@@ -762,7 +762,6 @@
     positionFocusCompanion(textarea);
     elements.focusCompanion.classList.add("is-visible");
     elements.focusCompanion.setAttribute("aria-hidden", "false");
-    elements.focusVideo.play().catch(() => {});
   }
 
   function hideFocusCompanion() {
@@ -796,8 +795,6 @@
     elements.focusCompanion.classList.add("is-visible");
     elements.focusCompanion.setAttribute("aria-hidden", "false");
     elements.saveBubble.classList.add("is-visible");
-    elements.focusVideo.play().catch(() => {});
-
     if (bubbleTimer) {
       clearTimeout(bubbleTimer);
     }

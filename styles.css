@@ -510,7 +510,7 @@ h3 {
   transition: opacity 180ms ease, transform 180ms ease;
 }
 
-.focus-companion video {
+.focus-companion img {
   width: 72px;
   height: 72px;
   object-fit: cover;
