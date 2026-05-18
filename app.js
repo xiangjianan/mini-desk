@@ -337,9 +337,19 @@
   }
 
   function handleLineEditorClick(event) {
+    const editorEl = event.currentTarget;
     const input = event.target.closest(".ws-input");
     if (input) {
-      handleTextareaFocus(input.closest(".ws-editor"));
+      handleTextareaFocus(editorEl);
+      return;
+    }
+    if (event.target === editorEl || event.target.closest(".ws-row")) {
+      handleTextareaFocus(editorEl);
+      const lastInput = editorEl.querySelectorAll(".ws-input");
+      const target = lastInput.length > 0 ? lastInput[lastInput.length - 1] : null;
+      if (target) {
+        target.focus();
+      }
     }
   }
 
@@ -749,14 +759,13 @@
   }
 
   function showFocusCompanion(textarea) {
+    positionFocusCompanion(textarea);
     elements.focusCompanion.classList.add("is-visible");
     elements.focusCompanion.setAttribute("aria-hidden", "false");
     elements.focusVideo.play().catch(() => {});
-    positionFocusCompanion(textarea);
   }
 
   function hideFocusCompanion() {
-    positionFocusCompanion(null);
     elements.focusCompanion.classList.remove("is-visible");
     elements.focusCompanion.setAttribute("aria-hidden", "true");
   }
