@@ -7,7 +7,7 @@
 
   const LINE_EDITORS = {
     noteEditor: { stateKey: "noteLines", placeholder: "写下临时想法..." },
-    workspaceEditor: { stateKey: "workspaceLines", placeholder: "在这里输入工作内容…" },
+    workspaceEditor: { stateKey: "workspaceLines", placeholder: "在这里输入工作内容..." },
     storageEditor: { stateKey: "storageLines", placeholder: "在这里存放工程文件路径、命令、片段..." },
   };
 
@@ -472,7 +472,7 @@
     if (state.images.length === 0) {
       const empty = document.createElement("p");
       empty.className = "hint";
-      empty.textContent = "暂无图片";
+      empty.textContent = "Ctrl + v 粘贴图片";
       elements.imageList.append(empty);
       return;
     }
