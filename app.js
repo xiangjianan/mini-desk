@@ -787,8 +787,7 @@
     elements.focusCompanion.style.top = `${top}px`;
   }
 
-  function showSaveBubble(options = {}) {
-    positionFocusCompanion(options.defaultPosition ? null : focusedTextarea);
+  function showSaveBubble() {
     const text = randomItem(saveMessages);
     const face = randomItem(kaomoji);
     elements.saveBubble.textContent = `${text} ${face}`;
