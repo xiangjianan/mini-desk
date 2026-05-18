@@ -2,10 +2,13 @@
   "use strict";
 
   const STORAGE_KEY = "todo-board-state-v1";
-  const TEXTAREA_KEYS = {
-    noteText: "note",
-    workspaceText: "workspace",
-    storageText: "storage",
+
+  const WS_INDENT = 24;
+
+  const LINE_EDITORS = {
+    noteEditor: { stateKey: "noteLines", placeholder: "写下临时想法..." },
+    workspaceEditor: { stateKey: "workspaceLines", placeholder: "在这里输入工作内容…" },
+    storageEditor: { stateKey: "storageLines", placeholder: "在这里存放工程文件路径、命令、片段..." },
   };
 
   const saveMessages = [
@@ -36,9 +39,10 @@
 
   const defaultState = {
     theme: "light",
-    note: "",
-    workspace: "",
-    storage: "",
+    customTitles: {},
+    noteLines: [],
+    workspaceLines: [],
+    storageLines: [],
     images: [],
     quickButtons: [],
     showHiddenQuickButtons: false,
@@ -62,6 +66,7 @@
   let activeImageContext = null;
   let activePreviewId = null;
   let draggedTodo = null;
+  let draggedImageId = null;
   let previewScale = 1;
   let previewX = 0;
   let previewY = 0;
@@ -75,6 +80,7 @@
   function init() {
     cacheElements();
     applyTheme();
+    applyCustomTitles();
     hydrateTextareas();
     bindEvents();
     renderAll();
@@ -83,13 +89,15 @@
   function cacheElements() {
     elements.imageCount = document.getElementById("imageCount");
     elements.imageList = document.getElementById("imageList");
-    elements.noteText = document.getElementById("noteText");
-    elements.workspaceText = document.getElementById("workspaceText");
-    elements.storageText = document.getElementById("storageText");
+    elements.noteEditor = document.getElementById("noteEditor");
+    elements.workspaceEditor = document.getElementById("workspaceEditor");
+    elements.storageEditor = document.getElementById("storageEditor");
     elements.addQuickBtn = document.getElementById("addQuickBtn");
     elements.quickButtons = document.getElementById("quickButtons");
     elements.toggleHiddenBtn = document.getElementById("toggleHiddenBtn");
     elements.themeToggle = document.getElementById("themeToggle");
+    elements.iconSun = document.getElementById("iconSun");
+    elements.iconMoon = document.getElementById("iconMoon");
     elements.focusCompanion = document.getElementById("focusCompanion");
     elements.focusVideo = document.getElementById("focusVideo");
     elements.saveBubble = document.getElementById("saveBubble");
@@ -112,18 +120,22 @@
     elements.previewImage = document.getElementById("previewImage");
     elements.closePreview = document.getElementById("closePreview");
     elements.imageMenu = document.getElementById("imageMenu");
+    elements.previewList = document.getElementById("previewList");
+    elements.previewMenu = document.getElementById("previewMenu");
   }
 
   function bindEvents() {
     document.addEventListener("paste", handlePaste);
     document.addEventListener("keydown", handleKeydown);
     document.addEventListener("click", handleDocumentClick);
+    document.addEventListener("dblclick", handleDocumentDblClick);
 
-    Object.keys(TEXTAREA_KEYS).forEach((id) => {
-      const textarea = elements[id];
-      textarea.addEventListener("focus", () => handleTextareaFocus(textarea));
-      textarea.addEventListener("input", () => handleTextareaInput(textarea));
-      textarea.addEventListener("blur", () => handleTextareaBlur(textarea));
+    Object.keys(LINE_EDITORS).forEach((id) => {
+      const editor = elements[id];
+      editor.addEventListener("click", handleLineEditorClick);
+      editor.addEventListener("keydown", handleLineEditorKeydown);
+      editor.addEventListener("focusin", () => handleTextareaFocus(editor));
+      editor.addEventListener("focusout", () => handleTextareaBlur(editor));
     });
 
     window.addEventListener("resize", positionFocusCompanion);
@@ -161,11 +173,18 @@
     elements.imageList.addEventListener("click", handleImageListClick);
     elements.imageList.addEventListener("dblclick", handleImageListDoubleClick);
     elements.imageList.addEventListener("contextmenu", handleImageContextMenu);
+    elements.imageList.addEventListener("dragstart", handleImageDragStart);
+    elements.imageList.addEventListener("dragover", handleImageDragOver);
+    elements.imageList.addEventListener("drop", handleImageDrop);
+    elements.imageList.addEventListener("dragend", handleImageDragEnd);
     elements.imageMenu.addEventListener("click", handleImageMenuClick);
     elements.closePreview.addEventListener("click", closeImagePreview);
     elements.imagePreview.addEventListener("wheel", handlePreviewWheel, { passive: false });
     elements.previewStage.addEventListener("click", handlePreviewStageClick);
+    elements.previewStage.addEventListener("contextmenu", handlePreviewContextMenu);
     elements.previewStage.addEventListener("mousedown", startPreviewDrag);
+    elements.previewMenu.addEventListener("click", handlePreviewMenuClick);
+    elements.previewList.addEventListener("click", handlePreviewListClick);
     window.addEventListener("mousemove", movePreviewDrag);
     window.addEventListener("mouseup", endPreviewDrag);
   }
@@ -177,7 +196,7 @@
         return structuredClone(defaultState);
       }
       const parsed = JSON.parse(raw);
-      return {
+      const result = {
         ...structuredClone(defaultState),
         ...parsed,
         todos: {
@@ -185,10 +204,31 @@
           ...(parsed.todos || {}),
         },
       };
+      if (typeof result.workspaceLines === "string") {
+        result.workspaceLines = migrateWorkspaceText(result.workspaceLines);
+        delete result.workspace;
+      } else if (result.workspace !== undefined) {
+        result.workspaceLines = migrateWorkspaceText(result.workspace);
+        delete result.workspace;
+      }
+      if (result.note !== undefined && !result.noteLines) {
+        result.noteLines = migrateWorkspaceText(result.note);
+        delete result.note;
+      }
+      if (result.storage !== undefined && !result.storageLines) {
+        result.storageLines = migrateWorkspaceText(result.storage);
+        delete result.storage;
+      }
+      return result;
     } catch (error) {
       console.warn("无法读取本地数据，使用默认状态。", error);
       return structuredClone(defaultState);
     }
+  }
+
+  function migrateWorkspaceText(text) {
+    if (!text) return [];
+    return text.split("\n").map((line) => ({ text: line, indent: 0 }));
   }
 
   function saveState(options = {}) {
@@ -212,15 +252,207 @@
   }
 
   function hydrateTextareas() {
-    elements.noteText.value = state.note;
-    elements.workspaceText.value = state.workspace;
-    elements.storageText.value = state.storage;
+    Object.keys(LINE_EDITORS).forEach((id) => renderLineEditor(elements[id]));
   }
 
   function renderAll() {
     renderImages();
     renderQuickButtons();
     renderTodos();
+    hydrateTextareas();
+  }
+
+  function getEditorConfig(editorEl) {
+    return LINE_EDITORS[editorEl.id];
+  }
+
+  function renderLineEditor(editorEl) {
+    const config = getEditorConfig(editorEl);
+    if (!config) return;
+
+    const lines = state[config.stateKey];
+    const activeInput = editorEl.querySelector(".ws-input:focus");
+    const activeIndex = activeInput ? Number(activeInput.dataset.index) : -1;
+    const selStart = activeInput ? activeInput.selectionStart : -1;
+
+    editorEl.innerHTML = "";
+
+    if (lines.length === 0) {
+      const row = createLineRow(editorEl, { text: "", indent: 0 }, 0);
+      editorEl.append(row);
+      return;
+    }
+
+    lines.forEach((line, index) => {
+      editorEl.append(createLineRow(editorEl, line, index));
+    });
+
+    if (activeIndex >= 0) {
+      const input = editorEl.querySelector(`.ws-input[data-index="${activeIndex}"]`);
+      if (input) {
+        input.focus();
+        if (selStart >= 0) {
+          input.setSelectionRange(selStart, selStart);
+        }
+      }
+    }
+  }
+
+  function createLineRow(editorEl, line, index) {
+    const config = getEditorConfig(editorEl);
+    const row = document.createElement("div");
+    row.className = "ws-row";
+
+    if (line.indent > 0) {
+      const indent = document.createElement("span");
+      indent.className = "ws-indent";
+      indent.style.width = `${line.indent * WS_INDENT}px`;
+      row.append(indent);
+
+      const dot = document.createElement("span");
+      dot.className = "ws-dash";
+      dot.textContent = "·";
+      row.append(dot);
+    }
+
+    const input = document.createElement("input");
+    input.className = "ws-input";
+    input.type = "text";
+    input.value = line.text;
+    input.dataset.index = index;
+    input.spellcheck = false;
+    if (index === 0 && line.text === "" && state[config.stateKey].length <= 1) {
+      input.placeholder = config.placeholder;
+    }
+
+    input.addEventListener("input", () => {
+      const i = Number(input.dataset.index);
+      const lines = state[config.stateKey];
+      lines[i] = { ...lines[i], text: input.value };
+      triggerLineEditorSave(editorEl);
+    });
+
+    row.append(input);
+    return row;
+  }
+
+  function handleLineEditorClick(event) {
+    const input = event.target.closest(".ws-input");
+    if (input) {
+      handleTextareaFocus(input.closest(".ws-editor"));
+    }
+  }
+
+  function handleLineEditorKeydown(event) {
+    const input = event.target.closest(".ws-input");
+    if (!input) return;
+
+    const editorEl = input.closest(".ws-editor");
+    const config = getEditorConfig(editorEl);
+    if (!config) return;
+
+    const lines = state[config.stateKey];
+    const index = Number(input.dataset.index);
+    let changed = false;
+
+    if (event.key === "Tab") {
+      event.preventDefault();
+      if (event.shiftKey) {
+        if (lines[index].indent > 0) {
+          lines[index] = { ...lines[index], indent: lines[index].indent - 1 };
+          changed = true;
+        }
+      } else {
+        lines[index] = { ...lines[index], indent: lines[index].indent + 1 };
+        changed = true;
+      }
+      if (changed) renderLineEditor(editorEl);
+    } else if (event.key === "Enter") {
+      event.preventDefault();
+      const text = input.value;
+      const cursorPos = input.selectionStart;
+      const before = text.slice(0, cursorPos);
+      const after = text.slice(cursorPos);
+      const currentIndent = lines[index].indent;
+
+      lines[index] = { text: before, indent: currentIndent };
+      lines.splice(index + 1, 0, { text: after, indent: currentIndent });
+      changed = true;
+      renderLineEditor(editorEl);
+      const nextInput = editorEl.querySelectorAll(".ws-input")[index + 1];
+      if (nextInput) {
+        nextInput.focus();
+        nextInput.setSelectionRange(0, 0);
+      }
+    } else if (event.key === "Backspace" && input.selectionStart === 0 && input.selectionEnd === 0) {
+      if (lines[index].indent > 0) {
+        event.preventDefault();
+        lines[index] = { ...lines[index], indent: lines[index].indent - 1 };
+        changed = true;
+        renderLineEditor(editorEl);
+      } else if (index > 0) {
+        event.preventDefault();
+        const prevLine = lines[index - 1];
+        const prevLen = prevLine.text.length;
+        if (lines[index].text === "") {
+          lines.splice(index, 1);
+        } else {
+          lines[index - 1] = { ...prevLine, text: prevLine.text + lines[index].text };
+          lines.splice(index, 1);
+        }
+        changed = true;
+        renderLineEditor(editorEl);
+        const prevInput = editorEl.querySelectorAll(".ws-input")[index - 1];
+        if (prevInput) {
+          prevInput.focus();
+          prevInput.setSelectionRange(prevLen, prevLen);
+        }
+      }
+    } else if (event.key === "ArrowUp" && index > 0) {
+      if (input.selectionStart === 0) {
+        event.preventDefault();
+        const prevInput = editorEl.querySelectorAll(".ws-input")[index - 1];
+        if (prevInput) prevInput.focus();
+      }
+    } else if (event.key === "ArrowDown" && index < lines.length - 1) {
+      if (input.selectionStart === input.value.length) {
+        event.preventDefault();
+        const nextInput = editorEl.querySelectorAll(".ws-input")[index + 1];
+        if (nextInput) nextInput.focus();
+      }
+    }
+
+    if (changed) {
+      triggerLineEditorSave(editorEl);
+    }
+  }
+
+  function triggerLineEditorSave(editorEl) {
+    hasTypedInFocusedTextarea = true;
+    if (inputSaveTimer) {
+      clearTimeout(inputSaveTimer);
+    }
+    inputSaveTimer = setTimeout(() => {
+      flushLineEditorState(editorEl);
+      saveState({ showBubble: true });
+      inputSaveTimer = null;
+    }, 3000);
+  }
+
+  function flushLineEditorState(editorEl) {
+    const config = getEditorConfig(editorEl);
+    if (!config) return;
+    const lines = state[config.stateKey];
+    editorEl.querySelectorAll(".ws-input").forEach((input) => {
+      const index = Number(input.dataset.index);
+      if (lines[index]) {
+        lines[index] = { ...lines[index], text: input.value };
+      }
+    });
+  }
+
+  function flushAllLineEditorState() {
+    Object.keys(LINE_EDITORS).forEach((id) => flushLineEditorState(elements[id]));
   }
 
   function renderImages() {
@@ -240,6 +472,7 @@
       card.type = "button";
       card.className = "image-card";
       card.dataset.id = image.id;
+      card.draggable = true;
       card.title = "单击预览，双击复制";
 
       const indexLabel = document.createElement("span");
@@ -337,7 +570,7 @@
       }
       const reader = new FileReader();
       reader.onload = () => {
-        state.images.unshift({
+        state.images.push({
           id: createId(),
           src: reader.result,
           createdAt: Date.now(),
@@ -366,8 +599,13 @@
     if (key === "Delete" || key === "Backspace") {
       event.preventDefault();
       if (confirmDelete("确定要删除这张图片吗？")) {
+        const nextId = findAdjacentImageId(activePreviewId, 1);
         deleteImage(activePreviewId);
-        closeImagePreview();
+        if (nextId) {
+          openImagePreview(nextId);
+        } else {
+          closeImagePreview();
+        }
       }
     } else if (key === "Enter") {
       event.preventDefault();
@@ -375,9 +613,15 @@
       if (image) {
         copyImageToClipboard(image);
       }
-    } else if (key === " ") {
+    } else if (key === "Escape" || key === " ") {
       event.preventDefault();
       closeImagePreview();
+    } else if (key === "ArrowLeft" || key === "ArrowUp") {
+      event.preventDefault();
+      navigatePreview(-1);
+    } else if (key === "ArrowRight" || key === "ArrowDown") {
+      event.preventDefault();
+      navigatePreview(1);
     }
   }
 
@@ -391,6 +635,57 @@
     if (!elements.imageMenu.contains(event.target)) {
       closeImageMenu();
     }
+    if (elements.previewMenu && !elements.previewMenu.contains(event.target)) {
+      closePreviewMenu();
+    }
+  }
+
+  function handleDocumentDblClick(event) {
+    const heading = event.target.closest(".panel-header h1, .panel-header h2, .todo-heading h3");
+    if (!heading) return;
+    if (heading.querySelector("input")) return;
+
+    const id = heading.id || heading.closest(".panel-header")?.querySelector("h1, h2")?.id;
+    if (!id) return;
+
+    const original = heading.textContent;
+    const input = document.createElement("input");
+    input.type = "text";
+    input.value = original;
+    input.className = "title-edit-input";
+    heading.textContent = "";
+    heading.append(input);
+    input.focus();
+    input.select();
+
+    const commit = () => {
+      const value = input.value.trim() || original;
+      heading.textContent = value;
+      if (value !== original) {
+        state.customTitles[id] = value;
+        saveState();
+      }
+    };
+
+    input.addEventListener("blur", commit, { once: true });
+    input.addEventListener("keydown", (e) => {
+      if (e.key === "Enter") {
+        e.preventDefault();
+        input.blur();
+      } else if (e.key === "Escape") {
+        input.value = original;
+        input.blur();
+      }
+    });
+  }
+
+  function applyCustomTitles() {
+    Object.entries(state.customTitles).forEach(([id, title]) => {
+      const heading = document.getElementById(id);
+      if (heading) {
+        heading.textContent = title;
+      }
+    });
   }
 
   function handleTextareaFocus(textarea) {
@@ -406,18 +701,10 @@
   }
 
   function handleTextareaInput(textarea) {
-    updateTextareaState(textarea);
-    hasTypedInFocusedTextarea = true;
-
-    if (inputSaveTimer) {
-      clearTimeout(inputSaveTimer);
+    const config = getEditorConfig(textarea);
+    if (config) {
+      triggerLineEditorSave(textarea);
     }
-
-    inputSaveTimer = setTimeout(() => {
-      flushTextareaState();
-      saveState({ showBubble: true });
-      inputSaveTimer = null;
-    }, 3000);
   }
 
   function handleTextareaBlur(textarea) {
@@ -428,10 +715,11 @@
       return;
     }
 
-    if (textarea.id === "workspaceText" && inputSaveTimer) {
+    const config = getEditorConfig(textarea);
+    if (config && inputSaveTimer) {
       clearTimeout(inputSaveTimer);
       inputSaveTimer = null;
-      updateTextareaState(textarea);
+      flushLineEditorState(textarea);
       saveState({ showBubble: true });
       return;
     }
@@ -441,21 +729,23 @@
     }
 
     blurSaveTimer = setTimeout(() => {
-      updateTextareaState(textarea);
+      if (config) {
+        flushLineEditorState(textarea);
+      }
       saveState({ showBubble: true });
       blurSaveTimer = null;
     }, 1000);
   }
 
   function updateTextareaState(textarea) {
-    const stateKey = TEXTAREA_KEYS[textarea.id];
-    if (stateKey) {
-      state[stateKey] = textarea.value;
+    const config = getEditorConfig(textarea);
+    if (config) {
+      flushLineEditorState(textarea);
     }
   }
 
   function flushTextareaState() {
-    Object.keys(TEXTAREA_KEYS).forEach((id) => updateTextareaState(elements[id]));
+    flushAllLineEditorState();
   }
 
   function showFocusCompanion(textarea) {
@@ -472,15 +762,19 @@
   }
 
   function positionFocusCompanion(textarea = focusedTextarea || lastTextarea) {
-    if (textarea !== null && !(textarea instanceof HTMLTextAreaElement)) {
+    if (textarea !== null && !(textarea instanceof HTMLElement)) {
       textarea = focusedTextarea || lastTextarea;
     }
-    if (!textarea) return;
     const size = 72;
-    const gap = 6;
+    const gap = 12;
+    if (!textarea) {
+      elements.focusCompanion.style.left = `${window.innerWidth - size - gap}px`;
+      elements.focusCompanion.style.top = `${window.innerHeight - size - gap}px`;
+      return;
+    }
     const rect = textarea.getBoundingClientRect();
-    const left = Math.max(8, Math.min(window.innerWidth - size - 8, rect.right - size - gap));
-    const top = Math.max(8, Math.min(window.innerHeight - size - 8, rect.bottom - size - gap));
+    const left = Math.max(8, Math.min(window.innerWidth - size - 8, rect.right - size - 6));
+    const top = Math.max(8, Math.min(window.innerHeight - size - 8, rect.bottom - size - 6));
     elements.focusCompanion.style.left = `${left}px`;
     elements.focusCompanion.style.top = `${top}px`;
   }
@@ -1024,6 +1318,86 @@
     activeImageContext = null;
   }
 
+  function handleImageDragStart(event) {
+    const card = event.target.closest(".image-card");
+    if (!card) return;
+    draggedImageId = card.dataset.id;
+    card.classList.add("is-dragging");
+    event.dataTransfer.effectAllowed = "move";
+  }
+
+  function handleImageDragOver(event) {
+    event.preventDefault();
+    event.dataTransfer.dropEffect = "move";
+    const card = event.target.closest(".image-card");
+    elements.imageList.querySelectorAll(".is-drag-over").forEach((el) => el.classList.remove("is-drag-over"));
+    if (card && card.dataset.id !== draggedImageId) {
+      card.classList.add("is-drag-over");
+    }
+  }
+
+  function handleImageDrop(event) {
+    event.preventDefault();
+    const card = event.target.closest(".image-card");
+    if (!card || !draggedImageId) return;
+    const targetId = card.dataset.id;
+    if (targetId === draggedImageId) return;
+
+    const fromIndex = state.images.findIndex((img) => img.id === draggedImageId);
+    const toIndex = state.images.findIndex((img) => img.id === targetId);
+    if (fromIndex === -1 || toIndex === -1) return;
+
+    const [moved] = state.images.splice(fromIndex, 1);
+    state.images.splice(toIndex, 0, moved);
+    saveState();
+    renderImages();
+  }
+
+  function handleImageDragEnd() {
+    draggedImageId = null;
+    elements.imageList.querySelectorAll(".is-dragging, .is-drag-over").forEach((el) => {
+      el.classList.remove("is-dragging", "is-drag-over");
+    });
+  }
+
+  function handlePreviewContextMenu(event) {
+    event.preventDefault();
+    closeImageMenu();
+    closePreviewMenu();
+    elements.previewMenu.style.left = `${Math.min(event.clientX, window.innerWidth - 130)}px`;
+    elements.previewMenu.style.top = `${Math.min(event.clientY, window.innerHeight - 110)}px`;
+    elements.previewMenu.classList.add("is-visible");
+    elements.previewMenu.setAttribute("aria-hidden", "false");
+  }
+
+  function handlePreviewMenuClick(event) {
+    const actionButton = event.target.closest("button[data-action]");
+    if (!actionButton || !activePreviewId) return;
+
+    const action = actionButton.dataset.action;
+    if (action === "copy") {
+      const image = findImage(activePreviewId);
+      if (image) copyImageToClipboard(image);
+    } else if (action === "delete") {
+      if (confirmDelete("确定要删除这张图片吗？")) {
+        const nextId = findAdjacentImageId(activePreviewId, 1);
+        deleteImage(activePreviewId);
+        if (nextId) {
+          openImagePreview(nextId);
+        } else {
+          closeImagePreview();
+        }
+      }
+    }
+    closePreviewMenu();
+  }
+
+  function closePreviewMenu() {
+    if (!elements.previewMenu) return;
+    elements.previewMenu.classList.remove("is-visible");
+    elements.previewMenu.setAttribute("aria-hidden", "true");
+  }
+
   function openImagePreview(id) {
     const image = findImage(id);
     if (!image) {
@@ -1037,6 +1411,7 @@
     elements.previewImage.src = image.src;
     elements.imagePreview.classList.add("is-visible");
     elements.imagePreview.setAttribute("aria-hidden", "false");
+    renderPreviewList();
     applyPreviewTransform();
   }
 
@@ -1045,6 +1420,52 @@
     elements.imagePreview.classList.remove("is-visible");
     elements.imagePreview.setAttribute("aria-hidden", "true");
     elements.previewImage.removeAttribute("src");
+    elements.previewList.innerHTML = "";
+  }
+
+  function renderPreviewList() {
+    elements.previewList.innerHTML = "";
+    state.images.forEach((image) => {
+      const thumb = document.createElement("div");
+      thumb.className = "preview-thumb" + (image.id === activePreviewId ? " is-active" : "");
+      thumb.dataset.id = image.id;
+      const img = document.createElement("img");
+      img.src = image.src;
+      img.alt = "";
+      img.draggable = false;
+      thumb.append(img);
+      elements.previewList.append(thumb);
+    });
+    scrollToActiveThumb();
+  }
+
+  function scrollToActiveThumb() {
+    const active = elements.previewList.querySelector(".preview-thumb.is-active");
+    if (active) {
+      active.scrollIntoView({ block: "nearest" });
+    }
+  }
+
+  function navigatePreview(direction) {
+    if (!activePreviewId || state.images.length === 0) {
+      return;
+    }
+    const nextId = findAdjacentImageId(activePreviewId, direction);
+    if (nextId && nextId !== activePreviewId) {
+      openImagePreview(nextId);
+    }
+  }
+
+  function findAdjacentImageId(currentId, direction) {
+    const index = state.images.findIndex((img) => img.id === currentId);
+    if (index === -1) {
+      return null;
+    }
+    const nextIndex = index + direction;
+    if (nextIndex < 0 || nextIndex >= state.images.length) {
+      return null;
+    }
+    return state.images[nextIndex].id;
   }
 
   function handlePreviewWheel(event) {
@@ -1061,6 +1482,14 @@
     if (event.target === elements.previewStage) {
       closeImagePreview();
     }
+  }
+
+  function handlePreviewListClick(event) {
+    const thumb = event.target.closest(".preview-thumb");
+    if (!thumb) {
+      return;
+    }
+    openImagePreview(thumb.dataset.id);
   }
 
   function startPreviewDrag(event) {
@@ -1143,7 +1572,9 @@
 
   function applyTheme() {
     document.documentElement.dataset.theme = state.theme;
-    elements.themeToggle.textContent = state.theme === "dark" ? "白天" : "黑夜";
+    const isDark = state.theme === "dark";
+    elements.iconSun.style.display = isDark ? "" : "none";
+    elements.iconMoon.style.display = isDark ? "none" : "";
   }
 
   function showToast(message) {

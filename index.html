@@ -3,7 +3,7 @@
   <head>
     <meta charset="UTF-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-    <title>TodoList</title>
+    <title>Life is short, use AI</title>
     <link rel="stylesheet" href="styles.css" />
   </head>
   <body>
@@ -21,12 +21,12 @@
           <div class="panel-header">
             <h2 id="note-title">记</h2>
           </div>
-          <textarea id="noteText" class="board-textarea" spellcheck="false" placeholder="写下临时想法..."></textarea>
+          <div id="noteEditor" class="ws-editor" data-placeholder="写下临时想法..."></div>
         </div>
 
         <div class="split-block quick-block">
           <div class="panel-header">
-            <h2>链</h2>
+            <h2 id="quick-title">链</h2>
             <div class="header-actions">
               <button id="addQuickBtn" class="ghost-button icon-action" type="button" aria-label="新增快捷链接" title="新增快捷链接">
                 <svg viewBox="0 0 24 24" aria-hidden="true">
@@ -53,7 +53,7 @@
         <div class="todo-sections">
           <section class="todo-section" data-period="morning">
             <div class="todo-heading">
-              <h3>早</h3>
+              <h3 id="todo-morning-title">早</h3>
               <div class="todo-heading-actions">
                 <span class="todo-count" data-count="morning">0</span>
                 <button class="clear-completed-button icon-action" type="button" data-clear-completed="morning" aria-label="清已完成" title="清已完成"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M3 6h18M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6m3 0V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2" /><line x1="10" y1="11" x2="10" y2="17" /><line x1="14" y1="11" x2="14" y2="17" /></svg></button>
@@ -64,7 +64,7 @@
 
           <section class="todo-section" data-period="noon">
             <div class="todo-heading">
-              <h3>中</h3>
+              <h3 id="todo-noon-title">中</h3>
               <div class="todo-heading-actions">
                 <span class="todo-count" data-count="noon">0</span>
                 <button class="clear-completed-button icon-action" type="button" data-clear-completed="noon" aria-label="清已完成" title="清已完成"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M3 6h18M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6m3 0V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2" /><line x1="10" y1="11" x2="10" y2="17" /><line x1="14" y1="11" x2="14" y2="17" /></svg></button>
@@ -75,7 +75,7 @@
 
           <section class="todo-section" data-period="evening">
             <div class="todo-heading">
-              <h3>晚</h3>
+              <h3 id="todo-evening-title">晚</h3>
               <div class="todo-heading-actions">
                 <span class="todo-count" data-count="evening">0</span>
                 <button class="clear-completed-button icon-action" type="button" data-clear-completed="evening" aria-label="清已完成" title="清已完成"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M3 6h18M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6m3 0V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2" /><line x1="10" y1="11" x2="10" y2="17" /><line x1="14" y1="11" x2="14" y2="17" /></svg></button>
@@ -90,15 +90,30 @@
         <div class="panel-header">
           <h2 id="workspace-title">工作空间</h2>
         </div>
-        <textarea id="workspaceText" class="board-textarea large-textarea" spellcheck="false" placeholder="在这里输入工作内容..."></textarea>
+        <div id="workspaceEditor" class="ws-editor" data-placeholder="在这里输入工作内容…"></div>
       </section>
 
       <section class="panel text-panel" aria-labelledby="storage-title">
         <div class="panel-header">
           <h2 id="storage-title">工程文件</h2>
-          <button id="themeToggle" class="ghost-button" type="button">黑夜</button>
+          <button id="themeToggle" class="ghost-button icon-action" type="button" aria-label="切换主题" title="切换主题">
+            <svg id="iconSun" viewBox="0 0 24 24" aria-hidden="true" style="display:none">
+              <circle cx="12" cy="12" r="5" />
+              <line x1="12" y1="1" x2="12" y2="3" />
+              <line x1="12" y1="21" x2="12" y2="23" />
+              <line x1="4.22" y1="4.22" x2="5.64" y2="5.64" />
+              <line x1="18.36" y1="18.36" x2="19.78" y2="19.78" />
+              <line x1="1" y1="12" x2="3" y2="12" />
+              <line x1="21" y1="12" x2="23" y2="12" />
+              <line x1="4.22" y1="19.78" x2="5.64" y2="18.36" />
+              <line x1="18.36" y1="5.64" x2="19.78" y2="4.22" />
+            </svg>
+            <svg id="iconMoon" viewBox="0 0 24 24" aria-hidden="true">
+              <path d="M21 12.79A9 9 0 1 1 11.21 3 7 7 0 0 0 21 12.79z" />
+            </svg>
+          </button>
         </div>
-        <textarea id="storageText" class="board-textarea large-textarea" spellcheck="false" placeholder="在这里存放工程文件路径、命令、片段..."></textarea>
+        <div id="storageEditor" class="ws-editor" data-placeholder="在这里存放工程文件路径、命令、片段..."></div>
       </section>
     </main>
 
@@ -154,11 +169,22 @@
     </dialog>
 
     <div id="imagePreview" class="image-preview" aria-hidden="true">
-      <button id="closePreview" class="preview-close" type="button" aria-label="关闭预览">×</button>
-      <div id="previewStage" class="preview-stage">
-        <img id="previewImage" alt="图片预览" draggable="false" />
+      <div class="preview-sidebar">
+        <div class="preview-sidebar-header">
+          <button id="closePreview" class="preview-close" type="button" aria-label="关闭预览">×</button>
+        </div>
+        <div id="previewList" class="preview-list"></div>
       </div>
-      <div class="preview-help">滚轮缩放 · 按住拖动 · Enter 复制 · Delete 删除 · Space 关闭</div>
+      <div class="preview-main">
+        <div id="previewStage" class="preview-stage">
+          <img id="previewImage" alt="图片预览" draggable="false" />
+        </div>
+        <div class="preview-help">← → 切换 · 滚轮缩放 · 拖动平移 · Enter 复制 · Delete 删除 · Esc 关闭</div>
+      </div>
+      <div id="previewMenu" class="context-menu" role="menu" aria-hidden="true">
+        <button type="button" data-action="copy">复制</button>
+        <button type="button" data-action="delete">删除</button>
+      </div>
     </div>
 
     <script src="app.js"></script>
