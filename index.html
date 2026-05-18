@@ -1,0 +1,150 @@
+<!doctype html>
+<html lang="zh-CN">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>To Do List 看板</title>
+    <link rel="stylesheet" href="styles.css" />
+  </head>
+  <body>
+    <main class="board" aria-label="To Do List 看板">
+      <section class="panel image-panel" aria-labelledby="image-title">
+        <div class="panel-header">
+          <h1 id="image-title">图床</h1>
+          <span id="imageCount" class="count">0</span>
+        </div>
+        <div id="imageList" class="image-list" aria-label="图床图片列表"></div>
+      </section>
+
+      <section class="panel note-link-panel" aria-labelledby="note-title">
+        <div class="split-block note-block">
+          <div class="panel-header">
+            <h2 id="note-title">便签</h2>
+          </div>
+          <textarea id="noteText" class="board-textarea" spellcheck="false" placeholder="写下临时想法..."></textarea>
+        </div>
+
+        <div class="split-block quick-block">
+          <div class="panel-header">
+            <h2>快捷复制</h2>
+            <div class="header-actions">
+              <button id="addQuickBtn" class="ghost-button" type="button">新增</button>
+              <button id="toggleHiddenBtn" class="ghost-button" type="button">显示全部</button>
+            </div>
+          </div>
+          <div id="quickButtons" class="quick-buttons" aria-label="快捷按钮列表"></div>
+        </div>
+      </section>
+
+      <section class="panel todo-panel" aria-labelledby="todo-title">
+        <div class="panel-header">
+          <h2 id="todo-title">待办事项</h2>
+        </div>
+        <div class="todo-sections">
+          <section class="todo-section" data-period="morning">
+            <div class="todo-heading">
+              <h3>早</h3>
+              <div class="todo-heading-actions">
+                <span class="todo-count" data-count="morning">0</span>
+                <button class="clear-completed-button" type="button" data-clear-completed="morning">清已完成</button>
+              </div>
+            </div>
+            <ul class="todo-list" data-list="morning"></ul>
+          </section>
+
+          <section class="todo-section" data-period="noon">
+            <div class="todo-heading">
+              <h3>中</h3>
+              <div class="todo-heading-actions">
+                <span class="todo-count" data-count="noon">0</span>
+                <button class="clear-completed-button" type="button" data-clear-completed="noon">清已完成</button>
+              </div>
+            </div>
+            <ul class="todo-list" data-list="noon"></ul>
+          </section>
+
+          <section class="todo-section" data-period="evening">
+            <div class="todo-heading">
+              <h3>晚</h3>
+              <div class="todo-heading-actions">
+                <span class="todo-count" data-count="evening">0</span>
+                <button class="clear-completed-button" type="button" data-clear-completed="evening">清已完成</button>
+              </div>
+            </div>
+            <ul class="todo-list" data-list="evening"></ul>
+          </section>
+        </div>
+      </section>
+
+      <section class="panel text-panel" aria-labelledby="workspace-title">
+        <div class="panel-header">
+          <h2 id="workspace-title">工作空间</h2>
+        </div>
+        <textarea id="workspaceText" class="board-textarea large-textarea" spellcheck="false" placeholder="在这里输入工作内容..."></textarea>
+      </section>
+
+      <section class="panel text-panel" aria-labelledby="storage-title">
+        <div class="panel-header">
+          <h2 id="storage-title">工程文件 / 工作存储</h2>
+          <button id="themeToggle" class="ghost-button" type="button">黑夜</button>
+        </div>
+        <textarea id="storageText" class="board-textarea large-textarea" spellcheck="false" placeholder="在这里存放工程文件路径、命令、片段..."></textarea>
+      </section>
+    </main>
+
+    <div id="focusCompanion" class="focus-companion" aria-hidden="true">
+      <div id="saveBubble" class="save-bubble" role="status" aria-live="polite"></div>
+      <video id="focusVideo" src="static/video/hermes.mp4" muted loop playsinline></video>
+    </div>
+
+    <div id="toast" class="toast" role="status" aria-live="polite"></div>
+
+    <div id="quickMenu" class="context-menu" role="menu" aria-hidden="true">
+      <button type="button" data-action="edit">编辑</button>
+      <button type="button" data-action="hide">隐藏</button>
+      <button type="button" data-action="delete">删除</button>
+    </div>
+
+    <div id="todoMenu" class="context-menu" role="menu" aria-hidden="true">
+      <button type="button" data-action="delete">删除</button>
+    </div>
+
+    <dialog id="quickDialog" class="quick-dialog">
+      <form id="quickEditForm" method="dialog">
+        <div class="dialog-header">
+          <h2 id="quickDialogTitle">编辑快捷按钮</h2>
+          <button class="icon-button" type="button" id="closeQuickDialog" aria-label="关闭">×</button>
+        </div>
+        <label>
+          <span>标题</span>
+          <input id="editQuickTitle" type="text" autocomplete="off" />
+        </label>
+        <label>
+          <span>属性</span>
+          <select id="editQuickType">
+            <option value="link">链接属性</option>
+            <option value="text">复制文本属性</option>
+          </select>
+        </label>
+        <label>
+          <span id="editQuickValueLabel">URL</span>
+          <input id="editQuickValue" type="text" autocomplete="off" />
+        </label>
+        <div class="dialog-actions">
+          <button type="button" id="deleteQuickInDialog" class="danger-button">删除</button>
+          <button type="submit">保存</button>
+        </div>
+      </form>
+    </dialog>
+
+    <div id="imagePreview" class="image-preview" aria-hidden="true">
+      <button id="closePreview" class="preview-close" type="button" aria-label="关闭预览">×</button>
+      <div id="previewStage" class="preview-stage">
+        <img id="previewImage" alt="图片预览" draggable="false" />
+      </div>
+      <div class="preview-help">滚轮缩放 · 按住拖动 · Enter 复制 · Delete 删除 · Space 关闭</div>
+    </div>
+
+    <script src="app.js"></script>
+  </body>
+</html>
