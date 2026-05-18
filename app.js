@@ -59,6 +59,7 @@
   let hasTypedInFocusedTextarea = false;
   let activeQuickId = null;
   let activeTodoContext = null;
+  let activeImageContext = null;
   let activePreviewId = null;
   let draggedTodo = null;
   let previewScale = 1;
@@ -100,14 +101,17 @@
     elements.quickEditForm = document.getElementById("quickEditForm");
     elements.closeQuickDialog = document.getElementById("closeQuickDialog");
     elements.editQuickTitle = document.getElementById("editQuickTitle");
-    elements.editQuickType = document.getElementById("editQuickType");
+    elements.editQuickIsLink = document.getElementById("editQuickIsLink");
     elements.editQuickValue = document.getElementById("editQuickValue");
     elements.editQuickValueLabel = document.getElementById("editQuickValueLabel");
     elements.deleteQuickInDialog = document.getElementById("deleteQuickInDialog");
+    elements.iconEyeOff = document.getElementById("iconEyeOff");
+    elements.iconEye = document.getElementById("iconEye");
     elements.imagePreview = document.getElementById("imagePreview");
     elements.previewStage = document.getElementById("previewStage");
     elements.previewImage = document.getElementById("previewImage");
     elements.closePreview = document.getElementById("closePreview");
+    elements.imageMenu = document.getElementById("imageMenu");
   }
 
   function bindEvents() {
@@ -133,7 +137,7 @@
     elements.todoMenu.addEventListener("click", handleTodoMenuClick);
     elements.closeQuickDialog.addEventListener("click", closeQuickDialog);
     elements.quickEditForm.addEventListener("submit", handleQuickEditSubmit);
-    elements.editQuickType.addEventListener("change", updateEditValueLabel);
+    elements.editQuickIsLink.addEventListener("change", updateEditValueLabel);
     elements.deleteQuickInDialog.addEventListener("click", deleteActiveQuickFromDialog);
     elements.themeToggle.addEventListener("click", toggleTheme);
     document.querySelectorAll(".clear-completed-button").forEach((button) => {
@@ -156,8 +160,11 @@
 
     elements.imageList.addEventListener("click", handleImageListClick);
     elements.imageList.addEventListener("dblclick", handleImageListDoubleClick);
+    elements.imageList.addEventListener("contextmenu", handleImageContextMenu);
+    elements.imageMenu.addEventListener("click", handleImageMenuClick);
     elements.closePreview.addEventListener("click", closeImagePreview);
     elements.imagePreview.addEventListener("wheel", handlePreviewWheel, { passive: false });
+    elements.previewStage.addEventListener("click", handlePreviewStageClick);
     elements.previewStage.addEventListener("mousedown", startPreviewDrag);
     window.addEventListener("mousemove", movePreviewDrag);
     window.addEventListener("mouseup", endPreviewDrag);
@@ -187,7 +194,7 @@
   function saveState(options = {}) {
     localStorage.setItem(STORAGE_KEY, JSON.stringify(getSerializableState()));
     if (options.showBubble) {
-      showSaveBubble();
+      showSaveBubble(options);
     }
   }
 
@@ -243,18 +250,18 @@
       img.src = image.src;
       img.alt = "图床图片";
 
-      const deleteButton = document.createElement("span");
-      deleteButton.className = "image-delete";
-      deleteButton.dataset.action = "delete";
-      deleteButton.textContent = "×";
-
-      card.append(indexLabel, img, deleteButton);
+      card.append(indexLabel, img);
       elements.imageList.append(card);
     });
   }
 
   function renderQuickButtons() {
-    elements.toggleHiddenBtn.textContent = state.showHiddenQuickButtons ? "隐藏已隐藏" : "显示全部";
+    const showing = state.showHiddenQuickButtons;
+    const toggleLabel = showing ? "隐藏已隐藏快捷链接" : "显示全部快捷链接";
+    elements.toggleHiddenBtn.setAttribute("aria-label", toggleLabel);
+    elements.toggleHiddenBtn.title = toggleLabel;
+    elements.iconEyeOff.style.display = showing ? "" : "none";
+    elements.iconEye.style.display = showing ? "none" : "";
     elements.quickButtons.innerHTML = "";
 
     const visibleButtons = state.quickButtons.filter((button) => {
@@ -348,7 +355,7 @@
     if ((event.metaKey || event.ctrlKey) && key.toLowerCase() === "s") {
       event.preventDefault();
       flushTextareaState();
-      saveState({ showBubble: true });
+      saveState({ showBubble: true, defaultPosition: true });
       return;
     }
 
@@ -380,6 +387,9 @@
     }
     if (!elements.todoMenu.contains(event.target)) {
       closeTodoMenu();
+    }
+    if (!elements.imageMenu.contains(event.target)) {
+      closeImageMenu();
     }
   }
 
@@ -456,29 +466,27 @@
   }
 
   function hideFocusCompanion() {
+    positionFocusCompanion(null);
     elements.focusCompanion.classList.remove("is-visible");
     elements.focusCompanion.setAttribute("aria-hidden", "true");
   }
 
   function positionFocusCompanion(textarea = focusedTextarea || lastTextarea) {
-    if (!(textarea instanceof HTMLTextAreaElement)) {
+    if (textarea !== null && !(textarea instanceof HTMLTextAreaElement)) {
       textarea = focusedTextarea || lastTextarea;
     }
+    if (!textarea) return;
     const size = 72;
-    const gap = 12;
-    let left = window.innerWidth - size - gap;
-    let top = window.innerHeight - size - gap;
-    if (textarea) {
-      const rect = textarea.getBoundingClientRect();
-      left = Math.max(8, Math.min(window.innerWidth - size - 8, rect.right - size - gap));
-      top = Math.max(8, Math.min(window.innerHeight - size - 8, rect.bottom - size - gap));
-    }
+    const gap = 6;
+    const rect = textarea.getBoundingClientRect();
+    const left = Math.max(8, Math.min(window.innerWidth - size - 8, rect.right - size - gap));
+    const top = Math.max(8, Math.min(window.innerHeight - size - 8, rect.bottom - size - gap));
     elements.focusCompanion.style.left = `${left}px`;
     elements.focusCompanion.style.top = `${top}px`;
   }
 
-  function showSaveBubble() {
-    positionFocusCompanion(focusedTextarea);
+  function showSaveBubble(options = {}) {
+    positionFocusCompanion(options.defaultPosition ? null : focusedTextarea);
     const text = randomItem(saveMessages);
     const face = randomItem(kaomoji);
     elements.saveBubble.textContent = `${text} ${face}`;
@@ -561,7 +569,7 @@
     elements.quickDialogTitle.textContent = "编辑快捷按钮";
     elements.deleteQuickInDialog.hidden = false;
     elements.editQuickTitle.value = item.title;
-    elements.editQuickType.value = item.type;
+    elements.editQuickIsLink.checked = item.type === "link";
     elements.editQuickValue.value = item.value;
     updateEditValueLabel();
     elements.quickDialog.showModal();
@@ -572,7 +580,7 @@
     elements.quickDialogTitle.textContent = "新增快捷按钮";
     elements.deleteQuickInDialog.hidden = true;
     elements.editQuickTitle.value = "";
-    elements.editQuickType.value = "link";
+    elements.editQuickIsLink.checked = true;
     elements.editQuickValue.value = "";
     updateEditValueLabel();
     elements.quickDialog.showModal();
@@ -587,7 +595,7 @@
     event.preventDefault();
     const title = elements.editQuickTitle.value.trim();
     const value = elements.editQuickValue.value.trim();
-    const type = elements.editQuickType.value;
+    const type = elements.editQuickIsLink.checked ? "link" : "text";
 
     if (!title || !value) {
       showToast("请填写标题和内容");
@@ -618,7 +626,7 @@
   }
 
   function updateEditValueLabel() {
-    elements.editQuickValueLabel.textContent = elements.editQuickType.value === "link" ? "URL" : "复制文本";
+    elements.editQuickValueLabel.textContent = elements.editQuickIsLink.checked ? "URL" : "复制文本";
   }
 
   function deleteActiveQuickFromDialog() {
@@ -956,20 +964,10 @@
   }
 
   function handleImageListClick(event) {
-    const deleteButton = event.target.closest('[data-action="delete"]');
     const card = event.target.closest(".image-card");
     if (!card) {
       return;
     }
-
-    if (deleteButton) {
-      event.stopPropagation();
-      if (confirmDelete("确定要删除这张图片吗？")) {
-        deleteImage(card.dataset.id);
-      }
-      return;
-    }
-
     openImagePreview(card.dataset.id);
   }
 
@@ -982,6 +980,48 @@
     if (image) {
       copyImageToClipboard(image);
     }
+  }
+
+  function handleImageContextMenu(event) {
+    const card = event.target.closest(".image-card");
+    if (!card) {
+      return;
+    }
+    event.preventDefault();
+    closeQuickMenu();
+    closeTodoMenu();
+    activeImageContext = card.dataset.id;
+    elements.imageMenu.style.left = `${Math.min(event.clientX, window.innerWidth - 130)}px`;
+    elements.imageMenu.style.top = `${Math.min(event.clientY, window.innerHeight - 110)}px`;
+    elements.imageMenu.classList.add("is-visible");
+    elements.imageMenu.setAttribute("aria-hidden", "false");
+  }
+
+  function handleImageMenuClick(event) {
+    const actionButton = event.target.closest("button[data-action]");
+    if (!actionButton || !activeImageContext) {
+      return;
+    }
+    const action = actionButton.dataset.action;
+    if (action === "preview") {
+      openImagePreview(activeImageContext);
+    } else if (action === "copy") {
+      const image = findImage(activeImageContext);
+      if (image) {
+        copyImageToClipboard(image);
+      }
+    } else if (action === "delete") {
+      if (confirmDelete("确定要删除这张图片吗？")) {
+        deleteImage(activeImageContext);
+      }
+    }
+    closeImageMenu();
+  }
+
+  function closeImageMenu() {
+    elements.imageMenu.classList.remove("is-visible");
+    elements.imageMenu.setAttribute("aria-hidden", "true");
+    activeImageContext = null;
   }
 
   function openImagePreview(id) {
@@ -1017,8 +1057,14 @@
     applyPreviewTransform();
   }
 
+  function handlePreviewStageClick(event) {
+    if (event.target === elements.previewStage) {
+      closeImagePreview();
+    }
+  }
+
   function startPreviewDrag(event) {
-    if (!activePreviewId || event.button !== 0) {
+    if (!activePreviewId || event.button !== 0 || event.target !== elements.previewImage) {
       return;
     }
     isDraggingPreview = true;
