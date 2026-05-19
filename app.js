@@ -24,14 +24,14 @@
   };
 
   const DEFAULT_TITLES = {
-    "image-title": "🖼 图",
-    "note-title": "📝 记",
-    "quick-title": "🔗 链",
-    "todo-morning-title": "🌅 早",
-    "todo-noon-title": "☀️ 中",
-    "todo-evening-title": "🌙 晚",
-    "workspace-title": "🛠 工作空间",
-    "storage-title": "📁 双击可改名",
+    "image-title": "🎨 截图",
+    "note-title": "📝 便签",
+    "quick-title": "🔗 快捷链接",
+    "todo-morning-title": "☀️ 早上",
+    "todo-noon-title": "🌤️ 中午",
+    "todo-evening-title": "🌙 晚上",
+    "workspace-title": "📁 工作空间",
+    "storage-title": "🛠 双击可改名",
   };
 
   const EMPTY_HINTS = {
@@ -367,7 +367,8 @@
     try {
       const parsed = JSON.parse(await file.text());
       const importedState = normalizeImportedState(parsed);
-      if (!(await confirmDelete("导入 JSON 会覆盖当前页面所有数据，继续吗？", elements.settingsBtn))) {
+      const storagePanel = elements.storageEditor.closest(".panel");
+      if (!(await confirmDelete("导入 JSON 会覆盖当前页面所有数据，继续吗？", storagePanel))) {
         return;
       }
       state = importedState;
@@ -1061,6 +1062,9 @@
     if (elements.settingsMenu && !elements.settingsMenu.contains(event.target) && !elements.settingsBtn.contains(event.target)) {
       closeSettingsMenu();
     }
+    if (confirmClickoutEnabled && confirmResolve && !elements.bubbleBox.contains(event.target)) {
+      handleConfirmBubbleNo();
+    }
   }
 
   function handleDocumentDblClick(event) {
@@ -1208,18 +1212,11 @@
     if (textarea !== null && !(textarea instanceof HTMLElement)) {
       textarea = focusedTextarea || lastTextarea;
     }
-    const size = 72;
-    const gap = 12;
     if (!textarea) {
-      elements.focusCompanion.style.left = `${window.innerWidth - size - gap}px`;
-      elements.focusCompanion.style.top = `${window.innerHeight - size - gap}px`;
+      positionCompanionNearElement(null);
       return;
     }
-    const rect = textarea.getBoundingClientRect();
-    const left = Math.max(8, Math.min(window.innerWidth - size - 8, rect.right - size - 6));
-    const top = Math.max(8, Math.min(window.innerHeight - size - 8, rect.bottom - size - 6));
-    elements.focusCompanion.style.left = `${left}px`;
-    elements.focusCompanion.style.top = `${top}px`;
+    positionCompanionNearElement(textarea);
   }
 
   function showSaveBubble() {
@@ -2160,10 +2157,12 @@
   }
 
   let confirmResolve = null;
+  let confirmClickoutEnabled = false;
 
   function confirmDelete(message, anchorEl) {
     return new Promise((resolve) => {
       confirmResolve = resolve;
+      confirmClickoutEnabled = false;
       if (bubbleTimer) {
         clearTimeout(bubbleTimer);
         bubbleTimer = null;
@@ -2174,6 +2173,9 @@
       elements.focusCompanion.classList.add("is-visible");
       elements.focusCompanion.setAttribute("aria-hidden", "false");
       elements.bubbleBox.classList.add("is-visible");
+      requestAnimationFrame(() => {
+        confirmClickoutEnabled = true;
+      });
     });
   }
 
