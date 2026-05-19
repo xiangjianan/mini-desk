@@ -24,14 +24,14 @@
   };
 
   const DEFAULT_TITLES = {
-    "image-title": "图",
-    "note-title": "记",
-    "quick-title": "链",
-    "todo-morning-title": "早",
-    "todo-noon-title": "中",
-    "todo-evening-title": "晚",
-    "workspace-title": "工作空间",
-    "storage-title": "双击可改名",
+    "image-title": "🖼 图",
+    "note-title": "📝 记",
+    "quick-title": "🔗 链",
+    "todo-morning-title": "🌅 早",
+    "todo-noon-title": "☀️ 中",
+    "todo-evening-title": "🌙 晚",
+    "workspace-title": "🛠 工作空间",
+    "storage-title": "📁 双击可改名",
   };
 
   const EMPTY_HINTS = {
@@ -106,6 +106,7 @@
   let activePreviewId = null;
   let draggedTodo = null;
   let draggedImageId = null;
+  let draggedQuickId = null;
   let previewScale = 1;
   let previewX = 0;
   let previewY = 0;
@@ -190,6 +191,10 @@
     elements.toggleHiddenBtn.addEventListener("click", toggleHiddenButtons);
     elements.quickButtons.addEventListener("click", handleQuickButtonClick);
     elements.quickButtons.addEventListener("contextmenu", handleQuickContextMenu);
+    elements.quickButtons.addEventListener("dragstart", handleQuickDragStart);
+    elements.quickButtons.addEventListener("dragover", handleQuickDragOver);
+    elements.quickButtons.addEventListener("drop", handleQuickDrop);
+    elements.quickButtons.addEventListener("dragend", handleQuickDragEnd);
     elements.quickMenu.addEventListener("click", handleQuickMenuClick);
     elements.todoMenu.addEventListener("click", handleTodoMenuClick);
     elements.closeQuickDialog.addEventListener("click", closeQuickDialog);
@@ -290,7 +295,7 @@
       showToast("本地保存空间不足，图片仍保留在当前页面");
     }
     if (options.showBubble) {
-      showSaveBubble(options);
+      showSaveBubble();
     }
   }
 
@@ -840,8 +845,13 @@
       item.type = "button";
       item.className = `quick-button${button.hidden ? " is-hidden" : ""}`;
       item.dataset.id = button.id;
+      item.draggable = true;
       item.title = button.hidden ? "已隐藏，右键可取消隐藏" : "点击复制，右键编辑";
-      item.textContent = button.title;
+      if (button.type === "text") {
+        item.innerHTML = `<svg viewBox="0 0 24 24" width="14" height="14" aria-hidden="true" style="vertical-align:-2px;margin-right:2px;flex-shrink:0"><rect x="9" y="9" width="13" height="13" rx="2" ry="2" fill="none" stroke="currentColor" stroke-width="2"/><path d="M5 15H4a2 2 0 0 1-2-2V4a2 2 0 0 1 2-2h9a2 2 0 0 1 2 2v1" fill="none" stroke="currentColor" stroke-width="2"/></svg><span>${button.title}</span>`;
+      } else {
+        item.textContent = button.title;
+      }
       elements.quickButtons.append(item);
     });
   }
@@ -875,10 +885,10 @@
         text.type = "text";
         text.className = "todo-text";
         text.value = todo.text;
-        text.placeholder = "提醒事项";
+        text.placeholder = DEFAULT_TITLES[`todo-${period}-title`] || "提醒事项";
         text.autocomplete = "off";
         text.spellcheck = false;
-        text.setAttribute("aria-label", "编辑提醒事项");
+        text.setAttribute("aria-label", `编辑${DEFAULT_TITLES[`todo-${period}-title`] || "提醒事项"}`);
 
         item.append(checkbox, text);
         list.append(item);
@@ -933,7 +943,7 @@
     if ((event.metaKey || event.ctrlKey) && key.toLowerCase() === "s") {
       event.preventDefault();
       flushTextareaState();
-      saveState({ showBubble: true, defaultPosition: true });
+      saveState({ showBubble: true });
       return;
     }
 
@@ -1150,12 +1160,7 @@
     elements.focusCompanion.style.top = `${top}px`;
   }
 
-  function showSaveBubble(options = {}) {
-    if (options.defaultPosition || !focusedTextarea) {
-      positionFocusCompanion(null);
-    } else {
-      positionFocusCompanion(focusedTextarea);
-    }
+  function showSaveBubble() {
     const text = randomItem(saveMessages);
     const face = randomItem(kaomoji);
     elements.saveBubble.textContent = `${text} ${face}`;
@@ -1780,6 +1785,48 @@
     } catch (error) {
       showToast("无法读取剪贴板，请尝试 Ctrl+V 粘贴");
     }
+  }
+
+  function handleQuickDragStart(event) {
+    const button = event.target.closest(".quick-button");
+    if (!button) return;
+    draggedQuickId = button.dataset.id;
+    button.classList.add("is-dragging");
+    event.dataTransfer.effectAllowed = "move";
+  }
+
+  function handleQuickDragOver(event) {
+    event.preventDefault();
+    event.dataTransfer.dropEffect = "move";
+    const button = event.target.closest(".quick-button");
+    elements.quickButtons.querySelectorAll(".is-drag-over").forEach((el) => el.classList.remove("is-drag-over"));
+    if (button && button.dataset.id !== draggedQuickId) {
+      button.classList.add("is-drag-over");
+    }
+  }
+
+  function handleQuickDrop(event) {
+    event.preventDefault();
+    const button = event.target.closest(".quick-button");
+    if (!button || !draggedQuickId) return;
+    const targetId = button.dataset.id;
+    if (targetId === draggedQuickId) return;
+
+    const fromIndex = state.quickButtons.findIndex((b) => b.id === draggedQuickId);
+    const toIndex = state.quickButtons.findIndex((b) => b.id === targetId);
+    if (fromIndex === -1 || toIndex === -1) return;
+
+    const [moved] = state.quickButtons.splice(fromIndex, 1);
+    state.quickButtons.splice(toIndex, 0, moved);
+    saveState();
+    renderQuickButtons();
+  }
+
+  function handleQuickDragEnd() {
+    draggedQuickId = null;
+    elements.quickButtons.querySelectorAll(".is-dragging, .is-drag-over").forEach((el) => {
+      el.classList.remove("is-dragging", "is-drag-over");
+    });
   }
 
   function handleImageDragStart(event) {

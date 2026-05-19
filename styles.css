@@ -220,9 +220,9 @@ h3 {
   overflow-y: auto;
   display: flex;
   flex-direction: column;
-  gap: 4px;
+  gap: 8px;
   flex: 1 1 auto;
-  padding: 4px;
+  padding: 6px;
 }
 
 .image-card {
@@ -326,9 +326,9 @@ h3 {
   display: flex;
   flex-wrap: wrap;
   align-content: flex-start;
-  gap: 6px;
+  gap: 8px;
   flex: 1 1 auto;
-  padding: 6px;
+  padding: 8px;
 }
 
 .quick-button {
@@ -343,6 +343,14 @@ h3 {
 .quick-button.is-hidden {
   opacity: 0.42;
   border-style: dashed;
+}
+
+.quick-button.is-dragging {
+  opacity: 0.4;
+}
+
+.quick-button.is-drag-over {
+  border-top: 2px solid var(--line-strong);
 }
 
 .todo-panel {
