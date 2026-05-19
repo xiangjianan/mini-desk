@@ -655,7 +655,7 @@ h3 {
   display: flex;
   flex-direction: column;
   background: var(--panel);
-  border-right: 1px solid var(--line-control);
+  border-right: 1px solid var(--line-main);
 }
 
 .preview-sidebar-header {
@@ -700,7 +700,9 @@ h3 {
   justify-items: center;
   width: 100%;
   min-height: 72px;
-  border: 1px solid transparent;
+  padding: 0;
+  border: 0;
+  border-bottom: 1px solid var(--line-subtle);
   border-radius: var(--radius);
   overflow: hidden;
   background: var(--input);
