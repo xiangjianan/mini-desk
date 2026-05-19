@@ -744,22 +744,29 @@
         return line.slice(1);
       })
       .join("\n");
-    // Apply outdented text to textarea
     textarea.setRangeText(outdented, range.start, range.end, "preserve");
     const newStart = Math.max(range.start, textarea.selectionStart - removedBeforeSelection);
     const newEnd = Math.max(newStart, textarea.selectionEnd - removedTotal);
-    // Re-hydrate to fix bullet display after outdent
-    const config = getTextEditorConfig(textarea);
-    const cursorLine = textarea.value.slice(0, newStart).split("\n").length - 1;
-    const cursorCol = newStart - (textarea.value.slice(0, newStart).lastIndexOf("\n") + 1);
+    // Calculate cursor position relative to text content (excluding indent/bullet)
+    const lineStartPos = textarea.value.slice(0, newStart).lastIndexOf("\n") + 1;
+    const fullLine = textarea.value.slice(lineStartPos, textarea.value.indexOf("\n", newStart) === -1 ? textarea.value.length : textarea.value.indexOf("\n", newStart));
+    const indentLen = (fullLine.match(/^\t*/)?.[0].length || 0);
+    const bulletLen = fullLine.startsWith("\t".repeat(indentLen) + "- ") ? 2 : 0;
+    const textStartCol = indentLen + bulletLen;
+    const cursorColInText = Math.max(0, newStart - lineStartPos - textStartCol);
+    // Re-hydrate
     const lines = serializeTextEditorValue(textarea.value);
     textarea.value = textEditorLinesToText(lines);
+    // Restore cursor: same line, same position relative to text
+    const cursorLine = textarea.value.slice(0, lineStartPos).split("\n").length - 1;
     const hydratedLines = textarea.value.split("\n");
     let pos = 0;
     for (let i = 0; i < cursorLine && i < hydratedLines.length; i++) pos += hydratedLines[i].length + 1;
-    const lineText = hydratedLines[cursorLine] || "";
-    const restoredCol = Math.min(cursorCol, lineText.length);
-    textarea.setSelectionRange(pos + restoredCol, pos + restoredCol);
+    const newLine = hydratedLines[cursorLine] || "";
+    const newIndentLen = (newLine.match(/^\t*/)?.[0].length || 0);
+    const newBulletLen = newLine.startsWith("\t".repeat(newIndentLen) + "- ") ? 2 : 0;
+    const restoredPos = pos + newIndentLen + newBulletLen + Math.min(cursorColInText, newLine.length - newIndentLen - newBulletLen);
+    textarea.setSelectionRange(restoredPos, restoredPos);
   }
 
   function outdentWorkspaceSelection(textarea) {

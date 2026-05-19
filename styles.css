@@ -312,6 +312,7 @@ h3 {
   height: 100%;
   overflow: auto;
   tab-size: 2;
+  -moz-tab-size: 2;
   white-space: pre-wrap;
 }
 
@@ -662,7 +663,9 @@ h3 {
   display: flex;
   align-items: center;
   justify-content: flex-end;
-  padding: 8px;
+  min-height: 34px;
+  padding: 0 8px;
+  border-bottom: 1px solid var(--line-section);
 }
 
 .preview-close {
