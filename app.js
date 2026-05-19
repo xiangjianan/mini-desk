@@ -1403,6 +1403,8 @@
     state.todos[period] = state.todos[period].filter((todo) => !todo.done);
     saveState();
     renderTodos();
+    clearFocusedAreas();
+    hideFocusCompanion();
   }
 
   function handleTodoInput(event) {
