@@ -574,7 +574,7 @@
     const config = getTextEditorConfig(textarea);
     if (!config) return;
     textarea.value = textEditorLinesToText(state[config.stateKey]);
-    updateTextEditorBulletLayer(textarea);
+    
   }
 
   function textEditorLinesToText(lines) {
@@ -584,7 +584,9 @@
     return lines
       .map((line) => {
         const indent = Math.max(0, Number(line?.indent) || 0);
-        return `${"\t".repeat(indent)}${line?.text || ""}`;
+        const text = line?.text || "";
+        const tabs = "\t".repeat(indent);
+        return text ? `${tabs}· ${text}` : tabs;
       })
       .join("\n");
   }
@@ -596,10 +598,9 @@
     return value.split("\n").map((line) => {
       const indentMatch = line.match(/^\t*/);
       const indent = indentMatch ? indentMatch[0].length : 0;
-      return {
-        text: line.slice(indent),
-        indent,
-      };
+      let text = line.slice(indent);
+      if (text.startsWith("· ")) text = text.slice(2);
+      return { text, indent };
     });
   }
 
@@ -674,10 +675,7 @@
     const range = getTextEditorSelectedLineRange(textarea);
 
     if (originalStart === originalEnd) {
-      textarea.setRangeText("\t", range.start, range.start, "preserve");
-      const cursorPosition = originalStart + 1;
-      textarea.setSelectionRange(cursorPosition, cursorPosition);
-      updateTextEditorBulletLayer(textarea);
+      textarea.setRangeText("\t· ", range.start, range.start, "end");
       return;
     }
 
@@ -690,7 +688,7 @@
     const selectionStart = originalStart + countInsertedTabsBeforeOffset(selectedText, originalStart - range.start);
     const selectionEnd = originalEnd + countInsertedTabsBeforeOffset(selectedText, originalEnd - range.start);
     textarea.setSelectionRange(selectionStart, selectionEnd);
-    updateTextEditorBulletLayer(textarea);
+    
   }
 
   function countInsertedTabsBeforeOffset(text, offset) {
@@ -732,7 +730,7 @@
     const nextEnd = Math.max(nextStart, textarea.selectionEnd - removedTotal);
     textarea.setRangeText(outdented, range.start, range.end, "preserve");
     textarea.setSelectionRange(nextStart, nextEnd);
-    updateTextEditorBulletLayer(textarea);
+    
   }
 
   function outdentWorkspaceSelection(textarea) {
@@ -749,8 +747,7 @@
     if (!indent) {
       return false;
     }
-    textarea.setRangeText(`\n${indent}`, textarea.selectionStart, textarea.selectionEnd, "end");
-    updateTextEditorBulletLayer(textarea);
+    textarea.setRangeText(`\n${indent}· `, textarea.selectionStart, textarea.selectionEnd, "end");
     return true;
   }
 
@@ -769,47 +766,12 @@
     return { start: rangeStart, end: rangeEnd };
   }
 
-  function updateTextEditorBulletLayer(textarea) {
-    const config = getTextEditorConfig(textarea);
-    if (!config) return;
-
-    // Ensure bullet layer exists (removed from HTML, created dynamically)
-    let bulletLayer = textarea.parentElement.querySelector(".text-bullet-layer");
-    if (!bulletLayer) {
-      bulletLayer = document.createElement("div");
-      bulletLayer.className = "text-bullet-layer";
-      bulletLayer.setAttribute("aria-hidden", "true");
-      textarea.parentElement.insertBefore(bulletLayer, textarea);
-    }
-
-    bulletLayer.innerHTML = "";
-    const computedStyle = window.getComputedStyle(textarea);
-    const fontSize = parseFloat(computedStyle.fontSize);
-    const lineHeight = parseFloat(computedStyle.lineHeight) || fontSize * 1.55;
-    const tabWidth = fontSize * 2; // approx 2ch
-    const padTop = parseFloat(computedStyle.paddingTop) || 8;
-    const padLeft = parseFloat(computedStyle.paddingLeft) || 8;
-
-    textarea.value.split("\n").forEach((line, idx) => {
-      const indent = line.match(/^\t+/)?.[0].length || 0;
-      if (indent > 0) {
-        const dot = document.createElement("div");
-        dot.className = "text-bullet-dot";
-        dot.textContent = "·";
-        dot.style.position = "absolute";
-        dot.style.top = (padTop + idx * lineHeight) + "px";
-        dot.style.left = (padLeft + indent * tabWidth) + "px";
-        dot.style.fontSize = fontSize + "px";
-        dot.style.lineHeight = lineHeight + "px";
-        dot.style.pointerEvents = "none";
-        bulletLayer.append(dot);
-      }
-    });
-    bulletLayer.style.transform = `translateY(${-textarea.scrollTop}px)`;
+  function updateTextEditorBulletLayer() {
+    // no-op: bullets are inline in textarea text
   }
 
   function updateWorkspaceBulletLayer() {
-    updateTextEditorBulletLayer(elements.workspaceEditor);
+    // no-op
   }
 
   function renderImages() {
@@ -1081,7 +1043,7 @@
     const config = getTextEditorConfig(textarea);
     if (config) {
       flushTextEditorState(textarea);
-      updateTextEditorBulletLayer(textarea);
+      
       triggerTextEditorSave(textarea);
     }
   }
