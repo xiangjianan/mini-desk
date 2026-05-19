@@ -9,7 +9,7 @@
     noteEditor: {
       stateKey: "noteLines",
       bulletId: "noteBullets",
-      placeholder: "随手记：临时想法、灵感、草稿先放这里。",
+      placeholder: "",
     },
     workspaceEditor: {
       stateKey: "workspaceLines",
@@ -19,7 +19,7 @@
     storageEditor: {
       stateKey: "storageLines",
       bulletId: "storageBullets",
-      placeholder: "写下你的创意吧",
+      placeholder: "尽情发挥吧",
     },
   };
 
@@ -35,7 +35,7 @@
   };
 
   const EMPTY_HINTS = {
-    images: "把截图或图片粘贴到这里，可预览、复制、拖动排序。",
+    images: "Ctrl+v，把截图或图片粘贴到这里，可预览、复制、拖动排序。",
     quickButtons: "把常用链接或复制文本做成按钮，点击即可复制。",
     todos: {
       morning: "早：放启动任务、晨间提醒和今天最先处理的事项。",
@@ -928,7 +928,7 @@
       count.textContent = String(todos.filter((todo) => !todo.done).length);
 
       if (todos.length === 0) {
-        renderTodoEmptyHint(list, period);
+        list.innerHTML = "";
         return;
       }
 
@@ -948,7 +948,7 @@
         text.type = "text";
         text.className = "todo-text";
         text.value = todo.text;
-        text.placeholder = DEFAULT_TITLES[`todo-${period}-title`] || "提醒事项";
+        text.placeholder = "";
         text.autocomplete = "off";
         text.spellcheck = false;
         text.setAttribute("aria-label", `编辑${DEFAULT_TITLES[`todo-${period}-title`] || "提醒事项"}`);
@@ -1008,6 +1008,14 @@
       flushTextareaState();
       saveState({ showBubble: true });
       return;
+    }
+
+    if (key === "Escape") {
+      const active = document.activeElement;
+      if (active && (active.tagName === "INPUT" || active.tagName === "TEXTAREA" || active.isContentEditable)) {
+        active.blur();
+      }
+      if (!activePreviewId) return;
     }
 
     if (!activePreviewId) {
