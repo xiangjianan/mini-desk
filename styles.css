@@ -801,3 +801,33 @@ h3 {
 ::-webkit-scrollbar-thumb:hover {
   background: var(--muted);
 }
+
+.settings-btn {
+  position: fixed;
+  top: 12px;
+  right: 12px;
+  z-index: 100;
+  width: 36px;
+  height: 36px;
+  padding: 6px;
+  border: none;
+  border-radius: 8px;
+  background: var(--surface);
+  color: var(--muted);
+  cursor: pointer;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  box-shadow: 0 1px 4px rgba(0,0,0,0.1);
+  transition: color 0.15s, background 0.15s;
+}
+
+.settings-btn:hover {
+  color: var(--text);
+  background: var(--surface-hover, var(--surface));
+}
+
+.settings-btn svg {
+  width: 20px;
+  height: 20px;
+}

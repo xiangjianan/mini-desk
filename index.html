@@ -103,20 +103,6 @@
         <div class="panel-header">
           <h2 id="storage-title">工程文件</h2>
           <div class="header-actions">
-            <button id="importJsonBtn" class="ghost-button icon-action" type="button" aria-label="导入 JSON" title="导入 JSON">
-              <svg viewBox="0 0 24 24" aria-hidden="true">
-                <path d="M12 3v12" />
-                <path d="M7 8l5-5 5 5" />
-                <path d="M5 17v3h14v-3" />
-              </svg>
-            </button>
-            <button id="exportJsonBtn" class="ghost-button icon-action" type="button" aria-label="导出 JSON" title="导出 JSON">
-              <svg viewBox="0 0 24 24" aria-hidden="true">
-                <path d="M12 21V9" />
-                <path d="M7 16l5 5 5-5" />
-                <path d="M5 7V4h14v3" />
-              </svg>
-            </button>
             <button id="themeToggle" class="ghost-button icon-action" type="button" aria-label="切换主题" title="切换主题">
               <svg id="iconSun" viewBox="0 0 24 24" aria-hidden="true" style="display:none">
                 <circle cx="12" cy="12" r="5" />
@@ -135,7 +121,7 @@
             </button>
           </div>
         </div>
-        <input id="importJsonInput" type="file" accept="application/json,.json" hidden />
+        </div>
         <div class="text-editor-frame">
           <textarea id="storageEditor" class="text-editor-textarea board-textarea large-textarea" placeholder="工程文件：放路径、命令、配置片段，随时复制查看。" spellcheck="false"></textarea>
         </div>
@@ -211,6 +197,19 @@
         <button type="button" data-action="delete">删除</button>
       </div>
     </div>
+
+    <div id="settingsBtn" class="settings-btn" title="设置">
+      <svg viewBox="0 0 24 24" aria-hidden="true" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+        <circle cx="12" cy="12" r="3"/>
+        <path d="M19.4 15a1.65 1.65 0 0 0 .33 1.82l.06.06a2 2 0 1 1-2.83 2.83l-.06-.06a1.65 1.65 0 0 0-1.82-.33 1.65 1.65 0 0 0-1 1.51V21a2 2 0 0 1-4 0v-.09A1.65 1.65 0 0 0 9 19.4a1.65 1.65 0 0 0-1.82.33l-.06.06a2 2 0 1 1-2.83-2.83l.06-.06A1.65 1.65 0 0 0 4.68 15a1.65 1.65 0 0 0-1.51-1H3a2 2 0 0 1 0-4h.09A1.65 1.65 0 0 0 4.6 9a1.65 1.65 0 0 0-.33-1.82l-.06-.06a2 2 0 1 1 2.83-2.83l.06.06A1.65 1.65 0 0 0 9 4.68a1.65 1.65 0 0 0 1-1.51V3a2 2 0 0 1 4 0v.09a1.65 1.65 0 0 0 1 1.51 1.65 1.65 0 0 0 1.82-.33l.06-.06a2 2 0 1 1 2.83 2.83l-.06.06A1.65 1.65 0 0 0 19.4 9a1.65 1.65 0 0 0 1.51 1H21a2 2 0 0 1 0 4h-.09a1.65 1.65 0 0 0-1.51 1z"/>
+      </svg>
+    </div>
+    <div id="settingsMenu" class="context-menu" role="menu" aria-hidden="true">
+      <button type="button" data-action="import">导入 JSON</button>
+      <button type="button" data-action="export">导出 JSON</button>
+      <button type="button" data-action="github">GitHub</button>
+    </div>
+    <input id="importJsonInput" type="file" accept="application/json,.json" hidden />
 
     <script src="app.js"></script>
   </body>

@@ -159,8 +159,6 @@
     elements.addQuickBtn = document.getElementById("addQuickBtn");
     elements.quickButtons = document.getElementById("quickButtons");
     elements.toggleHiddenBtn = document.getElementById("toggleHiddenBtn");
-    elements.importJsonBtn = document.getElementById("importJsonBtn");
-    elements.exportJsonBtn = document.getElementById("exportJsonBtn");
     elements.importJsonInput = document.getElementById("importJsonInput");
     elements.themeToggle = document.getElementById("themeToggle");
     elements.iconSun = document.getElementById("iconSun");
@@ -189,6 +187,8 @@
     elements.imageMenu = document.getElementById("imageMenu");
     elements.previewList = document.getElementById("previewList");
     elements.previewMenu = document.getElementById("previewMenu");
+    elements.settingsBtn = document.getElementById("settingsBtn");
+    elements.settingsMenu = document.getElementById("settingsMenu");
   }
 
   function bindEvents() {
@@ -219,8 +219,6 @@
     elements.quickEditForm.addEventListener("submit", handleQuickEditSubmit);
     elements.editQuickIsLink.addEventListener("change", updateEditValueLabel);
     elements.deleteQuickInDialog.addEventListener("click", deleteActiveQuickFromDialog);
-    elements.importJsonBtn.addEventListener("click", () => elements.importJsonInput.click());
-    elements.exportJsonBtn.addEventListener("click", exportJsonState);
     elements.importJsonInput.addEventListener("change", handleImportJson);
     elements.themeToggle.addEventListener("click", toggleTheme);
     document.querySelectorAll(".clear-completed-button").forEach((button) => {
@@ -257,6 +255,8 @@
     elements.previewStage.addEventListener("mousedown", startPreviewDrag);
     elements.previewMenu.addEventListener("click", handlePreviewMenuClick);
     elements.previewList.addEventListener("click", handlePreviewListClick);
+    elements.settingsBtn.addEventListener("click", handleSettingsClick);
+    elements.settingsMenu.addEventListener("click", handleSettingsMenuClick);
     window.addEventListener("mousemove", movePreviewDrag);
     window.addEventListener("mouseup", endPreviewDrag);
   }
@@ -586,7 +586,7 @@
         const indent = Math.max(0, Number(line?.indent) || 0);
         const text = line?.text || "";
         const tabs = "\t".repeat(indent);
-        return text ? `${tabs}· ${text}` : tabs;
+        return text ? `${tabs}- ${text}` : tabs;
       })
       .join("\n");
   }
@@ -599,7 +599,7 @@
       const indentMatch = line.match(/^\t*/);
       const indent = indentMatch ? indentMatch[0].length : 0;
       let text = line.slice(indent);
-      if (text.startsWith("· ")) text = text.slice(2);
+      if (text.startsWith("- ")) text = text.slice(2);
       return { text, indent };
     });
   }
@@ -658,10 +658,12 @@
       triggerTextEditorSave(event.currentTarget);
       return;
     }
-    if (event.key === "Enter" && insertIndentedLineBreak(event.currentTarget)) {
+    if (event.key === "Enter") {
       event.preventDefault();
-      flushTextEditorState(event.currentTarget);
-      triggerTextEditorSave(event.currentTarget);
+      if (insertIndentedLineBreak(event.currentTarget)) {
+        flushTextEditorState(event.currentTarget);
+        triggerTextEditorSave(event.currentTarget);
+      }
     }
   }
 
@@ -675,7 +677,7 @@
     const range = getTextEditorSelectedLineRange(textarea);
 
     if (originalStart === originalEnd) {
-      textarea.setRangeText("\t· ", range.start, range.start, "end");
+      textarea.setRangeText("\t", range.start, range.start, "end");
       return;
     }
 
@@ -726,11 +728,24 @@
         return line.slice(1);
       })
       .join("\n");
-    const nextStart = Math.max(range.start, textarea.selectionStart - removedBeforeSelection);
-    const nextEnd = Math.max(nextStart, textarea.selectionEnd - removedTotal);
-    textarea.setRangeText(outdented, range.start, range.end, "preserve");
-    textarea.setSelectionRange(nextStart, nextEnd);
-    
+    const newStart = Math.max(range.start, textarea.selectionStart - removedBeforeSelection);
+    const newEnd = Math.max(newStart, textarea.selectionEnd - removedTotal);
+    textarea.setSelectionRange(newStart, newEnd);
+    // Re-hydrate to fix bullet display after outdent
+    const config = getTextEditorConfig(textarea);
+    if (config) {
+      const cursorLine = textarea.value.slice(0, newStart).split("\n").length - 1;
+      const cursorCol = newStart - (textarea.value.slice(0, newStart).lastIndexOf("\n") + 1);
+      const lines = serializeTextEditorValue(textarea.value);
+      textarea.value = textEditorLinesToText(lines);
+      // Restore cursor position (approximate, on same line)
+      const hydratedLines = textarea.value.split("\n");
+      let pos = 0;
+      for (let i = 0; i < cursorLine && i < hydratedLines.length; i++) pos += hydratedLines[i].length + 1;
+      const lineText = hydratedLines[cursorLine] || "";
+      const restoredCol = Math.min(cursorCol, lineText.length);
+      textarea.setSelectionRange(pos + restoredCol, pos + restoredCol);
+    }
   }
 
   function outdentWorkspaceSelection(textarea) {
@@ -744,10 +759,8 @@
     const lineStart = textarea.value.lastIndexOf("\n", textarea.selectionStart - 1) + 1;
     const line = textarea.value.slice(lineStart, textarea.selectionStart);
     const indent = line.match(/^\t*/)?.[0] || "";
-    if (!indent) {
-      return false;
-    }
-    textarea.setRangeText(`\n${indent}· `, textarea.selectionStart, textarea.selectionEnd, "end");
+    const bullet = indent ? "- " : "";
+    textarea.setRangeText(`\n${indent}${bullet}`, textarea.selectionStart, textarea.selectionEnd, "end");
     return true;
   }
 
@@ -975,6 +988,9 @@
     }
     if (elements.previewMenu && !elements.previewMenu.contains(event.target)) {
       closePreviewMenu();
+    }
+    if (elements.settingsMenu && !elements.settingsMenu.contains(event.target) && !elements.settingsBtn.contains(event.target)) {
+      closeSettingsMenu();
     }
   }
 
@@ -1990,6 +2006,34 @@
 
   function createId() {
     return `${Date.now().toString(36)}-${Math.random().toString(36).slice(2, 9)}`;
+  }
+
+  function closeSettingsMenu() {
+    elements.settingsMenu.classList.remove("is-visible");
+    elements.settingsMenu.setAttribute("aria-hidden", "true");
+  }
+
+  function handleSettingsClick(event) {
+    event.stopPropagation();
+    const rect = elements.settingsBtn.getBoundingClientRect();
+    elements.settingsMenu.style.left = `${rect.right - 130}px`;
+    elements.settingsMenu.style.top = `${rect.bottom + 4}px`;
+    elements.settingsMenu.classList.toggle("is-visible");
+    elements.settingsMenu.setAttribute("aria-hidden", !elements.settingsMenu.classList.contains("is-visible"));
+  }
+
+  function handleSettingsMenuClick(event) {
+    const btn = event.target.closest("button[data-action]");
+    if (!btn) return;
+    const action = btn.dataset.action;
+    if (action === "import") {
+      elements.importJsonInput.click();
+    } else if (action === "export") {
+      exportJsonState();
+    } else if (action === "github") {
+      window.open("https://github.com/xiangjianan/todolist", "_blank");
+    }
+    closeSettingsMenu();
   }
 
   function clamp(value, min, max) {
