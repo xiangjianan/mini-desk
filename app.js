@@ -761,7 +761,6 @@
     const restoredCol = Math.min(cursorCol, lineText.length);
     textarea.setSelectionRange(pos + restoredCol, pos + restoredCol);
   }
-  }
 
   function outdentWorkspaceSelection(textarea) {
     outdentTextEditorSelection(textarea);
