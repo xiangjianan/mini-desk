@@ -790,7 +790,7 @@
         const dot = document.createElement("span");
         dot.className = "text-bullet-dot";
         dot.textContent = "·";
-        dot.style.marginLeft = `calc(${indent * 2}ch - 0.75ch)`;
+        dot.style.marginLeft = `calc(${indent * 2}ch - 0.5em)`;
         row.append(dot);
       }
       bulletLayer.append(row);
