@@ -49,7 +49,7 @@ test("textarea indentation uses real tab characters and keeps bullets at line st
   assert.match(js, /const cursorPosition = originalStart \+ 1;[\s\S]*textarea\.setSelectionRange\(cursorPosition, cursorPosition\);/);
   assert.match(js, /\.map\(\(line\) => `\\t\$\{line\}`\)/);
   assert.match(js, /setRangeText\(`\\n\$\{indent\}`/);
-  assert.doesNotMatch(js, /dot\.style\.marginLeft/);
+  assert.match(js, /dot\.style\.marginLeft = `calc\(\$\{indent \* 2\}ch - 0\.75ch\)`/);
 });
 
 test("focused areas are visually emphasized and typography is lighter", () => {
@@ -57,11 +57,23 @@ test("focused areas are visually emphasized and typography is lighter", () => {
 
   assert.match(css, /body\s*{[^}]*font-size:\s*13px/s);
   assert.match(css, /font-weight:\s*400/);
-  assert.match(css, /\.panel\.is-focused[\s\S]*box-shadow/);
-  assert.match(css, /\.split-block\.is-focused[\s\S]*box-shadow/);
-  assert.match(css, /\.todo-section\.is-focused[\s\S]*box-shadow/);
+  assert.match(css, /\.panel\.is-focused[\s\S]*box-shadow:\s*inset 0 0 0 1px var\(--line-strong\)/);
+  assert.match(css, /\.split-block\.is-focused[\s\S]*box-shadow:\s*inset 0 0 0 1px var\(--line-strong\)/);
+  assert.match(css, /\.todo-section\.is-focused[\s\S]*box-shadow:\s*inset 0 0 0 1px var\(--line-strong\)/);
   assert.match(css, /\.text-editor-textarea/);
   assert.match(css, /\.text-bullet-layer/);
+});
+
+test("todo focus and image persistence avoid stale borders and localStorage image quota", () => {
+  const js = read("app.js");
+
+  assert.match(js, /const IMAGE_DB_NAME = "todo-board-images-v1"/);
+  assert.match(js, /function openImageDb/);
+  assert.match(js, /async function hydrateStoredImages/);
+  assert.match(js, /async function storeImagePayload/);
+  assert.match(js, /function serializeImagesForLocalStorage/);
+  assert.match(js, /localStorage\.setItem\(STORAGE_KEY, JSON\.stringify\(getSerializableState\(\{ includeImageData: false \}\)\)\)/);
+  assert.match(js, /section\.classList\.remove\("is-focused"\)/);
 });
 
 test("empty regions explain their purpose", () => {

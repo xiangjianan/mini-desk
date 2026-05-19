@@ -2,6 +2,8 @@
   "use strict";
 
   const STORAGE_KEY = "todo-board-state-v1";
+  const IMAGE_DB_NAME = "todo-board-images-v1";
+  const IMAGE_STORE_NAME = "images";
 
   const TEXT_EDITORS = {
     noteEditor: {
@@ -138,8 +140,9 @@
 
   document.addEventListener("DOMContentLoaded", init);
 
-  function init() {
+  async function init() {
     cacheElements();
+    await hydrateStoredImages();
     applyTheme();
     applyCustomTitles();
     hydrateTextareas();
@@ -304,13 +307,19 @@
   }
 
   function saveState(options = {}) {
-    localStorage.setItem(STORAGE_KEY, JSON.stringify(getSerializableState()));
+    try {
+      localStorage.setItem(STORAGE_KEY, JSON.stringify(getSerializableState({ includeImageData: false })));
+    } catch (error) {
+      console.warn("保存本地数据失败。", error);
+      showToast("本地保存空间不足，图片仍保留在当前页面");
+    }
     if (options.showBubble) {
       showSaveBubble(options);
     }
   }
 
-  function getSerializableState() {
+  function getSerializableState(options = {}) {
+    const { includeImageData = true } = options;
     const todos = Object.fromEntries(
       Object.entries(state.todos).map(([period, todosForPeriod]) => [
         period,
@@ -319,8 +328,16 @@
     );
     return {
       ...state,
+      images: includeImageData ? state.images : serializeImagesForLocalStorage(state.images),
       todos,
     };
+  }
+
+  function serializeImagesForLocalStorage(images) {
+    return images.map((image) => ({
+      id: image.id,
+      createdAt: image.createdAt,
+    }));
   }
 
   function exportJsonState() {
@@ -356,6 +373,7 @@
         return;
       }
       state = importedState;
+      await persistImagePayloads();
       saveState();
       applyTheme();
       applyCustomTitles();
@@ -415,10 +433,10 @@
       return [];
     }
     return images
-      .filter((image) => image && typeof image.src === "string")
+      .filter((image) => image && (typeof image.src === "string" || image.id !== undefined))
       .map((image) => ({
         id: String(image.id || createId()),
-        src: image.src,
+        src: typeof image.src === "string" ? image.src : "",
         createdAt: Number(image.createdAt) || Date.now(),
       }));
   }
@@ -455,6 +473,100 @@
 
   function isPlainObject(value) {
     return value !== null && typeof value === "object" && !Array.isArray(value);
+  }
+
+  function openImageDb() {
+    return new Promise((resolve, reject) => {
+      if (!window.indexedDB) {
+        reject(new Error("IndexedDB 不可用"));
+        return;
+      }
+
+      const request = window.indexedDB.open(IMAGE_DB_NAME, 1);
+      request.onupgradeneeded = () => {
+        const db = request.result;
+        if (!db.objectStoreNames.contains(IMAGE_STORE_NAME)) {
+          db.createObjectStore(IMAGE_STORE_NAME, { keyPath: "id" });
+        }
+      };
+      request.onsuccess = () => resolve(request.result);
+      request.onerror = () => reject(request.error || new Error("无法打开图片存储"));
+    });
+  }
+
+  async function storeImagePayload(image) {
+    const db = await openImageDb();
+    return new Promise((resolve, reject) => {
+      const transaction = db.transaction(IMAGE_STORE_NAME, "readwrite");
+      transaction.objectStore(IMAGE_STORE_NAME).put({
+        id: image.id,
+        src: image.src,
+      });
+      transaction.oncomplete = () => {
+        db.close();
+        resolve();
+      };
+      transaction.onerror = () => {
+        db.close();
+        reject(transaction.error || new Error("图片写入失败"));
+      };
+    });
+  }
+
+  async function getStoredImagePayload(id) {
+    const db = await openImageDb();
+    return new Promise((resolve, reject) => {
+      const transaction = db.transaction(IMAGE_STORE_NAME, "readonly");
+      const request = transaction.objectStore(IMAGE_STORE_NAME).get(id);
+      request.onsuccess = () => resolve(request.result || null);
+      request.onerror = () => reject(request.error || new Error("图片读取失败"));
+      transaction.oncomplete = () => db.close();
+      transaction.onerror = () => {
+        db.close();
+        reject(transaction.error || new Error("图片读取失败"));
+      };
+    });
+  }
+
+  async function deleteStoredImage(id) {
+    const db = await openImageDb();
+    return new Promise((resolve, reject) => {
+      const transaction = db.transaction(IMAGE_STORE_NAME, "readwrite");
+      transaction.objectStore(IMAGE_STORE_NAME).delete(id);
+      transaction.oncomplete = () => {
+        db.close();
+        resolve();
+      };
+      transaction.onerror = () => {
+        db.close();
+        reject(transaction.error || new Error("图片删除失败"));
+      };
+    });
+  }
+
+  async function persistImagePayloads() {
+    const imagesWithPayload = state.images.filter((image) => image.src);
+    await Promise.all(imagesWithPayload.map((image) => storeImagePayload(image)));
+  }
+
+  async function hydrateStoredImages() {
+    try {
+      const hydratedImages = await Promise.all(
+        state.images.map(async (image) => {
+          if (image.src) {
+            await storeImagePayload(image);
+            return image;
+          }
+          const stored = await getStoredImagePayload(image.id);
+          return stored?.src ? { ...image, src: stored.src } : null;
+        })
+      );
+      state.images = hydratedImages.filter(Boolean);
+      saveState();
+    } catch (error) {
+      console.warn("图片数据恢复失败。", error);
+      state.images = state.images.filter((image) => image.src);
+    }
   }
 
   function hydrateTextareas() {
@@ -678,6 +790,7 @@
         const dot = document.createElement("span");
         dot.className = "text-bullet-dot";
         dot.textContent = "·";
+        dot.style.marginLeft = `calc(${indent * 2}ch - 0.75ch)`;
         row.append(dot);
       }
       bulletLayer.append(row);
@@ -815,15 +928,22 @@
         return;
       }
       const reader = new FileReader();
-      reader.onload = () => {
-        state.images.push({
+      reader.onload = async () => {
+        const image = {
           id: createId(),
           src: reader.result,
           createdAt: Date.now(),
-        });
-        saveState();
-        renderImages();
-        showToast("图片已添加到图床");
+        };
+        try {
+          await storeImagePayload(image);
+          state.images.push(image);
+          saveState();
+          renderImages();
+          showToast("图片已添加到图床");
+        } catch (error) {
+          console.warn("图片保存失败。", error);
+          showToast("图片保存失败，请稍后再试");
+        }
       };
       reader.readAsDataURL(file);
     });
@@ -1338,9 +1458,9 @@
       if (!section || document.activeElement?.closest(".todo-section") === section) {
         return;
       }
+      section.classList.remove("is-focused");
       if (focusedTextarea === section) {
         focusedTextarea = null;
-        clearFocusedAreas();
         hideFocusCompanion();
       }
     });
@@ -1826,6 +1946,7 @@
 
   function deleteImage(id) {
     state.images = state.images.filter((image) => image.id !== id);
+    deleteStoredImage(id).catch((error) => console.warn("图片存储删除失败。", error));
     saveState();
     renderImages();
     showToast("图片已删除");

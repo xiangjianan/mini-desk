@@ -1,6 +1,6 @@
 # To Do List 看板
 
-这是一个静态 To Do List 看板，使用 `index.html`、`styles.css` 和 `app.js` 实现。页面铺满整个浏览器视口，不依赖前端框架，数据保存在浏览器 `localStorage` 中。
+这是一个静态 To Do List 看板，使用 `index.html`、`styles.css` 和 `app.js` 实现。页面铺满整个浏览器视口，不依赖前端框架，文本和配置保存在浏览器 `localStorage` 中，图片原文保存在 IndexedDB 中。
 
 ## 使用方式
 
@@ -24,6 +24,7 @@
 - 所有删除操作都会先弹出二次确认。
 - 支持白天模式和黑夜模式切换。
 - 支持导入、导出 JSON，覆盖页面的主题、标题、图片、便签、快捷按钮、提醒事项、工作空间和工程文件数据。
+- 图片原文保存在浏览器 IndexedDB 中，页面状态在 `localStorage` 中只保存图片元数据，避免多张大图触发本地存储上限。
 - 页面为紧凑线框布局，主要区域之间只使用单条分隔线。
 
 ## 图床快捷键
@@ -59,4 +60,4 @@
 todo-board-state-v1
 ```
 
-清空浏览器站点数据或手动删除该键会清除看板内容。
+图片原文保存在同站点 IndexedDB 的 `todo-board-images-v1` 数据库中。清空浏览器站点数据会清除看板内容和图片；只手动删除 `localStorage` 键会清除看板状态，但可能保留 IndexedDB 中的图片原文。
