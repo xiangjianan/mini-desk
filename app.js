@@ -644,9 +644,16 @@
     }
     if (event.key === "Enter") {
       event.preventDefault();
-      if (insertIndentedLineBreak(event.currentTarget)) {
-        flushTextEditorState(event.currentTarget);
-        triggerTextEditorSave(event.currentTarget);
+      const textarea = event.currentTarget;
+      // Smart Enter on empty bullet lines
+      if (textarea.selectionStart === textarea.selectionEnd && handleEmptyBulletEnter(textarea)) {
+        flushTextEditorState(textarea);
+        triggerTextEditorSave(textarea);
+        return;
+      }
+      if (insertIndentedLineBreak(textarea)) {
+        flushTextEditorState(textarea);
+        triggerTextEditorSave(textarea);
       }
     }
   }
@@ -673,10 +680,19 @@
       const hydratedLines = textarea.value.split("\n");
       let pos = 0;
       for (let i = 0; i < lineIdx; i++) pos += hydratedLines[i].length + 1;
+      const targetLine = hydratedLines[lineIdx] || "";
       const tabCount = lines[lineIdx]?.indent || 0;
-      const bulletLen = (lines[lineIdx]?.text) ? 2 : 0; // "- " length
+      const hasBullet = targetLine.slice(tabCount).startsWith("- ");
+      // If line is empty text, ensure "- " bullet is present after tabs
+      if (!lines[lineIdx]?.text && !hasBullet) {
+        const before = targetLine.slice(0, tabCount);
+        const after = targetLine.slice(tabCount);
+        hydratedLines[lineIdx] = `${before}- ${after}`;
+        textarea.value = hydratedLines.join("\n");
+      }
+      const bulletLen = (lines[lineIdx]?.text || hydratedLines[lineIdx].slice(tabCount).startsWith("- ")) ? 2 : 0;
       const restoreCol = Math.min(col + 1, tabCount + bulletLen + (lines[lineIdx]?.text?.length || 0));
-      const finalPos = pos + Math.max(restoreCol, tabCount + bulletLen);
+      const finalPos = pos + Math.max(restoreCol, tabCount + (hydratedLines[lineIdx]?.slice(tabCount).startsWith("- ") ? 2 : 0));
       textarea.setSelectionRange(finalPos, finalPos);
       return;
     }
@@ -690,7 +706,7 @@
     const selectionStart = originalStart + countInsertedTabsBeforeOffset(selectedText, originalStart - range.start);
     const selectionEnd = originalEnd + countInsertedTabsBeforeOffset(selectedText, originalEnd - range.start);
     textarea.setSelectionRange(selectionStart, selectionEnd);
-    
+
   }
 
   function countInsertedTabsBeforeOffset(text, offset) {
@@ -708,14 +724,17 @@
   }
 
   function outdentTextEditorSelection(textarea) {
+    const isSingleCursor = textarea.selectionStart === textarea.selectionEnd;
     const range = getTextEditorSelectedLineRange(textarea);
     const selectedText = textarea.value.slice(range.start, range.end);
     // Save cursor position relative to text content before modification
     const cursorLineStart = textarea.value.lastIndexOf("\n", Math.max(0, textarea.selectionStart - 1)) + 1;
-    const cursorLine = textarea.value.slice(cursorLineStart, textarea.value.indexOf("\n", textarea.selectionStart) === -1 ? textarea.value.length : textarea.value.indexOf("\n", textarea.selectionStart));
+    const cursorLineEnd = (() => { const i = textarea.value.indexOf("\n", textarea.selectionStart); return i === -1 ? textarea.value.length : i; })();
+    const cursorLine = textarea.value.slice(cursorLineStart, cursorLineEnd);
     const oldIndentLen = (cursorLine.match(/^\t*/)?.[0].length || 0);
     const oldBulletLen = cursorLine.slice(oldIndentLen).startsWith("- ") ? 2 : 0;
     const oldTextStart = oldIndentLen + oldBulletLen;
+    const oldTextContent = cursorLine.slice(oldTextStart);
     const cursorColInText = Math.max(0, textarea.selectionStart - cursorLineStart - oldTextStart);
     const lineIdx = textarea.value.slice(0, cursorLineStart).split("\n").length - 1;
     // Outdent selected lines
@@ -731,6 +750,12 @@
     textarea.setRangeText(outdented, range.start, range.end, "end");
     // Serialize and re-hydrate to fix bullet display
     const lines = serializeTextEditorValue(textarea.value);
+    // For single cursor on empty bullet line: if outdent reaches indent 0, clear the dash
+    if (isSingleCursor && lineIdx >= 0 && lineIdx < lines.length) {
+      if (!oldTextContent.trim() && lines[lineIdx].indent === 0) {
+        lines[lineIdx].text = "";
+      }
+    }
     textarea.value = textEditorLinesToText(lines);
     // Restore cursor on same line, same relative position to text
     const hydratedLines = textarea.value.split("\n");
@@ -747,6 +772,26 @@
 
   function outdentWorkspaceSelection(textarea) {
     outdentTextEditorSelection(textarea);
+  }
+
+  function handleEmptyBulletEnter(textarea) {
+    const lineStart = textarea.value.lastIndexOf("\n", Math.max(0, textarea.selectionStart - 1)) + 1;
+    const lineEnd = (() => { const i = textarea.value.indexOf("\n", textarea.selectionStart); return i === -1 ? textarea.value.length : i; })();
+    const lineContent = textarea.value.slice(lineStart, lineEnd);
+    // Check if line is only tabs + "- " (empty bullet)
+    if (/^\t*- $/.test(lineContent)) {
+      // Clear the line entirely, cursor to column 0
+      textarea.setRangeText("", lineStart, lineEnd, "end");
+      textarea.setSelectionRange(lineStart, lineStart);
+      return true;
+    }
+    // Check if line is truly empty (no indent, no dash)
+    if (lineContent === "") {
+      // Insert new line at position 0
+      textarea.setRangeText("\n", textarea.selectionStart, textarea.selectionEnd, "end");
+      return true;
+    }
+    return false;
   }
 
   function insertIndentedLineBreak(textarea) {
