@@ -367,7 +367,7 @@
     try {
       const parsed = JSON.parse(await file.text());
       const importedState = normalizeImportedState(parsed);
-      if (!(await confirmDelete("导入 JSON 会覆盖当前页面所有数据，继续吗？"))) {
+      if (!(await confirmDelete("导入 JSON 会覆盖当前页面所有数据，继续吗？", elements.settingsBtn))) {
         return;
       }
       state = importedState;
@@ -1015,7 +1015,7 @@
 
     if (key === "Delete" || key === "Backspace") {
       event.preventDefault();
-      if (await confirmDelete("确定要删除这张图片吗？")) {
+      if (await confirmDelete("确定要删除这张图片吗？", elements.previewStage)) {
         const nextId = findAdjacentImageId(activePreviewId, 1);
         deleteImage(activePreviewId);
         if (nextId) {
@@ -1225,21 +1225,28 @@
   function showSaveBubble() {
     const text = randomItem(saveMessages);
     const face = randomItem(kaomoji);
-    showBubbleMessage(`${text} ${face}`);
+    showBubbleMessage(`${text} ${face}`, focusedTextarea);
   }
 
-  function showEncourageBubble(message) {
-    showBubbleMessage(message);
-  }
-
-  function showBubbleMessage(text) {
-    elements.bubbleText.textContent = text;
-    elements.bubbleActions.hidden = true;
-    // Position companion at bottom-center of viewport
+  function positionCompanionNearElement(el) {
     const size = 72;
     const gap = 12;
-    elements.focusCompanion.style.left = `${Math.max(8, (window.innerWidth - size) / 2)}px`;
-    elements.focusCompanion.style.top = `${window.innerHeight - size - gap}px`;
+    if (!el) {
+      elements.focusCompanion.style.left = `${window.innerWidth - size - gap}px`;
+      elements.focusCompanion.style.top = `${window.innerHeight - size - gap}px`;
+      return;
+    }
+    const rect = el.getBoundingClientRect();
+    const left = Math.max(8, Math.min(window.innerWidth - size - 8, rect.right - size - gap));
+    const top = Math.max(8, Math.min(window.innerHeight - size - 8, rect.bottom - size - gap));
+    elements.focusCompanion.style.left = `${left}px`;
+    elements.focusCompanion.style.top = `${top}px`;
+  }
+
+  function showBubbleMessage(text, anchorEl) {
+    elements.bubbleText.textContent = text;
+    elements.bubbleActions.hidden = true;
+    positionCompanionNearElement(anchorEl);
     elements.focusCompanion.classList.add("is-visible");
     elements.focusCompanion.setAttribute("aria-hidden", "false");
     elements.bubbleBox.classList.add("is-visible");
@@ -1266,7 +1273,7 @@
     if (item.type === "link") {
       window.open(item.value, "_blank");
     } else {
-      copyTextWithBubble(item.value);
+      copyTextWithBubble(item.value, button);
     }
   }
 
@@ -1301,7 +1308,8 @@
       toggleQuickHidden(activeQuickId);
     } else if (action === "delete") {
       const item = findQuickButton(activeQuickId);
-      if (await confirmDelete(`确定要删除快捷按钮「${item?.title || ""}」吗？`)) {
+      const quickEl = document.querySelector(`.quick-button[data-id="${activeQuickId}"]`);
+      if (await confirmDelete(`确定要删除快捷按钮「${item?.title || ""}」吗？`, quickEl)) {
         deleteQuickButton(activeQuickId);
       } else {
         shouldCloseMenu = false;
@@ -1384,7 +1392,8 @@
   async function deleteActiveQuickFromDialog() {
     if (activeQuickId) {
       const item = findQuickButton(activeQuickId);
-      if (await confirmDelete(`确定要删除快捷按钮「${item?.title || ""}」吗？`)) {
+      const quickEl = document.querySelector(`.quick-button[data-id="${activeQuickId}"]`);
+      if (await confirmDelete(`确定要删除快捷按钮「${item?.title || ""}」吗？`, quickEl)) {
         deleteQuickButton(activeQuickId);
         closeQuickDialog();
       }
@@ -1455,14 +1464,15 @@
       return;
     }
     const isChecked = event.target.checked;
+    const anchorSection = item.closest(".todo-section");
     todo.done = isChecked;
     normalizeTodoPeriod(item.dataset.period);
     saveState();
     renderTodos();
-    if (isChecked) {
+    if (isChecked && anchorSection) {
       const msg = randomItem(encourageMessages);
       const face = randomItem(kaomoji);
-      showEncourageBubble(`${msg} ${face}`);
+      showBubbleMessage(`${msg} ${face}`, anchorSection);
     }
   }
 
@@ -1473,7 +1483,7 @@
       showToast("没有已完成事项");
       return;
     }
-    if (!(await confirmDelete(`确定要清除 ${completedCount} 条已完成事项吗？`))) {
+    if (!(await confirmDelete(`确定要清除 ${completedCount} 条已完成事项吗？`, event.currentTarget))) {
       return;
     }
     state.todos[period] = state.todos[period].filter((todo) => !todo.done);
@@ -1644,7 +1654,9 @@
 
   async function deleteTodoWithConfirmation(period, id) {
     const todo = findTodo(period, id);
-    if (!todo || !(await confirmDelete(`确定要删除待办事项「${todo.text}」吗？`))) {
+    const todoEl = document.querySelector(`.todo-item[data-id="${id}"]`);
+    const anchor = todoEl?.closest(".todo-section") || todoEl;
+    if (!todo || !(await confirmDelete(`确定要删除待办事项「${todo.text}」吗？`, anchor))) {
       return;
     }
     removeTodo(period, id);
@@ -1809,7 +1821,8 @@
         copyImageToClipboard(image);
       }
     } else if (action === "delete") {
-      if (await confirmDelete("确定要删除这张图片吗？")) {
+      const cardEl = document.querySelector(`.image-card[data-id="${activeImageContext}"]`);
+      if (await confirmDelete("确定要删除这张图片吗？", cardEl)) {
         deleteImage(activeImageContext);
       }
     }
@@ -1987,7 +2000,7 @@
       const image = findImage(activePreviewId);
       if (image) copyImageToClipboard(image);
     } else if (action === "delete") {
-      if (await confirmDelete("确定要删除这张图片吗？")) {
+      if (await confirmDelete("确定要删除这张图片吗？", elements.previewStage)) {
         const nextId = findAdjacentImageId(activePreviewId, 1);
         deleteImage(activePreviewId);
         if (nextId) {
@@ -2145,7 +2158,7 @@
 
   let confirmResolve = null;
 
-  function confirmDelete(message) {
+  function confirmDelete(message, anchorEl) {
     return new Promise((resolve) => {
       confirmResolve = resolve;
       if (bubbleTimer) {
@@ -2154,10 +2167,7 @@
       }
       elements.bubbleText.textContent = message || "确定要删除吗？";
       elements.bubbleActions.hidden = false;
-      const size = 72;
-      const gap = 12;
-      elements.focusCompanion.style.left = `${Math.max(8, (window.innerWidth - size) / 2)}px`;
-      elements.focusCompanion.style.top = `${window.innerHeight - size - gap}px`;
+      positionCompanionNearElement(anchorEl);
       elements.focusCompanion.classList.add("is-visible");
       elements.focusCompanion.setAttribute("aria-hidden", "false");
       elements.bubbleBox.classList.add("is-visible");
@@ -2217,10 +2227,10 @@
     }
   }
 
-  async function copyTextWithBubble(text) {
+  async function copyTextWithBubble(text, anchorEl) {
     try {
       await navigator.clipboard.writeText(text);
-      showBubbleMessage("文字复制成功 (＾▽＾)");
+      showBubbleMessage("文字复制成功 (＾▽＾)", anchorEl);
     } catch (error) {
       console.warn(error);
       showToast("复制失败，请检查浏览器权限");
