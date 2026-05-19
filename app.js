@@ -19,7 +19,7 @@
     storageEditor: {
       stateKey: "storageLines",
       bulletId: "storageBullets",
-      placeholder: "工程文件：放路径、命令、配置片段，随时复制查看。",
+      placeholder: "写下你的创意吧",
     },
   };
 
@@ -31,7 +31,7 @@
     "todo-noon-title": "中",
     "todo-evening-title": "晚",
     "workspace-title": "工作空间",
-    "storage-title": "工程文件",
+    "storage-title": "双击可改名",
   };
 
   const EMPTY_HINTS = {
@@ -45,46 +45,22 @@
   };
 
   const saveMessages = [
-    "小小记录员踮起脚尖，把这一页保存好啦",
-    "小小记录员轻轻点头：内容已经保存",
-    "小小记录员把修改收好，放进今日背包",
-    "小小记录员翻开本子：这一版已经记下",
-    "小小记录员把便签压平，稳稳保存",
-    "小小记录员眨眨眼：刚才的内容已收好",
-    "小小记录员把数据归档到亮晶晶的小抽屉",
-    "小小记录员认真确认：状态已经备份",
-    "小小记录员抱着小本本：这一段已存好",
-    "小小记录员把你的想法保存进背包侧袋",
-    "小小记录员轻声说：放心，已经记下",
-    "小小记录员把页面收好，继续冒险吧",
-    "小小记录员举起铅笔：刚刚的修改已保存",
-    "小小记录员把字句排整齐，已经存好",
-    "小小记录员在角落盖章：已保存",
-    "小小记录员把看板状态收好，没有遗漏",
-    "小小记录员把这次编辑归档完成",
-    "小小记录员把内容放回小书包，已经保存",
-    "小小记录员轻轻合上册子：已备份",
-    "小小记录员把新内容记下，等你继续写",
-    "小小记录员把任务页保存到旅途中",
-    "小小记录员整理完毕：这一版已收好",
-    "小小记录员把改动放进安全格，已存好",
-    "小小记录员笑着提醒：当前页面已保存",
-    "小小记录员把文字收进小信封，保存完成",
-    "小小记录员检查了一遍：内容已经备份",
-    "小小记录员把今天的线索记下来了",
-    "小小记录员把新的想法归档好啦",
-    "小小记录员握紧小笔：这次修改已保存",
-    "小小记录员把记录贴好，已经收好",
-    "小小记录员把看板装进背包，已保存",
-    "小小记录员轻快地说：保存完成，可以继续",
-    "小小记录员把每一行都记下了",
-    "小小记录员守在旁边：你的内容已存好",
-    "小小记录员把页面备份好，安心继续吧",
-    "小小记录员把刚才的文字收好啦",
-    "小小记录员把这份记录归档到今日栏",
-    "小小记录员认真点名：所有修改已保存",
-    "小小记录员把小背包扣好：内容已存好",
-    "小小记录员低声汇报：看板已经保存",
+    "保存好啦～",
+    "收好啦，放心吧",
+    "已存好，继续写吧",
+    "嗯，记下了",
+    "安安稳稳地存好了",
+    "备份完成，安心继续",
+    "这一页归档好啦",
+    "改动已收好，没有遗漏",
+    "放心，都记下来了",
+    "整理完毕，存好了",
+    "眨眨眼，保存好了",
+    "盖个章，已存档",
+    "已备份，可以继续冒险了",
+    "轻轻合上本子，已保存",
+    "把你的想法收好啦",
+    "确认过了，全部存好了",
   ];
 
   const kaomoji = [
@@ -185,6 +161,7 @@
     elements.previewImage = document.getElementById("previewImage");
     elements.closePreview = document.getElementById("closePreview");
     elements.imageMenu = document.getElementById("imageMenu");
+    elements.imageListMenu = document.getElementById("imageListMenu");
     elements.previewList = document.getElementById("previewList");
     elements.previewMenu = document.getElementById("previewMenu");
     elements.settingsBtn = document.getElementById("settingsBtn");
@@ -248,6 +225,7 @@
     elements.imageList.addEventListener("drop", handleImageDrop);
     elements.imageList.addEventListener("dragend", handleImageDragEnd);
     elements.imageMenu.addEventListener("click", handleImageMenuClick);
+    elements.imageListMenu.addEventListener("click", handleImageListMenuClick);
     elements.closePreview.addEventListener("click", closeImagePreview);
     elements.imagePreview.addEventListener("wheel", handlePreviewWheel, { passive: false });
     elements.previewStage.addEventListener("click", handlePreviewStageClick);
@@ -255,6 +233,7 @@
     elements.previewStage.addEventListener("mousedown", startPreviewDrag);
     elements.previewMenu.addEventListener("click", handlePreviewMenuClick);
     elements.previewList.addEventListener("click", handlePreviewListClick);
+    elements.previewList.addEventListener("contextmenu", handlePreviewListContextMenu);
     elements.settingsBtn.addEventListener("click", handleSettingsClick);
     elements.settingsMenu.addEventListener("click", handleSettingsMenuClick);
     window.addEventListener("mousemove", movePreviewDrag);
@@ -726,45 +705,34 @@
   function outdentTextEditorSelection(textarea) {
     const range = getTextEditorSelectedLineRange(textarea);
     const selectedText = textarea.value.slice(range.start, range.end);
-    let removedBeforeSelection = 0;
-    let removedTotal = 0;
-    let offset = range.start;
+    // Save cursor position relative to text content before modification
+    const cursorLineStart = textarea.value.lastIndexOf("\n", Math.max(0, textarea.selectionStart - 1)) + 1;
+    const cursorLine = textarea.value.slice(cursorLineStart, textarea.value.indexOf("\n", textarea.selectionStart) === -1 ? textarea.value.length : textarea.value.indexOf("\n", textarea.selectionStart));
+    const oldIndentLen = (cursorLine.match(/^\t*/)?.[0].length || 0);
+    const oldBulletLen = cursorLine.slice(oldIndentLen).startsWith("- ") ? 2 : 0;
+    const oldTextStart = oldIndentLen + oldBulletLen;
+    const cursorColInText = Math.max(0, textarea.selectionStart - cursorLineStart - oldTextStart);
+    const lineIdx = textarea.value.slice(0, cursorLineStart).split("\n").length - 1;
+    // Outdent selected lines
     const outdented = selectedText
       .split("\n")
       .map((line) => {
-        const lineStart = offset;
-        offset += line.length + 1;
         if (!line.startsWith("\t")) {
           return line;
         }
-        if (lineStart < textarea.selectionStart) {
-          removedBeforeSelection += 1;
-        }
-        removedTotal += 1;
         return line.slice(1);
       })
       .join("\n");
-    textarea.setRangeText(outdented, range.start, range.end, "preserve");
-    // After setRangeText with 'preserve', cursor moved by removedBeforeSelection/removedTotal
-    const afterStart = Math.max(range.start, textarea.selectionStart - removedBeforeSelection);
-    const afterEnd = Math.max(afterStart, textarea.selectionEnd - removedTotal);
-    // Calculate cursor col relative to text (after indent+bullet)
-    const lineStartPos = textarea.value.slice(0, afterStart).lastIndexOf("\n") + 1;
-    const lineEndPos = textarea.value.indexOf("\n", afterStart);
-    const fullLine = textarea.value.slice(lineStartPos, lineEndPos === -1 ? textarea.value.length : lineEndPos);
-    const indentLen = (fullLine.match(/^\t*/)?.[0].length || 0);
-    const bulletLen = fullLine.slice(indentLen).startsWith("- ") ? 2 : 0;
-    const textStartInLine = indentLen + bulletLen;
-    const cursorColInText = Math.max(0, afterStart - lineStartPos - textStartInLine);
+    textarea.setRangeText(outdented, range.start, range.end, "end");
     // Serialize and re-hydrate to fix bullet display
     const lines = serializeTextEditorValue(textarea.value);
     textarea.value = textEditorLinesToText(lines);
     // Restore cursor on same line, same relative position to text
     const hydratedLines = textarea.value.split("\n");
-    const lineIdx = textarea.value.slice(0, lineStartPos).split("\n").length - 1;
+    const targetIdx = Math.min(lineIdx, hydratedLines.length - 1);
     let pos = 0;
-    for (let i = 0; i < lineIdx && i < hydratedLines.length; i++) pos += hydratedLines[i].length + 1;
-    const newLine = hydratedLines[lineIdx] || "";
+    for (let i = 0; i < targetIdx; i++) pos += hydratedLines[i].length + 1;
+    const newLine = hydratedLines[targetIdx] || "";
     const newIndentLen = (newLine.match(/^\t*/)?.[0].length || 0);
     const newBulletLen = newLine.slice(newIndentLen).startsWith("- ") ? 2 : 0;
     const textLen = newLine.length - newIndentLen - newBulletLen;
@@ -1011,6 +979,9 @@
     }
     if (!elements.imageMenu.contains(event.target)) {
       closeImageMenu();
+    }
+    if (elements.imageListMenu && !elements.imageListMenu.contains(event.target)) {
+      closeImageListMenu();
     }
     if (elements.previewMenu && !elements.previewMenu.contains(event.target)) {
       closePreviewMenu();
@@ -1717,18 +1688,24 @@
   }
 
   function handleImageContextMenu(event) {
-    const card = event.target.closest(".image-card");
-    if (!card) {
-      return;
-    }
     event.preventDefault();
     closeQuickMenu();
     closeTodoMenu();
-    activeImageContext = card.dataset.id;
-    elements.imageMenu.style.left = `${Math.min(event.clientX, window.innerWidth - 130)}px`;
-    elements.imageMenu.style.top = `${Math.min(event.clientY, window.innerHeight - 110)}px`;
-    elements.imageMenu.classList.add("is-visible");
-    elements.imageMenu.setAttribute("aria-hidden", "false");
+    closeImageMenu();
+    closeImageListMenu();
+    const card = event.target.closest(".image-card");
+    if (card) {
+      activeImageContext = card.dataset.id;
+      elements.imageMenu.style.left = `${Math.min(event.clientX, window.innerWidth - 130)}px`;
+      elements.imageMenu.style.top = `${Math.min(event.clientY, window.innerHeight - 110)}px`;
+      elements.imageMenu.classList.add("is-visible");
+      elements.imageMenu.setAttribute("aria-hidden", "false");
+    } else if (event.target.closest(".image-list")) {
+      elements.imageListMenu.style.left = `${Math.min(event.clientX, window.innerWidth - 130)}px`;
+      elements.imageListMenu.style.top = `${Math.min(event.clientY, window.innerHeight - 50)}px`;
+      elements.imageListMenu.classList.add("is-visible");
+      elements.imageListMenu.setAttribute("aria-hidden", "false");
+    }
   }
 
   function handleImageMenuClick(event) {
@@ -1756,6 +1733,53 @@
     elements.imageMenu.classList.remove("is-visible");
     elements.imageMenu.setAttribute("aria-hidden", "true");
     activeImageContext = null;
+  }
+
+  function closeImageListMenu() {
+    if (!elements.imageListMenu) return;
+    elements.imageListMenu.classList.remove("is-visible");
+    elements.imageListMenu.setAttribute("aria-hidden", "true");
+  }
+
+  function handleImageListMenuClick(event) {
+    const actionButton = event.target.closest("button[data-action]");
+    if (!actionButton) return;
+    closeImageListMenu();
+    if (actionButton.dataset.action === "paste") {
+      pasteImageFromClipboard();
+    }
+  }
+
+  async function pasteImageFromClipboard() {
+    try {
+      const items = await navigator.clipboard.read();
+      for (const item of items) {
+        const imageType = item.types.find((t) => t.startsWith("image/"));
+        if (!imageType) continue;
+        const blob = await item.getType(imageType);
+        const reader = new FileReader();
+        reader.onload = async () => {
+          const image = {
+            id: createId(),
+            src: reader.result,
+            createdAt: Date.now(),
+          };
+          try {
+            await storeImagePayload(image);
+            state.images.push(image);
+            saveState();
+            renderImages();
+            showToast("图片已添加到图床");
+          } catch (error) {
+            console.warn("图片保存失败。", error);
+            showToast("图片保存失败，请稍后再试");
+          }
+        };
+        reader.readAsDataURL(blob);
+      }
+    } catch (error) {
+      showToast("无法读取剪贴板，请尝试 Ctrl+V 粘贴");
+    }
   }
 
   function handleImageDragStart(event) {
@@ -1804,8 +1828,23 @@
     event.preventDefault();
     closeImageMenu();
     closePreviewMenu();
-    elements.previewMenu.style.left = `${Math.min(event.clientX, window.innerWidth - 130)}px`;
-    elements.previewMenu.style.top = `${Math.min(event.clientY, window.innerHeight - 110)}px`;
+    showPreviewMenu(event.clientX, event.clientY);
+  }
+
+  function handlePreviewListContextMenu(event) {
+    const thumb = event.target.closest(".preview-thumb");
+    if (!thumb) return;
+    event.preventDefault();
+    closeImageMenu();
+    closePreviewMenu();
+    activePreviewId = thumb.dataset.id;
+    openImagePreview(activePreviewId);
+    showPreviewMenu(event.clientX, event.clientY);
+  }
+
+  function showPreviewMenu(x, y) {
+    elements.previewMenu.style.left = `${Math.min(x, window.innerWidth - 130)}px`;
+    elements.previewMenu.style.top = `${Math.min(y, window.innerHeight - 140)}px`;
     elements.previewMenu.classList.add("is-visible");
     elements.previewMenu.setAttribute("aria-hidden", "false");
   }
@@ -1828,6 +1867,8 @@
           closeImagePreview();
         }
       }
+    } else if (action === "close") {
+      closeImagePreview();
     }
     closePreviewMenu();
   }

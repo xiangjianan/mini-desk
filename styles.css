@@ -388,6 +388,11 @@ h3 {
   background: transparent;
 }
 
+.clear-completed-button svg {
+  fill: currentColor;
+  stroke: none;
+}
+
 .todo-list {
   list-style: none;
   margin: 0;
@@ -585,6 +590,7 @@ h3 {
   border-radius: var(--radius);
   background: var(--panel);
   color: var(--text);
+  padding: 0;
 }
 
 .quick-dialog::backdrop {
@@ -595,6 +601,11 @@ h3 {
   display: flex;
   flex-direction: column;
   gap: 12px;
+  padding: 0 16px 16px;
+}
+
+.quick-dialog form > .dialog-header {
+  margin: 0 -16px;
 }
 
 .quick-dialog label {
@@ -628,12 +639,43 @@ h3 {
 
 .dialog-actions {
   display: flex;
-  justify-content: space-between;
+  justify-content: flex-start;
   gap: 8px;
+}
+
+.dialog-actions [type="submit"] {
+  border: 1px solid var(--text);
+  background: var(--bg);
+  font-weight: 500;
+  padding: 6px 20px;
+  min-height: 32px;
+}
+
+.dialog-actions [type="submit"]:hover {
+  background: var(--button-hover);
 }
 
 .danger-button {
   color: var(--danger);
+  border-color: var(--danger);
+}
+
+.danger-button:hover {
+  background: var(--danger);
+  color: var(--bg);
+}
+
+.dialog-header .icon-button {
+  border: none;
+  background: transparent;
+  color: var(--muted);
+  font-size: 18px;
+  line-height: 1;
+}
+
+.dialog-header .icon-button:hover {
+  color: var(--text);
+  background: var(--button-hover);
 }
 
 .image-preview {
