@@ -1976,20 +1976,10 @@
 
   function handlePreviewContextMenu(event) {
     event.preventDefault();
-    closeImageMenu();
-    closePreviewMenu();
-    showPreviewMenu(event.clientX, event.clientY);
   }
 
   function handlePreviewListContextMenu(event) {
-    const thumb = event.target.closest(".preview-thumb");
-    if (!thumb) return;
     event.preventDefault();
-    closeImageMenu();
-    closePreviewMenu();
-    activePreviewId = thumb.dataset.id;
-    openImagePreview(activePreviewId);
-    showPreviewMenu(event.clientX, event.clientY);
   }
 
   function showPreviewMenu(x, y) {
