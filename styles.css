@@ -568,6 +568,73 @@ h3 {
   transform: translateX(-50%) translateY(0);
 }
 
+.confirm-bubble {
+  position: fixed;
+  left: 50%;
+  bottom: 24px;
+  z-index: 90;
+  transform: translateX(-50%) translateY(12px);
+  padding: 12px 14px 8px;
+  border: 1px solid var(--line-control);
+  border-radius: var(--radius);
+  background: var(--panel);
+  color: var(--text);
+  opacity: 0;
+  pointer-events: none;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 10px;
+  transition: opacity 180ms ease, transform 180ms ease;
+}
+
+.confirm-bubble.is-visible {
+  opacity: 1;
+  pointer-events: auto;
+  transform: translateX(-50%) translateY(0);
+}
+
+.confirm-bubble-text {
+  text-align: center;
+  white-space: nowrap;
+}
+
+.confirm-bubble-actions {
+  display: flex;
+  gap: 8px;
+}
+
+.confirm-bubble-actions button {
+  border: 1px solid var(--text);
+  background: var(--bg);
+  padding: 4px 16px;
+  min-height: 28px;
+  font-size: 13px;
+}
+
+.confirm-bubble-actions button:hover {
+  background: var(--button-hover);
+}
+
+.confirm-bubble-actions button:first-child {
+  background: var(--text);
+  color: var(--bg);
+  border-color: var(--text);
+}
+
+.confirm-bubble-actions button:first-child:hover {
+  opacity: 0.85;
+}
+
+.confirm-bubble-gif {
+  width: 56px;
+  height: 56px;
+  object-fit: cover;
+  border: 1px solid var(--line-control);
+  border-radius: var(--radius);
+  background: #000000;
+}
+
 .context-menu {
   position: fixed;
   z-index: 70;

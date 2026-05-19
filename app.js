@@ -76,6 +76,17 @@
     "( •̀ ω •́ )y",
   ];
 
+  const encourageMessages = [
+    "太棒了，又完成一项！",
+    "厉害，继续加油！",
+    "搞定一个，距离目标更近了",
+    "很好，保持这个节奏！",
+    "完成了，给自己点个赞",
+    "不错不错，稳稳的",
+    "又划掉一个，成就感满满",
+    "好耶，进度 +1",
+  ];
+
   const defaultState = {
     theme: "light",
     customTitles: {},
@@ -144,6 +155,10 @@
     elements.focusVideo = document.getElementById("focusVideo");
     elements.saveBubble = document.getElementById("saveBubble");
     elements.toast = document.getElementById("toast");
+    elements.confirmBubble = document.getElementById("confirmBubble");
+    elements.confirmBubbleText = document.getElementById("confirmBubbleText");
+    elements.confirmBubbleYes = document.getElementById("confirmBubbleYes");
+    elements.confirmBubbleNo = document.getElementById("confirmBubbleNo");
     elements.quickMenu = document.getElementById("quickMenu");
     elements.todoMenu = document.getElementById("todoMenu");
     elements.quickDialog = document.getElementById("quickDialog");
@@ -202,6 +217,8 @@
     elements.editQuickIsLink.addEventListener("change", updateEditValueLabel);
     elements.deleteQuickInDialog.addEventListener("click", deleteActiveQuickFromDialog);
     elements.importJsonInput.addEventListener("change", handleImportJson);
+    elements.confirmBubbleYes.addEventListener("click", handleConfirmBubbleYes);
+    elements.confirmBubbleNo.addEventListener("click", handleConfirmBubbleNo);
     elements.themeToggle.addEventListener("click", toggleTheme);
     document.querySelectorAll(".clear-completed-button").forEach((button) => {
       button.addEventListener("click", handleClearCompleted);
@@ -350,7 +367,7 @@
     try {
       const parsed = JSON.parse(await file.text());
       const importedState = normalizeImportedState(parsed);
-      if (!window.confirm("导入 JSON 会覆盖当前页面所有数据，继续吗？")) {
+      if (!(await confirmDelete("导入 JSON 会覆盖当前页面所有数据，继续吗？"))) {
         return;
       }
       state = importedState;
@@ -983,7 +1000,7 @@
     });
   }
 
-  function handleKeydown(event) {
+  async function handleKeydown(event) {
     const key = event.key;
     if ((event.metaKey || event.ctrlKey) && key.toLowerCase() === "s") {
       event.preventDefault();
@@ -998,7 +1015,7 @@
 
     if (key === "Delete" || key === "Backspace") {
       event.preventDefault();
-      if (confirmDelete("确定要删除这张图片吗？")) {
+      if (await confirmDelete("确定要删除这张图片吗？")) {
         const nextId = findAdjacentImageId(activePreviewId, 1);
         deleteImage(activePreviewId);
         if (nextId) {
@@ -1208,7 +1225,20 @@
   function showSaveBubble() {
     const text = randomItem(saveMessages);
     const face = randomItem(kaomoji);
-    elements.saveBubble.textContent = `${text} ${face}`;
+    showBubbleMessage(`${text} ${face}`);
+  }
+
+  function showEncourageBubble(message) {
+    showBubbleMessage(message);
+  }
+
+  function showBubbleMessage(text) {
+    elements.saveBubble.textContent = text;
+    // Position companion at bottom-center of viewport
+    const size = 72;
+    const gap = 12;
+    elements.focusCompanion.style.left = `${Math.max(8, (window.innerWidth - size) / 2)}px`;
+    elements.focusCompanion.style.top = `${window.innerHeight - size - gap}px`;
     elements.focusCompanion.classList.add("is-visible");
     elements.focusCompanion.setAttribute("aria-hidden", "false");
     elements.saveBubble.classList.add("is-visible");
@@ -1235,7 +1265,7 @@
     if (item.type === "link") {
       window.open(item.value, "_blank");
     } else {
-      copyTextToClipboard(item.value, "文本已复制");
+      copyTextWithBubble(item.value);
     }
   }
 
@@ -1256,7 +1286,7 @@
     elements.quickMenu.setAttribute("aria-hidden", "false");
   }
 
-  function handleQuickMenuClick(event) {
+  async function handleQuickMenuClick(event) {
     const actionButton = event.target.closest("button[data-action]");
     if (!actionButton || !activeQuickId) {
       return;
@@ -1270,7 +1300,7 @@
       toggleQuickHidden(activeQuickId);
     } else if (action === "delete") {
       const item = findQuickButton(activeQuickId);
-      if (confirmDelete(`确定要删除快捷按钮“${item?.title || ""}”吗？`)) {
+      if (await confirmDelete(`确定要删除快捷按钮「${item?.title || ""}」吗？`)) {
         deleteQuickButton(activeQuickId);
       } else {
         shouldCloseMenu = false;
@@ -1350,10 +1380,10 @@
     elements.editQuickValueLabel.textContent = elements.editQuickIsLink.checked ? "URL" : "复制文本";
   }
 
-  function deleteActiveQuickFromDialog() {
+  async function deleteActiveQuickFromDialog() {
     if (activeQuickId) {
       const item = findQuickButton(activeQuickId);
-      if (confirmDelete(`确定要删除快捷按钮“${item?.title || ""}”吗？`)) {
+      if (await confirmDelete(`确定要删除快捷按钮「${item?.title || ""}」吗？`)) {
         deleteQuickButton(activeQuickId);
         closeQuickDialog();
       }
@@ -1423,20 +1453,26 @@
     if (!todo) {
       return;
     }
-    todo.done = event.target.checked;
+    const isChecked = event.target.checked;
+    todo.done = isChecked;
     normalizeTodoPeriod(item.dataset.period);
     saveState();
     renderTodos();
+    if (isChecked) {
+      const msg = randomItem(encourageMessages);
+      const face = randomItem(kaomoji);
+      showEncourageBubble(`${msg} ${face}`);
+    }
   }
 
-  function handleClearCompleted(event) {
+  async function handleClearCompleted(event) {
     const period = event.currentTarget.dataset.clearCompleted;
     const completedCount = state.todos[period].filter((todo) => todo.done).length;
     if (completedCount === 0) {
       showToast("没有已完成事项");
       return;
     }
-    if (!confirmDelete(`确定要清除 ${completedCount} 条已完成事项吗？`)) {
+    if (!(await confirmDelete(`确定要清除 ${completedCount} 条已完成事项吗？`))) {
       return;
     }
     state.todos[period] = state.todos[period].filter((todo) => !todo.done);
@@ -1605,9 +1641,9 @@
     closeTodoMenu();
   }
 
-  function deleteTodoWithConfirmation(period, id) {
+  async function deleteTodoWithConfirmation(period, id) {
     const todo = findTodo(period, id);
-    if (!todo || !confirmDelete(`确定要删除待办事项“${todo.text}”吗？`)) {
+    if (!todo || !(await confirmDelete(`确定要删除待办事项「${todo.text}」吗？`))) {
       return;
     }
     removeTodo(period, id);
@@ -1758,7 +1794,7 @@
     }
   }
 
-  function handleImageMenuClick(event) {
+  async function handleImageMenuClick(event) {
     const actionButton = event.target.closest("button[data-action]");
     if (!actionButton || !activeImageContext) {
       return;
@@ -1772,7 +1808,7 @@
         copyImageToClipboard(image);
       }
     } else if (action === "delete") {
-      if (confirmDelete("确定要删除这张图片吗？")) {
+      if (await confirmDelete("确定要删除这张图片吗？")) {
         deleteImage(activeImageContext);
       }
     }
@@ -1941,7 +1977,7 @@
     elements.previewMenu.setAttribute("aria-hidden", "false");
   }
 
-  function handlePreviewMenuClick(event) {
+  async function handlePreviewMenuClick(event) {
     const actionButton = event.target.closest("button[data-action]");
     if (!actionButton || !activePreviewId) return;
 
@@ -1950,7 +1986,7 @@
       const image = findImage(activePreviewId);
       if (image) copyImageToClipboard(image);
     } else if (action === "delete") {
-      if (confirmDelete("确定要删除这张图片吗？")) {
+      if (await confirmDelete("确定要删除这张图片吗？")) {
         const nextId = findAdjacentImageId(activePreviewId, 1);
         deleteImage(activePreviewId);
         if (nextId) {
@@ -2106,8 +2142,33 @@
     showToast("图片已删除");
   }
 
+  let confirmResolve = null;
+
   function confirmDelete(message) {
-    return window.confirm(message || "确定要删除吗？");
+    return new Promise((resolve) => {
+      confirmResolve = resolve;
+      elements.confirmBubbleText.textContent = message || "确定要删除吗？";
+      elements.confirmBubble.classList.add("is-visible");
+      elements.confirmBubble.setAttribute("aria-hidden", "false");
+    });
+  }
+
+  function handleConfirmBubbleYes() {
+    elements.confirmBubble.classList.remove("is-visible");
+    elements.confirmBubble.setAttribute("aria-hidden", "true");
+    if (confirmResolve) {
+      confirmResolve(true);
+      confirmResolve = null;
+    }
+  }
+
+  function handleConfirmBubbleNo() {
+    elements.confirmBubble.classList.remove("is-visible");
+    elements.confirmBubble.setAttribute("aria-hidden", "true");
+    if (confirmResolve) {
+      confirmResolve(false);
+      confirmResolve = null;
+    }
   }
 
   function findImage(id) {
@@ -2133,6 +2194,16 @@
     try {
       await navigator.clipboard.writeText(text);
       showToast(message);
+    } catch (error) {
+      console.warn(error);
+      showToast("复制失败，请检查浏览器权限");
+    }
+  }
+
+  async function copyTextWithBubble(text) {
+    try {
+      await navigator.clipboard.writeText(text);
+      showBubbleMessage("文字复制成功 (＾▽＾)");
     } catch (error) {
       console.warn(error);
       showToast("复制失败，请检查浏览器权限");

@@ -135,6 +135,15 @@
 
     <div id="toast" class="toast" role="status" aria-live="polite"></div>
 
+    <div id="confirmBubble" class="confirm-bubble" aria-hidden="true">
+      <div id="confirmBubbleText" class="confirm-bubble-text"></div>
+      <div class="confirm-bubble-actions">
+        <button type="button" id="confirmBubbleYes">是</button>
+        <button type="button" id="confirmBubbleNo">否</button>
+      </div>
+      <img src="static/video/hermes.gif" alt="" class="confirm-bubble-gif">
+    </div>
+
     <div id="quickMenu" class="context-menu" role="menu" aria-hidden="true">
       <button type="button" data-action="edit">编辑</button>
       <button type="button" data-action="hide">隐藏</button>
