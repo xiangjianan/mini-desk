@@ -1015,7 +1015,7 @@
 
     if (key === "Delete" || key === "Backspace") {
       event.preventDefault();
-      if (await confirmDelete("确定要删除这张图片吗？", elements.previewStage)) {
+      if (await confirmDelete("确定要删除这张图片吗？", document.querySelector(".note-link-panel"))) {
         const nextId = findAdjacentImageId(activePreviewId, 1);
         deleteImage(activePreviewId);
         if (nextId) {
@@ -1825,7 +1825,7 @@
       }
     } else if (action === "delete") {
       const cardEl = document.querySelector(`.image-card[data-id="${activeImageContext}"]`);
-      if (await confirmDelete("确定要删除这张图片吗？", cardEl)) {
+      if (await confirmDelete("确定要删除这张图片吗？", document.querySelector(".note-link-panel"))) {
         deleteImage(activeImageContext);
       }
     }
@@ -2003,7 +2003,7 @@
       const image = findImage(activePreviewId);
       if (image) copyImageToClipboard(image);
     } else if (action === "delete") {
-      if (await confirmDelete("确定要删除这张图片吗？", elements.previewStage)) {
+      if (await confirmDelete("确定要删除这张图片吗？", document.querySelector(".note-link-panel"))) {
         const nextId = findAdjacentImageId(activePreviewId, 1);
         deleteImage(activePreviewId);
         if (nextId) {
