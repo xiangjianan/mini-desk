@@ -1202,7 +1202,11 @@
     if (!item) {
       return;
     }
-    copyTextToClipboard(item.value, item.type === "link" ? "URL 已复制" : "文本已复制");
+    if (item.type === "link") {
+      window.open(item.value, "_blank");
+    } else {
+      copyTextToClipboard(item.value, "文本已复制");
+    }
   }
 
   function handleQuickContextMenu(event) {
