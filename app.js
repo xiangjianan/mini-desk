@@ -677,7 +677,23 @@
     const range = getTextEditorSelectedLineRange(textarea);
 
     if (originalStart === originalEnd) {
-      textarea.setRangeText("\t", range.start, range.start, "end");
+      // Single cursor: insert tab before text, re-hydrate to add bullet
+      const lines = serializeTextEditorValue(textarea.value);
+      const lineIdx = textarea.value.slice(0, originalStart).split("\n").length - 1;
+      const col = originalStart - (textarea.value.slice(0, originalStart).lastIndexOf("\n") + 1);
+      if (lineIdx >= 0 && lineIdx < lines.length) {
+        lines[lineIdx].indent += 1;
+      }
+      textarea.value = textEditorLinesToText(lines);
+      // Restore cursor: find position on same line, offset by 1 tab
+      const hydratedLines = textarea.value.split("\n");
+      let pos = 0;
+      for (let i = 0; i < lineIdx; i++) pos += hydratedLines[i].length + 1;
+      const tabCount = lines[lineIdx]?.indent || 0;
+      const bulletLen = (lines[lineIdx]?.text) ? 2 : 0; // "- " length
+      const restoreCol = Math.min(col + 1, tabCount + bulletLen + (lines[lineIdx]?.text?.length || 0));
+      const finalPos = pos + Math.max(restoreCol, tabCount + bulletLen);
+      textarea.setSelectionRange(finalPos, finalPos);
       return;
     }
 
@@ -728,24 +744,23 @@
         return line.slice(1);
       })
       .join("\n");
+    // Apply outdented text to textarea
+    textarea.setRangeText(outdented, range.start, range.end, "preserve");
     const newStart = Math.max(range.start, textarea.selectionStart - removedBeforeSelection);
     const newEnd = Math.max(newStart, textarea.selectionEnd - removedTotal);
-    textarea.setSelectionRange(newStart, newEnd);
     // Re-hydrate to fix bullet display after outdent
     const config = getTextEditorConfig(textarea);
-    if (config) {
-      const cursorLine = textarea.value.slice(0, newStart).split("\n").length - 1;
-      const cursorCol = newStart - (textarea.value.slice(0, newStart).lastIndexOf("\n") + 1);
-      const lines = serializeTextEditorValue(textarea.value);
-      textarea.value = textEditorLinesToText(lines);
-      // Restore cursor position (approximate, on same line)
-      const hydratedLines = textarea.value.split("\n");
-      let pos = 0;
-      for (let i = 0; i < cursorLine && i < hydratedLines.length; i++) pos += hydratedLines[i].length + 1;
-      const lineText = hydratedLines[cursorLine] || "";
-      const restoredCol = Math.min(cursorCol, lineText.length);
-      textarea.setSelectionRange(pos + restoredCol, pos + restoredCol);
-    }
+    const cursorLine = textarea.value.slice(0, newStart).split("\n").length - 1;
+    const cursorCol = newStart - (textarea.value.slice(0, newStart).lastIndexOf("\n") + 1);
+    const lines = serializeTextEditorValue(textarea.value);
+    textarea.value = textEditorLinesToText(lines);
+    const hydratedLines = textarea.value.split("\n");
+    let pos = 0;
+    for (let i = 0; i < cursorLine && i < hydratedLines.length; i++) pos += hydratedLines[i].length + 1;
+    const lineText = hydratedLines[cursorLine] || "";
+    const restoredCol = Math.min(cursorCol, lineText.length);
+    textarea.setSelectionRange(pos + restoredCol, pos + restoredCol);
+  }
   }
 
   function outdentWorkspaceSelection(textarea) {
@@ -759,7 +774,9 @@
     const lineStart = textarea.value.lastIndexOf("\n", textarea.selectionStart - 1) + 1;
     const line = textarea.value.slice(lineStart, textarea.selectionStart);
     const indent = line.match(/^\t*/)?.[0] || "";
-    const bullet = indent ? "- " : "";
+    // Check if line has a bullet
+    const hasBullet = line.startsWith(indent) && line.slice(indent.length).startsWith("- ");
+    const bullet = (indent && hasBullet) ? "- " : "";
     textarea.setRangeText(`\n${indent}${bullet}`, textarea.selectionStart, textarea.selectionEnd, "end");
     return true;
   }
