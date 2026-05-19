@@ -3,25 +3,86 @@
 
   const STORAGE_KEY = "todo-board-state-v1";
 
-  const WS_INDENT = 24;
+  const TEXT_EDITORS = {
+    noteEditor: {
+      stateKey: "noteLines",
+      bulletId: "noteBullets",
+      placeholder: "随手记：临时想法、灵感、草稿先放这里。",
+    },
+    workspaceEditor: {
+      stateKey: "workspaceLines",
+      bulletId: "workspaceBullets",
+      placeholder: "工作空间：拆任务、写步骤、整理当前上下文。Tab 可缩进。",
+    },
+    storageEditor: {
+      stateKey: "storageLines",
+      bulletId: "storageBullets",
+      placeholder: "工程文件：放路径、命令、配置片段，随时复制查看。",
+    },
+  };
 
-  const LINE_EDITORS = {
-    noteEditor: { stateKey: "noteLines", placeholder: "写下临时想法..." },
-    workspaceEditor: { stateKey: "workspaceLines", placeholder: "在这里输入工作内容..." },
-    storageEditor: { stateKey: "storageLines", placeholder: "在这里存放工程文件路径、命令、片段..." },
+  const DEFAULT_TITLES = {
+    "image-title": "图",
+    "note-title": "记",
+    "quick-title": "链",
+    "todo-morning-title": "早",
+    "todo-noon-title": "中",
+    "todo-evening-title": "晚",
+    "workspace-title": "工作空间",
+    "storage-title": "工程文件",
+  };
+
+  const EMPTY_HINTS = {
+    images: "把截图或图片粘贴到这里，可预览、复制、拖动排序。",
+    quickButtons: "把常用链接或复制文本做成按钮，点击即可复制。",
+    todos: {
+      morning: "早：放启动任务、晨间提醒和今天最先处理的事项。",
+      noon: "中：放午间跟进、临时插入和需要继续推进的事项。",
+      evening: "晚：放收尾检查、复盘记录和明天之前要记住的事项。",
+    },
   };
 
   const saveMessages = [
-    "已经帮你存好了",
-    "内容稳稳落袋",
-    "这次修改已保存",
-    "放心，已经记下",
-    "保存完成，可以继续",
-    "这一版已收好",
-    "刚刚的内容已入库",
-    "文字已经安全保存",
-    "看板状态已更新",
-    "记录好了，继续写吧",
+    "小小记录员踮起脚尖，把这一页保存好啦",
+    "小小记录员轻轻点头：内容已经保存",
+    "小小记录员把修改收好，放进今日背包",
+    "小小记录员翻开本子：这一版已经记下",
+    "小小记录员把便签压平，稳稳保存",
+    "小小记录员眨眨眼：刚才的内容已收好",
+    "小小记录员把数据归档到亮晶晶的小抽屉",
+    "小小记录员认真确认：状态已经备份",
+    "小小记录员抱着小本本：这一段已存好",
+    "小小记录员把你的想法保存进背包侧袋",
+    "小小记录员轻声说：放心，已经记下",
+    "小小记录员把页面收好，继续冒险吧",
+    "小小记录员举起铅笔：刚刚的修改已保存",
+    "小小记录员把字句排整齐，已经存好",
+    "小小记录员在角落盖章：已保存",
+    "小小记录员把看板状态收好，没有遗漏",
+    "小小记录员把这次编辑归档完成",
+    "小小记录员把内容放回小书包，已经保存",
+    "小小记录员轻轻合上册子：已备份",
+    "小小记录员把新内容记下，等你继续写",
+    "小小记录员把任务页保存到旅途中",
+    "小小记录员整理完毕：这一版已收好",
+    "小小记录员把改动放进安全格，已存好",
+    "小小记录员笑着提醒：当前页面已保存",
+    "小小记录员把文字收进小信封，保存完成",
+    "小小记录员检查了一遍：内容已经备份",
+    "小小记录员把今天的线索记下来了",
+    "小小记录员把新的想法归档好啦",
+    "小小记录员握紧小笔：这次修改已保存",
+    "小小记录员把记录贴好，已经收好",
+    "小小记录员把看板装进背包，已保存",
+    "小小记录员轻快地说：保存完成，可以继续",
+    "小小记录员把每一行都记下了",
+    "小小记录员守在旁边：你的内容已存好",
+    "小小记录员把页面备份好，安心继续吧",
+    "小小记录员把刚才的文字收好啦",
+    "小小记录员把这份记录归档到今日栏",
+    "小小记录员认真点名：所有修改已保存",
+    "小小记录员把小背包扣好：内容已存好",
+    "小小记录员低声汇报：看板已经保存",
   ];
 
   const kaomoji = [
@@ -90,11 +151,17 @@
     elements.imageCount = document.getElementById("imageCount");
     elements.imageList = document.getElementById("imageList");
     elements.noteEditor = document.getElementById("noteEditor");
+    elements.noteBullets = document.getElementById("noteBullets");
     elements.workspaceEditor = document.getElementById("workspaceEditor");
+    elements.workspaceBullets = document.getElementById("workspaceBullets");
     elements.storageEditor = document.getElementById("storageEditor");
+    elements.storageBullets = document.getElementById("storageBullets");
     elements.addQuickBtn = document.getElementById("addQuickBtn");
     elements.quickButtons = document.getElementById("quickButtons");
     elements.toggleHiddenBtn = document.getElementById("toggleHiddenBtn");
+    elements.importJsonBtn = document.getElementById("importJsonBtn");
+    elements.exportJsonBtn = document.getElementById("exportJsonBtn");
+    elements.importJsonInput = document.getElementById("importJsonInput");
     elements.themeToggle = document.getElementById("themeToggle");
     elements.iconSun = document.getElementById("iconSun");
     elements.iconMoon = document.getElementById("iconMoon");
@@ -130,12 +197,13 @@
     document.addEventListener("click", handleDocumentClick);
     document.addEventListener("dblclick", handleDocumentDblClick);
 
-    Object.keys(LINE_EDITORS).forEach((id) => {
+    Object.keys(TEXT_EDITORS).forEach((id) => {
       const editor = elements[id];
-      editor.addEventListener("click", handleLineEditorClick);
-      editor.addEventListener("keydown", handleLineEditorKeydown);
-      editor.addEventListener("focusin", () => handleTextareaFocus(editor));
-      editor.addEventListener("focusout", () => handleTextareaBlur(editor));
+      editor.addEventListener("input", () => handleTextareaInput(editor));
+      editor.addEventListener("keydown", handleTextEditorKeydown);
+      editor.addEventListener("focus", () => handleTextareaFocus(editor));
+      editor.addEventListener("blur", (event) => handleTextareaBlur(editor, event));
+      editor.addEventListener("scroll", () => updateTextEditorBulletLayer(editor));
     });
 
     window.addEventListener("resize", positionFocusCompanion);
@@ -151,6 +219,9 @@
     elements.quickEditForm.addEventListener("submit", handleQuickEditSubmit);
     elements.editQuickIsLink.addEventListener("change", updateEditValueLabel);
     elements.deleteQuickInDialog.addEventListener("click", deleteActiveQuickFromDialog);
+    elements.importJsonBtn.addEventListener("click", () => elements.importJsonInput.click());
+    elements.exportJsonBtn.addEventListener("click", exportJsonState);
+    elements.importJsonInput.addEventListener("change", handleImportJson);
     elements.themeToggle.addEventListener("click", toggleTheme);
     document.querySelectorAll(".clear-completed-button").forEach((button) => {
       button.addEventListener("click", handleClearCompleted);
@@ -161,6 +232,7 @@
       list.addEventListener("change", handleTodoChange);
       list.addEventListener("input", handleTodoInput);
       list.addEventListener("keydown", handleTodoKeydown);
+      list.addEventListener("focusin", handleTodoFocusIn);
       list.addEventListener("focusout", handleTodoFocusOut);
       list.addEventListener("contextmenu", handleTodoContextMenu);
       list.addEventListener("dragstart", handleTodoDragStart);
@@ -251,8 +323,179 @@
     };
   }
 
+  function exportJsonState() {
+    flushTextareaState();
+    const payload = {
+      app: "todo-board",
+      version: 1,
+      exportedAt: new Date().toISOString(),
+      data: getSerializableState(),
+    };
+    const blob = new Blob([JSON.stringify(payload, null, 2)], { type: "application/json" });
+    const url = URL.createObjectURL(blob);
+    const link = document.createElement("a");
+    link.href = url;
+    link.download = `todo-board-${new Date().toISOString().slice(0, 10)}.json`;
+    document.body.append(link);
+    link.click();
+    link.remove();
+    URL.revokeObjectURL(url);
+    showToast("JSON 已导出");
+  }
+
+  async function handleImportJson(event) {
+    const file = event.target.files?.[0];
+    if (!file) {
+      return;
+    }
+
+    try {
+      const parsed = JSON.parse(await file.text());
+      const importedState = normalizeImportedState(parsed);
+      if (!window.confirm("导入 JSON 会覆盖当前页面所有数据，继续吗？")) {
+        return;
+      }
+      state = importedState;
+      saveState();
+      applyTheme();
+      applyCustomTitles();
+      renderAll();
+      showToast("JSON 已导入");
+    } catch (error) {
+      console.warn("JSON 导入失败。", error);
+      showToast("JSON 导入失败");
+    } finally {
+      event.target.value = "";
+    }
+  }
+
+  function normalizeImportedState(payload) {
+    const imported = payload?.data && isPlainObject(payload.data) ? payload.data : payload;
+    if (!isPlainObject(imported)) {
+      throw new Error("导入内容不是有效的状态对象");
+    }
+
+    const nextState = {
+      ...structuredClone(defaultState),
+      ...imported,
+      customTitles: isPlainObject(imported.customTitles) ? imported.customTitles : {},
+      noteLines: normalizeLineCollection(imported.noteLines ?? imported.note),
+      workspaceLines: normalizeLineCollection(imported.workspaceLines ?? imported.workspace),
+      storageLines: normalizeLineCollection(imported.storageLines ?? imported.storage),
+      images: normalizeImages(imported.images),
+      quickButtons: normalizeQuickButtons(imported.quickButtons),
+      showHiddenQuickButtons: Boolean(imported.showHiddenQuickButtons),
+      todos: normalizeTodos(imported.todos),
+    };
+
+    nextState.theme = imported.theme === "dark" ? "dark" : "light";
+    return nextState;
+  }
+
+  function normalizeLineCollection(value) {
+    if (typeof value === "string") {
+      return migrateWorkspaceText(value);
+    }
+    if (!Array.isArray(value)) {
+      return [];
+    }
+    return value.map((line) => {
+      if (typeof line === "string") {
+        return { text: line, indent: 0 };
+      }
+      return {
+        text: String(line?.text ?? ""),
+        indent: Math.max(0, Number(line?.indent) || 0),
+      };
+    });
+  }
+
+  function normalizeImages(images) {
+    if (!Array.isArray(images)) {
+      return [];
+    }
+    return images
+      .filter((image) => image && typeof image.src === "string")
+      .map((image) => ({
+        id: String(image.id || createId()),
+        src: image.src,
+        createdAt: Number(image.createdAt) || Date.now(),
+      }));
+  }
+
+  function normalizeQuickButtons(buttons) {
+    if (!Array.isArray(buttons)) {
+      return [];
+    }
+    return buttons
+      .filter((button) => button && button.title !== undefined && button.value !== undefined)
+      .map((button) => ({
+        id: String(button.id || createId()),
+        title: String(button.title),
+        value: String(button.value),
+        type: button.type === "text" ? "text" : "link",
+        hidden: Boolean(button.hidden),
+      }));
+  }
+
+  function normalizeTodos(todos) {
+    const normalized = structuredClone(defaultState.todos);
+    Object.keys(normalized).forEach((period) => {
+      const items = Array.isArray(todos?.[period]) ? todos[period] : [];
+      normalized[period] = items
+        .filter((todo) => todo && todo.text !== undefined)
+        .map((todo) => ({
+          id: String(todo.id || createId()),
+          text: String(todo.text),
+          done: Boolean(todo.done),
+        }));
+    });
+    return normalized;
+  }
+
+  function isPlainObject(value) {
+    return value !== null && typeof value === "object" && !Array.isArray(value);
+  }
+
   function hydrateTextareas() {
-    Object.keys(LINE_EDITORS).forEach((id) => renderLineEditor(elements[id]));
+    Object.keys(TEXT_EDITORS).forEach((id) => hydrateTextEditor(elements[id]));
+  }
+
+  function hydrateTextEditor(textarea) {
+    const config = getTextEditorConfig(textarea);
+    if (!config) return;
+    textarea.value = textEditorLinesToText(state[config.stateKey]);
+    updateTextEditorBulletLayer(textarea);
+  }
+
+  function textEditorLinesToText(lines) {
+    if (!Array.isArray(lines) || lines.length === 0) {
+      return "";
+    }
+    return lines
+      .map((line) => {
+        const indent = Math.max(0, Number(line?.indent) || 0);
+        return `${"\t".repeat(indent)}${line?.text || ""}`;
+      })
+      .join("\n");
+  }
+
+  function serializeTextEditorValue(value = "") {
+    if (!value) {
+      return [];
+    }
+    return value.split("\n").map((line) => {
+      const indentMatch = line.match(/^\t*/);
+      const indent = indentMatch ? indentMatch[0].length : 0;
+      return {
+        text: line.slice(indent),
+        indent,
+      };
+    });
+  }
+
+  function serializeWorkspaceTextarea(value = elements.workspaceEditor.value) {
+    return serializeTextEditorValue(value);
   }
 
   function renderAll() {
@@ -262,207 +505,188 @@
     hydrateTextareas();
   }
 
-  function getEditorConfig(editorEl) {
-    return LINE_EDITORS[editorEl.id];
+  function getTextEditorConfig(textarea) {
+    return TEXT_EDITORS[textarea.id];
   }
 
-  function renderLineEditor(editorEl) {
-    const config = getEditorConfig(editorEl);
-    if (!config) return;
-
-    const lines = state[config.stateKey];
-    const activeInput = editorEl.querySelector(".ws-input:focus");
-    const activeIndex = activeInput ? Number(activeInput.dataset.index) : -1;
-    const selStart = activeInput ? activeInput.selectionStart : -1;
-
-    editorEl.innerHTML = "";
-
-    if (lines.length === 0) {
-      const row = createLineRow(editorEl, { text: "", indent: 0 }, 0);
-      editorEl.append(row);
-      return;
-    }
-
-    lines.forEach((line, index) => {
-      editorEl.append(createLineRow(editorEl, line, index));
-    });
-
-    if (activeIndex >= 0) {
-      const input = editorEl.querySelector(`.ws-input[data-index="${activeIndex}"]`);
-      if (input) {
-        input.focus();
-        if (selStart >= 0) {
-          input.setSelectionRange(selStart, selStart);
-        }
-      }
-    }
-  }
-
-  function createLineRow(editorEl, line, index) {
-    const config = getEditorConfig(editorEl);
-    const row = document.createElement("div");
-    row.className = "ws-row";
-
-    if (line.indent > 0) {
-      const indent = document.createElement("span");
-      indent.className = "ws-indent";
-      indent.style.width = `${line.indent * WS_INDENT}px`;
-      row.append(indent);
-
-      const dot = document.createElement("span");
-      dot.className = "ws-dash";
-      dot.textContent = "·";
-      row.append(dot);
-    }
-
-    const input = document.createElement("input");
-    input.className = "ws-input";
-    input.type = "text";
-    input.value = line.text;
-    input.dataset.index = index;
-    input.spellcheck = false;
-    if (index === 0 && line.text === "" && state[config.stateKey].length <= 1) {
-      input.placeholder = config.placeholder;
-    }
-
-    input.addEventListener("input", () => {
-      const i = Number(input.dataset.index);
-      const lines = state[config.stateKey];
-      lines[i] = { ...lines[i], text: input.value };
-      triggerLineEditorSave(editorEl);
-    });
-
-    row.append(input);
-    return row;
-  }
-
-  function handleLineEditorClick(event) {
-    const editorEl = event.currentTarget;
-    const input = event.target.closest(".ws-input");
-    if (input) {
-      handleTextareaFocus(editorEl);
-      return;
-    }
-    if (event.target === editorEl || event.target.closest(".ws-row")) {
-      handleTextareaFocus(editorEl);
-      const lastInput = editorEl.querySelectorAll(".ws-input");
-      const target = lastInput.length > 0 ? lastInput[lastInput.length - 1] : null;
-      if (target) {
-        target.focus();
-      }
-    }
-  }
-
-  function handleLineEditorKeydown(event) {
-    const input = event.target.closest(".ws-input");
-    if (!input) return;
-
-    const editorEl = input.closest(".ws-editor");
-    const config = getEditorConfig(editorEl);
-    if (!config) return;
-
-    const lines = state[config.stateKey];
-    const index = Number(input.dataset.index);
-    let changed = false;
-
-    if (event.key === "Tab") {
-      event.preventDefault();
-      if (event.shiftKey) {
-        if (lines[index].indent > 0) {
-          lines[index] = { ...lines[index], indent: lines[index].indent - 1 };
-          changed = true;
-        }
-      } else {
-        lines[index] = { ...lines[index], indent: lines[index].indent + 1 };
-        changed = true;
-      }
-      if (changed) renderLineEditor(editorEl);
-    } else if (event.key === "Enter") {
-      event.preventDefault();
-      const text = input.value;
-      const cursorPos = input.selectionStart;
-      const before = text.slice(0, cursorPos);
-      const after = text.slice(cursorPos);
-      const currentIndent = lines[index].indent;
-
-      lines[index] = { text: before, indent: currentIndent };
-      lines.splice(index + 1, 0, { text: after, indent: currentIndent });
-      changed = true;
-      renderLineEditor(editorEl);
-      const nextInput = editorEl.querySelectorAll(".ws-input")[index + 1];
-      if (nextInput) {
-        nextInput.focus();
-        nextInput.setSelectionRange(0, 0);
-      }
-    } else if (event.key === "Backspace" && input.selectionStart === 0 && input.selectionEnd === 0) {
-      if (lines[index].indent > 0) {
-        event.preventDefault();
-        lines[index] = { ...lines[index], indent: lines[index].indent - 1 };
-        changed = true;
-        renderLineEditor(editorEl);
-      } else if (index > 0) {
-        event.preventDefault();
-        const prevLine = lines[index - 1];
-        const prevLen = prevLine.text.length;
-        if (lines[index].text === "") {
-          lines.splice(index, 1);
-        } else {
-          lines[index - 1] = { ...prevLine, text: prevLine.text + lines[index].text };
-          lines.splice(index, 1);
-        }
-        changed = true;
-        renderLineEditor(editorEl);
-        const prevInput = editorEl.querySelectorAll(".ws-input")[index - 1];
-        if (prevInput) {
-          prevInput.focus();
-          prevInput.setSelectionRange(prevLen, prevLen);
-        }
-      }
-    } else if (event.key === "ArrowUp" && index > 0) {
-      if (input.selectionStart === 0) {
-        event.preventDefault();
-        const prevInput = editorEl.querySelectorAll(".ws-input")[index - 1];
-        if (prevInput) prevInput.focus();
-      }
-    } else if (event.key === "ArrowDown" && index < lines.length - 1) {
-      if (input.selectionStart === input.value.length) {
-        event.preventDefault();
-        const nextInput = editorEl.querySelectorAll(".ws-input")[index + 1];
-        if (nextInput) nextInput.focus();
-      }
-    }
-
-    if (changed) {
-      triggerLineEditorSave(editorEl);
-    }
-  }
-
-  function triggerLineEditorSave(editorEl) {
+  function triggerTextEditorSave(textarea) {
     hasTypedInFocusedTextarea = true;
     if (inputSaveTimer) {
       clearTimeout(inputSaveTimer);
     }
     inputSaveTimer = setTimeout(() => {
-      flushLineEditorState(editorEl);
+      flushTextEditorState(textarea);
       saveState({ showBubble: true });
       inputSaveTimer = null;
     }, 3000);
   }
 
-  function flushLineEditorState(editorEl) {
-    const config = getEditorConfig(editorEl);
-    if (!config) return;
-    const lines = state[config.stateKey];
-    editorEl.querySelectorAll(".ws-input").forEach((input) => {
-      const index = Number(input.dataset.index);
-      if (lines[index]) {
-        lines[index] = { ...lines[index], text: input.value };
-      }
-    });
+  function triggerWorkspaceTextareaSave(textarea) {
+    triggerTextEditorSave(textarea);
   }
 
-  function flushAllLineEditorState() {
-    Object.keys(LINE_EDITORS).forEach((id) => flushLineEditorState(elements[id]));
+  function flushTextEditorState(textarea) {
+    if (!textarea) return;
+    const config = getTextEditorConfig(textarea);
+    if (!config) return;
+    state[config.stateKey] = serializeTextEditorValue(textarea.value);
+  }
+
+  function flushWorkspaceTextareaState(textarea = elements.workspaceEditor) {
+    flushTextEditorState(textarea);
+  }
+
+  function handleTextEditorKeydown(event) {
+    if (event.key === "Tab") {
+      event.preventDefault();
+      if (event.shiftKey) {
+        outdentTextEditorSelection(event.currentTarget);
+      } else {
+        indentTextEditorSelection(event.currentTarget);
+      }
+      flushTextEditorState(event.currentTarget);
+      triggerTextEditorSave(event.currentTarget);
+      return;
+    }
+    if (event.key === "Enter" && insertIndentedLineBreak(event.currentTarget)) {
+      event.preventDefault();
+      flushTextEditorState(event.currentTarget);
+      triggerTextEditorSave(event.currentTarget);
+    }
+  }
+
+  function handleWorkspaceTextareaKeydown(event) {
+    handleTextEditorKeydown(event);
+  }
+
+  function indentTextEditorSelection(textarea) {
+    const originalStart = textarea.selectionStart;
+    const originalEnd = textarea.selectionEnd;
+    const range = getTextEditorSelectedLineRange(textarea);
+
+    if (originalStart === originalEnd) {
+      textarea.setRangeText("\t", range.start, range.start, "preserve");
+      const cursorPosition = originalStart + 1;
+      textarea.setSelectionRange(cursorPosition, cursorPosition);
+      updateTextEditorBulletLayer(textarea);
+      return;
+    }
+
+    const selectedText = textarea.value.slice(range.start, range.end);
+    const indented = selectedText
+      .split("\n")
+      .map((line) => `\t${line}`)
+      .join("\n");
+    textarea.setRangeText(indented, range.start, range.end, "preserve");
+    const selectionStart = originalStart + countInsertedTabsBeforeOffset(selectedText, originalStart - range.start);
+    const selectionEnd = originalEnd + countInsertedTabsBeforeOffset(selectedText, originalEnd - range.start);
+    textarea.setSelectionRange(selectionStart, selectionEnd);
+    updateTextEditorBulletLayer(textarea);
+  }
+
+  function countInsertedTabsBeforeOffset(text, offset) {
+    let count = 1;
+    for (let index = 0; index < offset; index += 1) {
+      if (text[index] === "\n") {
+        count += 1;
+      }
+    }
+    return count;
+  }
+
+  function indentWorkspaceSelection(textarea) {
+    indentTextEditorSelection(textarea);
+  }
+
+  function outdentTextEditorSelection(textarea) {
+    const range = getTextEditorSelectedLineRange(textarea);
+    const selectedText = textarea.value.slice(range.start, range.end);
+    let removedBeforeSelection = 0;
+    let removedTotal = 0;
+    let offset = range.start;
+    const outdented = selectedText
+      .split("\n")
+      .map((line) => {
+        const lineStart = offset;
+        offset += line.length + 1;
+        if (!line.startsWith("\t")) {
+          return line;
+        }
+        if (lineStart < textarea.selectionStart) {
+          removedBeforeSelection += 1;
+        }
+        removedTotal += 1;
+        return line.slice(1);
+      })
+      .join("\n");
+    const nextStart = Math.max(range.start, textarea.selectionStart - removedBeforeSelection);
+    const nextEnd = Math.max(nextStart, textarea.selectionEnd - removedTotal);
+    textarea.setRangeText(outdented, range.start, range.end, "preserve");
+    textarea.setSelectionRange(nextStart, nextEnd);
+    updateTextEditorBulletLayer(textarea);
+  }
+
+  function outdentWorkspaceSelection(textarea) {
+    outdentTextEditorSelection(textarea);
+  }
+
+  function insertIndentedLineBreak(textarea) {
+    if (textarea.selectionStart !== textarea.selectionEnd) {
+      return false;
+    }
+    const lineStart = textarea.value.lastIndexOf("\n", textarea.selectionStart - 1) + 1;
+    const line = textarea.value.slice(lineStart, textarea.selectionStart);
+    const indent = line.match(/^\t*/)?.[0] || "";
+    if (!indent) {
+      return false;
+    }
+    textarea.setRangeText(`\n${indent}`, textarea.selectionStart, textarea.selectionEnd, "end");
+    updateTextEditorBulletLayer(textarea);
+    return true;
+  }
+
+  function insertWorkspaceIndentedLineBreak(textarea) {
+    return insertIndentedLineBreak(textarea);
+  }
+
+  function getTextEditorSelectedLineRange(textarea) {
+    const value = textarea.value;
+    const start = textarea.selectionStart;
+    const end = textarea.selectionEnd;
+    const rangeStart = value.lastIndexOf("\n", Math.max(0, start - 1)) + 1;
+    const effectiveEnd = end > start && value[end - 1] === "\n" ? end - 1 : end;
+    const nextBreak = value.indexOf("\n", effectiveEnd);
+    const rangeEnd = nextBreak === -1 ? value.length : nextBreak;
+    return { start: rangeStart, end: rangeEnd };
+  }
+
+  function updateTextEditorBulletLayer(textarea) {
+    const config = getTextEditorConfig(textarea);
+    if (!config) {
+      return;
+    }
+    const bulletLayer = document.getElementById(config.bulletId);
+    if (!bulletLayer) {
+      return;
+    }
+    bulletLayer.innerHTML = "";
+    textarea.value.split("\n").forEach((line) => {
+      const indent = line.match(/^\t+/)?.[0].length || 0;
+      const row = document.createElement("div");
+      row.className = "text-bullet-line";
+      if (indent > 0) {
+        const dot = document.createElement("span");
+        dot.className = "text-bullet-dot";
+        dot.textContent = "·";
+        row.append(dot);
+      }
+      bulletLayer.append(row);
+    });
+    bulletLayer.style.transform = `translateY(${-textarea.scrollTop}px)`;
+  }
+
+  function updateWorkspaceBulletLayer() {
+    updateTextEditorBulletLayer(elements.workspaceEditor);
   }
 
   function renderImages() {
@@ -472,7 +696,7 @@
     if (state.images.length === 0) {
       const empty = document.createElement("p");
       empty.className = "hint";
-      empty.textContent = "Ctrl + v 粘贴图片";
+      empty.textContent = EMPTY_HINTS.images;
       elements.imageList.append(empty);
       return;
     }
@@ -514,7 +738,7 @@
     if (visibleButtons.length === 0) {
       const empty = document.createElement("p");
       empty.className = "hint";
-      empty.textContent = "暂无快捷按钮";
+      empty.textContent = EMPTY_HINTS.quickButtons;
       elements.quickButtons.append(empty);
       return;
     }
@@ -537,6 +761,11 @@
       const todos = getOrderedTodos(state.todos[period]);
       list.innerHTML = "";
       count.textContent = String(todos.filter((todo) => !todo.done).length);
+
+      if (todos.length === 0) {
+        renderTodoEmptyHint(list, period);
+        return;
+      }
 
       todos.forEach((todo) => {
         const item = document.createElement("li");
@@ -563,6 +792,13 @@
         list.append(item);
       });
     });
+  }
+
+  function renderTodoEmptyHint(list, period) {
+    const empty = document.createElement("li");
+    empty.className = "todo-empty hint";
+    empty.textContent = EMPTY_HINTS.todos[period] || "点击空白处新增提醒事项。";
+    list.append(empty);
   }
 
   function handlePaste(event) {
@@ -690,10 +926,10 @@
   }
 
   function applyCustomTitles() {
-    Object.entries(state.customTitles).forEach(([id, title]) => {
+    Object.entries(DEFAULT_TITLES).forEach(([id, defaultTitle]) => {
       const heading = document.getElementById(id);
       if (heading) {
-        heading.textContent = title;
+        heading.textContent = state.customTitles[id] || defaultTitle;
       }
     });
   }
@@ -707,29 +943,36 @@
     focusedTextarea = textarea;
     lastTextarea = textarea;
     hasTypedInFocusedTextarea = false;
+    markFocusedArea(textarea);
     showFocusCompanion(textarea);
   }
 
   function handleTextareaInput(textarea) {
-    const config = getEditorConfig(textarea);
+    const config = getTextEditorConfig(textarea);
     if (config) {
-      triggerLineEditorSave(textarea);
+      flushTextEditorState(textarea);
+      updateTextEditorBulletLayer(textarea);
+      triggerTextEditorSave(textarea);
     }
   }
 
-  function handleTextareaBlur(textarea) {
+  function handleTextareaBlur(textarea, event) {
+    if (event?.relatedTarget && textarea.contains(event.relatedTarget)) {
+      return;
+    }
     focusedTextarea = null;
+    clearFocusedAreas();
     hideFocusCompanion();
 
     if (!hasTypedInFocusedTextarea) {
       return;
     }
 
-    const config = getEditorConfig(textarea);
+    const config = getTextEditorConfig(textarea);
     if (config && inputSaveTimer) {
       clearTimeout(inputSaveTimer);
       inputSaveTimer = null;
-      flushLineEditorState(textarea);
+      flushTextEditorState(textarea);
       saveState({ showBubble: true });
       return;
     }
@@ -740,7 +983,7 @@
 
     blurSaveTimer = setTimeout(() => {
       if (config) {
-        flushLineEditorState(textarea);
+        flushTextEditorState(textarea);
       }
       saveState({ showBubble: true });
       blurSaveTimer = null;
@@ -748,14 +991,26 @@
   }
 
   function updateTextareaState(textarea) {
-    const config = getEditorConfig(textarea);
+    const config = getTextEditorConfig(textarea);
     if (config) {
-      flushLineEditorState(textarea);
+      flushTextEditorState(textarea);
     }
   }
 
   function flushTextareaState() {
-    flushAllLineEditorState();
+    Object.keys(TEXT_EDITORS).forEach((id) => flushTextEditorState(elements[id]));
+  }
+
+  function markFocusedArea(target) {
+    clearFocusedAreas();
+    const area = target.closest(".split-block") || target.closest(".todo-section") || target.closest(".panel") || target;
+    area.classList.add("is-focused");
+  }
+
+  function clearFocusedAreas() {
+    document.querySelectorAll(".panel.is-focused, .split-block.is-focused, .todo-section.is-focused").forEach((area) => {
+      area.classList.remove("is-focused");
+    });
   }
 
   function showFocusCompanion(textarea) {
@@ -769,7 +1024,10 @@
     elements.focusCompanion.setAttribute("aria-hidden", "true");
   }
 
-  function positionFocusCompanion(textarea = focusedTextarea || lastTextarea) {
+  function positionFocusCompanion(textarea) {
+    if (textarea === undefined) {
+      textarea = focusedTextarea || lastTextarea;
+    }
     if (textarea !== null && !(textarea instanceof HTMLElement)) {
       textarea = focusedTextarea || lastTextarea;
     }
@@ -787,7 +1045,12 @@
     elements.focusCompanion.style.top = `${top}px`;
   }
 
-  function showSaveBubble() {
+  function showSaveBubble(options = {}) {
+    if (options.defaultPosition || !focusedTextarea) {
+      positionFocusCompanion(null);
+    } else {
+      positionFocusCompanion(focusedTextarea);
+    }
     const text = randomItem(saveMessages);
     const face = randomItem(kaomoji);
     elements.saveBubble.textContent = `${text} ${face}`;
@@ -975,6 +1238,20 @@
     return state.quickButtons.find((button) => button.id === id);
   }
 
+  function handleTodoFocusIn(event) {
+    if (!event.target.matches(".todo-text")) {
+      return;
+    }
+    const section = event.target.closest(".todo-section");
+    if (!section) {
+      return;
+    }
+    focusedTextarea = section;
+    lastTextarea = section;
+    markFocusedArea(section);
+    showFocusCompanion(section);
+  }
+
   function handleTodoChange(event) {
     if (!event.target.matches('input[type="checkbox"]')) {
       return;
@@ -1012,6 +1289,7 @@
     if (!event.target.matches(".todo-text")) {
       return;
     }
+    handleTodoFocusIn(event);
     const item = event.target.closest(".todo-item");
     const todo = findTodo(item.dataset.period, item.dataset.id);
     if (!todo) {
@@ -1038,17 +1316,34 @@
     if (!event.target.matches(".todo-text")) {
       return;
     }
+    const section = event.target.closest(".todo-section");
     const item = event.target.closest(".todo-item");
     const todo = findTodo(item.dataset.period, item.dataset.id);
     if (!todo) {
+      settleTodoFocusOut(section);
       return;
     }
     todo.text = event.target.value;
     if (todo.text.trim()) {
       saveState();
+      settleTodoFocusOut(section);
       return;
     }
     removeTodo(item.dataset.period, item.dataset.id);
+    settleTodoFocusOut(section);
+  }
+
+  function settleTodoFocusOut(section) {
+    requestAnimationFrame(() => {
+      if (!section || document.activeElement?.closest(".todo-section") === section) {
+        return;
+      }
+      if (focusedTextarea === section) {
+        focusedTextarea = null;
+        clearFocusedAreas();
+        hideFocusCompanion();
+      }
+    });
   }
 
   function handleTodoListClick(event) {

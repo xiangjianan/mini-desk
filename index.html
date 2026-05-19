@@ -22,7 +22,10 @@
           <div class="panel-header">
             <h2 id="note-title">记</h2>
           </div>
-          <div id="noteEditor" class="ws-editor" data-placeholder="写下临时想法..."></div>
+          <div class="text-editor-frame">
+            <div id="noteBullets" class="text-bullet-layer" aria-hidden="true"></div>
+            <textarea id="noteEditor" class="text-editor-textarea board-textarea large-textarea" placeholder="随手记：临时想法、灵感、草稿先放这里。" spellcheck="false"></textarea>
+          </div>
         </div>
 
         <div class="split-block quick-block">
@@ -58,7 +61,7 @@
               <h3 id="todo-morning-title">早</h3>
               <div class="todo-heading-actions">
                 <span class="todo-count" data-count="morning">0</span>
-                <button class="clear-completed-button icon-action" type="button" data-clear-completed="morning" aria-label="清已完成" title="清已完成"><svg viewBox="5 0 16 20" aria-hidden="true"><line x1="12" y1="2" x2="12" y2="8" /><path d="M8 8h8v2l-1 8H9l-1-8z" /><line x1="9.5" y1="13" x2="8" y2="18" /><line x1="12" y1="13" x2="11" y2="18" /><line x1="14.5" y1="13" x2="16" y2="18" /></svg></button>
+                <button class="clear-completed-button icon-action" type="button" data-clear-completed="morning" aria-label="清已完成" title="清已完成"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M15.5 3.5l5 5" /><path d="M14 5l5 5-8.5 8.5a2.8 2.8 0 0 1-4 0l-1-1 8.5-8.5z" /><path d="M6 18l-2 3 3-2" /></svg></button>
               </div>
             </div>
             <ul class="todo-list" data-list="morning"></ul>
@@ -69,7 +72,7 @@
               <h3 id="todo-noon-title">中</h3>
               <div class="todo-heading-actions">
                 <span class="todo-count" data-count="noon">0</span>
-                <button class="clear-completed-button icon-action" type="button" data-clear-completed="noon" aria-label="清已完成" title="清已完成"><svg viewBox="5 0 16 20" aria-hidden="true"><line x1="12" y1="2" x2="12" y2="8" /><path d="M8 8h8v2l-1 8H9l-1-8z" /><line x1="9.5" y1="13" x2="8" y2="18" /><line x1="12" y1="13" x2="11" y2="18" /><line x1="14.5" y1="13" x2="16" y2="18" /></svg></button>
+                <button class="clear-completed-button icon-action" type="button" data-clear-completed="noon" aria-label="清已完成" title="清已完成"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M15.5 3.5l5 5" /><path d="M14 5l5 5-8.5 8.5a2.8 2.8 0 0 1-4 0l-1-1 8.5-8.5z" /><path d="M6 18l-2 3 3-2" /></svg></button>
               </div>
             </div>
             <ul class="todo-list" data-list="noon"></ul>
@@ -80,7 +83,7 @@
               <h3 id="todo-evening-title">晚</h3>
               <div class="todo-heading-actions">
                 <span class="todo-count" data-count="evening">0</span>
-                <button class="clear-completed-button icon-action" type="button" data-clear-completed="evening" aria-label="清已完成" title="清已完成"><svg viewBox="5 0 16 20" aria-hidden="true"><line x1="12" y1="2" x2="12" y2="8" /><path d="M8 8h8v2l-1 8H9l-1-8z" /><line x1="9.5" y1="13" x2="8" y2="18" /><line x1="12" y1="13" x2="11" y2="18" /><line x1="14.5" y1="13" x2="16" y2="18" /></svg></button>
+                <button class="clear-completed-button icon-action" type="button" data-clear-completed="evening" aria-label="清已完成" title="清已完成"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M15.5 3.5l5 5" /><path d="M14 5l5 5-8.5 8.5a2.8 2.8 0 0 1-4 0l-1-1 8.5-8.5z" /><path d="M6 18l-2 3 3-2" /></svg></button>
               </div>
             </div>
             <ul class="todo-list" data-list="evening"></ul>
@@ -92,30 +95,53 @@
         <div class="panel-header">
           <h2 id="workspace-title">工作空间</h2>
         </div>
-        <div id="workspaceEditor" class="ws-editor" data-placeholder="在这里输入工作内容..."></div>
+        <div class="text-editor-frame">
+          <div id="workspaceBullets" class="text-bullet-layer" aria-hidden="true"></div>
+          <textarea id="workspaceEditor" class="text-editor-textarea board-textarea large-textarea" placeholder="工作空间：拆任务、写步骤、整理当前上下文。Tab 可缩进。" spellcheck="false"></textarea>
+        </div>
       </section>
 
       <section class="panel text-panel" aria-labelledby="storage-title">
         <div class="panel-header">
           <h2 id="storage-title">工程文件</h2>
-          <button id="themeToggle" class="ghost-button icon-action" type="button" aria-label="切换主题" title="切换主题">
-            <svg id="iconSun" viewBox="0 0 24 24" aria-hidden="true" style="display:none">
-              <circle cx="12" cy="12" r="5" />
-              <line x1="12" y1="1" x2="12" y2="3" />
-              <line x1="12" y1="21" x2="12" y2="23" />
-              <line x1="4.22" y1="4.22" x2="5.64" y2="5.64" />
-              <line x1="18.36" y1="18.36" x2="19.78" y2="19.78" />
-              <line x1="1" y1="12" x2="3" y2="12" />
-              <line x1="21" y1="12" x2="23" y2="12" />
-              <line x1="4.22" y1="19.78" x2="5.64" y2="18.36" />
-              <line x1="18.36" y1="5.64" x2="19.78" y2="4.22" />
-            </svg>
-            <svg id="iconMoon" viewBox="0 0 24 24" aria-hidden="true">
-              <path d="M21 12.79A9 9 0 1 1 11.21 3 7 7 0 0 0 21 12.79z" />
-            </svg>
-          </button>
+          <div class="header-actions">
+            <button id="importJsonBtn" class="ghost-button icon-action" type="button" aria-label="导入 JSON" title="导入 JSON">
+              <svg viewBox="0 0 24 24" aria-hidden="true">
+                <path d="M12 3v12" />
+                <path d="M7 8l5-5 5 5" />
+                <path d="M5 17v3h14v-3" />
+              </svg>
+            </button>
+            <button id="exportJsonBtn" class="ghost-button icon-action" type="button" aria-label="导出 JSON" title="导出 JSON">
+              <svg viewBox="0 0 24 24" aria-hidden="true">
+                <path d="M12 21V9" />
+                <path d="M7 16l5 5 5-5" />
+                <path d="M5 7V4h14v3" />
+              </svg>
+            </button>
+            <button id="themeToggle" class="ghost-button icon-action" type="button" aria-label="切换主题" title="切换主题">
+              <svg id="iconSun" viewBox="0 0 24 24" aria-hidden="true" style="display:none">
+                <circle cx="12" cy="12" r="5" />
+                <line x1="12" y1="1" x2="12" y2="3" />
+                <line x1="12" y1="21" x2="12" y2="23" />
+                <line x1="4.22" y1="4.22" x2="5.64" y2="5.64" />
+                <line x1="18.36" y1="18.36" x2="19.78" y2="19.78" />
+                <line x1="1" y1="12" x2="3" y2="12" />
+                <line x1="21" y1="12" x2="23" y2="12" />
+                <line x1="4.22" y1="19.78" x2="5.64" y2="18.36" />
+                <line x1="18.36" y1="5.64" x2="19.78" y2="4.22" />
+              </svg>
+              <svg id="iconMoon" viewBox="0 0 24 24" aria-hidden="true">
+                <path d="M21 12.79A9 9 0 1 1 11.21 3 7 7 0 0 0 21 12.79z" />
+              </svg>
+            </button>
+          </div>
         </div>
-        <div id="storageEditor" class="ws-editor" data-placeholder="在这里存放工程文件路径、命令、片段..."></div>
+        <input id="importJsonInput" type="file" accept="application/json,.json" hidden />
+        <div class="text-editor-frame">
+          <div id="storageBullets" class="text-bullet-layer" aria-hidden="true"></div>
+          <textarea id="storageEditor" class="text-editor-textarea board-textarea large-textarea" placeholder="工程文件：放路径、命令、配置片段，随时复制查看。" spellcheck="false"></textarea>
+        </div>
       </section>
     </main>
 
