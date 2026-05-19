@@ -129,20 +129,17 @@
     </main>
 
     <div id="focusCompanion" class="focus-companion" aria-hidden="true">
-      <div id="saveBubble" class="save-bubble" role="status" aria-live="polite"></div>
+      <div id="bubbleBox" class="bubble-box" role="status" aria-live="polite">
+        <span id="bubbleText"></span>
+        <div id="bubbleActions" class="bubble-actions" hidden>
+          <button type="button" id="bubbleYes">是</button>
+          <button type="button" id="bubbleNo">否</button>
+        </div>
+      </div>
       <img id="focusVideo" src="static/video/hermes.gif" alt="">
     </div>
 
     <div id="toast" class="toast" role="status" aria-live="polite"></div>
-
-    <div id="confirmBubble" class="confirm-bubble" aria-hidden="true">
-      <div id="confirmBubbleText" class="confirm-bubble-text"></div>
-      <div class="confirm-bubble-actions">
-        <button type="button" id="confirmBubbleYes">是</button>
-        <button type="button" id="confirmBubbleNo">否</button>
-      </div>
-      <img src="static/video/hermes.gif" alt="" class="confirm-bubble-gif">
-    </div>
 
     <div id="quickMenu" class="context-menu" role="menu" aria-hidden="true">
       <button type="button" data-action="edit">编辑</button>

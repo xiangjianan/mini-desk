@@ -153,12 +153,12 @@
     elements.iconMoon = document.getElementById("iconMoon");
     elements.focusCompanion = document.getElementById("focusCompanion");
     elements.focusVideo = document.getElementById("focusVideo");
-    elements.saveBubble = document.getElementById("saveBubble");
+    elements.bubbleBox = document.getElementById("bubbleBox");
+    elements.bubbleText = document.getElementById("bubbleText");
+    elements.bubbleActions = document.getElementById("bubbleActions");
     elements.toast = document.getElementById("toast");
-    elements.confirmBubble = document.getElementById("confirmBubble");
-    elements.confirmBubbleText = document.getElementById("confirmBubbleText");
-    elements.confirmBubbleYes = document.getElementById("confirmBubbleYes");
-    elements.confirmBubbleNo = document.getElementById("confirmBubbleNo");
+    elements.bubbleYes = document.getElementById("bubbleYes");
+    elements.bubbleNo = document.getElementById("bubbleNo");
     elements.quickMenu = document.getElementById("quickMenu");
     elements.todoMenu = document.getElementById("todoMenu");
     elements.quickDialog = document.getElementById("quickDialog");
@@ -217,8 +217,8 @@
     elements.editQuickIsLink.addEventListener("change", updateEditValueLabel);
     elements.deleteQuickInDialog.addEventListener("click", deleteActiveQuickFromDialog);
     elements.importJsonInput.addEventListener("change", handleImportJson);
-    elements.confirmBubbleYes.addEventListener("click", handleConfirmBubbleYes);
-    elements.confirmBubbleNo.addEventListener("click", handleConfirmBubbleNo);
+    elements.bubbleYes.addEventListener("click", handleConfirmBubbleYes);
+    elements.bubbleNo.addEventListener("click", handleConfirmBubbleNo);
     elements.themeToggle.addEventListener("click", toggleTheme);
     document.querySelectorAll(".clear-completed-button").forEach((button) => {
       button.addEventListener("click", handleClearCompleted);
@@ -1233,7 +1233,8 @@
   }
 
   function showBubbleMessage(text) {
-    elements.saveBubble.textContent = text;
+    elements.bubbleText.textContent = text;
+    elements.bubbleActions.hidden = true;
     // Position companion at bottom-center of viewport
     const size = 72;
     const gap = 12;
@@ -1241,12 +1242,12 @@
     elements.focusCompanion.style.top = `${window.innerHeight - size - gap}px`;
     elements.focusCompanion.classList.add("is-visible");
     elements.focusCompanion.setAttribute("aria-hidden", "false");
-    elements.saveBubble.classList.add("is-visible");
+    elements.bubbleBox.classList.add("is-visible");
     if (bubbleTimer) {
       clearTimeout(bubbleTimer);
     }
     bubbleTimer = setTimeout(() => {
-      elements.saveBubble.classList.remove("is-visible");
+      elements.bubbleBox.classList.remove("is-visible");
       if (!focusedTextarea) {
         hideFocusCompanion();
       }
@@ -2147,15 +2148,28 @@
   function confirmDelete(message) {
     return new Promise((resolve) => {
       confirmResolve = resolve;
-      elements.confirmBubbleText.textContent = message || "确定要删除吗？";
-      elements.confirmBubble.classList.add("is-visible");
-      elements.confirmBubble.setAttribute("aria-hidden", "false");
+      if (bubbleTimer) {
+        clearTimeout(bubbleTimer);
+        bubbleTimer = null;
+      }
+      elements.bubbleText.textContent = message || "确定要删除吗？";
+      elements.bubbleActions.hidden = false;
+      const size = 72;
+      const gap = 12;
+      elements.focusCompanion.style.left = `${Math.max(8, (window.innerWidth - size) / 2)}px`;
+      elements.focusCompanion.style.top = `${window.innerHeight - size - gap}px`;
+      elements.focusCompanion.classList.add("is-visible");
+      elements.focusCompanion.setAttribute("aria-hidden", "false");
+      elements.bubbleBox.classList.add("is-visible");
     });
   }
 
   function handleConfirmBubbleYes() {
-    elements.confirmBubble.classList.remove("is-visible");
-    elements.confirmBubble.setAttribute("aria-hidden", "true");
+    elements.bubbleBox.classList.remove("is-visible");
+    elements.bubbleActions.hidden = true;
+    if (!focusedTextarea) {
+      hideFocusCompanion();
+    }
     if (confirmResolve) {
       confirmResolve(true);
       confirmResolve = null;
@@ -2163,8 +2177,11 @@
   }
 
   function handleConfirmBubbleNo() {
-    elements.confirmBubble.classList.remove("is-visible");
-    elements.confirmBubble.setAttribute("aria-hidden", "true");
+    elements.bubbleBox.classList.remove("is-visible");
+    elements.bubbleActions.hidden = true;
+    if (!focusedTextarea) {
+      hideFocusCompanion();
+    }
     if (confirmResolve) {
       confirmResolve(false);
       confirmResolve = null;
