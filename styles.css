@@ -318,25 +318,19 @@ h3 {
 .text-bullet-layer {
   position: absolute;
   z-index: 2;
-  top: 8px;
-  right: 8px;
-  left: 8px;
+  top: 0;
+  right: 0;
+  bottom: 0;
+  left: 0;
   color: var(--muted);
-  line-height: 1.55;
   pointer-events: none;
   user-select: none;
-}
-
-.text-bullet-line {
-  height: 1.55em;
+  overflow: hidden;
 }
 
 .text-bullet-dot {
-  display: inline-block;
-  width: 8px;
-  font-size: 16px;
-  line-height: 1;
-  margin-left: calc(var(--indent, 0) * 2ch - 0.5em);
+  position: absolute;
+  color: var(--muted);
 }
 
 .large-textarea {
@@ -672,15 +666,14 @@ h3 {
 }
 
 .preview-sidebar {
-  width: 10%;
-  min-width: 80px;
+  width: 25%;
+  max-width: 280px;
+  min-width: 180px;
   height: 100%;
   display: flex;
   flex-direction: column;
-  background: rgba(0, 0, 0, 0.55);
-  backdrop-filter: blur(16px);
-  -webkit-backdrop-filter: blur(16px);
-  border-right: 1px solid rgba(255, 255, 255, 0.1);
+  background: var(--panel);
+  border-right: 1px solid var(--line-control);
 }
 
 .preview-sidebar-header {
@@ -696,14 +689,14 @@ h3 {
   height: 28px;
   min-height: 28px;
   padding: 0;
-  background: rgba(255, 255, 255, 0.15);
-  color: #ffffff;
+  background: transparent;
+  color: var(--text);
   border-color: transparent;
   font-size: 16px;
 }
 
 .preview-close:hover {
-  background: rgba(255, 255, 255, 0.25);
+  color: var(--muted);
 }
 
 .preview-list {
@@ -712,45 +705,60 @@ h3 {
   display: flex;
   flex-direction: column;
   gap: 4px;
-  padding: 0 8px 8px;
+  padding: 4px;
 }
 
 .preview-thumb {
+  position: relative;
+  display: grid;
+  grid-template-columns: 28px minmax(0, 1fr);
+  align-items: center;
+  justify-items: center;
+  width: 100%;
+  min-height: 72px;
+  border: 1px solid transparent;
+  border-radius: var(--radius);
+  overflow: hidden;
+  background: var(--input);
+  cursor: pointer;
+}
+
+.preview-thumb::before {
+  content: attr(data-index);
+  width: 100%;
+  height: 100%;
+  min-height: 72px;
+  border-right: 1px solid var(--line-subtle);
+  color: var(--muted);
   display: flex;
   align-items: center;
   justify-content: center;
-  min-height: 48px;
-  border: 2px solid transparent;
-  border-radius: 4px;
-  cursor: pointer;
-  overflow: hidden;
-  background: rgba(255, 255, 255, 0.06);
+  font-size: 12px;
+  line-height: 1;
 }
 
 .preview-thumb:hover {
-  background: rgba(255, 255, 255, 0.12);
+  background: var(--input-hover);
 }
 
 .preview-thumb.is-active {
-  border-color: rgba(255, 255, 255, 0.6);
-  background: rgba(255, 255, 255, 0.1);
+  border-color: var(--text);
 }
 
 .preview-thumb img {
   display: block;
-  max-width: 100%;
-  max-height: 72px;
+  width: auto;
+  max-width: calc(100% - 8px);
+  max-height: 96px;
   object-fit: contain;
 }
 
 .preview-main {
-  width: 90%;
+  flex: 1 1 auto;
   height: 100%;
   display: flex;
   flex-direction: column;
-  background: rgba(0, 0, 0, 0.75);
-  backdrop-filter: blur(12px);
-  -webkit-backdrop-filter: blur(12px);
+  background: var(--panel);
 }
 
 .preview-stage {
@@ -779,7 +787,7 @@ h3 {
   flex: 0 0 auto;
   text-align: center;
   padding: 8px 12px;
-  color: rgba(255, 255, 255, 0.5);
+  color: var(--muted);
   font-size: 12px;
 }
 
@@ -792,4 +800,23 @@ h3 {
   .todo-heading {
     padding: 0 6px;
   }
+}
+
+/* Scrollbar */
+::-webkit-scrollbar {
+  width: 5px;
+  height: 5px;
+}
+
+::-webkit-scrollbar-track {
+  background: transparent;
+}
+
+::-webkit-scrollbar-thumb {
+  background: var(--line-control);
+  border-radius: 3px;
+}
+
+::-webkit-scrollbar-thumb:hover {
+  background: var(--muted);
 }

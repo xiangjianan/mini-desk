@@ -154,11 +154,8 @@
     elements.imageCount = document.getElementById("imageCount");
     elements.imageList = document.getElementById("imageList");
     elements.noteEditor = document.getElementById("noteEditor");
-    elements.noteBullets = document.getElementById("noteBullets");
     elements.workspaceEditor = document.getElementById("workspaceEditor");
-    elements.workspaceBullets = document.getElementById("workspaceBullets");
     elements.storageEditor = document.getElementById("storageEditor");
-    elements.storageBullets = document.getElementById("storageBullets");
     elements.addQuickBtn = document.getElementById("addQuickBtn");
     elements.quickButtons = document.getElementById("quickButtons");
     elements.toggleHiddenBtn = document.getElementById("toggleHiddenBtn");
@@ -774,26 +771,39 @@
 
   function updateTextEditorBulletLayer(textarea) {
     const config = getTextEditorConfig(textarea);
-    if (!config) {
-      return;
-    }
-    const bulletLayer = document.getElementById(config.bulletId);
+    if (!config) return;
+
+    // Ensure bullet layer exists (removed from HTML, created dynamically)
+    let bulletLayer = textarea.parentElement.querySelector(".text-bullet-layer");
     if (!bulletLayer) {
-      return;
+      bulletLayer = document.createElement("div");
+      bulletLayer.className = "text-bullet-layer";
+      bulletLayer.setAttribute("aria-hidden", "true");
+      textarea.parentElement.insertBefore(bulletLayer, textarea);
     }
+
     bulletLayer.innerHTML = "";
-    textarea.value.split("\n").forEach((line) => {
+    const computedStyle = window.getComputedStyle(textarea);
+    const fontSize = parseFloat(computedStyle.fontSize);
+    const lineHeight = parseFloat(computedStyle.lineHeight) || fontSize * 1.55;
+    const tabWidth = fontSize * 2; // approx 2ch
+    const padTop = parseFloat(computedStyle.paddingTop) || 8;
+    const padLeft = parseFloat(computedStyle.paddingLeft) || 8;
+
+    textarea.value.split("\n").forEach((line, idx) => {
       const indent = line.match(/^\t+/)?.[0].length || 0;
-      const row = document.createElement("div");
-      row.className = "text-bullet-line";
       if (indent > 0) {
-        const dot = document.createElement("span");
+        const dot = document.createElement("div");
         dot.className = "text-bullet-dot";
         dot.textContent = "·";
-        dot.style.marginLeft = `calc(${indent * 2}ch - 0.5em)`;
-        row.append(dot);
+        dot.style.position = "absolute";
+        dot.style.top = (padTop + idx * lineHeight) + "px";
+        dot.style.left = (padLeft + indent * tabWidth) + "px";
+        dot.style.fontSize = fontSize + "px";
+        dot.style.lineHeight = lineHeight + "px";
+        dot.style.pointerEvents = "none";
+        bulletLayer.append(dot);
       }
-      bulletLayer.append(row);
     });
     bulletLayer.style.transform = `translateY(${-textarea.scrollTop}px)`;
   }
@@ -1847,10 +1857,11 @@
 
   function renderPreviewList() {
     elements.previewList.innerHTML = "";
-    state.images.forEach((image) => {
+    state.images.forEach((image, index) => {
       const thumb = document.createElement("div");
       thumb.className = "preview-thumb" + (image.id === activePreviewId ? " is-active" : "");
       thumb.dataset.id = image.id;
+      thumb.dataset.index = index + 1;
       const img = document.createElement("img");
       img.src = image.src;
       img.alt = "";
