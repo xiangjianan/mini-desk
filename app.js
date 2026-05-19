@@ -1273,7 +1273,7 @@
     if (item.type === "link") {
       window.open(item.value, "_blank");
     } else {
-      copyTextWithBubble(item.value, button);
+      copyTextWithBubble(item.value, button.closest(".note-link-panel") || button);
     }
   }
 
@@ -1309,7 +1309,8 @@
     } else if (action === "delete") {
       const item = findQuickButton(activeQuickId);
       const quickEl = document.querySelector(`.quick-button[data-id="${activeQuickId}"]`);
-      if (await confirmDelete(`确定要删除快捷按钮「${item?.title || ""}」吗？`, quickEl)) {
+      const quickPanel = quickEl?.closest(".note-link-panel") || quickEl;
+      if (await confirmDelete(`确定要删除快捷按钮「${item?.title || ""}」吗？`, quickPanel)) {
         deleteQuickButton(activeQuickId);
       } else {
         shouldCloseMenu = false;
@@ -1393,7 +1394,8 @@
     if (activeQuickId) {
       const item = findQuickButton(activeQuickId);
       const quickEl = document.querySelector(`.quick-button[data-id="${activeQuickId}"]`);
-      if (await confirmDelete(`确定要删除快捷按钮「${item?.title || ""}」吗？`, quickEl)) {
+      const quickPanel = quickEl?.closest(".note-link-panel") || quickEl;
+      if (await confirmDelete(`确定要删除快捷按钮「${item?.title || ""}」吗？`, quickPanel)) {
         deleteQuickButton(activeQuickId);
         closeQuickDialog();
       }
@@ -1464,26 +1466,27 @@
       return;
     }
     const isChecked = event.target.checked;
-    const anchorSection = item.closest(".todo-section");
+    const todoPanel = item.closest(".todo-panel");
     todo.done = isChecked;
     normalizeTodoPeriod(item.dataset.period);
     saveState();
     renderTodos();
-    if (isChecked && anchorSection) {
+    if (isChecked && todoPanel) {
       const msg = randomItem(encourageMessages);
       const face = randomItem(kaomoji);
-      showBubbleMessage(`${msg} ${face}`, anchorSection);
+      showBubbleMessage(`${msg} ${face}`, todoPanel);
     }
   }
 
   async function handleClearCompleted(event) {
     const period = event.currentTarget.dataset.clearCompleted;
+    const todoPanel = event.currentTarget.closest(".todo-panel");
     const completedCount = state.todos[period].filter((todo) => todo.done).length;
     if (completedCount === 0) {
-      showToast("没有已完成事项");
+      showBubbleMessage("没有已完成事项", todoPanel);
       return;
     }
-    if (!(await confirmDelete(`确定要清除 ${completedCount} 条已完成事项吗？`, event.currentTarget))) {
+    if (!(await confirmDelete(`确定要清除 ${completedCount} 条已完成事项吗？`, todoPanel))) {
       return;
     }
     state.todos[period] = state.todos[period].filter((todo) => !todo.done);
@@ -1655,7 +1658,7 @@
   async function deleteTodoWithConfirmation(period, id) {
     const todo = findTodo(period, id);
     const todoEl = document.querySelector(`.todo-item[data-id="${id}"]`);
-    const anchor = todoEl?.closest(".todo-section") || todoEl;
+    const anchor = todoEl?.closest(".todo-panel") || todoEl;
     if (!todo || !(await confirmDelete(`确定要删除待办事项「${todo.text}」吗？`, anchor))) {
       return;
     }
