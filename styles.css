@@ -874,6 +874,50 @@ h3 {
   }
 }
 
+/* Mobile */
+.mobile-banner {
+  display: none;
+}
+
+@media (max-width: 768px) {
+  .board {
+    grid-template-columns: 1fr;
+    grid-template-rows: 1fr auto;
+    height: 100vh;
+  }
+
+  .board > .panel.image-panel,
+  .board > .panel.note-link-panel,
+  .board > .panel.todo-panel,
+  .board > .panel.text-panel:not(.workspace-panel) {
+    display: none;
+  }
+
+  .workspace-panel {
+    border-right: 0;
+  }
+
+  .mobile-banner {
+    display: block;
+    text-align: center;
+    padding: 12px 16px;
+    background: var(--panel);
+    border-top: 1px solid var(--line-section);
+    color: var(--muted);
+    font-size: 13px;
+  }
+
+  .mobile-banner p {
+    margin: 0;
+    line-height: 1.5;
+  }
+
+  .focus-companion,
+  .settings-btn {
+    display: none !important;
+  }
+}
+
 /* Scrollbar */
 ::-webkit-scrollbar {
   width: 5px;
