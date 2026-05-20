@@ -1,5 +1,5 @@
 <script setup lang="ts">
-import { computed, onUnmounted, reactive, ref, watch } from "vue";
+import { computed, reactive, ref, watch } from "vue";
 import { NButton, NCheckbox, NDropdown, NIcon, NInput, NModal } from "naive-ui";
 import { AddOutline, CopyOutline, EyeOffOutline, EyeOutline } from "@vicons/ionicons5";
 import type { DropdownOption } from "naive-ui";
@@ -43,16 +43,7 @@ const menuOptions = computed<DropdownOption[]>(() => {
 });
 
 watch(dialogOpen, (open) => {
-  if (!open) {
-    editingId.value = undefined;
-    removeDialogOutsideListener();
-    return;
-  }
-  document.addEventListener("click", handleDialogOutsideClick, true);
-});
-
-onUnmounted(() => {
-  removeDialogOutsideListener();
+  if (!open) editingId.value = undefined;
 });
 
 function openAdd(anchor?: HTMLElement): void {
@@ -87,16 +78,6 @@ function submit(): void {
 
 function closeDialog(): void {
   dialogOpen.value = false;
-}
-
-function removeDialogOutsideListener(): void {
-  document.removeEventListener("click", handleDialogOutsideClick, true);
-}
-
-function handleDialogOutsideClick(event: MouseEvent): void {
-  const target = event.target instanceof Element ? event.target : null;
-  if (target?.closest(".quick-dialog")) return;
-  closeDialog();
 }
 
 function openMenu(event: MouseEvent, id: string): void {
@@ -201,9 +182,8 @@ function handleToggleShowHidden(event: MouseEvent): void {
       v-model:show="dialogOpen"
       preset="card"
       class="quick-dialog"
-      :mask-closable="true"
+      :mask-closable="false"
       :title="editingId ? '编辑快捷按钮' : '新增快捷按钮'"
-      @mask-click="closeDialog"
     >
       <form class="quick-form" @submit.prevent="submit">
         <label>

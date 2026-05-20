@@ -179,7 +179,9 @@ describe("Naive UI component usage", () => {
     const quick = read("src/components/QuickButtons.vue");
     const styles = read("src/styles.css");
 
-    expect(quick).toContain(':mask-closable="true"');
+    expect(quick).toContain(':mask-closable="false"');
+    expect(quick).not.toContain("handleDialogOutsideClick");
+    expect(quick).not.toContain("@mask-click");
     expect(styles).toMatch(/\.quick-dialog\s*\{[^}]*width: min\(420px, calc\(100vw - 32px\)\)/s);
     expect(styles).toMatch(/\.panel\.is-focused,[\s\S]*?\.todo-section\.is-focused\s*\{[^}]*box-shadow: inset 0 0 0 1px var\(--line-focus\)/s);
   });

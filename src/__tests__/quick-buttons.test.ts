@@ -20,7 +20,7 @@ const dropdownStub = {
 };
 
 describe("QuickButtons", () => {
-  it("closes the add/edit dialog when clicking outside the modal card", async () => {
+  it("keeps the add/edit dialog open when clicking outside the modal card", async () => {
     const wrapper = mount(QuickButtons, {
       props: {
         title: "快捷链接",
@@ -48,7 +48,7 @@ describe("QuickButtons", () => {
     document.body.dispatchEvent(new MouseEvent("click", { bubbles: true }));
     await wrapper.vm.$nextTick();
 
-    expect(wrapper.find(".quick-dialog").exists()).toBe(false);
+    expect(wrapper.find(".quick-dialog").exists()).toBe(true);
 
     wrapper.unmount();
   });
