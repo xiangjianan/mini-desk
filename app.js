@@ -239,8 +239,22 @@
       list.addEventListener("dragend", handleTodoDragEnd);
     });
 
-    elements.imageList.addEventListener("click", handleImageListClick);
-    elements.imageList.addEventListener("dblclick", handleImageListDoubleClick);
+    let imageClickTimer = null;
+    elements.imageList.addEventListener("click", function(event) {
+      const card = event.target.closest(".image-card");
+      if (!card) return;
+      if (imageClickTimer) {
+        clearTimeout(imageClickTimer);
+        imageClickTimer = null;
+        const image = findImage(card.dataset.id);
+        if (image) copyImageToClipboard(image);
+      } else {
+        imageClickTimer = setTimeout(() => {
+          imageClickTimer = null;
+          openImagePreview(card.dataset.id);
+        }, 250);
+      }
+    });
     elements.imageList.addEventListener("contextmenu", handleImageContextMenu);
     elements.imageList.addEventListener("dragstart", handleImageDragStart);
     elements.imageList.addEventListener("dragover", handleImageDragOver);
