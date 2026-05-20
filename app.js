@@ -588,7 +588,7 @@
         const indent = Math.max(0, Number(line?.indent) || 0);
         const text = line?.text || "";
         const tabs = "\t".repeat(indent);
-        return text ? `${tabs}- ${text}` : tabs;
+        return text ? `${tabs}${indent > 0 ? "- " : ""}${text}` : tabs;
       })
       .join("\n");
   }
@@ -1799,7 +1799,6 @@
     closeQuickMenu();
     closeTodoMenu();
     closeImageMenu();
-    closeImageListMenu();
     const card = event.target.closest(".image-card");
     if (card) {
       activeImageContext = card.dataset.id;
@@ -1807,11 +1806,6 @@
       elements.imageMenu.style.top = `${Math.min(event.clientY, window.innerHeight - 110)}px`;
       elements.imageMenu.classList.add("is-visible");
       elements.imageMenu.setAttribute("aria-hidden", "false");
-    } else if (event.target.closest(".image-list")) {
-      elements.imageListMenu.style.left = `${Math.min(event.clientX, window.innerWidth - 130)}px`;
-      elements.imageListMenu.style.top = `${Math.min(event.clientY, window.innerHeight - 50)}px`;
-      elements.imageListMenu.classList.add("is-visible");
-      elements.imageListMenu.setAttribute("aria-hidden", "false");
     }
   }
 
@@ -1981,10 +1975,16 @@
 
   function handlePreviewContextMenu(event) {
     event.preventDefault();
+    showPreviewMenu(event.clientX, event.clientY);
   }
 
   function handlePreviewListContextMenu(event) {
     event.preventDefault();
+  }
+
+  function closePreviewMenu() {
+    elements.previewMenu.classList.remove("is-visible");
+    elements.previewMenu.setAttribute("aria-hidden", "true");
   }
 
   function showPreviewMenu(x, y) {
