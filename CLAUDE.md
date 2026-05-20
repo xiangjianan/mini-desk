@@ -4,11 +4,11 @@ This file provides guidance to Claude Code (claude.ai/code) when working with co
 
 ## Project Overview
 
-A static, single-page To Do List kanban board built with vanilla HTML/CSS/JS. No build tools, no frameworks, no package manager. Open `index.html` directly in a browser to use. Deployed via Cloudflare Pages (`.wrangler` directory present).
+A single-page To Do List kanban board built with Vue 3, Naive UI, TypeScript, and Vite. Run it with `npm run dev`, build it with `npm run build`, and test it with `npm test`.
 
 ## Architecture
 
-The app is a single-file IIFE (`app.js`) wrapped in `DOMContentLoaded`. There is no module system — all state and logic lives in one closure.
+The app mounts from `src/main.ts` into `#app` and composes the board in `src/App.vue`. Domain logic is split into typed modules under `src/state/`, with presentational and workflow components under `src/components/`.
 
 ### Layout
 
@@ -17,8 +17,8 @@ CSS Grid 5-column layout (`.board`): Image panel (10%) | Notes+Links (20%) | Tod
 ### State Management
 
 - All state is held in a single `state` object, persisted to `localStorage` under key `todo-board-state-v1`.
-- `loadState()` merges stored data with `defaultState` and handles legacy migrations (e.g. old `workspace` text field → new `workspaceLines` array).
-- `saveState()` serializes the full state. There is no diffing — the entire object is written each time.
+- `loadState()` and `normalizeImportedState()` live in `src/state/storage.ts` and handle legacy migrations, malformed imports, and missing collections.
+- `saveState()` serializes the full state while omitting large image payloads from localStorage.
 
 ### Key State Shape
 
@@ -57,13 +57,18 @@ A GIF avatar (`static/video/hermes.gif`) that appears near the focused editor or
 
 ## Development
 
-No build, lint, or test commands. Open `index.html` in a browser. For a local server: `npx serve .` or `python3 -m http.server`.
+```bash
+npm install
+npm run dev
+npm test
+npm run build
+```
 
 ## Conventions
 
 - All UI text is in Chinese (zh-CN).
-- No frameworks or external dependencies — vanilla JS only.
-- Images are stored as data URLs in localStorage (no server-side storage).
+- Prefer Vue components plus typed state helpers over ad hoc DOM manipulation.
+- Image metadata is stored in localStorage; image payloads are stored in IndexedDB (no server-side storage).
 - All delete operations require `window.confirm()` confirmation.
 - Completed todos are sorted to the bottom of their period section.
 - IDs are generated client-side: `${Date.now().toString(36)}-${random}`.
