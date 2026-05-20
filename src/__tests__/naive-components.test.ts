@@ -209,4 +209,16 @@ describe("Naive UI component usage", () => {
     expect(settings).toContain("settings-version-dot");
     expect(settings).toContain('"data-testid": "settings-version"');
   });
+
+  it("simplifies the mobile layout to the workspace editor only", () => {
+    const app = read("src/App.vue");
+    const styles = read("src/styles.css");
+
+    expect(app).toContain('class="workspace-panel"');
+    expect(app).toContain("推荐访问桌面版以获取更好的体验");
+    expect(app.indexOf("mobile-banner")).toBeLessThan(app.indexOf('title-id="workspace-title"'));
+    expect(styles).toMatch(/\.board > :not\(\.mobile-banner\):not\(\.workspace-panel\)\s*\{[^}]*display: none !important/s);
+    expect(styles).toMatch(/\.workspace-panel\s*\{[^}]*display: flex/s);
+    expect(styles).toMatch(/\.top-actions,[\s\S]*?\.focus-companion,[\s\S]*?\.image-preview\s*\{[^}]*display: none !important/s);
+  });
 });

@@ -694,7 +694,12 @@ function moveItem<T extends { id: string }>(items: T[], dragId: string, targetId
         @guide="handleGuideClick"
       />
 
+      <div class="mobile-banner">
+        <p>移动端已简化为工作空间编辑。推荐访问桌面版以获取更好的体验。</p>
+      </div>
+
       <TextPanel
+        class="workspace-panel"
         title-id="workspace-title"
         :title="titles['workspace-title']"
         :lines="state.workspaceLines"
@@ -704,10 +709,6 @@ function moveItem<T extends { id: string }>(items: T[], dragId: string, targetId
         @focus="handleGuideFocus('workspace', $event)"
         @blur="handleEditorBlur"
       />
-
-      <div class="mobile-banner">
-        <p>为了更好的体验，推荐在电脑端使用完整功能。</p>
-      </div>
 
       <TextPanel
         title-id="storage-title"

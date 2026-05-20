@@ -724,31 +724,57 @@ body:has(.image-preview) .n-modal-body-wrapper {
   html,
   body,
   #app {
-    overflow: auto;
+    overflow: hidden;
   }
 
   .board {
-    display: block;
-    width: 100%;
-    height: auto;
-    min-height: 100vh;
+    display: grid;
+    grid-template-columns: 1fr;
+    grid-template-rows: auto minmax(0, 1fr);
+    width: 100vw;
+    height: 100dvh;
+    min-height: 0;
+    overflow: hidden;
   }
 
-  .panel,
-  .split-block {
-    min-height: 320px;
-    border-right: 0;
-    border-bottom: 1px solid var(--line-main);
+  .board > :not(.mobile-banner):not(.workspace-panel) {
+    display: none !important;
   }
 
   .mobile-banner {
     display: block;
-    padding: 8px 10px;
+    padding: 10px 12px;
+    line-height: 1.5;
     color: var(--muted);
     border-bottom: 1px solid var(--line-main);
+    background: var(--panel);
   }
 
+  .workspace-panel {
+    display: flex;
+    min-height: 0;
+    height: auto;
+    border: 0;
+  }
+
+  .workspace-panel .panel-header {
+    min-height: 40px;
+    padding: 0 12px;
+  }
+
+  .workspace-panel .text-editor-frame {
+    min-height: 0;
+  }
+
+  .workspace-panel .text-editor-textarea {
+    padding: 12px;
+    font-size: 16px;
+    line-height: 1.65;
+  }
+
+  .top-actions,
+  .focus-companion,
   .image-preview {
-    grid-template-columns: 96px minmax(0, 1fr);
+    display: none !important;
   }
 }
