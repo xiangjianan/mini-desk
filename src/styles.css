@@ -356,6 +356,20 @@ h3 {
   max-width: calc(100vw - 32px);
 }
 
+.quick-dialog .n-base-close {
+  min-height: 0;
+  padding: 0;
+  border: 0;
+  background: transparent;
+  box-shadow: none;
+}
+
+.quick-dialog .n-base-close:hover {
+  border: 0;
+  background: transparent;
+  box-shadow: none;
+}
+
 .quick-form label {
   display: grid;
   gap: 6px;

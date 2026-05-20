@@ -33,6 +33,7 @@ const draggingId = ref<string | null>(null);
 const visibleButtons = computed(() =>
   props.buttons.filter((button) => props.showHidden || !button.hidden),
 );
+const canSubmit = computed(() => form.title.trim().length > 0 && form.value.trim().length > 0);
 const menuOptions = computed<DropdownOption[]>(() => {
   const button = props.buttons.find((item) => item.id === menu.value?.id);
   return [
@@ -67,6 +68,8 @@ function openEdit(id: string): void {
 }
 
 function submit(): void {
+  if (!canSubmit.value) return;
+
   emit("save", {
     id: editingId.value,
     title: form.title.trim(),
@@ -199,7 +202,7 @@ function handleToggleShowHidden(event: MouseEvent): void {
         </label>
         <div class="dialog-actions">
           <NButton v-if="editingId" type="error" ghost @click="emit('delete', editingId, $event.currentTarget as HTMLElement); closeDialog()">删除</NButton>
-          <NButton attr-type="submit" type="primary">保存</NButton>
+          <NButton attr-type="submit" type="primary" :disabled="!canSubmit">保存</NButton>
         </div>
       </form>
     </NModal>
