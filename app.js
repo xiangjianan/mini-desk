@@ -1860,6 +1860,11 @@
 
   async function pasteImageFromClipboard() {
     try {
+      const permResult = await navigator.permissions.query({ name: "clipboard-read" });
+      if (permResult.state !== "granted") {
+        showToast("请使用 Ctrl+V 粘贴图片");
+        return;
+      }
       const items = await navigator.clipboard.read();
       for (const item of items) {
         const imageType = item.types.find((t) => t.startsWith("image/"));
@@ -1886,7 +1891,7 @@
         reader.readAsDataURL(blob);
       }
     } catch (error) {
-      showToast("无法读取剪贴板，请尝试 Ctrl+V 粘贴");
+      showToast("请使用 Ctrl+V 粘贴图片");
     }
   }
 
