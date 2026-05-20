@@ -115,6 +115,7 @@
   let activeTodoContext = null;
   let activeImageContext = null;
   let activePreviewId = null;
+  let activePreviewThumbContextId = null;
   let draggedTodo = null;
   let draggedImageId = null;
   let draggedQuickId = null;
@@ -1533,7 +1534,9 @@
     }
     const section = event.target.closest(".todo-section");
     const item = event.target.closest(".todo-item");
-    const todo = findTodo(item.dataset.period, item.dataset.id);
+    const period = item.dataset.period;
+    const id = item.dataset.id;
+    const todo = findTodo(period, id);
     if (!todo) {
       settleTodoFocusOut(section);
       return;
@@ -1544,8 +1547,11 @@
       settleTodoFocusOut(section);
       return;
     }
-    removeTodo(item.dataset.period, item.dataset.id);
-    settleTodoFocusOut(section);
+    setTimeout(() => {
+      if (!findTodo(period, id)) return;
+      removeTodo(period, id);
+      settleTodoFocusOut(section);
+    }, 0);
   }
 
   function settleTodoFocusOut(section) {
@@ -1564,8 +1570,16 @@
   function handleTodoListClick(event) {
     const item = event.target.closest(".todo-item");
     if (item) {
-      if (!event.target.matches('input[type="checkbox"]')) {
-        item.querySelector(".todo-text")?.focus();
+      if (event.target.matches(".todo-text")) {
+        return;
+      }
+      if (event.target.matches('input[type="checkbox"]')) {
+        return;
+      }
+      const checkbox = item.querySelector('input[type="checkbox"]');
+      if (checkbox) {
+        checkbox.checked = !checkbox.checked;
+        checkbox.dispatchEvent(new Event("change", { bubbles: true }));
       }
       return;
     }
@@ -1979,11 +1993,14 @@
 
   function handlePreviewListContextMenu(event) {
     event.preventDefault();
-  }
-
-  function closePreviewMenu() {
-    elements.previewMenu.classList.remove("is-visible");
-    elements.previewMenu.setAttribute("aria-hidden", "true");
+    const thumb = event.target.closest(".preview-thumb");
+    if (!thumb) {
+      activePreviewThumbContextId = null;
+      return;
+    }
+    activePreviewThumbContextId = thumb.dataset.id;
+    closePreviewMenu();
+    showPreviewMenu(event.clientX, event.clientY);
   }
 
   function showPreviewMenu(x, y) {
@@ -1997,18 +2014,23 @@
     const actionButton = event.target.closest("button[data-action]");
     if (!actionButton || !activePreviewId) return;
 
+    const targetId = activePreviewThumbContextId || activePreviewId;
     const action = actionButton.dataset.action;
     if (action === "copy") {
-      const image = findImage(activePreviewId);
+      const image = findImage(targetId);
       if (image) copyImageToClipboard(image);
     } else if (action === "delete") {
       if (await confirmDelete("确定要删除这张图片吗？", document.querySelector(".note-block"))) {
-        const nextId = findAdjacentImageId(activePreviewId, 1);
-        deleteImage(activePreviewId);
-        if (nextId) {
-          openImagePreview(nextId);
+        const nextId = findAdjacentImageId(targetId, 1);
+        deleteImage(targetId);
+        if (targetId === activePreviewId) {
+          if (nextId) {
+            openImagePreview(nextId);
+          } else {
+            closeImagePreview();
+          }
         } else {
-          closeImagePreview();
+          renderPreviewList();
         }
       }
     } else if (action === "close") {
@@ -2021,6 +2043,7 @@
     if (!elements.previewMenu) return;
     elements.previewMenu.classList.remove("is-visible");
     elements.previewMenu.setAttribute("aria-hidden", "true");
+    activePreviewThumbContextId = null;
   }
 
   function openImagePreview(id) {

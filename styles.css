@@ -483,7 +483,7 @@ h3 {
 
 .focus-companion {
   position: fixed;
-  z-index: 30;
+  z-index: 200;
   width: 72px;
   height: 72px;
   left: calc(100vw - 84px);
