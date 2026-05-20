@@ -1,10 +1,27 @@
 # To Do List 看板
 
-这是一个静态 To Do List 看板，使用 `index.html`、`styles.css` 和 `app.js` 实现。页面铺满整个浏览器视口，不依赖前端框架，文本和配置保存在浏览器 `localStorage` 中，图片原文保存在 IndexedDB 中。
+这是一个基于 Vue 3、Naive UI、TypeScript 和 Vite 构建的 To Do List 看板。页面铺满整个浏览器视口，文本和配置保存在浏览器 `localStorage` 中，图片原文保存在 IndexedDB 中。
 
 ## 使用方式
 
-直接打开 `index.html` 即可使用。也可以在目录中启动一个本地静态服务器后访问页面。
+安装依赖后启动本地开发服务：
+
+```bash
+npm install
+npm run dev
+```
+
+构建生产产物：
+
+```bash
+npm run build
+```
+
+运行测试：
+
+```bash
+npm test
+```
 
 ## 功能说明
 
@@ -61,3 +78,11 @@ todo-board-state-v1
 ```
 
 图片原文保存在同站点 IndexedDB 的 `todo-board-images-v1` 数据库中。清空浏览器站点数据会清除看板内容和图片；只手动删除 `localStorage` 键会清除看板状态，但可能保留 IndexedDB 中的图片原文。
+
+## 项目结构
+
+- `src/App.vue`：看板主入口和跨组件事件编排。
+- `src/components/`：图床、快捷按钮、待办、文本区、预览层、设置入口和保存动效组件。
+- `src/state/`：默认状态、localStorage/IndexedDB 存取、导入导出归一化和待办领域逻辑。
+- `src/utils/`：textarea 缩进和文本行工具。
+- `src/__tests__/`：状态兼容、待办逻辑和 Vue 渲染契约测试。
