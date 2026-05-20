@@ -182,6 +182,7 @@
     elements.previewMenu = document.getElementById("previewMenu");
     elements.settingsBtn = document.getElementById("settingsBtn");
     elements.settingsMenu = document.getElementById("settingsMenu");
+    elements.pasteSuccess = document.getElementById("pasteSuccess");
   }
 
   function bindEvents() {
@@ -992,6 +993,7 @@
           saveState();
           renderImages();
           showToast("图片已添加到图床");
+          showPasteSuccess();
         } catch (error) {
           console.warn("图片保存失败。", error);
           showToast("图片保存失败，请稍后再试");
@@ -2267,6 +2269,18 @@
     toastTimer = setTimeout(() => {
       elements.toast.classList.remove("is-visible");
     }, 2200);
+  }
+
+  let pasteSuccessTimer = null;
+  function showPasteSuccess() {
+    if (!elements.pasteSuccess) return;
+    elements.pasteSuccess.classList.add("is-visible");
+    elements.pasteSuccess.setAttribute("aria-hidden", "false");
+    if (pasteSuccessTimer) clearTimeout(pasteSuccessTimer);
+    pasteSuccessTimer = setTimeout(() => {
+      elements.pasteSuccess.classList.remove("is-visible");
+      elements.pasteSuccess.setAttribute("aria-hidden", "true");
+    }, 1500);
   }
 
   function randomItem(items) {

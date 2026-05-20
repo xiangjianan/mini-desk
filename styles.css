@@ -970,3 +970,24 @@ h3 {
   stroke-linecap: round;
   stroke-linejoin: round;
 }
+
+.paste-success {
+  position: fixed;
+  top: 50%;
+  left: 50%;
+  transform: translate(-50%, -50%);
+  z-index: 200;
+  pointer-events: none;
+  opacity: 0;
+  transition: opacity 0.3s ease;
+}
+
+.paste-success.is-visible {
+  opacity: 1;
+}
+
+.paste-success-gif {
+  width: 120px;
+  height: 120px;
+  filter: drop-shadow(0 4px 12px rgba(0, 0, 0, 0.15));
+}
