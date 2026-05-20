@@ -239,22 +239,7 @@
       list.addEventListener("dragend", handleTodoDragEnd);
     });
 
-    let imageClickTimer = null;
-    elements.imageList.addEventListener("click", function(event) {
-      const card = event.target.closest(".image-card");
-      if (!card) return;
-      if (imageClickTimer) {
-        clearTimeout(imageClickTimer);
-        imageClickTimer = null;
-        const image = findImage(card.dataset.id);
-        if (image) copyImageToClipboard(image);
-      } else {
-        imageClickTimer = setTimeout(() => {
-          imageClickTimer = null;
-          openImagePreview(card.dataset.id);
-        }, 250);
-      }
-    });
+    elements.imageList.addEventListener("click", handleImageListClick);
     elements.imageList.addEventListener("contextmenu", handleImageContextMenu);
     elements.imageList.addEventListener("dragstart", handleImageDragStart);
     elements.imageList.addEventListener("dragover", handleImageDragOver);
@@ -881,7 +866,7 @@
       card.className = "image-card";
       card.dataset.id = image.id;
       card.draggable = true;
-      card.title = "单击预览，双击复制";
+      card.title = "单击预览，右键复制、删除";
 
       const indexLabel = document.createElement("span");
       indexLabel.className = "image-index";
