@@ -2,7 +2,7 @@
 import { computed, nextTick, onUnmounted, ref } from "vue";
 import { NButton, NCheckbox, NDropdown } from "naive-ui";
 import type { DropdownOption } from "naive-ui";
-import { EMPTY_HINTS, TODO_PERIODS } from "../state/defaults";
+import { EMPTY_HINTS, GUIDE_MENU_OPTION, TODO_PERIODS } from "../state/defaults";
 import type { DraggedTodo, GuideKey, TodoItem, TodoMap, TodoPeriod } from "../types";
 import { getOrderedTodos } from "../state/todos";
 import EditableTitle from "./EditableTitle.vue";
@@ -27,12 +27,16 @@ const emit = defineEmits<{
 }>();
 
 const focusedPeriod = ref<TodoPeriod | null>(null);
-const menu = ref<{ x: number; y: number; period: TodoPeriod; id: string; anchor?: HTMLElement } | null>(null);
+const menu = ref<{ x: number; y: number; period: TodoPeriod; id?: string; anchor?: HTMLElement } | null>(null);
 const dragged = ref<DraggedTodo | null>(null);
 const editingTodoKey = ref<string | null>(null);
 const pendingDoneReorderIds = ref<string[]>([]);
 const reorderTimers = new Map<string, number>();
-const menuOptions: DropdownOption[] = [{ label: "删除", key: "delete" }];
+const lastTodoCarets = new Map<string, number>();
+const guideMenuOption: DropdownOption = { ...GUIDE_MENU_OPTION, label: GUIDE_MENU_OPTION.label || "使用指南" };
+const menuOptions = computed<DropdownOption[]>(() =>
+  menu.value?.id ? [{ label: "删除", key: "delete" }, guideMenuOption] : [guideMenuOption],
+);
 
 const periodLabels: Record<TodoPeriod, string> = {
   morning: "todo-morning-title",
@@ -112,6 +116,13 @@ function openMenu(event: MouseEvent, period: TodoPeriod, id: string): void {
   menu.value = { x: event.clientX, y: event.clientY, period, id, anchor: event.currentTarget as HTMLElement };
 }
 
+function openSectionMenu(event: MouseEvent, period: TodoPeriod): void {
+  const target = event.target as HTMLElement;
+  if (target.closest("button, input, textarea, .todo-item")) return;
+  event.preventDefault();
+  menu.value = { x: event.clientX, y: event.clientY, period, anchor: event.currentTarget as HTMLElement };
+}
+
 function closeMenu(): void {
   menu.value = null;
 }
@@ -120,6 +131,8 @@ function handleMenuSelect(key: string): void {
   if (!menu.value) return;
   const { period, id, anchor } = menu.value;
   closeMenu();
+  if (key === "guide" && anchor) emit("guide", "todos", anchor);
+  if (!id) return;
   if (key === "delete") emit("remove", period, id, anchor);
 }
 
@@ -134,11 +147,18 @@ function isTodoEditable(period: TodoPeriod, todo: TodoItem): boolean {
 async function startTodoEdit(event: MouseEvent, period: TodoPeriod, id: string): Promise<void> {
   event.preventDefault();
   const input = event.currentTarget as HTMLInputElement;
-  const caret = input.selectionStart ?? input.value.length;
+  const key = todoKey(period, id);
+  const caret = lastTodoCarets.get(key) ?? input.selectionStart ?? input.value.length;
   editingTodoKey.value = todoKey(period, id);
   await nextTick();
   input.focus({ preventScroll: true });
   collapseSelection(input, caret);
+}
+
+function rememberTodoCaret(period: TodoPeriod, id: string, event: MouseEvent): void {
+  const input = event.currentTarget as HTMLInputElement;
+  if (input.selectionStart !== input.selectionEnd) return;
+  lastTodoCarets.set(todoKey(period, id), input.selectionStart ?? input.value.length);
 }
 
 function collapseSelection(input: HTMLInputElement, caret: number): void {
@@ -160,6 +180,7 @@ function collapseSelection(input: HTMLInputElement, caret: number): void {
         :class="{ 'is-focused': focusedPeriod === period }"
         :data-period="period"
         @click="handleSectionGuideClick"
+        @contextmenu="openSectionMenu($event, period)"
         @dragover.prevent
         @drop="dragged && emit('move', dragged, period)"
       >
@@ -210,7 +231,7 @@ function collapseSelection(input: HTMLInputElement, caret: number): void {
             class="todo-item"
             :class="{ 'is-done': todo.done }"
             draggable="true"
-            @contextmenu="openMenu($event, period, todo.id)"
+            @contextmenu.stop="openMenu($event, period, todo.id)"
             @dragstart="dragged = { period, id: todo.id }"
             @dragover.prevent
             @drop.stop="dragged && emit('move', dragged, period, todo.id)"
@@ -229,6 +250,7 @@ function collapseSelection(input: HTMLInputElement, caret: number): void {
               :readonly="!isTodoEditable(period, todo)"
               @input="emit('update', period, todo.id, ($event.target as HTMLInputElement).value)"
               @keydown.enter.prevent="handleEnter(period, todo)"
+              @mouseup="rememberTodoCaret(period, todo.id, $event)"
               @dblclick="startTodoEdit($event, period, todo.id)"
               @focus="handleInputFocus(period, todo, $event)"
               @blur="handleInputBlur(period, todo.id)"

@@ -11,6 +11,7 @@ describe("Naive UI component usage", () => {
       "src/components/ImagePanel.vue",
       "src/components/QuickButtons.vue",
       "src/components/TodoPanel.vue",
+      "src/components/TextPanel.vue",
       "src/components/SettingsMenu.vue",
     ];
 
@@ -102,8 +103,12 @@ describe("Naive UI component usage", () => {
     expect(preview).toContain("取消预览");
     expect(preview).toContain("复制");
     expect(preview).toContain("删除");
+    expect(preview).toContain("@keydown.space.prevent");
+    expect(preview).toContain("@contextmenu.prevent.stop=\"openMenu\"");
     expect(styles).toContain("grid-template-columns: 10vw 90vw");
     expect(styles).toContain("backdrop-filter");
+    expect(styles).toMatch(/\.image-preview\s*\{[^}]*background: rgba\(255, 255, 255/s);
+    expect(styles).toMatch(/html\[data-theme="dark"\] \.image-preview\s*\{[^}]*background: rgba\(0, 0, 0/s);
     expect(styles).toContain("z-index: 3200");
     expect(preview).toContain("preview-close-button");
   });
@@ -185,6 +190,16 @@ describe("Naive UI component usage", () => {
     expect(styles).toMatch(/\.n-base-wave\s*\{[^}]*display: none/s);
   });
 
+  it("keeps visible border widths at exactly one pixel", () => {
+    const styles = read("src/styles.css");
+    const visibleBorderWidths = [...styles.matchAll(/(?:border(?:-(?:top|right|bottom|left))?|--n-border(?:-[a-z]+)?|box-shadow):[^;{}]*?(\d+)px/g)]
+      .map((match) => Number(match[1]))
+      .filter((width) => width > 0);
+
+    expect(visibleBorderWidths.length).toBeGreaterThan(0);
+    expect(visibleBorderWidths.every((width) => width === 1)).toBe(true);
+  });
+
   it("uses double-click editing for area text instead of single-click editing", () => {
     const text = read("src/components/TextPanel.vue");
     const todo = read("src/components/TodoPanel.vue");
@@ -199,6 +214,8 @@ describe("Naive UI component usage", () => {
     expect(title).toContain("@dblclick=\"startEditing\"");
     expect(title).not.toContain("@click=\"startEditing\"");
     expect(title).not.toContain(".select()");
+    expect(todo).toContain("lastTodoCarets");
+    expect(text).toContain("lastCaret");
   });
 
   it("animates companion popover entry", () => {
@@ -221,6 +238,7 @@ describe("Naive UI component usage", () => {
       "src/components/ImagePreview.vue",
       "src/components/QuickButtons.vue",
       "src/components/TodoPanel.vue",
+      "src/components/TextPanel.vue",
     ];
 
     for (const file of dropdownSources) {
@@ -240,6 +258,34 @@ describe("Naive UI component usage", () => {
     expect(styles).toMatch(/\.companion-action-button\s*\{[^}]*--n-border: 1px solid var\(--line-control\)/s);
     expect(styles).toMatch(/\.companion-action-button\s*\{[^}]*--n-color: transparent/s);
     expect(styles).toMatch(/\.companion-action-button\s*\{[^}]*border: 1px solid var\(--line-control\)/s);
+  });
+
+  it("uses shared guide options for blank-area context menus", () => {
+    const app = read("src/App.vue");
+    const image = read("src/components/ImagePanel.vue");
+    const quick = read("src/components/QuickButtons.vue");
+    const todo = read("src/components/TodoPanel.vue");
+    const text = read("src/components/TextPanel.vue");
+    const defaults = read("src/state/defaults.ts");
+
+    expect(defaults).toContain("GUIDE_MENU_OPTION");
+    for (const source of [image, quick, todo, text]) {
+      expect(source).toContain("GUIDE_MENU_OPTION");
+      expect(source).toContain("使用指南");
+    }
+    expect(image).toContain("粘贴图片");
+    expect(app).toContain("@guide=\"handleGuideClick('note', $event)\"");
+    expect(app).toContain("@guide=\"handleGuideClick('workspace', $event)\"");
+    expect(app).toContain("@guide=\"handleGuideClick('storage', $event)\"");
+  });
+
+  it("uses two mutually exclusive checkboxes for quick button type", () => {
+    const quick = read("src/components/QuickButtons.vue");
+
+    expect(quick).toContain("setQuickType");
+    expect(quick).toContain("链接属性");
+    expect(quick).toContain("复制文本属性");
+    expect(quick).not.toContain("v-model:checked=\"form.isLink\"");
   });
 
   it("keeps modals and focused areas visually constrained", () => {

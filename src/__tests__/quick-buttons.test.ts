@@ -6,6 +6,12 @@ const buttonStub = {
   template: '<button v-bind="$attrs"><slot /></button>',
 };
 
+const checkboxStub = {
+  props: ["checked"],
+  emits: ["update:checked"],
+  template: '<button class="checkbox-stub" type="button" :data-checked="checked ? \'true\' : \'false\'" @click="$emit(\'update:checked\', !checked)"><slot /></button>',
+};
+
 const inputStub = {
   props: ["value"],
   emits: ["update:value"],
@@ -18,7 +24,22 @@ const modalStub = {
 };
 
 const dropdownStub = {
-  template: "<div><slot /></div>",
+  props: ["options"],
+  emits: ["select"],
+  template: `
+    <div>
+      <slot />
+      <button
+        v-for="option in options"
+        :key="option.key"
+        class="dropdown-option"
+        type="button"
+        @click="$emit('select', option.key)"
+      >
+        {{ option.label }}
+      </button>
+    </div>
+  `,
 };
 
 function mountQuickButtons() {
@@ -30,9 +51,14 @@ function mountQuickButtons() {
     },
     global: {
       stubs: {
+        Button: buttonStub,
+        Checkbox: checkboxStub,
+        Dropdown: dropdownStub,
+        Icon: true,
+        Input: inputStub,
         Modal: modalStub,
         NButton: buttonStub,
-        NCheckbox: buttonStub,
+        NCheckbox: checkboxStub,
         NDropdown: dropdownStub,
         NIcon: true,
         NInput: inputStub,
@@ -86,6 +112,35 @@ describe("QuickButtons", () => {
     expect(wrapper.emitted("save")).toBeUndefined();
     expect(wrapper.find(".quick-dialog").exists()).toBe(true);
 
+    wrapper.unmount();
+  });
+
+  it("shows mutually exclusive link and text type checkboxes with link selected by default", async () => {
+    const wrapper = mountQuickButtons();
+
+    await openDialog(wrapper);
+
+    const options = wrapper.findAll(".checkbox-stub");
+    expect(options.map((option) => option.text())).toEqual(["链接属性", "复制文本属性"]);
+    expect(options[0].attributes("data-checked")).toBe("true");
+    expect(options[1].attributes("data-checked")).toBe("false");
+
+    await options[1].trigger("click");
+    await wrapper.vm.$nextTick();
+
+    expect(options[0].attributes("data-checked")).toBe("false");
+    expect(options[1].attributes("data-checked")).toBe("true");
+
+    wrapper.unmount();
+  });
+
+  it("opens the usage guide from the blank quick-button area context menu", async () => {
+    const wrapper = mountQuickButtons();
+
+    await wrapper.get(".quick-buttons").trigger("contextmenu");
+    await wrapper.get(".dropdown-option").trigger("click");
+
+    expect(wrapper.emitted("guide")?.[0]?.[0]).toBe("quickButtons");
     wrapper.unmount();
   });
 });

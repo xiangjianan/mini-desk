@@ -4,7 +4,7 @@ import { NButton, NCheckbox, NDropdown, NIcon, NInput, NModal } from "naive-ui";
 import { AddOutline, CopyOutline, EyeOffOutline, EyeOutline } from "@vicons/ionicons5";
 import type { DropdownOption } from "naive-ui";
 import type { GuideKey, QuickButton, QuickButtonType } from "../types";
-import { EMPTY_HINTS } from "../state/defaults";
+import { EMPTY_HINTS, GUIDE_MENU_OPTION } from "../state/defaults";
 import EditableTitle from "./EditableTitle.vue";
 
 const props = defineProps<{
@@ -26,9 +26,14 @@ const emit = defineEmits<{
 
 const dialogOpen = ref(false);
 const editingId = ref<string | undefined>();
-const form = reactive({ title: "", value: "", isLink: true });
-const menu = ref<{ x: number; y: number; id: string; anchor?: HTMLElement } | null>(null);
+const form = reactive<{ title: string; value: string; type: QuickButtonType }>({
+  title: "",
+  value: "",
+  type: "link",
+});
+const menu = ref<{ x: number; y: number; id?: string; anchor?: HTMLElement } | null>(null);
 const draggingId = ref<string | null>(null);
+const guideMenuOption: DropdownOption = { ...GUIDE_MENU_OPTION, label: GUIDE_MENU_OPTION.label || "使用指南" };
 
 const visibleButtons = computed(() =>
   props.buttons.filter((button) => props.showHidden || !button.hidden),
@@ -36,10 +41,12 @@ const visibleButtons = computed(() =>
 const canSubmit = computed(() => form.title.trim().length > 0 && form.value.trim().length > 0);
 const menuOptions = computed<DropdownOption[]>(() => {
   const button = props.buttons.find((item) => item.id === menu.value?.id);
+  if (!menu.value?.id) return [guideMenuOption];
   return [
     { label: "编辑", key: "edit" },
     { label: button?.hidden ? "取消隐藏" : "隐藏", key: "toggle-hidden" },
     { label: "删除", key: "delete" },
+    guideMenuOption,
   ];
 });
 
@@ -51,7 +58,7 @@ function openAdd(anchor?: HTMLElement): void {
   editingId.value = undefined;
   form.title = "";
   form.value = "";
-  form.isLink = true;
+  form.type = "link";
   dialogOpen.value = true;
   if (anchor) emit("guide", "addQuick", anchor);
 }
@@ -62,9 +69,13 @@ function openEdit(id: string): void {
   editingId.value = id;
   form.title = button.title;
   form.value = button.value;
-  form.isLink = button.type === "link";
+  form.type = button.type;
   dialogOpen.value = true;
   menu.value = null;
+}
+
+function setQuickType(type: QuickButtonType): void {
+  form.type = type;
 }
 
 function submit(): void {
@@ -74,7 +85,7 @@ function submit(): void {
     id: editingId.value,
     title: form.title.trim(),
     value: form.value,
-    type: form.isLink ? "link" : "text",
+    type: form.type,
   });
   closeDialog();
 }
@@ -88,6 +99,14 @@ function openMenu(event: MouseEvent, id: string): void {
   menu.value = { x: event.clientX, y: event.clientY, id, anchor: event.currentTarget as HTMLElement };
 }
 
+function openAreaMenu(event: MouseEvent): void {
+  const target = event.target as HTMLElement;
+  const button = target.closest("button");
+  if (target.closest("input, textarea, .quick-button") || (button && !button.classList.contains("empty-hint"))) return;
+  event.preventDefault();
+  menu.value = { x: event.clientX, y: event.clientY, anchor: event.currentTarget as HTMLElement };
+}
+
 function closeMenu(): void {
   menu.value = null;
 }
@@ -96,6 +115,8 @@ function handleMenuSelect(key: string): void {
   if (!menu.value) return;
   const { id, anchor } = menu.value;
   closeMenu();
+  if (key === "guide" && anchor) emit("guide", "quickButtons", anchor);
+  if (!id) return;
   if (key === "edit") openEdit(id);
   if (key === "toggle-hidden") emit("toggleHidden", id);
   if (key === "delete") emit("delete", id, anchor);
@@ -141,7 +162,7 @@ function handleToggleShowHidden(event: MouseEvent): void {
       </div>
     </div>
 
-    <div class="quick-buttons" aria-label="快捷按钮列表" @click="closeMenu">
+    <div class="quick-buttons" aria-label="快捷按钮列表" @click="closeMenu" @contextmenu="openAreaMenu">
       <button v-if="visibleButtons.length === 0" class="empty-hint" type="button" @click="openAdd($event.currentTarget as HTMLElement)">
         {{ EMPTY_HINTS.quickButtons }}
       </button>
@@ -194,11 +215,16 @@ function handleToggleShowHidden(event: MouseEvent): void {
           <span>标题</span>
           <NInput v-model:value="form.title" autocomplete="off" />
         </label>
-        <label class="checkbox-row">
-          <NCheckbox v-model:checked="form.isLink">链接属性</NCheckbox>
-        </label>
+        <div class="quick-type-options">
+          <label class="checkbox-row">
+            <NCheckbox :checked="form.type === 'link'" @update:checked="setQuickType('link')">链接属性</NCheckbox>
+          </label>
+          <label class="checkbox-row">
+            <NCheckbox :checked="form.type === 'text'" @update:checked="setQuickType('text')">复制文本属性</NCheckbox>
+          </label>
+        </div>
         <label>
-          <span>{{ form.isLink ? "URL" : "复制文本" }}</span>
+          <span>{{ form.type === "link" ? "URL" : "复制文本" }}</span>
           <NInput v-model:value="form.value" autocomplete="off" />
         </label>
         <div class="dialog-actions">

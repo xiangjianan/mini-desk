@@ -95,6 +95,7 @@ function handleMenuSelect(key: string): void {
       @mouseup="dragging = false"
       @mouseleave="dragging = false"
       @keydown.esc="emit('close')"
+      @keydown.space.prevent="emit('close')"
       @keydown.delete="emit('delete', active.id)"
       @keydown.enter="emit('copy', active.id)"
       @contextmenu.prevent="openMenu"
@@ -133,10 +134,11 @@ function handleMenuSelect(key: string): void {
             alt="图片预览"
             draggable="false"
             :style="{ transform: `translate(${offset.x}px, ${offset.y}px) scale(${scale})` }"
+            @contextmenu.prevent.stop="openMenu"
           />
         </div>
         <div class="preview-actions">
-          <span>方向键切换 · 滚轮缩放 · 拖动平移 · Enter 复制 · Delete 删除 · Esc 关闭</span>
+          <span>方向键切换 · 滚轮缩放 · 拖动平移 · Enter 复制 · Delete 删除 · Space/Esc 关闭</span>
           <NButton size="small" @click="emit('close')">取消预览</NButton>
           <NButton size="small" @click="emit('copy', active.id)">复制</NButton>
           <NButton size="small" type="error" ghost @click="emit('delete', active.id, $event.currentTarget as HTMLElement)">

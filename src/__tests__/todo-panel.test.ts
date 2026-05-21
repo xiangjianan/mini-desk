@@ -13,7 +13,22 @@ const checkboxStub = {
 };
 
 const dropdownStub = {
-  template: "<div><slot /></div>",
+  props: ["options"],
+  emits: ["select"],
+  template: `
+    <div>
+      <slot />
+      <button
+        v-for="option in options"
+        :key="option.key"
+        class="dropdown-option"
+        type="button"
+        @click="$emit('select', option.key)"
+      >
+        {{ option.label }}
+      </button>
+    </div>
+  `,
 };
 
 const tooltipStub = {
@@ -37,6 +52,9 @@ describe("TodoPanel", () => {
       },
       global: {
         stubs: {
+          Button: true,
+          Checkbox: checkboxStub,
+          Dropdown: dropdownStub,
           NCheckbox: checkboxStub,
           NDropdown: dropdownStub,
           NTooltip: tooltipStub,
@@ -46,6 +64,7 @@ describe("TodoPanel", () => {
 
     expect(wrapper.find(".todo-empty").exists()).toBe(false);
     expect(wrapper.get(".todo-empty-hint").text()).toBe(EMPTY_HINTS.todos.morning);
+    expect(wrapper.get(".todo-empty-hint").text()).not.toMatch(/早上|中午|晚上|上午|下午/);
 
     await wrapper.get('[data-testid="todo-list-morning"]').trigger("dblclick");
 
@@ -64,6 +83,9 @@ describe("TodoPanel", () => {
       },
       global: {
         stubs: {
+          Button: true,
+          Checkbox: checkboxStub,
+          Dropdown: dropdownStub,
           NCheckbox: checkboxStub,
           NDropdown: dropdownStub,
           NTooltip: tooltipStub,
@@ -101,6 +123,9 @@ describe("TodoPanel", () => {
     const wrapper = mount(Harness, {
       global: {
         stubs: {
+          Button: true,
+          Checkbox: checkboxStub,
+          Dropdown: dropdownStub,
           NCheckbox: checkboxStub,
           NDropdown: dropdownStub,
           NTooltip: tooltipStub,
@@ -110,7 +135,7 @@ describe("TodoPanel", () => {
 
     expect(values(wrapper)).toEqual(["第一项", "第二项"]);
 
-    await wrapper.get(".n-checkbox").trigger("click");
+    await wrapper.get(".checkbox-stub").trigger("click");
     await nextTick();
 
     expect(values(wrapper)).toEqual(["第一项", "第二项"]);
@@ -140,6 +165,9 @@ describe("TodoPanel", () => {
       },
       global: {
         stubs: {
+          Button: true,
+          Checkbox: checkboxStub,
+          Dropdown: dropdownStub,
           NCheckbox: checkboxStub,
           NDropdown: dropdownStub,
           NTooltip: tooltipStub,
@@ -147,7 +175,7 @@ describe("TodoPanel", () => {
       },
     });
 
-    await wrapper.get(".n-checkbox").trigger("click");
+    await wrapper.get(".checkbox-stub").trigger("click");
     await wrapper.get('[data-testid="todo-list-morning"]').trigger("click");
 
     expect(wrapper.emitted("complete")?.[0]).toEqual(["morning", "a", true]);
@@ -167,6 +195,9 @@ describe("TodoPanel", () => {
       },
       global: {
         stubs: {
+          Button: true,
+          Checkbox: checkboxStub,
+          Dropdown: dropdownStub,
           NCheckbox: checkboxStub,
           NDropdown: dropdownStub,
           NTooltip: tooltipStub,
@@ -192,6 +223,9 @@ describe("TodoPanel", () => {
       },
       global: {
         stubs: {
+          Button: true,
+          Checkbox: checkboxStub,
+          Dropdown: dropdownStub,
           NCheckbox: checkboxStub,
           NDropdown: dropdownStub,
           NTooltip: tooltipStub,
@@ -220,6 +254,9 @@ describe("TodoPanel", () => {
       },
       global: {
         stubs: {
+          Button: true,
+          Checkbox: checkboxStub,
+          Dropdown: dropdownStub,
           NCheckbox: checkboxStub,
           NDropdown: dropdownStub,
           NTooltip: tooltipStub,
@@ -238,6 +275,40 @@ describe("TodoPanel", () => {
     wrapper.unmount();
   });
 
+  it("keeps the caret at the original clicked position when double-click editing a reminder", async () => {
+    const wrapper = mount(TodoPanel, {
+      props: {
+        todos: {
+          morning: [{ id: "a", text: "第一项内容", done: false }],
+          noon: [],
+          evening: [],
+        },
+        titles: DEFAULT_TITLES,
+      },
+      global: {
+        stubs: {
+          Button: true,
+          Checkbox: checkboxStub,
+          Dropdown: dropdownStub,
+          NCheckbox: checkboxStub,
+          NDropdown: dropdownStub,
+          NTooltip: tooltipStub,
+        },
+      },
+    });
+    const input = wrapper.get("input.todo-input").element as HTMLInputElement;
+
+    input.setSelectionRange(3, 3);
+    await wrapper.get("input.todo-input").trigger("mouseup");
+    input.setSelectionRange(1, 4);
+    await wrapper.get("input.todo-input").trigger("dblclick");
+    await wrapper.vm.$nextTick();
+
+    expect(input.selectionStart).toBe(3);
+    expect(input.selectionEnd).toBe(3);
+    wrapper.unmount();
+  });
+
   it("keeps a focused blank todo editable after the first character is entered", async () => {
     const wrapper = mount(TodoPanel, {
       props: {
@@ -250,6 +321,9 @@ describe("TodoPanel", () => {
       },
       global: {
         stubs: {
+          Button: true,
+          Checkbox: checkboxStub,
+          Dropdown: dropdownStub,
           NCheckbox: checkboxStub,
           NDropdown: dropdownStub,
           NTooltip: tooltipStub,
@@ -282,6 +356,9 @@ describe("TodoPanel", () => {
       },
       global: {
         stubs: {
+          Button: true,
+          Checkbox: checkboxStub,
+          Dropdown: dropdownStub,
           NCheckbox: checkboxStub,
           NDropdown: dropdownStub,
           NTooltip: tooltipStub,
@@ -290,6 +367,35 @@ describe("TodoPanel", () => {
     });
 
     expect(wrapper.get("input.todo-input").attributes("placeholder")).toBeUndefined();
+    wrapper.unmount();
+  });
+
+  it("opens the usage guide from blank reminder area context menus", async () => {
+    const wrapper = mount(TodoPanel, {
+      props: {
+        todos: {
+          morning: [],
+          noon: [],
+          evening: [],
+        },
+        titles: DEFAULT_TITLES,
+      },
+      global: {
+        stubs: {
+          Button: true,
+          Checkbox: checkboxStub,
+          Dropdown: dropdownStub,
+          NCheckbox: checkboxStub,
+          NDropdown: dropdownStub,
+          NTooltip: tooltipStub,
+        },
+      },
+    });
+
+    await wrapper.get('[data-period="morning"]').trigger("contextmenu");
+    await wrapper.get(".dropdown-option").trigger("click");
+
+    expect(wrapper.emitted("guide")?.[0]?.[0]).toBe("todos");
     wrapper.unmount();
   });
 });

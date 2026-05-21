@@ -486,9 +486,18 @@ function handleGlobalKeydown(event: KeyboardEvent): void {
     showSaveBubble();
   }
   if (activePreviewId.value) {
-    if (event.key === "Escape" || event.key === " ") activePreviewId.value = undefined;
-    if (event.key === "ArrowLeft" || event.key === "ArrowUp") navigatePreview(-1);
-    if (event.key === "ArrowRight" || event.key === "ArrowDown") navigatePreview(1);
+    if (event.key === "Escape" || event.key === " ") {
+      event.preventDefault();
+      activePreviewId.value = undefined;
+    }
+    if (event.key === "ArrowLeft" || event.key === "ArrowUp") {
+      event.preventDefault();
+      navigatePreview(-1);
+    }
+    if (event.key === "ArrowRight" || event.key === "ArrowDown") {
+      event.preventDefault();
+      navigatePreview(1);
+    }
   }
 }
 
@@ -712,6 +721,7 @@ function moveItem<T extends { id: string }>(items: T[], dragId: string, targetId
           @title-update="updateTitle"
           @update="updateLines('noteLines', $event)"
           @focus="handleGuideFocus('note', $event)"
+          @guide="handleGuideClick('note', $event)"
           @blur="handleEditorBlur"
         />
         <QuickButtons
@@ -758,6 +768,7 @@ function moveItem<T extends { id: string }>(items: T[], dragId: string, targetId
         @title-update="updateTitle"
         @update="updateLines('workspaceLines', $event)"
         @focus="handleGuideFocus('workspace', $event)"
+        @guide="handleGuideClick('workspace', $event)"
         @blur="handleEditorBlur"
       />
 
@@ -769,6 +780,7 @@ function moveItem<T extends { id: string }>(items: T[], dragId: string, targetId
         @title-update="updateTitle"
         @update="updateLines('storageLines', $event)"
         @focus="handleGuideFocus('storage', $event)"
+        @guide="handleGuideClick('storage', $event)"
         @blur="handleEditorBlur"
       />
     </main>

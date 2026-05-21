@@ -7,7 +7,22 @@ const buttonStub = {
 };
 
 const dropdownStub = {
-  template: "<div><slot /></div>",
+  props: ["options"],
+  emits: ["select"],
+  template: `
+    <div>
+      <slot />
+      <button
+        v-for="option in options"
+        :key="option.key"
+        class="dropdown-option"
+        type="button"
+        @click="$emit('select', option.key)"
+      >
+        {{ option.label }}
+      </button>
+    </div>
+  `,
 };
 
 const modalStub = {
@@ -24,6 +39,8 @@ describe("ImagePreview", () => {
       },
       global: {
         stubs: {
+          Button: buttonStub,
+          Dropdown: dropdownStub,
           Modal: modalStub,
           NButton: buttonStub,
           NDropdown: dropdownStub,
@@ -49,6 +66,8 @@ describe("ImagePreview", () => {
       },
       global: {
         stubs: {
+          Button: buttonStub,
+          Dropdown: dropdownStub,
           Modal: modalStub,
           NButton: buttonStub,
           NDropdown: dropdownStub,
@@ -74,6 +93,8 @@ describe("ImagePreview", () => {
       },
       global: {
         stubs: {
+          Button: buttonStub,
+          Dropdown: dropdownStub,
           Modal: modalStub,
           NButton: buttonStub,
           NDropdown: dropdownStub,
@@ -86,6 +107,57 @@ describe("ImagePreview", () => {
     expect(wrapper.get(".preview-thumb").classes()).toContain("image-card");
     expect(wrapper.get(".preview-sidebar").element.firstElementChild?.classList.contains("preview-sidebar-bar")).toBe(true);
 
+    wrapper.unmount();
+  });
+
+  it("closes the preview when pressing Space", async () => {
+    const wrapper = mount(ImagePreview, {
+      props: {
+        images: [{ id: "img-1", src: "data:image/png;base64,one", createdAt: 1 }],
+        activeId: "img-1",
+      },
+      global: {
+        stubs: {
+          Button: buttonStub,
+          Dropdown: dropdownStub,
+          Modal: modalStub,
+          NButton: buttonStub,
+          NDropdown: dropdownStub,
+          NModal: modalStub,
+        },
+      },
+    });
+
+    await wrapper.get(".image-preview").trigger("keydown", { key: " " });
+
+    expect(wrapper.emitted("close")).toHaveLength(1);
+    wrapper.unmount();
+  });
+
+  it("uses only the custom preview context menu over preview images", async () => {
+    const wrapper = mount(ImagePreview, {
+      props: {
+        images: [{ id: "img-1", src: "data:image/png;base64,one", createdAt: 1 }],
+        activeId: "img-1",
+      },
+      global: {
+        stubs: {
+          Button: buttonStub,
+          Dropdown: dropdownStub,
+          Modal: modalStub,
+          NButton: buttonStub,
+          NDropdown: dropdownStub,
+          NModal: modalStub,
+        },
+      },
+    });
+    const event = new MouseEvent("contextmenu", { bubbles: true, cancelable: true, clientX: 16, clientY: 18 });
+
+    wrapper.get(".preview-stage img").element.dispatchEvent(event);
+    await wrapper.vm.$nextTick();
+
+    expect(event.defaultPrevented).toBe(true);
+    expect(wrapper.findAll(".dropdown-option").map((option) => option.text())).toEqual(["取消预览", "复制", "删除"]);
     wrapper.unmount();
   });
 });

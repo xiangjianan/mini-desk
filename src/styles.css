@@ -517,22 +517,6 @@ h3 {
   width: 30px;
 }
 
-.context-menu {
-  position: fixed;
-  z-index: 50;
-  min-width: 96px;
-  padding: 4px;
-  border: 1px solid var(--line-main);
-  background: var(--panel);
-  box-shadow: 0 8px 24px rgba(0, 0, 0, 0.16);
-  display: grid;
-  gap: 2px;
-}
-
-.context-menu.is-open .n-button {
-  justify-content: flex-start;
-}
-
 .focus-companion {
   position: fixed;
   right: 54px;
@@ -708,6 +692,13 @@ h3 {
   left: auto;
 }
 
+.quick-type-options {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 10px;
+}
+
 .image-preview {
   position: fixed;
   inset: 0;
@@ -716,9 +707,13 @@ h3 {
   z-index: 3000;
   display: grid;
   grid-template-columns: 10vw 90vw;
-  background: rgba(18, 20, 24, 0.52);
+  background: rgba(255, 255, 255, 0.64);
   backdrop-filter: blur(18px);
-  color: #fff;
+  color: var(--text);
+}
+
+html[data-theme="dark"] .image-preview {
+  background: rgba(0, 0, 0, 0.64);
 }
 
 body:has(.image-preview) .n-modal-mask {
@@ -798,7 +793,7 @@ body:has(.image-preview) .n-modal-body-wrapper {
   grid-template-rows: minmax(0, 1fr) auto;
   min-width: 0;
   min-height: 0;
-  color: #fff;
+  color: var(--text);
 }
 
 .preview-stage {
@@ -821,8 +816,8 @@ body:has(.image-preview) .n-modal-body-wrapper {
   justify-content: center;
   gap: 10px;
   min-height: 44px;
-  border-top: 1px solid rgba(255, 255, 255, 0.18);
-  color: rgba(255, 255, 255, 0.8);
+  border-top: 1px solid var(--line-section);
+  color: var(--muted);
 }
 
 .mobile-banner {

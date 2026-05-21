@@ -21,11 +21,13 @@ export const EMPTY_HINTS = {
   images: "截图放这里，可预览和整理 (＾▽＾)",
   quickButtons: "常用内容做成按钮，点一下就用 (｡•̀ᴗ-)✧",
   todos: {
-    morning: "双击新增早上提醒 (๑•̀ㅂ•́)و✧",
-    noon: "双击新增中午提醒 (๑•̀ㅂ•́)و✧",
-    evening: "双击新增晚上提醒 (๑•̀ㅂ•́)و✧",
+    morning: "双击新增提醒 (๑•̀ㅂ•́)و✧",
+    noon: "双击新增提醒 (๑•̀ㅂ•́)و✧",
+    evening: "双击新增提醒 (๑•̀ㅂ•́)و✧",
   },
 };
+
+export const GUIDE_MENU_OPTION = { label: "使用指南", key: "guide" } as const;
 
 export const AREA_HELP = {
   images: "截图区：粘贴、预览和整理图片。",

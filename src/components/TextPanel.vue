@@ -1,6 +1,9 @@
 <script setup lang="ts">
 import { computed, nextTick, ref, watch } from "vue";
+import { NDropdown } from "naive-ui";
+import type { DropdownOption } from "naive-ui";
 import type { LineItem } from "../types";
+import { GUIDE_MENU_OPTION } from "../state/defaults";
 import { editorTextToLines, handleTextareaTab, insertIndentedLineBreak, textLinesToEditorText } from "../utils/textEditor";
 import EditableTitle from "./EditableTitle.vue";
 
@@ -17,12 +20,17 @@ const emit = defineEmits<{
   update: [lines: LineItem[]];
   focus: [element: HTMLElement];
   blur: [element: HTMLElement];
+  guide: [element: HTMLElement];
 }>();
 
 const textareaRef = ref<HTMLTextAreaElement | null>(null);
 const text = ref(textLinesToEditorText(props.lines));
 const focused = ref(false);
 const editing = ref(false);
+const lastCaret = ref<number | null>(null);
+const menu = ref<{ x: number; y: number; anchor: HTMLElement } | null>(null);
+const guideMenuOption: DropdownOption = { ...GUIDE_MENU_OPTION, label: GUIDE_MENU_OPTION.label || "使用指南" };
+const menuOptions: DropdownOption[] = [guideMenuOption];
 
 watch(
   () => props.lines,
@@ -76,11 +84,36 @@ function handleBlur(event: FocusEvent): void {
 async function startEditing(event: MouseEvent): Promise<void> {
   event.preventDefault();
   const textarea = event.currentTarget as HTMLTextAreaElement;
-  const caret = textarea.selectionStart ?? textarea.value.length;
+  const caret = lastCaret.value ?? textarea.selectionStart ?? textarea.value.length;
   editing.value = true;
   await nextTick();
   textareaRef.value?.focus({ preventScroll: true });
   if (textareaRef.value) collapseSelection(textareaRef.value, caret);
+}
+
+function rememberCaret(event: MouseEvent): void {
+  const textarea = event.currentTarget as HTMLTextAreaElement;
+  if (textarea.selectionStart !== textarea.selectionEnd) return;
+  lastCaret.value = textarea.selectionStart ?? textarea.value.length;
+}
+
+function openGuideMenu(event: MouseEvent): void {
+  event.preventDefault();
+  menu.value = {
+    x: event.clientX,
+    y: event.clientY,
+    anchor: event.currentTarget as HTMLElement,
+  };
+}
+
+function closeMenu(): void {
+  menu.value = null;
+}
+
+function handleMenuSelect(key: string): void {
+  const anchor = menu.value?.anchor;
+  closeMenu();
+  if (key === "guide" && anchor) emit("guide", anchor);
 }
 
 function collapseSelection(textarea: HTMLTextAreaElement, caret: number): void {
@@ -100,7 +133,7 @@ function collapseSelection(textarea: HTMLTextAreaElement, caret: number): void {
       </h2>
       <slot name="actions" />
     </div>
-    <div class="text-editor-frame">
+    <div class="text-editor-frame" @contextmenu.prevent="openGuideMenu">
       <textarea
         ref="textareaRef"
         v-model="text"
@@ -110,10 +143,28 @@ function collapseSelection(textarea: HTMLTextAreaElement, caret: number): void {
         spellcheck="false"
         @input="update"
         @keydown="handleKeydown"
+        @mouseup="rememberCaret"
         @dblclick="startEditing"
         @focus="handleFocus"
         @blur="handleBlur"
       />
     </div>
+    <NDropdown
+      v-if="menu"
+      placement="bottom-start"
+      trigger="manual"
+      :show="true"
+      :x="menu.x"
+      :y="menu.y"
+      :options="menuOptions"
+      @select="handleMenuSelect"
+      @clickoutside="closeMenu"
+    >
+      <span
+        class="dropdown-anchor"
+        :style="{ left: `${menu.x}px`, top: `${menu.y}px` }"
+        aria-hidden="true"
+      />
+    </NDropdown>
   </section>
 </template>

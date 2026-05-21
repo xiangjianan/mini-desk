@@ -6,6 +6,25 @@ const tooltipStub = {
   template: '<span><slot name="trigger" /><slot /></span>',
 };
 
+const dropdownStub = {
+  props: ["options"],
+  emits: ["select"],
+  template: `
+    <div>
+      <slot />
+      <button
+        v-for="option in options"
+        :key="option.key"
+        class="dropdown-option"
+        type="button"
+        @click="$emit('select', option.key)"
+      >
+        {{ option.label }}
+      </button>
+    </div>
+  `,
+};
+
 describe("TextPanel", () => {
   it("renders dash markers only for indented lines inside the editable text flow", () => {
     const wrapper = mount(TextPanel, {
@@ -157,5 +176,46 @@ describe("TextPanel", () => {
     await wrapper.vm.$nextTick();
 
     expect(textarea.selectionStart).toBe(textarea.selectionEnd);
+  });
+
+  it("keeps the caret at the original clicked position when double-click editing starts", async () => {
+    const wrapper = mount(TextPanel, {
+      props: {
+        titleId: "workspace-title",
+        title: "工作空间",
+        lines: [{ text: "root text", indent: 0 }],
+      },
+    });
+    const textarea = wrapper.get("textarea").element as HTMLTextAreaElement;
+
+    textarea.setSelectionRange(6, 6);
+    await wrapper.get("textarea").trigger("mouseup");
+    textarea.setSelectionRange(1, 5);
+    await wrapper.get("textarea").trigger("dblclick");
+    await wrapper.vm.$nextTick();
+
+    expect(textarea.selectionStart).toBe(6);
+    expect(textarea.selectionEnd).toBe(6);
+  });
+
+  it("opens the usage guide from a text panel context menu", async () => {
+    const wrapper = mount(TextPanel, {
+      props: {
+        titleId: "workspace-title",
+        title: "工作空间",
+        lines: [],
+      },
+      global: {
+        stubs: {
+          Dropdown: dropdownStub,
+          NDropdown: dropdownStub,
+        },
+      },
+    });
+
+    await wrapper.get(".text-editor-frame").trigger("contextmenu");
+    await wrapper.get(".dropdown-option").trigger("click");
+
+    expect(wrapper.emitted("guide")).toHaveLength(1);
   });
 });

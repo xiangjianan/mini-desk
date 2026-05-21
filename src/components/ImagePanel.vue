@@ -3,7 +3,7 @@ import { computed, ref } from "vue";
 import { NDropdown } from "naive-ui";
 import type { DropdownOption } from "naive-ui";
 import type { GuideKey, StoredImage } from "../types";
-import { EMPTY_HINTS } from "../state/defaults";
+import { EMPTY_HINTS, GUIDE_MENU_OPTION } from "../state/defaults";
 import EditableTitle from "./EditableTitle.vue";
 
 defineProps<{
@@ -23,6 +23,7 @@ const emit = defineEmits<{
 
 const menu = ref<{ x: number; y: number; id?: string; anchor?: HTMLElement } | null>(null);
 const draggingId = ref<string | null>(null);
+const guideMenuOption: DropdownOption = { ...GUIDE_MENU_OPTION, label: GUIDE_MENU_OPTION.label || "使用指南" };
 
 const menuOptions = computed<DropdownOption[]>(() =>
   menu.value?.id
@@ -30,8 +31,9 @@ const menuOptions = computed<DropdownOption[]>(() =>
         { label: "预览", key: "preview" },
         { label: "复制", key: "copy" },
         { label: "删除", key: "delete" },
+        guideMenuOption,
       ]
-    : [{ label: "粘贴图片", key: "paste" }],
+    : [{ label: "粘贴图片", key: "paste" }, guideMenuOption],
 );
 
 function openMenu(event: MouseEvent, id?: string): void {
@@ -48,6 +50,7 @@ function handleMenuSelect(key: string): void {
   const anchor = menu.value?.anchor;
   closeMenu();
   if (key === "paste") emit("paste");
+  if (key === "guide" && anchor) emit("guide", "images", anchor);
   if (!id) return;
   if (key === "preview") emit("preview", id);
   if (key === "copy") emit("copy", id);
@@ -70,7 +73,7 @@ function handleGuideClick(event: MouseEvent): void {
       <span class="count">{{ images.length }}</span>
     </div>
 
-    <div class="image-list" aria-label="图床图片列表" @click="closeMenu">
+    <div class="image-list" aria-label="图床图片列表" @click="closeMenu" @contextmenu.prevent.stop="openMenu($event)">
       <button v-if="images.length === 0" class="empty-hint image-empty" type="button" @click="emit('paste')">
         {{ EMPTY_HINTS.images }}
       </button>
