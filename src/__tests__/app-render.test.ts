@@ -462,6 +462,48 @@ describe("App shell", () => {
     }
   });
 
+  it("shows image copy success through the companion bubble", async () => {
+    vi.useFakeTimers();
+    localStorage.setItem(
+      STORAGE_KEY,
+      JSON.stringify({
+        images: [
+          {
+            id: "img-1",
+            src: "data:image/png;base64,iVBORw0KGgo=",
+            createdAt: 1,
+          },
+        ],
+      }),
+    );
+    Object.assign(navigator, {
+      clipboard: {
+        writeText: vi.fn().mockResolvedValue(undefined),
+      },
+    });
+    const wrapper = mountApp();
+
+    try {
+      wrapper.getComponent(ImagePanel).vm.$emit("copy", "img-1");
+      await Promise.resolve();
+      await Promise.resolve();
+      await wrapper.vm.$nextTick();
+
+      expect(navigator.clipboard.writeText).toHaveBeenCalledWith("data:image/png;base64,iVBORw0KGgo=");
+      expect(wrapper.find(".focus-companion.is-visible img").exists()).toBe(true);
+      expect(wrapper.find('[data-testid="companion-confirm"]').exists()).toBe(false);
+
+      await vi.advanceTimersByTimeAsync(200);
+      await wrapper.vm.$nextTick();
+
+      expect(wrapper.find('[data-testid="companion-confirm"]').text()).toMatch(/图片|剪贴板|粘贴|Data URL|复制/);
+    } finally {
+      wrapper.unmount();
+      vi.unstubAllGlobals();
+      vi.useRealTimers();
+    }
+  });
+
   it("shows import and export success through the companion bubble", async () => {
     vi.useFakeTimers();
     const createObjectURL = vi.fn(() => "blob:todo-board");

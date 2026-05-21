@@ -207,6 +207,36 @@ describe("TextPanel", () => {
     wrapper.unmount();
   });
 
+  it("starts mobile editing from a double tap touch gesture", async () => {
+    vi.useFakeTimers();
+    vi.setSystemTime(0);
+    const wrapper = mount(TextPanel, {
+      attachTo: document.body,
+      props: {
+        titleId: "workspace-title",
+        title: "工作空间",
+        lines: [{ text: "root", indent: 0 }],
+      },
+    });
+    const textarea = wrapper.get("textarea").element as HTMLTextAreaElement;
+
+    textarea.dispatchEvent(new TouchEvent("touchend", { bubbles: true, cancelable: true }));
+    await wrapper.vm.$nextTick();
+
+    expect(textarea.readOnly).toBe(true);
+    expect(document.activeElement).not.toBe(textarea);
+
+    await vi.advanceTimersByTimeAsync(120);
+    textarea.dispatchEvent(new TouchEvent("touchend", { bubbles: true, cancelable: true }));
+    await wrapper.vm.$nextTick();
+
+    expect(textarea.readOnly).toBe(false);
+    expect(document.activeElement).toBe(textarea);
+
+    wrapper.unmount();
+    vi.useRealTimers();
+  });
+
   it("collapses the caret instead of selecting text when double-click editing starts", async () => {
     const wrapper = mount(TextPanel, {
       props: {

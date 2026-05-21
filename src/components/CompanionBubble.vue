@@ -22,8 +22,13 @@ const emit = defineEmits<{
 }>();
 
 const POPOVER_DELAY_MS = 200;
+const POPOVER_HIDE_CONTENT_MS = 260;
 const delayedPopoverVisible = ref(false);
+const retainingPopoverContent = ref(false);
+const renderedMessage = ref("");
+const renderedConfirm = ref(false);
 const popoverTimer = ref<number | undefined>();
+const contentTimer = ref<number | undefined>();
 
 const placementStyle = computed(() => {
   if (!props.position) return undefined;
@@ -36,6 +41,7 @@ const placementStyle = computed(() => {
 
 const popoverVisible = computed(() => props.visible && Boolean(props.message || props.confirm));
 const visiblePopover = computed(() => delayedPopoverVisible.value && popoverVisible.value);
+const popoverContentVisible = computed(() => visiblePopover.value || retainingPopoverContent.value);
 const popoverKey = computed(() => `${props.position?.right ?? "default"}:${props.position?.bottom ?? "default"}`);
 const gifSrc = computed(() => (props.theme === "dark" ? hermesDarkGif : hermesGif));
 
@@ -43,10 +49,20 @@ watch(
   popoverVisible,
   (visible) => {
     window.clearTimeout(popoverTimer.value);
+    window.clearTimeout(contentTimer.value);
     if (!visible) {
       delayedPopoverVisible.value = false;
+      retainingPopoverContent.value = Boolean(renderedMessage.value || renderedConfirm.value);
+      contentTimer.value = window.setTimeout(() => {
+        retainingPopoverContent.value = false;
+        renderedMessage.value = "";
+        renderedConfirm.value = false;
+      }, POPOVER_HIDE_CONTENT_MS);
       return;
     }
+    renderedMessage.value = props.message;
+    renderedConfirm.value = Boolean(props.confirm);
+    retainingPopoverContent.value = false;
     popoverTimer.value = window.setTimeout(() => {
       delayedPopoverVisible.value = true;
     }, POPOVER_DELAY_MS);
@@ -54,8 +70,18 @@ watch(
   { immediate: true },
 );
 
+watch(
+  () => [props.message, props.confirm] as const,
+  () => {
+    if (!popoverVisible.value) return;
+    renderedMessage.value = props.message;
+    renderedConfirm.value = Boolean(props.confirm);
+  },
+);
+
 onUnmounted(() => {
   window.clearTimeout(popoverTimer.value);
+  window.clearTimeout(contentTimer.value);
 });
 </script>
 
@@ -85,9 +111,9 @@ onUnmounted(() => {
         <img :src="gifSrc" alt="" />
       </template>
 
-      <div v-if="visiblePopover" class="companion-popover" role="status" aria-live="polite" data-testid="companion-confirm">
-        <span>{{ message }}</span>
-        <div v-if="confirm" class="companion-actions">
+      <div v-if="popoverContentVisible" class="companion-popover" role="status" aria-live="polite" data-testid="companion-confirm">
+        <span>{{ renderedMessage }}</span>
+        <div v-if="renderedConfirm" class="companion-actions">
           <NButton size="tiny" class="companion-action-button" data-testid="companion-yes" @click="emit('yes')">是</NButton>
           <NButton size="tiny" class="companion-action-button" data-testid="companion-no" @click="emit('no')">否</NButton>
         </div>

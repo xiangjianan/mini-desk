@@ -8,6 +8,12 @@ const popoverStub = {
   template: '<div><slot name="trigger" /><div v-if="show" class="n-popover"><slot /></div></div>',
 };
 
+const persistentPopoverStub = {
+  name: "NPopover",
+  props: ["show"],
+  template: '<div><slot name="trigger" /><div class="n-popover" :data-show="String(show)"><slot /></div></div>',
+};
+
 const buttonStub = {
   template: '<button v-bind="$attrs"><slot /></button>',
 };
@@ -71,6 +77,40 @@ describe("CompanionBubble", () => {
 
     expect(document.body.querySelector(".n-popover")).toBeNull();
     expect(wrapper.find('[data-testid="companion-confirm"]').exists()).toBe(false);
+
+    wrapper.unmount();
+  });
+
+  it("keeps the previous bubble content during the hide animation", async () => {
+    vi.useFakeTimers();
+    const wrapper = mount(CompanionBubble, {
+      attachTo: document.body,
+      props: {
+        visible: true,
+        message: "保存好了",
+      },
+      global: {
+        stubs: {
+          NButton: buttonStub,
+          NPopover: persistentPopoverStub,
+          Popover: persistentPopoverStub,
+        },
+      },
+    });
+
+    await vi.advanceTimersByTimeAsync(200);
+    await wrapper.vm.$nextTick();
+
+    expect(wrapper.find(".n-popover").text()).toContain("保存好了");
+
+    await wrapper.setProps({ message: "" });
+
+    expect(wrapper.find(".n-popover").text()).toContain("保存好了");
+
+    await vi.advanceTimersByTimeAsync(260);
+    await wrapper.vm.$nextTick();
+
+    expect(wrapper.find(".n-popover").text()).toBe("");
 
     wrapper.unmount();
   });

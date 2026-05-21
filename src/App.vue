@@ -287,11 +287,11 @@ async function copyImage(id: string): Promise<void> {
   };
   if (clipboard.write && "ClipboardItem" in window) {
     const blob = await (await fetch(image.src)).blob();
-    await clipboard.write([new ClipboardItem({ [blob.type]: blob })]);
-    showToast("imageCopied");
+    await clipboard.write([new window.ClipboardItem({ [blob.type]: blob })]);
+    showBubble("imageCopied", undefined, { hideCompanionAfter: true });
     return;
   }
-  if (await copyText(image.src)) showToast("imageDataCopied");
+  if (await copyText(image.src)) showBubble("imageDataCopied", undefined, { hideCompanionAfter: true });
 }
 
 function saveQuick(payload: { id?: string; title: string; value: string; type: QuickButtonType }): void {

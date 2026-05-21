@@ -15,6 +15,8 @@ const props = defineProps<{
   split?: boolean;
 }>();
 
+const TOUCH_DOUBLE_TAP_MS = 360;
+
 const emit = defineEmits<{
   titleUpdate: [id: string, value: string];
   update: [lines: LineItem[]];
@@ -28,6 +30,7 @@ const text = ref(textLinesToEditorText(props.lines));
 const focused = ref(false);
 const editing = ref(false);
 const lastCaret = ref<number | null>(null);
+const lastTouchEndAt = ref<number | null>(null);
 const lastTextSelection = ref<{ start: number; end: number } | null>(null);
 const menu = ref<{
   x: number;
@@ -99,13 +102,26 @@ function handleBlur(event: FocusEvent): void {
 
 async function startEditing(event: MouseEvent): Promise<void> {
   const textarea = event.currentTarget as HTMLTextAreaElement;
-  const caret = lastCaret.value ?? textarea.selectionStart ?? textarea.value.length;
-  editing.value = true;
-  unlockTextareaForMobileKeyboard(textarea, caret);
+  startEditingFromTextarea(textarea);
   await nextTick();
+  const caret = lastCaret.value ?? textarea.selectionStart ?? textarea.value.length;
   textareaRef.value?.focus({ preventScroll: true });
   if (textareaRef.value) collapseSelection(textareaRef.value, caret);
   lastTextSelection.value = null;
+}
+
+function handleTouchEnd(event: TouchEvent): void {
+  const now = Date.now();
+  const previousTouchEndAt = lastTouchEndAt.value;
+  lastTouchEndAt.value = now;
+  if (previousTouchEndAt === null || now - previousTouchEndAt >= TOUCH_DOUBLE_TAP_MS) return;
+  startEditingFromTextarea(event.currentTarget as HTMLTextAreaElement);
+}
+
+function startEditingFromTextarea(textarea: HTMLTextAreaElement): void {
+  const caret = lastCaret.value ?? textarea.selectionStart ?? textarea.value.length;
+  editing.value = true;
+  unlockTextareaForMobileKeyboard(textarea, caret);
 }
 
 function unlockTextareaForMobileKeyboard(textarea: HTMLTextAreaElement, caret: number): void {
@@ -254,6 +270,7 @@ function collapseSelection(textarea: HTMLTextAreaElement, caret: number): void {
         @input="update"
         @keydown="handleKeydown"
         @mouseup="rememberCaret"
+        @touchend="handleTouchEnd"
         @select="rememberSelection"
         @dblclick="startEditing"
         @focus="handleFocus"

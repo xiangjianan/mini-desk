@@ -117,7 +117,7 @@ export const MESSAGE_CATALOG: Record<MessageKey, MessageEntry> = {
   },
   imageCopied: {
     mood: "happy",
-    surface: "naive-message",
+    surface: "companion",
     variants: [
       "图片已复制",
       "图片复制好了",
@@ -127,7 +127,7 @@ export const MESSAGE_CATALOG: Record<MessageKey, MessageEntry> = {
   },
   imageDataCopied: {
     mood: "surprised",
-    surface: "naive-message",
+    surface: "companion",
     variants: [
       "已复制为 Data URL",
       "图片按 Data URL 复制",
