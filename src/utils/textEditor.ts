@@ -54,8 +54,15 @@ export function handleTextareaTab(textarea: HTMLTextAreaElement, outdent = false
 export function insertIndentedLineBreak(textarea: HTMLTextAreaElement): string {
   const { selectionStart, value } = textarea;
   const lineStart = value.lastIndexOf("\n", selectionStart - 1) + 1;
-  const line = value.slice(lineStart, selectionStart);
-  const indent = line.match(/^\t*/)?.[0] ?? "";
+  const lineEndIndex = value.indexOf("\n", selectionStart);
+  const lineEnd = lineEndIndex === -1 ? value.length : lineEndIndex;
+  const line = value.slice(lineStart, lineEnd);
+  if (isEmptyIndentedLine(line)) {
+    textarea.setRangeText("", lineStart, lineEnd, "end");
+    return textarea.value;
+  }
+  const previousLine = value.slice(lineStart, selectionStart);
+  const indent = previousLine.match(/^\t*/)?.[0] ?? "";
   const marker = indent.length > 0 ? LINE_MARKER : "";
   textarea.setRangeText(`\n${indent}${marker}`, textarea.selectionStart, textarea.selectionEnd, "end");
   return textarea.value;
@@ -70,6 +77,12 @@ function stripLineMarker(content: string): string {
   if (content.startsWith(LINE_MARKER)) return content.slice(LINE_MARKER.length);
   if (content === "-") return "";
   return content;
+}
+
+function isEmptyIndentedLine(line: string): boolean {
+  const indent = line.match(/^\t*/)?.[0].length ?? 0;
+  if (indent === 0) return false;
+  return stripLineMarker(line.slice(indent)).trim().length === 0;
 }
 
 function getSelectedLineRange(value: string, start: number, end: number): { start: number; end: number } {

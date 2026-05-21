@@ -47,7 +47,6 @@ const importInput = ref<HTMLInputElement | null>(null);
 const importFeedbackAnchor = ref<HTMLElement | undefined>();
 const textSaveTimer = ref<number | undefined>();
 const bubbleTimer = ref<number | undefined>();
-const guideTimer = ref<number | undefined>();
 const emptyTodoRemovalTimers = new Map<string, number>();
 const appVersion = ref(getIndexAppVersion());
 const storedAppVersion = ref<string | null>(null);
@@ -59,35 +58,61 @@ type BubbleOptions = {
   guideKey?: GuideKey;
 };
 
-type GuideOptions = {
-  keepCompanionAfter?: boolean;
+const GUIDE_MESSAGES: Record<GuideKey, string[]> = {
+  images: [
+    `${AREA_HELP.images} Ctrl+V 粘贴图片，点击缩略图预览，方向键切换。`,
+    "截图区支持粘贴、拖拽排序、右键复制/删除，也可以置顶置底。",
+    "预览图片时可滚轮缩放、拖动平移，右键可复制、删除或取消预览。",
+  ],
+  note: [
+    `${AREA_HELP.note} 双击开始编辑，Ctrl+S 可立即保存。`,
+    "便签区适合临时记录，右键可复制/粘贴，也能打开使用指南。",
+    "写下零散想法后不用急着整理，停顿片刻会自动保存。",
+  ],
+  quickButtons: [
+    `${AREA_HELP.quickButtons} 链接会直接打开，文本会复制到剪贴板。`,
+    "快捷区可新增链接或复制文本，隐藏按钮可收起不常用入口。",
+    "编辑快捷内容时可以选择链接属性或复制文本属性，保存前会校验标题和内容。",
+  ],
+  todos: [
+    `${AREA_HELP.todos} 双击空白处新增，双击文字开始编辑。`,
+    "提醒事项可勾选完成，右键可复制/粘贴、删除、置顶或置底。",
+    "完成项可以统一清理；没有完成项时会给出提示，不会误删内容。",
+  ],
+  workspace: [
+    `${AREA_HELP.workspace} 双击编辑，Tab 缩进，Shift+Tab 取消缩进。`,
+    "工作空间适合拆步骤，缩进行会显示短横线，空缩进行按 Enter 会退出缩进。",
+    "编辑时 Ctrl+S 可立即保存，右键可复制/粘贴并查看指南。",
+  ],
+  storage: [
+    `${AREA_HELP.storage} 双击编辑，Ctrl+S 保存，适合放长期内容。`,
+    "扩展区支持和工作空间一样的缩进、换行、复制与粘贴。",
+    "需要长期保留的资料可以放这里，自动保存会帮你收好。",
+  ],
+  addQuick: [
+    `${CONTROL_HELP.addQuick} 可新增链接或复制文本，默认是链接属性。`,
+    "新增快捷内容时，标题和内容都要填写，链接与复制文本只能选一个。",
+    "快捷按钮保存后会出现在快捷区，常用入口可以更快触达。",
+  ],
+  toggleHiddenQuick: [
+    `${CONTROL_HELP.toggleHiddenQuick} 再点一次可切回。`,
+    "隐藏按钮适合收纳低频入口，展开后可以继续编辑或使用。",
+    "想清理界面时，把不常用的快捷内容隐藏起来就好。",
+  ],
+  settings: [
+    `${CONTROL_HELP.settings} 可导入导出数据、查看关于和版本状态。`,
+    "设置里能备份看板数据，也能在版本更新时刷新静态缓存。",
+    "关于弹窗里有项目名和 GitHub 入口，版本信息也收在这里。",
+  ],
+  theme: [
+    `${CONTROL_HELP.theme} 点一下就换风格。`,
+    "主题按钮可在明暗色之间切换，页面会记住你的选择。",
+    "白天和夜间都可以切换到更舒服的显示状态。",
+  ],
 };
-
-const GUIDE_MESSAGES: Record<GuideKey, string> = {
-  images: `${AREA_HELP.images} Ctrl+V 粘贴，方向键切图。`,
-  note: `${AREA_HELP.note} 双击编辑，Ctrl+S 保存。`,
-  quickButtons: `${AREA_HELP.quickButtons} Enter 保存，Esc 关闭。`,
-  todos: `${AREA_HELP.todos} 双击空白处新增。`,
-  workspace: `${AREA_HELP.workspace} Tab 缩进，Ctrl+S 保存。`,
-  storage: `${AREA_HELP.storage} 双击编辑，Ctrl+S 保存。`,
-  addQuick: `${CONTROL_HELP.addQuick} Enter 保存，Esc 关闭。`,
-  toggleHiddenQuick: `${CONTROL_HELP.toggleHiddenQuick} 再点一次可切回。`,
-  settings: `${CONTROL_HELP.settings} 导入导出会给反馈。`,
-  theme: `${CONTROL_HELP.theme} 点一下就换风格。`,
-};
-const GUIDE_DELAY_MIN_MS = 600;
-const GUIDE_DELAY_RANGE_MS = 1600;
 const GUIDE_MESSAGE_DURATION_MS = 4000;
-const GUIDE_GLOBAL_COOLDOWN_MS = 20_000;
-const GUIDE_KEY_COOLDOWN_MIN_MS = 60_000;
-const GUIDE_KEY_COOLDOWN_RANGE_MS = 60_000;
-const GUIDE_FIRST_CHANCE = 0.7;
-const GUIDE_REPEAT_CHANCE = 0.25;
 const GITHUB_REPO_NAME = "xiangjianan/todolist";
 const GITHUB_REPO_URL = "https://github.com/xiangjianan/todolist";
-const guideSeenKeys = new Set<GuideKey>();
-const guideNextAllowedAt = new Map<GuideKey, number>();
-const lastGuideShownAt = ref(Number.NEGATIVE_INFINITY);
 const activeGuideKey = ref<GuideKey | null>(null);
 
 const naiveTheme = computed(() => (state.theme === "dark" ? darkTheme : null));
@@ -154,7 +179,6 @@ function showCompanion(anchor?: HTMLElement, guideKey?: GuideKey): void {
 
 function handleGuideFocus(key: GuideKey, anchor?: HTMLElement): void {
   showCompanion(anchor, key);
-  maybeShowGuideBubble(key, anchor, { keepCompanionAfter: true });
 }
 
 function handleGuideClick(key: GuideKey, anchor?: HTMLElement, immediate = false): void {
@@ -163,7 +187,7 @@ function handleGuideClick(key: GuideKey, anchor?: HTMLElement, immediate = false
     showGuideBubble(key, anchor);
     return;
   }
-  maybeShowGuideBubble(key, anchor);
+  showCompanion(anchor, key);
 }
 
 function handleEditorBlur(): void {
@@ -226,6 +250,16 @@ async function addImageFile(file: File): Promise<void> {
 
 function reorderImages(dragId: string, targetId: string): void {
   moveItem(state.images, dragId, targetId);
+  persistNow();
+}
+
+function moveImageToTop(id: string): void {
+  moveItemToStart(state.images, id);
+  persistNow();
+}
+
+function moveImageToBottom(id: string): void {
+  moveItemToEnd(state.images, id);
   persistNow();
 }
 
@@ -521,7 +555,6 @@ function showBubble(messageKey: MessageKey, anchor?: HTMLElement, options: Bubbl
 }
 
 function showBubbleText(message: string, anchor?: HTMLElement, options: BubbleOptions = {}, duration = 3000): void {
-  clearGuideTimer();
   window.clearTimeout(bubbleTimer.value);
   pendingConfirm.value = null;
   bubbleMessage.value = message;
@@ -542,7 +575,6 @@ function showBubbleText(message: string, anchor?: HTMLElement, options: BubbleOp
 }
 
 function hideBubbleMessage(): void {
-  clearGuideTimer();
   window.clearTimeout(bubbleTimer.value);
   pendingConfirm.value = null;
   bubbleVisible.value = false;
@@ -560,7 +592,6 @@ function requestConfirmation(
   anchor: HTMLElement | undefined,
   onConfirm: () => void | Promise<void>,
 ): void {
-  clearGuideTimer();
   window.clearTimeout(bubbleTimer.value);
   bubbleMessage.value = getMessage(messageKey);
   pendingConfirm.value = { onConfirm };
@@ -589,7 +620,6 @@ function showToast(messageKey: MessageKey): void {
 function clearTimers(): void {
   window.clearTimeout(textSaveTimer.value);
   window.clearTimeout(bubbleTimer.value);
-  clearGuideTimer();
   emptyTodoRemovalTimers.forEach((timer) => window.clearTimeout(timer));
   emptyTodoRemovalTimers.clear();
 }
@@ -606,47 +636,22 @@ function cancelEmptyTodoRemoval(period: TodoPeriod, id: string): void {
   emptyTodoRemovalTimers.delete(key);
 }
 
-function maybeShowGuideBubble(key: GuideKey, anchor?: HTMLElement, options: GuideOptions = {}): void {
-  const now = Date.now();
-  if (pendingConfirm.value || bubbleVisible.value) return;
-  if (now - lastGuideShownAt.value < GUIDE_GLOBAL_COOLDOWN_MS) return;
-  if (now < (guideNextAllowedAt.get(key) ?? 0)) return;
-  const chance = guideSeenKeys.has(key) ? GUIDE_REPEAT_CHANCE : GUIDE_FIRST_CHANCE;
-  if (Math.random() > chance) return;
-
-  clearGuideTimer();
-  const delay = GUIDE_DELAY_MIN_MS + Math.floor(Math.random() * GUIDE_DELAY_RANGE_MS);
-  guideTimer.value = window.setTimeout(() => {
-    guideTimer.value = undefined;
-    if (pendingConfirm.value || bubbleVisible.value) return;
-    showGuideBubble(key, anchor, options);
-  }, delay);
-}
-
-function showGuideBubble(key: GuideKey, anchor?: HTMLElement, options: GuideOptions = {}): void {
+function showGuideBubble(key: GuideKey, anchor?: HTMLElement): void {
   if (pendingConfirm.value) return;
   showBubbleText(
-    withKaomoji(GUIDE_MESSAGES[key], "encouraging"),
+    withKaomoji(randomGuideMessage(key), "encouraging"),
     anchor,
-    { hideCompanionAfter: !options.keepCompanionAfter, guideKey: key },
+    { hideCompanionAfter: true, guideKey: key },
     GUIDE_MESSAGE_DURATION_MS,
-  );
-  const shownAt = Date.now();
-  lastGuideShownAt.value = shownAt;
-  guideSeenKeys.add(key);
-  guideNextAllowedAt.set(
-    key,
-    shownAt + GUIDE_KEY_COOLDOWN_MIN_MS + Math.floor(Math.random() * GUIDE_KEY_COOLDOWN_RANGE_MS),
   );
 }
 
-function clearGuideTimer(): void {
-  window.clearTimeout(guideTimer.value);
-  guideTimer.value = undefined;
+function randomGuideMessage(key: GuideKey): string {
+  const messages = GUIDE_MESSAGES[key];
+  return messages[Math.floor(Math.random() * messages.length)];
 }
 
 function invalidateGuideCompanion(nextKey: GuideKey): void {
-  clearGuideTimer();
   if (!activeGuideKey.value || activeGuideKey.value === nextKey || pendingConfirm.value) return;
   hideCompanion();
 }
@@ -702,6 +707,20 @@ function moveItem<T extends { id: string }>(items: T[], dragId: string, targetId
   items.splice(targetIndex, 0, item);
 }
 
+function moveItemToStart<T extends { id: string }>(items: T[], id: string): void {
+  const index = items.findIndex((item) => item.id === id);
+  if (index <= 0) return;
+  const [item] = items.splice(index, 1);
+  items.unshift(item);
+}
+
+function moveItemToEnd<T extends { id: string }>(items: T[], id: string): void {
+  const index = items.findIndex((item) => item.id === id);
+  if (index < 0 || index === items.length - 1) return;
+  const [item] = items.splice(index, 1);
+  items.push(item);
+}
+
 </script>
 
 <template>
@@ -716,6 +735,8 @@ function moveItem<T extends { id: string }>(items: T[], dragId: string, targetId
         @copy="copyImage"
         @delete="deleteImage"
         @reorder="reorderImages"
+        @move-top="moveImageToTop"
+        @move-bottom="moveImageToBottom"
         @paste="pasteImageFromClipboard"
         @guide="handleGuideClick"
       />

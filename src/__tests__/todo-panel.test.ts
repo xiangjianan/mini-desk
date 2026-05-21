@@ -398,4 +398,127 @@ describe("TodoPanel", () => {
     expect(wrapper.emitted("guide")?.[0]).toEqual(["todos", expect.any(HTMLElement), true]);
     wrapper.unmount();
   });
+
+  it("adds top and bottom actions to reminder item context menus", async () => {
+    const wrapper = mount(TodoPanel, {
+      props: {
+        todos: {
+          morning: [
+            { id: "a", text: "第一项", done: false },
+            { id: "b", text: "第二项", done: false },
+            { id: "c", text: "第三项", done: false },
+          ],
+          noon: [],
+          evening: [],
+        },
+        titles: DEFAULT_TITLES,
+      },
+      global: {
+        stubs: {
+          Button: true,
+          Checkbox: checkboxStub,
+          Dropdown: dropdownStub,
+          NCheckbox: checkboxStub,
+          NDropdown: dropdownStub,
+          NTooltip: tooltipStub,
+        },
+      },
+    });
+
+    await wrapper.findAll(".todo-item")[1].trigger("contextmenu");
+
+    expect(wrapper.findAll(".dropdown-option").map((option) => option.text())).toEqual([
+      "置顶",
+      "置底",
+      "删除",
+      "使用指南",
+    ]);
+
+    await wrapper.findAll(".dropdown-option").find((option) => option.text() === "置顶")?.trigger("click");
+    expect(wrapper.emitted("move")?.[0]).toEqual([{ period: "morning", id: "b" }, "morning", "a"]);
+
+    await wrapper.findAll(".todo-item")[1].trigger("contextmenu");
+    await wrapper.findAll(".dropdown-option").find((option) => option.text() === "置底")?.trigger("click");
+    expect(wrapper.emitted("move")?.[1]).toEqual([{ period: "morning", id: "b" }, "morning"]);
+
+    wrapper.unmount();
+  });
+
+  it("shows copy and paste actions when right-clicking selected editable reminder text", async () => {
+    const writeText = vi.fn().mockResolvedValue(undefined);
+    const readText = vi.fn().mockResolvedValue("补充");
+    Object.assign(navigator, { clipboard: { writeText, readText } });
+    const wrapper = mount(TodoPanel, {
+      props: {
+        todos: {
+          morning: [{ id: "a", text: "第一项内容", done: false }],
+          noon: [],
+          evening: [],
+        },
+        titles: DEFAULT_TITLES,
+      },
+      global: {
+        stubs: {
+          Button: true,
+          Checkbox: checkboxStub,
+          Dropdown: dropdownStub,
+          NCheckbox: checkboxStub,
+          NDropdown: dropdownStub,
+          NTooltip: tooltipStub,
+        },
+      },
+    });
+    const inputWrapper = wrapper.get("input.todo-input");
+    const input = inputWrapper.element as HTMLInputElement;
+
+    await inputWrapper.trigger("dblclick");
+    input.setSelectionRange(0, 3);
+    await inputWrapper.trigger("select");
+    await inputWrapper.trigger("contextmenu");
+
+    expect(wrapper.findAll(".dropdown-option").map((option) => option.text())).toEqual(["复制", "粘贴", "删除", "使用指南"]);
+
+    input.setSelectionRange(3, 3);
+    await wrapper.findAll(".dropdown-option")[0].trigger("click");
+    await Promise.resolve();
+
+    expect(writeText).toHaveBeenCalledWith("第一项");
+    wrapper.unmount();
+  });
+
+  it("pastes clipboard text into editable reminder text from the context menu", async () => {
+    const readText = vi.fn().mockResolvedValue("补充");
+    Object.assign(navigator, { clipboard: { readText, writeText: vi.fn() } });
+    const wrapper = mount(TodoPanel, {
+      props: {
+        todos: {
+          morning: [{ id: "a", text: "第一项", done: false }],
+          noon: [],
+          evening: [],
+        },
+        titles: DEFAULT_TITLES,
+      },
+      global: {
+        stubs: {
+          Button: true,
+          Checkbox: checkboxStub,
+          Dropdown: dropdownStub,
+          NCheckbox: checkboxStub,
+          NDropdown: dropdownStub,
+          NTooltip: tooltipStub,
+        },
+      },
+    });
+    const inputWrapper = wrapper.get("input.todo-input");
+    const input = inputWrapper.element as HTMLInputElement;
+
+    await inputWrapper.trigger("dblclick");
+    input.setSelectionRange(input.value.length, input.value.length);
+    await inputWrapper.trigger("contextmenu");
+    await wrapper.findAll(".dropdown-option").find((option) => option.text() === "粘贴")?.trigger("click");
+    await Promise.resolve();
+
+    expect(wrapper.emitted("update")?.at(-1)).toEqual(["morning", "a", "第一项补充"]);
+    wrapper.unmount();
+  });
 });

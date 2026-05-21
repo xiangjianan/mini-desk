@@ -28,9 +28,17 @@ const text = ref(textLinesToEditorText(props.lines));
 const focused = ref(false);
 const editing = ref(false);
 const lastCaret = ref<number | null>(null);
-const menu = ref<{ x: number; y: number; anchor: HTMLElement } | null>(null);
+const lastTextSelection = ref<{ start: number; end: number } | null>(null);
+const menu = ref<{ x: number; y: number; anchor: HTMLElement; target?: HTMLTextAreaElement } | null>(null);
 const guideMenuOption: DropdownOption = { ...GUIDE_MENU_OPTION, label: GUIDE_MENU_OPTION.label || "使用指南" };
-const menuOptions: DropdownOption[] = [guideMenuOption];
+const menuOptions = computed<DropdownOption[]>(() => {
+  const options: DropdownOption[] = [];
+  const target = menu.value?.target;
+  if (target && canCopyTextSelection(target)) options.push({ label: "复制", key: "copy" });
+  if (target && editing.value) options.push({ label: "粘贴", key: "paste" });
+  options.push(guideMenuOption);
+  return options;
+});
 
 watch(
   () => props.lines,
@@ -93,16 +101,25 @@ async function startEditing(event: MouseEvent): Promise<void> {
 
 function rememberCaret(event: MouseEvent): void {
   const textarea = event.currentTarget as HTMLTextAreaElement;
-  if (textarea.selectionStart !== textarea.selectionEnd) return;
+  if (hasSelection(textarea)) {
+    rememberTextSelection(textarea);
+    return;
+  }
   lastCaret.value = textarea.selectionStart ?? textarea.value.length;
 }
 
-function openGuideMenu(event: MouseEvent): void {
+function rememberSelection(event: Event): void {
+  rememberTextSelection(event.currentTarget as HTMLTextAreaElement);
+}
+
+function openTextMenu(event: MouseEvent): void {
   event.preventDefault();
+  const target = event.target instanceof HTMLTextAreaElement ? event.target : undefined;
   menu.value = {
     x: event.clientX,
     y: event.clientY,
     anchor: event.currentTarget as HTMLElement,
+    target,
   };
 }
 
@@ -110,10 +127,78 @@ function closeMenu(): void {
   menu.value = null;
 }
 
-function handleMenuSelect(key: string): void {
-  const anchor = menu.value?.anchor;
+async function handleMenuSelect(key: string): Promise<void> {
+  const current = menu.value;
+  const anchor = current?.anchor;
+  const target = current?.target;
   closeMenu();
+  if (key === "copy" && target) {
+    await copyTextSelection(target);
+    return;
+  }
+  if (key === "paste" && target) {
+    await pasteTextFromClipboard(target);
+    return;
+  }
   if (key === "guide" && anchor) emit("guide", anchor, true);
+}
+
+function hasSelection(target: HTMLTextAreaElement | HTMLInputElement): boolean {
+  return (target.selectionStart ?? 0) !== (target.selectionEnd ?? 0);
+}
+
+function rememberTextSelection(target: HTMLTextAreaElement): void {
+  if (!hasSelection(target)) return;
+  lastTextSelection.value = {
+    start: target.selectionStart ?? 0,
+    end: target.selectionEnd ?? 0,
+  };
+}
+
+function getTextSelectionRange(target: HTMLTextAreaElement): { start: number; end: number } {
+  if (hasSelection(target)) {
+    return {
+      start: target.selectionStart ?? 0,
+      end: target.selectionEnd ?? 0,
+    };
+  }
+  const fallback = lastTextSelection.value;
+  if (fallback && fallback.start !== fallback.end && fallback.end <= target.value.length) return fallback;
+  const caret = target.selectionStart ?? 0;
+  return { start: caret, end: caret };
+}
+
+function canCopyTextSelection(target: HTMLTextAreaElement): boolean {
+  const range = getTextSelectionRange(target);
+  return range.start !== range.end;
+}
+
+async function copyTextSelection(target: HTMLTextAreaElement | HTMLInputElement): Promise<void> {
+  const { start, end } = target instanceof HTMLTextAreaElement
+    ? getTextSelectionRange(target)
+    : { start: target.selectionStart ?? 0, end: target.selectionEnd ?? target.selectionStart ?? 0 };
+  const selectedText = target.value.slice(start, end);
+  if (!selectedText) return;
+  if (navigator.clipboard?.writeText) {
+    await navigator.clipboard.writeText(selectedText);
+    return;
+  }
+  const textarea = document.createElement("textarea");
+  textarea.value = selectedText;
+  document.body.append(textarea);
+  textarea.setSelectionRange(0, textarea.value.length);
+  document.execCommand("copy");
+  textarea.remove();
+}
+
+async function pasteTextFromClipboard(target: HTMLTextAreaElement): Promise<void> {
+  const pastedText = await navigator.clipboard?.readText?.();
+  if (!pastedText) return;
+  const start = target.selectionStart ?? target.value.length;
+  const end = target.selectionEnd ?? start;
+  target.setRangeText(pastedText, start, end, "end");
+  text.value = target.value;
+  update();
 }
 
 function collapseSelection(textarea: HTMLTextAreaElement, caret: number): void {
@@ -133,7 +218,7 @@ function collapseSelection(textarea: HTMLTextAreaElement, caret: number): void {
       </h2>
       <slot name="actions" />
     </div>
-    <div class="text-editor-frame" @contextmenu.prevent="openGuideMenu">
+    <div class="text-editor-frame" @contextmenu.prevent="openTextMenu">
       <textarea
         ref="textareaRef"
         v-model="text"
@@ -144,6 +229,7 @@ function collapseSelection(textarea: HTMLTextAreaElement, caret: number): void {
         @input="update"
         @keydown="handleKeydown"
         @mouseup="rememberCaret"
+        @select="rememberSelection"
         @dblclick="startEditing"
         @focus="handleFocus"
         @blur="handleBlur"

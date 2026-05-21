@@ -355,6 +355,33 @@ describe("App shell", () => {
     wrapper.unmount();
   });
 
+  it("reorders images from item context-menu top and bottom actions", async () => {
+    localStorage.setItem(
+      STORAGE_KEY,
+      JSON.stringify({
+        images: [
+          { id: "img-1", src: "data:image/png;base64,one", createdAt: 1 },
+          { id: "img-2", src: "data:image/png;base64,two", createdAt: 2 },
+          { id: "img-3", src: "data:image/png;base64,three", createdAt: 3 },
+        ],
+      }),
+    );
+    const wrapper = mountApp();
+    const imagePanel = wrapper.getComponent(ImagePanel);
+
+    imagePanel.vm.$emit("moveTop", "img-2");
+    await wrapper.vm.$nextTick();
+
+    expect(imagePanel.props("images").map((image: { id: string }) => image.id)).toEqual(["img-2", "img-1", "img-3"]);
+
+    imagePanel.vm.$emit("moveBottom", "img-2");
+    await wrapper.vm.$nextTick();
+
+    expect(imagePanel.props("images").map((image: { id: string }) => image.id)).toEqual(["img-1", "img-3", "img-2"]);
+
+    wrapper.unmount();
+  });
+
   it("hides the current companion GIF when opening image preview", async () => {
     vi.useFakeTimers();
     localStorage.setItem(
@@ -494,7 +521,7 @@ describe("App shell", () => {
     }
   });
 
-  it("shows low-frequency companion guide bubbles on area click and focus", async () => {
+  it("keeps area click and focus guidance to the GIF without low-frequency text bubbles", async () => {
     vi.useFakeTimers();
     vi.setSystemTime(new Date("2026-05-20T00:00:00.000Z"));
     vi.spyOn(Math, "random").mockReturnValue(0);
@@ -514,20 +541,10 @@ describe("App shell", () => {
       });
 
       await wrapper.get(".image-panel .panel-header").trigger("click");
-      await vi.advanceTimersByTimeAsync(600);
+      await vi.advanceTimersByTimeAsync(25_000);
       await wrapper.vm.$nextTick();
 
       expect(wrapper.find(".focus-companion.is-visible img").exists()).toBe(true);
-      expect(wrapper.find('[data-testid="companion-confirm"]').exists()).toBe(false);
-
-      await vi.advanceTimersByTimeAsync(200);
-      await wrapper.vm.$nextTick();
-
-      expect(wrapper.find(".focus-companion.is-visible img").exists()).toBe(true);
-      expect(wrapper.find('[data-testid="companion-confirm"]').text()).toMatch(/截图区|图片/);
-
-      await vi.advanceTimersByTimeAsync(4000);
-      await wrapper.vm.$nextTick();
       expect(wrapper.find('[data-testid="companion-confirm"]').exists()).toBe(false);
 
       const workspace = wrapper.findAll(".text-panel")[1];
@@ -543,17 +560,11 @@ describe("App shell", () => {
         toJSON: () => ({}),
       });
       await workspace.get("textarea").trigger("focus");
-      await vi.advanceTimersByTimeAsync(600);
-      await wrapper.vm.$nextTick();
-
-      expect(wrapper.find('[data-testid="companion-confirm"]').exists()).toBe(false);
-
       await vi.advanceTimersByTimeAsync(20_000);
-      await workspace.get("textarea").trigger("focus");
-      await vi.advanceTimersByTimeAsync(800);
       await wrapper.vm.$nextTick();
 
-      expect(wrapper.find('[data-testid="companion-confirm"]').text()).toMatch(/工作空间/);
+      expect(wrapper.find(".focus-companion.is-visible img").exists()).toBe(true);
+      expect(wrapper.find('[data-testid="companion-confirm"]').exists()).toBe(false);
     } finally {
       wrapper.unmount();
       vi.useRealTimers();
@@ -588,14 +599,14 @@ describe("App shell", () => {
       await vi.advanceTimersByTimeAsync(200);
       await wrapper.vm.$nextTick();
 
-      expect(wrapper.find('[data-testid="companion-confirm"]').text()).toMatch(/截图区|图片|Ctrl\+V|方向键/);
+      expect(wrapper.find('[data-testid="companion-confirm"]').text()).toMatch(/截图区|图片|Ctrl\+V|方向键|右键|删除/);
     } finally {
       wrapper.unmount();
       vi.useRealTimers();
     }
   });
 
-  it("hides a click-triggered guide GIF immediately when another area is clicked", async () => {
+  it("moves the click-triggered guide GIF to the newly clicked area without text bubbles", async () => {
     vi.useFakeTimers();
     vi.setSystemTime(new Date("2026-05-20T00:00:00.000Z"));
     vi.spyOn(Math, "random").mockReturnValue(0);
@@ -620,10 +631,22 @@ describe("App shell", () => {
 
       expect(wrapper.find(".focus-companion.is-visible img").exists()).toBe(true);
 
+      vi.spyOn(wrapper.get(".quick-block").element, "getBoundingClientRect").mockReturnValue({
+        x: 128,
+        y: 0,
+        width: 300,
+        height: 360,
+        top: 0,
+        left: 128,
+        right: 428,
+        bottom: 360,
+        toJSON: () => ({}),
+      });
       await wrapper.get(".quick-block").trigger("click");
       await wrapper.vm.$nextTick();
 
-      expect(wrapper.find(".focus-companion.is-visible").exists()).toBe(false);
+      expect(wrapper.find(".focus-companion.is-visible img").exists()).toBe(true);
+      expect(wrapper.get('[data-testid="companion-bubble"]').attributes("style")).toContain("100vw - 428px");
       expect(wrapper.find('[data-testid="companion-confirm"]').exists()).toBe(false);
 
       await vi.advanceTimersByTimeAsync(200);

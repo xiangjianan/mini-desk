@@ -79,8 +79,8 @@ describe("Naive UI component usage", () => {
       expect(source, file).not.toContain('trigger="hover"');
     }
 
-    expect(read("src/App.vue")).toContain("maybeShowGuideBubble");
     expect(read("src/App.vue")).toContain("handleGuideFocus");
+    expect(read("src/App.vue")).not.toContain("GUIDE_REPEAT_CHANCE");
   });
 
   it("does not apply the panel border class to split text panels", () => {
@@ -105,6 +105,8 @@ describe("Naive UI component usage", () => {
     expect(preview).toContain("删除");
     expect(preview).toContain("@keydown.space.prevent");
     expect(preview).not.toContain("@contextmenu.prevent.stop=\"openMenu\"");
+    expect(preview).not.toContain("custom-menu");
+    expect(preview).not.toContain('id="custom-menu"');
     expect(styles).toContain("grid-template-columns: 10vw 90vw");
     expect(styles).toContain("backdrop-filter");
     expect(styles).toMatch(/\.image-preview\s*\{[^}]*background: rgba\(255, 255, 255/s);
@@ -154,7 +156,7 @@ describe("Naive UI component usage", () => {
     expect(settings).not.toContain("settings-wrap");
     expect(quick).not.toContain(">+</NButton>");
     expect(todo).not.toContain("↘");
-    expect(styles).toMatch(/\.settings-btn\s*\{[^}]*border-radius: var\(--radius\)/s);
+    expect(styles).toMatch(/\.settings-btn\s*\{[^}]*border-radius: 0/s);
     expect(styles).toMatch(/\.top-actions\s*\{[^}]*top: 2px/s);
   });
 
@@ -187,7 +189,7 @@ describe("Naive UI component usage", () => {
     expect(styles).toContain("scrollbar-width: thin");
     expect(styles).toContain("::-webkit-scrollbar-thumb");
     expect(styles).toMatch(/button\s*\{[^}]*background: transparent/s);
-    expect(styles).toMatch(/\.n-button\s*\{[^}]*--n-border-radius: var\(--radius\)/s);
+    expect(styles).toMatch(/\.n-button\s*\{[^}]*--n-border-radius: 0/s);
     expect(styles).toMatch(/\.n-base-wave\s*\{[^}]*display: none/s);
   });
 
@@ -199,6 +201,28 @@ describe("Naive UI component usage", () => {
 
     expect(visibleBorderWidths.length).toBeGreaterThan(0);
     expect(visibleBorderWidths.every((width) => width === 1)).toBe(true);
+  });
+
+  it("keeps bordered controls and popup surfaces square without rounded corners", () => {
+    const styles = read("src/styles.css");
+
+    expect(styles).toContain("--radius: 0");
+    expect(styles).toMatch(/button\s*\{[^}]*border-radius: 0/s);
+    expect(styles).toMatch(/input,[\s\S]*?textarea\s*\{[^}]*border-radius: 0/s);
+    expect(styles).toMatch(/\.n-button,[\s\S]*?\.n-dropdown-menu,[\s\S]*?\.n-checkbox-box\s*\{[^}]*border-radius: 0/s);
+    expect(styles).not.toMatch(/border-radius:\s*(?:[1-9]\d*px|0\.\d+|[1-9]\d*%)/);
+  });
+
+  it("adds copy and paste actions to editable text context menus", () => {
+    const text = read("src/components/TextPanel.vue");
+    const todo = read("src/components/TodoPanel.vue");
+
+    for (const source of [text, todo]) {
+      expect(source).toContain("copyTextSelection");
+      expect(source).toContain("pasteTextFromClipboard");
+      expect(source).toContain("复制");
+      expect(source).toContain("粘贴");
+    }
   });
 
   it("uses double-click editing for area text instead of single-click editing", () => {

@@ -1,5 +1,5 @@
 import { mount } from "@vue/test-utils";
-import { describe, expect, it } from "vitest";
+import { describe, expect, it, vi } from "vitest";
 import TextPanel from "../components/TextPanel.vue";
 
 const tooltipStub = {
@@ -92,6 +92,25 @@ describe("TextPanel", () => {
     await wrapper.get("textarea").trigger("keydown", { key: "Enter" });
 
     expect(textarea.value).toBe("root\n");
+  });
+
+  it("exits indentation when pressing Enter on an empty indented marker line", async () => {
+    const wrapper = mount(TextPanel, {
+      props: {
+        titleId: "workspace-title",
+        title: "工作空间",
+        lines: [{ text: "", indent: 2 }],
+      },
+    });
+    const textarea = wrapper.get("textarea").element;
+    textarea.setSelectionRange(textarea.value.length, textarea.value.length);
+
+    await wrapper.get("textarea").trigger("dblclick");
+    await wrapper.get("textarea").trigger("keydown", { key: "Enter" });
+    await wrapper.vm.$nextTick();
+
+    expect(textarea.value).toBe("");
+    expect(wrapper.emitted("update")?.at(-1)?.[0]).toEqual([]);
   });
 
   it("keeps the caret collapsed when indenting a root line", async () => {
@@ -217,5 +236,67 @@ describe("TextPanel", () => {
     await wrapper.get(".dropdown-option").trigger("click");
 
     expect(wrapper.emitted("guide")?.[0]).toEqual([expect.any(HTMLElement), true]);
+  });
+
+  it("shows copy and paste actions when right-clicking selected editable text", async () => {
+    const writeText = vi.fn().mockResolvedValue(undefined);
+    const readText = vi.fn().mockResolvedValue(" pasted");
+    Object.assign(navigator, { clipboard: { writeText, readText } });
+    const wrapper = mount(TextPanel, {
+      props: {
+        titleId: "workspace-title",
+        title: "工作空间",
+        lines: [{ text: "root text", indent: 0 }],
+      },
+      global: {
+        stubs: {
+          Dropdown: dropdownStub,
+          NDropdown: dropdownStub,
+        },
+      },
+    });
+    const textarea = wrapper.get("textarea").element as HTMLTextAreaElement;
+
+    await wrapper.get("textarea").trigger("dblclick");
+    textarea.setSelectionRange(0, 4);
+    await wrapper.get("textarea").trigger("select");
+    await wrapper.get("textarea").trigger("contextmenu");
+
+    expect(wrapper.findAll(".dropdown-option").map((option) => option.text())).toEqual(["复制", "粘贴", "使用指南"]);
+
+    textarea.setSelectionRange(4, 4);
+    await wrapper.findAll(".dropdown-option")[0].trigger("click");
+    await Promise.resolve();
+
+    expect(writeText).toHaveBeenCalledWith("root");
+    wrapper.unmount();
+  });
+
+  it("pastes clipboard text into the editable text panel from the context menu", async () => {
+    const readText = vi.fn().mockResolvedValue(" pasted");
+    Object.assign(navigator, { clipboard: { readText, writeText: vi.fn() } });
+    const wrapper = mount(TextPanel, {
+      props: {
+        titleId: "workspace-title",
+        title: "工作空间",
+        lines: [{ text: "root", indent: 0 }],
+      },
+      global: {
+        stubs: {
+          Dropdown: dropdownStub,
+          NDropdown: dropdownStub,
+        },
+      },
+    });
+    const textarea = wrapper.get("textarea").element as HTMLTextAreaElement;
+
+    await wrapper.get("textarea").trigger("dblclick");
+    textarea.setSelectionRange(textarea.value.length, textarea.value.length);
+    await wrapper.get("textarea").trigger("contextmenu");
+    await wrapper.findAll(".dropdown-option").find((option) => option.text() === "粘贴")?.trigger("click");
+    await Promise.resolve();
+
+    expect(wrapper.emitted("update")?.at(-1)?.[0]).toEqual([{ text: "root pasted", indent: 0 }]);
+    wrapper.unmount();
   });
 });

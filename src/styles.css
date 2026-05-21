@@ -85,7 +85,7 @@ select {
 button {
   border: 1px solid var(--line-control);
   background: transparent;
-  border-radius: var(--radius);
+  border-radius: 0;
   min-height: 30px;
   padding: 0 10px;
   cursor: pointer;
@@ -100,7 +100,7 @@ input,
 textarea {
   border: 1px solid var(--line-control);
   background: var(--input);
-  border-radius: var(--radius);
+  border-radius: 0;
   outline: none;
 }
 
@@ -192,10 +192,23 @@ h3 {
 }
 
 .n-button {
-  --n-border-radius: var(--radius) !important;
+  --n-border-radius: 0 !important;
   --n-font-size: var(--app-font-size) !important;
   --n-wave-opacity: 0 !important;
   font-size: var(--app-font-size) !important;
+}
+
+.n-button,
+.n-input,
+.n-card,
+.n-dialog,
+.n-popover,
+.n-dropdown-menu,
+.n-dropdown-option,
+.n-base-selection,
+.n-checkbox-box {
+  --n-border-radius: 0 !important;
+  border-radius: 0 !important;
 }
 
 .n-input,
@@ -222,7 +235,7 @@ h3 {
 
 .n-button .n-button__border,
 .n-button .n-button__state-border {
-  border-radius: var(--radius) !important;
+  border-radius: 0 !important;
 }
 
 .n-base-wave {
@@ -647,7 +660,7 @@ h3 {
 }
 
 .settings-btn {
-  border-radius: var(--radius);
+  border-radius: 0;
 }
 
 .settings-trigger {
@@ -669,7 +682,7 @@ h3 {
   right: -7px;
   width: 7px;
   height: 7px;
-  border-radius: 50%;
+  border-radius: 0;
   background: var(--danger);
 }
 

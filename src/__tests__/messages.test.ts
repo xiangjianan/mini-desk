@@ -95,9 +95,13 @@ describe("message catalog", () => {
   it("includes shortcut guidance and keeps the source repository display out of shared message text", () => {
     const guideSource = readSource("src/App.vue");
 
+    expect(guideSource).toContain("Record<GuideKey, string[]>");
     expect(guideSource).toContain("Ctrl+S");
     expect(guideSource).toContain("Tab");
     expect(guideSource).toContain("方向键");
+    expect(guideSource).toContain("右键");
+    expect(guideSource).not.toContain("GUIDE_REPEAT_CHANCE");
+    expect(guideSource).not.toContain("maybeShowGuideBubble");
     expect(MESSAGE_CATALOG.about.variants.join("\n")).not.toContain("https://github.com/xiangjianan/todolist");
     expect(guideSource).toContain("LogoGithub");
     expect(guideSource).toContain("GITHUB_REPO_NAME");
