@@ -1,6 +1,8 @@
 <script setup lang="ts">
 import { computed, onUnmounted, ref, watch } from "vue";
 import { NButton, NPopover } from "naive-ui";
+import hermesGif from "../../static/video/hermes.gif?url";
+import hermesDarkGif from "../../static/video/hermes-dark.gif?url";
 
 const props = defineProps<{
   visible: boolean;
@@ -33,7 +35,7 @@ const placementStyle = computed(() => {
 const popoverVisible = computed(() => props.visible && Boolean(props.message || props.confirm));
 const visiblePopover = computed(() => delayedPopoverVisible.value && popoverVisible.value);
 const popoverKey = computed(() => `${props.position?.right ?? "default"}:${props.position?.bottom ?? "default"}`);
-const gifSrc = computed(() => (props.theme === "dark" ? "/static/video/hermes-dark.gif" : "/static/video/hermes.gif"));
+const gifSrc = computed(() => (props.theme === "dark" ? hermesDarkGif : hermesGif));
 
 watch(
   popoverVisible,
