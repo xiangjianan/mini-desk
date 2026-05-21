@@ -207,7 +207,7 @@ describe("TextPanel", () => {
     wrapper.unmount();
   });
 
-  it("starts mobile editing from a double tap touch gesture", async () => {
+  it("starts mobile editing from the second touchstart so mobile keyboards can open", async () => {
     vi.useFakeTimers();
     vi.setSystemTime(0);
     const wrapper = mount(TextPanel, {
@@ -220,14 +220,20 @@ describe("TextPanel", () => {
     });
     const textarea = wrapper.get("textarea").element as HTMLTextAreaElement;
 
-    textarea.dispatchEvent(new TouchEvent("touchend", { bubbles: true, cancelable: true }));
+    const focusSpy = vi.spyOn(textarea, "focus");
+
+    textarea.dispatchEvent(new TouchEvent("touchstart", { bubbles: true, cancelable: true }));
     await wrapper.vm.$nextTick();
 
     expect(textarea.readOnly).toBe(true);
     expect(document.activeElement).not.toBe(textarea);
 
     await vi.advanceTimersByTimeAsync(120);
-    textarea.dispatchEvent(new TouchEvent("touchend", { bubbles: true, cancelable: true }));
+    textarea.dispatchEvent(new TouchEvent("touchstart", { bubbles: true, cancelable: true }));
+
+    expect(focusSpy).toHaveBeenCalled();
+    expect(textarea.readOnly).toBe(false);
+
     await wrapper.vm.$nextTick();
 
     expect(textarea.readOnly).toBe(false);
@@ -319,10 +325,10 @@ describe("TextPanel", () => {
     await wrapper.get("textarea").trigger("select");
     await wrapper.get("textarea").trigger("contextmenu");
 
-    expect(wrapper.findAll(".dropdown-option").map((option) => option.text())).toEqual(["复制", "粘贴", "使用指南"]);
+    expect(wrapper.findAll(".dropdown-option").map((option) => option.text())).toEqual(["编辑", "复制", "粘贴", "使用指南"]);
 
     textarea.setSelectionRange(4, 4);
-    await wrapper.findAll(".dropdown-option")[0].trigger("click");
+    await wrapper.findAll(".dropdown-option").find((option) => option.text() === "复制")?.trigger("click");
     await Promise.resolve();
 
     expect(writeText).toHaveBeenCalledWith("root");
@@ -348,13 +354,41 @@ describe("TextPanel", () => {
     textarea.setSelectionRange(0, 0);
     await wrapper.get("textarea").trigger("contextmenu");
 
-    expect(wrapper.findAll(".dropdown-option").map((option) => option.text())).toEqual(["复制", "粘贴", "使用指南"]);
+    expect(wrapper.findAll(".dropdown-option").map((option) => option.text())).toEqual(["编辑", "复制", "粘贴", "使用指南"]);
     expect(wrapper.get('[data-key="copy"]').attributes("disabled")).toBeDefined();
     expect(wrapper.get('[data-key="paste"]').attributes("disabled")).toBeDefined();
 
     await wrapper.get('[data-key="copy"]').trigger("click");
 
     expect(wrapper.emitted("guide")).toBeUndefined();
+    wrapper.unmount();
+  });
+
+  it("starts editing from the text panel context menu", async () => {
+    const wrapper = mount(TextPanel, {
+      attachTo: document.body,
+      props: {
+        titleId: "workspace-title",
+        title: "工作空间",
+        lines: [{ text: "root text", indent: 0 }],
+      },
+      global: {
+        stubs: {
+          Dropdown: dropdownStub,
+          NDropdown: dropdownStub,
+        },
+      },
+    });
+    const textarea = wrapper.get("textarea").element as HTMLTextAreaElement;
+
+    expect(textarea.readOnly).toBe(true);
+
+    await wrapper.get("textarea").trigger("contextmenu");
+    await wrapper.findAll(".dropdown-option").find((option) => option.text() === "编辑")?.trigger("click");
+    await wrapper.vm.$nextTick();
+
+    expect(textarea.readOnly).toBe(false);
+    expect(document.activeElement).toBe(textarea);
     wrapper.unmount();
   });
 

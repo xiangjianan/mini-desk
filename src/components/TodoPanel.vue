@@ -16,6 +16,7 @@ const emit = defineEmits<{
   titleUpdate: [id: string, value: string];
   create: [period: TodoPeriod, afterId?: string];
   update: [period: TodoPeriod, id: string, text: string];
+  split: [period: TodoPeriod, id: string, before: string, after: string];
   complete: [period: TodoPeriod, id: string, done: boolean];
   remove: [period: TodoPeriod, id: string, anchor?: HTMLElement];
   clearCompleted: [period: TodoPeriod, anchor?: HTMLElement];
@@ -94,9 +95,14 @@ function handleSectionGuideClick(event: MouseEvent): void {
   emit("guide", "todos", event.currentTarget as HTMLElement);
 }
 
-function handleEnter(period: TodoPeriod, todo: TodoItem): void {
+function handleEnter(event: KeyboardEvent, period: TodoPeriod, todo: TodoItem): void {
   if (!isTodoEditable(period, todo)) return;
-  emit("create", period, todo.id);
+  const input = event.currentTarget as HTMLInputElement;
+  const start = input.selectionStart ?? input.value.length;
+  const end = input.selectionEnd ?? start;
+  const before = input.value.slice(0, start);
+  const after = input.value.slice(end);
+  emit("split", period, todo.id, before, after);
 }
 
 function handleChecked(period: TodoPeriod, id: string, checked: boolean): void {
@@ -364,13 +370,18 @@ function collapseSelection(input: HTMLInputElement, caret: number): void {
             :key="todo.id"
             class="todo-item"
             :class="{ 'is-done': todo.done, 'is-menu-selected': isTodoHighlighted(period, todo.id) }"
-            draggable="true"
             @contextmenu.stop="openMenu($event, period, todo.id)"
-            @dragstart="dragged = { period, id: todo.id }"
             @dragover.prevent
             @drop.stop="dragged && emit('move', dragged, period, todo.id)"
-            @dragend="dragged = null"
           >
+            <button
+              class="todo-drag-handle"
+              type="button"
+              draggable="true"
+              aria-label="拖动提醒事项"
+              @dragstart="dragged = { period, id: todo.id }"
+              @dragend="dragged = null"
+            />
             <NCheckbox
               :checked="todo.done"
               aria-label="完成"
@@ -382,8 +393,9 @@ function collapseSelection(input: HTMLInputElement, caret: number): void {
               :data-todo-id="todo.id"
               :value="todo.text"
               :readonly="!isTodoEditable(period, todo)"
+              draggable="false"
               @input="emit('update', period, todo.id, ($event.target as HTMLInputElement).value)"
-              @keydown.enter.prevent="handleEnter(period, todo)"
+              @keydown.enter.prevent="handleEnter($event, period, todo)"
               @mouseup="rememberTodoCaret(period, todo.id, $event)"
               @select="handleTodoSelection(period, todo.id, $event)"
               @contextmenu.stop="openTodoTextMenu($event, period, todo)"

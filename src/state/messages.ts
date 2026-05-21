@@ -19,6 +19,7 @@ export type MessageKey =
   | "confirmDeleteQuick"
   | "confirmDeleteTodo"
   | "confirmClearCompleted"
+  | "confirmImportData"
   | "about";
 
 type MessageEntry = {
@@ -98,7 +99,7 @@ export const MESSAGE_CATALOG: Record<MessageKey, MessageEntry> = {
   },
   clipboardImageMissing: {
     mood: "warning",
-    surface: "naive-message",
+    surface: "companion",
     variants: [
       "剪贴板里没有图片",
       "这次没找到图片",
@@ -107,7 +108,7 @@ export const MESSAGE_CATALOG: Record<MessageKey, MessageEntry> = {
   },
   imageAdded: {
     mood: "happy",
-    surface: "naive-message",
+    surface: "companion",
     variants: [
       "图片已添加",
       "图片收进来了",
@@ -230,6 +231,15 @@ export const MESSAGE_CATALOG: Record<MessageKey, MessageEntry> = {
       "要清掉这些完成事项吗？",
       "确定移除完成事项吗？",
       "完成事项清理掉吗？",
+    ],
+  },
+  confirmImportData: {
+    mood: "warning",
+    surface: "companion",
+    variants: [
+      "导入会覆盖当前数据，确认吗",
+      "当前数据会被覆盖，继续导入吗",
+      "确认导入并覆盖现有数据",
     ],
   },
   about: {

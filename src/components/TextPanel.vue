@@ -30,7 +30,7 @@ const text = ref(textLinesToEditorText(props.lines));
 const focused = ref(false);
 const editing = ref(false);
 const lastCaret = ref<number | null>(null);
-const lastTouchEndAt = ref<number | null>(null);
+const lastTouchStartAt = ref<number | null>(null);
 const lastTextSelection = ref<{ start: number; end: number } | null>(null);
 const menu = ref<{
   x: number;
@@ -44,6 +44,7 @@ const menuOptions = computed<DropdownOption[]>(() => {
   const options: DropdownOption[] = [];
   const target = menu.value?.target;
   if (target) {
+    options.push({ label: "编辑", key: "edit", disabled: editing.value && !target.readOnly });
     options.push({ label: "复制", key: "copy", disabled: !canCopyTextSelection(target) });
     options.push({ label: "粘贴", key: "paste", disabled: !menu.value?.canPaste });
   }
@@ -110,11 +111,11 @@ async function startEditing(event: MouseEvent): Promise<void> {
   lastTextSelection.value = null;
 }
 
-function handleTouchEnd(event: TouchEvent): void {
+function handleTouchStart(event: TouchEvent): void {
   const now = Date.now();
-  const previousTouchEndAt = lastTouchEndAt.value;
-  lastTouchEndAt.value = now;
-  if (previousTouchEndAt === null || now - previousTouchEndAt >= TOUCH_DOUBLE_TAP_MS) return;
+  const previousTouchStartAt = lastTouchStartAt.value;
+  lastTouchStartAt.value = now;
+  if (previousTouchStartAt === null || now - previousTouchStartAt >= TOUCH_DOUBLE_TAP_MS) return;
   startEditingFromTextarea(event.currentTarget as HTMLTextAreaElement);
 }
 
@@ -167,6 +168,10 @@ async function handleMenuSelect(key: string): Promise<void> {
   const target = current?.target;
   const canPaste = Boolean(current?.canPaste);
   closeMenu();
+  if (key === "edit" && target) {
+    startEditingFromTextarea(target);
+    return;
+  }
   if (key === "copy" && target) {
     if (!canCopyTextSelection(target)) return;
     await copyTextSelection(target);
@@ -270,7 +275,7 @@ function collapseSelection(textarea: HTMLTextAreaElement, caret: number): void {
         @input="update"
         @keydown="handleKeydown"
         @mouseup="rememberCaret"
-        @touchend="handleTouchEnd"
+        @touchstart="handleTouchStart"
         @select="rememberSelection"
         @dblclick="startEditing"
         @focus="handleFocus"

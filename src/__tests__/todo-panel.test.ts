@@ -448,6 +448,73 @@ describe("TodoPanel", () => {
     wrapper.unmount();
   });
 
+  it("splits a reminder into two items when Enter is pressed in the middle of editable text", async () => {
+    const wrapper = mount(TodoPanel, {
+      props: {
+        todos: {
+          morning: [{ id: "a", text: "第一项内容", done: false }],
+          noon: [],
+          evening: [],
+        },
+        titles: DEFAULT_TITLES,
+      },
+      global: {
+        stubs: {
+          Button: true,
+          Checkbox: checkboxStub,
+          Dropdown: dropdownStub,
+          NCheckbox: checkboxStub,
+          NDropdown: dropdownStub,
+          NTooltip: tooltipStub,
+        },
+      },
+    });
+    const inputWrapper = wrapper.get("input.todo-input");
+    const input = inputWrapper.element as HTMLInputElement;
+
+    await inputWrapper.trigger("dblclick");
+    input.setSelectionRange(2, 2);
+    await inputWrapper.trigger("keydown", { key: "Enter" });
+
+    expect(wrapper.emitted("split")?.[0]).toEqual(["morning", "a", "第一", "项内容"]);
+    wrapper.unmount();
+  });
+
+  it("only starts dragging reminders from the row handle and keeps text selectable", async () => {
+    const wrapper = mount(TodoPanel, {
+      props: {
+        todos: {
+          morning: [{ id: "a", text: "第一项内容", done: false }],
+          noon: [],
+          evening: [],
+        },
+        titles: DEFAULT_TITLES,
+      },
+      global: {
+        stubs: {
+          Button: true,
+          Checkbox: checkboxStub,
+          Dropdown: dropdownStub,
+          NCheckbox: checkboxStub,
+          NDropdown: dropdownStub,
+          NTooltip: tooltipStub,
+        },
+      },
+    });
+
+    expect(wrapper.get(".todo-item").attributes("draggable")).toBeUndefined();
+    expect(wrapper.get(".todo-input").attributes("draggable")).toBe("false");
+    expect(wrapper.get(".todo-drag-handle").attributes("draggable")).toBe("true");
+
+    await wrapper.get(".todo-drag-handle").trigger("dragstart");
+    expect(wrapper.get(".todo-item").classes()).toContain("is-menu-selected");
+
+    await wrapper.get(".todo-drag-handle").trigger("dragend");
+    expect(wrapper.get(".todo-item").classes()).not.toContain("is-menu-selected");
+
+    wrapper.unmount();
+  });
+
   it("keeps the reminder item highlighted while editing or dragging it", async () => {
     const wrapper = mount(TodoPanel, {
       props: {
@@ -478,11 +545,11 @@ describe("TodoPanel", () => {
     expect(wrapper.findAll(".todo-item")[1].classes()).toContain("is-menu-selected");
 
     await wrapper.findAll(".todo-input")[1].trigger("blur");
-    await wrapper.findAll(".todo-item")[1].trigger("dragstart");
+    await wrapper.findAll(".todo-drag-handle")[1].trigger("dragstart");
 
     expect(wrapper.findAll(".todo-item")[1].classes()).toContain("is-menu-selected");
 
-    await wrapper.findAll(".todo-item")[1].trigger("dragend");
+    await wrapper.findAll(".todo-drag-handle")[1].trigger("dragend");
 
     expect(wrapper.findAll(".todo-item")[1].classes()).not.toContain("is-menu-selected");
 

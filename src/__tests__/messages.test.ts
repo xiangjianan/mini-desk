@@ -32,6 +32,7 @@ const messageKeys = [
   "confirmDeleteQuick",
   "confirmDeleteTodo",
   "confirmClearCompleted",
+  "confirmImportData",
   "about",
 ] as const;
 

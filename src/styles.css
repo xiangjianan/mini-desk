@@ -494,12 +494,26 @@ h3 {
 
 .todo-item {
   display: grid;
-  grid-template-columns: 24px minmax(0, 1fr);
+  grid-template-columns: 14px 24px minmax(0, 1fr);
   align-items: center;
   gap: 4px;
   min-height: 30px;
   border-bottom: 1px solid var(--line-subtle);
   transition: background-color 0.18s ease, opacity 0.18s ease, transform 0.22s cubic-bezier(0.2, 0, 0, 1);
+}
+
+.todo-drag-handle {
+  width: 10px;
+  height: 18px;
+  border: 0;
+  border-left: 1px solid var(--line-main);
+  border-right: 1px solid var(--line-main);
+  background: transparent;
+  cursor: grab;
+}
+
+.todo-drag-handle:active {
+  cursor: grabbing;
 }
 
 .todo-item.is-menu-selected {
@@ -517,6 +531,7 @@ h3 {
   border: 0;
   font-size: var(--app-font-size);
   background: transparent;
+  user-select: text;
 }
 
 .todo-move-move,
@@ -755,7 +770,7 @@ h3 {
   z-index: 3000;
   display: grid;
   grid-template-columns: 10vw 90vw;
-  background: rgba(255, 255, 255, 0.58);
+  background: rgba(255, 255, 255, 0.72);
   -webkit-backdrop-filter: blur(18px);
   backdrop-filter: blur(18px);
   color: var(--text);
@@ -767,6 +782,7 @@ html[data-theme="dark"] .image-preview {
 
 body:has(.image-preview) .n-modal-mask {
   pointer-events: none;
+  background: transparent !important;
 }
 
 body:has(.image-preview) .n-modal-scroll-content {

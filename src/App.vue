@@ -19,6 +19,7 @@ import {
   moveTodo as moveTodoInMap,
   removeEmptyTodo,
   removeTodo as removeTodoFromMap,
+  splitTodo as splitTodoInMap,
   updateTodoText,
 } from "./state/todos";
 import {
@@ -42,7 +43,7 @@ const bubbleMessage = ref("");
 const bubbleVisible = ref(false);
 const companionFocused = ref(false);
 const companionPosition = ref<{ right: string; bottom?: string; top?: string } | undefined>();
-const pendingConfirm = ref<{ onConfirm: () => void | Promise<void> } | null>(null);
+const pendingConfirm = ref<{ onConfirm: () => void | Promise<void>; onCancel?: () => void } | null>(null);
 const importInput = ref<HTMLInputElement | null>(null);
 const importFeedbackAnchor = ref<HTMLElement | undefined>();
 const textSaveTimer = ref<number | undefined>();
@@ -235,7 +236,7 @@ async function pasteImageFromClipboard(): Promise<void> {
     await addImageFile(new File([blob], "clipboard-image", { type }));
     return;
   }
-  showToast("clipboardImageMissing");
+  showBubble("clipboardImageMissing", undefined, { hideCompanionAfter: true });
 }
 
 async function addImageFile(file: File): Promise<void> {
@@ -247,7 +248,7 @@ async function addImageFile(file: File): Promise<void> {
   state.images.unshift(image);
   await storeImagePayload(image);
   persistNow();
-  showToast("imageAdded");
+  showBubble("imageAdded", undefined, { hideCompanionAfter: true });
 }
 
 function reorderImages(dragId: string, targetId: string): void {
@@ -408,6 +409,24 @@ function updateTodo(period: TodoPeriod, id: string, text: string): void {
   persistNow();
 }
 
+function splitTodo(period: TodoPeriod, id: string, before: string, after: string): void {
+  cancelEmptyTodoRemoval(period, id);
+  const nextId = createId();
+  state.todos = splitTodoInMap(
+    state.todos,
+    period,
+    id,
+    {
+      id: nextId,
+      text: after,
+      done: false,
+    },
+    before,
+  );
+  persistNow();
+  nextTick(() => focusTodoInput(period, nextId));
+}
+
 function complete(period: TodoPeriod, id: string, done: boolean): void {
   state.todos = completeTodo(state.todos, period, id, done);
   persistNow();
@@ -486,12 +505,22 @@ async function importData(event: Event): Promise<void> {
   if (!file) return;
   const text = await file.text();
   const next = normalizeImportedState(JSON.parse(text));
-  Object.assign(state, next);
-  await persistImagePayloads(state.images);
-  persistNow();
-  showBubble("dataImported", importFeedbackAnchor.value, { hideCompanionAfter: true });
-  importFeedbackAnchor.value = undefined;
-  input.value = "";
+  requestConfirmation(
+    "confirmImportData",
+    importFeedbackAnchor.value,
+    async () => {
+      Object.assign(state, next);
+      await persistImagePayloads(state.images);
+      persistNow();
+      showBubble("dataImported", importFeedbackAnchor.value, { hideCompanionAfter: true });
+      importFeedbackAnchor.value = undefined;
+      input.value = "";
+    },
+    () => {
+      importFeedbackAnchor.value = undefined;
+      input.value = "";
+    },
+  );
 }
 
 function about(): void {
@@ -577,10 +606,11 @@ function requestConfirmation(
   messageKey: MessageKey,
   anchor: HTMLElement | undefined,
   onConfirm: () => void | Promise<void>,
+  onCancel?: () => void,
 ): void {
   window.clearTimeout(bubbleTimer.value);
   bubbleMessage.value = getMessage(messageKey);
-  pendingConfirm.value = { onConfirm };
+  pendingConfirm.value = { onConfirm, onCancel };
   activeGuideKey.value = null;
   bubbleVisible.value = true;
   companionFocused.value = true;
@@ -596,6 +626,7 @@ async function confirmCompanionAction(): Promise<void> {
 }
 
 function cancelCompanionAction(): void {
+  pendingConfirm.value?.onCancel?.();
   hideCompanion();
 }
 
@@ -771,6 +802,7 @@ function moveItemToEnd<T extends { id: string }>(items: T[], id: string): void {
         @title-update="updateTitle"
         @create="createTodo"
         @update="updateTodo"
+        @split="splitTodo"
         @complete="complete"
         @remove="removeTodo"
         @clear-completed="clearDone"

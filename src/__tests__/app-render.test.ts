@@ -504,6 +504,51 @@ describe("App shell", () => {
     }
   });
 
+  it("shows missing clipboard images and added images through the companion bubble", async () => {
+    vi.useFakeTimers();
+    const imageBlob = new Blob(["img"], { type: "image/png" });
+    const getType = vi.fn().mockResolvedValue(imageBlob);
+    Object.assign(navigator, {
+      clipboard: {
+        read: vi
+          .fn()
+          .mockResolvedValueOnce([{ types: ["text/plain"], getType: vi.fn() }])
+          .mockResolvedValueOnce([{ types: ["image/png"], getType }]),
+      },
+    });
+    const wrapper = mountApp();
+
+    try {
+      const imagePanel = wrapper.getComponent(ImagePanel);
+
+      imagePanel.vm.$emit("paste");
+      await Promise.resolve();
+      await wrapper.vm.$nextTick();
+      await vi.advanceTimersByTimeAsync(200);
+      await wrapper.vm.$nextTick();
+
+      expect(wrapper.find('[data-testid="companion-confirm"]').text()).toMatch(/没有|图片|剪贴板/);
+
+      await vi.advanceTimersByTimeAsync(3000);
+      imagePanel.vm.$emit("paste");
+      await Promise.resolve();
+      await Promise.resolve();
+      await wrapper.vm.$nextTick();
+      await vi.advanceTimersByTimeAsync(200);
+      await Promise.resolve();
+      await wrapper.vm.$nextTick();
+      await vi.advanceTimersByTimeAsync(200);
+      await wrapper.vm.$nextTick();
+
+      expect(getType).toHaveBeenCalledWith("image/png");
+      expect(wrapper.find(".image-card").exists()).toBe(true);
+      expect(wrapper.find('[data-testid="companion-confirm"]').text()).toMatch(/图片|截图|列表|添加|收进/);
+    } finally {
+      wrapper.unmount();
+      vi.useRealTimers();
+    }
+  });
+
   it("shows import and export success through the companion bubble", async () => {
     vi.useFakeTimers();
     const createObjectURL = vi.fn(() => "blob:todo-board");
@@ -538,7 +583,19 @@ describe("App shell", () => {
       await vi.advanceTimersByTimeAsync(200);
       await wrapper.vm.$nextTick();
 
+      expect(wrapper.find('[data-testid="companion-confirm"]').text()).toMatch(/覆盖|导入|当前数据/);
+      expect(wrapper.find('[data-testid="companion-yes"]').exists()).toBe(true);
+      expect(wrapper.text()).not.toContain("导入内容");
+
+      await wrapper.get('[data-testid="companion-yes"]').trigger("click");
+      await Promise.resolve();
+      await wrapper.vm.$nextTick();
+      await vi.advanceTimersByTimeAsync(200);
+      await wrapper.vm.$nextTick();
+
       expect(wrapper.find('[data-testid="companion-confirm"]').text()).toMatch(/导入|同步|生效/);
+      const workspaceTextarea = wrapper.findAll("textarea")[1].element as HTMLTextAreaElement;
+      expect(workspaceTextarea.value).toContain("导入内容");
     } finally {
       wrapper.unmount();
       vi.useRealTimers();

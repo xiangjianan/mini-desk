@@ -16,11 +16,28 @@ export function addTodo(
   const next = cloneTodoMap(todos);
   const list = next[period];
   if (!afterId) {
-    list.push(todo);
+    const firstCompletedIndex = list.findIndex((item) => item.done);
+    list.splice(firstCompletedIndex >= 0 ? firstCompletedIndex : list.length, 0, todo);
     return next;
   }
   const index = list.findIndex((item) => item.id === afterId);
   list.splice(index >= 0 ? index + 1 : list.length, 0, todo);
+  return next;
+}
+
+export function splitTodo(
+  todos: TodoMap,
+  period: TodoPeriod,
+  id: string,
+  nextTodo: TodoItem,
+  before: string,
+): TodoMap {
+  const next = cloneTodoMap(todos);
+  const list = next[period];
+  const index = list.findIndex((item) => item.id === id);
+  if (index < 0) return next;
+  list[index] = { ...list[index], text: before };
+  list.splice(index + 1, 0, nextTodo);
   return next;
 }
 

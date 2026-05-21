@@ -390,7 +390,7 @@ describe("Naive UI component usage", () => {
     expect(styles).toMatch(/\.image-preview\s*\{[^}]*display: none !important/s);
     expect(styles).not.toMatch(/\.top-actions,[\s\S]*?\.focus-companion,[\s\S]*?\.image-preview\s*\{[^}]*display: none !important/s);
     expect(text).toContain("unlockTextareaForMobileKeyboard");
-    expect(text).toContain('@touchend="handleTouchEnd"');
+    expect(text).toContain('@touchstart="handleTouchStart"');
     expect(text.match(/async function startEditing[\s\S]*?\n}/)?.[0] ?? "").not.toContain("event.preventDefault();");
     expect(text).toMatch(/function startEditingFromTextarea\(textarea: HTMLTextAreaElement\): void \{[\s\S]*editing\.value = true;[\s\S]*unlockTextareaForMobileKeyboard\(textarea, caret\);[\s\S]*\}/s);
     expect(text).toMatch(/async function startEditing\(event: MouseEvent\): Promise<void> \{[\s\S]*startEditingFromTextarea\(textarea\);[\s\S]*await nextTick\(\)/s);

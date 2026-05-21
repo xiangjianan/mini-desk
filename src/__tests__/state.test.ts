@@ -5,7 +5,7 @@ import {
   normalizeImportedState,
   serializeTextLines,
 } from "../state/storage";
-import { completeTodo, getOrderedTodos, moveTodo } from "../state/todos";
+import { addTodo, completeTodo, getOrderedTodos, moveTodo } from "../state/todos";
 import type { BoardState } from "../types";
 
 describe("state compatibility", () => {
@@ -82,6 +82,18 @@ describe("todo behavior", () => {
     ];
 
     expect(getOrderedTodos(todos).map((todo) => todo.id)).toEqual(["2", "1"]);
+  });
+
+  it("inserts a new open todo before completed todos to avoid visual reordering", () => {
+    const state = defaultState();
+    state.todos.morning = [
+      { id: "done", text: "已完成", done: true },
+    ];
+
+    const next = addTodo(state.todos, "morning", { id: "blank", text: "", done: false });
+
+    expect(next.morning.map((todo) => todo.id)).toEqual(["blank", "done"]);
+    expect(getOrderedTodos(next.morning).map((todo) => todo.id)).toEqual(["blank", "done"]);
   });
 
   it("moves todos across periods and can mark completion", () => {
