@@ -46,9 +46,33 @@ describe("TodoPanel", () => {
 
     expect(wrapper.find(".todo-empty").exists()).toBe(false);
 
-    await wrapper.get('[data-testid="todo-list-morning"]').trigger("click");
+    await wrapper.get('[data-testid="todo-list-morning"]').trigger("dblclick");
 
     expect(wrapper.emitted("create")?.[0]).toEqual(["morning"]);
+  });
+
+  it("does not create a todo from a single click on blank list space", async () => {
+    const wrapper = mount(TodoPanel, {
+      props: {
+        todos: {
+          morning: [],
+          noon: [],
+          evening: [],
+        },
+        titles: DEFAULT_TITLES,
+      },
+      global: {
+        stubs: {
+          NCheckbox: checkboxStub,
+          NDropdown: dropdownStub,
+          NTooltip: tooltipStub,
+        },
+      },
+    });
+
+    await wrapper.get('[data-testid="todo-list-morning"]').trigger("click");
+
+    expect(wrapper.emitted("create")).toBeUndefined();
   });
 
   it("keeps a newly completed todo in place for 200ms before animated regrouping", async () => {
@@ -127,6 +151,59 @@ describe("TodoPanel", () => {
 
     expect(wrapper.emitted("complete")?.[0]).toEqual(["morning", "a", true]);
     expect(wrapper.emitted("create")).toBeUndefined();
+    wrapper.unmount();
+  });
+
+  it("creates a blank todo from a double click on non-empty blank list space", async () => {
+    const wrapper = mount(TodoPanel, {
+      props: {
+        todos: {
+          morning: [{ id: "a", text: "第一项", done: true }],
+          noon: [],
+          evening: [],
+        },
+        titles: DEFAULT_TITLES,
+      },
+      global: {
+        stubs: {
+          NCheckbox: checkboxStub,
+          NDropdown: dropdownStub,
+          NTooltip: tooltipStub,
+        },
+      },
+    });
+
+    await wrapper.get('[data-testid="todo-list-morning"]').trigger("dblclick");
+
+    expect(wrapper.emitted("create")?.[0]).toEqual(["morning"]);
+    wrapper.unmount();
+  });
+
+  it("keeps existing todo text readonly until the input is double-clicked", async () => {
+    const wrapper = mount(TodoPanel, {
+      props: {
+        todos: {
+          morning: [{ id: "a", text: "第一项", done: false }],
+          noon: [],
+          evening: [],
+        },
+        titles: DEFAULT_TITLES,
+      },
+      global: {
+        stubs: {
+          NCheckbox: checkboxStub,
+          NDropdown: dropdownStub,
+          NTooltip: tooltipStub,
+        },
+      },
+    });
+    const input = wrapper.get("input.todo-input");
+
+    expect(input.attributes("readonly")).toBeDefined();
+
+    await input.trigger("dblclick");
+
+    expect(input.attributes("readonly")).toBeUndefined();
     wrapper.unmount();
   });
 

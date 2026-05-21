@@ -1,9 +1,9 @@
 <script setup lang="ts">
-import { computed, onUnmounted, ref } from "vue";
+import { computed, nextTick, onUnmounted, ref } from "vue";
 import { NButton, NCheckbox, NDropdown } from "naive-ui";
 import type { DropdownOption } from "naive-ui";
 import { TODO_PERIODS } from "../state/defaults";
-import type { DraggedTodo, GuideKey, TodoMap, TodoPeriod } from "../types";
+import type { DraggedTodo, GuideKey, TodoItem, TodoMap, TodoPeriod } from "../types";
 import { getOrderedTodos } from "../state/todos";
 import EditableTitle from "./EditableTitle.vue";
 
@@ -29,6 +29,7 @@ const emit = defineEmits<{
 const focusedPeriod = ref<TodoPeriod | null>(null);
 const menu = ref<{ x: number; y: number; period: TodoPeriod; id: string; anchor?: HTMLElement } | null>(null);
 const dragged = ref<DraggedTodo | null>(null);
+const editingTodoKey = ref<string | null>(null);
 const pendingDoneReorderIds = ref<string[]>([]);
 const reorderTimers = new Map<string, number>();
 const menuOptions: DropdownOption[] = [{ label: "删除", key: "delete" }];
@@ -56,9 +57,8 @@ onUnmounted(() => {
   reorderTimers.forEach((timer) => window.clearTimeout(timer));
 });
 
-function handleListClick(event: MouseEvent, period: TodoPeriod): void {
+function handleListDoubleClick(event: MouseEvent, period: TodoPeriod): void {
   if (event.target !== event.currentTarget) return;
-  if (props.todos[period].length > 0) return;
   emit("create", period);
 }
 
@@ -68,8 +68,9 @@ function handleSectionGuideClick(event: MouseEvent): void {
   emit("guide", "todos", event.currentTarget as HTMLElement);
 }
 
-function handleEnter(period: TodoPeriod, id: string): void {
-  emit("create", period, id);
+function handleEnter(period: TodoPeriod, todo: TodoItem): void {
+  if (!isTodoEditable(period, todo)) return;
+  emit("create", period, todo.id);
 }
 
 function handleChecked(period: TodoPeriod, id: string, checked: boolean): void {
@@ -87,6 +88,7 @@ function handleChecked(period: TodoPeriod, id: string, checked: boolean): void {
 
 function handleInputBlur(period: TodoPeriod, id: string): void {
   focusedPeriod.value = null;
+  if (editingTodoKey.value === todoKey(period, id)) editingTodoKey.value = null;
   emit("blurEmpty", period, id);
   emit("blur");
 }
@@ -112,6 +114,22 @@ function handleMenuSelect(key: string): void {
   const { period, id, anchor } = menu.value;
   closeMenu();
   if (key === "delete") emit("remove", period, id, anchor);
+}
+
+function todoKey(period: TodoPeriod, id: string): string {
+  return `${period}:${id}`;
+}
+
+function isTodoEditable(period: TodoPeriod, todo: TodoItem): boolean {
+  return editingTodoKey.value === todoKey(period, todo.id) || (!todo.done && todo.text.trim().length === 0);
+}
+
+async function startTodoEdit(event: MouseEvent, period: TodoPeriod, id: string): Promise<void> {
+  const input = event.currentTarget as HTMLInputElement;
+  editingTodoKey.value = todoKey(period, id);
+  await nextTick();
+  input.focus();
+  input.select();
 }
 </script>
 
@@ -159,7 +177,7 @@ function handleMenuSelect(key: string): void {
           class="todo-list"
           :class="{ 'todo-move': true }"
           :data-testid="`todo-list-${period}`"
-          @click="handleListClick($event, period)"
+          @dblclick="handleListDoubleClick($event, period)"
         >
           <li
             v-for="todo in ordered[period]"
@@ -181,9 +199,12 @@ function handleMenuSelect(key: string): void {
             <input
               class="todo-input"
               :data-testid="`todo-input-${period}`"
+              :data-todo-id="todo.id"
               :value="todo.text"
+              :readonly="!isTodoEditable(period, todo)"
               @input="emit('update', period, todo.id, ($event.target as HTMLInputElement).value)"
-              @keydown.enter.prevent="handleEnter(period, todo.id)"
+              @keydown.enter.prevent="handleEnter(period, todo)"
+              @dblclick="startTodoEdit($event, period, todo.id)"
               @focus="focusedPeriod = period; emit('focus', $event.currentTarget as HTMLElement)"
               @blur="handleInputBlur(period, todo.id)"
             />

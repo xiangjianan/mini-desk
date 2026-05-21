@@ -22,6 +22,7 @@ const emit = defineEmits<{
 const textareaRef = ref<HTMLTextAreaElement | null>(null);
 const text = ref(textLinesToEditorText(props.lines));
 const focused = ref(false);
+const editing = ref(false);
 
 watch(
   () => props.lines,
@@ -39,12 +40,14 @@ const textPanelClasses = computed(() => ({
 }));
 
 function update(): void {
+  if (!editing.value) return;
   emit("update", editorTextToLines(text.value));
 }
 
 function handleKeydown(event: KeyboardEvent): void {
   const textarea = textareaRef.value;
   if (!textarea) return;
+  if (!editing.value) return;
   if (event.isComposing || event.key === "Process" || event.keyCode === 229) return;
   if (event.key === "Tab") {
     event.preventDefault();
@@ -65,8 +68,15 @@ function handleFocus(event: FocusEvent): void {
 
 function handleBlur(event: FocusEvent): void {
   focused.value = false;
-  update();
+  if (editing.value) update();
+  editing.value = false;
   emit("blur", event.currentTarget as HTMLElement);
+}
+
+async function startEditing(): Promise<void> {
+  editing.value = true;
+  await nextTick();
+  textareaRef.value?.focus();
 }
 </script>
 
@@ -84,9 +94,11 @@ function handleBlur(event: FocusEvent): void {
         v-model="text"
         class="text-editor-textarea board-textarea large-textarea"
         :placeholder="placeholder"
+        :readonly="!editing"
         spellcheck="false"
         @input="update"
         @keydown="handleKeydown"
+        @dblclick="startEditing"
         @focus="handleFocus"
         @blur="handleBlur"
       />

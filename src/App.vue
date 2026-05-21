@@ -9,7 +9,7 @@ import QuickButtons from "./components/QuickButtons.vue";
 import SettingsMenu from "./components/SettingsMenu.vue";
 import TextPanel from "./components/TextPanel.vue";
 import TodoPanel from "./components/TodoPanel.vue";
-import { AREA_HELP, CONTROL_HELP, DEFAULT_TITLES } from "./state/defaults";
+import { AREA_HELP, CONTROL_HELP, DEFAULT_TITLES, TODO_PERIODS } from "./state/defaults";
 import { deleteStoredImage, hydrateStoredImages, persistImagePayloads, storeImagePayload } from "./state/images";
 import { getMessage, withKaomoji, type MessageKey } from "./state/messages";
 import {
@@ -48,6 +48,7 @@ const importFeedbackAnchor = ref<HTMLElement | undefined>();
 const textSaveTimer = ref<number | undefined>();
 const bubbleTimer = ref<number | undefined>();
 const guideTimer = ref<number | undefined>();
+const emptyTodoRemovalTimers = new Map<string, number>();
 const appVersion = ref(getIndexAppVersion());
 const storedAppVersion = ref<string | null>(null);
 const versionPromptVisible = ref(false);
@@ -321,24 +322,46 @@ async function copyText(text: string): Promise<boolean> {
 }
 
 function createTodo(period: TodoPeriod, afterId?: string): void {
+  if (!afterId) {
+    const blankTodo = findOpenBlankTodo();
+    if (blankTodo) {
+      cancelEmptyTodoRemoval(blankTodo.period, blankTodo.id);
+      nextTick(() => focusTodoInput(blankTodo.period, blankTodo.id));
+      return;
+    }
+  }
+  const id = createId();
   state.todos = addTodoToMap(
     state.todos,
     period,
     {
-      id: createId(),
+      id,
       text: "",
       done: false,
     },
     afterId,
   );
   persistNow();
-  nextTick(() => {
-    const inputs = document.querySelectorAll<HTMLInputElement>(`[data-testid="todo-input-${period}"]`);
-    inputs[inputs.length - 1]?.focus();
-  });
+  nextTick(() => focusTodoInput(period, id));
+}
+
+function findOpenBlankTodo(): { period: TodoPeriod; id: string } | undefined {
+  for (const period of TODO_PERIODS) {
+    const blankTodo = state.todos[period].find((todo) => !todo.done && todo.text.trim().length === 0);
+    if (blankTodo) return { period, id: blankTodo.id };
+  }
+  return undefined;
+}
+
+function focusTodoInput(period: TodoPeriod, id: string): void {
+  const inputs = Array.from(document.querySelectorAll<HTMLInputElement>(`[data-testid="todo-input-${period}"]`));
+  const input = inputs.find((item) => item.dataset.todoId === id) ?? inputs.at(-1);
+  input?.focus();
+  input?.select();
 }
 
 function updateTodo(period: TodoPeriod, id: string, text: string): void {
+  cancelEmptyTodoRemoval(period, id);
   state.todos = updateTodoText(state.todos, period, id, text);
   persistNow();
 }
@@ -368,8 +391,17 @@ function clearDone(period: TodoPeriod, anchor?: HTMLElement): void {
 }
 
 function blurEmptyTodo(period: TodoPeriod, id: string): void {
-  state.todos = removeEmptyTodo(state.todos, period, id);
-  persistNow();
+  cancelEmptyTodoRemoval(period, id);
+  const todo = state.todos[period].find((item) => item.id === id);
+  if (!todo || todo.text.trim()) return;
+  emptyTodoRemovalTimers.set(
+    todoKey(period, id),
+    window.setTimeout(() => {
+      state.todos = removeEmptyTodo(state.todos, period, id);
+      emptyTodoRemovalTimers.delete(todoKey(period, id));
+      persistNow();
+    }, 260),
+  );
 }
 
 function moveTodo(dragged: DraggedTodo, destinationPeriod: TodoPeriod, targetId?: string): void {
@@ -543,6 +575,20 @@ function clearTimers(): void {
   window.clearTimeout(textSaveTimer.value);
   window.clearTimeout(bubbleTimer.value);
   clearGuideTimer();
+  emptyTodoRemovalTimers.forEach((timer) => window.clearTimeout(timer));
+  emptyTodoRemovalTimers.clear();
+}
+
+function todoKey(period: TodoPeriod, id: string): string {
+  return `${period}:${id}`;
+}
+
+function cancelEmptyTodoRemoval(period: TodoPeriod, id: string): void {
+  const key = todoKey(period, id);
+  const timer = emptyTodoRemovalTimers.get(key);
+  if (!timer) return;
+  window.clearTimeout(timer);
+  emptyTodoRemovalTimers.delete(key);
 }
 
 function maybeShowGuideBubble(key: GuideKey, anchor?: HTMLElement, options: GuideOptions = {}): void {

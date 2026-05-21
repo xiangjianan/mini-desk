@@ -86,12 +86,67 @@ describe("App shell", () => {
     wrapper.unmount();
   });
 
-  it("creates a todo from an empty section click", async () => {
+  it("creates a todo from an empty section double click", async () => {
     const wrapper = mountApp();
 
-    await wrapper.get('[data-testid="todo-list-morning"]').trigger("click");
+    await wrapper.get('[data-testid="todo-list-morning"]').trigger("dblclick");
 
     expect(wrapper.find('[data-testid="todo-input-morning"]').exists()).toBe(true);
+
+    wrapper.unmount();
+  });
+
+  it("keeps at most one blank todo when blank list space is double-clicked repeatedly", async () => {
+    localStorage.setItem(
+      STORAGE_KEY,
+      JSON.stringify({
+        todos: {
+          morning: [{ id: "done-1", text: "已完成事项", done: true }],
+        },
+      }),
+    );
+    const wrapper = mountApp();
+    const list = wrapper.get('[data-testid="todo-list-morning"]');
+
+    await list.trigger("dblclick");
+    await wrapper.vm.$nextTick();
+    await list.trigger("dblclick");
+    await wrapper.vm.$nextTick();
+    await list.trigger("dblclick");
+    await wrapper.vm.$nextTick();
+
+    const blankInputs = wrapper
+      .findAll('[data-testid="todo-input-morning"]')
+      .filter((input) => (input.element as HTMLInputElement).value === "");
+    expect(blankInputs).toHaveLength(1);
+
+    wrapper.unmount();
+  });
+
+  it("keeps a single blank todo across all reminder sections", async () => {
+    localStorage.setItem(
+      STORAGE_KEY,
+      JSON.stringify({
+        todos: {
+          morning: [{ id: "done-1", text: "早上完成项", done: true }],
+          noon: [{ id: "done-2", text: "中午完成项", done: true }],
+          evening: [{ id: "done-3", text: "晚上完成项", done: true }],
+        },
+      }),
+    );
+    const wrapper = mountApp();
+
+    await wrapper.get('[data-testid="todo-list-morning"]').trigger("dblclick");
+    await wrapper.vm.$nextTick();
+    await wrapper.get('[data-testid="todo-list-noon"]').trigger("dblclick");
+    await wrapper.vm.$nextTick();
+    await wrapper.get('[data-testid="todo-list-evening"]').trigger("dblclick");
+    await wrapper.vm.$nextTick();
+
+    const blankInputs = wrapper
+      .findAll("input.todo-input")
+      .filter((input) => (input.element as HTMLInputElement).value === "");
+    expect(blankInputs).toHaveLength(1);
 
     wrapper.unmount();
   });
@@ -560,7 +615,7 @@ describe("App shell", () => {
       bottom: 294,
       toJSON: () => ({}),
     });
-    await todoList.trigger("click");
+    await todoList.trigger("dblclick");
     await wrapper.get('[data-testid="todo-input-morning"]').trigger("focus");
 
     const todoStyle = wrapper.get('[data-testid="companion-bubble"]').attributes("style");

@@ -100,26 +100,30 @@ function handleMenuSelect(key: string): void {
       @contextmenu.prevent="openMenu"
     >
       <aside class="preview-sidebar">
-        <NButton
-          quaternary
-          size="small"
-          class="preview-close-button icon-button"
-          aria-label="取消预览"
-          @click="emit('close')"
-        >
-          <NIcon :component="CloseOutline" />
-        </NButton>
-        <button
-          v-for="(image, index) in images"
-          :key="image.id"
-          class="preview-thumb"
-          :class="{ 'is-active': image.id === active.id }"
-          type="button"
-          @click="emit('activate', image.id)"
-        >
-          <span class="image-index">{{ index + 1 }}</span>
-          <img v-if="image.src" :src="image.src" alt="预览缩略图" />
-        </button>
+        <div class="preview-sidebar-bar">
+          <NButton
+            quaternary
+            size="small"
+            class="preview-close-button icon-button"
+            aria-label="取消预览"
+            @click="emit('close')"
+          >
+            <NIcon :component="CloseOutline" />
+          </NButton>
+        </div>
+        <div class="image-list preview-image-list" aria-label="预览图片列表">
+          <button
+            v-for="(image, index) in images"
+            :key="image.id"
+            class="image-card preview-thumb"
+            :class="{ 'is-active': image.id === active.id }"
+            type="button"
+            @click="emit('activate', image.id)"
+          >
+            <span class="image-index">{{ index + 1 }}</span>
+            <img v-if="image.src" :src="image.src" alt="预览缩略图" />
+          </button>
+        </div>
       </aside>
       <main class="preview-main">
         <div class="preview-stage" @mousedown="down">

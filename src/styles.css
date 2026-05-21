@@ -1,4 +1,5 @@
 :root {
+  --app-font-size: 12px;
   --bg: #ffffff;
   --panel: #ffffff;
   --text: #111111;
@@ -33,6 +34,26 @@ html[data-theme="dark"] {
 
 * {
   box-sizing: border-box;
+  scrollbar-color: var(--line-control) transparent;
+  scrollbar-width: thin;
+}
+
+*::-webkit-scrollbar {
+  width: 8px;
+  height: 8px;
+}
+
+*::-webkit-scrollbar-track {
+  background: transparent;
+}
+
+*::-webkit-scrollbar-thumb {
+  background: transparent;
+  border: 1px solid var(--line-control);
+}
+
+*:hover::-webkit-scrollbar-thumb {
+  background: var(--button-hover);
 }
 
 html,
@@ -63,7 +84,7 @@ select {
 
 button {
   border: 1px solid var(--line-control);
-  background: var(--button);
+  background: transparent;
   border-radius: var(--radius);
   min-height: 30px;
   padding: 0 10px;
@@ -97,12 +118,12 @@ p {
 
 h1,
 h2 {
-  font-size: 13px;
+  font-size: var(--app-font-size);
   font-weight: 400;
 }
 
 h3 {
-  font-size: 12px;
+  font-size: var(--app-font-size);
   font-weight: 400;
 }
 
@@ -160,12 +181,51 @@ h3 {
   max-width: 220px;
   height: 22px;
   padding: 0 4px;
+  font-size: var(--app-font-size);
 }
 
 .count,
 .todo-count {
   color: var(--muted);
-  font-size: 11px;
+  font-size: var(--app-font-size);
+}
+
+.n-button {
+  --n-border-radius: var(--radius) !important;
+  --n-font-size: var(--app-font-size) !important;
+  --n-wave-opacity: 0 !important;
+  font-size: var(--app-font-size) !important;
+}
+
+.n-input,
+.n-input .n-input__input-el,
+.n-checkbox,
+.n-dropdown-option,
+.n-popover,
+.n-dialog,
+.n-card {
+  --n-font-size: var(--app-font-size) !important;
+  font-size: var(--app-font-size) !important;
+}
+
+.n-button:not(.n-button--primary-type):not(.n-button--error-type) {
+  --n-color: transparent !important;
+  --n-color-hover: var(--button-hover) !important;
+  --n-color-pressed: var(--button-hover) !important;
+  --n-color-focus: var(--button-hover) !important;
+  --n-border: 1px solid var(--line-control) !important;
+  --n-border-hover: 1px solid var(--line-focus) !important;
+  --n-border-pressed: 1px solid var(--line-focus) !important;
+  --n-border-focus: 1px solid var(--line-focus) !important;
+}
+
+.n-button .n-button__border,
+.n-button .n-button__state-border {
+  border-radius: var(--radius) !important;
+}
+
+.n-base-wave {
+  display: none !important;
 }
 
 .header-actions,
@@ -186,7 +246,7 @@ h3 {
   align-items: center;
   justify-content: center;
   border: 1px solid var(--line-control);
-  background: var(--button);
+  background: transparent;
 }
 
 .icon-button .n-button__content {
@@ -242,6 +302,7 @@ h3 {
   resize: none;
   border: 0;
   padding: 8px 10px;
+  font-size: var(--app-font-size);
   line-height: 1.55;
   color: var(--text);
   background: transparent;
@@ -272,6 +333,7 @@ h3 {
   padding: 0;
   border: 0;
   border-bottom: 1px solid var(--line-subtle);
+  font-size: var(--app-font-size);
   background: var(--input);
   cursor: zoom-in;
 }
@@ -299,7 +361,7 @@ h3 {
 .image-missing,
 .empty-hint {
   color: var(--muted);
-  font-size: 12px;
+  font-size: var(--app-font-size);
   line-height: 1.5;
 }
 
@@ -329,6 +391,7 @@ h3 {
   max-width: 100%;
   min-height: 32px;
   padding: 0 12px;
+  font-size: var(--app-font-size);
   background: transparent;
   border: 1px solid var(--line-control);
   overflow: hidden;
@@ -424,6 +487,7 @@ h3 {
   width: 100%;
   height: 28px;
   border: 0;
+  font-size: var(--app-font-size);
   background: transparent;
 }
 
@@ -595,7 +659,7 @@ h3 {
 
 .settings-version-action {
   color: var(--danger);
-  font-size: 11px;
+  font-size: var(--app-font-size);
 }
 
 .dropdown-anchor {
@@ -651,31 +715,30 @@ body:has(.image-preview) .n-modal-body-wrapper {
 .preview-sidebar {
   display: flex;
   flex-direction: column;
-  gap: 8px;
   min-height: 0;
-  overflow-y: auto;
+  overflow: hidden;
   border-right: 1px solid var(--line-main);
   background: var(--panel);
   color: var(--text);
-  padding: 6px;
+  padding: 0;
+}
+
+.preview-sidebar-bar {
+  display: flex;
+  align-items: center;
+  justify-content: flex-end;
+  min-height: 34px;
+  padding: 0 6px;
+  border-bottom: 1px solid var(--line-section);
 }
 
 .preview-close-button {
   flex: 0 0 auto;
-  align-self: flex-end;
 }
 
-.preview-thumb {
-  display: grid;
-  grid-template-columns: 28px minmax(0, 1fr);
-  align-items: center;
+.preview-image-list {
   width: 100%;
-  min-height: 72px;
-  margin: 0;
-  padding: 0;
-  border: 0;
-  border-bottom: 1px solid var(--line-subtle);
-  background: var(--input);
+  padding: 6px;
 }
 
 .preview-thumb.is-active {

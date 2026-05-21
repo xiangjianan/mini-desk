@@ -113,16 +113,13 @@ describe("Naive UI component usage", () => {
     const styles = read("src/styles.css");
 
     expect(preview).toContain('v-for="(image, index) in images"');
+    expect(preview).toContain('class="image-list preview-image-list"');
+    expect(preview).toContain('class="image-card preview-thumb"');
     expect(preview).toContain('<span class="image-index">{{ index + 1 }}</span>');
     expect(preview).not.toContain("preview-sidebar-header");
-    expect(styles).toMatch(/\.preview-sidebar\s*\{[^}]*padding: 6px/s);
-    expect(styles).toMatch(/\.preview-thumb\s*\{[^}]*grid-template-columns: 28px minmax\(0, 1fr\)/s);
-    expect(styles).toMatch(/\.preview-thumb\s*\{[^}]*min-height: 72px/s);
-    expect(styles).toMatch(/\.preview-thumb\s*\{[^}]*padding: 0/s);
-    expect(styles).toMatch(/\.preview-thumb\s*\{[^}]*border-bottom: 1px solid var\(--line-subtle\)/s);
-    expect(styles).toMatch(/\.preview-thumb\s*\{[^}]*background: var\(--input\)/s);
-    expect(styles).toMatch(/\.preview-thumb img\s*\{[^}]*max-height: 120px/s);
-    expect(styles).toMatch(/\.preview-thumb img\s*\{[^}]*margin: 10px/s);
+    expect(styles).toMatch(/\.preview-sidebar-bar\s*\{[^}]*min-height: 34px/s);
+    expect(styles).toMatch(/\.preview-image-list\s*\{[^}]*padding: 6px/s);
+    expect(styles).not.toMatch(/\.preview-thumb\s*\{[^}]*margin-bottom/s);
   });
 
   it("marks text quick buttons with a copy icon and keeps settings in the top action bar", () => {
@@ -167,8 +164,38 @@ describe("Naive UI component usage", () => {
   it("keeps typography and confirmation actions compact but readable", () => {
     const styles = read("src/styles.css");
 
+    expect(styles).toContain("--app-font-size: 12px");
     expect(styles).toMatch(/body\s*\{[^}]*font-size: 12px/s);
+    expect(styles).toMatch(/h1,[\s\S]*?h2\s*\{[^}]*font-size: var\(--app-font-size\)/s);
+    expect(styles).toMatch(/\.count,[\s\S]*?\.todo-count\s*\{[^}]*font-size: var\(--app-font-size\)/s);
+    expect(styles).toMatch(/\.text-editor-textarea\s*\{[^}]*font-size: var\(--app-font-size\)/s);
+    expect(styles).toMatch(/\.quick-button\s*\{[^}]*font-size: var\(--app-font-size\)/s);
+    expect(styles).toMatch(/\.todo-input\s*\{[^}]*font-size: var\(--app-font-size\)/s);
+    expect(styles).toMatch(/\.n-input,[\s\S]*?\.n-card\s*\{[^}]*font-size: var\(--app-font-size\)/s);
     expect(styles).toMatch(/\.companion-actions \.n-button\s*\{[^}]*min-width: 64px/s);
+  });
+
+  it("keeps scrollbars and buttons in the simple line UI style", () => {
+    const styles = read("src/styles.css");
+
+    expect(styles).toContain("scrollbar-width: thin");
+    expect(styles).toContain("::-webkit-scrollbar-thumb");
+    expect(styles).toMatch(/button\s*\{[^}]*background: transparent/s);
+    expect(styles).toMatch(/\.n-button\s*\{[^}]*--n-border-radius: var\(--radius\)/s);
+    expect(styles).toMatch(/\.n-base-wave\s*\{[^}]*display: none/s);
+  });
+
+  it("uses double-click editing for area text instead of single-click editing", () => {
+    const text = read("src/components/TextPanel.vue");
+    const todo = read("src/components/TodoPanel.vue");
+    const title = read("src/components/EditableTitle.vue");
+
+    expect(text).toContain("@dblclick=\"startEditing\"");
+    expect(text).toContain(":readonly=\"!editing\"");
+    expect(todo).toContain("@dblclick=\"startTodoEdit");
+    expect(todo).toContain(":readonly=\"!isTodoEditable");
+    expect(title).toContain("@dblclick=\"startEditing\"");
+    expect(title).not.toContain("@click=\"startEditing\"");
   });
 
   it("animates companion popover entry", () => {

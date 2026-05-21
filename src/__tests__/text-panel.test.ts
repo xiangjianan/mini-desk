@@ -32,6 +32,7 @@ describe("TextPanel", () => {
       },
     });
 
+    await wrapper.get("textarea").trigger("dblclick");
     await wrapper.get("textarea").setValue("root\n\t- child");
 
     expect(wrapper.emitted("update")?.at(-1)?.[0]).toEqual([
@@ -51,6 +52,7 @@ describe("TextPanel", () => {
     const textarea = wrapper.get("textarea").element;
     textarea.setSelectionRange(textarea.value.length, textarea.value.length);
 
+    await wrapper.get("textarea").trigger("dblclick");
     await wrapper.get("textarea").trigger("keydown", { key: "Enter" });
 
     expect(textarea.value).toBe("\t- child\n\t- ");
@@ -67,6 +69,7 @@ describe("TextPanel", () => {
     const textarea = wrapper.get("textarea").element;
     textarea.setSelectionRange(textarea.value.length, textarea.value.length);
 
+    await wrapper.get("textarea").trigger("dblclick");
     await wrapper.get("textarea").trigger("keydown", { key: "Enter" });
 
     expect(textarea.value).toBe("root\n");
@@ -83,6 +86,7 @@ describe("TextPanel", () => {
     const textarea = wrapper.get("textarea").element;
     textarea.setSelectionRange(textarea.value.length, textarea.value.length);
 
+    await wrapper.get("textarea").trigger("dblclick");
     await wrapper.get("textarea").trigger("keydown", { key: "Tab" });
 
     expect(textarea.value).toBe("\t- root");
@@ -116,5 +120,25 @@ describe("TextPanel", () => {
 
     expect(event.defaultPrevented).toBe(false);
     expect(wrapper.emitted("update")).toBeUndefined();
+  });
+
+  it("keeps the text area readonly until it is double-clicked", async () => {
+    const wrapper = mount(TextPanel, {
+      props: {
+        titleId: "workspace-title",
+        title: "工作空间",
+        lines: [{ text: "root", indent: 0 }],
+      },
+    });
+    const textarea = wrapper.get("textarea");
+
+    expect(textarea.attributes("readonly")).toBeDefined();
+
+    await textarea.trigger("keydown", { key: "Tab" });
+    expect((textarea.element as HTMLTextAreaElement).value).toBe("root");
+
+    await textarea.trigger("dblclick");
+
+    expect(textarea.attributes("readonly")).toBeUndefined();
   });
 });

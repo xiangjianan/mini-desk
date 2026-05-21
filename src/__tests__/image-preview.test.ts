@@ -65,4 +65,27 @@ describe("ImagePreview", () => {
 
     wrapper.unmount();
   });
+
+  it("keeps preview thumbnails in the same image-list flow as the normal sidebar", () => {
+    const wrapper = mount(ImagePreview, {
+      props: {
+        images: [{ id: "img-1", src: "data:image/png;base64,one", createdAt: 1 }],
+        activeId: "img-1",
+      },
+      global: {
+        stubs: {
+          Modal: modalStub,
+          NButton: buttonStub,
+          NDropdown: dropdownStub,
+          NModal: modalStub,
+        },
+      },
+    });
+
+    expect(wrapper.get(".preview-image-list").classes()).toContain("image-list");
+    expect(wrapper.get(".preview-thumb").classes()).toContain("image-card");
+    expect(wrapper.get(".preview-sidebar").element.firstElementChild?.classList.contains("preview-sidebar-bar")).toBe(true);
+
+    wrapper.unmount();
+  });
 });
