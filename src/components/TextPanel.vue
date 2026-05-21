@@ -73,10 +73,22 @@ function handleBlur(event: FocusEvent): void {
   emit("blur", event.currentTarget as HTMLElement);
 }
 
-async function startEditing(): Promise<void> {
+async function startEditing(event: MouseEvent): Promise<void> {
+  event.preventDefault();
+  const textarea = event.currentTarget as HTMLTextAreaElement;
+  const caret = textarea.selectionStart ?? textarea.value.length;
   editing.value = true;
   await nextTick();
-  textareaRef.value?.focus();
+  textareaRef.value?.focus({ preventScroll: true });
+  if (textareaRef.value) collapseSelection(textareaRef.value, caret);
+}
+
+function collapseSelection(textarea: HTMLTextAreaElement, caret: number): void {
+  const position = Math.max(0, Math.min(caret, textarea.value.length));
+  textarea.setSelectionRange(position, position);
+  window.setTimeout(() => {
+    if (document.activeElement === textarea) textarea.setSelectionRange(position, position);
+  });
 }
 </script>
 

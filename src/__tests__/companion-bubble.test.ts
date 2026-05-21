@@ -8,6 +8,10 @@ const popoverStub = {
   template: '<div><slot name="trigger" /><div v-if="show" class="n-popover"><slot /></div></div>',
 };
 
+const buttonStub = {
+  template: '<button v-bind="$attrs"><slot /></button>',
+};
+
 describe("CompanionBubble", () => {
   afterEach(() => {
     vi.useRealTimers();
@@ -23,6 +27,7 @@ describe("CompanionBubble", () => {
       },
       global: {
         stubs: {
+          NButton: buttonStub,
           NPopover: popoverStub,
         },
       },
@@ -52,6 +57,7 @@ describe("CompanionBubble", () => {
       },
       global: {
         stubs: {
+          NButton: buttonStub,
           NPopover: popoverStub,
         },
       },
@@ -87,6 +93,32 @@ describe("CompanionBubble", () => {
     await wrapper.setProps({ visible: false });
 
     expect(wrapper.find('[data-testid="companion-bubble"]').exists()).toBe(false);
+
+    wrapper.unmount();
+  });
+
+  it("uses bordered action buttons for confirmation bubbles", async () => {
+    vi.useFakeTimers();
+    const wrapper = mount(CompanionBubble, {
+      attachTo: document.body,
+      props: {
+        visible: true,
+        message: "确认删除吗",
+        confirm: true,
+      },
+      global: {
+        stubs: {
+          NButton: buttonStub,
+          NPopover: popoverStub,
+        },
+      },
+    });
+
+    await vi.advanceTimersByTimeAsync(200);
+    await wrapper.vm.$nextTick();
+
+    expect(document.body.querySelector('[data-testid="companion-yes"]')?.classList.contains("companion-action-button")).toBe(true);
+    expect(document.body.querySelector('[data-testid="companion-no"]')?.classList.contains("companion-action-button")).toBe(true);
 
     wrapper.unmount();
   });

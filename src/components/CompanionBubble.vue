@@ -82,8 +82,8 @@ onUnmounted(() => {
       <div v-if="visiblePopover" class="companion-popover" role="status" aria-live="polite" data-testid="companion-confirm">
         <span>{{ message }}</span>
         <div v-if="confirm" class="companion-actions">
-          <NButton size="tiny" type="primary" data-testid="companion-yes" @click="emit('yes')">是</NButton>
-          <NButton size="tiny" quaternary data-testid="companion-no" @click="emit('no')">否</NButton>
+          <NButton size="tiny" class="companion-action-button" data-testid="companion-yes" @click="emit('yes')">是</NButton>
+          <NButton size="tiny" class="companion-action-button" data-testid="companion-no" @click="emit('no')">否</NButton>
         </div>
       </div>
     </NPopover>

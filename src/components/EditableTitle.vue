@@ -21,11 +21,18 @@ watch(
   },
 );
 
-async function startEditing(): Promise<void> {
+async function startEditing(event: MouseEvent): Promise<void> {
+  event.preventDefault();
   editing.value = true;
   await nextTick();
-  inputRef.value?.focus();
-  inputRef.value?.select();
+  const input = inputRef.value;
+  if (!input) return;
+  const caret = input.value.length;
+  input.focus({ preventScroll: true });
+  input.setSelectionRange(caret, caret);
+  window.setTimeout(() => {
+    if (document.activeElement === input) input.setSelectionRange(caret, caret);
+  });
 }
 
 function commit(): void {

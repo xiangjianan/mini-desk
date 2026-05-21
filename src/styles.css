@@ -173,6 +173,7 @@ h3 {
 
 .editable-title {
   cursor: text;
+  user-select: none;
 }
 
 .title-edit-input {
@@ -468,6 +469,16 @@ h3 {
   margin: 0;
 }
 
+.todo-empty-hint {
+  min-height: 32px;
+  padding: 7px 8px;
+  color: var(--muted);
+  border: 1px dashed var(--line-section);
+  font-size: var(--app-font-size);
+  line-height: 1.5;
+  pointer-events: none;
+}
+
 .todo-item {
   display: grid;
   grid-template-columns: 24px minmax(0, 1fr);
@@ -576,6 +587,27 @@ h3 {
 
 .companion-actions .n-button {
   min-width: 64px;
+}
+
+.companion-action-button {
+  --n-color: transparent !important;
+  --n-color-hover: var(--button-hover) !important;
+  --n-color-pressed: var(--button-hover) !important;
+  --n-color-focus: var(--button-hover) !important;
+  --n-text-color: var(--text) !important;
+  --n-text-color-hover: var(--text) !important;
+  --n-text-color-pressed: var(--text) !important;
+  --n-text-color-focus: var(--text) !important;
+  --n-border: 1px solid var(--line-control) !important;
+  --n-border-hover: 1px solid var(--line-focus) !important;
+  --n-border-pressed: 1px solid var(--line-focus) !important;
+  --n-border-focus: 1px solid var(--line-focus) !important;
+  border: 1px solid var(--line-control) !important;
+}
+
+.companion-action-button:hover,
+.companion-action-button:focus-visible {
+  border-color: var(--line-focus) !important;
 }
 
 @keyframes companion-pop {

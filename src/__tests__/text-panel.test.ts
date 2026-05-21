@@ -141,4 +141,21 @@ describe("TextPanel", () => {
 
     expect(textarea.attributes("readonly")).toBeUndefined();
   });
+
+  it("collapses the caret instead of selecting text when double-click editing starts", async () => {
+    const wrapper = mount(TextPanel, {
+      props: {
+        titleId: "workspace-title",
+        title: "工作空间",
+        lines: [{ text: "root text", indent: 0 }],
+      },
+    });
+    const textarea = wrapper.get("textarea").element as HTMLTextAreaElement;
+
+    textarea.setSelectionRange(1, 5);
+    await wrapper.get("textarea").trigger("dblclick");
+    await wrapper.vm.$nextTick();
+
+    expect(textarea.selectionStart).toBe(textarea.selectionEnd);
+  });
 });

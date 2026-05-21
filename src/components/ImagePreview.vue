@@ -145,11 +145,12 @@ function handleMenuSelect(key: string): void {
         </div>
       </main>
       <NDropdown
+        v-if="menu"
         placement="bottom-start"
         trigger="manual"
-        :show="Boolean(menu)"
-        :x="menu?.x"
-        :y="menu?.y"
+        :show="true"
+        :x="menu.x"
+        :y="menu.y"
         :options="menuOptions"
         :z-index="3100"
         @select="handleMenuSelect"
@@ -157,7 +158,7 @@ function handleMenuSelect(key: string): void {
       >
         <span
           class="dropdown-anchor"
-          :style="{ left: `${menu?.x ?? 0}px`, top: `${menu?.y ?? 0}px` }"
+          :style="{ left: `${menu.x}px`, top: `${menu.y}px` }"
           aria-hidden="true"
         />
       </NDropdown>

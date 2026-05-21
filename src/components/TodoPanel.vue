@@ -2,7 +2,7 @@
 import { computed, nextTick, onUnmounted, ref } from "vue";
 import { NButton, NCheckbox, NDropdown } from "naive-ui";
 import type { DropdownOption } from "naive-ui";
-import { TODO_PERIODS } from "../state/defaults";
+import { EMPTY_HINTS, TODO_PERIODS } from "../state/defaults";
 import type { DraggedTodo, GuideKey, TodoItem, TodoMap, TodoPeriod } from "../types";
 import { getOrderedTodos } from "../state/todos";
 import EditableTitle from "./EditableTitle.vue";
@@ -58,7 +58,8 @@ onUnmounted(() => {
 });
 
 function handleListDoubleClick(event: MouseEvent, period: TodoPeriod): void {
-  if (event.target !== event.currentTarget) return;
+  const target = event.target as HTMLElement;
+  if (event.target !== event.currentTarget && !target.closest(".todo-empty-hint")) return;
   emit("create", period);
 }
 
@@ -93,6 +94,12 @@ function handleInputBlur(period: TodoPeriod, id: string): void {
   emit("blur");
 }
 
+function handleInputFocus(period: TodoPeriod, todo: TodoItem, event: FocusEvent): void {
+  focusedPeriod.value = period;
+  if (!todo.done && todo.text.trim().length === 0) editingTodoKey.value = todoKey(period, todo.id);
+  emit("focus", event.currentTarget as HTMLElement);
+}
+
 function clearPendingReorder(key: string): void {
   const timer = reorderTimers.get(key);
   if (timer) window.clearTimeout(timer);
@@ -125,11 +132,21 @@ function isTodoEditable(period: TodoPeriod, todo: TodoItem): boolean {
 }
 
 async function startTodoEdit(event: MouseEvent, period: TodoPeriod, id: string): Promise<void> {
+  event.preventDefault();
   const input = event.currentTarget as HTMLInputElement;
+  const caret = input.selectionStart ?? input.value.length;
   editingTodoKey.value = todoKey(period, id);
   await nextTick();
-  input.focus();
-  input.select();
+  input.focus({ preventScroll: true });
+  collapseSelection(input, caret);
+}
+
+function collapseSelection(input: HTMLInputElement, caret: number): void {
+  const position = Math.max(0, Math.min(caret, input.value.length));
+  input.setSelectionRange(position, position);
+  window.setTimeout(() => {
+    if (document.activeElement === input) input.setSelectionRange(position, position);
+  });
 }
 </script>
 
@@ -180,6 +197,14 @@ async function startTodoEdit(event: MouseEvent, period: TodoPeriod, id: string):
           @dblclick="handleListDoubleClick($event, period)"
         >
           <li
+            v-if="todos[period].length === 0"
+            :key="`${period}-empty-hint`"
+            class="todo-empty-hint"
+            @dblclick="emit('create', period)"
+          >
+            {{ EMPTY_HINTS.todos[period] }}
+          </li>
+          <li
             v-for="todo in ordered[period]"
             :key="todo.id"
             class="todo-item"
@@ -205,7 +230,7 @@ async function startTodoEdit(event: MouseEvent, period: TodoPeriod, id: string):
               @input="emit('update', period, todo.id, ($event.target as HTMLInputElement).value)"
               @keydown.enter.prevent="handleEnter(period, todo)"
               @dblclick="startTodoEdit($event, period, todo.id)"
-              @focus="focusedPeriod = period; emit('focus', $event.currentTarget as HTMLElement)"
+              @focus="handleInputFocus(period, todo, $event)"
               @blur="handleInputBlur(period, todo.id)"
             />
           </li>
@@ -214,18 +239,19 @@ async function startTodoEdit(event: MouseEvent, period: TodoPeriod, id: string):
     </div>
 
     <NDropdown
+      v-if="menu"
       placement="bottom-start"
       trigger="manual"
-      :show="Boolean(menu)"
-      :x="menu?.x"
-      :y="menu?.y"
+      :show="true"
+      :x="menu.x"
+      :y="menu.y"
       :options="menuOptions"
       @select="handleMenuSelect"
       @clickoutside="closeMenu"
     >
       <span
         class="dropdown-anchor"
-        :style="{ left: `${menu?.x ?? 0}px`, top: `${menu?.y ?? 0}px` }"
+        :style="{ left: `${menu.x}px`, top: `${menu.y}px` }"
         aria-hidden="true"
       />
     </NDropdown>

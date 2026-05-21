@@ -165,18 +165,19 @@ function handleToggleShowHidden(event: MouseEvent): void {
     </div>
 
     <NDropdown
+      v-if="menu"
       placement="bottom-start"
       trigger="manual"
-      :show="Boolean(menu)"
-      :x="menu?.x"
-      :y="menu?.y"
+      :show="true"
+      :x="menu.x"
+      :y="menu.y"
       :options="menuOptions"
       @select="handleMenuSelect"
       @clickoutside="closeMenu"
     >
       <span
         class="dropdown-anchor"
-        :style="{ left: `${menu?.x ?? 0}px`, top: `${menu?.y ?? 0}px` }"
+        :style="{ left: `${menu.x}px`, top: `${menu.y}px` }"
         aria-hidden="true"
       />
     </NDropdown>

@@ -2,6 +2,11 @@ import { describe, expect, it } from "vitest";
 import { readFileSync } from "node:fs";
 import { resolve } from "node:path";
 import {
+  EMPTY_HINTS,
+  AREA_HELP,
+  CONTROL_HELP,
+} from "../state/defaults";
+import {
   KAOMOJI_BY_MOOD,
   MESSAGE_CATALOG,
   getMessage,
@@ -65,6 +70,26 @@ describe("message catalog", () => {
     expect(summary).toContain("companion");
     expect(summary).toContain("naive-message");
     expect(summary).toContain("dialog");
+  });
+
+  it("keeps prompt copy brief and human with kaomoji-ready wording", () => {
+    for (const [key, entry] of Object.entries(MESSAGE_CATALOG)) {
+      if (key === "about") continue;
+      for (const variant of entry.variants) {
+        expect(variant.length, `${key}: ${variant}`).toBeLessThanOrEqual(22);
+      }
+    }
+
+    const inlineHints = [
+      EMPTY_HINTS.images,
+      EMPTY_HINTS.quickButtons,
+      ...Object.values(EMPTY_HINTS.todos),
+      ...Object.values(AREA_HELP),
+      ...Object.values(CONTROL_HELP),
+    ];
+    for (const hint of inlineHints) {
+      expect(hint.length, hint).toBeLessThanOrEqual(28);
+    }
   });
 
   it("includes shortcut guidance and keeps the source repository display out of shared message text", () => {

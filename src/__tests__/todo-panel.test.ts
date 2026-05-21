@@ -2,7 +2,7 @@ import { defineComponent, nextTick, ref } from "vue";
 import { mount } from "@vue/test-utils";
 import { describe, expect, it, vi } from "vitest";
 import TodoPanel from "../components/TodoPanel.vue";
-import { DEFAULT_TITLES } from "../state/defaults";
+import { DEFAULT_TITLES, EMPTY_HINTS } from "../state/defaults";
 import { completeTodo } from "../state/todos";
 import type { TodoMap, TodoPeriod } from "../types";
 
@@ -45,6 +45,7 @@ describe("TodoPanel", () => {
     });
 
     expect(wrapper.find(".todo-empty").exists()).toBe(false);
+    expect(wrapper.get(".todo-empty-hint").text()).toBe(EMPTY_HINTS.todos.morning);
 
     await wrapper.get('[data-testid="todo-list-morning"]').trigger("dblclick");
 
@@ -204,6 +205,68 @@ describe("TodoPanel", () => {
     await input.trigger("dblclick");
 
     expect(input.attributes("readonly")).toBeUndefined();
+    wrapper.unmount();
+  });
+
+  it("does not select todo text when double-clicking to edit", async () => {
+    const wrapper = mount(TodoPanel, {
+      props: {
+        todos: {
+          morning: [{ id: "a", text: "第一项", done: false }],
+          noon: [],
+          evening: [],
+        },
+        titles: DEFAULT_TITLES,
+      },
+      global: {
+        stubs: {
+          NCheckbox: checkboxStub,
+          NDropdown: dropdownStub,
+          NTooltip: tooltipStub,
+        },
+      },
+    });
+    const input = wrapper.get("input.todo-input").element as HTMLInputElement;
+    const selectSpy = vi.spyOn(input, "select");
+
+    input.setSelectionRange(1, 3);
+    await wrapper.get("input.todo-input").trigger("dblclick");
+    await wrapper.vm.$nextTick();
+
+    expect(selectSpy).not.toHaveBeenCalled();
+    expect(input.selectionStart).toBe(input.selectionEnd);
+    wrapper.unmount();
+  });
+
+  it("keeps a focused blank todo editable after the first character is entered", async () => {
+    const wrapper = mount(TodoPanel, {
+      props: {
+        todos: {
+          morning: [{ id: "a", text: "", done: false }],
+          noon: [],
+          evening: [],
+        },
+        titles: DEFAULT_TITLES,
+      },
+      global: {
+        stubs: {
+          NCheckbox: checkboxStub,
+          NDropdown: dropdownStub,
+          NTooltip: tooltipStub,
+        },
+      },
+    });
+
+    await wrapper.get("input.todo-input").trigger("focus");
+    await wrapper.setProps({
+      todos: {
+        morning: [{ id: "a", text: "第", done: false }],
+        noon: [],
+        evening: [],
+      },
+    });
+
+    expect(wrapper.get("input.todo-input").attributes("readonly")).toBeUndefined();
     wrapper.unmount();
   });
 

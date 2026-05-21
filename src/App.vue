@@ -64,16 +64,16 @@ type GuideOptions = {
 };
 
 const GUIDE_MESSAGES: Record<GuideKey, string> = {
-  images: `${AREA_HELP.images} 快捷键：Ctrl+V 粘贴图片，预览时方向键切换。`,
-  note: `${AREA_HELP.note} 快捷键：Tab 缩进，Shift+Tab 反向缩进，Ctrl+S 保存。`,
-  quickButtons: `${AREA_HELP.quickButtons} 快捷键：Enter 确认表单，Esc 可关闭弹窗。`,
-  todos: `${AREA_HELP.todos} 快捷键：Enter 新增下一条，方向键可辅助浏览。`,
-  workspace: `${AREA_HELP.workspace} 快捷键：Tab 缩进，Shift+Tab 反向缩进，Ctrl+S 保存。`,
-  storage: `${AREA_HELP.storage} 快捷键：Tab 缩进，Ctrl+S 保存。`,
-  addQuick: `${CONTROL_HELP.addQuick} 快捷键：Enter 保存，Esc 关闭弹窗。`,
-  toggleHiddenQuick: `${CONTROL_HELP.toggleHiddenQuick} 快捷键：再次点击可切回显示状态。`,
-  settings: `${CONTROL_HELP.settings} 快捷键：导入导出后会在这里给出反馈。`,
-  theme: `${CONTROL_HELP.theme} 快捷键：也可以继续使用鼠标快速切换。`,
+  images: `${AREA_HELP.images} Ctrl+V 粘贴，方向键切图。`,
+  note: `${AREA_HELP.note} 双击编辑，Ctrl+S 保存。`,
+  quickButtons: `${AREA_HELP.quickButtons} Enter 保存，Esc 关闭。`,
+  todos: `${AREA_HELP.todos} 双击空白处新增。`,
+  workspace: `${AREA_HELP.workspace} Tab 缩进，Ctrl+S 保存。`,
+  storage: `${AREA_HELP.storage} 双击编辑，Ctrl+S 保存。`,
+  addQuick: `${CONTROL_HELP.addQuick} Enter 保存，Esc 关闭。`,
+  toggleHiddenQuick: `${CONTROL_HELP.toggleHiddenQuick} 再点一次可切回。`,
+  settings: `${CONTROL_HELP.settings} 导入导出会给反馈。`,
+  theme: `${CONTROL_HELP.theme} 点一下就换风格。`,
 };
 const GUIDE_DELAY_MIN_MS = 600;
 const GUIDE_DELAY_RANGE_MS = 1600;
@@ -356,8 +356,10 @@ function findOpenBlankTodo(): { period: TodoPeriod; id: string } | undefined {
 function focusTodoInput(period: TodoPeriod, id: string): void {
   const inputs = Array.from(document.querySelectorAll<HTMLInputElement>(`[data-testid="todo-input-${period}"]`));
   const input = inputs.find((item) => item.dataset.todoId === id) ?? inputs.at(-1);
-  input?.focus();
-  input?.select();
+  if (!input) return;
+  const caret = input.value.length;
+  input.focus({ preventScroll: true });
+  input.setSelectionRange(caret, caret);
 }
 
 function updateTodo(period: TodoPeriod, id: string, text: string): void {
@@ -706,7 +708,7 @@ function moveItem<T extends { id: string }>(items: T[], dragId: string, targetId
           title-id="note-title"
           :title="titles['note-title']"
           :lines="state.noteLines"
-          placeholder="随手记：临时想法、灵感、草稿先放这里。Tab 可缩进。"
+          placeholder="灵感先放这里，双击开始写 (＾▽＾)"
           @title-update="updateTitle"
           @update="updateLines('noteLines', $event)"
           @focus="handleGuideFocus('note', $event)"
@@ -744,7 +746,7 @@ function moveItem<T extends { id: string }>(items: T[], dragId: string, targetId
       />
 
       <div class="mobile-banner">
-        <p>移动端已简化为工作空间编辑。推荐访问桌面版以获取更好的体验。</p>
+        <p>移动端保留工作区编辑，桌面版体验更完整 (｡•̀ᴗ-)✧</p>
       </div>
 
       <TextPanel
@@ -752,7 +754,7 @@ function moveItem<T extends { id: string }>(items: T[], dragId: string, targetId
         title-id="workspace-title"
         :title="titles['workspace-title']"
         :lines="state.workspaceLines"
-        placeholder="工作空间：拆任务、写步骤、整理当前上下文。Tab 可缩进。"
+        placeholder="拆任务、写步骤，双击开始推进 (๑•̀ㅂ•́)و✧"
         @title-update="updateTitle"
         @update="updateLines('workspaceLines', $event)"
         @focus="handleGuideFocus('workspace', $event)"
@@ -763,7 +765,7 @@ function moveItem<T extends { id: string }>(items: T[], dragId: string, targetId
         title-id="storage-title"
         :title="titles['storage-title']"
         :lines="state.storageLines"
-        placeholder="尽情发挥吧"
+        placeholder="长期内容放这里，安心留一份 (＾－＾)V"
         @title-update="updateTitle"
         @update="updateLines('storageLines', $event)"
         @focus="handleGuideFocus('storage', $event)"

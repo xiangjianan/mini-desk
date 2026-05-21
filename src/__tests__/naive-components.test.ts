@@ -192,10 +192,13 @@ describe("Naive UI component usage", () => {
 
     expect(text).toContain("@dblclick=\"startEditing\"");
     expect(text).toContain(":readonly=\"!editing\"");
+    expect(text).not.toContain(".select()");
     expect(todo).toContain("@dblclick=\"startTodoEdit");
     expect(todo).toContain(":readonly=\"!isTodoEditable");
+    expect(todo).not.toContain(".select()");
     expect(title).toContain("@dblclick=\"startEditing\"");
     expect(title).not.toContain("@click=\"startEditing\"");
+    expect(title).not.toContain(".select()");
   });
 
   it("animates companion popover entry", () => {
@@ -210,6 +213,33 @@ describe("Naive UI component usage", () => {
     expect(styles).toMatch(/\.companion-popover-shell\.n-popover\s*\{[^}]*border: 1px solid #111/s);
     expect(styles).toMatch(/\.companion-popover-arrow\s*\{[^}]*box-shadow: none/s);
     expect(styles).toMatch(/\.companion-popover-arrow\s*\{[^}]*border: 1px solid #111/s);
+  });
+
+  it("removes manual dropdowns before clearing their coordinates to avoid top-left flashes", () => {
+    const dropdownSources = [
+      "src/components/ImagePanel.vue",
+      "src/components/ImagePreview.vue",
+      "src/components/QuickButtons.vue",
+      "src/components/TodoPanel.vue",
+    ];
+
+    for (const file of dropdownSources) {
+      const source = read(file);
+
+      expect(source, file).toContain("<NDropdown");
+      expect(source, file).toContain('v-if="menu"');
+      expect(source, file).not.toContain(":style=\"{ left: `${menu?.x ?? 0}px`, top: `${menu?.y ?? 0}px` }\"");
+    }
+  });
+
+  it("keeps companion confirmation actions in bordered button style", () => {
+    const companion = read("src/components/CompanionBubble.vue");
+    const styles = read("src/styles.css");
+
+    expect(companion).toContain("companion-action-button");
+    expect(styles).toMatch(/\.companion-action-button\s*\{[^}]*--n-border: 1px solid var\(--line-control\)/s);
+    expect(styles).toMatch(/\.companion-action-button\s*\{[^}]*--n-color: transparent/s);
+    expect(styles).toMatch(/\.companion-action-button\s*\{[^}]*border: 1px solid var\(--line-control\)/s);
   });
 
   it("keeps modals and focused areas visually constrained", () => {
@@ -252,7 +282,7 @@ describe("Naive UI component usage", () => {
     const styles = read("src/styles.css");
 
     expect(app).toContain('class="workspace-panel"');
-    expect(app).toContain("推荐访问桌面版以获取更好的体验");
+    expect(app).toContain("桌面版体验更完整");
     expect(app.indexOf("mobile-banner")).toBeLessThan(app.indexOf('title-id="workspace-title"'));
     expect(styles).toMatch(/\.board > :not\(\.mobile-banner\):not\(\.workspace-panel\)\s*\{[^}]*display: none !important/s);
     expect(styles).toMatch(/\.workspace-panel\s*\{[^}]*display: flex/s);
