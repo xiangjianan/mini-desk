@@ -502,6 +502,10 @@ h3 {
   transition: background-color 0.18s ease, opacity 0.18s ease, transform 0.22s cubic-bezier(0.2, 0, 0, 1);
 }
 
+.todo-item.is-menu-selected {
+  background: var(--button-hover);
+}
+
 .todo-item.is-done .todo-input {
   color: var(--muted);
   text-decoration: line-through;
@@ -646,6 +650,20 @@ h3 {
   gap: 12px;
 }
 
+.about-modal {
+  width: min(420px, calc(100vw - 32px));
+  color: var(--text);
+  background: var(--panel);
+  border: 1px solid var(--line-main);
+  border-radius: 0;
+}
+
+.about-modal .n-card-header,
+.about-modal .n-card__content,
+.about-modal .n-card__footer {
+  color: var(--text);
+}
+
 .about-dialog-text {
   white-space: pre-line;
 }
@@ -657,6 +675,23 @@ h3 {
   color: inherit;
   text-decoration: none;
   width: fit-content;
+}
+
+.about-dialog-actions {
+  display: flex;
+  justify-content: flex-end;
+}
+
+.about-confirm-button {
+  color: var(--text);
+  background: var(--button);
+  border: 1px solid var(--line-control);
+}
+
+.about-confirm-button:hover {
+  color: var(--text);
+  background: var(--button-hover);
+  border-color: var(--line-focus);
 }
 
 .settings-btn {

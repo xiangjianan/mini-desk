@@ -1,7 +1,7 @@
 <script setup lang="ts">
-import { computed, h, nextTick, onMounted, onUnmounted, reactive, ref, watch } from "vue";
+import { computed, nextTick, onMounted, onUnmounted, reactive, ref, watch } from "vue";
 import { LogoGithub, MoonOutline, SunnyOutline } from "@vicons/ionicons5";
-import { createDiscreteApi, darkTheme, NButton, NConfigProvider, NGlobalStyle, NIcon } from "naive-ui";
+import { createDiscreteApi, darkTheme, NButton, NConfigProvider, NGlobalStyle, NIcon, NModal } from "naive-ui";
 import CompanionBubble from "./components/CompanionBubble.vue";
 import ImagePanel from "./components/ImagePanel.vue";
 import ImagePreview from "./components/ImagePreview.vue";
@@ -51,7 +51,9 @@ const emptyTodoRemovalTimers = new Map<string, number>();
 const appVersion = ref(getIndexAppVersion());
 const storedAppVersion = ref<string | null>(null);
 const versionPromptVisible = ref(false);
-const { message: naiveMessage, dialog: naiveDialog } = createDiscreteApi(["message", "dialog"]);
+const aboutVisible = ref(false);
+const aboutMessage = ref(getMessage("about"));
+const { message: naiveMessage } = createDiscreteApi(["message"]);
 
 type BubbleOptions = {
   hideCompanionAfter?: boolean;
@@ -493,24 +495,8 @@ async function importData(event: Event): Promise<void> {
 }
 
 function about(): void {
-  naiveDialog.info({
-    title: "关于",
-    content: () =>
-      h("div", { class: "about-dialog-content" }, [
-        h("p", { class: "about-dialog-text" }, getMessage("about")),
-        h(
-          "a",
-          {
-            class: "about-github-link",
-            href: GITHUB_REPO_URL,
-            target: "_blank",
-            rel: "noreferrer",
-          },
-          [h(NIcon, { component: LogoGithub, size: 18 }), h("span", GITHUB_REPO_NAME)],
-        ),
-      ]),
-    positiveText: "知道了",
-  });
+  aboutMessage.value = getMessage("about");
+  aboutVisible.value = true;
 }
 
 function handleGlobalKeydown(event: KeyboardEvent): void {
@@ -829,9 +815,36 @@ function moveItemToEnd<T extends { id: string }>(items: T[], id: string): void {
       :message="bubbleMessage"
       :confirm="Boolean(pendingConfirm)"
       :position="companionPosition"
+      :theme="state.theme"
       @yes="confirmCompanionAction"
       @no="cancelCompanionAction"
     />
+    <NModal
+      v-model:show="aboutVisible"
+      preset="card"
+      title="关于"
+      class="about-modal"
+      :mask-closable="true"
+      :auto-focus="false"
+    >
+      <div class="about-dialog-content">
+        <p class="about-dialog-text">{{ aboutMessage }}</p>
+        <a
+          class="about-github-link"
+          :href="GITHUB_REPO_URL"
+          target="_blank"
+          rel="noreferrer"
+        >
+          <NIcon :component="LogoGithub" :size="18" />
+          <span>{{ GITHUB_REPO_NAME }}</span>
+        </a>
+      </div>
+      <template #footer>
+        <div class="about-dialog-actions">
+          <NButton class="about-confirm-button" @click="aboutVisible = false">知道了</NButton>
+        </div>
+      </template>
+    </NModal>
     <div class="top-actions">
       <SettingsMenu
         :app-version="appVersion"

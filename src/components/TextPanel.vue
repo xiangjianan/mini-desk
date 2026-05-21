@@ -29,13 +29,21 @@ const focused = ref(false);
 const editing = ref(false);
 const lastCaret = ref<number | null>(null);
 const lastTextSelection = ref<{ start: number; end: number } | null>(null);
-const menu = ref<{ x: number; y: number; anchor: HTMLElement; target?: HTMLTextAreaElement } | null>(null);
+const menu = ref<{
+  x: number;
+  y: number;
+  anchor: HTMLElement;
+  target?: HTMLTextAreaElement;
+  canPaste?: boolean;
+} | null>(null);
 const guideMenuOption: DropdownOption = { ...GUIDE_MENU_OPTION, label: GUIDE_MENU_OPTION.label || "使用指南" };
 const menuOptions = computed<DropdownOption[]>(() => {
   const options: DropdownOption[] = [];
   const target = menu.value?.target;
-  if (target && canCopyTextSelection(target)) options.push({ label: "复制", key: "copy" });
-  if (target && editing.value) options.push({ label: "粘贴", key: "paste" });
+  if (target) {
+    options.push({ label: "复制", key: "copy", disabled: !canCopyTextSelection(target) });
+    options.push({ label: "粘贴", key: "paste", disabled: !menu.value?.canPaste });
+  }
   options.push(guideMenuOption);
   return options;
 });
@@ -97,6 +105,7 @@ async function startEditing(event: MouseEvent): Promise<void> {
   await nextTick();
   textareaRef.value?.focus({ preventScroll: true });
   if (textareaRef.value) collapseSelection(textareaRef.value, caret);
+  lastTextSelection.value = null;
 }
 
 function rememberCaret(event: MouseEvent): void {
@@ -105,6 +114,7 @@ function rememberCaret(event: MouseEvent): void {
     rememberTextSelection(textarea);
     return;
   }
+  if (event.button !== 2) lastTextSelection.value = null;
   lastCaret.value = textarea.selectionStart ?? textarea.value.length;
 }
 
@@ -120,6 +130,7 @@ function openTextMenu(event: MouseEvent): void {
     y: event.clientY,
     anchor: event.currentTarget as HTMLElement,
     target,
+    canPaste: target ? canPasteText(target) : false,
   };
 }
 
@@ -131,12 +142,15 @@ async function handleMenuSelect(key: string): Promise<void> {
   const current = menu.value;
   const anchor = current?.anchor;
   const target = current?.target;
+  const canPaste = Boolean(current?.canPaste);
   closeMenu();
   if (key === "copy" && target) {
+    if (!canCopyTextSelection(target)) return;
     await copyTextSelection(target);
     return;
   }
   if (key === "paste" && target) {
+    if (!canPaste) return;
     await pasteTextFromClipboard(target);
     return;
   }
@@ -173,6 +187,10 @@ function canCopyTextSelection(target: HTMLTextAreaElement): boolean {
   return range.start !== range.end;
 }
 
+function canPasteText(target: HTMLTextAreaElement): boolean {
+  return editing.value && !target.readOnly;
+}
+
 async function copyTextSelection(target: HTMLTextAreaElement | HTMLInputElement): Promise<void> {
   const { start, end } = target instanceof HTMLTextAreaElement
     ? getTextSelectionRange(target)
@@ -198,7 +216,7 @@ async function pasteTextFromClipboard(target: HTMLTextAreaElement): Promise<void
   const end = target.selectionEnd ?? start;
   target.setRangeText(pastedText, start, end, "end");
   text.value = target.value;
-  update();
+  emit("update", editorTextToLines(text.value));
 }
 
 function collapseSelection(textarea: HTMLTextAreaElement, caret: number): void {

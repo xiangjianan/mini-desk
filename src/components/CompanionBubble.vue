@@ -6,6 +6,7 @@ const props = defineProps<{
   visible: boolean;
   message: string;
   confirm?: boolean;
+  theme?: "light" | "dark";
   position?: {
     right: string;
     bottom: string;
@@ -32,6 +33,7 @@ const placementStyle = computed(() => {
 const popoverVisible = computed(() => props.visible && Boolean(props.message || props.confirm));
 const visiblePopover = computed(() => delayedPopoverVisible.value && popoverVisible.value);
 const popoverKey = computed(() => `${props.position?.right ?? "default"}:${props.position?.bottom ?? "default"}`);
+const gifSrc = computed(() => (props.theme === "dark" ? "/static/video/hermes-dark.gif" : "/static/video/hermes.gif"));
 
 watch(
   popoverVisible,
@@ -76,7 +78,7 @@ onUnmounted(() => {
       :style="{ maxWidth: '240px', '--n-box-shadow': 'none' }"
     >
       <template #trigger>
-        <img src="/static/video/hermes.gif" alt="" />
+        <img :src="gifSrc" alt="" />
       </template>
 
       <div v-if="visiblePopover" class="companion-popover" role="status" aria-live="polite" data-testid="companion-confirm">

@@ -37,16 +37,22 @@ describe("Naive UI component usage", () => {
     const app = read("src/App.vue");
     const preview = read("src/components/ImagePreview.vue");
 
-    expect(app).toContain('createDiscreteApi(["message", "dialog"])');
+    expect(app).toContain('createDiscreteApi(["message"])');
+    expect(app).toContain("NModal");
+    expect(app).toContain('class="about-modal"');
     expect(app).not.toContain("window.alert");
     expect(preview).toContain("NModal");
   });
 
   it("uses Naive popover primitives for the reusable companion bubble", () => {
     const companion = read("src/components/CompanionBubble.vue");
+    const app = read("src/App.vue");
 
     expect(companion).toContain("NPopover");
     expect(companion).toContain("NButton");
+    expect(companion).toContain("hermes-dark.gif");
+    expect(companion).toContain(":src=\"gifSrc\"");
+    expect(app).toContain(":theme=\"state.theme\"");
     expect(companion).toContain("popoverKey");
     expect(companion).toContain("POPOVER_DELAY_MS = 200");
     expect(companion).toContain("delayedPopoverVisible");
@@ -225,6 +231,15 @@ describe("Naive UI component usage", () => {
     }
   });
 
+  it("highlights the reminder context-menu item without adding another border", () => {
+    const styles = read("src/styles.css");
+    const selectedRule = styles.match(/\.todo-item\.is-menu-selected\s*\{(?<body>[^}]*)\}/)?.groups?.body ?? "";
+
+    expect(selectedRule).toContain("background:");
+    expect(selectedRule).not.toContain("border");
+    expect(selectedRule).not.toContain("box-shadow");
+  });
+
   it("uses double-click editing for area text instead of single-click editing", () => {
     const text = read("src/components/TextPanel.vue");
     const todo = read("src/components/TodoPanel.vue");
@@ -331,11 +346,18 @@ describe("Naive UI component usage", () => {
   it("renders the source repository in the about dialog as an icon link", () => {
     const app = read("src/App.vue");
     const messages = read("src/state/messages.ts");
+    const styles = read("src/styles.css");
 
     expect(app).toContain("LogoGithub");
     expect(app).toContain("GITHUB_REPO_NAME");
     expect(app).toContain("GITHUB_REPO_URL");
     expect(app).toContain("about-github-link");
+    expect(app).toContain("aboutVisible");
+    expect(app).toContain("about-confirm-button");
+    expect(app).not.toContain("naiveDialog.info");
+    expect(app).not.toContain('positiveText: "知道了"');
+    expect(styles).toMatch(/\.about-modal\s*\{[^}]*background: var\(--panel\)/s);
+    expect(styles).toMatch(/\.about-confirm-button\s*\{[^}]*color: var\(--text\)/s);
     expect(messages).not.toContain("GitHub: https://github.com/xiangjianan/todolist");
   });
 

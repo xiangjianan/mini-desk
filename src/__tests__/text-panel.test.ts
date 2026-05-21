@@ -16,8 +16,10 @@ const dropdownStub = {
         v-for="option in options"
         :key="option.key"
         class="dropdown-option"
+        :data-key="option.key"
+        :disabled="option.disabled"
         type="button"
-        @click="$emit('select', option.key)"
+        @click="!option.disabled && $emit('select', option.key)"
       >
         {{ option.label }}
       </button>
@@ -272,6 +274,60 @@ describe("TextPanel", () => {
     wrapper.unmount();
   });
 
+  it("keeps copy and paste visible but disabled when the text state cannot use them", async () => {
+    const wrapper = mount(TextPanel, {
+      props: {
+        titleId: "workspace-title",
+        title: "工作空间",
+        lines: [{ text: "root text", indent: 0 }],
+      },
+      global: {
+        stubs: {
+          Dropdown: dropdownStub,
+          NDropdown: dropdownStub,
+        },
+      },
+    });
+    const textarea = wrapper.get("textarea").element as HTMLTextAreaElement;
+
+    textarea.setSelectionRange(0, 0);
+    await wrapper.get("textarea").trigger("contextmenu");
+
+    expect(wrapper.findAll(".dropdown-option").map((option) => option.text())).toEqual(["复制", "粘贴", "使用指南"]);
+    expect(wrapper.get('[data-key="copy"]').attributes("disabled")).toBeDefined();
+    expect(wrapper.get('[data-key="paste"]').attributes("disabled")).toBeDefined();
+
+    await wrapper.get('[data-key="copy"]').trigger("click");
+
+    expect(wrapper.emitted("guide")).toBeUndefined();
+    wrapper.unmount();
+  });
+
+  it("enables copy for selected readonly text while paste stays disabled until editing is active", async () => {
+    const wrapper = mount(TextPanel, {
+      props: {
+        titleId: "workspace-title",
+        title: "工作空间",
+        lines: [{ text: "root text", indent: 0 }],
+      },
+      global: {
+        stubs: {
+          Dropdown: dropdownStub,
+          NDropdown: dropdownStub,
+        },
+      },
+    });
+    const textarea = wrapper.get("textarea").element as HTMLTextAreaElement;
+
+    textarea.setSelectionRange(0, 4);
+    await wrapper.get("textarea").trigger("select");
+    await wrapper.get("textarea").trigger("contextmenu");
+
+    expect(wrapper.get('[data-key="copy"]').attributes("disabled")).toBeUndefined();
+    expect(wrapper.get('[data-key="paste"]').attributes("disabled")).toBeDefined();
+    wrapper.unmount();
+  });
+
   it("pastes clipboard text into the editable text panel from the context menu", async () => {
     const readText = vi.fn().mockResolvedValue(" pasted");
     Object.assign(navigator, { clipboard: { readText, writeText: vi.fn() } });
@@ -293,6 +349,35 @@ describe("TextPanel", () => {
     await wrapper.get("textarea").trigger("dblclick");
     textarea.setSelectionRange(textarea.value.length, textarea.value.length);
     await wrapper.get("textarea").trigger("contextmenu");
+    await wrapper.findAll(".dropdown-option").find((option) => option.text() === "粘贴")?.trigger("click");
+    await Promise.resolve();
+
+    expect(wrapper.emitted("update")?.at(-1)?.[0]).toEqual([{ text: "root pasted", indent: 0 }]);
+    wrapper.unmount();
+  });
+
+  it("still pastes from the context menu after the editor blurs to the menu", async () => {
+    const readText = vi.fn().mockResolvedValue(" pasted");
+    Object.assign(navigator, { clipboard: { readText, writeText: vi.fn() } });
+    const wrapper = mount(TextPanel, {
+      props: {
+        titleId: "workspace-title",
+        title: "工作空间",
+        lines: [{ text: "root", indent: 0 }],
+      },
+      global: {
+        stubs: {
+          Dropdown: dropdownStub,
+          NDropdown: dropdownStub,
+        },
+      },
+    });
+    const textarea = wrapper.get("textarea").element as HTMLTextAreaElement;
+
+    await wrapper.get("textarea").trigger("dblclick");
+    textarea.setSelectionRange(textarea.value.length, textarea.value.length);
+    await wrapper.get("textarea").trigger("contextmenu");
+    await wrapper.get("textarea").trigger("blur");
     await wrapper.findAll(".dropdown-option").find((option) => option.text() === "粘贴")?.trigger("click");
     await Promise.resolve();
 

@@ -122,4 +122,27 @@ describe("CompanionBubble", () => {
 
     wrapper.unmount();
   });
+
+  it("switches the companion GIF for dark theme", async () => {
+    const wrapper = mount(CompanionBubble, {
+      props: {
+        visible: true,
+        message: "",
+        theme: "light",
+      },
+      global: {
+        stubs: {
+          NPopover: popoverStub,
+        },
+      },
+    });
+
+    expect(wrapper.get("img").attributes("src")).toBe("/static/video/hermes.gif");
+
+    await wrapper.setProps({ theme: "dark" });
+
+    expect(wrapper.get("img").attributes("src")).toBe("/static/video/hermes-dark.gif");
+
+    wrapper.unmount();
+  });
 });

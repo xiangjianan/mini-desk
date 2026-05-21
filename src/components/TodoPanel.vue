@@ -37,6 +37,7 @@ const menu = ref<{
 } | null>(null);
 const dragged = ref<DraggedTodo | null>(null);
 const editingTodoKey = ref<string | null>(null);
+const selectedMenuTodoKey = ref<string | null>(null);
 const pendingDoneReorderIds = ref<string[]>([]);
 const reorderTimers = new Map<string, number>();
 const lastTodoCarets = new Map<string, number>();
@@ -49,7 +50,7 @@ const menuOptions = computed<DropdownOption[]>(() => {
     options.push({ label: "复制", key: "copy" });
   }
   if (target && isMenuTodoEditable()) options.push({ label: "粘贴", key: "paste" });
-  if (menu.value?.id && !target) {
+  if (menu.value?.id) {
     options.push({ label: "置顶", key: "top" });
     options.push({ label: "置底", key: "bottom" });
   }
@@ -133,11 +134,13 @@ function clearPendingReorder(key: string): void {
 
 function openMenu(event: MouseEvent, period: TodoPeriod, id: string): void {
   event.preventDefault();
+  selectedMenuTodoKey.value = todoKey(period, id);
   menu.value = { x: event.clientX, y: event.clientY, period, id, anchor: event.currentTarget as HTMLElement };
 }
 
 function openTodoTextMenu(event: MouseEvent, period: TodoPeriod, todo: TodoItem): void {
   event.preventDefault();
+  selectedMenuTodoKey.value = todoKey(period, todo.id);
   menu.value = {
     x: event.clientX,
     y: event.clientY,
@@ -152,11 +155,13 @@ function openSectionMenu(event: MouseEvent, period: TodoPeriod): void {
   const target = event.target as HTMLElement;
   if (target.closest("button, input, textarea, .todo-item")) return;
   event.preventDefault();
+  selectedMenuTodoKey.value = null;
   menu.value = { x: event.clientX, y: event.clientY, period, anchor: event.currentTarget as HTMLElement };
 }
 
 function closeMenu(): void {
   menu.value = null;
+  selectedMenuTodoKey.value = null;
 }
 
 async function handleMenuSelect(key: string): Promise<void> {
@@ -191,6 +196,15 @@ function isMenuTodoEditable(): boolean {
   if (!menu.value?.id) return false;
   const todo = props.todos[menu.value.period].find((item) => item.id === menu.value?.id);
   return Boolean(todo && isTodoEditable(menu.value.period, todo));
+}
+
+function isTodoHighlighted(period: TodoPeriod, id: string): boolean {
+  const key = todoKey(period, id);
+  return (
+    selectedMenuTodoKey.value === key ||
+    editingTodoKey.value === key ||
+    (dragged.value?.period === period && dragged.value.id === id)
+  );
 }
 
 function moveTodoToTop(period: TodoPeriod, id: string): void {
@@ -349,7 +363,7 @@ function collapseSelection(input: HTMLInputElement, caret: number): void {
             v-for="todo in ordered[period]"
             :key="todo.id"
             class="todo-item"
-            :class="{ 'is-done': todo.done }"
+            :class="{ 'is-done': todo.done, 'is-menu-selected': isTodoHighlighted(period, todo.id) }"
             draggable="true"
             @contextmenu.stop="openMenu($event, period, todo.id)"
             @dragstart="dragged = { period, id: todo.id }"

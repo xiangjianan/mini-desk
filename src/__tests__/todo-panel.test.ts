@@ -22,8 +22,10 @@ const dropdownStub = {
         v-for="option in options"
         :key="option.key"
         class="dropdown-option"
+        :data-key="option.key"
+        :disabled="option.disabled"
         type="button"
-        @click="$emit('select', option.key)"
+        @click="!option.disabled && $emit('select', option.key)"
       >
         {{ option.label }}
       </button>
@@ -427,6 +429,7 @@ describe("TodoPanel", () => {
 
     await wrapper.findAll(".todo-item")[1].trigger("contextmenu");
 
+    expect(wrapper.findAll(".todo-item")[1].classes()).toContain("is-menu-selected");
     expect(wrapper.findAll(".dropdown-option").map((option) => option.text())).toEqual([
       "置顶",
       "置底",
@@ -436,10 +439,52 @@ describe("TodoPanel", () => {
 
     await wrapper.findAll(".dropdown-option").find((option) => option.text() === "置顶")?.trigger("click");
     expect(wrapper.emitted("move")?.[0]).toEqual([{ period: "morning", id: "b" }, "morning", "a"]);
+    expect(wrapper.findAll(".todo-item")[1].classes()).not.toContain("is-menu-selected");
 
     await wrapper.findAll(".todo-item")[1].trigger("contextmenu");
     await wrapper.findAll(".dropdown-option").find((option) => option.text() === "置底")?.trigger("click");
     expect(wrapper.emitted("move")?.[1]).toEqual([{ period: "morning", id: "b" }, "morning"]);
+
+    wrapper.unmount();
+  });
+
+  it("keeps the reminder item highlighted while editing or dragging it", async () => {
+    const wrapper = mount(TodoPanel, {
+      props: {
+        todos: {
+          morning: [
+            { id: "a", text: "第一项", done: false },
+            { id: "b", text: "第二项", done: false },
+          ],
+          noon: [],
+          evening: [],
+        },
+        titles: DEFAULT_TITLES,
+      },
+      global: {
+        stubs: {
+          Button: true,
+          Checkbox: checkboxStub,
+          Dropdown: dropdownStub,
+          NCheckbox: checkboxStub,
+          NDropdown: dropdownStub,
+          NTooltip: tooltipStub,
+        },
+      },
+    });
+
+    await wrapper.findAll(".todo-input")[1].trigger("dblclick");
+
+    expect(wrapper.findAll(".todo-item")[1].classes()).toContain("is-menu-selected");
+
+    await wrapper.findAll(".todo-input")[1].trigger("blur");
+    await wrapper.findAll(".todo-item")[1].trigger("dragstart");
+
+    expect(wrapper.findAll(".todo-item")[1].classes()).toContain("is-menu-selected");
+
+    await wrapper.findAll(".todo-item")[1].trigger("dragend");
+
+    expect(wrapper.findAll(".todo-item")[1].classes()).not.toContain("is-menu-selected");
 
     wrapper.unmount();
   });
@@ -476,7 +521,15 @@ describe("TodoPanel", () => {
     await inputWrapper.trigger("select");
     await inputWrapper.trigger("contextmenu");
 
-    expect(wrapper.findAll(".dropdown-option").map((option) => option.text())).toEqual(["复制", "粘贴", "删除", "使用指南"]);
+    expect(wrapper.get(".todo-item").classes()).toContain("is-menu-selected");
+    expect(wrapper.findAll(".dropdown-option").map((option) => option.text())).toEqual([
+      "复制",
+      "粘贴",
+      "置顶",
+      "置底",
+      "删除",
+      "使用指南",
+    ]);
 
     input.setSelectionRange(3, 3);
     await wrapper.findAll(".dropdown-option")[0].trigger("click");
