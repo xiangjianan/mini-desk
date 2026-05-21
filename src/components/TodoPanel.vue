@@ -58,6 +58,7 @@ onUnmounted(() => {
 
 function handleListClick(event: MouseEvent, period: TodoPeriod): void {
   if (event.target !== event.currentTarget) return;
+  if (props.todos[period].length > 0) return;
   emit("create", period);
 }
 
@@ -181,7 +182,6 @@ function handleMenuSelect(key: string): void {
               class="todo-input"
               :data-testid="`todo-input-${period}`"
               :value="todo.text"
-              placeholder="新待办"
               @input="emit('update', period, todo.id, ($event.target as HTMLInputElement).value)"
               @keydown.enter.prevent="handleEnter(period, todo.id)"
               @focus="focusedPeriod = period; emit('focus', $event.currentTarget as HTMLElement)"

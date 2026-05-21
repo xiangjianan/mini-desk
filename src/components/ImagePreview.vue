@@ -1,6 +1,7 @@
 <script setup lang="ts">
 import { computed, ref, watch } from "vue";
-import { NButton, NDropdown, NModal } from "naive-ui";
+import { CloseOutline } from "@vicons/ionicons5";
+import { NButton, NDropdown, NIcon, NModal } from "naive-ui";
 import type { DropdownOption } from "naive-ui";
 import type { StoredImage } from "../types";
 
@@ -99,6 +100,15 @@ function handleMenuSelect(key: string): void {
       @contextmenu.prevent="openMenu"
     >
       <aside class="preview-sidebar">
+        <NButton
+          quaternary
+          size="small"
+          class="preview-close-button icon-button"
+          aria-label="取消预览"
+          @click="emit('close')"
+        >
+          <NIcon :component="CloseOutline" />
+        </NButton>
         <button
           v-for="(image, index) in images"
           :key="image.id"

@@ -41,4 +41,53 @@ describe("CompanionBubble", () => {
 
     wrapper.unmount();
   });
+
+  it("does not leave an empty popover shell when the message is cleared", async () => {
+    vi.useFakeTimers();
+    const wrapper = mount(CompanionBubble, {
+      attachTo: document.body,
+      props: {
+        visible: true,
+        message: "提示内容",
+      },
+      global: {
+        stubs: {
+          NPopover: popoverStub,
+        },
+      },
+    });
+
+    await vi.advanceTimersByTimeAsync(200);
+    await wrapper.vm.$nextTick();
+    expect(document.body.querySelector(".n-popover")).not.toBeNull();
+
+    await wrapper.setProps({ message: "" });
+
+    expect(document.body.querySelector(".n-popover")).toBeNull();
+    expect(wrapper.find('[data-testid="companion-confirm"]').exists()).toBe(false);
+
+    wrapper.unmount();
+  });
+
+  it("removes the companion surface immediately when hidden", async () => {
+    const wrapper = mount(CompanionBubble, {
+      props: {
+        visible: true,
+        message: "",
+      },
+      global: {
+        stubs: {
+          NPopover: popoverStub,
+        },
+      },
+    });
+
+    expect(wrapper.find('[data-testid="companion-bubble"]').exists()).toBe(true);
+
+    await wrapper.setProps({ visible: false });
+
+    expect(wrapper.find('[data-testid="companion-bubble"]').exists()).toBe(false);
+
+    wrapper.unmount();
+  });
 });

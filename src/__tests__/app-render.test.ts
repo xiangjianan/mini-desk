@@ -156,6 +156,8 @@ describe("App shell", () => {
       await wrapper.get('[data-testid="companion-yes"]').trigger("click");
 
       expect(wrapper.findAll("input.todo-input").some((input) => (input.element as HTMLInputElement).value === "已完成事项")).toBe(false);
+      expect(wrapper.find(".focus-companion.is-visible").exists()).toBe(false);
+      expect(document.activeElement).toBe(document.body);
     } finally {
       wrapper.unmount();
       vi.useRealTimers();
@@ -295,6 +297,36 @@ describe("App shell", () => {
     expect(wrapper.get(".preview-thumb.is-active .image-index").text()).toBe("2");
 
     wrapper.unmount();
+  });
+
+  it("hides the current companion GIF when opening image preview", async () => {
+    vi.useFakeTimers();
+    localStorage.setItem(
+      STORAGE_KEY,
+      JSON.stringify({
+        images: [{ id: "img-1", src: "data:image/png;base64,one", createdAt: 1 }],
+      }),
+    );
+    const wrapper = mountApp();
+
+    try {
+      await wrapper.get("textarea").trigger("focus");
+      window.dispatchEvent(new KeyboardEvent("keydown", { key: "s", ctrlKey: true }));
+      await vi.advanceTimersByTimeAsync(200);
+      await wrapper.vm.$nextTick();
+
+      expect(wrapper.find(".focus-companion.is-visible img").exists()).toBe(true);
+
+      await wrapper.get(".image-card").trigger("click");
+      await wrapper.vm.$nextTick();
+
+      expect(wrapper.find(".image-preview").exists()).toBe(true);
+      expect(wrapper.find(".focus-companion.is-visible").exists()).toBe(false);
+      expect(wrapper.find('[data-testid="companion-confirm"]').exists()).toBe(false);
+    } finally {
+      wrapper.unmount();
+      vi.useRealTimers();
+    }
   });
 
   it("shows import and export success through the companion bubble", async () => {

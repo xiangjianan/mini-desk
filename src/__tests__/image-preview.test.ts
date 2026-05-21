@@ -40,4 +40,29 @@ describe("ImagePreview", () => {
 
     wrapper.unmount();
   });
+
+  it("shows a top close button in the preview sidebar", async () => {
+    const wrapper = mount(ImagePreview, {
+      props: {
+        images: [{ id: "img-1", src: "data:image/png;base64,one", createdAt: 1 }],
+        activeId: "img-1",
+      },
+      global: {
+        stubs: {
+          Modal: modalStub,
+          NButton: buttonStub,
+          NDropdown: dropdownStub,
+          NModal: modalStub,
+        },
+      },
+    });
+
+    const closeButton = wrapper.get(".preview-close-button");
+    expect(closeButton.attributes("aria-label")).toBe("取消预览");
+
+    await closeButton.trigger("click");
+    expect(wrapper.emitted("close")).toHaveLength(1);
+
+    wrapper.unmount();
+  });
 });

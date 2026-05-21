@@ -54,6 +54,7 @@ describe("Naive UI component usage", () => {
     expect(companion).toContain('class="companion-popover-shell"');
     expect(companion).toContain('arrow-class="companion-popover-arrow"');
     expect(companion).toContain("--n-box-shadow");
+    expect(companion).toContain(":show=\"visiblePopover\"");
     expect(companion).not.toContain("content-class=\"companion-popover-shell\"");
     expect(companion).not.toContain("border: '1px solid #111'");
     expect(companion).not.toContain("bubble-box");
@@ -104,6 +105,7 @@ describe("Naive UI component usage", () => {
     expect(styles).toContain("grid-template-columns: 10vw 90vw");
     expect(styles).toContain("backdrop-filter");
     expect(styles).toContain("z-index: 3200");
+    expect(preview).toContain("preview-close-button");
   });
 
   it("keeps the preview sidebar aligned with the normal image list", () => {
@@ -113,11 +115,12 @@ describe("Naive UI component usage", () => {
     expect(preview).toContain('v-for="(image, index) in images"');
     expect(preview).toContain('<span class="image-index">{{ index + 1 }}</span>');
     expect(preview).not.toContain("preview-sidebar-header");
-    expect(styles).toMatch(/\.preview-sidebar\s*\{[^}]*padding: 40px 6px 6px/s);
+    expect(styles).toMatch(/\.preview-sidebar\s*\{[^}]*padding: 6px/s);
     expect(styles).toMatch(/\.preview-thumb\s*\{[^}]*grid-template-columns: 28px minmax\(0, 1fr\)/s);
     expect(styles).toMatch(/\.preview-thumb\s*\{[^}]*min-height: 72px/s);
     expect(styles).toMatch(/\.preview-thumb\s*\{[^}]*padding: 0/s);
-    expect(styles).toMatch(/\.preview-thumb\s*\{[^}]*border-bottom: 1px solid/s);
+    expect(styles).toMatch(/\.preview-thumb\s*\{[^}]*border-bottom: 1px solid var\(--line-subtle\)/s);
+    expect(styles).toMatch(/\.preview-thumb\s*\{[^}]*background: var\(--input\)/s);
     expect(styles).toMatch(/\.preview-thumb img\s*\{[^}]*max-height: 120px/s);
     expect(styles).toMatch(/\.preview-thumb img\s*\{[^}]*margin: 10px/s);
   });
@@ -159,6 +162,13 @@ describe("Naive UI component usage", () => {
     expect(styles).toContain("aspect-ratio: 1 / 1");
     expect(styles).toContain("object-fit: cover");
     expect(styles).toMatch(/\.focus-companion img\s*\{[^}]*border: 1px solid var\(--line-main\)/s);
+  });
+
+  it("keeps typography and confirmation actions compact but readable", () => {
+    const styles = read("src/styles.css");
+
+    expect(styles).toMatch(/body\s*\{[^}]*font-size: 12px/s);
+    expect(styles).toMatch(/\.companion-actions \.n-button\s*\{[^}]*min-width: 64px/s);
   });
 
   it("animates companion popover entry", () => {

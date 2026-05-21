@@ -30,6 +30,7 @@ const placementStyle = computed(() => {
 });
 
 const popoverVisible = computed(() => props.visible && Boolean(props.message || props.confirm));
+const visiblePopover = computed(() => delayedPopoverVisible.value && popoverVisible.value);
 const popoverKey = computed(() => `${props.position?.right ?? "default"}:${props.position?.bottom ?? "default"}`);
 
 watch(
@@ -54,6 +55,7 @@ onUnmounted(() => {
 
 <template>
   <div
+    v-if="visible"
     class="focus-companion"
     :class="{ 'is-visible': visible }"
     :style="placementStyle"
@@ -64,7 +66,7 @@ onUnmounted(() => {
       :key="popoverKey"
       trigger="manual"
       placement="top-end"
-      :show="delayedPopoverVisible"
+      :show="visiblePopover"
       :show-arrow="true"
       :arrow-point-to-center="true"
       :animated="true"
@@ -77,7 +79,7 @@ onUnmounted(() => {
         <img src="/static/video/hermes.gif" alt="" />
       </template>
 
-      <div v-if="message || confirm" class="companion-popover" role="status" aria-live="polite" data-testid="companion-confirm">
+      <div v-if="visiblePopover" class="companion-popover" role="status" aria-live="polite" data-testid="companion-confirm">
         <span>{{ message }}</span>
         <div v-if="confirm" class="companion-actions">
           <NButton size="tiny" type="primary" data-testid="companion-yes" @click="emit('yes')">是</NButton>

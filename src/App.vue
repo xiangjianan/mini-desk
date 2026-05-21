@@ -233,6 +233,11 @@ function deleteImage(id: string, anchor?: HTMLElement): void {
   });
 }
 
+function openImagePreview(id: string): void {
+  hideCompanion();
+  activePreviewId.value = id;
+}
+
 async function copyImage(id: string): Promise<void> {
   const image = state.images.find((item) => item.id === id);
   if (!image?.src) return;
@@ -521,10 +526,8 @@ function requestConfirmation(
 async function confirmCompanionAction(): Promise<void> {
   const action = pendingConfirm.value;
   if (!action) return;
-  pendingConfirm.value = null;
-  bubbleVisible.value = false;
-  bubbleMessage.value = "";
-  activeGuideKey.value = null;
+  hideCompanion();
+  (document.activeElement as HTMLElement | null)?.blur();
   await action.onConfirm();
 }
 
@@ -643,7 +646,7 @@ function moveItem<T extends { id: string }>(items: T[], dragId: string, targetId
         :title="titles['image-title']"
         :images="state.images"
         @title-update="updateTitle"
-        @preview="activePreviewId = $event"
+        @preview="openImagePreview"
         @copy="copyImage"
         @delete="deleteImage"
         @reorder="reorderImages"

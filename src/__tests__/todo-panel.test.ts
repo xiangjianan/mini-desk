@@ -102,4 +102,54 @@ describe("TodoPanel", () => {
     wrapper.unmount();
     vi.useRealTimers();
   });
+
+  it("does not create a new blank todo when a non-empty list blank area is clicked after completing an item", async () => {
+    const wrapper = mount(TodoPanel, {
+      props: {
+        todos: {
+          morning: [{ id: "a", text: "第一项", done: false }],
+          noon: [],
+          evening: [],
+        },
+        titles: DEFAULT_TITLES,
+      },
+      global: {
+        stubs: {
+          NCheckbox: checkboxStub,
+          NDropdown: dropdownStub,
+          NTooltip: tooltipStub,
+        },
+      },
+    });
+
+    await wrapper.get(".n-checkbox").trigger("click");
+    await wrapper.get('[data-testid="todo-list-morning"]').trigger("click");
+
+    expect(wrapper.emitted("complete")?.[0]).toEqual(["morning", "a", true]);
+    expect(wrapper.emitted("create")).toBeUndefined();
+    wrapper.unmount();
+  });
+
+  it("keeps new todo inputs visually empty instead of showing the old placeholder", () => {
+    const wrapper = mount(TodoPanel, {
+      props: {
+        todos: {
+          morning: [{ id: "a", text: "", done: false }],
+          noon: [],
+          evening: [],
+        },
+        titles: DEFAULT_TITLES,
+      },
+      global: {
+        stubs: {
+          NCheckbox: checkboxStub,
+          NDropdown: dropdownStub,
+          NTooltip: tooltipStub,
+        },
+      },
+    });
+
+    expect(wrapper.get("input.todo-input").attributes("placeholder")).toBeUndefined();
+    wrapper.unmount();
+  });
 });
