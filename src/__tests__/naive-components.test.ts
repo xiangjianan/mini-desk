@@ -102,7 +102,6 @@ describe("Naive UI component usage", () => {
     const preview = read("src/components/ImagePreview.vue");
     const styles = read("src/styles.css");
 
-    expect(preview).toContain("NDropdown");
     expect(preview).toContain("@contextmenu.prevent");
     expect(preview).toContain(':mask-closable="false"');
     expect(preview).not.toContain('@click.self="emit(\'close\')"');
@@ -110,6 +109,8 @@ describe("Naive UI component usage", () => {
     expect(preview).toContain("复制");
     expect(preview).toContain("删除");
     expect(preview).toContain("@keydown.space.prevent");
+    expect(preview).not.toContain("NDropdown");
+    expect(preview).not.toContain("openMenu");
     expect(preview).not.toContain("@contextmenu.prevent.stop=\"openMenu\"");
     expect(preview).not.toContain("custom-menu");
     expect(preview).not.toContain('id="custom-menu"');
@@ -275,7 +276,6 @@ describe("Naive UI component usage", () => {
   it("removes manual dropdowns before clearing their coordinates to avoid top-left flashes", () => {
     const dropdownSources = [
       "src/components/ImagePanel.vue",
-      "src/components/ImagePreview.vue",
       "src/components/QuickButtons.vue",
       "src/components/TodoPanel.vue",
       "src/components/TextPanel.vue",

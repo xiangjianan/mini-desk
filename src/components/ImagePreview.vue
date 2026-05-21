@@ -1,8 +1,7 @@
 <script setup lang="ts">
 import { computed, ref, watch } from "vue";
 import { CloseOutline } from "@vicons/ionicons5";
-import { NButton, NDropdown, NIcon, NModal } from "naive-ui";
-import type { DropdownOption } from "naive-ui";
+import { NButton, NIcon, NModal } from "naive-ui";
 import type { StoredImage } from "../types";
 
 const props = defineProps<{
@@ -21,12 +20,6 @@ const scale = ref(1);
 const offset = ref({ x: 0, y: 0 });
 const dragging = ref(false);
 const start = ref({ x: 0, y: 0, ox: 0, oy: 0 });
-const menu = ref<{ x: number; y: number; anchor?: HTMLElement } | null>(null);
-const menuOptions: DropdownOption[] = [
-  { label: "取消预览", key: "close" },
-  { label: "复制", key: "copy" },
-  { label: "删除", key: "delete" },
-];
 
 const active = computed(() => props.images.find((image) => image.id === props.activeId));
 
@@ -56,23 +49,6 @@ function move(event: MouseEvent): void {
   };
 }
 
-function openMenu(event: MouseEvent): void {
-  event.preventDefault();
-  menu.value = { x: event.clientX, y: event.clientY, anchor: event.currentTarget as HTMLElement };
-}
-
-function closeMenu(): void {
-  menu.value = null;
-}
-
-function handleMenuSelect(key: string): void {
-  if (!active.value) return;
-  const anchor = menu.value?.anchor;
-  closeMenu();
-  if (key === "close") emit("close");
-  if (key === "copy") emit("copy", active.value.id);
-  if (key === "delete") emit("delete", active.value.id, anchor);
-}
 </script>
 
 <template>
@@ -98,7 +74,7 @@ function handleMenuSelect(key: string): void {
       @keydown.space.prevent="emit('close')"
       @keydown.delete="emit('delete', active.id)"
       @keydown.enter="emit('copy', active.id)"
-      @contextmenu.prevent="openMenu"
+      @contextmenu.prevent
     >
       <aside class="preview-sidebar">
         <div class="preview-sidebar-bar">
@@ -145,24 +121,6 @@ function handleMenuSelect(key: string): void {
           </NButton>
         </div>
       </main>
-      <NDropdown
-        v-if="menu"
-        placement="bottom-start"
-        trigger="manual"
-        :show="true"
-        :x="menu.x"
-        :y="menu.y"
-        :options="menuOptions"
-        :z-index="3100"
-        @select="handleMenuSelect"
-        @clickoutside="closeMenu"
-      >
-        <span
-          class="dropdown-anchor"
-          :style="{ left: `${menu.x}px`, top: `${menu.y}px` }"
-          aria-hidden="true"
-        />
-      </NDropdown>
     </div>
   </NModal>
 </template>

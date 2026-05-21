@@ -134,7 +134,7 @@ describe("ImagePreview", () => {
     wrapper.unmount();
   });
 
-  it("uses only the custom preview context menu over preview images", async () => {
+  it("does not open a custom context menu over preview images", async () => {
     const wrapper = mount(ImagePreview, {
       props: {
         images: [{ id: "img-1", src: "data:image/png;base64,one", createdAt: 1 }],
@@ -157,7 +157,8 @@ describe("ImagePreview", () => {
     await wrapper.vm.$nextTick();
 
     expect(event.defaultPrevented).toBe(true);
-    expect(wrapper.findAll(".dropdown-option").map((option) => option.text())).toEqual(["取消预览", "复制", "删除"]);
+    expect(wrapper.find(".dropdown-option").exists()).toBe(false);
+    expect(wrapper.findComponent({ name: "NDropdown" }).exists()).toBe(false);
     wrapper.unmount();
   });
 });
