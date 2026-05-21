@@ -11,7 +11,8 @@ const props = defineProps<{
   theme?: "light" | "dark";
   position?: {
     right: string;
-    bottom: string;
+    bottom?: string;
+    top?: string;
   };
 }>();
 
@@ -29,6 +30,7 @@ const placementStyle = computed(() => {
   return {
     right: props.position.right,
     bottom: props.position.bottom,
+    top: props.position.top,
   };
 });
 

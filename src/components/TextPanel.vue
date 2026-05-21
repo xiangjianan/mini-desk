@@ -102,10 +102,18 @@ async function startEditing(event: MouseEvent): Promise<void> {
   const textarea = event.currentTarget as HTMLTextAreaElement;
   const caret = lastCaret.value ?? textarea.selectionStart ?? textarea.value.length;
   editing.value = true;
+  unlockTextareaForMobileKeyboard(textarea, caret);
   await nextTick();
   textareaRef.value?.focus({ preventScroll: true });
   if (textareaRef.value) collapseSelection(textareaRef.value, caret);
   lastTextSelection.value = null;
+}
+
+function unlockTextareaForMobileKeyboard(textarea: HTMLTextAreaElement, caret: number): void {
+  textarea.readOnly = false;
+  textarea.removeAttribute("readonly");
+  textarea.focus({ preventScroll: true });
+  collapseSelection(textarea, caret);
 }
 
 function rememberCaret(event: MouseEvent): void {

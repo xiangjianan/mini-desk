@@ -874,6 +874,10 @@ body:has(.image-preview) .n-modal-body-wrapper {
 }
 
 @media (max-width: 900px) {
+  :root {
+    --app-font-size: 14px;
+  }
+
   html,
   body,
   #app {
@@ -896,8 +900,9 @@ body:has(.image-preview) .n-modal-body-wrapper {
 
   .mobile-banner {
     display: block;
-    padding: 10px 12px;
-    line-height: 1.5;
+    padding: 8px 12px;
+    font-size: 13px;
+    line-height: 1.45;
     color: var(--muted);
     border-bottom: 1px solid var(--line-main);
     background: var(--panel);
@@ -908,10 +913,11 @@ body:has(.image-preview) .n-modal-body-wrapper {
     min-height: 0;
     height: auto;
     border: 0;
+    padding-bottom: env(safe-area-inset-bottom, 0);
   }
 
   .workspace-panel .panel-header {
-    min-height: 40px;
+    min-height: 42px;
     padding: 0 12px;
   }
 
@@ -920,13 +926,43 @@ body:has(.image-preview) .n-modal-body-wrapper {
   }
 
   .workspace-panel .text-editor-textarea {
-    padding: 12px;
+    padding: 14px;
     font-size: 16px;
-    line-height: 1.65;
+    line-height: 1.62;
   }
 
-  .top-actions,
-  .focus-companion,
+  .top-actions {
+    display: flex;
+    top: calc(8px + env(safe-area-inset-top, 0px));
+    right: 8px;
+    gap: 6px;
+    z-index: 3300;
+  }
+
+  .top-actions .icon-button {
+    width: 32px;
+    min-width: 32px;
+    height: 32px;
+    min-height: 32px;
+  }
+
+  .focus-companion {
+    top: 118px;
+    right: 12px;
+    bottom: auto;
+    gap: 4px;
+    z-index: 3200;
+  }
+
+  .focus-companion img {
+    width: 60px;
+    height: 60px;
+  }
+
+  .companion-popover-shell.n-popover {
+    max-width: min(220px, calc(100vw - 24px)) !important;
+  }
+
   .image-preview {
     display: none !important;
   }

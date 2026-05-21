@@ -41,7 +41,7 @@ const activePreviewId = ref<string | undefined>();
 const bubbleMessage = ref("");
 const bubbleVisible = ref(false);
 const companionFocused = ref(false);
-const companionPosition = ref<{ right: string; bottom: string } | undefined>();
+const companionPosition = ref<{ right: string; bottom?: string; top?: string } | undefined>();
 const pendingConfirm = ref<{ onConfirm: () => void | Promise<void> } | null>(null);
 const importInput = ref<HTMLInputElement | null>(null);
 const importFeedbackAnchor = ref<HTMLElement | undefined>();
@@ -659,7 +659,13 @@ async function updateStaticVersion(): Promise<void> {
   window.location.reload();
 }
 
-function getCompanionPosition(anchor?: HTMLElement): { right: string; bottom: string } | undefined {
+function getCompanionPosition(anchor?: HTMLElement): { right: string; bottom?: string; top?: string } | undefined {
+  if (isMobileLayout()) {
+    return {
+      right: "12px",
+      top: "118px",
+    };
+  }
   const target = anchor?.closest(".image-preview, .preview-main, .preview-stage, .todo-list, .todo-section, .quick-block, .text-panel, .split-block, .panel") as HTMLElement | null;
   if (!target) return undefined;
   const rect = target.getBoundingClientRect();
@@ -668,6 +674,10 @@ function getCompanionPosition(anchor?: HTMLElement): { right: string; bottom: st
     right: `calc(100vw - ${Math.round(rect.right)}px + 10px)`,
     bottom: `calc(100vh - ${Math.round(rect.bottom)}px + 10px)`,
   };
+}
+
+function isMobileLayout(): boolean {
+  return window.matchMedia?.("(max-width: 900px)").matches ?? window.innerWidth <= 900;
 }
 
 function normalizeLink(value: string): string {

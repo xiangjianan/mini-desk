@@ -375,12 +375,20 @@ describe("Naive UI component usage", () => {
   it("simplifies the mobile layout to the workspace editor only", () => {
     const app = read("src/App.vue");
     const styles = read("src/styles.css");
+    const text = read("src/components/TextPanel.vue");
 
     expect(app).toContain('class="workspace-panel"');
     expect(app).toContain("桌面版体验更完整");
     expect(app.indexOf("mobile-banner")).toBeLessThan(app.indexOf('title-id="workspace-title"'));
     expect(styles).toMatch(/\.board > :not\(\.mobile-banner\):not\(\.workspace-panel\)\s*\{[^}]*display: none !important/s);
     expect(styles).toMatch(/\.workspace-panel\s*\{[^}]*display: flex/s);
-    expect(styles).toMatch(/\.top-actions,[\s\S]*?\.focus-companion,[\s\S]*?\.image-preview\s*\{[^}]*display: none !important/s);
+    expect(styles).toMatch(/@media \(max-width: 900px\)[\s\S]*--app-font-size: 14px/s);
+    expect(styles).toMatch(/@media \(max-width: 900px\)[\s\S]*\.top-actions\s*\{[^}]*display: flex/s);
+    expect(styles).toMatch(/@media \(max-width: 900px\)[\s\S]*\.focus-companion\s*\{[^}]*top: 118px/s);
+    expect(styles).toMatch(/@media \(max-width: 900px\)[\s\S]*\.focus-companion img\s*\{[^}]*width: 60px/s);
+    expect(styles).toMatch(/\.image-preview\s*\{[^}]*display: none !important/s);
+    expect(styles).not.toMatch(/\.top-actions,[\s\S]*?\.focus-companion,[\s\S]*?\.image-preview\s*\{[^}]*display: none !important/s);
+    expect(text).toContain("unlockTextareaForMobileKeyboard");
+    expect(text).toMatch(/editing\.value = true;[\s\S]*unlockTextareaForMobileKeyboard\(textarea, caret\);[\s\S]*await nextTick\(\)/s);
   });
 });

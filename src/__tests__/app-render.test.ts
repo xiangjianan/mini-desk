@@ -183,6 +183,43 @@ describe("App shell", () => {
     }
   });
 
+  it("keeps mobile save feedback near the upper right without hiding the companion", async () => {
+    vi.useFakeTimers();
+    vi.stubGlobal("matchMedia", vi.fn().mockReturnValue({
+      matches: true,
+      media: "(max-width: 900px)",
+      onchange: null,
+      addEventListener: vi.fn(),
+      removeEventListener: vi.fn(),
+      addListener: vi.fn(),
+      removeListener: vi.fn(),
+      dispatchEvent: vi.fn(),
+    }));
+    const wrapper = mountApp();
+
+    try {
+      const workspace = wrapper.findAll(".text-panel")[1];
+      await workspace.get("textarea").trigger("focus");
+
+      const companion = wrapper.get('[data-testid="companion-bubble"]');
+      expect(companion.attributes("style")).toContain("top: 118px");
+      expect(companion.attributes("style")).toContain("right: 12px");
+      expect(companion.find("img").exists()).toBe(true);
+
+      window.dispatchEvent(new KeyboardEvent("keydown", { key: "s", ctrlKey: true }));
+      await wrapper.vm.$nextTick();
+      await vi.advanceTimersByTimeAsync(200);
+      await wrapper.vm.$nextTick();
+
+      expect(wrapper.find('[data-testid="companion-confirm"]').exists()).toBe(true);
+      expect(wrapper.get('[data-testid="companion-bubble"]').attributes("style")).toContain("top: 118px");
+    } finally {
+      wrapper.unmount();
+      vi.unstubAllGlobals();
+      vi.useRealTimers();
+    }
+  });
+
   it("uses the companion bubble instead of window.confirm for clearing completed todos", async () => {
     vi.useFakeTimers();
     localStorage.setItem(
