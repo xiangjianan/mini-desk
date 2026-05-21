@@ -586,12 +586,12 @@ h3 {
   --n-border-hover: 1px solid var(--line-focus) !important;
   --n-border-pressed: 1px solid var(--line-focus) !important;
   --n-border-focus: 1px solid var(--line-focus) !important;
-  border: 1px solid var(--line-control) !important;
+  border: 0 !important;
 }
 
-.companion-action-button:hover,
-.companion-action-button:focus-visible {
-  border-color: var(--line-focus) !important;
+.companion-action-button .n-button__border,
+.companion-action-button .n-button__state-border {
+  border-width: 1px !important;
 }
 
 @keyframes companion-pop {
@@ -707,13 +707,14 @@ h3 {
   z-index: 3000;
   display: grid;
   grid-template-columns: 10vw 90vw;
-  background: rgba(255, 255, 255, 0.64);
+  background: rgba(255, 255, 255, 0.58);
+  -webkit-backdrop-filter: blur(18px);
   backdrop-filter: blur(18px);
   color: var(--text);
 }
 
 html[data-theme="dark"] .image-preview {
-  background: rgba(0, 0, 0, 0.64);
+  background: rgba(0, 0, 0, 0.58);
 }
 
 body:has(.image-preview) .n-modal-mask {

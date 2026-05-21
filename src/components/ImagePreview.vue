@@ -134,7 +134,6 @@ function handleMenuSelect(key: string): void {
             alt="图片预览"
             draggable="false"
             :style="{ transform: `translate(${offset.x}px, ${offset.y}px) scale(${scale})` }"
-            @contextmenu.prevent.stop="openMenu"
           />
         </div>
         <div class="preview-actions">

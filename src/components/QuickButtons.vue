@@ -21,7 +21,7 @@ const emit = defineEmits<{
   toggleHidden: [id: string];
   toggleShowHidden: [];
   reorder: [dragId: string, targetId: string];
-  guide: [key: GuideKey, anchor: HTMLElement];
+  guide: [key: GuideKey, anchor: HTMLElement, immediate?: boolean];
 }>();
 
 const dialogOpen = ref(false);
@@ -115,7 +115,7 @@ function handleMenuSelect(key: string): void {
   if (!menu.value) return;
   const { id, anchor } = menu.value;
   closeMenu();
-  if (key === "guide" && anchor) emit("guide", "quickButtons", anchor);
+  if (key === "guide" && anchor) emit("guide", "quickButtons", anchor, true);
   if (!id) return;
   if (key === "edit") openEdit(id);
   if (key === "toggle-hidden") emit("toggleHidden", id);

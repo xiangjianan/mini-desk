@@ -395,7 +395,7 @@ describe("TodoPanel", () => {
     await wrapper.get('[data-period="morning"]').trigger("contextmenu");
     await wrapper.get(".dropdown-option").trigger("click");
 
-    expect(wrapper.emitted("guide")?.[0]?.[0]).toBe("todos");
+    expect(wrapper.emitted("guide")?.[0]).toEqual(["todos", expect.any(HTMLElement), true]);
     wrapper.unmount();
   });
 });

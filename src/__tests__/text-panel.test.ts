@@ -216,6 +216,6 @@ describe("TextPanel", () => {
     await wrapper.get(".text-editor-frame").trigger("contextmenu");
     await wrapper.get(".dropdown-option").trigger("click");
 
-    expect(wrapper.emitted("guide")).toHaveLength(1);
+    expect(wrapper.emitted("guide")?.[0]).toEqual([expect.any(HTMLElement), true]);
   });
 });

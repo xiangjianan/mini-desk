@@ -46,7 +46,7 @@ describe("ImagePanel", () => {
 
     await wrapper.findAll(".dropdown-option")[1].trigger("click");
 
-    expect(wrapper.emitted("guide")?.[0]?.[0]).toBe("images");
+    expect(wrapper.emitted("guide")?.[0]).toEqual(["images", expect.any(HTMLElement), true]);
     wrapper.unmount();
   });
 });

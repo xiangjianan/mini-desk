@@ -18,7 +18,7 @@ const emit = defineEmits<{
   delete: [id: string, anchor?: HTMLElement];
   reorder: [dragId: string, targetId: string];
   paste: [];
-  guide: [key: GuideKey, anchor: HTMLElement];
+  guide: [key: GuideKey, anchor: HTMLElement, immediate?: boolean];
 }>();
 
 const menu = ref<{ x: number; y: number; id?: string; anchor?: HTMLElement } | null>(null);
@@ -50,7 +50,7 @@ function handleMenuSelect(key: string): void {
   const anchor = menu.value?.anchor;
   closeMenu();
   if (key === "paste") emit("paste");
-  if (key === "guide" && anchor) emit("guide", "images", anchor);
+  if (key === "guide" && anchor) emit("guide", "images", anchor, true);
   if (!id) return;
   if (key === "preview") emit("preview", id);
   if (key === "copy") emit("copy", id);

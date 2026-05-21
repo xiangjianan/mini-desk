@@ -1,6 +1,7 @@
 import { mount } from "@vue/test-utils";
 import { beforeEach, describe, expect, it, vi } from "vitest";
 import App from "../App.vue";
+import ImagePanel from "../components/ImagePanel.vue";
 import SettingsMenu from "../components/SettingsMenu.vue";
 import { STORAGE_KEY } from "../state/defaults";
 
@@ -553,6 +554,41 @@ describe("App shell", () => {
       await wrapper.vm.$nextTick();
 
       expect(wrapper.find('[data-testid="companion-confirm"]').text()).toMatch(/工作空间/);
+    } finally {
+      wrapper.unmount();
+      vi.useRealTimers();
+    }
+  });
+
+  it("shows explicit context-menu guide bubbles immediately even when random hints are skipped", async () => {
+    vi.useFakeTimers();
+    vi.spyOn(Math, "random").mockReturnValue(0.99);
+    const wrapper = mountApp();
+
+    try {
+      const imagePanel = wrapper.getComponent(ImagePanel);
+      vi.spyOn(imagePanel.element, "getBoundingClientRect").mockReturnValue({
+        x: 0,
+        y: 0,
+        width: 128,
+        height: 720,
+        top: 0,
+        left: 0,
+        right: 128,
+        bottom: 720,
+        toJSON: () => ({}),
+      });
+
+      imagePanel.vm.$emit("guide", "images", imagePanel.element as HTMLElement, true);
+      await wrapper.vm.$nextTick();
+
+      expect(wrapper.find(".focus-companion.is-visible img").exists()).toBe(true);
+      expect(wrapper.find('[data-testid="companion-confirm"]').exists()).toBe(false);
+
+      await vi.advanceTimersByTimeAsync(200);
+      await wrapper.vm.$nextTick();
+
+      expect(wrapper.find('[data-testid="companion-confirm"]').text()).toMatch(/截图区|图片|Ctrl\+V|方向键/);
     } finally {
       wrapper.unmount();
       vi.useRealTimers();

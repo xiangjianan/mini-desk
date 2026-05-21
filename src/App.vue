@@ -157,8 +157,12 @@ function handleGuideFocus(key: GuideKey, anchor?: HTMLElement): void {
   maybeShowGuideBubble(key, anchor, { keepCompanionAfter: true });
 }
 
-function handleGuideClick(key: GuideKey, anchor?: HTMLElement): void {
+function handleGuideClick(key: GuideKey, anchor?: HTMLElement, immediate = false): void {
   invalidateGuideCompanion(key);
+  if (immediate) {
+    showGuideBubble(key, anchor);
+    return;
+  }
   maybeShowGuideBubble(key, anchor);
 }
 
@@ -615,20 +619,25 @@ function maybeShowGuideBubble(key: GuideKey, anchor?: HTMLElement, options: Guid
   guideTimer.value = window.setTimeout(() => {
     guideTimer.value = undefined;
     if (pendingConfirm.value || bubbleVisible.value) return;
-    showBubbleText(
-      withKaomoji(GUIDE_MESSAGES[key], "encouraging"),
-      anchor,
-      { hideCompanionAfter: !options.keepCompanionAfter, guideKey: key },
-      GUIDE_MESSAGE_DURATION_MS,
-    );
-    const shownAt = Date.now();
-    lastGuideShownAt.value = shownAt;
-    guideSeenKeys.add(key);
-    guideNextAllowedAt.set(
-      key,
-      shownAt + GUIDE_KEY_COOLDOWN_MIN_MS + Math.floor(Math.random() * GUIDE_KEY_COOLDOWN_RANGE_MS),
-    );
+    showGuideBubble(key, anchor, options);
   }, delay);
+}
+
+function showGuideBubble(key: GuideKey, anchor?: HTMLElement, options: GuideOptions = {}): void {
+  if (pendingConfirm.value) return;
+  showBubbleText(
+    withKaomoji(GUIDE_MESSAGES[key], "encouraging"),
+    anchor,
+    { hideCompanionAfter: !options.keepCompanionAfter, guideKey: key },
+    GUIDE_MESSAGE_DURATION_MS,
+  );
+  const shownAt = Date.now();
+  lastGuideShownAt.value = shownAt;
+  guideSeenKeys.add(key);
+  guideNextAllowedAt.set(
+    key,
+    shownAt + GUIDE_KEY_COOLDOWN_MIN_MS + Math.floor(Math.random() * GUIDE_KEY_COOLDOWN_RANGE_MS),
+  );
 }
 
 function clearGuideTimer(): void {
@@ -721,7 +730,7 @@ function moveItem<T extends { id: string }>(items: T[], dragId: string, targetId
           @title-update="updateTitle"
           @update="updateLines('noteLines', $event)"
           @focus="handleGuideFocus('note', $event)"
-          @guide="handleGuideClick('note', $event)"
+          @guide="(anchor, immediate) => handleGuideClick('note', anchor, immediate)"
           @blur="handleEditorBlur"
         />
         <QuickButtons
@@ -768,7 +777,7 @@ function moveItem<T extends { id: string }>(items: T[], dragId: string, targetId
         @title-update="updateTitle"
         @update="updateLines('workspaceLines', $event)"
         @focus="handleGuideFocus('workspace', $event)"
-        @guide="handleGuideClick('workspace', $event)"
+        @guide="(anchor, immediate) => handleGuideClick('workspace', anchor, immediate)"
         @blur="handleEditorBlur"
       />
 
@@ -780,7 +789,7 @@ function moveItem<T extends { id: string }>(items: T[], dragId: string, targetId
         @title-update="updateTitle"
         @update="updateLines('storageLines', $event)"
         @focus="handleGuideFocus('storage', $event)"
-        @guide="handleGuideClick('storage', $event)"
+        @guide="(anchor, immediate) => handleGuideClick('storage', anchor, immediate)"
         @blur="handleEditorBlur"
       />
     </main>

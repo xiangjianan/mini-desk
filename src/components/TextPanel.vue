@@ -20,7 +20,7 @@ const emit = defineEmits<{
   update: [lines: LineItem[]];
   focus: [element: HTMLElement];
   blur: [element: HTMLElement];
-  guide: [element: HTMLElement];
+  guide: [element: HTMLElement, immediate?: boolean];
 }>();
 
 const textareaRef = ref<HTMLTextAreaElement | null>(null);
@@ -113,7 +113,7 @@ function closeMenu(): void {
 function handleMenuSelect(key: string): void {
   const anchor = menu.value?.anchor;
   closeMenu();
-  if (key === "guide" && anchor) emit("guide", anchor);
+  if (key === "guide" && anchor) emit("guide", anchor, true);
 }
 
 function collapseSelection(textarea: HTMLTextAreaElement, caret: number): void {

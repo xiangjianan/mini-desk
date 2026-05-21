@@ -104,11 +104,12 @@ describe("Naive UI component usage", () => {
     expect(preview).toContain("复制");
     expect(preview).toContain("删除");
     expect(preview).toContain("@keydown.space.prevent");
-    expect(preview).toContain("@contextmenu.prevent.stop=\"openMenu\"");
+    expect(preview).not.toContain("@contextmenu.prevent.stop=\"openMenu\"");
     expect(styles).toContain("grid-template-columns: 10vw 90vw");
     expect(styles).toContain("backdrop-filter");
     expect(styles).toMatch(/\.image-preview\s*\{[^}]*background: rgba\(255, 255, 255/s);
     expect(styles).toMatch(/html\[data-theme="dark"\] \.image-preview\s*\{[^}]*background: rgba\(0, 0, 0/s);
+    expect(styles).toContain("-webkit-backdrop-filter");
     expect(styles).toContain("z-index: 3200");
     expect(preview).toContain("preview-close-button");
   });
@@ -257,7 +258,8 @@ describe("Naive UI component usage", () => {
     expect(companion).toContain("companion-action-button");
     expect(styles).toMatch(/\.companion-action-button\s*\{[^}]*--n-border: 1px solid var\(--line-control\)/s);
     expect(styles).toMatch(/\.companion-action-button\s*\{[^}]*--n-color: transparent/s);
-    expect(styles).toMatch(/\.companion-action-button\s*\{[^}]*border: 1px solid var\(--line-control\)/s);
+    expect(styles).toMatch(/\.companion-action-button\s*\{[^}]*border: 0 !important/s);
+    expect(styles).toMatch(/\.companion-action-button \.n-button__border,[\s\S]*?\.companion-action-button \.n-button__state-border\s*\{[^}]*border-width: 1px/s);
   });
 
   it("uses shared guide options for blank-area context menus", () => {
@@ -274,9 +276,10 @@ describe("Naive UI component usage", () => {
       expect(source).toContain("使用指南");
     }
     expect(image).toContain("粘贴图片");
-    expect(app).toContain("@guide=\"handleGuideClick('note', $event)\"");
-    expect(app).toContain("@guide=\"handleGuideClick('workspace', $event)\"");
-    expect(app).toContain("@guide=\"handleGuideClick('storage', $event)\"");
+    expect(app).toContain("@guide=\"(anchor, immediate) => handleGuideClick('note', anchor, immediate)\"");
+    expect(app).toContain("@guide=\"(anchor, immediate) => handleGuideClick('workspace', anchor, immediate)\"");
+    expect(app).toContain("@guide=\"(anchor, immediate) => handleGuideClick('storage', anchor, immediate)\"");
+    expect(app).toContain("showGuideBubble");
   });
 
   it("uses two mutually exclusive checkboxes for quick button type", () => {

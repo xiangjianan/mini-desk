@@ -23,7 +23,7 @@ const emit = defineEmits<{
   blur: [];
   move: [dragged: DraggedTodo, destinationPeriod: TodoPeriod, targetId?: string];
   focus: [element: HTMLElement];
-  guide: [key: GuideKey, anchor: HTMLElement];
+  guide: [key: GuideKey, anchor: HTMLElement, immediate?: boolean];
 }>();
 
 const focusedPeriod = ref<TodoPeriod | null>(null);
@@ -131,7 +131,7 @@ function handleMenuSelect(key: string): void {
   if (!menu.value) return;
   const { period, id, anchor } = menu.value;
   closeMenu();
-  if (key === "guide" && anchor) emit("guide", "todos", anchor);
+  if (key === "guide" && anchor) emit("guide", "todos", anchor, true);
   if (!id) return;
   if (key === "delete") emit("remove", period, id, anchor);
 }

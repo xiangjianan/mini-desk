@@ -140,7 +140,7 @@ describe("QuickButtons", () => {
     await wrapper.get(".quick-buttons").trigger("contextmenu");
     await wrapper.get(".dropdown-option").trigger("click");
 
-    expect(wrapper.emitted("guide")?.[0]?.[0]).toBe("quickButtons");
+    expect(wrapper.emitted("guide")?.[0]).toEqual(["quickButtons", expect.any(HTMLElement), true]);
     wrapper.unmount();
   });
 });
