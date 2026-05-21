@@ -23,11 +23,12 @@ describe("Naive UI component usage", () => {
     }
   });
 
-  it("uses Naive message feedback instead of a custom toast element", () => {
+  it("uses companion bubble feedback instead of a custom toast element", () => {
     const app = read("src/App.vue");
     const styles = read("src/styles.css");
 
-    expect(app).toContain("createDiscreteApi");
+    expect(app).toContain("showBubble");
+    expect(app).not.toContain("createDiscreteApi");
     expect(app).not.toContain('class="toast"');
     expect(app).not.toContain('const toast = ref("")');
     expect(styles).not.toContain(".toast");
@@ -37,7 +38,6 @@ describe("Naive UI component usage", () => {
     const app = read("src/App.vue");
     const preview = read("src/components/ImagePreview.vue");
 
-    expect(app).toContain('createDiscreteApi(["message"])');
     expect(app).toContain("NModal");
     expect(app).toContain('class="about-modal"');
     expect(app).not.toContain("window.alert");
@@ -252,6 +252,23 @@ describe("Naive UI component usage", () => {
     expect(styles).toContain(".todo-drag-handle::before");
   });
 
+  it("only reveals unstarred reminder star buttons on hover while starred buttons stay visible", () => {
+    const todo = read("src/components/TodoPanel.vue");
+    const styles = read("src/styles.css");
+    const starRule = styles.match(/\.todo-star-button\s*\{(?<body>[^}]*)\}/)?.groups?.body ?? "";
+
+    expect(todo).toContain(":class=\"{ 'is-starred': entry.todo.starred }\"");
+    expect(starRule).toContain("opacity: 0");
+    expect(starRule).toContain("pointer-events: none");
+    expect(styles).toContain(".todo-item:hover .todo-star-button");
+    expect(styles).not.toContain(".todo-item:focus-within .todo-star-button");
+    expect(styles).not.toContain(".today-focus-item:focus-within .todo-star-button");
+    expect(styles).toContain(".todo-star-button:focus-visible");
+    expect(styles).toContain(".todo-star-button.is-starred");
+    expect(styles).toMatch(/\.todo-star-button\.is-starred\s*\{[^}]*opacity: 1/s);
+    expect(styles).toMatch(/\.todo-star-button\.is-starred\s*\{[^}]*pointer-events: auto/s);
+  });
+
   it("highlights the reminder context-menu item without adding another border", () => {
     const styles = read("src/styles.css");
     const selectedRule = styles.match(/\.todo-item\.is-menu-selected\s*\{(?<body>[^}]*)\}/)?.groups?.body ?? "";
@@ -333,7 +350,7 @@ describe("Naive UI component usage", () => {
     expect(defaults).toContain("GUIDE_MENU_OPTION");
     for (const source of [image, quick, todo, text]) {
       expect(source).toContain("GUIDE_MENU_OPTION");
-      expect(source).toContain("使用指南");
+      expect(source).toContain("Tips");
     }
     expect(image).toContain("粘贴图片");
     expect(app).toContain("@guide=\"(anchor, immediate) => handleGuideClick('note', anchor, immediate)\"");
@@ -378,6 +395,8 @@ describe("Naive UI component usage", () => {
     expect(app).not.toContain('positiveText: "知道了"');
     expect(styles).toMatch(/\.about-modal\s*\{[^}]*background: var\(--panel\)/s);
     expect(styles).toMatch(/\.about-confirm-button\s*\{[^}]*color: var\(--text\)/s);
+    expect(styles).toMatch(/\.about-confirm-button\s*\{[^}]*border: 0 !important/s);
+    expect(styles).toMatch(/\.about-confirm-button \.n-button__border,[\s\S]*?\.about-confirm-button \.n-button__state-border\s*\{[^}]*border-width: 1px/s);
     expect(messages).not.toContain("GitHub: https://github.com/xiangjianan/todolist");
   });
 
@@ -413,8 +432,13 @@ describe("Naive UI component usage", () => {
     expect(app).toContain('class="mobile-menu-option"');
     expect(app).toContain('data-mobile-active');
     expect(app).toContain('{ key: "todos", label: "待办" }');
+    expect(app).toContain("建议到桌面端访问，以获得更好的体验");
+    expect(app.indexOf('class="mobile-nav"')).toBeLessThan(app.indexOf('class="mobile-banner"'));
+    expect(app.indexOf('class="mobile-banner"')).toBeLessThan(app.indexOf("<ImagePanel"));
     expect(styles).toMatch(/\.mobile-nav\s*\{[^}]*display: flex/s);
     expect(styles).toMatch(/\.mobile-nav\s*\{[^}]*padding: 6px 154px 6px 6px/s);
+    expect(styles).toMatch(/grid-template-rows: auto auto minmax\(0, 1fr\)/);
+    expect(styles).toMatch(/\.mobile-banner\s*\{[^}]*display: block/s);
     expect(styles).toMatch(/\.mobile-drawer-menu\s*\{[^}]*position: absolute/s);
     expect(styles).toMatch(/\.board\[data-mobile-active="todos"\] > \.todo-panel/s);
     expect(styles).toMatch(/\.board\[data-mobile-active="spaces"\] > \.space-panel/s);

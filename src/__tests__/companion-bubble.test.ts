@@ -163,6 +163,61 @@ describe("CompanionBubble", () => {
     wrapper.unmount();
   });
 
+  it("uses semantic labels for confirmation bubbles", async () => {
+    vi.useFakeTimers();
+    const wrapper = mount(CompanionBubble, {
+      attachTo: document.body,
+      props: {
+        visible: true,
+        message: "确认删除图片",
+        confirm: true,
+        confirmText: "删除",
+        cancelText: "取消",
+      },
+      global: {
+        stubs: {
+          NButton: buttonStub,
+          NPopover: popoverStub,
+        },
+      },
+    });
+
+    await vi.advanceTimersByTimeAsync(200);
+    await wrapper.vm.$nextTick();
+
+    expect(document.body.querySelector('[data-testid="companion-yes"]')?.textContent).toBe("删除");
+    expect(document.body.querySelector('[data-testid="companion-no"]')?.textContent).toBe("取消");
+
+    wrapper.unmount();
+  });
+
+  it("renders a single action button for undo bubbles", async () => {
+    vi.useFakeTimers();
+    const wrapper = mount(CompanionBubble, {
+      attachTo: document.body,
+      props: {
+        visible: true,
+        message: "提醒已删除",
+        actionText: "撤销",
+      },
+      global: {
+        stubs: {
+          NButton: buttonStub,
+          NPopover: popoverStub,
+        },
+      },
+    });
+
+    await vi.advanceTimersByTimeAsync(200);
+    await wrapper.vm.$nextTick();
+
+    expect(document.body.querySelector('[data-testid="companion-action"]')?.textContent).toBe("撤销");
+    expect(document.body.querySelector('[data-testid="companion-yes"]')).toBeNull();
+    expect(document.body.querySelector('[data-testid="companion-no"]')).toBeNull();
+
+    wrapper.unmount();
+  });
+
   it("switches the companion GIF for dark theme", async () => {
     const wrapper = mount(CompanionBubble, {
       props: {

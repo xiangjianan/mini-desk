@@ -165,6 +165,45 @@ describe("TodoPanel", () => {
     wrapper.unmount();
   });
 
+  it("opens the reminder context menu from today's focus items", async () => {
+    const wrapper = mount(TodoPanel, {
+      props: {
+        todos: {
+          morning: [{ id: "a", text: "重点事项", done: false, starred: true }],
+          noon: [],
+          evening: [],
+        },
+        titles: DEFAULT_TITLES,
+      },
+      global: {
+        stubs: {
+          Button: true,
+          Checkbox: checkboxStub,
+          Dropdown: dropdownStub,
+          NCheckbox: checkboxStub,
+          NDropdown: dropdownStub,
+          NTooltip: tooltipStub,
+        },
+      },
+    });
+
+    await wrapper.get(".today-focus-item").trigger("contextmenu");
+
+    expect(wrapper.get(".today-focus-item").classes()).toContain("is-menu-selected");
+    expect(wrapper.findAll(".dropdown-option").map((option) => option.text())).toEqual([
+      "取消重点",
+      "置顶",
+      "置底",
+      "删除",
+      "Tips",
+    ]);
+
+    await wrapper.findAll(".dropdown-option").find((option) => option.text() === "删除")?.trigger("click");
+
+    expect(wrapper.emitted("remove")?.[0]).toEqual(["morning", "a", expect.any(HTMLElement)]);
+    wrapper.unmount();
+  });
+
   it("places the reminder star action at the far right of the row", () => {
     const wrapper = mount(TodoPanel, {
       props: {
@@ -595,7 +634,7 @@ describe("TodoPanel", () => {
       "置顶",
       "置底",
       "删除",
-      "使用指南",
+      "Tips",
     ]);
 
     await wrapper.findAll(".dropdown-option").find((option) => option.text() === "置顶")?.trigger("click");
@@ -757,7 +796,7 @@ describe("TodoPanel", () => {
       "置顶",
       "置底",
       "删除",
-      "使用指南",
+      "Tips",
     ]);
 
     input.setSelectionRange(3, 3);

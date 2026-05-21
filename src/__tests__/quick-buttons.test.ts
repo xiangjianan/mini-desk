@@ -143,4 +143,14 @@ describe("QuickButtons", () => {
     expect(wrapper.emitted("guide")?.[0]).toEqual(["quickButtons", expect.any(HTMLElement), true]);
     wrapper.unmount();
   });
+
+  it("opens the usage guide from the quick-link panel context menu", async () => {
+    const wrapper = mountQuickButtons();
+
+    await wrapper.get(".panel-header").trigger("contextmenu");
+    await wrapper.get(".dropdown-option").trigger("click");
+
+    expect(wrapper.emitted("guide")?.[0]).toEqual(["quickButtons", expect.any(HTMLElement), true]);
+    wrapper.unmount();
+  });
 });

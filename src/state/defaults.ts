@@ -20,7 +20,7 @@ export const DEFAULT_TITLES: Record<string, string> = {
 };
 
 export const EMPTY_HINTS = {
-  images: "截图放这里，可预览和整理 (＾▽＾)",
+  images: "Ctrl+V 粘贴截图，可预览整理 (＾▽＾)",
   quickButtons: "常用内容做成按钮，点一下就用 (｡•̀ᴗ-)✧",
   todos: {
     morning: "双击新增提醒 (๑•̀ㅂ•́)و✧",
@@ -29,13 +29,13 @@ export const EMPTY_HINTS = {
   },
 };
 
-export const GUIDE_MENU_OPTION = { label: "使用指南", key: "guide" } as const;
+export const GUIDE_MENU_OPTION = { label: "Tips", key: "guide" } as const;
 
 export const AREA_HELP = {
   images: "截图区：粘贴、预览和整理图片。",
   note: "便签区：先收住临时想法。",
   quickButtons: "快捷区：常用内容一键打开或复制。",
-  todos: "提醒区：早中晚拆分任务。",
+  todos: "提醒区：标题可双击改名。",
   workspace: "工作空间：拆步骤，稳稳推进。",
   storage: "扩展区：放长期保留的内容。",
 };

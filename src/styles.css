@@ -689,12 +689,28 @@ h3 {
   color: var(--muted);
   background: transparent;
   line-height: 1;
+  opacity: 0;
+  pointer-events: none;
+  transition: opacity 0.18s ease, color 0.18s ease;
 }
 
-.todo-star-button:hover,
+.todo-item:hover .todo-star-button,
+.today-focus-item:hover .todo-star-button,
+.todo-star-button:focus-visible {
+  opacity: 1;
+  pointer-events: auto;
+}
+
+.todo-star-button:hover {
+  color: var(--text);
+  background: transparent;
+}
+
 .todo-star-button.is-starred {
   color: var(--text);
   background: transparent;
+  opacity: 1;
+  pointer-events: auto;
 }
 
 .todo-item .n-checkbox {
@@ -903,15 +919,23 @@ h3 {
 }
 
 .about-confirm-button {
+  --n-border: 1px solid var(--line-control) !important;
+  --n-border-hover: 1px solid var(--line-focus) !important;
+  --n-border-pressed: 1px solid var(--line-focus) !important;
+  --n-border-focus: 1px solid var(--line-focus) !important;
   color: var(--text);
   background: var(--button);
-  border: 1px solid var(--line-control);
+  border: 0 !important;
 }
 
 .about-confirm-button:hover {
   color: var(--text);
   background: var(--button-hover);
-  border-color: var(--line-focus);
+}
+
+.about-confirm-button .n-button__border,
+.about-confirm-button .n-button__state-border {
+  border-width: 1px !important;
 }
 
 .settings-btn {
@@ -1112,7 +1136,7 @@ body:has(.image-preview) .n-modal-body-wrapper {
   .board {
     display: grid;
     grid-template-columns: 1fr;
-    grid-template-rows: auto minmax(0, 1fr);
+    grid-template-rows: auto auto minmax(0, 1fr);
     width: 100vw;
     height: 100dvh;
     min-height: 0;
@@ -1193,7 +1217,7 @@ body:has(.image-preview) .n-modal-body-wrapper {
   }
 
   .mobile-banner {
-    display: none;
+    display: block;
     padding: 8px 12px;
     font-size: 13px;
     line-height: 1.45;

@@ -33,7 +33,7 @@ const form = reactive<{ title: string; value: string; type: QuickButtonType }>({
 });
 const menu = ref<{ x: number; y: number; id?: string; anchor?: HTMLElement } | null>(null);
 const draggingId = ref<string | null>(null);
-const guideMenuOption: DropdownOption = { ...GUIDE_MENU_OPTION, label: GUIDE_MENU_OPTION.label || "使用指南" };
+const guideMenuOption: DropdownOption = { ...GUIDE_MENU_OPTION, label: GUIDE_MENU_OPTION.label || "Tips" };
 
 const visibleButtons = computed(() =>
   props.buttons.filter((button) => props.showHidden || !button.hidden),
@@ -135,7 +135,7 @@ function handleToggleShowHidden(event: MouseEvent): void {
 </script>
 
 <template>
-  <section class="split-block quick-block" @click="handleAreaClick">
+  <section class="split-block quick-block" @click="handleAreaClick" @contextmenu="openAreaMenu">
     <div class="panel-header">
       <h2 id="quick-title">
         <EditableTitle id="quick-title" :value="title" @update="(id, value) => emit('titleUpdate', id, value)" />

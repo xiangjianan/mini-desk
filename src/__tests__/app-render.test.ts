@@ -2,7 +2,10 @@ import { mount } from "@vue/test-utils";
 import { beforeEach, describe, expect, it, vi } from "vitest";
 import App from "../App.vue";
 import ImagePanel from "../components/ImagePanel.vue";
+import ImagePreview from "../components/ImagePreview.vue";
+import QuickButtons from "../components/QuickButtons.vue";
 import SettingsMenu from "../components/SettingsMenu.vue";
+import SpacePanel from "../components/SpacePanel.vue";
 import TodoPanel from "../components/TodoPanel.vue";
 import { STORAGE_KEY } from "../state/defaults";
 
@@ -203,7 +206,7 @@ describe("App shell", () => {
       await wrapper.vm.$nextTick();
 
       expect(wrapper.find(".n-popover").exists()).toBe(true);
-      expect(wrapper.find('[data-testid="companion-confirm"]').text()).toMatch(/保存|收好|记下|归档|备份|存好|存档/);
+      expect(wrapper.find('[data-testid="companion-confirm"]').text()).toMatch(/保存|收好|记下|归档|备份|存好|存档|更新|继续/);
     } finally {
       wrapper.unmount();
       vi.useRealTimers();
@@ -290,6 +293,7 @@ describe("App shell", () => {
 
   it("uses the companion bubble instead of window.confirm for clearing completed todos", async () => {
     vi.useFakeTimers();
+    vi.spyOn(Math, "random").mockReturnValue(0);
     localStorage.setItem(
       STORAGE_KEY,
       JSON.stringify({
@@ -307,18 +311,261 @@ describe("App shell", () => {
       expect(confirmSpy).not.toHaveBeenCalled();
       expect(wrapper.find(".focus-companion.is-visible img").exists()).toBe(true);
       expect(wrapper.find('[data-testid="companion-confirm"]').exists()).toBe(false);
+      expect(wrapper.find('[data-testid="companion-yes"]').exists()).toBe(false);
+      expect(wrapper.findAll("input.todo-input").some((input) => (input.element as HTMLInputElement).value === "已完成事项")).toBe(false);
 
       await vi.advanceTimersByTimeAsync(200);
       await wrapper.vm.$nextTick();
 
       expect(wrapper.find('[data-testid="companion-confirm"]').exists()).toBe(true);
-      expect(wrapper.find('[data-testid="companion-confirm"]').text()).toMatch(/已完成事项|完成事项/);
+      expect(wrapper.find('[data-testid="companion-confirm"]').text()).toMatch(/已清理完成项/);
+      expect(wrapper.find('[data-testid="companion-action"]').text()).toBe("撤销");
 
-      await wrapper.get('[data-testid="companion-yes"]').trigger("click");
+      await wrapper.get('[data-testid="companion-action"]').trigger("click");
 
-      expect(wrapper.findAll("input.todo-input").some((input) => (input.element as HTMLInputElement).value === "已完成事项")).toBe(false);
+      expect(wrapper.findAll("input.todo-input").some((input) => (input.element as HTMLInputElement).value === "已完成事项")).toBe(true);
       expect(wrapper.find(".focus-companion.is-visible").exists()).toBe(false);
       expect(document.activeElement).toBe(document.body);
+    } finally {
+      wrapper.unmount();
+      vi.useRealTimers();
+    }
+  });
+
+  it("confirms todo deletion with semantic labels and restores it from undo", async () => {
+    vi.useFakeTimers();
+    vi.spyOn(Math, "random").mockReturnValue(0);
+    localStorage.setItem(
+      STORAGE_KEY,
+      JSON.stringify({
+        todos: {
+          morning: [{ id: "todo-1", text: "待删除提醒", done: false }],
+        },
+      }),
+    );
+    const wrapper = mountApp();
+
+    try {
+      const todoSection = wrapper.get('.todo-section[data-period="morning"]').element as HTMLElement;
+      wrapper.getComponent(TodoPanel).vm.$emit("remove", "morning", "todo-1", todoSection);
+      await wrapper.vm.$nextTick();
+      await vi.advanceTimersByTimeAsync(200);
+      await wrapper.vm.$nextTick();
+
+      expect(wrapper.get('[data-testid="companion-yes"]').text()).toBe("删除");
+      expect(wrapper.get('[data-testid="companion-no"]').text()).toBe("取消");
+
+      await wrapper.get('[data-testid="companion-yes"]').trigger("click");
+      await wrapper.vm.$nextTick();
+      await vi.advanceTimersByTimeAsync(200);
+      await wrapper.vm.$nextTick();
+
+      expect(wrapper.findAll("input.todo-input").some((input) => (input.element as HTMLInputElement).value === "待删除提醒")).toBe(false);
+      expect(wrapper.find('[data-testid="companion-confirm"]').text()).toMatch(/提醒已删除/);
+      expect(wrapper.get('[data-testid="companion-action"]').text()).toBe("撤销");
+
+      await wrapper.get('[data-testid="companion-action"]').trigger("click");
+      await wrapper.vm.$nextTick();
+
+      expect(wrapper.findAll("input.todo-input").some((input) => (input.element as HTMLInputElement).value === "待删除提醒")).toBe(true);
+    } finally {
+      wrapper.unmount();
+      vi.useRealTimers();
+    }
+  });
+
+  it("confirms image deletion with semantic labels and restores it from undo", async () => {
+    vi.useFakeTimers();
+    vi.spyOn(Math, "random").mockReturnValue(0);
+    localStorage.setItem(
+      STORAGE_KEY,
+      JSON.stringify({
+        images: [{ id: "img-1", src: "data:image/png;base64,iVBORw0KGgo=", createdAt: 1 }],
+      }),
+    );
+    const wrapper = mountApp();
+
+    try {
+      const imagePanel = wrapper.getComponent(ImagePanel);
+      imagePanel.vm.$emit("delete", "img-1", imagePanel.element as HTMLElement);
+      await wrapper.vm.$nextTick();
+      await vi.advanceTimersByTimeAsync(200);
+      await wrapper.vm.$nextTick();
+
+      expect(wrapper.get('[data-testid="companion-yes"]').text()).toBe("删除");
+      expect(wrapper.get('[data-testid="companion-no"]').text()).toBe("取消");
+
+      await wrapper.get('[data-testid="companion-yes"]').trigger("click");
+      await Promise.resolve();
+      await wrapper.vm.$nextTick();
+      await vi.advanceTimersByTimeAsync(200);
+      await wrapper.vm.$nextTick();
+
+      expect((wrapper.getComponent(ImagePanel).props("images") as Array<{ id: string }>)).toHaveLength(0);
+      expect(wrapper.find('[data-testid="companion-confirm"]').text()).toMatch(/图片已删除/);
+      expect(wrapper.get('[data-testid="companion-action"]').text()).toBe("撤销");
+
+      await wrapper.get('[data-testid="companion-action"]').trigger("click");
+      await wrapper.vm.$nextTick();
+
+      const images = wrapper.getComponent(ImagePanel).props("images") as Array<{ id: string }>;
+      expect(images.map((image) => image.id)).toEqual(["img-1"]);
+    } finally {
+      wrapper.unmount();
+      vi.useRealTimers();
+    }
+  });
+
+  it("anchors image deletion undo feedback to the screenshot list after deleting from preview", async () => {
+    vi.useFakeTimers();
+    vi.spyOn(Math, "random").mockReturnValue(0);
+    localStorage.setItem(
+      STORAGE_KEY,
+      JSON.stringify({
+        images: [{ id: "img-1", src: "data:image/png;base64,iVBORw0KGgo=", createdAt: 1 }],
+      }),
+    );
+    const wrapper = mountApp();
+
+    try {
+      const imagePanel = wrapper.getComponent(ImagePanel);
+      vi.spyOn(imagePanel.element, "getBoundingClientRect").mockReturnValue({
+        x: 0,
+        y: 0,
+        width: 128,
+        height: 720,
+        top: 0,
+        left: 0,
+        right: 128,
+        bottom: 720,
+        toJSON: () => ({}),
+      });
+
+      imagePanel.vm.$emit("preview", "img-1");
+      await wrapper.vm.$nextTick();
+
+      const preview = wrapper.get(".image-preview");
+      vi.spyOn(preview.element, "getBoundingClientRect").mockReturnValue({
+        x: 128,
+        y: 0,
+        width: 896,
+        height: 720,
+        top: 0,
+        left: 128,
+        right: 1024,
+        bottom: 720,
+        toJSON: () => ({}),
+      });
+      wrapper.getComponent(ImagePreview).vm.$emit("delete", "img-1", preview.element as HTMLElement);
+      await wrapper.vm.$nextTick();
+      await vi.advanceTimersByTimeAsync(200);
+      await wrapper.vm.$nextTick();
+
+      await wrapper.get('[data-testid="companion-yes"]').trigger("click");
+      await Promise.resolve();
+      await wrapper.vm.$nextTick();
+
+      const style = wrapper.get('[data-testid="companion-bubble"]').attributes("style");
+      expect(style).toContain("100vw - 128px");
+      expect(style).not.toContain("100vw - 1024px");
+    } finally {
+      wrapper.unmount();
+      vi.useRealTimers();
+    }
+  });
+
+  it("confirms quick button deletion with semantic labels and restores it from undo", async () => {
+    vi.useFakeTimers();
+    vi.spyOn(Math, "random").mockReturnValue(0);
+    localStorage.setItem(
+      STORAGE_KEY,
+      JSON.stringify({
+        quickButtons: [{ id: "quick-1", title: "片段", value: "复制内容", type: "text" }],
+      }),
+    );
+    const wrapper = mountApp();
+
+    try {
+      const quickButtons = wrapper.getComponent(QuickButtons);
+      quickButtons.vm.$emit("delete", "quick-1", quickButtons.element as HTMLElement);
+      await wrapper.vm.$nextTick();
+      await vi.advanceTimersByTimeAsync(200);
+      await wrapper.vm.$nextTick();
+
+      expect(wrapper.get('[data-testid="companion-yes"]').text()).toBe("删除");
+      expect(wrapper.get('[data-testid="companion-no"]').text()).toBe("取消");
+
+      await wrapper.get('[data-testid="companion-yes"]').trigger("click");
+      await wrapper.vm.$nextTick();
+      await vi.advanceTimersByTimeAsync(200);
+      await wrapper.vm.$nextTick();
+
+      expect((wrapper.getComponent(QuickButtons).props("buttons") as Array<{ id: string }>)).toHaveLength(0);
+      expect(wrapper.find('[data-testid="companion-confirm"]').text()).toMatch(/快捷按钮已删除/);
+      expect(wrapper.get('[data-testid="companion-action"]').text()).toBe("撤销");
+
+      await wrapper.get('[data-testid="companion-action"]').trigger("click");
+      await wrapper.vm.$nextTick();
+
+      const buttons = wrapper.getComponent(QuickButtons).props("buttons") as Array<{ id: string }>;
+      expect(buttons.map((button) => button.id)).toEqual(["quick-1"]);
+    } finally {
+      wrapper.unmount();
+      vi.useRealTimers();
+    }
+  });
+
+  it("confirms workspace deletion and restores the space from undo", async () => {
+    vi.useFakeTimers();
+    vi.spyOn(Math, "random").mockReturnValue(0);
+    localStorage.setItem(
+      STORAGE_KEY,
+      JSON.stringify({
+        spaces: [
+          { id: "workspace", title: "工作空间", lines: [] },
+          { id: "project", title: "项目", lines: [{ text: "项目资料", indent: 0 }] },
+        ],
+        activeSpaceId: "project",
+      }),
+    );
+    const wrapper = mountApp();
+
+    try {
+      const spacePanel = wrapper.getComponent(SpacePanel);
+      vi.spyOn(spacePanel.element, "getBoundingClientRect").mockReturnValue({
+        x: 720,
+        y: 0,
+        width: 360,
+        height: 720,
+        top: 0,
+        left: 720,
+        right: 1080,
+        bottom: 720,
+        toJSON: () => ({}),
+      });
+
+      spacePanel.vm.$emit("delete", "project");
+      await wrapper.vm.$nextTick();
+      await vi.advanceTimersByTimeAsync(200);
+      await wrapper.vm.$nextTick();
+
+      expect(wrapper.get('[data-testid="companion-yes"]').text()).toBe("删除空间");
+      expect(wrapper.get('[data-testid="companion-no"]').text()).toBe("取消");
+
+      await wrapper.get('[data-testid="companion-yes"]').trigger("click");
+      await wrapper.vm.$nextTick();
+      await vi.advanceTimersByTimeAsync(200);
+      await wrapper.vm.$nextTick();
+
+      expect(wrapper.findAll(".space-tab").map((tab) => tab.text())).toEqual(["工作空间"]);
+      expect(wrapper.find('[data-testid="companion-confirm"]').text()).toMatch(/空间已删除/);
+      expect(wrapper.get('[data-testid="companion-action"]').text()).toBe("撤销");
+
+      await wrapper.get('[data-testid="companion-action"]').trigger("click");
+      await wrapper.vm.$nextTick();
+
+      expect(wrapper.findAll(".space-tab").map((tab) => tab.text())).toEqual(["工作空间", "项目"]);
+      expect((wrapper.findAll("textarea")[1].element as HTMLTextAreaElement).value).toContain("项目资料");
     } finally {
       wrapper.unmount();
       vi.useRealTimers();
@@ -339,7 +586,7 @@ describe("App shell", () => {
       await wrapper.vm.$nextTick();
 
       expect(wrapper.find('[data-testid="companion-confirm"]').exists()).toBe(true);
-      expect(wrapper.find('[data-testid="companion-confirm"]').text()).toMatch(/没有|暂无|不用清理/);
+      expect(wrapper.find('[data-testid="companion-confirm"]').text()).toMatch(/没有|暂无|不用清理|无需清理|为空/);
       expect(wrapper.find('[data-testid="companion-yes"]').exists()).toBe(false);
     } finally {
       wrapper.unmount();
@@ -597,7 +844,7 @@ describe("App shell", () => {
 
       expect(getType).toHaveBeenCalledWith("image/png");
       expect(wrapper.find(".image-card").exists()).toBe(true);
-      expect(wrapper.find('[data-testid="companion-confirm"]').text()).toMatch(/图片|截图|列表|添加|收进/);
+      expect(wrapper.find('[data-testid="companion-confirm"]').text()).toMatch(/图片|截图|列表|添加|收进|保存|这张图/);
     } finally {
       wrapper.unmount();
       vi.useRealTimers();
@@ -657,7 +904,7 @@ describe("App shell", () => {
       await vi.advanceTimersByTimeAsync(200);
       await wrapper.vm.$nextTick();
 
-      expect(wrapper.find('[data-testid="companion-confirm"]').text()).toMatch(/导出|备份/);
+      expect(wrapper.find('[data-testid="companion-confirm"]').text()).toMatch(/导出|备份|文件|准备/);
 
       await vi.advanceTimersByTimeAsync(3000);
       settings.vm.$emit("import", settings.element as HTMLElement);
@@ -682,9 +929,190 @@ describe("App shell", () => {
       await vi.advanceTimersByTimeAsync(200);
       await wrapper.vm.$nextTick();
 
-      expect(wrapper.find('[data-testid="companion-confirm"]').text()).toMatch(/导入|同步|生效/);
+      expect(wrapper.find('[data-testid="companion-confirm"]').text()).toMatch(/导入|同步|生效|就位|更新/);
       const workspaceTextarea = wrapper.findAll("textarea")[1].element as HTMLTextAreaElement;
       expect(workspaceTextarea.value).toContain("导入内容");
+    } finally {
+      wrapper.unmount();
+      vi.useRealTimers();
+    }
+  });
+
+  it("shows a companion bubble for invalid JSON imports", async () => {
+    vi.useFakeTimers();
+    vi.spyOn(Math, "random").mockReturnValue(0);
+    const wrapper = mountApp();
+
+    try {
+      const settings = wrapper.getComponent(SettingsMenu);
+      settings.vm.$emit("import", settings.element as HTMLElement);
+      const input = wrapper.get('input[type="file"]').element as HTMLInputElement;
+      const file = new File(["{"], "broken.json", { type: "application/json" });
+      Object.defineProperty(input, "files", { value: [file], configurable: true });
+
+      await wrapper.get('input[type="file"]').trigger("change");
+      await Promise.resolve();
+      await wrapper.vm.$nextTick();
+      await vi.advanceTimersByTimeAsync(200);
+      await wrapper.vm.$nextTick();
+
+      expect(wrapper.find('[data-testid="companion-confirm"]').text()).toMatch(/文件格式不正确|检查文件/);
+    } finally {
+      wrapper.unmount();
+      vi.useRealTimers();
+    }
+  });
+
+  it("shows a companion bubble for invalid board backup data", async () => {
+    vi.useFakeTimers();
+    vi.spyOn(Math, "random").mockReturnValue(0);
+    const wrapper = mountApp();
+
+    try {
+      const settings = wrapper.getComponent(SettingsMenu);
+      settings.vm.$emit("import", settings.element as HTMLElement);
+      const input = wrapper.get('input[type="file"]').element as HTMLInputElement;
+      const file = new File([JSON.stringify({ unknown: true })], "wrong.json", { type: "application/json" });
+      Object.defineProperty(input, "files", { value: [file], configurable: true });
+
+      await wrapper.get('input[type="file"]').trigger("change");
+      await Promise.resolve();
+      await wrapper.vm.$nextTick();
+      await vi.advanceTimersByTimeAsync(200);
+      await wrapper.vm.$nextTick();
+
+      expect(wrapper.find('[data-testid="companion-confirm"]').text()).toMatch(/数据内容不适用|备份/);
+      expect(wrapper.find('[data-testid="companion-yes"]').exists()).toBe(false);
+    } finally {
+      wrapper.unmount();
+      vi.useRealTimers();
+    }
+  });
+
+  it("shows a companion bubble when clipboard image permission is denied", async () => {
+    vi.useFakeTimers();
+    vi.spyOn(Math, "random").mockReturnValue(0);
+    Object.assign(navigator, {
+      clipboard: {
+        read: vi.fn().mockRejectedValue(new DOMException("denied", "NotAllowedError")),
+      },
+    });
+    const wrapper = mountApp();
+
+    try {
+      wrapper.getComponent(ImagePanel).vm.$emit("paste");
+      await Promise.resolve();
+      await wrapper.vm.$nextTick();
+      await vi.advanceTimersByTimeAsync(200);
+      await wrapper.vm.$nextTick();
+
+      expect(wrapper.find('[data-testid="companion-confirm"]').text()).toMatch(/剪贴板权限受限|检查剪贴板权限/);
+    } finally {
+      wrapper.unmount();
+      vi.useRealTimers();
+    }
+  });
+
+  it("shows a companion bubble when image reading fails", async () => {
+    vi.useFakeTimers();
+    vi.spyOn(Math, "random").mockReturnValue(0);
+    const originalFileReader = window.FileReader;
+    class FailingFileReader extends EventTarget {
+      result: string | ArrayBuffer | null = null;
+      error = new DOMException("read failed", "NotReadableError");
+      onload: (() => void) | null = null;
+      onerror: (() => void) | null = null;
+      readAsDataURL(): void {
+        this.onerror?.();
+      }
+    }
+    vi.stubGlobal("FileReader", FailingFileReader);
+    const imageBlob = new Blob(["img"], { type: "image/png" });
+    Object.assign(navigator, {
+      clipboard: {
+        read: vi.fn().mockResolvedValue([{ types: ["image/png"], getType: vi.fn().mockResolvedValue(imageBlob) }]),
+      },
+    });
+    const wrapper = mountApp();
+
+    try {
+      wrapper.getComponent(ImagePanel).vm.$emit("paste");
+      await Promise.resolve();
+      await Promise.resolve();
+      await wrapper.vm.$nextTick();
+      await vi.advanceTimersByTimeAsync(200);
+      await wrapper.vm.$nextTick();
+
+      expect(wrapper.find('[data-testid="companion-confirm"]').text()).toMatch(/图片读取失败|重新粘贴/);
+      expect(wrapper.find(".image-card").exists()).toBe(false);
+    } finally {
+      vi.stubGlobal("FileReader", originalFileReader);
+      wrapper.unmount();
+      vi.useRealTimers();
+    }
+  });
+
+  it("shows a companion bubble when image storage fails", async () => {
+    vi.useFakeTimers();
+    vi.spyOn(Math, "random").mockReturnValue(0);
+    const originalIndexedDB = window.indexedDB;
+    vi.stubGlobal("indexedDB", {
+      open: vi.fn(() => {
+        throw new Error("store failed");
+      }),
+    });
+    const imageBlob = new Blob(["img"], { type: "image/png" });
+    Object.assign(navigator, {
+      clipboard: {
+        read: vi.fn().mockResolvedValue([{ types: ["image/png"], getType: vi.fn().mockResolvedValue(imageBlob) }]),
+      },
+    });
+    const wrapper = mountApp();
+
+    try {
+      wrapper.getComponent(ImagePanel).vm.$emit("paste");
+      await Promise.resolve();
+      await Promise.resolve();
+      await wrapper.vm.$nextTick();
+      await vi.advanceTimersByTimeAsync(200);
+      await Promise.resolve();
+      await wrapper.vm.$nextTick();
+      await vi.advanceTimersByTimeAsync(200);
+      await wrapper.vm.$nextTick();
+
+      expect(wrapper.find('[data-testid="companion-confirm"]').text()).toMatch(/图片保存失败|重试/);
+      expect(wrapper.find(".image-card").exists()).toBe(false);
+    } finally {
+      if (originalIndexedDB) {
+        vi.stubGlobal("indexedDB", originalIndexedDB);
+      } else {
+        Reflect.deleteProperty(window, "indexedDB");
+      }
+      wrapper.unmount();
+      vi.useRealTimers();
+    }
+  });
+
+  it("shows a companion bubble when link opening is blocked", async () => {
+    vi.useFakeTimers();
+    vi.spyOn(Math, "random").mockReturnValue(0);
+    localStorage.setItem(
+      STORAGE_KEY,
+      JSON.stringify({
+        quickButtons: [{ id: "link-1", title: "站点", value: "example.com", type: "link" }],
+      }),
+    );
+    vi.spyOn(window, "open").mockImplementation(() => null);
+    const wrapper = mountApp();
+
+    try {
+      await wrapper.get(".quick-button").trigger("click");
+      await Promise.resolve();
+      await wrapper.vm.$nextTick();
+      await vi.advanceTimersByTimeAsync(200);
+      await wrapper.vm.$nextTick();
+
+      expect(wrapper.find('[data-testid="companion-confirm"]').text()).toMatch(/链接打开失败|检查链接/);
     } finally {
       wrapper.unmount();
       vi.useRealTimers();
@@ -752,7 +1180,7 @@ describe("App shell", () => {
       await vi.advanceTimersByTimeAsync(200);
       await wrapper.vm.$nextTick();
 
-      expect(wrapper.find('[data-testid="companion-confirm"]').text()).toMatch(/已完成事项|完成事项/);
+      expect(wrapper.find('[data-testid="companion-confirm"]').text()).toMatch(/完成项|完成记录|完成列表|完成事项/);
     } finally {
       wrapper.unmount();
       vi.useRealTimers();
@@ -879,7 +1307,17 @@ describe("App shell", () => {
       await vi.advanceTimersByTimeAsync(200);
       await wrapper.vm.$nextTick();
 
-      expect(wrapper.find('[data-testid="companion-confirm"]').text()).toMatch(/截图区|图片|Ctrl\+V|方向键|右键|删除/);
+      expect(wrapper.find('[data-testid="companion-confirm"]').text()).toMatch(/截图区|图片|Ctrl\+V|方向键|右键|删除|预览|Esc/);
+
+      await vi.advanceTimersByTimeAsync(3900);
+      await wrapper.vm.$nextTick();
+
+      expect(wrapper.find('[data-testid="companion-confirm"]').exists()).toBe(true);
+
+      await vi.advanceTimersByTimeAsync(1000);
+      await wrapper.vm.$nextTick();
+
+      expect(wrapper.find('[data-testid="companion-confirm"]').exists()).toBe(false);
     } finally {
       wrapper.unmount();
       vi.useRealTimers();

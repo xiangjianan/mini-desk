@@ -1,7 +1,7 @@
 <script setup lang="ts">
 import { computed, nextTick, onMounted, onUnmounted, reactive, ref, watch } from "vue";
 import { LogoGithub, MoonOutline, SunnyOutline } from "@vicons/ionicons5";
-import { createDiscreteApi, darkTheme, NButton, NConfigProvider, NGlobalStyle, NIcon, NModal } from "naive-ui";
+import { darkTheme, NButton, NConfigProvider, NGlobalStyle, NIcon, NModal } from "naive-ui";
 import CompanionBubble from "./components/CompanionBubble.vue";
 import ImagePanel from "./components/ImagePanel.vue";
 import ImagePreview from "./components/ImagePreview.vue";
@@ -45,7 +45,13 @@ const bubbleMessage = ref("");
 const bubbleVisible = ref(false);
 const companionFocused = ref(false);
 const companionPosition = ref<{ right: string; bottom?: string; top?: string } | undefined>();
-const pendingConfirm = ref<{ onConfirm: () => void | Promise<void>; onCancel?: () => void } | null>(null);
+const pendingConfirm = ref<{
+  onConfirm: () => void | Promise<void>;
+  onCancel?: () => void;
+  confirmText: string;
+  cancelText: string;
+} | null>(null);
+const pendingAction = ref<{ actionText: string; onAction: () => void | Promise<void> } | null>(null);
 const importInput = ref<HTMLInputElement | null>(null);
 const importFeedbackAnchor = ref<HTMLElement | undefined>();
 const textSaveTimer = ref<number | undefined>();
@@ -59,7 +65,6 @@ const aboutVisible = ref(false);
 const aboutMessage = ref(getMessage("about"));
 const mobileActiveArea = ref<MobileArea>("todos");
 const mobileNavOpen = ref(false);
-const { message: naiveMessage } = createDiscreteApi(["message"]);
 
 type BubbleOptions = {
   hideCompanionAfter?: boolean;
@@ -78,57 +83,128 @@ const mobileAreas: Array<{ key: MobileArea; label: string }> = [
 
 const GUIDE_MESSAGES: Record<GuideKey, string[]> = {
   images: [
-    `${AREA_HELP.images} Ctrl+V 粘贴图片，点击缩略图预览，方向键切换。`,
-    "截图区支持粘贴、拖拽排序，右键可预览、复制、删除或查看指南。",
-    "预览图片时可滚轮缩放、拖动平移，右键可复制、删除或取消预览。",
+    "Ctrl+V 粘贴截图。",
+    "点击缩略图预览。",
+    "方向键可切换图片。",
+    "右键可复制或删除。",
+    "拖拽图片可排序。",
+    "预览时滚轮缩放。",
+    "拖动可平移预览。",
+    "Enter 可复制图片。",
+    "Delete 可删除图片。",
+    "Esc 可关闭预览。",
   ],
   note: [
-    `${AREA_HELP.note} 点一下开始编辑，Ctrl+S 可立即保存。`,
-    "便签区适合临时记录，右键可复制/粘贴，也能打开使用指南。",
-    "写下零散想法后不用急着整理，停顿片刻会自动保存。",
+    "点一下开始写便签。",
+    "Ctrl+S 立即保存。",
+    "停顿片刻会自动保存。",
+    "右键可复制文本。",
+    "右键可粘贴文本。",
+    "适合临时想法。",
+    "便签先收住灵感。",
+    "失焦后会保存。",
+    "可双击标题改名。",
+    "空白处也能编辑。",
   ],
   quickButtons: [
-    `${AREA_HELP.quickButtons} 链接会直接打开，文本会复制到剪贴板。`,
-    "快捷区可新增链接或复制文本，隐藏按钮可收起不常用入口。",
-    "编辑快捷内容时可以选择链接属性或复制文本属性，保存前会校验标题和内容。",
+    "链接会直接打开。",
+    "文本会复制到剪贴板。",
+    "加号可新增快捷项。",
+    "标题和内容都要填。",
+    "可设为链接属性。",
+    "可设为复制文本。",
+    "右键可编辑入口。",
+    "可隐藏低频入口。",
+    "拖拽可调整顺序。",
+    "展开可查看隐藏项。",
   ],
   todos: [
-    `${AREA_HELP.todos} 双击空白处新增，双击文字开始编辑。`,
-    "提醒事项可勾选完成，右键可复制/粘贴、删除、置顶或置底。",
-    "完成项可以统一清理；没有完成项时会给出提示，不会误删内容。",
+    "双击空白新增提醒。",
+    "双击标题可改名。",
+    "双击文字可编辑。",
+    "勾选即可完成。",
+    "星标会进入重点。",
+    "右键可复制粘贴。",
+    "右键可置顶置底。",
+    "完成项可一键清理。",
+    "清理后可撤销。",
+    "拖拽可调整顺序。",
   ],
   workspace: [
-    `${AREA_HELP.workspace} 点一下编辑，Tab 缩进，Shift+Tab 取消缩进。`,
-    "工作空间适合拆步骤，缩进行会显示短横线，空缩进行按 Enter 会退出缩进。",
-    "编辑时 Ctrl+S 可立即保存，右键可复制/粘贴并查看指南。",
+    "点一下开始编辑。",
+    "Tab 可增加缩进。",
+    "Shift+Tab 取消缩进。",
+    "Enter 会保留缩进。",
+    "空缩进行会退缩进。",
+    "Ctrl+S 立即保存。",
+    "右键可复制粘贴。",
+    "可双击标签改名。",
+    "适合拆步骤。",
+    "停顿片刻会保存。",
   ],
   storage: [
-    `${AREA_HELP.storage} 点一下编辑，Ctrl+S 保存，适合放长期内容。`,
-    "扩展区支持和工作空间一样的缩进、换行、复制与粘贴。",
-    "需要长期保留的资料可以放这里，自动保存会帮你收好。",
+    "适合长期资料。",
+    "点一下开始编辑。",
+    "Ctrl+S 立即保存。",
+    "Tab 可增加缩进。",
+    "Shift+Tab 取消缩进。",
+    "右键可复制粘贴。",
+    "Enter 会保留缩进。",
+    "停顿片刻会保存。",
+    "可双击标题改名。",
+    "资料会自动收好。",
   ],
   addQuick: [
-    `${CONTROL_HELP.addQuick} 可新增链接或复制文本，默认是链接属性。`,
-    "新增快捷内容时，标题和内容都要填写，链接与复制文本只能选一个。",
-    "快捷按钮保存后会出现在快捷区，常用入口可以更快触达。",
+    "可新增链接入口。",
+    "也可新增复制文本。",
+    "默认是链接属性。",
+    "标题和内容都要填。",
+    "链接会直接打开。",
+    "文本会复制使用。",
+    "保存后出现在快捷区。",
+    "常用入口更快触达。",
+    "可后续右键编辑。",
+    "可隐藏低频入口。",
   ],
   toggleHiddenQuick: [
-    `${CONTROL_HELP.toggleHiddenQuick} 再点一次可切回。`,
-    "隐藏按钮适合收纳低频入口，展开后可以继续编辑或使用。",
-    "想清理界面时，把不常用的快捷内容隐藏起来就好。",
+    "显示隐藏快捷项。",
+    "再点一次可收起。",
+    "适合收纳低频入口。",
+    "展开后仍可编辑。",
+    "展开后仍可使用。",
+    "隐藏不会删除内容。",
+    "界面会更清爽。",
+    "低频入口可先藏起。",
+    "隐藏项可随时找回。",
+    "收起后保留数据。",
   ],
   settings: [
-    `${CONTROL_HELP.settings} 可导入导出数据、查看关于和版本状态。`,
-    "设置里能备份看板数据，也能在版本更新时刷新静态缓存。",
-    "关于弹窗里有项目名和 GitHub 入口，版本信息也收在这里。",
+    "可导入导出数据。",
+    "导出可保留备份。",
+    "导入会先确认覆盖。",
+    "可打开建议入口。",
+    "关于里有项目信息。",
+    "版本状态在这里。",
+    "有更新会显示圆点。",
+    "可刷新静态缓存。",
+    "GitHub 入口在关于里。",
+    "设置收纳常用操作。",
   ],
   theme: [
-    `${CONTROL_HELP.theme} 点一下就换风格。`,
-    "主题按钮可在明暗色之间切换，页面会记住你的选择。",
-    "白天和夜间都可以切换到更舒服的显示状态。",
+    "点一下切换主题。",
+    "可切换明暗色。",
+    "页面会记住选择。",
+    "白天可用浅色。",
+    "夜间可用深色。",
+    "切换后立即生效。",
+    "主题会自动保存。",
+    "图标会跟着变化。",
+    "选择更舒服的显示。",
+    "随时可以切回来。",
   ],
 };
-const GUIDE_MESSAGE_DURATION_MS = 4000;
+const GUIDE_MESSAGE_DURATION_MS = 5000;
+const UNDO_BUBBLE_DURATION_MS = 5000;
 const GITHUB_REPO_NAME = "xiangjianan/todolist";
 const GITHUB_REPO_URL = "https://github.com/xiangjianan/todolist";
 const GITHUB_ISSUE_URL = `${GITHUB_REPO_URL}/issues/new`;
@@ -225,16 +301,34 @@ function deleteSpace(id: string): void {
     showBubbleText("至少保留一个空间");
     return;
   }
-  requestConfirmation("confirmDeleteSpace", undefined, () => {
+  const anchor = getSpacePanelAnchor();
+  requestConfirmation("confirmDeleteSpace", anchor, () => {
     const index = state.spaces.findIndex((space) => space.id === id);
     if (index < 0 || state.spaces.length <= 1) return;
+    const removed = {
+      ...state.spaces[index],
+      lines: state.spaces[index].lines.map((line) => ({ ...line })),
+    };
+    const previousActiveSpaceId = state.activeSpaceId;
     state.spaces.splice(index, 1);
     if (state.activeSpaceId === id) {
       state.activeSpaceId = state.spaces[Math.max(0, index - 1)]?.id ?? state.spaces[0].id;
     }
     syncLegacySpaceLines();
     persistNow();
-  });
+    showUndoBubble("undoDeleteSpace", anchor, () => {
+      if (state.spaces.some((space) => space.id === removed.id)) return;
+      state.spaces.splice(Math.min(index, state.spaces.length), 0, {
+        ...removed,
+        lines: removed.lines.map((line) => ({ ...line })),
+      });
+      if (previousActiveSpaceId === removed.id || !state.spaces.some((space) => space.id === state.activeSpaceId)) {
+        state.activeSpaceId = removed.id;
+      }
+      syncLegacySpaceLines();
+      persistNow();
+    });
+  }, undefined, { confirmText: "删除空间", cancelText: "取消" });
 }
 
 function reorderSpaces(dragId: string, targetId: string): void {
@@ -341,14 +435,26 @@ async function pasteImageFromClipboard(): Promise<void> {
     read?: () => Promise<ClipboardItem[]>;
   };
   if (!clipboard.read) {
-    showToast("clipboardPasteUnsupported");
+    showBubble("clipboardPasteUnsupported", undefined, { hideCompanionAfter: true });
     return;
   }
-  const items = await clipboard.read();
+  let items: ClipboardItem[];
+  try {
+    items = await clipboard.read();
+  } catch {
+    showBubble("clipboardPermissionDenied", undefined, { hideCompanionAfter: true });
+    return;
+  }
   for (const item of items) {
     const type = item.types.find((candidate) => candidate.startsWith("image/"));
     if (!type) continue;
-    const blob = await item.getType(type);
+    let blob: Blob;
+    try {
+      blob = await item.getType(type);
+    } catch {
+      showBubble("imageReadFailed", undefined, { hideCompanionAfter: true });
+      return;
+    }
     await addImageFile(new File([blob], "clipboard-image", { type }));
     return;
   }
@@ -356,13 +462,25 @@ async function pasteImageFromClipboard(): Promise<void> {
 }
 
 async function addImageFile(file: File): Promise<void> {
+  let src: string;
+  try {
+    src = await fileToDataUrl(file);
+  } catch {
+    showBubble("imageReadFailed", undefined, { hideCompanionAfter: true });
+    return;
+  }
   const image = {
     id: createId(),
-    src: await fileToDataUrl(file),
+    src,
     createdAt: Date.now(),
   };
+  try {
+    await storeImagePayload(image);
+  } catch {
+    showBubble("imageStoreFailed", undefined, { hideCompanionAfter: true });
+    return;
+  }
   state.images.push(image);
-  await storeImagePayload(image);
   persistNow();
   showBubble("imageAdded", undefined, { hideCompanionAfter: true });
 }
@@ -374,11 +492,20 @@ function reorderImages(dragId: string, targetId: string): void {
 
 function deleteImage(id: string, anchor?: HTMLElement): void {
   requestConfirmation("confirmDeleteImage", anchor, async () => {
+    const index = state.images.findIndex((image) => image.id === id);
+    if (index < 0) return;
+    const removed = { ...state.images[index] };
     state.images = state.images.filter((image) => image.id !== id);
     if (activePreviewId.value === id) activePreviewId.value = state.images[0]?.id;
     await deleteStoredImage(id);
     persistNow();
-  });
+    showUndoBubble("undoDeleteImage", getImageUndoAnchor(anchor), async () => {
+      if (state.images.some((image) => image.id === removed.id)) return;
+      state.images.splice(Math.min(index, state.images.length), 0, removed);
+      await storeImagePayload(removed);
+      persistNow();
+    });
+  }, undefined, { confirmText: "删除", cancelText: "取消" });
 }
 
 function openImagePreview(id: string): void {
@@ -392,13 +519,21 @@ async function copyImage(id: string): Promise<void> {
   const clipboard = navigator.clipboard as Clipboard & {
     write?: (items: ClipboardItem[]) => Promise<void>;
   };
-  if (clipboard.write && "ClipboardItem" in window) {
-    const blob = await (await fetch(image.src)).blob();
-    await clipboard.write([new window.ClipboardItem({ [blob.type]: blob })]);
-    showBubble("imageCopied", undefined, { hideCompanionAfter: true });
-    return;
+  try {
+    if (clipboard.write && "ClipboardItem" in window) {
+      const blob = await (await fetch(image.src)).blob();
+      await clipboard.write([new window.ClipboardItem({ [blob.type]: blob })]);
+      showBubble("imageCopied", undefined, { hideCompanionAfter: true });
+      return;
+    }
+    if (await copyText(image.src)) {
+      showBubble("imageDataCopied", undefined, { hideCompanionAfter: true });
+      return;
+    }
+  } catch {
+    // Fall through to the shared failure message below.
   }
-  if (await copyText(image.src)) showBubble("imageDataCopied", undefined, { hideCompanionAfter: true });
+  showBubble("imageCopyFailed", undefined, { hideCompanionAfter: true });
 }
 
 function saveQuick(payload: { id?: string; title: string; value: string; type: QuickButtonType }): void {
@@ -424,9 +559,17 @@ function saveQuick(payload: { id?: string; title: string; value: string; type: Q
 
 function deleteQuick(id: string, anchor?: HTMLElement): void {
   requestConfirmation("confirmDeleteQuick", anchor, () => {
+    const index = state.quickButtons.findIndex((button) => button.id === id);
+    if (index < 0) return;
+    const removed = { ...state.quickButtons[index] };
     state.quickButtons = state.quickButtons.filter((button) => button.id !== id);
     persistNow();
-  });
+    showUndoBubble("undoDeleteQuick", anchor, () => {
+      if (state.quickButtons.some((button) => button.id === removed.id)) return;
+      state.quickButtons.splice(Math.min(index, state.quickButtons.length), 0, removed);
+      persistNow();
+    });
+  }, undefined, { confirmText: "删除", cancelText: "取消" });
 }
 
 function toggleQuickHidden(id: string): void {
@@ -445,7 +588,8 @@ async function handleQuickButton(id: string, anchor?: HTMLElement): Promise<void
   const button = state.quickButtons.find((item) => item.id === id);
   if (!button) return;
   if (button.type === "link") {
-    window.open(normalizeLink(button.value), "_blank", "noopener,noreferrer");
+    const opened = window.open(normalizeLink(button.value), "_blank", "noopener,noreferrer");
+    if (!opened) showBubble("linkOpenFailed", anchor, { hideCompanionAfter: true });
     return;
   }
   showBubble((await copyText(button.value)) ? "quickTextCopied" : "quickTextCopyFailed", anchor, {
@@ -546,9 +690,25 @@ function toggleTodoStar(period: TodoPeriod, id: string, starred: boolean): void 
 
 function removeTodo(period: TodoPeriod, id: string, anchor?: HTMLElement): void {
   requestConfirmation("confirmDeleteTodo", anchor, () => {
+    const index = state.todos[period].findIndex((todo) => todo.id === id);
+    if (index < 0) return;
+    const removed = { ...state.todos[period][index] };
     state.todos = removeTodoFromMap(state.todos, period, id);
     persistNow();
-  });
+    showUndoBubble("undoDeleteTodo", anchor, () => {
+      if (state.todos[period].some((todo) => todo.id === removed.id)) return;
+      const next = {
+        ...state.todos,
+        [period]: [
+          ...state.todos[period].slice(0, index),
+          removed,
+          ...state.todos[period].slice(index),
+        ],
+      };
+      state.todos = next;
+      persistNow();
+    });
+  }, undefined, { confirmText: "删除", cancelText: "取消" });
 }
 
 function clearDone(period: TodoPeriod, anchor?: HTMLElement): void {
@@ -556,8 +716,21 @@ function clearDone(period: TodoPeriod, anchor?: HTMLElement): void {
     showBubble("noCompletedTodos", anchor);
     return;
   }
-  requestConfirmation("confirmClearCompleted", anchor, () => {
-    state.todos = clearCompleted(state.todos, period);
+  const removed = state.todos[period]
+    .map((todo, index) => ({ todo: { ...todo }, index }))
+    .filter((item) => item.todo.done);
+  state.todos = clearCompleted(state.todos, period);
+  persistNow();
+  showUndoBubble("undoClearCompleted", anchor, () => {
+    const restored = [...state.todos[period]];
+    removed.forEach(({ todo, index }) => {
+      if (restored.some((item) => item.id === todo.id)) return;
+      restored.splice(Math.min(index, restored.length), 0, todo);
+    });
+    state.todos = {
+      ...state.todos,
+      [period]: restored,
+    };
     persistNow();
   });
 }
@@ -615,7 +788,30 @@ async function importData(event: Event): Promise<void> {
   const file = input.files?.[0];
   if (!file) return;
   const text = await file.text();
-  const next = normalizeImportedState(JSON.parse(text));
+  let parsed: unknown;
+  try {
+    parsed = JSON.parse(text);
+  } catch {
+    showBubble("importJsonInvalid", importFeedbackAnchor.value, { hideCompanionAfter: true });
+    importFeedbackAnchor.value = undefined;
+    input.value = "";
+    return;
+  }
+  if (!isImportPayload(parsed)) {
+    showBubble("importDataInvalid", importFeedbackAnchor.value, { hideCompanionAfter: true });
+    importFeedbackAnchor.value = undefined;
+    input.value = "";
+    return;
+  }
+  let next: BoardState;
+  try {
+    next = normalizeImportedState(parsed);
+  } catch {
+    showBubble("importDataInvalid", importFeedbackAnchor.value, { hideCompanionAfter: true });
+    importFeedbackAnchor.value = undefined;
+    input.value = "";
+    return;
+  }
   requestConfirmation(
     "confirmImportData",
     importFeedbackAnchor.value,
@@ -631,6 +827,7 @@ async function importData(event: Event): Promise<void> {
       importFeedbackAnchor.value = undefined;
       input.value = "";
     },
+    { confirmText: "覆盖导入", cancelText: "取消" },
   );
 }
 
@@ -687,6 +884,7 @@ function showBubble(messageKey: MessageKey, anchor?: HTMLElement, options: Bubbl
 function showBubbleText(message: string, anchor?: HTMLElement, options: BubbleOptions = {}, duration = 3000): void {
   window.clearTimeout(bubbleTimer.value);
   pendingConfirm.value = null;
+  pendingAction.value = null;
   bubbleMessage.value = message;
   activeGuideKey.value = options.guideKey ?? null;
   if (anchor) {
@@ -707,6 +905,7 @@ function showBubbleText(message: string, anchor?: HTMLElement, options: BubbleOp
 function hideBubbleMessage(): void {
   window.clearTimeout(bubbleTimer.value);
   pendingConfirm.value = null;
+  pendingAction.value = null;
   bubbleVisible.value = false;
   bubbleMessage.value = "";
 }
@@ -722,10 +921,17 @@ function requestConfirmation(
   anchor: HTMLElement | undefined,
   onConfirm: () => void | Promise<void>,
   onCancel?: () => void,
+  options: { confirmText?: string; cancelText?: string } = {},
 ): void {
   window.clearTimeout(bubbleTimer.value);
   bubbleMessage.value = getMessage(messageKey);
-  pendingConfirm.value = { onConfirm, onCancel };
+  pendingConfirm.value = {
+    onConfirm,
+    onCancel,
+    confirmText: options.confirmText ?? "是",
+    cancelText: options.cancelText ?? "否",
+  };
+  pendingAction.value = null;
   activeGuideKey.value = null;
   bubbleVisible.value = true;
   companionFocused.value = true;
@@ -745,8 +951,54 @@ function cancelCompanionAction(): void {
   hideCompanion();
 }
 
+async function runCompanionAction(): Promise<void> {
+  const action = pendingAction.value;
+  if (!action) return;
+  hideCompanion();
+  await action.onAction();
+}
+
+function showUndoBubble(messageKey: MessageKey, anchor: HTMLElement | undefined, onAction: () => void | Promise<void>): void {
+  window.clearTimeout(bubbleTimer.value);
+  pendingConfirm.value = null;
+  pendingAction.value = { actionText: "撤销", onAction };
+  bubbleMessage.value = getMessage(messageKey);
+  activeGuideKey.value = null;
+  if (anchor) {
+    companionFocused.value = true;
+    companionPosition.value = getCompanionPosition(anchor);
+  }
+  bubbleVisible.value = true;
+  bubbleTimer.value = window.setTimeout(() => {
+    bubbleVisible.value = false;
+    bubbleMessage.value = "";
+    pendingAction.value = null;
+  }, UNDO_BUBBLE_DURATION_MS);
+}
+
 function showToast(messageKey: MessageKey): void {
-  naiveMessage.info(getMessage(messageKey), { duration: 1800 });
+  showBubble(messageKey, undefined, { hideCompanionAfter: true });
+}
+
+function isImportPayload(payload: unknown): payload is Record<string, unknown> {
+  if (!payload || typeof payload !== "object" || Array.isArray(payload)) return false;
+  const keys = new Set(Object.keys(payload));
+  return [
+    "theme",
+    "customTitles",
+    "noteLines",
+    "workspaceLines",
+    "storageLines",
+    "spaces",
+    "activeSpaceId",
+    "images",
+    "quickButtons",
+    "showHiddenQuickButtons",
+    "todos",
+    "note",
+    "workspace",
+    "storage",
+  ].some((key) => keys.has(key));
 }
 
 function clearTimers(): void {
@@ -823,6 +1075,15 @@ function getCompanionPosition(anchor?: HTMLElement): { right: string; bottom?: s
   };
 }
 
+function getImageUndoAnchor(anchor?: HTMLElement): HTMLElement | undefined {
+  if (!anchor?.closest(".image-preview")) return anchor;
+  return document.querySelector<HTMLElement>(".image-panel") ?? anchor;
+}
+
+function getSpacePanelAnchor(): HTMLElement | undefined {
+  return document.querySelector<HTMLElement>(".space-panel") ?? undefined;
+}
+
 function isMobileLayout(): boolean {
   return window.matchMedia?.("(max-width: 900px)").matches ?? window.innerWidth <= 900;
 }
@@ -879,6 +1140,10 @@ function moveItem<T extends { id: string }>(items: T[], dragId: string, targetId
           </button>
         </div>
       </nav>
+
+      <div class="mobile-banner">
+        <p>建议到桌面端访问，以获得更好的体验 (｡•̀ᴗ-)✧</p>
+      </div>
 
       <ImagePanel
         :title="titles['image-title']"
@@ -939,10 +1204,6 @@ function moveItem<T extends { id: string }>(items: T[], dragId: string, targetId
         @guide="handleGuideClick"
       />
 
-      <div class="mobile-banner">
-        <p>移动端保留工作区编辑，桌面版体验更完整 (｡•̀ᴗ-)✧</p>
-      </div>
-
       <SpacePanel
         class="workspace-panel"
         :spaces="state.spaces"
@@ -972,10 +1233,14 @@ function moveItem<T extends { id: string }>(items: T[], dragId: string, targetId
       :visible="companionVisible"
       :message="bubbleMessage"
       :confirm="Boolean(pendingConfirm)"
+      :confirm-text="pendingConfirm?.confirmText"
+      :cancel-text="pendingConfirm?.cancelText"
+      :action-text="pendingAction?.actionText"
       :position="companionPosition"
       :theme="state.theme"
       @yes="confirmCompanionAction"
       @no="cancelCompanionAction"
+      @action="runCompanionAction"
     />
     <NModal
       v-model:show="aboutVisible"

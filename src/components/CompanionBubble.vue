@@ -8,6 +8,9 @@ const props = defineProps<{
   visible: boolean;
   message: string;
   confirm?: boolean;
+  confirmText?: string;
+  cancelText?: string;
+  actionText?: string;
   theme?: "light" | "dark";
   position?: {
     right: string;
@@ -19,6 +22,7 @@ const props = defineProps<{
 const emit = defineEmits<{
   yes: [];
   no: [];
+  action: [];
 }>();
 
 const POPOVER_DELAY_MS = 200;
@@ -27,6 +31,9 @@ const delayedPopoverVisible = ref(false);
 const retainingPopoverContent = ref(false);
 const renderedMessage = ref("");
 const renderedConfirm = ref(false);
+const renderedConfirmText = ref("是");
+const renderedCancelText = ref("否");
+const renderedActionText = ref("");
 const popoverTimer = ref<number | undefined>();
 const contentTimer = ref<number | undefined>();
 
@@ -39,7 +46,7 @@ const placementStyle = computed(() => {
   };
 });
 
-const popoverVisible = computed(() => props.visible && Boolean(props.message || props.confirm));
+const popoverVisible = computed(() => props.visible && Boolean(props.message || props.confirm || props.actionText));
 const visiblePopover = computed(() => delayedPopoverVisible.value && popoverVisible.value);
 const popoverContentVisible = computed(() => visiblePopover.value || retainingPopoverContent.value);
 const popoverKey = computed(() => `${props.position?.right ?? "default"}:${props.position?.bottom ?? "default"}`);
@@ -52,16 +59,22 @@ watch(
     window.clearTimeout(contentTimer.value);
     if (!visible) {
       delayedPopoverVisible.value = false;
-      retainingPopoverContent.value = Boolean(renderedMessage.value || renderedConfirm.value);
+      retainingPopoverContent.value = Boolean(renderedMessage.value || renderedConfirm.value || renderedActionText.value);
       contentTimer.value = window.setTimeout(() => {
         retainingPopoverContent.value = false;
         renderedMessage.value = "";
         renderedConfirm.value = false;
+        renderedConfirmText.value = "是";
+        renderedCancelText.value = "否";
+        renderedActionText.value = "";
       }, POPOVER_HIDE_CONTENT_MS);
       return;
     }
     renderedMessage.value = props.message;
     renderedConfirm.value = Boolean(props.confirm);
+    renderedConfirmText.value = props.confirmText ?? "是";
+    renderedCancelText.value = props.cancelText ?? "否";
+    renderedActionText.value = props.confirm ? "" : props.actionText ?? "";
     retainingPopoverContent.value = false;
     popoverTimer.value = window.setTimeout(() => {
       delayedPopoverVisible.value = true;
@@ -71,11 +84,14 @@ watch(
 );
 
 watch(
-  () => [props.message, props.confirm] as const,
+  () => [props.message, props.confirm, props.confirmText, props.cancelText, props.actionText] as const,
   () => {
     if (!popoverVisible.value) return;
     renderedMessage.value = props.message;
     renderedConfirm.value = Boolean(props.confirm);
+    renderedConfirmText.value = props.confirmText ?? "是";
+    renderedCancelText.value = props.cancelText ?? "否";
+    renderedActionText.value = props.confirm ? "" : props.actionText ?? "";
   },
 );
 
@@ -114,8 +130,11 @@ onUnmounted(() => {
       <div v-if="popoverContentVisible" class="companion-popover" role="status" aria-live="polite" data-testid="companion-confirm">
         <span>{{ renderedMessage }}</span>
         <div v-if="renderedConfirm" class="companion-actions">
-          <NButton size="tiny" class="companion-action-button" data-testid="companion-yes" @click="emit('yes')">是</NButton>
-          <NButton size="tiny" class="companion-action-button" data-testid="companion-no" @click="emit('no')">否</NButton>
+          <NButton size="tiny" class="companion-action-button" data-testid="companion-yes" @click="emit('yes')">{{ renderedConfirmText }}</NButton>
+          <NButton size="tiny" class="companion-action-button" data-testid="companion-no" @click="emit('no')">{{ renderedCancelText }}</NButton>
+        </div>
+        <div v-else-if="renderedActionText" class="companion-actions">
+          <NButton size="tiny" class="companion-action-button" data-testid="companion-action" @click="emit('action')">{{ renderedActionText }}</NButton>
         </div>
       </div>
     </NPopover>

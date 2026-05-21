@@ -425,7 +425,7 @@ describe("TextPanel", () => {
     await wrapper.get("textarea").trigger("select");
     await wrapper.get("textarea").trigger("contextmenu");
 
-    expect(wrapper.findAll(".dropdown-option").map((option) => option.text())).toEqual(["复制", "粘贴", "使用指南"]);
+    expect(wrapper.findAll(".dropdown-option").map((option) => option.text())).toEqual(["复制", "粘贴", "Tips"]);
 
     textarea.setSelectionRange(4, 4);
     await wrapper.findAll(".dropdown-option").find((option) => option.text() === "复制")?.trigger("click");
@@ -454,7 +454,7 @@ describe("TextPanel", () => {
     textarea.setSelectionRange(0, 0);
     await wrapper.get("textarea").trigger("contextmenu");
 
-    expect(wrapper.findAll(".dropdown-option").map((option) => option.text())).toEqual(["复制", "粘贴", "使用指南"]);
+    expect(wrapper.findAll(".dropdown-option").map((option) => option.text())).toEqual(["复制", "粘贴", "Tips"]);
     expect(wrapper.get('[data-key="copy"]').attributes("disabled")).toBeDefined();
     expect(wrapper.get('[data-key="paste"]').attributes("disabled")).toBeDefined();
 

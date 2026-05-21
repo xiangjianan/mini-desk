@@ -45,7 +45,7 @@ const reorderTimers = new Map<string, number>();
 const lastTodoCarets = new Map<string, number>();
 const lastTodoSelections = new Map<string, { start: number; end: number }>();
 const todoSectionRefs = new Map<TodoPeriod, HTMLElement>();
-const guideMenuOption: DropdownOption = { ...GUIDE_MENU_OPTION, label: GUIDE_MENU_OPTION.label || "使用指南" };
+const guideMenuOption: DropdownOption = { ...GUIDE_MENU_OPTION, label: GUIDE_MENU_OPTION.label || "Tips" };
 const menuOptions = computed<DropdownOption[]>(() => {
   const options: DropdownOption[] = [];
   const target = menu.value?.target;
@@ -382,7 +382,8 @@ function buildTodoListEntries(todos: TodoItem[]): TodoListEntry[] {
           v-for="item in todayFocus"
           :key="`${item.period}-${item.todo.id}`"
           class="today-focus-item"
-          :class="{ 'is-done': item.todo.done }"
+          :class="{ 'is-done': item.todo.done, 'is-menu-selected': isTodoHighlighted(item.period, item.todo.id) }"
+          @contextmenu.stop="openMenu($event, item.period, item.todo.id)"
         >
           <NCheckbox
             :checked="item.todo.done"
@@ -398,6 +399,7 @@ function buildTodoListEntries(todos: TodoItem[]): TodoListEntry[] {
             @keydown.enter.prevent="handleEnter($event, item.period, item.todo)"
             @mouseup="rememberTodoCaret(item.period, item.todo.id, $event)"
             @select="handleTodoSelection(item.period, item.todo.id, $event)"
+            @contextmenu.stop="openTodoTextMenu($event, item.period, item.todo)"
             @dblclick="startTodoEdit($event, item.period, item.todo.id)"
             @focus="handleInputFocus(item.period, item.todo, $event)"
             @blur="handleInputBlur(item.period, item.todo.id)"

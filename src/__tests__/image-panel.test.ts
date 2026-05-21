@@ -43,7 +43,7 @@ describe("ImagePanel", () => {
 
     await wrapper.get(".image-list").trigger("contextmenu");
 
-    expect(wrapper.findAll(".dropdown-option").map((option) => option.text())).toEqual(["粘贴图片", "使用指南"]);
+    expect(wrapper.findAll(".dropdown-option").map((option) => option.text())).toEqual(["粘贴图片", "Tips"]);
 
     await wrapper.findAll(".dropdown-option")[1].trigger("click");
 
@@ -64,7 +64,7 @@ describe("ImagePanel", () => {
       "预览",
       "复制",
       "删除",
-      "使用指南",
+      "Tips",
     ]);
 
     expect(wrapper.text()).not.toContain("置顶");
