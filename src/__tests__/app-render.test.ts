@@ -79,10 +79,26 @@ describe("App shell", () => {
     expect(wrapper.text()).toContain("中午");
     expect(wrapper.text()).toContain("晚上");
     expect(wrapper.text()).toContain("工作空间");
-    expect(wrapper.text()).toContain("双击可改名");
+    expect(wrapper.findAll(".space-tab").map((tab) => tab.text())).toEqual(["工作空间"]);
     expect(wrapper.find('[aria-label="切换主题"]').exists()).toBe(true);
     expect(wrapper.find('[aria-label="新增快捷链接"]').exists()).toBe(true);
     expect(wrapper.find('[aria-label="设置"]').exists()).toBe(true);
+
+    wrapper.unmount();
+  });
+
+  it("renders a mobile area menu with todos selected by default", async () => {
+    const wrapper = mountApp();
+
+    expect(wrapper.findAll(".mobile-nav-button").map((button) => button.text())).toEqual([
+      "图片",
+      "便签",
+      "快捷",
+      "待办",
+      "空间",
+    ]);
+    expect(wrapper.get(".mobile-nav-button.is-active").text()).toBe("待办");
+    expect(wrapper.get('[aria-label="To Do List 看板"]').attributes("data-mobile-active")).toBe("todos");
 
     wrapper.unmount();
   });
@@ -177,6 +193,34 @@ describe("App shell", () => {
 
       expect(wrapper.find(".n-popover").exists()).toBe(true);
       expect(wrapper.find('[data-testid="companion-confirm"]').text()).toMatch(/保存|收好|记下|归档|备份|存好|存档/);
+    } finally {
+      wrapper.unmount();
+      vi.useRealTimers();
+    }
+  });
+
+  it("shows dirty and saved status around text edits", async () => {
+    vi.useFakeTimers();
+    const wrapper = mountApp();
+
+    try {
+      expect(wrapper.get('[data-testid="save-status"]').text()).toBe("已保存");
+
+      const textarea = wrapper.get("textarea");
+      await textarea.trigger("dblclick");
+      await textarea.setValue("临时记录");
+
+      expect(wrapper.get('[data-testid="save-status"]').text()).toBe("有未保存内容");
+
+      window.dispatchEvent(new KeyboardEvent("keydown", { key: "s", ctrlKey: true }));
+      await wrapper.vm.$nextTick();
+
+      expect(wrapper.get('[data-testid="save-status"]').text()).toBe("保存中");
+
+      await vi.advanceTimersByTimeAsync(120);
+      await wrapper.vm.$nextTick();
+
+      expect(wrapper.get('[data-testid="save-status"]').text()).toBe("已保存");
     } finally {
       wrapper.unmount();
       vi.useRealTimers();

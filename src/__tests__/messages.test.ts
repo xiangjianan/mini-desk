@@ -31,6 +31,7 @@ const messageKeys = [
   "confirmDeleteImage",
   "confirmDeleteQuick",
   "confirmDeleteTodo",
+  "confirmDeleteSpace",
   "confirmClearCompleted",
   "confirmImportData",
   "about",

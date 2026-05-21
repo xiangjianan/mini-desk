@@ -18,6 +18,7 @@ const emit = defineEmits<{
   update: [period: TodoPeriod, id: string, text: string];
   split: [period: TodoPeriod, id: string, before: string, after: string];
   complete: [period: TodoPeriod, id: string, done: boolean];
+  star: [period: TodoPeriod, id: string, starred: boolean];
   remove: [period: TodoPeriod, id: string, anchor?: HTMLElement];
   clearCompleted: [period: TodoPeriod, anchor?: HTMLElement];
   blurEmpty: [period: TodoPeriod, id: string];
@@ -47,11 +48,13 @@ const guideMenuOption: DropdownOption = { ...GUIDE_MENU_OPTION, label: GUIDE_MEN
 const menuOptions = computed<DropdownOption[]>(() => {
   const options: DropdownOption[] = [];
   const target = menu.value?.target;
+  const todo = getMenuTodo();
   if (target && menu.value?.id && canCopyTextSelection(menu.value.period, menu.value.id, target)) {
     options.push({ label: "复制", key: "copy" });
   }
   if (target && isMenuTodoEditable()) options.push({ label: "粘贴", key: "paste" });
   if (menu.value?.id) {
+    options.push({ label: todo?.starred ? "取消重点" : "设为重点", key: "star" });
     options.push({ label: "置顶", key: "top" });
     options.push({ label: "置底", key: "bottom" });
   }
@@ -77,6 +80,34 @@ const ordered = computed(() =>
       return [period, getOrderedTodos(props.todos[period], deferredIds)];
     }),
   ) as TodoMap,
+);
+
+const periodStats = computed(() =>
+  Object.fromEntries(
+    TODO_PERIODS.map((period) => {
+      const total = props.todos[period].length;
+      const done = props.todos[period].filter((todo) => todo.done).length;
+      return [period, `${done}/${total}`];
+    }),
+  ) as Record<TodoPeriod, string>,
+);
+
+const todayFocus = computed(() =>
+  TODO_PERIODS.flatMap((period) =>
+    ordered.value[period]
+      .filter((todo) => todo.starred)
+      .map((todo) => ({ period, todo })),
+  ),
+);
+
+type TodoListEntry =
+  | { type: "divider"; id: string }
+  | { type: "todo"; todo: TodoItem };
+
+const listEntries = computed(() =>
+  Object.fromEntries(
+    TODO_PERIODS.map((period) => [period, buildTodoListEntries(ordered.value[period])]),
+  ) as Record<TodoPeriod, TodoListEntry[]>,
 );
 
 onUnmounted(() => {
@@ -185,6 +216,7 @@ async function handleMenuSelect(key: string): Promise<void> {
   }
   if (key === "guide" && anchor) emit("guide", "todos", anchor, true);
   if (!id) return;
+  if (key === "star") emit("star", period, id, !getTodoById(period, id)?.starred);
   if (key === "top") moveTodoToTop(period, id);
   if (key === "bottom") emit("move", { period, id }, period);
   if (key === "delete") emit("remove", period, id, anchor);
@@ -199,9 +231,18 @@ function isTodoEditable(period: TodoPeriod, todo: TodoItem): boolean {
 }
 
 function isMenuTodoEditable(): boolean {
-  if (!menu.value?.id) return false;
-  const todo = props.todos[menu.value.period].find((item) => item.id === menu.value?.id);
+  if (!menu.value) return false;
+  const todo = getMenuTodo();
   return Boolean(todo && isTodoEditable(menu.value.period, todo));
+}
+
+function getMenuTodo(): TodoItem | undefined {
+  if (!menu.value?.id) return undefined;
+  return getTodoById(menu.value.period, menu.value.id);
+}
+
+function getTodoById(period: TodoPeriod, id: string): TodoItem | undefined {
+  return props.todos[period].find((item) => item.id === id);
 }
 
 function isTodoHighlighted(period: TodoPeriod, id: string): boolean {
@@ -308,10 +349,61 @@ function collapseSelection(input: HTMLInputElement, caret: number): void {
     if (document.activeElement === input) input.setSelectionRange(position, position);
   });
 }
+
+function buildTodoListEntries(todos: TodoItem[]): TodoListEntry[] {
+  const entries: TodoListEntry[] = [];
+  let completedDividerAdded = false;
+  todos.forEach((todo) => {
+    if (todo.done && !completedDividerAdded) {
+      entries.push({ type: "divider", id: `completed-${todo.id}` });
+      completedDividerAdded = true;
+    }
+    entries.push({ type: "todo", todo });
+  });
+  return entries;
+}
 </script>
 
 <template>
   <section class="panel todo-panel" aria-labelledby="todo-title">
+    <section v-if="todayFocus.length" class="today-focus-section" aria-label="今日重点">
+      <div class="today-focus-heading">今日重点</div>
+      <ul class="today-focus-list">
+        <li
+          v-for="item in todayFocus"
+          :key="`${item.period}-${item.todo.id}`"
+          class="today-focus-item"
+          :class="{ 'is-done': item.todo.done }"
+        >
+          <button
+            class="todo-star-button is-starred"
+            type="button"
+            aria-label="取消重点"
+            @click.stop="emit('star', item.period, item.todo.id, false)"
+          >
+            ★
+          </button>
+          <NCheckbox
+            :checked="item.todo.done"
+            aria-label="完成"
+            @update:checked="(checked) => handleChecked(item.period, item.todo.id, checked)"
+          />
+          <input
+            class="today-focus-input"
+            :value="item.todo.text"
+            :readonly="!isTodoEditable(item.period, item.todo)"
+            draggable="false"
+            @input="emit('update', item.period, item.todo.id, ($event.target as HTMLInputElement).value)"
+            @keydown.enter.prevent="handleEnter($event, item.period, item.todo)"
+            @mouseup="rememberTodoCaret(item.period, item.todo.id, $event)"
+            @select="handleTodoSelection(item.period, item.todo.id, $event)"
+            @dblclick="startTodoEdit($event, item.period, item.todo.id)"
+            @focus="handleInputFocus(item.period, item.todo, $event)"
+            @blur="handleInputBlur(item.period, item.todo.id)"
+          />
+        </li>
+      </ul>
+    </section>
     <div class="todo-sections">
       <section
         v-for="period in TODO_PERIODS"
@@ -333,7 +425,7 @@ function collapseSelection(input: HTMLInputElement, caret: number): void {
             />
           </h3>
           <div class="todo-heading-actions">
-            <span class="todo-count">{{ todos[period].length }}</span>
+            <span class="todo-count">{{ periodStats[period] }}</span>
             <NButton
               quaternary
               size="tiny"
@@ -373,45 +465,64 @@ function collapseSelection(input: HTMLInputElement, caret: number): void {
           :data-testid="`todo-list-${period}`"
           @dblclick="handleListDoubleClick($event, period)"
         >
-          <li
-            v-for="todo in ordered[period]"
-            :key="todo.id"
-            class="todo-item"
-            :class="{ 'is-done': todo.done, 'is-menu-selected': isTodoHighlighted(period, todo.id) }"
-            @contextmenu.stop="openMenu($event, period, todo.id)"
-            @dragover.prevent
-            @drop.stop="dragged && emit('move', dragged, period, todo.id)"
+          <template
+            v-for="entry in listEntries[period]"
+            :key="entry.type === 'todo' ? entry.todo.id : entry.id"
           >
-            <button
-              class="todo-drag-handle"
-              type="button"
-              draggable="true"
-              aria-label="拖动提醒事项"
-              @dragstart="dragged = { period, id: todo.id }"
-              @dragend="dragged = null"
-            />
-            <NCheckbox
-              :checked="todo.done"
-              aria-label="完成"
-              @update:checked="(checked) => handleChecked(period, todo.id, checked)"
-            />
-            <input
-              class="todo-input"
-              :data-testid="`todo-input-${period}`"
-              :data-todo-id="todo.id"
-              :value="todo.text"
-              :readonly="!isTodoEditable(period, todo)"
-              draggable="false"
-              @input="emit('update', period, todo.id, ($event.target as HTMLInputElement).value)"
-              @keydown.enter.prevent="handleEnter($event, period, todo)"
-              @mouseup="rememberTodoCaret(period, todo.id, $event)"
-              @select="handleTodoSelection(period, todo.id, $event)"
-              @contextmenu.stop="openTodoTextMenu($event, period, todo)"
-              @dblclick="startTodoEdit($event, period, todo.id)"
-              @focus="handleInputFocus(period, todo, $event)"
-              @blur="handleInputBlur(period, todo.id)"
-            />
-          </li>
+            <li
+              v-if="entry.type === 'todo'"
+              class="todo-item"
+              :class="{ 'is-done': entry.todo.done, 'is-starred': entry.todo.starred, 'is-menu-selected': isTodoHighlighted(period, entry.todo.id) }"
+              @contextmenu.stop="openMenu($event, period, entry.todo.id)"
+              @dragover.prevent
+              @drop.stop="dragged && emit('move', dragged, period, entry.todo.id)"
+            >
+              <button
+                class="todo-drag-handle"
+                type="button"
+                draggable="true"
+                aria-label="拖动提醒事项"
+                @dragstart="dragged = { period, id: entry.todo.id }"
+                @dragend="dragged = null"
+              />
+              <button
+                class="todo-star-button"
+                :class="{ 'is-starred': entry.todo.starred }"
+                type="button"
+                :aria-label="entry.todo.starred ? '取消重点' : '设为重点'"
+                @click.stop="emit('star', period, entry.todo.id, !entry.todo.starred)"
+              >
+                {{ entry.todo.starred ? "★" : "☆" }}
+              </button>
+              <NCheckbox
+                :checked="entry.todo.done"
+                aria-label="完成"
+                @update:checked="(checked) => handleChecked(period, entry.todo.id, checked)"
+              />
+              <input
+                class="todo-input"
+                :data-testid="`todo-input-${period}`"
+                :data-todo-id="entry.todo.id"
+                :value="entry.todo.text"
+                :readonly="!isTodoEditable(period, entry.todo)"
+                draggable="false"
+                @input="emit('update', period, entry.todo.id, ($event.target as HTMLInputElement).value)"
+                @keydown.enter.prevent="handleEnter($event, period, entry.todo)"
+                @mouseup="rememberTodoCaret(period, entry.todo.id, $event)"
+                @select="handleTodoSelection(period, entry.todo.id, $event)"
+                @contextmenu.stop="openTodoTextMenu($event, period, entry.todo)"
+                @dblclick="startTodoEdit($event, period, entry.todo.id)"
+                @focus="handleInputFocus(period, entry.todo, $event)"
+                @blur="handleInputBlur(period, entry.todo.id)"
+              />
+            </li>
+            <li
+              v-else
+              class="todo-completed-divider"
+            >
+              已完成
+            </li>
+          </template>
         </TransitionGroup>
       </section>
     </div>

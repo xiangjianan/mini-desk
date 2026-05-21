@@ -1,4 +1,4 @@
-import { defaultState, STORAGE_KEY, TODO_PERIODS } from "./defaults";
+import { DEFAULT_SPACE_ID, DEFAULT_SPACE_TITLE, defaultState, STORAGE_KEY, TODO_PERIODS } from "./defaults";
 import type {
   BoardState,
   LineItem,
@@ -8,6 +8,7 @@ import type {
   StoredImage,
   TodoItem,
   TodoMap,
+  WorkspaceSpace,
 } from "../types";
 
 export function createId(): string {
@@ -45,6 +46,10 @@ export function getSerializableState(
     noteLines: cloneLines(state.noteLines),
     workspaceLines: cloneLines(state.workspaceLines),
     storageLines: cloneLines(state.storageLines),
+    spaces: cloneSpaces(state.spaces),
+    activeSpaceId: state.spaces.some((space) => space.id === state.activeSpaceId)
+      ? state.activeSpaceId
+      : state.spaces[0]?.id ?? DEFAULT_SPACE_ID,
     quickButtons: state.quickButtons.map((button) => ({ ...button })),
     customTitles: { ...state.customTitles },
   };
@@ -58,19 +63,82 @@ export function normalizeImportedState(payload: unknown): BoardState {
   const source = isPlainObject(payload) ? payload : {};
   const base = defaultState();
   const typed = source as Record<string, unknown>;
+  const customTitles = normalizeStringRecord(typed.customTitles);
+  const noteLines = normalizeLineCollection(typed.noteLines ?? typed.note);
+  const workspaceLines = normalizeLineCollection(typed.workspaceLines ?? typed.workspace);
+  const storageLines = normalizeLineCollection(typed.storageLines ?? typed.storage);
+  const spaces = normalizeSpaces(typed.spaces, workspaceLines, storageLines, customTitles);
 
   return {
     ...base,
     theme: typed.theme === "dark" ? "dark" : "light",
-    customTitles: normalizeStringRecord(typed.customTitles),
-    noteLines: normalizeLineCollection(typed.noteLines ?? typed.note),
-    workspaceLines: normalizeLineCollection(typed.workspaceLines ?? typed.workspace),
-    storageLines: normalizeLineCollection(typed.storageLines ?? typed.storage),
+    customTitles,
+    noteLines,
+    workspaceLines,
+    storageLines,
+    spaces,
+    activeSpaceId: normalizeActiveSpaceId(typed.activeSpaceId, spaces),
     images: normalizeImages(typed.images),
     quickButtons: normalizeQuickButtons(typed.quickButtons),
     showHiddenQuickButtons: Boolean(typed.showHiddenQuickButtons),
     todos: normalizeTodos(typed.todos),
   };
+}
+
+export function normalizeSpaces(
+  spaces: unknown,
+  legacyWorkspaceLines: LineItem[] = [],
+  legacyStorageLines: LineItem[] = [],
+  customTitles: Record<string, string> = {},
+): WorkspaceSpace[] {
+  if (Array.isArray(spaces)) {
+    const seen = new Set<string>();
+    const normalized = spaces
+      .map((item) => normalizeSpace(item))
+      .filter((item): item is WorkspaceSpace => Boolean(item))
+      .map((space) => {
+        let id = space.id;
+        while (seen.has(id)) id = createId();
+        seen.add(id);
+        return { ...space, id };
+      });
+    if (normalized.length > 0) return normalized;
+  }
+
+  const result: WorkspaceSpace[] = [
+    {
+      id: DEFAULT_SPACE_ID,
+      title: customTitles["workspace-title"] || DEFAULT_SPACE_TITLE,
+      lines: cloneLines(legacyWorkspaceLines),
+    },
+  ];
+  if (legacyStorageLines.length > 0) {
+    result.push({
+      id: "storage",
+      title: customTitles["storage-title"] || "工程文件",
+      lines: cloneLines(legacyStorageLines),
+    });
+  }
+  return result;
+}
+
+function normalizeSpace(item: unknown): WorkspaceSpace | null {
+  if (!isPlainObject(item)) return null;
+  const record = item as Record<string, unknown>;
+  const id = typeof record.id === "string" && record.id.trim() ? record.id : createId();
+  const title = typeof record.title === "string" && record.title.trim()
+    ? record.title.trim()
+    : DEFAULT_SPACE_TITLE;
+  return {
+    id,
+    title,
+    lines: normalizeLineCollection(record.lines),
+  };
+}
+
+function normalizeActiveSpaceId(value: unknown, spaces: WorkspaceSpace[]): string {
+  const fallback = spaces[0]?.id ?? DEFAULT_SPACE_ID;
+  return typeof value === "string" && spaces.some((space) => space.id === value) ? value : fallback;
 }
 
 export function normalizeLineCollection(value: unknown): LineItem[] {
@@ -169,6 +237,7 @@ function normalizeTodo(item: unknown): TodoItem | null {
     id: typeof record.id === "string" ? record.id : createId(),
     text: typeof record.text === "string" ? record.text : "",
     done: Boolean(record.done),
+    starred: Boolean(record.starred),
   };
 }
 
@@ -191,6 +260,13 @@ function cloneTodos(todos: TodoMap): TodoMap {
 
 function cloneLines(lines: LineItem[]): LineItem[] {
   return lines.map((line) => ({ ...line }));
+}
+
+function cloneSpaces(spaces: WorkspaceSpace[]): WorkspaceSpace[] {
+  return spaces.map((space) => ({
+    ...space,
+    lines: cloneLines(space.lines),
+  }));
 }
 
 function clampInteger(value: unknown, min: number, max: number): number {

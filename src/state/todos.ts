@@ -1,9 +1,11 @@
 import type { TodoItem, TodoMap, TodoPeriod } from "../types";
 
 export function getOrderedTodos(todos: TodoItem[], deferredDoneIds: ReadonlySet<string> = new Set()): TodoItem[] {
+  const openTodos = todos.filter((todo) => !todo.done || deferredDoneIds.has(todo.id));
+  const completedTodos = todos.filter((todo) => todo.done && !deferredDoneIds.has(todo.id));
   return [
-    ...todos.filter((todo) => !todo.done || deferredDoneIds.has(todo.id)),
-    ...todos.filter((todo) => todo.done && !deferredDoneIds.has(todo.id)),
+    ...prioritizeStarred(openTodos),
+    ...completedTodos,
   ];
 }
 
@@ -65,6 +67,18 @@ export function completeTodo(
   return next;
 }
 
+export function starTodo(
+  todos: TodoMap,
+  period: TodoPeriod,
+  id: string,
+  starred: boolean,
+): TodoMap {
+  const next = cloneTodoMap(todos);
+  const todo = next[period].find((item) => item.id === id);
+  if (todo) todo.starred = starred;
+  return next;
+}
+
 export function removeTodo(todos: TodoMap, period: TodoPeriod, id: string): TodoMap {
   const next = cloneTodoMap(todos);
   next[period] = next[period].filter((todo) => todo.id !== id);
@@ -108,4 +122,11 @@ export function cloneTodoMap(todos: TodoMap): TodoMap {
     noon: todos.noon.map((todo) => ({ ...todo })),
     evening: todos.evening.map((todo) => ({ ...todo })),
   };
+}
+
+function prioritizeStarred(todos: TodoItem[]): TodoItem[] {
+  return [
+    ...todos.filter((todo) => todo.starred),
+    ...todos.filter((todo) => !todo.starred),
+  ];
 }

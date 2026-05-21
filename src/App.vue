@@ -7,6 +7,7 @@ import ImagePanel from "./components/ImagePanel.vue";
 import ImagePreview from "./components/ImagePreview.vue";
 import QuickButtons from "./components/QuickButtons.vue";
 import SettingsMenu from "./components/SettingsMenu.vue";
+import SpacePanel from "./components/SpacePanel.vue";
 import TextPanel from "./components/TextPanel.vue";
 import TodoPanel from "./components/TodoPanel.vue";
 import { AREA_HELP, CONTROL_HELP, DEFAULT_TITLES, TODO_PERIODS } from "./state/defaults";
@@ -20,6 +21,7 @@ import {
   removeEmptyTodo,
   removeTodo as removeTodoFromMap,
   splitTodo as splitTodoInMap,
+  starTodo,
   updateTodoText,
 } from "./state/todos";
 import {
@@ -48,18 +50,30 @@ const importInput = ref<HTMLInputElement | null>(null);
 const importFeedbackAnchor = ref<HTMLElement | undefined>();
 const textSaveTimer = ref<number | undefined>();
 const bubbleTimer = ref<number | undefined>();
+const saveStatusTimer = ref<number | undefined>();
 const emptyTodoRemovalTimers = new Map<string, number>();
 const appVersion = ref(getIndexAppVersion());
 const storedAppVersion = ref<string | null>(null);
 const versionPromptVisible = ref(false);
 const aboutVisible = ref(false);
 const aboutMessage = ref(getMessage("about"));
+const mobileActiveArea = ref<MobileArea>("todos");
 const { message: naiveMessage } = createDiscreteApi(["message"]);
 
 type BubbleOptions = {
   hideCompanionAfter?: boolean;
   guideKey?: GuideKey;
 };
+
+type MobileArea = "images" | "note" | "quick" | "todos" | "spaces";
+
+const mobileAreas: Array<{ key: MobileArea; label: string }> = [
+  { key: "images", label: "图片" },
+  { key: "note", label: "便签" },
+  { key: "quick", label: "快捷" },
+  { key: "todos", label: "待办" },
+  { key: "spaces", label: "空间" },
+];
 
 const GUIDE_MESSAGES: Record<GuideKey, string[]> = {
   images: [
@@ -120,6 +134,12 @@ const activeGuideKey = ref<GuideKey | null>(null);
 
 const naiveTheme = computed(() => (state.theme === "dark" ? darkTheme : null));
 const companionVisible = computed(() => companionFocused.value || bubbleVisible.value);
+const saveStatus = ref<"saved" | "saving" | "dirty">("saved");
+const saveStatusLabel = computed(() => {
+  if (saveStatus.value === "dirty") return "有未保存内容";
+  if (saveStatus.value === "saving") return "保存中";
+  return "已保存";
+});
 
 const titles = computed(() =>
   Object.fromEntries(
@@ -157,7 +177,73 @@ function updateTitle(id: string, value: string): void {
 
 function updateLines(key: "noteLines" | "workspaceLines" | "storageLines", lines: LineItem[]): void {
   state[key] = lines;
+  markDirty();
   scheduleTextSave();
+}
+
+function updateSpaceLines(id: string, lines: LineItem[]): void {
+  const space = state.spaces.find((item) => item.id === id);
+  if (!space) return;
+  space.lines = lines;
+  syncLegacySpaceLines();
+  markDirty();
+  scheduleTextSave();
+}
+
+function activateSpace(id: string): void {
+  if (!state.spaces.some((space) => space.id === id)) return;
+  state.activeSpaceId = id;
+  persistNow();
+}
+
+function createSpace(): void {
+  const id = createId();
+  state.spaces.push({
+    id,
+    title: nextSpaceTitle(),
+    lines: [],
+  });
+  state.activeSpaceId = id;
+  syncLegacySpaceLines();
+  persistNow();
+}
+
+function renameSpace(id: string, title: string): void {
+  const space = state.spaces.find((item) => item.id === id);
+  if (!space) return;
+  space.title = title.trim() || space.title;
+  persistNow();
+}
+
+function deleteSpace(id: string): void {
+  if (state.spaces.length <= 1) {
+    showBubbleText("至少保留一个空间");
+    return;
+  }
+  requestConfirmation("confirmDeleteSpace", undefined, () => {
+    const index = state.spaces.findIndex((space) => space.id === id);
+    if (index < 0 || state.spaces.length <= 1) return;
+    state.spaces.splice(index, 1);
+    if (state.activeSpaceId === id) {
+      state.activeSpaceId = state.spaces[Math.max(0, index - 1)]?.id ?? state.spaces[0].id;
+    }
+    syncLegacySpaceLines();
+    persistNow();
+  });
+}
+
+function nextSpaceTitle(): string {
+  const base = "新空间";
+  const titles = new Set(state.spaces.map((space) => space.title));
+  if (!titles.has(base)) return base;
+  let index = 2;
+  while (titles.has(`${base} ${index}`)) index += 1;
+  return `${base} ${index}`;
+}
+
+function syncLegacySpaceLines(): void {
+  state.workspaceLines = state.spaces[0]?.lines.map((line) => ({ ...line })) ?? [];
+  state.storageLines = state.spaces[1]?.lines.map((line) => ({ ...line })) ?? [];
 }
 
 function scheduleTextSave(): void {
@@ -207,7 +293,26 @@ function handleCompanionBlur(): void {
 }
 
 function persistNow(): void {
+  markSaving();
   saveState(state);
+  markSavedSoon();
+}
+
+function markDirty(): void {
+  window.clearTimeout(saveStatusTimer.value);
+  saveStatus.value = "dirty";
+}
+
+function markSaving(): void {
+  window.clearTimeout(saveStatusTimer.value);
+  saveStatus.value = "saving";
+}
+
+function markSavedSoon(): void {
+  window.clearTimeout(saveStatusTimer.value);
+  saveStatusTimer.value = window.setTimeout(() => {
+    saveStatus.value = "saved";
+  }, 100);
 }
 
 async function handlePaste(event: ClipboardEvent): Promise<void> {
@@ -433,6 +538,11 @@ function complete(period: TodoPeriod, id: string, done: boolean): void {
   if (done) showBubble("todoCompleted");
 }
 
+function toggleTodoStar(period: TodoPeriod, id: string, starred: boolean): void {
+  state.todos = starTodo(state.todos, period, id, starred);
+  persistNow();
+}
+
 function removeTodo(period: TodoPeriod, id: string, anchor?: HTMLElement): void {
   requestConfirmation("confirmDeleteTodo", anchor, () => {
     state.todos = removeTodoFromMap(state.todos, period, id);
@@ -637,6 +747,7 @@ function showToast(messageKey: MessageKey): void {
 function clearTimers(): void {
   window.clearTimeout(textSaveTimer.value);
   window.clearTimeout(bubbleTimer.value);
+  window.clearTimeout(saveStatusTimer.value);
   emptyTodoRemovalTimers.forEach((timer) => window.clearTimeout(timer));
   emptyTodoRemovalTimers.clear();
 }
@@ -753,7 +864,20 @@ function moveItemToEnd<T extends { id: string }>(items: T[], id: string): void {
 <template>
   <NConfigProvider :theme="naiveTheme">
     <NGlobalStyle />
-    <main class="board" aria-label="To Do List 看板">
+    <main class="board" aria-label="To Do List 看板" :data-mobile-active="mobileActiveArea">
+      <nav class="mobile-nav" aria-label="移动端区域切换">
+        <button
+          v-for="area in mobileAreas"
+          :key="area.key"
+          class="mobile-nav-button"
+          :class="{ 'is-active': mobileActiveArea === area.key }"
+          type="button"
+          @click="mobileActiveArea = area.key"
+        >
+          {{ area.label }}
+        </button>
+      </nav>
+
       <ImagePanel
         :title="titles['image-title']"
         :images="state.images"
@@ -771,6 +895,7 @@ function moveItemToEnd<T extends { id: string }>(items: T[], id: string): void {
       <section class="panel note-link-panel" aria-labelledby="note-title">
         <TextPanel
           split
+          class="note-panel"
           title-id="note-title"
           :title="titles['note-title']"
           :lines="state.noteLines"
@@ -804,6 +929,7 @@ function moveItemToEnd<T extends { id: string }>(items: T[], id: string): void {
         @update="updateTodo"
         @split="splitTodo"
         @complete="complete"
+        @star="toggleTodoStar"
         @remove="removeTodo"
         @clear-completed="clearDone"
         @blur-empty="blurEmptyTodo"
@@ -817,28 +943,17 @@ function moveItemToEnd<T extends { id: string }>(items: T[], id: string): void {
         <p>移动端保留工作区编辑，桌面版体验更完整 (｡•̀ᴗ-)✧</p>
       </div>
 
-      <TextPanel
+      <SpacePanel
         class="workspace-panel"
-        title-id="workspace-title"
-        :title="titles['workspace-title']"
-        :lines="state.workspaceLines"
-        placeholder="拆任务、写步骤，双击开始推进 (๑•̀ㅂ•́)و✧"
-        @title-update="updateTitle"
-        @update="updateLines('workspaceLines', $event)"
-        @focus="handleGuideFocus('workspace', $event)"
-        @guide="(anchor, immediate) => handleGuideClick('workspace', anchor, immediate)"
-        @blur="handleEditorBlur"
-      />
-
-      <TextPanel
-        title-id="storage-title"
-        :title="titles['storage-title']"
-        :lines="state.storageLines"
-        placeholder="长期内容放这里，安心留一份 (＾－＾)V"
-        @title-update="updateTitle"
-        @update="updateLines('storageLines', $event)"
-        @focus="handleGuideFocus('storage', $event)"
-        @guide="(anchor, immediate) => handleGuideClick('storage', anchor, immediate)"
+        :spaces="state.spaces"
+        :active-space-id="state.activeSpaceId"
+        @activate="activateSpace"
+        @create="createSpace"
+        @rename="renameSpace"
+        @update="updateSpaceLines"
+        @delete="deleteSpace"
+        @focus="(_, element) => handleGuideFocus('workspace', element)"
+        @guide="(_, anchor, immediate) => handleGuideClick('workspace', anchor, immediate)"
         @blur="handleEditorBlur"
       />
     </main>
@@ -888,6 +1003,7 @@ function moveItemToEnd<T extends { id: string }>(items: T[], id: string): void {
       </template>
     </NModal>
     <div class="top-actions">
+      <span class="save-status" data-testid="save-status" :data-state="saveStatus">{{ saveStatusLabel }}</span>
       <SettingsMenu
         :app-version="appVersion"
         :update-available="versionPromptVisible"

@@ -15,7 +15,7 @@ export function editorTextToLines(value = ""): LineItem[] {
     const tabs = line.match(/^\t*/)?.[0].length ?? 0;
     const content = line.slice(tabs);
     return {
-      text: stripLineMarker(content),
+      text: tabs > 0 ? stripLineMarker(content) : content,
       indent: tabs,
     };
   });
@@ -57,13 +57,17 @@ export function insertIndentedLineBreak(textarea: HTMLTextAreaElement): string {
   const lineEndIndex = value.indexOf("\n", selectionStart);
   const lineEnd = lineEndIndex === -1 ? value.length : lineEndIndex;
   const line = value.slice(lineStart, lineEnd);
+  if (isEmptyListLine(line)) {
+    textarea.setRangeText("", lineStart, lineEnd, "end");
+    return textarea.value;
+  }
   if (isEmptyIndentedLine(line)) {
     textarea.setRangeText("", lineStart, lineEnd, "end");
     return textarea.value;
   }
   const previousLine = value.slice(lineStart, selectionStart);
   const indent = previousLine.match(/^\t*/)?.[0] ?? "";
-  const marker = indent.length > 0 ? LINE_MARKER : "";
+  const marker = getContinuationMarker(previousLine.slice(indent.length)) ?? (indent.length > 0 ? LINE_MARKER : "");
   textarea.setRangeText(`\n${indent}${marker}`, textarea.selectionStart, textarea.selectionEnd, "end");
   return textarea.value;
 }
@@ -83,6 +87,19 @@ function isEmptyIndentedLine(line: string): boolean {
   const indent = line.match(/^\t*/)?.[0].length ?? 0;
   if (indent === 0) return false;
   return stripLineMarker(line.slice(indent)).trim().length === 0;
+}
+
+function isEmptyListLine(line: string): boolean {
+  const content = line.slice(line.match(/^\t*/)?.[0].length ?? 0);
+  return /^(\d+\.|[-*])\s*$/.test(content);
+}
+
+function getContinuationMarker(contentBeforeCaret: string): string | undefined {
+  const numbered = contentBeforeCaret.match(/^(\d+)\.\s+/);
+  if (numbered) return `${Number(numbered[1]) + 1}. `;
+  const unordered = contentBeforeCaret.match(/^([-*])\s+/);
+  if (unordered) return `${unordered[1]} `;
+  return undefined;
 }
 
 function getSelectedLineRange(value: string, start: number, end: number): { start: number; end: number } {

@@ -36,9 +36,16 @@ export interface TodoItem {
   id: string;
   text: string;
   done: boolean;
+  starred?: boolean;
 }
 
 export type TodoMap = Record<TodoPeriod, TodoItem[]>;
+
+export interface WorkspaceSpace {
+  id: string;
+  title: string;
+  lines: LineItem[];
+}
 
 export interface BoardState {
   theme: ThemeMode;
@@ -46,6 +53,8 @@ export interface BoardState {
   noteLines: LineItem[];
   workspaceLines: LineItem[];
   storageLines: LineItem[];
+  spaces: WorkspaceSpace[];
+  activeSpaceId: string;
   images: StoredImage[];
   quickButtons: QuickButton[];
   showHiddenQuickButtons: boolean;

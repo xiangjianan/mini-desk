@@ -18,6 +18,7 @@ export type MessageKey =
   | "confirmDeleteImage"
   | "confirmDeleteQuick"
   | "confirmDeleteTodo"
+  | "confirmDeleteSpace"
   | "confirmClearCompleted"
   | "confirmImportData"
   | "about";
@@ -221,6 +222,15 @@ export const MESSAGE_CATALOG: Record<MessageKey, MessageEntry> = {
       "要删掉这条提醒吗？",
       "确定移除这条提醒事项吗？",
       "删除后就看不到了",
+    ],
+  },
+  confirmDeleteSpace: {
+    mood: "warning",
+    surface: "companion",
+    variants: [
+      "确认删除这个空间？删除后不可恢复",
+      "要删掉这个空间吗？内容不会恢复",
+      "确定移除这个空间吗？删除后不可撤回",
     ],
   },
   confirmClearCompleted: {

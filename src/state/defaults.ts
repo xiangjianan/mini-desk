@@ -3,6 +3,8 @@ import type { BoardState, TodoPeriod } from "../types";
 export const STORAGE_KEY = "todo-board-state-v1";
 export const IMAGE_DB_NAME = "todo-board-images-v1";
 export const IMAGE_STORE_NAME = "images";
+export const DEFAULT_SPACE_ID = "workspace";
+export const DEFAULT_SPACE_TITLE = "工作空间";
 
 export const TODO_PERIODS: TodoPeriod[] = ["morning", "noon", "evening"];
 
@@ -53,6 +55,8 @@ export function defaultState(): BoardState {
     noteLines: [],
     workspaceLines: [],
     storageLines: [],
+    spaces: [{ id: DEFAULT_SPACE_ID, title: DEFAULT_SPACE_TITLE, lines: [] }],
+    activeSpaceId: DEFAULT_SPACE_ID,
     images: [],
     quickButtons: [],
     showHiddenQuickButtons: false,

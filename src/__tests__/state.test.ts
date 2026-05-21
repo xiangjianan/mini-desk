@@ -22,6 +22,29 @@ describe("state compatibility", () => {
     ]);
     expect(state.noteLines).toEqual([{ text: "idea", indent: 0 }]);
     expect(state.storageLines).toEqual([{ text: "command", indent: 1 }]);
+    expect(state.spaces).toEqual([
+      {
+        id: "workspace",
+        title: "工作空间",
+        lines: [
+          { text: "alpha", indent: 0 },
+          { text: "beta", indent: 1 },
+        ],
+      },
+      {
+        id: "storage",
+        title: "工程文件",
+        lines: [{ text: "command", indent: 1 }],
+      },
+    ]);
+    expect(state.activeSpaceId).toBe("workspace");
+  });
+
+  it("creates one default workspace space for new users", () => {
+    const state = defaultState();
+
+    expect(state.spaces).toEqual([{ id: "workspace", title: "工作空间", lines: [] }]);
+    expect(state.activeSpaceId).toBe("workspace");
   });
 
   it("serializes image metadata without large payloads for localStorage", () => {
@@ -61,8 +84,35 @@ describe("state compatibility", () => {
       hidden: false,
     });
     expect(state.todos.morning).toHaveLength(2);
+    expect(state.todos.morning[0].starred).toBe(false);
     expect(state.todos.noon).toEqual([]);
     expect(state.workspaceLines).toEqual([{ text: "child", indent: 1 }]);
+  });
+
+  it("normalizes persisted spaces and starred reminders", () => {
+    const state = normalizeImportedState({
+      activeSpaceId: "project",
+      spaces: [
+        {
+          id: "project",
+          title: "项目",
+          lines: [{ text: "note", indent: 0 }],
+        },
+      ],
+      todos: {
+        morning: [{ id: "a", text: "重点", done: false, starred: true }],
+      },
+    });
+
+    expect(state.spaces).toEqual([
+      {
+        id: "project",
+        title: "项目",
+        lines: [{ text: "note", indent: 0 }],
+      },
+    ]);
+    expect(state.activeSpaceId).toBe("project");
+    expect(state.todos.morning[0]).toMatchObject({ starred: true });
   });
 
   it("serializes textarea text into indented line records", () => {
@@ -82,6 +132,16 @@ describe("todo behavior", () => {
     ];
 
     expect(getOrderedTodos(todos).map((todo) => todo.id)).toEqual(["2", "1"]);
+  });
+
+  it("orders open starred todos before ordinary open todos and completed todos", () => {
+    const todos = [
+      { id: "1", text: "open", done: false, starred: false },
+      { id: "2", text: "done starred", done: true, starred: true },
+      { id: "3", text: "open starred", done: false, starred: true },
+    ];
+
+    expect(getOrderedTodos(todos).map((todo) => todo.id)).toEqual(["3", "1", "2"]);
   });
 
   it("inserts a new open todo before completed todos to avoid visual reordering", () => {

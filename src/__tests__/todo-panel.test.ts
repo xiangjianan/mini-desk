@@ -100,6 +100,71 @@ describe("TodoPanel", () => {
     expect(wrapper.emitted("create")).toBeUndefined();
   });
 
+  it("shows period progress and a weak completed divider", () => {
+    const wrapper = mount(TodoPanel, {
+      props: {
+        todos: {
+          morning: [
+            { id: "a", text: "未完成", done: false },
+            { id: "b", text: "已完成", done: true },
+          ],
+          noon: [],
+          evening: [],
+        },
+        titles: DEFAULT_TITLES,
+      },
+      global: {
+        stubs: {
+          Button: true,
+          Checkbox: checkboxStub,
+          Dropdown: dropdownStub,
+          NCheckbox: checkboxStub,
+          NDropdown: dropdownStub,
+          NTooltip: tooltipStub,
+        },
+      },
+    });
+
+    expect(wrapper.find('.todo-section[data-period="morning"] .todo-count').text()).toBe("1/2");
+    expect(wrapper.get(".todo-completed-divider").text()).toBe("已完成");
+    wrapper.unmount();
+  });
+
+  it("emits star toggles and aggregates starred reminders into today's focus", async () => {
+    const wrapper = mount(TodoPanel, {
+      props: {
+        todos: {
+          morning: [{ id: "a", text: "重点未完成", done: false, starred: true }],
+          noon: [{ id: "b", text: "重点已完成", done: true, starred: true }],
+          evening: [{ id: "c", text: "普通事项", done: false }],
+        },
+        titles: DEFAULT_TITLES,
+      },
+      global: {
+        stubs: {
+          Button: true,
+          Checkbox: checkboxStub,
+          Dropdown: dropdownStub,
+          NCheckbox: checkboxStub,
+          NDropdown: dropdownStub,
+          NTooltip: tooltipStub,
+        },
+      },
+    });
+
+    expect(wrapper.get(".today-focus-section").text()).toContain("今日重点");
+    expect(wrapper.findAll(".today-focus-input").map((item) => (item.element as HTMLInputElement).value)).toEqual([
+      "重点未完成",
+      "重点已完成",
+    ]);
+    expect(wrapper.findAll(".today-focus-item")[1].classes()).toContain("is-done");
+
+    await wrapper.get(".todo-star-button").trigger("click");
+
+    expect(wrapper.emitted("star")?.[0]).toEqual(["morning", "a", false]);
+    wrapper.unmount();
+  });
+
   it("keeps a newly completed todo in place for 200ms before animated regrouping", async () => {
     vi.useFakeTimers();
 
@@ -431,6 +496,7 @@ describe("TodoPanel", () => {
 
     expect(wrapper.findAll(".todo-item")[1].classes()).toContain("is-menu-selected");
     expect(wrapper.findAll(".dropdown-option").map((option) => option.text())).toEqual([
+      "设为重点",
       "置顶",
       "置底",
       "删除",
@@ -592,6 +658,7 @@ describe("TodoPanel", () => {
     expect(wrapper.findAll(".dropdown-option").map((option) => option.text())).toEqual([
       "复制",
       "粘贴",
+      "设为重点",
       "置顶",
       "置底",
       "删除",

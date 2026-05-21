@@ -246,8 +246,9 @@ describe("Naive UI component usage", () => {
 
     expect(todo).toContain('class="todo-drag-handle"');
     expect(todo).not.toMatch(/class="todo-item"[\s\S]{0,160}draggable="true"/);
-    expect(styles).toMatch(/\.todo-item\s*\{[^}]*grid-template-columns: 26px 30px minmax\(0, 1fr\)/s);
-    expect(styles).toMatch(/\.todo-drag-handle\s*\{[^}]*width: 22px/s);
+    expect(styles).toMatch(/\.todo-item\s*\{[^}]*grid-template-columns: 14px 24px 28px minmax\(0, 1fr\)/s);
+    expect(styles).toMatch(/\.todo-drag-handle\s*\{[^}]*width: 12px/s);
+    expect(styles).toMatch(/\.todo-drag-handle\s*\{[^}]*opacity: 0\.28/s);
     expect(styles).toContain(".todo-drag-handle::before");
   });
 
@@ -335,8 +336,7 @@ describe("Naive UI component usage", () => {
     }
     expect(image).toContain("粘贴图片");
     expect(app).toContain("@guide=\"(anchor, immediate) => handleGuideClick('note', anchor, immediate)\"");
-    expect(app).toContain("@guide=\"(anchor, immediate) => handleGuideClick('workspace', anchor, immediate)\"");
-    expect(app).toContain("@guide=\"(anchor, immediate) => handleGuideClick('storage', anchor, immediate)\"");
+    expect(app).toContain("@guide=\"(_, anchor, immediate) => handleGuideClick('workspace', anchor, immediate)\"");
     expect(app).toContain("showGuideBubble");
   });
 
@@ -391,16 +391,18 @@ describe("Naive UI component usage", () => {
     expect(settings).toContain('"data-testid": "settings-version"');
   });
 
-  it("simplifies the mobile layout to the workspace editor only", () => {
+  it("uses a mobile area menu instead of compressing the desktop board", () => {
     const app = read("src/App.vue");
     const styles = read("src/styles.css");
     const text = read("src/components/TextPanel.vue");
 
     expect(app).toContain('class="workspace-panel"');
-    expect(app).toContain("桌面版体验更完整");
-    expect(app.indexOf("mobile-banner")).toBeLessThan(app.indexOf('title-id="workspace-title"'));
-    expect(styles).toMatch(/\.board > :not\(\.mobile-banner\):not\(\.workspace-panel\)\s*\{[^}]*display: none !important/s);
-    expect(styles).toMatch(/\.workspace-panel\s*\{[^}]*display: flex/s);
+    expect(app).toContain('class="mobile-nav"');
+    expect(app).toContain('data-mobile-active');
+    expect(app).toContain('{ key: "todos", label: "待办" }');
+    expect(styles).toMatch(/\.mobile-nav\s*\{[^}]*display: flex/s);
+    expect(styles).toMatch(/\.board\[data-mobile-active="todos"\] > \.todo-panel/s);
+    expect(styles).toMatch(/\.board\[data-mobile-active="spaces"\] > \.space-panel/s);
     expect(styles).toMatch(/@media \(max-width: 900px\)[\s\S]*--app-font-size: 14px/s);
     expect(styles).toMatch(/@media \(max-width: 900px\)[\s\S]*\.top-actions\s*\{[^}]*display: flex/s);
     expect(styles).toMatch(/@media \(max-width: 900px\)[\s\S]*\.top-actions\s*\{[^}]*top: 3px/s);

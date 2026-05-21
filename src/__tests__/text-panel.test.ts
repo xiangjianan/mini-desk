@@ -96,6 +96,74 @@ describe("TextPanel", () => {
     expect(textarea.value).toBe("root\n");
   });
 
+  it("continues numbered lists when pressing Enter", async () => {
+    const wrapper = mount(TextPanel, {
+      props: {
+        titleId: "workspace-title",
+        title: "工作空间",
+        lines: [{ text: "1. 第一项", indent: 0 }],
+      },
+    });
+    const textarea = wrapper.get("textarea").element;
+    textarea.setSelectionRange(textarea.value.length, textarea.value.length);
+
+    await wrapper.get("textarea").trigger("dblclick");
+    await wrapper.get("textarea").trigger("keydown", { key: "Enter" });
+
+    expect(textarea.value).toBe("1. 第一项\n2. ");
+  });
+
+  it("continues unordered root lists when pressing Enter", async () => {
+    const wrapper = mount(TextPanel, {
+      props: {
+        titleId: "workspace-title",
+        title: "工作空间",
+        lines: [{ text: "- 第一项", indent: 0 }],
+      },
+    });
+    const textarea = wrapper.get("textarea").element;
+    textarea.setSelectionRange(textarea.value.length, textarea.value.length);
+
+    await wrapper.get("textarea").trigger("dblclick");
+    await wrapper.get("textarea").trigger("keydown", { key: "Enter" });
+
+    expect(textarea.value).toBe("- 第一项\n- ");
+  });
+
+  it("exits empty numbered or unordered root lists when pressing Enter", async () => {
+    const numbered = mount(TextPanel, {
+      props: {
+        titleId: "workspace-title",
+        title: "工作空间",
+        lines: [{ text: "2. ", indent: 0 }],
+      },
+    });
+    const numberedTextarea = numbered.get("textarea").element;
+    numberedTextarea.setSelectionRange(numberedTextarea.value.length, numberedTextarea.value.length);
+
+    await numbered.get("textarea").trigger("dblclick");
+    await numbered.get("textarea").trigger("keydown", { key: "Enter" });
+
+    expect(numberedTextarea.value).toBe("");
+    numbered.unmount();
+
+    const unordered = mount(TextPanel, {
+      props: {
+        titleId: "workspace-title",
+        title: "工作空间",
+        lines: [{ text: "- ", indent: 0 }],
+      },
+    });
+    const unorderedTextarea = unordered.get("textarea").element;
+    unorderedTextarea.setSelectionRange(unorderedTextarea.value.length, unorderedTextarea.value.length);
+
+    await unordered.get("textarea").trigger("dblclick");
+    await unordered.get("textarea").trigger("keydown", { key: "Enter" });
+
+    expect(unorderedTextarea.value).toBe("");
+    unordered.unmount();
+  });
+
   it("exits indentation when pressing Enter on an empty indented marker line", async () => {
     const wrapper = mount(TextPanel, {
       props: {
