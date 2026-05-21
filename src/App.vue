@@ -245,7 +245,7 @@ async function addImageFile(file: File): Promise<void> {
     src: await fileToDataUrl(file),
     createdAt: Date.now(),
   };
-  state.images.unshift(image);
+  state.images.push(image);
   await storeImagePayload(image);
   persistNow();
   showBubble("imageAdded", undefined, { hideCompanionAfter: true });

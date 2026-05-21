@@ -232,6 +232,25 @@ describe("Naive UI component usage", () => {
     }
   });
 
+  it("keeps blank reminder hints outside the moving todo transition list", () => {
+    const todo = read("src/components/TodoPanel.vue");
+
+    expect(todo).not.toMatch(/<TransitionGroup[\s\S]*v-if="todos\[period\]\.length === 0"[\s\S]*<\/TransitionGroup>/);
+    expect(todo).toContain('v-if="todos[period].length === 0"');
+    expect(todo).toContain('v-else');
+  });
+
+  it("uses a clear separated drag handle for reminder rows", () => {
+    const todo = read("src/components/TodoPanel.vue");
+    const styles = read("src/styles.css");
+
+    expect(todo).toContain('class="todo-drag-handle"');
+    expect(todo).not.toMatch(/class="todo-item"[\s\S]{0,160}draggable="true"/);
+    expect(styles).toMatch(/\.todo-item\s*\{[^}]*grid-template-columns: 26px 30px minmax\(0, 1fr\)/s);
+    expect(styles).toMatch(/\.todo-drag-handle\s*\{[^}]*width: 22px/s);
+    expect(styles).toContain(".todo-drag-handle::before");
+  });
+
   it("highlights the reminder context-menu item without adding another border", () => {
     const styles = read("src/styles.css");
     const selectedRule = styles.match(/\.todo-item\.is-menu-selected\s*\{(?<body>[^}]*)\}/)?.groups?.body ?? "";
@@ -392,7 +411,7 @@ describe("Naive UI component usage", () => {
     expect(text).toContain("unlockTextareaForMobileKeyboard");
     expect(text).toContain('@touchstart="handleTouchStart"');
     expect(text.match(/async function startEditing[\s\S]*?\n}/)?.[0] ?? "").not.toContain("event.preventDefault();");
-    expect(text).toMatch(/function startEditingFromTextarea\(textarea: HTMLTextAreaElement\): void \{[\s\S]*editing\.value = true;[\s\S]*unlockTextareaForMobileKeyboard\(textarea, caret\);[\s\S]*\}/s);
+    expect(text).toMatch(/function startEditingFromTextarea\(textarea: HTMLTextAreaElement, keyboardFocus = false\): void \{[\s\S]*editing\.value = true;[\s\S]*unlockTextareaForMobileKeyboard\(textarea, caret, keyboardFocus\);[\s\S]*\}/s);
     expect(text).toMatch(/async function startEditing\(event: MouseEvent\): Promise<void> \{[\s\S]*startEditingFromTextarea\(textarea\);[\s\S]*await nextTick\(\)/s);
   });
 });

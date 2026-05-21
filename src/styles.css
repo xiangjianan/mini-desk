@@ -482,6 +482,10 @@ h3 {
   margin: 0;
 }
 
+.todo-empty-list {
+  flex: 1 1 auto;
+}
+
 .todo-empty-hint {
   min-height: 32px;
   padding: 7px 8px;
@@ -494,26 +498,42 @@ h3 {
 
 .todo-item {
   display: grid;
-  grid-template-columns: 14px 24px minmax(0, 1fr);
+  grid-template-columns: 26px 30px minmax(0, 1fr);
   align-items: center;
-  gap: 4px;
+  gap: 6px;
   min-height: 30px;
+  padding-left: 4px;
   border-bottom: 1px solid var(--line-subtle);
   transition: background-color 0.18s ease, opacity 0.18s ease, transform 0.22s cubic-bezier(0.2, 0, 0, 1);
 }
 
 .todo-drag-handle {
-  width: 10px;
-  height: 18px;
-  border: 0;
-  border-left: 1px solid var(--line-main);
-  border-right: 1px solid var(--line-main);
-  background: transparent;
+  position: relative;
+  width: 22px;
+  min-width: 22px;
+  height: 24px;
+  min-height: 24px;
+  padding: 0;
+  border: 1px solid var(--line-control);
+  background: var(--button);
   cursor: grab;
+}
+
+.todo-drag-handle::before {
+  content: "";
+  position: absolute;
+  inset: 5px 6px;
+  background-image: radial-gradient(circle, var(--muted) 1px, transparent 1.5px);
+  background-size: 4px 4px;
+  opacity: 0.85;
 }
 
 .todo-drag-handle:active {
   cursor: grabbing;
+}
+
+.todo-item .n-checkbox {
+  justify-self: center;
 }
 
 .todo-item.is-menu-selected {

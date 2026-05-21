@@ -30,7 +30,7 @@ const text = ref(textLinesToEditorText(props.lines));
 const focused = ref(false);
 const editing = ref(false);
 const lastCaret = ref<number | null>(null);
-const lastTouchStartAt = ref<number | null>(null);
+const lastMobileTapAt = ref<number | null>(null);
 const lastTextSelection = ref<{ start: number; end: number } | null>(null);
 const menu = ref<{
   x: number;
@@ -111,24 +111,42 @@ async function startEditing(event: MouseEvent): Promise<void> {
   lastTextSelection.value = null;
 }
 
-function handleTouchStart(event: TouchEvent): void {
-  const now = Date.now();
-  const previousTouchStartAt = lastTouchStartAt.value;
-  lastTouchStartAt.value = now;
-  if (previousTouchStartAt === null || now - previousTouchStartAt >= TOUCH_DOUBLE_TAP_MS) return;
-  startEditingFromTextarea(event.currentTarget as HTMLTextAreaElement);
+function handlePointerDown(event: PointerEvent): void {
+  if (event.pointerType !== "touch") return;
+  handleMobileEditTap(event.currentTarget as HTMLTextAreaElement, event);
 }
 
-function startEditingFromTextarea(textarea: HTMLTextAreaElement): void {
+function handleTouchStart(event: TouchEvent): void {
+  if (typeof window.PointerEvent !== "undefined") return;
+  handleMobileEditTap(event.currentTarget as HTMLTextAreaElement, event);
+}
+
+function handleMobileEditTap(textarea: HTMLTextAreaElement, event: Event): void {
+  const now = Date.now();
+  const previousTapAt = lastMobileTapAt.value;
+  lastMobileTapAt.value = now;
+  event.preventDefault();
+  if (previousTapAt === null || now - previousTapAt >= TOUCH_DOUBLE_TAP_MS) return;
+  startEditingFromTextarea(textarea, true);
+}
+
+function startEditingFromTextarea(textarea: HTMLTextAreaElement, keyboardFocus = false): void {
   const caret = lastCaret.value ?? textarea.selectionStart ?? textarea.value.length;
   editing.value = true;
-  unlockTextareaForMobileKeyboard(textarea, caret);
+  unlockTextareaForMobileKeyboard(textarea, caret, keyboardFocus);
 }
 
-function unlockTextareaForMobileKeyboard(textarea: HTMLTextAreaElement, caret: number): void {
+function unlockTextareaForMobileKeyboard(textarea: HTMLTextAreaElement, caret: number, keyboardFocus = false): void {
   textarea.readOnly = false;
   textarea.removeAttribute("readonly");
-  textarea.focus({ preventScroll: true });
+  textarea.inputMode = "text";
+  textarea.setAttribute("inputmode", "text");
+  if (keyboardFocus) {
+    if (document.activeElement === textarea) textarea.blur();
+    textarea.focus();
+  } else {
+    textarea.focus({ preventScroll: true });
+  }
   collapseSelection(textarea, caret);
 }
 
@@ -271,10 +289,12 @@ function collapseSelection(textarea: HTMLTextAreaElement, caret: number): void {
         class="text-editor-textarea board-textarea large-textarea"
         :placeholder="placeholder"
         :readonly="!editing"
+        :inputmode="editing ? 'text' : 'none'"
         spellcheck="false"
         @input="update"
         @keydown="handleKeydown"
         @mouseup="rememberCaret"
+        @pointerdown="handlePointerDown"
         @touchstart="handleTouchStart"
         @select="rememberSelection"
         @dblclick="startEditing"

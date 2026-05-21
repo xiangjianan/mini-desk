@@ -210,6 +210,8 @@ describe("TextPanel", () => {
   it("starts mobile editing from the second touchstart so mobile keyboards can open", async () => {
     vi.useFakeTimers();
     vi.setSystemTime(0);
+    const PointerEventStub = window.PointerEvent;
+    vi.stubGlobal("PointerEvent", undefined);
     const wrapper = mount(TextPanel, {
       attachTo: document.body,
       props: {
@@ -222,9 +224,11 @@ describe("TextPanel", () => {
 
     const focusSpy = vi.spyOn(textarea, "focus");
 
-    textarea.dispatchEvent(new TouchEvent("touchstart", { bubbles: true, cancelable: true }));
+    const firstTouch = new TouchEvent("touchstart", { bubbles: true, cancelable: true });
+    textarea.dispatchEvent(firstTouch);
     await wrapper.vm.$nextTick();
 
+    expect(firstTouch.defaultPrevented).toBe(true);
     expect(textarea.readOnly).toBe(true);
     expect(document.activeElement).not.toBe(textarea);
 
@@ -237,6 +241,41 @@ describe("TextPanel", () => {
     await wrapper.vm.$nextTick();
 
     expect(textarea.readOnly).toBe(false);
+    expect(document.activeElement).toBe(textarea);
+
+    wrapper.unmount();
+    vi.stubGlobal("PointerEvent", PointerEventStub);
+    vi.useRealTimers();
+  });
+
+  it("starts mobile editing from the second pointerdown before touch fallback events", async () => {
+    vi.useFakeTimers();
+    vi.setSystemTime(0);
+    const wrapper = mount(TextPanel, {
+      attachTo: document.body,
+      props: {
+        titleId: "workspace-title",
+        title: "工作空间",
+        lines: [{ text: "root", indent: 0 }],
+      },
+    });
+    const textarea = wrapper.get("textarea").element as HTMLTextAreaElement;
+    const focusSpy = vi.spyOn(textarea, "focus");
+
+    const firstTap = new PointerEvent("pointerdown", { bubbles: true, cancelable: true, pointerType: "touch" });
+    textarea.dispatchEvent(firstTap);
+    await wrapper.vm.$nextTick();
+
+    expect(firstTap.defaultPrevented).toBe(true);
+    expect(textarea.readOnly).toBe(true);
+
+    await vi.advanceTimersByTimeAsync(120);
+    const secondTap = new PointerEvent("pointerdown", { bubbles: true, cancelable: true, pointerType: "touch" });
+    textarea.dispatchEvent(secondTap);
+
+    expect(secondTap.defaultPrevented).toBe(true);
+    expect(textarea.readOnly).toBe(false);
+    expect(focusSpy).toHaveBeenCalledWith();
     expect(document.activeElement).toBe(textarea);
 
     wrapper.unmount();

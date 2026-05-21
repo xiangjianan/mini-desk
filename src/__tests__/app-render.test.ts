@@ -549,6 +549,40 @@ describe("App shell", () => {
     }
   });
 
+  it("appends pasted images to the end of the image list", async () => {
+    vi.useFakeTimers();
+    localStorage.setItem(
+      STORAGE_KEY,
+      JSON.stringify({
+        images: [{ id: "existing", src: "data:image/png;base64,old", createdAt: 1 }],
+      }),
+    );
+    const imageBlob = new Blob(["img"], { type: "image/png" });
+    Object.assign(navigator, {
+      clipboard: {
+        read: vi.fn().mockResolvedValue([{ types: ["image/png"], getType: vi.fn().mockResolvedValue(imageBlob) }]),
+      },
+    });
+    const wrapper = mountApp();
+
+    try {
+      wrapper.getComponent(ImagePanel).vm.$emit("paste");
+      await Promise.resolve();
+      await Promise.resolve();
+      await wrapper.vm.$nextTick();
+      await vi.advanceTimersByTimeAsync(200);
+      await Promise.resolve();
+      await wrapper.vm.$nextTick();
+
+      const images = wrapper.getComponent(ImagePanel).props("images") as Array<{ id: string }>;
+      expect(images).toHaveLength(2);
+      expect(images[0].id).toBe("existing");
+    } finally {
+      wrapper.unmount();
+      vi.useRealTimers();
+    }
+  });
+
   it("shows import and export success through the companion bubble", async () => {
     vi.useFakeTimers();
     const createObjectURL = vi.fn(() => "blob:todo-board");
@@ -824,6 +858,19 @@ describe("App shell", () => {
       toJSON: () => ({}),
     });
     await todoList.trigger("dblclick");
+    await wrapper.vm.$nextTick();
+    const activeTodoList = wrapper.get('[data-testid="todo-list-morning"]');
+    vi.spyOn(activeTodoList.element, "getBoundingClientRect").mockReturnValue({
+      x: 440,
+      y: 34,
+      width: 270,
+      height: 260,
+      top: 34,
+      left: 440,
+      right: 710,
+      bottom: 294,
+      toJSON: () => ({}),
+    });
     await wrapper.get('[data-testid="todo-input-morning"]').trigger("focus");
 
     const todoStyle = wrapper.get('[data-testid="companion-bubble"]').attributes("style");

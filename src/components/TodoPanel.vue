@@ -349,7 +349,23 @@ function collapseSelection(input: HTMLInputElement, caret: number): void {
           </div>
         </div>
 
+        <ul
+          v-if="todos[period].length === 0"
+          class="todo-list todo-empty-list"
+          :data-testid="`todo-list-${period}`"
+          @dblclick="handleListDoubleClick($event, period)"
+        >
+          <li
+            :key="`${period}-empty-hint`"
+            class="todo-empty-hint"
+            @dblclick="emit('create', period)"
+          >
+            {{ EMPTY_HINTS.todos[period] }}
+          </li>
+        </ul>
+
         <TransitionGroup
+          v-else
           name="todo-move"
           tag="ul"
           class="todo-list"
@@ -357,14 +373,6 @@ function collapseSelection(input: HTMLInputElement, caret: number): void {
           :data-testid="`todo-list-${period}`"
           @dblclick="handleListDoubleClick($event, period)"
         >
-          <li
-            v-if="todos[period].length === 0"
-            :key="`${period}-empty-hint`"
-            class="todo-empty-hint"
-            @dblclick="emit('create', period)"
-          >
-            {{ EMPTY_HINTS.todos[period] }}
-          </li>
           <li
             v-for="todo in ordered[period]"
             :key="todo.id"
