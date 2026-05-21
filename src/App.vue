@@ -455,9 +455,9 @@ function toggleTheme(): void {
   state.theme = state.theme === "dark" ? "light" : "dark";
 }
 
-function handleThemeClick(event: MouseEvent): void {
+function handleThemeClick(): void {
   toggleTheme();
-  handleGuideClick("theme", event.currentTarget as HTMLElement);
+  hideCompanion();
 }
 
 function applyTheme(): void {

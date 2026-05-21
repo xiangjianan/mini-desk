@@ -933,7 +933,7 @@ body:has(.image-preview) .n-modal-body-wrapper {
 
   .top-actions {
     display: flex;
-    top: calc(8px + env(safe-area-inset-top, 0px));
+    top: 3px;
     right: 8px;
     gap: 6px;
     z-index: 3300;

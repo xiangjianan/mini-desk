@@ -384,11 +384,13 @@ describe("Naive UI component usage", () => {
     expect(styles).toMatch(/\.workspace-panel\s*\{[^}]*display: flex/s);
     expect(styles).toMatch(/@media \(max-width: 900px\)[\s\S]*--app-font-size: 14px/s);
     expect(styles).toMatch(/@media \(max-width: 900px\)[\s\S]*\.top-actions\s*\{[^}]*display: flex/s);
+    expect(styles).toMatch(/@media \(max-width: 900px\)[\s\S]*\.top-actions\s*\{[^}]*top: 3px/s);
     expect(styles).toMatch(/@media \(max-width: 900px\)[\s\S]*\.focus-companion\s*\{[^}]*top: 118px/s);
     expect(styles).toMatch(/@media \(max-width: 900px\)[\s\S]*\.focus-companion img\s*\{[^}]*width: 60px/s);
     expect(styles).toMatch(/\.image-preview\s*\{[^}]*display: none !important/s);
     expect(styles).not.toMatch(/\.top-actions,[\s\S]*?\.focus-companion,[\s\S]*?\.image-preview\s*\{[^}]*display: none !important/s);
     expect(text).toContain("unlockTextareaForMobileKeyboard");
+    expect(text.match(/async function startEditing[\s\S]*?\n}/)?.[0] ?? "").not.toContain("event.preventDefault();");
     expect(text).toMatch(/editing\.value = true;[\s\S]*unlockTextareaForMobileKeyboard\(textarea, caret\);[\s\S]*await nextTick\(\)/s);
   });
 });

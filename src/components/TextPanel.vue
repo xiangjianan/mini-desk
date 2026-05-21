@@ -98,7 +98,6 @@ function handleBlur(event: FocusEvent): void {
 }
 
 async function startEditing(event: MouseEvent): Promise<void> {
-  event.preventDefault();
   const textarea = event.currentTarget as HTMLTextAreaElement;
   const caret = lastCaret.value ?? textarea.selectionStart ?? textarea.value.length;
   editing.value = true;

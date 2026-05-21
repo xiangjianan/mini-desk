@@ -220,6 +220,19 @@ describe("App shell", () => {
     }
   });
 
+  it("does not show the companion GIF after toggling the theme", async () => {
+    const wrapper = mountApp();
+
+    await wrapper.get("textarea").trigger("focus");
+    expect(wrapper.find(".focus-companion.is-visible img").exists()).toBe(true);
+
+    await wrapper.get('[aria-label="切换主题"]').trigger("click");
+    await wrapper.vm.$nextTick();
+
+    expect(wrapper.find(".focus-companion.is-visible").exists()).toBe(false);
+    wrapper.unmount();
+  });
+
   it("uses the companion bubble instead of window.confirm for clearing completed todos", async () => {
     vi.useFakeTimers();
     localStorage.setItem(

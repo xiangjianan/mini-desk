@@ -182,6 +182,31 @@ describe("TextPanel", () => {
     expect(textarea.attributes("readonly")).toBeUndefined();
   });
 
+  it("does not prevent the native mobile focus when double-click editing starts", async () => {
+    const wrapper = mount(TextPanel, {
+      attachTo: document.body,
+      props: {
+        titleId: "workspace-title",
+        title: "工作空间",
+        lines: [{ text: "root", indent: 0 }],
+      },
+    });
+    const textarea = wrapper.get("textarea").element as HTMLTextAreaElement;
+    const event = new MouseEvent("dblclick", {
+      bubbles: true,
+      cancelable: true,
+    });
+
+    textarea.dispatchEvent(event);
+    await wrapper.vm.$nextTick();
+
+    expect(event.defaultPrevented).toBe(false);
+    expect(textarea.readOnly).toBe(false);
+    expect(document.activeElement).toBe(textarea);
+
+    wrapper.unmount();
+  });
+
   it("collapses the caret instead of selecting text when double-click editing starts", async () => {
     const wrapper = mount(TextPanel, {
       props: {
