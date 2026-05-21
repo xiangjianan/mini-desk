@@ -51,7 +51,7 @@ describe("ImagePanel", () => {
     wrapper.unmount();
   });
 
-  it("adds top and bottom actions to image item context menus", async () => {
+  it("keeps image item context menus focused on preview, copy, delete, and guide actions", async () => {
     const wrapper = mountImagePanel([
       { id: "a", src: "data:image/png;base64,a", createdAt: 1 },
       { id: "b", src: "data:image/png;base64,b", createdAt: 2 },
@@ -63,18 +63,13 @@ describe("ImagePanel", () => {
     expect(wrapper.findAll(".dropdown-option").map((option) => option.text())).toEqual([
       "预览",
       "复制",
-      "置顶",
-      "置底",
       "删除",
       "使用指南",
     ]);
 
-    await wrapper.findAll(".dropdown-option").find((option) => option.text() === "置顶")?.trigger("click");
-    expect(wrapper.emitted("moveTop")?.[0]).toEqual(["b"]);
-
-    await wrapper.findAll(".image-card")[1].trigger("contextmenu");
-    await wrapper.findAll(".dropdown-option").find((option) => option.text() === "置底")?.trigger("click");
-    expect(wrapper.emitted("moveBottom")?.[0]).toEqual(["b"]);
+    expect(wrapper.text()).not.toContain("置顶");
+    expect(wrapper.text()).not.toContain("取消置顶");
+    expect(wrapper.text()).not.toContain("置底");
 
     wrapper.unmount();
   });

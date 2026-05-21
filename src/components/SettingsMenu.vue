@@ -3,6 +3,7 @@ import { computed, h, ref } from "vue";
 import {
   CloudDownloadOutline,
   CloudUploadOutline,
+  CreateOutline,
   InformationCircleOutline,
   SettingsOutline,
 } from "@vicons/ionicons5";
@@ -19,6 +20,7 @@ const emit = defineEmits<{
   export: [anchor?: HTMLElement];
   import: [anchor?: HTMLElement];
   about: [anchor?: HTMLElement];
+  suggest: [anchor?: HTMLElement];
   update: [];
   guide: [key: GuideKey, anchor: HTMLElement];
 }>();
@@ -28,6 +30,7 @@ const triggerRef = ref<HTMLElement | null>(null);
 const options = computed(() => [
   { label: "数据导出", key: "export", icon: renderIcon(CloudDownloadOutline) },
   { label: "数据导入", key: "import", icon: renderIcon(CloudUploadOutline) },
+  { label: "提建议", key: "suggest", icon: renderIcon(CreateOutline) },
   { label: "关于", key: "about", icon: renderIcon(InformationCircleOutline) },
   { type: "divider", key: "version-divider" },
   {
@@ -45,6 +48,7 @@ const options = computed(() => [
 function handleSelect(key: string): void {
   if (key === "export") emit("export", triggerRef.value ?? undefined);
   if (key === "import") emit("import", triggerRef.value ?? undefined);
+  if (key === "suggest") emit("suggest", triggerRef.value ?? undefined);
   if (key === "about") emit("about", triggerRef.value ?? undefined);
   if (key === "version" && props.updateAvailable) emit("update");
 }

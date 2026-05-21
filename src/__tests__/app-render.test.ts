@@ -3,6 +3,7 @@ import { beforeEach, describe, expect, it, vi } from "vitest";
 import App from "../App.vue";
 import ImagePanel from "../components/ImagePanel.vue";
 import SettingsMenu from "../components/SettingsMenu.vue";
+import TodoPanel from "../components/TodoPanel.vue";
 import { STORAGE_KEY } from "../state/defaults";
 
 vi.mock("naive-ui", async (importOriginal) => {
@@ -87,18 +88,28 @@ describe("App shell", () => {
     wrapper.unmount();
   });
 
-  it("renders a mobile area menu with todos selected by default", async () => {
+  it("renders a mobile drawer menu with todos selected by default", async () => {
     const wrapper = mountApp();
 
-    expect(wrapper.findAll(".mobile-nav-button").map((button) => button.text())).toEqual([
+    expect(wrapper.get(".mobile-drawer-trigger").text()).toContain("待办");
+    expect(wrapper.find(".mobile-drawer-menu").exists()).toBe(false);
+    expect(wrapper.get('[aria-label="To Do List 看板"]').attributes("data-mobile-active")).toBe("todos");
+
+    await wrapper.get(".mobile-drawer-trigger").trigger("click");
+
+    expect(wrapper.findAll(".mobile-menu-option").map((button) => button.text())).toEqual([
       "图片",
       "便签",
       "快捷",
       "待办",
       "空间",
     ]);
-    expect(wrapper.get(".mobile-nav-button.is-active").text()).toBe("待办");
-    expect(wrapper.get('[aria-label="To Do List 看板"]').attributes("data-mobile-active")).toBe("todos");
+
+    await wrapper.findAll(".mobile-menu-option").find((button) => button.text() === "空间")?.trigger("click");
+
+    expect(wrapper.get('[aria-label="To Do List 看板"]').attributes("data-mobile-active")).toBe("spaces");
+    expect(wrapper.get(".mobile-drawer-trigger").text()).toContain("空间");
+    expect(wrapper.find(".mobile-drawer-menu").exists()).toBe(false);
 
     wrapper.unmount();
   });
@@ -449,7 +460,7 @@ describe("App shell", () => {
     wrapper.unmount();
   });
 
-  it("reorders images from item context-menu top and bottom actions", async () => {
+  it("reorders images from the image panel drag reorder event", async () => {
     localStorage.setItem(
       STORAGE_KEY,
       JSON.stringify({
@@ -463,12 +474,12 @@ describe("App shell", () => {
     const wrapper = mountApp();
     const imagePanel = wrapper.getComponent(ImagePanel);
 
-    imagePanel.vm.$emit("moveTop", "img-2");
+    imagePanel.vm.$emit("reorder", "img-2", "img-1");
     await wrapper.vm.$nextTick();
 
     expect(imagePanel.props("images").map((image: { id: string }) => image.id)).toEqual(["img-2", "img-1", "img-3"]);
 
-    imagePanel.vm.$emit("moveBottom", "img-2");
+    imagePanel.vm.$emit("reorder", "img-2", "img-3");
     await wrapper.vm.$nextTick();
 
     expect(imagePanel.props("images").map((image: { id: string }) => image.id)).toEqual(["img-1", "img-3", "img-2"]);
@@ -748,6 +759,48 @@ describe("App shell", () => {
     }
   });
 
+  it("anchors completion feedback to the checked todo section when the section was not focused", async () => {
+    vi.useFakeTimers();
+    localStorage.setItem(
+      STORAGE_KEY,
+      JSON.stringify({
+        todos: {
+          morning: [{ id: "open-1", text: "待完成事项", done: false }],
+        },
+      }),
+    );
+    const wrapper = mountApp();
+
+    try {
+      const todoSection = wrapper.get('.todo-section[data-period="morning"]');
+      vi.spyOn(todoSection.element, "getBoundingClientRect").mockReturnValue({
+        x: 384,
+        y: 0,
+        width: 255,
+        height: 240,
+        top: 0,
+        left: 384,
+        right: 639,
+        bottom: 240,
+        toJSON: () => ({}),
+      });
+      wrapper.getComponent(TodoPanel).vm.$emit("complete", "morning", "open-1", true, todoSection.element as HTMLElement);
+      await wrapper.vm.$nextTick();
+
+      const style = wrapper.get('[data-testid="companion-bubble"]').attributes("style");
+      expect(style).toContain("100vw - 639px");
+      expect(style).toContain("100vh - 240px");
+
+      await vi.advanceTimersByTimeAsync(200);
+      await wrapper.vm.$nextTick();
+
+      expect(wrapper.find('[data-testid="companion-confirm"]').text().trim().length).toBeGreaterThan(0);
+    } finally {
+      wrapper.unmount();
+      vi.useRealTimers();
+    }
+  });
+
   it("keeps area click and focus guidance to the GIF without low-frequency text bubbles", async () => {
     vi.useFakeTimers();
     vi.setSystemTime(new Date("2026-05-20T00:00:00.000Z"));
@@ -1009,6 +1062,23 @@ describe("App shell", () => {
     expect(settings.props("appVersion")).toMatch(/^\d+\.\d+\.\d+/);
     expect(settings.props("updateAvailable")).toBe(true);
     expect(wrapper.get('[aria-label="设置"]').attributes("data-update-available")).toBe("true");
+
+    wrapper.unmount();
+  });
+
+  it("opens the GitHub issue creation page from the settings suggestion action", async () => {
+    const openSpy = vi.spyOn(window, "open").mockImplementation(() => null);
+    const wrapper = mountApp();
+
+    const settings = wrapper.getComponent(SettingsMenu);
+    settings.vm.$emit("suggest", settings.element as HTMLElement);
+    await wrapper.vm.$nextTick();
+
+    expect(openSpy).toHaveBeenCalledWith(
+      "https://github.com/xiangjianan/todolist/issues/new",
+      "_blank",
+      "noopener,noreferrer",
+    );
 
     wrapper.unmount();
   });

@@ -104,7 +104,7 @@ describe("Naive UI component usage", () => {
 
     expect(preview).toContain("@contextmenu.prevent");
     expect(preview).toContain(':mask-closable="false"');
-    expect(preview).not.toContain('@click.self="emit(\'close\')"');
+    expect(preview).toContain('@click.self="emit(\'close\')"');
     expect(preview).toContain("取消预览");
     expect(preview).toContain("复制");
     expect(preview).toContain("删除");
@@ -246,7 +246,7 @@ describe("Naive UI component usage", () => {
 
     expect(todo).toContain('class="todo-drag-handle"');
     expect(todo).not.toMatch(/class="todo-item"[\s\S]{0,160}draggable="true"/);
-    expect(styles).toMatch(/\.todo-item\s*\{[^}]*grid-template-columns: 14px 24px 28px minmax\(0, 1fr\)/s);
+    expect(styles).toMatch(/\.todo-item\s*\{[^}]*grid-template-columns: 14px 28px minmax\(0, 1fr\) 24px/s);
     expect(styles).toMatch(/\.todo-drag-handle\s*\{[^}]*width: 12px/s);
     expect(styles).toMatch(/\.todo-drag-handle\s*\{[^}]*opacity: 0\.28/s);
     expect(styles).toContain(".todo-drag-handle::before");
@@ -261,11 +261,12 @@ describe("Naive UI component usage", () => {
     expect(selectedRule).not.toContain("box-shadow");
   });
 
-  it("uses double-click editing for area text instead of single-click editing", () => {
+  it("uses click editing for area text while titles and reminders keep double-click editing", () => {
     const text = read("src/components/TextPanel.vue");
     const todo = read("src/components/TodoPanel.vue");
     const title = read("src/components/EditableTitle.vue");
 
+    expect(text).toContain("@click=\"startEditing\"");
     expect(text).toContain("@dblclick=\"startEditing\"");
     expect(text).toContain(":readonly=\"!editing\"");
     expect(text).not.toContain(".select()");
@@ -391,6 +392,15 @@ describe("Naive UI component usage", () => {
     expect(settings).toContain('"data-testid": "settings-version"');
   });
 
+  it("keeps overflowing workspace tabs scrollable before the top action bar", () => {
+    const styles = read("src/styles.css");
+
+    expect(styles).toMatch(/\.space-tabs\s*\{[^}]*overflow-x: auto/s);
+    expect(styles).toMatch(/\.workspace-panel \.space-tabs\s*\{[^}]*max-width: calc\(100% - 154px\)/s);
+    expect(styles).toMatch(/\.workspace-panel \.space-tabs\s*\{[^}]*overflow-x: scroll/s);
+    expect(styles).toMatch(/\.space-tabs\s*\{[^}]*overscroll-behavior-x: contain/s);
+  });
+
   it("uses a mobile area menu instead of compressing the desktop board", () => {
     const app = read("src/App.vue");
     const styles = read("src/styles.css");
@@ -398,9 +408,14 @@ describe("Naive UI component usage", () => {
 
     expect(app).toContain('class="workspace-panel"');
     expect(app).toContain('class="mobile-nav"');
+    expect(app).toContain('class="mobile-drawer-trigger"');
+    expect(app).toContain('class="mobile-drawer-menu"');
+    expect(app).toContain('class="mobile-menu-option"');
     expect(app).toContain('data-mobile-active');
     expect(app).toContain('{ key: "todos", label: "待办" }');
     expect(styles).toMatch(/\.mobile-nav\s*\{[^}]*display: flex/s);
+    expect(styles).toMatch(/\.mobile-nav\s*\{[^}]*padding: 6px 154px 6px 6px/s);
+    expect(styles).toMatch(/\.mobile-drawer-menu\s*\{[^}]*position: absolute/s);
     expect(styles).toMatch(/\.board\[data-mobile-active="todos"\] > \.todo-panel/s);
     expect(styles).toMatch(/\.board\[data-mobile-active="spaces"\] > \.space-panel/s);
     expect(styles).toMatch(/@media \(max-width: 900px\)[\s\S]*--app-font-size: 14px/s);
@@ -412,6 +427,8 @@ describe("Naive UI component usage", () => {
     expect(styles).not.toMatch(/\.top-actions,[\s\S]*?\.focus-companion,[\s\S]*?\.image-preview\s*\{[^}]*display: none !important/s);
     expect(text).toContain("unlockTextareaForMobileKeyboard");
     expect(text).toContain('@touchstart="handleTouchStart"');
+    expect(text).toContain('@pointerdown="handlePointerDown"');
+    expect(text).not.toContain("handleMobileEditTap");
     expect(text.match(/async function startEditing[\s\S]*?\n}/)?.[0] ?? "").not.toContain("event.preventDefault();");
     expect(text).toMatch(/function startEditingFromTextarea\(textarea: HTMLTextAreaElement, keyboardFocus = false\): void \{[\s\S]*editing\.value = true;[\s\S]*unlockTextareaForMobileKeyboard\(textarea, caret, keyboardFocus\);[\s\S]*\}/s);
     expect(text).toMatch(/async function startEditing\(event: MouseEvent\): Promise<void> \{[\s\S]*startEditingFromTextarea\(textarea\);[\s\S]*await nextTick\(\)/s);

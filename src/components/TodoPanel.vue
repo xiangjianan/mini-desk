@@ -17,7 +17,7 @@ const emit = defineEmits<{
   create: [period: TodoPeriod, afterId?: string];
   update: [period: TodoPeriod, id: string, text: string];
   split: [period: TodoPeriod, id: string, before: string, after: string];
-  complete: [period: TodoPeriod, id: string, done: boolean];
+  complete: [period: TodoPeriod, id: string, done: boolean, anchor?: HTMLElement];
   star: [period: TodoPeriod, id: string, starred: boolean];
   remove: [period: TodoPeriod, id: string, anchor?: HTMLElement];
   clearCompleted: [period: TodoPeriod, anchor?: HTMLElement];
@@ -44,6 +44,7 @@ const pendingDoneReorderIds = ref<string[]>([]);
 const reorderTimers = new Map<string, number>();
 const lastTodoCarets = new Map<string, number>();
 const lastTodoSelections = new Map<string, { start: number; end: number }>();
+const todoSectionRefs = new Map<TodoPeriod, HTMLElement>();
 const guideMenuOption: DropdownOption = { ...GUIDE_MENU_OPTION, label: GUIDE_MENU_OPTION.label || "使用指南" };
 const menuOptions = computed<DropdownOption[]>(() => {
   const options: DropdownOption[] = [];
@@ -146,7 +147,7 @@ function handleChecked(period: TodoPeriod, id: string, checked: boolean): void {
       window.setTimeout(() => clearPendingReorder(key), 200),
     );
   }
-  emit("complete", period, id, checked);
+  emit("complete", period, id, checked, todoSectionRefs.get(period));
 }
 
 function handleInputBlur(period: TodoPeriod, id: string): void {
@@ -342,6 +343,14 @@ function handleTodoSelection(period: TodoPeriod, id: string, event: Event): void
   rememberTodoSelection(period, id, event.currentTarget as HTMLInputElement);
 }
 
+function setTodoSectionRef(period: TodoPeriod, element: Element | null): void {
+  if (element instanceof HTMLElement) {
+    todoSectionRefs.set(period, element);
+    return;
+  }
+  todoSectionRefs.delete(period);
+}
+
 function collapseSelection(input: HTMLInputElement, caret: number): void {
   const position = Math.max(0, Math.min(caret, input.value.length));
   input.setSelectionRange(position, position);
@@ -375,14 +384,6 @@ function buildTodoListEntries(todos: TodoItem[]): TodoListEntry[] {
           class="today-focus-item"
           :class="{ 'is-done': item.todo.done }"
         >
-          <button
-            class="todo-star-button is-starred"
-            type="button"
-            aria-label="取消重点"
-            @click.stop="emit('star', item.period, item.todo.id, false)"
-          >
-            ★
-          </button>
           <NCheckbox
             :checked="item.todo.done"
             aria-label="完成"
@@ -401,6 +402,14 @@ function buildTodoListEntries(todos: TodoItem[]): TodoListEntry[] {
             @focus="handleInputFocus(item.period, item.todo, $event)"
             @blur="handleInputBlur(item.period, item.todo.id)"
           />
+          <button
+            class="todo-star-button is-starred"
+            type="button"
+            aria-label="取消重点"
+            @click.stop="emit('star', item.period, item.todo.id, false)"
+          >
+            ★
+          </button>
         </li>
       </ul>
     </section>
@@ -408,6 +417,7 @@ function buildTodoListEntries(todos: TodoItem[]): TodoListEntry[] {
       <section
         v-for="period in TODO_PERIODS"
         :key="period"
+        :ref="(element) => setTodoSectionRef(period, element as Element | null)"
         class="todo-section"
         :class="{ 'is-focused': focusedPeriod === period }"
         :data-period="period"
@@ -485,15 +495,6 @@ function buildTodoListEntries(todos: TodoItem[]): TodoListEntry[] {
                 @dragstart="dragged = { period, id: entry.todo.id }"
                 @dragend="dragged = null"
               />
-              <button
-                class="todo-star-button"
-                :class="{ 'is-starred': entry.todo.starred }"
-                type="button"
-                :aria-label="entry.todo.starred ? '取消重点' : '设为重点'"
-                @click.stop="emit('star', period, entry.todo.id, !entry.todo.starred)"
-              >
-                {{ entry.todo.starred ? "★" : "☆" }}
-              </button>
               <NCheckbox
                 :checked="entry.todo.done"
                 aria-label="完成"
@@ -515,6 +516,15 @@ function buildTodoListEntries(todos: TodoItem[]): TodoListEntry[] {
                 @focus="handleInputFocus(period, entry.todo, $event)"
                 @blur="handleInputBlur(period, entry.todo.id)"
               />
+              <button
+                class="todo-star-button"
+                :class="{ 'is-starred': entry.todo.starred }"
+                type="button"
+                :aria-label="entry.todo.starred ? '取消重点' : '设为重点'"
+                @click.stop="emit('star', period, entry.todo.id, !entry.todo.starred)"
+              >
+                {{ entry.todo.starred ? "★" : "☆" }}
+              </button>
             </li>
             <li
               v-else

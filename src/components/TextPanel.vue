@@ -13,9 +13,8 @@ const props = defineProps<{
   lines: LineItem[];
   placeholder?: string;
   split?: boolean;
+  hideHeader?: boolean;
 }>();
-
-const TOUCH_DOUBLE_TAP_MS = 360;
 
 const emit = defineEmits<{
   titleUpdate: [id: string, value: string];
@@ -30,7 +29,6 @@ const text = ref(textLinesToEditorText(props.lines));
 const focused = ref(false);
 const editing = ref(false);
 const lastCaret = ref<number | null>(null);
-const lastMobileTapAt = ref<number | null>(null);
 const lastTextSelection = ref<{ start: number; end: number } | null>(null);
 const menu = ref<{
   x: number;
@@ -44,7 +42,6 @@ const menuOptions = computed<DropdownOption[]>(() => {
   const options: DropdownOption[] = [];
   const target = menu.value?.target;
   if (target) {
-    options.push({ label: "编辑", key: "edit", disabled: editing.value && !target.readOnly });
     options.push({ label: "复制", key: "copy", disabled: !canCopyTextSelection(target) });
     options.push({ label: "粘贴", key: "paste", disabled: !menu.value?.canPaste });
   }
@@ -103,6 +100,7 @@ function handleBlur(event: FocusEvent): void {
 
 async function startEditing(event: MouseEvent): Promise<void> {
   const textarea = event.currentTarget as HTMLTextAreaElement;
+  if (editing.value) return;
   startEditingFromTextarea(textarea);
   await nextTick();
   const caret = lastCaret.value ?? textarea.selectionStart ?? textarea.value.length;
@@ -113,27 +111,27 @@ async function startEditing(event: MouseEvent): Promise<void> {
 
 function handlePointerDown(event: PointerEvent): void {
   if (event.pointerType !== "touch") return;
-  handleMobileEditTap(event.currentTarget as HTMLTextAreaElement, event);
+  unlockTextareaBeforeNativeFocus(event.currentTarget as HTMLTextAreaElement);
 }
 
 function handleTouchStart(event: TouchEvent): void {
   if (typeof window.PointerEvent !== "undefined") return;
-  handleMobileEditTap(event.currentTarget as HTMLTextAreaElement, event);
-}
-
-function handleMobileEditTap(textarea: HTMLTextAreaElement, event: Event): void {
-  const now = Date.now();
-  const previousTapAt = lastMobileTapAt.value;
-  lastMobileTapAt.value = now;
-  event.preventDefault();
-  if (previousTapAt === null || now - previousTapAt >= TOUCH_DOUBLE_TAP_MS) return;
-  startEditingFromTextarea(textarea, true);
+  unlockTextareaBeforeNativeFocus(event.currentTarget as HTMLTextAreaElement);
 }
 
 function startEditingFromTextarea(textarea: HTMLTextAreaElement, keyboardFocus = false): void {
   const caret = lastCaret.value ?? textarea.selectionStart ?? textarea.value.length;
   editing.value = true;
   unlockTextareaForMobileKeyboard(textarea, caret, keyboardFocus);
+}
+
+function unlockTextareaBeforeNativeFocus(textarea: HTMLTextAreaElement): void {
+  if (editing.value) return;
+  editing.value = true;
+  textarea.readOnly = false;
+  textarea.removeAttribute("readonly");
+  textarea.inputMode = "text";
+  textarea.setAttribute("inputmode", "text");
 }
 
 function unlockTextareaForMobileKeyboard(textarea: HTMLTextAreaElement, caret: number, keyboardFocus = false): void {
@@ -186,10 +184,6 @@ async function handleMenuSelect(key: string): Promise<void> {
   const target = current?.target;
   const canPaste = Boolean(current?.canPaste);
   closeMenu();
-  if (key === "edit" && target) {
-    startEditingFromTextarea(target);
-    return;
-  }
   if (key === "copy" && target) {
     if (!canCopyTextSelection(target)) return;
     await copyTextSelection(target);
@@ -276,7 +270,7 @@ function collapseSelection(textarea: HTMLTextAreaElement, caret: number): void {
 
 <template>
   <section class="text-panel" :class="textPanelClasses">
-    <div class="panel-header">
+    <div v-if="!hideHeader" class="panel-header">
       <h2>
         <EditableTitle :id="titleId" :value="title" @update="(id, value) => emit('titleUpdate', id, value)" />
       </h2>
@@ -297,6 +291,7 @@ function collapseSelection(textarea: HTMLTextAreaElement, caret: number): void {
         @pointerdown="handlePointerDown"
         @touchstart="handleTouchStart"
         @select="rememberSelection"
+        @click="startEditing"
         @dblclick="startEditing"
         @focus="handleFocus"
         @blur="handleBlur"

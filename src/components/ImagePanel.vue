@@ -17,8 +17,6 @@ const emit = defineEmits<{
   copy: [id: string];
   delete: [id: string, anchor?: HTMLElement];
   reorder: [dragId: string, targetId: string];
-  moveTop: [id: string];
-  moveBottom: [id: string];
   paste: [];
   guide: [key: GuideKey, anchor: HTMLElement, immediate?: boolean];
 }>();
@@ -32,8 +30,6 @@ const menuOptions = computed<DropdownOption[]>(() =>
     ? [
         { label: "预览", key: "preview" },
         { label: "复制", key: "copy" },
-        { label: "置顶", key: "top" },
-        { label: "置底", key: "bottom" },
         { label: "删除", key: "delete" },
         guideMenuOption,
       ]
@@ -58,8 +54,6 @@ function handleMenuSelect(key: string): void {
   if (!id) return;
   if (key === "preview") emit("preview", id);
   if (key === "copy") emit("copy", id);
-  if (key === "top") emit("moveTop", id);
-  if (key === "bottom") emit("moveBottom", id);
   if (key === "delete") emit("delete", id, anchor);
 }
 

@@ -7,7 +7,22 @@ import type { WorkspaceSpace } from "../types";
 const dropdownStub = {
   props: ["options"],
   emits: ["select"],
-  template: "<div><slot /></div>",
+  template: `
+    <div>
+      <slot />
+      <button
+        v-for="option in options"
+        :key="option.key"
+        class="dropdown-option"
+        :data-key="option.key"
+        :disabled="option.disabled"
+        type="button"
+        @click="!option.disabled && $emit('select', option.key)"
+      >
+        {{ option.label }}
+      </button>
+    </div>
+  `,
 };
 
 function mountSpacePanel(spaces: WorkspaceSpace[], activeSpaceId = spaces[0].id) {
@@ -44,31 +59,89 @@ describe("SpacePanel", () => {
   it("renames and updates the active space", async () => {
     const wrapper = mountSpacePanel([{ id: "workspace", title: "工作空间", lines: [] }]);
 
-    wrapper.getComponent(TextPanel).vm.$emit("titleUpdate", "space-workspace-title", "资料");
     wrapper.getComponent(TextPanel).vm.$emit("update", [{ text: "记录", indent: 0 }]);
 
-    expect(wrapper.emitted("rename")?.[0]).toEqual(["workspace", "资料"]);
     expect(wrapper.emitted("update")?.[0]).toEqual(["workspace", [{ text: "记录", indent: 0 }]]);
   });
 
-  it("prevents deleting the final remaining space", async () => {
+  it("edits a space name from the tab double click", async () => {
     const wrapper = mountSpacePanel([{ id: "workspace", title: "工作空间", lines: [] }]);
 
-    expect(wrapper.get(".space-delete-button").attributes("disabled")).toBeDefined();
+    await wrapper.get(".space-tab").trigger("dblclick");
+    await wrapper.get(".space-tab-edit-input").setValue("资料");
+    await wrapper.get(".space-tab-edit-input").trigger("keydown.enter");
 
-    await wrapper.get(".space-delete-button").trigger("click");
-
-    expect(wrapper.emitted("delete")).toBeUndefined();
+    expect(wrapper.emitted("rename")?.[0]).toEqual(["workspace", "资料"]);
   });
 
-  it("emits delete for non-final spaces", async () => {
+  it("opens tab context actions for editing and deleting", async () => {
     const wrapper = mountSpacePanel([
       { id: "workspace", title: "工作空间", lines: [] },
       { id: "project", title: "项目", lines: [] },
     ], "project");
 
-    await wrapper.get(".space-delete-button").trigger("click");
+    await wrapper.findAll(".space-tab")[1].trigger("contextmenu");
+
+    expect(wrapper.findAll(".dropdown-option").map((option) => option.text())).toEqual(["编辑", "删除"]);
+
+    await wrapper.findAll(".dropdown-option").find((option) => option.text() === "删除")?.trigger("click");
 
     expect(wrapper.emitted("delete")?.[0]).toEqual(["project"]);
+  });
+
+  it("prevents deleting the final remaining space from the tab context menu", async () => {
+    const wrapper = mountSpacePanel([{ id: "workspace", title: "工作空间", lines: [] }]);
+
+    await wrapper.get(".space-tab").trigger("contextmenu");
+
+    expect(wrapper.get('[data-key="delete"]').attributes("disabled")).toBeDefined();
+
+    await wrapper.get('[data-key="delete"]').trigger("click");
+
+    expect(wrapper.emitted("delete")).toBeUndefined();
+  });
+
+  it("does not repeat the active space title or show a permanent delete button above the editor", () => {
+    const wrapper = mountSpacePanel([{ id: "workspace", title: "工作空间", lines: [] }]);
+
+    expect(wrapper.find(".space-text-panel .panel-header").exists()).toBe(false);
+    expect(wrapper.find(".space-delete-button").exists()).toBe(false);
+  });
+
+  it("emits tab reorder while keeping the add button fixed", async () => {
+    const wrapper = mountSpacePanel([
+      { id: "workspace", title: "工作空间", lines: [] },
+      { id: "project", title: "项目", lines: [] },
+      { id: "notes", title: "资料", lines: [] },
+    ]);
+
+    await wrapper.findAll(".space-tab")[0].trigger("dragstart");
+    await wrapper.findAll(".space-tab")[2].trigger("drop");
+    await wrapper.findAll(".space-tab")[0].trigger("dragend");
+
+    expect(wrapper.emitted("reorder")?.[0]).toEqual(["workspace", "notes"]);
+    expect(wrapper.find(".space-add-button").exists()).toBe(true);
+  });
+
+  it("translates mouse wheel movement into horizontal tab scrolling", async () => {
+    const wrapper = mountSpacePanel(
+      Array.from({ length: 8 }, (_, index) => ({
+        id: `space-${index}`,
+        title: `空间 ${index + 1}`,
+        lines: [],
+      })),
+    );
+    const tabs = wrapper.get(".space-tabs").element as HTMLElement;
+    Object.defineProperty(tabs, "scrollWidth", { value: 900, configurable: true });
+    Object.defineProperty(tabs, "clientWidth", { value: 240, configurable: true });
+    tabs.scrollLeft = 0;
+    const event = new WheelEvent("wheel", { bubbles: true, cancelable: true, deltaY: 72 });
+
+    tabs.dispatchEvent(event);
+    await wrapper.vm.$nextTick();
+
+    expect(event.defaultPrevented).toBe(true);
+    expect(tabs.scrollLeft).toBe(72);
+    wrapper.unmount();
   });
 });

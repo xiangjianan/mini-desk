@@ -230,7 +230,7 @@ describe("TextPanel", () => {
     expect(wrapper.emitted("update")).toBeUndefined();
   });
 
-  it("keeps the text area readonly until it is double-clicked", async () => {
+  it("starts editing from a single click", async () => {
     const wrapper = mount(TextPanel, {
       props: {
         titleId: "workspace-title",
@@ -245,12 +245,12 @@ describe("TextPanel", () => {
     await textarea.trigger("keydown", { key: "Tab" });
     expect((textarea.element as HTMLTextAreaElement).value).toBe("root");
 
-    await textarea.trigger("dblclick");
+    await textarea.trigger("click");
 
     expect(textarea.attributes("readonly")).toBeUndefined();
   });
 
-  it("does not prevent the native mobile focus when double-click editing starts", async () => {
+  it("does not prevent the native focus when click editing starts", async () => {
     const wrapper = mount(TextPanel, {
       attachTo: document.body,
       props: {
@@ -260,7 +260,7 @@ describe("TextPanel", () => {
       },
     });
     const textarea = wrapper.get("textarea").element as HTMLTextAreaElement;
-    const event = new MouseEvent("dblclick", {
+    const event = new MouseEvent("click", {
       bubbles: true,
       cancelable: true,
     });
@@ -275,9 +275,7 @@ describe("TextPanel", () => {
     wrapper.unmount();
   });
 
-  it("starts mobile editing from the second touchstart so mobile keyboards can open", async () => {
-    vi.useFakeTimers();
-    vi.setSystemTime(0);
+  it("unlocks mobile touch editing before the native focus step", async () => {
     const PointerEventStub = window.PointerEvent;
     vi.stubGlobal("PointerEvent", undefined);
     const wrapper = mount(TextPanel, {
@@ -290,35 +288,19 @@ describe("TextPanel", () => {
     });
     const textarea = wrapper.get("textarea").element as HTMLTextAreaElement;
 
-    const focusSpy = vi.spyOn(textarea, "focus");
-
     const firstTouch = new TouchEvent("touchstart", { bubbles: true, cancelable: true });
     textarea.dispatchEvent(firstTouch);
     await wrapper.vm.$nextTick();
 
-    expect(firstTouch.defaultPrevented).toBe(true);
-    expect(textarea.readOnly).toBe(true);
-    expect(document.activeElement).not.toBe(textarea);
-
-    await vi.advanceTimersByTimeAsync(120);
-    textarea.dispatchEvent(new TouchEvent("touchstart", { bubbles: true, cancelable: true }));
-
-    expect(focusSpy).toHaveBeenCalled();
+    expect(firstTouch.defaultPrevented).toBe(false);
     expect(textarea.readOnly).toBe(false);
-
-    await wrapper.vm.$nextTick();
-
-    expect(textarea.readOnly).toBe(false);
-    expect(document.activeElement).toBe(textarea);
+    expect(textarea.inputMode).toBe("text");
 
     wrapper.unmount();
     vi.stubGlobal("PointerEvent", PointerEventStub);
-    vi.useRealTimers();
   });
 
-  it("starts mobile editing from the second pointerdown before touch fallback events", async () => {
-    vi.useFakeTimers();
-    vi.setSystemTime(0);
+  it("unlocks mobile pointer editing before the native focus step", async () => {
     const wrapper = mount(TextPanel, {
       attachTo: document.body,
       props: {
@@ -328,29 +310,20 @@ describe("TextPanel", () => {
       },
     });
     const textarea = wrapper.get("textarea").element as HTMLTextAreaElement;
-    const focusSpy = vi.spyOn(textarea, "focus");
 
-    const firstTap = new PointerEvent("pointerdown", { bubbles: true, cancelable: true, pointerType: "touch" });
+    const firstTap = new MouseEvent("pointerdown", { bubbles: true, cancelable: true });
+    Object.defineProperty(firstTap, "pointerType", { value: "touch" });
     textarea.dispatchEvent(firstTap);
     await wrapper.vm.$nextTick();
 
-    expect(firstTap.defaultPrevented).toBe(true);
-    expect(textarea.readOnly).toBe(true);
-
-    await vi.advanceTimersByTimeAsync(120);
-    const secondTap = new PointerEvent("pointerdown", { bubbles: true, cancelable: true, pointerType: "touch" });
-    textarea.dispatchEvent(secondTap);
-
-    expect(secondTap.defaultPrevented).toBe(true);
+    expect(firstTap.defaultPrevented).toBe(false);
     expect(textarea.readOnly).toBe(false);
-    expect(focusSpy).toHaveBeenCalledWith();
-    expect(document.activeElement).toBe(textarea);
+    expect(textarea.inputMode).toBe("text");
 
     wrapper.unmount();
-    vi.useRealTimers();
   });
 
-  it("collapses the caret instead of selecting text when double-click editing starts", async () => {
+  it("starts click editing with a collapsed caret", async () => {
     const wrapper = mount(TextPanel, {
       props: {
         titleId: "workspace-title",
@@ -361,10 +334,30 @@ describe("TextPanel", () => {
     const textarea = wrapper.get("textarea").element as HTMLTextAreaElement;
 
     textarea.setSelectionRange(1, 5);
-    await wrapper.get("textarea").trigger("dblclick");
+    await wrapper.get("textarea").trigger("click");
     await wrapper.vm.$nextTick();
 
     expect(textarea.selectionStart).toBe(textarea.selectionEnd);
+  });
+
+  it("does not override text selection after the editor is already active", async () => {
+    const wrapper = mount(TextPanel, {
+      props: {
+        titleId: "workspace-title",
+        title: "工作空间",
+        lines: [{ text: "root text", indent: 0 }],
+      },
+    });
+    const textarea = wrapper.get("textarea").element as HTMLTextAreaElement;
+
+    await wrapper.get("textarea").trigger("click");
+    textarea.setSelectionRange(1, 5);
+    await wrapper.get("textarea").trigger("mouseup");
+    await wrapper.get("textarea").trigger("click");
+    await wrapper.vm.$nextTick();
+
+    expect(textarea.selectionStart).toBe(1);
+    expect(textarea.selectionEnd).toBe(5);
   });
 
   it("keeps the caret at the original clicked position when double-click editing starts", async () => {
@@ -432,7 +425,7 @@ describe("TextPanel", () => {
     await wrapper.get("textarea").trigger("select");
     await wrapper.get("textarea").trigger("contextmenu");
 
-    expect(wrapper.findAll(".dropdown-option").map((option) => option.text())).toEqual(["编辑", "复制", "粘贴", "使用指南"]);
+    expect(wrapper.findAll(".dropdown-option").map((option) => option.text())).toEqual(["复制", "粘贴", "使用指南"]);
 
     textarea.setSelectionRange(4, 4);
     await wrapper.findAll(".dropdown-option").find((option) => option.text() === "复制")?.trigger("click");
@@ -461,41 +454,13 @@ describe("TextPanel", () => {
     textarea.setSelectionRange(0, 0);
     await wrapper.get("textarea").trigger("contextmenu");
 
-    expect(wrapper.findAll(".dropdown-option").map((option) => option.text())).toEqual(["编辑", "复制", "粘贴", "使用指南"]);
+    expect(wrapper.findAll(".dropdown-option").map((option) => option.text())).toEqual(["复制", "粘贴", "使用指南"]);
     expect(wrapper.get('[data-key="copy"]').attributes("disabled")).toBeDefined();
     expect(wrapper.get('[data-key="paste"]').attributes("disabled")).toBeDefined();
 
     await wrapper.get('[data-key="copy"]').trigger("click");
 
     expect(wrapper.emitted("guide")).toBeUndefined();
-    wrapper.unmount();
-  });
-
-  it("starts editing from the text panel context menu", async () => {
-    const wrapper = mount(TextPanel, {
-      attachTo: document.body,
-      props: {
-        titleId: "workspace-title",
-        title: "工作空间",
-        lines: [{ text: "root text", indent: 0 }],
-      },
-      global: {
-        stubs: {
-          Dropdown: dropdownStub,
-          NDropdown: dropdownStub,
-        },
-      },
-    });
-    const textarea = wrapper.get("textarea").element as HTMLTextAreaElement;
-
-    expect(textarea.readOnly).toBe(true);
-
-    await wrapper.get("textarea").trigger("contextmenu");
-    await wrapper.findAll(".dropdown-option").find((option) => option.text() === "编辑")?.trigger("click");
-    await wrapper.vm.$nextTick();
-
-    expect(textarea.readOnly).toBe(false);
-    expect(document.activeElement).toBe(textarea);
     wrapper.unmount();
   });
 

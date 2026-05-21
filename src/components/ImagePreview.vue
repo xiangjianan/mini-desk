@@ -103,7 +103,7 @@ function move(event: MouseEvent): void {
         </div>
       </aside>
       <main class="preview-main">
-        <div class="preview-stage" @mousedown="down">
+        <div class="preview-stage" @mousedown="down" @click.self="emit('close')">
           <img
             v-if="active.src"
             :src="active.src"

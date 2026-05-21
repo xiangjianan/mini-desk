@@ -31,7 +31,7 @@ const modalStub = {
 };
 
 describe("ImagePreview", () => {
-  it("keeps preview open when clicking blank preview space and closes from the cancel button", async () => {
+  it("closes when clicking blank preview space and keeps image clicks inside the preview", async () => {
     const wrapper = mount(ImagePreview, {
       props: {
         images: [{ id: "img-1", src: "data:image/png;base64,one", createdAt: 1 }],
@@ -49,10 +49,10 @@ describe("ImagePreview", () => {
       },
     });
 
-    await wrapper.get(".preview-stage").trigger("click");
+    await wrapper.get(".preview-stage img").trigger("click");
     expect(wrapper.emitted("close")).toBeUndefined();
 
-    await wrapper.findAll("button").find((button) => button.text() === "取消预览")?.trigger("click");
+    await wrapper.get(".preview-stage").trigger("click");
     expect(wrapper.emitted("close")).toHaveLength(1);
 
     wrapper.unmount();

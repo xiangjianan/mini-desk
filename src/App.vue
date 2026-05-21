@@ -58,6 +58,7 @@ const versionPromptVisible = ref(false);
 const aboutVisible = ref(false);
 const aboutMessage = ref(getMessage("about"));
 const mobileActiveArea = ref<MobileArea>("todos");
+const mobileNavOpen = ref(false);
 const { message: naiveMessage } = createDiscreteApi(["message"]);
 
 type BubbleOptions = {
@@ -78,11 +79,11 @@ const mobileAreas: Array<{ key: MobileArea; label: string }> = [
 const GUIDE_MESSAGES: Record<GuideKey, string[]> = {
   images: [
     `${AREA_HELP.images} Ctrl+V 粘贴图片，点击缩略图预览，方向键切换。`,
-    "截图区支持粘贴、拖拽排序、右键复制/删除，也可以置顶置底。",
+    "截图区支持粘贴、拖拽排序，右键可预览、复制、删除或查看指南。",
     "预览图片时可滚轮缩放、拖动平移，右键可复制、删除或取消预览。",
   ],
   note: [
-    `${AREA_HELP.note} 双击开始编辑，Ctrl+S 可立即保存。`,
+    `${AREA_HELP.note} 点一下开始编辑，Ctrl+S 可立即保存。`,
     "便签区适合临时记录，右键可复制/粘贴，也能打开使用指南。",
     "写下零散想法后不用急着整理，停顿片刻会自动保存。",
   ],
@@ -97,12 +98,12 @@ const GUIDE_MESSAGES: Record<GuideKey, string[]> = {
     "完成项可以统一清理；没有完成项时会给出提示，不会误删内容。",
   ],
   workspace: [
-    `${AREA_HELP.workspace} 双击编辑，Tab 缩进，Shift+Tab 取消缩进。`,
+    `${AREA_HELP.workspace} 点一下编辑，Tab 缩进，Shift+Tab 取消缩进。`,
     "工作空间适合拆步骤，缩进行会显示短横线，空缩进行按 Enter 会退出缩进。",
     "编辑时 Ctrl+S 可立即保存，右键可复制/粘贴并查看指南。",
   ],
   storage: [
-    `${AREA_HELP.storage} 双击编辑，Ctrl+S 保存，适合放长期内容。`,
+    `${AREA_HELP.storage} 点一下编辑，Ctrl+S 保存，适合放长期内容。`,
     "扩展区支持和工作空间一样的缩进、换行、复制与粘贴。",
     "需要长期保留的资料可以放这里，自动保存会帮你收好。",
   ],
@@ -130,6 +131,7 @@ const GUIDE_MESSAGES: Record<GuideKey, string[]> = {
 const GUIDE_MESSAGE_DURATION_MS = 4000;
 const GITHUB_REPO_NAME = "xiangjianan/todolist";
 const GITHUB_REPO_URL = "https://github.com/xiangjianan/todolist";
+const GITHUB_ISSUE_URL = `${GITHUB_REPO_URL}/issues/new`;
 const activeGuideKey = ref<GuideKey | null>(null);
 
 const naiveTheme = computed(() => (state.theme === "dark" ? darkTheme : null));
@@ -140,6 +142,9 @@ const saveStatusLabel = computed(() => {
   if (saveStatus.value === "saving") return "保存中";
   return "已保存";
 });
+const mobileActiveLabel = computed(() =>
+  mobileAreas.find((area) => area.key === mobileActiveArea.value)?.label ?? "待办",
+);
 
 const titles = computed(() =>
   Object.fromEntries(
@@ -230,6 +235,12 @@ function deleteSpace(id: string): void {
     syncLegacySpaceLines();
     persistNow();
   });
+}
+
+function reorderSpaces(dragId: string, targetId: string): void {
+  moveItem(state.spaces, dragId, targetId);
+  syncLegacySpaceLines();
+  persistNow();
 }
 
 function nextSpaceTitle(): string {
@@ -358,16 +369,6 @@ async function addImageFile(file: File): Promise<void> {
 
 function reorderImages(dragId: string, targetId: string): void {
   moveItem(state.images, dragId, targetId);
-  persistNow();
-}
-
-function moveImageToTop(id: string): void {
-  moveItemToStart(state.images, id);
-  persistNow();
-}
-
-function moveImageToBottom(id: string): void {
-  moveItemToEnd(state.images, id);
   persistNow();
 }
 
@@ -532,10 +533,10 @@ function splitTodo(period: TodoPeriod, id: string, before: string, after: string
   nextTick(() => focusTodoInput(period, nextId));
 }
 
-function complete(period: TodoPeriod, id: string, done: boolean): void {
+function complete(period: TodoPeriod, id: string, done: boolean, anchor?: HTMLElement): void {
   state.todos = completeTodo(state.todos, period, id, done);
   persistNow();
-  if (done) showBubble("todoCompleted");
+  if (done) showBubble("todoCompleted", anchor);
 }
 
 function toggleTodoStar(period: TodoPeriod, id: string, starred: boolean): void {
@@ -636,6 +637,10 @@ async function importData(event: Event): Promise<void> {
 function about(): void {
   aboutMessage.value = getMessage("about");
   aboutVisible.value = true;
+}
+
+function suggestIssue(): void {
+  window.open(GITHUB_ISSUE_URL, "_blank", "noopener,noreferrer");
 }
 
 function handleGlobalKeydown(event: KeyboardEvent): void {
@@ -845,20 +850,6 @@ function moveItem<T extends { id: string }>(items: T[], dragId: string, targetId
   items.splice(targetIndex, 0, item);
 }
 
-function moveItemToStart<T extends { id: string }>(items: T[], id: string): void {
-  const index = items.findIndex((item) => item.id === id);
-  if (index <= 0) return;
-  const [item] = items.splice(index, 1);
-  items.unshift(item);
-}
-
-function moveItemToEnd<T extends { id: string }>(items: T[], id: string): void {
-  const index = items.findIndex((item) => item.id === id);
-  if (index < 0 || index === items.length - 1) return;
-  const [item] = items.splice(index, 1);
-  items.push(item);
-}
-
 </script>
 
 <template>
@@ -867,15 +858,26 @@ function moveItemToEnd<T extends { id: string }>(items: T[], id: string): void {
     <main class="board" aria-label="To Do List 看板" :data-mobile-active="mobileActiveArea">
       <nav class="mobile-nav" aria-label="移动端区域切换">
         <button
-          v-for="area in mobileAreas"
-          :key="area.key"
-          class="mobile-nav-button"
-          :class="{ 'is-active': mobileActiveArea === area.key }"
+          class="mobile-drawer-trigger"
           type="button"
-          @click="mobileActiveArea = area.key"
+          :aria-expanded="mobileNavOpen"
+          @click="mobileNavOpen = !mobileNavOpen"
         >
-          {{ area.label }}
+          <span class="mobile-menu-icon" aria-hidden="true">☰</span>
+          <span>{{ mobileActiveLabel }}</span>
         </button>
+        <div v-if="mobileNavOpen" class="mobile-drawer-menu">
+          <button
+            v-for="area in mobileAreas"
+            :key="area.key"
+            class="mobile-menu-option"
+            :class="{ 'is-active': mobileActiveArea === area.key }"
+            type="button"
+            @click="mobileActiveArea = area.key; mobileNavOpen = false"
+          >
+            {{ area.label }}
+          </button>
+        </div>
       </nav>
 
       <ImagePanel
@@ -886,8 +888,6 @@ function moveItemToEnd<T extends { id: string }>(items: T[], id: string): void {
         @copy="copyImage"
         @delete="deleteImage"
         @reorder="reorderImages"
-        @move-top="moveImageToTop"
-        @move-bottom="moveImageToBottom"
         @paste="pasteImageFromClipboard"
         @guide="handleGuideClick"
       />
@@ -899,7 +899,7 @@ function moveItemToEnd<T extends { id: string }>(items: T[], id: string): void {
           title-id="note-title"
           :title="titles['note-title']"
           :lines="state.noteLines"
-          placeholder="灵感先放这里，双击开始写 (＾▽＾)"
+          placeholder="灵感先放这里，点一下开始写 (＾▽＾)"
           @title-update="updateTitle"
           @update="updateLines('noteLines', $event)"
           @focus="handleGuideFocus('note', $event)"
@@ -952,6 +952,7 @@ function moveItemToEnd<T extends { id: string }>(items: T[], id: string): void {
         @rename="renameSpace"
         @update="updateSpaceLines"
         @delete="deleteSpace"
+        @reorder="reorderSpaces"
         @focus="(_, element) => handleGuideFocus('workspace', element)"
         @guide="(_, anchor, immediate) => handleGuideClick('workspace', anchor, immediate)"
         @blur="handleEditorBlur"
@@ -1010,6 +1011,7 @@ function moveItemToEnd<T extends { id: string }>(items: T[], id: string): void {
         @export="exportData"
         @import="requestImport"
         @about="about"
+        @suggest="suggestIssue"
         @update="updateStaticVersion"
         @guide="handleGuideClick"
       />

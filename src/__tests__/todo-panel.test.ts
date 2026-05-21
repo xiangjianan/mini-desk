@@ -159,9 +159,104 @@ describe("TodoPanel", () => {
     ]);
     expect(wrapper.findAll(".today-focus-item")[1].classes()).toContain("is-done");
 
-    await wrapper.get(".todo-star-button").trigger("click");
+    await wrapper.get(".todo-item .todo-star-button").trigger("click");
 
     expect(wrapper.emitted("star")?.[0]).toEqual(["morning", "a", false]);
+    wrapper.unmount();
+  });
+
+  it("places the reminder star action at the far right of the row", () => {
+    const wrapper = mount(TodoPanel, {
+      props: {
+        todos: {
+          morning: [{ id: "a", text: "第一项", done: false }],
+          noon: [],
+          evening: [],
+        },
+        titles: DEFAULT_TITLES,
+      },
+      global: {
+        stubs: {
+          Button: true,
+          Checkbox: checkboxStub,
+          Dropdown: dropdownStub,
+          NCheckbox: checkboxStub,
+          NDropdown: dropdownStub,
+          NTooltip: tooltipStub,
+        },
+      },
+    });
+
+    const rowChildren = Array.from(wrapper.get(".todo-item").element.children).map((child) =>
+      (child as HTMLElement).className,
+    );
+
+    expect(rowChildren[0]).toContain("todo-drag-handle");
+    expect(rowChildren[1]).toContain("checkbox-stub");
+    expect(rowChildren[2]).toContain("todo-input");
+    expect(rowChildren[3]).toContain("todo-star-button");
+    wrapper.unmount();
+  });
+
+  it("places the today focus star action at the far right of the row", () => {
+    const wrapper = mount(TodoPanel, {
+      props: {
+        todos: {
+          morning: [{ id: "a", text: "重点事项", done: false, starred: true }],
+          noon: [],
+          evening: [],
+        },
+        titles: DEFAULT_TITLES,
+      },
+      global: {
+        stubs: {
+          Button: true,
+          Checkbox: checkboxStub,
+          Dropdown: dropdownStub,
+          NCheckbox: checkboxStub,
+          NDropdown: dropdownStub,
+          NTooltip: tooltipStub,
+        },
+      },
+    });
+
+    const rowChildren = Array.from(wrapper.get(".today-focus-item").element.children).map((child) =>
+      (child as HTMLElement).className,
+    );
+
+    expect(rowChildren[0]).toContain("checkbox-stub");
+    expect(rowChildren[1]).toContain("today-focus-input");
+    expect(rowChildren[2]).toContain("todo-star-button");
+    wrapper.unmount();
+  });
+
+  it("emits the todo section as the completion anchor", async () => {
+    const wrapper = mount(TodoPanel, {
+      props: {
+        todos: {
+          morning: [{ id: "a", text: "第一项", done: false }],
+          noon: [],
+          evening: [],
+        },
+        titles: DEFAULT_TITLES,
+      },
+      global: {
+        stubs: {
+          Button: true,
+          Checkbox: checkboxStub,
+          Dropdown: dropdownStub,
+          NCheckbox: checkboxStub,
+          NDropdown: dropdownStub,
+          NTooltip: tooltipStub,
+        },
+      },
+    });
+
+    await wrapper.get(".todo-item .checkbox-stub").trigger("click");
+
+    const emitted = wrapper.emitted("complete")?.[0];
+    expect(emitted?.slice(0, 3)).toEqual(["morning", "a", true]);
+    expect((emitted?.[3] as HTMLElement).classList.contains("todo-section")).toBe(true);
     wrapper.unmount();
   });
 
@@ -245,7 +340,7 @@ describe("TodoPanel", () => {
     await wrapper.get(".checkbox-stub").trigger("click");
     await wrapper.get('[data-testid="todo-list-morning"]').trigger("click");
 
-    expect(wrapper.emitted("complete")?.[0]).toEqual(["morning", "a", true]);
+    expect(wrapper.emitted("complete")?.[0].slice(0, 3)).toEqual(["morning", "a", true]);
     expect(wrapper.emitted("create")).toBeUndefined();
     wrapper.unmount();
   });
