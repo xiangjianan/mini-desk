@@ -1164,6 +1164,55 @@ describe("App shell", () => {
     wrapper.unmount();
   });
 
+  it("cancels pending import confirmation and clears companion state when entering mobile", async () => {
+    vi.useFakeTimers();
+    const mediaQuery = stubMatchMedia(false);
+    const wrapper = mountApp();
+
+    try {
+      const settings = wrapper.getComponent(SettingsMenu);
+      const input = wrapper.get('input[type="file"]').element as HTMLInputElement;
+      settings.vm.$emit("import", settings.element as HTMLElement);
+      const file = new File([JSON.stringify({ workspaceLines: ["切换中导入"] })], "todo.json", {
+        type: "application/json",
+      });
+      Object.defineProperty(input, "files", { value: [file], configurable: true });
+      Object.defineProperty(input, "value", {
+        value: "C:\\fakepath\\todo.json",
+        writable: true,
+        configurable: true,
+      });
+
+      await wrapper.get('input[type="file"]').trigger("change");
+      await Promise.resolve();
+      await wrapper.vm.$nextTick();
+      await vi.advanceTimersByTimeAsync(200);
+      await wrapper.vm.$nextTick();
+
+      expect(wrapper.find('[data-testid="companion-yes"]').exists()).toBe(true);
+
+      mediaQuery.dispatchEvent({ matches: true } as MediaQueryListEvent);
+      await wrapper.vm.$nextTick();
+
+      expect(input.value).toBe("");
+      expect(wrapper.find(".mobile-handoff").exists()).toBe(true);
+
+      mediaQuery.dispatchEvent({ matches: false } as MediaQueryListEvent);
+      await wrapper.vm.$nextTick();
+      await vi.advanceTimersByTimeAsync(200);
+      await wrapper.vm.$nextTick();
+
+      expect(wrapper.find(".board").exists()).toBe(true);
+      expect(wrapper.find(".focus-companion.is-visible").exists()).toBe(false);
+      expect(wrapper.find('[data-testid="companion-confirm"]').exists()).toBe(false);
+      expect(wrapper.text()).not.toContain("切换中导入");
+    } finally {
+      wrapper.unmount();
+      vi.unstubAllGlobals();
+      vi.useRealTimers();
+    }
+  });
+
   it("shows about information in the companion bubble instead of a modal", async () => {
     vi.useFakeTimers();
     vi.spyOn(Math, "random").mockReturnValue(0);

@@ -238,7 +238,10 @@ function updateMobileBlocked(source?: MediaQueryList | MediaQueryListEvent): voi
   const wasMobileBlocked = isMobileBlocked.value;
   if (matches && !wasMobileBlocked) {
     activePreviewId.value = undefined;
+    clearPendingConfirm(true);
     hideBubbleMessage({ clearRetainedContent: true });
+    companionFocused.value = false;
+    activeGuideKey.value = null;
   }
   isMobileBlocked.value = matches;
 }
@@ -935,7 +938,7 @@ function showBubble(messageKey: MessageKey, anchor?: HTMLElement, options: Bubbl
 function showBubbleText(message: string, anchor?: HTMLElement, options: BubbleOptions = {}, duration = 3000): void {
   window.clearTimeout(bubbleTimer.value);
   window.clearTimeout(bubbleFadeTimer.value);
-  pendingConfirm.value = null;
+  clearPendingConfirm();
   bubbleMessage.value = message;
   bubbleLink.value = options.linkText && options.linkHref ? { text: options.linkText, href: options.linkHref } : null;
   activeGuideKey.value = options.guideKey ?? null;
@@ -955,7 +958,7 @@ function hideBubbleMessage(options: { clearRetainedContent?: boolean } = {}): vo
   bubbleRemainingMs.value = 0;
   bubbleTimerStartedAt.value = 0;
   bubbleTimerOptions.value = {};
-  pendingConfirm.value = null;
+  clearPendingConfirm();
   bubbleVisible.value = false;
   bubbleMessage.value = "";
   bubbleLink.value = null;
@@ -1046,8 +1049,14 @@ async function confirmCompanionAction(): Promise<void> {
 }
 
 function cancelCompanionAction(): void {
-  pendingConfirm.value?.onCancel?.();
+  clearPendingConfirm(true);
   hideCompanion();
+}
+
+function clearPendingConfirm(runCancel = false): void {
+  const action = pendingConfirm.value;
+  pendingConfirm.value = null;
+  if (runCancel) action?.onCancel?.();
 }
 
 function showToast(messageKey: MessageKey): void {
