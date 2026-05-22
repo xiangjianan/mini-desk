@@ -84,7 +84,8 @@ function mountQuickButtons(options: Partial<InstanceType<typeof QuickButtons>["$
 }
 
 async function openDialog(wrapper: ReturnType<typeof mountQuickButtons>) {
-  await wrapper.get(".empty-hint").trigger("click");
+  await wrapper.get(".quick-menu-button").trigger("click");
+  await wrapper.findAll(".dropdown-option").find((option) => option.text() === "新增")?.trigger("click");
   await wrapper.vm.$nextTick();
 }
 
@@ -173,6 +174,18 @@ describe("QuickButtons", () => {
     await wrapper.findAll(".dropdown-option").find((option) => option.text() === "Tips")?.trigger("click");
 
     expect(wrapper.emitted("guide")?.[0]).toEqual(["quickButtons", expect.any(HTMLElement), true]);
+    wrapper.unmount();
+  });
+
+  it("keeps an empty quick-button area visually blank and focuses guidance on click", async () => {
+    const wrapper = mountQuickButtons();
+
+    expect(wrapper.find(".empty-hint").text()).toBe("");
+
+    await wrapper.get(".empty-hint").trigger("click");
+
+    expect(wrapper.emitted("guide")?.[0]).toEqual(["quickButtons", expect.any(HTMLElement)]);
+    expect(wrapper.find(".quick-dialog").exists()).toBe(false);
     wrapper.unmount();
   });
 

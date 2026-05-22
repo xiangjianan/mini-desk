@@ -87,6 +87,10 @@ describe("App shell", () => {
     expect(wrapper.find('[aria-label="切换主题"]').exists()).toBe(true);
     expect(wrapper.find('[aria-label="快捷链接菜单"]').exists()).toBe(true);
     expect(wrapper.find('[aria-label="设置"]').exists()).toBe(true);
+    expect(wrapper.find(".image-empty").text()).toBe("");
+    expect(wrapper.find(".empty-hint").text()).toBe("");
+    expect(wrapper.find(".todo-empty-hint").text()).toBe("");
+    expect(wrapper.findAll("textarea").every((textarea) => !textarea.attributes("placeholder"))).toBe(true);
 
     wrapper.unmount();
   });
@@ -182,8 +186,9 @@ describe("App shell", () => {
     wrapper.unmount();
   });
 
-  it("shows the GIF companion on editor focus and the save bubble on Ctrl+S", async () => {
+  it("shows an empty editor Tips bubble on focus and the save bubble on Ctrl+S", async () => {
     vi.useFakeTimers();
+    vi.spyOn(Math, "random").mockReturnValue(0);
     const wrapper = mountApp();
 
     try {
@@ -191,6 +196,11 @@ describe("App shell", () => {
 
       expect(wrapper.find(".focus-companion.is-visible img").exists()).toBe(true);
       expect(wrapper.find('[data-testid="companion-confirm"]').exists()).toBe(false);
+
+      await vi.advanceTimersByTimeAsync(200);
+      await wrapper.vm.$nextTick();
+
+      expect(wrapper.find('[data-testid="companion-confirm"]').text()).toContain("点一下开始写便签");
 
       window.dispatchEvent(
         new KeyboardEvent("keydown", {
@@ -200,13 +210,34 @@ describe("App shell", () => {
       );
       await wrapper.vm.$nextTick();
 
-      expect(wrapper.find(".n-popover").exists()).toBe(false);
-
       await vi.advanceTimersByTimeAsync(200);
       await wrapper.vm.$nextTick();
 
       expect(wrapper.find(".n-popover").exists()).toBe(true);
       expect(wrapper.find('[data-testid="companion-confirm"]').text()).toMatch(/保存|收好|记下|归档|备份|存好|存档|更新|继续/);
+    } finally {
+      wrapper.unmount();
+      vi.useRealTimers();
+    }
+  });
+
+  it("shows only the GIF when focusing a non-empty editor", async () => {
+    vi.useFakeTimers();
+    localStorage.setItem(
+      STORAGE_KEY,
+      JSON.stringify({
+        noteLines: [{ text: "已有内容", indent: 0 }],
+      }),
+    );
+    const wrapper = mountApp();
+
+    try {
+      await wrapper.get("textarea").trigger("focus");
+      await vi.advanceTimersByTimeAsync(200);
+      await wrapper.vm.$nextTick();
+
+      expect(wrapper.find(".focus-companion.is-visible img").exists()).toBe(true);
+      expect(wrapper.find('[data-testid="companion-confirm"]').exists()).toBe(false);
     } finally {
       wrapper.unmount();
       vi.useRealTimers();
@@ -1348,6 +1379,14 @@ describe("App shell", () => {
     vi.useFakeTimers();
     vi.setSystemTime(new Date("2026-05-20T00:00:00.000Z"));
     vi.spyOn(Math, "random").mockReturnValue(0);
+    localStorage.setItem(
+      STORAGE_KEY,
+      JSON.stringify({
+        images: [{ id: "img-1", src: "data:image/png;base64,a", createdAt: 1 }],
+        spaces: [{ id: "workspace", title: "工作空间", lines: [{ text: "已有内容", indent: 0 }] }],
+        activeSpaceId: "workspace",
+      }),
+    );
     const wrapper = mountApp();
 
     try {
@@ -1447,7 +1486,7 @@ describe("App shell", () => {
     }
   });
 
-  it("moves the click-triggered guide GIF to the newly clicked area without text bubbles", async () => {
+  it("shows Tips for empty clicked areas and only the GIF for non-empty clicked areas", async () => {
     vi.useFakeTimers();
     vi.setSystemTime(new Date("2026-05-20T00:00:00.000Z"));
     vi.spyOn(Math, "random").mockReturnValue(0);
@@ -1467,11 +1506,18 @@ describe("App shell", () => {
       });
 
       await wrapper.get(".image-panel .panel-header").trigger("click");
-      await vi.advanceTimersByTimeAsync(600);
+      await vi.advanceTimersByTimeAsync(200);
       await wrapper.vm.$nextTick();
 
       expect(wrapper.find(".focus-companion.is-visible img").exists()).toBe(true);
+      expect(wrapper.find('[data-testid="companion-confirm"]').text()).toContain("Ctrl+V 粘贴截图");
 
+      wrapper.getComponent(QuickButtons).vm.$emit("save", {
+        title: "文档",
+        value: "https://example.com",
+        type: "link",
+      });
+      await wrapper.vm.$nextTick();
       vi.spyOn(wrapper.get(".quick-block").element, "getBoundingClientRect").mockReturnValue({
         x: 128,
         y: 0,
@@ -1488,9 +1534,13 @@ describe("App shell", () => {
 
       expect(wrapper.find(".focus-companion.is-visible img").exists()).toBe(true);
       expect(wrapper.get('[data-testid="companion-bubble"]').attributes("style")).toContain("100vw - 428px");
-      expect(wrapper.find('[data-testid="companion-confirm"]').exists()).toBe(false);
 
       await vi.advanceTimersByTimeAsync(200);
+      await wrapper.vm.$nextTick();
+
+      expect(wrapper.find('[data-testid="companion-confirm"]').classes()).toContain("is-popover-fading");
+
+      await vi.advanceTimersByTimeAsync(60);
       await wrapper.vm.$nextTick();
 
       expect(wrapper.find('[data-testid="companion-confirm"]').exists()).toBe(false);
@@ -1558,6 +1608,13 @@ describe("App shell", () => {
 
   it("hides the current bubble when focus switches, moves the GIF, and clears focus on Escape", async () => {
     vi.useFakeTimers();
+    localStorage.setItem(
+      STORAGE_KEY,
+      JSON.stringify({
+        spaces: [{ id: "workspace", title: "工作空间", lines: [{ text: "已有内容", indent: 0 }] }],
+        activeSpaceId: "workspace",
+      }),
+    );
     const wrapper = mountApp();
     try {
       const firstPanel = wrapper.find(".text-panel");
@@ -1597,9 +1654,13 @@ describe("App shell", () => {
       });
       await workspace.get("textarea").trigger("focus");
 
-      expect(wrapper.find('[data-testid="companion-confirm"]').exists()).toBe(false);
+      expect(wrapper.find('[data-testid="companion-confirm"]').classes()).toContain("is-popover-fading");
       expect(wrapper.get('[data-testid="companion-bubble"]').attributes("style")).toContain("100vw - 1080px");
       expect(wrapper.find(".focus-companion.is-visible img").exists()).toBe(true);
+
+      await vi.advanceTimersByTimeAsync(260);
+      await wrapper.vm.$nextTick();
+      expect(wrapper.find('[data-testid="companion-confirm"]').exists()).toBe(false);
 
       window.dispatchEvent(new KeyboardEvent("keydown", { key: "Escape" }));
       await wrapper.vm.$nextTick();

@@ -350,13 +350,21 @@ function showCompanion(anchor?: HTMLElement, guideKey?: GuideKey): void {
 }
 
 function handleGuideFocus(key: GuideKey, anchor?: HTMLElement): void {
-  showCompanion(anchor, key);
+  showAreaGuide(key, anchor);
 }
 
 function handleGuideClick(key: GuideKey, anchor?: HTMLElement, immediate = false): void {
   invalidateGuideCompanion(key);
   if (immediate) {
     showGuideBubble(key, anchor);
+    return;
+  }
+  showAreaGuide(key, anchor);
+}
+
+function showAreaGuide(key: GuideKey, anchor?: HTMLElement): void {
+  if (isGuideAreaEmpty(key, anchor)) {
+    showGuideBubble(key, anchor, false);
     return;
   }
   showCompanion(anchor, key);
@@ -976,14 +984,52 @@ function cancelEmptyTodoRemoval(period: TodoPeriod, id: string): void {
   emptyTodoRemovalTimers.delete(key);
 }
 
-function showGuideBubble(key: GuideKey, anchor?: HTMLElement): void {
+function showGuideBubble(key: GuideKey, anchor?: HTMLElement, hideCompanionAfter = true): void {
   if (pendingConfirm.value) return;
   showBubbleText(
     withKaomoji(randomGuideMessage(key), "encouraging"),
     anchor,
-    { hideCompanionAfter: true, guideKey: key },
+    { hideCompanionAfter, guideKey: key },
     GUIDE_MESSAGE_DURATION_MS,
   );
+}
+
+function isGuideAreaEmpty(key: GuideKey, anchor?: HTMLElement): boolean {
+  if (key === "images") return state.images.length === 0;
+  if (key === "note") return !hasLineContent(state.noteLines);
+  if (key === "quickButtons") {
+    return state.quickButtons.filter((button) => state.showHiddenQuickButtons || !button.hidden).length === 0;
+  }
+  if (key === "workspace") {
+    const active = state.spaces.find((space) => space.id === state.activeSpaceId) ?? state.spaces[0];
+    return !active || !hasLineContent(active.lines);
+  }
+  if (key === "storage") return !hasLineContent(state.storageLines);
+  if (key === "todos") {
+    const period = getTodoPeriodFromAnchor(anchor);
+    if (!period) return TODO_PERIODS.every((item) => isTodoPeriodEmpty(item));
+    return isTodoPeriodEmpty(period);
+  }
+  return false;
+}
+
+function hasLineContent(lines: LineItem[]): boolean {
+  return lines.some((line) => line.text.trim().length > 0);
+}
+
+function isTodoPeriodEmpty(period: TodoPeriod): boolean {
+  const visible = state.todos[period].filter((todo) => state.showCompletedTodos[period] || !todo.done);
+  return visible.length === 0 || visible.every((todo) => todo.text.trim().length === 0);
+}
+
+function getTodoPeriodFromAnchor(anchor?: HTMLElement): TodoPeriod | undefined {
+  const section = anchor?.closest(".todo-section[data-period]") as HTMLElement | null | undefined;
+  const period = section?.dataset.period;
+  return isTodoPeriod(period) ? period : undefined;
+}
+
+function isTodoPeriod(value: unknown): value is TodoPeriod {
+  return typeof value === "string" && TODO_PERIODS.includes(value as TodoPeriod);
 }
 
 function randomGuideMessage(key: GuideKey): string {
@@ -1120,7 +1166,6 @@ function moveItem<T extends { id: string }>(items: T[], dragId: string, targetId
           title-id="note-title"
           :title="titles['note-title']"
           :lines="state.noteLines"
-          placeholder="灵感先放这里，点一下开始写 (＾▽＾)"
           @title-update="updateTitle"
           @update="updateLines('noteLines', $event)"
           @focus="handleGuideFocus('note', $event)"

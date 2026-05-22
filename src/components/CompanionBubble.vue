@@ -54,7 +54,7 @@ const placementStyle = computed(() => {
 
 const surfaceVisible = computed(() => props.visible && (gifVisible.value || gifFading.value));
 const popoverVisible = computed(() => props.visible && gifVisible.value && Boolean(props.message || props.confirm));
-const visiblePopover = computed(() => delayedPopoverVisible.value && popoverVisible.value);
+const visiblePopover = computed(() => (delayedPopoverVisible.value && popoverVisible.value) || retainingPopoverContent.value);
 const popoverContentVisible = computed(() => visiblePopover.value || retainingPopoverContent.value);
 const popoverKey = computed(() => `${props.position?.right ?? "default"}:${props.position?.bottom ?? "default"}`);
 const gifSrc = computed(() => (props.theme === "dark" ? hermesDarkGif : hermesGif));
@@ -159,7 +159,14 @@ onUnmounted(() => {
         <img :src="gifSrc" alt="" />
       </template>
 
-      <div v-if="popoverContentVisible" class="companion-popover" role="status" aria-live="polite" data-testid="companion-confirm">
+      <div
+        v-if="popoverContentVisible"
+        class="companion-popover"
+        :class="{ 'is-popover-fading': retainingPopoverContent }"
+        role="status"
+        aria-live="polite"
+        data-testid="companion-confirm"
+      >
         <span>{{ renderedMessage }}</span>
         <div v-if="renderedConfirm" class="companion-actions">
           <NButton size="tiny" class="companion-action-button" data-testid="companion-yes" @click="emit('yes')">{{ renderedConfirmText }}</NButton>

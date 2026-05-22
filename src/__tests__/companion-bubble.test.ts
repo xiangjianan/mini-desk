@@ -53,7 +53,7 @@ describe("CompanionBubble", () => {
     wrapper.unmount();
   });
 
-  it("does not leave an empty popover shell when the message is cleared", async () => {
+  it("fades the popover out before removing cleared message content", async () => {
     vi.useFakeTimers();
     const wrapper = mount(CompanionBubble, {
       attachTo: document.body,
@@ -64,7 +64,7 @@ describe("CompanionBubble", () => {
       global: {
         stubs: {
           NButton: buttonStub,
-          NPopover: popoverStub,
+          NPopover: persistentPopoverStub,
         },
       },
     });
@@ -74,8 +74,15 @@ describe("CompanionBubble", () => {
     expect(document.body.querySelector(".n-popover")).not.toBeNull();
 
     await wrapper.setProps({ message: "" });
+    await wrapper.vm.$nextTick();
 
-    expect(document.body.querySelector(".n-popover")).toBeNull();
+    const fadingBubble = document.body.querySelector('[data-testid="companion-confirm"]');
+    expect(fadingBubble?.classList.contains("is-popover-fading")).toBe(true);
+    expect(fadingBubble?.textContent).toContain("提示内容");
+
+    await vi.advanceTimersByTimeAsync(260);
+    await wrapper.vm.$nextTick();
+
     expect(wrapper.find('[data-testid="companion-confirm"]').exists()).toBe(false);
 
     wrapper.unmount();
@@ -106,6 +113,7 @@ describe("CompanionBubble", () => {
     await wrapper.setProps({ message: "" });
 
     expect(wrapper.find(".n-popover").text()).toContain("保存好了");
+    expect(wrapper.get('[data-testid="companion-confirm"]').classes()).toContain("is-popover-fading");
 
     await vi.advanceTimersByTimeAsync(260);
     await wrapper.vm.$nextTick();

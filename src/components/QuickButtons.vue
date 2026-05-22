@@ -4,7 +4,7 @@ import { NButton, NCheckbox, NDropdown, NIcon, NInput, NModal } from "naive-ui";
 import { CopyOutline } from "@vicons/ionicons5";
 import type { DropdownOption } from "naive-ui";
 import type { GuideKey, QuickButton, QuickButtonType } from "../types";
-import { EMPTY_HINTS, GUIDE_MENU_OPTION } from "../state/defaults";
+import { GUIDE_MENU_OPTION } from "../state/defaults";
 import EditableTitle from "./EditableTitle.vue";
 
 const props = defineProps<{
@@ -173,9 +173,13 @@ function handleToggleShowHidden(anchor?: HTMLElement): void {
     </div>
 
     <div class="quick-buttons" aria-label="快捷按钮列表" @click="closeMenu" @contextmenu="openAreaMenu">
-      <button v-if="visibleButtons.length === 0" class="empty-hint" type="button" @click="openAdd($event.currentTarget as HTMLElement)">
-        {{ EMPTY_HINTS.quickButtons }}
-      </button>
+      <button
+        v-if="visibleButtons.length === 0"
+        class="empty-hint"
+        type="button"
+        aria-label="快捷链接 Tips"
+        @click="emit('guide', 'quickButtons', $event.currentTarget as HTMLElement)"
+      />
       <button
         v-for="button in visibleButtons"
         :key="button.id"

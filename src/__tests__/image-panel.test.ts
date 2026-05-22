@@ -51,6 +51,18 @@ describe("ImagePanel", () => {
     wrapper.unmount();
   });
 
+  it("keeps an empty image area visually blank while still focusable for guidance", async () => {
+    const wrapper = mountImagePanel();
+
+    expect(wrapper.find(".image-empty").text()).toBe("");
+
+    await wrapper.get(".image-empty").trigger("click");
+
+    expect(wrapper.emitted("guide")?.[0]).toEqual(["images", expect.any(HTMLElement)]);
+    expect(wrapper.emitted("paste")).toBeUndefined();
+    wrapper.unmount();
+  });
+
   it("keeps image item context menus focused on preview, copy, delete, and guide actions", async () => {
     const wrapper = mountImagePanel([
       { id: "a", src: "data:image/png;base64,a", createdAt: 1 },

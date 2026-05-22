@@ -2,7 +2,7 @@
 import { computed, nextTick, onUnmounted, ref } from "vue";
 import { NButton, NCheckbox, NDropdown } from "naive-ui";
 import type { DropdownOption } from "naive-ui";
-import { EMPTY_HINTS, GUIDE_MENU_OPTION, TODO_PERIODS } from "../state/defaults";
+import { GUIDE_MENU_OPTION, TODO_PERIODS } from "../state/defaults";
 import type { DraggedTodo, GuideKey, TodoCompletedVisibility, TodoItem, TodoMap, TodoPeriod } from "../types";
 import { getOrderedTodos } from "../state/todos";
 import EditableTitle from "./EditableTitle.vue";
@@ -540,10 +540,9 @@ function buildTodoListEntries(todos: TodoItem[]): TodoListEntry[] {
           <li
             :key="`${period}-empty-hint`"
             class="todo-empty-hint"
+            aria-label="提醒事项 Tips"
             @click="emit('create', period)"
-          >
-            {{ EMPTY_HINTS.todos[period] }}
-          </li>
+          />
         </ul>
 
         <TransitionGroup

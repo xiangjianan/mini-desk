@@ -169,7 +169,6 @@ function handleTabsWheel(event: WheelEvent): void {
       :title-id="`space-${activeSpace.id}-title`"
       :title="activeSpace.title"
       :lines="activeSpace.lines"
-      placeholder="记录当前工作、资料或草稿，点一下开始写"
       hide-header
       @title-update="handleRename"
       @update="handleUpdate"

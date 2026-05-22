@@ -2,7 +2,7 @@ import { defineComponent, nextTick, ref } from "vue";
 import { mount } from "@vue/test-utils";
 import { describe, expect, it, vi } from "vitest";
 import TodoPanel from "../components/TodoPanel.vue";
-import { DEFAULT_TITLES, EMPTY_HINTS } from "../state/defaults";
+import { DEFAULT_TITLES } from "../state/defaults";
 import { completeTodo } from "../state/todos";
 import type { TodoMap, TodoPeriod } from "../types";
 
@@ -42,7 +42,7 @@ function values(wrapper: ReturnType<typeof mount>): string[] {
 }
 
 describe("TodoPanel", () => {
-  it("does not render todo-empty placeholders for empty todo lists", async () => {
+  it("keeps empty todo lists visually blank while preserving click-to-create", async () => {
     const wrapper = mount(TodoPanel, {
       props: {
         todos: {
@@ -65,8 +65,7 @@ describe("TodoPanel", () => {
     });
 
     expect(wrapper.find(".todo-empty").exists()).toBe(false);
-    expect(wrapper.get(".todo-empty-hint").text()).toBe(EMPTY_HINTS.todos.morning);
-    expect(wrapper.get(".todo-empty-hint").text()).not.toMatch(/早上|中午|晚上|上午|下午/);
+    expect(wrapper.get(".todo-empty-hint").text()).toBe("");
 
     await wrapper.get('[data-testid="todo-list-morning"]').trigger("click");
 
