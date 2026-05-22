@@ -331,19 +331,26 @@ describe("App shell", () => {
     const wrapper = mountApp();
 
     try {
-      expect(wrapper.find('[data-testid="save-status"]').exists()).toBe(false);
-
       window.dispatchEvent(new KeyboardEvent("keydown", { key: "s", ctrlKey: true }));
-      const pasteEvent = new Event("paste") as ClipboardEvent;
+      const pasteEvent = new Event("paste", { cancelable: true }) as ClipboardEvent;
       Object.defineProperty(pasteEvent, "clipboardData", {
-        value: { items: [] },
+        value: {
+          items: [
+            {
+              type: "image/png",
+              getAsFile: vi.fn(() => new File(["image"], "mobile.png", { type: "image/png" })),
+            },
+          ],
+        },
       });
       document.dispatchEvent(pasteEvent);
+      expect(pasteEvent.defaultPrevented).toBe(false);
 
       await wrapper.vm.$nextTick();
       await vi.advanceTimersByTimeAsync(200);
       await wrapper.vm.$nextTick();
 
+      expect(wrapper.find('[data-testid="save-status"]').exists()).toBe(false);
       expect(wrapper.text()).not.toContain("保存中");
       expect(wrapper.find('[data-testid="companion-confirm"]').text()).toContain("建议在电脑浏览器打开");
       expect(wrapper.findComponent(ImagePanel).exists()).toBe(false);
