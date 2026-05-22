@@ -459,6 +459,99 @@ describe("App shell", () => {
     }
   });
 
+  it("removes a stored image payload when mobile handoff starts before image state is updated", async () => {
+    const mediaQuery = stubMatchMedia(false);
+    const putRequests: Array<{
+      record: { id: string; src?: string };
+      request: { result?: unknown; error?: unknown; onsuccess: (() => void) | null; onerror: (() => void) | null };
+    }> = [];
+    const deletedIds: string[] = [];
+    const fakeStore = {
+      put: vi.fn((record: { id: string; src?: string }) => {
+        const request: { result: string; error: null; onsuccess: (() => void) | null; onerror: (() => void) | null } = {
+          result: record.id,
+          error: null,
+          onsuccess: null,
+          onerror: null,
+        };
+        putRequests.push({ record, request });
+        return request;
+      }),
+      delete: vi.fn((id: string) => {
+        deletedIds.push(id);
+        const request: { result: undefined; error: null; onsuccess: (() => void) | null; onerror: (() => void) | null } = {
+          result: undefined,
+          error: null,
+          onsuccess: null,
+          onerror: null,
+        };
+        queueMicrotask(() => request.onsuccess?.());
+        return request;
+      }),
+    };
+    const fakeDb = {
+      objectStoreNames: { contains: vi.fn(() => true) },
+      transaction: vi.fn(() => ({
+        objectStore: vi.fn(() => fakeStore),
+        onerror: undefined,
+        error: null,
+      })),
+      close: vi.fn(),
+    };
+    vi.stubGlobal("indexedDB", {
+      open: vi.fn(() => {
+        const request: {
+          result: typeof fakeDb;
+          error: null;
+          onsuccess: (() => void) | null;
+          onerror: (() => void) | null;
+          onupgradeneeded: (() => void) | null;
+        } = { result: fakeDb, error: null, onsuccess: null, onerror: null, onupgradeneeded: null };
+        queueMicrotask(() => request.onsuccess?.());
+        return request;
+      }),
+    });
+    class ImmediateFileReader {
+      result: string | ArrayBuffer | null = null;
+      error: DOMException | null = null;
+      onload: (() => void) | null = null;
+      onerror: (() => void) | null = null;
+      readAsDataURL(): void {
+        this.result = "data:image/png;base64,c3RvcmVk";
+        this.onload?.();
+      }
+    }
+    vi.stubGlobal("FileReader", ImmediateFileReader);
+    let wrapper: ReturnType<typeof mountApp> | undefined;
+
+    try {
+      wrapper = mountApp();
+      await wrapper.vm.$nextTick();
+      await Promise.resolve();
+      await Promise.resolve();
+      wrapper
+        .getComponent(ImagePanel)
+        .vm.$emit("dropFiles", [new File(["stored"], "stored.png", { type: "image/png" })], wrapper.get(".image-panel").element as HTMLElement);
+      await vi.waitFor(() => {
+        expect(putRequests).toHaveLength(1);
+      });
+
+      putRequests[0].request.onsuccess?.();
+      mediaQuery.dispatchEvent({ matches: true } as MediaQueryListEvent);
+      await vi.waitFor(() => {
+        expect(deletedIds).toEqual([putRequests[0].record.id]);
+      });
+
+      mediaQuery.dispatchEvent({ matches: false } as MediaQueryListEvent);
+      await wrapper.vm.$nextTick();
+
+      expect(wrapper.find(".image-card").exists()).toBe(false);
+    } finally {
+      wrapper?.unmount();
+      vi.unstubAllGlobals();
+    }
+  });
+
   it("clears pending autosave before mobile handoff can show stale companion state", async () => {
     vi.useFakeTimers();
     const mediaQuery = stubMatchMedia(false);
@@ -1080,6 +1173,69 @@ describe("App shell", () => {
       expect(wrapper.find('[data-testid="companion-confirm"]').text()).toMatch(/图片|剪贴板|粘贴|Data URL|复制/);
     } finally {
       wrapper.unmount();
+      vi.unstubAllGlobals();
+      vi.useRealTimers();
+    }
+  });
+
+  it("does not complete an in-flight image copy after entering mobile handoff", async () => {
+    vi.useFakeTimers();
+    const mediaQuery = stubMatchMedia(false);
+    localStorage.setItem(
+      STORAGE_KEY,
+      JSON.stringify({
+        images: [
+          {
+            id: "img-1",
+            src: "data:image/png;base64,iVBORw0KGgo=",
+            createdAt: 1,
+          },
+        ],
+      }),
+    );
+    const fetchResult = createDeferred<{ blob: () => Promise<Blob> }>();
+    const blob = vi.fn().mockResolvedValue(new Blob(["img"], { type: "image/png" }));
+    const write = vi.fn().mockResolvedValue(undefined);
+    vi.stubGlobal("fetch", vi.fn(() => fetchResult.promise));
+    vi.stubGlobal(
+      "ClipboardItem",
+      class {
+        constructor(_items: Record<string, Blob>) {}
+      },
+    );
+    Object.assign(navigator, {
+      clipboard: {
+        write,
+      },
+    });
+    let wrapper: ReturnType<typeof mountApp> | undefined;
+
+    try {
+      wrapper = mountApp();
+
+      wrapper.getComponent(ImagePanel).vm.$emit("copy", "img-1");
+      expect(fetch).toHaveBeenCalledWith("data:image/png;base64,iVBORw0KGgo=");
+
+      mediaQuery.dispatchEvent({ matches: true } as MediaQueryListEvent);
+      await wrapper.vm.$nextTick();
+
+      fetchResult.resolve({ blob });
+      await Promise.resolve();
+      await Promise.resolve();
+      await Promise.resolve();
+      await wrapper.vm.$nextTick();
+
+      expect(blob).not.toHaveBeenCalled();
+      expect(write).not.toHaveBeenCalled();
+
+      mediaQuery.dispatchEvent({ matches: false } as MediaQueryListEvent);
+      await wrapper.vm.$nextTick();
+      await vi.advanceTimersByTimeAsync(200);
+      await wrapper.vm.$nextTick();
+
+      expect(wrapper.find('[data-testid="companion-confirm"]').exists()).toBe(false);
+    } finally {
+      wrapper?.unmount();
       vi.unstubAllGlobals();
       vi.useRealTimers();
     }

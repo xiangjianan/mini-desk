@@ -536,7 +536,14 @@ async function addImageFile(file: File, options: { showMessage?: boolean } = {})
     showBubble("imageStoreFailed", undefined, { hideCompanionAfter: true });
     return undefined;
   }
-  if (shouldBlockBoardEffects()) return undefined;
+  if (shouldBlockBoardEffects()) {
+    try {
+      await deleteStoredImage(image.id);
+    } catch {
+      // Best-effort cleanup for payloads that were stored just before mobile handoff.
+    }
+    return undefined;
+  }
   state.images.push(image);
   persistNow();
   if (options.showMessage ?? true) showBubble("imageAdded", undefined, { hideCompanionAfter: true });
@@ -589,6 +596,7 @@ function openImagePreview(id: string): void {
 }
 
 async function copyImage(id: string, anchor?: HTMLElement): Promise<void> {
+  if (shouldBlockBoardEffects()) return;
   const image = state.images.find((item) => item.id === id);
   if (!image?.src) return;
   const clipboard = navigator.clipboard as Clipboard & {
@@ -596,18 +604,27 @@ async function copyImage(id: string, anchor?: HTMLElement): Promise<void> {
   };
   try {
     if (clipboard.write && "ClipboardItem" in window) {
-      const blob = await (await fetch(image.src)).blob();
+      const response = await fetch(image.src);
+      if (shouldBlockBoardEffects()) return;
+      const blob = await response.blob();
+      if (shouldBlockBoardEffects()) return;
       await clipboard.write([new window.ClipboardItem({ [blob.type]: blob })]);
+      if (shouldBlockBoardEffects()) return;
       showBubble("imageCopied", anchor, { hideCompanionAfter: true });
       return;
     }
-    if (await copyText(image.src)) {
+    if (shouldBlockBoardEffects()) return;
+    const copied = await copyText(image.src);
+    if (shouldBlockBoardEffects()) return;
+    if (copied) {
       showBubble("imageDataCopied", anchor, { hideCompanionAfter: true });
       return;
     }
   } catch {
+    if (shouldBlockBoardEffects()) return;
     // Fall through to the shared failure message below.
   }
+  if (shouldBlockBoardEffects()) return;
   showBubble("imageCopyFailed", anchor, { hideCompanionAfter: true });
 }
 
