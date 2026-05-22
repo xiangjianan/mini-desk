@@ -483,7 +483,6 @@ h3 {
   padding: 8px;
   text-align: left;
   background: transparent;
-  border: 1px dashed var(--line-section);
 }
 
 .quick-buttons {
@@ -627,7 +626,6 @@ h3 {
   min-height: 32px;
   padding: 7px 8px;
   color: var(--muted);
-  border: 1px dashed var(--line-section);
   font-size: var(--app-font-size);
   line-height: 1.5;
   pointer-events: none;

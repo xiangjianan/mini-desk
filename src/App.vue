@@ -55,6 +55,7 @@ const importInput = ref<HTMLInputElement | null>(null);
 const importFeedbackAnchor = ref<HTMLElement | undefined>();
 const textSaveTimer = ref<number | undefined>();
 const bubbleTimer = ref<number | undefined>();
+const bubbleFadeTimer = ref<number | undefined>();
 const saveStatusTimer = ref<number | undefined>();
 const emptyTodoRemovalTimers = new Map<string, number>();
 const appVersion = ref(getIndexAppVersion());
@@ -874,6 +875,7 @@ function showBubble(messageKey: MessageKey, anchor?: HTMLElement, options: Bubbl
 
 function showBubbleText(message: string, anchor?: HTMLElement, options: BubbleOptions = {}, duration = 3000): void {
   window.clearTimeout(bubbleTimer.value);
+  window.clearTimeout(bubbleFadeTimer.value);
   pendingConfirm.value = null;
   bubbleMessage.value = message;
   activeGuideKey.value = options.guideKey ?? null;
@@ -886,14 +888,17 @@ function showBubbleText(message: string, anchor?: HTMLElement, options: BubbleOp
     bubbleVisible.value = false;
     bubbleMessage.value = "";
     if (options.hideCompanionAfter) {
-      companionFocused.value = false;
-      activeGuideKey.value = null;
+      bubbleFadeTimer.value = window.setTimeout(() => {
+        companionFocused.value = false;
+        activeGuideKey.value = null;
+      }, 260);
     }
   }, duration);
 }
 
 function hideBubbleMessage(): void {
   window.clearTimeout(bubbleTimer.value);
+  window.clearTimeout(bubbleFadeTimer.value);
   pendingConfirm.value = null;
   bubbleVisible.value = false;
   bubbleMessage.value = "";
@@ -913,6 +918,7 @@ function requestConfirmation(
   options: { confirmText?: string; cancelText?: string } = {},
 ): void {
   window.clearTimeout(bubbleTimer.value);
+  window.clearTimeout(bubbleFadeTimer.value);
   bubbleMessage.value = getMessage(messageKey);
   pendingConfirm.value = {
     onConfirm,
@@ -967,6 +973,7 @@ function isImportPayload(payload: unknown): payload is Record<string, unknown> {
 function clearTimers(): void {
   window.clearTimeout(textSaveTimer.value);
   window.clearTimeout(bubbleTimer.value);
+  window.clearTimeout(bubbleFadeTimer.value);
   window.clearTimeout(saveStatusTimer.value);
   emptyTodoRemovalTimers.forEach((timer) => window.clearTimeout(timer));
   emptyTodoRemovalTimers.clear();

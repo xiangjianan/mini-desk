@@ -209,6 +209,16 @@ describe("Naive UI component usage", () => {
     expect(styles).toMatch(/\.n-base-wave\s*\{[^}]*display: none/s);
   });
 
+  it("keeps empty area hit targets unframed", () => {
+    const styles = read("src/styles.css");
+    const emptyHintRule = styles.match(/\.empty-hint\s*\{(?<body>[^}]*)\}/)?.groups?.body ?? "";
+    const todoEmptyHintRule = styles.match(/\.todo-empty-hint\s*\{(?<body>[^}]*)\}/)?.groups?.body ?? "";
+
+    expect(emptyHintRule).not.toContain("border");
+    expect(todoEmptyHintRule).not.toContain("border");
+    expect(styles).not.toContain("1px dashed var(--line-section)");
+  });
+
   it("keeps visible border widths at exactly one pixel", () => {
     const styles = read("src/styles.css");
     const visibleBorderWidths = [...styles.matchAll(/(?:border(?:-(?:top|right|bottom|left))?|--n-border(?:-[a-z]+)?|box-shadow):[^;{}]*?(\d+)px/g)]

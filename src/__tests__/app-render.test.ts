@@ -712,6 +712,12 @@ describe("App shell", () => {
       await vi.advanceTimersByTimeAsync(3000);
       await wrapper.vm.$nextTick();
 
+      expect(wrapper.find('[data-testid="companion-confirm"]').classes()).toContain("is-popover-fading");
+      expect(wrapper.find(".focus-companion.is-visible").exists()).toBe(true);
+
+      await vi.advanceTimersByTimeAsync(260);
+      await wrapper.vm.$nextTick();
+
       expect(wrapper.find('[data-testid="companion-confirm"]').exists()).toBe(false);
       expect(wrapper.find(".focus-companion.is-visible").exists()).toBe(false);
     } finally {
@@ -1477,6 +1483,11 @@ describe("App shell", () => {
       expect(wrapper.find('[data-testid="companion-confirm"]').exists()).toBe(true);
 
       await vi.advanceTimersByTimeAsync(1000);
+      await wrapper.vm.$nextTick();
+
+      expect(wrapper.find('[data-testid="companion-confirm"]').classes()).toContain("is-popover-fading");
+
+      await vi.advanceTimersByTimeAsync(260);
       await wrapper.vm.$nextTick();
 
       expect(wrapper.find('[data-testid="companion-confirm"]').exists()).toBe(false);
