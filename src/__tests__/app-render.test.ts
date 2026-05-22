@@ -85,6 +85,30 @@ function mountAppWithPersistentPopover() {
   });
 }
 
+function stubMatchMedia(matches: boolean) {
+  const listeners = new Set<(event: MediaQueryListEvent) => void>();
+  const mediaQueryList = {
+    matches,
+    media: "(max-width: 900px)",
+    onchange: null,
+    addEventListener: vi.fn((event: string, listener: (event: MediaQueryListEvent) => void) => {
+      if (event === "change") listeners.add(listener);
+    }),
+    removeEventListener: vi.fn((event: string, listener: (event: MediaQueryListEvent) => void) => {
+      if (event === "change") listeners.delete(listener);
+    }),
+    addListener: vi.fn((listener: (event: MediaQueryListEvent) => void) => listeners.add(listener)),
+    removeListener: vi.fn((listener: (event: MediaQueryListEvent) => void) => listeners.delete(listener)),
+    dispatchEvent: vi.fn((event: MediaQueryListEvent) => {
+      listeners.forEach((listener) => listener(event));
+      return true;
+    }),
+  } as unknown as MediaQueryList;
+
+  vi.stubGlobal("matchMedia", vi.fn().mockReturnValue(mediaQueryList));
+  return mediaQueryList;
+}
+
 beforeEach(() => {
   localStorage.clear();
   vi.restoreAllMocks();
@@ -114,30 +138,36 @@ describe("App shell", () => {
     wrapper.unmount();
   });
 
-  it("renders a mobile drawer menu with todos selected by default", async () => {
+  it("renders a mobile handoff page instead of board regions on mobile", async () => {
+    vi.useFakeTimers();
+    stubMatchMedia(true);
     const wrapper = mountApp();
 
-    expect(wrapper.get(".mobile-drawer-trigger").text()).toContain("待办");
-    expect(wrapper.find(".mobile-drawer-menu").exists()).toBe(false);
-    expect(wrapper.get('[aria-label="To Do List 看板"]').attributes("data-mobile-active")).toBe("todos");
+    try {
+      expect(wrapper.find(".mobile-handoff").exists()).toBe(true);
+      expect(wrapper.get(".mobile-handoff-title").text()).toBe("To Do List 看板");
+      expect(wrapper.text()).toContain("建议在电脑浏览器打开，以获得完整体验");
+      expect(wrapper.find(".mobile-drawer-trigger").exists()).toBe(false);
+      expect(wrapper.find(".mobile-drawer-menu").exists()).toBe(false);
+      expect(wrapper.find('[aria-label="To Do List 看板"]').exists()).toBe(false);
+      expect(wrapper.findComponent(ImagePanel).exists()).toBe(false);
+      expect(wrapper.findComponent(QuickButtons).exists()).toBe(false);
+      expect(wrapper.findComponent(TodoPanel).exists()).toBe(false);
+      expect(wrapper.findComponent(SpacePanel).exists()).toBe(false);
+      expect(wrapper.findComponent(SettingsMenu).exists()).toBe(false);
+      expect(wrapper.findComponent(ImagePreview).exists()).toBe(false);
+      expect(wrapper.findAll("textarea")).toHaveLength(0);
+      expect(wrapper.find('[aria-label="切换主题"]').exists()).toBe(true);
 
-    await wrapper.get(".mobile-drawer-trigger").trigger("click");
+      await vi.advanceTimersByTimeAsync(200);
+      await wrapper.vm.$nextTick();
 
-    expect(wrapper.findAll(".mobile-menu-option").map((button) => button.text())).toEqual([
-      "图片",
-      "便签",
-      "快捷",
-      "待办",
-      "空间",
-    ]);
-
-    await wrapper.findAll(".mobile-menu-option").find((button) => button.text() === "空间")?.trigger("click");
-
-    expect(wrapper.get('[aria-label="To Do List 看板"]').attributes("data-mobile-active")).toBe("spaces");
-    expect(wrapper.get(".mobile-drawer-trigger").text()).toContain("空间");
-    expect(wrapper.find(".mobile-drawer-menu").exists()).toBe(false);
-
-    wrapper.unmount();
+      expect(wrapper.find('[data-testid="companion-confirm"]').text()).toContain("建议在电脑浏览器打开");
+    } finally {
+      wrapper.unmount();
+      vi.unstubAllGlobals();
+      vi.useRealTimers();
+    }
   });
 
   it("creates a todo from an empty section click", async () => {
@@ -295,36 +325,28 @@ describe("App shell", () => {
     }
   });
 
-  it("keeps mobile save feedback near the upper right without hiding the companion", async () => {
+  it("does not run board shortcuts or paste handling while mobile is blocked", async () => {
     vi.useFakeTimers();
-    vi.stubGlobal("matchMedia", vi.fn().mockReturnValue({
-      matches: true,
-      media: "(max-width: 900px)",
-      onchange: null,
-      addEventListener: vi.fn(),
-      removeEventListener: vi.fn(),
-      addListener: vi.fn(),
-      removeListener: vi.fn(),
-      dispatchEvent: vi.fn(),
-    }));
+    stubMatchMedia(true);
     const wrapper = mountApp();
 
     try {
-      const workspace = wrapper.findAll(".text-panel")[1];
-      await workspace.get("textarea").trigger("focus");
-
-      const companion = wrapper.get('[data-testid="companion-bubble"]');
-      expect(companion.attributes("style")).toContain("top: 118px");
-      expect(companion.attributes("style")).toContain("right: 12px");
-      expect(companion.find("img").exists()).toBe(true);
+      expect(wrapper.find('[data-testid="save-status"]').exists()).toBe(false);
 
       window.dispatchEvent(new KeyboardEvent("keydown", { key: "s", ctrlKey: true }));
+      const pasteEvent = new Event("paste") as ClipboardEvent;
+      Object.defineProperty(pasteEvent, "clipboardData", {
+        value: { items: [] },
+      });
+      document.dispatchEvent(pasteEvent);
+
       await wrapper.vm.$nextTick();
       await vi.advanceTimersByTimeAsync(200);
       await wrapper.vm.$nextTick();
 
-      expect(wrapper.find('[data-testid="companion-confirm"]').exists()).toBe(true);
-      expect(wrapper.get('[data-testid="companion-bubble"]').attributes("style")).toContain("top: 118px");
+      expect(wrapper.text()).not.toContain("保存中");
+      expect(wrapper.find('[data-testid="companion-confirm"]').text()).toContain("建议在电脑浏览器打开");
+      expect(wrapper.findComponent(ImagePanel).exists()).toBe(false);
     } finally {
       wrapper.unmount();
       vi.unstubAllGlobals();
