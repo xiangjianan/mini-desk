@@ -116,15 +116,15 @@ const GUIDE_MESSAGES: Record<GuideKey, string[]> = {
     "展开可查看隐藏项。",
   ],
   todos: [
-    "双击空白新增提醒。",
+    "单击空白新增提醒。",
     "双击标题可改名。",
-    "双击文字可编辑。",
+    "单击文字可编辑。",
     "勾选即可完成。",
     "星标会进入重点。",
     "右键可复制粘贴。",
-    "右键可置顶置底。",
-    "完成项可一键清理。",
-    "清理后可撤销。",
+    "右键可复制提醒。",
+    "完成项可确认清理。",
+    "已完成可显示收起。",
     "拖拽可调整顺序。",
   ],
   workspace: [
@@ -1110,6 +1110,7 @@ function moveItem<T extends { id: string }>(items: T[], dragId: string, targetId
       <TodoPanel
         :todos="state.todos"
         :titles="titles"
+        :show-completed="state.showCompletedTodos"
         @title-update="updateTitle"
         @create="createTodo"
         @update="updateTodo"
@@ -1118,6 +1119,7 @@ function moveItem<T extends { id: string }>(items: T[], dragId: string, targetId
         @star="toggleTodoStar"
         @remove="removeTodo"
         @clear-completed="clearDone"
+        @toggle-completed-visibility="state.showCompletedTodos = $event; persistNow()"
         @blur-empty="blurEmptyTodo"
         @blur="handleCompanionBlur"
         @move="moveTodo"

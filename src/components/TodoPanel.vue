@@ -10,6 +10,7 @@ import EditableTitle from "./EditableTitle.vue";
 const props = defineProps<{
   todos: TodoMap;
   titles: Record<string, string>;
+  showCompleted?: boolean;
 }>();
 
 const emit = defineEmits<{
@@ -21,6 +22,7 @@ const emit = defineEmits<{
   star: [period: TodoPeriod, id: string, starred: boolean];
   remove: [period: TodoPeriod, id: string, anchor?: HTMLElement];
   clearCompleted: [period: TodoPeriod, anchor?: HTMLElement];
+  toggleCompletedVisibility: [showCompleted: boolean];
   blurEmpty: [period: TodoPeriod, id: string];
   blur: [];
   move: [dragged: DraggedTodo, destinationPeriod: TodoPeriod, targetId?: string];
@@ -36,6 +38,7 @@ const menu = ref<{
   id?: string;
   anchor?: HTMLElement;
   target?: HTMLInputElement;
+  sectionActions?: boolean;
 } | null>(null);
 const dragged = ref<DraggedTodo | null>(null);
 const editingTodoKey = ref<string | null>(null);
@@ -47,19 +50,21 @@ const lastTodoSelections = new Map<string, { start: number; end: number }>();
 const todoSectionRefs = new Map<TodoPeriod, HTMLElement>();
 const guideMenuOption: DropdownOption = { ...GUIDE_MENU_OPTION, label: GUIDE_MENU_OPTION.label || "Tips" };
 const menuOptions = computed<DropdownOption[]>(() => {
+  if (menu.value?.sectionActions) {
+    return [
+      { label: props.showCompleted ? "隐藏已完成" : "显示已完成", key: "toggle-completed" },
+      { label: "清理已完成", key: "clear-completed" },
+      guideMenuOption,
+    ];
+  }
   const options: DropdownOption[] = [];
-  const target = menu.value?.target;
   const todo = getMenuTodo();
-  if (target && menu.value?.id && canCopyTextSelection(menu.value.period, menu.value.id, target)) {
-    options.push({ label: "复制", key: "copy" });
-  }
-  if (target && isMenuTodoEditable()) options.push({ label: "粘贴", key: "paste" });
   if (menu.value?.id) {
-    options.push({ label: todo?.starred ? "取消重点" : "设为重点", key: "star" });
-    options.push({ label: "置顶", key: "top" });
-    options.push({ label: "置底", key: "bottom" });
+    options.push({ label: "复制", key: "copy" });
+    options.push({ label: "编辑", key: "edit" });
+    options.push({ label: "删除", key: "delete" });
+    options.push({ label: todo?.starred ? "取消星标" : "星标", key: "star" });
   }
-  if (menu.value?.id) options.push({ label: "删除", key: "delete" });
   options.push(guideMenuOption);
   return options;
 });
@@ -101,13 +106,31 @@ const todayFocus = computed(() =>
   ),
 );
 
+const visibleOrdered = computed(() =>
+  Object.fromEntries(
+    TODO_PERIODS.map((period) => {
+      const deferredIds = new Set(
+        pendingDoneReorderIds.value
+          .filter((key) => key.startsWith(`${period}:`))
+          .map((key) => key.slice(period.length + 1)),
+      );
+      return [
+        period,
+        props.showCompleted
+          ? ordered.value[period]
+          : ordered.value[period].filter((todo) => !todo.done || deferredIds.has(todo.id)),
+      ];
+    }),
+  ) as TodoMap,
+);
+
 type TodoListEntry =
   | { type: "divider"; id: string }
   | { type: "todo"; todo: TodoItem };
 
 const listEntries = computed(() =>
   Object.fromEntries(
-    TODO_PERIODS.map((period) => [period, buildTodoListEntries(ordered.value[period])]),
+    TODO_PERIODS.map((period) => [period, buildTodoListEntries(visibleOrdered.value[period])]),
   ) as Record<TodoPeriod, TodoListEntry[]>,
 );
 
@@ -115,7 +138,7 @@ onUnmounted(() => {
   reorderTimers.forEach((timer) => window.clearTimeout(timer));
 });
 
-function handleListDoubleClick(event: MouseEvent, period: TodoPeriod): void {
+function handleListClick(event: MouseEvent, period: TodoPeriod): void {
   const target = event.target as HTMLElement;
   if (event.target !== event.currentTarget && !target.closest(".todo-empty-hint")) return;
   emit("create", period);
@@ -197,6 +220,19 @@ function openSectionMenu(event: MouseEvent, period: TodoPeriod): void {
   menu.value = { x: event.clientX, y: event.clientY, period, anchor: event.currentTarget as HTMLElement };
 }
 
+function openSectionActions(event: MouseEvent, period: TodoPeriod): void {
+  event.preventDefault();
+  event.stopPropagation();
+  selectedMenuTodoKey.value = null;
+  menu.value = {
+    x: event.clientX,
+    y: event.clientY,
+    period,
+    anchor: event.currentTarget as HTMLElement,
+    sectionActions: true,
+  };
+}
+
 function closeMenu(): void {
   menu.value = null;
   selectedMenuTodoKey.value = null;
@@ -204,22 +240,30 @@ function closeMenu(): void {
 
 async function handleMenuSelect(key: string): Promise<void> {
   if (!menu.value) return;
-  const { period, id, anchor, target } = menu.value;
-  if (key === "copy" && target) {
-    await copyTextSelection(target);
+  const { period, id, anchor } = menu.value;
+  if (key === "toggle-completed") {
+    closeMenu();
+    emit("toggleCompletedVisibility", !props.showCompleted);
+    return;
+  }
+  if (key === "clear-completed") {
+    closeMenu();
+    emit("clearCompleted", period, anchor);
+    return;
+  }
+  if (key === "copy" && id) {
+    await copyTodoText(period, id);
     closeMenu();
     return;
   }
   closeMenu();
-  if (key === "paste" && id && target) {
-    await pasteTextFromClipboard(period, id, target);
-    return;
-  }
   if (key === "guide" && anchor) emit("guide", "todos", anchor, true);
   if (!id) return;
+  if (key === "edit") {
+    await startTodoEditById(period, id);
+    return;
+  }
   if (key === "star") emit("star", period, id, !getTodoById(period, id)?.starred);
-  if (key === "top") moveTodoToTop(period, id);
-  if (key === "bottom") emit("move", { period, id }, period);
   if (key === "delete") emit("remove", period, id, anchor);
 }
 
@@ -253,12 +297,6 @@ function isTodoHighlighted(period: TodoPeriod, id: string): boolean {
     editingTodoKey.value === key ||
     (dragged.value?.period === period && dragged.value.id === id)
   );
-}
-
-function moveTodoToTop(period: TodoPeriod, id: string): void {
-  const first = ordered.value[period].find((todo) => todo.id !== id);
-  if (!first) return;
-  emit("move", { period, id }, period, first.id);
 }
 
 function hasSelection(target: HTMLTextAreaElement | HTMLInputElement): boolean {
@@ -310,6 +348,21 @@ async function copyTextSelection(target: HTMLTextAreaElement | HTMLInputElement)
   textarea.remove();
 }
 
+async function copyTodoText(period: TodoPeriod, id: string): Promise<void> {
+  const text = getTodoById(period, id)?.text ?? "";
+  if (!text) return;
+  if (navigator.clipboard?.writeText) {
+    await navigator.clipboard.writeText(text);
+    return;
+  }
+  const textarea = document.createElement("textarea");
+  textarea.value = text;
+  document.body.append(textarea);
+  textarea.setSelectionRange(0, textarea.value.length);
+  document.execCommand("copy");
+  textarea.remove();
+}
+
 async function pasteTextFromClipboard(period: TodoPeriod, id: string, target: HTMLInputElement): Promise<void> {
   const pastedText = await navigator.clipboard?.readText?.();
   if (!pastedText) return;
@@ -321,11 +374,22 @@ async function pasteTextFromClipboard(period: TodoPeriod, id: string, target: HT
 
 async function startTodoEdit(event: MouseEvent, period: TodoPeriod, id: string): Promise<void> {
   event.preventDefault();
+  event.stopPropagation();
   const input = event.currentTarget as HTMLInputElement;
   const key = todoKey(period, id);
   const caret = lastTodoCarets.get(key) ?? input.selectionStart ?? input.value.length;
   editingTodoKey.value = todoKey(period, id);
   await nextTick();
+  input.focus({ preventScroll: true });
+  collapseSelection(input, caret);
+}
+
+async function startTodoEditById(period: TodoPeriod, id: string): Promise<void> {
+  editingTodoKey.value = todoKey(period, id);
+  await nextTick();
+  const input = document.querySelector<HTMLInputElement>(`[data-testid="todo-input-${period}"][data-todo-id="${id}"]`);
+  if (!input) return;
+  const caret = lastTodoCarets.get(todoKey(period, id)) ?? input.selectionStart ?? input.value.length;
   input.focus({ preventScroll: true });
   collapseSelection(input, caret);
 }
@@ -382,7 +446,7 @@ function buildTodoListEntries(todos: TodoItem[]): TodoListEntry[] {
           v-for="item in todayFocus"
           :key="`${item.period}-${item.todo.id}`"
           class="today-focus-item"
-          :class="{ 'is-done': item.todo.done, 'is-menu-selected': isTodoHighlighted(item.period, item.todo.id) }"
+          :class="{ 'is-done': item.todo.done, 'is-completing': pendingDoneReorderIds.includes(`${item.period}:${item.todo.id}`), 'is-menu-selected': isTodoHighlighted(item.period, item.todo.id) }"
           @contextmenu.stop="openMenu($event, item.period, item.todo.id)"
         >
           <NCheckbox
@@ -400,7 +464,7 @@ function buildTodoListEntries(todos: TodoItem[]): TodoListEntry[] {
             @mouseup="rememberTodoCaret(item.period, item.todo.id, $event)"
             @select="handleTodoSelection(item.period, item.todo.id, $event)"
             @contextmenu.stop="openTodoTextMenu($event, item.period, item.todo)"
-            @dblclick="startTodoEdit($event, item.period, item.todo.id)"
+            @click="startTodoEdit($event, item.period, item.todo.id)"
             @focus="handleInputFocus(item.period, item.todo, $event)"
             @blur="handleInputBlur(item.period, item.todo.id)"
           />
@@ -438,31 +502,27 @@ function buildTodoListEntries(todos: TodoItem[]): TodoListEntry[] {
           </h3>
           <div class="todo-heading-actions">
             <span class="todo-count">{{ periodStats[period] }}</span>
-            <NButton
-              quaternary
-              size="tiny"
-              class="clear-completed-button icon-button"
-              aria-label="清已完成"
-              @click="emit('clearCompleted', period, $event.currentTarget as HTMLElement)"
+            <button
+              type="button"
+              class="todo-section-menu-button icon-button"
+              aria-label="待办菜单"
+              @click="openSectionActions($event, period)"
             >
-              <svg class="clear-completed-icon" viewBox="0 0 1024 1024" aria-hidden="true">
-                <path d="M786.6 715.9c-5.1 0-10.3-1.3-15.1-4.1L295.4 434.7c-14.3-8.3-19.2-26.7-10.8-41 8.3-14.3 26.7-19.2 41-10.8L801.7 660c14.3 8.3 19.2 26.7 10.8 41-5.6 9.5-15.6 14.9-25.9 14.9z" />
-                <path d="M629.3 960c-14.7 0-29.3-4.2-42.1-11.6L186.1 714.7c-40-23.3-53.8-75.1-30.7-115.4l166.4-290.5c15-26.1 42.9-42.4 72.9-42.4 14.7 0 29.3 3.9 42.1 11.4l113.2 66 129-225.2c19.1-33.4 54.8-54.1 93.1-54.1 18.8 0 37.4 5 53.7 14.5 51.1 29.8 68.8 95.9 39.3 147.4L735.9 452l102 59.4c40 23.3 53.8 75 30.7 115.3L702.2 917.4c-14.9 26.1-42.9 42.6-72.9 42.6zM394.7 326.4c-8.6 0-16.5 4.7-20.8 12.2L207.5 629.1c-6.7 11.8-2.8 26.9 8.9 33.6l401.1 233.5c3.7 2.1 7.7 3.2 11.9 3.2 8.6 0 16.5-4.7 20.8-12.2l166.4-290.5c6.7-11.8 2.8-26.9-8.8-33.6L680 488.8c-14.2-8.3-19.1-26.5-10.9-40.8L813 196.6c13.2-23 5.4-52.5-17.4-65.7-7.2-4.2-15.3-6.4-23.5-6.4-16.9 0-32.6 9.2-41 23.9l-144 251.4c-4 6.9-10.5 12-18.3 14.1-7.7 2.1-15.9 1-22.9-3.1l-139.4-81.1c-3.6-2.2-7.6-3.3-11.8-3.3z" />
-              </svg>
-            </NButton>
+              ⋯
+            </button>
           </div>
         </div>
 
         <ul
-          v-if="todos[period].length === 0"
+          v-if="listEntries[period].length === 0"
           class="todo-list todo-empty-list"
           :data-testid="`todo-list-${period}`"
-          @dblclick="handleListDoubleClick($event, period)"
+          @click="handleListClick($event, period)"
         >
           <li
             :key="`${period}-empty-hint`"
             class="todo-empty-hint"
-            @dblclick="emit('create', period)"
+            @click="emit('create', period)"
           >
             {{ EMPTY_HINTS.todos[period] }}
           </li>
@@ -475,7 +535,7 @@ function buildTodoListEntries(todos: TodoItem[]): TodoListEntry[] {
           class="todo-list"
           :class="{ 'todo-move': true }"
           :data-testid="`todo-list-${period}`"
-          @dblclick="handleListDoubleClick($event, period)"
+          @click="handleListClick($event, period)"
         >
           <template
             v-for="entry in listEntries[period]"
@@ -514,7 +574,7 @@ function buildTodoListEntries(todos: TodoItem[]): TodoListEntry[] {
                 @mouseup="rememberTodoCaret(period, entry.todo.id, $event)"
                 @select="handleTodoSelection(period, entry.todo.id, $event)"
                 @contextmenu.stop="openTodoTextMenu($event, period, entry.todo)"
-                @dblclick="startTodoEdit($event, period, entry.todo.id)"
+                @click="startTodoEdit($event, period, entry.todo.id)"
                 @focus="handleInputFocus(period, entry.todo, $event)"
                 @blur="handleInputBlur(period, entry.todo.id)"
               />

@@ -117,17 +117,17 @@ describe("App shell", () => {
     wrapper.unmount();
   });
 
-  it("creates a todo from an empty section double click", async () => {
+  it("creates a todo from an empty section click", async () => {
     const wrapper = mountApp();
 
-    await wrapper.get('[data-testid="todo-list-morning"]').trigger("dblclick");
+    await wrapper.get('[data-testid="todo-list-morning"]').trigger("click");
 
     expect(wrapper.find('[data-testid="todo-input-morning"]').exists()).toBe(true);
 
     wrapper.unmount();
   });
 
-  it("keeps at most one blank todo when blank list space is double-clicked repeatedly", async () => {
+  it("keeps at most one blank todo when blank list space is clicked repeatedly", async () => {
     localStorage.setItem(
       STORAGE_KEY,
       JSON.stringify({
@@ -139,11 +139,11 @@ describe("App shell", () => {
     const wrapper = mountApp();
     const list = wrapper.get('[data-testid="todo-list-morning"]');
 
-    await list.trigger("dblclick");
+    await list.trigger("click");
     await wrapper.vm.$nextTick();
-    await list.trigger("dblclick");
+    await list.trigger("click");
     await wrapper.vm.$nextTick();
-    await list.trigger("dblclick");
+    await list.trigger("click");
     await wrapper.vm.$nextTick();
 
     const blankInputs = wrapper
@@ -167,11 +167,11 @@ describe("App shell", () => {
     );
     const wrapper = mountApp();
 
-    await wrapper.get('[data-testid="todo-list-morning"]').trigger("dblclick");
+    await wrapper.get('[data-testid="todo-list-morning"]').trigger("click");
     await wrapper.vm.$nextTick();
-    await wrapper.get('[data-testid="todo-list-noon"]').trigger("dblclick");
+    await wrapper.get('[data-testid="todo-list-noon"]').trigger("click");
     await wrapper.vm.$nextTick();
-    await wrapper.get('[data-testid="todo-list-evening"]').trigger("dblclick");
+    await wrapper.get('[data-testid="todo-list-evening"]').trigger("click");
     await wrapper.vm.$nextTick();
 
     const blankInputs = wrapper
@@ -306,7 +306,11 @@ describe("App shell", () => {
     const wrapper = mountApp();
 
     try {
-      await wrapper.get(".clear-completed-button").trigger("click");
+      wrapper.getComponent(TodoPanel).vm.$emit(
+        "clearCompleted",
+        "morning",
+        wrapper.get('.todo-section[data-period="morning"]').element as HTMLElement,
+      );
       await wrapper.vm.$nextTick();
       await vi.advanceTimersByTimeAsync(200);
       await wrapper.vm.$nextTick();
@@ -315,7 +319,9 @@ describe("App shell", () => {
       expect(wrapper.find(".focus-companion.is-visible img").exists()).toBe(true);
       expect(wrapper.find('[data-testid="companion-yes"]').text()).toBe("清理");
       expect(wrapper.find('[data-testid="companion-no"]').text()).toBe("取消");
-      expect(wrapper.findAll("input.todo-input").some((input) => (input.element as HTMLInputElement).value === "已完成事项")).toBe(true);
+      expect(wrapper.getComponent(TodoPanel).props("todos").morning).toEqual([
+        expect.objectContaining({ id: "done-1", done: true }),
+      ]);
 
       await wrapper.get('[data-testid="companion-yes"]').trigger("click");
       await wrapper.vm.$nextTick();
@@ -324,7 +330,7 @@ describe("App shell", () => {
 
       expect(wrapper.find('[data-testid="companion-confirm"]').text()).toMatch(/已清理完成项/);
       expect(wrapper.find('[data-testid="companion-action"]').exists()).toBe(false);
-      expect(wrapper.findAll("input.todo-input").some((input) => (input.element as HTMLInputElement).value === "已完成事项")).toBe(false);
+      expect(wrapper.getComponent(TodoPanel).props("todos").morning).toEqual([]);
     } finally {
       wrapper.unmount();
       vi.useRealTimers();
@@ -553,7 +559,12 @@ describe("App shell", () => {
     const wrapper = mountApp();
 
     try {
-      await wrapper.get(".clear-completed-button").trigger("click");
+      wrapper.getComponent(TodoPanel).vm.$emit(
+        "clearCompleted",
+        "morning",
+        wrapper.get('.todo-section[data-period="morning"]').element as HTMLElement,
+      );
+      await wrapper.vm.$nextTick();
 
       expect(wrapper.find(".focus-companion.is-visible img").exists()).toBe(true);
       expect(wrapper.find('[data-testid="companion-confirm"]').exists()).toBe(false);
@@ -1168,7 +1179,11 @@ describe("App shell", () => {
       await vi.advanceTimersByTimeAsync(3000);
       await wrapper.vm.$nextTick();
 
-      await wrapper.get(".clear-completed-button").trigger("click");
+      wrapper.getComponent(TodoPanel).vm.$emit(
+        "clearCompleted",
+        "morning",
+        wrapper.get('.todo-section[data-period="morning"]').element as HTMLElement,
+      );
       await wrapper.vm.$nextTick();
 
       const style = wrapper.get('[data-testid="companion-bubble"]').attributes("style");
@@ -1399,7 +1414,7 @@ describe("App shell", () => {
       bottom: 294,
       toJSON: () => ({}),
     });
-    await todoList.trigger("dblclick");
+    await todoList.trigger("click");
     await wrapper.vm.$nextTick();
     const activeTodoList = wrapper.get('[data-testid="todo-list-morning"]');
     vi.spyOn(activeTodoList.element, "getBoundingClientRect").mockReturnValue({

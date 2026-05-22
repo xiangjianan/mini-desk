@@ -81,6 +81,7 @@ export function normalizeImportedState(payload: unknown): BoardState {
     images: normalizeImages(typed.images),
     quickButtons: normalizeQuickButtons(typed.quickButtons),
     showHiddenQuickButtons: Boolean(typed.showHiddenQuickButtons),
+    showCompletedTodos: Boolean(typed.showCompletedTodos),
     todos: normalizeTodos(typed.todos),
   };
 }

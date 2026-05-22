@@ -58,6 +58,7 @@ export interface BoardState {
   images: StoredImage[];
   quickButtons: QuickButton[];
   showHiddenQuickButtons: boolean;
+  showCompletedTodos: boolean;
   todos: TodoMap;
 }
 

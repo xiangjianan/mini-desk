@@ -23,9 +23,9 @@ export const EMPTY_HINTS = {
   images: "Ctrl+V 粘贴截图，可预览整理 (＾▽＾)",
   quickButtons: "常用内容做成按钮，点一下就用 (｡•̀ᴗ-)✧",
   todos: {
-    morning: "双击新增提醒 (๑•̀ㅂ•́)و✧",
-    noon: "双击新增提醒 (๑•̀ㅂ•́)و✧",
-    evening: "双击新增提醒 (๑•̀ㅂ•́)و✧",
+    morning: "单击新增提醒 (๑•̀ㅂ•́)و✧",
+    noon: "单击新增提醒 (๑•̀ㅂ•́)و✧",
+    evening: "单击新增提醒 (๑•̀ㅂ•́)و✧",
   },
 };
 
@@ -60,6 +60,7 @@ export function defaultState(): BoardState {
     images: [],
     quickButtons: [],
     showHiddenQuickButtons: false,
+    showCompletedTodos: false,
     todos: {
       morning: [],
       noon: [],

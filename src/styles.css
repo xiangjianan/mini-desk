@@ -604,6 +604,10 @@ h3 {
   opacity: 0.52;
 }
 
+.today-focus-item.is-completing {
+  animation: todo-focus-complete 0.34s ease;
+}
+
 .todo-section {
   display: flex;
   flex-direction: column;
@@ -766,8 +770,23 @@ h3 {
   opacity: 0;
 }
 
-.clear-completed-button {
+.todo-section-menu-button {
   width: 30px;
+}
+
+@keyframes todo-focus-complete {
+  0% {
+    transform: scale(1);
+  }
+
+  45% {
+    transform: scale(0.98);
+    background: var(--button-hover);
+  }
+
+  100% {
+    transform: scale(1);
+  }
 }
 
 .focus-companion {

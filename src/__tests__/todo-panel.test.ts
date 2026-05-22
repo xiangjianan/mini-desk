@@ -68,12 +68,12 @@ describe("TodoPanel", () => {
     expect(wrapper.get(".todo-empty-hint").text()).toBe(EMPTY_HINTS.todos.morning);
     expect(wrapper.get(".todo-empty-hint").text()).not.toMatch(/早上|中午|晚上|上午|下午/);
 
-    await wrapper.get('[data-testid="todo-list-morning"]').trigger("dblclick");
+    await wrapper.get('[data-testid="todo-list-morning"]').trigger("click");
 
     expect(wrapper.emitted("create")?.[0]).toEqual(["morning"]);
   });
 
-  it("does not create a todo from a single click on blank list space", async () => {
+  it("does not create a todo from a click on controls inside blank list space", async () => {
     const wrapper = mount(TodoPanel, {
       props: {
         todos: {
@@ -95,12 +95,12 @@ describe("TodoPanel", () => {
       },
     });
 
-    await wrapper.get('[data-testid="todo-list-morning"]').trigger("click");
+    await wrapper.get(".editable-title").trigger("click");
 
     expect(wrapper.emitted("create")).toBeUndefined();
   });
 
-  it("shows period progress and a weak completed divider", () => {
+  it("hides completed reminders by default while keeping period progress", () => {
     const wrapper = mount(TodoPanel, {
       props: {
         todos: {
@@ -126,7 +126,83 @@ describe("TodoPanel", () => {
     });
 
     expect(wrapper.find('.todo-section[data-period="morning"] .todo-count').text()).toBe("1/2");
+    expect(values(wrapper)).toEqual(["未完成"]);
+    expect(wrapper.find(".todo-completed-divider").exists()).toBe(false);
+    wrapper.unmount();
+  });
+
+  it("shows completed reminders and a weak divider when enabled", () => {
+    const wrapper = mount(TodoPanel, {
+      props: {
+        showCompleted: true,
+        todos: {
+          morning: [
+            { id: "a", text: "未完成", done: false },
+            { id: "b", text: "已完成", done: true },
+          ],
+          noon: [],
+          evening: [],
+        },
+        titles: DEFAULT_TITLES,
+      },
+      global: {
+        stubs: {
+          Button: true,
+          Checkbox: checkboxStub,
+          Dropdown: dropdownStub,
+          NCheckbox: checkboxStub,
+          NDropdown: dropdownStub,
+          NTooltip: tooltipStub,
+        },
+      },
+    });
+
+    expect(values(wrapper)).toEqual(["未完成", "已完成"]);
     expect(wrapper.get(".todo-completed-divider").text()).toBe("已完成");
+    wrapper.unmount();
+  });
+
+  it("uses a period three-dot menu for completed visibility and clearing", async () => {
+    const wrapper = mount(TodoPanel, {
+      props: {
+        showCompleted: false,
+        todos: {
+          morning: [
+            { id: "a", text: "未完成", done: false },
+            { id: "b", text: "已完成", done: true },
+          ],
+          noon: [],
+          evening: [],
+        },
+        titles: DEFAULT_TITLES,
+      },
+      global: {
+        stubs: {
+          Button: true,
+          Checkbox: checkboxStub,
+          Dropdown: dropdownStub,
+          NCheckbox: checkboxStub,
+          NDropdown: dropdownStub,
+          NTooltip: tooltipStub,
+        },
+      },
+    });
+
+    await wrapper.get('.todo-section[data-period="morning"] .todo-section-menu-button').trigger("click");
+
+    expect(wrapper.findAll(".dropdown-option").map((option) => option.text())).toEqual([
+      "显示已完成",
+      "清理已完成",
+      "Tips",
+    ]);
+
+    await wrapper.findAll(".dropdown-option").find((option) => option.text() === "显示已完成")?.trigger("click");
+    expect(wrapper.emitted("toggleCompletedVisibility")?.[0]).toEqual([true]);
+
+    await wrapper.get('.todo-section[data-period="morning"] .todo-section-menu-button').trigger("click");
+    await wrapper.findAll(".dropdown-option").find((option) => option.text() === "清理已完成")?.trigger("click");
+    expect(wrapper.emitted("clearCompleted")?.[0]).toEqual(["morning", expect.any(HTMLElement)]);
+
     wrapper.unmount();
   });
 
@@ -191,10 +267,10 @@ describe("TodoPanel", () => {
 
     expect(wrapper.get(".today-focus-item").classes()).toContain("is-menu-selected");
     expect(wrapper.findAll(".dropdown-option").map((option) => option.text())).toEqual([
-      "取消重点",
-      "置顶",
-      "置底",
+      "复制",
+      "编辑",
       "删除",
+      "取消星标",
       "Tips",
     ]);
 
@@ -347,14 +423,14 @@ describe("TodoPanel", () => {
     await vi.advanceTimersByTimeAsync(1);
     await nextTick();
 
-    expect(values(wrapper)).toEqual(["第二项", "第一项"]);
+    expect(values(wrapper)).toEqual(["第二项"]);
     expect(wrapper.find(".todo-list.todo-move").exists()).toBe(true);
 
     wrapper.unmount();
     vi.useRealTimers();
   });
 
-  it("does not create a new blank todo when a non-empty list blank area is clicked after completing an item", async () => {
+  it("creates a new blank todo when a non-empty list blank area is clicked after completing an item", async () => {
     const wrapper = mount(TodoPanel, {
       props: {
         todos: {
@@ -380,11 +456,11 @@ describe("TodoPanel", () => {
     await wrapper.get('[data-testid="todo-list-morning"]').trigger("click");
 
     expect(wrapper.emitted("complete")?.[0].slice(0, 3)).toEqual(["morning", "a", true]);
-    expect(wrapper.emitted("create")).toBeUndefined();
+    expect(wrapper.emitted("create")?.[0]).toEqual(["morning"]);
     wrapper.unmount();
   });
 
-  it("creates a blank todo from a double click on non-empty blank list space", async () => {
+  it("creates a blank todo from a single click on non-empty blank list space", async () => {
     const wrapper = mount(TodoPanel, {
       props: {
         todos: {
@@ -406,13 +482,13 @@ describe("TodoPanel", () => {
       },
     });
 
-    await wrapper.get('[data-testid="todo-list-morning"]').trigger("dblclick");
+    await wrapper.get('[data-testid="todo-list-morning"]').trigger("click");
 
     expect(wrapper.emitted("create")?.[0]).toEqual(["morning"]);
     wrapper.unmount();
   });
 
-  it("keeps existing todo text readonly until the input is double-clicked", async () => {
+  it("keeps existing todo text readonly until the input is clicked", async () => {
     const wrapper = mount(TodoPanel, {
       props: {
         todos: {
@@ -437,13 +513,13 @@ describe("TodoPanel", () => {
 
     expect(input.attributes("readonly")).toBeDefined();
 
-    await input.trigger("dblclick");
+    await input.trigger("click");
 
     expect(input.attributes("readonly")).toBeUndefined();
     wrapper.unmount();
   });
 
-  it("does not select todo text when double-clicking to edit", async () => {
+  it("does not select todo text when clicking to edit", async () => {
     const wrapper = mount(TodoPanel, {
       props: {
         todos: {
@@ -468,7 +544,7 @@ describe("TodoPanel", () => {
     const selectSpy = vi.spyOn(input, "select");
 
     input.setSelectionRange(1, 3);
-    await wrapper.get("input.todo-input").trigger("dblclick");
+    await wrapper.get("input.todo-input").trigger("click");
     await wrapper.vm.$nextTick();
 
     expect(selectSpy).not.toHaveBeenCalled();
@@ -476,7 +552,7 @@ describe("TodoPanel", () => {
     wrapper.unmount();
   });
 
-  it("keeps the caret at the original clicked position when double-click editing a reminder", async () => {
+  it("keeps the caret at the original clicked position when click editing a reminder", async () => {
     const wrapper = mount(TodoPanel, {
       props: {
         todos: {
@@ -502,7 +578,7 @@ describe("TodoPanel", () => {
     input.setSelectionRange(3, 3);
     await wrapper.get("input.todo-input").trigger("mouseup");
     input.setSelectionRange(1, 4);
-    await wrapper.get("input.todo-input").trigger("dblclick");
+    await wrapper.get("input.todo-input").trigger("click");
     await wrapper.vm.$nextTick();
 
     expect(input.selectionStart).toBe(3);
@@ -600,7 +676,9 @@ describe("TodoPanel", () => {
     wrapper.unmount();
   });
 
-  it("adds top and bottom actions to reminder item context menus", async () => {
+  it("uses compact reminder item context menus", async () => {
+    const writeText = vi.fn().mockResolvedValue(undefined);
+    Object.assign(navigator, { clipboard: { writeText } });
     const wrapper = mount(TodoPanel, {
       props: {
         todos: {
@@ -630,20 +708,17 @@ describe("TodoPanel", () => {
 
     expect(wrapper.findAll(".todo-item")[1].classes()).toContain("is-menu-selected");
     expect(wrapper.findAll(".dropdown-option").map((option) => option.text())).toEqual([
-      "设为重点",
-      "置顶",
-      "置底",
+      "复制",
+      "编辑",
       "删除",
+      "星标",
       "Tips",
     ]);
 
-    await wrapper.findAll(".dropdown-option").find((option) => option.text() === "置顶")?.trigger("click");
-    expect(wrapper.emitted("move")?.[0]).toEqual([{ period: "morning", id: "b" }, "morning", "a"]);
+    await wrapper.findAll(".dropdown-option").find((option) => option.text() === "复制")?.trigger("click");
+    await Promise.resolve();
+    expect(writeText).toHaveBeenCalledWith("第二项");
     expect(wrapper.findAll(".todo-item")[1].classes()).not.toContain("is-menu-selected");
-
-    await wrapper.findAll(".todo-item")[1].trigger("contextmenu");
-    await wrapper.findAll(".dropdown-option").find((option) => option.text() === "置底")?.trigger("click");
-    expect(wrapper.emitted("move")?.[1]).toEqual([{ period: "morning", id: "b" }, "morning"]);
 
     wrapper.unmount();
   });
@@ -672,7 +747,7 @@ describe("TodoPanel", () => {
     const inputWrapper = wrapper.get("input.todo-input");
     const input = inputWrapper.element as HTMLInputElement;
 
-    await inputWrapper.trigger("dblclick");
+    await inputWrapper.trigger("click");
     input.setSelectionRange(2, 2);
     await inputWrapper.trigger("keydown", { key: "Enter" });
 
@@ -740,7 +815,7 @@ describe("TodoPanel", () => {
       },
     });
 
-    await wrapper.findAll(".todo-input")[1].trigger("dblclick");
+    await wrapper.findAll(".todo-input")[1].trigger("click");
 
     expect(wrapper.findAll(".todo-item")[1].classes()).toContain("is-menu-selected");
 
@@ -756,10 +831,9 @@ describe("TodoPanel", () => {
     wrapper.unmount();
   });
 
-  it("shows copy and paste actions when right-clicking selected editable reminder text", async () => {
+  it("copies the full reminder text from the item context menu", async () => {
     const writeText = vi.fn().mockResolvedValue(undefined);
-    const readText = vi.fn().mockResolvedValue("补充");
-    Object.assign(navigator, { clipboard: { writeText, readText } });
+    Object.assign(navigator, { clipboard: { writeText } });
     const wrapper = mount(TodoPanel, {
       props: {
         todos: {
@@ -781,35 +855,26 @@ describe("TodoPanel", () => {
       },
     });
     const inputWrapper = wrapper.get("input.todo-input");
-    const input = inputWrapper.element as HTMLInputElement;
 
-    await inputWrapper.trigger("dblclick");
-    input.setSelectionRange(0, 3);
-    await inputWrapper.trigger("select");
     await inputWrapper.trigger("contextmenu");
 
     expect(wrapper.get(".todo-item").classes()).toContain("is-menu-selected");
     expect(wrapper.findAll(".dropdown-option").map((option) => option.text())).toEqual([
       "复制",
-      "粘贴",
-      "设为重点",
-      "置顶",
-      "置底",
+      "编辑",
       "删除",
+      "星标",
       "Tips",
     ]);
 
-    input.setSelectionRange(3, 3);
     await wrapper.findAll(".dropdown-option")[0].trigger("click");
     await Promise.resolve();
 
-    expect(writeText).toHaveBeenCalledWith("第一项");
+    expect(writeText).toHaveBeenCalledWith("第一项内容");
     wrapper.unmount();
   });
 
-  it("pastes clipboard text into editable reminder text from the context menu", async () => {
-    const readText = vi.fn().mockResolvedValue("补充");
-    Object.assign(navigator, { clipboard: { readText, writeText: vi.fn() } });
+  it("opens editing from the reminder context menu", async () => {
     const wrapper = mount(TodoPanel, {
       props: {
         todos: {
@@ -831,15 +896,12 @@ describe("TodoPanel", () => {
       },
     });
     const inputWrapper = wrapper.get("input.todo-input");
-    const input = inputWrapper.element as HTMLInputElement;
 
-    await inputWrapper.trigger("dblclick");
-    input.setSelectionRange(input.value.length, input.value.length);
     await inputWrapper.trigger("contextmenu");
-    await wrapper.findAll(".dropdown-option").find((option) => option.text() === "粘贴")?.trigger("click");
-    await Promise.resolve();
+    await wrapper.findAll(".dropdown-option").find((option) => option.text() === "编辑")?.trigger("click");
+    await wrapper.vm.$nextTick();
 
-    expect(wrapper.emitted("update")?.at(-1)).toEqual(["morning", "a", "第一项补充"]);
+    expect(wrapper.get("input.todo-input").attributes("readonly")).toBeUndefined();
     wrapper.unmount();
   });
 });

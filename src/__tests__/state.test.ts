@@ -45,6 +45,7 @@ describe("state compatibility", () => {
 
     expect(state.spaces).toEqual([{ id: "workspace", title: "工作空间", lines: [] }]);
     expect(state.activeSpaceId).toBe("workspace");
+    expect(state.showCompletedTodos).toBe(false);
   });
 
   it("serializes image metadata without large payloads for localStorage", () => {
@@ -71,6 +72,7 @@ describe("state compatibility", () => {
   it("normalizes quick buttons, todos, and text line indentation", () => {
     const state = normalizeImportedState({
       quickButtons: [{ title: "Docs", value: "https://example.com", type: "link" }],
+      showCompletedTodos: true,
       todos: {
         morning: [{ text: "A", done: true }, { text: "B", done: false }],
       },
@@ -87,6 +89,7 @@ describe("state compatibility", () => {
     expect(state.todos.morning[0].starred).toBe(false);
     expect(state.todos.noon).toEqual([]);
     expect(state.workspaceLines).toEqual([{ text: "child", indent: 1 }]);
+    expect(state.showCompletedTodos).toBe(true);
   });
 
   it("normalizes persisted spaces and starred reminders", () => {
