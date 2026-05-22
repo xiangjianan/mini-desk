@@ -20,7 +20,7 @@ vi.mock("naive-ui", async (importOriginal) => {
     NPopover: {
       name: "NPopover",
       props: ["show"],
-      template: "<div><slot name=\"trigger\" /><div v-if=\"show\" class=\"n-popover\"><slot /></div></div>",
+      template: "<div v-bind=\"$attrs\"><slot name=\"trigger\" /><div v-if=\"show\" class=\"n-popover\"><slot /></div></div>",
     },
     NTooltip: {
       name: "NTooltip",
@@ -40,7 +40,12 @@ const dropdownStub = {
 
 const popoverStub = {
   props: ["show"],
-  template: '<div><slot name="trigger" /><div v-if="show" class="n-popover"><slot /></div></div>',
+  template: '<div v-bind="$attrs"><slot name="trigger" /><div v-if="show" class="n-popover"><slot /></div></div>',
+};
+
+const persistentPopoverStub = {
+  props: ["show"],
+  template: '<div v-bind="$attrs"><slot name="trigger" /><div class="n-popover" :data-show="String(show)"><slot /></div></div>',
 };
 
 const tooltipStub = {
@@ -59,6 +64,20 @@ function mountApp() {
       stubs: {
         NDropdown: dropdownStub,
         NPopover: popoverStub,
+        NTooltip: tooltipStub,
+        NModal: modalStub,
+      },
+    },
+  });
+}
+
+function mountAppWithPersistentPopover() {
+  return mount(App, {
+    attachTo: document.body,
+    global: {
+      stubs: {
+        NDropdown: dropdownStub,
+        NPopover: persistentPopoverStub,
         NTooltip: tooltipStub,
         NModal: modalStub,
       },
@@ -445,6 +464,50 @@ describe("App shell", () => {
     }
   });
 
+  it("anchors image deletion feedback to the screenshot panel after deleting an image card", async () => {
+    vi.useFakeTimers();
+    vi.spyOn(Math, "random").mockReturnValue(0);
+    localStorage.setItem(
+      STORAGE_KEY,
+      JSON.stringify({
+        images: [{ id: "img-1", src: "data:image/png;base64,iVBORw0KGgo=", createdAt: 1 }],
+      }),
+    );
+    const wrapper = mountApp();
+
+    try {
+      const imagePanel = wrapper.getComponent(ImagePanel);
+      vi.spyOn(imagePanel.element, "getBoundingClientRect").mockReturnValue({
+        x: 0,
+        y: 0,
+        width: 128,
+        height: 720,
+        top: 0,
+        left: 0,
+        right: 128,
+        bottom: 720,
+        toJSON: () => ({}),
+      });
+
+      imagePanel.vm.$emit("delete", "img-1", wrapper.get(".image-card").element as HTMLElement);
+      await wrapper.vm.$nextTick();
+      await vi.advanceTimersByTimeAsync(200);
+      await wrapper.vm.$nextTick();
+
+      await wrapper.get('[data-testid="companion-yes"]').trigger("click");
+      await Promise.resolve();
+      await wrapper.vm.$nextTick();
+      await vi.advanceTimersByTimeAsync(200);
+      await wrapper.vm.$nextTick();
+
+      const style = wrapper.get('[data-testid="companion-bubble"]').attributes("style");
+      expect(style).toContain("100vw - 128px");
+    } finally {
+      wrapper.unmount();
+      vi.useRealTimers();
+    }
+  });
+
   it("anchors image deletion feedback to the screenshot list after deleting from preview", async () => {
     vi.useFakeTimers();
     vi.spyOn(Math, "random").mockReturnValue(0);
@@ -716,7 +779,8 @@ describe("App shell", () => {
       await vi.advanceTimersByTimeAsync(3000);
       await wrapper.vm.$nextTick();
 
-      expect(wrapper.find('[data-testid="companion-confirm"]').classes()).toContain("is-popover-fading");
+      expect(wrapper.find(".companion-popover-shell").classes()).toContain("is-popover-fading");
+      expect(wrapper.find('[data-testid="companion-confirm"]').classes()).not.toContain("is-popover-fading");
       expect(wrapper.find(".focus-companion.is-visible").exists()).toBe(true);
 
       await vi.advanceTimersByTimeAsync(260);
@@ -1083,6 +1147,31 @@ describe("App shell", () => {
       await vi.advanceTimersByTimeAsync(200);
       await wrapper.vm.$nextTick();
 
+      expect(wrapper.find('[data-testid="companion-confirm"]').text()).toContain("To Do List 看板");
+    } finally {
+      wrapper.unmount();
+      vi.useRealTimers();
+    }
+  });
+
+  it("keeps about bubble text and shell fading together when no anchor is supplied", async () => {
+    vi.useFakeTimers();
+    vi.spyOn(Math, "random").mockReturnValue(0);
+    const wrapper = mountApp();
+
+    try {
+      wrapper.getComponent(SettingsMenu).vm.$emit("about");
+      await wrapper.vm.$nextTick();
+      await vi.advanceTimersByTimeAsync(200);
+      await wrapper.vm.$nextTick();
+
+      expect(wrapper.find('[data-testid="companion-confirm"]').text()).toContain("To Do List 看板");
+
+      await vi.advanceTimersByTimeAsync(5000);
+      await wrapper.vm.$nextTick();
+
+      expect(wrapper.find(".companion-popover-shell").classes()).toContain("is-popover-fading");
+      expect(wrapper.find('[data-testid="companion-confirm"]').classes()).not.toContain("is-popover-fading");
       expect(wrapper.find('[data-testid="companion-confirm"]').text()).toContain("To Do List 看板");
     } finally {
       wrapper.unmount();
@@ -1489,9 +1578,40 @@ describe("App shell", () => {
       await vi.advanceTimersByTimeAsync(1000);
       await wrapper.vm.$nextTick();
 
-      expect(wrapper.find('[data-testid="companion-confirm"]').classes()).toContain("is-popover-fading");
+      expect(wrapper.find(".companion-popover-shell").classes()).toContain("is-popover-fading");
+      expect(wrapper.find('[data-testid="companion-confirm"]').classes()).not.toContain("is-popover-fading");
 
       await vi.advanceTimersByTimeAsync(260);
+      await wrapper.vm.$nextTick();
+
+      expect(wrapper.find('[data-testid="companion-confirm"]').exists()).toBe(false);
+    } finally {
+      wrapper.unmount();
+      vi.useRealTimers();
+    }
+  });
+
+  it("does not flash a stale Tips bubble when focusing a non-empty area", async () => {
+    vi.useFakeTimers();
+    vi.spyOn(Math, "random").mockReturnValue(0);
+    localStorage.setItem(
+      STORAGE_KEY,
+      JSON.stringify({
+        noteLines: [{ text: "已有便签", indent: 0 }],
+      }),
+    );
+    const wrapper = mountAppWithPersistentPopover();
+
+    try {
+      const imagePanel = wrapper.getComponent(ImagePanel);
+      imagePanel.vm.$emit("guide", "images", imagePanel.element as HTMLElement, true);
+      await wrapper.vm.$nextTick();
+      await vi.advanceTimersByTimeAsync(200);
+      await wrapper.vm.$nextTick();
+
+      expect(wrapper.find('[data-testid="companion-confirm"]').text()).toMatch(/截图区|图片|Ctrl\+V|方向键|右键|删除|预览|Esc/);
+
+      await wrapper.get(".note-panel textarea").trigger("focus");
       await wrapper.vm.$nextTick();
 
       expect(wrapper.find('[data-testid="companion-confirm"]').exists()).toBe(false);
@@ -1549,13 +1669,9 @@ describe("App shell", () => {
 
       expect(wrapper.find(".focus-companion.is-visible img").exists()).toBe(true);
       expect(wrapper.get('[data-testid="companion-bubble"]').attributes("style")).toContain("100vw - 428px");
+      expect(wrapper.find('[data-testid="companion-confirm"]').exists()).toBe(false);
 
-      await vi.advanceTimersByTimeAsync(200);
-      await wrapper.vm.$nextTick();
-
-      expect(wrapper.find('[data-testid="companion-confirm"]').classes()).toContain("is-popover-fading");
-
-      await vi.advanceTimersByTimeAsync(60);
+      await vi.advanceTimersByTimeAsync(260);
       await wrapper.vm.$nextTick();
 
       expect(wrapper.find('[data-testid="companion-confirm"]').exists()).toBe(false);
@@ -1669,7 +1785,7 @@ describe("App shell", () => {
       });
       await workspace.get("textarea").trigger("focus");
 
-      expect(wrapper.find('[data-testid="companion-confirm"]').classes()).toContain("is-popover-fading");
+      expect(wrapper.find('[data-testid="companion-confirm"]').exists()).toBe(false);
       expect(wrapper.get('[data-testid="companion-bubble"]').attributes("style")).toContain("100vw - 1080px");
       expect(wrapper.find(".focus-companion.is-visible img").exists()).toBe(true);
 

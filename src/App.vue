@@ -56,6 +56,7 @@ const importFeedbackAnchor = ref<HTMLElement | undefined>();
 const textSaveTimer = ref<number | undefined>();
 const bubbleTimer = ref<number | undefined>();
 const bubbleFadeTimer = ref<number | undefined>();
+const bubbleClearSignal = ref(0);
 const saveStatusTimer = ref<number | undefined>();
 const emptyTodoRemovalTimers = new Map<string, number>();
 const appVersion = ref(getIndexAppVersion());
@@ -344,7 +345,7 @@ function flushTextSave(): void {
 }
 
 function showCompanion(anchor?: HTMLElement, guideKey?: GuideKey): void {
-  hideBubbleMessage();
+  hideBubbleMessage({ clearRetainedContent: true });
   companionFocused.value = true;
   companionPosition.value = getCompanionPosition(anchor);
   activeGuideKey.value = guideKey ?? null;
@@ -497,6 +498,7 @@ function reorderImages(dragId: string, targetId: string): void {
 }
 
 function deleteImage(id: string, anchor?: HTMLElement): void {
+  const feedbackAnchor = getImageUndoAnchor(anchor);
   requestConfirmation("confirmDeleteImage", anchor, async () => {
     const index = state.images.findIndex((image) => image.id === id);
     if (index < 0) return;
@@ -504,7 +506,7 @@ function deleteImage(id: string, anchor?: HTMLElement): void {
     if (activePreviewId.value === id) activePreviewId.value = undefined;
     await deleteStoredImage(id);
     persistNow();
-    showBubble("deleteImage", getImageUndoAnchor(anchor), { hideCompanionAfter: true });
+    showBubble("deleteImage", feedbackAnchor, { hideCompanionAfter: true });
   }, undefined, { confirmText: "删除", cancelText: "取消" });
 }
 
@@ -882,8 +884,8 @@ function showBubbleText(message: string, anchor?: HTMLElement, options: BubbleOp
   pendingConfirm.value = null;
   bubbleMessage.value = message;
   activeGuideKey.value = options.guideKey ?? null;
+  companionFocused.value = true;
   if (anchor) {
-    companionFocused.value = true;
     companionPosition.value = getCompanionPosition(anchor);
   }
   bubbleVisible.value = true;
@@ -899,12 +901,13 @@ function showBubbleText(message: string, anchor?: HTMLElement, options: BubbleOp
   }, duration);
 }
 
-function hideBubbleMessage(): void {
+function hideBubbleMessage(options: { clearRetainedContent?: boolean } = {}): void {
   window.clearTimeout(bubbleTimer.value);
   window.clearTimeout(bubbleFadeTimer.value);
   pendingConfirm.value = null;
   bubbleVisible.value = false;
   bubbleMessage.value = "";
+  if (options.clearRetainedContent) bubbleClearSignal.value += 1;
 }
 
 function hideCompanion(): void {
@@ -1087,7 +1090,6 @@ function getCompanionPosition(anchor?: HTMLElement): { right: string; bottom?: s
 }
 
 function getImageUndoAnchor(anchor?: HTMLElement): HTMLElement | undefined {
-  if (!anchor?.closest(".image-preview")) return anchor;
   return document.querySelector<HTMLElement>(".image-panel") ?? anchor;
 }
 
@@ -1248,6 +1250,7 @@ function moveItem<T extends { id: string }>(items: T[], dragId: string, targetId
       :confirm="Boolean(pendingConfirm)"
       :confirm-text="pendingConfirm?.confirmText"
       :cancel-text="pendingConfirm?.cancelText"
+      :clear-signal="bubbleClearSignal"
       :position="companionPosition"
       :theme="state.theme"
       @yes="confirmCompanionAction"

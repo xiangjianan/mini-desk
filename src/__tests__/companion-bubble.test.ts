@@ -11,7 +11,13 @@ const popoverStub = {
 const persistentPopoverStub = {
   name: "NPopover",
   props: ["show"],
-  template: '<div><slot name="trigger" /><div class="n-popover" :data-show="String(show)"><slot /></div></div>',
+  template: '<div v-bind="$attrs"><slot name="trigger" /><div class="n-popover" :data-show="String(show)"><slot /></div></div>',
+};
+
+const fadingShellPopoverStub = {
+  name: "NPopover",
+  props: ["show"],
+  template: '<div v-bind="$attrs"><slot name="trigger" /><div class="n-popover" :data-show="String(show)"><slot /></div></div>',
 };
 
 const buttonStub = {
@@ -21,6 +27,7 @@ const buttonStub = {
 describe("CompanionBubble", () => {
   afterEach(() => {
     vi.useRealTimers();
+    document.body.innerHTML = "";
   });
 
   it("shows the GIF immediately and delays the message bubble by 200ms", async () => {
@@ -77,7 +84,8 @@ describe("CompanionBubble", () => {
     await wrapper.vm.$nextTick();
 
     const fadingBubble = document.body.querySelector('[data-testid="companion-confirm"]');
-    expect(fadingBubble?.classList.contains("is-popover-fading")).toBe(true);
+    expect(document.body.querySelector(".companion-popover-shell")?.classList.contains("is-popover-fading")).toBe(true);
+    expect(fadingBubble?.classList.contains("is-popover-fading")).toBe(false);
     expect(fadingBubble?.textContent).toContain("提示内容");
 
     await vi.advanceTimersByTimeAsync(260);
@@ -113,12 +121,42 @@ describe("CompanionBubble", () => {
     await wrapper.setProps({ message: "" });
 
     expect(wrapper.find(".n-popover").text()).toContain("保存好了");
-    expect(wrapper.get('[data-testid="companion-confirm"]').classes()).toContain("is-popover-fading");
+    expect(document.body.querySelector(".companion-popover-shell")?.classList.contains("is-popover-fading")).toBe(true);
+    expect(wrapper.get('[data-testid="companion-confirm"]').classes()).not.toContain("is-popover-fading");
 
     await vi.advanceTimersByTimeAsync(260);
     await wrapper.vm.$nextTick();
 
     expect(wrapper.find(".n-popover").text()).toBe("");
+
+    wrapper.unmount();
+  });
+
+  it("fades the popover shell instead of fading only the text content", async () => {
+    vi.useFakeTimers();
+    const wrapper = mount(CompanionBubble, {
+      attachTo: document.body,
+      props: {
+        visible: true,
+        message: "关于信息",
+      },
+      global: {
+        stubs: {
+          NButton: buttonStub,
+          NPopover: fadingShellPopoverStub,
+        },
+      },
+    });
+
+    await vi.advanceTimersByTimeAsync(200);
+    await wrapper.vm.$nextTick();
+
+    await wrapper.setProps({ message: "" });
+    await wrapper.vm.$nextTick();
+
+    expect(document.body.querySelector(".companion-popover-shell")?.classList.contains("is-popover-fading")).toBe(true);
+    expect(document.body.querySelector('[data-testid="companion-confirm"]')?.classList.contains("is-popover-fading")).toBe(false);
+    expect(document.body.querySelector('[data-testid="companion-confirm"]')?.textContent).toContain("关于信息");
 
     wrapper.unmount();
   });

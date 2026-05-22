@@ -268,7 +268,7 @@ describe("TodoPanel", () => {
       },
     });
 
-    expect(wrapper.get(".today-focus-section").text()).toContain("今日重点");
+    expect(wrapper.get(".today-focus-section").text()).toContain("❗️ 今日重点");
     expect(wrapper.findAll(".today-focus-input").map((item) => (item.element as HTMLInputElement).value)).toEqual([
       "重点未完成",
       "重点已完成",
@@ -278,6 +278,36 @@ describe("TodoPanel", () => {
     await wrapper.get(".todo-item .todo-star-button").trigger("click");
 
     expect(wrapper.emitted("star")?.[0]).toEqual(["morning", "a", false]);
+    wrapper.unmount();
+  });
+
+  it("edits the today focus title through the shared title model", async () => {
+    const wrapper = mount(TodoPanel, {
+      props: {
+        todos: {
+          morning: [{ id: "a", text: "重点事项", done: false, starred: true }],
+          noon: [],
+          evening: [],
+        },
+        titles: DEFAULT_TITLES,
+      },
+      global: {
+        stubs: {
+          Button: true,
+          Checkbox: checkboxStub,
+          Dropdown: dropdownStub,
+          NCheckbox: checkboxStub,
+          NDropdown: dropdownStub,
+          NTooltip: tooltipStub,
+        },
+      },
+    });
+
+    await wrapper.get(".today-focus-heading .editable-title").trigger("dblclick");
+    await wrapper.get(".today-focus-heading .title-edit-input").setValue("❗️ 本日重点");
+    await wrapper.get(".today-focus-heading .title-edit-input").trigger("blur");
+
+    expect(wrapper.emitted("titleUpdate")?.[0]).toEqual(["today-focus-title", "❗️ 本日重点"]);
     wrapper.unmount();
   });
 
@@ -456,9 +486,11 @@ describe("TodoPanel", () => {
     await nextTick();
 
     expect(values(wrapper)).toEqual(["第一项", "第二项"]);
+    expect(wrapper.find(".todo-completed-divider").exists()).toBe(false);
 
     await vi.advanceTimersByTimeAsync(199);
     expect(values(wrapper)).toEqual(["第一项", "第二项"]);
+    expect(wrapper.find(".todo-completed-divider").exists()).toBe(false);
 
     await vi.advanceTimersByTimeAsync(1);
     await nextTick();

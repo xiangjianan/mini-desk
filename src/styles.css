@@ -1,5 +1,6 @@
 :root {
   --app-font-size: 12px;
+  --scrollbar-size: 2px;
   --bg: #ffffff;
   --panel: #ffffff;
   --text: #111111;
@@ -39,8 +40,8 @@ html[data-theme="dark"] {
 }
 
 *::-webkit-scrollbar {
-  width: 8px;
-  height: 8px;
+  width: var(--scrollbar-size);
+  height: var(--scrollbar-size);
 }
 
 *::-webkit-scrollbar-track {
@@ -162,13 +163,24 @@ h3 {
 .panel-header,
 .todo-heading {
   display: flex;
-  align-items: center;
+  align-items: stretch;
   justify-content: space-between;
-  gap: 8px;
+  gap: 0;
   min-height: 34px;
-  padding: 0 8px;
+  padding: 0 0 0 8px;
   border-bottom: 1px solid var(--line-section);
   flex: 0 0 auto;
+}
+
+.panel-header > h1,
+.panel-header > h2,
+.todo-heading > h3 {
+  align-self: center;
+  display: flex;
+  align-items: center;
+  min-width: 0;
+  padding: 0;
+  border: 0;
 }
 
 .editable-title {
@@ -189,6 +201,16 @@ h3 {
 .todo-count {
   color: var(--muted);
   font-size: var(--app-font-size);
+}
+
+.panel-header > .count,
+.todo-heading-actions .todo-count {
+  align-self: center;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  padding: 0 8px;
+  border: 0;
 }
 
 .n-button {
@@ -243,7 +265,14 @@ h3 {
 }
 
 .header-actions,
-.todo-heading-actions,
+.todo-heading-actions {
+  display: flex;
+  align-items: stretch;
+  align-self: stretch;
+  gap: 0;
+  margin-left: auto;
+}
+
 .dialog-actions {
   display: flex;
   align-items: center;
@@ -257,7 +286,7 @@ h3 {
   align-items: center;
   justify-content: center;
   padding: 0 8px;
-  border: 1px solid var(--line-control);
+  border: 0;
   color: var(--muted);
   background: var(--panel);
   font-size: var(--app-font-size);
@@ -281,6 +310,7 @@ h3 {
   display: inline-flex;
   align-items: center;
   justify-content: center;
+  font-size: var(--app-font-size);
   border: 1px solid var(--line-control);
   background: transparent;
 }
@@ -309,7 +339,9 @@ h3 {
 .space-tabs {
   display: flex;
   align-items: stretch;
+  height: 34px;
   min-height: 34px;
+  font-size: var(--app-font-size);
   border-bottom: 1px solid var(--line-section);
   overflow-x: auto;
   overflow-y: hidden;
@@ -332,6 +364,7 @@ h3 {
   border: 0;
   border-right: 1px solid var(--line-subtle);
   color: var(--muted);
+  font-size: var(--app-font-size);
   background: transparent;
   overflow: hidden;
   text-overflow: ellipsis;
@@ -562,34 +595,40 @@ h3 {
 
 .today-focus-section {
   flex: 0 0 auto;
-  border-bottom: 1px solid var(--line-main);
+  border-bottom: 0;
   background: var(--panel);
 }
 
 .today-focus-heading {
-  min-height: 30px;
+  min-height: 34px;
   display: flex;
   align-items: center;
   padding: 0 8px;
-  color: var(--muted);
-  border-bottom: 1px solid var(--line-subtle);
+  color: inherit;
+  font-size: var(--app-font-size);
+  font-weight: 400;
+  border-bottom: 1px solid var(--line-section);
 }
 
 .today-focus-list {
   list-style: none;
   margin: 0;
-  padding: 4px 6px;
+  padding: 0;
   max-height: 25vh;
   overflow-y: auto;
 }
 
 .today-focus-item {
+  position: relative;
   display: grid;
-  grid-template-columns: 28px minmax(0, 1fr) 24px;
+  grid-template-columns: 42px minmax(0, 1fr) 24px;
   align-items: center;
-  min-height: 28px;
-  gap: 4px;
-  border-bottom: 1px solid var(--line-subtle);
+  gap: 0;
+  height: 34px;
+  min-height: 34px;
+  padding: 0;
+  font-size: var(--app-font-size);
+  border-bottom: 0;
 }
 
 .today-focus-item.is-done {
@@ -614,7 +653,7 @@ h3 {
 
 .todo-list {
   list-style: none;
-  padding: 6px;
+  padding: 0;
   margin: 0;
 }
 
@@ -623,31 +662,57 @@ h3 {
 }
 
 .todo-empty-hint {
-  min-height: 32px;
-  padding: 7px 8px;
+  min-height: 34px;
+  padding: 0 8px;
   color: var(--muted);
   font-size: var(--app-font-size);
-  line-height: 1.5;
+  line-height: 34px;
   pointer-events: none;
 }
 
 .todo-item {
+  position: relative;
   display: grid;
   grid-template-columns: 14px 28px minmax(0, 1fr) 24px;
   align-items: center;
-  gap: 4px;
-  min-height: 30px;
-  padding-left: 3px;
-  border-bottom: 1px solid var(--line-subtle);
+  gap: 0;
+  height: 34px;
+  min-height: 34px;
+  padding: 0;
+  font-size: var(--app-font-size);
+  border-bottom: 0;
   transition: background-color 0.18s ease, opacity 0.18s ease, transform 0.22s cubic-bezier(0.2, 0, 0, 1);
+}
+
+.today-focus-item::after,
+.todo-item::after {
+  content: "";
+  position: absolute;
+  right: 6px;
+  bottom: 0;
+  left: 6px;
+  border-bottom: 1px solid var(--line-subtle);
+  pointer-events: none;
+}
+
+.todo-list .todo-item:last-child {
+  margin-bottom: 8px;
+}
+
+.today-focus-item:last-child::after {
+  display: none;
+}
+
+.today-focus-section + .todo-sections .todo-section:first-child .todo-heading {
+  border-top: 1px solid var(--line-section);
 }
 
 .todo-drag-handle {
   position: relative;
   width: 12px;
   min-width: 12px;
-  height: 24px;
-  min-height: 24px;
+  height: 34px;
+  min-height: 34px;
   padding: 0;
   border: 0;
   background: transparent;
@@ -675,13 +740,14 @@ h3 {
 
 .todo-star-button {
   justify-self: end;
-  width: 22px;
-  min-width: 22px;
-  height: 24px;
-  min-height: 24px;
+  width: 24px;
+  min-width: 24px;
+  height: 34px;
+  min-height: 34px;
   padding: 0;
   border: 0;
   color: var(--muted);
+  font-size: var(--app-font-size);
   background: transparent;
   line-height: 1;
   opacity: 0;
@@ -712,6 +778,11 @@ h3 {
   justify-self: center;
 }
 
+.today-focus-item .n-checkbox {
+  justify-self: start;
+  margin-left: 20px;
+}
+
 .todo-item.is-menu-selected {
   background: var(--button-hover);
 }
@@ -724,7 +795,6 @@ h3 {
 .todo-input,
 .today-focus-input {
   width: 100%;
-  height: 28px;
   border: 0;
   font-size: var(--app-font-size);
   background: transparent;
@@ -732,7 +802,12 @@ h3 {
 }
 
 .todo-input {
+  height: 34px;
   font-size: var(--app-font-size);
+}
+
+.today-focus-input {
+  height: 34px;
 }
 
 .today-focus-item.is-done .today-focus-input {
@@ -746,7 +821,7 @@ h3 {
   min-height: 24px;
   padding: 4px 0 2px 42px;
   color: var(--muted);
-  font-size: 11px;
+  font-size: var(--app-font-size);
   border-bottom: 1px solid var(--line-subtle);
 }
 
@@ -762,7 +837,28 @@ h3 {
 }
 
 .todo-section-menu-button {
-  width: 30px;
+  width: 34px;
+}
+
+.quick-menu-button,
+.todo-section-menu-button {
+  flex: 0 0 34px;
+  width: 34px;
+  min-width: 34px;
+  height: 34px;
+  min-height: 34px;
+  margin: 0 -1px -1px 0;
+  border-top: 0;
+  border-color: var(--line-section);
+  border-right-color: var(--line-main);
+  border-radius: 0;
+}
+
+.quick-menu-button:hover,
+.quick-menu-button:focus-visible,
+.todo-section-menu-button:hover,
+.todo-section-menu-button:focus-visible {
+  border-right-color: var(--line-main);
 }
 
 @keyframes todo-focus-complete {
@@ -820,17 +916,18 @@ h3 {
   line-height: 1.5;
   transform-origin: right bottom;
   animation: companion-pop 0.2s cubic-bezier(0.16, 1, 0.3, 1);
-  transition: opacity 0.26s ease, transform 0.26s ease;
-}
-
-.companion-popover.is-popover-fading {
-  opacity: 0;
-  transform: translateY(4px) scale(0.96);
 }
 
 .companion-popover-shell.n-popover {
   box-shadow: none !important;
   border: 1px solid #111 !important;
+  transform-origin: right bottom;
+  transition: opacity 0.26s ease, transform 0.26s ease;
+}
+
+.companion-popover-shell.n-popover.is-popover-fading {
+  opacity: 0;
+  transform: translateY(4px) scale(0.96);
 }
 
 .companion-popover-arrow {
@@ -895,12 +992,37 @@ h3 {
 
 .top-actions {
   position: fixed;
-  top: 2px;
-  right: 10px;
+  top: 0;
+  right: 0;
   z-index: 70;
   display: flex;
-  align-items: center;
-  gap: 8px;
+  align-items: stretch;
+  height: 34px;
+  gap: 0;
+}
+
+.top-actions .save-status {
+  width: 88px;
+  min-width: 88px;
+  height: 34px;
+  min-height: 34px;
+  border: 0;
+  border-bottom: 1px solid var(--line-control);
+}
+
+.top-actions .icon-button {
+  height: 34px;
+  min-height: 34px;
+  border: 1px solid var(--line-control);
+}
+
+.top-actions .icon-button {
+  width: 34px;
+  min-width: 34px;
+}
+
+.settings-trigger + .theme-btn {
+  margin-left: -1px;
 }
 
 .settings-btn {
@@ -909,6 +1031,11 @@ h3 {
 
 .settings-trigger {
   display: inline-flex;
+  height: 34px;
+}
+
+.settings-trigger .n-badge {
+  height: 100%;
 }
 
 .settings-version-item {
@@ -1184,7 +1311,7 @@ body:has(.image-preview) .n-modal-body-wrapper {
   .mobile-banner {
     display: block;
     padding: 8px 12px;
-    font-size: 13px;
+    font-size: var(--app-font-size);
     line-height: 1.45;
     color: var(--muted);
     border-bottom: 1px solid var(--line-main);
@@ -1214,7 +1341,7 @@ body:has(.image-preview) .n-modal-body-wrapper {
 
   .workspace-panel .panel-header {
     min-height: 42px;
-    padding: 0 12px;
+    padding: 0;
   }
 
   .workspace-panel .space-tabs {
@@ -1234,17 +1361,17 @@ body:has(.image-preview) .n-modal-body-wrapper {
 
   .top-actions {
     display: flex;
-    top: 3px;
-    right: 8px;
-    gap: 6px;
+    top: 0;
+    right: 0;
+    gap: 0;
     z-index: 3300;
   }
 
   .top-actions .icon-button {
-    width: 32px;
-    min-width: 32px;
-    height: 32px;
-    min-height: 32px;
+    width: 34px;
+    min-width: 34px;
+    height: 34px;
+    min-height: 34px;
   }
 
   .focus-companion {

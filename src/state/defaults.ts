@@ -12,6 +12,7 @@ export const DEFAULT_TITLES: Record<string, string> = {
   "image-title": "🎨 截图",
   "note-title": "📝 便签",
   "quick-title": "🔗 快捷链接",
+  "today-focus-title": "❗️ 今日重点",
   "todo-morning-title": "☀️ 早上",
   "todo-noon-title": "🌤️ 中午",
   "todo-evening-title": "🌙 晚上",

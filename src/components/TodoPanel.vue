@@ -75,6 +75,7 @@ const periodLabels: Record<TodoPeriod, string> = {
   noon: "todo-noon-title",
   evening: "todo-evening-title",
 };
+const todayFocusTitleId = "today-focus-title";
 
 const ordered = computed(() =>
   Object.fromEntries(
@@ -131,7 +132,7 @@ type TodoListEntry =
 
 const listEntries = computed(() =>
   Object.fromEntries(
-    TODO_PERIODS.map((period) => [period, buildTodoListEntries(visibleOrdered.value[period])]),
+    TODO_PERIODS.map((period) => [period, buildTodoListEntries(visibleOrdered.value[period], getDeferredTodoIds(period))]),
   ) as Record<TodoPeriod, TodoListEntry[]>,
 );
 
@@ -441,11 +442,19 @@ function isCompletedVisible(period: TodoPeriod): boolean {
   return Boolean(props.showCompleted?.[period]);
 }
 
-function buildTodoListEntries(todos: TodoItem[]): TodoListEntry[] {
+function getDeferredTodoIds(period: TodoPeriod): Set<string> {
+  return new Set(
+    pendingDoneReorderIds.value
+      .filter((key) => key.startsWith(`${period}:`))
+      .map((key) => key.slice(period.length + 1)),
+  );
+}
+
+function buildTodoListEntries(todos: TodoItem[], deferredDoneIds: ReadonlySet<string> = new Set()): TodoListEntry[] {
   const entries: TodoListEntry[] = [];
   let completedDividerAdded = false;
   todos.forEach((todo) => {
-    if (todo.done && !completedDividerAdded) {
+    if (todo.done && !deferredDoneIds.has(todo.id) && !completedDividerAdded) {
       entries.push({ type: "divider", id: `completed-${todo.id}` });
       completedDividerAdded = true;
     }
@@ -458,7 +467,13 @@ function buildTodoListEntries(todos: TodoItem[]): TodoListEntry[] {
 <template>
   <section class="panel todo-panel" aria-labelledby="todo-title">
     <section v-if="todayFocus.length" class="today-focus-section" aria-label="今日重点">
-      <div class="today-focus-heading">今日重点</div>
+      <div class="today-focus-heading">
+        <EditableTitle
+          :id="todayFocusTitleId"
+          :value="titles[todayFocusTitleId]"
+          @update="(id, value) => emit('titleUpdate', id, value)"
+        />
+      </div>
       <ul class="today-focus-list">
         <li
           v-for="item in todayFocus"

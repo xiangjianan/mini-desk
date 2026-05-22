@@ -62,7 +62,8 @@ describe("Naive UI component usage", () => {
     expect(companion).toContain(':animated="false"');
     expect(companion).not.toContain(':animated="true"');
     expect(companion).toContain(":arrow-point-to-center");
-    expect(companion).toContain('class="companion-popover-shell"');
+    expect(companion).toContain("'companion-popover-shell'");
+    expect(companion).toContain("'is-popover-fading': retainingPopoverContent");
     expect(companion).toContain('arrow-class="companion-popover-arrow"');
     expect(companion).toContain("--n-box-shadow");
     expect(companion).toContain(":show=\"visiblePopover\"");
@@ -175,7 +176,42 @@ describe("Naive UI component usage", () => {
     expect(quick).not.toContain(">+</NButton>");
     expect(todo).not.toContain("↘");
     expect(styles).toMatch(/\.settings-btn\s*\{[^}]*border-radius: 0/s);
-    expect(styles).toMatch(/\.top-actions\s*\{[^}]*top: 2px/s);
+    expect(styles).toMatch(/\.top-actions\s*\{[^}]*top: 0/s);
+  });
+
+  it("keeps header text unboxed while header action buttons share the one-pixel edge", () => {
+    const styles = read("src/styles.css");
+
+    expect(styles).toMatch(/\.panel-header,[\s\S]*?\.todo-heading\s*\{[^}]*align-items: stretch/s);
+    expect(styles).toMatch(/\.panel-header,[\s\S]*?\.todo-heading\s*\{[^}]*gap: 0/s);
+    expect(styles).toMatch(/\.panel-header,[\s\S]*?\.todo-heading\s*\{[^}]*padding: 0 0 0 8px/s);
+    expect(styles).toMatch(/\.panel-header > h1,[\s\S]*?\.todo-heading > h3\s*\{[^}]*border: 0/s);
+    expect(styles).toMatch(/\.panel-header > \.count,[\s\S]*?\.todo-heading-actions \.todo-count\s*\{[^}]*border: 0/s);
+    expect(styles).toMatch(/\.header-actions,[\s\S]*?\.todo-heading-actions\s*\{[^}]*align-self: stretch/s);
+    expect(styles).toMatch(/\.header-actions,[\s\S]*?\.todo-heading-actions\s*\{[^}]*gap: 0/s);
+    expect(styles).toMatch(/\.quick-menu-button,[\s\S]*?\.todo-section-menu-button\s*\{[^}]*width: 34px/s);
+    expect(styles).toMatch(/\.quick-menu-button,[\s\S]*?\.todo-section-menu-button\s*\{[^}]*height: 34px/s);
+    expect(styles).toMatch(/\.quick-menu-button,[\s\S]*?\.todo-section-menu-button\s*\{[^}]*border-color: var\(--line-section\)/s);
+    expect(styles).toMatch(/\.quick-menu-button,[\s\S]*?\.todo-section-menu-button\s*\{[^}]*border-right-color: var\(--line-main\)/s);
+    expect(styles).toMatch(/\.quick-menu-button,[\s\S]*?\.todo-section-menu-button\s*\{[^}]*margin: 0 -1px -1px 0/s);
+    expect(styles).toMatch(/\.quick-menu-button,[\s\S]*?\.todo-section-menu-button\s*\{[^}]*border-top: 0/s);
+    expect(styles).toMatch(/\.quick-menu-button:hover,[\s\S]*?\.todo-section-menu-button:focus-visible\s*\{[^}]*border-right-color: var\(--line-main\)/s);
+  });
+
+  it("keeps top-right status plain while icon buttons stay flush as a one-pixel segmented control", () => {
+    const styles = read("src/styles.css");
+
+    expect(styles).toMatch(/\.top-actions\s*\{[^}]*top: 0/s);
+    expect(styles).toMatch(/\.top-actions\s*\{[^}]*right: 0/s);
+    expect(styles).toMatch(/\.top-actions\s*\{[^}]*height: 34px/s);
+    expect(styles).toMatch(/\.top-actions\s*\{[^}]*gap: 0/s);
+    expect(styles).toMatch(/\.settings-trigger \+ \.theme-btn\s*\{[^}]*margin-left: -1px/s);
+    expect(styles).toMatch(/\.top-actions \.save-status\s*\{[^}]*height: 34px/s);
+    expect(styles).toMatch(/\.top-actions \.save-status\s*\{[^}]*width: 88px/s);
+    expect(styles).toMatch(/\.top-actions \.save-status\s*\{[^}]*border: 0/s);
+    expect(styles).toMatch(/\.top-actions \.save-status\s*\{[^}]*border-bottom: 1px solid var\(--line-control\)/s);
+    expect(styles).toMatch(/\.top-actions \.icon-button\s*\{[^}]*height: 34px/s);
+    expect(styles).toMatch(/\.top-actions \.icon-button\s*\{[^}]*border: 1px solid var\(--line-control\)/s);
   });
 
   it("crops the companion GIF into a square instead of letterboxing it", () => {
@@ -194,9 +230,20 @@ describe("Naive UI component usage", () => {
     expect(styles).toMatch(/body\s*\{[^}]*font-size: 12px/s);
     expect(styles).toMatch(/h1,[\s\S]*?h2\s*\{[^}]*font-size: var\(--app-font-size\)/s);
     expect(styles).toMatch(/\.count,[\s\S]*?\.todo-count\s*\{[^}]*font-size: var\(--app-font-size\)/s);
+    expect(styles).toMatch(/\.today-focus-heading\s*\{[^}]*font-size: var\(--app-font-size\)/s);
+    expect(styles).toMatch(/\.today-focus-heading\s*\{[^}]*color: inherit/s);
+    expect(styles).toMatch(/\.today-focus-heading\s*\{[^}]*font-weight: 400/s);
     expect(styles).toMatch(/\.text-editor-textarea\s*\{[^}]*font-size: var\(--app-font-size\)/s);
     expect(styles).toMatch(/\.quick-button\s*\{[^}]*font-size: var\(--app-font-size\)/s);
+    expect(styles).toMatch(/\.icon-button\s*\{[^}]*font-size: var\(--app-font-size\)/s);
+    expect(styles).toMatch(/\.space-tabs\s*\{[^}]*font-size: var\(--app-font-size\)/s);
+    expect(styles).toMatch(/\.space-tab\s*\{[^}]*font-size: var\(--app-font-size\)/s);
+    expect(styles).toMatch(/\.todo-item\s*\{[^}]*font-size: var\(--app-font-size\)/s);
+    expect(styles).toMatch(/\.today-focus-item\s*\{[^}]*font-size: var\(--app-font-size\)/s);
+    expect(styles).toMatch(/\.todo-star-button\s*\{[^}]*font-size: var\(--app-font-size\)/s);
     expect(styles).toMatch(/\.todo-input\s*\{[^}]*font-size: var\(--app-font-size\)/s);
+    expect(styles).toMatch(/\.today-focus-input\s*\{[^}]*font-size: var\(--app-font-size\)/s);
+    expect(styles).toMatch(/\.todo-completed-divider\s*\{[^}]*font-size: var\(--app-font-size\)/s);
     expect(styles).toMatch(/\.n-input,[\s\S]*?\.n-card\s*\{[^}]*font-size: var\(--app-font-size\)/s);
     expect(styles).toMatch(/\.companion-actions \.n-button\s*\{[^}]*min-width: 64px/s);
   });
@@ -205,6 +252,9 @@ describe("Naive UI component usage", () => {
     const styles = read("src/styles.css");
 
     expect(styles).toContain("scrollbar-width: thin");
+    expect(styles).toContain("--scrollbar-size: 2px");
+    expect(styles).toMatch(/\*::-webkit-scrollbar\s*\{[^}]*width: var\(--scrollbar-size\)/s);
+    expect(styles).toMatch(/\*::-webkit-scrollbar\s*\{[^}]*height: var\(--scrollbar-size\)/s);
     expect(styles).toContain("::-webkit-scrollbar-thumb");
     expect(styles).toMatch(/button\s*\{[^}]*background: transparent/s);
     expect(styles).toMatch(/\.n-button\s*\{[^}]*--n-border-radius: 0/s);
@@ -270,9 +320,50 @@ describe("Naive UI component usage", () => {
     expect(todo).toContain('class="todo-drag-handle"');
     expect(todo).not.toMatch(/class="todo-item"[\s\S]{0,160}draggable="true"/);
     expect(styles).toMatch(/\.todo-item\s*\{[^}]*grid-template-columns: 14px 28px minmax\(0, 1fr\) 24px/s);
+    expect(styles).toMatch(/\.todo-list\s*\{[^}]*padding: 0/s);
+    expect(styles).toMatch(/\.todo-item\s*\{[^}]*height: 34px/s);
+    expect(styles).toMatch(/\.todo-item\s*\{[^}]*min-height: 34px/s);
+    expect(styles).toMatch(/\.todo-item\s*\{[^}]*padding: 0/s);
+    expect(styles).toMatch(/\.todo-item\s*\{[^}]*position: relative/s);
+    expect(styles).toMatch(/\.todo-item\s*\{[^}]*border-bottom: 0/s);
+    expect(styles).toMatch(/\.todo-item::after\s*\{[^}]*left: 6px/s);
+    expect(styles).toMatch(/\.todo-item::after\s*\{[^}]*right: 6px/s);
+    expect(styles).toMatch(/\.todo-item::after\s*\{[^}]*border-bottom: 1px solid var\(--line-subtle\)/s);
+    expect(styles).toMatch(/\.todo-list \.todo-item:last-child\s*\{[^}]*margin-bottom: 8px/s);
     expect(styles).toMatch(/\.todo-drag-handle\s*\{[^}]*width: 12px/s);
     expect(styles).toMatch(/\.todo-drag-handle\s*\{[^}]*opacity: 0\.28/s);
     expect(styles).toContain(".todo-drag-handle::before");
+  });
+
+  it("keeps today focus reminder rows aligned to the same one-line grid", () => {
+    const todo = read("src/components/TodoPanel.vue");
+    const styles = read("src/styles.css");
+
+    const todayFocusTemplate = todo.match(/class="today-focus-item"[\s\S]*?<\/li>/)?.[0] ?? "";
+
+    expect(todo).toContain('"today-focus-title"');
+    expect(todo).toContain(":value=\"titles[todayFocusTitleId]\"");
+    expect(todo).not.toContain("@drop.stop=\"dragged && emit('move', dragged, item.period, item.todo.id)\"");
+    expect(todayFocusTemplate).not.toContain('class="todo-drag-handle"');
+    expect(todayFocusTemplate).not.toContain("dragstart");
+    expect(styles).toMatch(/\.today-focus-section\s*\{[^}]*border-bottom: 0/s);
+    expect(styles).toMatch(/\.today-focus-heading\s*\{[^}]*min-height: 34px/s);
+    expect(styles).toMatch(/\.today-focus-list\s*\{[^}]*padding: 0/s);
+    expect(styles).toMatch(/\.today-focus-item\s*\{[^}]*grid-template-columns: 42px minmax\(0, 1fr\) 24px/s);
+    expect(styles).toMatch(/\.today-focus-item\s*\{[^}]*gap: 0/s);
+    expect(styles).toMatch(/\.today-focus-item\s*\{[^}]*height: 34px/s);
+    expect(styles).toMatch(/\.today-focus-item\s*\{[^}]*min-height: 34px/s);
+    expect(styles).toMatch(/\.today-focus-item\s*\{[^}]*padding: 0/s);
+    expect(styles).toMatch(/\.today-focus-item\s*\{[^}]*position: relative/s);
+    expect(styles).toMatch(/\.today-focus-item\s*\{[^}]*border-bottom: 0/s);
+    expect(styles).toMatch(/\.today-focus-item::after,[\s\S]*?\.todo-item::after\s*\{[^}]*left: 6px/s);
+    expect(styles).toMatch(/\.today-focus-item::after,[\s\S]*?\.todo-item::after\s*\{[^}]*right: 6px/s);
+    expect(styles).toMatch(/\.today-focus-item:last-child::after\s*\{[^}]*display: none/s);
+    expect(styles).toMatch(/\.today-focus-section \+ \.todo-sections \.todo-section:first-child \.todo-heading\s*\{[^}]*border-top: 1px solid var\(--line-section\)/s);
+    expect(styles).toMatch(/\.todo-item \.n-checkbox\s*\{[^}]*justify-self: center/s);
+    expect(styles).toMatch(/\.today-focus-item \.n-checkbox\s*\{[^}]*justify-self: start/s);
+    expect(styles).toMatch(/\.today-focus-item \.n-checkbox\s*\{[^}]*margin-left: 20px/s);
+    expect(styles).toMatch(/\.today-focus-input\s*\{[^}]*height: 34px/s);
   });
 
   it("only reveals unstarred reminder star buttons on hover while starred buttons stay visible", () => {
@@ -372,6 +463,7 @@ describe("Naive UI component usage", () => {
     const defaults = read("src/state/defaults.ts");
 
     expect(defaults).toContain("GUIDE_MENU_OPTION");
+    expect(defaults).toContain('"today-focus-title": "❗️ 今日重点"');
     for (const source of [image, quick, todo, text]) {
       expect(source).toContain("GUIDE_MENU_OPTION");
       expect(source).toContain("Tips");
@@ -441,6 +533,7 @@ describe("Naive UI component usage", () => {
     const styles = read("src/styles.css");
 
     expect(styles).toMatch(/\.space-tabs\s*\{[^}]*overflow-x: auto/s);
+    expect(styles).toMatch(/\.space-tabs\s*\{[^}]*height: 34px/s);
     expect(styles).toMatch(/\.workspace-panel \.space-tabs\s*\{[^}]*max-width: calc\(100% - 154px\)/s);
     expect(styles).toMatch(/\.workspace-panel \.space-tabs\s*\{[^}]*overflow-x: auto/s);
     expect(styles).not.toMatch(/\.workspace-panel \.space-tabs\s*\{[^}]*overflow-x: scroll/s);
@@ -472,7 +565,7 @@ describe("Naive UI component usage", () => {
     expect(styles).toMatch(/\.board\[data-mobile-active="spaces"\] > \.space-panel/s);
     expect(styles).toMatch(/@media \(max-width: 900px\)[\s\S]*--app-font-size: 14px/s);
     expect(styles).toMatch(/@media \(max-width: 900px\)[\s\S]*\.top-actions\s*\{[^}]*display: flex/s);
-    expect(styles).toMatch(/@media \(max-width: 900px\)[\s\S]*\.top-actions\s*\{[^}]*top: 3px/s);
+    expect(styles).toMatch(/@media \(max-width: 900px\)[\s\S]*\.top-actions\s*\{[^}]*top: 0/s);
     expect(styles).toMatch(/@media \(max-width: 900px\)[\s\S]*\.focus-companion\s*\{[^}]*top: 118px/s);
     expect(styles).toMatch(/@media \(max-width: 900px\)[\s\S]*\.focus-companion img\s*\{[^}]*width: 60px/s);
     expect(styles).toMatch(/\.image-preview\s*\{[^}]*display: none !important/s);

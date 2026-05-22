@@ -11,6 +11,7 @@ const props = defineProps<{
   confirmText?: string;
   cancelText?: string;
   actionText?: string;
+  clearSignal?: number;
   theme?: "light" | "dark";
   position?: {
     right: string;
@@ -125,6 +126,21 @@ watch(
   },
 );
 
+watch(
+  () => props.clearSignal,
+  () => {
+    window.clearTimeout(popoverTimer.value);
+    window.clearTimeout(contentTimer.value);
+    delayedPopoverVisible.value = false;
+    retainingPopoverContent.value = false;
+    renderedMessage.value = "";
+    renderedConfirm.value = false;
+    renderedConfirmText.value = "是";
+    renderedCancelText.value = "否";
+    renderedActionText.value = "";
+  },
+);
+
 onUnmounted(() => {
   window.clearTimeout(popoverTimer.value);
   window.clearTimeout(contentTimer.value);
@@ -151,7 +167,7 @@ onUnmounted(() => {
       :arrow-point-to-center="true"
       :animated="false"
       :z-index="3300"
-      class="companion-popover-shell"
+      :class="['companion-popover-shell', { 'is-popover-fading': retainingPopoverContent }]"
       arrow-class="companion-popover-arrow"
       :style="{ maxWidth: '240px', '--n-box-shadow': 'none' }"
     >
@@ -162,7 +178,6 @@ onUnmounted(() => {
       <div
         v-if="popoverContentVisible"
         class="companion-popover"
-        :class="{ 'is-popover-fading': retainingPopoverContent }"
         role="status"
         aria-live="polite"
         data-testid="companion-confirm"
