@@ -141,9 +141,11 @@ describe("App shell", () => {
   it("renders a mobile handoff page instead of board regions on mobile", async () => {
     vi.useFakeTimers();
     stubMatchMedia(true);
-    const wrapper = mountApp();
+    let wrapper: ReturnType<typeof mountApp> | undefined;
 
     try {
+      wrapper = mountApp();
+
       expect(wrapper.find(".mobile-handoff").exists()).toBe(true);
       expect(wrapper.get(".mobile-handoff-title").text()).toBe("To Do List 看板");
       expect(wrapper.text()).toContain("建议在电脑浏览器打开，以获得完整体验");
@@ -164,7 +166,7 @@ describe("App shell", () => {
 
       expect(wrapper.find('[data-testid="companion-confirm"]').text()).toContain("建议在电脑浏览器打开");
     } finally {
-      wrapper.unmount();
+      wrapper?.unmount();
       vi.unstubAllGlobals();
       vi.useRealTimers();
     }
@@ -328,9 +330,11 @@ describe("App shell", () => {
   it("does not run board shortcuts or paste handling while mobile is blocked", async () => {
     vi.useFakeTimers();
     stubMatchMedia(true);
-    const wrapper = mountApp();
+    let wrapper: ReturnType<typeof mountApp> | undefined;
 
     try {
+      wrapper = mountApp();
+
       window.dispatchEvent(new KeyboardEvent("keydown", { key: "s", ctrlKey: true }));
       const pasteEvent = new Event("paste", { cancelable: true }) as ClipboardEvent;
       Object.defineProperty(pasteEvent, "clipboardData", {
@@ -355,7 +359,7 @@ describe("App shell", () => {
       expect(wrapper.find('[data-testid="companion-confirm"]').text()).toContain("建议在电脑浏览器打开");
       expect(wrapper.findComponent(ImagePanel).exists()).toBe(false);
     } finally {
-      wrapper.unmount();
+      wrapper?.unmount();
       vi.unstubAllGlobals();
       vi.useRealTimers();
     }
