@@ -1,5 +1,7 @@
 import { mount } from "@vue/test-utils";
 import { describe, expect, it } from "vitest";
+import { readFileSync } from "node:fs";
+import { resolve } from "node:path";
 import SpacePanel from "../components/SpacePanel.vue";
 import TextPanel from "../components/TextPanel.vue";
 import type { WorkspaceSpace } from "../types";
@@ -143,5 +145,14 @@ describe("SpacePanel", () => {
     expect(event.defaultPrevented).toBe(true);
     expect(tabs.scrollLeft).toBe(72);
     wrapper.unmount();
+  });
+
+  it("does not reserve an empty horizontal scrollbar gutter for workspace tabs", () => {
+    const styles = readFileSync(resolve(__dirname, "../styles.css"), "utf8");
+    const workspaceTabsRule = styles.match(/\.workspace-panel \.space-tabs \{([\s\S]*?)\}/)?.[1] ?? "";
+
+    expect(workspaceTabsRule).toContain("overflow-x: auto");
+    expect(workspaceTabsRule).not.toContain("overflow-x: scroll");
+    expect(workspaceTabsRule).not.toContain("scrollbar-gutter: stable");
   });
 });

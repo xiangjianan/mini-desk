@@ -4,7 +4,13 @@ import { NDropdown } from "naive-ui";
 import type { DropdownOption } from "naive-ui";
 import type { LineItem } from "../types";
 import { GUIDE_MENU_OPTION } from "../state/defaults";
-import { editorTextToLines, handleTextareaTab, insertIndentedLineBreak, textLinesToEditorText } from "../utils/textEditor";
+import {
+  editorTextToLines,
+  handleTextareaTab,
+  insertIndentedLineBreak,
+  outdentEmptyIndentedLine,
+  textLinesToEditorText,
+} from "../utils/textEditor";
 import EditableTitle from "./EditableTitle.vue";
 
 const props = defineProps<{
@@ -28,6 +34,8 @@ const textareaRef = ref<HTMLTextAreaElement | null>(null);
 const text = ref(textLinesToEditorText(props.lines));
 const focused = ref(false);
 const editing = ref(false);
+const undoStack = ref<string[]>([]);
+const lastUndoText = ref(text.value);
 const lastCaret = ref<number | null>(null);
 const lastTextSelection = ref<{ start: number; end: number } | null>(null);
 const menu = ref<{
@@ -53,7 +61,11 @@ watch(
   () => props.lines,
   (lines) => {
     const next = textLinesToEditorText(lines);
-    if (next !== text.value) text.value = next;
+    if (next !== text.value) {
+      text.value = next;
+      lastUndoText.value = next;
+      undoStack.value = [];
+    }
   },
   { deep: true },
 );
@@ -66,6 +78,7 @@ const textPanelClasses = computed(() => ({
 
 function update(): void {
   if (!editing.value) return;
+  recordUndoForText(text.value);
   emit("update", editorTextToLines(text.value));
 }
 
@@ -74,15 +87,27 @@ function handleKeydown(event: KeyboardEvent): void {
   if (!textarea) return;
   if (!editing.value) return;
   if (event.isComposing || event.key === "Process" || event.keyCode === 229) return;
+  if ((event.ctrlKey || event.metaKey) && event.key.toLowerCase() === "z") {
+    event.preventDefault();
+    undoLastTextChange(textarea);
+    return;
+  }
   if (event.key === "Tab") {
     event.preventDefault();
-    text.value = handleTextareaTab(textarea, event.shiftKey);
+    applyEditorText(handleTextareaTab(textarea, event.shiftKey));
     update();
   }
   if (event.key === "Enter") {
     event.preventDefault();
-    text.value = insertIndentedLineBreak(textarea);
+    applyEditorText(insertIndentedLineBreak(textarea));
     nextTick(() => update());
+  }
+  if (event.key === "Backspace" || event.key === "Delete") {
+    const next = outdentEmptyIndentedLine(textarea);
+    if (typeof next !== "string") return;
+    event.preventDefault();
+    applyEditorText(next);
+    update();
   }
 }
 
@@ -122,6 +147,8 @@ function handleTouchStart(event: TouchEvent): void {
 function startEditingFromTextarea(textarea: HTMLTextAreaElement, keyboardFocus = false): void {
   const caret = lastCaret.value ?? textarea.selectionStart ?? textarea.value.length;
   editing.value = true;
+  undoStack.value = [];
+  lastUndoText.value = text.value;
   unlockTextareaForMobileKeyboard(textarea, caret, keyboardFocus);
 }
 
@@ -255,8 +282,32 @@ async function pasteTextFromClipboard(target: HTMLTextAreaElement): Promise<void
   const start = target.selectionStart ?? target.value.length;
   const end = target.selectionEnd ?? start;
   target.setRangeText(pastedText, start, end, "end");
-  text.value = target.value;
+  applyEditorText(target.value);
   emit("update", editorTextToLines(text.value));
+}
+
+function applyEditorText(next: string): void {
+  recordUndoForText(next);
+  text.value = next;
+  if (textareaRef.value && textareaRef.value.value !== next) textareaRef.value.value = next;
+}
+
+function recordUndoForText(next: string): void {
+  if (next === lastUndoText.value) return;
+  undoStack.value = [...undoStack.value.slice(-49), lastUndoText.value];
+  lastUndoText.value = next;
+}
+
+function undoLastTextChange(textarea: HTMLTextAreaElement): void {
+  const previous = undoStack.value.at(-1);
+  if (typeof previous !== "string") return;
+  undoStack.value = undoStack.value.slice(0, -1);
+  text.value = previous;
+  textarea.value = previous;
+  lastUndoText.value = previous;
+  const caret = Math.min(previous.length, textarea.selectionStart ?? previous.length);
+  textarea.setSelectionRange(caret, caret);
+  emit("update", editorTextToLines(previous));
 }
 
 function collapseSelection(textarea: HTMLTextAreaElement, caret: number): void {

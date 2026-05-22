@@ -325,8 +325,7 @@ h3 {
 .workspace-panel .space-tabs {
   width: calc(100% - 154px);
   max-width: calc(100% - 154px);
-  overflow-x: scroll;
-  scrollbar-gutter: stable;
+  overflow-x: auto;
 }
 
 .space-tab {

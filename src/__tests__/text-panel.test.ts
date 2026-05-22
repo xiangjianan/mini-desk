@@ -183,6 +183,48 @@ describe("TextPanel", () => {
     expect(wrapper.emitted("update")?.at(-1)?.[0]).toEqual([]);
   });
 
+  it("undoes the latest text edit with Ctrl+Z inside the current editor", async () => {
+    const wrapper = mount(TextPanel, {
+      props: {
+        titleId: "workspace-title",
+        title: "工作空间",
+        lines: [{ text: "root", indent: 0 }],
+      },
+    });
+    const textarea = wrapper.get("textarea").element as HTMLTextAreaElement;
+
+    await wrapper.get("textarea").trigger("click");
+    await wrapper.get("textarea").setValue("root changed");
+    await wrapper.get("textarea").trigger("keydown", { key: "z", ctrlKey: true });
+
+    expect(textarea.value).toBe("root");
+    expect(wrapper.emitted("update")?.at(-1)?.[0]).toEqual([{ text: "root", indent: 0 }]);
+  });
+
+  it("outdents an empty indented line when pressing Backspace or Delete", async () => {
+    const wrapper = mount(TextPanel, {
+      props: {
+        titleId: "workspace-title",
+        title: "工作空间",
+        lines: [{ text: "", indent: 2 }],
+      },
+    });
+    const textarea = wrapper.get("textarea").element as HTMLTextAreaElement;
+
+    await wrapper.get("textarea").trigger("click");
+    textarea.setSelectionRange(textarea.value.length, textarea.value.length);
+    await wrapper.get("textarea").trigger("keydown", { key: "Backspace" });
+
+    expect(textarea.value).toBe("\t- ");
+    expect(wrapper.emitted("update")?.at(-1)?.[0]).toEqual([{ text: "", indent: 1 }]);
+
+    textarea.setSelectionRange(textarea.value.length, textarea.value.length);
+    await wrapper.get("textarea").trigger("keydown", { key: "Delete" });
+
+    expect(textarea.value).toBe("");
+    expect(wrapper.emitted("update")?.at(-1)?.[0]).toEqual([]);
+  });
+
   it("keeps the caret collapsed when indenting a root line", async () => {
     const wrapper = mount(TextPanel, {
       props: {

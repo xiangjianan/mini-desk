@@ -72,6 +72,22 @@ export function insertIndentedLineBreak(textarea: HTMLTextAreaElement): string {
   return textarea.value;
 }
 
+export function outdentEmptyIndentedLine(textarea: HTMLTextAreaElement): string | undefined {
+  const { selectionStart, selectionEnd, value } = textarea;
+  if (selectionStart !== selectionEnd) return undefined;
+  const lineStart = value.lastIndexOf("\n", selectionStart - 1) + 1;
+  const lineEndIndex = value.indexOf("\n", selectionStart);
+  const lineEnd = lineEndIndex === -1 ? value.length : lineEndIndex;
+  const line = value.slice(lineStart, lineEnd);
+  const indent = line.match(/^\t*/)?.[0].length ?? 0;
+  if (indent === 0) return undefined;
+  if (stripLineMarker(line.slice(indent)).trim().length > 0) return undefined;
+
+  const nextLine = indent - 1 > 0 ? formatEditorLine(indent - 1, "") : "";
+  textarea.setRangeText(nextLine, lineStart, lineEnd, "end");
+  return textarea.value;
+}
+
 function formatEditorLine(indent: number, text: string): string {
   const prefix = "\t".repeat(indent);
   return indent > 0 ? `${prefix}${LINE_MARKER}${text}` : text;
