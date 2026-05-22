@@ -1148,6 +1148,9 @@ describe("App shell", () => {
       await wrapper.vm.$nextTick();
 
       expect(wrapper.find('[data-testid="companion-confirm"]').text()).toContain("To Do List 看板");
+      expect(wrapper.find('[data-testid="companion-confirm"]').text()).toContain("xiangjianan / todolist");
+      expect(wrapper.get('[data-testid="companion-link"]').attributes("href")).toBe("https://github.com/xiangjianan/todolist");
+      expect(wrapper.get('[data-testid="companion-link"]').attributes("target")).toBe("_blank");
     } finally {
       wrapper.unmount();
       vi.useRealTimers();
@@ -1166,6 +1169,7 @@ describe("App shell", () => {
       await wrapper.vm.$nextTick();
 
       expect(wrapper.find('[data-testid="companion-confirm"]').text()).toContain("To Do List 看板");
+      expect(wrapper.find('[data-testid="companion-confirm"]').text()).toContain("xiangjianan / todolist");
 
       await vi.advanceTimersByTimeAsync(5000);
       await wrapper.vm.$nextTick();
@@ -1173,6 +1177,37 @@ describe("App shell", () => {
       expect(wrapper.find(".companion-popover-shell").classes()).toContain("is-popover-fading");
       expect(wrapper.find('[data-testid="companion-confirm"]').classes()).not.toContain("is-popover-fading");
       expect(wrapper.find('[data-testid="companion-confirm"]').text()).toContain("To Do List 看板");
+    } finally {
+      wrapper.unmount();
+      vi.useRealTimers();
+    }
+  });
+
+  it("pauses an auto-dismiss message bubble while the pointer is hovering it", async () => {
+    vi.useFakeTimers();
+    const wrapper = mountApp();
+
+    try {
+      wrapper.getComponent(SettingsMenu).vm.$emit("about");
+      await wrapper.vm.$nextTick();
+      await vi.advanceTimersByTimeAsync(200);
+      await wrapper.vm.$nextTick();
+
+      await wrapper.get('[data-testid="companion-confirm"]').trigger("mouseenter");
+      await vi.advanceTimersByTimeAsync(5000);
+      await wrapper.vm.$nextTick();
+
+      expect(wrapper.find('[data-testid="companion-confirm"]').text()).toContain("To Do List 看板");
+      expect(wrapper.find(".companion-popover-shell").classes()).not.toContain("is-popover-fading");
+
+      await wrapper.get('[data-testid="companion-confirm"]').trigger("mouseleave");
+      await vi.advanceTimersByTimeAsync(4799);
+      await wrapper.vm.$nextTick();
+      expect(wrapper.find('[data-testid="companion-confirm"]').exists()).toBe(true);
+
+      await vi.advanceTimersByTimeAsync(1);
+      await wrapper.vm.$nextTick();
+      expect(wrapper.find(".companion-popover-shell").classes()).toContain("is-popover-fading");
     } finally {
       wrapper.unmount();
       vi.useRealTimers();
@@ -1675,6 +1710,109 @@ describe("App shell", () => {
       await wrapper.vm.$nextTick();
 
       expect(wrapper.find('[data-testid="companion-confirm"]').exists()).toBe(false);
+    } finally {
+      wrapper.unmount();
+      vi.useRealTimers();
+    }
+  });
+
+  it("keeps the current blank-area Tips for quick links, images, and todos while repeated clicks happen before expiry", async () => {
+    vi.useFakeTimers();
+    try {
+      const scenarios = [
+        { key: "quickButtons", component: QuickButtons, pattern: /快捷|按钮|复制|链接/ },
+        { key: "images", component: ImagePanel, pattern: /截图区|图片|Ctrl\+V|方向键|右键|删除|预览|Esc/ },
+        { key: "todos", component: TodoPanel, pattern: /提醒|事项|完成|星标|右键|拖动|已完成/ },
+      ] as const;
+
+      for (const scenario of scenarios) {
+        const randomSpy = vi.spyOn(Math, "random");
+        randomSpy
+          .mockReturnValueOnce(0)
+          .mockReturnValueOnce(0)
+          .mockReturnValueOnce(0.8)
+          .mockReturnValueOnce(0.8);
+        const wrapper = mountApp();
+
+        try {
+          const component = wrapper.getComponent(scenario.component);
+          vi.spyOn(component.element, "getBoundingClientRect").mockReturnValue({
+            x: 128,
+            y: 0,
+            width: 300,
+            height: 360,
+            top: 0,
+            left: 128,
+            right: 428,
+            bottom: 360,
+            toJSON: () => ({}),
+          });
+
+          component.vm.$emit("guide", scenario.key, component.element as HTMLElement);
+          await wrapper.vm.$nextTick();
+          await vi.advanceTimersByTimeAsync(200);
+          await wrapper.vm.$nextTick();
+          const firstTips = wrapper.get('[data-testid="companion-confirm"]').text();
+          expect(firstTips).toMatch(scenario.pattern);
+
+          component.vm.$emit("guide", scenario.key, component.element as HTMLElement);
+          await wrapper.vm.$nextTick();
+          await vi.advanceTimersByTimeAsync(200);
+          await wrapper.vm.$nextTick();
+
+          expect(wrapper.get('[data-testid="companion-confirm"]').text()).toBe(firstTips);
+
+          await vi.advanceTimersByTimeAsync(4860);
+          await wrapper.vm.$nextTick();
+          expect(wrapper.find('[data-testid="companion-confirm"]').exists()).toBe(false);
+
+          component.vm.$emit("guide", scenario.key, component.element as HTMLElement);
+          await wrapper.vm.$nextTick();
+          await vi.advanceTimersByTimeAsync(200);
+          await wrapper.vm.$nextTick();
+
+          expect(wrapper.get('[data-testid="companion-confirm"]').text()).not.toBe(firstTips);
+        } finally {
+          wrapper.unmount();
+          randomSpy.mockRestore();
+        }
+      }
+    } finally {
+      vi.useRealTimers();
+    }
+  });
+
+  it("allows quick-link blank-area Tips to refresh after switching focus to another area", async () => {
+    vi.useFakeTimers();
+    const randomSpy = vi.spyOn(Math, "random");
+    randomSpy
+      .mockReturnValueOnce(0)
+      .mockReturnValueOnce(0)
+      .mockReturnValueOnce(0.7)
+      .mockReturnValueOnce(0.7)
+      .mockReturnValueOnce(0.4)
+      .mockReturnValueOnce(0.4);
+    const wrapper = mountApp();
+
+    try {
+      const quick = wrapper.getComponent(QuickButtons);
+      quick.vm.$emit("guide", "quickButtons", quick.element as HTMLElement);
+      await wrapper.vm.$nextTick();
+      await vi.advanceTimersByTimeAsync(200);
+      await wrapper.vm.$nextTick();
+      const firstTips = wrapper.get('[data-testid="companion-confirm"]').text();
+
+      await wrapper.get(".note-panel textarea").trigger("focus");
+      await wrapper.vm.$nextTick();
+
+      expect(wrapper.find('[data-testid="companion-confirm"]').text()).not.toBe(firstTips);
+
+      quick.vm.$emit("guide", "quickButtons", quick.element as HTMLElement);
+      await wrapper.vm.$nextTick();
+      await vi.advanceTimersByTimeAsync(200);
+      await wrapper.vm.$nextTick();
+
+      expect(wrapper.get('[data-testid="companion-confirm"]').text()).not.toBe(firstTips);
     } finally {
       wrapper.unmount();
       vi.useRealTimers();

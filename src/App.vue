@@ -42,6 +42,7 @@ import type { BoardState, DraggedTodo, GuideKey, LineItem, QuickButtonType, Stor
 const state = reactive<BoardState>(loadState());
 const activePreviewId = ref<string | undefined>();
 const bubbleMessage = ref("");
+const bubbleLink = ref<{ text: string; href: string } | null>(null);
 const bubbleVisible = ref(false);
 const companionFocused = ref(false);
 const companionPosition = ref<{ right: string; bottom?: string; top?: string } | undefined>();
@@ -56,6 +57,9 @@ const importFeedbackAnchor = ref<HTMLElement | undefined>();
 const textSaveTimer = ref<number | undefined>();
 const bubbleTimer = ref<number | undefined>();
 const bubbleFadeTimer = ref<number | undefined>();
+const bubbleRemainingMs = ref(0);
+const bubbleTimerStartedAt = ref(0);
+const bubbleTimerOptions = ref<BubbleOptions>({});
 const bubbleClearSignal = ref(0);
 const saveStatusTimer = ref<number | undefined>();
 const emptyTodoRemovalTimers = new Map<string, number>();
@@ -68,6 +72,8 @@ const mobileNavOpen = ref(false);
 type BubbleOptions = {
   hideCompanionAfter?: boolean;
   guideKey?: GuideKey;
+  linkText?: string;
+  linkHref?: string;
 };
 
 type MobileArea = "images" | "note" | "quick" | "todos" | "spaces";
@@ -204,6 +210,9 @@ const GUIDE_MESSAGES: Record<GuideKey, string[]> = {
 };
 const GUIDE_MESSAGE_DURATION_MS = 5000;
 const GITHUB_ISSUE_URL = "https://github.com/xiangjianan/todolist/issues/new";
+const GITHUB_REPO_URL = "https://github.com/xiangjianan/todolist";
+const GITHUB_REPO_LABEL = "xiangjianan / todolist";
+const ABOUT_MESSAGE = "To Do List 看板：一个本地优先的轻量工作台，用来整理截图、便签、提醒事项、快捷链接和工作空间。";
 const activeGuideKey = ref<GuideKey | null>(null);
 
 const naiveTheme = computed(() => (state.theme === "dark" ? darkTheme : null));
@@ -821,7 +830,12 @@ async function importData(event: Event): Promise<void> {
 }
 
 function about(anchor?: HTMLElement): void {
-  showBubbleText(getMessage("about"), anchor, { hideCompanionAfter: true }, 5000);
+  showBubbleText(
+    ABOUT_MESSAGE,
+    anchor,
+    { hideCompanionAfter: true, linkText: GITHUB_REPO_LABEL, linkHref: GITHUB_REPO_URL },
+    5000,
+  );
 }
 
 function suggestIssue(): void {
@@ -883,30 +897,28 @@ function showBubbleText(message: string, anchor?: HTMLElement, options: BubbleOp
   window.clearTimeout(bubbleFadeTimer.value);
   pendingConfirm.value = null;
   bubbleMessage.value = message;
+  bubbleLink.value = options.linkText && options.linkHref ? { text: options.linkText, href: options.linkHref } : null;
   activeGuideKey.value = options.guideKey ?? null;
   companionFocused.value = true;
   if (anchor) {
     companionPosition.value = getCompanionPosition(anchor);
   }
   bubbleVisible.value = true;
-  bubbleTimer.value = window.setTimeout(() => {
-    bubbleVisible.value = false;
-    bubbleMessage.value = "";
-    if (options.hideCompanionAfter) {
-      bubbleFadeTimer.value = window.setTimeout(() => {
-        companionFocused.value = false;
-        activeGuideKey.value = null;
-      }, 260);
-    }
-  }, duration);
+  bubbleTimerOptions.value = options;
+  startBubbleTimer(duration);
 }
 
 function hideBubbleMessage(options: { clearRetainedContent?: boolean } = {}): void {
   window.clearTimeout(bubbleTimer.value);
   window.clearTimeout(bubbleFadeTimer.value);
+  bubbleTimer.value = undefined;
+  bubbleRemainingMs.value = 0;
+  bubbleTimerStartedAt.value = 0;
+  bubbleTimerOptions.value = {};
   pendingConfirm.value = null;
   bubbleVisible.value = false;
   bubbleMessage.value = "";
+  bubbleLink.value = null;
   if (options.clearRetainedContent) bubbleClearSignal.value += 1;
 }
 
@@ -914,6 +926,48 @@ function hideCompanion(): void {
   hideBubbleMessage();
   companionFocused.value = false;
   activeGuideKey.value = null;
+}
+
+function startBubbleTimer(duration: number): void {
+  bubbleRemainingMs.value = duration;
+  bubbleTimerStartedAt.value = Date.now();
+  bubbleTimer.value = window.setTimeout(finishBubbleTimer, duration);
+}
+
+function finishBubbleTimer(): void {
+  const options = bubbleTimerOptions.value;
+  bubbleTimer.value = undefined;
+  bubbleRemainingMs.value = 0;
+  bubbleTimerStartedAt.value = 0;
+  bubbleVisible.value = false;
+  bubbleMessage.value = "";
+  bubbleLink.value = null;
+  if (options.guideKey) activeGuideKey.value = null;
+  if (options.hideCompanionAfter) {
+    bubbleFadeTimer.value = window.setTimeout(() => {
+      companionFocused.value = false;
+    }, 260);
+  }
+}
+
+function pauseBubbleTimer(): void {
+  if (!bubbleVisible.value || pendingConfirm.value || !bubbleTimer.value) return;
+  window.clearTimeout(bubbleTimer.value);
+  bubbleTimer.value = undefined;
+  const elapsed = Date.now() - bubbleTimerStartedAt.value;
+  bubbleRemainingMs.value = Math.max(0, bubbleRemainingMs.value - elapsed);
+  bubbleTimerStartedAt.value = 0;
+}
+
+function resumeBubbleTimer(): void {
+  if (!bubbleVisible.value || pendingConfirm.value || bubbleTimer.value) return;
+  if (!bubbleMessage.value && !bubbleLink.value) return;
+  if (bubbleRemainingMs.value <= 0) {
+    finishBubbleTimer();
+    return;
+  }
+  bubbleTimerStartedAt.value = Date.now();
+  bubbleTimer.value = window.setTimeout(finishBubbleTimer, bubbleRemainingMs.value);
 }
 
 function requestConfirmation(
@@ -925,7 +979,12 @@ function requestConfirmation(
 ): void {
   window.clearTimeout(bubbleTimer.value);
   window.clearTimeout(bubbleFadeTimer.value);
+  bubbleTimer.value = undefined;
+  bubbleRemainingMs.value = 0;
+  bubbleTimerStartedAt.value = 0;
+  bubbleTimerOptions.value = {};
   bubbleMessage.value = getMessage(messageKey);
+  bubbleLink.value = null;
   pendingConfirm.value = {
     onConfirm,
     onCancel,
@@ -999,12 +1058,20 @@ function cancelEmptyTodoRemoval(period: TodoPeriod, id: string): void {
 
 function showGuideBubble(key: GuideKey, anchor?: HTMLElement, hideCompanionAfter = true): void {
   if (pendingConfirm.value) return;
+  if (isRepeatLockedGuide(key)) {
+    if (anchor) companionPosition.value = getCompanionPosition(anchor);
+    return;
+  }
   showBubbleText(
     withKaomoji(randomGuideMessage(key), "encouraging"),
     anchor,
     { hideCompanionAfter, guideKey: key },
     GUIDE_MESSAGE_DURATION_MS,
   );
+}
+
+function isRepeatLockedGuide(key: GuideKey): boolean {
+  return ["images", "quickButtons", "todos"].includes(key) && activeGuideKey.value === key && bubbleVisible.value && Boolean(bubbleMessage.value);
 }
 
 function isGuideAreaEmpty(key: GuideKey, anchor?: HTMLElement): boolean {
@@ -1247,6 +1314,8 @@ function moveItem<T extends { id: string }>(items: T[], dragId: string, targetId
     <CompanionBubble
       :visible="companionVisible"
       :message="bubbleMessage"
+      :link-text="bubbleLink?.text"
+      :link-href="bubbleLink?.href"
       :confirm="Boolean(pendingConfirm)"
       :confirm-text="pendingConfirm?.confirmText"
       :cancel-text="pendingConfirm?.cancelText"
@@ -1255,6 +1324,8 @@ function moveItem<T extends { id: string }>(items: T[], dragId: string, targetId
       :theme="state.theme"
       @yes="confirmCompanionAction"
       @no="cancelCompanionAction"
+      @pause="pauseBubbleTimer"
+      @resume="resumeBubbleTimer"
     />
     <div class="top-actions">
       <span class="save-status" data-testid="save-status" :data-state="saveStatus">{{ saveStatusLabel }}</span>

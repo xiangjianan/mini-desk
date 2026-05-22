@@ -913,9 +913,25 @@ h3 {
 }
 
 .companion-popover {
+  display: grid;
+  gap: 6px;
   line-height: 1.5;
   transform-origin: right bottom;
   animation: companion-pop 0.2s cubic-bezier(0.16, 1, 0.3, 1);
+}
+
+.companion-link {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  color: var(--text);
+  text-decoration: underline;
+  text-underline-offset: 2px;
+}
+
+.companion-link-icon {
+  flex: 0 0 auto;
+  font-size: 14px;
 }
 
 .companion-popover-shell.n-popover {

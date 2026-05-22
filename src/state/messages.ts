@@ -644,16 +644,7 @@ export const MESSAGE_CATALOG: Record<MessageKey, MessageEntry> = {
     mood: "calm",
     surface: "companion",
     variants: [
-      "To Do List 看板 · Vue 3 + Naive UI + TypeScript",
-      "To Do List 看板，基于 Vue 3、Naive UI 和 TypeScript 构建",
-      "To Do List 看板已经迁移到 Vue 3 + Naive UI + TypeScript",
-      "To Do List 看板，轻量本地任务面板",
-      "To Do List 看板，适合整理每日任务",
-      "To Do List 看板，数据保存在浏览器本地",
-      "To Do List 看板，支持图片、便签和待办",
-      "To Do List 看板，专注快速记录和整理",
-      "To Do List 看板，当前版本基于 Vue 3",
-      "To Do List 看板，建议入口在设置里",
+      "To Do List 看板：一个本地优先的轻量工作台，用来整理截图、便签、提醒事项、快捷链接和工作空间。",
     ],
   },
 };

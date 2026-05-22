@@ -1,12 +1,15 @@
 <script setup lang="ts">
 import { computed, onUnmounted, ref, watch } from "vue";
-import { NButton, NPopover } from "naive-ui";
+import { LogoGithub } from "@vicons/ionicons5";
+import { NButton, NIcon, NPopover } from "naive-ui";
 import hermesGif from "../../static/video/hermes.gif?url";
 import hermesDarkGif from "../../static/video/hermes-dark.gif?url";
 
 const props = defineProps<{
   visible: boolean;
   message: string;
+  linkText?: string;
+  linkHref?: string;
   confirm?: boolean;
   confirmText?: string;
   cancelText?: string;
@@ -24,6 +27,8 @@ const emit = defineEmits<{
   yes: [];
   no: [];
   action: [];
+  pause: [];
+  resume: [];
 }>();
 
 const POPOVER_DELAY_MS = 200;
@@ -35,6 +40,8 @@ const retainingPopoverContent = ref(false);
 const gifVisible = ref(false);
 const gifFading = ref(false);
 const renderedMessage = ref("");
+const renderedLinkText = ref("");
+const renderedLinkHref = ref("");
 const renderedConfirm = ref(false);
 const renderedConfirmText = ref("是");
 const renderedCancelText = ref("否");
@@ -54,7 +61,7 @@ const placementStyle = computed(() => {
 });
 
 const surfaceVisible = computed(() => props.visible && (gifVisible.value || gifFading.value));
-const popoverVisible = computed(() => props.visible && gifVisible.value && Boolean(props.message || props.confirm));
+const popoverVisible = computed(() => props.visible && gifVisible.value && Boolean(props.message || props.confirm || props.linkText));
 const visiblePopover = computed(() => (delayedPopoverVisible.value && popoverVisible.value) || retainingPopoverContent.value);
 const popoverContentVisible = computed(() => visiblePopover.value || retainingPopoverContent.value);
 const popoverKey = computed(() => `${props.position?.right ?? "default"}:${props.position?.bottom ?? "default"}`);
@@ -71,6 +78,8 @@ watch(
       contentTimer.value = window.setTimeout(() => {
         retainingPopoverContent.value = false;
         renderedMessage.value = "";
+        renderedLinkText.value = "";
+        renderedLinkHref.value = "";
         renderedConfirm.value = false;
         renderedConfirmText.value = "是";
         renderedCancelText.value = "否";
@@ -79,6 +88,8 @@ watch(
       return;
     }
     renderedMessage.value = props.message;
+    renderedLinkText.value = props.linkText ?? "";
+    renderedLinkHref.value = props.linkHref ?? "";
     renderedConfirm.value = Boolean(props.confirm);
     renderedConfirmText.value = props.confirmText ?? "是";
     renderedCancelText.value = props.cancelText ?? "否";
@@ -92,7 +103,7 @@ watch(
 );
 
 watch(
-  () => [props.visible, props.message, props.confirm, props.position?.right, props.position?.bottom, props.position?.top] as const,
+  () => [props.visible, props.message, props.linkText, props.linkHref, props.confirm, props.position?.right, props.position?.bottom, props.position?.top] as const,
   ([visible]) => {
     window.clearTimeout(gifTimer.value);
     window.clearTimeout(gifFadeTimer.value);
@@ -115,10 +126,12 @@ watch(
 );
 
 watch(
-  () => [props.message, props.confirm, props.confirmText, props.cancelText, props.actionText] as const,
+  () => [props.message, props.linkText, props.linkHref, props.confirm, props.confirmText, props.cancelText, props.actionText] as const,
   () => {
     if (!popoverVisible.value) return;
     renderedMessage.value = props.message;
+    renderedLinkText.value = props.linkText ?? "";
+    renderedLinkHref.value = props.linkHref ?? "";
     renderedConfirm.value = Boolean(props.confirm);
     renderedConfirmText.value = props.confirmText ?? "是";
     renderedCancelText.value = props.cancelText ?? "否";
@@ -134,6 +147,8 @@ watch(
     delayedPopoverVisible.value = false;
     retainingPopoverContent.value = false;
     renderedMessage.value = "";
+    renderedLinkText.value = "";
+    renderedLinkHref.value = "";
     renderedConfirm.value = false;
     renderedConfirmText.value = "是";
     renderedCancelText.value = "否";
@@ -181,8 +196,21 @@ onUnmounted(() => {
         role="status"
         aria-live="polite"
         data-testid="companion-confirm"
+        @mouseenter="emit('pause')"
+        @mouseleave="emit('resume')"
       >
-        <span>{{ renderedMessage }}</span>
+        <span v-if="renderedMessage">{{ renderedMessage }}</span>
+        <a
+          v-if="renderedLinkText && renderedLinkHref"
+          class="companion-link"
+          :href="renderedLinkHref"
+          target="_blank"
+          rel="noopener noreferrer"
+          data-testid="companion-link"
+        >
+          <NIcon class="companion-link-icon" :component="LogoGithub" />
+          {{ renderedLinkText }}
+        </a>
         <div v-if="renderedConfirm" class="companion-actions">
           <NButton size="tiny" class="companion-action-button" data-testid="companion-yes" @click="emit('yes')">{{ renderedConfirmText }}</NButton>
           <NButton size="tiny" class="companion-action-button" data-testid="companion-no" @click="emit('no')">{{ renderedCancelText }}</NButton>

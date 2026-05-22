@@ -161,6 +161,65 @@ describe("CompanionBubble", () => {
     wrapper.unmount();
   });
 
+  it("renders an optional companion link as a clickable external link", async () => {
+    vi.useFakeTimers();
+    const wrapper = mount(CompanionBubble, {
+      attachTo: document.body,
+      props: {
+        visible: true,
+        message: "项目信息",
+        linkText: "xiangjianan / todolist",
+        linkHref: "https://github.com/xiangjianan/todolist",
+      },
+      global: {
+        stubs: {
+          NButton: buttonStub,
+          NPopover: popoverStub,
+        },
+      },
+    });
+
+    await vi.advanceTimersByTimeAsync(200);
+    await wrapper.vm.$nextTick();
+
+    const link = document.body.querySelector<HTMLAnchorElement>('[data-testid="companion-link"]');
+    expect(link?.textContent?.trim()).toBe("xiangjianan / todolist");
+    expect(link?.querySelector(".companion-link-icon")).not.toBeNull();
+    expect(link?.href).toBe("https://github.com/xiangjianan/todolist");
+    expect(link?.target).toBe("_blank");
+    expect(link?.rel).toBe("noopener noreferrer");
+
+    wrapper.unmount();
+  });
+
+  it("emits pause and resume when the pointer enters and leaves the message bubble", async () => {
+    vi.useFakeTimers();
+    const wrapper = mount(CompanionBubble, {
+      attachTo: document.body,
+      props: {
+        visible: true,
+        message: "提示内容",
+      },
+      global: {
+        stubs: {
+          NButton: buttonStub,
+          NPopover: popoverStub,
+        },
+      },
+    });
+
+    await vi.advanceTimersByTimeAsync(200);
+    await wrapper.vm.$nextTick();
+
+    document.body.querySelector('[data-testid="companion-confirm"]')?.dispatchEvent(new MouseEvent("mouseenter"));
+    document.body.querySelector('[data-testid="companion-confirm"]')?.dispatchEvent(new MouseEvent("mouseleave"));
+
+    expect(wrapper.emitted("pause")).toHaveLength(1);
+    expect(wrapper.emitted("resume")).toHaveLength(1);
+
+    wrapper.unmount();
+  });
+
   it("removes the companion surface immediately when hidden", async () => {
     const wrapper = mount(CompanionBubble, {
       props: {

@@ -498,15 +498,22 @@ describe("Naive UI component usage", () => {
 
   it("routes about information through the companion bubble and suggestions to GitHub issues", () => {
     const app = read("src/App.vue");
+    const companion = read("src/components/CompanionBubble.vue");
     const messages = read("src/state/messages.ts");
     const styles = read("src/styles.css");
 
     expect(app).toContain("function about");
-    expect(app).toContain('showBubbleText(getMessage("about")');
+    expect(app).toContain("ABOUT_MESSAGE");
+    expect(app).toContain("GITHUB_REPO_LABEL");
+    expect(app).toContain("GITHUB_REPO_URL");
+    expect(app).toContain("xiangjianan / todolist");
+    expect(app).toContain("https://github.com/xiangjianan/todolist");
+    expect(companion).toContain("LogoGithub");
+    expect(companion).toContain("companion-link-icon");
+    expect(companion).toContain('data-testid="companion-link"');
     expect(app).toContain("GITHUB_ISSUE_URL");
     expect(app).toContain("/issues/new");
     expect(app).not.toContain("LogoGithub");
-    expect(app).not.toContain("GITHUB_REPO_NAME");
     expect(app).not.toContain("about-github-link");
     expect(app).not.toContain("aboutVisible");
     expect(app).not.toContain("about-confirm-button");
@@ -514,6 +521,8 @@ describe("Naive UI component usage", () => {
     expect(app).not.toContain('positiveText: "知道了"');
     expect(styles).not.toContain(".about-modal");
     expect(styles).not.toContain(".about-confirm-button");
+    expect(styles).toContain(".companion-link");
+    expect(styles).toContain(".companion-link-icon");
     expect(messages).toContain('surface: "companion"');
     expect(messages).not.toContain("GitHub: https://github.com/xiangjianan/todolist");
   });
