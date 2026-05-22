@@ -579,7 +579,9 @@ describe("Naive UI component usage", () => {
     expect(styles).toMatch(/@media \(max-width: 900px\)[\s\S]*\.focus-companion\s*\{[^}]*bottom: 28px/s);
     expect(styles).toMatch(/@media \(max-width: 900px\)[\s\S]*\.focus-companion img\s*\{[^}]*width: 60px/s);
     expect(styles).not.toContain(".mobile-nav");
+    expect(styles).not.toContain(".mobile-drawer-trigger");
     expect(styles).not.toContain(".mobile-drawer-menu");
+    expect(styles).not.toContain(".mobile-menu-option");
     expect(styles).not.toContain(".mobile-banner");
     expect(styles).not.toContain("data-mobile-active");
     expect(text).toContain("unlockTextareaForMobileKeyboard");
