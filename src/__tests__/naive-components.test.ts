@@ -568,6 +568,7 @@ describe("Naive UI component usage", () => {
     expect(app).not.toContain('class="mobile-drawer-trigger"');
     expect(app).not.toContain('class="mobile-drawer-menu"');
     expect(app).not.toContain('class="mobile-menu-option"');
+    expect(app).not.toContain('class="mobile-banner"');
     expect(app).not.toContain("data-mobile-active");
     expect(app).not.toContain("mobileActiveArea");
     expect(app).not.toContain("mobileNavOpen");
