@@ -365,6 +365,41 @@ describe("App shell", () => {
     }
   });
 
+  it("clears pending autosave before mobile handoff can show stale companion state", async () => {
+    vi.useFakeTimers();
+    const mediaQuery = stubMatchMedia(false);
+    const wrapper = mountApp();
+
+    try {
+      const textarea = wrapper.get("textarea");
+      await textarea.trigger("dblclick");
+      await textarea.setValue("移动端切换前的草稿");
+      await wrapper.vm.$nextTick();
+
+      mediaQuery.dispatchEvent({ matches: true } as MediaQueryListEvent);
+      await wrapper.vm.$nextTick();
+
+      expect(wrapper.find(".mobile-handoff").exists()).toBe(true);
+
+      await vi.advanceTimersByTimeAsync(3200);
+      await wrapper.vm.$nextTick();
+
+      mediaQuery.dispatchEvent({ matches: false } as MediaQueryListEvent);
+      await wrapper.vm.$nextTick();
+      await vi.advanceTimersByTimeAsync(200);
+      await wrapper.vm.$nextTick();
+
+      expect(wrapper.find(".board").exists()).toBe(true);
+      expect((wrapper.get("textarea").element as HTMLTextAreaElement).value).toContain("移动端切换前的草稿");
+      expect(wrapper.find(".focus-companion.is-visible").exists()).toBe(false);
+      expect(wrapper.find('[data-testid="companion-confirm"]').exists()).toBe(false);
+    } finally {
+      wrapper.unmount();
+      vi.unstubAllGlobals();
+      vi.useRealTimers();
+    }
+  });
+
   it("does not show the companion GIF after toggling the theme", async () => {
     const wrapper = mountApp();
 

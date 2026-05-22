@@ -238,6 +238,7 @@ function updateMobileBlocked(source?: MediaQueryList | MediaQueryListEvent): voi
   const wasMobileBlocked = isMobileBlocked.value;
   if (matches && !wasMobileBlocked) {
     activePreviewId.value = undefined;
+    if (textSaveTimer.value !== undefined) flushTextSave();
     clearPendingConfirm(true);
     hideBubbleMessage({ clearRetainedContent: true });
     companionFocused.value = false;
@@ -384,6 +385,7 @@ function syncLegacySpaceLines(): void {
 function scheduleTextSave(): void {
   window.clearTimeout(textSaveTimer.value);
   textSaveTimer.value = window.setTimeout(() => {
+    textSaveTimer.value = undefined;
     persistNow();
     showSaveBubble();
   }, 3000);
@@ -391,6 +393,7 @@ function scheduleTextSave(): void {
 
 function flushTextSave(): void {
   window.clearTimeout(textSaveTimer.value);
+  textSaveTimer.value = undefined;
   persistNow();
 }
 
