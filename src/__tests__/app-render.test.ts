@@ -85,7 +85,7 @@ describe("App shell", () => {
     expect(wrapper.text()).toContain("工作空间");
     expect(wrapper.findAll(".space-tab").map((tab) => tab.text())).toEqual(["工作空间"]);
     expect(wrapper.find('[aria-label="切换主题"]').exists()).toBe(true);
-    expect(wrapper.find('[aria-label="新增快捷链接"]').exists()).toBe(true);
+    expect(wrapper.find('[aria-label="快捷链接菜单"]').exists()).toBe(true);
     expect(wrapper.find('[aria-label="设置"]').exists()).toBe(true);
 
     wrapper.unmount();
@@ -624,6 +624,29 @@ describe("App shell", () => {
       wrapper.unmount();
       vi.useRealTimers();
     }
+  });
+
+  it("preserves newlines when copying text quick buttons", async () => {
+    localStorage.setItem(
+      STORAGE_KEY,
+      JSON.stringify({
+        quickButtons: [
+          { id: "text-1", title: "多行片段", value: "第一行\n第二行", type: "text" },
+        ],
+      }),
+    );
+    Object.assign(navigator, {
+      clipboard: {
+        writeText: vi.fn().mockResolvedValue(undefined),
+      },
+    });
+    const wrapper = mountApp();
+
+    await wrapper.get(".quick-button").trigger("click");
+    await Promise.resolve();
+
+    expect(navigator.clipboard.writeText).toHaveBeenCalledWith("第一行\n第二行");
+    wrapper.unmount();
   });
 
   it("hides the quick-copy GIF together with the companion bubble timeout", async () => {

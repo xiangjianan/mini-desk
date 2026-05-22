@@ -1,7 +1,7 @@
 <script setup lang="ts">
 import { computed, reactive, ref, watch } from "vue";
 import { NButton, NCheckbox, NDropdown, NIcon, NInput, NModal } from "naive-ui";
-import { AddOutline, CopyOutline, EyeOffOutline, EyeOutline } from "@vicons/ionicons5";
+import { CopyOutline } from "@vicons/ionicons5";
 import type { DropdownOption } from "naive-ui";
 import type { GuideKey, QuickButton, QuickButtonType } from "../types";
 import { EMPTY_HINTS, GUIDE_MENU_OPTION } from "../state/defaults";
@@ -41,10 +41,17 @@ const visibleButtons = computed(() =>
 const canSubmit = computed(() => form.title.trim().length > 0 && form.value.trim().length > 0);
 const menuOptions = computed<DropdownOption[]>(() => {
   const button = props.buttons.find((item) => item.id === menu.value?.id);
-  if (!menu.value?.id) return [guideMenuOption];
+  if (!menu.value?.id) {
+    return [
+      { label: "新增", key: "add" },
+      { label: props.showHidden ? "收起隐藏项" : "显示隐藏项", key: "toggle-show-hidden" },
+      guideMenuOption,
+    ];
+  }
   return [
+    { label: "复制", key: "copy" },
     { label: "编辑", key: "edit" },
-    { label: button?.hidden ? "取消隐藏" : "隐藏", key: "toggle-hidden" },
+    { label: button?.hidden ? "显示" : "隐藏", key: "toggle-hidden" },
     { label: "删除", key: "delete" },
     guideMenuOption,
   ];
@@ -107,6 +114,12 @@ function openAreaMenu(event: MouseEvent): void {
   menu.value = { x: event.clientX, y: event.clientY, anchor: event.currentTarget as HTMLElement };
 }
 
+function openHeaderMenu(event: MouseEvent): void {
+  event.preventDefault();
+  event.stopPropagation();
+  menu.value = { x: event.clientX, y: event.clientY, anchor: event.currentTarget as HTMLElement };
+}
+
 function closeMenu(): void {
   menu.value = null;
 }
@@ -115,8 +128,17 @@ function handleMenuSelect(key: string): void {
   if (!menu.value) return;
   const { id, anchor } = menu.value;
   closeMenu();
+  if (key === "add") {
+    openAdd(anchor);
+    return;
+  }
+  if (key === "toggle-show-hidden") {
+    handleToggleShowHidden(anchor);
+    return;
+  }
   if (key === "guide" && anchor) emit("guide", "quickButtons", anchor, true);
   if (!id) return;
+  if (key === "copy") emit("copy", id, anchor);
   if (key === "edit") openEdit(id);
   if (key === "toggle-hidden") emit("toggleHidden", id);
   if (key === "delete") emit("delete", id, anchor);
@@ -128,9 +150,9 @@ function handleAreaClick(event: MouseEvent): void {
   emit("guide", "quickButtons", event.currentTarget as HTMLElement);
 }
 
-function handleToggleShowHidden(event: MouseEvent): void {
+function handleToggleShowHidden(anchor?: HTMLElement): void {
   emit("toggleShowHidden");
-  emit("guide", "toggleHiddenQuick", event.currentTarget as HTMLElement);
+  if (anchor) emit("guide", "toggleHiddenQuick", anchor);
 }
 </script>
 
@@ -141,24 +163,14 @@ function handleToggleShowHidden(event: MouseEvent): void {
         <EditableTitle id="quick-title" :value="title" @update="(id, value) => emit('titleUpdate', id, value)" />
       </h2>
       <div class="header-actions">
-        <NButton
-          quaternary
-          size="tiny"
-          class="icon-button"
-          aria-label="新增快捷链接"
-          @click="openAdd($event.currentTarget as HTMLElement)"
+        <button
+          type="button"
+          class="quick-menu-button icon-button"
+          aria-label="快捷链接菜单"
+          @click="openHeaderMenu"
         >
-          <NIcon :component="AddOutline" />
-        </NButton>
-        <NButton
-          quaternary
-          size="tiny"
-          class="icon-button"
-          :aria-label="showHidden ? '隐藏已隐藏快捷链接' : '显示全部快捷链接'"
-          @click="handleToggleShowHidden"
-        >
-          <NIcon :component="showHidden ? EyeOffOutline : EyeOutline" />
-        </NButton>
+          ⋯
+        </button>
       </div>
     </div>
 

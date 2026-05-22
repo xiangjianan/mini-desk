@@ -42,12 +42,13 @@ const dropdownStub = {
   `,
 };
 
-function mountQuickButtons() {
+function mountQuickButtons(options: Partial<InstanceType<typeof QuickButtons>["$props"]> = {}) {
   return mount(QuickButtons, {
     props: {
       title: "快捷链接",
       buttons: [],
       showHidden: false,
+      ...options,
     },
     global: {
       stubs: {
@@ -138,7 +139,7 @@ describe("QuickButtons", () => {
     const wrapper = mountQuickButtons();
 
     await wrapper.get(".quick-buttons").trigger("contextmenu");
-    await wrapper.get(".dropdown-option").trigger("click");
+    await wrapper.findAll(".dropdown-option").find((option) => option.text() === "Tips")?.trigger("click");
 
     expect(wrapper.emitted("guide")?.[0]).toEqual(["quickButtons", expect.any(HTMLElement), true]);
     wrapper.unmount();
@@ -148,9 +149,61 @@ describe("QuickButtons", () => {
     const wrapper = mountQuickButtons();
 
     await wrapper.get(".panel-header").trigger("contextmenu");
-    await wrapper.get(".dropdown-option").trigger("click");
+    await wrapper.findAll(".dropdown-option").find((option) => option.text() === "Tips")?.trigger("click");
 
     expect(wrapper.emitted("guide")?.[0]).toEqual(["quickButtons", expect.any(HTMLElement), true]);
+    wrapper.unmount();
+  });
+
+  it("moves add and hidden visibility actions into a compact area menu", async () => {
+    const wrapper = mountQuickButtons({
+      buttons: [{ id: "hidden-1", title: "隐藏项", value: "value", type: "text", hidden: true }],
+      showHidden: false,
+    });
+
+    expect(wrapper.find('[aria-label="新增快捷链接"]').exists()).toBe(false);
+    expect(wrapper.find('[aria-label="显示全部快捷链接"]').exists()).toBe(false);
+
+    await wrapper.get(".quick-menu-button").trigger("click");
+
+    expect(wrapper.findAll(".dropdown-option").map((option) => option.text())).toEqual([
+      "新增",
+      "显示隐藏项",
+      "Tips",
+    ]);
+
+    await wrapper.findAll(".dropdown-option").find((option) => option.text() === "显示隐藏项")?.trigger("click");
+    expect(wrapper.emitted("toggleShowHidden")).toHaveLength(1);
+
+    await wrapper.setProps({ showHidden: true });
+    await wrapper.get(".quick-menu-button").trigger("click");
+    expect(wrapper.findAll(".dropdown-option").map((option) => option.text())).toEqual([
+      "新增",
+      "收起隐藏项",
+      "Tips",
+    ]);
+
+    wrapper.unmount();
+  });
+
+  it("uses compact quick-button context menu labels with copy first", async () => {
+    const wrapper = mountQuickButtons({
+      buttons: [{ id: "quick-1", title: "片段", value: "第一行\n第二行", type: "text", hidden: false }],
+    });
+
+    await wrapper.get(".quick-button").trigger("contextmenu");
+
+    expect(wrapper.findAll(".dropdown-option").map((option) => option.text())).toEqual([
+      "复制",
+      "编辑",
+      "隐藏",
+      "删除",
+      "Tips",
+    ]);
+
+    await wrapper.findAll(".dropdown-option").find((option) => option.text() === "复制")?.trigger("click");
+    expect(wrapper.emitted("copy")?.[0]).toEqual(["quick-1", expect.any(HTMLElement)]);
+
     wrapper.unmount();
   });
 });
