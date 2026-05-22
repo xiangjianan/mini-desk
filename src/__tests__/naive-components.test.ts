@@ -588,5 +588,9 @@ describe("Naive UI component usage", () => {
     expect(text).toContain("unlockTextareaForMobileKeyboard");
     expect(text).toContain('@touchstart="handleTouchStart"');
     expect(text).toContain('@pointerdown="handlePointerDown"');
+    expect(text).not.toContain("handleMobileEditTap");
+    expect(text.match(/async function startEditing[\s\S]*?\n}/)?.[0] ?? "").not.toContain("event.preventDefault();");
+    expect(text).toMatch(/function startEditingFromTextarea\(textarea: HTMLTextAreaElement, keyboardFocus = false\): void \{[\s\S]*editing\.value = true;[\s\S]*unlockTextareaForMobileKeyboard\(textarea, caret, keyboardFocus\);[\s\S]*\}/s);
+    expect(text).toMatch(/async function startEditing\(event: MouseEvent\): Promise<void> \{[\s\S]*startEditingFromTextarea\(textarea\);[\s\S]*await nextTick\(\)/s);
   });
 });
