@@ -1241,6 +1241,73 @@ describe("App shell", () => {
     }
   });
 
+  it("does not run the copy fallback after entering mobile handoff", async () => {
+    vi.useFakeTimers();
+    const mediaQuery = stubMatchMedia(false);
+    localStorage.setItem(
+      STORAGE_KEY,
+      JSON.stringify({
+        images: [
+          {
+            id: "img-1",
+            src: "data:image/png;base64,iVBORw0KGgo=",
+            createdAt: 1,
+          },
+        ],
+      }),
+    );
+    const writeTextResult = createDeferred<void>();
+    const writeText = vi.fn(() => writeTextResult.promise);
+    Object.assign(navigator, {
+      clipboard: {
+        writeText,
+      },
+    });
+    const originalExecCommand = document.execCommand;
+    const execCommand = vi.fn(() => true);
+    Object.defineProperty(document, "execCommand", {
+      value: execCommand,
+      configurable: true,
+    });
+    let wrapper: ReturnType<typeof mountApp> | undefined;
+
+    try {
+      wrapper = mountApp();
+
+      wrapper.getComponent(ImagePanel).vm.$emit("copy", "img-1");
+      expect(writeText).toHaveBeenCalledWith("data:image/png;base64,iVBORw0KGgo=");
+
+      mediaQuery.dispatchEvent({ matches: true } as MediaQueryListEvent);
+      await wrapper.vm.$nextTick();
+
+      writeTextResult.reject(new DOMException("denied", "NotAllowedError"));
+      await Promise.resolve();
+      await Promise.resolve();
+      await wrapper.vm.$nextTick();
+
+      expect(execCommand).not.toHaveBeenCalled();
+
+      mediaQuery.dispatchEvent({ matches: false } as MediaQueryListEvent);
+      await wrapper.vm.$nextTick();
+      await vi.advanceTimersByTimeAsync(200);
+      await wrapper.vm.$nextTick();
+
+      expect(wrapper.find('[data-testid="companion-confirm"]').exists()).toBe(false);
+    } finally {
+      if (originalExecCommand) {
+        Object.defineProperty(document, "execCommand", {
+          value: originalExecCommand,
+          configurable: true,
+        });
+      } else {
+        Reflect.deleteProperty(document, "execCommand");
+      }
+      wrapper?.unmount();
+      vi.unstubAllGlobals();
+      vi.useRealTimers();
+    }
+  });
+
   it("copies the current image when Enter is pressed immediately after preview opens", async () => {
     localStorage.setItem(
       STORAGE_KEY,

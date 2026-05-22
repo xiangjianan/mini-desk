@@ -614,7 +614,7 @@ async function copyImage(id: string, anchor?: HTMLElement): Promise<void> {
       return;
     }
     if (shouldBlockBoardEffects()) return;
-    const copied = await copyText(image.src);
+    const copied = await copyText(image.src, shouldBlockBoardEffects);
     if (shouldBlockBoardEffects()) return;
     if (copied) {
       showBubble("imageDataCopied", anchor, { hideCompanionAfter: true });
@@ -679,16 +679,19 @@ async function handleQuickButton(id: string, anchor?: HTMLElement): Promise<void
     if (!opened) showBubble("linkOpenFailed", anchor, { hideCompanionAfter: true });
     return;
   }
-  showBubble((await copyText(button.value)) ? "quickTextCopied" : "quickTextCopyFailed", anchor, {
+  const copied = await copyText(button.value, shouldBlockBoardEffects);
+  if (shouldBlockBoardEffects()) return;
+  showBubble(copied ? "quickTextCopied" : "quickTextCopyFailed", anchor, {
     hideCompanionAfter: true,
   });
 }
 
-async function copyText(text: string): Promise<boolean> {
+async function copyText(text: string, shouldAbort: () => boolean = () => false): Promise<boolean> {
   try {
     await navigator.clipboard.writeText(text);
     return true;
   } catch {
+    if (shouldAbort()) return false;
     const textarea = document.createElement("textarea");
     textarea.value = text;
     document.body.append(textarea);
