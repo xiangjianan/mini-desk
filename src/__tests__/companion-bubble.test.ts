@@ -218,7 +218,7 @@ describe("CompanionBubble", () => {
     wrapper.unmount();
   });
 
-  it("fades out the GIF surface after at most ten seconds per appearance", async () => {
+  it("fades the GIF surface out after ten seconds before removing it", async () => {
     vi.useFakeTimers();
     const wrapper = mount(CompanionBubble, {
       props: {
@@ -239,6 +239,11 @@ describe("CompanionBubble", () => {
     expect(wrapper.find('[data-testid="companion-bubble"]').exists()).toBe(true);
 
     await vi.advanceTimersByTimeAsync(1);
+    await wrapper.vm.$nextTick();
+    expect(wrapper.find('[data-testid="companion-bubble"]').exists()).toBe(true);
+    expect(wrapper.get('[data-testid="companion-bubble"]').classes()).toContain("is-fading");
+
+    await vi.advanceTimersByTimeAsync(260);
     await wrapper.vm.$nextTick();
     expect(wrapper.find('[data-testid="companion-bubble"]').exists()).toBe(false);
 

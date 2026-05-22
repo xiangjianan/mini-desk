@@ -132,9 +132,11 @@ describe("message catalog", () => {
     expect(guideSource).toContain("Tab");
     expect(guideSource).toContain("方向键");
     expect(guideSource).toContain("右键");
+    expect(guideSource).toContain("拖动图片到这里");
     expect(guideSource).not.toContain("GUIDE_REPEAT_CHANCE");
     expect(guideSource).not.toContain("maybeShowGuideBubble");
     expect(MESSAGE_CATALOG.about.variants.join("\n")).not.toContain("https://github.com/xiangjianan/todolist");
+    expect(MESSAGE_CATALOG.about.variants.join("\n")).not.toContain("下方");
     expect(guideSource).toContain("GITHUB_ISSUE_URL");
     expect(guideSource).toContain("/issues/new");
     expect(guideSource).not.toContain("GITHUB_REPO_NAME");

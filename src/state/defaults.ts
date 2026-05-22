@@ -60,7 +60,11 @@ export function defaultState(): BoardState {
     images: [],
     quickButtons: [],
     showHiddenQuickButtons: false,
-    showCompletedTodos: false,
+    showCompletedTodos: {
+      morning: false,
+      noon: false,
+      evening: false,
+    },
     todos: {
       morning: [],
       noon: [],

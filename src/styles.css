@@ -803,6 +803,12 @@ h3 {
   animation: companion-gif-in 0.22s cubic-bezier(0.16, 1, 0.3, 1);
 }
 
+.focus-companion.is-fading {
+  opacity: 0;
+  transform: translateY(8px) scale(0.96);
+  pointer-events: none;
+}
+
 .focus-companion img {
   width: 82px;
   height: 82px;

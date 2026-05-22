@@ -28,9 +28,11 @@ const emit = defineEmits<{
 const POPOVER_DELAY_MS = 200;
 const POPOVER_HIDE_CONTENT_MS = 260;
 const GIF_MAX_VISIBLE_MS = 10000;
+const GIF_FADE_MS = 260;
 const delayedPopoverVisible = ref(false);
 const retainingPopoverContent = ref(false);
 const gifVisible = ref(false);
+const gifFading = ref(false);
 const renderedMessage = ref("");
 const renderedConfirm = ref(false);
 const renderedConfirmText = ref("是");
@@ -39,6 +41,7 @@ const renderedActionText = ref("");
 const popoverTimer = ref<number | undefined>();
 const contentTimer = ref<number | undefined>();
 const gifTimer = ref<number | undefined>();
+const gifFadeTimer = ref<number | undefined>();
 
 const placementStyle = computed(() => {
   if (!props.position) return undefined;
@@ -49,8 +52,8 @@ const placementStyle = computed(() => {
   };
 });
 
-const surfaceVisible = computed(() => props.visible && gifVisible.value);
-const popoverVisible = computed(() => surfaceVisible.value && Boolean(props.message || props.confirm));
+const surfaceVisible = computed(() => props.visible && (gifVisible.value || gifFading.value));
+const popoverVisible = computed(() => props.visible && gifVisible.value && Boolean(props.message || props.confirm));
 const visiblePopover = computed(() => delayedPopoverVisible.value && popoverVisible.value);
 const popoverContentVisible = computed(() => visiblePopover.value || retainingPopoverContent.value);
 const popoverKey = computed(() => `${props.position?.right ?? "default"}:${props.position?.bottom ?? "default"}`);
@@ -91,13 +94,20 @@ watch(
   () => [props.visible, props.message, props.confirm, props.position?.right, props.position?.bottom, props.position?.top] as const,
   ([visible]) => {
     window.clearTimeout(gifTimer.value);
+    window.clearTimeout(gifFadeTimer.value);
     if (!visible) {
       gifVisible.value = false;
+      gifFading.value = false;
       return;
     }
     gifVisible.value = true;
+    gifFading.value = false;
     gifTimer.value = window.setTimeout(() => {
       gifVisible.value = false;
+      gifFading.value = true;
+      gifFadeTimer.value = window.setTimeout(() => {
+        gifFading.value = false;
+      }, GIF_FADE_MS);
     }, GIF_MAX_VISIBLE_MS);
   },
   { immediate: true },
@@ -119,6 +129,7 @@ onUnmounted(() => {
   window.clearTimeout(popoverTimer.value);
   window.clearTimeout(contentTimer.value);
   window.clearTimeout(gifTimer.value);
+  window.clearTimeout(gifFadeTimer.value);
 });
 </script>
 
@@ -126,10 +137,10 @@ onUnmounted(() => {
   <div
     v-if="surfaceVisible"
     class="focus-companion"
-    :class="{ 'is-visible': visible }"
+    :class="{ 'is-visible': gifVisible, 'is-fading': gifFading }"
     :style="placementStyle"
     data-testid="companion-bubble"
-    :aria-hidden="!visible"
+    :aria-hidden="!surfaceVisible"
   >
     <NPopover
       :key="popoverKey"

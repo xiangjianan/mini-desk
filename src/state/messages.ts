@@ -653,7 +653,7 @@ export const MESSAGE_CATALOG: Record<MessageKey, MessageEntry> = {
       "To Do List 看板，支持图片、便签和待办",
       "To Do List 看板，专注快速记录和整理",
       "To Do List 看板，当前版本基于 Vue 3",
-      "To Do List 看板，开源项目入口在下方",
+      "To Do List 看板，建议入口在设置里",
     ],
   },
 };

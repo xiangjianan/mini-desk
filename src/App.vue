@@ -84,7 +84,7 @@ const GUIDE_MESSAGES: Record<GuideKey, string[]> = {
     "点击缩略图预览。",
     "方向键可切换图片。",
     "右键可复制或删除。",
-    "拖拽图片可排序。",
+    "拖动图片到这里。",
     "预览时滚轮缩放。",
     "拖动可平移预览。",
     "Enter 可复制图片。",
@@ -702,6 +702,11 @@ function clearDone(period: TodoPeriod, anchor?: HTMLElement): void {
   );
 }
 
+function toggleCompletedVisibility(period: TodoPeriod, showCompleted: boolean): void {
+  state.showCompletedTodos[period] = showCompleted;
+  persistNow();
+}
+
 function blurEmptyTodo(period: TodoPeriod, id: string): void {
   cancelEmptyTodoRemoval(period, id);
   const todo = state.todos[period].find((item) => item.id === id);
@@ -1149,7 +1154,7 @@ function moveItem<T extends { id: string }>(items: T[], dragId: string, targetId
         @star="toggleTodoStar"
         @remove="removeTodo"
         @clear-completed="clearDone"
-        @toggle-completed-visibility="state.showCompletedTodos = $event; persistNow()"
+        @toggle-completed-visibility="toggleCompletedVisibility"
         @blur-empty="blurEmptyTodo"
         @blur="handleCompanionBlur"
         @move="moveTodo"

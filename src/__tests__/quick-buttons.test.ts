@@ -13,9 +13,22 @@ const checkboxStub = {
 };
 
 const inputStub = {
-  props: ["value"],
+  props: ["value", "type"],
   emits: ["update:value"],
-  template: `<input v-bind="$attrs" :value="value" @input="$emit('update:value', $event.target.value)" />`,
+  template: `
+    <textarea
+      v-if="type === 'textarea'"
+      v-bind="$attrs"
+      :value="value"
+      @input="$emit('update:value', $event.target.value)"
+    />
+    <input
+      v-else
+      v-bind="$attrs"
+      :value="value"
+      @input="$emit('update:value', $event.target.value)"
+    />
+  `,
 };
 
 const modalStub = {
@@ -135,6 +148,24 @@ describe("QuickButtons", () => {
     wrapper.unmount();
   });
 
+  it("uses a multiline editor for copy-text quick buttons", async () => {
+    const wrapper = mountQuickButtons();
+
+    await openDialog(wrapper);
+    await wrapper.findAll(".checkbox-stub")[1].trigger("click");
+    await wrapper.findAll("input")[0].setValue("片段");
+    await wrapper.get("textarea").setValue("第一行\n第二行");
+    await wrapper.get("form").trigger("submit.prevent");
+
+    expect(wrapper.emitted("save")?.[0][0]).toMatchObject({
+      title: "片段",
+      value: "第一行\n第二行",
+      type: "text",
+    });
+
+    wrapper.unmount();
+  });
+
   it("opens the usage guide from the blank quick-button area context menu", async () => {
     const wrapper = mountQuickButtons();
 
@@ -186,7 +217,7 @@ describe("QuickButtons", () => {
     wrapper.unmount();
   });
 
-  it("uses compact quick-button context menu labels with copy first", async () => {
+  it("uses compact quick-button context menu labels without a copy action", async () => {
     const wrapper = mountQuickButtons({
       buttons: [{ id: "quick-1", title: "片段", value: "第一行\n第二行", type: "text", hidden: false }],
     });
@@ -194,15 +225,13 @@ describe("QuickButtons", () => {
     await wrapper.get(".quick-button").trigger("contextmenu");
 
     expect(wrapper.findAll(".dropdown-option").map((option) => option.text())).toEqual([
-      "复制",
       "编辑",
       "隐藏",
       "删除",
       "Tips",
     ]);
 
-    await wrapper.findAll(".dropdown-option").find((option) => option.text() === "复制")?.trigger("click");
-    expect(wrapper.emitted("copy")?.[0]).toEqual(["quick-1", expect.any(HTMLElement)]);
+    expect(wrapper.findAll(".dropdown-option").some((option) => option.text() === "复制")).toBe(false);
 
     wrapper.unmount();
   });

@@ -3,14 +3,14 @@ import { computed, nextTick, onUnmounted, ref } from "vue";
 import { NButton, NCheckbox, NDropdown } from "naive-ui";
 import type { DropdownOption } from "naive-ui";
 import { EMPTY_HINTS, GUIDE_MENU_OPTION, TODO_PERIODS } from "../state/defaults";
-import type { DraggedTodo, GuideKey, TodoItem, TodoMap, TodoPeriod } from "../types";
+import type { DraggedTodo, GuideKey, TodoCompletedVisibility, TodoItem, TodoMap, TodoPeriod } from "../types";
 import { getOrderedTodos } from "../state/todos";
 import EditableTitle from "./EditableTitle.vue";
 
 const props = defineProps<{
   todos: TodoMap;
   titles: Record<string, string>;
-  showCompleted?: boolean;
+  showCompleted?: TodoCompletedVisibility;
 }>();
 
 const emit = defineEmits<{
@@ -22,7 +22,7 @@ const emit = defineEmits<{
   star: [period: TodoPeriod, id: string, starred: boolean];
   remove: [period: TodoPeriod, id: string, anchor?: HTMLElement];
   clearCompleted: [period: TodoPeriod, anchor?: HTMLElement];
-  toggleCompletedVisibility: [showCompleted: boolean];
+  toggleCompletedVisibility: [period: TodoPeriod, showCompleted: boolean];
   blurEmpty: [period: TodoPeriod, id: string];
   blur: [];
   move: [dragged: DraggedTodo, destinationPeriod: TodoPeriod, targetId?: string];
@@ -51,8 +51,9 @@ const todoSectionRefs = new Map<TodoPeriod, HTMLElement>();
 const guideMenuOption: DropdownOption = { ...GUIDE_MENU_OPTION, label: GUIDE_MENU_OPTION.label || "Tips" };
 const menuOptions = computed<DropdownOption[]>(() => {
   if (menu.value?.sectionActions) {
+    const period = menu.value.period;
     return [
-      { label: props.showCompleted ? "隐藏已完成" : "显示已完成", key: "toggle-completed" },
+      { label: isCompletedVisible(period) ? "隐藏已完成" : "显示已完成", key: "toggle-completed" },
       { label: "清理已完成", key: "clear-completed" },
       guideMenuOption,
     ];
@@ -116,7 +117,7 @@ const visibleOrdered = computed(() =>
       );
       return [
         period,
-        props.showCompleted
+        isCompletedVisible(period)
           ? ordered.value[period]
           : ordered.value[period].filter((todo) => !todo.done || deferredIds.has(todo.id)),
       ];
@@ -152,6 +153,8 @@ function handleSectionGuideClick(event: MouseEvent): void {
 
 function handleEnter(event: KeyboardEvent, period: TodoPeriod, todo: TodoItem): void {
   if (!isTodoEditable(period, todo)) return;
+  if (event.isComposing || event.key === "Process" || event.keyCode === 229) return;
+  event.preventDefault();
   const input = event.currentTarget as HTMLInputElement;
   const start = input.selectionStart ?? input.value.length;
   const end = input.selectionEnd ?? start;
@@ -240,10 +243,10 @@ function closeMenu(): void {
 
 async function handleMenuSelect(key: string): Promise<void> {
   if (!menu.value) return;
-  const { period, id, anchor } = menu.value;
+  const { period, id, anchor, target } = menu.value;
   if (key === "toggle-completed") {
     closeMenu();
-    emit("toggleCompletedVisibility", !props.showCompleted);
+    emit("toggleCompletedVisibility", period, !isCompletedVisible(period));
     return;
   }
   if (key === "clear-completed") {
@@ -252,7 +255,11 @@ async function handleMenuSelect(key: string): Promise<void> {
     return;
   }
   if (key === "copy" && id) {
-    await copyTodoText(period, id);
+    if (target && canCopyTextSelection(period, id, target)) {
+      await copyTextSelection(target);
+    } else {
+      await copyTodoText(period, id);
+    }
     closeMenu();
     return;
   }
@@ -377,10 +384,17 @@ async function startTodoEdit(event: MouseEvent, period: TodoPeriod, id: string):
   event.stopPropagation();
   const input = event.currentTarget as HTMLInputElement;
   const key = todoKey(period, id);
+  const selection = hasSelection(input)
+    ? { start: input.selectionStart ?? 0, end: input.selectionEnd ?? input.selectionStart ?? 0 }
+    : lastTodoSelections.get(key);
   const caret = lastTodoCarets.get(key) ?? input.selectionStart ?? input.value.length;
   editingTodoKey.value = todoKey(period, id);
   await nextTick();
   input.focus({ preventScroll: true });
+  if (selection && selection.start !== selection.end && selection.end <= input.value.length) {
+    input.setSelectionRange(selection.start, selection.end);
+    return;
+  }
   collapseSelection(input, caret);
 }
 
@@ -423,6 +437,10 @@ function collapseSelection(input: HTMLInputElement, caret: number): void {
   });
 }
 
+function isCompletedVisible(period: TodoPeriod): boolean {
+  return Boolean(props.showCompleted?.[period]);
+}
+
 function buildTodoListEntries(todos: TodoItem[]): TodoListEntry[] {
   const entries: TodoListEntry[] = [];
   let completedDividerAdded = false;
@@ -460,7 +478,7 @@ function buildTodoListEntries(todos: TodoItem[]): TodoListEntry[] {
             :readonly="!isTodoEditable(item.period, item.todo)"
             draggable="false"
             @input="emit('update', item.period, item.todo.id, ($event.target as HTMLInputElement).value)"
-            @keydown.enter.prevent="handleEnter($event, item.period, item.todo)"
+            @keydown.enter="handleEnter($event, item.period, item.todo)"
             @mouseup="rememberTodoCaret(item.period, item.todo.id, $event)"
             @select="handleTodoSelection(item.period, item.todo.id, $event)"
             @contextmenu.stop="openTodoTextMenu($event, item.period, item.todo)"
@@ -570,7 +588,7 @@ function buildTodoListEntries(todos: TodoItem[]): TodoListEntry[] {
                 :readonly="!isTodoEditable(period, entry.todo)"
                 draggable="false"
                 @input="emit('update', period, entry.todo.id, ($event.target as HTMLInputElement).value)"
-                @keydown.enter.prevent="handleEnter($event, period, entry.todo)"
+                @keydown.enter="handleEnter($event, period, entry.todo)"
                 @mouseup="rememberTodoCaret(period, entry.todo.id, $event)"
                 @select="handleTodoSelection(period, entry.todo.id, $event)"
                 @contextmenu.stop="openTodoTextMenu($event, period, entry.todo)"

@@ -134,7 +134,7 @@ describe("TodoPanel", () => {
   it("shows completed reminders and a weak divider when enabled", () => {
     const wrapper = mount(TodoPanel, {
       props: {
-        showCompleted: true,
+        showCompleted: { morning: true, noon: false, evening: false },
         todos: {
           morning: [
             { id: "a", text: "未完成", done: false },
@@ -165,7 +165,7 @@ describe("TodoPanel", () => {
   it("uses a period three-dot menu for completed visibility and clearing", async () => {
     const wrapper = mount(TodoPanel, {
       props: {
-        showCompleted: false,
+        showCompleted: { morning: false, noon: false, evening: false },
         todos: {
           morning: [
             { id: "a", text: "未完成", done: false },
@@ -197,11 +197,52 @@ describe("TodoPanel", () => {
     ]);
 
     await wrapper.findAll(".dropdown-option").find((option) => option.text() === "显示已完成")?.trigger("click");
-    expect(wrapper.emitted("toggleCompletedVisibility")?.[0]).toEqual([true]);
+    expect(wrapper.emitted("toggleCompletedVisibility")?.[0]).toEqual(["morning", true]);
 
     await wrapper.get('.todo-section[data-period="morning"] .todo-section-menu-button').trigger("click");
     await wrapper.findAll(".dropdown-option").find((option) => option.text() === "清理已完成")?.trigger("click");
     expect(wrapper.emitted("clearCompleted")?.[0]).toEqual(["morning", expect.any(HTMLElement)]);
+
+    wrapper.unmount();
+  });
+
+  it("applies completed visibility per reminder section", async () => {
+    const wrapper = mount(TodoPanel, {
+      props: {
+        showCompleted: { morning: true, noon: false, evening: false },
+        todos: {
+          morning: [
+            { id: "a", text: "早上未完成", done: false },
+            { id: "b", text: "早上已完成", done: true },
+          ],
+          noon: [
+            { id: "c", text: "中午未完成", done: false },
+            { id: "d", text: "中午已完成", done: true },
+          ],
+          evening: [],
+        },
+        titles: DEFAULT_TITLES,
+      },
+      global: {
+        stubs: {
+          Button: true,
+          Checkbox: checkboxStub,
+          Dropdown: dropdownStub,
+          NCheckbox: checkboxStub,
+          NDropdown: dropdownStub,
+          NTooltip: tooltipStub,
+        },
+      },
+    });
+
+    expect(values(wrapper)).toEqual(["早上未完成", "早上已完成", "中午未完成"]);
+
+    await wrapper.get('.todo-section[data-period="noon"] .todo-section-menu-button').trigger("click");
+    expect(wrapper.findAll(".dropdown-option").map((option) => option.text())).toEqual([
+      "显示已完成",
+      "清理已完成",
+      "Tips",
+    ]);
 
     wrapper.unmount();
   });
@@ -519,7 +560,7 @@ describe("TodoPanel", () => {
     wrapper.unmount();
   });
 
-  it("does not select todo text when clicking to edit", async () => {
+  it("preserves a user text selection when clicking to edit a reminder", async () => {
     const wrapper = mount(TodoPanel, {
       props: {
         todos: {
@@ -548,7 +589,8 @@ describe("TodoPanel", () => {
     await wrapper.vm.$nextTick();
 
     expect(selectSpy).not.toHaveBeenCalled();
-    expect(input.selectionStart).toBe(input.selectionEnd);
+    expect(input.selectionStart).toBe(1);
+    expect(input.selectionEnd).toBe(3);
     wrapper.unmount();
   });
 
@@ -577,7 +619,7 @@ describe("TodoPanel", () => {
 
     input.setSelectionRange(3, 3);
     await wrapper.get("input.todo-input").trigger("mouseup");
-    input.setSelectionRange(1, 4);
+    input.setSelectionRange(3, 3);
     await wrapper.get("input.todo-input").trigger("click");
     await wrapper.vm.$nextTick();
 
@@ -755,6 +797,37 @@ describe("TodoPanel", () => {
     wrapper.unmount();
   });
 
+  it("does not split reminders while Chinese IME composition is confirming with Enter", async () => {
+    const wrapper = mount(TodoPanel, {
+      props: {
+        todos: {
+          morning: [{ id: "a", text: "中文输入", done: false }],
+          noon: [],
+          evening: [],
+        },
+        titles: DEFAULT_TITLES,
+      },
+      global: {
+        stubs: {
+          Button: true,
+          Checkbox: checkboxStub,
+          Dropdown: dropdownStub,
+          NCheckbox: checkboxStub,
+          NDropdown: dropdownStub,
+          NTooltip: tooltipStub,
+        },
+      },
+    });
+    const inputWrapper = wrapper.get("input.todo-input");
+
+    await inputWrapper.trigger("click");
+    await inputWrapper.trigger("keydown", { key: "Enter", isComposing: true });
+    await inputWrapper.trigger("keydown", { key: "Enter", keyCode: 229 });
+
+    expect(wrapper.emitted("split")).toBeUndefined();
+    wrapper.unmount();
+  });
+
   it("only starts dragging reminders from the row handle and keeps text selectable", async () => {
     const wrapper = mount(TodoPanel, {
       props: {
@@ -871,6 +944,42 @@ describe("TodoPanel", () => {
     await Promise.resolve();
 
     expect(writeText).toHaveBeenCalledWith("第一项内容");
+    wrapper.unmount();
+  });
+
+  it("copies only the selected reminder text from the input context menu", async () => {
+    const writeText = vi.fn().mockResolvedValue(undefined);
+    Object.assign(navigator, { clipboard: { writeText } });
+    const wrapper = mount(TodoPanel, {
+      props: {
+        todos: {
+          morning: [{ id: "a", text: "第一项内容", done: false }],
+          noon: [],
+          evening: [],
+        },
+        titles: DEFAULT_TITLES,
+      },
+      global: {
+        stubs: {
+          Button: true,
+          Checkbox: checkboxStub,
+          Dropdown: dropdownStub,
+          NCheckbox: checkboxStub,
+          NDropdown: dropdownStub,
+          NTooltip: tooltipStub,
+        },
+      },
+    });
+    const inputWrapper = wrapper.get("input.todo-input");
+    const input = inputWrapper.element as HTMLInputElement;
+
+    input.setSelectionRange(1, 3);
+    await inputWrapper.trigger("select");
+    await inputWrapper.trigger("contextmenu");
+    await wrapper.findAll(".dropdown-option")[0].trigger("click");
+    await Promise.resolve();
+
+    expect(writeText).toHaveBeenCalledWith("一项");
     wrapper.unmount();
   });
 

@@ -45,7 +45,7 @@ describe("state compatibility", () => {
 
     expect(state.spaces).toEqual([{ id: "workspace", title: "工作空间", lines: [] }]);
     expect(state.activeSpaceId).toBe("workspace");
-    expect(state.showCompletedTodos).toBe(false);
+    expect(state.showCompletedTodos).toEqual({ morning: false, noon: false, evening: false });
   });
 
   it("serializes image metadata without large payloads for localStorage", () => {
@@ -89,7 +89,18 @@ describe("state compatibility", () => {
     expect(state.todos.morning[0].starred).toBe(false);
     expect(state.todos.noon).toEqual([]);
     expect(state.workspaceLines).toEqual([{ text: "child", indent: 1 }]);
-    expect(state.showCompletedTodos).toBe(true);
+    expect(state.showCompletedTodos).toEqual({ morning: true, noon: true, evening: true });
+  });
+
+  it("normalizes per-period completed reminder visibility", () => {
+    const state = normalizeImportedState({
+      showCompletedTodos: {
+        morning: true,
+        noon: false,
+      },
+    });
+
+    expect(state.showCompletedTodos).toEqual({ morning: true, noon: false, evening: false });
   });
 
   it("normalizes persisted spaces and starred reminders", () => {

@@ -6,6 +6,7 @@ import type {
   QuickButtonType,
   SerializableOptions,
   StoredImage,
+  TodoCompletedVisibility,
   TodoItem,
   TodoMap,
   WorkspaceSpace,
@@ -81,9 +82,24 @@ export function normalizeImportedState(payload: unknown): BoardState {
     images: normalizeImages(typed.images),
     quickButtons: normalizeQuickButtons(typed.quickButtons),
     showHiddenQuickButtons: Boolean(typed.showHiddenQuickButtons),
-    showCompletedTodos: Boolean(typed.showCompletedTodos),
+    showCompletedTodos: normalizeCompletedVisibility(typed.showCompletedTodos),
     todos: normalizeTodos(typed.todos),
   };
+}
+
+function normalizeCompletedVisibility(value: unknown): TodoCompletedVisibility {
+  if (typeof value === "boolean") {
+    return {
+      morning: value,
+      noon: value,
+      evening: value,
+    };
+  }
+  if (!isPlainObject(value)) return { ...defaultState().showCompletedTodos };
+  const record = value as Record<string, unknown>;
+  return Object.fromEntries(
+    TODO_PERIODS.map((period) => [period, Boolean(record[period])]),
+  ) as TodoCompletedVisibility;
 }
 
 export function normalizeSpaces(

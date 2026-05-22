@@ -1,6 +1,7 @@
 export type ThemeMode = "light" | "dark";
 export type QuickButtonType = "link" | "text";
 export type TodoPeriod = "morning" | "noon" | "evening";
+export type TodoCompletedVisibility = Record<TodoPeriod, boolean>;
 export type GuideKey =
   | "images"
   | "note"
@@ -58,7 +59,7 @@ export interface BoardState {
   images: StoredImage[];
   quickButtons: QuickButton[];
   showHiddenQuickButtons: boolean;
-  showCompletedTodos: boolean;
+  showCompletedTodos: TodoCompletedVisibility;
   todos: TodoMap;
 }
 

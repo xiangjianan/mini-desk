@@ -49,7 +49,6 @@ const menuOptions = computed<DropdownOption[]>(() => {
     ];
   }
   return [
-    { label: "复制", key: "copy" },
     { label: "编辑", key: "edit" },
     { label: button?.hidden ? "显示" : "隐藏", key: "toggle-hidden" },
     { label: "删除", key: "delete" },
@@ -138,7 +137,6 @@ function handleMenuSelect(key: string): void {
   }
   if (key === "guide" && anchor) emit("guide", "quickButtons", anchor, true);
   if (!id) return;
-  if (key === "copy") emit("copy", id, anchor);
   if (key === "edit") openEdit(id);
   if (key === "toggle-hidden") emit("toggleHidden", id);
   if (key === "delete") emit("delete", id, anchor);
@@ -237,7 +235,12 @@ function handleToggleShowHidden(anchor?: HTMLElement): void {
         </div>
         <label>
           <span>{{ form.type === "link" ? "URL" : "复制文本" }}</span>
-          <NInput v-model:value="form.value" autocomplete="off" />
+          <NInput
+            v-model:value="form.value"
+            :type="form.type === 'text' ? 'textarea' : 'text'"
+            autocomplete="off"
+            :autosize="form.type === 'text' ? { minRows: 4, maxRows: 8 } : undefined"
+          />
         </label>
         <div class="dialog-actions">
           <NButton v-if="editingId" type="error" ghost @click="emit('delete', editingId, $event.currentTarget as HTMLElement); closeDialog()">删除</NButton>
