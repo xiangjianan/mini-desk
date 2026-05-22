@@ -59,6 +59,8 @@ describe("Naive UI component usage", () => {
     expect(companion).toContain("POPOVER_DELAY_MS = 200");
     expect(companion).toContain("delayedPopoverVisible");
     expect(companion).toContain('placement="top-end"');
+    expect(companion).toContain(':animated="false"');
+    expect(companion).not.toContain(':animated="true"');
     expect(companion).toContain(":arrow-point-to-center");
     expect(companion).toContain('class="companion-popover-shell"');
     expect(companion).toContain('arrow-class="companion-popover-arrow"');

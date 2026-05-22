@@ -177,12 +177,12 @@ describe("QuickButtons", () => {
     wrapper.unmount();
   });
 
-  it("keeps an empty quick-button area visually blank and focuses guidance on click", async () => {
+  it("keeps an empty quick-button area visually blank without rendering an empty box", async () => {
     const wrapper = mountQuickButtons();
 
-    expect(wrapper.find(".empty-hint").text()).toBe("");
+    expect(wrapper.find(".empty-hint").exists()).toBe(false);
 
-    await wrapper.get(".empty-hint").trigger("click");
+    await wrapper.get(".quick-buttons").trigger("click");
 
     expect(wrapper.emitted("guide")?.[0]).toEqual(["quickButtons", expect.any(HTMLElement)]);
     expect(wrapper.find(".quick-dialog").exists()).toBe(false);

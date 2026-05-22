@@ -89,13 +89,6 @@ function handleExternalDrop(event: DragEvent): void {
 
     <div class="image-list" aria-label="图床图片列表" @click="closeMenu" @dragover.prevent @drop.prevent.stop="handleExternalDrop" @contextmenu.prevent.stop="openMenu($event)">
       <button
-        v-if="images.length === 0"
-        class="empty-hint image-empty"
-        type="button"
-        aria-label="截图区 Tips"
-        @click="emit('guide', 'images', $event.currentTarget as HTMLElement)"
-      />
-      <button
         v-for="(image, index) in images"
         :key="image.id"
         class="image-card"

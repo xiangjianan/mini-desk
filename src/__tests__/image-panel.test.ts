@@ -51,12 +51,12 @@ describe("ImagePanel", () => {
     wrapper.unmount();
   });
 
-  it("keeps an empty image area visually blank while still focusable for guidance", async () => {
+  it("keeps an empty image area visually blank without rendering an empty box", async () => {
     const wrapper = mountImagePanel();
 
-    expect(wrapper.find(".image-empty").text()).toBe("");
+    expect(wrapper.find(".image-empty").exists()).toBe(false);
 
-    await wrapper.get(".image-empty").trigger("click");
+    await wrapper.get(".image-list").trigger("click");
 
     expect(wrapper.emitted("guide")?.[0]).toEqual(["images", expect.any(HTMLElement)]);
     expect(wrapper.emitted("paste")).toBeUndefined();

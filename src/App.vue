@@ -612,8 +612,11 @@ function createTodo(period: TodoPeriod, afterId?: string): void {
     const blankTodo = findOpenBlankTodo();
     if (blankTodo) {
       cancelEmptyTodoRemoval(blankTodo.period, blankTodo.id);
-      nextTick(() => focusTodoInput(blankTodo.period, blankTodo.id));
-      return;
+      if (blankTodo.period === period) {
+        nextTick(() => focusTodoInput(blankTodo.period, blankTodo.id));
+        return;
+      }
+      state.todos = removeTodoFromMap(state.todos, blankTodo.period, blankTodo.id);
     }
   }
   const id = createId();

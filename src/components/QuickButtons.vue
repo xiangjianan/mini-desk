@@ -108,7 +108,7 @@ function openMenu(event: MouseEvent, id: string): void {
 function openAreaMenu(event: MouseEvent): void {
   const target = event.target as HTMLElement;
   const button = target.closest("button");
-  if (target.closest("input, textarea, .quick-button") || (button && !button.classList.contains("empty-hint"))) return;
+  if (target.closest("input, textarea, .quick-button") || button) return;
   event.preventDefault();
   menu.value = { x: event.clientX, y: event.clientY, anchor: event.currentTarget as HTMLElement };
 }
@@ -173,13 +173,6 @@ function handleToggleShowHidden(anchor?: HTMLElement): void {
     </div>
 
     <div class="quick-buttons" aria-label="快捷按钮列表" @click="closeMenu" @contextmenu="openAreaMenu">
-      <button
-        v-if="visibleButtons.length === 0"
-        class="empty-hint"
-        type="button"
-        aria-label="快捷链接 Tips"
-        @click="emit('guide', 'quickButtons', $event.currentTarget as HTMLElement)"
-      />
       <button
         v-for="button in visibleButtons"
         :key="button.id"

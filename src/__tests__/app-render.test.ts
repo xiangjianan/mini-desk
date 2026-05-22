@@ -87,8 +87,8 @@ describe("App shell", () => {
     expect(wrapper.find('[aria-label="切换主题"]').exists()).toBe(true);
     expect(wrapper.find('[aria-label="快捷链接菜单"]').exists()).toBe(true);
     expect(wrapper.find('[aria-label="设置"]').exists()).toBe(true);
-    expect(wrapper.find(".image-empty").text()).toBe("");
-    expect(wrapper.find(".empty-hint").text()).toBe("");
+    expect(wrapper.find(".image-empty").exists()).toBe(false);
+    expect(wrapper.find(".empty-hint").exists()).toBe(false);
     expect(wrapper.find(".todo-empty-hint").text()).toBe("");
     expect(wrapper.findAll("textarea").every((textarea) => !textarea.attributes("placeholder"))).toBe(true);
 
@@ -182,6 +182,10 @@ describe("App shell", () => {
       .findAll("input.todo-input")
       .filter((input) => (input.element as HTMLInputElement).value === "");
     expect(blankInputs).toHaveLength(1);
+    expect(wrapper.find('[data-testid="todo-input-morning"]').exists()).toBe(false);
+    expect(wrapper.find('[data-testid="todo-input-noon"]').exists()).toBe(false);
+    expect(wrapper.find('[data-testid="todo-input-evening"]').exists()).toBe(true);
+    expect(document.activeElement).toBe(wrapper.get('[data-testid="todo-input-evening"]').element);
 
     wrapper.unmount();
   });
