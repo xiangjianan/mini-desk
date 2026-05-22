@@ -1326,7 +1326,7 @@ function moveItem<T extends { id: string }>(items: T[], dragId: string, targetId
     <main v-else class="mobile-handoff" aria-label="To Do List 看板移动端引导">
       <header class="mobile-handoff-header">
         <h1 class="mobile-handoff-title">To Do List 看板</h1>
-        <NButton quaternary size="small" class="mobile-handoff-theme icon-button" aria-label="切换主题" @click="handleThemeClick">
+        <NButton quaternary size="small" class="mobile-handoff-theme" aria-label="切换主题" @click="handleThemeClick">
           <NIcon :component="state.theme === 'dark' ? SunnyOutline : MoonOutline" />
         </NButton>
       </header>
