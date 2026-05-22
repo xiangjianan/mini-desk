@@ -865,7 +865,9 @@ describe("App shell", () => {
     await new Promise((resolve) => setTimeout(resolve, 0));
     await wrapper.vm.$nextTick();
 
-    expect((wrapper.getComponent(ImagePanel).props("images") as Array<{ id: string }>)).toHaveLength(2);
+    await vi.waitFor(() => {
+      expect((wrapper.getComponent(ImagePanel).props("images") as Array<{ id: string }>)).toHaveLength(2);
+    });
     expect(writeText).toHaveBeenCalledTimes(1);
     expect(String(writeText.mock.calls[0][0])).toContain("data:image/png");
     wrapper.unmount();
@@ -1001,6 +1003,27 @@ describe("App shell", () => {
       wrapper.unmount();
       vi.useRealTimers();
     }
+  });
+
+  it("resets the import file input before opening the picker", async () => {
+    const wrapper = mountApp();
+
+    const settings = wrapper.getComponent(SettingsMenu);
+    const input = wrapper.get('input[type="file"]').element as HTMLInputElement;
+    Object.defineProperty(input, "value", {
+      value: "C:\\fakepath\\todo.json",
+      writable: true,
+      configurable: true,
+    });
+    const clickSpy = vi.spyOn(input, "click").mockImplementation(() => {});
+
+    settings.vm.$emit("import", settings.element as HTMLElement);
+    await wrapper.vm.$nextTick();
+
+    expect(input.value).toBe("");
+    expect(clickSpy).toHaveBeenCalledTimes(1);
+
+    wrapper.unmount();
   });
 
   it("shows about information in the companion bubble instead of a modal", async () => {

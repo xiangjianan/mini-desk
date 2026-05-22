@@ -749,6 +749,9 @@ function exportData(anchor?: HTMLElement): void {
 
 function requestImport(anchor?: HTMLElement): void {
   importFeedbackAnchor.value = anchor;
+  if (importInput.value) {
+    importInput.value.value = "";
+  }
   importInput.value?.click();
 }
 
