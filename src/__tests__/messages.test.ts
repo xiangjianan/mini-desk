@@ -22,6 +22,8 @@ const messageKeys = [
   "imageAdded",
   "imageCopied",
   "imageDataCopied",
+  "imageDropIgnored",
+  "imageDropEmpty",
   "quickLinkCopied",
   "quickTextCopied",
   "quickTextCopyFailed",

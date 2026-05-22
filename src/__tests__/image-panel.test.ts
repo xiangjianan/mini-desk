@@ -61,8 +61,8 @@ describe("ImagePanel", () => {
     await wrapper.findAll(".image-card")[1].trigger("contextmenu");
 
     expect(wrapper.findAll(".dropdown-option").map((option) => option.text())).toEqual([
-      "预览",
       "复制",
+      "预览",
       "删除",
       "Tips",
     ]);
@@ -71,6 +71,21 @@ describe("ImagePanel", () => {
     expect(wrapper.text()).not.toContain("取消置顶");
     expect(wrapper.text()).not.toContain("置底");
 
+    wrapper.unmount();
+  });
+
+  it("emits browser-external dropped files from the image list", async () => {
+    const wrapper = mountImagePanel();
+    const image = new File(["img"], "screen.png", { type: "image/png" });
+    const text = new File(["note"], "note.txt", { type: "text/plain" });
+
+    await wrapper.get(".image-list").trigger("drop", {
+      dataTransfer: {
+        files: [image, text],
+      },
+    });
+
+    expect(wrapper.emitted("dropFiles")?.[0]).toEqual([[image, text], expect.any(HTMLElement)]);
     wrapper.unmount();
   });
 });

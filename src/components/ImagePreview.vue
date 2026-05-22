@@ -1,7 +1,8 @@
 <script setup lang="ts">
 import { computed, ref, watch } from "vue";
 import { CloseOutline } from "@vicons/ionicons5";
-import { NButton, NIcon, NModal } from "naive-ui";
+import { NButton, NDropdown, NIcon, NModal } from "naive-ui";
+import type { DropdownOption } from "naive-ui";
 import type { StoredImage } from "../types";
 
 const props = defineProps<{
@@ -20,8 +21,14 @@ const scale = ref(1);
 const offset = ref({ x: 0, y: 0 });
 const dragging = ref(false);
 const start = ref({ x: 0, y: 0, ox: 0, oy: 0 });
+const menu = ref<{ x: number; y: number; id: string; anchor?: HTMLElement } | null>(null);
 
 const active = computed(() => props.images.find((image) => image.id === props.activeId));
+const menuOptions: DropdownOption[] = [
+  { label: "复制", key: "copy" },
+  { label: "取消预览", key: "close" },
+  { label: "删除", key: "delete" },
+];
 
 watch(
   () => props.activeId,
@@ -49,6 +56,42 @@ function move(event: MouseEvent): void {
   };
 }
 
+function openMenu(event: MouseEvent, id: string): void {
+  event.preventDefault();
+  menu.value = { x: event.clientX, y: event.clientY, id, anchor: event.currentTarget as HTMLElement };
+}
+
+function closeMenu(): void {
+  menu.value = null;
+}
+
+function handleMenuSelect(key: string): void {
+  const current = menu.value;
+  if (!current) return;
+  closeMenu();
+  if (key === "copy") emit("copy", current.id);
+  if (key === "close") emit("close");
+  if (key === "delete") emit("delete", current.id, current.anchor);
+}
+
+function handleKeydown(event: KeyboardEvent): void {
+  if (!active.value) return;
+  if (event.key === "Escape" || event.key === " ") {
+    event.preventDefault();
+    emit("close");
+    return;
+  }
+  if (event.key === "Enter") {
+    event.preventDefault();
+    emit("copy", active.value.id);
+    return;
+  }
+  if (event.key === "Delete" || event.key === "Backspace") {
+    event.preventDefault();
+    emit("delete", active.value.id);
+  }
+}
+
 </script>
 
 <template>
@@ -70,11 +113,8 @@ function move(event: MouseEvent): void {
       @mousemove="move"
       @mouseup="dragging = false"
       @mouseleave="dragging = false"
-      @keydown.esc="emit('close')"
-      @keydown.space.prevent="emit('close')"
-      @keydown.delete="emit('delete', active.id)"
-      @keydown.enter="emit('copy', active.id)"
-      @contextmenu.prevent
+      @keydown="handleKeydown"
+      @contextmenu.prevent="openMenu($event, active.id)"
     >
       <aside class="preview-sidebar">
         <div class="preview-sidebar-bar">
@@ -110,6 +150,7 @@ function move(event: MouseEvent): void {
             alt="图片预览"
             draggable="false"
             :style="{ transform: `translate(${offset.x}px, ${offset.y}px) scale(${scale})` }"
+            @contextmenu.prevent="openMenu($event, active.id)"
           />
         </div>
         <div class="preview-actions">
@@ -121,6 +162,23 @@ function move(event: MouseEvent): void {
           </NButton>
         </div>
       </main>
+      <NDropdown
+        v-if="menu"
+        placement="bottom-start"
+        trigger="manual"
+        :show="true"
+        :x="menu.x"
+        :y="menu.y"
+        :options="menuOptions"
+        @select="handleMenuSelect"
+        @clickoutside="closeMenu"
+      >
+        <span
+          class="dropdown-anchor"
+          :style="{ left: `${menu.x}px`, top: `${menu.y}px` }"
+          aria-hidden="true"
+        />
+      </NDropdown>
     </div>
   </NModal>
 </template>

@@ -18,6 +18,7 @@ const emit = defineEmits<{
   delete: [id: string, anchor?: HTMLElement];
   reorder: [dragId: string, targetId: string];
   paste: [];
+  dropFiles: [files: File[], anchor?: HTMLElement];
   guide: [key: GuideKey, anchor: HTMLElement, immediate?: boolean];
 }>();
 
@@ -28,8 +29,8 @@ const guideMenuOption: DropdownOption = { ...GUIDE_MENU_OPTION, label: GUIDE_MEN
 const menuOptions = computed<DropdownOption[]>(() =>
   menu.value?.id
     ? [
-        { label: "预览", key: "preview" },
         { label: "复制", key: "copy" },
+        { label: "预览", key: "preview" },
         { label: "删除", key: "delete" },
         guideMenuOption,
       ]
@@ -62,10 +63,23 @@ function handleGuideClick(event: MouseEvent): void {
   if (target.closest("button, input, textarea, .image-card")) return;
   emit("guide", "images", event.currentTarget as HTMLElement);
 }
+
+function handleExternalDrop(event: DragEvent): void {
+  const files = Array.from(event.dataTransfer?.files ?? []);
+  if (files.length === 0) return;
+  emit("dropFiles", files, event.currentTarget as HTMLElement);
+}
 </script>
 
 <template>
-  <section class="panel image-panel" aria-labelledby="image-title" @click="handleGuideClick" @contextmenu="openMenu($event)">
+  <section
+    class="panel image-panel"
+    aria-labelledby="image-title"
+    @click="handleGuideClick"
+    @dragover.prevent
+    @drop.prevent="handleExternalDrop"
+    @contextmenu="openMenu($event)"
+  >
     <div class="panel-header">
       <h1 id="image-title">
         <EditableTitle id="image-title" :value="title" @update="(id, value) => emit('titleUpdate', id, value)" />
@@ -73,7 +87,7 @@ function handleGuideClick(event: MouseEvent): void {
       <span class="count">{{ images.length }}</span>
     </div>
 
-    <div class="image-list" aria-label="图床图片列表" @click="closeMenu" @contextmenu.prevent.stop="openMenu($event)">
+    <div class="image-list" aria-label="图床图片列表" @click="closeMenu" @dragover.prevent @drop.prevent.stop="handleExternalDrop" @contextmenu.prevent.stop="openMenu($event)">
       <button v-if="images.length === 0" class="empty-hint image-empty" type="button" @click="emit('paste')">
         {{ EMPTY_HINTS.images }}
       </button>

@@ -134,7 +134,7 @@ describe("ImagePreview", () => {
     wrapper.unmount();
   });
 
-  it("does not open a custom context menu over preview images", async () => {
+  it("opens a compact context menu over preview images", async () => {
     const wrapper = mount(ImagePreview, {
       props: {
         images: [{ id: "img-1", src: "data:image/png;base64,one", createdAt: 1 }],
@@ -157,8 +157,45 @@ describe("ImagePreview", () => {
     await wrapper.vm.$nextTick();
 
     expect(event.defaultPrevented).toBe(true);
-    expect(wrapper.find(".dropdown-option").exists()).toBe(false);
-    expect(wrapper.findComponent({ name: "NDropdown" }).exists()).toBe(false);
+    expect(wrapper.findAll(".dropdown-option").map((option) => option.text())).toEqual([
+      "复制",
+      "取消预览",
+      "删除",
+    ]);
+
+    await wrapper.findAll(".dropdown-option").find((option) => option.text() === "取消预览")?.trigger("click");
+    expect(wrapper.emitted("close")).toHaveLength(1);
+
+    wrapper.unmount();
+  });
+
+  it("routes preview keyboard shortcuts to the active image", async () => {
+    const wrapper = mount(ImagePreview, {
+      props: {
+        images: [{ id: "img-1", src: "data:image/png;base64,one", createdAt: 1 }],
+        activeId: "img-1",
+      },
+      global: {
+        stubs: {
+          Button: buttonStub,
+          Dropdown: dropdownStub,
+          Modal: modalStub,
+          NButton: buttonStub,
+          NDropdown: dropdownStub,
+          NModal: modalStub,
+        },
+      },
+    });
+
+    await wrapper.get(".image-preview").trigger("keydown", { key: "Enter" });
+    await wrapper.get(".image-preview").trigger("keydown", { key: "Backspace" });
+    await wrapper.get(".image-preview").trigger("keydown", { key: "Delete" });
+    await wrapper.get(".image-preview").trigger("keydown", { key: "Escape" });
+
+    expect(wrapper.emitted("copy")?.[0]).toEqual(["img-1"]);
+    expect(wrapper.emitted("delete")?.map((event) => event[0])).toEqual(["img-1", "img-1"]);
+    expect(wrapper.emitted("close")).toHaveLength(1);
+
     wrapper.unmount();
   });
 });

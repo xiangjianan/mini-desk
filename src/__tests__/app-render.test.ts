@@ -410,7 +410,7 @@ describe("App shell", () => {
     }
   });
 
-  it("anchors image deletion undo feedback to the screenshot list after deleting from preview", async () => {
+  it("anchors image deletion feedback to the screenshot list after deleting from preview", async () => {
     vi.useFakeTimers();
     vi.spyOn(Math, "random").mockReturnValue(0);
     localStorage.setItem(
@@ -457,6 +457,8 @@ describe("App shell", () => {
 
       await wrapper.get('[data-testid="companion-yes"]').trigger("click");
       await Promise.resolve();
+      await wrapper.vm.$nextTick();
+      await vi.advanceTimersByTimeAsync(200);
       await wrapper.vm.$nextTick();
 
       const style = wrapper.get('[data-testid="companion-bubble"]').attributes("style");
@@ -791,6 +793,59 @@ describe("App shell", () => {
       vi.unstubAllGlobals();
       vi.useRealTimers();
     }
+  });
+
+  it("copies the current image when Enter is pressed immediately after preview opens", async () => {
+    localStorage.setItem(
+      STORAGE_KEY,
+      JSON.stringify({
+        images: [
+          {
+            id: "img-1",
+            src: "data:image/png;base64,iVBORw0KGgo=",
+            createdAt: 1,
+          },
+        ],
+      }),
+    );
+    Object.assign(navigator, {
+      clipboard: {
+        writeText: vi.fn().mockResolvedValue(undefined),
+      },
+    });
+    const wrapper = mountApp();
+
+    await wrapper.get(".image-card").trigger("click");
+    window.dispatchEvent(new KeyboardEvent("keydown", { key: "Enter" }));
+    await Promise.resolve();
+
+    expect(navigator.clipboard.writeText).toHaveBeenCalledWith("data:image/png;base64,iVBORw0KGgo=");
+    wrapper.unmount();
+  });
+
+  it("adds dropped image files and copies the last added image", async () => {
+    const writeText = vi.fn().mockResolvedValue(undefined);
+    Object.assign(navigator, {
+      clipboard: {
+        writeText,
+      },
+    });
+    const wrapper = mountApp();
+    const first = new File(["first"], "first.png", { type: "image/png" });
+    const ignored = new File(["note"], "note.txt", { type: "text/plain" });
+    const last = new File(["last"], "last.png", { type: "image/png" });
+
+    wrapper.getComponent(ImagePanel).vm.$emit("dropFiles", [first, ignored, last], wrapper.get(".image-panel").element as HTMLElement);
+    await Promise.resolve();
+    await Promise.resolve();
+    await new Promise((resolve) => setTimeout(resolve, 0));
+    await new Promise((resolve) => setTimeout(resolve, 0));
+    await wrapper.vm.$nextTick();
+
+    expect((wrapper.getComponent(ImagePanel).props("images") as Array<{ id: string }>)).toHaveLength(2);
+    expect(writeText).toHaveBeenCalledTimes(1);
+    expect(String(writeText.mock.calls[0][0])).toContain("data:image/png");
+    wrapper.unmount();
   });
 
   it("shows missing clipboard images and added images through the companion bubble", async () => {
@@ -1194,7 +1249,7 @@ describe("App shell", () => {
       await vi.advanceTimersByTimeAsync(200);
       await wrapper.vm.$nextTick();
 
-      expect(wrapper.find('[data-testid="companion-confirm"]').text()).toMatch(/完成项|完成记录|完成列表|完成事项/);
+      expect(wrapper.find('[data-testid="companion-confirm"]').text()).toMatch(/清理|完成项|不可恢复/);
     } finally {
       wrapper.unmount();
       vi.useRealTimers();

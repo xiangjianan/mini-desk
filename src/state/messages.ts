@@ -9,6 +9,8 @@ export type MessageKey =
   | "imageAdded"
   | "imageCopied"
   | "imageDataCopied"
+  | "imageDropIgnored"
+  | "imageDropEmpty"
   | "quickLinkCopied"
   | "quickTextCopied"
   | "quickTextCopyFailed"
@@ -220,6 +222,38 @@ export const MESSAGE_CATALOG: Record<MessageKey, MessageEntry> = {
       "图片源码已复制",
       "已复制图片源码",
       "图片转文本复制",
+    ],
+  },
+  imageDropIgnored: {
+    mood: "warning",
+    surface: "companion",
+    variants: [
+      "已忽略非图片",
+      "非图片已跳过",
+      "只添加了图片",
+      "已跳过非图片",
+      "非图片未添加",
+      "只收进图片",
+      "非图片已忽略",
+      "已过滤非图片",
+      "只处理图片",
+      "其它文件跳过",
+    ],
+  },
+  imageDropEmpty: {
+    mood: "warning",
+    surface: "companion",
+    variants: [
+      "没有可添加的图片",
+      "未找到图片文件",
+      "这里没有图片",
+      "请拖入图片文件",
+      "没有读到图片",
+      "未添加任何图片",
+      "只支持图片文件",
+      "请换图片再试",
+      "这些不是图片",
+      "没有有效图片",
     ],
   },
   quickLinkCopied: {

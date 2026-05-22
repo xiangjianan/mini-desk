@@ -37,7 +37,7 @@ import {
   getStoredAppVersion,
   markAppVersionSeen,
 } from "./state/version";
-import type { BoardState, DraggedTodo, GuideKey, LineItem, QuickButtonType, TodoPeriod } from "./types";
+import type { BoardState, DraggedTodo, GuideKey, LineItem, QuickButtonType, StoredImage, TodoPeriod } from "./types";
 
 const state = reactive<BoardState>(loadState());
 const activePreviewId = ref<string | undefined>();
@@ -441,13 +441,13 @@ async function pasteImageFromClipboard(): Promise<void> {
   showBubble("clipboardImageMissing", undefined, { hideCompanionAfter: true });
 }
 
-async function addImageFile(file: File): Promise<void> {
+async function addImageFile(file: File, options: { showMessage?: boolean } = {}): Promise<StoredImage | undefined> {
   let src: string;
   try {
     src = await fileToDataUrl(file);
   } catch {
     showBubble("imageReadFailed", undefined, { hideCompanionAfter: true });
-    return;
+    return undefined;
   }
   const image = {
     id: createId(),
@@ -458,11 +458,30 @@ async function addImageFile(file: File): Promise<void> {
     await storeImagePayload(image);
   } catch {
     showBubble("imageStoreFailed", undefined, { hideCompanionAfter: true });
-    return;
+    return undefined;
   }
   state.images.push(image);
   persistNow();
-  showBubble("imageAdded", undefined, { hideCompanionAfter: true });
+  if (options.showMessage ?? true) showBubble("imageAdded", undefined, { hideCompanionAfter: true });
+  return image;
+}
+
+async function addImageFiles(files: File[], anchor?: HTMLElement): Promise<void> {
+  const imageFiles = files.filter((file) => file.type.startsWith("image/"));
+  const ignoredCount = files.length - imageFiles.length;
+  if (imageFiles.length === 0) {
+    showBubble("imageDropEmpty", anchor, { hideCompanionAfter: true });
+    return;
+  }
+
+  const added: StoredImage[] = [];
+  for (const file of imageFiles) {
+    const image = await addImageFile(file, { showMessage: false });
+    if (image) added.push(image);
+  }
+  if (added.length === 0) return;
+  await copyImage(added.at(-1)!.id, anchor);
+  if (ignoredCount > 0) showBubble("imageDropIgnored", anchor, { hideCompanionAfter: true });
 }
 
 function reorderImages(dragId: string, targetId: string): void {
@@ -475,7 +494,7 @@ function deleteImage(id: string, anchor?: HTMLElement): void {
     const index = state.images.findIndex((image) => image.id === id);
     if (index < 0) return;
     state.images = state.images.filter((image) => image.id !== id);
-    if (activePreviewId.value === id) activePreviewId.value = state.images[0]?.id;
+    if (activePreviewId.value === id) activePreviewId.value = undefined;
     await deleteStoredImage(id);
     persistNow();
     showBubble("deleteImage", getImageUndoAnchor(anchor), { hideCompanionAfter: true });
@@ -487,7 +506,7 @@ function openImagePreview(id: string): void {
   activePreviewId.value = id;
 }
 
-async function copyImage(id: string): Promise<void> {
+async function copyImage(id: string, anchor?: HTMLElement): Promise<void> {
   const image = state.images.find((item) => item.id === id);
   if (!image?.src) return;
   const clipboard = navigator.clipboard as Clipboard & {
@@ -497,17 +516,17 @@ async function copyImage(id: string): Promise<void> {
     if (clipboard.write && "ClipboardItem" in window) {
       const blob = await (await fetch(image.src)).blob();
       await clipboard.write([new window.ClipboardItem({ [blob.type]: blob })]);
-      showBubble("imageCopied", undefined, { hideCompanionAfter: true });
+      showBubble("imageCopied", anchor, { hideCompanionAfter: true });
       return;
     }
     if (await copyText(image.src)) {
-      showBubble("imageDataCopied", undefined, { hideCompanionAfter: true });
+      showBubble("imageDataCopied", anchor, { hideCompanionAfter: true });
       return;
     }
   } catch {
     // Fall through to the shared failure message below.
   }
-  showBubble("imageCopyFailed", undefined, { hideCompanionAfter: true });
+  showBubble("imageCopyFailed", anchor, { hideCompanionAfter: true });
 }
 
 function saveQuick(payload: { id?: string; title: string; value: string; type: QuickButtonType }): void {
@@ -804,6 +823,14 @@ function handleGlobalKeydown(event: KeyboardEvent): void {
       event.preventDefault();
       activePreviewId.value = undefined;
     }
+    if (event.key === "Enter") {
+      event.preventDefault();
+      void copyImage(activePreviewId.value, document.querySelector<HTMLElement>(".image-preview") ?? undefined);
+    }
+    if (event.key === "Delete" || event.key === "Backspace") {
+      event.preventDefault();
+      deleteImage(activePreviewId.value, document.querySelector<HTMLElement>(".image-preview") ?? undefined);
+    }
     if (event.key === "ArrowLeft" || event.key === "ArrowUp") {
       event.preventDefault();
       navigatePreview(-1);
@@ -1075,6 +1102,7 @@ function moveItem<T extends { id: string }>(items: T[], dragId: string, targetId
         @delete="deleteImage"
         @reorder="reorderImages"
         @paste="pasteImageFromClipboard"
+        @drop-files="addImageFiles"
         @guide="handleGuideClick"
       />
 
