@@ -124,7 +124,7 @@ describe("message catalog", () => {
     expect(AREA_HELP.todos).not.toMatch(/早|中|晚/);
   });
 
-  it("includes shortcut guidance and keeps the source repository display out of shared message text", () => {
+  it("includes shortcut guidance and keeps repository URLs out of shared message text", () => {
     const guideSource = readSource("src/App.vue");
 
     expect(guideSource).toContain("Record<GuideKey, string[]>");
@@ -135,7 +135,9 @@ describe("message catalog", () => {
     expect(guideSource).not.toContain("GUIDE_REPEAT_CHANCE");
     expect(guideSource).not.toContain("maybeShowGuideBubble");
     expect(MESSAGE_CATALOG.about.variants.join("\n")).not.toContain("https://github.com/xiangjianan/todolist");
-    expect(guideSource).toContain("GITHUB_REPO_NAME");
+    expect(guideSource).toContain("GITHUB_ISSUE_URL");
+    expect(guideSource).toContain("/issues/new");
+    expect(guideSource).not.toContain("GITHUB_REPO_NAME");
   });
 
   it("provides ten guide variants for every guide bubble scenario", () => {

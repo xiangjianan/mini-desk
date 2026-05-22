@@ -34,14 +34,16 @@ describe("Naive UI component usage", () => {
     expect(styles).not.toContain(".toast");
   });
 
-  it("uses Naive dialog/modal primitives for popup surfaces", () => {
+  it("uses Naive modal primitives only for popup surfaces that still need them", () => {
     const app = read("src/App.vue");
     const preview = read("src/components/ImagePreview.vue");
+    const quick = read("src/components/QuickButtons.vue");
 
-    expect(app).toContain("NModal");
-    expect(app).toContain('class="about-modal"');
+    expect(app).not.toContain("NModal");
+    expect(app).not.toContain('class="about-modal"');
     expect(app).not.toContain("window.alert");
     expect(preview).toContain("NModal");
+    expect(quick).toContain("NModal");
   });
 
   it("uses Naive popover primitives for the reusable companion bubble", () => {
@@ -108,9 +110,10 @@ describe("Naive UI component usage", () => {
     expect(preview).toContain("取消预览");
     expect(preview).toContain("复制");
     expect(preview).toContain("删除");
-    expect(preview).toContain("@keydown.space.prevent");
-    expect(preview).not.toContain("NDropdown");
-    expect(preview).not.toContain("openMenu");
+    expect(preview).toContain('@keydown="handleKeydown"');
+    expect(preview).toContain("NDropdown");
+    expect(preview).toContain("openMenu");
+    expect(preview).toContain('@contextmenu.prevent="openMenu($event, active.id)"');
     expect(preview).not.toContain("@contextmenu.prevent.stop=\"openMenu\"");
     expect(preview).not.toContain("custom-menu");
     expect(preview).not.toContain('id="custom-menu"');
@@ -119,7 +122,8 @@ describe("Naive UI component usage", () => {
     expect(styles).toMatch(/\.image-preview\s*\{[^}]*background: rgba\(255, 255, 255/s);
     expect(styles).toMatch(/html\[data-theme="dark"\] \.image-preview\s*\{[^}]*background: rgba\(0, 0, 0/s);
     expect(styles).toContain("-webkit-backdrop-filter");
-    expect(styles).toContain("z-index: 3200");
+    expect(styles).toMatch(/\.image-preview\s*\{[^}]*z-index: 3000/s);
+    expect(styles).toMatch(/\.focus-companion\s*\{[^}]*z-index: 3200/s);
     expect(preview).toContain("preview-close-button");
   });
 
@@ -137,7 +141,7 @@ describe("Naive UI component usage", () => {
     expect(styles).not.toMatch(/\.preview-thumb\s*\{[^}]*margin-bottom/s);
   });
 
-  it("marks text quick buttons with a copy icon and keeps settings in the top action bar", () => {
+  it("marks text quick buttons with a copy icon and keeps compact actions in menus", () => {
     const quick = read("src/components/QuickButtons.vue");
     const app = read("src/App.vue");
     const settings = read("src/components/SettingsMenu.vue");
@@ -145,15 +149,20 @@ describe("Naive UI component usage", () => {
     const styles = read("src/styles.css");
 
     expect(quick).toContain("CopyOutline");
-    expect(quick).toContain("AddOutline");
-    expect(quick).toContain("EyeOutline");
-    expect(quick).toContain("EyeOffOutline");
+    expect(quick).toContain("quick-menu-button");
+    expect(quick).toContain("快捷链接菜单");
+    expect(quick).toContain("显示隐藏项");
+    expect(quick).toContain("收起隐藏项");
+    expect(quick).not.toContain("AddOutline");
+    expect(quick).not.toContain("EyeOutline");
+    expect(quick).not.toContain("EyeOffOutline");
     expect(quick).toContain("quick-button-icon");
     expect(app).toContain("top-actions");
     expect(app).toContain("SunnyOutline");
     expect(app).toContain("MoonOutline");
-    expect(todo).toContain("clear-completed-icon");
-    expect(todo).toContain("M786.6 715.9");
+    expect(todo).toContain("todo-section-menu-button");
+    expect(todo).toContain("待办菜单");
+    expect(todo).toContain("清理已完成");
     expect(todo).not.toContain("TrashOutline");
     expect(settings).toContain("NIcon");
     expect(settings).toContain("NBadge");
@@ -220,23 +229,25 @@ describe("Naive UI component usage", () => {
     expect(styles).not.toMatch(/border-radius:\s*(?:[1-9]\d*px|0\.\d+|[1-9]\d*%)/);
   });
 
-  it("adds copy and paste actions to editable text context menus", () => {
+  it("keeps editable text copy/paste while todo item menus stay concise", () => {
     const text = read("src/components/TextPanel.vue");
     const todo = read("src/components/TodoPanel.vue");
 
-    for (const source of [text, todo]) {
-      expect(source).toContain("copyTextSelection");
-      expect(source).toContain("pasteTextFromClipboard");
-      expect(source).toContain("复制");
-      expect(source).toContain("粘贴");
-    }
+    expect(text).toContain("copyTextSelection");
+    expect(text).toContain("pasteTextFromClipboard");
+    expect(text).toContain("复制");
+    expect(text).toContain("粘贴");
+    expect(todo).toContain("copyTodoText");
+    expect(todo).toContain("复制");
+    expect(todo).toContain("编辑");
+    expect(todo).toContain("删除");
   });
 
   it("keeps blank reminder hints outside the moving todo transition list", () => {
     const todo = read("src/components/TodoPanel.vue");
 
-    expect(todo).not.toMatch(/<TransitionGroup[\s\S]*v-if="todos\[period\]\.length === 0"[\s\S]*<\/TransitionGroup>/);
-    expect(todo).toContain('v-if="todos[period].length === 0"');
+    expect(todo).not.toMatch(/<TransitionGroup[\s\S]*v-if="listEntries\[period\]\.length === 0"[\s\S]*<\/TransitionGroup>/);
+    expect(todo).toContain('v-if="listEntries[period].length === 0"');
     expect(todo).toContain('v-else');
   });
 
@@ -278,7 +289,7 @@ describe("Naive UI component usage", () => {
     expect(selectedRule).not.toContain("box-shadow");
   });
 
-  it("uses click editing for area text while titles and reminders keep double-click editing", () => {
+  it("uses click editing for area text and reminders while titles keep double-click editing", () => {
     const text = read("src/components/TextPanel.vue");
     const todo = read("src/components/TodoPanel.vue");
     const title = read("src/components/EditableTitle.vue");
@@ -287,7 +298,8 @@ describe("Naive UI component usage", () => {
     expect(text).toContain("@dblclick=\"startEditing\"");
     expect(text).toContain(":readonly=\"!editing\"");
     expect(text).not.toContain(".select()");
-    expect(todo).toContain("@dblclick=\"startTodoEdit");
+    expect(todo).toContain("@click=\"startTodoEdit");
+    expect(todo).not.toContain("@dblclick=\"startTodoEdit");
     expect(todo).toContain(":readonly=\"!isTodoEditable");
     expect(todo).not.toContain(".select()");
     expect(title).toContain("@dblclick=\"startEditing\"");
@@ -380,23 +392,25 @@ describe("Naive UI component usage", () => {
     expect(styles).toMatch(/\.panel\.is-focused,[\s\S]*?\.todo-section\.is-focused\s*\{[^}]*box-shadow: inset 0 0 0 1px var\(--line-focus\)/s);
   });
 
-  it("renders the source repository in the about dialog as an icon link", () => {
+  it("routes about information through the companion bubble and suggestions to GitHub issues", () => {
     const app = read("src/App.vue");
     const messages = read("src/state/messages.ts");
     const styles = read("src/styles.css");
 
-    expect(app).toContain("LogoGithub");
-    expect(app).toContain("GITHUB_REPO_NAME");
-    expect(app).toContain("GITHUB_REPO_URL");
-    expect(app).toContain("about-github-link");
-    expect(app).toContain("aboutVisible");
-    expect(app).toContain("about-confirm-button");
+    expect(app).toContain("function about");
+    expect(app).toContain('showBubbleText(getMessage("about")');
+    expect(app).toContain("GITHUB_ISSUE_URL");
+    expect(app).toContain("/issues/new");
+    expect(app).not.toContain("LogoGithub");
+    expect(app).not.toContain("GITHUB_REPO_NAME");
+    expect(app).not.toContain("about-github-link");
+    expect(app).not.toContain("aboutVisible");
+    expect(app).not.toContain("about-confirm-button");
     expect(app).not.toContain("naiveDialog.info");
     expect(app).not.toContain('positiveText: "知道了"');
-    expect(styles).toMatch(/\.about-modal\s*\{[^}]*background: var\(--panel\)/s);
-    expect(styles).toMatch(/\.about-confirm-button\s*\{[^}]*color: var\(--text\)/s);
-    expect(styles).toMatch(/\.about-confirm-button\s*\{[^}]*border: 0 !important/s);
-    expect(styles).toMatch(/\.about-confirm-button \.n-button__border,[\s\S]*?\.about-confirm-button \.n-button__state-border\s*\{[^}]*border-width: 1px/s);
+    expect(styles).not.toContain(".about-modal");
+    expect(styles).not.toContain(".about-confirm-button");
+    expect(messages).toContain('surface: "companion"');
     expect(messages).not.toContain("GitHub: https://github.com/xiangjianan/todolist");
   });
 
@@ -416,7 +430,9 @@ describe("Naive UI component usage", () => {
 
     expect(styles).toMatch(/\.space-tabs\s*\{[^}]*overflow-x: auto/s);
     expect(styles).toMatch(/\.workspace-panel \.space-tabs\s*\{[^}]*max-width: calc\(100% - 154px\)/s);
-    expect(styles).toMatch(/\.workspace-panel \.space-tabs\s*\{[^}]*overflow-x: scroll/s);
+    expect(styles).toMatch(/\.workspace-panel \.space-tabs\s*\{[^}]*overflow-x: auto/s);
+    expect(styles).not.toMatch(/\.workspace-panel \.space-tabs\s*\{[^}]*overflow-x: scroll/s);
+    expect(styles).not.toContain("scrollbar-gutter: stable");
     expect(styles).toMatch(/\.space-tabs\s*\{[^}]*overscroll-behavior-x: contain/s);
   });
 

@@ -201,9 +201,7 @@ const GUIDE_MESSAGES: Record<GuideKey, string[]> = {
   ],
 };
 const GUIDE_MESSAGE_DURATION_MS = 5000;
-const GITHUB_REPO_NAME = "xiangjianan/todolist";
-const GITHUB_REPO_URL = "https://github.com/xiangjianan/todolist";
-const GITHUB_ISSUE_URL = `${GITHUB_REPO_URL}/issues/new`;
+const GITHUB_ISSUE_URL = "https://github.com/xiangjianan/todolist/issues/new";
 const activeGuideKey = ref<GuideKey | null>(null);
 
 const naiveTheme = computed(() => (state.theme === "dark" ? darkTheme : null));

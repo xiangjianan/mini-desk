@@ -296,12 +296,6 @@ h3 {
   font-size: 16px;
 }
 
-.clear-completed-icon {
-  width: 17px;
-  height: 17px;
-  fill: currentColor;
-}
-
 .note-link-panel {
   display: flex;
   flex-direction: column;
@@ -897,63 +891,6 @@ h3 {
   display: flex;
   align-items: center;
   gap: 8px;
-}
-
-.about-dialog-content {
-  display: grid;
-  gap: 12px;
-}
-
-.about-modal {
-  width: min(420px, calc(100vw - 32px));
-  color: var(--text);
-  background: var(--panel);
-  border: 1px solid var(--line-main);
-  border-radius: 0;
-}
-
-.about-modal .n-card-header,
-.about-modal .n-card__content,
-.about-modal .n-card__footer {
-  color: var(--text);
-}
-
-.about-dialog-text {
-  white-space: pre-line;
-}
-
-.about-github-link {
-  display: inline-flex;
-  align-items: center;
-  gap: 6px;
-  color: inherit;
-  text-decoration: none;
-  width: fit-content;
-}
-
-.about-dialog-actions {
-  display: flex;
-  justify-content: flex-end;
-}
-
-.about-confirm-button {
-  --n-border: 1px solid var(--line-control) !important;
-  --n-border-hover: 1px solid var(--line-focus) !important;
-  --n-border-pressed: 1px solid var(--line-focus) !important;
-  --n-border-focus: 1px solid var(--line-focus) !important;
-  color: var(--text);
-  background: var(--button);
-  border: 0 !important;
-}
-
-.about-confirm-button:hover {
-  color: var(--text);
-  background: var(--button-hover);
-}
-
-.about-confirm-button .n-button__border,
-.about-confirm-button .n-button__state-border {
-  border-width: 1px !important;
 }
 
 .settings-btn {
