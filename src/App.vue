@@ -819,18 +819,19 @@ function handleGlobalKeydown(event: KeyboardEvent): void {
     flushTextSave();
     showSaveBubble();
   }
-  if (activePreviewId.value) {
+  const previewId = activePreviewId.value;
+  if (previewId) {
     if (event.key === "Escape" || event.key === " ") {
       event.preventDefault();
       activePreviewId.value = undefined;
     }
     if (event.key === "Enter") {
       event.preventDefault();
-      void copyImage(activePreviewId.value, document.querySelector<HTMLElement>(".image-preview") ?? undefined);
+      void copyImage(previewId, document.querySelector<HTMLElement>(".image-preview") ?? undefined);
     }
     if (event.key === "Delete" || event.key === "Backspace") {
       event.preventDefault();
-      deleteImage(activePreviewId.value, document.querySelector<HTMLElement>(".image-preview") ?? undefined);
+      deleteImage(previewId, document.querySelector<HTMLElement>(".image-preview") ?? undefined);
     }
     if (event.key === "ArrowLeft" || event.key === "ArrowUp") {
       event.preventDefault();
