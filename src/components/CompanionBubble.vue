@@ -15,6 +15,7 @@ const props = defineProps<{
   cancelText?: string;
   actionText?: string;
   clearSignal?: number;
+  persistent?: boolean;
   theme?: "light" | "dark";
   position?: {
     right: string;
@@ -103,7 +104,18 @@ watch(
 );
 
 watch(
-  () => [props.visible, props.message, props.linkText, props.linkHref, props.confirm, props.position?.right, props.position?.bottom, props.position?.top] as const,
+  () =>
+    [
+      props.visible,
+      props.message,
+      props.linkText,
+      props.linkHref,
+      props.confirm,
+      props.persistent,
+      props.position?.right,
+      props.position?.bottom,
+      props.position?.top,
+    ] as const,
   ([visible]) => {
     window.clearTimeout(gifTimer.value);
     window.clearTimeout(gifFadeTimer.value);
@@ -114,6 +126,7 @@ watch(
     }
     gifVisible.value = true;
     gifFading.value = false;
+    if (props.persistent) return;
     gifTimer.value = window.setTimeout(() => {
       gifVisible.value = false;
       gifFading.value = true;

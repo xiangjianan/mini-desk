@@ -247,6 +247,10 @@ function updateMobileBlocked(source?: MediaQueryList | MediaQueryListEvent): voi
   isMobileBlocked.value = matches;
 }
 
+function shouldBlockBoardEffects(): boolean {
+  return isMobileBlocked.value;
+}
+
 function setupMobileBreakpoint(): void {
   if (!window.matchMedia) return;
   const query = window.matchMedia(MOBILE_BREAKPOINT_QUERY);
@@ -462,7 +466,7 @@ function markSavedSoon(): void {
 }
 
 async function handlePaste(event: ClipboardEvent): Promise<void> {
-  if (isMobileBlocked.value) return;
+  if (shouldBlockBoardEffects()) return;
   const items = Array.from(event.clipboardData?.items ?? []);
   const imageItem = items.find((item) => item.type.startsWith("image/"));
   if (!imageItem) return;
@@ -473,6 +477,7 @@ async function handlePaste(event: ClipboardEvent): Promise<void> {
 }
 
 async function pasteImageFromClipboard(): Promise<void> {
+  if (shouldBlockBoardEffects()) return;
   const clipboard = navigator.clipboard as Clipboard & {
     read?: () => Promise<ClipboardItem[]>;
   };
@@ -484,9 +489,11 @@ async function pasteImageFromClipboard(): Promise<void> {
   try {
     items = await clipboard.read();
   } catch {
+    if (shouldBlockBoardEffects()) return;
     showBubble("clipboardPermissionDenied", undefined, { hideCompanionAfter: true });
     return;
   }
+  if (shouldBlockBoardEffects()) return;
   for (const item of items) {
     const type = item.types.find((candidate) => candidate.startsWith("image/"));
     if (!type) continue;
@@ -494,23 +501,29 @@ async function pasteImageFromClipboard(): Promise<void> {
     try {
       blob = await item.getType(type);
     } catch {
+      if (shouldBlockBoardEffects()) return;
       showBubble("imageReadFailed", undefined, { hideCompanionAfter: true });
       return;
     }
+    if (shouldBlockBoardEffects()) return;
     await addImageFile(new File([blob], "clipboard-image", { type }));
     return;
   }
+  if (shouldBlockBoardEffects()) return;
   showBubble("clipboardImageMissing", undefined, { hideCompanionAfter: true });
 }
 
 async function addImageFile(file: File, options: { showMessage?: boolean } = {}): Promise<StoredImage | undefined> {
+  if (shouldBlockBoardEffects()) return undefined;
   let src: string;
   try {
     src = await fileToDataUrl(file);
   } catch {
+    if (shouldBlockBoardEffects()) return undefined;
     showBubble("imageReadFailed", undefined, { hideCompanionAfter: true });
     return undefined;
   }
+  if (shouldBlockBoardEffects()) return undefined;
   const image = {
     id: createId(),
     src,
@@ -519,9 +532,11 @@ async function addImageFile(file: File, options: { showMessage?: boolean } = {})
   try {
     await storeImagePayload(image);
   } catch {
+    if (shouldBlockBoardEffects()) return undefined;
     showBubble("imageStoreFailed", undefined, { hideCompanionAfter: true });
     return undefined;
   }
+  if (shouldBlockBoardEffects()) return undefined;
   state.images.push(image);
   persistNow();
   if (options.showMessage ?? true) showBubble("imageAdded", undefined, { hideCompanionAfter: true });
@@ -529,6 +544,7 @@ async function addImageFile(file: File, options: { showMessage?: boolean } = {})
 }
 
 async function addImageFiles(files: File[], anchor?: HTMLElement): Promise<void> {
+  if (shouldBlockBoardEffects()) return;
   const imageFiles = files.filter((file) => file.type.startsWith("image/"));
   const ignoredCount = files.length - imageFiles.length;
   if (imageFiles.length === 0) {
@@ -539,10 +555,13 @@ async function addImageFiles(files: File[], anchor?: HTMLElement): Promise<void>
   const added: StoredImage[] = [];
   for (const file of imageFiles) {
     const image = await addImageFile(file, { showMessage: false });
+    if (shouldBlockBoardEffects()) return;
     if (image) added.push(image);
   }
   if (added.length === 0) return;
+  if (shouldBlockBoardEffects()) return;
   await copyImage(added.at(-1)!.id, anchor);
+  if (shouldBlockBoardEffects()) return;
   if (ignoredCount > 0) showBubble("imageDropIgnored", anchor, { hideCompanionAfter: true });
 }
 
@@ -831,6 +850,11 @@ async function importData(event: Event): Promise<void> {
   const file = input.files?.[0];
   if (!file) return;
   const text = await file.text();
+  if (shouldBlockBoardEffects()) {
+    importFeedbackAnchor.value = undefined;
+    input.value = "";
+    return;
+  }
   let parsed: unknown;
   try {
     parsed = JSON.parse(text);
@@ -939,6 +963,7 @@ function showBubble(messageKey: MessageKey, anchor?: HTMLElement, options: Bubbl
 }
 
 function showBubbleText(message: string, anchor?: HTMLElement, options: BubbleOptions = {}, duration = 3000): void {
+  if (shouldBlockBoardEffects()) return;
   window.clearTimeout(bubbleTimer.value);
   window.clearTimeout(bubbleFadeTimer.value);
   clearPendingConfirm();
@@ -1023,6 +1048,7 @@ function requestConfirmation(
   onCancel?: () => void,
   options: { confirmText?: string; cancelText?: string } = {},
 ): void {
+  if (shouldBlockBoardEffects()) return;
   window.clearTimeout(bubbleTimer.value);
   window.clearTimeout(bubbleFadeTimer.value);
   bubbleTimer.value = undefined;
@@ -1362,6 +1388,7 @@ function moveItem<T extends { id: string }>(items: T[], dragId: string, targetId
       :confirm-text="isMobileBlocked ? undefined : pendingConfirm?.confirmText"
       :cancel-text="isMobileBlocked ? undefined : pendingConfirm?.cancelText"
       :clear-signal="bubbleClearSignal"
+      :persistent="isMobileBlocked"
       :position="activeCompanionPosition"
       :theme="state.theme"
       @yes="confirmCompanionAction"

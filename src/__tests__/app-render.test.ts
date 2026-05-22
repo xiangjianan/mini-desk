@@ -109,6 +109,16 @@ function stubMatchMedia(matches: boolean) {
   return mediaQueryList;
 }
 
+function createDeferred<T>() {
+  let resolve!: (value: T) => void;
+  let reject!: (reason?: unknown) => void;
+  const promise = new Promise<T>((promiseResolve, promiseReject) => {
+    resolve = promiseResolve;
+    reject = promiseReject;
+  });
+  return { promise, resolve, reject };
+}
+
 beforeEach(() => {
   localStorage.clear();
   vi.restoreAllMocks();
@@ -164,6 +174,26 @@ describe("App shell", () => {
       await vi.advanceTimersByTimeAsync(200);
       await wrapper.vm.$nextTick();
 
+      expect(wrapper.find('[data-testid="companion-confirm"]').text()).toContain("建议在电脑浏览器打开");
+    } finally {
+      wrapper?.unmount();
+      vi.unstubAllGlobals();
+      vi.useRealTimers();
+    }
+  });
+
+  it("keeps the mobile handoff companion visible after the desktop bubble timeout", async () => {
+    vi.useFakeTimers();
+    stubMatchMedia(true);
+    let wrapper: ReturnType<typeof mountApp> | undefined;
+
+    try {
+      wrapper = mountApp();
+
+      await vi.advanceTimersByTimeAsync(10500);
+      await wrapper.vm.$nextTick();
+
+      expect(wrapper.find('[data-testid="companion-bubble"]').exists()).toBe(true);
       expect(wrapper.find('[data-testid="companion-confirm"]').text()).toContain("建议在电脑浏览器打开");
     } finally {
       wrapper?.unmount();
@@ -358,6 +388,70 @@ describe("App shell", () => {
       expect(wrapper.text()).not.toContain("保存中");
       expect(wrapper.find('[data-testid="companion-confirm"]').text()).toContain("建议在电脑浏览器打开");
       expect(wrapper.findComponent(ImagePanel).exists()).toBe(false);
+    } finally {
+      wrapper?.unmount();
+      vi.unstubAllGlobals();
+      vi.useRealTimers();
+    }
+  });
+
+  it("does not finish an in-flight image paste after entering mobile handoff", async () => {
+    vi.useFakeTimers();
+    const mediaQuery = stubMatchMedia(false);
+    const readers: Array<{
+      result: string | ArrayBuffer | null;
+      onload: (() => void) | null;
+      onerror: (() => void) | null;
+    }> = [];
+    class DelayedFileReader {
+      result: string | ArrayBuffer | null = null;
+      error: DOMException | null = null;
+      onload: (() => void) | null = null;
+      onerror: (() => void) | null = null;
+      readAsDataURL(): void {
+        readers.push(this);
+      }
+    }
+    vi.stubGlobal("FileReader", DelayedFileReader);
+    let wrapper: ReturnType<typeof mountApp> | undefined;
+
+    try {
+      wrapper = mountApp();
+      await wrapper.vm.$nextTick();
+      await Promise.resolve();
+      await Promise.resolve();
+      const pasteEvent = new Event("paste", { cancelable: true }) as ClipboardEvent;
+      Object.defineProperty(pasteEvent, "clipboardData", {
+        value: {
+          items: [
+            {
+              type: "image/png",
+              getAsFile: vi.fn(() => new File(["late"], "late.png", { type: "image/png" })),
+            },
+          ],
+        },
+      });
+
+      document.dispatchEvent(pasteEvent);
+      expect(pasteEvent.defaultPrevented).toBe(true);
+      expect(readers).toHaveLength(1);
+
+      mediaQuery.dispatchEvent({ matches: true } as MediaQueryListEvent);
+      await wrapper.vm.$nextTick();
+
+      readers[0].result = "data:image/png;base64,bGF0ZQ==";
+      readers[0].onload?.();
+      await Promise.resolve();
+      await Promise.resolve();
+      await wrapper.vm.$nextTick();
+
+      mediaQuery.dispatchEvent({ matches: false } as MediaQueryListEvent);
+      await wrapper.vm.$nextTick();
+      await vi.advanceTimersByTimeAsync(200);
+      await wrapper.vm.$nextTick();
+
+      expect(wrapper.find(".image-card").exists()).toBe(false);
+      expect(wrapper.find('[data-testid="companion-confirm"]').exists()).toBe(false);
     } finally {
       wrapper?.unmount();
       vi.unstubAllGlobals();
@@ -1241,6 +1335,63 @@ describe("App shell", () => {
       expect(wrapper.find(".focus-companion.is-visible").exists()).toBe(false);
       expect(wrapper.find('[data-testid="companion-confirm"]').exists()).toBe(false);
       expect(wrapper.text()).not.toContain("切换中导入");
+    } finally {
+      wrapper.unmount();
+      vi.unstubAllGlobals();
+      vi.useRealTimers();
+    }
+  });
+
+  it("does not create a stale import confirmation when file text resolves after mobile handoff", async () => {
+    vi.useFakeTimers();
+    const mediaQuery = stubMatchMedia(false);
+    const wrapper = mountApp();
+
+    try {
+      const settings = wrapper.getComponent(SettingsMenu);
+      const input = wrapper.get('input[type="file"]').element as HTMLInputElement;
+      const fileText = createDeferred<string>();
+      const file = new File([""], "delayed.json", {
+        type: "application/json",
+      });
+      Object.defineProperty(file, "text", {
+        value: vi.fn(() => fileText.promise),
+        configurable: true,
+      });
+      settings.vm.$emit("import", settings.element as HTMLElement);
+      Object.defineProperty(input, "files", { value: [file], configurable: true });
+      Object.defineProperty(input, "value", {
+        value: "C:\\fakepath\\delayed.json",
+        writable: true,
+        configurable: true,
+      });
+
+      await wrapper.get('input[type="file"]').trigger("change");
+      await Promise.resolve();
+
+      mediaQuery.dispatchEvent({ matches: true } as MediaQueryListEvent);
+      await wrapper.vm.$nextTick();
+
+      fileText.resolve(JSON.stringify({ workspaceLines: ["延迟导入"] }));
+      await Promise.resolve();
+      await wrapper.vm.$nextTick();
+      await vi.advanceTimersByTimeAsync(200);
+      await wrapper.vm.$nextTick();
+
+      expect(input.value).toBe("");
+      expect(wrapper.find(".mobile-handoff").exists()).toBe(true);
+      expect(wrapper.find('[data-testid="companion-confirm"]').text()).toContain("建议在电脑浏览器打开");
+      expect(wrapper.find('[data-testid="companion-yes"]').exists()).toBe(false);
+
+      mediaQuery.dispatchEvent({ matches: false } as MediaQueryListEvent);
+      await wrapper.vm.$nextTick();
+      await vi.advanceTimersByTimeAsync(200);
+      await wrapper.vm.$nextTick();
+
+      expect(wrapper.find(".board").exists()).toBe(true);
+      expect(wrapper.find(".focus-companion.is-visible").exists()).toBe(false);
+      expect(wrapper.find('[data-testid="companion-confirm"]').exists()).toBe(false);
+      expect(wrapper.text()).not.toContain("延迟导入");
     } finally {
       wrapper.unmount();
       vi.unstubAllGlobals();
