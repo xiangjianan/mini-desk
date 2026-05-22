@@ -1,7 +1,7 @@
 <script setup lang="ts">
 import { computed, nextTick, onMounted, onUnmounted, reactive, ref, watch } from "vue";
-import { LogoGithub, MoonOutline, SunnyOutline } from "@vicons/ionicons5";
-import { darkTheme, NButton, NConfigProvider, NGlobalStyle, NIcon, NModal } from "naive-ui";
+import { MoonOutline, SunnyOutline } from "@vicons/ionicons5";
+import { darkTheme, NButton, NConfigProvider, NGlobalStyle, NIcon } from "naive-ui";
 import CompanionBubble from "./components/CompanionBubble.vue";
 import ImagePanel from "./components/ImagePanel.vue";
 import ImagePreview from "./components/ImagePreview.vue";
@@ -51,7 +51,6 @@ const pendingConfirm = ref<{
   confirmText: string;
   cancelText: string;
 } | null>(null);
-const pendingAction = ref<{ actionText: string; onAction: () => void | Promise<void> } | null>(null);
 const importInput = ref<HTMLInputElement | null>(null);
 const importFeedbackAnchor = ref<HTMLElement | undefined>();
 const textSaveTimer = ref<number | undefined>();
@@ -61,8 +60,6 @@ const emptyTodoRemovalTimers = new Map<string, number>();
 const appVersion = ref(getIndexAppVersion());
 const storedAppVersion = ref<string | null>(null);
 const versionPromptVisible = ref(false);
-const aboutVisible = ref(false);
-const aboutMessage = ref(getMessage("about"));
 const mobileActiveArea = ref<MobileArea>("todos");
 const mobileNavOpen = ref(false);
 
@@ -204,7 +201,6 @@ const GUIDE_MESSAGES: Record<GuideKey, string[]> = {
   ],
 };
 const GUIDE_MESSAGE_DURATION_MS = 5000;
-const UNDO_BUBBLE_DURATION_MS = 5000;
 const GITHUB_REPO_NAME = "xiangjianan/todolist";
 const GITHUB_REPO_URL = "https://github.com/xiangjianan/todolist";
 const GITHUB_ISSUE_URL = `${GITHUB_REPO_URL}/issues/new`;
@@ -305,29 +301,13 @@ function deleteSpace(id: string): void {
   requestConfirmation("confirmDeleteSpace", anchor, () => {
     const index = state.spaces.findIndex((space) => space.id === id);
     if (index < 0 || state.spaces.length <= 1) return;
-    const removed = {
-      ...state.spaces[index],
-      lines: state.spaces[index].lines.map((line) => ({ ...line })),
-    };
-    const previousActiveSpaceId = state.activeSpaceId;
     state.spaces.splice(index, 1);
     if (state.activeSpaceId === id) {
       state.activeSpaceId = state.spaces[Math.max(0, index - 1)]?.id ?? state.spaces[0].id;
     }
     syncLegacySpaceLines();
     persistNow();
-    showUndoBubble("undoDeleteSpace", anchor, () => {
-      if (state.spaces.some((space) => space.id === removed.id)) return;
-      state.spaces.splice(Math.min(index, state.spaces.length), 0, {
-        ...removed,
-        lines: removed.lines.map((line) => ({ ...line })),
-      });
-      if (previousActiveSpaceId === removed.id || !state.spaces.some((space) => space.id === state.activeSpaceId)) {
-        state.activeSpaceId = removed.id;
-      }
-      syncLegacySpaceLines();
-      persistNow();
-    });
+    showBubble("deleteSpace", anchor, { hideCompanionAfter: true });
   }, undefined, { confirmText: "删除空间", cancelText: "取消" });
 }
 
@@ -494,17 +474,11 @@ function deleteImage(id: string, anchor?: HTMLElement): void {
   requestConfirmation("confirmDeleteImage", anchor, async () => {
     const index = state.images.findIndex((image) => image.id === id);
     if (index < 0) return;
-    const removed = { ...state.images[index] };
     state.images = state.images.filter((image) => image.id !== id);
     if (activePreviewId.value === id) activePreviewId.value = state.images[0]?.id;
     await deleteStoredImage(id);
     persistNow();
-    showUndoBubble("undoDeleteImage", getImageUndoAnchor(anchor), async () => {
-      if (state.images.some((image) => image.id === removed.id)) return;
-      state.images.splice(Math.min(index, state.images.length), 0, removed);
-      await storeImagePayload(removed);
-      persistNow();
-    });
+    showBubble("deleteImage", getImageUndoAnchor(anchor), { hideCompanionAfter: true });
   }, undefined, { confirmText: "删除", cancelText: "取消" });
 }
 
@@ -561,14 +535,9 @@ function deleteQuick(id: string, anchor?: HTMLElement): void {
   requestConfirmation("confirmDeleteQuick", anchor, () => {
     const index = state.quickButtons.findIndex((button) => button.id === id);
     if (index < 0) return;
-    const removed = { ...state.quickButtons[index] };
     state.quickButtons = state.quickButtons.filter((button) => button.id !== id);
     persistNow();
-    showUndoBubble("undoDeleteQuick", anchor, () => {
-      if (state.quickButtons.some((button) => button.id === removed.id)) return;
-      state.quickButtons.splice(Math.min(index, state.quickButtons.length), 0, removed);
-      persistNow();
-    });
+    showBubble("deleteQuick", anchor, { hideCompanionAfter: true });
   }, undefined, { confirmText: "删除", cancelText: "取消" });
 }
 
@@ -692,22 +661,9 @@ function removeTodo(period: TodoPeriod, id: string, anchor?: HTMLElement): void 
   requestConfirmation("confirmDeleteTodo", anchor, () => {
     const index = state.todos[period].findIndex((todo) => todo.id === id);
     if (index < 0) return;
-    const removed = { ...state.todos[period][index] };
     state.todos = removeTodoFromMap(state.todos, period, id);
     persistNow();
-    showUndoBubble("undoDeleteTodo", anchor, () => {
-      if (state.todos[period].some((todo) => todo.id === removed.id)) return;
-      const next = {
-        ...state.todos,
-        [period]: [
-          ...state.todos[period].slice(0, index),
-          removed,
-          ...state.todos[period].slice(index),
-        ],
-      };
-      state.todos = next;
-      persistNow();
-    });
+    showBubble("deleteTodo", anchor, { hideCompanionAfter: true });
   }, undefined, { confirmText: "删除", cancelText: "取消" });
 }
 
@@ -716,23 +672,17 @@ function clearDone(period: TodoPeriod, anchor?: HTMLElement): void {
     showBubble("noCompletedTodos", anchor);
     return;
   }
-  const removed = state.todos[period]
-    .map((todo, index) => ({ todo: { ...todo }, index }))
-    .filter((item) => item.todo.done);
-  state.todos = clearCompleted(state.todos, period);
-  persistNow();
-  showUndoBubble("undoClearCompleted", anchor, () => {
-    const restored = [...state.todos[period]];
-    removed.forEach(({ todo, index }) => {
-      if (restored.some((item) => item.id === todo.id)) return;
-      restored.splice(Math.min(index, restored.length), 0, todo);
-    });
-    state.todos = {
-      ...state.todos,
-      [period]: restored,
-    };
-    persistNow();
-  });
+  requestConfirmation(
+    "confirmClearCompleted",
+    anchor,
+    () => {
+      state.todos = clearCompleted(state.todos, period);
+      persistNow();
+      showBubble("clearCompleted", anchor, { hideCompanionAfter: true });
+    },
+    undefined,
+    { confirmText: "清理", cancelText: "取消" },
+  );
 }
 
 function blurEmptyTodo(period: TodoPeriod, id: string): void {
@@ -831,9 +781,8 @@ async function importData(event: Event): Promise<void> {
   );
 }
 
-function about(): void {
-  aboutMessage.value = getMessage("about");
-  aboutVisible.value = true;
+function about(anchor?: HTMLElement): void {
+  showBubbleText(getMessage("about"), anchor, { hideCompanionAfter: true }, 5000);
 }
 
 function suggestIssue(): void {
@@ -884,7 +833,6 @@ function showBubble(messageKey: MessageKey, anchor?: HTMLElement, options: Bubbl
 function showBubbleText(message: string, anchor?: HTMLElement, options: BubbleOptions = {}, duration = 3000): void {
   window.clearTimeout(bubbleTimer.value);
   pendingConfirm.value = null;
-  pendingAction.value = null;
   bubbleMessage.value = message;
   activeGuideKey.value = options.guideKey ?? null;
   if (anchor) {
@@ -905,7 +853,6 @@ function showBubbleText(message: string, anchor?: HTMLElement, options: BubbleOp
 function hideBubbleMessage(): void {
   window.clearTimeout(bubbleTimer.value);
   pendingConfirm.value = null;
-  pendingAction.value = null;
   bubbleVisible.value = false;
   bubbleMessage.value = "";
 }
@@ -931,7 +878,6 @@ function requestConfirmation(
     confirmText: options.confirmText ?? "是",
     cancelText: options.cancelText ?? "否",
   };
-  pendingAction.value = null;
   activeGuideKey.value = null;
   bubbleVisible.value = true;
   companionFocused.value = true;
@@ -949,31 +895,6 @@ async function confirmCompanionAction(): Promise<void> {
 function cancelCompanionAction(): void {
   pendingConfirm.value?.onCancel?.();
   hideCompanion();
-}
-
-async function runCompanionAction(): Promise<void> {
-  const action = pendingAction.value;
-  if (!action) return;
-  hideCompanion();
-  await action.onAction();
-}
-
-function showUndoBubble(messageKey: MessageKey, anchor: HTMLElement | undefined, onAction: () => void | Promise<void>): void {
-  window.clearTimeout(bubbleTimer.value);
-  pendingConfirm.value = null;
-  pendingAction.value = { actionText: "撤销", onAction };
-  bubbleMessage.value = getMessage(messageKey);
-  activeGuideKey.value = null;
-  if (anchor) {
-    companionFocused.value = true;
-    companionPosition.value = getCompanionPosition(anchor);
-  }
-  bubbleVisible.value = true;
-  bubbleTimer.value = window.setTimeout(() => {
-    bubbleVisible.value = false;
-    bubbleMessage.value = "";
-    pendingAction.value = null;
-  }, UNDO_BUBBLE_DURATION_MS);
 }
 
 function showToast(messageKey: MessageKey): void {
@@ -1235,39 +1156,11 @@ function moveItem<T extends { id: string }>(items: T[], dragId: string, targetId
       :confirm="Boolean(pendingConfirm)"
       :confirm-text="pendingConfirm?.confirmText"
       :cancel-text="pendingConfirm?.cancelText"
-      :action-text="pendingAction?.actionText"
       :position="companionPosition"
       :theme="state.theme"
       @yes="confirmCompanionAction"
       @no="cancelCompanionAction"
-      @action="runCompanionAction"
     />
-    <NModal
-      v-model:show="aboutVisible"
-      preset="card"
-      title="关于"
-      class="about-modal"
-      :mask-closable="true"
-      :auto-focus="false"
-    >
-      <div class="about-dialog-content">
-        <p class="about-dialog-text">{{ aboutMessage }}</p>
-        <a
-          class="about-github-link"
-          :href="GITHUB_REPO_URL"
-          target="_blank"
-          rel="noreferrer"
-        >
-          <NIcon :component="LogoGithub" :size="18" />
-          <span>{{ GITHUB_REPO_NAME }}</span>
-        </a>
-      </div>
-      <template #footer>
-        <div class="about-dialog-actions">
-          <NButton class="about-confirm-button" @click="aboutVisible = false">知道了</NButton>
-        </div>
-      </template>
-    </NModal>
     <div class="top-actions">
       <span class="save-status" data-testid="save-status" :data-state="saveStatus">{{ saveStatusLabel }}</span>
       <SettingsMenu

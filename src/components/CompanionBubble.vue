@@ -27,8 +27,10 @@ const emit = defineEmits<{
 
 const POPOVER_DELAY_MS = 200;
 const POPOVER_HIDE_CONTENT_MS = 260;
+const GIF_MAX_VISIBLE_MS = 10000;
 const delayedPopoverVisible = ref(false);
 const retainingPopoverContent = ref(false);
+const gifVisible = ref(false);
 const renderedMessage = ref("");
 const renderedConfirm = ref(false);
 const renderedConfirmText = ref("是");
@@ -36,6 +38,7 @@ const renderedCancelText = ref("否");
 const renderedActionText = ref("");
 const popoverTimer = ref<number | undefined>();
 const contentTimer = ref<number | undefined>();
+const gifTimer = ref<number | undefined>();
 
 const placementStyle = computed(() => {
   if (!props.position) return undefined;
@@ -46,7 +49,8 @@ const placementStyle = computed(() => {
   };
 });
 
-const popoverVisible = computed(() => props.visible && Boolean(props.message || props.confirm || props.actionText));
+const surfaceVisible = computed(() => props.visible && gifVisible.value);
+const popoverVisible = computed(() => surfaceVisible.value && Boolean(props.message || props.confirm));
 const visiblePopover = computed(() => delayedPopoverVisible.value && popoverVisible.value);
 const popoverContentVisible = computed(() => visiblePopover.value || retainingPopoverContent.value);
 const popoverKey = computed(() => `${props.position?.right ?? "default"}:${props.position?.bottom ?? "default"}`);
@@ -74,11 +78,27 @@ watch(
     renderedConfirm.value = Boolean(props.confirm);
     renderedConfirmText.value = props.confirmText ?? "是";
     renderedCancelText.value = props.cancelText ?? "否";
-    renderedActionText.value = props.confirm ? "" : props.actionText ?? "";
+    renderedActionText.value = "";
     retainingPopoverContent.value = false;
     popoverTimer.value = window.setTimeout(() => {
       delayedPopoverVisible.value = true;
     }, POPOVER_DELAY_MS);
+  },
+  { immediate: true },
+);
+
+watch(
+  () => [props.visible, props.message, props.confirm, props.position?.right, props.position?.bottom, props.position?.top] as const,
+  ([visible]) => {
+    window.clearTimeout(gifTimer.value);
+    if (!visible) {
+      gifVisible.value = false;
+      return;
+    }
+    gifVisible.value = true;
+    gifTimer.value = window.setTimeout(() => {
+      gifVisible.value = false;
+    }, GIF_MAX_VISIBLE_MS);
   },
   { immediate: true },
 );
@@ -91,19 +111,20 @@ watch(
     renderedConfirm.value = Boolean(props.confirm);
     renderedConfirmText.value = props.confirmText ?? "是";
     renderedCancelText.value = props.cancelText ?? "否";
-    renderedActionText.value = props.confirm ? "" : props.actionText ?? "";
+    renderedActionText.value = "";
   },
 );
 
 onUnmounted(() => {
   window.clearTimeout(popoverTimer.value);
   window.clearTimeout(contentTimer.value);
+  window.clearTimeout(gifTimer.value);
 });
 </script>
 
 <template>
   <div
-    v-if="visible"
+    v-if="surfaceVisible"
     class="focus-companion"
     :class="{ 'is-visible': visible }"
     :style="placementStyle"

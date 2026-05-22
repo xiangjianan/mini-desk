@@ -1,5 +1,5 @@
 export type MessageMood = "happy" | "surprised" | "encouraging" | "warning" | "calm";
-export type MessageSurface = "companion" | "naive-message" | "dialog";
+export type MessageSurface = "companion" | "naive-message";
 
 export type MessageKey =
   | "save"
@@ -15,11 +15,11 @@ export type MessageKey =
   | "noCompletedTodos"
   | "dataExported"
   | "dataImported"
-  | "undoDeleteImage"
-  | "undoDeleteQuick"
-  | "undoDeleteTodo"
-  | "undoDeleteSpace"
-  | "undoClearCompleted"
+  | "deleteImage"
+  | "deleteQuick"
+  | "deleteTodo"
+  | "deleteSpace"
+  | "clearCompleted"
   | "importJsonInvalid"
   | "importDataInvalid"
   | "imageStoreFailed"
@@ -41,6 +41,11 @@ type MessageEntry = {
   variants: string[];
 };
 
+/**
+ * Central copy catalog for companion bubbles and confirmation prompts.
+ * Keep message keys scenario-based so components do not hard-code user-facing
+ * copy. Delete-result keys intentionally do not imply undo or recovery.
+ */
 export const KAOMOJI_BY_MOOD: Record<MessageMood, string[]> = {
   happy: [
     "(＾▽＾)",
@@ -313,7 +318,7 @@ export const MESSAGE_CATALOG: Record<MessageKey, MessageEntry> = {
       "导出文件好了",
     ],
   },
-  undoDeleteImage: {
+  deleteImage: {
     mood: "calm",
     surface: "companion",
     variants: [
@@ -329,7 +334,7 @@ export const MESSAGE_CATALOG: Record<MessageKey, MessageEntry> = {
       "图片已清掉",
     ],
   },
-  undoDeleteQuick: {
+  deleteQuick: {
     mood: "calm",
     surface: "companion",
     variants: [
@@ -345,7 +350,7 @@ export const MESSAGE_CATALOG: Record<MessageKey, MessageEntry> = {
       "快捷项已删除",
     ],
   },
-  undoDeleteTodo: {
+  deleteTodo: {
     mood: "calm",
     surface: "companion",
     variants: [
@@ -361,7 +366,7 @@ export const MESSAGE_CATALOG: Record<MessageKey, MessageEntry> = {
       "待办已移除",
     ],
   },
-  undoDeleteSpace: {
+  deleteSpace: {
     mood: "calm",
     surface: "companion",
     variants: [
@@ -377,7 +382,7 @@ export const MESSAGE_CATALOG: Record<MessageKey, MessageEntry> = {
       "空间已收起",
     ],
   },
-  undoClearCompleted: {
+  clearCompleted: {
     mood: "calm",
     surface: "companion",
     variants: [
@@ -517,7 +522,7 @@ export const MESSAGE_CATALOG: Record<MessageKey, MessageEntry> = {
       "确定删除图片？",
       "图片会从列表移除",
       "确认移除图片？",
-      "删除后可撤销",
+      "删除后不可恢复",
       "要移除这张图？",
     ],
   },
@@ -533,7 +538,7 @@ export const MESSAGE_CATALOG: Record<MessageKey, MessageEntry> = {
       "确定删除快捷入口？",
       "按钮会从这里移除",
       "确认移除这个入口？",
-      "删除后可撤销",
+      "删除后不可恢复",
       "要删除这个按钮？",
     ],
   },
@@ -549,7 +554,7 @@ export const MESSAGE_CATALOG: Record<MessageKey, MessageEntry> = {
       "确定删除提醒？",
       "提醒会从列表移除",
       "确认移除提醒？",
-      "删除后可撤销",
+      "删除后不可恢复",
       "要移除这条待办？",
     ],
   },
@@ -581,7 +586,7 @@ export const MESSAGE_CATALOG: Record<MessageKey, MessageEntry> = {
       "移除已完成事项？",
       "清掉完成记录？",
       "完成项会被移除",
-      "清理后可撤销",
+      "清理后不可恢复",
       "确定清理完成项？",
     ],
   },
@@ -603,7 +608,7 @@ export const MESSAGE_CATALOG: Record<MessageKey, MessageEntry> = {
   },
   about: {
     mood: "calm",
-    surface: "dialog",
+    surface: "companion",
     variants: [
       "To Do List 看板 · Vue 3 + Naive UI + TypeScript",
       "To Do List 看板，基于 Vue 3、Naive UI 和 TypeScript 构建",

@@ -28,11 +28,11 @@ const messageKeys = [
   "noCompletedTodos",
   "dataExported",
   "dataImported",
-  "undoDeleteImage",
-  "undoDeleteQuick",
-  "undoDeleteTodo",
-  "undoDeleteSpace",
-  "undoClearCompleted",
+  "deleteImage",
+  "deleteQuick",
+  "deleteTodo",
+  "deleteSpace",
+  "clearCompleted",
   "importJsonInvalid",
   "importDataInvalid",
   "imageStoreFailed",
@@ -88,8 +88,15 @@ describe("message catalog", () => {
 
     expect(summary).toContain("confirmDeleteImage");
     expect(summary).toContain("companion");
-    expect(summary).toContain("dialog");
+    expect(summary).not.toContain("dialog");
     expect(summary).not.toContain("naive-message");
+  });
+
+  it("does not keep undo keys or undo wording in delete and clear flows", () => {
+    expect(Object.keys(MESSAGE_CATALOG).some((key) => key.startsWith("undo"))).toBe(false);
+    for (const key of ["confirmDeleteImage", "confirmDeleteQuick", "confirmDeleteTodo", "confirmClearCompleted"] as const) {
+      expect(MESSAGE_CATALOG[key].variants.join("\n"), key).not.toMatch(/(^|[^不])可(撤销|恢复)/);
+    }
   });
 
   it("keeps prompt copy brief and human with kaomoji-ready wording", () => {
@@ -126,7 +133,6 @@ describe("message catalog", () => {
     expect(guideSource).not.toContain("GUIDE_REPEAT_CHANCE");
     expect(guideSource).not.toContain("maybeShowGuideBubble");
     expect(MESSAGE_CATALOG.about.variants.join("\n")).not.toContain("https://github.com/xiangjianan/todolist");
-    expect(guideSource).toContain("LogoGithub");
     expect(guideSource).toContain("GITHUB_REPO_NAME");
   });
 
