@@ -85,6 +85,40 @@ function mountAppWithPersistentPopover() {
   });
 }
 
+function stubMatchMedia(matches: boolean) {
+  const listeners = new Set<(event: MediaQueryListEvent) => void>();
+  const mediaQueryList = {
+    matches,
+    media: "(max-width: 900px)",
+    onchange: null,
+    addEventListener: vi.fn((event: string, listener: (event: MediaQueryListEvent) => void) => {
+      if (event === "change") listeners.add(listener);
+    }),
+    removeEventListener: vi.fn((event: string, listener: (event: MediaQueryListEvent) => void) => {
+      if (event === "change") listeners.delete(listener);
+    }),
+    addListener: vi.fn((listener: (event: MediaQueryListEvent) => void) => listeners.add(listener)),
+    removeListener: vi.fn((listener: (event: MediaQueryListEvent) => void) => listeners.delete(listener)),
+    dispatchEvent: vi.fn((event: MediaQueryListEvent) => {
+      listeners.forEach((listener) => listener(event));
+      return true;
+    }),
+  } as unknown as MediaQueryList;
+
+  vi.stubGlobal("matchMedia", vi.fn().mockReturnValue(mediaQueryList));
+  return mediaQueryList;
+}
+
+function createDeferred<T>() {
+  let resolve!: (value: T) => void;
+  let reject!: (reason?: unknown) => void;
+  const promise = new Promise<T>((promiseResolve, promiseReject) => {
+    resolve = promiseResolve;
+    reject = promiseReject;
+  });
+  return { promise, resolve, reject };
+}
+
 beforeEach(() => {
   localStorage.clear();
   vi.restoreAllMocks();
@@ -114,30 +148,58 @@ describe("App shell", () => {
     wrapper.unmount();
   });
 
-  it("renders a mobile drawer menu with todos selected by default", async () => {
-    const wrapper = mountApp();
+  it("renders a mobile handoff page instead of board regions on mobile", async () => {
+    vi.useFakeTimers();
+    stubMatchMedia(true);
+    let wrapper: ReturnType<typeof mountApp> | undefined;
 
-    expect(wrapper.get(".mobile-drawer-trigger").text()).toContain("待办");
-    expect(wrapper.find(".mobile-drawer-menu").exists()).toBe(false);
-    expect(wrapper.get('[aria-label="To Do List 看板"]').attributes("data-mobile-active")).toBe("todos");
+    try {
+      wrapper = mountApp();
 
-    await wrapper.get(".mobile-drawer-trigger").trigger("click");
+      expect(wrapper.find(".mobile-handoff").exists()).toBe(true);
+      expect(wrapper.get(".mobile-handoff-title").text()).toBe("To Do List 看板");
+      expect(wrapper.text()).toContain("建议在电脑浏览器打开，以获得完整体验");
+      expect(wrapper.find(".mobile-drawer-trigger").exists()).toBe(false);
+      expect(wrapper.find(".mobile-drawer-menu").exists()).toBe(false);
+      expect(wrapper.find('[aria-label="To Do List 看板"]').exists()).toBe(false);
+      expect(wrapper.findComponent(ImagePanel).exists()).toBe(false);
+      expect(wrapper.findComponent(QuickButtons).exists()).toBe(false);
+      expect(wrapper.findComponent(TodoPanel).exists()).toBe(false);
+      expect(wrapper.findComponent(SpacePanel).exists()).toBe(false);
+      expect(wrapper.findComponent(SettingsMenu).exists()).toBe(false);
+      expect(wrapper.findComponent(ImagePreview).exists()).toBe(false);
+      expect(wrapper.findAll("textarea")).toHaveLength(0);
+      expect(wrapper.find('[aria-label="切换主题"]').exists()).toBe(true);
 
-    expect(wrapper.findAll(".mobile-menu-option").map((button) => button.text())).toEqual([
-      "图片",
-      "便签",
-      "快捷",
-      "待办",
-      "空间",
-    ]);
+      await vi.advanceTimersByTimeAsync(200);
+      await wrapper.vm.$nextTick();
 
-    await wrapper.findAll(".mobile-menu-option").find((button) => button.text() === "空间")?.trigger("click");
+      expect(wrapper.find('[data-testid="companion-confirm"]').text()).toContain("建议在电脑浏览器打开");
+    } finally {
+      wrapper?.unmount();
+      vi.unstubAllGlobals();
+      vi.useRealTimers();
+    }
+  });
 
-    expect(wrapper.get('[aria-label="To Do List 看板"]').attributes("data-mobile-active")).toBe("spaces");
-    expect(wrapper.get(".mobile-drawer-trigger").text()).toContain("空间");
-    expect(wrapper.find(".mobile-drawer-menu").exists()).toBe(false);
+  it("keeps the mobile handoff companion visible after the desktop bubble timeout", async () => {
+    vi.useFakeTimers();
+    stubMatchMedia(true);
+    let wrapper: ReturnType<typeof mountApp> | undefined;
 
-    wrapper.unmount();
+    try {
+      wrapper = mountApp();
+
+      await vi.advanceTimersByTimeAsync(10500);
+      await wrapper.vm.$nextTick();
+
+      expect(wrapper.find('[data-testid="companion-bubble"]').exists()).toBe(true);
+      expect(wrapper.find('[data-testid="companion-confirm"]').text()).toContain("建议在电脑浏览器打开");
+    } finally {
+      wrapper?.unmount();
+      vi.unstubAllGlobals();
+      vi.useRealTimers();
+    }
   });
 
   it("creates a todo from an empty section click", async () => {
@@ -295,36 +357,229 @@ describe("App shell", () => {
     }
   });
 
-  it("keeps mobile save feedback near the upper right without hiding the companion", async () => {
+  it("does not run board shortcuts or paste handling while mobile is blocked", async () => {
     vi.useFakeTimers();
-    vi.stubGlobal("matchMedia", vi.fn().mockReturnValue({
-      matches: true,
-      media: "(max-width: 900px)",
-      onchange: null,
-      addEventListener: vi.fn(),
-      removeEventListener: vi.fn(),
-      addListener: vi.fn(),
-      removeListener: vi.fn(),
-      dispatchEvent: vi.fn(),
-    }));
-    const wrapper = mountApp();
+    stubMatchMedia(true);
+    let wrapper: ReturnType<typeof mountApp> | undefined;
 
     try {
-      const workspace = wrapper.findAll(".text-panel")[1];
-      await workspace.get("textarea").trigger("focus");
-
-      const companion = wrapper.get('[data-testid="companion-bubble"]');
-      expect(companion.attributes("style")).toContain("top: 118px");
-      expect(companion.attributes("style")).toContain("right: 12px");
-      expect(companion.find("img").exists()).toBe(true);
+      wrapper = mountApp();
 
       window.dispatchEvent(new KeyboardEvent("keydown", { key: "s", ctrlKey: true }));
+      const pasteEvent = new Event("paste", { cancelable: true }) as ClipboardEvent;
+      Object.defineProperty(pasteEvent, "clipboardData", {
+        value: {
+          items: [
+            {
+              type: "image/png",
+              getAsFile: vi.fn(() => new File(["image"], "mobile.png", { type: "image/png" })),
+            },
+          ],
+        },
+      });
+      document.dispatchEvent(pasteEvent);
+      expect(pasteEvent.defaultPrevented).toBe(false);
+
       await wrapper.vm.$nextTick();
       await vi.advanceTimersByTimeAsync(200);
       await wrapper.vm.$nextTick();
 
-      expect(wrapper.find('[data-testid="companion-confirm"]').exists()).toBe(true);
-      expect(wrapper.get('[data-testid="companion-bubble"]').attributes("style")).toContain("top: 118px");
+      expect(wrapper.find('[data-testid="save-status"]').exists()).toBe(false);
+      expect(wrapper.text()).not.toContain("保存中");
+      expect(wrapper.find('[data-testid="companion-confirm"]').text()).toContain("建议在电脑浏览器打开");
+      expect(wrapper.findComponent(ImagePanel).exists()).toBe(false);
+    } finally {
+      wrapper?.unmount();
+      vi.unstubAllGlobals();
+      vi.useRealTimers();
+    }
+  });
+
+  it("does not finish an in-flight image paste after entering mobile handoff", async () => {
+    vi.useFakeTimers();
+    const mediaQuery = stubMatchMedia(false);
+    const readers: Array<{
+      result: string | ArrayBuffer | null;
+      onload: (() => void) | null;
+      onerror: (() => void) | null;
+    }> = [];
+    class DelayedFileReader {
+      result: string | ArrayBuffer | null = null;
+      error: DOMException | null = null;
+      onload: (() => void) | null = null;
+      onerror: (() => void) | null = null;
+      readAsDataURL(): void {
+        readers.push(this);
+      }
+    }
+    vi.stubGlobal("FileReader", DelayedFileReader);
+    let wrapper: ReturnType<typeof mountApp> | undefined;
+
+    try {
+      wrapper = mountApp();
+      await wrapper.vm.$nextTick();
+      await Promise.resolve();
+      await Promise.resolve();
+      const pasteEvent = new Event("paste", { cancelable: true }) as ClipboardEvent;
+      Object.defineProperty(pasteEvent, "clipboardData", {
+        value: {
+          items: [
+            {
+              type: "image/png",
+              getAsFile: vi.fn(() => new File(["late"], "late.png", { type: "image/png" })),
+            },
+          ],
+        },
+      });
+
+      document.dispatchEvent(pasteEvent);
+      expect(pasteEvent.defaultPrevented).toBe(true);
+      expect(readers).toHaveLength(1);
+
+      mediaQuery.dispatchEvent({ matches: true } as MediaQueryListEvent);
+      await wrapper.vm.$nextTick();
+
+      readers[0].result = "data:image/png;base64,bGF0ZQ==";
+      readers[0].onload?.();
+      await Promise.resolve();
+      await Promise.resolve();
+      await wrapper.vm.$nextTick();
+
+      mediaQuery.dispatchEvent({ matches: false } as MediaQueryListEvent);
+      await wrapper.vm.$nextTick();
+      await vi.advanceTimersByTimeAsync(200);
+      await wrapper.vm.$nextTick();
+
+      expect(wrapper.find(".image-card").exists()).toBe(false);
+      expect(wrapper.find('[data-testid="companion-confirm"]').exists()).toBe(false);
+    } finally {
+      wrapper?.unmount();
+      vi.unstubAllGlobals();
+      vi.useRealTimers();
+    }
+  });
+
+  it("removes a stored image payload when mobile handoff starts before image state is updated", async () => {
+    const mediaQuery = stubMatchMedia(false);
+    const putRequests: Array<{
+      record: { id: string; src?: string };
+      request: { result?: unknown; error?: unknown; onsuccess: (() => void) | null; onerror: (() => void) | null };
+    }> = [];
+    const deletedIds: string[] = [];
+    const fakeStore = {
+      put: vi.fn((record: { id: string; src?: string }) => {
+        const request: { result: string; error: null; onsuccess: (() => void) | null; onerror: (() => void) | null } = {
+          result: record.id,
+          error: null,
+          onsuccess: null,
+          onerror: null,
+        };
+        putRequests.push({ record, request });
+        return request;
+      }),
+      delete: vi.fn((id: string) => {
+        deletedIds.push(id);
+        const request: { result: undefined; error: null; onsuccess: (() => void) | null; onerror: (() => void) | null } = {
+          result: undefined,
+          error: null,
+          onsuccess: null,
+          onerror: null,
+        };
+        queueMicrotask(() => request.onsuccess?.());
+        return request;
+      }),
+    };
+    const fakeDb = {
+      objectStoreNames: { contains: vi.fn(() => true) },
+      transaction: vi.fn(() => ({
+        objectStore: vi.fn(() => fakeStore),
+        onerror: undefined,
+        error: null,
+      })),
+      close: vi.fn(),
+    };
+    vi.stubGlobal("indexedDB", {
+      open: vi.fn(() => {
+        const request: {
+          result: typeof fakeDb;
+          error: null;
+          onsuccess: (() => void) | null;
+          onerror: (() => void) | null;
+          onupgradeneeded: (() => void) | null;
+        } = { result: fakeDb, error: null, onsuccess: null, onerror: null, onupgradeneeded: null };
+        queueMicrotask(() => request.onsuccess?.());
+        return request;
+      }),
+    });
+    class ImmediateFileReader {
+      result: string | ArrayBuffer | null = null;
+      error: DOMException | null = null;
+      onload: (() => void) | null = null;
+      onerror: (() => void) | null = null;
+      readAsDataURL(): void {
+        this.result = "data:image/png;base64,c3RvcmVk";
+        this.onload?.();
+      }
+    }
+    vi.stubGlobal("FileReader", ImmediateFileReader);
+    let wrapper: ReturnType<typeof mountApp> | undefined;
+
+    try {
+      wrapper = mountApp();
+      await wrapper.vm.$nextTick();
+      await Promise.resolve();
+      await Promise.resolve();
+      wrapper
+        .getComponent(ImagePanel)
+        .vm.$emit("dropFiles", [new File(["stored"], "stored.png", { type: "image/png" })], wrapper.get(".image-panel").element as HTMLElement);
+      await vi.waitFor(() => {
+        expect(putRequests).toHaveLength(1);
+      });
+
+      putRequests[0].request.onsuccess?.();
+      mediaQuery.dispatchEvent({ matches: true } as MediaQueryListEvent);
+      await vi.waitFor(() => {
+        expect(deletedIds).toEqual([putRequests[0].record.id]);
+      });
+
+      mediaQuery.dispatchEvent({ matches: false } as MediaQueryListEvent);
+      await wrapper.vm.$nextTick();
+
+      expect(wrapper.find(".image-card").exists()).toBe(false);
+    } finally {
+      wrapper?.unmount();
+      vi.unstubAllGlobals();
+    }
+  });
+
+  it("clears pending autosave before mobile handoff can show stale companion state", async () => {
+    vi.useFakeTimers();
+    const mediaQuery = stubMatchMedia(false);
+    const wrapper = mountApp();
+
+    try {
+      const textarea = wrapper.get("textarea");
+      await textarea.trigger("dblclick");
+      await textarea.setValue("移动端切换前的草稿");
+      await wrapper.vm.$nextTick();
+
+      mediaQuery.dispatchEvent({ matches: true } as MediaQueryListEvent);
+      await wrapper.vm.$nextTick();
+
+      expect(wrapper.find(".mobile-handoff").exists()).toBe(true);
+
+      await vi.advanceTimersByTimeAsync(3200);
+      await wrapper.vm.$nextTick();
+
+      mediaQuery.dispatchEvent({ matches: false } as MediaQueryListEvent);
+      await wrapper.vm.$nextTick();
+      await vi.advanceTimersByTimeAsync(200);
+      await wrapper.vm.$nextTick();
+
+      expect(wrapper.find(".board").exists()).toBe(true);
+      expect((wrapper.get("textarea").element as HTMLTextAreaElement).value).toContain("移动端切换前的草稿");
+      expect(wrapper.find(".focus-companion.is-visible").exists()).toBe(false);
+      expect(wrapper.find('[data-testid="companion-confirm"]').exists()).toBe(false);
     } finally {
       wrapper.unmount();
       vi.unstubAllGlobals();
@@ -923,6 +1178,136 @@ describe("App shell", () => {
     }
   });
 
+  it("does not complete an in-flight image copy after entering mobile handoff", async () => {
+    vi.useFakeTimers();
+    const mediaQuery = stubMatchMedia(false);
+    localStorage.setItem(
+      STORAGE_KEY,
+      JSON.stringify({
+        images: [
+          {
+            id: "img-1",
+            src: "data:image/png;base64,iVBORw0KGgo=",
+            createdAt: 1,
+          },
+        ],
+      }),
+    );
+    const fetchResult = createDeferred<{ blob: () => Promise<Blob> }>();
+    const blob = vi.fn().mockResolvedValue(new Blob(["img"], { type: "image/png" }));
+    const write = vi.fn().mockResolvedValue(undefined);
+    vi.stubGlobal("fetch", vi.fn(() => fetchResult.promise));
+    vi.stubGlobal(
+      "ClipboardItem",
+      class {
+        constructor(_items: Record<string, Blob>) {}
+      },
+    );
+    Object.assign(navigator, {
+      clipboard: {
+        write,
+      },
+    });
+    let wrapper: ReturnType<typeof mountApp> | undefined;
+
+    try {
+      wrapper = mountApp();
+
+      wrapper.getComponent(ImagePanel).vm.$emit("copy", "img-1");
+      expect(fetch).toHaveBeenCalledWith("data:image/png;base64,iVBORw0KGgo=");
+
+      mediaQuery.dispatchEvent({ matches: true } as MediaQueryListEvent);
+      await wrapper.vm.$nextTick();
+
+      fetchResult.resolve({ blob });
+      await Promise.resolve();
+      await Promise.resolve();
+      await Promise.resolve();
+      await wrapper.vm.$nextTick();
+
+      expect(blob).not.toHaveBeenCalled();
+      expect(write).not.toHaveBeenCalled();
+
+      mediaQuery.dispatchEvent({ matches: false } as MediaQueryListEvent);
+      await wrapper.vm.$nextTick();
+      await vi.advanceTimersByTimeAsync(200);
+      await wrapper.vm.$nextTick();
+
+      expect(wrapper.find('[data-testid="companion-confirm"]').exists()).toBe(false);
+    } finally {
+      wrapper?.unmount();
+      vi.unstubAllGlobals();
+      vi.useRealTimers();
+    }
+  });
+
+  it("does not run the copy fallback after entering mobile handoff", async () => {
+    vi.useFakeTimers();
+    const mediaQuery = stubMatchMedia(false);
+    localStorage.setItem(
+      STORAGE_KEY,
+      JSON.stringify({
+        images: [
+          {
+            id: "img-1",
+            src: "data:image/png;base64,iVBORw0KGgo=",
+            createdAt: 1,
+          },
+        ],
+      }),
+    );
+    const writeTextResult = createDeferred<void>();
+    const writeText = vi.fn(() => writeTextResult.promise);
+    Object.assign(navigator, {
+      clipboard: {
+        writeText,
+      },
+    });
+    const originalExecCommand = document.execCommand;
+    const execCommand = vi.fn(() => true);
+    Object.defineProperty(document, "execCommand", {
+      value: execCommand,
+      configurable: true,
+    });
+    let wrapper: ReturnType<typeof mountApp> | undefined;
+
+    try {
+      wrapper = mountApp();
+
+      wrapper.getComponent(ImagePanel).vm.$emit("copy", "img-1");
+      expect(writeText).toHaveBeenCalledWith("data:image/png;base64,iVBORw0KGgo=");
+
+      mediaQuery.dispatchEvent({ matches: true } as MediaQueryListEvent);
+      await wrapper.vm.$nextTick();
+
+      writeTextResult.reject(new DOMException("denied", "NotAllowedError"));
+      await Promise.resolve();
+      await Promise.resolve();
+      await wrapper.vm.$nextTick();
+
+      expect(execCommand).not.toHaveBeenCalled();
+
+      mediaQuery.dispatchEvent({ matches: false } as MediaQueryListEvent);
+      await wrapper.vm.$nextTick();
+      await vi.advanceTimersByTimeAsync(200);
+      await wrapper.vm.$nextTick();
+
+      expect(wrapper.find('[data-testid="companion-confirm"]').exists()).toBe(false);
+    } finally {
+      if (originalExecCommand) {
+        Object.defineProperty(document, "execCommand", {
+          value: originalExecCommand,
+          configurable: true,
+        });
+      } else {
+        Reflect.deleteProperty(document, "execCommand");
+      }
+      wrapper?.unmount();
+      vi.unstubAllGlobals();
+      vi.useRealTimers();
+    }
+  });
+
   it("copies the current image when Enter is pressed immediately after preview opens", async () => {
     localStorage.setItem(
       STORAGE_KEY,
@@ -1129,6 +1514,112 @@ describe("App shell", () => {
     expect(clickSpy).toHaveBeenCalledTimes(1);
 
     wrapper.unmount();
+  });
+
+  it("cancels pending import confirmation and clears companion state when entering mobile", async () => {
+    vi.useFakeTimers();
+    const mediaQuery = stubMatchMedia(false);
+    const wrapper = mountApp();
+
+    try {
+      const settings = wrapper.getComponent(SettingsMenu);
+      const input = wrapper.get('input[type="file"]').element as HTMLInputElement;
+      settings.vm.$emit("import", settings.element as HTMLElement);
+      const file = new File([JSON.stringify({ workspaceLines: ["切换中导入"] })], "todo.json", {
+        type: "application/json",
+      });
+      Object.defineProperty(input, "files", { value: [file], configurable: true });
+      Object.defineProperty(input, "value", {
+        value: "C:\\fakepath\\todo.json",
+        writable: true,
+        configurable: true,
+      });
+
+      await wrapper.get('input[type="file"]').trigger("change");
+      await Promise.resolve();
+      await wrapper.vm.$nextTick();
+      await vi.advanceTimersByTimeAsync(200);
+      await wrapper.vm.$nextTick();
+
+      expect(wrapper.find('[data-testid="companion-yes"]').exists()).toBe(true);
+
+      mediaQuery.dispatchEvent({ matches: true } as MediaQueryListEvent);
+      await wrapper.vm.$nextTick();
+
+      expect(input.value).toBe("");
+      expect(wrapper.find(".mobile-handoff").exists()).toBe(true);
+
+      mediaQuery.dispatchEvent({ matches: false } as MediaQueryListEvent);
+      await wrapper.vm.$nextTick();
+      await vi.advanceTimersByTimeAsync(200);
+      await wrapper.vm.$nextTick();
+
+      expect(wrapper.find(".board").exists()).toBe(true);
+      expect(wrapper.find(".focus-companion.is-visible").exists()).toBe(false);
+      expect(wrapper.find('[data-testid="companion-confirm"]').exists()).toBe(false);
+      expect(wrapper.text()).not.toContain("切换中导入");
+    } finally {
+      wrapper.unmount();
+      vi.unstubAllGlobals();
+      vi.useRealTimers();
+    }
+  });
+
+  it("does not create a stale import confirmation when file text resolves after mobile handoff", async () => {
+    vi.useFakeTimers();
+    const mediaQuery = stubMatchMedia(false);
+    const wrapper = mountApp();
+
+    try {
+      const settings = wrapper.getComponent(SettingsMenu);
+      const input = wrapper.get('input[type="file"]').element as HTMLInputElement;
+      const fileText = createDeferred<string>();
+      const file = new File([""], "delayed.json", {
+        type: "application/json",
+      });
+      Object.defineProperty(file, "text", {
+        value: vi.fn(() => fileText.promise),
+        configurable: true,
+      });
+      settings.vm.$emit("import", settings.element as HTMLElement);
+      Object.defineProperty(input, "files", { value: [file], configurable: true });
+      Object.defineProperty(input, "value", {
+        value: "C:\\fakepath\\delayed.json",
+        writable: true,
+        configurable: true,
+      });
+
+      await wrapper.get('input[type="file"]').trigger("change");
+      await Promise.resolve();
+
+      mediaQuery.dispatchEvent({ matches: true } as MediaQueryListEvent);
+      await wrapper.vm.$nextTick();
+
+      fileText.resolve(JSON.stringify({ workspaceLines: ["延迟导入"] }));
+      await Promise.resolve();
+      await wrapper.vm.$nextTick();
+      await vi.advanceTimersByTimeAsync(200);
+      await wrapper.vm.$nextTick();
+
+      expect(input.value).toBe("");
+      expect(wrapper.find(".mobile-handoff").exists()).toBe(true);
+      expect(wrapper.find('[data-testid="companion-confirm"]').text()).toContain("建议在电脑浏览器打开");
+      expect(wrapper.find('[data-testid="companion-yes"]').exists()).toBe(false);
+
+      mediaQuery.dispatchEvent({ matches: false } as MediaQueryListEvent);
+      await wrapper.vm.$nextTick();
+      await vi.advanceTimersByTimeAsync(200);
+      await wrapper.vm.$nextTick();
+
+      expect(wrapper.find(".board").exists()).toBe(true);
+      expect(wrapper.find(".focus-companion.is-visible").exists()).toBe(false);
+      expect(wrapper.find('[data-testid="companion-confirm"]').exists()).toBe(false);
+      expect(wrapper.text()).not.toContain("延迟导入");
+    } finally {
+      wrapper.unmount();
+      vi.unstubAllGlobals();
+      vi.useRealTimers();
+    }
   });
 
   it("shows about information in the companion bubble instead of a modal", async () => {

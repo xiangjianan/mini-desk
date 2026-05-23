@@ -39,6 +39,15 @@ import {
 } from "./state/version";
 import type { BoardState, DraggedTodo, GuideKey, LineItem, QuickButtonType, StoredImage, TodoPeriod } from "./types";
 
+const MOBILE_BREAKPOINT_QUERY = "(max-width: 900px)";
+const MOBILE_HANDOFF_MESSAGE = "建议在电脑浏览器打开，以获得完整体验 (｡•̀ᴗ-)✧";
+const MOBILE_HANDOFF_DESCRIPTION = "这个看板为桌面端工作流设计，用来整理截图、便签、提醒事项、快捷链接和工作空间。";
+const mobileCompanionPosition: { right: string; bottom: string } = { right: "18px", bottom: "28px" };
+
+function getInitialMobileBlocked(): boolean {
+  return typeof window !== "undefined" && typeof window.matchMedia === "function" && window.matchMedia(MOBILE_BREAKPOINT_QUERY).matches;
+}
+
 const state = reactive<BoardState>(loadState());
 const activePreviewId = ref<string | undefined>();
 const bubbleMessage = ref("");
@@ -66,8 +75,9 @@ const emptyTodoRemovalTimers = new Map<string, number>();
 const appVersion = ref(getIndexAppVersion());
 const storedAppVersion = ref<string | null>(null);
 const versionPromptVisible = ref(false);
-const mobileActiveArea = ref<MobileArea>("todos");
-const mobileNavOpen = ref(false);
+const isMobileBlocked = ref(getInitialMobileBlocked());
+const mobileMediaQuery = ref<MediaQueryList | null>(null);
+let appMounted = false;
 
 type BubbleOptions = {
   hideCompanionAfter?: boolean;
@@ -75,16 +85,6 @@ type BubbleOptions = {
   linkText?: string;
   linkHref?: string;
 };
-
-type MobileArea = "images" | "note" | "quick" | "todos" | "spaces";
-
-const mobileAreas: Array<{ key: MobileArea; label: string }> = [
-  { key: "images", label: "图片" },
-  { key: "note", label: "便签" },
-  { key: "quick", label: "快捷" },
-  { key: "todos", label: "待办" },
-  { key: "spaces", label: "空间" },
-];
 
 const GUIDE_MESSAGES: Record<GuideKey, string[]> = {
   images: [
@@ -217,15 +217,15 @@ const activeGuideKey = ref<GuideKey | null>(null);
 
 const naiveTheme = computed(() => (state.theme === "dark" ? darkTheme : null));
 const companionVisible = computed(() => companionFocused.value || bubbleVisible.value);
+const activeCompanionVisible = computed(() => isMobileBlocked.value || companionVisible.value);
+const activeCompanionMessage = computed(() => (isMobileBlocked.value ? MOBILE_HANDOFF_MESSAGE : bubbleMessage.value));
+const activeCompanionPosition = computed(() => (isMobileBlocked.value ? mobileCompanionPosition : companionPosition.value));
 const saveStatus = ref<"saved" | "saving" | "dirty">("saved");
 const saveStatusLabel = computed(() => {
   if (saveStatus.value === "dirty") return "有未保存内容";
   if (saveStatus.value === "saving") return "保存中";
   return "已保存";
 });
-const mobileActiveLabel = computed(() =>
-  mobileAreas.find((area) => area.key === mobileActiveArea.value)?.label ?? "待办",
-);
 
 const titles = computed(() =>
   Object.fromEntries(
@@ -233,18 +233,64 @@ const titles = computed(() =>
   ) as Record<string, string>,
 );
 
+function updateMobileBlocked(source?: MediaQueryList | MediaQueryListEvent): void {
+  const matches = Boolean(source?.matches ?? mobileMediaQuery.value?.matches);
+  const wasMobileBlocked = isMobileBlocked.value;
+  if (matches && !wasMobileBlocked) {
+    activePreviewId.value = undefined;
+    if (textSaveTimer.value !== undefined) flushTextSave();
+    clearPendingConfirm(true);
+    hideBubbleMessage({ clearRetainedContent: true });
+    companionFocused.value = false;
+    activeGuideKey.value = null;
+  }
+  isMobileBlocked.value = matches;
+}
+
+function shouldBlockBoardEffects(): boolean {
+  return isMobileBlocked.value;
+}
+
+function setupMobileBreakpoint(): void {
+  if (!window.matchMedia) return;
+  const query = window.matchMedia(MOBILE_BREAKPOINT_QUERY);
+  mobileMediaQuery.value = query;
+  updateMobileBlocked(query);
+  if (query.addEventListener) {
+    query.addEventListener("change", updateMobileBlocked);
+    return;
+  }
+  query.addListener(updateMobileBlocked);
+}
+
+function teardownMobileBreakpoint(): void {
+  const query = mobileMediaQuery.value;
+  if (!query) return;
+  if (query.removeEventListener) {
+    query.removeEventListener("change", updateMobileBlocked);
+  } else {
+    query.removeListener(updateMobileBlocked);
+  }
+  mobileMediaQuery.value = null;
+}
+
 onMounted(async () => {
+  appMounted = true;
   applyTheme();
+  setupMobileBreakpoint();
   state.images = await hydrateStoredImages(state.images);
   await persistImagePayloads(state.images);
+  if (!appMounted) return;
   checkAppVersion();
   window.addEventListener("keydown", handleGlobalKeydown);
   document.addEventListener("paste", handlePaste);
 });
 
 onUnmounted(() => {
+  appMounted = false;
   window.removeEventListener("keydown", handleGlobalKeydown);
   document.removeEventListener("paste", handlePaste);
+  teardownMobileBreakpoint();
   clearTimers();
 });
 
@@ -343,6 +389,7 @@ function syncLegacySpaceLines(): void {
 function scheduleTextSave(): void {
   window.clearTimeout(textSaveTimer.value);
   textSaveTimer.value = window.setTimeout(() => {
+    textSaveTimer.value = undefined;
     persistNow();
     showSaveBubble();
   }, 3000);
@@ -350,6 +397,7 @@ function scheduleTextSave(): void {
 
 function flushTextSave(): void {
   window.clearTimeout(textSaveTimer.value);
+  textSaveTimer.value = undefined;
   persistNow();
 }
 
@@ -418,6 +466,7 @@ function markSavedSoon(): void {
 }
 
 async function handlePaste(event: ClipboardEvent): Promise<void> {
+  if (shouldBlockBoardEffects()) return;
   const items = Array.from(event.clipboardData?.items ?? []);
   const imageItem = items.find((item) => item.type.startsWith("image/"));
   if (!imageItem) return;
@@ -428,6 +477,7 @@ async function handlePaste(event: ClipboardEvent): Promise<void> {
 }
 
 async function pasteImageFromClipboard(): Promise<void> {
+  if (shouldBlockBoardEffects()) return;
   const clipboard = navigator.clipboard as Clipboard & {
     read?: () => Promise<ClipboardItem[]>;
   };
@@ -439,9 +489,11 @@ async function pasteImageFromClipboard(): Promise<void> {
   try {
     items = await clipboard.read();
   } catch {
+    if (shouldBlockBoardEffects()) return;
     showBubble("clipboardPermissionDenied", undefined, { hideCompanionAfter: true });
     return;
   }
+  if (shouldBlockBoardEffects()) return;
   for (const item of items) {
     const type = item.types.find((candidate) => candidate.startsWith("image/"));
     if (!type) continue;
@@ -449,23 +501,29 @@ async function pasteImageFromClipboard(): Promise<void> {
     try {
       blob = await item.getType(type);
     } catch {
+      if (shouldBlockBoardEffects()) return;
       showBubble("imageReadFailed", undefined, { hideCompanionAfter: true });
       return;
     }
+    if (shouldBlockBoardEffects()) return;
     await addImageFile(new File([blob], "clipboard-image", { type }));
     return;
   }
+  if (shouldBlockBoardEffects()) return;
   showBubble("clipboardImageMissing", undefined, { hideCompanionAfter: true });
 }
 
 async function addImageFile(file: File, options: { showMessage?: boolean } = {}): Promise<StoredImage | undefined> {
+  if (shouldBlockBoardEffects()) return undefined;
   let src: string;
   try {
     src = await fileToDataUrl(file);
   } catch {
+    if (shouldBlockBoardEffects()) return undefined;
     showBubble("imageReadFailed", undefined, { hideCompanionAfter: true });
     return undefined;
   }
+  if (shouldBlockBoardEffects()) return undefined;
   const image = {
     id: createId(),
     src,
@@ -474,7 +532,16 @@ async function addImageFile(file: File, options: { showMessage?: boolean } = {})
   try {
     await storeImagePayload(image);
   } catch {
+    if (shouldBlockBoardEffects()) return undefined;
     showBubble("imageStoreFailed", undefined, { hideCompanionAfter: true });
+    return undefined;
+  }
+  if (shouldBlockBoardEffects()) {
+    try {
+      await deleteStoredImage(image.id);
+    } catch {
+      // Best-effort cleanup for payloads that were stored just before mobile handoff.
+    }
     return undefined;
   }
   state.images.push(image);
@@ -484,6 +551,7 @@ async function addImageFile(file: File, options: { showMessage?: boolean } = {})
 }
 
 async function addImageFiles(files: File[], anchor?: HTMLElement): Promise<void> {
+  if (shouldBlockBoardEffects()) return;
   const imageFiles = files.filter((file) => file.type.startsWith("image/"));
   const ignoredCount = files.length - imageFiles.length;
   if (imageFiles.length === 0) {
@@ -494,10 +562,13 @@ async function addImageFiles(files: File[], anchor?: HTMLElement): Promise<void>
   const added: StoredImage[] = [];
   for (const file of imageFiles) {
     const image = await addImageFile(file, { showMessage: false });
+    if (shouldBlockBoardEffects()) return;
     if (image) added.push(image);
   }
   if (added.length === 0) return;
+  if (shouldBlockBoardEffects()) return;
   await copyImage(added.at(-1)!.id, anchor);
+  if (shouldBlockBoardEffects()) return;
   if (ignoredCount > 0) showBubble("imageDropIgnored", anchor, { hideCompanionAfter: true });
 }
 
@@ -525,6 +596,7 @@ function openImagePreview(id: string): void {
 }
 
 async function copyImage(id: string, anchor?: HTMLElement): Promise<void> {
+  if (shouldBlockBoardEffects()) return;
   const image = state.images.find((item) => item.id === id);
   if (!image?.src) return;
   const clipboard = navigator.clipboard as Clipboard & {
@@ -532,18 +604,27 @@ async function copyImage(id: string, anchor?: HTMLElement): Promise<void> {
   };
   try {
     if (clipboard.write && "ClipboardItem" in window) {
-      const blob = await (await fetch(image.src)).blob();
+      const response = await fetch(image.src);
+      if (shouldBlockBoardEffects()) return;
+      const blob = await response.blob();
+      if (shouldBlockBoardEffects()) return;
       await clipboard.write([new window.ClipboardItem({ [blob.type]: blob })]);
+      if (shouldBlockBoardEffects()) return;
       showBubble("imageCopied", anchor, { hideCompanionAfter: true });
       return;
     }
-    if (await copyText(image.src)) {
+    if (shouldBlockBoardEffects()) return;
+    const copied = await copyText(image.src, shouldBlockBoardEffects);
+    if (shouldBlockBoardEffects()) return;
+    if (copied) {
       showBubble("imageDataCopied", anchor, { hideCompanionAfter: true });
       return;
     }
   } catch {
+    if (shouldBlockBoardEffects()) return;
     // Fall through to the shared failure message below.
   }
+  if (shouldBlockBoardEffects()) return;
   showBubble("imageCopyFailed", anchor, { hideCompanionAfter: true });
 }
 
@@ -598,16 +679,19 @@ async function handleQuickButton(id: string, anchor?: HTMLElement): Promise<void
     if (!opened) showBubble("linkOpenFailed", anchor, { hideCompanionAfter: true });
     return;
   }
-  showBubble((await copyText(button.value)) ? "quickTextCopied" : "quickTextCopyFailed", anchor, {
+  const copied = await copyText(button.value, shouldBlockBoardEffects);
+  if (shouldBlockBoardEffects()) return;
+  showBubble(copied ? "quickTextCopied" : "quickTextCopyFailed", anchor, {
     hideCompanionAfter: true,
   });
 }
 
-async function copyText(text: string): Promise<boolean> {
+async function copyText(text: string, shouldAbort: () => boolean = () => false): Promise<boolean> {
   try {
     await navigator.clipboard.writeText(text);
     return true;
   } catch {
+    if (shouldAbort()) return false;
     const textarea = document.createElement("textarea");
     textarea.value = text;
     document.body.append(textarea);
@@ -786,6 +870,11 @@ async function importData(event: Event): Promise<void> {
   const file = input.files?.[0];
   if (!file) return;
   const text = await file.text();
+  if (shouldBlockBoardEffects()) {
+    importFeedbackAnchor.value = undefined;
+    input.value = "";
+    return;
+  }
   let parsed: unknown;
   try {
     parsed = JSON.parse(text);
@@ -843,6 +932,7 @@ function suggestIssue(): void {
 }
 
 function handleGlobalKeydown(event: KeyboardEvent): void {
+  if (isMobileBlocked.value) return;
   if (event.key === "Escape" && companionVisible.value) {
     hideCompanion();
     (document.activeElement as HTMLElement | null)?.blur();
@@ -893,9 +983,10 @@ function showBubble(messageKey: MessageKey, anchor?: HTMLElement, options: Bubbl
 }
 
 function showBubbleText(message: string, anchor?: HTMLElement, options: BubbleOptions = {}, duration = 3000): void {
+  if (shouldBlockBoardEffects()) return;
   window.clearTimeout(bubbleTimer.value);
   window.clearTimeout(bubbleFadeTimer.value);
-  pendingConfirm.value = null;
+  clearPendingConfirm();
   bubbleMessage.value = message;
   bubbleLink.value = options.linkText && options.linkHref ? { text: options.linkText, href: options.linkHref } : null;
   activeGuideKey.value = options.guideKey ?? null;
@@ -915,7 +1006,7 @@ function hideBubbleMessage(options: { clearRetainedContent?: boolean } = {}): vo
   bubbleRemainingMs.value = 0;
   bubbleTimerStartedAt.value = 0;
   bubbleTimerOptions.value = {};
-  pendingConfirm.value = null;
+  clearPendingConfirm();
   bubbleVisible.value = false;
   bubbleMessage.value = "";
   bubbleLink.value = null;
@@ -977,6 +1068,7 @@ function requestConfirmation(
   onCancel?: () => void,
   options: { confirmText?: string; cancelText?: string } = {},
 ): void {
+  if (shouldBlockBoardEffects()) return;
   window.clearTimeout(bubbleTimer.value);
   window.clearTimeout(bubbleFadeTimer.value);
   bubbleTimer.value = undefined;
@@ -1006,8 +1098,14 @@ async function confirmCompanionAction(): Promise<void> {
 }
 
 function cancelCompanionAction(): void {
-  pendingConfirm.value?.onCancel?.();
+  clearPendingConfirm(true);
   hideCompanion();
+}
+
+function clearPendingConfirm(runCancel = false): void {
+  const action = pendingConfirm.value;
+  pendingConfirm.value = null;
+  if (runCancel) action?.onCancel?.();
 }
 
 function showToast(messageKey: MessageKey): void {
@@ -1165,7 +1263,7 @@ function getSpacePanelAnchor(): HTMLElement | undefined {
 }
 
 function isMobileLayout(): boolean {
-  return window.matchMedia?.("(max-width: 900px)").matches ?? window.innerWidth <= 900;
+  return window.matchMedia?.(MOBILE_BREAKPOINT_QUERY).matches ?? window.innerWidth <= 900;
 }
 
 function normalizeLink(value: string): string {
@@ -1196,35 +1294,7 @@ function moveItem<T extends { id: string }>(items: T[], dragId: string, targetId
 <template>
   <NConfigProvider :theme="naiveTheme">
     <NGlobalStyle />
-    <main class="board" aria-label="To Do List 看板" :data-mobile-active="mobileActiveArea">
-      <nav class="mobile-nav" aria-label="移动端区域切换">
-        <button
-          class="mobile-drawer-trigger"
-          type="button"
-          :aria-expanded="mobileNavOpen"
-          @click="mobileNavOpen = !mobileNavOpen"
-        >
-          <span class="mobile-menu-icon" aria-hidden="true">☰</span>
-          <span>{{ mobileActiveLabel }}</span>
-        </button>
-        <div v-if="mobileNavOpen" class="mobile-drawer-menu">
-          <button
-            v-for="area in mobileAreas"
-            :key="area.key"
-            class="mobile-menu-option"
-            :class="{ 'is-active': mobileActiveArea === area.key }"
-            type="button"
-            @click="mobileActiveArea = area.key; mobileNavOpen = false"
-          >
-            {{ area.label }}
-          </button>
-        </div>
-      </nav>
-
-      <div class="mobile-banner">
-        <p>建议到桌面端访问，以获得更好的体验 (｡•̀ᴗ-)✧</p>
-      </div>
-
+    <main v-if="!isMobileBlocked" class="board" aria-label="To Do List 看板">
       <ImagePanel
         :title="titles['image-title']"
         :images="state.images"
@@ -1302,7 +1372,25 @@ function moveItem<T extends { id: string }>(items: T[], dragId: string, targetId
       />
     </main>
 
+    <main v-else class="mobile-handoff" aria-label="To Do List 看板移动端引导">
+      <header class="mobile-handoff-header">
+        <h1 class="mobile-handoff-title">To Do List 看板</h1>
+        <NButton quaternary size="small" class="mobile-handoff-theme" aria-label="切换主题" @click="handleThemeClick">
+          <NIcon :component="state.theme === 'dark' ? SunnyOutline : MoonOutline" />
+        </NButton>
+      </header>
+
+      <section class="mobile-handoff-body" aria-labelledby="mobile-handoff-title">
+        <div class="mobile-handoff-message">
+          <h2 id="mobile-handoff-title">桌面端体验更完整</h2>
+          <p>{{ MOBILE_HANDOFF_DESCRIPTION }}</p>
+          <p>{{ MOBILE_HANDOFF_MESSAGE }}</p>
+        </div>
+      </section>
+    </main>
+
     <ImagePreview
+      v-if="!isMobileBlocked"
       :images="state.images"
       :active-id="activePreviewId"
       @close="activePreviewId = undefined"
@@ -1312,22 +1400,23 @@ function moveItem<T extends { id: string }>(items: T[], dragId: string, targetId
     />
 
     <CompanionBubble
-      :visible="companionVisible"
-      :message="bubbleMessage"
-      :link-text="bubbleLink?.text"
-      :link-href="bubbleLink?.href"
-      :confirm="Boolean(pendingConfirm)"
-      :confirm-text="pendingConfirm?.confirmText"
-      :cancel-text="pendingConfirm?.cancelText"
+      :visible="activeCompanionVisible"
+      :message="activeCompanionMessage"
+      :link-text="isMobileBlocked ? undefined : bubbleLink?.text"
+      :link-href="isMobileBlocked ? undefined : bubbleLink?.href"
+      :confirm="!isMobileBlocked && Boolean(pendingConfirm)"
+      :confirm-text="isMobileBlocked ? undefined : pendingConfirm?.confirmText"
+      :cancel-text="isMobileBlocked ? undefined : pendingConfirm?.cancelText"
       :clear-signal="bubbleClearSignal"
-      :position="companionPosition"
+      :persistent="isMobileBlocked"
+      :position="activeCompanionPosition"
       :theme="state.theme"
       @yes="confirmCompanionAction"
       @no="cancelCompanionAction"
       @pause="pauseBubbleTimer"
       @resume="resumeBubbleTimer"
     />
-    <div class="top-actions">
+    <div v-if="!isMobileBlocked" class="top-actions">
       <span class="save-status" data-testid="save-status" :data-state="saveStatus">{{ saveStatusLabel }}</span>
       <SettingsMenu
         :app-version="appVersion"
