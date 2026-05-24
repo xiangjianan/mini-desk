@@ -3,6 +3,12 @@ import { computed, nextTick, onUnmounted, ref } from "vue";
 import { NButton, NCheckbox, NDropdown } from "naive-ui";
 import type { DropdownOption } from "naive-ui";
 import { GUIDE_MENU_OPTION, TODO_PERIODS } from "../state/defaults";
+import {
+  DEADLINE_TIME_OPTIONS,
+  DEFAULT_DEADLINE_TIME,
+  createDeadlineAt,
+  getLocalDateInputValue,
+} from "../state/deadlines";
 import type { DraggedTodo, GuideKey, TodoCompletedVisibility, TodoItem, TodoMap, TodoPeriod, TodoStarChange } from "../types";
 import { getOrderedTodos } from "../state/todos";
 import EditableTitle from "./EditableTitle.vue";
@@ -43,6 +49,13 @@ const menu = ref<{
 const dragged = ref<DraggedTodo | null>(null);
 const editingTodoKey = ref<string | null>(null);
 const selectedMenuTodoKey = ref<string | null>(null);
+const deadlineEditor = ref<{
+  period: TodoPeriod;
+  id: string;
+  anchor: HTMLElement;
+  date: string;
+  time: string;
+} | null>(null);
 const pendingDoneReorderIds = ref<string[]>([]);
 const reorderTimers = new Map<string, number>();
 const lastTodoCarets = new Map<string, number>();
@@ -249,6 +262,59 @@ function closeMenu(): void {
   selectedMenuTodoKey.value = null;
 }
 
+function handleStarClick(event: MouseEvent, period: TodoPeriod, todo: TodoItem): void {
+  event.preventDefault();
+  event.stopPropagation();
+  const anchor = event.currentTarget as HTMLElement;
+  if (todo.starred) {
+    closeDeadlineEditor();
+    emit("star", { period, id: todo.id, starred: false, anchor });
+    return;
+  }
+  openDeadlineEditor(period, todo.id, anchor);
+}
+
+function openDeadlineEditor(period: TodoPeriod, id: string, anchor: HTMLElement): void {
+  selectedMenuTodoKey.value = null;
+  deadlineEditor.value = {
+    period,
+    id,
+    anchor,
+    date: getLocalDateInputValue(),
+    time: DEFAULT_DEADLINE_TIME,
+  };
+}
+
+function selectDeadlineTime(time: string): void {
+  if (!deadlineEditor.value) return;
+  deadlineEditor.value = { ...deadlineEditor.value, time };
+}
+
+function updateDeadlineDate(value: string): void {
+  if (!deadlineEditor.value) return;
+  deadlineEditor.value = { ...deadlineEditor.value, date: value };
+}
+
+function confirmDeadlineEditor(): void {
+  const editor = deadlineEditor.value;
+  if (!editor) return;
+  const deadlineAt = createDeadlineAt(editor.date, editor.time);
+  if (deadlineAt === null) return;
+  emit("star", { period: editor.period, id: editor.id, starred: true, deadlineAt, anchor: editor.anchor });
+  deadlineEditor.value = null;
+}
+
+function ignoreDeadlineEditor(): void {
+  const editor = deadlineEditor.value;
+  if (!editor) return;
+  emit("star", { period: editor.period, id: editor.id, starred: true, anchor: editor.anchor });
+  deadlineEditor.value = null;
+}
+
+function closeDeadlineEditor(): void {
+  deadlineEditor.value = null;
+}
+
 async function handleMenuSelect(key: string): Promise<void> {
   if (!menu.value) return;
   const { period, id, anchor, target } = menu.value;
@@ -279,7 +345,14 @@ async function handleMenuSelect(key: string): Promise<void> {
   closeMenu();
   if (key === "guide" && anchor) emit("guide", "todos", anchor, true);
   if (!id) return;
-  if (key === "star") emit("star", { period, id, starred: !getTodoById(period, id)?.starred, anchor });
+  if (key === "star") {
+    const todo = getTodoById(period, id);
+    if (todo?.starred) {
+      emit("star", { period, id, starred: false, anchor });
+    } else if (anchor) {
+      openDeadlineEditor(period, id, anchor);
+    }
+  }
   if (key === "delete") emit("remove", period, id, anchor);
 }
 
@@ -541,7 +614,7 @@ function buildTodoListEntries(todos: TodoItem[], deferredDoneIds: ReadonlySet<st
             class="todo-star-button is-starred"
             type="button"
             aria-label="取消重点"
-            @click.stop="emit('star', { period: item.period, id: item.todo.id, starred: false, anchor: $event.currentTarget as HTMLElement })"
+            @click="handleStarClick($event, item.period, item.todo)"
           >
             ★
           </button>
@@ -651,7 +724,7 @@ function buildTodoListEntries(todos: TodoItem[], deferredDoneIds: ReadonlySet<st
                 :class="{ 'is-starred': entry.todo.starred }"
                 type="button"
                 :aria-label="entry.todo.starred ? '取消重点' : '设为重点'"
-                @click.stop="emit('star', { period, id: entry.todo.id, starred: !entry.todo.starred, anchor: $event.currentTarget as HTMLElement })"
+                @click="handleStarClick($event, period, entry.todo)"
               >
                 {{ entry.todo.starred ? "★" : "☆" }}
               </button>
@@ -666,6 +739,58 @@ function buildTodoListEntries(todos: TodoItem[], deferredDoneIds: ReadonlySet<st
         </TransitionGroup>
       </section>
     </div>
+
+    <section
+      v-if="deadlineEditor"
+      class="deadline-editor"
+      aria-label="设置截止时间"
+    >
+      <div class="deadline-editor-heading">
+        <span>设置截止时间</span>
+        <button
+          class="deadline-close-button icon-button"
+          type="button"
+          aria-label="关闭截止时间选择"
+          @click="closeDeadlineEditor"
+        >
+          ×
+        </button>
+      </div>
+      <input
+        class="deadline-date-input"
+        type="date"
+        :value="deadlineEditor.date"
+        @input="updateDeadlineDate(($event.target as HTMLInputElement).value)"
+      />
+      <div class="deadline-time-options" aria-label="选择截止整点">
+        <button
+          v-for="time in DEADLINE_TIME_OPTIONS"
+          :key="time"
+          class="deadline-time-button"
+          :class="{ 'is-selected': deadlineEditor.time === time }"
+          type="button"
+          @click="selectDeadlineTime(time)"
+        >
+          {{ time }}
+        </button>
+      </div>
+      <div class="deadline-editor-actions">
+        <button
+          class="deadline-ignore-button"
+          type="button"
+          @click="ignoreDeadlineEditor"
+        >
+          忽略
+        </button>
+        <button
+          class="deadline-confirm-button"
+          type="button"
+          @click="confirmDeadlineEditor"
+        >
+          确定
+        </button>
+      </div>
+    </section>
 
     <NDropdown
       v-if="menu"
