@@ -301,7 +301,8 @@ describe("Naive UI component usage", () => {
     expect(text).toContain("粘贴");
     expect(todo).toContain("copyTodoText");
     expect(todo).toContain("复制");
-    expect(todo).not.toContain("编辑");
+    expect(todo).toContain("设置提醒时间");
+    expect(todo).toContain("编辑提醒时间");
     expect(todo).toContain("删除");
   });
 
@@ -471,7 +472,7 @@ describe("Naive UI component usage", () => {
     const defaults = read("src/state/defaults.ts");
 
     expect(defaults).toContain("GUIDE_MENU_OPTION");
-    expect(defaults).toContain('"today-focus-title": "❗️ 今日重点"');
+    expect(defaults).toContain('"today-focus-title": "重点事项"');
     for (const source of [image, quick, todo, text]) {
       expect(source).toContain("GUIDE_MENU_OPTION");
       expect(source).toContain("Tips");

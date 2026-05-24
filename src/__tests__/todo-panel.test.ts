@@ -268,7 +268,7 @@ describe("TodoPanel", () => {
       },
     });
 
-    expect(wrapper.get(".today-focus-section").text()).toContain("❗️ 今日重点");
+    expect(wrapper.get(".today-focus-section").text()).toContain("重点事项");
     expect(wrapper.findAll(".today-focus-input").map((item) => (item.element as HTMLInputElement).value)).toEqual([
       "重点未完成",
       "重点已完成",
@@ -353,6 +353,44 @@ describe("TodoPanel", () => {
     } finally {
       vi.useRealTimers();
     }
+  });
+
+  it("sorts today's focus reminders by deadline before undated starred items", () => {
+    const wrapper = mount(TodoPanel, {
+      props: {
+        todos: {
+          morning: [
+            { id: "a", text: "明天早上", done: false, starred: true, deadlineAt: new Date(2026, 4, 26, 9).getTime() },
+            { id: "b", text: "没有截止时间", done: false, starred: true },
+          ],
+          noon: [
+            { id: "c", text: "今天下午", done: false, starred: true, deadlineAt: new Date(2026, 4, 25, 15).getTime() },
+          ],
+          evening: [
+            { id: "d", text: "已完成今天中午", done: true, starred: true, deadlineAt: new Date(2026, 4, 25, 12).getTime() },
+          ],
+        },
+        titles: DEFAULT_TITLES,
+      },
+      global: {
+        stubs: {
+          Button: true,
+          Checkbox: checkboxStub,
+          Dropdown: dropdownStub,
+          NCheckbox: checkboxStub,
+          NDropdown: dropdownStub,
+          NTooltip: tooltipStub,
+        },
+      },
+    });
+
+    expect(wrapper.findAll(".today-focus-input").map((item) => (item.element as HTMLInputElement).value)).toEqual([
+      "今天下午",
+      "明天早上",
+      "没有截止时间",
+      "已完成今天中午",
+    ]);
+    wrapper.unmount();
   });
 
   it("refreshes deadline labels on the deadline clock without prop changes", async () => {
@@ -476,12 +514,13 @@ describe("TodoPanel", () => {
     expect(wrapper.find(".deadline-editor").exists()).toBe(true);
     expect((wrapper.get(".deadline-date-input").element as HTMLInputElement).value).toBe("2026-05-25");
     expect(wrapper.findAll(".deadline-time-button").map((button) => button.text())).toEqual([
-      "09:00",
-      "12:00",
-      "15:00",
-      "18:00",
-      "21:00",
+      "上午 9 点",
+      "中午 12 点",
+      "下午 3 点",
+      "下午 6 点",
+      "晚上 9 点",
     ]);
+    expect(wrapper.get(".deadline-time-button.is-selected").text()).toBe("上午 9 点");
     expect(wrapper.emitted("star")).toBeUndefined();
     wrapper.unmount();
     vi.useRealTimers();
@@ -513,7 +552,7 @@ describe("TodoPanel", () => {
 
     await wrapper.get(".todo-star-button").trigger("click");
     await wrapper.get(".deadline-date-input").setValue("2026-05-30");
-    await wrapper.findAll(".deadline-time-button").find((button) => button.text() === "15:00")?.trigger("click");
+    await wrapper.findAll(".deadline-time-button").find((button) => button.text() === "下午 3 点")?.trigger("click");
     await wrapper.get(".deadline-confirm-button").trigger("click");
 
     expect(wrapper.emitted("star")?.[0]).toEqual([
@@ -710,6 +749,7 @@ describe("TodoPanel", () => {
     expect(wrapper.get(".today-focus-item").classes()).toContain("is-menu-selected");
     expect(wrapper.findAll(".dropdown-option").map((option) => option.text())).toEqual([
       "复制",
+      "设置提醒时间",
       "删除",
       "取消星标",
       "Tips",
@@ -718,6 +758,60 @@ describe("TodoPanel", () => {
     await wrapper.findAll(".dropdown-option").find((option) => option.text() === "删除")?.trigger("click");
 
     expect(wrapper.emitted("remove")?.[0]).toEqual(["morning", "a", expect.any(HTMLElement)]);
+    wrapper.unmount();
+  });
+
+  it("opens a deadline editor from today's focus context menu and preloads existing deadlines", async () => {
+    const wrapper = mount(TodoPanel, {
+      props: {
+        todos: {
+          morning: [
+            {
+              id: "a",
+              text: "重点事项",
+              done: false,
+              starred: true,
+              deadlineAt: new Date(2026, 4, 30, 18).getTime(),
+            },
+          ],
+          noon: [],
+          evening: [],
+        },
+        titles: DEFAULT_TITLES,
+      },
+      global: {
+        stubs: {
+          Button: true,
+          Checkbox: checkboxStub,
+          Dropdown: dropdownStub,
+          NCheckbox: checkboxStub,
+          NDropdown: dropdownStub,
+          NTooltip: tooltipStub,
+        },
+      },
+    });
+
+    await wrapper.get(".today-focus-item").trigger("contextmenu");
+
+    expect(wrapper.findAll(".dropdown-option").map((option) => option.text())).toContain("编辑提醒时间");
+
+    await wrapper.findAll(".dropdown-option").find((option) => option.text() === "编辑提醒时间")?.trigger("click");
+
+    expect((wrapper.get(".deadline-date-input").element as HTMLInputElement).value).toBe("2026-05-30");
+    expect(wrapper.get(".deadline-time-button.is-selected").text()).toBe("下午 6 点");
+
+    await wrapper.findAll(".deadline-time-button").find((button) => button.text() === "中午 12 点")?.trigger("click");
+    await wrapper.get(".deadline-confirm-button").trigger("click");
+
+    expect(wrapper.emitted("star")?.[0]).toEqual([
+      {
+        period: "morning",
+        id: "a",
+        starred: true,
+        deadlineAt: new Date(2026, 4, 30, 12).getTime(),
+        anchor: expect.any(HTMLElement),
+      },
+    ]);
     wrapper.unmount();
   });
 

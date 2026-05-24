@@ -10,7 +10,7 @@ import {
 describe("deadline helpers", () => {
   it("uses a small set of common whole-hour choices", () => {
     expect(DEADLINE_TIME_OPTIONS).toEqual(["09:00", "12:00", "15:00", "18:00", "21:00"]);
-    expect(DEFAULT_DEADLINE_TIME).toBe("18:00");
+    expect(DEFAULT_DEADLINE_TIME).toBe("09:00");
   });
 
   it("creates a local timestamp from a date and whole-hour time", () => {
@@ -19,8 +19,8 @@ describe("deadline helpers", () => {
     expect(timestamp).toBe(new Date(2026, 4, 30, 15, 0, 0, 0).getTime());
   });
 
-  it("defaults missing time to 18:00 and rejects malformed dates", () => {
-    expect(createDeadlineAt("2026-05-30")).toBe(new Date(2026, 4, 30, 18, 0, 0, 0).getTime());
+  it("defaults missing time to 09:00 and rejects malformed dates", () => {
+    expect(createDeadlineAt("2026-05-30")).toBe(new Date(2026, 4, 30, 9, 0, 0, 0).getTime());
     expect(createDeadlineAt("", "18:00")).toBeNull();
     expect(createDeadlineAt("2026/05/30", "18:00")).toBeNull();
     expect(createDeadlineAt("2026-13-30", "18:00")).toBeNull();

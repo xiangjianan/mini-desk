@@ -76,6 +76,23 @@ describe("SpacePanel", () => {
     expect(wrapper.emitted("rename")?.[0]).toEqual(["workspace", "资料"]);
   });
 
+  it("does not save a space name while Chinese IME composition is confirming", async () => {
+    const wrapper = mountSpacePanel([{ id: "workspace", title: "工作空间", lines: [] }]);
+
+    await wrapper.get(".space-tab").trigger("dblclick");
+    await wrapper.get(".space-tab-edit-input").setValue("ziliao");
+    await wrapper.get(".space-tab-edit-input").trigger("compositionstart");
+    await wrapper.get(".space-tab-edit-input").trigger("keydown.enter", { isComposing: true, keyCode: 229 });
+
+    expect(wrapper.emitted("rename")).toBeUndefined();
+    expect(wrapper.find(".space-tab-edit-input").exists()).toBe(true);
+
+    await wrapper.get(".space-tab-edit-input").trigger("compositionend");
+    await wrapper.get(".space-tab-edit-input").trigger("keydown.enter");
+
+    expect(wrapper.emitted("rename")?.[0]).toEqual(["workspace", "ziliao"]);
+  });
+
   it("opens tab context actions for editing and deleting", async () => {
     const wrapper = mountSpacePanel([
       { id: "workspace", title: "工作空间", lines: [] },

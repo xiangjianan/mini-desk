@@ -767,6 +767,21 @@ h3 {
   background: rgba(239, 68, 68, 0.12);
 }
 
+.todo-item.deadline-due-soon,
+.today-focus-item.deadline-due-soon {
+  background: rgba(239, 68, 68, 0.08);
+}
+
+.todo-item.deadline-upcoming,
+.today-focus-item.deadline-upcoming {
+  background: rgba(245, 158, 11, 0.1);
+}
+
+.todo-item.deadline-later,
+.today-focus-item.deadline-later {
+  background: rgba(107, 114, 128, 0.07);
+}
+
 .todo-item.deadline-overdue::before,
 .todo-item.deadline-due-soon::before,
 .todo-item.deadline-upcoming::before,
@@ -901,10 +916,8 @@ h3 {
 
 .deadline-editor {
   position: fixed;
-  right: 18px;
-  bottom: 18px;
   z-index: 30;
-  width: min(260px, calc(100vw - 36px));
+  width: min(280px, calc(100vw - 16px));
   padding: 10px;
   border: 1px solid var(--line-control);
   background: var(--panel);

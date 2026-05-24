@@ -1,8 +1,16 @@
 export const DEADLINE_TIME_OPTIONS = ["09:00", "12:00", "15:00", "18:00", "21:00"] as const;
-export const DEFAULT_DEADLINE_TIME = "18:00";
+export const DEFAULT_DEADLINE_TIME = "09:00";
 
 export type DeadlineTimeOption = typeof DEADLINE_TIME_OPTIONS[number];
 export type DeadlineUrgency = "overdue" | "due-soon" | "upcoming" | "later";
+
+const DEADLINE_TIME_LABELS: Record<DeadlineTimeOption, string> = {
+  "09:00": "上午 9 点",
+  "12:00": "中午 12 点",
+  "15:00": "下午 3 点",
+  "18:00": "下午 6 点",
+  "21:00": "晚上 9 点",
+};
 
 export interface DeadlineDisplay {
   label: string;
@@ -68,6 +76,10 @@ export function getDeadlineDisplay(deadlineAt: number | undefined, now = Date.no
     label: `${deadlineDate.getMonth() + 1}/${deadlineDate.getDate()} ${hour}`,
     urgency: "later",
   };
+}
+
+export function getDeadlineTimeLabel(time: DeadlineTimeOption): string {
+  return DEADLINE_TIME_LABELS[time];
 }
 
 export function isValidDeadlineAt(value: unknown): value is number {

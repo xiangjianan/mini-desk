@@ -8,8 +8,11 @@ import {
   DEFAULT_DEADLINE_TIME,
   createDeadlineAt,
   getDeadlineDisplay,
+  getDeadlineTimeLabel,
   getLocalDateInputValue,
+  isValidDeadlineAt,
   type DeadlineDisplay,
+  type DeadlineTimeOption,
 } from "../state/deadlines";
 import type { DraggedTodo, GuideKey, TodoCompletedVisibility, TodoItem, TodoMap, TodoPeriod, TodoStarChange } from "../types";
 import { getOrderedTodos } from "../state/todos";
@@ -56,7 +59,9 @@ const deadlineEditor = ref<{
   id: string;
   anchor: HTMLElement;
   date: string;
-  time: string;
+  time: DeadlineTimeOption;
+  x: number;
+  y: number;
 } | null>(null);
 const pendingDoneReorderIds = ref<string[]>([]);
 const reorderTimers = new Map<string, number>();
@@ -80,6 +85,12 @@ const menuOptions = computed<DropdownOption[]>(() => {
     if (menu.value.target && canPasteTodoText(menu.value.period, menu.value.id, menu.value.target)) {
       options.push({ label: "粘贴", key: "paste" });
     }
+    if (todo?.starred) {
+      options.push({
+        label: isValidDeadlineAt(todo.deadlineAt) ? "编辑提醒时间" : "设置提醒时间",
+        key: "deadline",
+      });
+    }
     options.push({ label: "删除", key: "delete" });
     options.push({ label: todo?.starred ? "取消星标" : "星标", key: "star" });
   }
@@ -94,6 +105,9 @@ const periodLabels: Record<TodoPeriod, string> = {
 };
 const todayFocusTitleId = "today-focus-title";
 const DEADLINE_CLOCK_INTERVAL_MS = 60_000;
+const DEADLINE_EDITOR_OFFSET = 8;
+const DEADLINE_EDITOR_WIDTH = 280;
+const DEADLINE_EDITOR_HEIGHT = 190;
 const deadlineNow = ref(Date.now());
 const deadlineClockTimer = ref<number | undefined>();
 
@@ -120,13 +134,27 @@ const periodStats = computed(() =>
   ) as Record<TodoPeriod, string>,
 );
 
-const todayFocus = computed(() =>
-  TODO_PERIODS.flatMap((period) =>
+type TodayFocusEntry = { period: TodoPeriod; todo: TodoItem; index: number };
+
+const todayFocus = computed(() => {
+  const entries: TodayFocusEntry[] = TODO_PERIODS.flatMap((period) =>
     ordered.value[period]
       .filter((todo) => todo.starred)
-      .map((todo) => ({ period, todo })),
-  ),
-);
+      .map((todo) => ({ period, todo, index: 0 })),
+  );
+  entries.forEach((entry, index) => {
+    entry.index = index;
+  });
+  return entries.sort(compareTodayFocusEntries).map(({ period, todo }) => ({ period, todo }));
+});
+
+const deadlineEditorStyle = computed(() => {
+  if (!deadlineEditor.value) return {};
+  return {
+    left: `${deadlineEditor.value.x}px`,
+    top: `${deadlineEditor.value.y}px`,
+  };
+});
 
 const deadlineDisplays = computed(() => {
   const displays = new Map<TodoItem, DeadlineDisplay>();
@@ -296,23 +324,52 @@ function handleStarClick(event: MouseEvent, period: TodoPeriod, todo: TodoItem):
     emit("star", { period, id: todo.id, starred: false, anchor });
     return;
   }
-  openDeadlineEditor(period, todo.id, anchor);
+  openDeadlineEditor(period, todo.id, anchor, todo);
 }
 
-function openDeadlineEditor(period: TodoPeriod, id: string, anchor: HTMLElement): void {
+function openDeadlineEditor(period: TodoPeriod, id: string, anchor: HTMLElement, todo = getTodoById(period, id)): void {
+  const { date, time } = getDeadlineEditorValues(todo);
+  const { x, y } = getDeadlineEditorPosition(anchor);
   selectedMenuTodoKey.value = null;
   deadlineEditor.value = {
     period,
     id,
     anchor,
-    date: getLocalDateInputValue(),
-    time: DEFAULT_DEADLINE_TIME,
+    date,
+    time,
+    x,
+    y,
   };
 }
 
-function selectDeadlineTime(time: string): void {
+function selectDeadlineTime(time: DeadlineTimeOption): void {
   if (!deadlineEditor.value) return;
   deadlineEditor.value = { ...deadlineEditor.value, time };
+}
+
+function getDeadlineEditorValues(todo?: TodoItem): { date: string; time: DeadlineTimeOption } {
+  if (!isValidDeadlineAt(todo?.deadlineAt)) return { date: getLocalDateInputValue(), time: DEFAULT_DEADLINE_TIME };
+
+  const deadlineDate = new Date(todo.deadlineAt);
+  const hour = String(deadlineDate.getHours()).padStart(2, "0");
+  const time = `${hour}:00`;
+  const supportedTime = DEADLINE_TIME_OPTIONS.includes(time as DeadlineTimeOption)
+    ? time as DeadlineTimeOption
+    : DEFAULT_DEADLINE_TIME;
+  return { date: getLocalDateInputValue(deadlineDate), time: supportedTime };
+}
+
+function getDeadlineEditorPosition(anchor: HTMLElement): { x: number; y: number } {
+  const rect = anchor.getBoundingClientRect();
+  const viewportWidth = window.innerWidth || document.documentElement.clientWidth || DEADLINE_EDITOR_WIDTH;
+  const viewportHeight = window.innerHeight || document.documentElement.clientHeight || DEADLINE_EDITOR_HEIGHT;
+  const maxX = Math.max(DEADLINE_EDITOR_OFFSET, viewportWidth - DEADLINE_EDITOR_WIDTH - DEADLINE_EDITOR_OFFSET);
+  const rightX = rect.right + DEADLINE_EDITOR_OFFSET;
+  const fallbackLeftX = rect.left - DEADLINE_EDITOR_WIDTH - DEADLINE_EDITOR_OFFSET;
+  const x = rightX <= maxX ? rightX : Math.max(DEADLINE_EDITOR_OFFSET, fallbackLeftX);
+  const maxY = Math.max(DEADLINE_EDITOR_OFFSET, viewportHeight - DEADLINE_EDITOR_HEIGHT - DEADLINE_EDITOR_OFFSET);
+  const y = Math.min(Math.max(DEADLINE_EDITOR_OFFSET, rect.top), maxY);
+  return { x, y };
 }
 
 function updateDeadlineDate(value: string): void {
@@ -367,6 +424,12 @@ async function handleMenuSelect(key: string): Promise<void> {
     closeMenu();
     return;
   }
+  if (key === "deadline" && id && anchor) {
+    const todo = getTodoById(period, id);
+    closeMenu();
+    openDeadlineEditor(period, id, anchor, todo);
+    return;
+  }
   closeMenu();
   if (key === "guide" && anchor) emit("guide", "todos", anchor, true);
   if (!id) return;
@@ -375,7 +438,7 @@ async function handleMenuSelect(key: string): Promise<void> {
     if (todo?.starred) {
       emit("star", { period, id, starred: false, anchor });
     } else if (anchor) {
-      openDeadlineEditor(period, id, anchor);
+      openDeadlineEditor(period, id, anchor, todo);
     }
   }
   if (key === "delete") emit("remove", period, id, anchor);
@@ -425,6 +488,22 @@ function getTodoDeadlineClass(todo: TodoItem): string | null {
 
 function getTodoDeadlineLabel(todo: TodoItem): string | null {
   return getTodoDeadline(todo)?.label ?? null;
+}
+
+function compareTodayFocusEntries(left: TodayFocusEntry, right: TodayFocusEntry): number {
+  const doneDiff = Number(left.todo.done) - Number(right.todo.done);
+  if (doneDiff !== 0) return doneDiff;
+
+  const leftDeadline = left.todo.deadlineAt;
+  const rightDeadline = right.todo.deadlineAt;
+  const leftHasDeadline = isValidDeadlineAt(leftDeadline);
+  const rightHasDeadline = isValidDeadlineAt(rightDeadline);
+  if (leftHasDeadline && rightHasDeadline) {
+    const deadlineDiff = leftDeadline - rightDeadline;
+    if (deadlineDiff !== 0) return deadlineDiff;
+  }
+  if (leftHasDeadline !== rightHasDeadline) return leftHasDeadline ? -1 : 1;
+  return left.index - right.index;
 }
 
 function hasSelection(target: HTMLTextAreaElement | HTMLInputElement): boolean {
@@ -804,6 +883,7 @@ function buildTodoListEntries(todos: TodoItem[], deferredDoneIds: ReadonlySet<st
     <section
       v-if="deadlineEditor"
       class="deadline-editor"
+      :style="deadlineEditorStyle"
       aria-label="设置截止时间"
     >
       <div class="deadline-editor-heading">
@@ -832,7 +912,7 @@ function buildTodoListEntries(todos: TodoItem[], deferredDoneIds: ReadonlySet<st
           type="button"
           @click="selectDeadlineTime(time)"
         >
-          {{ time }}
+          {{ getDeadlineTimeLabel(time) }}
         </button>
       </div>
       <div class="deadline-editor-actions">
