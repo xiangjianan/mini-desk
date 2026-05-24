@@ -38,6 +38,7 @@ export interface TodoItem {
   text: string;
   done: boolean;
   starred?: boolean;
+  deadlineAt?: number;
 }
 
 export type TodoMap = Record<TodoPeriod, TodoItem[]>;

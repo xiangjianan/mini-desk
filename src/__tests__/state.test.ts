@@ -114,7 +114,7 @@ describe("state compatibility", () => {
         },
       ],
       todos: {
-        morning: [{ id: "a", text: "重点", done: false, starred: true }],
+        morning: [{ id: "a", text: "重点", done: false, starred: true, deadlineAt: 1779721200000 }],
       },
     });
 
@@ -126,7 +126,25 @@ describe("state compatibility", () => {
       },
     ]);
     expect(state.activeSpaceId).toBe("project");
-    expect(state.todos.morning[0]).toMatchObject({ starred: true });
+    expect(state.todos.morning[0]).toMatchObject({ starred: true, deadlineAt: 1779721200000 });
+  });
+
+  it("drops invalid or non-starred todo deadlines during import", () => {
+    const state = normalizeImportedState({
+      todos: {
+        morning: [
+          { id: "a", text: "有效截止", done: false, starred: true, deadlineAt: 1779721200000 },
+          { id: "b", text: "非法截止", done: false, starred: true, deadlineAt: "2026-05-30" },
+          { id: "c", text: "非重点截止", done: false, starred: false, deadlineAt: 1779721200000 },
+        ],
+      },
+    });
+
+    expect(state.todos.morning[0]).toMatchObject({ starred: true, deadlineAt: 1779721200000 });
+    expect(state.todos.morning[1]).toMatchObject({ starred: true });
+    expect(state.todos.morning[1]).not.toHaveProperty("deadlineAt");
+    expect(state.todos.morning[2]).toMatchObject({ starred: false });
+    expect(state.todos.morning[2]).not.toHaveProperty("deadlineAt");
   });
 
   it("serializes textarea text into indented line records", () => {

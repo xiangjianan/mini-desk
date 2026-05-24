@@ -1,4 +1,5 @@
 import { DEFAULT_SPACE_ID, DEFAULT_SPACE_TITLE, defaultState, STORAGE_KEY, TODO_PERIODS } from "./defaults";
+import { isValidDeadlineAt } from "./deadlines";
 import type {
   BoardState,
   LineItem,
@@ -250,12 +251,17 @@ export function normalizeTodos(todos: unknown): TodoMap {
 function normalizeTodo(item: unknown): TodoItem | null {
   if (!isPlainObject(item)) return null;
   const record = item as Record<string, unknown>;
-  return {
+  const starred = Boolean(record.starred);
+  const todo: TodoItem = {
     id: typeof record.id === "string" ? record.id : createId(),
     text: typeof record.text === "string" ? record.text : "",
     done: Boolean(record.done),
-    starred: Boolean(record.starred),
+    starred,
   };
+  if (starred && isValidDeadlineAt(record.deadlineAt)) {
+    todo.deadlineAt = record.deadlineAt;
+  }
+  return todo;
 }
 
 function normalizeStringRecord(value: unknown): Record<string, string> {
