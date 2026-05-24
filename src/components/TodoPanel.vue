@@ -7,7 +7,9 @@ import {
   DEADLINE_TIME_OPTIONS,
   DEFAULT_DEADLINE_TIME,
   createDeadlineAt,
+  getDeadlineDisplay,
   getLocalDateInputValue,
+  type DeadlineDisplay,
 } from "../state/deadlines";
 import type { DraggedTodo, GuideKey, TodoCompletedVisibility, TodoItem, TodoMap, TodoPeriod, TodoStarChange } from "../types";
 import { getOrderedTodos } from "../state/todos";
@@ -388,6 +390,16 @@ function isTodoHighlighted(period: TodoPeriod, id: string): boolean {
   );
 }
 
+function getTodoDeadline(todo: TodoItem): DeadlineDisplay | null {
+  if (todo.done) return null;
+  return getDeadlineDisplay(todo.deadlineAt);
+}
+
+function getTodoDeadlineClass(todo: TodoItem): string | null {
+  const display = getTodoDeadline(todo);
+  return display ? `deadline-${display.urgency}` : null;
+}
+
 function hasSelection(target: HTMLTextAreaElement | HTMLInputElement): boolean {
   return (target.selectionStart ?? 0) !== (target.selectionEnd ?? 0);
 }
@@ -588,7 +600,10 @@ function buildTodoListEntries(todos: TodoItem[], deferredDoneIds: ReadonlySet<st
           v-for="item in todayFocus"
           :key="`${item.period}-${item.todo.id}`"
           class="today-focus-item"
-          :class="{ 'is-done': item.todo.done, 'is-completing': pendingDoneReorderIds.includes(`${item.period}:${item.todo.id}`), 'is-menu-selected': isTodoHighlighted(item.period, item.todo.id) }"
+          :class="[
+            { 'is-done': item.todo.done, 'is-completing': pendingDoneReorderIds.includes(`${item.period}:${item.todo.id}`), 'is-menu-selected': isTodoHighlighted(item.period, item.todo.id) },
+            getTodoDeadlineClass(item.todo),
+          ]"
           @contextmenu.stop="openMenu($event, item.period, item.todo.id)"
         >
           <NCheckbox
@@ -610,6 +625,14 @@ function buildTodoListEntries(todos: TodoItem[], deferredDoneIds: ReadonlySet<st
             @focus="handleInputFocus(item.period, item.todo, $event)"
             @blur="handleInputBlur(item.period, item.todo.id)"
           />
+          <span class="todo-deadline-slot">
+            <span
+              v-if="getTodoDeadline(item.todo)"
+              class="todo-deadline-label"
+            >
+              {{ getTodoDeadline(item.todo)?.label }}
+            </span>
+          </span>
           <button
             class="todo-star-button is-starred"
             type="button"
@@ -685,7 +708,10 @@ function buildTodoListEntries(todos: TodoItem[], deferredDoneIds: ReadonlySet<st
             <li
               v-if="entry.type === 'todo'"
               class="todo-item"
-              :class="{ 'is-done': entry.todo.done, 'is-starred': entry.todo.starred, 'is-menu-selected': isTodoHighlighted(period, entry.todo.id) }"
+              :class="[
+                { 'is-done': entry.todo.done, 'is-starred': entry.todo.starred, 'is-menu-selected': isTodoHighlighted(period, entry.todo.id) },
+                getTodoDeadlineClass(entry.todo),
+              ]"
               @contextmenu.stop="openMenu($event, period, entry.todo.id)"
               @dragover.prevent
               @drop.stop="dragged && emit('move', dragged, period, entry.todo.id)"
@@ -719,6 +745,14 @@ function buildTodoListEntries(todos: TodoItem[], deferredDoneIds: ReadonlySet<st
                 @focus="handleInputFocus(period, entry.todo, $event)"
                 @blur="handleInputBlur(period, entry.todo.id)"
               />
+              <span class="todo-deadline-slot">
+                <span
+                  v-if="getTodoDeadline(entry.todo)"
+                  class="todo-deadline-label"
+                >
+                  {{ getTodoDeadline(entry.todo)?.label }}
+                </span>
+              </span>
               <button
                 class="todo-star-button"
                 :class="{ 'is-starred': entry.todo.starred }"
