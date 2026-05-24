@@ -125,6 +125,18 @@ const todayFocus = computed(() =>
   ),
 );
 
+const deadlineDisplays = computed(() => {
+  const displays = new Map<TodoItem, DeadlineDisplay>();
+  TODO_PERIODS.forEach((period) => {
+    props.todos[period].forEach((todo) => {
+      if (todo.done) return;
+      const display = getDeadlineDisplay(todo.deadlineAt);
+      if (display) displays.set(todo, display);
+    });
+  });
+  return displays;
+});
+
 const visibleOrdered = computed(() =>
   Object.fromEntries(
     TODO_PERIODS.map((period) => {
@@ -391,13 +403,16 @@ function isTodoHighlighted(period: TodoPeriod, id: string): boolean {
 }
 
 function getTodoDeadline(todo: TodoItem): DeadlineDisplay | null {
-  if (todo.done) return null;
-  return getDeadlineDisplay(todo.deadlineAt);
+  return deadlineDisplays.value.get(todo) ?? null;
 }
 
 function getTodoDeadlineClass(todo: TodoItem): string | null {
   const display = getTodoDeadline(todo);
   return display ? `deadline-${display.urgency}` : null;
+}
+
+function getTodoDeadlineLabel(todo: TodoItem): string | null {
+  return getTodoDeadline(todo)?.label ?? null;
 }
 
 function hasSelection(target: HTMLTextAreaElement | HTMLInputElement): boolean {
@@ -627,10 +642,10 @@ function buildTodoListEntries(todos: TodoItem[], deferredDoneIds: ReadonlySet<st
           />
           <span class="todo-deadline-slot">
             <span
-              v-if="getTodoDeadline(item.todo)"
+              v-if="getTodoDeadlineLabel(item.todo)"
               class="todo-deadline-label"
             >
-              {{ getTodoDeadline(item.todo)?.label }}
+              {{ getTodoDeadlineLabel(item.todo) }}
             </span>
           </span>
           <button
@@ -747,10 +762,10 @@ function buildTodoListEntries(todos: TodoItem[], deferredDoneIds: ReadonlySet<st
               />
               <span class="todo-deadline-slot">
                 <span
-                  v-if="getTodoDeadline(entry.todo)"
+                  v-if="getTodoDeadlineLabel(entry.todo)"
                   class="todo-deadline-label"
                 >
-                  {{ getTodoDeadline(entry.todo)?.label }}
+                  {{ getTodoDeadlineLabel(entry.todo) }}
                 </span>
               </span>
               <button

@@ -301,53 +301,58 @@ describe("TodoPanel", () => {
 
   it("shows deadline labels and urgency classes in reminders and today's focus", () => {
     vi.useFakeTimers();
-    vi.setSystemTime(new Date(2026, 4, 25, 10));
-    const wrapper = mount(TodoPanel, {
-      props: {
-        todos: {
-          morning: [
-            { id: "a", text: "超期", done: false, starred: true, deadlineAt: new Date(2026, 4, 25, 9).getTime() },
-            { id: "b", text: "今天", done: false, starred: true, deadlineAt: new Date(2026, 4, 25, 18).getTime() },
-            { id: "c", text: "三天内", done: false, starred: true, deadlineAt: new Date(2026, 4, 27, 18).getTime() },
-            { id: "d", text: "更晚", done: false, starred: true, deadlineAt: new Date(2026, 5, 2, 18).getTime() },
-          ],
-          noon: [],
-          evening: [],
+    try {
+      vi.setSystemTime(new Date(2026, 4, 25, 10));
+      const wrapper = mount(TodoPanel, {
+        props: {
+          todos: {
+            morning: [
+              { id: "a", text: "超期", done: false, starred: true, deadlineAt: new Date(2026, 4, 25, 9).getTime() },
+              { id: "b", text: "今天", done: false, starred: true, deadlineAt: new Date(2026, 4, 25, 18).getTime() },
+              { id: "c", text: "三天内", done: false, starred: true, deadlineAt: new Date(2026, 4, 27, 18).getTime() },
+              { id: "d", text: "更晚", done: false, starred: true, deadlineAt: new Date(2026, 5, 2, 18).getTime() },
+            ],
+            noon: [],
+            evening: [],
+          },
+          titles: DEFAULT_TITLES,
         },
-        titles: DEFAULT_TITLES,
-      },
-      global: {
-        stubs: {
-          Button: true,
-          Checkbox: checkboxStub,
-          Dropdown: dropdownStub,
-          NCheckbox: checkboxStub,
-          NDropdown: dropdownStub,
-          NTooltip: tooltipStub,
+        global: {
+          stubs: {
+            Button: true,
+            Checkbox: checkboxStub,
+            Dropdown: dropdownStub,
+            NCheckbox: checkboxStub,
+            NDropdown: dropdownStub,
+            NTooltip: tooltipStub,
+          },
         },
-      },
-    });
-
-    expect(wrapper.findAll(".todo-deadline-label").map((item) => item.text())).toEqual([
-      "! 已超期",
-      "! 今天 18",
-      "2天后 18",
-      "6/2 18",
-      "! 已超期",
-      "! 今天 18",
-      "2天后 18",
-      "6/2 18",
-    ]);
-    expect(wrapper.findAll(".todo-item")[0].classes()).toContain("deadline-overdue");
-    expect(wrapper.findAll(".todo-item")[1].classes()).toContain("deadline-due-soon");
-    expect(wrapper.findAll(".todo-item")[2].classes()).toContain("deadline-upcoming");
-    expect(wrapper.findAll(".todo-item")[3].classes()).toContain("deadline-later");
-    expect(wrapper.findAll(".today-focus-item")[0].classes()).toContain("deadline-overdue");
-    expect(wrapper.findAll(".today-focus-item")[1].classes()).toContain("deadline-due-soon");
-    expect(wrapper.findAll(".today-focus-item")[2].classes()).toContain("deadline-upcoming");
-    expect(wrapper.findAll(".today-focus-item")[3].classes()).toContain("deadline-later");
-    wrapper.unmount();
-    vi.useRealTimers();
+      });
+      try {
+        expect(wrapper.findAll(".todo-deadline-label").map((item) => item.text())).toEqual([
+          "! 已超期",
+          "! 今天 18",
+          "2天后 18",
+          "6/2 18",
+          "! 已超期",
+          "! 今天 18",
+          "2天后 18",
+          "6/2 18",
+        ]);
+        expect(wrapper.findAll(".todo-item")[0].classes()).toContain("deadline-overdue");
+        expect(wrapper.findAll(".todo-item")[1].classes()).toContain("deadline-due-soon");
+        expect(wrapper.findAll(".todo-item")[2].classes()).toContain("deadline-upcoming");
+        expect(wrapper.findAll(".todo-item")[3].classes()).toContain("deadline-later");
+        expect(wrapper.findAll(".today-focus-item")[0].classes()).toContain("deadline-overdue");
+        expect(wrapper.findAll(".today-focus-item")[1].classes()).toContain("deadline-due-soon");
+        expect(wrapper.findAll(".today-focus-item")[2].classes()).toContain("deadline-upcoming");
+        expect(wrapper.findAll(".today-focus-item")[3].classes()).toContain("deadline-later");
+      } finally {
+        wrapper.unmount();
+      }
+    } finally {
+      vi.useRealTimers();
+    }
   });
 
   it("opens a deadline selector when starring an unstarred reminder", async () => {

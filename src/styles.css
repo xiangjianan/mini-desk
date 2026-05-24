@@ -621,7 +621,7 @@ h3 {
 .today-focus-item {
   position: relative;
   display: grid;
-  grid-template-columns: 42px minmax(0, 1fr) max-content 24px;
+  grid-template-columns: 42px minmax(0, 1fr) minmax(0, 64px) 24px;
   align-items: center;
   gap: 0;
   height: 34px;
@@ -673,7 +673,7 @@ h3 {
 .todo-item {
   position: relative;
   display: grid;
-  grid-template-columns: 14px 28px minmax(0, 1fr) max-content 24px;
+  grid-template-columns: 14px 28px minmax(0, 1fr) minmax(0, 64px) 24px;
   align-items: center;
   gap: 0;
   height: 34px;
@@ -742,20 +742,23 @@ h3 {
   display: inline-flex;
   align-items: center;
   justify-content: flex-end;
+  width: 100%;
   min-width: 0;
   height: 34px;
   padding: 0 4px;
 }
 
 .todo-deadline-label {
-  display: inline-flex;
-  align-items: center;
-  max-width: 78px;
+  display: block;
+  min-width: 0;
+  max-width: 100%;
   min-height: 20px;
   padding: 0 4px;
   color: var(--muted);
   font-size: calc(var(--app-font-size) - 1px);
-  line-height: 1;
+  line-height: 20px;
+  overflow: hidden;
+  text-overflow: ellipsis;
   white-space: nowrap;
 }
 
@@ -905,7 +908,6 @@ h3 {
   padding: 10px;
   border: 1px solid var(--line-control);
   background: var(--panel);
-  filter: drop-shadow(0 10px 12px rgba(0, 0, 0, 0.12));
 }
 
 .deadline-editor-heading,
