@@ -839,9 +839,32 @@ function complete(period: TodoPeriod, id: string, done: boolean, anchor?: HTMLEl
   if (done) showBubble("todoCompleted", anchor);
 }
 
-function toggleTodoStar(period: TodoPeriod, id: string, starred: boolean): void {
-  state.todos = starTodo(state.todos, period, id, starred);
-  persistNow();
+function toggleTodoStar(
+  period: TodoPeriod,
+  id: string,
+  starred: boolean,
+  deadlineAt?: number,
+  anchor?: HTMLElement,
+): void {
+  if (starred) {
+    state.todos = starTodo(state.todos, period, id, true, deadlineAt);
+    persistNow();
+    return;
+  }
+
+  const todo = state.todos[period].find((item) => item.id === id);
+  if (!todo?.starred) return;
+  const messageKey: MessageKey = todo.deadlineAt ? "confirmUnstarTodoDeadline" : "confirmUnstarTodo";
+  requestConfirmation(
+    messageKey,
+    anchor,
+    () => {
+      state.todos = starTodo(state.todos, period, id, false);
+      persistNow();
+    },
+    undefined,
+    { confirmText: "取消重点", cancelText: "算了" },
+  );
 }
 
 function removeTodo(period: TodoPeriod, id: string, anchor?: HTMLElement): void {
