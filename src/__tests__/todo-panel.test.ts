@@ -325,7 +325,7 @@ describe("TodoPanel", () => {
 
     await wrapper.get(".todo-star-button").trigger("click");
 
-    expect(wrapper.get(".deadline-editor").exists()).toBe(true);
+    expect(wrapper.find(".deadline-editor").exists()).toBe(true);
     expect((wrapper.get(".deadline-date-input").element as HTMLInputElement).value).toBe("2026-05-25");
     expect(wrapper.findAll(".deadline-time-button").map((button) => button.text())).toEqual([
       "09:00",
@@ -500,7 +500,7 @@ describe("TodoPanel", () => {
     await wrapper.get(".todo-item").trigger("contextmenu");
     await wrapper.findAll(".dropdown-option").find((option) => option.text() === "星标")?.trigger("click");
 
-    expect(wrapper.get(".deadline-editor").exists()).toBe(true);
+    expect(wrapper.find(".deadline-editor").exists()).toBe(true);
     expect(wrapper.emitted("star")).toBeUndefined();
     wrapper.unmount();
   });
@@ -1047,7 +1047,7 @@ describe("TodoPanel", () => {
     ]);
 
     await wrapper.findAll(".dropdown-option").find((option) => option.text() === "星标")?.trigger("click");
-    expect(wrapper.get(".deadline-editor").exists()).toBe(true);
+    expect(wrapper.find(".deadline-editor").exists()).toBe(true);
     expect(wrapper.emitted("star")).toBeUndefined();
     await wrapper.findAll(".todo-item")[1].trigger("contextmenu");
 
