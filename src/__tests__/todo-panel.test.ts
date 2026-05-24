@@ -343,6 +343,9 @@ describe("TodoPanel", () => {
     expect(wrapper.findAll(".todo-item")[2].classes()).toContain("deadline-upcoming");
     expect(wrapper.findAll(".todo-item")[3].classes()).toContain("deadline-later");
     expect(wrapper.findAll(".today-focus-item")[0].classes()).toContain("deadline-overdue");
+    expect(wrapper.findAll(".today-focus-item")[1].classes()).toContain("deadline-due-soon");
+    expect(wrapper.findAll(".today-focus-item")[2].classes()).toContain("deadline-upcoming");
+    expect(wrapper.findAll(".today-focus-item")[3].classes()).toContain("deadline-later");
     wrapper.unmount();
     vi.useRealTimers();
   });
