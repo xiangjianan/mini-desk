@@ -5,7 +5,7 @@ import {
   normalizeImportedState,
   serializeTextLines,
 } from "../state/storage";
-import { addTodo, completeTodo, getOrderedTodos, moveTodo } from "../state/todos";
+import { addTodo, completeTodo, getOrderedTodos, moveTodo, starTodo } from "../state/todos";
 import type { BoardState } from "../types";
 
 describe("state compatibility", () => {
@@ -174,6 +174,45 @@ describe("todo behavior", () => {
     ];
 
     expect(getOrderedTodos(todos).map((todo) => todo.id)).toEqual(["3", "1", "2"]);
+  });
+
+  it("orders starred todos with deadlines before other open todos", () => {
+    const todos = [
+      { id: "ordinary", text: "普通", done: false },
+      { id: "later", text: "晚一点", done: false, starred: true, deadlineAt: 3000 },
+      { id: "starred", text: "重点无时间", done: false, starred: true },
+      { id: "sooner", text: "更近", done: false, starred: true, deadlineAt: 1000 },
+      { id: "done", text: "完成", done: true, starred: true, deadlineAt: 500 },
+    ];
+
+    expect(getOrderedTodos(todos).map((todo) => todo.id)).toEqual([
+      "sooner",
+      "later",
+      "starred",
+      "ordinary",
+      "done",
+    ]);
+  });
+
+  it("keeps same-deadline starred todos in their original relative order", () => {
+    const todos = [
+      { id: "b", text: "第二个", done: false, starred: true, deadlineAt: 1000 },
+      { id: "a", text: "第一个", done: false, starred: true, deadlineAt: 1000 },
+    ];
+
+    expect(getOrderedTodos(todos).map((todo) => todo.id)).toEqual(["b", "a"]);
+  });
+
+  it("sets and clears todo deadlines through starTodo", () => {
+    const state = defaultState();
+    state.todos.morning = [{ id: "a", text: "重点", done: false }];
+
+    const starred = starTodo(state.todos, "morning", "a", true, 1779721200000);
+    expect(starred.morning[0]).toMatchObject({ starred: true, deadlineAt: 1779721200000 });
+
+    const unstarred = starTodo(starred, "morning", "a", false);
+    expect(unstarred.morning[0]).toMatchObject({ starred: false });
+    expect(unstarred.morning[0]).not.toHaveProperty("deadlineAt");
   });
 
   it("inserts a new open todo before completed todos to avoid visual reordering", () => {
