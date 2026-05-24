@@ -38,7 +38,7 @@ import {
   getStoredAppVersion,
   markAppVersionSeen,
 } from "./state/version";
-import type { BoardState, DraggedTodo, GuideKey, LineItem, QuickButtonType, StoredImage, TodoPeriod } from "./types";
+import type { BoardState, DraggedTodo, GuideKey, LineItem, QuickButtonType, StoredImage, TodoPeriod, TodoStarChange } from "./types";
 
 const MOBILE_BREAKPOINT_QUERY = "(max-width: 900px)";
 const MOBILE_HANDOFF_MESSAGE = "建议在电脑浏览器打开，以获得完整体验 (｡•̀ᴗ-)✧";
@@ -840,13 +840,8 @@ function complete(period: TodoPeriod, id: string, done: boolean, anchor?: HTMLEl
   if (done) showBubble("todoCompleted", anchor);
 }
 
-function toggleTodoStar(
-  period: TodoPeriod,
-  id: string,
-  starred: boolean,
-  deadlineAt?: number,
-  anchor?: HTMLElement,
-): void {
+function toggleTodoStar(change: TodoStarChange): void {
+  const { period, id, starred, deadlineAt, anchor } = change;
   if (starred) {
     state.todos = starTodo(state.todos, period, id, true, deadlineAt);
     persistNow();

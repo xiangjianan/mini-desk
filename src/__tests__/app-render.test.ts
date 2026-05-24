@@ -696,7 +696,13 @@ describe("App shell", () => {
 
     try {
       const anchor = wrapper.get(".todo-item").element as HTMLElement;
-      wrapper.getComponent(TodoPanel).vm.$emit("star", "morning", "todo-1", true, 1779721200000, anchor);
+      wrapper.getComponent(TodoPanel).vm.$emit("star", {
+        period: "morning",
+        id: "todo-1",
+        starred: true,
+        deadlineAt: 1779721200000,
+        anchor,
+      });
       await wrapper.vm.$nextTick();
 
       expect(wrapper.getComponent(TodoPanel).props("todos").morning[0]).toMatchObject({
@@ -724,7 +730,12 @@ describe("App shell", () => {
 
     try {
       const anchor = wrapper.get(".todo-item").element as HTMLElement;
-      wrapper.getComponent(TodoPanel).vm.$emit("star", "morning", "todo-1", false, undefined, anchor);
+      wrapper.getComponent(TodoPanel).vm.$emit("star", {
+        period: "morning",
+        id: "todo-1",
+        starred: false,
+        anchor,
+      });
       await wrapper.vm.$nextTick();
       await vi.advanceTimersByTimeAsync(200);
       await wrapper.vm.$nextTick();
@@ -759,7 +770,12 @@ describe("App shell", () => {
 
     try {
       const anchor = wrapper.get(".todo-item").element as HTMLElement;
-      wrapper.getComponent(TodoPanel).vm.$emit("star", "morning", "todo-1", false, undefined, anchor);
+      wrapper.getComponent(TodoPanel).vm.$emit("star", {
+        period: "morning",
+        id: "todo-1",
+        starred: false,
+        anchor,
+      });
       await wrapper.vm.$nextTick();
       await vi.advanceTimersByTimeAsync(200);
       await wrapper.vm.$nextTick();

@@ -43,6 +43,14 @@ export interface TodoItem {
 
 export type TodoMap = Record<TodoPeriod, TodoItem[]>;
 
+export interface TodoStarChange {
+  period: TodoPeriod;
+  id: string;
+  starred: boolean;
+  deadlineAt?: number;
+  anchor?: HTMLElement;
+}
+
 export interface WorkspaceSpace {
   id: string;
   title: string;

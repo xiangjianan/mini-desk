@@ -3,7 +3,7 @@ import { computed, nextTick, onUnmounted, ref } from "vue";
 import { NButton, NCheckbox, NDropdown } from "naive-ui";
 import type { DropdownOption } from "naive-ui";
 import { GUIDE_MENU_OPTION, TODO_PERIODS } from "../state/defaults";
-import type { DraggedTodo, GuideKey, TodoCompletedVisibility, TodoItem, TodoMap, TodoPeriod } from "../types";
+import type { DraggedTodo, GuideKey, TodoCompletedVisibility, TodoItem, TodoMap, TodoPeriod, TodoStarChange } from "../types";
 import { getOrderedTodos } from "../state/todos";
 import EditableTitle from "./EditableTitle.vue";
 
@@ -19,7 +19,7 @@ const emit = defineEmits<{
   update: [period: TodoPeriod, id: string, text: string];
   split: [period: TodoPeriod, id: string, before: string, after: string];
   complete: [period: TodoPeriod, id: string, done: boolean, anchor?: HTMLElement];
-  star: [period: TodoPeriod, id: string, starred: boolean];
+  star: [change: TodoStarChange];
   remove: [period: TodoPeriod, id: string, anchor?: HTMLElement];
   clearCompleted: [period: TodoPeriod, anchor?: HTMLElement];
   toggleCompletedVisibility: [period: TodoPeriod, showCompleted: boolean];
@@ -279,7 +279,7 @@ async function handleMenuSelect(key: string): Promise<void> {
   closeMenu();
   if (key === "guide" && anchor) emit("guide", "todos", anchor, true);
   if (!id) return;
-  if (key === "star") emit("star", period, id, !getTodoById(period, id)?.starred);
+  if (key === "star") emit("star", { period, id, starred: !getTodoById(period, id)?.starred, anchor });
   if (key === "delete") emit("remove", period, id, anchor);
 }
 
@@ -541,7 +541,7 @@ function buildTodoListEntries(todos: TodoItem[], deferredDoneIds: ReadonlySet<st
             class="todo-star-button is-starred"
             type="button"
             aria-label="取消重点"
-            @click.stop="emit('star', item.period, item.todo.id, false)"
+            @click.stop="emit('star', { period: item.period, id: item.todo.id, starred: false, anchor: $event.currentTarget as HTMLElement })"
           >
             ★
           </button>
@@ -651,7 +651,7 @@ function buildTodoListEntries(todos: TodoItem[], deferredDoneIds: ReadonlySet<st
                 :class="{ 'is-starred': entry.todo.starred }"
                 type="button"
                 :aria-label="entry.todo.starred ? '取消重点' : '设为重点'"
-                @click.stop="emit('star', period, entry.todo.id, !entry.todo.starred)"
+                @click.stop="emit('star', { period, id: entry.todo.id, starred: !entry.todo.starred, anchor: $event.currentTarget as HTMLElement })"
               >
                 {{ entry.todo.starred ? "★" : "☆" }}
               </button>

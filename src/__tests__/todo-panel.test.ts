@@ -275,9 +275,27 @@ describe("TodoPanel", () => {
     ]);
     expect(wrapper.findAll(".today-focus-item")[1].classes()).toContain("is-done");
 
+    await wrapper.get(".today-focus-item .todo-star-button").trigger("click");
+
+    expect(wrapper.emitted("star")?.[0]).toEqual([
+      {
+        period: "morning",
+        id: "a",
+        starred: false,
+        anchor: expect.any(HTMLElement),
+      },
+    ]);
+
     await wrapper.get(".todo-item .todo-star-button").trigger("click");
 
-    expect(wrapper.emitted("star")?.[0]).toEqual(["morning", "a", false]);
+    expect(wrapper.emitted("star")?.[1]).toEqual([
+      {
+        period: "morning",
+        id: "a",
+        starred: false,
+        anchor: expect.any(HTMLElement),
+      },
+    ]);
     wrapper.unmount();
   });
 
@@ -821,6 +839,17 @@ describe("TodoPanel", () => {
       "星标",
       "Tips",
     ]);
+
+    await wrapper.findAll(".dropdown-option").find((option) => option.text() === "星标")?.trigger("click");
+    expect(wrapper.emitted("star")?.[0]).toEqual([
+      {
+        period: "morning",
+        id: "b",
+        starred: true,
+        anchor: expect.any(HTMLElement),
+      },
+    ]);
+    await wrapper.findAll(".todo-item")[1].trigger("contextmenu");
 
     await wrapper.findAll(".dropdown-option").find((option) => option.text() === "复制")?.trigger("click");
     await Promise.resolve();
