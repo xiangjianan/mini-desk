@@ -1,5 +1,5 @@
 <script setup lang="ts">
-import { computed, nextTick, onUnmounted, ref } from "vue";
+import { computed, nextTick, onMounted, onUnmounted, ref } from "vue";
 import { NButton, NCheckbox, NDropdown } from "naive-ui";
 import type { DropdownOption } from "naive-ui";
 import { GUIDE_MENU_OPTION, TODO_PERIODS } from "../state/defaults";
@@ -93,6 +93,9 @@ const periodLabels: Record<TodoPeriod, string> = {
   evening: "todo-evening-title",
 };
 const todayFocusTitleId = "today-focus-title";
+const DEADLINE_CLOCK_INTERVAL_MS = 60_000;
+const deadlineNow = ref(Date.now());
+const deadlineClockTimer = ref<number | undefined>();
 
 const ordered = computed(() =>
   Object.fromEntries(
@@ -127,10 +130,10 @@ const todayFocus = computed(() =>
 
 const deadlineDisplays = computed(() => {
   const displays = new Map<TodoItem, DeadlineDisplay>();
+  const now = deadlineNow.value;
   TODO_PERIODS.forEach((period) => {
     props.todos[period].forEach((todo) => {
-      if (todo.done) return;
-      const display = getDeadlineDisplay(todo.deadlineAt);
+      const display = getDeadlineDisplay(todo.deadlineAt, now);
       if (display) displays.set(todo, display);
     });
   });
@@ -165,8 +168,16 @@ const listEntries = computed(() =>
   ) as Record<TodoPeriod, TodoListEntry[]>,
 );
 
+onMounted(() => {
+  deadlineNow.value = Date.now();
+  deadlineClockTimer.value = window.setInterval(() => {
+    deadlineNow.value = Date.now();
+  }, DEADLINE_CLOCK_INTERVAL_MS);
+});
+
 onUnmounted(() => {
   reorderTimers.forEach((timer) => window.clearTimeout(timer));
+  window.clearInterval(deadlineClockTimer.value);
 });
 
 function handleListClick(event: MouseEvent, period: TodoPeriod): void {
@@ -407,6 +418,7 @@ function getTodoDeadline(todo: TodoItem): DeadlineDisplay | null {
 }
 
 function getTodoDeadlineClass(todo: TodoItem): string | null {
+  if (todo.done) return null;
   const display = getTodoDeadline(todo);
   return display ? `deadline-${display.urgency}` : null;
 }

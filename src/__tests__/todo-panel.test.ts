@@ -355,6 +355,98 @@ describe("TodoPanel", () => {
     }
   });
 
+  it("refreshes deadline labels on the deadline clock without prop changes", async () => {
+    vi.useFakeTimers();
+    vi.setSystemTime(new Date(2026, 4, 25, 9, 59, 30));
+    const wrapper = mount(TodoPanel, {
+      props: {
+        todos: {
+          morning: [
+            {
+              id: "a",
+              text: "马上到期",
+              done: false,
+              starred: true,
+              deadlineAt: new Date(2026, 4, 25, 10, 0, 0).getTime(),
+            },
+          ],
+          noon: [],
+          evening: [],
+        },
+        titles: DEFAULT_TITLES,
+      },
+      global: {
+        stubs: {
+          Button: true,
+          Checkbox: checkboxStub,
+          Dropdown: dropdownStub,
+          NCheckbox: checkboxStub,
+          NDropdown: dropdownStub,
+          NTooltip: tooltipStub,
+        },
+      },
+    });
+
+    try {
+      expect(wrapper.find(".todo-deadline-label").text()).toBe("! 今天 10");
+
+      vi.setSystemTime(new Date(2026, 4, 25, 10, 0, 31));
+      await vi.advanceTimersByTimeAsync(60_000);
+      await wrapper.vm.$nextTick();
+
+      expect(wrapper.find(".todo-deadline-label").text()).toBe("! 已超期");
+    } finally {
+      wrapper.unmount();
+      vi.useRealTimers();
+    }
+  });
+
+  it("shows weak deadline labels for completed starred reminders without urgency styling", () => {
+    vi.useFakeTimers();
+    vi.setSystemTime(new Date(2026, 4, 25, 10));
+    const wrapper = mount(TodoPanel, {
+      props: {
+        showCompleted: { morning: true, noon: false, evening: false },
+        todos: {
+          morning: [
+            {
+              id: "a",
+              text: "已完成重点",
+              done: true,
+              starred: true,
+              deadlineAt: new Date(2026, 4, 25, 18).getTime(),
+            },
+          ],
+          noon: [],
+          evening: [],
+        },
+        titles: DEFAULT_TITLES,
+      },
+      global: {
+        stubs: {
+          Button: true,
+          Checkbox: checkboxStub,
+          Dropdown: dropdownStub,
+          NCheckbox: checkboxStub,
+          NDropdown: dropdownStub,
+          NTooltip: tooltipStub,
+        },
+      },
+    });
+
+    try {
+      expect(wrapper.find(".todo-item .todo-deadline-label").text()).toBe("! 今天 18");
+      expect(wrapper.find(".today-focus-item .todo-deadline-label").text()).toBe("! 今天 18");
+
+      const urgencyClasses = ["deadline-overdue", "deadline-due-soon", "deadline-upcoming", "deadline-later"];
+      expect(wrapper.get(".todo-item").classes()).not.toEqual(expect.arrayContaining(urgencyClasses));
+      expect(wrapper.get(".today-focus-item").classes()).not.toEqual(expect.arrayContaining(urgencyClasses));
+    } finally {
+      wrapper.unmount();
+      vi.useRealTimers();
+    }
+  });
+
   it("opens a deadline selector when starring an unstarred reminder", async () => {
     vi.useFakeTimers();
     vi.setSystemTime(new Date(2026, 4, 25, 10));
