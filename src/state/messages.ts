@@ -32,6 +32,8 @@ export type MessageKey =
   | "confirmDeleteImage"
   | "confirmDeleteQuick"
   | "confirmDeleteTodo"
+  | "confirmUnstarTodo"
+  | "confirmUnstarTodoDeadline"
   | "confirmDeleteSpace"
   | "confirmClearCompleted"
   | "confirmImportData"
@@ -590,6 +592,38 @@ export const MESSAGE_CATALOG: Record<MessageKey, MessageEntry> = {
       "确认移除提醒？",
       "删除后不可恢复",
       "要移除这条待办？",
+    ],
+  },
+  confirmUnstarTodo: {
+    mood: "warning",
+    surface: "companion",
+    variants: [
+      "确定取消重点吗？",
+      "这个任务将不再置顶",
+      "确定不再重点关注？",
+      "取消后回到普通事项",
+      "这个重点要撤掉吗？",
+      "取消重点后普通显示",
+      "确认取消这个重点？",
+      "取消后不进今日重点",
+      "这条会变普通事项",
+      "确定撤下这个重点？",
+    ],
+  },
+  confirmUnstarTodoDeadline: {
+    mood: "warning",
+    surface: "companion",
+    variants: [
+      "取消重点后，截止时间也会一起清掉。",
+      "任务不再置顶，截止时间也会移除。",
+      "确定取消重点吗？截止时间会同步清除。",
+      "取消后回到普通事项，截止时间不保留。",
+      "这个重点要撤掉吗？截止时间也会撤掉。",
+      "取消重点会停用这条任务的截止提醒。",
+      "确认取消重点？相关截止时间也会删除。",
+      "取消后不再按截止时间提醒这个任务。",
+      "任务会变回普通事项，截止时间会清掉。",
+      "确定不再重点关注？截止时间也会移除。",
     ],
   },
   confirmDeleteSpace: {
