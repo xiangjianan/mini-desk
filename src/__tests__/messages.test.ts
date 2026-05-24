@@ -137,8 +137,12 @@ describe("message catalog", () => {
   it("has separate cancel-star confirmation copy for todos with and without deadlines", () => {
     expect(MESSAGE_CATALOG.confirmUnstarTodo.variants).toHaveLength(10);
     expect(MESSAGE_CATALOG.confirmUnstarTodoDeadline.variants).toHaveLength(10);
-    expect(MESSAGE_CATALOG.confirmUnstarTodo.variants.join("\n")).not.toContain("截止时间");
-    expect(MESSAGE_CATALOG.confirmUnstarTodoDeadline.variants.join("\n")).toContain("截止时间");
+    for (const variant of MESSAGE_CATALOG.confirmUnstarTodo.variants) {
+      expect(variant).not.toContain("截止时间");
+    }
+    for (const variant of MESSAGE_CATALOG.confirmUnstarTodoDeadline.variants) {
+      expect(variant).toContain("截止时间");
+    }
   });
 
   it("includes shortcut guidance and keeps repository URLs out of shared message text", () => {
