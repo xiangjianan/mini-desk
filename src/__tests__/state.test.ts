@@ -210,6 +210,14 @@ describe("todo behavior", () => {
     const starred = starTodo(state.todos, "morning", "a", true, 1779721200000);
     expect(starred.morning[0]).toMatchObject({ starred: true, deadlineAt: 1779721200000 });
 
+    const missingDeadline = starTodo(starred, "morning", "a", true);
+    expect(missingDeadline.morning[0]).toMatchObject({ starred: true });
+    expect(missingDeadline.morning[0]).not.toHaveProperty("deadlineAt");
+
+    const invalidDeadline = starTodo(starred, "morning", "a", true, Number.NaN);
+    expect(invalidDeadline.morning[0]).toMatchObject({ starred: true });
+    expect(invalidDeadline.morning[0]).not.toHaveProperty("deadlineAt");
+
     const unstarred = starTodo(starred, "morning", "a", false);
     expect(unstarred.morning[0]).toMatchObject({ starred: false });
     expect(unstarred.morning[0]).not.toHaveProperty("deadlineAt");
