@@ -11,6 +11,7 @@ import SpacePanel from "./components/SpacePanel.vue";
 import TextPanel from "./components/TextPanel.vue";
 import TodoPanel from "./components/TodoPanel.vue";
 import { AREA_HELP, CONTROL_HELP, DEFAULT_TITLES, TODO_PERIODS } from "./state/defaults";
+import { isValidDeadlineAt } from "./state/deadlines";
 import { deleteStoredImage, hydrateStoredImages, persistImagePayloads, storeImagePayload } from "./state/images";
 import { getMessage, withKaomoji, type MessageKey } from "./state/messages";
 import {
@@ -854,7 +855,7 @@ function toggleTodoStar(
 
   const todo = state.todos[period].find((item) => item.id === id);
   if (!todo?.starred) return;
-  const messageKey: MessageKey = todo.deadlineAt ? "confirmUnstarTodoDeadline" : "confirmUnstarTodo";
+  const messageKey: MessageKey = isValidDeadlineAt(todo.deadlineAt) ? "confirmUnstarTodoDeadline" : "confirmUnstarTodo";
   requestConfirmation(
     messageKey,
     anchor,

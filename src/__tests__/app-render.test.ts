@@ -716,7 +716,7 @@ describe("App shell", () => {
       STORAGE_KEY,
       JSON.stringify({
         todos: {
-          morning: [{ id: "todo-1", text: "重点提醒", done: false, starred: true, deadlineAt: 1779721200000 }],
+          morning: [{ id: "todo-1", text: "重点提醒", done: false, starred: true, deadlineAt: 0 }],
         },
       }),
     );
