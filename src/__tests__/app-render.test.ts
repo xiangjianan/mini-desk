@@ -756,7 +756,61 @@ describe("App shell", () => {
       await wrapper.vm.$nextTick();
 
       const style = wrapper.get('[data-testid="companion-bubble"]').attributes("style");
-      expect(style).toContain("100vw - 128px");
+      expect(style).toContain("100vw - 260px");
+    } finally {
+      wrapper.unmount();
+      vi.useRealTimers();
+    }
+  });
+
+  it("keeps repeated image deletion confirmations inside the left screen edge while the previous bubble fades", async () => {
+    vi.useFakeTimers();
+    vi.spyOn(Math, "random").mockReturnValue(0);
+    localStorage.setItem(
+      STORAGE_KEY,
+      JSON.stringify({
+        images: [
+          { id: "img-1", src: "data:image/png;base64,iVBORw0KGgo=", createdAt: 1 },
+          { id: "img-2", src: "data:image/png;base64,iVBORw0KGgo=", createdAt: 2 },
+        ],
+      }),
+    );
+    const wrapper = mountApp();
+
+    try {
+      const imagePanel = wrapper.getComponent(ImagePanel);
+      vi.spyOn(imagePanel.element, "getBoundingClientRect").mockReturnValue({
+        x: 0,
+        y: 0,
+        width: 128,
+        height: 720,
+        top: 0,
+        left: 0,
+        right: 128,
+        bottom: 720,
+        toJSON: () => ({}),
+      });
+
+      imagePanel.vm.$emit("delete", "img-1", wrapper.findAll(".image-card")[0].element as HTMLElement);
+      await wrapper.vm.$nextTick();
+      await vi.advanceTimersByTimeAsync(200);
+      await wrapper.vm.$nextTick();
+
+      await wrapper.get('[data-testid="companion-yes"]').trigger("click");
+      await Promise.resolve();
+      await wrapper.vm.$nextTick();
+      await vi.advanceTimersByTimeAsync(3200);
+      await wrapper.vm.$nextTick();
+
+      imagePanel.vm.$emit("delete", "img-2", wrapper.findAll(".image-card")[0].element as HTMLElement);
+      await wrapper.vm.$nextTick();
+      await vi.advanceTimersByTimeAsync(200);
+      await wrapper.vm.$nextTick();
+
+      const style = wrapper.get('[data-testid="companion-bubble"]').attributes("style");
+      expect(style).toContain("100vw - 260px");
+      expect(style).not.toContain("100vw - 128px");
+      expect(wrapper.get('[data-testid="companion-yes"]').text()).toBe("删除");
     } finally {
       wrapper.unmount();
       vi.useRealTimers();
@@ -815,7 +869,7 @@ describe("App shell", () => {
       await wrapper.vm.$nextTick();
 
       const style = wrapper.get('[data-testid="companion-bubble"]').attributes("style");
-      expect(style).toContain("100vw - 128px");
+      expect(style).toContain("100vw - 260px");
       expect(style).not.toContain("100vw - 1024px");
     } finally {
       wrapper.unmount();
@@ -1144,15 +1198,23 @@ describe("App shell", () => {
         images: [
           {
             id: "img-1",
-            src: "data:image/png;base64,iVBORw0KGgo=",
+            src: "https://example.test/image.png",
             createdAt: 1,
           },
         ],
       }),
     );
+    const write = vi.fn().mockResolvedValue(undefined);
+    vi.stubGlobal("fetch", vi.fn().mockResolvedValue({ blob: vi.fn().mockResolvedValue(new Blob(["img"], { type: "image/png" })) }));
+    vi.stubGlobal(
+      "ClipboardItem",
+      class {
+        constructor(_items: Record<string, Blob>) {}
+      },
+    );
     Object.assign(navigator, {
       clipboard: {
-        writeText: vi.fn().mockResolvedValue(undefined),
+        write,
       },
     });
     const wrapper = mountApp();
@@ -1163,14 +1225,146 @@ describe("App shell", () => {
       await Promise.resolve();
       await wrapper.vm.$nextTick();
 
-      expect(navigator.clipboard.writeText).toHaveBeenCalledWith("data:image/png;base64,iVBORw0KGgo=");
-      expect(wrapper.find(".focus-companion.is-visible img").exists()).toBe(true);
+      expect(write).toHaveBeenCalledTimes(1);
       expect(wrapper.find('[data-testid="companion-confirm"]').exists()).toBe(false);
 
       await vi.advanceTimersByTimeAsync(200);
       await wrapper.vm.$nextTick();
 
-      expect(wrapper.find('[data-testid="companion-confirm"]').text()).toMatch(/图片|剪贴板|粘贴|Data URL|复制/);
+      expect(wrapper.find('[data-testid="companion-confirm"]').text()).toMatch(/图片|剪贴板|粘贴|复制/);
+    } finally {
+      wrapper.unmount();
+      vi.unstubAllGlobals();
+      vi.useRealTimers();
+    }
+  });
+
+  it("writes data-url images to the clipboard without waiting on async fetch work", async () => {
+    const clipboardItems: Array<Record<string, Blob | Promise<Blob>>> = [];
+    localStorage.setItem(
+      STORAGE_KEY,
+      JSON.stringify({
+        images: [
+          {
+            id: "img-1",
+            src: "data:image/png;base64,iVBORw0KGgo=",
+            createdAt: 1,
+          },
+        ],
+      }),
+    );
+    const write = vi.fn().mockResolvedValue(undefined);
+    vi.stubGlobal("fetch", vi.fn());
+    vi.stubGlobal(
+      "ClipboardItem",
+      class {
+        constructor(items: Record<string, Blob | Promise<Blob>>) {
+          clipboardItems.push(items);
+        }
+      },
+    );
+    Object.assign(navigator, {
+      clipboard: {
+        write,
+      },
+    });
+    const wrapper = mountApp();
+
+    wrapper.getComponent(ImagePanel).vm.$emit("copy", "img-1");
+
+    expect(fetch).not.toHaveBeenCalled();
+    expect(write).toHaveBeenCalledTimes(1);
+    expect(Object.keys(clipboardItems[0])).toEqual(["image/png"]);
+
+    wrapper.unmount();
+    vi.unstubAllGlobals();
+  });
+
+  it("converts non-png data-url images to png before writing the image clipboard", async () => {
+    const clipboardItems: Array<Record<string, Blob | Promise<Blob>>> = [];
+    localStorage.setItem(
+      STORAGE_KEY,
+      JSON.stringify({
+        images: [
+          {
+            id: "img-1",
+            src: "data:image/jpeg;base64,/9j/4AAQSkZJRgABAQAAAQABAAD/2wBDAP//////////////////////////////////////////////////////////////////////////////////////2wBDAf//////////////////////////////////////////////////////////////////////////////////////wAARCAABAAEDASIAAhEBAxEB/8QAFQABAQAAAAAAAAAAAAAAAAAAAAX/xAAUEAEAAAAAAAAAAAAAAAAAAAAA/9oADAMBAAIQAxAAAAH/xAAUEAEAAAAAAAAAAAAAAAAAAAAA/9oACAEBAAEFAqf/xAAUEQEAAAAAAAAAAAAAAAAAAAAA/9oACAEDAQE/ASP/xAAUEQEAAAAAAAAAAAAAAAAAAAAA/9oACAECAQE/ASP/xAAUEAEAAAAAAAAAAAAAAAAAAAAA/9oACAEBAAY/Ar//xAAUEAEAAAAAAAAAAAAAAAAAAAAA/9oACAEBAAE/ISf/2gAMAwEAAgADAAAAEP/EFBQRAQAAAAAAAAAAAAAAAAAAABD/2gAIAQMBAT8QH//EFBQRAQAAAAAAAAAAAAAAAAAAABD/2gAIAQIBAT8QH//EFBABAQAAAAAAAAAAAAAAAAAAABD/2gAIAQEAAT8QH//Z",
+            createdAt: 1,
+          },
+        ],
+      }),
+    );
+    const write = vi.fn().mockResolvedValue(undefined);
+    vi.stubGlobal("fetch", vi.fn());
+    vi.stubGlobal(
+      "ClipboardItem",
+      class {
+        constructor(items: Record<string, Blob | Promise<Blob>>) {
+          clipboardItems.push(items);
+        }
+      },
+    );
+    Object.assign(navigator, {
+      clipboard: {
+        write,
+      },
+    });
+    const wrapper = mountApp();
+
+    wrapper.getComponent(ImagePanel).vm.$emit("copy", "img-1");
+
+    expect(fetch).not.toHaveBeenCalled();
+    expect(write).toHaveBeenCalledTimes(1);
+    expect(Object.keys(clipboardItems[0])).toEqual(["image/png"]);
+    expect(clipboardItems[0]["image/png"]).toBeInstanceOf(Promise);
+
+    wrapper.unmount();
+    vi.unstubAllGlobals();
+  });
+
+  it("does not copy image data as text when binary clipboard copy is rejected", async () => {
+    vi.useFakeTimers();
+    vi.spyOn(Math, "random").mockReturnValue(0);
+    localStorage.setItem(
+      STORAGE_KEY,
+      JSON.stringify({
+        images: [
+          {
+            id: "img-1",
+            src: "data:image/png;base64,iVBORw0KGgo=",
+            createdAt: 1,
+          },
+        ],
+      }),
+    );
+    const write = vi.fn().mockRejectedValue(new DOMException("denied", "NotAllowedError"));
+    const writeText = vi.fn().mockResolvedValue(undefined);
+    vi.stubGlobal("fetch", vi.fn().mockResolvedValue({ blob: vi.fn().mockResolvedValue(new Blob(["img"], { type: "image/png" })) }));
+    vi.stubGlobal(
+      "ClipboardItem",
+      class {
+        constructor(_items: Record<string, Blob>) {}
+      },
+    );
+    Object.assign(navigator, {
+      clipboard: {
+        write,
+        writeText,
+      },
+    });
+    const wrapper = mountApp();
+
+    try {
+      wrapper.getComponent(ImagePanel).vm.$emit("copy", "img-1");
+      await Promise.resolve();
+      await Promise.resolve();
+      await wrapper.vm.$nextTick();
+      await vi.advanceTimersByTimeAsync(200);
+      await wrapper.vm.$nextTick();
+
+      expect(write).toHaveBeenCalledTimes(1);
+      expect(writeText).not.toHaveBeenCalled();
+      expect(wrapper.find('[data-testid="companion-confirm"]').text()).toMatch(/图片复制失败|复制图片|剪贴板写入失败|图片没有复制|请再复制/);
     } finally {
       wrapper.unmount();
       vi.unstubAllGlobals();
@@ -1187,7 +1381,7 @@ describe("App shell", () => {
         images: [
           {
             id: "img-1",
-            src: "data:image/png;base64,iVBORw0KGgo=",
+            src: "https://example.test/image.png",
             createdAt: 1,
           },
         ],
@@ -1214,7 +1408,7 @@ describe("App shell", () => {
       wrapper = mountApp();
 
       wrapper.getComponent(ImagePanel).vm.$emit("copy", "img-1");
-      expect(fetch).toHaveBeenCalledWith("data:image/png;base64,iVBORw0KGgo=");
+      expect(fetch).toHaveBeenCalledWith("https://example.test/image.png");
 
       mediaQuery.dispatchEvent({ matches: true } as MediaQueryListEvent);
       await wrapper.vm.$nextTick();
@@ -1241,9 +1435,9 @@ describe("App shell", () => {
     }
   });
 
-  it("does not run the copy fallback after entering mobile handoff", async () => {
+  it("does not copy image data through text clipboard APIs", async () => {
     vi.useFakeTimers();
-    const mediaQuery = stubMatchMedia(false);
+    vi.spyOn(Math, "random").mockReturnValue(0);
     localStorage.setItem(
       STORAGE_KEY,
       JSON.stringify({
@@ -1256,18 +1450,11 @@ describe("App shell", () => {
         ],
       }),
     );
-    const writeTextResult = createDeferred<void>();
-    const writeText = vi.fn(() => writeTextResult.promise);
+    const writeText = vi.fn().mockResolvedValue(undefined);
     Object.assign(navigator, {
       clipboard: {
         writeText,
       },
-    });
-    const originalExecCommand = document.execCommand;
-    const execCommand = vi.fn(() => true);
-    Object.defineProperty(document, "execCommand", {
-      value: execCommand,
-      configurable: true,
     });
     let wrapper: ReturnType<typeof mountApp> | undefined;
 
@@ -1275,33 +1462,14 @@ describe("App shell", () => {
       wrapper = mountApp();
 
       wrapper.getComponent(ImagePanel).vm.$emit("copy", "img-1");
-      expect(writeText).toHaveBeenCalledWith("data:image/png;base64,iVBORw0KGgo=");
-
-      mediaQuery.dispatchEvent({ matches: true } as MediaQueryListEvent);
-      await wrapper.vm.$nextTick();
-
-      writeTextResult.reject(new DOMException("denied", "NotAllowedError"));
       await Promise.resolve();
-      await Promise.resolve();
-      await wrapper.vm.$nextTick();
-
-      expect(execCommand).not.toHaveBeenCalled();
-
-      mediaQuery.dispatchEvent({ matches: false } as MediaQueryListEvent);
       await wrapper.vm.$nextTick();
       await vi.advanceTimersByTimeAsync(200);
       await wrapper.vm.$nextTick();
 
-      expect(wrapper.find('[data-testid="companion-confirm"]').exists()).toBe(false);
+      expect(writeText).not.toHaveBeenCalled();
+      expect(wrapper.find('[data-testid="companion-confirm"]').text()).toMatch(/图片复制失败|复制图片|剪贴板写入失败|图片没有复制|请再复制/);
     } finally {
-      if (originalExecCommand) {
-        Object.defineProperty(document, "execCommand", {
-          value: originalExecCommand,
-          configurable: true,
-        });
-      } else {
-        Reflect.deleteProperty(document, "execCommand");
-      }
       wrapper?.unmount();
       vi.unstubAllGlobals();
       vi.useRealTimers();
@@ -1321,9 +1489,17 @@ describe("App shell", () => {
         ],
       }),
     );
+    const write = vi.fn().mockResolvedValue(undefined);
+    vi.stubGlobal("fetch", vi.fn().mockResolvedValue({ blob: vi.fn().mockResolvedValue(new Blob(["img"], { type: "image/png" })) }));
+    vi.stubGlobal(
+      "ClipboardItem",
+      class {
+        constructor(_items: Record<string, Blob>) {}
+      },
+    );
     Object.assign(navigator, {
       clipboard: {
-        writeText: vi.fn().mockResolvedValue(undefined),
+        write,
       },
     });
     const wrapper = mountApp();
@@ -1331,16 +1507,26 @@ describe("App shell", () => {
     await wrapper.get(".image-card").trigger("click");
     window.dispatchEvent(new KeyboardEvent("keydown", { key: "Enter" }));
     await Promise.resolve();
+    await Promise.resolve();
+    await Promise.resolve();
 
-    expect(navigator.clipboard.writeText).toHaveBeenCalledWith("data:image/png;base64,iVBORw0KGgo=");
+    expect(write).toHaveBeenCalledTimes(1);
+    vi.unstubAllGlobals();
     wrapper.unmount();
   });
 
   it("adds dropped image files and copies the last added image", async () => {
-    const writeText = vi.fn().mockResolvedValue(undefined);
+    const write = vi.fn().mockResolvedValue(undefined);
+    vi.stubGlobal("fetch", vi.fn().mockResolvedValue({ blob: vi.fn().mockResolvedValue(new Blob(["img"], { type: "image/png" })) }));
+    vi.stubGlobal(
+      "ClipboardItem",
+      class {
+        constructor(_items: Record<string, Blob>) {}
+      },
+    );
     Object.assign(navigator, {
       clipboard: {
-        writeText,
+        write,
       },
     });
     const wrapper = mountApp();
@@ -1358,8 +1544,43 @@ describe("App shell", () => {
     await vi.waitFor(() => {
       expect((wrapper.getComponent(ImagePanel).props("images") as Array<{ id: string }>)).toHaveLength(2);
     });
-    expect(writeText).toHaveBeenCalledTimes(1);
-    expect(String(writeText.mock.calls[0][0])).toContain("data:image/png");
+    expect(write).toHaveBeenCalledTimes(1);
+    vi.unstubAllGlobals();
+    wrapper.unmount();
+  });
+
+  it("adds image files dropped anywhere on the board", async () => {
+    const write = vi.fn().mockResolvedValue(undefined);
+    vi.stubGlobal("fetch", vi.fn().mockResolvedValue({ blob: vi.fn().mockResolvedValue(new Blob(["img"], { type: "image/png" })) }));
+    vi.stubGlobal(
+      "ClipboardItem",
+      class {
+        constructor(_items: Record<string, Blob>) {}
+      },
+    );
+    Object.assign(navigator, {
+      clipboard: {
+        write,
+      },
+    });
+    const wrapper = mountApp();
+    const file = new File(["board"], "board.png", { type: "image/png" });
+
+    await wrapper.get(".note-link-panel").trigger("drop", {
+      dataTransfer: {
+        files: [file],
+      },
+    });
+    await Promise.resolve();
+    await Promise.resolve();
+    await new Promise((resolve) => setTimeout(resolve, 0));
+    await wrapper.vm.$nextTick();
+
+    await vi.waitFor(() => {
+      expect((wrapper.getComponent(ImagePanel).props("images") as Array<{ id: string }>)).toHaveLength(1);
+    });
+    expect(write).toHaveBeenCalledTimes(1);
+    vi.unstubAllGlobals();
     wrapper.unmount();
   });
 
@@ -1639,6 +1860,7 @@ describe("App shell", () => {
       await wrapper.vm.$nextTick();
 
       expect(wrapper.find('[data-testid="companion-confirm"]').text()).toContain("To Do List 看板");
+      expect(wrapper.find('[data-testid="companion-confirm"]').text()).not.toContain("给老婆做的 todolist 看板");
       expect(wrapper.find('[data-testid="companion-confirm"]').text()).toContain("xiangjianan / todolist");
       expect(wrapper.get('[data-testid="companion-link"]').attributes("href")).toBe("https://github.com/xiangjianan/todolist");
       expect(wrapper.get('[data-testid="companion-link"]').attributes("target")).toBe("_blank");
@@ -1660,14 +1882,22 @@ describe("App shell", () => {
       await wrapper.vm.$nextTick();
 
       expect(wrapper.find('[data-testid="companion-confirm"]').text()).toContain("To Do List 看板");
+      expect(wrapper.find('[data-testid="companion-confirm"]').text()).not.toContain("给老婆做的 todolist 看板");
       expect(wrapper.find('[data-testid="companion-confirm"]').text()).toContain("xiangjianan / todolist");
 
-      await vi.advanceTimersByTimeAsync(5000);
+      await vi.advanceTimersByTimeAsync(9799);
+      await wrapper.vm.$nextTick();
+
+      expect(wrapper.find('[data-testid="companion-confirm"]').exists()).toBe(true);
+      expect(wrapper.find(".companion-popover-shell").classes()).not.toContain("is-popover-fading");
+
+      await vi.advanceTimersByTimeAsync(1);
       await wrapper.vm.$nextTick();
 
       expect(wrapper.find(".companion-popover-shell").classes()).toContain("is-popover-fading");
       expect(wrapper.find('[data-testid="companion-confirm"]').classes()).not.toContain("is-popover-fading");
       expect(wrapper.find('[data-testid="companion-confirm"]').text()).toContain("To Do List 看板");
+      expect(wrapper.find('[data-testid="companion-confirm"]').text()).not.toContain("给老婆做的 todolist 看板");
     } finally {
       wrapper.unmount();
       vi.useRealTimers();
@@ -1685,14 +1915,15 @@ describe("App shell", () => {
       await wrapper.vm.$nextTick();
 
       await wrapper.get('[data-testid="companion-confirm"]').trigger("mouseenter");
-      await vi.advanceTimersByTimeAsync(5000);
+      await vi.advanceTimersByTimeAsync(10000);
       await wrapper.vm.$nextTick();
 
       expect(wrapper.find('[data-testid="companion-confirm"]').text()).toContain("To Do List 看板");
+      expect(wrapper.find('[data-testid="companion-confirm"]').text()).not.toContain("给老婆做的 todolist 看板");
       expect(wrapper.find(".companion-popover-shell").classes()).not.toContain("is-popover-fading");
 
       await wrapper.get('[data-testid="companion-confirm"]').trigger("mouseleave");
-      await vi.advanceTimersByTimeAsync(4799);
+      await vi.advanceTimersByTimeAsync(9999);
       await wrapper.vm.$nextTick();
       expect(wrapper.find('[data-testid="companion-confirm"]').exists()).toBe(true);
 
@@ -1721,10 +1952,11 @@ describe("App shell", () => {
 
       expect(wrapper.find('[data-testid="companion-bubble"]').exists()).toBe(true);
       expect(wrapper.find('[data-testid="companion-confirm"]').text()).toContain("To Do List 看板");
+      expect(wrapper.find('[data-testid="companion-confirm"]').text()).not.toContain("给老婆做的 todolist 看板");
       expect(wrapper.find(".companion-popover-shell").classes()).not.toContain("is-popover-fading");
 
       await wrapper.get('[data-testid="companion-bubble"]').trigger("mouseleave");
-      await vi.advanceTimersByTimeAsync(4799);
+      await vi.advanceTimersByTimeAsync(9999);
       await wrapper.vm.$nextTick();
       expect(wrapper.find('[data-testid="companion-confirm"]').exists()).toBe(true);
 
@@ -1791,6 +2023,11 @@ describe("App shell", () => {
   it("shows a companion bubble when clipboard image permission is denied", async () => {
     vi.useFakeTimers();
     vi.spyOn(Math, "random").mockReturnValue(0);
+    const originalExecCommand = document.execCommand;
+    Object.defineProperty(document, "execCommand", {
+      value: vi.fn(() => false),
+      configurable: true,
+    });
     Object.assign(navigator, {
       clipboard: {
         read: vi.fn().mockRejectedValue(new DOMException("denied", "NotAllowedError")),
@@ -1807,8 +2044,73 @@ describe("App shell", () => {
 
       expect(wrapper.find('[data-testid="companion-confirm"]').text()).toMatch(/剪贴板权限受限|检查剪贴板权限/);
     } finally {
+      if (originalExecCommand) {
+        Object.defineProperty(document, "execCommand", {
+          value: originalExecCommand,
+          configurable: true,
+        });
+      } else {
+        Reflect.deleteProperty(document, "execCommand");
+      }
       wrapper.unmount();
       vi.useRealTimers();
+    }
+  });
+
+  it("falls back to the browser paste command when clipboard image reading is denied", async () => {
+    const originalExecCommand = document.execCommand;
+    const image = new File(["img"], "clip.png", { type: "image/png" });
+    const pasteEvent = new Event("paste", { bubbles: true, cancelable: true });
+    Object.defineProperty(pasteEvent, "clipboardData", {
+      value: {
+        items: [
+          {
+            type: "image/png",
+            getAsFile: () => image,
+          },
+        ],
+      },
+    });
+    const execCommand = vi.fn(() => {
+      document.dispatchEvent(pasteEvent);
+      return true;
+    });
+    Object.defineProperty(document, "execCommand", {
+      value: execCommand,
+      configurable: true,
+    });
+    Object.assign(navigator, {
+      clipboard: {
+        read: vi.fn().mockRejectedValue(new DOMException("denied", "NotAllowedError")),
+      },
+    });
+    const wrapper = mountApp();
+
+    try {
+      await wrapper.vm.$nextTick();
+      await Promise.resolve();
+      await Promise.resolve();
+      wrapper.getComponent(ImagePanel).vm.$emit("paste", wrapper.get(".image-panel").element as HTMLElement);
+      await Promise.resolve();
+      await Promise.resolve();
+      await new Promise((resolve) => setTimeout(resolve, 0));
+      await new Promise((resolve) => setTimeout(resolve, 0));
+      await wrapper.vm.$nextTick();
+
+      expect(execCommand).toHaveBeenCalledWith("paste");
+      await vi.waitFor(() => {
+        expect((wrapper.getComponent(ImagePanel).props("images") as Array<{ id: string }>)).toHaveLength(1);
+      });
+    } finally {
+      if (originalExecCommand) {
+        Object.defineProperty(document, "execCommand", {
+          value: originalExecCommand,
+          configurable: true,
+        });
+      } else {
+        Reflect.deleteProperty(document, "execCommand");
+      }
+      wrapper.unmount();
     }
   });
 

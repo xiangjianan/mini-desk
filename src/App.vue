@@ -213,6 +213,8 @@ const GITHUB_ISSUE_URL = "https://github.com/xiangjianan/todolist/issues/new";
 const GITHUB_REPO_URL = "https://github.com/xiangjianan/todolist";
 const GITHUB_REPO_LABEL = "xiangjianan / todolist";
 const ABOUT_MESSAGE = "To Do List 看板：一个本地优先的轻量工作台，用来整理截图、便签、提醒事项、快捷链接和工作空间。";
+const ABOUT_MESSAGE_DURATION_MS = 10000;
+const MIN_COMPANION_POPOVER_RIGHT_EDGE = 260;
 const activeGuideKey = ref<GuideKey | null>(null);
 
 const naiveTheme = computed(() => (state.theme === "dark" ? darkTheme : null));
@@ -476,12 +478,13 @@ async function handlePaste(event: ClipboardEvent): Promise<void> {
   await addImageFile(file);
 }
 
-async function pasteImageFromClipboard(): Promise<void> {
+async function pasteImageFromClipboard(anchor?: HTMLElement): Promise<void> {
   if (shouldBlockBoardEffects()) return;
   const clipboard = navigator.clipboard as Clipboard & {
     read?: () => Promise<ClipboardItem[]>;
   };
-  if (!clipboard.read) {
+  if (!clipboard?.read) {
+    if (pasteImageWithBrowserCommand(anchor)) return;
     showBubble("clipboardPasteUnsupported", undefined, { hideCompanionAfter: true });
     return;
   }
@@ -490,6 +493,7 @@ async function pasteImageFromClipboard(): Promise<void> {
     items = await clipboard.read();
   } catch {
     if (shouldBlockBoardEffects()) return;
+    if (pasteImageWithBrowserCommand(anchor)) return;
     showBubble("clipboardPermissionDenied", undefined, { hideCompanionAfter: true });
     return;
   }
@@ -511,6 +515,11 @@ async function pasteImageFromClipboard(): Promise<void> {
   }
   if (shouldBlockBoardEffects()) return;
   showBubble("clipboardImageMissing", undefined, { hideCompanionAfter: true });
+}
+
+function pasteImageWithBrowserCommand(anchor?: HTMLElement): boolean {
+  anchor?.focus({ preventScroll: true });
+  return Boolean(document.execCommand?.("paste"));
 }
 
 async function addImageFile(file: File, options: { showMessage?: boolean } = {}): Promise<StoredImage | undefined> {
@@ -572,6 +581,13 @@ async function addImageFiles(files: File[], anchor?: HTMLElement): Promise<void>
   if (ignoredCount > 0) showBubble("imageDropIgnored", anchor, { hideCompanionAfter: true });
 }
 
+function handleBoardDrop(event: DragEvent): void {
+  const files = Array.from(event.dataTransfer?.files ?? []);
+  if (files.length === 0) return;
+  const anchor = document.querySelector<HTMLElement>(".image-panel") ?? (event.currentTarget as HTMLElement);
+  void addImageFiles(files, anchor);
+}
+
 function reorderImages(dragId: string, targetId: string): void {
   moveItem(state.images, dragId, targetId);
   persistNow();
@@ -602,30 +618,77 @@ async function copyImage(id: string, anchor?: HTMLElement): Promise<void> {
   const clipboard = navigator.clipboard as Clipboard & {
     write?: (items: ClipboardItem[]) => Promise<void>;
   };
+  if (!clipboard?.write || !("ClipboardItem" in window)) {
+    showBubble("imageCopyFailed", anchor, { hideCompanionAfter: true });
+    return;
+  }
   try {
-    if (clipboard.write && "ClipboardItem" in window) {
-      const response = await fetch(image.src);
-      if (shouldBlockBoardEffects()) return;
-      const blob = await response.blob();
-      if (shouldBlockBoardEffects()) return;
-      await clipboard.write([new window.ClipboardItem({ [blob.type]: blob })]);
+    const dataUrlBlob = getImageDataUrlBlob(image.src);
+    if (dataUrlBlob) {
+      const payload = dataUrlBlob.type === "image/png" ? dataUrlBlob : imageSourceToPngBlob(image.src);
+      await clipboard.write([new window.ClipboardItem({ "image/png": payload })]);
       if (shouldBlockBoardEffects()) return;
       showBubble("imageCopied", anchor, { hideCompanionAfter: true });
       return;
     }
+    const response = await fetch(image.src);
     if (shouldBlockBoardEffects()) return;
-    const copied = await copyText(image.src, shouldBlockBoardEffects);
+    const blob = await response.blob();
     if (shouldBlockBoardEffects()) return;
-    if (copied) {
-      showBubble("imageDataCopied", anchor, { hideCompanionAfter: true });
-      return;
-    }
+    const type = blob.type || getImageSourceType(image.src);
+    const typedBlob = type && !blob.type ? blob.slice(0, blob.size, type) : blob;
+    const payload = type === "image/png" ? typedBlob : imageSourceToPngBlob(image.src);
+    await clipboard.write([new window.ClipboardItem({ "image/png": payload })]);
+    if (shouldBlockBoardEffects()) return;
+    showBubble("imageCopied", anchor, { hideCompanionAfter: true });
   } catch {
     if (shouldBlockBoardEffects()) return;
-    // Fall through to the shared failure message below.
+    showBubble("imageCopyFailed", anchor, { hideCompanionAfter: true });
   }
-  if (shouldBlockBoardEffects()) return;
-  showBubble("imageCopyFailed", anchor, { hideCompanionAfter: true });
+}
+
+function getImageSourceType(src: string): string | undefined {
+  return src.match(/^data:(image\/[^;,]+)/)?.[1];
+}
+
+function getImageDataUrlBlob(src: string): Blob | undefined {
+  const match = src.match(/^data:(image\/[^;,]+)(;base64)?,(.*)$/);
+  if (!match) return undefined;
+  const [, type, base64Flag, payload] = match;
+  const binary = base64Flag ? atob(payload) : decodeURIComponent(payload);
+  const bytes = new Uint8Array(binary.length);
+  for (let index = 0; index < binary.length; index += 1) {
+    bytes[index] = binary.charCodeAt(index);
+  }
+  return new Blob([bytes], { type });
+}
+
+function imageSourceToPngBlob(src: string): Promise<Blob> {
+  return new Promise((resolve, reject) => {
+    const image = new Image();
+    image.onload = () => {
+      const width = image.naturalWidth || image.width;
+      const height = image.naturalHeight || image.height;
+      const canvas = document.createElement("canvas");
+      canvas.width = width;
+      canvas.height = height;
+      const context = canvas.getContext("2d");
+      if (!context) {
+        reject(new Error("Canvas is unavailable"));
+        return;
+      }
+      context.drawImage(image, 0, 0, width, height);
+      canvas.toBlob((blob) => {
+        if (blob) {
+          resolve(blob);
+          return;
+        }
+        reject(new Error("PNG conversion failed"));
+      }, "image/png");
+    };
+    image.onerror = () => reject(new Error("Image decoding failed"));
+    image.src = src;
+  });
 }
 
 function saveQuick(payload: { id?: string; title: string; value: string; type: QuickButtonType }): void {
@@ -923,7 +986,7 @@ function about(anchor?: HTMLElement): void {
     ABOUT_MESSAGE,
     anchor,
     { hideCompanionAfter: true, linkText: GITHUB_REPO_LABEL, linkHref: GITHUB_REPO_URL },
-    5000,
+    ABOUT_MESSAGE_DURATION_MS,
   );
 }
 
@@ -1248,8 +1311,9 @@ function getCompanionPosition(anchor?: HTMLElement): { right: string; bottom?: s
   if (!target) return undefined;
   const rect = target.getBoundingClientRect();
   if (!rect.width && !rect.height) return undefined;
+  const safeRight = Math.max(Math.round(rect.right), MIN_COMPANION_POPOVER_RIGHT_EDGE);
   return {
-    right: `calc(100vw - ${Math.round(rect.right)}px + 10px)`,
+    right: `calc(100vw - ${safeRight}px + 10px)`,
     bottom: `calc(100vh - ${Math.round(rect.bottom)}px + 10px)`,
   };
 }
@@ -1294,7 +1358,13 @@ function moveItem<T extends { id: string }>(items: T[], dragId: string, targetId
 <template>
   <NConfigProvider :theme="naiveTheme">
     <NGlobalStyle />
-    <main v-if="!isMobileBlocked" class="board" aria-label="To Do List 看板">
+    <main
+      v-if="!isMobileBlocked"
+      class="board"
+      aria-label="To Do List 看板"
+      @dragover.prevent
+      @drop.prevent="handleBoardDrop"
+    >
       <ImagePanel
         :title="titles['image-title']"
         :images="state.images"

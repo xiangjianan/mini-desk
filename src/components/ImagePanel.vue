@@ -17,7 +17,7 @@ const emit = defineEmits<{
   copy: [id: string];
   delete: [id: string, anchor?: HTMLElement];
   reorder: [dragId: string, targetId: string];
-  paste: [];
+  paste: [anchor?: HTMLElement];
   dropFiles: [files: File[], anchor?: HTMLElement];
   guide: [key: GuideKey, anchor: HTMLElement, immediate?: boolean];
 }>();
@@ -50,7 +50,7 @@ function handleMenuSelect(key: string): void {
   const id = menu.value?.id;
   const anchor = menu.value?.anchor;
   closeMenu();
-  if (key === "paste") emit("paste");
+  if (key === "paste") emit("paste", anchor);
   if (key === "guide" && anchor) emit("guide", "images", anchor, true);
   if (!id) return;
   if (key === "preview") emit("preview", id);
@@ -75,9 +75,10 @@ function handleExternalDrop(event: DragEvent): void {
   <section
     class="panel image-panel"
     aria-labelledby="image-title"
+    tabindex="-1"
     @click="handleGuideClick"
     @dragover.prevent
-    @drop.prevent="handleExternalDrop"
+    @drop.prevent.stop="handleExternalDrop"
     @contextmenu="openMenu($event)"
   >
     <div class="panel-header">

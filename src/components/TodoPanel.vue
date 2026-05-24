@@ -65,7 +65,6 @@ const menuOptions = computed<DropdownOption[]>(() => {
     if (menu.value.target && canPasteTodoText(menu.value.period, menu.value.id, menu.value.target)) {
       options.push({ label: "粘贴", key: "paste" });
     }
-    options.push({ label: "编辑", key: "edit" });
     options.push({ label: "删除", key: "delete" });
     options.push({ label: todo?.starred ? "取消星标" : "星标", key: "star" });
   }
@@ -280,10 +279,6 @@ async function handleMenuSelect(key: string): Promise<void> {
   closeMenu();
   if (key === "guide" && anchor) emit("guide", "todos", anchor, true);
   if (!id) return;
-  if (key === "edit") {
-    await startTodoEditById(period, id);
-    return;
-  }
   if (key === "star") emit("star", period, id, !getTodoById(period, id)?.starred);
   if (key === "delete") emit("remove", period, id, anchor);
 }
@@ -351,7 +346,8 @@ function canCopyTextSelection(period: TodoPeriod, id: string, target: HTMLInputE
 }
 
 function canPasteTodoText(period: TodoPeriod, id: string, target: HTMLInputElement): boolean {
-  return isTodoEditable(period, getTodoById(period, id) ?? { id, text: target.value, done: false }) && typeof navigator.clipboard?.readText === "function";
+  const todo = getTodoById(period, id);
+  return todo?.done !== true && typeof navigator.clipboard?.readText === "function";
 }
 
 async function copyTextSelection(target: HTMLTextAreaElement | HTMLInputElement): Promise<void> {
@@ -446,16 +442,6 @@ async function startTodoEdit(event: MouseEvent, period: TodoPeriod, id: string):
   await nextTick();
   input.focus({ preventScroll: true });
   lastTodoSelections.delete(key);
-  collapseSelection(input, caret);
-}
-
-async function startTodoEditById(period: TodoPeriod, id: string): Promise<void> {
-  editingTodoKey.value = todoKey(period, id);
-  await nextTick();
-  const input = document.querySelector<HTMLInputElement>(`[data-testid="todo-input-${period}"][data-todo-id="${id}"]`);
-  if (!input) return;
-  const caret = lastTodoCarets.get(todoKey(period, id)) ?? input.selectionStart ?? input.value.length;
-  input.focus({ preventScroll: true });
   collapseSelection(input, caret);
 }
 

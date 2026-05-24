@@ -144,6 +144,7 @@ describe("message catalog", () => {
     expect(guideSource).not.toContain("maybeShowGuideBubble");
     expect(MESSAGE_CATALOG.about.variants.join("\n")).not.toContain("https://github.com/xiangjianan/todolist");
     expect(MESSAGE_CATALOG.about.variants.join("\n")).not.toContain("下方");
+    expect(MESSAGE_CATALOG.about.variants.join("\n")).not.toContain("给老婆做的 todolist 看板");
     expect(guideSource).toContain("GITHUB_ISSUE_URL");
     expect(guideSource).toContain("/issues/new");
     expect(guideSource).not.toContain("GITHUB_REPO_NAME");

@@ -1,8 +1,8 @@
 # To Do List 看板
 
-当前版本：`1.0.16`
+当前版本：`1.0.17`
 
-一个基于 Vue 3、Naive UI、TypeScript 和 Vite 构建的本地优先工作看板。它面向桌面端浏览器，用来集中整理截图、便签、提醒事项、快捷链接和多个工作空间。页面状态保存在浏览器 `localStorage`，图片原文保存在 IndexedDB。
+给老婆做的 todolist 看板。它基于 Vue 3、Naive UI、TypeScript 和 Vite 构建，是一个本地优先的桌面端工作看板，用来集中整理截图、便签、提醒事项、快捷链接和多个工作空间。页面状态保存在浏览器 `localStorage`，图片原文保存在 IndexedDB。
 
 ## 在线地址
 

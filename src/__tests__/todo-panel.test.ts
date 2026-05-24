@@ -338,7 +338,6 @@ describe("TodoPanel", () => {
     expect(wrapper.get(".today-focus-item").classes()).toContain("is-menu-selected");
     expect(wrapper.findAll(".dropdown-option").map((option) => option.text())).toEqual([
       "复制",
-      "编辑",
       "删除",
       "取消星标",
       "Tips",
@@ -818,7 +817,6 @@ describe("TodoPanel", () => {
     expect(wrapper.findAll(".todo-item")[1].classes()).toContain("is-menu-selected");
     expect(wrapper.findAll(".dropdown-option").map((option) => option.text())).toEqual([
       "复制",
-      "编辑",
       "删除",
       "星标",
       "Tips",
@@ -1001,7 +999,6 @@ describe("TodoPanel", () => {
     expect(wrapper.get(".todo-item").classes()).toContain("is-menu-selected");
     expect(wrapper.findAll(".dropdown-option").map((option) => option.text())).toEqual([
       "复制",
-      "编辑",
       "删除",
       "星标",
       "Tips",
@@ -1087,7 +1084,7 @@ describe("TodoPanel", () => {
     wrapper.unmount();
   });
 
-  it("pastes clipboard text from an editable reminder context menu", async () => {
+  it("pastes clipboard text from an existing reminder context menu", async () => {
     const readText = vi.fn().mockResolvedValue("粘贴内容");
     Object.assign(navigator, { clipboard: { readText, writeText: vi.fn() } });
     const wrapper = mount(TodoPanel, {
@@ -1113,14 +1110,13 @@ describe("TodoPanel", () => {
     const inputWrapper = wrapper.get("input.todo-input");
     const input = inputWrapper.element as HTMLInputElement;
 
-    await inputWrapper.trigger("click");
+    expect(inputWrapper.attributes("readonly")).toBeDefined();
     input.setSelectionRange(input.value.length, input.value.length);
     await inputWrapper.trigger("contextmenu");
 
     expect(wrapper.findAll(".dropdown-option").map((option) => option.text())).toEqual([
       "复制",
       "粘贴",
-      "编辑",
       "删除",
       "星标",
       "Tips",
@@ -1169,8 +1165,9 @@ describe("TodoPanel", () => {
     expect(writeText).toHaveBeenCalledWith("一项");
     wrapper.unmount();
   });
-
-  it("opens editing from the reminder context menu", async () => {
+  it("does not show an edit action in reminder context menus", async () => {
+    const writeText = vi.fn().mockResolvedValue(undefined);
+    Object.assign(navigator, { clipboard: { writeText } });
     const wrapper = mount(TodoPanel, {
       props: {
         todos: {
@@ -1191,13 +1188,10 @@ describe("TodoPanel", () => {
         },
       },
     });
-    const inputWrapper = wrapper.get("input.todo-input");
 
-    await inputWrapper.trigger("contextmenu");
-    await wrapper.findAll(".dropdown-option").find((option) => option.text() === "编辑")?.trigger("click");
-    await wrapper.vm.$nextTick();
+    await wrapper.get("input.todo-input").trigger("contextmenu");
 
-    expect(wrapper.get("input.todo-input").attributes("readonly")).toBeUndefined();
+    expect(wrapper.findAll(".dropdown-option").map((option) => option.text())).not.toContain("编辑");
     wrapper.unmount();
   });
 });

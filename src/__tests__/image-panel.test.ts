@@ -1,4 +1,5 @@
 import { mount } from "@vue/test-utils";
+import { nextTick } from "vue";
 import { describe, expect, it } from "vitest";
 import ImagePanel from "../components/ImagePanel.vue";
 import type { StoredImage } from "../types";
@@ -83,6 +84,31 @@ describe("ImagePanel", () => {
     expect(wrapper.text()).not.toContain("取消置顶");
     expect(wrapper.text()).not.toContain("置底");
 
+    wrapper.unmount();
+  });
+
+  it("emits copy from the real image item dropdown menu", async () => {
+    const wrapper = mount(ImagePanel, {
+      attachTo: document.body,
+      props: {
+        title: "截图",
+        images: [{ id: "img-1", src: "data:image/png;base64,iVBORw0KGgo=", createdAt: 1 }],
+      },
+    });
+
+    await wrapper.get(".image-card").trigger("contextmenu");
+    await nextTick();
+    await nextTick();
+
+    const copyOption = Array.from(document.body.querySelectorAll<HTMLElement>(".n-dropdown-option")).find((option) =>
+      option.textContent?.includes("复制"),
+    );
+    expect(copyOption).toBeTruthy();
+
+    copyOption?.querySelector<HTMLElement>(".n-dropdown-option-body")?.click();
+    await nextTick();
+
+    expect(wrapper.emitted("copy")?.[0]).toEqual(["img-1"]);
     wrapper.unmount();
   });
 
