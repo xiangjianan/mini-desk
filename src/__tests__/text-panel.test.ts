@@ -402,6 +402,26 @@ describe("TextPanel", () => {
     expect(textarea.selectionEnd).toBe(5);
   });
 
+  it("preserves a mouse text selection when readonly text starts editing", async () => {
+    const wrapper = mount(TextPanel, {
+      props: {
+        titleId: "workspace-title",
+        title: "工作空间",
+        lines: [{ text: "root text", indent: 0 }],
+      },
+    });
+    const textarea = wrapper.get("textarea").element as HTMLTextAreaElement;
+
+    textarea.setSelectionRange(1, 5);
+    await wrapper.get("textarea").trigger("mouseup");
+    await wrapper.get("textarea").trigger("click");
+    await wrapper.vm.$nextTick();
+
+    expect(textarea.readOnly).toBe(false);
+    expect(textarea.selectionStart).toBe(1);
+    expect(textarea.selectionEnd).toBe(5);
+  });
+
   it("keeps the caret at the original clicked position when double-click editing starts", async () => {
     const wrapper = mount(TextPanel, {
       props: {
@@ -443,6 +463,37 @@ describe("TextPanel", () => {
     expect(wrapper.emitted("guide")?.[0]).toEqual([expect.any(HTMLElement), true]);
   });
 
+  it("keeps the native textarea context menu when async clipboard APIs are unavailable", async () => {
+    Object.assign(navigator, { clipboard: undefined });
+    const wrapper = mount(TextPanel, {
+      props: {
+        titleId: "workspace-title",
+        title: "工作空间",
+        lines: [{ text: "root text", indent: 0 }],
+      },
+      global: {
+        stubs: {
+          Dropdown: dropdownStub,
+          NDropdown: dropdownStub,
+        },
+      },
+    });
+    const textarea = wrapper.get("textarea").element as HTMLTextAreaElement;
+    const event = new MouseEvent("contextmenu", {
+      bubbles: true,
+      cancelable: true,
+      clientX: 12,
+      clientY: 16,
+    });
+
+    textarea.dispatchEvent(event);
+    await wrapper.vm.$nextTick();
+
+    expect(event.defaultPrevented).toBe(false);
+    expect(wrapper.find(".dropdown-option").exists()).toBe(false);
+    wrapper.unmount();
+  });
+
   it("shows copy and paste actions when right-clicking selected editable text", async () => {
     const writeText = vi.fn().mockResolvedValue(undefined);
     const readText = vi.fn().mockResolvedValue(" pasted");
@@ -477,7 +528,8 @@ describe("TextPanel", () => {
     wrapper.unmount();
   });
 
-  it("keeps copy and paste visible but disabled when the text state cannot use them", async () => {
+  it("keeps copy disabled without a selection while paste can start editing from the context menu", async () => {
+    Object.assign(navigator, { clipboard: { readText: vi.fn().mockResolvedValue(" pasted"), writeText: vi.fn() } });
     const wrapper = mount(TextPanel, {
       props: {
         titleId: "workspace-title",
@@ -498,7 +550,7 @@ describe("TextPanel", () => {
 
     expect(wrapper.findAll(".dropdown-option").map((option) => option.text())).toEqual(["复制", "粘贴", "Tips"]);
     expect(wrapper.get('[data-key="copy"]').attributes("disabled")).toBeDefined();
-    expect(wrapper.get('[data-key="paste"]').attributes("disabled")).toBeDefined();
+    expect(wrapper.get('[data-key="paste"]').attributes("disabled")).toBeUndefined();
 
     await wrapper.get('[data-key="copy"]').trigger("click");
 
@@ -506,7 +558,8 @@ describe("TextPanel", () => {
     wrapper.unmount();
   });
 
-  it("enables copy for selected readonly text while paste stays disabled until editing is active", async () => {
+  it("enables copy and paste for selected readonly text from the context menu", async () => {
+    Object.assign(navigator, { clipboard: { readText: vi.fn().mockResolvedValue(" pasted"), writeText: vi.fn() } });
     const wrapper = mount(TextPanel, {
       props: {
         titleId: "workspace-title",
@@ -527,7 +580,133 @@ describe("TextPanel", () => {
     await wrapper.get("textarea").trigger("contextmenu");
 
     expect(wrapper.get('[data-key="copy"]').attributes("disabled")).toBeUndefined();
-    expect(wrapper.get('[data-key="paste"]').attributes("disabled")).toBeDefined();
+    expect(wrapper.get('[data-key="paste"]').attributes("disabled")).toBeUndefined();
+    wrapper.unmount();
+  });
+
+  it("copies a readonly mouse selection from the context menu after editing starts", async () => {
+    const writeText = vi.fn().mockResolvedValue(undefined);
+    Object.assign(navigator, { clipboard: { writeText, readText: vi.fn() } });
+    const wrapper = mount(TextPanel, {
+      props: {
+        titleId: "workspace-title",
+        title: "工作空间",
+        lines: [{ text: "root text", indent: 0 }],
+      },
+      global: {
+        stubs: {
+          Dropdown: dropdownStub,
+          NDropdown: dropdownStub,
+        },
+      },
+    });
+    const textarea = wrapper.get("textarea").element as HTMLTextAreaElement;
+
+    textarea.setSelectionRange(0, 4);
+    await wrapper.get("textarea").trigger("mouseup");
+    await wrapper.get("textarea").trigger("click");
+    await wrapper.get("textarea").trigger("contextmenu");
+    await wrapper.get('[data-key="copy"]').trigger("click");
+    await Promise.resolve();
+
+    expect(writeText).toHaveBeenCalledWith("root");
+    wrapper.unmount();
+  });
+
+  it("falls back to the browser copy command when async clipboard writing fails", async () => {
+    const writeText = vi.fn().mockRejectedValue(new Error("clipboard denied"));
+    const execCommand = vi.fn().mockReturnValue(true);
+    Object.assign(navigator, { clipboard: { writeText, readText: vi.fn() } });
+    Object.assign(document, { execCommand });
+    const wrapper = mount(TextPanel, {
+      props: {
+        titleId: "workspace-title",
+        title: "工作空间",
+        lines: [{ text: "root text", indent: 0 }],
+      },
+      global: {
+        stubs: {
+          Dropdown: dropdownStub,
+          NDropdown: dropdownStub,
+        },
+      },
+    });
+    const textarea = wrapper.get("textarea").element as HTMLTextAreaElement;
+
+    textarea.setSelectionRange(0, 4);
+    await wrapper.get("textarea").trigger("select");
+    await wrapper.get("textarea").trigger("contextmenu");
+    await wrapper.get('[data-key="copy"]').trigger("click");
+    await Promise.resolve();
+
+    expect(writeText).toHaveBeenCalledWith("root");
+    expect(execCommand).toHaveBeenCalledWith("copy");
+    wrapper.unmount();
+  });
+
+  it("pastes clipboard text from the context menu before the text panel is focused", async () => {
+    const readText = vi.fn().mockResolvedValue(" pasted");
+    Object.assign(navigator, { clipboard: { readText, writeText: vi.fn() } });
+    const wrapper = mount(TextPanel, {
+      props: {
+        titleId: "workspace-title",
+        title: "工作空间",
+        lines: [{ text: "root", indent: 0 }],
+      },
+      global: {
+        stubs: {
+          Dropdown: dropdownStub,
+          NDropdown: dropdownStub,
+        },
+      },
+    });
+    const textarea = wrapper.get("textarea").element as HTMLTextAreaElement;
+
+    textarea.setSelectionRange(textarea.value.length, textarea.value.length);
+    await wrapper.get("textarea").trigger("contextmenu");
+    expect(wrapper.get('[data-key="paste"]').attributes("disabled")).toBeUndefined();
+
+    await wrapper.get('[data-key="paste"]').trigger("click");
+    await Promise.resolve();
+
+    expect(textarea.readOnly).toBe(false);
+    expect(wrapper.emitted("update")?.at(-1)?.[0]).toEqual([{ text: "root pasted", indent: 0 }]);
+    wrapper.unmount();
+  });
+
+  it("falls back to the browser paste command when async clipboard reading fails", async () => {
+    const readText = vi.fn().mockRejectedValue(new Error("clipboard denied"));
+    Object.assign(navigator, { clipboard: { readText, writeText: vi.fn() } });
+    const wrapper = mount(TextPanel, {
+      attachTo: document.body,
+      props: {
+        titleId: "workspace-title",
+        title: "工作空间",
+        lines: [{ text: "root", indent: 0 }],
+      },
+      global: {
+        stubs: {
+          Dropdown: dropdownStub,
+          NDropdown: dropdownStub,
+        },
+      },
+    });
+    const textarea = wrapper.get("textarea").element as HTMLTextAreaElement;
+    const execCommand = vi.fn((command: string) => {
+      if (command !== "paste") return false;
+      textarea.setRangeText(" fallback", textarea.selectionStart ?? textarea.value.length, textarea.selectionEnd ?? textarea.value.length, "end");
+      return true;
+    });
+    Object.assign(document, { execCommand });
+
+    textarea.setSelectionRange(textarea.value.length, textarea.value.length);
+    await wrapper.get("textarea").trigger("contextmenu");
+    await wrapper.get('[data-key="paste"]').trigger("click");
+    await Promise.resolve();
+
+    expect(readText).toHaveBeenCalled();
+    expect(execCommand).toHaveBeenCalledWith("paste");
+    expect(wrapper.emitted("update")?.at(-1)?.[0]).toEqual([{ text: "root fallback", indent: 0 }]);
     wrapper.unmount();
   });
 

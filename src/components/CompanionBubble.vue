@@ -1,5 +1,5 @@
 <script setup lang="ts">
-import { computed, onUnmounted, ref, watch } from "vue";
+import { computed, onMounted, onUnmounted, ref, watch } from "vue";
 import { LogoGithub } from "@vicons/ionicons5";
 import { NButton, NIcon, NPopover } from "naive-ui";
 import hermesGif from "../../static/video/hermes.gif?url";
@@ -51,6 +51,11 @@ const popoverTimer = ref<number | undefined>();
 const contentTimer = ref<number | undefined>();
 const gifTimer = ref<number | undefined>();
 const gifFadeTimer = ref<number | undefined>();
+const gifRemainingMs = ref(GIF_MAX_VISIBLE_MS);
+const gifTimerStartedAt = ref(0);
+const hoveringCompanion = ref(false);
+const surfaceRef = ref<HTMLElement | null>(null);
+const popoverRef = ref<HTMLElement | null>(null);
 
 const placementStyle = computed(() => {
   if (!props.position) return undefined;
@@ -119,7 +124,12 @@ watch(
   ([visible]) => {
     window.clearTimeout(gifTimer.value);
     window.clearTimeout(gifFadeTimer.value);
+    gifTimer.value = undefined;
+    gifFadeTimer.value = undefined;
+    gifRemainingMs.value = GIF_MAX_VISIBLE_MS;
+    gifTimerStartedAt.value = 0;
     if (!visible) {
+      hoveringCompanion.value = false;
       gifVisible.value = false;
       gifFading.value = false;
       return;
@@ -127,13 +137,7 @@ watch(
     gifVisible.value = true;
     gifFading.value = false;
     if (props.persistent) return;
-    gifTimer.value = window.setTimeout(() => {
-      gifVisible.value = false;
-      gifFading.value = true;
-      gifFadeTimer.value = window.setTimeout(() => {
-        gifFading.value = false;
-      }, GIF_FADE_MS);
-    }, GIF_MAX_VISIBLE_MS);
+    if (!hoveringCompanion.value) startGifTimer(GIF_MAX_VISIBLE_MS);
   },
   { immediate: true },
 );
@@ -169,22 +173,98 @@ watch(
   },
 );
 
+onMounted(() => {
+  window.addEventListener("mousemove", handleWindowMousemove);
+});
+
 onUnmounted(() => {
+  window.removeEventListener("mousemove", handleWindowMousemove);
   window.clearTimeout(popoverTimer.value);
   window.clearTimeout(contentTimer.value);
   window.clearTimeout(gifTimer.value);
   window.clearTimeout(gifFadeTimer.value);
 });
+
+function startGifTimer(duration: number): void {
+  window.clearTimeout(gifTimer.value);
+  gifRemainingMs.value = duration;
+  gifTimerStartedAt.value = Date.now();
+  gifTimer.value = window.setTimeout(finishGifTimer, duration);
+}
+
+function finishGifTimer(): void {
+  gifTimer.value = undefined;
+  gifRemainingMs.value = 0;
+  gifTimerStartedAt.value = 0;
+  gifVisible.value = false;
+  gifFading.value = true;
+  gifFadeTimer.value = window.setTimeout(() => {
+    gifFading.value = false;
+  }, GIF_FADE_MS);
+}
+
+function pauseGifTimer(): void {
+  if (props.persistent || !gifVisible.value || !gifTimer.value) return;
+  window.clearTimeout(gifTimer.value);
+  gifTimer.value = undefined;
+  const elapsed = Date.now() - gifTimerStartedAt.value;
+  gifRemainingMs.value = Math.max(0, gifRemainingMs.value - elapsed);
+  gifTimerStartedAt.value = 0;
+}
+
+function resumeGifTimer(): void {
+  if (props.persistent || !gifVisible.value || gifFading.value || gifTimer.value) return;
+  if (gifRemainingMs.value <= 0) {
+    finishGifTimer();
+    return;
+  }
+  startGifTimer(gifRemainingMs.value);
+}
+
+function handleCompanionMouseenter(): void {
+  if (hoveringCompanion.value) return;
+  hoveringCompanion.value = true;
+  pauseGifTimer();
+  emit("pause");
+}
+
+function handleCompanionMouseleave(): void {
+  if (!hoveringCompanion.value) return;
+  hoveringCompanion.value = false;
+  resumeGifTimer();
+  emit("resume");
+}
+
+function handleCompanionMousemove(): void {
+  handleCompanionMouseenter();
+}
+
+function handleWindowMousemove(event: MouseEvent): void {
+  if (!hoveringCompanion.value) return;
+  if (isPointInsideElement(event.clientX, event.clientY, surfaceRef.value)) return;
+  if (isPointInsideElement(event.clientX, event.clientY, popoverRef.value)) return;
+  handleCompanionMouseleave();
+}
+
+function isPointInsideElement(x: number, y: number, element: HTMLElement | null): boolean {
+  if (!element) return false;
+  const rect = element.getBoundingClientRect();
+  return x >= rect.left && x <= rect.right && y >= rect.top && y <= rect.bottom;
+}
 </script>
 
 <template>
   <div
     v-if="surfaceVisible"
+    ref="surfaceRef"
     class="focus-companion"
     :class="{ 'is-visible': gifVisible, 'is-fading': gifFading }"
     :style="placementStyle"
     data-testid="companion-bubble"
     :aria-hidden="!surfaceVisible"
+    @mouseenter="handleCompanionMouseenter"
+    @mousemove="handleCompanionMousemove"
+    @mouseleave="handleCompanionMouseleave"
   >
     <NPopover
       :key="popoverKey"
@@ -205,12 +285,14 @@ onUnmounted(() => {
 
       <div
         v-if="popoverContentVisible"
+        ref="popoverRef"
         class="companion-popover"
         role="status"
         aria-live="polite"
         data-testid="companion-confirm"
-        @mouseenter="emit('pause')"
-        @mouseleave="emit('resume')"
+        @mouseenter="handleCompanionMouseenter"
+        @mousemove="handleCompanionMousemove"
+        @mouseleave="handleCompanionMouseleave"
       >
         <span v-if="renderedMessage">{{ renderedMessage }}</span>
         <a

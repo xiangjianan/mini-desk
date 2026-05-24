@@ -126,12 +126,19 @@ function handleBlur(event: FocusEvent): void {
 async function startEditing(event: MouseEvent): Promise<void> {
   const textarea = event.currentTarget as HTMLTextAreaElement;
   if (editing.value) return;
+  const preservedSelection = getRememberedSelection(textarea);
   startEditingFromTextarea(textarea);
   await nextTick();
-  const caret = lastCaret.value ?? textarea.selectionStart ?? textarea.value.length;
   textareaRef.value?.focus({ preventScroll: true });
-  if (textareaRef.value) collapseSelection(textareaRef.value, caret);
-  lastTextSelection.value = null;
+  if (textareaRef.value) {
+    if (preservedSelection) {
+      restoreSelection(textareaRef.value, preservedSelection);
+    } else {
+      const caret = lastCaret.value ?? textarea.selectionStart ?? textarea.value.length;
+      collapseSelection(textareaRef.value, caret);
+      lastTextSelection.value = null;
+    }
+  }
 }
 
 function handlePointerDown(event: PointerEvent): void {
@@ -145,11 +152,13 @@ function handleTouchStart(event: TouchEvent): void {
 }
 
 function startEditingFromTextarea(textarea: HTMLTextAreaElement, keyboardFocus = false): void {
-  const caret = lastCaret.value ?? textarea.selectionStart ?? textarea.value.length;
+  const preservedSelection = getRememberedSelection(textarea);
+  const caret = preservedSelection?.start ?? lastCaret.value ?? textarea.selectionStart ?? textarea.value.length;
   editing.value = true;
   undoStack.value = [];
   lastUndoText.value = text.value;
   unlockTextareaForMobileKeyboard(textarea, caret, keyboardFocus);
+  if (preservedSelection) restoreSelection(textarea, preservedSelection);
 }
 
 function unlockTextareaBeforeNativeFocus(textarea: HTMLTextAreaElement): void {
@@ -190,8 +199,13 @@ function rememberSelection(event: Event): void {
 }
 
 function openTextMenu(event: MouseEvent): void {
-  event.preventDefault();
   const target = event.target instanceof HTMLTextAreaElement ? event.target : undefined;
+  if (target && !hasAsyncClipboard()) {
+    closeMenu();
+    return;
+  }
+  event.preventDefault();
+  if (target && hasSelection(target)) rememberTextSelection(target);
   menu.value = {
     x: event.clientX,
     y: event.clientY,
@@ -255,7 +269,7 @@ function canCopyTextSelection(target: HTMLTextAreaElement): boolean {
 }
 
 function canPasteText(target: HTMLTextAreaElement): boolean {
-  return editing.value && !target.readOnly;
+  return Boolean(target && navigator.clipboard?.readText);
 }
 
 async function copyTextSelection(target: HTMLTextAreaElement | HTMLInputElement): Promise<void> {
@@ -265,25 +279,61 @@ async function copyTextSelection(target: HTMLTextAreaElement | HTMLInputElement)
   const selectedText = target.value.slice(start, end);
   if (!selectedText) return;
   if (navigator.clipboard?.writeText) {
-    await navigator.clipboard.writeText(selectedText);
-    return;
+    try {
+      await navigator.clipboard.writeText(selectedText);
+      return;
+    } catch {
+      // Fall back below when async clipboard access is denied.
+    }
   }
+  copyTextWithBrowserCommand(selectedText);
+}
+
+function copyTextWithBrowserCommand(selectedText: string): void {
   const textarea = document.createElement("textarea");
   textarea.value = selectedText;
+  textarea.setAttribute("readonly", "");
+  textarea.style.position = "fixed";
+  textarea.style.left = "-9999px";
   document.body.append(textarea);
+  textarea.focus();
   textarea.setSelectionRange(0, textarea.value.length);
-  document.execCommand("copy");
+  document.execCommand?.("copy");
   textarea.remove();
 }
 
 async function pasteTextFromClipboard(target: HTMLTextAreaElement): Promise<void> {
-  const pastedText = await navigator.clipboard?.readText?.();
-  if (!pastedText) return;
-  const start = target.selectionStart ?? target.value.length;
-  const end = target.selectionEnd ?? start;
-  target.setRangeText(pastedText, start, end, "end");
+  const range = getTextSelectionRange(target);
+  if (!editing.value || target.readOnly) startEditingFromTextarea(target);
+  target.setSelectionRange(range.start, range.end);
+  let pastedText: string | undefined;
+  if (navigator.clipboard?.readText) {
+    try {
+      pastedText = await navigator.clipboard.readText();
+    } catch {
+      pastedText = undefined;
+    }
+  }
+  if (typeof pastedText === "string") {
+    if (!pastedText) return;
+    target.setRangeText(pastedText, range.start, range.end, "end");
+  } else if (!pasteTextWithBrowserCommand(target, range)) {
+    return;
+  }
   applyEditorText(target.value);
   emit("update", editorTextToLines(text.value));
+}
+
+function pasteTextWithBrowserCommand(target: HTMLTextAreaElement, range: { start: number; end: number }): boolean {
+  const before = target.value;
+  target.focus({ preventScroll: true });
+  target.setSelectionRange(range.start, range.end);
+  const pasted = Boolean(document.execCommand?.("paste"));
+  return pasted && target.value !== before;
+}
+
+function hasAsyncClipboard(): boolean {
+  return typeof navigator.clipboard?.readText === "function" && typeof navigator.clipboard?.writeText === "function";
 }
 
 function applyEditorText(next: string): void {
@@ -317,6 +367,20 @@ function collapseSelection(textarea: HTMLTextAreaElement, caret: number): void {
     if (document.activeElement === textarea) textarea.setSelectionRange(position, position);
   });
 }
+
+function getRememberedSelection(textarea: HTMLTextAreaElement): { start: number; end: number } | null {
+  const selection = lastTextSelection.value;
+  if (!selection || selection.start === selection.end || selection.end > textarea.value.length) return null;
+  if ((textarea.selectionStart ?? 0) !== selection.start || (textarea.selectionEnd ?? 0) !== selection.end) return null;
+  return selection;
+}
+
+function restoreSelection(textarea: HTMLTextAreaElement, selection: { start: number; end: number }): void {
+  textarea.setSelectionRange(selection.start, selection.end);
+  window.setTimeout(() => {
+    if (document.activeElement === textarea) textarea.setSelectionRange(selection.start, selection.end);
+  });
+}
 </script>
 
 <template>
@@ -327,7 +391,7 @@ function collapseSelection(textarea: HTMLTextAreaElement, caret: number): void {
       </h2>
       <slot name="actions" />
     </div>
-    <div class="text-editor-frame" @contextmenu.prevent="openTextMenu">
+    <div class="text-editor-frame" @contextmenu="openTextMenu">
       <textarea
         ref="textareaRef"
         v-model="text"

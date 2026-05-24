@@ -62,6 +62,9 @@ const menuOptions = computed<DropdownOption[]>(() => {
   const todo = getMenuTodo();
   if (menu.value?.id) {
     options.push({ label: "复制", key: "copy" });
+    if (menu.value.target && canPasteTodoText(menu.value.period, menu.value.id, menu.value.target)) {
+      options.push({ label: "粘贴", key: "paste" });
+    }
     options.push({ label: "编辑", key: "edit" });
     options.push({ label: "删除", key: "delete" });
     options.push({ label: todo?.starred ? "取消星标" : "星标", key: "star" });
@@ -204,6 +207,11 @@ function openMenu(event: MouseEvent, period: TodoPeriod, id: string): void {
 }
 
 function openTodoTextMenu(event: MouseEvent, period: TodoPeriod, todo: TodoItem): void {
+  const target = event.currentTarget as HTMLInputElement;
+  if (!hasAnyClipboardMethod()) {
+    closeMenu();
+    return;
+  }
   event.preventDefault();
   selectedMenuTodoKey.value = todoKey(period, todo.id);
   menu.value = {
@@ -211,8 +219,8 @@ function openTodoTextMenu(event: MouseEvent, period: TodoPeriod, todo: TodoItem)
     y: event.clientY,
     period,
     id: todo.id,
-    anchor: event.currentTarget as HTMLElement,
-    target: event.currentTarget as HTMLInputElement,
+    anchor: target,
+    target,
   };
 }
 
@@ -261,6 +269,11 @@ async function handleMenuSelect(key: string): Promise<void> {
     } else {
       await copyTodoText(period, id);
     }
+    closeMenu();
+    return;
+  }
+  if (key === "paste" && id && target) {
+    await pasteTextFromClipboard(period, id, target);
     closeMenu();
     return;
   }
@@ -337,6 +350,10 @@ function canCopyTextSelection(period: TodoPeriod, id: string, target: HTMLInputE
   return range.start !== range.end;
 }
 
+function canPasteTodoText(period: TodoPeriod, id: string, target: HTMLInputElement): boolean {
+  return isTodoEditable(period, getTodoById(period, id) ?? { id, text: target.value, done: false }) && typeof navigator.clipboard?.readText === "function";
+}
+
 async function copyTextSelection(target: HTMLTextAreaElement | HTMLInputElement): Promise<void> {
   const current = menu.value;
   const { start, end } = target instanceof HTMLInputElement && current?.id
@@ -345,57 +362,90 @@ async function copyTextSelection(target: HTMLTextAreaElement | HTMLInputElement)
   const selectedText = target.value.slice(start, end);
   if (!selectedText) return;
   if (navigator.clipboard?.writeText) {
-    await navigator.clipboard.writeText(selectedText);
-    return;
+    try {
+      await navigator.clipboard.writeText(selectedText);
+      return;
+    } catch {
+      // Fall back below when async clipboard access is denied.
+    }
   }
-  const textarea = document.createElement("textarea");
-  textarea.value = selectedText;
-  document.body.append(textarea);
-  textarea.setSelectionRange(0, textarea.value.length);
-  document.execCommand("copy");
-  textarea.remove();
+  copyTextWithBrowserCommand(selectedText);
 }
 
 async function copyTodoText(period: TodoPeriod, id: string): Promise<void> {
   const text = getTodoById(period, id)?.text ?? "";
   if (!text) return;
   if (navigator.clipboard?.writeText) {
-    await navigator.clipboard.writeText(text);
-    return;
+    try {
+      await navigator.clipboard.writeText(text);
+      return;
+    } catch {
+      // Fall back below when async clipboard access is denied.
+    }
   }
+  copyTextWithBrowserCommand(text);
+}
+
+function copyTextWithBrowserCommand(text: string): void {
   const textarea = document.createElement("textarea");
   textarea.value = text;
+  textarea.setAttribute("readonly", "");
+  textarea.style.position = "fixed";
+  textarea.style.left = "-9999px";
   document.body.append(textarea);
+  textarea.focus();
   textarea.setSelectionRange(0, textarea.value.length);
-  document.execCommand("copy");
+  document.execCommand?.("copy");
   textarea.remove();
 }
 
 async function pasteTextFromClipboard(period: TodoPeriod, id: string, target: HTMLInputElement): Promise<void> {
-  const pastedText = await navigator.clipboard?.readText?.();
-  if (!pastedText) return;
   const start = target.selectionStart ?? target.value.length;
   const end = target.selectionEnd ?? start;
-  target.setRangeText(pastedText, start, end, "end");
+  let pastedText: string | undefined;
+  if (navigator.clipboard?.readText) {
+    try {
+      pastedText = await navigator.clipboard.readText();
+    } catch {
+      pastedText = undefined;
+    }
+  }
+  if (typeof pastedText === "string") {
+    if (!pastedText) return;
+    target.setRangeText(pastedText, start, end, "end");
+  } else if (!pasteTextWithBrowserCommand(target, { start, end })) {
+    return;
+  }
   emit("update", period, id, target.value);
 }
 
+function pasteTextWithBrowserCommand(target: HTMLInputElement, range: { start: number; end: number }): boolean {
+  const before = target.value;
+  target.focus({ preventScroll: true });
+  target.setSelectionRange(range.start, range.end);
+  const pasted = Boolean(document.execCommand?.("paste"));
+  return pasted && target.value !== before;
+}
+
+function hasAnyClipboardMethod(): boolean {
+  return typeof navigator.clipboard?.readText === "function" || typeof navigator.clipboard?.writeText === "function";
+}
+
 async function startTodoEdit(event: MouseEvent, period: TodoPeriod, id: string): Promise<void> {
-  event.preventDefault();
-  event.stopPropagation();
   const input = event.currentTarget as HTMLInputElement;
   const key = todoKey(period, id);
-  const selection = hasSelection(input)
-    ? { start: input.selectionStart ?? 0, end: input.selectionEnd ?? input.selectionStart ?? 0 }
-    : lastTodoSelections.get(key);
-  const caret = lastTodoCarets.get(key) ?? input.selectionStart ?? input.value.length;
-  editingTodoKey.value = todoKey(period, id);
-  await nextTick();
-  input.focus({ preventScroll: true });
-  if (selection && selection.start !== selection.end && selection.end <= input.value.length) {
-    input.setSelectionRange(selection.start, selection.end);
+  if (editingTodoKey.value === key) return;
+  if (hasSelection(input)) {
+    rememberTodoSelection(period, id, input);
     return;
   }
+  event.preventDefault();
+  event.stopPropagation();
+  const caret = lastTodoCarets.get(key) ?? input.selectionStart ?? input.value.length;
+  editingTodoKey.value = key;
+  await nextTick();
+  input.focus({ preventScroll: true });
+  lastTodoSelections.delete(key);
   collapseSelection(input, caret);
 }
 

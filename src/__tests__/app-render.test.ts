@@ -1705,6 +1705,38 @@ describe("App shell", () => {
     }
   });
 
+  it("pauses an auto-dismiss message bubble while the pointer is hovering the GIF", async () => {
+    vi.useFakeTimers();
+    const wrapper = mountApp();
+
+    try {
+      wrapper.getComponent(SettingsMenu).vm.$emit("about");
+      await wrapper.vm.$nextTick();
+      await vi.advanceTimersByTimeAsync(200);
+      await wrapper.vm.$nextTick();
+
+      await wrapper.get('[data-testid="companion-bubble"]').trigger("mouseenter");
+      await vi.advanceTimersByTimeAsync(12000);
+      await wrapper.vm.$nextTick();
+
+      expect(wrapper.find('[data-testid="companion-bubble"]').exists()).toBe(true);
+      expect(wrapper.find('[data-testid="companion-confirm"]').text()).toContain("To Do List 看板");
+      expect(wrapper.find(".companion-popover-shell").classes()).not.toContain("is-popover-fading");
+
+      await wrapper.get('[data-testid="companion-bubble"]').trigger("mouseleave");
+      await vi.advanceTimersByTimeAsync(4799);
+      await wrapper.vm.$nextTick();
+      expect(wrapper.find('[data-testid="companion-confirm"]').exists()).toBe(true);
+
+      await vi.advanceTimersByTimeAsync(1);
+      await wrapper.vm.$nextTick();
+      expect(wrapper.find(".companion-popover-shell").classes()).toContain("is-popover-fading");
+    } finally {
+      wrapper.unmount();
+      vi.useRealTimers();
+    }
+  });
+
   it("shows a companion bubble for invalid JSON imports", async () => {
     vi.useFakeTimers();
     vi.spyOn(Math, "random").mockReturnValue(0);

@@ -220,6 +220,34 @@ describe("CompanionBubble", () => {
     wrapper.unmount();
   });
 
+  it("emits pause and resume when the pointer enters and leaves the GIF surface", async () => {
+    vi.useFakeTimers();
+    const wrapper = mount(CompanionBubble, {
+      attachTo: document.body,
+      props: {
+        visible: true,
+        message: "提示内容",
+      },
+      global: {
+        stubs: {
+          NButton: buttonStub,
+          NPopover: popoverStub,
+        },
+      },
+    });
+
+    await vi.advanceTimersByTimeAsync(200);
+    await wrapper.vm.$nextTick();
+
+    await wrapper.get('[data-testid="companion-bubble"]').trigger("mouseenter");
+    await wrapper.get('[data-testid="companion-bubble"]').trigger("mouseleave");
+
+    expect(wrapper.emitted("pause")).toHaveLength(1);
+    expect(wrapper.emitted("resume")).toHaveLength(1);
+
+    wrapper.unmount();
+  });
+
   it("removes the companion surface immediately when hidden", async () => {
     const wrapper = mount(CompanionBubble, {
       props: {
@@ -351,6 +379,105 @@ describe("CompanionBubble", () => {
     await vi.advanceTimersByTimeAsync(260);
     await wrapper.vm.$nextTick();
     expect(wrapper.find('[data-testid="companion-bubble"]').exists()).toBe(false);
+
+    wrapper.unmount();
+  });
+
+  it("keeps the GIF surface visible while the pointer is hovering past ten seconds", async () => {
+    vi.useFakeTimers();
+    const wrapper = mount(CompanionBubble, {
+      props: {
+        visible: true,
+        message: "持续提示",
+      },
+      global: {
+        stubs: {
+          NPopover: popoverStub,
+        },
+      },
+    });
+
+    await wrapper.get('[data-testid="companion-bubble"]').trigger("mouseenter");
+    await vi.advanceTimersByTimeAsync(12000);
+    await wrapper.vm.$nextTick();
+
+    expect(wrapper.find('[data-testid="companion-bubble"]').exists()).toBe(true);
+    expect(wrapper.get('[data-testid="companion-bubble"]').classes()).toContain("is-visible");
+    expect(wrapper.get('[data-testid="companion-bubble"]').classes()).not.toContain("is-fading");
+
+    await wrapper.get('[data-testid="companion-bubble"]').trigger("mouseleave");
+    await vi.advanceTimersByTimeAsync(9999);
+    await wrapper.vm.$nextTick();
+    expect(wrapper.get('[data-testid="companion-bubble"]').classes()).not.toContain("is-fading");
+
+    await vi.advanceTimersByTimeAsync(1);
+    await wrapper.vm.$nextTick();
+    expect(wrapper.get('[data-testid="companion-bubble"]').classes()).toContain("is-fading");
+
+    wrapper.unmount();
+  });
+
+  it("keeps the GIF surface visible when hover is reported by mouse movement", async () => {
+    vi.useFakeTimers();
+    const wrapper = mount(CompanionBubble, {
+      props: {
+        visible: true,
+        message: "持续提示",
+      },
+      global: {
+        stubs: {
+          NPopover: popoverStub,
+        },
+      },
+    });
+
+    await wrapper.get('[data-testid="companion-bubble"]').trigger("mousemove");
+    await vi.advanceTimersByTimeAsync(12000);
+    await wrapper.vm.$nextTick();
+
+    expect(wrapper.find('[data-testid="companion-bubble"]').exists()).toBe(true);
+    expect(wrapper.get('[data-testid="companion-bubble"]').classes()).toContain("is-visible");
+    expect(wrapper.get('[data-testid="companion-bubble"]').classes()).not.toContain("is-fading");
+
+    wrapper.unmount();
+  });
+
+  it("resumes the GIF timer when the mouse moves outside without a leave event", async () => {
+    vi.useFakeTimers();
+    const wrapper = mount(CompanionBubble, {
+      props: {
+        visible: true,
+        message: "持续提示",
+      },
+      global: {
+        stubs: {
+          NPopover: popoverStub,
+        },
+      },
+    });
+    const surface = wrapper.get('[data-testid="companion-bubble"]').element as HTMLElement;
+    surface.getBoundingClientRect = vi.fn(() => ({
+      x: 100,
+      y: 100,
+      width: 82,
+      height: 82,
+      top: 100,
+      right: 182,
+      bottom: 182,
+      left: 100,
+      toJSON: () => ({}),
+    }));
+
+    await wrapper.get('[data-testid="companion-bubble"]').trigger("mousemove", { clientX: 120, clientY: 120 });
+    window.dispatchEvent(new MouseEvent("mousemove", { clientX: 20, clientY: 20 }));
+
+    await vi.advanceTimersByTimeAsync(9999);
+    await wrapper.vm.$nextTick();
+    expect(wrapper.get('[data-testid="companion-bubble"]').classes()).not.toContain("is-fading");
+
+    await vi.advanceTimersByTimeAsync(1);
+    await wrapper.vm.$nextTick();
+    expect(wrapper.get('[data-testid="companion-bubble"]').classes()).toContain("is-fading");
 
     wrapper.unmount();
   });

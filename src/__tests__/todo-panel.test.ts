@@ -591,7 +591,7 @@ describe("TodoPanel", () => {
     wrapper.unmount();
   });
 
-  it("preserves a user text selection when clicking to edit a reminder", async () => {
+  it("allows selecting reminder text before it is being edited", async () => {
     const wrapper = mount(TodoPanel, {
       props: {
         todos: {
@@ -615,11 +615,47 @@ describe("TodoPanel", () => {
     const input = wrapper.get("input.todo-input").element as HTMLInputElement;
     const selectSpy = vi.spyOn(input, "select");
 
+    const inputWrapper = wrapper.get("input.todo-input");
     input.setSelectionRange(1, 3);
-    await wrapper.get("input.todo-input").trigger("click");
+    await inputWrapper.trigger("click");
     await wrapper.vm.$nextTick();
 
     expect(selectSpy).not.toHaveBeenCalled();
+    expect(inputWrapper.attributes("readonly")).toBeDefined();
+    expect(input.selectionStart).toBe(1);
+    expect(input.selectionEnd).toBe(3);
+    wrapper.unmount();
+  });
+
+  it("allows selecting reminder text after it is already being edited", async () => {
+    const wrapper = mount(TodoPanel, {
+      props: {
+        todos: {
+          morning: [{ id: "a", text: "第一项内容", done: false }],
+          noon: [],
+          evening: [],
+        },
+        titles: DEFAULT_TITLES,
+      },
+      global: {
+        stubs: {
+          Button: true,
+          Checkbox: checkboxStub,
+          Dropdown: dropdownStub,
+          NCheckbox: checkboxStub,
+          NDropdown: dropdownStub,
+          NTooltip: tooltipStub,
+        },
+      },
+    });
+    const inputWrapper = wrapper.get("input.todo-input");
+    const input = inputWrapper.element as HTMLInputElement;
+
+    await inputWrapper.trigger("click");
+    input.setSelectionRange(1, 3);
+    await inputWrapper.trigger("click");
+    await wrapper.vm.$nextTick();
+
     expect(input.selectionStart).toBe(1);
     expect(input.selectionEnd).toBe(3);
     wrapper.unmount();
@@ -975,6 +1011,126 @@ describe("TodoPanel", () => {
     await Promise.resolve();
 
     expect(writeText).toHaveBeenCalledWith("第一项内容");
+    wrapper.unmount();
+  });
+
+  it("keeps the native reminder text context menu when clipboard APIs are unavailable", async () => {
+    Object.assign(navigator, { clipboard: undefined });
+    const wrapper = mount(TodoPanel, {
+      props: {
+        todos: {
+          morning: [{ id: "a", text: "第一项内容", done: false }],
+          noon: [],
+          evening: [],
+        },
+        titles: DEFAULT_TITLES,
+      },
+      global: {
+        stubs: {
+          Button: true,
+          Checkbox: checkboxStub,
+          Dropdown: dropdownStub,
+          NCheckbox: checkboxStub,
+          NDropdown: dropdownStub,
+          NTooltip: tooltipStub,
+        },
+      },
+    });
+    const input = wrapper.get("input.todo-input").element as HTMLInputElement;
+    const event = new MouseEvent("contextmenu", {
+      bubbles: true,
+      cancelable: true,
+      clientX: 12,
+      clientY: 16,
+    });
+
+    input.dispatchEvent(event);
+    await wrapper.vm.$nextTick();
+
+    expect(event.defaultPrevented).toBe(false);
+    expect(wrapper.find(".dropdown-option").exists()).toBe(false);
+    wrapper.unmount();
+  });
+
+  it("falls back to the browser copy command when reminder copy is denied", async () => {
+    const writeText = vi.fn().mockRejectedValue(new Error("clipboard denied"));
+    const execCommand = vi.fn().mockReturnValue(true);
+    Object.assign(navigator, { clipboard: { writeText } });
+    Object.assign(document, { execCommand });
+    const wrapper = mount(TodoPanel, {
+      props: {
+        todos: {
+          morning: [{ id: "a", text: "第一项内容", done: false }],
+          noon: [],
+          evening: [],
+        },
+        titles: DEFAULT_TITLES,
+      },
+      global: {
+        stubs: {
+          Button: true,
+          Checkbox: checkboxStub,
+          Dropdown: dropdownStub,
+          NCheckbox: checkboxStub,
+          NDropdown: dropdownStub,
+          NTooltip: tooltipStub,
+        },
+      },
+    });
+
+    await wrapper.get("input.todo-input").trigger("contextmenu");
+    await wrapper.findAll(".dropdown-option")[0].trigger("click");
+    await Promise.resolve();
+
+    expect(writeText).toHaveBeenCalledWith("第一项内容");
+    expect(execCommand).toHaveBeenCalledWith("copy");
+    wrapper.unmount();
+  });
+
+  it("pastes clipboard text from an editable reminder context menu", async () => {
+    const readText = vi.fn().mockResolvedValue("粘贴内容");
+    Object.assign(navigator, { clipboard: { readText, writeText: vi.fn() } });
+    const wrapper = mount(TodoPanel, {
+      props: {
+        todos: {
+          morning: [{ id: "a", text: "第一项", done: false }],
+          noon: [],
+          evening: [],
+        },
+        titles: DEFAULT_TITLES,
+      },
+      global: {
+        stubs: {
+          Button: true,
+          Checkbox: checkboxStub,
+          Dropdown: dropdownStub,
+          NCheckbox: checkboxStub,
+          NDropdown: dropdownStub,
+          NTooltip: tooltipStub,
+        },
+      },
+    });
+    const inputWrapper = wrapper.get("input.todo-input");
+    const input = inputWrapper.element as HTMLInputElement;
+
+    await inputWrapper.trigger("click");
+    input.setSelectionRange(input.value.length, input.value.length);
+    await inputWrapper.trigger("contextmenu");
+
+    expect(wrapper.findAll(".dropdown-option").map((option) => option.text())).toEqual([
+      "复制",
+      "粘贴",
+      "编辑",
+      "删除",
+      "星标",
+      "Tips",
+    ]);
+
+    await wrapper.findAll(".dropdown-option").find((option) => option.text() === "粘贴")?.trigger("click");
+    await Promise.resolve();
+
+    expect(readText).toHaveBeenCalled();
+    expect(wrapper.emitted("update")?.at(-1)).toEqual(["morning", "a", "第一项粘贴内容"]);
     wrapper.unmount();
   });
 
