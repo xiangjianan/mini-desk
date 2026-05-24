@@ -56,6 +56,15 @@ describe("deadline helpers", () => {
     });
   });
 
+  it("keeps next-day deadlines outside 24 hours in the upcoming bucket", () => {
+    const now = new Date(2026, 4, 25, 0, 1).getTime();
+
+    expect(getDeadlineDisplay(new Date(2026, 4, 26, 23).getTime(), now)).toEqual({
+      label: "1天后 23",
+      urgency: "upcoming",
+    });
+  });
+
   it("returns null for missing or invalid deadline timestamps", () => {
     expect(getDeadlineDisplay(undefined)).toBeNull();
     expect(getDeadlineDisplay(Number.NaN)).toBeNull();

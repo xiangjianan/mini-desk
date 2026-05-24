@@ -40,16 +40,17 @@ export function getDeadlineDisplay(deadlineAt: number | undefined, now = Date.no
 
   const deadlineDate = new Date(deadlineAt);
   const dayDistance = getLocalDayDistance(now, deadlineAt);
+  const isWithinDueSoonWindow = deadlineAt - now <= ONE_DAY_MS;
   const hour = String(deadlineDate.getHours()).padStart(2, "0");
 
-  if (dayDistance === 0) {
+  if (isWithinDueSoonWindow && dayDistance === 0) {
     return {
       label: `! 今天 ${hour}`,
       urgency: "due-soon",
     };
   }
 
-  if (dayDistance === 1) {
+  if (isWithinDueSoonWindow && dayDistance === 1) {
     return {
       label: `! 明天 ${hour}`,
       urgency: "due-soon",
