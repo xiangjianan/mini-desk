@@ -48,8 +48,6 @@ export interface TodoStarChange {
   period: TodoPeriod;
   id: string;
   starred: boolean;
-  notifyAt?: number;
-  deadlineAt?: number;
   anchor?: HTMLElement;
 }
 

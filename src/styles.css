@@ -931,7 +931,7 @@ h3 {
 }
 
 .notify-editor {
-  width: 520px;
+  width: min(520px, calc(100vw - 16px));
   min-height: 240px;
 }
 
@@ -1005,6 +1005,16 @@ h3 {
 .notify-clock-button.time-1500 { right: 18px; bottom: 26px; }
 .notify-clock-button.time-1800 { left: 57px; bottom: 6px; }
 .notify-clock-button.time-2100 { left: 4px; top: 66px; }
+
+@media (max-width: 560px) {
+  .notify-editor-body {
+    grid-template-columns: 1fr;
+  }
+
+  .notify-clock-options {
+    margin: 0 auto;
+  }
+}
 
 .deadline-time-button,
 .deadline-ignore-button,

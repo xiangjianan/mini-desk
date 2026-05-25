@@ -683,7 +683,35 @@ describe("App shell", () => {
     }
   });
 
-  it("stars a todo with an optional deadline without showing a confirmation bubble", async () => {
+  it("writes notification time from TodoPanel notify events", async () => {
+    localStorage.setItem(
+      STORAGE_KEY,
+      JSON.stringify({
+        todos: {
+          morning: [{ id: "todo-1", text: "重点提醒", done: false }],
+        },
+      }),
+    );
+    const wrapper = mountApp();
+
+    try {
+      const anchor = wrapper.get(".todo-item").element as HTMLElement;
+      wrapper.getComponent(TodoPanel).vm.$emit("notify", "morning", "todo-1", 1779721200000, anchor);
+      await wrapper.vm.$nextTick();
+
+      expect(wrapper.getComponent(TodoPanel).props("todos").morning[0]).toMatchObject({
+        notifyAt: 1779721200000,
+      });
+      expect(wrapper.getComponent(TodoPanel).props("todos").morning[0]).not.toHaveProperty("deadlineAt");
+      expect(JSON.parse(localStorage.getItem(STORAGE_KEY) || "{}").todos.morning[0]).toMatchObject({
+        notifyAt: 1779721200000,
+      });
+    } finally {
+      wrapper.unmount();
+    }
+  });
+
+  it("stars a todo without setting notification time or showing a confirmation bubble", async () => {
     localStorage.setItem(
       STORAGE_KEY,
       JSON.stringify({
@@ -700,16 +728,15 @@ describe("App shell", () => {
         period: "morning",
         id: "todo-1",
         starred: true,
-        deadlineAt: 1779721200000,
         anchor,
       });
       await wrapper.vm.$nextTick();
 
       expect(wrapper.getComponent(TodoPanel).props("todos").morning[0]).toMatchObject({
         starred: true,
-        notifyAt: 1779721200000,
       });
-      expect(wrapper.getComponent(TodoPanel).props("todos").morning[0]).not.toHaveProperty("deadlineAt");
+      expect(wrapper.getComponent(TodoPanel).props("todos").morning[0]).not.toHaveProperty("notifyAt");
+      expect(JSON.parse(localStorage.getItem(STORAGE_KEY) || "{}").todos.morning[0]).not.toHaveProperty("notifyAt");
       expect(wrapper.find('[data-testid="companion-confirm"]').exists()).toBe(false);
     } finally {
       wrapper.unmount();
@@ -723,7 +750,7 @@ describe("App shell", () => {
       STORAGE_KEY,
       JSON.stringify({
         todos: {
-          morning: [{ id: "todo-1", text: "重点提醒", done: false, starred: true, deadlineAt: 0 }],
+          morning: [{ id: "todo-1", text: "重点提醒", done: false, starred: true, notifyAt: 0 }],
         },
       }),
     );
@@ -741,7 +768,8 @@ describe("App shell", () => {
       await vi.advanceTimersByTimeAsync(200);
       await wrapper.vm.$nextTick();
 
-      expect(wrapper.get('[data-testid="companion-confirm"]').text()).toContain("截止时间");
+      expect(wrapper.get('[data-testid="companion-confirm"]').text()).toContain("确定取消重点吗？");
+      expect(wrapper.get('[data-testid="companion-confirm"]').text()).not.toContain("截止时间");
       expect(wrapper.get('[data-testid="companion-yes"]').text()).toBe("取消重点");
       expect(wrapper.get('[data-testid="companion-no"]').text()).toBe("算了");
 
