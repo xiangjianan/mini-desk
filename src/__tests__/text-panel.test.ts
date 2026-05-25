@@ -937,7 +937,7 @@ describe("TextPanel", () => {
     ]);
   });
 
-  it("preserves existing trailing spaces when external text is dropped", async () => {
+  it("preserves existing and dropped text whitespace when external text is dropped", async () => {
     const wrapper = mount(TextPanel, {
       props: {
         titleId: "workspace-title",
@@ -949,13 +949,37 @@ describe("TextPanel", () => {
     Object.defineProperty(event, "dataTransfer", {
       value: {
         files: [],
-        getData: (type: string) => (type === "text/plain" ? "新增 A  " : ""),
+        getData: (type: string) => (type === "text/plain" ? "  新增 A  " : ""),
       },
     });
 
     await wrapper.get(".text-editor-frame").element.dispatchEvent(event);
 
-    expect(wrapper.get("textarea").element.value).toBe("已有内容  \n新增 A");
+    expect(wrapper.get("textarea").element.value).toBe("已有内容  \n  新增 A  ");
+  });
+
+  it("moves the caret to the end after external text is dropped", async () => {
+    const wrapper = mount(TextPanel, {
+      props: {
+        titleId: "workspace-title",
+        title: "工作空间",
+        lines: [{ text: "已有内容", indent: 0 }],
+      },
+    });
+    const textarea = wrapper.get("textarea").element as HTMLTextAreaElement;
+    textarea.setSelectionRange(0, 0);
+    const event = new Event("drop") as DragEvent;
+    Object.defineProperty(event, "dataTransfer", {
+      value: {
+        files: [],
+        getData: (type: string) => (type === "text/plain" ? "新增 A" : ""),
+      },
+    });
+
+    await wrapper.get(".text-editor-frame").element.dispatchEvent(event);
+
+    expect(textarea.selectionStart).toBe(textarea.value.length);
+    expect(textarea.selectionEnd).toBe(textarea.value.length);
   });
 
   it("ignores external text drops that include files", async () => {

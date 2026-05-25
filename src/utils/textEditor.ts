@@ -25,8 +25,8 @@ export function editorTextToLines(value = ""): LineItem[] {
 }
 
 export function appendPlainTextToEditorText(current: string, dropped: string): string {
-  const normalizedDrop = dropped.replace(/\r\n?/g, "\n").trim();
-  if (!normalizedDrop) return current;
+  const normalizedDrop = dropped.replace(/\r\n?/g, "\n");
+  if (!normalizedDrop.trim()) return current;
   if (!current) return normalizedDrop;
   return `${current}\n${normalizedDrop}`;
 }

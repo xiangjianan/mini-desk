@@ -136,7 +136,12 @@ function handleExternalTextDrop(event: DragEvent): void {
   event.stopPropagation();
   const textarea = textareaRef.value;
   if (textarea && !editing.value) startEditingFromTextarea(textarea);
-  applyEditorText(appendPlainTextToEditorText(text.value, dropped));
+  const next = appendPlainTextToEditorText(text.value, dropped);
+  applyEditorText(next);
+  if (textarea) {
+    const end = textarea.value.length;
+    textarea.setSelectionRange(end, end);
+  }
   emit("update", editorTextToLines(text.value));
 }
 
