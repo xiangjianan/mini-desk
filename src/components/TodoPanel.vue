@@ -4,16 +4,16 @@ import { NButton, NCheckbox, NDropdown } from "naive-ui";
 import type { DropdownOption } from "naive-ui";
 import { GUIDE_MENU_OPTION, TODO_PERIODS } from "../state/defaults";
 import {
-  DEADLINE_TIME_OPTIONS,
-  DEFAULT_DEADLINE_TIME,
-  createDeadlineAt,
-  getDefaultDeadlineSelection,
-  getDeadlineDisplay,
-  getDeadlineTimeLabel,
+  NOTIFY_TIME_OPTIONS,
+  DEFAULT_NOTIFY_TIME,
+  createNotifyAt,
+  getDefaultNotifySelection,
+  getNotifyDisplay,
+  getNotifyTimeLabel,
   getLocalDateInputValue,
   isValidDeadlineAt,
-  type DeadlineDisplay,
-  type DeadlineTimeOption,
+  type NotifyDisplay,
+  type NotifyTimeOption,
 } from "../state/deadlines";
 import type { DraggedTodo, GuideKey, TodoCompletedVisibility, TodoItem, TodoMap, TodoPeriod, TodoStarChange } from "../types";
 import { getOrderedTodos } from "../state/todos";
@@ -32,6 +32,7 @@ const emit = defineEmits<{
   split: [period: TodoPeriod, id: string, before: string, after: string];
   complete: [period: TodoPeriod, id: string, done: boolean, anchor?: HTMLElement];
   star: [change: TodoStarChange];
+  notify: [period: TodoPeriod, id: string, notifyAt: number | undefined, anchor?: HTMLElement];
   remove: [period: TodoPeriod, id: string, anchor?: HTMLElement];
   clearCompleted: [period: TodoPeriod, anchor?: HTMLElement];
   toggleCompletedVisibility: [period: TodoPeriod, showCompleted: boolean];
@@ -55,13 +56,13 @@ const menu = ref<{
 const dragged = ref<DraggedTodo | null>(null);
 const editingTodoKey = ref<string | null>(null);
 const selectedMenuTodoKey = ref<string | null>(null);
-const deadlineEditorRef = ref<HTMLElement | null>(null);
-const deadlineEditor = ref<{
+const notifyEditorRef = ref<HTMLElement | null>(null);
+const notifyEditor = ref<{
   period: TodoPeriod;
   id: string;
   anchor: HTMLElement;
   date: string;
-  time: DeadlineTimeOption;
+  time: NotifyTimeOption;
   x: number;
   y: number;
 } | null>(null);
@@ -87,12 +88,10 @@ const menuOptions = computed<DropdownOption[]>(() => {
     if (menu.value.target && canPasteTodoText(menu.value.period, menu.value.id, menu.value.target)) {
       options.push({ label: "粘贴", key: "paste" });
     }
-    if (todo?.starred) {
-      options.push({
-        label: isValidDeadlineAt(getTodoReminderAt(todo)) ? "编辑提醒时间" : "设置提醒时间",
-        key: "deadline",
-      });
-    }
+    options.push({
+      label: isValidDeadlineAt(todo?.notifyAt) ? "编辑通知时间" : "设置通知时间",
+      key: "notify",
+    });
     options.push({ label: "删除", key: "delete" });
     options.push({ label: todo?.starred ? "取消星标" : "星标", key: "star" });
   }
@@ -108,8 +107,8 @@ const periodLabels: Record<TodoPeriod, string> = {
 const todayFocusTitleId = "today-focus-title";
 const DEADLINE_CLOCK_INTERVAL_MS = 60_000;
 const DEADLINE_EDITOR_OFFSET = 8;
-const DEADLINE_EDITOR_WIDTH = 280;
-const DEADLINE_EDITOR_HEIGHT = 190;
+const DEADLINE_EDITOR_WIDTH = 520;
+const DEADLINE_EDITOR_HEIGHT = 240;
 const deadlineNow = ref(Date.now());
 const deadlineClockTimer = ref<number | undefined>();
 
@@ -150,20 +149,20 @@ const todayFocus = computed(() => {
   return entries.sort(compareTodayFocusEntries).map(({ period, todo }) => ({ period, todo }));
 });
 
-const deadlineEditorStyle = computed(() => {
-  if (!deadlineEditor.value) return {};
+const notifyEditorStyle = computed(() => {
+  if (!notifyEditor.value) return {};
   return {
-    left: `${deadlineEditor.value.x}px`,
-    top: `${deadlineEditor.value.y}px`,
+    left: `${notifyEditor.value.x}px`,
+    top: `${notifyEditor.value.y}px`,
   };
 });
 
-const deadlineDisplays = computed(() => {
-  const displays = new Map<TodoItem, DeadlineDisplay>();
+const notifyDisplays = computed(() => {
+  const displays = new Map<TodoItem, NotifyDisplay>();
   const now = deadlineNow.value;
   TODO_PERIODS.forEach((period) => {
     props.todos[period].forEach((todo) => {
-      const display = getDeadlineDisplay(getTodoReminderAt(todo), now);
+      const display = getNotifyDisplay(todo.notifyAt, now);
       if (display) displays.set(todo, display);
     });
   });
@@ -277,10 +276,6 @@ function openMenu(event: MouseEvent, period: TodoPeriod, id: string): void {
 
 function openTodoTextMenu(event: MouseEvent, period: TodoPeriod, todo: TodoItem): void {
   const target = event.currentTarget as HTMLInputElement;
-  if (!hasAnyClipboardMethod()) {
-    closeMenu();
-    return;
-  }
   event.preventDefault();
   selectedMenuTodoKey.value = todoKey(period, todo.id);
   menu.value = {
@@ -322,20 +317,14 @@ function closeMenu(): void {
 function handleStarClick(event: MouseEvent, period: TodoPeriod, todo: TodoItem): void {
   event.preventDefault();
   event.stopPropagation();
-  const anchor = event.currentTarget as HTMLElement;
-  if (todo.starred) {
-    closeDeadlineEditor();
-    emit("star", { period, id: todo.id, starred: false, anchor });
-    return;
-  }
-  openDeadlineEditor(period, todo.id, anchor, todo);
+  emit("star", { period, id: todo.id, starred: !todo.starred, anchor: event.currentTarget as HTMLElement });
 }
 
-function openDeadlineEditor(period: TodoPeriod, id: string, anchor: HTMLElement, todo = getTodoById(period, id)): void {
-  const { date, time } = getDeadlineEditorValues(todo);
-  const { x, y } = getDeadlineEditorPosition(anchor);
+function openNotifyEditor(period: TodoPeriod, id: string, anchor: HTMLElement, todo = getTodoById(period, id)): void {
+  const { date, time } = getNotifyEditorValues(todo);
+  const { x, y } = getNotifyEditorPosition(anchor);
   selectedMenuTodoKey.value = null;
-  deadlineEditor.value = {
+  notifyEditor.value = {
     period,
     id,
     anchor,
@@ -346,25 +335,24 @@ function openDeadlineEditor(period: TodoPeriod, id: string, anchor: HTMLElement,
   };
 }
 
-function selectDeadlineTime(time: DeadlineTimeOption): void {
-  if (!deadlineEditor.value) return;
-  deadlineEditor.value = { ...deadlineEditor.value, time };
+function selectNotifyTime(time: NotifyTimeOption): void {
+  if (!notifyEditor.value) return;
+  notifyEditor.value = { ...notifyEditor.value, time };
 }
 
-function getDeadlineEditorValues(todo?: TodoItem): { date: string; time: DeadlineTimeOption } {
-  const reminderAt = getTodoReminderAt(todo);
-  if (!isValidDeadlineAt(reminderAt)) return getDefaultDeadlineSelection();
+function getNotifyEditorValues(todo?: TodoItem): { date: string; time: NotifyTimeOption } {
+  if (!isValidDeadlineAt(todo?.notifyAt)) return getDefaultNotifySelection();
 
-  const deadlineDate = new Date(reminderAt);
-  const hour = String(deadlineDate.getHours()).padStart(2, "0");
+  const notifyDate = new Date(todo.notifyAt);
+  const hour = String(notifyDate.getHours()).padStart(2, "0");
   const time = `${hour}:00`;
-  const supportedTime = DEADLINE_TIME_OPTIONS.includes(time as DeadlineTimeOption)
-    ? time as DeadlineTimeOption
-    : DEFAULT_DEADLINE_TIME;
-  return { date: getLocalDateInputValue(deadlineDate), time: supportedTime };
+  const supportedTime = NOTIFY_TIME_OPTIONS.includes(time as NotifyTimeOption)
+    ? time as NotifyTimeOption
+    : DEFAULT_NOTIFY_TIME;
+  return { date: getLocalDateInputValue(notifyDate), time: supportedTime };
 }
 
-function getDeadlineEditorPosition(anchor: HTMLElement): { x: number; y: number } {
+function getNotifyEditorPosition(anchor: HTMLElement): { x: number; y: number } {
   const rect = anchor.getBoundingClientRect();
   const viewportWidth = window.innerWidth || document.documentElement.clientWidth || DEADLINE_EDITOR_WIDTH;
   const viewportHeight = window.innerHeight || document.documentElement.clientHeight || DEADLINE_EDITOR_HEIGHT;
@@ -377,37 +365,37 @@ function getDeadlineEditorPosition(anchor: HTMLElement): { x: number; y: number 
   return { x, y };
 }
 
-function updateDeadlineDate(value: string): void {
-  if (!deadlineEditor.value) return;
-  deadlineEditor.value = { ...deadlineEditor.value, date: value };
+function updateNotifyDate(value: string): void {
+  if (!notifyEditor.value) return;
+  notifyEditor.value = { ...notifyEditor.value, date: value };
 }
 
-function confirmDeadlineEditor(): void {
-  const editor = deadlineEditor.value;
+function confirmNotifyEditor(): void {
+  const editor = notifyEditor.value;
   if (!editor) return;
-  const deadlineAt = createDeadlineAt(editor.date, editor.time);
-  if (deadlineAt === null) return;
-  emit("star", { period: editor.period, id: editor.id, starred: true, deadlineAt, anchor: editor.anchor });
-  deadlineEditor.value = null;
+  const notifyAt = createNotifyAt(editor.date, editor.time);
+  if (notifyAt === null) return;
+  emit("notify", editor.period, editor.id, notifyAt, editor.anchor);
+  notifyEditor.value = null;
 }
 
-function ignoreDeadlineEditor(): void {
-  const editor = deadlineEditor.value;
+function clearNotifyEditor(): void {
+  const editor = notifyEditor.value;
   if (!editor) return;
-  emit("star", { period: editor.period, id: editor.id, starred: true, anchor: editor.anchor });
-  deadlineEditor.value = null;
+  emit("notify", editor.period, editor.id, undefined, editor.anchor);
+  notifyEditor.value = null;
 }
 
-function closeDeadlineEditor(): void {
-  deadlineEditor.value = null;
+function closeNotifyEditor(): void {
+  notifyEditor.value = null;
 }
 
 function handleDeadlineEditorOutsidePointerDown(event: PointerEvent): void {
-  if (!deadlineEditor.value) return;
+  if (!notifyEditor.value) return;
   const target = event.target;
   if (!(target instanceof Node)) return;
-  if (deadlineEditorRef.value?.contains(target)) return;
-  deadlineEditor.value = null;
+  if (notifyEditorRef.value?.contains(target)) return;
+  notifyEditor.value = null;
 }
 
 async function handleMenuSelect(key: string): Promise<void> {
@@ -437,10 +425,10 @@ async function handleMenuSelect(key: string): Promise<void> {
     closeMenu();
     return;
   }
-  if (key === "deadline" && id && anchor) {
+  if (key === "notify" && id && anchor) {
     const todo = getTodoById(period, id);
     closeMenu();
-    openDeadlineEditor(period, id, anchor, todo);
+    openNotifyEditor(period, id, anchor, todo);
     return;
   }
   closeMenu();
@@ -448,11 +436,7 @@ async function handleMenuSelect(key: string): Promise<void> {
   if (!id) return;
   if (key === "star") {
     const todo = getTodoById(period, id);
-    if (todo?.starred) {
-      emit("star", { period, id, starred: false, anchor });
-    } else if (anchor) {
-      openDeadlineEditor(period, id, anchor, todo);
-    }
+    emit("star", { period, id, starred: !todo?.starred, anchor });
   }
   if (key === "delete") emit("remove", period, id, anchor);
 }
@@ -480,12 +464,6 @@ function getTodoById(period: TodoPeriod, id: string): TodoItem | undefined {
   return props.todos[period].find((item) => item.id === id);
 }
 
-function getTodoReminderAt(todo?: TodoItem): number | undefined {
-  if (isValidDeadlineAt(todo?.notifyAt)) return todo.notifyAt;
-  if (isValidDeadlineAt(todo?.deadlineAt)) return todo.deadlineAt;
-  return undefined;
-}
-
 function isTodoHighlighted(period: TodoPeriod, id: string): boolean {
   const key = todoKey(period, id);
   return (
@@ -495,26 +473,26 @@ function isTodoHighlighted(period: TodoPeriod, id: string): boolean {
   );
 }
 
-function getTodoDeadline(todo: TodoItem): DeadlineDisplay | null {
-  return deadlineDisplays.value.get(todo) ?? null;
+function getTodoNotify(todo: TodoItem): NotifyDisplay | null {
+  return notifyDisplays.value.get(todo) ?? null;
 }
 
 function getTodoDeadlineClass(todo: TodoItem): string | null {
   if (todo.done) return null;
-  const display = getTodoDeadline(todo);
+  const display = getTodoNotify(todo);
   return display ? `deadline-${display.urgency}` : null;
 }
 
-function getTodoCompactDeadlineLabel(todo: TodoItem): string | null {
-  return getTodoDeadline(todo)?.compactLabel ?? null;
+function getTodoCompactNotifyLabel(todo: TodoItem): string | null {
+  return getTodoNotify(todo)?.compactLabel ?? null;
 }
 
 function compareTodayFocusEntries(left: TodayFocusEntry, right: TodayFocusEntry): number {
   const doneDiff = Number(left.todo.done) - Number(right.todo.done);
   if (doneDiff !== 0) return doneDiff;
 
-  const leftDeadline = getTodoReminderAt(left.todo);
-  const rightDeadline = getTodoReminderAt(right.todo);
+  const leftDeadline = left.todo.notifyAt;
+  const rightDeadline = right.todo.notifyAt;
   const leftHasDeadline = isValidDeadlineAt(leftDeadline);
   const rightHasDeadline = isValidDeadlineAt(rightDeadline);
   if (leftHasDeadline && rightHasDeadline) {
@@ -633,10 +611,6 @@ function pasteTextWithBrowserCommand(target: HTMLInputElement, range: { start: n
   return pasted && target.value !== before;
 }
 
-function hasAnyClipboardMethod(): boolean {
-  return typeof navigator.clipboard?.readText === "function" || typeof navigator.clipboard?.writeText === "function";
-}
-
 async function startTodoEdit(event: MouseEvent, period: TodoPeriod, id: string): Promise<void> {
   const input = event.currentTarget as HTMLInputElement;
   const key = todoKey(period, id);
@@ -750,12 +724,9 @@ function buildTodoListEntries(todos: TodoItem[], deferredDoneIds: ReadonlySet<st
             @focus="handleInputFocus(item.period, item.todo, $event)"
             @blur="handleInputBlur(item.period, item.todo.id)"
           />
-          <span class="todo-deadline-slot">
-            <span
-              v-if="getTodoCompactDeadlineLabel(item.todo)"
-              class="todo-deadline-label"
-            >
-              {{ getTodoCompactDeadlineLabel(item.todo) }}
+          <span v-if="getTodoCompactNotifyLabel(item.todo)" class="todo-deadline-slot">
+            <span class="todo-deadline-label">
+              {{ getTodoCompactNotifyLabel(item.todo) }}
             </span>
           </span>
           <button
@@ -870,12 +841,9 @@ function buildTodoListEntries(todos: TodoItem[], deferredDoneIds: ReadonlySet<st
                 @focus="handleInputFocus(period, entry.todo, $event)"
                 @blur="handleInputBlur(period, entry.todo.id)"
               />
-              <span class="todo-deadline-slot">
-                <span
-                  v-if="getTodoCompactDeadlineLabel(entry.todo)"
-                  class="todo-deadline-label"
-                >
-                  {{ getTodoCompactDeadlineLabel(entry.todo) }}
+              <span v-if="getTodoCompactNotifyLabel(entry.todo)" class="todo-deadline-slot">
+                <span class="todo-deadline-label">
+                  {{ getTodoCompactNotifyLabel(entry.todo) }}
                 </span>
               </span>
               <button
@@ -900,53 +868,62 @@ function buildTodoListEntries(todos: TodoItem[], deferredDoneIds: ReadonlySet<st
     </div>
 
     <section
-      v-if="deadlineEditor"
-      ref="deadlineEditorRef"
-      class="deadline-editor"
-      :style="deadlineEditorStyle"
-      aria-label="设置截止时间"
+      v-if="notifyEditor"
+      ref="notifyEditorRef"
+      class="deadline-editor notify-editor"
+      :style="notifyEditorStyle"
+      aria-label="设置通知时间"
     >
       <div class="deadline-editor-heading">
-        <span>设置截止时间</span>
+        <span>设置通知时间</span>
         <button
           class="deadline-close-button icon-button"
           type="button"
-          aria-label="关闭截止时间选择"
-          @click="closeDeadlineEditor"
+          aria-label="关闭通知时间选择"
+          @click="closeNotifyEditor"
         >
           ×
         </button>
       </div>
-      <input
-        class="deadline-date-input"
-        type="date"
-        :value="deadlineEditor.date"
-        @input="updateDeadlineDate(($event.target as HTMLInputElement).value)"
-      />
-      <div class="deadline-time-options" aria-label="选择截止整点">
-        <button
-          v-for="time in DEADLINE_TIME_OPTIONS"
-          :key="time"
-          class="deadline-time-button"
-          :class="{ 'is-selected': deadlineEditor.time === time }"
-          type="button"
-          @click="selectDeadlineTime(time)"
-        >
-          {{ getDeadlineTimeLabel(time) }}
-        </button>
+      <div class="notify-editor-body">
+        <div class="notify-date-column">
+          <span class="notify-editor-label">日期</span>
+          <input
+            class="deadline-date-input"
+            type="date"
+            :value="notifyEditor.date"
+            @input="updateNotifyDate(($event.target as HTMLInputElement).value)"
+          />
+        </div>
+        <div class="notify-time-column">
+          <span class="notify-editor-label">快捷时间</span>
+          <div class="deadline-time-options notify-clock-options" aria-label="选择通知整点">
+            <button
+              v-for="time in NOTIFY_TIME_OPTIONS"
+              :key="time"
+              class="deadline-time-button notify-clock-button"
+              :class="[`time-${time.replace(':', '')}`, { 'is-selected': notifyEditor.time === time }]"
+              type="button"
+              :aria-label="getNotifyTimeLabel(time)"
+              @click="selectNotifyTime(time)"
+            >
+              {{ time.slice(0, 2) }}
+            </button>
+          </div>
+        </div>
       </div>
       <div class="deadline-editor-actions">
         <button
           class="deadline-ignore-button"
           type="button"
-          @click="ignoreDeadlineEditor"
+          @click="clearNotifyEditor"
         >
-          忽略
+          不设通知时间
         </button>
         <button
           class="deadline-confirm-button"
           type="button"
-          @click="confirmDeadlineEditor"
+          @click="confirmNotifyEditor"
         >
           确定
         </button>

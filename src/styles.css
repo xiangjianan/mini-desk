@@ -829,6 +829,7 @@ h3 {
 
 .todo-star-button {
   justify-self: end;
+  grid-column: 5;
   width: 24px;
   min-width: 24px;
   height: 34px;
@@ -842,6 +843,10 @@ h3 {
   opacity: 0;
   pointer-events: none;
   transition: opacity 0.18s ease, color 0.18s ease;
+}
+
+.today-focus-item .todo-star-button {
+  grid-column: 4;
 }
 
 .todo-item:hover .todo-star-button,
@@ -883,6 +888,8 @@ h3 {
 
 .todo-input,
 .today-focus-input {
+  min-width: 0;
+  flex: 1 1 auto;
   width: 100%;
   border: 0;
   font-size: var(--app-font-size);
@@ -923,6 +930,25 @@ h3 {
   background: var(--panel);
 }
 
+.notify-editor {
+  width: 520px;
+  min-height: 240px;
+}
+
+.notify-editor-body {
+  display: grid;
+  grid-template-columns: minmax(180px, 1fr) 180px;
+  gap: 18px;
+  padding: 12px 0;
+}
+
+.notify-editor-label {
+  display: block;
+  margin-bottom: 8px;
+  color: var(--muted);
+  font-size: 12px;
+}
+
 .deadline-editor-heading,
 .deadline-editor-actions,
 .deadline-time-options {
@@ -952,6 +978,33 @@ h3 {
   gap: 6px;
   margin-bottom: 10px;
 }
+
+.notify-clock-options {
+  position: relative;
+  width: 160px;
+  height: 160px;
+  border: 1px dashed var(--line-control);
+  border-radius: 999px;
+  background: var(--button);
+}
+
+.notify-clock-button {
+  position: absolute;
+  width: 46px;
+  height: 28px;
+  transition: transform 0.16s ease, box-shadow 0.16s ease;
+}
+
+.notify-clock-button:hover {
+  transform: scale(1.14);
+  z-index: 2;
+}
+
+.notify-clock-button.time-0900 { left: 57px; top: 6px; }
+.notify-clock-button.time-1200 { right: 4px; top: 66px; }
+.notify-clock-button.time-1500 { right: 18px; bottom: 26px; }
+.notify-clock-button.time-1800 { left: 57px; bottom: 6px; }
+.notify-clock-button.time-2100 { left: 4px; top: 66px; }
 
 .deadline-time-button,
 .deadline-ignore-button,

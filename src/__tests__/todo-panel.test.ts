@@ -307,10 +307,10 @@ describe("TodoPanel", () => {
         props: {
           todos: {
             morning: [
-              { id: "a", text: "超期", done: false, starred: true, deadlineAt: new Date(2026, 4, 25, 9).getTime() },
+              { id: "a", text: "超期", done: false, starred: true, notifyAt: new Date(2026, 4, 25, 9).getTime() },
               { id: "b", text: "今天", done: false, starred: true, notifyAt: new Date(2026, 4, 25, 18).getTime() },
-              { id: "c", text: "三天内", done: false, starred: true, deadlineAt: new Date(2026, 4, 27, 18).getTime() },
-              { id: "d", text: "更晚", done: false, starred: true, deadlineAt: new Date(2026, 5, 2, 18).getTime() },
+              { id: "c", text: "三天内", done: false, starred: true, notifyAt: new Date(2026, 4, 27, 18).getTime() },
+              { id: "d", text: "更晚", done: false, starred: true, notifyAt: new Date(2026, 5, 2, 18).getTime() },
             ],
             noon: [],
             evening: [],
@@ -364,10 +364,10 @@ describe("TodoPanel", () => {
             { id: "b", text: "没有截止时间", done: false, starred: true },
           ],
           noon: [
-            { id: "c", text: "今天下午", done: false, starred: true, deadlineAt: new Date(2026, 4, 25, 15).getTime() },
+            { id: "c", text: "今天下午", done: false, starred: true, notifyAt: new Date(2026, 4, 25, 15).getTime() },
           ],
           evening: [
-            { id: "d", text: "已完成今天中午", done: true, starred: true, deadlineAt: new Date(2026, 4, 25, 12).getTime() },
+            { id: "d", text: "已完成今天中午", done: true, starred: true, notifyAt: new Date(2026, 4, 25, 12).getTime() },
           ],
         },
         titles: DEFAULT_TITLES,
@@ -485,9 +485,7 @@ describe("TodoPanel", () => {
     }
   });
 
-  it("opens a deadline selector when starring an unstarred reminder", async () => {
-    vi.useFakeTimers();
-    vi.setSystemTime(new Date(2026, 4, 25, 10));
+  it("emits a star request when starring an unstarred reminder", async () => {
     const wrapper = mount(TodoPanel, {
       props: {
         todos: {
@@ -510,89 +508,6 @@ describe("TodoPanel", () => {
     });
 
     await wrapper.get(".todo-star-button").trigger("click");
-
-    expect(wrapper.find(".deadline-editor").exists()).toBe(true);
-    expect((wrapper.get(".deadline-date-input").element as HTMLInputElement).value).toBe("2026-05-25");
-    expect(wrapper.findAll(".deadline-time-button").map((button) => button.text())).toEqual([
-      "上午 9 点",
-      "中午 12 点",
-      "下午 3 点",
-      "下午 6 点",
-      "晚上 9 点",
-    ]);
-    expect(wrapper.get(".deadline-time-button.is-selected").text()).toBe("中午 12 点");
-    expect(wrapper.emitted("star")).toBeUndefined();
-    wrapper.unmount();
-    vi.useRealTimers();
-  });
-
-  it("confirms a selected deadline and emits star with a timestamp", async () => {
-    vi.useFakeTimers();
-    vi.setSystemTime(new Date(2026, 4, 25, 10));
-    const wrapper = mount(TodoPanel, {
-      props: {
-        todos: {
-          morning: [{ id: "a", text: "第一项", done: false }],
-          noon: [],
-          evening: [],
-        },
-        titles: DEFAULT_TITLES,
-      },
-      global: {
-        stubs: {
-          Button: true,
-          Checkbox: checkboxStub,
-          Dropdown: dropdownStub,
-          NCheckbox: checkboxStub,
-          NDropdown: dropdownStub,
-          NTooltip: tooltipStub,
-        },
-      },
-    });
-
-    await wrapper.get(".todo-star-button").trigger("click");
-    await wrapper.get(".deadline-date-input").setValue("2026-05-30");
-    await wrapper.findAll(".deadline-time-button").find((button) => button.text() === "下午 3 点")?.trigger("click");
-    await wrapper.get(".deadline-confirm-button").trigger("click");
-
-    expect(wrapper.emitted("star")?.[0]).toEqual([
-      {
-        period: "morning",
-        id: "a",
-        starred: true,
-        deadlineAt: new Date(2026, 4, 30, 15).getTime(),
-        anchor: expect.any(HTMLElement),
-      },
-    ]);
-    expect(wrapper.find(".deadline-editor").exists()).toBe(false);
-    wrapper.unmount();
-    vi.useRealTimers();
-  });
-
-  it("can ignore deadline selection and only set the star", async () => {
-    const wrapper = mount(TodoPanel, {
-      props: {
-        todos: {
-          morning: [{ id: "a", text: "第一项", done: false }],
-          noon: [],
-          evening: [],
-        },
-        titles: DEFAULT_TITLES,
-      },
-      global: {
-        stubs: {
-          Button: true,
-          Checkbox: checkboxStub,
-          Dropdown: dropdownStub,
-          NCheckbox: checkboxStub,
-          NDropdown: dropdownStub,
-          NTooltip: tooltipStub,
-        },
-      },
-    });
-
-    await wrapper.get(".todo-star-button").trigger("click");
-    await wrapper.get(".deadline-ignore-button").trigger("click");
 
     expect(wrapper.emitted("star")?.[0]).toEqual([
       { period: "morning", id: "a", starred: true, anchor: expect.any(HTMLElement) },
@@ -601,7 +516,9 @@ describe("TodoPanel", () => {
     wrapper.unmount();
   });
 
-  it("closes deadline selection without changing the reminder", async () => {
+  it("confirms a selected notification time and emits notify with a timestamp", async () => {
+    vi.useFakeTimers();
+    vi.setSystemTime(new Date(2026, 4, 25, 10));
     const wrapper = mount(TodoPanel, {
       props: {
         todos: {
@@ -623,15 +540,89 @@ describe("TodoPanel", () => {
       },
     });
 
-    await wrapper.get(".todo-star-button").trigger("click");
-    await wrapper.get(".deadline-close-button").trigger("click");
+    await wrapper.get("input.todo-input").trigger("contextmenu");
+    await wrapper.findAll(".dropdown-option").find((option) => option.text() === "设置通知时间")?.trigger("click");
+    await wrapper.get(".deadline-date-input").setValue("2026-05-30");
+    await wrapper.findAll(".deadline-time-button").find((button) => button.text() === "15")?.trigger("click");
+    await wrapper.get(".deadline-confirm-button").trigger("click");
 
+    expect(wrapper.emitted("notify")?.[0]).toEqual([
+      "morning",
+      "a",
+      new Date(2026, 4, 30, 15).getTime(),
+      expect.any(HTMLElement),
+    ]);
+    expect(wrapper.emitted("star")).toBeUndefined();
+    expect(wrapper.find(".deadline-editor").exists()).toBe(false);
+    wrapper.unmount();
+    vi.useRealTimers();
+  });
+
+  it("can clear notification time from the editor", async () => {
+    const wrapper = mount(TodoPanel, {
+      props: {
+        todos: {
+          morning: [{ id: "a", text: "第一项", done: false, notifyAt: new Date(2026, 4, 30, 15).getTime() }],
+          noon: [],
+          evening: [],
+        },
+        titles: DEFAULT_TITLES,
+      },
+      global: {
+        stubs: {
+          Button: true,
+          Checkbox: checkboxStub,
+          Dropdown: dropdownStub,
+          NCheckbox: checkboxStub,
+          NDropdown: dropdownStub,
+          NTooltip: tooltipStub,
+        },
+      },
+    });
+
+    await wrapper.get("input.todo-input").trigger("contextmenu");
+    await wrapper.findAll(".dropdown-option").find((option) => option.text() === "编辑通知时间")?.trigger("click");
+    await wrapper.get(".deadline-ignore-button").trigger("click");
+
+    expect(wrapper.emitted("notify")?.[0]).toEqual(["morning", "a", undefined, expect.any(HTMLElement)]);
     expect(wrapper.emitted("star")).toBeUndefined();
     expect(wrapper.find(".deadline-editor").exists()).toBe(false);
     wrapper.unmount();
   });
 
-  it("closes deadline selection from an outside click without setting the star", async () => {
+  it("closes notification selection without changing the reminder", async () => {
+    const wrapper = mount(TodoPanel, {
+      props: {
+        todos: {
+          morning: [{ id: "a", text: "第一项", done: false }],
+          noon: [],
+          evening: [],
+        },
+        titles: DEFAULT_TITLES,
+      },
+      global: {
+        stubs: {
+          Button: true,
+          Checkbox: checkboxStub,
+          Dropdown: dropdownStub,
+          NCheckbox: checkboxStub,
+          NDropdown: dropdownStub,
+          NTooltip: tooltipStub,
+        },
+      },
+    });
+
+    await wrapper.get("input.todo-input").trigger("contextmenu");
+    await wrapper.findAll(".dropdown-option").find((option) => option.text() === "设置通知时间")?.trigger("click");
+    await wrapper.get(".deadline-close-button").trigger("click");
+
+    expect(wrapper.emitted("star")).toBeUndefined();
+    expect(wrapper.emitted("notify")).toBeUndefined();
+    expect(wrapper.find(".deadline-editor").exists()).toBe(false);
+    wrapper.unmount();
+  });
+
+  it("closes notification selection from an outside click without changing the reminder", async () => {
     const wrapper = mount(TodoPanel, {
       attachTo: document.body,
       props: {
@@ -654,11 +645,13 @@ describe("TodoPanel", () => {
       },
     });
 
-    await wrapper.get(".todo-star-button").trigger("click");
+    await wrapper.get("input.todo-input").trigger("contextmenu");
+    await wrapper.findAll(".dropdown-option").find((option) => option.text() === "设置通知时间")?.trigger("click");
     document.body.dispatchEvent(new PointerEvent("pointerdown", { bubbles: true }));
     await nextTick();
 
     expect(wrapper.emitted("star")).toBeUndefined();
+    expect(wrapper.emitted("notify")).toBeUndefined();
     expect(wrapper.find(".deadline-editor").exists()).toBe(false);
     wrapper.unmount();
   });
@@ -694,7 +687,7 @@ describe("TodoPanel", () => {
     wrapper.unmount();
   });
 
-  it("opens the deadline selector from the reminder context menu when starring", async () => {
+  it("emits star from the reminder context menu without opening notification time", async () => {
     const wrapper = mount(TodoPanel, {
       props: {
         todos: {
@@ -719,8 +712,10 @@ describe("TodoPanel", () => {
     await wrapper.get(".todo-item").trigger("contextmenu");
     await wrapper.findAll(".dropdown-option").find((option) => option.text() === "星标")?.trigger("click");
 
-    expect(wrapper.find(".deadline-editor").exists()).toBe(true);
-    expect(wrapper.emitted("star")).toBeUndefined();
+    expect(wrapper.emitted("star")?.[0]).toEqual([
+      { period: "morning", id: "a", starred: true, anchor: expect.any(HTMLElement) },
+    ]);
+    expect(wrapper.find(".deadline-editor").exists()).toBe(false);
     wrapper.unmount();
   });
 
@@ -781,7 +776,7 @@ describe("TodoPanel", () => {
     expect(wrapper.get(".today-focus-item").classes()).toContain("is-menu-selected");
     expect(wrapper.findAll(".dropdown-option").map((option) => option.text())).toEqual([
       "复制",
-      "设置提醒时间",
+      "设置通知时间",
       "删除",
       "取消星标",
       "Tips",
@@ -793,7 +788,7 @@ describe("TodoPanel", () => {
     wrapper.unmount();
   });
 
-  it("opens a deadline editor from today's focus context menu and preloads existing deadlines", async () => {
+  it("opens a notification editor from today's focus context menu and preloads existing notification times", async () => {
     const wrapper = mount(TodoPanel, {
       props: {
         todos: {
@@ -826,25 +821,23 @@ describe("TodoPanel", () => {
 
     await wrapper.get(".today-focus-item").trigger("contextmenu");
 
-    expect(wrapper.findAll(".dropdown-option").map((option) => option.text())).toContain("编辑提醒时间");
+    expect(wrapper.findAll(".dropdown-option").map((option) => option.text())).toContain("编辑通知时间");
 
-    await wrapper.findAll(".dropdown-option").find((option) => option.text() === "编辑提醒时间")?.trigger("click");
+    await wrapper.findAll(".dropdown-option").find((option) => option.text() === "编辑通知时间")?.trigger("click");
 
     expect((wrapper.get(".deadline-date-input").element as HTMLInputElement).value).toBe("2026-05-30");
-    expect(wrapper.get(".deadline-time-button.is-selected").text()).toBe("下午 6 点");
+    expect(wrapper.get(".deadline-time-button.is-selected").text()).toBe("18");
 
-    await wrapper.findAll(".deadline-time-button").find((button) => button.text() === "中午 12 点")?.trigger("click");
+    await wrapper.findAll(".deadline-time-button").find((button) => button.text() === "12")?.trigger("click");
     await wrapper.get(".deadline-confirm-button").trigger("click");
 
-    expect(wrapper.emitted("star")?.[0]).toEqual([
-      {
-        period: "morning",
-        id: "a",
-        starred: true,
-        deadlineAt: new Date(2026, 4, 30, 12).getTime(),
-        anchor: expect.any(HTMLElement),
-      },
+    expect(wrapper.emitted("notify")?.[0]).toEqual([
+      "morning",
+      "a",
+      new Date(2026, 4, 30, 12).getTime(),
+      expect.any(HTMLElement),
     ]);
+    expect(wrapper.emitted("star")).toBeUndefined();
     wrapper.unmount();
   });
 
@@ -852,7 +845,7 @@ describe("TodoPanel", () => {
     const wrapper = mount(TodoPanel, {
       props: {
         todos: {
-          morning: [{ id: "a", text: "第一项", done: false }],
+          morning: [{ id: "a", text: "第一项", done: false, notifyAt: new Date(2026, 4, 30, 12).getTime() }],
           noon: [],
           evening: [],
         },
@@ -886,7 +879,7 @@ describe("TodoPanel", () => {
     const wrapper = mount(TodoPanel, {
       props: {
         todos: {
-          morning: [{ id: "a", text: "重点事项", done: false, starred: true }],
+          morning: [{ id: "a", text: "重点事项", done: false, starred: true, notifyAt: new Date(2026, 4, 30, 12).getTime() }],
           noon: [],
           evening: [],
         },
@@ -1318,14 +1311,17 @@ describe("TodoPanel", () => {
     expect(wrapper.findAll(".todo-item")[1].classes()).toContain("is-menu-selected");
     expect(wrapper.findAll(".dropdown-option").map((option) => option.text())).toEqual([
       "复制",
+      "设置通知时间",
       "删除",
       "星标",
       "Tips",
     ]);
 
     await wrapper.findAll(".dropdown-option").find((option) => option.text() === "星标")?.trigger("click");
-    expect(wrapper.find(".deadline-editor").exists()).toBe(true);
-    expect(wrapper.emitted("star")).toBeUndefined();
+    expect(wrapper.emitted("star")?.[0]).toEqual([
+      { period: "morning", id: "b", starred: true, anchor: expect.any(HTMLElement) },
+    ]);
+    expect(wrapper.find(".deadline-editor").exists()).toBe(false);
     await wrapper.findAll(".todo-item")[1].trigger("contextmenu");
 
     await wrapper.findAll(".dropdown-option").find((option) => option.text() === "复制")?.trigger("click");
@@ -1505,6 +1501,7 @@ describe("TodoPanel", () => {
     expect(wrapper.get(".todo-item").classes()).toContain("is-menu-selected");
     expect(wrapper.findAll(".dropdown-option").map((option) => option.text())).toEqual([
       "复制",
+      "设置通知时间",
       "删除",
       "星标",
       "Tips",
@@ -1517,7 +1514,7 @@ describe("TodoPanel", () => {
     wrapper.unmount();
   });
 
-  it("keeps the native reminder text context menu when clipboard APIs are unavailable", async () => {
+  it("keeps reminder actions available when clipboard APIs are unavailable", async () => {
     Object.assign(navigator, { clipboard: undefined });
     const wrapper = mount(TodoPanel, {
       props: {
@@ -1550,8 +1547,14 @@ describe("TodoPanel", () => {
     input.dispatchEvent(event);
     await wrapper.vm.$nextTick();
 
-    expect(event.defaultPrevented).toBe(false);
-    expect(wrapper.find(".dropdown-option").exists()).toBe(false);
+    expect(event.defaultPrevented).toBe(true);
+    expect(wrapper.findAll(".dropdown-option").map((option) => option.text())).toEqual([
+      "复制",
+      "设置通知时间",
+      "删除",
+      "星标",
+      "Tips",
+    ]);
     wrapper.unmount();
   });
 
@@ -1623,6 +1626,7 @@ describe("TodoPanel", () => {
     expect(wrapper.findAll(".dropdown-option").map((option) => option.text())).toEqual([
       "复制",
       "粘贴",
+      "设置通知时间",
       "删除",
       "星标",
       "Tips",
@@ -1699,5 +1703,96 @@ describe("TodoPanel", () => {
 
     expect(wrapper.findAll(".dropdown-option").map((option) => option.text())).not.toContain("编辑");
     wrapper.unmount();
+  });
+
+  it("allows notification time on an unstarred reminder", async () => {
+    const wrapper = mount(TodoPanel, {
+      props: {
+        todos: {
+          morning: [{ id: "a", text: "普通事项", done: false }],
+          noon: [],
+          evening: [],
+        },
+        titles: DEFAULT_TITLES,
+      },
+      global: {
+        stubs: {
+          Button: true,
+          Checkbox: checkboxStub,
+          Dropdown: dropdownStub,
+          NCheckbox: checkboxStub,
+          NDropdown: dropdownStub,
+          NTooltip: tooltipStub,
+        },
+      },
+    });
+
+    await wrapper.get('.todo-section[data-period="morning"] input.todo-input').trigger("contextmenu");
+    expect(wrapper.findAll(".dropdown-option").map((option) => option.text())).toContain("设置通知时间");
+
+    await wrapper.findAll(".dropdown-option").find((option) => option.text() === "设置通知时间")?.trigger("click");
+    expect(wrapper.get(".deadline-editor").attributes("aria-label")).toBe("设置通知时间");
+    expect(wrapper.get(".deadline-editor-heading").text()).toContain("设置通知时间");
+    expect(wrapper.get(".deadline-ignore-button").text()).toBe("不设通知时间");
+  });
+
+  it("emits notify updates without changing star state", async () => {
+    const wrapper = mount(TodoPanel, {
+      props: {
+        todos: {
+          morning: [{ id: "a", text: "普通事项", done: false }],
+          noon: [],
+          evening: [],
+        },
+        titles: DEFAULT_TITLES,
+      },
+      global: {
+        stubs: {
+          Button: true,
+          Checkbox: checkboxStub,
+          Dropdown: dropdownStub,
+          NCheckbox: checkboxStub,
+          NDropdown: dropdownStub,
+          NTooltip: tooltipStub,
+        },
+      },
+    });
+
+    await wrapper.get('.todo-section[data-period="morning"] input.todo-input').trigger("contextmenu");
+    await wrapper.findAll(".dropdown-option").find((option) => option.text() === "设置通知时间")?.trigger("click");
+    await wrapper.get(".deadline-confirm-button").trigger("click");
+
+    expect(wrapper.emitted("notify")?.[0]).toEqual([
+      "morning",
+      "a",
+      expect.any(Number),
+      expect.any(HTMLElement),
+    ]);
+    expect(wrapper.emitted("star")).toBeUndefined();
+  });
+
+  it("does not render an empty notification slot when no notification time exists", () => {
+    const wrapper = mount(TodoPanel, {
+      props: {
+        todos: {
+          morning: [{ id: "a", text: "这是一条很长的普通提醒事项", done: false }],
+          noon: [],
+          evening: [],
+        },
+        titles: DEFAULT_TITLES,
+      },
+      global: {
+        stubs: {
+          Button: true,
+          Checkbox: checkboxStub,
+          Dropdown: dropdownStub,
+          NCheckbox: checkboxStub,
+          NDropdown: dropdownStub,
+          NTooltip: tooltipStub,
+        },
+      },
+    });
+
+    expect(wrapper.find(".todo-deadline-slot").exists()).toBe(false);
   });
 });

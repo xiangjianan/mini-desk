@@ -11,7 +11,6 @@ import SpacePanel from "./components/SpacePanel.vue";
 import TextPanel from "./components/TextPanel.vue";
 import TodoPanel from "./components/TodoPanel.vue";
 import { AREA_HELP, CONTROL_HELP, DEFAULT_TITLES, TODO_PERIODS } from "./state/defaults";
-import { isValidDeadlineAt } from "./state/deadlines";
 import { deleteStoredImage, hydrateStoredImages, persistImagePayloads, storeImagePayload } from "./state/images";
 import { getMessage, withKaomoji, type MessageKey } from "./state/messages";
 import {
@@ -21,6 +20,7 @@ import {
   moveTodo as moveTodoInMap,
   removeEmptyTodo,
   removeTodo as removeTodoFromMap,
+  setTodoNotifyAt,
   splitTodo as splitTodoInMap,
   starTodo,
   updateTodoText,
@@ -841,16 +841,16 @@ function complete(period: TodoPeriod, id: string, done: boolean, anchor?: HTMLEl
 }
 
 function toggleTodoStar(change: TodoStarChange): void {
-  const { period, id, starred, notifyAt, deadlineAt, anchor } = change;
+  const { period, id, starred, anchor } = change;
   if (starred) {
-    state.todos = starTodo(state.todos, period, id, true, notifyAt ?? deadlineAt);
+    state.todos = starTodo(state.todos, period, id, true);
     persistNow();
     return;
   }
 
   const todo = state.todos[period].find((item) => item.id === id);
   if (!todo?.starred) return;
-  const messageKey: MessageKey = isValidDeadlineAt(getTodoReminderAt(todo)) ? "confirmUnstarTodoDeadline" : "confirmUnstarTodo";
+  const messageKey: MessageKey = "confirmUnstarTodo";
   requestConfirmation(
     messageKey,
     anchor,
@@ -863,10 +863,10 @@ function toggleTodoStar(change: TodoStarChange): void {
   );
 }
 
-function getTodoReminderAt(todo: { notifyAt?: number; deadlineAt?: number }): number | undefined {
-  if (isValidDeadlineAt(todo.notifyAt)) return todo.notifyAt;
-  if (isValidDeadlineAt(todo.deadlineAt)) return todo.deadlineAt;
-  return undefined;
+function updateTodoNotify(period: TodoPeriod, id: string, notifyAt: number | undefined, anchor?: HTMLElement): void {
+  state.todos = setTodoNotifyAt(state.todos, period, id, notifyAt);
+  persistNow();
+  if (notifyAt === undefined) showBubbleText("已取消通知时间", anchor);
 }
 
 function removeTodo(period: TodoPeriod, id: string, anchor?: HTMLElement): void {
@@ -1441,6 +1441,7 @@ function moveItem<T extends { id: string }>(items: T[], dragId: string, targetId
         @split="splitTodo"
         @complete="complete"
         @star="toggleTodoStar"
+        @notify="updateTodoNotify"
         @remove="removeTodo"
         @clear-completed="clearDone"
         @toggle-completed-visibility="toggleCompletedVisibility"
