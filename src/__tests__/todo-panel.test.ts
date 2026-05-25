@@ -41,7 +41,125 @@ function values(wrapper: ReturnType<typeof mount>): string[] {
   return wrapper.findAll("input.todo-input").map((input) => (input.element as HTMLInputElement).value);
 }
 
+const defaultTodoLists = [
+  { id: "morning", title: "☀️ 早上", collapsed: false, compact: false },
+  { id: "noon", title: "🌤️ 中午", collapsed: false, compact: false },
+  { id: "evening", title: "🌙 晚上", collapsed: false, compact: false },
+];
+
 describe("TodoPanel", () => {
+  it("renders reminder sections from configurable todo lists", () => {
+    const wrapper = mount(TodoPanel, {
+      props: {
+        todoLists: [{ id: "custom", title: "自定义", collapsed: false, compact: false }],
+        todos: { custom: [{ id: "a", text: "A", done: false }] },
+        showCompleted: { custom: false },
+        titles: DEFAULT_TITLES,
+      },
+      global: {
+        stubs: {
+          Checkbox: checkboxStub,
+          Dropdown: dropdownStub,
+          NCheckbox: checkboxStub,
+          NDropdown: dropdownStub,
+          NTooltip: tooltipStub,
+        },
+      },
+    });
+
+    expect(wrapper.find('.todo-section[data-list-id="custom"]').exists()).toBe(true);
+    expect(wrapper.find('[data-testid="todo-list-custom"]').exists()).toBe(true);
+    expect(values(wrapper)).toEqual(["A"]);
+  });
+
+  it("emits list creation and list title updates", async () => {
+    const wrapper = mount(TodoPanel, {
+      props: {
+        todoLists: defaultTodoLists,
+        todos: { morning: [], noon: [], evening: [] },
+        showCompleted: { morning: false, noon: false, evening: false },
+        titles: DEFAULT_TITLES,
+      },
+      global: {
+        stubs: {
+          Checkbox: checkboxStub,
+          Dropdown: dropdownStub,
+          NCheckbox: checkboxStub,
+          NDropdown: dropdownStub,
+          NTooltip: tooltipStub,
+        },
+      },
+    });
+
+    await wrapper.get(".todo-add-list-button").trigger("click");
+    expect(wrapper.emitted("createList")?.[0]).toEqual([expect.any(HTMLElement)]);
+
+    await wrapper.get('.todo-section[data-list-id="morning"] .editable-title').trigger("dblclick");
+    await wrapper.get('.todo-section[data-list-id="morning"] .title-edit-input').setValue("上午");
+    await wrapper.get('.todo-section[data-list-id="morning"] .title-edit-input').trigger("blur");
+
+    expect(wrapper.emitted("updateListTitle")?.[0]).toEqual(["morning", "上午"]);
+  });
+
+  it("emits collapse compact delete and list reorder actions", async () => {
+    const wrapper = mount(TodoPanel, {
+      props: {
+        todoLists: defaultTodoLists,
+        todos: { morning: [{ id: "a", text: "A", done: false }], noon: [], evening: [] },
+        showCompleted: { morning: false, noon: false, evening: false },
+        titles: DEFAULT_TITLES,
+      },
+      global: {
+        stubs: {
+          Checkbox: checkboxStub,
+          Dropdown: dropdownStub,
+          NCheckbox: checkboxStub,
+          NDropdown: dropdownStub,
+          NTooltip: tooltipStub,
+        },
+      },
+    });
+
+    await wrapper.get('.todo-section[data-list-id="morning"] .todo-section-menu-button').trigger("click");
+    expect(wrapper.findAll(".dropdown-option").map((option) => option.text())).toContain("折叠");
+
+    await wrapper.findAll(".dropdown-option").find((option) => option.text() === "折叠")?.trigger("click");
+    await wrapper.get('.todo-section[data-list-id="morning"] .todo-section-menu-button').trigger("click");
+    await wrapper.findAll(".dropdown-option").find((option) => option.text() === "收缩")?.trigger("click");
+    await wrapper.get('.todo-section[data-list-id="morning"] .todo-section-menu-button').trigger("click");
+    await wrapper.findAll(".dropdown-option").find((option) => option.text() === "删除列表")?.trigger("click");
+
+    expect(wrapper.emitted("toggleListCollapsed")?.[0]).toEqual(["morning", true]);
+    expect(wrapper.emitted("toggleListCompact")?.[0]).toEqual(["morning", true]);
+    expect(wrapper.emitted("deleteList")?.[0]).toEqual(["morning", expect.any(HTMLElement)]);
+  });
+
+  it("emits list reorder actions without moving reminders", async () => {
+    const wrapper = mount(TodoPanel, {
+      props: {
+        todoLists: defaultTodoLists,
+        todos: { morning: [{ id: "a", text: "A", done: false }], noon: [], evening: [] },
+        showCompleted: { morning: false, noon: false, evening: false },
+        titles: DEFAULT_TITLES,
+      },
+      global: {
+        stubs: {
+          Checkbox: checkboxStub,
+          Dropdown: dropdownStub,
+          NCheckbox: checkboxStub,
+          NDropdown: dropdownStub,
+          NTooltip: tooltipStub,
+        },
+      },
+    });
+
+    await wrapper.get('.todo-section[data-list-id="morning"] .todo-list-drag-handle').trigger("dragstart");
+    await wrapper.get('.todo-section[data-list-id="noon"]').trigger("drop");
+
+    expect(wrapper.emitted("reorderLists")?.[0]).toEqual(["morning", "noon"]);
+    expect(wrapper.emitted("move")).toBeUndefined();
+  });
+
   it("keeps empty todo lists visually blank while preserving click-to-create", async () => {
     const wrapper = mount(TodoPanel, {
       props: {
@@ -222,8 +340,11 @@ describe("TodoPanel", () => {
     await wrapper.get('.todo-section[data-period="morning"] .todo-section-menu-button').trigger("click");
 
     expect(wrapper.findAll(".dropdown-option").map((option) => option.text())).toEqual([
+      "折叠",
+      "收缩",
       "显示已完成",
       "清理已完成",
+      "删除列表",
       "Tips",
     ]);
 
@@ -270,8 +391,11 @@ describe("TodoPanel", () => {
 
     await wrapper.get('.todo-section[data-period="noon"] .todo-section-menu-button').trigger("click");
     expect(wrapper.findAll(".dropdown-option").map((option) => option.text())).toEqual([
+      "折叠",
+      "收缩",
       "显示已完成",
       "清理已完成",
+      "删除列表",
       "Tips",
     ]);
 

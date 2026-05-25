@@ -1,8 +1,8 @@
 <script setup lang="ts">
 import { computed, nextTick, onMounted, onUnmounted, ref } from "vue";
-import { NButton, NCheckbox, NDropdown } from "naive-ui";
+import { NCheckbox, NDropdown } from "naive-ui";
 import type { DropdownOption } from "naive-ui";
-import { GUIDE_MENU_OPTION, TODO_PERIODS } from "../state/defaults";
+import { DEFAULT_TODO_LISTS, GUIDE_MENU_OPTION } from "../state/defaults";
 import {
   NOTIFY_TIME_OPTIONS,
   DEFAULT_NOTIFY_TIME,
@@ -15,19 +15,37 @@ import {
   type NotifyDisplay,
   type NotifyTimeOption,
 } from "../state/deadlines";
-import type { DraggedTodo, GuideKey, TodoCompletedVisibility, TodoItem, TodoMap, TodoPeriod, TodoStarChange } from "../types";
+import type {
+  DraggedTodo,
+  GuideKey,
+  TodoCompletedVisibility,
+  TodoItem,
+  TodoListConfig,
+  TodoListId,
+  TodoMap,
+  TodoPeriod,
+  TodoStarChange,
+} from "../types";
 import { getOrderedTodos } from "../state/todos";
 import { splitDroppedTodoText } from "../utils/textEditor";
 import EditableTitle from "./EditableTitle.vue";
 
 const props = defineProps<{
+  todoLists?: TodoListConfig[];
   todos: TodoMap;
   titles: Record<string, string>;
   showCompleted?: TodoCompletedVisibility;
+  editListId?: TodoListId | null;
 }>();
 
 const emit = defineEmits<{
   titleUpdate: [id: string, value: string];
+  createList: [anchor?: HTMLElement];
+  updateListTitle: [listId: TodoListId, title: string];
+  toggleListCollapsed: [listId: TodoListId, collapsed: boolean];
+  toggleListCompact: [listId: TodoListId, compact: boolean];
+  deleteList: [listId: TodoListId, anchor?: HTMLElement];
+  reorderLists: [draggedId: TodoListId, targetId: TodoListId];
   create: [period: TodoPeriod, afterId?: string];
   update: [period: TodoPeriod, id: string, text: string];
   split: [period: TodoPeriod, id: string, before: string, after: string];
@@ -45,17 +63,18 @@ const emit = defineEmits<{
   guide: [key: GuideKey, anchor: HTMLElement, immediate?: boolean];
 }>();
 
-const focusedPeriod = ref<TodoPeriod | null>(null);
+const focusedListId = ref<TodoListId | null>(null);
 const menu = ref<{
   x: number;
   y: number;
-  period: TodoPeriod;
+  period: TodoListId;
   id?: string;
   anchor?: HTMLElement;
   target?: HTMLInputElement;
   sectionActions?: boolean;
 } | null>(null);
 const dragged = ref<DraggedTodo | null>(null);
+const draggedListId = ref<TodoListId | null>(null);
 const editingTodoKey = ref<string | null>(null);
 const selectedMenuTodoKey = ref<string | null>(null);
 const notifyEditorRef = ref<HTMLElement | null>(null);
@@ -72,14 +91,19 @@ const pendingDoneReorderIds = ref<string[]>([]);
 const reorderTimers = new Map<string, number>();
 const lastTodoCarets = new Map<string, number>();
 const lastTodoSelections = new Map<string, { start: number; end: number }>();
-const todoSectionRefs = new Map<TodoPeriod, HTMLElement>();
+const todoSectionRefs = new Map<TodoListId, HTMLElement>();
 const guideMenuOption: DropdownOption = { ...GUIDE_MENU_OPTION, label: GUIDE_MENU_OPTION.label || "Tips" };
+const effectiveTodoLists = computed(() => props.todoLists ?? DEFAULT_TODO_LISTS);
 const menuOptions = computed<DropdownOption[]>(() => {
   if (menu.value?.sectionActions) {
-    const period = menu.value.period;
+    const list = getListById(menu.value.period);
+    if (!list) return [guideMenuOption];
     return [
-      { label: isCompletedVisible(period) ? "隐藏已完成" : "显示已完成", key: "toggle-completed" },
+      { label: list.collapsed ? "展开" : "折叠", key: "toggle-collapsed" },
+      { label: list.compact ? "恢复" : "收缩", key: "toggle-compact" },
+      { label: isCompletedVisible(list.id) ? "隐藏已完成" : "显示已完成", key: "toggle-completed" },
       { label: "清理已完成", key: "clear-completed" },
+      { label: "删除列表", key: "delete-list", disabled: effectiveTodoLists.value.length <= 1 },
       guideMenuOption,
     ];
   }
@@ -101,11 +125,6 @@ const menuOptions = computed<DropdownOption[]>(() => {
   return options;
 });
 
-const periodLabels: Record<TodoPeriod, string> = {
-  morning: "todo-morning-title",
-  noon: "todo-noon-title",
-  evening: "todo-evening-title",
-};
 const todayFocusTitleId = "today-focus-title";
 const DEADLINE_CLOCK_INTERVAL_MS = 60_000;
 const DEADLINE_EDITOR_OFFSET = 8;
@@ -116,12 +135,9 @@ const deadlineClockTimer = ref<number | undefined>();
 
 const ordered = computed(() =>
   Object.fromEntries(
-    TODO_PERIODS.map((period) => {
-      const deferredIds = new Set(
-        pendingDoneReorderIds.value
-          .filter((key) => key.startsWith(`${period}:`))
-          .map((key) => key.slice(period.length + 1)),
-      );
+    effectiveTodoLists.value.map((list) => {
+      const period = list.id;
+      const deferredIds = getDeferredTodoIds(period);
       return [period, getOrderedTodos(getTodos(period), deferredIds)];
     }),
   ) as TodoMap,
@@ -129,22 +145,23 @@ const ordered = computed(() =>
 
 const periodStats = computed(() =>
   Object.fromEntries(
-    TODO_PERIODS.map((period) => {
+    effectiveTodoLists.value.map((list) => {
+      const period = list.id;
       const todos = getTodos(period);
       const total = todos.length;
       const done = todos.filter((todo) => todo.done).length;
       return [period, `${done}/${total}`];
     }),
-  ) as Record<TodoPeriod, string>,
+  ) as Record<TodoListId, string>,
 );
 
-type TodayFocusEntry = { period: TodoPeriod; todo: TodoItem; index: number };
+type TodayFocusEntry = { period: TodoListId; todo: TodoItem; index: number };
 
 const todayFocus = computed(() => {
-  const entries: TodayFocusEntry[] = TODO_PERIODS.flatMap((period) =>
-    ordered.value[period]
+  const entries: TodayFocusEntry[] = effectiveTodoLists.value.flatMap((list) =>
+    (ordered.value[list.id] ?? [])
       .filter((todo) => todo.starred)
-      .map((todo) => ({ period, todo, index: 0 })),
+      .map((todo) => ({ period: list.id, todo, index: 0 })),
   );
   entries.forEach((entry, index) => {
     entry.index = index;
@@ -163,8 +180,8 @@ const notifyEditorStyle = computed(() => {
 const notifyDisplays = computed(() => {
   const displays = new Map<TodoItem, NotifyDisplay>();
   const now = deadlineNow.value;
-  TODO_PERIODS.forEach((period) => {
-    getTodos(period).forEach((todo) => {
+  effectiveTodoLists.value.forEach((list) => {
+    getTodos(list.id).forEach((todo) => {
       const display = getNotifyDisplay(todo.notifyAt, now);
       if (display) displays.set(todo, display);
     });
@@ -174,12 +191,9 @@ const notifyDisplays = computed(() => {
 
 const visibleOrdered = computed(() =>
   Object.fromEntries(
-    TODO_PERIODS.map((period) => {
-      const deferredIds = new Set(
-        pendingDoneReorderIds.value
-          .filter((key) => key.startsWith(`${period}:`))
-          .map((key) => key.slice(period.length + 1)),
-      );
+    effectiveTodoLists.value.map((list) => {
+      const period = list.id;
+      const deferredIds = getDeferredTodoIds(period);
       return [
         period,
         isCompletedVisible(period)
@@ -191,13 +205,16 @@ const visibleOrdered = computed(() =>
 );
 
 type TodoListEntry =
-  | { type: "divider"; id: string; period: TodoPeriod }
+  | { type: "divider"; id: string; period: TodoListId }
   | { type: "todo"; todo: TodoItem };
 
 const listEntries = computed(() =>
   Object.fromEntries(
-    TODO_PERIODS.map((period) => [period, buildTodoListEntries(period, visibleOrdered.value[period], getDeferredTodoIds(period))]),
-  ) as Record<TodoPeriod, TodoListEntry[]>,
+    effectiveTodoLists.value.map((list) => {
+      const period = list.id;
+      return [period, buildTodoListEntries(period, visibleOrdered.value[period] ?? [], getDeferredTodoIds(period))];
+    }),
+  ) as Record<TodoListId, TodoListEntry[]>,
 );
 
 onMounted(() => {
@@ -259,6 +276,16 @@ function handleTodoSectionDrop(event: DragEvent, period: TodoPeriod): void {
   handleTodoTextDrop(event, period);
 }
 
+function handleListSectionDrop(event: DragEvent, listId: TodoListId): void {
+  if (draggedListId.value) {
+    event.preventDefault();
+    emit("reorderLists", draggedListId.value, listId);
+    draggedListId.value = null;
+    return;
+  }
+  handleTodoSectionDrop(event, listId);
+}
+
 function handleSectionGuideClick(event: MouseEvent): void {
   const target = event.target as HTMLElement;
   if (target.closest("button, input, textarea, .todo-list")) return;
@@ -291,14 +318,14 @@ function handleChecked(period: TodoPeriod, id: string, checked: boolean): void {
 }
 
 function handleInputBlur(period: TodoPeriod, id: string): void {
-  focusedPeriod.value = null;
+  focusedListId.value = null;
   if (editingTodoKey.value === todoKey(period, id)) editingTodoKey.value = null;
   emit("blurEmpty", period, id);
   emit("blur");
 }
 
 function handleInputFocus(period: TodoPeriod, todo: TodoItem, event: FocusEvent): void {
-  focusedPeriod.value = period;
+  focusedListId.value = period;
   if (!todo.done && todo.text.trim().length === 0) editingTodoKey.value = todoKey(period, todo.id);
   emit("focus", event.currentTarget as HTMLElement);
 }
@@ -338,7 +365,7 @@ function openSectionMenu(event: MouseEvent, period: TodoPeriod): void {
   menu.value = { x: event.clientX, y: event.clientY, period, anchor: event.currentTarget as HTMLElement };
 }
 
-function openSectionActions(event: MouseEvent, period: TodoPeriod): void {
+function openSectionActions(event: MouseEvent, period: TodoListId): void {
   event.preventDefault();
   event.stopPropagation();
   selectedMenuTodoKey.value = null;
@@ -443,6 +470,22 @@ function handleDeadlineEditorOutsidePointerDown(event: PointerEvent): void {
 async function handleMenuSelect(key: string): Promise<void> {
   if (!menu.value) return;
   const { period, id, anchor, target } = menu.value;
+  const list = getListById(period);
+  if (key === "toggle-collapsed" && list) {
+    closeMenu();
+    emit("toggleListCollapsed", period, !list.collapsed);
+    return;
+  }
+  if (key === "toggle-compact" && list) {
+    closeMenu();
+    emit("toggleListCompact", period, !list.compact);
+    return;
+  }
+  if (key === "delete-list") {
+    closeMenu();
+    emit("deleteList", period, anchor);
+    return;
+  }
   if (key === "toggle-completed") {
     closeMenu();
     emit("toggleCompletedVisibility", period, !isCompletedVisible(period));
@@ -504,6 +547,10 @@ function getMenuTodo(): TodoItem | undefined {
 
 function getTodoById(period: TodoPeriod, id: string): TodoItem | undefined {
   return getTodos(period).find((item) => item.id === id);
+}
+
+function getListById(listId: TodoListId): TodoListConfig | undefined {
+  return effectiveTodoLists.value.find((list) => list.id === listId);
 }
 
 function isTodoHighlighted(period: TodoPeriod, id: string): boolean {
@@ -684,7 +731,7 @@ function handleTodoSelection(period: TodoPeriod, id: string, event: Event): void
   rememberTodoSelection(period, id, event.currentTarget as HTMLInputElement);
 }
 
-function setTodoSectionRef(period: TodoPeriod, element: Element | null): void {
+function setTodoSectionRef(period: TodoListId, element: Element | null): void {
   if (element instanceof HTMLElement) {
     todoSectionRefs.set(period, element);
     return;
@@ -700,15 +747,15 @@ function collapseSelection(input: HTMLInputElement, caret: number): void {
   });
 }
 
-function isCompletedVisible(period: TodoPeriod): boolean {
+function isCompletedVisible(period: TodoListId): boolean {
   return Boolean(props.showCompleted?.[period]);
 }
 
-function getTodos(period: TodoPeriod): TodoItem[] {
+function getTodos(period: TodoListId): TodoItem[] {
   return props.todos[period] ?? [];
 }
 
-function getDeferredTodoIds(period: TodoPeriod): Set<string> {
+function getDeferredTodoIds(period: TodoListId): Set<string> {
   return new Set(
     pendingDoneReorderIds.value
       .filter((key) => key.startsWith(`${period}:`))
@@ -716,7 +763,7 @@ function getDeferredTodoIds(period: TodoPeriod): Set<string> {
   );
 }
 
-function buildTodoListEntries(period: TodoPeriod, todos: TodoItem[], deferredDoneIds: ReadonlySet<string>): TodoListEntry[] {
+function buildTodoListEntries(period: TodoListId, todos: TodoItem[], deferredDoneIds: ReadonlySet<string>): TodoListEntry[] {
   const entries: TodoListEntry[] = [];
   let completedDividerAdded = false;
   todos.forEach((todo) => {
@@ -787,33 +834,50 @@ function buildTodoListEntries(period: TodoPeriod, todos: TodoItem[], deferredDon
       </ul>
     </section>
     <div class="todo-sections">
+      <button
+        class="todo-add-list-button icon-button"
+        type="button"
+        aria-label="新增提醒列表"
+        @click="emit('createList', $event.currentTarget as HTMLElement)"
+      >
+        ＋
+      </button>
       <section
-        v-for="period in TODO_PERIODS"
-        :key="period"
-        :ref="(element) => setTodoSectionRef(period, element as Element | null)"
+        v-for="list in effectiveTodoLists"
+        :key="list.id"
+        :ref="(element) => setTodoSectionRef(list.id, element as Element | null)"
         class="todo-section"
-        :class="{ 'is-focused': focusedPeriod === period }"
-        :data-period="period"
+        :class="{ 'is-focused': focusedListId === list.id, 'is-collapsed': list.collapsed, 'is-compact': list.compact }"
+        :data-list-id="list.id"
+        :data-period="list.id"
         @click="handleSectionGuideClick"
-        @contextmenu="openSectionMenu($event, period)"
+        @contextmenu="openSectionMenu($event, list.id)"
         @dragover.prevent
-        @drop="handleTodoSectionDrop($event, period)"
+        @drop="handleListSectionDrop($event, list.id)"
       >
         <div class="todo-heading">
+          <button
+            class="todo-list-drag-handle"
+            type="button"
+            draggable="true"
+            aria-label="拖动提醒列表"
+            @dragstart="draggedListId = list.id"
+            @dragend="draggedListId = null"
+          />
           <h3>
             <EditableTitle
-              :id="periodLabels[period]"
-              :value="titles[periodLabels[period]]"
-              @update="(id, value) => emit('titleUpdate', id, value)"
+              :id="list.id"
+              :value="list.title"
+              @update="(_id, value) => emit('updateListTitle', list.id, value)"
             />
           </h3>
           <div class="todo-heading-actions">
-            <span class="todo-count">{{ periodStats[period] }}</span>
+            <span class="todo-count">{{ periodStats[list.id] }}</span>
             <button
               type="button"
               class="todo-section-menu-button icon-button"
               aria-label="待办菜单"
-              @click="openSectionActions($event, period)"
+              @click="openSectionActions($event, list.id)"
             >
               ⋯
             </button>
@@ -821,75 +885,75 @@ function buildTodoListEntries(period: TodoPeriod, todos: TodoItem[], deferredDon
         </div>
 
         <ul
-          v-if="listEntries[period].length === 0"
+          v-if="!list.collapsed && listEntries[list.id].length === 0"
           class="todo-list todo-empty-list"
-          :data-testid="`todo-list-${period}`"
-          @click="handleListClick($event, period)"
+          :data-testid="`todo-list-${list.id}`"
+          @click="handleListClick($event, list.id)"
           @dragover.prevent
-          @drop="handleTodoTextDrop($event, period)"
+          @drop="handleTodoTextDrop($event, list.id)"
         >
           <li
-            :key="`${period}-empty-hint`"
+            :key="`${list.id}-empty-hint`"
             class="todo-empty-hint"
             aria-label="提醒事项 Tips"
-            @click="emit('create', period)"
+            @click="emit('create', list.id)"
           />
         </ul>
 
         <TransitionGroup
-          v-else
+          v-else-if="!list.collapsed"
           name="todo-move"
           tag="ul"
           class="todo-list"
           :class="{ 'todo-move': true }"
-          :data-testid="`todo-list-${period}`"
-          @click="handleListClick($event, period)"
+          :data-testid="`todo-list-${list.id}`"
+          @click="handleListClick($event, list.id)"
           @dragover.prevent
-          @drop="handleTodoTextDrop($event, period)"
+          @drop="handleTodoTextDrop($event, list.id)"
         >
           <template
-            v-for="entry in listEntries[period]"
+            v-for="entry in listEntries[list.id]"
             :key="entry.type === 'todo' ? entry.todo.id : entry.id"
           >
             <li
               v-if="entry.type === 'todo'"
               class="todo-item"
               :class="[
-                { 'is-done': entry.todo.done, 'is-starred': entry.todo.starred, 'is-menu-selected': isTodoHighlighted(period, entry.todo.id), 'has-notify': Boolean(getTodoCompactNotifyLabel(entry.todo)) },
+                { 'is-done': entry.todo.done, 'is-starred': entry.todo.starred, 'is-menu-selected': isTodoHighlighted(list.id, entry.todo.id), 'has-notify': Boolean(getTodoCompactNotifyLabel(entry.todo)) },
                 getTodoDeadlineClass(entry.todo),
               ]"
-              @contextmenu.stop="openMenu($event, period, entry.todo.id)"
+              @contextmenu.stop="openMenu($event, list.id, entry.todo.id)"
               @dragover.prevent
-              @drop="handleTodoItemDrop($event, period, entry.todo.id)"
+              @drop="handleTodoItemDrop($event, list.id, entry.todo.id)"
             >
               <button
                 class="todo-drag-handle"
                 type="button"
                 draggable="true"
                 aria-label="拖动提醒事项"
-                @dragstart="dragged = { period, id: entry.todo.id }"
+                @dragstart="dragged = { period: list.id, id: entry.todo.id }"
                 @dragend="dragged = null"
               />
               <NCheckbox
                 :checked="entry.todo.done"
                 aria-label="完成"
-                @update:checked="(checked) => handleChecked(period, entry.todo.id, checked)"
+                @update:checked="(checked) => handleChecked(list.id, entry.todo.id, checked)"
               />
               <input
                 class="todo-input"
-                :data-testid="`todo-input-${period}`"
+                :data-testid="`todo-input-${list.id}`"
                 :data-todo-id="entry.todo.id"
                 :value="entry.todo.text"
-                :readonly="!isTodoEditable(period, entry.todo)"
+                :readonly="!isTodoEditable(list.id, entry.todo)"
                 draggable="false"
-                @input="emit('update', period, entry.todo.id, ($event.target as HTMLInputElement).value)"
-                @keydown.enter="handleEnter($event, period, entry.todo)"
-                @mouseup="rememberTodoCaret(period, entry.todo.id, $event)"
-                @select="handleTodoSelection(period, entry.todo.id, $event)"
-                @contextmenu.stop="openTodoTextMenu($event, period, entry.todo)"
-                @click="startTodoEdit($event, period, entry.todo.id)"
-                @focus="handleInputFocus(period, entry.todo, $event)"
-                @blur="handleInputBlur(period, entry.todo.id)"
+                @input="emit('update', list.id, entry.todo.id, ($event.target as HTMLInputElement).value)"
+                @keydown.enter="handleEnter($event, list.id, entry.todo)"
+                @mouseup="rememberTodoCaret(list.id, entry.todo.id, $event)"
+                @select="handleTodoSelection(list.id, entry.todo.id, $event)"
+                @contextmenu.stop="openTodoTextMenu($event, list.id, entry.todo)"
+                @click="startTodoEdit($event, list.id, entry.todo.id)"
+                @focus="handleInputFocus(list.id, entry.todo, $event)"
+                @blur="handleInputBlur(list.id, entry.todo.id)"
               />
               <span v-if="getTodoCompactNotifyLabel(entry.todo)" class="todo-deadline-slot">
                 <span class="todo-deadline-label">
@@ -901,7 +965,7 @@ function buildTodoListEntries(period: TodoPeriod, todos: TodoItem[], deferredDon
                 :class="{ 'is-starred': entry.todo.starred }"
                 type="button"
                 :aria-label="entry.todo.starred ? '取消重点' : '设为重点'"
-                @click="handleStarClick($event, period, entry.todo)"
+                @click="handleStarClick($event, list.id, entry.todo)"
               >
                 {{ entry.todo.starred ? "★" : "☆" }}
               </button>
