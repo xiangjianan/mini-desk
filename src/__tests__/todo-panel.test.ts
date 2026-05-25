@@ -441,38 +441,60 @@ describe("TodoPanel", () => {
 
   it("refreshes notification labels when the page regains focus", async () => {
     vi.useFakeTimers();
-    vi.setSystemTime(new Date(2026, 4, 25, 9, 59));
     const notifyAt = new Date(2026, 4, 25, 10).getTime();
-    const wrapper = mount(TodoPanel, {
-      props: {
-        todos: {
-          morning: [{ id: "a", text: "马上提醒", done: false, notifyAt }],
-          noon: [],
-          evening: [],
+    let wrapper: ReturnType<typeof mount> | undefined;
+    const visibilityStateSpy = vi.spyOn(document, "visibilityState", "get").mockReturnValue("visible");
+    const mountPanel = () =>
+      mount(TodoPanel, {
+        props: {
+          todos: {
+            morning: [{ id: "a", text: "马上提醒", done: false, notifyAt }],
+            noon: [],
+            evening: [],
+          },
+          titles: DEFAULT_TITLES,
         },
-        titles: DEFAULT_TITLES,
-      },
-      global: {
-        stubs: {
-          Button: true,
-          Checkbox: checkboxStub,
-          Dropdown: dropdownStub,
-          NCheckbox: checkboxStub,
-          NDropdown: dropdownStub,
-          NTooltip: tooltipStub,
+        global: {
+          stubs: {
+            Button: true,
+            Checkbox: checkboxStub,
+            Dropdown: dropdownStub,
+            NCheckbox: checkboxStub,
+            NDropdown: dropdownStub,
+            NTooltip: tooltipStub,
+          },
         },
-      },
-    });
+      });
 
-    expect(wrapper.get(".todo-deadline-label").text()).toBe("今天 10");
+    try {
+      vi.setSystemTime(new Date(2026, 4, 25, 9, 59));
+      wrapper = mountPanel();
 
-    vi.setSystemTime(new Date(2026, 4, 25, 10, 1));
-    window.dispatchEvent(new Event("focus"));
-    await wrapper.vm.$nextTick();
+      expect(wrapper.get(".todo-deadline-label").text()).toBe("今天 10");
 
-    expect(wrapper.get(".todo-deadline-label").text()).toBe("! 已超期");
-    wrapper.unmount();
-    vi.useRealTimers();
+      vi.setSystemTime(new Date(2026, 4, 25, 10, 1));
+      window.dispatchEvent(new Event("focus"));
+      await wrapper.vm.$nextTick();
+
+      expect(wrapper.get(".todo-deadline-label").text()).toBe("! 已超期");
+      wrapper.unmount();
+      wrapper = undefined;
+
+      vi.setSystemTime(new Date(2026, 4, 25, 9, 59));
+      wrapper = mountPanel();
+
+      expect(wrapper.get(".todo-deadline-label").text()).toBe("今天 10");
+
+      vi.setSystemTime(new Date(2026, 4, 25, 10, 1));
+      document.dispatchEvent(new Event("visibilitychange"));
+      await wrapper.vm.$nextTick();
+
+      expect(wrapper.get(".todo-deadline-label").text()).toBe("! 已超期");
+    } finally {
+      wrapper?.unmount();
+      visibilityStateSpy.mockRestore();
+      vi.useRealTimers();
+    }
   });
 
   it("shows weak deadline labels for completed starred reminders without urgency styling", () => {
