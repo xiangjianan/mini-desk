@@ -1,8 +1,28 @@
 import { mount } from "@vue/test-utils";
+import { nextTick } from "vue";
 import { describe, expect, it } from "vitest";
 import EditableTitle from "../components/EditableTitle.vue";
 
 describe("EditableTitle", () => {
+  it("enters edit mode and focuses the input when autoEdit is enabled", async () => {
+    const wrapper = mount(EditableTitle, {
+      props: {
+        id: "todo-list",
+        value: "未命名列表",
+        autoEdit: true,
+      },
+      attachTo: document.body,
+    });
+
+    await nextTick();
+
+    const input = wrapper.find(".title-edit-input");
+    expect(input.exists()).toBe(true);
+    expect(document.activeElement).toBe(input.element);
+
+    wrapper.unmount();
+  });
+
   it("does not save while Chinese IME composition is confirming with Enter", async () => {
     const wrapper = mount(EditableTitle, {
       props: {

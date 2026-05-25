@@ -895,6 +895,7 @@ function buildTodoListEntries(period: TodoListId, todos: TodoItem[], deferredDon
             <EditableTitle
               :id="list.id"
               :value="list.title"
+              :auto-edit="Boolean(props.todoLists && props.editListId === list.id)"
               @update="(_id, value) => handleListTitleUpdate(list.id, value)"
             />
           </h3>

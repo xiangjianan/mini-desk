@@ -4,6 +4,7 @@ import { nextTick, ref, watch } from "vue";
 const props = defineProps<{
   id: string;
   value: string;
+  autoEdit?: boolean;
 }>();
 
 const emit = defineEmits<{
@@ -22,8 +23,15 @@ watch(
   },
 );
 
-async function startEditing(event: MouseEvent): Promise<void> {
-  event.preventDefault();
+watch(
+  () => props.autoEdit,
+  (autoEdit) => {
+    if (autoEdit) void enterEditing();
+  },
+  { immediate: true },
+);
+
+async function enterEditing(): Promise<void> {
   composing.value = false;
   editing.value = true;
   await nextTick();
@@ -35,6 +43,11 @@ async function startEditing(event: MouseEvent): Promise<void> {
   window.setTimeout(() => {
     if (document.activeElement === input) input.setSelectionRange(caret, caret);
   });
+}
+
+async function startEditing(event: MouseEvent): Promise<void> {
+  event.preventDefault();
+  await enterEditing();
 }
 
 function commit(): void {

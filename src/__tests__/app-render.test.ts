@@ -301,6 +301,24 @@ describe("App shell", () => {
     }
   });
 
+  it("starts editing a newly created reminder list title", async () => {
+    const wrapper = mountApp();
+
+    try {
+      await wrapper.get(".todo-add-list-button").trigger("click");
+      await nextTick();
+
+      const newSection = wrapper.findAll(".todo-section").at(-1);
+      const input = newSection?.find(".title-edit-input");
+
+      expect(input?.exists()).toBe(true);
+      expect((input?.element as HTMLInputElement | undefined)?.value).toBe("未命名列表");
+      expect(document.activeElement).toBe(input?.element);
+    } finally {
+      wrapper.unmount();
+    }
+  });
+
   it("persists reminder list title updates", async () => {
     localStorage.setItem(STORAGE_KEY, JSON.stringify({
       ...defaultState(),
@@ -422,6 +440,68 @@ describe("App shell", () => {
 
       const stored = JSON.parse(localStorage.getItem(STORAGE_KEY) || "{}");
       expect(stored.todoLists.map((list: { id: string }) => list.id)).toEqual(["b", "a"]);
+    } finally {
+      wrapper.unmount();
+    }
+  });
+
+  it("ignores stale create events without restoring deleted default lists", async () => {
+    localStorage.setItem(STORAGE_KEY, JSON.stringify({
+      ...defaultState(),
+      todoLists: [{ id: "custom", title: "自定义", collapsed: false, compact: false }],
+      todos: { custom: [{ id: "blank", text: "", done: false }] },
+      showCompletedTodos: { custom: false },
+    }));
+    const wrapper = mountApp();
+
+    try {
+      wrapper.getComponent(TodoPanel).vm.$emit("create", "morning");
+      await nextTick();
+
+      const stored = JSON.parse(localStorage.getItem(STORAGE_KEY) || "{}");
+      expect(stored.todoLists.map((list: { id: string }) => list.id)).toEqual(["custom"]);
+      expect(stored.todos).toEqual({
+        custom: [{ id: "blank", text: "", done: false }],
+      });
+      expect(stored.showCompletedTodos).toEqual({ custom: false });
+    } finally {
+      wrapper.unmount();
+    }
+  });
+
+  it("ignores stale drop update and move events without orphan todo records", async () => {
+    localStorage.setItem(STORAGE_KEY, JSON.stringify({
+      ...defaultState(),
+      todoLists: [
+        { id: "home", title: "生活", collapsed: false, compact: false },
+        { id: "work", title: "工作", collapsed: false, compact: false },
+      ],
+      todos: {
+        home: [{ id: "home-a", text: "Home", done: false }],
+        work: [],
+      },
+      showCompletedTodos: { home: false, work: false },
+    }));
+    const wrapper = mountApp();
+
+    try {
+      wrapper.getComponent(TodoPanel).vm.$emit("deleteList", "work", wrapper.get(".todo-panel").element as HTMLElement);
+      await nextTick();
+
+      wrapper.getComponent(TodoPanel).vm.$emit("createFromText", "work", ["stale drop"]);
+      wrapper.getComponent(TodoPanel).vm.$emit("update", "work", "missing", "stale update");
+      wrapper.getComponent(TodoPanel).vm.$emit("toggleCompletedVisibility", "work", true);
+      wrapper.getComponent(TodoPanel).vm.$emit("move", { period: "home", id: "home-a" }, "morning");
+      await nextTick();
+
+      const stored = JSON.parse(localStorage.getItem(STORAGE_KEY) || "{}");
+      expect(stored.todoLists.map((list: { id: string }) => list.id)).toEqual(["home"]);
+      expect(stored.todos.home).toEqual([
+        expect.objectContaining({ id: "home-a", text: "Home", done: false }),
+      ]);
+      expect(stored.showCompletedTodos).toEqual({ home: false });
+      expect(stored.todos.work).toBeUndefined();
+      expect(stored.todos.morning).toBeUndefined();
     } finally {
       wrapper.unmount();
     }
@@ -2162,6 +2242,49 @@ describe("App shell", () => {
 
       expect(wrapper.getComponent(SettingsMenu).props("companionGifTheme")).toBe("none");
       expect(JSON.parse(localStorage.getItem(STORAGE_KEY) || "{}").companionGifTheme).toBe("none");
+    } finally {
+      wrapper.unmount();
+      vi.useRealTimers();
+    }
+  });
+
+  it("accepts imports that only configure reminder lists", async () => {
+    vi.useFakeTimers();
+    const wrapper = mountApp();
+
+    try {
+      const settings = wrapper.getComponent(SettingsMenu);
+      settings.vm.$emit("import", settings.element as HTMLElement);
+      const input = wrapper.get('input[type="file"]').element as HTMLInputElement;
+      const file = new File([
+        JSON.stringify({
+          todoLists: [{ id: "solo", title: "单独列表", collapsed: false, compact: false }],
+          showCompletedTodos: { solo: true },
+        }),
+      ], "todo-lists.json", {
+        type: "application/json",
+      });
+      Object.defineProperty(input, "files", { value: [file], configurable: true });
+
+      await wrapper.get('input[type="file"]').trigger("change");
+      await Promise.resolve();
+      await wrapper.vm.$nextTick();
+      await vi.advanceTimersByTimeAsync(200);
+      await wrapper.vm.$nextTick();
+
+      expect(wrapper.find('[data-testid="companion-confirm"]').text()).toMatch(/覆盖|导入|当前数据/);
+
+      await wrapper.get('[data-testid="companion-yes"]').trigger("click");
+      await Promise.resolve();
+      await wrapper.vm.$nextTick();
+
+      const stored = JSON.parse(localStorage.getItem(STORAGE_KEY) || "{}");
+      expect(stored.todoLists).toEqual([
+        { id: "solo", title: "单独列表", collapsed: false, compact: false },
+      ]);
+      expect(stored.todos.solo).toEqual([]);
+      expect(stored.showCompletedTodos.solo).toBe(true);
+      expect(wrapper.find('.todo-section[data-list-id="solo"]').exists()).toBe(true);
     } finally {
       wrapper.unmount();
       vi.useRealTimers();

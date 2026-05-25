@@ -101,6 +101,36 @@ describe("TodoPanel", () => {
     expect(wrapper.emitted("updateListTitle")?.[0]).toEqual(["morning", "上午"]);
   });
 
+  it("auto-edits the configured list matching editListId", async () => {
+    const wrapper = mount(TodoPanel, {
+      props: {
+        todoLists: [{ id: "custom", title: "未命名列表", collapsed: false, compact: false }],
+        editListId: "custom",
+        todos: { custom: [] },
+        showCompleted: { custom: false },
+        titles: DEFAULT_TITLES,
+      },
+      attachTo: document.body,
+      global: {
+        stubs: {
+          Checkbox: checkboxStub,
+          Dropdown: dropdownStub,
+          NCheckbox: checkboxStub,
+          NDropdown: dropdownStub,
+          NTooltip: tooltipStub,
+        },
+      },
+    });
+
+    await nextTick();
+
+    const input = wrapper.get('.todo-section[data-list-id="custom"] .title-edit-input');
+    expect((input.element as HTMLInputElement).value).toBe("未命名列表");
+    expect(document.activeElement).toBe(input.element);
+
+    wrapper.unmount();
+  });
+
   it("uses legacy titles and titleUpdate events when todoLists are omitted", async () => {
     const wrapper = mount(TodoPanel, {
       props: {
