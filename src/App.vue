@@ -1235,6 +1235,7 @@ function isImportPayload(payload: unknown): payload is Record<string, unknown> {
   const keys = new Set(Object.keys(payload));
   return [
     "theme",
+    "companionGifTheme",
     "customTitles",
     "noteLines",
     "workspaceLines",

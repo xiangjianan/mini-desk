@@ -1946,6 +1946,39 @@ describe("App shell", () => {
     }
   });
 
+  it("accepts imports that only change the companion GIF theme", async () => {
+    vi.useFakeTimers();
+    const wrapper = mountApp();
+
+    try {
+      const settings = wrapper.getComponent(SettingsMenu);
+      settings.vm.$emit("import", settings.element as HTMLElement);
+      const input = wrapper.get('input[type="file"]').element as HTMLInputElement;
+      const file = new File([JSON.stringify({ companionGifTheme: "none" })], "todo.json", {
+        type: "application/json",
+      });
+      Object.defineProperty(input, "files", { value: [file], configurable: true });
+
+      await wrapper.get('input[type="file"]').trigger("change");
+      await Promise.resolve();
+      await wrapper.vm.$nextTick();
+      await vi.advanceTimersByTimeAsync(200);
+      await wrapper.vm.$nextTick();
+
+      expect(wrapper.find('[data-testid="companion-confirm"]').text()).toMatch(/覆盖|导入|当前数据/);
+
+      await wrapper.get('[data-testid="companion-yes"]').trigger("click");
+      await Promise.resolve();
+      await wrapper.vm.$nextTick();
+
+      expect(wrapper.getComponent(SettingsMenu).props("companionGifTheme")).toBe("none");
+      expect(JSON.parse(localStorage.getItem(STORAGE_KEY) || "{}").companionGifTheme).toBe("none");
+    } finally {
+      wrapper.unmount();
+      vi.useRealTimers();
+    }
+  });
+
   it("resets the import file input before opening the picker", async () => {
     const wrapper = mountApp();
 
