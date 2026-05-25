@@ -73,12 +73,16 @@ export function starTodo(
   period: TodoPeriod,
   id: string,
   starred: boolean,
-  _legacyDeadlineAt?: number,
+  legacyDeadlineAt?: number,
 ): TodoMap {
   const next = cloneTodoMap(todos);
   const todo = next[period].find((item) => item.id === id);
   if (!todo) return next;
   todo.starred = starred;
+  if (starred && isValidDeadlineAt(legacyDeadlineAt)) {
+    todo.notifyAt = legacyDeadlineAt;
+  }
+  delete todo.deadlineAt;
   return next;
 }
 

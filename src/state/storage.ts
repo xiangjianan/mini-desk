@@ -287,15 +287,9 @@ function cloneTodos(todos: TodoMap): TodoMap {
 }
 
 function cloneTodo(todo: TodoItem): TodoItem {
-  const next: TodoItem = {
-    id: todo.id,
-    text: todo.text,
-    done: todo.done,
-    starred: Boolean(todo.starred),
-  };
-  if (isValidDeadlineAt(todo.notifyAt)) {
-    next.notifyAt = todo.notifyAt;
-  }
+  const next: TodoItem = { ...todo };
+  delete next.deadlineAt;
+  if (!isValidDeadlineAt(next.notifyAt)) delete next.notifyAt;
   return next;
 }
 

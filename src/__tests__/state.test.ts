@@ -164,6 +164,23 @@ describe("state compatibility", () => {
     expect("deadlineAt" in getSerializableState(state).todos.morning[0]).toBe(false);
   });
 
+  it("prefers notifyAt over legacy deadlineAt during import and serialization", () => {
+    const notifyAt = new Date(2026, 4, 25, 9).getTime();
+    const legacyAt = new Date(2026, 4, 25, 18).getTime();
+    const state = normalizeImportedState({
+      todos: {
+        morning: [{ id: "a", text: "both", done: false, starred: true, notifyAt, deadlineAt: legacyAt }],
+        noon: [],
+        evening: [],
+      },
+    });
+
+    expect(state.todos.morning[0]).toMatchObject({ notifyAt });
+    expect("deadlineAt" in state.todos.morning[0]).toBe(false);
+    expect(getSerializableState(state).todos.morning[0]).toMatchObject({ notifyAt });
+    expect("deadlineAt" in getSerializableState(state).todos.morning[0]).toBe(false);
+  });
+
   it("serializes textarea text into indented line records", () => {
     expect(serializeTextLines("root\n\tchild\n\t\tleaf")).toEqual([
       { text: "root", indent: 0 },
@@ -230,6 +247,34 @@ describe("todo behavior", () => {
 
     expect(starTodo(todos, "morning", "a", false).morning[0]).toMatchObject({
       starred: false,
+      notifyAt,
+    });
+  });
+
+  it("maps valid legacy star deadline arguments to notification time", () => {
+    const notifyAt = new Date(2026, 4, 25, 18).getTime();
+    const todos = {
+      morning: [{ id: "a", text: "task", done: false }],
+      noon: [],
+      evening: [],
+    };
+
+    expect(starTodo(todos, "morning", "a", true, notifyAt).morning[0]).toMatchObject({
+      starred: true,
+      notifyAt,
+    });
+  });
+
+  it("does not clear existing notification time when starring without a legacy deadline", () => {
+    const notifyAt = new Date(2026, 4, 25, 18).getTime();
+    const todos = {
+      morning: [{ id: "a", text: "task", done: false, notifyAt }],
+      noon: [],
+      evening: [],
+    };
+
+    expect(starTodo(todos, "morning", "a", true).morning[0]).toMatchObject({
+      starred: true,
       notifyAt,
     });
   });
