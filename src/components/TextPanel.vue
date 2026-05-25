@@ -79,12 +79,9 @@ const textPanelClasses = computed(() => ({
 
 function update(): void {
   if (!editing.value) return;
-  const normalized = renumberOrderedListText(text.value);
-  if (normalized !== text.value) {
-    applyEditorText(normalized);
-  } else {
-    recordUndoForText(text.value);
-  }
+  const textarea = textareaRef.value;
+  if (textarea) normalizeTextareaText(textarea);
+  else recordUndoForText(text.value);
   emit("update", editorTextToLines(text.value));
 }
 
@@ -326,7 +323,7 @@ async function pasteTextFromClipboard(target: HTMLTextAreaElement): Promise<void
   } else if (!pasteTextWithBrowserCommand(target, range)) {
     return;
   }
-  applyEditorText(target.value);
+  normalizeTextareaText(target);
   emit("update", editorTextToLines(text.value));
 }
 
@@ -346,6 +343,55 @@ function applyEditorText(next: string): void {
   recordUndoForText(next);
   text.value = next;
   if (textareaRef.value && textareaRef.value.value !== next) textareaRef.value.value = next;
+}
+
+function normalizeTextareaText(textarea: HTMLTextAreaElement): void {
+  const raw = textarea.value;
+  const normalized = renumberOrderedListText(raw);
+  if (normalized === raw) {
+    recordUndoForText(raw);
+    text.value = raw;
+    return;
+  }
+
+  const selectionStart = textarea.selectionStart ?? raw.length;
+  const selectionEnd = textarea.selectionEnd ?? selectionStart;
+  const nextSelectionStart = getAdjustedSelectionOffset(raw, normalized, selectionStart);
+  const nextSelectionEnd = getAdjustedSelectionOffset(raw, normalized, selectionEnd);
+  recordUndoForText(normalized);
+  text.value = normalized;
+  textarea.value = normalized;
+  textarea.setSelectionRange(nextSelectionStart, nextSelectionEnd);
+}
+
+function getAdjustedSelectionOffset(raw: string, normalized: string, offset: number): number {
+  const prefixLength = getCommonPrefixLength(raw, normalized);
+  if (prefixLength >= offset) return offset;
+  const suffixLength = getCommonSuffixLength(raw, normalized, prefixLength);
+  const rawChangedEnd = raw.length - suffixLength;
+  const normalizedChangedEnd = normalized.length - suffixLength;
+  if (offset >= rawChangedEnd) {
+    return clampSelectionOffset(offset + normalized.length - raw.length, normalized.length);
+  }
+  return clampSelectionOffset(normalizedChangedEnd, normalized.length);
+}
+
+function getCommonPrefixLength(left: string, right: string): number {
+  const maxLength = Math.min(left.length, right.length);
+  let index = 0;
+  while (index < maxLength && left[index] === right[index]) index += 1;
+  return index;
+}
+
+function getCommonSuffixLength(left: string, right: string, prefixLength: number): number {
+  const maxLength = Math.min(left.length, right.length) - prefixLength;
+  let index = 0;
+  while (index < maxLength && left[left.length - 1 - index] === right[right.length - 1 - index]) index += 1;
+  return index;
+}
+
+function clampSelectionOffset(offset: number, textLength: number): number {
+  return Math.max(0, Math.min(offset, textLength));
 }
 
 function recordUndoForText(next: string): void {

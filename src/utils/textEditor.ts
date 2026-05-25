@@ -5,6 +5,7 @@ export { serializeTextLines, textLinesToText };
 
 const LINE_MARKER = "- ";
 const ORDERED_MARKER_PATTERN = /^(\d+)\.\s+(.*)$/;
+const MAX_ORDERED_LIST_MARKER = 99;
 
 export function textLinesToEditorText(lines: LineItem[]): string {
   return renumberOrderedListText(lines.map((line) => formatEditorLine(line.indent, line.text)).join("\n"));
@@ -47,8 +48,13 @@ export function renumberOrderedListText(value = ""): string {
       return line;
     }
 
-    const startsList = Number(match[1]) === 1 || active.has(indent);
-    if (!startsList) return line;
+    const markerNumber = Number(match[1]);
+    const startsList = markerNumber === 1 || (active.has(indent) && markerNumber <= MAX_ORDERED_LIST_MARKER);
+    if (!startsList) {
+      counters.delete(indent);
+      active.delete(indent);
+      return line;
+    }
 
     const nextNumber = active.has(indent) ? (counters.get(indent) ?? 0) + 1 : 1;
     counters.set(indent, nextNumber);

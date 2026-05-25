@@ -738,6 +738,38 @@ describe("TextPanel", () => {
     wrapper.unmount();
   });
 
+  it("normalizes visible pasted ordered lists before emitting updates", async () => {
+    const readText = vi.fn().mockResolvedValue("\n10. 第四项");
+    Object.assign(navigator, { clipboard: { readText, writeText: vi.fn() } });
+    const wrapper = mount(TextPanel, {
+      props: {
+        titleId: "workspace-title",
+        title: "工作空间",
+        lines: [{ text: "1. 第一项", indent: 0 }],
+      },
+      global: {
+        stubs: {
+          Dropdown: dropdownStub,
+          NDropdown: dropdownStub,
+        },
+      },
+    });
+    const textarea = wrapper.get("textarea").element as HTMLTextAreaElement;
+
+    await wrapper.get("textarea").trigger("dblclick");
+    textarea.setSelectionRange(textarea.value.length, textarea.value.length);
+    await wrapper.get("textarea").trigger("contextmenu");
+    await wrapper.findAll(".dropdown-option").find((option) => option.text() === "粘贴")?.trigger("click");
+    await Promise.resolve();
+
+    expect(textarea.value).toBe("1. 第一项\n2. 第四项");
+    expect(wrapper.emitted("update")?.at(-1)?.[0]).toEqual([
+      { text: "1. 第一项", indent: 0 },
+      { text: "2. 第四项", indent: 0 },
+    ]);
+    wrapper.unmount();
+  });
+
   it("still pastes from the context menu after the editor blurs to the menu", async () => {
     const readText = vi.fn().mockResolvedValue(" pasted");
     Object.assign(navigator, { clipboard: { readText, writeText: vi.fn() } });
@@ -791,6 +823,30 @@ describe("TextPanel", () => {
     ]);
   });
 
+  it("adjusts the caret when auto-renumbering shortens text before it", async () => {
+    const wrapper = mount(TextPanel, {
+      props: {
+        titleId: "note-title",
+        title: "备忘录",
+        lines: [{ text: "1. 第一项", indent: 0 }],
+      },
+    });
+    const textarea = wrapper.get("textarea").element as HTMLTextAreaElement;
+    const raw = "1. 第一项\n10. 第四项";
+    const expected = "1. 第一项\n2. 第四项";
+    const rawCaret = raw.indexOf("第四项");
+    const expectedCaret = expected.indexOf("第四项");
+
+    await wrapper.get("textarea").trigger("click");
+    textarea.value = raw;
+    textarea.setSelectionRange(rawCaret, rawCaret);
+    await wrapper.get("textarea").trigger("input");
+
+    expect(textarea.value).toBe(expected);
+    expect(textarea.selectionStart).toBe(expectedCaret);
+    expect(textarea.selectionEnd).toBe(expectedCaret);
+  });
+
   it("renumbers ordered lists independently by indentation level", () => {
     const wrapper = mount(TextPanel, {
       props: {
@@ -839,5 +895,20 @@ describe("TextPanel", () => {
     });
 
     expect(wrapper.get("textarea").element.value).toBe("2026.05 发布\n1.0.18 版本\n散落 2. 文字");
+  });
+
+  it("does not renumber year-like prose inside an active ordered list", () => {
+    const wrapper = mount(TextPanel, {
+      props: {
+        titleId: "note-title",
+        title: "备忘录",
+        lines: [
+          { text: "1. Meeting notes", indent: 0 },
+          { text: "2026. 05 launch window", indent: 0 },
+        ],
+      },
+    });
+
+    expect(wrapper.get("textarea").element.value).toBe("1. Meeting notes\n2026. 05 launch window");
   });
 });
