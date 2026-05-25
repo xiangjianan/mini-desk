@@ -31,6 +31,11 @@ export function renumberOrderedListText(value = ""): string {
   return value.split("\n").map((line) => {
     const indentText = line.match(/^\t*/)?.[0] ?? "";
     const indent = indentText.length;
+    for (const counterIndent of counters.keys()) {
+      if (counterIndent <= indent) continue;
+      counters.delete(counterIndent);
+      active.delete(counterIndent);
+    }
     const content = line.slice(indent);
     const markerPrefix = content.startsWith(LINE_MARKER) ? LINE_MARKER : "";
     const text = markerPrefix ? content.slice(LINE_MARKER.length) : content;

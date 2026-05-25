@@ -808,6 +808,23 @@ describe("TextPanel", () => {
     expect(wrapper.get("textarea").element.value).toBe("1. 父项\n\t- 1. 子项 A\n\t- 2. 子项 B\n2. 父项 B");
   });
 
+  it("resets nested ordered list counters under separate root items", () => {
+    const wrapper = mount(TextPanel, {
+      props: {
+        titleId: "workspace-title",
+        title: "工作空间",
+        lines: [
+          { text: "1. Parent A", indent: 0 },
+          { text: "1. Child A", indent: 1 },
+          { text: "2. Parent B", indent: 0 },
+          { text: "1. Child B", indent: 1 },
+        ],
+      },
+    });
+
+    expect(wrapper.get("textarea").element.value).toBe("1. Parent A\n\t- 1. Child A\n2. Parent B\n\t- 1. Child B");
+  });
+
   it("does not renumber dates or versions as ordered lists", () => {
     const wrapper = mount(TextPanel, {
       props: {
