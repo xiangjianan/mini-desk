@@ -134,8 +134,8 @@ export const MESSAGE_CATALOG: Record<MessageKey, MessageEntry> = {
     mood: "encouraging",
     surface: "companion",
     variants: [
-      "又完成一项",
-      "进度加一",
+      "又完成1项",
+      "进度+1",
       "这一步拿下了",
       "节奏不错",
       "继续稳稳推进",
