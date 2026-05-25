@@ -32,6 +32,7 @@ export type MessageKey =
   | "confirmDeleteImage"
   | "confirmDeleteQuick"
   | "confirmDeleteTodo"
+  | "confirmDeleteTodoList"
   | "confirmUnstarTodo"
   | "confirmUnstarTodoDeadline"
   | "confirmDeleteSpace"
@@ -592,6 +593,22 @@ export const MESSAGE_CATALOG: Record<MessageKey, MessageEntry> = {
       "确认移除提醒？",
       "删除后不可恢复",
       "要移除这条待办？",
+    ],
+  },
+  confirmDeleteTodoList: {
+    mood: "warning",
+    surface: "companion",
+    variants: [
+      "确认删除列表？",
+      "提醒事项会删除",
+      "删除此提醒列表？",
+      "列表提醒会移除",
+      "确认移除列表？",
+      "提醒会一起删除",
+      "列表内容会删除",
+      "删除这个列表？",
+      "列表里的提醒会删",
+      "删除列表和提醒？",
     ],
   },
   confirmUnstarTodo: {

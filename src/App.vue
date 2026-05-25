@@ -10,7 +10,7 @@ import SettingsMenu from "./components/SettingsMenu.vue";
 import SpacePanel from "./components/SpacePanel.vue";
 import TextPanel from "./components/TextPanel.vue";
 import TodoPanel from "./components/TodoPanel.vue";
-import { AREA_HELP, CONTROL_HELP, DEFAULT_TITLES, DEFAULT_TODO_LISTS, TODO_PERIODS } from "./state/defaults";
+import { AREA_HELP, CONTROL_HELP, DEFAULT_TITLES, DEFAULT_TODO_LISTS } from "./state/defaults";
 import { deleteStoredImage, hydrateStoredImages, persistImagePayloads, storeImagePayload } from "./state/images";
 import { getMessage, withKaomoji, type MessageKey } from "./state/messages";
 import {
@@ -20,6 +20,8 @@ import {
   moveTodo as moveTodoInMap,
   removeEmptyTodo,
   removeTodo as removeTodoFromMap,
+  removeTodoListData,
+  reorderTodoLists,
   setTodoNotifyAt,
   splitTodo as splitTodoInMap,
   starTodo,
@@ -38,7 +40,7 @@ import {
   getStoredAppVersion,
   markAppVersionSeen,
 } from "./state/version";
-import type { BoardState, CompanionGifTheme, DraggedTodo, GuideKey, LineItem, QuickButtonType, StoredImage, TodoItem, TodoPeriod, TodoStarChange } from "./types";
+import type { BoardState, CompanionGifTheme, DraggedTodo, GuideKey, LineItem, QuickButtonType, StoredImage, TodoItem, TodoListId, TodoPeriod, TodoStarChange } from "./types";
 
 const MOBILE_BREAKPOINT_QUERY = "(max-width: 900px)";
 const MOBILE_HANDOFF_MESSAGE = "建议在电脑浏览器打开，以获得完整体验 (｡•̀ᴗ-)✧";
@@ -66,6 +68,7 @@ const pendingConfirm = ref<{
 const importInput = ref<HTMLInputElement | null>(null);
 const importFeedbackAnchor = ref<HTMLElement | undefined>();
 const pendingEditSpaceId = ref<string | null>(null);
+const pendingEditTodoListId = ref<string | null>(null);
 const textSaveTimer = ref<number | undefined>();
 const bubbleTimer = ref<number | undefined>();
 const bubbleFadeTimer = ref<number | undefined>();
@@ -778,6 +781,86 @@ async function copyText(text: string, shouldAbort: () => boolean = () => false):
   }
 }
 
+function createTodoList(anchor?: HTMLElement): void {
+  const id = createId();
+  state.todoLists.push({ id, title: "未命名列表", collapsed: false, compact: false });
+  state.todos[id] = [];
+  state.showCompletedTodos[id] = false;
+  pendingEditTodoListId.value = id;
+  persistNow();
+  showBubbleText("已新增提醒列表", anchor);
+}
+
+function updateTodoListTitle(listId: TodoListId, title: string): void {
+  const list = state.todoLists.find((item) => item.id === listId);
+  if (!list) return;
+  list.title = title.trim() || "未命名列表";
+  if (pendingEditTodoListId.value === listId) pendingEditTodoListId.value = null;
+  persistNow();
+}
+
+function toggleTodoListCollapsed(listId: TodoListId, collapsed: boolean): void {
+  const list = state.todoLists.find((item) => item.id === listId);
+  if (!list) return;
+  list.collapsed = collapsed;
+  persistNow();
+}
+
+function toggleTodoListCompact(listId: TodoListId, compact: boolean): void {
+  const list = state.todoLists.find((item) => item.id === listId);
+  if (!list) return;
+  list.compact = compact;
+  persistNow();
+}
+
+function deleteTodoList(listId: TodoListId, anchor?: HTMLElement): void {
+  if (state.todoLists.length <= 1) {
+    showBubbleText("至少保留一个提醒列表", anchor);
+    return;
+  }
+  const list = state.todoLists.find((item) => item.id === listId);
+  if (!list) return;
+  const remove = () => removeTodoList(listId, anchor);
+  if ((state.todos[listId] ?? []).length === 0) {
+    remove();
+    return;
+  }
+  requestConfirmation(
+    "confirmDeleteTodoList",
+    anchor,
+    remove,
+    undefined,
+    { confirmText: "删除列表", cancelText: "取消" },
+  );
+}
+
+function removeTodoList(listId: TodoListId, anchor?: HTMLElement): void {
+  const index = state.todoLists.findIndex((list) => list.id === listId);
+  if (index < 0 || state.todoLists.length <= 1) return;
+  state.todoLists.splice(index, 1);
+  const next = removeTodoListData(state.todos, state.showCompletedTodos, listId);
+  state.todos = next.todos;
+  state.showCompletedTodos = next.showCompletedTodos;
+  clearEmptyTodoRemovalTimersForList(listId);
+  if (pendingEditTodoListId.value === listId) pendingEditTodoListId.value = null;
+  persistNow();
+  showBubbleText("提醒列表已删除", anchor, { hideCompanionAfter: true });
+}
+
+function reorderTodoListSections(draggedId: TodoListId, targetId: TodoListId): void {
+  const sourceIndex = state.todoLists.findIndex((list) => list.id === draggedId);
+  const targetIndex = state.todoLists.findIndex((list) => list.id === targetId);
+  if (sourceIndex < 0 || targetIndex < 0 || sourceIndex === targetIndex) return;
+  if (targetIndex === sourceIndex + 1) {
+    const [item] = state.todoLists.splice(sourceIndex, 1);
+    if (!item) return;
+    state.todoLists.splice(targetIndex, 0, item);
+  } else {
+    state.todoLists = reorderTodoLists(state.todoLists, draggedId, targetId);
+  }
+  persistNow();
+}
+
 function createTodo(period: TodoPeriod, afterId?: string): void {
   if (!afterId) {
     const blankTodo = findOpenBlankTodo();
@@ -819,7 +902,7 @@ function createTodosFromText(period: TodoPeriod, texts: string[]): void {
 }
 
 function findOpenBlankTodo(): { period: TodoPeriod; id: string } | undefined {
-  for (const period of TODO_PERIODS) {
+  for (const period of getTodoListIds()) {
     const blankTodo = getTodos(period).find((todo) => !todo.done && todo.text.trim().length === 0);
     if (blankTodo) return { period, id: blankTodo.id };
   }
@@ -1293,14 +1376,14 @@ function triggerDueTodoNotifications(): void {
   const notificationApi = getNotificationApi();
   if (!notificationApi || notificationApi.permission !== "granted") return;
   const now = Date.now();
-  for (const period of TODO_PERIODS) {
+  for (const period of getTodoListIds()) {
     for (const todo of getTodos(period)) {
       if (todo.done || !Number.isFinite(todo.notifyAt) || todo.notifyAt === undefined || todo.notifyAt > now) continue;
       const key = `${todo.id}:${todo.notifyAt}`;
       if (sentTodoNotifications.has(key)) continue;
       sentTodoNotifications.add(key);
       new notificationApi("提醒事项", {
-        body: todo.text || DEFAULT_TITLES[period],
+        body: todo.text || getTodoListTitle(period),
         tag: key,
       });
     }
@@ -1317,6 +1400,14 @@ function cancelEmptyTodoRemoval(period: TodoPeriod, id: string): void {
   if (!timer) return;
   window.clearTimeout(timer);
   emptyTodoRemovalTimers.delete(key);
+}
+
+function clearEmptyTodoRemovalTimersForList(listId: TodoListId): void {
+  for (const [key, timer] of emptyTodoRemovalTimers) {
+    if (!key.startsWith(`${listId}:`)) continue;
+    window.clearTimeout(timer);
+    emptyTodoRemovalTimers.delete(key);
+  }
 }
 
 function showGuideBubble(key: GuideKey, anchor?: HTMLElement, hideCompanionAfter = true): void {
@@ -1350,7 +1441,7 @@ function isGuideAreaEmpty(key: GuideKey, anchor?: HTMLElement): boolean {
   if (key === "storage") return !hasLineContent(state.storageLines);
   if (key === "todos") {
     const period = getTodoPeriodFromAnchor(anchor);
-    if (!period) return TODO_PERIODS.every((item) => isTodoPeriodEmpty(item));
+    if (!period) return getTodoListIds().every((item) => isTodoPeriodEmpty(item));
     return isTodoPeriodEmpty(period);
   }
   return false;
@@ -1384,7 +1475,17 @@ function getTodoPeriodFromAnchor(anchor?: HTMLElement): TodoPeriod | undefined {
 }
 
 function isTodoPeriod(value: unknown): value is TodoPeriod {
-  return typeof value === "string" && TODO_PERIODS.includes(value as TodoPeriod);
+  return typeof value === "string" && state.todoLists.some((list) => list.id === value);
+}
+
+function getTodoListIds(): TodoListId[] {
+  return state.todoLists.map((list) => list.id);
+}
+
+function getTodoListTitle(listId: TodoListId): string {
+  const list = state.todoLists.find((item) => item.id === listId);
+  if (list?.title) return list.title;
+  return DEFAULT_TITLES[`todo-${listId}-title`] ?? "提醒事项";
 }
 
 function randomGuideMessage(key: GuideKey): string {
@@ -1521,10 +1622,18 @@ function moveItem<T extends { id: string }>(items: T[], dragId: string, targetId
       </section>
 
       <TodoPanel
+        :todo-lists="state.todoLists"
+        :edit-list-id="pendingEditTodoListId"
         :todos="state.todos"
         :titles="titles"
         :show-completed="state.showCompletedTodos"
         @title-update="updateTitle"
+        @create-list="createTodoList"
+        @update-list-title="updateTodoListTitle"
+        @toggle-list-collapsed="toggleTodoListCollapsed"
+        @toggle-list-compact="toggleTodoListCompact"
+        @delete-list="deleteTodoList"
+        @reorder-lists="reorderTodoListSections"
         @create="createTodo"
         @create-from-text="createTodosFromText"
         @update="updateTodo"

@@ -1,3 +1,4 @@
+import { nextTick } from "vue";
 import { mount } from "@vue/test-utils";
 import { beforeEach, describe, expect, it, vi } from "vitest";
 import App from "../App.vue";
@@ -8,7 +9,7 @@ import QuickButtons from "../components/QuickButtons.vue";
 import SettingsMenu from "../components/SettingsMenu.vue";
 import SpacePanel from "../components/SpacePanel.vue";
 import TodoPanel from "../components/TodoPanel.vue";
-import { STORAGE_KEY } from "../state/defaults";
+import { defaultState, STORAGE_KEY } from "../state/defaults";
 
 vi.mock("naive-ui", async (importOriginal) => {
   const actual = await importOriginal<typeof import("naive-ui")>();
@@ -36,7 +37,24 @@ vi.mock("naive-ui", async (importOriginal) => {
 });
 
 const dropdownStub = {
-  template: "<div><slot /></div>",
+  props: ["options"],
+  emits: ["select"],
+  template: `
+    <div>
+      <slot />
+      <button
+        v-for="option in options"
+        :key="option.key"
+        class="dropdown-option"
+        :data-key="option.key"
+        :disabled="option.disabled"
+        type="button"
+        @click="!option.disabled && $emit('select', option.key)"
+      >
+        {{ option.label }}
+      </button>
+    </div>
+  `,
 };
 
 const popoverStub = {
@@ -149,7 +167,7 @@ describe("App shell", () => {
     wrapper.unmount();
   });
 
-  it("keeps fixed todo UI usable when persisted dynamic lists omit legacy periods", async () => {
+  it("renders persisted dynamic todo lists without forcing legacy periods", async () => {
     localStorage.setItem(
       STORAGE_KEY,
       JSON.stringify({
@@ -161,20 +179,16 @@ describe("App shell", () => {
 
     const wrapper = mountApp();
 
-    expect(wrapper.find('[data-testid="todo-list-morning"]').exists()).toBe(true);
+    expect(wrapper.find('[data-testid="todo-list-morning"]').exists()).toBe(false);
+    expect(wrapper.find('[data-testid="todo-input-custom"]').exists()).toBe(true);
 
-    await wrapper.get('[data-testid="todo-list-morning"]').trigger("click");
+    await wrapper.get('[data-testid="todo-list-custom"]').trigger("click");
     await wrapper.vm.$nextTick();
 
-    expect(wrapper.find('[data-testid="todo-input-morning"]').exists()).toBe(true);
+    expect(wrapper.findAll('[data-testid="todo-input-custom"]')).toHaveLength(2);
     const stored = JSON.parse(localStorage.getItem(STORAGE_KEY) || "{}");
-    expect(stored.todoLists).toContainEqual({
-      id: "morning",
-      title: "☀️ 早上",
-      collapsed: false,
-      compact: false,
-    });
-    expect(stored.todos.morning[0]).toMatchObject({
+    expect(stored.todoLists.map((list: { id: string }) => list.id)).toEqual(["custom"]);
+    expect(stored.todos.custom.at(-1)).toMatchObject({
       text: "",
       done: false,
     });
@@ -266,6 +280,148 @@ describe("App shell", () => {
         { text: "任务 A", done: false },
         { text: "任务 B", done: false },
       ]);
+    } finally {
+      wrapper.unmount();
+    }
+  });
+
+  it("creates a configurable reminder list and persists it", async () => {
+    const wrapper = mountApp();
+
+    try {
+      await wrapper.get(".todo-add-list-button").trigger("click");
+      await nextTick();
+
+      const stored = JSON.parse(localStorage.getItem(STORAGE_KEY) || "{}");
+      expect(stored.todoLists).toHaveLength(4);
+      expect(stored.todoLists.at(-1).title).toBe("未命名列表");
+      expect(stored.todos[stored.todoLists.at(-1).id]).toEqual([]);
+    } finally {
+      wrapper.unmount();
+    }
+  });
+
+  it("persists reminder list title updates", async () => {
+    localStorage.setItem(STORAGE_KEY, JSON.stringify({
+      ...defaultState(),
+      todoLists: [{ id: "work", title: "工作", collapsed: false, compact: false }],
+      todos: { work: [] },
+      showCompletedTodos: { work: false },
+    }));
+    const wrapper = mountApp();
+
+    try {
+      wrapper.getComponent(TodoPanel).vm.$emit("updateListTitle", "work", "  工作提醒  ");
+      await nextTick();
+
+      const stored = JSON.parse(localStorage.getItem(STORAGE_KEY) || "{}");
+      expect(stored.todoLists.find((list: { id: string }) => list.id === "work").title).toBe("工作提醒");
+    } finally {
+      wrapper.unmount();
+    }
+  });
+
+  it("persists reminder list collapsed and compact flags", async () => {
+    localStorage.setItem(STORAGE_KEY, JSON.stringify({
+      ...defaultState(),
+      todoLists: [{ id: "work", title: "工作", collapsed: false, compact: false }],
+      todos: { work: [] },
+      showCompletedTodos: { work: false },
+    }));
+    const wrapper = mountApp();
+
+    try {
+      wrapper.getComponent(TodoPanel).vm.$emit("toggleListCollapsed", "work", true);
+      wrapper.getComponent(TodoPanel).vm.$emit("toggleListCompact", "work", true);
+      await nextTick();
+
+      const stored = JSON.parse(localStorage.getItem(STORAGE_KEY) || "{}");
+      expect(stored.todoLists.find((list: { id: string }) => list.id === "work")).toMatchObject({
+        collapsed: true,
+        compact: true,
+      });
+    } finally {
+      wrapper.unmount();
+    }
+  });
+
+  it("confirms deletion of a non-empty reminder list and removes its reminders", async () => {
+    vi.useFakeTimers();
+    localStorage.setItem(STORAGE_KEY, JSON.stringify({
+      ...defaultState(),
+      todoLists: [
+        { id: "work", title: "工作", collapsed: false, compact: false },
+        { id: "home", title: "生活", collapsed: false, compact: false },
+      ],
+      todos: { work: [{ id: "a", text: "A", done: false }], home: [] },
+      showCompletedTodos: { work: false, home: false },
+    }));
+    const wrapper = mountApp();
+
+    try {
+      await wrapper.get('.todo-section[data-list-id="work"] .todo-section-menu-button').trigger("click");
+      await wrapper.findAll(".dropdown-option").find((option) => option.text() === "删除列表")?.trigger("click");
+      await vi.advanceTimersByTimeAsync(200);
+      await nextTick();
+
+      expect(wrapper.get('[data-testid="companion-confirm"]').text()).toMatch(/删除列表|提醒事项/);
+
+      await wrapper.get('[data-testid="companion-yes"]').trigger("click");
+      await nextTick();
+
+      const stored = JSON.parse(localStorage.getItem(STORAGE_KEY) || "{}");
+      expect(stored.todoLists.some((list: { id: string }) => list.id === "work")).toBe(false);
+      expect(stored.todos.work).toBeUndefined();
+    } finally {
+      wrapper.unmount();
+      vi.useRealTimers();
+    }
+  });
+
+  it("blocks deleting the last reminder list", async () => {
+    vi.useFakeTimers();
+    localStorage.setItem(STORAGE_KEY, JSON.stringify({
+      ...defaultState(),
+      todoLists: [{ id: "work", title: "工作", collapsed: false, compact: false }],
+      todos: { work: [] },
+      showCompletedTodos: { work: false },
+    }));
+    const wrapper = mountApp();
+
+    try {
+      wrapper.getComponent(TodoPanel).vm.$emit("deleteList", "work", wrapper.get(".todo-panel").element as HTMLElement);
+      await nextTick();
+      await vi.advanceTimersByTimeAsync(200);
+      await nextTick();
+
+      const stored = JSON.parse(localStorage.getItem(STORAGE_KEY) || "{}");
+      expect(stored.todoLists.map((list: { id: string }) => list.id)).toEqual(["work"]);
+      expect(stored.todos.work).toEqual([]);
+      expect(wrapper.get('[data-testid="companion-confirm"]').text()).toContain("至少保留一个提醒列表");
+    } finally {
+      wrapper.unmount();
+      vi.useRealTimers();
+    }
+  });
+
+  it("persists reminder list reorder", async () => {
+    localStorage.setItem(STORAGE_KEY, JSON.stringify({
+      ...defaultState(),
+      todoLists: [
+        { id: "a", title: "A", collapsed: false, compact: false },
+        { id: "b", title: "B", collapsed: false, compact: false },
+      ],
+      todos: { a: [], b: [] },
+      showCompletedTodos: { a: false, b: false },
+    }));
+    const wrapper = mountApp();
+
+    try {
+      await wrapper.get('.todo-section[data-list-id="a"] .todo-list-drag-handle').trigger("dragstart");
+      await wrapper.get('.todo-section[data-list-id="b"]').trigger("drop");
+
+      const stored = JSON.parse(localStorage.getItem(STORAGE_KEY) || "{}");
+      expect(stored.todoLists.map((list: { id: string }) => list.id)).toEqual(["b", "a"]);
     } finally {
       wrapper.unmount();
     }
