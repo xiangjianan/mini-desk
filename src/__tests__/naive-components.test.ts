@@ -219,6 +219,7 @@ describe("Naive UI component usage", () => {
     expect(styles).toMatch(/\.todo-section\.is-collapsed\s*\{[^}]*flex: 0 0 auto/s);
     expect(styles).toMatch(/\.todo-section\.is-compact\s*\{[^}]*flex: 0 0 auto/s);
     expect(styles).toMatch(/\.todo-section\.is-compact \.todo-list\s*\{[^}]*max-height: 136px/s);
+    expect(styles).toMatch(/\.todo-section\.is-compact \.todo-star-button\s*\{[^}]*height: 30px/s);
   });
 
   it("keeps top-right status plain while icon buttons stay flush as a one-pixel segmented control", () => {

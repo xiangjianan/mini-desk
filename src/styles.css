@@ -938,6 +938,11 @@ h3 {
   transition: opacity 0.18s ease, color 0.18s ease;
 }
 
+.todo-section.is-compact .todo-star-button {
+  height: 30px;
+  min-height: 30px;
+}
+
 .todo-item.has-notify .todo-star-button {
   grid-column: 5;
 }
