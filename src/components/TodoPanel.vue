@@ -198,18 +198,28 @@ const listEntries = computed(() =>
 );
 
 onMounted(() => {
-  deadlineNow.value = Date.now();
+  refreshNotifyNow();
   document.addEventListener("pointerdown", handleDeadlineEditorOutsidePointerDown, true);
-  deadlineClockTimer.value = window.setInterval(() => {
-    deadlineNow.value = Date.now();
-  }, DEADLINE_CLOCK_INTERVAL_MS);
+  window.addEventListener("focus", refreshNotifyNow);
+  document.addEventListener("visibilitychange", handleVisibilityChange);
+  deadlineClockTimer.value = window.setInterval(refreshNotifyNow, DEADLINE_CLOCK_INTERVAL_MS);
 });
 
 onUnmounted(() => {
   reorderTimers.forEach((timer) => window.clearTimeout(timer));
   document.removeEventListener("pointerdown", handleDeadlineEditorOutsidePointerDown, true);
+  window.removeEventListener("focus", refreshNotifyNow);
+  document.removeEventListener("visibilitychange", handleVisibilityChange);
   window.clearInterval(deadlineClockTimer.value);
 });
+
+function refreshNotifyNow(): void {
+  deadlineNow.value = Date.now();
+}
+
+function handleVisibilityChange(): void {
+  if (document.visibilityState === "visible") refreshNotifyNow();
+}
 
 function handleListClick(event: MouseEvent, period: TodoPeriod): void {
   const target = event.target as HTMLElement;
