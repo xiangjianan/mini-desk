@@ -1,4 +1,4 @@
-import { DEFAULT_SPACE_ID, DEFAULT_SPACE_TITLE, defaultState, STORAGE_KEY, TODO_PERIODS } from "./defaults";
+import { DEFAULT_SPACE_ID, DEFAULT_SPACE_TITLE, DEFAULT_TODO_LISTS, defaultState, STORAGE_KEY } from "./defaults";
 import { isValidDeadlineAt } from "./deadlines";
 import { normalizeCompanionGifTheme } from "./companionGifThemes";
 import type {
@@ -10,6 +10,7 @@ import type {
   StoredImage,
   TodoCompletedVisibility,
   TodoItem,
+  TodoListConfig,
   TodoMap,
   WorkspaceSpace,
 } from "../types";
@@ -36,6 +37,8 @@ export function getSerializableState(
   state: BoardState,
   options: SerializableOptions = {},
 ): BoardState {
+  const todoLists = cloneTodoLists(state.todoLists);
+
   return {
     ...state,
     images: state.images.map((image) => {
@@ -45,7 +48,9 @@ export function getSerializableState(
         createdAt: image.createdAt,
       };
     }),
-    todos: cloneTodos(state.todos),
+    todoLists,
+    showCompletedTodos: cloneCompletedVisibility(state.showCompletedTodos, todoLists),
+    todos: cloneTodos(state.todos, todoLists),
     noteLines: cloneLines(state.noteLines),
     workspaceLines: cloneLines(state.workspaceLines),
     storageLines: cloneLines(state.storageLines),
@@ -71,6 +76,7 @@ export function normalizeImportedState(payload: unknown): BoardState {
   const workspaceLines = normalizeLineCollection(typed.workspaceLines ?? typed.workspace);
   const storageLines = normalizeLineCollection(typed.storageLines ?? typed.storage);
   const spaces = normalizeSpaces(typed.spaces, workspaceLines, storageLines, customTitles);
+  const todoLists = normalizeTodoLists(typed.todoLists, customTitles);
 
   return {
     ...base,
@@ -85,23 +91,64 @@ export function normalizeImportedState(payload: unknown): BoardState {
     images: normalizeImages(typed.images),
     quickButtons: normalizeQuickButtons(typed.quickButtons),
     showHiddenQuickButtons: Boolean(typed.showHiddenQuickButtons),
-    showCompletedTodos: normalizeCompletedVisibility(typed.showCompletedTodos),
-    todos: normalizeTodos(typed.todos),
+    todoLists,
+    showCompletedTodos: normalizeCompletedVisibility(typed.showCompletedTodos, todoLists),
+    todos: normalizeTodos(typed.todos, todoLists),
   };
 }
 
-function normalizeCompletedVisibility(value: unknown): TodoCompletedVisibility {
-  if (typeof value === "boolean") {
-    return {
-      morning: value,
-      noon: value,
-      evening: value,
-    };
+const LEGACY_TODO_TITLE_IDS: Record<string, string> = {
+  morning: "todo-morning-title",
+  noon: "todo-noon-title",
+  evening: "todo-evening-title",
+};
+
+function normalizeTodoLists(value: unknown, customTitles: Record<string, string>): TodoListConfig[] {
+  if (Array.isArray(value)) {
+    const seen = new Set<string>();
+    const lists = value
+      .map((item) => normalizeTodoListConfig(item))
+      .filter((item): item is TodoListConfig => Boolean(item))
+      .map((list) => {
+        let id = list.id;
+        while (seen.has(id)) id = createId();
+        seen.add(id);
+        return { ...list, id };
+      });
+    if (lists.length > 0) return lists;
   }
-  if (!isPlainObject(value)) return { ...defaultState().showCompletedTodos };
+
+  return DEFAULT_TODO_LISTS.map((list) => ({
+    ...list,
+    title: customTitles[LEGACY_TODO_TITLE_IDS[list.id] ?? ""] || list.title,
+  }));
+}
+
+function normalizeTodoListConfig(item: unknown): TodoListConfig | null {
+  if (!isPlainObject(item)) return null;
+  const record = item as Record<string, unknown>;
+  if (typeof record.id !== "string" || !record.id.trim()) return null;
+  const title = typeof record.title === "string" && record.title.trim()
+    ? record.title.trim()
+    : "未命名列表";
+  return {
+    id: record.id.trim(),
+    title,
+    collapsed: Boolean(record.collapsed),
+    compact: Boolean(record.compact),
+  };
+}
+
+function normalizeCompletedVisibility(value: unknown, todoLists: TodoListConfig[]): TodoCompletedVisibility {
+  if (typeof value === "boolean") {
+    return Object.fromEntries(todoLists.map((list) => [list.id, value])) as TodoCompletedVisibility;
+  }
+  if (!isPlainObject(value)) {
+    return Object.fromEntries(todoLists.map((list) => [list.id, false])) as TodoCompletedVisibility;
+  }
   const record = value as Record<string, unknown>;
   return Object.fromEntries(
-    TODO_PERIODS.map((period) => [period, Boolean(record[period])]),
+    todoLists.map((list) => [list.id, Boolean(record[list.id])]),
   ) as TodoCompletedVisibility;
 }
 
@@ -233,14 +280,14 @@ export function normalizeQuickButtons(buttons: unknown): QuickButton[] {
     .filter((item): item is QuickButton => Boolean(item));
 }
 
-export function normalizeTodos(todos: unknown): TodoMap {
-  const result = defaultState().todos;
+export function normalizeTodos(todos: unknown, todoLists: TodoListConfig[] = DEFAULT_TODO_LISTS): TodoMap {
+  const result = Object.fromEntries(todoLists.map((list) => [list.id, []])) as TodoMap;
   if (!isPlainObject(todos)) return result;
   const record = todos as Record<string, unknown>;
 
-  TODO_PERIODS.forEach((period) => {
-    const items = record[period];
-    result[period] = Array.isArray(items)
+  todoLists.forEach((list) => {
+    const items = record[list.id];
+    result[list.id] = Array.isArray(items)
       ? items
           .map((item) => normalizeTodo(item))
           .filter((item): item is TodoItem => Boolean(item))
@@ -280,12 +327,23 @@ function normalizeStringRecord(value: unknown): Record<string, string> {
   );
 }
 
-function cloneTodos(todos: TodoMap): TodoMap {
-  return {
-    morning: todos.morning.map(cloneTodo),
-    noon: todos.noon.map(cloneTodo),
-    evening: todos.evening.map(cloneTodo),
-  };
+function cloneTodoLists(todoLists: TodoListConfig[]): TodoListConfig[] {
+  return todoLists.map((list) => ({ ...list }));
+}
+
+function cloneCompletedVisibility(
+  visibility: TodoCompletedVisibility,
+  todoLists: TodoListConfig[],
+): TodoCompletedVisibility {
+  return Object.fromEntries(
+    todoLists.map((list) => [list.id, Boolean(visibility[list.id])]),
+  ) as TodoCompletedVisibility;
+}
+
+function cloneTodos(todos: TodoMap, todoLists: TodoListConfig[]): TodoMap {
+  return Object.fromEntries(
+    todoLists.map((list) => [list.id, (todos[list.id] ?? []).map(cloneTodo)]),
+  ) as TodoMap;
 }
 
 function cloneTodo(todo: TodoItem): TodoItem {

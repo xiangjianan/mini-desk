@@ -49,6 +49,78 @@ describe("state compatibility", () => {
     expect(state.showCompletedTodos).toEqual({ morning: false, noon: false, evening: false });
   });
 
+  it("creates default configurable todo lists for new users", () => {
+    const state = defaultState();
+
+    expect(state.todoLists.map((list) => ({ id: list.id, title: list.title }))).toEqual([
+      { id: "morning", title: "☀️ 早上" },
+      { id: "noon", title: "🌤️ 中午" },
+      { id: "evening", title: "🌙 晚上" },
+    ]);
+    expect(Object.keys(state.todos)).toEqual(["morning", "noon", "evening"]);
+    expect(state.showCompletedTodos).toEqual({ morning: false, noon: false, evening: false });
+  });
+
+  it("migrates legacy fixed reminder lists into configurable todoLists", () => {
+    const state = normalizeImportedState({
+      customTitles: {
+        "todo-morning-title": "上午",
+        "todo-noon-title": "中段",
+      },
+      showCompletedTodos: { morning: true },
+      todos: {
+        morning: [{ id: "a", text: "A", done: false }],
+        noon: [{ id: "b", text: "B", done: true }],
+        evening: [],
+      },
+    });
+
+    expect(state.todoLists.map((list) => [list.id, list.title])).toEqual([
+      ["morning", "上午"],
+      ["noon", "中段"],
+      ["evening", "🌙 晚上"],
+    ]);
+    expect(state.todos.morning.map((todo) => todo.text)).toEqual(["A"]);
+    expect(state.todos.noon.map((todo) => todo.text)).toEqual(["B"]);
+    expect(state.showCompletedTodos).toEqual({ morning: true, noon: false, evening: false });
+  });
+
+  it("normalizes persisted dynamic todo lists and drops orphan todo records", () => {
+    const state = normalizeImportedState({
+      todoLists: [
+        { id: "work", title: "工作", collapsed: true, compact: false },
+        { id: "life", title: "", collapsed: false, compact: true },
+      ],
+      showCompletedTodos: { work: true, orphan: true },
+      todos: {
+        work: [{ id: "a", text: "A", done: false }],
+        life: [{ id: "b", text: "B", done: true }],
+        orphan: [{ id: "x", text: "X", done: false }],
+      },
+    });
+
+    expect(state.todoLists).toEqual([
+      { id: "work", title: "工作", collapsed: true, compact: false },
+      { id: "life", title: "未命名列表", collapsed: false, compact: true },
+    ]);
+    expect(Object.keys(state.todos)).toEqual(["work", "life"]);
+    expect(state.showCompletedTodos).toEqual({ work: true, life: false });
+  });
+
+  it("serializes configurable todo lists without orphan records", () => {
+    const state = normalizeImportedState({
+      todoLists: [{ id: "custom", title: "自定义", collapsed: false, compact: true }],
+      todos: { custom: [{ id: "a", text: "A", done: false }], ghost: [{ id: "g", text: "G", done: false }] },
+      showCompletedTodos: { custom: true, ghost: true },
+    });
+
+    const stored = getSerializableState(state);
+
+    expect(stored.todoLists).toEqual([{ id: "custom", title: "自定义", collapsed: false, compact: true }]);
+    expect(Object.keys(stored.todos)).toEqual(["custom"]);
+    expect(stored.showCompletedTodos).toEqual({ custom: true });
+  });
+
   it("defaults to the Hermes companion GIF theme", () => {
     expect(defaultState().companionGifTheme).toBe(DEFAULT_COMPANION_GIF_THEME);
   });

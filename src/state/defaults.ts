@@ -1,4 +1,4 @@
-import type { BoardState, TodoPeriod } from "../types";
+import type { BoardState, TodoListConfig, TodoListId, TodoMap } from "../types";
 import { DEFAULT_COMPANION_GIF_THEME } from "./companionGifThemes";
 
 export const STORAGE_KEY = "todo-board-state-v1";
@@ -7,7 +7,13 @@ export const IMAGE_STORE_NAME = "images";
 export const DEFAULT_SPACE_ID = "workspace";
 export const DEFAULT_SPACE_TITLE = "工作空间";
 
-export const TODO_PERIODS: TodoPeriod[] = ["morning", "noon", "evening"];
+export const DEFAULT_TODO_LISTS: TodoListConfig[] = [
+  { id: "morning", title: "☀️ 早上", collapsed: false, compact: false },
+  { id: "noon", title: "🌤️ 中午", collapsed: false, compact: false },
+  { id: "evening", title: "🌙 晚上", collapsed: false, compact: false },
+];
+
+export const TODO_PERIODS: TodoListId[] = DEFAULT_TODO_LISTS.map((list) => list.id);
 
 export const DEFAULT_TITLES: Record<string, string> = {
   "image-title": "🎨 截图",
@@ -63,15 +69,20 @@ export function defaultState(): BoardState {
     images: [],
     quickButtons: [],
     showHiddenQuickButtons: false,
-    showCompletedTodos: {
-      morning: false,
-      noon: false,
-      evening: false,
-    },
-    todos: {
-      morning: [],
-      noon: [],
-      evening: [],
-    },
+    todoLists: cloneDefaultTodoLists(),
+    showCompletedTodos: createDefaultCompletedVisibility(),
+    todos: createDefaultTodoMap(),
   };
+}
+
+export function cloneDefaultTodoLists(): TodoListConfig[] {
+  return DEFAULT_TODO_LISTS.map((list) => ({ ...list }));
+}
+
+export function createDefaultCompletedVisibility(): Record<TodoListId, boolean> {
+  return Object.fromEntries(DEFAULT_TODO_LISTS.map((list) => [list.id, false]));
+}
+
+export function createDefaultTodoMap(): TodoMap {
+  return Object.fromEntries(DEFAULT_TODO_LISTS.map((list) => [list.id, []])) as TodoMap;
 }

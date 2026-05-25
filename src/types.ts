@@ -1,8 +1,9 @@
 export type ThemeMode = "light" | "dark";
 export type CompanionGifTheme = "hermes" | "none";
 export type QuickButtonType = "link" | "text";
-export type TodoPeriod = "morning" | "noon" | "evening";
-export type TodoCompletedVisibility = Record<TodoPeriod, boolean>;
+export type TodoListId = string;
+export type TodoPeriod = TodoListId;
+export type TodoCompletedVisibility = Record<TodoListId, boolean>;
 export type GuideKey =
   | "images"
   | "note"
@@ -43,7 +44,14 @@ export interface TodoItem {
   deadlineAt?: number;
 }
 
-export type TodoMap = Record<TodoPeriod, TodoItem[]>;
+export interface TodoListConfig {
+  id: TodoListId;
+  title: string;
+  collapsed: boolean;
+  compact: boolean;
+}
+
+export type TodoMap = Record<TodoListId, TodoItem[]>;
 
 export interface TodoStarChange {
   period: TodoPeriod;
@@ -70,6 +78,7 @@ export interface BoardState {
   images: StoredImage[];
   quickButtons: QuickButton[];
   showHiddenQuickButtons: boolean;
+  todoLists: TodoListConfig[];
   showCompletedTodos: TodoCompletedVisibility;
   todos: TodoMap;
 }
