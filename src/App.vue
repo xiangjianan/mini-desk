@@ -10,7 +10,7 @@ import SettingsMenu from "./components/SettingsMenu.vue";
 import SpacePanel from "./components/SpacePanel.vue";
 import TextPanel from "./components/TextPanel.vue";
 import TodoPanel from "./components/TodoPanel.vue";
-import { AREA_HELP, CONTROL_HELP, DEFAULT_TITLES, TODO_PERIODS } from "./state/defaults";
+import { AREA_HELP, CONTROL_HELP, DEFAULT_TITLES, DEFAULT_TODO_LISTS, TODO_PERIODS } from "./state/defaults";
 import { deleteStoredImage, hydrateStoredImages, persistImagePayloads, storeImagePayload } from "./state/images";
 import { getMessage, withKaomoji, type MessageKey } from "./state/messages";
 import {
@@ -790,6 +790,7 @@ function createTodo(period: TodoPeriod, afterId?: string): void {
       state.todos = removeTodoFromMap(state.todos, blankTodo.period, blankTodo.id);
     }
   }
+  ensureDefaultTodoList(period);
   const id = createId();
   state.todos = addTodoToMap(
     state.todos,
@@ -806,6 +807,7 @@ function createTodo(period: TodoPeriod, afterId?: string): void {
 }
 
 function createTodosFromText(period: TodoPeriod, texts: string[]): void {
+  ensureDefaultTodoList(period);
   texts.forEach((text) => {
     state.todos = addTodoToMap(state.todos, period, {
       id: createId(),
@@ -835,12 +837,14 @@ function focusTodoInput(period: TodoPeriod, id: string): void {
 
 function updateTodo(period: TodoPeriod, id: string, text: string): void {
   cancelEmptyTodoRemoval(period, id);
+  ensureDefaultTodoList(period);
   state.todos = updateTodoText(state.todos, period, id, text);
   persistNow();
 }
 
 function splitTodo(period: TodoPeriod, id: string, before: string, after: string): void {
   cancelEmptyTodoRemoval(period, id);
+  ensureDefaultTodoList(period);
   const nextId = createId();
   state.todos = splitTodoInMap(
     state.todos,
@@ -858,6 +862,7 @@ function splitTodo(period: TodoPeriod, id: string, before: string, after: string
 }
 
 function complete(period: TodoPeriod, id: string, done: boolean, anchor?: HTMLElement): void {
+  ensureDefaultTodoList(period);
   state.todos = completeTodo(state.todos, period, id, done);
   persistNow();
   if (done) showBubble("todoCompleted", anchor);
@@ -866,6 +871,7 @@ function complete(period: TodoPeriod, id: string, done: boolean, anchor?: HTMLEl
 function toggleTodoStar(change: TodoStarChange): void {
   const { period, id, starred, anchor } = change;
   if (starred) {
+    ensureDefaultTodoList(period);
     state.todos = starTodo(state.todos, period, id, true);
     persistNow();
     return;
@@ -878,6 +884,7 @@ function toggleTodoStar(change: TodoStarChange): void {
     messageKey,
     anchor,
     () => {
+      ensureDefaultTodoList(period);
       state.todos = starTodo(state.todos, period, id, false);
       persistNow();
     },
@@ -887,6 +894,7 @@ function toggleTodoStar(change: TodoStarChange): void {
 }
 
 function updateTodoNotify(period: TodoPeriod, id: string, notifyAt: number | undefined, anchor?: HTMLElement): void {
+  ensureDefaultTodoList(period);
   state.todos = setTodoNotifyAt(state.todos, period, id, notifyAt);
   persistNow();
   if (notifyAt === undefined) showBubbleText("已取消通知时间", anchor);
@@ -897,6 +905,7 @@ function removeTodo(period: TodoPeriod, id: string, anchor?: HTMLElement): void 
   requestConfirmation("confirmDeleteTodo", anchor, () => {
     const index = getTodos(period).findIndex((todo) => todo.id === id);
     if (index < 0) return;
+    ensureDefaultTodoList(period);
     state.todos = removeTodoFromMap(state.todos, period, id);
     persistNow();
     showBubble("deleteTodo", anchor, { hideCompanionAfter: true });
@@ -912,6 +921,7 @@ function clearDone(period: TodoPeriod, anchor?: HTMLElement): void {
     "confirmClearCompleted",
     anchor,
     () => {
+      ensureDefaultTodoList(period);
       state.todos = clearCompleted(state.todos, period);
       persistNow();
       showBubble("clearCompleted", anchor, { hideCompanionAfter: true });
@@ -922,6 +932,7 @@ function clearDone(period: TodoPeriod, anchor?: HTMLElement): void {
 }
 
 function toggleCompletedVisibility(period: TodoPeriod, showCompleted: boolean): void {
+  ensureDefaultTodoList(period);
   state.showCompletedTodos[period] = showCompleted;
   persistNow();
 }
@@ -933,6 +944,7 @@ function blurEmptyTodo(period: TodoPeriod, id: string): void {
   emptyTodoRemovalTimers.set(
     todoKey(period, id),
     window.setTimeout(() => {
+      ensureDefaultTodoList(period);
       state.todos = removeEmptyTodo(state.todos, period, id);
       emptyTodoRemovalTimers.delete(todoKey(period, id));
       persistNow();
@@ -941,6 +953,8 @@ function blurEmptyTodo(period: TodoPeriod, id: string): void {
 }
 
 function moveTodo(dragged: DraggedTodo, destinationPeriod: TodoPeriod, targetId?: string): void {
+  ensureDefaultTodoList(dragged.period);
+  ensureDefaultTodoList(destinationPeriod);
   state.todos = moveTodoInMap(state.todos, dragged.period, dragged.id, destinationPeriod, targetId);
   persistNow();
 }
@@ -1353,6 +1367,14 @@ function isTodoPeriodEmpty(period: TodoPeriod): boolean {
 
 function getTodos(period: TodoPeriod): TodoItem[] {
   return state.todos[period] ?? [];
+}
+
+function ensureDefaultTodoList(period: TodoPeriod): void {
+  if (state.todoLists.some((list) => list.id === period)) return;
+  const defaultList = DEFAULT_TODO_LISTS.find((list) => list.id === period);
+  if (!defaultList) return;
+  state.todoLists.push({ ...defaultList });
+  state.showCompletedTodos[period] ??= false;
 }
 
 function getTodoPeriodFromAnchor(anchor?: HTMLElement): TodoPeriod | undefined {

@@ -167,6 +167,17 @@ describe("App shell", () => {
     await wrapper.vm.$nextTick();
 
     expect(wrapper.find('[data-testid="todo-input-morning"]').exists()).toBe(true);
+    const stored = JSON.parse(localStorage.getItem(STORAGE_KEY) || "{}");
+    expect(stored.todoLists).toContainEqual({
+      id: "morning",
+      title: "☀️ 早上",
+      collapsed: false,
+      compact: false,
+    });
+    expect(stored.todos.morning[0]).toMatchObject({
+      text: "",
+      done: false,
+    });
 
     wrapper.unmount();
   });
