@@ -13,6 +13,7 @@ const emit = defineEmits<{
 const editing = ref(false);
 const draft = ref(props.value);
 const inputRef = ref<HTMLInputElement | null>(null);
+const composing = ref(false);
 
 watch(
   () => props.value,
@@ -23,6 +24,7 @@ watch(
 
 async function startEditing(event: MouseEvent): Promise<void> {
   event.preventDefault();
+  composing.value = false;
   editing.value = true;
   await nextTick();
   const input = inputRef.value;
@@ -37,8 +39,20 @@ async function startEditing(event: MouseEvent): Promise<void> {
 
 function commit(): void {
   const value = draft.value.trim() || props.value;
+  composing.value = false;
   editing.value = false;
   emit("update", props.id, value);
+}
+
+function cancel(): void {
+  composing.value = false;
+  editing.value = false;
+}
+
+function handleEnter(event: KeyboardEvent): void {
+  if (composing.value || event.isComposing || event.key === "Process" || event.keyCode === 229) return;
+  event.preventDefault();
+  commit();
 }
 </script>
 
@@ -48,8 +62,10 @@ function commit(): void {
     ref="inputRef"
     v-model="draft"
     class="title-edit-input"
-    @keydown.enter.prevent="commit"
-    @keydown.esc.prevent="editing = false"
+    @compositionstart="composing = true"
+    @compositionend="composing = false"
+    @keydown.enter="handleEnter"
+    @keydown.esc.prevent="cancel"
     @blur="commit"
   />
   <span v-else class="editable-title" @dblclick="startEditing">{{ value }}</span>
