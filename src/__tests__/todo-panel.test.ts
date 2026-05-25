@@ -1984,6 +1984,40 @@ describe("TodoPanel", () => {
     expect(wrapper.emitted("createFromText")?.[0]).toEqual(["morning", ["任务 C", "任务 D"]]);
   });
 
+  it("emits dropped external text from a todo section heading", async () => {
+    const wrapper = mount(TodoPanel, {
+      props: {
+        todos: {
+          morning: [{ id: "a", text: "已有任务", done: false }],
+          noon: [],
+          evening: [],
+        },
+        titles: DEFAULT_TITLES,
+      },
+      global: {
+        stubs: {
+          Button: true,
+          Checkbox: checkboxStub,
+          Dropdown: dropdownStub,
+          NCheckbox: checkboxStub,
+          NDropdown: dropdownStub,
+          NTooltip: tooltipStub,
+        },
+      },
+    });
+    const event = new Event("drop", { bubbles: true }) as DragEvent;
+    Object.defineProperty(event, "dataTransfer", {
+      value: {
+        files: [],
+        getData: (type: string) => (type === "text/plain" ? "标题区域任务" : ""),
+      },
+    });
+
+    await wrapper.get('.todo-section[data-period="morning"] .todo-heading').element.dispatchEvent(event);
+
+    expect(wrapper.emitted("createFromText")?.[0]).toEqual(["morning", ["标题区域任务"]]);
+  });
+
   it("keeps internal dragged todo drops from creating external text todos", async () => {
     const wrapper = mount(TodoPanel, {
       props: {

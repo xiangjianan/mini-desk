@@ -43,6 +43,7 @@ import type { BoardState, DraggedTodo, GuideKey, LineItem, QuickButtonType, Stor
 const MOBILE_BREAKPOINT_QUERY = "(max-width: 900px)";
 const MOBILE_HANDOFF_MESSAGE = "建议在电脑浏览器打开，以获得完整体验 (｡•̀ᴗ-)✧";
 const MOBILE_HANDOFF_DESCRIPTION = "这个看板为桌面端工作流设计，用来整理截图、便签、提醒事项、快捷链接和工作空间。";
+const TODO_NOTIFICATION_INTERVAL_MS = 30_000;
 const mobileCompanionPosition: { right: string; bottom: string } = { right: "18px", bottom: "28px" };
 
 function getInitialMobileBlocked(): boolean {
@@ -73,7 +74,9 @@ const bubbleTimerStartedAt = ref(0);
 const bubbleTimerOptions = ref<BubbleOptions>({});
 const bubbleClearSignal = ref(0);
 const saveStatusTimer = ref<number | undefined>();
+const todoNotificationTimer = ref<number | undefined>();
 const emptyTodoRemovalTimers = new Map<string, number>();
+const sentTodoNotifications = new Set<string>();
 const appVersion = ref(getIndexAppVersion());
 const storedAppVersion = ref<string | null>(null);
 const versionPromptVisible = ref(false);
@@ -288,6 +291,8 @@ onMounted(async () => {
   checkAppVersion();
   window.addEventListener("keydown", handleGlobalKeydown);
   document.addEventListener("paste", handlePaste);
+  todoNotificationTimer.value = window.setInterval(triggerDueTodoNotifications, TODO_NOTIFICATION_INTERVAL_MS);
+  triggerDueTodoNotifications();
 });
 
 onUnmounted(() => {
@@ -885,6 +890,7 @@ function updateTodoNotify(period: TodoPeriod, id: string, notifyAt: number | und
   state.todos = setTodoNotifyAt(state.todos, period, id, notifyAt);
   persistNow();
   if (notifyAt === undefined) showBubbleText("已取消通知时间", anchor);
+  else void prepareTodoNotifications();
 }
 
 function removeTodo(period: TodoPeriod, id: string, anchor?: HTMLElement): void {
@@ -1244,8 +1250,40 @@ function clearTimers(): void {
   window.clearTimeout(bubbleTimer.value);
   window.clearTimeout(bubbleFadeTimer.value);
   window.clearTimeout(saveStatusTimer.value);
+  window.clearInterval(todoNotificationTimer.value);
   emptyTodoRemovalTimers.forEach((timer) => window.clearTimeout(timer));
   emptyTodoRemovalTimers.clear();
+}
+
+function getNotificationApi(): typeof Notification | undefined {
+  return typeof Notification === "undefined" ? undefined : Notification;
+}
+
+async function prepareTodoNotifications(): Promise<void> {
+  const notificationApi = getNotificationApi();
+  if (!notificationApi) return;
+  if (notificationApi.permission === "default" && typeof notificationApi.requestPermission === "function") {
+    await notificationApi.requestPermission();
+  }
+  triggerDueTodoNotifications();
+}
+
+function triggerDueTodoNotifications(): void {
+  const notificationApi = getNotificationApi();
+  if (!notificationApi || notificationApi.permission !== "granted") return;
+  const now = Date.now();
+  for (const period of TODO_PERIODS) {
+    for (const todo of state.todos[period]) {
+      if (todo.done || !Number.isFinite(todo.notifyAt) || todo.notifyAt === undefined || todo.notifyAt > now) continue;
+      const key = `${todo.id}:${todo.notifyAt}`;
+      if (sentTodoNotifications.has(key)) continue;
+      sentTodoNotifications.add(key);
+      new notificationApi("提醒事项", {
+        body: todo.text || DEFAULT_TITLES[period],
+        tag: key,
+      });
+    }
+  }
 }
 
 function todoKey(period: TodoPeriod, id: string): string {

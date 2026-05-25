@@ -320,7 +320,8 @@ describe("Naive UI component usage", () => {
 
     expect(todo).toContain('class="todo-drag-handle"');
     expect(todo).not.toMatch(/class="todo-item"[\s\S]{0,160}draggable="true"/);
-    expect(styles).toMatch(/\.todo-item\s*\{[^}]*grid-template-columns: 14px 28px minmax\(0, 1fr\) minmax\(0, 64px\) 24px/s);
+    expect(styles).toMatch(/\.todo-item\s*\{[^}]*grid-template-columns: 14px 28px minmax\(0, 1fr\) 24px/s);
+    expect(styles).toMatch(/\.todo-item\.has-notify\s*\{[^}]*grid-template-columns: 14px 28px minmax\(0, 1fr\) minmax\(0, 64px\) 24px/s);
     expect(styles).toMatch(/\.todo-list\s*\{[^}]*padding: 0/s);
     expect(styles).toMatch(/\.todo-item\s*\{[^}]*height: 34px/s);
     expect(styles).toMatch(/\.todo-item\s*\{[^}]*min-height: 34px/s);
@@ -358,7 +359,8 @@ describe("Naive UI component usage", () => {
     expect(styles).toMatch(/\.today-focus-section\s*\{[^}]*border-bottom: 0/s);
     expect(styles).toMatch(/\.today-focus-heading\s*\{[^}]*min-height: 34px/s);
     expect(styles).toMatch(/\.today-focus-list\s*\{[^}]*padding: 0/s);
-    expect(styles).toMatch(/\.today-focus-item\s*\{[^}]*grid-template-columns: 42px minmax\(0, 1fr\) minmax\(0, 64px\) 24px/s);
+    expect(styles).toMatch(/\.today-focus-item\s*\{[^}]*grid-template-columns: 42px minmax\(0, 1fr\) 24px/s);
+    expect(styles).toMatch(/\.today-focus-item\.has-notify\s*\{[^}]*grid-template-columns: 42px minmax\(0, 1fr\) minmax\(0, 64px\) 24px/s);
     expect(styles).toMatch(/\.today-focus-item\s*\{[^}]*gap: 0/s);
     expect(styles).toMatch(/\.today-focus-item\s*\{[^}]*height: 34px/s);
     expect(styles).toMatch(/\.today-focus-item\s*\{[^}]*min-height: 34px/s);

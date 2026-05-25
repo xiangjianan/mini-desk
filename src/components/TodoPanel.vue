@@ -250,6 +250,14 @@ function handleTodoItemDrop(event: DragEvent, period: TodoPeriod, targetId: stri
   emit("move", dragged.value, period, targetId);
 }
 
+function handleTodoSectionDrop(event: DragEvent, period: TodoPeriod): void {
+  if (dragged.value) {
+    emit("move", dragged.value, period);
+    return;
+  }
+  handleTodoTextDrop(event, period);
+}
+
 function handleSectionGuideClick(event: MouseEvent): void {
   const target = event.target as HTMLElement;
   if (target.closest("button, input, textarea, .todo-list")) return;
@@ -733,7 +741,7 @@ function buildTodoListEntries(period: TodoPeriod, todos: TodoItem[], deferredDon
           :key="`${item.period}-${item.todo.id}`"
           class="today-focus-item"
           :class="[
-            { 'is-done': item.todo.done, 'is-completing': pendingDoneReorderIds.includes(`${item.period}:${item.todo.id}`), 'is-menu-selected': isTodoHighlighted(item.period, item.todo.id) },
+            { 'is-done': item.todo.done, 'is-completing': pendingDoneReorderIds.includes(`${item.period}:${item.todo.id}`), 'is-menu-selected': isTodoHighlighted(item.period, item.todo.id), 'has-notify': Boolean(getTodoCompactNotifyLabel(item.todo)) },
             getTodoDeadlineClass(item.todo),
           ]"
           @contextmenu.stop="openMenu($event, item.period, item.todo.id)"
@@ -784,7 +792,7 @@ function buildTodoListEntries(period: TodoPeriod, todos: TodoItem[], deferredDon
         @click="handleSectionGuideClick"
         @contextmenu="openSectionMenu($event, period)"
         @dragover.prevent
-        @drop="dragged && emit('move', dragged, period)"
+        @drop="handleTodoSectionDrop($event, period)"
       >
         <div class="todo-heading">
           <h3>
@@ -842,7 +850,7 @@ function buildTodoListEntries(period: TodoPeriod, todos: TodoItem[], deferredDon
               v-if="entry.type === 'todo'"
               class="todo-item"
               :class="[
-                { 'is-done': entry.todo.done, 'is-starred': entry.todo.starred, 'is-menu-selected': isTodoHighlighted(period, entry.todo.id) },
+                { 'is-done': entry.todo.done, 'is-starred': entry.todo.starred, 'is-menu-selected': isTodoHighlighted(period, entry.todo.id), 'has-notify': Boolean(getTodoCompactNotifyLabel(entry.todo)) },
                 getTodoDeadlineClass(entry.todo),
               ]"
               @contextmenu.stop="openMenu($event, period, entry.todo.id)"

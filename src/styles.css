@@ -621,7 +621,7 @@ h3 {
 .today-focus-item {
   position: relative;
   display: grid;
-  grid-template-columns: 42px minmax(0, 1fr) minmax(0, 64px) 24px;
+  grid-template-columns: 42px minmax(0, 1fr) 24px;
   align-items: center;
   gap: 0;
   height: 34px;
@@ -629,6 +629,10 @@ h3 {
   padding: 0;
   font-size: var(--app-font-size);
   border-bottom: 0;
+}
+
+.today-focus-item.has-notify {
+  grid-template-columns: 42px minmax(0, 1fr) minmax(0, 64px) 24px;
 }
 
 .today-focus-item.is-done {
@@ -673,7 +677,7 @@ h3 {
 .todo-item {
   position: relative;
   display: grid;
-  grid-template-columns: 14px 28px minmax(0, 1fr) minmax(0, 64px) 24px;
+  grid-template-columns: 14px 28px minmax(0, 1fr) 24px;
   align-items: center;
   gap: 0;
   height: 34px;
@@ -682,6 +686,10 @@ h3 {
   font-size: var(--app-font-size);
   border-bottom: 0;
   transition: background-color 0.18s ease, opacity 0.18s ease, transform 0.22s cubic-bezier(0.2, 0, 0, 1);
+}
+
+.todo-item.has-notify {
+  grid-template-columns: 14px 28px minmax(0, 1fr) minmax(0, 64px) 24px;
 }
 
 .today-focus-item::after,
@@ -829,7 +837,7 @@ h3 {
 
 .todo-star-button {
   justify-self: end;
-  grid-column: 5;
+  grid-column: 4;
   width: 24px;
   min-width: 24px;
   height: 34px;
@@ -843,6 +851,10 @@ h3 {
   opacity: 0;
   pointer-events: none;
   transition: opacity 0.18s ease, color 0.18s ease;
+}
+
+.todo-item.has-notify .todo-star-button {
+  grid-column: 5;
 }
 
 .today-focus-item .todo-star-button {

@@ -736,6 +736,51 @@ describe("App shell", () => {
     }
   });
 
+  it("requests web notification permission and sends due reminder notifications", async () => {
+    vi.useFakeTimers();
+    vi.setSystemTime(new Date(2026, 4, 25, 8, 0, 0));
+    const notificationSpy = vi.fn();
+    class NotificationStub {
+      static permission: NotificationPermission = "default";
+      static requestPermission = vi.fn(async () => {
+        NotificationStub.permission = "granted";
+        return "granted" as NotificationPermission;
+      });
+
+      constructor(title: string, options?: NotificationOptions) {
+        notificationSpy(title, options);
+      }
+    }
+    vi.stubGlobal("Notification", NotificationStub);
+    localStorage.setItem(
+      STORAGE_KEY,
+      JSON.stringify({
+        todos: {
+          morning: [{ id: "todo-1", text: "喝水", done: false }],
+        },
+      }),
+    );
+    const wrapper = mountApp();
+
+    try {
+      const notifyAt = new Date(2026, 4, 25, 8, 0, 30).getTime();
+      wrapper.getComponent(TodoPanel).vm.$emit("notify", "morning", "todo-1", notifyAt);
+      await Promise.resolve();
+      await vi.advanceTimersByTimeAsync(30_000);
+
+      expect(NotificationStub.requestPermission).toHaveBeenCalledTimes(1);
+      expect(notificationSpy).toHaveBeenCalledTimes(1);
+      expect(notificationSpy).toHaveBeenCalledWith("提醒事项", {
+        body: "喝水",
+        tag: `todo-1:${notifyAt}`,
+      });
+    } finally {
+      wrapper.unmount();
+      vi.unstubAllGlobals();
+      vi.useRealTimers();
+    }
+  });
+
   it("stars a todo without setting notification time or showing a confirmation bubble", async () => {
     localStorage.setItem(
       STORAGE_KEY,
