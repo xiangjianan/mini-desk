@@ -217,7 +217,12 @@ function rememberCaret(event: MouseEvent): void {
 }
 
 function rememberSelection(event: Event): void {
-  rememberTextSelection(event.currentTarget as HTMLTextAreaElement);
+  const textarea = event.currentTarget as HTMLTextAreaElement;
+  rememberTextSelection(textarea);
+  if (hasSelection(textarea) && !editing.value) {
+    startEditingFromTextarea(textarea);
+    restoreSelection(textarea, getTextSelectionRange(textarea));
+  }
 }
 
 function openTextMenu(event: MouseEvent): void {

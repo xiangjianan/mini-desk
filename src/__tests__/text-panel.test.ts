@@ -584,6 +584,23 @@ describe("TextPanel", () => {
     wrapper.unmount();
   });
 
+  it("enters editing mode immediately after text selection", async () => {
+    const wrapper = mount(TextPanel, {
+      props: {
+        titleId: "workspace-title",
+        title: "工作空间",
+        lines: [{ text: "可以被选中的文本", indent: 0 }],
+      },
+    });
+    const textarea = wrapper.get("textarea").element as HTMLTextAreaElement;
+    textarea.setSelectionRange(0, 4);
+
+    await wrapper.get("textarea").trigger("select");
+
+    expect(textarea.readOnly).toBe(false);
+    expect(textarea.getAttribute("inputmode")).toBe("text");
+  });
+
   it("copies a readonly mouse selection from the context menu after editing starts", async () => {
     const writeText = vi.fn().mockResolvedValue(undefined);
     Object.assign(navigator, { clipboard: { writeText, readText: vi.fn() } });
