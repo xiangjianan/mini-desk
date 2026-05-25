@@ -76,6 +76,33 @@ describe("SpacePanel", () => {
     expect(wrapper.emitted("rename")?.[0]).toEqual(["workspace", "资料"]);
   });
 
+  it("starts editing a newly created active space name", async () => {
+    const wrapper = mount(SpacePanel, {
+      attachTo: document.body,
+      props: {
+        activeSpaceId: "new",
+        editSpaceId: "new",
+        spaces: [
+          { id: "old", title: "旧空间", lines: [] },
+          { id: "new", title: "新空间", lines: [] },
+        ],
+      },
+      global: {
+        stubs: {
+          Dropdown: dropdownStub,
+          NDropdown: dropdownStub,
+        },
+      },
+    });
+
+    await wrapper.vm.$nextTick();
+
+    const input = wrapper.get(".space-tab-edit-input").element as HTMLInputElement;
+    expect(input.value).toBe("新空间");
+    expect(document.activeElement).toBe(input);
+    wrapper.unmount();
+  });
+
   it("does not save a space name while Chinese IME composition is confirming", async () => {
     const wrapper = mountSpacePanel([{ id: "workspace", title: "工作空间", lines: [] }]);
 

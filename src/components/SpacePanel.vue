@@ -1,5 +1,5 @@
 <script setup lang="ts">
-import { computed, nextTick, ref } from "vue";
+import { computed, nextTick, ref, watch } from "vue";
 import { NDropdown } from "naive-ui";
 import type { DropdownOption } from "naive-ui";
 import type { GuideKey, LineItem, WorkspaceSpace } from "../types";
@@ -8,6 +8,7 @@ import TextPanel from "./TextPanel.vue";
 const props = defineProps<{
   spaces: WorkspaceSpace[];
   activeSpaceId: string;
+  editSpaceId?: string | null;
 }>();
 
 const emit = defineEmits<{
@@ -65,6 +66,16 @@ function startTabEdit(id: string): void {
     input?.select();
   });
 }
+
+watch(
+  () => props.editSpaceId,
+  (id) => {
+    if (!id) return;
+    if (!props.spaces.some((space) => space.id === id)) return;
+    startTabEdit(id);
+  },
+  { immediate: true },
+);
 
 function commitTabEdit(): void {
   const id = editingSpaceId.value;

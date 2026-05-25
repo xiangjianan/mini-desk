@@ -64,6 +64,7 @@ const pendingConfirm = ref<{
 } | null>(null);
 const importInput = ref<HTMLInputElement | null>(null);
 const importFeedbackAnchor = ref<HTMLElement | undefined>();
+const pendingEditSpaceId = ref<string | null>(null);
 const textSaveTimer = ref<number | undefined>();
 const bubbleTimer = ref<number | undefined>();
 const bubbleFadeTimer = ref<number | undefined>();
@@ -339,6 +340,7 @@ function createSpace(): void {
     lines: [],
   });
   state.activeSpaceId = id;
+  pendingEditSpaceId.value = id;
   syncLegacySpaceLines();
   persistNow();
 }
@@ -347,6 +349,7 @@ function renameSpace(id: string, title: string): void {
   const space = state.spaces.find((item) => item.id === id);
   if (!space) return;
   space.title = title.trim() || space.title;
+  if (pendingEditSpaceId.value === id) pendingEditSpaceId.value = null;
   persistNow();
 }
 
@@ -1468,6 +1471,7 @@ function moveItem<T extends { id: string }>(items: T[], dragId: string, targetId
         class="workspace-panel"
         :spaces="state.spaces"
         :active-space-id="state.activeSpaceId"
+        :edit-space-id="pendingEditSpaceId"
         @activate="activateSpace"
         @create="createSpace"
         @rename="renameSpace"
