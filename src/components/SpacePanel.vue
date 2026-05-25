@@ -24,6 +24,7 @@ const emit = defineEmits<{
 
 const editingSpaceId = ref<string | null>(null);
 const editingTitle = ref("");
+const titleComposing = ref(false);
 const draggedSpaceId = ref<string | null>(null);
 const menu = ref<{ x: number; y: number; spaceId: string } | null>(null);
 
@@ -55,6 +56,7 @@ function startTabEdit(id: string): void {
   const space = getSpace(id);
   if (!space) return;
   closeMenu();
+  titleComposing.value = false;
   editingSpaceId.value = id;
   editingTitle.value = space.title;
   nextTick(() => {
@@ -68,14 +70,22 @@ function commitTabEdit(): void {
   const id = editingSpaceId.value;
   if (!id) return;
   const title = editingTitle.value.trim();
+  titleComposing.value = false;
   editingSpaceId.value = null;
   editingTitle.value = "";
   if (title) emit("rename", id, title);
 }
 
 function cancelTabEdit(): void {
+  titleComposing.value = false;
   editingSpaceId.value = null;
   editingTitle.value = "";
+}
+
+function handleTabEditEnter(event: KeyboardEvent): void {
+  if (titleComposing.value || event.isComposing || event.key === "Process" || event.keyCode === 229) return;
+  event.preventDefault();
+  commitTabEdit();
 }
 
 function openTabMenu(event: MouseEvent, id: string): void {
@@ -147,7 +157,9 @@ function handleTabsWheel(event: WheelEvent): void {
           v-model="editingTitle"
           class="space-tab-edit-input"
           aria-label="编辑空间名称"
-          @keydown.enter.prevent="commitTabEdit"
+          @compositionstart="titleComposing = true"
+          @compositionend="titleComposing = false"
+          @keydown.enter="handleTabEditEnter"
           @keydown.esc.prevent="cancelTabEdit"
           @blur="commitTabEdit"
         />

@@ -11,6 +11,7 @@ import SpacePanel from "./components/SpacePanel.vue";
 import TextPanel from "./components/TextPanel.vue";
 import TodoPanel from "./components/TodoPanel.vue";
 import { AREA_HELP, CONTROL_HELP, DEFAULT_TITLES, TODO_PERIODS } from "./state/defaults";
+import { isValidDeadlineAt } from "./state/deadlines";
 import { deleteStoredImage, hydrateStoredImages, persistImagePayloads, storeImagePayload } from "./state/images";
 import { getMessage, withKaomoji, type MessageKey } from "./state/messages";
 import {
@@ -37,7 +38,7 @@ import {
   getStoredAppVersion,
   markAppVersionSeen,
 } from "./state/version";
-import type { BoardState, DraggedTodo, GuideKey, LineItem, QuickButtonType, StoredImage, TodoPeriod } from "./types";
+import type { BoardState, DraggedTodo, GuideKey, LineItem, QuickButtonType, StoredImage, TodoPeriod, TodoStarChange } from "./types";
 
 const MOBILE_BREAKPOINT_QUERY = "(max-width: 900px)";
 const MOBILE_HANDOFF_MESSAGE = "建议在电脑浏览器打开，以获得完整体验 (｡•̀ᴗ-)✧";
@@ -839,9 +840,27 @@ function complete(period: TodoPeriod, id: string, done: boolean, anchor?: HTMLEl
   if (done) showBubble("todoCompleted", anchor);
 }
 
-function toggleTodoStar(period: TodoPeriod, id: string, starred: boolean): void {
-  state.todos = starTodo(state.todos, period, id, starred);
-  persistNow();
+function toggleTodoStar(change: TodoStarChange): void {
+  const { period, id, starred, deadlineAt, anchor } = change;
+  if (starred) {
+    state.todos = starTodo(state.todos, period, id, true, deadlineAt);
+    persistNow();
+    return;
+  }
+
+  const todo = state.todos[period].find((item) => item.id === id);
+  if (!todo?.starred) return;
+  const messageKey: MessageKey = isValidDeadlineAt(todo.deadlineAt) ? "confirmUnstarTodoDeadline" : "confirmUnstarTodo";
+  requestConfirmation(
+    messageKey,
+    anchor,
+    () => {
+      state.todos = starTodo(state.todos, period, id, false);
+      persistNow();
+    },
+    undefined,
+    { confirmText: "取消重点", cancelText: "算了" },
+  );
 }
 
 function removeTodo(period: TodoPeriod, id: string, anchor?: HTMLElement): void {

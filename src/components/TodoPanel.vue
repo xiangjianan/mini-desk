@@ -1,9 +1,21 @@
 <script setup lang="ts">
-import { computed, nextTick, onUnmounted, ref } from "vue";
+import { computed, nextTick, onMounted, onUnmounted, ref } from "vue";
 import { NButton, NCheckbox, NDropdown } from "naive-ui";
 import type { DropdownOption } from "naive-ui";
 import { GUIDE_MENU_OPTION, TODO_PERIODS } from "../state/defaults";
-import type { DraggedTodo, GuideKey, TodoCompletedVisibility, TodoItem, TodoMap, TodoPeriod } from "../types";
+import {
+  DEADLINE_TIME_OPTIONS,
+  DEFAULT_DEADLINE_TIME,
+  createDeadlineAt,
+  getDefaultDeadlineSelection,
+  getDeadlineDisplay,
+  getDeadlineTimeLabel,
+  getLocalDateInputValue,
+  isValidDeadlineAt,
+  type DeadlineDisplay,
+  type DeadlineTimeOption,
+} from "../state/deadlines";
+import type { DraggedTodo, GuideKey, TodoCompletedVisibility, TodoItem, TodoMap, TodoPeriod, TodoStarChange } from "../types";
 import { getOrderedTodos } from "../state/todos";
 import EditableTitle from "./EditableTitle.vue";
 
@@ -19,7 +31,7 @@ const emit = defineEmits<{
   update: [period: TodoPeriod, id: string, text: string];
   split: [period: TodoPeriod, id: string, before: string, after: string];
   complete: [period: TodoPeriod, id: string, done: boolean, anchor?: HTMLElement];
-  star: [period: TodoPeriod, id: string, starred: boolean];
+  star: [change: TodoStarChange];
   remove: [period: TodoPeriod, id: string, anchor?: HTMLElement];
   clearCompleted: [period: TodoPeriod, anchor?: HTMLElement];
   toggleCompletedVisibility: [period: TodoPeriod, showCompleted: boolean];
@@ -43,6 +55,16 @@ const menu = ref<{
 const dragged = ref<DraggedTodo | null>(null);
 const editingTodoKey = ref<string | null>(null);
 const selectedMenuTodoKey = ref<string | null>(null);
+const deadlineEditorRef = ref<HTMLElement | null>(null);
+const deadlineEditor = ref<{
+  period: TodoPeriod;
+  id: string;
+  anchor: HTMLElement;
+  date: string;
+  time: DeadlineTimeOption;
+  x: number;
+  y: number;
+} | null>(null);
 const pendingDoneReorderIds = ref<string[]>([]);
 const reorderTimers = new Map<string, number>();
 const lastTodoCarets = new Map<string, number>();
@@ -65,6 +87,12 @@ const menuOptions = computed<DropdownOption[]>(() => {
     if (menu.value.target && canPasteTodoText(menu.value.period, menu.value.id, menu.value.target)) {
       options.push({ label: "粘贴", key: "paste" });
     }
+    if (todo?.starred) {
+      options.push({
+        label: isValidDeadlineAt(todo.deadlineAt) ? "编辑提醒时间" : "设置提醒时间",
+        key: "deadline",
+      });
+    }
     options.push({ label: "删除", key: "delete" });
     options.push({ label: todo?.starred ? "取消星标" : "星标", key: "star" });
   }
@@ -78,6 +106,12 @@ const periodLabels: Record<TodoPeriod, string> = {
   evening: "todo-evening-title",
 };
 const todayFocusTitleId = "today-focus-title";
+const DEADLINE_CLOCK_INTERVAL_MS = 60_000;
+const DEADLINE_EDITOR_OFFSET = 8;
+const DEADLINE_EDITOR_WIDTH = 280;
+const DEADLINE_EDITOR_HEIGHT = 190;
+const deadlineNow = ref(Date.now());
+const deadlineClockTimer = ref<number | undefined>();
 
 const ordered = computed(() =>
   Object.fromEntries(
@@ -102,13 +136,39 @@ const periodStats = computed(() =>
   ) as Record<TodoPeriod, string>,
 );
 
-const todayFocus = computed(() =>
-  TODO_PERIODS.flatMap((period) =>
+type TodayFocusEntry = { period: TodoPeriod; todo: TodoItem; index: number };
+
+const todayFocus = computed(() => {
+  const entries: TodayFocusEntry[] = TODO_PERIODS.flatMap((period) =>
     ordered.value[period]
       .filter((todo) => todo.starred)
-      .map((todo) => ({ period, todo })),
-  ),
-);
+      .map((todo) => ({ period, todo, index: 0 })),
+  );
+  entries.forEach((entry, index) => {
+    entry.index = index;
+  });
+  return entries.sort(compareTodayFocusEntries).map(({ period, todo }) => ({ period, todo }));
+});
+
+const deadlineEditorStyle = computed(() => {
+  if (!deadlineEditor.value) return {};
+  return {
+    left: `${deadlineEditor.value.x}px`,
+    top: `${deadlineEditor.value.y}px`,
+  };
+});
+
+const deadlineDisplays = computed(() => {
+  const displays = new Map<TodoItem, DeadlineDisplay>();
+  const now = deadlineNow.value;
+  TODO_PERIODS.forEach((period) => {
+    props.todos[period].forEach((todo) => {
+      const display = getDeadlineDisplay(todo.deadlineAt, now);
+      if (display) displays.set(todo, display);
+    });
+  });
+  return displays;
+});
 
 const visibleOrdered = computed(() =>
   Object.fromEntries(
@@ -138,8 +198,18 @@ const listEntries = computed(() =>
   ) as Record<TodoPeriod, TodoListEntry[]>,
 );
 
+onMounted(() => {
+  deadlineNow.value = Date.now();
+  document.addEventListener("pointerdown", handleDeadlineEditorOutsidePointerDown, true);
+  deadlineClockTimer.value = window.setInterval(() => {
+    deadlineNow.value = Date.now();
+  }, DEADLINE_CLOCK_INTERVAL_MS);
+});
+
 onUnmounted(() => {
   reorderTimers.forEach((timer) => window.clearTimeout(timer));
+  document.removeEventListener("pointerdown", handleDeadlineEditorOutsidePointerDown, true);
+  window.clearInterval(deadlineClockTimer.value);
 });
 
 function handleListClick(event: MouseEvent, period: TodoPeriod): void {
@@ -249,6 +319,96 @@ function closeMenu(): void {
   selectedMenuTodoKey.value = null;
 }
 
+function handleStarClick(event: MouseEvent, period: TodoPeriod, todo: TodoItem): void {
+  event.preventDefault();
+  event.stopPropagation();
+  const anchor = event.currentTarget as HTMLElement;
+  if (todo.starred) {
+    closeDeadlineEditor();
+    emit("star", { period, id: todo.id, starred: false, anchor });
+    return;
+  }
+  openDeadlineEditor(period, todo.id, anchor, todo);
+}
+
+function openDeadlineEditor(period: TodoPeriod, id: string, anchor: HTMLElement, todo = getTodoById(period, id)): void {
+  const { date, time } = getDeadlineEditorValues(todo);
+  const { x, y } = getDeadlineEditorPosition(anchor);
+  selectedMenuTodoKey.value = null;
+  deadlineEditor.value = {
+    period,
+    id,
+    anchor,
+    date,
+    time,
+    x,
+    y,
+  };
+}
+
+function selectDeadlineTime(time: DeadlineTimeOption): void {
+  if (!deadlineEditor.value) return;
+  deadlineEditor.value = { ...deadlineEditor.value, time };
+}
+
+function getDeadlineEditorValues(todo?: TodoItem): { date: string; time: DeadlineTimeOption } {
+  if (!isValidDeadlineAt(todo?.deadlineAt)) return getDefaultDeadlineSelection();
+
+  const deadlineDate = new Date(todo.deadlineAt);
+  const hour = String(deadlineDate.getHours()).padStart(2, "0");
+  const time = `${hour}:00`;
+  const supportedTime = DEADLINE_TIME_OPTIONS.includes(time as DeadlineTimeOption)
+    ? time as DeadlineTimeOption
+    : DEFAULT_DEADLINE_TIME;
+  return { date: getLocalDateInputValue(deadlineDate), time: supportedTime };
+}
+
+function getDeadlineEditorPosition(anchor: HTMLElement): { x: number; y: number } {
+  const rect = anchor.getBoundingClientRect();
+  const viewportWidth = window.innerWidth || document.documentElement.clientWidth || DEADLINE_EDITOR_WIDTH;
+  const viewportHeight = window.innerHeight || document.documentElement.clientHeight || DEADLINE_EDITOR_HEIGHT;
+  const maxX = Math.max(DEADLINE_EDITOR_OFFSET, viewportWidth - DEADLINE_EDITOR_WIDTH - DEADLINE_EDITOR_OFFSET);
+  const rightX = rect.right + DEADLINE_EDITOR_OFFSET;
+  const fallbackLeftX = rect.left - DEADLINE_EDITOR_WIDTH - DEADLINE_EDITOR_OFFSET;
+  const x = rightX <= maxX ? rightX : Math.max(DEADLINE_EDITOR_OFFSET, fallbackLeftX);
+  const maxY = Math.max(DEADLINE_EDITOR_OFFSET, viewportHeight - DEADLINE_EDITOR_HEIGHT - DEADLINE_EDITOR_OFFSET);
+  const y = Math.min(Math.max(DEADLINE_EDITOR_OFFSET, rect.top), maxY);
+  return { x, y };
+}
+
+function updateDeadlineDate(value: string): void {
+  if (!deadlineEditor.value) return;
+  deadlineEditor.value = { ...deadlineEditor.value, date: value };
+}
+
+function confirmDeadlineEditor(): void {
+  const editor = deadlineEditor.value;
+  if (!editor) return;
+  const deadlineAt = createDeadlineAt(editor.date, editor.time);
+  if (deadlineAt === null) return;
+  emit("star", { period: editor.period, id: editor.id, starred: true, deadlineAt, anchor: editor.anchor });
+  deadlineEditor.value = null;
+}
+
+function ignoreDeadlineEditor(): void {
+  const editor = deadlineEditor.value;
+  if (!editor) return;
+  emit("star", { period: editor.period, id: editor.id, starred: true, anchor: editor.anchor });
+  deadlineEditor.value = null;
+}
+
+function closeDeadlineEditor(): void {
+  deadlineEditor.value = null;
+}
+
+function handleDeadlineEditorOutsidePointerDown(event: PointerEvent): void {
+  if (!deadlineEditor.value) return;
+  const target = event.target;
+  if (!(target instanceof Node)) return;
+  if (deadlineEditorRef.value?.contains(target)) return;
+  deadlineEditor.value = null;
+}
+
 async function handleMenuSelect(key: string): Promise<void> {
   if (!menu.value) return;
   const { period, id, anchor, target } = menu.value;
@@ -276,10 +436,23 @@ async function handleMenuSelect(key: string): Promise<void> {
     closeMenu();
     return;
   }
+  if (key === "deadline" && id && anchor) {
+    const todo = getTodoById(period, id);
+    closeMenu();
+    openDeadlineEditor(period, id, anchor, todo);
+    return;
+  }
   closeMenu();
   if (key === "guide" && anchor) emit("guide", "todos", anchor, true);
   if (!id) return;
-  if (key === "star") emit("star", period, id, !getTodoById(period, id)?.starred);
+  if (key === "star") {
+    const todo = getTodoById(period, id);
+    if (todo?.starred) {
+      emit("star", { period, id, starred: false, anchor });
+    } else if (anchor) {
+      openDeadlineEditor(period, id, anchor, todo);
+    }
+  }
   if (key === "delete") emit("remove", period, id, anchor);
 }
 
@@ -313,6 +486,36 @@ function isTodoHighlighted(period: TodoPeriod, id: string): boolean {
     editingTodoKey.value === key ||
     (dragged.value?.period === period && dragged.value.id === id)
   );
+}
+
+function getTodoDeadline(todo: TodoItem): DeadlineDisplay | null {
+  return deadlineDisplays.value.get(todo) ?? null;
+}
+
+function getTodoDeadlineClass(todo: TodoItem): string | null {
+  if (todo.done) return null;
+  const display = getTodoDeadline(todo);
+  return display ? `deadline-${display.urgency}` : null;
+}
+
+function getTodoCompactDeadlineLabel(todo: TodoItem): string | null {
+  return getTodoDeadline(todo)?.compactLabel ?? null;
+}
+
+function compareTodayFocusEntries(left: TodayFocusEntry, right: TodayFocusEntry): number {
+  const doneDiff = Number(left.todo.done) - Number(right.todo.done);
+  if (doneDiff !== 0) return doneDiff;
+
+  const leftDeadline = left.todo.deadlineAt;
+  const rightDeadline = right.todo.deadlineAt;
+  const leftHasDeadline = isValidDeadlineAt(leftDeadline);
+  const rightHasDeadline = isValidDeadlineAt(rightDeadline);
+  if (leftHasDeadline && rightHasDeadline) {
+    const deadlineDiff = leftDeadline - rightDeadline;
+    if (deadlineDiff !== 0) return deadlineDiff;
+  }
+  if (leftHasDeadline !== rightHasDeadline) return leftHasDeadline ? -1 : 1;
+  return left.index - right.index;
 }
 
 function hasSelection(target: HTMLTextAreaElement | HTMLInputElement): boolean {
@@ -515,7 +718,10 @@ function buildTodoListEntries(todos: TodoItem[], deferredDoneIds: ReadonlySet<st
           v-for="item in todayFocus"
           :key="`${item.period}-${item.todo.id}`"
           class="today-focus-item"
-          :class="{ 'is-done': item.todo.done, 'is-completing': pendingDoneReorderIds.includes(`${item.period}:${item.todo.id}`), 'is-menu-selected': isTodoHighlighted(item.period, item.todo.id) }"
+          :class="[
+            { 'is-done': item.todo.done, 'is-completing': pendingDoneReorderIds.includes(`${item.period}:${item.todo.id}`), 'is-menu-selected': isTodoHighlighted(item.period, item.todo.id) },
+            getTodoDeadlineClass(item.todo),
+          ]"
           @contextmenu.stop="openMenu($event, item.period, item.todo.id)"
         >
           <NCheckbox
@@ -537,11 +743,19 @@ function buildTodoListEntries(todos: TodoItem[], deferredDoneIds: ReadonlySet<st
             @focus="handleInputFocus(item.period, item.todo, $event)"
             @blur="handleInputBlur(item.period, item.todo.id)"
           />
+          <span class="todo-deadline-slot">
+            <span
+              v-if="getTodoCompactDeadlineLabel(item.todo)"
+              class="todo-deadline-label"
+            >
+              {{ getTodoCompactDeadlineLabel(item.todo) }}
+            </span>
+          </span>
           <button
             class="todo-star-button is-starred"
             type="button"
             aria-label="取消重点"
-            @click.stop="emit('star', item.period, item.todo.id, false)"
+            @click="handleStarClick($event, item.period, item.todo)"
           >
             ★
           </button>
@@ -612,7 +826,10 @@ function buildTodoListEntries(todos: TodoItem[], deferredDoneIds: ReadonlySet<st
             <li
               v-if="entry.type === 'todo'"
               class="todo-item"
-              :class="{ 'is-done': entry.todo.done, 'is-starred': entry.todo.starred, 'is-menu-selected': isTodoHighlighted(period, entry.todo.id) }"
+              :class="[
+                { 'is-done': entry.todo.done, 'is-starred': entry.todo.starred, 'is-menu-selected': isTodoHighlighted(period, entry.todo.id) },
+                getTodoDeadlineClass(entry.todo),
+              ]"
               @contextmenu.stop="openMenu($event, period, entry.todo.id)"
               @dragover.prevent
               @drop.stop="dragged && emit('move', dragged, period, entry.todo.id)"
@@ -646,12 +863,20 @@ function buildTodoListEntries(todos: TodoItem[], deferredDoneIds: ReadonlySet<st
                 @focus="handleInputFocus(period, entry.todo, $event)"
                 @blur="handleInputBlur(period, entry.todo.id)"
               />
+              <span class="todo-deadline-slot">
+                <span
+                  v-if="getTodoCompactDeadlineLabel(entry.todo)"
+                  class="todo-deadline-label"
+                >
+                  {{ getTodoCompactDeadlineLabel(entry.todo) }}
+                </span>
+              </span>
               <button
                 class="todo-star-button"
                 :class="{ 'is-starred': entry.todo.starred }"
                 type="button"
                 :aria-label="entry.todo.starred ? '取消重点' : '设为重点'"
-                @click.stop="emit('star', period, entry.todo.id, !entry.todo.starred)"
+                @click="handleStarClick($event, period, entry.todo)"
               >
                 {{ entry.todo.starred ? "★" : "☆" }}
               </button>
@@ -666,6 +891,60 @@ function buildTodoListEntries(todos: TodoItem[], deferredDoneIds: ReadonlySet<st
         </TransitionGroup>
       </section>
     </div>
+
+    <section
+      v-if="deadlineEditor"
+      ref="deadlineEditorRef"
+      class="deadline-editor"
+      :style="deadlineEditorStyle"
+      aria-label="设置截止时间"
+    >
+      <div class="deadline-editor-heading">
+        <span>设置截止时间</span>
+        <button
+          class="deadline-close-button icon-button"
+          type="button"
+          aria-label="关闭截止时间选择"
+          @click="closeDeadlineEditor"
+        >
+          ×
+        </button>
+      </div>
+      <input
+        class="deadline-date-input"
+        type="date"
+        :value="deadlineEditor.date"
+        @input="updateDeadlineDate(($event.target as HTMLInputElement).value)"
+      />
+      <div class="deadline-time-options" aria-label="选择截止整点">
+        <button
+          v-for="time in DEADLINE_TIME_OPTIONS"
+          :key="time"
+          class="deadline-time-button"
+          :class="{ 'is-selected': deadlineEditor.time === time }"
+          type="button"
+          @click="selectDeadlineTime(time)"
+        >
+          {{ getDeadlineTimeLabel(time) }}
+        </button>
+      </div>
+      <div class="deadline-editor-actions">
+        <button
+          class="deadline-ignore-button"
+          type="button"
+          @click="ignoreDeadlineEditor"
+        >
+          忽略
+        </button>
+        <button
+          class="deadline-confirm-button"
+          type="button"
+          @click="confirmDeadlineEditor"
+        >
+          确定
+        </button>
+      </div>
+    </section>
 
     <NDropdown
       v-if="menu"

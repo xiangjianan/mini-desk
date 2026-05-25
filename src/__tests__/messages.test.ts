@@ -45,6 +45,8 @@ const messageKeys = [
   "confirmDeleteImage",
   "confirmDeleteQuick",
   "confirmDeleteTodo",
+  "confirmUnstarTodo",
+  "confirmUnstarTodoDeadline",
   "confirmDeleteSpace",
   "confirmClearCompleted",
   "confirmImportData",
@@ -112,7 +114,8 @@ describe("message catalog", () => {
     for (const [key, entry] of Object.entries(MESSAGE_CATALOG)) {
       if (key === "about") continue;
       for (const variant of entry.variants) {
-        expect(variant.length, `${key}: ${variant}`).toBeLessThanOrEqual(15);
+        const maxLength = key === "confirmUnstarTodoDeadline" ? 24 : 15;
+        expect(variant.length, `${key}: ${variant}`).toBeLessThanOrEqual(maxLength);
       }
     }
 
@@ -129,6 +132,17 @@ describe("message catalog", () => {
 
     expect(EMPTY_HINTS.images).toContain("Ctrl+V");
     expect(AREA_HELP.todos).not.toMatch(/早|中|晚/);
+  });
+
+  it("has separate cancel-star confirmation copy for todos with and without deadlines", () => {
+    expect(MESSAGE_CATALOG.confirmUnstarTodo.variants).toHaveLength(10);
+    expect(MESSAGE_CATALOG.confirmUnstarTodoDeadline.variants).toHaveLength(10);
+    for (const variant of MESSAGE_CATALOG.confirmUnstarTodo.variants) {
+      expect(variant).not.toContain("截止时间");
+    }
+    for (const variant of MESSAGE_CATALOG.confirmUnstarTodoDeadline.variants) {
+      expect(variant).toContain("截止时间");
+    }
   });
 
   it("includes shortcut guidance and keeps repository URLs out of shared message text", () => {

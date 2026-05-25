@@ -301,7 +301,8 @@ describe("Naive UI component usage", () => {
     expect(text).toContain("粘贴");
     expect(todo).toContain("copyTodoText");
     expect(todo).toContain("复制");
-    expect(todo).not.toContain("编辑");
+    expect(todo).toContain("设置提醒时间");
+    expect(todo).toContain("编辑提醒时间");
     expect(todo).toContain("删除");
   });
 
@@ -319,7 +320,7 @@ describe("Naive UI component usage", () => {
 
     expect(todo).toContain('class="todo-drag-handle"');
     expect(todo).not.toMatch(/class="todo-item"[\s\S]{0,160}draggable="true"/);
-    expect(styles).toMatch(/\.todo-item\s*\{[^}]*grid-template-columns: 14px 28px minmax\(0, 1fr\) 24px/s);
+    expect(styles).toMatch(/\.todo-item\s*\{[^}]*grid-template-columns: 14px 28px minmax\(0, 1fr\) minmax\(0, 64px\) 24px/s);
     expect(styles).toMatch(/\.todo-list\s*\{[^}]*padding: 0/s);
     expect(styles).toMatch(/\.todo-item\s*\{[^}]*height: 34px/s);
     expect(styles).toMatch(/\.todo-item\s*\{[^}]*min-height: 34px/s);
@@ -333,6 +334,14 @@ describe("Naive UI component usage", () => {
     expect(styles).toMatch(/\.todo-drag-handle\s*\{[^}]*width: 12px/s);
     expect(styles).toMatch(/\.todo-drag-handle\s*\{[^}]*opacity: 0\.28/s);
     expect(styles).toContain(".todo-drag-handle::before");
+    expect(styles).toContain(".todo-deadline-label");
+    expect(styles).toContain(".deadline-overdue");
+    expect(styles).toContain(".deadline-due-soon");
+    expect(styles).toContain(".deadline-upcoming");
+    expect(styles).toContain(".deadline-later");
+    expect(styles).toMatch(/\.todo-deadline-label\s*\{[^}]*overflow: hidden/s);
+    expect(styles).toMatch(/\.todo-deadline-label\s*\{[^}]*text-overflow: ellipsis/s);
+    expect(styles).not.toContain("filter: drop-shadow");
   });
 
   it("keeps today focus reminder rows aligned to the same one-line grid", () => {
@@ -349,7 +358,7 @@ describe("Naive UI component usage", () => {
     expect(styles).toMatch(/\.today-focus-section\s*\{[^}]*border-bottom: 0/s);
     expect(styles).toMatch(/\.today-focus-heading\s*\{[^}]*min-height: 34px/s);
     expect(styles).toMatch(/\.today-focus-list\s*\{[^}]*padding: 0/s);
-    expect(styles).toMatch(/\.today-focus-item\s*\{[^}]*grid-template-columns: 42px minmax\(0, 1fr\) 24px/s);
+    expect(styles).toMatch(/\.today-focus-item\s*\{[^}]*grid-template-columns: 42px minmax\(0, 1fr\) minmax\(0, 64px\) 24px/s);
     expect(styles).toMatch(/\.today-focus-item\s*\{[^}]*gap: 0/s);
     expect(styles).toMatch(/\.today-focus-item\s*\{[^}]*height: 34px/s);
     expect(styles).toMatch(/\.today-focus-item\s*\{[^}]*min-height: 34px/s);
@@ -463,7 +472,7 @@ describe("Naive UI component usage", () => {
     const defaults = read("src/state/defaults.ts");
 
     expect(defaults).toContain("GUIDE_MENU_OPTION");
-    expect(defaults).toContain('"today-focus-title": "❗️ 今日重点"');
+    expect(defaults).toContain('"today-focus-title": "重点事项"');
     for (const source of [image, quick, todo, text]) {
       expect(source).toContain("GUIDE_MENU_OPTION");
       expect(source).toContain("Tips");
