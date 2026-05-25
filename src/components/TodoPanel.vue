@@ -17,6 +17,7 @@ import {
 } from "../state/deadlines";
 import type { DraggedTodo, GuideKey, TodoCompletedVisibility, TodoItem, TodoMap, TodoPeriod, TodoStarChange } from "../types";
 import { getOrderedTodos } from "../state/todos";
+import { splitDroppedTodoText } from "../utils/textEditor";
 import EditableTitle from "./EditableTitle.vue";
 
 const props = defineProps<{
@@ -39,6 +40,7 @@ const emit = defineEmits<{
   blurEmpty: [period: TodoPeriod, id: string];
   blur: [];
   move: [dragged: DraggedTodo, destinationPeriod: TodoPeriod, targetId?: string];
+  createFromText: [period: TodoPeriod, texts: string[]];
   focus: [element: HTMLElement];
   guide: [key: GuideKey, anchor: HTMLElement, immediate?: boolean];
 }>();
@@ -225,6 +227,17 @@ function handleListClick(event: MouseEvent, period: TodoPeriod): void {
   const target = event.target as HTMLElement;
   if (event.target !== event.currentTarget && !target.closest(".todo-empty-hint")) return;
   emit("create", period);
+}
+
+function handleTodoTextDrop(event: DragEvent, period: TodoPeriod): void {
+  if (dragged.value) return;
+  const files = Array.from(event.dataTransfer?.files ?? []);
+  if (files.length > 0) return;
+  const texts = splitDroppedTodoText(event.dataTransfer?.getData("text/plain") ?? "");
+  if (texts.length === 0) return;
+  event.preventDefault();
+  event.stopPropagation();
+  emit("createFromText", period, texts);
 }
 
 function handleSectionGuideClick(event: MouseEvent): void {
@@ -789,6 +802,8 @@ function buildTodoListEntries(todos: TodoItem[], deferredDoneIds: ReadonlySet<st
           class="todo-list todo-empty-list"
           :data-testid="`todo-list-${period}`"
           @click="handleListClick($event, period)"
+          @dragover.prevent
+          @drop="handleTodoTextDrop($event, period)"
         >
           <li
             :key="`${period}-empty-hint`"
@@ -806,6 +821,8 @@ function buildTodoListEntries(todos: TodoItem[], deferredDoneIds: ReadonlySet<st
           :class="{ 'todo-move': true }"
           :data-testid="`todo-list-${period}`"
           @click="handleListClick($event, period)"
+          @dragover.prevent
+          @drop="handleTodoTextDrop($event, period)"
         >
           <template
             v-for="entry in listEntries[period]"

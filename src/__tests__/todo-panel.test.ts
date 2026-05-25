@@ -1853,4 +1853,34 @@ describe("TodoPanel", () => {
 
     expect(wrapper.find(".todo-deadline-slot").exists()).toBe(false);
   });
+
+  it("emits dropped external text as one reminder per non-empty line", async () => {
+    const wrapper = mount(TodoPanel, {
+      props: {
+        todos: { morning: [], noon: [], evening: [] },
+        titles: DEFAULT_TITLES,
+      },
+      global: {
+        stubs: {
+          Button: true,
+          Checkbox: checkboxStub,
+          Dropdown: dropdownStub,
+          NCheckbox: checkboxStub,
+          NDropdown: dropdownStub,
+          NTooltip: tooltipStub,
+        },
+      },
+    });
+    const event = new Event("drop") as DragEvent;
+    Object.defineProperty(event, "dataTransfer", {
+      value: {
+        files: [],
+        getData: (type: string) => (type === "text/plain" ? "任务 A\n\n任务 B" : ""),
+      },
+    });
+
+    await wrapper.get('[data-testid="todo-list-morning"]').element.dispatchEvent(event);
+
+    expect(wrapper.emitted("createFromText")?.[0]).toEqual(["morning", ["任务 A", "任务 B"]]);
+  });
 });

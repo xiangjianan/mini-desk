@@ -911,4 +911,29 @@ describe("TextPanel", () => {
 
     expect(wrapper.get("textarea").element.value).toBe("1. Meeting notes\n2026. 05 launch window");
   });
+
+  it("emits appended lines when external text is dropped", async () => {
+    const wrapper = mount(TextPanel, {
+      props: {
+        titleId: "workspace-title",
+        title: "工作空间",
+        lines: [{ text: "已有内容", indent: 0 }],
+      },
+    });
+    const event = new Event("drop") as DragEvent;
+    Object.defineProperty(event, "dataTransfer", {
+      value: {
+        files: [],
+        getData: (type: string) => (type === "text/plain" ? "新增 A\n新增 B" : ""),
+      },
+    });
+
+    await wrapper.get(".text-editor-frame").element.dispatchEvent(event);
+
+    expect(wrapper.emitted("update")?.at(-1)?.[0]).toEqual([
+      { text: "已有内容", indent: 0 },
+      { text: "新增 A", indent: 0 },
+      { text: "新增 B", indent: 0 },
+    ]);
+  });
 });

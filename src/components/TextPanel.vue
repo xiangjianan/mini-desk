@@ -5,6 +5,7 @@ import type { DropdownOption } from "naive-ui";
 import type { LineItem } from "../types";
 import { GUIDE_MENU_OPTION } from "../state/defaults";
 import {
+  appendPlainTextToEditorText,
   editorTextToLines,
   handleTextareaTab,
   insertIndentedLineBreak,
@@ -124,6 +125,19 @@ function handleBlur(event: FocusEvent): void {
   if (editing.value) update();
   editing.value = false;
   emit("blur", event.currentTarget as HTMLElement);
+}
+
+function handleExternalTextDrop(event: DragEvent): void {
+  const files = Array.from(event.dataTransfer?.files ?? []);
+  if (files.length > 0) return;
+  const dropped = event.dataTransfer?.getData("text/plain") ?? "";
+  if (!dropped.trim()) return;
+  event.preventDefault();
+  event.stopPropagation();
+  const textarea = textareaRef.value;
+  if (textarea && !editing.value) startEditingFromTextarea(textarea);
+  applyEditorText(appendPlainTextToEditorText(text.value, dropped));
+  emit("update", editorTextToLines(text.value));
 }
 
 async function startEditing(event: MouseEvent): Promise<void> {
@@ -443,7 +457,7 @@ function restoreSelection(textarea: HTMLTextAreaElement, selection: { start: num
       </h2>
       <slot name="actions" />
     </div>
-    <div class="text-editor-frame" @contextmenu="openTextMenu">
+    <div class="text-editor-frame" @contextmenu="openTextMenu" @dragover.prevent @drop="handleExternalTextDrop">
       <textarea
         ref="textareaRef"
         v-model="text"

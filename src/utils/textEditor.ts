@@ -24,6 +24,21 @@ export function editorTextToLines(value = ""): LineItem[] {
   });
 }
 
+export function appendPlainTextToEditorText(current: string, dropped: string): string {
+  const normalizedDrop = dropped.replace(/\r\n?/g, "\n").trim();
+  if (!normalizedDrop) return current;
+  if (!current) return normalizedDrop;
+  return `${current.replace(/\s+$/g, "")}\n${normalizedDrop}`;
+}
+
+export function splitDroppedTodoText(value: string): string[] {
+  return value
+    .replace(/\r\n?/g, "\n")
+    .split("\n")
+    .map((line) => line.trim())
+    .filter(Boolean);
+}
+
 export function renumberOrderedListText(value = ""): string {
   if (!value) return "";
   const counters = new Map<number, number>();

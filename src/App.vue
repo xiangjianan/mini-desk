@@ -793,6 +793,17 @@ function createTodo(period: TodoPeriod, afterId?: string): void {
   nextTick(() => focusTodoInput(period, id));
 }
 
+function createTodosFromText(period: TodoPeriod, texts: string[]): void {
+  texts.forEach((text) => {
+    state.todos = addTodoToMap(state.todos, period, {
+      id: createId(),
+      text,
+      done: false,
+    });
+  });
+  persistNow();
+}
+
 function findOpenBlankTodo(): { period: TodoPeriod; id: string } | undefined {
   for (const period of TODO_PERIODS) {
     const blankTodo = state.todos[period].find((todo) => !todo.done && todo.text.trim().length === 0);
@@ -1437,6 +1448,7 @@ function moveItem<T extends { id: string }>(items: T[], dragId: string, targetId
         :show-completed="state.showCompletedTodos"
         @title-update="updateTitle"
         @create="createTodo"
+        @create-from-text="createTodosFromText"
         @update="updateTodo"
         @split="splitTodo"
         @complete="complete"
