@@ -240,7 +240,7 @@ function handleToggleShowHidden(anchor?: HTMLElement): void {
           />
         </label>
         <div class="dialog-actions">
-          <NButton v-if="editingId" type="error" ghost @click="emit('delete', editingId, $event.currentTarget as HTMLElement); closeDialog()">删除</NButton>
+          <NButton v-if="editingId" ghost @click="closeDialog">取消</NButton>
           <NButton attr-type="submit" type="primary" :disabled="!canSubmit">保存</NButton>
         </div>
       </form>

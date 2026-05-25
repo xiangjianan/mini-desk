@@ -157,8 +157,39 @@ describe("TodoPanel", () => {
     });
 
     expect(values(wrapper)).toEqual(["未完成", "已完成"]);
-    expect(wrapper.get(".todo-completed-divider").text()).toBe("已完成");
+    expect(wrapper.get(".todo-completed-divider").text()).toContain("已完成");
     wrapper.unmount();
+  });
+
+  it("shows a clear button on the completed divider", async () => {
+    const wrapper = mount(TodoPanel, {
+      props: {
+        showCompleted: { morning: true, noon: false, evening: false },
+        todos: {
+          morning: [
+            { id: "a", text: "未完成", done: false },
+            { id: "b", text: "已完成", done: true },
+          ],
+          noon: [],
+          evening: [],
+        },
+        titles: DEFAULT_TITLES,
+      },
+      global: {
+        stubs: {
+          Button: true,
+          Checkbox: checkboxStub,
+          Dropdown: dropdownStub,
+          NCheckbox: checkboxStub,
+          NDropdown: dropdownStub,
+          NTooltip: tooltipStub,
+        },
+      },
+    });
+
+    await wrapper.get(".todo-completed-clear").trigger("click");
+
+    expect(wrapper.emitted("clearCompleted")?.[0]).toEqual(["morning", expect.any(HTMLElement)]);
   });
 
   it("uses a period three-dot menu for completed visibility and clearing", async () => {

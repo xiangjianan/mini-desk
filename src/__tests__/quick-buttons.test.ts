@@ -248,4 +248,36 @@ describe("QuickButtons", () => {
 
     wrapper.unmount();
   });
+
+  it("shows cancel instead of delete in the edit dialog", async () => {
+    const wrapper = mount(QuickButtons, {
+      props: {
+        title: "快捷按钮",
+        showHidden: true,
+        buttons: [{ id: "a", title: "链接", value: "https://example.com", type: "link", hidden: false }],
+      },
+      global: {
+        stubs: {
+          Button: { template: '<button type="button"><slot /></button>' },
+          Checkbox: true,
+          Dropdown: dropdownStub,
+          Icon: true,
+          Input: true,
+          Modal: { template: '<div><slot /></div>' },
+          NButton: { template: '<button type="button"><slot /></button>' },
+          NCheckbox: true,
+          NDropdown: dropdownStub,
+          NIcon: true,
+          NInput: true,
+          NModal: { template: '<div><slot /></div>' },
+        },
+      },
+    });
+
+    await wrapper.get(".quick-button").trigger("contextmenu");
+    await wrapper.findAll(".dropdown-option").find((option) => option.text() === "编辑")?.trigger("click");
+
+    expect(wrapper.text()).toContain("取消");
+    expect(wrapper.text()).not.toContain("删除");
+  });
 });

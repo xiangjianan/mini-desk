@@ -914,11 +914,25 @@ h3 {
 .todo-completed-divider {
   display: flex;
   align-items: center;
+  justify-content: space-between;
+  gap: 8px;
   min-height: 24px;
   padding: 4px 0 2px 42px;
   color: var(--muted);
   font-size: var(--app-font-size);
   border-bottom: 1px solid var(--line-subtle);
+}
+
+.todo-completed-clear {
+  border: 0;
+  background: transparent;
+  color: var(--muted-text, var(--muted));
+  cursor: pointer;
+  font-size: 12px;
+}
+
+.todo-completed-clear:hover {
+  color: var(--text);
 }
 
 .deadline-editor {

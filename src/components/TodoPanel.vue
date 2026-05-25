@@ -190,12 +190,12 @@ const visibleOrdered = computed(() =>
 );
 
 type TodoListEntry =
-  | { type: "divider"; id: string }
+  | { type: "divider"; id: string; period: TodoPeriod }
   | { type: "todo"; todo: TodoItem };
 
 const listEntries = computed(() =>
   Object.fromEntries(
-    TODO_PERIODS.map((period) => [period, buildTodoListEntries(visibleOrdered.value[period], getDeferredTodoIds(period))]),
+    TODO_PERIODS.map((period) => [period, buildTodoListEntries(period, visibleOrdered.value[period], getDeferredTodoIds(period))]),
   ) as Record<TodoPeriod, TodoListEntry[]>,
 );
 
@@ -700,12 +700,12 @@ function getDeferredTodoIds(period: TodoPeriod): Set<string> {
   );
 }
 
-function buildTodoListEntries(todos: TodoItem[], deferredDoneIds: ReadonlySet<string> = new Set()): TodoListEntry[] {
+function buildTodoListEntries(period: TodoPeriod, todos: TodoItem[], deferredDoneIds: ReadonlySet<string>): TodoListEntry[] {
   const entries: TodoListEntry[] = [];
   let completedDividerAdded = false;
   todos.forEach((todo) => {
     if (todo.done && !deferredDoneIds.has(todo.id) && !completedDividerAdded) {
-      entries.push({ type: "divider", id: `completed-${todo.id}` });
+      entries.push({ type: "divider", id: `completed-${todo.id}`, period });
       completedDividerAdded = true;
     }
     entries.push({ type: "todo", todo });
@@ -894,7 +894,14 @@ function buildTodoListEntries(todos: TodoItem[], deferredDoneIds: ReadonlySet<st
               v-else
               class="todo-completed-divider"
             >
-              已完成
+              <span>已完成</span>
+              <button
+                class="todo-completed-clear"
+                type="button"
+                @click.stop="emit('clearCompleted', entry.period, $event.currentTarget as HTMLElement)"
+              >
+                clear
+              </button>
             </li>
           </template>
         </TransitionGroup>
