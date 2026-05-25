@@ -14,6 +14,7 @@ const DEADLINE_TIME_LABELS: Record<DeadlineTimeOption, string> = {
 
 export interface DeadlineDisplay {
   label: string;
+  compactLabel: string;
   urgency: DeadlineUrgency;
 }
 
@@ -64,6 +65,7 @@ export function getDeadlineDisplay(deadlineAt: number | undefined, now = Date.no
   if (deadlineAt < now) {
     return {
       label: "! 已超期",
+      compactLabel: "! 已超期",
       urgency: "overdue",
     };
   }
@@ -72,10 +74,12 @@ export function getDeadlineDisplay(deadlineAt: number | undefined, now = Date.no
   const dayDistance = getLocalDayDistance(now, deadlineAt);
   const isWithinDueSoonWindow = deadlineAt - now <= ONE_DAY_MS;
   const timeLabel = getDisplayTimeLabel(deadlineDate);
+  const compactTimeLabel = getCompactTimeLabel(deadlineDate);
 
   if (isWithinDueSoonWindow && dayDistance === 0) {
     return {
       label: `今天${timeLabel}`,
+      compactLabel: `今天 ${compactTimeLabel}`,
       urgency: "due-soon",
     };
   }
@@ -83,6 +87,7 @@ export function getDeadlineDisplay(deadlineAt: number | undefined, now = Date.no
   if (isWithinDueSoonWindow && dayDistance === 1) {
     return {
       label: `明天${timeLabel}`,
+      compactLabel: `明天 ${compactTimeLabel}`,
       urgency: "due-soon",
     };
   }
@@ -90,12 +95,14 @@ export function getDeadlineDisplay(deadlineAt: number | undefined, now = Date.no
   if (dayDistance <= 3) {
     return {
       label: `${dayDistance}天后 ${timeLabel}`,
+      compactLabel: `${dayDistance}天后 ${compactTimeLabel}`,
       urgency: "upcoming",
     };
   }
 
   return {
     label: `${deadlineDate.getMonth() + 1}/${deadlineDate.getDate()} ${timeLabel}`,
+    compactLabel: `${deadlineDate.getMonth() + 1}/${deadlineDate.getDate()} ${compactTimeLabel}`,
     urgency: "later",
   };
 }
@@ -138,6 +145,10 @@ function getDisplayTimeLabel(date: Date): string {
   if (hour === 12) return "中午 12:00";
   if (hour <= 18) return `下午 ${hour - 12}:00`;
   return `晚上 ${hour - 12}:00`;
+}
+
+function getCompactTimeLabel(date: Date): string {
+  return String(date.getHours()).padStart(2, "0");
 }
 
 function getLocalDayDistance(from: number, to: number): number {

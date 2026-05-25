@@ -331,9 +331,9 @@ describe("TodoPanel", () => {
       try {
         expect(wrapper.findAll(".todo-deadline-label").map((item) => item.text())).toEqual([
           "! 已超期",
-          "今天下午 6:00",
-          "2天后 下午 6:00",
-          "6/2 下午 6:00",
+          "今天 18",
+          "2天后 18",
+          "6/2 18",
           "! 已超期",
           "今天下午 6:00",
           "2天后 下午 6:00",
@@ -426,13 +426,13 @@ describe("TodoPanel", () => {
     });
 
     try {
-      expect(wrapper.find(".todo-deadline-label").text()).toBe("今天上午 10:00");
+      expect(wrapper.find(".todo-item .todo-deadline-label").text()).toBe("今天上午 10:00");
 
       vi.setSystemTime(new Date(2026, 4, 25, 10, 0, 31));
       await vi.advanceTimersByTimeAsync(60_000);
       await wrapper.vm.$nextTick();
 
-      expect(wrapper.find(".todo-deadline-label").text()).toBe("! 已超期");
+      expect(wrapper.find(".todo-item .todo-deadline-label").text()).toBe("! 已超期");
     } finally {
       wrapper.unmount();
       vi.useRealTimers();
@@ -474,7 +474,7 @@ describe("TodoPanel", () => {
 
     try {
       expect(wrapper.find(".todo-item .todo-deadline-label").text()).toBe("今天下午 6:00");
-      expect(wrapper.find(".today-focus-item .todo-deadline-label").text()).toBe("今天下午 6:00");
+      expect(wrapper.find(".today-focus-item .todo-deadline-label").text()).toBe("今天 18");
 
       const urgencyClasses = ["deadline-overdue", "deadline-due-soon", "deadline-upcoming", "deadline-later"];
       expect(wrapper.get(".todo-item").classes()).not.toEqual(expect.arrayContaining(urgencyClasses));

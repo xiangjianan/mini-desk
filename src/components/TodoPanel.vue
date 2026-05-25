@@ -502,6 +502,10 @@ function getTodoDeadlineLabel(todo: TodoItem): string | null {
   return getTodoDeadline(todo)?.label ?? null;
 }
 
+function getTodoCompactDeadlineLabel(todo: TodoItem): string | null {
+  return getTodoDeadline(todo)?.compactLabel ?? null;
+}
+
 function compareTodayFocusEntries(left: TodayFocusEntry, right: TodayFocusEntry): number {
   const doneDiff = Number(left.todo.done) - Number(right.todo.done);
   if (doneDiff !== 0) return doneDiff;
@@ -745,10 +749,10 @@ function buildTodoListEntries(todos: TodoItem[], deferredDoneIds: ReadonlySet<st
           />
           <span class="todo-deadline-slot">
             <span
-              v-if="getTodoDeadlineLabel(item.todo)"
+              v-if="getTodoCompactDeadlineLabel(item.todo)"
               class="todo-deadline-label"
             >
-              {{ getTodoDeadlineLabel(item.todo) }}
+              {{ getTodoCompactDeadlineLabel(item.todo) }}
             </span>
           </span>
           <button

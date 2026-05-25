@@ -52,22 +52,27 @@ describe("deadline helpers", () => {
 
     expect(getDeadlineDisplay(new Date(2026, 4, 25, 9).getTime(), now)).toEqual({
       label: "! 已超期",
+      compactLabel: "! 已超期",
       urgency: "overdue",
     });
     expect(getDeadlineDisplay(new Date(2026, 4, 25, 18).getTime(), now)).toEqual({
       label: "今天下午 6:00",
+      compactLabel: "今天 18",
       urgency: "due-soon",
     });
     expect(getDeadlineDisplay(new Date(2026, 4, 26, 9).getTime(), now)).toEqual({
       label: "明天上午 9:00",
+      compactLabel: "明天 09",
       urgency: "due-soon",
     });
     expect(getDeadlineDisplay(new Date(2026, 4, 27, 18).getTime(), now)).toEqual({
       label: "2天后 下午 6:00",
+      compactLabel: "2天后 18",
       urgency: "upcoming",
     });
     expect(getDeadlineDisplay(new Date(2026, 5, 2, 18).getTime(), now)).toEqual({
       label: "6/2 下午 6:00",
+      compactLabel: "6/2 18",
       urgency: "later",
     });
   });
@@ -77,6 +82,7 @@ describe("deadline helpers", () => {
 
     expect(getDeadlineDisplay(new Date(2026, 4, 26, 23).getTime(), now)).toEqual({
       label: "1天后 晚上 11:00",
+      compactLabel: "1天后 23",
       urgency: "upcoming",
     });
   });
