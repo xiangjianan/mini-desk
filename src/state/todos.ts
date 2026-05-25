@@ -132,6 +132,8 @@ export function moveTodo(
   destinationPeriod: TodoPeriod,
   targetId?: string,
 ): TodoMap {
+  if (sourcePeriod === destinationPeriod && id === targetId) return todos;
+
   const next = cloneTodoMap(todos);
   const source = next[sourcePeriod];
   if (!source) return next;
@@ -168,7 +170,8 @@ export function reorderTodoLists(
   if (sourceIndex < 0 || targetIndex < 0 || sourceIndex === targetIndex) return lists;
   const next = lists.map((list) => ({ ...list }));
   const [item] = next.splice(sourceIndex, 1);
-  next.splice(targetIndex, 0, item);
+  const nextTargetIndex = next.findIndex((list) => list.id === targetId);
+  next.splice(nextTargetIndex, 0, item);
   return next;
 }
 

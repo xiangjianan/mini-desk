@@ -392,6 +392,40 @@ describe("todo behavior", () => {
     expect(reordered.map((list) => list.id)).toEqual(["c", "a", "b"]);
     expect(Object.keys(removed.todos)).toEqual(["a", "c"]);
     expect(removed.todos.a[0].text).toBe("A");
+    expect(removed.showCompletedTodos).toEqual({ a: false, c: false });
+  });
+
+  it("leaves todo order unchanged when moving a todo onto itself", () => {
+    const todos = {
+      custom: [
+        { id: "a", text: "A", done: false },
+        { id: "b", text: "B", done: false },
+        { id: "c", text: "C", done: false },
+      ],
+    };
+
+    const moved = moveTodo(todos, "custom", "b", "custom", "b");
+
+    expect(moved.custom.map((todo) => todo.id)).toEqual(["a", "b", "c"]);
+  });
+
+  it("reorders configurable todo lists before the target when moving downward", () => {
+    const state = normalizeImportedState({
+      todoLists: [
+        { id: "a", title: "A" },
+        { id: "b", title: "B" },
+        { id: "c", title: "C" },
+      ],
+      todos: {
+        a: [],
+        b: [],
+        c: [],
+      },
+    });
+
+    const reordered = reorderTodoLists(state.todoLists, "a", "c");
+
+    expect(reordered.map((list) => list.id)).toEqual(["b", "a", "c"]);
   });
 
   it("keeps completed todos at the bottom", () => {
