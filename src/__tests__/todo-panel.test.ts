@@ -101,6 +101,37 @@ describe("TodoPanel", () => {
     expect(wrapper.emitted("updateListTitle")?.[0]).toEqual(["morning", "上午"]);
   });
 
+  it("uses legacy titles and titleUpdate events when todoLists are omitted", async () => {
+    const wrapper = mount(TodoPanel, {
+      props: {
+        todos: { morning: [], noon: [], evening: [] },
+        showCompleted: { morning: false, noon: false, evening: false },
+        titles: {
+          ...DEFAULT_TITLES,
+          "todo-morning-title": "🌅 自定义早上",
+        },
+      },
+      global: {
+        stubs: {
+          Checkbox: checkboxStub,
+          Dropdown: dropdownStub,
+          NCheckbox: checkboxStub,
+          NDropdown: dropdownStub,
+          NTooltip: tooltipStub,
+        },
+      },
+    });
+
+    expect(wrapper.get('.todo-section[data-list-id="morning"] .editable-title').text()).toBe("🌅 自定义早上");
+
+    await wrapper.get('.todo-section[data-list-id="morning"] .editable-title').trigger("dblclick");
+    await wrapper.get('.todo-section[data-list-id="morning"] .title-edit-input').setValue("上午计划");
+    await wrapper.get('.todo-section[data-list-id="morning"] .title-edit-input').trigger("blur");
+
+    expect(wrapper.emitted("titleUpdate")?.[0]).toEqual(["todo-morning-title", "上午计划"]);
+    expect(wrapper.emitted("updateListTitle")).toBeUndefined();
+  });
+
   it("emits collapse compact delete and list reorder actions", async () => {
     const wrapper = mount(TodoPanel, {
       props: {

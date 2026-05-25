@@ -316,9 +316,9 @@ describe("Naive UI component usage", () => {
   it("keeps blank reminder hints outside the moving todo transition list", () => {
     const todo = read("src/components/TodoPanel.vue");
 
-    expect(todo).not.toMatch(/<TransitionGroup[\s\S]*v-if="listEntries\[period\]\.length === 0"[\s\S]*<\/TransitionGroup>/);
-    expect(todo).toContain('v-if="listEntries[period].length === 0"');
-    expect(todo).toContain('v-else');
+    expect(todo).not.toMatch(/<TransitionGroup[\s\S]*v-if="!list\.collapsed && listEntries\[list\.id\]\.length === 0"[\s\S]*<\/TransitionGroup>/);
+    expect(todo).toContain('v-if="!list.collapsed && listEntries[list.id].length === 0"');
+    expect(todo).toContain('v-else-if="!list.collapsed"');
   });
 
   it("uses a clear separated drag handle for reminder rows", () => {

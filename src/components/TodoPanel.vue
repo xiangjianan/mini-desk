@@ -93,7 +93,18 @@ const lastTodoCarets = new Map<string, number>();
 const lastTodoSelections = new Map<string, { start: number; end: number }>();
 const todoSectionRefs = new Map<TodoListId, HTMLElement>();
 const guideMenuOption: DropdownOption = { ...GUIDE_MENU_OPTION, label: GUIDE_MENU_OPTION.label || "Tips" };
-const effectiveTodoLists = computed(() => props.todoLists ?? DEFAULT_TODO_LISTS);
+const legacyTodoTitleIds: Record<TodoListId, string> = {
+  morning: "todo-morning-title",
+  noon: "todo-noon-title",
+  evening: "todo-evening-title",
+};
+const effectiveTodoLists = computed(() => {
+  if (props.todoLists) return props.todoLists;
+  return DEFAULT_TODO_LISTS.map((list) => ({
+    ...list,
+    title: getFallbackListTitle(list),
+  }));
+});
 const menuOptions = computed<DropdownOption[]>(() => {
   if (menu.value?.sectionActions) {
     const list = getListById(menu.value.period);
@@ -383,6 +394,17 @@ function closeMenu(): void {
   selectedMenuTodoKey.value = null;
 }
 
+function handleListTitleUpdate(listId: TodoListId, value: string): void {
+  if (!props.todoLists) {
+    const legacyTitleId = legacyTodoTitleIds[listId];
+    if (legacyTitleId) {
+      emit("titleUpdate", legacyTitleId, value);
+      return;
+    }
+  }
+  emit("updateListTitle", listId, value);
+}
+
 function handleStarClick(event: MouseEvent, period: TodoPeriod, todo: TodoItem): void {
   event.preventDefault();
   event.stopPropagation();
@@ -551,6 +573,11 @@ function getTodoById(period: TodoPeriod, id: string): TodoItem | undefined {
 
 function getListById(listId: TodoListId): TodoListConfig | undefined {
   return effectiveTodoLists.value.find((list) => list.id === listId);
+}
+
+function getFallbackListTitle(list: TodoListConfig): string {
+  const legacyTitleId = legacyTodoTitleIds[list.id];
+  return legacyTitleId ? props.titles[legacyTitleId] ?? list.title : list.title;
 }
 
 function isTodoHighlighted(period: TodoPeriod, id: string): boolean {
@@ -868,7 +895,7 @@ function buildTodoListEntries(period: TodoListId, todos: TodoItem[], deferredDon
             <EditableTitle
               :id="list.id"
               :value="list.title"
-              @update="(_id, value) => emit('updateListTitle', list.id, value)"
+              @update="(_id, value) => handleListTitleUpdate(list.id, value)"
             />
           </h3>
           <div class="todo-heading-actions">
