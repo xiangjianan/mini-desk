@@ -38,7 +38,7 @@ import {
   getStoredAppVersion,
   markAppVersionSeen,
 } from "./state/version";
-import type { BoardState, DraggedTodo, GuideKey, LineItem, QuickButtonType, StoredImage, TodoPeriod, TodoStarChange } from "./types";
+import type { BoardState, CompanionGifTheme, DraggedTodo, GuideKey, LineItem, QuickButtonType, StoredImage, TodoPeriod, TodoStarChange } from "./types";
 
 const MOBILE_BREAKPOINT_QUERY = "(max-width: 900px)";
 const MOBILE_HANDOFF_MESSAGE = "建议在电脑浏览器打开，以获得完整体验 (｡•̀ᴗ-)✧";
@@ -954,6 +954,12 @@ function handleThemeClick(): void {
   hideCompanion();
 }
 
+function updateCompanionGifTheme(theme: CompanionGifTheme, anchor?: HTMLElement): void {
+  state.companionGifTheme = theme;
+  persistNow();
+  showBubbleText(theme === "none" ? "已关闭 GIF" : "已切换 GIF 主题", anchor);
+}
+
 function applyTheme(): void {
   document.documentElement.dataset.theme = state.theme;
 }
@@ -1566,6 +1572,7 @@ function moveItem<T extends { id: string }>(items: T[], dragId: string, targetId
       :persistent="isMobileBlocked"
       :position="activeCompanionPosition"
       :theme="state.theme"
+      :gif-theme="state.companionGifTheme"
       @yes="confirmCompanionAction"
       @no="cancelCompanionAction"
       @pause="pauseBubbleTimer"
@@ -1576,11 +1583,13 @@ function moveItem<T extends { id: string }>(items: T[], dragId: string, targetId
       <SettingsMenu
         :app-version="appVersion"
         :update-available="versionPromptVisible"
+        :companion-gif-theme="state.companionGifTheme"
         @export="exportData"
         @import="requestImport"
         @about="about"
         @suggest="suggestIssue"
         @update="updateStaticVersion"
+        @gif-theme="updateCompanionGifTheme"
         @guide="handleGuideClick"
       />
       <NButton quaternary size="small" class="theme-btn icon-button" aria-label="切换主题" @click="handleThemeClick">

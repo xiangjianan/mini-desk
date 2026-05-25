@@ -49,12 +49,19 @@ describe("Naive UI component usage", () => {
   it("uses Naive popover primitives for the reusable companion bubble", () => {
     const companion = read("src/components/CompanionBubble.vue");
     const app = read("src/App.vue");
+    const settings = read("src/components/SettingsMenu.vue");
 
     expect(companion).toContain("NPopover");
     expect(companion).toContain("NButton");
     expect(companion).toContain("hermes-dark.gif");
     expect(companion).toContain(":src=\"gifSrc\"");
     expect(app).toContain(":theme=\"state.theme\"");
+    expect(app).toContain(':gif-theme="state.companionGifTheme"');
+    expect(settings).toContain("companionGifTheme");
+    expect(settings).toContain("gifTheme");
+    expect(settings).toContain("GIF 主题");
+    expect(companion).toContain("gifTheme");
+    expect(companion).toContain("shouldRenderGif");
     expect(companion).toContain("popoverKey");
     expect(companion).toContain("POPOVER_DELAY_MS = 200");
     expect(companion).toContain("delayedPopoverVisible");

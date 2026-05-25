@@ -1,6 +1,7 @@
 import { mount } from "@vue/test-utils";
 import { beforeEach, describe, expect, it, vi } from "vitest";
 import App from "../App.vue";
+import CompanionBubble from "../components/CompanionBubble.vue";
 import ImagePanel from "../components/ImagePanel.vue";
 import ImagePreview from "../components/ImagePreview.vue";
 import QuickButtons from "../components/QuickButtons.vue";
@@ -3026,5 +3027,38 @@ describe("App shell", () => {
     );
 
     wrapper.unmount();
+  });
+
+  it("persists companion GIF theme selections from settings", async () => {
+    const wrapper = mountApp();
+
+    try {
+      wrapper.getComponent(SettingsMenu).vm.$emit("gifTheme", "none", wrapper.getComponent(SettingsMenu).element as HTMLElement);
+      await wrapper.vm.$nextTick();
+
+      expect(wrapper.getComponent(SettingsMenu).props("companionGifTheme")).toBe("none");
+      expect(JSON.parse(localStorage.getItem(STORAGE_KEY) || "{}").companionGifTheme).toBe("none");
+      expect(wrapper.getComponent(CompanionBubble).props("gifTheme")).toBe("none");
+    } finally {
+      wrapper.unmount();
+    }
+  });
+
+  it("shows guide bubble content without a GIF when GIF theme is none", async () => {
+    vi.useFakeTimers();
+    localStorage.setItem(STORAGE_KEY, JSON.stringify({ companionGifTheme: "none" }));
+    const wrapper = mountApp();
+
+    try {
+      await wrapper.get(".image-panel").trigger("click");
+      await vi.advanceTimersByTimeAsync(200);
+      await wrapper.vm.$nextTick();
+
+      expect(wrapper.find(".focus-companion img").exists()).toBe(false);
+      expect(wrapper.find('[data-testid="companion-confirm"]').exists()).toBe(true);
+    } finally {
+      wrapper.unmount();
+      vi.useRealTimers();
+    }
   });
 });
