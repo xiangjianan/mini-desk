@@ -241,7 +241,10 @@ function handleTodoTextDrop(event: DragEvent, period: TodoPeriod): void {
 }
 
 function handleTodoItemDrop(event: DragEvent, period: TodoPeriod, targetId: string): void {
-  if (!dragged.value) return;
+  if (!dragged.value) {
+    handleTodoTextDrop(event, period);
+    return;
+  }
   event.preventDefault();
   event.stopPropagation();
   emit("move", dragged.value, period, targetId);

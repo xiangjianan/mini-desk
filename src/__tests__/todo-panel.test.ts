@@ -1937,7 +1937,7 @@ describe("TodoPanel", () => {
         },
       },
     });
-    const event = new Event("drop", { bubbles: true }) as DragEvent;
+    const event = new Event("drop") as DragEvent;
     Object.defineProperty(event, "dataTransfer", {
       value: {
         files: [],
