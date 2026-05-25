@@ -190,6 +190,7 @@ describe("TodoPanel", () => {
     await wrapper.get(".todo-completed-clear").trigger("click");
 
     expect(wrapper.emitted("clearCompleted")?.[0]).toEqual(["morning", expect.any(HTMLElement)]);
+    expect(wrapper.emitted("create")).toBeUndefined();
   });
 
   it("uses a period three-dot menu for completed visibility and clearing", async () => {

@@ -249,29 +249,24 @@ describe("QuickButtons", () => {
     wrapper.unmount();
   });
 
+  it("emits delete from the quick-button context menu", async () => {
+    const wrapper = mountQuickButtons({
+      buttons: [{ id: "quick-1", title: "片段", value: "第一行\n第二行", type: "text", hidden: false }],
+    });
+
+    await wrapper.get(".quick-button").trigger("contextmenu");
+    await wrapper.findAll(".dropdown-option").find((option) => option.text() === "删除")?.trigger("click");
+
+    expect(wrapper.emitted("delete")?.[0]).toEqual(["quick-1", expect.any(HTMLElement)]);
+
+    wrapper.unmount();
+  });
+
   it("shows cancel instead of delete in the edit dialog", async () => {
-    const wrapper = mount(QuickButtons, {
-      props: {
-        title: "快捷按钮",
-        showHidden: true,
-        buttons: [{ id: "a", title: "链接", value: "https://example.com", type: "link", hidden: false }],
-      },
-      global: {
-        stubs: {
-          Button: { template: '<button type="button"><slot /></button>' },
-          Checkbox: true,
-          Dropdown: dropdownStub,
-          Icon: true,
-          Input: true,
-          Modal: { template: '<div><slot /></div>' },
-          NButton: { template: '<button type="button"><slot /></button>' },
-          NCheckbox: true,
-          NDropdown: dropdownStub,
-          NIcon: true,
-          NInput: true,
-          NModal: { template: '<div><slot /></div>' },
-        },
-      },
+    const wrapper = mountQuickButtons({
+      title: "快捷按钮",
+      showHidden: true,
+      buttons: [{ id: "a", title: "链接", value: "https://example.com", type: "link", hidden: false }],
     });
 
     await wrapper.get(".quick-button").trigger("contextmenu");
@@ -279,5 +274,13 @@ describe("QuickButtons", () => {
 
     expect(wrapper.text()).toContain("取消");
     expect(wrapper.text()).not.toContain("删除");
+    expect(wrapper.find(".quick-dialog").exists()).toBe(true);
+
+    await wrapper.findAll("button").find((button) => button.text() === "取消")?.trigger("click");
+
+    expect(wrapper.find(".quick-dialog").exists()).toBe(false);
+    expect(wrapper.emitted("delete")).toBeUndefined();
+
+    wrapper.unmount();
   });
 });
