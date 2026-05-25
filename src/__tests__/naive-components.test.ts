@@ -205,6 +205,22 @@ describe("Naive UI component usage", () => {
     expect(styles).toMatch(/\.quick-menu-button:hover,[\s\S]*?\.todo-section-menu-button:focus-visible\s*\{[^}]*border-right-color: var\(--line-main\)/s);
   });
 
+  it("styles configurable reminder list controls and compact collapsed states", () => {
+    const todo = read("src/components/TodoPanel.vue");
+    const styles = read("src/styles.css");
+
+    expect(todo).toContain("todo-add-list-button");
+    expect(todo).toContain("todo-list-drag-handle");
+    expect(todo).toContain("is-collapsed");
+    expect(todo).toContain("is-compact");
+    expect(styles).toMatch(/\.todo-add-list-button\s*\{[^}]*height: 34px/s);
+    expect(styles).toMatch(/\.todo-add-list-button\s*\{[^}]*border-bottom: 1px solid var\(--line-section\)/s);
+    expect(styles).toMatch(/\.todo-list-drag-handle\s*\{[^}]*cursor: grab/s);
+    expect(styles).toMatch(/\.todo-section\.is-collapsed\s*\{[^}]*flex: 0 0 auto/s);
+    expect(styles).toMatch(/\.todo-section\.is-compact\s*\{[^}]*flex: 0 0 auto/s);
+    expect(styles).toMatch(/\.todo-section\.is-compact \.todo-list\s*\{[^}]*max-height: 136px/s);
+  });
+
   it("keeps top-right status plain while icon buttons stay flush as a one-pixel segmented control", () => {
     const styles = read("src/styles.css");
 

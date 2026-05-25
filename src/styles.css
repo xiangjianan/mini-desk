@@ -593,6 +593,27 @@ h3 {
   min-height: 0;
 }
 
+.todo-add-list-button {
+  flex: 0 0 34px;
+  width: 100%;
+  min-width: 0;
+  height: 34px;
+  min-height: 34px;
+  margin: 0;
+  border-top: 0;
+  border-right: 0;
+  border-left: 0;
+  border-bottom: 1px solid var(--line-section);
+  color: var(--muted);
+  background: var(--panel);
+}
+
+.todo-add-list-button:hover,
+.todo-add-list-button:focus-visible {
+  color: var(--text);
+  border-bottom-color: var(--line-focus);
+}
+
 .today-focus-section {
   flex: 0 0 auto;
   border-bottom: 0;
@@ -651,6 +672,15 @@ h3 {
   border-bottom: 1px solid var(--line-main);
 }
 
+.todo-section.is-collapsed {
+  flex: 0 0 auto;
+  min-height: 34px;
+}
+
+.todo-section.is-compact {
+  flex: 0 0 auto;
+}
+
 .todo-section:last-child {
   border-bottom: 0;
 }
@@ -659,6 +689,11 @@ h3 {
   list-style: none;
   padding: 0;
   margin: 0;
+}
+
+.todo-section.is-compact .todo-list {
+  flex: 0 1 auto;
+  max-height: 136px;
 }
 
 .todo-empty-list {
@@ -692,6 +727,19 @@ h3 {
   grid-template-columns: 14px 28px minmax(0, 1fr) minmax(0, 64px) 24px;
 }
 
+.todo-section.is-compact .todo-item,
+.todo-section.is-compact .todo-input,
+.todo-section.is-compact .todo-deadline-slot,
+.todo-section.is-compact .todo-drag-handle {
+  height: 30px;
+  min-height: 30px;
+}
+
+.todo-section.is-compact .todo-empty-hint {
+  min-height: 30px;
+  line-height: 30px;
+}
+
 .today-focus-item::after,
 .todo-item::after {
   content: "";
@@ -713,6 +761,43 @@ h3 {
 
 .today-focus-section + .todo-sections .todo-section:first-child .todo-heading {
   border-top: 1px solid var(--line-section);
+}
+
+.todo-heading > h3 {
+  flex: 1 1 auto;
+}
+
+.todo-list-drag-handle {
+  position: relative;
+  flex: 0 0 20px;
+  width: 20px;
+  min-width: 20px;
+  height: 34px;
+  min-height: 34px;
+  padding: 0;
+  border: 0;
+  border-right: 1px solid var(--line-subtle);
+  background: transparent;
+  cursor: grab;
+  opacity: 0.34;
+}
+
+.todo-list-drag-handle::before {
+  content: "";
+  position: absolute;
+  inset: 7px 6px;
+  background-image: radial-gradient(circle, var(--muted) 1px, transparent 1.5px);
+  background-size: 4px 4px;
+}
+
+.todo-section:hover .todo-list-drag-handle,
+.todo-list-drag-handle:focus-visible,
+.todo-list-drag-handle:active {
+  opacity: 0.9;
+}
+
+.todo-list-drag-handle:active {
+  cursor: grabbing;
 }
 
 .todo-drag-handle {
