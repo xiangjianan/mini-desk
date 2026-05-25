@@ -1,10 +1,10 @@
-export const DEADLINE_TIME_OPTIONS = ["09:00", "12:00", "15:00", "18:00", "21:00"] as const;
-export const DEFAULT_DEADLINE_TIME = "09:00";
+export const NOTIFY_TIME_OPTIONS = ["09:00", "12:00", "15:00", "18:00", "21:00"] as const;
+export const DEFAULT_NOTIFY_TIME = "09:00";
 
-export type DeadlineTimeOption = typeof DEADLINE_TIME_OPTIONS[number];
-export type DeadlineUrgency = "overdue" | "due-soon" | "upcoming" | "later";
+export type NotifyTimeOption = typeof NOTIFY_TIME_OPTIONS[number];
+export type NotifyUrgency = "overdue" | "due-soon" | "upcoming" | "later";
 
-const DEADLINE_TIME_LABELS: Record<DeadlineTimeOption, string> = {
+const NOTIFY_TIME_LABELS: Record<NotifyTimeOption, string> = {
   "09:00": "上午 9 点",
   "12:00": "中午 12 点",
   "15:00": "下午 3 点",
@@ -12,11 +12,17 @@ const DEADLINE_TIME_LABELS: Record<DeadlineTimeOption, string> = {
   "21:00": "晚上 9 点",
 };
 
-export interface DeadlineDisplay {
+export interface NotifyDisplay {
   label: string;
   compactLabel: string;
-  urgency: DeadlineUrgency;
+  urgency: NotifyUrgency;
 }
+
+export const DEADLINE_TIME_OPTIONS = NOTIFY_TIME_OPTIONS;
+export const DEFAULT_DEADLINE_TIME = DEFAULT_NOTIFY_TIME;
+export type DeadlineTimeOption = NotifyTimeOption;
+export type DeadlineUrgency = NotifyUrgency;
+export type DeadlineDisplay = NotifyDisplay;
 
 const DATE_INPUT_PATTERN = /^(\d{4})-(\d{2})-(\d{2})$/;
 const WHOLE_HOUR_PATTERN = /^([01]\d|2[0-3]):00$/;
@@ -29,7 +35,7 @@ export function getLocalDateInputValue(date = new Date()): string {
   return `${year}-${month}-${day}`;
 }
 
-export function createDeadlineAt(dateValue: string, timeValue = DEFAULT_DEADLINE_TIME): number | null {
+export function createNotifyAt(dateValue: string, timeValue = DEFAULT_NOTIFY_TIME): number | null {
   const parsedDate = parseLocalDateValue(dateValue);
   const parsedHour = parseWholeHourValue(timeValue);
   if (!parsedDate || parsedHour === null) return null;
@@ -37,8 +43,8 @@ export function createDeadlineAt(dateValue: string, timeValue = DEFAULT_DEADLINE
   return new Date(parsedDate.year, parsedDate.month - 1, parsedDate.day, parsedHour, 0, 0, 0).getTime();
 }
 
-export function getDefaultDeadlineSelection(now = new Date()): { date: string; time: DeadlineTimeOption } {
-  const nextToday = DEADLINE_TIME_OPTIONS.find((time) => {
+export function getDefaultNotifySelection(now = new Date()): { date: string; time: NotifyTimeOption } {
+  const nextToday = NOTIFY_TIME_OPTIONS.find((time) => {
     const hour = parseWholeHourValue(time);
     if (hour === null) return false;
     const candidate = new Date(now.getFullYear(), now.getMonth(), now.getDate(), hour, 0, 0, 0);
@@ -55,14 +61,14 @@ export function getDefaultDeadlineSelection(now = new Date()): { date: string; t
   const tomorrow = new Date(now.getFullYear(), now.getMonth(), now.getDate() + 1);
   return {
     date: getLocalDateInputValue(tomorrow),
-    time: DEFAULT_DEADLINE_TIME,
+    time: DEFAULT_NOTIFY_TIME,
   };
 }
 
-export function getDeadlineDisplay(deadlineAt: number | undefined, now = Date.now()): DeadlineDisplay | null {
-  if (!isValidDeadlineAt(deadlineAt) || !isValidDeadlineAt(now)) return null;
+export function getNotifyDisplay(notifyAt: number | undefined, now = Date.now()): NotifyDisplay | null {
+  if (!isValidNotifyAt(notifyAt) || !isValidNotifyAt(now)) return null;
 
-  if (deadlineAt < now) {
+  if (notifyAt < now) {
     return {
       label: "! 已超期",
       compactLabel: "! 已超期",
@@ -70,11 +76,11 @@ export function getDeadlineDisplay(deadlineAt: number | undefined, now = Date.no
     };
   }
 
-  const deadlineDate = new Date(deadlineAt);
-  const dayDistance = getLocalDayDistance(now, deadlineAt);
-  const isWithinDueSoonWindow = deadlineAt - now <= ONE_DAY_MS;
-  const timeLabel = getDisplayTimeLabel(deadlineDate);
-  const compactTimeLabel = getCompactTimeLabel(deadlineDate);
+  const notifyDate = new Date(notifyAt);
+  const dayDistance = getLocalDayDistance(now, notifyAt);
+  const isWithinDueSoonWindow = notifyAt - now <= ONE_DAY_MS;
+  const timeLabel = getDisplayTimeLabel(notifyDate);
+  const compactTimeLabel = getCompactTimeLabel(notifyDate);
 
   if (isWithinDueSoonWindow && dayDistance === 0) {
     return {
@@ -101,19 +107,25 @@ export function getDeadlineDisplay(deadlineAt: number | undefined, now = Date.no
   }
 
   return {
-    label: `${deadlineDate.getMonth() + 1}/${deadlineDate.getDate()} ${timeLabel}`,
-    compactLabel: `${deadlineDate.getMonth() + 1}/${deadlineDate.getDate()} ${compactTimeLabel}`,
+    label: `${notifyDate.getMonth() + 1}/${notifyDate.getDate()} ${timeLabel}`,
+    compactLabel: `${notifyDate.getMonth() + 1}/${notifyDate.getDate()} ${compactTimeLabel}`,
     urgency: "later",
   };
 }
 
-export function getDeadlineTimeLabel(time: DeadlineTimeOption): string {
-  return DEADLINE_TIME_LABELS[time];
+export function getNotifyTimeLabel(time: NotifyTimeOption): string {
+  return NOTIFY_TIME_LABELS[time];
 }
 
-export function isValidDeadlineAt(value: unknown): value is number {
+export function isValidNotifyAt(value: unknown): value is number {
   return typeof value === "number" && Number.isFinite(value) && value >= 0;
 }
+
+export const createDeadlineAt = createNotifyAt;
+export const getDefaultDeadlineSelection = getDefaultNotifySelection;
+export const getDeadlineDisplay = getNotifyDisplay;
+export const getDeadlineTimeLabel = getNotifyTimeLabel;
+export const isValidDeadlineAt = isValidNotifyAt;
 
 function parseLocalDateValue(dateValue: string): { year: number; month: number; day: number } | null {
   const match = DATE_INPUT_PATTERN.exec(dateValue);

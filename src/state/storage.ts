@@ -258,8 +258,13 @@ function normalizeTodo(item: unknown): TodoItem | null {
     done: Boolean(record.done),
     starred,
   };
-  if (starred && isValidDeadlineAt(record.deadlineAt)) {
-    todo.deadlineAt = record.deadlineAt;
+  const notifyAt = isValidDeadlineAt(record.notifyAt)
+    ? record.notifyAt
+    : isValidDeadlineAt(record.deadlineAt)
+      ? record.deadlineAt
+      : undefined;
+  if (isValidDeadlineAt(notifyAt)) {
+    todo.notifyAt = notifyAt;
   }
   return todo;
 }
@@ -275,10 +280,23 @@ function normalizeStringRecord(value: unknown): Record<string, string> {
 
 function cloneTodos(todos: TodoMap): TodoMap {
   return {
-    morning: todos.morning.map((todo) => ({ ...todo })),
-    noon: todos.noon.map((todo) => ({ ...todo })),
-    evening: todos.evening.map((todo) => ({ ...todo })),
+    morning: todos.morning.map(cloneTodo),
+    noon: todos.noon.map(cloneTodo),
+    evening: todos.evening.map(cloneTodo),
   };
+}
+
+function cloneTodo(todo: TodoItem): TodoItem {
+  const next: TodoItem = {
+    id: todo.id,
+    text: todo.text,
+    done: todo.done,
+    starred: Boolean(todo.starred),
+  };
+  if (isValidDeadlineAt(todo.notifyAt)) {
+    next.notifyAt = todo.notifyAt;
+  }
+  return next;
 }
 
 function cloneLines(lines: LineItem[]): LineItem[] {

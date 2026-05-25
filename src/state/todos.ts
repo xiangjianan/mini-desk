@@ -73,19 +73,30 @@ export function starTodo(
   period: TodoPeriod,
   id: string,
   starred: boolean,
-  deadlineAt?: number,
+  _legacyDeadlineAt?: number,
 ): TodoMap {
   const next = cloneTodoMap(todos);
   const todo = next[period].find((item) => item.id === id);
   if (!todo) return next;
   todo.starred = starred;
-  if (!starred) {
-    delete todo.deadlineAt;
-  } else if (isValidDeadlineAt(deadlineAt)) {
-    todo.deadlineAt = deadlineAt;
+  return next;
+}
+
+export function setTodoNotifyAt(
+  todos: TodoMap,
+  period: TodoPeriod,
+  id: string,
+  notifyAt?: number,
+): TodoMap {
+  const next = cloneTodoMap(todos);
+  const todo = next[period].find((item) => item.id === id);
+  if (!todo) return next;
+  if (isValidDeadlineAt(notifyAt)) {
+    todo.notifyAt = notifyAt;
   } else {
-    delete todo.deadlineAt;
+    delete todo.notifyAt;
   }
+  delete todo.deadlineAt;
   return next;
 }
 
@@ -141,17 +152,12 @@ function prioritizeStarred(todos: TodoItem[]): TodoItem[] {
       const leftRank = getOpenTodoRank(left.todo);
       const rightRank = getOpenTodoRank(right.todo);
       if (leftRank !== rightRank) return leftRank - rightRank;
-      if (leftRank === 0) {
-        const deadlineDiff = (left.todo.deadlineAt ?? 0) - (right.todo.deadlineAt ?? 0);
-        if (deadlineDiff !== 0) return deadlineDiff;
-      }
       return left.index - right.index;
     })
     .map((entry) => entry.todo);
 }
 
 function getOpenTodoRank(todo: TodoItem): number {
-  if (todo.starred && isValidDeadlineAt(todo.deadlineAt)) return 0;
-  if (todo.starred) return 1;
-  return 2;
+  if (todo.starred) return 0;
+  return 1;
 }

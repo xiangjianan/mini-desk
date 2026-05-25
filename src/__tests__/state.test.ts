@@ -5,7 +5,7 @@ import {
   normalizeImportedState,
   serializeTextLines,
 } from "../state/storage";
-import { addTodo, completeTodo, getOrderedTodos, moveTodo, starTodo } from "../state/todos";
+import { addTodo, completeTodo, getOrderedTodos, moveTodo, setTodoNotifyAt, starTodo } from "../state/todos";
 import type { BoardState } from "../types";
 
 describe("state compatibility", () => {
@@ -126,10 +126,11 @@ describe("state compatibility", () => {
       },
     ]);
     expect(state.activeSpaceId).toBe("project");
-    expect(state.todos.morning[0]).toMatchObject({ starred: true, deadlineAt: 1779721200000 });
+    expect(state.todos.morning[0]).toMatchObject({ starred: true, notifyAt: 1779721200000 });
+    expect(state.todos.morning[0]).not.toHaveProperty("deadlineAt");
   });
 
-  it("drops invalid or non-starred todo deadlines during import", () => {
+  it("migrates valid todo deadlines during import regardless of starred state", () => {
     const state = normalizeImportedState({
       todos: {
         morning: [
@@ -140,11 +141,27 @@ describe("state compatibility", () => {
       },
     });
 
-    expect(state.todos.morning[0]).toMatchObject({ starred: true, deadlineAt: 1779721200000 });
+    expect(state.todos.morning[0]).toMatchObject({ starred: true, notifyAt: 1779721200000 });
     expect(state.todos.morning[1]).toMatchObject({ starred: true });
-    expect(state.todos.morning[1]).not.toHaveProperty("deadlineAt");
-    expect(state.todos.morning[2]).toMatchObject({ starred: false });
+    expect(state.todos.morning[1]).not.toHaveProperty("notifyAt");
+    expect(state.todos.morning[2]).toMatchObject({ starred: false, notifyAt: 1779721200000 });
     expect(state.todos.morning[2]).not.toHaveProperty("deadlineAt");
+  });
+
+  it("migrates legacy deadlineAt to notifyAt and serializes only notifyAt", () => {
+    const legacyAt = new Date(2026, 4, 25, 18).getTime();
+    const state = normalizeImportedState({
+      todos: {
+        morning: [{ id: "a", text: "legacy", done: false, starred: true, deadlineAt: legacyAt }],
+        noon: [],
+        evening: [],
+      },
+    });
+
+    expect(state.todos.morning[0]).toMatchObject({ notifyAt: legacyAt });
+    expect("deadlineAt" in state.todos.morning[0]).toBe(false);
+    expect(getSerializableState(state).todos.morning[0]).toMatchObject({ notifyAt: legacyAt });
+    expect("deadlineAt" in getSerializableState(state).todos.morning[0]).toBe(false);
   });
 
   it("serializes textarea text into indented line records", () => {
@@ -176,51 +193,76 @@ describe("todo behavior", () => {
     expect(getOrderedTodos(todos).map((todo) => todo.id)).toEqual(["3", "1", "2"]);
   });
 
-  it("orders starred todos with deadlines before other open todos", () => {
+  it("keeps starred ordering independent from notification time", () => {
     const todos = [
       { id: "ordinary", text: "普通", done: false },
-      { id: "later", text: "晚一点", done: false, starred: true, deadlineAt: 3000 },
+      { id: "later", text: "晚一点", done: false, starred: true, notifyAt: 3000 },
       { id: "starred", text: "重点无时间", done: false, starred: true },
-      { id: "sooner", text: "更近", done: false, starred: true, deadlineAt: 1000 },
-      { id: "done", text: "完成", done: true, starred: true, deadlineAt: 500 },
+      { id: "sooner", text: "更近", done: false, starred: true, notifyAt: 1000 },
+      { id: "done", text: "完成", done: true, starred: true, notifyAt: 500 },
     ];
 
     expect(getOrderedTodos(todos).map((todo) => todo.id)).toEqual([
-      "sooner",
       "later",
       "starred",
+      "sooner",
       "ordinary",
       "done",
     ]);
   });
 
-  it("keeps same-deadline starred todos in their original relative order", () => {
+  it("keeps starred todos in their original relative order", () => {
     const todos = [
-      { id: "b", text: "第二个", done: false, starred: true, deadlineAt: 1000 },
-      { id: "a", text: "第一个", done: false, starred: true, deadlineAt: 1000 },
+      { id: "b", text: "第二个", done: false, starred: true, notifyAt: 3000 },
+      { id: "a", text: "第一个", done: false, starred: true, notifyAt: 1000 },
     ];
 
     expect(getOrderedTodos(todos).map((todo) => todo.id)).toEqual(["b", "a"]);
   });
 
-  it("sets and clears todo deadlines through starTodo", () => {
+  it("keeps notification time when star is removed", () => {
+    const notifyAt = new Date(2026, 4, 25, 18).getTime();
+    const todos = {
+      morning: [{ id: "a", text: "task", done: false, starred: true, notifyAt }],
+      noon: [],
+      evening: [],
+    };
+
+    expect(starTodo(todos, "morning", "a", false).morning[0]).toMatchObject({
+      starred: false,
+      notifyAt,
+    });
+  });
+
+  it("sets and clears notification time without changing starred state", () => {
+    const notifyAt = new Date(2026, 4, 25, 18).getTime();
+    const todos = {
+      morning: [{ id: "a", text: "task", done: false, starred: true }],
+      noon: [],
+      evening: [],
+    };
+
+    const withNotify = setTodoNotifyAt(todos, "morning", "a", notifyAt);
+    expect(withNotify.morning[0]).toMatchObject({ starred: true, notifyAt });
+
+    const withoutNotify = setTodoNotifyAt(withNotify, "morning", "a", undefined);
+    expect(withoutNotify.morning[0]).toMatchObject({ starred: true });
+    expect(withoutNotify.morning[0].notifyAt).toBeUndefined();
+  });
+
+  it("sets and clears todo star state through starTodo", () => {
     const state = defaultState();
     state.todos.morning = [{ id: "a", text: "重点", done: false }];
 
-    const starred = starTodo(state.todos, "morning", "a", true, 1779721200000);
-    expect(starred.morning[0]).toMatchObject({ starred: true, deadlineAt: 1779721200000 });
+    const starred = starTodo(state.todos, "morning", "a", true);
+    expect(starred.morning[0]).toMatchObject({ starred: true });
+    expect(starred.morning[0]).not.toHaveProperty("notifyAt");
 
     const missingDeadline = starTodo(starred, "morning", "a", true);
     expect(missingDeadline.morning[0]).toMatchObject({ starred: true });
-    expect(missingDeadline.morning[0]).not.toHaveProperty("deadlineAt");
-
-    const invalidDeadline = starTodo(starred, "morning", "a", true, Number.NaN);
-    expect(invalidDeadline.morning[0]).toMatchObject({ starred: true });
-    expect(invalidDeadline.morning[0]).not.toHaveProperty("deadlineAt");
 
     const unstarred = starTodo(starred, "morning", "a", false);
     expect(unstarred.morning[0]).toMatchObject({ starred: false });
-    expect(unstarred.morning[0]).not.toHaveProperty("deadlineAt");
   });
 
   it("inserts a new open todo before completed todos to avoid visual reordering", () => {

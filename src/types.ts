@@ -38,6 +38,7 @@ export interface TodoItem {
   text: string;
   done: boolean;
   starred?: boolean;
+  notifyAt?: number;
   deadlineAt?: number;
 }
 
