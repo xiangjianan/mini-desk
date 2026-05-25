@@ -36,6 +36,28 @@ export function createDeadlineAt(dateValue: string, timeValue = DEFAULT_DEADLINE
   return new Date(parsedDate.year, parsedDate.month - 1, parsedDate.day, parsedHour, 0, 0, 0).getTime();
 }
 
+export function getDefaultDeadlineSelection(now = new Date()): { date: string; time: DeadlineTimeOption } {
+  const nextToday = DEADLINE_TIME_OPTIONS.find((time) => {
+    const hour = parseWholeHourValue(time);
+    if (hour === null) return false;
+    const candidate = new Date(now.getFullYear(), now.getMonth(), now.getDate(), hour, 0, 0, 0);
+    return candidate.getTime() > now.getTime();
+  });
+
+  if (nextToday) {
+    return {
+      date: getLocalDateInputValue(now),
+      time: nextToday,
+    };
+  }
+
+  const tomorrow = new Date(now.getFullYear(), now.getMonth(), now.getDate() + 1);
+  return {
+    date: getLocalDateInputValue(tomorrow),
+    time: DEFAULT_DEADLINE_TIME,
+  };
+}
+
 export function getDeadlineDisplay(deadlineAt: number | undefined, now = Date.now()): DeadlineDisplay | null {
   if (!isValidDeadlineAt(deadlineAt) || !isValidDeadlineAt(now)) return null;
 
@@ -49,31 +71,31 @@ export function getDeadlineDisplay(deadlineAt: number | undefined, now = Date.no
   const deadlineDate = new Date(deadlineAt);
   const dayDistance = getLocalDayDistance(now, deadlineAt);
   const isWithinDueSoonWindow = deadlineAt - now <= ONE_DAY_MS;
-  const hour = String(deadlineDate.getHours()).padStart(2, "0");
+  const timeLabel = getDisplayTimeLabel(deadlineDate);
 
   if (isWithinDueSoonWindow && dayDistance === 0) {
     return {
-      label: `! 今天 ${hour}`,
+      label: `今天${timeLabel}`,
       urgency: "due-soon",
     };
   }
 
   if (isWithinDueSoonWindow && dayDistance === 1) {
     return {
-      label: `! 明天 ${hour}`,
+      label: `明天${timeLabel}`,
       urgency: "due-soon",
     };
   }
 
   if (dayDistance <= 3) {
     return {
-      label: `${dayDistance}天后 ${hour}`,
+      label: `${dayDistance}天后 ${timeLabel}`,
       urgency: "upcoming",
     };
   }
 
   return {
-    label: `${deadlineDate.getMonth() + 1}/${deadlineDate.getDate()} ${hour}`,
+    label: `${deadlineDate.getMonth() + 1}/${deadlineDate.getDate()} ${timeLabel}`,
     urgency: "later",
   };
 }
@@ -106,6 +128,16 @@ function parseWholeHourValue(timeValue: string): number | null {
   const match = WHOLE_HOUR_PATTERN.exec(timeValue);
   if (!match) return null;
   return Number(match[1]);
+}
+
+function getDisplayTimeLabel(date: Date): string {
+  const hour = date.getHours();
+  if (hour === 0) return "凌晨 12:00";
+  if (hour < 6) return `凌晨 ${hour}:00`;
+  if (hour < 12) return `上午 ${hour}:00`;
+  if (hour === 12) return "中午 12:00";
+  if (hour <= 18) return `下午 ${hour - 12}:00`;
+  return `晚上 ${hour - 12}:00`;
 }
 
 function getLocalDayDistance(from: number, to: number): number {

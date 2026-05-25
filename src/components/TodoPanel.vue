@@ -7,6 +7,7 @@ import {
   DEADLINE_TIME_OPTIONS,
   DEFAULT_DEADLINE_TIME,
   createDeadlineAt,
+  getDefaultDeadlineSelection,
   getDeadlineDisplay,
   getDeadlineTimeLabel,
   getLocalDateInputValue,
@@ -54,6 +55,7 @@ const menu = ref<{
 const dragged = ref<DraggedTodo | null>(null);
 const editingTodoKey = ref<string | null>(null);
 const selectedMenuTodoKey = ref<string | null>(null);
+const deadlineEditorRef = ref<HTMLElement | null>(null);
 const deadlineEditor = ref<{
   period: TodoPeriod;
   id: string;
@@ -198,6 +200,7 @@ const listEntries = computed(() =>
 
 onMounted(() => {
   deadlineNow.value = Date.now();
+  document.addEventListener("pointerdown", handleDeadlineEditorOutsidePointerDown, true);
   deadlineClockTimer.value = window.setInterval(() => {
     deadlineNow.value = Date.now();
   }, DEADLINE_CLOCK_INTERVAL_MS);
@@ -205,6 +208,7 @@ onMounted(() => {
 
 onUnmounted(() => {
   reorderTimers.forEach((timer) => window.clearTimeout(timer));
+  document.removeEventListener("pointerdown", handleDeadlineEditorOutsidePointerDown, true);
   window.clearInterval(deadlineClockTimer.value);
 });
 
@@ -348,7 +352,7 @@ function selectDeadlineTime(time: DeadlineTimeOption): void {
 }
 
 function getDeadlineEditorValues(todo?: TodoItem): { date: string; time: DeadlineTimeOption } {
-  if (!isValidDeadlineAt(todo?.deadlineAt)) return { date: getLocalDateInputValue(), time: DEFAULT_DEADLINE_TIME };
+  if (!isValidDeadlineAt(todo?.deadlineAt)) return getDefaultDeadlineSelection();
 
   const deadlineDate = new Date(todo.deadlineAt);
   const hour = String(deadlineDate.getHours()).padStart(2, "0");
@@ -394,6 +398,14 @@ function ignoreDeadlineEditor(): void {
 }
 
 function closeDeadlineEditor(): void {
+  deadlineEditor.value = null;
+}
+
+function handleDeadlineEditorOutsidePointerDown(event: PointerEvent): void {
+  if (!deadlineEditor.value) return;
+  const target = event.target;
+  if (!(target instanceof Node)) return;
+  if (deadlineEditorRef.value?.contains(target)) return;
   deadlineEditor.value = null;
 }
 
@@ -882,6 +894,7 @@ function buildTodoListEntries(todos: TodoItem[], deferredDoneIds: ReadonlySet<st
 
     <section
       v-if="deadlineEditor"
+      ref="deadlineEditorRef"
       class="deadline-editor"
       :style="deadlineEditorStyle"
       aria-label="设置截止时间"

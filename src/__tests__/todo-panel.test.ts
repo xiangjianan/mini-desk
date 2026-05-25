@@ -331,13 +331,13 @@ describe("TodoPanel", () => {
       try {
         expect(wrapper.findAll(".todo-deadline-label").map((item) => item.text())).toEqual([
           "! 已超期",
-          "! 今天 18",
-          "2天后 18",
-          "6/2 18",
+          "今天下午 6:00",
+          "2天后 下午 6:00",
+          "6/2 下午 6:00",
           "! 已超期",
-          "! 今天 18",
-          "2天后 18",
-          "6/2 18",
+          "今天下午 6:00",
+          "2天后 下午 6:00",
+          "6/2 下午 6:00",
         ]);
         expect(wrapper.findAll(".todo-item")[0].classes()).toContain("deadline-overdue");
         expect(wrapper.findAll(".todo-item")[1].classes()).toContain("deadline-due-soon");
@@ -426,7 +426,7 @@ describe("TodoPanel", () => {
     });
 
     try {
-      expect(wrapper.find(".todo-deadline-label").text()).toBe("! 今天 10");
+      expect(wrapper.find(".todo-deadline-label").text()).toBe("今天上午 10:00");
 
       vi.setSystemTime(new Date(2026, 4, 25, 10, 0, 31));
       await vi.advanceTimersByTimeAsync(60_000);
@@ -473,8 +473,8 @@ describe("TodoPanel", () => {
     });
 
     try {
-      expect(wrapper.find(".todo-item .todo-deadline-label").text()).toBe("! 今天 18");
-      expect(wrapper.find(".today-focus-item .todo-deadline-label").text()).toBe("! 今天 18");
+      expect(wrapper.find(".todo-item .todo-deadline-label").text()).toBe("今天下午 6:00");
+      expect(wrapper.find(".today-focus-item .todo-deadline-label").text()).toBe("今天下午 6:00");
 
       const urgencyClasses = ["deadline-overdue", "deadline-due-soon", "deadline-upcoming", "deadline-later"];
       expect(wrapper.get(".todo-item").classes()).not.toEqual(expect.arrayContaining(urgencyClasses));
@@ -520,7 +520,7 @@ describe("TodoPanel", () => {
       "下午 6 点",
       "晚上 9 点",
     ]);
-    expect(wrapper.get(".deadline-time-button.is-selected").text()).toBe("上午 9 点");
+    expect(wrapper.get(".deadline-time-button.is-selected").text()).toBe("中午 12 点");
     expect(wrapper.emitted("star")).toBeUndefined();
     wrapper.unmount();
     vi.useRealTimers();
@@ -625,6 +625,38 @@ describe("TodoPanel", () => {
 
     await wrapper.get(".todo-star-button").trigger("click");
     await wrapper.get(".deadline-close-button").trigger("click");
+
+    expect(wrapper.emitted("star")).toBeUndefined();
+    expect(wrapper.find(".deadline-editor").exists()).toBe(false);
+    wrapper.unmount();
+  });
+
+  it("closes deadline selection from an outside click without setting the star", async () => {
+    const wrapper = mount(TodoPanel, {
+      attachTo: document.body,
+      props: {
+        todos: {
+          morning: [{ id: "a", text: "第一项", done: false }],
+          noon: [],
+          evening: [],
+        },
+        titles: DEFAULT_TITLES,
+      },
+      global: {
+        stubs: {
+          Button: true,
+          Checkbox: checkboxStub,
+          Dropdown: dropdownStub,
+          NCheckbox: checkboxStub,
+          NDropdown: dropdownStub,
+          NTooltip: tooltipStub,
+        },
+      },
+    });
+
+    await wrapper.get(".todo-star-button").trigger("click");
+    document.body.dispatchEvent(new PointerEvent("pointerdown", { bubbles: true }));
+    await nextTick();
 
     expect(wrapper.emitted("star")).toBeUndefined();
     expect(wrapper.find(".deadline-editor").exists()).toBe(false);

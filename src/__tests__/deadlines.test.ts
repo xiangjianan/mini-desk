@@ -3,6 +3,7 @@ import {
   DEADLINE_TIME_OPTIONS,
   DEFAULT_DEADLINE_TIME,
   createDeadlineAt,
+  getDefaultDeadlineSelection,
   getDeadlineDisplay,
   getLocalDateInputValue,
 } from "../state/deadlines";
@@ -31,6 +32,21 @@ describe("deadline helpers", () => {
     expect(getLocalDateInputValue(new Date(2026, 4, 7, 9))).toBe("2026-05-07");
   });
 
+  it("chooses the next common whole-hour deadline by default", () => {
+    expect(getDefaultDeadlineSelection(new Date(2026, 4, 25, 8, 0))).toEqual({
+      date: "2026-05-25",
+      time: "09:00",
+    });
+    expect(getDefaultDeadlineSelection(new Date(2026, 4, 25, 10, 0))).toEqual({
+      date: "2026-05-25",
+      time: "12:00",
+    });
+    expect(getDefaultDeadlineSelection(new Date(2026, 4, 25, 21, 0))).toEqual({
+      date: "2026-05-26",
+      time: "09:00",
+    });
+  });
+
   it("classifies overdue, due-soon, upcoming, and later deadlines", () => {
     const now = new Date(2026, 4, 25, 10).getTime();
 
@@ -39,19 +55,19 @@ describe("deadline helpers", () => {
       urgency: "overdue",
     });
     expect(getDeadlineDisplay(new Date(2026, 4, 25, 18).getTime(), now)).toEqual({
-      label: "! 今天 18",
+      label: "今天下午 6:00",
       urgency: "due-soon",
     });
     expect(getDeadlineDisplay(new Date(2026, 4, 26, 9).getTime(), now)).toEqual({
-      label: "! 明天 09",
+      label: "明天上午 9:00",
       urgency: "due-soon",
     });
     expect(getDeadlineDisplay(new Date(2026, 4, 27, 18).getTime(), now)).toEqual({
-      label: "2天后 18",
+      label: "2天后 下午 6:00",
       urgency: "upcoming",
     });
     expect(getDeadlineDisplay(new Date(2026, 5, 2, 18).getTime(), now)).toEqual({
-      label: "6/2 18",
+      label: "6/2 下午 6:00",
       urgency: "later",
     });
   });
@@ -60,7 +76,7 @@ describe("deadline helpers", () => {
     const now = new Date(2026, 4, 25, 0, 1).getTime();
 
     expect(getDeadlineDisplay(new Date(2026, 4, 26, 23).getTime(), now)).toEqual({
-      label: "1天后 23",
+      label: "1天后 晚上 11:00",
       urgency: "upcoming",
     });
   });
