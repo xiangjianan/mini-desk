@@ -149,6 +149,28 @@ describe("App shell", () => {
     wrapper.unmount();
   });
 
+  it("keeps fixed todo UI usable when persisted dynamic lists omit legacy periods", async () => {
+    localStorage.setItem(
+      STORAGE_KEY,
+      JSON.stringify({
+        todoLists: [{ id: "custom", title: "自定义", collapsed: false, compact: false }],
+        todos: { custom: [{ id: "c", text: "C", done: false }] },
+        showCompletedTodos: { custom: false },
+      }),
+    );
+
+    const wrapper = mountApp();
+
+    expect(wrapper.find('[data-testid="todo-list-morning"]').exists()).toBe(true);
+
+    await wrapper.get('[data-testid="todo-list-morning"]').trigger("click");
+    await wrapper.vm.$nextTick();
+
+    expect(wrapper.find('[data-testid="todo-input-morning"]').exists()).toBe(true);
+
+    wrapper.unmount();
+  });
+
   it("renders a mobile handoff page instead of board regions on mobile", async () => {
     vi.useFakeTimers();
     stubMatchMedia(true);

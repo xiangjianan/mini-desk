@@ -38,7 +38,7 @@ import {
   getStoredAppVersion,
   markAppVersionSeen,
 } from "./state/version";
-import type { BoardState, CompanionGifTheme, DraggedTodo, GuideKey, LineItem, QuickButtonType, StoredImage, TodoPeriod, TodoStarChange } from "./types";
+import type { BoardState, CompanionGifTheme, DraggedTodo, GuideKey, LineItem, QuickButtonType, StoredImage, TodoItem, TodoPeriod, TodoStarChange } from "./types";
 
 const MOBILE_BREAKPOINT_QUERY = "(max-width: 900px)";
 const MOBILE_HANDOFF_MESSAGE = "建议在电脑浏览器打开，以获得完整体验 (｡•̀ᴗ-)✧";
@@ -818,7 +818,7 @@ function createTodosFromText(period: TodoPeriod, texts: string[]): void {
 
 function findOpenBlankTodo(): { period: TodoPeriod; id: string } | undefined {
   for (const period of TODO_PERIODS) {
-    const blankTodo = state.todos[period].find((todo) => !todo.done && todo.text.trim().length === 0);
+    const blankTodo = getTodos(period).find((todo) => !todo.done && todo.text.trim().length === 0);
     if (blankTodo) return { period, id: blankTodo.id };
   }
   return undefined;
@@ -871,7 +871,7 @@ function toggleTodoStar(change: TodoStarChange): void {
     return;
   }
 
-  const todo = state.todos[period].find((item) => item.id === id);
+  const todo = getTodos(period).find((item) => item.id === id);
   if (!todo?.starred) return;
   const messageKey: MessageKey = "confirmUnstarTodo";
   requestConfirmation(
@@ -895,7 +895,7 @@ function updateTodoNotify(period: TodoPeriod, id: string, notifyAt: number | und
 
 function removeTodo(period: TodoPeriod, id: string, anchor?: HTMLElement): void {
   requestConfirmation("confirmDeleteTodo", anchor, () => {
-    const index = state.todos[period].findIndex((todo) => todo.id === id);
+    const index = getTodos(period).findIndex((todo) => todo.id === id);
     if (index < 0) return;
     state.todos = removeTodoFromMap(state.todos, period, id);
     persistNow();
@@ -904,7 +904,7 @@ function removeTodo(period: TodoPeriod, id: string, anchor?: HTMLElement): void 
 }
 
 function clearDone(period: TodoPeriod, anchor?: HTMLElement): void {
-  if (!state.todos[period].some((todo) => todo.done)) {
+  if (!getTodos(period).some((todo) => todo.done)) {
     showBubble("noCompletedTodos", anchor);
     return;
   }
@@ -928,7 +928,7 @@ function toggleCompletedVisibility(period: TodoPeriod, showCompleted: boolean): 
 
 function blurEmptyTodo(period: TodoPeriod, id: string): void {
   cancelEmptyTodoRemoval(period, id);
-  const todo = state.todos[period].find((item) => item.id === id);
+  const todo = getTodos(period).find((item) => item.id === id);
   if (!todo || todo.text.trim()) return;
   emptyTodoRemovalTimers.set(
     todoKey(period, id),
@@ -1280,7 +1280,7 @@ function triggerDueTodoNotifications(): void {
   if (!notificationApi || notificationApi.permission !== "granted") return;
   const now = Date.now();
   for (const period of TODO_PERIODS) {
-    for (const todo of state.todos[period]) {
+    for (const todo of getTodos(period)) {
       if (todo.done || !Number.isFinite(todo.notifyAt) || todo.notifyAt === undefined || todo.notifyAt > now) continue;
       const key = `${todo.id}:${todo.notifyAt}`;
       if (sentTodoNotifications.has(key)) continue;
@@ -1347,8 +1347,12 @@ function hasLineContent(lines: LineItem[]): boolean {
 }
 
 function isTodoPeriodEmpty(period: TodoPeriod): boolean {
-  const visible = state.todos[period].filter((todo) => state.showCompletedTodos[period] || !todo.done);
+  const visible = getTodos(period).filter((todo) => state.showCompletedTodos[period] || !todo.done);
   return visible.length === 0 || visible.every((todo) => todo.text.trim().length === 0);
+}
+
+function getTodos(period: TodoPeriod): TodoItem[] {
+  return state.todos[period] ?? [];
 }
 
 function getTodoPeriodFromAnchor(anchor?: HTMLElement): TodoPeriod | undefined {

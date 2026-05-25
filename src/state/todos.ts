@@ -1,7 +1,7 @@
 import type { TodoItem, TodoMap, TodoPeriod } from "../types";
 import { isValidDeadlineAt } from "./deadlines";
 
-export function getOrderedTodos(todos: TodoItem[], deferredDoneIds: ReadonlySet<string> = new Set()): TodoItem[] {
+export function getOrderedTodos(todos: TodoItem[] = [], deferredDoneIds: ReadonlySet<string> = new Set()): TodoItem[] {
   const openTodos = todos.filter((todo) => !todo.done || deferredDoneIds.has(todo.id));
   const completedTodos = todos.filter((todo) => todo.done && !deferredDoneIds.has(todo.id));
   return [
@@ -17,7 +17,7 @@ export function addTodo(
   afterId?: string,
 ): TodoMap {
   const next = cloneTodoMap(todos);
-  const list = next[period];
+  const list = ensureTodoList(next, period);
   if (!afterId) {
     const firstCompletedIndex = list.findIndex((item) => item.done);
     list.splice(firstCompletedIndex >= 0 ? firstCompletedIndex : list.length, 0, todo);
@@ -37,6 +37,7 @@ export function splitTodo(
 ): TodoMap {
   const next = cloneTodoMap(todos);
   const list = next[period];
+  if (!list) return next;
   const index = list.findIndex((item) => item.id === id);
   if (index < 0) return next;
   list[index] = { ...list[index], text: before };
@@ -51,7 +52,7 @@ export function updateTodoText(
   text: string,
 ): TodoMap {
   const next = cloneTodoMap(todos);
-  const todo = next[period].find((item) => item.id === id);
+  const todo = next[period]?.find((item) => item.id === id);
   if (todo) todo.text = text;
   return next;
 }
@@ -63,7 +64,7 @@ export function completeTodo(
   done: boolean,
 ): TodoMap {
   const next = cloneTodoMap(todos);
-  const todo = next[period].find((item) => item.id === id);
+  const todo = next[period]?.find((item) => item.id === id);
   if (todo) todo.done = done;
   return next;
 }
@@ -76,7 +77,7 @@ export function starTodo(
   legacyDeadlineAt?: number,
 ): TodoMap {
   const next = cloneTodoMap(todos);
-  const todo = next[period].find((item) => item.id === id);
+  const todo = next[period]?.find((item) => item.id === id);
   if (!todo) return next;
   todo.starred = starred;
   if (starred && isValidDeadlineAt(legacyDeadlineAt)) {
@@ -93,7 +94,7 @@ export function setTodoNotifyAt(
   notifyAt?: number,
 ): TodoMap {
   const next = cloneTodoMap(todos);
-  const todo = next[period].find((item) => item.id === id);
+  const todo = next[period]?.find((item) => item.id === id);
   if (!todo) return next;
   if (isValidDeadlineAt(notifyAt)) {
     todo.notifyAt = notifyAt;
@@ -106,18 +107,20 @@ export function setTodoNotifyAt(
 
 export function removeTodo(todos: TodoMap, period: TodoPeriod, id: string): TodoMap {
   const next = cloneTodoMap(todos);
+  if (!next[period]) return next;
   next[period] = next[period].filter((todo) => todo.id !== id);
   return next;
 }
 
 export function clearCompleted(todos: TodoMap, period: TodoPeriod): TodoMap {
   const next = cloneTodoMap(todos);
+  if (!next[period]) return next;
   next[period] = next[period].filter((todo) => !todo.done);
   return next;
 }
 
 export function removeEmptyTodo(todos: TodoMap, period: TodoPeriod, id: string): TodoMap {
-  const todo = todos[period].find((item) => item.id === id);
+  const todo = todos[period]?.find((item) => item.id === id);
   if (!todo || todo.text.trim()) return todos;
   return removeTodo(todos, period, id);
 }
@@ -131,22 +134,26 @@ export function moveTodo(
 ): TodoMap {
   const next = cloneTodoMap(todos);
   const source = next[sourcePeriod];
+  if (!source) return next;
   const sourceIndex = source.findIndex((todo) => todo.id === id);
   if (sourceIndex < 0) return next;
 
   const [todo] = source.splice(sourceIndex, 1);
-  const destination = next[destinationPeriod];
+  const destination = ensureTodoList(next, destinationPeriod);
   const targetIndex = targetId ? destination.findIndex((item) => item.id === targetId) : -1;
   destination.splice(targetIndex >= 0 ? targetIndex : destination.length, 0, todo);
   return next;
 }
 
 export function cloneTodoMap(todos: TodoMap): TodoMap {
-  return {
-    morning: todos.morning.map((todo) => ({ ...todo })),
-    noon: todos.noon.map((todo) => ({ ...todo })),
-    evening: todos.evening.map((todo) => ({ ...todo })),
-  };
+  return Object.fromEntries(
+    Object.entries(todos).map(([period, list]) => [period, list.map((todo) => ({ ...todo }))]),
+  ) as TodoMap;
+}
+
+function ensureTodoList(todos: TodoMap, period: TodoPeriod): TodoItem[] {
+  todos[period] ??= [];
+  return todos[period];
 }
 
 function prioritizeStarred(todos: TodoItem[]): TodoItem[] {

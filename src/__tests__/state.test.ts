@@ -6,7 +6,7 @@ import {
   normalizeImportedState,
   serializeTextLines,
 } from "../state/storage";
-import { addTodo, completeTodo, getOrderedTodos, moveTodo, setTodoNotifyAt, starTodo } from "../state/todos";
+import { addTodo, completeTodo, getOrderedTodos, moveTodo, removeEmptyTodo, setTodoNotifyAt, starTodo } from "../state/todos";
 import type { BoardState } from "../types";
 
 describe("state compatibility", () => {
@@ -107,6 +107,47 @@ describe("state compatibility", () => {
     expect(state.showCompletedTodos).toEqual({ work: true, life: false });
   });
 
+  it("renames duplicate persisted todo list ids while keeping list order", () => {
+    const state = normalizeImportedState({
+      todoLists: [
+        { id: "work", title: "工作", collapsed: false, compact: false },
+        { id: "work", title: "重复工作", collapsed: true, compact: true },
+      ],
+      todos: {
+        work: [{ id: "a", text: "A", done: false }],
+      },
+    });
+
+    expect(state.todoLists).toHaveLength(2);
+    expect(state.todoLists[0]).toEqual({ id: "work", title: "工作", collapsed: false, compact: false });
+    expect(state.todoLists[1]).toMatchObject({ title: "重复工作", collapsed: true, compact: true });
+    expect(state.todoLists[1].id).not.toBe("work");
+    expect(new Set(state.todoLists.map((list) => list.id)).size).toBe(2);
+    expect(Object.keys(state.todos)).toEqual(state.todoLists.map((list) => list.id));
+  });
+
+  it("falls back to default todo lists when persisted todoLists is empty or invalid", () => {
+    const emptyState = normalizeImportedState({ todoLists: [] });
+    const invalidState = normalizeImportedState({
+      todoLists: [
+        { id: "", title: "空" },
+        null,
+        { title: "缺少 id" },
+      ],
+    });
+
+    const expected = [
+      { id: "morning", title: "☀️ 早上" },
+      { id: "noon", title: "🌤️ 中午" },
+      { id: "evening", title: "🌙 晚上" },
+    ];
+
+    expect(emptyState.todoLists.map((list) => ({ id: list.id, title: list.title }))).toEqual(expected);
+    expect(invalidState.todoLists.map((list) => ({ id: list.id, title: list.title }))).toEqual(expected);
+    expect(Object.keys(emptyState.todos)).toEqual(["morning", "noon", "evening"]);
+    expect(Object.keys(invalidState.todos)).toEqual(["morning", "noon", "evening"]);
+  });
+
   it("serializes configurable todo lists without orphan records", () => {
     const state = normalizeImportedState({
       todoLists: [{ id: "custom", title: "自定义", collapsed: false, compact: true }],
@@ -119,6 +160,19 @@ describe("state compatibility", () => {
     expect(stored.todoLists).toEqual([{ id: "custom", title: "自定义", collapsed: false, compact: true }]);
     expect(Object.keys(stored.todos)).toEqual(["custom"]);
     expect(stored.showCompletedTodos).toEqual({ custom: true });
+  });
+
+  it("keeps todo helpers safe when fixed-period arrays are missing", () => {
+    const state = normalizeImportedState({
+      todoLists: [{ id: "custom", title: "自定义", collapsed: false, compact: false }],
+      todos: { custom: [{ id: "c", text: "C", done: false }] },
+    });
+
+    const withMorning = addTodo(state.todos, "morning", { id: "m", text: "M", done: false });
+
+    expect(withMorning.custom.map((todo) => todo.text)).toEqual(["C"]);
+    expect(withMorning.morning.map((todo) => todo.text)).toEqual(["M"]);
+    expect(removeEmptyTodo(state.todos, "morning", "missing")).toEqual(state.todos);
   });
 
   it("defaults to the Hermes companion GIF theme", () => {

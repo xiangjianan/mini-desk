@@ -122,7 +122,7 @@ const ordered = computed(() =>
           .filter((key) => key.startsWith(`${period}:`))
           .map((key) => key.slice(period.length + 1)),
       );
-      return [period, getOrderedTodos(props.todos[period], deferredIds)];
+      return [period, getOrderedTodos(getTodos(period), deferredIds)];
     }),
   ) as TodoMap,
 );
@@ -130,8 +130,9 @@ const ordered = computed(() =>
 const periodStats = computed(() =>
   Object.fromEntries(
     TODO_PERIODS.map((period) => {
-      const total = props.todos[period].length;
-      const done = props.todos[period].filter((todo) => todo.done).length;
+      const todos = getTodos(period);
+      const total = todos.length;
+      const done = todos.filter((todo) => todo.done).length;
       return [period, `${done}/${total}`];
     }),
   ) as Record<TodoPeriod, string>,
@@ -163,7 +164,7 @@ const notifyDisplays = computed(() => {
   const displays = new Map<TodoItem, NotifyDisplay>();
   const now = deadlineNow.value;
   TODO_PERIODS.forEach((period) => {
-    props.todos[period].forEach((todo) => {
+    getTodos(period).forEach((todo) => {
       const display = getNotifyDisplay(todo.notifyAt, now);
       if (display) displays.set(todo, display);
     });
@@ -502,7 +503,7 @@ function getMenuTodo(): TodoItem | undefined {
 }
 
 function getTodoById(period: TodoPeriod, id: string): TodoItem | undefined {
-  return props.todos[period].find((item) => item.id === id);
+  return getTodos(period).find((item) => item.id === id);
 }
 
 function isTodoHighlighted(period: TodoPeriod, id: string): boolean {
@@ -701,6 +702,10 @@ function collapseSelection(input: HTMLInputElement, caret: number): void {
 
 function isCompletedVisible(period: TodoPeriod): boolean {
   return Boolean(props.showCompleted?.[period]);
+}
+
+function getTodos(period: TodoPeriod): TodoItem[] {
+  return props.todos[period] ?? [];
 }
 
 function getDeferredTodoIds(period: TodoPeriod): Set<string> {
