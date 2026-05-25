@@ -707,15 +707,16 @@ describe("App shell", () => {
 
       expect(wrapper.getComponent(TodoPanel).props("todos").morning[0]).toMatchObject({
         starred: true,
-        deadlineAt: 1779721200000,
+        notifyAt: 1779721200000,
       });
+      expect(wrapper.getComponent(TodoPanel).props("todos").morning[0]).not.toHaveProperty("deadlineAt");
       expect(wrapper.find('[data-testid="companion-confirm"]').exists()).toBe(false);
     } finally {
       wrapper.unmount();
     }
   });
 
-  it("confirms un-starring and clears the deadline after confirmation", async () => {
+  it("confirms un-starring and keeps notification time after confirmation", async () => {
     vi.useFakeTimers();
     vi.spyOn(Math, "random").mockReturnValue(0);
     localStorage.setItem(
@@ -748,6 +749,7 @@ describe("App shell", () => {
       await wrapper.vm.$nextTick();
 
       expect(wrapper.getComponent(TodoPanel).props("todos").morning[0]).toMatchObject({ starred: false });
+      expect(wrapper.getComponent(TodoPanel).props("todos").morning[0]).toMatchObject({ notifyAt: 0 });
       expect(wrapper.getComponent(TodoPanel).props("todos").morning[0]).not.toHaveProperty("deadlineAt");
     } finally {
       wrapper.unmount();

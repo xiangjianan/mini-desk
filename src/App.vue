@@ -841,16 +841,16 @@ function complete(period: TodoPeriod, id: string, done: boolean, anchor?: HTMLEl
 }
 
 function toggleTodoStar(change: TodoStarChange): void {
-  const { period, id, starred, deadlineAt, anchor } = change;
+  const { period, id, starred, notifyAt, deadlineAt, anchor } = change;
   if (starred) {
-    state.todos = starTodo(state.todos, period, id, true, deadlineAt);
+    state.todos = starTodo(state.todos, period, id, true, notifyAt ?? deadlineAt);
     persistNow();
     return;
   }
 
   const todo = state.todos[period].find((item) => item.id === id);
   if (!todo?.starred) return;
-  const messageKey: MessageKey = isValidDeadlineAt(todo.deadlineAt) ? "confirmUnstarTodoDeadline" : "confirmUnstarTodo";
+  const messageKey: MessageKey = isValidDeadlineAt(getTodoReminderAt(todo)) ? "confirmUnstarTodoDeadline" : "confirmUnstarTodo";
   requestConfirmation(
     messageKey,
     anchor,
@@ -861,6 +861,12 @@ function toggleTodoStar(change: TodoStarChange): void {
     undefined,
     { confirmText: "取消重点", cancelText: "算了" },
   );
+}
+
+function getTodoReminderAt(todo: { notifyAt?: number; deadlineAt?: number }): number | undefined {
+  if (isValidDeadlineAt(todo.notifyAt)) return todo.notifyAt;
+  if (isValidDeadlineAt(todo.deadlineAt)) return todo.deadlineAt;
+  return undefined;
 }
 
 function removeTodo(period: TodoPeriod, id: string, anchor?: HTMLElement): void {

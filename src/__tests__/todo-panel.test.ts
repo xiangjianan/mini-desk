@@ -308,7 +308,7 @@ describe("TodoPanel", () => {
           todos: {
             morning: [
               { id: "a", text: "超期", done: false, starred: true, deadlineAt: new Date(2026, 4, 25, 9).getTime() },
-              { id: "b", text: "今天", done: false, starred: true, deadlineAt: new Date(2026, 4, 25, 18).getTime() },
+              { id: "b", text: "今天", done: false, starred: true, notifyAt: new Date(2026, 4, 25, 18).getTime() },
               { id: "c", text: "三天内", done: false, starred: true, deadlineAt: new Date(2026, 4, 27, 18).getTime() },
               { id: "d", text: "更晚", done: false, starred: true, deadlineAt: new Date(2026, 5, 2, 18).getTime() },
             ],
@@ -360,7 +360,7 @@ describe("TodoPanel", () => {
       props: {
         todos: {
           morning: [
-            { id: "a", text: "明天早上", done: false, starred: true, deadlineAt: new Date(2026, 4, 26, 9).getTime() },
+            { id: "a", text: "明天早上", done: false, starred: true, notifyAt: new Date(2026, 4, 26, 9).getTime() },
             { id: "b", text: "没有截止时间", done: false, starred: true },
           ],
           noon: [
@@ -405,7 +405,7 @@ describe("TodoPanel", () => {
               text: "马上到期",
               done: false,
               starred: true,
-              deadlineAt: new Date(2026, 4, 25, 10, 0, 0).getTime(),
+              notifyAt: new Date(2026, 4, 25, 10, 0, 0).getTime(),
             },
           ],
           noon: [],
@@ -452,7 +452,7 @@ describe("TodoPanel", () => {
               text: "已完成重点",
               done: true,
               starred: true,
-              deadlineAt: new Date(2026, 4, 25, 18).getTime(),
+              notifyAt: new Date(2026, 4, 25, 18).getTime(),
             },
           ],
           noon: [],
@@ -803,7 +803,8 @@ describe("TodoPanel", () => {
               text: "重点事项",
               done: false,
               starred: true,
-              deadlineAt: new Date(2026, 4, 30, 18).getTime(),
+              notifyAt: new Date(2026, 4, 30, 18).getTime(),
+              deadlineAt: new Date(2026, 4, 30, 9).getTime(),
             },
           ],
           noon: [],

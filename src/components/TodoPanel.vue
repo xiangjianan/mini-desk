@@ -89,7 +89,7 @@ const menuOptions = computed<DropdownOption[]>(() => {
     }
     if (todo?.starred) {
       options.push({
-        label: isValidDeadlineAt(todo.deadlineAt) ? "编辑提醒时间" : "设置提醒时间",
+        label: isValidDeadlineAt(getTodoReminderAt(todo)) ? "编辑提醒时间" : "设置提醒时间",
         key: "deadline",
       });
     }
@@ -163,7 +163,7 @@ const deadlineDisplays = computed(() => {
   const now = deadlineNow.value;
   TODO_PERIODS.forEach((period) => {
     props.todos[period].forEach((todo) => {
-      const display = getDeadlineDisplay(todo.deadlineAt, now);
+      const display = getDeadlineDisplay(getTodoReminderAt(todo), now);
       if (display) displays.set(todo, display);
     });
   });
@@ -352,9 +352,10 @@ function selectDeadlineTime(time: DeadlineTimeOption): void {
 }
 
 function getDeadlineEditorValues(todo?: TodoItem): { date: string; time: DeadlineTimeOption } {
-  if (!isValidDeadlineAt(todo?.deadlineAt)) return getDefaultDeadlineSelection();
+  const reminderAt = getTodoReminderAt(todo);
+  if (!isValidDeadlineAt(reminderAt)) return getDefaultDeadlineSelection();
 
-  const deadlineDate = new Date(todo.deadlineAt);
+  const deadlineDate = new Date(reminderAt);
   const hour = String(deadlineDate.getHours()).padStart(2, "0");
   const time = `${hour}:00`;
   const supportedTime = DEADLINE_TIME_OPTIONS.includes(time as DeadlineTimeOption)
@@ -479,6 +480,12 @@ function getTodoById(period: TodoPeriod, id: string): TodoItem | undefined {
   return props.todos[period].find((item) => item.id === id);
 }
 
+function getTodoReminderAt(todo?: TodoItem): number | undefined {
+  if (isValidDeadlineAt(todo?.notifyAt)) return todo.notifyAt;
+  if (isValidDeadlineAt(todo?.deadlineAt)) return todo.deadlineAt;
+  return undefined;
+}
+
 function isTodoHighlighted(period: TodoPeriod, id: string): boolean {
   const key = todoKey(period, id);
   return (
@@ -506,8 +513,8 @@ function compareTodayFocusEntries(left: TodayFocusEntry, right: TodayFocusEntry)
   const doneDiff = Number(left.todo.done) - Number(right.todo.done);
   if (doneDiff !== 0) return doneDiff;
 
-  const leftDeadline = left.todo.deadlineAt;
-  const rightDeadline = right.todo.deadlineAt;
+  const leftDeadline = getTodoReminderAt(left.todo);
+  const rightDeadline = getTodoReminderAt(right.todo);
   const leftHasDeadline = isValidDeadlineAt(leftDeadline);
   const rightHasDeadline = isValidDeadlineAt(rightDeadline);
   if (leftHasDeadline && rightHasDeadline) {
