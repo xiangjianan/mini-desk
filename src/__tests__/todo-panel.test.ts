@@ -1917,4 +1917,134 @@ describe("TodoPanel", () => {
 
     expect(wrapper.emitted("createFromText")?.[0]).toEqual(["morning", ["任务 A", "任务 B"]]);
   });
+
+  it("emits dropped external text from populated list blank space", async () => {
+    const wrapper = mount(TodoPanel, {
+      props: {
+        todos: {
+          morning: [{ id: "a", text: "已有任务", done: false }],
+          noon: [],
+          evening: [],
+        },
+        titles: DEFAULT_TITLES,
+      },
+      global: {
+        stubs: {
+          Button: true,
+          Checkbox: checkboxStub,
+          Dropdown: dropdownStub,
+          NCheckbox: checkboxStub,
+          NDropdown: dropdownStub,
+          NTooltip: tooltipStub,
+        },
+      },
+    });
+    const event = new Event("drop") as DragEvent;
+    Object.defineProperty(event, "dataTransfer", {
+      value: {
+        files: [],
+        getData: (type: string) => (type === "text/plain" ? "任务 C\n任务 D" : ""),
+      },
+    });
+
+    await wrapper.get('[data-testid="todo-list-morning"]').element.dispatchEvent(event);
+
+    expect(wrapper.emitted("createFromText")?.[0]).toEqual(["morning", ["任务 C", "任务 D"]]);
+  });
+
+  it("keeps internal dragged todo drops from creating external text todos", async () => {
+    const wrapper = mount(TodoPanel, {
+      props: {
+        todos: {
+          morning: [{ id: "a", text: "已有任务", done: false }],
+          noon: [],
+          evening: [],
+        },
+        titles: DEFAULT_TITLES,
+      },
+      global: {
+        stubs: {
+          Button: true,
+          Checkbox: checkboxStub,
+          Dropdown: dropdownStub,
+          NCheckbox: checkboxStub,
+          NDropdown: dropdownStub,
+          NTooltip: tooltipStub,
+        },
+      },
+    });
+    const event = new Event("drop", { bubbles: true }) as DragEvent;
+    Object.defineProperty(event, "dataTransfer", {
+      value: {
+        files: [],
+        getData: (type: string) => (type === "text/plain" ? "外部任务" : ""),
+      },
+    });
+
+    await wrapper.get(".todo-drag-handle").trigger("dragstart");
+    await wrapper.get('[data-testid="todo-list-noon"]').element.dispatchEvent(event);
+
+    expect(wrapper.emitted("move")?.[0]).toEqual([{ period: "morning", id: "a" }, "noon"]);
+    expect(wrapper.emitted("createFromText")).toBeUndefined();
+  });
+
+  it("ignores external text drops that include files", async () => {
+    const wrapper = mount(TodoPanel, {
+      props: {
+        todos: { morning: [], noon: [], evening: [] },
+        titles: DEFAULT_TITLES,
+      },
+      global: {
+        stubs: {
+          Button: true,
+          Checkbox: checkboxStub,
+          Dropdown: dropdownStub,
+          NCheckbox: checkboxStub,
+          NDropdown: dropdownStub,
+          NTooltip: tooltipStub,
+        },
+      },
+    });
+    const event = new Event("drop") as DragEvent;
+    Object.defineProperty(event, "dataTransfer", {
+      value: {
+        files: [{}],
+        getData: (type: string) => (type === "text/plain" ? "任务 A" : ""),
+      },
+    });
+
+    await wrapper.get('[data-testid="todo-list-morning"]').element.dispatchEvent(event);
+
+    expect(wrapper.emitted("createFromText")).toBeUndefined();
+  });
+
+  it("ignores empty external text drops", async () => {
+    const wrapper = mount(TodoPanel, {
+      props: {
+        todos: { morning: [], noon: [], evening: [] },
+        titles: DEFAULT_TITLES,
+      },
+      global: {
+        stubs: {
+          Button: true,
+          Checkbox: checkboxStub,
+          Dropdown: dropdownStub,
+          NCheckbox: checkboxStub,
+          NDropdown: dropdownStub,
+          NTooltip: tooltipStub,
+        },
+      },
+    });
+    const event = new Event("drop") as DragEvent;
+    Object.defineProperty(event, "dataTransfer", {
+      value: {
+        files: [],
+        getData: (type: string) => (type === "text/plain" ? " \n\t " : ""),
+      },
+    });
+
+    await wrapper.get('[data-testid="todo-list-morning"]').element.dispatchEvent(event);
+
+    expect(wrapper.emitted("createFromText")).toBeUndefined();
+  });
 });

@@ -212,6 +212,31 @@ describe("App shell", () => {
     wrapper.unmount();
   });
 
+  it("creates and persists todos from TodoPanel external text events", async () => {
+    const wrapper = mountApp();
+
+    try {
+      wrapper.getComponent(TodoPanel).vm.$emit("createFromText", "morning", ["任务 A", "任务 B"]);
+      await wrapper.vm.$nextTick();
+
+      const renderedTexts = wrapper
+        .findAll('[data-testid="todo-input-morning"]')
+        .map((input) => (input.element as HTMLInputElement).value);
+      const stored = JSON.parse(localStorage.getItem(STORAGE_KEY) || "{}");
+
+      expect(renderedTexts).toEqual(["任务 A", "任务 B"]);
+      expect(stored.todos.morning.map((todo: { text: string; done: boolean }) => ({
+        text: todo.text,
+        done: todo.done,
+      }))).toEqual([
+        { text: "任务 A", done: false },
+        { text: "任务 B", done: false },
+      ]);
+    } finally {
+      wrapper.unmount();
+    }
+  });
+
   it("keeps at most one blank todo when blank list space is clicked repeatedly", async () => {
     localStorage.setItem(
       STORAGE_KEY,

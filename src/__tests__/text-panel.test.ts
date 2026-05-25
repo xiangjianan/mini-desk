@@ -957,4 +957,46 @@ describe("TextPanel", () => {
 
     expect(wrapper.get("textarea").element.value).toBe("已有内容  \n新增 A");
   });
+
+  it("ignores external text drops that include files", async () => {
+    const wrapper = mount(TextPanel, {
+      props: {
+        titleId: "workspace-title",
+        title: "工作空间",
+        lines: [{ text: "已有内容", indent: 0 }],
+      },
+    });
+    const event = new Event("drop") as DragEvent;
+    Object.defineProperty(event, "dataTransfer", {
+      value: {
+        files: [{}],
+        getData: (type: string) => (type === "text/plain" ? "新增 A" : ""),
+      },
+    });
+
+    await wrapper.get(".text-editor-frame").element.dispatchEvent(event);
+
+    expect(wrapper.emitted("update")).toBeUndefined();
+  });
+
+  it("ignores empty external text drops", async () => {
+    const wrapper = mount(TextPanel, {
+      props: {
+        titleId: "workspace-title",
+        title: "工作空间",
+        lines: [{ text: "已有内容", indent: 0 }],
+      },
+    });
+    const event = new Event("drop") as DragEvent;
+    Object.defineProperty(event, "dataTransfer", {
+      value: {
+        files: [],
+        getData: (type: string) => (type === "text/plain" ? "   \n\t  " : ""),
+      },
+    });
+
+    await wrapper.get(".text-editor-frame").element.dispatchEvent(event);
+
+    expect(wrapper.emitted("update")).toBeUndefined();
+  });
 });
