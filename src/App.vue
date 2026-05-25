@@ -851,13 +851,7 @@ function reorderTodoListSections(draggedId: TodoListId, targetId: TodoListId): v
   const sourceIndex = state.todoLists.findIndex((list) => list.id === draggedId);
   const targetIndex = state.todoLists.findIndex((list) => list.id === targetId);
   if (sourceIndex < 0 || targetIndex < 0 || sourceIndex === targetIndex) return;
-  if (targetIndex === sourceIndex + 1) {
-    const [item] = state.todoLists.splice(sourceIndex, 1);
-    if (!item) return;
-    state.todoLists.splice(targetIndex, 0, item);
-  } else {
-    state.todoLists = reorderTodoLists(state.todoLists, draggedId, targetId);
-  }
+  state.todoLists = reorderTodoLists(state.todoLists, draggedId, targetId);
   persistNow();
 }
 
@@ -910,7 +904,8 @@ function findOpenBlankTodo(): { period: TodoPeriod; id: string } | undefined {
 }
 
 function focusTodoInput(period: TodoPeriod, id: string): void {
-  const inputs = Array.from(document.querySelectorAll<HTMLInputElement>(`[data-testid="todo-input-${period}"]`));
+  const inputs = Array.from(document.querySelectorAll<HTMLInputElement>(".todo-input"))
+    .filter((item) => item.dataset.testid === `todo-input-${period}`);
   const input = inputs.find((item) => item.dataset.todoId === id) ?? inputs.at(-1);
   if (!input) return;
   const caret = input.value.length;

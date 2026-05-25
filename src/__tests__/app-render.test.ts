@@ -435,11 +435,62 @@ describe("App shell", () => {
     const wrapper = mountApp();
 
     try {
+      await wrapper.get('.todo-section[data-list-id="b"] .todo-list-drag-handle').trigger("dragstart");
+      await wrapper.get('.todo-section[data-list-id="a"]').trigger("drop");
+
+      const stored = JSON.parse(localStorage.getItem(STORAGE_KEY) || "{}");
+      expect(stored.todoLists.map((list: { id: string }) => list.id)).toEqual(["b", "a"]);
+    } finally {
+      wrapper.unmount();
+    }
+  });
+
+  it("uses the same before-target ordering for adjacent and non-adjacent list reorders", async () => {
+    localStorage.setItem(STORAGE_KEY, JSON.stringify({
+      ...defaultState(),
+      todoLists: [
+        { id: "a", title: "A", collapsed: false, compact: false },
+        { id: "b", title: "B", collapsed: false, compact: false },
+        { id: "c", title: "C", collapsed: false, compact: false },
+      ],
+      todos: { a: [], b: [], c: [] },
+      showCompletedTodos: { a: false, b: false, c: false },
+    }));
+    const wrapper = mountApp();
+
+    try {
       await wrapper.get('.todo-section[data-list-id="a"] .todo-list-drag-handle').trigger("dragstart");
       await wrapper.get('.todo-section[data-list-id="b"]').trigger("drop");
 
       const stored = JSON.parse(localStorage.getItem(STORAGE_KEY) || "{}");
-      expect(stored.todoLists.map((list: { id: string }) => list.id)).toEqual(["b", "a"]);
+      expect(stored.todoLists.map((list: { id: string }) => list.id)).toEqual(["a", "b", "c"]);
+    } finally {
+      wrapper.unmount();
+    }
+  });
+
+  it("focuses todos for imported list ids with selector characters", async () => {
+    localStorage.setItem(STORAGE_KEY, JSON.stringify({
+      ...defaultState(),
+      todoLists: [{ id: 'bad"]id', title: "特殊", collapsed: false, compact: false }],
+      todos: { 'bad"]id': [] },
+      showCompletedTodos: { 'bad"]id': false },
+    }));
+    const wrapper = mountApp();
+
+    try {
+      wrapper.getComponent(TodoPanel).vm.$emit("create", 'bad"]id');
+      await nextTick();
+      await nextTick();
+
+      const stored = JSON.parse(localStorage.getItem(STORAGE_KEY) || "{}");
+      expect(stored.todos['bad"]id']).toHaveLength(1);
+      expect(stored.todos['bad"]id'][0]).toMatchObject({ text: "", done: false });
+      expect(
+        wrapper
+          .findAll("input.todo-input")
+          .some((input) => (input.element as HTMLInputElement).dataset.testid === 'todo-input-bad"]id'),
+      ).toBe(true);
     } finally {
       wrapper.unmount();
     }
