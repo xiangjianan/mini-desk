@@ -1150,6 +1150,12 @@ h3 {
   object-position: center;
 }
 
+.companion-popover-anchor {
+  display: block;
+  width: 0;
+  height: 0;
+}
+
 .companion-popover {
   display: grid;
   gap: 6px;

@@ -488,6 +488,7 @@ describe("CompanionBubble", () => {
         visible: true,
         message: "",
         theme: "light",
+        gifTheme: "hermes",
       },
       global: {
         stubs: {
@@ -501,6 +502,50 @@ describe("CompanionBubble", () => {
     await wrapper.setProps({ theme: "dark" });
 
     expect(wrapper.get("img").attributes("src")).toBe("/static/video/hermes-dark.gif");
+
+    wrapper.unmount();
+  });
+
+  it("renders bubble content without an image when GIF theme is none", async () => {
+    vi.useFakeTimers();
+    const wrapper = mount(CompanionBubble, {
+      props: {
+        visible: true,
+        message: "只显示气泡",
+        gifTheme: "none",
+      },
+      global: {
+        stubs: {
+          NPopover: popoverStub,
+        },
+      },
+    });
+
+    expect(wrapper.find("img").exists()).toBe(false);
+    await vi.advanceTimersByTimeAsync(200);
+
+    expect(document.body.querySelector('[data-testid="companion-confirm"]')?.textContent).toContain("只显示气泡");
+    expect(wrapper.find('[data-testid="companion-bubble"]').exists()).toBe(true);
+
+    wrapper.unmount();
+    vi.useRealTimers();
+  });
+
+  it("renders no companion surface for GIF-only visibility when GIF theme is none", () => {
+    const wrapper = mount(CompanionBubble, {
+      props: {
+        visible: true,
+        message: "",
+        gifTheme: "none",
+      },
+      global: {
+        stubs: {
+          NPopover: popoverStub,
+        },
+      },
+    });
+
+    expect(wrapper.find('[data-testid="companion-bubble"]').exists()).toBe(false);
 
     wrapper.unmount();
   });

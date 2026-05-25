@@ -2,6 +2,7 @@
 import { computed, onMounted, onUnmounted, ref, watch } from "vue";
 import { LogoGithub } from "@vicons/ionicons5";
 import { NButton, NIcon, NPopover } from "naive-ui";
+import type { CompanionGifTheme } from "../types";
 import hermesGif from "../../static/video/hermes.gif?url";
 import hermesDarkGif from "../../static/video/hermes-dark.gif?url";
 
@@ -17,6 +18,7 @@ const props = defineProps<{
   clearSignal?: number;
   persistent?: boolean;
   theme?: "light" | "dark";
+  gifTheme?: CompanionGifTheme;
   position?: {
     right: string;
     bottom?: string;
@@ -66,12 +68,25 @@ const placementStyle = computed(() => {
   };
 });
 
-const surfaceVisible = computed(() => props.visible && (gifVisible.value || gifFading.value));
-const popoverVisible = computed(() => props.visible && gifVisible.value && Boolean(props.message || props.confirm || props.linkText));
+const activeGifTheme = computed(() => props.gifTheme ?? "hermes");
+const gifSrc = computed(() => {
+  if (activeGifTheme.value === "none") return "";
+  return props.theme === "dark" ? hermesDarkGif : hermesGif;
+});
+const shouldRenderGif = computed(() => Boolean(gifSrc.value));
+const hasPopoverPayload = computed(() => Boolean(props.message || props.confirm || props.linkText));
+const surfaceVisible = computed(() => {
+  if (!props.visible) return false;
+  if (shouldRenderGif.value) return gifVisible.value || gifFading.value;
+  return hasPopoverPayload.value;
+});
+const popoverVisible = computed(() => {
+  if (!props.visible || !hasPopoverPayload.value) return false;
+  return shouldRenderGif.value ? gifVisible.value : true;
+});
 const visiblePopover = computed(() => (delayedPopoverVisible.value && popoverVisible.value) || retainingPopoverContent.value);
 const popoverContentVisible = computed(() => visiblePopover.value || retainingPopoverContent.value);
 const popoverKey = computed(() => `${props.position?.right ?? "default"}:${props.position?.bottom ?? "default"}`);
-const gifSrc = computed(() => (props.theme === "dark" ? hermesDarkGif : hermesGif));
 
 watch(
   popoverVisible,
@@ -117,6 +132,7 @@ watch(
       props.linkHref,
       props.confirm,
       props.persistent,
+      props.gifTheme,
       props.position?.right,
       props.position?.bottom,
       props.position?.top,
@@ -128,7 +144,7 @@ watch(
     gifFadeTimer.value = undefined;
     gifRemainingMs.value = GIF_MAX_VISIBLE_MS;
     gifTimerStartedAt.value = 0;
-    if (!visible) {
+    if (!visible || !shouldRenderGif.value) {
       hoveringCompanion.value = false;
       gifVisible.value = false;
       gifFading.value = false;
@@ -258,7 +274,7 @@ function isPointInsideElement(x: number, y: number, element: HTMLElement | null)
     v-if="surfaceVisible"
     ref="surfaceRef"
     class="focus-companion"
-    :class="{ 'is-visible': gifVisible, 'is-fading': gifFading }"
+    :class="{ 'is-visible': gifVisible || (!shouldRenderGif && popoverVisible), 'is-fading': gifFading }"
     :style="placementStyle"
     data-testid="companion-bubble"
     :aria-hidden="!surfaceVisible"
@@ -280,7 +296,8 @@ function isPointInsideElement(x: number, y: number, element: HTMLElement | null)
       :style="{ maxWidth: '240px', '--n-box-shadow': 'none' }"
     >
       <template #trigger>
-        <img :src="gifSrc" alt="" />
+        <img v-if="shouldRenderGif" :src="gifSrc" alt="" />
+        <span v-else class="companion-popover-anchor" aria-hidden="true" />
       </template>
 
       <div
