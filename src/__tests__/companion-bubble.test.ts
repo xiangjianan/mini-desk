@@ -531,6 +531,44 @@ describe("CompanionBubble", () => {
     vi.useRealTimers();
   });
 
+  it("keeps gif-free bubble content during the hide animation", async () => {
+    vi.useFakeTimers();
+    const wrapper = mount(CompanionBubble, {
+      attachTo: document.body,
+      props: {
+        visible: true,
+        message: "只显示气泡",
+        gifTheme: "none",
+      },
+      global: {
+        stubs: {
+          NPopover: persistentPopoverStub,
+        },
+      },
+    });
+
+    await vi.advanceTimersByTimeAsync(200);
+    await wrapper.vm.$nextTick();
+
+    expect(wrapper.find('[data-testid="companion-bubble"]').exists()).toBe(true);
+    expect(document.body.querySelector('[data-testid="companion-confirm"]')?.textContent).toContain("只显示气泡");
+
+    await wrapper.setProps({ message: "" });
+    await wrapper.vm.$nextTick();
+
+    expect(wrapper.find('[data-testid="companion-bubble"]').exists()).toBe(true);
+    expect(document.body.querySelector(".companion-popover-shell")?.classList.contains("is-popover-fading")).toBe(true);
+    expect(document.body.querySelector('[data-testid="companion-confirm"]')?.textContent).toContain("只显示气泡");
+
+    await vi.advanceTimersByTimeAsync(260);
+    await wrapper.vm.$nextTick();
+
+    expect(wrapper.find('[data-testid="companion-bubble"]').exists()).toBe(false);
+
+    wrapper.unmount();
+    vi.useRealTimers();
+  });
+
   it("renders no companion surface for GIF-only visibility when GIF theme is none", () => {
     const wrapper = mount(CompanionBubble, {
       props: {

@@ -78,7 +78,7 @@ const hasPopoverPayload = computed(() => Boolean(props.message || props.confirm 
 const surfaceVisible = computed(() => {
   if (!props.visible) return false;
   if (shouldRenderGif.value) return gifVisible.value || gifFading.value;
-  return hasPopoverPayload.value;
+  return hasPopoverPayload.value || retainingPopoverContent.value;
 });
 const popoverVisible = computed(() => {
   if (!props.visible || !hasPopoverPayload.value) return false;
