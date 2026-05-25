@@ -240,6 +240,13 @@ function handleTodoTextDrop(event: DragEvent, period: TodoPeriod): void {
   emit("createFromText", period, texts);
 }
 
+function handleTodoItemDrop(event: DragEvent, period: TodoPeriod, targetId: string): void {
+  if (!dragged.value) return;
+  event.preventDefault();
+  event.stopPropagation();
+  emit("move", dragged.value, period, targetId);
+}
+
 function handleSectionGuideClick(event: MouseEvent): void {
   const target = event.target as HTMLElement;
   if (target.closest("button, input, textarea, .todo-list")) return;
@@ -837,7 +844,7 @@ function buildTodoListEntries(todos: TodoItem[], deferredDoneIds: ReadonlySet<st
               ]"
               @contextmenu.stop="openMenu($event, period, entry.todo.id)"
               @dragover.prevent
-              @drop.stop="dragged && emit('move', dragged, period, entry.todo.id)"
+              @drop="handleTodoItemDrop($event, period, entry.todo.id)"
             >
               <button
                 class="todo-drag-handle"

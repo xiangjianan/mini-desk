@@ -28,7 +28,7 @@ export function appendPlainTextToEditorText(current: string, dropped: string): s
   const normalizedDrop = dropped.replace(/\r\n?/g, "\n").trim();
   if (!normalizedDrop) return current;
   if (!current) return normalizedDrop;
-  return `${current.replace(/\s+$/g, "")}\n${normalizedDrop}`;
+  return `${current}\n${normalizedDrop}`;
 }
 
 export function splitDroppedTodoText(value: string): string[] {
