@@ -766,4 +766,61 @@ describe("TextPanel", () => {
     expect(wrapper.emitted("update")?.at(-1)?.[0]).toEqual([{ text: "root pasted", indent: 0 }]);
     wrapper.unmount();
   });
+
+  it("renumbers root ordered lists after a middle item is removed", async () => {
+    const wrapper = mount(TextPanel, {
+      props: {
+        titleId: "note-title",
+        title: "备忘录",
+        lines: [
+          { text: "1. 第一项", indent: 0 },
+          { text: "2. 第二项", indent: 0 },
+          { text: "4. 第四项", indent: 0 },
+        ],
+      },
+    });
+
+    expect(wrapper.get("textarea").element.value).toBe("1. 第一项\n2. 第二项\n3. 第四项");
+
+    await wrapper.get("textarea").trigger("click");
+    await wrapper.get("textarea").setValue("1. 第一项\n3. 第四项");
+
+    expect(wrapper.emitted("update")?.at(-1)?.[0]).toEqual([
+      { text: "1. 第一项", indent: 0 },
+      { text: "2. 第四项", indent: 0 },
+    ]);
+  });
+
+  it("renumbers ordered lists independently by indentation level", () => {
+    const wrapper = mount(TextPanel, {
+      props: {
+        titleId: "workspace-title",
+        title: "工作空间",
+        lines: [
+          { text: "1. 父项", indent: 0 },
+          { text: "1. 子项 A", indent: 1 },
+          { text: "7. 子项 B", indent: 1 },
+          { text: "9. 父项 B", indent: 0 },
+        ],
+      },
+    });
+
+    expect(wrapper.get("textarea").element.value).toBe("1. 父项\n\t- 1. 子项 A\n\t- 2. 子项 B\n2. 父项 B");
+  });
+
+  it("does not renumber dates or versions as ordered lists", () => {
+    const wrapper = mount(TextPanel, {
+      props: {
+        titleId: "note-title",
+        title: "备忘录",
+        lines: [
+          { text: "2026.05 发布", indent: 0 },
+          { text: "1.0.18 版本", indent: 0 },
+          { text: "散落 2. 文字", indent: 0 },
+        ],
+      },
+    });
+
+    expect(wrapper.get("textarea").element.value).toBe("2026.05 发布\n1.0.18 版本\n散落 2. 文字");
+  });
 });

@@ -9,6 +9,7 @@ import {
   handleTextareaTab,
   insertIndentedLineBreak,
   outdentEmptyIndentedLine,
+  renumberOrderedListText,
   textLinesToEditorText,
 } from "../utils/textEditor";
 import EditableTitle from "./EditableTitle.vue";
@@ -78,7 +79,12 @@ const textPanelClasses = computed(() => ({
 
 function update(): void {
   if (!editing.value) return;
-  recordUndoForText(text.value);
+  const normalized = renumberOrderedListText(text.value);
+  if (normalized !== text.value) {
+    applyEditorText(normalized);
+  } else {
+    recordUndoForText(text.value);
+  }
   emit("update", editorTextToLines(text.value));
 }
 

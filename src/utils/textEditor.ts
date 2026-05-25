@@ -4,14 +4,16 @@ import { serializeTextLines, textLinesToText } from "../state/storage";
 export { serializeTextLines, textLinesToText };
 
 const LINE_MARKER = "- ";
+const ORDERED_MARKER_PATTERN = /^(\d+)\.\s+(.*)$/;
 
 export function textLinesToEditorText(lines: LineItem[]): string {
-  return lines.map((line) => formatEditorLine(line.indent, line.text)).join("\n");
+  return renumberOrderedListText(lines.map((line) => formatEditorLine(line.indent, line.text)).join("\n"));
 }
 
 export function editorTextToLines(value = ""): LineItem[] {
-  if (!value) return [];
-  return value.split("\n").map((line) => {
+  const normalized = renumberOrderedListText(value);
+  if (!normalized) return [];
+  return normalized.split("\n").map((line) => {
     const tabs = line.match(/^\t*/)?.[0].length ?? 0;
     const content = line.slice(tabs);
     return {
@@ -19,6 +21,35 @@ export function editorTextToLines(value = ""): LineItem[] {
       indent: tabs,
     };
   });
+}
+
+export function renumberOrderedListText(value = ""): string {
+  if (!value) return "";
+  const counters = new Map<number, number>();
+  const active = new Set<number>();
+
+  return value.split("\n").map((line) => {
+    const indentText = line.match(/^\t*/)?.[0] ?? "";
+    const indent = indentText.length;
+    const content = line.slice(indent);
+    const markerPrefix = content.startsWith(LINE_MARKER) ? LINE_MARKER : "";
+    const text = markerPrefix ? content.slice(LINE_MARKER.length) : content;
+    const match = ORDERED_MARKER_PATTERN.exec(text);
+
+    if (!match) {
+      counters.delete(indent);
+      active.delete(indent);
+      return line;
+    }
+
+    const startsList = Number(match[1]) === 1 || active.has(indent);
+    if (!startsList) return line;
+
+    const nextNumber = active.has(indent) ? (counters.get(indent) ?? 0) + 1 : 1;
+    counters.set(indent, nextNumber);
+    active.add(indent);
+    return `${indentText}${markerPrefix}${nextNumber}. ${match[2]}`;
+  }).join("\n");
 }
 
 export function handleTextareaTab(textarea: HTMLTextAreaElement, outdent = false): string {
