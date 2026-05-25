@@ -1,5 +1,6 @@
 import { DEFAULT_SPACE_ID, DEFAULT_SPACE_TITLE, defaultState, STORAGE_KEY, TODO_PERIODS } from "./defaults";
 import { isValidDeadlineAt } from "./deadlines";
+import { normalizeCompanionGifTheme } from "./companionGifThemes";
 import type {
   BoardState,
   LineItem,
@@ -74,6 +75,7 @@ export function normalizeImportedState(payload: unknown): BoardState {
   return {
     ...base,
     theme: typed.theme === "dark" ? "dark" : "light",
+    companionGifTheme: normalizeCompanionGifTheme(typed.companionGifTheme),
     customTitles,
     noteLines,
     workspaceLines,

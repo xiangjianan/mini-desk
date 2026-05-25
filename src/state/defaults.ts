@@ -1,4 +1,5 @@
 import type { BoardState, TodoPeriod } from "../types";
+import { DEFAULT_COMPANION_GIF_THEME } from "./companionGifThemes";
 
 export const STORAGE_KEY = "todo-board-state-v1";
 export const IMAGE_DB_NAME = "todo-board-images-v1";
@@ -52,6 +53,7 @@ export const CONTROL_HELP = {
 export function defaultState(): BoardState {
   return {
     theme: "light",
+    companionGifTheme: DEFAULT_COMPANION_GIF_THEME,
     customTitles: {},
     noteLines: [],
     workspaceLines: [],

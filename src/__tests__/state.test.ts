@@ -1,4 +1,5 @@
 import { describe, expect, it } from "vitest";
+import { DEFAULT_COMPANION_GIF_THEME } from "../state/companionGifThemes";
 import { defaultState } from "../state/defaults";
 import {
   getSerializableState,
@@ -46,6 +47,23 @@ describe("state compatibility", () => {
     expect(state.spaces).toEqual([{ id: "workspace", title: "工作空间", lines: [] }]);
     expect(state.activeSpaceId).toBe("workspace");
     expect(state.showCompletedTodos).toEqual({ morning: false, noon: false, evening: false });
+  });
+
+  it("defaults to the Hermes companion GIF theme", () => {
+    expect(defaultState().companionGifTheme).toBe(DEFAULT_COMPANION_GIF_THEME);
+  });
+
+  it("preserves the disabled companion GIF theme during import and serialization", () => {
+    const state = normalizeImportedState({ companionGifTheme: "none" });
+
+    expect(state.companionGifTheme).toBe("none");
+    expect(getSerializableState(state).companionGifTheme).toBe("none");
+  });
+
+  it("normalizes unknown companion GIF themes to Hermes", () => {
+    expect(normalizeImportedState({ companionGifTheme: "future-theme" }).companionGifTheme).toBe("hermes");
+    expect(normalizeImportedState({ companionGifTheme: "" }).companionGifTheme).toBe("hermes");
+    expect(normalizeImportedState({ companionGifTheme: null }).companionGifTheme).toBe("hermes");
   });
 
   it("serializes image metadata without large payloads for localStorage", () => {

@@ -1,4 +1,5 @@
 export type ThemeMode = "light" | "dark";
+export type CompanionGifTheme = "hermes" | "none";
 export type QuickButtonType = "link" | "text";
 export type TodoPeriod = "morning" | "noon" | "evening";
 export type TodoCompletedVisibility = Record<TodoPeriod, boolean>;
@@ -59,6 +60,7 @@ export interface WorkspaceSpace {
 
 export interface BoardState {
   theme: ThemeMode;
+  companionGifTheme: CompanionGifTheme;
   customTitles: Record<string, string>;
   noteLines: LineItem[];
   workspaceLines: LineItem[];
