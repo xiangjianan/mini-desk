@@ -998,7 +998,7 @@ h3 {
   width: 160px;
   height: 160px;
   border: 1px dashed var(--line-control);
-  border-radius: 999px;
+  border-radius: 0;
   background: var(--button);
 }
 

@@ -301,8 +301,8 @@ describe("Naive UI component usage", () => {
     expect(text).toContain("粘贴");
     expect(todo).toContain("copyTodoText");
     expect(todo).toContain("复制");
-    expect(todo).toContain("设置提醒时间");
-    expect(todo).toContain("编辑提醒时间");
+    expect(todo).toContain("设置通知时间");
+    expect(todo).toContain("编辑通知时间");
     expect(todo).toContain("删除");
   });
 
