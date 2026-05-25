@@ -103,6 +103,56 @@ describe("SpacePanel", () => {
     wrapper.unmount();
   });
 
+  it("emits editDone when Esc cancels editing requested by editSpaceId", async () => {
+    const wrapper = mount(SpacePanel, {
+      props: {
+        activeSpaceId: "new",
+        editSpaceId: "new",
+        spaces: [
+          { id: "old", title: "旧空间", lines: [] },
+          { id: "new", title: "新空间", lines: [] },
+        ],
+      },
+      global: {
+        stubs: {
+          Dropdown: dropdownStub,
+          NDropdown: dropdownStub,
+        },
+      },
+    });
+
+    await wrapper.vm.$nextTick();
+    await wrapper.get(".space-tab-edit-input").trigger("keydown.esc");
+
+    expect(wrapper.emitted("editDone")?.[0]).toEqual(["new"]);
+  });
+
+  it("emits editDone without rename when blur commits an empty space name", async () => {
+    const wrapper = mount(SpacePanel, {
+      props: {
+        activeSpaceId: "new",
+        editSpaceId: "new",
+        spaces: [
+          { id: "old", title: "旧空间", lines: [] },
+          { id: "new", title: "新空间", lines: [] },
+        ],
+      },
+      global: {
+        stubs: {
+          Dropdown: dropdownStub,
+          NDropdown: dropdownStub,
+        },
+      },
+    });
+
+    await wrapper.vm.$nextTick();
+    await wrapper.get(".space-tab-edit-input").setValue("   ");
+    await wrapper.get(".space-tab-edit-input").trigger("blur");
+
+    expect(wrapper.emitted("rename")).toBeUndefined();
+    expect(wrapper.emitted("editDone")?.[0]).toEqual(["new"]);
+  });
+
   it("does not save a space name while Chinese IME composition is confirming", async () => {
     const wrapper = mountSpacePanel([{ id: "workspace", title: "工作空间", lines: [] }]);
 

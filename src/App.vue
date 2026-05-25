@@ -353,6 +353,10 @@ function renameSpace(id: string, title: string): void {
   persistNow();
 }
 
+function finishSpaceEdit(id: string): void {
+  if (pendingEditSpaceId.value === id) pendingEditSpaceId.value = null;
+}
+
 function deleteSpace(id: string): void {
   if (state.spaces.length <= 1) {
     showBubbleText("至少保留一个空间");
@@ -1475,6 +1479,7 @@ function moveItem<T extends { id: string }>(items: T[], dragId: string, targetId
         @activate="activateSpace"
         @create="createSpace"
         @rename="renameSpace"
+        @edit-done="finishSpaceEdit"
         @update="updateSpaceLines"
         @delete="deleteSpace"
         @reorder="reorderSpaces"

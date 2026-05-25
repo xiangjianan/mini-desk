@@ -1126,6 +1126,27 @@ describe("App shell", () => {
     }
   });
 
+  it("clears pending workspace name editing after SpacePanel edit completion", async () => {
+    const wrapper = mountApp();
+
+    try {
+      let spacePanel = wrapper.getComponent(SpacePanel);
+      spacePanel.vm.$emit("create");
+      await wrapper.vm.$nextTick();
+
+      spacePanel = wrapper.getComponent(SpacePanel);
+      const editSpaceId = spacePanel.props("editSpaceId");
+      expect(editSpaceId).toBeTruthy();
+
+      spacePanel.vm.$emit("editDone", editSpaceId);
+      await wrapper.vm.$nextTick();
+
+      expect(wrapper.getComponent(SpacePanel).props("editSpaceId")).toBeNull();
+    } finally {
+      wrapper.unmount();
+    }
+  });
+
   it("shows a companion bubble when clearing an empty completed todo list", async () => {
     vi.useFakeTimers();
     const wrapper = mountApp();

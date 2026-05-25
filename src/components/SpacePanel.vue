@@ -15,6 +15,7 @@ const emit = defineEmits<{
   activate: [id: string];
   create: [];
   rename: [id: string, title: string];
+  editDone: [id: string];
   update: [id: string, lines: LineItem[]];
   delete: [id: string];
   reorder: [dragId: string, targetId: string];
@@ -85,12 +86,15 @@ function commitTabEdit(): void {
   editingSpaceId.value = null;
   editingTitle.value = "";
   if (title) emit("rename", id, title);
+  emit("editDone", id);
 }
 
 function cancelTabEdit(): void {
+  const id = editingSpaceId.value;
   titleComposing.value = false;
   editingSpaceId.value = null;
   editingTitle.value = "";
+  if (id) emit("editDone", id);
 }
 
 function handleTabEditEnter(event: KeyboardEvent): void {
