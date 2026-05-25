@@ -6,7 +6,18 @@ import {
   normalizeImportedState,
   serializeTextLines,
 } from "../state/storage";
-import { addTodo, completeTodo, getOrderedTodos, moveTodo, removeEmptyTodo, setTodoNotifyAt, starTodo } from "../state/todos";
+import {
+  addTodo,
+  completeTodo,
+  getOrderedTodos,
+  moveTodo,
+  removeEmptyTodo,
+  removeTodoListData,
+  reorderTodoLists,
+  setTodoNotifyAt,
+  starTodo,
+  updateTodoText,
+} from "../state/todos";
 import type { BoardState } from "../types";
 
 describe("state compatibility", () => {
@@ -335,6 +346,54 @@ describe("state compatibility", () => {
 });
 
 describe("todo behavior", () => {
+  it("edits reminders in arbitrary todo list ids", () => {
+    const todos = {
+      custom: [{ id: "a", text: "A", done: false }],
+    };
+
+    const added = addTodo(todos, "custom", { id: "b", text: "B", done: false });
+    const updated = updateTodoText(added, "custom", "b", "B2");
+    const notified = setTodoNotifyAt(updated, "custom", "b", new Date(2026, 4, 25, 9).getTime());
+    const completed = completeTodo(notified, "custom", "b", true);
+
+    expect(completed.custom.map((todo) => [todo.id, todo.text, todo.done])).toEqual([
+      ["a", "A", false],
+      ["b", "B2", true],
+    ]);
+    expect(completed.custom[1].notifyAt).toBe(new Date(2026, 4, 25, 9).getTime());
+  });
+
+  it("treats missing todo list ids as no-ops", () => {
+    const todos = { custom: [{ id: "a", text: "A", done: false }] };
+
+    expect(updateTodoText(todos, "missing", "a", "B")).toEqual(todos);
+    expect(completeTodo(todos, "missing", "a", true)).toEqual(todos);
+    expect(moveTodo(todos, "missing", "a", "custom")).toEqual(todos);
+    expect(moveTodo(todos, "custom", "a", "missing")).toEqual(todos);
+  });
+
+  it("removes and reorders configurable todo lists without mutating reminders", () => {
+    const state = normalizeImportedState({
+      todoLists: [
+        { id: "a", title: "A" },
+        { id: "b", title: "B" },
+        { id: "c", title: "C" },
+      ],
+      todos: {
+        a: [{ id: "ta", text: "A", done: false }],
+        b: [{ id: "tb", text: "B", done: false }],
+        c: [],
+      },
+    });
+
+    const reordered = reorderTodoLists(state.todoLists, "c", "a");
+    const removed = removeTodoListData(state.todos, state.showCompletedTodos, "b");
+
+    expect(reordered.map((list) => list.id)).toEqual(["c", "a", "b"]);
+    expect(Object.keys(removed.todos)).toEqual(["a", "c"]);
+    expect(removed.todos.a[0].text).toBe("A");
+  });
+
   it("keeps completed todos at the bottom", () => {
     const todos = [
       { id: "1", text: "done", done: true },

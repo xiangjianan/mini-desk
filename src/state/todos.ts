@@ -1,4 +1,4 @@
-import type { TodoItem, TodoMap, TodoPeriod } from "../types";
+import type { TodoCompletedVisibility, TodoItem, TodoListConfig, TodoListId, TodoMap, TodoPeriod } from "../types";
 import { isValidDeadlineAt } from "./deadlines";
 
 export function getOrderedTodos(todos: TodoItem[] = [], deferredDoneIds: ReadonlySet<string> = new Set()): TodoItem[] {
@@ -137,11 +137,38 @@ export function moveTodo(
   if (!source) return next;
   const sourceIndex = source.findIndex((todo) => todo.id === id);
   if (sourceIndex < 0) return next;
+  const destination = next[destinationPeriod];
+  if (!destination) return next;
 
   const [todo] = source.splice(sourceIndex, 1);
-  const destination = ensureTodoList(next, destinationPeriod);
   const targetIndex = targetId ? destination.findIndex((item) => item.id === targetId) : -1;
   destination.splice(targetIndex >= 0 ? targetIndex : destination.length, 0, todo);
+  return next;
+}
+
+export function removeTodoListData(
+  todos: TodoMap,
+  showCompleted: TodoCompletedVisibility,
+  listId: TodoListId,
+): { todos: TodoMap; showCompletedTodos: TodoCompletedVisibility } {
+  const nextTodos = cloneTodoMap(todos);
+  const nextVisibility = { ...showCompleted };
+  delete nextTodos[listId];
+  delete nextVisibility[listId];
+  return { todos: nextTodos, showCompletedTodos: nextVisibility };
+}
+
+export function reorderTodoLists(
+  lists: TodoListConfig[],
+  draggedId: TodoListId,
+  targetId: TodoListId,
+): TodoListConfig[] {
+  const sourceIndex = lists.findIndex((list) => list.id === draggedId);
+  const targetIndex = lists.findIndex((list) => list.id === targetId);
+  if (sourceIndex < 0 || targetIndex < 0 || sourceIndex === targetIndex) return lists;
+  const next = lists.map((list) => ({ ...list }));
+  const [item] = next.splice(sourceIndex, 1);
+  next.splice(targetIndex, 0, item);
   return next;
 }
 
