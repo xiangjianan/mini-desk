@@ -7,9 +7,7 @@ on:
   workflow_dispatch:
 
 permissions:
-  contents: read
-  pages: write
-  id-token: write
+  contents: write
 
 concurrency:
   group: github-pages
@@ -17,9 +15,6 @@ concurrency:
 
 jobs:
   deploy:
-    environment:
-      name: github-pages
-      url: ${{ steps.deployment.outputs.page_url }}
     runs-on: ubuntu-latest
     steps:
       - name: Checkout
@@ -37,11 +32,22 @@ jobs:
       - name: Build
         run: VITE_BASE=/todolist/ npm run build
 
-      - name: Upload artifact
-        uses: actions/upload-pages-artifact@v4
-        with:
-          path: dist
-
-      - name: Deploy
-        id: deployment
-        uses: actions/deploy-pages@v4
+      - name: Publish to gh-pages
+        run: |
+          set -euo pipefail
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          tmpdir="$(mktemp -d)"
+          cp -R dist/. "$tmpdir/"
+          git fetch origin gh-pages
+          git checkout gh-pages
+          find . -mindepth 1 -maxdepth 1 ! -name .git -exec rm -rf {} +
+          cp -R "$tmpdir"/. .
+          touch .nojekyll
+          git add -A
+          if git diff --cached --quiet; then
+            echo "No GitHub Pages changes to publish."
+          else
+            git commit -m "deploy: publish GitHub Pages build"
+            git push origin gh-pages
+          fi
