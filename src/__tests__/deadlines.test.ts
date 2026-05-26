@@ -9,8 +9,10 @@ import {
 } from "../state/deadlines";
 
 describe("notification time helpers", () => {
-  it("uses a small set of common whole-hour choices", () => {
-    expect(NOTIFY_TIME_OPTIONS).toEqual(["09:00", "12:00", "15:00", "18:00", "21:00"]);
+  it("uses all whole-hour choices for the notification clock", () => {
+    expect(NOTIFY_TIME_OPTIONS).toHaveLength(24);
+    expect(NOTIFY_TIME_OPTIONS[0]).toBe("00:00");
+    expect(NOTIFY_TIME_OPTIONS[23]).toBe("23:00");
     expect(DEFAULT_NOTIFY_TIME).toBe("09:00");
   });
 
@@ -32,16 +34,16 @@ describe("notification time helpers", () => {
     expect(getLocalDateInputValue(new Date(2026, 4, 7, 9))).toBe("2026-05-07");
   });
 
-  it("chooses the next common whole-hour notification time by default", () => {
+  it("chooses the next whole-hour notification time by default", () => {
     expect(getDefaultNotifySelection(new Date(2026, 4, 25, 8, 0))).toEqual({
       date: "2026-05-25",
       time: "09:00",
     });
     expect(getDefaultNotifySelection(new Date(2026, 4, 25, 10, 0))).toEqual({
       date: "2026-05-25",
-      time: "12:00",
+      time: "11:00",
     });
-    expect(getDefaultNotifySelection(new Date(2026, 4, 25, 21, 0))).toEqual({
+    expect(getDefaultNotifySelection(new Date(2026, 4, 25, 23, 30))).toEqual({
       date: "2026-05-26",
       time: "09:00",
     });

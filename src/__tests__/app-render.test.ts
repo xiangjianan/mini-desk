@@ -285,16 +285,20 @@ describe("App shell", () => {
     }
   });
 
-  it("creates a configurable reminder list and persists it", async () => {
+  it("creates a configurable reminder list with the submitted title and persists it", async () => {
     const wrapper = mountApp();
 
     try {
-      await wrapper.get(".todo-add-list-button").trigger("click");
+      wrapper.getComponent(TodoPanel).vm.$emit(
+        "createList",
+        wrapper.get(".todo-panel").element as HTMLElement,
+        "工作提醒",
+      );
       await nextTick();
 
       const stored = JSON.parse(localStorage.getItem(STORAGE_KEY) || "{}");
       expect(stored.todoLists).toHaveLength(4);
-      expect(stored.todoLists.at(-1).title).toBe("未命名列表");
+      expect(stored.todoLists.at(-1).title).toBe("工作提醒");
       expect(stored.todos[stored.todoLists.at(-1).id]).toEqual([]);
     } finally {
       wrapper.unmount();
@@ -305,7 +309,8 @@ describe("App shell", () => {
     const wrapper = mountApp();
 
     try {
-      await wrapper.get(".todo-add-list-button").trigger("click");
+      wrapper.getComponent(TodoPanel).vm.$emit("createList", wrapper.get(".todo-panel").element as HTMLElement);
+      await nextTick();
       await nextTick();
 
       const newSection = wrapper.findAll(".todo-section").at(-1);

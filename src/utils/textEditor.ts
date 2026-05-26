@@ -129,6 +129,11 @@ export function insertIndentedLineBreak(textarea: HTMLTextAreaElement): string {
   return textarea.value;
 }
 
+export function insertPlainLineBreak(textarea: HTMLTextAreaElement): string {
+  textarea.setRangeText("\n", textarea.selectionStart, textarea.selectionEnd, "end");
+  return textarea.value;
+}
+
 export function outdentEmptyIndentedLine(textarea: HTMLTextAreaElement): string | undefined {
   const { selectionStart, selectionEnd, value } = textarea;
   if (selectionStart !== selectionEnd) return undefined;

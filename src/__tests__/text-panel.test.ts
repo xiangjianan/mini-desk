@@ -96,6 +96,31 @@ describe("TextPanel", () => {
     expect(textarea.value).toBe("root\n");
   });
 
+  it("inserts a plain line break at the caret when pressing Shift+Enter", async () => {
+    const wrapper = mount(TextPanel, {
+      props: {
+        titleId: "workspace-title",
+        title: "工作空间",
+        lines: [{ text: "child text", indent: 1 }],
+      },
+    });
+    const textarea = wrapper.get("textarea").element as HTMLTextAreaElement;
+    const caret = textarea.value.indexOf(" text");
+    textarea.setSelectionRange(caret, caret);
+
+    await wrapper.get("textarea").trigger("dblclick");
+    textarea.setSelectionRange(caret, caret);
+    await wrapper.get("textarea").trigger("keydown", { key: "Enter", shiftKey: true });
+
+    expect(textarea.value).toBe("\t- child\n text");
+    expect(textarea.selectionStart).toBe("\t- child\n".length);
+    expect(textarea.selectionEnd).toBe("\t- child\n".length);
+    expect(wrapper.emitted("update")?.at(-1)?.[0]).toEqual([
+      { text: "child", indent: 1 },
+      { text: " text", indent: 0 },
+    ]);
+  });
+
   it("continues numbered lists when pressing Enter", async () => {
     const wrapper = mount(TextPanel, {
       props: {

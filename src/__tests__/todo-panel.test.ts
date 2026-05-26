@@ -72,7 +72,7 @@ describe("TodoPanel", () => {
     expect(values(wrapper)).toEqual(["A"]);
   });
 
-  it("emits list creation and list title updates", async () => {
+  it("opens a right-click dialog before creating a reminder list", async () => {
     const wrapper = mount(TodoPanel, {
       props: {
         todoLists: defaultTodoLists,
@@ -91,8 +91,35 @@ describe("TodoPanel", () => {
       },
     });
 
-    await wrapper.get(".todo-add-list-button").trigger("click");
-    expect(wrapper.emitted("createList")?.[0]).toEqual([expect.any(HTMLElement)]);
+    expect(wrapper.find(".todo-add-list-button").exists()).toBe(false);
+
+    await wrapper.get('.todo-section[data-list-id="morning"]').trigger("contextmenu");
+    await wrapper.findAll(".dropdown-option").find((option) => option.text() === "新增提醒列表")?.trigger("click");
+    await wrapper.get(".todo-list-create-input").setValue("工作提醒");
+    await wrapper.get(".todo-list-create-confirm").trigger("click");
+
+    expect(wrapper.emitted("createList")?.[0]).toEqual([expect.any(HTMLElement), "工作提醒"]);
+    expect(wrapper.find(".todo-list-create-dialog").exists()).toBe(false);
+  });
+
+  it("emits list title updates", async () => {
+    const wrapper = mount(TodoPanel, {
+      props: {
+        todoLists: defaultTodoLists,
+        todos: { morning: [], noon: [], evening: [] },
+        showCompleted: { morning: false, noon: false, evening: false },
+        titles: DEFAULT_TITLES,
+      },
+      global: {
+        stubs: {
+          Checkbox: checkboxStub,
+          Dropdown: dropdownStub,
+          NCheckbox: checkboxStub,
+          NDropdown: dropdownStub,
+          NTooltip: tooltipStub,
+        },
+      },
+    });
 
     await wrapper.get('.todo-section[data-list-id="morning"] .editable-title').trigger("dblclick");
     await wrapper.get('.todo-section[data-list-id="morning"] .title-edit-input').setValue("上午");
@@ -162,7 +189,7 @@ describe("TodoPanel", () => {
     expect(wrapper.emitted("updateListTitle")).toBeUndefined();
   });
 
-  it("emits collapse compact delete and list reorder actions", async () => {
+  it("toggles list collapse from a centered header icon and keeps compact out of the menu", async () => {
     const wrapper = mount(TodoPanel, {
       props: {
         todoLists: defaultTodoLists,
@@ -181,21 +208,22 @@ describe("TodoPanel", () => {
       },
     });
 
+    await wrapper.get('.todo-section[data-list-id="morning"] .todo-collapse-button').trigger("click");
     await wrapper.get('.todo-section[data-list-id="morning"] .todo-section-menu-button').trigger("click");
-    expect(wrapper.findAll(".dropdown-option").map((option) => option.text())).toContain("折叠");
+    const optionTexts = wrapper.findAll(".dropdown-option").map((option) => option.text());
+    expect(optionTexts).not.toContain("折叠");
+    expect(optionTexts).not.toContain("展开");
+    expect(optionTexts).not.toContain("收缩");
+    expect(optionTexts).not.toContain("恢复");
 
-    await wrapper.findAll(".dropdown-option").find((option) => option.text() === "折叠")?.trigger("click");
-    await wrapper.get('.todo-section[data-list-id="morning"] .todo-section-menu-button').trigger("click");
-    await wrapper.findAll(".dropdown-option").find((option) => option.text() === "收缩")?.trigger("click");
-    await wrapper.get('.todo-section[data-list-id="morning"] .todo-section-menu-button').trigger("click");
     await wrapper.findAll(".dropdown-option").find((option) => option.text() === "删除列表")?.trigger("click");
 
     expect(wrapper.emitted("toggleListCollapsed")?.[0]).toEqual(["morning", true]);
-    expect(wrapper.emitted("toggleListCompact")?.[0]).toEqual(["morning", true]);
+    expect(wrapper.emitted("toggleListCompact")).toBeUndefined();
     expect(wrapper.emitted("deleteList")?.[0]).toEqual(["morning", expect.any(HTMLElement)]);
   });
 
-  it("emits list reorder actions without moving reminders", async () => {
+  it("emits list reorder actions from header dragging without moving reminders", async () => {
     const wrapper = mount(TodoPanel, {
       props: {
         todoLists: defaultTodoLists,
@@ -213,12 +241,50 @@ describe("TodoPanel", () => {
         },
       },
     });
+    const dataTransfer = {
+      effectAllowed: "",
+      setData: vi.fn(),
+    };
 
-    await wrapper.get('.todo-section[data-list-id="morning"] .todo-list-drag-handle').trigger("dragstart");
+    await wrapper.get('.todo-section[data-list-id="morning"] .todo-heading').trigger("dragstart", { dataTransfer });
     await wrapper.get('.todo-section[data-list-id="noon"]').trigger("drop");
 
+    expect(dataTransfer.effectAllowed).toBe("move");
+    expect(dataTransfer.setData).toHaveBeenCalledWith("text/plain", "morning");
     expect(wrapper.emitted("reorderLists")?.[0]).toEqual(["morning", "noon"]);
     expect(wrapper.emitted("move")).toBeUndefined();
+  });
+
+  it("does not treat a dragged reminder list as dropped external text over a list body", async () => {
+    const wrapper = mount(TodoPanel, {
+      props: {
+        todoLists: defaultTodoLists,
+        todos: { morning: [{ id: "a", text: "A", done: false }], noon: [], evening: [] },
+        showCompleted: { morning: false, noon: false, evening: false },
+        titles: DEFAULT_TITLES,
+      },
+      global: {
+        stubs: {
+          Checkbox: checkboxStub,
+          Dropdown: dropdownStub,
+          NCheckbox: checkboxStub,
+          NDropdown: dropdownStub,
+          NTooltip: tooltipStub,
+        },
+      },
+    });
+    const dataTransfer = {
+      effectAllowed: "",
+      files: [],
+      getData: vi.fn(() => "morning"),
+      setData: vi.fn(),
+    };
+
+    await wrapper.get('.todo-section[data-list-id="morning"] .todo-heading').trigger("dragstart", { dataTransfer });
+    await wrapper.get('[data-testid="todo-list-noon"]').trigger("drop", { dataTransfer });
+
+    expect(wrapper.emitted("reorderLists")?.[0]).toEqual(["morning", "noon"]);
+    expect(wrapper.emitted("createFromText")).toBeUndefined();
   });
 
   it("keeps empty todo lists visually blank while preserving click-to-create", async () => {
@@ -401,8 +467,6 @@ describe("TodoPanel", () => {
     await wrapper.get('.todo-section[data-period="morning"] .todo-section-menu-button').trigger("click");
 
     expect(wrapper.findAll(".dropdown-option").map((option) => option.text())).toEqual([
-      "折叠",
-      "收缩",
       "显示已完成",
       "清理已完成",
       "删除列表",
@@ -452,8 +516,6 @@ describe("TodoPanel", () => {
 
     await wrapper.get('.todo-section[data-period="noon"] .todo-section-menu-button').trigger("click");
     expect(wrapper.findAll(".dropdown-option").map((option) => option.text())).toEqual([
-      "折叠",
-      "收缩",
       "显示已完成",
       "清理已完成",
       "删除列表",
@@ -817,7 +879,11 @@ describe("TodoPanel", () => {
 
     await wrapper.get("input.todo-input").trigger("contextmenu");
     await wrapper.findAll(".dropdown-option").find((option) => option.text() === "设置通知时间")?.trigger("click");
-    await wrapper.get(".deadline-date-input").setValue("2026-05-30");
+    expect(wrapper.find(".deadline-date-input").exists()).toBe(false);
+    expect(wrapper.findAll(".notify-calendar-day").filter((button) => button.text() === "30")).toHaveLength(1);
+    expect(wrapper.findAll(".deadline-time-button")).toHaveLength(24);
+
+    await wrapper.findAll(".notify-calendar-day").find((button) => button.text() === "30")?.trigger("click");
     await wrapper.findAll(".deadline-time-button").find((button) => button.text() === "15")?.trigger("click");
     await wrapper.get(".deadline-confirm-button").trigger("click");
 
@@ -1100,7 +1166,8 @@ describe("TodoPanel", () => {
 
     await wrapper.findAll(".dropdown-option").find((option) => option.text() === "编辑通知时间")?.trigger("click");
 
-    expect((wrapper.get(".deadline-date-input").element as HTMLInputElement).value).toBe("2026-05-30");
+    expect(wrapper.find(".deadline-date-input").exists()).toBe(false);
+    expect(wrapper.find(".notify-calendar-day.is-selected").text()).toBe("30");
     expect(wrapper.get(".deadline-time-button.is-selected").text()).toBe("18");
 
     await wrapper.findAll(".deadline-time-button").find((button) => button.text() === "12")?.trigger("click");
@@ -1547,7 +1614,7 @@ describe("TodoPanel", () => {
     });
 
     await wrapper.get('[data-period="morning"]').trigger("contextmenu");
-    await wrapper.get(".dropdown-option").trigger("click");
+    await wrapper.findAll(".dropdown-option").find((option) => option.text() === "Tips")?.trigger("click");
 
     expect(wrapper.emitted("guide")?.[0]).toEqual(["todos", expect.any(HTMLElement), true]);
     wrapper.unmount();

@@ -781,12 +781,13 @@ async function copyText(text: string, shouldAbort: () => boolean = () => false):
   }
 }
 
-function createTodoList(anchor?: HTMLElement): void {
+function createTodoList(anchor?: HTMLElement, title?: string): void {
   const id = createId();
-  state.todoLists.push({ id, title: "未命名列表", collapsed: false, compact: false });
+  const trimmedTitle = title?.trim() ?? "";
+  state.todoLists.push({ id, title: trimmedTitle || "未命名列表", collapsed: false, compact: false });
   state.todos[id] = [];
   state.showCompletedTodos[id] = false;
-  pendingEditTodoListId.value = id;
+  pendingEditTodoListId.value = trimmedTitle ? null : id;
   persistNow();
   showBubbleText("已新增提醒列表", anchor);
 }

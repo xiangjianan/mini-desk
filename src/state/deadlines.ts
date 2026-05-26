@@ -1,16 +1,33 @@
-export const NOTIFY_TIME_OPTIONS = ["09:00", "12:00", "15:00", "18:00", "21:00"] as const;
+export const NOTIFY_TIME_OPTIONS = [
+  "00:00",
+  "01:00",
+  "02:00",
+  "03:00",
+  "04:00",
+  "05:00",
+  "06:00",
+  "07:00",
+  "08:00",
+  "09:00",
+  "10:00",
+  "11:00",
+  "12:00",
+  "13:00",
+  "14:00",
+  "15:00",
+  "16:00",
+  "17:00",
+  "18:00",
+  "19:00",
+  "20:00",
+  "21:00",
+  "22:00",
+  "23:00",
+] as const;
 export const DEFAULT_NOTIFY_TIME = "09:00";
 
 export type NotifyTimeOption = typeof NOTIFY_TIME_OPTIONS[number];
 export type NotifyUrgency = "overdue" | "due-soon" | "upcoming" | "later";
-
-const NOTIFY_TIME_LABELS: Record<NotifyTimeOption, string> = {
-  "09:00": "上午 9 点",
-  "12:00": "中午 12 点",
-  "15:00": "下午 3 点",
-  "18:00": "下午 6 点",
-  "21:00": "晚上 9 点",
-};
 
 export interface NotifyDisplay {
   label: string;
@@ -114,7 +131,14 @@ export function getNotifyDisplay(notifyAt: number | undefined, now = Date.now())
 }
 
 export function getNotifyTimeLabel(time: NotifyTimeOption): string {
-  return NOTIFY_TIME_LABELS[time];
+  const hour = parseWholeHourValue(time);
+  if (hour === null) return time;
+  if (hour === 0) return "凌晨 0 点";
+  if (hour < 6) return `凌晨 ${hour} 点`;
+  if (hour < 12) return `上午 ${hour} 点`;
+  if (hour === 12) return "中午 12 点";
+  if (hour <= 18) return `下午 ${hour - 12} 点`;
+  return `晚上 ${hour - 12} 点`;
 }
 
 export function isValidNotifyAt(value: unknown): value is number {

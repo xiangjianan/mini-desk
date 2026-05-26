@@ -209,16 +209,19 @@ describe("Naive UI component usage", () => {
     const todo = read("src/components/TodoPanel.vue");
     const styles = read("src/styles.css");
 
-    expect(todo).toContain("todo-add-list-button");
+    expect(todo).not.toContain("todo-add-list-button");
     expect(todo).toContain("todo-list-drag-handle");
+    expect(todo).toContain("todo-collapse-button");
+    expect(todo).toContain("todo-list-create-dialog");
     expect(todo).toContain("is-collapsed");
     expect(todo).toContain("is-compact");
-    expect(styles).toMatch(/\.todo-add-list-button\s*\{[^}]*height: 34px/s);
-    expect(styles).toMatch(/\.todo-add-list-button\s*\{[^}]*border-bottom: 1px solid var\(--line-section\)/s);
+    expect(styles).toMatch(/\.todo-collapse-button\s*\{[^}]*height: 34px/s);
+    expect(styles).toMatch(/\.todo-list-create-dialog\s*\{[^}]*width: 260px/s);
     expect(styles).toMatch(/\.todo-list-drag-handle\s*\{[^}]*cursor: grab/s);
     expect(styles).toMatch(/\.todo-section\.is-collapsed\s*\{[^}]*flex: 0 0 auto/s);
     expect(styles).toMatch(/\.todo-section\.is-compact\s*\{[^}]*flex: 0 0 auto/s);
     expect(styles).toMatch(/\.todo-section\.is-compact \.todo-list\s*\{[^}]*max-height: 136px/s);
+    expect(styles).toMatch(/\.todo-section\.is-compact \.todo-empty-hint\s*\{[^}]*min-height: 90px/s);
     expect(styles).toMatch(/\.todo-section\.is-compact \.todo-star-button\s*\{[^}]*height: 30px/s);
   });
 
@@ -307,12 +310,17 @@ describe("Naive UI component usage", () => {
 
   it("keeps bordered controls and popup surfaces square without rounded corners", () => {
     const styles = read("src/styles.css");
+    const stylesWithoutClock = styles
+      .replace(/\.notify-clock-options\s*\{[^}]*\}/g, "")
+      .replace(/\.notify-clock-button\.deadline-time-button\s*\{[^}]*\}/g, "");
 
     expect(styles).toContain("--radius: 0");
     expect(styles).toMatch(/button\s*\{[^}]*border-radius: 0/s);
     expect(styles).toMatch(/input,[\s\S]*?textarea\s*\{[^}]*border-radius: 0/s);
     expect(styles).toMatch(/\.n-button,[\s\S]*?\.n-dropdown-menu,[\s\S]*?\.n-checkbox-box\s*\{[^}]*border-radius: 0/s);
-    expect(styles).not.toMatch(/border-radius:\s*(?:[1-9]\d*px|0\.\d+|[1-9]\d*%)/);
+    expect(styles).toMatch(/\.notify-clock-options\s*\{[^}]*border-radius: 50%/s);
+    expect(styles).toMatch(/\.notify-clock-button\.deadline-time-button\s*\{[^}]*border-radius: 50% !important/s);
+    expect(stylesWithoutClock).not.toMatch(/border-radius:\s*(?:[1-9]\d*px|0\.\d+|[1-9]\d*%)/);
   });
 
   it("keeps editable text copy/paste while todo item menus stay concise", () => {

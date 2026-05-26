@@ -593,27 +593,6 @@ h3 {
   min-height: 0;
 }
 
-.todo-add-list-button {
-  flex: 0 0 34px;
-  width: 100%;
-  min-width: 0;
-  height: 34px;
-  min-height: 34px;
-  margin: 0;
-  border-top: 0;
-  border-right: 0;
-  border-left: 0;
-  border-bottom: 1px solid var(--line-section);
-  color: var(--muted);
-  background: var(--panel);
-}
-
-.todo-add-list-button:hover,
-.todo-add-list-button:focus-visible {
-  color: var(--text);
-  border-bottom-color: var(--line-focus);
-}
-
 .today-focus-section {
   flex: 0 0 auto;
   border-bottom: 0;
@@ -736,7 +715,7 @@ h3 {
 }
 
 .todo-section.is-compact .todo-empty-hint {
-  min-height: 30px;
+  min-height: 90px;
   line-height: 30px;
 }
 
@@ -767,8 +746,17 @@ h3 {
   flex: 1 1 auto;
 }
 
+.todo-heading[draggable="true"] {
+  cursor: grab;
+}
+
+.todo-heading[draggable="true"]:active {
+  cursor: grabbing;
+}
+
 .todo-list-drag-handle {
   position: relative;
+  display: block;
   flex: 0 0 20px;
   width: 20px;
   min-width: 20px;
@@ -798,6 +786,30 @@ h3 {
 
 .todo-list-drag-handle:active {
   cursor: grabbing;
+}
+
+.todo-collapse-button {
+  flex: 0 0 34px;
+  width: 34px;
+  min-width: 34px;
+  height: 34px;
+  min-height: 34px;
+  margin: 0;
+  border-top: 0;
+  border-bottom-color: var(--line-section);
+  border-left-color: var(--line-section);
+  border-right-color: var(--line-section);
+  color: var(--muted);
+  background: transparent;
+}
+
+.todo-collapse-button:hover,
+.todo-collapse-button:focus-visible {
+  color: var(--text);
+}
+
+.todo-section.is-list-dragging {
+  opacity: 0.64;
 }
 
 .todo-drag-handle {
@@ -1047,14 +1059,14 @@ h3 {
 }
 
 .notify-editor {
-  width: min(520px, calc(100vw - 16px));
-  min-height: 240px;
+  width: min(600px, calc(100vw - 16px));
+  min-height: 360px;
 }
 
 .notify-editor-body {
   display: grid;
-  grid-template-columns: minmax(180px, 1fr) 180px;
-  gap: 18px;
+  grid-template-columns: minmax(240px, 1fr) 240px;
+  gap: 20px;
   padding: 12px 0;
 }
 
@@ -1089,6 +1101,77 @@ h3 {
   font-size: var(--app-font-size);
 }
 
+.notify-calendar-header {
+  display: grid;
+  grid-template-columns: 30px minmax(0, 1fr) 30px;
+  align-items: center;
+  min-height: 30px;
+  margin-bottom: 8px;
+  color: var(--text);
+  font-size: var(--app-font-size);
+  text-align: center;
+}
+
+.notify-calendar-nav {
+  width: 30px;
+  height: 30px;
+  padding: 0;
+  border: 1px solid var(--line-control);
+  background: transparent;
+  color: var(--text);
+  font-size: 18px;
+  line-height: 1;
+}
+
+.notify-calendar-nav:hover,
+.notify-calendar-nav:focus-visible {
+  background: var(--button-hover);
+}
+
+.notify-calendar-weekdays,
+.notify-calendar-grid {
+  display: grid;
+  grid-template-columns: repeat(7, minmax(0, 1fr));
+  gap: 4px;
+}
+
+.notify-calendar-weekdays {
+  margin-bottom: 4px;
+  color: var(--muted);
+  font-size: 12px;
+  text-align: center;
+}
+
+.notify-calendar-placeholder,
+.notify-calendar-day {
+  width: 100%;
+  aspect-ratio: 1;
+}
+
+.notify-calendar-day {
+  min-width: 0;
+  padding: 0;
+  border: 1px solid transparent;
+  background: transparent;
+  color: var(--text);
+  font-size: var(--app-font-size);
+}
+
+.notify-calendar-day:hover,
+.notify-calendar-day:focus-visible {
+  border-color: var(--line-focus);
+  background: var(--button-hover);
+}
+
+.notify-calendar-day.is-today {
+  border-color: var(--line-control);
+}
+
+.notify-calendar-day.is-selected {
+  background: var(--button-hover);
+  border-color: var(--line-focus);
+}
+
 .deadline-time-options {
   flex-wrap: wrap;
   gap: 6px;
@@ -1097,17 +1180,15 @@ h3 {
 
 .notify-clock-options {
   position: relative;
-  width: 160px;
-  height: 160px;
+  width: 220px;
+  height: 220px;
   border: 1px dashed var(--line-control);
-  border-radius: 0;
+  border-radius: 50%;
   background: var(--button);
 }
 
 .notify-clock-button {
   position: absolute;
-  width: 46px;
-  height: 28px;
   transition: transform 0.16s ease, box-shadow 0.16s ease;
 }
 
@@ -1115,12 +1196,6 @@ h3 {
   transform: scale(1.14);
   z-index: 2;
 }
-
-.notify-clock-button.time-0900 { left: 57px; top: 6px; }
-.notify-clock-button.time-1200 { right: 4px; top: 66px; }
-.notify-clock-button.time-1500 { right: 18px; bottom: 26px; }
-.notify-clock-button.time-1800 { left: 57px; bottom: 6px; }
-.notify-clock-button.time-2100 { left: 4px; top: 66px; }
 
 @media (max-width: 560px) {
   .notify-editor-body {
@@ -1148,9 +1223,66 @@ h3 {
   background: var(--button-hover);
 }
 
+.notify-clock-button.deadline-time-button {
+  width: 32px;
+  min-width: 32px;
+  height: 32px;
+  min-height: 32px;
+  padding: 0;
+  border-radius: 50% !important;
+  font-size: 11px;
+}
+
 .deadline-editor-actions {
   justify-content: flex-end;
   gap: 6px;
+}
+
+.todo-list-create-dialog {
+  position: fixed;
+  z-index: 32;
+  width: 260px;
+  padding: 10px;
+  border: 1px solid var(--line-control);
+  background: var(--panel);
+}
+
+.todo-list-create-label {
+  display: block;
+  margin-bottom: 6px;
+  color: var(--muted);
+  font-size: 12px;
+}
+
+.todo-list-create-input {
+  width: 100%;
+  height: 30px;
+  padding: 0 6px;
+  border: 1px solid var(--line-control);
+  background: var(--panel);
+  color: var(--text);
+  font-size: var(--app-font-size);
+}
+
+.todo-list-create-actions {
+  display: flex;
+  justify-content: flex-end;
+  gap: 6px;
+  margin-top: 8px;
+}
+
+.todo-list-create-cancel,
+.todo-list-create-confirm {
+  height: 28px;
+  padding: 0 8px;
+  border: 1px solid var(--line-control);
+  background: transparent;
+  color: var(--text);
+  font-size: var(--app-font-size);
+}
+
+.todo-list-create-confirm {
+  background: var(--button-hover);
 }
 
 .todo-move-move,

@@ -9,6 +9,7 @@ import {
   editorTextToLines,
   handleTextareaTab,
   insertIndentedLineBreak,
+  insertPlainLineBreak,
   outdentEmptyIndentedLine,
   renumberOrderedListText,
   textLinesToEditorText,
@@ -103,7 +104,7 @@ function handleKeydown(event: KeyboardEvent): void {
   }
   if (event.key === "Enter") {
     event.preventDefault();
-    applyEditorText(insertIndentedLineBreak(textarea));
+    applyEditorText(event.shiftKey ? insertPlainLineBreak(textarea) : insertIndentedLineBreak(textarea));
     nextTick(() => update());
   }
   if (event.key === "Backspace" || event.key === "Delete") {

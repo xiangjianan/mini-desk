@@ -1,6 +1,7 @@
 <script setup lang="ts">
 import { computed, nextTick, onMounted, onUnmounted, ref } from "vue";
-import { NCheckbox, NDropdown } from "naive-ui";
+import { ChevronDownOutline, ChevronForwardOutline } from "@vicons/ionicons5";
+import { NCheckbox, NDropdown, NIcon } from "naive-ui";
 import type { DropdownOption } from "naive-ui";
 import { DEFAULT_TODO_LISTS, GUIDE_MENU_OPTION } from "../state/defaults";
 import {
@@ -40,7 +41,7 @@ const props = defineProps<{
 
 const emit = defineEmits<{
   titleUpdate: [id: string, value: string];
-  createList: [anchor?: HTMLElement];
+  createList: [anchor?: HTMLElement, title?: string];
   updateListTitle: [listId: TodoListId, title: string];
   toggleListCollapsed: [listId: TodoListId, collapsed: boolean];
   toggleListCompact: [listId: TodoListId, compact: boolean];
@@ -78,14 +79,23 @@ const draggedListId = ref<TodoListId | null>(null);
 const editingTodoKey = ref<string | null>(null);
 const selectedMenuTodoKey = ref<string | null>(null);
 const notifyEditorRef = ref<HTMLElement | null>(null);
+const listCreateDialogRef = ref<HTMLElement | null>(null);
+const listCreateInputRef = ref<HTMLInputElement | null>(null);
 const notifyEditor = ref<{
   period: TodoPeriod;
   id: string;
   anchor: HTMLElement;
   date: string;
+  month: string;
   time: NotifyTimeOption;
   x: number;
   y: number;
+} | null>(null);
+const listCreateDialog = ref<{
+  x: number;
+  y: number;
+  anchor?: HTMLElement;
+  title: string;
 } | null>(null);
 const pendingDoneReorderIds = ref<string[]>([]);
 const reorderTimers = new Map<string, number>();
@@ -110,8 +120,6 @@ const menuOptions = computed<DropdownOption[]>(() => {
     const list = getListById(menu.value.period);
     if (!list) return [guideMenuOption];
     return [
-      { label: list.collapsed ? "展开" : "折叠", key: "toggle-collapsed" },
-      { label: list.compact ? "恢复" : "收缩", key: "toggle-compact" },
       { label: isCompletedVisible(list.id) ? "隐藏已完成" : "显示已完成", key: "toggle-completed" },
       { label: "清理已完成", key: "clear-completed" },
       { label: "删除列表", key: "delete-list", disabled: effectiveTodoLists.value.length <= 1 },
@@ -120,6 +128,9 @@ const menuOptions = computed<DropdownOption[]>(() => {
   }
   const options: DropdownOption[] = [];
   const todo = getMenuTodo();
+  if (!menu.value?.id) {
+    options.push({ label: "新增提醒列表", key: "create-list" });
+  }
   if (menu.value?.id) {
     options.push({ label: "复制", key: "copy" });
     if (menu.value.target && canPasteTodoText(menu.value.period, menu.value.id, menu.value.target)) {
@@ -139,8 +150,14 @@ const menuOptions = computed<DropdownOption[]>(() => {
 const todayFocusTitleId = "today-focus-title";
 const DEADLINE_CLOCK_INTERVAL_MS = 60_000;
 const DEADLINE_EDITOR_OFFSET = 8;
-const DEADLINE_EDITOR_WIDTH = 520;
-const DEADLINE_EDITOR_HEIGHT = 240;
+const DEADLINE_EDITOR_WIDTH = 600;
+const DEADLINE_EDITOR_HEIGHT = 360;
+const LIST_CREATE_DIALOG_WIDTH = 260;
+const LIST_CREATE_DIALOG_HEIGHT = 112;
+const CALENDAR_WEEKDAYS = ["日", "一", "二", "三", "四", "五", "六"];
+const NOTIFY_CLOCK_SIZE = 220;
+const NOTIFY_CLOCK_BUTTON_SIZE = 32;
+const NOTIFY_CLOCK_RADIUS = 88;
 const deadlineNow = ref(Date.now());
 const deadlineClockTimer = ref<number | undefined>();
 
@@ -188,6 +205,52 @@ const notifyEditorStyle = computed(() => {
   };
 });
 
+const listCreateDialogStyle = computed(() => {
+  if (!listCreateDialog.value) return {};
+  return {
+    left: `${listCreateDialog.value.x}px`,
+    top: `${listCreateDialog.value.y}px`,
+  };
+});
+
+const notifyCalendarTitle = computed(() => {
+  if (!notifyEditor.value) return "";
+  const month = parseMonthValue(notifyEditor.value.month);
+  if (!month) return "";
+  return `${month.year} 年 ${month.month} 月`;
+});
+
+const notifyCalendarDays = computed(() => {
+  if (!notifyEditor.value) return [];
+  const month = parseMonthValue(notifyEditor.value.month);
+  if (!month) return [];
+  const selectedDate = notifyEditor.value.date;
+  const today = getLocalDateInputValue();
+  const firstDay = new Date(month.year, month.month - 1, 1).getDay();
+  const daysInMonth = new Date(month.year, month.month, 0).getDate();
+  const leading = Array.from({ length: firstDay }, (_, index) => ({
+    key: `blank-${index}`,
+    day: "",
+    date: "",
+    blank: true,
+    selected: false,
+    today: false,
+  }));
+  const days = Array.from({ length: daysInMonth }, (_, index) => {
+    const day = index + 1;
+    const date = formatDateValue(month.year, month.month, day);
+    return {
+      key: date,
+      day: String(day),
+      date,
+      blank: false,
+      selected: date === selectedDate,
+      today: date === today,
+    };
+  });
+  return [...leading, ...days];
+});
+
 const notifyDisplays = computed(() => {
   const displays = new Map<TodoItem, NotifyDisplay>();
   const now = deadlineNow.value;
@@ -230,7 +293,7 @@ const listEntries = computed(() =>
 
 onMounted(() => {
   refreshNotifyNow();
-  document.addEventListener("pointerdown", handleDeadlineEditorOutsidePointerDown, true);
+  document.addEventListener("pointerdown", handleFloatingEditorOutsidePointerDown, true);
   window.addEventListener("focus", refreshNotifyNow);
   document.addEventListener("visibilitychange", handleVisibilityChange);
   deadlineClockTimer.value = window.setInterval(refreshNotifyNow, DEADLINE_CLOCK_INTERVAL_MS);
@@ -238,7 +301,7 @@ onMounted(() => {
 
 onUnmounted(() => {
   reorderTimers.forEach((timer) => window.clearTimeout(timer));
-  document.removeEventListener("pointerdown", handleDeadlineEditorOutsidePointerDown, true);
+  document.removeEventListener("pointerdown", handleFloatingEditorOutsidePointerDown, true);
   window.removeEventListener("focus", refreshNotifyNow);
   document.removeEventListener("visibilitychange", handleVisibilityChange);
   window.clearInterval(deadlineClockTimer.value);
@@ -259,6 +322,13 @@ function handleListClick(event: MouseEvent, period: TodoPeriod): void {
 }
 
 function handleTodoTextDrop(event: DragEvent, period: TodoPeriod): void {
+  if (draggedListId.value) {
+    event.preventDefault();
+    event.stopPropagation();
+    emit("reorderLists", draggedListId.value, period);
+    draggedListId.value = null;
+    return;
+  }
   if (dragged.value) return;
   const files = Array.from(event.dataTransfer?.files ?? []);
   if (files.length > 0) return;
@@ -290,11 +360,25 @@ function handleTodoSectionDrop(event: DragEvent, period: TodoPeriod): void {
 function handleListSectionDrop(event: DragEvent, listId: TodoListId): void {
   if (draggedListId.value) {
     event.preventDefault();
+    event.stopPropagation();
     emit("reorderLists", draggedListId.value, listId);
     draggedListId.value = null;
     return;
   }
   handleTodoSectionDrop(event, listId);
+}
+
+function handleListDragStart(event: DragEvent, listId: TodoListId): void {
+  const target = event.target as HTMLElement | null;
+  if (target?.closest("input, textarea, .title-edit-input, .todo-section-menu-button, .todo-collapse-button")) {
+    event.preventDefault();
+    return;
+  }
+  draggedListId.value = listId;
+  if (event.dataTransfer) {
+    event.dataTransfer.effectAllowed = "move";
+    event.dataTransfer.setData("text/plain", listId);
+  }
 }
 
 function handleSectionGuideClick(event: MouseEvent): void {
@@ -394,6 +478,38 @@ function closeMenu(): void {
   selectedMenuTodoKey.value = null;
 }
 
+async function openCreateListDialog(anchor?: HTMLElement, x?: number, y?: number): Promise<void> {
+  const position = getListCreateDialogPosition(anchor, x, y);
+  listCreateDialog.value = {
+    ...position,
+    anchor,
+    title: "",
+  };
+  await nextTick();
+  listCreateInputRef.value?.focus({ preventScroll: true });
+}
+
+function updateCreateListTitle(value: string): void {
+  if (!listCreateDialog.value) return;
+  listCreateDialog.value = { ...listCreateDialog.value, title: value };
+}
+
+function confirmCreateListDialog(): void {
+  const dialog = listCreateDialog.value;
+  if (!dialog) return;
+  const title = dialog.title.trim();
+  if (!title) {
+    listCreateInputRef.value?.focus({ preventScroll: true });
+    return;
+  }
+  emit("createList", dialog.anchor, title);
+  listCreateDialog.value = null;
+}
+
+function closeCreateListDialog(): void {
+  listCreateDialog.value = null;
+}
+
 function handleListTitleUpdate(listId: TodoListId, value: string): void {
   if (!props.todoLists) {
     const legacyTitleId = legacyTodoTitleIds[listId];
@@ -420,6 +536,7 @@ function openNotifyEditor(period: TodoPeriod, id: string, anchor: HTMLElement, t
     id,
     anchor,
     date,
+    month: getMonthValue(date),
     time,
     x,
     y,
@@ -456,9 +573,77 @@ function getNotifyEditorPosition(anchor: HTMLElement): { x: number; y: number } 
   return { x, y };
 }
 
-function updateNotifyDate(value: string): void {
+function getListCreateDialogPosition(anchor?: HTMLElement, x?: number, y?: number): { x: number; y: number } {
+  const viewportWidth = window.innerWidth || document.documentElement.clientWidth || LIST_CREATE_DIALOG_WIDTH;
+  const viewportHeight = window.innerHeight || document.documentElement.clientHeight || LIST_CREATE_DIALOG_HEIGHT;
+  const anchorRect = anchor?.getBoundingClientRect();
+  const rawX = x ?? (anchorRect ? anchorRect.left + DEADLINE_EDITOR_OFFSET : DEADLINE_EDITOR_OFFSET);
+  const rawY = y ?? (anchorRect ? anchorRect.top + DEADLINE_EDITOR_OFFSET : DEADLINE_EDITOR_OFFSET);
+  return {
+    x: Math.min(Math.max(DEADLINE_EDITOR_OFFSET, rawX), Math.max(DEADLINE_EDITOR_OFFSET, viewportWidth - LIST_CREATE_DIALOG_WIDTH - DEADLINE_EDITOR_OFFSET)),
+    y: Math.min(Math.max(DEADLINE_EDITOR_OFFSET, rawY), Math.max(DEADLINE_EDITOR_OFFSET, viewportHeight - LIST_CREATE_DIALOG_HEIGHT - DEADLINE_EDITOR_OFFSET)),
+  };
+}
+
+function selectNotifyDate(value: string): void {
   if (!notifyEditor.value) return;
-  notifyEditor.value = { ...notifyEditor.value, date: value };
+  notifyEditor.value = { ...notifyEditor.value, date: value, month: getMonthValue(value) };
+}
+
+function shiftNotifyCalendarMonth(delta: number): void {
+  if (!notifyEditor.value) return;
+  const month = parseMonthValue(notifyEditor.value.month);
+  if (!month) return;
+  const next = new Date(month.year, month.month - 1 + delta, 1);
+  notifyEditor.value = {
+    ...notifyEditor.value,
+    month: formatMonthValue(next.getFullYear(), next.getMonth() + 1),
+  };
+}
+
+function getNotifyClockButtonStyle(time: NotifyTimeOption): Record<string, string> {
+  const hour = Number(time.slice(0, 2));
+  const angle = (hour / NOTIFY_TIME_OPTIONS.length) * Math.PI * 2 - Math.PI / 2;
+  const center = NOTIFY_CLOCK_SIZE / 2;
+  const offset = NOTIFY_CLOCK_BUTTON_SIZE / 2;
+  return {
+    left: `${center + Math.cos(angle) * NOTIFY_CLOCK_RADIUS - offset}px`,
+    top: `${center + Math.sin(angle) * NOTIFY_CLOCK_RADIUS - offset}px`,
+  };
+}
+
+function getMonthValue(dateValue: string): string {
+  const parts = parseDateValue(dateValue);
+  if (!parts) return formatMonthValue(new Date().getFullYear(), new Date().getMonth() + 1);
+  return formatMonthValue(parts.year, parts.month);
+}
+
+function parseDateValue(dateValue: string): { year: number; month: number; day: number } | null {
+  const match = /^(\d{4})-(\d{2})-(\d{2})$/.exec(dateValue);
+  if (!match) return null;
+  const year = Number(match[1]);
+  const month = Number(match[2]);
+  const day = Number(match[3]);
+  const date = new Date(year, month - 1, day);
+  if (date.getFullYear() !== year || date.getMonth() !== month - 1 || date.getDate() !== day) return null;
+  return { year, month, day };
+}
+
+function parseMonthValue(monthValue: string): { year: number; month: number } | null {
+  const match = /^(\d{4})-(\d{2})$/.exec(monthValue);
+  if (!match) return null;
+  const year = Number(match[1]);
+  const month = Number(match[2]);
+  if (month < 1 || month > 12) return null;
+  return { year, month };
+}
+
+function formatDateValue(year: number, month: number, day: number): string {
+  return `${year}-${String(month).padStart(2, "0")}-${String(day).padStart(2, "0")}`;
+}
+
+function formatMonthValue(year: number, month: number): string {
+  return `${year}-${String(month).padStart(2, "0")}`;
 }
 
 function confirmNotifyEditor(): void {
@@ -481,26 +666,20 @@ function closeNotifyEditor(): void {
   notifyEditor.value = null;
 }
 
-function handleDeadlineEditorOutsidePointerDown(event: PointerEvent): void {
-  if (!notifyEditor.value) return;
+function handleFloatingEditorOutsidePointerDown(event: PointerEvent): void {
   const target = event.target;
   if (!(target instanceof Node)) return;
-  if (notifyEditorRef.value?.contains(target)) return;
-  notifyEditor.value = null;
+  if (notifyEditor.value && !notifyEditorRef.value?.contains(target)) notifyEditor.value = null;
+  if (listCreateDialog.value && !listCreateDialogRef.value?.contains(target)) listCreateDialog.value = null;
 }
 
 async function handleMenuSelect(key: string): Promise<void> {
   if (!menu.value) return;
-  const { period, id, anchor, target } = menu.value;
+  const { period, id, anchor, target, x, y } = menu.value;
   const list = getListById(period);
-  if (key === "toggle-collapsed" && list) {
+  if (key === "create-list") {
     closeMenu();
-    emit("toggleListCollapsed", period, !list.collapsed);
-    return;
-  }
-  if (key === "toggle-compact" && list) {
-    closeMenu();
-    emit("toggleListCompact", period, !list.compact);
+    await openCreateListDialog(anchor, x, y);
     return;
   }
   if (key === "delete-list") {
@@ -861,20 +1040,12 @@ function buildTodoListEntries(period: TodoListId, todos: TodoItem[], deferredDon
       </ul>
     </section>
     <div class="todo-sections">
-      <button
-        class="todo-add-list-button icon-button"
-        type="button"
-        aria-label="新增提醒列表"
-        @click="emit('createList', $event.currentTarget as HTMLElement)"
-      >
-        ＋
-      </button>
       <section
         v-for="list in effectiveTodoLists"
         :key="list.id"
         :ref="(element) => setTodoSectionRef(list.id, element as Element | null)"
         class="todo-section"
-        :class="{ 'is-focused': focusedListId === list.id, 'is-collapsed': list.collapsed, 'is-compact': list.compact }"
+        :class="{ 'is-focused': focusedListId === list.id, 'is-collapsed': list.collapsed, 'is-compact': true, 'is-list-dragging': draggedListId === list.id }"
         :data-list-id="list.id"
         :data-period="list.id"
         @click="handleSectionGuideClick"
@@ -882,14 +1053,17 @@ function buildTodoListEntries(period: TodoListId, todos: TodoItem[], deferredDon
         @dragover.prevent
         @drop="handleListSectionDrop($event, list.id)"
       >
-        <div class="todo-heading">
-          <button
+        <div
+          class="todo-heading"
+          draggable="true"
+          @dragstart="handleListDragStart($event, list.id)"
+          @dragend="draggedListId = null"
+          @dragover.prevent
+          @drop="handleListSectionDrop($event, list.id)"
+        >
+          <span
             class="todo-list-drag-handle"
-            type="button"
-            draggable="true"
             aria-label="拖动提醒列表"
-            @dragstart="draggedListId = list.id"
-            @dragend="draggedListId = null"
           />
           <h3>
             <EditableTitle
@@ -899,6 +1073,14 @@ function buildTodoListEntries(period: TodoListId, todos: TodoItem[], deferredDon
               @update="(_id, value) => handleListTitleUpdate(list.id, value)"
             />
           </h3>
+          <button
+            type="button"
+            class="todo-collapse-button icon-button"
+            :aria-label="list.collapsed ? '展开提醒列表' : '收起提醒列表'"
+            @click.stop="emit('toggleListCollapsed', list.id, !list.collapsed)"
+          >
+            <NIcon :component="list.collapsed ? ChevronForwardOutline : ChevronDownOutline" />
+          </button>
           <div class="todo-heading-actions">
             <span class="todo-count">{{ periodStats[list.id] }}</span>
             <button
@@ -1034,15 +1216,47 @@ function buildTodoListEntries(period: TodoListId, todos: TodoItem[], deferredDon
           ×
         </button>
       </div>
-      <div class="notify-editor-body">
-        <div class="notify-date-column">
-          <span class="notify-editor-label">日期</span>
-          <input
-            class="deadline-date-input"
-            type="date"
-            :value="notifyEditor.date"
-            @input="updateNotifyDate(($event.target as HTMLInputElement).value)"
-          />
+        <div class="notify-editor-body">
+          <div class="notify-date-column">
+          <div class="notify-calendar-header">
+            <button
+              class="notify-calendar-nav"
+              type="button"
+              aria-label="上个月"
+              @click="shiftNotifyCalendarMonth(-1)"
+            >
+              ‹
+            </button>
+            <span>{{ notifyCalendarTitle }}</span>
+            <button
+              class="notify-calendar-nav"
+              type="button"
+              aria-label="下个月"
+              @click="shiftNotifyCalendarMonth(1)"
+            >
+              ›
+            </button>
+          </div>
+          <div class="notify-calendar-weekdays" aria-hidden="true">
+            <span v-for="weekday in CALENDAR_WEEKDAYS" :key="weekday">{{ weekday }}</span>
+          </div>
+          <div class="notify-calendar-grid" aria-label="选择通知日期">
+            <template v-for="day in notifyCalendarDays" :key="day.key">
+              <span
+                v-if="day.blank"
+                class="notify-calendar-placeholder"
+              />
+              <button
+                v-else
+                class="notify-calendar-day"
+                :class="{ 'is-selected': day.selected, 'is-today': day.today }"
+                type="button"
+                @click="selectNotifyDate(day.date)"
+              >
+                {{ day.day }}
+              </button>
+            </template>
+          </div>
         </div>
         <div class="notify-time-column">
           <span class="notify-editor-label">快捷时间</span>
@@ -1052,6 +1266,7 @@ function buildTodoListEntries(period: TodoListId, todos: TodoItem[], deferredDon
               :key="time"
               class="deadline-time-button notify-clock-button"
               :class="[`time-${time.replace(':', '')}`, { 'is-selected': notifyEditor.time === time }]"
+              :style="getNotifyClockButtonStyle(time)"
               type="button"
               :aria-label="getNotifyTimeLabel(time)"
               @click="selectNotifyTime(time)"
@@ -1076,6 +1291,29 @@ function buildTodoListEntries(period: TodoListId, todos: TodoItem[], deferredDon
         >
           确定
         </button>
+      </div>
+    </section>
+
+    <section
+      v-if="listCreateDialog"
+      ref="listCreateDialogRef"
+      class="todo-list-create-dialog"
+      :style="listCreateDialogStyle"
+      aria-label="新增提醒列表"
+    >
+      <label class="todo-list-create-label" for="todo-list-create-input">列表名称</label>
+      <input
+        id="todo-list-create-input"
+        ref="listCreateInputRef"
+        class="todo-list-create-input"
+        :value="listCreateDialog.title"
+        @input="updateCreateListTitle(($event.target as HTMLInputElement).value)"
+        @keydown.enter.prevent="confirmCreateListDialog"
+        @keydown.esc.prevent="closeCreateListDialog"
+      />
+      <div class="todo-list-create-actions">
+        <button class="todo-list-create-cancel" type="button" @click="closeCreateListDialog">取消</button>
+        <button class="todo-list-create-confirm" type="button" @click="confirmCreateListDialog">确定</button>
       </div>
     </section>
 
