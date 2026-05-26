@@ -531,6 +531,58 @@ describe("CompanionBubble", () => {
     vi.useRealTimers();
   });
 
+  it("renders custom GIF sources for light and dark themes", async () => {
+    const wrapper = mount(CompanionBubble, {
+      props: {
+        visible: true,
+        message: "",
+        theme: "light",
+        gifTheme: "custom",
+        customGifLightSrc: "data:image/gif;base64,light",
+        customGifDarkSrc: "data:image/gif;base64,dark",
+      },
+      global: {
+        stubs: {
+          NPopover: popoverStub,
+        },
+      },
+    });
+
+    expect(wrapper.get("img").attributes("src")).toBe("data:image/gif;base64,light");
+
+    await wrapper.setProps({ theme: "dark" });
+
+    expect(wrapper.get("img").attributes("src")).toBe("data:image/gif;base64,dark");
+    wrapper.unmount();
+  });
+
+  it("marks the confirmation button as danger when requested", async () => {
+    vi.useFakeTimers();
+    const wrapper = mount(CompanionBubble, {
+      attachTo: document.body,
+      props: {
+        visible: true,
+        message: "确认删除？",
+        confirm: true,
+        confirmDanger: true,
+        gifTheme: "none",
+      },
+      global: {
+        stubs: {
+          NButton: buttonStub,
+          NPopover: popoverStub,
+        },
+      },
+    });
+
+    await vi.advanceTimersByTimeAsync(200);
+    await wrapper.vm.$nextTick();
+
+    expect(document.body.querySelector('[data-testid="companion-yes"]')?.classList.contains("is-danger")).toBe(true);
+    wrapper.unmount();
+    vi.useRealTimers();
+  });
+
   it("keeps gif-free bubble content during the hide animation", async () => {
     vi.useFakeTimers();
     const wrapper = mount(CompanionBubble, {

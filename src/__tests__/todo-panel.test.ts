@@ -1,6 +1,8 @@
 import { defineComponent, nextTick, ref } from "vue";
 import { mount } from "@vue/test-utils";
 import { describe, expect, it, vi } from "vitest";
+import { readFileSync } from "node:fs";
+import { resolve } from "node:path";
 import TodoPanel from "../components/TodoPanel.vue";
 import { DEFAULT_TITLES } from "../state/defaults";
 import { completeTodo } from "../state/todos";
@@ -250,7 +252,8 @@ describe("TodoPanel", () => {
     await wrapper.get('.todo-section[data-list-id="noon"]').trigger("drop");
 
     expect(dataTransfer.effectAllowed).toBe("move");
-    expect(dataTransfer.setData).toHaveBeenCalledWith("text/plain", "morning");
+    expect(dataTransfer.setData).toHaveBeenCalledWith("text/plain", "☀️ 早上");
+    expect(dataTransfer.setData).toHaveBeenCalledWith("application/x-todo-list-id", "morning");
     expect(wrapper.emitted("reorderLists")?.[0]).toEqual(["morning", "noon"]);
     expect(wrapper.emitted("move")).toBeUndefined();
   });
@@ -881,16 +884,38 @@ describe("TodoPanel", () => {
     await wrapper.findAll(".dropdown-option").find((option) => option.text() === "设置通知时间")?.trigger("click");
     expect(wrapper.find(".deadline-date-input").exists()).toBe(false);
     expect(wrapper.findAll(".notify-calendar-day").filter((button) => button.text() === "30")).toHaveLength(1);
-    expect(wrapper.findAll(".deadline-time-button")).toHaveLength(24);
+    expect(wrapper.find(".notify-hour-ring-inner").exists()).toBe(false);
+    expect(wrapper.find(".notify-hour-ring-outer").exists()).toBe(false);
+    expect(wrapper.findAll(".notify-period-checkbox").map((checkbox) => checkbox.text())).toEqual(["上午", "下午"]);
+    expect(wrapper.get(".notify-period-checkbox.is-selected").text()).toBe("上午");
+    expect(wrapper.findAll(".notify-hour-button").map((button) => button.text())).toEqual([
+      "1",
+      "2",
+      "3",
+      "4",
+      "5",
+      "6",
+      "7",
+      "8",
+      "9",
+      "10",
+      "11",
+      "12",
+    ]);
+    expect(wrapper.findAll(".notify-minute-button").map((button) => button.text())).toEqual(["00", "15", "30", "45"]);
+    expect(wrapper.get(".notify-hour-title").text()).toBe("小时");
+    expect(wrapper.get(".notify-minute-title").text()).toBe("分钟");
 
     await wrapper.findAll(".notify-calendar-day").find((button) => button.text() === "30")?.trigger("click");
-    await wrapper.findAll(".deadline-time-button").find((button) => button.text() === "15")?.trigger("click");
+    await wrapper.findAll(".notify-period-checkbox").find((button) => button.text() === "下午")?.trigger("click");
+    await wrapper.findAll(".notify-hour-button").find((button) => button.text() === "3")?.trigger("click");
+    await wrapper.findAll(".notify-minute-button").find((button) => button.text() === "30")?.trigger("click");
     await wrapper.get(".deadline-confirm-button").trigger("click");
 
     expect(wrapper.emitted("notify")?.[0]).toEqual([
       "morning",
       "a",
-      new Date(2026, 4, 30, 15).getTime(),
+      new Date(2026, 4, 30, 15, 30).getTime(),
       expect.any(HTMLElement),
     ]);
     expect(wrapper.emitted("star")).toBeUndefined();
@@ -929,6 +954,87 @@ describe("TodoPanel", () => {
     expect(wrapper.emitted("star")).toBeUndefined();
     expect(wrapper.find(".deadline-editor").exists()).toBe(false);
     wrapper.unmount();
+  });
+
+  it("opens the notification editor from the row alarm button", async () => {
+    const wrapper = mount(TodoPanel, {
+      props: {
+        todos: {
+          morning: [{ id: "a", text: "普通事项", done: false }],
+          noon: [],
+          evening: [],
+        },
+        titles: DEFAULT_TITLES,
+      },
+      global: {
+        stubs: {
+          Button: true,
+          Checkbox: checkboxStub,
+          Dropdown: dropdownStub,
+          NCheckbox: checkboxStub,
+          NDropdown: dropdownStub,
+          NTooltip: tooltipStub,
+        },
+      },
+    });
+
+    expect(wrapper.find(".todo-deadline-slot").exists()).toBe(false);
+    expect(wrapper.get(".todo-notify-button").attributes("aria-label")).toBe("设置通知时间");
+
+    await wrapper.get(".todo-notify-button").trigger("click");
+
+    expect(wrapper.get(".deadline-editor").attributes("aria-label")).toBe("设置通知时间");
+    wrapper.unmount();
+  });
+
+  it("uses afternoon 12 as next-day midnight notification times", async () => {
+    vi.useFakeTimers();
+    vi.setSystemTime(new Date(2026, 4, 25, 10));
+    const wrapper = mount(TodoPanel, {
+      props: {
+        todos: {
+          morning: [{ id: "a", text: "跨天提醒", done: false }],
+          noon: [],
+          evening: [],
+        },
+        titles: DEFAULT_TITLES,
+      },
+      global: {
+        stubs: {
+          Button: true,
+          Checkbox: checkboxStub,
+          Dropdown: dropdownStub,
+          NCheckbox: checkboxStub,
+          NDropdown: dropdownStub,
+          NTooltip: tooltipStub,
+        },
+      },
+    });
+
+    await wrapper.get(".todo-notify-button").trigger("click");
+    await wrapper.findAll(".notify-calendar-day").find((button) => button.text() === "30")?.trigger("click");
+    await wrapper.findAll(".notify-period-checkbox").find((button) => button.text() === "下午")?.trigger("click");
+    await wrapper.findAll(".notify-hour-button").find((button) => button.text() === "12")?.trigger("click");
+    await wrapper.findAll(".notify-minute-button").find((button) => button.text() === "15")?.trigger("click");
+    await wrapper.get(".deadline-confirm-button").trigger("click");
+
+    expect(wrapper.emitted("notify")?.[0]).toEqual([
+      "morning",
+      "a",
+      new Date(2026, 4, 31, 0, 15).getTime(),
+      expect.any(HTMLElement),
+    ]);
+    wrapper.unmount();
+    vi.useRealTimers();
+  });
+
+  it("lets collapsed reminder sections stop consuming list height", () => {
+    const styles = readFileSync(resolve(__dirname, "../styles.css"), "utf8");
+    const collapsedRule = styles.match(/\.todo-section\.is-collapsed \{([\s\S]*?)\}/)?.[1] ?? "";
+    const compactCollapsedRule = styles.match(/\.todo-section\.is-compact\.is-collapsed \{([\s\S]*?)\}/)?.[1] ?? "";
+
+    expect(collapsedRule).toContain("flex: 0 0 34px");
+    expect(compactCollapsedRule).toContain("flex: 0 0 34px");
   });
 
   it("closes notification selection without changing the reminder", async () => {
@@ -1168,9 +1274,12 @@ describe("TodoPanel", () => {
 
     expect(wrapper.find(".deadline-date-input").exists()).toBe(false);
     expect(wrapper.find(".notify-calendar-day.is-selected").text()).toBe("30");
-    expect(wrapper.get(".deadline-time-button.is-selected").text()).toBe("18");
+    expect(wrapper.get(".notify-period-checkbox.is-selected").text()).toBe("下午");
+    expect(wrapper.get(".notify-hour-button.is-selected").text()).toBe("6");
+    expect(wrapper.get(".notify-minute-button.is-selected").text()).toBe("00");
 
-    await wrapper.findAll(".deadline-time-button").find((button) => button.text() === "12")?.trigger("click");
+    await wrapper.findAll(".notify-period-checkbox").find((button) => button.text() === "上午")?.trigger("click");
+    await wrapper.findAll(".notify-hour-button").find((button) => button.text() === "12")?.trigger("click");
     await wrapper.get(".deadline-confirm-button").trigger("click");
 
     expect(wrapper.emitted("notify")?.[0]).toEqual([
@@ -1248,6 +1357,19 @@ describe("TodoPanel", () => {
     expect(rowChildren[2]).toContain("todo-deadline-slot");
     expect(rowChildren[3]).toContain("todo-star-button");
     wrapper.unmount();
+  });
+
+  it("keeps today focus notification time before the visible star column", () => {
+    const styles = readFileSync(resolve(__dirname, "../styles.css"), "utf8");
+    const todayNotifyRule = styles.match(/\.today-focus-item \.todo-notify-button \{([\s\S]*?)\}/)?.[1] ?? "";
+    const todayStarRule = styles.match(/\.today-focus-item \.todo-star-button \{([\s\S]*?)\}/)?.[1] ?? "";
+    const todayNotifyWidthRule = styles.match(/\.today-focus-item\.has-notify \{([\s\S]*?)\}/)?.[1] ?? "";
+    const deadlineLabelRule = styles.match(/\.todo-deadline-label \{([\s\S]*?)\}/)?.[1] ?? "";
+
+    expect(todayNotifyRule).toContain("grid-column: 3");
+    expect(todayStarRule).toContain("grid-column: 4");
+    expect(todayNotifyWidthRule).toContain("minmax(0, 92px)");
+    expect(deadlineLabelRule).not.toContain("text-overflow: ellipsis");
   });
 
   it("emits the todo section as the completion anchor", async () => {
@@ -1426,7 +1548,7 @@ describe("TodoPanel", () => {
     wrapper.unmount();
   });
 
-  it("allows selecting reminder text before it is being edited", async () => {
+  it("enters edit mode while preserving selected reminder text", async () => {
     const wrapper = mount(TodoPanel, {
       props: {
         todos: {
@@ -1456,7 +1578,7 @@ describe("TodoPanel", () => {
     await wrapper.vm.$nextTick();
 
     expect(selectSpy).not.toHaveBeenCalled();
-    expect(inputWrapper.attributes("readonly")).toBeDefined();
+    expect(inputWrapper.attributes("readonly")).toBeUndefined();
     expect(input.selectionStart).toBe(1);
     expect(input.selectionEnd).toBe(3);
     wrapper.unmount();
@@ -2113,6 +2235,35 @@ describe("TodoPanel", () => {
     expect(wrapper.emitted("star")).toBeUndefined();
   });
 
+  it("enters edit mode immediately when selecting reminder text", async () => {
+    const wrapper = mount(TodoPanel, {
+      props: {
+        todos: {
+          morning: [{ id: "a", text: "可以直接编辑的提醒", done: false }],
+          noon: [],
+          evening: [],
+        },
+        titles: DEFAULT_TITLES,
+      },
+      global: {
+        stubs: {
+          Button: true,
+          Checkbox: checkboxStub,
+          Dropdown: dropdownStub,
+          NCheckbox: checkboxStub,
+          NDropdown: dropdownStub,
+          NTooltip: tooltipStub,
+        },
+      },
+    });
+    const input = wrapper.get("input.todo-input").element as HTMLInputElement;
+    input.setSelectionRange(2, 6);
+
+    await wrapper.get("input.todo-input").trigger("select");
+
+    expect(input.readOnly).toBe(false);
+  });
+
   it("does not render an empty notification slot when no notification time exists", () => {
     const wrapper = mount(TodoPanel, {
       props: {
@@ -2234,6 +2385,66 @@ describe("TodoPanel", () => {
     await wrapper.get('[data-testid="todo-list-morning"]').element.dispatchEvent(event);
 
     expect(wrapper.emitted("createFromText")?.[0]).toEqual(["morning", ["任务 C", "任务 D"]]);
+  });
+
+  it("places reminder text on the drag payload for dropping into workspace", async () => {
+    const setData = vi.fn();
+    const wrapper = mount(TodoPanel, {
+      props: {
+        todos: {
+          morning: [{ id: "a", text: "拖到工作空间", done: false }],
+          noon: [],
+          evening: [],
+        },
+        titles: DEFAULT_TITLES,
+      },
+      global: {
+        stubs: {
+          Button: true,
+          Checkbox: checkboxStub,
+          Dropdown: dropdownStub,
+          NCheckbox: checkboxStub,
+          NDropdown: dropdownStub,
+          NTooltip: tooltipStub,
+        },
+      },
+    });
+
+    await wrapper.get(".todo-drag-handle").trigger("dragstart", {
+      dataTransfer: { effectAllowed: "", setData },
+    });
+
+    expect(setData).toHaveBeenCalledWith("text/plain", "拖到工作空间");
+    expect(setData).toHaveBeenCalledWith("application/x-todo-id", "morning:a");
+  });
+
+  it("places reminder list title text on the drag payload for dropping into workspace", async () => {
+    const setData = vi.fn();
+    const wrapper = mount(TodoPanel, {
+      props: {
+        todoLists: defaultTodoLists,
+        todos: { morning: [], noon: [], evening: [] },
+        showCompleted: { morning: false, noon: false, evening: false },
+        titles: DEFAULT_TITLES,
+      },
+      global: {
+        stubs: {
+          Button: true,
+          Checkbox: checkboxStub,
+          Dropdown: dropdownStub,
+          NCheckbox: checkboxStub,
+          NDropdown: dropdownStub,
+          NTooltip: tooltipStub,
+        },
+      },
+    });
+
+    await wrapper.get('.todo-section[data-list-id="morning"] .todo-heading').trigger("dragstart", {
+      dataTransfer: { effectAllowed: "", setData },
+    });
+
+    expect(setData).toHaveBeenCalledWith("text/plain", "☀️ 早上");
+    expect(setData).toHaveBeenCalledWith("application/x-todo-list-id", "morning");
   });
 
   it("emits dropped external text from a todo section heading", async () => {

@@ -7,9 +7,10 @@ export const COMPANION_GIF_THEME_OPTIONS: Array<{
   label: string;
 }> = [
   { value: "hermes", label: "默认 Hermes" },
+  { value: "custom", label: "自定义 GIF" },
   { value: "none", label: "无 GIF" },
 ];
 
 export function normalizeCompanionGifTheme(value: unknown): CompanionGifTheme {
-  return value === "none" || value === "hermes" ? value : DEFAULT_COMPANION_GIF_THEME;
+  return value === "none" || value === "custom" || value === "hermes" ? value : DEFAULT_COMPANION_GIF_THEME;
 }

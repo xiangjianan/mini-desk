@@ -249,4 +249,11 @@ describe("SpacePanel", () => {
     expect(workspaceTabsRule).not.toContain("overflow-x: scroll");
     expect(workspaceTabsRule).not.toContain("scrollbar-gutter: stable");
   });
+
+  it("renders workspace tab labels with bold text", () => {
+    const styles = readFileSync(resolve(__dirname, "../styles.css"), "utf8");
+    const spaceTabRule = styles.match(/\.space-tab \{([\s\S]*?)\}/)?.[1] ?? "";
+
+    expect(spaceTabRule).toContain("font-weight: 600");
+  });
 });

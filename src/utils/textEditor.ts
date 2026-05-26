@@ -130,7 +130,10 @@ export function insertIndentedLineBreak(textarea: HTMLTextAreaElement): string {
 }
 
 export function insertPlainLineBreak(textarea: HTMLTextAreaElement): string {
-  textarea.setRangeText("\n", textarea.selectionStart, textarea.selectionEnd, "end");
+  const { selectionEnd, value } = textarea;
+  const lineEndIndex = value.indexOf("\n", selectionEnd);
+  const lineEnd = lineEndIndex === -1 ? value.length : lineEndIndex;
+  textarea.setRangeText("\n", lineEnd, lineEnd, "end");
   return textarea.value;
 }
 

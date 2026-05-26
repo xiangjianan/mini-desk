@@ -217,10 +217,11 @@ describe("Naive UI component usage", () => {
     expect(todo).toContain("is-compact");
     expect(styles).toMatch(/\.todo-collapse-button\s*\{[^}]*height: 34px/s);
     expect(styles).toMatch(/\.todo-list-create-dialog\s*\{[^}]*width: 260px/s);
-    expect(styles).toMatch(/\.todo-list-drag-handle\s*\{[^}]*cursor: grab/s);
-    expect(styles).toMatch(/\.todo-section\.is-collapsed\s*\{[^}]*flex: 0 0 auto/s);
-    expect(styles).toMatch(/\.todo-section\.is-compact\s*\{[^}]*flex: 0 0 auto/s);
-    expect(styles).toMatch(/\.todo-section\.is-compact \.todo-list\s*\{[^}]*max-height: 136px/s);
+    expect(styles).toMatch(/\.todo-list-drag-handle\s*\{[^}]*display: none/s);
+    expect(styles).toMatch(/\.todo-section\.is-collapsed\s*\{[^}]*flex: 0 0 34px/s);
+    expect(styles).toMatch(/\.todo-section\.is-compact\.is-collapsed\s*\{[^}]*flex: 0 0 34px/s);
+    expect(styles).toMatch(/\.todo-section\.is-compact\s*\{[^}]*flex: 1 1 0/s);
+    expect(styles).toMatch(/\.todo-section\.is-compact \.todo-list\s*\{[^}]*overflow-y: auto/s);
     expect(styles).toMatch(/\.todo-section\.is-compact \.todo-empty-hint\s*\{[^}]*min-height: 90px/s);
     expect(styles).toMatch(/\.todo-section\.is-compact \.todo-star-button\s*\{[^}]*height: 30px/s);
   });
@@ -259,7 +260,7 @@ describe("Naive UI component usage", () => {
     expect(styles).toMatch(/\.count,[\s\S]*?\.todo-count\s*\{[^}]*font-size: var\(--app-font-size\)/s);
     expect(styles).toMatch(/\.today-focus-heading\s*\{[^}]*font-size: var\(--app-font-size\)/s);
     expect(styles).toMatch(/\.today-focus-heading\s*\{[^}]*color: inherit/s);
-    expect(styles).toMatch(/\.today-focus-heading\s*\{[^}]*font-weight: 400/s);
+    expect(styles).toMatch(/\.today-focus-heading\s*\{[^}]*font-weight: 600/s);
     expect(styles).toMatch(/\.text-editor-textarea\s*\{[^}]*font-size: var\(--app-font-size\)/s);
     expect(styles).toMatch(/\.quick-button\s*\{[^}]*font-size: var\(--app-font-size\)/s);
     expect(styles).toMatch(/\.icon-button\s*\{[^}]*font-size: var\(--app-font-size\)/s);
@@ -312,6 +313,7 @@ describe("Naive UI component usage", () => {
     const styles = read("src/styles.css");
     const stylesWithoutClock = styles
       .replace(/\.notify-clock-options\s*\{[^}]*\}/g, "")
+      .replace(/\.notify-hour-ring\s*\{[^}]*\}/g, "")
       .replace(/\.notify-clock-button\.deadline-time-button\s*\{[^}]*\}/g, "");
 
     expect(styles).toContain("--radius: 0");
@@ -352,8 +354,8 @@ describe("Naive UI component usage", () => {
 
     expect(todo).toContain('class="todo-drag-handle"');
     expect(todo).not.toMatch(/class="todo-item"[\s\S]{0,160}draggable="true"/);
-    expect(styles).toMatch(/\.todo-item\s*\{[^}]*grid-template-columns: 14px 28px minmax\(0, 1fr\) 24px/s);
-    expect(styles).toMatch(/\.todo-item\.has-notify\s*\{[^}]*grid-template-columns: 14px 28px minmax\(0, 1fr\) minmax\(0, 64px\) 24px/s);
+    expect(styles).toMatch(/\.todo-item\s*\{[^}]*grid-template-columns: 14px 28px minmax\(0, 1fr\) 28px 24px/s);
+    expect(styles).toMatch(/\.todo-item\.has-notify\s*\{[^}]*grid-template-columns: 14px 28px minmax\(0, 1fr\) minmax\(0, 92px\) 24px/s);
     expect(styles).toMatch(/\.todo-list\s*\{[^}]*padding: 0/s);
     expect(styles).toMatch(/\.todo-item\s*\{[^}]*height: 34px/s);
     expect(styles).toMatch(/\.todo-item\s*\{[^}]*min-height: 34px/s);
@@ -372,8 +374,8 @@ describe("Naive UI component usage", () => {
     expect(styles).toContain(".deadline-due-soon");
     expect(styles).toContain(".deadline-upcoming");
     expect(styles).toContain(".deadline-later");
-    expect(styles).toMatch(/\.todo-deadline-label\s*\{[^}]*overflow: hidden/s);
-    expect(styles).toMatch(/\.todo-deadline-label\s*\{[^}]*text-overflow: ellipsis/s);
+    expect(styles).toMatch(/\.todo-deadline-label\s*\{[^}]*overflow: visible/s);
+    expect(styles).not.toMatch(/\.todo-deadline-label\s*\{[^}]*text-overflow: ellipsis/s);
     expect(styles).not.toContain("filter: drop-shadow");
   });
 
@@ -391,8 +393,9 @@ describe("Naive UI component usage", () => {
     expect(styles).toMatch(/\.today-focus-section\s*\{[^}]*border-bottom: 0/s);
     expect(styles).toMatch(/\.today-focus-heading\s*\{[^}]*min-height: 34px/s);
     expect(styles).toMatch(/\.today-focus-list\s*\{[^}]*padding: 0/s);
-    expect(styles).toMatch(/\.today-focus-item\s*\{[^}]*grid-template-columns: 42px minmax\(0, 1fr\) 24px/s);
-    expect(styles).toMatch(/\.today-focus-item\.has-notify\s*\{[^}]*grid-template-columns: 42px minmax\(0, 1fr\) minmax\(0, 64px\) 24px/s);
+    expect(styles).toMatch(/\.today-focus-item\s*\{[^}]*grid-template-columns: 42px minmax\(0, 1fr\) 28px 24px/s);
+    expect(styles).toMatch(/\.today-focus-item\.has-notify\s*\{[^}]*grid-template-columns: 42px minmax\(0, 1fr\) minmax\(0, 92px\) 24px/s);
+    expect(styles).toMatch(/\.today-focus-item \.todo-notify-button\s*\{[^}]*grid-column: 3/s);
     expect(styles).toMatch(/\.today-focus-item\s*\{[^}]*gap: 0/s);
     expect(styles).toMatch(/\.today-focus-item\s*\{[^}]*height: 34px/s);
     expect(styles).toMatch(/\.today-focus-item\s*\{[^}]*min-height: 34px/s);

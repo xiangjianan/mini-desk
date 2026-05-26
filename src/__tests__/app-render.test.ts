@@ -401,6 +401,38 @@ describe("App shell", () => {
     }
   });
 
+  it("confirms deletion of an empty reminder list before removing it", async () => {
+    vi.useFakeTimers();
+    localStorage.setItem(STORAGE_KEY, JSON.stringify({
+      ...defaultState(),
+      todoLists: [
+        { id: "work", title: "工作", collapsed: false, compact: false },
+        { id: "home", title: "生活", collapsed: false, compact: false },
+      ],
+      todos: { work: [], home: [] },
+      showCompletedTodos: { work: false, home: false },
+    }));
+    const wrapper = mountApp();
+
+    try {
+      wrapper.getComponent(TodoPanel).vm.$emit("deleteList", "work", wrapper.get(".todo-panel").element as HTMLElement);
+      await nextTick();
+      await vi.advanceTimersByTimeAsync(200);
+      await nextTick();
+
+      expect(wrapper.get('[data-testid="companion-confirm"]').text()).toMatch(/删除列表|提醒列表/);
+      expect(JSON.parse(localStorage.getItem(STORAGE_KEY) || "{}").todoLists.map((list: { id: string }) => list.id)).toEqual(["work", "home"]);
+
+      await wrapper.get('[data-testid="companion-yes"]').trigger("click");
+      await nextTick();
+
+      expect(JSON.parse(localStorage.getItem(STORAGE_KEY) || "{}").todoLists.map((list: { id: string }) => list.id)).toEqual(["home"]);
+    } finally {
+      wrapper.unmount();
+      vi.useRealTimers();
+    }
+  });
+
   it("blocks deleting the last reminder list", async () => {
     vi.useFakeTimers();
     localStorage.setItem(STORAGE_KEY, JSON.stringify({
@@ -542,6 +574,8 @@ describe("App shell", () => {
 
     try {
       wrapper.getComponent(TodoPanel).vm.$emit("deleteList", "work", wrapper.get(".todo-panel").element as HTMLElement);
+      await nextTick();
+      wrapper.getComponent(CompanionBubble).vm.$emit("yes");
       await nextTick();
 
       wrapper.getComponent(TodoPanel).vm.$emit("createFromText", "work", ["stale drop"]);
@@ -1019,6 +1053,7 @@ describe("App shell", () => {
 
       expect(wrapper.get('[data-testid="companion-yes"]').text()).toBe("删除");
       expect(wrapper.get('[data-testid="companion-no"]').text()).toBe("取消");
+      expect(wrapper.get('[data-testid="companion-yes"]').classes()).toContain("is-danger");
 
       await wrapper.get('[data-testid="companion-yes"]').trigger("click");
       await wrapper.vm.$nextTick();
@@ -1139,9 +1174,7 @@ describe("App shell", () => {
     }
   });
 
-  it("confirms un-starring and keeps notification time after confirmation", async () => {
-    vi.useFakeTimers();
-    vi.spyOn(Math, "random").mockReturnValue(0);
+  it("un-stars immediately and keeps notification time", async () => {
     localStorage.setItem(
       STORAGE_KEY,
       JSON.stringify({
@@ -1161,29 +1194,17 @@ describe("App shell", () => {
         anchor,
       });
       await wrapper.vm.$nextTick();
-      await vi.advanceTimersByTimeAsync(200);
-      await wrapper.vm.$nextTick();
-
-      expect(wrapper.get('[data-testid="companion-confirm"]').text()).toContain("确定取消重点吗？");
-      expect(wrapper.get('[data-testid="companion-confirm"]').text()).not.toContain("截止时间");
-      expect(wrapper.get('[data-testid="companion-yes"]').text()).toBe("取消重点");
-      expect(wrapper.get('[data-testid="companion-no"]').text()).toBe("算了");
-
-      await wrapper.get('[data-testid="companion-yes"]').trigger("click");
-      await wrapper.vm.$nextTick();
 
       expect(wrapper.getComponent(TodoPanel).props("todos").morning[0]).toMatchObject({ starred: false });
       expect(wrapper.getComponent(TodoPanel).props("todos").morning[0]).toMatchObject({ notifyAt: 0 });
       expect(wrapper.getComponent(TodoPanel).props("todos").morning[0]).not.toHaveProperty("deadlineAt");
+      expect(wrapper.find('[data-testid="companion-confirm"]').exists()).toBe(false);
     } finally {
       wrapper.unmount();
-      vi.useRealTimers();
     }
   });
 
-  it("keeps a starred todo unchanged when canceling the un-star confirmation", async () => {
-    vi.useFakeTimers();
-    vi.spyOn(Math, "random").mockReturnValue(0);
+  it("does not show a confirmation when canceling a star", async () => {
     localStorage.setItem(
       STORAGE_KEY,
       JSON.stringify({
@@ -1203,17 +1224,11 @@ describe("App shell", () => {
         anchor,
       });
       await wrapper.vm.$nextTick();
-      await vi.advanceTimersByTimeAsync(200);
-      await wrapper.vm.$nextTick();
 
-      expect(wrapper.get('[data-testid="companion-confirm"]').text()).not.toContain("截止时间");
-      await wrapper.get('[data-testid="companion-no"]').trigger("click");
-      await wrapper.vm.$nextTick();
-
-      expect(wrapper.getComponent(TodoPanel).props("todos").morning[0]).toMatchObject({ starred: true });
+      expect(wrapper.getComponent(TodoPanel).props("todos").morning[0]).toMatchObject({ starred: false });
+      expect(wrapper.find('[data-testid="companion-confirm"]').exists()).toBe(false);
     } finally {
       wrapper.unmount();
-      vi.useRealTimers();
     }
   });
 
@@ -3440,6 +3455,28 @@ describe("App shell", () => {
       expect(wrapper.getComponent(SettingsMenu).props("companionGifTheme")).toBe("none");
       expect(JSON.parse(localStorage.getItem(STORAGE_KEY) || "{}").companionGifTheme).toBe("none");
       expect(wrapper.getComponent(CompanionBubble).props("gifTheme")).toBe("none");
+    } finally {
+      wrapper.unmount();
+    }
+  });
+
+  it("persists custom companion GIF uploads from settings", async () => {
+    const wrapper = mountApp();
+    const light = new File(["light"], "light.gif", { type: "image/gif" });
+    const dark = new File(["dark"], "dark.gif", { type: "image/gif" });
+
+    try {
+      wrapper.getComponent(SettingsMenu).vm.$emit("customGif", { light, dark }, wrapper.getComponent(SettingsMenu).element as HTMLElement);
+      await new Promise((resolve) => window.setTimeout(resolve, 0));
+      await wrapper.vm.$nextTick();
+
+      const stored = JSON.parse(localStorage.getItem(STORAGE_KEY) || "{}");
+      expect(stored.companionGifTheme).toBe("custom");
+      expect(stored.customCompanionGif.light).toMatch(/^data:image\/gif/);
+      expect(stored.customCompanionGif.dark).toMatch(/^data:image\/gif/);
+      expect(wrapper.getComponent(CompanionBubble).props("gifTheme")).toBe("custom");
+      expect(wrapper.getComponent(CompanionBubble).props("customGifLightSrc")).toMatch(/^data:image\/gif/);
+      expect(wrapper.getComponent(CompanionBubble).props("customGifDarkSrc")).toMatch(/^data:image\/gif/);
     } finally {
       wrapper.unmount();
     }

@@ -96,7 +96,7 @@ describe("TextPanel", () => {
     expect(textarea.value).toBe("root\n");
   });
 
-  it("inserts a plain line break at the caret when pressing Shift+Enter", async () => {
+  it("inserts a new line after the current line when pressing Shift+Enter", async () => {
     const wrapper = mount(TextPanel, {
       props: {
         titleId: "workspace-title",
@@ -112,12 +112,12 @@ describe("TextPanel", () => {
     textarea.setSelectionRange(caret, caret);
     await wrapper.get("textarea").trigger("keydown", { key: "Enter", shiftKey: true });
 
-    expect(textarea.value).toBe("\t- child\n text");
-    expect(textarea.selectionStart).toBe("\t- child\n".length);
-    expect(textarea.selectionEnd).toBe("\t- child\n".length);
+    expect(textarea.value).toBe("\t- child text\n");
+    expect(textarea.selectionStart).toBe("\t- child text\n".length);
+    expect(textarea.selectionEnd).toBe("\t- child text\n".length);
     expect(wrapper.emitted("update")?.at(-1)?.[0]).toEqual([
-      { text: "child", indent: 1 },
-      { text: " text", indent: 0 },
+      { text: "child text", indent: 1 },
+      { text: "", indent: 0 },
     ]);
   });
 

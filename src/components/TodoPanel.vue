@@ -1,11 +1,13 @@
 <script setup lang="ts">
 import { computed, nextTick, onMounted, onUnmounted, ref } from "vue";
-import { ChevronDownOutline, ChevronForwardOutline } from "@vicons/ionicons5";
+import { AlarmOutline, ChevronDownOutline, ChevronForwardOutline } from "@vicons/ionicons5";
 import { NCheckbox, NDropdown, NIcon } from "naive-ui";
 import type { DropdownOption } from "naive-ui";
 import { DEFAULT_TODO_LISTS, GUIDE_MENU_OPTION } from "../state/defaults";
 import {
   NOTIFY_TIME_OPTIONS,
+  NOTIFY_HOUR_OPTIONS,
+  NOTIFY_MINUTE_OPTIONS,
   DEFAULT_NOTIFY_TIME,
   createNotifyAt,
   getDefaultNotifySelection,
@@ -14,6 +16,8 @@ import {
   getLocalDateInputValue,
   isValidDeadlineAt,
   type NotifyDisplay,
+  type NotifyHourOption,
+  type NotifyMinuteOption,
   type NotifyTimeOption,
 } from "../state/deadlines";
 import type {
@@ -155,11 +159,31 @@ const DEADLINE_EDITOR_HEIGHT = 360;
 const LIST_CREATE_DIALOG_WIDTH = 260;
 const LIST_CREATE_DIALOG_HEIGHT = 112;
 const CALENDAR_WEEKDAYS = ["日", "一", "二", "三", "四", "五", "六"];
+const NOTIFY_PERIOD_OPTIONS = [
+  { key: "am", label: "上午" },
+  { key: "pm", label: "下午" },
+] as const;
+const NOTIFY_CLOCK_HOUR_OPTIONS = [
+  "01",
+  "02",
+  "03",
+  "04",
+  "05",
+  "06",
+  "07",
+  "08",
+  "09",
+  "10",
+  "11",
+  "12",
+] as const;
 const NOTIFY_CLOCK_SIZE = 220;
 const NOTIFY_CLOCK_BUTTON_SIZE = 32;
-const NOTIFY_CLOCK_RADIUS = 88;
+const NOTIFY_CLOCK_RADIUS = 82;
 const deadlineNow = ref(Date.now());
 const deadlineClockTimer = ref<number | undefined>();
+type NotifyPeriodOption = typeof NOTIFY_PERIOD_OPTIONS[number]["key"];
+type NotifyClockHourOption = typeof NOTIFY_CLOCK_HOUR_OPTIONS[number];
 
 const ordered = computed(() =>
   Object.fromEntries(
@@ -375,9 +399,11 @@ function handleListDragStart(event: DragEvent, listId: TodoListId): void {
     return;
   }
   draggedListId.value = listId;
+  const list = getListById(listId);
   if (event.dataTransfer) {
     event.dataTransfer.effectAllowed = "move";
-    event.dataTransfer.setData("text/plain", listId);
+    event.dataTransfer.setData("text/plain", list?.title ?? listId);
+    event.dataTransfer.setData("application/x-todo-list-id", listId);
   }
 }
 
@@ -527,6 +553,20 @@ function handleStarClick(event: MouseEvent, period: TodoPeriod, todo: TodoItem):
   emit("star", { period, id: todo.id, starred: !todo.starred, anchor: event.currentTarget as HTMLElement });
 }
 
+function handleNotifyClick(event: MouseEvent, period: TodoPeriod, todo: TodoItem): void {
+  event.preventDefault();
+  event.stopPropagation();
+  openNotifyEditor(period, todo.id, event.currentTarget as HTMLElement, todo);
+}
+
+function handleTodoDragStart(event: DragEvent, period: TodoPeriod, todo: TodoItem): void {
+  dragged.value = { period, id: todo.id };
+  if (!event.dataTransfer) return;
+  event.dataTransfer.effectAllowed = "move";
+  event.dataTransfer.setData("text/plain", todo.text);
+  event.dataTransfer.setData("application/x-todo-id", `${period}:${todo.id}`);
+}
+
 function openNotifyEditor(period: TodoPeriod, id: string, anchor: HTMLElement, todo = getTodoById(period, id)): void {
   const { date, time } = getNotifyEditorValues(todo);
   const { x, y } = getNotifyEditorPosition(anchor);
@@ -543,9 +583,12 @@ function openNotifyEditor(period: TodoPeriod, id: string, anchor: HTMLElement, t
   };
 }
 
-function selectNotifyTime(time: NotifyTimeOption): void {
+function selectNotifyMinute(minute: NotifyMinuteOption): void {
   if (!notifyEditor.value) return;
-  notifyEditor.value = { ...notifyEditor.value, time };
+  notifyEditor.value = {
+    ...notifyEditor.value,
+    time: `${getSelectedNotifyHour(notifyEditor.value.time)}:${minute}` as NotifyTimeOption,
+  };
 }
 
 function getNotifyEditorValues(todo?: TodoItem): { date: string; time: NotifyTimeOption } {
@@ -553,7 +596,8 @@ function getNotifyEditorValues(todo?: TodoItem): { date: string; time: NotifyTim
 
   const notifyDate = new Date(todo.notifyAt);
   const hour = String(notifyDate.getHours()).padStart(2, "0");
-  const time = `${hour}:00`;
+  const minute = getSupportedNotifyMinute(String(notifyDate.getMinutes()).padStart(2, "0"));
+  const time = `${hour}:${minute}`;
   const supportedTime = NOTIFY_TIME_OPTIONS.includes(time as NotifyTimeOption)
     ? time as NotifyTimeOption
     : DEFAULT_NOTIFY_TIME;
@@ -601,15 +645,77 @@ function shiftNotifyCalendarMonth(delta: number): void {
   };
 }
 
-function getNotifyClockButtonStyle(time: NotifyTimeOption): Record<string, string> {
-  const hour = Number(time.slice(0, 2));
-  const angle = (hour / NOTIFY_TIME_OPTIONS.length) * Math.PI * 2 - Math.PI / 2;
+function getNotifyHourButtonStyle(hourValue: NotifyClockHourOption): Record<string, string> {
+  const hour = Number(hourValue);
   const center = NOTIFY_CLOCK_SIZE / 2;
   const offset = NOTIFY_CLOCK_BUTTON_SIZE / 2;
+  if (hour === 0) {
+    return {
+      left: `${center - offset}px`,
+      top: `${center - offset}px`,
+    };
+  }
+  const angle = (hour / 12) * Math.PI * 2 - Math.PI / 2;
   return {
     left: `${center + Math.cos(angle) * NOTIFY_CLOCK_RADIUS - offset}px`,
     top: `${center + Math.sin(angle) * NOTIFY_CLOCK_RADIUS - offset}px`,
   };
+}
+
+function getNotifyHourLabel(hour: NotifyClockHourOption): string {
+  if (!notifyEditor.value) return hour;
+  const period = getSelectedNotifyPeriod(notifyEditor.value.time);
+  const minute = notifyEditor.value ? getSelectedNotifyMinute(notifyEditor.value.time) : "00";
+  return getNotifyTimeLabel(`${getActualNotifyHour(period, hour)}:${minute}` as NotifyTimeOption);
+}
+
+function getSelectedNotifyHour(time: NotifyTimeOption): NotifyHourOption {
+  const hour = time.slice(0, 2) as NotifyHourOption;
+  return NOTIFY_HOUR_OPTIONS.includes(hour) ? hour : DEFAULT_NOTIFY_TIME.slice(0, 2) as NotifyHourOption;
+}
+
+function getSelectedNotifyPeriod(time: NotifyTimeOption): NotifyPeriodOption {
+  return Number(getSelectedNotifyHour(time)) <= 12 ? "am" : "pm";
+}
+
+function getSelectedNotifyClockHour(time: NotifyTimeOption): NotifyClockHourOption {
+  const actualHour = Number(getSelectedNotifyHour(time));
+  const displayHour = actualHour <= 12 ? actualHour : actualHour - 12;
+  const hour = String(displayHour).padStart(2, "0") as NotifyClockHourOption;
+  return NOTIFY_CLOCK_HOUR_OPTIONS.includes(hour) ? hour : "09";
+}
+
+function getSelectedNotifyMinute(time: NotifyTimeOption): NotifyMinuteOption {
+  return getSupportedNotifyMinute(time.slice(3, 5));
+}
+
+function selectNotifyPeriod(period: NotifyPeriodOption): void {
+  if (!notifyEditor.value) return;
+  const hour = getSelectedNotifyClockHour(notifyEditor.value.time);
+  notifyEditor.value = {
+    ...notifyEditor.value,
+    time: `${getActualNotifyHour(period, hour)}:${getSelectedNotifyMinute(notifyEditor.value.time)}` as NotifyTimeOption,
+  };
+}
+
+function selectNotifyClockHour(hour: NotifyClockHourOption): void {
+  if (!notifyEditor.value) return;
+  const period = getSelectedNotifyPeriod(notifyEditor.value.time);
+  notifyEditor.value = {
+    ...notifyEditor.value,
+    time: `${getActualNotifyHour(period, hour)}:${getSelectedNotifyMinute(notifyEditor.value.time)}` as NotifyTimeOption,
+  };
+}
+
+function getActualNotifyHour(period: NotifyPeriodOption, hour: NotifyClockHourOption): NotifyHourOption {
+  const displayHour = Number(hour);
+  const actualHour = period === "am" ? displayHour : displayHour + 12;
+  return String(actualHour).padStart(2, "0") as NotifyHourOption;
+}
+
+function getSupportedNotifyMinute(value: string): NotifyMinuteOption {
+  const minute = value as NotifyMinuteOption;
+  return NOTIFY_MINUTE_OPTIONS.includes(minute) ? minute : "00";
 }
 
 function getMonthValue(dateValue: string): string {
@@ -912,6 +1018,11 @@ async function startTodoEdit(event: MouseEvent, period: TodoPeriod, id: string):
   if (editingTodoKey.value === key) return;
   if (hasSelection(input)) {
     rememberTodoSelection(period, id, input);
+    editingTodoKey.value = key;
+    await nextTick();
+    input.focus({ preventScroll: true });
+    const selection = lastTodoSelections.get(key);
+    if (selection) input.setSelectionRange(selection.start, selection.end);
     return;
   }
   event.preventDefault();
@@ -934,7 +1045,17 @@ function rememberTodoCaret(period: TodoPeriod, id: string, event: MouseEvent): v
 }
 
 function handleTodoSelection(period: TodoPeriod, id: string, event: Event): void {
-  rememberTodoSelection(period, id, event.currentTarget as HTMLInputElement);
+  const input = event.currentTarget as HTMLInputElement;
+  if (!hasSelection(input)) return;
+  const key = todoKey(period, id);
+  rememberTodoSelection(period, id, input);
+  if (editingTodoKey.value === key) return;
+  editingTodoKey.value = key;
+  void nextTick(() => {
+    input.focus({ preventScroll: true });
+    const selection = lastTodoSelections.get(key);
+    if (selection) input.setSelectionRange(selection.start, selection.end);
+  });
 }
 
 function setTodoSectionRef(period: TodoListId, element: Element | null): void {
@@ -1023,11 +1144,18 @@ function buildTodoListEntries(period: TodoListId, todos: TodoItem[], deferredDon
             @focus="handleInputFocus(item.period, item.todo, $event)"
             @blur="handleInputBlur(item.period, item.todo.id)"
           />
-          <span v-if="getTodoCompactNotifyLabel(item.todo)" class="todo-deadline-slot">
-            <span class="todo-deadline-label">
+          <button
+            class="todo-notify-button"
+            :class="{ 'todo-deadline-slot': Boolean(getTodoCompactNotifyLabel(item.todo)), 'has-time': Boolean(getTodoCompactNotifyLabel(item.todo)) }"
+            type="button"
+            :aria-label="getTodoCompactNotifyLabel(item.todo) ? '编辑通知时间' : '设置通知时间'"
+            @click="handleNotifyClick($event, item.period, item.todo)"
+          >
+            <span v-if="getTodoCompactNotifyLabel(item.todo)" class="todo-deadline-label">
               {{ getTodoCompactNotifyLabel(item.todo) }}
             </span>
-          </span>
+            <NIcon v-else :component="AlarmOutline" />
+          </button>
           <button
             class="todo-star-button is-starred"
             type="button"
@@ -1141,7 +1269,7 @@ function buildTodoListEntries(period: TodoListId, todos: TodoItem[], deferredDon
                 type="button"
                 draggable="true"
                 aria-label="拖动提醒事项"
-                @dragstart="dragged = { period: list.id, id: entry.todo.id }"
+                @dragstart="handleTodoDragStart($event, list.id, entry.todo)"
                 @dragend="dragged = null"
               />
               <NCheckbox
@@ -1165,11 +1293,18 @@ function buildTodoListEntries(period: TodoListId, todos: TodoItem[], deferredDon
                 @focus="handleInputFocus(list.id, entry.todo, $event)"
                 @blur="handleInputBlur(list.id, entry.todo.id)"
               />
-              <span v-if="getTodoCompactNotifyLabel(entry.todo)" class="todo-deadline-slot">
-                <span class="todo-deadline-label">
+              <button
+                class="todo-notify-button"
+                :class="{ 'todo-deadline-slot': Boolean(getTodoCompactNotifyLabel(entry.todo)), 'has-time': Boolean(getTodoCompactNotifyLabel(entry.todo)) }"
+                type="button"
+                :aria-label="getTodoCompactNotifyLabel(entry.todo) ? '编辑通知时间' : '设置通知时间'"
+                @click="handleNotifyClick($event, list.id, entry.todo)"
+              >
+                <span v-if="getTodoCompactNotifyLabel(entry.todo)" class="todo-deadline-label">
                   {{ getTodoCompactNotifyLabel(entry.todo) }}
                 </span>
-              </span>
+                <NIcon v-else :component="AlarmOutline" />
+              </button>
               <button
                 class="todo-star-button"
                 :class="{ 'is-starred': entry.todo.starred }"
@@ -1259,19 +1394,47 @@ function buildTodoListEntries(period: TodoListId, todos: TodoItem[], deferredDon
           </div>
         </div>
         <div class="notify-time-column">
-          <span class="notify-editor-label">快捷时间</span>
-          <div class="deadline-time-options notify-clock-options" aria-label="选择通知整点">
+          <span class="notify-editor-label">通知时间</span>
+          <div class="notify-period-options" aria-label="选择上午或下午">
             <button
-              v-for="time in NOTIFY_TIME_OPTIONS"
-              :key="time"
-              class="deadline-time-button notify-clock-button"
-              :class="[`time-${time.replace(':', '')}`, { 'is-selected': notifyEditor.time === time }]"
-              :style="getNotifyClockButtonStyle(time)"
+              v-for="period in NOTIFY_PERIOD_OPTIONS"
+              :key="period.key"
+              class="notify-period-checkbox"
+              :class="{ 'is-selected': getSelectedNotifyPeriod(notifyEditor.time) === period.key }"
               type="button"
-              :aria-label="getNotifyTimeLabel(time)"
-              @click="selectNotifyTime(time)"
+              role="checkbox"
+              :aria-checked="getSelectedNotifyPeriod(notifyEditor.time) === period.key"
+              @click="selectNotifyPeriod(period.key)"
             >
-              {{ time.slice(0, 2) }}
+              {{ period.label }}
+            </button>
+          </div>
+          <span class="notify-time-unit-title notify-hour-title">小时</span>
+          <div class="deadline-time-options notify-clock-options" aria-label="选择通知时间">
+            <button
+              v-for="hour in NOTIFY_CLOCK_HOUR_OPTIONS"
+              :key="hour"
+              class="deadline-time-button notify-clock-button notify-hour-button"
+              :class="[`hour-${hour}`, { 'is-selected': getSelectedNotifyClockHour(notifyEditor.time) === hour }]"
+              :style="getNotifyHourButtonStyle(hour)"
+              type="button"
+              :aria-label="getNotifyHourLabel(hour)"
+              @click="selectNotifyClockHour(hour)"
+            >
+              {{ Number(hour) }}
+            </button>
+          </div>
+          <span class="notify-time-unit-title notify-minute-title">分钟</span>
+          <div class="notify-minute-options" aria-label="选择通知分钟">
+            <button
+              v-for="minute in NOTIFY_MINUTE_OPTIONS"
+              :key="minute"
+              class="notify-minute-button"
+              :class="{ 'is-selected': getSelectedNotifyMinute(notifyEditor.time) === minute }"
+              type="button"
+              @click="selectNotifyMinute(minute)"
+            >
+              {{ minute }}
             </button>
           </div>
         </div>

@@ -197,6 +197,23 @@ describe("state compatibility", () => {
     expect(getSerializableState(state).companionGifTheme).toBe("none");
   });
 
+  it("preserves custom companion GIF sources during import and serialization", () => {
+    const state = normalizeImportedState({
+      companionGifTheme: "custom",
+      customCompanionGif: {
+        light: "data:image/gif;base64,light",
+        dark: "data:image/gif;base64,dark",
+      },
+    });
+
+    expect(state.companionGifTheme).toBe("custom");
+    expect(state.customCompanionGif).toEqual({
+      light: "data:image/gif;base64,light",
+      dark: "data:image/gif;base64,dark",
+    });
+    expect(getSerializableState(state).customCompanionGif).toEqual(state.customCompanionGif);
+  });
+
   it("normalizes unknown companion GIF themes to Hermes", () => {
     expect(normalizeImportedState({ companionGifTheme: "future-theme" }).companionGifTheme).toBe("hermes");
     expect(normalizeImportedState({ companionGifTheme: "" }).companionGifTheme).toBe("hermes");

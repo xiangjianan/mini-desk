@@ -27,11 +27,15 @@ const emit = defineEmits<{
   suggest: [anchor?: HTMLElement];
   update: [];
   gifTheme: [theme: CompanionGifTheme, anchor?: HTMLElement];
+  customGif: [files: { light?: File; dark?: File }, anchor?: HTMLElement];
   guide: [key: GuideKey, anchor: HTMLElement];
 }>();
 
 const menuOpen = ref(false);
 const triggerRef = ref<HTMLElement | null>(null);
+const customGifDialogOpen = ref(false);
+const customGifLightFile = ref<File | undefined>();
+const customGifDarkFile = ref<File | undefined>();
 const options = computed(() => [
   { label: "数据导出", key: "export", icon: renderIcon(CloudDownloadOutline) },
   { label: "数据导入", key: "import", icon: renderIcon(CloudUploadOutline) },
@@ -66,9 +70,41 @@ function handleSelect(key: string): void {
   if (key === "suggest") emit("suggest", triggerRef.value ?? undefined);
   if (key === "about") emit("about", triggerRef.value ?? undefined);
   if (key === "version" && props.updateAvailable) emit("update");
+  if (key === "gif-theme:custom") {
+    customGifDialogOpen.value = true;
+    return;
+  }
   if (key === "gif-theme:hermes" || key === "gif-theme:none") {
     emit("gifTheme", key.replace("gif-theme:", "") as CompanionGifTheme, triggerRef.value ?? undefined);
   }
+}
+
+function handleCustomGifFileChange(event: Event, mode: "light" | "dark"): void {
+  const input = event.currentTarget as HTMLInputElement;
+  const file = input.files?.[0];
+  if (mode === "light") customGifLightFile.value = file;
+  else customGifDarkFile.value = file;
+}
+
+function confirmCustomGif(): void {
+  if (!customGifLightFile.value && !customGifDarkFile.value) return;
+  emit(
+    "customGif",
+    {
+      light: customGifLightFile.value,
+      dark: customGifDarkFile.value,
+    },
+    triggerRef.value ?? undefined,
+  );
+  customGifDialogOpen.value = false;
+  customGifLightFile.value = undefined;
+  customGifDarkFile.value = undefined;
+}
+
+function closeCustomGifDialog(): void {
+  customGifDialogOpen.value = false;
+  customGifLightFile.value = undefined;
+  customGifDarkFile.value = undefined;
 }
 
 function renderIcon(component: Component) {
@@ -99,4 +135,18 @@ function renderIcon(component: Component) {
       </NBadge>
     </span>
   </NDropdown>
+  <section v-if="customGifDialogOpen" class="gif-theme-custom-dialog" aria-label="自定义 GIF">
+    <label>
+      <span>浅色 GIF</span>
+      <input class="gif-theme-light-input" type="file" accept="image/gif,.gif" @change="handleCustomGifFileChange($event, 'light')" />
+    </label>
+    <label>
+      <span>深色 GIF</span>
+      <input class="gif-theme-dark-input" type="file" accept="image/gif,.gif" @change="handleCustomGifFileChange($event, 'dark')" />
+    </label>
+    <div class="gif-theme-custom-actions">
+      <button class="gif-theme-custom-cancel" type="button" @click="closeCustomGifDialog">取消</button>
+      <button class="gif-theme-custom-confirm" type="button" @click="confirmCustomGif">确定</button>
+    </div>
+  </section>
 </template>

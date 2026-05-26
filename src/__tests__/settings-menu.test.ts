@@ -80,6 +80,7 @@ describe("SettingsMenu", () => {
 
     expect(wrapper.find('[data-key="gif-theme"]').text()).toBe("GIF 主题");
     expect(wrapper.find('[data-key="gif-theme:hermes"]').text()).toBe("默认 Hermes");
+    expect(wrapper.find('[data-key="gif-theme:custom"]').text()).toBe("自定义 GIF");
     expect(wrapper.find('[data-key="gif-theme:none"]').text()).toBe("无 GIF");
     expect(wrapper.find('[data-key="gif-theme:none"]').classes()).toContain("is-selected");
     expect(wrapper.find('[data-key="gif-theme:hermes"]').classes()).not.toContain("is-selected");
@@ -106,5 +107,39 @@ describe("SettingsMenu", () => {
     await wrapper.find('[data-key="gif-theme:none"]').trigger("click");
 
     expect(wrapper.emitted("gifTheme")?.[0]).toEqual(["none", expect.any(HTMLElement)]);
+  });
+
+  it("opens a custom GIF upload dialog and emits selected GIF files", async () => {
+    const wrapper = mount(SettingsMenu, {
+      props: {
+        appVersion: "1.0.19",
+        updateAvailable: false,
+        companionGifTheme: "hermes",
+      },
+      global: {
+        stubs: {
+          Dropdown: dropdownStub,
+          NDropdown: dropdownStub,
+          NBadge: { template: "<span><slot /></span>" },
+          NButton: { template: "<button><slot /></button>" },
+          NIcon: { template: "<span />" },
+        },
+      },
+    });
+    const light = new File(["light"], "light.gif", { type: "image/gif" });
+    const dark = new File(["dark"], "dark.gif", { type: "image/gif" });
+
+    await wrapper.find('[data-key="gif-theme:custom"]').trigger("click");
+    Object.defineProperty(wrapper.get(".gif-theme-light-input").element, "files", { value: [light], configurable: true });
+    Object.defineProperty(wrapper.get(".gif-theme-dark-input").element, "files", { value: [dark], configurable: true });
+    await wrapper.get(".gif-theme-light-input").trigger("change");
+    await wrapper.get(".gif-theme-dark-input").trigger("change");
+    await wrapper.get(".gif-theme-custom-confirm").trigger("click");
+
+    expect(wrapper.emitted("customGif")?.[0]).toEqual([
+      { light, dark },
+      expect.any(HTMLElement),
+    ]);
+    expect(wrapper.find(".gif-theme-custom-dialog").exists()).toBe(false);
   });
 });

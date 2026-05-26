@@ -1,32 +1,39 @@
-export const NOTIFY_TIME_OPTIONS = [
-  "00:00",
-  "01:00",
-  "02:00",
-  "03:00",
-  "04:00",
-  "05:00",
-  "06:00",
-  "07:00",
-  "08:00",
-  "09:00",
-  "10:00",
-  "11:00",
-  "12:00",
-  "13:00",
-  "14:00",
-  "15:00",
-  "16:00",
-  "17:00",
-  "18:00",
-  "19:00",
-  "20:00",
-  "21:00",
-  "22:00",
-  "23:00",
+export const NOTIFY_HOUR_OPTIONS = [
+  "00",
+  "01",
+  "02",
+  "03",
+  "04",
+  "05",
+  "06",
+  "07",
+  "08",
+  "09",
+  "10",
+  "11",
+  "12",
+  "13",
+  "14",
+  "15",
+  "16",
+  "17",
+  "18",
+  "19",
+  "20",
+  "21",
+  "22",
+  "23",
+  "24",
 ] as const;
+export const NOTIFY_MINUTE_OPTIONS = ["00", "15", "30", "45"] as const;
+export const NOTIFY_TIME_OPTIONS = NOTIFY_HOUR_OPTIONS.flatMap((hour) =>
+  NOTIFY_MINUTE_OPTIONS.map((minute) => `${hour}:${minute}`),
+);
 export const DEFAULT_NOTIFY_TIME = "09:00";
 
-export type NotifyTimeOption = typeof NOTIFY_TIME_OPTIONS[number];
+export type NotifyHourOption = typeof NOTIFY_HOUR_OPTIONS[number];
+export type NotifyMinuteOption = typeof NOTIFY_MINUTE_OPTIONS[number];
+export type NotifyTimeOption = `${NotifyHourOption}:${NotifyMinuteOption}`;
 export type NotifyUrgency = "overdue" | "due-soon" | "upcoming" | "later";
 
 export interface NotifyDisplay {
@@ -42,8 +49,9 @@ export type DeadlineUrgency = NotifyUrgency;
 export type DeadlineDisplay = NotifyDisplay;
 
 const DATE_INPUT_PATTERN = /^(\d{4})-(\d{2})-(\d{2})$/;
-const WHOLE_HOUR_PATTERN = /^([01]\d|2[0-3]):00$/;
+const QUARTER_HOUR_PATTERN = /^([01]\d|2[0-4]):(00|15|30|45)$/;
 const ONE_DAY_MS = 24 * 60 * 60 * 1000;
+const DEFAULT_NOTIFY_HOUR_OPTIONS = NOTIFY_HOUR_OPTIONS.slice(0, 24);
 
 export function getLocalDateInputValue(date = new Date()): string {
   const year = date.getFullYear();
@@ -54,16 +62,25 @@ export function getLocalDateInputValue(date = new Date()): string {
 
 export function createNotifyAt(dateValue: string, timeValue = DEFAULT_NOTIFY_TIME): number | null {
   const parsedDate = parseLocalDateValue(dateValue);
-  const parsedHour = parseWholeHourValue(timeValue);
-  if (!parsedDate || parsedHour === null) return null;
+  const parsedTime = parseQuarterHourValue(timeValue);
+  if (!parsedDate || !parsedTime) return null;
 
-  return new Date(parsedDate.year, parsedDate.month - 1, parsedDate.day, parsedHour, 0, 0, 0).getTime();
+  const dayOffset = parsedTime.hour === 24 ? 1 : 0;
+  const hour = parsedTime.hour === 24 ? 0 : parsedTime.hour;
+  return new Date(
+    parsedDate.year,
+    parsedDate.month - 1,
+    parsedDate.day + dayOffset,
+    hour,
+    parsedTime.minute,
+    0,
+    0,
+  ).getTime();
 }
 
 export function getDefaultNotifySelection(now = new Date()): { date: string; time: NotifyTimeOption } {
-  const nextToday = NOTIFY_TIME_OPTIONS.find((time) => {
-    const hour = parseWholeHourValue(time);
-    if (hour === null) return false;
+  const nextToday = DEFAULT_NOTIFY_HOUR_OPTIONS.find((hourText) => {
+    const hour = Number(hourText);
     const candidate = new Date(now.getFullYear(), now.getMonth(), now.getDate(), hour, 0, 0, 0);
     return candidate.getTime() > now.getTime();
   });
@@ -71,7 +88,7 @@ export function getDefaultNotifySelection(now = new Date()): { date: string; tim
   if (nextToday) {
     return {
       date: getLocalDateInputValue(now),
-      time: nextToday,
+      time: `${nextToday}:00` as NotifyTimeOption,
     };
   }
 
@@ -131,14 +148,10 @@ export function getNotifyDisplay(notifyAt: number | undefined, now = Date.now())
 }
 
 export function getNotifyTimeLabel(time: NotifyTimeOption): string {
-  const hour = parseWholeHourValue(time);
-  if (hour === null) return time;
-  if (hour === 0) return "凌晨 0 点";
-  if (hour < 6) return `凌晨 ${hour} 点`;
-  if (hour < 12) return `上午 ${hour} 点`;
-  if (hour === 12) return "中午 12 点";
-  if (hour <= 18) return `下午 ${hour - 12} 点`;
-  return `晚上 ${hour - 12} 点`;
+  const parsed = parseQuarterHourValue(time);
+  if (!parsed) return time;
+  if (parsed.hour === 24) return `次日 ${formatMinuteTime(0, parsed.minute)}`;
+  return getDisplayTimeLabel(new Date(2000, 0, 1, parsed.hour, parsed.minute));
 }
 
 export function isValidNotifyAt(value: unknown): value is number {
@@ -167,24 +180,34 @@ function parseLocalDateValue(dateValue: string): { year: number; month: number; 
   return { year, month, day };
 }
 
-function parseWholeHourValue(timeValue: string): number | null {
-  const match = WHOLE_HOUR_PATTERN.exec(timeValue);
+function parseQuarterHourValue(timeValue: string): { hour: number; minute: number } | null {
+  const match = QUARTER_HOUR_PATTERN.exec(timeValue);
   if (!match) return null;
-  return Number(match[1]);
+  return {
+    hour: Number(match[1]),
+    minute: Number(match[2]),
+  };
 }
 
 function getDisplayTimeLabel(date: Date): string {
   const hour = date.getHours();
-  if (hour === 0) return "凌晨 12:00";
-  if (hour < 6) return `凌晨 ${hour}:00`;
-  if (hour < 12) return `上午 ${hour}:00`;
-  if (hour === 12) return "中午 12:00";
-  if (hour <= 18) return `下午 ${hour - 12}:00`;
-  return `晚上 ${hour - 12}:00`;
+  const minute = date.getMinutes();
+  if (hour === 0) return `凌晨 ${formatMinuteTime(12, minute)}`;
+  if (hour < 6) return `凌晨 ${formatMinuteTime(hour, minute)}`;
+  if (hour < 12) return `上午 ${formatMinuteTime(hour, minute)}`;
+  if (hour === 12) return `中午 ${formatMinuteTime(12, minute)}`;
+  if (hour <= 18) return `下午 ${formatMinuteTime(hour - 12, minute)}`;
+  return `晚上 ${formatMinuteTime(hour - 12, minute)}`;
 }
 
 function getCompactTimeLabel(date: Date): string {
-  return String(date.getHours()).padStart(2, "0");
+  const hour = String(date.getHours()).padStart(2, "0");
+  if (date.getMinutes() === 0) return hour;
+  return `${hour}:${String(date.getMinutes()).padStart(2, "0")}`;
+}
+
+function formatMinuteTime(hour: number, minute: number): string {
+  return `${hour}:${String(minute).padStart(2, "0")}`;
 }
 
 function getLocalDayDistance(from: number, to: number): number {

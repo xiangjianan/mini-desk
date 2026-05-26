@@ -1,5 +1,5 @@
 export type ThemeMode = "light" | "dark";
-export type CompanionGifTheme = "hermes" | "none";
+export type CompanionGifTheme = "hermes" | "custom" | "none";
 export type QuickButtonType = "link" | "text";
 export type TodoListId = string;
 export type TodoPeriod = TodoListId;
@@ -44,6 +44,11 @@ export interface TodoItem {
   deadlineAt?: number;
 }
 
+export interface CompanionCustomGif {
+  light?: string;
+  dark?: string;
+}
+
 export interface TodoListConfig {
   id: TodoListId;
   title: string;
@@ -69,6 +74,7 @@ export interface WorkspaceSpace {
 export interface BoardState {
   theme: ThemeMode;
   companionGifTheme: CompanionGifTheme;
+  customCompanionGif: CompanionCustomGif;
   customTitles: Record<string, string>;
   noteLines: LineItem[];
   workspaceLines: LineItem[];

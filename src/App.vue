@@ -64,6 +64,7 @@ const pendingConfirm = ref<{
   onCancel?: () => void;
   confirmText: string;
   cancelText: string;
+  danger: boolean;
 } | null>(null);
 const importInput = ref<HTMLInputElement | null>(null);
 const importFeedbackAnchor = ref<HTMLElement | undefined>();
@@ -822,16 +823,12 @@ function deleteTodoList(listId: TodoListId, anchor?: HTMLElement): void {
   const list = state.todoLists.find((item) => item.id === listId);
   if (!list) return;
   const remove = () => removeTodoList(listId, anchor);
-  if ((state.todos[listId] ?? []).length === 0) {
-    remove();
-    return;
-  }
   requestConfirmation(
     "confirmDeleteTodoList",
     anchor,
     remove,
     undefined,
-    { confirmText: "删除列表", cancelText: "取消" },
+    { confirmText: "删除列表", cancelText: "取消", danger: true },
   );
 }
 
@@ -948,28 +945,13 @@ function complete(period: TodoPeriod, id: string, done: boolean, anchor?: HTMLEl
 }
 
 function toggleTodoStar(change: TodoStarChange): void {
-  const { period, id, starred, anchor } = change;
+  const { period, id, starred } = change;
   if (!isConfiguredTodoListId(period)) return;
-  if (starred) {
-    state.todos = starTodo(state.todos, period, id, true);
-    persistNow();
-    return;
-  }
-
   const todo = getTodos(period).find((item) => item.id === id);
-  if (!todo?.starred) return;
-  const messageKey: MessageKey = "confirmUnstarTodo";
-  requestConfirmation(
-    messageKey,
-    anchor,
-    () => {
-      if (!isConfiguredTodoListId(period)) return;
-      state.todos = starTodo(state.todos, period, id, false);
-      persistNow();
-    },
-    undefined,
-    { confirmText: "取消重点", cancelText: "算了" },
-  );
+  if (!todo) return;
+  if (!starred && !todo.starred) return;
+  state.todos = starTodo(state.todos, period, id, starred);
+  persistNow();
 }
 
 function updateTodoNotify(period: TodoPeriod, id: string, notifyAt: number | undefined, anchor?: HTMLElement): void {
@@ -1057,6 +1039,23 @@ function updateCompanionGifTheme(theme: CompanionGifTheme, anchor?: HTMLElement)
   state.companionGifTheme = theme;
   persistNow();
   showBubbleText(theme === "none" ? "已关闭 GIF" : "已切换 GIF 主题", anchor);
+}
+
+async function updateCustomCompanionGif(files: { light?: File; dark?: File }, anchor?: HTMLElement): Promise<void> {
+  const light = await readGifFile(files.light);
+  const dark = await readGifFile(files.dark);
+  const fallback = light ?? dark;
+  if (!fallback) {
+    showBubbleText("请选择 GIF 文件", anchor);
+    return;
+  }
+  state.customCompanionGif = {
+    light: light ?? fallback,
+    dark: dark ?? fallback,
+  };
+  state.companionGifTheme = "custom";
+  persistNow();
+  showBubbleText("已设置自定义 GIF", anchor);
 }
 
 function applyTheme(): void {
@@ -1283,7 +1282,7 @@ function requestConfirmation(
   anchor: HTMLElement | undefined,
   onConfirm: () => void | Promise<void>,
   onCancel?: () => void,
-  options: { confirmText?: string; cancelText?: string } = {},
+  options: { confirmText?: string; cancelText?: string; danger?: boolean } = {},
 ): void {
   if (shouldBlockBoardEffects()) return;
   window.clearTimeout(bubbleTimer.value);
@@ -1299,6 +1298,7 @@ function requestConfirmation(
     onCancel,
     confirmText: options.confirmText ?? "是",
     cancelText: options.cancelText ?? "否",
+    danger: options.danger ?? /删除|清理/.test(options.confirmText ?? ""),
   };
   activeGuideKey.value = null;
   bubbleVisible.value = true;
@@ -1335,6 +1335,7 @@ function isImportPayload(payload: unknown): payload is Record<string, unknown> {
   return [
     "theme",
     "companionGifTheme",
+    "customCompanionGif",
     "customTitles",
     "noteLines",
     "workspaceLines",
@@ -1560,6 +1561,13 @@ function fileToDataUrl(file: File): Promise<string> {
   });
 }
 
+async function readGifFile(file?: File): Promise<string | undefined> {
+  if (!file) return undefined;
+  const isGif = file.type === "image/gif" || file.name.toLowerCase().endsWith(".gif");
+  if (!isGif) return undefined;
+  return fileToDataUrl(file);
+}
+
 function moveItem<T extends { id: string }>(items: T[], dragId: string, targetId: string): void {
   const sourceIndex = items.findIndex((item) => item.id === dragId);
   const targetIndex = items.findIndex((item) => item.id === targetId);
@@ -1702,6 +1710,7 @@ function moveItem<T extends { id: string }>(items: T[], dragId: string, targetId
       :link-text="isMobileBlocked ? undefined : bubbleLink?.text"
       :link-href="isMobileBlocked ? undefined : bubbleLink?.href"
       :confirm="!isMobileBlocked && Boolean(pendingConfirm)"
+      :confirm-danger="!isMobileBlocked && Boolean(pendingConfirm?.danger)"
       :confirm-text="isMobileBlocked ? undefined : pendingConfirm?.confirmText"
       :cancel-text="isMobileBlocked ? undefined : pendingConfirm?.cancelText"
       :clear-signal="bubbleClearSignal"
@@ -1709,6 +1718,8 @@ function moveItem<T extends { id: string }>(items: T[], dragId: string, targetId
       :position="activeCompanionPosition"
       :theme="state.theme"
       :gif-theme="state.companionGifTheme"
+      :custom-gif-light-src="state.customCompanionGif.light"
+      :custom-gif-dark-src="state.customCompanionGif.dark"
       @yes="confirmCompanionAction"
       @no="cancelCompanionAction"
       @pause="pauseBubbleTimer"
@@ -1726,6 +1737,7 @@ function moveItem<T extends { id: string }>(items: T[], dragId: string, targetId
         @suggest="suggestIssue"
         @update="updateStaticVersion"
         @gif-theme="updateCompanionGifTheme"
+        @custom-gif="updateCustomCompanionGif"
         @guide="handleGuideClick"
       />
       <NButton quaternary size="small" class="theme-btn icon-button" aria-label="切换主题" @click="handleThemeClick">

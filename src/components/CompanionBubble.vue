@@ -12,6 +12,7 @@ const props = defineProps<{
   linkText?: string;
   linkHref?: string;
   confirm?: boolean;
+  confirmDanger?: boolean;
   confirmText?: string;
   cancelText?: string;
   actionText?: string;
@@ -19,6 +20,8 @@ const props = defineProps<{
   persistent?: boolean;
   theme?: "light" | "dark";
   gifTheme?: CompanionGifTheme;
+  customGifLightSrc?: string;
+  customGifDarkSrc?: string;
   position?: {
     right: string;
     bottom?: string;
@@ -46,6 +49,7 @@ const renderedMessage = ref("");
 const renderedLinkText = ref("");
 const renderedLinkHref = ref("");
 const renderedConfirm = ref(false);
+const renderedConfirmDanger = ref(false);
 const renderedConfirmText = ref("是");
 const renderedCancelText = ref("否");
 const renderedActionText = ref("");
@@ -71,6 +75,10 @@ const placementStyle = computed(() => {
 const activeGifTheme = computed(() => props.gifTheme ?? "hermes");
 const gifSrc = computed(() => {
   if (activeGifTheme.value === "none") return "";
+  if (activeGifTheme.value === "custom") {
+    if (props.theme === "dark") return props.customGifDarkSrc || props.customGifLightSrc || "";
+    return props.customGifLightSrc || props.customGifDarkSrc || "";
+  }
   return props.theme === "dark" ? hermesDarkGif : hermesGif;
 });
 const shouldRenderGif = computed(() => Boolean(gifSrc.value));
@@ -102,6 +110,7 @@ watch(
         renderedLinkText.value = "";
         renderedLinkHref.value = "";
         renderedConfirm.value = false;
+        renderedConfirmDanger.value = false;
         renderedConfirmText.value = "是";
         renderedCancelText.value = "否";
         renderedActionText.value = "";
@@ -112,6 +121,7 @@ watch(
     renderedLinkText.value = props.linkText ?? "";
     renderedLinkHref.value = props.linkHref ?? "";
     renderedConfirm.value = Boolean(props.confirm);
+    renderedConfirmDanger.value = Boolean(props.confirmDanger);
     renderedConfirmText.value = props.confirmText ?? "是";
     renderedCancelText.value = props.cancelText ?? "否";
     renderedActionText.value = "";
@@ -131,8 +141,11 @@ watch(
       props.linkText,
       props.linkHref,
       props.confirm,
+      props.confirmDanger,
       props.persistent,
       props.gifTheme,
+      props.customGifLightSrc,
+      props.customGifDarkSrc,
       props.position?.right,
       props.position?.bottom,
       props.position?.top,
@@ -159,13 +172,14 @@ watch(
 );
 
 watch(
-  () => [props.message, props.linkText, props.linkHref, props.confirm, props.confirmText, props.cancelText, props.actionText] as const,
+  () => [props.message, props.linkText, props.linkHref, props.confirm, props.confirmDanger, props.confirmText, props.cancelText, props.actionText] as const,
   () => {
     if (!popoverVisible.value) return;
     renderedMessage.value = props.message;
     renderedLinkText.value = props.linkText ?? "";
     renderedLinkHref.value = props.linkHref ?? "";
     renderedConfirm.value = Boolean(props.confirm);
+    renderedConfirmDanger.value = Boolean(props.confirmDanger);
     renderedConfirmText.value = props.confirmText ?? "是";
     renderedCancelText.value = props.cancelText ?? "否";
     renderedActionText.value = "";
@@ -183,6 +197,7 @@ watch(
     renderedLinkText.value = "";
     renderedLinkHref.value = "";
     renderedConfirm.value = false;
+    renderedConfirmDanger.value = false;
     renderedConfirmText.value = "是";
     renderedCancelText.value = "否";
     renderedActionText.value = "";
@@ -324,7 +339,7 @@ function isPointInsideElement(x: number, y: number, element: HTMLElement | null)
           {{ renderedLinkText }}
         </a>
         <div v-if="renderedConfirm" class="companion-actions">
-          <NButton size="tiny" class="companion-action-button" data-testid="companion-yes" @click="emit('yes')">{{ renderedConfirmText }}</NButton>
+          <NButton size="tiny" class="companion-action-button" :class="{ 'is-danger': renderedConfirmDanger }" data-testid="companion-yes" @click="emit('yes')">{{ renderedConfirmText }}</NButton>
           <NButton size="tiny" class="companion-action-button" data-testid="companion-no" @click="emit('no')">{{ renderedCancelText }}</NButton>
         </div>
         <div v-else-if="renderedActionText" class="companion-actions">

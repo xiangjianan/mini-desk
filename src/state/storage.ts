@@ -3,6 +3,7 @@ import { isValidDeadlineAt } from "./deadlines";
 import { normalizeCompanionGifTheme } from "./companionGifThemes";
 import type {
   BoardState,
+  CompanionCustomGif,
   LineItem,
   QuickButton,
   QuickButtonType,
@@ -41,6 +42,7 @@ export function getSerializableState(
 
   return {
     ...state,
+    customCompanionGif: cloneCustomCompanionGif(state.customCompanionGif),
     images: state.images.map((image) => {
       if (options.includeImageData) return { ...image };
       return {
@@ -82,6 +84,7 @@ export function normalizeImportedState(payload: unknown): BoardState {
     ...base,
     theme: typed.theme === "dark" ? "dark" : "light",
     companionGifTheme: normalizeCompanionGifTheme(typed.companionGifTheme),
+    customCompanionGif: normalizeCustomCompanionGif(typed.customCompanionGif),
     customTitles,
     noteLines,
     workspaceLines,
@@ -318,6 +321,21 @@ function normalizeTodo(item: unknown): TodoItem | null {
   return todo;
 }
 
+function normalizeCustomCompanionGif(value: unknown): CompanionCustomGif {
+  if (!isPlainObject(value)) return {};
+  const record = value as Record<string, unknown>;
+  const light = normalizeGifDataUrl(record.light);
+  const dark = normalizeGifDataUrl(record.dark);
+  return {
+    ...(light ? { light } : {}),
+    ...(dark ? { dark } : {}),
+  };
+}
+
+function normalizeGifDataUrl(value: unknown): string | undefined {
+  return typeof value === "string" && /^data:image\/gif(?:;[^,]*)?,/i.test(value) ? value : undefined;
+}
+
 function normalizeStringRecord(value: unknown): Record<string, string> {
   if (!isPlainObject(value)) return {};
   return Object.fromEntries(
@@ -351,6 +369,13 @@ function cloneTodo(todo: TodoItem): TodoItem {
   delete next.deadlineAt;
   if (!isValidDeadlineAt(next.notifyAt)) delete next.notifyAt;
   return next;
+}
+
+function cloneCustomCompanionGif(value: CompanionCustomGif | undefined): CompanionCustomGif {
+  return {
+    ...(value?.light ? { light: value.light } : {}),
+    ...(value?.dark ? { dark: value.dark } : {}),
+  };
 }
 
 function cloneLines(lines: LineItem[]): LineItem[] {
