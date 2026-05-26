@@ -329,13 +329,15 @@ describe("Naive UI component usage", () => {
   it("keeps the notification editor compact with prominent selected time states", () => {
     const styles = read("src/styles.css");
 
-    expect(styles).toMatch(/\.notify-editor\s*\{[^}]*width: min\(540px, calc\(100vw - 16px\)\)/s);
-    expect(styles).toMatch(/\.notify-editor\s*\{[^}]*min-height: 320px/s);
-    expect(styles).toMatch(/\.notify-editor-body\s*\{[^}]*grid-template-columns: minmax\(216px, 1fr\) 216px/s);
-    expect(styles).toMatch(/\.notify-editor-body\s*\{[^}]*gap: 14px/s);
+    expect(styles).toMatch(/\.notify-editor\s*\{[^}]*width: min\(378px, calc\(100vw - 16px\)\)/s);
+    expect(styles).toMatch(/\.notify-editor\s*\{[^}]*min-height: 224px/s);
+    expect(styles).toMatch(/\.notify-editor-body\s*\{[^}]*grid-template-columns: minmax\(160px, 1fr\) 150px/s);
+    expect(styles).toMatch(/\.notify-editor-body\s*\{[^}]*gap: 8px/s);
     expect(styles).toMatch(/\.notify-date-shortcuts\s*\{[^}]*grid-template-columns: repeat\(3, minmax\(0, 1fr\)\)/s);
-    expect(styles).toMatch(/\.notify-clock-options\s*\{[^}]*width: 192px/s);
-    expect(styles).toMatch(/\.notify-clock-options\s*\{[^}]*height: 192px/s);
+    expect(styles).toMatch(/\.notify-calendar-weekdays,[\s\S]*?\.notify-calendar-grid\s*\{[^}]*gap: 2px/s);
+    expect(styles).toMatch(/\.notify-clock-options\s*\{[^}]*width: 136px/s);
+    expect(styles).toMatch(/\.notify-clock-options\s*\{[^}]*height: 136px/s);
+    expect(styles).toMatch(/\.notify-period-toggle\s*\{[^}]*position: absolute[^}]*left: 50%[^}]*top: 50%/s);
     expect(styles).toMatch(/\.deadline-time-button\.is-selected,[\s\S]*?\.notify-minute-button\.is-selected\s*\{[^}]*background: var\(--text\)[^}]*color: var\(--panel\)[^}]*border-color: var\(--text\)/s);
   });
 

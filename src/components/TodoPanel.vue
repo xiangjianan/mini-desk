@@ -154,14 +154,14 @@ const menuOptions = computed<DropdownOption[]>(() => {
 const todayFocusTitleId = "today-focus-title";
 const DEADLINE_CLOCK_INTERVAL_MS = 60_000;
 const DEADLINE_EDITOR_OFFSET = 8;
-const DEADLINE_EDITOR_WIDTH = 540;
-const DEADLINE_EDITOR_HEIGHT = 320;
+const DEADLINE_EDITOR_WIDTH = 378;
+const DEADLINE_EDITOR_HEIGHT = 224;
 const LIST_CREATE_DIALOG_WIDTH = 260;
 const LIST_CREATE_DIALOG_HEIGHT = 112;
 const CALENDAR_WEEKDAYS = ["日", "一", "二", "三", "四", "五", "六"];
 const NOTIFY_PERIOD_OPTIONS = [
-  { key: "am", label: "上午" },
-  { key: "pm", label: "下午" },
+  { key: "am", label: "早" },
+  { key: "pm", label: "晚" },
 ] as const;
 const NOTIFY_DATE_SHORTCUTS = [
   { label: "今天", offsetDays: 0 },
@@ -182,9 +182,9 @@ const NOTIFY_CLOCK_HOUR_OPTIONS = [
   "11",
   "12",
 ] as const;
-const NOTIFY_CLOCK_SIZE = 192;
-const NOTIFY_CLOCK_BUTTON_SIZE = 28;
-const NOTIFY_CLOCK_RADIUS = 72;
+const NOTIFY_CLOCK_SIZE = 136;
+const NOTIFY_CLOCK_BUTTON_SIZE = 22;
+const NOTIFY_CLOCK_RADIUS = 51;
 const deadlineNow = ref(Date.now());
 const deadlineClockTimer = ref<number | undefined>();
 type NotifyPeriodOption = typeof NOTIFY_PERIOD_OPTIONS[number]["key"];
@@ -678,6 +678,11 @@ function getNotifyHourLabel(hour: NotifyClockHourOption): string {
   const period = getSelectedNotifyPeriod(notifyEditor.value.time);
   const minute = notifyEditor.value ? getSelectedNotifyMinute(notifyEditor.value.time) : "00";
   return getNotifyTimeLabel(`${getActualNotifyHour(period, hour)}:${minute}` as NotifyTimeOption);
+}
+
+function getNotifyClockHourDisplay(hour: NotifyClockHourOption): number {
+  if (!notifyEditor.value) return Number(hour);
+  return getSelectedNotifyPeriod(notifyEditor.value.time) === "pm" ? Number(hour) + 12 : Number(hour);
 }
 
 function getSelectedNotifyHour(time: NotifyTimeOption): NotifyHourOption {
@@ -1416,22 +1421,21 @@ function buildTodoListEntries(period: TodoListId, todos: TodoItem[], deferredDon
           </div>
         </div>
         <div class="notify-time-column">
-          <div class="notify-period-options" aria-label="选择上午或下午">
-            <button
-              v-for="period in NOTIFY_PERIOD_OPTIONS"
-              :key="period.key"
-              class="notify-period-checkbox"
-              :class="{ 'is-selected': getSelectedNotifyPeriod(notifyEditor.time) === period.key }"
-              type="button"
-              role="checkbox"
-              :aria-checked="getSelectedNotifyPeriod(notifyEditor.time) === period.key"
-              @click="selectNotifyPeriod(period.key)"
-            >
-              {{ period.label }}
-            </button>
-          </div>
           <span class="notify-time-unit-title notify-hour-title">小时</span>
           <div class="deadline-time-options notify-clock-options" aria-label="选择通知时间">
+            <div class="notify-period-toggle" aria-label="早晚切换">
+              <button
+                v-for="period in NOTIFY_PERIOD_OPTIONS"
+                :key="period.key"
+                class="notify-period-toggle-button"
+                :class="{ 'is-selected': getSelectedNotifyPeriod(notifyEditor.time) === period.key }"
+                type="button"
+                :aria-pressed="getSelectedNotifyPeriod(notifyEditor.time) === period.key"
+                @click="selectNotifyPeriod(period.key)"
+              >
+                {{ period.label }}
+              </button>
+            </div>
             <button
               v-for="hour in NOTIFY_CLOCK_HOUR_OPTIONS"
               :key="hour"
@@ -1442,7 +1446,7 @@ function buildTodoListEntries(period: TodoListId, todos: TodoItem[], deferredDon
               :aria-label="getNotifyHourLabel(hour)"
               @click="selectNotifyClockHour(hour)"
             >
-              {{ Number(hour) }}
+              {{ getNotifyClockHourDisplay(hour) }}
             </button>
           </div>
           <span class="notify-time-unit-title notify-minute-title">分钟</span>

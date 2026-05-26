@@ -888,8 +888,8 @@ describe("TodoPanel", () => {
     expect(wrapper.findAll(".notify-date-shortcut").map((button) => button.text())).toEqual(["今天", "明天", "后天"]);
     expect(wrapper.find(".notify-hour-ring-inner").exists()).toBe(false);
     expect(wrapper.find(".notify-hour-ring-outer").exists()).toBe(false);
-    expect(wrapper.findAll(".notify-period-checkbox").map((checkbox) => checkbox.text())).toEqual(["上午", "下午"]);
-    expect(wrapper.get(".notify-period-checkbox.is-selected").text()).toBe("上午");
+    expect(wrapper.findAll(".notify-period-toggle-button").map((button) => button.text())).toEqual(["早", "晚"]);
+    expect(wrapper.get(".notify-period-toggle-button.is-selected").text()).toBe("早");
     expect(wrapper.findAll(".notify-hour-button").map((button) => button.text())).toEqual([
       "1",
       "2",
@@ -909,8 +909,22 @@ describe("TodoPanel", () => {
     expect(wrapper.get(".notify-minute-title").text()).toBe("分钟");
 
     await wrapper.findAll(".notify-date-shortcut").find((button) => button.text() === "明天")?.trigger("click");
-    await wrapper.findAll(".notify-period-checkbox").find((button) => button.text() === "下午")?.trigger("click");
-    await wrapper.findAll(".notify-hour-button").find((button) => button.text() === "3")?.trigger("click");
+    await wrapper.findAll(".notify-period-toggle-button").find((button) => button.text() === "晚")?.trigger("click");
+    expect(wrapper.findAll(".notify-hour-button").map((button) => button.text())).toEqual([
+      "13",
+      "14",
+      "15",
+      "16",
+      "17",
+      "18",
+      "19",
+      "20",
+      "21",
+      "22",
+      "23",
+      "24",
+    ]);
+    await wrapper.findAll(".notify-hour-button").find((button) => button.text() === "15")?.trigger("click");
     await wrapper.get(".deadline-confirm-button").trigger("click");
 
     expect(wrapper.emitted("notify")?.[0]).toEqual([
@@ -951,8 +965,8 @@ describe("TodoPanel", () => {
     await wrapper.findAll(".dropdown-option").find((option) => option.text() === "设置通知时间")?.trigger("click");
     await wrapper.findAll(".notify-date-shortcut").find((button) => button.text() === "后天")?.trigger("click");
     await wrapper.findAll(".notify-calendar-day").find((button) => button.text() === "30")?.trigger("click");
-    await wrapper.findAll(".notify-period-checkbox").find((button) => button.text() === "下午")?.trigger("click");
-    await wrapper.findAll(".notify-hour-button").find((button) => button.text() === "3")?.trigger("click");
+    await wrapper.findAll(".notify-period-toggle-button").find((button) => button.text() === "晚")?.trigger("click");
+    await wrapper.findAll(".notify-hour-button").find((button) => button.text() === "15")?.trigger("click");
     await wrapper.findAll(".notify-minute-button").find((button) => button.text() === "30")?.trigger("click");
     await wrapper.get(".deadline-confirm-button").trigger("click");
 
@@ -1057,8 +1071,8 @@ describe("TodoPanel", () => {
 
     await wrapper.get(".todo-notify-button").trigger("click");
     await wrapper.findAll(".notify-calendar-day").find((button) => button.text() === "30")?.trigger("click");
-    await wrapper.findAll(".notify-period-checkbox").find((button) => button.text() === "下午")?.trigger("click");
-    await wrapper.findAll(".notify-hour-button").find((button) => button.text() === "12")?.trigger("click");
+    await wrapper.findAll(".notify-period-toggle-button").find((button) => button.text() === "晚")?.trigger("click");
+    await wrapper.findAll(".notify-hour-button").find((button) => button.text() === "24")?.trigger("click");
     await wrapper.findAll(".notify-minute-button").find((button) => button.text() === "15")?.trigger("click");
     await wrapper.get(".deadline-confirm-button").trigger("click");
 
@@ -1318,11 +1332,11 @@ describe("TodoPanel", () => {
 
     expect(wrapper.find(".deadline-date-input").exists()).toBe(false);
     expect(wrapper.find(".notify-calendar-day.is-selected").text()).toBe("30");
-    expect(wrapper.get(".notify-period-checkbox.is-selected").text()).toBe("下午");
-    expect(wrapper.get(".notify-hour-button.is-selected").text()).toBe("6");
+    expect(wrapper.get(".notify-period-toggle-button.is-selected").text()).toBe("晚");
+    expect(wrapper.get(".notify-hour-button.is-selected").text()).toBe("18");
     expect(wrapper.get(".notify-minute-button.is-selected").text()).toBe("00");
 
-    await wrapper.findAll(".notify-period-checkbox").find((button) => button.text() === "上午")?.trigger("click");
+    await wrapper.findAll(".notify-period-toggle-button").find((button) => button.text() === "早")?.trigger("click");
     await wrapper.findAll(".notify-hour-button").find((button) => button.text() === "12")?.trigger("click");
     await wrapper.get(".deadline-confirm-button").trigger("click");
 

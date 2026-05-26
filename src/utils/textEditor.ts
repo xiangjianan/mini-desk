@@ -131,9 +131,13 @@ export function insertIndentedLineBreak(textarea: HTMLTextAreaElement): string {
 
 export function insertPlainLineBreak(textarea: HTMLTextAreaElement): string {
   const { selectionEnd, value } = textarea;
+  const lineStart = value.lastIndexOf("\n", selectionEnd - 1) + 1;
   const lineEndIndex = value.indexOf("\n", selectionEnd);
   const lineEnd = lineEndIndex === -1 ? value.length : lineEndIndex;
-  textarea.setRangeText("\n", lineEnd, lineEnd, "end");
+  const line = value.slice(lineStart, lineEnd);
+  const indent = line.match(/^\t*/)?.[0] ?? "";
+  const marker = getContinuationMarker(line.slice(indent.length)) ?? "";
+  textarea.setRangeText(`\n${indent}${marker}`, lineEnd, lineEnd, "end");
   return textarea.value;
 }
 

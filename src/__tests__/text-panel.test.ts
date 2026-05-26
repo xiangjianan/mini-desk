@@ -96,7 +96,7 @@ describe("TextPanel", () => {
     expect(textarea.value).toBe("root\n");
   });
 
-  it("inserts a new line after the current line when pressing Shift+Enter", async () => {
+  it("continues an indented dash line after the current line when pressing Shift+Enter", async () => {
     const wrapper = mount(TextPanel, {
       props: {
         titleId: "workspace-title",
@@ -112,12 +112,58 @@ describe("TextPanel", () => {
     textarea.setSelectionRange(caret, caret);
     await wrapper.get("textarea").trigger("keydown", { key: "Enter", shiftKey: true });
 
-    expect(textarea.value).toBe("\t- child text\n");
-    expect(textarea.selectionStart).toBe("\t- child text\n".length);
-    expect(textarea.selectionEnd).toBe("\t- child text\n".length);
+    expect(textarea.value).toBe("\t- child text\n\t- ");
+    expect(textarea.selectionStart).toBe("\t- child text\n\t- ".length);
+    expect(textarea.selectionEnd).toBe("\t- child text\n\t- ".length);
     expect(wrapper.emitted("update")?.at(-1)?.[0]).toEqual([
       { text: "child text", indent: 1 },
-      { text: "", indent: 0 },
+      { text: "", indent: 1 },
+    ]);
+  });
+
+  it("continues root numbered lists after the current line when pressing Shift+Enter", async () => {
+    const wrapper = mount(TextPanel, {
+      props: {
+        titleId: "workspace-title",
+        title: "工作空间",
+        lines: [{ text: "1. 第一项", indent: 0 }],
+      },
+    });
+    const textarea = wrapper.get("textarea").element as HTMLTextAreaElement;
+    const caret = textarea.value.indexOf("一");
+    textarea.setSelectionRange(caret, caret);
+
+    await wrapper.get("textarea").trigger("dblclick");
+    textarea.setSelectionRange(caret, caret);
+    await wrapper.get("textarea").trigger("keydown", { key: "Enter", shiftKey: true });
+
+    expect(textarea.value).toBe("1. 第一项\n2. ");
+    expect(wrapper.emitted("update")?.at(-1)?.[0]).toEqual([
+      { text: "1. 第一项", indent: 0 },
+      { text: "2. ", indent: 0 },
+    ]);
+  });
+
+  it("continues root dash lists after the current line when pressing Shift+Enter", async () => {
+    const wrapper = mount(TextPanel, {
+      props: {
+        titleId: "workspace-title",
+        title: "工作空间",
+        lines: [{ text: "- 第一项", indent: 0 }],
+      },
+    });
+    const textarea = wrapper.get("textarea").element as HTMLTextAreaElement;
+    const caret = textarea.value.indexOf("一");
+    textarea.setSelectionRange(caret, caret);
+
+    await wrapper.get("textarea").trigger("dblclick");
+    textarea.setSelectionRange(caret, caret);
+    await wrapper.get("textarea").trigger("keydown", { key: "Enter", shiftKey: true });
+
+    expect(textarea.value).toBe("- 第一项\n- ");
+    expect(wrapper.emitted("update")?.at(-1)?.[0]).toEqual([
+      { text: "- 第一项", indent: 0 },
+      { text: "- ", indent: 0 },
     ]);
   });
 
