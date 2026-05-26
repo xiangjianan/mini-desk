@@ -37,9 +37,6 @@ jobs:
       - name: Build
         run: VITE_BASE=/todolist/ npm run build
 
-      - name: Configure Pages
-        uses: actions/configure-pages@v4
-
       - name: Upload artifact
         uses: actions/upload-pages-artifact@v4
         with:
