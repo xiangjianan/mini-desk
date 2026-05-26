@@ -53,7 +53,7 @@ Light/dark mode toggled via `data-theme` attribute on `<html>`. CSS custom prope
 
 ### Focus Companion
 
-A GIF avatar (`static/video/hermes.gif`) that appears near the focused editor or at the bottom-right corner on `Ctrl+S`. Positioned absolutely relative to the editor's bounding rect.
+A GIF avatar (`static/video/kun.gif` by default) that appears near the focused editor or at the bottom-right corner on `Ctrl+S`. Positioned absolutely relative to the editor's bounding rect.
 
 ## Development
 

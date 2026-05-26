@@ -1,5 +1,5 @@
 export type ThemeMode = "light" | "dark";
-export type CompanionGifTheme = "hermes" | "custom" | "none";
+export type CompanionGifTheme = "ikun" | "hermes" | "custom" | "none";
 export type QuickButtonType = "link" | "text";
 export type TodoListId = string;
 export type TodoPeriod = TodoListId;

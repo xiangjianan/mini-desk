@@ -1113,29 +1113,22 @@ h3 {
 }
 
 .notify-editor {
-  width: min(600px, calc(100vw - 16px));
-  min-height: 360px;
+  width: min(540px, calc(100vw - 16px));
+  min-height: 320px;
 }
 
 .notify-editor-body {
   display: grid;
-  grid-template-columns: minmax(240px, 1fr) 240px;
-  gap: 20px;
-  padding: 12px 0;
-}
-
-.notify-editor-label {
-  display: block;
-  margin-bottom: 8px;
-  color: var(--muted);
-  font-size: 12px;
+  grid-template-columns: minmax(216px, 1fr) 216px;
+  gap: 14px;
+  padding: 8px 0;
 }
 
 .notify-period-options {
   display: grid;
   grid-template-columns: repeat(2, minmax(0, 1fr));
   gap: 6px;
-  margin-bottom: 10px;
+  margin-bottom: 6px;
 }
 
 .notify-period-checkbox {
@@ -1161,18 +1154,20 @@ h3 {
 }
 
 .notify-period-checkbox.is-selected {
-  background: var(--button-hover);
-  border-color: var(--line-focus);
+  background: var(--text);
+  border-color: var(--text);
+  color: var(--panel);
 }
 
 .notify-period-checkbox.is-selected::before {
-  background: var(--text);
-  box-shadow: inset 0 0 0 1px var(--button-hover);
+  background: var(--panel);
+  border-color: var(--panel);
+  box-shadow: inset 0 0 0 1px var(--text);
 }
 
 .notify-time-unit-title {
   display: block;
-  margin: 8px 0 6px;
+  margin: 5px 0 4px;
   color: var(--muted);
   font-size: 12px;
 }
@@ -1206,7 +1201,7 @@ h3 {
   grid-template-columns: 30px minmax(0, 1fr) 30px;
   align-items: center;
   min-height: 30px;
-  margin-bottom: 8px;
+  margin-bottom: 6px;
   color: var(--text);
   font-size: var(--app-font-size);
   text-align: center;
@@ -1236,7 +1231,7 @@ h3 {
 }
 
 .notify-calendar-weekdays {
-  margin-bottom: 4px;
+  margin-bottom: 3px;
   color: var(--muted);
   font-size: 12px;
   text-align: center;
@@ -1272,16 +1267,33 @@ h3 {
   border-color: var(--line-focus);
 }
 
+.notify-date-shortcuts {
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  gap: 6px;
+  margin-top: 6px;
+}
+
+.notify-date-shortcut {
+  height: 28px;
+  min-height: 28px;
+  padding: 0 6px;
+  border: 1px solid var(--line-control);
+  background: transparent;
+  color: var(--text);
+  font-size: var(--app-font-size);
+}
+
 .deadline-time-options {
   flex-wrap: wrap;
   gap: 6px;
-  margin-bottom: 10px;
+  margin-bottom: 6px;
 }
 
 .notify-clock-options {
   position: relative;
-  width: 220px;
-  height: 220px;
+  width: 192px;
+  height: 192px;
   border: 1px dashed var(--line-control);
   border-radius: 50%;
   background: var(--button);
@@ -1340,11 +1352,18 @@ h3 {
   background: var(--button-hover);
 }
 
+.deadline-time-button.is-selected,
+.notify-minute-button.is-selected {
+  background: var(--text);
+  color: var(--panel);
+  border-color: var(--text);
+}
+
 .notify-clock-button.deadline-time-button {
-  width: 32px;
-  min-width: 32px;
-  height: 32px;
-  min-height: 32px;
+  width: 28px;
+  min-width: 28px;
+  height: 28px;
+  min-height: 28px;
   padding: 0;
   border-radius: 50% !important;
   font-size: 11px;
@@ -1354,7 +1373,7 @@ h3 {
   display: grid;
   grid-template-columns: repeat(4, minmax(0, 1fr));
   gap: 6px;
-  margin-top: 8px;
+  margin-top: 5px;
 }
 
 .notify-minute-button {
@@ -1367,8 +1386,9 @@ h3 {
 }
 
 .notify-minute-button.is-selected {
-  background: var(--button-hover);
-  border-color: var(--line-focus);
+  background: var(--text);
+  color: var(--panel);
+  border-color: var(--text);
 }
 
 .deadline-editor-actions {
@@ -1522,6 +1542,10 @@ h3 {
   line-height: 1.5;
   transform-origin: right bottom;
   animation: companion-pop 0.2s cubic-bezier(0.16, 1, 0.3, 1);
+}
+
+.companion-popover > span {
+  white-space: pre-line;
 }
 
 .companion-link {

@@ -884,6 +884,8 @@ describe("TodoPanel", () => {
     await wrapper.findAll(".dropdown-option").find((option) => option.text() === "设置通知时间")?.trigger("click");
     expect(wrapper.find(".deadline-date-input").exists()).toBe(false);
     expect(wrapper.findAll(".notify-calendar-day").filter((button) => button.text() === "30")).toHaveLength(1);
+    expect(wrapper.find(".notify-editor-label").exists()).toBe(false);
+    expect(wrapper.findAll(".notify-date-shortcut").map((button) => button.text())).toEqual(["今天", "明天", "后天"]);
     expect(wrapper.find(".notify-hour-ring-inner").exists()).toBe(false);
     expect(wrapper.find(".notify-hour-ring-outer").exists()).toBe(false);
     expect(wrapper.findAll(".notify-period-checkbox").map((checkbox) => checkbox.text())).toEqual(["上午", "下午"]);
@@ -906,6 +908,48 @@ describe("TodoPanel", () => {
     expect(wrapper.get(".notify-hour-title").text()).toBe("小时");
     expect(wrapper.get(".notify-minute-title").text()).toBe("分钟");
 
+    await wrapper.findAll(".notify-date-shortcut").find((button) => button.text() === "明天")?.trigger("click");
+    await wrapper.findAll(".notify-period-checkbox").find((button) => button.text() === "下午")?.trigger("click");
+    await wrapper.findAll(".notify-hour-button").find((button) => button.text() === "3")?.trigger("click");
+    await wrapper.get(".deadline-confirm-button").trigger("click");
+
+    expect(wrapper.emitted("notify")?.[0]).toEqual([
+      "morning",
+      "a",
+      new Date(2026, 4, 26, 15).getTime(),
+      expect.any(HTMLElement),
+    ]);
+    wrapper.unmount();
+    vi.useRealTimers();
+  });
+
+  it("confirms a calendar selected notification date after using quick date shortcuts", async () => {
+    vi.useFakeTimers();
+    vi.setSystemTime(new Date(2026, 4, 25, 10));
+    const wrapper = mount(TodoPanel, {
+      props: {
+        todos: {
+          morning: [{ id: "a", text: "第一项", done: false }],
+          noon: [],
+          evening: [],
+        },
+        titles: DEFAULT_TITLES,
+      },
+      global: {
+        stubs: {
+          Button: true,
+          Checkbox: checkboxStub,
+          Dropdown: dropdownStub,
+          NCheckbox: checkboxStub,
+          NDropdown: dropdownStub,
+          NTooltip: tooltipStub,
+        },
+      },
+    });
+
+    await wrapper.get("input.todo-input").trigger("contextmenu");
+    await wrapper.findAll(".dropdown-option").find((option) => option.text() === "设置通知时间")?.trigger("click");
+    await wrapper.findAll(".notify-date-shortcut").find((button) => button.text() === "后天")?.trigger("click");
     await wrapper.findAll(".notify-calendar-day").find((button) => button.text() === "30")?.trigger("click");
     await wrapper.findAll(".notify-period-checkbox").find((button) => button.text() === "下午")?.trigger("click");
     await wrapper.findAll(".notify-hour-button").find((button) => button.text() === "3")?.trigger("click");

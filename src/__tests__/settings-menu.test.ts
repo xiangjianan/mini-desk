@@ -79,9 +79,10 @@ describe("SettingsMenu", () => {
     });
 
     expect(wrapper.find('[data-key="gif-theme"]').text()).toBe("GIF 主题");
-    expect(wrapper.find('[data-key="gif-theme:hermes"]').text()).toBe("默认 Hermes");
-    expect(wrapper.find('[data-key="gif-theme:custom"]').text()).toBe("自定义 GIF");
-    expect(wrapper.find('[data-key="gif-theme:none"]').text()).toBe("无 GIF");
+    expect(wrapper.find('[data-key="gif-theme:ikun"]').text()).toBe("ikun");
+    expect(wrapper.find('[data-key="gif-theme:hermes"]').text()).toBe("云霞");
+    expect(wrapper.find('[data-key="gif-theme:custom"]').text()).toBe("自定义");
+    expect(wrapper.find('[data-key="gif-theme:none"]').text()).toBe("不显示");
     expect(wrapper.find('[data-key="gif-theme:none"]').classes()).toContain("is-selected");
     expect(wrapper.find('[data-key="gif-theme:hermes"]').classes()).not.toContain("is-selected");
   });
@@ -104,9 +105,9 @@ describe("SettingsMenu", () => {
       },
     });
 
-    await wrapper.find('[data-key="gif-theme:none"]').trigger("click");
+    await wrapper.find('[data-key="gif-theme:ikun"]').trigger("click");
 
-    expect(wrapper.emitted("gifTheme")?.[0]).toEqual(["none", expect.any(HTMLElement)]);
+    expect(wrapper.emitted("gifTheme")?.[0]).toEqual(["ikun", expect.any(HTMLElement)]);
   });
 
   it("opens a custom GIF upload dialog and emits selected GIF files", async () => {

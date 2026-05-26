@@ -154,14 +154,19 @@ const menuOptions = computed<DropdownOption[]>(() => {
 const todayFocusTitleId = "today-focus-title";
 const DEADLINE_CLOCK_INTERVAL_MS = 60_000;
 const DEADLINE_EDITOR_OFFSET = 8;
-const DEADLINE_EDITOR_WIDTH = 600;
-const DEADLINE_EDITOR_HEIGHT = 360;
+const DEADLINE_EDITOR_WIDTH = 540;
+const DEADLINE_EDITOR_HEIGHT = 320;
 const LIST_CREATE_DIALOG_WIDTH = 260;
 const LIST_CREATE_DIALOG_HEIGHT = 112;
 const CALENDAR_WEEKDAYS = ["日", "一", "二", "三", "四", "五", "六"];
 const NOTIFY_PERIOD_OPTIONS = [
   { key: "am", label: "上午" },
   { key: "pm", label: "下午" },
+] as const;
+const NOTIFY_DATE_SHORTCUTS = [
+  { label: "今天", offsetDays: 0 },
+  { label: "明天", offsetDays: 1 },
+  { label: "后天", offsetDays: 2 },
 ] as const;
 const NOTIFY_CLOCK_HOUR_OPTIONS = [
   "01",
@@ -177,9 +182,9 @@ const NOTIFY_CLOCK_HOUR_OPTIONS = [
   "11",
   "12",
 ] as const;
-const NOTIFY_CLOCK_SIZE = 220;
-const NOTIFY_CLOCK_BUTTON_SIZE = 32;
-const NOTIFY_CLOCK_RADIUS = 82;
+const NOTIFY_CLOCK_SIZE = 192;
+const NOTIFY_CLOCK_BUTTON_SIZE = 28;
+const NOTIFY_CLOCK_RADIUS = 72;
 const deadlineNow = ref(Date.now());
 const deadlineClockTimer = ref<number | undefined>();
 type NotifyPeriodOption = typeof NOTIFY_PERIOD_OPTIONS[number]["key"];
@@ -632,6 +637,12 @@ function getListCreateDialogPosition(anchor?: HTMLElement, x?: number, y?: numbe
 function selectNotifyDate(value: string): void {
   if (!notifyEditor.value) return;
   notifyEditor.value = { ...notifyEditor.value, date: value, month: getMonthValue(value) };
+}
+
+function selectNotifyRelativeDate(offsetDays: number): void {
+  const date = new Date();
+  date.setDate(date.getDate() + offsetDays);
+  selectNotifyDate(getLocalDateInputValue(date));
 }
 
 function shiftNotifyCalendarMonth(delta: number): void {
@@ -1392,9 +1403,19 @@ function buildTodoListEntries(period: TodoListId, todos: TodoItem[], deferredDon
               </button>
             </template>
           </div>
+          <div class="notify-date-shortcuts" aria-label="快捷选择通知日期">
+            <button
+              v-for="shortcut in NOTIFY_DATE_SHORTCUTS"
+              :key="shortcut.label"
+              class="notify-date-shortcut"
+              type="button"
+              @click="selectNotifyRelativeDate(shortcut.offsetDays)"
+            >
+              {{ shortcut.label }}
+            </button>
+          </div>
         </div>
         <div class="notify-time-column">
-          <span class="notify-editor-label">通知时间</span>
           <div class="notify-period-options" aria-label="选择上午或下午">
             <button
               v-for="period in NOTIFY_PERIOD_OPTIONS"

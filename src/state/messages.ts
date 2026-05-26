@@ -695,7 +695,15 @@ export const MESSAGE_CATALOG: Record<MessageKey, MessageEntry> = {
     mood: "calm",
     surface: "companion",
     variants: [
-      "To Do List 看板：一个本地优先的轻量工作台，用来整理截图、便签、提醒事项、快捷链接和工作空间。",
+      [
+        "To Do List 看板",
+        "一个本地优先的轻量工作台，用来整理截图、便签、提醒事项、快捷链接和工作空间。",
+        "",
+        "开发人员介绍",
+        "产品经理：云霞",
+        "开发：佳男",
+        "协作支持：Codex",
+      ].join("\n"),
     ],
   },
 };

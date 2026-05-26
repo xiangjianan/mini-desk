@@ -53,7 +53,8 @@ describe("Naive UI component usage", () => {
 
     expect(companion).toContain("NPopover");
     expect(companion).toContain("NButton");
-    expect(companion).toContain("hermes-dark.gif");
+    expect(companion).toContain("kun-dark.gif");
+    expect(companion).toContain("yunxia-dark.gif");
     expect(companion).toContain(":src=\"gifSrc\"");
     expect(app).toContain(":theme=\"state.theme\"");
     expect(app).toContain(':gif-theme="state.companionGifTheme"');
@@ -325,6 +326,19 @@ describe("Naive UI component usage", () => {
     expect(stylesWithoutClock).not.toMatch(/border-radius:\s*(?:[1-9]\d*px|0\.\d+|[1-9]\d*%)/);
   });
 
+  it("keeps the notification editor compact with prominent selected time states", () => {
+    const styles = read("src/styles.css");
+
+    expect(styles).toMatch(/\.notify-editor\s*\{[^}]*width: min\(540px, calc\(100vw - 16px\)\)/s);
+    expect(styles).toMatch(/\.notify-editor\s*\{[^}]*min-height: 320px/s);
+    expect(styles).toMatch(/\.notify-editor-body\s*\{[^}]*grid-template-columns: minmax\(216px, 1fr\) 216px/s);
+    expect(styles).toMatch(/\.notify-editor-body\s*\{[^}]*gap: 14px/s);
+    expect(styles).toMatch(/\.notify-date-shortcuts\s*\{[^}]*grid-template-columns: repeat\(3, minmax\(0, 1fr\)\)/s);
+    expect(styles).toMatch(/\.notify-clock-options\s*\{[^}]*width: 192px/s);
+    expect(styles).toMatch(/\.notify-clock-options\s*\{[^}]*height: 192px/s);
+    expect(styles).toMatch(/\.deadline-time-button\.is-selected,[\s\S]*?\.notify-minute-button\.is-selected\s*\{[^}]*background: var\(--text\)[^}]*color: var\(--panel\)[^}]*border-color: var\(--text\)/s);
+  });
+
   it("keeps editable text copy/paste while todo item menus stay concise", () => {
     const text = read("src/components/TextPanel.vue");
     const todo = read("src/components/TodoPanel.vue");
@@ -554,6 +568,11 @@ describe("Naive UI component usage", () => {
     expect(app).toContain("GITHUB_REPO_URL");
     expect(app).toContain("xiangjianan / todolist");
     expect(app).toContain("https://github.com/xiangjianan/todolist");
+    expect(app).toContain("开发人员介绍");
+    expect(app).toContain("产品经理：云霞");
+    expect(app).toContain("开发：佳男");
+    expect(app).toContain("协作支持：Codex");
+    expect(styles).toMatch(/\.companion-popover > span\s*\{[^}]*white-space: pre-line/s);
     expect(companion).toContain("LogoGithub");
     expect(companion).toContain("companion-link-icon");
     expect(companion).toContain('data-testid="companion-link"');

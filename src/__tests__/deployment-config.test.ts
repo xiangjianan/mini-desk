@@ -13,12 +13,12 @@ describe("deployment configuration", () => {
   });
 
   it("builds the GitHub Pages artifact with the repository subpath", () => {
-    const workflow = read(".github/workflows/deploy-pages.yml");
+    const workflow = read(".github/workflows/pages.yml");
 
-    expect(workflow).toContain("uses: actions/configure-pages@v6");
-    expect(workflow).toContain("uses: actions/upload-pages-artifact@v5");
-    expect(workflow).toContain("uses: actions/deploy-pages@v5");
-    expect(workflow).toContain("VITE_BASE: /todolist/");
-    expect(workflow).toContain("path: ./dist");
+    expect(workflow).toContain("VITE_BASE=/todolist/ npm run build");
+    expect(workflow).toContain("cp -R dist/.");
+    expect(workflow).toContain("git checkout gh-pages");
+    expect(workflow).toContain("touch .nojekyll");
+    expect(workflow).toContain("git push origin gh-pages");
   });
 });

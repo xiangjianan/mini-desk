@@ -186,8 +186,9 @@ describe("state compatibility", () => {
     expect(removeEmptyTodo(state.todos, "morning", "missing")).toEqual(state.todos);
   });
 
-  it("defaults to the Hermes companion GIF theme", () => {
+  it("defaults to the ikun companion GIF theme", () => {
     expect(defaultState().companionGifTheme).toBe(DEFAULT_COMPANION_GIF_THEME);
+    expect(defaultState().companionGifTheme).toBe("ikun");
   });
 
   it("preserves the disabled companion GIF theme during import and serialization", () => {
@@ -214,10 +215,10 @@ describe("state compatibility", () => {
     expect(getSerializableState(state).customCompanionGif).toEqual(state.customCompanionGif);
   });
 
-  it("normalizes unknown companion GIF themes to Hermes", () => {
-    expect(normalizeImportedState({ companionGifTheme: "future-theme" }).companionGifTheme).toBe("hermes");
-    expect(normalizeImportedState({ companionGifTheme: "" }).companionGifTheme).toBe("hermes");
-    expect(normalizeImportedState({ companionGifTheme: null }).companionGifTheme).toBe("hermes");
+  it("normalizes unknown companion GIF themes to ikun", () => {
+    expect(normalizeImportedState({ companionGifTheme: "future-theme" }).companionGifTheme).toBe("ikun");
+    expect(normalizeImportedState({ companionGifTheme: "" }).companionGifTheme).toBe("ikun");
+    expect(normalizeImportedState({ companionGifTheme: null }).companionGifTheme).toBe("ikun");
   });
 
   it("serializes image metadata without large payloads for localStorage", () => {

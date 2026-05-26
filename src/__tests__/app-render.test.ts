@@ -2506,6 +2506,11 @@ describe("App shell", () => {
       await wrapper.vm.$nextTick();
 
       expect(wrapper.find('[data-testid="companion-confirm"]').text()).toContain("To Do List 看板");
+      expect(wrapper.find('[data-testid="companion-confirm"]').text()).toContain("开发人员介绍");
+      expect(wrapper.find('[data-testid="companion-confirm"]').text()).toContain("产品经理：云霞");
+      expect(wrapper.find('[data-testid="companion-confirm"]').text()).toContain("开发：佳男");
+      expect(wrapper.find('[data-testid="companion-confirm"]').text()).toContain("协作支持：Codex");
+      expect(wrapper.find('[data-testid="companion-confirm"]').text()).not.toContain("牛马：Codex");
       expect(wrapper.find('[data-testid="companion-confirm"]').text()).not.toContain("给老婆做的 todolist 看板");
       expect(wrapper.find('[data-testid="companion-confirm"]').text()).toContain("xiangjianan / todolist");
       expect(wrapper.get('[data-testid="companion-link"]').attributes("href")).toBe("https://github.com/xiangjianan/todolist");
@@ -3467,7 +3472,10 @@ describe("App shell", () => {
 
     try {
       wrapper.getComponent(SettingsMenu).vm.$emit("customGif", { light, dark }, wrapper.getComponent(SettingsMenu).element as HTMLElement);
-      await new Promise((resolve) => window.setTimeout(resolve, 0));
+
+      await vi.waitFor(() => {
+        expect(JSON.parse(localStorage.getItem(STORAGE_KEY) || "{}").companionGifTheme).toBe("custom");
+      });
       await wrapper.vm.$nextTick();
 
       const stored = JSON.parse(localStorage.getItem(STORAGE_KEY) || "{}");

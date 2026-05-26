@@ -74,8 +74,9 @@ function handleSelect(key: string): void {
     customGifDialogOpen.value = true;
     return;
   }
-  if (key === "gif-theme:hermes" || key === "gif-theme:none") {
-    emit("gifTheme", key.replace("gif-theme:", "") as CompanionGifTheme, triggerRef.value ?? undefined);
+  if (key.startsWith("gif-theme:")) {
+    const theme = key.replace("gif-theme:", "") as CompanionGifTheme;
+    emit("gifTheme", theme, triggerRef.value ?? undefined);
   }
 }
 
