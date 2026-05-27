@@ -1,6 +1,6 @@
 <script setup lang="ts">
 import { computed, nextTick, onMounted, onUnmounted, ref } from "vue";
-import { AlarmOutline, ChevronDownOutline, ChevronForwardOutline } from "@vicons/ionicons5";
+import { AlarmOutline, ChevronDownOutline } from "@vicons/ionicons5";
 import { NCheckbox, NDropdown, NIcon } from "naive-ui";
 import type { DropdownOption } from "naive-ui";
 import { DEFAULT_TODO_LISTS, GUIDE_MENU_OPTION } from "../state/defaults";
@@ -1122,67 +1122,69 @@ function buildTodoListEntries(period: TodoListId, todos: TodoItem[], deferredDon
 
 <template>
   <section class="panel todo-panel" aria-labelledby="todo-title">
-    <section v-if="todayFocus.length" class="today-focus-section" aria-label="今日重点">
-      <div class="today-focus-heading">
-        <EditableTitle
-          :id="todayFocusTitleId"
-          :value="titles[todayFocusTitleId]"
-          @update="(id, value) => emit('titleUpdate', id, value)"
-        />
-      </div>
-      <ul class="today-focus-list">
-        <li
-          v-for="item in todayFocus"
-          :key="`${item.period}-${item.todo.id}`"
-          class="today-focus-item"
-          :class="[
-            { 'is-done': item.todo.done, 'is-completing': pendingDoneReorderIds.includes(`${item.period}:${item.todo.id}`), 'is-menu-selected': isTodoHighlighted(item.period, item.todo.id), 'has-notify': Boolean(getTodoCompactNotifyLabel(item.todo)) },
-            getTodoDeadlineClass(item.todo),
-          ]"
-          @contextmenu.stop="openMenu($event, item.period, item.todo.id)"
-        >
-          <NCheckbox
-            :checked="item.todo.done"
-            aria-label="完成"
-            @update:checked="(checked) => handleChecked(item.period, item.todo.id, checked)"
+    <Transition name="section-reveal" :duration="240">
+      <section v-if="todayFocus.length" class="today-focus-section" aria-label="今日重点">
+        <div class="today-focus-heading">
+          <EditableTitle
+            :id="todayFocusTitleId"
+            :value="titles[todayFocusTitleId]"
+            @update="(id, value) => emit('titleUpdate', id, value)"
           />
-          <input
-            class="today-focus-input"
-            :value="item.todo.text"
-            :readonly="!isTodoEditable(item.period, item.todo)"
-            draggable="false"
-            @input="emit('update', item.period, item.todo.id, ($event.target as HTMLInputElement).value)"
-            @keydown.enter="handleEnter($event, item.period, item.todo)"
-            @mouseup="rememberTodoCaret(item.period, item.todo.id, $event)"
-            @select="handleTodoSelection(item.period, item.todo.id, $event)"
-            @contextmenu.stop="openTodoTextMenu($event, item.period, item.todo)"
-            @click="startTodoEdit($event, item.period, item.todo.id)"
-            @focus="handleInputFocus(item.period, item.todo, $event)"
-            @blur="handleInputBlur(item.period, item.todo.id)"
-          />
-          <button
-            class="todo-notify-button"
-            :class="{ 'todo-deadline-slot': Boolean(getTodoCompactNotifyLabel(item.todo)), 'has-time': Boolean(getTodoCompactNotifyLabel(item.todo)) }"
-            type="button"
-            :aria-label="getTodoCompactNotifyLabel(item.todo) ? '编辑通知时间' : '设置通知时间'"
-            @click="handleNotifyClick($event, item.period, item.todo)"
+        </div>
+        <ul class="today-focus-list">
+          <li
+            v-for="item in todayFocus"
+            :key="`${item.period}-${item.todo.id}`"
+            class="today-focus-item"
+            :class="[
+              { 'is-done': item.todo.done, 'is-completing': pendingDoneReorderIds.includes(`${item.period}:${item.todo.id}`), 'is-menu-selected': isTodoHighlighted(item.period, item.todo.id), 'has-notify': Boolean(getTodoCompactNotifyLabel(item.todo)) },
+              getTodoDeadlineClass(item.todo),
+            ]"
+            @contextmenu.stop="openMenu($event, item.period, item.todo.id)"
           >
-            <span v-if="getTodoCompactNotifyLabel(item.todo)" class="todo-deadline-label">
-              {{ getTodoCompactNotifyLabel(item.todo) }}
-            </span>
-            <NIcon v-else :component="AlarmOutline" />
-          </button>
-          <button
-            class="todo-star-button is-starred"
-            type="button"
-            aria-label="取消重点"
-            @click="handleStarClick($event, item.period, item.todo)"
-          >
-            ★
-          </button>
-        </li>
-      </ul>
-    </section>
+            <NCheckbox
+              :checked="item.todo.done"
+              aria-label="完成"
+              @update:checked="(checked) => handleChecked(item.period, item.todo.id, checked)"
+            />
+            <input
+              class="today-focus-input"
+              :value="item.todo.text"
+              :readonly="!isTodoEditable(item.period, item.todo)"
+              draggable="false"
+              @input="emit('update', item.period, item.todo.id, ($event.target as HTMLInputElement).value)"
+              @keydown.enter="handleEnter($event, item.period, item.todo)"
+              @mouseup="rememberTodoCaret(item.period, item.todo.id, $event)"
+              @select="handleTodoSelection(item.period, item.todo.id, $event)"
+              @contextmenu.stop="openTodoTextMenu($event, item.period, item.todo)"
+              @click="startTodoEdit($event, item.period, item.todo.id)"
+              @focus="handleInputFocus(item.period, item.todo, $event)"
+              @blur="handleInputBlur(item.period, item.todo.id)"
+            />
+            <button
+              class="todo-notify-button"
+              :class="{ 'todo-deadline-slot': Boolean(getTodoCompactNotifyLabel(item.todo)), 'has-time': Boolean(getTodoCompactNotifyLabel(item.todo)) }"
+              type="button"
+              :aria-label="getTodoCompactNotifyLabel(item.todo) ? '编辑通知时间' : '设置通知时间'"
+              @click="handleNotifyClick($event, item.period, item.todo)"
+            >
+              <span v-if="getTodoCompactNotifyLabel(item.todo)" class="todo-deadline-label">
+                {{ getTodoCompactNotifyLabel(item.todo) }}
+              </span>
+              <NIcon v-else :component="AlarmOutline" />
+            </button>
+            <button
+              class="todo-star-button is-starred"
+              type="button"
+              aria-label="取消重点"
+              @click="handleStarClick($event, item.period, item.todo)"
+            >
+              ★
+            </button>
+          </li>
+        </ul>
+      </section>
+    </Transition>
     <div class="todo-sections">
       <section
         v-for="list in effectiveTodoLists"
@@ -1220,10 +1222,11 @@ function buildTodoListEntries(period: TodoListId, todos: TodoItem[], deferredDon
           <button
             type="button"
             class="todo-collapse-button icon-button"
+            :class="{ 'is-collapsed': list.collapsed }"
             :aria-label="list.collapsed ? '展开提醒列表' : '收起提醒列表'"
             @click.stop="emit('toggleListCollapsed', list.id, !list.collapsed)"
           >
-            <NIcon :component="list.collapsed ? ChevronForwardOutline : ChevronDownOutline" />
+            <NIcon :component="ChevronDownOutline" />
           </button>
           <div class="todo-heading-actions">
             <span class="todo-count">{{ periodStats[list.id] }}</span>
@@ -1238,124 +1241,131 @@ function buildTodoListEntries(period: TodoListId, todos: TodoItem[], deferredDon
           </div>
         </div>
 
-        <ul
-          v-if="!list.collapsed && listEntries[list.id].length === 0"
-          class="todo-list todo-empty-list"
-          :data-testid="`todo-list-${list.id}`"
-          @click="handleListClick($event, list.id)"
-          @dragover.prevent
-          @drop="handleTodoTextDrop($event, list.id)"
+        <div
+          class="todo-list-shell"
+          :class="{ 'is-hidden': list.collapsed }"
+          :aria-hidden="list.collapsed"
         >
-          <li
-            :key="`${list.id}-empty-hint`"
-            class="todo-empty-hint"
-            aria-label="提醒事项 Tips"
-            @click="emit('create', list.id)"
-          />
-        </ul>
-
-        <TransitionGroup
-          v-else-if="!list.collapsed"
-          name="todo-move"
-          tag="ul"
-          class="todo-list"
-          :class="{ 'todo-move': true }"
-          :data-testid="`todo-list-${list.id}`"
-          @click="handleListClick($event, list.id)"
-          @dragover.prevent
-          @drop="handleTodoTextDrop($event, list.id)"
-        >
-          <template
-            v-for="entry in listEntries[list.id]"
-            :key="entry.type === 'todo' ? entry.todo.id : entry.id"
+          <ul
+            v-if="listEntries[list.id].length === 0"
+            class="todo-list todo-empty-list"
+            :data-testid="`todo-list-${list.id}`"
+            @click="handleListClick($event, list.id)"
+            @dragover.prevent
+            @drop="handleTodoTextDrop($event, list.id)"
           >
             <li
-              v-if="entry.type === 'todo'"
-              class="todo-item"
-              :class="[
-                { 'is-done': entry.todo.done, 'is-starred': entry.todo.starred, 'is-menu-selected': isTodoHighlighted(list.id, entry.todo.id), 'has-notify': Boolean(getTodoCompactNotifyLabel(entry.todo)) },
-                getTodoDeadlineClass(entry.todo),
-              ]"
-              @contextmenu.stop="openMenu($event, list.id, entry.todo.id)"
-              @dragover.prevent
-              @drop="handleTodoItemDrop($event, list.id, entry.todo.id)"
+              :key="`${list.id}-empty-hint`"
+              class="todo-empty-hint"
+              aria-label="提醒事项 Tips"
+              @click="emit('create', list.id)"
+            />
+          </ul>
+
+          <TransitionGroup
+            v-else
+            name="todo-move"
+            tag="ul"
+            class="todo-list"
+            :class="{ 'todo-move': true }"
+            :data-testid="`todo-list-${list.id}`"
+            @click="handleListClick($event, list.id)"
+            @dragover.prevent
+            @drop="handleTodoTextDrop($event, list.id)"
+          >
+            <template
+              v-for="entry in listEntries[list.id]"
+              :key="entry.type === 'todo' ? entry.todo.id : entry.id"
             >
-              <button
-                class="todo-drag-handle"
-                type="button"
-                draggable="true"
-                aria-label="拖动提醒事项"
-                @dragstart="handleTodoDragStart($event, list.id, entry.todo)"
-                @dragend="dragged = null"
-              />
-              <NCheckbox
-                :checked="entry.todo.done"
-                aria-label="完成"
-                @update:checked="(checked) => handleChecked(list.id, entry.todo.id, checked)"
-              />
-              <input
-                class="todo-input"
-                :data-testid="`todo-input-${list.id}`"
-                :data-todo-id="entry.todo.id"
-                :value="entry.todo.text"
-                :readonly="!isTodoEditable(list.id, entry.todo)"
-                draggable="false"
-                @input="emit('update', list.id, entry.todo.id, ($event.target as HTMLInputElement).value)"
-                @keydown.enter="handleEnter($event, list.id, entry.todo)"
-                @mouseup="rememberTodoCaret(list.id, entry.todo.id, $event)"
-                @select="handleTodoSelection(list.id, entry.todo.id, $event)"
-                @contextmenu.stop="openTodoTextMenu($event, list.id, entry.todo)"
-                @click="startTodoEdit($event, list.id, entry.todo.id)"
-                @focus="handleInputFocus(list.id, entry.todo, $event)"
-                @blur="handleInputBlur(list.id, entry.todo.id)"
-              />
-              <button
-                class="todo-notify-button"
-                :class="{ 'todo-deadline-slot': Boolean(getTodoCompactNotifyLabel(entry.todo)), 'has-time': Boolean(getTodoCompactNotifyLabel(entry.todo)) }"
-                type="button"
-                :aria-label="getTodoCompactNotifyLabel(entry.todo) ? '编辑通知时间' : '设置通知时间'"
-                @click="handleNotifyClick($event, list.id, entry.todo)"
+              <li
+                v-if="entry.type === 'todo'"
+                class="todo-item"
+                :class="[
+                  { 'is-done': entry.todo.done, 'is-starred': entry.todo.starred, 'is-menu-selected': isTodoHighlighted(list.id, entry.todo.id), 'has-notify': Boolean(getTodoCompactNotifyLabel(entry.todo)) },
+                  getTodoDeadlineClass(entry.todo),
+                ]"
+                @contextmenu.stop="openMenu($event, list.id, entry.todo.id)"
+                @dragover.prevent
+                @drop="handleTodoItemDrop($event, list.id, entry.todo.id)"
               >
-                <span v-if="getTodoCompactNotifyLabel(entry.todo)" class="todo-deadline-label">
-                  {{ getTodoCompactNotifyLabel(entry.todo) }}
-                </span>
-                <NIcon v-else :component="AlarmOutline" />
-              </button>
-              <button
-                class="todo-star-button"
-                :class="{ 'is-starred': entry.todo.starred }"
-                type="button"
-                :aria-label="entry.todo.starred ? '取消重点' : '设为重点'"
-                @click="handleStarClick($event, list.id, entry.todo)"
+                <button
+                  class="todo-drag-handle"
+                  type="button"
+                  draggable="true"
+                  aria-label="拖动提醒事项"
+                  @dragstart="handleTodoDragStart($event, list.id, entry.todo)"
+                  @dragend="dragged = null"
+                />
+                <NCheckbox
+                  :checked="entry.todo.done"
+                  aria-label="完成"
+                  @update:checked="(checked) => handleChecked(list.id, entry.todo.id, checked)"
+                />
+                <input
+                  class="todo-input"
+                  :data-testid="`todo-input-${list.id}`"
+                  :data-todo-id="entry.todo.id"
+                  :value="entry.todo.text"
+                  :readonly="!isTodoEditable(list.id, entry.todo)"
+                  draggable="false"
+                  @input="emit('update', list.id, entry.todo.id, ($event.target as HTMLInputElement).value)"
+                  @keydown.enter="handleEnter($event, list.id, entry.todo)"
+                  @mouseup="rememberTodoCaret(list.id, entry.todo.id, $event)"
+                  @select="handleTodoSelection(list.id, entry.todo.id, $event)"
+                  @contextmenu.stop="openTodoTextMenu($event, list.id, entry.todo)"
+                  @click="startTodoEdit($event, list.id, entry.todo.id)"
+                  @focus="handleInputFocus(list.id, entry.todo, $event)"
+                  @blur="handleInputBlur(list.id, entry.todo.id)"
+                />
+                <button
+                  class="todo-notify-button"
+                  :class="{ 'todo-deadline-slot': Boolean(getTodoCompactNotifyLabel(entry.todo)), 'has-time': Boolean(getTodoCompactNotifyLabel(entry.todo)) }"
+                  type="button"
+                  :aria-label="getTodoCompactNotifyLabel(entry.todo) ? '编辑通知时间' : '设置通知时间'"
+                  @click="handleNotifyClick($event, list.id, entry.todo)"
+                >
+                  <span v-if="getTodoCompactNotifyLabel(entry.todo)" class="todo-deadline-label">
+                    {{ getTodoCompactNotifyLabel(entry.todo) }}
+                  </span>
+                  <NIcon v-else :component="AlarmOutline" />
+                </button>
+                <button
+                  class="todo-star-button"
+                  :class="{ 'is-starred': entry.todo.starred }"
+                  type="button"
+                  :aria-label="entry.todo.starred ? '取消重点' : '设为重点'"
+                  @click="handleStarClick($event, list.id, entry.todo)"
+                >
+                  {{ entry.todo.starred ? "★" : "☆" }}
+                </button>
+              </li>
+              <li
+                v-else
+                class="todo-completed-divider"
               >
-                {{ entry.todo.starred ? "★" : "☆" }}
-              </button>
-            </li>
-            <li
-              v-else
-              class="todo-completed-divider"
-            >
-              <span>已完成</span>
-              <button
-                class="todo-completed-clear"
-                type="button"
-                @click.stop="emit('clearCompleted', entry.period, $event.currentTarget as HTMLElement)"
-              >
-                clear
-              </button>
-            </li>
-          </template>
-        </TransitionGroup>
+                <span>已完成</span>
+                <button
+                  class="todo-completed-clear"
+                  type="button"
+                  @click.stop="emit('clearCompleted', entry.period, $event.currentTarget as HTMLElement)"
+                >
+                  clear
+                </button>
+              </li>
+            </template>
+          </TransitionGroup>
+        </div>
       </section>
     </div>
 
-    <section
-      v-if="notifyEditor"
-      ref="notifyEditorRef"
-      class="deadline-editor notify-editor"
-      :style="notifyEditorStyle"
-      aria-label="设置通知时间"
-    >
+    <Transition name="floating-pop" :duration="240">
+      <section
+        v-if="notifyEditor"
+        ref="notifyEditorRef"
+        class="deadline-editor notify-editor"
+        :style="notifyEditorStyle"
+        aria-label="设置通知时间"
+      >
       <div class="deadline-editor-heading">
         <span>设置通知时间</span>
         <button
@@ -1480,30 +1490,33 @@ function buildTodoListEntries(period: TodoListId, todos: TodoItem[], deferredDon
           确定
         </button>
       </div>
-    </section>
+      </section>
+    </Transition>
 
-    <section
-      v-if="listCreateDialog"
-      ref="listCreateDialogRef"
-      class="todo-list-create-dialog"
-      :style="listCreateDialogStyle"
-      aria-label="新增提醒列表"
-    >
-      <label class="todo-list-create-label" for="todo-list-create-input">列表名称</label>
-      <input
-        id="todo-list-create-input"
-        ref="listCreateInputRef"
-        class="todo-list-create-input"
-        :value="listCreateDialog.title"
-        @input="updateCreateListTitle(($event.target as HTMLInputElement).value)"
-        @keydown.enter.prevent="confirmCreateListDialog"
-        @keydown.esc.prevent="closeCreateListDialog"
-      />
-      <div class="todo-list-create-actions">
-        <button class="todo-list-create-cancel" type="button" @click="closeCreateListDialog">取消</button>
-        <button class="todo-list-create-confirm" type="button" @click="confirmCreateListDialog">确定</button>
-      </div>
-    </section>
+    <Transition name="floating-pop" :duration="240">
+      <section
+        v-if="listCreateDialog"
+        ref="listCreateDialogRef"
+        class="todo-list-create-dialog"
+        :style="listCreateDialogStyle"
+        aria-label="新增提醒列表"
+      >
+        <label class="todo-list-create-label" for="todo-list-create-input">列表名称</label>
+        <input
+          id="todo-list-create-input"
+          ref="listCreateInputRef"
+          class="todo-list-create-input"
+          :value="listCreateDialog.title"
+          @input="updateCreateListTitle(($event.target as HTMLInputElement).value)"
+          @keydown.enter.prevent="confirmCreateListDialog"
+          @keydown.esc.prevent="closeCreateListDialog"
+        />
+        <div class="todo-list-create-actions">
+          <button class="todo-list-create-cancel" type="button" @click="closeCreateListDialog">取消</button>
+          <button class="todo-list-create-confirm" type="button" @click="confirmCreateListDialog">确定</button>
+        </div>
+      </section>
+    </Transition>
 
     <NDropdown
       v-if="menu"

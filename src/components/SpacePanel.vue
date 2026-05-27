@@ -189,20 +189,24 @@ function handleTabsWheel(event: WheelEvent): void {
       </button>
     </div>
 
-    <TextPanel
-      v-if="activeSpace"
-      :key="activeSpace.id"
-      class="space-text-panel"
-      :title-id="`space-${activeSpace.id}-title`"
-      :title="activeSpace.title"
-      :lines="activeSpace.lines"
-      hide-header
-      @title-update="handleRename"
-      @update="handleUpdate"
-      @focus="emit('focus', 'workspace', $event)"
-      @guide="(anchor, immediate) => emit('guide', 'workspace', anchor, immediate)"
-      @blur="emit('blur')"
-    />
+    <div class="space-text-stage">
+      <Transition name="space-panel-switch" mode="out-in" :duration="180">
+        <TextPanel
+          v-if="activeSpace"
+          :key="activeSpace.id"
+          class="space-text-panel"
+          :title-id="`space-${activeSpace.id}-title`"
+          :title="activeSpace.title"
+          :lines="activeSpace.lines"
+          hide-header
+          @title-update="handleRename"
+          @update="handleUpdate"
+          @focus="emit('focus', 'workspace', $event)"
+          @guide="(anchor, immediate) => emit('guide', 'workspace', anchor, immediate)"
+          @blur="emit('blur')"
+        />
+      </Transition>
+    </div>
     <NDropdown
       v-if="menu"
       placement="bottom-start"

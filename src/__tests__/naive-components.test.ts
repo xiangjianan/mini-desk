@@ -214,15 +214,19 @@ describe("Naive UI component usage", () => {
     expect(todo).toContain("todo-list-drag-handle");
     expect(todo).toContain("todo-collapse-button");
     expect(todo).toContain("todo-list-create-dialog");
+    expect(todo).toContain('class="todo-list-shell"');
+    expect(todo).toContain(":class=\"{ 'is-hidden': list.collapsed }\"");
     expect(todo).toContain("is-collapsed");
     expect(todo).toContain("is-compact");
     expect(styles).toMatch(/\.todo-collapse-button\s*\{[^}]*height: 34px/s);
+    expect(styles).toMatch(/\.todo-collapse-button \.n-icon\s*\{[^}]*transition: transform var\(--motion-medium\) var\(--motion-ease\)/s);
     expect(styles).toMatch(/\.todo-list-create-dialog\s*\{[^}]*width: 260px/s);
     expect(styles).toMatch(/\.todo-list-drag-handle\s*\{[^}]*display: none/s);
     expect(styles).toMatch(/\.todo-section\.is-collapsed\s*\{[^}]*flex: 0 0 34px/s);
     expect(styles).toMatch(/\.todo-section\.is-compact\.is-collapsed\s*\{[^}]*flex: 0 0 34px/s);
     expect(styles).toMatch(/\.todo-section\.is-compact\s*\{[^}]*flex: 1 1 0/s);
     expect(styles).toMatch(/\.todo-section\.is-compact \.todo-list\s*\{[^}]*overflow-y: auto/s);
+    expect(styles).toMatch(/\.todo-list-shell\s*\{[^}]*overflow: hidden/s);
     expect(styles).toMatch(/\.todo-section\.is-compact \.todo-empty-hint\s*\{[^}]*min-height: 90px/s);
     expect(styles).toMatch(/\.todo-section\.is-compact \.todo-star-button\s*\{[^}]*height: 30px/s);
   });
@@ -359,9 +363,9 @@ describe("Naive UI component usage", () => {
   it("keeps blank reminder hints outside the moving todo transition list", () => {
     const todo = read("src/components/TodoPanel.vue");
 
-    expect(todo).not.toMatch(/<TransitionGroup[\s\S]*v-if="!list\.collapsed && listEntries\[list\.id\]\.length === 0"[\s\S]*<\/TransitionGroup>/);
-    expect(todo).toContain('v-if="!list.collapsed && listEntries[list.id].length === 0"');
-    expect(todo).toContain('v-else-if="!list.collapsed"');
+    expect(todo).not.toMatch(/<TransitionGroup[\s\S]*v-if="listEntries\[list\.id\]\.length === 0"[\s\S]*<\/TransitionGroup>/);
+    expect(todo).toContain('v-if="listEntries[list.id].length === 0"');
+    expect(todo).toContain('v-else');
   });
 
   it("uses a clear separated drag handle for reminder rows", () => {
@@ -486,6 +490,26 @@ describe("Naive UI component usage", () => {
     expect(styles).toMatch(/\.companion-popover-shell\.n-popover\s*\{[^}]*border: 1px solid #111/s);
     expect(styles).toMatch(/\.companion-popover-arrow\s*\{[^}]*box-shadow: none/s);
     expect(styles).toMatch(/\.companion-popover-arrow\s*\{[^}]*border: 1px solid #111/s);
+  });
+
+  it("animates reminder reveal and workspace tab switches", () => {
+    const space = read("src/components/SpacePanel.vue");
+    const todo = read("src/components/TodoPanel.vue");
+    const styles = read("src/styles.css");
+
+    expect(space).toContain('name="space-panel-switch"');
+    expect(space).toContain('mode="out-in"');
+    expect(space).toContain(':duration="180"');
+    expect(space).toContain('class="space-text-stage"');
+    expect(todo).toContain('name="section-reveal"');
+    expect(todo).toContain('name="floating-pop"');
+    expect(todo).toContain(':duration="240"');
+    expect(styles).toMatch(/:root\s*\{[^}]*--motion-medium: 240ms/s);
+    expect(styles).toMatch(/\.space-panel-switch-enter-active,[\s\S]*?\.space-panel-switch-leave-active\s*\{[^}]*opacity 180ms/s);
+    expect(styles).toMatch(/\.todo-list-shell\s*\{[^}]*max-height var\(--motion-medium\)/s);
+    expect(styles).toMatch(/\.todo-list-shell\.is-hidden\s*\{[^}]*max-height: 0/s);
+    expect(styles).toMatch(/\.section-reveal-enter-active,[\s\S]*?\.section-reveal-leave-active\s*\{[^}]*max-height var\(--motion-medium\)/s);
+    expect(styles).toMatch(/\.floating-pop-enter-active,[\s\S]*?\.floating-pop-leave-active\s*\{[^}]*transform var\(--motion-medium\)/s);
   });
 
   it("removes manual dropdowns before clearing their coordinates to avoid top-left flashes", () => {
