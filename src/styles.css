@@ -15,6 +15,9 @@
   --button-hover: #eeeeee;
   --danger: #b42318;
   --radius: 0;
+  --motion-fast: 160ms;
+  --motion-medium: 240ms;
+  --motion-ease: cubic-bezier(0.2, 0, 0, 1);
 }
 
 html[data-theme="dark"] {
@@ -90,6 +93,12 @@ button {
   min-height: 30px;
   padding: 0 10px;
   cursor: pointer;
+  transition:
+    background-color var(--motion-fast) ease,
+    border-color var(--motion-fast) ease,
+    color var(--motion-fast) ease,
+    opacity var(--motion-fast) ease,
+    transform var(--motion-medium) var(--motion-ease);
 }
 
 button:hover {
@@ -103,6 +112,11 @@ textarea {
   background: var(--input);
   border-radius: 0;
   outline: none;
+  transition:
+    background-color var(--motion-fast) ease,
+    border-color var(--motion-fast) ease,
+    color var(--motion-fast) ease,
+    opacity var(--motion-fast) ease;
 }
 
 textarea:focus,
@@ -347,6 +361,7 @@ h3 {
   overflow-x: auto;
   overflow-y: hidden;
   overscroll-behavior-x: contain;
+  transition: border-color var(--motion-fast) ease;
 }
 
 .workspace-panel .space-tabs {
@@ -372,6 +387,12 @@ h3 {
   text-overflow: ellipsis;
   white-space: nowrap;
   cursor: grab;
+  transition:
+    background-color var(--motion-fast) ease,
+    border-color var(--motion-fast) ease,
+    color var(--motion-fast) ease,
+    opacity var(--motion-fast) ease,
+    transform var(--motion-medium) var(--motion-ease);
 }
 
 .space-tab.is-active {
@@ -409,12 +430,40 @@ h3 {
   border-bottom: 0;
 }
 
-.space-text-panel {
+.space-text-stage {
+  position: relative;
+  display: flex;
   flex: 1 1 auto;
+  min-width: 0;
+  min-height: 0;
+  overflow: hidden;
+}
+
+.space-text-stage > .space-text-panel {
+  flex: 1 1 auto;
+  min-width: 0;
+  min-height: 0;
 }
 
 .space-text-panel.panel {
   border-right: 0;
+}
+
+.space-panel-switch-enter-active,
+.space-panel-switch-leave-active {
+  transition:
+    opacity 180ms ease,
+    transform 180ms var(--motion-ease);
+}
+
+.space-panel-switch-enter-from {
+  opacity: 0;
+  transform: translateX(8px);
+}
+
+.space-panel-switch-leave-to {
+  opacity: 0;
+  transform: translateX(-8px);
 }
 
 .text-panel {
@@ -599,6 +648,7 @@ h3 {
   flex: 0 0 auto;
   border-bottom: 0;
   background: var(--panel);
+  overflow: hidden;
 }
 
 .today-focus-heading {
@@ -651,6 +701,13 @@ h3 {
   min-height: 0;
   flex: 1 1 33.33%;
   border-bottom: 1px solid var(--line-main);
+  overflow: hidden;
+  transition:
+    flex-basis var(--motion-medium) var(--motion-ease),
+    flex-grow var(--motion-medium) var(--motion-ease),
+    min-height var(--motion-medium) var(--motion-ease),
+    opacity var(--motion-fast) ease,
+    background-color var(--motion-fast) ease;
 }
 
 .todo-section.is-collapsed {
@@ -666,11 +723,8 @@ h3 {
   flex: 0 0 34px;
 }
 
-.todo-section.is-collapsed .todo-list {
-  flex: 0 0 0;
-  height: 0;
-  min-height: 0;
-  overflow: hidden;
+.todo-section.is-collapsed .todo-list-shell {
+  pointer-events: none;
 }
 
 .todo-section:last-child {
@@ -681,6 +735,28 @@ h3 {
   list-style: none;
   padding: 0;
   margin: 0;
+}
+
+.todo-list-shell {
+  display: flex;
+  flex: 1 1 auto;
+  flex-direction: column;
+  max-height: 100vh;
+  min-height: 0;
+  opacity: 1;
+  overflow: hidden;
+  transform: translateY(0);
+  transition:
+    max-height var(--motion-medium) var(--motion-ease),
+    opacity var(--motion-fast) ease,
+    transform var(--motion-medium) var(--motion-ease);
+}
+
+.todo-list-shell.is-hidden {
+  max-height: 0;
+  opacity: 0;
+  pointer-events: none;
+  transform: translateY(-6px);
 }
 
 .todo-section.is-compact .todo-list {
@@ -816,6 +892,14 @@ h3 {
   color: var(--muted);
   background: transparent;
   transform: translateX(-50%);
+}
+
+.todo-collapse-button .n-icon {
+  transition: transform var(--motion-medium) var(--motion-ease);
+}
+
+.todo-collapse-button.is-collapsed .n-icon {
+  transform: rotate(-90deg);
 }
 
 .todo-collapse-button:hover,
@@ -1446,6 +1530,43 @@ h3 {
 .todo-move-enter-from,
 .todo-move-leave-to {
   opacity: 0;
+}
+
+.section-reveal-enter-active,
+.section-reveal-leave-active {
+  overflow: hidden;
+  transition:
+    max-height var(--motion-medium) var(--motion-ease),
+    opacity var(--motion-fast) ease,
+    transform var(--motion-medium) var(--motion-ease);
+}
+
+.section-reveal-enter-from,
+.section-reveal-leave-to {
+  max-height: 0;
+  opacity: 0;
+  transform: translateY(-6px);
+}
+
+.section-reveal-enter-to,
+.section-reveal-leave-from {
+  max-height: calc(100vh - 34px);
+  opacity: 1;
+  transform: translateY(0);
+}
+
+.floating-pop-enter-active,
+.floating-pop-leave-active {
+  transform-origin: top left;
+  transition:
+    opacity var(--motion-fast) ease,
+    transform var(--motion-medium) var(--motion-ease);
+}
+
+.floating-pop-enter-from,
+.floating-pop-leave-to {
+  opacity: 0;
+  transform: translateY(4px) scale(0.98);
 }
 
 .todo-section-menu-button {
