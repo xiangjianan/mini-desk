@@ -1,7 +1,7 @@
 <script setup lang="ts">
 import { computed, nextTick, onMounted, onUnmounted, reactive, ref, watch } from "vue";
 import { MoonOutline, SunnyOutline } from "@vicons/ionicons5";
-import { darkTheme, dateZhCN, NButton, NConfigProvider, NGlobalStyle, NIcon, zhCN } from "naive-ui";
+import { darkTheme, dateEnUS, dateZhCN, enUS, NButton, NConfigProvider, NGlobalStyle, NIcon, zhCN } from "naive-ui";
 import CompanionBubble from "./components/CompanionBubble.vue";
 import ImagePanel from "./components/ImagePanel.vue";
 import ImagePreview from "./components/ImagePreview.vue";
@@ -10,10 +10,19 @@ import SettingsMenu from "./components/SettingsMenu.vue";
 import SpacePanel from "./components/SpacePanel.vue";
 import TextPanel from "./components/TextPanel.vue";
 import TodoPanel from "./components/TodoPanel.vue";
-import { AREA_HELP, CONTROL_HELP, DEFAULT_TITLES } from "./state/defaults";
-import { getCompanionGifSrc } from "./state/companionGifThemes";
+import { getCompanionGifSrc, getCompanionNotificationIconSrc } from "./state/companionGifThemes";
 import { deleteStoredImage, hydrateStoredImages, persistImagePayloads, storeImagePayload } from "./state/images";
 import { getMessage, withKaomoji, type MessageKey } from "./state/messages";
+import {
+  getDefaultTitles,
+  getDisplaySpaceTitle,
+  getDisplayTodoListTitle,
+  getGuideMessages,
+  getStoredSpaceTitle,
+  getStoredTodoListTitle,
+  getUiText,
+  normalizeLanguage,
+} from "./state/i18n";
 import {
   addTodo as addTodoToMap,
   clearCompleted,
@@ -41,11 +50,9 @@ import {
   getStoredAppVersion,
   markAppVersionSeen,
 } from "./state/version";
-import type { BoardState, CompanionGifTheme, DraggedTodo, GuideKey, LineItem, QuickButtonType, StoredImage, TodoItem, TodoListId, TodoPeriod, TodoStarChange } from "./types";
+import type { AppLanguage, BoardState, CompanionGifTheme, DraggedTodo, GuideKey, LineItem, QuickButtonType, StoredImage, TodoItem, TodoListConfig, TodoListId, TodoPeriod, TodoStarChange, WorkspaceSpace } from "./types";
 
 const MOBILE_BREAKPOINT_QUERY = "(max-width: 900px)";
-const MOBILE_HANDOFF_MESSAGE = "建议在电脑浏览器打开，以获得完整体验 (｡•̀ᴗ-)✧";
-const MOBILE_HANDOFF_DESCRIPTION = "这个看板为桌面端工作流设计，用来整理截图、便签、提醒事项、快捷链接和工作空间。";
 const TODO_NOTIFICATION_INTERVAL_MS = 30_000;
 const mobileCompanionPosition: { right: string; bottom: string } = { right: "18px", bottom: "28px" };
 
@@ -96,156 +103,45 @@ type BubbleOptions = {
   linkHref?: string;
 };
 
-const GUIDE_MESSAGES: Record<GuideKey, string[]> = {
-  images: [
-    "Ctrl+V 粘贴截图。",
-    "点击缩略图预览。",
-    "方向键可切换图片。",
-    "右键可复制或删除。",
-    "拖动图片到这里。",
-    "预览时滚轮缩放。",
-    "拖动可平移预览。",
-    "Enter 可复制图片。",
-    "Delete 可删除图片。",
-    "Esc 可关闭预览。",
-  ],
-  note: [
-    "点一下开始写便签。",
-    "Ctrl+S 立即保存。",
-    "停顿片刻会自动保存。",
-    "右键可复制文本。",
-    "右键可粘贴文本。",
-    "适合临时想法。",
-    "便签先收住灵感。",
-    "失焦后会保存。",
-    "可双击标题改名。",
-    "空白处也能编辑。",
-  ],
-  quickButtons: [
-    "链接会直接打开。",
-    "文本会复制到剪贴板。",
-    "加号可新增快捷项。",
-    "标题和内容都要填。",
-    "可设为链接属性。",
-    "可设为复制文本。",
-    "右键可编辑入口。",
-    "可隐藏低频入口。",
-    "拖拽可调整顺序。",
-    "展开可查看隐藏项。",
-  ],
-  todos: [
-    "单击空白新增提醒。",
-    "双击标题可改名。",
-    "单击文字可编辑。",
-    "勾选即可完成。",
-    "星标会进入重点。",
-    "右键可复制粘贴。",
-    "右键可复制提醒。",
-    "完成项可确认清理。",
-    "已完成可显示收起。",
-    "拖拽可调整顺序。",
-  ],
-  workspace: [
-    "点一下开始编辑。",
-    "Tab 可增加缩进。",
-    "Shift+Tab 取消缩进。",
-    "Enter 会保留缩进。",
-    "空缩进行会退缩进。",
-    "Ctrl+S 立即保存。",
-    "右键可复制粘贴。",
-    "可双击标签改名。",
-    "适合拆步骤。",
-    "停顿片刻会保存。",
-  ],
-  storage: [
-    "适合长期资料。",
-    "点一下开始编辑。",
-    "Ctrl+S 立即保存。",
-    "Tab 可增加缩进。",
-    "Shift+Tab 取消缩进。",
-    "右键可复制粘贴。",
-    "Enter 会保留缩进。",
-    "停顿片刻会保存。",
-    "可双击标题改名。",
-    "资料会自动收好。",
-  ],
-  addQuick: [
-    "可新增链接入口。",
-    "也可新增复制文本。",
-    "默认是链接属性。",
-    "标题和内容都要填。",
-    "链接会直接打开。",
-    "文本会复制使用。",
-    "保存后出现在快捷区。",
-    "常用入口更快触达。",
-    "可后续右键编辑。",
-    "可隐藏低频入口。",
-  ],
-  toggleHiddenQuick: [
-    "显示隐藏快捷项。",
-    "再点一次可收起。",
-    "适合收纳低频入口。",
-    "展开后仍可编辑。",
-    "展开后仍可使用。",
-    "隐藏不会删除内容。",
-    "界面会更清爽。",
-    "低频入口可先藏起。",
-    "隐藏项可随时找回。",
-    "收起后保留数据。",
-  ],
-  settings: [
-    "可导入导出数据。",
-    "导出可保留备份。",
-    "导入会先确认覆盖。",
-    "可打开建议入口。",
-    "关于里有项目信息。",
-    "版本状态在这里。",
-    "有更新会显示圆点。",
-    "可刷新静态缓存。",
-    "GitHub 入口在关于里。",
-    "设置收纳常用操作。",
-  ],
-  theme: [
-    "点一下切换主题。",
-    "可切换明暗色。",
-    "页面会记住选择。",
-    "白天可用浅色。",
-    "夜间可用深色。",
-    "切换后立即生效。",
-    "主题会自动保存。",
-    "图标会跟着变化。",
-    "选择更舒服的显示。",
-    "随时可以切回来。",
-  ],
-};
 const GUIDE_MESSAGE_DURATION_MS = 5000;
 const GITHUB_ISSUE_URL = "https://github.com/xiangjianan/todolist/issues/new";
 const GITHUB_REPO_URL = "https://github.com/xiangjianan/todolist";
 const GITHUB_REPO_LABEL = "xiangjianan / todolist";
-const ABOUT_MESSAGE = [
-  "To Do List 看板",
-  "一个本地优先的轻量工作台，用来整理截图、便签、提醒事项、快捷链接和工作空间。",
-].join("\n");
 const ABOUT_MESSAGE_DURATION_MS = 10000;
 const MIN_COMPANION_POPOVER_RIGHT_EDGE = 260;
 const activeGuideKey = ref<GuideKey | null>(null);
 
 const naiveTheme = computed(() => (state.theme === "dark" ? darkTheme : null));
+const naiveLocale = computed(() => (state.language === "en" ? enUS : zhCN));
+const naiveDateLocale = computed(() => (state.language === "en" ? dateEnUS : dateZhCN));
+const uiText = computed(() => getUiText(state.language));
 const companionVisible = computed(() => companionFocused.value || bubbleVisible.value);
 const activeCompanionVisible = computed(() => isMobileBlocked.value || companionVisible.value);
-const activeCompanionMessage = computed(() => (isMobileBlocked.value ? MOBILE_HANDOFF_MESSAGE : bubbleMessage.value));
+const activeCompanionMessage = computed(() => (isMobileBlocked.value ? uiText.value.app.mobileMessage : bubbleMessage.value));
 const activeCompanionPosition = computed(() => (isMobileBlocked.value ? mobileCompanionPosition : companionPosition.value));
 const saveStatus = ref<"saved" | "saving" | "dirty">("saved");
 const saveStatusLabel = computed(() => {
-  if (saveStatus.value === "dirty") return "有未保存内容";
-  if (saveStatus.value === "saving") return "保存中";
-  return "已保存";
+  if (saveStatus.value === "dirty") return uiText.value.app.dirty;
+  if (saveStatus.value === "saving") return uiText.value.app.saving;
+  return uiText.value.app.saved;
 });
 
 const titles = computed(() =>
   Object.fromEntries(
-    Object.entries(DEFAULT_TITLES).map(([id, title]) => [id, state.customTitles[id] || title]),
+    Object.entries(getDefaultTitles(state.language)).map(([id, title]) => [id, state.customTitles[id] || title]),
   ) as Record<string, string>,
+);
+const displayTodoLists = computed<TodoListConfig[]>(() =>
+  state.todoLists.map((list) => ({
+    ...list,
+    title: getDisplayTodoListTitle(list, state.language),
+  })),
+);
+const displaySpaces = computed<WorkspaceSpace[]>(() =>
+  state.spaces.map((space) => ({
+    ...space,
+    title: getDisplaySpaceTitle(space, state.language),
+  })),
 );
 
 function updateMobileBlocked(source?: MediaQueryList | MediaQueryListEvent): void {
@@ -320,7 +216,16 @@ watch(
 );
 
 function updateTitle(id: string, value: string): void {
-  state.customTitles[id] = value || DEFAULT_TITLES[id] || value;
+  const title = value.trim();
+  if (title) state.customTitles[id] = title;
+  else delete state.customTitles[id];
+  persistNow();
+}
+
+function updateLanguage(language: AppLanguage): void {
+  const next = normalizeLanguage(language);
+  if (state.language === next) return;
+  state.language = next;
   persistNow();
 }
 
@@ -361,7 +266,7 @@ function createSpace(): void {
 function renameSpace(id: string, title: string): void {
   const space = state.spaces.find((item) => item.id === id);
   if (!space) return;
-  space.title = title.trim() || space.title;
+  space.title = getStoredSpaceTitle(id, title) || space.title;
   if (pendingEditSpaceId.value === id) pendingEditSpaceId.value = null;
   persistNow();
 }
@@ -372,7 +277,7 @@ function finishSpaceEdit(id: string): void {
 
 function deleteSpace(id: string): void {
   if (state.spaces.length <= 1) {
-    showBubbleText("至少保留一个空间");
+    showBubbleText(uiText.value.app.keepOneSpace);
     return;
   }
   const anchor = getSpacePanelAnchor();
@@ -386,7 +291,7 @@ function deleteSpace(id: string): void {
     syncLegacySpaceLines();
     persistNow();
     showBubble("deleteSpace", anchor, { hideCompanionAfter: true });
-  }, undefined, { confirmText: "删除空间", cancelText: "取消" });
+  }, undefined, { confirmText: uiText.value.app.deleteSpace, cancelText: uiText.value.common.cancel });
 }
 
 function reorderSpaces(dragId: string, targetId: string): void {
@@ -396,7 +301,7 @@ function reorderSpaces(dragId: string, targetId: string): void {
 }
 
 function nextSpaceTitle(): string {
-  const base = "新空间";
+  const base = uiText.value.app.newSpace;
   const titles = new Set(state.spaces.map((space) => space.title));
   if (!titles.has(base)) return base;
   let index = 2;
@@ -624,7 +529,7 @@ function deleteImage(id: string, anchor?: HTMLElement): void {
     await deleteStoredImage(id);
     persistNow();
     showBubble("deleteImage", feedbackAnchor, { hideCompanionAfter: true });
-  }, undefined, { confirmText: "删除", cancelText: "取消" });
+  }, undefined, { confirmText: uiText.value.common.delete, cancelText: uiText.value.common.cancel });
 }
 
 function openImagePreview(id: string): void {
@@ -724,7 +629,7 @@ function saveQuick(payload: { id?: string; title: string; value: string; type: Q
   } else {
     state.quickButtons.push({
       id: createId(),
-      title: payload.title || (payload.type === "link" ? "未命名链接" : "未命名文本"),
+      title: payload.title || (payload.type === "link" ? uiText.value.quick.untitledLink : uiText.value.quick.untitledText),
       value: payload.value,
       type: payload.type,
       hidden: false,
@@ -740,7 +645,7 @@ function deleteQuick(id: string, anchor?: HTMLElement): void {
     state.quickButtons = state.quickButtons.filter((button) => button.id !== id);
     persistNow();
     showBubble("deleteQuick", anchor, { hideCompanionAfter: true });
-  }, undefined, { confirmText: "删除", cancelText: "取消" });
+  }, undefined, { confirmText: uiText.value.common.delete, cancelText: uiText.value.common.cancel });
 }
 
 function toggleQuickHidden(id: string): void {
@@ -789,18 +694,18 @@ async function copyText(text: string, shouldAbort: () => boolean = () => false):
 function createTodoList(anchor?: HTMLElement, title?: string): void {
   const id = createId();
   const trimmedTitle = title?.trim() ?? "";
-  state.todoLists.push({ id, title: trimmedTitle || "未命名列表", collapsed: false, compact: false });
+  state.todoLists.push({ id, title: trimmedTitle || uiText.value.app.unnamedList, collapsed: false, compact: false });
   state.todos[id] = [];
   state.showCompletedTodos[id] = false;
   pendingEditTodoListId.value = trimmedTitle ? null : id;
   persistNow();
-  showBubbleText("已新增提醒列表", anchor);
+  showBubbleText(uiText.value.app.todoListAdded, anchor);
 }
 
 function updateTodoListTitle(listId: TodoListId, title: string): void {
   const list = state.todoLists.find((item) => item.id === listId);
   if (!list) return;
-  list.title = title.trim() || "未命名列表";
+  list.title = getStoredTodoListTitle(listId, title) || uiText.value.app.unnamedList;
   if (pendingEditTodoListId.value === listId) pendingEditTodoListId.value = null;
   persistNow();
 }
@@ -821,7 +726,7 @@ function toggleTodoListCompact(listId: TodoListId, compact: boolean): void {
 
 function deleteTodoList(listId: TodoListId, anchor?: HTMLElement): void {
   if (state.todoLists.length <= 1) {
-    showBubbleText("至少保留一个提醒列表", anchor);
+    showBubbleText(uiText.value.app.keepOneTodoList, anchor);
     return;
   }
   const list = state.todoLists.find((item) => item.id === listId);
@@ -832,7 +737,7 @@ function deleteTodoList(listId: TodoListId, anchor?: HTMLElement): void {
     anchor,
     remove,
     undefined,
-    { confirmText: "删除列表", cancelText: "取消", danger: true },
+    { confirmText: uiText.value.todo.deleteList, cancelText: uiText.value.common.cancel, danger: true },
   );
 }
 
@@ -846,7 +751,7 @@ function removeTodoList(listId: TodoListId, anchor?: HTMLElement): void {
   clearEmptyTodoRemovalTimersForList(listId);
   if (pendingEditTodoListId.value === listId) pendingEditTodoListId.value = null;
   persistNow();
-  showBubbleText("提醒列表已删除", anchor, { hideCompanionAfter: true });
+  showBubbleText(uiText.value.app.todoListDeleted, anchor, { hideCompanionAfter: true });
 }
 
 function reorderTodoListSections(draggedId: TodoListId, targetId: TodoListId): void {
@@ -962,7 +867,7 @@ function updateTodoNotify(period: TodoPeriod, id: string, notifyAt: number | und
   if (!isConfiguredTodoListId(period)) return;
   state.todos = setTodoNotifyAt(state.todos, period, id, notifyAt);
   persistNow();
-  if (notifyAt === undefined) showBubbleText("已取消通知时间", anchor);
+  if (notifyAt === undefined) showBubbleText(uiText.value.app.notifyCleared, anchor);
   else void prepareTodoNotifications();
 }
 
@@ -975,7 +880,7 @@ function removeTodo(period: TodoPeriod, id: string, anchor?: HTMLElement): void 
     state.todos = removeTodoFromMap(state.todos, period, id);
     persistNow();
     showBubble("deleteTodo", anchor, { hideCompanionAfter: true });
-  }, undefined, { confirmText: "删除", cancelText: "取消" });
+  }, undefined, { confirmText: uiText.value.common.delete, cancelText: uiText.value.common.cancel });
 }
 
 function clearDone(period: TodoPeriod, anchor?: HTMLElement): void {
@@ -994,7 +899,7 @@ function clearDone(period: TodoPeriod, anchor?: HTMLElement): void {
       showBubble("clearCompleted", anchor, { hideCompanionAfter: true });
     },
     undefined,
-    { confirmText: "清理", cancelText: "取消" },
+    { confirmText: uiText.value.todo.clearCompletedConfirm, cancelText: uiText.value.common.cancel },
   );
 }
 
@@ -1042,7 +947,7 @@ function handleThemeClick(): void {
 function updateCompanionGifTheme(theme: CompanionGifTheme, anchor?: HTMLElement): void {
   state.companionGifTheme = theme;
   persistNow();
-  showBubbleText(theme === "none" ? "已关闭 GIF" : "已切换 GIF 主题", anchor);
+  showBubbleText(theme === "none" ? uiText.value.app.gifDisabled : uiText.value.app.gifThemeChanged, anchor);
 }
 
 async function updateCustomCompanionGif(files: { light?: File; dark?: File }, anchor?: HTMLElement): Promise<void> {
@@ -1050,7 +955,7 @@ async function updateCustomCompanionGif(files: { light?: File; dark?: File }, an
   const dark = await readGifFile(files.dark);
   const fallback = light ?? dark;
   if (!fallback) {
-    showBubbleText("请选择 GIF 文件", anchor);
+    showBubbleText(uiText.value.app.chooseGif, anchor);
     return;
   }
   state.customCompanionGif = {
@@ -1059,7 +964,7 @@ async function updateCustomCompanionGif(files: { light?: File; dark?: File }, an
   };
   state.companionGifTheme = "custom";
   persistNow();
-  showBubbleText("已设置自定义 GIF", anchor);
+  showBubbleText(uiText.value.app.customGifSet, anchor);
 }
 
 function applyTheme(): void {
@@ -1134,13 +1039,13 @@ async function importData(event: Event): Promise<void> {
       importFeedbackAnchor.value = undefined;
       input.value = "";
     },
-    { confirmText: "覆盖导入", cancelText: "取消" },
+    { confirmText: uiText.value.app.importOverwrite, cancelText: uiText.value.common.cancel },
   );
 }
 
 function about(anchor?: HTMLElement): void {
   showBubbleText(
-    ABOUT_MESSAGE,
+    [uiText.value.app.aboutTitle, uiText.value.app.aboutDescription].join("\n"),
     anchor,
     { hideCompanionAfter: true, linkText: GITHUB_REPO_LABEL, linkHref: GITHUB_REPO_URL },
     ABOUT_MESSAGE_DURATION_MS,
@@ -1199,7 +1104,7 @@ function showSaveBubble(): void {
 }
 
 function showBubble(messageKey: MessageKey, anchor?: HTMLElement, options: BubbleOptions = {}): void {
-  showBubbleText(getMessage(messageKey), anchor, options);
+  showBubbleText(getMessage(messageKey, Math.random, state.language), anchor, options);
 }
 
 function showBubbleText(message: string, anchor?: HTMLElement, options: BubbleOptions = {}, duration = 3000): void {
@@ -1295,14 +1200,14 @@ function requestConfirmation(
   bubbleRemainingMs.value = 0;
   bubbleTimerStartedAt.value = 0;
   bubbleTimerOptions.value = {};
-  bubbleMessage.value = getMessage(messageKey);
+  bubbleMessage.value = getMessage(messageKey, Math.random, state.language);
   bubbleLink.value = null;
   pendingConfirm.value = {
     onConfirm,
     onCancel,
-    confirmText: options.confirmText ?? "是",
-    cancelText: options.cancelText ?? "否",
-    danger: options.danger ?? /删除|清理/.test(options.confirmText ?? ""),
+    confirmText: options.confirmText ?? uiText.value.common.yes,
+    cancelText: options.cancelText ?? uiText.value.common.no,
+    danger: options.danger ?? /删除|清理|Delete|Clear/.test(options.confirmText ?? ""),
   };
   activeGuideKey.value = null;
   bubbleVisible.value = true;
@@ -1403,7 +1308,7 @@ function triggerDueTodoNotifications(): void {
 }
 
 function getReminderNotificationIcon(): string {
-  return getCompanionGifSrc(state.companionGifTheme, state.theme, state.customCompanionGif);
+  return getCompanionNotificationIconSrc(state.companionGifTheme, state.theme, state.customCompanionGif);
 }
 
 function todoKey(period: TodoPeriod, id: string): string {
@@ -1496,12 +1401,12 @@ function getTodoListIds(): TodoListId[] {
 
 function getTodoListTitle(listId: TodoListId): string {
   const list = state.todoLists.find((item) => item.id === listId);
-  if (list?.title) return list.title;
-  return DEFAULT_TITLES[`todo-${listId}-title`] ?? "提醒事项";
+  if (list?.title) return getDisplayTodoListTitle(list, state.language);
+  return getDefaultTitles(state.language)[`todo-${listId}-title`] ?? uiText.value.app.reminderFallback;
 }
 
 function randomGuideMessage(key: GuideKey): string {
-  const messages = GUIDE_MESSAGES[key];
+  const messages = getGuideMessages(state.language)[key];
   return messages[Math.floor(Math.random() * messages.length)];
 }
 
@@ -1590,18 +1495,19 @@ function moveItem<T extends { id: string }>(items: T[], dragId: string, targetId
 </script>
 
 <template>
-  <NConfigProvider :theme="naiveTheme" :locale="zhCN" :date-locale="dateZhCN">
+  <NConfigProvider :theme="naiveTheme" :locale="naiveLocale" :date-locale="naiveDateLocale">
     <NGlobalStyle />
     <main
       v-if="!isMobileBlocked"
       class="board"
-      aria-label="To Do List 看板"
+      :aria-label="uiText.app.boardLabel"
       @dragover.prevent
       @drop.prevent="handleBoardDrop"
     >
       <ImagePanel
         :title="titles['image-title']"
         :images="state.images"
+        :language="state.language"
         @title-update="updateTitle"
         @preview="openImagePreview"
         @copy="copyImage"
@@ -1619,6 +1525,7 @@ function moveItem<T extends { id: string }>(items: T[], dragId: string, targetId
           title-id="note-title"
           :title="titles['note-title']"
           :lines="state.noteLines"
+          :language="state.language"
           @title-update="updateTitle"
           @update="updateLines('noteLines', $event)"
           @focus="handleGuideFocus('note', $event)"
@@ -1629,6 +1536,7 @@ function moveItem<T extends { id: string }>(items: T[], dragId: string, targetId
           :title="titles['quick-title']"
           :buttons="state.quickButtons"
           :show-hidden="state.showHiddenQuickButtons"
+          :language="state.language"
           @title-update="updateTitle"
           @save="saveQuick"
           @delete="deleteQuick"
@@ -1641,11 +1549,12 @@ function moveItem<T extends { id: string }>(items: T[], dragId: string, targetId
       </section>
 
       <TodoPanel
-        :todo-lists="state.todoLists"
+        :todo-lists="displayTodoLists"
         :edit-list-id="pendingEditTodoListId"
         :todos="state.todos"
         :titles="titles"
         :show-completed="state.showCompletedTodos"
+        :language="state.language"
         @title-update="updateTitle"
         @create-list="createTodoList"
         @update-list-title="updateTodoListTitle"
@@ -1672,9 +1581,10 @@ function moveItem<T extends { id: string }>(items: T[], dragId: string, targetId
 
       <SpacePanel
         class="workspace-panel"
-        :spaces="state.spaces"
+        :spaces="displaySpaces"
         :active-space-id="state.activeSpaceId"
         :edit-space-id="pendingEditSpaceId"
+        :language="state.language"
         @activate="activateSpace"
         @create="createSpace"
         @rename="renameSpace"
@@ -1688,19 +1598,19 @@ function moveItem<T extends { id: string }>(items: T[], dragId: string, targetId
       />
     </main>
 
-    <main v-else class="mobile-handoff" aria-label="To Do List 看板移动端引导">
+    <main v-else class="mobile-handoff" :aria-label="uiText.app.mobileLabel">
       <header class="mobile-handoff-header">
-        <h1 class="mobile-handoff-title">To Do List 看板</h1>
-        <NButton quaternary size="small" class="mobile-handoff-theme" aria-label="切换主题" @click="handleThemeClick">
+        <h1 class="mobile-handoff-title">{{ uiText.app.mobileTitle }}</h1>
+        <NButton quaternary size="small" class="mobile-handoff-theme" :aria-label="uiText.app.theme" @click="handleThemeClick">
           <NIcon :component="state.theme === 'dark' ? SunnyOutline : MoonOutline" />
         </NButton>
       </header>
 
       <section class="mobile-handoff-body" aria-labelledby="mobile-handoff-title">
         <div class="mobile-handoff-message">
-          <h2 id="mobile-handoff-title">桌面端体验更完整</h2>
-          <p>{{ MOBILE_HANDOFF_DESCRIPTION }}</p>
-          <p>{{ MOBILE_HANDOFF_MESSAGE }}</p>
+          <h2 id="mobile-handoff-title">{{ uiText.app.mobileHeading }}</h2>
+          <p>{{ uiText.app.mobileDescription }}</p>
+          <p>{{ uiText.app.mobileMessage }}</p>
         </div>
       </section>
     </main>
@@ -1709,6 +1619,7 @@ function moveItem<T extends { id: string }>(items: T[], dragId: string, targetId
       v-if="!isMobileBlocked"
       :images="state.images"
       :active-id="activePreviewId"
+      :language="state.language"
       @close="activePreviewId = undefined"
       @copy="copyImage"
       @delete="deleteImage"
@@ -1728,6 +1639,7 @@ function moveItem<T extends { id: string }>(items: T[], dragId: string, targetId
       :persistent="isMobileBlocked"
       :position="activeCompanionPosition"
       :theme="state.theme"
+      :language="state.language"
       :gif-theme="state.companionGifTheme"
       :custom-gif-light-src="state.customCompanionGif.light"
       :custom-gif-dark-src="state.customCompanionGif.dark"
@@ -1742,16 +1654,18 @@ function moveItem<T extends { id: string }>(items: T[], dragId: string, targetId
         :app-version="appVersion"
         :update-available="versionPromptVisible"
         :companion-gif-theme="state.companionGifTheme"
+        :language="state.language"
         @export="exportData"
         @import="requestImport"
         @about="about"
         @suggest="suggestIssue"
         @update="updateStaticVersion"
+        @language="updateLanguage"
         @gif-theme="updateCompanionGifTheme"
         @custom-gif="updateCustomCompanionGif"
         @guide="handleGuideClick"
       />
-      <NButton quaternary size="small" class="theme-btn icon-button" aria-label="切换主题" @click="handleThemeClick">
+      <NButton quaternary size="small" class="theme-btn icon-button" :aria-label="uiText.app.theme" @click="handleThemeClick">
         <NIcon :component="state.theme === 'dark' ? SunnyOutline : MoonOutline" />
       </NButton>
     </div>

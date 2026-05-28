@@ -1,0 +1,61 @@
+import { describe, expect, it } from "vitest";
+import {
+  GUIDE_MESSAGES,
+  getDefaultTitles,
+  getDisplaySpaceTitle,
+  getDisplayTodoListTitle,
+  getUiText,
+} from "../state/i18n";
+
+describe("localized public copy", () => {
+  it("translates default board titles without translating custom titles", () => {
+    expect(getDefaultTitles("en")).toMatchObject({
+      "image-title": "🎨 Screenshots",
+      "note-title": "📝 Notes",
+      "quick-title": "🔗 Quick Links",
+      "todo-morning-title": "☀️ Morning",
+      "todo-noon-title": "🌤️ Noon",
+      "todo-evening-title": "🌙 Evening",
+      "workspace-title": "📁 Workspace",
+    });
+
+    expect(getDisplayTodoListTitle({ id: "morning", title: "☀️ 早上", collapsed: false, compact: false }, "en")).toBe("☀️ Morning");
+    expect(getDisplayTodoListTitle({ id: "morning", title: "客户跟进", collapsed: false, compact: false }, "en")).toBe("客户跟进");
+    expect(getDisplaySpaceTitle({ id: "workspace", title: "工作空间", lines: [] }, "en")).toBe("Workspace");
+    expect(getDisplaySpaceTitle({ id: "workspace", title: "个人计划", lines: [] }, "en")).toBe("个人计划");
+  });
+
+  it("includes the expanded Chinese Tips and English counterparts", () => {
+    expect(GUIDE_MESSAGES.zh.workspace).toEqual(expect.arrayContaining([
+      "试试把工作空间里的文本拖到提醒事项。",
+      "双击空间标签可以修改空间名。",
+      "从外部拖入文本，也能直接收进工作空间。",
+      "编辑文字后停顿 3 秒会自动保存。",
+    ]));
+    expect(GUIDE_MESSAGES.zh.todos).toEqual(expect.arrayContaining([
+      "试试把提醒事项拖到工作空间。",
+      "按住列表名拖动可以调整列表顺序。",
+      "点击闹钟可以设置通知时间。",
+      "空白处右键可以新增提醒事项列表。",
+    ]));
+    expect(GUIDE_MESSAGES.zh.images).toEqual(expect.arrayContaining([
+      "试试把外部图片拖到这里。",
+      "Ctrl+V 可以直接粘贴图片。",
+      "单击图片可以预览。",
+    ]));
+    expect(GUIDE_MESSAGES.en.quickButtons).toEqual(expect.arrayContaining([
+      "Use the context menu to hide a link.",
+      "Drag links to reorder them.",
+      "Text shortcuts copy their text instantly.",
+    ]));
+    expect(GUIDE_MESSAGES.en.note).toContain("Edited text saves automatically after 3 seconds.");
+  });
+
+  it("localizes shared menu labels", () => {
+    expect(getUiText("en").settings.language).toBe("语言");
+    expect(getUiText("en").quick.add).toBe("Add");
+    expect(getUiText("en").todo.createList).toBe("New reminder list");
+    expect(getUiText("en").common.delete).toBe("Delete");
+    expect(getUiText("zh").settings.language).toBe("Language");
+  });
+});

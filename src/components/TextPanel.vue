@@ -4,6 +4,8 @@ import { NDropdown, NScrollbar } from "naive-ui";
 import type { DropdownOption } from "naive-ui";
 import type { LineItem } from "../types";
 import { GUIDE_MENU_OPTION } from "../state/defaults";
+import { getUiText } from "../state/i18n";
+import type { AppLanguage } from "../types";
 import {
   appendPlainTextToEditorText,
   editorTextToLines,
@@ -16,14 +18,17 @@ import {
 } from "../utils/textEditor";
 import EditableTitle from "./EditableTitle.vue";
 
-const props = defineProps<{
+const props = withDefaults(defineProps<{
   titleId: string;
   title: string;
   lines: LineItem[];
   placeholder?: string;
   split?: boolean;
   hideHeader?: boolean;
-}>();
+  language?: AppLanguage;
+}>(), {
+  language: "zh",
+});
 
 const emit = defineEmits<{
   titleUpdate: [id: string, value: string];
@@ -48,15 +53,19 @@ const menu = ref<{
   target?: HTMLTextAreaElement;
   canPaste?: boolean;
 } | null>(null);
-const guideMenuOption: DropdownOption = { ...GUIDE_MENU_OPTION, label: GUIDE_MENU_OPTION.label || "Tips" };
+const uiText = computed(() => getUiText(props.language));
+const guideMenuOption = computed<DropdownOption>(() => ({
+  ...GUIDE_MENU_OPTION,
+  label: uiText.value.common.tips,
+}));
 const menuOptions = computed<DropdownOption[]>(() => {
   const options: DropdownOption[] = [];
   const target = menu.value?.target;
   if (target) {
-    options.push({ label: "复制", key: "copy", disabled: !canCopyTextSelection(target) });
-    options.push({ label: "粘贴", key: "paste", disabled: !menu.value?.canPaste });
+    options.push({ label: uiText.value.common.copy, key: "copy", disabled: !canCopyTextSelection(target) });
+    options.push({ label: uiText.value.common.paste, key: "paste", disabled: !menu.value?.canPaste });
   }
-  options.push(guideMenuOption);
+  options.push(guideMenuOption.value);
   return options;
 });
 

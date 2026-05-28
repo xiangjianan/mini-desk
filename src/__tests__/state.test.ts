@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { DEFAULT_COMPANION_GIF_THEME } from "../state/companionGifThemes";
+import { DEFAULT_COMPANION_GIF_THEME, getCompanionNotificationIconSrc } from "../state/companionGifThemes";
 import { defaultState } from "../state/defaults";
 import {
   getSerializableState,
@@ -55,9 +55,19 @@ describe("state compatibility", () => {
   it("creates one default workspace space for new users", () => {
     const state = defaultState();
 
+    expect(state.language).toBe("zh");
     expect(state.spaces).toEqual([{ id: "workspace", title: "工作空间", lines: [] }]);
     expect(state.activeSpaceId).toBe("workspace");
     expect(state.showCompletedTodos).toEqual({ morning: false, noon: false, evening: false });
+  });
+
+  it("normalizes and serializes the app language preference", () => {
+    const english = normalizeImportedState({ language: "en" });
+    const unknown = normalizeImportedState({ language: "fr" });
+
+    expect(english.language).toBe("en");
+    expect(getSerializableState(english).language).toBe("en");
+    expect(unknown.language).toBe("zh");
   });
 
   it("creates default configurable todo lists for new users", () => {
@@ -219,6 +229,16 @@ describe("state compatibility", () => {
     expect(normalizeImportedState({ companionGifTheme: "future-theme" }).companionGifTheme).toBe("ikun");
     expect(normalizeImportedState({ companionGifTheme: "" }).companionGifTheme).toBe("ikun");
     expect(normalizeImportedState({ companionGifTheme: null }).companionGifTheme).toBe("ikun");
+  });
+
+  it("uses still image assets for built-in reminder notification icons", () => {
+    expect(getCompanionNotificationIconSrc("ikun", "light")).toContain("kun.jpg");
+    expect(getCompanionNotificationIconSrc("ikun", "dark")).toContain("kun-dark.jpg");
+    expect(getCompanionNotificationIconSrc("hermes", "light")).toContain("yunxia.jpg");
+    expect(getCompanionNotificationIconSrc("hermes", "dark")).toContain("yunxia-dark.jpg");
+    expect(getCompanionNotificationIconSrc("none", "light")).toBe("");
+    expect(getCompanionNotificationIconSrc("custom", "light", { light: "data:image/gif;base64,light" })).toBe("data:image/gif;base64,light");
+    expect(getCompanionNotificationIconSrc("custom", "dark", { light: "data:image/gif;base64,light", dark: "data:image/gif;base64,dark" })).toBe("data:image/gif;base64,dark");
   });
 
   it("serializes image metadata without large payloads for localStorage", () => {

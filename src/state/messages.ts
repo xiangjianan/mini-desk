@@ -1,3 +1,6 @@
+import type { AppLanguage } from "../types";
+import { DEFAULT_LANGUAGE, normalizeLanguage } from "./i18n";
+
 export type MessageMood = "happy" | "surprised" | "encouraging" | "warning" | "calm";
 export type MessageSurface = "companion" | "naive-message";
 
@@ -703,9 +706,55 @@ export const MESSAGE_CATALOG: Record<MessageKey, MessageEntry> = {
   },
 };
 
-export function getMessage(key: MessageKey, random = Math.random): string {
+const EN_MESSAGE_VARIANTS = {
+  save: ["Saved", "Changes saved", "Your board is up to date"],
+  todoCompleted: ["One more reminder completed", "Progress updated", "Reminder completed"],
+  clipboardPasteUnsupported: ["Clipboard images are not available here", "Try pressing Ctrl+V to paste an image", "Use the paste shortcut instead"],
+  clipboardImageMissing: ["No image found in the clipboard", "Copy an image first", "The clipboard does not contain an image"],
+  imageAdded: ["Image added", "Screenshot saved", "Image placed in the list"],
+  imageCopied: ["Image copied", "Image is ready to paste", "Screenshot copied"],
+  imageDataCopied: ["Copied as a Data URL", "Image copied as text", "Data URL copied"],
+  imageDropIgnored: ["Non-image files were skipped", "Only images were added", "Unsupported files were ignored"],
+  imageDropEmpty: ["No valid images found", "Drop image files here", "Only image files are supported"],
+  quickLinkCopied: ["Link copied", "Link is ready to paste", "Shortcut link copied"],
+  quickTextCopied: ["Text copied", "Shortcut text copied", "Text is ready to paste"],
+  quickTextCopyFailed: ["Could not copy text", "Text copy failed", "Try copying again"],
+  noCompletedTodos: ["No completed reminders to clear", "Nothing completed here yet", "There are no completed items"],
+  dataExported: ["Data exported", "Backup created", "Board data exported"],
+  dataImported: ["Data imported", "Import complete", "Board data updated"],
+  deleteImage: ["Image deleted", "Screenshot removed", "Image removed from the list"],
+  deleteQuick: ["Shortcut deleted", "Quick entry removed", "Shortcut removed"],
+  deleteTodo: ["Reminder deleted", "Reminder removed", "Item deleted"],
+  deleteSpace: ["Space deleted", "Workspace removed", "Space removed"],
+  clearCompleted: ["Completed reminders cleared", "Completed items removed", "Done items cleared"],
+  importJsonInvalid: ["Invalid JSON file", "Could not read that JSON", "Choose a valid board backup"],
+  importDataInvalid: ["Import data does not match this board", "Invalid board backup", "That backup cannot be imported"],
+  imageStoreFailed: ["Image storage failed", "Could not store this image", "Try adding the image again"],
+  imageReadFailed: ["Image read failed", "Could not read this image", "Try another image"],
+  clipboardPermissionDenied: ["Clipboard permission was denied", "Allow clipboard access and try again", "Clipboard access is blocked"],
+  imageCopyFailed: ["Image copy failed", "Could not copy this image", "Try copying again"],
+  linkOpenFailed: ["Could not open the link", "Check the URL", "The browser blocked this link"],
+  confirmDeleteImage: ["Delete this image?", "Remove this image?", "This image will be removed."],
+  confirmDeleteQuick: ["Delete this shortcut?", "Remove this quick entry?", "This shortcut will be removed."],
+  confirmDeleteTodo: ["Delete this reminder?", "Remove this reminder?", "This reminder will be removed."],
+  confirmDeleteTodoList: ["Delete this list?", "Reminders in this list will be deleted.", "Remove this reminder list?"],
+  confirmUnstarTodo: ["Unpin this reminder?", "Remove it from pinned reminders?", "This reminder will return to the normal list."],
+  confirmUnstarTodoDeadline: ["Unpinning also clears the notification time.", "Unpin this reminder and clear its notification?", "This reminder will no longer use its notification time."],
+  confirmDeleteSpace: ["Delete this space? This cannot be undone.", "Remove this space permanently?", "This space and its content will be deleted."],
+  confirmClearCompleted: ["Clear completed reminders?", "Remove completed items?", "Completed reminders will be removed."],
+  confirmImportData: ["Importing will overwrite current data.", "Overwrite this board with the backup?", "Current board data will be replaced."],
+  about: [
+    [
+      "To Do List Board",
+      "A local-first lightweight workspace for organizing screenshots, notes, reminders, quick links, and workspaces.",
+    ].join("\n"),
+  ],
+} satisfies Record<MessageKey, string[]>;
+
+export function getMessage(key: MessageKey, random = Math.random, language: AppLanguage = DEFAULT_LANGUAGE): string {
   const entry = MESSAGE_CATALOG[key];
-  return withKaomoji(randomItem(entry.variants, random), entry.mood, random);
+  const variants = normalizeLanguage(language) === "en" ? EN_MESSAGE_VARIANTS[key] : entry.variants;
+  return withKaomoji(randomItem(variants, random), entry.mood, random);
 }
 
 export function withKaomoji(text: string, mood: MessageMood, random = Math.random): string {

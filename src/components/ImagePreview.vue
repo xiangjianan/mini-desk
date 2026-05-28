@@ -3,12 +3,16 @@ import { computed, ref, watch } from "vue";
 import { CloseOutline } from "@vicons/ionicons5";
 import { NButton, NDropdown, NIcon, NModal, NScrollbar } from "naive-ui";
 import type { DropdownOption } from "naive-ui";
-import type { StoredImage } from "../types";
+import { getUiText } from "../state/i18n";
+import type { AppLanguage, StoredImage } from "../types";
 
-const props = defineProps<{
+const props = withDefaults(defineProps<{
   images: StoredImage[];
   activeId?: string;
-}>();
+  language?: AppLanguage;
+}>(), {
+  language: "zh",
+});
 
 const emit = defineEmits<{
   close: [];
@@ -23,12 +27,13 @@ const dragging = ref(false);
 const start = ref({ x: 0, y: 0, ox: 0, oy: 0 });
 const menu = ref<{ x: number; y: number; id: string; anchor?: HTMLElement } | null>(null);
 
+const uiText = computed(() => getUiText(props.language));
 const active = computed(() => props.images.find((image) => image.id === props.activeId));
-const menuOptions: DropdownOption[] = [
-  { label: "复制", key: "copy" },
-  { label: "取消预览", key: "close" },
-  { label: "删除", key: "delete" },
-];
+const menuOptions = computed<DropdownOption[]>(() => [
+  { label: uiText.value.common.copy, key: "copy" },
+  { label: uiText.value.preview.close, key: "close" },
+  { label: uiText.value.common.delete, key: "delete" },
+]);
 
 watch(
   () => props.activeId,
@@ -122,13 +127,13 @@ function handleKeydown(event: KeyboardEvent): void {
             quaternary
             size="small"
             class="preview-close-button icon-button"
-            aria-label="取消预览"
+            :aria-label="uiText.preview.close"
             @click="emit('close')"
           >
             <NIcon :component="CloseOutline" />
           </NButton>
         </div>
-        <NScrollbar class="preview-image-list-scrollbar" aria-label="预览图片列表">
+        <NScrollbar class="preview-image-list-scrollbar" :aria-label="uiText.preview.list">
           <div class="image-list preview-image-list">
             <button
               v-for="(image, index) in images"
@@ -139,7 +144,7 @@ function handleKeydown(event: KeyboardEvent): void {
               @click.stop="emit('activate', image.id)"
             >
               <span class="image-index">{{ index + 1 }}</span>
-              <img v-if="image.src" :src="image.src" alt="预览缩略图" />
+              <img v-if="image.src" :src="image.src" :alt="uiText.preview.thumbnailAlt" />
             </button>
           </div>
         </NScrollbar>
@@ -150,18 +155,18 @@ function handleKeydown(event: KeyboardEvent): void {
             v-if="active.src"
             :key="active.id"
             :src="active.src"
-            alt="图片预览"
+            :alt="uiText.preview.imageAlt"
             draggable="false"
             :style="{ transform: `translate(${offset.x}px, ${offset.y}px) scale(${scale})` }"
             @contextmenu.prevent="openMenu($event, active.id)"
           />
         </div>
         <div class="preview-actions">
-          <span>方向键切换 · 滚轮缩放 · 拖动平移 · Enter 复制 · Delete 删除 · Space/Esc 关闭</span>
-          <NButton size="small" @click="emit('close')">取消预览</NButton>
-          <NButton size="small" @click="emit('copy', active.id)">复制</NButton>
+          <span>{{ uiText.preview.help }}</span>
+          <NButton size="small" @click="emit('close')">{{ uiText.preview.close }}</NButton>
+          <NButton size="small" @click="emit('copy', active.id)">{{ uiText.common.copy }}</NButton>
           <NButton size="small" type="error" ghost @click="emit('delete', active.id, $event.currentTarget as HTMLElement)">
-            删除
+            {{ uiText.common.delete }}
           </NButton>
         </div>
       </main>

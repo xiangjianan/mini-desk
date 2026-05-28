@@ -13,13 +13,17 @@ import { NBadge, NButton, NDropdown, NIcon, NUpload } from "naive-ui";
 import type { Component } from "vue";
 import type { UploadFileInfo } from "naive-ui";
 import { COMPANION_GIF_THEME_OPTIONS } from "../state/companionGifThemes";
-import type { CompanionGifTheme, GuideKey } from "../types";
+import { getUiText, normalizeLanguage } from "../state/i18n";
+import type { AppLanguage, CompanionGifTheme, GuideKey } from "../types";
 
-const props = defineProps<{
+const props = withDefaults(defineProps<{
   appVersion: string;
   updateAvailable: boolean;
   companionGifTheme: CompanionGifTheme;
-}>();
+  language?: AppLanguage;
+}>(), {
+  language: "zh",
+});
 
 const emit = defineEmits<{
   export: [anchor?: HTMLElement];
@@ -27,6 +31,7 @@ const emit = defineEmits<{
   about: [anchor?: HTMLElement];
   suggest: [anchor?: HTMLElement];
   update: [];
+  language: [language: AppLanguage, anchor?: HTMLElement];
   gifTheme: [theme: CompanionGifTheme, anchor?: HTMLElement];
   customGif: [files: { light?: File; dark?: File }, anchor?: HTMLElement];
   guide: [key: GuideKey, anchor: HTMLElement];
@@ -37,28 +42,46 @@ const triggerRef = ref<HTMLElement | null>(null);
 const customGifDialogOpen = ref(false);
 const customGifLightFile = ref<File | undefined>();
 const customGifDarkFile = ref<File | undefined>();
+const text = computed(() => getUiText(props.language));
 const options = computed(() => [
-  { label: "数据导出", key: "export", icon: renderIcon(CloudDownloadOutline) },
-  { label: "数据导入", key: "import", icon: renderIcon(CloudUploadOutline) },
+  { label: text.value.settings.export, key: "export", icon: renderIcon(CloudDownloadOutline) },
+  { label: text.value.settings.import, key: "import", icon: renderIcon(CloudUploadOutline) },
   {
-    label: "GIF 主题",
+    label: text.value.settings.language,
+    key: "language",
+    icon: renderIcon(CheckmarkOutline),
+    children: [
+      {
+        label: text.value.settings.chinese,
+        key: "language:zh",
+        icon: normalizeLanguage(props.language) === "zh" ? renderIcon(CheckmarkOutline) : undefined,
+      },
+      {
+        label: text.value.settings.english,
+        key: "language:en",
+        icon: normalizeLanguage(props.language) === "en" ? renderIcon(CheckmarkOutline) : undefined,
+      },
+    ],
+  },
+  {
+    label: text.value.settings.gifTheme,
     key: "gif-theme",
     icon: renderIcon(ImagesOutline),
     children: COMPANION_GIF_THEME_OPTIONS.map((option) => ({
-      label: option.label,
+      label: getCompanionGifThemeLabel(option.value),
       key: `gif-theme:${option.value}`,
       icon: option.value === props.companionGifTheme ? renderIcon(CheckmarkOutline) : undefined,
     })),
   },
-  { label: "提建议", key: "suggest", icon: renderIcon(CreateOutline) },
-  { label: "关于", key: "about", icon: renderIcon(InformationCircleOutline) },
+  { label: text.value.settings.suggest, key: "suggest", icon: renderIcon(CreateOutline) },
+  { label: text.value.settings.about, key: "about", icon: renderIcon(InformationCircleOutline) },
   { type: "divider", key: "version-divider" },
   {
     label: () =>
       h("span", { class: "settings-version-item", "data-testid": "settings-version" }, [
         h("span", `v${props.appVersion}`),
         props.updateAvailable ? h("span", { class: "settings-version-dot", "aria-hidden": "true" }) : null,
-        props.updateAvailable ? h("span", { class: "settings-version-action" }, "更新") : null,
+        props.updateAvailable ? h("span", { class: "settings-version-action" }, text.value.settings.update) : null,
       ]),
     key: "version",
     disabled: !props.updateAvailable,
@@ -71,6 +94,10 @@ function handleSelect(key: string): void {
   if (key === "suggest") emit("suggest", triggerRef.value ?? undefined);
   if (key === "about") emit("about", triggerRef.value ?? undefined);
   if (key === "version" && props.updateAvailable) emit("update");
+  if (key.startsWith("language:")) {
+    emit("language", normalizeLanguage(key.replace("language:", "")), triggerRef.value ?? undefined);
+    return;
+  }
   if (key === "gif-theme:custom") {
     customGifDialogOpen.value = true;
     return;
@@ -108,6 +135,15 @@ function closeCustomGifDialog(): void {
   customGifDarkFile.value = undefined;
 }
 
+function getCompanionGifThemeLabel(theme: CompanionGifTheme): string {
+  if (normalizeLanguage(props.language) === "zh") {
+    return COMPANION_GIF_THEME_OPTIONS.find((option) => option.value === theme)?.label ?? theme;
+  }
+  if (theme === "custom") return "Custom";
+  if (theme === "none") return "Hidden";
+  return theme;
+}
+
 function renderIcon(component: Component) {
   return () => h(NIcon, { component });
 }
@@ -127,7 +163,7 @@ function renderIcon(component: Component) {
           class="settings-btn icon-button"
           quaternary
           size="small"
-          aria-label="设置"
+          :aria-label="text.settings.button"
           :data-update-available="updateAvailable && !menuOpen ? 'true' : undefined"
           @click="emit('guide', 'settings', $event.currentTarget as HTMLElement)"
         >
@@ -136,32 +172,32 @@ function renderIcon(component: Component) {
       </NBadge>
     </span>
   </NDropdown>
-  <section v-if="customGifDialogOpen" class="gif-theme-custom-dialog" aria-label="自定义 GIF">
+  <section v-if="customGifDialogOpen" class="gif-theme-custom-dialog" :aria-label="text.settings.customGif">
     <label>
-      <span>浅色 GIF</span>
+      <span>{{ text.settings.lightGif }}</span>
       <NUpload
         accept="image/gif,.gif"
         :max="1"
         :default-upload="false"
         @update:file-list="(files) => handleCustomGifUpload(files, 'light')"
       >
-        <NButton size="small" class="gif-theme-upload-button">选择浅色 GIF</NButton>
+        <NButton size="small" class="gif-theme-upload-button">{{ text.settings.chooseLightGif }}</NButton>
       </NUpload>
     </label>
     <label>
-      <span>深色 GIF</span>
+      <span>{{ text.settings.darkGif }}</span>
       <NUpload
         accept="image/gif,.gif"
         :max="1"
         :default-upload="false"
         @update:file-list="(files) => handleCustomGifUpload(files, 'dark')"
       >
-        <NButton size="small" class="gif-theme-upload-button">选择深色 GIF</NButton>
+        <NButton size="small" class="gif-theme-upload-button">{{ text.settings.chooseDarkGif }}</NButton>
       </NUpload>
     </label>
     <div class="gif-theme-custom-actions">
-      <button class="gif-theme-custom-cancel" type="button" @click="closeCustomGifDialog">取消</button>
-      <button class="gif-theme-custom-confirm" type="button" @click="confirmCustomGif">确定</button>
+      <button class="gif-theme-custom-cancel" type="button" @click="closeCustomGifDialog">{{ text.common.cancel }}</button>
+      <button class="gif-theme-custom-confirm" type="button" @click="confirmCustomGif">{{ text.common.confirm }}</button>
     </div>
   </section>
 </template>

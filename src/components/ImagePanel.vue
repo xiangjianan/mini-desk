@@ -2,14 +2,18 @@
 import { computed, ref } from "vue";
 import { NDropdown, NScrollbar } from "naive-ui";
 import type { DropdownOption } from "naive-ui";
-import type { GuideKey, StoredImage } from "../types";
+import type { AppLanguage, GuideKey, StoredImage } from "../types";
 import { GUIDE_MENU_OPTION } from "../state/defaults";
+import { getUiText } from "../state/i18n";
 import EditableTitle from "./EditableTitle.vue";
 
-defineProps<{
+const props = withDefaults(defineProps<{
   title: string;
   images: StoredImage[];
-}>();
+  language?: AppLanguage;
+}>(), {
+  language: "zh",
+});
 
 const emit = defineEmits<{
   titleUpdate: [id: string, value: string];
@@ -24,17 +28,18 @@ const emit = defineEmits<{
 
 const menu = ref<{ x: number; y: number; id?: string; anchor?: HTMLElement } | null>(null);
 const draggingId = ref<string | null>(null);
-const guideMenuOption: DropdownOption = { ...GUIDE_MENU_OPTION, label: GUIDE_MENU_OPTION.label || "Tips" };
+const uiText = computed(() => getUiText(props.language));
+const guideMenuOption = computed<DropdownOption>(() => ({ ...GUIDE_MENU_OPTION, label: uiText.value.common.tips }));
 
 const menuOptions = computed<DropdownOption[]>(() =>
   menu.value?.id
     ? [
-        { label: "复制", key: "copy" },
-        { label: "预览", key: "preview" },
-        { label: "删除", key: "delete" },
-        guideMenuOption,
+        { label: uiText.value.common.copy, key: "copy" },
+        { label: uiText.value.common.preview, key: "preview" },
+        { label: uiText.value.common.delete, key: "delete" },
+        guideMenuOption.value,
       ]
-    : [{ label: "粘贴图片", key: "paste" }, guideMenuOption],
+    : [{ label: uiText.value.images.pasteImage, key: "paste" }, guideMenuOption.value],
 );
 
 function openMenu(event: MouseEvent, id?: string): void {
@@ -90,7 +95,7 @@ function handleExternalDrop(event: DragEvent): void {
 
     <NScrollbar
       class="image-list-scrollbar"
-      aria-label="图床图片列表"
+      :aria-label="uiText.images.list"
       @click="closeMenu"
       @dragover.prevent
       @drop.prevent.stop="handleExternalDrop"
@@ -111,8 +116,8 @@ function handleExternalDrop(event: DragEvent): void {
         @dragend="draggingId = null"
       >
         <span class="image-index">{{ index + 1 }}</span>
-        <img v-if="image.src" :src="image.src" alt="截图缩略图" draggable="false" />
-        <span v-else class="image-missing">图片载入中</span>
+        <img v-if="image.src" :src="image.src" :alt="uiText.images.thumbnailAlt" draggable="false" />
+        <span v-else class="image-missing">{{ uiText.images.loading }}</span>
       </button>
       </div>
     </NScrollbar>

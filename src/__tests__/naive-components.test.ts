@@ -51,6 +51,7 @@ describe("Naive UI component usage", () => {
     const companionGifThemes = read("src/state/companionGifThemes.ts");
     const app = read("src/App.vue");
     const settings = read("src/components/SettingsMenu.vue");
+    const i18n = read("src/state/i18n.ts");
 
     expect(companion).toContain("NPopover");
     expect(companion).toContain("NButton");
@@ -62,7 +63,8 @@ describe("Naive UI component usage", () => {
     expect(app).toContain(':gif-theme="state.companionGifTheme"');
     expect(settings).toContain("companionGifTheme");
     expect(settings).toContain("gifTheme");
-    expect(settings).toContain("GIF 主题");
+    expect(settings).toContain("settings.gifTheme");
+    expect(i18n).toContain("GIF 主题");
     expect(settings).toContain("NUpload");
     expect(companion).toContain("gifTheme");
     expect(companion).toContain("shouldRenderGif");
@@ -118,13 +120,15 @@ describe("Naive UI component usage", () => {
   it("keeps image preview actions and companion bubble above the preview layer", () => {
     const preview = read("src/components/ImagePreview.vue");
     const styles = read("src/styles.css");
+    const i18n = read("src/state/i18n.ts");
 
     expect(preview).toContain("@contextmenu.prevent");
     expect(preview).toContain(':mask-closable="false"');
     expect(preview).toContain('@click.self="emit(\'close\')"');
-    expect(preview).toContain("取消预览");
-    expect(preview).toContain("复制");
-    expect(preview).toContain("删除");
+    expect(preview).toContain("uiText.preview.close");
+    expect(preview).toContain("uiText.common.copy");
+    expect(preview).toContain("uiText.common.delete");
+    expect(i18n).toContain("取消预览");
     expect(preview).toContain('@keydown="handleKeydown"');
     expect(preview).toContain("NDropdown");
     expect(preview).toContain("openMenu");
@@ -166,12 +170,14 @@ describe("Naive UI component usage", () => {
     const settings = read("src/components/SettingsMenu.vue");
     const todo = read("src/components/TodoPanel.vue");
     const styles = read("src/styles.css");
+    const i18n = read("src/state/i18n.ts");
 
     expect(quick).toContain("CopyOutline");
     expect(quick).toContain("quick-menu-button");
-    expect(quick).toContain("快捷链接菜单");
-    expect(quick).toContain("显示隐藏项");
-    expect(quick).toContain("收起隐藏项");
+    expect(quick).toContain("uiText.quick.menu");
+    expect(quick).toContain("uiText.value.quick.showHidden");
+    expect(quick).toContain("uiText.value.quick.hideHidden");
+    expect(i18n).toContain("快捷链接菜单");
     expect(quick).not.toContain("AddOutline");
     expect(quick).not.toContain("EyeOutline");
     expect(quick).not.toContain("EyeOffOutline");
@@ -180,8 +186,8 @@ describe("Naive UI component usage", () => {
     expect(app).toContain("SunnyOutline");
     expect(app).toContain("MoonOutline");
     expect(todo).toContain("todo-section-menu-button");
-    expect(todo).toContain("待办菜单");
-    expect(todo).toContain("清理已完成");
+    expect(todo).toContain("uiText.todo.menu");
+    expect(todo).toContain("uiText.value.todo.clearCompleted");
     expect(todo).not.toContain("TrashOutline");
     expect(settings).toContain("NIcon");
     expect(settings).toContain("NBadge");
@@ -339,6 +345,7 @@ describe("Naive UI component usage", () => {
   it("uses row Naive date pickers for notification time editing", () => {
     const todo = read("src/components/TodoPanel.vue");
     const styles = read("src/styles.css");
+    const i18n = read("src/state/i18n.ts");
 
     expect(todo).toContain("NDatePicker");
     expect(todo).toContain('type="datetime"');
@@ -355,10 +362,12 @@ describe("Naive UI component usage", () => {
     expect(todo).toContain("setNotifyPickerDraftToToday");
     expect(todo).toContain("clearNotifyPicker");
     expect(todo).toContain('<template #clear');
-    expect(todo).toContain('清除');
-    expect(todo).toContain('今天');
+    expect(todo).toContain("uiText.todo.clear");
+    expect(todo).toContain("uiText.todo.today");
+    expect(i18n).toContain('clear: "清除"');
+    expect(i18n).toContain('today: "今天"');
     expect(todo).not.toContain('此刻');
-    expect(todo).toContain('确定');
+    expect(todo).toContain("uiText.common.confirm");
     expect(todo).not.toContain('class="deadline-editor notify-editor"');
     expect(todo).not.toContain("notify-calendar-grid");
     expect(todo).not.toContain("notify-clock-options");
@@ -393,16 +402,18 @@ describe("Naive UI component usage", () => {
   it("keeps editable text copy/paste while todo item menus stay concise", () => {
     const text = read("src/components/TextPanel.vue");
     const todo = read("src/components/TodoPanel.vue");
+    const i18n = read("src/state/i18n.ts");
 
     expect(text).toContain("copyTextSelection");
     expect(text).toContain("pasteTextFromClipboard");
-    expect(text).toContain("复制");
-    expect(text).toContain("粘贴");
+    expect(text).toContain("uiText.value.common.copy");
+    expect(text).toContain("uiText.value.common.paste");
     expect(todo).toContain("copyTodoText");
-    expect(todo).toContain("复制");
-    expect(todo).toContain("设置通知时间");
-    expect(todo).toContain("编辑通知时间");
-    expect(todo).toContain("删除");
+    expect(todo).toContain("uiText.value.common.copy");
+    expect(todo).toContain("uiText.value.todo.setNotify");
+    expect(todo).toContain("uiText.value.todo.editNotify");
+    expect(todo).toContain("uiText.value.common.delete");
+    expect(i18n).toContain("设置通知时间");
   });
 
   it("keeps blank reminder hints outside the moving todo transition list", () => {
@@ -594,14 +605,15 @@ describe("Naive UI component usage", () => {
     const todo = read("src/components/TodoPanel.vue");
     const text = read("src/components/TextPanel.vue");
     const defaults = read("src/state/defaults.ts");
+    const i18n = read("src/state/i18n.ts");
 
     expect(defaults).toContain("GUIDE_MENU_OPTION");
-    expect(defaults).toContain('"today-focus-title": "重点事项"');
+    expect(i18n).toContain('"today-focus-title": "重点事项"');
     for (const source of [image, quick, todo, text]) {
       expect(source).toContain("GUIDE_MENU_OPTION");
-      expect(source).toContain("Tips");
+      expect(source).toContain("common.tips");
     }
-    expect(image).toContain("粘贴图片");
+    expect(image).toContain("uiText.value.images.pasteImage");
     expect(app).toContain("@guide=\"(anchor, immediate) => handleGuideClick('note', anchor, immediate)\"");
     expect(app).toContain("@guide=\"(_, anchor, immediate) => handleGuideClick('workspace', anchor, immediate)\"");
     expect(app).toContain("showGuideBubble");
@@ -609,10 +621,13 @@ describe("Naive UI component usage", () => {
 
   it("uses two mutually exclusive checkboxes for quick button type", () => {
     const quick = read("src/components/QuickButtons.vue");
+    const i18n = read("src/state/i18n.ts");
 
     expect(quick).toContain("setQuickType");
-    expect(quick).toContain("链接属性");
-    expect(quick).toContain("复制文本属性");
+    expect(quick).toContain("uiText.quick.linkType");
+    expect(quick).toContain("uiText.quick.textType");
+    expect(i18n).toContain("链接属性");
+    expect(i18n).toContain("复制文本属性");
     expect(quick).not.toContain("v-model:checked=\"form.isLink\"");
   });
 
@@ -636,7 +651,8 @@ describe("Naive UI component usage", () => {
     const styles = read("src/styles.css");
 
     expect(app).toContain("function about");
-    expect(app).toContain("ABOUT_MESSAGE");
+    expect(app).toContain("aboutTitle");
+    expect(app).toContain("aboutDescription");
     expect(app).toContain("GITHUB_REPO_LABEL");
     expect(app).toContain("GITHUB_REPO_URL");
     expect(app).toContain("xiangjianan / todolist");
@@ -695,16 +711,17 @@ describe("Naive UI component usage", () => {
     const app = read("src/App.vue");
     const styles = read("src/styles.css");
     const text = read("src/components/TextPanel.vue");
+    const i18n = read("src/state/i18n.ts");
 
     expect(app).toContain('class="workspace-panel"');
     expect(app).toContain("MOBILE_BREAKPOINT_QUERY");
-    expect(app).toContain("MOBILE_HANDOFF_MESSAGE");
+    expect(app).toContain("mobileMessage");
     expect(app).toContain('class="mobile-handoff"');
     expect(app).toContain('class="mobile-handoff-title"');
     expect(app).toContain('class="mobile-handoff-theme"');
     expect(app).toContain('v-if="!isMobileBlocked"');
     expect(app).toContain("isMobileBlocked.value || companionVisible.value");
-    expect(app).toContain("建议在电脑浏览器打开，以获得完整体验");
+    expect(i18n).toContain("建议在电脑浏览器打开，以获得完整体验");
     expect(app).not.toContain('class="mobile-nav"');
     expect(app).not.toContain('class="mobile-drawer-trigger"');
     expect(app).not.toContain('class="mobile-drawer-menu"');

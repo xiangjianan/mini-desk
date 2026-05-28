@@ -167,6 +167,33 @@ describe("App shell", () => {
     wrapper.unmount();
   });
 
+  it("switches default public titles to English while preserving custom titles", async () => {
+    localStorage.setItem(STORAGE_KEY, JSON.stringify({
+      ...defaultState(),
+      customTitles: {
+        "note-title": "我的便签",
+      },
+    }));
+    const wrapper = mountApp();
+
+    try {
+      wrapper.getComponent(SettingsMenu).vm.$emit("language", "en", wrapper.get(".settings-trigger").element as HTMLElement);
+      await nextTick();
+
+      expect(wrapper.text()).toContain("Screenshots");
+      expect(wrapper.text()).toContain("我的便签");
+      expect(wrapper.text()).toContain("Quick Links");
+      expect(wrapper.text()).toContain("Morning");
+      expect(wrapper.text()).toContain("Noon");
+      expect(wrapper.text()).toContain("Evening");
+      expect(wrapper.findAll(".space-tab").map((tab) => tab.text())).toEqual(["Workspace"]);
+      expect(wrapper.text()).not.toContain("快捷链接");
+      expect(JSON.parse(localStorage.getItem(STORAGE_KEY) || "{}").language).toBe("en");
+    } finally {
+      wrapper.unmount();
+    }
+  });
+
   it("renders persisted dynamic todo lists without forcing legacy periods", async () => {
     localStorage.setItem(
       STORAGE_KEY,
@@ -1191,7 +1218,7 @@ describe("App shell", () => {
       expect(notificationSpy).toHaveBeenCalledWith("☀️ 早上", {
         body: "喝水",
         tag: `todo-1:${notifyAt}`,
-        icon: expect.stringContaining("kun.gif"),
+        icon: expect.stringContaining("kun.jpg"),
       });
     } finally {
       wrapper.unmount();

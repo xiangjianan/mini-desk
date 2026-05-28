@@ -15,7 +15,7 @@ describe("app version", () => {
     const index = readFileSync(resolve(root, "index.html"), "utf8");
     const pkg = JSON.parse(readFileSync(resolve(root, "package.json"), "utf8")) as { version: string };
 
-    expect(pkg.version).toBe("1.0.25");
+    expect(pkg.version).toBe("1.0.26");
     expect(index).toContain(`<meta name="app-version" content="${pkg.version}"`);
     expect(FALLBACK_APP_VERSION).toBe(pkg.version);
   });

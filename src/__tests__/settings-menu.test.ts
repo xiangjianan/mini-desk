@@ -53,6 +53,7 @@ describe("SettingsMenu", () => {
         appVersion: "1.0.11",
         updateAvailable: false,
         companionGifTheme: "hermes",
+        language: "zh",
       },
       global: {
         stubs: {
@@ -80,6 +81,7 @@ describe("SettingsMenu", () => {
         appVersion: "1.0.18",
         updateAvailable: false,
         companionGifTheme: "none",
+        language: "zh",
       },
       global: {
         stubs: {
@@ -107,6 +109,7 @@ describe("SettingsMenu", () => {
         appVersion: "1.0.18",
         updateAvailable: false,
         companionGifTheme: "hermes",
+        language: "zh",
       },
       global: {
         stubs: {
@@ -130,6 +133,7 @@ describe("SettingsMenu", () => {
         appVersion: "1.0.19",
         updateAvailable: false,
         companionGifTheme: "hermes",
+        language: "zh",
       },
       global: {
         stubs: {
@@ -159,5 +163,56 @@ describe("SettingsMenu", () => {
       expect.any(HTMLElement),
     ]);
     expect(wrapper.find(".gif-theme-custom-dialog").exists()).toBe(false);
+  });
+
+  it("renders a language switch and emits the selected language", async () => {
+    const wrapper = mount(SettingsMenu, {
+      props: {
+        appVersion: "1.0.25",
+        updateAvailable: false,
+        companionGifTheme: "ikun",
+        language: "zh",
+      },
+      global: {
+        stubs: {
+          Dropdown: dropdownStub,
+          NDropdown: dropdownStub,
+          NBadge: { template: "<span><slot /></span>" },
+          NButton: { template: "<button><slot /></button>" },
+          NIcon: { template: "<span />" },
+        },
+      },
+    });
+
+    expect(wrapper.find('[data-key="language"]').text()).toBe("Language");
+    expect(wrapper.find('[data-key="language:zh"]').classes()).toContain("is-selected");
+    expect(wrapper.find('[data-key="language:en"]').text()).toBe("English");
+
+    await wrapper.find('[data-key="language:en"]').trigger("click");
+
+    expect(wrapper.emitted("language")?.[0]).toEqual(["en", expect.any(HTMLElement)]);
+  });
+
+  it("uses Chinese as the language switch label while English is active", () => {
+    const wrapper = mount(SettingsMenu, {
+      props: {
+        appVersion: "1.0.25",
+        updateAvailable: false,
+        companionGifTheme: "ikun",
+        language: "en",
+      },
+      global: {
+        stubs: {
+          Dropdown: dropdownStub,
+          NDropdown: dropdownStub,
+          NBadge: { template: "<span><slot /></span>" },
+          NButton: { template: "<button><slot /></button>" },
+          NIcon: { template: "<span />" },
+        },
+      },
+    });
+
+    expect(wrapper.find('[data-key="language"]').text()).toBe("语言");
+    expect(wrapper.find('[data-key="language:en"]').classes()).toContain("is-selected");
   });
 });

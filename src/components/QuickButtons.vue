@@ -3,15 +3,19 @@ import { computed, reactive, ref, watch } from "vue";
 import { NButton, NCheckbox, NDropdown, NIcon, NInput, NModal, NScrollbar } from "naive-ui";
 import { CopyOutline } from "@vicons/ionicons5";
 import type { DropdownOption } from "naive-ui";
-import type { GuideKey, QuickButton, QuickButtonType } from "../types";
+import type { AppLanguage, GuideKey, QuickButton, QuickButtonType } from "../types";
 import { GUIDE_MENU_OPTION } from "../state/defaults";
+import { getUiText } from "../state/i18n";
 import EditableTitle from "./EditableTitle.vue";
 
-const props = defineProps<{
+const props = withDefaults(defineProps<{
   title: string;
   buttons: QuickButton[];
   showHidden: boolean;
-}>();
+  language?: AppLanguage;
+}>(), {
+  language: "zh",
+});
 
 const emit = defineEmits<{
   titleUpdate: [id: string, value: string];
@@ -33,7 +37,8 @@ const form = reactive<{ title: string; value: string; type: QuickButtonType }>({
 });
 const menu = ref<{ x: number; y: number; id?: string; anchor?: HTMLElement } | null>(null);
 const draggingId = ref<string | null>(null);
-const guideMenuOption: DropdownOption = { ...GUIDE_MENU_OPTION, label: GUIDE_MENU_OPTION.label || "Tips" };
+const uiText = computed(() => getUiText(props.language));
+const guideMenuOption = computed<DropdownOption>(() => ({ ...GUIDE_MENU_OPTION, label: uiText.value.common.tips }));
 
 const visibleButtons = computed(() =>
   props.buttons.filter((button) => props.showHidden || !button.hidden),
@@ -43,16 +48,16 @@ const menuOptions = computed<DropdownOption[]>(() => {
   const button = props.buttons.find((item) => item.id === menu.value?.id);
   if (!menu.value?.id) {
     return [
-      { label: "新增", key: "add" },
-      { label: props.showHidden ? "收起隐藏项" : "显示隐藏项", key: "toggle-show-hidden" },
-      guideMenuOption,
+      { label: uiText.value.quick.add, key: "add" },
+      { label: props.showHidden ? uiText.value.quick.hideHidden : uiText.value.quick.showHidden, key: "toggle-show-hidden" },
+      guideMenuOption.value,
     ];
   }
   return [
-    { label: "编辑", key: "edit" },
-    { label: button?.hidden ? "显示" : "隐藏", key: "toggle-hidden" },
-    { label: "删除", key: "delete" },
-    guideMenuOption,
+    { label: uiText.value.common.edit, key: "edit" },
+    { label: button?.hidden ? uiText.value.quick.show : uiText.value.quick.hide, key: "toggle-hidden" },
+    { label: uiText.value.common.delete, key: "delete" },
+    guideMenuOption.value,
   ];
 });
 
@@ -164,7 +169,7 @@ function handleToggleShowHidden(anchor?: HTMLElement): void {
         <button
           type="button"
           class="quick-menu-button icon-button"
-          aria-label="快捷链接菜单"
+          :aria-label="uiText.quick.menu"
           @click="openHeaderMenu"
         >
           ⋯
@@ -172,7 +177,7 @@ function handleToggleShowHidden(anchor?: HTMLElement): void {
       </div>
     </div>
 
-    <NScrollbar class="quick-buttons-scrollbar" aria-label="快捷按钮列表" @click="closeMenu" @contextmenu="openAreaMenu">
+    <NScrollbar class="quick-buttons-scrollbar" :aria-label="uiText.quick.list" @click="closeMenu" @contextmenu="openAreaMenu">
       <div class="quick-buttons">
         <button
           v-for="button in visibleButtons"
@@ -217,23 +222,23 @@ function handleToggleShowHidden(anchor?: HTMLElement): void {
       preset="card"
       class="quick-dialog"
       :mask-closable="false"
-      :title="editingId ? '编辑快捷按钮' : '新增快捷按钮'"
+      :title="editingId ? uiText.quick.dialogEdit : uiText.quick.dialogAdd"
     >
       <form class="quick-form" @submit.prevent="submit">
         <label>
-          <span>标题</span>
+          <span>{{ uiText.quick.title }}</span>
           <NInput v-model:value="form.title" autocomplete="off" />
         </label>
         <div class="quick-type-options">
           <label class="checkbox-row">
-            <NCheckbox :checked="form.type === 'link'" @update:checked="setQuickType('link')">链接属性</NCheckbox>
+            <NCheckbox :checked="form.type === 'link'" @update:checked="setQuickType('link')">{{ uiText.quick.linkType }}</NCheckbox>
           </label>
           <label class="checkbox-row">
-            <NCheckbox :checked="form.type === 'text'" @update:checked="setQuickType('text')">复制文本属性</NCheckbox>
+            <NCheckbox :checked="form.type === 'text'" @update:checked="setQuickType('text')">{{ uiText.quick.textType }}</NCheckbox>
           </label>
         </div>
         <label>
-          <span>{{ form.type === "link" ? "URL" : "复制文本" }}</span>
+          <span>{{ form.type === "link" ? "URL" : uiText.quick.copyText }}</span>
           <NInput
             v-model:value="form.value"
             :type="form.type === 'text' ? 'textarea' : 'text'"
@@ -242,8 +247,8 @@ function handleToggleShowHidden(anchor?: HTMLElement): void {
           />
         </label>
         <div class="dialog-actions">
-          <NButton v-if="editingId" ghost @click="closeDialog">取消</NButton>
-          <NButton attr-type="submit" type="primary" :disabled="!canSubmit">保存</NButton>
+          <NButton v-if="editingId" ghost @click="closeDialog">{{ uiText.common.cancel }}</NButton>
+          <NButton attr-type="submit" type="primary" :disabled="!canSubmit">{{ uiText.common.save }}</NButton>
         </div>
       </form>
     </NModal>

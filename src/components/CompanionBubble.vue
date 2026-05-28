@@ -2,10 +2,11 @@
 import { computed, onMounted, onUnmounted, ref, watch } from "vue";
 import { LogoGithub } from "@vicons/ionicons5";
 import { NButton, NIcon, NPopover } from "naive-ui";
-import type { CompanionGifTheme } from "../types";
+import type { AppLanguage, CompanionGifTheme } from "../types";
 import { getCompanionGifSrc } from "../state/companionGifThemes";
+import { getUiText } from "../state/i18n";
 
-const props = defineProps<{
+const props = withDefaults(defineProps<{
   visible: boolean;
   message: string;
   linkText?: string;
@@ -18,6 +19,7 @@ const props = defineProps<{
   clearSignal?: number;
   persistent?: boolean;
   theme?: "light" | "dark";
+  language?: AppLanguage;
   gifTheme?: CompanionGifTheme;
   customGifLightSrc?: string;
   customGifDarkSrc?: string;
@@ -26,7 +28,9 @@ const props = defineProps<{
     bottom?: string;
     top?: string;
   };
-}>();
+}>(), {
+  language: "zh",
+});
 
 const emit = defineEmits<{
   yes: [];
@@ -49,8 +53,8 @@ const renderedLinkText = ref("");
 const renderedLinkHref = ref("");
 const renderedConfirm = ref(false);
 const renderedConfirmDanger = ref(false);
-const renderedConfirmText = ref("是");
-const renderedCancelText = ref("否");
+const renderedConfirmText = ref("");
+const renderedCancelText = ref("");
 const renderedActionText = ref("");
 const popoverTimer = ref<number | undefined>();
 const contentTimer = ref<number | undefined>();
@@ -61,6 +65,7 @@ const gifTimerStartedAt = ref(0);
 const hoveringCompanion = ref(false);
 const surfaceRef = ref<HTMLElement | null>(null);
 const popoverRef = ref<HTMLElement | null>(null);
+const uiText = computed(() => getUiText(props.language));
 
 const placementStyle = computed(() => {
   if (!props.position) return undefined;
@@ -108,8 +113,8 @@ watch(
         renderedLinkHref.value = "";
         renderedConfirm.value = false;
         renderedConfirmDanger.value = false;
-        renderedConfirmText.value = "是";
-        renderedCancelText.value = "否";
+        renderedConfirmText.value = uiText.value.common.yes;
+        renderedCancelText.value = uiText.value.common.no;
         renderedActionText.value = "";
       }, POPOVER_HIDE_CONTENT_MS);
       return;
@@ -119,8 +124,8 @@ watch(
     renderedLinkHref.value = props.linkHref ?? "";
     renderedConfirm.value = Boolean(props.confirm);
     renderedConfirmDanger.value = Boolean(props.confirmDanger);
-    renderedConfirmText.value = props.confirmText ?? "是";
-    renderedCancelText.value = props.cancelText ?? "否";
+    renderedConfirmText.value = props.confirmText ?? uiText.value.common.yes;
+    renderedCancelText.value = props.cancelText ?? uiText.value.common.no;
     renderedActionText.value = "";
     retainingPopoverContent.value = false;
     popoverTimer.value = window.setTimeout(() => {
@@ -141,6 +146,7 @@ watch(
       props.confirmDanger,
       props.persistent,
       props.theme,
+      props.language,
       props.gifTheme,
       props.customGifLightSrc,
       props.customGifDarkSrc,
@@ -170,7 +176,7 @@ watch(
 );
 
 watch(
-  () => [props.message, props.linkText, props.linkHref, props.confirm, props.confirmDanger, props.confirmText, props.cancelText, props.actionText] as const,
+  () => [props.message, props.linkText, props.linkHref, props.confirm, props.confirmDanger, props.confirmText, props.cancelText, props.actionText, props.language] as const,
   () => {
     if (!popoverVisible.value) return;
     renderedMessage.value = props.message;
@@ -178,8 +184,8 @@ watch(
     renderedLinkHref.value = props.linkHref ?? "";
     renderedConfirm.value = Boolean(props.confirm);
     renderedConfirmDanger.value = Boolean(props.confirmDanger);
-    renderedConfirmText.value = props.confirmText ?? "是";
-    renderedCancelText.value = props.cancelText ?? "否";
+    renderedConfirmText.value = props.confirmText ?? uiText.value.common.yes;
+    renderedCancelText.value = props.cancelText ?? uiText.value.common.no;
     renderedActionText.value = "";
   },
 );
@@ -196,8 +202,8 @@ watch(
     renderedLinkHref.value = "";
     renderedConfirm.value = false;
     renderedConfirmDanger.value = false;
-    renderedConfirmText.value = "是";
-    renderedCancelText.value = "否";
+    renderedConfirmText.value = uiText.value.common.yes;
+    renderedCancelText.value = uiText.value.common.no;
     renderedActionText.value = "";
   },
 );

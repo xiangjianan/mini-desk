@@ -4,6 +4,7 @@ import { AlarmOutline, ChevronDownOutline } from "@vicons/ionicons5";
 import { NCheckbox, NDatePicker, NDropdown, NIcon, NScrollbar } from "naive-ui";
 import type { DropdownOption } from "naive-ui";
 import { DEFAULT_TODO_LISTS, GUIDE_MENU_OPTION } from "../state/defaults";
+import { getDisplayTodoListTitle, getUiText } from "../state/i18n";
 import {
   getDefaultNotifyDateTimeValue,
   getNotifyDisplay,
@@ -13,6 +14,7 @@ import {
 import type {
   DraggedTodo,
   GuideKey,
+  AppLanguage,
   TodoCompletedVisibility,
   TodoItem,
   TodoListConfig,
@@ -25,13 +27,16 @@ import { getOrderedTodos } from "../state/todos";
 import { splitDroppedTodoText } from "../utils/textEditor";
 import EditableTitle from "./EditableTitle.vue";
 
-const props = defineProps<{
+const props = withDefaults(defineProps<{
   todoLists?: TodoListConfig[];
   todos: TodoMap;
   titles: Record<string, string>;
   showCompleted?: TodoCompletedVisibility;
   editListId?: TodoListId | null;
-}>();
+  language?: AppLanguage;
+}>(), {
+  language: "zh",
+});
 
 const emit = defineEmits<{
   titleUpdate: [id: string, value: string];
@@ -95,48 +100,52 @@ const lastTodoCarets = new Map<string, number>();
 const lastTodoSelections = new Map<string, { start: number; end: number }>();
 const todoSectionRefs = new Map<TodoListId, HTMLElement>();
 const notifyPickerAnchors = new Map<string, HTMLElement>();
-const guideMenuOption: DropdownOption = { ...GUIDE_MENU_OPTION, label: GUIDE_MENU_OPTION.label || "Tips" };
+const uiText = computed(() => getUiText(props.language));
+const guideMenuOption = computed<DropdownOption>(() => ({ ...GUIDE_MENU_OPTION, label: uiText.value.common.tips }));
 const legacyTodoTitleIds: Record<TodoListId, string> = {
   morning: "todo-morning-title",
   noon: "todo-noon-title",
   evening: "todo-evening-title",
 };
 const effectiveTodoLists = computed(() => {
-  if (props.todoLists) return props.todoLists;
-  return DEFAULT_TODO_LISTS.map((list) => ({
+  const lists = props.todoLists ?? DEFAULT_TODO_LISTS.map((list) => ({
     ...list,
     title: getFallbackListTitle(list),
+  }));
+  return lists.map((list) => ({
+    ...list,
+    title: getDisplayTodoListTitle(list, props.language),
   }));
 });
 const menuOptions = computed<DropdownOption[]>(() => {
   if (menu.value?.sectionActions) {
     const list = getListById(menu.value.period);
-    if (!list) return [guideMenuOption];
+    if (!list) return [guideMenuOption.value];
     return [
-      { label: isCompletedVisible(list.id) ? "隐藏已完成" : "显示已完成", key: "toggle-completed" },
-      { label: "清理已完成", key: "clear-completed" },
-      { label: "删除列表", key: "delete-list", disabled: effectiveTodoLists.value.length <= 1 },
-      guideMenuOption,
+      { label: isCompletedVisible(list.id) ? uiText.value.todo.hideCompleted : uiText.value.todo.showCompleted, key: "toggle-completed" },
+      { label: uiText.value.todo.clearCompleted, key: "clear-completed" },
+      { label: uiText.value.todo.deleteList, key: "delete-list", disabled: effectiveTodoLists.value.length <= 1 },
+      guideMenuOption.value,
     ];
   }
   const options: DropdownOption[] = [];
   const todo = getMenuTodo();
   if (!menu.value?.id) {
-    options.push({ label: "新增提醒列表", key: "create-list" });
+    options.push({ label: uiText.value.todo.createList, key: "create-list" });
   }
   if (menu.value?.id) {
-    options.push({ label: "复制", key: "copy" });
+    options.push({ label: uiText.value.common.copy, key: "copy" });
     if (menu.value.target && canPasteTodoText(menu.value.period, menu.value.id, menu.value.target)) {
-      options.push({ label: "粘贴", key: "paste" });
+      options.push({ label: uiText.value.common.paste, key: "paste" });
     }
     options.push({
-      label: isValidDeadlineAt(todo?.notifyAt) ? "编辑通知时间" : "设置通知时间",
+      label: isValidDeadlineAt(todo?.notifyAt) ? uiText.value.todo.editNotify : uiText.value.todo.setNotify,
       key: "notify",
     });
-    options.push({ label: "删除", key: "delete" });
-    options.push({ label: todo?.starred ? "取消星标" : "星标", key: "star" });
+    options.push({ label: uiText.value.common.delete, key: "delete" });
+    options.push({ label: todo?.starred ? uiText.value.todo.unstar : uiText.value.todo.star, key: "star" });
   }
-  options.push(guideMenuOption);
+  options.push(guideMenuOption.value);
   return options;
 });
 
@@ -208,7 +217,7 @@ const notifyDisplays = computed(() => {
   const now = deadlineNow.value;
   effectiveTodoLists.value.forEach((list) => {
     getTodos(list.id).forEach((todo) => {
-      const display = getNotifyDisplay(todo.notifyAt, now);
+      const display = getNotifyDisplay(todo.notifyAt, now, props.language);
       if (display) displays.set(todo, display);
     });
   });
@@ -957,7 +966,7 @@ function buildTodoListEntries(period: TodoListId, todos: TodoItem[], deferredDon
 <template>
   <section class="panel todo-panel" aria-labelledby="todo-title">
     <Transition name="section-reveal" :duration="240">
-      <section v-if="todayFocus.length" class="today-focus-section" aria-label="今日重点">
+      <section v-if="todayFocus.length" class="today-focus-section" :aria-label="uiText.todo.todayFocus">
         <div class="today-focus-heading">
           <EditableTitle
             :id="todayFocusTitleId"
@@ -979,7 +988,7 @@ function buildTodoListEntries(period: TodoListId, todos: TodoItem[], deferredDon
           >
             <NCheckbox
               :checked="item.todo.done"
-              aria-label="完成"
+              :aria-label="uiText.todo.done"
               @update:checked="(checked) => handleChecked(item.period, item.todo.id, checked)"
             />
             <input
@@ -1001,7 +1010,7 @@ function buildTodoListEntries(period: TodoListId, todos: TodoItem[], deferredDon
               :class="{ 'todo-deadline-slot': Boolean(getTodoCompactNotifyLabel(item.todo)), 'has-time': Boolean(getTodoCompactNotifyLabel(item.todo)) }"
               :ref="(element) => setNotifyPickerAnchor(item.period, item.todo.id, element as Element | null)"
               type="button"
-              :aria-label="getTodoCompactNotifyLabel(item.todo) ? '编辑通知时间' : '设置通知时间'"
+              :aria-label="getTodoCompactNotifyLabel(item.todo) ? uiText.todo.editNotify : uiText.todo.setNotify"
               @click="handleNotifyClick($event, item.period, item.todo)"
             >
               <span v-if="getTodoCompactNotifyLabel(item.todo)" class="todo-deadline-label">
@@ -1012,7 +1021,7 @@ function buildTodoListEntries(period: TodoListId, todos: TodoItem[], deferredDon
             <button
               class="todo-star-button is-starred"
               type="button"
-              aria-label="取消重点"
+              :aria-label="uiText.todo.unpin"
               @click="handleStarClick($event, item.period, item.todo)"
             >
               ★
@@ -1046,7 +1055,7 @@ function buildTodoListEntries(period: TodoListId, todos: TodoItem[], deferredDon
         >
           <span
             class="todo-list-drag-handle"
-            aria-label="拖动提醒列表"
+            :aria-label="uiText.todo.dragList"
           />
           <h3>
             <EditableTitle
@@ -1060,7 +1069,7 @@ function buildTodoListEntries(period: TodoListId, todos: TodoItem[], deferredDon
             type="button"
             class="todo-collapse-button icon-button"
             :class="{ 'is-collapsed': list.collapsed }"
-            :aria-label="list.collapsed ? '展开提醒列表' : '收起提醒列表'"
+            :aria-label="list.collapsed ? uiText.todo.expand : uiText.todo.collapse"
             @click.stop="emit('toggleListCollapsed', list.id, !list.collapsed)"
           >
             <NIcon :component="ChevronDownOutline" />
@@ -1070,7 +1079,7 @@ function buildTodoListEntries(period: TodoListId, todos: TodoItem[], deferredDon
             <button
               type="button"
               class="todo-section-menu-button icon-button"
-              aria-label="待办菜单"
+              :aria-label="uiText.todo.menu"
               @click="openSectionActions($event, list.id)"
             >
               ⋯
@@ -1097,7 +1106,7 @@ function buildTodoListEntries(period: TodoListId, todos: TodoItem[], deferredDon
               <li
                 :key="`${list.id}-empty-hint`"
                 class="todo-empty-hint"
-                aria-label="提醒事项 Tips"
+                :aria-label="uiText.todo.tips"
               />
             </ul>
           </NScrollbar>
@@ -1134,13 +1143,13 @@ function buildTodoListEntries(period: TodoListId, todos: TodoItem[], deferredDon
                   class="todo-drag-handle"
                   type="button"
                   draggable="true"
-                  aria-label="拖动提醒事项"
+                  :aria-label="uiText.todo.dragTodo"
                   @dragstart="handleTodoDragStart($event, list.id, entry.todo)"
                   @dragend="dragged = null"
                 />
                 <NCheckbox
                   :checked="entry.todo.done"
-                  aria-label="完成"
+                  :aria-label="uiText.todo.done"
                   @update:checked="(checked) => handleChecked(list.id, entry.todo.id, checked)"
                 />
                 <input
@@ -1164,7 +1173,7 @@ function buildTodoListEntries(period: TodoListId, todos: TodoItem[], deferredDon
                   :class="{ 'todo-deadline-slot': Boolean(getTodoCompactNotifyLabel(entry.todo)), 'has-time': Boolean(getTodoCompactNotifyLabel(entry.todo)) }"
                   :ref="(element) => setNotifyPickerAnchor(list.id, entry.todo.id, element as Element | null)"
                   type="button"
-                  :aria-label="getTodoCompactNotifyLabel(entry.todo) ? '编辑通知时间' : '设置通知时间'"
+                  :aria-label="getTodoCompactNotifyLabel(entry.todo) ? uiText.todo.editNotify : uiText.todo.setNotify"
                   @click="handleNotifyClick($event, list.id, entry.todo)"
                 >
                   <span v-if="getTodoCompactNotifyLabel(entry.todo)" class="todo-deadline-label">
@@ -1176,7 +1185,7 @@ function buildTodoListEntries(period: TodoListId, todos: TodoItem[], deferredDon
                   class="todo-star-button"
                   :class="{ 'is-starred': entry.todo.starred }"
                   type="button"
-                  :aria-label="entry.todo.starred ? '取消重点' : '设为重点'"
+                  :aria-label="entry.todo.starred ? uiText.todo.unpin : uiText.todo.pin"
                   @click="handleStarClick($event, list.id, entry.todo)"
                 >
                   {{ entry.todo.starred ? "★" : "☆" }}
@@ -1186,13 +1195,13 @@ function buildTodoListEntries(period: TodoListId, todos: TodoItem[], deferredDon
                 v-else
                 class="todo-completed-divider"
               >
-                <span>已完成</span>
+                <span>{{ uiText.todo.completed }}</span>
                 <button
                   class="todo-completed-clear"
                   type="button"
                   @click.stop="emit('clearCompleted', entry.period, getTodoSectionAnchor(entry.period))"
                 >
-                  clear
+                  {{ uiText.todo.clear }}
                 </button>
               </li>
             </template>
@@ -1209,7 +1218,7 @@ function buildTodoListEntries(period: TodoListId, todos: TodoItem[], deferredDon
           ref="notifyPickerRef"
           class="notify-floating-date-picker"
           :style="notifyPickerStyle"
-          aria-label="设置通知时间"
+          :aria-label="uiText.todo.setNotify"
         >
           <NDatePicker
             class="notify-date-picker"
@@ -1226,13 +1235,13 @@ function buildTodoListEntries(period: TodoListId, todos: TodoItem[], deferredDon
             @confirm="confirmNotifyPicker"
           >
             <template #clear>
-              <button class="notify-panel-action is-danger" type="button" @click="clearNotifyPicker">清除</button>
+              <button class="notify-panel-action is-danger" type="button" @click="clearNotifyPicker">{{ uiText.todo.clear }}</button>
             </template>
             <template #now>
-              <button class="notify-panel-action" type="button" @click="setNotifyPickerDraftToToday">今天</button>
+              <button class="notify-panel-action" type="button" @click="setNotifyPickerDraftToToday">{{ uiText.todo.today }}</button>
             </template>
             <template #confirm="{ onConfirm, disabled }">
-              <button class="notify-panel-action" type="button" :disabled="disabled" @click="onConfirm">确定</button>
+              <button class="notify-panel-action" type="button" :disabled="disabled" @click="onConfirm">{{ uiText.common.confirm }}</button>
             </template>
           </NDatePicker>
         </div>
@@ -1245,9 +1254,9 @@ function buildTodoListEntries(period: TodoListId, todos: TodoItem[], deferredDon
         ref="listCreateDialogRef"
         class="todo-list-create-dialog"
         :style="listCreateDialogStyle"
-        aria-label="新增提醒列表"
+        :aria-label="uiText.todo.listDialog"
       >
-        <label class="todo-list-create-label" for="todo-list-create-input">列表名称</label>
+        <label class="todo-list-create-label" for="todo-list-create-input">{{ uiText.todo.listName }}</label>
         <input
           id="todo-list-create-input"
           ref="listCreateInputRef"
@@ -1258,8 +1267,8 @@ function buildTodoListEntries(period: TodoListId, todos: TodoItem[], deferredDon
           @keydown.esc.prevent="closeCreateListDialog"
         />
         <div class="todo-list-create-actions">
-          <button class="todo-list-create-cancel" type="button" @click="closeCreateListDialog">取消</button>
-          <button class="todo-list-create-confirm" type="button" @click="confirmCreateListDialog">确定</button>
+          <button class="todo-list-create-cancel" type="button" @click="closeCreateListDialog">{{ uiText.common.cancel }}</button>
+          <button class="todo-list-create-confirm" type="button" @click="confirmCreateListDialog">{{ uiText.common.confirm }}</button>
         </div>
       </section>
     </Transition>

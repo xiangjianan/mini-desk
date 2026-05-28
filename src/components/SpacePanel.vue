@@ -2,14 +2,18 @@
 import { computed, nextTick, ref, watch } from "vue";
 import { NDropdown, NScrollbar } from "naive-ui";
 import type { DropdownOption } from "naive-ui";
-import type { GuideKey, LineItem, WorkspaceSpace } from "../types";
+import type { AppLanguage, GuideKey, LineItem, WorkspaceSpace } from "../types";
+import { getUiText } from "../state/i18n";
 import TextPanel from "./TextPanel.vue";
 
-const props = defineProps<{
+const props = withDefaults(defineProps<{
   spaces: WorkspaceSpace[];
   activeSpaceId: string;
   editSpaceId?: string | null;
-}>();
+  language?: AppLanguage;
+}>(), {
+  language: "zh",
+});
 
 const emit = defineEmits<{
   activate: [id: string];
@@ -29,6 +33,7 @@ const editingTitle = ref("");
 const titleComposing = ref(false);
 const draggedSpaceId = ref<string | null>(null);
 const menu = ref<{ x: number; y: number; spaceId: string } | null>(null);
+const uiText = computed(() => getUiText(props.language));
 
 const activeSpace = computed(() =>
   props.spaces.find((space) => space.id === props.activeSpaceId) ?? props.spaces[0],
@@ -36,8 +41,8 @@ const activeSpace = computed(() =>
 
 const canDeleteSpaces = computed(() => props.spaces.length > 1);
 const menuOptions = computed<DropdownOption[]>(() => [
-  { label: "编辑", key: "edit" },
-  { label: "删除", key: "delete", disabled: !canDeleteSpaces.value },
+  { label: uiText.value.common.edit, key: "edit" },
+  { label: uiText.value.common.delete, key: "delete", disabled: !canDeleteSpaces.value },
 ]);
 
 function handleRename(_titleId: string, title: string): void {
@@ -146,9 +151,9 @@ function handleTabsWheel(event: WheelEvent): void {
 </script>
 
 <template>
-  <section class="panel space-panel" aria-label="空间">
+  <section class="panel space-panel" :aria-label="uiText.space.panel">
     <NScrollbar class="space-tabs-scrollbar" x-scrollable trigger="none">
-      <div class="space-tabs" role="tablist" aria-label="空间列表" @wheel="handleTabsWheel">
+      <div class="space-tabs" role="tablist" :aria-label="uiText.space.list" @wheel="handleTabsWheel">
         <template v-for="space in spaces" :key="space.id">
           <button
             v-if="editingSpaceId !== space.id"
@@ -172,7 +177,7 @@ function handleTabsWheel(event: WheelEvent): void {
             v-else
             v-model="editingTitle"
             class="space-tab-edit-input"
-            aria-label="编辑空间名称"
+            :aria-label="uiText.space.editName"
             @compositionstart="titleComposing = true"
             @compositionend="titleComposing = false"
             @keydown.enter="handleTabEditEnter"
@@ -183,7 +188,7 @@ function handleTabsWheel(event: WheelEvent): void {
         <button
           class="space-add-button icon-button"
           type="button"
-          aria-label="新增空间"
+          :aria-label="uiText.space.add"
           @click="emit('create')"
         >
           +
@@ -200,6 +205,7 @@ function handleTabsWheel(event: WheelEvent): void {
           :title-id="`space-${activeSpace.id}-title`"
           :title="activeSpace.title"
           :lines="activeSpace.lines"
+          :language="props.language"
           hide-header
           @title-update="handleRename"
           @update="handleUpdate"

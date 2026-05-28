@@ -103,13 +103,14 @@ export function getDefaultNotifyDateTimeValue(now = new Date()): number {
   return new Date(now.getFullYear(), now.getMonth(), now.getDate(), 9, 0, 0, 0).getTime();
 }
 
-export function getNotifyDisplay(notifyAt: number | undefined, now = Date.now()): NotifyDisplay | null {
+export function getNotifyDisplay(notifyAt: number | undefined, now = Date.now(), language: AppLanguage = DEFAULT_LANGUAGE): NotifyDisplay | null {
   if (!isValidNotifyAt(notifyAt) || !isValidNotifyAt(now)) return null;
+  const normalizedLanguage = normalizeLanguage(language);
 
   if (notifyAt < now) {
     return {
-      label: "! 已超期",
-      compactLabel: "! 已超期",
+      label: normalizedLanguage === "en" ? "! Overdue" : "! 已超期",
+      compactLabel: normalizedLanguage === "en" ? "! Overdue" : "! 已超期",
       urgency: "overdue",
     };
   }
@@ -117,29 +118,29 @@ export function getNotifyDisplay(notifyAt: number | undefined, now = Date.now())
   const notifyDate = new Date(notifyAt);
   const dayDistance = getLocalDayDistance(now, notifyAt);
   const isWithinDueSoonWindow = notifyAt - now <= ONE_DAY_MS;
-  const timeLabel = getDisplayTimeLabel(notifyDate);
+  const timeLabel = getDisplayTimeLabel(notifyDate, normalizedLanguage);
   const compactTimeLabel = getCompactTimeLabel(notifyDate);
 
   if (isWithinDueSoonWindow && dayDistance === 0) {
     return {
-      label: `今天${timeLabel}`,
-      compactLabel: `今天 ${compactTimeLabel}`,
+      label: normalizedLanguage === "en" ? `Today ${timeLabel}` : `今天${timeLabel}`,
+      compactLabel: normalizedLanguage === "en" ? `Today ${compactTimeLabel}` : `今天 ${compactTimeLabel}`,
       urgency: "due-soon",
     };
   }
 
   if (isWithinDueSoonWindow && dayDistance === 1) {
     return {
-      label: `明天${timeLabel}`,
-      compactLabel: `明天 ${compactTimeLabel}`,
+      label: normalizedLanguage === "en" ? `Tomorrow ${timeLabel}` : `明天${timeLabel}`,
+      compactLabel: normalizedLanguage === "en" ? `Tomorrow ${compactTimeLabel}` : `明天 ${compactTimeLabel}`,
       urgency: "due-soon",
     };
   }
 
   if (dayDistance <= 3) {
     return {
-      label: `${dayDistance}天后 ${timeLabel}`,
-      compactLabel: `${dayDistance}天后 ${compactTimeLabel}`,
+      label: normalizedLanguage === "en" ? `In ${dayDistance} days ${timeLabel}` : `${dayDistance}天后 ${timeLabel}`,
+      compactLabel: normalizedLanguage === "en" ? `In ${dayDistance} days ${compactTimeLabel}` : `${dayDistance}天后 ${compactTimeLabel}`,
       urgency: "upcoming",
     };
   }
@@ -151,11 +152,16 @@ export function getNotifyDisplay(notifyAt: number | undefined, now = Date.now())
   };
 }
 
-export function getNotifyTimeLabel(time: NotifyTimeOption): string {
+export function getNotifyTimeLabel(time: NotifyTimeOption, language: AppLanguage = DEFAULT_LANGUAGE): string {
   const parsed = parseQuarterHourValue(time);
   if (!parsed) return time;
-  if (parsed.hour === 24) return `次日 ${formatMinuteTime(0, parsed.minute)}`;
-  return getDisplayTimeLabel(new Date(2000, 0, 1, parsed.hour, parsed.minute));
+  const normalizedLanguage = normalizeLanguage(language);
+  if (parsed.hour === 24) {
+    return normalizedLanguage === "en"
+      ? `Next day ${formatMinuteTime(0, parsed.minute)}`
+      : `次日 ${formatMinuteTime(0, parsed.minute)}`;
+  }
+  return getDisplayTimeLabel(new Date(2000, 0, 1, parsed.hour, parsed.minute), normalizedLanguage);
 }
 
 export function isValidNotifyAt(value: unknown): value is number {
@@ -193,7 +199,8 @@ function parseQuarterHourValue(timeValue: string): { hour: number; minute: numbe
   };
 }
 
-function getDisplayTimeLabel(date: Date): string {
+function getDisplayTimeLabel(date: Date, language: AppLanguage = DEFAULT_LANGUAGE): string {
+  if (normalizeLanguage(language) === "en") return getCompactTimeLabel(date);
   const hour = date.getHours();
   const minute = date.getMinutes();
   if (hour === 0) return `凌晨 ${formatMinuteTime(12, minute)}`;
@@ -221,3 +228,5 @@ function getLocalDayDistance(from: number, to: number): number {
   const toStart = new Date(toDate.getFullYear(), toDate.getMonth(), toDate.getDate()).getTime();
   return Math.round((toStart - fromStart) / ONE_DAY_MS);
 }
+import type { AppLanguage } from "../types";
+import { DEFAULT_LANGUAGE, normalizeLanguage } from "./i18n";

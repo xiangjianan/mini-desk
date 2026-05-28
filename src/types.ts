@@ -1,4 +1,5 @@
 export type ThemeMode = "light" | "dark";
+export type AppLanguage = "zh" | "en";
 export type CompanionGifTheme = "ikun" | "hermes" | "custom" | "none";
 export type QuickButtonType = "link" | "text";
 export type TodoListId = string;
@@ -72,6 +73,7 @@ export interface WorkspaceSpace {
 }
 
 export interface BoardState {
+  language: AppLanguage;
   theme: ThemeMode;
   companionGifTheme: CompanionGifTheme;
   customCompanionGif: CompanionCustomGif;

@@ -13,6 +13,7 @@ import {
   getMessageCatalogSummary,
   withKaomoji,
 } from "../state/messages";
+import { GUIDE_MESSAGES } from "../state/i18n";
 
 const messageKeys = [
   "save",
@@ -150,26 +151,25 @@ describe("message catalog", () => {
   });
 
   it("includes shortcut guidance and keeps repository URLs out of shared message text", () => {
-    const guideSource = readSource("src/App.vue");
+    const guideSource = Object.values(GUIDE_MESSAGES.zh).flat().join("\n");
+    const appSource = readSource("src/App.vue");
 
-    expect(guideSource).toContain("Record<GuideKey, string[]>");
     expect(guideSource).toContain("Ctrl+S");
     expect(guideSource).toContain("Tab");
     expect(guideSource).toContain("方向键");
     expect(guideSource).toContain("右键");
-    expect(guideSource).toContain("拖动图片到这里");
-    expect(guideSource).not.toContain("GUIDE_REPEAT_CHANCE");
-    expect(guideSource).not.toContain("maybeShowGuideBubble");
+    expect(guideSource).toContain("试试把外部图片拖到这里");
+    expect(appSource).not.toContain("GUIDE_REPEAT_CHANCE");
+    expect(appSource).not.toContain("maybeShowGuideBubble");
     expect(MESSAGE_CATALOG.about.variants.join("\n")).not.toContain("https://github.com/xiangjianan/todolist");
     expect(MESSAGE_CATALOG.about.variants.join("\n")).not.toContain("下方");
     expect(MESSAGE_CATALOG.about.variants.join("\n")).not.toContain("给老婆做的 todolist 看板");
-    expect(guideSource).toContain("GITHUB_ISSUE_URL");
-    expect(guideSource).toContain("/issues/new");
-    expect(guideSource).not.toContain("GITHUB_REPO_NAME");
+    expect(appSource).toContain("GITHUB_ISSUE_URL");
+    expect(appSource).toContain("/issues/new");
+    expect(appSource).not.toContain("GITHUB_REPO_NAME");
   });
 
   it("provides ten guide variants for every guide bubble scenario", () => {
-    const guideSource = readSource("src/App.vue");
     const guideKeys = [
       "images",
       "note",
@@ -181,20 +181,15 @@ describe("message catalog", () => {
       "toggleHiddenQuick",
       "settings",
       "theme",
-    ];
+    ] as const;
 
     for (const key of guideKeys) {
-      expect(countGuideVariants(guideSource, key), key).toBe(10);
+      expect(GUIDE_MESSAGES.zh[key].length, key).toBeGreaterThanOrEqual(10);
+      expect(GUIDE_MESSAGES.en[key].length, key).toBeGreaterThanOrEqual(10);
     }
   });
 });
 
 function readSource(file: string): string {
   return readFileSync(resolve(__dirname, "../..", file), "utf8");
-}
-
-function countGuideVariants(source: string, key: string): number {
-  const match = source.match(new RegExp(String.raw`  ${key}: \[([\s\S]*?)  \]`));
-  if (!match) return 0;
-  return match[1].match(/^    [`"]/gm)?.length ?? 0;
 }

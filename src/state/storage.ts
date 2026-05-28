@@ -1,6 +1,7 @@
 import { DEFAULT_SPACE_ID, DEFAULT_SPACE_TITLE, DEFAULT_TODO_LISTS, defaultState, STORAGE_KEY } from "./defaults";
 import { isValidDeadlineAt } from "./deadlines";
 import { normalizeCompanionGifTheme } from "./companionGifThemes";
+import { DEFAULT_SPACE_TITLES, getUiText, normalizeLanguage } from "./i18n";
 import type {
   BoardState,
   CompanionCustomGif,
@@ -79,9 +80,11 @@ export function normalizeImportedState(payload: unknown): BoardState {
   const storageLines = normalizeLineCollection(typed.storageLines ?? typed.storage);
   const spaces = normalizeSpaces(typed.spaces, workspaceLines, storageLines, customTitles);
   const todoLists = normalizeTodoLists(typed.todoLists, customTitles);
+  const language = normalizeLanguage(typed.language);
 
   return {
     ...base,
+    language,
     theme: typed.theme === "dark" ? "dark" : "light",
     companionGifTheme: normalizeCompanionGifTheme(typed.companionGifTheme),
     customCompanionGif: normalizeCustomCompanionGif(typed.customCompanionGif),
@@ -92,7 +95,7 @@ export function normalizeImportedState(payload: unknown): BoardState {
     spaces,
     activeSpaceId: normalizeActiveSpaceId(typed.activeSpaceId, spaces),
     images: normalizeImages(typed.images),
-    quickButtons: normalizeQuickButtons(typed.quickButtons),
+    quickButtons: normalizeQuickButtons(typed.quickButtons, language),
     showHiddenQuickButtons: Boolean(typed.showHiddenQuickButtons),
     todoLists,
     showCompletedTodos: normalizeCompletedVisibility(typed.showCompletedTodos, todoLists),
@@ -133,7 +136,7 @@ function normalizeTodoListConfig(item: unknown): TodoListConfig | null {
   if (typeof record.id !== "string" || !record.id.trim()) return null;
   const title = typeof record.title === "string" && record.title.trim()
     ? record.title.trim()
-    : "未命名列表";
+    : getUiText("zh").app.unnamedList;
   return {
     id: record.id.trim(),
     title,
@@ -185,7 +188,7 @@ export function normalizeSpaces(
   if (legacyStorageLines.length > 0) {
     result.push({
       id: "storage",
-      title: customTitles["storage-title"] || "工程文件",
+      title: customTitles["storage-title"] || DEFAULT_SPACE_TITLES.zh.storage,
       lines: cloneLines(legacyStorageLines),
     });
   }
@@ -262,7 +265,7 @@ export function normalizeImages(images: unknown): StoredImage[] {
     .filter((item): item is StoredImage => Boolean(item));
 }
 
-export function normalizeQuickButtons(buttons: unknown): QuickButton[] {
+export function normalizeQuickButtons(buttons: unknown, language = "zh"): QuickButton[] {
   if (!Array.isArray(buttons)) return [];
   return buttons
     .map((item) => {
@@ -274,7 +277,7 @@ export function normalizeQuickButtons(buttons: unknown): QuickButton[] {
       if (!title && !value) return null;
       return {
         id: typeof record.id === "string" ? record.id : createId(),
-        title: title || (type === "link" ? "未命名链接" : "未命名文本"),
+        title: title || (type === "link" ? getUiText(normalizeLanguage(language)).quick.untitledLink : getUiText(normalizeLanguage(language)).quick.untitledText),
         value,
         type,
         hidden: Boolean(record.hidden),
