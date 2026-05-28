@@ -1,6 +1,6 @@
 <script setup lang="ts">
 import { computed, nextTick, ref, watch } from "vue";
-import { NDropdown } from "naive-ui";
+import { NDropdown, NScrollbar } from "naive-ui";
 import type { DropdownOption } from "naive-ui";
 import type { LineItem } from "../types";
 import { GUIDE_MENU_OPTION } from "../state/defaults";
@@ -469,6 +469,7 @@ function restoreSelection(textarea: HTMLTextAreaElement, selection: { start: num
       <slot name="actions" />
     </div>
     <div class="text-editor-frame" @contextmenu="openTextMenu" @dragover.prevent @drop="handleExternalTextDrop">
+      <NScrollbar class="text-editor-scrollbar">
       <textarea
         ref="textareaRef"
         v-model="text"
@@ -488,6 +489,7 @@ function restoreSelection(textarea: HTMLTextAreaElement, selection: { start: num
         @focus="handleFocus"
         @blur="handleBlur"
       />
+      </NScrollbar>
     </div>
     <NDropdown
       v-if="menu"

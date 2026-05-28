@@ -5,6 +5,7 @@ import {
   NOTIFY_TIME_OPTIONS,
   DEFAULT_NOTIFY_TIME,
   createNotifyAt,
+  getDefaultNotifyDateTimeValue,
   getDefaultNotifySelection,
   getNotifyDisplay,
   getLocalDateInputValue,
@@ -57,6 +58,12 @@ describe("notification time helpers", () => {
       date: "2026-05-26",
       time: "09:00",
     });
+  });
+
+  it("defaults new notification picker values to today at 09:00", () => {
+    const value = getDefaultNotifyDateTimeValue(new Date(2026, 4, 25, 23, 30));
+
+    expect(value).toBe(new Date(2026, 4, 25, 9, 0, 0, 0).getTime());
   });
 
   it("classifies overdue, due-soon, upcoming, and later notification times", () => {

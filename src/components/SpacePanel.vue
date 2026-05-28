@@ -1,6 +1,6 @@
 <script setup lang="ts">
 import { computed, nextTick, ref, watch } from "vue";
-import { NDropdown } from "naive-ui";
+import { NDropdown, NScrollbar } from "naive-ui";
 import type { DropdownOption } from "naive-ui";
 import type { GuideKey, LineItem, WorkspaceSpace } from "../types";
 import TextPanel from "./TextPanel.vue";
@@ -147,47 +147,49 @@ function handleTabsWheel(event: WheelEvent): void {
 
 <template>
   <section class="panel space-panel" aria-label="空间">
-    <div class="space-tabs" role="tablist" aria-label="空间列表" @wheel="handleTabsWheel">
-      <template v-for="space in spaces" :key="space.id">
+    <NScrollbar class="space-tabs-scrollbar" x-scrollable trigger="none">
+      <div class="space-tabs" role="tablist" aria-label="空间列表" @wheel="handleTabsWheel">
+        <template v-for="space in spaces" :key="space.id">
+          <button
+            v-if="editingSpaceId !== space.id"
+            class="space-tab"
+            :class="{ 'is-active': space.id === activeSpaceId, 'is-dragging': draggedSpaceId === space.id }"
+            type="button"
+            role="tab"
+            draggable="true"
+            :aria-selected="space.id === activeSpaceId"
+            @click="emit('activate', space.id)"
+            @dblclick.stop="startTabEdit(space.id)"
+            @contextmenu.stop.prevent="openTabMenu($event, space.id)"
+            @dragstart="handleDragStart($event, space.id)"
+            @dragend="draggedSpaceId = null"
+            @dragover.prevent
+            @drop.stop.prevent="handleDrop(space.id)"
+          >
+            {{ space.title }}
+          </button>
+          <input
+            v-else
+            v-model="editingTitle"
+            class="space-tab-edit-input"
+            aria-label="编辑空间名称"
+            @compositionstart="titleComposing = true"
+            @compositionend="titleComposing = false"
+            @keydown.enter="handleTabEditEnter"
+            @keydown.esc.prevent="cancelTabEdit"
+            @blur="commitTabEdit"
+          />
+        </template>
         <button
-          v-if="editingSpaceId !== space.id"
-          class="space-tab"
-          :class="{ 'is-active': space.id === activeSpaceId, 'is-dragging': draggedSpaceId === space.id }"
+          class="space-add-button icon-button"
           type="button"
-          role="tab"
-          draggable="true"
-          :aria-selected="space.id === activeSpaceId"
-          @click="emit('activate', space.id)"
-          @dblclick.stop="startTabEdit(space.id)"
-          @contextmenu.stop.prevent="openTabMenu($event, space.id)"
-          @dragstart="handleDragStart($event, space.id)"
-          @dragend="draggedSpaceId = null"
-          @dragover.prevent
-          @drop.stop.prevent="handleDrop(space.id)"
+          aria-label="新增空间"
+          @click="emit('create')"
         >
-          {{ space.title }}
+          +
         </button>
-        <input
-          v-else
-          v-model="editingTitle"
-          class="space-tab-edit-input"
-          aria-label="编辑空间名称"
-          @compositionstart="titleComposing = true"
-          @compositionend="titleComposing = false"
-          @keydown.enter="handleTabEditEnter"
-          @keydown.esc.prevent="cancelTabEdit"
-          @blur="commitTabEdit"
-        />
-      </template>
-      <button
-        class="space-add-button icon-button"
-        type="button"
-        aria-label="新增空间"
-        @click="emit('create')"
-      >
-        +
-      </button>
-    </div>
+      </div>
+    </NScrollbar>
 
     <div class="space-text-stage">
       <Transition name="space-panel-switch" mode="out-in" :duration="180">

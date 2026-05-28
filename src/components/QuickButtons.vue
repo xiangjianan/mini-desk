@@ -1,6 +1,6 @@
 <script setup lang="ts">
 import { computed, reactive, ref, watch } from "vue";
-import { NButton, NCheckbox, NDropdown, NIcon, NInput, NModal } from "naive-ui";
+import { NButton, NCheckbox, NDropdown, NIcon, NInput, NModal, NScrollbar } from "naive-ui";
 import { CopyOutline } from "@vicons/ionicons5";
 import type { DropdownOption } from "naive-ui";
 import type { GuideKey, QuickButton, QuickButtonType } from "../types";
@@ -172,25 +172,27 @@ function handleToggleShowHidden(anchor?: HTMLElement): void {
       </div>
     </div>
 
-    <div class="quick-buttons" aria-label="快捷按钮列表" @click="closeMenu" @contextmenu="openAreaMenu">
-      <button
-        v-for="button in visibleButtons"
-        :key="button.id"
-        class="quick-button"
-        :class="{ 'is-hidden': button.hidden, 'is-copy': button.type === 'text' }"
-        type="button"
-        draggable="true"
-        @click="emit('copy', button.id, $event.currentTarget as HTMLElement)"
-        @contextmenu.stop="openMenu($event, button.id)"
-        @dragstart="draggingId = button.id"
-        @dragover.prevent
-        @drop="draggingId && draggingId !== button.id && emit('reorder', draggingId, button.id)"
-        @dragend="draggingId = null"
-      >
-        <NIcon v-if="button.type === 'text'" class="quick-button-icon" :component="CopyOutline" />
-        <span>{{ button.title }}</span>
-      </button>
-    </div>
+    <NScrollbar class="quick-buttons-scrollbar" aria-label="快捷按钮列表" @click="closeMenu" @contextmenu="openAreaMenu">
+      <div class="quick-buttons">
+        <button
+          v-for="button in visibleButtons"
+          :key="button.id"
+          class="quick-button"
+          :class="{ 'is-hidden': button.hidden, 'is-copy': button.type === 'text' }"
+          type="button"
+          draggable="true"
+          @click="emit('copy', button.id, $event.currentTarget as HTMLElement)"
+          @contextmenu.stop="openMenu($event, button.id)"
+          @dragstart="draggingId = button.id"
+          @dragover.prevent
+          @drop="draggingId && draggingId !== button.id && emit('reorder', draggingId, button.id)"
+          @dragend="draggingId = null"
+        >
+          <NIcon v-if="button.type === 'text'" class="quick-button-icon" :component="CopyOutline" />
+          <span>{{ button.title }}</span>
+        </button>
+      </div>
+    </NScrollbar>
 
     <NDropdown
       v-if="menu"

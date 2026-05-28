@@ -99,6 +99,10 @@ export function getDefaultNotifySelection(now = new Date()): { date: string; tim
   };
 }
 
+export function getDefaultNotifyDateTimeValue(now = new Date()): number {
+  return new Date(now.getFullYear(), now.getMonth(), now.getDate(), 9, 0, 0, 0).getTime();
+}
+
 export function getNotifyDisplay(notifyAt: number | undefined, now = Date.now()): NotifyDisplay | null {
   if (!isValidNotifyAt(notifyAt) || !isValidNotifyAt(now)) return null;
 
