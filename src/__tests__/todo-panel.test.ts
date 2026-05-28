@@ -1089,10 +1089,45 @@ describe("TodoPanel", () => {
 
     await wrapper.get("input.todo-input").trigger("contextmenu");
     await wrapper.findAll(".dropdown-option").find((option) => option.text() === "编辑通知时间")?.trigger("click");
-    await wrapper.getComponent({ name: "NDatePicker" }).vm.$emit("update:value", new Date(2026, 4, 28).getTime());
+    await wrapper.getComponent({ name: "NDatePicker" }).vm.$emit("update:value", new Date(2026, 4, 28, 8, 45).getTime());
     await nextTick();
 
     expect(wrapper.getComponent({ name: "NDatePicker" }).props("value")).toBe(new Date(2026, 4, 28, 15, 30).getTime());
+    wrapper.unmount();
+    vi.useRealTimers();
+  });
+
+  it("allows changing only the notification time without changing the selected date", async () => {
+    vi.useFakeTimers();
+    vi.setSystemTime(new Date(2026, 4, 25, 10));
+    const wrapper = mount(TodoPanel, {
+      props: {
+        todos: {
+          morning: [{ id: "a", text: "第一项", done: false, notifyAt: new Date(2026, 4, 26, 15, 30).getTime() }],
+          noon: [],
+          evening: [],
+        },
+        titles: DEFAULT_TITLES,
+      },
+      global: {
+        stubs: {
+          Button: true,
+          Checkbox: checkboxStub,
+          Dropdown: dropdownStub,
+          NCheckbox: checkboxStub,
+          NDatePicker: datePickerStub,
+          NDropdown: dropdownStub,
+          NTooltip: tooltipStub,
+        },
+      },
+    });
+
+    await wrapper.get("input.todo-input").trigger("contextmenu");
+    await wrapper.findAll(".dropdown-option").find((option) => option.text() === "编辑通知时间")?.trigger("click");
+    await wrapper.getComponent({ name: "NDatePicker" }).vm.$emit("update:value", new Date(2026, 4, 26, 8, 45).getTime());
+    await nextTick();
+
+    expect(wrapper.getComponent({ name: "NDatePicker" }).props("value")).toBe(new Date(2026, 4, 26, 8, 45).getTime());
     wrapper.unmount();
     vi.useRealTimers();
   });

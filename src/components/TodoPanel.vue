@@ -551,12 +551,7 @@ function preserveNotifyTimeOnDateChange(currentValue: number, nextValue: number)
     current.getFullYear() !== next.getFullYear() ||
     current.getMonth() !== next.getMonth() ||
     current.getDate() !== next.getDate();
-  const nextHasDefaultTime =
-    next.getHours() === 0 &&
-    next.getMinutes() === 0 &&
-    next.getSeconds() === 0 &&
-    next.getMilliseconds() === 0;
-  if (!dateChanged || !nextHasDefaultTime) return nextValue;
+  if (!dateChanged) return nextValue;
   next.setHours(current.getHours(), current.getMinutes(), current.getSeconds(), current.getMilliseconds());
   return next.getTime();
 }

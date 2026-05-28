@@ -1,4 +1,8 @@
-import type { CompanionGifTheme } from "../types";
+import type { CompanionCustomGif, CompanionGifTheme, ThemeMode } from "../types";
+import ikunGif from "../../static/video/kun.gif?url";
+import ikunDarkGif from "../../static/video/kun-dark.gif?url";
+import hermesGif from "../../static/video/yunxia.gif?url";
+import hermesDarkGif from "../../static/video/yunxia-dark.gif?url";
 
 export const DEFAULT_COMPANION_GIF_THEME: CompanionGifTheme = "ikun";
 
@@ -14,4 +18,14 @@ export const COMPANION_GIF_THEME_OPTIONS: Array<{
 
 export function normalizeCompanionGifTheme(value: unknown): CompanionGifTheme {
   return value === "ikun" || value === "none" || value === "custom" || value === "hermes" ? value : DEFAULT_COMPANION_GIF_THEME;
+}
+
+export function getCompanionGifSrc(theme: CompanionGifTheme | undefined, mode: ThemeMode, customGif: CompanionCustomGif = {}): string {
+  const activeTheme = theme ?? DEFAULT_COMPANION_GIF_THEME;
+  if (activeTheme === "none") return "";
+  if (activeTheme === "custom") {
+    return mode === "dark" ? customGif.dark || customGif.light || "" : customGif.light || customGif.dark || "";
+  }
+  if (activeTheme === "hermes") return mode === "dark" ? hermesDarkGif : hermesGif;
+  return mode === "dark" ? ikunDarkGif : ikunGif;
 }

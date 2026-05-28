@@ -11,6 +11,7 @@ import SpacePanel from "./components/SpacePanel.vue";
 import TextPanel from "./components/TextPanel.vue";
 import TodoPanel from "./components/TodoPanel.vue";
 import { AREA_HELP, CONTROL_HELP, DEFAULT_TITLES } from "./state/defaults";
+import { getCompanionGifSrc } from "./state/companionGifThemes";
 import { deleteStoredImage, hydrateStoredImages, persistImagePayloads, storeImagePayload } from "./state/images";
 import { getMessage, withKaomoji, type MessageKey } from "./state/messages";
 import {
@@ -224,10 +225,6 @@ const GITHUB_REPO_LABEL = "xiangjianan / todolist";
 const ABOUT_MESSAGE = [
   "To Do List 看板",
   "一个本地优先的轻量工作台，用来整理截图、便签、提醒事项、快捷链接和工作空间。",
-  "",
-  "云霞 · 产品",
-  "佳男 · 开发",
-  "Codex · 协作支持",
 ].join("\n");
 const ABOUT_MESSAGE_DURATION_MS = 10000;
 const MIN_COMPANION_POPOVER_RIGHT_EDGE = 260;
@@ -1388,18 +1385,25 @@ function triggerDueTodoNotifications(): void {
   const notificationApi = getNotificationApi();
   if (!notificationApi || notificationApi.permission !== "granted") return;
   const now = Date.now();
+  const notificationIcon = getReminderNotificationIcon();
   for (const period of getTodoListIds()) {
     for (const todo of getTodos(period)) {
       if (todo.done || !Number.isFinite(todo.notifyAt) || todo.notifyAt === undefined || todo.notifyAt > now) continue;
       const key = `${todo.id}:${todo.notifyAt}`;
       if (sentTodoNotifications.has(key)) continue;
       sentTodoNotifications.add(key);
-      new notificationApi("提醒事项", {
-        body: todo.text || getTodoListTitle(period),
+      const options: NotificationOptions = {
+        body: todo.text,
         tag: key,
-      });
+      };
+      if (notificationIcon) options.icon = notificationIcon;
+      new notificationApi(getTodoListTitle(period), options);
     }
   }
+}
+
+function getReminderNotificationIcon(): string {
+  return getCompanionGifSrc(state.companionGifTheme, state.theme, state.customCompanionGif);
 }
 
 function todoKey(period: TodoPeriod, id: string): string {

@@ -48,13 +48,15 @@ describe("Naive UI component usage", () => {
 
   it("uses Naive popover primitives for the reusable companion bubble", () => {
     const companion = read("src/components/CompanionBubble.vue");
+    const companionGifThemes = read("src/state/companionGifThemes.ts");
     const app = read("src/App.vue");
     const settings = read("src/components/SettingsMenu.vue");
 
     expect(companion).toContain("NPopover");
     expect(companion).toContain("NButton");
-    expect(companion).toContain("kun-dark.gif");
-    expect(companion).toContain("yunxia-dark.gif");
+    expect(companionGifThemes).toContain("kun-dark.gif");
+    expect(companionGifThemes).toContain("yunxia-dark.gif");
+    expect(companion).toContain("getCompanionGifSrc");
     expect(companion).toContain(":src=\"gifSrc\"");
     expect(app).toContain(":theme=\"state.theme\"");
     expect(app).toContain(':gif-theme="state.companionGifTheme"');
@@ -639,9 +641,9 @@ describe("Naive UI component usage", () => {
     expect(app).toContain("GITHUB_REPO_URL");
     expect(app).toContain("xiangjianan / todolist");
     expect(app).toContain("https://github.com/xiangjianan/todolist");
-    expect(app).toContain("云霞 · 产品");
-    expect(app).toContain("佳男 · 开发");
-    expect(app).toContain("Codex · 协作支持");
+    expect(app).not.toContain("云霞 · 产品");
+    expect(app).not.toContain("佳男 · 开发");
+    expect(app).not.toContain("Codex · 协作支持");
     expect(app).not.toContain("👤 产品经理 — 云霞");
     expect(styles).toMatch(/\.companion-popover > span\s*\{[^}]*white-space: pre-line/s);
     expect(companion).toContain("LogoGithub");

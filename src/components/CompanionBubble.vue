@@ -3,10 +3,7 @@ import { computed, onMounted, onUnmounted, ref, watch } from "vue";
 import { LogoGithub } from "@vicons/ionicons5";
 import { NButton, NIcon, NPopover } from "naive-ui";
 import type { CompanionGifTheme } from "../types";
-import ikunGif from "../../static/video/kun.gif?url";
-import ikunDarkGif from "../../static/video/kun-dark.gif?url";
-import hermesGif from "../../static/video/yunxia.gif?url";
-import hermesDarkGif from "../../static/video/yunxia-dark.gif?url";
+import { getCompanionGifSrc } from "../state/companionGifThemes";
 
 const props = defineProps<{
   visible: boolean;
@@ -75,15 +72,12 @@ const placementStyle = computed(() => {
 });
 
 const activeGifTheme = computed(() => props.gifTheme ?? "ikun");
-const gifSrc = computed(() => {
-  if (activeGifTheme.value === "none") return "";
-  if (activeGifTheme.value === "custom") {
-    if (props.theme === "dark") return props.customGifDarkSrc || props.customGifLightSrc || "";
-    return props.customGifLightSrc || props.customGifDarkSrc || "";
-  }
-  if (activeGifTheme.value === "hermes") return props.theme === "dark" ? hermesDarkGif : hermesGif;
-  return props.theme === "dark" ? ikunDarkGif : ikunGif;
-});
+const gifSrc = computed(() =>
+  getCompanionGifSrc(activeGifTheme.value, props.theme ?? "light", {
+    light: props.customGifLightSrc,
+    dark: props.customGifDarkSrc,
+  }),
+);
 const shouldRenderGif = computed(() => Boolean(gifSrc.value));
 const hasPopoverPayload = computed(() => Boolean(props.message || props.confirm || props.linkText));
 const surfaceVisible = computed(() => {
@@ -146,6 +140,7 @@ watch(
       props.confirm,
       props.confirmDanger,
       props.persistent,
+      props.theme,
       props.gifTheme,
       props.customGifLightSrc,
       props.customGifDarkSrc,

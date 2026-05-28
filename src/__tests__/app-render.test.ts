@@ -1188,7 +1188,48 @@ describe("App shell", () => {
 
       expect(NotificationStub.requestPermission).toHaveBeenCalledTimes(1);
       expect(notificationSpy).toHaveBeenCalledTimes(1);
-      expect(notificationSpy).toHaveBeenCalledWith("提醒事项", {
+      expect(notificationSpy).toHaveBeenCalledWith("☀️ 早上", {
+        body: "喝水",
+        tag: `todo-1:${notifyAt}`,
+        icon: expect.stringContaining("kun.gif"),
+      });
+    } finally {
+      wrapper.unmount();
+      vi.unstubAllGlobals();
+      vi.useRealTimers();
+    }
+  });
+
+  it("omits the reminder notification GIF when the companion GIF theme is none", async () => {
+    vi.useFakeTimers();
+    vi.setSystemTime(new Date(2026, 4, 25, 8, 0, 0));
+    const notificationSpy = vi.fn();
+    class NotificationStub {
+      static permission: NotificationPermission = "granted";
+      static requestPermission = vi.fn();
+
+      constructor(title: string, options?: NotificationOptions) {
+        notificationSpy(title, options);
+      }
+    }
+    vi.stubGlobal("Notification", NotificationStub);
+    localStorage.setItem(
+      STORAGE_KEY,
+      JSON.stringify({
+        companionGifTheme: "none",
+        todos: {
+          morning: [{ id: "todo-1", text: "喝水", done: false }],
+        },
+      }),
+    );
+    const wrapper = mountApp();
+
+    try {
+      const notifyAt = new Date(2026, 4, 25, 8, 0, 30).getTime();
+      wrapper.getComponent(TodoPanel).vm.$emit("notify", "morning", "todo-1", notifyAt);
+      await vi.advanceTimersByTimeAsync(30_000);
+
+      expect(notificationSpy).toHaveBeenCalledWith("☀️ 早上", {
         body: "喝水",
         tag: `todo-1:${notifyAt}`,
       });
@@ -2563,9 +2604,9 @@ describe("App shell", () => {
       await wrapper.vm.$nextTick();
 
       expect(wrapper.find('[data-testid="companion-confirm"]').text()).toContain("To Do List 看板");
-      expect(wrapper.find('[data-testid="companion-confirm"]').text()).toContain("云霞 · 产品");
-      expect(wrapper.find('[data-testid="companion-confirm"]').text()).toContain("佳男 · 开发");
-      expect(wrapper.find('[data-testid="companion-confirm"]').text()).toContain("Codex · 协作支持");
+      expect(wrapper.find('[data-testid="companion-confirm"]').text()).not.toContain("云霞 · 产品");
+      expect(wrapper.find('[data-testid="companion-confirm"]').text()).not.toContain("佳男 · 开发");
+      expect(wrapper.find('[data-testid="companion-confirm"]').text()).not.toContain("Codex · 协作支持");
       expect(wrapper.find('[data-testid="companion-confirm"]').text()).not.toContain("👤 产品经理 — 云霞");
       expect(wrapper.find('[data-testid="companion-confirm"]').text()).not.toContain("牛马：Codex");
       expect(wrapper.find('[data-testid="companion-confirm"]').text()).not.toContain("给老婆做的 todolist 看板");
