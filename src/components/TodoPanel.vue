@@ -569,9 +569,13 @@ function clearNotifyPicker(): void {
   const picker = notifyPicker.value;
   if (!picker) return;
   const key = todoKey(picker.period, picker.id);
-  emit("notify", picker.period, picker.id, undefined, notifyPickerAnchors.get(key));
+  emit("notify", picker.period, picker.id, undefined, getNotifyPickerListAnchor(key));
   notifyPicker.value = null;
   removeNotifyPickerDraft(key);
+}
+
+function getNotifyPickerListAnchor(key: string): HTMLElement | undefined {
+  return (notifyPickerAnchors.get(key)?.closest(".todo-section") as HTMLElement | null | undefined) ?? notifyPickerAnchors.get(key);
 }
 
 function closeNotifyPicker(): void {

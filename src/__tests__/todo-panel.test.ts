@@ -1201,6 +1201,7 @@ describe("TodoPanel", () => {
     await nextTick();
 
     expect(wrapper.emitted("notify")?.[0]).toEqual(["morning", "a", undefined, expect.any(HTMLElement)]);
+    expect((wrapper.emitted("notify")?.[0][3] as HTMLElement).classList.contains("todo-section")).toBe(true);
     expect(wrapper.emitted("star")).toBeUndefined();
     expect(wrapper.find(".deadline-editor").exists()).toBe(false);
     wrapper.unmount();

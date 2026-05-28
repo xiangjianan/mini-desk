@@ -1272,6 +1272,63 @@ describe("App shell", () => {
     }
   });
 
+  it("anchors the clear notification feedback to the todo section instead of the todo row", async () => {
+    vi.useFakeTimers();
+    localStorage.setItem(
+      STORAGE_KEY,
+      JSON.stringify({
+        todos: {
+          morning: [{ id: "todo-1", text: "喝水", done: false, notifyAt: new Date(2026, 4, 25, 9).getTime() }],
+        },
+      }),
+    );
+    const wrapper = mountApp();
+
+    try {
+      vi.spyOn(wrapper.get(".todo-item").element, "getBoundingClientRect").mockReturnValue({
+        x: 400,
+        y: 40,
+        width: 200,
+        height: 24,
+        top: 40,
+        left: 400,
+        right: 600,
+        bottom: 64,
+        toJSON: () => ({}),
+      });
+      vi.spyOn(wrapper.get('.todo-section[data-period="morning"]').element, "getBoundingClientRect").mockReturnValue({
+        x: 384,
+        y: 0,
+        width: 255,
+        height: 240,
+        top: 0,
+        left: 384,
+        right: 639,
+        bottom: 240,
+        toJSON: () => ({}),
+      });
+
+      wrapper.getComponent(TodoPanel).vm.$emit(
+        "notify",
+        "morning",
+        "todo-1",
+        undefined,
+        wrapper.get('.todo-section[data-period="morning"]').element as HTMLElement,
+      );
+      await wrapper.vm.$nextTick();
+
+      const style = wrapper.get('[data-testid="companion-bubble"]').attributes("style");
+      expect(style).toContain("right: calc(10px + 100vw - 639px)");
+      expect(style).toContain("bottom: calc(10px + 100vh - 240px)");
+      await vi.advanceTimersByTimeAsync(200);
+      await wrapper.vm.$nextTick();
+      expect(wrapper.find('[data-testid="companion-confirm"]').text()).toContain("已取消通知时间");
+    } finally {
+      wrapper.unmount();
+      vi.useRealTimers();
+    }
+  });
+
   it("un-stars immediately and keeps notification time", async () => {
     localStorage.setItem(
       STORAGE_KEY,
