@@ -270,4 +270,11 @@ describe("SpacePanel", () => {
     expect(activeTabRule).not.toContain("box-shadow");
     expect(styles).not.toContain(".space-tab-indicator");
   });
+
+  it("hides the workspace tab right border on hover", () => {
+    const styles = readFileSync(resolve(__dirname, "../styles.css"), "utf8");
+    const hoverRule = styles.match(/\.space-tab:hover \{([\s\S]*?)\}/)?.[1] ?? "";
+
+    expect(hoverRule).toContain("border-right-color: transparent");
+  });
 });

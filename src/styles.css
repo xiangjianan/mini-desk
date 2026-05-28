@@ -413,6 +413,10 @@ h3 {
   background: var(--button-hover);
 }
 
+.space-tab:hover {
+  border-right-color: transparent;
+}
+
 .space-tab.is-dragging {
   opacity: 0.45;
 }

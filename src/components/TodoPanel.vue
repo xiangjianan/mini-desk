@@ -531,7 +531,7 @@ function updateNotifyPickerDraft(value: number | null): void {
   const picker = notifyPicker.value;
   if (!picker || value === null) return;
   const key = todoKey(picker.period, picker.id);
-  notifyPickerDrafts.value = { ...notifyPickerDrafts.value, [key]: value };
+  notifyPickerDrafts.value = { ...notifyPickerDrafts.value, [key]: preserveNotifyTimeOnDateChange(getNotifyPickerValue(), value) };
 }
 
 function setNotifyPickerDraftToToday(): void {
@@ -542,6 +542,23 @@ function setNotifyPickerDraftToToday(): void {
   const today = new Date();
   current.setFullYear(today.getFullYear(), today.getMonth(), today.getDate());
   notifyPickerDrafts.value = { ...notifyPickerDrafts.value, [key]: current.getTime() };
+}
+
+function preserveNotifyTimeOnDateChange(currentValue: number, nextValue: number): number {
+  const current = new Date(currentValue);
+  const next = new Date(nextValue);
+  const dateChanged =
+    current.getFullYear() !== next.getFullYear() ||
+    current.getMonth() !== next.getMonth() ||
+    current.getDate() !== next.getDate();
+  const nextHasDefaultTime =
+    next.getHours() === 0 &&
+    next.getMinutes() === 0 &&
+    next.getSeconds() === 0 &&
+    next.getMilliseconds() === 0;
+  if (!dateChanged || !nextHasDefaultTime) return nextValue;
+  next.setHours(current.getHours(), current.getMinutes(), current.getSeconds(), current.getMilliseconds());
+  return next.getTime();
 }
 
 function confirmNotifyPicker(value: number | null): void {
