@@ -361,6 +361,7 @@ h3 {
 }
 
 .space-tabs {
+  position: relative;
   display: flex;
   align-items: stretch;
   width: max-content;
@@ -382,6 +383,7 @@ h3 {
 }
 
 .space-tab {
+  position: relative;
   flex: 0 0 auto;
   min-width: 84px;
   max-width: 180px;
@@ -463,8 +465,8 @@ h3 {
 .space-panel-switch-enter-active,
 .space-panel-switch-leave-active {
   transition:
-    opacity 180ms ease,
-    transform 180ms var(--motion-ease);
+    opacity 90ms ease,
+    transform 90ms var(--motion-ease);
 }
 
 .space-panel-switch-enter-from {
@@ -1075,6 +1077,15 @@ h3 {
   background: var(--button-hover);
 }
 
+.notify-panel-action.is-danger {
+  color: var(--danger);
+  border-color: var(--danger);
+}
+
+.notify-panel-action.is-danger:hover:not(:disabled) {
+  background: rgba(180, 35, 24, 0.08);
+}
+
 .notify-panel-action:disabled {
   color: var(--muted);
   cursor: not-allowed;
@@ -1237,6 +1248,9 @@ h3 {
   font-size: var(--app-font-size);
   background: transparent;
   line-height: 34px;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
   user-select: text;
 }
 
@@ -1441,8 +1455,8 @@ h3 {
 }
 
 .focus-companion img {
-  width: 82px;
-  height: 82px;
+  width: 50px;
+  height: 50px;
   aspect-ratio: 1 / 1;
   border: 1px solid var(--line-main);
   object-fit: cover;
@@ -1565,6 +1579,27 @@ h3 {
   to {
     opacity: 1;
     transform: translateY(0) scale(1);
+  }
+}
+
+@keyframes image-preview-in {
+  from {
+    opacity: 0;
+  }
+
+  to {
+    opacity: 1;
+  }
+}
+
+@keyframes image-preview-photo-in {
+  from {
+    opacity: 0;
+    transform: scale(0.985);
+  }
+
+  to {
+    opacity: 1;
   }
 }
 
@@ -1723,6 +1758,7 @@ h3 {
   -webkit-backdrop-filter: blur(18px);
   backdrop-filter: blur(18px);
   color: var(--text);
+  animation: image-preview-in 120ms ease-out;
 }
 
 html[data-theme="dark"] .image-preview {
@@ -1750,6 +1786,12 @@ body:has(.image-preview) .n-modal-body-wrapper {
 }
 
 .image-preview {
+  pointer-events: auto;
+}
+
+body:has(.image-preview) .image-preview .n-scrollbar-container,
+body:has(.image-preview) .image-preview .n-scrollbar-content,
+body:has(.image-preview) .image-preview .n-scrollbar {
   pointer-events: auto;
 }
 
@@ -1821,6 +1863,7 @@ body:has(.image-preview) .n-modal-body-wrapper {
   max-width: calc(90vw - 32px);
   max-height: 88vh;
   transform-origin: center;
+  animation: image-preview-photo-in 140ms cubic-bezier(0.16, 1, 0.3, 1);
   transition: transform 0.04s linear;
 }
 
@@ -1924,8 +1967,8 @@ body:has(.image-preview) .n-modal-body-wrapper {
   }
 
   .focus-companion img {
-    width: 60px;
-    height: 60px;
+    width: 50px;
+    height: 50px;
   }
 
   .companion-popover-shell.n-popover {

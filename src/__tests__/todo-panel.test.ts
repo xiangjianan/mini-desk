@@ -59,7 +59,7 @@ const datePickerStub = defineComponent({
     >
       日期时间选择
       <slot name="clear" :onClear="() => $emit('update:value', null)" text="清除" />
-      <slot name="now" :onNow="() => $emit('update:value', Date.now())" text="此刻" />
+      <slot name="now" :onNow="() => $emit('update:value', Date.now())" text="今天" />
       <slot name="confirm" :onConfirm="() => $emit('confirm', value)" :disabled="false" text="确认" />
     </button>
   `,
@@ -543,7 +543,9 @@ describe("TodoPanel", () => {
 
     await wrapper.get(".todo-completed-clear").trigger("click");
 
-    expect(wrapper.emitted("clearCompleted")?.[0]).toEqual(["morning", expect.any(HTMLElement)]);
+    const emitted = wrapper.emitted("clearCompleted")?.[0];
+    expect(emitted?.[0]).toBe("morning");
+    expect((emitted?.[1] as HTMLElement).classList.contains("todo-section")).toBe(true);
     expect(wrapper.emitted("create")).toBeUndefined();
   });
 
@@ -587,7 +589,9 @@ describe("TodoPanel", () => {
 
     await wrapper.get('.todo-section[data-period="morning"] .todo-section-menu-button').trigger("click");
     await wrapper.findAll(".dropdown-option").find((option) => option.text() === "清理已完成")?.trigger("click");
-    expect(wrapper.emitted("clearCompleted")?.[0]).toEqual(["morning", expect.any(HTMLElement)]);
+    const clearEmitted = wrapper.emitted("clearCompleted")?.[0];
+    expect(clearEmitted?.[0]).toBe("morning");
+    expect((clearEmitted?.[1] as HTMLElement).classList.contains("todo-section")).toBe(true);
 
     wrapper.unmount();
   });
@@ -1001,10 +1005,11 @@ describe("TodoPanel", () => {
     expect(picker.props("actions")).toEqual(["clear", "now", "confirm"]);
     expect(picker.props("value")).toBe(new Date(2026, 4, 25, 9).getTime());
     expect(getTeleportedDatePickerText()).toContain("清除");
-    expect(getTeleportedDatePickerText()).toContain("此刻");
+    expect(document.body.querySelector(".notify-panel-action.is-danger")?.textContent).toContain("清除");
+    expect(getTeleportedDatePickerText()).toContain("今天");
     expect(getTeleportedDatePickerText()).toContain("确定");
 
-    clickTeleportedNotifyAction("此刻");
+    clickTeleportedNotifyAction("今天");
     await nextTick();
     expect(wrapper.emitted("notify")).toBeUndefined();
     expect(document.body.querySelector(".notify-floating-date-picker")).toBeTruthy();
@@ -1017,6 +1022,42 @@ describe("TodoPanel", () => {
       new Date(2026, 4, 26, 15).getTime(),
       expect.any(HTMLElement),
     ]);
+    wrapper.unmount();
+    vi.useRealTimers();
+  });
+
+  it("moves the notification picker date to today while preserving the selected time", async () => {
+    vi.useFakeTimers();
+    vi.setSystemTime(new Date(2026, 4, 25, 10));
+    const wrapper = mount(TodoPanel, {
+      props: {
+        todos: {
+          morning: [{ id: "a", text: "第一项", done: false, notifyAt: new Date(2026, 4, 26, 15, 30).getTime() }],
+          noon: [],
+          evening: [],
+        },
+        titles: DEFAULT_TITLES,
+      },
+      global: {
+        stubs: {
+          Button: true,
+          Checkbox: checkboxStub,
+          Dropdown: dropdownStub,
+          NCheckbox: checkboxStub,
+          NDatePicker: datePickerStub,
+          NDropdown: dropdownStub,
+          NTooltip: tooltipStub,
+        },
+      },
+    });
+
+    await wrapper.get("input.todo-input").trigger("contextmenu");
+    await wrapper.findAll(".dropdown-option").find((option) => option.text() === "编辑通知时间")?.trigger("click");
+
+    clickTeleportedNotifyAction("今天");
+    await nextTick();
+
+    expect(wrapper.getComponent({ name: "NDatePicker" }).props("value")).toBe(new Date(2026, 4, 25, 15, 30).getTime());
     wrapper.unmount();
     vi.useRealTimers();
   });
@@ -1370,7 +1411,9 @@ describe("TodoPanel", () => {
 
     await wrapper.findAll(".dropdown-option").find((option) => option.text() === "删除")?.trigger("click");
 
-    expect(wrapper.emitted("remove")?.[0]).toEqual(["morning", "a", expect.any(HTMLElement)]);
+    const removeEmitted = wrapper.emitted("remove")?.[0];
+    expect(removeEmitted?.slice(0, 2)).toEqual(["morning", "a"]);
+    expect((removeEmitted?.[2] as HTMLElement).classList.contains("todo-section")).toBe(true);
     wrapper.unmount();
   });
 
@@ -1511,6 +1554,8 @@ describe("TodoPanel", () => {
     expect(todayFocusItemRule).toContain("align-items: center");
     expect(todoInputSharedRule).toContain("box-sizing: border-box");
     expect(todoInputSharedRule).toContain("padding: 0 8px");
+    expect(todoInputSharedRule).toContain("text-overflow: ellipsis");
+    expect(todoInputSharedRule).toContain("white-space: nowrap");
     expect(todayNotifyRule).toContain("grid-column: 3");
     expect(todayStarRule).toContain("grid-column: 4");
     expect(todayNotifyWidthRule).toContain("minmax(0, 92px)");
@@ -2373,7 +2418,7 @@ describe("TodoPanel", () => {
     expect(wrapper.find(".deadline-editor").exists()).toBe(false);
     expect(picker.props("panel")).toBe(true);
     expect(getTeleportedDatePickerText()).toContain("清除");
-    expect(getTeleportedDatePickerText()).toContain("此刻");
+    expect(getTeleportedDatePickerText()).toContain("今天");
     expect(getTeleportedDatePickerText()).toContain("确定");
   });
 

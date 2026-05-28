@@ -136,7 +136,7 @@ function handleKeydown(event: KeyboardEvent): void {
               class="image-card preview-thumb"
               :class="{ 'is-active': image.id === active.id }"
               type="button"
-              @click="emit('activate', image.id)"
+              @click.stop="emit('activate', image.id)"
             >
               <span class="image-index">{{ index + 1 }}</span>
               <img v-if="image.src" :src="image.src" alt="预览缩略图" />
@@ -148,6 +148,7 @@ function handleKeydown(event: KeyboardEvent): void {
         <div class="preview-stage" @mousedown="down" @click.self="emit('close')">
           <img
             v-if="active.src"
+            :key="active.id"
             :src="active.src"
             alt="图片预览"
             draggable="false"

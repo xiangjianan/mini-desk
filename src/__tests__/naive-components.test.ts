@@ -136,6 +136,9 @@ describe("Naive UI component usage", () => {
     expect(styles).toMatch(/html\[data-theme="dark"\] \.image-preview\s*\{[^}]*background: rgba\(0, 0, 0/s);
     expect(styles).toContain("-webkit-backdrop-filter");
     expect(styles).toMatch(/\.image-preview\s*\{[^}]*z-index: 3000/s);
+    expect(styles).toMatch(/\.image-preview\s*\{[^}]*animation: image-preview-in 120ms/s);
+    expect(styles).toContain("@keyframes image-preview-photo-in");
+    expect(styles).toMatch(/body:has\(\.image-preview\) \.image-preview \.n-scrollbar\s*\{[^}]*pointer-events: auto/s);
     expect(styles).toMatch(/\.focus-companion\s*\{[^}]*z-index: 3200/s);
     expect(preview).toContain("preview-close-button");
   });
@@ -148,6 +151,7 @@ describe("Naive UI component usage", () => {
     expect(preview).toContain('class="image-list preview-image-list"');
     expect(preview).toContain('class="image-card preview-thumb"');
     expect(preview).toContain('<span class="image-index">{{ index + 1 }}</span>');
+    expect(preview).toContain('@click.stop="emit(\'activate\', image.id)"');
     expect(preview).not.toContain("preview-sidebar-header");
     expect(styles).toMatch(/\.preview-sidebar-bar\s*\{[^}]*min-height: 34px/s);
     expect(styles).toMatch(/\.preview-image-list\s*\{[^}]*padding: 6px/s);
@@ -253,6 +257,8 @@ describe("Naive UI component usage", () => {
     const styles = read("src/styles.css");
 
     expect(styles).toContain(".focus-companion img");
+    expect(styles).toMatch(/\.focus-companion img\s*\{[^}]*width: 50px/s);
+    expect(styles).toMatch(/\.focus-companion img\s*\{[^}]*height: 50px/s);
     expect(styles).toContain("aspect-ratio: 1 / 1");
     expect(styles).toContain("object-fit: cover");
     expect(styles).toMatch(/\.focus-companion img\s*\{[^}]*border: 1px solid var\(--line-main\)/s);
@@ -344,11 +350,12 @@ describe("Naive UI component usage", () => {
     expect(todo).not.toContain(':show="isNotifyPickerShown');
     expect(todo).toContain('@update:value="updateNotifyPickerDraft"');
     expect(todo).toContain('@confirm="confirmNotifyPicker"');
-    expect(todo).toContain("setNotifyPickerDraftToNow");
+    expect(todo).toContain("setNotifyPickerDraftToToday");
     expect(todo).toContain("clearNotifyPicker");
     expect(todo).toContain('<template #clear');
     expect(todo).toContain('清除');
-    expect(todo).toContain('此刻');
+    expect(todo).toContain('今天');
+    expect(todo).not.toContain('此刻');
     expect(todo).toContain('确定');
     expect(todo).not.toContain('class="deadline-editor notify-editor"');
     expect(todo).not.toContain("notify-calendar-grid");
@@ -535,13 +542,15 @@ describe("Naive UI component usage", () => {
 
     expect(space).toContain('name="space-panel-switch"');
     expect(space).toContain('mode="out-in"');
-    expect(space).toContain(':duration="180"');
+    expect(space).toContain(':duration="90"');
     expect(space).toContain('class="space-text-stage"');
+    expect(space).not.toContain('class="space-tab-indicator"');
     expect(todo).toContain('name="section-reveal"');
     expect(todo).toContain('name="floating-pop"');
     expect(todo).toContain(':duration="240"');
     expect(styles).toMatch(/:root\s*\{[^}]*--motion-medium: 240ms/s);
-    expect(styles).toMatch(/\.space-panel-switch-enter-active,[\s\S]*?\.space-panel-switch-leave-active\s*\{[^}]*opacity 180ms/s);
+    expect(styles).toMatch(/\.space-panel-switch-enter-active,[\s\S]*?\.space-panel-switch-leave-active\s*\{[^}]*opacity 90ms/s);
+    expect(styles).not.toContain(".space-tab-indicator");
     expect(styles).toMatch(/\.todo-list-shell\s*\{[^}]*max-height var\(--motion-medium\)/s);
     expect(styles).toMatch(/\.todo-list-shell\.is-hidden\s*\{[^}]*max-height: 0/s);
     expect(styles).toMatch(/\.section-reveal-enter-active,[\s\S]*?\.section-reveal-leave-active\s*\{[^}]*max-height var\(--motion-medium\)/s);
@@ -630,9 +639,10 @@ describe("Naive UI component usage", () => {
     expect(app).toContain("GITHUB_REPO_URL");
     expect(app).toContain("xiangjianan / todolist");
     expect(app).toContain("https://github.com/xiangjianan/todolist");
-    expect(app).toContain("👤 产品经理 — 云霞");
-    expect(app).toContain("💻 开发 — 佳男");
-    expect(app).toContain("🤝 协作支持 — Codex");
+    expect(app).toContain("云霞 · 产品");
+    expect(app).toContain("佳男 · 开发");
+    expect(app).toContain("Codex · 协作支持");
+    expect(app).not.toContain("👤 产品经理 — 云霞");
     expect(styles).toMatch(/\.companion-popover > span\s*\{[^}]*white-space: pre-line/s);
     expect(companion).toContain("LogoGithub");
     expect(companion).toContain("companion-link-icon");
@@ -707,7 +717,7 @@ describe("Naive UI component usage", () => {
     expect(styles).toMatch(/\.mobile-handoff-message\s*\{[^}]*border: 1px solid var\(--line-main\)/s);
     expect(styles).toMatch(/@media \(max-width: 900px\)[\s\S]*--app-font-size: 14px/s);
     expect(styles).toMatch(/@media \(max-width: 900px\)[\s\S]*\.focus-companion\s*\{[^}]*bottom: 28px/s);
-    expect(styles).toMatch(/@media \(max-width: 900px\)[\s\S]*\.focus-companion img\s*\{[^}]*width: 60px/s);
+    expect(styles).toMatch(/@media \(max-width: 900px\)[\s\S]*\.focus-companion img\s*\{[^}]*width: 50px/s);
     expect(styles).not.toContain(".mobile-nav");
     expect(styles).not.toContain(".mobile-drawer-trigger");
     expect(styles).not.toContain(".mobile-drawer-menu");

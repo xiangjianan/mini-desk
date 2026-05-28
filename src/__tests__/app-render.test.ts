@@ -624,6 +624,63 @@ describe("App shell", () => {
     wrapper.unmount();
   });
 
+  it("adds blank-space reminders below open reminders and above the completed divider", async () => {
+    localStorage.setItem(
+      STORAGE_KEY,
+      JSON.stringify({
+        showCompletedTodos: { morning: true },
+        todos: {
+          morning: [
+            { id: "done-1", text: "已完成事项", done: true },
+            { id: "open-1", text: "未完成事项", done: false },
+          ],
+        },
+      }),
+    );
+    const wrapper = mountApp();
+
+    await wrapper.get('[data-testid="todo-list-morning"]').trigger("click");
+    await wrapper.vm.$nextTick();
+
+    const renderedTexts = wrapper
+      .findAll('[data-testid="todo-input-morning"]')
+      .map((input) => (input.element as HTMLInputElement).value);
+    expect(renderedTexts).toEqual(["未完成事项", "", "已完成事项"]);
+    expect(wrapper.find(".todo-completed-divider").exists()).toBe(true);
+
+    wrapper.unmount();
+  });
+
+  it("adds Enter-created reminders directly below the edited reminder and above completed items", async () => {
+    localStorage.setItem(
+      STORAGE_KEY,
+      JSON.stringify({
+        showCompletedTodos: { morning: true },
+        todos: {
+          morning: [
+            { id: "done-1", text: "已完成事项", done: true },
+            { id: "open-1", text: "未完成事项", done: false },
+          ],
+        },
+      }),
+    );
+    const wrapper = mountApp();
+    const inputWrapper = wrapper.get('[data-testid="todo-input-morning"]');
+    const input = inputWrapper.element as HTMLInputElement;
+
+    await inputWrapper.trigger("click");
+    input.setSelectionRange(input.value.length, input.value.length);
+    await inputWrapper.trigger("keydown", { key: "Enter" });
+    await wrapper.vm.$nextTick();
+
+    const renderedTexts = wrapper
+      .findAll('[data-testid="todo-input-morning"]')
+      .map((item) => (item.element as HTMLInputElement).value);
+    expect(renderedTexts).toEqual(["未完成事项", "", "已完成事项"]);
+
+    wrapper.unmount();
+  });
+
   it("keeps a single blank todo across all reminder sections", async () => {
     localStorage.setItem(
       STORAGE_KEY,
@@ -2506,9 +2563,10 @@ describe("App shell", () => {
       await wrapper.vm.$nextTick();
 
       expect(wrapper.find('[data-testid="companion-confirm"]').text()).toContain("To Do List 看板");
-      expect(wrapper.find('[data-testid="companion-confirm"]').text()).toContain("👤 产品经理 — 云霞");
-      expect(wrapper.find('[data-testid="companion-confirm"]').text()).toContain("💻 开发 — 佳男");
-      expect(wrapper.find('[data-testid="companion-confirm"]').text()).toContain("🤝 协作支持 — Codex");
+      expect(wrapper.find('[data-testid="companion-confirm"]').text()).toContain("云霞 · 产品");
+      expect(wrapper.find('[data-testid="companion-confirm"]').text()).toContain("佳男 · 开发");
+      expect(wrapper.find('[data-testid="companion-confirm"]').text()).toContain("Codex · 协作支持");
+      expect(wrapper.find('[data-testid="companion-confirm"]').text()).not.toContain("👤 产品经理 — 云霞");
       expect(wrapper.find('[data-testid="companion-confirm"]').text()).not.toContain("牛马：Codex");
       expect(wrapper.find('[data-testid="companion-confirm"]').text()).not.toContain("给老婆做的 todolist 看板");
       expect(wrapper.find('[data-testid="companion-confirm"]').text()).toContain("xiangjianan / todolist");

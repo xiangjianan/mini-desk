@@ -534,11 +534,14 @@ function updateNotifyPickerDraft(value: number | null): void {
   notifyPickerDrafts.value = { ...notifyPickerDrafts.value, [key]: value };
 }
 
-function setNotifyPickerDraftToNow(): void {
+function setNotifyPickerDraftToToday(): void {
   const picker = notifyPicker.value;
   if (!picker) return;
   const key = todoKey(picker.period, picker.id);
-  notifyPickerDrafts.value = { ...notifyPickerDrafts.value, [key]: Date.now() };
+  const current = new Date(getNotifyPickerValue());
+  const today = new Date();
+  current.setFullYear(today.getFullYear(), today.getMonth(), today.getDate());
+  notifyPickerDrafts.value = { ...notifyPickerDrafts.value, [key]: current.getTime() };
 }
 
 function confirmNotifyPicker(value: number | null): void {
@@ -628,7 +631,7 @@ async function handleMenuSelect(key: string): Promise<void> {
   }
   if (key === "clear-completed") {
     closeMenu();
-    emit("clearCompleted", period, anchor);
+    emit("clearCompleted", period, getTodoSectionAnchor(period));
     return;
   }
   if (key === "copy" && id) {
@@ -657,7 +660,7 @@ async function handleMenuSelect(key: string): Promise<void> {
     const todo = getTodoById(period, id);
     emit("star", { period, id, starred: !todo?.starred, anchor });
   }
-  if (key === "delete") emit("remove", period, id, anchor);
+  if (key === "delete") emit("remove", period, id, getTodoSectionAnchor(period));
 }
 
 function todoKey(period: TodoPeriod, id: string): string {
@@ -685,6 +688,10 @@ function getTodoById(period: TodoPeriod, id: string): TodoItem | undefined {
 
 function getListById(listId: TodoListId): TodoListConfig | undefined {
   return effectiveTodoLists.value.find((list) => list.id === listId);
+}
+
+function getTodoSectionAnchor(period: TodoListId): HTMLElement | undefined {
+  return todoSectionRefs.get(period);
 }
 
 function getFallbackListTitle(list: TodoListConfig): string {
@@ -1167,7 +1174,7 @@ function buildTodoListEntries(period: TodoListId, todos: TodoItem[], deferredDon
                 <button
                   class="todo-completed-clear"
                   type="button"
-                  @click.stop="emit('clearCompleted', entry.period, $event.currentTarget as HTMLElement)"
+                  @click.stop="emit('clearCompleted', entry.period, getTodoSectionAnchor(entry.period))"
                 >
                   clear
                 </button>
@@ -1180,38 +1187,40 @@ function buildTodoListEntries(period: TodoListId, todos: TodoItem[], deferredDon
     </div>
 
     <Teleport to="body">
-      <div
-        v-if="notifyPicker"
-        ref="notifyPickerRef"
-        class="notify-floating-date-picker"
-        :style="notifyPickerStyle"
-        aria-label="设置通知时间"
-      >
-        <NDatePicker
-          class="notify-date-picker"
-          type="datetime"
-          panel
-          :value="getNotifyPickerValue()"
-          clearable
-          format="yyyy-MM-dd HH:mm"
-          value-format="timestamp"
-          default-time="09:00:00"
-          :time-picker-props="notifyTimePickerProps"
-          :actions="['clear', 'now', 'confirm']"
-          @update:value="updateNotifyPickerDraft"
-          @confirm="confirmNotifyPicker"
+      <Transition name="floating-pop" :duration="240">
+        <div
+          v-if="notifyPicker"
+          ref="notifyPickerRef"
+          class="notify-floating-date-picker"
+          :style="notifyPickerStyle"
+          aria-label="设置通知时间"
         >
-          <template #clear>
-            <button class="notify-panel-action" type="button" @click="clearNotifyPicker">清除</button>
-          </template>
-          <template #now>
-            <button class="notify-panel-action" type="button" @click="setNotifyPickerDraftToNow">此刻</button>
-          </template>
-          <template #confirm="{ onConfirm, disabled }">
-            <button class="notify-panel-action" type="button" :disabled="disabled" @click="onConfirm">确定</button>
-          </template>
-        </NDatePicker>
-      </div>
+          <NDatePicker
+            class="notify-date-picker"
+            type="datetime"
+            panel
+            :value="getNotifyPickerValue()"
+            clearable
+            format="yyyy-MM-dd HH:mm"
+            value-format="timestamp"
+            default-time="09:00:00"
+            :time-picker-props="notifyTimePickerProps"
+            :actions="['clear', 'now', 'confirm']"
+            @update:value="updateNotifyPickerDraft"
+            @confirm="confirmNotifyPicker"
+          >
+            <template #clear>
+              <button class="notify-panel-action is-danger" type="button" @click="clearNotifyPicker">清除</button>
+            </template>
+            <template #now>
+              <button class="notify-panel-action" type="button" @click="setNotifyPickerDraftToToday">今天</button>
+            </template>
+            <template #confirm="{ onConfirm, disabled }">
+              <button class="notify-panel-action" type="button" :disabled="disabled" @click="onConfirm">确定</button>
+            </template>
+          </NDatePicker>
+        </div>
+      </Transition>
     </Teleport>
 
     <Transition name="floating-pop" :duration="240">

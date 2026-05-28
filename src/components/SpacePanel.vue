@@ -192,7 +192,7 @@ function handleTabsWheel(event: WheelEvent): void {
     </NScrollbar>
 
     <div class="space-text-stage">
-      <Transition name="space-panel-switch" mode="out-in" :duration="180">
+      <Transition name="space-panel-switch" mode="out-in" :duration="90">
         <TextPanel
           v-if="activeSpace"
           :key="activeSpace.id"

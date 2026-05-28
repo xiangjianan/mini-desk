@@ -577,6 +577,19 @@ describe("todo behavior", () => {
     expect(getOrderedTodos(next.morning).map((todo) => todo.id)).toEqual(["blank", "done"]);
   });
 
+  it("inserts a blank-space todo after existing open todos even when completed todos were stored first", () => {
+    const state = defaultState();
+    state.todos.morning = [
+      { id: "done", text: "已完成", done: true },
+      { id: "open", text: "未完成", done: false },
+    ];
+
+    const next = addTodo(state.todos, "morning", { id: "blank", text: "", done: false });
+
+    expect(next.morning.map((todo) => todo.id)).toEqual(["done", "open", "blank"]);
+    expect(getOrderedTodos(next.morning).map((todo) => todo.id)).toEqual(["open", "blank", "done"]);
+  });
+
   it("moves todos across periods and can mark completion", () => {
     const state = defaultState();
     state.todos.morning = [

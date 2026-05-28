@@ -256,4 +256,18 @@ describe("SpacePanel", () => {
 
     expect(spaceTabRule).toContain("font-weight: 600");
   });
+
+  it("keeps active workspace tabs highlighted by background only", () => {
+    const wrapper = mountSpacePanel([
+      { id: "workspace", title: "工作空间", lines: [] },
+      { id: "project", title: "项目", lines: [] },
+    ], "project");
+    const styles = readFileSync(resolve(__dirname, "../styles.css"), "utf8");
+    const activeTabRule = styles.match(/\.space-tab\.is-active \{([\s\S]*?)\}/)?.[1] ?? "";
+
+    expect(wrapper.find(".space-tab-indicator").exists()).toBe(false);
+    expect(activeTabRule).toContain("background: var(--button-hover)");
+    expect(activeTabRule).not.toContain("box-shadow");
+    expect(styles).not.toContain(".space-tab-indicator");
+  });
 });

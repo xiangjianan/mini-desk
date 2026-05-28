@@ -19,8 +19,8 @@ export function addTodo(
   const next = cloneTodoMap(todos);
   const list = ensureTodoList(next, period);
   if (!afterId) {
-    const firstCompletedIndex = list.findIndex((item) => item.done);
-    list.splice(firstCompletedIndex >= 0 ? firstCompletedIndex : list.length, 0, todo);
+    const lastOpenIndex = findLastOpenTodoIndex(list);
+    list.splice(lastOpenIndex >= 0 ? lastOpenIndex + 1 : 0, 0, todo);
     return next;
   }
   const index = list.findIndex((item) => item.id === afterId);
@@ -184,6 +184,13 @@ export function cloneTodoMap(todos: TodoMap): TodoMap {
 function ensureTodoList(todos: TodoMap, period: TodoPeriod): TodoItem[] {
   todos[period] ??= [];
   return todos[period];
+}
+
+function findLastOpenTodoIndex(todos: TodoItem[]): number {
+  for (let index = todos.length - 1; index >= 0; index -= 1) {
+    if (!todos[index].done) return index;
+  }
+  return -1;
 }
 
 function prioritizeStarred(todos: TodoItem[]): TodoItem[] {
