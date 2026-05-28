@@ -351,13 +351,24 @@ h3 {
   min-height: 0;
 }
 
+.space-tabs-scrollbar {
+  flex: 0 0 34px;
+  width: calc(100% - 154px);
+  max-width: calc(100% - 154px);
+  height: 34px;
+  min-height: 34px;
+  border-bottom: 1px solid var(--line-section);
+}
+
 .space-tabs {
   display: flex;
   align-items: stretch;
+  width: max-content;
+  min-width: 100%;
   height: 34px;
   min-height: 34px;
   font-size: var(--app-font-size);
-  border-bottom: 1px solid var(--line-section);
+  border-bottom: 0;
   overflow-x: auto;
   overflow-y: hidden;
   overscroll-behavior-x: contain;
@@ -365,8 +376,8 @@ h3 {
 }
 
 .workspace-panel .space-tabs {
-  width: calc(100% - 154px);
-  max-width: calc(100% - 154px);
+  width: max-content;
+  max-width: none;
   overflow-x: auto;
 }
 
@@ -491,6 +502,12 @@ h3 {
   overflow: hidden;
 }
 
+.text-editor-scrollbar,
+.text-editor-scrollbar .n-scrollbar-container,
+.text-editor-scrollbar .n-scrollbar-content {
+  height: 100%;
+}
+
 .text-editor-textarea {
   width: 100%;
   height: 100%;
@@ -510,6 +527,23 @@ h3 {
   min-height: 0;
   overflow-y: auto;
   flex: 1 1 auto;
+}
+
+.image-list-scrollbar,
+.quick-buttons-scrollbar,
+.todo-list-scrollbar,
+.text-editor-scrollbar,
+.preview-image-list-scrollbar {
+  flex: 1 1 auto;
+  min-height: 0;
+}
+
+.image-list-scrollbar .image-list,
+.quick-buttons-scrollbar .quick-buttons,
+.todo-list-scrollbar .todo-list,
+.preview-image-list-scrollbar .preview-image-list {
+  overflow: visible;
+  flex: 0 0 auto;
 }
 
 .image-list {
@@ -670,6 +704,15 @@ h3 {
   overflow-y: auto;
 }
 
+.today-focus-scrollbar {
+  max-height: 25vh;
+}
+
+.today-focus-scrollbar .today-focus-list {
+  max-height: none;
+  overflow: visible;
+}
+
 .today-focus-item {
   position: relative;
   display: grid;
@@ -802,6 +845,10 @@ h3 {
 .todo-section.is-compact .todo-drag-handle {
   height: 30px;
   min-height: 30px;
+}
+
+.todo-section.is-compact .todo-input {
+  line-height: 30px;
 }
 
 .todo-section.is-compact .todo-empty-hint {
@@ -955,6 +1002,7 @@ h3 {
 }
 
 .todo-notify-button {
+  position: relative;
   justify-self: end;
   grid-column: 4;
   display: inline-flex;
@@ -968,6 +1016,8 @@ h3 {
   border: 0;
   color: var(--muted);
   background: transparent;
+  cursor: pointer;
+  overflow: visible;
   opacity: 0;
   pointer-events: none;
   transition: opacity 0.18s ease, color 0.18s ease;
@@ -990,6 +1040,44 @@ h3 {
 .todo-notify-button:hover {
   color: var(--text);
   background: transparent;
+}
+
+.todo-notify-icon,
+.todo-deadline-label {
+  position: relative;
+  z-index: 1;
+  pointer-events: none;
+}
+
+.notify-floating-date-picker {
+  position: fixed;
+  z-index: 4000;
+  width: max-content;
+  max-width: calc(100vw - 16px);
+  border: 1px solid var(--line-main);
+  background: var(--panel);
+}
+
+.notify-date-picker {
+  max-width: calc(100vw - 16px);
+}
+
+.notify-panel-action {
+  height: 28px;
+  padding: 0 10px;
+  border: 1px solid var(--line-control);
+  background: transparent;
+  color: var(--text);
+  font-size: var(--app-font-size);
+}
+
+.notify-panel-action:hover:not(:disabled) {
+  background: var(--button-hover);
+}
+
+.notify-panel-action:disabled {
+  color: var(--muted);
+  cursor: not-allowed;
 }
 
 .today-focus-item .todo-notify-button {
@@ -1140,12 +1228,15 @@ h3 {
 
 .todo-input,
 .today-focus-input {
+  box-sizing: border-box;
   min-width: 0;
   flex: 1 1 auto;
   width: 100%;
+  padding: 0 8px;
   border: 0;
   font-size: var(--app-font-size);
   background: transparent;
+  line-height: 34px;
   user-select: text;
 }
 
@@ -1185,293 +1276,6 @@ h3 {
 
 .todo-completed-clear:hover {
   color: var(--text);
-}
-
-.deadline-editor {
-  position: fixed;
-  z-index: 30;
-  width: min(280px, calc(100vw - 16px));
-  padding: 10px;
-  border: 1px solid var(--line-control);
-  background: var(--panel);
-}
-
-.notify-editor {
-  width: min(378px, calc(100vw - 16px));
-  min-height: 224px;
-}
-
-.notify-editor-body {
-  display: grid;
-  grid-template-columns: minmax(160px, 1fr) 150px;
-  gap: 8px;
-  padding: 4px 0 6px;
-}
-
-.notify-time-unit-title {
-  display: block;
-  margin: 2px 0 3px;
-  color: var(--muted);
-  font-size: 12px;
-}
-
-.deadline-editor-heading,
-.deadline-editor-actions,
-.deadline-time-options {
-  display: flex;
-  align-items: center;
-}
-
-.deadline-editor-heading {
-  justify-content: space-between;
-  margin-bottom: 4px;
-  font-size: var(--app-font-size);
-}
-
-.deadline-date-input {
-  width: 100%;
-  height: 30px;
-  margin-bottom: 8px;
-  padding: 0 6px;
-  border: 1px solid var(--line-control);
-  background: var(--panel);
-  color: var(--text);
-  font-size: var(--app-font-size);
-}
-
-.notify-calendar-header {
-  display: grid;
-  grid-template-columns: 24px minmax(0, 1fr) 24px;
-  align-items: center;
-  min-height: 24px;
-  margin-bottom: 3px;
-  color: var(--text);
-  font-size: var(--app-font-size);
-  text-align: center;
-}
-
-.notify-calendar-nav {
-  width: 24px;
-  height: 24px;
-  min-height: 24px;
-  padding: 0;
-  border: 1px solid var(--line-control);
-  background: transparent;
-  color: var(--text);
-  font-size: 16px;
-  line-height: 1;
-}
-
-.notify-calendar-nav:hover,
-.notify-calendar-nav:focus-visible {
-  background: var(--button-hover);
-}
-
-.notify-calendar-weekdays,
-.notify-calendar-grid {
-  display: grid;
-  grid-template-columns: repeat(7, minmax(0, 1fr));
-  gap: 2px;
-}
-
-.notify-calendar-weekdays {
-  margin-bottom: 2px;
-  color: var(--muted);
-  font-size: 11px;
-  text-align: center;
-}
-
-.notify-calendar-placeholder,
-.notify-calendar-day {
-  width: 100%;
-  aspect-ratio: 1;
-}
-
-.notify-calendar-day {
-  min-width: 0;
-  min-height: 0;
-  padding: 0;
-  border: 1px solid transparent;
-  background: transparent;
-  color: var(--text);
-  font-size: 11px;
-}
-
-.notify-calendar-day:hover,
-.notify-calendar-day:focus-visible {
-  border-color: var(--line-focus);
-  background: var(--button-hover);
-}
-
-.notify-calendar-day.is-today {
-  border-color: var(--line-control);
-}
-
-.notify-calendar-day.is-selected {
-  background: var(--button-hover);
-  border-color: var(--line-focus);
-}
-
-.notify-date-shortcuts {
-  display: grid;
-  grid-template-columns: repeat(3, minmax(0, 1fr));
-  gap: 4px;
-  margin-top: 4px;
-}
-
-.notify-date-shortcut {
-  height: 24px;
-  min-height: 24px;
-  padding: 0 4px;
-  border: 1px solid var(--line-control);
-  background: transparent;
-  color: var(--text);
-  font-size: var(--app-font-size);
-}
-
-.deadline-time-options {
-  flex-wrap: wrap;
-  gap: 6px;
-  margin-bottom: 6px;
-}
-
-.notify-clock-options {
-  position: relative;
-  width: 136px;
-  height: 136px;
-  margin: 0 auto;
-  border: 1px dashed var(--line-control);
-  border-radius: 50%;
-  background: var(--button);
-}
-
-.notify-period-toggle {
-  position: absolute;
-  left: 50%;
-  top: 50%;
-  z-index: 3;
-  display: grid;
-  grid-template-columns: repeat(2, 24px);
-  gap: 0;
-  padding: 2px;
-  border: 1px solid var(--line-control);
-  background: var(--panel);
-  transform: translate(-50%, -50%);
-}
-
-.notify-period-toggle-button {
-  width: 24px;
-  min-width: 24px;
-  height: 22px;
-  min-height: 22px;
-  padding: 0;
-  border: 0;
-  background: transparent;
-  color: var(--muted);
-  font-size: 11px;
-}
-
-.notify-period-toggle-button.is-selected {
-  background: var(--text);
-  color: var(--panel);
-}
-
-.notify-hour-ring {
-  position: absolute;
-  left: 50%;
-  top: 50%;
-  width: 144px;
-  height: 144px;
-  border: 1px dashed var(--line-subtle);
-  border-radius: 50%;
-  pointer-events: none;
-  transform: translate(-50%, -50%);
-}
-
-.notify-hour-ring-outer {
-  width: 192px;
-  height: 192px;
-}
-
-.notify-clock-button {
-  position: absolute;
-  transition: transform 0.16s ease, box-shadow 0.16s ease;
-}
-
-.notify-clock-button:hover {
-  transform: scale(1.14);
-  z-index: 2;
-}
-
-@media (max-width: 560px) {
-  .notify-editor-body {
-    grid-template-columns: 1fr;
-  }
-
-  .notify-clock-options {
-    margin: 0 auto;
-  }
-}
-
-.deadline-time-button,
-.deadline-ignore-button,
-.deadline-confirm-button {
-  height: 28px;
-  padding: 0 8px;
-  border: 1px solid var(--line-control);
-  background: transparent;
-  color: var(--text);
-  font-size: var(--app-font-size);
-}
-
-.deadline-time-button.is-selected,
-.deadline-confirm-button {
-  background: var(--button-hover);
-}
-
-.deadline-time-button.is-selected,
-.notify-minute-button.is-selected {
-  background: var(--text);
-  color: var(--panel);
-  border-color: var(--text);
-}
-
-.notify-clock-button.deadline-time-button {
-  width: 22px;
-  min-width: 22px;
-  height: 22px;
-  min-height: 22px;
-  padding: 0;
-  border-radius: 50% !important;
-  font-size: 10px;
-}
-
-.notify-minute-options {
-  display: grid;
-  grid-template-columns: repeat(4, minmax(0, 1fr));
-  gap: 4px;
-  margin-top: 4px;
-}
-
-.notify-minute-button {
-  height: 24px;
-  min-height: 24px;
-  padding: 0 4px;
-  border: 1px solid var(--line-control);
-  background: transparent;
-  color: var(--text);
-  font-size: var(--app-font-size);
-}
-
-.notify-minute-button.is-selected {
-  background: var(--text);
-  color: var(--panel);
-  border-color: var(--text);
-}
-
-.deadline-editor-actions {
-  justify-content: flex-end;
-  gap: 4px;
 }
 
 .todo-list-create-dialog {
@@ -1828,11 +1632,14 @@ h3 {
   font-size: 12px;
 }
 
-.gif-theme-custom-dialog input {
+.gif-theme-custom-dialog .n-upload,
+.gif-theme-upload-button {
   width: 100%;
   min-width: 0;
-  height: 30px;
-  color: var(--text);
+}
+
+.gif-theme-upload-button {
+  justify-content: center;
 }
 
 .gif-theme-custom-actions {

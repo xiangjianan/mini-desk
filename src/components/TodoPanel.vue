@@ -1,24 +1,14 @@
 <script setup lang="ts">
 import { computed, nextTick, onMounted, onUnmounted, ref } from "vue";
 import { AlarmOutline, ChevronDownOutline } from "@vicons/ionicons5";
-import { NCheckbox, NDropdown, NIcon } from "naive-ui";
+import { NCheckbox, NDatePicker, NDropdown, NIcon, NScrollbar } from "naive-ui";
 import type { DropdownOption } from "naive-ui";
 import { DEFAULT_TODO_LISTS, GUIDE_MENU_OPTION } from "../state/defaults";
 import {
-  NOTIFY_TIME_OPTIONS,
-  NOTIFY_HOUR_OPTIONS,
-  NOTIFY_MINUTE_OPTIONS,
-  DEFAULT_NOTIFY_TIME,
-  createNotifyAt,
-  getDefaultNotifySelection,
+  getDefaultNotifyDateTimeValue,
   getNotifyDisplay,
-  getNotifyTimeLabel,
-  getLocalDateInputValue,
   isValidDeadlineAt,
   type NotifyDisplay,
-  type NotifyHourOption,
-  type NotifyMinuteOption,
-  type NotifyTimeOption,
 } from "../state/deadlines";
 import type {
   DraggedTodo,
@@ -82,19 +72,17 @@ const dragged = ref<DraggedTodo | null>(null);
 const draggedListId = ref<TodoListId | null>(null);
 const editingTodoKey = ref<string | null>(null);
 const selectedMenuTodoKey = ref<string | null>(null);
-const notifyEditorRef = ref<HTMLElement | null>(null);
-const listCreateDialogRef = ref<HTMLElement | null>(null);
-const listCreateInputRef = ref<HTMLInputElement | null>(null);
-const notifyEditor = ref<{
+const notifyPickerRef = ref<HTMLElement | null>(null);
+const notifyPicker = ref<{
   period: TodoPeriod;
   id: string;
   anchor: HTMLElement;
-  date: string;
-  month: string;
-  time: NotifyTimeOption;
   x: number;
   y: number;
 } | null>(null);
+const notifyPickerDrafts = ref<Record<string, number>>({});
+const listCreateDialogRef = ref<HTMLElement | null>(null);
+const listCreateInputRef = ref<HTMLInputElement | null>(null);
 const listCreateDialog = ref<{
   x: number;
   y: number;
@@ -106,6 +94,7 @@ const reorderTimers = new Map<string, number>();
 const lastTodoCarets = new Map<string, number>();
 const lastTodoSelections = new Map<string, { start: number; end: number }>();
 const todoSectionRefs = new Map<TodoListId, HTMLElement>();
+const notifyPickerAnchors = new Map<string, HTMLElement>();
 const guideMenuOption: DropdownOption = { ...GUIDE_MENU_OPTION, label: GUIDE_MENU_OPTION.label || "Tips" };
 const legacyTodoTitleIds: Record<TodoListId, string> = {
   morning: "todo-morning-title",
@@ -154,41 +143,13 @@ const menuOptions = computed<DropdownOption[]>(() => {
 const todayFocusTitleId = "today-focus-title";
 const DEADLINE_CLOCK_INTERVAL_MS = 60_000;
 const DEADLINE_EDITOR_OFFSET = 8;
-const DEADLINE_EDITOR_WIDTH = 378;
-const DEADLINE_EDITOR_HEIGHT = 224;
+const NOTIFY_PICKER_WIDTH = 320;
+const NOTIFY_PICKER_HEIGHT = 360;
+const notifyTimePickerProps = { format: "HH:mm" };
 const LIST_CREATE_DIALOG_WIDTH = 260;
 const LIST_CREATE_DIALOG_HEIGHT = 112;
-const CALENDAR_WEEKDAYS = ["日", "一", "二", "三", "四", "五", "六"];
-const NOTIFY_PERIOD_OPTIONS = [
-  { key: "am", label: "早" },
-  { key: "pm", label: "晚" },
-] as const;
-const NOTIFY_DATE_SHORTCUTS = [
-  { label: "今天", offsetDays: 0 },
-  { label: "明天", offsetDays: 1 },
-  { label: "后天", offsetDays: 2 },
-] as const;
-const NOTIFY_CLOCK_HOUR_OPTIONS = [
-  "01",
-  "02",
-  "03",
-  "04",
-  "05",
-  "06",
-  "07",
-  "08",
-  "09",
-  "10",
-  "11",
-  "12",
-] as const;
-const NOTIFY_CLOCK_SIZE = 136;
-const NOTIFY_CLOCK_BUTTON_SIZE = 22;
-const NOTIFY_CLOCK_RADIUS = 51;
 const deadlineNow = ref(Date.now());
 const deadlineClockTimer = ref<number | undefined>();
-type NotifyPeriodOption = typeof NOTIFY_PERIOD_OPTIONS[number]["key"];
-type NotifyClockHourOption = typeof NOTIFY_CLOCK_HOUR_OPTIONS[number];
 
 const ordered = computed(() =>
   Object.fromEntries(
@@ -226,14 +187,6 @@ const todayFocus = computed(() => {
   return entries.sort(compareTodayFocusEntries).map(({ period, todo }) => ({ period, todo }));
 });
 
-const notifyEditorStyle = computed(() => {
-  if (!notifyEditor.value) return {};
-  return {
-    left: `${notifyEditor.value.x}px`,
-    top: `${notifyEditor.value.y}px`,
-  };
-});
-
 const listCreateDialogStyle = computed(() => {
   if (!listCreateDialog.value) return {};
   return {
@@ -242,42 +195,12 @@ const listCreateDialogStyle = computed(() => {
   };
 });
 
-const notifyCalendarTitle = computed(() => {
-  if (!notifyEditor.value) return "";
-  const month = parseMonthValue(notifyEditor.value.month);
-  if (!month) return "";
-  return `${month.year} 年 ${month.month} 月`;
-});
-
-const notifyCalendarDays = computed(() => {
-  if (!notifyEditor.value) return [];
-  const month = parseMonthValue(notifyEditor.value.month);
-  if (!month) return [];
-  const selectedDate = notifyEditor.value.date;
-  const today = getLocalDateInputValue();
-  const firstDay = new Date(month.year, month.month - 1, 1).getDay();
-  const daysInMonth = new Date(month.year, month.month, 0).getDate();
-  const leading = Array.from({ length: firstDay }, (_, index) => ({
-    key: `blank-${index}`,
-    day: "",
-    date: "",
-    blank: true,
-    selected: false,
-    today: false,
-  }));
-  const days = Array.from({ length: daysInMonth }, (_, index) => {
-    const day = index + 1;
-    const date = formatDateValue(month.year, month.month, day);
-    return {
-      key: date,
-      day: String(day),
-      date,
-      blank: false,
-      selected: date === selectedDate,
-      today: date === today,
-    };
-  });
-  return [...leading, ...days];
+const notifyPickerStyle = computed(() => {
+  if (!notifyPicker.value) return {};
+  return {
+    left: `${notifyPicker.value.x}px`,
+    top: `${notifyPicker.value.y}px`,
+  };
 });
 
 const notifyDisplays = computed(() => {
@@ -346,7 +269,8 @@ function handleVisibilityChange(): void {
 
 function handleListClick(event: MouseEvent, period: TodoPeriod): void {
   const target = event.target as HTMLElement;
-  if (event.target !== event.currentTarget && !target.closest(".todo-empty-hint")) return;
+  if (target.closest("button, input, textarea, .todo-item, .todo-completed-divider")) return;
+  event.stopPropagation();
   emit("create", period);
 }
 
@@ -453,7 +377,7 @@ function handleInputBlur(period: TodoPeriod, id: string): void {
 function handleInputFocus(period: TodoPeriod, todo: TodoItem, event: FocusEvent): void {
   focusedListId.value = period;
   if (!todo.done && todo.text.trim().length === 0) editingTodoKey.value = todoKey(period, todo.id);
-  emit("focus", event.currentTarget as HTMLElement);
+  emit("focus", todoSectionRefs.get(period) ?? (event.currentTarget as HTMLElement));
 }
 
 function clearPendingReorder(key: string): void {
@@ -561,7 +485,7 @@ function handleStarClick(event: MouseEvent, period: TodoPeriod, todo: TodoItem):
 function handleNotifyClick(event: MouseEvent, period: TodoPeriod, todo: TodoItem): void {
   event.preventDefault();
   event.stopPropagation();
-  openNotifyEditor(period, todo.id, event.currentTarget as HTMLElement, todo);
+  openNotifyPicker(period, todo.id, event.currentTarget as HTMLElement);
 }
 
 function handleTodoDragStart(event: DragEvent, period: TodoPeriod, todo: TodoItem): void {
@@ -572,54 +496,94 @@ function handleTodoDragStart(event: DragEvent, period: TodoPeriod, todo: TodoIte
   event.dataTransfer.setData("application/x-todo-id", `${period}:${todo.id}`);
 }
 
-function openNotifyEditor(period: TodoPeriod, id: string, anchor: HTMLElement, todo = getTodoById(period, id)): void {
-  const { date, time } = getNotifyEditorValues(todo);
-  const { x, y } = getNotifyEditorPosition(anchor);
+function setNotifyPickerAnchor(period: TodoPeriod, id: string, element: Element | null): void {
+  const key = todoKey(period, id);
+  if (element instanceof HTMLElement) notifyPickerAnchors.set(key, element);
+  else notifyPickerAnchors.delete(key);
+}
+
+function openNotifyPicker(period: TodoPeriod, id: string, anchor?: HTMLElement): void {
+  if (!anchor) return;
+  const key = todoKey(period, id);
+  const position = getNotifyPickerPosition(anchor);
+  notifyPickerAnchors.set(key, anchor);
+  notifyPickerDrafts.value = {
+    ...notifyPickerDrafts.value,
+    [key]: getNotifyPickerInitialValue(getTodoById(period, id)),
+  };
   selectedMenuTodoKey.value = null;
-  notifyEditor.value = {
-    period,
-    id,
-    anchor,
-    date,
-    month: getMonthValue(date),
-    time,
-    x,
-    y,
-  };
+  notifyPicker.value = { period, id, anchor, ...position };
 }
 
-function selectNotifyMinute(minute: NotifyMinuteOption): void {
-  if (!notifyEditor.value) return;
-  notifyEditor.value = {
-    ...notifyEditor.value,
-    time: `${getSelectedNotifyHour(notifyEditor.value.time)}:${minute}` as NotifyTimeOption,
-  };
+function getNotifyPickerInitialValue(todo?: TodoItem): number {
+  return isValidDeadlineAt(todo?.notifyAt) ? todo.notifyAt : getDefaultNotifyDateTimeValue();
 }
 
-function getNotifyEditorValues(todo?: TodoItem): { date: string; time: NotifyTimeOption } {
-  if (!isValidDeadlineAt(todo?.notifyAt)) return getDefaultNotifySelection();
-
-  const notifyDate = new Date(todo.notifyAt);
-  const hour = String(notifyDate.getHours()).padStart(2, "0");
-  const minute = getSupportedNotifyMinute(String(notifyDate.getMinutes()).padStart(2, "0"));
-  const time = `${hour}:${minute}`;
-  const supportedTime = NOTIFY_TIME_OPTIONS.includes(time as NotifyTimeOption)
-    ? time as NotifyTimeOption
-    : DEFAULT_NOTIFY_TIME;
-  return { date: getLocalDateInputValue(notifyDate), time: supportedTime };
+function getNotifyPickerValue(): number {
+  const picker = notifyPicker.value;
+  if (!picker) return getDefaultNotifyDateTimeValue();
+  const todo = getTodoById(picker.period, picker.id);
+  const key = todoKey(picker.period, picker.id);
+  return notifyPickerDrafts.value[key] ?? getNotifyPickerInitialValue(todo);
 }
 
-function getNotifyEditorPosition(anchor: HTMLElement): { x: number; y: number } {
+function updateNotifyPickerDraft(value: number | null): void {
+  const picker = notifyPicker.value;
+  if (!picker || value === null) return;
+  const key = todoKey(picker.period, picker.id);
+  notifyPickerDrafts.value = { ...notifyPickerDrafts.value, [key]: value };
+}
+
+function setNotifyPickerDraftToNow(): void {
+  const picker = notifyPicker.value;
+  if (!picker) return;
+  const key = todoKey(picker.period, picker.id);
+  notifyPickerDrafts.value = { ...notifyPickerDrafts.value, [key]: Date.now() };
+}
+
+function confirmNotifyPicker(value: number | null): void {
+  const picker = notifyPicker.value;
+  if (!picker || value === null) return;
+  const key = todoKey(picker.period, picker.id);
+  emit("notify", picker.period, picker.id, value, notifyPickerAnchors.get(key));
+  notifyPicker.value = null;
+  removeNotifyPickerDraft(key);
+}
+
+function clearNotifyPicker(): void {
+  const picker = notifyPicker.value;
+  if (!picker) return;
+  const key = todoKey(picker.period, picker.id);
+  emit("notify", picker.period, picker.id, undefined, notifyPickerAnchors.get(key));
+  notifyPicker.value = null;
+  removeNotifyPickerDraft(key);
+}
+
+function closeNotifyPicker(): void {
+  const picker = notifyPicker.value;
+  if (picker) removeNotifyPickerDraft(todoKey(picker.period, picker.id));
+  notifyPicker.value = null;
+}
+
+function getNotifyPickerPosition(anchor: HTMLElement): { x: number; y: number } {
   const rect = anchor.getBoundingClientRect();
-  const viewportWidth = window.innerWidth || document.documentElement.clientWidth || DEADLINE_EDITOR_WIDTH;
-  const viewportHeight = window.innerHeight || document.documentElement.clientHeight || DEADLINE_EDITOR_HEIGHT;
-  const maxX = Math.max(DEADLINE_EDITOR_OFFSET, viewportWidth - DEADLINE_EDITOR_WIDTH - DEADLINE_EDITOR_OFFSET);
-  const rightX = rect.right + DEADLINE_EDITOR_OFFSET;
-  const fallbackLeftX = rect.left - DEADLINE_EDITOR_WIDTH - DEADLINE_EDITOR_OFFSET;
-  const x = rightX <= maxX ? rightX : Math.max(DEADLINE_EDITOR_OFFSET, fallbackLeftX);
-  const maxY = Math.max(DEADLINE_EDITOR_OFFSET, viewportHeight - DEADLINE_EDITOR_HEIGHT - DEADLINE_EDITOR_OFFSET);
-  const y = Math.min(Math.max(DEADLINE_EDITOR_OFFSET, rect.top), maxY);
-  return { x, y };
+  const viewportWidth = window.innerWidth || document.documentElement.clientWidth || NOTIFY_PICKER_WIDTH;
+  const viewportHeight = window.innerHeight || document.documentElement.clientHeight || NOTIFY_PICKER_HEIGHT;
+  const maxX = Math.max(DEADLINE_EDITOR_OFFSET, viewportWidth - NOTIFY_PICKER_WIDTH - DEADLINE_EDITOR_OFFSET);
+  const maxY = Math.max(DEADLINE_EDITOR_OFFSET, viewportHeight - NOTIFY_PICKER_HEIGHT - DEADLINE_EDITOR_OFFSET);
+  const preferredX = rect.left;
+  const preferredY = rect.bottom + DEADLINE_EDITOR_OFFSET;
+  const fallbackY = rect.top - NOTIFY_PICKER_HEIGHT - DEADLINE_EDITOR_OFFSET;
+  return {
+    x: Math.min(Math.max(DEADLINE_EDITOR_OFFSET, preferredX), maxX),
+    y: preferredY <= maxY ? preferredY : Math.max(DEADLINE_EDITOR_OFFSET, fallbackY),
+  };
+}
+
+function removeNotifyPickerDraft(key: string): void {
+  if (!(key in notifyPickerDrafts.value)) return;
+  const { [key]: _removed, ...nextDrafts } = notifyPickerDrafts.value;
+  notifyPickerDrafts.value = nextDrafts;
 }
 
 function getListCreateDialogPosition(anchor?: HTMLElement, x?: number, y?: number): { x: number; y: number } {
@@ -634,164 +598,12 @@ function getListCreateDialogPosition(anchor?: HTMLElement, x?: number, y?: numbe
   };
 }
 
-function selectNotifyDate(value: string): void {
-  if (!notifyEditor.value) return;
-  notifyEditor.value = { ...notifyEditor.value, date: value, month: getMonthValue(value) };
-}
-
-function selectNotifyRelativeDate(offsetDays: number): void {
-  const date = new Date();
-  date.setDate(date.getDate() + offsetDays);
-  selectNotifyDate(getLocalDateInputValue(date));
-}
-
-function shiftNotifyCalendarMonth(delta: number): void {
-  if (!notifyEditor.value) return;
-  const month = parseMonthValue(notifyEditor.value.month);
-  if (!month) return;
-  const next = new Date(month.year, month.month - 1 + delta, 1);
-  notifyEditor.value = {
-    ...notifyEditor.value,
-    month: formatMonthValue(next.getFullYear(), next.getMonth() + 1),
-  };
-}
-
-function getNotifyHourButtonStyle(hourValue: NotifyClockHourOption): Record<string, string> {
-  const hour = Number(hourValue);
-  const center = NOTIFY_CLOCK_SIZE / 2;
-  const offset = NOTIFY_CLOCK_BUTTON_SIZE / 2;
-  if (hour === 0) {
-    return {
-      left: `${center - offset}px`,
-      top: `${center - offset}px`,
-    };
-  }
-  const angle = (hour / 12) * Math.PI * 2 - Math.PI / 2;
-  return {
-    left: `${center + Math.cos(angle) * NOTIFY_CLOCK_RADIUS - offset}px`,
-    top: `${center + Math.sin(angle) * NOTIFY_CLOCK_RADIUS - offset}px`,
-  };
-}
-
-function getNotifyHourLabel(hour: NotifyClockHourOption): string {
-  if (!notifyEditor.value) return hour;
-  const period = getSelectedNotifyPeriod(notifyEditor.value.time);
-  const minute = notifyEditor.value ? getSelectedNotifyMinute(notifyEditor.value.time) : "00";
-  return getNotifyTimeLabel(`${getActualNotifyHour(period, hour)}:${minute}` as NotifyTimeOption);
-}
-
-function getNotifyClockHourDisplay(hour: NotifyClockHourOption): number {
-  if (!notifyEditor.value) return Number(hour);
-  return getSelectedNotifyPeriod(notifyEditor.value.time) === "pm" ? Number(hour) + 12 : Number(hour);
-}
-
-function getSelectedNotifyHour(time: NotifyTimeOption): NotifyHourOption {
-  const hour = time.slice(0, 2) as NotifyHourOption;
-  return NOTIFY_HOUR_OPTIONS.includes(hour) ? hour : DEFAULT_NOTIFY_TIME.slice(0, 2) as NotifyHourOption;
-}
-
-function getSelectedNotifyPeriod(time: NotifyTimeOption): NotifyPeriodOption {
-  return Number(getSelectedNotifyHour(time)) <= 12 ? "am" : "pm";
-}
-
-function getSelectedNotifyClockHour(time: NotifyTimeOption): NotifyClockHourOption {
-  const actualHour = Number(getSelectedNotifyHour(time));
-  const displayHour = actualHour <= 12 ? actualHour : actualHour - 12;
-  const hour = String(displayHour).padStart(2, "0") as NotifyClockHourOption;
-  return NOTIFY_CLOCK_HOUR_OPTIONS.includes(hour) ? hour : "09";
-}
-
-function getSelectedNotifyMinute(time: NotifyTimeOption): NotifyMinuteOption {
-  return getSupportedNotifyMinute(time.slice(3, 5));
-}
-
-function selectNotifyPeriod(period: NotifyPeriodOption): void {
-  if (!notifyEditor.value) return;
-  const hour = getSelectedNotifyClockHour(notifyEditor.value.time);
-  notifyEditor.value = {
-    ...notifyEditor.value,
-    time: `${getActualNotifyHour(period, hour)}:${getSelectedNotifyMinute(notifyEditor.value.time)}` as NotifyTimeOption,
-  };
-}
-
-function selectNotifyClockHour(hour: NotifyClockHourOption): void {
-  if (!notifyEditor.value) return;
-  const period = getSelectedNotifyPeriod(notifyEditor.value.time);
-  notifyEditor.value = {
-    ...notifyEditor.value,
-    time: `${getActualNotifyHour(period, hour)}:${getSelectedNotifyMinute(notifyEditor.value.time)}` as NotifyTimeOption,
-  };
-}
-
-function getActualNotifyHour(period: NotifyPeriodOption, hour: NotifyClockHourOption): NotifyHourOption {
-  const displayHour = Number(hour);
-  const actualHour = period === "am" ? displayHour : displayHour + 12;
-  return String(actualHour).padStart(2, "0") as NotifyHourOption;
-}
-
-function getSupportedNotifyMinute(value: string): NotifyMinuteOption {
-  const minute = value as NotifyMinuteOption;
-  return NOTIFY_MINUTE_OPTIONS.includes(minute) ? minute : "00";
-}
-
-function getMonthValue(dateValue: string): string {
-  const parts = parseDateValue(dateValue);
-  if (!parts) return formatMonthValue(new Date().getFullYear(), new Date().getMonth() + 1);
-  return formatMonthValue(parts.year, parts.month);
-}
-
-function parseDateValue(dateValue: string): { year: number; month: number; day: number } | null {
-  const match = /^(\d{4})-(\d{2})-(\d{2})$/.exec(dateValue);
-  if (!match) return null;
-  const year = Number(match[1]);
-  const month = Number(match[2]);
-  const day = Number(match[3]);
-  const date = new Date(year, month - 1, day);
-  if (date.getFullYear() !== year || date.getMonth() !== month - 1 || date.getDate() !== day) return null;
-  return { year, month, day };
-}
-
-function parseMonthValue(monthValue: string): { year: number; month: number } | null {
-  const match = /^(\d{4})-(\d{2})$/.exec(monthValue);
-  if (!match) return null;
-  const year = Number(match[1]);
-  const month = Number(match[2]);
-  if (month < 1 || month > 12) return null;
-  return { year, month };
-}
-
-function formatDateValue(year: number, month: number, day: number): string {
-  return `${year}-${String(month).padStart(2, "0")}-${String(day).padStart(2, "0")}`;
-}
-
-function formatMonthValue(year: number, month: number): string {
-  return `${year}-${String(month).padStart(2, "0")}`;
-}
-
-function confirmNotifyEditor(): void {
-  const editor = notifyEditor.value;
-  if (!editor) return;
-  const notifyAt = createNotifyAt(editor.date, editor.time);
-  if (notifyAt === null) return;
-  emit("notify", editor.period, editor.id, notifyAt, editor.anchor);
-  notifyEditor.value = null;
-}
-
-function clearNotifyEditor(): void {
-  const editor = notifyEditor.value;
-  if (!editor) return;
-  emit("notify", editor.period, editor.id, undefined, editor.anchor);
-  notifyEditor.value = null;
-}
-
-function closeNotifyEditor(): void {
-  notifyEditor.value = null;
-}
-
 function handleFloatingEditorOutsidePointerDown(event: PointerEvent): void {
   const target = event.target;
   if (!(target instanceof Node)) return;
-  if (notifyEditor.value && !notifyEditorRef.value?.contains(target)) notifyEditor.value = null;
+  if (notifyPicker.value && !notifyPickerRef.value?.contains(target) && !(target as HTMLElement).closest?.(".todo-notify-button")) {
+    closeNotifyPicker();
+  }
   if (listCreateDialog.value && !listCreateDialogRef.value?.contains(target)) listCreateDialog.value = null;
 }
 
@@ -834,9 +646,8 @@ async function handleMenuSelect(key: string): Promise<void> {
     return;
   }
   if (key === "notify" && id && anchor) {
-    const todo = getTodoById(period, id);
     closeMenu();
-    openNotifyEditor(period, id, anchor, todo);
+    openNotifyPicker(period, id, anchor);
     return;
   }
   closeMenu();
@@ -1131,6 +942,7 @@ function buildTodoListEntries(period: TodoListId, todos: TodoItem[], deferredDon
             @update="(id, value) => emit('titleUpdate', id, value)"
           />
         </div>
+        <NScrollbar class="today-focus-scrollbar">
         <ul class="today-focus-list">
           <li
             v-for="item in todayFocus"
@@ -1164,6 +976,7 @@ function buildTodoListEntries(period: TodoListId, todos: TodoItem[], deferredDon
             <button
               class="todo-notify-button"
               :class="{ 'todo-deadline-slot': Boolean(getTodoCompactNotifyLabel(item.todo)), 'has-time': Boolean(getTodoCompactNotifyLabel(item.todo)) }"
+              :ref="(element) => setNotifyPickerAnchor(item.period, item.todo.id, element as Element | null)"
               type="button"
               :aria-label="getTodoCompactNotifyLabel(item.todo) ? '编辑通知时间' : '设置通知时间'"
               @click="handleNotifyClick($event, item.period, item.todo)"
@@ -1171,7 +984,7 @@ function buildTodoListEntries(period: TodoListId, todos: TodoItem[], deferredDon
               <span v-if="getTodoCompactNotifyLabel(item.todo)" class="todo-deadline-label">
                 {{ getTodoCompactNotifyLabel(item.todo) }}
               </span>
-              <NIcon v-else :component="AlarmOutline" />
+              <NIcon v-else class="todo-notify-icon" :component="AlarmOutline" />
             </button>
             <button
               class="todo-star-button is-starred"
@@ -1183,6 +996,7 @@ function buildTodoListEntries(period: TodoListId, todos: TodoItem[], deferredDon
             </button>
           </li>
         </ul>
+        </NScrollbar>
       </section>
     </Transition>
     <div class="todo-sections">
@@ -1245,31 +1059,36 @@ function buildTodoListEntries(period: TodoListId, todos: TodoItem[], deferredDon
           class="todo-list-shell"
           :class="{ 'is-hidden': list.collapsed }"
           :aria-hidden="list.collapsed"
+          @click="handleListClick($event, list.id)"
         >
-          <ul
+          <NScrollbar
             v-if="listEntries[list.id].length === 0"
-            class="todo-list todo-empty-list"
-            :data-testid="`todo-list-${list.id}`"
-            @click="handleListClick($event, list.id)"
-            @dragover.prevent
-            @drop="handleTodoTextDrop($event, list.id)"
+            class="todo-list-scrollbar"
           >
-            <li
-              :key="`${list.id}-empty-hint`"
-              class="todo-empty-hint"
-              aria-label="提醒事项 Tips"
-              @click="emit('create', list.id)"
-            />
-          </ul>
+            <ul
+              class="todo-list todo-empty-list"
+              :data-testid="`todo-list-${list.id}`"
+              @dragover.prevent
+              @drop="handleTodoTextDrop($event, list.id)"
+            >
+              <li
+                :key="`${list.id}-empty-hint`"
+                class="todo-empty-hint"
+                aria-label="提醒事项 Tips"
+              />
+            </ul>
+          </NScrollbar>
 
-          <TransitionGroup
+          <NScrollbar
             v-else
+            class="todo-list-scrollbar"
+          >
+          <TransitionGroup
             name="todo-move"
             tag="ul"
             class="todo-list"
             :class="{ 'todo-move': true }"
             :data-testid="`todo-list-${list.id}`"
-            @click="handleListClick($event, list.id)"
             @dragover.prevent
             @drop="handleTodoTextDrop($event, list.id)"
           >
@@ -1320,6 +1139,7 @@ function buildTodoListEntries(period: TodoListId, todos: TodoItem[], deferredDon
                 <button
                   class="todo-notify-button"
                   :class="{ 'todo-deadline-slot': Boolean(getTodoCompactNotifyLabel(entry.todo)), 'has-time': Boolean(getTodoCompactNotifyLabel(entry.todo)) }"
+                  :ref="(element) => setNotifyPickerAnchor(list.id, entry.todo.id, element as Element | null)"
                   type="button"
                   :aria-label="getTodoCompactNotifyLabel(entry.todo) ? '编辑通知时间' : '设置通知时间'"
                   @click="handleNotifyClick($event, list.id, entry.todo)"
@@ -1327,7 +1147,7 @@ function buildTodoListEntries(period: TodoListId, todos: TodoItem[], deferredDon
                   <span v-if="getTodoCompactNotifyLabel(entry.todo)" class="todo-deadline-label">
                     {{ getTodoCompactNotifyLabel(entry.todo) }}
                   </span>
-                  <NIcon v-else :component="AlarmOutline" />
+                  <NIcon v-else class="todo-notify-icon" :component="AlarmOutline" />
                 </button>
                 <button
                   class="todo-star-button"
@@ -1354,144 +1174,45 @@ function buildTodoListEntries(period: TodoListId, todos: TodoItem[], deferredDon
               </li>
             </template>
           </TransitionGroup>
+          </NScrollbar>
         </div>
       </section>
     </div>
 
-    <Transition name="floating-pop" :duration="240">
-      <section
-        v-if="notifyEditor"
-        ref="notifyEditorRef"
-        class="deadline-editor notify-editor"
-        :style="notifyEditorStyle"
+    <Teleport to="body">
+      <div
+        v-if="notifyPicker"
+        ref="notifyPickerRef"
+        class="notify-floating-date-picker"
+        :style="notifyPickerStyle"
         aria-label="设置通知时间"
       >
-      <div class="deadline-editor-heading">
-        <span>设置通知时间</span>
-        <button
-          class="deadline-close-button icon-button"
-          type="button"
-          aria-label="关闭通知时间选择"
-          @click="closeNotifyEditor"
+        <NDatePicker
+          class="notify-date-picker"
+          type="datetime"
+          panel
+          :value="getNotifyPickerValue()"
+          clearable
+          format="yyyy-MM-dd HH:mm"
+          value-format="timestamp"
+          default-time="09:00:00"
+          :time-picker-props="notifyTimePickerProps"
+          :actions="['clear', 'now', 'confirm']"
+          @update:value="updateNotifyPickerDraft"
+          @confirm="confirmNotifyPicker"
         >
-          ×
-        </button>
+          <template #clear>
+            <button class="notify-panel-action" type="button" @click="clearNotifyPicker">清除</button>
+          </template>
+          <template #now>
+            <button class="notify-panel-action" type="button" @click="setNotifyPickerDraftToNow">此刻</button>
+          </template>
+          <template #confirm="{ onConfirm, disabled }">
+            <button class="notify-panel-action" type="button" :disabled="disabled" @click="onConfirm">确定</button>
+          </template>
+        </NDatePicker>
       </div>
-        <div class="notify-editor-body">
-          <div class="notify-date-column">
-          <div class="notify-calendar-header">
-            <button
-              class="notify-calendar-nav"
-              type="button"
-              aria-label="上个月"
-              @click="shiftNotifyCalendarMonth(-1)"
-            >
-              ‹
-            </button>
-            <span>{{ notifyCalendarTitle }}</span>
-            <button
-              class="notify-calendar-nav"
-              type="button"
-              aria-label="下个月"
-              @click="shiftNotifyCalendarMonth(1)"
-            >
-              ›
-            </button>
-          </div>
-          <div class="notify-calendar-weekdays" aria-hidden="true">
-            <span v-for="weekday in CALENDAR_WEEKDAYS" :key="weekday">{{ weekday }}</span>
-          </div>
-          <div class="notify-calendar-grid" aria-label="选择通知日期">
-            <template v-for="day in notifyCalendarDays" :key="day.key">
-              <span
-                v-if="day.blank"
-                class="notify-calendar-placeholder"
-              />
-              <button
-                v-else
-                class="notify-calendar-day"
-                :class="{ 'is-selected': day.selected, 'is-today': day.today }"
-                type="button"
-                @click="selectNotifyDate(day.date)"
-              >
-                {{ day.day }}
-              </button>
-            </template>
-          </div>
-          <div class="notify-date-shortcuts" aria-label="快捷选择通知日期">
-            <button
-              v-for="shortcut in NOTIFY_DATE_SHORTCUTS"
-              :key="shortcut.label"
-              class="notify-date-shortcut"
-              type="button"
-              @click="selectNotifyRelativeDate(shortcut.offsetDays)"
-            >
-              {{ shortcut.label }}
-            </button>
-          </div>
-        </div>
-        <div class="notify-time-column">
-          <span class="notify-time-unit-title notify-hour-title">小时</span>
-          <div class="deadline-time-options notify-clock-options" aria-label="选择通知时间">
-            <div class="notify-period-toggle" aria-label="早晚切换">
-              <button
-                v-for="period in NOTIFY_PERIOD_OPTIONS"
-                :key="period.key"
-                class="notify-period-toggle-button"
-                :class="{ 'is-selected': getSelectedNotifyPeriod(notifyEditor.time) === period.key }"
-                type="button"
-                :aria-pressed="getSelectedNotifyPeriod(notifyEditor.time) === period.key"
-                @click="selectNotifyPeriod(period.key)"
-              >
-                {{ period.label }}
-              </button>
-            </div>
-            <button
-              v-for="hour in NOTIFY_CLOCK_HOUR_OPTIONS"
-              :key="hour"
-              class="deadline-time-button notify-clock-button notify-hour-button"
-              :class="[`hour-${hour}`, { 'is-selected': getSelectedNotifyClockHour(notifyEditor.time) === hour }]"
-              :style="getNotifyHourButtonStyle(hour)"
-              type="button"
-              :aria-label="getNotifyHourLabel(hour)"
-              @click="selectNotifyClockHour(hour)"
-            >
-              {{ getNotifyClockHourDisplay(hour) }}
-            </button>
-          </div>
-          <span class="notify-time-unit-title notify-minute-title">分钟</span>
-          <div class="notify-minute-options" aria-label="选择通知分钟">
-            <button
-              v-for="minute in NOTIFY_MINUTE_OPTIONS"
-              :key="minute"
-              class="notify-minute-button"
-              :class="{ 'is-selected': getSelectedNotifyMinute(notifyEditor.time) === minute }"
-              type="button"
-              @click="selectNotifyMinute(minute)"
-            >
-              {{ minute }}
-            </button>
-          </div>
-        </div>
-      </div>
-      <div class="deadline-editor-actions">
-        <button
-          class="deadline-ignore-button"
-          type="button"
-          @click="clearNotifyEditor"
-        >
-          不设通知时间
-        </button>
-        <button
-          class="deadline-confirm-button"
-          type="button"
-          @click="confirmNotifyEditor"
-        >
-          确定
-        </button>
-      </div>
-      </section>
-    </Transition>
+    </Teleport>
 
     <Transition name="floating-pop" :duration="240">
       <section

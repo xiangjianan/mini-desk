@@ -1,7 +1,7 @@
 <script setup lang="ts">
 import { computed, ref, watch } from "vue";
 import { CloseOutline } from "@vicons/ionicons5";
-import { NButton, NDropdown, NIcon, NModal } from "naive-ui";
+import { NButton, NDropdown, NIcon, NModal, NScrollbar } from "naive-ui";
 import type { DropdownOption } from "naive-ui";
 import type { StoredImage } from "../types";
 
@@ -128,19 +128,21 @@ function handleKeydown(event: KeyboardEvent): void {
             <NIcon :component="CloseOutline" />
           </NButton>
         </div>
-        <div class="image-list preview-image-list" aria-label="预览图片列表">
-          <button
-            v-for="(image, index) in images"
-            :key="image.id"
-            class="image-card preview-thumb"
-            :class="{ 'is-active': image.id === active.id }"
-            type="button"
-            @click="emit('activate', image.id)"
-          >
-            <span class="image-index">{{ index + 1 }}</span>
-            <img v-if="image.src" :src="image.src" alt="预览缩略图" />
-          </button>
-        </div>
+        <NScrollbar class="preview-image-list-scrollbar" aria-label="预览图片列表">
+          <div class="image-list preview-image-list">
+            <button
+              v-for="(image, index) in images"
+              :key="image.id"
+              class="image-card preview-thumb"
+              :class="{ 'is-active': image.id === active.id }"
+              type="button"
+              @click="emit('activate', image.id)"
+            >
+              <span class="image-index">{{ index + 1 }}</span>
+              <img v-if="image.src" :src="image.src" alt="预览缩略图" />
+            </button>
+          </div>
+        </NScrollbar>
       </aside>
       <main class="preview-main">
         <div class="preview-stage" @mousedown="down" @click.self="emit('close')">

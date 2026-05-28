@@ -1,3 +1,4 @@
+import { defineComponent } from "vue";
 import { mount } from "@vue/test-utils";
 import { describe, expect, it } from "vitest";
 import SettingsMenu from "../components/SettingsMenu.vue";
@@ -34,6 +35,17 @@ const dropdownStub = {
   `,
 };
 
+const uploadStub = defineComponent({
+  name: "Upload",
+  props: {
+    accept: String,
+    max: Number,
+    defaultUpload: Boolean,
+  },
+  emits: ["update:file-list"],
+  template: '<div class="upload-stub"><slot /></div>',
+});
+
 describe("SettingsMenu", () => {
   it("adds a suggestion action that emits from the settings menu", async () => {
     const wrapper = mount(SettingsMenu, {
@@ -49,6 +61,8 @@ describe("SettingsMenu", () => {
           NBadge: { template: "<span><slot /></span>" },
           NButton: { template: "<button><slot /></button>" },
           NIcon: { template: "<span />" },
+          NUpload: uploadStub,
+          Upload: uploadStub,
         },
       },
     });
@@ -131,10 +145,13 @@ describe("SettingsMenu", () => {
     const dark = new File(["dark"], "dark.gif", { type: "image/gif" });
 
     await wrapper.find('[data-key="gif-theme:custom"]').trigger("click");
-    Object.defineProperty(wrapper.get(".gif-theme-light-input").element, "files", { value: [light], configurable: true });
-    Object.defineProperty(wrapper.get(".gif-theme-dark-input").element, "files", { value: [dark], configurable: true });
-    await wrapper.get(".gif-theme-light-input").trigger("change");
-    await wrapper.get(".gif-theme-dark-input").trigger("change");
+    const uploads = wrapper.findAllComponents(uploadStub);
+    expect(uploads).toHaveLength(2);
+    expect(uploads[0].props("accept")).toBe("image/gif,.gif");
+    expect(uploads[0].props("max")).toBe(1);
+    expect(uploads[0].props("defaultUpload")).toBe(false);
+    await uploads[0].vm.$emit("update:file-list", [{ file: light }]);
+    await uploads[1].vm.$emit("update:file-list", [{ file: dark }]);
     await wrapper.get(".gif-theme-custom-confirm").trigger("click");
 
     expect(wrapper.emitted("customGif")?.[0]).toEqual([

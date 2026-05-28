@@ -2506,10 +2506,9 @@ describe("App shell", () => {
       await wrapper.vm.$nextTick();
 
       expect(wrapper.find('[data-testid="companion-confirm"]').text()).toContain("To Do List 看板");
-      expect(wrapper.find('[data-testid="companion-confirm"]').text()).toContain("开发人员介绍");
-      expect(wrapper.find('[data-testid="companion-confirm"]').text()).toContain("产品经理：云霞");
-      expect(wrapper.find('[data-testid="companion-confirm"]').text()).toContain("开发：佳男");
-      expect(wrapper.find('[data-testid="companion-confirm"]').text()).toContain("协作支持：Codex");
+      expect(wrapper.find('[data-testid="companion-confirm"]').text()).toContain("👤 产品经理 — 云霞");
+      expect(wrapper.find('[data-testid="companion-confirm"]').text()).toContain("💻 开发 — 佳男");
+      expect(wrapper.find('[data-testid="companion-confirm"]').text()).toContain("🤝 协作支持 — Codex");
       expect(wrapper.find('[data-testid="companion-confirm"]').text()).not.toContain("牛马：Codex");
       expect(wrapper.find('[data-testid="companion-confirm"]').text()).not.toContain("给老婆做的 todolist 看板");
       expect(wrapper.find('[data-testid="companion-confirm"]').text()).toContain("xiangjianan / todolist");
@@ -3295,7 +3294,7 @@ describe("App shell", () => {
     }
   });
 
-  it("anchors the companion near the focused todo area and workspace area", async () => {
+  it("anchors the companion near the focused todo section and workspace area", async () => {
     const wrapper = mountApp();
     const todoList = wrapper.get('[data-testid="todo-list-morning"]');
 
@@ -3312,23 +3311,23 @@ describe("App shell", () => {
     });
     await todoList.trigger("click");
     await wrapper.vm.$nextTick();
-    const activeTodoList = wrapper.get('[data-testid="todo-list-morning"]');
-    vi.spyOn(activeTodoList.element, "getBoundingClientRect").mockReturnValue({
+    const todoSection = wrapper.get('.todo-section[data-period="morning"]');
+    vi.spyOn(todoSection.element, "getBoundingClientRect").mockReturnValue({
       x: 440,
       y: 34,
-      width: 270,
-      height: 260,
+      width: 300,
+      height: 360,
       top: 34,
       left: 440,
-      right: 710,
-      bottom: 294,
+      right: 740,
+      bottom: 394,
       toJSON: () => ({}),
     });
     await wrapper.get('[data-testid="todo-input-morning"]').trigger("focus");
 
     const todoStyle = wrapper.get('[data-testid="companion-bubble"]').attributes("style");
-    expect(todoStyle).toContain("right: calc(10px + 100vw - 710px)");
-    expect(todoStyle).toContain("bottom: calc(10px + 100vh - 294px)");
+    expect(todoStyle).toContain("right: calc(10px + 100vw - 740px)");
+    expect(todoStyle).toContain("bottom: calc(10px + 100vh - 394px)");
 
     const workspace = wrapper.findAll(".text-panel")[1];
     vi.spyOn(workspace.element, "getBoundingClientRect").mockReturnValue({

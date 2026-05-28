@@ -9,8 +9,9 @@ import {
   InformationCircleOutline,
   SettingsOutline,
 } from "@vicons/ionicons5";
-import { NBadge, NButton, NDropdown, NIcon } from "naive-ui";
+import { NBadge, NButton, NDropdown, NIcon, NUpload } from "naive-ui";
 import type { Component } from "vue";
+import type { UploadFileInfo } from "naive-ui";
 import { COMPANION_GIF_THEME_OPTIONS } from "../state/companionGifThemes";
 import type { CompanionGifTheme, GuideKey } from "../types";
 
@@ -80,9 +81,8 @@ function handleSelect(key: string): void {
   }
 }
 
-function handleCustomGifFileChange(event: Event, mode: "light" | "dark"): void {
-  const input = event.currentTarget as HTMLInputElement;
-  const file = input.files?.[0];
+function handleCustomGifUpload(fileList: UploadFileInfo[], mode: "light" | "dark"): void {
+  const file = fileList[0]?.file ?? undefined;
   if (mode === "light") customGifLightFile.value = file;
   else customGifDarkFile.value = file;
 }
@@ -139,11 +139,25 @@ function renderIcon(component: Component) {
   <section v-if="customGifDialogOpen" class="gif-theme-custom-dialog" aria-label="自定义 GIF">
     <label>
       <span>浅色 GIF</span>
-      <input class="gif-theme-light-input" type="file" accept="image/gif,.gif" @change="handleCustomGifFileChange($event, 'light')" />
+      <NUpload
+        accept="image/gif,.gif"
+        :max="1"
+        :default-upload="false"
+        @update:file-list="(files) => handleCustomGifUpload(files, 'light')"
+      >
+        <NButton size="small" class="gif-theme-upload-button">选择浅色 GIF</NButton>
+      </NUpload>
     </label>
     <label>
       <span>深色 GIF</span>
-      <input class="gif-theme-dark-input" type="file" accept="image/gif,.gif" @change="handleCustomGifFileChange($event, 'dark')" />
+      <NUpload
+        accept="image/gif,.gif"
+        :max="1"
+        :default-upload="false"
+        @update:file-list="(files) => handleCustomGifUpload(files, 'dark')"
+      >
+        <NButton size="small" class="gif-theme-upload-button">选择深色 GIF</NButton>
+      </NUpload>
     </label>
     <div class="gif-theme-custom-actions">
       <button class="gif-theme-custom-cancel" type="button" @click="closeCustomGifDialog">取消</button>

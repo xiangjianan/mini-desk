@@ -61,6 +61,7 @@ describe("Naive UI component usage", () => {
     expect(settings).toContain("companionGifTheme");
     expect(settings).toContain("gifTheme");
     expect(settings).toContain("GIF 主题");
+    expect(settings).toContain("NUpload");
     expect(companion).toContain("gifTheme");
     expect(companion).toContain("shouldRenderGif");
     expect(companion).toContain("popoverKey");
@@ -79,6 +80,7 @@ describe("Naive UI component usage", () => {
     expect(companion).not.toContain("border: '1px solid #111'");
     expect(companion).not.toContain("bubble-box");
     expect(companion).not.toContain("<button");
+    expect(settings).not.toContain('type="file"');
   });
 
   it("routes guidance through the companion bubble instead of hover tooltips", () => {
@@ -316,33 +318,67 @@ describe("Naive UI component usage", () => {
 
   it("keeps bordered controls and popup surfaces square without rounded corners", () => {
     const styles = read("src/styles.css");
-    const stylesWithoutClock = styles
-      .replace(/\.notify-clock-options\s*\{[^}]*\}/g, "")
-      .replace(/\.notify-hour-ring\s*\{[^}]*\}/g, "")
-      .replace(/\.notify-clock-button\.deadline-time-button\s*\{[^}]*\}/g, "");
 
     expect(styles).toContain("--radius: 0");
     expect(styles).toMatch(/button\s*\{[^}]*border-radius: 0/s);
     expect(styles).toMatch(/input,[\s\S]*?textarea\s*\{[^}]*border-radius: 0/s);
     expect(styles).toMatch(/\.n-button,[\s\S]*?\.n-dropdown-menu,[\s\S]*?\.n-checkbox-box\s*\{[^}]*border-radius: 0/s);
-    expect(styles).toMatch(/\.notify-clock-options\s*\{[^}]*border-radius: 50%/s);
-    expect(styles).toMatch(/\.notify-clock-button\.deadline-time-button\s*\{[^}]*border-radius: 50% !important/s);
-    expect(stylesWithoutClock).not.toMatch(/border-radius:\s*(?:[1-9]\d*px|0\.\d+|[1-9]\d*%)/);
+    expect(styles).not.toContain(".notify-clock-options");
+    expect(styles).not.toContain(".notify-clock-button");
+    expect(styles).not.toMatch(/border-radius:\s*(?:[1-9]\d*px|0\.\d+|[1-9]\d*%)/);
   });
 
-  it("keeps the notification editor compact with prominent selected time states", () => {
+  it("uses row Naive date pickers for notification time editing", () => {
+    const todo = read("src/components/TodoPanel.vue");
     const styles = read("src/styles.css");
 
-    expect(styles).toMatch(/\.notify-editor\s*\{[^}]*width: min\(378px, calc\(100vw - 16px\)\)/s);
-    expect(styles).toMatch(/\.notify-editor\s*\{[^}]*min-height: 224px/s);
-    expect(styles).toMatch(/\.notify-editor-body\s*\{[^}]*grid-template-columns: minmax\(160px, 1fr\) 150px/s);
-    expect(styles).toMatch(/\.notify-editor-body\s*\{[^}]*gap: 8px/s);
-    expect(styles).toMatch(/\.notify-date-shortcuts\s*\{[^}]*grid-template-columns: repeat\(3, minmax\(0, 1fr\)\)/s);
-    expect(styles).toMatch(/\.notify-calendar-weekdays,[\s\S]*?\.notify-calendar-grid\s*\{[^}]*gap: 2px/s);
-    expect(styles).toMatch(/\.notify-clock-options\s*\{[^}]*width: 136px/s);
-    expect(styles).toMatch(/\.notify-clock-options\s*\{[^}]*height: 136px/s);
-    expect(styles).toMatch(/\.notify-period-toggle\s*\{[^}]*position: absolute[^}]*left: 50%[^}]*top: 50%/s);
-    expect(styles).toMatch(/\.deadline-time-button\.is-selected,[\s\S]*?\.notify-minute-button\.is-selected\s*\{[^}]*background: var\(--text\)[^}]*color: var\(--panel\)[^}]*border-color: var\(--text\)/s);
+    expect(todo).toContain("NDatePicker");
+    expect(todo).toContain('type="datetime"');
+    expect(todo).toContain('format="yyyy-MM-dd HH:mm"');
+    expect(todo).toContain('default-time="09:00:00"');
+    expect(todo).toContain(':time-picker-props="notifyTimePickerProps"');
+    expect(todo).toContain('<Teleport to="body">');
+    expect(todo).toContain("notify-floating-date-picker");
+    expect(todo).toContain("panel");
+    expect(todo).not.toContain(':to="false"');
+    expect(todo).not.toContain(':show="isNotifyPickerShown');
+    expect(todo).toContain('@update:value="updateNotifyPickerDraft"');
+    expect(todo).toContain('@confirm="confirmNotifyPicker"');
+    expect(todo).toContain("setNotifyPickerDraftToNow");
+    expect(todo).toContain("clearNotifyPicker");
+    expect(todo).toContain('<template #clear');
+    expect(todo).toContain('清除');
+    expect(todo).toContain('此刻');
+    expect(todo).toContain('确定');
+    expect(todo).not.toContain('class="deadline-editor notify-editor"');
+    expect(todo).not.toContain("notify-calendar-grid");
+    expect(todo).not.toContain("notify-clock-options");
+    expect(styles).toMatch(/\.notify-floating-date-picker\s*\{[^}]*position: fixed/s);
+    expect(styles).toMatch(/\.notify-floating-date-picker\s*\{[^}]*border: 1px solid var\(--line-main\)/s);
+    expect(styles).toMatch(/\.todo-notify-button\s*\{[^}]*align-items: center/s);
+    expect(styles).not.toContain(".notify-editor");
+    expect(styles).not.toContain(".deadline-editor-actions");
+  });
+
+  it("uses Naive scrollbars while reminder text stays in native inputs", () => {
+    const scrollbarSources = [
+      "src/components/ImagePanel.vue",
+      "src/components/ImagePreview.vue",
+      "src/components/QuickButtons.vue",
+      "src/components/SpacePanel.vue",
+      "src/components/TextPanel.vue",
+      "src/components/TodoPanel.vue",
+    ];
+
+    for (const file of scrollbarSources) {
+      expect(read(file), file).toContain("NScrollbar");
+    }
+
+    const todo = read("src/components/TodoPanel.vue");
+    expect(todo).not.toContain("NEllipsis");
+    expect(todo).not.toContain("todo-text-ellipsis");
+    expect(todo).toContain('class="todo-input"');
+    expect(todo).toContain('class="today-focus-input"');
   });
 
   it("keeps editable text copy/paste while todo item menus stay concise", () => {
@@ -594,10 +630,9 @@ describe("Naive UI component usage", () => {
     expect(app).toContain("GITHUB_REPO_URL");
     expect(app).toContain("xiangjianan / todolist");
     expect(app).toContain("https://github.com/xiangjianan/todolist");
-    expect(app).toContain("开发人员介绍");
-    expect(app).toContain("产品经理：云霞");
-    expect(app).toContain("开发：佳男");
-    expect(app).toContain("协作支持：Codex");
+    expect(app).toContain("👤 产品经理 — 云霞");
+    expect(app).toContain("💻 开发 — 佳男");
+    expect(app).toContain("🤝 协作支持 — Codex");
     expect(styles).toMatch(/\.companion-popover > span\s*\{[^}]*white-space: pre-line/s);
     expect(companion).toContain("LogoGithub");
     expect(companion).toContain("companion-link-icon");
@@ -630,12 +665,15 @@ describe("Naive UI component usage", () => {
   });
 
   it("keeps overflowing workspace tabs scrollable before the top action bar", () => {
+    const space = read("src/components/SpacePanel.vue");
     const styles = read("src/styles.css");
 
+    expect(space).toContain("NScrollbar");
+    expect(space).toContain('class="space-tabs-scrollbar"');
     expect(styles).toMatch(/\.space-tabs\s*\{[^}]*overflow-x: auto/s);
     expect(styles).toMatch(/\.space-tabs\s*\{[^}]*height: 34px/s);
-    expect(styles).toMatch(/\.workspace-panel \.space-tabs\s*\{[^}]*max-width: calc\(100% - 154px\)/s);
-    expect(styles).toMatch(/\.workspace-panel \.space-tabs\s*\{[^}]*overflow-x: auto/s);
+    expect(styles).toMatch(/\.space-tabs-scrollbar\s*\{[^}]*max-width: calc\(100% - 154px\)/s);
+    expect(styles).toMatch(/\.space-tabs-scrollbar\s*\{[^}]*height: 34px/s);
     expect(styles).not.toMatch(/\.workspace-panel \.space-tabs\s*\{[^}]*overflow-x: scroll/s);
     expect(styles).not.toContain("scrollbar-gutter: stable");
     expect(styles).toMatch(/\.space-tabs\s*\{[^}]*overscroll-behavior-x: contain/s);

@@ -1,6 +1,6 @@
 <script setup lang="ts">
 import { computed, ref } from "vue";
-import { NDropdown } from "naive-ui";
+import { NDropdown, NScrollbar } from "naive-ui";
 import type { DropdownOption } from "naive-ui";
 import type { GuideKey, StoredImage } from "../types";
 import { GUIDE_MENU_OPTION } from "../state/defaults";
@@ -88,7 +88,15 @@ function handleExternalDrop(event: DragEvent): void {
       <span class="count">{{ images.length }}</span>
     </div>
 
-    <div class="image-list" aria-label="图床图片列表" @click="closeMenu" @dragover.prevent @drop.prevent.stop="handleExternalDrop" @contextmenu.prevent.stop="openMenu($event)">
+    <NScrollbar
+      class="image-list-scrollbar"
+      aria-label="图床图片列表"
+      @click="closeMenu"
+      @dragover.prevent
+      @drop.prevent.stop="handleExternalDrop"
+      @contextmenu.prevent.stop="openMenu($event)"
+    >
+      <div class="image-list">
       <button
         v-for="(image, index) in images"
         :key="image.id"
@@ -106,7 +114,8 @@ function handleExternalDrop(event: DragEvent): void {
         <img v-if="image.src" :src="image.src" alt="截图缩略图" draggable="false" />
         <span v-else class="image-missing">图片载入中</span>
       </button>
-    </div>
+      </div>
+    </NScrollbar>
 
     <NDropdown
       v-if="menu"
