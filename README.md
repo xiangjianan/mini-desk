@@ -5,7 +5,7 @@
 ## 在线地址
 
 - GitHub Pages: <https://xiangjianan.github.io/todolist/>
-- Cloudflare Pages: <https://todo.helloxjn.com/>
+- Cloudflare Pages: <https://minidesk.online>
 
 ## 快速开始
 
