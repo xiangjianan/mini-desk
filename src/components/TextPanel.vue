@@ -1,5 +1,5 @@
 <script setup lang="ts">
-import { computed, nextTick, ref, watch } from "vue";
+import { computed, nextTick, onMounted, onUnmounted, ref, watch } from "vue";
 import { NDropdown, NScrollbar } from "naive-ui";
 import type { DropdownOption } from "naive-ui";
 import type { LineItem } from "../types";
@@ -16,6 +16,7 @@ import {
   renumberOrderedListText,
   textLinesToEditorText,
 } from "../utils/textEditor";
+import { CONTEXT_MENU_Z_INDEX, createExclusiveContextMenu } from "../utils/contextMenu";
 import EditableTitle from "./EditableTitle.vue";
 
 const props = withDefaults(defineProps<{
@@ -42,6 +43,7 @@ const textareaRef = ref<HTMLTextAreaElement | null>(null);
 const text = ref(textLinesToEditorText(props.lines));
 const focused = ref(false);
 const editing = ref(false);
+const titleRef = ref<{ openMenuAt: (x: number, y: number, event?: Event) => void } | null>(null);
 const undoStack = ref<string[]>([]);
 const lastUndoText = ref(text.value);
 const lastCaret = ref<number | null>(null);
@@ -58,6 +60,14 @@ const guideMenuOption = computed<DropdownOption>(() => ({
   ...GUIDE_MENU_OPTION,
   label: uiText.value.common.tips,
 }));
+const exclusiveMenu = createExclusiveContextMenu(closeMenu);
+const canDragSelectedText = computed(() => {
+  const selection = lastTextSelection.value;
+  return Boolean(selection && selection.start !== selection.end);
+});
+
+onMounted(exclusiveMenu.mount);
+onUnmounted(exclusiveMenu.unmount);
 const menuOptions = computed<DropdownOption[]>(() => {
   const options: DropdownOption[] = [];
   const target = menu.value?.target;
@@ -135,6 +145,14 @@ function handleBlur(event: FocusEvent): void {
   if (editing.value) update();
   editing.value = false;
   emit("blur", event.currentTarget as HTMLElement);
+}
+
+function openTitleMenu(event: MouseEvent): void {
+  const target = event.target as HTMLElement;
+  if (target.closest("button, input, textarea")) return;
+  event.preventDefault();
+  event.stopPropagation();
+  titleRef.value?.openMenuAt(event.clientX, event.clientY, event);
 }
 
 function handleExternalTextDrop(event: DragEvent): void {
@@ -242,7 +260,9 @@ function openTextMenu(event: MouseEvent): void {
     return;
   }
   event.preventDefault();
+  event.stopPropagation();
   if (target && hasSelection(target)) rememberTextSelection(target);
+  exclusiveMenu.notifyOpen(event, { replacingExistingMenu: Boolean(menu.value) });
   menu.value = {
     x: event.clientX,
     y: event.clientY,
@@ -254,6 +274,18 @@ function openTextMenu(event: MouseEvent): void {
 
 function closeMenu(): void {
   menu.value = null;
+}
+
+function handleTextDragStart(event: DragEvent): void {
+  const target = event.currentTarget as HTMLTextAreaElement;
+  const range = getTextSelectionRange(target);
+  const selectedText = target.value.slice(range.start, range.end);
+  if (!selectedText.trim() || !event.dataTransfer) {
+    event.preventDefault();
+    return;
+  }
+  event.dataTransfer.effectAllowed = "copy";
+  event.dataTransfer.setData("text/plain", selectedText);
 }
 
 async function handleMenuSelect(key: string): Promise<void> {
@@ -471,9 +503,15 @@ function restoreSelection(textarea: HTMLTextAreaElement, selection: { start: num
 
 <template>
   <section class="text-panel" :class="textPanelClasses">
-    <div v-if="!hideHeader" class="panel-header">
+    <div v-if="!hideHeader" class="panel-header" @contextmenu="openTitleMenu">
       <h2>
-        <EditableTitle :id="titleId" :value="title" @update="(id, value) => emit('titleUpdate', id, value)" />
+        <EditableTitle
+          ref="titleRef"
+          :id="titleId"
+          :value="title"
+          :edit-label="uiText.common.edit"
+          @update="(id, value) => emit('titleUpdate', id, value)"
+        />
       </h2>
       <slot name="actions" />
     </div>
@@ -486,12 +524,14 @@ function restoreSelection(textarea: HTMLTextAreaElement, selection: { start: num
         :placeholder="placeholder"
         :readonly="!editing"
         :inputmode="editing ? 'text' : 'none'"
+        :draggable="canDragSelectedText"
         spellcheck="false"
         @input="update"
         @keydown="handleKeydown"
         @mouseup="rememberCaret"
         @pointerdown="handlePointerDown"
         @touchstart="handleTouchStart"
+        @dragstart="handleTextDragStart"
         @select="rememberSelection"
         @click="startEditing"
         @dblclick="startEditing"
@@ -507,9 +547,10 @@ function restoreSelection(textarea: HTMLTextAreaElement, selection: { start: num
       :show="true"
       :x="menu.x"
       :y="menu.y"
+      :z-index="CONTEXT_MENU_Z_INDEX"
       :options="menuOptions"
       @select="handleMenuSelect"
-      @clickoutside="closeMenu"
+      @clickoutside="exclusiveMenu.handleClickOutside"
     >
       <span
         class="dropdown-anchor"

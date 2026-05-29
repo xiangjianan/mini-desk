@@ -150,11 +150,11 @@ function normalizeCompletedVisibility(value: unknown, todoLists: TodoListConfig[
     return Object.fromEntries(todoLists.map((list) => [list.id, value])) as TodoCompletedVisibility;
   }
   if (!isPlainObject(value)) {
-    return Object.fromEntries(todoLists.map((list) => [list.id, false])) as TodoCompletedVisibility;
+    return Object.fromEntries(todoLists.map((list) => [list.id, true])) as TodoCompletedVisibility;
   }
   const record = value as Record<string, unknown>;
   return Object.fromEntries(
-    todoLists.map((list) => [list.id, Boolean(record[list.id])]),
+    todoLists.map((list) => [list.id, list.id in record ? Boolean(record[list.id]) : true]),
   ) as TodoCompletedVisibility;
 }
 

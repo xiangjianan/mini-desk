@@ -712,6 +712,7 @@ describe("App shell", () => {
     localStorage.setItem(
       STORAGE_KEY,
       JSON.stringify({
+        showCompletedTodos: { morning: false, noon: false, evening: false },
         todos: {
           morning: [{ id: "done-1", text: "早上完成项", done: true }],
           noon: [{ id: "done-2", text: "中午完成项", done: true }],
@@ -798,31 +799,50 @@ describe("App shell", () => {
     }
   });
 
-  it("shows dirty and saved status around text edits", async () => {
+  it("shows compact save status dots around text edits", async () => {
     vi.useFakeTimers();
     const wrapper = mountApp();
 
     try {
-      expect(wrapper.get('[data-testid="save-status"]').text()).toBe("已保存");
+      expect(wrapper.get('[data-testid="save-status"]').attributes("data-state")).toBe("saved");
+      expect(wrapper.get('[data-testid="save-status"]').attributes("aria-label")).toBe("已保存");
 
       const textarea = wrapper.get("textarea");
       await textarea.trigger("dblclick");
       await textarea.setValue("临时记录");
 
-      expect(wrapper.get('[data-testid="save-status"]').text()).toBe("有未保存内容");
+      expect(wrapper.get('[data-testid="save-status"]').attributes("data-state")).toBe("dirty");
+      expect(wrapper.get('[data-testid="save-status"]').attributes("aria-label")).toBe("有未保存内容");
 
       window.dispatchEvent(new KeyboardEvent("keydown", { key: "s", ctrlKey: true }));
       await wrapper.vm.$nextTick();
 
-      expect(wrapper.get('[data-testid="save-status"]').text()).toBe("保存中");
+      expect(wrapper.get('[data-testid="save-status"]').attributes("data-state")).toBe("saving");
+      expect(wrapper.get('[data-testid="save-status"]').attributes("aria-label")).toBe("保存中");
 
       await vi.advanceTimersByTimeAsync(120);
       await wrapper.vm.$nextTick();
 
-      expect(wrapper.get('[data-testid="save-status"]').text()).toBe("已保存");
+      expect(wrapper.get('[data-testid="save-status"]').attributes("data-state")).toBe("saved");
+      expect(wrapper.get('[data-testid="save-status"]').attributes("aria-label")).toBe("已保存");
     } finally {
       wrapper.unmount();
       vi.useRealTimers();
+    }
+  });
+
+  it("creates reminder lists with completed reminders visible by default", async () => {
+    const wrapper = mountApp();
+
+    try {
+      wrapper.getComponent(TodoPanel).vm.$emit("createList", undefined, "新列表");
+      await wrapper.vm.$nextTick();
+
+      const stored = JSON.parse(localStorage.getItem(STORAGE_KEY) || "{}");
+      const listId = stored.todoLists.at(-1).id;
+      expect(stored.showCompletedTodos[listId]).toBe(true);
+    } finally {
+      wrapper.unmount();
     }
   });
 
@@ -2546,6 +2566,8 @@ describe("App shell", () => {
 
       expect(wrapper.find('[data-testid="companion-confirm"]').text()).toMatch(/覆盖|导入|当前数据/);
       expect(wrapper.find('[data-testid="companion-yes"]').exists()).toBe(true);
+      expect(wrapper.get('[data-testid="companion-yes"]').text()).toBe("覆盖导入");
+      expect(wrapper.get('[data-testid="companion-yes"]').classes()).toContain("is-danger");
       expect(wrapper.text()).not.toContain("导入内容");
 
       await wrapper.get('[data-testid="companion-yes"]').trigger("click");

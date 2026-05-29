@@ -1,5 +1,5 @@
 import { mount } from "@vue/test-utils";
-import { describe, expect, it } from "vitest";
+import { describe, expect, it, vi } from "vitest";
 import { readFileSync } from "node:fs";
 import { resolve } from "node:path";
 import SpacePanel from "../components/SpacePanel.vue";
@@ -219,6 +219,21 @@ describe("SpacePanel", () => {
     expect(wrapper.find(".space-add-button").exists()).toBe(true);
   });
 
+  it("keeps workspace tab drags off the plain-text payload", async () => {
+    const setData = vi.fn();
+    const wrapper = mountSpacePanel([
+      { id: "workspace", title: "工作空间", lines: [] },
+      { id: "project", title: "项目", lines: [] },
+    ]);
+
+    await wrapper.findAll(".space-tab")[0].trigger("dragstart", {
+      dataTransfer: { effectAllowed: "", setData, setDragImage: vi.fn() },
+    });
+
+    expect(setData).not.toHaveBeenCalledWith("text/plain", "workspace");
+    expect(setData).toHaveBeenCalledWith("application/x-space-id", "workspace");
+  });
+
   it("translates mouse wheel movement into horizontal tab scrolling", async () => {
     const wrapper = mountSpacePanel(
       Array.from({ length: 8 }, (_, index) => ({
@@ -238,6 +253,50 @@ describe("SpacePanel", () => {
 
     expect(event.defaultPrevented).toBe(true);
     expect(tabs.scrollLeft).toBe(72);
+    wrapper.unmount();
+  });
+
+  it("translates mouse wheel movement from the tab scrollbar shell", async () => {
+    const wrapper = mountSpacePanel(
+      Array.from({ length: 8 }, (_, index) => ({
+        id: `space-${index}`,
+        title: `空间 ${index + 1}`,
+        lines: [],
+      })),
+    );
+    const tabs = wrapper.get(".space-tabs").element as HTMLElement;
+    Object.defineProperty(tabs, "scrollWidth", { value: 900, configurable: true });
+    Object.defineProperty(tabs, "clientWidth", { value: 240, configurable: true });
+    tabs.scrollLeft = 0;
+    const event = new WheelEvent("wheel", { bubbles: true, cancelable: true, deltaY: 48 });
+
+    wrapper.get(".space-tabs-scrollbar").element.dispatchEvent(event);
+    await wrapper.vm.$nextTick();
+
+    expect(event.defaultPrevented).toBe(true);
+    expect(tabs.scrollLeft).toBe(48);
+    wrapper.unmount();
+  });
+
+  it("translates vertical wheel movement into the Naive horizontal scrollbar container", async () => {
+    const wrapper = mountSpacePanel(
+      Array.from({ length: 8 }, (_, index) => ({
+        id: `space-${index}`,
+        title: `空间 ${index + 1}`,
+        lines: [],
+      })),
+    );
+    const container = wrapper.get(".space-tabs-scrollbar .n-scrollbar-container").element as HTMLElement;
+    Object.defineProperty(container, "scrollWidth", { value: 900, configurable: true });
+    Object.defineProperty(container, "clientWidth", { value: 240, configurable: true });
+    container.scrollLeft = 0;
+    const event = new WheelEvent("wheel", { bubbles: true, cancelable: true, deltaY: 64 });
+
+    wrapper.get(".space-tabs-scrollbar").element.dispatchEvent(event);
+    await wrapper.vm.$nextTick();
+
+    expect(event.defaultPrevented).toBe(true);
+    expect(container.scrollLeft).toBe(64);
     wrapper.unmount();
   });
 

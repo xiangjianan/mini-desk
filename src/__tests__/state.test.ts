@@ -58,7 +58,7 @@ describe("state compatibility", () => {
     expect(state.language).toBe("zh");
     expect(state.spaces).toEqual([{ id: "workspace", title: "工作空间", lines: [] }]);
     expect(state.activeSpaceId).toBe("workspace");
-    expect(state.showCompletedTodos).toEqual({ morning: false, noon: false, evening: false });
+    expect(state.showCompletedTodos).toEqual({ morning: true, noon: true, evening: true });
   });
 
   it("normalizes and serializes the app language preference", () => {
@@ -79,7 +79,7 @@ describe("state compatibility", () => {
       { id: "evening", title: "🌙 晚上" },
     ]);
     expect(Object.keys(state.todos)).toEqual(["morning", "noon", "evening"]);
-    expect(state.showCompletedTodos).toEqual({ morning: false, noon: false, evening: false });
+    expect(state.showCompletedTodos).toEqual({ morning: true, noon: true, evening: true });
   });
 
   it("migrates legacy fixed reminder lists into configurable todoLists", () => {
@@ -103,7 +103,7 @@ describe("state compatibility", () => {
     ]);
     expect(state.todos.morning.map((todo) => todo.text)).toEqual(["A"]);
     expect(state.todos.noon.map((todo) => todo.text)).toEqual(["B"]);
-    expect(state.showCompletedTodos).toEqual({ morning: true, noon: false, evening: false });
+    expect(state.showCompletedTodos).toEqual({ morning: true, noon: true, evening: true });
   });
 
   it("normalizes persisted dynamic todo lists and drops orphan todo records", () => {
@@ -125,7 +125,7 @@ describe("state compatibility", () => {
       { id: "life", title: "未命名列表", collapsed: false, compact: true },
     ]);
     expect(Object.keys(state.todos)).toEqual(["work", "life"]);
-    expect(state.showCompletedTodos).toEqual({ work: true, life: false });
+    expect(state.showCompletedTodos).toEqual({ work: true, life: true });
   });
 
   it("renames duplicate persisted todo list ids while keeping list order", () => {
@@ -293,7 +293,7 @@ describe("state compatibility", () => {
       },
     });
 
-    expect(state.showCompletedTodos).toEqual({ morning: true, noon: false, evening: false });
+    expect(state.showCompletedTodos).toEqual({ morning: true, noon: false, evening: true });
   });
 
   it("normalizes persisted spaces and starred reminders", () => {
@@ -430,7 +430,7 @@ describe("todo behavior", () => {
     expect(reordered.map((list) => list.id)).toEqual(["c", "a", "b"]);
     expect(Object.keys(removed.todos)).toEqual(["a", "c"]);
     expect(removed.todos.a[0].text).toBe("A");
-    expect(removed.showCompletedTodos).toEqual({ a: false, c: false });
+    expect(removed.showCompletedTodos).toEqual({ a: true, c: true });
   });
 
   it("leaves todo order unchanged when moving a todo onto itself", () => {

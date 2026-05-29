@@ -245,7 +245,7 @@ describe("Naive UI component usage", () => {
     expect(styles).toMatch(/\.todo-section\.is-compact \.todo-star-button\s*\{[^}]*height: 30px/s);
   });
 
-  it("keeps top-right status plain while icon buttons stay flush as a one-pixel segmented control", () => {
+  it("keeps top-right save status as a compact dot while icon buttons stay flush", () => {
     const styles = read("src/styles.css");
 
     expect(styles).toMatch(/\.top-actions\s*\{[^}]*top: 0/s);
@@ -254,9 +254,18 @@ describe("Naive UI component usage", () => {
     expect(styles).toMatch(/\.top-actions\s*\{[^}]*gap: 0/s);
     expect(styles).toMatch(/\.settings-trigger \+ \.theme-btn\s*\{[^}]*margin-left: -1px/s);
     expect(styles).toMatch(/\.top-actions \.save-status\s*\{[^}]*height: 34px/s);
-    expect(styles).toMatch(/\.top-actions \.save-status\s*\{[^}]*width: 88px/s);
-    expect(styles).toMatch(/\.top-actions \.save-status\s*\{[^}]*border: 0/s);
+    expect(styles).toMatch(/\.top-actions \.save-status\s*\{[^}]*width: 34px/s);
+    expect(styles).toMatch(/\.top-actions \.save-status\s*\{[^}]*min-width: 34px/s);
     expect(styles).toMatch(/\.top-actions \.save-status\s*\{[^}]*border-bottom: 1px solid var\(--line-control\)/s);
+    expect(styles).toMatch(/\.top-actions \.save-status::before\s*\{[^}]*width: 6px/s);
+    expect(styles).toMatch(/\.save-status::before\s*\{[^}]*border-radius: 999px/s);
+    expect(styles).toMatch(/\.save-status::before\s*\{[^}]*background-color: #22c55e/s);
+    expect(styles).toMatch(/\.save-status::before\s*\{[^}]*transition:[^}]*background-color var\(--motion-fast\) ease/s);
+    expect(styles).toMatch(/\.save-status\[data-state="dirty"\]::before\s*\{[^}]*animation: none/s);
+    expect(styles).toMatch(/\.save-status\[data-state="saved"\]::before\s*\{[^}]*animation: none/s);
+    expect(styles).toMatch(/\.top-actions \.save-status\[data-state="dirty"\]::before\s*\{[^}]*background: #ef4444/s);
+    expect(styles).toMatch(/\.top-actions \.save-status\[data-state="saved"\]::before\s*\{[^}]*background: #22c55e/s);
+    expect(styles).toMatch(/\.top-actions \.save-status\[data-state="saving"\]::before\s*\{[^}]*animation: save-status-pulse/s);
     expect(styles).toMatch(/\.top-actions \.icon-button\s*\{[^}]*height: 34px/s);
     expect(styles).toMatch(/\.top-actions \.icon-button\s*\{[^}]*border: 1px solid var\(--line-control\)/s);
   });
@@ -332,6 +341,7 @@ describe("Naive UI component usage", () => {
 
   it("keeps bordered controls and popup surfaces square without rounded corners", () => {
     const styles = read("src/styles.css");
+    const stylesWithoutIndicatorDot = styles.replace(/\.save-status::before\s*\{[^}]*\}/g, "");
 
     expect(styles).toContain("--radius: 0");
     expect(styles).toMatch(/button\s*\{[^}]*border-radius: 0/s);
@@ -339,7 +349,33 @@ describe("Naive UI component usage", () => {
     expect(styles).toMatch(/\.n-button,[\s\S]*?\.n-dropdown-menu,[\s\S]*?\.n-checkbox-box\s*\{[^}]*border-radius: 0/s);
     expect(styles).not.toContain(".notify-clock-options");
     expect(styles).not.toContain(".notify-clock-button");
-    expect(styles).not.toMatch(/border-radius:\s*(?:[1-9]\d*px|0\.\d+|[1-9]\d*%)/);
+    expect(stylesWithoutIndicatorDot).not.toMatch(/border-radius:\s*(?:[1-9]\d*px|0\.\d+|[1-9]\d*%)/);
+  });
+
+  it("renders context menus as bordered surfaces above companion bubbles", () => {
+    const styles = read("src/styles.css");
+    const contextMenu = read("src/utils/contextMenu.ts");
+    const companion = read("src/components/CompanionBubble.vue");
+    const dropdownFiles = [
+      "src/components/EditableTitle.vue",
+      "src/components/TextPanel.vue",
+      "src/components/TodoPanel.vue",
+      "src/components/QuickButtons.vue",
+      "src/components/ImagePanel.vue",
+      "src/components/ImagePreview.vue",
+      "src/components/SpacePanel.vue",
+    ];
+
+    expect(styles).toMatch(/\.n-dropdown-menu\s*\{[^}]*--n-box-shadow: none !important/s);
+    expect(styles).toMatch(/\.n-dropdown-menu\s*\{[^}]*box-shadow: none !important/s);
+    expect(styles).toMatch(/\.n-dropdown-menu\s*\{[^}]*border: 1px solid var\(--line-main\) !important/s);
+    expect(contextMenu).toContain("export const CONTEXT_MENU_Z_INDEX = 3400");
+    expect(companion).toContain(':z-index="3300"');
+    for (const file of dropdownFiles) {
+      const source = read(file);
+      expect(source, file).toContain("CONTEXT_MENU_Z_INDEX");
+      expect(source, file).toContain(':z-index="CONTEXT_MENU_Z_INDEX"');
+    }
   });
 
   it("uses row Naive date pickers for notification time editing", () => {
@@ -698,10 +734,17 @@ describe("Naive UI component usage", () => {
 
     expect(space).toContain("NScrollbar");
     expect(space).toContain('class="space-tabs-scrollbar"');
+    expect(space).toContain('trigger="hover"');
+    expect(space).toContain("@wheel=\"handleTabsWheel\"");
     expect(styles).toMatch(/\.space-tabs\s*\{[^}]*overflow-x: auto/s);
     expect(styles).toMatch(/\.space-tabs\s*\{[^}]*height: 34px/s);
-    expect(styles).toMatch(/\.space-tabs-scrollbar\s*\{[^}]*max-width: calc\(100% - 154px\)/s);
+    expect(styles).toMatch(/\.space-tabs-scrollbar\s*\{[^}]*max-width: calc\(100% - 101px\)/s);
     expect(styles).toMatch(/\.space-tabs-scrollbar\s*\{[^}]*height: 34px/s);
+    expect(styles).toMatch(/\.space-tabs-scrollbar\s*\{[^}]*border-bottom: 1px solid var\(--line-control\)/s);
+    expect(styles).toMatch(/\.space-tabs\s*\{[^}]*scrollbar-width: none/s);
+    expect(styles).toMatch(/\.space-tabs:hover\s*\{[^}]*scrollbar-width: thin/s);
+    expect(styles).toMatch(/\.space-tabs::-webkit-scrollbar\s*\{[^}]*height: 0/s);
+    expect(styles).toMatch(/\.space-tabs:hover::-webkit-scrollbar\s*\{[^}]*height: var\(--scrollbar-size\)/s);
     expect(styles).not.toMatch(/\.workspace-panel \.space-tabs\s*\{[^}]*overflow-x: scroll/s);
     expect(styles).not.toContain("scrollbar-gutter: stable");
     expect(styles).toMatch(/\.space-tabs\s*\{[^}]*overscroll-behavior-x: contain/s);

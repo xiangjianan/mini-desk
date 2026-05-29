@@ -698,7 +698,7 @@ function createTodoList(anchor?: HTMLElement, title?: string): void {
   const trimmedTitle = title?.trim() ?? "";
   state.todoLists.push({ id, title: trimmedTitle || uiText.value.app.unnamedList, collapsed: false, compact: false });
   state.todos[id] = [];
-  state.showCompletedTodos[id] = false;
+  state.showCompletedTodos[id] = true;
   pendingEditTodoListId.value = trimmedTitle ? null : id;
   persistNow();
   showBubbleText(uiText.value.app.todoListAdded, anchor);
@@ -1043,7 +1043,7 @@ async function importData(event: Event): Promise<void> {
       importFeedbackAnchor.value = undefined;
       input.value = "";
     },
-    { confirmText: uiText.value.app.importOverwrite, cancelText: uiText.value.common.cancel },
+    { confirmText: uiText.value.app.importOverwrite, cancelText: uiText.value.common.cancel, danger: true },
   );
 }
 
@@ -1716,7 +1716,16 @@ function moveItem<T extends { id: string }>(items: T[], dragId: string, targetId
       @resume="resumeBubbleTimer"
     />
     <div v-if="!isMobileBlocked" class="top-actions">
-      <span class="save-status" data-testid="save-status" :data-state="saveStatus">{{ saveStatusLabel }}</span>
+      <span
+        class="save-status"
+        data-testid="save-status"
+        :data-state="saveStatus"
+        :aria-label="saveStatusLabel"
+        :title="saveStatusLabel"
+        aria-live="polite"
+      >
+        <span class="save-status-label">{{ saveStatusLabel }}</span>
+      </span>
       <SettingsMenu
         :app-version="appVersion"
         :update-available="versionPromptVisible"

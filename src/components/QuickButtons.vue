@@ -1,11 +1,12 @@
 <script setup lang="ts">
-import { computed, reactive, ref, watch } from "vue";
+import { computed, onMounted, onUnmounted, reactive, ref, watch } from "vue";
 import { NButton, NCheckbox, NDropdown, NIcon, NInput, NModal, NScrollbar } from "naive-ui";
 import { CopyOutline } from "@vicons/ionicons5";
 import type { DropdownOption } from "naive-ui";
 import type { AppLanguage, GuideKey, QuickButton, QuickButtonType } from "../types";
 import { GUIDE_MENU_OPTION } from "../state/defaults";
 import { getUiText } from "../state/i18n";
+import { CONTEXT_MENU_Z_INDEX, createExclusiveContextMenu } from "../utils/contextMenu";
 import EditableTitle from "./EditableTitle.vue";
 
 const props = withDefaults(defineProps<{
@@ -30,6 +31,7 @@ const emit = defineEmits<{
 
 const dialogOpen = ref(false);
 const editingId = ref<string | undefined>();
+const titleRef = ref<{ openMenuAt: (x: number, y: number, event?: Event) => void } | null>(null);
 const form = reactive<{ title: string; value: string; type: QuickButtonType }>({
   title: "",
   value: "",
@@ -39,6 +41,10 @@ const menu = ref<{ x: number; y: number; id?: string; anchor?: HTMLElement } | n
 const draggingId = ref<string | null>(null);
 const uiText = computed(() => getUiText(props.language));
 const guideMenuOption = computed<DropdownOption>(() => ({ ...GUIDE_MENU_OPTION, label: uiText.value.common.tips }));
+const exclusiveMenu = createExclusiveContextMenu(closeMenu);
+
+onMounted(exclusiveMenu.mount);
+onUnmounted(exclusiveMenu.unmount);
 
 const visibleButtons = computed(() =>
   props.buttons.filter((button) => props.showHidden || !button.hidden),
@@ -107,6 +113,8 @@ function closeDialog(): void {
 
 function openMenu(event: MouseEvent, id: string): void {
   event.preventDefault();
+  event.stopPropagation();
+  exclusiveMenu.notifyOpen(event, { replacingExistingMenu: Boolean(menu.value) });
   menu.value = { x: event.clientX, y: event.clientY, id, anchor: event.currentTarget as HTMLElement };
 }
 
@@ -115,13 +123,24 @@ function openAreaMenu(event: MouseEvent): void {
   const button = target.closest("button");
   if (target.closest("input, textarea, .quick-button") || button) return;
   event.preventDefault();
+  event.stopPropagation();
+  exclusiveMenu.notifyOpen(event, { replacingExistingMenu: Boolean(menu.value) });
   menu.value = { x: event.clientX, y: event.clientY, anchor: event.currentTarget as HTMLElement };
 }
 
 function openHeaderMenu(event: MouseEvent): void {
   event.preventDefault();
   event.stopPropagation();
+  exclusiveMenu.notifyOpen(event, { replacingExistingMenu: Boolean(menu.value) });
   menu.value = { x: event.clientX, y: event.clientY, anchor: event.currentTarget as HTMLElement };
+}
+
+function openTitleMenu(event: MouseEvent): void {
+  const target = event.target as HTMLElement;
+  if (target.closest("button, input, textarea")) return;
+  event.preventDefault();
+  event.stopPropagation();
+  titleRef.value?.openMenuAt(event.clientX, event.clientY, event);
 }
 
 function closeMenu(): void {
@@ -161,9 +180,15 @@ function handleToggleShowHidden(anchor?: HTMLElement): void {
 
 <template>
   <section class="split-block quick-block" @click="handleAreaClick" @contextmenu="openAreaMenu">
-    <div class="panel-header">
+    <div class="panel-header" @contextmenu="openTitleMenu">
       <h2 id="quick-title">
-        <EditableTitle id="quick-title" :value="title" @update="(id, value) => emit('titleUpdate', id, value)" />
+        <EditableTitle
+          ref="titleRef"
+          id="quick-title"
+          :value="title"
+          :edit-label="uiText.common.edit"
+          @update="(id, value) => emit('titleUpdate', id, value)"
+        />
       </h2>
       <div class="header-actions">
         <button
@@ -206,9 +231,10 @@ function handleToggleShowHidden(anchor?: HTMLElement): void {
       :show="true"
       :x="menu.x"
       :y="menu.y"
+      :z-index="CONTEXT_MENU_Z_INDEX"
       :options="menuOptions"
       @select="handleMenuSelect"
-      @clickoutside="closeMenu"
+      @clickoutside="exclusiveMenu.handleClickOutside"
     >
       <span
         class="dropdown-anchor"

@@ -56,7 +56,7 @@ export function cloneDefaultTodoLists(): TodoListConfig[] {
 }
 
 export function createDefaultCompletedVisibility(): Record<TodoListId, boolean> {
-  return Object.fromEntries(DEFAULT_TODO_LISTS.map((list) => [list.id, false]));
+  return Object.fromEntries(DEFAULT_TODO_LISTS.map((list) => [list.id, true]));
 }
 
 export function createDefaultTodoMap(): TodoMap {

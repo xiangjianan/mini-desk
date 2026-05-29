@@ -25,6 +25,7 @@ import type {
 } from "../types";
 import { getOrderedTodos } from "../state/todos";
 import { splitDroppedTodoText } from "../utils/textEditor";
+import { CONTEXT_MENU_Z_INDEX, createExclusiveContextMenu } from "../utils/contextMenu";
 import EditableTitle from "./EditableTitle.vue";
 
 const props = withDefaults(defineProps<{
@@ -64,6 +65,7 @@ const emit = defineEmits<{
 }>();
 
 const focusedListId = ref<TodoListId | null>(null);
+const localEditListId = ref<TodoListId | null>(null);
 const menu = ref<{
   x: number;
   y: number;
@@ -88,6 +90,7 @@ const notifyPicker = ref<{
 const notifyPickerDrafts = ref<Record<string, number>>({});
 const listCreateDialogRef = ref<HTMLElement | null>(null);
 const listCreateInputRef = ref<HTMLInputElement | null>(null);
+const todayFocusTitleRef = ref<{ openMenuAt: (x: number, y: number, event?: Event) => void } | null>(null);
 const listCreateDialog = ref<{
   x: number;
   y: number;
@@ -102,6 +105,7 @@ const todoSectionRefs = new Map<TodoListId, HTMLElement>();
 const notifyPickerAnchors = new Map<string, HTMLElement>();
 const uiText = computed(() => getUiText(props.language));
 const guideMenuOption = computed<DropdownOption>(() => ({ ...GUIDE_MENU_OPTION, label: uiText.value.common.tips }));
+const exclusiveMenu = createExclusiveContextMenu(closeMenu);
 const legacyTodoTitleIds: Record<TodoListId, string> = {
   morning: "todo-morning-title",
   noon: "todo-noon-title",
@@ -122,8 +126,10 @@ const menuOptions = computed<DropdownOption[]>(() => {
     const list = getListById(menu.value.period);
     if (!list) return [guideMenuOption.value];
     return [
-      { label: isCompletedVisible(list.id) ? uiText.value.todo.hideCompleted : uiText.value.todo.showCompleted, key: "toggle-completed" },
       { label: uiText.value.todo.clearCompleted, key: "clear-completed" },
+      { label: isCompletedVisible(list.id) ? uiText.value.todo.hideCompleted : uiText.value.todo.showCompleted, key: "toggle-completed" },
+      { label: uiText.value.todo.newList, key: "create-list" },
+      { label: uiText.value.todo.editList, key: "edit-list" },
       { label: uiText.value.todo.deleteList, key: "delete-list", disabled: effectiveTodoLists.value.length <= 1 },
       guideMenuOption.value,
     ];
@@ -131,7 +137,7 @@ const menuOptions = computed<DropdownOption[]>(() => {
   const options: DropdownOption[] = [];
   const todo = getMenuTodo();
   if (!menu.value?.id) {
-    options.push({ label: uiText.value.todo.createList, key: "create-list" });
+    options.push({ label: uiText.value.todo.newList, key: "create-list" });
   }
   if (menu.value?.id) {
     options.push({ label: uiText.value.common.copy, key: "copy" });
@@ -253,6 +259,7 @@ const listEntries = computed(() =>
 );
 
 onMounted(() => {
+  exclusiveMenu.mount();
   refreshNotifyNow();
   document.addEventListener("pointerdown", handleFloatingEditorOutsidePointerDown, true);
   window.addEventListener("focus", refreshNotifyNow);
@@ -261,6 +268,7 @@ onMounted(() => {
 });
 
 onUnmounted(() => {
+  exclusiveMenu.unmount();
   reorderTimers.forEach((timer) => window.clearTimeout(timer));
   document.removeEventListener("pointerdown", handleFloatingEditorOutsidePointerDown, true);
   window.removeEventListener("focus", refreshNotifyNow);
@@ -337,10 +345,8 @@ function handleListDragStart(event: DragEvent, listId: TodoListId): void {
     return;
   }
   draggedListId.value = listId;
-  const list = getListById(listId);
   if (event.dataTransfer) {
     event.dataTransfer.effectAllowed = "move";
-    event.dataTransfer.setData("text/plain", list?.title ?? listId);
     event.dataTransfer.setData("application/x-todo-list-id", listId);
   }
 }
@@ -398,14 +404,18 @@ function clearPendingReorder(key: string): void {
 
 function openMenu(event: MouseEvent, period: TodoPeriod, id: string): void {
   event.preventDefault();
+  event.stopPropagation();
   selectedMenuTodoKey.value = todoKey(period, id);
+  exclusiveMenu.notifyOpen(event, { replacingExistingMenu: Boolean(menu.value) });
   menu.value = { x: event.clientX, y: event.clientY, period, id, anchor: event.currentTarget as HTMLElement };
 }
 
 function openTodoTextMenu(event: MouseEvent, period: TodoPeriod, todo: TodoItem): void {
   const target = event.currentTarget as HTMLInputElement;
   event.preventDefault();
+  event.stopPropagation();
   selectedMenuTodoKey.value = todoKey(period, todo.id);
+  exclusiveMenu.notifyOpen(event, { replacingExistingMenu: Boolean(menu.value) });
   menu.value = {
     x: event.clientX,
     y: event.clientY,
@@ -420,14 +430,9 @@ function openSectionMenu(event: MouseEvent, period: TodoPeriod): void {
   const target = event.target as HTMLElement;
   if (target.closest("button, input, textarea, .todo-item")) return;
   event.preventDefault();
-  selectedMenuTodoKey.value = null;
-  menu.value = { x: event.clientX, y: event.clientY, period, anchor: event.currentTarget as HTMLElement };
-}
-
-function openSectionActions(event: MouseEvent, period: TodoListId): void {
-  event.preventDefault();
   event.stopPropagation();
   selectedMenuTodoKey.value = null;
+  exclusiveMenu.notifyOpen(event, { replacingExistingMenu: Boolean(menu.value) });
   menu.value = {
     x: event.clientX,
     y: event.clientY,
@@ -435,6 +440,34 @@ function openSectionActions(event: MouseEvent, period: TodoListId): void {
     anchor: event.currentTarget as HTMLElement,
     sectionActions: true,
   };
+}
+
+function openSectionActions(event: MouseEvent, period: TodoListId): void {
+  event.preventDefault();
+  event.stopPropagation();
+  selectedMenuTodoKey.value = null;
+  exclusiveMenu.notifyOpen(event, { replacingExistingMenu: Boolean(menu.value) });
+  menu.value = {
+    x: event.clientX,
+    y: event.clientY,
+    period,
+    anchor: event.currentTarget as HTMLElement,
+    sectionActions: true,
+  };
+}
+
+function openHeadingActions(event: MouseEvent, period: TodoListId): void {
+  const target = event.target as HTMLElement;
+  if (target.closest("button, input, textarea, .title-edit-input")) return;
+  openSectionActions(event, period);
+}
+
+function openTodayFocusTitleMenu(event: MouseEvent): void {
+  const target = event.target as HTMLElement;
+  if (target.closest("button, input, textarea, .title-edit-input")) return;
+  event.preventDefault();
+  event.stopPropagation();
+  todayFocusTitleRef.value?.openMenuAt(event.clientX, event.clientY, event);
 }
 
 function closeMenu(): void {
@@ -475,6 +508,7 @@ function closeCreateListDialog(): void {
 }
 
 function handleListTitleUpdate(listId: TodoListId, value: string): void {
+  if (localEditListId.value === listId) localEditListId.value = null;
   if (!props.todoLists) {
     const legacyTitleId = legacyTodoTitleIds[listId];
     if (legacyTitleId) {
@@ -483,6 +517,15 @@ function handleListTitleUpdate(listId: TodoListId, value: string): void {
     }
   }
   emit("updateListTitle", listId, value);
+}
+
+async function startListTitleEdit(listId: TodoListId): Promise<void> {
+  if (!getListById(listId)) return;
+  localEditListId.value = null;
+  await nextTick();
+  localEditListId.value = listId;
+  await nextTick();
+  localEditListId.value = null;
 }
 
 function handleStarClick(event: MouseEvent, period: TodoPeriod, todo: TodoItem): void {
@@ -501,8 +544,10 @@ function handleTodoDragStart(event: DragEvent, period: TodoPeriod, todo: TodoIte
   dragged.value = { period, id: todo.id };
   if (!event.dataTransfer) return;
   event.dataTransfer.effectAllowed = "move";
-  event.dataTransfer.setData("text/plain", todo.text);
   event.dataTransfer.setData("application/x-todo-id", `${period}:${todo.id}`);
+  const handle = event.currentTarget instanceof HTMLElement ? event.currentTarget : null;
+  const dragPreview = handle?.closest<HTMLElement>(".todo-item");
+  if (dragPreview) event.dataTransfer.setDragImage?.(dragPreview, 0, 0);
 }
 
 function setNotifyPickerAnchor(period: TodoPeriod, id: string, element: Element | null): void {
@@ -638,7 +683,11 @@ function handleFloatingEditorOutsidePointerDown(event: PointerEvent): void {
 async function handleMenuSelect(key: string): Promise<void> {
   if (!menu.value) return;
   const { period, id, anchor, target, x, y } = menu.value;
-  const list = getListById(period);
+  if (key === "edit-list") {
+    closeMenu();
+    await startListTitleEdit(period);
+    return;
+  }
   if (key === "create-list") {
     closeMenu();
     await openCreateListDialog(anchor, x, y);
@@ -934,7 +983,7 @@ function collapseSelection(input: HTMLInputElement, caret: number): void {
 }
 
 function isCompletedVisible(period: TodoListId): boolean {
-  return Boolean(props.showCompleted?.[period]);
+  return props.showCompleted?.[period] ?? true;
 }
 
 function getTodos(period: TodoListId): TodoItem[] {
@@ -967,10 +1016,12 @@ function buildTodoListEntries(period: TodoListId, todos: TodoItem[], deferredDon
   <section class="panel todo-panel" aria-labelledby="todo-title">
     <Transition name="section-reveal" :duration="240">
       <section v-if="todayFocus.length" class="today-focus-section" :aria-label="uiText.todo.todayFocus">
-        <div class="today-focus-heading">
+        <div class="today-focus-heading" @contextmenu="openTodayFocusTitleMenu">
           <EditableTitle
+            ref="todayFocusTitleRef"
             :id="todayFocusTitleId"
             :value="titles[todayFocusTitleId]"
+            :edit-label="uiText.common.edit"
             @update="(id, value) => emit('titleUpdate', id, value)"
           />
         </div>
@@ -1048,6 +1099,7 @@ function buildTodoListEntries(period: TodoListId, todos: TodoItem[], deferredDon
         <div
           class="todo-heading"
           draggable="true"
+          @contextmenu="openHeadingActions($event, list.id)"
           @dragstart="handleListDragStart($event, list.id)"
           @dragend="draggedListId = null"
           @dragover.prevent
@@ -1061,7 +1113,8 @@ function buildTodoListEntries(period: TodoListId, todos: TodoItem[], deferredDon
             <EditableTitle
               :id="list.id"
               :value="list.title"
-              :auto-edit="Boolean(props.todoLists && props.editListId === list.id)"
+              :auto-edit="Boolean(props.todoLists && (props.editListId === list.id || localEditListId === list.id))"
+              :menu-enabled="false"
               @update="(_id, value) => handleListTitleUpdate(list.id, value)"
             />
           </h3>
@@ -1280,9 +1333,10 @@ function buildTodoListEntries(period: TodoListId, todos: TodoItem[], deferredDon
       :show="true"
       :x="menu.x"
       :y="menu.y"
+      :z-index="CONTEXT_MENU_Z_INDEX"
       :options="menuOptions"
       @select="handleMenuSelect"
-      @clickoutside="closeMenu"
+      @clickoutside="exclusiveMenu.handleClickOutside"
     >
       <span
         class="dropdown-anchor"

@@ -1,11 +1,19 @@
 <script setup lang="ts">
-import { nextTick, ref, watch } from "vue";
+import { computed, nextTick, onMounted, onUnmounted, ref, watch } from "vue";
+import { NDropdown } from "naive-ui";
+import type { DropdownOption } from "naive-ui";
+import { CONTEXT_MENU_Z_INDEX, createExclusiveContextMenu } from "../utils/contextMenu";
 
-const props = defineProps<{
+const props = withDefaults(defineProps<{
   id: string;
   value: string;
   autoEdit?: boolean;
-}>();
+  editLabel?: string;
+  menuEnabled?: boolean;
+}>(), {
+  editLabel: "编辑",
+  menuEnabled: true,
+});
 
 const emit = defineEmits<{
   update: [id: string, value: string];
@@ -15,6 +23,12 @@ const editing = ref(false);
 const draft = ref(props.value);
 const inputRef = ref<HTMLInputElement | null>(null);
 const composing = ref(false);
+const menu = ref<{ x: number; y: number } | null>(null);
+const menuOptions = computed<DropdownOption[]>(() => [{ label: props.editLabel, key: "edit" }]);
+const exclusiveMenu = createExclusiveContextMenu(closeMenu);
+
+onMounted(exclusiveMenu.mount);
+onUnmounted(exclusiveMenu.unmount);
 
 watch(
   () => props.value,
@@ -32,6 +46,7 @@ watch(
 );
 
 async function enterEditing(): Promise<void> {
+  closeMenu();
   composing.value = false;
   editing.value = true;
   await nextTick();
@@ -47,19 +62,45 @@ async function enterEditing(): Promise<void> {
 
 async function startEditing(event: MouseEvent): Promise<void> {
   event.preventDefault();
+  event.stopPropagation();
   await enterEditing();
+}
+
+function openMenu(event: MouseEvent): void {
+  if (!props.menuEnabled) return;
+  event.preventDefault();
+  event.stopPropagation();
+  openMenuAt(event.clientX, event.clientY, event);
+}
+
+function openMenuAt(x: number, y: number, event?: Event): void {
+  if (!props.menuEnabled) return;
+  if (editing.value) return;
+  exclusiveMenu.notifyOpen(event, { replacingExistingMenu: Boolean(menu.value) });
+  menu.value = { x, y };
+}
+
+function closeMenu(): void {
+  menu.value = null;
+}
+
+async function handleMenuSelect(key: string): Promise<void> {
+  closeMenu();
+  if (key === "edit") await enterEditing();
 }
 
 function commit(): void {
   const value = draft.value.trim() || props.value;
   composing.value = false;
   editing.value = false;
+  closeMenu();
   emit("update", props.id, value);
 }
 
 function cancel(): void {
   composing.value = false;
   editing.value = false;
+  closeMenu();
 }
 
 function handleEnter(event: KeyboardEvent): void {
@@ -67,6 +108,8 @@ function handleEnter(event: KeyboardEvent): void {
   event.preventDefault();
   commit();
 }
+
+defineExpose({ openMenuAt });
 </script>
 
 <template>
@@ -81,5 +124,23 @@ function handleEnter(event: KeyboardEvent): void {
     @keydown.esc.prevent="cancel"
     @blur="commit"
   />
-  <span v-else class="editable-title" @dblclick="startEditing">{{ value }}</span>
+  <span v-else class="editable-title" @dblclick="startEditing" @contextmenu="openMenu">{{ value }}</span>
+  <NDropdown
+    v-if="menu"
+    placement="bottom-start"
+    trigger="manual"
+    :show="true"
+    :x="menu.x"
+    :y="menu.y"
+    :z-index="CONTEXT_MENU_Z_INDEX"
+    :options="menuOptions"
+    @select="handleMenuSelect"
+    @clickoutside="exclusiveMenu.handleClickOutside"
+  >
+    <span
+      class="dropdown-anchor"
+      :style="{ left: `${menu.x}px`, top: `${menu.y}px` }"
+      aria-hidden="true"
+    />
+  </NDropdown>
 </template>

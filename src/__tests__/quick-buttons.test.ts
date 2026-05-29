@@ -189,13 +189,16 @@ describe("QuickButtons", () => {
     wrapper.unmount();
   });
 
-  it("opens the usage guide from the quick-link panel context menu", async () => {
+  it("opens the title edit menu from any blank point in the header bar", async () => {
     const wrapper = mountQuickButtons();
 
     await wrapper.get(".panel-header").trigger("contextmenu");
-    await wrapper.findAll(".dropdown-option").find((option) => option.text() === "Tips")?.trigger("click");
 
-    expect(wrapper.emitted("guide")?.[0]).toEqual(["quickButtons", expect.any(HTMLElement), true]);
+    expect(wrapper.findAll(".dropdown-option").map((option) => option.text())).toEqual(["编辑"]);
+
+    await wrapper.get(".dropdown-option").trigger("click");
+
+    expect(wrapper.find(".title-edit-input").exists()).toBe(true);
     wrapper.unmount();
   });
 

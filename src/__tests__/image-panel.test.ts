@@ -52,6 +52,19 @@ describe("ImagePanel", () => {
     wrapper.unmount();
   });
 
+  it("opens the title edit menu from any blank point in the header bar", async () => {
+    const wrapper = mountImagePanel();
+
+    await wrapper.get(".panel-header").trigger("contextmenu");
+
+    expect(wrapper.findAll(".dropdown-option").map((option) => option.text())).toEqual(["编辑"]);
+
+    await wrapper.get(".dropdown-option").trigger("click");
+
+    expect(wrapper.find(".title-edit-input").exists()).toBe(true);
+    wrapper.unmount();
+  });
+
   it("keeps an empty image area visually blank without rendering an empty box", async () => {
     const wrapper = mountImagePanel();
 

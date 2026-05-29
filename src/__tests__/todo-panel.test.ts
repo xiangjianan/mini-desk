@@ -122,12 +122,12 @@ describe("TodoPanel", () => {
     expect(values(wrapper)).toEqual(["A"]);
   });
 
-  it("opens a right-click dialog before creating a reminder list", async () => {
+  it("opens the shared list menu and dialog before creating a reminder list", async () => {
     const wrapper = mount(TodoPanel, {
       props: {
         todoLists: defaultTodoLists,
         todos: { morning: [], noon: [], evening: [] },
-        showCompleted: { morning: false, noon: false, evening: false },
+        showCompleted: { morning: true, noon: true, evening: true },
         titles: DEFAULT_TITLES,
       },
       global: {
@@ -145,7 +145,16 @@ describe("TodoPanel", () => {
     expect(wrapper.find(".todo-add-list-button").exists()).toBe(false);
 
     await wrapper.get('.todo-section[data-list-id="morning"]').trigger("contextmenu");
-    await wrapper.findAll(".dropdown-option").find((option) => option.text() === "新增提醒列表")?.trigger("click");
+    expect(wrapper.findAll(".dropdown-option").map((option) => option.text())).toEqual([
+      "清理已完成",
+      "隐藏已完成",
+      "新建列表",
+      "编辑列表",
+      "删除列表",
+      "Tips",
+    ]);
+
+    await wrapper.findAll(".dropdown-option").find((option) => option.text() === "新建列表")?.trigger("click");
     await wrapper.get(".todo-list-create-input").setValue("工作提醒");
     await wrapper.get(".todo-list-create-confirm").trigger("click");
 
@@ -178,6 +187,43 @@ describe("TodoPanel", () => {
     await wrapper.get('.todo-section[data-list-id="morning"] .title-edit-input').trigger("blur");
 
     expect(wrapper.emitted("updateListTitle")?.[0]).toEqual(["morning", "上午"]);
+  });
+
+  it("opens the shared list menu from a reminder list title and edits the title", async () => {
+    const wrapper = mount(TodoPanel, {
+      props: {
+        todoLists: defaultTodoLists,
+        todos: { morning: [], noon: [], evening: [] },
+        showCompleted: { morning: true, noon: true, evening: true },
+        titles: DEFAULT_TITLES,
+      },
+      global: {
+        stubs: {
+          Checkbox: checkboxStub,
+          Dropdown: dropdownStub,
+          NCheckbox: checkboxStub,
+          NDatePicker: datePickerStub,
+          NDropdown: dropdownStub,
+          NTooltip: tooltipStub,
+        },
+      },
+    });
+
+    await wrapper.get('.todo-section[data-list-id="morning"] .todo-heading').trigger("contextmenu");
+
+    expect(wrapper.findAll(".dropdown-option").map((option) => option.text())).toEqual([
+      "清理已完成",
+      "隐藏已完成",
+      "新建列表",
+      "编辑列表",
+      "删除列表",
+      "Tips",
+    ]);
+
+    await wrapper.findAll(".dropdown-option").find((option) => option.text() === "编辑列表")?.trigger("click");
+    await nextTick();
+
+    expect(wrapper.find('.todo-section[data-list-id="morning"] .title-edit-input').exists()).toBe(true);
   });
 
   it("auto-edits the configured list matching editListId", async () => {
@@ -302,7 +348,7 @@ describe("TodoPanel", () => {
     await wrapper.get('.todo-section[data-list-id="noon"]').trigger("drop");
 
     expect(dataTransfer.effectAllowed).toBe("move");
-    expect(dataTransfer.setData).toHaveBeenCalledWith("text/plain", "☀️ 早上");
+    expect(dataTransfer.setData).not.toHaveBeenCalledWith("text/plain", "☀️ 早上");
     expect(dataTransfer.setData).toHaveBeenCalledWith("application/x-todo-list-id", "morning");
     expect(wrapper.emitted("reorderLists")?.[0]).toEqual(["morning", "noon"]);
     expect(wrapper.emitted("move")).toBeUndefined();
@@ -453,7 +499,7 @@ describe("TodoPanel", () => {
     expect(wrapper.emitted("create")).toBeUndefined();
   });
 
-  it("hides completed reminders by default while keeping period progress", () => {
+  it("shows completed reminders by default while keeping period progress", () => {
     const wrapper = mount(TodoPanel, {
       props: {
         todos: {
@@ -479,8 +525,8 @@ describe("TodoPanel", () => {
     });
 
     expect(wrapper.find('.todo-section[data-period="morning"] .todo-count').text()).toBe("1/2");
-    expect(values(wrapper)).toEqual(["未完成"]);
-    expect(wrapper.find(".todo-completed-divider").exists()).toBe(false);
+    expect(values(wrapper)).toEqual(["未完成", "已完成"]);
+    expect(wrapper.find(".todo-completed-divider").exists()).toBe(true);
     wrapper.unmount();
   });
 
@@ -578,8 +624,10 @@ describe("TodoPanel", () => {
     await wrapper.get('.todo-section[data-period="morning"] .todo-section-menu-button').trigger("click");
 
     expect(wrapper.findAll(".dropdown-option").map((option) => option.text())).toEqual([
-      "显示已完成",
       "清理已完成",
+      "显示已完成",
+      "新建列表",
+      "编辑列表",
       "删除列表",
       "Tips",
     ]);
@@ -629,8 +677,10 @@ describe("TodoPanel", () => {
 
     await wrapper.get('.todo-section[data-period="noon"] .todo-section-menu-button').trigger("click");
     expect(wrapper.findAll(".dropdown-option").map((option) => option.text())).toEqual([
-      "显示已完成",
       "清理已完成",
+      "显示已完成",
+      "新建列表",
+      "编辑列表",
       "删除列表",
       "Tips",
     ]);
@@ -1742,7 +1792,8 @@ describe("TodoPanel", () => {
     await vi.advanceTimersByTimeAsync(1);
     await nextTick();
 
-    expect(values(wrapper)).toEqual(["第二项"]);
+    expect(values(wrapper)).toEqual(["第二项", "第一项"]);
+    expect(wrapper.find(".todo-completed-divider").exists()).toBe(true);
     expect(wrapper.find(".todo-list.todo-move").exists()).toBe(true);
 
     wrapper.unmount();
@@ -2175,11 +2226,45 @@ describe("TodoPanel", () => {
     expect(wrapper.get(".todo-input").attributes("draggable")).toBe("false");
     expect(wrapper.get(".todo-drag-handle").attributes("draggable")).toBe("true");
 
-    await wrapper.get(".todo-drag-handle").trigger("dragstart");
+    await wrapper.get(".todo-drag-handle").trigger("dragstart", {
+      dataTransfer: { effectAllowed: "", setData: vi.fn() },
+    });
     expect(wrapper.get(".todo-item").classes()).toContain("is-menu-selected");
 
     await wrapper.get(".todo-drag-handle").trigger("dragend");
     expect(wrapper.get(".todo-item").classes()).not.toContain("is-menu-selected");
+
+    wrapper.unmount();
+  });
+
+  it("uses the full reminder row as the drag preview instead of only the handle", async () => {
+    const setDragImage = vi.fn();
+    const wrapper = mount(TodoPanel, {
+      props: {
+        todos: {
+          morning: [{ id: "a", text: "拖动时看见这段文字", done: false }],
+          noon: [],
+          evening: [],
+        },
+        titles: DEFAULT_TITLES,
+      },
+      global: {
+        stubs: {
+          Button: true,
+          Checkbox: checkboxStub,
+          Dropdown: dropdownStub,
+          NCheckbox: checkboxStub,
+          NDropdown: dropdownStub,
+          NTooltip: tooltipStub,
+        },
+      },
+    });
+
+    await wrapper.get(".todo-drag-handle").trigger("dragstart", {
+      dataTransfer: { effectAllowed: "", setData: vi.fn(), setDragImage },
+    });
+
+    expect(setDragImage).toHaveBeenCalledWith(wrapper.get(".todo-item").element, 0, 0);
 
     wrapper.unmount();
   });
@@ -2680,7 +2765,7 @@ describe("TodoPanel", () => {
     expect(wrapper.emitted("createFromText")?.[0]).toEqual(["morning", ["任务 C", "任务 D"]]);
   });
 
-  it("places reminder text on the drag payload for dropping into workspace", async () => {
+  it("keeps internal reminder drags off the plain-text payload", async () => {
     const setData = vi.fn();
     const wrapper = mount(TodoPanel, {
       props: {
@@ -2707,11 +2792,11 @@ describe("TodoPanel", () => {
       dataTransfer: { effectAllowed: "", setData },
     });
 
-    expect(setData).toHaveBeenCalledWith("text/plain", "拖到工作空间");
+    expect(setData).not.toHaveBeenCalledWith("text/plain", "拖到工作空间");
     expect(setData).toHaveBeenCalledWith("application/x-todo-id", "morning:a");
   });
 
-  it("places reminder list title text on the drag payload for dropping into workspace", async () => {
+  it("keeps internal reminder list drags off the plain-text payload", async () => {
     const setData = vi.fn();
     const wrapper = mount(TodoPanel, {
       props: {
@@ -2736,7 +2821,7 @@ describe("TodoPanel", () => {
       dataTransfer: { effectAllowed: "", setData },
     });
 
-    expect(setData).toHaveBeenCalledWith("text/plain", "☀️ 早上");
+    expect(setData).not.toHaveBeenCalledWith("text/plain", "☀️ 早上");
     expect(setData).toHaveBeenCalledWith("application/x-todo-list-id", "morning");
   });
 

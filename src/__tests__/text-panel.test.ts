@@ -534,6 +534,31 @@ describe("TextPanel", () => {
     expect(wrapper.emitted("guide")?.[0]).toEqual([expect.any(HTMLElement), true]);
   });
 
+  it("opens the title edit menu from any blank point in the header bar", async () => {
+    const wrapper = mount(TextPanel, {
+      props: {
+        titleId: "workspace-title",
+        title: "工作空间",
+        lines: [],
+      },
+      global: {
+        stubs: {
+          Dropdown: dropdownStub,
+          NDropdown: dropdownStub,
+        },
+      },
+    });
+
+    await wrapper.get(".panel-header").trigger("contextmenu");
+
+    expect(wrapper.findAll(".dropdown-option").map((option) => option.text())).toEqual(["编辑"]);
+
+    await wrapper.get(".dropdown-option").trigger("click");
+
+    expect(wrapper.find(".title-edit-input").exists()).toBe(true);
+    wrapper.unmount();
+  });
+
   it("keeps the native textarea context menu when async clipboard APIs are unavailable", async () => {
     Object.assign(navigator, { clipboard: undefined });
     const wrapper = mount(TextPanel, {
@@ -1068,6 +1093,52 @@ describe("TextPanel", () => {
 
     expect(textarea.selectionStart).toBe(textarea.value.length);
     expect(textarea.selectionEnd).toBe(textarea.value.length);
+  });
+
+  it("places selected workspace text on the drag payload for reminders", async () => {
+    const setData = vi.fn();
+    const wrapper = mount(TextPanel, {
+      props: {
+        titleId: "workspace-title",
+        title: "工作空间",
+        lines: [
+          { text: "拖入提醒", indent: 0 },
+          { text: "保留内容", indent: 0 },
+        ],
+      },
+    });
+    const textarea = wrapper.get("textarea").element as HTMLTextAreaElement;
+    textarea.setSelectionRange(0, 4);
+    await wrapper.get("textarea").trigger("select");
+
+    await wrapper.get("textarea").trigger("dragstart", {
+      dataTransfer: { effectAllowed: "", setData },
+    });
+
+    expect(setData).toHaveBeenCalledWith("text/plain", "拖入提醒");
+  });
+
+  it("keeps remembered workspace text draggable when the drag gesture disturbs the live selection", async () => {
+    const setData = vi.fn();
+    const wrapper = mount(TextPanel, {
+      props: {
+        titleId: "workspace-title",
+        title: "工作空间",
+        lines: [{ text: "拖动文字", indent: 0 }],
+      },
+    });
+    const textarea = wrapper.get("textarea").element as HTMLTextAreaElement;
+    textarea.setSelectionRange(0, 4);
+    await wrapper.get("textarea").trigger("select");
+
+    expect(wrapper.get("textarea").attributes("draggable")).toBe("true");
+
+    textarea.setSelectionRange(0, 0);
+    await wrapper.get("textarea").trigger("dragstart", {
+      dataTransfer: { effectAllowed: "", setData },
+    });
+
+    expect(setData).toHaveBeenCalledWith("text/plain", "拖动文字");
   });
 
   it("ignores external text drops that include files", async () => {

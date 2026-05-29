@@ -1,10 +1,11 @@
 <script setup lang="ts">
-import { computed, ref } from "vue";
+import { computed, onMounted, onUnmounted, ref } from "vue";
 import { NDropdown, NScrollbar } from "naive-ui";
 import type { DropdownOption } from "naive-ui";
 import type { AppLanguage, GuideKey, StoredImage } from "../types";
 import { GUIDE_MENU_OPTION } from "../state/defaults";
 import { getUiText } from "../state/i18n";
+import { CONTEXT_MENU_Z_INDEX, createExclusiveContextMenu } from "../utils/contextMenu";
 import EditableTitle from "./EditableTitle.vue";
 
 const props = withDefaults(defineProps<{
@@ -28,8 +29,13 @@ const emit = defineEmits<{
 
 const menu = ref<{ x: number; y: number; id?: string; anchor?: HTMLElement } | null>(null);
 const draggingId = ref<string | null>(null);
+const titleRef = ref<{ openMenuAt: (x: number, y: number, event?: Event) => void } | null>(null);
 const uiText = computed(() => getUiText(props.language));
 const guideMenuOption = computed<DropdownOption>(() => ({ ...GUIDE_MENU_OPTION, label: uiText.value.common.tips }));
+const exclusiveMenu = createExclusiveContextMenu(closeMenu);
+
+onMounted(exclusiveMenu.mount);
+onUnmounted(exclusiveMenu.unmount);
 
 const menuOptions = computed<DropdownOption[]>(() =>
   menu.value?.id
@@ -44,7 +50,17 @@ const menuOptions = computed<DropdownOption[]>(() =>
 
 function openMenu(event: MouseEvent, id?: string): void {
   event.preventDefault();
+  event.stopPropagation();
+  exclusiveMenu.notifyOpen(event, { replacingExistingMenu: Boolean(menu.value) });
   menu.value = { x: event.clientX, y: event.clientY, id, anchor: event.currentTarget as HTMLElement };
+}
+
+function openTitleMenu(event: MouseEvent): void {
+  const target = event.target as HTMLElement;
+  if (target.closest("button, input, textarea")) return;
+  event.preventDefault();
+  event.stopPropagation();
+  titleRef.value?.openMenuAt(event.clientX, event.clientY, event);
 }
 
 function closeMenu(): void {
@@ -86,9 +102,15 @@ function handleExternalDrop(event: DragEvent): void {
     @drop.prevent.stop="handleExternalDrop"
     @contextmenu="openMenu($event)"
   >
-    <div class="panel-header">
+    <div class="panel-header" @contextmenu="openTitleMenu">
       <h1 id="image-title">
-        <EditableTitle id="image-title" :value="title" @update="(id, value) => emit('titleUpdate', id, value)" />
+        <EditableTitle
+          ref="titleRef"
+          id="image-title"
+          :value="title"
+          :edit-label="uiText.common.edit"
+          @update="(id, value) => emit('titleUpdate', id, value)"
+        />
       </h1>
       <span class="count">{{ images.length }}</span>
     </div>
@@ -129,9 +151,10 @@ function handleExternalDrop(event: DragEvent): void {
       :show="true"
       :x="menu.x"
       :y="menu.y"
+      :z-index="CONTEXT_MENU_Z_INDEX"
       :options="menuOptions"
       @select="handleMenuSelect"
-      @clickoutside="closeMenu"
+      @clickoutside="exclusiveMenu.handleClickOutside"
     >
       <span
         class="dropdown-anchor"

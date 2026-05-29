@@ -1,10 +1,11 @@
 <script setup lang="ts">
-import { computed, ref, watch } from "vue";
+import { computed, onMounted, onUnmounted, ref, watch } from "vue";
 import { CloseOutline } from "@vicons/ionicons5";
 import { NButton, NDropdown, NIcon, NModal, NScrollbar } from "naive-ui";
 import type { DropdownOption } from "naive-ui";
 import { getUiText } from "../state/i18n";
 import type { AppLanguage, StoredImage } from "../types";
+import { CONTEXT_MENU_Z_INDEX, createExclusiveContextMenu } from "../utils/contextMenu";
 
 const props = withDefaults(defineProps<{
   images: StoredImage[];
@@ -34,6 +35,10 @@ const menuOptions = computed<DropdownOption[]>(() => [
   { label: uiText.value.preview.close, key: "close" },
   { label: uiText.value.common.delete, key: "delete" },
 ]);
+const exclusiveMenu = createExclusiveContextMenu(closeMenu);
+
+onMounted(exclusiveMenu.mount);
+onUnmounted(exclusiveMenu.unmount);
 
 watch(
   () => props.activeId,
@@ -63,6 +68,8 @@ function move(event: MouseEvent): void {
 
 function openMenu(event: MouseEvent, id: string): void {
   event.preventDefault();
+  event.stopPropagation();
+  exclusiveMenu.notifyOpen(event, { replacingExistingMenu: Boolean(menu.value) });
   menu.value = { x: event.clientX, y: event.clientY, id, anchor: event.currentTarget as HTMLElement };
 }
 
@@ -177,9 +184,10 @@ function handleKeydown(event: KeyboardEvent): void {
         :show="true"
         :x="menu.x"
         :y="menu.y"
+        :z-index="CONTEXT_MENU_Z_INDEX"
         :options="menuOptions"
         @select="handleMenuSelect"
-        @clickoutside="closeMenu"
+        @clickoutside="exclusiveMenu.handleClickOutside"
       >
         <span
           class="dropdown-anchor"

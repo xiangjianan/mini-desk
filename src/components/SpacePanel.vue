@@ -1,9 +1,10 @@
 <script setup lang="ts">
-import { computed, nextTick, ref, watch } from "vue";
+import { computed, nextTick, onMounted, onUnmounted, ref, watch } from "vue";
 import { NDropdown, NScrollbar } from "naive-ui";
 import type { DropdownOption } from "naive-ui";
 import type { AppLanguage, GuideKey, LineItem, WorkspaceSpace } from "../types";
 import { getUiText } from "../state/i18n";
+import { CONTEXT_MENU_Z_INDEX, createExclusiveContextMenu } from "../utils/contextMenu";
 import TextPanel from "./TextPanel.vue";
 
 const props = withDefaults(defineProps<{
@@ -34,6 +35,10 @@ const titleComposing = ref(false);
 const draggedSpaceId = ref<string | null>(null);
 const menu = ref<{ x: number; y: number; spaceId: string } | null>(null);
 const uiText = computed(() => getUiText(props.language));
+const exclusiveMenu = createExclusiveContextMenu(closeMenu);
+
+onMounted(exclusiveMenu.mount);
+onUnmounted(exclusiveMenu.unmount);
 
 const activeSpace = computed(() =>
   props.spaces.find((space) => space.id === props.activeSpaceId) ?? props.spaces[0],
@@ -110,6 +115,8 @@ function handleTabEditEnter(event: KeyboardEvent): void {
 
 function openTabMenu(event: MouseEvent, id: string): void {
   event.preventDefault();
+  event.stopPropagation();
+  exclusiveMenu.notifyOpen(event, { replacingExistingMenu: Boolean(menu.value) });
   menu.value = { x: event.clientX, y: event.clientY, spaceId: id };
 }
 
@@ -130,8 +137,10 @@ function handleMenuSelect(key: string): void {
 
 function handleDragStart(event: DragEvent, id: string): void {
   draggedSpaceId.value = id;
-  event.dataTransfer?.setData("text/plain", id);
-  event.dataTransfer?.setDragImage?.(event.currentTarget as Element, 0, 0);
+  if (!event.dataTransfer) return;
+  event.dataTransfer.effectAllowed = "move";
+  event.dataTransfer.setData("application/x-space-id", id);
+  event.dataTransfer.setDragImage?.(event.currentTarget as Element, 0, 0);
 }
 
 function handleDrop(id: string): void {
@@ -141,60 +150,71 @@ function handleDrop(id: string): void {
 }
 
 function handleTabsWheel(event: WheelEvent): void {
-  const tabs = event.currentTarget as HTMLElement;
-  if (tabs.scrollWidth <= tabs.clientWidth) return;
+  const current = event.currentTarget as HTMLElement;
+  const candidates = [
+    current.classList.contains("n-scrollbar-container") ? current : null,
+    current.querySelector<HTMLElement>(".n-scrollbar-container"),
+    current.classList.contains("space-tabs") ? current : null,
+    current.querySelector<HTMLElement>(".space-tabs"),
+  ];
+  const scrollTarget = candidates.find((element): element is HTMLElement =>
+    Boolean(element && element.scrollWidth > element.clientWidth),
+  );
+  if (!scrollTarget) return;
   const delta = Math.abs(event.deltaX) > Math.abs(event.deltaY) ? event.deltaX : event.deltaY;
   if (!delta) return;
   event.preventDefault();
-  tabs.scrollLeft += delta;
+  scrollTarget.scrollLeft += delta;
 }
 </script>
 
 <template>
   <section class="panel space-panel" :aria-label="uiText.space.panel">
-    <NScrollbar class="space-tabs-scrollbar" x-scrollable trigger="none">
-      <div class="space-tabs" role="tablist" :aria-label="uiText.space.list" @wheel="handleTabsWheel">
-        <template v-for="space in spaces" :key="space.id">
+    <div class="space-tabs-scrollbar" @wheel="handleTabsWheel">
+      <NScrollbar class="space-tabs-scrollbar-inner" x-scrollable trigger="hover">
+        <div class="space-tabs" role="tablist" :aria-label="uiText.space.list">
+          <template v-for="space in spaces" :key="space.id">
+            <button
+              v-if="editingSpaceId !== space.id"
+              class="space-tab"
+              :class="{ 'is-active': space.id === activeSpaceId, 'is-dragging': draggedSpaceId === space.id }"
+              type="button"
+              role="tab"
+              draggable="true"
+              :aria-selected="space.id === activeSpaceId"
+              @click="emit('activate', space.id)"
+              @dblclick.stop="startTabEdit(space.id)"
+              @contextmenu.stop.prevent="openTabMenu($event, space.id)"
+              @dragstart="handleDragStart($event, space.id)"
+              @dragend="draggedSpaceId = null"
+              @dragover.prevent
+              @drop.stop.prevent="handleDrop(space.id)"
+            >
+              {{ space.title }}
+            </button>
+            <input
+              v-else
+              v-model="editingTitle"
+              class="space-tab-edit-input"
+              :aria-label="uiText.space.editName"
+              @compositionstart="titleComposing = true"
+              @compositionend="titleComposing = false"
+              @keydown.enter="handleTabEditEnter"
+              @keydown.esc.prevent="cancelTabEdit"
+              @blur="commitTabEdit"
+            />
+          </template>
           <button
-            v-if="editingSpaceId !== space.id"
-            class="space-tab"
-            :class="{ 'is-active': space.id === activeSpaceId, 'is-dragging': draggedSpaceId === space.id }"
+            class="space-add-button icon-button"
             type="button"
-            role="tab"
-            draggable="true"
-            :aria-selected="space.id === activeSpaceId"
-            @click="emit('activate', space.id)"
-            @dblclick.stop="startTabEdit(space.id)"
-            @contextmenu.stop.prevent="openTabMenu($event, space.id)"
-            @dragstart="handleDragStart($event, space.id)"
-            @dragend="draggedSpaceId = null"
-            @dragover.prevent
-            @drop.stop.prevent="handleDrop(space.id)"
+            :aria-label="uiText.space.add"
+            @click="emit('create')"
           >
-            {{ space.title }}
+            +
           </button>
-          <input
-            v-else
-            v-model="editingTitle"
-            class="space-tab-edit-input"
-            :aria-label="uiText.space.editName"
-            @compositionstart="titleComposing = true"
-            @compositionend="titleComposing = false"
-            @keydown.enter="handleTabEditEnter"
-            @keydown.esc.prevent="cancelTabEdit"
-            @blur="commitTabEdit"
-          />
-        </template>
-        <button
-          class="space-add-button icon-button"
-          type="button"
-          :aria-label="uiText.space.add"
-          @click="emit('create')"
-        >
-          +
-        </button>
-      </div>
-    </NScrollbar>
+        </div>
+      </NScrollbar>
+    </div>
 
     <div class="space-text-stage">
       <Transition name="space-panel-switch" mode="out-in" :duration="90">
@@ -222,9 +242,10 @@ function handleTabsWheel(event: WheelEvent): void {
       :show="true"
       :x="menu.x"
       :y="menu.y"
+      :z-index="CONTEXT_MENU_Z_INDEX"
       :options="menuOptions"
       @select="handleMenuSelect"
-      @clickoutside="closeMenu"
+      @clickoutside="exclusiveMenu.handleClickOutside"
     >
       <span
         class="dropdown-anchor"
