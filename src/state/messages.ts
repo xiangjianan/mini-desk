@@ -6,6 +6,7 @@ export type MessageSurface = "companion" | "naive-message";
 
 export type MessageKey =
   | "save"
+  | "saveStatusLegend"
   | "todoCompleted"
   | "clipboardPasteUnsupported"
   | "clipboardImageMissing"
@@ -132,6 +133,22 @@ export const MESSAGE_CATALOG: Record<MessageKey, MessageEntry> = {
       "内容稳稳保存",
       "记录已更新",
       "放心继续写",
+    ],
+  },
+  saveStatusLegend: {
+    mood: "calm",
+    surface: "companion",
+    variants: [
+      "绿色=已保存；红色=未保存；橙色=保存中",
+      "绿色是已保存，红色是未保存，橙色是保存中",
+      "看到绿色就是已保存；红色是未保存；橙色是保存中",
+      "绿色表示已保存；红色表示未保存；橙色表示保存中",
+      "绿色=已保存；红色=未保存；橙色=保存中",
+      "绿色表示已保存，红色提醒未保存，橙色保存中",
+      "绿色代表已保存，红色代表未保存，橙色代表保存中",
+      "绿色是保存好了；红色是未保存；橙色是保存中",
+      "绿色已保存，红色未保存，橙色保存中",
+      "绿色已收好；红色有未保存内容；橙色保存中",
     ],
   },
   todoCompleted: {
@@ -708,6 +725,11 @@ export const MESSAGE_CATALOG: Record<MessageKey, MessageEntry> = {
 
 const EN_MESSAGE_VARIANTS = {
   save: ["Saved", "Changes saved", "Your board is up to date"],
+  saveStatusLegend: [
+    "Green means saved. Red means unsaved. Orange means saving.",
+    "Green is saved, red is unsaved, and orange is saving.",
+    "Green means everything is saved. Red means unsaved. Orange means saving.",
+  ],
   todoCompleted: ["One more reminder completed", "Progress updated", "Reminder completed"],
   clipboardPasteUnsupported: ["Clipboard images are not available here", "Try pressing Ctrl+V to paste an image", "Use the paste shortcut instead"],
   clipboardImageMissing: ["No image found in the clipboard", "Copy an image first", "The clipboard does not contain an image"],

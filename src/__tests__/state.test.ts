@@ -447,6 +447,22 @@ describe("todo behavior", () => {
     expect(moved.custom.map((todo) => todo.id)).toEqual(["a", "b", "c"]);
   });
 
+  it("matches image-style ordering when moving a todo downward onto the next item", () => {
+    const todos = {
+      custom: [
+        { id: "a", text: "A", done: false },
+        { id: "b", text: "B", done: false },
+        { id: "c", text: "C", done: false },
+      ],
+    };
+
+    const adjacent = moveTodo(todos, "custom", "a", "custom", "b");
+    const nonAdjacent = moveTodo(todos, "custom", "a", "custom", "c");
+
+    expect(adjacent.custom.map((todo) => todo.id)).toEqual(["b", "a", "c"]);
+    expect(nonAdjacent.custom.map((todo) => todo.id)).toEqual(["b", "c", "a"]);
+  });
+
   it("reorders configurable todo lists before the target when moving downward", () => {
     const state = normalizeImportedState({
       todoLists: [

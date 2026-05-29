@@ -141,9 +141,9 @@ export function moveTodo(
   if (sourceIndex < 0) return next;
   const destination = next[destinationPeriod];
   if (!destination) return next;
+  const targetIndex = targetId ? destination.findIndex((item) => item.id === targetId) : -1;
 
   const [todo] = source.splice(sourceIndex, 1);
-  const targetIndex = targetId ? destination.findIndex((item) => item.id === targetId) : -1;
   destination.splice(targetIndex >= 0 ? targetIndex : destination.length, 0, todo);
   return next;
 }

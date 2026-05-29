@@ -17,6 +17,7 @@ import { GUIDE_MESSAGES } from "../state/i18n";
 
 const messageKeys = [
   "save",
+  "saveStatusLegend",
   "todoCompleted",
   "clipboardPasteUnsupported",
   "clipboardImageMissing",
@@ -119,7 +120,7 @@ describe("message catalog", () => {
     for (const [key, entry] of Object.entries(MESSAGE_CATALOG)) {
       if (key === "about") continue;
       for (const variant of entry.variants) {
-        const maxLength = key === "confirmUnstarTodoDeadline" ? 24 : 15;
+        const maxLength = key === "saveStatusLegend" ? 28 : key === "confirmUnstarTodoDeadline" ? 24 : 15;
         expect(variant.length, `${key}: ${variant}`).toBeLessThanOrEqual(maxLength);
       }
     }
@@ -167,6 +168,8 @@ describe("message catalog", () => {
     expect(appSource).toContain("GITHUB_ISSUE_URL");
     expect(appSource).toContain("/issues/new");
     expect(appSource).not.toContain("GITHUB_REPO_NAME");
+    expect(appSource).not.toContain("绿色表示已保存");
+    expect(appSource).not.toContain("Green means saved");
   });
 
   it("provides ten guide variants for every guide bubble scenario", () => {

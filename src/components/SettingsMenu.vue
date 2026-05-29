@@ -19,10 +19,12 @@ import type { AppLanguage, CompanionGifTheme, GuideKey } from "../types";
 const props = withDefaults(defineProps<{
   appVersion: string;
   updateAvailable: boolean;
+  updateBadgeVisible?: boolean;
   companionGifTheme: CompanionGifTheme;
   language?: AppLanguage;
 }>(), {
   language: "zh",
+  updateBadgeVisible: false,
 });
 
 const emit = defineEmits<{
@@ -158,13 +160,13 @@ function renderIcon(component: Component) {
     @update:show="menuOpen = $event"
   >
     <span ref="triggerRef" class="settings-trigger">
-      <NBadge :show="updateAvailable && !menuOpen" dot>
+      <NBadge :show="updateBadgeVisible && !menuOpen" dot>
         <NButton
           class="settings-btn icon-button"
           quaternary
           size="small"
           :aria-label="text.settings.button"
-          :data-update-available="updateAvailable && !menuOpen ? 'true' : undefined"
+          :data-update-available="updateBadgeVisible && !menuOpen ? 'true' : undefined"
           @click="emit('guide', 'settings', $event.currentTarget as HTMLElement)"
         >
           <NIcon :component="SettingsOutline" />

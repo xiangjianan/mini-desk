@@ -10,6 +10,7 @@ import SettingsMenu from "../components/SettingsMenu.vue";
 import SpacePanel from "../components/SpacePanel.vue";
 import TodoPanel from "../components/TodoPanel.vue";
 import { defaultState, STORAGE_KEY } from "../state/defaults";
+import { KAOMOJI_BY_MOOD } from "../state/messages";
 
 vi.mock("naive-ui", async (importOriginal) => {
   const actual = await importOriginal<typeof import("naive-ui")>();
@@ -825,6 +826,29 @@ describe("App shell", () => {
 
       expect(wrapper.get('[data-testid="save-status"]').attributes("data-state")).toBe("saved");
       expect(wrapper.get('[data-testid="save-status"]').attributes("aria-label")).toBe("已保存");
+    } finally {
+      wrapper.unmount();
+      vi.useRealTimers();
+    }
+  });
+
+  it("shows a color legend tip when clicking the save status dot", async () => {
+    vi.useFakeTimers();
+    const wrapper = mountApp();
+
+    try {
+      await wrapper.get('[data-testid="save-status"]').trigger("click");
+      await vi.advanceTimersByTimeAsync(200);
+      await wrapper.vm.$nextTick();
+
+      const message = wrapper.get('[data-testid="companion-confirm"]').text();
+      expect(message).toContain("绿色");
+      expect(message).toContain("已保存");
+      expect(message).toContain("红色");
+      expect(message).toContain("未保存");
+      expect(message).toContain("橙色");
+      expect(message).toContain("保存中");
+      expect(KAOMOJI_BY_MOOD.calm.some((kaomoji) => message.endsWith(kaomoji))).toBe(true);
     } finally {
       wrapper.unmount();
       vi.useRealTimers();
@@ -3730,6 +3754,32 @@ describe("App shell", () => {
     expect(wrapper.get('[aria-label="设置"]').attributes("data-update-available")).toBe("true");
 
     wrapper.unmount();
+  });
+
+  it("hides the settings update dot after ten seconds without clearing update status", async () => {
+    vi.useFakeTimers();
+    localStorage.setItem("todo-board-app-version", "0.9.0");
+    const wrapper = mountApp();
+
+    try {
+      await vi.advanceTimersByTimeAsync(0);
+      await wrapper.vm.$nextTick();
+
+      expect(wrapper.getComponent(SettingsMenu).props("updateAvailable")).toBe(true);
+      expect(wrapper.get('[aria-label="设置"]').attributes("data-update-available")).toBe("true");
+
+      await vi.advanceTimersByTimeAsync(9_999);
+      await wrapper.vm.$nextTick();
+      expect(wrapper.get('[aria-label="设置"]').attributes("data-update-available")).toBe("true");
+
+      await vi.advanceTimersByTimeAsync(1);
+      await wrapper.vm.$nextTick();
+      expect(wrapper.get('[aria-label="设置"]').attributes("data-update-available")).toBeUndefined();
+      expect(wrapper.getComponent(SettingsMenu).props("updateAvailable")).toBe(true);
+    } finally {
+      wrapper.unmount();
+      vi.useRealTimers();
+    }
   });
 
   it("opens the GitHub issue creation page from the settings suggestion action", async () => {

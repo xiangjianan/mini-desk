@@ -94,6 +94,7 @@ const sentTodoNotifications = new Set<string>();
 const appVersion = ref(getIndexAppVersion());
 const storedAppVersion = ref<string | null>(null);
 const versionPromptVisible = ref(false);
+const versionBadgeVisible = ref(false);
 const isMobileBlocked = ref(getInitialMobileBlocked());
 const mobileMediaQuery = ref<MediaQueryList | null>(null);
 let appMounted = false;
@@ -110,8 +111,10 @@ const GITHUB_ISSUE_URL = "https://github.com/xiangjianan/todolist/issues/new";
 const GITHUB_REPO_URL = "https://github.com/xiangjianan/todolist";
 const GITHUB_REPO_LABEL = "xiangjianan / todolist";
 const ABOUT_MESSAGE_DURATION_MS = 10000;
+const VERSION_BADGE_MAX_VISIBLE_MS = 10000;
 const MIN_COMPANION_POPOVER_RIGHT_EDGE = 260;
 const activeGuideKey = ref<GuideKey | null>(null);
+const versionBadgeTimer = ref<number | undefined>();
 
 const naiveTheme = computed(() => (state.theme === "dark" ? darkTheme : null));
 const naiveLocale = computed(() => (state.language === "en" ? enUS : zhCN));
@@ -1107,6 +1110,10 @@ function showSaveBubble(): void {
   showBubble("save");
 }
 
+function showSaveStatusTip(anchor?: HTMLElement): void {
+  showBubble("saveStatusLegend", anchor);
+}
+
 function showBubble(messageKey: MessageKey, anchor?: HTMLElement, options: BubbleOptions = {}): void {
   showBubbleText(getMessage(messageKey, Math.random, state.language), anchor, options);
 }
@@ -1272,7 +1279,9 @@ function clearTimers(): void {
   window.clearTimeout(bubbleTimer.value);
   window.clearTimeout(bubbleFadeTimer.value);
   window.clearTimeout(saveStatusTimer.value);
+  window.clearTimeout(versionBadgeTimer.value);
   window.clearTimeout(todoNotificationDueTimer.value);
+  versionBadgeTimer.value = undefined;
   window.clearInterval(todoNotificationTimer.value);
   todoNotificationDueTimer.value = undefined;
   todoNotificationTimer.value = undefined;
@@ -1487,16 +1496,32 @@ function checkAppVersion(): void {
   if (!storedAppVersion.value) {
     markAppVersionSeen(appVersion.value);
     storedAppVersion.value = appVersion.value;
+    versionBadgeVisible.value = false;
     return;
   }
   versionPromptVisible.value = storedAppVersion.value !== appVersion.value;
+  startVersionBadgeTimer();
 }
 
 async function updateStaticVersion(): Promise<void> {
   await clearStaticCaches();
   markAppVersionSeen(appVersion.value);
   versionPromptVisible.value = false;
+  versionBadgeVisible.value = false;
+  window.clearTimeout(versionBadgeTimer.value);
+  versionBadgeTimer.value = undefined;
   window.location.reload();
+}
+
+function startVersionBadgeTimer(): void {
+  window.clearTimeout(versionBadgeTimer.value);
+  versionBadgeTimer.value = undefined;
+  versionBadgeVisible.value = versionPromptVisible.value;
+  if (!versionBadgeVisible.value) return;
+  versionBadgeTimer.value = window.setTimeout(() => {
+    versionBadgeVisible.value = false;
+    versionBadgeTimer.value = undefined;
+  }, VERSION_BADGE_MAX_VISIBLE_MS);
 }
 
 function getCompanionPosition(anchor?: HTMLElement): { right: string; bottom?: string; top?: string } | undefined {
@@ -1723,12 +1748,18 @@ function moveItem<T extends { id: string }>(items: T[], dragId: string, targetId
         :aria-label="saveStatusLabel"
         :title="saveStatusLabel"
         aria-live="polite"
+        role="button"
+        tabindex="0"
+        @click="showSaveStatusTip($event.currentTarget as HTMLElement)"
+        @keydown.enter.prevent="showSaveStatusTip($event.currentTarget as HTMLElement)"
+        @keydown.space.prevent="showSaveStatusTip($event.currentTarget as HTMLElement)"
       >
         <span class="save-status-label">{{ saveStatusLabel }}</span>
       </span>
       <SettingsMenu
         :app-version="appVersion"
         :update-available="versionPromptVisible"
+        :update-badge-visible="versionBadgeVisible"
         :companion-gif-theme="state.companionGifTheme"
         :language="state.language"
         @export="exportData"
