@@ -4,8 +4,7 @@
 
 ## 在线地址
 
-- GitHub Pages: <https://xiangjianan.github.io/todolist/>
-- Cloudflare Pages: <https://minidesk.online>
+- <https://minidesk.online>
 
 ## 快速开始
 
@@ -145,13 +144,17 @@ todo-board-images-v1
 
 ## 部署
 
-GitHub Pages 通过 GitHub Actions 自动部署。构建时会设置仓库子路径：
+Cloudflare Pages 使用 `dist` 目录部署，项目名为 `todolist`。
 
 ```bash
-VITE_BASE=/todolist/ npm run build
+npm run build
 ```
 
-Cloudflare Pages 使用 `dist` 目录部署，项目名为 `todolist`。
+部署到 Cloudflare Pages：
+
+```bash
+npm run deploy:cloudflare
+```
 
 Vite 的 `base` 由环境变量控制：
 
@@ -166,4 +169,3 @@ base: process.env.VITE_BASE ?? "/"
 - `src/state/`：默认状态、消息文案、版本信息、localStorage/IndexedDB 存取、导入导出归一化和待办领域逻辑。
 - `src/utils/`：文本编辑缩进与行处理工具。
 - `src/__tests__/`：组件渲染、状态兼容、交互契约、部署配置和消息文案测试。
-- `.github/workflows/`：GitHub Pages 自动部署配置。
