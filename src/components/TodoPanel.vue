@@ -1082,7 +1082,7 @@ function buildTodoListEntries(period: TodoListId, todos: TodoItem[], deferredDon
         </NScrollbar>
       </section>
     </Transition>
-    <div class="todo-sections">
+    <TransitionGroup name="todo-section-reorder" tag="div" class="todo-sections">
       <section
         v-for="list in effectiveTodoLists"
         :key="list.id"
@@ -1262,7 +1262,7 @@ function buildTodoListEntries(period: TodoListId, todos: TodoItem[], deferredDon
           </NScrollbar>
         </div>
       </section>
-    </div>
+    </TransitionGroup>
 
     <Teleport to="body">
       <Transition name="floating-pop" :duration="240">

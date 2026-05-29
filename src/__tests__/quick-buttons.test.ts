@@ -1,4 +1,6 @@
 import { mount } from "@vue/test-utils";
+import { readFileSync } from "node:fs";
+import { resolve } from "node:path";
 import { describe, expect, it } from "vitest";
 import QuickButtons from "../components/QuickButtons.vue";
 
@@ -87,6 +89,10 @@ async function openDialog(wrapper: ReturnType<typeof mountQuickButtons>) {
   await wrapper.get(".quick-menu-button").trigger("click");
   await wrapper.findAll(".dropdown-option").find((option) => option.text() === "新增")?.trigger("click");
   await wrapper.vm.$nextTick();
+}
+
+function readSource(path: string): string {
+  return readFileSync(resolve(__dirname, "..", path), "utf8");
 }
 
 describe("QuickButtons", () => {
@@ -284,6 +290,31 @@ describe("QuickButtons", () => {
     expect(wrapper.find(".quick-dialog").exists()).toBe(false);
     expect(wrapper.emitted("delete")).toBeUndefined();
 
+    wrapper.unmount();
+  });
+
+  it("animates quick-button position changes while drag sorting", async () => {
+    const wrapper = mountQuickButtons({
+      buttons: [
+        { id: "a", title: "A", value: "a", type: "text", hidden: false },
+        { id: "b", title: "B", value: "b", type: "text", hidden: false },
+      ],
+    });
+    const source = readSource("components/QuickButtons.vue");
+    const styles = readSource("styles.css");
+
+    expect(source).toContain('<TransitionGroup name="quick-reorder" tag="div" class="quick-buttons">');
+    expect(styles).toMatch(/\.quick-reorder-move,[\s\S]*?\.quick-reorder-enter-active,[\s\S]*?\.quick-reorder-leave-active\s*\{[^}]*transform 0\.22s/s);
+    expect(styles).toMatch(/\.quick-button\.is-dragging\s*\{[^}]*opacity: 0\.45/s);
+
+    await wrapper.findAll(".quick-button")[0].trigger("dragstart");
+    expect(wrapper.findAll(".quick-button")[0].classes()).toContain("is-dragging");
+
+    await wrapper.findAll(".quick-button")[1].trigger("drop");
+    expect(wrapper.emitted("reorder")?.[0]).toEqual(["a", "b"]);
+
+    await wrapper.findAll(".quick-button")[0].trigger("dragend");
+    expect(wrapper.findAll(".quick-button")[0].classes()).not.toContain("is-dragging");
     wrapper.unmount();
   });
 });

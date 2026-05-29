@@ -343,8 +343,15 @@ describe("TodoPanel", () => {
       effectAllowed: "",
       setData: vi.fn(),
     };
+    const source = readFileSync(resolve(__dirname, "../components/TodoPanel.vue"), "utf8");
+    const styles = readFileSync(resolve(__dirname, "../styles.css"), "utf8");
+
+    expect(source).toContain('<TransitionGroup name="todo-section-reorder" tag="div" class="todo-sections">');
+    expect(styles).toMatch(/\.todo-section-reorder-move,[\s\S]*?\.todo-section-reorder-enter-active,[\s\S]*?\.todo-section-reorder-leave-active\s*\{[^}]*transform 0\.22s/s);
 
     await wrapper.get('.todo-section[data-list-id="morning"] .todo-heading').trigger("dragstart", { dataTransfer });
+    expect(wrapper.get('.todo-section[data-list-id="morning"]').classes()).toContain("is-list-dragging");
+
     await wrapper.get('.todo-section[data-list-id="noon"]').trigger("drop");
 
     expect(dataTransfer.effectAllowed).toBe("move");
@@ -352,6 +359,9 @@ describe("TodoPanel", () => {
     expect(dataTransfer.setData).toHaveBeenCalledWith("application/x-todo-list-id", "morning");
     expect(wrapper.emitted("reorderLists")?.[0]).toEqual(["morning", "noon"]);
     expect(wrapper.emitted("move")).toBeUndefined();
+
+    await wrapper.get('.todo-section[data-list-id="morning"] .todo-heading').trigger("dragend");
+    expect(wrapper.get('.todo-section[data-list-id="morning"]').classes()).not.toContain("is-list-dragging");
   });
 
   it("does not treat a dragged reminder list as dropped external text over a list body", async () => {

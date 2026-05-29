@@ -203,12 +203,12 @@ function handleToggleShowHidden(anchor?: HTMLElement): void {
     </div>
 
     <NScrollbar class="quick-buttons-scrollbar" :aria-label="uiText.quick.list" @click="closeMenu" @contextmenu="openAreaMenu">
-      <div class="quick-buttons">
+      <TransitionGroup name="quick-reorder" tag="div" class="quick-buttons">
         <button
           v-for="button in visibleButtons"
           :key="button.id"
           class="quick-button"
-          :class="{ 'is-hidden': button.hidden, 'is-copy': button.type === 'text' }"
+          :class="{ 'is-hidden': button.hidden, 'is-copy': button.type === 'text', 'is-dragging': draggingId === button.id }"
           type="button"
           draggable="true"
           @click="emit('copy', button.id, $event.currentTarget as HTMLElement)"
@@ -221,7 +221,7 @@ function handleToggleShowHidden(anchor?: HTMLElement): void {
           <NIcon v-if="button.type === 'text'" class="quick-button-icon" :component="CopyOutline" />
           <span>{{ button.title }}</span>
         </button>
-      </div>
+      </TransitionGroup>
     </NScrollbar>
 
     <NDropdown

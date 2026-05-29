@@ -490,6 +490,19 @@ h3 {
   opacity: 0.45;
 }
 
+.space-reorder-move,
+.space-reorder-enter-active,
+.space-reorder-leave-active {
+  transition:
+    transform 0.22s cubic-bezier(0.2, 0, 0, 1),
+    opacity 0.18s ease;
+}
+
+.space-reorder-enter-from,
+.space-reorder-leave-to {
+  opacity: 0;
+}
+
 .space-tab:active {
   cursor: grabbing;
 }
@@ -642,6 +655,23 @@ h3 {
   cursor: zoom-in;
 }
 
+.image-card.is-dragging {
+  opacity: 0.45;
+}
+
+.image-reorder-move,
+.image-reorder-enter-active,
+.image-reorder-leave-active {
+  transition:
+    transform 0.22s cubic-bezier(0.2, 0, 0, 1),
+    opacity 0.18s ease;
+}
+
+.image-reorder-enter-from,
+.image-reorder-leave-to {
+  opacity: 0;
+}
+
 .image-index {
   height: 100%;
   min-height: 72px;
@@ -710,6 +740,23 @@ h3 {
 .quick-button.is-hidden {
   opacity: 0.42;
   border-style: dashed;
+}
+
+.quick-button.is-dragging {
+  opacity: 0.45;
+}
+
+.quick-reorder-move,
+.quick-reorder-enter-active,
+.quick-reorder-leave-active {
+  transition:
+    transform 0.22s cubic-bezier(0.2, 0, 0, 1),
+    opacity 0.18s ease;
+}
+
+.quick-reorder-enter-from,
+.quick-reorder-leave-to {
+  opacity: 0;
 }
 
 .quick-form {
@@ -1033,6 +1080,19 @@ h3 {
 
 .todo-section.is-list-dragging {
   opacity: 0.64;
+}
+
+.todo-section-reorder-move,
+.todo-section-reorder-enter-active,
+.todo-section-reorder-leave-active {
+  transition:
+    transform 0.22s cubic-bezier(0.2, 0, 0, 1),
+    opacity 0.18s ease;
+}
+
+.todo-section-reorder-enter-from,
+.todo-section-reorder-leave-to {
+  opacity: 0;
 }
 
 .todo-drag-handle {

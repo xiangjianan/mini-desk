@@ -172,10 +172,11 @@ function handleTabsWheel(event: WheelEvent): void {
   <section class="panel space-panel" :aria-label="uiText.space.panel">
     <div class="space-tabs-scrollbar" @wheel="handleTabsWheel">
       <NScrollbar class="space-tabs-scrollbar-inner" x-scrollable trigger="hover">
-        <div class="space-tabs" role="tablist" :aria-label="uiText.space.list">
-          <template v-for="space in spaces" :key="space.id">
+        <TransitionGroup name="space-reorder" tag="div" class="space-tabs" role="tablist" :aria-label="uiText.space.list">
+          <template v-for="space in spaces">
             <button
               v-if="editingSpaceId !== space.id"
+              :key="`tab-${space.id}`"
               class="space-tab"
               :class="{ 'is-active': space.id === activeSpaceId, 'is-dragging': draggedSpaceId === space.id }"
               type="button"
@@ -194,6 +195,7 @@ function handleTabsWheel(event: WheelEvent): void {
             </button>
             <input
               v-else
+              :key="`edit-${space.id}`"
               v-model="editingTitle"
               class="space-tab-edit-input"
               :aria-label="uiText.space.editName"
@@ -205,6 +207,7 @@ function handleTabsWheel(event: WheelEvent): void {
             />
           </template>
           <button
+            key="space-add"
             class="space-add-button icon-button"
             type="button"
             :aria-label="uiText.space.add"
@@ -212,7 +215,7 @@ function handleTabsWheel(event: WheelEvent): void {
           >
             +
           </button>
-        </div>
+        </TransitionGroup>
       </NScrollbar>
     </div>
 

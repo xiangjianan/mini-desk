@@ -219,6 +219,27 @@ describe("SpacePanel", () => {
     expect(wrapper.find(".space-add-button").exists()).toBe(true);
   });
 
+  it("animates workspace tab position changes while drag sorting", async () => {
+    const wrapper = mountSpacePanel([
+      { id: "workspace", title: "工作空间", lines: [] },
+      { id: "project", title: "项目", lines: [] },
+    ]);
+    const source = readFileSync(resolve(__dirname, "../components/SpacePanel.vue"), "utf8");
+    const styles = readFileSync(resolve(__dirname, "../styles.css"), "utf8");
+
+    expect(source).toContain('<TransitionGroup name="space-reorder" tag="div" class="space-tabs"');
+    expect(source).toContain(':key="`tab-${space.id}`"');
+    expect(source).toContain('key="space-add"');
+    expect(styles).toMatch(/\.space-reorder-move,[\s\S]*?\.space-reorder-enter-active,[\s\S]*?\.space-reorder-leave-active\s*\{[^}]*transform 0\.22s/s);
+
+    await wrapper.findAll(".space-tab")[0].trigger("dragstart");
+    expect(wrapper.findAll(".space-tab")[0].classes()).toContain("is-dragging");
+
+    await wrapper.findAll(".space-tab")[0].trigger("dragend");
+    expect(wrapper.findAll(".space-tab")[0].classes()).not.toContain("is-dragging");
+    wrapper.unmount();
+  });
+
   it("keeps workspace tab drags off the plain-text payload", async () => {
     const setData = vi.fn();
     const wrapper = mountSpacePanel([

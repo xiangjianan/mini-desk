@@ -454,8 +454,9 @@ describe("Naive UI component usage", () => {
 
   it("keeps blank reminder hints outside the moving todo transition list", () => {
     const todo = read("src/components/TodoPanel.vue");
+    const todoMoveBlock = todo.match(/<TransitionGroup\s+name="todo-move"[\s\S]*?<\/TransitionGroup>/)?.[0] ?? "";
 
-    expect(todo).not.toMatch(/<TransitionGroup[\s\S]*v-if="listEntries\[list\.id\]\.length === 0"[\s\S]*<\/TransitionGroup>/);
+    expect(todoMoveBlock).not.toContain('v-if="listEntries[list.id].length === 0"');
     expect(todo).toContain('v-if="listEntries[list.id].length === 0"');
     expect(todo).toContain('v-else');
   });

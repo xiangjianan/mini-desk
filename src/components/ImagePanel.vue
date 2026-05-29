@@ -123,11 +123,12 @@ function handleExternalDrop(event: DragEvent): void {
       @drop.prevent.stop="handleExternalDrop"
       @contextmenu.prevent.stop="openMenu($event)"
     >
-      <div class="image-list">
+      <TransitionGroup name="image-reorder" tag="div" class="image-list">
       <button
         v-for="(image, index) in images"
         :key="image.id"
         class="image-card"
+        :class="{ 'is-dragging': draggingId === image.id }"
         type="button"
         draggable="true"
         @click="emit('preview', image.id)"
@@ -141,7 +142,7 @@ function handleExternalDrop(event: DragEvent): void {
         <img v-if="image.src" :src="image.src" :alt="uiText.images.thumbnailAlt" draggable="false" />
         <span v-else class="image-missing">{{ uiText.images.loading }}</span>
       </button>
-      </div>
+      </TransitionGroup>
     </NScrollbar>
 
     <NDropdown

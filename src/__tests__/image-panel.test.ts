@@ -1,4 +1,6 @@
 import { mount } from "@vue/test-utils";
+import { readFileSync } from "fs";
+import { resolve } from "path";
 import { nextTick } from "vue";
 import { describe, expect, it } from "vitest";
 import ImagePanel from "../components/ImagePanel.vue";
@@ -36,6 +38,10 @@ function mountImagePanel(images: StoredImage[] = []) {
       },
     },
   });
+}
+
+function readSource(path: string): string {
+  return readFileSync(resolve(__dirname, "..", path), "utf8");
 }
 
 describe("ImagePanel", () => {
@@ -137,6 +143,26 @@ describe("ImagePanel", () => {
     });
 
     expect(wrapper.emitted("dropFiles")?.[0]).toEqual([[image, text], expect.any(HTMLElement)]);
+    wrapper.unmount();
+  });
+
+  it("keeps image reorder movement animated during drag sorting", async () => {
+    const wrapper = mountImagePanel([
+      { id: "a", src: "data:image/png;base64,a", createdAt: 1 },
+      { id: "b", src: "data:image/png;base64,b", createdAt: 2 },
+    ]);
+    const source = readSource("components/ImagePanel.vue");
+    const styles = readSource("styles.css");
+
+    expect(source).toContain('<TransitionGroup name="image-reorder" tag="div" class="image-list">');
+    expect(styles).toMatch(/\.image-reorder-move,[\s\S]*?\.image-reorder-enter-active,[\s\S]*?\.image-reorder-leave-active\s*\{[^}]*transform 0\.22s/s);
+    expect(styles).toMatch(/\.image-card\.is-dragging\s*\{[^}]*opacity: 0\.45/s);
+
+    await wrapper.findAll(".image-card")[0].trigger("dragstart");
+    expect(wrapper.findAll(".image-card")[0].classes()).toContain("is-dragging");
+
+    await wrapper.findAll(".image-card")[0].trigger("dragend");
+    expect(wrapper.findAll(".image-card")[0].classes()).not.toContain("is-dragging");
     wrapper.unmount();
   });
 });
