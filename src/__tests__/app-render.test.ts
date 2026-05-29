@@ -1218,10 +1218,105 @@ describe("App shell", () => {
       expect(notificationSpy).toHaveBeenCalledWith("☀️ 早上", {
         body: "喝水",
         tag: `todo-1:${notifyAt}`,
-        icon: expect.stringContaining("kun.jpg"),
+        icon: expect.stringMatching(/^https?:\/\/.*kun.*\.jpg/),
       });
     } finally {
       wrapper.unmount();
+      vi.unstubAllGlobals();
+      vi.useRealTimers();
+    }
+  });
+
+  it("sends future reminder notifications at the exact due time", async () => {
+    vi.useFakeTimers();
+    vi.setSystemTime(new Date(2026, 4, 25, 8, 0, 0));
+    const notificationSpy = vi.fn();
+    class NotificationStub {
+      static permission: NotificationPermission = "granted";
+      static requestPermission = vi.fn();
+
+      constructor(title: string, options?: NotificationOptions) {
+        notificationSpy(title, options);
+      }
+    }
+    vi.stubGlobal("Notification", NotificationStub);
+    localStorage.setItem(
+      STORAGE_KEY,
+      JSON.stringify({
+        todos: {
+          morning: [{ id: "todo-1", text: "喝水", done: false }],
+        },
+      }),
+    );
+    const wrapper = mountApp();
+
+    try {
+      const notifyAt = new Date(2026, 4, 25, 8, 0, 10).getTime();
+      wrapper.getComponent(TodoPanel).vm.$emit("notify", "morning", "todo-1", notifyAt);
+      await vi.advanceTimersByTimeAsync(9_999);
+      expect(notificationSpy).not.toHaveBeenCalled();
+
+      await vi.advanceTimersByTimeAsync(1);
+      expect(notificationSpy).toHaveBeenCalledTimes(1);
+      expect(notificationSpy).toHaveBeenCalledWith("☀️ 早上", {
+        body: "喝水",
+        tag: `todo-1:${notifyAt}`,
+        icon: expect.stringMatching(/^https?:\/\/.*kun.*\.jpg/),
+      });
+    } finally {
+      wrapper.unmount();
+      vi.unstubAllGlobals();
+      vi.useRealTimers();
+    }
+  });
+
+  it("retries due reminder notifications when the browser constructor fails once", async () => {
+    vi.useFakeTimers();
+    vi.setSystemTime(new Date(2026, 4, 25, 8, 0, 0));
+    const notificationSpy = vi.fn();
+    const warnSpy = vi.spyOn(console, "warn").mockImplementation(() => undefined);
+    let constructorCalls = 0;
+    class NotificationStub {
+      static permission: NotificationPermission = "granted";
+      static requestPermission = vi.fn();
+
+      constructor(title: string, options?: NotificationOptions) {
+        constructorCalls += 1;
+        if (constructorCalls === 1) throw new Error("notification unavailable");
+        notificationSpy(title, options);
+      }
+    }
+    vi.stubGlobal("Notification", NotificationStub);
+    localStorage.setItem(
+      STORAGE_KEY,
+      JSON.stringify({
+        todos: {
+          morning: [{ id: "todo-1", text: "喝水", done: false }],
+        },
+      }),
+    );
+    const wrapper = mountApp();
+
+    try {
+      const notifyAt = new Date(2026, 4, 25, 8, 0, 10).getTime();
+      wrapper.getComponent(TodoPanel).vm.$emit("notify", "morning", "todo-1", notifyAt);
+      await vi.advanceTimersByTimeAsync(10_000);
+
+      expect(constructorCalls).toBe(1);
+      expect(notificationSpy).not.toHaveBeenCalled();
+      expect(warnSpy).toHaveBeenCalledWith("Failed to show reminder notification", expect.any(Error));
+
+      await vi.advanceTimersByTimeAsync(20_000);
+      expect(constructorCalls).toBe(2);
+      expect(notificationSpy).toHaveBeenCalledTimes(1);
+      expect(notificationSpy).toHaveBeenCalledWith("☀️ 早上", {
+        body: "喝水",
+        tag: `todo-1:${notifyAt}`,
+        icon: expect.stringMatching(/^https?:\/\/.*kun.*\.jpg/),
+      });
+    } finally {
+      wrapper.unmount();
+      warnSpy.mockRestore();
       vi.unstubAllGlobals();
       vi.useRealTimers();
     }

@@ -53,7 +53,8 @@ import {
 import type { AppLanguage, BoardState, CompanionGifTheme, DraggedTodo, GuideKey, LineItem, QuickButtonType, StoredImage, TodoItem, TodoListConfig, TodoListId, TodoPeriod, TodoStarChange, WorkspaceSpace } from "./types";
 
 const MOBILE_BREAKPOINT_QUERY = "(max-width: 900px)";
-const TODO_NOTIFICATION_INTERVAL_MS = 30_000;
+const TODO_NOTIFICATION_FALLBACK_INTERVAL_MS = 30_000;
+const MAX_TODO_NOTIFICATION_TIMEOUT_MS = 2_147_483_647;
 const mobileCompanionPosition: { right: string; bottom: string } = { right: "18px", bottom: "28px" };
 
 function getInitialMobileBlocked(): boolean {
@@ -87,6 +88,7 @@ const bubbleTimerOptions = ref<BubbleOptions>({});
 const bubbleClearSignal = ref(0);
 const saveStatusTimer = ref<number | undefined>();
 const todoNotificationTimer = ref<number | undefined>();
+const todoNotificationDueTimer = ref<number | undefined>();
 const emptyTodoRemovalTimers = new Map<string, number>();
 const sentTodoNotifications = new Set<string>();
 const appVersion = ref(getIndexAppVersion());
@@ -195,8 +197,8 @@ onMounted(async () => {
   checkAppVersion();
   window.addEventListener("keydown", handleGlobalKeydown);
   document.addEventListener("paste", handlePaste);
-  todoNotificationTimer.value = window.setInterval(triggerDueTodoNotifications, TODO_NOTIFICATION_INTERVAL_MS);
-  triggerDueTodoNotifications();
+  todoNotificationTimer.value = window.setInterval(refreshTodoNotifications, TODO_NOTIFICATION_FALLBACK_INTERVAL_MS);
+  refreshTodoNotifications();
 });
 
 onUnmounted(() => {
@@ -867,6 +869,7 @@ function updateTodoNotify(period: TodoPeriod, id: string, notifyAt: number | und
   if (!isConfiguredTodoListId(period)) return;
   state.todos = setTodoNotifyAt(state.todos, period, id, notifyAt);
   persistNow();
+  scheduleNextTodoNotification();
   if (notifyAt === undefined) showBubbleText(uiText.value.app.notifyCleared, anchor);
   else void prepareTodoNotifications();
 }
@@ -1031,6 +1034,7 @@ async function importData(event: Event): Promise<void> {
       Object.assign(state, next);
       await persistImagePayloads(state.images);
       persistNow();
+      refreshTodoNotifications();
       showBubble("dataImported", importFeedbackAnchor.value, { hideCompanionAfter: true });
       importFeedbackAnchor.value = undefined;
       input.value = "";
@@ -1268,7 +1272,10 @@ function clearTimers(): void {
   window.clearTimeout(bubbleTimer.value);
   window.clearTimeout(bubbleFadeTimer.value);
   window.clearTimeout(saveStatusTimer.value);
+  window.clearTimeout(todoNotificationDueTimer.value);
   window.clearInterval(todoNotificationTimer.value);
+  todoNotificationDueTimer.value = undefined;
+  todoNotificationTimer.value = undefined;
   emptyTodoRemovalTimers.forEach((timer) => window.clearTimeout(timer));
   emptyTodoRemovalTimers.clear();
 }
@@ -1281,34 +1288,94 @@ async function prepareTodoNotifications(): Promise<void> {
   const notificationApi = getNotificationApi();
   if (!notificationApi) return;
   if (notificationApi.permission === "default" && typeof notificationApi.requestPermission === "function") {
-    await notificationApi.requestPermission();
+    try {
+      await notificationApi.requestPermission();
+    } catch (error) {
+      console.warn("Failed to request reminder notification permission", error);
+    }
   }
+  refreshTodoNotifications();
+}
+
+function refreshTodoNotifications(): void {
   triggerDueTodoNotifications();
+  scheduleNextTodoNotification();
 }
 
 function triggerDueTodoNotifications(): void {
   const notificationApi = getNotificationApi();
+  pruneSentTodoNotifications();
   if (!notificationApi || notificationApi.permission !== "granted") return;
   const now = Date.now();
   const notificationIcon = getReminderNotificationIcon();
   for (const period of getTodoListIds()) {
     for (const todo of getTodos(period)) {
       if (todo.done || !Number.isFinite(todo.notifyAt) || todo.notifyAt === undefined || todo.notifyAt > now) continue;
-      const key = `${todo.id}:${todo.notifyAt}`;
+      const key = getTodoNotificationKey(period, todo);
       if (sentTodoNotifications.has(key)) continue;
-      sentTodoNotifications.add(key);
       const options: NotificationOptions = {
         body: todo.text,
-        tag: key,
+        tag: getTodoNotificationTag(todo),
       };
       if (notificationIcon) options.icon = notificationIcon;
-      new notificationApi(getTodoListTitle(period), options);
+      try {
+        new notificationApi(getTodoListTitle(period), options);
+        sentTodoNotifications.add(key);
+      } catch (error) {
+        console.warn("Failed to show reminder notification", error);
+      }
     }
   }
 }
 
+function scheduleNextTodoNotification(): void {
+  if (!appMounted) return;
+  window.clearTimeout(todoNotificationDueTimer.value);
+  todoNotificationDueTimer.value = undefined;
+  const now = Date.now();
+  let nextNotifyAt: number | undefined;
+  for (const period of getTodoListIds()) {
+    for (const todo of getTodos(period)) {
+      if (todo.done || !Number.isFinite(todo.notifyAt) || todo.notifyAt === undefined || todo.notifyAt <= now) continue;
+      if (sentTodoNotifications.has(getTodoNotificationKey(period, todo))) continue;
+      if (nextNotifyAt === undefined || todo.notifyAt < nextNotifyAt) nextNotifyAt = todo.notifyAt;
+    }
+  }
+  if (nextNotifyAt === undefined) return;
+  const delay = Math.min(nextNotifyAt - now, MAX_TODO_NOTIFICATION_TIMEOUT_MS);
+  todoNotificationDueTimer.value = window.setTimeout(refreshTodoNotifications, delay);
+}
+
+function pruneSentTodoNotifications(): void {
+  const activeKeys = new Set<string>();
+  for (const period of getTodoListIds()) {
+    for (const todo of getTodos(period)) {
+      if (Number.isFinite(todo.notifyAt) && todo.notifyAt !== undefined && !todo.done) {
+        activeKeys.add(getTodoNotificationKey(period, todo));
+      }
+    }
+  }
+  for (const key of sentTodoNotifications) {
+    if (!activeKeys.has(key)) sentTodoNotifications.delete(key);
+  }
+}
+
+function getTodoNotificationKey(period: TodoPeriod, todo: TodoItem): string {
+  return `${period}:${todo.id}:${todo.notifyAt}`;
+}
+
+function getTodoNotificationTag(todo: TodoItem): string {
+  return `${todo.id}:${todo.notifyAt}`;
+}
+
 function getReminderNotificationIcon(): string {
-  return getCompanionNotificationIconSrc(state.companionGifTheme, state.theme, state.customCompanionGif);
+  const src = getCompanionNotificationIconSrc(state.companionGifTheme, state.theme, state.customCompanionGif);
+  if (!src) return "";
+  try {
+    return new URL(src, window.location.href).href;
+  } catch {
+    return src;
+  }
 }
 
 function todoKey(period: TodoPeriod, id: string): string {
