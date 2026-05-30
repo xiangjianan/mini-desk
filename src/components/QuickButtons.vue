@@ -221,6 +221,7 @@ function handleQuickDrop(event: DragEvent): void {
     @dragover="handleQuickDragOver"
     @dragleave="handleQuickDragLeave"
     @drop="handleQuickDrop"
+    @dragend="handleQuickDragLeave"
   >
     <div class="panel-header" @contextmenu="openTitleMenu">
       <h2 id="quick-title">

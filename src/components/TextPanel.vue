@@ -176,7 +176,8 @@ function handleDragLeaveClear(): void {
 
 function handleDragOver(event: DragEvent): void {
   const types = Array.from(event.dataTransfer?.types ?? []);
-  if (types.includes("text/plain") || types.includes("text/uri-list")) {
+  const isInternalDrag = (event.target as HTMLElement)?.closest?.("textarea");
+  if (!isInternalDrag && (types.includes("text/plain") || types.includes("text/uri-list"))) {
     event.preventDefault();
     isDragHover.value = true;
   }
@@ -529,7 +530,7 @@ function restoreSelection(textarea: HTMLTextAreaElement, selection: { start: num
 </script>
 
 <template>
-  <section class="text-panel" :class="[textPanelClasses, { 'drag-hover': isDragHover }]" @dragenter="handleDragEnter" @dragleave="handleDragLeaveClear" @drop="handleDragLeaveClear">
+  <section class="text-panel" :class="[textPanelClasses, { 'drag-hover': isDragHover }]" @dragenter="handleDragEnter" @dragleave="handleDragLeaveClear" @drop="handleDragLeaveClear" @dragend="handleDragLeaveClear">
     <div v-if="!hideHeader" class="panel-header" @contextmenu="openTitleMenu">
       <h2>
         <EditableTitle

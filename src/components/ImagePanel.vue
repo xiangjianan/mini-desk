@@ -122,6 +122,7 @@ function handleImageDragLeave(): void {
     @drop.prevent.stop="handleExternalDrop"
     @dragenter="handleImageDragEnter"
     @dragleave="handleImageDragLeave"
+    @dragend="handleImageDragLeave"
     @contextmenu="openMenu($event)"
   >
     <div class="panel-header" @contextmenu="openTitleMenu">

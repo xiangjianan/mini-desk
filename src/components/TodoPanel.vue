@@ -1043,7 +1043,7 @@ function buildTodoListEntries(period: TodoListId, todos: TodoItem[], deferredDon
 </script>
 
 <template>
-  <section class="panel todo-panel" :class="{ 'drag-hover': isDragHover }" aria-labelledby="todo-title" @dragenter="handleTodoDragEnter" @dragleave="handleTodoDragLeave" @drop="handleTodoDragLeave">
+  <section class="panel todo-panel" :class="{ 'drag-hover': isDragHover }" aria-labelledby="todo-title" @dragenter="handleTodoDragEnter" @dragleave="handleTodoDragLeave" @drop="handleTodoDragLeave" @dragend="handleTodoDragLeave">
     <Transition name="section-reveal" :duration="240">
       <section v-if="todayFocus.length" class="today-focus-section" :aria-label="uiText.todo.todayFocus">
         <div class="today-focus-heading" @contextmenu="openTodayFocusTitleMenu">
