@@ -176,10 +176,36 @@ function handleToggleShowHidden(anchor?: HTMLElement): void {
   emit("toggleShowHidden");
   if (anchor) emit("guide", "toggleHiddenQuick", anchor);
 }
+
+function handleQuickDragOver(event: DragEvent): void {
+  const types = Array.from(event.dataTransfer?.types ?? []);
+  if (types.includes("text/plain") && !types.includes("Files")) {
+    event.preventDefault();
+    event.dataTransfer!.dropEffect = "copy";
+  }
+}
+
+function handleQuickDragLeave(): void {
+  // highlight removal will be handled by Task 5 (drag-hover class)
+}
+
+function handleQuickDrop(event: DragEvent): void {
+  event.preventDefault();
+  const text = event.dataTransfer?.getData("text/plain") ?? "";
+  if (!text.trim()) return;
+
+  const isUrl = /^https?:\/\//.test(text.trim());
+  const title = isUrl
+    ? (() => { try { return new URL(text.trim()).hostname; } catch { return text.trim().slice(0, 20); } })()
+    : text.trim().slice(0, 20);
+  const type: QuickButtonType = isUrl ? "link" : "text";
+
+  emit("save", { title, value: text.trim(), type });
+}
 </script>
 
 <template>
-  <section class="split-block quick-block" @click="handleAreaClick" @contextmenu="openAreaMenu">
+  <section class="split-block quick-block" @click="handleAreaClick" @contextmenu="openAreaMenu" @dragover="handleQuickDragOver" @dragleave="handleQuickDragLeave" @drop="handleQuickDrop">
     <div class="panel-header" @contextmenu="openTitleMenu">
       <h2 id="quick-title">
         <EditableTitle
