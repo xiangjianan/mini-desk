@@ -1248,52 +1248,21 @@ h3 {
 
 .todo-item.deadline-due-soon,
 .today-focus-item.deadline-due-soon {
-  background: rgba(239, 68, 68, 0.08);
+  background: transparent;
 }
 
 .todo-item.deadline-upcoming,
 .today-focus-item.deadline-upcoming {
-  background: rgba(245, 158, 11, 0.1);
+  background: transparent;
 }
 
 .todo-item.deadline-later,
 .today-focus-item.deadline-later {
-  background: rgba(107, 114, 128, 0.07);
-}
-
-.todo-item.deadline-due-soon::before,
-.todo-item.deadline-upcoming::before,
-.todo-item.deadline-later::before,
-.today-focus-item.deadline-due-soon::before,
-.today-focus-item.deadline-upcoming::before,
-.today-focus-item.deadline-later::before {
-  content: "";
-  position: absolute;
-  top: 4px;
-  bottom: 4px;
-  left: 0;
-  width: 3px;
-  pointer-events: none;
-}
-
-.todo-item.deadline-due-soon::before,
-.today-focus-item.deadline-due-soon::before {
-  background: #ef4444;
-}
-
-.todo-item.deadline-upcoming::before,
-.today-focus-item.deadline-upcoming::before {
-  background: #f59e0b;
-}
-
-.todo-item.deadline-later::before,
-.today-focus-item.deadline-later::before {
-  background: var(--muted);
-  opacity: 0.45;
+  background: transparent;
 }
 
 .deadline-overdue .todo-deadline-label {
-  color: #9ca3af;
+  color: #e88;
 }
 
 .deadline-due-soon .todo-deadline-label {
@@ -2093,6 +2062,16 @@ body:has(.image-preview) .image-preview .n-scrollbar {
   color: var(--muted);
   font-size: var(--app-font-size);
   line-height: 1.6;
+}
+
+/* Drag text highlight */
+.panel.drag-hover,
+.text-panel.drag-hover,
+.split-block.drag-hover,
+.todo-panel.drag-hover {
+  outline: 2px dashed var(--line-focus);
+  outline-offset: -2px;
+  transition: outline 0.15s ease;
 }
 
 @media (max-width: 900px) {
