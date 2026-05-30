@@ -155,6 +155,13 @@ function openTitleMenu(event: MouseEvent): void {
   titleRef.value?.openMenuAt(event.clientX, event.clientY, event);
 }
 
+function handleDragOver(event: DragEvent): void {
+  const types = Array.from(event.dataTransfer?.types ?? []);
+  if (types.includes("text/plain") || types.includes("text/uri-list")) {
+    event.preventDefault();
+  }
+}
+
 function handleExternalTextDrop(event: DragEvent): void {
   const files = Array.from(event.dataTransfer?.files ?? []);
   if (files.length > 0) return;
@@ -515,7 +522,7 @@ function restoreSelection(textarea: HTMLTextAreaElement, selection: { start: num
       </h2>
       <slot name="actions" />
     </div>
-    <div class="text-editor-frame" @contextmenu="openTextMenu" @dragover.prevent @drop="handleExternalTextDrop">
+    <div class="text-editor-frame" @contextmenu="openTextMenu" @dragover="handleDragOver" @drop="handleExternalTextDrop">
       <NScrollbar class="text-editor-scrollbar">
       <textarea
         ref="textareaRef"
