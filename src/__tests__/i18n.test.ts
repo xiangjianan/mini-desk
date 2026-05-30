@@ -10,16 +10,16 @@ import {
 describe("localized public copy", () => {
   it("translates default board titles without translating custom titles", () => {
     expect(getDefaultTitles("en")).toMatchObject({
-      "image-title": "🎨 Screenshots",
+      "image-title": "🖼️ Image Bed",
       "note-title": "📝 Notes",
-      "quick-title": "🔗 Quick Links",
-      "todo-morning-title": "☀️ Morning",
-      "todo-noon-title": "🌤️ Noon",
-      "todo-evening-title": "🌙 Evening",
-      "workspace-title": "📁 Workspace",
+      "quick-title": "⚡ Quick Actions",
+      "todo-morning-title": "☑️ To-Do",
+      "todo-noon-title": "💼 Work",
+      "todo-evening-title": "📚 Study",
+      "workspace-title": "📝 Notepad.txt",
     });
 
-    expect(getDisplayTodoListTitle({ id: "morning", title: "☀️ 早上", collapsed: false, compact: false }, "en")).toBe("☀️ Morning");
+    expect(getDisplayTodoListTitle({ id: "morning", title: "☑️ 待办", collapsed: false, compact: false }, "en")).toBe("☑️ To-Do");
     expect(getDisplayTodoListTitle({ id: "morning", title: "客户跟进", collapsed: false, compact: false }, "en")).toBe("客户跟进");
     expect(getDisplaySpaceTitle({ id: "workspace", title: "工作空间", lines: [] }, "en")).toBe("Workspace");
     expect(getDisplaySpaceTitle({ id: "workspace", title: "个人计划", lines: [] }, "en")).toBe("个人计划");
@@ -32,6 +32,7 @@ describe("localized public copy", () => {
       "从外部拖入文本，也能直接收进工作空间。",
       "编辑文字后停顿 3 秒会自动保存。",
     ]));
+    expect(GUIDE_MESSAGES.zh.workspace).toContain("适合把任务拆成步骤。");
     expect(GUIDE_MESSAGES.zh.todos).toEqual(expect.arrayContaining([
       "试试把提醒事项拖到工作空间。",
       "按住列表名拖动可以调整列表顺序。",
@@ -44,8 +45,8 @@ describe("localized public copy", () => {
       "单击图片可以预览。",
     ]));
     expect(GUIDE_MESSAGES.en.quickButtons).toEqual(expect.arrayContaining([
-      "Use the context menu to hide a link.",
-      "Drag links to reorder them.",
+      "Use the context menu to hide an action.",
+      "Drag actions to reorder them.",
       "Text shortcuts copy their text instantly.",
     ]));
     expect(GUIDE_MESSAGES.en.note).toContain("Edited text saves automatically after 3 seconds.");
@@ -54,6 +55,7 @@ describe("localized public copy", () => {
   it("localizes shared menu labels", () => {
     expect(getUiText("en").settings.language).toBe("语言");
     expect(getUiText("en").quick.add).toBe("Add");
+    expect(getUiText("en").quick.menu).toBe("Quick actions menu");
     expect(getUiText("en").todo.createList).toBe("New reminder list");
     expect(getUiText("en").common.delete).toBe("Delete");
     expect(getUiText("zh").settings.language).toBe("Language");
