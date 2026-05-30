@@ -70,8 +70,8 @@ describe("notification time helpers", () => {
     const now = new Date(2026, 4, 25, 10).getTime();
 
     expect(getNotifyDisplay(new Date(2026, 4, 25, 9).getTime(), now)).toEqual({
-      label: "! 已超期",
-      compactLabel: "! 已超期",
+      label: "待重排",
+      compactLabel: "待重排",
       urgency: "overdue",
     });
     expect(getNotifyDisplay(new Date(2026, 4, 25, 18).getTime(), now)).toEqual({

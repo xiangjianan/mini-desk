@@ -782,11 +782,11 @@ describe("TodoPanel", () => {
       });
       try {
         expect(wrapper.findAll(".todo-deadline-label").map((item) => item.text())).toEqual([
-          "! 已超期",
+          "待重排",
           "今天 18",
           "2天后 18",
           "6/2 18",
-          "! 已超期",
+          "待重排",
           "今天 18",
           "2天后 18",
           "6/2 18",
@@ -884,7 +884,7 @@ describe("TodoPanel", () => {
       await vi.advanceTimersByTimeAsync(60_000);
       await wrapper.vm.$nextTick();
 
-      expect(wrapper.find(".todo-item .todo-deadline-label").text()).toBe("! 已超期");
+      expect(wrapper.find(".todo-item .todo-deadline-label").text()).toBe("待重排");
     } finally {
       wrapper.unmount();
       vi.useRealTimers();
@@ -928,7 +928,7 @@ describe("TodoPanel", () => {
       window.dispatchEvent(new Event("focus"));
       await wrapper.vm.$nextTick();
 
-      expect(wrapper.get(".todo-deadline-label").text()).toBe("! 已超期");
+      expect(wrapper.get(".todo-deadline-label").text()).toBe("待重排");
       wrapper.unmount();
       wrapper = undefined;
 
@@ -941,7 +941,7 @@ describe("TodoPanel", () => {
       document.dispatchEvent(new Event("visibilitychange"));
       await wrapper.vm.$nextTick();
 
-      expect(wrapper.get(".todo-deadline-label").text()).toBe("! 已超期");
+      expect(wrapper.get(".todo-deadline-label").text()).toBe("待重排");
     } finally {
       wrapper?.unmount();
       visibilityStateSpy.mockRestore();

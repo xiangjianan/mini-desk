@@ -14,6 +14,14 @@
   --button: #f7f7f7;
   --button-hover: #eeeeee;
   --danger: #b42318;
+  --status-overdue: #64748b;
+  --status-overdue-bg: rgba(100, 116, 139, 0.07);
+  --status-due-soon: #a16207;
+  --status-due-soon-bg: rgba(245, 158, 11, 0.09);
+  --status-upcoming: #47746d;
+  --status-upcoming-bg: rgba(20, 184, 166, 0.06);
+  --status-later: #6b7280;
+  --status-later-bg: rgba(107, 114, 128, 0.05);
   --radius: 0;
   --motion-fast: 160ms;
   --motion-medium: 240ms;
@@ -34,6 +42,14 @@ html[data-theme="dark"] {
   --button: #232323;
   --button-hover: #2f2f2f;
   --danger: #ff8b7f;
+  --status-overdue: #94a3b8;
+  --status-overdue-bg: rgba(148, 163, 184, 0.09);
+  --status-due-soon: #fbbf24;
+  --status-due-soon-bg: rgba(251, 191, 36, 0.08);
+  --status-upcoming: #7dd3c7;
+  --status-upcoming-bg: rgba(125, 211, 199, 0.07);
+  --status-later: #9ca3af;
+  --status-later-bg: rgba(156, 163, 175, 0.06);
 }
 
 * {
@@ -590,6 +606,92 @@ h3 {
   overflow: hidden;
 }
 
+.markdown-preview {
+  min-height: 100%;
+  padding: 8px 10px;
+  color: var(--text);
+  font-size: var(--app-font-size);
+  line-height: 1.55;
+  cursor: text;
+  user-select: text;
+}
+
+.markdown-preview-heading,
+.markdown-preview-paragraph {
+  margin: 0 0 6px;
+}
+
+.markdown-preview-heading {
+  color: var(--text);
+  font-weight: 700;
+  line-height: 1.35;
+}
+
+.markdown-preview-heading-1 {
+  padding-bottom: 5px;
+  border-bottom: 1px solid var(--line-subtle);
+  font-size: calc(var(--app-font-size) + 4px);
+}
+
+.markdown-preview-heading-2 {
+  font-size: calc(var(--app-font-size) + 2px);
+}
+
+.markdown-preview-heading-3 {
+  font-size: var(--app-font-size);
+}
+
+.markdown-preview-list {
+  display: grid;
+  gap: 2px;
+  margin: 0 0 6px;
+  padding-left: 18px;
+}
+
+.markdown-preview-list li {
+  min-width: 0;
+}
+
+.markdown-preview-list li.has-check {
+  display: grid;
+  grid-template-columns: 14px minmax(0, 1fr);
+  gap: 6px;
+  align-items: start;
+  margin-left: -18px;
+  list-style: none;
+}
+
+.markdown-preview-line {
+  min-width: 0;
+}
+
+.markdown-preview-check {
+  width: 12px;
+  height: 12px;
+  margin-top: 5px;
+  border: 1px solid var(--line-main);
+  border-radius: 0;
+  background: var(--input);
+}
+
+.markdown-preview-check[aria-checked="true"] {
+  border-color: var(--line-focus);
+  background:
+    linear-gradient(135deg, transparent 0 42%, var(--panel) 42% 56%, transparent 56% 100%),
+    var(--line-focus);
+}
+
+.markdown-preview strong {
+  font-weight: 700;
+}
+
+.markdown-preview mark {
+  padding: 0 2px;
+  border-radius: 0;
+  color: inherit;
+  background: var(--status-due-soon-bg);
+}
+
 .text-editor-scrollbar,
 .text-editor-scrollbar .n-scrollbar-container,
 .text-editor-scrollbar .n-scrollbar-content {
@@ -607,6 +709,13 @@ h3 {
   color: var(--text);
   background: transparent;
   tab-size: 2;
+}
+
+.text-editor-textarea.is-preview-hidden {
+  position: absolute;
+  inset: 0;
+  opacity: 0;
+  pointer-events: none;
 }
 
 .image-list,
@@ -715,6 +824,14 @@ h3 {
   flex-wrap: wrap;
   gap: 10px;
   padding: 10px;
+}
+
+.quick-block.is-drop-target {
+  box-shadow: inset 0 0 0 1px var(--line-focus);
+}
+
+.quick-block.is-drop-target .quick-buttons-scrollbar {
+  background: var(--button-hover);
 }
 
 .quick-button {
@@ -1243,22 +1360,22 @@ h3 {
 
 .todo-item.deadline-overdue,
 .today-focus-item.deadline-overdue {
-  background: rgba(239, 68, 68, 0.12);
+  background: var(--status-overdue-bg);
 }
 
 .todo-item.deadline-due-soon,
 .today-focus-item.deadline-due-soon {
-  background: rgba(239, 68, 68, 0.08);
+  background: var(--status-due-soon-bg);
 }
 
 .todo-item.deadline-upcoming,
 .today-focus-item.deadline-upcoming {
-  background: rgba(245, 158, 11, 0.1);
+  background: var(--status-upcoming-bg);
 }
 
 .todo-item.deadline-later,
 .today-focus-item.deadline-later {
-  background: rgba(107, 114, 128, 0.07);
+  background: var(--status-later-bg);
 }
 
 .todo-item.deadline-overdue::before,
@@ -1271,39 +1388,50 @@ h3 {
 .today-focus-item.deadline-later::before {
   content: "";
   position: absolute;
-  top: 4px;
-  bottom: 4px;
+  top: 8px;
+  bottom: 8px;
   left: 0;
-  width: 3px;
+  width: 2px;
   pointer-events: none;
 }
 
 .todo-item.deadline-overdue::before,
+.today-focus-item.deadline-overdue::before {
+  background: var(--status-overdue);
+}
+
 .todo-item.deadline-due-soon::before,
-.today-focus-item.deadline-overdue::before,
 .today-focus-item.deadline-due-soon::before {
-  background: #ef4444;
+  background: var(--status-due-soon);
 }
 
 .todo-item.deadline-upcoming::before,
 .today-focus-item.deadline-upcoming::before {
-  background: #f59e0b;
+  background: var(--status-upcoming);
 }
 
 .todo-item.deadline-later::before,
 .today-focus-item.deadline-later::before {
-  background: var(--muted);
+  background: var(--status-later);
   opacity: 0.45;
 }
 
-.deadline-overdue .todo-deadline-label,
+.deadline-overdue .todo-deadline-label {
+  color: var(--status-overdue);
+  font-weight: 500;
+}
+
 .deadline-due-soon .todo-deadline-label {
-  color: #b91c1c;
-  font-weight: 600;
+  color: var(--status-due-soon);
+  font-weight: 500;
 }
 
 .deadline-upcoming .todo-deadline-label {
-  color: #92400e;
+  color: var(--status-upcoming);
+}
+
+.deadline-later .todo-deadline-label {
+  color: var(--status-later);
 }
 
 .todo-star-button {

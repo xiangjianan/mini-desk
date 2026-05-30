@@ -96,6 +96,47 @@ function readSource(path: string): string {
 }
 
 describe("QuickButtons", () => {
+  it("creates a link quick action when a URL is dropped into the quick area", async () => {
+    const wrapper = mountQuickButtons();
+    const event = new Event("drop", { bubbles: true }) as DragEvent;
+    Object.defineProperty(event, "dataTransfer", {
+      value: {
+        files: [],
+        getData: (type: string) => (type === "text/plain" ? "https://example.com/docs/setup" : ""),
+      },
+    });
+
+    await wrapper.get(".quick-block").element.dispatchEvent(event);
+
+    expect(wrapper.emitted("save")?.[0][0]).toEqual({
+      title: "example.com/docs/setup",
+      value: "https://example.com/docs/setup",
+      type: "link",
+    });
+    expect(wrapper.emitted("save")?.[0][1]).toBe(wrapper.get(".quick-block").element);
+    wrapper.unmount();
+  });
+
+  it("creates a copy-text quick action when plain text is dropped into the quick area", async () => {
+    const wrapper = mountQuickButtons();
+    const event = new Event("drop", { bubbles: true }) as DragEvent;
+    Object.defineProperty(event, "dataTransfer", {
+      value: {
+        files: [],
+        getData: (type: string) => (type === "text/plain" ? "客服回复模板\n第二行" : ""),
+      },
+    });
+
+    await wrapper.get(".quick-block").element.dispatchEvent(event);
+
+    expect(wrapper.emitted("save")?.[0][0]).toEqual({
+      title: "客服回复模板",
+      value: "客服回复模板\n第二行",
+      type: "text",
+    });
+    wrapper.unmount();
+  });
+
   it("keeps the add/edit dialog open when clicking outside the modal card", async () => {
     const wrapper = mountQuickButtons();
 
@@ -110,7 +151,35 @@ describe("QuickButtons", () => {
     wrapper.unmount();
   });
 
-  it("does not save a quick link when the title is empty", async () => {
+  it("highlights the quick action panel while external text is dragged over it", async () => {
+    const wrapper = mountQuickButtons();
+
+    await wrapper.get(".quick-block").trigger("dragover");
+
+    expect(wrapper.get(".quick-block").classes()).toContain("is-drop-target");
+
+    await wrapper.get(".quick-block").trigger("dragleave", {
+      relatedTarget: document.body,
+    });
+
+    expect(wrapper.get(".quick-block").classes()).not.toContain("is-drop-target");
+    wrapper.unmount();
+  });
+
+  it("does not highlight the quick action panel for file drags", async () => {
+    const wrapper = mountQuickButtons();
+
+    await wrapper.get(".quick-block").trigger("dragover", {
+      dataTransfer: {
+        types: ["Files"],
+      },
+    });
+
+    expect(wrapper.get(".quick-block").classes()).not.toContain("is-drop-target");
+    wrapper.unmount();
+  });
+
+  it("does not save a quick action when the title is empty", async () => {
     const wrapper = mountQuickButtons();
 
     await openDialog(wrapper);
@@ -123,7 +192,7 @@ describe("QuickButtons", () => {
     wrapper.unmount();
   });
 
-  it("does not save a quick link when the link text is empty", async () => {
+  it("does not save a quick action when the content is empty", async () => {
     const wrapper = mountQuickButtons();
 
     await openDialog(wrapper);
@@ -303,7 +372,8 @@ describe("QuickButtons", () => {
     const source = readSource("components/QuickButtons.vue");
     const styles = readSource("styles.css");
 
-    expect(source).toContain('<TransitionGroup name="quick-reorder" tag="div" class="quick-buttons">');
+    expect(source).toMatch(/class="split-block quick-block"[\s\S]*@drop="handleQuickDrop"/);
+    expect(source).toMatch(/<TransitionGroup\s+name="quick-reorder"\s+tag="div"\s+class="quick-buttons"/);
     expect(styles).toMatch(/\.quick-reorder-move,[\s\S]*?\.quick-reorder-enter-active,[\s\S]*?\.quick-reorder-leave-active\s*\{[^}]*transform 0\.22s/s);
     expect(styles).toMatch(/\.quick-button\.is-dragging\s*\{[^}]*opacity: 0\.45/s);
 

@@ -6,6 +6,7 @@ import type { LineItem } from "../types";
 import { GUIDE_MENU_OPTION } from "../state/defaults";
 import { getUiText } from "../state/i18n";
 import type { AppLanguage } from "../types";
+import { renderMarkdownLite, type MarkdownLiteInline } from "../utils/markdownLite";
 import {
   appendPlainTextToEditorText,
   editorTextToLines,
@@ -34,6 +35,8 @@ const props = withDefaults(defineProps<{
 const emit = defineEmits<{
   titleUpdate: [id: string, value: string];
   update: [lines: LineItem[]];
+  createTodos: [texts: string[], anchor?: HTMLElement];
+  createQuick: [payload: { title: string; value: string; type: "text" }, anchor?: HTMLElement];
   focus: [element: HTMLElement];
   blur: [element: HTMLElement];
   guide: [element: HTMLElement, immediate?: boolean];
@@ -53,6 +56,7 @@ const menu = ref<{
   y: number;
   anchor: HTMLElement;
   target?: HTMLTextAreaElement;
+  selectionText?: string;
   canPaste?: boolean;
 } | null>(null);
 const uiText = computed(() => getUiText(props.language));
@@ -65,15 +69,24 @@ const canDragSelectedText = computed(() => {
   const selection = lastTextSelection.value;
   return Boolean(selection && selection.start !== selection.end);
 });
+const markdownBlocks = computed(() => renderMarkdownLite(text.value));
+const showMarkdownPreview = computed(() => !editing.value && text.value.trim().length > 0);
 
 onMounted(exclusiveMenu.mount);
 onUnmounted(exclusiveMenu.unmount);
 const menuOptions = computed<DropdownOption[]>(() => {
   const options: DropdownOption[] = [];
   const target = menu.value?.target;
+  const workflowText = getMenuWorkflowText(menu.value);
+  if (workflowText) {
+    options.push({ label: uiText.value.note.createTodos, key: "create-todos" });
+    options.push({ label: uiText.value.note.createQuick, key: "create-quick" });
+  }
   if (target) {
     options.push({ label: uiText.value.common.copy, key: "copy", disabled: !canCopyTextSelection(target) });
     options.push({ label: uiText.value.common.paste, key: "paste", disabled: !menu.value?.canPaste });
+  } else if (workflowText) {
+    options.push({ label: uiText.value.common.copy, key: "copy" });
   }
   options.push(guideMenuOption.value);
   return options;
@@ -114,6 +127,18 @@ function handleKeydown(event: KeyboardEvent): void {
   if ((event.ctrlKey || event.metaKey) && event.key.toLowerCase() === "z") {
     event.preventDefault();
     undoLastTextChange(textarea);
+    return;
+  }
+  if ((event.ctrlKey || event.metaKey) && event.key.toLowerCase() === "b") {
+    event.preventDefault();
+    wrapSelectedText(textarea, "**");
+    update();
+    return;
+  }
+  if ((event.ctrlKey || event.metaKey) && event.shiftKey && event.key.toLowerCase() === "h") {
+    event.preventDefault();
+    wrapSelectedText(textarea, "==");
+    update();
     return;
   }
   if (event.key === "Tab") {
@@ -191,6 +216,21 @@ async function startEditing(event: MouseEvent): Promise<void> {
   }
 }
 
+async function startEditingFromPreview(event?: MouseEvent, force = false): Promise<void> {
+  if (!force && event?.currentTarget instanceof HTMLElement && hasPreviewSelection(event.currentTarget)) return;
+  const textarea = textareaRef.value;
+  if (!textarea) return;
+  startEditingFromTextarea(textarea);
+  await nextTick();
+  textarea.focus({ preventScroll: true });
+}
+
+function hasPreviewSelection(root: HTMLElement): boolean {
+  const selection = window.getSelection?.();
+  if (!selection || selection.isCollapsed || !selection.anchorNode || !selection.focusNode) return false;
+  return root.contains(selection.anchorNode) && root.contains(selection.focusNode);
+}
+
 function handlePointerDown(event: PointerEvent): void {
   if (event.pointerType !== "touch") return;
   unlockTextareaBeforeNativeFocus(event.currentTarget as HTMLTextAreaElement);
@@ -255,7 +295,9 @@ function rememberSelection(event: Event): void {
 
 function openTextMenu(event: MouseEvent): void {
   const target = event.target instanceof HTMLTextAreaElement ? event.target : undefined;
-  if (target && !hasAsyncClipboard()) {
+  const previewSelectionText = target ? "" : getPreviewSelectionText(event.target, event.currentTarget as HTMLElement);
+  const hasWorkflowSelection = target ? getSelectedWorkflowText(target).length > 0 : previewSelectionText.length > 0;
+  if (target && !hasAsyncClipboard() && !hasWorkflowSelection) {
     closeMenu();
     return;
   }
@@ -268,6 +310,7 @@ function openTextMenu(event: MouseEvent): void {
     y: event.clientY,
     anchor: event.currentTarget as HTMLElement,
     target,
+    selectionText: previewSelectionText || undefined,
     canPaste: target ? canPasteText(target) : false,
   };
 }
@@ -299,9 +342,29 @@ async function handleMenuSelect(key: string): Promise<void> {
     await copyTextSelection(target);
     return;
   }
+  if (key === "copy" && current?.selectionText) {
+    copyTextWithBrowserCommand(current.selectionText);
+    return;
+  }
   if (key === "paste" && target) {
     if (!canPaste) return;
     await pasteTextFromClipboard(target);
+    return;
+  }
+  if (key === "create-todos") {
+    const texts = getWorkflowLinesFromText(getMenuWorkflowText(current));
+    if (texts.length > 0) emit("createTodos", texts, anchor);
+    return;
+  }
+  if (key === "create-quick") {
+    const selectedText = getMenuWorkflowText(current);
+    if (selectedText) {
+      emit("createQuick", {
+        title: deriveWorkflowTitle(selectedText),
+        value: selectedText,
+        type: "text",
+      }, anchor);
+    }
     return;
   }
   if (key === "guide" && anchor) emit("guide", anchor, true);
@@ -335,6 +398,58 @@ function getTextSelectionRange(target: HTMLTextAreaElement): { start: number; en
 function canCopyTextSelection(target: HTMLTextAreaElement): boolean {
   const range = getTextSelectionRange(target);
   return range.start !== range.end;
+}
+
+function getSelectedWorkflowText(target: HTMLTextAreaElement): string {
+  const range = getTextSelectionRange(target);
+  return target.value.slice(range.start, range.end).trim();
+}
+
+function getSelectedWorkflowLines(target: HTMLTextAreaElement): string[] {
+  return getWorkflowLinesFromText(getSelectedWorkflowText(target));
+}
+
+function getMenuWorkflowText(current: typeof menu.value): string {
+  if (!current) return "";
+  if (current.selectionText?.trim()) return current.selectionText.trim();
+  if (current.target) return getSelectedWorkflowText(current.target);
+  return "";
+}
+
+function getWorkflowLinesFromText(value: string): string[] {
+  return value
+    .split("\n")
+    .map((line) => stripWorkflowLineMarker(line))
+    .filter(Boolean);
+}
+
+function getPreviewSelectionText(target: EventTarget | null, root: HTMLElement): string {
+  const element = target instanceof HTMLElement ? target : undefined;
+  const preview = element?.closest(".markdown-preview");
+  if (!preview || !root.contains(preview)) return "";
+  const selection = window.getSelection?.();
+  if (!selection || selection.isCollapsed || !selection.anchorNode || !selection.focusNode) return "";
+  if (!preview.contains(selection.anchorNode) || !preview.contains(selection.focusNode)) return "";
+  return selection
+    .toString()
+    .replace(/\r\n?/g, "\n")
+    .split("\n")
+    .map((line) => line.trim())
+    .filter(Boolean)
+    .join("\n")
+    .trim();
+}
+
+function deriveWorkflowTitle(value: string): string {
+  return stripWorkflowLineMarker(value.split("\n").find((line) => line.trim()) ?? "").slice(0, 24) || uiText.value.quick.untitledText;
+}
+
+function stripWorkflowLineMarker(value: string): string {
+  return value
+    .trim()
+    .replace(/^(?:[-*]|\d+\.)\s+/, "")
+    .replace(/^\[[ xX]\]\s+/, "")
+    .trim();
 }
 
 function canPasteText(target: HTMLTextAreaElement): boolean {
@@ -409,6 +524,20 @@ function applyEditorText(next: string): void {
   recordUndoForText(next);
   text.value = next;
   if (textareaRef.value && textareaRef.value.value !== next) textareaRef.value.value = next;
+}
+
+function wrapSelectedText(textarea: HTMLTextAreaElement, marker: "**" | "=="): void {
+  const start = textarea.selectionStart ?? 0;
+  const end = textarea.selectionEnd ?? start;
+  const selected = textarea.value.slice(start, end);
+  const replacement = selected ? `${marker}${selected}${marker}` : `${marker}${marker}`;
+  textarea.setRangeText(replacement, start, end, selected ? "select" : "end");
+  if (selected) textarea.setSelectionRange(start, start + replacement.length);
+  applyEditorText(textarea.value);
+}
+
+function inlineKey(inline: MarkdownLiteInline, index: number): string {
+  return `${inline.type}-${index}-${inline.text}`;
 }
 
 function normalizeTextareaText(textarea: HTMLTextAreaElement): void {
@@ -517,27 +646,82 @@ function restoreSelection(textarea: HTMLTextAreaElement, selection: { start: num
     </div>
     <div class="text-editor-frame" @contextmenu="openTextMenu" @dragover.prevent @drop="handleExternalTextDrop">
       <NScrollbar class="text-editor-scrollbar">
-      <textarea
-        ref="textareaRef"
-        v-model="text"
-        class="text-editor-textarea board-textarea large-textarea"
-        :placeholder="placeholder"
-        :readonly="!editing"
-        :inputmode="editing ? 'text' : 'none'"
-        :draggable="canDragSelectedText"
-        spellcheck="false"
-        @input="update"
-        @keydown="handleKeydown"
-        @mouseup="rememberCaret"
-        @pointerdown="handlePointerDown"
-        @touchstart="handleTouchStart"
-        @dragstart="handleTextDragStart"
-        @select="rememberSelection"
-        @click="startEditing"
-        @dblclick="startEditing"
-        @focus="handleFocus"
-        @blur="handleBlur"
-      />
+        <div
+          v-if="showMarkdownPreview"
+          class="markdown-preview"
+          @click="startEditingFromPreview"
+          @dblclick="startEditingFromPreview($event, true)"
+        >
+          <template v-for="(block, blockIndex) in markdownBlocks" :key="`block-${blockIndex}`">
+            <component
+              :is="`h${block.level}`"
+              v-if="block.type === 'heading'"
+              class="markdown-preview-heading"
+              :class="`markdown-preview-heading-${block.level}`"
+            >
+              <template v-for="(inline, inlineIndex) in block.inlines" :key="inlineKey(inline, inlineIndex)">
+                <strong v-if="inline.type === 'strong'">{{ inline.text }}</strong>
+                <mark v-else-if="inline.type === 'mark'">{{ inline.text }}</mark>
+                <span v-else>{{ inline.text }}</span>
+              </template>
+            </component>
+            <component
+              :is="block.ordered ? 'ol' : 'ul'"
+              v-else-if="block.type === 'list'"
+              class="markdown-preview-list"
+              :class="{ 'is-ordered': block.ordered }"
+            >
+              <li
+                v-for="(item, itemIndex) in block.items"
+                :key="`item-${blockIndex}-${itemIndex}`"
+                :class="{ 'has-check': typeof item.checked === 'boolean' }"
+              >
+                <span
+                  v-if="typeof item.checked === 'boolean'"
+                  class="markdown-preview-check"
+                  role="checkbox"
+                  :aria-checked="item.checked"
+                />
+                <span class="markdown-preview-line">
+                  <template v-for="(inline, inlineIndex) in item.inlines" :key="inlineKey(inline, inlineIndex)">
+                    <strong v-if="inline.type === 'strong'">{{ inline.text }}</strong>
+                    <mark v-else-if="inline.type === 'mark'">{{ inline.text }}</mark>
+                    <span v-else>{{ inline.text }}</span>
+                  </template>
+                </span>
+              </li>
+            </component>
+            <p v-else class="markdown-preview-paragraph">
+              <template v-for="(inline, inlineIndex) in block.inlines" :key="inlineKey(inline, inlineIndex)">
+                <strong v-if="inline.type === 'strong'">{{ inline.text }}</strong>
+                <mark v-else-if="inline.type === 'mark'">{{ inline.text }}</mark>
+                <span v-else>{{ inline.text }}</span>
+              </template>
+            </p>
+          </template>
+        </div>
+        <textarea
+          ref="textareaRef"
+          v-model="text"
+          class="text-editor-textarea board-textarea large-textarea"
+          :class="{ 'is-preview-hidden': showMarkdownPreview }"
+          :placeholder="placeholder"
+          :readonly="!editing"
+          :inputmode="editing ? 'text' : 'none'"
+          :draggable="canDragSelectedText"
+          spellcheck="false"
+          @input="update"
+          @keydown="handleKeydown"
+          @mouseup="rememberCaret"
+          @pointerdown="handlePointerDown"
+          @touchstart="handleTouchStart"
+          @dragstart="handleTextDragStart"
+          @select="rememberSelection"
+          @click="startEditing"
+          @dblclick="startEditing"
+          @focus="handleFocus"
+          @blur="handleBlur"
+        />
       </NScrollbar>
     </div>
     <NDropdown

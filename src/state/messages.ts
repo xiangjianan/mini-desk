@@ -146,9 +146,9 @@ export const MESSAGE_CATALOG: Record<MessageKey, MessageEntry> = {
       "绿色=已保存；红色=未保存；橙色=保存中",
       "绿色表示已保存，红色提醒未保存，橙色保存中",
       "绿色代表已保存，红色代表未保存，橙色代表保存中",
-      "绿色是保存好了；红色是未保存；橙色是保存中",
+      "绿色是已保存；红色是未保存；橙色是保存中",
       "绿色已保存，红色未保存，橙色保存中",
-      "绿色已收好；红色有未保存内容；橙色保存中",
+      "绿色已保存；红色有未保存内容；橙色保存中",
     ],
   },
   todoCompleted: {
@@ -717,7 +717,7 @@ export const MESSAGE_CATALOG: Record<MessageKey, MessageEntry> = {
     variants: [
       [
         "To Do List 看板",
-        "一个本地优先的轻量工作台，用来整理截图、便签、提醒事项、快捷链接和工作空间。",
+        "一个本地优先的轻量工作台，用来整理截图、便签、提醒事项、快捷动作和工作空间。",
       ].join("\n"),
     ],
   },
@@ -738,14 +738,14 @@ const EN_MESSAGE_VARIANTS = {
   imageDataCopied: ["Copied as a Data URL", "Image copied as text", "Data URL copied"],
   imageDropIgnored: ["Non-image files were skipped", "Only images were added", "Unsupported files were ignored"],
   imageDropEmpty: ["No valid images found", "Drop image files here", "Only image files are supported"],
-  quickLinkCopied: ["Link copied", "Link is ready to paste", "Shortcut link copied"],
-  quickTextCopied: ["Text copied", "Shortcut text copied", "Text is ready to paste"],
+  quickLinkCopied: ["Link action copied", "Link action is ready to paste", "Action URL copied"],
+  quickTextCopied: ["Text action copied", "Action text copied", "Text is ready to paste"],
   quickTextCopyFailed: ["Could not copy text", "Text copy failed", "Try copying again"],
   noCompletedTodos: ["No completed reminders to clear", "Nothing completed here yet", "There are no completed items"],
   dataExported: ["Data exported", "Backup created", "Board data exported"],
   dataImported: ["Data imported", "Import complete", "Board data updated"],
   deleteImage: ["Image deleted", "Screenshot removed", "Image removed from the list"],
-  deleteQuick: ["Shortcut deleted", "Quick entry removed", "Shortcut removed"],
+  deleteQuick: ["Quick action deleted", "Quick entry removed", "Action removed"],
   deleteTodo: ["Reminder deleted", "Reminder removed", "Item deleted"],
   deleteSpace: ["Space deleted", "Workspace removed", "Space removed"],
   clearCompleted: ["Completed reminders cleared", "Completed items removed", "Done items cleared"],
@@ -757,7 +757,7 @@ const EN_MESSAGE_VARIANTS = {
   imageCopyFailed: ["Image copy failed", "Could not copy this image", "Try copying again"],
   linkOpenFailed: ["Could not open the link", "Check the URL", "The browser blocked this link"],
   confirmDeleteImage: ["Delete this image?", "Remove this image?", "This image will be removed."],
-  confirmDeleteQuick: ["Delete this shortcut?", "Remove this quick entry?", "This shortcut will be removed."],
+  confirmDeleteQuick: ["Delete this quick action?", "Remove this quick entry?", "This action will be removed."],
   confirmDeleteTodo: ["Delete this reminder?", "Remove this reminder?", "This reminder will be removed."],
   confirmDeleteTodoList: ["Delete this list?", "Reminders in this list will be deleted.", "Remove this reminder list?"],
   confirmUnstarTodo: ["Unpin this reminder?", "Remove it from pinned reminders?", "This reminder will return to the normal list."],
@@ -768,7 +768,7 @@ const EN_MESSAGE_VARIANTS = {
   about: [
     [
       "To Do List Board",
-      "A local-first lightweight workspace for organizing screenshots, notes, reminders, quick links, and workspaces.",
+      "A local-first lightweight workspace for organizing screenshots, notes, reminders, quick actions, and workspaces.",
     ].join("\n"),
   ],
 } satisfies Record<MessageKey, string[]>;

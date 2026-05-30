@@ -28,6 +28,157 @@ const dropdownStub = {
 };
 
 describe("TextPanel", () => {
+  it("renders markdown-lite structure while keeping the textarea editing surface", () => {
+    const wrapper = mount(TextPanel, {
+      props: {
+        titleId: "note-title",
+        title: "便签",
+        lines: [
+          { text: "# 今日思路", indent: 0 },
+          { text: "- **先做** 工作流", indent: 0 },
+          { text: "1. ==复盘== 批评", indent: 0 },
+          { text: "[ ] 明早检查", indent: 0 },
+        ],
+      },
+    });
+
+    expect(wrapper.get("textarea").element.value).toContain("# 今日思路");
+    expect(wrapper.get(".markdown-preview-heading").text()).toBe("今日思路");
+    expect(wrapper.find(".markdown-preview-list").exists()).toBe(true);
+    expect(wrapper.find("strong").text()).toBe("先做");
+    expect(wrapper.find("mark").text()).toBe("复盘");
+    expect(wrapper.get(".markdown-preview-check").attributes("aria-checked")).toBe("false");
+  });
+
+  it("opens the editing surface when clicking the markdown preview", async () => {
+    const wrapper = mount(TextPanel, {
+      props: {
+        titleId: "note-title",
+        title: "便签",
+        lines: [{ text: "# 今日思路", indent: 0 }],
+      },
+    });
+
+    await wrapper.get(".markdown-preview").trigger("click");
+
+    expect(wrapper.get("textarea").attributes("readonly")).toBeUndefined();
+  });
+
+  it("wraps the selected note text with bold markers from the keyboard", async () => {
+    const wrapper = mount(TextPanel, {
+      props: {
+        titleId: "note-title",
+        title: "便签",
+        lines: [{ text: "关键结论", indent: 0 }],
+      },
+    });
+    const textarea = wrapper.get("textarea").element as HTMLTextAreaElement;
+
+    await wrapper.get("textarea").trigger("dblclick");
+    textarea.setSelectionRange(0, 4);
+    await wrapper.get("textarea").trigger("keydown", { key: "b", metaKey: true });
+
+    expect(textarea.value).toBe("**关键结论**");
+    expect(wrapper.emitted("update")?.at(-1)?.[0]).toEqual([{ text: "**关键结论**", indent: 0 }]);
+  });
+
+  it("emits selected text as reminders or a quick action from the context menu", async () => {
+    Object.assign(navigator, { clipboard: { readText: vi.fn().mockResolvedValue(""), writeText: vi.fn() } });
+    const wrapper = mount(TextPanel, {
+      props: {
+        titleId: "note-title",
+        title: "便签",
+        lines: [
+          { text: "- 设计工作流", indent: 0 },
+          { text: "- 验证快捷动作", indent: 0 },
+        ],
+      },
+      global: {
+        stubs: {
+          Dropdown: dropdownStub,
+          NDropdown: dropdownStub,
+        },
+      },
+    });
+    const textarea = wrapper.get("textarea").element as HTMLTextAreaElement;
+
+    textarea.setSelectionRange(0, textarea.value.length);
+    await wrapper.get("textarea").trigger("select");
+    await wrapper.get("textarea").trigger("contextmenu");
+
+    expect(wrapper.findAll(".dropdown-option").map((option) => option.text())).toEqual([
+      "转为提醒",
+      "做成快捷动作",
+      "复制",
+      "粘贴",
+      "Tips",
+    ]);
+
+    await wrapper.findAll(".dropdown-option").find((option) => option.text() === "转为提醒")?.trigger("click");
+
+    expect(wrapper.emitted("createTodos")?.[0]).toEqual([
+      ["设计工作流", "验证快捷动作"],
+      expect.any(HTMLElement),
+    ]);
+
+    await wrapper.get("textarea").trigger("contextmenu");
+    await wrapper.findAll(".dropdown-option").find((option) => option.text() === "做成快捷动作")?.trigger("click");
+
+    expect(wrapper.emitted("createQuick")?.[0]).toEqual([
+      {
+        title: "设计工作流",
+        value: "- 设计工作流\n- 验证快捷动作",
+        type: "text",
+      },
+      expect.any(HTMLElement),
+    ]);
+  });
+
+  it("emits selected preview text as workflow actions without async clipboard APIs", async () => {
+    Object.defineProperty(navigator, "clipboard", { value: undefined, configurable: true });
+    const wrapper = mount(TextPanel, {
+      props: {
+        titleId: "note-title",
+        title: "便签",
+        lines: [
+          { text: "# 今日思路", indent: 0 },
+          { text: "- 设计工作流", indent: 0 },
+        ],
+      },
+      global: {
+        stubs: {
+          Dropdown: dropdownStub,
+          NDropdown: dropdownStub,
+        },
+      },
+      attachTo: document.body,
+    });
+    const listItem = wrapper.get(".markdown-preview-list li").element;
+    const selection = window.getSelection();
+    const range = document.createRange();
+    range.selectNodeContents(listItem);
+    selection?.removeAllRanges();
+    selection?.addRange(range);
+
+    await wrapper.get(".markdown-preview-list li").trigger("click");
+    expect(wrapper.find(".markdown-preview").exists()).toBe(true);
+
+    await wrapper.get(".markdown-preview-list li").trigger("contextmenu");
+
+    expect(wrapper.findAll(".dropdown-option").map((option) => option.text())).toEqual([
+      "转为提醒",
+      "做成快捷动作",
+      "复制",
+      "Tips",
+    ]);
+
+    await wrapper.findAll(".dropdown-option").find((option) => option.text() === "转为提醒")?.trigger("click");
+    expect(wrapper.emitted("createTodos")?.[0]).toEqual([["设计工作流"], expect.any(HTMLElement)]);
+
+    selection?.removeAllRanges();
+    wrapper.unmount();
+  });
+
   it("renders dash markers only for indented lines inside the editable text flow", () => {
     const wrapper = mount(TextPanel, {
       props: {
@@ -559,8 +710,8 @@ describe("TextPanel", () => {
     wrapper.unmount();
   });
 
-  it("keeps the native textarea context menu when async clipboard APIs are unavailable", async () => {
-    Object.assign(navigator, { clipboard: undefined });
+  it("keeps the native textarea context menu without selection when async clipboard APIs are unavailable", async () => {
+    Object.defineProperty(navigator, "clipboard", { value: undefined, configurable: true });
     const wrapper = mount(TextPanel, {
       props: {
         titleId: "workspace-title",
@@ -590,6 +741,41 @@ describe("TextPanel", () => {
     wrapper.unmount();
   });
 
+  it("keeps workflow actions available for selected text when async clipboard APIs are unavailable", async () => {
+    Object.defineProperty(navigator, "clipboard", { value: undefined, configurable: true });
+    const wrapper = mount(TextPanel, {
+      props: {
+        titleId: "workspace-title",
+        title: "工作空间",
+        lines: [{ text: "root text", indent: 0 }],
+      },
+      global: {
+        stubs: {
+          Dropdown: dropdownStub,
+          NDropdown: dropdownStub,
+        },
+      },
+    });
+    const textarea = wrapper.get("textarea").element as HTMLTextAreaElement;
+
+    await wrapper.get("textarea").trigger("dblclick");
+    textarea.setSelectionRange(0, 4);
+    await wrapper.get("textarea").trigger("select");
+    await wrapper.get("textarea").trigger("contextmenu");
+
+    expect(wrapper.findAll(".dropdown-option").map((option) => option.text())).toEqual([
+      "转为提醒",
+      "做成快捷动作",
+      "复制",
+      "粘贴",
+      "Tips",
+    ]);
+    expect(wrapper.findAll(".dropdown-option").find((option) => option.text() === "粘贴")?.attributes("disabled")).toBeDefined();
+    await wrapper.findAll(".dropdown-option").find((option) => option.text() === "转为提醒")?.trigger("click");
+    expect(wrapper.emitted("createTodos")?.[0]).toEqual([["root"], expect.any(HTMLElement)]);
+    wrapper.unmount();
+  });
+
   it("shows copy and paste actions when right-clicking selected editable text", async () => {
     const writeText = vi.fn().mockResolvedValue(undefined);
     const readText = vi.fn().mockResolvedValue(" pasted");
@@ -614,7 +800,13 @@ describe("TextPanel", () => {
     await wrapper.get("textarea").trigger("select");
     await wrapper.get("textarea").trigger("contextmenu");
 
-    expect(wrapper.findAll(".dropdown-option").map((option) => option.text())).toEqual(["复制", "粘贴", "Tips"]);
+    expect(wrapper.findAll(".dropdown-option").map((option) => option.text())).toEqual([
+      "转为提醒",
+      "做成快捷动作",
+      "复制",
+      "粘贴",
+      "Tips",
+    ]);
 
     textarea.setSelectionRange(4, 4);
     await wrapper.findAll(".dropdown-option").find((option) => option.text() === "复制")?.trigger("click");

@@ -177,7 +177,7 @@ describe("Naive UI component usage", () => {
     expect(quick).toContain("uiText.quick.menu");
     expect(quick).toContain("uiText.value.quick.showHidden");
     expect(quick).toContain("uiText.value.quick.hideHidden");
-    expect(i18n).toContain("快捷链接菜单");
+    expect(i18n).toContain("快捷动作菜单");
     expect(quick).not.toContain("AddOutline");
     expect(quick).not.toContain("EyeOutline");
     expect(quick).not.toContain("EyeOffOutline");
@@ -487,7 +487,10 @@ describe("Naive UI component usage", () => {
     expect(styles).toContain(".deadline-due-soon");
     expect(styles).toContain(".deadline-upcoming");
     expect(styles).toContain(".deadline-later");
+    expect(styles).toContain("--status-overdue:");
     expect(styles).toMatch(/\.todo-deadline-label\s*\{[^}]*overflow: visible/s);
+    expect(styles).not.toMatch(/\.todo-item\.deadline-overdue,[\s\S]*?background: rgba\(239, 68, 68/s);
+    expect(styles).not.toMatch(/\.deadline-overdue \.todo-deadline-label,[\s\S]*?color: #b91c1c/s);
     expect(styles).not.toMatch(/\.todo-deadline-label\s*\{[^}]*text-overflow: ellipsis/s);
     expect(styles).not.toContain("filter: drop-shadow");
   });

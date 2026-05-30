@@ -66,6 +66,28 @@ describe("SpacePanel", () => {
     expect(wrapper.emitted("update")?.[0]).toEqual(["workspace", [{ text: "记录", indent: 0 }]]);
   });
 
+  it("forwards workflow actions from the active space text panel", () => {
+    const wrapper = mountSpacePanel([{ id: "workspace", title: "工作空间", lines: [] }]);
+    const anchor = wrapper.get(".space-panel").element as HTMLElement;
+
+    wrapper.getComponent(TextPanel).vm.$emit("createTodos", ["拆步骤"], anchor);
+    wrapper.getComponent(TextPanel).vm.$emit("createQuick", {
+      title: "复盘模板",
+      value: "复盘模板\n第二行",
+      type: "text",
+    }, anchor);
+
+    expect(wrapper.emitted("createTodos")?.[0]).toEqual([["拆步骤"], anchor]);
+    expect(wrapper.emitted("createQuick")?.[0]).toEqual([
+      {
+        title: "复盘模板",
+        value: "复盘模板\n第二行",
+        type: "text",
+      },
+      anchor,
+    ]);
+  });
+
   it("edits a space name from the tab double click", async () => {
     const wrapper = mountSpacePanel([{ id: "workspace", title: "工作空间", lines: [] }]);
 

@@ -20,7 +20,7 @@ const props = withDefaults(defineProps<{
 
 const emit = defineEmits<{
   titleUpdate: [id: string, value: string];
-  save: [payload: { id?: string; title: string; value: string; type: QuickButtonType }];
+  save: [payload: { id?: string; title: string; value: string; type: QuickButtonType }, anchor?: HTMLElement];
   delete: [id: string, anchor?: HTMLElement];
   copy: [id: string, anchor?: HTMLElement];
   toggleHidden: [id: string];
@@ -39,6 +39,7 @@ const form = reactive<{ title: string; value: string; type: QuickButtonType }>({
 });
 const menu = ref<{ x: number; y: number; id?: string; anchor?: HTMLElement } | null>(null);
 const draggingId = ref<string | null>(null);
+const dropTargetActive = ref(false);
 const uiText = computed(() => getUiText(props.language));
 const guideMenuOption = computed<DropdownOption>(() => ({ ...GUIDE_MENU_OPTION, label: uiText.value.common.tips }));
 const exclusiveMenu = createExclusiveContextMenu(closeMenu);
@@ -176,10 +177,85 @@ function handleToggleShowHidden(anchor?: HTMLElement): void {
   emit("toggleShowHidden");
   if (anchor) emit("guide", "toggleHiddenQuick", anchor);
 }
+
+function handleQuickDrop(event: DragEvent): void {
+  dropTargetActive.value = false;
+  if (draggingId.value) return;
+  const files = Array.from(event.dataTransfer?.files ?? []);
+  if (files.length > 0) return;
+  const dropped = event.dataTransfer?.getData("text/plain") ?? "";
+  const action = inferQuickAction(dropped);
+  if (!action) return;
+  event.preventDefault();
+  event.stopPropagation();
+  emit("save", action, event.currentTarget as HTMLElement);
+}
+
+function handleQuickDragOver(event: DragEvent): void {
+  if (draggingId.value) return;
+  if (isFileDrag(event)) return;
+  dropTargetActive.value = true;
+  event.preventDefault();
+}
+
+function handleQuickDragLeave(event: DragEvent): void {
+  const current = event.currentTarget as HTMLElement;
+  if (event.relatedTarget instanceof Node && current.contains(event.relatedTarget)) return;
+  dropTargetActive.value = false;
+}
+
+function isFileDrag(event: DragEvent): boolean {
+  return Array.from(event.dataTransfer?.types ?? []).includes("Files");
+}
+
+function inferQuickAction(value: string): { title: string; value: string; type: QuickButtonType } | null {
+  const trimmed = value.trim();
+  if (!trimmed) return null;
+  const url = parseQuickUrl(trimmed);
+  if (url) {
+    return {
+      title: getUrlTitle(url),
+      value: trimmed,
+      type: "link",
+    };
+  }
+  return {
+    title: getTextTitle(trimmed),
+    value: trimmed,
+    type: "text",
+  };
+}
+
+function parseQuickUrl(value: string): URL | null {
+  if (/\s/.test(value)) return null;
+  try {
+    const url = new URL(value);
+    return url.protocol === "http:" || url.protocol === "https:" ? url : null;
+  } catch {
+    return null;
+  }
+}
+
+function getUrlTitle(url: URL): string {
+  const path = `${url.pathname}${url.search}`.replace(/\/$/, "");
+  return `${url.hostname}${path === "/" ? "" : path}`.slice(0, 40);
+}
+
+function getTextTitle(value: string): string {
+  return (value.split("\n").find((line) => line.trim()) ?? uiText.value.quick.untitledText).trim().slice(0, 24);
+}
 </script>
 
 <template>
-  <section class="split-block quick-block" @click="handleAreaClick" @contextmenu="openAreaMenu">
+  <section
+    class="split-block quick-block"
+    :class="{ 'is-drop-target': dropTargetActive }"
+    @click="handleAreaClick"
+    @contextmenu="openAreaMenu"
+    @dragover="handleQuickDragOver"
+    @dragleave="handleQuickDragLeave"
+    @drop="handleQuickDrop"
+  >
     <div class="panel-header" @contextmenu="openTitleMenu">
       <h2 id="quick-title">
         <EditableTitle

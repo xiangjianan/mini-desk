@@ -8,6 +8,7 @@ import ImagePreview from "../components/ImagePreview.vue";
 import QuickButtons from "../components/QuickButtons.vue";
 import SettingsMenu from "../components/SettingsMenu.vue";
 import SpacePanel from "../components/SpacePanel.vue";
+import TextPanel from "../components/TextPanel.vue";
 import TodoPanel from "../components/TodoPanel.vue";
 import { defaultState, STORAGE_KEY } from "../state/defaults";
 import { KAOMOJI_BY_MOOD } from "../state/messages";
@@ -151,14 +152,14 @@ describe("App shell", () => {
     expect(wrapper.find('[aria-label="To Do List 看板"]').exists()).toBe(true);
     expect(wrapper.text()).toContain("截图");
     expect(wrapper.text()).toContain("便签");
-    expect(wrapper.text()).toContain("快捷链接");
+    expect(wrapper.text()).toContain("快捷动作");
     expect(wrapper.text()).toContain("早上");
     expect(wrapper.text()).toContain("中午");
     expect(wrapper.text()).toContain("晚上");
     expect(wrapper.text()).toContain("工作空间");
     expect(wrapper.findAll(".space-tab").map((tab) => tab.text())).toEqual(["工作空间"]);
     expect(wrapper.find('[aria-label="切换主题"]').exists()).toBe(true);
-    expect(wrapper.find('[aria-label="快捷链接菜单"]').exists()).toBe(true);
+    expect(wrapper.find('[aria-label="快捷动作菜单"]').exists()).toBe(true);
     expect(wrapper.find('[aria-label="设置"]').exists()).toBe(true);
     expect(wrapper.find(".image-empty").exists()).toBe(false);
     expect(wrapper.find(".empty-hint").exists()).toBe(false);
@@ -183,12 +184,12 @@ describe("App shell", () => {
 
       expect(wrapper.text()).toContain("Screenshots");
       expect(wrapper.text()).toContain("我的便签");
-      expect(wrapper.text()).toContain("Quick Links");
+      expect(wrapper.text()).toContain("Quick Actions");
       expect(wrapper.text()).toContain("Morning");
       expect(wrapper.text()).toContain("Noon");
       expect(wrapper.text()).toContain("Evening");
       expect(wrapper.findAll(".space-tab").map((tab) => tab.text())).toEqual(["Workspace"]);
-      expect(wrapper.text()).not.toContain("快捷链接");
+      expect(wrapper.text()).not.toContain("快捷动作");
       expect(JSON.parse(localStorage.getItem(STORAGE_KEY) || "{}").language).toBe("en");
     } finally {
       wrapper.unmount();
@@ -1220,6 +1221,129 @@ describe("App shell", () => {
       expect(JSON.parse(localStorage.getItem(STORAGE_KEY) || "{}").todos.morning[0]).toMatchObject({
         notifyAt: 1779721200000,
       });
+    } finally {
+      wrapper.unmount();
+    }
+  });
+
+  it("turns selected note text into reminders and quick actions", async () => {
+    const wrapper = mountApp();
+
+    try {
+      const notePanel = wrapper.findAllComponents(TextPanel).find((panel) => panel.props("titleId") === "note-title");
+      expect(notePanel).toBeTruthy();
+      const anchor = wrapper.get(".note-panel").element as HTMLElement;
+
+      notePanel?.vm.$emit("createTodos", ["设计工作流", "验证快捷动作"], anchor);
+      await wrapper.vm.$nextTick();
+
+      expect(wrapper.getComponent(TodoPanel).props("todos").morning.map((todo) => todo.text)).toEqual([
+        "设计工作流",
+        "验证快捷动作",
+      ]);
+
+      notePanel?.vm.$emit("createQuick", {
+        title: "客服回复模板",
+        value: "客服回复模板\n第二行",
+        type: "text",
+      }, anchor);
+      await wrapper.vm.$nextTick();
+
+      expect(wrapper.getComponent(QuickButtons).props("buttons")).toEqual([
+        expect.objectContaining({
+          title: "客服回复模板",
+          value: "客服回复模板\n第二行",
+          type: "text",
+          hidden: false,
+        }),
+      ]);
+    } finally {
+      wrapper.unmount();
+    }
+  });
+
+  it("sends selected text reminders to the recently focused reminder list", async () => {
+    const wrapper = mountApp();
+
+    try {
+      const notePanel = wrapper.findAllComponents(TextPanel).find((panel) => panel.props("titleId") === "note-title");
+      const noonSection = wrapper.get('.todo-section[data-list-id="noon"]').element as HTMLElement;
+      const anchor = wrapper.get(".note-panel").element as HTMLElement;
+
+      wrapper.getComponent(TodoPanel).vm.$emit("focus", noonSection);
+      notePanel?.vm.$emit("createTodos", ["午间复盘"], anchor);
+      await wrapper.vm.$nextTick();
+
+      expect(wrapper.getComponent(TodoPanel).props("todos").morning).toEqual([]);
+      expect(wrapper.getComponent(TodoPanel).props("todos").noon.map((todo) => todo.text)).toEqual(["午间复盘"]);
+    } finally {
+      wrapper.unmount();
+    }
+  });
+
+  it("shows feedback when a quick action is created from a panel drop", async () => {
+    vi.useFakeTimers();
+    const wrapper = mountApp();
+
+    try {
+      const quickPanel = wrapper.get(".quick-block").element as HTMLElement;
+
+      wrapper.getComponent(QuickButtons).vm.$emit("save", {
+        title: "复盘模板",
+        value: "复盘模板\n第二行",
+        type: "text",
+      }, quickPanel);
+      await wrapper.vm.$nextTick();
+
+      expect(wrapper.getComponent(QuickButtons).props("buttons")).toEqual([
+        expect.objectContaining({
+          title: "复盘模板",
+          value: "复盘模板\n第二行",
+          type: "text",
+          hidden: false,
+        }),
+      ]);
+      expect(wrapper.find(".focus-companion.is-visible img").exists()).toBe(true);
+
+      await vi.advanceTimersByTimeAsync(200);
+      await wrapper.vm.$nextTick();
+
+      expect(wrapper.get('[data-testid="companion-confirm"]').text()).toContain("已新增快捷动作");
+    } finally {
+      wrapper.unmount();
+      vi.useRealTimers();
+    }
+  });
+
+  it("turns selected workspace text into reminders and quick actions", async () => {
+    const wrapper = mountApp();
+
+    try {
+      const spacePanel = wrapper.getComponent(SpacePanel);
+      const anchor = wrapper.get(".space-panel").element as HTMLElement;
+
+      spacePanel.vm.$emit("createTodos", ["拆工作步骤"], anchor);
+      await wrapper.vm.$nextTick();
+
+      expect(wrapper.getComponent(TodoPanel).props("todos").morning.map((todo) => todo.text)).toEqual([
+        "拆工作步骤",
+      ]);
+
+      spacePanel.vm.$emit("createQuick", {
+        title: "复盘模板",
+        value: "复盘模板\n第二行",
+        type: "text",
+      }, anchor);
+      await wrapper.vm.$nextTick();
+
+      expect(wrapper.getComponent(QuickButtons).props("buttons")).toEqual([
+        expect.objectContaining({
+          title: "复盘模板",
+          value: "复盘模板\n第二行",
+          type: "text",
+          hidden: false,
+        }),
+      ]);
     } finally {
       wrapper.unmount();
     }
@@ -3515,11 +3639,11 @@ describe("App shell", () => {
     }
   });
 
-  it("keeps the current blank-area Tips for quick links, images, and todos while repeated clicks happen before expiry", async () => {
+  it("keeps the current blank-area Tips for quick actions, images, and todos while repeated clicks happen before expiry", async () => {
     vi.useFakeTimers();
     try {
       const scenarios = [
-        { key: "quickButtons", component: QuickButtons, pattern: /快捷|按钮|复制|链接/ },
+        { key: "quickButtons", component: QuickButtons, pattern: /快捷|动作|按钮|复制|链接/ },
         { key: "images", component: ImagePanel, pattern: /截图区|图片|Ctrl\+V|方向键|右键|删除|预览|Esc/ },
         { key: "todos", component: TodoPanel, pattern: /提醒|事项|完成|星标|右键|拖动|已完成/ },
       ] as const;

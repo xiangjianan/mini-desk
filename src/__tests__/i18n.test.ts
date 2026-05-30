@@ -12,7 +12,7 @@ describe("localized public copy", () => {
     expect(getDefaultTitles("en")).toMatchObject({
       "image-title": "🎨 Screenshots",
       "note-title": "📝 Notes",
-      "quick-title": "🔗 Quick Links",
+      "quick-title": "⚡ Quick Actions",
       "todo-morning-title": "☀️ Morning",
       "todo-noon-title": "🌤️ Noon",
       "todo-evening-title": "🌙 Evening",
@@ -44,9 +44,9 @@ describe("localized public copy", () => {
       "单击图片可以预览。",
     ]));
     expect(GUIDE_MESSAGES.en.quickButtons).toEqual(expect.arrayContaining([
-      "Use the context menu to hide a link.",
-      "Drag links to reorder them.",
-      "Text shortcuts copy their text instantly.",
+      "Use the context menu to hide an action.",
+      "Drag actions to reorder them.",
+      "Text actions copy their text instantly.",
     ]));
     expect(GUIDE_MESSAGES.en.note).toContain("Edited text saves automatically after 3 seconds.");
   });

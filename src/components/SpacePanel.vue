@@ -22,6 +22,8 @@ const emit = defineEmits<{
   rename: [id: string, title: string];
   editDone: [id: string];
   update: [id: string, lines: LineItem[]];
+  createTodos: [texts: string[], anchor?: HTMLElement];
+  createQuick: [payload: { title: string; value: string; type: "text" }, anchor?: HTMLElement];
   delete: [id: string];
   reorder: [dragId: string, targetId: string];
   focus: [key: GuideKey, element: HTMLElement];
@@ -234,6 +236,8 @@ function handleTabsWheel(event: WheelEvent): void {
           @update="handleUpdate"
           @focus="emit('focus', 'workspace', $event)"
           @guide="(anchor, immediate) => emit('guide', 'workspace', anchor, immediate)"
+          @create-todos="(texts, anchor) => emit('createTodos', texts, anchor)"
+          @create-quick="(payload, anchor) => emit('createQuick', payload, anchor)"
           @blur="emit('blur')"
         />
       </Transition>

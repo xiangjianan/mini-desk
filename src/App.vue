@@ -97,6 +97,7 @@ const versionPromptVisible = ref(false);
 const versionBadgeVisible = ref(false);
 const isMobileBlocked = ref(getInitialMobileBlocked());
 const mobileMediaQuery = ref<MediaQueryList | null>(null);
+const lastWorkflowTodoListId = ref<TodoPeriod | undefined>();
 let appMounted = false;
 
 type BubbleOptions = {
@@ -343,6 +344,12 @@ function showCompanion(anchor?: HTMLElement, guideKey?: GuideKey): void {
 
 function handleGuideFocus(key: GuideKey, anchor?: HTMLElement): void {
   showAreaGuide(key, anchor);
+}
+
+function handleTodoFocus(anchor?: HTMLElement): void {
+  const period = getTodoPeriodFromAnchor(anchor);
+  if (period) lastWorkflowTodoListId.value = period;
+  handleGuideFocus("todos", anchor);
 }
 
 function handleGuideClick(key: GuideKey, anchor?: HTMLElement, immediate = false): void {
@@ -643,6 +650,16 @@ function saveQuick(payload: { id?: string; title: string; value: string; type: Q
   persistNow();
 }
 
+function saveQuickFromPanel(payload: { id?: string; title: string; value: string; type: QuickButtonType }, anchor?: HTMLElement): void {
+  saveQuick(payload);
+  if (anchor) showBubbleText(uiText.value.app.quickActionAdded, anchor);
+}
+
+function createQuickFromText(payload: { title: string; value: string; type: "text" }, anchor?: HTMLElement): void {
+  saveQuick(payload);
+  showBubbleText(uiText.value.app.quickActionAdded, anchor);
+}
+
 function deleteQuick(id: string, anchor?: HTMLElement): void {
   requestConfirmation("confirmDeleteQuick", anchor, () => {
     const index = state.quickButtons.findIndex((button) => button.id === id);
@@ -769,6 +786,7 @@ function reorderTodoListSections(draggedId: TodoListId, targetId: TodoListId): v
 
 function createTodo(period: TodoPeriod, afterId?: string): void {
   if (!isConfiguredTodoListId(period)) return;
+  lastWorkflowTodoListId.value = period;
   if (!afterId) {
     const blankTodo = findOpenBlankTodo();
     if (blankTodo) {
@@ -797,6 +815,7 @@ function createTodo(period: TodoPeriod, afterId?: string): void {
 
 function createTodosFromText(period: TodoPeriod, texts: string[]): void {
   if (!isConfiguredTodoListId(period)) return;
+  lastWorkflowTodoListId.value = period;
   texts.forEach((text) => {
     state.todos = addTodoToMap(state.todos, period, {
       id: createId(),
@@ -805,6 +824,17 @@ function createTodosFromText(period: TodoPeriod, texts: string[]): void {
     });
   });
   persistNow();
+}
+
+function createTodosFromSelection(texts: string[], anchor?: HTMLElement): void {
+  const period = lastWorkflowTodoListId.value && isConfiguredTodoListId(lastWorkflowTodoListId.value)
+    ? lastWorkflowTodoListId.value
+    : state.todoLists[0]?.id;
+  if (!period || !isConfiguredTodoListId(period)) return;
+  const normalized = texts.map((text) => text.trim()).filter(Boolean);
+  if (normalized.length === 0) return;
+  createTodosFromText(period, normalized);
+  showBubbleText(uiText.value.app.todosCreatedFromText, anchor);
 }
 
 function findOpenBlankTodo(): { period: TodoPeriod; id: string } | undefined {
@@ -827,6 +857,7 @@ function focusTodoInput(period: TodoPeriod, id: string): void {
 
 function updateTodo(period: TodoPeriod, id: string, text: string): void {
   if (!isConfiguredTodoListId(period)) return;
+  lastWorkflowTodoListId.value = period;
   cancelEmptyTodoRemoval(period, id);
   state.todos = updateTodoText(state.todos, period, id, text);
   persistNow();
@@ -834,6 +865,7 @@ function updateTodo(period: TodoPeriod, id: string, text: string): void {
 
 function splitTodo(period: TodoPeriod, id: string, before: string, after: string): void {
   if (!isConfiguredTodoListId(period)) return;
+  lastWorkflowTodoListId.value = period;
   cancelEmptyTodoRemoval(period, id);
   const nextId = createId();
   state.todos = splitTodoInMap(
@@ -1622,6 +1654,8 @@ function moveItem<T extends { id: string }>(items: T[], dragId: string, targetId
           @update="updateLines('noteLines', $event)"
           @focus="handleGuideFocus('note', $event)"
           @guide="(anchor, immediate) => handleGuideClick('note', anchor, immediate)"
+          @create-todos="createTodosFromSelection"
+          @create-quick="createQuickFromText"
           @blur="handleEditorBlur"
         />
         <QuickButtons
@@ -1630,7 +1664,7 @@ function moveItem<T extends { id: string }>(items: T[], dragId: string, targetId
           :show-hidden="state.showHiddenQuickButtons"
           :language="state.language"
           @title-update="updateTitle"
-          @save="saveQuick"
+          @save="saveQuickFromPanel"
           @delete="deleteQuick"
           @copy="handleQuickButton"
           @toggle-hidden="toggleQuickHidden"
@@ -1667,7 +1701,7 @@ function moveItem<T extends { id: string }>(items: T[], dragId: string, targetId
         @blur-empty="blurEmptyTodo"
         @blur="handleCompanionBlur"
         @move="moveTodo"
-        @focus="handleGuideFocus('todos', $event)"
+        @focus="handleTodoFocus"
         @guide="handleGuideClick"
       />
 
@@ -1684,6 +1718,8 @@ function moveItem<T extends { id: string }>(items: T[], dragId: string, targetId
         @update="updateSpaceLines"
         @delete="deleteSpace"
         @reorder="reorderSpaces"
+        @create-todos="createTodosFromSelection"
+        @create-quick="createQuickFromText"
         @focus="(_, element) => handleGuideFocus('workspace', element)"
         @guide="(_, anchor, immediate) => handleGuideClick('workspace', anchor, immediate)"
         @blur="handleEditorBlur"

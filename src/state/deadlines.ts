@@ -109,8 +109,8 @@ export function getNotifyDisplay(notifyAt: number | undefined, now = Date.now(),
 
   if (notifyAt < now) {
     return {
-      label: normalizedLanguage === "en" ? "! Overdue" : "! 已超期",
-      compactLabel: normalizedLanguage === "en" ? "! Overdue" : "! 已超期",
+      label: normalizedLanguage === "en" ? "Needs reschedule" : "待重排",
+      compactLabel: normalizedLanguage === "en" ? "Reschedule" : "待重排",
       urgency: "overdue",
     };
   }
