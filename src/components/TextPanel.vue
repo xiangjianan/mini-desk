@@ -9,7 +9,6 @@ import { GUIDE_MENU_OPTION } from "../state/defaults";
 import { getUiText } from "../state/i18n";
 import type { AppLanguage } from "../types";
 import {
-  appendPlainTextToEditorText,
   editorTextToLines,
   handleTextareaTab,
   insertIndentedLineBreak,
@@ -174,6 +173,32 @@ function handleDragLeaveClear(): void {
   isDragHover.value = false;
 }
 
+function getTextOffsetAtPoint(textarea: HTMLTextAreaElement, clientX: number, clientY: number): number {
+  const rect = textarea.getBoundingClientRect();
+  const style = window.getComputedStyle(textarea);
+  const lineHeight = parseFloat(style.lineHeight) || parseFloat(style.fontSize) * 1.2;
+  const paddingTop = parseFloat(style.paddingTop) || 0;
+  const paddingLeft = parseFloat(style.paddingLeft) || 0;
+
+  const y = clientY - rect.top - paddingTop + textarea.scrollTop;
+  const lines = textarea.value.split("\n");
+  const lineIndex = Math.max(0, Math.min(Math.floor(y / lineHeight), lines.length - 1));
+
+  const canvas = document.createElement("canvas");
+  const ctx = canvas.getContext("2d")!;
+  ctx.font = `${style.fontSize} ${style.fontFamily}`;
+  const lineText = lines[lineIndex];
+  const x = clientX - rect.left - paddingLeft + textarea.scrollLeft;
+
+  let col = 0;
+  for (let i = 0; i < lineText.length; i++) {
+    if (ctx.measureText(lineText.slice(0, i + 1)).width >= x) break;
+    col = i + 1;
+  }
+
+  return lines.slice(0, lineIndex).reduce((sum, l) => sum + l.length + 1, 0) + col;
+}
+
 function handleDragOver(event: DragEvent): void {
   const types = Array.from(event.dataTransfer?.types ?? []);
   const isInternalDrag = (event.target as HTMLElement)?.closest?.("textarea");
@@ -184,6 +209,7 @@ function handleDragOver(event: DragEvent): void {
 }
 
 function handleExternalTextDrop(event: DragEvent): void {
+  isDragHover.value = false;
   const files = Array.from(event.dataTransfer?.files ?? []);
   if (files.length > 0) return;
   const dropped = event.dataTransfer?.getData("text/plain") ?? "";
@@ -192,11 +218,15 @@ function handleExternalTextDrop(event: DragEvent): void {
   event.stopPropagation();
   const textarea = textareaRef.value;
   if (textarea && !editing.value) startEditingFromTextarea(textarea);
-  const next = appendPlainTextToEditorText(text.value, dropped);
+  const current = text.value;
+  const offset = textarea ? getTextOffsetAtPoint(textarea, event.clientX, event.clientY) : current.length;
+  const before = current.slice(0, offset);
+  const after = current.slice(offset);
+  const next = before + dropped + after;
   applyEditorText(next);
   if (textarea) {
-    const end = textarea.value.length;
-    textarea.setSelectionRange(end, end);
+    const cursorPos = offset + dropped.length;
+    textarea.setSelectionRange(cursorPos, cursorPos);
   }
   emit("update", editorTextToLines(text.value));
 }
