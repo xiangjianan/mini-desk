@@ -1,7 +1,9 @@
 <script setup lang="ts">
-import { computed, nextTick, onMounted, onUnmounted, ref, watch } from "vue";
-import { NDropdown, NScrollbar } from "naive-ui";
+import { computed, h, nextTick, onMounted, onUnmounted, ref, watch } from "vue";
+import type { Component, VNode } from "vue";
+import { NDropdown, NIcon, NScrollbar } from "naive-ui";
 import type { DropdownOption } from "naive-ui";
+import { ClipboardOutline, CopyOutline, HelpCircleOutline } from "@vicons/ionicons5";
 import type { LineItem } from "../types";
 import { GUIDE_MENU_OPTION } from "../state/defaults";
 import { getUiText } from "../state/i18n";
@@ -39,6 +41,7 @@ const emit = defineEmits<{
   guide: [element: HTMLElement, immediate?: boolean];
 }>();
 
+const isDragHover = ref(false);
 const textareaRef = ref<HTMLTextAreaElement | null>(null);
 const text = ref(textLinesToEditorText(props.lines));
 const focused = ref(false);
@@ -68,14 +71,19 @@ const canDragSelectedText = computed(() => {
 
 onMounted(exclusiveMenu.mount);
 onUnmounted(exclusiveMenu.unmount);
+
+function renderIcon(icon: Component): () => VNode {
+  return () => h(NIcon, { size: 16 }, { default: () => h(icon) });
+}
+
 const menuOptions = computed<DropdownOption[]>(() => {
   const options: DropdownOption[] = [];
   const target = menu.value?.target;
   if (target) {
-    options.push({ label: uiText.value.common.copy, key: "copy", disabled: !canCopyTextSelection(target) });
-    options.push({ label: uiText.value.common.paste, key: "paste", disabled: !menu.value?.canPaste });
+    options.push({ label: uiText.value.common.copy, key: "copy", disabled: !canCopyTextSelection(target), icon: renderIcon(CopyOutline) });
+    options.push({ label: uiText.value.common.paste, key: "paste", disabled: !menu.value?.canPaste, icon: renderIcon(ClipboardOutline) });
   }
-  options.push(guideMenuOption.value);
+  options.push({ ...guideMenuOption.value, icon: renderIcon(HelpCircleOutline) });
   return options;
 });
 
@@ -155,10 +163,22 @@ function openTitleMenu(event: MouseEvent): void {
   titleRef.value?.openMenuAt(event.clientX, event.clientY, event);
 }
 
+function handleDragEnter(event: DragEvent): void {
+  const types = Array.from(event.dataTransfer?.types ?? []);
+  if (types.includes("text/plain") && !types.includes("Files")) {
+    isDragHover.value = true;
+  }
+}
+
+function handleDragLeaveClear(): void {
+  isDragHover.value = false;
+}
+
 function handleDragOver(event: DragEvent): void {
   const types = Array.from(event.dataTransfer?.types ?? []);
   if (types.includes("text/plain") || types.includes("text/uri-list")) {
     event.preventDefault();
+    isDragHover.value = true;
   }
 }
 
@@ -509,7 +529,7 @@ function restoreSelection(textarea: HTMLTextAreaElement, selection: { start: num
 </script>
 
 <template>
-  <section class="text-panel" :class="textPanelClasses">
+  <section class="text-panel" :class="[textPanelClasses, { 'drag-hover': isDragHover }]" @dragenter="handleDragEnter" @dragleave="handleDragLeaveClear" @drop="handleDragLeaveClear">
     <div v-if="!hideHeader" class="panel-header" @contextmenu="openTitleMenu">
       <h2>
         <EditableTitle
