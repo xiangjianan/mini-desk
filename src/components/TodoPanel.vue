@@ -2,12 +2,15 @@
 import { computed, h, nextTick, onMounted, onUnmounted, ref } from "vue";
 import type { Component, VNode } from "vue";
 import {
+  AddOutline,
   AlarmOutline,
   CheckmarkDoneOutline,
   ChevronDownOutline,
   ClipboardOutline,
   CopyOutline,
   CreateOutline,
+  EyeOffOutline,
+  EyeOutline,
   HelpCircleOutline,
   ListOutline,
   NotificationsOutline,
@@ -145,8 +148,8 @@ const menuOptions = computed<DropdownOption[]>(() => {
     if (!list) return [guideMenuOption.value];
     return [
       { label: uiText.value.todo.clearCompleted, key: "clear-completed", icon: renderIcon(CheckmarkDoneOutline) },
-      { label: isCompletedVisible(list.id) ? uiText.value.todo.hideCompleted : uiText.value.todo.showCompleted, key: "toggle-completed", icon: renderIcon(CheckmarkDoneOutline) },
-      { label: uiText.value.todo.newList, key: "create-list", icon: renderIcon(ListOutline) },
+      { label: isCompletedVisible(list.id) ? uiText.value.todo.hideCompleted : uiText.value.todo.showCompleted, key: "toggle-completed", icon: renderIcon(isCompletedVisible(list.id) ? EyeOffOutline : EyeOutline) },
+      { label: uiText.value.todo.newList, key: "create-list", icon: renderIcon(AddOutline) },
       { label: uiText.value.todo.editList, key: "edit-list", icon: renderIcon(CreateOutline) },
       { label: uiText.value.todo.deleteList, key: "delete-list", disabled: effectiveTodoLists.value.length <= 1, icon: renderIcon(TrashOutline) },
       { ...guideMenuOption.value, icon: renderIcon(HelpCircleOutline) },
