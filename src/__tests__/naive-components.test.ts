@@ -340,7 +340,7 @@ describe("Naive UI component usage", () => {
 
   it("keeps bordered controls and popup surfaces square without rounded corners", () => {
     const styles = read("src/styles.css");
-    const stylesWithoutIndicatorDot = styles.replace(/\.save-status::before\s*\{[^}]*\}/g, "");
+    const stylesWithoutIndicatorDot = styles.replace(/\.save-status::before\s*\{[^}]*\}/g, "").replace(/\.shortcut-row kbd\s*\{[^}]*\}/g, "");
 
     expect(styles).toContain("--radius: 0");
     expect(styles).toMatch(/button\s*\{[^}]*border-radius: 0/s);

@@ -188,6 +188,7 @@ describe("ImagePreview", () => {
       "复制",
       "取消预览",
       "删除",
+      "Tips",
     ]);
 
     await wrapper.findAll(".dropdown-option").find((option) => option.text() === "取消预览")?.trigger("click");

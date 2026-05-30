@@ -185,7 +185,8 @@ function getTextOffsetAtPoint(textarea: HTMLTextAreaElement, clientX: number, cl
   const lineIndex = Math.max(0, Math.min(Math.floor(y / lineHeight), lines.length - 1));
 
   const canvas = document.createElement("canvas");
-  const ctx = canvas.getContext("2d")!;
+  const ctx = canvas.getContext("2d");
+  if (!ctx) return textarea.value.length;
   ctx.font = `${style.fontSize} ${style.fontFamily}`;
   const lineText = lines[lineIndex];
   const x = clientX - rect.left - paddingLeft + textarea.scrollLeft;

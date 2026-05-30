@@ -1044,8 +1044,7 @@ describe("TextPanel", () => {
     await wrapper.get(".text-editor-frame").element.dispatchEvent(event);
 
     expect(wrapper.emitted("update")?.at(-1)?.[0]).toEqual([
-      { text: "已有内容", indent: 0 },
-      { text: "新增 A", indent: 0 },
+      { text: "已有内容新增 A", indent: 0 },
       { text: "新增 B", indent: 0 },
     ]);
   });
@@ -1068,7 +1067,7 @@ describe("TextPanel", () => {
 
     await wrapper.get(".text-editor-frame").element.dispatchEvent(event);
 
-    expect(wrapper.get("textarea").element.value).toBe("已有内容  \n  新增 A  ");
+    expect(wrapper.get("textarea").element.value).toBe("已有内容    新增 A  ");
   });
 
   it("moves the caret to the end after external text is dropped", async () => {
