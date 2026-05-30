@@ -1,7 +1,8 @@
 <script setup lang="ts">
-import { computed, onMounted, onUnmounted, reactive, ref, watch } from "vue";
+import { computed, h, onMounted, onUnmounted, reactive, ref, watch } from "vue";
+import type { Component, VNode } from "vue";
 import { NButton, NCheckbox, NDropdown, NIcon, NInput, NModal, NScrollbar } from "naive-ui";
-import { CopyOutline } from "@vicons/ionicons5";
+import { AddOutline, CopyOutline, CreateOutline, EyeOffOutline, EyeOutline, HelpCircleOutline, TrashOutline } from "@vicons/ionicons5";
 import type { DropdownOption } from "naive-ui";
 import type { AppLanguage, GuideKey, QuickButton, QuickButtonType } from "../types";
 import { GUIDE_MENU_OPTION } from "../state/defaults";
@@ -39,9 +40,14 @@ const form = reactive<{ title: string; value: string; type: QuickButtonType }>({
 });
 const menu = ref<{ x: number; y: number; id?: string; anchor?: HTMLElement } | null>(null);
 const draggingId = ref<string | null>(null);
+const isDragHover = ref(false);
 const uiText = computed(() => getUiText(props.language));
 const guideMenuOption = computed<DropdownOption>(() => ({ ...GUIDE_MENU_OPTION, label: uiText.value.common.tips }));
 const exclusiveMenu = createExclusiveContextMenu(closeMenu);
+
+function renderIcon(icon: Component): () => VNode {
+  return () => h(NIcon, { size: 16 }, { default: () => h(icon) });
+}
 
 onMounted(exclusiveMenu.mount);
 onUnmounted(exclusiveMenu.unmount);
@@ -54,16 +60,16 @@ const menuOptions = computed<DropdownOption[]>(() => {
   const button = props.buttons.find((item) => item.id === menu.value?.id);
   if (!menu.value?.id) {
     return [
-      { label: uiText.value.quick.add, key: "add" },
-      { label: props.showHidden ? uiText.value.quick.hideHidden : uiText.value.quick.showHidden, key: "toggle-show-hidden" },
-      guideMenuOption.value,
+      { label: uiText.value.quick.add, key: "add", icon: renderIcon(AddOutline) },
+      { label: props.showHidden ? uiText.value.quick.hideHidden : uiText.value.quick.showHidden, key: "toggle-show-hidden", icon: renderIcon(props.showHidden ? EyeOffOutline : EyeOutline) },
+      { ...guideMenuOption.value, icon: renderIcon(HelpCircleOutline) },
     ];
   }
   return [
-    { label: uiText.value.common.edit, key: "edit" },
-    { label: button?.hidden ? uiText.value.quick.show : uiText.value.quick.hide, key: "toggle-hidden" },
-    { label: uiText.value.common.delete, key: "delete" },
-    guideMenuOption.value,
+    { label: uiText.value.common.edit, key: "edit", icon: renderIcon(CreateOutline) },
+    { label: button?.hidden ? uiText.value.quick.show : uiText.value.quick.hide, key: "toggle-hidden", icon: renderIcon(button?.hidden ? EyeOutline : EyeOffOutline) },
+    { label: uiText.value.common.delete, key: "delete", icon: renderIcon(TrashOutline) },
+    { ...guideMenuOption.value, icon: renderIcon(HelpCircleOutline) },
   ];
 });
 
@@ -182,15 +188,17 @@ function handleQuickDragOver(event: DragEvent): void {
   if (types.includes("text/plain") && !types.includes("Files")) {
     event.preventDefault();
     event.dataTransfer!.dropEffect = "copy";
+    isDragHover.value = true;
   }
 }
 
 function handleQuickDragLeave(): void {
-  // highlight removal will be handled by Task 5 (drag-hover class)
+  isDragHover.value = false;
 }
 
 function handleQuickDrop(event: DragEvent): void {
   event.preventDefault();
+  isDragHover.value = false;
   const text = event.dataTransfer?.getData("text/plain") ?? "";
   if (!text.trim()) return;
 
@@ -205,7 +213,15 @@ function handleQuickDrop(event: DragEvent): void {
 </script>
 
 <template>
-  <section class="split-block quick-block" @click="handleAreaClick" @contextmenu="openAreaMenu" @dragover="handleQuickDragOver" @dragleave="handleQuickDragLeave" @drop="handleQuickDrop">
+  <section
+    class="split-block quick-block"
+    :class="{ 'drag-hover': isDragHover }"
+    @click="handleAreaClick"
+    @contextmenu="openAreaMenu"
+    @dragover="handleQuickDragOver"
+    @dragleave="handleQuickDragLeave"
+    @drop="handleQuickDrop"
+  >
     <div class="panel-header" @contextmenu="openTitleMenu">
       <h2 id="quick-title">
         <EditableTitle
