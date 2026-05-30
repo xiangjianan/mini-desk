@@ -1,6 +1,7 @@
 <script setup lang="ts">
-import { computed, onMounted, onUnmounted, ref, watch } from "vue";
-import { CloseOutline } from "@vicons/ionicons5";
+import { computed, h, onMounted, onUnmounted, ref, watch } from "vue";
+import type { Component, VNode } from "vue";
+import { CloseOutline, CopyOutline, HelpCircleOutline, TrashOutline } from "@vicons/ionicons5";
 import { NButton, NDropdown, NIcon, NModal, NScrollbar } from "naive-ui";
 import type { DropdownOption } from "naive-ui";
 import { getUiText } from "../state/i18n";
@@ -31,11 +32,16 @@ const menu = ref<{ x: number; y: number; id: string; anchor?: HTMLElement } | nu
 const uiText = computed(() => getUiText(props.language));
 const active = computed(() => props.images.find((image) => image.id === props.activeId));
 const menuOptions = computed<DropdownOption[]>(() => [
-  { label: uiText.value.common.copy, key: "copy" },
-  { label: uiText.value.preview.close, key: "close" },
-  { label: uiText.value.common.delete, key: "delete" },
+  { label: uiText.value.common.copy, key: "copy", icon: renderIcon(CopyOutline) },
+  { label: uiText.value.preview.close, key: "close", icon: renderIcon(CloseOutline) },
+  { label: uiText.value.common.delete, key: "delete", icon: renderIcon(TrashOutline) },
+  { label: uiText.value.common.tips, key: "tips", icon: renderIcon(HelpCircleOutline) },
 ]);
 const exclusiveMenu = createExclusiveContextMenu(closeMenu);
+
+function renderIcon(icon: Component): () => VNode {
+  return () => h(NIcon, { size: 16 }, { default: () => h(icon) });
+}
 
 onMounted(exclusiveMenu.mount);
 onUnmounted(exclusiveMenu.unmount);
@@ -81,6 +87,10 @@ function handleMenuSelect(key: string): void {
   const current = menu.value;
   if (!current) return;
   closeMenu();
+  if (key === "tips") {
+    window.alert(uiText.value.preview.help);
+    return;
+  }
   if (key === "copy") emit("copy", current.id);
   if (key === "close") emit("close");
   if (key === "delete") emit("delete", current.id, current.anchor);
