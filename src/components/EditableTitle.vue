@@ -1,7 +1,9 @@
 <script setup lang="ts">
-import { computed, nextTick, onMounted, onUnmounted, ref, watch } from "vue";
-import { NDropdown } from "naive-ui";
+import { computed, h, nextTick, onMounted, onUnmounted, ref, watch } from "vue";
+import type { Component, VNode } from "vue";
+import { NDropdown, NIcon } from "naive-ui";
 import type { DropdownOption } from "naive-ui";
+import { CreateOutline } from "@vicons/ionicons5";
 import { CONTEXT_MENU_Z_INDEX, createExclusiveContextMenu } from "../utils/contextMenu";
 
 const props = withDefaults(defineProps<{
@@ -11,7 +13,7 @@ const props = withDefaults(defineProps<{
   editLabel?: string;
   menuEnabled?: boolean;
 }>(), {
-  editLabel: "编辑",
+  editLabel: "重命名",
   menuEnabled: true,
 });
 
@@ -24,7 +26,11 @@ const draft = ref(props.value);
 const inputRef = ref<HTMLInputElement | null>(null);
 const composing = ref(false);
 const menu = ref<{ x: number; y: number } | null>(null);
-const menuOptions = computed<DropdownOption[]>(() => [{ label: props.editLabel, key: "edit" }]);
+const menuOptions = computed<DropdownOption[]>(() => [{ label: props.editLabel, key: "edit", icon: renderIcon(CreateOutline) }]);
+
+function renderIcon(icon: Component): () => VNode {
+  return () => h(NIcon, { size: 16 }, { default: () => h(icon) });
+}
 const exclusiveMenu = createExclusiveContextMenu(closeMenu);
 
 onMounted(exclusiveMenu.mount);

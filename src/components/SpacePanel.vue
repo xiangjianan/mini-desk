@@ -53,7 +53,7 @@ function renderIcon(icon: Component): () => VNode {
 }
 
 const menuOptions = computed<DropdownOption[]>(() => [
-  { label: uiText.value.common.edit, key: "edit", icon: renderIcon(CreateOutline) },
+  { label: uiText.value.common.rename, key: "edit", icon: renderIcon(CreateOutline) },
   { label: uiText.value.common.delete, key: "delete", disabled: !canDeleteSpaces.value, icon: renderIcon(TrashOutline) },
 ]);
 
