@@ -1,6 +1,8 @@
 <script setup lang="ts">
-import { computed, onMounted, onUnmounted, ref } from "vue";
-import { NDropdown, NScrollbar } from "naive-ui";
+import { computed, h, onMounted, onUnmounted, ref } from "vue";
+import type { Component, VNode } from "vue";
+import { NDropdown, NIcon, NScrollbar } from "naive-ui";
+import { ClipboardOutline, CopyOutline, EyeOutline, HelpCircleOutline, TrashOutline } from "@vicons/ionicons5";
 import type { DropdownOption } from "naive-ui";
 import type { AppLanguage, GuideKey, StoredImage } from "../types";
 import { GUIDE_MENU_OPTION } from "../state/defaults";
@@ -29,10 +31,15 @@ const emit = defineEmits<{
 
 const menu = ref<{ x: number; y: number; id?: string; anchor?: HTMLElement } | null>(null);
 const draggingId = ref<string | null>(null);
+const isDragHover = ref(false);
 const titleRef = ref<{ openMenuAt: (x: number, y: number, event?: Event) => void } | null>(null);
 const uiText = computed(() => getUiText(props.language));
 const guideMenuOption = computed<DropdownOption>(() => ({ ...GUIDE_MENU_OPTION, label: uiText.value.common.tips }));
 const exclusiveMenu = createExclusiveContextMenu(closeMenu);
+
+function renderIcon(icon: Component): () => VNode {
+  return () => h(NIcon, { size: 16 }, { default: () => h(icon) });
+}
 
 onMounted(exclusiveMenu.mount);
 onUnmounted(exclusiveMenu.unmount);
@@ -40,12 +47,12 @@ onUnmounted(exclusiveMenu.unmount);
 const menuOptions = computed<DropdownOption[]>(() =>
   menu.value?.id
     ? [
-        { label: uiText.value.common.copy, key: "copy" },
-        { label: uiText.value.common.preview, key: "preview" },
-        { label: uiText.value.common.delete, key: "delete" },
-        guideMenuOption.value,
+        { label: uiText.value.common.copy, key: "copy", icon: renderIcon(CopyOutline) },
+        { label: uiText.value.common.preview, key: "preview", icon: renderIcon(EyeOutline) },
+        { label: uiText.value.common.delete, key: "delete", icon: renderIcon(TrashOutline) },
+        { ...guideMenuOption.value, icon: renderIcon(HelpCircleOutline) },
       ]
-    : [{ label: uiText.value.images.pasteImage, key: "paste" }, guideMenuOption.value],
+    : [{ label: uiText.value.images.pasteImage, key: "paste", icon: renderIcon(ClipboardOutline) }, { ...guideMenuOption.value, icon: renderIcon(HelpCircleOutline) }],
 );
 
 function openMenu(event: MouseEvent, id?: string): void {
@@ -86,20 +93,35 @@ function handleGuideClick(event: MouseEvent): void {
 }
 
 function handleExternalDrop(event: DragEvent): void {
+  isDragHover.value = false;
   const files = Array.from(event.dataTransfer?.files ?? []);
   if (files.length === 0) return;
   emit("dropFiles", files, event.currentTarget as HTMLElement);
+}
+
+function handleImageDragEnter(event: DragEvent): void {
+  const types = Array.from(event.dataTransfer?.types ?? []);
+  if (types.includes("text/plain") && !types.includes("Files")) {
+    isDragHover.value = true;
+  }
+}
+
+function handleImageDragLeave(): void {
+  isDragHover.value = false;
 }
 </script>
 
 <template>
   <section
     class="panel image-panel"
+    :class="{ 'drag-hover': isDragHover }"
     aria-labelledby="image-title"
     tabindex="-1"
     @click="handleGuideClick"
     @dragover.prevent
     @drop.prevent.stop="handleExternalDrop"
+    @dragenter="handleImageDragEnter"
+    @dragleave="handleImageDragLeave"
     @contextmenu="openMenu($event)"
   >
     <div class="panel-header" @contextmenu="openTitleMenu">
