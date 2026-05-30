@@ -7,6 +7,7 @@ import {
   CreateOutline,
   ImagesOutline,
   InformationCircleOutline,
+  KeyOutline,
   SettingsOutline,
 } from "@vicons/ionicons5";
 import { NBadge, NButton, NDropdown, NIcon, NUpload } from "naive-ui";
@@ -32,6 +33,7 @@ const emit = defineEmits<{
   import: [anchor?: HTMLElement];
   about: [anchor?: HTMLElement];
   suggest: [anchor?: HTMLElement];
+  shortcutHelp: [];
   update: [];
   language: [language: AppLanguage, anchor?: HTMLElement];
   gifTheme: [theme: CompanionGifTheme, anchor?: HTMLElement];
@@ -76,6 +78,7 @@ const options = computed(() => [
     })),
   },
   { label: text.value.settings.suggest, key: "suggest", icon: renderIcon(CreateOutline) },
+  { label: text.value.settings.shortcutHelp, key: "shortcut-help", icon: renderIcon(KeyOutline) },
   { label: text.value.settings.about, key: "about", icon: renderIcon(InformationCircleOutline) },
   { type: "divider", key: "version-divider" },
   {
@@ -95,6 +98,10 @@ function handleSelect(key: string): void {
   if (key === "import") emit("import", triggerRef.value ?? undefined);
   if (key === "suggest") emit("suggest", triggerRef.value ?? undefined);
   if (key === "about") emit("about", triggerRef.value ?? undefined);
+  if (key === "shortcut-help") {
+    emit("shortcutHelp");
+    return;
+  }
   if (key === "version" && props.updateAvailable) emit("update");
   if (key.startsWith("language:")) {
     emit("language", normalizeLanguage(key.replace("language:", "")), triggerRef.value ?? undefined);

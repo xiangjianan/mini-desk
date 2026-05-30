@@ -430,6 +430,7 @@ export const UI_TEXT = {
       import: "数据导入",
       gifTheme: "GIF 主题",
       suggest: "提建议",
+      shortcutHelp: "快捷键",
       about: "关于",
       update: "更新",
       customGif: "自定义 GIF",
@@ -557,6 +558,7 @@ export const UI_TEXT = {
       import: "Import data",
       gifTheme: "GIF theme",
       suggest: "Feedback",
+      shortcutHelp: "Shortcuts",
       about: "About",
       update: "Update",
       customGif: "Custom GIF",
@@ -704,3 +706,64 @@ function isDefaultTodoListTitle(id: string, title: string): boolean {
 function isDefaultSpaceTitle(id: string, title: string): boolean {
   return Object.values(DEFAULT_SPACE_TITLES).some((titles) => titles[id] === title);
 }
+
+export const SHORTCUT_HELP: Record<AppLanguage, { area: string; shortcuts: { key: string; desc: string }[] }[]> = {
+  zh: [
+    { area: "全局", shortcuts: [
+      { key: "Ctrl + S", desc: "立即保存" },
+    ]},
+    { area: "文本编辑", shortcuts: [
+      { key: "Tab", desc: "增加缩进" },
+      { key: "Shift + Tab", desc: "减少缩进" },
+      { key: "Enter", desc: "换行（延续缩进）" },
+      { key: "Backspace", desc: "空缩进行减少缩进" },
+      { key: "右键", desc: "复制 / 粘贴" },
+    ]},
+    { area: "提醒事项", shortcuts: [
+      { key: "单击空白", desc: "新增提醒" },
+      { key: "拖动", desc: "调整顺序" },
+      { key: "右键", desc: "复制 / 删除 / 星标 / 通知" },
+    ]},
+    { area: "截图", shortcuts: [
+      { key: "Ctrl + V", desc: "粘贴截图" },
+      { key: "预览中滚轮", desc: "缩放" },
+      { key: "← / →", desc: "切换图片" },
+      { key: "Enter", desc: "复制图片" },
+      { key: "Delete", desc: "删除图片" },
+      { key: "Esc / Space", desc: "关闭预览" },
+    ]},
+    { area: "快捷动作", shortcuts: [
+      { key: "拖入文本/URL", desc: "自动创建动作" },
+      { key: "右键", desc: "编辑 / 隐藏 / 删除" },
+    ]},
+  ],
+  en: [
+    { area: "Global", shortcuts: [
+      { key: "Ctrl + S", desc: "Save immediately" },
+    ]},
+    { area: "Text Editing", shortcuts: [
+      { key: "Tab", desc: "Increase indent" },
+      { key: "Shift + Tab", desc: "Decrease indent" },
+      { key: "Enter", desc: "New line (keep indent)" },
+      { key: "Backspace", desc: "Decrease indent on empty line" },
+      { key: "Right-click", desc: "Copy / Paste" },
+    ]},
+    { area: "Reminders", shortcuts: [
+      { key: "Click blank", desc: "Add reminder" },
+      { key: "Drag", desc: "Reorder" },
+      { key: "Right-click", desc: "Copy / Delete / Star / Notify" },
+    ]},
+    { area: "Screenshots", shortcuts: [
+      { key: "Ctrl + V", desc: "Paste screenshot" },
+      { key: "Scroll wheel (preview)", desc: "Zoom" },
+      { key: "← / →", desc: "Switch image" },
+      { key: "Enter", desc: "Copy image" },
+      { key: "Delete", desc: "Delete image" },
+      { key: "Esc / Space", desc: "Close preview" },
+    ]},
+    { area: "Quick Actions", shortcuts: [
+      { key: "Drag text/URL", desc: "Auto-create action" },
+      { key: "Right-click", desc: "Edit / Hide / Delete" },
+    ]},
+  ],
+};

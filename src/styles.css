@@ -2074,6 +2074,54 @@ body:has(.image-preview) .image-preview .n-scrollbar {
   transition: outline 0.15s ease;
 }
 
+.shortcut-help-modal .n-card__content {
+  padding: 0 !important;
+}
+
+.shortcut-help-content {
+  max-height: 60vh;
+  padding: 16px 20px;
+}
+
+.shortcut-section {
+  margin-bottom: 16px;
+}
+
+.shortcut-section:last-child {
+  margin-bottom: 0;
+}
+
+.shortcut-section h4 {
+  margin: 0 0 8px;
+  font-size: 13px;
+  color: var(--muted);
+}
+
+.shortcut-row {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  padding: 4px 0;
+  font-size: var(--app-font-size);
+}
+
+.shortcut-row kbd {
+  display: inline-block;
+  min-width: 120px;
+  padding: 2px 8px;
+  background: var(--button);
+  border: 1px solid var(--line-subtle);
+  border-radius: 4px;
+  font-family: inherit;
+  font-size: calc(var(--app-font-size) - 1px);
+  text-align: center;
+  color: var(--text);
+}
+
+.shortcut-row span {
+  color: var(--text);
+}
+
 @media (max-width: 900px) {
   :root {
     --app-font-size: 14px;

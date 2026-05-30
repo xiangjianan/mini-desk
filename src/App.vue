@@ -7,6 +7,7 @@ import ImagePanel from "./components/ImagePanel.vue";
 import ImagePreview from "./components/ImagePreview.vue";
 import QuickButtons from "./components/QuickButtons.vue";
 import SettingsMenu from "./components/SettingsMenu.vue";
+import ShortcutHelp from "./components/ShortcutHelp.vue";
 import SpacePanel from "./components/SpacePanel.vue";
 import TextPanel from "./components/TextPanel.vue";
 import TodoPanel from "./components/TodoPanel.vue";
@@ -95,6 +96,7 @@ const appVersion = ref(getIndexAppVersion());
 const storedAppVersion = ref<string | null>(null);
 const versionPromptVisible = ref(false);
 const versionBadgeVisible = ref(false);
+const shortcutHelpVisible = ref(false);
 const isMobileBlocked = ref(getInitialMobileBlocked());
 const mobileMediaQuery = ref<MediaQueryList | null>(null);
 let appMounted = false;
@@ -1766,6 +1768,7 @@ function moveItem<T extends { id: string }>(items: T[], dragId: string, targetId
         @import="requestImport"
         @about="about"
         @suggest="suggestIssue"
+        @shortcut-help="shortcutHelpVisible = true"
         @update="updateStaticVersion"
         @language="updateLanguage"
         @gif-theme="updateCompanionGifTheme"
@@ -1777,5 +1780,6 @@ function moveItem<T extends { id: string }>(items: T[], dragId: string, targetId
       </NButton>
     </div>
     <input ref="importInput" type="file" accept="application/json,.json" hidden @change="importData" />
+    <ShortcutHelp :show="shortcutHelpVisible" :language="state.language" @close="shortcutHelpVisible = false" />
   </NConfigProvider>
 </template>
