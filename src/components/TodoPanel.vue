@@ -1,6 +1,20 @@
 <script setup lang="ts">
-import { computed, nextTick, onMounted, onUnmounted, ref } from "vue";
-import { AlarmOutline, ChevronDownOutline } from "@vicons/ionicons5";
+import { computed, h, nextTick, onMounted, onUnmounted, ref } from "vue";
+import type { Component, VNode } from "vue";
+import {
+  AlarmOutline,
+  CheckmarkDoneOutline,
+  ChevronDownOutline,
+  ClipboardOutline,
+  CopyOutline,
+  CreateOutline,
+  HelpCircleOutline,
+  ListOutline,
+  NotificationsOutline,
+  Star,
+  StarOutline,
+  TrashOutline,
+} from "@vicons/ionicons5";
 import { NCheckbox, NDatePicker, NDropdown, NIcon, NScrollbar } from "naive-ui";
 import type { DropdownOption } from "naive-ui";
 import { DEFAULT_TODO_LISTS, GUIDE_MENU_OPTION } from "../state/defaults";
@@ -79,6 +93,7 @@ const dragged = ref<DraggedTodo | null>(null);
 const draggedListId = ref<TodoListId | null>(null);
 const editingTodoKey = ref<string | null>(null);
 const selectedMenuTodoKey = ref<string | null>(null);
+const isDragHover = ref(false);
 const notifyPickerRef = ref<HTMLElement | null>(null);
 const notifyPicker = ref<{
   period: TodoPeriod;
@@ -105,6 +120,9 @@ const todoSectionRefs = new Map<TodoListId, HTMLElement>();
 const notifyPickerAnchors = new Map<string, HTMLElement>();
 const uiText = computed(() => getUiText(props.language));
 const guideMenuOption = computed<DropdownOption>(() => ({ ...GUIDE_MENU_OPTION, label: uiText.value.common.tips }));
+function renderIcon(icon: Component): () => VNode {
+  return () => h(NIcon, { size: 16 }, { default: () => h(icon) });
+}
 const exclusiveMenu = createExclusiveContextMenu(closeMenu);
 const legacyTodoTitleIds: Record<TodoListId, string> = {
   morning: "todo-morning-title",
@@ -126,32 +144,33 @@ const menuOptions = computed<DropdownOption[]>(() => {
     const list = getListById(menu.value.period);
     if (!list) return [guideMenuOption.value];
     return [
-      { label: uiText.value.todo.clearCompleted, key: "clear-completed" },
-      { label: isCompletedVisible(list.id) ? uiText.value.todo.hideCompleted : uiText.value.todo.showCompleted, key: "toggle-completed" },
-      { label: uiText.value.todo.newList, key: "create-list" },
-      { label: uiText.value.todo.editList, key: "edit-list" },
-      { label: uiText.value.todo.deleteList, key: "delete-list", disabled: effectiveTodoLists.value.length <= 1 },
-      guideMenuOption.value,
+      { label: uiText.value.todo.clearCompleted, key: "clear-completed", icon: renderIcon(CheckmarkDoneOutline) },
+      { label: isCompletedVisible(list.id) ? uiText.value.todo.hideCompleted : uiText.value.todo.showCompleted, key: "toggle-completed", icon: renderIcon(CheckmarkDoneOutline) },
+      { label: uiText.value.todo.newList, key: "create-list", icon: renderIcon(ListOutline) },
+      { label: uiText.value.todo.editList, key: "edit-list", icon: renderIcon(CreateOutline) },
+      { label: uiText.value.todo.deleteList, key: "delete-list", disabled: effectiveTodoLists.value.length <= 1, icon: renderIcon(TrashOutline) },
+      { ...guideMenuOption.value, icon: renderIcon(HelpCircleOutline) },
     ];
   }
   const options: DropdownOption[] = [];
   const todo = getMenuTodo();
   if (!menu.value?.id) {
-    options.push({ label: uiText.value.todo.newList, key: "create-list" });
+    options.push({ label: uiText.value.todo.newList, key: "create-list", icon: renderIcon(ListOutline) });
   }
   if (menu.value?.id) {
-    options.push({ label: uiText.value.common.copy, key: "copy" });
+    options.push({ label: uiText.value.common.copy, key: "copy", icon: renderIcon(CopyOutline) });
     if (menu.value.target && canPasteTodoText(menu.value.period, menu.value.id, menu.value.target)) {
-      options.push({ label: uiText.value.common.paste, key: "paste" });
+      options.push({ label: uiText.value.common.paste, key: "paste", icon: renderIcon(ClipboardOutline) });
     }
     options.push({
       label: isValidDeadlineAt(todo?.notifyAt) ? uiText.value.todo.editNotify : uiText.value.todo.setNotify,
       key: "notify",
+      icon: renderIcon(NotificationsOutline),
     });
-    options.push({ label: uiText.value.common.delete, key: "delete" });
-    options.push({ label: todo?.starred ? uiText.value.todo.unstar : uiText.value.todo.star, key: "star" });
+    options.push({ label: uiText.value.common.delete, key: "delete", icon: renderIcon(TrashOutline) });
+    options.push({ label: todo?.starred ? uiText.value.todo.unstar : uiText.value.todo.star, key: "star", icon: renderIcon(todo?.starred ? Star : StarOutline) });
   }
-  options.push(guideMenuOption.value);
+  options.push({ ...guideMenuOption.value, icon: renderIcon(HelpCircleOutline) });
   return options;
 });
 
@@ -986,6 +1005,17 @@ function isCompletedVisible(period: TodoListId): boolean {
   return props.showCompleted?.[period] ?? true;
 }
 
+function handleTodoDragEnter(event: DragEvent): void {
+  const types = Array.from(event.dataTransfer?.types ?? []);
+  if (types.includes("text/plain") && !types.includes("Files")) {
+    isDragHover.value = true;
+  }
+}
+
+function handleTodoDragLeave(): void {
+  isDragHover.value = false;
+}
+
 function getTodos(period: TodoListId): TodoItem[] {
   return props.todos[period] ?? [];
 }
@@ -1013,7 +1043,7 @@ function buildTodoListEntries(period: TodoListId, todos: TodoItem[], deferredDon
 </script>
 
 <template>
-  <section class="panel todo-panel" aria-labelledby="todo-title">
+  <section class="panel todo-panel" :class="{ 'drag-hover': isDragHover }" aria-labelledby="todo-title" @dragenter="handleTodoDragEnter" @dragleave="handleTodoDragLeave" @drop="handleTodoDragLeave">
     <Transition name="section-reveal" :duration="240">
       <section v-if="todayFocus.length" class="today-focus-section" :aria-label="uiText.todo.todayFocus">
         <div class="today-focus-heading" @contextmenu="openTodayFocusTitleMenu">
