@@ -1741,6 +1741,7 @@ function moveItem<T extends { id: string }>(items: T[], dragId: string, targetId
       @no="cancelCompanionAction"
       @pause="pauseBubbleTimer"
       @resume="resumeBubbleTimer"
+      @gif-theme-change="(theme: string) => updateCompanionGifTheme(theme as CompanionGifTheme)"
     />
     <div v-if="!isMobileBlocked" class="top-actions">
       <span
