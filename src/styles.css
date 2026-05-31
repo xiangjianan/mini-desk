@@ -2074,6 +2074,11 @@ body:has(.image-preview) .image-preview .n-scrollbar {
   transition: outline 0.15s ease;
 }
 
+.shortcut-help-modal {
+  max-width: 420px !important;
+  margin: 0 auto;
+}
+
 .shortcut-help-modal .n-card__content {
   padding: 0 !important;
 }
@@ -2081,6 +2086,7 @@ body:has(.image-preview) .image-preview .n-scrollbar {
 .shortcut-help-content {
   max-height: 60vh;
   padding: 16px 20px;
+  box-sizing: border-box;
 }
 
 .shortcut-section {
