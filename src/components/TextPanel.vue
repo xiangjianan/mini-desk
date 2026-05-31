@@ -42,6 +42,7 @@ const emit = defineEmits<{
 
 const isDragHover = ref(false);
 const isLocalDrag = ref(false);
+const pointerDownOnSelection = ref(false);
 const textareaRef = ref<HTMLTextAreaElement | null>(null);
 const text = ref(textLinesToEditorText(props.lines));
 const focused = ref(false);
@@ -173,6 +174,7 @@ function handleDragEnter(event: DragEvent): void {
 function handleDragLeaveClear(): void {
   isDragHover.value = false;
   isLocalDrag.value = false;
+  pointerDownOnSelection.value = false;
 }
 
 function getTextOffsetAtPoint(textarea: HTMLTextAreaElement, clientX: number, clientY: number): number {
@@ -254,8 +256,23 @@ async function startEditing(event: MouseEvent): Promise<void> {
 }
 
 function handlePointerDown(event: PointerEvent): void {
+  // Check if pointer is on selected text for drag prevention
+  const textarea = event.currentTarget as HTMLTextAreaElement;
+  const selStart = textarea.selectionStart ?? 0;
+  const selEnd = textarea.selectionEnd ?? 0;
+  if (selStart !== selEnd) {
+    try {
+      const offset = getTextOffsetAtPoint(textarea, event.clientX, event.clientY);
+      pointerDownOnSelection.value = offset >= selStart && offset <= selEnd;
+    } catch {
+      pointerDownOnSelection.value = true; // fallback: allow drag
+    }
+  } else {
+    pointerDownOnSelection.value = false;
+  }
+
   if (event.pointerType !== "touch") return;
-  unlockTextareaBeforeNativeFocus(event.currentTarget as HTMLTextAreaElement);
+  unlockTextareaBeforeNativeFocus(textarea);
 }
 
 function handleTouchStart(event: TouchEvent): void {
@@ -339,6 +356,10 @@ function closeMenu(): void {
 }
 
 function handleTextDragStart(event: DragEvent): void {
+  if (!pointerDownOnSelection.value) {
+    event.preventDefault();
+    return;
+  }
   const target = event.currentTarget as HTMLTextAreaElement;
   const range = getTextSelectionRange(target);
   const selectedText = target.value.slice(range.start, range.end);
