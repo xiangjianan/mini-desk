@@ -42,7 +42,7 @@ const emit = defineEmits<{
 
 const isDragHover = ref(false);
 const isLocalDrag = ref(false);
-const pointerDownOnSelection = ref(false);
+const pointerDownOnSelection = ref(true);
 const textareaRef = ref<HTMLTextAreaElement | null>(null);
 const text = ref(textLinesToEditorText(props.lines));
 const focused = ref(false);
