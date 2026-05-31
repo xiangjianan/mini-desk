@@ -314,6 +314,7 @@ function handleListClick(event: MouseEvent, period: TodoPeriod): void {
 }
 
 function handleTodoTextDrop(event: DragEvent, period: TodoPeriod): void {
+  isDragHover.value = false;
   if (draggedListId.value) {
     event.preventDefault();
     event.stopPropagation();
