@@ -746,24 +746,6 @@ h3 {
   opacity: 0.45;
 }
 
-.quick-reorder-move,
-.quick-reorder-enter-active,
-.quick-reorder-leave-active {
-  transition:
-    transform 0.22s cubic-bezier(0.2, 0, 0, 1),
-    opacity 0.18s ease;
-}
-
-.quick-reorder-enter-from,
-.quick-reorder-leave-to {
-  opacity: 0;
-  transform: scale(0.85);
-}
-
-.quick-reorder-leave-active {
-  position: absolute;
-}
-
 .quick-form {
   display: grid;
   gap: 14px;
@@ -1267,14 +1249,6 @@ h3 {
 }
 
 .deadline-overdue .todo-deadline-label {
-  color: #e88;
-}
-
-.deadline-due-soon .todo-deadline-label {
-  color: #e88;
-}
-
-.deadline-upcoming .todo-deadline-label {
   color: #e88;
 }
 
@@ -2072,7 +2046,7 @@ body:has(.image-preview) .image-preview .n-scrollbar {
 .panel.drag-hover,
 .text-panel.drag-hover,
 .split-block.drag-hover,
-.todo-panel.drag-hover {
+.todo-section.drag-hover {
   outline: 2px dashed var(--line-focus);
   outline-offset: -2px;
   transition: outline 0.15s ease;

@@ -96,7 +96,7 @@ const dragged = ref<DraggedTodo | null>(null);
 const draggedListId = ref<TodoListId | null>(null);
 const editingTodoKey = ref<string | null>(null);
 const selectedMenuTodoKey = ref<string | null>(null);
-const isDragHover = ref(false);
+const dragHoverListId = ref<TodoListId | null>(null);
 const notifyPickerRef = ref<HTMLElement | null>(null);
 const notifyPicker = ref<{
   period: TodoPeriod;
@@ -314,7 +314,7 @@ function handleListClick(event: MouseEvent, period: TodoPeriod): void {
 }
 
 function handleTodoTextDrop(event: DragEvent, period: TodoPeriod): void {
-  isDragHover.value = false;
+  dragHoverListId.value = null;
   if (draggedListId.value) {
     event.preventDefault();
     event.stopPropagation();
@@ -1009,22 +1009,20 @@ function isCompletedVisible(period: TodoListId): boolean {
   return props.showCompleted?.[period] ?? true;
 }
 
-function handleTodoDragEnter(event: DragEvent): void {
-  const types = Array.from(event.dataTransfer?.types ?? []);
-  if (types.includes("text/plain") && !types.includes("Files")) {
-    isDragHover.value = true;
-  }
+function getListIdFromDragEvent(event: DragEvent): TodoListId | null {
+  const el = (event.target as HTMLElement)?.closest<HTMLElement>("[data-list-id]");
+  return (el?.dataset.listId as TodoListId) ?? null;
 }
 
 function handleTodoDragOver(event: DragEvent): void {
   const types = Array.from(event.dataTransfer?.types ?? []);
   if (types.includes("text/plain") && !types.includes("Files")) {
-    isDragHover.value = true;
+    dragHoverListId.value = getListIdFromDragEvent(event);
   }
 }
 
 function handleTodoDragLeave(): void {
-  isDragHover.value = false;
+  dragHoverListId.value = null;
 }
 
 function getTodos(period: TodoListId): TodoItem[] {
@@ -1054,7 +1052,7 @@ function buildTodoListEntries(period: TodoListId, todos: TodoItem[], deferredDon
 </script>
 
 <template>
-  <section class="panel todo-panel" :class="{ 'drag-hover': isDragHover }" aria-labelledby="todo-title" @dragenter="handleTodoDragEnter" @dragover="handleTodoDragOver" @dragleave="handleTodoDragLeave" @drop="handleTodoDragLeave" @dragend="handleTodoDragLeave">
+  <section class="panel todo-panel" aria-labelledby="todo-title" @dragleave="handleTodoDragLeave" @drop="handleTodoDragLeave" @dragend="handleTodoDragLeave">
     <Transition name="section-reveal" :duration="240">
       <section v-if="todayFocus.length" class="today-focus-section" :aria-label="uiText.todo.todayFocus">
         <div class="today-focus-heading" @contextmenu="openTodayFocusTitleMenu">
@@ -1129,12 +1127,12 @@ function buildTodoListEntries(period: TodoListId, todos: TodoItem[], deferredDon
         :key="list.id"
         :ref="(element) => setTodoSectionRef(list.id, element as Element | null)"
         class="todo-section"
-        :class="{ 'is-focused': focusedListId === list.id, 'is-collapsed': list.collapsed, 'is-compact': true, 'is-list-dragging': draggedListId === list.id }"
+        :class="{ 'is-focused': focusedListId === list.id, 'is-collapsed': list.collapsed, 'is-compact': true, 'is-list-dragging': draggedListId === list.id, 'drag-hover': dragHoverListId === list.id }"
         :data-list-id="list.id"
         :data-period="list.id"
         @click="handleSectionGuideClick"
         @contextmenu="openSectionMenu($event, list.id)"
-        @dragover.prevent
+        @dragover.prevent="handleTodoDragOver"
         @drop="handleListSectionDrop($event, list.id)"
       >
         <div

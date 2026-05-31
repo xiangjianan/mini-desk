@@ -303,8 +303,8 @@ describe("QuickButtons", () => {
     const source = readSource("components/QuickButtons.vue");
     const styles = readSource("styles.css");
 
-    expect(source).toContain('<TransitionGroup name="quick-reorder" tag="div" class="quick-buttons">');
-    expect(styles).toMatch(/\.quick-reorder-move,[\s\S]*?\.quick-reorder-enter-active,[\s\S]*?\.quick-reorder-leave-active\s*\{[^}]*transform 0\.22s/s);
+    expect(source).toContain(':css="false"');
+    expect(source).toContain('onQuickBeforeMove');
     expect(styles).toMatch(/\.quick-button\.is-dragging\s*\{[^}]*opacity: 0\.45/s);
 
     await wrapper.findAll(".quick-button")[0].trigger("dragstart");

@@ -41,6 +41,7 @@ const form = reactive<{ title: string; value: string; type: QuickButtonType }>({
 const menu = ref<{ x: number; y: number; id?: string; anchor?: HTMLElement } | null>(null);
 const draggingId = ref<string | null>(null);
 const isDragHover = ref(false);
+const leavingHiddenIds = new Set<string>();
 const uiText = computed(() => getUiText(props.language));
 const guideMenuOption = computed<DropdownOption>(() => ({ ...GUIDE_MENU_OPTION, label: uiText.value.common.tips }));
 const exclusiveMenu = createExclusiveContextMenu(closeMenu);
@@ -168,7 +169,11 @@ function handleMenuSelect(key: string): void {
   if (key === "guide" && anchor) emit("guide", "quickButtons", anchor, true);
   if (!id) return;
   if (key === "edit") openEdit(id);
-  if (key === "toggle-hidden") emit("toggleHidden", id);
+  if (key === "toggle-hidden") {
+    const btn = props.buttons.find((b) => b.id === id);
+    if (btn && !btn.hidden) leavingHiddenIds.add(id);
+    emit("toggleHidden", id);
+  }
   if (key === "delete") emit("delete", id, anchor);
 }
 
@@ -210,6 +215,60 @@ function handleQuickDrop(event: DragEvent): void {
 
   emit("save", { title, value: text.trim(), type });
 }
+
+const MOVE_DURATION = 220;
+
+function onQuickBeforeEnter(el: Element): void {
+  const e = el as HTMLElement;
+  e.style.opacity = "0";
+}
+
+function onQuickEnter(el: Element, done: () => void): void {
+  const e = el as HTMLElement;
+  requestAnimationFrame(() => {
+    e.style.transition = `opacity 0.18s ease, transform 0.22s cubic-bezier(0.2, 0, 0, 1)`;
+    e.style.opacity = "1";
+  });
+  setTimeout(done, 220);
+}
+
+function onQuickAfterEnter(el: Element): void {
+  const e = el as HTMLElement;
+  e.style.transition = "";
+  e.style.opacity = "";
+}
+
+function onQuickBeforeLeave(el: Element): void {
+  const e = el as HTMLElement;
+  const id = e.dataset.id;
+  if (id && leavingHiddenIds.has(id)) {
+    e.style.display = "none";
+    leavingHiddenIds.delete(id);
+  }
+}
+
+function onQuickLeave(el: Element, done: () => void): void {
+  done();
+}
+
+function onQuickAfterLeave(el: Element): void {
+  const e = el as HTMLElement;
+  e.style.display = "";
+}
+
+function onQuickBeforeMove(el: Element): void {
+  const e = el as HTMLElement;
+  e.style.transition = `transform ${MOVE_DURATION}ms cubic-bezier(0.2, 0, 0, 1)`;
+}
+
+function onQuickMove(el: Element, done: () => void): void {
+  setTimeout(done, MOVE_DURATION);
+}
+
+function onQuickAfterMove(el: Element): void {
+  const e = el as HTMLElement;
+  e.style.transition = "";
+}
 </script>
 
 <template>
@@ -246,12 +305,26 @@ function handleQuickDrop(event: DragEvent): void {
     </div>
 
     <NScrollbar class="quick-buttons-scrollbar" :aria-label="uiText.quick.list" @click="closeMenu" @contextmenu="openAreaMenu">
-      <TransitionGroup name="quick-reorder" tag="div" class="quick-buttons">
+      <TransitionGroup
+        :css="false"
+        tag="div"
+        class="quick-buttons"
+        @before-enter="onQuickBeforeEnter"
+        @enter="onQuickEnter"
+        @after-enter="onQuickAfterEnter"
+        @before-leave="onQuickBeforeLeave"
+        @leave="onQuickLeave"
+        @after-leave="onQuickAfterLeave"
+        @before-move="onQuickBeforeMove"
+        @move="onQuickMove"
+        @after-move="onQuickAfterMove"
+      >
         <button
           v-for="button in visibleButtons"
           :key="button.id"
           class="quick-button"
           :class="{ 'is-hidden': button.hidden, 'is-copy': button.type === 'text', 'is-dragging': draggingId === button.id }"
+          :data-id="button.id"
           type="button"
           draggable="true"
           @click="emit('copy', button.id, $event.currentTarget as HTMLElement)"
