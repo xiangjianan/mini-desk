@@ -164,6 +164,7 @@ function openTitleMenu(event: MouseEvent): void {
 }
 
 function handleDragEnter(event: DragEvent): void {
+  if (isLocalDrag.value) return;
   const types = Array.from(event.dataTransfer?.types ?? []);
   if (types.includes("text/plain") && !types.includes("Files")) {
     isDragHover.value = true;
@@ -203,7 +204,10 @@ function getTextOffsetAtPoint(textarea: HTMLTextAreaElement, clientX: number, cl
 }
 
 function handleDragOver(event: DragEvent): void {
-  if (isLocalDrag.value) return;
+  if (isLocalDrag.value) {
+    if (event.dataTransfer) event.dataTransfer.dropEffect = "none";
+    return;
+  }
   const types = Array.from(event.dataTransfer?.types ?? []);
   if (types.includes("text/plain") || types.includes("text/uri-list")) {
     event.preventDefault();
@@ -211,9 +215,28 @@ function handleDragOver(event: DragEvent): void {
   }
 }
 
+function handleTextareaDragOver(event: DragEvent): void {
+  if (isLocalDrag.value) {
+    if (event.dataTransfer) event.dataTransfer.dropEffect = "none";
+    return;
+  }
+  event.preventDefault();
+}
+
+function handleTextareaDrop(event: DragEvent): void {
+  if (isLocalDrag.value) {
+    event.preventDefault();
+    event.stopPropagation();
+    isLocalDrag.value = false;
+    return;
+  }
+}
+
 function handleExternalTextDrop(event: DragEvent): void {
   isDragHover.value = false;
+  const wasLocal = isLocalDrag.value;
   isLocalDrag.value = false;
+  if (wasLocal) return;
   const files = Array.from(event.dataTransfer?.files ?? []);
   if (files.length > 0) return;
   const dropped = event.dataTransfer?.getData("text/plain") ?? "";
@@ -612,6 +635,8 @@ function restoreSelection(textarea: HTMLTextAreaElement, selection: { start: num
         @pointerdown="handlePointerDown"
         @touchstart="handleTouchStart"
         @dragstart="handleTextDragStart"
+        @dragover="handleTextareaDragOver"
+        @drop="handleTextareaDrop"
         @select="rememberSelection"
         @click="startEditing"
         @dblclick="startEditing"
