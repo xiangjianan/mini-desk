@@ -90,6 +90,11 @@ function openGifMenu(event: MouseEvent): void {
   gifMenu.value = { x: event.clientX, y: event.clientY };
 }
 
+function onSurfaceContextmenu(event: MouseEvent): void {
+  if (!shouldRenderGif.value) return;
+  openGifMenu(event);
+}
+
 function handleGifMenuSelect(key: string): void {
   gifMenu.value = null;
   if (key === "hide") {
@@ -332,6 +337,7 @@ function isPointInsideElement(x: number, y: number, element: HTMLElement | null)
     @mouseenter="handleCompanionMouseenter"
     @mousemove="handleCompanionMousemove"
     @mouseleave="handleCompanionMouseleave"
+    @contextmenu="onSurfaceContextmenu"
   >
     <NPopover
       :key="popoverKey"
@@ -347,7 +353,7 @@ function isPointInsideElement(x: number, y: number, element: HTMLElement | null)
       :style="{ maxWidth: '240px', '--n-box-shadow': 'none' }"
     >
       <template #trigger>
-        <img v-if="shouldRenderGif" :src="gifSrc" alt="" @contextmenu="openGifMenu" />
+        <img v-if="shouldRenderGif" :src="gifSrc" alt="" />
         <span v-else class="companion-popover-anchor" aria-hidden="true" />
       </template>
 
