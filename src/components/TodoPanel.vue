@@ -1015,6 +1015,13 @@ function handleTodoDragEnter(event: DragEvent): void {
   }
 }
 
+function handleTodoDragOver(event: DragEvent): void {
+  const types = Array.from(event.dataTransfer?.types ?? []);
+  if (types.includes("text/plain") && !types.includes("Files")) {
+    isDragHover.value = true;
+  }
+}
+
 function handleTodoDragLeave(): void {
   isDragHover.value = false;
 }
@@ -1046,7 +1053,7 @@ function buildTodoListEntries(period: TodoListId, todos: TodoItem[], deferredDon
 </script>
 
 <template>
-  <section class="panel todo-panel" :class="{ 'drag-hover': isDragHover }" aria-labelledby="todo-title" @dragenter="handleTodoDragEnter" @dragleave="handleTodoDragLeave" @drop="handleTodoDragLeave" @dragend="handleTodoDragLeave">
+  <section class="panel todo-panel" :class="{ 'drag-hover': isDragHover }" aria-labelledby="todo-title" @dragenter="handleTodoDragEnter" @dragover="handleTodoDragOver" @dragleave="handleTodoDragLeave" @drop="handleTodoDragLeave" @dragend="handleTodoDragLeave">
     <Transition name="section-reveal" :duration="240">
       <section v-if="todayFocus.length" class="today-focus-section" :aria-label="uiText.todo.todayFocus">
         <div class="today-focus-heading" @contextmenu="openTodayFocusTitleMenu">
