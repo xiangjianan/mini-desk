@@ -1259,7 +1259,7 @@ describe("App shell", () => {
 
       expect(NotificationStub.requestPermission).toHaveBeenCalledTimes(1);
       expect(notificationSpy).toHaveBeenCalledTimes(1);
-      expect(notificationSpy).toHaveBeenCalledWith("☑️ 待办", {
+      expect(notificationSpy).toHaveBeenCalledWith("【☑️ 待办】", {
         body: "喝水",
         tag: `todo-1:${notifyAt}`,
         icon: expect.stringMatching(/^https?:\/\/.*kun.*\.jpg/),
@@ -1302,7 +1302,7 @@ describe("App shell", () => {
 
       await vi.advanceTimersByTimeAsync(1);
       expect(notificationSpy).toHaveBeenCalledTimes(1);
-      expect(notificationSpy).toHaveBeenCalledWith("☑️ 待办", {
+      expect(notificationSpy).toHaveBeenCalledWith("【☑️ 待办】", {
         body: "喝水",
         tag: `todo-1:${notifyAt}`,
         icon: expect.stringMatching(/^https?:\/\/.*kun.*\.jpg/),
@@ -1353,7 +1353,7 @@ describe("App shell", () => {
       await vi.advanceTimersByTimeAsync(20_000);
       expect(constructorCalls).toBe(2);
       expect(notificationSpy).toHaveBeenCalledTimes(1);
-      expect(notificationSpy).toHaveBeenCalledWith("☑️ 待办", {
+      expect(notificationSpy).toHaveBeenCalledWith("【☑️ 待办】", {
         body: "喝水",
         tag: `todo-1:${notifyAt}`,
         icon: expect.stringMatching(/^https?:\/\/.*kun.*\.jpg/),
@@ -1395,7 +1395,7 @@ describe("App shell", () => {
       wrapper.getComponent(TodoPanel).vm.$emit("notify", "morning", "todo-1", notifyAt);
       await vi.advanceTimersByTimeAsync(30_000);
 
-      expect(notificationSpy).toHaveBeenCalledWith("☑️ 待办", {
+      expect(notificationSpy).toHaveBeenCalledWith("【☑️ 待办】", {
         body: "喝水",
         tag: `todo-1:${notifyAt}`,
       });

@@ -1308,6 +1308,15 @@ async function prepareTodoNotifications(): Promise<void> {
   refreshTodoNotifications();
 }
 
+const URL_LINE_PATTERN = /^https?:\/\//i;
+
+function formatNotificationBody(text: string, language: AppLanguage): string {
+  const prefix = language === "en" ? "From ——\n" : "来自于——\n";
+  const lines = text.split("\n");
+  const result = lines.map((line) => (URL_LINE_PATTERN.test(line.trim()) ? prefix + line : line));
+  return result.join("\n");
+}
+
 function refreshTodoNotifications(): void {
   triggerDueTodoNotifications();
   scheduleNextTodoNotification();
@@ -1324,13 +1333,15 @@ function triggerDueTodoNotifications(): void {
       if (todo.done || !Number.isFinite(todo.notifyAt) || todo.notifyAt === undefined || todo.notifyAt > now) continue;
       const key = getTodoNotificationKey(period, todo);
       if (sentTodoNotifications.has(key)) continue;
+      const title = `【${getTodoListTitle(period)}】`;
+      const body = formatNotificationBody(todo.text, state.language);
       const options: NotificationOptions = {
-        body: todo.text,
+        body,
         tag: getTodoNotificationTag(todo),
       };
       if (notificationIcon) options.icon = notificationIcon;
       try {
-        new notificationApi(getTodoListTitle(period), options);
+        new notificationApi(title, options);
         sentTodoNotifications.add(key);
       } catch (error) {
         console.warn("Failed to show reminder notification", error);
