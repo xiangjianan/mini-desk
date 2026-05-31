@@ -2085,8 +2085,10 @@ body:has(.image-preview) .image-preview .n-scrollbar {
 
 .shortcut-help-content {
   max-height: 60vh;
-  padding: 16px 20px 32px 20px;
-  box-sizing: border-box;
+}
+
+.shortcut-help-inner {
+  padding: 16px 20px 24px 20px;
 }
 
 .shortcut-section {

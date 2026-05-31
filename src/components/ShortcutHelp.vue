@@ -19,11 +19,13 @@ const sections = computed(() => SHORTCUT_HELP[props.language === "en" ? "en" : "
 <template>
   <NModal :show="show" preset="card" :title="uiText.settings.shortcutHelp" class="shortcut-help-modal" @update:show="(v: boolean) => !v && emit('close')">
     <NScrollbar class="shortcut-help-content">
-      <div v-for="section in sections" :key="section.area" class="shortcut-section">
-        <h4>{{ section.area }}</h4>
-        <div v-for="item in section.shortcuts" :key="item.key" class="shortcut-row">
-          <kbd>{{ item.key }}</kbd>
-          <span>{{ item.desc }}</span>
+      <div class="shortcut-help-inner">
+        <div v-for="section in sections" :key="section.area" class="shortcut-section">
+          <h4>{{ section.area }}</h4>
+          <div v-for="item in section.shortcuts" :key="item.key" class="shortcut-row">
+            <kbd>{{ item.key }}</kbd>
+            <span>{{ item.desc }}</span>
+          </div>
         </div>
       </div>
     </NScrollbar>
