@@ -42,7 +42,6 @@ const emit = defineEmits<{
 
 const isDragHover = ref(false);
 const isLocalDrag = ref(false);
-const pointerDownOnSelection = ref(true);
 const textareaRef = ref<HTMLTextAreaElement | null>(null);
 const text = ref(textLinesToEditorText(props.lines));
 const focused = ref(false);
@@ -174,7 +173,6 @@ function handleDragEnter(event: DragEvent): void {
 function handleDragLeaveClear(): void {
   isDragHover.value = false;
   isLocalDrag.value = false;
-  pointerDownOnSelection.value = false;
 }
 
 function getTextOffsetAtPoint(textarea: HTMLTextAreaElement, clientX: number, clientY: number): number {
@@ -258,17 +256,17 @@ async function startEditing(event: MouseEvent): Promise<void> {
 function handlePointerDown(event: PointerEvent): void {
   // Check if pointer is on selected text for drag prevention
   const textarea = event.currentTarget as HTMLTextAreaElement;
-  const selStart = textarea.selectionStart ?? 0;
-  const selEnd = textarea.selectionEnd ?? 0;
-  if (selStart !== selEnd) {
+  const prev = lastTextSelection.value;
+  if (prev && prev.start !== prev.end) {
     try {
       const offset = getTextOffsetAtPoint(textarea, event.clientX, event.clientY);
-      pointerDownOnSelection.value = offset >= selStart && offset <= selEnd;
+      const onSelection = offset >= prev.start && offset <= prev.end;
+      textarea.draggable = onSelection;
     } catch {
-      pointerDownOnSelection.value = true; // fallback: allow drag
+      textarea.draggable = true;
     }
   } else {
-    pointerDownOnSelection.value = false;
+    textarea.draggable = false;
   }
 
   if (event.pointerType !== "touch") return;
@@ -320,12 +318,14 @@ function rememberCaret(event: MouseEvent): void {
     return;
   }
   if (event.button !== 2) lastTextSelection.value = null;
+  textarea.draggable = false;
   lastCaret.value = textarea.selectionStart ?? textarea.value.length;
 }
 
 function rememberSelection(event: Event): void {
   const textarea = event.currentTarget as HTMLTextAreaElement;
   rememberTextSelection(textarea);
+  textarea.draggable = hasSelection(textarea);
   if (hasSelection(textarea) && !editing.value) {
     startEditingFromTextarea(textarea);
     restoreSelection(textarea, getTextSelectionRange(textarea));
@@ -356,10 +356,6 @@ function closeMenu(): void {
 }
 
 function handleTextDragStart(event: DragEvent): void {
-  if (!pointerDownOnSelection.value) {
-    event.preventDefault();
-    return;
-  }
   const target = event.currentTarget as HTMLTextAreaElement;
   const range = getTextSelectionRange(target);
   const selectedText = target.value.slice(range.start, range.end);

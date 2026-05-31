@@ -18,7 +18,7 @@ const sections = computed(() => SHORTCUT_HELP[props.language === "en" ? "en" : "
 
 <template>
   <NModal :show="show" preset="card" :title="uiText.settings.shortcutHelp" class="shortcut-help-modal" @update:show="(v: boolean) => !v && emit('close')">
-    <NScrollbar class="shortcut-help-content">
+    <NScrollbar class="shortcut-help-content" @wheel.stop>
       <div class="shortcut-help-inner">
         <div v-for="section in sections" :key="section.area" class="shortcut-section">
           <h4>{{ section.area }}</h4>
