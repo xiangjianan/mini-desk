@@ -41,6 +41,7 @@ const emit = defineEmits<{
 }>();
 
 const isDragHover = ref(false);
+const isLocalDrag = ref(false);
 const textareaRef = ref<HTMLTextAreaElement | null>(null);
 const text = ref(textLinesToEditorText(props.lines));
 const focused = ref(false);
@@ -171,6 +172,7 @@ function handleDragEnter(event: DragEvent): void {
 
 function handleDragLeaveClear(): void {
   isDragHover.value = false;
+  isLocalDrag.value = false;
 }
 
 function getTextOffsetAtPoint(textarea: HTMLTextAreaElement, clientX: number, clientY: number): number {
@@ -201,9 +203,9 @@ function getTextOffsetAtPoint(textarea: HTMLTextAreaElement, clientX: number, cl
 }
 
 function handleDragOver(event: DragEvent): void {
+  if (isLocalDrag.value) return;
   const types = Array.from(event.dataTransfer?.types ?? []);
-  const isInternalDrag = (event.target as HTMLElement)?.closest?.("textarea");
-  if (!isInternalDrag && (types.includes("text/plain") || types.includes("text/uri-list"))) {
+  if (types.includes("text/plain") || types.includes("text/uri-list")) {
     event.preventDefault();
     isDragHover.value = true;
   }
@@ -211,6 +213,7 @@ function handleDragOver(event: DragEvent): void {
 
 function handleExternalTextDrop(event: DragEvent): void {
   isDragHover.value = false;
+  isLocalDrag.value = false;
   const files = Array.from(event.dataTransfer?.files ?? []);
   if (files.length > 0) return;
   const dropped = event.dataTransfer?.getData("text/plain") ?? "";
@@ -343,6 +346,7 @@ function handleTextDragStart(event: DragEvent): void {
     event.preventDefault();
     return;
   }
+  isLocalDrag.value = true;
   event.dataTransfer.effectAllowed = "copy";
   event.dataTransfer.setData("text/plain", selectedText);
 }
@@ -568,7 +572,7 @@ function restoreSelection(textarea: HTMLTextAreaElement, selection: { start: num
           ref="titleRef"
           :id="titleId"
           :value="title"
-          :edit-label="uiText.common.edit"
+          :edit-label="uiText.common.rename"
           @update="(id, value) => emit('titleUpdate', id, value)"
         />
       </h2>
