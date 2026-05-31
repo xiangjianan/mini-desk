@@ -229,7 +229,7 @@ function handleQuickDrop(event: DragEvent): void {
           ref="titleRef"
           id="quick-title"
           :value="title"
-          :edit-label="uiText.common.edit"
+          :edit-label="uiText.common.rename"
           @update="(id, value) => emit('titleUpdate', id, value)"
         />
       </h2>

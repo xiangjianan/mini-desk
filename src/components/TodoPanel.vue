@@ -1054,7 +1054,7 @@ function buildTodoListEntries(period: TodoListId, todos: TodoItem[], deferredDon
             ref="todayFocusTitleRef"
             :id="todayFocusTitleId"
             :value="titles[todayFocusTitleId]"
-            :edit-label="uiText.common.edit"
+            :edit-label="uiText.common.rename"
             @update="(id, value) => emit('titleUpdate', id, value)"
           />
         </div>
