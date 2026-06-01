@@ -19,6 +19,7 @@ const props = withDefaults(defineProps<{
 
 const emit = defineEmits<{
   update: [id: string, value: string];
+  editState: [id: string, editing: boolean];
 }>();
 
 const editing = ref(false);
@@ -54,6 +55,7 @@ watch(
 async function enterEditing(): Promise<void> {
   closeMenu();
   composing.value = false;
+  if (!editing.value) emit("editState", props.id, true);
   editing.value = true;
   await nextTick();
   const input = inputRef.value;
@@ -98,6 +100,7 @@ async function handleMenuSelect(key: string): Promise<void> {
 function commit(): void {
   const value = draft.value.trim() || props.value;
   composing.value = false;
+  if (editing.value) emit("editState", props.id, false);
   editing.value = false;
   closeMenu();
   emit("update", props.id, value);
@@ -105,6 +108,7 @@ function commit(): void {
 
 function cancel(): void {
   composing.value = false;
+  if (editing.value) emit("editState", props.id, false);
   editing.value = false;
   closeMenu();
 }

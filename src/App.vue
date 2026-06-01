@@ -56,6 +56,7 @@ import type { AppLanguage, BoardState, CompanionGifTheme, DraggedTodo, GuideKey,
 const MOBILE_BREAKPOINT_QUERY = "(max-width: 900px)";
 const TODO_NOTIFICATION_FALLBACK_INTERVAL_MS = 30_000;
 const MAX_TODO_NOTIFICATION_TIMEOUT_MS = 2_147_483_647;
+const UNDO_HISTORY_LIMIT = 50;
 const mobileCompanionPosition: { right: string; bottom: string } = { right: "18px", bottom: "28px" };
 
 function getInitialMobileBlocked(): boolean {
@@ -63,6 +64,8 @@ function getInitialMobileBlocked(): boolean {
 }
 
 const state = reactive<BoardState>(loadState());
+const undoSnapshots = ref<string[]>([]);
+const lastUndoSnapshot = ref(exportJsonState(state));
 const activePreviewId = ref<string | undefined>();
 const bubbleMessage = ref("");
 const bubbleLink = ref<{ text: string; href: string } | null>(null);
@@ -102,6 +105,7 @@ const shortcutHelpVisible = ref(false);
 const isMobileBlocked = ref(getInitialMobileBlocked());
 const mobileMediaQuery = ref<MediaQueryList | null>(null);
 let appMounted = false;
+let restoringUndo = false;
 
 type BubbleOptions = {
   hideCompanionAfter?: boolean;
@@ -380,12 +384,14 @@ function handleCompanionBlur(): void {
 }
 
 function persistNow(): void {
+  recordUndoCheckpoint();
   markSaving();
   saveState(state);
   markSavedSoon();
 }
 
 function markDirty(): void {
+  recordUndoCheckpoint();
   window.clearTimeout(saveStatusTimer.value);
   saveStatus.value = "dirty";
 }
@@ -778,6 +784,12 @@ function createTodo(period: TodoPeriod, afterId?: string): void {
     if (blankTodo) {
       cancelEmptyTodoRemoval(blankTodo.period, blankTodo.id);
       if (blankTodo.period === period) {
+        const input = getTodoInput(blankTodo.period, blankTodo.id);
+        if (document.activeElement === input) {
+          input.blur();
+          blurEmptyTodo(blankTodo.period, blankTodo.id);
+          return;
+        }
         nextTick(() => focusTodoInput(blankTodo.period, blankTodo.id));
         return;
       }
@@ -820,13 +832,20 @@ function findOpenBlankTodo(): { period: TodoPeriod; id: string } | undefined {
 }
 
 function focusTodoInput(period: TodoPeriod, id: string): void {
-  const inputs = Array.from(document.querySelectorAll<HTMLInputElement>(".todo-input"))
-    .filter((item) => item.dataset.testid === `todo-input-${period}`);
-  const input = inputs.find((item) => item.dataset.todoId === id) ?? inputs.at(-1);
+  const input = getTodoInput(period, id) ?? getTodoInputs(period).at(-1);
   if (!input) return;
   const caret = input.value.length;
   input.focus({ preventScroll: true });
   input.setSelectionRange(caret, caret);
+}
+
+function getTodoInputs(period: TodoPeriod): HTMLInputElement[] {
+  return Array.from(document.querySelectorAll<HTMLInputElement>(".todo-input"))
+    .filter((item) => item.dataset.testid === `todo-input-${period}`);
+}
+
+function getTodoInput(period: TodoPeriod, id: string): HTMLInputElement | undefined {
+  return getTodoInputs(period).find((item) => item.dataset.todoId === id);
 }
 
 function updateTodo(period: TodoPeriod, id: string, text: string): void {
@@ -1069,37 +1088,116 @@ function suggestIssue(): void {
 
 function handleGlobalKeydown(event: KeyboardEvent): void {
   if (isMobileBlocked.value) return;
-  if (event.key === "Escape" && companionVisible.value) {
-    hideCompanion();
-    (document.activeElement as HTMLElement | null)?.blur();
+  if (event.defaultPrevented) return;
+  const previewId = activePreviewId.value;
+  if (previewId) {
+    if (event.key === "Escape" || event.key === " ") {
+      event.preventDefault();
+      activePreviewId.value = undefined;
+      return;
+    }
+    if (event.key === "Enter") {
+      event.preventDefault();
+      void copyImage(previewId, document.querySelector<HTMLElement>(".image-preview") ?? undefined);
+      return;
+    }
+    if (event.key === "Delete" || event.key === "Backspace") {
+      event.preventDefault();
+      deleteImage(previewId, document.querySelector<HTMLElement>(".image-preview") ?? undefined);
+      return;
+    }
+    if (event.key === "ArrowLeft" || event.key === "ArrowUp") {
+      event.preventDefault();
+      navigatePreview(-1);
+      return;
+    }
+    if (event.key === "ArrowRight" || event.key === "ArrowDown") {
+      event.preventDefault();
+      navigatePreview(1);
+      return;
+    }
+  }
+  if (isUndoShortcut(event) && !shouldSkipGlobalUndo(event.target)) {
+    event.preventDefault();
+    undoLastBoardChange();
+    return;
+  }
+  if (event.key === "Escape") {
+    const hadCompanion = companionVisible.value;
+    if (hadCompanion) hideCompanion();
+    const didBlur = blurActiveBoardElement();
+    if (hadCompanion || didBlur) event.preventDefault();
+    return;
   }
   if ((event.ctrlKey || event.metaKey) && event.key.toLowerCase() === "s") {
     event.preventDefault();
     flushTextSave();
     showSaveBubble();
   }
-  const previewId = activePreviewId.value;
-  if (previewId) {
-    if (event.key === "Escape" || event.key === " ") {
-      event.preventDefault();
-      activePreviewId.value = undefined;
-    }
-    if (event.key === "Enter") {
-      event.preventDefault();
-      void copyImage(previewId, document.querySelector<HTMLElement>(".image-preview") ?? undefined);
-    }
-    if (event.key === "Delete" || event.key === "Backspace") {
-      event.preventDefault();
-      deleteImage(previewId, document.querySelector<HTMLElement>(".image-preview") ?? undefined);
-    }
-    if (event.key === "ArrowLeft" || event.key === "ArrowUp") {
-      event.preventDefault();
-      navigatePreview(-1);
-    }
-    if (event.key === "ArrowRight" || event.key === "ArrowDown") {
-      event.preventDefault();
-      navigatePreview(1);
-    }
+}
+
+function isUndoShortcut(event: KeyboardEvent): boolean {
+  return (event.ctrlKey || event.metaKey) && !event.shiftKey && event.key.toLowerCase() === "z";
+}
+
+function shouldSkipGlobalUndo(target: EventTarget | null): boolean {
+  if (!(target instanceof HTMLElement)) return false;
+  if (target.isContentEditable) return true;
+  if (target.closest(".title-edit-input, .space-tab-edit-input, .todo-list-create-input, .gif-theme-custom-dialog")) return true;
+  if (target instanceof HTMLTextAreaElement && target.closest(".text-panel")) return true;
+  return false;
+}
+
+function blurActiveBoardElement(): boolean {
+  const active = document.activeElement;
+  if (!(active instanceof HTMLElement) || active === document.body) return false;
+  if (!active.closest(".board, .top-actions")) return false;
+  active.blur();
+  return true;
+}
+
+function recordUndoCheckpoint(): void {
+  if (restoringUndo) {
+    lastUndoSnapshot.value = exportJsonState(state);
+    return;
+  }
+  const current = exportJsonState(state);
+  if (current === lastUndoSnapshot.value) return;
+  undoSnapshots.value = [
+    ...undoSnapshots.value.slice(-(UNDO_HISTORY_LIMIT - 1)),
+    lastUndoSnapshot.value,
+  ];
+  lastUndoSnapshot.value = current;
+}
+
+function undoLastBoardChange(): void {
+  const snapshot = undoSnapshots.value.at(-1);
+  if (!snapshot) return;
+  undoSnapshots.value = undoSnapshots.value.slice(0, -1);
+  let nextState: BoardState;
+  try {
+    nextState = normalizeImportedState(JSON.parse(snapshot));
+  } catch {
+    lastUndoSnapshot.value = exportJsonState(state);
+    return;
+  }
+
+  restoringUndo = true;
+  try {
+    window.clearTimeout(textSaveTimer.value);
+    textSaveTimer.value = undefined;
+    emptyTodoRemovalTimers.forEach((timer) => window.clearTimeout(timer));
+    emptyTodoRemovalTimers.clear();
+    activePreviewId.value = undefined;
+    pendingEditSpaceId.value = null;
+    pendingEditTodoListId.value = null;
+    Object.assign(state, nextState);
+    markSaving();
+    saveState(state);
+    lastUndoSnapshot.value = exportJsonState(state);
+    markSavedSoon();
+  } finally {
+    restoringUndo = false;
   }
 }
 

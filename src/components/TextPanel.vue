@@ -277,19 +277,24 @@ async function startEditing(event: MouseEvent): Promise<void> {
 }
 
 function handlePointerDown(event: PointerEvent): void {
-  // Check if pointer is on selected text for drag prevention
   const textarea = event.currentTarget as HTMLTextAreaElement;
+  if (!hasSelection(textarea)) {
+    lastTextSelection.value = null;
+    textarea.draggable = false;
+  } else {
+    rememberTextSelection(textarea);
+  }
+
   const prev = lastTextSelection.value;
   if (prev && prev.start !== prev.end) {
     try {
       const offset = getTextOffsetAtPoint(textarea, event.clientX, event.clientY);
       const onSelection = offset >= prev.start && offset <= prev.end;
       textarea.draggable = onSelection;
+      if (!onSelection) lastTextSelection.value = null;
     } catch {
       textarea.draggable = true;
     }
-  } else {
-    textarea.draggable = false;
   }
 
   if (event.pointerType !== "touch") return;

@@ -321,6 +321,46 @@ describe("TodoPanel", () => {
     expect(wrapper.emitted("deleteList")?.[0]).toEqual(["morning", expect.any(HTMLElement)]);
   });
 
+  it("styles the centered collapse icon smaller and lighter than regular icon buttons", () => {
+    const styles = readFileSync(resolve(__dirname, "../styles.css"), "utf8");
+    const iconRule = styles.match(/\.todo-collapse-button \.n-icon,[\s\S]*?\.todo-collapse-button svg\s*\{([\s\S]*?)\}/)?.[1] ?? "";
+
+    expect(iconRule).toContain("font-size: 12px");
+    expect(iconRule).toContain("opacity: 0.55");
+  });
+
+  it("pauses reminder list dragging while the list title is being edited", async () => {
+    const wrapper = mount(TodoPanel, {
+      props: {
+        todoLists: defaultTodoLists,
+        todos: { morning: [], noon: [], evening: [] },
+        showCompleted: { morning: false, noon: false, evening: false },
+        titles: DEFAULT_TITLES,
+      },
+      global: {
+        stubs: {
+          Checkbox: checkboxStub,
+          Dropdown: dropdownStub,
+          NCheckbox: checkboxStub,
+          NDropdown: dropdownStub,
+          NTooltip: tooltipStub,
+        },
+      },
+    });
+    const dataTransfer = { effectAllowed: "", setData: vi.fn() };
+
+    await wrapper.get('.todo-section[data-list-id="morning"] .editable-title').trigger("dblclick");
+    await nextTick();
+    const dragEvent = new Event("dragstart", { bubbles: true, cancelable: true }) as DragEvent;
+    Object.defineProperty(dragEvent, "dataTransfer", { value: dataTransfer });
+    wrapper.get('.todo-section[data-list-id="morning"] .todo-heading').element.dispatchEvent(dragEvent);
+    await wrapper.vm.$nextTick();
+
+    expect(dragEvent.defaultPrevented).toBe(true);
+    expect(dataTransfer.setData).not.toHaveBeenCalled();
+    expect(wrapper.get('.todo-section[data-list-id="morning"] .todo-heading').attributes("draggable")).toBe("false");
+  });
+
   it("emits list reorder actions from header dragging without moving reminders", async () => {
     const wrapper = mount(TodoPanel, {
       props: {
@@ -749,6 +789,14 @@ describe("TodoPanel", () => {
       },
     ]);
     wrapper.unmount();
+  });
+
+  it("applies a flowing multicolor text effect to starred reminders", () => {
+    const styles = readFileSync(resolve(__dirname, "../styles.css"), "utf8");
+
+    expect(styles).toContain("@keyframes starred-text-flow");
+    expect(styles).toMatch(/\.todo-item\.is-starred \.todo-input,[\s\S]*?\.today-focus-item \.today-focus-input\s*\{[\s\S]*?linear-gradient/s);
+    expect(styles).toMatch(/\.todo-item\.is-starred \.todo-input,[\s\S]*?animation: starred-text-flow/s);
   });
 
   it("shows deadline labels and urgency classes in reminders and today's focus", () => {
@@ -2902,6 +2950,70 @@ describe("TodoPanel", () => {
     await wrapper.get('[data-testid="todo-list-noon"]').element.dispatchEvent(event);
 
     expect(wrapper.emitted("move")?.[0]).toEqual([{ period: "morning", id: "a" }, "noon"]);
+    expect(wrapper.emitted("createFromText")).toBeUndefined();
+  });
+
+  it("drops an internal reminder into another list at the mouse position instead of always at the bottom", async () => {
+    const wrapper = mount(TodoPanel, {
+      props: {
+        todos: {
+          morning: [{ id: "a", text: "拖拽项", done: false }],
+          noon: [
+            { id: "b", text: "中午第一项", done: false },
+            { id: "c", text: "中午第二项", done: false },
+          ],
+          evening: [],
+        },
+        titles: DEFAULT_TITLES,
+      },
+      global: {
+        stubs: {
+          Button: true,
+          Checkbox: checkboxStub,
+          Dropdown: dropdownStub,
+          NCheckbox: checkboxStub,
+          NDropdown: dropdownStub,
+          NTooltip: tooltipStub,
+        },
+      },
+    });
+    const noonItems = wrapper.findAll('.todo-section[data-list-id="noon"] .todo-item');
+    vi.spyOn(noonItems[0].element, "getBoundingClientRect").mockReturnValue({
+      x: 0,
+      y: 20,
+      width: 200,
+      height: 30,
+      top: 20,
+      left: 0,
+      right: 200,
+      bottom: 50,
+      toJSON: () => ({}),
+    });
+    vi.spyOn(noonItems[1].element, "getBoundingClientRect").mockReturnValue({
+      x: 0,
+      y: 60,
+      width: 200,
+      height: 30,
+      top: 60,
+      left: 0,
+      right: 200,
+      bottom: 90,
+      toJSON: () => ({}),
+    });
+    const event = new Event("drop", { bubbles: true, cancelable: true }) as DragEvent;
+    Object.defineProperty(event, "clientY", { value: 25 });
+    Object.defineProperty(event, "dataTransfer", {
+      value: {
+        files: [],
+        getData: () => "",
+      },
+    });
+
+    await wrapper.get('.todo-section[data-list-id="morning"] .todo-drag-handle').trigger("dragstart");
+    wrapper.get('[data-testid="todo-list-noon"]').element.dispatchEvent(event);
+    await wrapper.vm.$nextTick();
+
+    expect(wrapper.emitted("move")?.[0]).toEqual([{ period: "morning", id: "a" }, "noon", "b"]);
     expect(wrapper.emitted("createFromText")).toBeUndefined();
   });
 

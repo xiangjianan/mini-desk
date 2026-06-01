@@ -288,6 +288,46 @@ describe("App shell", () => {
     wrapper.unmount();
   });
 
+  it("cancels an empty reminder creation when clicking the same blank list space again", async () => {
+    vi.useFakeTimers();
+    const wrapper = mountApp();
+
+    try {
+      await wrapper.get('[data-testid="todo-list-morning"]').trigger("click");
+      await wrapper.vm.$nextTick();
+
+      expect(wrapper.find('[data-testid="todo-input-morning"]').exists()).toBe(true);
+
+      await wrapper.get('[data-testid="todo-list-morning"]').trigger("click");
+      await vi.advanceTimersByTimeAsync(300);
+      await wrapper.vm.$nextTick();
+
+      expect(wrapper.find('[data-testid="todo-input-morning"]').exists()).toBe(false);
+    } finally {
+      wrapper.unmount();
+      vi.useRealTimers();
+    }
+  });
+
+  it("undoes the latest board-level change with global Ctrl+Z", async () => {
+    const wrapper = mountApp();
+
+    try {
+      await wrapper.get('[data-testid="todo-list-morning"]').trigger("click");
+      await wrapper.vm.$nextTick();
+
+      expect(wrapper.find('[data-testid="todo-input-morning"]').exists()).toBe(true);
+
+      window.dispatchEvent(new KeyboardEvent("keydown", { key: "z", ctrlKey: true }));
+      await wrapper.vm.$nextTick();
+
+      expect(wrapper.find('[data-testid="todo-input-morning"]').exists()).toBe(false);
+      expect(JSON.parse(localStorage.getItem(STORAGE_KEY) || "{}").todos.morning).toEqual([]);
+    } finally {
+      wrapper.unmount();
+    }
+  });
+
   it("creates and persists todos from TodoPanel external text events", async () => {
     const wrapper = mountApp();
 
@@ -3721,6 +3761,37 @@ describe("App shell", () => {
 
       expect(wrapper.find(".focus-companion.is-visible").exists()).toBe(false);
       expect(wrapper.find('[data-testid="companion-confirm"]').exists()).toBe(false);
+    } finally {
+      wrapper.unmount();
+      vi.useRealTimers();
+    }
+  });
+
+  it("blurs the focused workspace on Escape even when no companion bubble is visible", async () => {
+    vi.useFakeTimers();
+    localStorage.setItem(
+      STORAGE_KEY,
+      JSON.stringify({
+        spaces: [{ id: "workspace", title: "工作空间", lines: [{ text: "已有内容", indent: 0 }] }],
+        activeSpaceId: "workspace",
+      }),
+    );
+    const wrapper = mountApp();
+
+    try {
+      const workspaceTextarea = wrapper.findAll("textarea")[1].element as HTMLTextAreaElement;
+      workspaceTextarea.focus();
+      await wrapper.findAll("textarea")[1].trigger("focus");
+      await vi.advanceTimersByTimeAsync(260);
+      await wrapper.vm.$nextTick();
+
+      expect(document.activeElement).toBe(workspaceTextarea);
+      expect(wrapper.find(".focus-companion.is-visible").exists()).toBe(false);
+
+      window.dispatchEvent(new KeyboardEvent("keydown", { key: "Escape" }));
+      await wrapper.vm.$nextTick();
+
+      expect(document.activeElement).not.toBe(workspaceTextarea);
     } finally {
       wrapper.unmount();
       vi.useRealTimers();

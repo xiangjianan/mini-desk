@@ -1,6 +1,8 @@
 import { defineComponent } from "vue";
 import { mount } from "@vue/test-utils";
 import { describe, expect, it } from "vitest";
+import { readFileSync } from "node:fs";
+import { resolve } from "node:path";
 import SettingsMenu from "../components/SettingsMenu.vue";
 
 const dropdownStub = {
@@ -191,6 +193,14 @@ describe("SettingsMenu", () => {
     await wrapper.find('[data-key="language:en"]').trigger("click");
 
     expect(wrapper.emitted("language")?.[0]).toEqual(["en", expect.any(HTMLElement)]);
+  });
+
+  it("uses a globe icon for the language menu group", () => {
+    const source = readFileSync(resolve(__dirname, "../components/SettingsMenu.vue"), "utf8");
+
+    expect(source).toContain("GlobeOutline");
+    expect(source).toContain('key: "language"');
+    expect(source).toMatch(/key:\s*"language"[\s\S]*?icon:\s*renderIcon\(GlobeOutline\)/);
   });
 
   it("uses Chinese as the language switch label while English is active", () => {

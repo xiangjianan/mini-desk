@@ -606,7 +606,12 @@ h3 {
   line-height: 1.55;
   color: var(--text);
   background: transparent;
-  tab-size: 2;
+  tab-size: 4;
+}
+
+.workspace-panel .text-editor-textarea {
+  padding: 12px 14px;
+  line-height: 1.75;
 }
 
 .image-list,
@@ -1050,8 +1055,18 @@ h3 {
   transform: translateX(-50%);
 }
 
+.todo-collapse-button .n-icon,
+.todo-collapse-button svg {
+  color: var(--muted);
+  font-size: 12px;
+  opacity: 0.55;
+  transition:
+    opacity var(--motion-fast) ease,
+    transform var(--motion-medium) var(--motion-ease);
+}
+
 .todo-collapse-button .n-icon {
-  transition: transform var(--motion-medium) var(--motion-ease);
+  transition: transform var(--motion-medium) var(--motion-ease), opacity var(--motion-fast) ease;
 }
 
 .todo-collapse-button.is-collapsed .n-icon {
@@ -1060,9 +1075,16 @@ h3 {
 
 .todo-collapse-button:hover,
 .todo-collapse-button:focus-visible {
-  color: var(--text);
+  color: var(--muted);
   border: 0;
   background: transparent;
+}
+
+.todo-collapse-button:hover .n-icon,
+.todo-collapse-button:focus-visible .n-icon,
+.todo-collapse-button:hover svg,
+.todo-collapse-button:focus-visible svg {
+  opacity: 0.72;
 }
 
 .todo-section.is-list-dragging {
@@ -1345,6 +1367,28 @@ h3 {
 .today-focus-item.is-done .today-focus-input {
   color: var(--muted);
   text-decoration: line-through;
+}
+
+.todo-item.is-starred .todo-input,
+.today-focus-item .today-focus-input {
+  color: transparent;
+  -webkit-text-fill-color: transparent;
+  caret-color: var(--text);
+  background: linear-gradient(90deg, #d946ef, #2563eb, #0f9f6e, #f59e0b, #ef4444, #d946ef);
+  background-size: 240% 100%;
+  -webkit-background-clip: text;
+  background-clip: text;
+  animation: starred-text-flow 4.8s linear infinite;
+}
+
+@keyframes starred-text-flow {
+  from {
+    background-position: 0% 50%;
+  }
+
+  to {
+    background-position: 240% 50%;
+  }
 }
 
 .todo-completed-divider {

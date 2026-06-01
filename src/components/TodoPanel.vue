@@ -94,6 +94,7 @@ const menu = ref<{
 } | null>(null);
 const dragged = ref<DraggedTodo | null>(null);
 const draggedListId = ref<TodoListId | null>(null);
+const editingListTitleIds = ref<Set<TodoListId>>(new Set());
 const editingTodoKey = ref<string | null>(null);
 const selectedMenuTodoKey = ref<string | null>(null);
 const dragHoverListId = ref<TodoListId | null>(null);
@@ -339,12 +340,14 @@ function handleTodoItemDrop(event: DragEvent, period: TodoPeriod, targetId: stri
   }
   event.preventDefault();
   event.stopPropagation();
-  emit("move", dragged.value, period, targetId);
+  emitTodoMove(dragged.value, period, getTodoItemDropTargetId(event, period, targetId));
 }
 
 function handleTodoSectionDrop(event: DragEvent, period: TodoPeriod): void {
   if (dragged.value) {
-    emit("move", dragged.value, period);
+    event.preventDefault();
+    event.stopPropagation();
+    emitTodoMove(dragged.value, period, getTodoDropTargetId(event, period));
     return;
   }
   handleTodoTextDrop(event, period);
@@ -363,6 +366,10 @@ function handleListSectionDrop(event: DragEvent, listId: TodoListId): void {
 
 function handleListDragStart(event: DragEvent, listId: TodoListId): void {
   const target = event.target as HTMLElement | null;
+  if (isListTitleEditing(listId)) {
+    event.preventDefault();
+    return;
+  }
   if (target?.closest("input, textarea, .title-edit-input, .todo-section-menu-button, .todo-collapse-button")) {
     event.preventDefault();
     return;
@@ -531,6 +538,7 @@ function closeCreateListDialog(): void {
 }
 
 function handleListTitleUpdate(listId: TodoListId, value: string): void {
+  setListTitleEditing(listId, false);
   if (localEditListId.value === listId) localEditListId.value = null;
   if (!props.todoLists) {
     const legacyTitleId = legacyTodoTitleIds[listId];
@@ -540,6 +548,17 @@ function handleListTitleUpdate(listId: TodoListId, value: string): void {
     }
   }
   emit("updateListTitle", listId, value);
+}
+
+function setListTitleEditing(listId: TodoListId, editing: boolean): void {
+  const next = new Set(editingListTitleIds.value);
+  if (editing) next.add(listId);
+  else next.delete(listId);
+  editingListTitleIds.value = next;
+}
+
+function isListTitleEditing(listId: TodoListId): boolean {
+  return editingListTitleIds.value.has(listId);
 }
 
 async function startListTitleEdit(listId: TodoListId): Promise<void> {
@@ -1037,6 +1056,38 @@ function getDeferredTodoIds(period: TodoListId): Set<string> {
   );
 }
 
+function getTodoDropTargetId(event: DragEvent, period: TodoPeriod): string | undefined {
+  const y = event.clientY;
+  const items = getVisibleTodoItemElements(period);
+  return items.find((item) => {
+    const rect = item.getBoundingClientRect();
+    return y < rect.top + rect.height / 2;
+  })?.dataset.todoId;
+}
+
+function emitTodoMove(draggedTodo: DraggedTodo, destinationPeriod: TodoPeriod, targetId?: string): void {
+  if (targetId) emit("move", draggedTodo, destinationPeriod, targetId);
+  else emit("move", draggedTodo, destinationPeriod);
+}
+
+function getTodoItemDropTargetId(event: DragEvent, period: TodoPeriod, targetId: string): string | undefined {
+  const target = (event.currentTarget as HTMLElement | null)?.closest<HTMLElement>(".todo-item[data-todo-id]");
+  if (!target) return targetId;
+  const rect = target.getBoundingClientRect();
+  if (event.clientY <= rect.top + rect.height / 2) return targetId;
+  return getNextVisibleTodoId(period, targetId);
+}
+
+function getNextVisibleTodoId(period: TodoPeriod, currentId: string): string | undefined {
+  const ids = getVisibleTodoItemElements(period).map((item) => item.dataset.todoId).filter(Boolean) as string[];
+  const index = ids.indexOf(currentId);
+  return index >= 0 ? ids[index + 1] : undefined;
+}
+
+function getVisibleTodoItemElements(period: TodoPeriod): HTMLElement[] {
+  return Array.from(todoSectionRefs.get(period)?.querySelectorAll<HTMLElement>(".todo-item[data-todo-id]") ?? []);
+}
+
 function buildTodoListEntries(period: TodoListId, todos: TodoItem[], deferredDoneIds: ReadonlySet<string>): TodoListEntry[] {
   const entries: TodoListEntry[] = [];
   let completedDividerAdded = false;
@@ -1137,7 +1188,7 @@ function buildTodoListEntries(period: TodoListId, todos: TodoItem[], deferredDon
       >
         <div
           class="todo-heading"
-          draggable="true"
+          :draggable="!isListTitleEditing(list.id)"
           @contextmenu="openHeadingActions($event, list.id)"
           @dragstart="handleListDragStart($event, list.id)"
           @dragend="draggedListId = null"
@@ -1155,6 +1206,7 @@ function buildTodoListEntries(period: TodoListId, todos: TodoItem[], deferredDon
               :auto-edit="Boolean(props.todoLists && (props.editListId === list.id || localEditListId === list.id))"
               :menu-enabled="false"
               @update="(_id, value) => handleListTitleUpdate(list.id, value)"
+              @edit-state="(_id, editing) => setListTitleEditing(list.id, editing)"
             />
           </h3>
           <button
@@ -1223,6 +1275,7 @@ function buildTodoListEntries(period: TodoListId, todos: TodoItem[], deferredDon
               <li
                 v-if="entry.type === 'todo'"
                 class="todo-item"
+                :data-todo-id="entry.todo.id"
                 :class="[
                   { 'is-done': entry.todo.done, 'is-starred': entry.todo.starred, 'is-menu-selected': isTodoHighlighted(list.id, entry.todo.id), 'has-notify': Boolean(getTodoCompactNotifyLabel(entry.todo)) },
                   getTodoDeadlineClass(entry.todo),

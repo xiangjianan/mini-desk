@@ -5,6 +5,7 @@ import {
   CloudDownloadOutline,
   CloudUploadOutline,
   CreateOutline,
+  GlobeOutline,
   ImagesOutline,
   InformationCircleOutline,
   KeyOutline,
@@ -53,7 +54,7 @@ const options = computed(() => [
   {
     label: text.value.settings.language,
     key: "language",
-    icon: renderIcon(CheckmarkOutline),
+    icon: renderIcon(GlobeOutline),
     children: [
       {
         label: text.value.settings.chinese,

@@ -183,7 +183,7 @@ function handleTabsWheel(event: WheelEvent): void {
           <template v-for="space in spaces">
             <button
               v-if="editingSpaceId !== space.id"
-              :key="`tab-${space.id}`"
+              :key="space.id"
               class="space-tab"
               :class="{ 'is-active': space.id === activeSpaceId, 'is-dragging': draggedSpaceId === space.id }"
               type="button"
@@ -202,7 +202,7 @@ function handleTabsWheel(event: WheelEvent): void {
             </button>
             <input
               v-else
-              :key="`edit-${space.id}`"
+              :key="space.id"
               v-model="editingTitle"
               class="space-tab-edit-input"
               :aria-label="uiText.space.editName"

@@ -228,7 +228,8 @@ describe("SpacePanel", () => {
     const styles = readFileSync(resolve(__dirname, "../styles.css"), "utf8");
 
     expect(source).toContain('<TransitionGroup name="space-reorder" tag="div" class="space-tabs"');
-    expect(source).toContain(':key="`tab-${space.id}`"');
+    expect(source).toContain(':key="space.id"');
+    expect(source).not.toContain(':key="`edit-${space.id}`"');
     expect(source).toContain('key="space-add"');
     expect(styles).toMatch(/\.space-reorder-move,[\s\S]*?\.space-reorder-enter-active,[\s\S]*?\.space-reorder-leave-active\s*\{[^}]*transform 0\.22s/s);
 

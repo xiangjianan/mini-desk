@@ -28,7 +28,7 @@ const dropdownStub = {
 };
 
 describe("TextPanel", () => {
-  it("renders dash markers only for indented lines inside the editable text flow", () => {
+  it("renders four-space indentation without injected dash markers", () => {
     const wrapper = mount(TextPanel, {
       props: {
         titleId: "workspace-title",
@@ -40,11 +40,11 @@ describe("TextPanel", () => {
       },
     });
 
-    expect(wrapper.get("textarea").element.value).toBe("root\n\t\t- child");
+    expect(wrapper.get("textarea").element.value).toBe("root\n        child");
     expect(wrapper.find(".text-bullet-layer").exists()).toBe(false);
   });
 
-  it("stores text lines without the visual dash marker", async () => {
+  it("stores four-space indented text lines as indentation depth", async () => {
     const wrapper = mount(TextPanel, {
       props: {
         titleId: "workspace-title",
@@ -54,7 +54,7 @@ describe("TextPanel", () => {
     });
 
     await wrapper.get("textarea").trigger("dblclick");
-    await wrapper.get("textarea").setValue("root\n\t- child");
+    await wrapper.get("textarea").setValue("root\n    child");
 
     expect(wrapper.emitted("update")?.at(-1)?.[0]).toEqual([
       { text: "root", indent: 0 },
@@ -62,7 +62,7 @@ describe("TextPanel", () => {
     ]);
   });
 
-  it("keeps the dash marker with the inherited indent when pressing Enter", async () => {
+  it("keeps four-space indentation when pressing Enter", async () => {
     const wrapper = mount(TextPanel, {
       props: {
         titleId: "workspace-title",
@@ -76,7 +76,7 @@ describe("TextPanel", () => {
     await wrapper.get("textarea").trigger("dblclick");
     await wrapper.get("textarea").trigger("keydown", { key: "Enter" });
 
-    expect(textarea.value).toBe("\t- child\n\t- ");
+    expect(textarea.value).toBe("    child\n    ");
   });
 
   it("does not insert a dash marker when pressing Enter on a root line", async () => {
@@ -101,7 +101,7 @@ describe("TextPanel", () => {
       props: {
         titleId: "workspace-title",
         title: "工作空间",
-        lines: [{ text: "child text", indent: 1 }],
+        lines: [{ text: "- child text", indent: 1 }],
       },
     });
     const textarea = wrapper.get("textarea").element as HTMLTextAreaElement;
@@ -112,12 +112,33 @@ describe("TextPanel", () => {
     textarea.setSelectionRange(caret, caret);
     await wrapper.get("textarea").trigger("keydown", { key: "Enter", shiftKey: true });
 
-    expect(textarea.value).toBe("\t- child text\n\t- ");
-    expect(textarea.selectionStart).toBe("\t- child text\n\t- ".length);
-    expect(textarea.selectionEnd).toBe("\t- child text\n\t- ".length);
+    expect(textarea.value).toBe("    - child text\n    - ");
+    expect(textarea.selectionStart).toBe("    - child text\n    - ".length);
+    expect(textarea.selectionEnd).toBe("    - child text\n    - ".length);
     expect(wrapper.emitted("update")?.at(-1)?.[0]).toEqual([
-      { text: "child text", indent: 1 },
-      { text: "", indent: 1 },
+      { text: "- child text", indent: 1 },
+      { text: "- ", indent: 1 },
+    ]);
+  });
+
+  it("continues indented numbered lists with the next number when pressing Enter", async () => {
+    const wrapper = mount(TextPanel, {
+      props: {
+        titleId: "workspace-title",
+        title: "工作空间",
+        lines: [{ text: "1. 第一项", indent: 1 }],
+      },
+    });
+    const textarea = wrapper.get("textarea").element as HTMLTextAreaElement;
+    textarea.setSelectionRange(textarea.value.length, textarea.value.length);
+
+    await wrapper.get("textarea").trigger("dblclick");
+    await wrapper.get("textarea").trigger("keydown", { key: "Enter" });
+
+    expect(textarea.value).toBe("    1. 第一项\n    2. ");
+    expect(wrapper.emitted("update")?.at(-1)?.[0]).toEqual([
+      { text: "1. 第一项", indent: 1 },
+      { text: "2. ", indent: 1 },
     ]);
   });
 
@@ -286,7 +307,7 @@ describe("TextPanel", () => {
     textarea.setSelectionRange(textarea.value.length, textarea.value.length);
     await wrapper.get("textarea").trigger("keydown", { key: "Backspace" });
 
-    expect(textarea.value).toBe("\t- ");
+    expect(textarea.value).toBe("    ");
     expect(wrapper.emitted("update")?.at(-1)?.[0]).toEqual([{ text: "", indent: 1 }]);
 
     textarea.setSelectionRange(textarea.value.length, textarea.value.length);
@@ -310,9 +331,9 @@ describe("TextPanel", () => {
     await wrapper.get("textarea").trigger("dblclick");
     await wrapper.get("textarea").trigger("keydown", { key: "Tab" });
 
-    expect(textarea.value).toBe("\t- root");
+    expect(textarea.value).toBe("    root");
     expect(textarea.selectionStart).toBe(textarea.selectionEnd);
-    expect(textarea.selectionStart).toBe("\t- root".length);
+    expect(textarea.selectionStart).toBe("    root".length);
   });
 
   it("does not intercept Enter while Chinese IME composition is active", async () => {
@@ -974,7 +995,7 @@ describe("TextPanel", () => {
       },
     });
 
-    expect(wrapper.get("textarea").element.value).toBe("1. 父项\n\t- 1. 子项 A\n\t- 2. 子项 B\n2. 父项 B");
+    expect(wrapper.get("textarea").element.value).toBe("1. 父项\n    1. 子项 A\n    2. 子项 B\n2. 父项 B");
   });
 
   it("resets nested ordered list counters under separate root items", () => {
@@ -991,7 +1012,7 @@ describe("TextPanel", () => {
       },
     });
 
-    expect(wrapper.get("textarea").element.value).toBe("1. Parent A\n\t- 1. Child A\n2. Parent B\n\t- 1. Child B");
+    expect(wrapper.get("textarea").element.value).toBe("1. Parent A\n    1. Child A\n2. Parent B\n    1. Child B");
   });
 
   it("does not renumber dates or versions as ordered lists", () => {
@@ -1138,6 +1159,35 @@ describe("TextPanel", () => {
     });
 
     expect(setData).toHaveBeenCalledWith("text/plain", "拖动文字");
+  });
+
+  it("does not start a remembered text drag after the selection has been collapsed in blank space", async () => {
+    const setData = vi.fn();
+    const wrapper = mount(TextPanel, {
+      props: {
+        titleId: "workspace-title",
+        title: "工作空间",
+        lines: [{ text: "拖动文字", indent: 0 }],
+      },
+    });
+    const textarea = wrapper.get("textarea").element as HTMLTextAreaElement;
+    textarea.setSelectionRange(0, 4);
+    await wrapper.get("textarea").trigger("select");
+
+    textarea.setSelectionRange(textarea.value.length, textarea.value.length);
+    await wrapper.get("textarea").trigger("pointerdown", { pointerType: "mouse" });
+
+    expect(wrapper.get("textarea").attributes("draggable")).toBe("false");
+
+    const dragEvent = new Event("dragstart", { bubbles: true, cancelable: true }) as DragEvent;
+    Object.defineProperty(dragEvent, "dataTransfer", {
+      value: { effectAllowed: "", setData },
+    });
+    textarea.dispatchEvent(dragEvent);
+    await wrapper.vm.$nextTick();
+
+    expect(dragEvent.defaultPrevented).toBe(true);
+    expect(setData).not.toHaveBeenCalled();
   });
 
   it("ignores external text drops that include files", async () => {

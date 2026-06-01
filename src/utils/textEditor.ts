@@ -3,7 +3,7 @@ import { serializeTextLines, textLinesToText } from "../state/storage";
 
 export { serializeTextLines, textLinesToText };
 
-const LINE_MARKER = "- ";
+const INDENT_UNIT = "    ";
 const ORDERED_MARKER_PATTERN = /^(\d+)\.\s+(.*)$/;
 const MAX_ORDERED_LIST_MARKER = 99;
 
@@ -15,11 +15,10 @@ export function editorTextToLines(value = ""): LineItem[] {
   const normalized = renumberOrderedListText(value);
   if (!normalized) return [];
   return normalized.split("\n").map((line) => {
-    const tabs = line.match(/^\t*/)?.[0].length ?? 0;
-    const content = line.slice(tabs);
+    const indent = getIndentInfo(line);
     return {
-      text: tabs > 0 ? stripLineMarker(content) : content,
-      indent: tabs,
+      text: line.slice(indent.contentStart),
+      indent: indent.depth,
     };
   });
 }
@@ -45,7 +44,7 @@ export function renumberOrderedListText(value = ""): string {
   const active = new Set<number>();
 
   return value.split("\n").map((line) => {
-    const indentText = line.match(/^\t*/)?.[0] ?? "";
+    const indentText = line.match(/^[ \t]*/)?.[0] ?? "";
     const indent = indentText.length;
     for (const counterIndent of counters.keys()) {
       if (counterIndent <= indent) continue;
@@ -53,9 +52,7 @@ export function renumberOrderedListText(value = ""): string {
       active.delete(counterIndent);
     }
     const content = line.slice(indent);
-    const markerPrefix = content.startsWith(LINE_MARKER) ? LINE_MARKER : "";
-    const text = markerPrefix ? content.slice(LINE_MARKER.length) : content;
-    const match = ORDERED_MARKER_PATTERN.exec(text);
+    const match = ORDERED_MARKER_PATTERN.exec(content);
 
     if (!match) {
       counters.delete(indent);
@@ -74,7 +71,7 @@ export function renumberOrderedListText(value = ""): string {
     const nextNumber = active.has(indent) ? (counters.get(indent) ?? 0) + 1 : 1;
     counters.set(indent, nextNumber);
     active.add(indent);
-    return `${indentText}${markerPrefix}${nextNumber}. ${match[2]}`;
+    return `${indentText}${nextNumber}. ${match[2]}`;
   }).join("\n");
 }
 
@@ -84,25 +81,21 @@ export function handleTextareaTab(textarea: HTMLTextAreaElement, outdent = false
   const range = getSelectedLineRange(value, selectionStart, selectionEnd);
   const selected = value.slice(range.start, range.end);
   const lines = selected.split("\n");
+  const firstLineIndentDelta = outdent ? -getRemovedIndentLength(lines[0] ?? "") : INDENT_UNIT.length;
   const transformed = lines
-    .map((line) => {
-      const indent = line.match(/^\t*/)?.[0].length ?? 0;
-      const text = stripLineMarker(line.slice(indent));
-      const nextIndent = outdent ? Math.max(0, indent - 1) : indent + 1;
-      return formatEditorLine(nextIndent, text);
-    })
+    .map((line) => (outdent ? removeOneIndentUnit(line) : `${INDENT_UNIT}${line}`))
     .join("\n");
 
   textarea.setRangeText(transformed, range.start, range.end, "preserve");
   const delta = transformed.length - selected.length;
   if (isCollapsedSelection) {
-    const cursor = Math.max(range.start, selectionStart + delta);
+    const cursor = Math.max(range.start, selectionStart + firstLineIndentDelta);
     textarea.setSelectionRange(cursor, cursor);
     return textarea.value;
   }
 
   textarea.setSelectionRange(
-    Math.max(range.start, selectionStart + (outdent ? -1 : 1)),
+    Math.max(range.start, selectionStart + firstLineIndentDelta),
     Math.max(range.start, selectionEnd + delta),
   );
   return textarea.value;
@@ -123,9 +116,7 @@ export function insertIndentedLineBreak(textarea: HTMLTextAreaElement): string {
     return textarea.value;
   }
   const previousLine = value.slice(lineStart, selectionStart);
-  const indent = previousLine.match(/^\t*/)?.[0] ?? "";
-  const marker = getContinuationMarker(previousLine.slice(indent.length)) ?? (indent.length > 0 ? LINE_MARKER : "");
-  textarea.setRangeText(`\n${indent}${marker}`, textarea.selectionStart, textarea.selectionEnd, "end");
+  textarea.setRangeText(`\n${getContinuationPrefix(previousLine)}`, textarea.selectionStart, textarea.selectionEnd, "end");
   return textarea.value;
 }
 
@@ -135,9 +126,7 @@ export function insertPlainLineBreak(textarea: HTMLTextAreaElement): string {
   const lineEndIndex = value.indexOf("\n", selectionEnd);
   const lineEnd = lineEndIndex === -1 ? value.length : lineEndIndex;
   const line = value.slice(lineStart, lineEnd);
-  const indent = line.match(/^\t*/)?.[0] ?? "";
-  const marker = getContinuationMarker(line.slice(indent.length)) ?? "";
-  textarea.setRangeText(`\n${indent}${marker}`, lineEnd, lineEnd, "end");
+  textarea.setRangeText(`\n${getContinuationPrefix(line)}`, lineEnd, lineEnd, "end");
   return textarea.value;
 }
 
@@ -148,43 +137,42 @@ export function outdentEmptyIndentedLine(textarea: HTMLTextAreaElement): string 
   const lineEndIndex = value.indexOf("\n", selectionStart);
   const lineEnd = lineEndIndex === -1 ? value.length : lineEndIndex;
   const line = value.slice(lineStart, lineEnd);
-  const indent = line.match(/^\t*/)?.[0].length ?? 0;
-  if (indent === 0) return undefined;
-  if (stripLineMarker(line.slice(indent)).trim().length > 0) return undefined;
+  const indent = getIndentInfo(line);
+  if (indent.depth === 0) return undefined;
+  const content = line.slice(indent.contentStart);
+  if (content.trim().length > 0 && !isEmptyListContent(content)) return undefined;
 
-  const nextLine = indent - 1 > 0 ? formatEditorLine(indent - 1, "") : "";
+  const nextLine = formatEditorLine(indent.depth - 1, content);
   textarea.setRangeText(nextLine, lineStart, lineEnd, "end");
   return textarea.value;
 }
 
 function formatEditorLine(indent: number, text: string): string {
-  const prefix = "\t".repeat(indent);
-  return indent > 0 ? `${prefix}${LINE_MARKER}${text}` : text;
-}
-
-function stripLineMarker(content: string): string {
-  if (content.startsWith(LINE_MARKER)) return content.slice(LINE_MARKER.length);
-  if (content === "-") return "";
-  return content;
+  return `${INDENT_UNIT.repeat(Math.max(0, indent))}${text}`;
 }
 
 function isEmptyIndentedLine(line: string): boolean {
-  const indent = line.match(/^\t*/)?.[0].length ?? 0;
-  if (indent === 0) return false;
-  return stripLineMarker(line.slice(indent)).trim().length === 0;
+  const indent = getIndentInfo(line);
+  if (indent.depth === 0) return false;
+  return line.slice(indent.contentStart).trim().length === 0;
 }
 
 function isEmptyListLine(line: string): boolean {
-  const content = line.slice(line.match(/^\t*/)?.[0].length ?? 0);
+  return isEmptyListContent(line.slice(line.match(/^[ \t]*/)?.[0].length ?? 0));
+}
+
+function isEmptyListContent(content: string): boolean {
   return /^(\d+\.|[-*])\s*$/.test(content);
 }
 
-function getContinuationMarker(contentBeforeCaret: string): string | undefined {
-  const numbered = contentBeforeCaret.match(/^(\d+)\.\s+/);
-  if (numbered) return `${Number(numbered[1]) + 1}. `;
-  const unordered = contentBeforeCaret.match(/^([-*])\s+/);
-  if (unordered) return `${unordered[1]} `;
-  return undefined;
+function getContinuationPrefix(lineBeforeCaret: string): string {
+  const indent = lineBeforeCaret.match(/^[ \t]*/)?.[0] ?? "";
+  const content = lineBeforeCaret.slice(indent.length);
+  const numbered = content.match(/^(\d+)\.\s+/);
+  if (numbered) return `${indent}${Number(numbered[1]) + 1}. `;
+  const unordered = content.match(/^([-*])\s+/);
+  if (unordered) return `${indent}${unordered[1]} `;
+  return indent;
 }
 
 function getSelectedLineRange(value: string, start: number, end: number): { start: number; end: number } {
@@ -194,4 +182,33 @@ function getSelectedLineRange(value: string, start: number, end: number): { star
     start: lineStart,
     end: nextBreak === -1 ? value.length : nextBreak,
   };
+}
+
+function getIndentInfo(line: string): { depth: number; contentStart: number } {
+  let depth = 0;
+  let index = 0;
+  while (index < line.length) {
+    if (line[index] === "\t") {
+      depth += 1;
+      index += 1;
+      continue;
+    }
+    if (line.slice(index, index + INDENT_UNIT.length) === INDENT_UNIT) {
+      depth += 1;
+      index += INDENT_UNIT.length;
+      continue;
+    }
+    break;
+  }
+  return { depth, contentStart: index };
+}
+
+function getRemovedIndentLength(line: string): number {
+  if (line.startsWith("\t")) return 1;
+  if (line.startsWith(INDENT_UNIT)) return INDENT_UNIT.length;
+  return 0;
+}
+
+function removeOneIndentUnit(line: string): string {
+  return line.slice(getRemovedIndentLength(line));
 }
