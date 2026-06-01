@@ -74,8 +74,8 @@ describe("state compatibility", () => {
     const state = defaultState();
 
     expect(state.todoLists.map((list) => ({ id: list.id, title: list.title }))).toEqual([
-      { id: "morning", title: "☑️ 待办" },
-      { id: "noon", title: "💼 工作" },
+      { id: "morning", title: "✅ 待办" },
+      { id: "noon", title: "💻 工作" },
       { id: "evening", title: "📚 学习" },
     ]);
     expect(Object.keys(state.todos)).toEqual(["morning", "noon", "evening"]);
@@ -158,8 +158,8 @@ describe("state compatibility", () => {
     });
 
     const expected = [
-      { id: "morning", title: "☑️ 待办" },
-      { id: "noon", title: "💼 工作" },
+      { id: "morning", title: "✅ 待办" },
+      { id: "noon", title: "💻 工作" },
       { id: "evening", title: "📚 学习" },
     ];
 

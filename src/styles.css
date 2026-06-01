@@ -563,6 +563,524 @@ h3 {
   border-right: 0;
 }
 
+.tool-panel {
+  display: flex;
+  flex-direction: column;
+  min-width: 0;
+  min-height: 0;
+  background: var(--panel);
+}
+
+.tool-panel-header .count {
+  min-width: 0;
+  color: var(--muted);
+}
+
+.tool-workbench {
+  display: flex;
+  flex: 1 1 auto;
+  min-width: 0;
+  min-height: 0;
+  overflow: hidden;
+}
+
+.tool-tabs {
+  display: flex;
+  flex: 0 0 34px;
+  width: 34px;
+  min-width: 34px;
+  max-width: 34px;
+  min-height: 0;
+  flex-direction: column;
+  border-right: 1px solid var(--line-control);
+  background: color-mix(in srgb, var(--panel) 94%, var(--button-hover));
+}
+
+.tool-tab {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 34px;
+  height: 34px;
+  min-height: 34px;
+  padding: 0;
+  border-top: 0;
+  border-right: 0;
+  border-left: 0;
+  border-bottom: 1px solid var(--line-subtle);
+  color: var(--muted);
+  font-size: var(--app-font-size);
+  font-weight: 600;
+  text-align: left;
+  white-space: normal;
+  line-height: 1.35;
+}
+
+.tool-tab-icon {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  flex: 0 0 18px;
+  color: var(--muted);
+}
+
+.tool-tab-label {
+  display: none;
+}
+
+.tool-tab.is-active {
+  color: var(--text);
+  background: var(--button-hover);
+}
+
+.tool-tab.is-active .tool-tab-icon {
+  color: var(--text);
+}
+
+.tool-tab:hover {
+  border-bottom-color: transparent;
+}
+
+.tool-content-scrollbar {
+  flex: 1 1 auto;
+  min-width: 0;
+  min-height: 0;
+  --n-scrollbar-width: var(--scrollbar-size) !important;
+  --n-scrollbar-height: var(--scrollbar-size) !important;
+}
+
+.tool-content {
+  min-width: 0;
+  min-height: 100%;
+  overflow: auto;
+}
+
+.tool-content-scrollbar .tool-content {
+  overflow: visible;
+}
+
+.tool-content.is-empty {
+  background: var(--panel);
+}
+
+.tool-pane {
+  display: flex;
+  flex-direction: column;
+  gap: 14px;
+  min-height: 100%;
+  padding: 14px 16px;
+}
+
+.tool-form-grid {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) auto auto;
+  gap: 10px;
+  align-items: end;
+}
+
+.tool-base-grid {
+  grid-template-columns: minmax(86px, 0.24fr) minmax(86px, 0.24fr) minmax(0, 1fr) auto;
+}
+
+.tool-field {
+  display: flex;
+  min-width: 0;
+  flex-direction: column;
+  gap: 5px;
+  color: var(--muted);
+  font-size: calc(var(--app-font-size) - 1px);
+}
+
+.tool-field-heading {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 6px;
+  min-width: 0;
+}
+
+.tool-field > input,
+.tool-field > select,
+.tool-field > textarea {
+  width: 100%;
+  min-width: 0;
+  min-height: 30px;
+  padding: 0 8px;
+  color: var(--text);
+  font-size: var(--app-font-size);
+}
+
+.tool-field > textarea {
+  min-height: 112px;
+  padding: 8px;
+  resize: vertical;
+  line-height: 1.55;
+}
+
+.tool-field-wide {
+  grid-column: span 1;
+}
+
+.calculator-shell {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+
+.calculator-display > input {
+  height: 36px;
+  font-size: 18px;
+  text-align: right;
+  font-variant-numeric: tabular-nums;
+}
+
+.calculator-keypad {
+  display: grid;
+  grid-template-columns: repeat(4, minmax(0, 1fr));
+  gap: 4px;
+}
+
+.calculator-key {
+  min-width: 0;
+  min-height: 34px;
+  padding: 0;
+  font-size: 15px;
+  font-weight: 600;
+  background: var(--panel);
+}
+
+.calculator-key.is-operator,
+.calculator-key.is-equals {
+  background: var(--button-hover);
+}
+
+.calculator-key.is-utility {
+  color: var(--muted);
+}
+
+.calculator-key.is-wide {
+  grid-column: span 2;
+}
+
+.base-source-row,
+.base-input-row,
+.color-controls {
+  display: grid;
+  grid-template-columns: 72px minmax(0, 1fr);
+  gap: 8px;
+  align-items: end;
+}
+
+.base-source-row {
+  grid-template-columns: minmax(86px, 0.42fr) minmax(0, 1fr);
+}
+
+.color-controls {
+  grid-template-columns: minmax(0, 1fr) minmax(0, 1fr) auto;
+}
+
+.color-pick-row {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) auto;
+  gap: 8px;
+  align-items: end;
+}
+
+.tool-primary-action.eyedropper-button {
+  position: relative;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 5px;
+  overflow: hidden;
+  border-color: transparent;
+  color: #ffffff;
+  background: linear-gradient(100deg, #ef4444 0%, #f59e0b 10%, #22c55e 20%, #06b6d4 30%, #6366f1 40%, #ef4444 50%, #f59e0b 60%, #22c55e 70%, #06b6d4 80%, #6366f1 90%, #ef4444 100%);
+  background-repeat: repeat-x;
+  background-size: 1000% 100%;
+  animation: eyedropper-flow 10s linear infinite;
+}
+
+.tool-primary-action.eyedropper-button:hover,
+.tool-primary-action.eyedropper-button:focus-visible {
+  border-color: rgba(255, 255, 255, 0.58);
+  color: #ffffff;
+  background: linear-gradient(100deg, #ef4444 0%, #f59e0b 10%, #22c55e 20%, #06b6d4 30%, #6366f1 40%, #ef4444 50%, #f59e0b 60%, #22c55e 70%, #06b6d4 80%, #6366f1 90%, #ef4444 100%);
+  background-repeat: repeat-x;
+  background-size: 1000% 100%;
+}
+
+.eyedropper-icon {
+  font-size: 15px;
+}
+
+@keyframes eyedropper-flow {
+  from {
+    background-position: 0% 50%;
+  }
+
+  to {
+    background-position: -100% 50%;
+  }
+}
+
+.base-result-list,
+.copy-value-list {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+}
+
+.copy-value-row {
+  display: grid;
+  grid-template-columns: 58px minmax(0, 1fr) 30px;
+  align-items: center;
+  min-height: 32px;
+  border: 1px solid var(--line-subtle);
+  background: transparent;
+}
+
+.copy-value-label {
+  display: flex;
+  align-items: center;
+  align-self: stretch;
+  justify-content: center;
+  color: var(--muted);
+  border-right: 1px solid var(--line-subtle);
+  font-size: calc(var(--app-font-size) - 1px);
+}
+
+.copy-value-row code {
+  min-width: 0;
+  padding: 0 8px;
+  overflow: hidden;
+  color: var(--text);
+  font-family: ui-monospace, SFMono-Regular, Menlo, Consolas, monospace;
+  font-size: calc(var(--app-font-size) - 1px);
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.copy-inline-button {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 30px;
+  min-width: 30px;
+  height: 30px;
+  min-height: 30px;
+  padding: 0;
+  border-top: 0;
+  border-right: 0;
+  border-bottom: 0;
+  border-left: 1px solid var(--line-subtle);
+  color: var(--muted);
+}
+
+.copy-inline-button .n-icon,
+.copy-inline-button svg {
+  font-size: 15px;
+}
+
+.tool-primary-action,
+.tool-secondary-action {
+  min-height: 30px;
+  white-space: nowrap;
+}
+
+.tool-primary-action {
+  border-color: var(--line-focus);
+  background: var(--button-hover);
+}
+
+.tool-section-title {
+  padding-top: 2px;
+  color: var(--text);
+  font-weight: 600;
+}
+
+.color-preview {
+  height: 72px;
+  border: 1px solid var(--line-control);
+}
+
+.codec-actions {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 8px;
+}
+
+.codec-actions > button {
+  min-width: 0;
+  padding: 0 6px;
+  overflow-wrap: anywhere;
+  line-height: 1.3;
+}
+
+.password-options {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 8px;
+}
+
+.codec-tool,
+.password-tool,
+.codec-tool .tool-field,
+.password-tool .tool-field,
+.codec-tool button,
+.password-tool button,
+.codec-tool textarea,
+.password-tool input,
+.password-tool textarea {
+  font-size: 12px;
+}
+
+.password-options label {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  min-height: 30px;
+  padding: 0 8px;
+  border: 1px solid var(--line-control);
+  color: var(--text);
+  background: transparent;
+}
+
+.password-options input {
+  margin: 0;
+}
+
+.password-length-control {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) auto;
+  gap: 8px;
+  align-items: center;
+  color: var(--muted);
+}
+
+.password-length-control strong {
+  color: var(--text);
+  font-size: 16px;
+  font-variant-numeric: tabular-nums;
+}
+
+.password-length-control .n-slider {
+  grid-column: 1 / -1;
+}
+
+.password-symbol-list {
+  padding: 6px 8px;
+  border: 1px solid var(--line-subtle);
+  color: var(--muted);
+  font-family: ui-monospace, SFMono-Regular, Menlo, Consolas, monospace;
+  font-size: calc(var(--app-font-size) - 1px);
+  overflow-wrap: anywhere;
+}
+
+.password-symbols-field > textarea {
+  min-height: 42px;
+  resize: vertical;
+  font-family: ui-monospace, SFMono-Regular, Menlo, Consolas, monospace;
+}
+
+.password-symbol-reset {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 24px;
+  min-width: 24px;
+  height: 24px;
+  min-height: 24px;
+  padding: 0;
+  border: 1px solid var(--line-subtle);
+  color: var(--muted);
+}
+
+.password-symbol-reset .n-icon,
+.password-symbol-reset svg {
+  font-size: 14px;
+}
+
+.password-output-row {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) 30px;
+  align-items: end;
+}
+
+.password-copy-button {
+  margin-bottom: 0;
+  border: 1px solid var(--line-subtle);
+}
+
+.note-panel.tool-panel .tool-tabs {
+  flex-basis: 34px;
+  min-width: 34px;
+  max-width: 34px;
+}
+
+.note-panel.tool-panel .tool-content-scrollbar {
+  flex-basis: auto;
+}
+
+.note-panel.tool-panel .tool-pane {
+  gap: 9px;
+  padding: 9px;
+}
+
+.note-panel.tool-panel .tool-form-grid,
+.note-panel.tool-panel .tool-base-grid {
+  grid-template-columns: minmax(0, 1fr);
+}
+
+.note-panel.tool-panel .codec-actions,
+.note-panel.tool-panel .password-options {
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+}
+
+.note-panel.tool-panel .tool-tab {
+  width: 34px;
+  height: 34px;
+  min-height: 34px;
+  padding: 0;
+}
+
+.note-panel.tool-panel .tool-tab-icon {
+  flex-basis: 18px;
+}
+
+.note-panel.tool-panel .tool-tab-label {
+  display: none;
+}
+
+.note-panel.tool-panel .tool-primary-action,
+.note-panel.tool-panel .tool-secondary-action,
+.note-panel.tool-panel .codec-actions > button {
+  width: 100%;
+}
+
+.note-panel.tool-panel .tool-field > textarea {
+  min-height: 84px;
+}
+
+.note-panel.tool-panel .password-symbols-field > textarea {
+  min-height: 42px;
+}
+
+.note-panel.tool-panel .color-controls,
+.note-panel.tool-panel .base-input-row {
+  grid-template-columns: minmax(0, 1fr);
+}
+
+.note-panel.tool-panel .base-source-row,
+.note-panel.tool-panel .color-pick-row {
+  grid-template-columns: minmax(0, 1fr) minmax(0, 1fr);
+}
+
+.note-panel.tool-panel .calculator-display > input {
+  height: 34px;
+  font-size: 16px;
+}
+
 .space-panel-switch-enter-active,
 .space-panel-switch-leave-active {
   transition:

@@ -9,8 +9,8 @@ import QuickButtons from "./components/QuickButtons.vue";
 import SettingsMenu from "./components/SettingsMenu.vue";
 import ShortcutHelp from "./components/ShortcutHelp.vue";
 import SpacePanel from "./components/SpacePanel.vue";
-import TextPanel from "./components/TextPanel.vue";
 import TodoPanel from "./components/TodoPanel.vue";
+import ToolPanel from "./components/ToolPanel.vue";
 import { getCompanionGifSrc, getCompanionNotificationIconSrc } from "./state/companionGifThemes";
 import { deleteStoredImage, hydrateStoredImages, persistImagePayloads, storeImagePayload } from "./state/images";
 import { getMessage, withKaomoji, type MessageKey } from "./state/messages";
@@ -1256,6 +1256,7 @@ function shouldSkipGlobalUndo(target: EventTarget | null): boolean {
   if (target.isContentEditable) return true;
   if (target.closest(".title-edit-input, .space-tab-edit-input, .todo-list-create-input, .gif-theme-custom-dialog")) return true;
   if (target instanceof HTMLTextAreaElement && target.closest(".text-panel")) return true;
+  if ((target instanceof HTMLInputElement || target instanceof HTMLTextAreaElement || target instanceof HTMLSelectElement) && target.closest(".tool-panel")) return true;
   return false;
 }
 
@@ -1346,6 +1347,16 @@ function showBubbleText(message: string, anchor?: HTMLElement, options: BubbleOp
   bubbleVisible.value = true;
   bubbleTimerOptions.value = options;
   startBubbleTimer(duration);
+}
+
+function showToolBubble(message: string, anchor?: HTMLElement): void {
+  showBubbleText(message, anchor, { hideCompanionAfter: true }, 3000);
+}
+
+function dismissToolBubble(): void {
+  hideBubbleMessage({ clearRetainedContent: true });
+  companionFocused.value = false;
+  activeGuideKey.value = null;
 }
 
 function hideBubbleMessage(options: { clearRetainedContent?: boolean } = {}): void {
@@ -1680,6 +1691,7 @@ function isGuideAreaEmpty(key: GuideKey, anchor?: HTMLElement): boolean {
     const active = state.spaces.find((space) => space.id === state.activeSpaceId) ?? state.spaces[0];
     return !active || !hasLineContent(active.lines);
   }
+  if (key === "tools") return false;
   if (key === "storage") return !hasLineContent(state.storageLines);
   if (key === "todos") {
     const period = getTodoPeriodFromAnchor(anchor);
@@ -1856,18 +1868,18 @@ function moveItem<T extends { id: string }>(items: T[], dragId: string, targetId
       />
 
       <section class="panel note-link-panel" aria-labelledby="note-title">
-        <TextPanel
+        <ToolPanel
           split
           class="note-panel"
           title-id="note-title"
           :title="titles['note-title']"
-          :lines="state.noteLines"
           :language="state.language"
+          :theme="state.theme"
           @title-update="updateTitle"
-          @update="updateLines('noteLines', $event)"
-          @focus="handleGuideFocus('note', $event)"
-          @guide="(anchor, immediate) => handleGuideClick('note', anchor, immediate)"
-          @blur="handleEditorBlur"
+          @message="showToolBubble"
+          @dismiss-message="dismissToolBubble"
+          @focus="handleGuideFocus('tools', $event)"
+          @blur="handleCompanionBlur"
         />
         <QuickButtons
           :title="titles['quick-title']"

@@ -10,16 +10,16 @@ import {
 describe("localized public copy", () => {
   it("translates default board titles without translating custom titles", () => {
     expect(getDefaultTitles("en")).toMatchObject({
-      "image-title": "🖼️ Image Bed",
-      "note-title": "📝 Notes",
+      "image-title": "🎨 Image Bed",
+      "note-title": "🔧 Tools",
       "quick-title": "⚡ Quick Actions",
-      "todo-morning-title": "☑️ To-Do",
-      "todo-noon-title": "💼 Work",
+      "todo-morning-title": "✅ To-Do",
+      "todo-noon-title": "💻 Work",
       "todo-evening-title": "📚 Study",
       "workspace-title": "📝 Notepad.txt",
     });
 
-    expect(getDisplayTodoListTitle({ id: "morning", title: "☑️ 待办", collapsed: false, compact: false }, "en")).toBe("☑️ To-Do");
+    expect(getDisplayTodoListTitle({ id: "morning", title: "✅ 待办", collapsed: false, compact: false }, "en")).toBe("✅ To-Do");
     expect(getDisplayTodoListTitle({ id: "morning", title: "客户跟进", collapsed: false, compact: false }, "en")).toBe("客户跟进");
     expect(getDisplaySpaceTitle({ id: "workspace", title: "工作空间", lines: [] }, "en")).toBe("Workspace");
     expect(getDisplaySpaceTitle({ id: "workspace", title: "个人计划", lines: [] }, "en")).toBe("个人计划");

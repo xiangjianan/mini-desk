@@ -17,6 +17,7 @@ export type GuideKey =
   | "quickButtons"
   | "todos"
   | "workspace"
+  | "tools"
   | "storage"
   | "addQuick"
   | "toggleHiddenQuick"
