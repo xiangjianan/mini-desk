@@ -729,13 +729,19 @@ h3 {
   background: transparent;
 }
 
+.quick-block {
+  display: flex;
+  flex-direction: column;
+  overflow: hidden;
+}
+
 .quick-buttons {
   display: flex;
   align-content: flex-start;
   align-items: flex-start;
   flex-wrap: wrap;
   gap: 10px;
-  padding: 10px;
+  padding: 10px 10px 18px;
 }
 
 .quick-button {
@@ -794,6 +800,26 @@ h3 {
 .quick-form label {
   display: grid;
   gap: 6px;
+}
+
+.quick-api-headers {
+  display: grid;
+  gap: 8px;
+}
+
+.quick-api-header-row {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) minmax(0, 1fr) 30px;
+  gap: 6px;
+  align-items: center;
+}
+
+.quick-api-add-header {
+  justify-self: start;
+}
+
+.quick-api-remove-header {
+  align-self: stretch;
 }
 
 .checkbox-row {
@@ -1430,6 +1456,18 @@ h3 {
   -webkit-text-fill-color: transparent;
   caret-color: var(--text);
   background: linear-gradient(90deg, #d946ef 0%, #2563eb 10%, #0f9f6e 20%, #f59e0b 30%, #ef4444 40%, #d946ef 50%, #2563eb 60%, #0f9f6e 70%, #f59e0b 80%, #ef4444 90%, #d946ef 100%);
+  background-size: 200% 100%;
+  background-repeat: repeat-x;
+  -webkit-background-clip: text;
+  background-clip: text;
+  animation: starred-text-flow 4.8s linear infinite;
+}
+
+.todo-item.is-starred.is-done .todo-input,
+.today-focus-item.is-done .today-focus-input {
+  text-decoration: line-through;
+  text-decoration-color: var(--muted);
+  background: linear-gradient(90deg, #f0abfc 0%, #93c5fd 10%, #86efac 20%, #fde68a 30%, #fca5a5 40%, #f0abfc 50%, #93c5fd 60%, #86efac 70%, #fde68a 80%, #fca5a5 90%, #f0abfc 100%);
   background-size: 200% 100%;
   background-repeat: repeat-x;
   -webkit-background-clip: text;

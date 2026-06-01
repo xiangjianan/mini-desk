@@ -921,7 +921,7 @@ describe("App shell", () => {
     }
   });
 
-  it("creates reminder lists with completed reminders visible by default", async () => {
+  it("creates reminder lists with completed reminders hidden by default", async () => {
     const wrapper = mountApp();
 
     try {
@@ -930,7 +930,7 @@ describe("App shell", () => {
 
       const stored = JSON.parse(localStorage.getItem(STORAGE_KEY) || "{}");
       const listId = stored.todoLists.at(-1).id;
-      expect(stored.showCompletedTodos[listId]).toBe(true);
+      expect(stored.showCompletedTodos[listId]).toBe(false);
     } finally {
       wrapper.unmount();
     }
@@ -2016,7 +2016,7 @@ describe("App shell", () => {
   it("calls API quick buttons and reports invocation plus response status in the companion bubble", async () => {
     vi.useFakeTimers();
     const apiResult = createDeferred<{ status: number }>();
-    const fetchMock = vi.fn(() => apiResult.promise);
+    const fetchMock = vi.fn((_input: RequestInfo | URL, _init?: RequestInit) => apiResult.promise);
     vi.stubGlobal("fetch", fetchMock);
     localStorage.setItem(
       STORAGE_KEY,
@@ -2028,6 +2028,10 @@ describe("App shell", () => {
             value: "api.example.test/users",
             type: "api",
             apiMethod: "POST",
+            apiHeaders: [
+              { key: "Authorization", value: "Bearer test" },
+              { key: "X-Trace-Id", value: "abc" },
+            ],
             apiBodyType: "json",
             apiBody: '{"name":"Kun"}',
           },
@@ -2046,6 +2050,10 @@ describe("App shell", () => {
           body: '{"name":"Kun"}',
         }),
       );
+      const requestInit = fetchMock.mock.calls[0][1] as RequestInit;
+      expect((requestInit.headers as Headers).get("Authorization")).toBe("Bearer test");
+      expect((requestInit.headers as Headers).get("X-Trace-Id")).toBe("abc");
+      expect((requestInit.headers as Headers).get("Content-Type")).toBe("application/json");
 
       await vi.advanceTimersByTimeAsync(200);
       await wrapper.vm.$nextTick();

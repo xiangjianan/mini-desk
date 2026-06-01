@@ -799,6 +799,9 @@ describe("TodoPanel", () => {
     expect(styles).toMatch(/\.todo-item\.is-starred \.todo-input,[\s\S]*?background-size: 200% 100%/s);
     expect(styles).toMatch(/\.todo-item\.is-starred \.todo-input,[\s\S]*?background-repeat: repeat-x/s);
     expect(styles).toMatch(/\.todo-item\.is-starred \.todo-input,[\s\S]*?animation: starred-text-flow/s);
+    expect(styles).toMatch(/\.todo-item\.is-starred\.is-done \.todo-input,[\s\S]*?\.today-focus-item\.is-done \.today-focus-input\s*\{[\s\S]*?linear-gradient/s);
+    expect(styles).toMatch(/\.todo-item\.is-starred\.is-done \.todo-input,[\s\S]*?text-decoration: line-through/s);
+    expect(styles).toMatch(/\.todo-item\.is-starred\.is-done \.todo-input,[\s\S]*?animation: starred-text-flow/s);
     expect(styles).toMatch(/@keyframes starred-text-flow\s*\{[\s\S]*?background-position: 0% 50%[\s\S]*?background-position: -100% 50%/s);
   });
 

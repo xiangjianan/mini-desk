@@ -51,7 +51,7 @@ import {
   getStoredAppVersion,
   markAppVersionSeen,
 } from "./state/version";
-import type { AppLanguage, BoardState, CompanionGifTheme, DraggedTodo, GuideKey, LineItem, QuickApiBodyType, QuickApiMethod, QuickButton, QuickButtonType, StoredImage, TodoItem, TodoListConfig, TodoListId, TodoPeriod, TodoStarChange, WorkspaceSpace } from "./types";
+import type { AppLanguage, BoardState, CompanionGifTheme, DraggedTodo, GuideKey, LineItem, QuickApiBodyType, QuickApiHeader, QuickApiMethod, QuickButton, QuickButtonType, StoredImage, TodoItem, TodoListConfig, TodoListId, TodoPeriod, TodoStarChange, WorkspaceSpace } from "./types";
 
 const MOBILE_BREAKPOINT_QUERY = "(max-width: 900px)";
 const TODO_NOTIFICATION_FALLBACK_INTERVAL_MS = 30_000;
@@ -632,7 +632,7 @@ function imageSourceToPngBlob(src: string): Promise<Blob> {
   });
 }
 
-function saveQuick(payload: { id?: string; title: string; value: string; type: QuickButtonType; apiMethod?: QuickApiMethod; apiBodyType?: QuickApiBodyType; apiBody?: string }): void {
+function saveQuick(payload: { id?: string; title: string; value: string; type: QuickButtonType; apiMethod?: QuickApiMethod; apiHeaders?: QuickApiHeader[]; apiBodyType?: QuickApiBodyType; apiBody?: string }): void {
   if (!payload.title && !payload.value) return;
   if (payload.id) {
     const button = state.quickButtons.find((item) => item.id === payload.id);
@@ -664,15 +664,17 @@ function getUntitledQuickTitle(type: QuickButtonType): string {
 
 function applyQuickApiConfig(
   button: QuickButton,
-  payload: { type: QuickButtonType; apiMethod?: QuickApiMethod; apiBodyType?: QuickApiBodyType; apiBody?: string },
+  payload: { type: QuickButtonType; apiMethod?: QuickApiMethod; apiHeaders?: QuickApiHeader[]; apiBodyType?: QuickApiBodyType; apiBody?: string },
 ): void {
   if (payload.type !== "api") {
     delete button.apiMethod;
+    delete button.apiHeaders;
     delete button.apiBodyType;
     delete button.apiBody;
     return;
   }
   button.apiMethod = payload.apiMethod ?? "GET";
+  button.apiHeaders = payload.apiHeaders ?? [];
   button.apiBodyType = payload.apiBodyType ?? "none";
   button.apiBody = payload.apiBody ?? "";
 }
@@ -734,19 +736,28 @@ function buildQuickApiRequest(button: QuickButton): RequestInit {
   const method = button.apiMethod ?? "GET";
   const bodyType = button.apiBodyType ?? "none";
   const headers = new Headers();
+  applyQuickApiHeaders(headers, button.apiHeaders ?? []);
   const init: RequestInit = { method, headers };
   if (["GET", "HEAD"].includes(method) || bodyType === "none") return init;
   if (bodyType === "json") {
-    headers.set("Content-Type", "application/json");
+    if (!headers.has("Content-Type")) headers.set("Content-Type", "application/json");
     init.body = button.apiBody ?? "";
   } else if (bodyType === "form") {
-    headers.set("Content-Type", "application/x-www-form-urlencoded;charset=UTF-8");
+    if (!headers.has("Content-Type")) headers.set("Content-Type", "application/x-www-form-urlencoded;charset=UTF-8");
     init.body = button.apiBody ?? "";
   } else {
-    headers.set("Content-Type", "text/plain;charset=UTF-8");
+    if (!headers.has("Content-Type")) headers.set("Content-Type", "text/plain;charset=UTF-8");
     init.body = button.apiBody ?? "";
   }
   return init;
+}
+
+function applyQuickApiHeaders(headers: Headers, apiHeaders: QuickApiHeader[]): void {
+  apiHeaders.forEach((header) => {
+    const name = header.key.trim();
+    if (!name) return;
+    headers.set(name, header.value.trim());
+  });
 }
 
 function normalizeApiUrl(value: string): string {
@@ -808,7 +819,7 @@ function createTodoList(anchor?: HTMLElement, title?: string): void {
   const trimmedTitle = title?.trim() ?? "";
   state.todoLists.push({ id, title: trimmedTitle || uiText.value.app.unnamedList, collapsed: false, compact: false });
   state.todos[id] = [];
-  state.showCompletedTodos[id] = true;
+  state.showCompletedTodos[id] = false;
   pendingEditTodoListId.value = trimmedTitle ? null : id;
   persistNow();
   showBubbleText(uiText.value.app.todoListAdded, anchor);

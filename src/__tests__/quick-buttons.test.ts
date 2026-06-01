@@ -173,7 +173,7 @@ describe("QuickButtons", () => {
     wrapper.unmount();
   });
 
-  it("collects API quick button method, body type, URL, and body data", async () => {
+  it("collects multiple API headers as key-value pairs", async () => {
     const wrapper = mountQuickButtons();
 
     await openDialog(wrapper);
@@ -182,6 +182,11 @@ describe("QuickButtons", () => {
     await wrapper.findAll("input")[1].setValue("https://api.example.test/users");
     await wrapper.findAll("select")[0].setValue("POST");
     await wrapper.findAll("select")[1].setValue("json");
+    await wrapper.get(".quick-api-header-key").setValue("Authorization");
+    await wrapper.get(".quick-api-header-value").setValue("Bearer test");
+    await wrapper.get(".quick-api-add-header").trigger("click");
+    await wrapper.findAll(".quick-api-header-key")[1].setValue("X-Trace-Id");
+    await wrapper.findAll(".quick-api-header-value")[1].setValue("abc");
     await wrapper.get("textarea").setValue('{"name":"Kun"}');
     await wrapper.get("form").trigger("submit.prevent");
 
@@ -190,6 +195,10 @@ describe("QuickButtons", () => {
       value: "https://api.example.test/users",
       type: "api",
       apiMethod: "POST",
+      apiHeaders: [
+        { key: "Authorization", value: "Bearer test" },
+        { key: "X-Trace-Id", value: "abc" },
+      ],
       apiBodyType: "json",
       apiBody: '{"name":"Kun"}',
     });
@@ -347,6 +356,9 @@ describe("QuickButtons", () => {
 
     expect(source).toContain(':css="false"');
     expect(source).toContain('onQuickBeforeMove');
+    expect(styles).toMatch(/\.quick-block\s*\{[^}]*display: flex/s);
+    expect(styles).toMatch(/\.quick-block\s*\{[^}]*overflow: hidden/s);
+    expect(styles).toMatch(/\.quick-buttons\s*\{[^}]*padding: 10px 10px 18px/s);
     expect(styles).toMatch(/\.quick-button\.is-dragging\s*\{[^}]*opacity: 0\.45/s);
 
     await wrapper.findAll(".quick-button")[0].trigger("dragstart");

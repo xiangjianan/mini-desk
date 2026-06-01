@@ -4,7 +4,7 @@ import type { Component, VNode } from "vue";
 import { NButton, NCheckbox, NDropdown, NIcon, NInput, NModal, NScrollbar, NSelect } from "naive-ui";
 import { AddOutline, CloudUploadOutline, CopyOutline, CreateOutline, EyeOffOutline, EyeOutline, HelpCircleOutline, TrashOutline } from "@vicons/ionicons5";
 import type { DropdownOption } from "naive-ui";
-import type { AppLanguage, GuideKey, QuickApiBodyType, QuickApiMethod, QuickButton, QuickButtonType } from "../types";
+import type { AppLanguage, GuideKey, QuickApiBodyType, QuickApiHeader, QuickApiMethod, QuickButton, QuickButtonType } from "../types";
 import { GUIDE_MENU_OPTION } from "../state/defaults";
 import { getUiText } from "../state/i18n";
 import { CONTEXT_MENU_Z_INDEX, createExclusiveContextMenu } from "../utils/contextMenu";
@@ -21,7 +21,7 @@ const props = withDefaults(defineProps<{
 
 const emit = defineEmits<{
   titleUpdate: [id: string, value: string];
-  save: [payload: { id?: string; title: string; value: string; type: QuickButtonType; apiMethod?: QuickApiMethod; apiBodyType?: QuickApiBodyType; apiBody?: string }];
+  save: [payload: { id?: string; title: string; value: string; type: QuickButtonType; apiMethod?: QuickApiMethod; apiHeaders?: QuickApiHeader[]; apiBodyType?: QuickApiBodyType; apiBody?: string }];
   delete: [id: string, anchor?: HTMLElement];
   copy: [id: string, anchor?: HTMLElement];
   toggleHidden: [id: string];
@@ -33,11 +33,26 @@ const emit = defineEmits<{
 const dialogOpen = ref(false);
 const editingId = ref<string | undefined>();
 const titleRef = ref<{ openMenuAt: (x: number, y: number, event?: Event) => void } | null>(null);
-const form = reactive<{ title: string; value: string; type: QuickButtonType; apiMethod: QuickApiMethod; apiBodyType: QuickApiBodyType; apiBody: string }>({
+type QuickApiHeaderFormRow = QuickApiHeader & { id: string };
+
+let headerRowId = 0;
+
+function createHeaderRow(key = "", value = ""): QuickApiHeaderFormRow {
+  headerRowId += 1;
+  return { id: `header-${headerRowId}`, key, value };
+}
+
+function createHeaderRows(headers: QuickApiHeader[] | undefined): QuickApiHeaderFormRow[] {
+  const rows = (headers ?? []).map((header) => createHeaderRow(header.key, header.value));
+  return rows.length ? rows : [createHeaderRow()];
+}
+
+const form = reactive<{ title: string; value: string; type: QuickButtonType; apiMethod: QuickApiMethod; apiHeaders: QuickApiHeaderFormRow[]; apiBodyType: QuickApiBodyType; apiBody: string }>({
   title: "",
   value: "",
   type: "link",
   apiMethod: "GET",
+  apiHeaders: [createHeaderRow()],
   apiBodyType: "none",
   apiBody: "",
 });
@@ -100,6 +115,7 @@ function openAdd(anchor?: HTMLElement): void {
   form.value = "";
   form.type = "link";
   form.apiMethod = "GET";
+  form.apiHeaders = [createHeaderRow()];
   form.apiBodyType = "none";
   form.apiBody = "";
   dialogOpen.value = true;
@@ -114,6 +130,7 @@ function openEdit(id: string): void {
   form.value = button.value;
   form.type = button.type;
   form.apiMethod = button.apiMethod ?? "GET";
+  form.apiHeaders = createHeaderRows(button.apiHeaders);
   form.apiBodyType = button.apiBodyType ?? "none";
   form.apiBody = button.apiBody ?? "";
   dialogOpen.value = true;
@@ -123,9 +140,27 @@ function openEdit(id: string): void {
 function setQuickType(type: QuickButtonType): void {
   form.type = type;
   if (type !== "api") {
+    form.apiHeaders = [createHeaderRow()];
     form.apiBodyType = "none";
     form.apiBody = "";
+  } else if (form.apiHeaders.length === 0) {
+    form.apiHeaders = [createHeaderRow()];
   }
+}
+
+function addApiHeader(): void {
+  form.apiHeaders.push(createHeaderRow());
+}
+
+function removeApiHeader(id: string): void {
+  form.apiHeaders = form.apiHeaders.filter((header) => header.id !== id);
+  if (form.apiHeaders.length === 0) form.apiHeaders = [createHeaderRow()];
+}
+
+function getApiHeadersPayload(): QuickApiHeader[] {
+  return form.apiHeaders
+    .map((header) => ({ key: header.key.trim(), value: header.value.trim() }))
+    .filter((header) => header.key.length > 0);
 }
 
 function submit(): void {
@@ -137,7 +172,7 @@ function submit(): void {
     value: form.value,
     type: form.type,
     ...(form.type === "api"
-      ? { apiMethod: form.apiMethod, apiBodyType: form.apiBodyType, apiBody: form.apiBody }
+      ? { apiMethod: form.apiMethod, apiHeaders: getApiHeadersPayload(), apiBodyType: form.apiBodyType, apiBody: form.apiBody }
       : {}),
   });
   closeDialog();
@@ -425,6 +460,38 @@ function onQuickAfterMove(el: Element): void {
           <label>
             <span>{{ uiText.quick.requestMethod }}</span>
             <NSelect v-model:value="form.apiMethod" :options="apiMethodOptions" />
+          </label>
+          <label>
+            <span>{{ uiText.quick.requestHeaders }}</span>
+            <div class="quick-api-headers">
+              <div
+                v-for="header in form.apiHeaders"
+                :key="header.id"
+                class="quick-api-header-row"
+              >
+                <NInput
+                  v-model:value="header.key"
+                  class="quick-api-header-key"
+                  :placeholder="uiText.quick.requestHeaderKey"
+                  autocomplete="off"
+                />
+                <NInput
+                  v-model:value="header.value"
+                  class="quick-api-header-value"
+                  :placeholder="uiText.quick.requestHeaderValue"
+                  autocomplete="off"
+                />
+                <button
+                  type="button"
+                  class="quick-api-remove-header icon-button"
+                  :aria-label="uiText.quick.removeRequestHeader"
+                  @click="removeApiHeader(header.id)"
+                >
+                  <NIcon :component="TrashOutline" />
+                </button>
+              </div>
+              <NButton class="quick-api-add-header" type="default" @click="addApiHeader">{{ uiText.quick.addRequestHeader }}</NButton>
+            </div>
           </label>
           <label>
             <span>{{ uiText.quick.requestBodyType }}</span>

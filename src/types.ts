@@ -4,6 +4,10 @@ export type CompanionGifTheme = "ikun" | "hermes" | "custom" | "none";
 export type QuickButtonType = "link" | "text" | "api";
 export type QuickApiMethod = "GET" | "POST" | "PUT" | "PATCH" | "DELETE" | "HEAD" | "OPTIONS";
 export type QuickApiBodyType = "none" | "json" | "text" | "form";
+export interface QuickApiHeader {
+  key: string;
+  value: string;
+}
 export type TodoListId = string;
 export type TodoPeriod = TodoListId;
 export type TodoCompletedVisibility = Record<TodoListId, boolean>;
@@ -36,6 +40,7 @@ export interface QuickButton {
   value: string;
   type: QuickButtonType;
   apiMethod?: QuickApiMethod;
+  apiHeaders?: QuickApiHeader[];
   apiBodyType?: QuickApiBodyType;
   apiBody?: string;
   hidden: boolean;

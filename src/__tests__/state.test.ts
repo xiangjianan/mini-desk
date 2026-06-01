@@ -58,7 +58,7 @@ describe("state compatibility", () => {
     expect(state.language).toBe("zh");
     expect(state.spaces).toEqual([{ id: "workspace", title: "工作空间", lines: [] }]);
     expect(state.activeSpaceId).toBe("workspace");
-    expect(state.showCompletedTodos).toEqual({ morning: true, noon: true, evening: true });
+    expect(state.showCompletedTodos).toEqual({ morning: false, noon: false, evening: false });
   });
 
   it("normalizes and serializes the app language preference", () => {
@@ -79,7 +79,7 @@ describe("state compatibility", () => {
       { id: "evening", title: "📚 学习" },
     ]);
     expect(Object.keys(state.todos)).toEqual(["morning", "noon", "evening"]);
-    expect(state.showCompletedTodos).toEqual({ morning: true, noon: true, evening: true });
+    expect(state.showCompletedTodos).toEqual({ morning: false, noon: false, evening: false });
   });
 
   it("migrates legacy fixed reminder lists into configurable todoLists", () => {
@@ -103,7 +103,7 @@ describe("state compatibility", () => {
     ]);
     expect(state.todos.morning.map((todo) => todo.text)).toEqual(["A"]);
     expect(state.todos.noon.map((todo) => todo.text)).toEqual(["B"]);
-    expect(state.showCompletedTodos).toEqual({ morning: true, noon: true, evening: true });
+    expect(state.showCompletedTodos).toEqual({ morning: true, noon: false, evening: false });
   });
 
   it("normalizes persisted dynamic todo lists and drops orphan todo records", () => {
@@ -125,7 +125,7 @@ describe("state compatibility", () => {
       { id: "life", title: "未命名列表", collapsed: false, compact: true },
     ]);
     expect(Object.keys(state.todos)).toEqual(["work", "life"]);
-    expect(state.showCompletedTodos).toEqual({ work: true, life: true });
+    expect(state.showCompletedTodos).toEqual({ work: true, life: false });
   });
 
   it("renames duplicate persisted todo list ids while keeping list order", () => {
@@ -266,7 +266,18 @@ describe("state compatibility", () => {
     const state = normalizeImportedState({
       quickButtons: [
         { title: "Docs", value: "https://example.com", type: "link" },
-        { title: "接口", value: "https://api.example.com", type: "api", apiMethod: "DELETE", apiBodyType: "json", apiBody: '{"id":1}' },
+        {
+          title: "接口",
+          value: "https://api.example.com",
+          type: "api",
+          apiMethod: "DELETE",
+          apiHeaders: [
+            { key: "Authorization", value: "Bearer test" },
+            { key: "X-Trace-Id", value: "abc" },
+          ],
+          apiBodyType: "json",
+          apiBody: '{"id":1}',
+        },
       ],
       showCompletedTodos: true,
       todos: {
@@ -286,6 +297,10 @@ describe("state compatibility", () => {
       value: "https://api.example.com",
       type: "api",
       apiMethod: "DELETE",
+      apiHeaders: [
+        { key: "Authorization", value: "Bearer test" },
+        { key: "X-Trace-Id", value: "abc" },
+      ],
       apiBodyType: "json",
       apiBody: '{"id":1}',
       hidden: false,
@@ -305,7 +320,27 @@ describe("state compatibility", () => {
       },
     });
 
-    expect(state.showCompletedTodos).toEqual({ morning: true, noon: false, evening: true });
+    expect(state.showCompletedTodos).toEqual({ morning: true, noon: false, evening: false });
+  });
+
+  it("normalizes legacy API header text into key-value pairs", () => {
+    const state = normalizeImportedState({
+      quickButtons: [
+        {
+          title: "旧接口",
+          value: "https://api.example.com",
+          type: "api",
+          apiHeaders: "Authorization: Bearer test\nX-Trace-Id: abc\nInvalid",
+        },
+      ],
+    });
+
+    expect(state.quickButtons[0]).toMatchObject({
+      apiHeaders: [
+        { key: "Authorization", value: "Bearer test" },
+        { key: "X-Trace-Id", value: "abc" },
+      ],
+    });
   });
 
   it("normalizes persisted spaces and starred reminders", () => {
@@ -442,7 +477,7 @@ describe("todo behavior", () => {
     expect(reordered.map((list) => list.id)).toEqual(["c", "a", "b"]);
     expect(Object.keys(removed.todos)).toEqual(["a", "c"]);
     expect(removed.todos.a[0].text).toBe("A");
-    expect(removed.showCompletedTodos).toEqual({ a: true, c: true });
+    expect(removed.showCompletedTodos).toEqual({ a: false, c: false });
   });
 
   it("leaves todo order unchanged when moving a todo onto itself", () => {

@@ -6,6 +6,7 @@ import type {
   BoardState,
   CompanionCustomGif,
   LineItem,
+  QuickApiHeader,
   QuickButton,
   QuickApiBodyType,
   QuickApiMethod,
@@ -152,11 +153,11 @@ function normalizeCompletedVisibility(value: unknown, todoLists: TodoListConfig[
     return Object.fromEntries(todoLists.map((list) => [list.id, value])) as TodoCompletedVisibility;
   }
   if (!isPlainObject(value)) {
-    return Object.fromEntries(todoLists.map((list) => [list.id, true])) as TodoCompletedVisibility;
+    return Object.fromEntries(todoLists.map((list) => [list.id, false])) as TodoCompletedVisibility;
   }
   const record = value as Record<string, unknown>;
   return Object.fromEntries(
-    todoLists.map((list) => [list.id, list.id in record ? Boolean(record[list.id]) : true]),
+    todoLists.map((list) => [list.id, list.id in record ? Boolean(record[list.id]) : false]),
   ) as TodoCompletedVisibility;
 }
 
@@ -286,6 +287,7 @@ export function normalizeQuickButtons(buttons: unknown, language = "zh"): QuickB
         type,
         ...(type === "api" ? {
           apiMethod,
+          apiHeaders: normalizeQuickApiHeaders(record.apiHeaders),
           apiBodyType,
           apiBody: typeof record.apiBody === "string" ? record.apiBody : "",
         } : {}),
@@ -312,6 +314,31 @@ function normalizeQuickApiBodyType(value: unknown): QuickApiBodyType {
   return ["none", "json", "text", "form"].includes(String(value))
     ? (value as QuickApiBodyType)
     : "none";
+}
+
+function normalizeQuickApiHeaders(value: unknown): QuickApiHeader[] {
+  if (Array.isArray(value)) {
+    return value
+      .map((item) => {
+        if (!isPlainObject(item)) return null;
+        const record = item as Record<string, unknown>;
+        const key = typeof record.key === "string" ? record.key.trim() : "";
+        const headerValue = typeof record.value === "string" ? record.value.trim() : "";
+        return key ? { key, value: headerValue } : null;
+      })
+      .filter((item): item is QuickApiHeader => Boolean(item));
+  }
+  if (typeof value !== "string") return [];
+  return value
+    .split(/\r?\n/)
+    .map((line) => {
+      const separatorIndex = line.indexOf(":");
+      if (separatorIndex <= 0) return null;
+      const key = line.slice(0, separatorIndex).trim();
+      const headerValue = line.slice(separatorIndex + 1).trim();
+      return key ? { key, value: headerValue } : null;
+    })
+    .filter((item): item is QuickApiHeader => Boolean(item));
 }
 
 export function normalizeTodos(todos: unknown, todoLists: TodoListConfig[] = DEFAULT_TODO_LISTS): TodoMap {
