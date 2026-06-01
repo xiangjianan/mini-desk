@@ -2013,6 +2013,61 @@ describe("App shell", () => {
     wrapper.unmount();
   });
 
+  it("calls API quick buttons and reports invocation plus response status in the companion bubble", async () => {
+    vi.useFakeTimers();
+    const apiResult = createDeferred<{ status: number }>();
+    const fetchMock = vi.fn(() => apiResult.promise);
+    vi.stubGlobal("fetch", fetchMock);
+    localStorage.setItem(
+      STORAGE_KEY,
+      JSON.stringify({
+        quickButtons: [
+          {
+            id: "api-1",
+            title: "创建用户",
+            value: "api.example.test/users",
+            type: "api",
+            apiMethod: "POST",
+            apiBodyType: "json",
+            apiBody: '{"name":"Kun"}',
+          },
+        ],
+      }),
+    );
+    const wrapper = mountApp();
+    try {
+      await wrapper.get(".quick-button").trigger("click");
+      await wrapper.vm.$nextTick();
+
+      expect(fetchMock).toHaveBeenCalledWith(
+        "https://api.example.test/users",
+        expect.objectContaining({
+          method: "POST",
+          body: '{"name":"Kun"}',
+        }),
+      );
+
+      await vi.advanceTimersByTimeAsync(200);
+      await wrapper.vm.$nextTick();
+      expect(wrapper.get('[data-testid="companion-confirm"]').text()).toContain("已发起调用");
+
+      apiResult.resolve({ status: 201 });
+      await Promise.resolve();
+      await wrapper.vm.$nextTick();
+      await vi.advanceTimersByTimeAsync(200);
+      await wrapper.vm.$nextTick();
+
+      const message = wrapper.get('[data-testid="companion-confirm"]').text();
+      expect(message).toContain("201");
+      expect(message).toMatch(/调用成功|正常响应/);
+      expect(message).toMatch(/✅|\(＾▽＾\)/);
+    } finally {
+      wrapper.unmount();
+      vi.useRealTimers();
+      vi.unstubAllGlobals();
+    }
+  });
+
   it("hides the quick-copy GIF two seconds after the companion bubble disappears", async () => {
     vi.useFakeTimers();
     localStorage.setItem(

@@ -1,7 +1,9 @@
 export type ThemeMode = "light" | "dark";
 export type AppLanguage = "zh" | "en";
 export type CompanionGifTheme = "ikun" | "hermes" | "custom" | "none";
-export type QuickButtonType = "link" | "text";
+export type QuickButtonType = "link" | "text" | "api";
+export type QuickApiMethod = "GET" | "POST" | "PUT" | "PATCH" | "DELETE" | "HEAD" | "OPTIONS";
+export type QuickApiBodyType = "none" | "json" | "text" | "form";
 export type TodoListId = string;
 export type TodoPeriod = TodoListId;
 export type TodoCompletedVisibility = Record<TodoListId, boolean>;
@@ -33,6 +35,9 @@ export interface QuickButton {
   title: string;
   value: string;
   type: QuickButtonType;
+  apiMethod?: QuickApiMethod;
+  apiBodyType?: QuickApiBodyType;
+  apiBody?: string;
   hidden: boolean;
 }
 

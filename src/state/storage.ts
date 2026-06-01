@@ -7,6 +7,8 @@ import type {
   CompanionCustomGif,
   LineItem,
   QuickButton,
+  QuickApiBodyType,
+  QuickApiMethod,
   QuickButtonType,
   SerializableOptions,
   StoredImage,
@@ -273,17 +275,43 @@ export function normalizeQuickButtons(buttons: unknown, language = "zh"): QuickB
       const record = item as Record<string, unknown>;
       const title = typeof record.title === "string" ? record.title.trim() : "";
       const value = typeof record.value === "string" ? record.value : "";
-      const type: QuickButtonType = record.type === "text" ? "text" : "link";
+      const type: QuickButtonType = record.type === "text" ? "text" : record.type === "api" ? "api" : "link";
+      const apiMethod = normalizeQuickApiMethod(record.apiMethod);
+      const apiBodyType = normalizeQuickApiBodyType(record.apiBodyType);
       if (!title && !value) return null;
       return {
         id: typeof record.id === "string" ? record.id : createId(),
-        title: title || (type === "link" ? getUiText(normalizeLanguage(language)).quick.untitledLink : getUiText(normalizeLanguage(language)).quick.untitledText),
+        title: title || getUntitledQuickTitle(type, language),
         value,
         type,
+        ...(type === "api" ? {
+          apiMethod,
+          apiBodyType,
+          apiBody: typeof record.apiBody === "string" ? record.apiBody : "",
+        } : {}),
         hidden: Boolean(record.hidden),
       };
     })
     .filter((item): item is QuickButton => Boolean(item));
+}
+
+function getUntitledQuickTitle(type: QuickButtonType, language: string): string {
+  const quickText = getUiText(normalizeLanguage(language)).quick;
+  if (type === "link") return quickText.untitledLink;
+  if (type === "api") return quickText.untitledApi;
+  return quickText.untitledText;
+}
+
+function normalizeQuickApiMethod(value: unknown): QuickApiMethod {
+  return ["GET", "POST", "PUT", "PATCH", "DELETE", "HEAD", "OPTIONS"].includes(String(value))
+    ? (value as QuickApiMethod)
+    : "GET";
+}
+
+function normalizeQuickApiBodyType(value: unknown): QuickApiBodyType {
+  return ["none", "json", "text", "form"].includes(String(value))
+    ? (value as QuickApiBodyType)
+    : "none";
 }
 
 export function normalizeTodos(todos: unknown, todoLists: TodoListConfig[] = DEFAULT_TODO_LISTS): TodoMap {

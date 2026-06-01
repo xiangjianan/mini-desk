@@ -33,6 +33,20 @@ const inputStub = {
   `,
 };
 
+const selectStub = {
+  props: ["value", "options"],
+  emits: ["update:value"],
+  template: `
+    <select
+      v-bind="$attrs"
+      :value="value"
+      @change="$emit('update:value', $event.target.value)"
+    >
+      <option v-for="option in options" :key="option.value" :value="option.value">{{ option.label }}</option>
+    </select>
+  `,
+};
+
 const modalStub = {
   props: ["show", "title"],
   template: '<section v-if="show" class="quick-dialog"><h2>{{ title }}</h2><slot /></section>',
@@ -73,12 +87,14 @@ function mountQuickButtons(options: Partial<InstanceType<typeof QuickButtons>["$
         Icon: true,
         Input: inputStub,
         Modal: modalStub,
+        Select: selectStub,
         NButton: buttonStub,
         NCheckbox: checkboxStub,
         NDropdown: dropdownStub,
         NIcon: true,
         NInput: inputStub,
         NModal: modalStub,
+        NSelect: selectStub,
       },
     },
     attachTo: document.body,
@@ -136,21 +152,47 @@ describe("QuickButtons", () => {
     wrapper.unmount();
   });
 
-  it("shows mutually exclusive link and text type checkboxes with link selected by default", async () => {
+  it("shows mutually exclusive link, text, and API type checkboxes with link selected by default", async () => {
     const wrapper = mountQuickButtons();
 
     await openDialog(wrapper);
 
     const options = wrapper.findAll(".checkbox-stub");
-    expect(options.map((option) => option.text())).toEqual(["链接属性", "复制文本属性"]);
+    expect(options.map((option) => option.text())).toEqual(["链接属性", "复制文本属性", "接口调用属性"]);
     expect(options[0].attributes("data-checked")).toBe("true");
     expect(options[1].attributes("data-checked")).toBe("false");
+    expect(options[2].attributes("data-checked")).toBe("false");
 
     await options[1].trigger("click");
     await wrapper.vm.$nextTick();
 
     expect(options[0].attributes("data-checked")).toBe("false");
     expect(options[1].attributes("data-checked")).toBe("true");
+    expect(options[2].attributes("data-checked")).toBe("false");
+
+    wrapper.unmount();
+  });
+
+  it("collects API quick button method, body type, URL, and body data", async () => {
+    const wrapper = mountQuickButtons();
+
+    await openDialog(wrapper);
+    await wrapper.findAll(".checkbox-stub")[2].trigger("click");
+    await wrapper.findAll("input")[0].setValue("创建用户");
+    await wrapper.findAll("input")[1].setValue("https://api.example.test/users");
+    await wrapper.findAll("select")[0].setValue("POST");
+    await wrapper.findAll("select")[1].setValue("json");
+    await wrapper.get("textarea").setValue('{"name":"Kun"}');
+    await wrapper.get("form").trigger("submit.prevent");
+
+    expect(wrapper.emitted("save")?.[0][0]).toMatchObject({
+      title: "创建用户",
+      value: "https://api.example.test/users",
+      type: "api",
+      apiMethod: "POST",
+      apiBodyType: "json",
+      apiBody: '{"name":"Kun"}',
+    });
 
     wrapper.unmount();
   });

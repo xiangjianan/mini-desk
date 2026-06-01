@@ -51,7 +51,7 @@ import {
   getStoredAppVersion,
   markAppVersionSeen,
 } from "./state/version";
-import type { AppLanguage, BoardState, CompanionGifTheme, DraggedTodo, GuideKey, LineItem, QuickButtonType, StoredImage, TodoItem, TodoListConfig, TodoListId, TodoPeriod, TodoStarChange, WorkspaceSpace } from "./types";
+import type { AppLanguage, BoardState, CompanionGifTheme, DraggedTodo, GuideKey, LineItem, QuickApiBodyType, QuickApiMethod, QuickButton, QuickButtonType, StoredImage, TodoItem, TodoListConfig, TodoListId, TodoPeriod, TodoStarChange, WorkspaceSpace } from "./types";
 
 const MOBILE_BREAKPOINT_QUERY = "(max-width: 900px)";
 const TODO_NOTIFICATION_FALLBACK_INTERVAL_MS = 30_000;
@@ -632,7 +632,7 @@ function imageSourceToPngBlob(src: string): Promise<Blob> {
   });
 }
 
-function saveQuick(payload: { id?: string; title: string; value: string; type: QuickButtonType }): void {
+function saveQuick(payload: { id?: string; title: string; value: string; type: QuickButtonType; apiMethod?: QuickApiMethod; apiBodyType?: QuickApiBodyType; apiBody?: string }): void {
   if (!payload.title && !payload.value) return;
   if (payload.id) {
     const button = state.quickButtons.find((item) => item.id === payload.id);
@@ -640,17 +640,41 @@ function saveQuick(payload: { id?: string; title: string; value: string; type: Q
       button.title = payload.title || button.title;
       button.value = payload.value;
       button.type = payload.type;
+      applyQuickApiConfig(button, payload);
     }
   } else {
-    state.quickButtons.push({
+    const button: QuickButton = {
       id: createId(),
-      title: payload.title || (payload.type === "link" ? uiText.value.quick.untitledLink : uiText.value.quick.untitledText),
+      title: payload.title || getUntitledQuickTitle(payload.type),
       value: payload.value,
       type: payload.type,
       hidden: false,
-    });
+    };
+    applyQuickApiConfig(button, payload);
+    state.quickButtons.push(button);
   }
   persistNow();
+}
+
+function getUntitledQuickTitle(type: QuickButtonType): string {
+  if (type === "link") return uiText.value.quick.untitledLink;
+  if (type === "api") return uiText.value.quick.untitledApi;
+  return uiText.value.quick.untitledText;
+}
+
+function applyQuickApiConfig(
+  button: QuickButton,
+  payload: { type: QuickButtonType; apiMethod?: QuickApiMethod; apiBodyType?: QuickApiBodyType; apiBody?: string },
+): void {
+  if (payload.type !== "api") {
+    delete button.apiMethod;
+    delete button.apiBodyType;
+    delete button.apiBody;
+    return;
+  }
+  button.apiMethod = payload.apiMethod ?? "GET";
+  button.apiBodyType = payload.apiBodyType ?? "none";
+  button.apiBody = payload.apiBody ?? "";
 }
 
 function deleteQuick(id: string, anchor?: HTMLElement): void {
@@ -683,11 +707,84 @@ async function handleQuickButton(id: string, anchor?: HTMLElement): Promise<void
     if (!opened) showBubble("linkOpenFailed", anchor, { hideCompanionAfter: true });
     return;
   }
+  if (button.type === "api") {
+    await callQuickApi(button, anchor);
+    return;
+  }
   const copied = await copyText(button.value, shouldBlockBoardEffects);
   if (shouldBlockBoardEffects()) return;
   showBubble(copied ? "quickTextCopied" : "quickTextCopyFailed", anchor, {
     hideCompanionAfter: true,
   });
+}
+
+async function callQuickApi(button: QuickButton, anchor?: HTMLElement): Promise<void> {
+  showBubbleText(getQuickApiInvokedMessage(button.title), anchor, { hideCompanionAfter: true }, 2200);
+  try {
+    const response = await fetch(normalizeApiUrl(button.value), buildQuickApiRequest(button));
+    if (shouldBlockBoardEffects()) return;
+    showBubbleText(getQuickApiStatusMessage(response.status), anchor, { hideCompanionAfter: true }, 4200);
+  } catch {
+    if (shouldBlockBoardEffects()) return;
+    showBubbleText(state.language === "en" ? "❌ API request failed. Check the URL, CORS, or network (；′⌒`)" : "❌ 接口调用失败，检查 URL、跨域或网络吧 (；′⌒`)", anchor, { hideCompanionAfter: true }, 4200);
+  }
+}
+
+function buildQuickApiRequest(button: QuickButton): RequestInit {
+  const method = button.apiMethod ?? "GET";
+  const bodyType = button.apiBodyType ?? "none";
+  const headers = new Headers();
+  const init: RequestInit = { method, headers };
+  if (["GET", "HEAD"].includes(method) || bodyType === "none") return init;
+  if (bodyType === "json") {
+    headers.set("Content-Type", "application/json");
+    init.body = button.apiBody ?? "";
+  } else if (bodyType === "form") {
+    headers.set("Content-Type", "application/x-www-form-urlencoded;charset=UTF-8");
+    init.body = button.apiBody ?? "";
+  } else {
+    headers.set("Content-Type", "text/plain;charset=UTF-8");
+    init.body = button.apiBody ?? "";
+  }
+  return init;
+}
+
+function normalizeApiUrl(value: string): string {
+  const trimmed = value.trim();
+  if (/^https?:\/\//i.test(trimmed)) return trimmed;
+  return `https://${trimmed}`;
+}
+
+function getQuickApiInvokedMessage(title: string): string {
+  return state.language === "en"
+    ? `🚀 API "${title}" has been called (｡•̀ᴗ-)✧`
+    : `🚀 接口「${title}」已发起调用 (｡•̀ᴗ-)✧`;
+}
+
+function getQuickApiStatusMessage(status: number): string {
+  if (status >= 200 && status < 300) {
+    return state.language === "en"
+      ? `✅ ${status} Success, the API responded normally (＾▽＾)`
+      : `✅ ${status} 调用成功，接口正常响应啦 (＾▽＾)`;
+  }
+  if (status >= 300 && status < 400) {
+    return state.language === "en"
+      ? `↪️ ${status} Redirect response received (・_・ヾ`
+      : `↪️ ${status} 收到重定向响应，可能需要检查跳转地址 (・_・ヾ`;
+  }
+  if (status >= 400 && status < 500) {
+    return state.language === "en"
+      ? `⚠️ ${status} Client-side request issue, check parameters or permission (；′⌒\`)`
+      : `⚠️ ${status} 请求侧可能有问题，检查参数或权限吧 (；′⌒\`)`;
+  }
+  if (status >= 500) {
+    return state.language === "en"
+      ? `💥 ${status} Server-side error, the API is unhappy Σ(っ °Д °;)っ`
+      : `💥 ${status} 服务端异常，接口有点不开心 Σ(っ °Д °;)っ`;
+  }
+  return state.language === "en"
+    ? `ℹ️ ${status} Response received, status is uncommon (・∀・)`
+    : `ℹ️ ${status} 已收到响应，这个状态码比较少见 (・∀・)`;
 }
 
 async function copyText(text: string, shouldAbort: () => boolean = () => false): Promise<boolean> {

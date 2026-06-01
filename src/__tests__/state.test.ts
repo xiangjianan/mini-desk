@@ -264,7 +264,10 @@ describe("state compatibility", () => {
 
   it("normalizes quick buttons, todos, and text line indentation", () => {
     const state = normalizeImportedState({
-      quickButtons: [{ title: "Docs", value: "https://example.com", type: "link" }],
+      quickButtons: [
+        { title: "Docs", value: "https://example.com", type: "link" },
+        { title: "接口", value: "https://api.example.com", type: "api", apiMethod: "DELETE", apiBodyType: "json", apiBody: '{"id":1}' },
+      ],
       showCompletedTodos: true,
       todos: {
         morning: [{ text: "A", done: true }, { text: "B", done: false }],
@@ -276,6 +279,15 @@ describe("state compatibility", () => {
       title: "Docs",
       value: "https://example.com",
       type: "link",
+      hidden: false,
+    });
+    expect(state.quickButtons[1]).toMatchObject({
+      title: "接口",
+      value: "https://api.example.com",
+      type: "api",
+      apiMethod: "DELETE",
+      apiBodyType: "json",
+      apiBody: '{"id":1}',
       hidden: false,
     });
     expect(state.todos.morning).toHaveLength(2);

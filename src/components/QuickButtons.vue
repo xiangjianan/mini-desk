@@ -1,10 +1,10 @@
 <script setup lang="ts">
 import { computed, h, onMounted, onUnmounted, reactive, ref, watch } from "vue";
 import type { Component, VNode } from "vue";
-import { NButton, NCheckbox, NDropdown, NIcon, NInput, NModal, NScrollbar } from "naive-ui";
-import { AddOutline, CopyOutline, CreateOutline, EyeOffOutline, EyeOutline, HelpCircleOutline, TrashOutline } from "@vicons/ionicons5";
+import { NButton, NCheckbox, NDropdown, NIcon, NInput, NModal, NScrollbar, NSelect } from "naive-ui";
+import { AddOutline, CloudUploadOutline, CopyOutline, CreateOutline, EyeOffOutline, EyeOutline, HelpCircleOutline, TrashOutline } from "@vicons/ionicons5";
 import type { DropdownOption } from "naive-ui";
-import type { AppLanguage, GuideKey, QuickButton, QuickButtonType } from "../types";
+import type { AppLanguage, GuideKey, QuickApiBodyType, QuickApiMethod, QuickButton, QuickButtonType } from "../types";
 import { GUIDE_MENU_OPTION } from "../state/defaults";
 import { getUiText } from "../state/i18n";
 import { CONTEXT_MENU_Z_INDEX, createExclusiveContextMenu } from "../utils/contextMenu";
@@ -21,7 +21,7 @@ const props = withDefaults(defineProps<{
 
 const emit = defineEmits<{
   titleUpdate: [id: string, value: string];
-  save: [payload: { id?: string; title: string; value: string; type: QuickButtonType }];
+  save: [payload: { id?: string; title: string; value: string; type: QuickButtonType; apiMethod?: QuickApiMethod; apiBodyType?: QuickApiBodyType; apiBody?: string }];
   delete: [id: string, anchor?: HTMLElement];
   copy: [id: string, anchor?: HTMLElement];
   toggleHidden: [id: string];
@@ -33,10 +33,13 @@ const emit = defineEmits<{
 const dialogOpen = ref(false);
 const editingId = ref<string | undefined>();
 const titleRef = ref<{ openMenuAt: (x: number, y: number, event?: Event) => void } | null>(null);
-const form = reactive<{ title: string; value: string; type: QuickButtonType }>({
+const form = reactive<{ title: string; value: string; type: QuickButtonType; apiMethod: QuickApiMethod; apiBodyType: QuickApiBodyType; apiBody: string }>({
   title: "",
   value: "",
   type: "link",
+  apiMethod: "GET",
+  apiBodyType: "none",
+  apiBody: "",
 });
 const menu = ref<{ x: number; y: number; id?: string; anchor?: HTMLElement } | null>(null);
 const draggingId = ref<string | null>(null);
@@ -45,6 +48,15 @@ const leavingHiddenIds = new Set<string>();
 const uiText = computed(() => getUiText(props.language));
 const guideMenuOption = computed<DropdownOption>(() => ({ ...GUIDE_MENU_OPTION, label: uiText.value.common.tips }));
 const exclusiveMenu = createExclusiveContextMenu(closeMenu);
+const apiMethodOptions = computed(() =>
+  ["GET", "POST", "PUT", "PATCH", "DELETE", "HEAD", "OPTIONS"].map((method) => ({ label: method, value: method })),
+);
+const apiBodyTypeOptions = computed(() => [
+  { label: uiText.value.quick.bodyNone, value: "none" },
+  { label: uiText.value.quick.bodyJson, value: "json" },
+  { label: uiText.value.quick.bodyText, value: "text" },
+  { label: uiText.value.quick.bodyForm, value: "form" },
+]);
 
 function renderIcon(icon: Component): () => VNode {
   return () => h(NIcon, { size: 16 }, { default: () => h(icon) });
@@ -56,7 +68,11 @@ onUnmounted(exclusiveMenu.unmount);
 const visibleButtons = computed(() =>
   props.buttons.filter((button) => props.showHidden || !button.hidden),
 );
-const canSubmit = computed(() => form.title.trim().length > 0 && form.value.trim().length > 0);
+const canSubmit = computed(() => {
+  if (form.title.trim().length === 0 || form.value.trim().length === 0) return false;
+  if (form.type !== "api") return true;
+  return form.apiBodyType === "none" || form.apiBody.trim().length > 0;
+});
 const menuOptions = computed<DropdownOption[]>(() => {
   const button = props.buttons.find((item) => item.id === menu.value?.id);
   if (!menu.value?.id) {
@@ -83,6 +99,9 @@ function openAdd(anchor?: HTMLElement): void {
   form.title = "";
   form.value = "";
   form.type = "link";
+  form.apiMethod = "GET";
+  form.apiBodyType = "none";
+  form.apiBody = "";
   dialogOpen.value = true;
   if (anchor) emit("guide", "addQuick", anchor);
 }
@@ -94,12 +113,19 @@ function openEdit(id: string): void {
   form.title = button.title;
   form.value = button.value;
   form.type = button.type;
+  form.apiMethod = button.apiMethod ?? "GET";
+  form.apiBodyType = button.apiBodyType ?? "none";
+  form.apiBody = button.apiBody ?? "";
   dialogOpen.value = true;
   menu.value = null;
 }
 
 function setQuickType(type: QuickButtonType): void {
   form.type = type;
+  if (type !== "api") {
+    form.apiBodyType = "none";
+    form.apiBody = "";
+  }
 }
 
 function submit(): void {
@@ -110,6 +136,9 @@ function submit(): void {
     title: form.title.trim(),
     value: form.value,
     type: form.type,
+    ...(form.type === "api"
+      ? { apiMethod: form.apiMethod, apiBodyType: form.apiBodyType, apiBody: form.apiBody }
+      : {}),
   });
   closeDialog();
 }
@@ -323,7 +352,7 @@ function onQuickAfterMove(el: Element): void {
           v-for="button in visibleButtons"
           :key="button.id"
           class="quick-button"
-          :class="{ 'is-hidden': button.hidden, 'is-copy': button.type === 'text', 'is-dragging': draggingId === button.id }"
+          :class="{ 'is-hidden': button.hidden, 'is-copy': button.type === 'text', 'is-api': button.type === 'api', 'is-dragging': draggingId === button.id }"
           :data-id="button.id"
           type="button"
           draggable="true"
@@ -335,6 +364,7 @@ function onQuickAfterMove(el: Element): void {
           @dragend="draggingId = null"
         >
           <NIcon v-if="button.type === 'text'" class="quick-button-icon" :component="CopyOutline" />
+          <NIcon v-else-if="button.type === 'api'" class="quick-button-icon" :component="CloudUploadOutline" />
           <span>{{ button.title }}</span>
         </button>
       </TransitionGroup>
@@ -378,9 +408,12 @@ function onQuickAfterMove(el: Element): void {
           <label class="checkbox-row">
             <NCheckbox :checked="form.type === 'text'" @update:checked="setQuickType('text')">{{ uiText.quick.textType }}</NCheckbox>
           </label>
+          <label class="checkbox-row">
+            <NCheckbox :checked="form.type === 'api'" @update:checked="setQuickType('api')">{{ uiText.quick.apiType }}</NCheckbox>
+          </label>
         </div>
         <label>
-          <span>{{ form.type === "link" ? "URL" : uiText.quick.copyText }}</span>
+          <span>{{ form.type === "api" ? uiText.quick.requestUrl : form.type === "link" ? "URL" : uiText.quick.copyText }}</span>
           <NInput
             v-model:value="form.value"
             :type="form.type === 'text' ? 'textarea' : 'text'"
@@ -388,6 +421,25 @@ function onQuickAfterMove(el: Element): void {
             :autosize="form.type === 'text' ? { minRows: 4, maxRows: 8 } : undefined"
           />
         </label>
+        <template v-if="form.type === 'api'">
+          <label>
+            <span>{{ uiText.quick.requestMethod }}</span>
+            <NSelect v-model:value="form.apiMethod" :options="apiMethodOptions" />
+          </label>
+          <label>
+            <span>{{ uiText.quick.requestBodyType }}</span>
+            <NSelect v-model:value="form.apiBodyType" :options="apiBodyTypeOptions" />
+          </label>
+          <label v-if="form.apiBodyType !== 'none'">
+            <span>{{ uiText.quick.requestBody }}</span>
+            <NInput
+              v-model:value="form.apiBody"
+              type="textarea"
+              autocomplete="off"
+              :autosize="{ minRows: 5, maxRows: 10 }"
+            />
+          </label>
+        </template>
         <div class="dialog-actions">
           <NButton v-if="editingId" ghost @click="closeDialog">{{ uiText.common.cancel }}</NButton>
           <NButton attr-type="submit" type="primary" :disabled="!canSubmit">{{ uiText.common.save }}</NButton>
