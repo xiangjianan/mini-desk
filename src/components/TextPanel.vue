@@ -13,7 +13,6 @@ import {
   handleTextareaTab,
   insertIndentedLineBreak,
   insertPlainLineBreak,
-  outdentEmptyIndentedLine,
   renumberOrderedListText,
   textLinesToEditorText,
 } from "../utils/textEditor";
@@ -133,13 +132,6 @@ function handleKeydown(event: KeyboardEvent): void {
     event.preventDefault();
     applyEditorText(event.shiftKey ? insertPlainLineBreak(textarea) : insertIndentedLineBreak(textarea));
     nextTick(() => update());
-  }
-  if (event.key === "Backspace" || event.key === "Delete") {
-    const next = outdentEmptyIndentedLine(textarea);
-    if (typeof next !== "string") return;
-    event.preventDefault();
-    applyEditorText(next);
-    update();
   }
 }
 
@@ -289,7 +281,7 @@ function handlePointerDown(event: PointerEvent): void {
   if (prev && prev.start !== prev.end) {
     try {
       const offset = getTextOffsetAtPoint(textarea, event.clientX, event.clientY);
-      const onSelection = offset >= prev.start && offset <= prev.end;
+      const onSelection = offset >= prev.start && offset < prev.end;
       textarea.draggable = onSelection;
       if (!onSelection) lastTextSelection.value = null;
     } catch {

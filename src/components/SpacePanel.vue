@@ -35,12 +35,17 @@ const editingSpaceId = ref<string | null>(null);
 const editingTitle = ref("");
 const titleComposing = ref(false);
 const draggedSpaceId = ref<string | null>(null);
+const suppressTabCommitTransition = ref(false);
 const menu = ref<{ x: number; y: number; spaceId: string } | null>(null);
 const uiText = computed(() => getUiText(props.language));
 const exclusiveMenu = createExclusiveContextMenu(closeMenu);
+let tabCommitTransitionTimer: number | undefined;
 
 onMounted(exclusiveMenu.mount);
-onUnmounted(exclusiveMenu.unmount);
+onUnmounted(() => {
+  exclusiveMenu.unmount();
+  window.clearTimeout(tabCommitTransitionTimer);
+});
 
 const activeSpace = computed(() =>
   props.spaces.find((space) => space.id === props.activeSpaceId) ?? props.spaces[0],
@@ -99,6 +104,7 @@ function commitTabEdit(): void {
   const id = editingSpaceId.value;
   if (!id) return;
   const title = editingTitle.value.trim();
+  suppressNextTabCommitTransition();
   titleComposing.value = false;
   editingSpaceId.value = null;
   editingTitle.value = "";
@@ -108,10 +114,20 @@ function commitTabEdit(): void {
 
 function cancelTabEdit(): void {
   const id = editingSpaceId.value;
+  suppressNextTabCommitTransition();
   titleComposing.value = false;
   editingSpaceId.value = null;
   editingTitle.value = "";
   if (id) emit("editDone", id);
+}
+
+function suppressNextTabCommitTransition(): void {
+  suppressTabCommitTransition.value = true;
+  window.clearTimeout(tabCommitTransitionTimer);
+  tabCommitTransitionTimer = window.setTimeout(() => {
+    suppressTabCommitTransition.value = false;
+    tabCommitTransitionTimer = undefined;
+  }, 120);
 }
 
 function handleTabEditEnter(event: KeyboardEvent): void {
@@ -179,7 +195,14 @@ function handleTabsWheel(event: WheelEvent): void {
   <section class="panel space-panel" :aria-label="uiText.space.panel">
     <div class="space-tabs-scrollbar" @wheel="handleTabsWheel">
       <NScrollbar class="space-tabs-scrollbar-inner" x-scrollable trigger="hover">
-        <TransitionGroup name="space-reorder" tag="div" class="space-tabs" role="tablist" :aria-label="uiText.space.list">
+        <TransitionGroup
+          name="space-reorder"
+          tag="div"
+          class="space-tabs"
+          :class="{ 'is-committing-tab': suppressTabCommitTransition }"
+          role="tablist"
+          :aria-label="uiText.space.list"
+        >
           <template v-for="space in spaces">
             <button
               v-if="editingSpaceId !== space.id"

@@ -326,7 +326,7 @@ describe("TodoPanel", () => {
     const iconRule = styles.match(/\.todo-collapse-button \.n-icon,[\s\S]*?\.todo-collapse-button svg\s*\{([\s\S]*?)\}/)?.[1] ?? "";
 
     expect(iconRule).toContain("font-size: 12px");
-    expect(iconRule).toContain("opacity: 0.55");
+    expect(iconRule).toContain("opacity: 0.8");
   });
 
   it("pauses reminder list dragging while the list title is being edited", async () => {
@@ -796,7 +796,22 @@ describe("TodoPanel", () => {
 
     expect(styles).toContain("@keyframes starred-text-flow");
     expect(styles).toMatch(/\.todo-item\.is-starred \.todo-input,[\s\S]*?\.today-focus-item \.today-focus-input\s*\{[\s\S]*?linear-gradient/s);
+    expect(styles).toMatch(/\.todo-item\.is-starred \.todo-input,[\s\S]*?background-size: 200% 100%/s);
+    expect(styles).toMatch(/\.todo-item\.is-starred \.todo-input,[\s\S]*?background-repeat: repeat-x/s);
     expect(styles).toMatch(/\.todo-item\.is-starred \.todo-input,[\s\S]*?animation: starred-text-flow/s);
+    expect(styles).toMatch(/@keyframes starred-text-flow\s*\{[\s\S]*?background-position: 0% 50%[\s\S]*?background-position: -100% 50%/s);
+  });
+
+  it("uses an inset soft background for the reminder editing state", () => {
+    const styles = readFileSync(resolve(__dirname, "../styles.css"), "utf8");
+    const editingRule = styles.match(/\.today-focus-item\.is-editing,[\s\S]*?\.todo-item\.is-editing\s*\{(?<body>[^}]*)\}/)?.groups?.body ?? "";
+    const editingBeforeRule = styles.match(/\.today-focus-item\.is-editing::before,[\s\S]*?\.todo-item\.is-editing::before\s*\{(?<body>[^}]*)\}/)?.groups?.body ?? "";
+
+    expect(editingRule).toContain("background: transparent");
+    expect(editingBeforeRule).toContain("right: 6px");
+    expect(editingBeforeRule).toContain("left: 6px");
+    expect(editingBeforeRule).toMatch(/background: rgba\([^)]*0\.08\)/);
+    expect(editingBeforeRule).toContain("pointer-events: none");
   });
 
   it("shows deadline labels and urgency classes in reminders and today's focus", () => {
@@ -2354,7 +2369,8 @@ describe("TodoPanel", () => {
 
     await wrapper.findAll(".todo-input")[1].trigger("click");
 
-    expect(wrapper.findAll(".todo-item")[1].classes()).toContain("is-menu-selected");
+    expect(wrapper.findAll(".todo-item")[1].classes()).toContain("is-editing");
+    expect(wrapper.findAll(".todo-item")[1].classes()).not.toContain("is-menu-selected");
 
     await wrapper.findAll(".todo-input")[1].trigger("blur");
     await wrapper.findAll(".todo-drag-handle")[1].trigger("dragstart");

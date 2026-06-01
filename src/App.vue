@@ -785,12 +785,9 @@ function createTodo(period: TodoPeriod, afterId?: string): void {
       cancelEmptyTodoRemoval(blankTodo.period, blankTodo.id);
       if (blankTodo.period === period) {
         const input = getTodoInput(blankTodo.period, blankTodo.id);
-        if (document.activeElement === input) {
-          input.blur();
-          blurEmptyTodo(blankTodo.period, blankTodo.id);
-          return;
-        }
-        nextTick(() => focusTodoInput(blankTodo.period, blankTodo.id));
+        input?.blur();
+        state.todos = removeTodoFromMap(state.todos, blankTodo.period, blankTodo.id);
+        persistNow();
         return;
       }
       state.todos = removeTodoFromMap(state.todos, blankTodo.period, blankTodo.id);
@@ -1001,14 +998,20 @@ function applyTheme(): void {
 }
 
 function exportData(anchor?: HTMLElement): void {
-  const blob = new Blob([exportJsonState(state)], { type: "application/json" });
+  const content = exportJsonState(state);
+  const filename = `todo-board-${new Date().toISOString().slice(0, 10)}.json`;
+  downloadExportFile(content, filename);
+  showBubble("dataExported", anchor, { hideCompanionAfter: true });
+}
+
+function downloadExportFile(content: string, filename: string): void {
+  const blob = new Blob([content], { type: "application/json" });
   const url = URL.createObjectURL(blob);
   const link = document.createElement("a");
   link.href = url;
-  link.download = `todo-board-${new Date().toISOString().slice(0, 10)}.json`;
+  link.download = filename;
   link.click();
   URL.revokeObjectURL(url);
-  showBubble("dataExported", anchor, { hideCompanionAfter: true });
 }
 
 function requestImport(anchor?: HTMLElement): void {

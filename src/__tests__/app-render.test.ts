@@ -303,6 +303,33 @@ describe("App shell", () => {
       await wrapper.vm.$nextTick();
 
       expect(wrapper.find('[data-testid="todo-input-morning"]').exists()).toBe(false);
+      expect(wrapper.find('.todo-section[data-list-id="morning"]').classes()).not.toContain("is-focused");
+      expect(document.activeElement).toBe(document.body);
+    } finally {
+      wrapper.unmount();
+      vi.useRealTimers();
+    }
+  });
+
+  it("cancels the pending blank reminder from same-list blank space even after the input lost focus", async () => {
+    vi.useFakeTimers();
+    const wrapper = mountApp();
+
+    try {
+      await wrapper.get('.todo-section[data-list-id="morning"] .todo-list-shell').trigger("click");
+      await wrapper.vm.$nextTick();
+
+      const input = wrapper.get('[data-testid="todo-input-morning"]').element as HTMLInputElement;
+      input.blur();
+      await wrapper.vm.$nextTick();
+
+      await wrapper.get('.todo-section[data-list-id="morning"] .todo-list-shell').trigger("click");
+      await vi.advanceTimersByTimeAsync(300);
+      await wrapper.vm.$nextTick();
+
+      expect(wrapper.find('[data-testid="todo-input-morning"]').exists()).toBe(false);
+      expect(wrapper.find('.todo-section[data-list-id="morning"]').classes()).not.toContain("is-focused");
+      expect(document.activeElement).toBe(document.body);
     } finally {
       wrapper.unmount();
       vi.useRealTimers();
@@ -2653,6 +2680,50 @@ describe("App shell", () => {
     }
   });
 
+  it("exports through a generated browser download without requesting file-system access", async () => {
+    vi.useFakeTimers();
+    const showSaveFilePicker = vi.fn();
+    const showDirectoryPicker = vi.fn();
+    let exportedBlob: Blob | undefined;
+    const createObjectURL = vi.fn((blob: Blob) => {
+      exportedBlob = blob;
+      return "blob:todo-board";
+    });
+    const revokeObjectURL = vi.fn();
+    const anchorClick = vi.spyOn(HTMLAnchorElement.prototype, "click").mockImplementation(() => {});
+    Object.defineProperty(window, "showSaveFilePicker", { value: showSaveFilePicker, configurable: true });
+    Object.defineProperty(window, "showDirectoryPicker", { value: showDirectoryPicker, configurable: true });
+    Object.assign(URL, { createObjectURL, revokeObjectURL });
+    const wrapper = mountApp();
+
+    try {
+      const settings = wrapper.getComponent(SettingsMenu);
+      settings.vm.$emit("export", settings.element as HTMLElement);
+      await wrapper.vm.$nextTick();
+
+      expect(showSaveFilePicker).not.toHaveBeenCalled();
+      expect(showDirectoryPicker).not.toHaveBeenCalled();
+      expect(createObjectURL).toHaveBeenCalledWith(expect.any(Blob));
+      expect(anchorClick).toHaveBeenCalled();
+      expect(revokeObjectURL).toHaveBeenCalledWith("blob:todo-board");
+
+      expect(exportedBlob).toBeInstanceOf(Blob);
+      if (!exportedBlob) throw new Error("Expected export blob");
+      const exported = await exportedBlob.text();
+      expect(JSON.parse(exported)).toMatchObject({ theme: "light" });
+
+      await vi.advanceTimersByTimeAsync(200);
+      await wrapper.vm.$nextTick();
+
+      expect(wrapper.find('[data-testid="companion-confirm"]').text()).toMatch(/导出|备份|文件|准备/);
+    } finally {
+      delete (window as typeof window & { showSaveFilePicker?: unknown }).showSaveFilePicker;
+      delete (window as typeof window & { showDirectoryPicker?: unknown }).showDirectoryPicker;
+      wrapper.unmount();
+      vi.useRealTimers();
+    }
+  });
+
   it("accepts imports that only change the companion GIF theme", async () => {
     vi.useFakeTimers();
     const wrapper = mountApp();
@@ -2873,6 +2944,8 @@ describe("App shell", () => {
       await wrapper.vm.$nextTick();
 
       expect(wrapper.find('[data-testid="companion-confirm"]').text()).toContain("To Do List 看板");
+      expect(wrapper.find('[data-testid="companion-confirm"]').text()).toContain("所有操作均在本地浏览器完成");
+      expect(wrapper.find('[data-testid="companion-confirm"]').text()).toContain("绝不上传您的任何数据");
       expect(wrapper.find('[data-testid="companion-confirm"]').text()).not.toContain("云霞 · 产品");
       expect(wrapper.find('[data-testid="companion-confirm"]').text()).not.toContain("佳男 · 开发");
       expect(wrapper.find('[data-testid="companion-confirm"]').text()).not.toContain("Codex · 协作支持");

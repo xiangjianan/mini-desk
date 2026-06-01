@@ -227,7 +227,8 @@ describe("SpacePanel", () => {
     const source = readFileSync(resolve(__dirname, "../components/SpacePanel.vue"), "utf8");
     const styles = readFileSync(resolve(__dirname, "../styles.css"), "utf8");
 
-    expect(source).toContain('<TransitionGroup name="space-reorder" tag="div" class="space-tabs"');
+    expect(source).toContain('name="space-reorder"');
+    expect(source).toContain('class="space-tabs"');
     expect(source).toContain(':key="space.id"');
     expect(source).not.toContain(':key="`edit-${space.id}`"');
     expect(source).toContain('key="space-add"');
@@ -239,6 +240,18 @@ describe("SpacePanel", () => {
     await wrapper.findAll(".space-tab")[0].trigger("dragend");
     expect(wrapper.findAll(".space-tab")[0].classes()).not.toContain("is-dragging");
     wrapper.unmount();
+  });
+
+  it("keeps a newly committed tab from flashing during the edit-to-label swap", () => {
+    const source = readFileSync(resolve(__dirname, "../components/SpacePanel.vue"), "utf8");
+    const styles = readFileSync(resolve(__dirname, "../styles.css"), "utf8");
+    const inputRule = styles.match(/\.space-tab-edit-input\s*\{([\s\S]*?)\}/)?.[1] ?? "";
+
+    expect(source).toContain("suppressTabCommitTransition");
+    expect(source).toContain("is-committing-tab");
+    expect(inputRule).toContain("flex: 0 0 84px");
+    expect(inputRule).toContain("width: 84px");
+    expect(styles).toMatch(/\.space-tabs\.is-committing-tab > \.space-reorder-move,[\s\S]*?transition: none/s);
   });
 
   it("keeps workspace tab drags off the plain-text payload", async () => {

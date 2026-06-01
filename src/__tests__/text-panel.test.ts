@@ -1,5 +1,7 @@
 import { mount } from "@vue/test-utils";
 import { describe, expect, it, vi } from "vitest";
+import { readFileSync } from "node:fs";
+import { resolve } from "node:path";
 import TextPanel from "../components/TextPanel.vue";
 
 const tooltipStub = {
@@ -293,7 +295,7 @@ describe("TextPanel", () => {
     expect(wrapper.emitted("update")?.at(-1)?.[0]).toEqual([{ text: "root", indent: 0 }]);
   });
 
-  it("outdents an empty indented line when pressing Backspace or Delete", async () => {
+  it("only outdents with Shift+Tab while Backspace and Delete stay native", async () => {
     const wrapper = mount(TextPanel, {
       props: {
         titleId: "workspace-title",
@@ -305,16 +307,37 @@ describe("TextPanel", () => {
 
     await wrapper.get("textarea").trigger("click");
     textarea.setSelectionRange(textarea.value.length, textarea.value.length);
-    await wrapper.get("textarea").trigger("keydown", { key: "Backspace" });
+
+    const backspace = new KeyboardEvent("keydown", { key: "Backspace", bubbles: true, cancelable: true });
+    textarea.dispatchEvent(backspace);
+
+    expect(backspace.defaultPrevented).toBe(false);
+    expect(textarea.value).toBe("        ");
+    expect(wrapper.emitted("update")).toBeUndefined();
+
+    const deleteKey = new KeyboardEvent("keydown", { key: "Delete", bubbles: true, cancelable: true });
+    textarea.dispatchEvent(deleteKey);
+
+    expect(deleteKey.defaultPrevented).toBe(false);
+    expect(textarea.value).toBe("        ");
+    expect(wrapper.emitted("update")).toBeUndefined();
+
+    await wrapper.get("textarea").trigger("keydown", { key: "Tab", shiftKey: true });
 
     expect(textarea.value).toBe("    ");
     expect(wrapper.emitted("update")?.at(-1)?.[0]).toEqual([{ text: "", indent: 1 }]);
+  });
 
-    textarea.setSelectionRange(textarea.value.length, textarea.value.length);
-    await wrapper.get("textarea").trigger("keydown", { key: "Delete" });
+  it("uses roomier text spacing in notes and workspace editors", () => {
+    const styles = readFileSync(resolve(__dirname, "../styles.css"), "utf8");
+    const baseRule = styles.match(/\.text-editor-textarea\s*\{([\s\S]*?)\}/)?.[1] ?? "";
+    const workspaceRule = styles.match(/\.workspace-panel \.text-editor-textarea\s*\{([\s\S]*?)\}/)?.[1] ?? "";
 
-    expect(textarea.value).toBe("");
-    expect(wrapper.emitted("update")?.at(-1)?.[0]).toEqual([]);
+    expect(baseRule).toContain("padding: 10px 12px");
+    expect(baseRule).toContain("line-height: 1.68");
+    expect(baseRule).toContain("letter-spacing: 0.01em");
+    expect(workspaceRule).toContain("padding: 14px 16px");
+    expect(workspaceRule).toContain("line-height: 1.82");
   });
 
   it("keeps the caret collapsed when indenting a root line", async () => {
@@ -1188,6 +1211,32 @@ describe("TextPanel", () => {
 
     expect(dragEvent.defaultPrevented).toBe(true);
     expect(setData).not.toHaveBeenCalled();
+  });
+
+  it("does not treat blank space after a selected line end as draggable text", async () => {
+    vi.spyOn(HTMLCanvasElement.prototype, "getContext").mockReturnValue(null);
+    const wrapper = mount(TextPanel, {
+      props: {
+        titleId: "workspace-title",
+        title: "工作空间",
+        lines: [{ text: "拖动文字", indent: 0 }],
+      },
+    });
+    const textarea = wrapper.get("textarea").element as HTMLTextAreaElement;
+    textarea.setSelectionRange(0, textarea.value.length);
+    await wrapper.get("textarea").trigger("select");
+
+    const pointer = new MouseEvent("pointerdown", {
+      bubbles: true,
+      cancelable: true,
+      clientX: 999,
+      clientY: 0,
+    });
+    Object.defineProperty(pointer, "pointerType", { value: "mouse" });
+    textarea.dispatchEvent(pointer);
+    await wrapper.vm.$nextTick();
+
+    expect(wrapper.get("textarea").attributes("draggable")).toBe("false");
   });
 
   it("ignores external text drops that include files", async () => {

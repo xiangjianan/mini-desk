@@ -541,13 +541,24 @@ describe("Naive UI component usage", () => {
     expect(styles).toMatch(/\.todo-star-button\.is-starred\s*\{[^}]*pointer-events: auto/s);
   });
 
-  it("highlights the reminder context-menu item without adding another border", () => {
+  it("draws selected reminder borders inside the row so every edge stays visible", () => {
     const styles = read("src/styles.css");
-    const selectedRule = styles.match(/\.todo-item\.is-menu-selected\s*\{(?<body>[^}]*)\}/)?.groups?.body ?? "";
+    const selectedRule =
+      styles.match(/\.today-focus-item\.is-menu-selected,[\s\S]*?\.todo-item\.is-menu-selected\s*\{(?<body>[^}]*)\}/)
+        ?.groups?.body ?? "";
+    const selectedBorderRule =
+      styles.match(
+        /\.today-focus-item\.is-menu-selected::before,[\s\S]*?\.todo-item\.is-menu-selected::before\s*\{(?<body>[^}]*)\}/
+      )?.groups?.body ?? "";
 
-    expect(selectedRule).toContain("background:");
-    expect(selectedRule).not.toContain("border");
-    expect(selectedRule).not.toContain("box-shadow");
+    expect(selectedRule).toContain("background: transparent");
+    expect(selectedBorderRule).toContain("top: 0");
+    expect(selectedBorderRule).toContain("right: 6px");
+    expect(selectedBorderRule).toContain("bottom: 0");
+    expect(selectedBorderRule).toContain("left: 6px");
+    expect(selectedBorderRule).toContain("border: 1px solid var(--line-focus)");
+    expect(selectedBorderRule).toContain("pointer-events: none");
+    expect(selectedBorderRule).toContain("z-index: 3");
   });
 
   it("uses click editing for area text and reminders while titles keep double-click editing", () => {
@@ -678,6 +689,10 @@ describe("Naive UI component usage", () => {
     expect(styles).toMatch(/\.quick-dialog \.n-base-close\s*\{[^}]*border: 0/s);
     expect(styles).toMatch(/\.quick-dialog \.n-base-close\s*\{[^}]*box-shadow: none/s);
     expect(styles).toMatch(/\.panel\.is-focused,[\s\S]*?\.todo-section\.is-focused\s*\{[^}]*box-shadow: inset 0 0 0 1px var\(--line-focus\)/s);
+    expect(styles).toMatch(/\.todo-section\.is-focused::before\s*\{[^}]*inset: 0/s);
+    expect(styles).toMatch(/\.todo-section\.is-focused::before\s*\{[^}]*border: 1px solid var\(--line-focus\)/s);
+    expect(styles).toMatch(/\.todo-section\.is-focused::before\s*\{[^}]*pointer-events: none/s);
+    expect(styles).toMatch(/\.todo-section\.is-focused::before\s*\{[^}]*z-index: 4/s);
   });
 
   it("routes about information through the companion bubble and suggestions to GitHub issues", () => {
