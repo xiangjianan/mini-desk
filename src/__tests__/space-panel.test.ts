@@ -178,7 +178,7 @@ describe("SpacePanel", () => {
 
     await wrapper.findAll(".space-tab")[1].trigger("contextmenu");
 
-    expect(wrapper.findAll(".dropdown-option").map((option) => option.text())).toEqual(["编辑", "删除"]);
+    expect(wrapper.findAll(".dropdown-option").map((option) => option.text())).toEqual(["重命名", "删除"]);
 
     await wrapper.findAll(".dropdown-option").find((option) => option.text() === "删除")?.trigger("click");
 

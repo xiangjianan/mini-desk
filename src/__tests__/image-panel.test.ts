@@ -63,7 +63,7 @@ describe("ImagePanel", () => {
 
     await wrapper.get(".panel-header").trigger("contextmenu");
 
-    expect(wrapper.findAll(".dropdown-option").map((option) => option.text())).toEqual(["编辑"]);
+    expect(wrapper.findAll(".dropdown-option").map((option) => option.text())).toEqual(["重命名"]);
 
     await wrapper.get(".dropdown-option").trigger("click");
 

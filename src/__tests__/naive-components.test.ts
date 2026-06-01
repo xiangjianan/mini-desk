@@ -177,10 +177,9 @@ describe("Naive UI component usage", () => {
     expect(quick).toContain("uiText.quick.menu");
     expect(quick).toContain("uiText.value.quick.showHidden");
     expect(quick).toContain("uiText.value.quick.hideHidden");
-    expect(i18n).toContain("快捷链接菜单");
-    expect(quick).not.toContain("AddOutline");
-    expect(quick).not.toContain("EyeOutline");
-    expect(quick).not.toContain("EyeOffOutline");
+    expect(i18n).toContain("快捷动作菜单");
+    expect(quick).toContain("EyeOutline");
+    expect(quick).toContain("EyeOffOutline");
     expect(quick).toContain("quick-button-icon");
     expect(app).toContain("top-actions");
     expect(app).toContain("SunnyOutline");
@@ -188,7 +187,7 @@ describe("Naive UI component usage", () => {
     expect(todo).toContain("todo-section-menu-button");
     expect(todo).toContain("uiText.todo.menu");
     expect(todo).toContain("uiText.value.todo.clearCompleted");
-    expect(todo).not.toContain("TrashOutline");
+    expect(todo).toContain("TrashOutline");
     expect(settings).toContain("NIcon");
     expect(settings).toContain("NBadge");
     expect(settings).toContain("SettingsOutline");
@@ -341,7 +340,7 @@ describe("Naive UI component usage", () => {
 
   it("keeps bordered controls and popup surfaces square without rounded corners", () => {
     const styles = read("src/styles.css");
-    const stylesWithoutIndicatorDot = styles.replace(/\.save-status::before\s*\{[^}]*\}/g, "");
+    const stylesWithoutIndicatorDot = styles.replace(/\.save-status::before\s*\{[^}]*\}/g, "").replace(/\.shortcut-row kbd\s*\{[^}]*\}/g, "");
 
     expect(styles).toContain("--radius: 0");
     expect(styles).toMatch(/button\s*\{[^}]*border-radius: 0/s);

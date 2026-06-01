@@ -7,6 +7,7 @@ import ImagePanel from "./components/ImagePanel.vue";
 import ImagePreview from "./components/ImagePreview.vue";
 import QuickButtons from "./components/QuickButtons.vue";
 import SettingsMenu from "./components/SettingsMenu.vue";
+import ShortcutHelp from "./components/ShortcutHelp.vue";
 import SpacePanel from "./components/SpacePanel.vue";
 import TextPanel from "./components/TextPanel.vue";
 import TodoPanel from "./components/TodoPanel.vue";
@@ -84,6 +85,8 @@ const bubbleTimer = ref<number | undefined>();
 const bubbleFadeTimer = ref<number | undefined>();
 const bubbleRemainingMs = ref(0);
 const bubbleTimerStartedAt = ref(0);
+const companionFadeRemaining = ref(2000);
+const companionFadeStartedAt = ref(0);
 const bubbleTimerOptions = ref<BubbleOptions>({});
 const bubbleClearSignal = ref(0);
 const saveStatusTimer = ref<number | undefined>();
@@ -95,6 +98,7 @@ const appVersion = ref(getIndexAppVersion());
 const storedAppVersion = ref<string | null>(null);
 const versionPromptVisible = ref(false);
 const versionBadgeVisible = ref(false);
+const shortcutHelpVisible = ref(false);
 const isMobileBlocked = ref(getInitialMobileBlocked());
 const mobileMediaQuery = ref<MediaQueryList | null>(null);
 let appMounted = false;
@@ -111,6 +115,7 @@ const GITHUB_ISSUE_URL = "https://github.com/xiangjianan/todolist/issues/new";
 const GITHUB_REPO_URL = "https://github.com/xiangjianan/todolist";
 const GITHUB_REPO_LABEL = "xiangjianan / todolist";
 const ABOUT_MESSAGE_DURATION_MS = 10000;
+const COMPANION_FADE_MS = 2000;
 const VERSION_BADGE_MAX_VISIBLE_MS = 10000;
 const MIN_COMPANION_POPOVER_RIGHT_EDGE = 260;
 const activeGuideKey = ref<GuideKey | null>(null);
@@ -336,7 +341,6 @@ function flushTextSave(): void {
 
 function showCompanion(anchor?: HTMLElement, guideKey?: GuideKey): void {
   hideBubbleMessage({ clearRetainedContent: true });
-  companionFocused.value = true;
   companionPosition.value = getCompanionPosition(anchor);
   activeGuideKey.value = guideKey ?? null;
 }
@@ -1139,8 +1143,11 @@ function hideBubbleMessage(options: { clearRetainedContent?: boolean } = {}): vo
   window.clearTimeout(bubbleTimer.value);
   window.clearTimeout(bubbleFadeTimer.value);
   bubbleTimer.value = undefined;
+  bubbleFadeTimer.value = undefined;
   bubbleRemainingMs.value = 0;
   bubbleTimerStartedAt.value = 0;
+  companionFadeRemaining.value = 0;
+  companionFadeStartedAt.value = 0;
   bubbleTimerOptions.value = {};
   clearPendingConfirm();
   bubbleVisible.value = false;
@@ -1170,31 +1177,49 @@ function finishBubbleTimer(): void {
   bubbleMessage.value = "";
   bubbleLink.value = null;
   if (options.guideKey) activeGuideKey.value = null;
-  if (options.hideCompanionAfter) {
-    bubbleFadeTimer.value = window.setTimeout(() => {
-      companionFocused.value = false;
-    }, 260);
-  }
+  window.clearTimeout(bubbleFadeTimer.value);
+  companionFadeRemaining.value = COMPANION_FADE_MS;
+  companionFadeStartedAt.value = Date.now();
+  bubbleFadeTimer.value = window.setTimeout(finishCompanionFade, COMPANION_FADE_MS);
+}
+
+function finishCompanionFade(): void {
+  bubbleFadeTimer.value = undefined;
+  companionFadeRemaining.value = 0;
+  companionFadeStartedAt.value = 0;
+  companionFocused.value = false;
 }
 
 function pauseBubbleTimer(): void {
-  if (!bubbleVisible.value || pendingConfirm.value || !bubbleTimer.value) return;
-  window.clearTimeout(bubbleTimer.value);
-  bubbleTimer.value = undefined;
-  const elapsed = Date.now() - bubbleTimerStartedAt.value;
-  bubbleRemainingMs.value = Math.max(0, bubbleRemainingMs.value - elapsed);
-  bubbleTimerStartedAt.value = 0;
+  if (bubbleVisible.value && bubbleTimer.value && !pendingConfirm.value) {
+    window.clearTimeout(bubbleTimer.value);
+    bubbleTimer.value = undefined;
+    const elapsed = Date.now() - bubbleTimerStartedAt.value;
+    bubbleRemainingMs.value = Math.max(0, bubbleRemainingMs.value - elapsed);
+    bubbleTimerStartedAt.value = 0;
+  }
+  if (bubbleFadeTimer.value) {
+    window.clearTimeout(bubbleFadeTimer.value);
+    bubbleFadeTimer.value = undefined;
+    const elapsed = Date.now() - companionFadeStartedAt.value;
+    companionFadeRemaining.value = Math.max(0, companionFadeRemaining.value - elapsed);
+    companionFadeStartedAt.value = 0;
+  }
 }
 
 function resumeBubbleTimer(): void {
-  if (!bubbleVisible.value || pendingConfirm.value || bubbleTimer.value) return;
-  if (!bubbleMessage.value && !bubbleLink.value) return;
-  if (bubbleRemainingMs.value <= 0) {
-    finishBubbleTimer();
-    return;
+  if (bubbleVisible.value && !bubbleTimer.value && !pendingConfirm.value && (bubbleMessage.value || bubbleLink.value)) {
+    if (bubbleRemainingMs.value <= 0) {
+      finishBubbleTimer();
+      return;
+    }
+    bubbleTimerStartedAt.value = Date.now();
+    bubbleTimer.value = window.setTimeout(finishBubbleTimer, bubbleRemainingMs.value);
   }
-  bubbleTimerStartedAt.value = Date.now();
-  bubbleTimer.value = window.setTimeout(finishBubbleTimer, bubbleRemainingMs.value);
+  if (!bubbleFadeTimer.value && companionFadeRemaining.value > 0 && !bubbleVisible.value) {
+    companionFadeStartedAt.value = Date.now();
+    bubbleFadeTimer.value = window.setTimeout(finishCompanionFade, companionFadeRemaining.value);
+  }
 }
 
 function requestConfirmation(
@@ -1306,6 +1331,15 @@ async function prepareTodoNotifications(): Promise<void> {
   refreshTodoNotifications();
 }
 
+const URL_LINE_PATTERN = /^https?:\/\//i;
+
+function formatNotificationBody(text: string, language: AppLanguage): string {
+  const prefix = language === "en" ? "From ——\n" : "来自于——\n";
+  const lines = text.split("\n");
+  const result = lines.map((line) => (URL_LINE_PATTERN.test(line.trim()) ? prefix + line : line));
+  return result.join("\n");
+}
+
 function refreshTodoNotifications(): void {
   triggerDueTodoNotifications();
   scheduleNextTodoNotification();
@@ -1322,13 +1356,15 @@ function triggerDueTodoNotifications(): void {
       if (todo.done || !Number.isFinite(todo.notifyAt) || todo.notifyAt === undefined || todo.notifyAt > now) continue;
       const key = getTodoNotificationKey(period, todo);
       if (sentTodoNotifications.has(key)) continue;
+      const title = `【${getTodoListTitle(period)}】`;
+      const body = formatNotificationBody(todo.text, state.language);
       const options: NotificationOptions = {
-        body: todo.text,
+        body,
         tag: getTodoNotificationTag(todo),
       };
       if (notificationIcon) options.icon = notificationIcon;
       try {
-        new notificationApi(getTodoListTitle(period), options);
+        new notificationApi(title, options);
         sentTodoNotifications.add(key);
       } catch (error) {
         console.warn("Failed to show reminder notification", error);
@@ -1739,6 +1775,7 @@ function moveItem<T extends { id: string }>(items: T[], dragId: string, targetId
       @no="cancelCompanionAction"
       @pause="pauseBubbleTimer"
       @resume="resumeBubbleTimer"
+      @gif-theme-change="(theme: string) => updateCompanionGifTheme(theme as CompanionGifTheme)"
     />
     <div v-if="!isMobileBlocked" class="top-actions">
       <span
@@ -1766,6 +1803,7 @@ function moveItem<T extends { id: string }>(items: T[], dragId: string, targetId
         @import="requestImport"
         @about="about"
         @suggest="suggestIssue"
+        @shortcut-help="shortcutHelpVisible = true"
         @update="updateStaticVersion"
         @language="updateLanguage"
         @gif-theme="updateCompanionGifTheme"
@@ -1777,5 +1815,6 @@ function moveItem<T extends { id: string }>(items: T[], dragId: string, targetId
       </NButton>
     </div>
     <input ref="importInput" type="file" accept="application/json,.json" hidden @change="importData" />
+    <ShortcutHelp :show="shortcutHelpVisible" :language="state.language" @close="shortcutHelpVisible = false" />
   </NConfigProvider>
 </template>

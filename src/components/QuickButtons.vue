@@ -1,7 +1,8 @@
 <script setup lang="ts">
-import { computed, onMounted, onUnmounted, reactive, ref, watch } from "vue";
+import { computed, h, onMounted, onUnmounted, reactive, ref, watch } from "vue";
+import type { Component, VNode } from "vue";
 import { NButton, NCheckbox, NDropdown, NIcon, NInput, NModal, NScrollbar } from "naive-ui";
-import { CopyOutline } from "@vicons/ionicons5";
+import { AddOutline, CopyOutline, CreateOutline, EyeOffOutline, EyeOutline, HelpCircleOutline, TrashOutline } from "@vicons/ionicons5";
 import type { DropdownOption } from "naive-ui";
 import type { AppLanguage, GuideKey, QuickButton, QuickButtonType } from "../types";
 import { GUIDE_MENU_OPTION } from "../state/defaults";
@@ -39,9 +40,15 @@ const form = reactive<{ title: string; value: string; type: QuickButtonType }>({
 });
 const menu = ref<{ x: number; y: number; id?: string; anchor?: HTMLElement } | null>(null);
 const draggingId = ref<string | null>(null);
+const isDragHover = ref(false);
+const leavingHiddenIds = new Set<string>();
 const uiText = computed(() => getUiText(props.language));
 const guideMenuOption = computed<DropdownOption>(() => ({ ...GUIDE_MENU_OPTION, label: uiText.value.common.tips }));
 const exclusiveMenu = createExclusiveContextMenu(closeMenu);
+
+function renderIcon(icon: Component): () => VNode {
+  return () => h(NIcon, { size: 16 }, { default: () => h(icon) });
+}
 
 onMounted(exclusiveMenu.mount);
 onUnmounted(exclusiveMenu.unmount);
@@ -54,16 +61,16 @@ const menuOptions = computed<DropdownOption[]>(() => {
   const button = props.buttons.find((item) => item.id === menu.value?.id);
   if (!menu.value?.id) {
     return [
-      { label: uiText.value.quick.add, key: "add" },
-      { label: props.showHidden ? uiText.value.quick.hideHidden : uiText.value.quick.showHidden, key: "toggle-show-hidden" },
-      guideMenuOption.value,
+      { label: uiText.value.quick.add, key: "add", icon: renderIcon(AddOutline) },
+      { label: props.showHidden ? uiText.value.quick.hideHidden : uiText.value.quick.showHidden, key: "toggle-show-hidden", icon: renderIcon(props.showHidden ? EyeOffOutline : EyeOutline) },
+      { ...guideMenuOption.value, icon: renderIcon(HelpCircleOutline) },
     ];
   }
   return [
-    { label: uiText.value.common.edit, key: "edit" },
-    { label: button?.hidden ? uiText.value.quick.show : uiText.value.quick.hide, key: "toggle-hidden" },
-    { label: uiText.value.common.delete, key: "delete" },
-    guideMenuOption.value,
+    { label: uiText.value.common.edit, key: "edit", icon: renderIcon(CreateOutline) },
+    { label: button?.hidden ? uiText.value.quick.show : uiText.value.quick.hide, key: "toggle-hidden", icon: renderIcon(button?.hidden ? EyeOutline : EyeOffOutline) },
+    { label: uiText.value.common.delete, key: "delete", icon: renderIcon(TrashOutline) },
+    { ...guideMenuOption.value, icon: renderIcon(HelpCircleOutline) },
   ];
 });
 
@@ -162,7 +169,11 @@ function handleMenuSelect(key: string): void {
   if (key === "guide" && anchor) emit("guide", "quickButtons", anchor, true);
   if (!id) return;
   if (key === "edit") openEdit(id);
-  if (key === "toggle-hidden") emit("toggleHidden", id);
+  if (key === "toggle-hidden") {
+    const btn = props.buttons.find((b) => b.id === id);
+    if (btn && !btn.hidden) leavingHiddenIds.add(id);
+    emit("toggleHidden", id);
+  }
   if (key === "delete") emit("delete", id, anchor);
 }
 
@@ -176,17 +187,108 @@ function handleToggleShowHidden(anchor?: HTMLElement): void {
   emit("toggleShowHidden");
   if (anchor) emit("guide", "toggleHiddenQuick", anchor);
 }
+
+function handleQuickDragOver(event: DragEvent): void {
+  const types = Array.from(event.dataTransfer?.types ?? []);
+  if (types.includes("text/plain") && !types.includes("Files")) {
+    event.preventDefault();
+    event.dataTransfer!.dropEffect = "copy";
+    isDragHover.value = true;
+  }
+}
+
+function handleQuickDragLeave(): void {
+  isDragHover.value = false;
+}
+
+function handleQuickDrop(event: DragEvent): void {
+  event.preventDefault();
+  isDragHover.value = false;
+  const text = event.dataTransfer?.getData("text/plain") ?? "";
+  if (!text.trim()) return;
+
+  const isUrl = /^https?:\/\//.test(text.trim());
+  const title = isUrl
+    ? (() => { try { return new URL(text.trim()).hostname; } catch { return text.trim().slice(0, 20); } })()
+    : text.trim().slice(0, 20);
+  const type: QuickButtonType = isUrl ? "link" : "text";
+
+  emit("save", { title, value: text.trim(), type });
+}
+
+const MOVE_DURATION = 220;
+
+function onQuickBeforeEnter(el: Element): void {
+  const e = el as HTMLElement;
+  e.style.opacity = "0";
+}
+
+function onQuickEnter(el: Element, done: () => void): void {
+  const e = el as HTMLElement;
+  requestAnimationFrame(() => {
+    e.style.transition = `opacity 0.18s ease, transform 0.22s cubic-bezier(0.2, 0, 0, 1)`;
+    e.style.opacity = "1";
+  });
+  setTimeout(done, 220);
+}
+
+function onQuickAfterEnter(el: Element): void {
+  const e = el as HTMLElement;
+  e.style.transition = "";
+  e.style.opacity = "";
+}
+
+function onQuickBeforeLeave(el: Element): void {
+  const e = el as HTMLElement;
+  const id = e.dataset.id;
+  if (id && leavingHiddenIds.has(id)) {
+    e.style.display = "none";
+    leavingHiddenIds.delete(id);
+  }
+}
+
+function onQuickLeave(el: Element, done: () => void): void {
+  done();
+}
+
+function onQuickAfterLeave(el: Element): void {
+  const e = el as HTMLElement;
+  e.style.display = "";
+}
+
+function onQuickBeforeMove(el: Element): void {
+  const e = el as HTMLElement;
+  e.style.transition = `transform ${MOVE_DURATION}ms cubic-bezier(0.2, 0, 0, 1)`;
+}
+
+function onQuickMove(el: Element, done: () => void): void {
+  setTimeout(done, MOVE_DURATION);
+}
+
+function onQuickAfterMove(el: Element): void {
+  const e = el as HTMLElement;
+  e.style.transition = "";
+}
 </script>
 
 <template>
-  <section class="split-block quick-block" @click="handleAreaClick" @contextmenu="openAreaMenu">
+  <section
+    class="split-block quick-block"
+    :class="{ 'drag-hover': isDragHover }"
+    @click="handleAreaClick"
+    @contextmenu="openAreaMenu"
+    @dragover="handleQuickDragOver"
+    @dragleave="handleQuickDragLeave"
+    @drop="handleQuickDrop"
+    @dragend="handleQuickDragLeave"
+  >
     <div class="panel-header" @contextmenu="openTitleMenu">
       <h2 id="quick-title">
         <EditableTitle
           ref="titleRef"
           id="quick-title"
           :value="title"
-          :edit-label="uiText.common.edit"
+          :edit-label="uiText.common.rename"
           @update="(id, value) => emit('titleUpdate', id, value)"
         />
       </h2>
@@ -203,12 +305,26 @@ function handleToggleShowHidden(anchor?: HTMLElement): void {
     </div>
 
     <NScrollbar class="quick-buttons-scrollbar" :aria-label="uiText.quick.list" @click="closeMenu" @contextmenu="openAreaMenu">
-      <TransitionGroup name="quick-reorder" tag="div" class="quick-buttons">
+      <TransitionGroup
+        :css="false"
+        tag="div"
+        class="quick-buttons"
+        @before-enter="onQuickBeforeEnter"
+        @enter="onQuickEnter"
+        @after-enter="onQuickAfterEnter"
+        @before-leave="onQuickBeforeLeave"
+        @leave="onQuickLeave"
+        @after-leave="onQuickAfterLeave"
+        @before-move="onQuickBeforeMove"
+        @move="onQuickMove"
+        @after-move="onQuickAfterMove"
+      >
         <button
           v-for="button in visibleButtons"
           :key="button.id"
           class="quick-button"
           :class="{ 'is-hidden': button.hidden, 'is-copy': button.type === 'text', 'is-dragging': draggingId === button.id }"
+          :data-id="button.id"
           type="button"
           draggable="true"
           @click="emit('copy', button.id, $event.currentTarget as HTMLElement)"

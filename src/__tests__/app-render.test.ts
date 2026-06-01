@@ -149,16 +149,16 @@ describe("App shell", () => {
     const wrapper = mountApp();
 
     expect(wrapper.find('[aria-label="To Do List 看板"]').exists()).toBe(true);
-    expect(wrapper.text()).toContain("截图");
+    expect(wrapper.text()).toContain("图床");
     expect(wrapper.text()).toContain("便签");
-    expect(wrapper.text()).toContain("快捷链接");
-    expect(wrapper.text()).toContain("早上");
-    expect(wrapper.text()).toContain("中午");
-    expect(wrapper.text()).toContain("晚上");
+    expect(wrapper.text()).toContain("快捷动作");
+    expect(wrapper.text()).toContain("待办");
+    expect(wrapper.text()).toContain("工作");
+    expect(wrapper.text()).toContain("学习");
     expect(wrapper.text()).toContain("工作空间");
     expect(wrapper.findAll(".space-tab").map((tab) => tab.text())).toEqual(["工作空间"]);
     expect(wrapper.find('[aria-label="切换主题"]').exists()).toBe(true);
-    expect(wrapper.find('[aria-label="快捷链接菜单"]').exists()).toBe(true);
+    expect(wrapper.find('[aria-label="快捷动作菜单"]').exists()).toBe(true);
     expect(wrapper.find('[aria-label="设置"]').exists()).toBe(true);
     expect(wrapper.find(".image-empty").exists()).toBe(false);
     expect(wrapper.find(".empty-hint").exists()).toBe(false);
@@ -181,14 +181,14 @@ describe("App shell", () => {
       wrapper.getComponent(SettingsMenu).vm.$emit("language", "en", wrapper.get(".settings-trigger").element as HTMLElement);
       await nextTick();
 
-      expect(wrapper.text()).toContain("Screenshots");
+      expect(wrapper.text()).toContain("Image Bed");
       expect(wrapper.text()).toContain("我的便签");
-      expect(wrapper.text()).toContain("Quick Links");
-      expect(wrapper.text()).toContain("Morning");
-      expect(wrapper.text()).toContain("Noon");
-      expect(wrapper.text()).toContain("Evening");
+      expect(wrapper.text()).toContain("Quick Actions");
+      expect(wrapper.text()).toContain("To-Do");
+      expect(wrapper.text()).toContain("Work");
+      expect(wrapper.text()).toContain("Study");
       expect(wrapper.findAll(".space-tab").map((tab) => tab.text())).toEqual(["Workspace"]);
-      expect(wrapper.text()).not.toContain("快捷链接");
+      expect(wrapper.text()).not.toContain("快捷动作");
       expect(JSON.parse(localStorage.getItem(STORAGE_KEY) || "{}").language).toBe("en");
     } finally {
       wrapper.unmount();
@@ -777,7 +777,7 @@ describe("App shell", () => {
     }
   });
 
-  it("shows only the GIF when focusing a non-empty editor", async () => {
+  it("does not show the GIF when focusing a non-empty editor without a bubble", async () => {
     vi.useFakeTimers();
     localStorage.setItem(
       STORAGE_KEY,
@@ -792,8 +792,7 @@ describe("App shell", () => {
       await vi.advanceTimersByTimeAsync(200);
       await wrapper.vm.$nextTick();
 
-      expect(wrapper.find(".focus-companion.is-visible img").exists()).toBe(true);
-      expect(wrapper.find('[data-testid="companion-confirm"]').exists()).toBe(false);
+      expect(wrapper.find(".focus-companion.is-visible img").exists()).toBe(false);
     } finally {
       wrapper.unmount();
       vi.useRealTimers();
@@ -843,7 +842,7 @@ describe("App shell", () => {
 
       const message = wrapper.get('[data-testid="companion-confirm"]').text();
       expect(message).toContain("绿色");
-      expect(message).toContain("已保存");
+      expect(message).toContain("保存");
       expect(message).toContain("红色");
       expect(message).toContain("未保存");
       expect(message).toContain("橙色");
@@ -1259,7 +1258,7 @@ describe("App shell", () => {
 
       expect(NotificationStub.requestPermission).toHaveBeenCalledTimes(1);
       expect(notificationSpy).toHaveBeenCalledTimes(1);
-      expect(notificationSpy).toHaveBeenCalledWith("☀️ 早上", {
+      expect(notificationSpy).toHaveBeenCalledWith("【☑️ 待办】", {
         body: "喝水",
         tag: `todo-1:${notifyAt}`,
         icon: expect.stringMatching(/^https?:\/\/.*kun.*\.jpg/),
@@ -1302,7 +1301,7 @@ describe("App shell", () => {
 
       await vi.advanceTimersByTimeAsync(1);
       expect(notificationSpy).toHaveBeenCalledTimes(1);
-      expect(notificationSpy).toHaveBeenCalledWith("☀️ 早上", {
+      expect(notificationSpy).toHaveBeenCalledWith("【☑️ 待办】", {
         body: "喝水",
         tag: `todo-1:${notifyAt}`,
         icon: expect.stringMatching(/^https?:\/\/.*kun.*\.jpg/),
@@ -1353,7 +1352,7 @@ describe("App shell", () => {
       await vi.advanceTimersByTimeAsync(20_000);
       expect(constructorCalls).toBe(2);
       expect(notificationSpy).toHaveBeenCalledTimes(1);
-      expect(notificationSpy).toHaveBeenCalledWith("☀️ 早上", {
+      expect(notificationSpy).toHaveBeenCalledWith("【☑️ 待办】", {
         body: "喝水",
         tag: `todo-1:${notifyAt}`,
         icon: expect.stringMatching(/^https?:\/\/.*kun.*\.jpg/),
@@ -1395,7 +1394,7 @@ describe("App shell", () => {
       wrapper.getComponent(TodoPanel).vm.$emit("notify", "morning", "todo-1", notifyAt);
       await vi.advanceTimersByTimeAsync(30_000);
 
-      expect(notificationSpy).toHaveBeenCalledWith("☀️ 早上", {
+      expect(notificationSpy).toHaveBeenCalledWith("【☑️ 待办】", {
         body: "喝水",
         tag: `todo-1:${notifyAt}`,
       });
@@ -1947,7 +1946,7 @@ describe("App shell", () => {
     wrapper.unmount();
   });
 
-  it("hides the quick-copy GIF together with the companion bubble timeout", async () => {
+  it("hides the quick-copy GIF two seconds after the companion bubble disappears", async () => {
     vi.useFakeTimers();
     localStorage.setItem(
       STORAGE_KEY,
@@ -1987,6 +1986,11 @@ describe("App shell", () => {
       await wrapper.vm.$nextTick();
 
       expect(wrapper.find('[data-testid="companion-confirm"]').exists()).toBe(false);
+      expect(wrapper.find(".focus-companion.is-visible").exists()).toBe(true);
+
+      await vi.advanceTimersByTimeAsync(1740);
+      await wrapper.vm.$nextTick();
+
       expect(wrapper.find(".focus-companion.is-visible").exists()).toBe(false);
     } finally {
       wrapper.unmount();
@@ -3308,7 +3312,7 @@ describe("App shell", () => {
     }
   });
 
-  it("fades area click and focus guidance GIFs after ten seconds", async () => {
+  it("does not show GIF when focusing on areas without a message bubble", async () => {
     vi.useFakeTimers();
     vi.setSystemTime(new Date("2026-05-20T00:00:00.000Z"));
     vi.spyOn(Math, "random").mockReturnValue(0);
@@ -3336,15 +3340,9 @@ describe("App shell", () => {
       });
 
       await wrapper.get(".image-panel .panel-header").trigger("click");
-      await vi.advanceTimersByTimeAsync(9_999);
       await wrapper.vm.$nextTick();
 
-      expect(wrapper.find(".focus-companion.is-visible img").exists()).toBe(true);
-      expect(wrapper.find('[data-testid="companion-confirm"]').exists()).toBe(false);
-
-      await vi.advanceTimersByTimeAsync(1);
-      await wrapper.vm.$nextTick();
-      expect(wrapper.find(".focus-companion.is-visible").exists()).toBe(false);
+      expect(wrapper.find(".focus-companion.is-visible img").exists()).toBe(false);
 
       const workspace = wrapper.findAll(".text-panel")[1];
       vi.spyOn(workspace.element, "getBoundingClientRect").mockReturnValue({
@@ -3359,15 +3357,9 @@ describe("App shell", () => {
         toJSON: () => ({}),
       });
       await workspace.get("textarea").trigger("focus");
-      await vi.advanceTimersByTimeAsync(9_999);
       await wrapper.vm.$nextTick();
 
-      expect(wrapper.find(".focus-companion.is-visible img").exists()).toBe(true);
-      expect(wrapper.find('[data-testid="companion-confirm"]').exists()).toBe(false);
-
-      await vi.advanceTimersByTimeAsync(1);
-      await wrapper.vm.$nextTick();
-      expect(wrapper.find(".focus-companion.is-visible").exists()).toBe(false);
+      expect(wrapper.find(".focus-companion.is-visible img").exists()).toBe(false);
     } finally {
       wrapper.unmount();
       vi.useRealTimers();
@@ -3455,7 +3447,7 @@ describe("App shell", () => {
     }
   });
 
-  it("shows Tips for empty clicked areas and only the GIF for non-empty clicked areas", async () => {
+  it("shows Tips for empty clicked areas and no GIF for non-empty clicked areas", async () => {
     vi.useFakeTimers();
     vi.setSystemTime(new Date("2026-05-20T00:00:00.000Z"));
     vi.spyOn(Math, "random").mockReturnValue(0);
@@ -3501,13 +3493,7 @@ describe("App shell", () => {
       await wrapper.get(".quick-block").trigger("click");
       await wrapper.vm.$nextTick();
 
-      expect(wrapper.find(".focus-companion.is-visible img").exists()).toBe(true);
-      expect(wrapper.get('[data-testid="companion-bubble"]').attributes("style")).toContain("100vw - 428px");
-      expect(wrapper.find('[data-testid="companion-confirm"]').exists()).toBe(false);
-
-      await vi.advanceTimersByTimeAsync(260);
-      await wrapper.vm.$nextTick();
-
+      expect(wrapper.find(".focus-companion.is-visible img").exists()).toBe(false);
       expect(wrapper.find('[data-testid="companion-confirm"]').exists()).toBe(false);
     } finally {
       wrapper.unmount();
@@ -3519,7 +3505,7 @@ describe("App shell", () => {
     vi.useFakeTimers();
     try {
       const scenarios = [
-        { key: "quickButtons", component: QuickButtons, pattern: /快捷|按钮|复制|链接/ },
+        { key: "quickButtons", component: QuickButtons, pattern: /快捷|按钮|复制|动作/ },
         { key: "images", component: ImagePanel, pattern: /截图区|图片|Ctrl\+V|方向键|右键|删除|预览|Esc/ },
         { key: "todos", component: TodoPanel, pattern: /提醒|事项|完成|星标|右键|拖动|已完成/ },
       ] as const;

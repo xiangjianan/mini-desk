@@ -1,13 +1,14 @@
 <script setup lang="ts">
-import { computed, nextTick, onMounted, onUnmounted, ref, watch } from "vue";
-import { NDropdown, NScrollbar } from "naive-ui";
+import { computed, h, nextTick, onMounted, onUnmounted, ref, watch } from "vue";
+import type { Component, VNode } from "vue";
+import { NDropdown, NIcon, NScrollbar } from "naive-ui";
 import type { DropdownOption } from "naive-ui";
+import { ClipboardOutline, CopyOutline, HelpCircleOutline } from "@vicons/ionicons5";
 import type { LineItem } from "../types";
 import { GUIDE_MENU_OPTION } from "../state/defaults";
 import { getUiText } from "../state/i18n";
 import type { AppLanguage } from "../types";
 import {
-  appendPlainTextToEditorText,
   editorTextToLines,
   handleTextareaTab,
   insertIndentedLineBreak,
@@ -39,6 +40,8 @@ const emit = defineEmits<{
   guide: [element: HTMLElement, immediate?: boolean];
 }>();
 
+const isDragHover = ref(false);
+const isLocalDrag = ref(false);
 const textareaRef = ref<HTMLTextAreaElement | null>(null);
 const text = ref(textLinesToEditorText(props.lines));
 const focused = ref(false);
@@ -68,14 +71,19 @@ const canDragSelectedText = computed(() => {
 
 onMounted(exclusiveMenu.mount);
 onUnmounted(exclusiveMenu.unmount);
+
+function renderIcon(icon: Component): () => VNode {
+  return () => h(NIcon, { size: 16 }, { default: () => h(icon) });
+}
+
 const menuOptions = computed<DropdownOption[]>(() => {
   const options: DropdownOption[] = [];
   const target = menu.value?.target;
   if (target) {
-    options.push({ label: uiText.value.common.copy, key: "copy", disabled: !canCopyTextSelection(target) });
-    options.push({ label: uiText.value.common.paste, key: "paste", disabled: !menu.value?.canPaste });
+    options.push({ label: uiText.value.common.copy, key: "copy", disabled: !canCopyTextSelection(target), icon: renderIcon(CopyOutline) });
+    options.push({ label: uiText.value.common.paste, key: "paste", disabled: !menu.value?.canPaste, icon: renderIcon(ClipboardOutline) });
   }
-  options.push(guideMenuOption.value);
+  options.push({ ...guideMenuOption.value, icon: renderIcon(HelpCircleOutline) });
   return options;
 });
 
@@ -155,7 +163,80 @@ function openTitleMenu(event: MouseEvent): void {
   titleRef.value?.openMenuAt(event.clientX, event.clientY, event);
 }
 
+function handleDragEnter(event: DragEvent): void {
+  if (isLocalDrag.value) return;
+  const types = Array.from(event.dataTransfer?.types ?? []);
+  if (types.includes("text/plain") && !types.includes("Files")) {
+    isDragHover.value = true;
+  }
+}
+
+function handleDragLeaveClear(): void {
+  isDragHover.value = false;
+  isLocalDrag.value = false;
+}
+
+function getTextOffsetAtPoint(textarea: HTMLTextAreaElement, clientX: number, clientY: number): number {
+  const rect = textarea.getBoundingClientRect();
+  const style = window.getComputedStyle(textarea);
+  const lineHeight = parseFloat(style.lineHeight) || parseFloat(style.fontSize) * 1.2;
+  const paddingTop = parseFloat(style.paddingTop) || 0;
+  const paddingLeft = parseFloat(style.paddingLeft) || 0;
+
+  const y = clientY - rect.top - paddingTop + textarea.scrollTop;
+  const lines = textarea.value.split("\n");
+  const lineIndex = Math.max(0, Math.min(Math.floor(y / lineHeight), lines.length - 1));
+
+  const canvas = document.createElement("canvas");
+  const ctx = canvas.getContext("2d");
+  if (!ctx) return textarea.value.length;
+  ctx.font = `${style.fontSize} ${style.fontFamily}`;
+  const lineText = lines[lineIndex];
+  const x = clientX - rect.left - paddingLeft + textarea.scrollLeft;
+
+  let col = 0;
+  for (let i = 0; i < lineText.length; i++) {
+    if (ctx.measureText(lineText.slice(0, i + 1)).width >= x) break;
+    col = i + 1;
+  }
+
+  return lines.slice(0, lineIndex).reduce((sum, l) => sum + l.length + 1, 0) + col;
+}
+
+function handleDragOver(event: DragEvent): void {
+  if (isLocalDrag.value) {
+    if (event.dataTransfer) event.dataTransfer.dropEffect = "none";
+    return;
+  }
+  const types = Array.from(event.dataTransfer?.types ?? []);
+  if (types.includes("text/plain") || types.includes("text/uri-list")) {
+    event.preventDefault();
+    isDragHover.value = true;
+  }
+}
+
+function handleTextareaDragOver(event: DragEvent): void {
+  if (isLocalDrag.value) {
+    if (event.dataTransfer) event.dataTransfer.dropEffect = "none";
+    return;
+  }
+  event.preventDefault();
+}
+
+function handleTextareaDrop(event: DragEvent): void {
+  if (isLocalDrag.value) {
+    event.preventDefault();
+    event.stopPropagation();
+    isLocalDrag.value = false;
+    return;
+  }
+}
+
 function handleExternalTextDrop(event: DragEvent): void {
+  isDragHover.value = false;
+  const wasLocal = isLocalDrag.value;
+  isLocalDrag.value = false;
+  if (wasLocal) return;
   const files = Array.from(event.dataTransfer?.files ?? []);
   if (files.length > 0) return;
   const dropped = event.dataTransfer?.getData("text/plain") ?? "";
@@ -164,11 +245,15 @@ function handleExternalTextDrop(event: DragEvent): void {
   event.stopPropagation();
   const textarea = textareaRef.value;
   if (textarea && !editing.value) startEditingFromTextarea(textarea);
-  const next = appendPlainTextToEditorText(text.value, dropped);
+  const current = text.value;
+  const offset = textarea ? getTextOffsetAtPoint(textarea, event.clientX, event.clientY) : current.length;
+  const before = current.slice(0, offset);
+  const after = current.slice(offset);
+  const next = before + dropped + after;
   applyEditorText(next);
   if (textarea) {
-    const end = textarea.value.length;
-    textarea.setSelectionRange(end, end);
+    const cursorPos = offset + dropped.length;
+    textarea.setSelectionRange(cursorPos, cursorPos);
   }
   emit("update", editorTextToLines(text.value));
 }
@@ -192,8 +277,23 @@ async function startEditing(event: MouseEvent): Promise<void> {
 }
 
 function handlePointerDown(event: PointerEvent): void {
+  // Check if pointer is on selected text for drag prevention
+  const textarea = event.currentTarget as HTMLTextAreaElement;
+  const prev = lastTextSelection.value;
+  if (prev && prev.start !== prev.end) {
+    try {
+      const offset = getTextOffsetAtPoint(textarea, event.clientX, event.clientY);
+      const onSelection = offset >= prev.start && offset <= prev.end;
+      textarea.draggable = onSelection;
+    } catch {
+      textarea.draggable = true;
+    }
+  } else {
+    textarea.draggable = false;
+  }
+
   if (event.pointerType !== "touch") return;
-  unlockTextareaBeforeNativeFocus(event.currentTarget as HTMLTextAreaElement);
+  unlockTextareaBeforeNativeFocus(textarea);
 }
 
 function handleTouchStart(event: TouchEvent): void {
@@ -241,12 +341,14 @@ function rememberCaret(event: MouseEvent): void {
     return;
   }
   if (event.button !== 2) lastTextSelection.value = null;
+  textarea.draggable = false;
   lastCaret.value = textarea.selectionStart ?? textarea.value.length;
 }
 
 function rememberSelection(event: Event): void {
   const textarea = event.currentTarget as HTMLTextAreaElement;
   rememberTextSelection(textarea);
+  textarea.draggable = hasSelection(textarea);
   if (hasSelection(textarea) && !editing.value) {
     startEditingFromTextarea(textarea);
     restoreSelection(textarea, getTextSelectionRange(textarea));
@@ -284,6 +386,7 @@ function handleTextDragStart(event: DragEvent): void {
     event.preventDefault();
     return;
   }
+  isLocalDrag.value = true;
   event.dataTransfer.effectAllowed = "copy";
   event.dataTransfer.setData("text/plain", selectedText);
 }
@@ -502,20 +605,20 @@ function restoreSelection(textarea: HTMLTextAreaElement, selection: { start: num
 </script>
 
 <template>
-  <section class="text-panel" :class="textPanelClasses">
+  <section class="text-panel" :class="[textPanelClasses, { 'drag-hover': isDragHover }]" @dragenter="handleDragEnter" @dragleave="handleDragLeaveClear" @drop="handleDragLeaveClear" @dragend="handleDragLeaveClear">
     <div v-if="!hideHeader" class="panel-header" @contextmenu="openTitleMenu">
       <h2>
         <EditableTitle
           ref="titleRef"
           :id="titleId"
           :value="title"
-          :edit-label="uiText.common.edit"
+          :edit-label="uiText.common.rename"
           @update="(id, value) => emit('titleUpdate', id, value)"
         />
       </h2>
       <slot name="actions" />
     </div>
-    <div class="text-editor-frame" @contextmenu="openTextMenu" @dragover.prevent @drop="handleExternalTextDrop">
+    <div class="text-editor-frame" @contextmenu="openTextMenu" @dragover="handleDragOver" @drop="handleExternalTextDrop">
       <NScrollbar class="text-editor-scrollbar">
       <textarea
         ref="textareaRef"
@@ -532,6 +635,8 @@ function restoreSelection(textarea: HTMLTextAreaElement, selection: { start: num
         @pointerdown="handlePointerDown"
         @touchstart="handleTouchStart"
         @dragstart="handleTextDragStart"
+        @dragover="handleTextareaDragOver"
+        @drop="handleTextareaDrop"
         @select="rememberSelection"
         @click="startEditing"
         @dblclick="startEditing"

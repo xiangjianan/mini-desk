@@ -1,6 +1,8 @@
 <script setup lang="ts">
-import { computed, nextTick, onMounted, onUnmounted, ref, watch } from "vue";
-import { NDropdown, NScrollbar } from "naive-ui";
+import { computed, h, nextTick, onMounted, onUnmounted, ref, watch } from "vue";
+import type { Component, VNode } from "vue";
+import { NDropdown, NIcon, NScrollbar } from "naive-ui";
+import { CreateOutline, TrashOutline } from "@vicons/ionicons5";
 import type { DropdownOption } from "naive-ui";
 import type { AppLanguage, GuideKey, LineItem, WorkspaceSpace } from "../types";
 import { getUiText } from "../state/i18n";
@@ -45,9 +47,14 @@ const activeSpace = computed(() =>
 );
 
 const canDeleteSpaces = computed(() => props.spaces.length > 1);
+
+function renderIcon(icon: Component): () => VNode {
+  return () => h(NIcon, { size: 16 }, { default: () => h(icon) });
+}
+
 const menuOptions = computed<DropdownOption[]>(() => [
-  { label: uiText.value.common.edit, key: "edit" },
-  { label: uiText.value.common.delete, key: "delete", disabled: !canDeleteSpaces.value },
+  { label: uiText.value.common.rename, key: "edit", icon: renderIcon(CreateOutline) },
+  { label: uiText.value.common.delete, key: "delete", disabled: !canDeleteSpaces.value, icon: renderIcon(TrashOutline) },
 ]);
 
 function handleRename(_titleId: string, title: string): void {

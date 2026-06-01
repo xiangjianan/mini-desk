@@ -1,10 +1,14 @@
 <script setup lang="ts">
-import { computed, onMounted, onUnmounted, ref, watch } from "vue";
+import { computed, h, onMounted, onUnmounted, ref, watch } from "vue";
+import type { Component, VNode } from "vue";
 import { LogoGithub } from "@vicons/ionicons5";
-import { NButton, NIcon, NPopover } from "naive-ui";
+import { CloseOutline, EyeOffOutline } from "@vicons/ionicons5";
+import { NButton, NDropdown, NIcon, NPopover } from "naive-ui";
+import type { DropdownOption } from "naive-ui";
 import type { AppLanguage, CompanionGifTheme } from "../types";
 import { getCompanionGifSrc } from "../state/companionGifThemes";
 import { getUiText } from "../state/i18n";
+import { CONTEXT_MENU_Z_INDEX, createExclusiveContextMenu } from "../utils/contextMenu";
 
 const props = withDefaults(defineProps<{
   visible: boolean;
@@ -38,6 +42,7 @@ const emit = defineEmits<{
   action: [];
   pause: [];
   resume: [];
+  gifThemeChange: [theme: string];
 }>();
 
 const POPOVER_DELAY_MS = 200;
@@ -66,6 +71,36 @@ const hoveringCompanion = ref(false);
 const surfaceRef = ref<HTMLElement | null>(null);
 const popoverRef = ref<HTMLElement | null>(null);
 const uiText = computed(() => getUiText(props.language));
+
+const gifMenu = ref<{ x: number; y: number } | null>(null);
+const exclusiveMenu = createExclusiveContextMenu(() => { gifMenu.value = null; });
+
+function renderGifMenuIcon(icon: Component): () => VNode {
+  return () => h(NIcon, { size: 16 }, { default: () => h(icon) });
+}
+
+const gifMenuOptions = computed<DropdownOption[]>(() => [
+  { label: "不显示", key: "hide", icon: renderGifMenuIcon(EyeOffOutline) },
+]);
+
+function openGifMenu(event: MouseEvent): void {
+  event.preventDefault();
+  event.stopPropagation();
+  exclusiveMenu.notifyOpen(event, { replacingExistingMenu: Boolean(gifMenu.value) });
+  gifMenu.value = { x: event.clientX, y: event.clientY };
+}
+
+function onSurfaceContextmenu(event: MouseEvent): void {
+  if (!shouldRenderGif.value) return;
+  openGifMenu(event);
+}
+
+function handleGifMenuSelect(key: string): void {
+  gifMenu.value = null;
+  if (key === "hide") {
+    emit("gifThemeChange", "none");
+  }
+}
 
 const placementStyle = computed(() => {
   if (!props.position) return undefined;
@@ -209,10 +244,12 @@ watch(
 );
 
 onMounted(() => {
+  exclusiveMenu.mount();
   window.addEventListener("mousemove", handleWindowMousemove);
 });
 
 onUnmounted(() => {
+  exclusiveMenu.unmount();
   window.removeEventListener("mousemove", handleWindowMousemove);
   window.clearTimeout(popoverTimer.value);
   window.clearTimeout(contentTimer.value);
@@ -300,6 +337,7 @@ function isPointInsideElement(x: number, y: number, element: HTMLElement | null)
     @mouseenter="handleCompanionMouseenter"
     @mousemove="handleCompanionMousemove"
     @mouseleave="handleCompanionMouseleave"
+    @contextmenu="onSurfaceContextmenu"
   >
     <NPopover
       :key="popoverKey"
@@ -351,5 +389,19 @@ function isPointInsideElement(x: number, y: number, element: HTMLElement | null)
         </div>
       </div>
     </NPopover>
+    <NDropdown
+      v-if="gifMenu"
+      placement="bottom-start"
+      trigger="manual"
+      :show="true"
+      :x="gifMenu.x"
+      :y="gifMenu.y"
+      :z-index="CONTEXT_MENU_Z_INDEX"
+      :options="gifMenuOptions"
+      @select="handleGifMenuSelect"
+      @clickoutside="exclusiveMenu.handleClickOutside"
+    >
+      <span class="dropdown-anchor" :style="{ left: `${gifMenu.x}px`, top: `${gifMenu.y}px` }" aria-hidden="true" />
+    </NDropdown>
   </div>
 </template>

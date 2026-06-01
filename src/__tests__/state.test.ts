@@ -74,9 +74,9 @@ describe("state compatibility", () => {
     const state = defaultState();
 
     expect(state.todoLists.map((list) => ({ id: list.id, title: list.title }))).toEqual([
-      { id: "morning", title: "☀️ 早上" },
-      { id: "noon", title: "🌤️ 中午" },
-      { id: "evening", title: "🌙 晚上" },
+      { id: "morning", title: "☑️ 待办" },
+      { id: "noon", title: "💼 工作" },
+      { id: "evening", title: "📚 学习" },
     ]);
     expect(Object.keys(state.todos)).toEqual(["morning", "noon", "evening"]);
     expect(state.showCompletedTodos).toEqual({ morning: true, noon: true, evening: true });
@@ -99,7 +99,7 @@ describe("state compatibility", () => {
     expect(state.todoLists.map((list) => [list.id, list.title])).toEqual([
       ["morning", "上午"],
       ["noon", "中段"],
-      ["evening", "🌙 晚上"],
+      ["evening", "📚 学习"],
     ]);
     expect(state.todos.morning.map((todo) => todo.text)).toEqual(["A"]);
     expect(state.todos.noon.map((todo) => todo.text)).toEqual(["B"]);
@@ -158,9 +158,9 @@ describe("state compatibility", () => {
     });
 
     const expected = [
-      { id: "morning", title: "☀️ 早上" },
-      { id: "noon", title: "🌤️ 中午" },
-      { id: "evening", title: "🌙 晚上" },
+      { id: "morning", title: "☑️ 待办" },
+      { id: "noon", title: "💼 工作" },
+      { id: "evening", title: "📚 学习" },
     ];
 
     expect(emptyState.todoLists.map((list) => ({ id: list.id, title: list.title }))).toEqual(expected);
