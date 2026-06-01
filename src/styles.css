@@ -1694,6 +1694,7 @@ h3 {
 }
 
 .top-actions .save-status {
+  cursor: pointer;
   width: 34px;
   min-width: 34px;
   height: 34px;

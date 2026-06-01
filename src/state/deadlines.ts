@@ -107,19 +107,34 @@ export function getNotifyDisplay(notifyAt: number | undefined, now = Date.now(),
   if (!isValidNotifyAt(notifyAt) || !isValidNotifyAt(now)) return null;
   const normalizedLanguage = normalizeLanguage(language);
 
+  const notifyDate = new Date(notifyAt);
+  const dayDistance = getLocalDayDistance(now, notifyAt);
+  const timeLabel = getDisplayTimeLabel(notifyDate, normalizedLanguage);
+  const compactTimeLabel = getCompactTimeLabel(notifyDate);
+
   if (notifyAt < now) {
+    if (dayDistance === 0) {
+      return {
+        label: normalizedLanguage === "en" ? `Today ${timeLabel}` : `今天${timeLabel}`,
+        compactLabel: normalizedLanguage === "en" ? `Today ${compactTimeLabel}` : `今天 ${compactTimeLabel}`,
+        urgency: "overdue",
+      };
+    }
+    if (dayDistance === -1) {
+      return {
+        label: normalizedLanguage === "en" ? `Yesterday ${timeLabel}` : `昨天${timeLabel}`,
+        compactLabel: normalizedLanguage === "en" ? `Yesterday ${compactTimeLabel}` : `昨天 ${compactTimeLabel}`,
+        urgency: "overdue",
+      };
+    }
     return {
-      label: normalizedLanguage === "en" ? "! Overdue" : "! 已超期",
-      compactLabel: normalizedLanguage === "en" ? "! Overdue" : "! 已超期",
+      label: `${notifyDate.getMonth() + 1}/${notifyDate.getDate()} ${timeLabel}`,
+      compactLabel: `${notifyDate.getMonth() + 1}/${notifyDate.getDate()} ${compactTimeLabel}`,
       urgency: "overdue",
     };
   }
 
-  const notifyDate = new Date(notifyAt);
-  const dayDistance = getLocalDayDistance(now, notifyAt);
   const isWithinDueSoonWindow = notifyAt - now <= ONE_DAY_MS;
-  const timeLabel = getDisplayTimeLabel(notifyDate, normalizedLanguage);
-  const compactTimeLabel = getCompactTimeLabel(notifyDate);
 
   if (isWithinDueSoonWindow && dayDistance === 0) {
     return {

@@ -777,7 +777,7 @@ describe("App shell", () => {
     }
   });
 
-  it("shows only the GIF when focusing a non-empty editor", async () => {
+  it("does not show the GIF when focusing a non-empty editor without a bubble", async () => {
     vi.useFakeTimers();
     localStorage.setItem(
       STORAGE_KEY,
@@ -792,8 +792,7 @@ describe("App shell", () => {
       await vi.advanceTimersByTimeAsync(200);
       await wrapper.vm.$nextTick();
 
-      expect(wrapper.find(".focus-companion.is-visible img").exists()).toBe(true);
-      expect(wrapper.find('[data-testid="companion-confirm"]').exists()).toBe(false);
+      expect(wrapper.find(".focus-companion.is-visible img").exists()).toBe(false);
     } finally {
       wrapper.unmount();
       vi.useRealTimers();
@@ -1947,7 +1946,7 @@ describe("App shell", () => {
     wrapper.unmount();
   });
 
-  it("hides the quick-copy GIF together with the companion bubble timeout", async () => {
+  it("hides the quick-copy GIF two seconds after the companion bubble disappears", async () => {
     vi.useFakeTimers();
     localStorage.setItem(
       STORAGE_KEY,
@@ -1987,6 +1986,11 @@ describe("App shell", () => {
       await wrapper.vm.$nextTick();
 
       expect(wrapper.find('[data-testid="companion-confirm"]').exists()).toBe(false);
+      expect(wrapper.find(".focus-companion.is-visible").exists()).toBe(true);
+
+      await vi.advanceTimersByTimeAsync(1740);
+      await wrapper.vm.$nextTick();
+
       expect(wrapper.find(".focus-companion.is-visible").exists()).toBe(false);
     } finally {
       wrapper.unmount();
@@ -3308,7 +3312,7 @@ describe("App shell", () => {
     }
   });
 
-  it("fades area click and focus guidance GIFs after ten seconds", async () => {
+  it("does not show GIF when focusing on areas without a message bubble", async () => {
     vi.useFakeTimers();
     vi.setSystemTime(new Date("2026-05-20T00:00:00.000Z"));
     vi.spyOn(Math, "random").mockReturnValue(0);
@@ -3336,15 +3340,9 @@ describe("App shell", () => {
       });
 
       await wrapper.get(".image-panel .panel-header").trigger("click");
-      await vi.advanceTimersByTimeAsync(9_999);
       await wrapper.vm.$nextTick();
 
-      expect(wrapper.find(".focus-companion.is-visible img").exists()).toBe(true);
-      expect(wrapper.find('[data-testid="companion-confirm"]').exists()).toBe(false);
-
-      await vi.advanceTimersByTimeAsync(1);
-      await wrapper.vm.$nextTick();
-      expect(wrapper.find(".focus-companion.is-visible").exists()).toBe(false);
+      expect(wrapper.find(".focus-companion.is-visible img").exists()).toBe(false);
 
       const workspace = wrapper.findAll(".text-panel")[1];
       vi.spyOn(workspace.element, "getBoundingClientRect").mockReturnValue({
@@ -3359,15 +3357,9 @@ describe("App shell", () => {
         toJSON: () => ({}),
       });
       await workspace.get("textarea").trigger("focus");
-      await vi.advanceTimersByTimeAsync(9_999);
       await wrapper.vm.$nextTick();
 
-      expect(wrapper.find(".focus-companion.is-visible img").exists()).toBe(true);
-      expect(wrapper.find('[data-testid="companion-confirm"]').exists()).toBe(false);
-
-      await vi.advanceTimersByTimeAsync(1);
-      await wrapper.vm.$nextTick();
-      expect(wrapper.find(".focus-companion.is-visible").exists()).toBe(false);
+      expect(wrapper.find(".focus-companion.is-visible img").exists()).toBe(false);
     } finally {
       wrapper.unmount();
       vi.useRealTimers();
@@ -3455,7 +3447,7 @@ describe("App shell", () => {
     }
   });
 
-  it("shows Tips for empty clicked areas and only the GIF for non-empty clicked areas", async () => {
+  it("shows Tips for empty clicked areas and no GIF for non-empty clicked areas", async () => {
     vi.useFakeTimers();
     vi.setSystemTime(new Date("2026-05-20T00:00:00.000Z"));
     vi.spyOn(Math, "random").mockReturnValue(0);
@@ -3501,13 +3493,7 @@ describe("App shell", () => {
       await wrapper.get(".quick-block").trigger("click");
       await wrapper.vm.$nextTick();
 
-      expect(wrapper.find(".focus-companion.is-visible img").exists()).toBe(true);
-      expect(wrapper.get('[data-testid="companion-bubble"]').attributes("style")).toContain("100vw - 428px");
-      expect(wrapper.find('[data-testid="companion-confirm"]').exists()).toBe(false);
-
-      await vi.advanceTimersByTimeAsync(260);
-      await wrapper.vm.$nextTick();
-
+      expect(wrapper.find(".focus-companion.is-visible img").exists()).toBe(false);
       expect(wrapper.find('[data-testid="companion-confirm"]').exists()).toBe(false);
     } finally {
       wrapper.unmount();

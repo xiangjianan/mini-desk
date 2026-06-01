@@ -720,12 +720,13 @@ export const SHORTCUT_HELP: Record<AppLanguage, { area: string; shortcuts: { key
       { key: "右键", desc: "复制 / 粘贴" },
     ]},
     { area: "提醒事项", shortcuts: [
-      { key: "单击空白", desc: "新增提醒" },
+      { key: "单击空白 / 拖拽文本", desc: "新增提醒" },
       { key: "拖动", desc: "调整顺序" },
       { key: "右键", desc: "复制 / 删除 / 星标 / 通知" },
     ]},
     { area: "截图", shortcuts: [
-      { key: "Ctrl + V", desc: "粘贴截图" },
+      { key: "Ctrl + V / 拖拽图片", desc: "粘贴截图" },
+      { key: "拖动", desc: "调整顺序" },
       { key: "预览中滚轮", desc: "缩放" },
       { key: "← / →", desc: "切换图片" },
       { key: "Enter", desc: "复制图片" },
@@ -749,12 +750,13 @@ export const SHORTCUT_HELP: Record<AppLanguage, { area: string; shortcuts: { key
       { key: "Right-click", desc: "Copy / Paste" },
     ]},
     { area: "Reminders", shortcuts: [
-      { key: "Click blank", desc: "Add reminder" },
+      { key: "Click blank / Drag text", desc: "Add reminder" },
       { key: "Drag", desc: "Reorder" },
       { key: "Right-click", desc: "Copy / Delete / Star / Notify" },
     ]},
     { area: "Screenshots", shortcuts: [
-      { key: "Ctrl + V", desc: "Paste screenshot" },
+      { key: "Ctrl + V / Drag image", desc: "Paste screenshot" },
+      { key: "Drag", desc: "Reorder" },
       { key: "Scroll wheel (preview)", desc: "Zoom" },
       { key: "← / →", desc: "Switch image" },
       { key: "Enter", desc: "Copy image" },
