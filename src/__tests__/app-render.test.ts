@@ -3058,9 +3058,9 @@ describe("App shell", () => {
       await vi.advanceTimersByTimeAsync(200);
       await wrapper.vm.$nextTick();
 
-      expect(wrapper.find('[data-testid="companion-confirm"]').text()).toContain("Mini Desk");
-      expect(wrapper.find('[data-testid="companion-confirm"]').text()).toContain("所有操作均在本地浏览器完成");
-      expect(wrapper.find('[data-testid="companion-confirm"]').text()).toContain("绝不上传您的任何数据");
+      expect(wrapper.find('[data-testid="companion-confirm"]').text()).toContain("Mini Desk 看板");
+      expect(wrapper.find('[data-testid="companion-confirm"]').text()).toContain("把截图、TODO、快捷动作和工作空间缝合得恰到好处");
+      expect(wrapper.find('[data-testid="companion-confirm"]').text()).toContain("所有操作均在本地浏览器完成，绝不上传您的任何数据。");
       expect(wrapper.find('[data-testid="companion-confirm"]').text()).not.toContain("云霞 · 产品");
       expect(wrapper.find('[data-testid="companion-confirm"]').text()).not.toContain("佳男 · 开发");
       expect(wrapper.find('[data-testid="companion-confirm"]').text()).not.toContain("Codex · 协作支持");
