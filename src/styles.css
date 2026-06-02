@@ -148,7 +148,7 @@ select {
   color: inherit;
 }
 
-button {
+button:not([data-slot="button"]) {
   border: 1px solid var(--line-control);
   background: transparent;
   border-radius: 0;
@@ -163,7 +163,7 @@ button {
     transform var(--motion-medium) var(--motion-ease);
 }
 
-button:hover {
+button:not([data-slot="button"]):hover {
   background: var(--button-hover);
   border-color: var(--line-focus);
 }

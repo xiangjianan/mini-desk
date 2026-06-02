@@ -17,6 +17,15 @@ function expectSelectorBody(styles: string, selector: string, text: string): voi
 }
 
 describe("workbench style contract", () => {
+  it("keeps legacy native button styling from overriding shadcn buttons", () => {
+    const styles = readFileSync(resolve(__dirname, "../styles.css"), "utf8");
+    const bareButtonBodies = ruleBodies(styles, "button");
+
+    expect(bareButtonBodies.join("\n")).not.toMatch(/\b(border|background|border-radius|min-height|padding):/);
+    expectSelectorBody(styles, 'button:not([data-slot="button"])', "border: 1px solid var(--line-control)");
+    expectSelectorBody(styles, 'button:not([data-slot="button"])', "min-height: 30px");
+  });
+
   it("normalizes retained Naive UI and panel internals through shared tokens", () => {
     const styles = readFileSync(resolve(__dirname, "../styles.css"), "utf8");
 
