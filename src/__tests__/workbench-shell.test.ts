@@ -41,6 +41,12 @@ describe("WorkbenchShell", () => {
       props: defaultProps,
     });
 
+    const commandAffordance = wrapper.get(".workbench-command-button");
+
+    expect(wrapper.find('button[aria-label="搜索或执行命令"]').exists()).toBe(false);
+    expect(commandAffordance.element.tagName).toBe("DIV");
+    expect(commandAffordance.text()).toContain("搜索或执行命令");
+    expect(commandAffordance.attributes("tabindex")).toBeUndefined();
     expect(wrapper.find('button[aria-label="设置"]').exists()).toBe(false);
     expect(wrapper.findAll('[aria-label="应用导航"] button')).toHaveLength(1);
     expect(wrapper.get('[data-testid="workbench-rail-theme"]').attributes("aria-label")).toBe("切换到深色");

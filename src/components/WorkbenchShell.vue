@@ -80,11 +80,11 @@ const railItems = [
           </slot>
         </div>
         <div class="workbench-command-actions">
-          <button class="workbench-command-button" type="button" aria-label="搜索或执行命令">
+          <div class="workbench-command-button" aria-label="搜索或执行命令">
             <CommandIcon aria-hidden="true" />
             <span>搜索或执行命令</span>
             <kbd>⌘K</kbd>
-          </button>
+          </div>
           <slot name="actions" />
         </div>
       </header>
