@@ -149,18 +149,22 @@ describe("App shell", () => {
   it("renders the preserved board regions and primary controls", async () => {
     const wrapper = mountApp();
 
-    expect(wrapper.find('[aria-label="Mini Desk"]').exists()).toBe(true);
+    expect(wrapper.find('[aria-label="应用导航"]').exists()).toBe(true);
+    expect(wrapper.find('[data-testid="workbench-command-bar"]').text()).toContain("今日工作台");
+    expect(wrapper.find('[aria-label="素材"]').exists()).toBe(true);
+    expect(wrapper.find('[aria-label="笔记与快捷动作"]').exists()).toBe(true);
+    expect(wrapper.find('[aria-label="任务流"]').exists()).toBe(true);
+    expect(wrapper.find('[aria-label="工作区与工具"]').exists()).toBe(true);
+    expect(wrapper.find('[aria-label="Mini Desk"]').exists()).toBe(false);
     expect(wrapper.text()).toContain("🎨 图床");
     expect(wrapper.text()).toContain("🔧 工具");
     expect(wrapper.text()).toContain("快捷动作");
     expect(wrapper.text()).toContain("✅ 待办");
-    expect(wrapper.text()).toContain("💻 工作");
-    expect(wrapper.text()).toContain("学习");
     expect(wrapper.text()).toContain("工作空间");
     expect(wrapper.findAll(".space-tab").map((tab) => tab.text())).toEqual(["工作空间"]);
     expect(wrapper.findAll(".tool-tab").map((tab) => tab.text().trim())).toEqual(["", "", "", "", ""]);
     expect(wrapper.findAll(".tool-tab").map((tab) => tab.attributes("aria-label"))).toEqual(["计算器", "进制转换", "取色板", "编解码", "随机密码生成"]);
-    expect(wrapper.find('[aria-label="切换主题"]').exists()).toBe(true);
+    expect(wrapper.find('[data-testid="workbench-rail-theme"]').exists()).toBe(true);
     expect(wrapper.find('[aria-label="快捷动作菜单"]').exists()).toBe(true);
     expect(wrapper.find('[aria-label="设置"]').exists()).toBe(true);
     expect(wrapper.find(".image-empty").exists()).toBe(false);
@@ -1162,7 +1166,7 @@ describe("App shell", () => {
       await vi.advanceTimersByTimeAsync(200);
       await wrapper.vm.$nextTick();
 
-      expect(wrapper.find(".board").exists()).toBe(true);
+      expect(wrapper.find(".workbench-shell").exists()).toBe(true);
       expect((wrapper.get("textarea").element as HTMLTextAreaElement).value).toContain("移动端切换前的草稿");
       expect(wrapper.find(".focus-companion.is-visible").exists()).toBe(false);
       expect(wrapper.find('[data-testid="companion-confirm"]').exists()).toBe(false);
@@ -1179,7 +1183,7 @@ describe("App shell", () => {
     await wrapper.get("textarea").trigger("focus");
     expect(wrapper.find(".focus-companion.is-visible img").exists()).toBe(true);
 
-    await wrapper.get('[aria-label="切换主题"]').trigger("click");
+    await wrapper.get('[data-testid="workbench-rail-theme"]').trigger("click");
     await wrapper.vm.$nextTick();
 
     expect(wrapper.find(".focus-companion.is-visible").exists()).toBe(false);
@@ -2636,7 +2640,7 @@ describe("App shell", () => {
     const wrapper = mountApp();
     const file = new File(["board"], "board.png", { type: "image/png" });
 
-    await wrapper.get(".note-link-panel").trigger("drop", {
+    await wrapper.get(".workbench-zone-notes").trigger("drop", {
       dataTransfer: {
         files: [file],
       },
@@ -2967,7 +2971,7 @@ describe("App shell", () => {
       await vi.advanceTimersByTimeAsync(200);
       await wrapper.vm.$nextTick();
 
-      expect(wrapper.find(".board").exists()).toBe(true);
+      expect(wrapper.find(".workbench-shell").exists()).toBe(true);
       expect(wrapper.find(".focus-companion.is-visible").exists()).toBe(false);
       expect(wrapper.find('[data-testid="companion-confirm"]').exists()).toBe(false);
       expect(wrapper.text()).not.toContain("切换中导入");
@@ -3024,7 +3028,7 @@ describe("App shell", () => {
       await vi.advanceTimersByTimeAsync(200);
       await wrapper.vm.$nextTick();
 
-      expect(wrapper.find(".board").exists()).toBe(true);
+      expect(wrapper.find(".workbench-shell").exists()).toBe(true);
       expect(wrapper.find(".focus-companion.is-visible").exists()).toBe(false);
       expect(wrapper.find('[data-testid="companion-confirm"]').exists()).toBe(false);
       expect(wrapper.text()).not.toContain("延迟导入");

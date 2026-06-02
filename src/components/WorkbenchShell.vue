@@ -25,6 +25,7 @@ const emit = defineEmits<{
 }>();
 
 defineSlots<{
+  status?: () => unknown;
   actions?: () => unknown;
   assets?: () => unknown;
   notes?: () => unknown;
@@ -74,7 +75,9 @@ const railItems = [
         <div class="workbench-title-group">
           <SparklesIcon class="workbench-title-icon" aria-hidden="true" />
           <h1>{{ title }}</h1>
-          <Badge variant="secondary" data-testid="workbench-save-status">{{ saveStatusLabel }}</Badge>
+          <slot name="status">
+            <Badge variant="secondary" data-testid="workbench-save-status">{{ saveStatusLabel }}</Badge>
+          </slot>
         </div>
         <div class="workbench-command-actions">
           <button class="workbench-command-button" type="button" aria-label="搜索或执行命令">

@@ -2433,58 +2433,6 @@ h3 {
   }
 }
 
-.top-actions {
-  position: fixed;
-  top: 0;
-  right: 0;
-  z-index: 70;
-  display: flex;
-  align-items: stretch;
-  height: 34px;
-  gap: 0;
-}
-
-.top-actions .save-status {
-  cursor: pointer;
-  width: 34px;
-  min-width: 34px;
-  height: 34px;
-  min-height: 34px;
-  border: 0;
-  border-bottom: 1px solid var(--line-control);
-}
-
-.top-actions .save-status::before {
-  width: 6px;
-}
-
-.top-actions .save-status[data-state="dirty"]::before {
-  background: #ef4444;
-}
-
-.top-actions .save-status[data-state="saved"]::before {
-  background: #22c55e;
-}
-
-.top-actions .save-status[data-state="saving"]::before {
-  animation: save-status-pulse 0.8s ease-in-out infinite;
-}
-
-.top-actions .icon-button {
-  height: 34px;
-  min-height: 34px;
-  border: 1px solid var(--line-control);
-}
-
-.top-actions .icon-button {
-  width: 34px;
-  min-width: 34px;
-}
-
-.settings-trigger + .theme-btn {
-  margin-left: -1px;
-}
-
 .settings-btn {
   border-radius: 0;
 }
@@ -2932,6 +2880,10 @@ body:has(.image-preview) .image-panel .n-scrollbar {
   font-weight: 650;
 }
 
+.workbench-title-group .save-status {
+  cursor: pointer;
+}
+
 .workbench-title-icon {
   width: 16px;
   height: 16px;
@@ -2979,6 +2931,27 @@ body:has(.image-preview) .image-panel .n-scrollbar {
   overflow: hidden;
   display: flex;
   flex-direction: column;
+}
+
+.workbench-zone > .panel,
+.workbench-zone > .space-panel,
+.workbench-zone > .todo-panel,
+.workbench-zone > .text-panel,
+.workbench-zone > .tool-panel {
+  flex: 1 1 auto;
+  min-height: 0;
+  border-right: 0;
+  border-radius: 0;
+}
+
+.workbench-zone-notes {
+  gap: 0;
+}
+
+.workbench-zone-notes > .note-panel,
+.workbench-zone-notes > .quick-block {
+  flex: 1 1 0;
+  min-height: 0;
 }
 
 @media (max-width: 1180px) {

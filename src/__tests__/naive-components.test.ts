@@ -181,7 +181,8 @@ describe("Naive UI component usage", () => {
     expect(quick).toContain("EyeOutline");
     expect(quick).toContain("EyeOffOutline");
     expect(quick).toContain("quick-button-icon");
-    expect(app).toContain("top-actions");
+    expect(app).toContain("WorkbenchShell");
+    expect(app).toContain('data-testid="save-status"');
     expect(app).toContain("SunnyOutline");
     expect(app).toContain("MoonOutline");
     expect(todo).toContain("todo-section-menu-button");
@@ -197,7 +198,7 @@ describe("Naive UI component usage", () => {
     expect(quick).not.toContain(">+</NButton>");
     expect(todo).not.toContain("↘");
     expect(styles).toMatch(/\.settings-btn\s*\{[^}]*border-radius: 0/s);
-    expect(styles).toMatch(/\.top-actions\s*\{[^}]*top: 0/s);
+    expect(styles).toMatch(/\.workbench-command-actions\s*\{[^}]*gap: 8px/s);
   });
 
   it("keeps header text unboxed while header action buttons share the one-pixel edge", () => {
@@ -244,29 +245,23 @@ describe("Naive UI component usage", () => {
     expect(styles).toMatch(/\.todo-section\.is-compact \.todo-star-button\s*\{[^}]*height: 30px/s);
   });
 
-  it("keeps top-right save status as a compact dot while icon buttons stay flush", () => {
+  it("keeps workbench save status as a compact interactive dot", () => {
     const styles = read("src/styles.css");
 
-    expect(styles).toMatch(/\.top-actions\s*\{[^}]*top: 0/s);
-    expect(styles).toMatch(/\.top-actions\s*\{[^}]*right: 0/s);
-    expect(styles).toMatch(/\.top-actions\s*\{[^}]*height: 34px/s);
-    expect(styles).toMatch(/\.top-actions\s*\{[^}]*gap: 0/s);
-    expect(styles).toMatch(/\.settings-trigger \+ \.theme-btn\s*\{[^}]*margin-left: -1px/s);
-    expect(styles).toMatch(/\.top-actions \.save-status\s*\{[^}]*height: 34px/s);
-    expect(styles).toMatch(/\.top-actions \.save-status\s*\{[^}]*width: 34px/s);
-    expect(styles).toMatch(/\.top-actions \.save-status\s*\{[^}]*min-width: 34px/s);
-    expect(styles).toMatch(/\.top-actions \.save-status\s*\{[^}]*border-bottom: 1px solid var\(--line-control\)/s);
-    expect(styles).toMatch(/\.top-actions \.save-status::before\s*\{[^}]*width: 6px/s);
+    expect(styles).not.toContain(".top-actions");
+    expect(styles).toMatch(/\.workbench-main\s*\{[^}]*grid-template-rows: 52px minmax\(0, 1fr\)/s);
+    expect(styles).toMatch(/\.workbench-title-group \.save-status\s*\{[^}]*cursor: pointer/s);
+    expect(styles).toMatch(/\.save-status\s*\{[^}]*height: 30px/s);
+    expect(styles).toMatch(/\.save-status\s*\{[^}]*width: 34px/s);
+    expect(styles).toMatch(/\.save-status\s*\{[^}]*min-width: 34px/s);
     expect(styles).toMatch(/\.save-status::before\s*\{[^}]*border-radius: 999px/s);
     expect(styles).toMatch(/\.save-status::before\s*\{[^}]*background-color: #22c55e/s);
     expect(styles).toMatch(/\.save-status::before\s*\{[^}]*transition:[^}]*background-color var\(--motion-fast\) ease/s);
     expect(styles).toMatch(/\.save-status\[data-state="dirty"\]::before\s*\{[^}]*animation: none/s);
     expect(styles).toMatch(/\.save-status\[data-state="saved"\]::before\s*\{[^}]*animation: none/s);
-    expect(styles).toMatch(/\.top-actions \.save-status\[data-state="dirty"\]::before\s*\{[^}]*background: #ef4444/s);
-    expect(styles).toMatch(/\.top-actions \.save-status\[data-state="saved"\]::before\s*\{[^}]*background: #22c55e/s);
-    expect(styles).toMatch(/\.top-actions \.save-status\[data-state="saving"\]::before\s*\{[^}]*animation: save-status-pulse/s);
-    expect(styles).toMatch(/\.top-actions \.icon-button\s*\{[^}]*height: 34px/s);
-    expect(styles).toMatch(/\.top-actions \.icon-button\s*\{[^}]*border: 1px solid var\(--line-control\)/s);
+    expect(styles).toMatch(/\.save-status\[data-state="dirty"\]::before\s*\{[^}]*background-color: #ef4444/s);
+    expect(styles).toMatch(/\.save-status\[data-state="saved"\]::before\s*\{[^}]*background-color: #22c55e/s);
+    expect(styles).toMatch(/\.save-status\[data-state="saving"\]::before\s*\{[^}]*animation: save-status-pulse/s);
   });
 
   it("crops the companion GIF into a square instead of letterboxing it", () => {

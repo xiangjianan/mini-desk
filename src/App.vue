@@ -11,6 +11,7 @@ import ShortcutHelp from "./components/ShortcutHelp.vue";
 import SpacePanel from "./components/SpacePanel.vue";
 import TodoPanel from "./components/TodoPanel.vue";
 import ToolPanel from "./components/ToolPanel.vue";
+import WorkbenchShell from "./components/WorkbenchShell.vue";
 import { getCompanionGifSrc, getCompanionNotificationIconSrc } from "./state/companionGifThemes";
 import { deleteStoredImage, hydrateStoredImages, persistImagePayloads, storeImagePayload } from "./state/images";
 import { getMessage, withKaomoji, type MessageKey } from "./state/messages";
@@ -1283,7 +1284,7 @@ function shouldSkipGlobalUndo(target: EventTarget | null): boolean {
 function blurActiveBoardElement(): boolean {
   const active = document.activeElement;
   if (!(active instanceof HTMLElement) || active === document.body) return false;
-  if (!active.closest(".board, .top-actions")) return false;
+  if (!active.closest(".workbench-shell")) return false;
   active.blur();
   return true;
 }
@@ -1866,30 +1867,72 @@ function moveItem<T extends { id: string }>(items: T[], dragId: string, targetId
 <template>
   <NConfigProvider :theme="naiveTheme" :locale="naiveLocale" :date-locale="naiveDateLocale">
     <NGlobalStyle />
-    <main
+    <WorkbenchShell
       v-if="!isMobileBlocked"
-      class="board"
-      :aria-label="uiText.app.boardLabel"
+      :title="state.language === 'en' ? 'Today Workbench' : '今日工作台'"
+      :save-status-label="saveStatusLabel"
+      :theme="state.theme"
+      @theme="handleThemeClick"
       @dragover.prevent
       @drop.prevent="handleBoardDrop"
     >
-      <ImagePanel
-        :title="titles['image-title']"
-        :images="state.images"
-        :active-preview-id="activePreviewId"
-        :language="state.language"
-        @title-update="updateTitle"
-        @preview="openImagePreview"
-        @close-preview="activePreviewId = undefined"
-        @copy="copyImage"
-        @delete="deleteImage"
-        @reorder="reorderImages"
-        @paste="pasteImageFromClipboard"
-        @drop-files="addImageFiles"
-        @guide="handleGuideClick"
-      />
+      <template #status>
+        <span
+          class="save-status"
+          data-testid="save-status"
+          :data-state="saveStatus"
+          :aria-label="saveStatusLabel"
+          :title="saveStatusLabel"
+          aria-live="polite"
+          role="button"
+          tabindex="0"
+          @click="showSaveStatusTip($event.currentTarget as HTMLElement)"
+          @keydown.enter.prevent="showSaveStatusTip($event.currentTarget as HTMLElement)"
+          @keydown.space.prevent="showSaveStatusTip($event.currentTarget as HTMLElement)"
+        >
+          <span class="save-status-label">{{ saveStatusLabel }}</span>
+        </span>
+      </template>
 
-      <section class="panel note-link-panel" aria-labelledby="note-title">
+      <template #actions>
+        <SettingsMenu
+          :app-version="appVersion"
+          :update-available="versionPromptVisible"
+          :update-badge-visible="versionBadgeVisible"
+          :companion-gif-theme="state.companionGifTheme"
+          :language="state.language"
+          @export="exportData"
+          @import="requestImport"
+          @about="about"
+          @suggest="suggestIssue"
+          @shortcut-help="shortcutHelpVisible = true"
+          @update="updateStaticVersion"
+          @language="updateLanguage"
+          @gif-theme="updateCompanionGifTheme"
+          @custom-gif="updateCustomCompanionGif"
+          @guide="handleGuideClick"
+        />
+      </template>
+
+      <template #assets>
+        <ImagePanel
+          :title="titles['image-title']"
+          :images="state.images"
+          :active-preview-id="activePreviewId"
+          :language="state.language"
+          @title-update="updateTitle"
+          @preview="openImagePreview"
+          @close-preview="activePreviewId = undefined"
+          @copy="copyImage"
+          @delete="deleteImage"
+          @reorder="reorderImages"
+          @paste="pasteImageFromClipboard"
+          @drop-files="addImageFiles"
+          @guide="handleGuideClick"
+        />
+      </template>
+
+      <template #notes>
         <ToolPanel
           split
           class="note-panel"
@@ -1917,57 +1960,61 @@ function moveItem<T extends { id: string }>(items: T[], dragId: string, targetId
           @reorder="reorderQuickButtons"
           @guide="handleGuideClick"
         />
-      </section>
+      </template>
 
-      <TodoPanel
-        :todo-lists="displayTodoLists"
-        :edit-list-id="pendingEditTodoListId"
-        :todos="state.todos"
-        :titles="titles"
-        :show-completed="state.showCompletedTodos"
-        :language="state.language"
-        @title-update="updateTitle"
-        @create-list="createTodoList"
-        @update-list-title="updateTodoListTitle"
-        @toggle-list-collapsed="toggleTodoListCollapsed"
-        @toggle-list-compact="toggleTodoListCompact"
-        @delete-list="deleteTodoList"
-        @reorder-lists="reorderTodoListSections"
-        @create="createTodo"
-        @create-from-text="createTodosFromText"
-        @update="updateTodo"
-        @split="splitTodo"
-        @complete="complete"
-        @star="toggleTodoStar"
-        @notify="updateTodoNotify"
-        @remove="removeTodo"
-        @clear-completed="clearDone"
-        @toggle-completed-visibility="toggleCompletedVisibility"
-        @blur-empty="blurEmptyTodo"
-        @blur="handleCompanionBlur"
-        @move="moveTodo"
-        @focus="handleGuideFocus('todos', $event)"
-        @guide="handleGuideClick"
-      />
+      <template #tasks>
+        <TodoPanel
+          :todo-lists="displayTodoLists"
+          :edit-list-id="pendingEditTodoListId"
+          :todos="state.todos"
+          :titles="titles"
+          :show-completed="state.showCompletedTodos"
+          :language="state.language"
+          @title-update="updateTitle"
+          @create-list="createTodoList"
+          @update-list-title="updateTodoListTitle"
+          @toggle-list-collapsed="toggleTodoListCollapsed"
+          @toggle-list-compact="toggleTodoListCompact"
+          @delete-list="deleteTodoList"
+          @reorder-lists="reorderTodoListSections"
+          @create="createTodo"
+          @create-from-text="createTodosFromText"
+          @update="updateTodo"
+          @split="splitTodo"
+          @complete="complete"
+          @star="toggleTodoStar"
+          @notify="updateTodoNotify"
+          @remove="removeTodo"
+          @clear-completed="clearDone"
+          @toggle-completed-visibility="toggleCompletedVisibility"
+          @blur-empty="blurEmptyTodo"
+          @blur="handleCompanionBlur"
+          @move="moveTodo"
+          @focus="handleGuideFocus('todos', $event)"
+          @guide="handleGuideClick"
+        />
+      </template>
 
-      <SpacePanel
-        class="workspace-panel"
-        :spaces="displaySpaces"
-        :active-space-id="state.activeSpaceId"
-        :edit-space-id="pendingEditSpaceId"
-        :language="state.language"
-        @activate="activateSpace"
-        @create="createSpace"
-        @rename="renameSpace"
-        @edit-done="finishSpaceEdit"
-        @update="updateSpaceLines"
-        @delete="deleteSpace"
-        @reorder="reorderSpaces"
-        @focus="(_, element) => handleGuideFocus('workspace', element)"
-        @guide="(_, anchor, immediate) => handleGuideClick('workspace', anchor, immediate)"
-        @blur="handleEditorBlur"
-      />
-    </main>
+      <template #workspace>
+        <SpacePanel
+          class="workspace-panel"
+          :spaces="displaySpaces"
+          :active-space-id="state.activeSpaceId"
+          :edit-space-id="pendingEditSpaceId"
+          :language="state.language"
+          @activate="activateSpace"
+          @create="createSpace"
+          @rename="renameSpace"
+          @edit-done="finishSpaceEdit"
+          @update="updateSpaceLines"
+          @delete="deleteSpace"
+          @reorder="reorderSpaces"
+          @focus="(_, element) => handleGuideFocus('workspace', element)"
+          @guide="(_, anchor, immediate) => handleGuideClick('workspace', anchor, immediate)"
+          @blur="handleEditorBlur"
+        />
+      </template>
+    </WorkbenchShell>
 
     <main v-else class="mobile-handoff" :aria-label="uiText.app.mobileLabel">
       <header class="mobile-handoff-header">
@@ -2019,43 +2066,6 @@ function moveItem<T extends { id: string }>(items: T[], dragId: string, targetId
       @resume="resumeBubbleTimer"
       @gif-theme-change="(theme: string) => updateCompanionGifTheme(theme as CompanionGifTheme)"
     />
-    <div v-if="!isMobileBlocked" class="top-actions">
-      <span
-        class="save-status"
-        data-testid="save-status"
-        :data-state="saveStatus"
-        :aria-label="saveStatusLabel"
-        :title="saveStatusLabel"
-        aria-live="polite"
-        role="button"
-        tabindex="0"
-        @click="showSaveStatusTip($event.currentTarget as HTMLElement)"
-        @keydown.enter.prevent="showSaveStatusTip($event.currentTarget as HTMLElement)"
-        @keydown.space.prevent="showSaveStatusTip($event.currentTarget as HTMLElement)"
-      >
-        <span class="save-status-label">{{ saveStatusLabel }}</span>
-      </span>
-      <SettingsMenu
-        :app-version="appVersion"
-        :update-available="versionPromptVisible"
-        :update-badge-visible="versionBadgeVisible"
-        :companion-gif-theme="state.companionGifTheme"
-        :language="state.language"
-        @export="exportData"
-        @import="requestImport"
-        @about="about"
-        @suggest="suggestIssue"
-        @shortcut-help="shortcutHelpVisible = true"
-        @update="updateStaticVersion"
-        @language="updateLanguage"
-        @gif-theme="updateCompanionGifTheme"
-        @custom-gif="updateCustomCompanionGif"
-        @guide="handleGuideClick"
-      />
-      <NButton quaternary size="small" class="theme-btn icon-button" :aria-label="uiText.app.theme" @click="handleThemeClick">
-        <NIcon :component="state.theme === 'dark' ? SunnyOutline : MoonOutline" />
-      </NButton>
-    </div>
     <input ref="importInput" type="file" accept="application/json,.json" hidden @change="importData" />
     <ShortcutHelp :show="shortcutHelpVisible" :language="state.language" @close="shortcutHelpVisible = false" />
   </NConfigProvider>
