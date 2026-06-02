@@ -2957,5 +2957,6 @@ body:has(.image-preview) .image-panel .n-scrollbar {
 @media (max-width: 1180px) {
   .workbench-grid {
     grid-template-columns: minmax(0, 1fr) minmax(0, 1fr);
+    grid-template-rows: repeat(2, minmax(0, 1fr));
   }
 }

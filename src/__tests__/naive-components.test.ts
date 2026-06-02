@@ -250,6 +250,7 @@ describe("Naive UI component usage", () => {
 
     expect(styles).not.toContain(".top-actions");
     expect(styles).toMatch(/\.workbench-main\s*\{[^}]*grid-template-rows: 52px minmax\(0, 1fr\)/s);
+    expect(styles).toMatch(/@media \(max-width: 1180px\)\s*\{[\s\S]*?\.workbench-grid\s*\{[^}]*grid-template-rows: repeat\(2, minmax\(0, 1fr\)\)/s);
     expect(styles).toMatch(/\.workbench-title-group \.save-status\s*\{[^}]*cursor: pointer/s);
     expect(styles).toMatch(/\.save-status\s*\{[^}]*height: 30px/s);
     expect(styles).toMatch(/\.save-status\s*\{[^}]*width: 34px/s);
