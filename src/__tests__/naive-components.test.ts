@@ -206,7 +206,9 @@ describe("Naive UI component usage", () => {
 
     expect(styles).toMatch(/\.panel-header,[\s\S]*?\.todo-heading\s*\{[^}]*align-items: stretch/s);
     expect(styles).toMatch(/\.panel-header,[\s\S]*?\.todo-heading\s*\{[^}]*gap: 0/s);
-    expect(styles).toMatch(/\.panel-header,[\s\S]*?\.todo-heading\s*\{[^}]*padding: 0 0 0 8px/s);
+    expect(styles).toMatch(/\.panel-header,[\s\S]*?\.todo-heading\s*\{[^}]*padding: 0 8px 0 10px/s);
+    expect(styles).toMatch(/\.panel-header,[\s\S]*?\.todo-heading\s*\{[^}]*border-bottom: 1px solid var\(--border\)/s);
+    expect(styles).toMatch(/\.panel-header,[\s\S]*?\.todo-heading\s*\{[^}]*background: var\(--card\)/s);
     expect(styles).toMatch(/\.panel-header > h1,[\s\S]*?\.todo-heading > h3\s*\{[^}]*border: 0/s);
     expect(styles).toMatch(/\.panel-header > \.count,[\s\S]*?\.todo-heading-actions \.todo-count\s*\{[^}]*border: 0/s);
     expect(styles).toMatch(/\.header-actions,[\s\S]*?\.todo-heading-actions\s*\{[^}]*align-self: stretch/s);
@@ -310,7 +312,7 @@ describe("Naive UI component usage", () => {
     expect(styles).toMatch(/\*::-webkit-scrollbar\s*\{[^}]*height: var\(--scrollbar-size\)/s);
     expect(styles).toContain("::-webkit-scrollbar-thumb");
     expect(styles).toMatch(/button\s*\{[^}]*background: transparent/s);
-    expect(styles).toMatch(/\.n-button\s*\{[^}]*--n-border-radius: 0/s);
+    expect(styles).toMatch(/\.n-button,[\s\S]*?\.n-checkbox-box\s*\{[^}]*--n-border-radius: var\(--radius\)/s);
     expect(styles).toMatch(/\.n-base-wave\s*\{[^}]*display: none/s);
   });
 
@@ -326,7 +328,7 @@ describe("Naive UI component usage", () => {
 
   it("keeps visible border widths at exactly one pixel", () => {
     const styles = read("src/styles.css");
-    const visibleBorderWidths = [...styles.matchAll(/(?:border(?:-(?:top|right|bottom|left))?|--n-border(?:-[a-z]+)?|box-shadow):[^;{}]*?(\d+)px/g)]
+    const visibleBorderWidths = [...styles.matchAll(/(?:border(?:-(?:top|right|bottom|left))?|--n-border(?:-[a-z]+)?):[^;{}]*?(\d+)px/g)]
       .map((match) => Number(match[1]))
       .filter((width) => width > 0);
 
@@ -334,16 +336,19 @@ describe("Naive UI component usage", () => {
     expect(visibleBorderWidths.every((width) => width === 1)).toBe(true);
   });
 
-  it("keeps bordered controls and popup surfaces square without rounded corners", () => {
+  it("keeps bordered controls and popup surfaces aligned to shared radius tokens", () => {
     const styles = read("src/styles.css");
-    const stylesWithoutIndicatorDot = styles.replace(/\.save-status::before\s*\{[^}]*\}/g, "").replace(/\.shortcut-row kbd\s*\{[^}]*\}/g, "");
 
     expect(styles).toMatch(/button\s*\{[^}]*border-radius: 0/s);
     expect(styles).toMatch(/input,[\s\S]*?textarea\s*\{[^}]*border-radius: 0/s);
-    expect(styles).toMatch(/\.n-button,[\s\S]*?\.n-dropdown-menu,[\s\S]*?\.n-checkbox-box\s*\{[^}]*border-radius: 0/s);
+    expect(styles).toMatch(/\.n-button,[\s\S]*?\.n-dropdown-menu,[\s\S]*?\.n-checkbox-box\s*\{[^}]*border-radius: var\(--radius\)/s);
+    expect(styles).toMatch(/\.n-button \.n-button__border,[\s\S]*?\.n-button \.n-button__state-border\s*\{[^}]*border-radius: var\(--radius\)/s);
+    expect(styles).toMatch(/\.quick-button\s*\{[^}]*border-radius: var\(--radius\)/s);
+    expect(styles).toMatch(/\.space-tab\s*\{[^}]*border-radius: var\(--radius\)/s);
+    expect(styles).toMatch(/\.todo-item\s*\{[^}]*border-radius: var\(--radius\)/s);
+    expect(styles).toMatch(/\.image-card\s*\{[^}]*border-radius: var\(--radius\)/s);
     expect(styles).not.toContain(".notify-clock-options");
     expect(styles).not.toContain(".notify-clock-button");
-    expect(stylesWithoutIndicatorDot).not.toMatch(/border-radius:\s*(?:[1-9]\d*px|0\.\d+|[1-9]\d*%)/);
   });
 
   it("renders context menus as bordered surfaces above companion bubbles", () => {
@@ -360,9 +365,10 @@ describe("Naive UI component usage", () => {
       "src/components/SpacePanel.vue",
     ];
 
-    expect(styles).toMatch(/\.n-dropdown-menu\s*\{[^}]*--n-box-shadow: none !important/s);
-    expect(styles).toMatch(/\.n-dropdown-menu\s*\{[^}]*box-shadow: none !important/s);
-    expect(styles).toMatch(/\.n-dropdown-menu\s*\{[^}]*border: 1px solid var\(--line-main\) !important/s);
+    expect(styles).toMatch(/\.n-dropdown-menu,[\s\S]*?\.n-dialog\s*\{[^}]*border: 1px solid var\(--border\) !important/s);
+    expect(styles).toMatch(/\.n-dropdown-menu,[\s\S]*?\.n-dialog\s*\{[^}]*background: var\(--popover\) !important/s);
+    expect(styles).toMatch(/\.n-dropdown-menu,[\s\S]*?\.n-dialog\s*\{[^}]*color: var\(--popover-foreground\) !important/s);
+    expect(styles).toMatch(/\.n-dropdown-menu,[\s\S]*?\.n-dialog\s*\{[^}]*box-shadow: 0 14px 38px rgba\(15, 23, 42, 0\.12\) !important/s);
     expect(contextMenu).toContain("export const CONTEXT_MENU_Z_INDEX = 3400");
     expect(companion).toContain(':z-index="3300"');
     for (const file of dropdownFiles) {

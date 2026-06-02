@@ -252,9 +252,10 @@ h3 {
   align-items: stretch;
   justify-content: space-between;
   gap: 0;
-  min-height: 34px;
-  padding: 0 0 0 8px;
-  border-bottom: 1px solid var(--line-section);
+  min-height: 36px;
+  padding: 0 8px 0 10px;
+  border-bottom: 1px solid var(--border);
+  background: var(--card);
   flex: 0 0 auto;
 }
 
@@ -300,7 +301,6 @@ h3 {
 }
 
 .n-button {
-  --n-border-radius: 0 !important;
   --n-font-size: var(--app-font-size) !important;
   --n-wave-opacity: 0 !important;
   font-size: var(--app-font-size) !important;
@@ -315,8 +315,9 @@ h3 {
 .n-dropdown-option,
 .n-base-selection,
 .n-checkbox-box {
-  --n-border-radius: 0 !important;
-  border-radius: 0 !important;
+  --n-border-radius: var(--radius) !important;
+  --n-font-size: var(--app-font-size) !important;
+  border-radius: var(--radius) !important;
 }
 
 .n-input,
@@ -330,10 +331,13 @@ h3 {
   font-size: var(--app-font-size) !important;
 }
 
-.n-dropdown-menu {
-  --n-box-shadow: none !important;
-  box-shadow: none !important;
-  border: 1px solid var(--line-main) !important;
+.n-dropdown-menu,
+.n-popover,
+.n-dialog {
+  border: 1px solid var(--border) !important;
+  background: var(--popover) !important;
+  color: var(--popover-foreground) !important;
+  box-shadow: 0 14px 38px rgba(15, 23, 42, 0.12) !important;
 }
 
 .n-button:not(.n-button--primary-type):not(.n-button--error-type) {
@@ -349,7 +353,7 @@ h3 {
 
 .n-button .n-button__border,
 .n-button .n-button__state-border {
-  border-radius: 0 !important;
+  border-radius: var(--radius) !important;
 }
 
 .n-base-wave {
@@ -532,6 +536,8 @@ h3 {
   padding: 0 10px;
   border: 0;
   border-right: 1px solid var(--line-subtle);
+  border-color: var(--border);
+  border-radius: var(--radius);
   color: var(--muted);
   font-size: var(--app-font-size);
   font-weight: 600;
@@ -1279,6 +1285,8 @@ h3 {
   padding: 0;
   border: 0;
   border-bottom: 1px solid var(--line-subtle);
+  border-color: var(--border);
+  border-radius: var(--radius);
   font-size: var(--app-font-size);
   background: var(--input);
   cursor: zoom-in;
@@ -1367,6 +1375,8 @@ h3 {
   font-size: var(--app-font-size);
   background: transparent;
   border: 1px solid var(--line-control);
+  border-color: var(--border);
+  border-radius: var(--radius);
   overflow: hidden;
   text-overflow: ellipsis;
   white-space: nowrap;
@@ -1600,6 +1610,8 @@ h3 {
   padding: 0;
   font-size: var(--app-font-size);
   border-bottom: 0;
+  border-color: var(--border);
+  border-radius: var(--radius);
   transition: background-color 0.18s ease, opacity 0.18s ease, transform 0.22s cubic-bezier(0.2, 0, 0, 1);
 }
 
