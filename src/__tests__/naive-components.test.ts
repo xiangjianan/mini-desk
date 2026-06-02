@@ -136,8 +136,9 @@ describe("Naive UI component usage", () => {
     expect(preview).not.toContain("@contextmenu.prevent.stop=\"openMenu\"");
     expect(preview).not.toContain("custom-menu");
     expect(preview).not.toContain('id="custom-menu"');
-    expect(styles).toMatch(/\.image-preview\s*\{[^}]*left: 10vw/s);
-    expect(styles).toMatch(/\.image-preview\s*\{[^}]*width: 90vw/s);
+    expect(styles).toMatch(/\.image-preview\s*\{[^}]*left: var\(--image-preview-left, clamp\(220px, 18vw, 320px\)\)/s);
+    expect(styles).toMatch(/\.image-preview\s*\{[^}]*right: 0/s);
+    expect(styles).not.toMatch(/\.image-preview\s*\{[^}]*width: 90vw/s);
     expect(styles).toContain("backdrop-filter");
     expect(styles).toMatch(/\.image-preview\s*\{[^}]*background: rgba\(255, 255, 255/s);
     expect(styles).toMatch(/html\[data-theme="dark"\] \.image-preview\s*\{[^}]*background: rgba\(0, 0, 0/s);
@@ -197,29 +198,30 @@ describe("Naive UI component usage", () => {
     expect(settings).not.toContain("settings-wrap");
     expect(quick).not.toContain(">+</NButton>");
     expect(todo).not.toContain("↘");
-    expect(styles).toMatch(/\.settings-btn\s*\{[^}]*border-radius: 0/s);
+    expect(styles).toMatch(/\.settings-btn\s*\{[^}]*border-radius: var\(--radius\)/s);
     expect(styles).toMatch(/\.workbench-command-actions\s*\{[^}]*gap: 8px/s);
   });
 
-  it("keeps header text unboxed while header action buttons share the one-pixel edge", () => {
+  it("keeps header text unboxed while header controls use rounded soft edges", () => {
     const styles = read("src/styles.css");
 
     expect(styles).toMatch(/\.panel-header,[\s\S]*?\.todo-heading\s*\{[^}]*align-items: stretch/s);
     expect(styles).toMatch(/\.panel-header,[\s\S]*?\.todo-heading\s*\{[^}]*gap: 0/s);
     expect(styles).toMatch(/\.panel-header,[\s\S]*?\.todo-heading\s*\{[^}]*padding: 0 8px 0 10px/s);
-    expect(styles).toMatch(/\.panel-header,[\s\S]*?\.todo-heading\s*\{[^}]*border-bottom: 1px solid var\(--border\)/s);
-    expect(styles).toMatch(/\.panel-header,[\s\S]*?\.todo-heading\s*\{[^}]*background: var\(--card\)/s);
+    expect(styles).toMatch(/\.panel-header,[\s\S]*?\.todo-heading\s*\{[^}]*border-bottom: 0/s);
+    expect(styles).toMatch(/\.panel-header,[\s\S]*?\.todo-heading\s*\{[^}]*box-shadow: inset 0 -1px color-mix\(in srgb, var\(--border\) 55%, transparent\)/s);
+    expect(styles).toMatch(/\.panel-header,[\s\S]*?\.todo-heading\s*\{[^}]*background: color-mix\(in srgb, var\(--card\) 96%, var\(--muted-surface\)\)/s);
     expect(styles).toMatch(/\.panel-header > h1,[\s\S]*?\.todo-heading > h3\s*\{[^}]*border: 0/s);
     expect(styles).toMatch(/\.panel-header > \.count,[\s\S]*?\.todo-heading-actions \.todo-count\s*\{[^}]*border: 0/s);
     expect(styles).toMatch(/\.header-actions,[\s\S]*?\.todo-heading-actions\s*\{[^}]*align-self: stretch/s);
     expect(styles).toMatch(/\.header-actions,[\s\S]*?\.todo-heading-actions\s*\{[^}]*gap: 0/s);
     expect(styles).toMatch(/\.quick-menu-button,[\s\S]*?\.todo-section-menu-button\s*\{[^}]*width: 34px/s);
     expect(styles).toMatch(/\.quick-menu-button,[\s\S]*?\.todo-section-menu-button\s*\{[^}]*height: 34px/s);
-    expect(styles).toMatch(/\.quick-menu-button,[\s\S]*?\.todo-section-menu-button\s*\{[^}]*border-color: var\(--line-section\)/s);
-    expect(styles).toMatch(/\.quick-menu-button,[\s\S]*?\.todo-section-menu-button\s*\{[^}]*border-right-color: var\(--line-main\)/s);
-    expect(styles).toMatch(/\.quick-menu-button,[\s\S]*?\.todo-section-menu-button\s*\{[^}]*margin: 0 -1px -1px 0/s);
-    expect(styles).toMatch(/\.quick-menu-button,[\s\S]*?\.todo-section-menu-button\s*\{[^}]*border-top: 0/s);
-    expect(styles).toMatch(/\.quick-menu-button:hover,[\s\S]*?\.todo-section-menu-button:focus-visible\s*\{[^}]*border-right-color: var\(--line-main\)/s);
+    expect(styles).toMatch(/\.quick-menu-button,[\s\S]*?\.todo-section-menu-button\s*\{[^}]*border: 0/s);
+    expect(styles).toMatch(/\.quick-menu-button,[\s\S]*?\.todo-section-menu-button\s*\{[^}]*margin: 0 0 0 2px/s);
+    expect(styles).toMatch(/\.quick-menu-button,[\s\S]*?\.todo-section-menu-button\s*\{[^}]*border-radius: var\(--radius\)/s);
+    expect(styles).toMatch(/button\.quick-menu-button,[\s\S]*?button\.todo-section-menu-button\s*\{[^}]*background: transparent/s);
+    expect(styles).toMatch(/\.quick-menu-button:hover,[\s\S]*?\.todo-section-menu-button:focus-visible\s*\{[^}]*background: transparent/s);
   });
 
   it("styles configurable reminder list controls and compact collapsed states", () => {
@@ -235,6 +237,8 @@ describe("Naive UI component usage", () => {
     expect(todo).toContain("is-collapsed");
     expect(todo).toContain("is-compact");
     expect(styles).toMatch(/\.todo-collapse-button\s*\{[^}]*height: 34px/s);
+    expect(styles).toMatch(/\.todo-collapse-button\s*\{[^}]*background: transparent/s);
+    expect(styles).toMatch(/\.todo-collapse-button:hover,[\s\S]*?\.todo-collapse-button:focus-visible\s*\{[^}]*background: transparent/s);
     expect(styles).toMatch(/\.todo-collapse-button \.n-icon\s*\{[^}]*transition: transform var\(--motion-medium\) var\(--motion-ease\)/s);
     expect(styles).toMatch(/\.todo-list-create-dialog\s*\{[^}]*width: 260px/s);
     expect(styles).toMatch(/\.todo-list-drag-handle\s*\{[^}]*display: none/s);
@@ -253,6 +257,7 @@ describe("Naive UI component usage", () => {
     expect(styles).not.toContain(".top-actions");
     expect(styles).toMatch(/\.workbench-main\s*\{[^}]*grid-template-rows: 52px minmax\(0, 1fr\)/s);
     expect(styles).toMatch(/@media \(max-width: 1180px\)\s*\{[\s\S]*?\.workbench-grid\s*\{[^}]*grid-template-rows: repeat\(2, minmax\(0, 1fr\)\)/s);
+    expect(styles).toMatch(/@media \(max-width: 1180px\)\s*\{[\s\S]*?\.workbench-resizer\s*\{[^}]*display: none/s);
     expect(styles).toMatch(/\.workbench-title-group \.save-status\s*\{[^}]*cursor: pointer/s);
     expect(styles).toMatch(/\.save-status\s*\{[^}]*height: 30px/s);
     expect(styles).toMatch(/\.save-status\s*\{[^}]*width: 34px/s);
@@ -339,8 +344,9 @@ describe("Naive UI component usage", () => {
   it("keeps bordered controls and popup surfaces aligned to shared radius tokens", () => {
     const styles = read("src/styles.css");
 
-    expect(styles).toMatch(/button\s*\{[^}]*border-radius: 0/s);
-    expect(styles).toMatch(/input,[\s\S]*?textarea\s*\{[^}]*border-radius: 0/s);
+    expect(styles).toMatch(/button:not\(\[data-slot="button"\]\)\s*\{[^}]*border: 0/s);
+    expect(styles).toMatch(/button:not\(\[data-slot="button"\]\)\s*\{[^}]*border-radius: var\(--radius\)/s);
+    expect(styles).toMatch(/input,[\s\S]*?textarea\s*\{[^}]*border-radius: var\(--radius\)/s);
     expect(styles).toMatch(/\.n-button,[\s\S]*?\.n-dropdown-menu,[\s\S]*?\.n-checkbox-box\s*\{[^}]*border-radius: var\(--radius\)/s);
     expect(styles).toMatch(/\.n-button \.n-button__border,[\s\S]*?\.n-button \.n-button__state-border\s*\{[^}]*border-radius: var\(--radius\)/s);
     expect(styles).toMatch(/\.quick-button\s*\{[^}]*border-radius: var\(--radius\)/s);
@@ -368,7 +374,7 @@ describe("Naive UI component usage", () => {
     expect(styles).toMatch(/\.n-dropdown-menu,[\s\S]*?\.shortcut-help-modal\.n-card\s*\{[^}]*border: 1px solid var\(--border\) !important/s);
     expect(styles).toMatch(/\.n-dropdown-menu,[\s\S]*?\.shortcut-help-modal\.n-card\s*\{[^}]*background: var\(--popover\) !important/s);
     expect(styles).toMatch(/\.n-dropdown-menu,[\s\S]*?\.shortcut-help-modal\.n-card\s*\{[^}]*color: var\(--popover-foreground\) !important/s);
-    expect(styles).toMatch(/\.n-dropdown-menu,[\s\S]*?\.shortcut-help-modal\.n-card\s*\{[^}]*box-shadow: 0 14px 38px rgba\(15, 23, 42, 0\.12\) !important/s);
+    expect(styles).toMatch(/\.n-dropdown-menu,[\s\S]*?\.shortcut-help-modal\.n-card\s*\{[^}]*box-shadow: 0 10px 24px rgba\(15, 23, 42, 0\.08\) !important/s);
     expect(contextMenu).toContain("export const CONTEXT_MENU_Z_INDEX = 3400");
     expect(companion).toContain(':z-index="3300"');
     for (const file of dropdownFiles) {
@@ -468,8 +474,8 @@ describe("Naive UI component usage", () => {
 
     expect(todo).toContain('class="todo-drag-handle"');
     expect(todo).not.toMatch(/class="todo-item"[\s\S]{0,160}draggable="true"/);
-    expect(styles).toMatch(/\.todo-item\s*\{[^}]*grid-template-columns: 14px 28px minmax\(0, 1fr\) 28px 24px/s);
-    expect(styles).toMatch(/\.todo-item\.has-notify\s*\{[^}]*grid-template-columns: 14px 28px minmax\(0, 1fr\) minmax\(0, 92px\) 24px/s);
+    expect(styles).toMatch(/\.todo-item\s*\{[^}]*grid-template-columns: 22px 32px minmax\(0, 1fr\) 28px 24px/s);
+    expect(styles).toMatch(/\.todo-item\.has-notify\s*\{[^}]*grid-template-columns: 22px 32px minmax\(0, 1fr\) minmax\(0, 92px\) 24px/s);
     expect(styles).toMatch(/\.todo-list\s*\{[^}]*padding: 0/s);
     expect(styles).toMatch(/\.todo-item\s*\{[^}]*height: 34px/s);
     expect(styles).toMatch(/\.todo-item\s*\{[^}]*min-height: 34px/s);
@@ -480,7 +486,7 @@ describe("Naive UI component usage", () => {
     expect(styles).toMatch(/\.todo-item::after\s*\{[^}]*right: 6px/s);
     expect(styles).toMatch(/\.todo-item::after\s*\{[^}]*border-bottom: 1px solid var\(--border\)/s);
     expect(styles).toMatch(/\.todo-list \.todo-item:last-child\s*\{[^}]*margin-bottom: 8px/s);
-    expect(styles).toMatch(/\.todo-drag-handle\s*\{[^}]*width: 12px/s);
+    expect(styles).toMatch(/\.todo-drag-handle\s*\{[^}]*width: 18px/s);
     expect(styles).toMatch(/\.todo-drag-handle\s*\{[^}]*opacity: 0\.28/s);
     expect(styles).toContain(".todo-drag-handle::before");
     expect(styles).toContain(".todo-deadline-label");
@@ -591,7 +597,7 @@ describe("Naive UI component usage", () => {
     expect(styles).toContain("@keyframes companion-pop");
     expect(styles).toMatch(/\.companion-popover\s*\{[^}]*animation: companion-pop/s);
     expect(styles).toMatch(/\.companion-popover\s*\{[^}]*transform-origin: right bottom/s);
-    expect(styles).toMatch(/\.companion-popover-shell\.n-popover\s*\{[^}]*box-shadow: 0 14px 38px rgba\(15, 23, 42, 0\.12\) !important/s);
+    expect(styles).toMatch(/\.companion-popover-shell\.n-popover\s*\{[^}]*box-shadow: 0 10px 24px rgba\(15, 23, 42, 0\.08\) !important/s);
     expect(styles).toMatch(/\.companion-popover-shell\.n-popover\s*\{[^}]*border: 1px solid var\(--border\) !important/s);
     expect(styles).toMatch(/\.companion-popover-shell\.n-popover\s*\{[^}]*background: var\(--popover\) !important/s);
     expect(styles).toMatch(/\.companion-popover-arrow\s*\{[^}]*box-shadow: none/s);
@@ -610,6 +616,7 @@ describe("Naive UI component usage", () => {
     expect(space).toContain('class="space-text-stage"');
     expect(space).not.toContain('class="space-tab-indicator"');
     expect(todo).toContain('name="section-reveal"');
+    expect(todo).toContain('name="today-focus-move"');
     expect(todo).toContain('name="floating-pop"');
     expect(todo).toContain(':duration="240"');
     expect(styles).toMatch(/:root\s*\{[^}]*--motion-medium: 240ms/s);
@@ -617,6 +624,7 @@ describe("Naive UI component usage", () => {
     expect(styles).not.toContain(".space-tab-indicator");
     expect(styles).toMatch(/\.todo-list-shell\s*\{[^}]*max-height var\(--motion-medium\)/s);
     expect(styles).toMatch(/\.todo-list-shell\.is-hidden\s*\{[^}]*max-height: 0/s);
+    expect(styles).toMatch(/\.today-focus-move-move,[\s\S]*?\.today-focus-move-enter-active,[\s\S]*?\.today-focus-move-leave-active[\s\S]*?\{[^}]*transform 0\.22s/s);
     expect(styles).toMatch(/\.section-reveal-enter-active,[\s\S]*?\.section-reveal-leave-active\s*\{[^}]*max-height var\(--motion-medium\)/s);
     expect(styles).toMatch(/\.floating-pop-enter-active,[\s\S]*?\.floating-pop-leave-active\s*\{[^}]*transform var\(--motion-medium\)/s);
   });
@@ -692,11 +700,9 @@ describe("Naive UI component usage", () => {
     expect(styles).toMatch(/\.quick-dialog\s*\{[^}]*width: min\(420px, calc\(100vw - 32px\)\)/s);
     expect(styles).toMatch(/\.quick-dialog \.n-base-close\s*\{[^}]*border: 0/s);
     expect(styles).toMatch(/\.quick-dialog \.n-base-close\s*\{[^}]*box-shadow: none/s);
-    expect(styles).toMatch(/\.panel\.is-focused,[\s\S]*?\.todo-section\.is-focused\s*\{[^}]*box-shadow: inset 0 0 0 1px var\(--line-focus\)/s);
-    expect(styles).toMatch(/\.todo-section\.is-focused::before\s*\{[^}]*inset: 0/s);
-    expect(styles).toMatch(/\.todo-section\.is-focused::before\s*\{[^}]*border: 1px solid var\(--line-focus\)/s);
-    expect(styles).toMatch(/\.todo-section\.is-focused::before\s*\{[^}]*pointer-events: none/s);
-    expect(styles).toMatch(/\.todo-section\.is-focused::before\s*\{[^}]*z-index: 4/s);
+    expect(styles).toMatch(/\.panel\.is-focused,[\s\S]*?\.todo-section\.is-focused\s*\{[^}]*box-shadow: none/s);
+    expect(styles).toMatch(/\.todo-section\.is-focused::before\s*\{[^}]*content: none/s);
+    expect(styles).not.toMatch(/\.todo-section\.is-focused::before\s*\{[^}]*border: 1px solid var\(--line-focus\)/s);
   });
 
   it("uses a slightly stronger gradient for completed pinned reminders", () => {
@@ -768,7 +774,8 @@ describe("Naive UI component usage", () => {
     expect(space).toContain("@wheel=\"handleTabsWheel\"");
     expect(styles).toMatch(/\.space-tabs\s*\{[^}]*overflow-x: auto/s);
     expect(styles).toMatch(/\.space-tabs\s*\{[^}]*height: 34px/s);
-    expect(styles).toMatch(/\.space-tabs-scrollbar\s*\{[^}]*max-width: calc\(100% - 101px\)/s);
+    expect(styles).toMatch(/\.space-tabs-scrollbar\s*\{[^}]*max-width: 100%/s);
+    expect(styles).not.toMatch(/\.space-tabs-scrollbar\s*\{[^}]*calc\(100% - 101px\)/s);
     expect(styles).toMatch(/\.space-tabs-scrollbar\s*\{[^}]*height: 34px/s);
     expect(styles).toMatch(/\.space-tabs-scrollbar\s*\{[^}]*border-bottom: 1px solid var\(--line-control\)/s);
     expect(styles).toMatch(/\.space-tabs\s*\{[^}]*scrollbar-width: none/s);

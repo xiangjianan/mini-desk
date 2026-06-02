@@ -39,7 +39,8 @@ describe("design system setup", () => {
     expect(styles).toContain('@import "tailwindcss"');
     expect(styles).toContain("--background:");
     expect(styles).toContain("--foreground:");
-    expect(styles).toMatch(/button:not\(\[data-slot="button"\]\)\s*\{[^}]*border-radius: 0/s);
+    expect(styles).toMatch(/button:not\(\[data-slot="button"\]\)\s*\{[^}]*border: 0/s);
+    expect(styles).toMatch(/button:not\(\[data-slot="button"\]\)\s*\{[^}]*border-radius: var\(--radius\)/s);
     expect(styles).not.toMatch(/button\s*\{[^}]*--radius:/s);
   });
 });

@@ -1869,7 +1869,7 @@ function moveItem<T extends { id: string }>(items: T[], dragId: string, targetId
     <NGlobalStyle />
     <WorkbenchShell
       v-if="!isMobileBlocked"
-      :title="state.language === 'en' ? 'Today Workbench' : '今日工作台'"
+      title="Mini Desk"
       :save-status-label="saveStatusLabel"
       :theme="state.theme"
       @theme="handleThemeClick"

@@ -149,8 +149,11 @@ describe("App shell", () => {
   it("renders the preserved board regions and primary controls", async () => {
     const wrapper = mountApp();
 
-    expect(wrapper.find('[aria-label="应用导航"]').exists()).toBe(true);
-    expect(wrapper.find('[data-testid="workbench-command-bar"]').text()).toContain("今日工作台");
+    expect(wrapper.find('[aria-label="应用导航"]').exists()).toBe(false);
+    expect(wrapper.find(".workbench-rail").exists()).toBe(false);
+    expect(wrapper.find('[data-testid="workbench-command-bar"]').text()).toContain("Mini Desk");
+    expect(wrapper.find('[data-testid="workbench-command-bar"]').text()).not.toContain("搜索或执行命令");
+    expect(wrapper.find('[data-testid="workbench-command-bar"]').text()).not.toContain("⌘K");
     expect(wrapper.find('[aria-label="素材"]').exists()).toBe(true);
     expect(wrapper.find('[aria-label="笔记与快捷动作"]').exists()).toBe(true);
     expect(wrapper.find('[aria-label="任务流"]').exists()).toBe(true);
@@ -164,7 +167,7 @@ describe("App shell", () => {
     expect(wrapper.findAll(".space-tab").map((tab) => tab.text())).toEqual(["工作空间"]);
     expect(wrapper.findAll(".tool-tab").map((tab) => tab.text().trim())).toEqual(["", "", "", "", ""]);
     expect(wrapper.findAll(".tool-tab").map((tab) => tab.attributes("aria-label"))).toEqual(["计算器", "进制转换", "取色板", "编解码", "随机密码生成"]);
-    expect(wrapper.find('[data-testid="workbench-rail-theme"]').exists()).toBe(true);
+    expect(wrapper.find('[data-testid="workbench-theme"]').exists()).toBe(true);
     expect(wrapper.find('[aria-label="快捷动作菜单"]').exists()).toBe(true);
     expect(wrapper.find('[aria-label="设置"]').exists()).toBe(true);
     expect(wrapper.find(".image-empty").exists()).toBe(false);
@@ -1183,7 +1186,7 @@ describe("App shell", () => {
     await wrapper.get("textarea").trigger("focus");
     expect(wrapper.find(".focus-companion.is-visible img").exists()).toBe(true);
 
-    await wrapper.get('[data-testid="workbench-rail-theme"]').trigger("click");
+    await wrapper.get('[data-testid="workbench-theme"]').trigger("click");
     await wrapper.vm.$nextTick();
 
     expect(wrapper.find(".focus-companion.is-visible").exists()).toBe(false);
