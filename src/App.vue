@@ -725,7 +725,9 @@ async function callQuickApi(button: QuickButton, anchor?: HTMLElement): Promise<
   try {
     const response = await fetch(normalizeApiUrl(button.value), buildQuickApiRequest(button));
     if (shouldBlockBoardEffects()) return;
-    showBubbleText(getQuickApiStatusMessage(response.status), anchor, { hideCompanionAfter: true }, 4200);
+    const responseBody = await readQuickApiResponseBody(response);
+    if (shouldBlockBoardEffects()) return;
+    showBubbleText(getQuickApiStatusMessage(response.status, responseBody), anchor, { hideCompanionAfter: true }, 5200);
   } catch {
     if (shouldBlockBoardEffects()) return;
     showBubbleText(state.language === "en" ? "❌ API request failed. Check the URL, CORS, or network (；′⌒`)" : "❌ 接口调用失败，检查 URL、跨域或网络吧 (；′⌒`)", anchor, { hideCompanionAfter: true }, 4200);
@@ -772,30 +774,48 @@ function getQuickApiInvokedMessage(title: string): string {
     : `🚀 接口「${title}」已发起调用 (｡•̀ᴗ-)✧`;
 }
 
-function getQuickApiStatusMessage(status: number): string {
+async function readQuickApiResponseBody(response: Response): Promise<string> {
+  try {
+    const text = await response.text();
+    const normalized = text.trim();
+    return normalized || (state.language === "en" ? "(empty)" : "空");
+  } catch {
+    return state.language === "en" ? "Unable to read response body" : "无法读取响应体";
+  }
+}
+
+function getQuickApiStatusMessage(status: number, responseBody?: string): string {
+  const bodyLine = responseBody === undefined
+    ? ""
+    : `\n${state.language === "en" ? "Response body" : "响应体"}：${formatQuickApiResponseBody(responseBody)}`;
   if (status >= 200 && status < 300) {
     return state.language === "en"
-      ? `✅ ${status} Success, the API responded normally (＾▽＾)`
-      : `✅ ${status} 调用成功，接口正常响应啦 (＾▽＾)`;
+      ? `✅ ${status} Success, the API responded normally (＾▽＾)${bodyLine}`
+      : `✅ ${status} 调用成功，接口正常响应啦 (＾▽＾)${bodyLine}`;
   }
   if (status >= 300 && status < 400) {
     return state.language === "en"
-      ? `↪️ ${status} Redirect response received (・_・ヾ`
-      : `↪️ ${status} 收到重定向响应，可能需要检查跳转地址 (・_・ヾ`;
+      ? `↪️ ${status} Redirect response received (・_・ヾ${bodyLine}`
+      : `↪️ ${status} 收到重定向响应，可能需要检查跳转地址 (・_・ヾ${bodyLine}`;
   }
   if (status >= 400 && status < 500) {
     return state.language === "en"
-      ? `⚠️ ${status} Client-side request issue, check parameters or permission (；′⌒\`)`
-      : `⚠️ ${status} 请求侧可能有问题，检查参数或权限吧 (；′⌒\`)`;
+      ? `⚠️ ${status} Client-side request issue, check parameters or permission (；′⌒\`)${bodyLine}`
+      : `⚠️ ${status} 请求侧可能有问题，检查参数或权限吧 (；′⌒\`)${bodyLine}`;
   }
   if (status >= 500) {
     return state.language === "en"
-      ? `💥 ${status} Server-side error, the API is unhappy Σ(っ °Д °;)っ`
-      : `💥 ${status} 服务端异常，接口有点不开心 Σ(っ °Д °;)っ`;
+      ? `💥 ${status} Server-side error, the API is unhappy Σ(っ °Д °;)っ${bodyLine}`
+      : `💥 ${status} 服务端异常，接口有点不开心 Σ(っ °Д °;)っ${bodyLine}`;
   }
   return state.language === "en"
-    ? `ℹ️ ${status} Response received, status is uncommon (・∀・)`
-    : `ℹ️ ${status} 已收到响应，这个状态码比较少见 (・∀・)`;
+    ? `ℹ️ ${status} Response received, status is uncommon (・∀・)${bodyLine}`
+    : `ℹ️ ${status} 已收到响应，这个状态码比较少见 (・∀・)${bodyLine}`;
+}
+
+function formatQuickApiResponseBody(value: string): string {
+  const maxLength = 500;
+  return value.length > maxLength ? `${value.slice(0, maxLength)}...` : value;
 }
 
 async function copyText(text: string, shouldAbort: () => boolean = () => false): Promise<boolean> {

@@ -255,8 +255,16 @@ function openToolMenu(event: MouseEvent, id: ToolId): void {
 function openActiveToolMenu(event: MouseEvent): void {
   if (!activeToolId.value) return;
   const target = event.target as HTMLElement;
-  if (target.closest("button, input, textarea, select")) return;
+  if (!isBlankToolContextTarget(target)) return;
   openToolMenu(event, activeToolId.value);
+}
+
+function isBlankToolContextTarget(target: HTMLElement): boolean {
+  if (target.closest(".tool-tabs")) return false;
+  if (target.closest("button, input, textarea, select, label, code")) return false;
+  const pane = target.closest(".tool-pane");
+  if (pane) return target === pane;
+  return Boolean(target.closest(".tool-workbench, .tool-content, .tool-content-scrollbar"));
 }
 
 function closeToolMenu(): void {
@@ -583,18 +591,20 @@ function uniqueChars(value: string): string {
 
 async function copyToolText(value: string): Promise<void> {
   if (!value || value === "--") return;
+  let copied = false;
   if (navigator.clipboard?.writeText) {
     try {
       await navigator.clipboard.writeText(value);
-      return;
+      copied = true;
     } catch {
       // Fall back below when async clipboard access is denied.
     }
   }
-  copyTextWithBrowserCommand(value);
+  if (!copied) copied = copyTextWithBrowserCommand(value);
+  notifyToolMessage(copied ? uiText.value.tools.copySuccess : uiText.value.tools.copyFailed);
 }
 
-function copyTextWithBrowserCommand(value: string): void {
+function copyTextWithBrowserCommand(value: string): boolean {
   const textarea = document.createElement("textarea");
   textarea.value = value;
   textarea.setAttribute("readonly", "");
@@ -603,8 +613,9 @@ function copyTextWithBrowserCommand(value: string): void {
   document.body.append(textarea);
   textarea.focus();
   textarea.setSelectionRange(0, textarea.value.length);
-  document.execCommand?.("copy");
+  const copied = document.execCommand?.("copy") ?? false;
   textarea.remove();
+  return copied;
 }
 </script>
 

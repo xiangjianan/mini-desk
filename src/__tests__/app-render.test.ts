@@ -2033,7 +2033,7 @@ describe("App shell", () => {
 
   it("calls API quick buttons and reports invocation plus response status in the companion bubble", async () => {
     vi.useFakeTimers();
-    const apiResult = createDeferred<{ status: number }>();
+    const apiResult = createDeferred<{ status: number; text: () => Promise<string> }>();
     const fetchMock = vi.fn((_input: RequestInfo | URL, _init?: RequestInit) => apiResult.promise);
     vi.stubGlobal("fetch", fetchMock);
     localStorage.setItem(
@@ -2077,7 +2077,7 @@ describe("App shell", () => {
       await wrapper.vm.$nextTick();
       expect(wrapper.get('[data-testid="companion-confirm"]').text()).toContain("已发起调用");
 
-      apiResult.resolve({ status: 201 });
+      apiResult.resolve({ status: 201, text: vi.fn().mockResolvedValue('{"ok":true,"id":7}') });
       await Promise.resolve();
       await wrapper.vm.$nextTick();
       await vi.advanceTimersByTimeAsync(200);
@@ -2087,6 +2087,7 @@ describe("App shell", () => {
       expect(message).toContain("201");
       expect(message).toMatch(/调用成功|正常响应/);
       expect(message).toMatch(/✅|\(＾▽＾\)/);
+      expect(message).toContain('响应体：{"ok":true,"id":7}');
     } finally {
       wrapper.unmount();
       vi.useRealTimers();

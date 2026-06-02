@@ -111,7 +111,7 @@ describe("ToolPanel", () => {
     expect(styles).toMatch(/\.tool-content-scrollbar\s*\{[^}]*--n-scrollbar-width: var\(--scrollbar-size\) !important/s);
   });
 
-  it("opens the close menu from each selected tool page blank area without intercepting controls", async () => {
+  it("opens the close menu only from each selected tool page blank area without intercepting content or controls", async () => {
     const wrapper = mountToolPanel();
     const toolPaneSelectors = [".calculator-tool", ".base-tool", ".color-tool", ".codec-tool", ".password-tool"];
 
@@ -130,6 +130,12 @@ describe("ToolPanel", () => {
 
     expect(wrapper.find(".dropdown-option").exists()).toBe(false);
     expect(wrapper.findAll(".tool-tab")[0].attributes("aria-selected")).toBe("true");
+
+    await wrapper.findAll(".tool-tab")[1].trigger("click");
+    await wrapper.get('[data-testid="base-result-10"]').trigger("contextmenu", { clientX: 140, clientY: 160 });
+
+    expect(wrapper.find(".dropdown-option").exists()).toBe(false);
+    expect(wrapper.findAll(".tool-tab")[1].attributes("aria-selected")).toBe("true");
 
     await wrapper.get(".tool-workbench").trigger("contextmenu", { clientX: 220, clientY: 260 });
 
@@ -199,6 +205,7 @@ describe("ToolPanel", () => {
     await wrapper.get('[data-testid="copy-base-2"]').trigger("click");
 
     expect(writeText).toHaveBeenCalledWith("11111111");
+    expect(wrapper.emitted("message")?.at(-1)?.[0]).toMatch(/^复制成功 .+$/);
   });
 
   it("emits tool prompts for the app message bubble instead of rendering inline text", async () => {
