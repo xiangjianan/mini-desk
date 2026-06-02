@@ -440,8 +440,8 @@ export const UI_TEXT = {
       chooseGif: "请选择 GIF 文件",
       customGifSet: "已设置自定义 GIF",
       importOverwrite: "覆盖导入",
-      aboutTitle: "Mini Desk",
-      aboutDescription: "一个本地优先的轻量工作台，用来整理截图、便签、提醒事项、快捷动作和工作空间。\n所有操作均在本地浏览器完成，绝不上传您的任何数据。",
+      aboutTitle: "Mini Desk 看板",
+      aboutDescription: "一个本地优先的轻量工作台，把截图、TODO、快捷动作和工作空间缝合得恰到好处。\n所有操作均在本地浏览器完成，绝不上传您的任何数据。",
       reminderFallback: "提醒事项",
     },
     settings: {

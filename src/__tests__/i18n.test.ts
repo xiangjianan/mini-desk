@@ -61,10 +61,13 @@ describe("localized public copy", () => {
     expect(getUiText("zh").settings.language).toBe("Language");
   });
 
-  it("uses Mini Desk as the public app name in both languages", () => {
+  it("uses Mini Desk as the public app name while naming the Chinese about board", () => {
     expect(getUiText("zh").app.boardLabel).toBe("Mini Desk");
     expect(getUiText("zh").app.mobileTitle).toBe("Mini Desk");
-    expect(getUiText("zh").app.aboutTitle).toBe("Mini Desk");
+    expect(getUiText("zh").app.aboutTitle).toBe("Mini Desk 看板");
+    expect(getUiText("zh").app.aboutDescription).toBe(
+      "一个本地优先的轻量工作台，把截图、TODO、快捷动作和工作空间缝合得恰到好处。\n所有操作均在本地浏览器完成，绝不上传您的任何数据。",
+    );
     expect(getUiText("en").app.boardLabel).toBe("Mini Desk");
     expect(getUiText("en").app.mobileTitle).toBe("Mini Desk");
     expect(getUiText("en").app.aboutTitle).toBe("Mini Desk");

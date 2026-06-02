@@ -266,7 +266,7 @@ describe("SpacePanel", () => {
     expect(styles).toMatch(/\.space-tabs\.is-committing-tab > \.space-reorder-move,[\s\S]*?transition: none/s);
   });
 
-  it("keeps the tab edit control sized from the same title text as the label", async () => {
+  it("keeps the tab edit control sized from the original title while typing", async () => {
     const wrapper = mountSpacePanel([{ id: "workspace", title: "一个很长的工作空间标签", lines: [] }]);
 
     await wrapper.get(".space-tab").trigger("dblclick");
@@ -276,7 +276,7 @@ describe("SpacePanel", () => {
 
     await wrapper.get(".space-tab-edit-input").setValue("一个更长的工作空间标签名称");
 
-    expect(wrapper.get(".space-tab-edit-measure").text()).toBe("一个更长的工作空间标签名称");
+    expect(wrapper.get(".space-tab-edit-measure").text()).toBe("一个很长的工作空间标签");
     wrapper.unmount();
   });
 

@@ -79,6 +79,10 @@ function values(wrapper: ReturnType<typeof mount>): string[] {
   return wrapper.findAll("input.todo-input").map((input) => (input.element as HTMLInputElement).value);
 }
 
+function todayFocusValues(wrapper: ReturnType<typeof mount>): string[] {
+  return wrapper.findAll("input.today-focus-input").map((input) => (input.element as HTMLInputElement).value);
+}
+
 function getTeleportedDatePickerText(): string {
   return document.body.querySelector(".date-picker-stub")?.textContent ?? "";
 }
@@ -789,6 +793,148 @@ describe("TodoPanel", () => {
       },
     ]);
     wrapper.unmount();
+  });
+
+  it("filters completed focus reminders through their source list completed visibility", () => {
+    const wrapper = mount(TodoPanel, {
+      props: {
+        todos: {
+          morning: [
+            { id: "a", text: "隐藏列表已完成重点", done: true, starred: true },
+            { id: "b", text: "隐藏列表未完成重点", done: false, starred: true },
+          ],
+          noon: [{ id: "c", text: "显示列表已完成重点", done: true, starred: true }],
+          evening: [],
+        },
+        showCompleted: { morning: false, noon: true, evening: false },
+        titles: DEFAULT_TITLES,
+      },
+      global: {
+        stubs: {
+          Button: true,
+          Checkbox: checkboxStub,
+          Dropdown: dropdownStub,
+          NCheckbox: checkboxStub,
+          NDropdown: dropdownStub,
+          NTooltip: tooltipStub,
+        },
+      },
+    });
+
+    expect(todayFocusValues(wrapper)).toEqual(["隐藏列表未完成重点", "显示列表已完成重点"]);
+    expect(wrapper.findAll(".today-focus-item")[1].classes()).toContain("is-done");
+
+    wrapper.unmount();
+  });
+
+  it("animates completed focus reminders to the bottom when completed reminders are visible", async () => {
+    vi.useFakeTimers();
+
+    const Harness = defineComponent({
+      components: { TodoPanel },
+      setup() {
+        const todos = ref<TodoMap>({
+          morning: [
+            { id: "a", text: "第一重点", done: false, starred: true },
+            { id: "b", text: "第二重点", done: false, starred: true },
+          ],
+          noon: [],
+          evening: [],
+        });
+        const complete = (period: TodoPeriod, id: string, done: boolean) => {
+          todos.value = completeTodo(todos.value, period, id, done);
+        };
+        return { todos, complete, titles: DEFAULT_TITLES };
+      },
+      template: '<TodoPanel :todos="todos" :titles="titles" :show-completed="{ morning: true, noon: false, evening: false }" @complete="complete" />',
+    });
+
+    const wrapper = mount(Harness, {
+      global: {
+        stubs: {
+          Button: true,
+          Checkbox: checkboxStub,
+          Dropdown: dropdownStub,
+          NCheckbox: checkboxStub,
+          NDropdown: dropdownStub,
+          NTooltip: tooltipStub,
+        },
+      },
+    });
+
+    expect(todayFocusValues(wrapper)).toEqual(["第一重点", "第二重点"]);
+
+    await wrapper.get(".today-focus-item .checkbox-stub").trigger("click");
+    await nextTick();
+
+    expect(todayFocusValues(wrapper)).toEqual(["第一重点", "第二重点"]);
+    expect(wrapper.find(".today-focus-list.today-focus-move").exists()).toBe(true);
+
+    await vi.advanceTimersByTimeAsync(199);
+    expect(todayFocusValues(wrapper)).toEqual(["第一重点", "第二重点"]);
+
+    await vi.advanceTimersByTimeAsync(1);
+    await nextTick();
+
+    expect(todayFocusValues(wrapper)).toEqual(["第二重点", "第一重点"]);
+    expect(wrapper.findAll(".today-focus-item")[1].classes()).toContain("is-done");
+
+    wrapper.unmount();
+    vi.useRealTimers();
+  });
+
+  it("hides newly completed focus reminders after the transition when their source list hides completed reminders", async () => {
+    vi.useFakeTimers();
+
+    const Harness = defineComponent({
+      components: { TodoPanel },
+      setup() {
+        const todos = ref<TodoMap>({
+          morning: [
+            { id: "a", text: "完成后隐藏重点", done: false, starred: true },
+            { id: "b", text: "仍然显示重点", done: false, starred: true },
+          ],
+          noon: [],
+          evening: [],
+        });
+        const complete = (period: TodoPeriod, id: string, done: boolean) => {
+          todos.value = completeTodo(todos.value, period, id, done);
+        };
+        return { todos, complete, titles: DEFAULT_TITLES };
+      },
+      template: '<TodoPanel :todos="todos" :titles="titles" :show-completed="{ morning: false, noon: false, evening: false }" @complete="complete" />',
+    });
+
+    const wrapper = mount(Harness, {
+      global: {
+        stubs: {
+          Button: true,
+          Checkbox: checkboxStub,
+          Dropdown: dropdownStub,
+          NCheckbox: checkboxStub,
+          NDropdown: dropdownStub,
+          NTooltip: tooltipStub,
+        },
+      },
+    });
+
+    expect(todayFocusValues(wrapper)).toEqual(["完成后隐藏重点", "仍然显示重点"]);
+
+    await wrapper.get(".today-focus-item .checkbox-stub").trigger("click");
+    await nextTick();
+
+    expect(todayFocusValues(wrapper)).toEqual(["完成后隐藏重点", "仍然显示重点"]);
+
+    await vi.advanceTimersByTimeAsync(199);
+    expect(todayFocusValues(wrapper)).toEqual(["完成后隐藏重点", "仍然显示重点"]);
+
+    await vi.advanceTimersByTimeAsync(1);
+    await nextTick();
+
+    expect(todayFocusValues(wrapper)).toEqual(["仍然显示重点"]);
+
+    wrapper.unmount();
+    vi.useRealTimers();
   });
 
   it("applies a flowing multicolor text effect to starred reminders", () => {

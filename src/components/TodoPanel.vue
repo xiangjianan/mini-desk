@@ -211,14 +211,15 @@ const periodStats = computed(() =>
   ) as Record<TodoListId, string>,
 );
 
-type TodayFocusEntry = { period: TodoListId; todo: TodoItem; index: number };
+type TodayFocusEntry = { period: TodoListId; todo: TodoItem; index: number; deferredDone: boolean };
 
 const todayFocus = computed(() => {
-  const entries: TodayFocusEntry[] = effectiveTodoLists.value.flatMap((list) =>
-    (ordered.value[list.id] ?? [])
-      .filter((todo) => todo.starred)
-      .map((todo) => ({ period: list.id, todo, index: 0 })),
-  );
+  const entries: TodayFocusEntry[] = effectiveTodoLists.value.flatMap((list) => {
+    const deferredIds = getDeferredTodoIds(list.id);
+    return (ordered.value[list.id] ?? [])
+      .filter((todo) => todo.starred && (!todo.done || isCompletedVisible(list.id) || deferredIds.has(todo.id)))
+      .map((todo) => ({ period: list.id, todo, index: 0, deferredDone: deferredIds.has(todo.id) }));
+  });
   entries.forEach((entry, index) => {
     entry.index = index;
   });
@@ -842,7 +843,7 @@ function getTodoCompactNotifyLabel(todo: TodoItem): string | null {
 }
 
 function compareTodayFocusEntries(left: TodayFocusEntry, right: TodayFocusEntry): number {
-  const doneDiff = Number(left.todo.done) - Number(right.todo.done);
+  const doneDiff = Number(left.todo.done && !left.deferredDone) - Number(right.todo.done && !right.deferredDone);
   if (doneDiff !== 0) return doneDiff;
 
   const leftDeadline = left.todo.notifyAt;
@@ -1119,7 +1120,12 @@ function buildTodoListEntries(period: TodoListId, todos: TodoItem[], deferredDon
           />
         </div>
         <NScrollbar class="today-focus-scrollbar">
-        <ul class="today-focus-list">
+        <TransitionGroup
+          name="today-focus-move"
+          tag="ul"
+          class="today-focus-list"
+          :class="{ 'today-focus-move': true }"
+        >
           <li
             v-for="item in todayFocus"
             :key="`${item.period}-${item.todo.id}`"
@@ -1171,7 +1177,7 @@ function buildTodoListEntries(period: TodoListId, todos: TodoItem[], deferredDon
               ★
             </button>
           </li>
-        </ul>
+        </TransitionGroup>
         </NScrollbar>
       </section>
     </Transition>

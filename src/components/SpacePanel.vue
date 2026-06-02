@@ -33,6 +33,7 @@ const emit = defineEmits<{
 
 const editingSpaceId = ref<string | null>(null);
 const editingTitle = ref("");
+const editingMeasureTitle = ref("");
 const titleComposing = ref(false);
 const draggedSpaceId = ref<string | null>(null);
 const suppressTabCommitTransition = ref(false);
@@ -83,6 +84,7 @@ function startTabEdit(id: string): void {
   titleComposing.value = false;
   editingSpaceId.value = id;
   editingTitle.value = space.title;
+  editingMeasureTitle.value = space.title;
   nextTick(() => {
     const input = document.querySelector<HTMLInputElement>(".space-tab-edit-input");
     input?.focus({ preventScroll: true });
@@ -108,6 +110,7 @@ function commitTabEdit(): void {
   titleComposing.value = false;
   editingSpaceId.value = null;
   editingTitle.value = "";
+  editingMeasureTitle.value = "";
   if (title) emit("rename", id, title);
   emit("editDone", id);
 }
@@ -118,6 +121,7 @@ function cancelTabEdit(): void {
   titleComposing.value = false;
   editingSpaceId.value = null;
   editingTitle.value = "";
+  editingMeasureTitle.value = "";
   if (id) emit("editDone", id);
 }
 
@@ -228,7 +232,7 @@ function handleTabsWheel(event: WheelEvent): void {
               :key="space.id"
               class="space-tab-edit-shell"
             >
-              <span class="space-tab-edit-measure" aria-hidden="true">{{ editingTitle || " " }}</span>
+              <span class="space-tab-edit-measure" aria-hidden="true">{{ editingMeasureTitle || " " }}</span>
               <input
                 v-model="editingTitle"
                 class="space-tab-edit-input"
