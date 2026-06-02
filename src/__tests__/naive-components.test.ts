@@ -365,10 +365,10 @@ describe("Naive UI component usage", () => {
       "src/components/SpacePanel.vue",
     ];
 
-    expect(styles).toMatch(/\.n-dropdown-menu,[\s\S]*?\.n-dialog\s*\{[^}]*border: 1px solid var\(--border\) !important/s);
-    expect(styles).toMatch(/\.n-dropdown-menu,[\s\S]*?\.n-dialog\s*\{[^}]*background: var\(--popover\) !important/s);
-    expect(styles).toMatch(/\.n-dropdown-menu,[\s\S]*?\.n-dialog\s*\{[^}]*color: var\(--popover-foreground\) !important/s);
-    expect(styles).toMatch(/\.n-dropdown-menu,[\s\S]*?\.n-dialog\s*\{[^}]*box-shadow: 0 14px 38px rgba\(15, 23, 42, 0\.12\) !important/s);
+    expect(styles).toMatch(/\.n-dropdown-menu,[\s\S]*?\.shortcut-help-modal\.n-card\s*\{[^}]*border: 1px solid var\(--border\) !important/s);
+    expect(styles).toMatch(/\.n-dropdown-menu,[\s\S]*?\.shortcut-help-modal\.n-card\s*\{[^}]*background: var\(--popover\) !important/s);
+    expect(styles).toMatch(/\.n-dropdown-menu,[\s\S]*?\.shortcut-help-modal\.n-card\s*\{[^}]*color: var\(--popover-foreground\) !important/s);
+    expect(styles).toMatch(/\.n-dropdown-menu,[\s\S]*?\.shortcut-help-modal\.n-card\s*\{[^}]*box-shadow: 0 14px 38px rgba\(15, 23, 42, 0\.12\) !important/s);
     expect(contextMenu).toContain("export const CONTEXT_MENU_Z_INDEX = 3400");
     expect(companion).toContain(':z-index="3300"');
     for (const file of dropdownFiles) {
@@ -478,7 +478,7 @@ describe("Naive UI component usage", () => {
     expect(styles).toMatch(/\.todo-item\s*\{[^}]*border-bottom: 0/s);
     expect(styles).toMatch(/\.todo-item::after\s*\{[^}]*left: 6px/s);
     expect(styles).toMatch(/\.todo-item::after\s*\{[^}]*right: 6px/s);
-    expect(styles).toMatch(/\.todo-item::after\s*\{[^}]*border-bottom: 1px solid var\(--line-subtle\)/s);
+    expect(styles).toMatch(/\.todo-item::after\s*\{[^}]*border-bottom: 1px solid var\(--border\)/s);
     expect(styles).toMatch(/\.todo-list \.todo-item:last-child\s*\{[^}]*margin-bottom: 8px/s);
     expect(styles).toMatch(/\.todo-drag-handle\s*\{[^}]*width: 12px/s);
     expect(styles).toMatch(/\.todo-drag-handle\s*\{[^}]*opacity: 0\.28/s);
@@ -591,10 +591,12 @@ describe("Naive UI component usage", () => {
     expect(styles).toContain("@keyframes companion-pop");
     expect(styles).toMatch(/\.companion-popover\s*\{[^}]*animation: companion-pop/s);
     expect(styles).toMatch(/\.companion-popover\s*\{[^}]*transform-origin: right bottom/s);
-    expect(styles).toMatch(/\.companion-popover-shell\.n-popover\s*\{[^}]*box-shadow: none/s);
-    expect(styles).toMatch(/\.companion-popover-shell\.n-popover\s*\{[^}]*border: 1px solid #111/s);
+    expect(styles).toMatch(/\.companion-popover-shell\.n-popover\s*\{[^}]*box-shadow: 0 14px 38px rgba\(15, 23, 42, 0\.12\) !important/s);
+    expect(styles).toMatch(/\.companion-popover-shell\.n-popover\s*\{[^}]*border: 1px solid var\(--border\) !important/s);
+    expect(styles).toMatch(/\.companion-popover-shell\.n-popover\s*\{[^}]*background: var\(--popover\) !important/s);
     expect(styles).toMatch(/\.companion-popover-arrow\s*\{[^}]*box-shadow: none/s);
-    expect(styles).toMatch(/\.companion-popover-arrow\s*\{[^}]*border: 1px solid #111/s);
+    expect(styles).toMatch(/\.companion-popover-arrow\s*\{[^}]*border: 1px solid var\(--border\) !important/s);
+    expect(styles).toMatch(/\.companion-popover-arrow\s*\{[^}]*background: var\(--popover\) !important/s);
   });
 
   it("animates reminder reveal and workspace tab switches", () => {

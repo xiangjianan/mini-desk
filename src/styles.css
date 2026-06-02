@@ -301,6 +301,7 @@ h3 {
 }
 
 .n-button {
+  --n-border-radius: var(--radius) !important;
   --n-font-size: var(--app-font-size) !important;
   --n-wave-opacity: 0 !important;
   font-size: var(--app-font-size) !important;
@@ -333,7 +334,10 @@ h3 {
 
 .n-dropdown-menu,
 .n-popover,
-.n-dialog {
+.n-dialog,
+.n-modal .n-card,
+.quick-dialog.n-card,
+.shortcut-help-modal.n-card {
   border: 1px solid var(--border) !important;
   background: var(--popover) !important;
   color: var(--popover-foreground) !important;
@@ -1644,7 +1648,7 @@ h3 {
   right: 6px;
   bottom: 0;
   left: 6px;
-  border-bottom: 1px solid var(--line-subtle);
+  border-bottom: 1px solid var(--border);
   pointer-events: none;
   z-index: 2;
 }
@@ -2338,8 +2342,10 @@ h3 {
 }
 
 .companion-popover-shell.n-popover {
-  box-shadow: none !important;
-  border: 1px solid #111 !important;
+  border: 1px solid var(--border) !important;
+  background: var(--popover) !important;
+  color: var(--popover-foreground) !important;
+  box-shadow: 0 14px 38px rgba(15, 23, 42, 0.12) !important;
   transform-origin: right bottom;
   transition: opacity 0.26s ease, transform 0.26s ease;
 }
@@ -2350,8 +2356,9 @@ h3 {
 }
 
 .companion-popover-arrow {
+  border: 1px solid var(--border) !important;
+  background: var(--popover) !important;
   box-shadow: none !important;
-  border: 1px solid #111 !important;
 }
 
 .companion-actions {
