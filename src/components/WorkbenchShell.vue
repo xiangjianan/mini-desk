@@ -6,7 +6,6 @@ import {
   CommandIcon,
   MoonIcon,
   PanelLeftIcon,
-  SettingsIcon,
   SparklesIcon,
   SunIcon,
   WrenchIcon,
@@ -25,6 +24,14 @@ const emit = defineEmits<{
   theme: [];
 }>();
 
+defineSlots<{
+  actions?: () => unknown;
+  assets?: () => unknown;
+  notes?: () => unknown;
+  tasks?: () => unknown;
+  workspace?: () => unknown;
+}>();
+
 const railItems = [
   { label: "工作台", icon: PanelLeftIcon, active: true },
   { label: "素材", icon: BoxIcon, active: false },
@@ -38,17 +45,16 @@ const railItems = [
   <main class="workbench-shell">
     <aside class="workbench-rail" aria-label="应用导航">
       <div class="workbench-mark" aria-hidden="true">T</div>
-      <Button
+      <span
         v-for="item in railItems"
         :key="item.label"
-        :variant="item.active ? 'default' : 'ghost'"
-        size="icon"
         class="workbench-rail-button"
+        role="img"
         :aria-label="item.label"
-        :aria-current="item.active ? 'page' : undefined"
+        :data-active="item.active ? 'true' : undefined"
       >
         <component :is="item.icon" data-icon="inline-start" />
-      </Button>
+      </span>
       <div class="workbench-rail-spacer" />
       <Button
         variant="ghost"
@@ -77,9 +83,6 @@ const railItems = [
             <kbd>⌘K</kbd>
           </button>
           <slot name="actions" />
-          <Button variant="ghost" size="icon" aria-label="设置">
-            <SettingsIcon data-icon="inline-start" />
-          </Button>
         </div>
       </header>
 

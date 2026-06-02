@@ -3,13 +3,15 @@ import { describe, expect, it } from "vitest";
 import WorkbenchShell from "../components/WorkbenchShell.vue";
 
 describe("WorkbenchShell", () => {
+  const defaultProps = {
+    title: "今日工作台",
+    saveStatusLabel: "已保存",
+    theme: "light" as const,
+  };
+
   it("renders rail, command bar, and four named work zones", () => {
     const wrapper = mount(WorkbenchShell, {
-      props: {
-        title: "今日工作台",
-        saveStatusLabel: "已保存",
-        theme: "light",
-      },
+      props: defaultProps,
       slots: {
         assets: "<div data-testid='assets-slot'>assets</div>",
         notes: "<div data-testid='notes-slot'>notes</div>",
@@ -31,6 +33,17 @@ describe("WorkbenchShell", () => {
     expect(wrapper.get('[data-testid="tasks-slot"]').text()).toBe("tasks");
     expect(wrapper.get('[data-testid="workspace-slot"]').text()).toBe("workspace");
     expect(wrapper.get('[data-testid="actions-slot"]').text()).toBe("settings");
+    expect(wrapper.find('[data-testid="workbench-rail-theme"][aria-label="切换到深色"]').exists()).toBe(true);
+  });
+
+  it("does not render dead shell controls by default", () => {
+    const wrapper = mount(WorkbenchShell, {
+      props: defaultProps,
+    });
+
+    expect(wrapper.find('button[aria-label="设置"]').exists()).toBe(false);
+    expect(wrapper.findAll('[aria-label="应用导航"] button')).toHaveLength(1);
+    expect(wrapper.get('[data-testid="workbench-rail-theme"]').attributes("aria-label")).toBe("切换到深色");
   });
 
   it("emits theme requests from the rail theme action", async () => {

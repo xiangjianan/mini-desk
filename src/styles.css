@@ -2885,6 +2885,20 @@ body:has(.image-preview) .image-panel .n-scrollbar {
 .workbench-rail-button {
   width: 32px;
   height: 32px;
+  border-radius: var(--radius);
+  color: var(--muted-foreground);
+  display: grid;
+  place-items: center;
+}
+
+.workbench-rail-button[data-active="true"] {
+  background: var(--primary);
+  color: var(--primary-foreground);
+}
+
+.workbench-rail-button svg {
+  width: 16px;
+  height: 16px;
 }
 
 .workbench-main {
