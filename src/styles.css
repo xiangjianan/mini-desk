@@ -149,7 +149,6 @@ select {
 }
 
 button {
-  --radius: 0;
   border: 1px solid var(--line-control);
   background: transparent;
   border-radius: 0;
