@@ -1,6 +1,50 @@
+@import "tailwindcss";
+
+@theme inline {
+  --color-background: var(--background);
+  --color-foreground: var(--foreground);
+  --color-card: var(--card);
+  --color-card-foreground: var(--card-foreground);
+  --color-popover: var(--popover);
+  --color-popover-foreground: var(--popover-foreground);
+  --color-primary: var(--primary);
+  --color-primary-foreground: var(--primary-foreground);
+  --color-secondary: var(--secondary);
+  --color-secondary-foreground: var(--secondary-foreground);
+  --color-muted: var(--muted-surface);
+  --color-muted-foreground: var(--muted-foreground);
+  --color-accent: var(--accent);
+  --color-accent-foreground: var(--accent-foreground);
+  --color-destructive: var(--destructive);
+  --color-border: var(--border);
+  --color-input: var(--input-token);
+  --color-ring: var(--ring);
+  --radius-sm: calc(var(--radius) - 2px);
+  --radius-md: var(--radius);
+  --radius-lg: calc(var(--radius) + 2px);
+}
+
 :root {
   --app-font-size: 12px;
   --scrollbar-size: 2px;
+  --background: #ffffff;
+  --foreground: #111827;
+  --card: #ffffff;
+  --card-foreground: #111827;
+  --popover: #ffffff;
+  --popover-foreground: #111827;
+  --primary: #111827;
+  --primary-foreground: #ffffff;
+  --secondary: #f4f4f5;
+  --secondary-foreground: #18181b;
+  --muted-surface: #f4f4f5;
+  --muted-foreground: #71717a;
+  --accent: #f4f4f5;
+  --accent-foreground: #18181b;
+  --destructive: #b42318;
+  --border: #e4e4e7;
+  --input-token: #e4e4e7;
+  --ring: #18181b;
   --bg: #ffffff;
   --panel: #ffffff;
   --text: #111111;
@@ -14,13 +58,31 @@
   --button: #f7f7f7;
   --button-hover: #eeeeee;
   --danger: #b42318;
-  --radius: 0;
+  --radius: 8px;
   --motion-fast: 160ms;
   --motion-medium: 240ms;
   --motion-ease: cubic-bezier(0.2, 0, 0, 1);
 }
 
 html[data-theme="dark"] {
+  --background: #09090b;
+  --foreground: #fafafa;
+  --card: #111113;
+  --card-foreground: #fafafa;
+  --popover: #111113;
+  --popover-foreground: #fafafa;
+  --primary: #fafafa;
+  --primary-foreground: #18181b;
+  --secondary: #27272a;
+  --secondary-foreground: #fafafa;
+  --muted-surface: #27272a;
+  --muted-foreground: #a1a1aa;
+  --accent: #27272a;
+  --accent-foreground: #fafafa;
+  --destructive: #ff8b7f;
+  --border: #27272a;
+  --input-token: #3f3f46;
+  --ring: #d4d4d8;
   --bg: #111111;
   --panel: #151515;
   --text: #f1f1f1;
@@ -87,6 +149,7 @@ select {
 }
 
 button {
+  --radius: 0;
   border: 1px solid var(--line-control);
   background: transparent;
   border-radius: 0;
