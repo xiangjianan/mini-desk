@@ -2846,3 +2846,129 @@ body:has(.image-preview) .image-panel .n-scrollbar {
     display: none !important;
   }
 }
+
+.workbench-shell {
+  display: grid;
+  grid-template-columns: 56px minmax(0, 1fr);
+  width: 100vw;
+  height: 100vh;
+  background: var(--background);
+  color: var(--foreground);
+}
+
+.workbench-rail {
+  min-height: 0;
+  border-right: 1px solid var(--border);
+  background: var(--card);
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 8px;
+  padding: 10px 8px;
+}
+
+.workbench-mark {
+  display: grid;
+  place-items: center;
+  width: 32px;
+  height: 32px;
+  border-radius: var(--radius);
+  background: var(--primary);
+  color: var(--primary-foreground);
+  font-weight: 700;
+}
+
+.workbench-rail-spacer {
+  flex: 1 1 auto;
+}
+
+.workbench-rail-button {
+  width: 32px;
+  height: 32px;
+}
+
+.workbench-main {
+  min-width: 0;
+  min-height: 0;
+  display: grid;
+  grid-template-rows: 52px minmax(0, 1fr);
+}
+
+.workbench-command-bar {
+  min-width: 0;
+  border-bottom: 1px solid var(--border);
+  background: var(--card);
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 16px;
+  padding: 0 16px;
+}
+
+.workbench-title-group,
+.workbench-command-actions {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  min-width: 0;
+}
+
+.workbench-title-group h1 {
+  font-size: 18px;
+  font-weight: 650;
+}
+
+.workbench-title-icon {
+  width: 16px;
+  height: 16px;
+}
+
+.workbench-command-button {
+  height: 32px;
+  min-width: 220px;
+  border-radius: var(--radius);
+  border: 1px solid var(--border);
+  background: var(--background);
+  color: var(--muted-foreground);
+  display: inline-flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 8px;
+  padding: 0 10px;
+}
+
+.workbench-command-button svg {
+  width: 14px;
+  height: 14px;
+}
+
+.workbench-command-button kbd {
+  color: var(--foreground);
+  font-size: 11px;
+}
+
+.workbench-grid {
+  min-width: 0;
+  min-height: 0;
+  display: grid;
+  grid-template-columns: minmax(140px, 0.75fr) minmax(220px, 1.05fr) minmax(310px, 1.55fr) minmax(280px, 1.35fr);
+  gap: 12px;
+  padding: 12px;
+}
+
+.workbench-zone {
+  min-width: 0;
+  min-height: 0;
+  border: 1px solid var(--border);
+  border-radius: var(--radius);
+  background: var(--card);
+  overflow: hidden;
+  display: flex;
+  flex-direction: column;
+}
+
+@media (max-width: 1180px) {
+  .workbench-grid {
+    grid-template-columns: minmax(0, 1fr) minmax(0, 1fr);
+  }
+}
