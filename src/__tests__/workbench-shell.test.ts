@@ -15,7 +15,7 @@ describe("WorkbenchShell", () => {
         notes: "<div data-testid='notes-slot'>notes</div>",
         tasks: "<div data-testid='tasks-slot'>tasks</div>",
         workspace: "<div data-testid='workspace-slot'>workspace</div>",
-        actions: "<button aria-label='设置'>settings</button>",
+        actions: "<button data-testid='actions-slot' aria-label='设置'>settings</button>",
       },
     });
 
@@ -30,6 +30,7 @@ describe("WorkbenchShell", () => {
     expect(wrapper.get('[data-testid="notes-slot"]').text()).toBe("notes");
     expect(wrapper.get('[data-testid="tasks-slot"]').text()).toBe("tasks");
     expect(wrapper.get('[data-testid="workspace-slot"]').text()).toBe("workspace");
+    expect(wrapper.get('[data-testid="actions-slot"]').text()).toBe("settings");
   });
 
   it("emits theme requests from the rail theme action", async () => {
