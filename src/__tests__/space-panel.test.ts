@@ -245,13 +245,39 @@ describe("SpacePanel", () => {
   it("keeps a newly committed tab from flashing during the edit-to-label swap", () => {
     const source = readFileSync(resolve(__dirname, "../components/SpacePanel.vue"), "utf8");
     const styles = readFileSync(resolve(__dirname, "../styles.css"), "utf8");
+    const shellRule = styles.match(/\.space-tab-edit-shell\s*\{([\s\S]*?)\}/)?.[1] ?? "";
+    const measureRule = styles.match(/\.space-tab-edit-measure\s*\{([\s\S]*?)\}/)?.[1] ?? "";
     const inputRule = styles.match(/\.space-tab-edit-input\s*\{([\s\S]*?)\}/)?.[1] ?? "";
 
     expect(source).toContain("suppressTabCommitTransition");
     expect(source).toContain("is-committing-tab");
-    expect(inputRule).toContain("flex: 0 0 84px");
-    expect(inputRule).toContain("width: 84px");
+    expect(source).toContain("space-tab-edit-shell");
+    expect(source).toContain("space-tab-edit-measure");
+    expect(shellRule).toContain("flex: 0 0 auto");
+    expect(shellRule).toContain("min-width: 84px");
+    expect(shellRule).toContain("max-width: 180px");
+    expect(shellRule).toContain("display: grid");
+    expect(measureRule).toContain("visibility: hidden");
+    expect(measureRule).toContain("white-space: pre");
+    expect(inputRule).toContain("width: 100%");
+    expect(inputRule).toContain("min-width: 0");
+    expect(inputRule).not.toContain("width: 84px");
+    expect(inputRule).not.toContain("flex: 0 0 84px");
     expect(styles).toMatch(/\.space-tabs\.is-committing-tab > \.space-reorder-move,[\s\S]*?transition: none/s);
+  });
+
+  it("keeps the tab edit control sized from the same title text as the label", async () => {
+    const wrapper = mountSpacePanel([{ id: "workspace", title: "一个很长的工作空间标签", lines: [] }]);
+
+    await wrapper.get(".space-tab").trigger("dblclick");
+
+    expect(wrapper.get(".space-tab-edit-measure").text()).toBe("一个很长的工作空间标签");
+    expect(wrapper.get(".space-tab-edit-input").classes()).toContain("space-tab-edit-input");
+
+    await wrapper.get(".space-tab-edit-input").setValue("一个更长的工作空间标签名称");
+
+    expect(wrapper.get(".space-tab-edit-measure").text()).toBe("一个更长的工作空间标签名称");
+    wrapper.unmount();
   });
 
   it("keeps workspace tab drags off the plain-text payload", async () => {

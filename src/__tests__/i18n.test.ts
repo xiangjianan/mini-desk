@@ -60,4 +60,13 @@ describe("localized public copy", () => {
     expect(getUiText("en").common.delete).toBe("Delete");
     expect(getUiText("zh").settings.language).toBe("Language");
   });
+
+  it("uses Mini Desk as the public app name in both languages", () => {
+    expect(getUiText("zh").app.boardLabel).toBe("Mini Desk");
+    expect(getUiText("zh").app.mobileTitle).toBe("Mini Desk");
+    expect(getUiText("zh").app.aboutTitle).toBe("Mini Desk");
+    expect(getUiText("en").app.boardLabel).toBe("Mini Desk");
+    expect(getUiText("en").app.mobileTitle).toBe("Mini Desk");
+    expect(getUiText("en").app.aboutTitle).toBe("Mini Desk");
+  });
 });

@@ -223,18 +223,23 @@ function handleTabsWheel(event: WheelEvent): void {
             >
               {{ space.title }}
             </button>
-            <input
+            <span
               v-else
               :key="space.id"
-              v-model="editingTitle"
-              class="space-tab-edit-input"
-              :aria-label="uiText.space.editName"
-              @compositionstart="titleComposing = true"
-              @compositionend="titleComposing = false"
-              @keydown.enter="handleTabEditEnter"
-              @keydown.esc.prevent="cancelTabEdit"
-              @blur="commitTabEdit"
-            />
+              class="space-tab-edit-shell"
+            >
+              <span class="space-tab-edit-measure" aria-hidden="true">{{ editingTitle || " " }}</span>
+              <input
+                v-model="editingTitle"
+                class="space-tab-edit-input"
+                :aria-label="uiText.space.editName"
+                @compositionstart="titleComposing = true"
+                @compositionend="titleComposing = false"
+                @keydown.enter="handleTabEditEnter"
+                @keydown.esc.prevent="cancelTabEdit"
+                @blur="commitTabEdit"
+              />
+            </span>
           </template>
           <button
             key="space-add"

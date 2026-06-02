@@ -58,7 +58,7 @@ describe("ImagePreview", () => {
     wrapper.unmount();
   });
 
-  it("shows a top close button in the preview sidebar", async () => {
+  it("shows a close action in the right-side preview surface", async () => {
     const wrapper = mount(ImagePreview, {
       props: {
         images: [{ id: "img-1", src: "data:image/png;base64,one", createdAt: 1 }],
@@ -76,16 +76,17 @@ describe("ImagePreview", () => {
       },
     });
 
-    const closeButton = wrapper.get(".preview-close-button");
-    expect(closeButton.attributes("aria-label")).toBe("取消预览");
+    expect(wrapper.find(".preview-sidebar").exists()).toBe(false);
+    const closeButton = wrapper.findAll(".preview-actions button").find((button) => button.text() === "取消预览");
+    expect(closeButton).toBeTruthy();
 
-    await closeButton.trigger("click");
+    await closeButton?.trigger("click");
     expect(wrapper.emitted("close")).toHaveLength(1);
 
     wrapper.unmount();
   });
 
-  it("keeps preview thumbnails in the same image-list flow as the normal sidebar", () => {
+  it("does not render a duplicate thumbnail list inside the preview", () => {
     const wrapper = mount(ImagePreview, {
       props: {
         images: [{ id: "img-1", src: "data:image/png;base64,one", createdAt: 1 }],
@@ -103,14 +104,15 @@ describe("ImagePreview", () => {
       },
     });
 
-    expect(wrapper.get(".preview-image-list").classes()).toContain("image-list");
-    expect(wrapper.get(".preview-thumb").classes()).toContain("image-card");
-    expect(wrapper.get(".preview-sidebar").element.firstElementChild?.classList.contains("preview-sidebar-bar")).toBe(true);
+    expect(wrapper.find(".preview-main").exists()).toBe(true);
+    expect(wrapper.find(".preview-sidebar").exists()).toBe(false);
+    expect(wrapper.find(".preview-image-list").exists()).toBe(false);
+    expect(wrapper.find(".preview-thumb").exists()).toBe(false);
 
     wrapper.unmount();
   });
 
-  it("activates another image when clicking a preview thumbnail", async () => {
+  it("does not zoom when wheel events happen outside the preview stage", async () => {
     const wrapper = mount(ImagePreview, {
       props: {
         images: [
@@ -130,10 +132,43 @@ describe("ImagePreview", () => {
         },
       },
     });
+    const event = new WheelEvent("wheel", { bubbles: true, cancelable: true, deltaY: -80 });
 
-    await wrapper.findAll(".preview-thumb")[1].trigger("click");
+    wrapper.get(".image-preview").element.dispatchEvent(event);
+    await wrapper.vm.$nextTick();
 
-    expect(wrapper.emitted("activate")?.[0]).toEqual(["img-2"]);
+    expect(event.defaultPrevented).toBe(false);
+    expect(wrapper.get(".preview-stage img").attributes("style")).toContain("scale(1)");
+    wrapper.unmount();
+  });
+
+  it("zooms only from the right-side preview stage", async () => {
+    const wrapper = mount(ImagePreview, {
+      props: {
+        images: [
+          { id: "img-1", src: "data:image/png;base64,one", createdAt: 1 },
+          { id: "img-2", src: "data:image/png;base64,two", createdAt: 2 },
+        ],
+        activeId: "img-1",
+      },
+      global: {
+        stubs: {
+          Button: buttonStub,
+          Dropdown: dropdownStub,
+          Modal: modalStub,
+          NButton: buttonStub,
+          NDropdown: dropdownStub,
+          NModal: modalStub,
+        },
+      },
+    });
+    const event = new WheelEvent("wheel", { bubbles: true, cancelable: true, deltaY: -80 });
+
+    wrapper.get(".preview-stage").element.dispatchEvent(event);
+    await wrapper.vm.$nextTick();
+
+    expect(event.defaultPrevented).toBe(true);
+    expect(wrapper.get(".preview-stage img").attributes("style")).toContain("scale(1.1)");
     wrapper.unmount();
   });
 

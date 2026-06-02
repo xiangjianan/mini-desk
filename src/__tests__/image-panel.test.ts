@@ -25,11 +25,12 @@ const dropdownStub = {
   `,
 };
 
-function mountImagePanel(images: StoredImage[] = []) {
+function mountImagePanel(images: StoredImage[] = [], props = {}) {
   return mount(ImagePanel, {
     props: {
       title: "截图",
       images,
+      ...props,
     },
     global: {
       stubs: {
@@ -103,6 +104,73 @@ describe("ImagePanel", () => {
     expect(wrapper.text()).not.toContain("取消置顶");
     expect(wrapper.text()).not.toContain("置底");
 
+    wrapper.unmount();
+  });
+
+  it("shows cancel preview for the active preview image context menu", async () => {
+    const wrapper = mountImagePanel(
+      [
+        { id: "img-1", src: "data:image/png;base64,one", createdAt: 1 },
+        { id: "img-2", src: "data:image/png;base64,two", createdAt: 2 },
+      ],
+      { activePreviewId: "img-2" },
+    );
+
+    await wrapper.findAll(".image-card")[1].trigger("contextmenu");
+
+    expect(wrapper.findAll(".dropdown-option").map((option) => option.text())).toEqual([
+      "复制",
+      "取消预览",
+      "删除",
+      "Tips",
+    ]);
+
+    await wrapper.findAll(".dropdown-option").find((option) => option.text() === "取消预览")?.trigger("click");
+
+    expect(wrapper.emitted("closePreview")?.[0]).toEqual([]);
+    expect(wrapper.emitted("preview")).toBeUndefined();
+    wrapper.unmount();
+  });
+
+  it("shows cancel preview for inactive image context menus while preview is open", async () => {
+    const wrapper = mountImagePanel(
+      [
+        { id: "img-1", src: "data:image/png;base64,one", createdAt: 1 },
+        { id: "img-2", src: "data:image/png;base64,two", createdAt: 2 },
+      ],
+      { activePreviewId: "img-2" },
+    );
+
+    await wrapper.findAll(".image-card")[0].trigger("contextmenu");
+
+    expect(wrapper.findAll(".dropdown-option").map((option) => option.text())).toEqual([
+      "复制",
+      "取消预览",
+      "删除",
+      "Tips",
+    ]);
+
+    await wrapper.findAll(".dropdown-option").find((option) => option.text() === "取消预览")?.trigger("click");
+
+    expect(wrapper.emitted("closePreview")?.[0]).toEqual([]);
+    expect(wrapper.emitted("preview")).toBeUndefined();
+    wrapper.unmount();
+  });
+
+  it("emits preview from the shared image list and highlights the active preview image", async () => {
+    const wrapper = mountImagePanel(
+      [
+        { id: "img-1", src: "data:image/png;base64,one", createdAt: 1 },
+        { id: "img-2", src: "data:image/png;base64,two", createdAt: 2 },
+      ],
+      { activePreviewId: "img-2" },
+    );
+
+    expect(wrapper.findAll(".image-card")[0].classes()).not.toContain("is-active");
+    expect(wrapper.findAll(".image-card")[1].classes()).toContain("is-active");
+    await wrapper.findAll(".image-card")[1].trigger("click");
+
+    expect(wrapper.emitted("preview")?.[0]).toEqual(["img-2"]);
     wrapper.unmount();
   });
 

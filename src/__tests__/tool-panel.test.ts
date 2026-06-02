@@ -380,5 +380,6 @@ describe("ToolPanel", () => {
     await wrapper.get('[data-testid="copy-password"]').trigger("click");
 
     expect(writeText).toHaveBeenCalledWith(password);
+    expect((wrapper.get('[data-testid="password-output"]').element as HTMLInputElement).value).toBe("");
   });
 });

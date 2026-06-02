@@ -136,7 +136,8 @@ describe("Naive UI component usage", () => {
     expect(preview).not.toContain("@contextmenu.prevent.stop=\"openMenu\"");
     expect(preview).not.toContain("custom-menu");
     expect(preview).not.toContain('id="custom-menu"');
-    expect(styles).toContain("grid-template-columns: 10vw 90vw");
+    expect(styles).toMatch(/\.image-preview\s*\{[^}]*left: 10vw/s);
+    expect(styles).toMatch(/\.image-preview\s*\{[^}]*width: 90vw/s);
     expect(styles).toContain("backdrop-filter");
     expect(styles).toMatch(/\.image-preview\s*\{[^}]*background: rgba\(255, 255, 255/s);
     expect(styles).toMatch(/html\[data-theme="dark"\] \.image-preview\s*\{[^}]*background: rgba\(0, 0, 0/s);
@@ -144,24 +145,23 @@ describe("Naive UI component usage", () => {
     expect(styles).toMatch(/\.image-preview\s*\{[^}]*z-index: 3000/s);
     expect(styles).toMatch(/\.image-preview\s*\{[^}]*animation: image-preview-in 120ms/s);
     expect(styles).toContain("@keyframes image-preview-photo-in");
-    expect(styles).toMatch(/body:has\(\.image-preview\) \.image-preview \.n-scrollbar\s*\{[^}]*pointer-events: auto/s);
+    expect(styles).toMatch(/body:has\(\.image-preview\) \.image-panel \.n-scrollbar\s*\{[^}]*pointer-events: auto/s);
     expect(styles).toMatch(/\.focus-companion\s*\{[^}]*z-index: 3200/s);
-    expect(preview).toContain("preview-close-button");
   });
 
-  it("keeps the preview sidebar aligned with the normal image list", () => {
+  it("reuses the normal image list while previewing on the right side", () => {
+    const image = read("src/components/ImagePanel.vue");
     const preview = read("src/components/ImagePreview.vue");
     const styles = read("src/styles.css");
 
-    expect(preview).toContain('v-for="(image, index) in images"');
-    expect(preview).toContain('class="image-list preview-image-list"');
-    expect(preview).toContain('class="image-card preview-thumb"');
-    expect(preview).toContain('<span class="image-index">{{ index + 1 }}</span>');
-    expect(preview).toContain('@click.stop="emit(\'activate\', image.id)"');
-    expect(preview).not.toContain("preview-sidebar-header");
-    expect(styles).toMatch(/\.preview-sidebar-bar\s*\{[^}]*min-height: 34px/s);
-    expect(styles).toMatch(/\.preview-image-list\s*\{[^}]*padding: 6px/s);
-    expect(styles).not.toMatch(/\.preview-thumb\s*\{[^}]*margin-bottom/s);
+    expect(image).toContain("activePreviewId");
+    expect(image).toContain("'is-active': image.id === activePreviewId");
+    expect(preview).not.toContain('class="image-list preview-image-list"');
+    expect(preview).not.toContain('class="image-card preview-thumb"');
+    expect(preview).not.toContain("preview-sidebar");
+    expect(styles).not.toContain(".preview-thumb");
+    expect(styles).not.toContain(".preview-sidebar");
+    expect(styles).toMatch(/\.image-panel \.image-card\.is-active\s*\{[^}]*box-shadow: inset 0 0 0 1px var\(--line-focus\)/s);
   });
 
   it("marks text quick buttons with a copy icon and keeps compact actions in menus", () => {
@@ -416,7 +416,6 @@ describe("Naive UI component usage", () => {
   it("uses Naive scrollbars while reminder text stays in native inputs", () => {
     const scrollbarSources = [
       "src/components/ImagePanel.vue",
-      "src/components/ImagePreview.vue",
       "src/components/QuickButtons.vue",
       "src/components/SpacePanel.vue",
       "src/components/TextPanel.vue",
@@ -428,6 +427,8 @@ describe("Naive UI component usage", () => {
     }
 
     const todo = read("src/components/TodoPanel.vue");
+    const preview = read("src/components/ImagePreview.vue");
+    expect(preview).not.toContain("NScrollbar");
     expect(todo).not.toContain("NEllipsis");
     expect(todo).not.toContain("todo-text-ellipsis");
     expect(todo).toContain('class="todo-input"');
@@ -693,6 +694,17 @@ describe("Naive UI component usage", () => {
     expect(styles).toMatch(/\.todo-section\.is-focused::before\s*\{[^}]*border: 1px solid var\(--line-focus\)/s);
     expect(styles).toMatch(/\.todo-section\.is-focused::before\s*\{[^}]*pointer-events: none/s);
     expect(styles).toMatch(/\.todo-section\.is-focused::before\s*\{[^}]*z-index: 4/s);
+  });
+
+  it("uses a slightly stronger gradient for completed pinned reminders", () => {
+    const styles = read("src/styles.css");
+    const rule = styles.match(/\.todo-item\.is-starred\.is-done \.todo-input,[\s\S]*?\.today-focus-item\.is-done \.today-focus-input\s*\{([\s\S]*?)\}/)?.[1] ?? "";
+
+    expect(rule).toContain("#e879f9");
+    expect(rule).toContain("#60a5fa");
+    expect(rule).toContain("#4ade80");
+    expect(rule).toContain("#fbbf24");
+    expect(rule).toContain("#f87171");
   });
 
   it("routes about information through the companion bubble and suggestions to GitHub issues", () => {

@@ -589,8 +589,8 @@ function uniqueChars(value: string): string {
   return Array.from(new Set(Array.from(value))).join("");
 }
 
-async function copyToolText(value: string): Promise<void> {
-  if (!value || value === "--") return;
+async function copyToolText(value: string): Promise<boolean> {
+  if (!value || value === "--") return false;
   let copied = false;
   if (navigator.clipboard?.writeText) {
     try {
@@ -602,6 +602,12 @@ async function copyToolText(value: string): Promise<void> {
   }
   if (!copied) copied = copyTextWithBrowserCommand(value);
   notifyToolMessage(copied ? uiText.value.tools.copySuccess : uiText.value.tools.copyFailed);
+  return copied;
+}
+
+async function copyPassword(): Promise<void> {
+  const copied = await copyToolText(passwordOutput.value);
+  if (copied) passwordOutput.value = "";
 }
 
 function copyTextWithBrowserCommand(value: string): boolean {
@@ -819,7 +825,7 @@ function copyTextWithBrowserCommand(value: string): boolean {
               data-testid="copy-password"
               :aria-label="`${uiText.common.copy} ${uiText.tools.generatedPassword}`"
               :disabled="!passwordOutput"
-              @click="copyToolText(passwordOutput)"
+              @click="copyPassword"
             >
               <NIcon :component="CopyOutline" />
             </button>

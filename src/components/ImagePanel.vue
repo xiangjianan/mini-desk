@@ -2,7 +2,7 @@
 import { computed, h, onMounted, onUnmounted, ref } from "vue";
 import type { Component, VNode } from "vue";
 import { NDropdown, NIcon, NScrollbar } from "naive-ui";
-import { ClipboardOutline, CopyOutline, EyeOutline, HelpCircleOutline, TrashOutline } from "@vicons/ionicons5";
+import { ClipboardOutline, CloseOutline, CopyOutline, EyeOutline, HelpCircleOutline, TrashOutline } from "@vicons/ionicons5";
 import type { DropdownOption } from "naive-ui";
 import type { AppLanguage, GuideKey, StoredImage } from "../types";
 import { GUIDE_MENU_OPTION } from "../state/defaults";
@@ -13,6 +13,7 @@ import EditableTitle from "./EditableTitle.vue";
 const props = withDefaults(defineProps<{
   title: string;
   images: StoredImage[];
+  activePreviewId?: string;
   language?: AppLanguage;
 }>(), {
   language: "zh",
@@ -21,6 +22,7 @@ const props = withDefaults(defineProps<{
 const emit = defineEmits<{
   titleUpdate: [id: string, value: string];
   preview: [id: string];
+  closePreview: [];
   copy: [id: string];
   delete: [id: string, anchor?: HTMLElement];
   reorder: [dragId: string, targetId: string];
@@ -36,6 +38,7 @@ const titleRef = ref<{ openMenuAt: (x: number, y: number, event?: Event) => void
 const uiText = computed(() => getUiText(props.language));
 const guideMenuOption = computed<DropdownOption>(() => ({ ...GUIDE_MENU_OPTION, label: uiText.value.common.tips }));
 const exclusiveMenu = createExclusiveContextMenu(closeMenu);
+const isPreviewCloseMenuItem = computed(() => Boolean(menu.value?.id && props.activePreviewId));
 
 function renderIcon(icon: Component): () => VNode {
   return () => h(NIcon, { size: 16 }, { default: () => h(icon) });
@@ -48,7 +51,11 @@ const menuOptions = computed<DropdownOption[]>(() =>
   menu.value?.id
     ? [
         { label: uiText.value.common.copy, key: "copy", icon: renderIcon(CopyOutline) },
-        { label: uiText.value.common.preview, key: "preview", icon: renderIcon(EyeOutline) },
+        {
+          label: isPreviewCloseMenuItem.value ? uiText.value.preview.close : uiText.value.common.preview,
+          key: isPreviewCloseMenuItem.value ? "close-preview" : "preview",
+          icon: renderIcon(isPreviewCloseMenuItem.value ? CloseOutline : EyeOutline),
+        },
         { label: uiText.value.common.delete, key: "delete", icon: renderIcon(TrashOutline) },
         { ...guideMenuOption.value, icon: renderIcon(HelpCircleOutline) },
       ]
@@ -82,6 +89,7 @@ function handleMenuSelect(key: string): void {
   if (key === "guide" && anchor) emit("guide", "images", anchor, true);
   if (!id) return;
   if (key === "preview") emit("preview", id);
+  if (key === "close-preview") emit("closePreview");
   if (key === "copy") emit("copy", id);
   if (key === "delete") emit("delete", id, anchor);
 }
@@ -151,7 +159,7 @@ function handleImageDragLeave(): void {
         v-for="(image, index) in images"
         :key="image.id"
         class="image-card"
-        :class="{ 'is-dragging': draggingId === image.id }"
+        :class="{ 'is-dragging': draggingId === image.id, 'is-active': image.id === activePreviewId }"
         type="button"
         draggable="true"
         @click="emit('preview', image.id)"

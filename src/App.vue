@@ -1876,9 +1876,11 @@ function moveItem<T extends { id: string }>(items: T[], dragId: string, targetId
       <ImagePanel
         :title="titles['image-title']"
         :images="state.images"
+        :active-preview-id="activePreviewId"
         :language="state.language"
         @title-update="updateTitle"
         @preview="openImagePreview"
+        @close-preview="activePreviewId = undefined"
         @copy="copyImage"
         @delete="deleteImage"
         @reorder="reorderImages"
@@ -1992,7 +1994,6 @@ function moveItem<T extends { id: string }>(items: T[], dragId: string, targetId
       @close="activePreviewId = undefined"
       @copy="copyImage"
       @delete="deleteImage"
-      @activate="activePreviewId = $event"
     />
 
     <CompanionBubble

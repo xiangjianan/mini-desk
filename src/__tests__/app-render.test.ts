@@ -149,7 +149,7 @@ describe("App shell", () => {
   it("renders the preserved board regions and primary controls", async () => {
     const wrapper = mountApp();
 
-    expect(wrapper.find('[aria-label="To Do List 看板"]').exists()).toBe(true);
+    expect(wrapper.find('[aria-label="Mini Desk"]').exists()).toBe(true);
     expect(wrapper.text()).toContain("🎨 图床");
     expect(wrapper.text()).toContain("🔧 工具");
     expect(wrapper.text()).toContain("快捷动作");
@@ -238,11 +238,11 @@ describe("App shell", () => {
       wrapper = mountApp();
 
       expect(wrapper.find(".mobile-handoff").exists()).toBe(true);
-      expect(wrapper.get(".mobile-handoff-title").text()).toBe("To Do List 看板");
+      expect(wrapper.get(".mobile-handoff-title").text()).toBe("Mini Desk");
       expect(wrapper.text()).toContain("建议在电脑浏览器打开，以获得完整体验");
       expect(wrapper.find(".mobile-drawer-trigger").exists()).toBe(false);
       expect(wrapper.find(".mobile-drawer-menu").exists()).toBe(false);
-      expect(wrapper.find('[aria-label="To Do List 看板"]').exists()).toBe(false);
+      expect(wrapper.find('[aria-label="Mini Desk"]').exists()).toBe(false);
       expect(wrapper.findComponent(ImagePanel).exists()).toBe(false);
       expect(wrapper.findComponent(QuickButtons).exists()).toBe(false);
       expect(wrapper.findComponent(TodoPanel).exists()).toBe(false);
@@ -2160,20 +2160,46 @@ describe("App shell", () => {
     const wrapper = mountApp();
 
     await wrapper.get(".image-card").trigger("click");
-    expect(wrapper.get(".preview-thumb.is-active .image-index").text()).toBe("1");
+    expect(wrapper.get(".image-panel .image-card.is-active .image-index").text()).toBe("1");
 
     window.dispatchEvent(new KeyboardEvent("keydown", { key: "ArrowDown" }));
     await wrapper.vm.$nextTick();
-    expect(wrapper.get(".preview-thumb.is-active .image-index").text()).toBe("2");
+    expect(wrapper.get(".image-panel .image-card.is-active .image-index").text()).toBe("2");
 
     window.dispatchEvent(new KeyboardEvent("keydown", { key: "ArrowUp" }));
     await wrapper.vm.$nextTick();
-    expect(wrapper.get(".preview-thumb.is-active .image-index").text()).toBe("1");
+    expect(wrapper.get(".image-panel .image-card.is-active .image-index").text()).toBe("1");
 
     window.dispatchEvent(new KeyboardEvent("keydown", { key: "ArrowRight" }));
     await wrapper.vm.$nextTick();
-    expect(wrapper.get(".preview-thumb.is-active .image-index").text()).toBe("2");
+    expect(wrapper.get(".image-panel .image-card.is-active .image-index").text()).toBe("2");
 
+    wrapper.unmount();
+  });
+
+  it("closes image preview from the shared image list close event", async () => {
+    localStorage.setItem(
+      STORAGE_KEY,
+      JSON.stringify({
+        images: [
+          { id: "img-1", src: "data:image/png;base64,one", createdAt: 1 },
+          { id: "img-2", src: "data:image/png;base64,two", createdAt: 2 },
+        ],
+      }),
+    );
+    const wrapper = mountApp();
+    const imagePanel = wrapper.getComponent(ImagePanel);
+
+    imagePanel.vm.$emit("preview", "img-2");
+    await wrapper.vm.$nextTick();
+    expect(wrapper.find(".image-preview").exists()).toBe(true);
+    expect(wrapper.get(".image-panel .image-card.is-active .image-index").text()).toBe("2");
+
+    imagePanel.vm.$emit("closePreview");
+    await wrapper.vm.$nextTick();
+
+    expect(wrapper.find(".image-preview").exists()).toBe(false);
+    expect(wrapper.find(".image-panel .image-card.is-active").exists()).toBe(false);
     wrapper.unmount();
   });
 
@@ -3025,7 +3051,7 @@ describe("App shell", () => {
       await vi.advanceTimersByTimeAsync(200);
       await wrapper.vm.$nextTick();
 
-      expect(wrapper.find('[data-testid="companion-confirm"]').text()).toContain("To Do List 看板");
+      expect(wrapper.find('[data-testid="companion-confirm"]').text()).toContain("Mini Desk");
       expect(wrapper.find('[data-testid="companion-confirm"]').text()).toContain("所有操作均在本地浏览器完成");
       expect(wrapper.find('[data-testid="companion-confirm"]').text()).toContain("绝不上传您的任何数据");
       expect(wrapper.find('[data-testid="companion-confirm"]').text()).not.toContain("云霞 · 产品");
@@ -3054,7 +3080,7 @@ describe("App shell", () => {
       await vi.advanceTimersByTimeAsync(200);
       await wrapper.vm.$nextTick();
 
-      expect(wrapper.find('[data-testid="companion-confirm"]').text()).toContain("To Do List 看板");
+      expect(wrapper.find('[data-testid="companion-confirm"]').text()).toContain("Mini Desk");
       expect(wrapper.find('[data-testid="companion-confirm"]').text()).not.toContain("给老婆做的 todolist 看板");
       expect(wrapper.find('[data-testid="companion-confirm"]').text()).toContain("xiangjianan / todolist");
 
@@ -3069,7 +3095,7 @@ describe("App shell", () => {
 
       expect(wrapper.find(".companion-popover-shell").classes()).toContain("is-popover-fading");
       expect(wrapper.find('[data-testid="companion-confirm"]').classes()).not.toContain("is-popover-fading");
-      expect(wrapper.find('[data-testid="companion-confirm"]').text()).toContain("To Do List 看板");
+      expect(wrapper.find('[data-testid="companion-confirm"]').text()).toContain("Mini Desk");
       expect(wrapper.find('[data-testid="companion-confirm"]').text()).not.toContain("给老婆做的 todolist 看板");
     } finally {
       wrapper.unmount();
@@ -3091,7 +3117,7 @@ describe("App shell", () => {
       await vi.advanceTimersByTimeAsync(10000);
       await wrapper.vm.$nextTick();
 
-      expect(wrapper.find('[data-testid="companion-confirm"]').text()).toContain("To Do List 看板");
+      expect(wrapper.find('[data-testid="companion-confirm"]').text()).toContain("Mini Desk");
       expect(wrapper.find('[data-testid="companion-confirm"]').text()).not.toContain("给老婆做的 todolist 看板");
       expect(wrapper.find(".companion-popover-shell").classes()).not.toContain("is-popover-fading");
 
@@ -3124,7 +3150,7 @@ describe("App shell", () => {
       await wrapper.vm.$nextTick();
 
       expect(wrapper.find('[data-testid="companion-bubble"]').exists()).toBe(true);
-      expect(wrapper.find('[data-testid="companion-confirm"]').text()).toContain("To Do List 看板");
+      expect(wrapper.find('[data-testid="companion-confirm"]').text()).toContain("Mini Desk");
       expect(wrapper.find('[data-testid="companion-confirm"]').text()).not.toContain("给老婆做的 todolist 看板");
       expect(wrapper.find(".companion-popover-shell").classes()).not.toContain("is-popover-fading");
 

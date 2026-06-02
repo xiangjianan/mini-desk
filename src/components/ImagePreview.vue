@@ -2,7 +2,7 @@
 import { computed, h, onMounted, onUnmounted, ref, watch } from "vue";
 import type { Component, VNode } from "vue";
 import { CloseOutline, CopyOutline, HelpCircleOutline, TrashOutline } from "@vicons/ionicons5";
-import { NButton, NDropdown, NIcon, NModal, NScrollbar } from "naive-ui";
+import { NButton, NDropdown, NIcon, NModal } from "naive-ui";
 import type { DropdownOption } from "naive-ui";
 import { getUiText } from "../state/i18n";
 import type { AppLanguage, StoredImage } from "../types";
@@ -20,7 +20,6 @@ const emit = defineEmits<{
   close: [];
   copy: [id: string];
   delete: [id: string, anchor?: HTMLElement];
-  activate: [id: string];
 }>();
 
 const scale = ref(1);
@@ -131,43 +130,14 @@ function handleKeydown(event: KeyboardEvent): void {
       class="image-preview"
       aria-hidden="false"
       tabindex="0"
-      @wheel="wheel"
       @mousemove="move"
       @mouseup="dragging = false"
       @mouseleave="dragging = false"
       @keydown="handleKeydown"
       @contextmenu.prevent="openMenu($event, active.id)"
     >
-      <aside class="preview-sidebar">
-        <div class="preview-sidebar-bar">
-          <NButton
-            quaternary
-            size="small"
-            class="preview-close-button icon-button"
-            :aria-label="uiText.preview.close"
-            @click="emit('close')"
-          >
-            <NIcon :component="CloseOutline" />
-          </NButton>
-        </div>
-        <NScrollbar class="preview-image-list-scrollbar" :aria-label="uiText.preview.list">
-          <div class="image-list preview-image-list">
-            <button
-              v-for="(image, index) in images"
-              :key="image.id"
-              class="image-card preview-thumb"
-              :class="{ 'is-active': image.id === active.id }"
-              type="button"
-              @click.stop="emit('activate', image.id)"
-            >
-              <span class="image-index">{{ index + 1 }}</span>
-              <img v-if="image.src" :src="image.src" :alt="uiText.preview.thumbnailAlt" />
-            </button>
-          </div>
-        </NScrollbar>
-      </aside>
       <main class="preview-main">
-        <div class="preview-stage" @mousedown="down" @click.self="emit('close')">
+        <div class="preview-stage" @wheel="wheel" @mousedown="down" @click.self="emit('close')">
           <img
             v-if="active.src"
             :key="active.id"

@@ -1,6 +1,6 @@
-# To Do List 看板
+# Mini Desk
 
-给老婆做的 todolist 看板。它基于 Vue 3、Naive UI、TypeScript 和 Vite 构建，是一个本地优先的桌面端工作看板，用来集中整理截图、便签、提醒事项、快捷链接和多个工作空间。页面状态保存在浏览器 `localStorage`，图片原文保存在 IndexedDB。
+Mini Desk 是给老婆做的本地优先桌面工作台。它基于 Vue 3、Naive UI、TypeScript 和 Vite 构建，用来集中整理截图、便签、提醒事项、快捷链接和多个工作空间。页面状态保存在浏览器 `localStorage`，图片原文保存在 IndexedDB。
 
 ## 在线地址
 
