@@ -38,9 +38,9 @@ const WORKBENCH_WIDTH_STORAGE_KEY = "todo-board-workbench-widths";
 const WORKBENCH_HEADER_STORAGE_KEY = "todo-board-workbench-header-hidden";
 const DEFAULT_COLUMN_WEIGHTS = [0.15, 0.2, 0.35, 0.3] as const;
 const MIN_COLUMN_WIDTHS = [160, 320, 320, 320] as const;
-const DEFAULT_GRID_GAP = 7;
-const DEFAULT_GRID_PADDING_X = 7;
-const DEFAULT_GRID_PADDING_Y = 7;
+const DEFAULT_GRID_GAP = 14;
+const DEFAULT_GRID_PADDING_X = 14;
+const DEFAULT_GRID_PADDING_Y = 14;
 const RESIZE_STEP = 24;
 const HEADER_REVEAL_AUTO_HIDE_MS = 2_000;
 

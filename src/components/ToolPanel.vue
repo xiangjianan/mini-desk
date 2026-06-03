@@ -250,7 +250,7 @@ function isDefaultThemeColor(value: string): boolean {
 function showEmptyToolTips(event: MouseEvent): void {
   if (activeToolId.value) return;
   if ((event.target as HTMLElement).closest(".tool-tabs")) return;
-  notifyToolMessage(getToolTipsMessage(null));
+  notifyToolMessage(uiText.value.tools.emptyTips);
 }
 
 function getToolMessageMood(message: string): MessageMood {
@@ -345,6 +345,12 @@ function openToolMenu(event: MouseEvent, id: ToolId | null): void {
   const replacingExistingMenu = Boolean(toolMenu.value);
   toolMenu.value = { x: event.clientX, y: event.clientY, toolId: id };
   exclusiveToolMenu.notifyOpen(event, { replacingExistingMenu });
+}
+
+function openToolTabsMenu(event: MouseEvent): void {
+  const target = event.target as HTMLElement;
+  if (target.closest(".tool-tab")) return;
+  openToolMenu(event, activeToolId.value);
 }
 
 function openActiveToolMenu(event: MouseEvent): void {
@@ -793,7 +799,7 @@ function copyTextWithBrowserCommand(value: string): boolean {
     </section>
 
     <div class="tool-workbench" @click="showEmptyToolTips" @contextmenu.capture="openActiveToolMenu">
-      <nav class="tool-tabs" role="tablist" :aria-label="uiText.tools.list">
+      <nav class="tool-tabs" role="tablist" :aria-label="uiText.tools.list" @contextmenu="openToolTabsMenu">
         <button
           v-for="tool in visibleTools"
           :key="tool.id"

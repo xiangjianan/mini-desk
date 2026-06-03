@@ -1,7 +1,7 @@
 import { DEFAULT_SPACE_ID, DEFAULT_SPACE_TITLE, DEFAULT_TODO_LISTS, defaultState, STORAGE_KEY } from "./defaults";
 import { isValidDeadlineAt } from "./deadlines";
 import { normalizeCompanionGifTheme } from "./companionGifThemes";
-import { DEFAULT_SPACE_TITLES, getUiText, normalizeLanguage } from "./i18n";
+import { DEFAULT_SPACE_TITLES, DEFAULT_TITLES_BY_LANGUAGE, LEGACY_DEFAULT_TITLES_BY_LANGUAGE, getUiText, normalizeLanguage } from "./i18n";
 import type {
   BoardState,
   CompanionCustomGif,
@@ -77,7 +77,7 @@ export function normalizeImportedState(payload: unknown): BoardState {
   const source = isPlainObject(payload) ? payload : {};
   const base = defaultState();
   const typed = source as Record<string, unknown>;
-  const customTitles = normalizeStringRecord(typed.customTitles);
+  const customTitles = normalizeCustomTitles(typed.customTitles);
   const noteLines = normalizeLineCollection(typed.noteLines ?? typed.note);
   const workspaceLines = normalizeLineCollection(typed.workspaceLines ?? typed.workspace);
   const storageLines = normalizeLineCollection(typed.storageLines ?? typed.storage);
@@ -401,6 +401,20 @@ function normalizeStringRecord(value: unknown): Record<string, string> {
       (entry): entry is [string, string] => typeof entry[1] === "string",
     ),
   );
+}
+
+function normalizeCustomTitles(value: unknown): Record<string, string> {
+  const titles = normalizeStringRecord(value);
+  return Object.fromEntries(
+    Object.entries(titles).filter(([id, title]) => !isDefaultBoardTitle(id, title)),
+  );
+}
+
+function isDefaultBoardTitle(id: string, title: string): boolean {
+  return [
+    ...Object.values(DEFAULT_TITLES_BY_LANGUAGE),
+    ...Object.values(LEGACY_DEFAULT_TITLES_BY_LANGUAGE),
+  ].some((titles) => titles[id] === title);
 }
 
 function cloneTodoLists(todoLists: TodoListConfig[]): TodoListConfig[] {

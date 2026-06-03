@@ -159,12 +159,12 @@ describe("App shell", () => {
     expect(wrapper.find('[aria-label="任务流"]').exists()).toBe(true);
     expect(wrapper.find('[aria-label="工作区与工具"]').exists()).toBe(true);
     expect(wrapper.find('[aria-label="Mini Desk"]').exists()).toBe(false);
-    expect(wrapper.text()).toContain("🎨 图床");
-    expect(wrapper.text()).toContain("🔧 小工具");
+    expect(wrapper.text()).toContain("🎨 图片");
+    expect(wrapper.text()).toContain("🔧 工具");
     expect(wrapper.text()).toContain("快捷动作");
-    expect(wrapper.text()).toContain("✅ 待办");
-    expect(wrapper.text()).toContain("备忘录");
-    expect(wrapper.findAll(".space-tab").map((tab) => tab.text())).toEqual(["备忘录"]);
+    expect(wrapper.text()).toContain("✅ 提醒事项");
+    expect(wrapper.text()).toContain("📕 备忘录");
+    expect(wrapper.findAll(".space-tab").map((tab) => tab.text())).toEqual(["📕 备忘录"]);
     expect(wrapper.findAll(".tool-tab").map((tab) => tab.text().trim())).toEqual(["", ""]);
     expect(wrapper.findAll(".tool-tab").map((tab) => tab.attributes("aria-label"))).toEqual(["计算器", "取色板"]);
     expect(wrapper.find('[data-testid="workbench-theme"]').exists()).toBe(true);
@@ -191,14 +191,14 @@ describe("App shell", () => {
       wrapper.getComponent(SettingsMenu).vm.$emit("language", "en", wrapper.get(".settings-trigger").element as HTMLElement);
       await nextTick();
 
-      expect(wrapper.text()).toContain("Image Bed");
+      expect(wrapper.text()).toContain("Images");
       expect(wrapper.text()).toContain("我的便签");
-      expect(wrapper.text()).not.toContain("🔧 Utilities");
+      expect(wrapper.text()).not.toContain("🔧 Tools");
       expect(wrapper.text()).toContain("Quick Actions");
-      expect(wrapper.text()).toContain("To-Do");
+      expect(wrapper.text()).toContain("Reminders");
       expect(wrapper.text()).toContain("Work");
       expect(wrapper.text()).toContain("Study");
-      expect(wrapper.findAll(".space-tab").map((tab) => tab.text())).toEqual(["Memo"]);
+      expect(wrapper.findAll(".space-tab").map((tab) => tab.text())).toEqual(["📕 Memo"]);
       expect(wrapper.findAll(".tool-tab").map((tab) => tab.text().trim())).toEqual(["", ""]);
       expect(wrapper.findAll(".tool-tab").map((tab) => tab.attributes("aria-label"))).toEqual(["Calculator", "Color"]);
       expect(wrapper.text()).not.toContain("快捷动作");
@@ -216,7 +216,7 @@ describe("App shell", () => {
       wrapper.getComponent(SettingsMenu).vm.$emit("language", "en", wrapper.get(".settings-trigger").element as HTMLElement);
       await nextTick();
 
-      expect(wrapper.text()).toContain("🔧 Utilities");
+      expect(wrapper.text()).toContain("🔧 Tools");
       expect(wrapper.text()).not.toContain("🔧 工具");
       expect(wrapper.text()).not.toContain("🔧 小工具");
     } finally {
@@ -1356,7 +1356,7 @@ describe("App shell", () => {
 
       expect(NotificationStub.requestPermission).toHaveBeenCalledTimes(1);
       expect(notificationSpy).toHaveBeenCalledTimes(1);
-      expect(notificationSpy).toHaveBeenCalledWith("【✅ 待办】", {
+      expect(notificationSpy).toHaveBeenCalledWith("【✅ 提醒事项】", {
         body: "喝水",
         tag: `todo-1:${notifyAt}`,
         icon: expect.stringMatching(/^https?:\/\/.*kun.*\.jpg/),
@@ -1399,7 +1399,7 @@ describe("App shell", () => {
 
       await vi.advanceTimersByTimeAsync(1);
       expect(notificationSpy).toHaveBeenCalledTimes(1);
-      expect(notificationSpy).toHaveBeenCalledWith("【✅ 待办】", {
+      expect(notificationSpy).toHaveBeenCalledWith("【✅ 提醒事项】", {
         body: "喝水",
         tag: `todo-1:${notifyAt}`,
         icon: expect.stringMatching(/^https?:\/\/.*kun.*\.jpg/),
@@ -1450,7 +1450,7 @@ describe("App shell", () => {
       await vi.advanceTimersByTimeAsync(20_000);
       expect(constructorCalls).toBe(2);
       expect(notificationSpy).toHaveBeenCalledTimes(1);
-      expect(notificationSpy).toHaveBeenCalledWith("【✅ 待办】", {
+      expect(notificationSpy).toHaveBeenCalledWith("【✅ 提醒事项】", {
         body: "喝水",
         tag: `todo-1:${notifyAt}`,
         icon: expect.stringMatching(/^https?:\/\/.*kun.*\.jpg/),
@@ -1492,7 +1492,7 @@ describe("App shell", () => {
       wrapper.getComponent(TodoPanel).vm.$emit("notify", "morning", "todo-1", notifyAt);
       await vi.advanceTimersByTimeAsync(30_000);
 
-      expect(notificationSpy).toHaveBeenCalledWith("【✅ 待办】", {
+      expect(notificationSpy).toHaveBeenCalledWith("【✅ 提醒事项】", {
         body: "喝水",
         tag: `todo-1:${notifyAt}`,
       });
@@ -1927,11 +1927,9 @@ describe("App shell", () => {
       await wrapper.vm.$nextTick();
 
       const message = wrapper.get('[data-testid="companion-confirm"]').text();
-      expect(message).toContain("计算器");
-      expect(message).toContain("进制转换");
-      expect(message).toContain("取色板");
-      expect(message).toContain("编解码");
-      expect(message).toContain("随机密码生成");
+      expect(message).toContain("点击左侧图标打开工具");
+      expect(message).not.toContain("计算器");
+      expect(message).not.toContain("随机密码生成");
     } finally {
       wrapper.unmount();
       vi.useRealTimers();

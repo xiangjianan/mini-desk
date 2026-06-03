@@ -4,6 +4,19 @@ export const DEFAULT_LANGUAGE: AppLanguage = "zh";
 
 const DEFAULT_TODO_TITLES: Record<AppLanguage, Record<string, string>> = {
   zh: {
+    morning: "✅ 提醒事项",
+    noon: "💻 工作",
+    evening: "📚 学习",
+  },
+  en: {
+    morning: "✅ Reminders",
+    noon: "💻 Work",
+    evening: "📚 Study",
+  },
+};
+
+const LEGACY_DEFAULT_TODO_TITLES: Record<AppLanguage, Record<string, string>> = {
+  zh: {
     morning: "✅ 待办",
     noon: "💻 工作",
     evening: "📚 学习",
@@ -17,6 +30,17 @@ const DEFAULT_TODO_TITLES: Record<AppLanguage, Record<string, string>> = {
 
 export const DEFAULT_SPACE_TITLES: Record<AppLanguage, Record<string, string>> = {
   zh: {
+    workspace: "📕 备忘录",
+    storage: "工程文件",
+  },
+  en: {
+    workspace: "📕 Memo",
+    storage: "Project Files",
+  },
+};
+
+const LEGACY_DEFAULT_SPACE_TITLES: Record<AppLanguage, Record<string, string>> = {
+  zh: {
     workspace: "备忘录",
     storage: "工程文件",
   },
@@ -26,7 +50,7 @@ export const DEFAULT_SPACE_TITLES: Record<AppLanguage, Record<string, string>> =
   },
 };
 
-const LEGACY_DEFAULT_SPACE_TITLES: Record<AppLanguage, Record<string, string>> = {
+const OLDER_LEGACY_DEFAULT_SPACE_TITLES: Record<AppLanguage, Record<string, string>> = {
   zh: {
     workspace: "工作空间",
     storage: "工程文件",
@@ -38,6 +62,33 @@ const LEGACY_DEFAULT_SPACE_TITLES: Record<AppLanguage, Record<string, string>> =
 };
 
 export const DEFAULT_TITLES_BY_LANGUAGE: Record<AppLanguage, Record<string, string>> = {
+  zh: {
+    "image-title": "🎨 图片",
+    "note-title": "🔧 工具",
+    "quick-title": "⚡ 快捷动作",
+    "today-focus-title": "重点事项",
+    "todo-morning-title": "✅ 提醒事项",
+    "todo-noon-title": "💻 工作",
+    "todo-evening-title": "📚 学习",
+    "workspace-title": "📕 备忘录.txt",
+    "tools-title": "🔧 工具",
+    "storage-title": "🛠 双击可改名",
+  },
+  en: {
+    "image-title": "🎨 Images",
+    "note-title": "🔧 Tools",
+    "quick-title": "⚡ Quick Actions",
+    "today-focus-title": "Pinned Reminders",
+    "todo-morning-title": "✅ Reminders",
+    "todo-noon-title": "💻 Work",
+    "todo-evening-title": "📚 Study",
+    "workspace-title": "📕 Memo.txt",
+    "tools-title": "🔧 Tools",
+    "storage-title": "🛠 Double-click to rename",
+  },
+};
+
+export const LEGACY_DEFAULT_TITLES_BY_LANGUAGE: Record<AppLanguage, Record<string, string>> = {
   zh: {
     "image-title": "🎨 图床",
     "note-title": "🔧 小工具",
@@ -89,8 +140,8 @@ export const EMPTY_HINTS_BY_LANGUAGE = {
 
 export const AREA_HELP_BY_LANGUAGE: Record<AppLanguage, Record<"images" | "note" | "quickButtons" | "todos" | "workspace" | "tools" | "storage", string>> = {
   zh: {
-    images: "截图区：粘贴、预览和整理图片。",
-    note: "工具区：常用小工具集中处理。",
+    images: "图片区：粘贴、预览和整理图片。",
+    note: "工具区：常用工具集中处理。",
     quickButtons: "快捷区：常用内容一键打开或复制。",
     todos: "提醒区：标题可双击改名。",
     workspace: "记事本：拆步骤，稳稳推进。",
@@ -98,7 +149,7 @@ export const AREA_HELP_BY_LANGUAGE: Record<AppLanguage, Record<"images" | "note"
     storage: "扩展区：放长期保留的内容。",
   },
   en: {
-    images: "Screenshots: paste, preview, and organize images.",
+    images: "Images: paste, preview, and organize images.",
     note: "Tools: keep common utilities close at hand.",
     quickButtons: "Quick Actions: open links or copy text.",
     todos: "Reminders: double-click titles to rename.",
@@ -506,7 +557,7 @@ export const UI_TEXT = {
       bodyForm: "表单文本",
     },
     images: {
-      list: "图床图片列表",
+      list: "图片列表",
       thumbnailAlt: "截图缩略图",
       loading: "图片载入中",
       pasteImage: "粘贴图片",
@@ -520,7 +571,7 @@ export const UI_TEXT = {
     tools: {
       panel: "工具集合",
       list: "工具列表",
-      emptyTips: "可用工具：计算器、进制转换、取色板、编解码、随机密码生成。点击左侧图标打开工具。",
+      emptyTips: "点击左侧图标打开工具。",
       close: "关闭",
       menu: "工具菜单",
       configure: "配置",
@@ -589,7 +640,7 @@ export const UI_TEXT = {
       dragList: "拖动提醒列表",
       collapse: "收起提醒列表",
       expand: "展开提醒列表",
-      menu: "待办菜单",
+      menu: "提醒事项菜单",
       tips: "提醒事项 Tips",
       dragTodo: "拖动提醒事项",
       editNotify: "编辑通知时间",
@@ -729,7 +780,7 @@ export const UI_TEXT = {
     tools: {
       panel: "Tools",
       list: "Tool list",
-      emptyTips: "Available tools: Calculator, Base conversion, Color, Codec, and Password Generator. Click an icon on the left to open a tool.",
+      emptyTips: "Click an icon on the left to open a tool.",
       close: "Close",
       menu: "Tools menu",
       configure: "Configure",
@@ -893,11 +944,15 @@ export function getGuideMessages(language: AppLanguage): Record<GuideKey, string
 }
 
 function isDefaultTodoListTitle(id: string, title: string): boolean {
-  return Object.values(DEFAULT_TODO_TITLES).some((titles) => titles[id] === title);
+  return [...Object.values(DEFAULT_TODO_TITLES), ...Object.values(LEGACY_DEFAULT_TODO_TITLES)].some((titles) => titles[id] === title);
 }
 
 function isDefaultSpaceTitle(id: string, title: string): boolean {
-  return [...Object.values(DEFAULT_SPACE_TITLES), ...Object.values(LEGACY_DEFAULT_SPACE_TITLES)].some((titles) => titles[id] === title);
+  return [
+    ...Object.values(DEFAULT_SPACE_TITLES),
+    ...Object.values(LEGACY_DEFAULT_SPACE_TITLES),
+    ...Object.values(OLDER_LEGACY_DEFAULT_SPACE_TITLES),
+  ].some((titles) => titles[id] === title);
 }
 
 export const SHORTCUT_HELP: Record<AppLanguage, { area: string; shortcuts: { key: string; desc: string }[] }[]> = {

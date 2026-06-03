@@ -193,7 +193,7 @@ describe("WorkbenchShell", () => {
     await nextTick();
 
     const grid = wrapper.get(".workbench-grid");
-    expect(grid.attributes("style")).toContain("grid-template-columns: 169px 332px 341px 338px");
+    expect(grid.attributes("style")).toContain("grid-template-columns: 166px 328px 333px 331px");
 
     wrapper.unmount();
   });

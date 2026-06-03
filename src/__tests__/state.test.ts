@@ -37,7 +37,7 @@ describe("state compatibility", () => {
     expect(state.spaces).toEqual([
       {
         id: "workspace",
-        title: "备忘录",
+        title: "📕 备忘录",
         lines: [
           { text: "alpha", indent: 0 },
           { text: "beta", indent: 1 },
@@ -56,7 +56,7 @@ describe("state compatibility", () => {
     const state = defaultState();
 
     expect(state.language).toBe("zh");
-    expect(state.spaces).toEqual([{ id: "workspace", title: "备忘录", lines: [] }]);
+    expect(state.spaces).toEqual([{ id: "workspace", title: "📕 备忘录", lines: [] }]);
     expect(state.activeSpaceId).toBe("workspace");
     expect(state.showCompletedTodos).toEqual({ morning: false, noon: false, evening: false });
   });
@@ -70,11 +70,26 @@ describe("state compatibility", () => {
     expect(unknown.language).toBe("zh");
   });
 
+  it("drops legacy default custom titles while preserving real custom titles", () => {
+    const state = normalizeImportedState({
+      customTitles: {
+        "image-title": "🎨 图床",
+        "note-title": "我的便签",
+        "todo-morning-title": "✅ 待办",
+        "workspace-title": "📝 Memo.txt",
+      },
+    });
+
+    expect(state.customTitles).toEqual({ "note-title": "我的便签" });
+    expect(state.todoLists[0].title).toBe("✅ 提醒事项");
+    expect(state.spaces[0].title).toBe("📕 备忘录");
+  });
+
   it("creates default configurable todo lists for new users", () => {
     const state = defaultState();
 
     expect(state.todoLists.map((list) => ({ id: list.id, title: list.title }))).toEqual([
-      { id: "morning", title: "✅ 待办" },
+      { id: "morning", title: "✅ 提醒事项" },
       { id: "noon", title: "💻 工作" },
       { id: "evening", title: "📚 学习" },
     ]);
@@ -158,7 +173,7 @@ describe("state compatibility", () => {
     });
 
     const expected = [
-      { id: "morning", title: "✅ 待办" },
+      { id: "morning", title: "✅ 提醒事项" },
       { id: "noon", title: "💻 工作" },
       { id: "evening", title: "📚 学习" },
     ];

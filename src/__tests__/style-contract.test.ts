@@ -30,12 +30,12 @@ describe("workbench style contract", () => {
     expectSelectorBody(styles, ".workbench-grid", "background: color-mix(in srgb, var(--background) 82%, var(--muted-surface))");
     expect(ruleBodies(styles, ".workbench-zone").join("\n")).not.toContain("border: 1px solid var(--border)");
     expectSelectorBody(styles, ".workbench-zone", "border-radius: calc(var(--radius) + 4px)");
-    expectSelectorBody(styles, ".workbench-zone", "padding: 8px");
+    expectSelectorBody(styles, ".workbench-zone", "padding: 16px");
     expectSelectorBody(styles, ".workbench-zone", "background: color-mix(in srgb, var(--card) 96%, var(--background))");
     expectSelectorBody(styles, ".workbench-zone", "inset 0 0 0 1px color-mix(in srgb, var(--border) 34%, transparent)");
     expectSelectorBody(styles, ".workbench-zone > .panel", "border-radius: var(--radius)");
     expectSelectorBody(styles, ".workbench-zone > .tool-panel", "border-radius: 0");
-    expectSelectorBody(styles, ".workbench-zone-notes", "gap: 8px");
+    expectSelectorBody(styles, ".workbench-zone-notes", "gap: 16px");
     expectSelectorBody(styles, "button.quick-button", "border: 0");
     expectSelectorBody(styles, "button.space-tab", "border: 0");
     expectSelectorBody(styles, "button.quick-menu-button", "border: 0");
@@ -90,8 +90,8 @@ describe("workbench style contract", () => {
     expectSelectorBody(styles, ".preview-stage img", "max-width: calc(100vw - var(--image-preview-left, clamp(220px, 18vw, 320px)) - 32px)");
     expectSelectorBody(styles, ".workbench-grid", "position: relative");
     expectSelectorBody(styles, ".workbench-grid", "grid-template-columns: minmax(160px, 0.15fr) minmax(320px, 0.2fr) minmax(320px, 0.35fr) minmax(320px, 0.3fr)");
-    expectSelectorBody(styles, ".workbench-grid", "gap: 7px");
-    expectSelectorBody(styles, ".workbench-grid", "padding: 7px");
+    expectSelectorBody(styles, ".workbench-grid", "gap: 14px");
+    expectSelectorBody(styles, ".workbench-grid", "padding: 14px");
     expectSelectorBody(styles, ".workbench-grid", "grid-row: 2");
     expectSelectorBody(styles, ".workbench-header-reveal-zone", "position: absolute");
     expectSelectorBody(styles, ".workbench-header-reveal-zone", "left: 50%");

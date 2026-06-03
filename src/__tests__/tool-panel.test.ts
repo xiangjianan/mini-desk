@@ -191,6 +191,22 @@ describe("ToolPanel", () => {
     expect(styles).toMatch(/\.tool-content-scrollbar\s*\{[^}]*--n-scrollbar-width: var\(--scrollbar-size\) !important/s);
   });
 
+  it("opens the active tool menu from blank space in the tool tab column", async () => {
+    showAllToolsByDefault();
+    const wrapper = mountToolPanel();
+
+    await wrapper.findAll(".tool-tab")[2].trigger("click");
+    await wrapper.get(".tool-tabs").trigger("contextmenu", { clientX: 24, clientY: 180 });
+
+    expect(wrapper.findAll(".dropdown-option").map((option) => option.attributes("data-key"))).toEqual(["close", "configure", "tips"]);
+    expect(wrapper.get('[data-key="close"]').text()).toContain("关闭");
+
+    await wrapper.get('[data-key="close"]').trigger("click");
+
+    expect(wrapper.findAll(".tool-tab")[2].attributes("aria-selected")).toBe("false");
+    expect(localStorage.getItem(ACTIVE_TOOL_STORAGE_KEY)).toBe("");
+  });
+
   it("opens the close menu only from each selected tool page blank area without intercepting content or controls", async () => {
     showAllToolsByDefault();
     const wrapper = mountToolPanel();
@@ -260,9 +276,9 @@ describe("ToolPanel", () => {
 
     await wrapper.get(".tool-content.is-empty").trigger("click");
 
-    expect(wrapper.emitted("message")?.[0][0]).toContain("可用工具");
-    expect(wrapper.emitted("message")?.[0][0]).toContain("计算器用于四则运算");
-    expect(wrapper.emitted("message")?.[0][0]).toContain("随机密码生成");
+    expect(wrapper.emitted("message")?.[0][0]).toContain("点击左侧图标打开工具");
+    expect(wrapper.emitted("message")?.[0][0]).not.toContain("计算器");
+    expect(wrapper.emitted("message")?.[0][0]).not.toContain("随机密码生成");
   });
 
   it("keeps calculator and base conversion as separate tools", async () => {
