@@ -880,7 +880,7 @@ function copyTextWithBrowserCommand(value: string): boolean {
             </label>
             <button type="button" class="tool-primary-action eyedropper-button" data-testid="eyedropper" @click="pickExternalColor">
               <NIcon class="eyedropper-icon" :component="EyedropOutline" />
-              {{ uiText.tools.pickExternalColor }}
+              <span class="eyedropper-label">{{ uiText.tools.pickExternalColor }}</span>
             </button>
           </div>
           <label class="tool-field color-value-field">

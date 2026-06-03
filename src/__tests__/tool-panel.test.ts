@@ -356,13 +356,19 @@ describe("ToolPanel", () => {
     expect((wrapper.get('[data-testid="color-value"]').element as HTMLInputElement).value).toBe("#336699");
     expect(wrapper.get('[data-testid="color-rgb"]').text()).toContain("rgb(51, 102, 153)");
     expect(wrapper.emitted("message")?.at(-1)?.[0]).toMatch(/^已拾取颜色 .+$/);
+    expect(wrapper.get('[data-testid="eyedropper"]').find(".eyedropper-label").text()).toBe("取色笔");
 
     const styles = readFileSync(resolve(__dirname, "../styles.css"), "utf8");
-    expect(styles).toMatch(/\.eyedropper-button\s*\{[^}]*animation: eyedropper-flow 10s linear infinite/s);
-    expect(styles).toMatch(/\.eyedropper-button\s*\{[^}]*linear-gradient\(100deg/s);
-    expect(styles).toMatch(/\.eyedropper-button\s*\{[^}]*#ef4444 0%[\s\S]*#ef4444 50%[\s\S]*#ef4444 100%/s);
-    expect(styles).toMatch(/\.eyedropper-button\s*\{[^}]*background-size: 1000% 100%/s);
-    expect(styles).toMatch(/@keyframes eyedropper-flow\s*\{[\s\S]*?from\s*\{[^}]*background-position: 0% 50%[\s\S]*?to\s*\{[^}]*background-position: -100% 50%/s);
+    expect(styles).toMatch(/\.eyedropper-button\s*\{[^}]*--eyedropper-flow-gradient: linear-gradient\(90deg/s);
+    expect(styles).toMatch(/\.eyedropper-button\s*\{[^}]*background: transparent/s);
+    expect(styles).toMatch(/\.eyedropper-button\s*\{[^}]*isolation: isolate/s);
+    expect(styles).toMatch(/\.eyedropper-button\s*\{[^}]*#d946ef 0%[\s\S]*#2563eb 10%[\s\S]*#d946ef 50%[\s\S]*#d946ef 100%/s);
+    expect(styles).toMatch(/\.eyedropper-button::before\s*\{[^}]*width: 200%/s);
+    expect(styles).toMatch(/\.eyedropper-button::before\s*\{[^}]*background: var\(--eyedropper-flow-gradient\)/s);
+    expect(styles).toMatch(/\.eyedropper-button::before\s*\{[^}]*transform: translateX\(-50%\)/s);
+    expect(styles).toMatch(/\.eyedropper-button::before\s*\{[^}]*animation: eyedropper-flow 4\.8s linear infinite/s);
+    expect(styles).toMatch(/\.eyedropper-label\s*\{[^}]*z-index: 1/s);
+    expect(styles).toMatch(/@keyframes eyedropper-flow\s*\{[\s\S]*?from\s*\{[\s\S]*?transform: translateX\(-50%\)[\s\S]*?to\s*\{[\s\S]*?transform: translateX\(0\)/);
   });
 
   it("keeps color picking usable in Safari by falling back to the color input", async () => {
