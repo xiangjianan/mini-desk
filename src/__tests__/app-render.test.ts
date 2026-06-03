@@ -165,8 +165,8 @@ describe("App shell", () => {
     expect(wrapper.text()).toContain("✅ 待办");
     expect(wrapper.text()).toContain("备忘录");
     expect(wrapper.findAll(".space-tab").map((tab) => tab.text())).toEqual(["备忘录"]);
-    expect(wrapper.findAll(".tool-tab").map((tab) => tab.text().trim())).toEqual(["", "", "", "", ""]);
-    expect(wrapper.findAll(".tool-tab").map((tab) => tab.attributes("aria-label"))).toEqual(["计算器", "进制转换", "取色板", "编解码", "随机密码生成"]);
+    expect(wrapper.findAll(".tool-tab").map((tab) => tab.text().trim())).toEqual(["", ""]);
+    expect(wrapper.findAll(".tool-tab").map((tab) => tab.attributes("aria-label"))).toEqual(["计算器", "取色板"]);
     expect(wrapper.find('[data-testid="workbench-theme"]').exists()).toBe(true);
     expect(wrapper.find('[aria-label="快捷动作菜单"]').exists()).toBe(true);
     expect(wrapper.find('[aria-label="设置"]').exists()).toBe(true);
@@ -199,8 +199,8 @@ describe("App shell", () => {
       expect(wrapper.text()).toContain("Work");
       expect(wrapper.text()).toContain("Study");
       expect(wrapper.findAll(".space-tab").map((tab) => tab.text())).toEqual(["Memo"]);
-      expect(wrapper.findAll(".tool-tab").map((tab) => tab.text().trim())).toEqual(["", "", "", "", ""]);
-      expect(wrapper.findAll(".tool-tab").map((tab) => tab.attributes("aria-label"))).toEqual(["Calculator", "Base conversion", "Color", "Codec", "Password Generator"]);
+      expect(wrapper.findAll(".tool-tab").map((tab) => tab.text().trim())).toEqual(["", ""]);
+      expect(wrapper.findAll(".tool-tab").map((tab) => tab.attributes("aria-label"))).toEqual(["Calculator", "Color"]);
       expect(wrapper.text()).not.toContain("快捷动作");
       expect(JSON.parse(localStorage.getItem(STORAGE_KEY) || "{}").language).toBe("en");
     } finally {
@@ -1952,7 +1952,9 @@ describe("App shell", () => {
       expect(wrapper.find('[data-testid="companion-confirm"]').exists()).toBe(false);
       expect(wrapper.find(".focus-companion.is-visible").exists()).toBe(true);
 
-      await wrapper.findAll(".tool-tab")[3].trigger("click");
+      const colorTab = wrapper.findAll(".tool-tab").find((tab) => tab.attributes("aria-label") === "取色板");
+      if (!colorTab) throw new Error("Color tool tab not found");
+      await colorTab.trigger("click");
       await wrapper.vm.$nextTick();
 
       expect(wrapper.find(".focus-companion.is-visible").exists()).toBe(false);

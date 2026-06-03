@@ -34,6 +34,7 @@ type ToolPanelMenu = { x: number; y: number };
 const ACTIVE_TOOL_STORAGE_KEY = "todo-board-active-tool";
 const HIDDEN_TOOLS_STORAGE_KEY = "todo-board-hidden-tools";
 const TOOL_IDS = ["calculator", "base", "color", "codec", "password"] as const;
+const DEFAULT_HIDDEN_TOOL_IDS: readonly ToolId[] = ["base", "codec", "password"];
 const COMMON_BASES = [2, 8, 10, 16] as const;
 const DEFAULT_PASSWORD_SYMBOLS_TEXT = "!@#$%^&*_-+=?";
 const DEFAULT_LIGHT_COLOR = "#ffffff";
@@ -196,13 +197,15 @@ function readStoredActiveToolId(): ToolId | null {
 
 function readStoredHiddenToolIds(): Set<ToolId> {
   try {
-    if (typeof localStorage === "undefined") return new Set();
-    const parsed = JSON.parse(localStorage.getItem(HIDDEN_TOOLS_STORAGE_KEY) ?? "[]");
-    if (!Array.isArray(parsed)) return new Set();
+    if (typeof localStorage === "undefined") return new Set(DEFAULT_HIDDEN_TOOL_IDS);
+    const stored = localStorage.getItem(HIDDEN_TOOLS_STORAGE_KEY);
+    if (stored === null) return new Set(DEFAULT_HIDDEN_TOOL_IDS);
+    const parsed = JSON.parse(stored);
+    if (!Array.isArray(parsed)) return new Set(DEFAULT_HIDDEN_TOOL_IDS);
     const ids = parsed.filter(isToolId);
-    return ids.length >= TOOL_IDS.length ? new Set() : new Set(ids);
+    return ids.length >= TOOL_IDS.length ? new Set(DEFAULT_HIDDEN_TOOL_IDS) : new Set(ids);
   } catch {
-    return new Set();
+    return new Set(DEFAULT_HIDDEN_TOOL_IDS);
   }
 }
 

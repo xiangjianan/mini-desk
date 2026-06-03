@@ -47,6 +47,20 @@ function mountToolPanel(props = {}) {
   });
 }
 
+function toolTabs(wrapper: ReturnType<typeof mountToolPanel>) {
+  return wrapper.findAll(".tool-tab");
+}
+
+async function selectToolByLabel(wrapper: ReturnType<typeof mountToolPanel>, label: string) {
+  const tab = toolTabs(wrapper).find((item) => item.attributes("aria-label") === label);
+  if (!tab) throw new Error(`Tool tab not found: ${label}`);
+  await tab.trigger("click");
+}
+
+function showAllToolsByDefault() {
+  localStorage.setItem(HIDDEN_TOOLS_STORAGE_KEY, JSON.stringify([]));
+}
+
 describe("ToolPanel", () => {
   beforeEach(() => {
     localStorage.clear();
@@ -58,39 +72,33 @@ describe("ToolPanel", () => {
 
     expect(wrapper.find(".tool-panel").exists()).toBe(true);
     expect(wrapper.get(".tool-tabs").attributes("role")).toBe("tablist");
-    expect(wrapper.findAll(".tool-tab-icon")).toHaveLength(5);
-    expect(wrapper.findAll(".tool-tab").map((tab) => tab.text().trim())).toEqual(["", "", "", "", ""]);
+    expect(wrapper.findAll(".tool-tab-icon")).toHaveLength(2);
+    expect(wrapper.findAll(".tool-tab").map((tab) => tab.text().trim())).toEqual(["", ""]);
     expect(wrapper.findAll(".tool-tab").map((tab) => tab.attributes("aria-label"))).toEqual([
       "计算器",
-      "进制转换",
       "取色板",
-      "编解码",
-      "随机密码生成",
     ]);
     expect(wrapper.findAll(".tool-tab").map((tab) => tab.attributes("data-tooltip"))).toEqual([
       "计算器",
-      "进制转换",
       "取色板",
-      "编解码",
-      "随机密码生成",
     ]);
     expect(wrapper.get(".tool-content").text().trim()).toBe("");
     expect(wrapper.get(".tool-active-title").text().trim()).toBe("");
 
-    await wrapper.findAll(".tool-tab")[3].trigger("click");
+    await selectToolByLabel(wrapper, "取色板");
 
-    expect(wrapper.get(".tool-content").text()).toContain("Base64 编码");
-    expect(wrapper.findAll(".tool-tab")[3].attributes("aria-selected")).toBe("true");
-    expect(wrapper.get(".tool-active-title").text()).toContain("编解码");
-    expect(localStorage.getItem(ACTIVE_TOOL_STORAGE_KEY)).toBe("codec");
+    expect(wrapper.get(".tool-content").text()).toContain("颜色值");
+    expect(wrapper.findAll(".tool-tab")[1].attributes("aria-selected")).toBe("true");
+    expect(wrapper.get(".tool-active-title").text()).toContain("取色板");
+    expect(localStorage.getItem(ACTIVE_TOOL_STORAGE_KEY)).toBe("color");
 
     wrapper.unmount();
     const persisted = mountToolPanel();
 
-    expect(persisted.get(".tool-content").text()).toContain("Base64 编码");
-    expect(persisted.findAll(".tool-tab")[3].attributes("aria-selected")).toBe("true");
+    expect(persisted.get(".tool-content").text()).toContain("颜色值");
+    expect(persisted.findAll(".tool-tab")[1].attributes("aria-selected")).toBe("true");
 
-    await persisted.findAll(".tool-tab")[3].trigger("contextmenu", { clientX: 12, clientY: 16 });
+    await persisted.findAll(".tool-tab")[1].trigger("contextmenu", { clientX: 12, clientY: 16 });
 
     expect(persisted.get(".dropdown-option").text()).toContain("关闭");
     expect(persisted.find(".dropdown-option-icon").exists()).toBe(true);
@@ -98,7 +106,7 @@ describe("ToolPanel", () => {
     await persisted.get(".dropdown-option").trigger("click");
 
     expect(persisted.get(".tool-content").text().trim()).toBe("");
-    expect(persisted.findAll(".tool-tab")[3].attributes("aria-selected")).toBe("false");
+    expect(persisted.findAll(".tool-tab")[1].attributes("aria-selected")).toBe("false");
     expect(localStorage.getItem(ACTIVE_TOOL_STORAGE_KEY)).toBe("");
   });
 
@@ -131,24 +139,19 @@ describe("ToolPanel", () => {
 
     expect(wrapper.findAll(".tool-tab").map((tab) => tab.attributes("aria-label"))).toEqual([
       "计算器",
-      "进制转换",
-      "编解码",
-      "随机密码生成",
     ]);
-    expect(localStorage.getItem(HIDDEN_TOOLS_STORAGE_KEY)).toBe(JSON.stringify(["color"]));
+    expect(localStorage.getItem(HIDDEN_TOOLS_STORAGE_KEY)).toBe(JSON.stringify(["base", "color", "codec", "password"]));
 
     wrapper.unmount();
     const persisted = mountToolPanel();
 
     expect(persisted.findAll(".tool-tab").map((tab) => tab.attributes("aria-label"))).toEqual([
       "计算器",
-      "进制转换",
-      "编解码",
-      "随机密码生成",
     ]);
   });
 
   it("moves the active tool title to the centered tool header slot", async () => {
+    showAllToolsByDefault();
     const wrapper = mountToolPanel();
     const styles = readFileSync(resolve(__dirname, "../styles.css"), "utf8");
 
@@ -167,6 +170,7 @@ describe("ToolPanel", () => {
   });
 
   it("opens the shared action menu from the tool work area and uses the narrow tool scrollbar", async () => {
+    showAllToolsByDefault();
     const wrapper = mountToolPanel();
 
     await wrapper.findAll(".tool-tab")[2].trigger("click");
@@ -188,6 +192,7 @@ describe("ToolPanel", () => {
   });
 
   it("opens the close menu only from each selected tool page blank area without intercepting content or controls", async () => {
+    showAllToolsByDefault();
     const wrapper = mountToolPanel();
     const toolPaneSelectors = [".calculator-tool", ".base-tool", ".color-tool", ".codec-tool", ".password-tool"];
 
@@ -261,6 +266,7 @@ describe("ToolPanel", () => {
   });
 
   it("keeps calculator and base conversion as separate tools", async () => {
+    showAllToolsByDefault();
     const wrapper = mountToolPanel();
 
     await wrapper.findAll(".tool-tab")[0].trigger("click");
@@ -299,6 +305,7 @@ describe("ToolPanel", () => {
   });
 
   it("copies base conversion values", async () => {
+    showAllToolsByDefault();
     const writeText = vi.fn().mockResolvedValue(undefined);
     Object.assign(navigator, { clipboard: { writeText } });
     const wrapper = mountToolPanel();
@@ -313,6 +320,7 @@ describe("ToolPanel", () => {
   });
 
   it("emits tool prompts for the app message bubble instead of rendering inline text", async () => {
+    showAllToolsByDefault();
     const wrapper = mountToolPanel();
 
     await wrapper.findAll(".tool-tab")[0].trigger("click");
@@ -331,6 +339,7 @@ describe("ToolPanel", () => {
   });
 
   it("asks the app to dismiss fading tool messages when switching tools", async () => {
+    showAllToolsByDefault();
     const wrapper = mountToolPanel();
 
     await wrapper.findAll(".tool-tab")[2].trigger("click");
@@ -347,7 +356,7 @@ describe("ToolPanel", () => {
     vi.stubGlobal("EyeDropper", MockEyeDropper);
     const wrapper = mountToolPanel();
 
-    await wrapper.findAll(".tool-tab")[2].trigger("click");
+    await selectToolByLabel(wrapper, "取色板");
     await wrapper.get('[data-testid="eyedropper"]').trigger("click");
     await Promise.resolve();
     await wrapper.vm.$nextTick();
@@ -375,7 +384,7 @@ describe("ToolPanel", () => {
     const click = vi.spyOn(HTMLInputElement.prototype, "click").mockImplementation(() => undefined);
     const wrapper = mountToolPanel();
 
-    await wrapper.findAll(".tool-tab")[2].trigger("click");
+    await selectToolByLabel(wrapper, "取色板");
     const eyedropper = wrapper.get('[data-testid="eyedropper"]');
 
     expect(eyedropper.attributes("disabled")).toBeUndefined();
@@ -393,7 +402,7 @@ describe("ToolPanel", () => {
     Object.assign(navigator, { clipboard: { writeText } });
     const wrapper = mountToolPanel();
 
-    await wrapper.findAll(".tool-tab")[2].trigger("click");
+    await selectToolByLabel(wrapper, "取色板");
     expect(wrapper.get(".color-pick-row").find('input[type="color"]').exists()).toBe(true);
     expect(wrapper.get(".color-pick-row").find('[data-testid="eyedropper"]').exists()).toBe(true);
     expect((wrapper.get('[data-testid="color-value"]').element as HTMLInputElement).value).toBe("#ffffff");
@@ -417,19 +426,20 @@ describe("ToolPanel", () => {
 
   it("uses white as the default color in light mode and black in dark mode", async () => {
     const light = mountToolPanel({ theme: "light" });
-    await light.findAll(".tool-tab")[2].trigger("click");
+    await selectToolByLabel(light, "取色板");
 
     expect((light.get('[data-testid="color-value"]').element as HTMLInputElement).value).toBe("#ffffff");
     expect(light.get('[data-testid="color-rgb"]').text()).toContain("rgb(255, 255, 255)");
 
     const dark = mountToolPanel({ theme: "dark" });
-    await dark.findAll(".tool-tab")[2].trigger("click");
+    await selectToolByLabel(dark, "取色板");
 
     expect((dark.get('[data-testid="color-value"]').element as HTMLInputElement).value).toBe("#000000");
     expect(dark.get('[data-testid="color-rgb"]').text()).toContain("rgb(0, 0, 0)");
   });
 
   it("encodes and decodes Base64 and URL text", async () => {
+    showAllToolsByDefault();
     const wrapper = mountToolPanel();
 
     await wrapper.findAll(".tool-tab")[3].trigger("click");
@@ -452,6 +462,7 @@ describe("ToolPanel", () => {
   });
 
   it("generates a random password from editable special characters and can reset them", async () => {
+    showAllToolsByDefault();
     const writeText = vi.fn().mockResolvedValue(undefined);
     Object.assign(navigator, { clipboard: { writeText } });
     const wrapper = mountToolPanel();
