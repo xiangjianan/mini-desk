@@ -62,7 +62,7 @@ describe("workbench style contract", () => {
     expectSelectorBody(styles, ".n-dropdown-menu", "border: 1px solid var(--border) !important");
     expectSelectorBody(styles, ".n-dropdown-menu", "background: var(--popover) !important");
     expectSelectorBody(styles, ".n-dropdown-menu", "color: var(--popover-foreground) !important");
-    expectSelectorBody(styles, ".n-dropdown-menu", "box-shadow: 0 10px 24px rgba(15, 23, 42, 0.08) !important");
+    expectSelectorBody(styles, ".n-dropdown-menu", "box-shadow: 0 6px 14px rgba(15, 23, 42, 0.045) !important");
     expectSelectorBody(styles, ".n-modal .n-card", "border: 1px solid var(--border) !important");
     expectSelectorBody(styles, ".n-modal .n-card", "background: var(--popover) !important");
     expectSelectorBody(styles, ".n-modal .n-card", "color: var(--popover-foreground) !important");
@@ -75,7 +75,7 @@ describe("workbench style contract", () => {
     expectSelectorBody(styles, ".quick-button", "border-radius: var(--radius)");
     expectSelectorBody(styles, ".companion-popover-shell.n-popover", "border: 1px solid var(--border) !important");
     expectSelectorBody(styles, ".companion-popover-shell.n-popover", "background: var(--popover) !important");
-    expectSelectorBody(styles, ".companion-popover-shell.n-popover", "box-shadow: 0 10px 24px rgba(15, 23, 42, 0.08) !important");
+    expectSelectorBody(styles, ".companion-popover-shell.n-popover", "box-shadow: 0 6px 14px rgba(15, 23, 42, 0.045) !important");
     expectSelectorBody(styles, ".companion-popover-arrow", "border: 1px solid var(--border) !important");
     expect(ruleBodies(styles, ".companion-popover-shell.n-popover").join("\n")).not.toContain("#111");
     expect(ruleBodies(styles, ".companion-popover-arrow").join("\n")).not.toContain("#111");
@@ -89,7 +89,7 @@ describe("workbench style contract", () => {
     expect(ruleBodies(styles, ".image-preview").join("\n")).not.toContain("width: 90vw");
     expectSelectorBody(styles, ".preview-stage img", "max-width: calc(100vw - var(--image-preview-left, clamp(220px, 18vw, 320px)) - 32px)");
     expectSelectorBody(styles, ".workbench-grid", "position: relative");
-    expectSelectorBody(styles, ".workbench-grid", "grid-template-columns: minmax(160px, 0.15fr) minmax(160px, 0.2fr) minmax(320px, 0.35fr) minmax(320px, 0.3fr)");
+    expectSelectorBody(styles, ".workbench-grid", "grid-template-columns: minmax(160px, 0.15fr) minmax(320px, 0.2fr) minmax(320px, 0.35fr) minmax(320px, 0.3fr)");
     expectSelectorBody(styles, ".workbench-grid", "gap: 7px");
     expectSelectorBody(styles, ".workbench-grid", "padding: 7px");
     expectSelectorBody(styles, ".workbench-grid", "grid-row: 2");
@@ -122,7 +122,22 @@ describe("workbench style contract", () => {
     expectSelectorBody(styles, ".settings-trigger", "height: 32px");
     expectSelectorBody(styles, ".settings-btn.icon-button", "width: 32px");
     expectSelectorBody(styles, ".settings-btn.icon-button", "height: 32px");
+    expectSelectorBody(styles, ".icon-button .n-icon", "font-size: 16px");
+    expectSelectorBody(styles, ".icon-button svg", "font-size: 16px");
+    expectSelectorBody(styles, ".tool-tabs", "flex: 0 0 35px");
+    expectSelectorBody(styles, ".tool-tabs", "width: 35px");
+    expectSelectorBody(styles, ".tool-tabs", "min-width: 35px");
+    expectSelectorBody(styles, ".tool-tabs", "max-width: 35px");
     expectSelectorBody(styles, "button.tool-tab", "background: transparent");
+    expectSelectorBody(styles, ".tool-tab", "width: 34px");
+    expectSelectorBody(styles, ".tool-tab-icon", "flex: 0 0 16px");
+    expectSelectorBody(styles, ".tool-tab-icon", "width: 16px");
+    expectSelectorBody(styles, ".tool-tab-icon", "height: 16px");
+    expectSelectorBody(styles, ".tool-tab-icon", "font-size: 16px");
+    expectSelectorBody(styles, ".tool-tab-icon .n-icon", "font-size: 16px");
+    expectSelectorBody(styles, ".tool-tab-icon svg", "font-size: 16px");
+    expectSelectorBody(styles, ".tool-tab::after", "content: attr(data-tooltip)");
+    expectSelectorBody(styles, ".tool-tab:hover::after", "opacity: 1");
     expectSelectorBody(styles, ".tool-tab.is-active", "background: var(--button-hover)");
     expectSelectorBody(styles, "button.tool-tab.is-active", "background: var(--button-hover)");
     expectSelectorBody(styles, "button.quick-menu-button", "background: transparent");
@@ -133,5 +148,23 @@ describe("workbench style contract", () => {
     expectSelectorBody(styles, ".todo-collapse-button", "--n-color-hover: transparent !important");
     expectSelectorBody(styles, ".panel.is-focused", "box-shadow: none");
     expectSelectorBody(styles, ".todo-section.is-focused::before", "content: none");
+  });
+
+  it("keeps reminders and notification actions readable with shared visual tokens", () => {
+    const styles = readFileSync(resolve(__dirname, "../styles.css"), "utf8");
+
+    expect(ruleBodies(styles, ".todo-item .n-checkbox-box--checked")).toHaveLength(1);
+    expect(ruleBodies(styles, ".today-focus-item .n-checkbox-box--checked")).toHaveLength(1);
+    expectSelectorBody(styles, ".todo-item .n-checkbox-box--checked", "--n-color-checked: #22c55e !important");
+    expectSelectorBody(styles, ".today-focus-item .n-checkbox-box--checked", "--n-color-checked: #22c55e !important");
+    expectSelectorBody(styles, ".today-focus-item.is-done", "opacity: 1");
+    expectSelectorBody(styles, ".todo-item.is-done .n-checkbox", "opacity: 0.78");
+    expectSelectorBody(styles, ".today-focus-item.is-done .n-checkbox", "opacity: 0.78");
+    expectSelectorBody(styles, ".todo-item.is-done .todo-star-button.is-starred", "opacity: 0.78");
+    expectSelectorBody(styles, ".today-focus-item.is-done .todo-star-button.is-starred", "opacity: 0.78");
+    expectSelectorBody(styles, ".notify-panel-action.is-confirm", "color: var(--text)");
+    expectSelectorBody(styles, ".notify-panel-action.is-confirm", "background: var(--button-hover)");
+    expectSelectorBody(styles, ".n-time-picker-panel .n-button--primary-type", "--n-text-color: #111111 !important");
+    expectSelectorBody(styles, ".n-time-picker-panel .n-button--primary-type", "color: #111111 !important");
   });
 });

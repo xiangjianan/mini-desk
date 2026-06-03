@@ -17,6 +17,17 @@ const DEFAULT_TODO_TITLES: Record<AppLanguage, Record<string, string>> = {
 
 export const DEFAULT_SPACE_TITLES: Record<AppLanguage, Record<string, string>> = {
   zh: {
+    workspace: "备忘录",
+    storage: "工程文件",
+  },
+  en: {
+    workspace: "Memo",
+    storage: "Project Files",
+  },
+};
+
+const LEGACY_DEFAULT_SPACE_TITLES: Record<AppLanguage, Record<string, string>> = {
+  zh: {
     workspace: "工作空间",
     storage: "工程文件",
   },
@@ -29,26 +40,26 @@ export const DEFAULT_SPACE_TITLES: Record<AppLanguage, Record<string, string>> =
 export const DEFAULT_TITLES_BY_LANGUAGE: Record<AppLanguage, Record<string, string>> = {
   zh: {
     "image-title": "🎨 图床",
-    "note-title": "🔧 工具",
+    "note-title": "🔧 小工具",
     "quick-title": "⚡ 快捷动作",
     "today-focus-title": "重点事项",
     "todo-morning-title": "✅ 待办",
     "todo-noon-title": "💻 工作",
     "todo-evening-title": "📚 学习",
     "workspace-title": "📝 记事本.txt",
-    "tools-title": "🔧 工具",
+    "tools-title": "🔧 小工具",
     "storage-title": "🛠 双击可改名",
   },
   en: {
     "image-title": "🎨 Image Bed",
-    "note-title": "🔧 Tools",
+    "note-title": "🔧 Utilities",
     "quick-title": "⚡ Quick Actions",
     "today-focus-title": "Pinned Reminders",
     "todo-morning-title": "✅ To-Do",
     "todo-noon-title": "💻 Work",
     "todo-evening-title": "📚 Study",
-    "workspace-title": "📝 Notepad.txt",
-    "tools-title": "🔧 Tools",
+    "workspace-title": "📝 Memo.txt",
+    "tools-title": "🔧 Utilities",
     "storage-title": "🛠 Double-click to rename",
   },
 };
@@ -91,7 +102,7 @@ export const AREA_HELP_BY_LANGUAGE: Record<AppLanguage, Record<"images" | "note"
     note: "Tools: keep common utilities close at hand.",
     quickButtons: "Quick Actions: open links or copy text.",
     todos: "Reminders: double-click titles to rename.",
-    workspace: "Notepad: break work into steps.",
+    workspace: "Memo: break work into steps.",
     tools: "Tools: calculate, pick colors, encode text, and generate passwords.",
     storage: "Storage: keep long-lived reference material.",
   },
@@ -275,7 +286,7 @@ export const GUIDE_MESSAGES: Record<AppLanguage, Record<GuideKey, string[]>> = {
     note: [
       "Double-click the title to rename it.",
       "Try dropping external text here.",
-      "Try dragging workspace text into reminders.",
+      "Try dragging memo text into reminders.",
       "Edited text saves automatically after 3 seconds.",
       "Press Ctrl+S to save immediately.",
       "Right-click to copy selected text.",
@@ -301,7 +312,7 @@ export const GUIDE_MESSAGES: Record<AppLanguage, Record<GuideKey, string[]>> = {
       "Use the context menu to delete an entry.",
     ],
     todos: [
-      "Try dragging a reminder into the workspace.",
+      "Try dragging a reminder into the memo.",
       "Try dropping external text here.",
       "Drag reminders to reorder them.",
       "Drag a list name to reorder lists.",
@@ -315,9 +326,9 @@ export const GUIDE_MESSAGES: Record<AppLanguage, Record<GuideKey, string[]>> = {
       "Completed reminders can be shown or cleared.",
     ],
     workspace: [
-      "Try dragging workspace text into reminders.",
+      "Try dragging memo text into reminders.",
       "Double-click a space tab to rename it.",
-      "Drop external text here to capture it in the workspace.",
+      "Drop external text here to capture it in the memo.",
       "Edited text saves automatically after 3 seconds.",
       "Press Ctrl+S to save immediately.",
       "Press Tab to indent.",
@@ -326,7 +337,7 @@ export const GUIDE_MESSAGES: Record<AppLanguage, Record<GuideKey, string[]>> = {
       "Backspace on an empty indented line outdents it.",
       "Right-click to copy selected text.",
       "Right-click to paste text.",
-      "Use the workspace to break work into steps.",
+      "Use the memo to break work into steps.",
     ],
     tools: [
       "Use the left rail to switch tools.",
@@ -441,7 +452,7 @@ export const UI_TEXT = {
       customGifSet: "已设置自定义 GIF",
       importOverwrite: "覆盖导入",
       aboutTitle: "Mini Desk 看板",
-      aboutDescription: "一个本地优先的轻量工作台，把截图、TODO、快捷动作和工作空间缝合得恰到好处。\n所有操作均在本地浏览器完成，绝不上传您的任何数据。",
+      aboutDescription: "一个本地优先的轻量工作台，把截图、提醒事项、快捷动作和备忘录缝合得恰到好处。\n所有操作均在本地浏览器完成，绝不上传您的任何数据。",
       reminderFallback: "提醒事项",
     },
     settings: {
@@ -511,6 +522,16 @@ export const UI_TEXT = {
       list: "工具列表",
       emptyTips: "可用工具：计算器、进制转换、取色板、编解码、随机密码生成。点击左侧图标打开工具。",
       close: "关闭",
+      menu: "工具菜单",
+      configure: "配置",
+      configTitle: "工具配置",
+      tips: "Tips",
+      tipsGeneral: "可用工具：计算器用于四则运算；进制转换用于二进制、八进制、十进制、十六进制互转；取色板用于取色并复制 HEX/RGB/HSL；编解码用于 Base64 和 URL 编解码；随机密码生成用于按长度和字符类型生成密码。",
+      calculatorTips: "计算器：用于四则运算，支持 +、-、×、÷、%、小数和退格；输入表达式或点击按键后，按 = 得出结果。",
+      baseTips: "进制转换：选择源进制后输入数值，可同时查看二进制、八进制、十进制和十六进制结果，并可一键复制。",
+      colorTips: "取色板：可以手动选择颜色，支持浏览器取色笔，并提供 HEX、RGB、HSL 三种颜色值复制。",
+      codecTips: "编解码：用于 Base64 编码/解码和 URL 编码/解码，适合处理接口参数、链接片段和文本转义。",
+      passwordTips: "随机密码生成：设置长度和字符类型后生成密码；可以自定义特殊字符集，并一键复制结果。",
       calculator: "计算器",
       binaryBase: "二进制",
       octalBase: "八进制",
@@ -621,7 +642,7 @@ export const UI_TEXT = {
       mobileTitle: "Mini Desk",
       mobileHeading: "The desktop experience is more complete",
       mobileMessage: "Open this in a desktop browser for the full experience (｡•̀ᴗ-)✧",
-      mobileDescription: "This board is designed for desktop workflows to organize screenshots, notes, reminders, quick actions, and workspaces.",
+      mobileDescription: "This board is designed for desktop workflows to organize screenshots, notes, reminders, quick actions, and a memo.",
       saved: "Saved",
       saving: "Saving",
       dirty: "Unsaved changes",
@@ -640,7 +661,7 @@ export const UI_TEXT = {
       customGifSet: "Custom GIF set",
       importOverwrite: "Overwrite import",
       aboutTitle: "Mini Desk",
-      aboutDescription: "A local-first lightweight workspace for organizing screenshots, notes, reminders, quick actions, and workspaces.\nEverything happens in your local browser. None of your data is ever uploaded.",
+      aboutDescription: "A local-first lightweight desk for organizing screenshots, reminders, quick actions, and a memo.\nEverything happens in your local browser. None of your data is ever uploaded.",
       reminderFallback: "Reminders",
     },
     settings: {
@@ -710,6 +731,16 @@ export const UI_TEXT = {
       list: "Tool list",
       emptyTips: "Available tools: Calculator, Base conversion, Color, Codec, and Password Generator. Click an icon on the left to open a tool.",
       close: "Close",
+      menu: "Tools menu",
+      configure: "Configure",
+      configTitle: "Tool configuration",
+      tips: "Tips",
+      tipsGeneral: "Available tools: Calculator for arithmetic; Base conversion for binary, octal, decimal, and hexadecimal values; Color for picking and copying HEX/RGB/HSL; Codec for Base64 and URL transforms; Password Generator for length and character-type based passwords.",
+      calculatorTips: "Calculator: use it for arithmetic with +, -, ×, ÷, %, decimals, and backspace. Type an expression or click keys, then press = for the result.",
+      baseTips: "Base conversion: choose the source base, enter a value, then read binary, octal, decimal, and hexadecimal outputs with one-click copy.",
+      colorTips: "Color: pick a color manually or with the browser eyedropper, then copy HEX, RGB, or HSL values.",
+      codecTips: "Codec: encode/decode Base64 and URL text for API parameters, links, and escaped snippets.",
+      passwordTips: "Password Generator: choose length and character types, customize symbols when needed, then copy the generated password.",
       calculator: "Calculator",
       binaryBase: "Binary",
       octalBase: "Octal",
@@ -866,7 +897,7 @@ function isDefaultTodoListTitle(id: string, title: string): boolean {
 }
 
 function isDefaultSpaceTitle(id: string, title: string): boolean {
-  return Object.values(DEFAULT_SPACE_TITLES).some((titles) => titles[id] === title);
+  return [...Object.values(DEFAULT_SPACE_TITLES), ...Object.values(LEGACY_DEFAULT_SPACE_TITLES)].some((titles) => titles[id] === title);
 }
 
 export const SHORTCUT_HELP: Record<AppLanguage, { area: string; shortcuts: { key: string; desc: string }[] }[]> = {

@@ -5,6 +5,7 @@ import { NDropdown, NIcon, NScrollbar, NSlider } from "naive-ui";
 import type { DropdownOption } from "naive-ui";
 import {
   CalculatorOutline,
+  BulbOutline,
   CloseOutline,
   CodeSlashOutline,
   ColorPaletteOutline,
@@ -12,6 +13,7 @@ import {
   EyedropOutline,
   KeyOutline,
   RefreshOutline,
+  SettingsOutline,
   SwapHorizontalOutline,
 } from "@vicons/ionicons5";
 import type { AppLanguage, ThemeMode } from "../types";
@@ -26,9 +28,11 @@ type EyeDropperConstructor = new () => { open: () => Promise<EyeDropperResult> }
 type ToolTab = { id: ToolId; label: string; icon: Component };
 type CalculatorKey = { label: string; value: string; testId: string; kind?: "operator" | "utility" | "equals" };
 type RgbColor = { r: number; g: number; b: number };
-type ToolMenu = { x: number; y: number; toolId: ToolId };
+type ToolMenu = { x: number; y: number; toolId: ToolId | null };
+type ToolPanelMenu = { x: number; y: number };
 
 const ACTIVE_TOOL_STORAGE_KEY = "todo-board-active-tool";
+const HIDDEN_TOOLS_STORAGE_KEY = "todo-board-hidden-tools";
 const TOOL_IDS = ["calculator", "base", "color", "codec", "password"] as const;
 const COMMON_BASES = [2, 8, 10, 16] as const;
 const DEFAULT_PASSWORD_SYMBOLS_TEXT = "!@#$%^&*_-+=?";
@@ -57,8 +61,13 @@ const emit = defineEmits<{
 const uiText = computed(() => getUiText(props.language));
 const panelRef = ref<HTMLElement | null>(null);
 const titleRef = ref<{ openMenuAt: (x: number, y: number, event?: Event) => void } | null>(null);
+const toolPanelMenuButtonRef = ref<HTMLElement | null>(null);
+const toolConfigPanelRef = ref<HTMLElement | null>(null);
 const activeToolId = ref<ToolId | null>(readStoredActiveToolId());
+const hiddenToolIds = ref<Set<ToolId>>(readStoredHiddenToolIds());
 const toolMenu = ref<ToolMenu | null>(null);
+const toolPanelMenu = ref<ToolPanelMenu | null>(null);
+const toolConfigVisible = ref(false);
 const panelClasses = computed(() => ({
   panel: !props.split,
   "split-block": props.split,
@@ -85,8 +94,15 @@ const passwordOptions = reactive({
 });
 const passwordSymbolSet = ref(DEFAULT_PASSWORD_SYMBOLS_TEXT);
 
-onMounted(exclusiveToolMenu.mount);
-onUnmounted(exclusiveToolMenu.unmount);
+onMounted(() => {
+  exclusiveToolMenu.mount();
+  document.addEventListener("pointerdown", handleToolConfigOutsidePointerDown);
+});
+
+onUnmounted(() => {
+  exclusiveToolMenu.unmount();
+  document.removeEventListener("pointerdown", handleToolConfigOutsidePointerDown);
+});
 
 watch(() => props.theme, (theme) => {
   if (isDefaultThemeColor(colorValue.value)) colorValue.value = getDefaultColorForTheme(theme);
@@ -100,9 +116,12 @@ const tools = computed<ToolTab[]>(() => [
   { id: "password", label: uiText.value.tools.password, icon: KeyOutline },
 ]);
 
-const activeTool = computed(() => activeToolId.value ? tools.value.find((tool) => tool.id === activeToolId.value) ?? null : null);
+const visibleTools = computed<ToolTab[]>(() => tools.value.filter((tool) => !hiddenToolIds.value.has(tool.id)));
+const activeTool = computed(() => activeToolId.value ? visibleTools.value.find((tool) => tool.id === activeToolId.value) ?? null : null);
 const toolMenuOptions = computed<DropdownOption[]>(() => [
-  { label: uiText.value.tools.close, key: "close", icon: renderIcon(CloseOutline) },
+  { label: uiText.value.tools.close, key: "close", disabled: !activeToolId.value, icon: renderIcon(CloseOutline) },
+  { label: uiText.value.tools.configure, key: "configure", icon: renderIcon(SettingsOutline) },
+  { label: uiText.value.tools.tips, key: "tips", icon: renderIcon(BulbOutline) },
 ]);
 const baseOptions = computed(() => [
   { value: "2", label: uiText.value.tools.binaryBase },
@@ -175,12 +194,34 @@ function readStoredActiveToolId(): ToolId | null {
   }
 }
 
+function readStoredHiddenToolIds(): Set<ToolId> {
+  try {
+    if (typeof localStorage === "undefined") return new Set();
+    const parsed = JSON.parse(localStorage.getItem(HIDDEN_TOOLS_STORAGE_KEY) ?? "[]");
+    if (!Array.isArray(parsed)) return new Set();
+    const ids = parsed.filter(isToolId);
+    return ids.length >= TOOL_IDS.length ? new Set() : new Set(ids);
+  } catch {
+    return new Set();
+  }
+}
+
 function storeActiveToolId(id: ToolId | null): void {
   try {
     if (typeof localStorage === "undefined") return;
     localStorage.setItem(ACTIVE_TOOL_STORAGE_KEY, id ?? "");
   } catch {
     // Local storage may be blocked; the tool can still be used for this session.
+  }
+}
+
+function storeHiddenToolIds(ids: ReadonlySet<ToolId>): void {
+  try {
+    if (typeof localStorage === "undefined") return;
+    const orderedIds = TOOL_IDS.filter((id) => ids.has(id));
+    localStorage.setItem(HIDDEN_TOOLS_STORAGE_KEY, JSON.stringify(orderedIds));
+  } catch {
+    // Layout storage is optional; all tools stay available for this session.
   }
 }
 
@@ -206,7 +247,7 @@ function isDefaultThemeColor(value: string): boolean {
 function showEmptyToolTips(event: MouseEvent): void {
   if (activeToolId.value) return;
   if ((event.target as HTMLElement).closest(".tool-tabs")) return;
-  notifyToolMessage(uiText.value.tools.emptyTips);
+  notifyToolMessage(getToolTipsMessage(null));
 }
 
 function getToolMessageMood(message: string): MessageMood {
@@ -237,6 +278,7 @@ function handleFocusOut(event: FocusEvent): void {
 }
 
 function selectTool(id: ToolId): void {
+  if (hiddenToolIds.value.has(id)) return;
   const previousToolId = activeToolId.value;
   activeToolId.value = id;
   storeActiveToolId(id);
@@ -244,7 +286,57 @@ function selectTool(id: ToolId): void {
   if (previousToolId !== id) emit("dismissMessage");
 }
 
-function openToolMenu(event: MouseEvent, id: ToolId): void {
+function openToolPanelMenu(event: MouseEvent): void {
+  event.preventDefault();
+  event.stopPropagation();
+  closeToolMenu();
+  toolPanelMenu.value = { x: event.clientX, y: event.clientY };
+}
+
+function closeToolPanelMenu(): void {
+  toolPanelMenu.value = null;
+}
+
+function handleToolPanelMenuSelect(key: string): void {
+  handleToolActionSelect(key, activeToolId.value);
+  closeToolPanelMenu();
+}
+
+function handleToolConfigOutsidePointerDown(event: PointerEvent): void {
+  if (!toolConfigVisible.value) return;
+  const target = event.target;
+  if (!(target instanceof Node)) return;
+  if (toolConfigPanelRef.value?.contains(target)) return;
+  if (toolPanelMenuButtonRef.value?.contains(target)) return;
+  toolConfigVisible.value = false;
+}
+
+function isToolVisible(id: ToolId): boolean {
+  return !hiddenToolIds.value.has(id);
+}
+
+function canHideTool(id: ToolId): boolean {
+  return !isToolVisible(id) || visibleTools.value.length > 1;
+}
+
+function toggleToolVisibility(id: ToolId, visible: boolean): void {
+  const nextHidden = new Set(hiddenToolIds.value);
+  if (visible) {
+    nextHidden.delete(id);
+  } else {
+    if (!canHideTool(id)) return;
+    nextHidden.add(id);
+  }
+  hiddenToolIds.value = nextHidden;
+  storeHiddenToolIds(nextHidden);
+  if (activeToolId.value && nextHidden.has(activeToolId.value)) {
+    const nextActiveToolId = TOOL_IDS.find((toolId) => !nextHidden.has(toolId)) ?? null;
+    activeToolId.value = nextActiveToolId;
+    storeActiveToolId(nextActiveToolId);
+  }
+}
+
+function openToolMenu(event: MouseEvent, id: ToolId | null): void {
   event.preventDefault();
   event.stopPropagation();
   const replacingExistingMenu = Boolean(toolMenu.value);
@@ -253,7 +345,6 @@ function openToolMenu(event: MouseEvent, id: ToolId): void {
 }
 
 function openActiveToolMenu(event: MouseEvent): void {
-  if (!activeToolId.value) return;
   const target = event.target as HTMLElement;
   if (!isBlankToolContextTarget(target)) return;
   openToolMenu(event, activeToolId.value);
@@ -272,11 +363,31 @@ function closeToolMenu(): void {
 }
 
 function handleToolMenuSelect(key: string): void {
-  if (key === "close") {
+  handleToolActionSelect(key, toolMenu.value?.toolId ?? activeToolId.value);
+  closeToolMenu();
+}
+
+function handleToolActionSelect(key: string, contextToolId: ToolId | null): void {
+  if (key === "close" && activeToolId.value) {
     activeToolId.value = null;
     storeActiveToolId(null);
   }
-  closeToolMenu();
+  if (key === "configure") {
+    toolConfigVisible.value = true;
+  }
+  if (key === "tips") {
+    notifyToolMessage(getToolTipsMessage(contextToolId));
+  }
+}
+
+function getToolTipsMessage(id: ToolId | null): string {
+  const tips = uiText.value.tools;
+  if (id === "calculator") return tips.calculatorTips;
+  if (id === "base") return tips.baseTips;
+  if (id === "color") return tips.colorTips;
+  if (id === "codec") return tips.codecTips;
+  if (id === "password") return tips.passwordTips;
+  return tips.tipsGeneral;
 }
 
 function calculateExpression(): void {
@@ -637,13 +748,51 @@ function copyTextWithBrowserCommand(value: string): boolean {
           @update="(id, value) => emit('titleUpdate', id, value)"
         />
       </h2>
-      <span class="count">{{ activeTool?.label ?? "" }}</span>
+      <span class="count tool-active-title">
+        <NIcon v-if="activeTool" class="tool-active-title-icon" :component="activeTool.icon" aria-hidden="true" />
+        <span class="tool-active-title-text">{{ activeTool?.label ?? "" }}</span>
+      </span>
+      <button
+        ref="toolPanelMenuButtonRef"
+        type="button"
+        class="tool-panel-menu-button icon-button"
+        :aria-label="uiText.tools.menu"
+        :title="uiText.tools.menu"
+        @click="openToolPanelMenu"
+      >
+        ⋯
+      </button>
     </div>
+
+    <section v-if="toolConfigVisible" ref="toolConfigPanelRef" class="tool-config-panel" :aria-label="uiText.tools.configTitle">
+      <div class="tool-config-heading">
+        <span>{{ uiText.tools.configTitle }}</span>
+        <button
+          type="button"
+          class="tool-config-close icon-button"
+          :aria-label="uiText.tools.close"
+          :title="uiText.tools.close"
+          @click="toolConfigVisible = false"
+        >
+          ×
+        </button>
+      </div>
+      <label v-for="tool in tools" :key="tool.id" class="tool-config-row">
+        <input
+          type="checkbox"
+          :data-testid="`tool-toggle-${tool.id}`"
+          :checked="isToolVisible(tool.id)"
+          :disabled="isToolVisible(tool.id) && !canHideTool(tool.id)"
+          @change="toggleToolVisibility(tool.id, ($event.target as HTMLInputElement).checked)"
+        />
+        <span>{{ tool.label }}</span>
+      </label>
+    </section>
 
     <div class="tool-workbench" @click="showEmptyToolTips" @contextmenu.capture="openActiveToolMenu">
       <nav class="tool-tabs" role="tablist" :aria-label="uiText.tools.list">
         <button
-          v-for="tool in tools"
+          v-for="tool in visibleTools"
           :key="tool.id"
           class="tool-tab"
           :class="{ 'is-active': activeToolId === tool.id }"
@@ -652,6 +801,7 @@ function copyTextWithBrowserCommand(value: string): boolean {
           :aria-selected="activeToolId === tool.id"
           :aria-label="tool.label"
           :title="tool.label"
+          :data-tooltip="tool.label"
           @click="selectTool(tool.id)"
           @contextmenu="openToolMenu($event, tool.id)"
         >
@@ -834,6 +984,25 @@ function copyTextWithBrowserCommand(value: string): boolean {
       </div>
       </NScrollbar>
     </div>
+
+    <NDropdown
+      v-if="toolPanelMenu"
+      placement="bottom-start"
+      trigger="manual"
+      :show="true"
+      :x="toolPanelMenu.x"
+      :y="toolPanelMenu.y"
+      :z-index="CONTEXT_MENU_Z_INDEX"
+      :options="toolMenuOptions"
+      @select="handleToolPanelMenuSelect"
+      @clickoutside="closeToolPanelMenu"
+    >
+      <span
+        class="dropdown-anchor"
+        :style="{ left: `${toolPanelMenu.x}px`, top: `${toolPanelMenu.y}px` }"
+        aria-hidden="true"
+      />
+    </NDropdown>
 
     <NDropdown
       v-if="toolMenu"

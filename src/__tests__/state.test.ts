@@ -37,7 +37,7 @@ describe("state compatibility", () => {
     expect(state.spaces).toEqual([
       {
         id: "workspace",
-        title: "工作空间",
+        title: "备忘录",
         lines: [
           { text: "alpha", indent: 0 },
           { text: "beta", indent: 1 },
@@ -56,7 +56,7 @@ describe("state compatibility", () => {
     const state = defaultState();
 
     expect(state.language).toBe("zh");
-    expect(state.spaces).toEqual([{ id: "workspace", title: "工作空间", lines: [] }]);
+    expect(state.spaces).toEqual([{ id: "workspace", title: "备忘录", lines: [] }]);
     expect(state.activeSpaceId).toBe("workspace");
     expect(state.showCompletedTodos).toEqual({ morning: false, noon: false, evening: false });
   });

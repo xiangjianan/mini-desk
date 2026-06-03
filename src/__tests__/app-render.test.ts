@@ -160,11 +160,11 @@ describe("App shell", () => {
     expect(wrapper.find('[aria-label="工作区与工具"]').exists()).toBe(true);
     expect(wrapper.find('[aria-label="Mini Desk"]').exists()).toBe(false);
     expect(wrapper.text()).toContain("🎨 图床");
-    expect(wrapper.text()).toContain("🔧 工具");
+    expect(wrapper.text()).toContain("🔧 小工具");
     expect(wrapper.text()).toContain("快捷动作");
     expect(wrapper.text()).toContain("✅ 待办");
-    expect(wrapper.text()).toContain("工作空间");
-    expect(wrapper.findAll(".space-tab").map((tab) => tab.text())).toEqual(["工作空间"]);
+    expect(wrapper.text()).toContain("备忘录");
+    expect(wrapper.findAll(".space-tab").map((tab) => tab.text())).toEqual(["备忘录"]);
     expect(wrapper.findAll(".tool-tab").map((tab) => tab.text().trim())).toEqual(["", "", "", "", ""]);
     expect(wrapper.findAll(".tool-tab").map((tab) => tab.attributes("aria-label"))).toEqual(["计算器", "进制转换", "取色板", "编解码", "随机密码生成"]);
     expect(wrapper.find('[data-testid="workbench-theme"]').exists()).toBe(true);
@@ -193,15 +193,32 @@ describe("App shell", () => {
 
       expect(wrapper.text()).toContain("Image Bed");
       expect(wrapper.text()).toContain("我的便签");
+      expect(wrapper.text()).not.toContain("🔧 Utilities");
       expect(wrapper.text()).toContain("Quick Actions");
       expect(wrapper.text()).toContain("To-Do");
       expect(wrapper.text()).toContain("Work");
       expect(wrapper.text()).toContain("Study");
-      expect(wrapper.findAll(".space-tab").map((tab) => tab.text())).toEqual(["Workspace"]);
+      expect(wrapper.findAll(".space-tab").map((tab) => tab.text())).toEqual(["Memo"]);
       expect(wrapper.findAll(".tool-tab").map((tab) => tab.text().trim())).toEqual(["", "", "", "", ""]);
       expect(wrapper.findAll(".tool-tab").map((tab) => tab.attributes("aria-label"))).toEqual(["Calculator", "Base conversion", "Color", "Codec", "Password Generator"]);
       expect(wrapper.text()).not.toContain("快捷动作");
       expect(JSON.parse(localStorage.getItem(STORAGE_KEY) || "{}").language).toBe("en");
+    } finally {
+      wrapper.unmount();
+    }
+  });
+
+  it("switches the default tools title to English", async () => {
+    localStorage.setItem(STORAGE_KEY, JSON.stringify(defaultState()));
+    const wrapper = mountApp();
+
+    try {
+      wrapper.getComponent(SettingsMenu).vm.$emit("language", "en", wrapper.get(".settings-trigger").element as HTMLElement);
+      await nextTick();
+
+      expect(wrapper.text()).toContain("🔧 Utilities");
+      expect(wrapper.text()).not.toContain("🔧 工具");
+      expect(wrapper.text()).not.toContain("🔧 小工具");
     } finally {
       wrapper.unmount();
     }
@@ -3059,7 +3076,7 @@ describe("App shell", () => {
       await wrapper.vm.$nextTick();
 
       expect(wrapper.find('[data-testid="companion-confirm"]').text()).toContain("Mini Desk 看板");
-      expect(wrapper.find('[data-testid="companion-confirm"]').text()).toContain("把截图、TODO、快捷动作和工作空间缝合得恰到好处");
+      expect(wrapper.find('[data-testid="companion-confirm"]').text()).toContain("把截图、提醒事项、快捷动作和备忘录缝合得恰到好处");
       expect(wrapper.find('[data-testid="companion-confirm"]').text()).toContain("所有操作均在本地浏览器完成，绝不上传您的任何数据。");
       expect(wrapper.find('[data-testid="companion-confirm"]').text()).not.toContain("云霞 · 产品");
       expect(wrapper.find('[data-testid="companion-confirm"]').text()).not.toContain("佳男 · 开发");
@@ -3070,6 +3087,34 @@ describe("App shell", () => {
       expect(wrapper.find('[data-testid="companion-confirm"]').text()).toContain("xiangjianan / todolist");
       expect(wrapper.get('[data-testid="companion-link"]').attributes("href")).toBe("https://github.com/xiangjianan/todolist");
       expect(wrapper.get('[data-testid="companion-link"]').attributes("target")).toBe("_blank");
+    } finally {
+      wrapper.unmount();
+      vi.useRealTimers();
+    }
+  });
+
+  it("shows the localized English about copy with memo wording", async () => {
+    vi.useFakeTimers();
+    vi.spyOn(Math, "random").mockReturnValue(0);
+    localStorage.setItem(STORAGE_KEY, JSON.stringify({
+      ...defaultState(),
+      language: "en",
+    }));
+    const wrapper = mountApp();
+
+    try {
+      const settings = wrapper.getComponent(SettingsMenu);
+      settings.vm.$emit("about", settings.element as HTMLElement);
+      await wrapper.vm.$nextTick();
+
+      await vi.advanceTimersByTimeAsync(200);
+      await wrapper.vm.$nextTick();
+
+      const aboutText = wrapper.find('[data-testid="companion-confirm"]').text();
+      expect(aboutText).toContain("Mini Desk");
+      expect(aboutText).toContain("screenshots, reminders, quick actions, and a memo");
+      expect(aboutText).toContain("Everything happens in your local browser. None of your data is ever uploaded.");
+      expect(aboutText).not.toContain("workspaces");
     } finally {
       wrapper.unmount();
       vi.useRealTimers();

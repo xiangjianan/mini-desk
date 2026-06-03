@@ -374,7 +374,7 @@ describe("Naive UI component usage", () => {
     expect(styles).toMatch(/\.n-dropdown-menu,[\s\S]*?\.shortcut-help-modal\.n-card\s*\{[^}]*border: 1px solid var\(--border\) !important/s);
     expect(styles).toMatch(/\.n-dropdown-menu,[\s\S]*?\.shortcut-help-modal\.n-card\s*\{[^}]*background: var\(--popover\) !important/s);
     expect(styles).toMatch(/\.n-dropdown-menu,[\s\S]*?\.shortcut-help-modal\.n-card\s*\{[^}]*color: var\(--popover-foreground\) !important/s);
-    expect(styles).toMatch(/\.n-dropdown-menu,[\s\S]*?\.shortcut-help-modal\.n-card\s*\{[^}]*box-shadow: 0 10px 24px rgba\(15, 23, 42, 0\.08\) !important/s);
+    expect(styles).toMatch(/\.n-dropdown-menu,[\s\S]*?\.shortcut-help-modal\.n-card\s*\{[^}]*box-shadow: 0 6px 14px rgba\(15, 23, 42, 0\.045\) !important/s);
     expect(contextMenu).toContain("export const CONTEXT_MENU_Z_INDEX = 3400");
     expect(companion).toContain(':z-index="3300"');
     for (const file of dropdownFiles) {
@@ -410,11 +410,14 @@ describe("Naive UI component usage", () => {
     expect(i18n).toContain('today: "今天"');
     expect(todo).not.toContain('此刻');
     expect(todo).toContain("uiText.common.confirm");
+    expect(todo).toContain("notify-panel-action is-confirm");
     expect(todo).not.toContain('class="deadline-editor notify-editor"');
     expect(todo).not.toContain("notify-calendar-grid");
     expect(todo).not.toContain("notify-clock-options");
     expect(styles).toMatch(/\.notify-floating-date-picker\s*\{[^}]*position: fixed/s);
     expect(styles).toMatch(/\.notify-floating-date-picker\s*\{[^}]*border: 1px solid var\(--line-main\)/s);
+    expect(styles).toMatch(/\.notify-panel-action\.is-confirm\s*\{[^}]*color: var\(--text\)/s);
+    expect(styles).toMatch(/\.notify-panel-action\.is-confirm\s*\{[^}]*background: var\(--button-hover\)/s);
     expect(styles).toMatch(/\.todo-notify-button\s*\{[^}]*align-items: center/s);
     expect(styles).not.toContain(".notify-editor");
     expect(styles).not.toContain(".deadline-editor-actions");
@@ -597,7 +600,7 @@ describe("Naive UI component usage", () => {
     expect(styles).toContain("@keyframes companion-pop");
     expect(styles).toMatch(/\.companion-popover\s*\{[^}]*animation: companion-pop/s);
     expect(styles).toMatch(/\.companion-popover\s*\{[^}]*transform-origin: right bottom/s);
-    expect(styles).toMatch(/\.companion-popover-shell\.n-popover\s*\{[^}]*box-shadow: 0 10px 24px rgba\(15, 23, 42, 0\.08\) !important/s);
+    expect(styles).toMatch(/\.companion-popover-shell\.n-popover\s*\{[^}]*box-shadow: 0 6px 14px rgba\(15, 23, 42, 0\.045\) !important/s);
     expect(styles).toMatch(/\.companion-popover-shell\.n-popover\s*\{[^}]*border: 1px solid var\(--border\) !important/s);
     expect(styles).toMatch(/\.companion-popover-shell\.n-popover\s*\{[^}]*background: var\(--popover\) !important/s);
     expect(styles).toMatch(/\.companion-popover-arrow\s*\{[^}]*box-shadow: none/s);

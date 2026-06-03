@@ -11,11 +11,14 @@ import { Badge } from "./ui/badge";
 import { Button } from "./ui/button";
 import type { ThemeMode } from "../types";
 
-defineProps<{
+withDefaults(defineProps<{
   title: string;
   saveStatusLabel: string;
   theme: ThemeMode;
-}>();
+  slogan?: string;
+}>(), {
+  slogan: "",
+});
 
 const emit = defineEmits<{
   theme: [];
@@ -34,7 +37,7 @@ const DESKTOP_RESIZE_BREAKPOINT = 1180;
 const WORKBENCH_WIDTH_STORAGE_KEY = "todo-board-workbench-widths";
 const WORKBENCH_HEADER_STORAGE_KEY = "todo-board-workbench-header-hidden";
 const DEFAULT_COLUMN_WEIGHTS = [0.15, 0.2, 0.35, 0.3] as const;
-const MIN_COLUMN_WIDTHS = [160, 160, 320, 320] as const;
+const MIN_COLUMN_WIDTHS = [160, 320, 320, 320] as const;
 const DEFAULT_GRID_GAP = 7;
 const DEFAULT_GRID_PADDING_X = 7;
 const DEFAULT_GRID_PADDING_Y = 7;
@@ -143,29 +146,20 @@ function readGridMetrics(): { rect: DOMRect; contentWidth: number } | undefined 
 
 function fitColumnsToWidth(width: number, currentWidths?: readonly number[]): number[] {
   if (width <= 0) return [];
-  if (width <= MIN_COLUMN_WIDTHS.reduce((sum, value) => sum + value, 0)) {
+  const minTotal = MIN_COLUMN_WIDTHS.reduce((sum, value) => sum + value, 0);
+  if (width <= minTotal) {
     return [...MIN_COLUMN_WIDTHS];
   }
 
   const source = currentWidths?.length === 4 ? currentWidths : DEFAULT_COLUMN_WEIGHTS;
-  const sourceTotal = source.reduce((sum, value) => sum + value, 0);
-  let widths = source.map((value, index) => Math.max(MIN_COLUMN_WIDTHS[index], (value / sourceTotal) * width));
-  let delta = widths.reduce((sum, value) => sum + value, 0) - width;
-
-  while (Math.abs(delta) > 0.5) {
-    const adjustable = widths
-      .map((value, index) => ({ index, room: value - MIN_COLUMN_WIDTHS[index] }))
-      .filter((item) => item.room > 0.5);
-    if (adjustable.length === 0) break;
-    const share = delta / adjustable.length;
-    for (const item of adjustable) {
-      const reduction = Math.min(item.room, share);
-      widths[item.index] -= reduction;
-    }
-    delta = widths.reduce((sum, value) => sum + value, 0) - width;
-  }
-
-  return widths;
+  const sourceWeights = source.map((value, index) => currentWidths?.length === 4 ? Math.max(0, value - MIN_COLUMN_WIDTHS[index]) : value);
+  const effectiveWeights = sourceWeights.reduce((sum, value) => sum + value, 0) > 0 ? sourceWeights : [...DEFAULT_COLUMN_WEIGHTS];
+  const sourceTotal = effectiveWeights.reduce((sum, value) => sum + value, 0);
+  const remainingDelta = width - minTotal;
+  return MIN_COLUMN_WIDTHS.map((minWidth, index) => {
+    const weight = effectiveWeights[index];
+    return minWidth + (remainingDelta * weight) / sourceTotal;
+  });
 }
 
 function syncImagePreviewLeft(): void {
@@ -311,6 +305,7 @@ onUnmounted(() => {
             <slot name="status">
               <Badge variant="secondary" data-testid="workbench-save-status">{{ saveStatusLabel }}</Badge>
             </slot>
+            <p v-if="slogan" class="workbench-slogan">{{ slogan }}</p>
           </div>
           <div class="workbench-command-actions">
             <Button

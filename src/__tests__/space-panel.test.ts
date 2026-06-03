@@ -42,6 +42,16 @@ function mountSpacePanel(spaces: WorkspaceSpace[], activeSpaceId = spaces[0].id)
   });
 }
 
+function ruleBodies(styles: string, selector: string): string[] {
+  const bodies: string[] = [];
+  const regex = /([^{}]+)\{([^{}]*)\}/g;
+  for (const match of styles.matchAll(regex)) {
+    const selectors = match[1].split(",").map((part) => part.trim());
+    if (selectors.includes(selector)) bodies.push(match[2]);
+  }
+  return bodies;
+}
+
 describe("SpacePanel", () => {
   it("renders tabs, switches spaces, and creates new spaces", async () => {
     const wrapper = mountSpacePanel([
@@ -245,20 +255,24 @@ describe("SpacePanel", () => {
   it("keeps a newly committed tab from flashing during the edit-to-label swap", () => {
     const source = readFileSync(resolve(__dirname, "../components/SpacePanel.vue"), "utf8");
     const styles = readFileSync(resolve(__dirname, "../styles.css"), "utf8");
-    const shellRule = styles.match(/\.space-tab-edit-shell\s*\{([\s\S]*?)\}/)?.[1] ?? "";
-    const measureRule = styles.match(/\.space-tab-edit-measure\s*\{([\s\S]*?)\}/)?.[1] ?? "";
-    const inputRule = styles.match(/\.space-tab-edit-input\s*\{([\s\S]*?)\}/)?.[1] ?? "";
+    const shellRule = ruleBodies(styles, ".space-tab-edit-shell").join("\n");
+    const measureRule = ruleBodies(styles, ".space-tab-edit-measure").join("\n");
+    const inputRule = ruleBodies(styles, ".space-tab-edit-input").join("\n");
 
     expect(source).toContain("suppressTabCommitTransition");
     expect(source).toContain("is-committing-tab");
     expect(source).toContain("space-tab-edit-shell");
     expect(source).toContain("space-tab-edit-measure");
-    expect(shellRule).toContain("flex: 0 0 auto");
+    expect(shellRule).toContain("flex: 0 0 var(--space-tab-edit-width, auto)");
+    expect(shellRule).toContain("width: var(--space-tab-edit-width, auto)");
     expect(shellRule).toContain("min-width: 84px");
     expect(shellRule).toContain("max-width: 180px");
     expect(shellRule).toContain("display: grid");
     expect(measureRule).toContain("visibility: hidden");
     expect(measureRule).toContain("white-space: pre");
+    expect(inputRule).toContain("position: absolute");
+    expect(inputRule).toContain("inset: 0");
+    expect(inputRule).toContain("box-sizing: border-box");
     expect(inputRule).toContain("width: 100%");
     expect(inputRule).toContain("min-width: 0");
     expect(inputRule).not.toContain("width: 84px");
@@ -278,6 +292,39 @@ describe("SpacePanel", () => {
 
     expect(wrapper.get(".space-tab-edit-measure").text()).toBe("一个很长的工作空间标签");
     wrapper.unmount();
+  });
+
+  it("locks the edit shell to the clicked tab width before replacing the tab label", async () => {
+    const originalRect = HTMLElement.prototype.getBoundingClientRect;
+    HTMLElement.prototype.getBoundingClientRect = function getMockRect() {
+      if (this instanceof HTMLElement && this.classList.contains("space-tab")) {
+        return {
+          x: 0,
+          y: 0,
+          left: 0,
+          top: 0,
+          right: 137,
+          bottom: 34,
+          width: 137,
+          height: 34,
+          toJSON: () => ({}),
+        } as DOMRect;
+      }
+      return originalRect.call(this);
+    };
+    const wrapper = mountSpacePanel([
+      { id: "workspace", title: "一个会被截断的工作空间标签", lines: [] },
+      { id: "project", title: "项目", lines: [] },
+    ]);
+
+    try {
+      await wrapper.findAll(".space-tab")[0].trigger("dblclick");
+
+      expect(wrapper.get(".space-tab-edit-shell").attributes("style") ?? "").toContain("--space-tab-edit-width: 137px");
+    } finally {
+      wrapper.unmount();
+      HTMLElement.prototype.getBoundingClientRect = originalRect;
+    }
   });
 
   it("keeps workspace tab drags off the plain-text payload", async () => {

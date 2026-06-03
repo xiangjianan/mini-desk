@@ -717,7 +717,7 @@ export const MESSAGE_CATALOG: Record<MessageKey, MessageEntry> = {
     variants: [
       [
         "Mini Desk 看板",
-        "一个本地优先的轻量工作台，把截图、TODO、快捷动作和工作空间缝合得恰到好处。",
+        "一个本地优先的轻量工作台，把截图、提醒事项、快捷动作和备忘录缝合得恰到好处。",
         "所有操作均在本地浏览器完成，绝不上传您的任何数据。",
       ].join("\n"),
     ],
@@ -748,7 +748,7 @@ const EN_MESSAGE_VARIANTS = {
   deleteImage: ["Image deleted", "Screenshot removed", "Image removed from the list"],
   deleteQuick: ["Shortcut deleted", "Quick entry removed", "Shortcut removed"],
   deleteTodo: ["Reminder deleted", "Reminder removed", "Item deleted"],
-  deleteSpace: ["Space deleted", "Workspace removed", "Space removed"],
+  deleteSpace: ["Space deleted", "Memo removed", "Space removed"],
   clearCompleted: ["Completed reminders cleared", "Completed items removed", "Done items cleared"],
   importJsonInvalid: ["Invalid JSON file", "Could not read that JSON", "Choose a valid board backup"],
   importDataInvalid: ["Import data does not match this board", "Invalid board backup", "That backup cannot be imported"],
@@ -769,7 +769,7 @@ const EN_MESSAGE_VARIANTS = {
   about: [
     [
       "Mini Desk",
-      "A local-first lightweight workspace for organizing screenshots, notes, reminders, quick links, and workspaces.",
+      "A local-first lightweight desk for organizing screenshots, reminders, quick links, and a memo.",
       "Everything happens in your local browser. None of your data is ever uploaded.",
     ].join("\n"),
   ],

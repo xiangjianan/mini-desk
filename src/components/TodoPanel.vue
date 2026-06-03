@@ -1395,7 +1395,7 @@ function buildTodoListEntries(period: TodoListId, todos: TodoItem[], deferredDon
               <button class="notify-panel-action" type="button" @click="setNotifyPickerDraftToToday">{{ uiText.todo.today }}</button>
             </template>
             <template #confirm="{ onConfirm, disabled }">
-              <button class="notify-panel-action" type="button" :disabled="disabled" @click="onConfirm">{{ uiText.common.confirm }}</button>
+              <button class="notify-panel-action is-confirm" type="button" :disabled="disabled" @click="onConfirm">{{ uiText.common.confirm }}</button>
             </template>
           </NDatePicker>
         </div>

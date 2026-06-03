@@ -1,4 +1,6 @@
 import { mount } from "@vue/test-utils";
+import { readFileSync } from "node:fs";
+import { resolve } from "node:path";
 import { afterEach, describe, expect, it, vi } from "vitest";
 import { nextTick } from "vue";
 import WorkbenchShell from "../components/WorkbenchShell.vue";
@@ -37,6 +39,7 @@ describe("WorkbenchShell", () => {
     expect(wrapper.find('[aria-label="应用导航"]').exists()).toBe(false);
     expect(wrapper.find(".workbench-rail").exists()).toBe(false);
     expect(wrapper.get('[data-testid="workbench-command-bar"]').text()).toContain("Mini Desk");
+    expect(wrapper.find(".workbench-slogan").exists()).toBe(false);
     expect(wrapper.get('[data-testid="workbench-command-bar"]').text()).not.toContain("搜索或执行命令");
     expect(wrapper.get('[data-testid="workbench-command-bar"]').text()).not.toContain("⌘K");
     expect(wrapper.get('[data-testid="workbench-save-status"]').text()).toBe("已保存");
@@ -50,6 +53,27 @@ describe("WorkbenchShell", () => {
     expect(wrapper.get('[data-testid="workspace-slot"]').text()).toBe("workspace");
     expect(wrapper.get('[data-testid="actions-slot"]').text()).toBe("settings");
     expect(wrapper.find('[data-testid="workbench-theme"][aria-label="切换到深色"]').exists()).toBe(true);
+  });
+
+  it("renders a compact slogan after the title and save status when provided", () => {
+    const wrapper = mount(WorkbenchShell, {
+      props: {
+        ...defaultProps,
+        slogan: "Do less, do it well.",
+      },
+    });
+
+    expect(wrapper.get(".workbench-title-group").text()).toContain("Mini Desk");
+    expect(wrapper.get(".workbench-title-group").text()).toContain("已保存");
+    expect(wrapper.get(".workbench-slogan").text()).toBe("Do less, do it well.");
+  });
+
+  it("keeps the tool zone minimum width at 320px and fits columns without oscillating", () => {
+    const source = readFileSync(resolve(__dirname, "../components/WorkbenchShell.vue"), "utf8");
+
+    expect(source).toContain("const MIN_COLUMN_WIDTHS = [160, 320, 320, 320] as const");
+    expect(source).toContain("fitColumnsToWidth");
+    expect(source).toContain("remainingDelta");
   });
 
   it("does not render dead shell controls by default", () => {
@@ -143,7 +167,7 @@ describe("WorkbenchShell", () => {
     vi.useRealTimers();
   });
 
-  it("uses 15/20/35/30 as the initial desktop workbench column widths", async () => {
+  it("uses the compact initial desktop workbench column widths with a 320px tool zone", async () => {
     vi.spyOn(window, "innerWidth", "get").mockReturnValue(1600);
     HTMLElement.prototype.getBoundingClientRect = function getMockRect() {
       if (this instanceof HTMLElement && this.classList.contains("workbench-grid")) {
@@ -169,7 +193,7 @@ describe("WorkbenchShell", () => {
     await nextTick();
 
     const grid = wrapper.get(".workbench-grid");
-    expect(grid.attributes("style")).toContain("grid-template-columns: 177px 236px 413px 354px");
+    expect(grid.attributes("style")).toContain("grid-template-columns: 169px 332px 341px 338px");
 
     wrapper.unmount();
   });

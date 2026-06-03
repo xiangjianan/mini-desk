@@ -34,6 +34,7 @@ const emit = defineEmits<{
 const editingSpaceId = ref<string | null>(null);
 const editingTitle = ref("");
 const editingMeasureTitle = ref("");
+const editingTabWidth = ref<number | null>(null);
 const titleComposing = ref(false);
 const draggedSpaceId = ref<string | null>(null);
 const suppressTabCommitTransition = ref(false);
@@ -77,11 +78,15 @@ function getSpace(id: string): WorkspaceSpace | undefined {
   return props.spaces.find((space) => space.id === id);
 }
 
-function startTabEdit(id: string): void {
+function startTabEdit(id: string, sourceElement?: HTMLElement): void {
   const space = getSpace(id);
   if (!space) return;
+  const tabElement = sourceElement ?? findSpaceTabElement(id);
+  const tabWidth = tabElement?.getBoundingClientRect().width;
   closeMenu();
+  suppressNextTabCommitTransition();
   titleComposing.value = false;
+  editingTabWidth.value = typeof tabWidth === "number" && tabWidth > 0 ? tabWidth : null;
   editingSpaceId.value = id;
   editingTitle.value = space.title;
   editingMeasureTitle.value = space.title;
@@ -111,6 +116,7 @@ function commitTabEdit(): void {
   editingSpaceId.value = null;
   editingTitle.value = "";
   editingMeasureTitle.value = "";
+  editingTabWidth.value = null;
   if (title) emit("rename", id, title);
   emit("editDone", id);
 }
@@ -122,7 +128,18 @@ function cancelTabEdit(): void {
   editingSpaceId.value = null;
   editingTitle.value = "";
   editingMeasureTitle.value = "";
+  editingTabWidth.value = null;
   if (id) emit("editDone", id);
+}
+
+function findSpaceTabElement(id: string): HTMLElement | undefined {
+  return Array.from(document.querySelectorAll<HTMLElement>(".space-tab"))
+    .find((element) => element.dataset.spaceTabId === id);
+}
+
+function getTabEditStyle(id: string): Record<string, string> | undefined {
+  if (editingSpaceId.value !== id || editingTabWidth.value === null) return undefined;
+  return { "--space-tab-edit-width": `${editingTabWidth.value}px` };
 }
 
 function suppressNextTabCommitTransition(): void {
@@ -216,9 +233,10 @@ function handleTabsWheel(event: WheelEvent): void {
               type="button"
               role="tab"
               draggable="true"
+              :data-space-tab-id="space.id"
               :aria-selected="space.id === activeSpaceId"
               @click="emit('activate', space.id)"
-              @dblclick.stop="startTabEdit(space.id)"
+              @dblclick.stop="startTabEdit(space.id, $event.currentTarget as HTMLElement)"
               @contextmenu.stop.prevent="openTabMenu($event, space.id)"
               @dragstart="handleDragStart($event, space.id)"
               @dragend="draggedSpaceId = null"
@@ -231,6 +249,7 @@ function handleTabsWheel(event: WheelEvent): void {
               v-else
               :key="space.id"
               class="space-tab-edit-shell"
+              :style="getTabEditStyle(space.id)"
             >
               <span class="space-tab-edit-measure" aria-hidden="true">{{ editingMeasureTitle || " " }}</span>
               <input

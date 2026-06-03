@@ -1870,6 +1870,7 @@ function moveItem<T extends { id: string }>(items: T[], dragId: string, targetId
     <WorkbenchShell
       v-if="!isMobileBlocked"
       title="Mini Desk"
+      slogan="Do less, do it well."
       :save-status-label="saveStatusLabel"
       :theme="state.theme"
       @theme="handleThemeClick"

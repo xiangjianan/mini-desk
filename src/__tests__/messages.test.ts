@@ -61,13 +61,28 @@ describe("message catalog", () => {
     expect(Object.keys(MESSAGE_CATALOG).sort()).toEqual([...messageKeys].sort());
   });
 
+  it("keeps the English about message aligned with memo naming", () => {
+    const about = getMessage("about", () => 0, "en");
+
+    expect(about).toContain("screenshots, reminders, quick links, and a memo");
+    expect(about).not.toContain("workspaces");
+    expect(about).not.toContain("workspace for organizing");
+  });
+
+  it("uses memo wording in English delete-space feedback", () => {
+    const deleteMessage = getMessage("deleteSpace", () => 0.5, "en");
+
+    expect(deleteMessage).toContain("Memo removed");
+    expect(deleteMessage).not.toContain("Workspace removed");
+  });
+
   it("provides ten variants for every popup message", () => {
     for (const key of messageKeys) {
       if (key === "about") {
         expect(MESSAGE_CATALOG.about.variants).toEqual([
           [
             "Mini Desk 看板",
-            "一个本地优先的轻量工作台，把截图、TODO、快捷动作和工作空间缝合得恰到好处。",
+            "一个本地优先的轻量工作台，把截图、提醒事项、快捷动作和备忘录缝合得恰到好处。",
             "所有操作均在本地浏览器完成，绝不上传您的任何数据。",
           ].join("\n"),
         ]);
