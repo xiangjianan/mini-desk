@@ -1,12 +1,12 @@
-import { IMAGE_DB_NAME, IMAGE_STORE_NAME } from "./defaults";
+import { IMAGE_DB_NAME, IMAGE_STORE_NAME, LEGACY_IMAGE_DB_NAME } from "./defaults";
 import type { CompanionCustomGif, CompanionCustomGifStored, StoredImage } from "../types";
 
 const CUSTOM_COMPANION_GIF_LIGHT_ID = "__custom-companion-gif-light__";
 const CUSTOM_COMPANION_GIF_DARK_ID = "__custom-companion-gif-dark__";
 
-export function openImageDb(): Promise<IDBDatabase> {
+export function openImageDb(name = IMAGE_DB_NAME): Promise<IDBDatabase> {
   return new Promise((resolve, reject) => {
-    const request = indexedDB.open(IMAGE_DB_NAME, 1);
+    const request = indexedDB.open(name, 1);
 
     request.onupgradeneeded = () => {
       const db = request.result;
@@ -33,7 +33,8 @@ export async function getStoredImagePayload(id: string): Promise<string | undefi
     store.get(id),
   );
   db.close();
-  return record?.src;
+  if (record?.src) return record.src;
+  return getLegacyStoredPayload(id);
 }
 
 export async function deleteStoredImage(id: string): Promise<void> {
@@ -53,6 +54,7 @@ export async function clearStoredImagePayloads(): Promise<void> {
   const db = await openImageDb();
   await transact(db, "readwrite", (store) => store.clear());
   db.close();
+  await clearLegacyStoredPayloads();
 }
 
 export async function persistCustomCompanionGifPayloads(customGif: CompanionCustomGif): Promise<void> {
@@ -84,9 +86,13 @@ export async function hydrateCustomCompanionGif(
       : Promise.resolve(undefined),
   ]);
   db.close();
+  const [legacyLight, legacyDark] = await Promise.all([
+    stored.light && !customGif.light && !lightRecord?.src ? getLegacyStoredPayload(CUSTOM_COMPANION_GIF_LIGHT_ID) : Promise.resolve(undefined),
+    stored.dark && !customGif.dark && !darkRecord?.src ? getLegacyStoredPayload(CUSTOM_COMPANION_GIF_DARK_ID) : Promise.resolve(undefined),
+  ]);
   return {
-    ...(customGif.light || lightRecord?.src ? { light: customGif.light ?? lightRecord?.src } : {}),
-    ...(customGif.dark || darkRecord?.src ? { dark: customGif.dark ?? darkRecord?.src } : {}),
+    ...(customGif.light || lightRecord?.src || legacyLight ? { light: customGif.light ?? lightRecord?.src ?? legacyLight } : {}),
+    ...(customGif.dark || darkRecord?.src || legacyDark ? { dark: customGif.dark ?? darkRecord?.src ?? legacyDark } : {}),
   };
 }
 
@@ -112,4 +118,27 @@ function transact<T>(
     request.onerror = () => reject(request.error);
     transaction.onerror = () => reject(transaction.error);
   });
+}
+
+async function getLegacyStoredPayload(id: string): Promise<string | undefined> {
+  try {
+    const db = await openImageDb(LEGACY_IMAGE_DB_NAME);
+    const record = await transact<{ id: string; src?: string } | undefined>(db, "readonly", (store) =>
+      store.get(id),
+    );
+    db.close();
+    return record?.src;
+  } catch {
+    return undefined;
+  }
+}
+
+async function clearLegacyStoredPayloads(): Promise<void> {
+  try {
+    const db = await openImageDb(LEGACY_IMAGE_DB_NAME);
+    await transact(db, "readwrite", (store) => store.clear());
+    db.close();
+  } catch {
+    // Legacy cleanup is best-effort; the active mini-desk database remains authoritative.
+  }
 }

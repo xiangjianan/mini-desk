@@ -6,8 +6,10 @@ import { nextTick } from "vue";
 import WorkbenchShell from "../components/WorkbenchShell.vue";
 
 const originalGetBoundingClientRect = HTMLElement.prototype.getBoundingClientRect;
-const WORKBENCH_WIDTH_STORAGE_KEY = "todo-board-workbench-widths";
-const WORKBENCH_HEADER_STORAGE_KEY = "todo-board-workbench-header-hidden";
+const WORKBENCH_WIDTH_STORAGE_KEY = "mini-desk-workbench-widths";
+const LEGACY_WORKBENCH_WIDTH_STORAGE_KEY = "todo-board-workbench-widths";
+const WORKBENCH_HEADER_STORAGE_KEY = "mini-desk-workbench-header-hidden";
+const LEGACY_WORKBENCH_HEADER_STORAGE_KEY = "todo-board-workbench-header-hidden";
 
 afterEach(() => {
   vi.useRealTimers();
@@ -167,6 +169,24 @@ describe("WorkbenchShell", () => {
     vi.useRealTimers();
   });
 
+  it("restores legacy command header hidden state after the project rename", async () => {
+    vi.useFakeTimers();
+    localStorage.setItem(LEGACY_WORKBENCH_HEADER_STORAGE_KEY, "true");
+
+    const wrapper = mount(WorkbenchShell, {
+      props: defaultProps,
+      slots: {
+        actions: "<button data-testid='actions-slot' aria-label='设置'>settings</button>",
+      },
+    });
+    await nextTick();
+
+    expect(wrapper.find('[data-testid="workbench-command-bar"]').exists()).toBe(false);
+
+    wrapper.unmount();
+    vi.useRealTimers();
+  });
+
   it("uses the compact initial desktop workbench column widths with a 320px tool zone", async () => {
     vi.spyOn(window, "innerWidth", "get").mockReturnValue(1600);
     HTMLElement.prototype.getBoundingClientRect = function getMockRect() {
@@ -294,6 +314,38 @@ describe("WorkbenchShell", () => {
     expect(document.documentElement.style.getPropertyValue("--image-preview-left")).toMatch(/px$/);
 
     restored.unmount();
+  });
+
+  it("restores legacy resized workbench widths after the project rename", async () => {
+    vi.spyOn(window, "innerWidth", "get").mockReturnValue(1600);
+    localStorage.setItem(LEGACY_WORKBENCH_WIDTH_STORAGE_KEY, JSON.stringify([170, 320, 330, 310]));
+    HTMLElement.prototype.getBoundingClientRect = function getMockRect() {
+      if (this instanceof HTMLElement && this.classList.contains("workbench-grid")) {
+        return {
+          x: 0,
+          y: 52,
+          left: 0,
+          top: 52,
+          right: 1200,
+          bottom: 800,
+          width: 1200,
+          height: 748,
+          toJSON: () => undefined,
+        };
+      }
+      return originalGetBoundingClientRect.call(this);
+    };
+
+    const wrapper = mount(WorkbenchShell, {
+      attachTo: document.body,
+      props: defaultProps,
+    });
+    await nextTick();
+    await nextTick();
+
+    expect(wrapper.get(".workbench-grid").attributes("style")).toContain("grid-template-columns: 179px 320px 339px 320px");
+
+    wrapper.unmount();
   });
 
   it("emits theme requests from the top command theme action", async () => {

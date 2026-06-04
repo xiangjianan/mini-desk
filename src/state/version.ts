@@ -1,12 +1,13 @@
-export const APP_VERSION_STORAGE_KEY = "todo-board-app-version";
-export const FALLBACK_APP_VERSION = "1.0.40";
+export const APP_VERSION_STORAGE_KEY = "mini-desk-app-version";
+export const LEGACY_APP_VERSION_STORAGE_KEY = "todo-board-app-version";
+export const FALLBACK_APP_VERSION = "1.0.41";
 
 export function getIndexAppVersion(doc: Document = document): string {
   return doc.querySelector<HTMLMetaElement>('meta[name="app-version"]')?.content || FALLBACK_APP_VERSION;
 }
 
 export function getStoredAppVersion(storage: Storage = localStorage): string | null {
-  return storage.getItem(APP_VERSION_STORAGE_KEY);
+  return storage.getItem(APP_VERSION_STORAGE_KEY) ?? storage.getItem(LEGACY_APP_VERSION_STORAGE_KEY);
 }
 
 export function markAppVersionSeen(version: string, storage: Storage = localStorage): void {

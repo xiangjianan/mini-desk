@@ -1,6 +1,6 @@
 {
-  "name": "todo-board",
-  "version": "1.0.40",
+  "name": "mini-desk",
+  "version": "1.0.41",
   "private": true,
   "type": "module",
   "scripts": {

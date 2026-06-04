@@ -1,4 +1,4 @@
-const CONTEXT_MENU_OPENED = "todo-board-context-menu-opened";
+const CONTEXT_MENU_OPENED = "mini-desk-context-menu-opened";
 
 export const CONTEXT_MENU_Z_INDEX = 3400;
 

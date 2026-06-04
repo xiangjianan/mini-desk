@@ -16,7 +16,7 @@ CSS Grid 5-column layout (`.board`): Image panel (10%) | Notes+Links (20%) | Tod
 
 ### State Management
 
-- All state is held in a single `state` object, persisted to `localStorage` under key `todo-board-state-v1`.
+- All state is held in a single `state` object, persisted to `localStorage` under key `mini-desk-state-v1`, with legacy reads from `todo-board-state-v1`.
 - `loadState()` and `normalizeImportedState()` live in `src/state/storage.ts` and handle legacy migrations, malformed imports, and missing collections.
 - `saveState()` serializes the full state while omitting large image payloads from localStorage.
 

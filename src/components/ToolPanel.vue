@@ -31,8 +31,10 @@ type RgbColor = { r: number; g: number; b: number };
 type ToolMenu = { x: number; y: number; toolId: ToolId | null };
 type ToolPanelMenu = { x: number; y: number };
 
-const ACTIVE_TOOL_STORAGE_KEY = "todo-board-active-tool";
-const HIDDEN_TOOLS_STORAGE_KEY = "todo-board-hidden-tools";
+const ACTIVE_TOOL_STORAGE_KEY = "mini-desk-active-tool";
+const LEGACY_ACTIVE_TOOL_STORAGE_KEY = "todo-board-active-tool";
+const HIDDEN_TOOLS_STORAGE_KEY = "mini-desk-hidden-tools";
+const LEGACY_HIDDEN_TOOLS_STORAGE_KEY = "todo-board-hidden-tools";
 const TOOL_IDS = ["calculator", "base", "color", "codec", "password"] as const;
 const DEFAULT_HIDDEN_TOOL_IDS: readonly ToolId[] = ["base", "codec", "password"];
 const COMMON_BASES = [2, 8, 10, 16] as const;
@@ -188,7 +190,7 @@ function isToolId(value: unknown): value is ToolId {
 function readStoredActiveToolId(): ToolId | null {
   try {
     if (typeof localStorage === "undefined") return null;
-    const stored = localStorage.getItem(ACTIVE_TOOL_STORAGE_KEY);
+    const stored = localStorage.getItem(ACTIVE_TOOL_STORAGE_KEY) ?? localStorage.getItem(LEGACY_ACTIVE_TOOL_STORAGE_KEY);
     return isToolId(stored) ? stored : null;
   } catch {
     return null;
@@ -198,7 +200,7 @@ function readStoredActiveToolId(): ToolId | null {
 function readStoredHiddenToolIds(): Set<ToolId> {
   try {
     if (typeof localStorage === "undefined") return new Set(DEFAULT_HIDDEN_TOOL_IDS);
-    const stored = localStorage.getItem(HIDDEN_TOOLS_STORAGE_KEY);
+    const stored = localStorage.getItem(HIDDEN_TOOLS_STORAGE_KEY) ?? localStorage.getItem(LEGACY_HIDDEN_TOOLS_STORAGE_KEY);
     if (stored === null) return new Set(DEFAULT_HIDDEN_TOOL_IDS);
     const parsed = JSON.parse(stored);
     if (!Array.isArray(parsed)) return new Set(DEFAULT_HIDDEN_TOOL_IDS);

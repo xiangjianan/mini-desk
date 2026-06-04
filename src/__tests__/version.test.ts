@@ -4,6 +4,7 @@ import { describe, expect, it } from "vitest";
 import {
   APP_VERSION_STORAGE_KEY,
   FALLBACK_APP_VERSION,
+  LEGACY_APP_VERSION_STORAGE_KEY,
   getIndexAppVersion,
   getStoredAppVersion,
   markAppVersionSeen,
@@ -35,5 +36,13 @@ describe("app version", () => {
     markAppVersionSeen("9.9.9", storage);
 
     expect(storage.getItem(APP_VERSION_STORAGE_KEY)).toBe("9.9.9");
+  });
+
+  it("reads the legacy local app version marker after the project rename", () => {
+    const storage = localStorage;
+    storage.clear();
+    storage.setItem(LEGACY_APP_VERSION_STORAGE_KEY, "1.0.39");
+
+    expect(getStoredAppVersion(storage)).toBe("1.0.39");
   });
 });

@@ -157,16 +157,16 @@ npm test
 看板状态保存在浏览器 `localStorage`：
 
 ```text
-todo-board-state-v1
+mini-desk-state-v1
 ```
 
 图片原文保存在同站点 IndexedDB：
 
 ```text
-todo-board-images-v1
+mini-desk-images-v1
 ```
 
-自定义 GIF 资源也保存在同站点 IndexedDB。清空浏览器站点数据会清除看板内容、图片和自定义 GIF。只删除 `localStorage` 键会清除看板状态，但 IndexedDB 中可能仍保留图片原文。
+自定义 GIF 资源也保存在同站点 IndexedDB。历史版本使用的 `todo-board-state-v1` 和 `todo-board-images-v1` 会在读取时兼容。清空浏览器站点数据会清除看板内容、图片和自定义 GIF。只删除 `localStorage` 键会清除看板状态，但 IndexedDB 中可能仍保留图片原文。
 
 ## 移动端说明
 

@@ -1,4 +1,4 @@
-import { DEFAULT_SPACE_ID, DEFAULT_SPACE_TITLE, DEFAULT_TODO_LISTS, defaultState, STORAGE_KEY } from "./defaults";
+import { DEFAULT_SPACE_ID, DEFAULT_SPACE_TITLE, DEFAULT_TODO_LISTS, LEGACY_STORAGE_KEY, defaultState, STORAGE_KEY } from "./defaults";
 import { isValidDeadlineAt } from "./deadlines";
 import { normalizeCompanionGifTheme } from "./companionGifThemes";
 import { DEFAULT_SPACE_TITLES, DEFAULT_TITLES_BY_LANGUAGE, LEGACY_DEFAULT_TITLES_BY_LANGUAGE, OLDER_LEGACY_DEFAULT_TITLES_BY_LANGUAGE, getUiText, normalizeLanguage } from "./i18n";
@@ -27,7 +27,7 @@ export function createId(): string {
 
 export function loadState(storage: Storage = localStorage): BoardState {
   try {
-    const raw = storage.getItem(STORAGE_KEY);
+    const raw = storage.getItem(STORAGE_KEY) ?? storage.getItem(LEGACY_STORAGE_KEY);
     if (!raw) return defaultState();
     return normalizeImportedState(JSON.parse(raw));
   } catch {

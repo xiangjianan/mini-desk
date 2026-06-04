@@ -4,8 +4,10 @@ import { resolve } from "node:path";
 import { beforeEach, describe, expect, it, vi } from "vitest";
 import ToolPanel from "../components/ToolPanel.vue";
 
-const ACTIVE_TOOL_STORAGE_KEY = "todo-board-active-tool";
-const HIDDEN_TOOLS_STORAGE_KEY = "todo-board-hidden-tools";
+const ACTIVE_TOOL_STORAGE_KEY = "mini-desk-active-tool";
+const LEGACY_ACTIVE_TOOL_STORAGE_KEY = "todo-board-active-tool";
+const HIDDEN_TOOLS_STORAGE_KEY = "mini-desk-hidden-tools";
+const LEGACY_HIDDEN_TOOLS_STORAGE_KEY = "todo-board-hidden-tools";
 
 const dropdownStub = {
   props: ["options"],
@@ -108,6 +110,22 @@ describe("ToolPanel", () => {
     expect(persisted.get(".tool-content").text().trim()).toBe("");
     expect(persisted.findAll(".tool-tab")[1].attributes("aria-selected")).toBe("false");
     expect(localStorage.getItem(ACTIVE_TOOL_STORAGE_KEY)).toBe("");
+  });
+
+  it("reads legacy tool preferences after the project rename", () => {
+    localStorage.setItem(LEGACY_ACTIVE_TOOL_STORAGE_KEY, "color");
+    localStorage.setItem(LEGACY_HIDDEN_TOOLS_STORAGE_KEY, JSON.stringify([]));
+
+    const wrapper = mountToolPanel();
+
+    expect(wrapper.get(".tool-content").text()).toContain("颜色值");
+    expect(wrapper.findAll(".tool-tab").map((tab) => tab.attributes("aria-label"))).toEqual([
+      "计算器",
+      "进制转换",
+      "取色板",
+      "编解码",
+      "随机密码生成",
+    ]);
   });
 
   it("opens tool configuration from the top-right menu and persists hidden tools", async () => {

@@ -34,8 +34,10 @@ defineSlots<{
 }>();
 
 const DESKTOP_RESIZE_BREAKPOINT = 1180;
-const WORKBENCH_WIDTH_STORAGE_KEY = "todo-board-workbench-widths";
-const WORKBENCH_HEADER_STORAGE_KEY = "todo-board-workbench-header-hidden";
+const WORKBENCH_WIDTH_STORAGE_KEY = "mini-desk-workbench-widths";
+const LEGACY_WORKBENCH_WIDTH_STORAGE_KEY = "todo-board-workbench-widths";
+const WORKBENCH_HEADER_STORAGE_KEY = "mini-desk-workbench-header-hidden";
+const LEGACY_WORKBENCH_HEADER_STORAGE_KEY = "todo-board-workbench-header-hidden";
 const DEFAULT_COLUMN_WEIGHTS = [0.15, 0.2, 0.35, 0.3] as const;
 const MIN_COLUMN_WIDTHS = [160, 320, 320, 320] as const;
 const DEFAULT_GRID_GAP = 14;
@@ -87,7 +89,8 @@ function readPixel(value: string, fallback: number): number {
 function readStoredColumnWidths(): number[] | undefined {
   if (typeof localStorage === "undefined") return undefined;
   try {
-    const parsed = JSON.parse(localStorage.getItem(WORKBENCH_WIDTH_STORAGE_KEY) ?? "null");
+    const raw = localStorage.getItem(WORKBENCH_WIDTH_STORAGE_KEY) ?? localStorage.getItem(LEGACY_WORKBENCH_WIDTH_STORAGE_KEY);
+    const parsed = JSON.parse(raw ?? "null");
     if (!Array.isArray(parsed) || parsed.length !== 4) return undefined;
     const widths = parsed.map((value) => Number(value));
     return widths.every((value) => Number.isFinite(value) && value > 0) ? widths : undefined;
@@ -108,7 +111,7 @@ function persistColumnWidths(widths: number[]): void {
 function readStoredHeaderHidden(): boolean {
   if (typeof localStorage === "undefined") return false;
   try {
-    return localStorage.getItem(WORKBENCH_HEADER_STORAGE_KEY) === "true";
+    return (localStorage.getItem(WORKBENCH_HEADER_STORAGE_KEY) ?? localStorage.getItem(LEGACY_WORKBENCH_HEADER_STORAGE_KEY)) === "true";
   } catch {
     return false;
   }

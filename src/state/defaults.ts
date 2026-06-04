@@ -10,8 +10,10 @@ import {
   getDefaultTodoLists,
 } from "./i18n";
 
-export const STORAGE_KEY = "todo-board-state-v1";
-export const IMAGE_DB_NAME = "todo-board-images-v1";
+export const STORAGE_KEY = "mini-desk-state-v1";
+export const LEGACY_STORAGE_KEY = "todo-board-state-v1";
+export const IMAGE_DB_NAME = "mini-desk-images-v1";
+export const LEGACY_IMAGE_DB_NAME = "todo-board-images-v1";
 export const IMAGE_STORE_NAME = "images";
 export const DEFAULT_SPACE_ID = "workspace";
 export const DEFAULT_SPACE_TITLE = DEFAULT_SPACE_TITLES.zh.workspace;
