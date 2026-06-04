@@ -55,6 +55,14 @@ describe("workbench style contract", () => {
     expectSelectorBody(styles, 'button:not([data-slot="button"])', "min-height: 30px");
   });
 
+  it("keeps the settings custom GIF dialog above workspace content", () => {
+    const styles = readFileSync(resolve(__dirname, "../styles.css"), "utf8");
+
+    expectSelectorBody(styles, ".workbench-command-bar", "overflow: visible");
+    expectSelectorBody(styles, ".workbench-command-bar", "z-index: 4200");
+    expectSelectorBody(styles, ".gif-theme-custom-dialog", "z-index: 4210");
+  });
+
   it("normalizes retained Naive UI and panel internals through shared tokens", () => {
     const styles = readFileSync(resolve(__dirname, "../styles.css"), "utf8");
 
@@ -89,6 +97,9 @@ describe("workbench style contract", () => {
     expectSelectorBody(styles, ".image-preview", "right: 0");
     expect(ruleBodies(styles, ".image-preview").join("\n")).not.toContain("width: 90vw");
     expectSelectorBody(styles, ".preview-stage img", "max-width: calc(100vw - var(--image-preview-left, clamp(220px, 18vw, 320px)) - 32px)");
+    expectSelectorBody(styles, ".preview-stage img", "width: auto");
+    expectSelectorBody(styles, ".preview-stage img", "height: auto");
+    expectSelectorBody(styles, ".preview-stage img", "object-fit: contain");
     expectSelectorBody(styles, ".workbench-grid", "position: relative");
     expectSelectorBody(styles, ".workbench-grid", "grid-template-columns: minmax(160px, 0.15fr) minmax(320px, 0.2fr) minmax(320px, 0.35fr) minmax(320px, 0.3fr)");
     expectSelectorBody(styles, ".workbench-grid", "gap: 14px");

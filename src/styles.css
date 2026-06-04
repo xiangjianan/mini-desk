@@ -3217,8 +3217,11 @@ body:has(.image-preview) .image-panel .n-scrollbar {
 }
 
 .preview-stage img {
+  width: auto;
+  height: auto;
   max-width: calc(100vw - var(--image-preview-left, clamp(220px, 18vw, 320px)) - 32px);
   max-height: 88vh;
+  object-fit: contain;
   transform-origin: center;
   animation: image-preview-photo-in 140ms cubic-bezier(0.16, 1, 0.3, 1);
   transition: transform 0.04s linear;
@@ -4017,6 +4020,22 @@ button.tool-tab.is-active:focus-visible {
   box-shadow: var(--shadow-soft);
 }
 
+.workbench-command-bar {
+  position: relative;
+  z-index: 4200;
+  overflow: visible;
+}
+
+.gif-theme-custom-dialog {
+  top: max(38px, env(safe-area-inset-top));
+  right: max(8px, env(safe-area-inset-right));
+  z-index: 4210;
+  max-width: calc(100vw - 16px);
+  border-color: var(--line-control);
+  -webkit-backdrop-filter: blur(28px) saturate(1.7);
+  backdrop-filter: blur(28px) saturate(1.7);
+}
+
 .text-editor-textarea {
   padding: 12px 14px;
   line-height: 1.72;
@@ -4459,14 +4478,20 @@ html[data-theme="dark"] .tool-field input[type="color"] {
   box-shadow: var(--shadow-control);
 }
 
-.calculator-key:hover,
-.calculator-key:focus-visible {
+.calculator-key:not(.is-operator):not(.is-equals):hover,
+.calculator-key:not(.is-operator):not(.is-equals):focus-visible {
   background: var(--button-hover);
 }
 
 .calculator-key.is-operator {
   color: var(--primary);
   background: color-mix(in srgb, var(--primary) 12%, transparent);
+}
+
+.calculator-key.is-operator:hover,
+.calculator-key.is-operator:focus-visible {
+  color: var(--primary);
+  background: color-mix(in srgb, var(--primary) 18%, transparent);
 }
 
 .calculator-key.is-equals {
@@ -4678,7 +4703,11 @@ html[data-theme="dark"] .image-preview {
 }
 
 .preview-stage img {
+  width: auto;
+  height: auto;
+  max-width: min(100%, calc(100vw - 32px));
   max-height: calc(100vh - 112px);
+  object-fit: contain;
   border-radius: calc(var(--radius) + 4px);
   box-shadow: 0 18px 60px rgba(0, 0, 0, 0.2);
 }
@@ -4796,4 +4825,222 @@ button.todo-collapse-button:active {
 .section-reveal-leave-from {
   opacity: 1;
   clip-path: inset(0 0 0 0 round var(--radius-control));
+}
+
+/* Apple HIG foundation pass: semantic color, materials, icon weight, type, and directionality. */
+:root {
+  --label-primary: rgba(0, 0, 0, 0.88);
+  --label-secondary: rgba(60, 60, 67, 0.68);
+  --label-tertiary: rgba(60, 60, 67, 0.42);
+  --fill-quaternary: rgba(118, 118, 128, 0.08);
+  --fill-tertiary: rgba(118, 118, 128, 0.12);
+  --fill-secondary: rgba(118, 118, 128, 0.18);
+  --separator-opaque: rgba(60, 60, 67, 0.2);
+  --control-hit-size: 34px;
+  --icon-size: 16px;
+  --icon-stroke: 1.75;
+}
+
+html[data-theme="dark"] {
+  --label-primary: rgba(255, 255, 255, 0.9);
+  --label-secondary: rgba(235, 235, 245, 0.66);
+  --label-tertiary: rgba(235, 235, 245, 0.42);
+  --fill-quaternary: rgba(118, 118, 128, 0.14);
+  --fill-tertiary: rgba(118, 118, 128, 0.2);
+  --fill-secondary: rgba(118, 118, 128, 0.28);
+  --separator-opaque: rgba(84, 84, 88, 0.64);
+}
+
+body {
+  color: var(--label-primary);
+  font-feature-settings: "kern";
+  line-height: 1.45;
+}
+
+button,
+input,
+textarea,
+select {
+  -webkit-tap-highlight-color: transparent;
+}
+
+.count,
+.todo-count,
+.workbench-slogan,
+.tool-field,
+.copy-value-label,
+.image-index,
+.empty-hint,
+.todo-empty-hint {
+  color: var(--label-secondary);
+}
+
+.panel-header,
+.todo-heading,
+.today-focus-heading,
+.space-tabs-scrollbar {
+  border-color: var(--separator-opaque);
+}
+
+.workbench-zone,
+.n-dropdown-menu,
+.n-popover,
+.n-dialog,
+.n-modal .n-card,
+.quick-dialog.n-card,
+.shortcut-help-modal.n-card,
+.companion-popover-shell.n-popover,
+.preview-actions {
+  -webkit-backdrop-filter: blur(28px) saturate(1.65);
+}
+
+.n-icon,
+.icon-button .n-icon,
+.tool-tab-icon .n-icon,
+.workbench-title-icon,
+.workbench-header-hide-button svg,
+.workbench-theme-button svg,
+.workbench-header-reveal svg,
+.settings-btn.icon-button svg,
+.quick-menu-button svg,
+.todo-section-menu-button svg,
+.tool-panel-menu-button svg {
+  width: var(--icon-size);
+  height: var(--icon-size);
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.icon-button svg,
+.tool-tab-icon svg,
+.workbench-header-hide-button svg,
+.workbench-theme-button svg,
+.workbench-header-reveal svg,
+.settings-btn.icon-button svg,
+.quick-menu-button svg,
+.todo-section-menu-button svg,
+.tool-panel-menu-button svg {
+  stroke-width: var(--icon-stroke);
+}
+
+.icon-button,
+.settings-btn.icon-button,
+.workbench-header-hide-button,
+.workbench-theme-button,
+.workbench-header-reveal,
+.quick-menu-button,
+.todo-section-menu-button,
+.tool-panel-menu-button,
+.copy-inline-button,
+.password-copy-button {
+  min-width: var(--control-hit-size);
+  min-height: var(--control-hit-size);
+}
+
+.tool-field > input,
+.tool-field > select,
+.tool-field > textarea,
+.quick-dialog .n-input,
+.quick-dialog .n-base-selection,
+.copy-value-row,
+.password-length-control,
+.color-preview {
+  background-color: color-mix(in srgb, var(--card) 76%, var(--fill-quaternary));
+}
+
+.n-dropdown-option-body:hover,
+.n-dropdown-option.n-dropdown-option--pending .n-dropdown-option-body,
+.quick-button:hover,
+.calculator-key:not(.is-operator):not(.is-equals):hover,
+.copy-inline-button:hover,
+.password-options label:hover {
+  background-color: var(--fill-secondary) !important;
+}
+
+.settings-version-action,
+.copy-inline-button:hover,
+.copy-inline-button:focus-visible {
+  color: var(--primary);
+}
+
+[data-key="clear-data"],
+.settings-version-dot {
+  color: var(--danger);
+}
+
+@media (prefers-contrast: more) {
+  :root {
+    --border: rgba(60, 60, 67, 0.36);
+    --line-main: rgba(60, 60, 67, 0.42);
+    --line-section: rgba(60, 60, 67, 0.34);
+    --line-subtle: rgba(60, 60, 67, 0.24);
+    --line-control: rgba(60, 60, 67, 0.42);
+    --shadow-soft: 0 1px 2px rgba(15, 23, 42, 0.1);
+  }
+
+  html[data-theme="dark"] {
+    --border: rgba(235, 235, 245, 0.34);
+    --line-main: rgba(235, 235, 245, 0.38);
+    --line-section: rgba(235, 235, 245, 0.32);
+    --line-subtle: rgba(235, 235, 245, 0.24);
+    --line-control: rgba(235, 235, 245, 0.38);
+    --shadow-soft: 0 1px 2px rgba(0, 0, 0, 0.28);
+  }
+}
+
+@media (prefers-reduced-transparency: reduce) {
+  .workbench-command-bar,
+  .workbench-zone,
+  .n-dropdown-menu,
+  .n-popover,
+  .n-dialog,
+  .n-modal .n-card,
+  .quick-dialog.n-card,
+  .shortcut-help-modal.n-card,
+  .companion-popover-shell.n-popover,
+  .preview-actions,
+  .image-preview {
+    -webkit-backdrop-filter: none;
+    backdrop-filter: none;
+    background: var(--card) !important;
+  }
+}
+
+:dir(rtl) .workbench-title-group,
+:dir(rtl) .workbench-command-actions,
+:dir(rtl) .header-actions,
+:dir(rtl) .todo-heading-actions,
+:dir(rtl) .dialog-actions,
+:dir(rtl) .quick-type-options {
+  direction: rtl;
+}
+
+:dir(rtl) .workbench-command-actions,
+:dir(rtl) .header-actions,
+:dir(rtl) .todo-heading-actions {
+  margin-right: auto;
+  margin-left: 0;
+}
+
+:dir(rtl) .copy-value-row {
+  grid-template-columns: 30px minmax(0, 1fr) 58px;
+}
+
+:dir(rtl) .copy-value-label {
+  border-right: 0;
+  border-left: 1px solid color-mix(in srgb, var(--border) 70%, transparent);
+}
+
+:dir(rtl) .copy-inline-button {
+  border-right: 1px solid color-mix(in srgb, var(--border) 70%, transparent);
+  border-left: 0;
+}
+
+:dir(rtl) .tool-field > input,
+:dir(rtl) .tool-field > textarea,
+:dir(rtl) .text-editor-textarea,
+:dir(rtl) .todo-input,
+:dir(rtl) .today-focus-input {
+  text-align: right;
 }
