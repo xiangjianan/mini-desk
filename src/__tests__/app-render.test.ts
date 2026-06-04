@@ -2838,6 +2838,7 @@ describe("App shell", () => {
       expect(createObjectURL).toHaveBeenCalledWith(expect.any(Blob));
       expect(anchorClick).toHaveBeenCalled();
       expect(revokeObjectURL).toHaveBeenCalledWith("blob:todo-board");
+      expect((anchorClick.mock.instances[0] as HTMLAnchorElement).download).toMatch(/^mini-desk-\d{4}-\d{2}-\d{2}\.json$/);
 
       expect(exportedBlob).toBeInstanceOf(Blob);
       if (!exportedBlob) throw new Error("Expected export blob");
@@ -2851,6 +2852,52 @@ describe("App shell", () => {
     } finally {
       delete (window as typeof window & { showSaveFilePicker?: unknown }).showSaveFilePicker;
       delete (window as typeof window & { showDirectoryPicker?: unknown }).showDirectoryPicker;
+      wrapper.unmount();
+      vi.useRealTimers();
+    }
+  });
+
+  it("clears all board data from the settings data menu after confirmation", async () => {
+    vi.useFakeTimers();
+    localStorage.setItem(STORAGE_KEY, JSON.stringify({
+      ...defaultState(),
+      theme: "dark",
+      workspaceLines: [{ text: "待清空", indent: 0 }],
+      quickButtons: [{ id: "q", title: "按钮", value: "文本", type: "text", hidden: false }],
+      todos: {
+        morning: [{ id: "t", text: "提醒", done: false }],
+        noon: [],
+        evening: [],
+      },
+    }));
+    const wrapper = mountApp();
+
+    try {
+      const settings = wrapper.getComponent(SettingsMenu);
+      settings.vm.$emit("clearData", settings.element as HTMLElement);
+      await wrapper.vm.$nextTick();
+      await vi.advanceTimersByTimeAsync(200);
+      await wrapper.vm.$nextTick();
+
+      expect(wrapper.get('[data-testid="companion-confirm"]').text()).toMatch(/清空|当前数据|不可恢复/);
+      expect(wrapper.get('[data-testid="companion-yes"]').text()).toBe("清空数据");
+      expect(wrapper.get('[data-testid="companion-yes"]').classes()).toContain("is-danger");
+
+      await wrapper.get('[data-testid="companion-yes"]').trigger("click");
+      await Promise.resolve();
+      await wrapper.vm.$nextTick();
+      await vi.advanceTimersByTimeAsync(200);
+      await wrapper.vm.$nextTick();
+
+      const stored = JSON.parse(localStorage.getItem(STORAGE_KEY) || "{}");
+      expect(stored).toMatchObject({
+        theme: "light",
+        workspaceLines: [],
+        quickButtons: [],
+      });
+      expect(stored.todos.morning).toEqual([]);
+      expect(wrapper.find('[data-testid="companion-confirm"]').text()).toMatch(/清空|已重置|数据|初始/);
+    } finally {
       wrapper.unmount();
       vi.useRealTimers();
     }
@@ -2885,6 +2932,98 @@ describe("App shell", () => {
       expect(JSON.parse(localStorage.getItem(STORAGE_KEY) || "{}").companionGifTheme).toBe("none");
     } finally {
       wrapper.unmount();
+      vi.useRealTimers();
+    }
+  });
+
+  it("stores imported custom companion GIF payloads outside localStorage before refresh", async () => {
+    vi.useFakeTimers();
+    const putRecords: Array<{ id: string; src?: string }> = [];
+    const fakeStore = {
+      put: vi.fn((record: { id: string; src?: string }) => {
+        putRecords.push(record);
+        const request: { result: string; error: null; onsuccess: (() => void) | null; onerror: (() => void) | null } = {
+          result: record.id,
+          error: null,
+          onsuccess: null,
+          onerror: null,
+        };
+        queueMicrotask(() => request.onsuccess?.());
+        return request;
+      }),
+      delete: vi.fn(() => {
+        const request: { result: undefined; error: null; onsuccess: (() => void) | null; onerror: (() => void) | null } = {
+          result: undefined,
+          error: null,
+          onsuccess: null,
+          onerror: null,
+        };
+        queueMicrotask(() => request.onsuccess?.());
+        return request;
+      }),
+    };
+    const fakeDb = {
+      objectStoreNames: { contains: vi.fn(() => true) },
+      transaction: vi.fn(() => ({
+        objectStore: vi.fn(() => fakeStore),
+        onerror: undefined,
+        error: null,
+      })),
+      close: vi.fn(),
+    };
+    vi.stubGlobal("indexedDB", {
+      open: vi.fn(() => {
+        const request: {
+          result: typeof fakeDb;
+          error: null;
+          onsuccess: (() => void) | null;
+          onerror: (() => void) | null;
+          onupgradeneeded: (() => void) | null;
+        } = { result: fakeDb, error: null, onsuccess: null, onerror: null, onupgradeneeded: null };
+        queueMicrotask(() => request.onsuccess?.());
+        return request;
+      }),
+    });
+    const wrapper = mountApp();
+
+    try {
+      const settings = wrapper.getComponent(SettingsMenu);
+      settings.vm.$emit("import", settings.element as HTMLElement);
+      const input = wrapper.get('input[type="file"]').element as HTMLInputElement;
+      const file = new File([
+        JSON.stringify({
+          companionGifTheme: "custom",
+          customCompanionGif: {
+            light: "data:image/gif;base64,light",
+            dark: "data:image/gif;base64,dark",
+          },
+        }),
+      ], "mini-desk.json", { type: "application/json" });
+      Object.defineProperty(input, "files", { value: [file], configurable: true });
+
+      await wrapper.get('input[type="file"]').trigger("change");
+      await Promise.resolve();
+      await wrapper.vm.$nextTick();
+      await vi.advanceTimersByTimeAsync(200);
+      await wrapper.vm.$nextTick();
+      await wrapper.get('[data-testid="companion-yes"]').trigger("click");
+      await vi.waitFor(() => {
+        expect(putRecords.some((record) => record.id === "__custom-companion-gif-light__")).toBe(true);
+        expect(putRecords.some((record) => record.id === "__custom-companion-gif-dark__")).toBe(true);
+      });
+      await vi.waitFor(() => {
+        expect(JSON.parse(localStorage.getItem(STORAGE_KEY) || "{}").companionGifTheme).toBe("custom");
+      });
+
+      const stored = JSON.parse(localStorage.getItem(STORAGE_KEY) || "{}");
+      expect(stored.companionGifTheme).toBe("custom");
+      expect(stored.customCompanionGif).toEqual({});
+      expect(stored.customCompanionGifStored).toEqual({ light: true, dark: true });
+      expect(wrapper.getComponent(CompanionBubble).props("customGifLightSrc")).toBe("data:image/gif;base64,light");
+      expect(wrapper.getComponent(CompanionBubble).props("customGifDarkSrc")).toBe("data:image/gif;base64,dark");
+    } finally {
+      wrapper.unmount();
+      vi.unstubAllGlobals();
       vi.useRealTimers();
     }
   });
@@ -4118,13 +4257,75 @@ describe("App shell", () => {
 
       const stored = JSON.parse(localStorage.getItem(STORAGE_KEY) || "{}");
       expect(stored.companionGifTheme).toBe("custom");
-      expect(stored.customCompanionGif.light).toMatch(/^data:image\/gif/);
-      expect(stored.customCompanionGif.dark).toMatch(/^data:image\/gif/);
+      expect(stored.customCompanionGif).toEqual({});
+      expect(stored.customCompanionGifStored).toEqual({ light: true, dark: true });
       expect(wrapper.getComponent(CompanionBubble).props("gifTheme")).toBe("custom");
       expect(wrapper.getComponent(CompanionBubble).props("customGifLightSrc")).toMatch(/^data:image\/gif/);
       expect(wrapper.getComponent(CompanionBubble).props("customGifDarkSrc")).toMatch(/^data:image\/gif/);
     } finally {
       wrapper.unmount();
+    }
+  });
+
+  it("loads persisted custom companion GIF sources after refresh", async () => {
+    localStorage.setItem(
+      STORAGE_KEY,
+      JSON.stringify({
+        companionGifTheme: "custom",
+        customCompanionGif: {
+          light: "data:image/gif;base64,light",
+          dark: "data:image/gif;base64,dark",
+        },
+      }),
+    );
+    const wrapper = mountApp();
+
+    try {
+      expect(wrapper.getComponent(SettingsMenu).props("companionGifTheme")).toBe("custom");
+      expect(wrapper.getComponent(CompanionBubble).props("gifTheme")).toBe("custom");
+      expect(wrapper.getComponent(CompanionBubble).props("customGifLightSrc")).toBe("data:image/gif;base64,light");
+      expect(wrapper.getComponent(CompanionBubble).props("customGifDarkSrc")).toBe("data:image/gif;base64,dark");
+    } finally {
+      wrapper.unmount();
+    }
+  });
+
+  it("shows custom GIF tips when clicking a blank reminders area after switching back to custom", async () => {
+    vi.useFakeTimers();
+    localStorage.setItem(
+      STORAGE_KEY,
+      JSON.stringify({
+        companionGifTheme: "ikun",
+        customCompanionGif: {
+          light: "data:image/gif;base64,light",
+          dark: "data:image/gif;base64,dark",
+        },
+      }),
+    );
+    const wrapper = mountApp();
+
+    try {
+      wrapper.getComponent(SettingsMenu).vm.$emit("gifTheme", "hermes", wrapper.getComponent(SettingsMenu).element as HTMLElement);
+      await wrapper.vm.$nextTick();
+      wrapper.getComponent(SettingsMenu).vm.$emit("gifTheme", "custom", wrapper.getComponent(SettingsMenu).element as HTMLElement);
+      await wrapper.vm.$nextTick();
+
+      await wrapper.get('[data-testid="todo-list-morning"]').trigger("click");
+      await wrapper.vm.$nextTick();
+
+      const img = wrapper.get(".focus-companion.is-visible img");
+      expect(img.attributes("src")).toBe("data:image/gif;base64,light");
+      const input = wrapper.get('[data-testid="todo-input-morning"]');
+      expect(document.activeElement).toBe(input.element);
+      expect(wrapper.get(".todo-item").classes()).toContain("is-editing");
+
+      await vi.advanceTimersByTimeAsync(260);
+      await wrapper.vm.$nextTick();
+
+      expect(wrapper.get('[data-testid="companion-confirm"]').text()).not.toHaveLength(0);
+    } finally {
+      wrapper.unmount();
+      vi.useRealTimers();
     }
   });
 

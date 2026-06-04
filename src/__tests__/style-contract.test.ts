@@ -50,7 +50,8 @@ describe("workbench style contract", () => {
 
     expect(bareButtonBodies.join("\n")).not.toMatch(/\b(border|background|border-radius|min-height|padding):/);
     expectSelectorBody(styles, 'button:not([data-slot="button"])', "border: 0");
-    expectSelectorBody(styles, 'button:not([data-slot="button"])', "background: var(--button)");
+    expect(ruleBodies(styles, 'button:not([data-slot="button"])').join("\n")).not.toContain("background:");
+    expect(styles).not.toContain('button:not([data-slot="button"]):hover');
     expectSelectorBody(styles, 'button:not([data-slot="button"])', "min-height: 30px");
   });
 

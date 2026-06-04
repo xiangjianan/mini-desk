@@ -237,7 +237,9 @@ describe("state compatibility", () => {
       light: "data:image/gif;base64,light",
       dark: "data:image/gif;base64,dark",
     });
-    expect(getSerializableState(state).customCompanionGif).toEqual(state.customCompanionGif);
+    expect(getSerializableState(state).customCompanionGif).toEqual({});
+    expect(getSerializableState(state).customCompanionGifStored).toEqual({ light: true, dark: true });
+    expect(getSerializableState(state, { includeCustomGifData: true }).customCompanionGif).toEqual(state.customCompanionGif);
   });
 
   it("normalizes unknown companion GIF themes to ikun", () => {

@@ -272,15 +272,17 @@ describe("Naive UI component usage", () => {
     expect(styles).toMatch(/\.save-status\[data-state="saving"\]::before\s*\{[^}]*animation: save-status-pulse/s);
   });
 
-  it("crops the companion GIF into a square instead of letterboxing it", () => {
+  it("keeps the companion GIF unframed within a 50px box", () => {
     const styles = read("src/styles.css");
 
     expect(styles).toContain(".focus-companion img");
-    expect(styles).toMatch(/\.focus-companion img\s*\{[^}]*width: 50px/s);
-    expect(styles).toMatch(/\.focus-companion img\s*\{[^}]*height: 50px/s);
-    expect(styles).toContain("aspect-ratio: 1 / 1");
-    expect(styles).toContain("object-fit: cover");
-    expect(styles).toMatch(/\.focus-companion img\s*\{[^}]*border: 1px solid var\(--line-main\)/s);
+    expect(styles).toMatch(/\.focus-companion img\s*\{[^}]*max-width: 50px/s);
+    expect(styles).toMatch(/\.focus-companion img\s*\{[^}]*max-height: 50px/s);
+    expect(styles).toMatch(/\.focus-companion img\s*\{[^}]*width: auto/s);
+    expect(styles).toMatch(/\.focus-companion img\s*\{[^}]*height: auto/s);
+    expect(styles).not.toContain("aspect-ratio: 1 / 1");
+    expect(styles).toContain("object-fit: contain");
+    expect(styles).toMatch(/\.focus-companion img\s*\{[^}]*border: 0/s);
   });
 
   it("keeps typography and confirmation actions compact but readable", () => {
@@ -382,6 +384,18 @@ describe("Naive UI component usage", () => {
       expect(source, file).toContain("CONTEXT_MENU_Z_INDEX");
       expect(source, file).toContain(':z-index="CONTEXT_MENU_Z_INDEX"');
     }
+  });
+
+  it("keeps the shortcut help close button circular before and during hover", () => {
+    const styles = read("src/styles.css");
+
+    expect(styles).toMatch(/\.shortcut-help-modal \.n-base-close\s*\{[^}]*width: 30px/s);
+    expect(styles).toMatch(/\.shortcut-help-modal \.n-base-close\s*\{[^}]*height: 30px/s);
+    expect(styles).toMatch(/\.shortcut-help-modal \.n-base-close\s*\{[^}]*border-radius: 50% !important/s);
+    expect(styles).toMatch(/\.shortcut-help-modal \.n-base-close:hover\s*\{[^}]*width: 30px/s);
+    expect(styles).toMatch(/\.shortcut-help-modal \.n-base-close:hover\s*\{[^}]*height: 30px/s);
+    expect(styles).toMatch(/\.shortcut-help-modal \.n-base-close:hover\s*\{[^}]*border-radius: 50% !important/s);
+    expect(styles).toMatch(/\.shortcut-help-modal \.n-base-close \.n-base-close__state-border[\s\S]*?\.shortcut-help-modal \.n-base-close \.n-base-close__border\s*\{[^}]*display: none/s);
   });
 
   it("uses row Naive date pickers for notification time editing", () => {
@@ -636,6 +650,23 @@ describe("Naive UI component usage", () => {
     expect(styles).toMatch(/\.companion-popover-arrow\s*\{[^}]*background: var\(--popover\) !important/s);
   });
 
+  it("animates the tool configuration popover and keeps its close button circular", () => {
+    const tool = read("src/components/ToolPanel.vue");
+    const styles = read("src/styles.css");
+
+    expect(tool).toContain('name="tool-config-pop"');
+    expect(tool).toContain(':duration="240"');
+    expect(styles).toMatch(/\.tool-config-panel\s*\{[^}]*border: 1px solid var\(--border\)/s);
+    expect(styles).toMatch(/\.tool-config-panel\s*\{[^}]*background: var\(--popover\)/s);
+    expect(styles).toMatch(/\.tool-config-panel\s*\{[^}]*box-shadow: 0 6px 14px rgba\(15, 23, 42, 0\.045\)/s);
+    expect(styles).toMatch(/\.tool-config-pop-enter-active,[\s\S]*?\.tool-config-pop-leave-active\s*\{[^}]*transform var\(--motion-medium\)/s);
+    expect(styles).toMatch(/\.tool-config-pop-enter-from,[\s\S]*?\.tool-config-pop-leave-to\s*\{[^}]*opacity: 0/s);
+    expect(styles).toMatch(/\.tool-config-close\s*\{[^}]*width: 30px/s);
+    expect(styles).toMatch(/\.tool-config-close\s*\{[^}]*height: 30px/s);
+    expect(styles).toMatch(/\.tool-config-close\s*\{[^}]*border-radius: 50%/s);
+    expect(styles).toMatch(/button\.tool-config-close:hover,[\s\S]*?button\.tool-config-close:focus-visible\s*\{[^}]*background: var\(--button-hover\)/s);
+  });
+
   it("animates reminder reveal and workspace tab switches", () => {
     const space = read("src/components/SpacePanel.vue");
     const todo = read("src/components/TodoPanel.vue");
@@ -847,7 +878,7 @@ describe("Naive UI component usage", () => {
     expect(styles).toMatch(/\.mobile-handoff-message\s*\{[^}]*border: 1px solid var\(--line-main\)/s);
     expect(styles).toMatch(/@media \(max-width: 900px\)[\s\S]*--app-font-size: 14px/s);
     expect(styles).toMatch(/@media \(max-width: 900px\)[\s\S]*\.focus-companion\s*\{[^}]*bottom: 28px/s);
-    expect(styles).toMatch(/@media \(max-width: 900px\)[\s\S]*\.focus-companion img\s*\{[^}]*width: 50px/s);
+    expect(styles).toMatch(/@media \(max-width: 900px\)[\s\S]*\.focus-companion img\s*\{[^}]*max-width: 50px/s);
     expect(styles).not.toContain(".mobile-nav");
     expect(styles).not.toContain(".mobile-drawer-trigger");
     expect(styles).not.toContain(".mobile-drawer-menu");

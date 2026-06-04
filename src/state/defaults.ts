@@ -36,6 +36,7 @@ export function defaultState(): BoardState {
     theme: "light",
     companionGifTheme: DEFAULT_COMPANION_GIF_THEME,
     customCompanionGif: {},
+    customCompanionGifStored: {},
     customTitles: {},
     noteLines: [],
     workspaceLines: [],

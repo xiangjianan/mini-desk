@@ -21,6 +21,7 @@ export type MessageKey =
   | "noCompletedTodos"
   | "dataExported"
   | "dataImported"
+  | "dataCleared"
   | "deleteImage"
   | "deleteQuick"
   | "deleteTodo"
@@ -42,6 +43,7 @@ export type MessageKey =
   | "confirmDeleteSpace"
   | "confirmClearCompleted"
   | "confirmImportData"
+  | "confirmClearData"
   | "about";
 
 type MessageEntry = {
@@ -373,6 +375,22 @@ export const MESSAGE_CATALOG: Record<MessageKey, MessageEntry> = {
       "文件已准备好",
       "数据已备份",
       "导出文件好了",
+    ],
+  },
+  dataCleared: {
+    mood: "calm",
+    surface: "companion",
+    variants: [
+      "数据已清空",
+      "当前数据已重置",
+      "看板已恢复初始状态",
+      "已清空所有本地数据",
+      "数据清理完成",
+      "Mini Desk 已重置",
+      "本地数据已清空",
+      "已恢复默认数据",
+      "清空完成",
+      "看板数据已清空",
     ],
   },
   deleteImage: {
@@ -711,6 +729,22 @@ export const MESSAGE_CATALOG: Record<MessageKey, MessageEntry> = {
       "确认用备份覆盖？",
     ],
   },
+  confirmClearData: {
+    mood: "warning",
+    surface: "companion",
+    variants: [
+      "清空当前数据？此操作不可恢复",
+      "确认清空所有本地数据？",
+      "当前看板数据会被清空",
+      "清空后会恢复初始状态",
+      "确定清空数据？",
+      "所有本地数据将被清空",
+      "清空数据后不可恢复",
+      "确认重置当前看板？",
+      "这会清空当前数据",
+      "清空当前看板数据？",
+    ],
+  },
   about: {
     mood: "calm",
     surface: "companion",
@@ -745,6 +779,7 @@ const EN_MESSAGE_VARIANTS = {
   noCompletedTodos: ["No completed reminders to clear", "Nothing completed here yet", "There are no completed items"],
   dataExported: ["Data exported", "Backup created", "Board data exported"],
   dataImported: ["Data imported", "Import complete", "Board data updated"],
+  dataCleared: ["Data cleared", "Board reset", "Local data cleared"],
   deleteImage: ["Image deleted", "Screenshot removed", "Image removed from the list"],
   deleteQuick: ["Shortcut deleted", "Quick entry removed", "Shortcut removed"],
   deleteTodo: ["Reminder deleted", "Reminder removed", "Item deleted"],
@@ -766,6 +801,7 @@ const EN_MESSAGE_VARIANTS = {
   confirmDeleteSpace: ["Delete this space? This cannot be undone.", "Remove this space permanently?", "This space and its content will be deleted."],
   confirmClearCompleted: ["Clear completed reminders?", "Remove completed items?", "Completed reminders will be removed."],
   confirmImportData: ["Importing will overwrite current data.", "Overwrite this board with the backup?", "Current board data will be replaced."],
+  confirmClearData: ["Clear all local data?", "This will reset the board.", "Current data will be cleared."],
   about: [
     [
       "Mini Desk",

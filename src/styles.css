@@ -166,7 +166,6 @@ select {
 
 button:not([data-slot="button"]) {
   border: 0;
-  background: var(--button);
   border-radius: var(--radius);
   min-height: 30px;
   padding: 0 10px;
@@ -177,10 +176,6 @@ button:not([data-slot="button"]) {
     color var(--motion-fast) ease,
     opacity var(--motion-fast) ease,
     transform var(--motion-medium) var(--motion-ease);
-}
-
-button:not([data-slot="button"]):hover {
-  background: var(--button-hover);
 }
 
 input,
@@ -829,13 +824,27 @@ button.tool-panel-menu-button:focus-visible {
   z-index: 22;
   display: grid;
   width: min(220px, calc(100% - 16px));
-  gap: 6px;
-  padding: 8px;
+  gap: 8px;
+  padding: 10px;
   border: 1px solid var(--border);
   border-radius: var(--radius);
-  color: var(--text);
+  color: var(--popover-foreground);
   background: var(--popover);
   box-shadow: 0 6px 14px rgba(15, 23, 42, 0.045);
+  transform-origin: top right;
+}
+
+.tool-config-pop-enter-active,
+.tool-config-pop-leave-active {
+  transition:
+    opacity var(--motion-fast) ease,
+    transform var(--motion-medium) var(--motion-ease);
+}
+
+.tool-config-pop-enter-from,
+.tool-config-pop-leave-to {
+  opacity: 0;
+  transform: translateY(-4px) scale(0.98);
 }
 
 .tool-config-heading {
@@ -848,18 +857,35 @@ button.tool-panel-menu-button:focus-visible {
 }
 
 .tool-config-close {
-  width: 24px;
-  min-width: 24px;
-  height: 24px;
-  min-height: 24px;
+  width: 30px;
+  min-width: 30px;
+  height: 30px;
+  min-height: 30px;
+  padding: 0;
+  border-radius: 50%;
   color: var(--muted);
   background: transparent;
 }
 
-button.tool-config-close,
+button.tool-config-close {
+  width: 30px;
+  min-width: 30px;
+  height: 30px;
+  min-height: 30px;
+  padding: 0;
+  border-radius: 50%;
+  background: transparent;
+}
+
 button.tool-config-close:hover,
 button.tool-config-close:focus-visible {
-  background: transparent;
+  width: 30px;
+  min-width: 30px;
+  height: 30px;
+  min-height: 30px;
+  padding: 0;
+  border-radius: 50%;
+  background: var(--button-hover);
 }
 
 .tool-config-row {
@@ -2810,11 +2836,12 @@ button.todo-section-menu-button {
 }
 
 .focus-companion img {
-  width: 50px;
-  height: 50px;
-  aspect-ratio: 1 / 1;
-  border: 1px solid var(--line-main);
-  object-fit: cover;
+  max-width: 50px;
+  max-height: 50px;
+  width: auto;
+  height: auto;
+  border: 0;
+  object-fit: contain;
   object-position: center;
 }
 
@@ -3004,6 +3031,26 @@ button.todo-section-menu-button {
   gap: 4px;
   color: var(--muted);
   font-size: 12px;
+}
+
+.gif-theme-custom-preview {
+  display: inline-flex;
+  width: 50px;
+  height: 50px;
+  align-items: center;
+  justify-content: center;
+  overflow: hidden;
+  border-radius: calc(var(--radius) - 4px);
+  background: var(--button);
+}
+
+.gif-theme-custom-preview img {
+  max-width: 50px;
+  max-height: 50px;
+  width: auto;
+  height: auto;
+  border: 0;
+  object-fit: contain;
 }
 
 .gif-theme-custom-dialog .n-upload,
@@ -3257,6 +3304,39 @@ body:has(.image-preview) .image-panel .n-scrollbar {
   margin: 0 auto;
 }
 
+.shortcut-help-modal .n-base-close {
+  width: 30px;
+  min-width: 30px;
+  height: 30px;
+  min-height: 30px;
+  padding: 0;
+  box-sizing: border-box;
+  border-radius: 50% !important;
+}
+
+.shortcut-help-modal .n-base-close:hover {
+  width: 30px;
+  min-width: 30px;
+  height: 30px;
+  min-height: 30px;
+  padding: 0;
+  border-radius: 50% !important;
+}
+
+.shortcut-help-modal .n-base-close:focus-visible {
+  width: 30px;
+  min-width: 30px;
+  height: 30px;
+  min-height: 30px;
+  padding: 0;
+  border-radius: 50% !important;
+}
+
+.shortcut-help-modal .n-base-close .n-base-close__state-border,
+.shortcut-help-modal .n-base-close .n-base-close__border {
+  display: none;
+}
+
 .shortcut-help-modal .n-card__content {
   padding: 0 !important;
 }
@@ -3328,8 +3408,8 @@ body:has(.image-preview) .image-panel .n-scrollbar {
   }
 
   .focus-companion img {
-    width: 50px;
-    height: 50px;
+    max-width: 50px;
+    max-height: 50px;
   }
 
   .companion-popover-shell.n-popover {

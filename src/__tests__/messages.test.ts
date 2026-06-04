@@ -32,6 +32,7 @@ const messageKeys = [
   "noCompletedTodos",
   "dataExported",
   "dataImported",
+  "dataCleared",
   "deleteImage",
   "deleteQuick",
   "deleteTodo",
@@ -53,6 +54,7 @@ const messageKeys = [
   "confirmDeleteSpace",
   "confirmClearCompleted",
   "confirmImportData",
+  "confirmClearData",
   "about",
 ] as const;
 
@@ -127,7 +129,7 @@ describe("message catalog", () => {
 
   it("does not keep undo keys or undo wording in delete and clear flows", () => {
     expect(Object.keys(MESSAGE_CATALOG).some((key) => key.startsWith("undo"))).toBe(false);
-    for (const key of ["confirmDeleteImage", "confirmDeleteQuick", "confirmDeleteTodo", "confirmClearCompleted"] as const) {
+    for (const key of ["confirmDeleteImage", "confirmDeleteQuick", "confirmDeleteTodo", "confirmClearCompleted", "confirmClearData"] as const) {
       expect(MESSAGE_CATALOG[key].variants.join("\n"), key).not.toMatch(/(^|[^不])可(撤销|恢复)/);
     }
   });

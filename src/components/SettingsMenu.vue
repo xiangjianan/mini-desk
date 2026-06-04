@@ -9,29 +9,36 @@ import {
   ImagesOutline,
   InformationCircleOutline,
   KeyOutline,
+  ServerOutline,
   SettingsOutline,
+  TrashOutline,
 } from "@vicons/ionicons5";
 import { NBadge, NButton, NDropdown, NIcon, NUpload } from "naive-ui";
 import type { Component } from "vue";
 import type { UploadFileInfo } from "naive-ui";
 import { COMPANION_GIF_THEME_OPTIONS } from "../state/companionGifThemes";
 import { getUiText, normalizeLanguage } from "../state/i18n";
-import type { AppLanguage, CompanionGifTheme, GuideKey } from "../types";
+import type { AppLanguage, CompanionCustomGif, CompanionGifTheme, GuideKey } from "../types";
 
 const props = withDefaults(defineProps<{
   appVersion: string;
   updateAvailable: boolean;
   updateBadgeVisible?: boolean;
   companionGifTheme: CompanionGifTheme;
+  customCompanionGif?: CompanionCustomGif;
+  hasCustomCompanionGif?: boolean;
   language?: AppLanguage;
 }>(), {
   language: "zh",
   updateBadgeVisible: false,
+  customCompanionGif: () => ({}),
+  hasCustomCompanionGif: false,
 });
 
 const emit = defineEmits<{
   export: [anchor?: HTMLElement];
   import: [anchor?: HTMLElement];
+  clearData: [anchor?: HTMLElement];
   about: [anchor?: HTMLElement];
   suggest: [anchor?: HTMLElement];
   shortcutHelp: [];
@@ -49,8 +56,16 @@ const customGifLightFile = ref<File | undefined>();
 const customGifDarkFile = ref<File | undefined>();
 const text = computed(() => getUiText(props.language));
 const options = computed(() => [
-  { label: text.value.settings.export, key: "export", icon: renderIcon(CloudDownloadOutline) },
-  { label: text.value.settings.import, key: "import", icon: renderIcon(CloudUploadOutline) },
+  {
+    label: text.value.settings.data,
+    key: "data",
+    icon: renderIcon(ServerOutline),
+    children: [
+      { label: text.value.settings.export, key: "export", icon: renderIcon(CloudDownloadOutline) },
+      { label: text.value.settings.import, key: "import", icon: renderIcon(CloudUploadOutline) },
+      { label: text.value.settings.clearData, key: "clear-data", icon: renderIcon(TrashOutline) },
+    ],
+  },
   {
     label: text.value.settings.language,
     key: "language",
@@ -97,6 +112,7 @@ const options = computed(() => [
 function handleSelect(key: string): void {
   if (key === "export") emit("export", triggerRef.value ?? undefined);
   if (key === "import") emit("import", triggerRef.value ?? undefined);
+  if (key === "clear-data") emit("clearData", triggerRef.value ?? undefined);
   if (key === "suggest") emit("suggest", triggerRef.value ?? undefined);
   if (key === "about") emit("about", triggerRef.value ?? undefined);
   if (key === "shortcut-help") {
@@ -109,6 +125,11 @@ function handleSelect(key: string): void {
     return;
   }
   if (key === "gif-theme:custom") {
+    if (props.hasCustomCompanionGif) {
+      emit("gifTheme", "custom", triggerRef.value ?? undefined);
+      customGifDialogOpen.value = true;
+      return;
+    }
     customGifDialogOpen.value = true;
     return;
   }
@@ -125,7 +146,13 @@ function handleCustomGifUpload(fileList: UploadFileInfo[], mode: "light" | "dark
 }
 
 function confirmCustomGif(): void {
-  if (!customGifLightFile.value && !customGifDarkFile.value) return;
+  if (!customGifLightFile.value && !customGifDarkFile.value) {
+    if (props.hasCustomCompanionGif) {
+      emit("gifTheme", "custom", triggerRef.value ?? undefined);
+      customGifDialogOpen.value = false;
+    }
+    return;
+  }
   emit(
     "customGif",
     {
@@ -185,6 +212,9 @@ function renderIcon(component: Component) {
   <section v-if="customGifDialogOpen" class="gif-theme-custom-dialog" :aria-label="text.settings.customGif">
     <label>
       <span>{{ text.settings.lightGif }}</span>
+      <span v-if="customCompanionGif.light" class="gif-theme-custom-preview">
+        <img :src="customCompanionGif.light" alt="" />
+      </span>
       <NUpload
         accept="image/gif,.gif"
         :max="1"
@@ -196,6 +226,9 @@ function renderIcon(component: Component) {
     </label>
     <label>
       <span>{{ text.settings.darkGif }}</span>
+      <span v-if="customCompanionGif.dark" class="gif-theme-custom-preview">
+        <img :src="customCompanionGif.dark" alt="" />
+      </span>
       <NUpload
         accept="image/gif,.gif"
         :max="1"

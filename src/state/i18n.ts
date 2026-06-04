@@ -546,8 +546,10 @@ export const UI_TEXT = {
     },
     settings: {
       button: "设置",
+      data: "数据",
       export: "数据导出",
       import: "数据导入",
+      clearData: "清空数据",
       gifTheme: "GIF 主题",
       suggest: "提建议",
       shortcutHelp: "快捷键",
@@ -755,8 +757,10 @@ export const UI_TEXT = {
     },
     settings: {
       button: "Settings",
+      data: "Data",
       export: "Export data",
       import: "Import data",
+      clearData: "Clear data",
       gifTheme: "GIF theme",
       suggest: "Feedback",
       shortcutHelp: "Shortcuts",

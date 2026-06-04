@@ -61,6 +61,11 @@ export interface CompanionCustomGif {
   dark?: string;
 }
 
+export interface CompanionCustomGifStored {
+  light?: boolean;
+  dark?: boolean;
+}
+
 export interface TodoListConfig {
   id: TodoListId;
   title: string;
@@ -88,6 +93,7 @@ export interface BoardState {
   theme: ThemeMode;
   companionGifTheme: CompanionGifTheme;
   customCompanionGif: CompanionCustomGif;
+  customCompanionGifStored: CompanionCustomGifStored;
   customTitles: Record<string, string>;
   noteLines: LineItem[];
   workspaceLines: LineItem[];
@@ -104,6 +110,7 @@ export interface BoardState {
 
 export interface SerializableOptions {
   includeImageData?: boolean;
+  includeCustomGifData?: boolean;
 }
 
 export interface DraggedTodo {

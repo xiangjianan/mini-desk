@@ -5,6 +5,7 @@ import { DEFAULT_SPACE_TITLES, DEFAULT_TITLES_BY_LANGUAGE, LEGACY_DEFAULT_TITLES
 import type {
   BoardState,
   CompanionCustomGif,
+  CompanionCustomGifStored,
   LineItem,
   QuickApiHeader,
   QuickButton,
@@ -46,7 +47,8 @@ export function getSerializableState(
 
   return {
     ...state,
-    customCompanionGif: cloneCustomCompanionGif(state.customCompanionGif),
+    customCompanionGif: options.includeCustomGifData ? cloneCustomCompanionGif(state.customCompanionGif) : {},
+    customCompanionGifStored: getCustomCompanionGifStoredState(state.customCompanionGif, state.customCompanionGifStored),
     images: state.images.map((image) => {
       if (options.includeImageData) return { ...image };
       return {
@@ -70,7 +72,7 @@ export function getSerializableState(
 }
 
 export function exportJsonState(state: BoardState): string {
-  return JSON.stringify(getSerializableState(state, { includeImageData: true }), null, 2);
+  return JSON.stringify(getSerializableState(state, { includeImageData: true, includeCustomGifData: true }), null, 2);
 }
 
 export function normalizeImportedState(payload: unknown): BoardState {
@@ -91,6 +93,7 @@ export function normalizeImportedState(payload: unknown): BoardState {
     theme: typed.theme === "dark" ? "dark" : "light",
     companionGifTheme: normalizeCompanionGifTheme(typed.companionGifTheme),
     customCompanionGif: normalizeCustomCompanionGif(typed.customCompanionGif),
+    customCompanionGifStored: normalizeCustomCompanionGifStored(typed.customCompanionGifStored, typed.customCompanionGif),
     customTitles,
     noteLines,
     workspaceLines,
@@ -390,6 +393,15 @@ function normalizeCustomCompanionGif(value: unknown): CompanionCustomGif {
   };
 }
 
+function normalizeCustomCompanionGifStored(value: unknown, customCompanionGif: unknown): CompanionCustomGifStored {
+  const stored = isPlainObject(value) ? value as Record<string, unknown> : {};
+  const custom = normalizeCustomCompanionGif(customCompanionGif);
+  return {
+    ...((stored.light === true || Boolean(custom.light)) ? { light: true } : {}),
+    ...((stored.dark === true || Boolean(custom.dark)) ? { dark: true } : {}),
+  };
+}
+
 function normalizeGifDataUrl(value: unknown): string | undefined {
   return typeof value === "string" && /^data:image\/gif(?:;[^,]*)?,/i.test(value) ? value : undefined;
 }
@@ -448,6 +460,16 @@ function cloneCustomCompanionGif(value: CompanionCustomGif | undefined): Compani
   return {
     ...(value?.light ? { light: value.light } : {}),
     ...(value?.dark ? { dark: value.dark } : {}),
+  };
+}
+
+function getCustomCompanionGifStoredState(
+  customGif: CompanionCustomGif | undefined,
+  stored: CompanionCustomGifStored | undefined,
+): CompanionCustomGifStored {
+  return {
+    ...((stored?.light || customGif?.light) ? { light: true } : {}),
+    ...((stored?.dark || customGif?.dark) ? { dark: true } : {}),
   };
 }
 

@@ -773,30 +773,32 @@ function copyTextWithBrowserCommand(value: string): boolean {
       </button>
     </div>
 
-    <section v-if="toolConfigVisible" ref="toolConfigPanelRef" class="tool-config-panel" :aria-label="uiText.tools.configTitle">
-      <div class="tool-config-heading">
-        <span>{{ uiText.tools.configTitle }}</span>
-        <button
-          type="button"
-          class="tool-config-close icon-button"
-          :aria-label="uiText.tools.close"
-          :title="uiText.tools.close"
-          @click="toolConfigVisible = false"
-        >
-          ×
-        </button>
-      </div>
-      <label v-for="tool in tools" :key="tool.id" class="tool-config-row">
-        <input
-          type="checkbox"
-          :data-testid="`tool-toggle-${tool.id}`"
-          :checked="isToolVisible(tool.id)"
-          :disabled="isToolVisible(tool.id) && !canHideTool(tool.id)"
-          @change="toggleToolVisibility(tool.id, ($event.target as HTMLInputElement).checked)"
-        />
-        <span>{{ tool.label }}</span>
-      </label>
-    </section>
+    <Transition name="tool-config-pop" :duration="240">
+      <section v-if="toolConfigVisible" ref="toolConfigPanelRef" class="tool-config-panel" :aria-label="uiText.tools.configTitle">
+        <div class="tool-config-heading">
+          <span>{{ uiText.tools.configTitle }}</span>
+          <button
+            type="button"
+            class="tool-config-close icon-button"
+            :aria-label="uiText.tools.close"
+            :title="uiText.tools.close"
+            @click="toolConfigVisible = false"
+          >
+            <NIcon :component="CloseOutline" aria-hidden="true" />
+          </button>
+        </div>
+        <label v-for="tool in tools" :key="tool.id" class="tool-config-row">
+          <input
+            type="checkbox"
+            :data-testid="`tool-toggle-${tool.id}`"
+            :checked="isToolVisible(tool.id)"
+            :disabled="isToolVisible(tool.id) && !canHideTool(tool.id)"
+            @change="toggleToolVisibility(tool.id, ($event.target as HTMLInputElement).checked)"
+          />
+          <span>{{ tool.label }}</span>
+        </label>
+      </section>
+    </Transition>
 
     <div class="tool-workbench" @click="showEmptyToolTips" @contextmenu.capture="openActiveToolMenu">
       <nav class="tool-tabs" role="tablist" :aria-label="uiText.tools.list" @contextmenu="openToolTabsMenu">

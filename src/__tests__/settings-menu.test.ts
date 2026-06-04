@@ -49,6 +49,51 @@ const uploadStub = defineComponent({
 });
 
 describe("SettingsMenu", () => {
+  it("groups data actions under one icon menu", async () => {
+    const wrapper = mount(SettingsMenu, {
+      props: {
+        appVersion: "1.0.38",
+        updateAvailable: false,
+        companionGifTheme: "hermes",
+        language: "zh",
+      },
+      global: {
+        stubs: {
+          Dropdown: dropdownStub,
+          NDropdown: dropdownStub,
+          NBadge: { template: "<span><slot /></span>" },
+          NButton: { template: "<button><slot /></button>" },
+          NIcon: { template: "<span />" },
+          NUpload: uploadStub,
+          Upload: uploadStub,
+        },
+      },
+    });
+
+    expect(wrapper.find('[data-key="data"]').text()).toBe("数据");
+    expect(wrapper.findAll('[data-key="export"]')).toHaveLength(1);
+    expect(wrapper.findAll('[data-key="import"]')).toHaveLength(1);
+    expect(wrapper.find('[data-key="clear-data"]').text()).toBe("清空数据");
+    expect(wrapper.find('[data-key="export"]').classes()).toContain("dropdown-child-option");
+    expect(wrapper.find('[data-key="import"]').classes()).toContain("dropdown-child-option");
+    expect(wrapper.find('[data-key="clear-data"]').classes()).toContain("dropdown-child-option");
+
+    await wrapper.find('[data-key="clear-data"]').trigger("click");
+
+    expect(wrapper.emitted("clearData")?.[0]).toEqual([expect.any(HTMLElement)]);
+  });
+
+  it("keeps icons on the data menu and its child actions", () => {
+    const source = readFileSync(resolve(__dirname, "../components/SettingsMenu.vue"), "utf8");
+
+    expect(source).toContain("ServerOutline");
+    expect(source).toContain("TrashOutline");
+    expect(source).toMatch(/key:\s*"data"[\s\S]*?icon:\s*renderIcon\(ServerOutline\)/);
+    expect(source).toMatch(/key:\s*"export"[\s\S]*?icon:\s*renderIcon\(CloudDownloadOutline\)/);
+    expect(source).toMatch(/key:\s*"import"[\s\S]*?icon:\s*renderIcon\(CloudUploadOutline\)/);
+    expect(source).toMatch(/key:\s*"clear-data"[\s\S]*?icon:\s*renderIcon\(TrashOutline\)/);
+  });
+
   it("adds a suggestion action that emits from the settings menu", async () => {
     const wrapper = mount(SettingsMenu, {
       props: {
@@ -127,6 +172,40 @@ describe("SettingsMenu", () => {
     await wrapper.find('[data-key="gif-theme:ikun"]').trigger("click");
 
     expect(wrapper.emitted("gifTheme")?.[0]).toEqual(["ikun", expect.any(HTMLElement)]);
+  });
+
+  it("opens the saved custom GIF dialog with previews while switching back to custom", async () => {
+    const wrapper = mount(SettingsMenu, {
+      props: {
+        appVersion: "1.0.38",
+        updateAvailable: false,
+        companionGifTheme: "hermes",
+        hasCustomCompanionGif: true,
+        customCompanionGif: {
+          light: "data:image/gif;base64,light",
+          dark: "data:image/gif;base64,dark",
+        },
+        language: "zh",
+      },
+      global: {
+        stubs: {
+          Dropdown: dropdownStub,
+          NDropdown: dropdownStub,
+          NBadge: { template: "<span><slot /></span>" },
+          NButton: { template: "<button><slot /></button>" },
+          NIcon: { template: "<span />" },
+        },
+      },
+    });
+
+    await wrapper.find('[data-key="gif-theme:custom"]').trigger("click");
+
+    expect(wrapper.emitted("gifTheme")?.[0]).toEqual(["custom", expect.any(HTMLElement)]);
+    expect(wrapper.find(".gif-theme-custom-dialog").exists()).toBe(true);
+    expect(wrapper.findAll(".gif-theme-custom-preview img").map((img) => img.attributes("src"))).toEqual([
+      "data:image/gif;base64,light",
+      "data:image/gif;base64,dark",
+    ]);
   });
 
   it("opens a custom GIF upload dialog and emits selected GIF files", async () => {

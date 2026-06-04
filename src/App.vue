@@ -13,7 +13,15 @@ import TodoPanel from "./components/TodoPanel.vue";
 import ToolPanel from "./components/ToolPanel.vue";
 import WorkbenchShell from "./components/WorkbenchShell.vue";
 import { getCompanionGifSrc, getCompanionNotificationIconSrc } from "./state/companionGifThemes";
-import { deleteStoredImage, hydrateStoredImages, persistImagePayloads, storeImagePayload } from "./state/images";
+import {
+  clearStoredImagePayloads,
+  deleteStoredImage,
+  hydrateCustomCompanionGif,
+  hydrateStoredImages,
+  persistCustomCompanionGifPayloads,
+  persistImagePayloads,
+  storeImagePayload,
+} from "./state/images";
 import { getMessage, withKaomoji, type MessageKey } from "./state/messages";
 import {
   getDefaultTitles,
@@ -39,6 +47,7 @@ import {
   starTodo,
   updateTodoText,
 } from "./state/todos";
+import { defaultState } from "./state/defaults";
 import {
   createId,
   exportJsonState,
@@ -204,6 +213,20 @@ onMounted(async () => {
   appMounted = true;
   applyTheme();
   setupMobileBreakpoint();
+  try {
+    state.customCompanionGif = await hydrateCustomCompanionGif(state.customCompanionGif, state.customCompanionGifStored);
+    state.customCompanionGifStored = {
+      ...(state.customCompanionGif.light ? { light: true } : {}),
+      ...(state.customCompanionGif.dark ? { dark: true } : {}),
+    };
+    if (state.customCompanionGif.light || state.customCompanionGif.dark) {
+      await persistCustomCompanionGifPayloads(state.customCompanionGif);
+      saveState(state);
+      lastUndoSnapshot.value = exportJsonState(state);
+    }
+  } catch {
+    state.customCompanionGifStored = {};
+  }
   state.images = await hydrateStoredImages(state.images);
   await persistImagePayloads(state.images);
   if (!appMounted) return;
@@ -1117,7 +1140,12 @@ async function updateCustomCompanionGif(files: { light?: File; dark?: File }, an
     light: light ?? fallback,
     dark: dark ?? fallback,
   };
+  state.customCompanionGifStored = {
+    light: true,
+    dark: true,
+  };
   state.companionGifTheme = "custom";
+  await persistCustomCompanionGifPayloads(state.customCompanionGif);
   persistNow();
   showBubbleText(uiText.value.app.customGifSet, anchor);
 }
@@ -1128,9 +1156,34 @@ function applyTheme(): void {
 
 function exportData(anchor?: HTMLElement): void {
   const content = exportJsonState(state);
-  const filename = `todo-board-${new Date().toISOString().slice(0, 10)}.json`;
+  const filename = `mini-desk-${new Date().toISOString().slice(0, 10)}.json`;
   downloadExportFile(content, filename);
   showBubble("dataExported", anchor, { hideCompanionAfter: true });
+}
+
+function clearData(anchor?: HTMLElement): void {
+  requestConfirmation(
+    "confirmClearData",
+    anchor,
+    async () => {
+      window.clearTimeout(textSaveTimer.value);
+      textSaveTimer.value = undefined;
+      emptyTodoRemovalTimers.forEach((timer) => window.clearTimeout(timer));
+      emptyTodoRemovalTimers.clear();
+      activePreviewId.value = undefined;
+      pendingEditSpaceId.value = null;
+      pendingEditTodoListId.value = null;
+      undoSnapshots.value = [];
+      Object.assign(state, defaultState());
+      await clearStoredImagePayloads();
+      persistNow();
+      refreshTodoNotifications();
+      lastUndoSnapshot.value = exportJsonState(state);
+      showBubble("dataCleared", anchor, { hideCompanionAfter: true });
+    },
+    undefined,
+    { confirmText: uiText.value.settings.clearData, cancelText: uiText.value.common.cancel, danger: true },
+  );
 }
 
 function downloadExportFile(content: string, filename: string): void {
@@ -1190,6 +1243,7 @@ async function importData(event: Event): Promise<void> {
     importFeedbackAnchor.value,
     async () => {
       Object.assign(state, next);
+      await persistCustomCompanionGifPayloads(state.customCompanionGif);
       await persistImagePayloads(state.images);
       persistNow();
       refreshTodoNotifications();
@@ -1901,9 +1955,12 @@ function moveItem<T extends { id: string }>(items: T[], dragId: string, targetId
           :update-available="versionPromptVisible"
           :update-badge-visible="versionBadgeVisible"
           :companion-gif-theme="state.companionGifTheme"
+          :custom-companion-gif="state.customCompanionGif"
+          :has-custom-companion-gif="Boolean(state.customCompanionGif.light || state.customCompanionGif.dark || state.customCompanionGifStored.light || state.customCompanionGifStored.dark)"
           :language="state.language"
           @export="exportData"
           @import="requestImport"
+          @clear-data="clearData"
           @about="about"
           @suggest="suggestIssue"
           @shortcut-help="shortcutHelpVisible = true"
