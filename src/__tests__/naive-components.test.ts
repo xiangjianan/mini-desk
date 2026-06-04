@@ -427,6 +427,7 @@ describe("Naive UI component usage", () => {
     expect(styles).toMatch(/\.notify-floating-date-picker\s*\{[^}]*border: 0/s);
     expect(styles).toMatch(/\.notify-floating-date-picker\s*\{[^}]*border-radius: var\(--radius\)/s);
     expect(styles).toMatch(/\.notify-floating-date-picker\s*\{[^}]*box-shadow: 0 8px 22px rgba\(15, 23, 42, 0\.12\)/s);
+    expect(styles).toMatch(/\.notify-floating-date-picker\s*\{[^}]*padding-top: 8px/s);
     expect(styles).toMatch(/\.notify-floating-date-picker\s*\{[^}]*--notify-date-column-width: 332px/s);
     expect(styles).toMatch(/\.notify-floating-date-picker\s*\{[^}]*--notify-time-column-width: 114px/s);
     expect(styles).toMatch(/\.notify-floating-date-picker\s*\{[^}]*--notify-date-panel-height: 267px/s);

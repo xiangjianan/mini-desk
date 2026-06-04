@@ -210,6 +210,7 @@ describe("workbench style contract", () => {
     expectSelectorBody(styles, ".notify-floating-date-picker", "border: 0");
     expectSelectorBody(styles, ".notify-floating-date-picker", "border-radius: var(--radius)");
     expectSelectorBody(styles, ".notify-floating-date-picker", "box-shadow: 0 8px 22px rgba(15, 23, 42, 0.12)");
+    expectSelectorBody(styles, ".notify-floating-date-picker", "padding-top: 8px");
     expectSelectorBody(styles, ".notify-time-columns", "grid-template-columns: 1fr 1fr");
     expectSelectorBody(styles, ".notify-time-panel", "border-radius: var(--radius)");
     expectSelectorBody(styles, ".notify-time-column", "overflow-y: auto");

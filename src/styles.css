@@ -2234,6 +2234,7 @@ button.todo-notify-button.has-time {
   grid-template-columns: var(--notify-date-column-width) var(--notify-time-column-width);
   column-gap: var(--notify-picker-gap);
   align-items: start;
+  padding-top: 8px;
 }
 
 .notify-date-picker {
