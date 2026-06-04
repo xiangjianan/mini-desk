@@ -52,6 +52,11 @@ const modalStub = {
   template: '<section v-if="show" class="quick-dialog"><h2>{{ title }}</h2><slot /></section>',
 };
 
+const persistentModalStub = {
+  props: ["show", "title"],
+  template: '<section class="quick-dialog" :data-show="show ? \'true\' : \'false\'"><h2>{{ title }}</h2><slot /></section>',
+};
+
 const dropdownStub = {
   props: ["options"],
   emits: ["select"],
@@ -94,6 +99,36 @@ function mountQuickButtons(options: Partial<InstanceType<typeof QuickButtons>["$
         NIcon: true,
         NInput: inputStub,
         NModal: modalStub,
+        NSelect: selectStub,
+      },
+    },
+    attachTo: document.body,
+  });
+}
+
+function mountQuickButtonsWithPersistentModal(options: Partial<InstanceType<typeof QuickButtons>["$props"]> = {}) {
+  return mount(QuickButtons, {
+    props: {
+      title: "快捷链接",
+      buttons: [],
+      showHidden: false,
+      ...options,
+    },
+    global: {
+      stubs: {
+        Button: buttonStub,
+        Checkbox: checkboxStub,
+        Dropdown: dropdownStub,
+        Icon: true,
+        Input: inputStub,
+        Modal: persistentModalStub,
+        Select: selectStub,
+        NButton: buttonStub,
+        NCheckbox: checkboxStub,
+        NDropdown: dropdownStub,
+        NIcon: true,
+        NInput: inputStub,
+        NModal: persistentModalStub,
         NSelect: selectStub,
       },
     },
@@ -220,6 +255,26 @@ describe("QuickButtons", () => {
       value: "第一行\n第二行",
       type: "text",
     });
+
+    wrapper.unmount();
+  });
+
+  it("keeps edit actions mounted while the dialog closes after saving", async () => {
+    const wrapper = mountQuickButtonsWithPersistentModal({
+      buttons: [{ id: "a", title: "示例", value: "https://example.com", type: "link", hidden: false }],
+    });
+
+    await wrapper.get(".quick-button").trigger("contextmenu");
+    await wrapper.findAll(".dropdown-option").find((option) => option.text() === "编辑")?.trigger("click");
+    expect(wrapper.find(".quick-dialog-cancel").exists()).toBe(true);
+
+    await wrapper.get("form").trigger("submit.prevent");
+    await wrapper.vm.$nextTick();
+
+    expect(wrapper.emitted("save")?.[0][0]).toMatchObject({ id: "a", title: "示例" });
+    expect(wrapper.get(".quick-dialog").attributes("data-show")).toBe("false");
+    expect(wrapper.find(".quick-dialog-cancel").exists()).toBe(true);
+    expect(wrapper.find(".quick-dialog-submit").exists()).toBe(true);
 
     wrapper.unmount();
   });

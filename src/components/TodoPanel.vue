@@ -185,10 +185,15 @@ const NOTIFY_PICKER_WIDTH = 456;
 const NOTIFY_PICKER_HEIGHT = 360;
 const NOTIFY_HOURS = Array.from({ length: 24 }, (_, hour) => hour);
 const NOTIFY_MINUTES = Array.from({ length: 60 }, (_, minute) => minute);
+const NOTIFY_TIME_LOOP_CYCLES = 5;
+const NOTIFY_TIME_LOOP_MIDDLE_CYCLE = Math.floor(NOTIFY_TIME_LOOP_CYCLES / 2);
+const NOTIFY_LOOPED_HOURS = createNotifyTimeLoopOptions(NOTIFY_HOURS);
+const NOTIFY_LOOPED_MINUTES = createNotifyTimeLoopOptions(NOTIFY_MINUTES);
 const LIST_CREATE_DIALOG_WIDTH = 260;
 const LIST_CREATE_DIALOG_HEIGHT = 112;
 const deadlineNow = ref(Date.now());
 const deadlineClockTimer = ref<number | undefined>();
+const resettingNotifyTimeColumns = new WeakSet<HTMLElement>();
 
 const ordered = computed(() =>
   Object.fromEntries(
@@ -213,6 +218,7 @@ const periodStats = computed(() =>
 );
 
 type TodayFocusEntry = { period: TodoListId; todo: TodoItem; index: number; deferredDone: boolean };
+type NotifyTimeLoopOption = { key: string; value: number; cycle: number; isScrollAnchor: boolean };
 
 const todayFocus = computed(() => {
   const entries: TodayFocusEntry[] = effectiveTodoLists.value.flatMap((list) => {
@@ -620,19 +626,40 @@ function scrollNotifyTimePickerActiveItems(): void {
   notifyPickerRef.value
     ?.querySelectorAll<HTMLElement>(".notify-time-column")
     .forEach((column) => {
-      const active = column.querySelector<HTMLElement>(".notify-time-option.is-active");
+      const active = column.querySelector<HTMLElement>(".notify-time-option.is-scroll-anchor")
+        ?? column.querySelector<HTMLElement>(".notify-time-option.is-active");
       if (!active) return;
       column.scrollTop = Math.max(0, active.offsetTop - column.offsetTop);
     });
 }
 
-function handleNotifyPickerWheel(event: WheelEvent): void {
-  const target = event.target instanceof Element ? event.target : null;
-  const column = target?.closest<HTMLElement>(".notify-time-column");
-  if (!column) return;
-  column.scrollTop += event.deltaY;
-  event.preventDefault();
-  event.stopPropagation();
+function createNotifyTimeLoopOptions(values: number[]): NotifyTimeLoopOption[] {
+  return Array.from({ length: values.length * NOTIFY_TIME_LOOP_CYCLES }, (_, index) => {
+    const cycle = Math.floor(index / values.length);
+    const value = values[index % values.length];
+    return {
+      key: `${cycle}-${value}`,
+      value,
+      cycle,
+      isScrollAnchor: cycle === NOTIFY_TIME_LOOP_MIDDLE_CYCLE,
+    };
+  });
+}
+
+function handleNotifyTimeColumnScroll(event: Event, valueCount: number): void {
+  const column = event.currentTarget;
+  if (!(column instanceof HTMLElement) || resettingNotifyTimeColumns.has(column)) return;
+  const option = column.querySelector<HTMLElement>(".notify-time-option");
+  const optionHeight = option?.offsetHeight ?? 0;
+  if (optionHeight <= 0) return;
+  const cycleHeight = valueCount * optionHeight;
+  const scrollWithinCycle = column.scrollTop % cycleHeight;
+  const shouldResetToMiddle = column.scrollTop < cycleHeight * 0.5
+    || column.scrollTop > cycleHeight * (NOTIFY_TIME_LOOP_CYCLES - 1.5);
+  if (!shouldResetToMiddle) return;
+  resettingNotifyTimeColumns.add(column);
+  column.scrollTop = (NOTIFY_TIME_LOOP_MIDDLE_CYCLE * cycleHeight) + scrollWithinCycle;
+  window.requestAnimationFrame(() => resettingNotifyTimeColumns.delete(column));
 }
 
 function getNotifyPickerInitialValue(todo?: TodoItem): number {
@@ -1421,7 +1448,6 @@ function buildTodoListEntries(period: TodoListId, todos: TodoItem[], deferredDon
           class="notify-floating-date-picker"
           :style="notifyPickerStyle"
           :aria-label="uiText.todo.setNotify"
-          @wheel="handleNotifyPickerWheel"
         >
           <NDatePicker
             class="notify-date-picker"
@@ -1441,33 +1467,31 @@ function buildTodoListEntries(period: TodoListId, todos: TodoItem[], deferredDon
               <span>{{ formatNotifyTimeUnit(getNotifyPickerMinute()) }}</span>
             </div>
             <div class="notify-time-columns">
-              <div class="notify-time-column is-hour" role="listbox" aria-label="小时">
-                <button
-                  v-for="hour in NOTIFY_HOURS"
-                  :key="hour"
+              <div class="notify-time-column is-hour" role="listbox" aria-label="小时" @scroll="handleNotifyTimeColumnScroll($event, NOTIFY_HOURS.length)">
+                <div
+                  v-for="hour in NOTIFY_LOOPED_HOURS"
+                  :key="hour.key"
                   class="notify-time-option"
-                  :class="{ 'is-active': getNotifyPickerHour() === hour }"
-                  type="button"
+                  :class="{ 'is-active': getNotifyPickerHour() === hour.value, 'is-scroll-anchor': hour.isScrollAnchor && getNotifyPickerHour() === hour.value }"
                   role="option"
-                  :aria-selected="getNotifyPickerHour() === hour"
-                  @click="updateNotifyPickerTime('hour', hour)"
+                  :aria-selected="getNotifyPickerHour() === hour.value"
+                  @click="updateNotifyPickerTime('hour', hour.value)"
                 >
-                  {{ formatNotifyTimeUnit(hour) }}
-                </button>
+                  {{ formatNotifyTimeUnit(hour.value) }}
+                </div>
               </div>
-              <div class="notify-time-column is-minute" role="listbox" aria-label="分钟">
-                <button
-                  v-for="minute in NOTIFY_MINUTES"
-                  :key="minute"
+              <div class="notify-time-column is-minute" role="listbox" aria-label="分钟" @scroll="handleNotifyTimeColumnScroll($event, NOTIFY_MINUTES.length)">
+                <div
+                  v-for="minute in NOTIFY_LOOPED_MINUTES"
+                  :key="minute.key"
                   class="notify-time-option"
-                  :class="{ 'is-active': getNotifyPickerMinute() === minute }"
-                  type="button"
+                  :class="{ 'is-active': getNotifyPickerMinute() === minute.value, 'is-scroll-anchor': minute.isScrollAnchor && getNotifyPickerMinute() === minute.value }"
                   role="option"
-                  :aria-selected="getNotifyPickerMinute() === minute"
-                  @click="updateNotifyPickerTime('minute', minute)"
+                  :aria-selected="getNotifyPickerMinute() === minute.value"
+                  @click="updateNotifyPickerTime('minute', minute.value)"
                 >
-                  {{ formatNotifyTimeUnit(minute) }}
-                </button>
+                  {{ formatNotifyTimeUnit(minute.value) }}
+                </div>
               </div>
             </div>
           </div>

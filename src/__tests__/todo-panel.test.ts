@@ -1285,8 +1285,40 @@ describe("TodoPanel", () => {
     expect(picker.props("actions")).toEqual([]);
     expect(picker.props("value")).toBe(new Date(2026, 4, 25, 9).getTime());
     expect(document.body.querySelectorAll(".notify-time-column")).toHaveLength(2);
-    expect(document.body.querySelectorAll(".notify-time-column.is-hour .notify-time-option")).toHaveLength(24);
-    expect(document.body.querySelectorAll(".notify-time-column.is-minute .notify-time-option")).toHaveLength(60);
+    const hourOptions = Array.from(document.body.querySelectorAll(".notify-time-column.is-hour .notify-time-option"));
+    const minuteOptions = Array.from(document.body.querySelectorAll(".notify-time-column.is-minute .notify-time-option"));
+    expect(hourOptions.length).toBeGreaterThan(24);
+    expect(minuteOptions.length).toBeGreaterThan(60);
+    expect(hourOptions.slice(0, 27).map((option) => option.textContent?.trim())).toEqual([
+      "00",
+      "01",
+      "02",
+      "03",
+      "04",
+      "05",
+      "06",
+      "07",
+      "08",
+      "09",
+      "10",
+      "11",
+      "12",
+      "13",
+      "14",
+      "15",
+      "16",
+      "17",
+      "18",
+      "19",
+      "20",
+      "21",
+      "22",
+      "23",
+      "00",
+      "01",
+      "02",
+    ]);
+    expect(minuteOptions.slice(57, 63).map((option) => option.textContent?.trim())).toEqual(["57", "58", "59", "00", "01", "02"]);
     expect(document.body.querySelector(".notify-time-column.is-hour .notify-time-option.is-active")?.textContent).toContain("09");
     expect(document.body.querySelector(".notify-time-column.is-minute .notify-time-option.is-active")?.textContent).toContain("00");
     expect(getTeleportedDatePickerText()).toContain("清除");

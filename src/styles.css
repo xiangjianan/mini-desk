@@ -411,6 +411,10 @@ h3 {
   color: #18a058 !important;
 }
 
+.quick-dialog-submit.n-button:hover:not(.n-button--disabled) {
+  background: rgba(24, 160, 88, 0.1) !important;
+}
+
 .n-button .n-button__border,
 .n-button .n-button__state-border {
   border-radius: var(--radius) !important;
@@ -2215,13 +2219,16 @@ button.todo-notify-button.has-time {
 .notify-floating-date-picker {
   --notify-date-column-width: 332px;
   --notify-time-column-width: 114px;
+  --notify-date-panel-height: 267px;
   --notify-picker-gap: 8px;
   position: fixed;
   z-index: 4000;
   width: min(456px, calc(100vw - 16px));
   max-width: calc(100vw - 16px);
-  border: 1px solid var(--line-main);
+  border: 0;
+  border-radius: var(--radius);
   background: var(--panel);
+  box-shadow: 0 8px 22px rgba(15, 23, 42, 0.12);
   box-sizing: border-box;
   display: grid;
   grid-template-columns: var(--notify-date-column-width) var(--notify-time-column-width);
@@ -2246,12 +2253,18 @@ button.todo-notify-button.has-time {
 }
 
 .notify-time-panel {
+  align-self: stretch;
+  display: flex;
+  flex-direction: column;
   width: var(--notify-time-column-width);
+  height: var(--notify-date-panel-height);
+  max-height: var(--notify-date-panel-height);
   min-width: 0;
   box-sizing: border-box;
-  margin: 4px 0;
+  margin: 0;
   padding: 4px 8px 4px 0;
-  border-left: 1px solid var(--line-subtle);
+  border-radius: var(--radius);
+  overflow: hidden;
 }
 
 .notify-time-preview {
@@ -2261,6 +2274,7 @@ button.todo-notify-button.has-time {
   gap: 2px;
   height: 28px;
   border: 1px solid var(--line-control);
+  border-radius: var(--radius);
   background: var(--button);
   color: var(--text);
   font-size: var(--app-font-size);
@@ -2271,7 +2285,8 @@ button.todo-notify-button.has-time {
   display: grid;
   grid-template-columns: 1fr 1fr;
   gap: 4px;
-  height: 168px;
+  flex: 1;
+  height: auto;
   margin-top: 8px;
   min-height: 0;
 }
@@ -2281,7 +2296,11 @@ button.todo-notify-button.has-time {
   height: 100%;
   overflow-y: auto;
   overscroll-behavior: contain;
+  -webkit-overflow-scrolling: touch;
+  scroll-behavior: auto;
+  contain: paint;
   border: 1px solid var(--line-subtle);
+  border-radius: calc(var(--radius) - 1px);
   background: var(--panel);
   scrollbar-width: thin;
 }
@@ -2299,6 +2318,7 @@ button.todo-notify-button.has-time {
   font-size: var(--app-font-size);
   line-height: 1;
   cursor: pointer;
+  user-select: none;
 }
 
 .notify-time-option:hover {

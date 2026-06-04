@@ -207,9 +207,14 @@ describe("workbench style contract", () => {
     expectSelectorBody(styles, ".notify-floating-date-picker", "--notify-date-column-width: 332px");
     expectSelectorBody(styles, ".notify-floating-date-picker", "--notify-time-column-width: 114px");
     expectSelectorBody(styles, ".notify-floating-date-picker", "grid-template-columns: var(--notify-date-column-width) var(--notify-time-column-width)");
+    expectSelectorBody(styles, ".notify-floating-date-picker", "border: 0");
+    expectSelectorBody(styles, ".notify-floating-date-picker", "border-radius: var(--radius)");
+    expectSelectorBody(styles, ".notify-floating-date-picker", "box-shadow: 0 8px 22px rgba(15, 23, 42, 0.12)");
     expectSelectorBody(styles, ".notify-time-columns", "grid-template-columns: 1fr 1fr");
+    expectSelectorBody(styles, ".notify-time-panel", "border-radius: var(--radius)");
     expectSelectorBody(styles, ".notify-time-column", "overflow-y: auto");
     expectSelectorBody(styles, ".notify-time-column", "overscroll-behavior: contain");
+    expectSelectorBody(styles, ".notify-time-column", "-webkit-overflow-scrolling: touch");
     expectSelectorBody(styles, ".notify-panel-actions", "justify-content: flex-end");
     expectSelectorBody(styles, ".notify-panel-action", "min-width: 48px");
     expectSelectorBody(styles, ".notify-panel-action", "white-space: nowrap");
@@ -217,6 +222,7 @@ describe("workbench style contract", () => {
     expectSelectorBody(styles, ".quick-dialog-action.n-button", "--n-border: 1px solid var(--line-control) !important");
     expectSelectorBody(styles, ".quick-dialog-submit.n-button", "--n-color-hover: rgba(24, 160, 88, 0.1) !important");
     expectSelectorBody(styles, ".quick-dialog-submit.n-button", "--n-text-color: #18a058 !important");
+    expectSelectorBody(styles, ".quick-dialog-submit.n-button:hover:not(.n-button--disabled)", "background: rgba(24, 160, 88, 0.1) !important");
     expectSelectorBody(styles, ".n-time-picker-panel .n-button--primary-type", "--n-text-color: #111111 !important");
     expectSelectorBody(styles, ".n-time-picker-panel .n-button--primary-type", "color: #111111 !important");
   });

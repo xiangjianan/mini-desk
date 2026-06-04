@@ -1,5 +1,5 @@
 <script setup lang="ts">
-import { computed, h, onMounted, onUnmounted, reactive, ref, watch } from "vue";
+import { computed, h, onMounted, onUnmounted, reactive, ref } from "vue";
 import type { Component, VNode } from "vue";
 import { NButton, NCheckbox, NDropdown, NIcon, NInput, NModal, NScrollbar, NSelect } from "naive-ui";
 import { AddOutline, CloudUploadOutline, CopyOutline, CreateOutline, EyeOffOutline, EyeOutline, HelpCircleOutline, TrashOutline } from "@vicons/ionicons5";
@@ -103,10 +103,6 @@ const menuOptions = computed<DropdownOption[]>(() => {
     { label: uiText.value.common.delete, key: "delete", icon: renderIcon(TrashOutline) },
     { ...guideMenuOption.value, icon: renderIcon(HelpCircleOutline) },
   ];
-});
-
-watch(dialogOpen, (open) => {
-  if (!open) editingId.value = undefined;
 });
 
 function openAdd(anchor?: HTMLElement): void {
