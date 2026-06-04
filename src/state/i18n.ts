@@ -30,6 +30,17 @@ const LEGACY_DEFAULT_TODO_TITLES: Record<AppLanguage, Record<string, string>> = 
 
 export const DEFAULT_SPACE_TITLES: Record<AppLanguage, Record<string, string>> = {
   zh: {
+    workspace: "📝 备忘录",
+    storage: "工程文件",
+  },
+  en: {
+    workspace: "📝 Memo",
+    storage: "Project Files",
+  },
+};
+
+const LEGACY_DEFAULT_SPACE_TITLES: Record<AppLanguage, Record<string, string>> = {
+  zh: {
     workspace: "📕 备忘录",
     storage: "工程文件",
   },
@@ -39,7 +50,7 @@ export const DEFAULT_SPACE_TITLES: Record<AppLanguage, Record<string, string>> =
   },
 };
 
-const LEGACY_DEFAULT_SPACE_TITLES: Record<AppLanguage, Record<string, string>> = {
+const OLDER_LEGACY_DEFAULT_SPACE_TITLES: Record<AppLanguage, Record<string, string>> = {
   zh: {
     workspace: "备忘录",
     storage: "工程文件",
@@ -50,7 +61,7 @@ const LEGACY_DEFAULT_SPACE_TITLES: Record<AppLanguage, Record<string, string>> =
   },
 };
 
-const OLDER_LEGACY_DEFAULT_SPACE_TITLES: Record<AppLanguage, Record<string, string>> = {
+const OLDEST_LEGACY_DEFAULT_SPACE_TITLES: Record<AppLanguage, Record<string, string>> = {
   zh: {
     workspace: "工作空间",
     storage: "工程文件",
@@ -66,6 +77,33 @@ export const DEFAULT_TITLES_BY_LANGUAGE: Record<AppLanguage, Record<string, stri
     "image-title": "🎨 图片",
     "note-title": "🔧 工具",
     "quick-title": "⚡ 快捷动作",
+    "today-focus-title": "❗️ 重点事项",
+    "todo-morning-title": "✅ 提醒事项",
+    "todo-noon-title": "💻 工作",
+    "todo-evening-title": "📚 学习",
+    "workspace-title": "📝 备忘录.txt",
+    "tools-title": "🔧 工具",
+    "storage-title": "🛠 双击可改名",
+  },
+  en: {
+    "image-title": "🎨 Images",
+    "note-title": "🔧 Tools",
+    "quick-title": "⚡ Quick Actions",
+    "today-focus-title": "❗️ Pinned Reminders",
+    "todo-morning-title": "✅ Reminders",
+    "todo-noon-title": "💻 Work",
+    "todo-evening-title": "📚 Study",
+    "workspace-title": "📝 Memo.txt",
+    "tools-title": "🔧 Tools",
+    "storage-title": "🛠 Double-click to rename",
+  },
+};
+
+export const LEGACY_DEFAULT_TITLES_BY_LANGUAGE: Record<AppLanguage, Record<string, string>> = {
+  zh: {
+    "image-title": "🎨 图床",
+    "note-title": "🔧 小工具",
+    "quick-title": "⚡ 快捷动作",
     "today-focus-title": "重点事项",
     "todo-morning-title": "✅ 提醒事项",
     "todo-noon-title": "💻 工作",
@@ -75,8 +113,8 @@ export const DEFAULT_TITLES_BY_LANGUAGE: Record<AppLanguage, Record<string, stri
     "storage-title": "🛠 双击可改名",
   },
   en: {
-    "image-title": "🎨 Images",
-    "note-title": "🔧 Tools",
+    "image-title": "🎨 Image Bed",
+    "note-title": "🔧 Utilities",
     "quick-title": "⚡ Quick Actions",
     "today-focus-title": "Pinned Reminders",
     "todo-morning-title": "✅ Reminders",
@@ -88,7 +126,7 @@ export const DEFAULT_TITLES_BY_LANGUAGE: Record<AppLanguage, Record<string, stri
   },
 };
 
-export const LEGACY_DEFAULT_TITLES_BY_LANGUAGE: Record<AppLanguage, Record<string, string>> = {
+export const OLDER_LEGACY_DEFAULT_TITLES_BY_LANGUAGE: Record<AppLanguage, Record<string, string>> = {
   zh: {
     "image-title": "🎨 图床",
     "note-title": "🔧 小工具",
@@ -952,6 +990,7 @@ function isDefaultSpaceTitle(id: string, title: string): boolean {
     ...Object.values(DEFAULT_SPACE_TITLES),
     ...Object.values(LEGACY_DEFAULT_SPACE_TITLES),
     ...Object.values(OLDER_LEGACY_DEFAULT_SPACE_TITLES),
+    ...Object.values(OLDEST_LEGACY_DEFAULT_SPACE_TITLES),
   ].some((titles) => titles[id] === title);
 }
 

@@ -1,7 +1,7 @@
 import { DEFAULT_SPACE_ID, DEFAULT_SPACE_TITLE, DEFAULT_TODO_LISTS, defaultState, STORAGE_KEY } from "./defaults";
 import { isValidDeadlineAt } from "./deadlines";
 import { normalizeCompanionGifTheme } from "./companionGifThemes";
-import { DEFAULT_SPACE_TITLES, DEFAULT_TITLES_BY_LANGUAGE, LEGACY_DEFAULT_TITLES_BY_LANGUAGE, getUiText, normalizeLanguage } from "./i18n";
+import { DEFAULT_SPACE_TITLES, DEFAULT_TITLES_BY_LANGUAGE, LEGACY_DEFAULT_TITLES_BY_LANGUAGE, OLDER_LEGACY_DEFAULT_TITLES_BY_LANGUAGE, getUiText, normalizeLanguage } from "./i18n";
 import type {
   BoardState,
   CompanionCustomGif,
@@ -414,6 +414,7 @@ function isDefaultBoardTitle(id: string, title: string): boolean {
   return [
     ...Object.values(DEFAULT_TITLES_BY_LANGUAGE),
     ...Object.values(LEGACY_DEFAULT_TITLES_BY_LANGUAGE),
+    ...Object.values(OLDER_LEGACY_DEFAULT_TITLES_BY_LANGUAGE),
   ].some((titles) => titles[id] === title);
 }
 

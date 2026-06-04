@@ -508,8 +508,8 @@ function onQuickAfterMove(el: Element): void {
           </label>
         </template>
         <div class="dialog-actions">
-          <NButton v-if="editingId" ghost @click="closeDialog">{{ uiText.common.cancel }}</NButton>
-          <NButton attr-type="submit" type="primary" :disabled="!canSubmit">{{ uiText.common.save }}</NButton>
+          <NButton v-if="editingId" class="quick-dialog-action quick-dialog-cancel" type="default" @click="closeDialog">{{ uiText.common.cancel }}</NButton>
+          <NButton class="quick-dialog-action quick-dialog-submit" attr-type="submit" type="default" :disabled="!canSubmit">{{ uiText.common.save }}</NButton>
         </div>
       </form>
     </NModal>

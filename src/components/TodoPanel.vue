@@ -181,9 +181,10 @@ const menuOptions = computed<DropdownOption[]>(() => {
 const todayFocusTitleId = "today-focus-title";
 const DEADLINE_CLOCK_INTERVAL_MS = 60_000;
 const DEADLINE_EDITOR_OFFSET = 8;
-const NOTIFY_PICKER_WIDTH = 320;
+const NOTIFY_PICKER_WIDTH = 456;
 const NOTIFY_PICKER_HEIGHT = 360;
-const notifyTimePickerProps = { format: "HH:mm" };
+const NOTIFY_HOURS = Array.from({ length: 24 }, (_, hour) => hour);
+const NOTIFY_MINUTES = Array.from({ length: 60 }, (_, minute) => minute);
 const LIST_CREATE_DIALOG_WIDTH = 260;
 const LIST_CREATE_DIALOG_HEIGHT = 112;
 const deadlineNow = ref(Date.now());
@@ -610,6 +611,28 @@ function openNotifyPicker(period: TodoPeriod, id: string, anchor?: HTMLElement):
   };
   selectedMenuTodoKey.value = null;
   notifyPicker.value = { period, id, anchor, ...position };
+  void nextTick(() => {
+    window.requestAnimationFrame(scrollNotifyTimePickerActiveItems);
+  });
+}
+
+function scrollNotifyTimePickerActiveItems(): void {
+  notifyPickerRef.value
+    ?.querySelectorAll<HTMLElement>(".notify-time-column")
+    .forEach((column) => {
+      const active = column.querySelector<HTMLElement>(".notify-time-option.is-active");
+      if (!active) return;
+      column.scrollTop = Math.max(0, active.offsetTop - column.offsetTop);
+    });
+}
+
+function handleNotifyPickerWheel(event: WheelEvent): void {
+  const target = event.target instanceof Element ? event.target : null;
+  const column = target?.closest<HTMLElement>(".notify-time-column");
+  if (!column) return;
+  column.scrollTop += event.deltaY;
+  event.preventDefault();
+  event.stopPropagation();
 }
 
 function getNotifyPickerInitialValue(todo?: TodoItem): number {
@@ -639,18 +662,43 @@ function setNotifyPickerDraftToToday(): void {
   const today = new Date();
   current.setFullYear(today.getFullYear(), today.getMonth(), today.getDate());
   notifyPickerDrafts.value = { ...notifyPickerDrafts.value, [key]: current.getTime() };
+  void nextTick(() => {
+    window.requestAnimationFrame(scrollNotifyTimePickerActiveItems);
+  });
 }
 
 function preserveNotifyTimeOnDateChange(currentValue: number, nextValue: number): number {
   const current = new Date(currentValue);
   const next = new Date(nextValue);
-  const dateChanged =
-    current.getFullYear() !== next.getFullYear() ||
-    current.getMonth() !== next.getMonth() ||
-    current.getDate() !== next.getDate();
-  if (!dateChanged) return nextValue;
   next.setHours(current.getHours(), current.getMinutes(), current.getSeconds(), current.getMilliseconds());
   return next.getTime();
+}
+
+function getNotifyPickerHour(): number {
+  return new Date(getNotifyPickerValue()).getHours();
+}
+
+function getNotifyPickerMinute(): number {
+  return new Date(getNotifyPickerValue()).getMinutes();
+}
+
+function formatNotifyTimeUnit(value: number): string {
+  return String(value).padStart(2, "0");
+}
+
+function updateNotifyPickerTime(unit: "hour" | "minute", value: number): void {
+  const picker = notifyPicker.value;
+  if (!picker) return;
+  const key = todoKey(picker.period, picker.id);
+  const current = new Date(getNotifyPickerValue());
+  if (unit === "hour") current.setHours(value);
+  else current.setMinutes(value);
+  current.setSeconds(0, 0);
+  notifyPickerDrafts.value = { ...notifyPickerDrafts.value, [key]: current.getTime() };
+}
+
+function confirmCurrentNotifyPicker(): void {
+  confirmNotifyPicker(getNotifyPickerValue());
 }
 
 function confirmNotifyPicker(value: number | null): void {
@@ -1373,31 +1421,61 @@ function buildTodoListEntries(period: TodoListId, todos: TodoItem[], deferredDon
           class="notify-floating-date-picker"
           :style="notifyPickerStyle"
           :aria-label="uiText.todo.setNotify"
+          @wheel="handleNotifyPickerWheel"
         >
           <NDatePicker
             class="notify-date-picker"
-            type="datetime"
+            type="date"
             panel
             :value="getNotifyPickerValue()"
             clearable
-            format="yyyy-MM-dd HH:mm"
+            format="yyyy-MM-dd"
             value-format="timestamp"
-            default-time="09:00:00"
-            :time-picker-props="notifyTimePickerProps"
-            :actions="['clear', 'now', 'confirm']"
+            :actions="[]"
             @update:value="updateNotifyPickerDraft"
-            @confirm="confirmNotifyPicker"
-          >
-            <template #clear>
-              <button class="notify-panel-action is-danger" type="button" @click="clearNotifyPicker">{{ uiText.todo.clear }}</button>
-            </template>
-            <template #now>
-              <button class="notify-panel-action" type="button" @click="setNotifyPickerDraftToToday">{{ uiText.todo.today }}</button>
-            </template>
-            <template #confirm="{ onConfirm, disabled }">
-              <button class="notify-panel-action is-confirm" type="button" :disabled="disabled" @click="onConfirm">{{ uiText.common.confirm }}</button>
-            </template>
-          </NDatePicker>
+          />
+          <div class="notify-time-panel" :aria-label="uiText.todo.setNotify">
+            <div class="notify-time-preview">
+              <span>{{ formatNotifyTimeUnit(getNotifyPickerHour()) }}</span>
+              <span>:</span>
+              <span>{{ formatNotifyTimeUnit(getNotifyPickerMinute()) }}</span>
+            </div>
+            <div class="notify-time-columns">
+              <div class="notify-time-column is-hour" role="listbox" aria-label="小时">
+                <button
+                  v-for="hour in NOTIFY_HOURS"
+                  :key="hour"
+                  class="notify-time-option"
+                  :class="{ 'is-active': getNotifyPickerHour() === hour }"
+                  type="button"
+                  role="option"
+                  :aria-selected="getNotifyPickerHour() === hour"
+                  @click="updateNotifyPickerTime('hour', hour)"
+                >
+                  {{ formatNotifyTimeUnit(hour) }}
+                </button>
+              </div>
+              <div class="notify-time-column is-minute" role="listbox" aria-label="分钟">
+                <button
+                  v-for="minute in NOTIFY_MINUTES"
+                  :key="minute"
+                  class="notify-time-option"
+                  :class="{ 'is-active': getNotifyPickerMinute() === minute }"
+                  type="button"
+                  role="option"
+                  :aria-selected="getNotifyPickerMinute() === minute"
+                  @click="updateNotifyPickerTime('minute', minute)"
+                >
+                  {{ formatNotifyTimeUnit(minute) }}
+                </button>
+              </div>
+            </div>
+          </div>
+          <div class="notify-panel-actions">
+            <button class="notify-panel-action is-danger" type="button" @click="clearNotifyPicker">{{ uiText.todo.clear }}</button>
+            <button class="notify-panel-action" type="button" @click="setNotifyPickerDraftToToday">{{ uiText.todo.today }}</button>
+            <button class="notify-panel-action is-confirm" type="button" @click="confirmCurrentNotifyPicker">{{ uiText.common.confirm }}</button>
+          </div>
         </div>
       </Transition>
     </Teleport>

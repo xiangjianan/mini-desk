@@ -371,6 +371,46 @@ h3 {
   --n-border-focus: 0 solid transparent !important;
 }
 
+.quick-dialog-action.n-button {
+  --n-color: var(--button) !important;
+  --n-color-hover: var(--button-hover) !important;
+  --n-color-pressed: var(--button-hover) !important;
+  --n-color-focus: var(--button-hover) !important;
+  --n-border: 1px solid var(--line-control) !important;
+  --n-border-hover: 1px solid var(--line-control) !important;
+  --n-border-pressed: 1px solid var(--line-control) !important;
+  --n-border-focus: 1px solid var(--line-control) !important;
+  --n-text-color: var(--text) !important;
+  --n-text-color-hover: var(--text) !important;
+  --n-text-color-pressed: var(--text) !important;
+  --n-text-color-focus: var(--text) !important;
+  min-width: 48px;
+  height: 28px;
+  padding: 0 12px !important;
+  color: var(--text) !important;
+  white-space: nowrap;
+}
+
+.quick-dialog-action.n-button .n-button__content {
+  color: inherit !important;
+}
+
+.quick-dialog-submit.n-button {
+  --n-color: var(--button) !important;
+  --n-color-hover: rgba(24, 160, 88, 0.1) !important;
+  --n-color-pressed: rgba(24, 160, 88, 0.14) !important;
+  --n-color-focus: rgba(24, 160, 88, 0.1) !important;
+  --n-text-color: #18a058 !important;
+  --n-text-color-hover: #18a058 !important;
+  --n-text-color-pressed: #18a058 !important;
+  --n-text-color-focus: #18a058 !important;
+  color: #18a058 !important;
+}
+
+.quick-dialog-submit.n-button .n-button__content {
+  color: #18a058 !important;
+}
+
 .n-button .n-button__border,
 .n-button .n-button__state-border {
   border-radius: var(--radius) !important;
@@ -2173,25 +2213,121 @@ button.todo-notify-button.has-time {
 }
 
 .notify-floating-date-picker {
+  --notify-date-column-width: 332px;
+  --notify-time-column-width: 114px;
+  --notify-picker-gap: 8px;
   position: fixed;
   z-index: 4000;
-  width: max-content;
+  width: min(456px, calc(100vw - 16px));
   max-width: calc(100vw - 16px);
   border: 1px solid var(--line-main);
   background: var(--panel);
+  box-sizing: border-box;
+  display: grid;
+  grid-template-columns: var(--notify-date-column-width) var(--notify-time-column-width);
+  column-gap: var(--notify-picker-gap);
+  align-items: start;
 }
 
 .notify-date-picker {
-  max-width: calc(100vw - 16px);
+  width: var(--notify-date-column-width);
+  max-width: 100%;
+}
+
+.notify-date-picker.n-date-panel {
+  width: var(--notify-date-column-width);
+  margin: 0;
+  box-shadow: none !important;
+  border-radius: 0;
+}
+
+.notify-date-picker .n-date-panel-calendar {
+  width: var(--notify-date-column-width);
+}
+
+.notify-time-panel {
+  width: var(--notify-time-column-width);
+  min-width: 0;
+  box-sizing: border-box;
+  margin: 4px 0;
+  padding: 4px 8px 4px 0;
+  border-left: 1px solid var(--line-subtle);
+}
+
+.notify-time-preview {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 2px;
+  height: 28px;
+  border: 1px solid var(--line-control);
+  background: var(--button);
+  color: var(--text);
+  font-size: var(--app-font-size);
+  line-height: 1;
+}
+
+.notify-time-columns {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 4px;
+  height: 168px;
+  margin-top: 8px;
+  min-height: 0;
+}
+
+.notify-time-column {
+  min-width: 0;
+  height: 100%;
+  overflow-y: auto;
+  overscroll-behavior: contain;
+  border: 1px solid var(--line-subtle);
+  background: var(--panel);
+  scrollbar-width: thin;
+}
+
+.notify-time-option {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 100%;
+  height: 28px;
+  padding: 0;
+  border: 0;
+  background: transparent;
+  color: var(--text);
+  font-size: var(--app-font-size);
+  line-height: 1;
+  cursor: pointer;
+}
+
+.notify-time-option:hover {
+  background: var(--button-hover);
+}
+
+.notify-time-option.is-active {
+  background: rgba(24, 160, 88, 0.1);
+  color: #18a058;
+}
+
+.notify-panel-actions {
+  grid-column: 1 / -1;
+  display: flex;
+  justify-content: flex-end;
+  gap: 6px;
+  padding: 8px;
+  border-top: 1px solid var(--line-subtle);
 }
 
 .notify-panel-action {
   height: 28px;
-  padding: 0 10px;
+  min-width: 48px;
+  padding: 0 12px;
   border: 1px solid var(--line-control);
-  background: transparent;
+  background: var(--button);
   color: var(--text);
   font-size: var(--app-font-size);
+  white-space: nowrap;
 }
 
 .notify-panel-action:hover:not(:disabled) {
@@ -2208,13 +2344,13 @@ button.todo-notify-button.has-time {
 }
 
 .notify-panel-action.is-confirm {
-  color: var(--text);
-  background: var(--button-hover);
+  color: #18a058;
+  background: var(--button);
 }
 
 .notify-panel-action.is-confirm:hover:not(:disabled) {
-  color: var(--text);
-  background: var(--button-hover);
+  color: #18a058;
+  background: rgba(24, 160, 88, 0.1);
 }
 
 .n-time-picker-panel .n-button--primary-type {

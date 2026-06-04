@@ -224,6 +224,14 @@ function handleTextareaDrop(event: DragEvent): void {
   }
 }
 
+function handleTextareaWheel(event: WheelEvent): void {
+  const textarea = event.currentTarget as HTMLTextAreaElement;
+  if (textarea.scrollHeight <= textarea.clientHeight + 1) {
+    textarea.scrollTop = 0;
+    event.preventDefault();
+  }
+}
+
 function handleExternalTextDrop(event: DragEvent): void {
   isDragHover.value = false;
   const wasLocal = isLocalDrag.value;
@@ -634,6 +642,7 @@ function restoreSelection(textarea: HTMLTextAreaElement, selection: { start: num
         @dragstart="handleTextDragStart"
         @dragover="handleTextareaDragOver"
         @drop="handleTextareaDrop"
+        @wheel="handleTextareaWheel"
         @select="rememberSelection"
         @click="startEditing"
         @dblclick="startEditing"

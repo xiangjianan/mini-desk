@@ -390,20 +390,27 @@ describe("Naive UI component usage", () => {
     const i18n = read("src/state/i18n.ts");
 
     expect(todo).toContain("NDatePicker");
-    expect(todo).toContain('type="datetime"');
-    expect(todo).toContain('format="yyyy-MM-dd HH:mm"');
-    expect(todo).toContain('default-time="09:00:00"');
-    expect(todo).toContain(':time-picker-props="notifyTimePickerProps"');
+    expect(todo).toContain('type="date"');
+    expect(todo).toContain('format="yyyy-MM-dd"');
+    expect(todo).toContain(':actions="[]"');
+    expect(todo).toContain("NOTIFY_HOURS");
+    expect(todo).toContain("NOTIFY_MINUTES");
+    expect(todo).toContain("updateNotifyPickerTime");
+    expect(todo).toContain("scrollNotifyTimePickerActiveItems");
+    expect(todo).toContain("active.offsetTop - column.offsetTop");
+    expect(todo).toContain("handleNotifyPickerWheel");
+    expect(todo).toContain('@wheel="handleNotifyPickerWheel"');
     expect(todo).toContain('<Teleport to="body">');
     expect(todo).toContain("notify-floating-date-picker");
     expect(todo).toContain("panel");
     expect(todo).not.toContain(':to="false"');
     expect(todo).not.toContain(':show="isNotifyPickerShown');
     expect(todo).toContain('@update:value="updateNotifyPickerDraft"');
-    expect(todo).toContain('@confirm="confirmNotifyPicker"');
+    expect(todo).toContain("confirmCurrentNotifyPicker");
     expect(todo).toContain("setNotifyPickerDraftToToday");
     expect(todo).toContain("clearNotifyPicker");
-    expect(todo).toContain('<template #clear');
+    expect(todo).toContain("notify-time-column is-hour");
+    expect(todo).toContain("notify-time-column is-minute");
     expect(todo).toContain("uiText.todo.clear");
     expect(todo).toContain("uiText.todo.today");
     expect(i18n).toContain('clear: "清除"');
@@ -416,8 +423,15 @@ describe("Naive UI component usage", () => {
     expect(todo).not.toContain("notify-clock-options");
     expect(styles).toMatch(/\.notify-floating-date-picker\s*\{[^}]*position: fixed/s);
     expect(styles).toMatch(/\.notify-floating-date-picker\s*\{[^}]*border: 1px solid var\(--line-main\)/s);
-    expect(styles).toMatch(/\.notify-panel-action\.is-confirm\s*\{[^}]*color: var\(--text\)/s);
-    expect(styles).toMatch(/\.notify-panel-action\.is-confirm\s*\{[^}]*background: var\(--button-hover\)/s);
+    expect(styles).toMatch(/\.notify-floating-date-picker\s*\{[^}]*--notify-date-column-width: 332px/s);
+    expect(styles).toMatch(/\.notify-floating-date-picker\s*\{[^}]*--notify-time-column-width: 114px/s);
+    expect(styles).toMatch(/\.notify-floating-date-picker\s*\{[^}]*grid-template-columns: var\(--notify-date-column-width\) var\(--notify-time-column-width\)/s);
+    expect(styles).toMatch(/\.notify-time-columns\s*\{[^}]*grid-template-columns: 1fr 1fr/s);
+    expect(styles).toMatch(/\.notify-time-column\s*\{[^}]*overflow-y: auto/s);
+    expect(styles).toMatch(/\.notify-time-column\s*\{[^}]*overscroll-behavior: contain/s);
+    expect(styles).toMatch(/\.notify-panel-actions\s*\{[^}]*justify-content: flex-end/s);
+    expect(styles).toMatch(/\.notify-panel-action\.is-confirm\s*\{[^}]*color: #18a058/s);
+    expect(styles).toMatch(/\.notify-panel-action\.is-confirm\s*\{[^}]*background: var\(--button\)/s);
     expect(styles).toMatch(/\.todo-notify-button\s*\{[^}]*align-items: center/s);
     expect(styles).not.toContain(".notify-editor");
     expect(styles).not.toContain(".deadline-editor-actions");
@@ -670,7 +684,7 @@ describe("Naive UI component usage", () => {
     const i18n = read("src/state/i18n.ts");
 
     expect(defaults).toContain("GUIDE_MENU_OPTION");
-    expect(i18n).toContain('"today-focus-title": "重点事项"');
+    expect(i18n).toContain('"today-focus-title": "❗️ 重点事项"');
     for (const source of [image, quick, todo, text]) {
       expect(source).toContain("GUIDE_MENU_OPTION");
       expect(source).toContain("common.tips");

@@ -163,8 +163,8 @@ describe("App shell", () => {
     expect(wrapper.text()).toContain("🔧 工具");
     expect(wrapper.text()).toContain("快捷动作");
     expect(wrapper.text()).toContain("✅ 提醒事项");
-    expect(wrapper.text()).toContain("📕 备忘录");
-    expect(wrapper.findAll(".space-tab").map((tab) => tab.text())).toEqual(["📕 备忘录"]);
+    expect(wrapper.text()).toContain("📝 备忘录");
+    expect(wrapper.findAll(".space-tab").map((tab) => tab.text())).toEqual(["📝 备忘录"]);
     expect(wrapper.findAll(".tool-tab").map((tab) => tab.text().trim())).toEqual(["", ""]);
     expect(wrapper.findAll(".tool-tab").map((tab) => tab.attributes("aria-label"))).toEqual(["计算器", "取色板"]);
     expect(wrapper.find('[data-testid="workbench-theme"]').exists()).toBe(true);
@@ -198,7 +198,7 @@ describe("App shell", () => {
       expect(wrapper.text()).toContain("Reminders");
       expect(wrapper.text()).toContain("Work");
       expect(wrapper.text()).toContain("Study");
-      expect(wrapper.findAll(".space-tab").map((tab) => tab.text())).toEqual(["📕 Memo"]);
+      expect(wrapper.findAll(".space-tab").map((tab) => tab.text())).toEqual(["📝 Memo"]);
       expect(wrapper.findAll(".tool-tab").map((tab) => tab.text().trim())).toEqual(["", ""]);
       expect(wrapper.findAll(".tool-tab").map((tab) => tab.attributes("aria-label"))).toEqual(["Calculator", "Color"]);
       expect(wrapper.text()).not.toContain("快捷动作");

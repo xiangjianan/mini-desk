@@ -20,13 +20,13 @@ describe("localized public copy", () => {
       "todo-morning-title": "✅ Reminders",
       "todo-noon-title": "💻 Work",
       "todo-evening-title": "📚 Study",
-      "workspace-title": "📕 Memo.txt",
+      "workspace-title": "📝 Memo.txt",
       "tools-title": "🔧 Tools",
     });
 
     expect(getDisplayTodoListTitle({ id: "morning", title: "✅ 待办", collapsed: false, compact: false }, "en")).toBe("✅ Reminders");
     expect(getDisplayTodoListTitle({ id: "morning", title: "客户跟进", collapsed: false, compact: false }, "en")).toBe("客户跟进");
-    expect(getDisplaySpaceTitle({ id: "workspace", title: "备忘录", lines: [] }, "en")).toBe("📕 Memo");
+    expect(getDisplaySpaceTitle({ id: "workspace", title: "备忘录", lines: [] }, "en")).toBe("📝 Memo");
     expect(getDisplaySpaceTitle({ id: "workspace", title: "个人计划", lines: [] }, "en")).toBe("个人计划");
   });
 
@@ -82,9 +82,10 @@ describe("localized public copy", () => {
     );
   });
 
-  it("uses the book emoji in default memo names", () => {
-    expect(getDisplaySpaceTitle({ id: "workspace", title: "备忘录", lines: [] }, "zh")).toBe("📕 备忘录");
-    expect(getDisplaySpaceTitle({ id: "workspace", title: "备忘录", lines: [] }, "en")).toBe("📕 Memo");
-    expect(getDisplaySpaceTitle({ id: "workspace", title: "Workspace", lines: [] }, "en")).toBe("📕 Memo");
+  it("uses the memo emoji in default memo names", () => {
+    expect(getDisplaySpaceTitle({ id: "workspace", title: "备忘录", lines: [] }, "zh")).toBe("📝 备忘录");
+    expect(getDisplaySpaceTitle({ id: "workspace", title: "📕 备忘录", lines: [] }, "zh")).toBe("📝 备忘录");
+    expect(getDisplaySpaceTitle({ id: "workspace", title: "备忘录", lines: [] }, "en")).toBe("📝 Memo");
+    expect(getDisplaySpaceTitle({ id: "workspace", title: "Workspace", lines: [] }, "en")).toBe("📝 Memo");
   });
 });
