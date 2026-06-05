@@ -5040,6 +5040,527 @@ select {
   color: var(--danger);
 }
 
+/* Liquid Glass pass: translucent functional surfaces, reflected edges, and fluid control feedback. */
+:root {
+  --glass-blur: blur(30px) saturate(1.85);
+  --glass-blur-soft: blur(18px) saturate(1.55);
+  --glass-surface: rgba(255, 255, 255, 0.58);
+  --glass-surface-strong: rgba(255, 255, 255, 0.74);
+  --glass-surface-soft: rgba(255, 255, 255, 0.38);
+  --glass-surface-elevated: rgba(255, 255, 255, 0.8);
+  --glass-control: rgba(255, 255, 255, 0.46);
+  --glass-control-hover: rgba(255, 255, 255, 0.66);
+  --glass-control-active: color-mix(in srgb, var(--primary) 13%, var(--glass-control));
+  --glass-field: rgba(255, 255, 255, 0.5);
+  --glass-row: rgba(255, 255, 255, 0.28);
+  --glass-border: rgba(255, 255, 255, 0.5);
+  --glass-border-strong: rgba(255, 255, 255, 0.7);
+  --glass-highlight: linear-gradient(145deg, rgba(255, 255, 255, 0.72) 0%, rgba(255, 255, 255, 0.22) 42%, rgba(255, 255, 255, 0) 68%);
+  --glass-inset: inset 0 1px 0 rgba(255, 255, 255, 0.58), inset 0 -1px 0 rgba(60, 60, 67, 0.08);
+  --glass-shadow: 0 18px 44px rgba(15, 23, 42, 0.1), 0 2px 8px rgba(15, 23, 42, 0.06);
+  --glass-shadow-strong: 0 24px 70px rgba(15, 23, 42, 0.16), 0 3px 12px rgba(15, 23, 42, 0.08);
+  --glass-control-shadow: 0 7px 18px rgba(15, 23, 42, 0.07), var(--glass-inset);
+}
+
+html[data-theme="dark"] {
+  --glass-surface: rgba(44, 44, 46, 0.5);
+  --glass-surface-strong: rgba(58, 58, 60, 0.62);
+  --glass-surface-soft: rgba(58, 58, 60, 0.36);
+  --glass-surface-elevated: rgba(44, 44, 46, 0.78);
+  --glass-control: rgba(118, 118, 128, 0.24);
+  --glass-control-hover: rgba(118, 118, 128, 0.34);
+  --glass-control-active: color-mix(in srgb, var(--primary) 18%, var(--glass-control));
+  --glass-field: rgba(44, 44, 46, 0.56);
+  --glass-row: rgba(118, 118, 128, 0.14);
+  --glass-border: rgba(235, 235, 245, 0.14);
+  --glass-border-strong: rgba(235, 235, 245, 0.24);
+  --glass-highlight: linear-gradient(145deg, rgba(255, 255, 255, 0.2) 0%, rgba(255, 255, 255, 0.08) 44%, rgba(255, 255, 255, 0) 72%);
+  --glass-inset: inset 0 1px 0 rgba(255, 255, 255, 0.12), inset 0 -1px 0 rgba(255, 255, 255, 0.04);
+  --glass-shadow: 0 20px 52px rgba(0, 0, 0, 0.32), 0 2px 10px rgba(0, 0, 0, 0.2);
+  --glass-shadow-strong: 0 28px 80px rgba(0, 0, 0, 0.46), 0 4px 16px rgba(0, 0, 0, 0.22);
+  --glass-control-shadow: 0 8px 20px rgba(0, 0, 0, 0.22), var(--glass-inset);
+}
+
+body {
+  background:
+    linear-gradient(135deg, color-mix(in srgb, var(--background) 94%, #ffffff) 0%, color-mix(in srgb, var(--background) 88%, #dfe5ee) 48%, var(--background) 100%);
+}
+
+html[data-theme="dark"] body {
+  background:
+    linear-gradient(135deg, color-mix(in srgb, var(--background) 86%, #000000) 0%, color-mix(in srgb, var(--background) 72%, #2c2c2e) 48%, var(--background) 100%);
+}
+
+.workbench-shell {
+  background:
+    linear-gradient(145deg, color-mix(in srgb, var(--background) 96%, #ffffff) 0%, color-mix(in srgb, var(--background) 88%, #d8dee9) 52%, var(--background) 100%);
+}
+
+html[data-theme="dark"] .workbench-shell {
+  background:
+    linear-gradient(145deg, color-mix(in srgb, var(--background) 90%, #000000) 0%, color-mix(in srgb, var(--background) 78%, #3a3a3c) 52%, var(--background) 100%);
+}
+
+.workbench-main,
+.workbench-grid {
+  background: transparent;
+}
+
+.workbench-command-bar,
+.workbench-zone,
+.workbench-zone > .panel,
+.workbench-zone > .space-panel,
+.workbench-zone > .todo-panel,
+.workbench-zone > .text-panel,
+.workbench-zone > .tool-panel,
+.tool-config-panel,
+.gif-theme-custom-dialog,
+.notify-floating-date-picker,
+.quick-dialog.n-card,
+.shortcut-help-modal.n-card,
+.mobile-handoff-message {
+  position: relative;
+  border: 1px solid var(--glass-border);
+  background: var(--glass-surface);
+  box-shadow: var(--glass-shadow), var(--glass-inset);
+  -webkit-backdrop-filter: var(--glass-blur);
+  backdrop-filter: var(--glass-blur);
+}
+
+.workbench-command-bar,
+.tool-config-panel,
+.gif-theme-custom-dialog,
+.notify-floating-date-picker,
+.quick-dialog.n-card,
+.shortcut-help-modal.n-card,
+.mobile-handoff-message {
+  overflow: hidden;
+}
+
+.mobile-handoff-message {
+  border-radius: calc(var(--radius) + 6px);
+}
+
+.workbench-command-bar::before,
+.workbench-zone::before,
+.workbench-zone > .panel::before,
+.workbench-zone > .space-panel::before,
+.workbench-zone > .todo-panel::before,
+.workbench-zone > .text-panel::before,
+.workbench-zone > .tool-panel::before,
+.tool-config-panel::before,
+.gif-theme-custom-dialog::before,
+.notify-floating-date-picker::before,
+.quick-dialog.n-card::before,
+.shortcut-help-modal.n-card::before,
+.mobile-handoff-message::before {
+  content: "";
+  position: absolute;
+  inset: 0;
+  z-index: 0;
+  border-radius: inherit;
+  background: var(--glass-highlight);
+  opacity: 0.75;
+  pointer-events: none;
+}
+
+.workbench-command-bar > *,
+.workbench-zone > *,
+.tool-config-panel > *,
+.gif-theme-custom-dialog > *,
+.notify-floating-date-picker > *,
+.quick-dialog.n-card > *,
+.shortcut-help-modal.n-card > *,
+.mobile-handoff-message > * {
+  position: relative;
+  z-index: 1;
+}
+
+.workbench-command-bar {
+  border-width: 0 0 1px;
+  background: var(--glass-surface-strong);
+  box-shadow: var(--glass-inset);
+}
+
+.workbench-zone {
+  background: var(--glass-surface);
+}
+
+.workbench-zone > .panel,
+.workbench-zone > .space-panel,
+.workbench-zone > .todo-panel,
+.workbench-zone > .text-panel,
+.workbench-zone > .tool-panel {
+  border-radius: calc(var(--radius) + 2px);
+  background: var(--glass-surface-strong);
+  box-shadow: var(--glass-inset);
+}
+
+.panel-header,
+.todo-heading,
+.today-focus-heading,
+.space-tabs-scrollbar,
+.tool-tabs {
+  background: var(--glass-surface-soft);
+  border-color: var(--glass-border);
+  box-shadow: var(--glass-inset);
+  -webkit-backdrop-filter: var(--glass-blur-soft);
+  backdrop-filter: var(--glass-blur-soft);
+}
+
+.n-dropdown-menu,
+.n-popover,
+.n-dialog,
+.n-modal .n-card,
+.quick-dialog.n-card,
+.shortcut-help-modal.n-card,
+.companion-popover-shell.n-popover,
+.preview-actions,
+.tool-config-panel,
+.gif-theme-custom-dialog,
+.notify-floating-date-picker {
+  border: 1px solid var(--glass-border-strong) !important;
+  background: var(--glass-surface-elevated) !important;
+  box-shadow: var(--glass-shadow-strong), var(--glass-inset) !important;
+  -webkit-backdrop-filter: var(--glass-blur);
+  backdrop-filter: var(--glass-blur);
+}
+
+.companion-popover-arrow {
+  border: 1px solid var(--glass-border-strong) !important;
+  background: var(--glass-surface-elevated) !important;
+}
+
+.n-button:not(.n-button--primary-type):not(.n-button--error-type) {
+  --n-color: var(--glass-control) !important;
+  --n-color-hover: var(--glass-control-hover) !important;
+  --n-color-pressed: var(--glass-control-hover) !important;
+  --n-color-focus: var(--glass-control-hover) !important;
+  --n-border: 1px solid var(--glass-border) !important;
+  --n-border-hover: 1px solid var(--glass-border-strong) !important;
+  --n-border-pressed: 1px solid var(--glass-border-strong) !important;
+  --n-border-focus: 1px solid var(--glass-border-strong) !important;
+  box-shadow: var(--glass-control-shadow);
+}
+
+.icon-button,
+.settings-btn.icon-button,
+.workbench-header-hide-button,
+.workbench-theme-button,
+.workbench-header-reveal,
+.quick-menu-button,
+.todo-section-menu-button,
+.tool-panel-menu-button,
+.copy-inline-button,
+.password-copy-button,
+.tool-primary-action,
+.notify-panel-action,
+.space-tab,
+.space-add-button,
+.tool-tab,
+.quick-button,
+button.quick-button,
+.calculator-key,
+.todo-star-button,
+.todo-notify-button.has-time,
+.shortcut-help-modal .n-base-close {
+  border: 1px solid var(--glass-border);
+  background: var(--glass-control);
+  box-shadow: var(--glass-control-shadow);
+  -webkit-backdrop-filter: var(--glass-blur-soft);
+  backdrop-filter: var(--glass-blur-soft);
+  transition:
+    background-color var(--motion-fast) ease,
+    border-color var(--motion-fast) ease,
+    box-shadow var(--motion-fast) ease,
+    color var(--motion-fast) ease,
+    transform var(--motion-medium) var(--motion-ease);
+}
+
+.icon-button:hover,
+.icon-button:focus-visible,
+.settings-btn.icon-button:hover,
+.settings-btn.icon-button:focus-visible,
+.workbench-header-hide-button:hover,
+.workbench-header-hide-button:focus-visible,
+.workbench-theme-button:hover,
+.workbench-theme-button:focus-visible,
+.workbench-header-reveal:hover,
+.workbench-header-reveal:focus-visible,
+.quick-menu-button:hover,
+.quick-menu-button:focus-visible,
+.todo-section-menu-button:hover,
+.todo-section-menu-button:focus-visible,
+.tool-panel-menu-button:hover,
+.tool-panel-menu-button:focus-visible,
+.copy-inline-button:hover,
+.copy-inline-button:focus-visible,
+.password-copy-button:hover,
+.password-copy-button:focus-visible,
+.tool-primary-action:hover,
+.tool-primary-action:focus-visible,
+.notify-panel-action:hover:not(:disabled),
+.space-tab:hover,
+.space-tab:focus-visible,
+.space-add-button:hover,
+.space-add-button:focus-visible,
+.tool-tab:hover,
+button.tool-tab:hover,
+button.tool-tab:focus-visible,
+.quick-button:hover,
+.quick-button:focus-visible,
+.calculator-key:hover,
+.calculator-key:focus-visible,
+.todo-star-button:hover,
+.todo-star-button:focus-visible,
+.todo-notify-button.has-time:hover,
+.todo-notify-button.has-time:focus-visible,
+.shortcut-help-modal .n-base-close:hover,
+.shortcut-help-modal .n-base-close:focus-visible {
+  border-color: var(--glass-border-strong);
+  background: var(--glass-control-hover);
+  box-shadow: var(--glass-shadow), var(--glass-inset);
+}
+
+.space-tab.is-active,
+.tool-tab.is-active,
+button.tool-tab.is-active,
+button.tool-tab.is-active:hover,
+button.tool-tab.is-active:focus-visible {
+  color: var(--primary);
+  border-color: color-mix(in srgb, var(--primary) 26%, var(--glass-border-strong));
+  background: var(--glass-control-active);
+}
+
+.tool-field > input,
+.tool-field > select,
+.tool-field > textarea,
+.tool-field input[type="color"],
+.title-edit-input,
+.space-tab-edit-input,
+.copy-value-row,
+.password-length-control,
+.color-preview,
+.quick-form input,
+.quick-form textarea,
+.tool-config-row input {
+  border: 1px solid var(--glass-border);
+  background: var(--glass-field);
+  background-color: var(--glass-field);
+  background-image: none;
+  box-shadow: var(--glass-inset);
+  -webkit-backdrop-filter: var(--glass-blur-soft);
+  backdrop-filter: var(--glass-blur-soft);
+}
+
+.tool-field > input:hover,
+.tool-field > select:hover,
+.tool-field > textarea:hover,
+.tool-field input[type="color"]:hover,
+.title-edit-input:hover,
+.space-tab-edit-input:hover,
+.quick-form input:hover,
+.quick-form textarea:hover,
+.tool-config-row input:hover {
+  border-color: var(--glass-border-strong);
+  background: color-mix(in srgb, var(--glass-field) 74%, var(--glass-control-hover));
+  background-color: color-mix(in srgb, var(--glass-field) 74%, var(--glass-control-hover));
+}
+
+.tool-field > input:focus,
+.tool-field > select:focus,
+.tool-field > textarea:focus,
+.tool-field input[type="color"]:focus,
+.title-edit-input:focus,
+.space-tab-edit-input:focus,
+.quick-form input:focus,
+.quick-form textarea:focus,
+.tool-config-row input:focus {
+  border-color: color-mix(in srgb, var(--primary) 48%, var(--glass-border-strong));
+  background: color-mix(in srgb, var(--glass-field) 72%, var(--glass-control-hover));
+  background-color: color-mix(in srgb, var(--glass-field) 72%, var(--glass-control-hover));
+}
+
+.tool-field > input:not([type="color"]),
+.tool-field > textarea,
+.title-edit-input,
+.space-tab-edit-input,
+.quick-form input,
+.quick-form textarea,
+.tool-config-row input {
+  -webkit-appearance: none;
+  appearance: none;
+  background-color: var(--glass-field) !important;
+}
+
+.tool-field > input:not([type="color"]):hover,
+.tool-field > textarea:hover,
+.title-edit-input:hover,
+.space-tab-edit-input:hover,
+.quick-form input:hover,
+.quick-form textarea:hover,
+.tool-config-row input:hover {
+  background-color: color-mix(in srgb, var(--glass-field) 74%, var(--glass-control-hover)) !important;
+}
+
+.tool-field > input:not([type="color"]):focus,
+.tool-field > textarea:focus,
+.title-edit-input:focus,
+.space-tab-edit-input:focus,
+.quick-form input:focus,
+.quick-form textarea:focus,
+.tool-config-row input:focus {
+  background-color: color-mix(in srgb, var(--glass-field) 72%, var(--glass-control-hover)) !important;
+}
+
+html[data-theme="dark"] .tool-field > input:not([type="color"]),
+html[data-theme="dark"] .tool-field > textarea,
+html[data-theme="dark"] .title-edit-input,
+html[data-theme="dark"] .space-tab-edit-input,
+html[data-theme="dark"] .quick-form input,
+html[data-theme="dark"] .quick-form textarea,
+html[data-theme="dark"] .tool-config-row input {
+  border-color: rgba(235, 235, 245, 0.14);
+  background-color: rgba(44, 44, 46, 0.56) !important;
+}
+
+html[data-theme="dark"] .tool-field > input:not([type="color"]):hover,
+html[data-theme="dark"] .tool-field > textarea:hover,
+html[data-theme="dark"] .title-edit-input:hover,
+html[data-theme="dark"] .space-tab-edit-input:hover,
+html[data-theme="dark"] .quick-form input:hover,
+html[data-theme="dark"] .quick-form textarea:hover,
+html[data-theme="dark"] .tool-config-row input:hover,
+html[data-theme="dark"] .tool-field > input:not([type="color"]):focus,
+html[data-theme="dark"] .tool-field > textarea:focus,
+html[data-theme="dark"] .title-edit-input:focus,
+html[data-theme="dark"] .space-tab-edit-input:focus,
+html[data-theme="dark"] .quick-form input:focus,
+html[data-theme="dark"] .quick-form textarea:focus,
+html[data-theme="dark"] .tool-config-row input:focus {
+  border-color: rgba(235, 235, 245, 0.24);
+  background-color: rgba(58, 58, 60, 0.62) !important;
+}
+
+.todo-item,
+.today-focus-item,
+.image-card,
+.shortcut-section,
+.password-options label {
+  background: var(--glass-row);
+  box-shadow: inset 0 0 0 1px color-mix(in srgb, var(--glass-border) 42%, transparent);
+  -webkit-backdrop-filter: var(--glass-blur-soft);
+  backdrop-filter: var(--glass-blur-soft);
+}
+
+.todo-item:hover,
+.today-focus-item:hover,
+.image-card:hover,
+.image-card:focus-visible,
+.shortcut-section:hover,
+.password-options label:hover {
+  background: color-mix(in srgb, var(--glass-control-hover) 72%, transparent);
+  box-shadow:
+    var(--glass-control-shadow),
+    inset 0 0 0 1px color-mix(in srgb, var(--glass-border-strong) 80%, transparent);
+}
+
+.quick-button:hover,
+.quick-button:focus-visible,
+.calculator-key:hover,
+.calculator-key:focus-visible,
+.image-card:hover,
+.image-card:focus-visible {
+  transform: translateY(-1px);
+}
+
+.calculator-key {
+  background: var(--glass-control);
+}
+
+.calculator-key.is-operator {
+  color: var(--text);
+  background: color-mix(in srgb, var(--foreground) 5%, var(--glass-control));
+}
+
+.calculator-key.is-operator:hover,
+.calculator-key.is-operator:focus-visible {
+  color: var(--text);
+  background: color-mix(in srgb, var(--foreground) 8%, var(--glass-control-hover));
+}
+
+.calculator-key.is-equals {
+  color: var(--primary);
+  border-color: color-mix(in srgb, var(--primary) 24%, var(--glass-border));
+  background: color-mix(in srgb, var(--primary) 12%, var(--glass-control));
+}
+
+.calculator-key.is-equals:hover,
+.calculator-key.is-equals:focus-visible {
+  color: var(--primary);
+  background: color-mix(in srgb, var(--primary) 18%, var(--glass-control-hover));
+}
+
+.tool-primary-action.eyedropper-button {
+  color: var(--primary);
+  border: 1px solid color-mix(in srgb, var(--primary) 24%, var(--glass-border));
+  background: color-mix(in srgb, var(--primary) 12%, var(--glass-control));
+}
+
+.tool-primary-action.eyedropper-button:hover,
+.tool-primary-action.eyedropper-button:focus-visible {
+  color: var(--primary);
+  background: color-mix(in srgb, var(--primary) 18%, var(--glass-control-hover));
+}
+
+.calculator-key.is-utility {
+  background: color-mix(in srgb, var(--glass-control) 72%, transparent);
+}
+
+.todo-notify-button.has-time,
+button.todo-notify-button.has-time {
+  color: var(--muted);
+  background: color-mix(in srgb, var(--glass-control) 82%, transparent);
+}
+
+.image-index {
+  background: var(--glass-surface-elevated);
+  box-shadow: var(--glass-control-shadow);
+  -webkit-backdrop-filter: var(--glass-blur-soft);
+  backdrop-filter: var(--glass-blur-soft);
+}
+
+.image-preview {
+  background:
+    linear-gradient(180deg, color-mix(in srgb, var(--background) 54%, transparent) 0%, color-mix(in srgb, var(--background) 70%, transparent) 100%);
+  -webkit-backdrop-filter: var(--glass-blur);
+  backdrop-filter: var(--glass-blur);
+}
+
+html[data-theme="dark"] .image-preview {
+  background:
+    linear-gradient(180deg, rgba(28, 28, 30, 0.56) 0%, rgba(28, 28, 30, 0.78) 100%);
+}
+
+.preview-actions {
+  background: var(--glass-surface-elevated);
+}
+
+.n-dropdown-option-body:hover,
+.n-dropdown-option.n-dropdown-option--pending .n-dropdown-option-body {
+  background: var(--glass-control-hover) !important;
+}
+
+.workbench-resizer::before {
+  background: color-mix(in srgb, var(--glass-border-strong) 34%, transparent);
+}
+
+.workbench-resizer:hover::before,
+.workbench-resizer:focus-visible::before {
+  background: color-mix(in srgb, var(--primary) 44%, var(--glass-border-strong));
+  box-shadow: 0 0 0 4px color-mix(in srgb, var(--primary) 9%, transparent);
+}
+
 @media (prefers-contrast: more) {
   :root {
     --border: rgba(60, 60, 67, 0.36);
@@ -5058,11 +5579,29 @@ select {
     --line-control: rgba(235, 235, 245, 0.38);
     --shadow-soft: 0 1px 2px rgba(0, 0, 0, 0.28);
   }
+
+  :root,
+  html[data-theme="dark"] {
+    --glass-surface: var(--card);
+    --glass-surface-strong: var(--card);
+    --glass-surface-soft: var(--button);
+    --glass-surface-elevated: var(--popover);
+    --glass-control: var(--button);
+    --glass-control-hover: var(--button-hover);
+    --glass-field: var(--input);
+    --glass-border: var(--line-control);
+    --glass-border-strong: var(--line-main);
+  }
 }
 
 @media (prefers-reduced-transparency: reduce) {
   .workbench-command-bar,
   .workbench-zone,
+  .workbench-zone > .panel,
+  .workbench-zone > .space-panel,
+  .workbench-zone > .todo-panel,
+  .workbench-zone > .text-panel,
+  .workbench-zone > .tool-panel,
   .n-dropdown-menu,
   .n-popover,
   .n-dialog,
@@ -5070,6 +5609,9 @@ select {
   .quick-dialog.n-card,
   .shortcut-help-modal.n-card,
   .companion-popover-shell.n-popover,
+  .tool-config-panel,
+  .gif-theme-custom-dialog,
+  .notify-floating-date-picker,
   .preview-actions,
   .image-preview {
     -webkit-backdrop-filter: none;

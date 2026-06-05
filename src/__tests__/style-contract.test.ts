@@ -293,6 +293,28 @@ describe("workbench style contract", () => {
     expectSelectorBody(styles, ".today-focus-scrollbar", "--n-scrollbar-width: var(--scrollbar-size) !important");
   });
 
+  it("applies the Liquid Glass material system across functional surfaces and controls", () => {
+    const styles = readFileSync(resolve(__dirname, "../styles.css"), "utf8");
+
+    expect(styles).toContain("--glass-blur: blur(30px) saturate(1.85)");
+    expect(styles).toContain("--glass-surface-elevated: rgba(255, 255, 255, 0.8)");
+    expectSelectorBody(styles, 'html[data-theme="dark"]', "--glass-surface-elevated: rgba(44, 44, 46, 0.78)");
+    expectSelectorBody(styles, ".workbench-zone", "backdrop-filter: var(--glass-blur)");
+    expectSelectorBody(styles, ".workbench-command-bar", "background: var(--glass-surface-strong)");
+    expectSelectorBody(styles, ".panel-header", "backdrop-filter: var(--glass-blur-soft)");
+    expectSelectorBody(styles, ".n-dropdown-menu", "background: var(--glass-surface-elevated) !important");
+    expectSelectorBody(styles, ".tool-field > input", "background: var(--glass-field)");
+    expectSelectorBody(styles, ".tool-field > input", "background-color: var(--glass-field)");
+    expectSelectorBody(styles, ".tool-field > input:not([type=\"color\"])", "appearance: none");
+    expectSelectorBody(styles, ".tool-field > input:not([type=\"color\"])", "background-color: var(--glass-field) !important");
+    expectSelectorBody(styles, 'html[data-theme="dark"] .tool-field > input:not([type="color"])', "background-color: rgba(44, 44, 46, 0.56) !important");
+    expectSelectorBody(styles, ".calculator-key", "background: var(--glass-control)");
+    expectSelectorBody(styles, ".calculator-key.is-equals", "background: color-mix(in srgb, var(--primary) 12%, var(--glass-control))");
+    expectSelectorBody(styles, ".tool-primary-action.eyedropper-button", "background: color-mix(in srgb, var(--primary) 12%, var(--glass-control))");
+    expectSelectorBody(styles, ".mobile-handoff-message", "border-radius: calc(var(--radius) + 6px)");
+    expect(styles).toMatch(/@media \(prefers-reduced-transparency: reduce\)[\s\S]*?\.workbench-zone > \.tool-panel/);
+  });
+
   it("keeps calculator operators neutral while matching equals to the primary tool action", () => {
     const styles = readFileSync(resolve(__dirname, "../styles.css"), "utf8");
 
