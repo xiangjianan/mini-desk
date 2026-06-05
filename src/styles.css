@@ -1136,8 +1136,6 @@ button.tool-tab:focus-visible {
 }
 
 .calculator-display > input {
-  height: 36px;
-  font-size: 18px;
   text-align: right;
   font-variant-numeric: tabular-nums;
 }
@@ -1498,11 +1496,6 @@ button.tool-tab:focus-visible {
   grid-template-columns: minmax(0, 1fr) minmax(0, 1fr);
 }
 
-.note-panel.tool-panel .calculator-display > input {
-  height: 34px;
-  font-size: 16px;
-}
-
 .space-panel-switch-enter-active,
 .space-panel-switch-leave-active {
   transition:
@@ -1845,7 +1838,7 @@ button.quick-button {
 }
 
 .today-focus-item.has-notify {
-  grid-template-columns: 42px minmax(0, 1fr) minmax(0, 92px) 30px;
+  grid-template-columns: 42px minmax(0, 1fr) minmax(0, 68px) 30px;
 }
 
 .today-focus-item.is-done {
@@ -1960,7 +1953,7 @@ button.quick-button {
 }
 
 .todo-item.has-notify {
-  grid-template-columns: 22px 32px minmax(0, 1fr) minmax(0, 92px) 30px;
+  grid-template-columns: 22px 32px minmax(0, 1fr) minmax(0, 68px) 30px;
 }
 
 .todo-section.is-compact .todo-item,
@@ -2190,10 +2183,10 @@ button.todo-collapse-button {
   display: inline-flex;
   align-items: center;
   justify-content: flex-end;
-  width: 100%;
+  width: auto;
   min-width: 0;
-  height: 34px;
-  padding: 0 4px;
+  height: 26px;
+  padding: 0 6px;
 }
 
 .todo-notify-button {
@@ -2221,11 +2214,12 @@ button.todo-collapse-button {
 }
 
 .todo-notify-button.has-time {
-  width: 100%;
+  width: auto;
+  max-width: 100%;
   min-width: 0;
-  height: 34px;
-  min-height: 34px;
-  border-radius: var(--radius);
+  height: 26px;
+  min-height: 26px;
+  border-radius: 999px;
   opacity: 1;
   pointer-events: auto;
 }
@@ -2235,7 +2229,7 @@ button.todo-notify-button {
 }
 
 button.todo-notify-button.has-time {
-  border-radius: var(--radius);
+  border-radius: 999px;
 }
 
 .todo-item:hover .todo-notify-button,
@@ -2441,7 +2435,7 @@ button.todo-notify-button.has-time {
   min-width: 0;
   max-width: 100%;
   min-height: 20px;
-  padding: 0 4px;
+  padding: 0;
   color: var(--muted);
   font-size: calc(var(--app-font-size) - 1px);
   line-height: 20px;
@@ -3003,6 +2997,28 @@ button.todo-section-menu-button {
   }
 }
 
+@keyframes image-preview-out {
+  from {
+    opacity: 1;
+  }
+
+  to {
+    opacity: 0;
+  }
+}
+
+@keyframes image-preview-photo-out {
+  from {
+    opacity: 1;
+    transform: scale(1);
+  }
+
+  to {
+    opacity: 0;
+    transform: scale(0.985);
+  }
+}
+
 .settings-btn {
   border-radius: 50%;
 }
@@ -3318,7 +3334,7 @@ body:has(.image-preview) .image-panel .n-scrollbar {
 }
 
 .shortcut-help-modal {
-  max-width: 420px !important;
+  max-width: 620px !important;
   margin: 0 auto;
 }
 
@@ -3360,38 +3376,82 @@ body:has(.image-preview) .image-panel .n-scrollbar {
 }
 
 .shortcut-help-content {
-  max-height: 60vh;
+  max-height: min(68vh, 680px);
 }
 
 .shortcut-help-inner {
-  padding: 16px 20px 24px 20px;
+  display: grid;
+  gap: 10px;
+  padding: 14px 16px 18px;
 }
 
 .shortcut-section {
-  margin-bottom: 16px;
+  padding: 12px;
+  border: 1px solid color-mix(in srgb, var(--border) 74%, transparent);
+  border-radius: var(--radius-control);
+  background: color-mix(in srgb, var(--card) 78%, transparent);
 }
 
-.shortcut-section:last-child {
-  margin-bottom: 0;
+.shortcut-section-heading {
+  display: grid;
+  grid-template-columns: 26px minmax(0, 1fr);
+  gap: 8px;
+  align-items: start;
+}
+
+.shortcut-section-icon {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 26px;
+  height: 26px;
+  border-radius: 50%;
+  background: var(--button);
+  font-size: 13px;
+}
+
+.shortcut-section h4,
+.shortcut-section p {
+  margin: 0;
 }
 
 .shortcut-section h4 {
-  margin: 0 0 8px;
   font-size: 13px;
+  color: var(--text);
+}
+
+.shortcut-section p,
+.shortcut-tip-list {
   color: var(--muted);
+  font-size: calc(var(--app-font-size) - 1px);
+  line-height: 1.55;
+}
+
+.shortcut-tip-list {
+  display: grid;
+  gap: 3px;
+  margin: 8px 0 10px;
+  padding-left: 16px;
+}
+
+.shortcut-grid {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 4px 10px;
 }
 
 .shortcut-row {
-  display: flex;
+  display: grid;
+  grid-template-columns: minmax(94px, 0.42fr) minmax(0, 1fr);
   align-items: center;
-  gap: 12px;
+  gap: 8px;
   padding: 4px 0;
   font-size: var(--app-font-size);
 }
 
 .shortcut-row kbd {
   display: inline-block;
-  min-width: 120px;
+  min-width: 0;
   padding: 2px 8px;
   background: var(--button);
   border: 1px solid var(--line-subtle);
@@ -3404,11 +3464,17 @@ body:has(.image-preview) .image-panel .n-scrollbar {
 
 .shortcut-row span {
   color: var(--text);
+  min-width: 0;
+  overflow-wrap: anywhere;
 }
 
 @media (max-width: 900px) {
   :root {
     --app-font-size: 14px;
+  }
+
+  .shortcut-grid {
+    grid-template-columns: minmax(0, 1fr);
   }
 
   html,
@@ -4149,8 +4215,9 @@ button.quick-button {
 
 .todo-notify-button.has-time,
 button.todo-notify-button.has-time {
-  color: var(--primary);
-  background: color-mix(in srgb, var(--primary) 10%, transparent);
+  color: var(--muted);
+  background: color-mix(in srgb, var(--button) 70%, transparent);
+  box-shadow: inset 0 0 0 1px color-mix(in srgb, var(--border) 72%, transparent);
 }
 
 .todo-notify-button:hover,
@@ -4451,18 +4518,13 @@ html[data-theme="dark"] .tool-field input[type="color"] {
 }
 
 .calculator-display > input {
-  height: 42px;
-  padding: 0 12px;
-  border: 0;
-  background: color-mix(in srgb, var(--button) 72%, transparent);
-  font-size: 20px;
+  padding: 0 8px;
 }
 
 .calculator-display > input:hover,
 .calculator-display > input:focus {
-  border: 0;
-  background: color-mix(in srgb, var(--button) 72%, transparent);
-  box-shadow: none;
+  border-color: color-mix(in srgb, var(--primary) 28%, var(--border));
+  background: color-mix(in srgb, var(--card) 94%, var(--button));
 }
 
 .calculator-keypad {
@@ -4484,25 +4546,25 @@ html[data-theme="dark"] .tool-field input[type="color"] {
 }
 
 .calculator-key.is-operator {
-  color: var(--primary);
-  background: color-mix(in srgb, var(--primary) 12%, transparent);
+  color: var(--text);
+  background: color-mix(in srgb, var(--foreground) 4%, var(--button));
 }
 
 .calculator-key.is-operator:hover,
 .calculator-key.is-operator:focus-visible {
-  color: var(--primary);
-  background: color-mix(in srgb, var(--primary) 18%, transparent);
+  color: var(--text);
+  background: color-mix(in srgb, var(--foreground) 7%, var(--button-hover));
 }
 
 .calculator-key.is-equals {
   color: var(--primary);
-  background: color-mix(in srgb, var(--primary) 18%, transparent);
+  background: color-mix(in srgb, var(--primary) 10%, transparent);
 }
 
 .calculator-key.is-equals:hover,
 .calculator-key.is-equals:focus-visible {
   color: var(--primary);
-  background: color-mix(in srgb, var(--primary) 24%, transparent);
+  background: color-mix(in srgb, var(--primary) 16%, transparent);
 }
 
 .calculator-key.is-utility {
@@ -4688,6 +4750,11 @@ html[data-theme="dark"] .tool-field input[type="color"] {
   backdrop-filter: blur(34px) saturate(1.8);
 }
 
+.image-preview.is-closing {
+  pointer-events: none;
+  animation: image-preview-out 220ms ease-in forwards;
+}
+
 html[data-theme="dark"] .image-preview {
   background:
     radial-gradient(circle at 50% 18%, rgba(58, 58, 60, 0.55), transparent 42%),
@@ -4710,6 +4777,10 @@ html[data-theme="dark"] .image-preview {
   object-fit: contain;
   border-radius: calc(var(--radius) + 4px);
   box-shadow: 0 18px 60px rgba(0, 0, 0, 0.2);
+}
+
+.image-preview.is-closing .preview-stage img {
+  animation: image-preview-photo-out 220ms ease-in forwards;
 }
 
 .preview-actions {

@@ -124,7 +124,9 @@ describe("Naive UI component usage", () => {
 
     expect(preview).toContain("@contextmenu.prevent");
     expect(preview).toContain(':mask-closable="false"');
-    expect(preview).toContain('@click.self="emit(\'close\')"');
+    expect(preview).toContain('@click.self="requestClose"');
+    expect(preview).toContain("function requestClose");
+    expect(preview).toContain("is-closing");
     expect(preview).toContain("uiText.preview.close");
     expect(preview).toContain("uiText.common.copy");
     expect(preview).toContain("uiText.common.delete");
@@ -389,6 +391,11 @@ describe("Naive UI component usage", () => {
   it("keeps the shortcut help close button circular before and during hover", () => {
     const styles = read("src/styles.css");
 
+    expect(styles).toMatch(/\.shortcut-help-modal\s*\{[^}]*max-width: 620px/s);
+    expect(styles).toMatch(/\.shortcut-section\s*\{[^}]*border: 1px solid color-mix\(in srgb, var\(--border\) 74%, transparent\)/s);
+    expect(styles).toMatch(/\.shortcut-section-heading\s*\{[^}]*grid-template-columns: 26px minmax\(0, 1fr\)/s);
+    expect(styles).toMatch(/\.shortcut-tip-list\s*\{[^}]*display: grid/s);
+    expect(styles).toMatch(/\.shortcut-grid\s*\{[^}]*grid-template-columns: repeat\(2, minmax\(0, 1fr\)\)/s);
     expect(styles).toMatch(/\.shortcut-help-modal \.n-base-close\s*\{[^}]*width: 30px/s);
     expect(styles).toMatch(/\.shortcut-help-modal \.n-base-close\s*\{[^}]*height: 30px/s);
     expect(styles).toMatch(/\.shortcut-help-modal \.n-base-close\s*\{[^}]*border-radius: 50% !important/s);
@@ -520,7 +527,7 @@ describe("Naive UI component usage", () => {
     expect(todo).toContain('class="todo-drag-handle"');
     expect(todo).not.toMatch(/class="todo-item"[\s\S]{0,160}draggable="true"/);
     expect(styles).toMatch(/\.todo-item\s*\{[^}]*grid-template-columns: 22px 32px minmax\(0, 1fr\) 30px 30px/s);
-    expect(styles).toMatch(/\.todo-item\.has-notify\s*\{[^}]*grid-template-columns: 22px 32px minmax\(0, 1fr\) minmax\(0, 92px\) 30px/s);
+    expect(styles).toMatch(/\.todo-item\.has-notify\s*\{[^}]*grid-template-columns: 22px 32px minmax\(0, 1fr\) minmax\(0, 68px\) 30px/s);
     expect(styles).toMatch(/\.todo-list\s*\{[^}]*padding: 0/s);
     expect(styles).toMatch(/\.todo-item\s*\{[^}]*height: 34px/s);
     expect(styles).toMatch(/\.todo-item\s*\{[^}]*min-height: 34px/s);
@@ -559,7 +566,7 @@ describe("Naive UI component usage", () => {
     expect(styles).toMatch(/\.today-focus-heading\s*\{[^}]*min-height: 34px/s);
     expect(styles).toMatch(/\.today-focus-list\s*\{[^}]*padding: 0/s);
     expect(styles).toMatch(/\.today-focus-item\s*\{[^}]*grid-template-columns: 42px minmax\(0, 1fr\) 30px 30px/s);
-    expect(styles).toMatch(/\.today-focus-item\.has-notify\s*\{[^}]*grid-template-columns: 42px minmax\(0, 1fr\) minmax\(0, 92px\) 30px/s);
+    expect(styles).toMatch(/\.today-focus-item\.has-notify\s*\{[^}]*grid-template-columns: 42px minmax\(0, 1fr\) minmax\(0, 68px\) 30px/s);
     expect(styles).toMatch(/\.today-focus-item \.todo-notify-button\s*\{[^}]*grid-column: 3/s);
     expect(styles).toMatch(/\.today-focus-item\s*\{[^}]*gap: 0/s);
     expect(styles).toMatch(/\.today-focus-item\s*\{[^}]*height: 34px/s);
@@ -789,8 +796,10 @@ describe("Naive UI component usage", () => {
     expect(app).toContain("aboutDescription");
     expect(app).toContain("GITHUB_REPO_LABEL");
     expect(app).toContain("GITHUB_REPO_URL");
-    expect(app).toContain("xiangjianan / todolist");
-    expect(app).toContain("https://github.com/xiangjianan/todolist");
+    expect(app).toContain("xiangjianan / mini-desk");
+    expect(app).toContain("https://github.com/xiangjianan/mini-desk");
+    expect(app).not.toContain("xiangjianan / todolist");
+    expect(app).not.toContain("https://github.com/xiangjianan/todolist");
     expect(app).not.toContain("云霞 · 产品");
     expect(app).not.toContain("佳男 · 开发");
     expect(app).not.toContain("Codex · 协作支持");

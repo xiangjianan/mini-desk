@@ -1,6 +1,7 @@
 import { describe, expect, it } from "vitest";
 import {
   GUIDE_MESSAGES,
+  SHORTCUT_HELP,
   getDefaultTitles,
   getDisplaySpaceTitle,
   getDisplayTodoListTitle,
@@ -57,8 +58,30 @@ describe("localized public copy", () => {
     expect(GUIDE_MESSAGES.en.note).toContain("Edited text saves automatically after 3 seconds.");
   });
 
+  it("keeps shortcut help focused on hidden tips plus key commands", () => {
+    expect(SHORTCUT_HELP.zh).toHaveLength(5);
+    expect(SHORTCUT_HELP.zh[0]).toMatchObject({
+      area: "工作台",
+      icon: "⌘",
+      summary: expect.stringContaining("一个桌面"),
+    });
+    expect(SHORTCUT_HELP.zh.flatMap((section) => section.tips)).toEqual(expect.arrayContaining([
+      "双击任意区域标题可以改名，包括今日重点和空间标签。",
+      "右键空白处可以新增提醒列表，列表名也能拖动排序。",
+      "工具栏可以配置显示哪些工具，当前打开项会自动记住。",
+    ]));
+    expect(SHORTCUT_HELP.zh.flatMap((section) => section.shortcuts.map((shortcut) => shortcut.key))).toEqual(expect.arrayContaining([
+      "Ctrl + S",
+      "Esc / Space",
+      "工具区三点菜单",
+    ]));
+    expect(SHORTCUT_HELP.en.flatMap((section) => section.tips)).toContain("Double-click section titles to rename them, including Focus and space tabs.");
+  });
+
   it("localizes shared menu labels", () => {
     expect(getUiText("en").settings.language).toBe("语言");
+    expect(getUiText("zh").settings.shortcutHelp).toBe("帮助与快捷键");
+    expect(getUiText("en").settings.shortcutHelp).toBe("Help & Shortcuts");
     expect(getUiText("en").quick.add).toBe("Add");
     expect(getUiText("en").quick.menu).toBe("Quick actions menu");
     expect(getUiText("en").todo.createList).toBe("New reminder list");

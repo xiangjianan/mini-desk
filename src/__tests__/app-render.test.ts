@@ -2202,6 +2202,7 @@ describe("App shell", () => {
   });
 
   it("closes image preview from the shared image list close event", async () => {
+    vi.useFakeTimers();
     localStorage.setItem(
       STORAGE_KEY,
       JSON.stringify({
@@ -2212,19 +2213,30 @@ describe("App shell", () => {
       }),
     );
     const wrapper = mountApp();
-    const imagePanel = wrapper.getComponent(ImagePanel);
 
-    imagePanel.vm.$emit("preview", "img-2");
-    await wrapper.vm.$nextTick();
-    expect(wrapper.find(".image-preview").exists()).toBe(true);
-    expect(wrapper.get(".image-panel .image-card.is-active .image-index").text()).toBe("2");
+    try {
+      const imagePanel = wrapper.getComponent(ImagePanel);
 
-    imagePanel.vm.$emit("closePreview");
-    await wrapper.vm.$nextTick();
+      imagePanel.vm.$emit("preview", "img-2");
+      await wrapper.vm.$nextTick();
+      expect(wrapper.find(".image-preview").exists()).toBe(true);
+      expect(wrapper.get(".image-panel .image-card.is-active .image-index").text()).toBe("2");
 
-    expect(wrapper.find(".image-preview").exists()).toBe(false);
-    expect(wrapper.find(".image-panel .image-card.is-active").exists()).toBe(false);
-    wrapper.unmount();
+      imagePanel.vm.$emit("closePreview");
+      await wrapper.vm.$nextTick();
+
+      expect(wrapper.find(".image-panel .image-card.is-active").exists()).toBe(false);
+      expect(wrapper.find(".image-preview").exists()).toBe(true);
+      expect(wrapper.get(".image-preview").classes()).toContain("is-closing");
+
+      await vi.advanceTimersByTimeAsync(220);
+      await wrapper.vm.$nextTick();
+
+      expect(wrapper.find(".image-preview").exists()).toBe(false);
+    } finally {
+      wrapper.unmount();
+      vi.useRealTimers();
+    }
   });
 
   it("reorders images from the image panel drag reorder event", async () => {
@@ -3223,8 +3235,8 @@ describe("App shell", () => {
       expect(wrapper.find('[data-testid="companion-confirm"]').text()).not.toContain("👤 产品经理 — 云霞");
       expect(wrapper.find('[data-testid="companion-confirm"]').text()).not.toContain("牛马：Codex");
       expect(wrapper.find('[data-testid="companion-confirm"]').text()).not.toContain("给老婆做的 todolist 看板");
-      expect(wrapper.find('[data-testid="companion-confirm"]').text()).toContain("xiangjianan / todolist");
-      expect(wrapper.get('[data-testid="companion-link"]').attributes("href")).toBe("https://github.com/xiangjianan/todolist");
+      expect(wrapper.find('[data-testid="companion-confirm"]').text()).toContain("xiangjianan / mini-desk");
+      expect(wrapper.get('[data-testid="companion-link"]').attributes("href")).toBe("https://github.com/xiangjianan/mini-desk");
       expect(wrapper.get('[data-testid="companion-link"]').attributes("target")).toBe("_blank");
     } finally {
       wrapper.unmount();
@@ -3273,7 +3285,7 @@ describe("App shell", () => {
 
       expect(wrapper.find('[data-testid="companion-confirm"]').text()).toContain("Mini Desk");
       expect(wrapper.find('[data-testid="companion-confirm"]').text()).not.toContain("给老婆做的 todolist 看板");
-      expect(wrapper.find('[data-testid="companion-confirm"]').text()).toContain("xiangjianan / todolist");
+      expect(wrapper.find('[data-testid="companion-confirm"]').text()).toContain("xiangjianan / mini-desk");
 
       await vi.advanceTimersByTimeAsync(9799);
       await wrapper.vm.$nextTick();
@@ -4219,7 +4231,7 @@ describe("App shell", () => {
     await wrapper.vm.$nextTick();
 
     expect(openSpy).toHaveBeenCalledWith(
-      "https://github.com/xiangjianan/todolist/issues/new",
+      "https://github.com/xiangjianan/mini-desk/issues/new",
       "_blank",
       "noopener,noreferrer",
     );

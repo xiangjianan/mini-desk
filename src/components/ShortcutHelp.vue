@@ -21,10 +21,21 @@ const sections = computed(() => SHORTCUT_HELP[props.language === "en" ? "en" : "
     <NScrollbar class="shortcut-help-content" @wheel.stop>
       <div class="shortcut-help-inner">
         <div v-for="section in sections" :key="section.area" class="shortcut-section">
-          <h4>{{ section.area }}</h4>
-          <div v-for="item in section.shortcuts" :key="item.key" class="shortcut-row">
-            <kbd>{{ item.key }}</kbd>
-            <span>{{ item.desc }}</span>
+          <div class="shortcut-section-heading">
+            <span class="shortcut-section-icon" aria-hidden="true">{{ section.icon }}</span>
+            <div>
+              <h4>{{ section.area }}</h4>
+              <p>{{ section.summary }}</p>
+            </div>
+          </div>
+          <ul class="shortcut-tip-list">
+            <li v-for="tip in section.tips" :key="tip">{{ tip }}</li>
+          </ul>
+          <div class="shortcut-grid" :aria-label="section.area">
+            <div v-for="item in section.shortcuts" :key="item.key" class="shortcut-row">
+              <kbd>{{ item.key }}</kbd>
+              <span>{{ item.desc }}</span>
+            </div>
           </div>
         </div>
       </div>

@@ -1963,7 +1963,7 @@ describe("TodoPanel", () => {
     expect(todoInputSharedRule).toContain("white-space: nowrap");
     expect(todayNotifyRule).toContain("grid-column: 3");
     expect(todayStarRule).toContain("grid-column: 4");
-    expect(todayNotifyWidthRule).toContain("minmax(0, 92px)");
+    expect(todayNotifyWidthRule).toContain("minmax(0, 68px)");
     expect(deadlineLabelRule).not.toContain("text-overflow: ellipsis");
   });
 

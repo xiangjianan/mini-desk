@@ -458,7 +458,7 @@ describe("ToolPanel", () => {
     expect(writeText).toHaveBeenCalledWith("rgb(51, 102, 153)");
   });
 
-  it("uses white as the default color in light mode and black in dark mode", async () => {
+  it("uses white as the default color in light mode and the panel surface in dark mode", async () => {
     const light = mountToolPanel({ theme: "light" });
     await selectToolByLabel(light, "取色板");
 
@@ -468,8 +468,8 @@ describe("ToolPanel", () => {
     const dark = mountToolPanel({ theme: "dark" });
     await selectToolByLabel(dark, "取色板");
 
-    expect((dark.get('[data-testid="color-value"]').element as HTMLInputElement).value).toBe("#000000");
-    expect(dark.get('[data-testid="color-rgb"]').text()).toContain("rgb(0, 0, 0)");
+    expect((dark.get('[data-testid="color-value"]').element as HTMLInputElement).value).toBe("#2c2c2e");
+    expect(dark.get('[data-testid="color-rgb"]').text()).toContain("rgb(44, 44, 46)");
   });
 
   it("encodes and decodes Base64 and URL text", async () => {

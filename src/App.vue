@@ -67,6 +67,7 @@ const MOBILE_BREAKPOINT_QUERY = "(max-width: 900px)";
 const TODO_NOTIFICATION_FALLBACK_INTERVAL_MS = 30_000;
 const MAX_TODO_NOTIFICATION_TIMEOUT_MS = 2_147_483_647;
 const UNDO_HISTORY_LIMIT = 50;
+const IMAGE_PREVIEW_CLOSE_MS = 220;
 const mobileCompanionPosition: { right: string; bottom: string } = { right: "18px", bottom: "28px" };
 
 function getInitialMobileBlocked(): boolean {
@@ -77,6 +78,8 @@ const state = reactive<BoardState>(loadState());
 const undoSnapshots = ref<string[]>([]);
 const lastUndoSnapshot = ref(exportJsonState(state));
 const activePreviewId = ref<string | undefined>();
+const closingPreviewId = ref<string | undefined>();
+const previewCloseTimer = ref<number | undefined>();
 const bubbleMessage = ref("");
 const bubbleLink = ref<{ text: string; href: string } | null>(null);
 const bubbleVisible = ref(false);
@@ -125,9 +128,9 @@ type BubbleOptions = {
 };
 
 const GUIDE_MESSAGE_DURATION_MS = 5000;
-const GITHUB_ISSUE_URL = "https://github.com/xiangjianan/todolist/issues/new";
-const GITHUB_REPO_URL = "https://github.com/xiangjianan/todolist";
-const GITHUB_REPO_LABEL = "xiangjianan / todolist";
+const GITHUB_ISSUE_URL = "https://github.com/xiangjianan/mini-desk/issues/new";
+const GITHUB_REPO_URL = "https://github.com/xiangjianan/mini-desk";
+const GITHUB_REPO_LABEL = "xiangjianan / mini-desk";
 const ABOUT_MESSAGE_DURATION_MS = 10000;
 const COMPANION_FADE_MS = 2000;
 const VERSION_BADGE_MAX_VISIBLE_MS = 10000;
@@ -143,6 +146,8 @@ const companionVisible = computed(() => companionFocused.value || bubbleVisible.
 const activeCompanionVisible = computed(() => isMobileBlocked.value || companionVisible.value);
 const activeCompanionMessage = computed(() => (isMobileBlocked.value ? uiText.value.app.mobileMessage : bubbleMessage.value));
 const activeCompanionPosition = computed(() => (isMobileBlocked.value ? mobileCompanionPosition : companionPosition.value));
+const displayedPreviewId = computed(() => activePreviewId.value ?? closingPreviewId.value);
+const imagePreviewClosing = computed(() => Boolean(closingPreviewId.value) && !activePreviewId.value);
 const saveStatus = ref<"saved" | "saving" | "dirty">("saved");
 const saveStatusLabel = computed(() => {
   if (saveStatus.value === "dirty") return uiText.value.app.dirty;
@@ -172,7 +177,7 @@ function updateMobileBlocked(source?: MediaQueryList | MediaQueryListEvent): voi
   const matches = Boolean(source?.matches ?? mobileMediaQuery.value?.matches);
   const wasMobileBlocked = isMobileBlocked.value;
   if (matches && !wasMobileBlocked) {
-    activePreviewId.value = undefined;
+    clearImagePreview();
     if (textSaveTimer.value !== undefined) flushTextSave();
     clearPendingConfirm(true);
     hideBubbleMessage({ clearRetainedContent: true });
@@ -564,7 +569,7 @@ function deleteImage(id: string, anchor?: HTMLElement): void {
     const index = state.images.findIndex((image) => image.id === id);
     if (index < 0) return;
     state.images = state.images.filter((image) => image.id !== id);
-    if (activePreviewId.value === id) activePreviewId.value = undefined;
+    if (activePreviewId.value === id || closingPreviewId.value === id) clearImagePreview();
     await deleteStoredImage(id);
     persistNow();
     showBubble("deleteImage", feedbackAnchor, { hideCompanionAfter: true });
@@ -572,8 +577,30 @@ function deleteImage(id: string, anchor?: HTMLElement): void {
 }
 
 function openImagePreview(id: string): void {
+  window.clearTimeout(previewCloseTimer.value);
+  previewCloseTimer.value = undefined;
+  closingPreviewId.value = undefined;
   hideCompanion();
   activePreviewId.value = id;
+}
+
+function closeImagePreview(): void {
+  const previewId = activePreviewId.value;
+  if (!previewId) return;
+  window.clearTimeout(previewCloseTimer.value);
+  closingPreviewId.value = previewId;
+  activePreviewId.value = undefined;
+  previewCloseTimer.value = window.setTimeout(() => {
+    closingPreviewId.value = undefined;
+    previewCloseTimer.value = undefined;
+  }, IMAGE_PREVIEW_CLOSE_MS);
+}
+
+function clearImagePreview(): void {
+  window.clearTimeout(previewCloseTimer.value);
+  previewCloseTimer.value = undefined;
+  activePreviewId.value = undefined;
+  closingPreviewId.value = undefined;
 }
 
 async function copyImage(id: string, anchor?: HTMLElement): Promise<void> {
@@ -1170,7 +1197,7 @@ function clearData(anchor?: HTMLElement): void {
       textSaveTimer.value = undefined;
       emptyTodoRemovalTimers.forEach((timer) => window.clearTimeout(timer));
       emptyTodoRemovalTimers.clear();
-      activePreviewId.value = undefined;
+      clearImagePreview();
       pendingEditSpaceId.value = null;
       pendingEditTodoListId.value = null;
       undoSnapshots.value = [];
@@ -1279,7 +1306,7 @@ function handleGlobalKeydown(event: KeyboardEvent): void {
   if (previewId) {
     if (event.key === "Escape" || event.key === " ") {
       event.preventDefault();
-      activePreviewId.value = undefined;
+      closeImagePreview();
       return;
     }
     if (event.key === "Enter") {
@@ -1375,7 +1402,7 @@ function undoLastBoardChange(): void {
     textSaveTimer.value = undefined;
     emptyTodoRemovalTimers.forEach((timer) => window.clearTimeout(timer));
     emptyTodoRemovalTimers.clear();
-    activePreviewId.value = undefined;
+    clearImagePreview();
     pendingEditSpaceId.value = null;
     pendingEditTodoListId.value = null;
     Object.assign(state, nextState);
@@ -1601,6 +1628,8 @@ function clearTimers(): void {
   window.clearTimeout(saveStatusTimer.value);
   window.clearTimeout(versionBadgeTimer.value);
   window.clearTimeout(todoNotificationDueTimer.value);
+  window.clearTimeout(previewCloseTimer.value);
+  previewCloseTimer.value = undefined;
   versionBadgeTimer.value = undefined;
   window.clearInterval(todoNotificationTimer.value);
   todoNotificationDueTimer.value = undefined;
@@ -1980,7 +2009,7 @@ function moveItem<T extends { id: string }>(items: T[], dragId: string, targetId
           :language="state.language"
           @title-update="updateTitle"
           @preview="openImagePreview"
-          @close-preview="activePreviewId = undefined"
+          @close-preview="closeImagePreview"
           @copy="copyImage"
           @delete="deleteImage"
           @reorder="reorderImages"
@@ -2094,9 +2123,10 @@ function moveItem<T extends { id: string }>(items: T[], dragId: string, targetId
     <ImagePreview
       v-if="!isMobileBlocked"
       :images="state.images"
-      :active-id="activePreviewId"
+      :active-id="displayedPreviewId"
+      :closing="imagePreviewClosing"
       :language="state.language"
-      @close="activePreviewId = undefined"
+      @close="clearImagePreview"
       @copy="copyImage"
       @delete="deleteImage"
     />

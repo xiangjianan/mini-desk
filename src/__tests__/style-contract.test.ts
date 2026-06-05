@@ -271,7 +271,9 @@ describe("workbench style contract", () => {
     expectSelectorBody(styles, ".todo-notify-button", "height: 30px");
     expectSelectorBody(styles, ".todo-notify-button", "margin-right: 2px");
     expectSelectorBody(styles, "button.todo-notify-button", "border-radius: 50%");
-    expectSelectorBody(styles, ".todo-notify-button.has-time", "border-radius: var(--radius)");
+    expectSelectorBody(styles, ".todo-notify-button.has-time", "border-radius: 999px");
+    expectSelectorBody(styles, ".todo-notify-button.has-time", "height: 26px");
+    expect(ruleBodies(styles, ".todo-notify-button.has-time").join("\n")).not.toContain("var(--primary)");
     expectSelectorBody(styles, ".todo-star-button", "border-radius: 50%");
     expectSelectorBody(styles, ".todo-star-button", "width: 30px");
     expectSelectorBody(styles, ".todo-star-button", "height: 30px");
@@ -289,5 +291,33 @@ describe("workbench style contract", () => {
     expectSelectorBody(styles, ".tool-content-scrollbar", "--n-scrollbar-width: var(--scrollbar-size) !important");
     expectSelectorBody(styles, ".todo-list-scrollbar", "--n-scrollbar-width: var(--scrollbar-size) !important");
     expectSelectorBody(styles, ".today-focus-scrollbar", "--n-scrollbar-width: var(--scrollbar-size) !important");
+  });
+
+  it("keeps calculator operators neutral while matching equals to the primary tool action", () => {
+    const styles = readFileSync(resolve(__dirname, "../styles.css"), "utf8");
+
+    const operatorRules = ruleBodies(styles, ".calculator-key.is-operator").join("\n");
+    const equalsRules = ruleBodies(styles, ".calculator-key.is-equals").join("\n");
+
+    expect(operatorRules).not.toContain("var(--primary)");
+    expect(equalsRules).toContain("color: var(--primary)");
+    expect(equalsRules).toContain("background: color-mix(in srgb, var(--primary) 10%, transparent)");
+    expectSelectorBody(styles, ".calculator-key.is-operator", "color: var(--text)");
+    expectSelectorBody(styles, ".calculator-key.is-operator", "background: color-mix(in srgb, var(--foreground) 4%, var(--button))");
+    expectSelectorBody(styles, ".calculator-key.is-operator:hover", "background: color-mix(in srgb, var(--foreground) 7%, var(--button-hover))");
+    expectSelectorBody(styles, ".calculator-key.is-equals:hover", "background: color-mix(in srgb, var(--primary) 16%, transparent)");
+  });
+
+  it("keeps the calculator expression input aligned with other tool fields", () => {
+    const styles = readFileSync(resolve(__dirname, "../styles.css"), "utf8");
+    const calculatorInputRules = ruleBodies(styles, ".calculator-display > input").join("\n");
+
+    expectSelectorBody(styles, ".tool-field > input", "border: 1px solid color-mix(in srgb, var(--border) 86%, transparent)");
+    expectSelectorBody(styles, ".tool-field > input", "border-radius: var(--radius-control)");
+    expectSelectorBody(styles, ".calculator-display > input", "text-align: right");
+    expectSelectorBody(styles, ".calculator-display > input", "padding: 0 8px");
+    expect(calculatorInputRules).not.toContain("border: 0");
+    expect(calculatorInputRules).not.toContain("font-size: 20px");
+    expect(calculatorInputRules).not.toContain("height: 42px");
   });
 });

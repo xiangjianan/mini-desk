@@ -12,8 +12,10 @@ const props = withDefaults(defineProps<{
   images: StoredImage[];
   activeId?: string;
   language?: AppLanguage;
+  closing?: boolean;
 }>(), {
   language: "zh",
+  closing: false,
 });
 
 const emit = defineEmits<{
@@ -25,11 +27,14 @@ const emit = defineEmits<{
 const scale = ref(1);
 const offset = ref({ x: 0, y: 0 });
 const dragging = ref(false);
+const localClosing = ref(false);
 const start = ref({ x: 0, y: 0, ox: 0, oy: 0 });
 const menu = ref<{ x: number; y: number; id: string; anchor?: HTMLElement } | null>(null);
+let closeTimer: number | undefined;
 
 const uiText = computed(() => getUiText(props.language));
 const active = computed(() => props.images.find((image) => image.id === props.activeId));
+const isClosing = computed(() => props.closing || localClosing.value);
 const menuOptions = computed<DropdownOption[]>(() => [
   { label: uiText.value.common.copy, key: "copy", icon: renderIcon(CopyOutline) },
   { label: uiText.value.preview.close, key: "close", icon: renderIcon(CloseOutline) },
@@ -43,15 +48,33 @@ function renderIcon(icon: Component): () => VNode {
 }
 
 onMounted(exclusiveMenu.mount);
-onUnmounted(exclusiveMenu.unmount);
+onUnmounted(() => {
+  exclusiveMenu.unmount();
+  window.clearTimeout(closeTimer);
+});
 
 watch(
   () => props.activeId,
   () => {
+    window.clearTimeout(closeTimer);
+    closeTimer = undefined;
+    localClosing.value = false;
     scale.value = 1;
     offset.value = { x: 0, y: 0 };
   },
 );
+
+function requestClose(): void {
+  if (localClosing.value || props.closing) return;
+  closeMenu();
+  dragging.value = false;
+  localClosing.value = true;
+  window.clearTimeout(closeTimer);
+  closeTimer = window.setTimeout(() => {
+    closeTimer = undefined;
+    emit("close");
+  }, 220);
+}
 
 function wheel(event: WheelEvent): void {
   event.preventDefault();
@@ -91,7 +114,7 @@ function handleMenuSelect(key: string): void {
     return;
   }
   if (key === "copy") emit("copy", current.id);
-  if (key === "close") emit("close");
+  if (key === "close") requestClose();
   if (key === "delete") emit("delete", current.id, current.anchor);
 }
 
@@ -99,7 +122,7 @@ function handleKeydown(event: KeyboardEvent): void {
   if (!active.value) return;
   if (event.key === "Escape" || event.key === " ") {
     event.preventDefault();
-    emit("close");
+    requestClose();
     return;
   }
   if (event.key === "Enter") {
@@ -124,10 +147,11 @@ function handleKeydown(event: KeyboardEvent): void {
     :trap-focus="false"
     :block-scroll="false"
     :mask-style="{ pointerEvents: 'none' }"
-    @update:show="(show) => !show && emit('close')"
+    @update:show="(show) => !show && requestClose()"
   >
     <div
       class="image-preview"
+      :class="{ 'is-closing': isClosing }"
       aria-hidden="false"
       tabindex="0"
       @mousemove="move"
@@ -137,7 +161,7 @@ function handleKeydown(event: KeyboardEvent): void {
       @contextmenu.prevent="openMenu($event, active.id)"
     >
       <main class="preview-main">
-        <div class="preview-stage" @wheel="wheel" @mousedown="down" @click.self="emit('close')">
+        <div class="preview-stage" @wheel="wheel" @mousedown="down" @click.self="requestClose">
           <img
             v-if="active.src"
             :key="active.id"
@@ -150,7 +174,7 @@ function handleKeydown(event: KeyboardEvent): void {
         </div>
         <div class="preview-actions">
           <span>{{ uiText.preview.help }}</span>
-          <NButton size="small" @click="emit('close')">{{ uiText.preview.close }}</NButton>
+          <NButton size="small" @click="requestClose">{{ uiText.preview.close }}</NButton>
           <NButton size="small" @click="emit('copy', active.id)">{{ uiText.common.copy }}</NButton>
           <NButton size="small" type="error" ghost @click="emit('delete', active.id, $event.currentTarget as HTMLElement)">
             {{ uiText.common.delete }}

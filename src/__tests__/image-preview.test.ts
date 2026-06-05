@@ -1,5 +1,5 @@
 import { mount } from "@vue/test-utils";
-import { describe, expect, it } from "vitest";
+import { describe, expect, it, vi } from "vitest";
 import ImagePreview from "../components/ImagePreview.vue";
 
 const buttonStub = {
@@ -32,6 +32,7 @@ const modalStub = {
 
 describe("ImagePreview", () => {
   it("closes when clicking blank preview space and keeps image clicks inside the preview", async () => {
+    vi.useFakeTimers();
     const wrapper = mount(ImagePreview, {
       props: {
         images: [{ id: "img-1", src: "data:image/png;base64,one", createdAt: 1 }],
@@ -52,13 +53,22 @@ describe("ImagePreview", () => {
     await wrapper.get(".preview-stage img").trigger("click");
     expect(wrapper.emitted("close")).toBeUndefined();
 
-    await wrapper.get(".preview-stage").trigger("click");
-    expect(wrapper.emitted("close")).toHaveLength(1);
+    try {
+      await wrapper.get(".preview-stage").trigger("click");
+      expect(wrapper.get(".image-preview").classes()).toContain("is-closing");
+      expect(wrapper.emitted("close")).toBeUndefined();
 
-    wrapper.unmount();
+      await vi.advanceTimersByTimeAsync(220);
+
+      expect(wrapper.emitted("close")).toHaveLength(1);
+    } finally {
+      wrapper.unmount();
+      vi.useRealTimers();
+    }
   });
 
   it("shows a close action in the right-side preview surface", async () => {
+    vi.useFakeTimers();
     const wrapper = mount(ImagePreview, {
       props: {
         images: [{ id: "img-1", src: "data:image/png;base64,one", createdAt: 1 }],
@@ -80,10 +90,18 @@ describe("ImagePreview", () => {
     const closeButton = wrapper.findAll(".preview-actions button").find((button) => button.text() === "取消预览");
     expect(closeButton).toBeTruthy();
 
-    await closeButton?.trigger("click");
-    expect(wrapper.emitted("close")).toHaveLength(1);
+    try {
+      await closeButton?.trigger("click");
+      expect(wrapper.get(".image-preview").classes()).toContain("is-closing");
+      expect(wrapper.emitted("close")).toBeUndefined();
 
-    wrapper.unmount();
+      await vi.advanceTimersByTimeAsync(220);
+
+      expect(wrapper.emitted("close")).toHaveLength(1);
+    } finally {
+      wrapper.unmount();
+      vi.useRealTimers();
+    }
   });
 
   it("does not render a duplicate thumbnail list inside the preview", () => {
@@ -173,6 +191,7 @@ describe("ImagePreview", () => {
   });
 
   it("closes the preview when pressing Space", async () => {
+    vi.useFakeTimers();
     const wrapper = mount(ImagePreview, {
       props: {
         images: [{ id: "img-1", src: "data:image/png;base64,one", createdAt: 1 }],
@@ -190,13 +209,23 @@ describe("ImagePreview", () => {
       },
     });
 
-    await wrapper.get(".image-preview").trigger("keydown", { key: " " });
+    try {
+      await wrapper.get(".image-preview").trigger("keydown", { key: " " });
 
-    expect(wrapper.emitted("close")).toHaveLength(1);
-    wrapper.unmount();
+      expect(wrapper.get(".image-preview").classes()).toContain("is-closing");
+      expect(wrapper.emitted("close")).toBeUndefined();
+
+      await vi.advanceTimersByTimeAsync(220);
+
+      expect(wrapper.emitted("close")).toHaveLength(1);
+    } finally {
+      wrapper.unmount();
+      vi.useRealTimers();
+    }
   });
 
   it("opens a compact context menu over preview images", async () => {
+    vi.useFakeTimers();
     const wrapper = mount(ImagePreview, {
       props: {
         images: [{ id: "img-1", src: "data:image/png;base64,one", createdAt: 1 }],
@@ -226,13 +255,22 @@ describe("ImagePreview", () => {
       "Tips",
     ]);
 
-    await wrapper.findAll(".dropdown-option").find((option) => option.text() === "取消预览")?.trigger("click");
-    expect(wrapper.emitted("close")).toHaveLength(1);
+    try {
+      await wrapper.findAll(".dropdown-option").find((option) => option.text() === "取消预览")?.trigger("click");
+      expect(wrapper.get(".image-preview").classes()).toContain("is-closing");
+      expect(wrapper.emitted("close")).toBeUndefined();
 
-    wrapper.unmount();
+      await vi.advanceTimersByTimeAsync(220);
+
+      expect(wrapper.emitted("close")).toHaveLength(1);
+    } finally {
+      wrapper.unmount();
+      vi.useRealTimers();
+    }
   });
 
   it("routes preview keyboard shortcuts to the active image", async () => {
+    vi.useFakeTimers();
     const wrapper = mount(ImagePreview, {
       props: {
         images: [{ id: "img-1", src: "data:image/png;base64,one", createdAt: 1 }],
@@ -253,12 +291,20 @@ describe("ImagePreview", () => {
     await wrapper.get(".image-preview").trigger("keydown", { key: "Enter" });
     await wrapper.get(".image-preview").trigger("keydown", { key: "Backspace" });
     await wrapper.get(".image-preview").trigger("keydown", { key: "Delete" });
-    await wrapper.get(".image-preview").trigger("keydown", { key: "Escape" });
+    try {
+      await wrapper.get(".image-preview").trigger("keydown", { key: "Escape" });
 
-    expect(wrapper.emitted("copy")?.[0]).toEqual(["img-1"]);
-    expect(wrapper.emitted("delete")?.map((event) => event[0])).toEqual(["img-1", "img-1"]);
-    expect(wrapper.emitted("close")).toHaveLength(1);
+      expect(wrapper.emitted("copy")?.[0]).toEqual(["img-1"]);
+      expect(wrapper.emitted("delete")?.map((event) => event[0])).toEqual(["img-1", "img-1"]);
+      expect(wrapper.get(".image-preview").classes()).toContain("is-closing");
+      expect(wrapper.emitted("close")).toBeUndefined();
 
-    wrapper.unmount();
+      await vi.advanceTimersByTimeAsync(220);
+
+      expect(wrapper.emitted("close")).toHaveLength(1);
+    } finally {
+      wrapper.unmount();
+      vi.useRealTimers();
+    }
   });
 });

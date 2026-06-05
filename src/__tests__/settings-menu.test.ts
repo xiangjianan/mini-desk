@@ -122,6 +122,32 @@ describe("SettingsMenu", () => {
     expect(wrapper.emitted("suggest")?.[0]).toEqual([expect.any(HTMLElement)]);
   });
 
+  it("shows help and shortcut copy from the settings menu", async () => {
+    const wrapper = mount(SettingsMenu, {
+      props: {
+        appVersion: "1.0.41",
+        updateAvailable: false,
+        companionGifTheme: "hermes",
+        language: "zh",
+      },
+      global: {
+        stubs: {
+          Dropdown: dropdownStub,
+          NDropdown: dropdownStub,
+          NBadge: { template: "<span><slot /></span>" },
+          NButton: { template: "<button><slot /></button>" },
+          NIcon: { template: "<span />" },
+        },
+      },
+    });
+
+    expect(wrapper.find('[data-key="shortcut-help"]').text()).toBe("帮助与快捷键");
+
+    await wrapper.find('[data-key="shortcut-help"]').trigger("click");
+
+    expect(wrapper.emitted("shortcutHelp")).toHaveLength(1);
+  });
+
   it("renders companion GIF theme choices and marks the current choice", async () => {
     const wrapper = mount(SettingsMenu, {
       props: {

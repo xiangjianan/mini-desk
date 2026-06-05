@@ -40,7 +40,8 @@ const DEFAULT_HIDDEN_TOOL_IDS: readonly ToolId[] = ["base", "codec", "password"]
 const COMMON_BASES = [2, 8, 10, 16] as const;
 const DEFAULT_PASSWORD_SYMBOLS_TEXT = "!@#$%^&*_-+=?";
 const DEFAULT_LIGHT_COLOR = "#ffffff";
-const DEFAULT_DARK_COLOR = "#000000";
+const DEFAULT_DARK_COLOR = "#2c2c2e";
+const LEGACY_DEFAULT_DARK_COLOR = "#000000";
 
 const props = withDefaults(defineProps<{
   titleId: string;
@@ -246,7 +247,7 @@ function getDefaultColorForTheme(theme: ThemeMode): string {
 
 function isDefaultThemeColor(value: string): boolean {
   const normalized = normalizeHexColor(value);
-  return normalized === DEFAULT_LIGHT_COLOR || normalized === DEFAULT_DARK_COLOR;
+  return normalized === DEFAULT_LIGHT_COLOR || normalized === DEFAULT_DARK_COLOR || normalized === LEGACY_DEFAULT_DARK_COLOR;
 }
 
 function showEmptyToolTips(event: MouseEvent): void {

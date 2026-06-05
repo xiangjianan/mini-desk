@@ -168,8 +168,8 @@ describe("CompanionBubble", () => {
       props: {
         visible: true,
         message: "项目信息",
-        linkText: "xiangjianan / todolist",
-        linkHref: "https://github.com/xiangjianan/todolist",
+        linkText: "xiangjianan / mini-desk",
+        linkHref: "https://github.com/xiangjianan/mini-desk",
       },
       global: {
         stubs: {
@@ -183,9 +183,9 @@ describe("CompanionBubble", () => {
     await wrapper.vm.$nextTick();
 
     const link = document.body.querySelector<HTMLAnchorElement>('[data-testid="companion-link"]');
-    expect(link?.textContent?.trim()).toBe("xiangjianan / todolist");
+    expect(link?.textContent?.trim()).toBe("xiangjianan / mini-desk");
     expect(link?.querySelector(".companion-link-icon")).not.toBeNull();
-    expect(link?.href).toBe("https://github.com/xiangjianan/todolist");
+    expect(link?.href).toBe("https://github.com/xiangjianan/mini-desk");
     expect(link?.target).toBe("_blank");
     expect(link?.rel).toBe("noopener noreferrer");
 
