@@ -90,6 +90,7 @@ describe("ToolPanel", () => {
     await selectToolByLabel(wrapper, "取色板");
 
     expect(wrapper.get(".tool-content").text()).toContain("颜色值");
+    expect(wrapper.find(".color-picker-header").exists()).toBe(false);
     expect(wrapper.findAll(".tool-tab")[1].attributes("aria-selected")).toBe("true");
     expect(wrapper.get(".tool-active-title").text()).toContain("取色板");
     expect(localStorage.getItem(ACTIVE_TOOL_STORAGE_KEY)).toBe("color");
@@ -229,6 +230,16 @@ describe("ToolPanel", () => {
     showAllToolsByDefault();
     const wrapper = mountToolPanel();
     const toolPaneSelectors = [".calculator-tool", ".base-tool", ".color-tool", ".codec-tool", ".password-tool"];
+    const styles = readFileSync(resolve(__dirname, "../styles.css"), "utf8");
+
+    expect(styles).toMatch(/\.color-tool\s*\{[^}]*border-top: 0/s);
+    expect(styles).toMatch(/\.color-tool\s*\{[^}]*box-shadow: none/s);
+    expect(styles).toMatch(/\.tool-tabs\s*\{[^}]*border-right: 1px solid color-mix\(in srgb, var\(--border\) 72%, transparent\)/s);
+    expect(styles).not.toContain(".color-picker-header");
+    expect(styles).toMatch(/\.color-pick-row\s*\{[^}]*grid-template-columns: repeat\(2, minmax\(0, 1fr\)\)/s);
+    expect(styles).toMatch(/\.color-pick-row\s*\{[^}]*align-items: end/s);
+    expect(styles).toMatch(/\.tool-primary-action\.eyedropper-button\s*\{[^}]*height: 32px/s);
+    expect(styles).toMatch(/\.tool-primary-action\.eyedropper-button\s*\{[^}]*min-height: 32px/s);
 
     for (const [index, selector] of toolPaneSelectors.entries()) {
       await wrapper.findAll(".tool-tab")[index].trigger("click");
@@ -402,16 +413,13 @@ describe("ToolPanel", () => {
     expect(wrapper.get('[data-testid="eyedropper"]').find(".eyedropper-label").text()).toBe("取色笔");
 
     const styles = readFileSync(resolve(__dirname, "../styles.css"), "utf8");
-    expect(styles).toMatch(/\.eyedropper-button\s*\{[^}]*--eyedropper-flow-gradient: linear-gradient\(90deg/s);
-    expect(styles).toMatch(/\.eyedropper-button\s*\{[^}]*background: transparent/s);
-    expect(styles).toMatch(/\.eyedropper-button\s*\{[^}]*isolation: isolate/s);
-    expect(styles).toMatch(/\.eyedropper-button\s*\{[^}]*#d946ef 0%[\s\S]*#2563eb 10%[\s\S]*#d946ef 50%[\s\S]*#d946ef 100%/s);
-    expect(styles).toMatch(/\.eyedropper-button::before\s*\{[^}]*width: 200%/s);
-    expect(styles).toMatch(/\.eyedropper-button::before\s*\{[^}]*background: var\(--eyedropper-flow-gradient\)/s);
-    expect(styles).toMatch(/\.eyedropper-button::before\s*\{[^}]*transform: translateX\(-50%\)/s);
-    expect(styles).toMatch(/\.eyedropper-button::before\s*\{[^}]*animation: eyedropper-flow 4\.8s linear infinite/s);
+    expect(styles).toMatch(/\.eyedropper-button\s*\{[^}]*border: 1px solid color-mix\(in srgb, var\(--primary\) 56%, transparent\)/s);
+    expect(styles).toMatch(/\.eyedropper-button\s*\{[^}]*background: var\(--button\)/s);
+    expect(styles).toMatch(/\.eyedropper-button\s*\{[^}]*color: var\(--primary\)/s);
+    expect(styles).toMatch(/\.eyedropper-button\s*\{[^}]*font-size: var\(--app-font-size\)/s);
+    expect(styles).toMatch(/\.eyedropper-button::before\s*\{[^}]*display: none/s);
     expect(styles).toMatch(/\.eyedropper-label\s*\{[^}]*z-index: 1/s);
-    expect(styles).toMatch(/@keyframes eyedropper-flow\s*\{[\s\S]*?from\s*\{[\s\S]*?transform: translateX\(-50%\)[\s\S]*?to\s*\{[\s\S]*?transform: translateX\(0\)/);
+    expect(styles).toMatch(/\.eyedropper-label\s*\{[^}]*font-size: inherit/s);
   });
 
   it("keeps color picking usable in Safari by falling back to the color input", async () => {
@@ -511,6 +519,11 @@ describe("ToolPanel", () => {
     await wrapper.get('[data-testid="password-lowercase"]').setValue(false);
     await wrapper.get('[data-testid="password-numbers"]').setValue(false);
     await wrapper.get('[data-testid="password-symbol-set"]').setValue("~");
+
+    const passwordStyles = readFileSync(resolve(__dirname, "../styles.css"), "utf8");
+    expect(wrapper.get('[data-testid="password-generate"]').classes()).toContain("tool-primary-action");
+    expect(passwordStyles).toMatch(/button\.tool-primary-action,[\s\S]*?button\[data-testid="password-generate"\]\.tool-primary-action\s*\{[^}]*border: 1px solid color-mix\(in srgb, var\(--primary\) 56%, transparent\)/s);
+    expect(passwordStyles).toMatch(/button\.tool-primary-action,[\s\S]*?button\[data-testid="password-generate"\]\.tool-primary-action\s*\{[^}]*background: var\(--button\)/s);
 
     expect(wrapper.find(".password-symbol-options").exists()).toBe(false);
     expect(wrapper.find('[data-testid="password-custom-symbols"]').exists()).toBe(false);

@@ -34,13 +34,37 @@ describe("workbench style contract", () => {
     expectSelectorBody(styles, ".workbench-zone", "background: color-mix(in srgb, var(--card) 96%, var(--background))");
     expectSelectorBody(styles, ".workbench-zone", "inset 0 0 0 1px color-mix(in srgb, var(--border) 34%, transparent)");
     expectSelectorBody(styles, ".workbench-zone > .panel", "border-radius: var(--radius)");
-    expectSelectorBody(styles, ".workbench-zone > .tool-panel", "border-radius: 0");
+    expectSelectorBody(styles, ".workbench-zone > .space-panel", "box-shadow: none");
+    expectSelectorBody(styles, ".workbench-zone > .image-panel", "box-shadow: none");
+    expectSelectorBody(styles, ".workbench-zone > .todo-panel", "box-shadow: none");
+    expectSelectorBody(styles, ".workbench-zone > .text-panel", "box-shadow: none");
+    expectSelectorBody(styles, ".workbench-zone > .tool-panel", "box-shadow: none");
+    expectSelectorBody(styles, ".workbench-zone > .image-panel", "border-radius: var(--radius)");
+    expectSelectorBody(styles, ".workbench-zone > .tool-panel", "border-radius: var(--radius)");
+    expectSelectorBody(styles, ".workbench-zone > .todo-panel", "border-radius: var(--radius)");
+    expect(ruleBodies(styles, ".workbench-zone > .tool-panel").join("\n")).not.toContain("border-radius: 0");
     expectSelectorBody(styles, ".workbench-zone-notes", "gap: 16px");
     expectSelectorBody(styles, "button.quick-button", "border: 0");
     expectSelectorBody(styles, "button.space-tab", "border: 0");
     expectSelectorBody(styles, "button.quick-menu-button", "border: 0");
-    expectSelectorBody(styles, "button.image-card", "border: 0");
-    expectSelectorBody(styles, ".image-card", "border-bottom: 0");
+    expectSelectorBody(styles, ".image-panel", "border-left: 0");
+    expectSelectorBody(styles, ".image-panel", "border-right: 0");
+    expectSelectorBody(styles, ".image-panel", "border-bottom: 0");
+    expectSelectorBody(styles, ".image-panel", "box-shadow: none");
+    expectSelectorBody(styles, ".workbench-zone > .image-panel", "box-shadow: none");
+    expectSelectorBody(styles, ".image-panel > .panel-header", "border-top-left-radius: var(--radius)");
+    expectSelectorBody(styles, ".tool-panel > .panel-header", "border-top-left-radius: var(--radius)");
+    expectSelectorBody(styles, ".tool-panel > .tool-panel-header", "border-top-left-radius: var(--radius)");
+    expectSelectorBody(styles, ".note-panel.tool-panel.split-block", "border-top-left-radius: var(--radius) !important");
+    expectSelectorBody(styles, ".note-panel.tool-panel.split-block", "border-top-right-radius: var(--radius) !important");
+    expectSelectorBody(styles, ".todo-panel", "border-top-left-radius: var(--radius)");
+    expectSelectorBody(styles, ".todo-panel > .today-focus-section", "border-top-left-radius: var(--radius)");
+    expectSelectorBody(styles, ".todo-panel > .today-focus-section .today-focus-heading", "border-top-left-radius: var(--radius)");
+    expect(styles).not.toMatch(/\.todo-panel > \.todo-sections\s*\{[^}]*border-top-left-radius/s);
+    expect(styles).not.toMatch(/\.todo-panel > \.todo-sections > \.todo-section:first-child \.todo-heading\s*\{[^}]*border-top-left-radius/s);
+    expectSelectorBody(styles, ".image-card", "border: 1px solid color-mix(in srgb, var(--border) 64%, transparent)");
+    expectSelectorBody(styles, ".image-card", "box-shadow: none");
+    expectSelectorBody(styles, "button.image-card", "border: 1px solid color-mix(in srgb, var(--border) 64%, transparent)");
     expectSelectorBody(styles, ".image-index", "border-right: 0");
   });
 
@@ -152,11 +176,15 @@ describe("workbench style contract", () => {
     expectSelectorBody(styles, ".tool-tabs", "width: 35px");
     expectSelectorBody(styles, ".tool-tabs", "min-width: 35px");
     expectSelectorBody(styles, ".tool-tabs", "max-width: 35px");
+    expectSelectorBody(styles, ".tool-tabs", "border-right: 1px solid color-mix(in srgb, var(--border) 72%, transparent)");
+    expectSelectorBody(styles, ".tool-tabs", "border-bottom: 0");
+    expectSelectorBody(styles, ".tool-tabs", "box-shadow: none");
     expectSelectorBody(styles, ".tool-panel-menu-button", "width: 34px");
     expectSelectorBody(styles, ".tool-panel-menu-button", "height: 34px");
     expectSelectorBody(styles, ".tool-panel-menu-button", "border-radius: 50%");
     expectSelectorBody(styles, "button.tool-panel-menu-button", "border-radius: 50%");
-    expectSelectorBody(styles, "button.tool-panel-menu-button:hover", "background: var(--button-hover)");
+    expectSelectorBody(styles, "button.tool-panel-menu-button:hover", "background: transparent");
+    expectSelectorBody(styles, "button.tool-panel-menu-button:hover", "box-shadow: none");
     expectSelectorBody(styles, "button.tool-panel-menu-button:hover", "border-radius: 50%");
     expectSelectorBody(styles, "button.tool-tab", "background: transparent");
     expectSelectorBody(styles, ".tool-tab", "width: 30px");
@@ -184,8 +212,8 @@ describe("workbench style contract", () => {
     expectSelectorBody(styles, ".quick-menu-button", "height: 34px");
     expectSelectorBody(styles, ".todo-section-menu-button", "width: 34px");
     expectSelectorBody(styles, ".todo-section-menu-button", "height: 34px");
-    expectSelectorBody(styles, ".quick-menu-button:hover", "background: var(--button-hover)");
-    expectSelectorBody(styles, ".todo-section-menu-button:hover", "background: var(--button-hover)");
+    expectSelectorBody(styles, ".quick-menu-button:hover", "background: transparent");
+    expectSelectorBody(styles, ".todo-section-menu-button:hover", "background: transparent");
     expectSelectorBody(styles, ".todo-collapse-button", "background: transparent");
     expectSelectorBody(styles, "button.todo-collapse-button", "background: transparent");
     expectSelectorBody(styles, ".todo-collapse-button", "border-radius: 50%");
@@ -199,6 +227,12 @@ describe("workbench style contract", () => {
     expectSelectorBody(styles, ".workbench-header-reveal svg", "stroke-width: 1.5");
     expectSelectorBody(styles, ".panel.is-focused", "box-shadow: none");
     expectSelectorBody(styles, ".todo-section.is-focused::before", "content: none");
+    expectSelectorBody(styles, ".todo-panel", "border-left: 0");
+    expectSelectorBody(styles, ".todo-panel", "border-right: 0");
+    expectSelectorBody(styles, ".todo-panel", "box-shadow: none");
+    expectSelectorBody(styles, ".todo-section", "border-left: 0");
+    expectSelectorBody(styles, ".todo-section", "border-right: 0");
+    expectSelectorBody(styles, ".todo-section", "box-shadow: none");
   });
 
   it("keeps reminders and notification actions readable with shared visual tokens", () => {
@@ -229,6 +263,9 @@ describe("workbench style contract", () => {
     expectSelectorBody(styles, ".notify-time-column", "overscroll-behavior: contain");
     expectSelectorBody(styles, ".notify-time-column", "-webkit-overflow-scrolling: touch");
     expectSelectorBody(styles, ".notify-panel-actions", "justify-content: flex-end");
+    expectSelectorBody(styles, ".notify-time-preview", "height: 26px");
+    expectSelectorBody(styles, ".notify-time-option", "height: 26px");
+    expectSelectorBody(styles, ".notify-panel-action", "height: 26px");
     expectSelectorBody(styles, ".notify-panel-action", "min-width: 48px");
     expectSelectorBody(styles, ".notify-panel-action", "white-space: nowrap");
     expectSelectorBody(styles, ".quick-dialog-action.n-button", "--n-color: var(--button) !important");
@@ -240,43 +277,39 @@ describe("workbench style contract", () => {
     expectSelectorBody(styles, ".n-time-picker-panel .n-button--primary-type", "color: #111111 !important");
   });
 
-  it("centers reminder star icons, loops the eyedropper background seamlessly, and unifies thin scrollbars", () => {
+  it("centers reminder star icons, unifies primary tool buttons, and unifies thin scrollbars", () => {
     const styles = readFileSync(resolve(__dirname, "../styles.css"), "utf8");
 
     expectSelectorBody(styles, ".todo-star-button", "display: inline-flex");
     expectSelectorBody(styles, ".todo-star-button", "align-items: center");
     expectSelectorBody(styles, ".todo-star-button", "justify-content: center");
-    expectSelectorBody(styles, ".todo-star-button", "font-size: 13px");
+    expectSelectorBody(styles, ".todo-star-button", "font-size: 12px");
     expectSelectorBody(styles, ".todo-star-button", "line-height: 1");
 
-    expectSelectorBody(styles, ".tool-primary-action.eyedropper-button", "--eyedropper-flow-gradient: linear-gradient(90deg");
-    expectSelectorBody(styles, ".tool-primary-action.eyedropper-button", "#d946ef 0%");
-    expectSelectorBody(styles, ".tool-primary-action.eyedropper-button", "#2563eb 10%");
-    expectSelectorBody(styles, ".tool-primary-action.eyedropper-button", "#d946ef 50%");
-    expectSelectorBody(styles, ".tool-primary-action.eyedropper-button", "#d946ef 100%");
-    expectSelectorBody(styles, ".tool-primary-action.eyedropper-button", "background: transparent");
-    expectSelectorBody(styles, ".tool-primary-action.eyedropper-button", "isolation: isolate");
-    expectSelectorBody(styles, ".tool-primary-action.eyedropper-button::before", "width: 200%");
-    expectSelectorBody(styles, ".tool-primary-action.eyedropper-button::before", "background: var(--eyedropper-flow-gradient)");
-    expectSelectorBody(styles, ".tool-primary-action.eyedropper-button::before", "transform: translateX(-50%)");
-    expectSelectorBody(styles, ".tool-primary-action.eyedropper-button::before", "animation: eyedropper-flow 4.8s linear infinite");
+    expectSelectorBody(styles, ".tool-primary-action.eyedropper-button", "--eyedropper-flow-gradient: none");
+    expectSelectorBody(styles, ".tool-primary-action.eyedropper-button", "border: 1px solid color-mix(in srgb, var(--primary) 56%, transparent)");
+    expectSelectorBody(styles, ".tool-primary-action.eyedropper-button", "background: var(--button)");
+    expectSelectorBody(styles, ".tool-primary-action.eyedropper-button", "color: var(--primary)");
+    expectSelectorBody(styles, ".tool-primary-action.eyedropper-button", "font-size: var(--app-font-size)");
+    expectSelectorBody(styles, ".tool-primary-action.eyedropper-button::before", "display: none");
     expectSelectorBody(styles, ".tool-primary-action.eyedropper-button > *", "z-index: 1");
     expectSelectorBody(styles, ".eyedropper-label", "z-index: 1");
-    expect(styles).toContain("@keyframes eyedropper-flow");
-    expect(styles).toMatch(/@keyframes eyedropper-flow\s*\{[\s\S]*?from\s*\{[\s\S]*?transform: translateX\(-50%\)[\s\S]*?to\s*\{[\s\S]*?transform: translateX\(0\)/);
+    expectSelectorBody(styles, ".eyedropper-label", "font-size: inherit");
     expect(styles).toContain("@keyframes starred-text-flow");
 
     expectSelectorBody(styles, ".todo-notify-button", "border-radius: 50%");
-    expectSelectorBody(styles, ".todo-notify-button", "width: 30px");
-    expectSelectorBody(styles, ".todo-notify-button", "height: 30px");
+    expectSelectorBody(styles, ".todo-notify-button", "width: 26px");
+    expectSelectorBody(styles, ".todo-notify-button", "height: 26px");
     expectSelectorBody(styles, ".todo-notify-button", "margin-right: 2px");
     expectSelectorBody(styles, "button.todo-notify-button", "border-radius: 50%");
     expectSelectorBody(styles, ".todo-notify-button.has-time", "border-radius: 999px");
     expectSelectorBody(styles, ".todo-notify-button.has-time", "height: 26px");
+    expectSelectorBody(styles, ".todo-notify-button.has-time", "background: transparent");
+    expectSelectorBody(styles, ".todo-notify-button.has-time", "box-shadow: none");
     expect(ruleBodies(styles, ".todo-notify-button.has-time").join("\n")).not.toContain("var(--primary)");
     expectSelectorBody(styles, ".todo-star-button", "border-radius: 50%");
-    expectSelectorBody(styles, ".todo-star-button", "width: 30px");
-    expectSelectorBody(styles, ".todo-star-button", "height: 30px");
+    expectSelectorBody(styles, ".todo-star-button", "width: 26px");
+    expectSelectorBody(styles, ".todo-star-button", "height: 26px");
     expectSelectorBody(styles, ".todo-star-button", "margin-left: 2px");
     expectSelectorBody(styles, "button.todo-star-button", "border-radius: 50%");
 
@@ -293,7 +326,7 @@ describe("workbench style contract", () => {
     expectSelectorBody(styles, ".today-focus-scrollbar", "--n-scrollbar-width: var(--scrollbar-size) !important");
   });
 
-  it("keeps calculator operators neutral while matching equals to the primary tool action", () => {
+  it("keeps calculator operators neutral while giving equals a white primary-accent treatment", () => {
     const styles = readFileSync(resolve(__dirname, "../styles.css"), "utf8");
 
     const operatorRules = ruleBodies(styles, ".calculator-key.is-operator").join("\n");
@@ -301,11 +334,15 @@ describe("workbench style contract", () => {
 
     expect(operatorRules).not.toContain("var(--primary)");
     expect(equalsRules).toContain("color: var(--primary)");
-    expect(equalsRules).toContain("background: color-mix(in srgb, var(--primary) 10%, transparent)");
+    expect(equalsRules).toContain("background: var(--button)");
+    expect(equalsRules).toContain("border: 1px solid color-mix(in srgb, var(--primary) 56%, transparent)");
+    expect(equalsRules).toContain("box-shadow: var(--shadow-control)");
     expectSelectorBody(styles, ".calculator-key.is-operator", "color: var(--text)");
-    expectSelectorBody(styles, ".calculator-key.is-operator", "background: color-mix(in srgb, var(--foreground) 4%, var(--button))");
-    expectSelectorBody(styles, ".calculator-key.is-operator:hover", "background: color-mix(in srgb, var(--foreground) 7%, var(--button-hover))");
-    expectSelectorBody(styles, ".calculator-key.is-equals:hover", "background: color-mix(in srgb, var(--primary) 16%, transparent)");
+    expectSelectorBody(styles, ".calculator-key.is-operator", "background: var(--button)");
+    expectSelectorBody(styles, ".calculator-key.is-operator:hover", "background: var(--button-hover)");
+    expectSelectorBody(styles, ".calculator-key.is-equals:hover", "background: var(--button-hover)");
+    expectSelectorBody(styles, ".tool-primary-action", "border-color: color-mix(in srgb, var(--primary) 56%, transparent)");
+    expectSelectorBody(styles, ".tool-primary-action", "background: var(--button)");
   });
 
   it("keeps the calculator expression input aligned with other tool fields", () => {

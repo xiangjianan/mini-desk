@@ -886,7 +886,6 @@ function copyTextWithBrowserCommand(value: string): boolean {
         </section>
 
         <section v-else-if="activeToolId === 'color'" class="tool-pane color-tool" :aria-label="uiText.tools.colorPicker">
-          <div class="color-preview" :style="{ backgroundColor: safeColorHex }" />
           <div class="color-pick-row">
             <label class="tool-field">
               <span>{{ uiText.tools.browserColor }}</span>

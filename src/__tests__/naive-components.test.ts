@@ -164,7 +164,8 @@ describe("Naive UI component usage", () => {
     expect(preview).not.toContain("preview-sidebar");
     expect(styles).not.toContain(".preview-thumb");
     expect(styles).not.toContain(".preview-sidebar");
-    expect(styles).toMatch(/\.image-panel \.image-card\.is-active\s*\{[^}]*box-shadow: inset 0 0 0 1px var\(--line-focus\)/s);
+    expect(styles).toMatch(/\.image-panel \.image-card\.is-active\s*\{[^}]*border-color: var\(--line-focus\)/s);
+    expect(styles).toMatch(/\.image-panel \.image-card\.is-active\s*\{[^}]*box-shadow: none/s);
   });
 
   it("marks text quick buttons with a copy icon and keeps compact actions in menus", () => {
@@ -223,7 +224,7 @@ describe("Naive UI component usage", () => {
     expect(styles).toMatch(/\.quick-menu-button,[\s\S]*?\.todo-section-menu-button\s*\{[^}]*margin: 0 0 0 2px/s);
     expect(styles).toMatch(/\.quick-menu-button,[\s\S]*?\.todo-section-menu-button\s*\{[^}]*border-radius: 50%/s);
     expect(styles).toMatch(/button\.quick-menu-button,[\s\S]*?button\.todo-section-menu-button\s*\{[^}]*background: transparent/s);
-    expect(styles).toMatch(/\.quick-menu-button:hover,[\s\S]*?\.todo-section-menu-button:focus-visible\s*\{[^}]*background: var\(--button-hover\)/s);
+    expect(styles).toMatch(/\.quick-menu-button:hover,[\s\S]*?\.todo-section-menu-button:focus-visible\s*\{[^}]*background: transparent/s);
   });
 
   it("styles configurable reminder list controls and compact collapsed states", () => {
@@ -250,7 +251,7 @@ describe("Naive UI component usage", () => {
     expect(styles).toMatch(/\.todo-section\.is-compact \.todo-list\s*\{[^}]*overflow-y: auto/s);
     expect(styles).toMatch(/\.todo-list-shell\s*\{[^}]*overflow: hidden/s);
     expect(styles).toMatch(/\.todo-section\.is-compact \.todo-empty-hint\s*\{[^}]*min-height: 90px/s);
-    expect(styles).toMatch(/\.todo-section\.is-compact \.todo-star-button\s*\{[^}]*height: 30px/s);
+    expect(styles).toMatch(/\.todo-section\.is-compact \.todo-star-button\s*\{[^}]*height: 26px/s);
   });
 
   it("keeps workbench save status as a compact interactive dot", () => {
@@ -304,7 +305,7 @@ describe("Naive UI component usage", () => {
     expect(styles).toMatch(/\.space-tab\s*\{[^}]*font-size: var\(--app-font-size\)/s);
     expect(styles).toMatch(/\.todo-item\s*\{[^}]*font-size: var\(--app-font-size\)/s);
     expect(styles).toMatch(/\.today-focus-item\s*\{[^}]*font-size: var\(--app-font-size\)/s);
-    expect(styles).toMatch(/\.todo-star-button\s*\{[^}]*font-size: 13px/s);
+    expect(styles).toMatch(/\.todo-star-button\s*\{[^}]*font-size: 12px/s);
     expect(styles).toMatch(/\.todo-input\s*\{[^}]*font-size: var\(--app-font-size\)/s);
     expect(styles).toMatch(/\.today-focus-input\s*\{[^}]*font-size: var\(--app-font-size\)/s);
     expect(styles).toMatch(/\.todo-completed-divider\s*\{[^}]*font-size: var\(--app-font-size\)/s);
@@ -335,14 +336,14 @@ describe("Naive UI component usage", () => {
     expect(styles).not.toContain("1px dashed var(--line-section)");
   });
 
-  it("keeps visible border widths at exactly one pixel", () => {
+  it("keeps visible border widths thin", () => {
     const styles = read("src/styles.css");
-    const visibleBorderWidths = [...styles.matchAll(/(?:border(?:-(?:top|right|bottom|left))?|--n-border(?:-[a-z]+)?):[^;{}]*?(\d+)px/g)]
+    const visibleBorderWidths = [...styles.matchAll(/(?:border(?:-(?:top|right|bottom|left))?|--n-border(?:-[a-z]+)?):[^;{}]*?(\d+(?:\.\d+)?)px/g)]
       .map((match) => Number(match[1]))
       .filter((width) => width > 0);
 
     expect(visibleBorderWidths.length).toBeGreaterThan(0);
-    expect(visibleBorderWidths.every((width) => width === 1)).toBe(true);
+    expect(visibleBorderWidths.every((width) => width === 1 || width === 0.5)).toBe(true);
   });
 
   it("keeps bordered controls and popup surfaces aligned to shared radius tokens", () => {
@@ -357,6 +358,7 @@ describe("Naive UI component usage", () => {
     expect(styles).toMatch(/\.space-tab\s*\{[^}]*border-radius: var\(--radius\)/s);
     expect(styles).toMatch(/\.todo-item\s*\{[^}]*border-radius: var\(--radius\)/s);
     expect(styles).toMatch(/\.image-card\s*\{[^}]*border-radius: var\(--radius\)/s);
+    expect(styles).toMatch(/\.image-card\s*\{[^}]*border: 1px solid color-mix\(in srgb, var\(--border\) 64%, transparent\)/s);
     expect(styles).not.toContain(".notify-clock-options");
     expect(styles).not.toContain(".notify-clock-button");
   });
@@ -526,8 +528,8 @@ describe("Naive UI component usage", () => {
 
     expect(todo).toContain('class="todo-drag-handle"');
     expect(todo).not.toMatch(/class="todo-item"[\s\S]{0,160}draggable="true"/);
-    expect(styles).toMatch(/\.todo-item\s*\{[^}]*grid-template-columns: 22px 32px minmax\(0, 1fr\) 30px 30px/s);
-    expect(styles).toMatch(/\.todo-item\.has-notify\s*\{[^}]*grid-template-columns: 22px 32px minmax\(0, 1fr\) minmax\(0, 68px\) 30px/s);
+    expect(styles).toMatch(/\.todo-item\s*\{[^}]*grid-template-columns: 22px 32px minmax\(0, 1fr\) 26px 26px/s);
+    expect(styles).toMatch(/\.todo-item\.has-notify\s*\{[^}]*grid-template-columns: 22px 32px minmax\(0, 1fr\) minmax\(0, 64px\) 26px/s);
     expect(styles).toMatch(/\.todo-list\s*\{[^}]*padding: 0/s);
     expect(styles).toMatch(/\.todo-item\s*\{[^}]*height: 34px/s);
     expect(styles).toMatch(/\.todo-item\s*\{[^}]*min-height: 34px/s);
@@ -546,6 +548,8 @@ describe("Naive UI component usage", () => {
     expect(styles).toContain(".deadline-due-soon");
     expect(styles).toContain(".deadline-upcoming");
     expect(styles).toContain(".deadline-later");
+    expect(styles).toMatch(/\.todo-item\.deadline-overdue:not\(\.is-done\) \.todo-input,[\s\S]*?\.deadline-overdue:not\(\.is-done\) \.todo-deadline-label\s*\{[^}]*color: var\(--danger\)/s);
+    expect(styles).toMatch(/\.todo-item\.deadline-overdue:not\(\.is-done\) \.todo-input,[\s\S]*?\.today-focus-item\.deadline-overdue:not\(\.is-done\) \.today-focus-input\s*\{[^}]*animation: none/s);
     expect(styles).toMatch(/\.todo-deadline-label\s*\{[^}]*overflow: visible/s);
     expect(styles).not.toMatch(/\.todo-deadline-label\s*\{[^}]*text-overflow: ellipsis/s);
     expect(styles).not.toContain("filter: drop-shadow");
@@ -562,11 +566,17 @@ describe("Naive UI component usage", () => {
     expect(todo).not.toContain("@drop.stop=\"dragged && emit('move', dragged, item.period, item.todo.id)\"");
     expect(todayFocusTemplate).not.toContain('class="todo-drag-handle"');
     expect(todayFocusTemplate).not.toContain("dragstart");
+    expect(styles).toMatch(/\.today-focus-section\s*\{[^}]*border-top: 0/s);
     expect(styles).toMatch(/\.today-focus-section\s*\{[^}]*border-bottom: 0/s);
+    expect(styles).toMatch(/\.today-focus-section\s*\{[^}]*border-left: 0/s);
+    expect(styles).toMatch(/\.today-focus-section\s*\{[^}]*border-right: 0/s);
+    expect(styles).toMatch(/\.today-focus-section\s*\{[^}]*box-shadow: none/s);
     expect(styles).toMatch(/\.today-focus-heading\s*\{[^}]*min-height: 34px/s);
+    expect(styles).toMatch(/\.today-focus-heading\s*\{[^}]*border-bottom: 0\.5px solid var\(--line-section\)/s);
+    expect(styles).toMatch(/\.today-focus-heading\s*\{[^}]*box-shadow: none/s);
     expect(styles).toMatch(/\.today-focus-list\s*\{[^}]*padding: 0/s);
-    expect(styles).toMatch(/\.today-focus-item\s*\{[^}]*grid-template-columns: 42px minmax\(0, 1fr\) 30px 30px/s);
-    expect(styles).toMatch(/\.today-focus-item\.has-notify\s*\{[^}]*grid-template-columns: 42px minmax\(0, 1fr\) minmax\(0, 68px\) 30px/s);
+    expect(styles).toMatch(/\.today-focus-item\s*\{[^}]*grid-template-columns: 42px minmax\(0, 1fr\) 26px 26px/s);
+    expect(styles).toMatch(/\.today-focus-item\.has-notify\s*\{[^}]*grid-template-columns: 42px minmax\(0, 1fr\) minmax\(0, 64px\) 26px/s);
     expect(styles).toMatch(/\.today-focus-item \.todo-notify-button\s*\{[^}]*grid-column: 3/s);
     expect(styles).toMatch(/\.today-focus-item\s*\{[^}]*gap: 0/s);
     expect(styles).toMatch(/\.today-focus-item\s*\{[^}]*height: 34px/s);
@@ -848,7 +858,13 @@ describe("Naive UI component usage", () => {
     expect(styles).toMatch(/\.space-tabs-scrollbar\s*\{[^}]*max-width: 100%/s);
     expect(styles).not.toMatch(/\.space-tabs-scrollbar\s*\{[^}]*calc\(100% - 101px\)/s);
     expect(styles).toMatch(/\.space-tabs-scrollbar\s*\{[^}]*height: 34px/s);
-    expect(styles).toMatch(/\.space-tabs-scrollbar\s*\{[^}]*border-bottom: 1px solid var\(--line-control\)/s);
+    expect(styles).toMatch(/\.space-tabs-scrollbar\s*\{[^}]*border-bottom: 0\.5px solid var\(--line-control\)/s);
+    expect(styles).toMatch(/\.space-add-button\s*\{[^}]*margin-left: 4px/s);
+    expect(styles).toMatch(/button\.space-add-button,[\s\S]*?\.space-add-button\.icon-button\s*\{[^}]*border: 0/s);
+    expect(styles).toMatch(/button\.space-add-button,[\s\S]*?\.space-add-button\.icon-button\s*\{[^}]*box-shadow: none/s);
+    expect(styles).toMatch(/\.space-add-button\.icon-button:hover,[\s\S]*?\.space-add-button\.icon-button:focus-visible\s*\{[^}]*background: var\(--button-hover\)/s);
+    expect(styles).toMatch(/\.space-add-button\.icon-button:hover,[\s\S]*?\.space-add-button\.icon-button:focus-visible\s*\{[^}]*color: var\(--primary\)/s);
+    expect(styles).toMatch(/\.space-add-button\.icon-button:hover,[\s\S]*?\.space-add-button\.icon-button:focus-visible\s*\{[^}]*box-shadow: none/s);
     expect(styles).toMatch(/\.space-tabs\s*\{[^}]*scrollbar-width: none/s);
     expect(styles).toMatch(/\.space-tabs:hover\s*\{[^}]*scrollbar-width: thin/s);
     expect(styles).toMatch(/\.space-tabs::-webkit-scrollbar\s*\{[^}]*height: 0/s);

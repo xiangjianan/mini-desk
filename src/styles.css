@@ -57,8 +57,8 @@
   --line-control: rgba(60, 60, 67, 0.22);
   --line-focus: #007aff;
   --input: #ffffff;
-  --button: rgba(118, 118, 128, 0.12);
-  --button-hover: rgba(118, 118, 128, 0.2);
+  --button: #ffffff;
+  --button-hover: color-mix(in srgb, #ffffff 88%, var(--primary) 12%);
   --danger: #b42318;
   --radius: 12px;
   --radius-control: 10px;
@@ -66,7 +66,7 @@
   --material-elevated: rgba(255, 255, 255, 0.9);
   --material-pressed: rgba(0, 122, 255, 0.12);
   --shadow-soft: 0 1px 2px rgba(15, 23, 42, 0.04), 0 12px 32px rgba(15, 23, 42, 0.07);
-  --shadow-control: 0 1px 1px rgba(15, 23, 42, 0.04);
+  --shadow-control: 0 1px 1px rgba(15, 23, 42, 0.04), 0 0 0 1px color-mix(in srgb, var(--border) 78%, transparent);
   --focus-ring: 0 0 0 3px color-mix(in srgb, var(--ring) 24%, transparent);
   --motion-fast: 160ms;
   --motion-medium: 240ms;
@@ -102,14 +102,14 @@ html[data-theme="dark"] {
   --line-control: rgba(235, 235, 245, 0.2);
   --line-focus: #0a84ff;
   --input: #1c1c1e;
-  --button: rgba(118, 118, 128, 0.22);
-  --button-hover: rgba(118, 118, 128, 0.34);
+  --button: color-mix(in srgb, var(--card) 92%, #ffffff 8%);
+  --button-hover: color-mix(in srgb, var(--card) 82%, var(--primary) 18%);
   --danger: #ff8b7f;
   --material-surface: rgba(44, 44, 46, 0.78);
   --material-elevated: rgba(44, 44, 46, 0.92);
   --material-pressed: rgba(10, 132, 255, 0.2);
   --shadow-soft: 0 1px 2px rgba(0, 0, 0, 0.18), 0 16px 36px rgba(0, 0, 0, 0.24);
-  --shadow-control: 0 1px 1px rgba(0, 0, 0, 0.18);
+  --shadow-control: 0 1px 1px rgba(0, 0, 0, 0.18), 0 0 0 1px color-mix(in srgb, var(--border) 88%, transparent);
   --focus-ring: 0 0 0 3px color-mix(in srgb, var(--ring) 34%, transparent);
 }
 
@@ -564,7 +564,7 @@ h3 {
   max-width: 100%;
   height: 34px;
   min-height: 34px;
-  border-bottom: 1px solid var(--line-control);
+  border-bottom: 0.5px solid var(--line-control);
   overflow: hidden;
 }
 
@@ -729,9 +729,13 @@ button.space-tab {
   width: 34px;
   height: 34px;
   min-height: 34px;
+  margin-left: 4px;
   border-top: 0;
   border-bottom: 0;
+  border-left: 0;
+  border-right: 0;
   background: var(--button);
+  box-shadow: none;
 }
 
 .space-text-stage {
@@ -759,7 +763,10 @@ button.space-tab {
   flex-direction: column;
   min-width: 0;
   min-height: 0;
+  border-top-left-radius: var(--radius);
+  border-top-right-radius: var(--radius);
   background: var(--panel);
+  overflow: hidden;
 }
 
 .tool-panel-header .count {
@@ -829,7 +836,8 @@ button.tool-panel-menu-button {
 button.tool-panel-menu-button:hover,
 button.tool-panel-menu-button:focus-visible {
   border-radius: 50%;
-  background: var(--button-hover);
+  background: transparent;
+  box-shadow: none;
 }
 
 .tool-config-panel {
@@ -935,7 +943,7 @@ button.tool-config-close:focus-visible {
   flex-direction: column;
   gap: 2px;
   padding: 2px 0;
-  border-right: 1px solid var(--line-control);
+  border-right: 1px solid color-mix(in srgb, var(--border) 72%, transparent);
   background: color-mix(in srgb, var(--panel) 94%, var(--button-hover));
   overflow: visible;
   z-index: 2;
@@ -1155,9 +1163,14 @@ button.tool-tab:focus-visible {
   background: var(--panel);
 }
 
-.calculator-key.is-operator,
+.calculator-key.is-operator {
+  background: var(--button);
+}
+
 .calculator-key.is-equals {
-  background: var(--button-hover);
+  border: 1px solid color-mix(in srgb, var(--primary) 56%, transparent);
+  color: var(--primary);
+  background: var(--button);
 }
 
 .calculator-key.is-utility {
@@ -1187,34 +1200,28 @@ button.tool-tab:focus-visible {
 
 .color-pick-row {
   display: grid;
-  grid-template-columns: minmax(0, 1fr) auto;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
   gap: 8px;
   align-items: end;
 }
 
 .tool-primary-action.eyedropper-button {
-  --eyedropper-flow-gradient: linear-gradient(90deg, #d946ef 0%, #2563eb 10%, #0f9f6e 20%, #f59e0b 30%, #ef4444 40%, #d946ef 50%, #2563eb 60%, #0f9f6e 70%, #f59e0b 80%, #ef4444 90%, #d946ef 100%);
   position: relative;
   display: inline-flex;
   align-items: center;
   justify-content: center;
   gap: 5px;
-  isolation: isolate;
+  height: 32px;
+  min-height: 32px;
   overflow: hidden;
-  border-color: transparent;
-  color: #ffffff;
-  background: transparent;
+  border-color: color-mix(in srgb, var(--primary) 56%, transparent);
+  color: var(--primary);
+  font-size: var(--app-font-size);
+  background: var(--button);
 }
 
 .tool-primary-action.eyedropper-button::before {
-  content: "";
-  position: absolute;
-  inset: 0 auto 0 0;
-  z-index: 0;
-  width: 200%;
-  background: var(--eyedropper-flow-gradient);
-  transform: translateX(-50%);
-  animation: eyedropper-flow 4.8s linear infinite;
+  display: none;
 }
 
 .tool-primary-action.eyedropper-button > * {
@@ -1223,15 +1230,15 @@ button.tool-tab:focus-visible {
 }
 
 .tool-primary-action.eyedropper-button:hover {
-  border-color: rgba(255, 255, 255, 0.58);
-  color: #ffffff;
-  background: transparent;
+  border-color: color-mix(in srgb, var(--primary) 56%, transparent);
+  color: var(--primary);
+  background: var(--button-hover);
 }
 
 .tool-primary-action.eyedropper-button:focus-visible {
-  border-color: rgba(255, 255, 255, 0.58);
-  color: #ffffff;
-  background: transparent;
+  border-color: color-mix(in srgb, var(--primary) 56%, transparent);
+  color: var(--primary);
+  background: var(--button-hover);
 }
 
 .eyedropper-icon {
@@ -1241,6 +1248,7 @@ button.tool-tab:focus-visible {
 .eyedropper-label {
   position: relative;
   z-index: 1;
+  font-size: inherit;
 }
 
 .base-result-list,
@@ -1308,19 +1316,14 @@ button.tool-tab:focus-visible {
 }
 
 .tool-primary-action {
-  border-color: var(--line-focus);
-  background: var(--button-hover);
+  border-color: color-mix(in srgb, var(--primary) 56%, transparent);
+  background: var(--button);
 }
 
 .tool-section-title {
   padding-top: 2px;
   color: var(--text);
   font-weight: 600;
-}
-
-.color-preview {
-  height: 72px;
-  border: 1px solid var(--line-control);
 }
 
 .codec-actions {
@@ -1493,7 +1496,7 @@ button.tool-tab:focus-visible {
 
 .note-panel.tool-panel .base-source-row,
 .note-panel.tool-panel .color-pick-row {
-  grid-template-columns: minmax(0, 1fr) minmax(0, 1fr);
+  grid-template-columns: repeat(2, minmax(0, 1fr));
 }
 
 .space-panel-switch-enter-active,
@@ -1523,12 +1526,19 @@ button.tool-tab:focus-visible {
 
 .split-block {
   min-height: 0;
-  border-bottom: 1px solid var(--line-main);
+  border-radius: 0 !important;
+  border-bottom: 0.5px solid var(--line-main);
   flex: 1 1 50%;
 }
 
 .split-block:last-child {
   border-bottom: 0;
+}
+
+.note-panel.tool-panel.split-block {
+  border-top-left-radius: var(--radius) !important;
+  border-top-right-radius: var(--radius) !important;
+  overflow: hidden;
 }
 
 .text-editor-frame {
@@ -1606,17 +1616,16 @@ button.tool-tab:focus-visible {
   width: 100%;
   min-height: 72px;
   padding: 0;
-  border: 0;
-  border-bottom: 0;
+  border: 1px solid color-mix(in srgb, var(--border) 64%, transparent);
   border-radius: var(--radius);
   font-size: var(--app-font-size);
   background: color-mix(in srgb, var(--card) 90%, var(--muted-surface));
-  box-shadow: 0 1px 1px rgba(15, 23, 42, 0.035);
+  box-shadow: none;
   cursor: zoom-in;
 }
 
 button.image-card {
-  border: 0;
+  border: 1px solid color-mix(in srgb, var(--border) 64%, transparent);
 }
 
 .image-card.is-dragging {
@@ -1624,8 +1633,8 @@ button.image-card {
 }
 
 .image-panel .image-card.is-active {
-  border-bottom-color: var(--line-focus);
-  box-shadow: inset 0 0 0 1px var(--line-focus);
+  border-color: var(--line-focus);
+  box-shadow: none;
 }
 
 .image-reorder-move,
@@ -1787,12 +1796,17 @@ button.quick-button {
   flex-direction: column;
   height: 100%;
   min-height: 0;
+  overflow: hidden;
 }
 
 .today-focus-section {
   flex: 0 0 auto;
+  border-top: 0;
   border-bottom: 0;
+  border-left: 0;
+  border-right: 0;
   background: var(--panel);
+  box-shadow: none;
   overflow: hidden;
 }
 
@@ -1804,7 +1818,7 @@ button.quick-button {
   color: inherit;
   font-size: var(--app-font-size);
   font-weight: 600;
-  border-bottom: 1px solid var(--line-section);
+  border-bottom: 0.5px solid var(--line-section);
 }
 
 .today-focus-list {
@@ -1827,7 +1841,7 @@ button.quick-button {
 .today-focus-item {
   position: relative;
   display: grid;
-  grid-template-columns: 42px minmax(0, 1fr) 30px 30px;
+  grid-template-columns: 42px minmax(0, 1fr) 26px 26px;
   align-items: center;
   gap: 0;
   height: 34px;
@@ -1838,7 +1852,7 @@ button.quick-button {
 }
 
 .today-focus-item.has-notify {
-  grid-template-columns: 42px minmax(0, 1fr) minmax(0, 68px) 30px;
+  grid-template-columns: 42px minmax(0, 1fr) minmax(0, 64px) 26px;
 }
 
 .today-focus-item.is-done {
@@ -1860,6 +1874,9 @@ button.quick-button {
   min-height: 0;
   flex: 1 1 33.33%;
   border-bottom: 1px solid var(--line-main);
+  border-left: 0;
+  border-right: 0;
+  box-shadow: none;
   overflow: hidden;
   transition:
     flex-basis var(--motion-medium) var(--motion-ease),
@@ -1939,7 +1956,7 @@ button.quick-button {
 .todo-item {
   position: relative;
   display: grid;
-  grid-template-columns: 22px 32px minmax(0, 1fr) 30px 30px;
+  grid-template-columns: 22px 32px minmax(0, 1fr) 26px 26px;
   align-items: center;
   gap: 0;
   height: 34px;
@@ -1953,13 +1970,12 @@ button.quick-button {
 }
 
 .todo-item.has-notify {
-  grid-template-columns: 22px 32px minmax(0, 1fr) minmax(0, 68px) 30px;
+  grid-template-columns: 22px 32px minmax(0, 1fr) minmax(0, 64px) 26px;
 }
 
 .todo-section.is-compact .todo-item,
 .todo-section.is-compact .todo-input,
 .todo-section.is-compact .todo-deadline-slot,
-.todo-section.is-compact .todo-notify-button,
 .todo-section.is-compact .todo-drag-handle {
   height: 30px;
   min-height: 30px;
@@ -2186,7 +2202,8 @@ button.todo-collapse-button {
   width: auto;
   min-width: 0;
   height: 26px;
-  padding: 0 6px;
+  min-height: 26px;
+  padding: 0 5px;
 }
 
 .todo-notify-button {
@@ -2196,10 +2213,10 @@ button.todo-collapse-button {
   display: inline-flex;
   align-items: center;
   justify-content: center;
-  width: 30px;
-  min-width: 30px;
-  height: 30px;
-  min-height: 30px;
+  width: 26px;
+  min-width: 26px;
+  height: 26px;
+  min-height: 26px;
   margin-right: 2px;
   padding: 0;
   border: 0;
@@ -2242,6 +2259,7 @@ button.todo-notify-button.has-time {
 .todo-notify-button:hover {
   color: var(--text);
   background: transparent;
+  box-shadow: none;
 }
 
 .todo-notify-icon,
@@ -2249,6 +2267,14 @@ button.todo-notify-button.has-time {
   position: relative;
   z-index: 1;
   pointer-events: none;
+}
+
+.todo-notify-icon,
+.todo-notify-icon .n-icon,
+.todo-notify-icon svg {
+  width: 14px;
+  height: 14px;
+  font-size: 14px;
 }
 
 .notify-floating-date-picker {
@@ -2308,7 +2334,7 @@ button.todo-notify-button.has-time {
   align-items: center;
   justify-content: center;
   gap: 2px;
-  height: 28px;
+  height: 26px;
   border: 1px solid var(--line-control);
   border-radius: var(--radius);
   background: var(--button);
@@ -2346,7 +2372,7 @@ button.todo-notify-button.has-time {
   align-items: center;
   justify-content: center;
   width: 100%;
-  height: 28px;
+  height: 26px;
   padding: 0;
   border: 0;
   background: transparent;
@@ -2376,7 +2402,7 @@ button.todo-notify-button.has-time {
 }
 
 .notify-panel-action {
-  height: 28px;
+  height: 26px;
   min-width: 48px;
   padding: 0 12px;
   border: 1px solid var(--line-control);
@@ -2434,11 +2460,11 @@ button.todo-notify-button.has-time {
   display: block;
   min-width: 0;
   max-width: 100%;
-  min-height: 20px;
+  min-height: 18px;
   padding: 0;
   color: var(--muted);
   font-size: calc(var(--app-font-size) - 1px);
-  line-height: 20px;
+  line-height: 18px;
   overflow: visible;
   white-space: nowrap;
 }
@@ -2473,16 +2499,16 @@ button.todo-notify-button.has-time {
   display: inline-flex;
   align-items: center;
   justify-content: center;
-  width: 30px;
-  min-width: 30px;
-  height: 30px;
-  min-height: 30px;
+  width: 26px;
+  min-width: 26px;
+  height: 26px;
+  min-height: 26px;
   margin-left: 2px;
   padding: 0;
   border: 0;
   border-radius: 50%;
   color: var(--muted);
-  font-size: 13px;
+  font-size: 12px;
   background: transparent;
   line-height: 1;
   opacity: 0;
@@ -2491,8 +2517,8 @@ button.todo-notify-button.has-time {
 }
 
 .todo-section.is-compact .todo-star-button {
-  height: 30px;
-  min-height: 30px;
+  height: 26px;
+  min-height: 26px;
 }
 
 button.todo-star-button {
@@ -2513,6 +2539,7 @@ button.todo-star-button {
 .todo-star-button:hover {
   color: var(--text);
   background: transparent;
+  box-shadow: none;
 }
 
 .todo-star-button.is-starred {
@@ -2626,6 +2653,19 @@ button.todo-star-button {
   -webkit-background-clip: text;
   background-clip: text;
   animation: starred-text-flow 4.8s linear infinite;
+}
+
+.todo-item.deadline-overdue:not(.is-done) .todo-input,
+.today-focus-item.deadline-overdue:not(.is-done) .today-focus-input,
+.deadline-overdue:not(.is-done) .todo-deadline-label {
+  color: var(--danger);
+  -webkit-text-fill-color: var(--danger);
+}
+
+.todo-item.deadline-overdue:not(.is-done) .todo-input,
+.today-focus-item.deadline-overdue:not(.is-done) .today-focus-input {
+  background: transparent;
+  animation: none;
 }
 
 @keyframes eyedropper-flow {
@@ -3792,7 +3832,7 @@ button.workbench-resizer {
 }
 
 .workbench-zone > .tool-panel {
-  border-radius: 0;
+  border-radius: var(--radius);
 }
 
 .workbench-zone-notes {
@@ -3981,6 +4021,14 @@ html[data-theme="dark"] .workbench-shell {
   box-shadow: inset 0 0 0 1px color-mix(in srgb, var(--border) 38%, transparent);
 }
 
+.workbench-zone > .space-panel,
+.workbench-zone > .image-panel,
+.workbench-zone > .todo-panel,
+.workbench-zone > .text-panel,
+.workbench-zone > .tool-panel {
+  box-shadow: none;
+}
+
 .workbench-zone > .tool-panel {
   border-radius: var(--radius);
 }
@@ -3992,6 +4040,31 @@ html[data-theme="dark"] .workbench-shell {
   background: transparent;
 }
 
+.image-panel,
+.workbench-zone > .image-panel {
+  border-left: 0;
+  border-right: 0;
+  border-bottom: 0;
+  box-shadow: none;
+}
+
+.workbench-zone > .image-panel,
+.workbench-zone > .tool-panel,
+.workbench-zone > .todo-panel {
+  border-radius: var(--radius);
+  overflow: hidden;
+}
+
+.image-panel > .panel-header,
+.tool-panel > .panel-header,
+.tool-panel > .tool-panel-header,
+.todo-panel,
+.todo-panel > .today-focus-section,
+.todo-panel > .today-focus-section .today-focus-heading {
+  border-top-left-radius: var(--radius);
+  border-top-right-radius: var(--radius);
+}
+
 .panel-header,
 .todo-heading,
 .today-focus-heading {
@@ -4000,6 +4073,18 @@ html[data-theme="dark"] .workbench-shell {
   background: color-mix(in srgb, var(--card) 82%, transparent);
   backdrop-filter: blur(18px) saturate(1.5);
   box-shadow: inset 0 -1px color-mix(in srgb, var(--border) 72%, transparent);
+}
+
+.todo-panel,
+.todo-section,
+.today-focus-section {
+  border-left: 0;
+  border-right: 0;
+  box-shadow: none;
+}
+
+.today-focus-heading {
+  box-shadow: none;
 }
 
 .panel-header > h1,
@@ -4055,8 +4140,10 @@ html[data-theme="dark"] .workbench-shell {
 
 .tool-tabs {
   padding: 4px 0;
-  border-right-color: color-mix(in srgb, var(--border) 72%, transparent);
+  border-right: 1px solid color-mix(in srgb, var(--border) 72%, transparent);
+  border-bottom: 0;
   background: var(--panel);
+  box-shadow: none;
 }
 
 .tool-tab:hover,
@@ -4125,9 +4212,7 @@ button.tool-tab.is-active:focus-visible {
 
 .image-card {
   background: color-mix(in srgb, var(--card) 88%, var(--button));
-  box-shadow:
-    var(--shadow-control),
-    inset 0 0 0 1px color-mix(in srgb, var(--border) 54%, transparent);
+  box-shadow: none;
   transition:
     background-color var(--motion-fast) ease,
     box-shadow var(--motion-fast) ease,
@@ -4137,15 +4222,12 @@ button.tool-tab.is-active:focus-visible {
 .image-card:hover,
 .image-card:focus-visible {
   background: color-mix(in srgb, var(--card) 96%, var(--primary) 4%);
-  box-shadow:
-    0 8px 22px rgba(15, 23, 42, 0.08),
-    inset 0 0 0 1px color-mix(in srgb, var(--primary) 22%, var(--border));
+  box-shadow: none;
 }
 
 .image-panel .image-card.is-active {
-  box-shadow:
-    0 8px 22px rgba(15, 23, 42, 0.08),
-    inset 0 0 0 1px var(--primary);
+  border-color: var(--line-focus);
+  box-shadow: none;
 }
 
 .quick-buttons {
@@ -4216,18 +4298,15 @@ button.quick-button {
 .todo-notify-button.has-time,
 button.todo-notify-button.has-time {
   color: var(--muted);
-  background: color-mix(in srgb, var(--button) 70%, transparent);
-  box-shadow: inset 0 0 0 1px color-mix(in srgb, var(--border) 72%, transparent);
+  background: transparent;
+  box-shadow: none;
 }
 
 .todo-notify-button:hover,
-.todo-star-button:hover,
-.todo-section-menu-button:hover,
-.todo-section-menu-button:focus-visible,
-.quick-menu-button:hover,
-.quick-menu-button:focus-visible {
+.todo-star-button:hover {
   color: var(--foreground);
-  background: var(--button-hover);
+  background: transparent;
+  box-shadow: none;
 }
 
 .todo-star-button.is-starred {
@@ -4349,6 +4428,7 @@ button.workbench-resizer:active {
 .quick-menu-button:focus-visible,
 .todo-section-menu-button:hover,
 .todo-section-menu-button:focus-visible {
+  color: var(--foreground);
   background: transparent;
   box-shadow: none;
 }
@@ -4364,6 +4444,8 @@ button.workbench-resizer:active {
   margin-top: 0;
   margin-bottom: 0;
   padding: 0;
+  background: transparent;
+  box-shadow: none;
 }
 
 .tool-panel-menu-button .n-icon,
@@ -4389,6 +4471,21 @@ button.workbench-resizer:active {
 
 .space-tab-edit-input:focus {
   border-color: transparent;
+  box-shadow: none;
+}
+
+button.space-add-button,
+.space-add-button.icon-button {
+  border: 0;
+  background: transparent;
+  box-shadow: none;
+}
+
+.space-add-button.icon-button:hover,
+.space-add-button.icon-button:focus-visible {
+  border: 0;
+  color: var(--primary);
+  background: var(--button-hover);
   box-shadow: none;
 }
 
@@ -4517,6 +4614,11 @@ html[data-theme="dark"] .tool-field input[type="color"] {
   border-radius: calc(var(--radius) + 2px);
 }
 
+.color-tool {
+  border-top: 0;
+  box-shadow: none;
+}
+
 .calculator-display > input {
   padding: 0 8px;
 }
@@ -4547,48 +4649,41 @@ html[data-theme="dark"] .tool-field input[type="color"] {
 
 .calculator-key.is-operator {
   color: var(--text);
-  background: color-mix(in srgb, var(--foreground) 4%, var(--button));
+  background: var(--button);
 }
 
 .calculator-key.is-operator:hover,
 .calculator-key.is-operator:focus-visible {
   color: var(--text);
-  background: color-mix(in srgb, var(--foreground) 7%, var(--button-hover));
+  background: var(--button-hover);
 }
 
 .calculator-key.is-equals {
   color: var(--primary);
-  background: color-mix(in srgb, var(--primary) 10%, transparent);
+  border: 1px solid color-mix(in srgb, var(--primary) 56%, transparent);
+  background: var(--button);
+  box-shadow: var(--shadow-control);
 }
 
 .calculator-key.is-equals:hover,
 .calculator-key.is-equals:focus-visible {
   color: var(--primary);
-  background: color-mix(in srgb, var(--primary) 16%, transparent);
+  background: var(--button-hover);
 }
 
 .calculator-key.is-utility {
   color: var(--muted);
-  background: color-mix(in srgb, var(--button) 70%, transparent);
-}
-
-.color-preview {
-  height: 82px;
-  border: 0;
-  border-radius: calc(var(--radius) + 2px);
-  box-shadow:
-    inset 0 0 0 1px color-mix(in srgb, var(--border) 72%, transparent),
-    var(--shadow-control);
+  background: var(--button);
 }
 
 .tool-primary-action,
 .tool-secondary-action,
 .codec-actions > button {
   min-height: 32px;
-  border: 0;
+  border: 1px solid color-mix(in srgb, var(--primary) 56%, transparent);
   border-radius: 999px;
   color: var(--primary);
-  background: color-mix(in srgb, var(--primary) 10%, transparent);
+  background: var(--button);
   box-shadow: var(--shadow-control);
 }
 
@@ -4598,14 +4693,31 @@ html[data-theme="dark"] .tool-field input[type="color"] {
 .tool-secondary-action:focus-visible,
 .codec-actions > button:hover,
 .codec-actions > button:focus-visible {
-  background: color-mix(in srgb, var(--primary) 16%, transparent);
+  border-color: color-mix(in srgb, var(--primary) 56%, transparent);
+  background: var(--button-hover);
+}
+
+button.tool-primary-action,
+button[data-testid="password-generate"].tool-primary-action {
+  border: 1px solid color-mix(in srgb, var(--primary) 56%, transparent);
+  color: var(--primary);
+  background: var(--button);
+  box-shadow: var(--shadow-control);
+}
+
+button.tool-primary-action:hover,
+button.tool-primary-action:focus-visible,
+button[data-testid="password-generate"].tool-primary-action:hover,
+button[data-testid="password-generate"].tool-primary-action:focus-visible {
+  border-color: color-mix(in srgb, var(--primary) 56%, transparent);
+  background: var(--button-hover);
 }
 
 .tool-primary-action.eyedropper-button {
   --eyedropper-flow-gradient: none;
-  border: 0;
+  border: 1px solid color-mix(in srgb, var(--primary) 56%, transparent);
   color: var(--primary);
-  background: color-mix(in srgb, var(--primary) 10%, transparent);
+  background: var(--button);
 }
 
 .tool-primary-action.eyedropper-button::before {
@@ -4614,8 +4726,9 @@ html[data-theme="dark"] .tool-field input[type="color"] {
 
 .tool-primary-action.eyedropper-button:hover,
 .tool-primary-action.eyedropper-button:focus-visible {
+  border-color: color-mix(in srgb, var(--primary) 56%, transparent);
   color: var(--primary);
-  background: color-mix(in srgb, var(--primary) 16%, transparent);
+  background: var(--button-hover);
 }
 
 .copy-value-list,
@@ -4738,9 +4851,8 @@ html[data-theme="dark"] .tool-field input[type="color"] {
 
 .image-panel .image-card.is-active {
   background: color-mix(in srgb, var(--primary) 8%, var(--card));
-  box-shadow:
-    0 10px 28px rgba(15, 23, 42, 0.1),
-    inset 0 0 0 1px var(--primary);
+  border-color: var(--line-focus);
+  box-shadow: none;
 }
 
 .image-preview {
@@ -5015,8 +5127,7 @@ select {
 .quick-dialog .n-input,
 .quick-dialog .n-base-selection,
 .copy-value-row,
-.password-length-control,
-.color-preview {
+.password-length-control {
   background-color: color-mix(in srgb, var(--card) 76%, var(--fill-quaternary));
 }
 
@@ -5026,7 +5137,7 @@ select {
 .calculator-key:not(.is-operator):not(.is-equals):hover,
 .copy-inline-button:hover,
 .password-options label:hover {
-  background-color: var(--fill-secondary) !important;
+  background-color: var(--button-hover) !important;
 }
 
 .settings-version-action,
