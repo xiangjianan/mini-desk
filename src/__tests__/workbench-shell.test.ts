@@ -265,6 +265,45 @@ describe("WorkbenchShell", () => {
     wrapper.unmount();
   });
 
+  it("continues shrinking earlier left zones when the rightmost resizer passes the task minimum", async () => {
+    vi.spyOn(window, "innerWidth", "get").mockReturnValue(1600);
+    HTMLElement.prototype.getBoundingClientRect = function getMockRect() {
+      if (this instanceof HTMLElement && this.classList.contains("workbench-grid")) {
+        return {
+          x: 0,
+          y: 52,
+          left: 0,
+          top: 52,
+          right: 1200,
+          bottom: 800,
+          width: 1200,
+          height: 748,
+          toJSON: () => undefined,
+        };
+      }
+      return originalGetBoundingClientRect.call(this);
+    };
+    const wrapper = mount(WorkbenchShell, {
+      attachTo: document.body,
+      props: defaultProps,
+    });
+    await nextTick();
+    await nextTick();
+
+    expect(wrapper.get(".workbench-grid").attributes("style")).toContain("grid-template-columns: 166px 328px 333px 331px");
+
+    const pointerDown = new MouseEvent("pointerdown", { bubbles: true, cancelable: true });
+    Object.defineProperty(pointerDown, "clientX", { value: 900 });
+    wrapper.findAll(".workbench-resizer")[2].element.dispatchEvent(pointerDown);
+    window.dispatchEvent(new MouseEvent("pointermove", { clientX: 700 }));
+    window.dispatchEvent(new MouseEvent("pointerup"));
+    await nextTick();
+
+    expect(wrapper.get(".workbench-grid").attributes("style")).toContain("grid-template-columns: 160px 320px 320px 358px");
+
+    wrapper.unmount();
+  });
+
   it("restores resized workbench widths after the shell remounts", async () => {
     vi.spyOn(window, "innerWidth", "get").mockReturnValue(1600);
     HTMLElement.prototype.getBoundingClientRect = function getMockRect() {

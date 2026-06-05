@@ -192,17 +192,36 @@ function refreshWorkbenchLayout(): void {
   void nextTick(syncImagePreviewLeft);
 }
 
-function clampResizeDelta(index: number, delta: number, widths: number[]): number {
-  const leftMinDelta = MIN_COLUMN_WIDTHS[index] - widths[index];
-  const rightMaxDelta = widths[index + 1] - MIN_COLUMN_WIDTHS[index + 1];
-  return Math.max(leftMinDelta, Math.min(rightMaxDelta, delta));
+function shrinkColumns(widths: number[], indices: number[], requestedShrink: number): { widths: number[]; actualShrink: number } {
+  const nextWidths = [...widths];
+  let remainingShrink = Math.max(0, requestedShrink);
+  let actualShrink = 0;
+
+  for (const index of indices) {
+    if (remainingShrink <= 0) break;
+    const shrinkableWidth = Math.max(0, nextWidths[index] - MIN_COLUMN_WIDTHS[index]);
+    const columnShrink = Math.min(shrinkableWidth, remainingShrink);
+    nextWidths[index] -= columnShrink;
+    remainingShrink -= columnShrink;
+    actualShrink += columnShrink;
+  }
+
+  return { widths: nextWidths, actualShrink };
 }
 
 function applyResizeDelta(index: number, delta: number, startWidths: number[]): void {
-  const adjustedDelta = clampResizeDelta(index, delta, startWidths);
   const nextWidths = [...startWidths];
-  nextWidths[index] = startWidths[index] + adjustedDelta;
-  nextWidths[index + 1] = startWidths[index + 1] - adjustedDelta;
+  if (delta < 0) {
+    const leftShrinkOrder = Array.from({ length: index + 1 }, (_, offset) => index - offset);
+    const { widths, actualShrink } = shrinkColumns(startWidths, leftShrinkOrder, Math.abs(delta));
+    Object.assign(nextWidths, widths);
+    nextWidths[index + 1] = startWidths[index + 1] + actualShrink;
+  } else {
+    const rightShrinkOrder = Array.from({ length: startWidths.length - index - 1 }, (_, offset) => index + 1 + offset);
+    const { widths, actualShrink } = shrinkColumns(startWidths, rightShrinkOrder, delta);
+    Object.assign(nextWidths, widths);
+    nextWidths[index] = startWidths[index] + actualShrink;
+  }
   columnWidths.value = nextWidths;
   persistColumnWidths(nextWidths);
   syncImagePreviewLeft();
