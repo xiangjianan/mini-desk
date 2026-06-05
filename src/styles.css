@@ -4023,7 +4023,7 @@ html[data-theme="dark"] .workbench-shell {
   min-height: 38px;
   padding: 4px;
   border-bottom-color: color-mix(in srgb, var(--border) 72%, transparent);
-  background: color-mix(in srgb, var(--button) 62%, transparent);
+  background: var(--panel);
 }
 
 .space-tabs,
@@ -4056,14 +4056,14 @@ html[data-theme="dark"] .workbench-shell {
 .tool-tabs {
   padding: 4px 0;
   border-right-color: color-mix(in srgb, var(--border) 72%, transparent);
-  background: color-mix(in srgb, var(--button) 58%, transparent);
+  background: var(--panel);
 }
 
 .tool-tab:hover,
 button.tool-tab:hover,
 button.tool-tab:focus-visible {
   color: var(--foreground);
-  background: var(--button);
+  background: var(--panel);
 }
 
 .tool-tab.is-active,
