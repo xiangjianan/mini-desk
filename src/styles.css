@@ -3622,29 +3622,41 @@ body:has(.image-preview) .image-panel .n-scrollbar {
   position: absolute;
   z-index: 8;
   top: 0;
-  left: 50%;
-  width: 168px;
-  height: 48px;
-  transform: translateX(-50%);
+  right: 100px;
+  width: 32px;
+  height: 32px;
 }
 
 .workbench-header-reveal {
   position: absolute;
-  top: 7px;
-  left: 50%;
+  top: 1px;
+  left: 0;
   width: 32px;
   min-width: 32px;
   height: 32px;
   min-height: 32px;
   padding: 0;
-  border-radius: 50%;
-  background: var(--button);
+  border-radius: 0;
+  color: var(--muted-foreground);
+  background: transparent;
+  box-shadow: none;
+}
+
+.workbench-header-reveal::before {
+  content: "";
+  position: absolute;
+  top: -1px;
+  left: 50%;
+  width: 1px;
+  height: 22px;
+  background: color-mix(in srgb, var(--muted-foreground) 58%, transparent);
   transform: translateX(-50%);
 }
 
 .workbench-header-reveal:hover,
 .workbench-header-reveal:focus-visible {
-  background: var(--button-hover);
+  color: var(--foreground);
+  background: transparent;
   cursor: pointer;
 }
 
@@ -3658,13 +3670,13 @@ body:has(.image-preview) .image-panel .n-scrollbar {
 .workbench-header-reveal-enter-from,
 .workbench-header-reveal-leave-to {
   opacity: 0;
-  transform: translate(-50%, -12px);
+  transform: translateY(-12px);
 }
 
 .workbench-header-reveal-enter-to,
 .workbench-header-reveal-leave-from {
   opacity: 1;
-  transform: translate(-50%, 0);
+  transform: translateY(0);
 }
 
 .workbench-title-group,
@@ -3979,8 +3991,7 @@ html[data-theme="dark"] .workbench-shell {
 .workbench-header-hide-button,
 .workbench-theme-button,
 .settings-btn.icon-button,
-.icon-button,
-.workbench-header-reveal {
+.icon-button {
   background: var(--button);
   box-shadow: var(--shadow-control);
 }
@@ -4415,11 +4426,12 @@ button.workbench-resizer:active {
 .workbench-header-reveal:hover,
 .workbench-header-reveal:focus-visible,
 .workbench-header-reveal:active {
-  transform: translateX(-50%);
+  transform: translateY(0);
 }
 
 .workbench-header-reveal:active {
-  background: var(--button-hover);
+  color: var(--foreground);
+  background: transparent;
 }
 
 .tool-panel-menu-button:hover,
