@@ -29,6 +29,7 @@ const messageKeys = [
   "quickLinkCopied",
   "quickTextCopied",
   "quickTextCopyFailed",
+  "declutter",
   "noCompletedTodos",
   "dataExported",
   "dataImported",

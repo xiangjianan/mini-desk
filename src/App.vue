@@ -1455,6 +1455,10 @@ function showToolBubble(message: string, anchor?: HTMLElement): void {
   showBubbleText(message, anchor, { hideCompanionAfter: true }, 3000);
 }
 
+function showDeclutterBubble(anchor?: HTMLElement): void {
+  showBubble("declutter", anchor);
+}
+
 function dismissToolBubble(): void {
   hideBubbleMessage({ clearRetainedContent: true });
   companionFocused.value = false;
@@ -2046,6 +2050,7 @@ function moveItem<T extends { id: string }>(items: T[], dragId: string, targetId
           @toggle-show-hidden="state.showHiddenQuickButtons = !state.showHiddenQuickButtons; persistNow()"
           @reorder="reorderQuickButtons"
           @guide="handleGuideClick"
+          @declutter="showDeclutterBubble"
         />
       </template>
 
@@ -2079,6 +2084,7 @@ function moveItem<T extends { id: string }>(items: T[], dragId: string, targetId
           @move="moveTodo"
           @focus="handleGuideFocus('todos', $event)"
           @guide="handleGuideClick"
+          @declutter="showDeclutterBubble"
         />
       </template>
 

@@ -111,6 +111,64 @@ const defaultTodoLists = [
 ];
 
 describe("TodoPanel", () => {
+  it("emits a declutter prompt when a reminder list with at least seven items is focused", async () => {
+    const wrapper = mount(TodoPanel, {
+      props: {
+        todoLists: defaultTodoLists,
+        todos: {
+          morning: Array.from({ length: 7 }, (_, index) => ({ id: `todo-${index}`, text: `事项 ${index + 1}`, done: false })),
+          noon: [],
+          evening: [],
+        },
+        showCompleted: { morning: false, noon: false, evening: false },
+        titles: DEFAULT_TITLES,
+      },
+      global: {
+        stubs: {
+          Checkbox: checkboxStub,
+          Dropdown: dropdownStub,
+          NCheckbox: checkboxStub,
+          NDatePicker: datePickerStub,
+          NDropdown: dropdownStub,
+          NTooltip: tooltipStub,
+        },
+      },
+    });
+
+    await wrapper.get('[data-testid="todo-input-morning"]').trigger("focus");
+
+    expect(wrapper.emitted("declutter")?.[0]).toEqual([expect.any(HTMLElement)]);
+  });
+
+  it("does not emit a declutter prompt while a reminder list has fewer than seven items", async () => {
+    const wrapper = mount(TodoPanel, {
+      props: {
+        todoLists: defaultTodoLists,
+        todos: {
+          morning: Array.from({ length: 6 }, (_, index) => ({ id: `todo-${index}`, text: `事项 ${index + 1}`, done: false })),
+          noon: [],
+          evening: [],
+        },
+        showCompleted: { morning: false, noon: false, evening: false },
+        titles: DEFAULT_TITLES,
+      },
+      global: {
+        stubs: {
+          Checkbox: checkboxStub,
+          Dropdown: dropdownStub,
+          NCheckbox: checkboxStub,
+          NDatePicker: datePickerStub,
+          NDropdown: dropdownStub,
+          NTooltip: tooltipStub,
+        },
+      },
+    });
+
+    await wrapper.get('[data-testid="todo-input-morning"]').trigger("focus");
+
+    expect(wrapper.emitted("declutter")).toBeUndefined();
+  });
+
   it("renders reminder sections from configurable todo lists", () => {
     const wrapper = mount(TodoPanel, {
       props: {

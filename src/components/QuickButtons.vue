@@ -28,6 +28,7 @@ const emit = defineEmits<{
   toggleShowHidden: [];
   reorder: [dragId: string, targetId: string];
   guide: [key: GuideKey, anchor: HTMLElement, immediate?: boolean];
+  declutter: [anchor: HTMLElement];
 }>();
 
 const dialogOpen = ref(false);
@@ -240,8 +241,15 @@ function handleMenuSelect(key: string): void {
 function handleAreaClick(event: MouseEvent): void {
   const target = event.target as HTMLElement;
   if (target.closest("button, input, textarea, .quick-button, .header-actions")) return;
-  emit("guide", "quickButtons", event.currentTarget as HTMLElement);
+  const anchor = event.currentTarget as HTMLElement;
+  if (visibleActiveButtonCount.value > 12) {
+    emit("declutter", anchor);
+    return;
+  }
+  emit("guide", "quickButtons", anchor);
 }
+
+const visibleActiveButtonCount = computed(() => props.buttons.filter((button) => !button.hidden).length);
 
 function handleToggleShowHidden(anchor?: HTMLElement): void {
   emit("toggleShowHidden");

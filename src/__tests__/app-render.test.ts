@@ -4028,6 +4028,82 @@ describe("App shell", () => {
     }
   });
 
+  it("shows a declutter companion bubble and GIF when focusing a reminder list with at least seven items", async () => {
+    vi.useFakeTimers();
+    localStorage.setItem(
+      STORAGE_KEY,
+      JSON.stringify({
+        ...defaultState(),
+        todos: {
+          morning: Array.from({ length: 7 }, (_, index) => ({
+            id: `todo-${index}`,
+            text: `提醒 ${index + 1}`,
+            done: false,
+          })),
+          noon: [],
+          evening: [],
+        },
+      }),
+    );
+    const randomSpy = vi.spyOn(Math, "random").mockReturnValue(0);
+    const wrapper = mountApp();
+
+    try {
+      await wrapper.get('[data-testid="todo-input-morning"]').trigger("focus");
+      await wrapper.vm.$nextTick();
+
+      expect(wrapper.find(".focus-companion.is-visible img").exists()).toBe(true);
+
+      await vi.advanceTimersByTimeAsync(200);
+      await wrapper.vm.$nextTick();
+
+      const text = wrapper.get('[data-testid="companion-confirm"]').text();
+      expect(text).toContain("数量有点多，适当做减法");
+      expect(text).toContain("(・_・;)");
+    } finally {
+      wrapper.unmount();
+      randomSpy.mockRestore();
+      vi.useRealTimers();
+    }
+  });
+
+  it("shows a declutter companion bubble and GIF when clicking a quick-action area with more than twelve visible buttons", async () => {
+    vi.useFakeTimers();
+    localStorage.setItem(
+      STORAGE_KEY,
+      JSON.stringify({
+        ...defaultState(),
+        quickButtons: Array.from({ length: 13 }, (_, index) => ({
+          id: `quick-${index}`,
+          title: `按钮 ${index + 1}`,
+          value: `https://example.com/${index}`,
+          type: "link",
+          hidden: false,
+        })),
+      }),
+    );
+    const randomSpy = vi.spyOn(Math, "random").mockReturnValue(0);
+    const wrapper = mountApp();
+
+    try {
+      await wrapper.get(".quick-block").trigger("click");
+      await wrapper.vm.$nextTick();
+
+      expect(wrapper.find(".focus-companion.is-visible img").exists()).toBe(true);
+
+      await vi.advanceTimersByTimeAsync(200);
+      await wrapper.vm.$nextTick();
+
+      const text = wrapper.get('[data-testid="companion-confirm"]').text();
+      expect(text).toContain("数量有点多，适当做减法");
+      expect(text).toContain("(・_・;)");
+    } finally {
+      wrapper.unmount();
+      randomSpy.mockRestore();
+      vi.useRealTimers();
+    }
+  });
+
   it("anchors the companion near the focused todo section and tools area", async () => {
     const wrapper = mountApp();
     const todoList = wrapper.get('[data-testid="todo-list-morning"]');

@@ -79,6 +79,7 @@ const emit = defineEmits<{
   createFromText: [period: TodoPeriod, texts: string[]];
   focus: [element: HTMLElement];
   guide: [key: GuideKey, anchor: HTMLElement, immediate?: boolean];
+  declutter: [anchor: HTMLElement];
 }>();
 
 const focusedListId = ref<TodoListId | null>(null);
@@ -319,6 +320,7 @@ function handleListClick(event: MouseEvent, period: TodoPeriod): void {
   const target = event.target as HTMLElement;
   if (target.closest("button, input, textarea, .todo-item, .todo-completed-divider")) return;
   event.stopPropagation();
+  emitDeclutterPrompt(period, event.currentTarget as HTMLElement);
   emit("create", period);
 }
 
@@ -430,7 +432,14 @@ function handleInputBlur(period: TodoPeriod, id: string): void {
 function handleInputFocus(period: TodoPeriod, todo: TodoItem, event: FocusEvent): void {
   focusedListId.value = period;
   if (!todo.done && todo.text.trim().length === 0) editingTodoKey.value = todoKey(period, todo.id);
-  emit("focus", todoSectionRefs.get(period) ?? (event.currentTarget as HTMLElement));
+  const anchor = todoSectionRefs.get(period) ?? (event.currentTarget as HTMLElement);
+  emit("focus", anchor);
+  emitDeclutterPrompt(period, anchor);
+}
+
+function emitDeclutterPrompt(period: TodoPeriod, anchor: HTMLElement): void {
+  if ((props.todos[period] ?? []).length < 7) return;
+  emit("declutter", anchor);
 }
 
 function clearPendingReorder(key: string): void {

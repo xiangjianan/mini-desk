@@ -147,6 +147,45 @@ function readSource(path: string): string {
 }
 
 describe("QuickButtons", () => {
+  it("emits a declutter prompt when more than twelve visible quick buttons are clicked", async () => {
+    const wrapper = mountQuickButtons({
+      buttons: Array.from({ length: 13 }, (_, index) => ({
+        id: `quick-${index}`,
+        title: `按钮 ${index + 1}`,
+        value: `https://example.com/${index}`,
+        type: "link" as const,
+        hidden: false,
+      })),
+    });
+
+    await wrapper.get(".quick-block").trigger("click");
+
+    expect(wrapper.emitted("declutter")?.[0]).toEqual([expect.any(HTMLElement)]);
+
+    wrapper.unmount();
+  });
+
+  it("ignores hidden quick buttons when deciding whether to show the declutter prompt", async () => {
+    const wrapper = mountQuickButtons({
+      buttons: [
+        ...Array.from({ length: 12 }, (_, index) => ({
+          id: `quick-${index}`,
+          title: `按钮 ${index + 1}`,
+          value: `https://example.com/${index}`,
+          type: "link" as const,
+          hidden: false,
+        })),
+        { id: "hidden", title: "隐藏", value: "https://example.com/hidden", type: "link" as const, hidden: true },
+      ],
+    });
+
+    await wrapper.get(".quick-block").trigger("click");
+
+    expect(wrapper.emitted("declutter")).toBeUndefined();
+
+    wrapper.unmount();
+  });
+
   it("keeps the add/edit dialog open when clicking outside the modal card", async () => {
     const wrapper = mountQuickButtons();
 
