@@ -179,20 +179,20 @@ export const EMPTY_HINTS_BY_LANGUAGE = {
 export const AREA_HELP_BY_LANGUAGE: Record<AppLanguage, Record<"images" | "note" | "quickButtons" | "todos" | "workspace" | "tools" | "storage", string>> = {
   zh: {
     images: "图片区：粘贴、预览和整理图片。",
-    note: "工具区：常用工具集中处理。",
+    note: "快捷动作：常用内容一键打开或复制。",
     quickButtons: "快捷区：常用内容一键打开或复制。",
     todos: "提醒区：标题可双击改名。",
     workspace: "记事本：拆步骤，稳稳推进。",
-    tools: "工具区：计算、取色、编解码和生成密码。",
+    tools: "快捷动作：按标签整理常用链接和复制片段。",
     storage: "扩展区：放长期保留的内容。",
   },
   en: {
     images: "Images: paste, preview, and organize images.",
-    note: "Tools: keep common utilities close at hand.",
+    note: "Quick Actions: open links or copy text.",
     quickButtons: "Quick Actions: open links or copy text.",
     todos: "Reminders: double-click titles to rename.",
     workspace: "Memo: break work into steps.",
-    tools: "Tools: calculate, pick colors, encode text, and generate passwords.",
+    tools: "Quick Actions: organize frequent links and snippets with tags.",
     storage: "Storage: keep long-lived reference material.",
   },
 };
@@ -289,12 +289,11 @@ export const GUIDE_MESSAGES: Record<AppLanguage, Record<GuideKey, string[]>> = {
       "适合把任务拆成步骤。",
     ],
     tools: [
-      "左侧可以切换工具。",
-      "计算器支持基础运算和进制转换。",
-      "取色板可以手动选择颜色。",
-      "支持的浏览器可以用取色笔拾取屏幕颜色。",
-      "编解码工具支持 Base64 和 URL。",
-      "随机密码生成可以组合大小写、数字和特殊字符。",
+      "快捷动作可以按标签分组。",
+      "链接会打开目标地址。",
+      "文本按钮会复制内容。",
+      "API 动作可以复制响应内容。",
+      "按钮可以拖到其他分类或无标签区域。",
     ],
     storage: [
       "双击标题可以修改名称。",
@@ -429,12 +428,11 @@ export const GUIDE_MESSAGES: Record<AppLanguage, Record<GuideKey, string[]>> = {
       "Use the memo to break work into steps.",
     ],
     tools: [
-      "Use the left rail to switch tools.",
-      "The calculator supports arithmetic and base conversion.",
-      "The color panel supports manual color selection.",
-      "Supported browsers can pick colors from the screen.",
-      "The codec supports Base64 and URL transforms.",
-      "The password tool can combine letters, numbers, and symbols.",
+      "Quick actions can be grouped by tag.",
+      "Link actions open their target URL.",
+      "Text actions copy their content.",
+      "API actions can copy response content.",
+      "Actions can be dragged into another category or the untagged area.",
     ],
     storage: [
       "Double-click the title to rename it.",
@@ -1021,7 +1019,7 @@ export type ShortcutHelpSection = {
 
 export const SHORTCUT_HELP: Record<AppLanguage, ShortcutHelpSection[]> = {
   zh: [
-    { area: "工作台", icon: "⌘", summary: "把图片、提醒、工具和备忘录放在一个桌面里。", tips: [
+    { area: "工作台", icon: "⌘", summary: "把图片、提醒、快捷动作和备忘录放在一个桌面里。", tips: [
       "拖动栏间分隔线可以调整宽度，布局会自动记住。",
       "顶部菜单可以收起，适合给内容区让出空间。",
       "双击任意区域标题可以改名，包括今日重点和空间标签。",
@@ -1062,18 +1060,18 @@ export const SHORTCUT_HELP: Record<AppLanguage, ShortcutHelpSection[]> = {
       { key: "Backspace", desc: "空缩进行减少缩进" },
       { key: "右键", desc: "复制 / 粘贴" },
     ]},
-    { area: "快捷动作与工具", icon: "⚡", summary: "把常用链接、复制片段和小工具放在手边。", tips: [
+    { area: "快捷动作", icon: "⚡", summary: "把常用链接和复制片段放在手边。", tips: [
       "快捷动作可以隐藏；需要时从三点菜单临时显示隐藏项。",
       "API 快捷动作能复制响应内容，适合做个人小自动化。",
-      "工具栏可以配置显示哪些工具，当前打开项会自动记住。",
+      "快捷动作可以按标签分组，也能拖到其他分类或无标签区域。",
     ], shortcuts: [
       { key: "拖入文本 / URL", desc: "自动创建快捷动作" },
       { key: "右键", desc: "编辑 / 隐藏 / 删除" },
-      { key: "工具区三点菜单", desc: "显示 / 隐藏工具" },
+      { key: "拖动按钮", desc: "排序或移动到其他分类" },
     ]},
   ],
   en: [
-    { area: "Desk", icon: "⌘", summary: "Screenshots, reminders, tools, and notes in one local workspace.", tips: [
+    { area: "Desk", icon: "⌘", summary: "Screenshots, reminders, quick actions, and notes in one local workspace.", tips: [
       "Drag column dividers to resize areas; the layout is remembered.",
       "Hide the top bar when you want more room for content.",
       "Double-click section titles to rename them, including Focus and space tabs.",
@@ -1114,14 +1112,14 @@ export const SHORTCUT_HELP: Record<AppLanguage, ShortcutHelpSection[]> = {
       { key: "Backspace", desc: "Decrease indent on empty line" },
       { key: "Right-click", desc: "Copy / Paste" },
     ]},
-    { area: "Quick Actions & Tools", icon: "⚡", summary: "Keep frequent links, copy snippets, and small utilities close by.", tips: [
+    { area: "Quick Actions", icon: "⚡", summary: "Keep frequent links and copy snippets close by.", tips: [
       "Hidden actions can be temporarily shown from the three-dot menu.",
       "API actions can copy response content for small personal automations.",
-      "The tool panel can hide unused tools and remembers the last open tool.",
+      "Actions can be grouped with tags or dragged into another category.",
     ], shortcuts: [
       { key: "Drag text/URL", desc: "Auto-create action" },
       { key: "Right-click", desc: "Edit / Hide / Delete" },
-      { key: "Tool menu", desc: "Show / Hide tools" },
+      { key: "Drag action", desc: "Reorder or move to another category" },
     ]},
   ],
 };

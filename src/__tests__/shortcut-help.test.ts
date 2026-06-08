@@ -43,7 +43,8 @@ describe("ShortcutHelp", () => {
     expect(wrapper.findAll(".shortcut-section")).toHaveLength(5);
     expect(wrapper.text()).toContain("双击任意区域标题可以改名");
     expect(wrapper.text()).toContain("右键空白处可以新增提醒列表");
-    expect(wrapper.text()).toContain("工具栏可以配置显示哪些工具");
+    expect(wrapper.text()).toContain("快捷动作可以按标签分组");
+    expect(wrapper.text()).not.toContain("工具栏");
     expect(wrapper.text()).toContain("Ctrl + S");
     expect(wrapper.text()).toContain("Esc / Space");
     expect(wrapper.findAll(".shortcut-section-icon").map((icon) => icon.text())).toEqual(["⌘", "🖼️", "⏱️", "📝", "⚡"]);
@@ -55,7 +56,9 @@ describe("ShortcutHelp", () => {
     expect(wrapper.text()).toContain("Help & Shortcuts");
     expect(wrapper.text()).toContain("Double-click section titles to rename them");
     expect(wrapper.text()).toContain("Notification time works without starring");
-    expect(wrapper.text()).toContain("Tool menu");
+    expect(wrapper.text()).toContain("Drag action");
+    expect(wrapper.text()).not.toContain("Tool menu");
+    expect(wrapper.text()).not.toContain("tool panel");
   });
 
   it("emits close when the modal is dismissed", async () => {

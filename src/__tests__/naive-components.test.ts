@@ -752,7 +752,7 @@ describe("Naive UI component usage", () => {
       expect(source).toContain("common.tips");
     }
     expect(image).toContain("uiText.value.images.pasteImage");
-    expect(app).toContain("@focus=\"handleGuideFocus('tools', $event)\"");
+    expect(app).not.toContain("@focus=\"handleGuideFocus('tools', $event)\"");
     expect(app).toContain("@guide=\"(_, anchor, immediate) => handleGuideClick('workspace', anchor, immediate)\"");
     expect(app).toContain("showGuideBubble");
   });

@@ -9,7 +9,6 @@ import QuickButtons from "../components/QuickButtons.vue";
 import SettingsMenu from "../components/SettingsMenu.vue";
 import SpacePanel from "../components/SpacePanel.vue";
 import TodoPanel from "../components/TodoPanel.vue";
-import ToolPanel from "../components/ToolPanel.vue";
 import { defaultState, STORAGE_KEY } from "../state/defaults";
 import { KAOMOJI_BY_MOOD } from "../state/messages";
 
@@ -157,16 +156,15 @@ describe("App shell", () => {
     expect(wrapper.find('[aria-label="素材"]').exists()).toBe(true);
     expect(wrapper.find('[aria-label="笔记与快捷动作"]').exists()).toBe(true);
     expect(wrapper.find('[aria-label="任务流"]').exists()).toBe(true);
-    expect(wrapper.find('[aria-label="工作区与工具"]').exists()).toBe(true);
+    expect(wrapper.find('[aria-label="工作区"]').exists()).toBe(true);
     expect(wrapper.find('[aria-label="Mini Desk"]').exists()).toBe(false);
     expect(wrapper.text()).toContain("🎨 图片");
-    expect(wrapper.text()).toContain("🔧 工具");
     expect(wrapper.text()).toContain("快捷动作");
     expect(wrapper.text()).toContain("✅ 提醒事项");
     expect(wrapper.text()).toContain("📝 备忘录");
+    expect(wrapper.find(".tool-panel").exists()).toBe(false);
+    expect(wrapper.find(".workbench-zone-notes > .quick-block").exists()).toBe(true);
     expect(wrapper.findAll(".space-tab").map((tab) => tab.text())).toEqual(["📝 备忘录"]);
-    expect(wrapper.findAll(".tool-tab").map((tab) => tab.text().trim())).toEqual(["", ""]);
-    expect(wrapper.findAll(".tool-tab").map((tab) => tab.attributes("aria-label"))).toEqual(["计算器", "取色板"]);
     expect(wrapper.find('[data-testid="workbench-theme"]').exists()).toBe(true);
     expect(wrapper.find('[aria-label="快捷动作菜单"]').exists()).toBe(true);
     expect(wrapper.find('[aria-label="设置"]').exists()).toBe(true);
@@ -182,7 +180,7 @@ describe("App shell", () => {
     localStorage.setItem(STORAGE_KEY, JSON.stringify({
       ...defaultState(),
       customTitles: {
-        "note-title": "我的便签",
+        "quick-title": "我的快捷",
       },
     }));
     const wrapper = mountApp();
@@ -192,33 +190,14 @@ describe("App shell", () => {
       await nextTick();
 
       expect(wrapper.text()).toContain("Images");
-      expect(wrapper.text()).toContain("我的便签");
-      expect(wrapper.text()).not.toContain("🔧 Tools");
-      expect(wrapper.text()).toContain("Quick Actions");
+      expect(wrapper.text()).toContain("我的快捷");
       expect(wrapper.text()).toContain("Reminders");
       expect(wrapper.text()).not.toContain("💻 Work");
       expect(wrapper.text()).not.toContain("📚 Study");
       expect(wrapper.findAll(".space-tab").map((tab) => tab.text())).toEqual(["📝 Memo"]);
-      expect(wrapper.findAll(".tool-tab").map((tab) => tab.text().trim())).toEqual(["", ""]);
-      expect(wrapper.findAll(".tool-tab").map((tab) => tab.attributes("aria-label"))).toEqual(["Calculator", "Color"]);
+      expect(wrapper.find(".tool-panel").exists()).toBe(false);
       expect(wrapper.text()).not.toContain("快捷动作");
       expect(JSON.parse(localStorage.getItem(STORAGE_KEY) || "{}").language).toBe("en");
-    } finally {
-      wrapper.unmount();
-    }
-  });
-
-  it("switches the default tools title to English", async () => {
-    localStorage.setItem(STORAGE_KEY, JSON.stringify(defaultState()));
-    const wrapper = mountApp();
-
-    try {
-      wrapper.getComponent(SettingsMenu).vm.$emit("language", "en", wrapper.get(".settings-trigger").element as HTMLElement);
-      await nextTick();
-
-      expect(wrapper.text()).toContain("🔧 Tools");
-      expect(wrapper.text()).not.toContain("🔧 工具");
-      expect(wrapper.text()).not.toContain("🔧 小工具");
     } finally {
       wrapper.unmount();
     }
@@ -271,7 +250,6 @@ describe("App shell", () => {
       expect(wrapper.findComponent(QuickButtons).exists()).toBe(false);
       expect(wrapper.findComponent(TodoPanel).exists()).toBe(false);
       expect(wrapper.findComponent(SpacePanel).exists()).toBe(false);
-      expect(wrapper.findComponent(ToolPanel).exists()).toBe(false);
       expect(wrapper.findComponent(SettingsMenu).exists()).toBe(false);
       expect(wrapper.findComponent(ImagePreview).exists()).toBe(false);
       expect(wrapper.findAll("textarea")).toHaveLength(0);
@@ -2003,89 +1981,6 @@ describe("App shell", () => {
       expect((wrapper.getComponent(QuickButtons).props("buttons") as Array<{ id: string }>)).toHaveLength(0);
       expect(wrapper.find('[data-testid="companion-confirm"]').text()).toMatch(/快捷按钮已删除/);
       expect(wrapper.find('[data-testid="companion-action"]').exists()).toBe(false);
-    } finally {
-      wrapper.unmount();
-      vi.useRealTimers();
-    }
-  });
-
-  it("persists the editable tool title in the former note area", async () => {
-    const wrapper = mountApp();
-
-    try {
-      wrapper.getComponent(ToolPanel).vm.$emit("titleUpdate", "note-title", "常用工具");
-      await wrapper.vm.$nextTick();
-
-      expect(wrapper.text()).toContain("常用工具");
-      expect(JSON.parse(localStorage.getItem(STORAGE_KEY) || "{}").customTitles["note-title"]).toBe("常用工具");
-    } finally {
-      wrapper.unmount();
-    }
-  });
-
-  it("shows tool prompts through the companion bubble with a GIF", async () => {
-    vi.useFakeTimers();
-    const wrapper = mountApp();
-
-    try {
-      wrapper.getComponent(ToolPanel).vm.$emit("message", "工具提示", wrapper.get(".tool-panel").element as HTMLElement);
-      await wrapper.vm.$nextTick();
-
-      expect(wrapper.find(".focus-companion.is-visible img").exists()).toBe(true);
-
-      await vi.advanceTimersByTimeAsync(260);
-      await wrapper.vm.$nextTick();
-
-      expect(wrapper.get('[data-testid="companion-confirm"]').text()).toContain("工具提示");
-    } finally {
-      wrapper.unmount();
-      vi.useRealTimers();
-    }
-  });
-
-  it("shows tool tips with a GIF when clicking the empty tool area before selecting a tool", async () => {
-    vi.useFakeTimers();
-    const wrapper = mountApp();
-
-    try {
-      await wrapper.get(".tool-content.is-empty").trigger("click");
-      await wrapper.vm.$nextTick();
-
-      expect(wrapper.find(".focus-companion.is-visible img").exists()).toBe(true);
-
-      await vi.advanceTimersByTimeAsync(260);
-      await wrapper.vm.$nextTick();
-
-      const message = wrapper.get('[data-testid="companion-confirm"]').text();
-      expect(message).toContain("点击左侧图标打开工具");
-      expect(message).not.toContain("计算器");
-      expect(message).not.toContain("随机密码生成");
-    } finally {
-      wrapper.unmount();
-      vi.useRealTimers();
-    }
-  });
-
-  it("clears a fading tool GIF when switching to another tool", async () => {
-    vi.useFakeTimers();
-    const wrapper = mountApp();
-
-    try {
-      wrapper.getComponent(ToolPanel).vm.$emit("message", "已拾取颜色", wrapper.get(".tool-panel").element as HTMLElement);
-      await wrapper.vm.$nextTick();
-
-      await vi.advanceTimersByTimeAsync(3260);
-      await wrapper.vm.$nextTick();
-
-      expect(wrapper.find('[data-testid="companion-confirm"]').exists()).toBe(false);
-      expect(wrapper.find(".focus-companion.is-visible").exists()).toBe(true);
-
-      const colorTab = wrapper.findAll(".tool-tab").find((tab) => tab.attributes("aria-label") === "取色板");
-      if (!colorTab) throw new Error("Color tool tab not found");
-      await colorTab.trigger("click");
-      await wrapper.vm.$nextTick();
-
-      expect(wrapper.find(".focus-companion.is-visible").exists()).toBe(false);
     } finally {
       wrapper.unmount();
       vi.useRealTimers();
@@ -4014,8 +3909,8 @@ describe("App shell", () => {
 
       expect(wrapper.find(".focus-companion.is-visible img").exists()).toBe(false);
 
-      const tools = wrapper.get(".tool-panel");
-      vi.spyOn(tools.element, "getBoundingClientRect").mockReturnValue({
+      const textPanel = wrapper.get(".text-panel");
+      vi.spyOn(textPanel.element, "getBoundingClientRect").mockReturnValue({
         x: 720,
         y: 0,
         width: 360,
@@ -4026,7 +3921,7 @@ describe("App shell", () => {
         bottom: 900,
         toJSON: () => ({}),
       });
-      await tools.trigger("focusin");
+      await textPanel.get("textarea").trigger("focus");
       await wrapper.vm.$nextTick();
 
       expect(wrapper.find('[data-testid="companion-confirm"]').exists()).toBe(false);
@@ -4093,7 +3988,8 @@ describe("App shell", () => {
     localStorage.setItem(
       STORAGE_KEY,
       JSON.stringify({
-        noteLines: [{ text: "已有便签", indent: 0 }],
+        spaces: [{ id: "workspace", title: "工作空间", lines: [{ text: "已有内容", indent: 0 }] }],
+        activeSpaceId: "workspace",
       }),
     );
     const wrapper = mountAppWithPersistentPopover();
@@ -4107,7 +4003,7 @@ describe("App shell", () => {
 
       expect(wrapper.find('[data-testid="companion-confirm"]').text()).toMatch(/截图区|图片|Ctrl\+V|方向键|右键|删除|预览|Esc/);
 
-      await wrapper.get(".note-panel").trigger("focusin");
+      wrapper.getComponent(SpacePanel).vm.$emit("focus", "workspace", wrapper.get(".text-panel").element as HTMLElement);
       await wrapper.vm.$nextTick();
 
       expect(wrapper.find('[data-testid="companion-confirm"]').exists()).toBe(false);
@@ -4247,6 +4143,13 @@ describe("App shell", () => {
       .mockReturnValueOnce(0.7)
       .mockReturnValueOnce(0.4)
       .mockReturnValueOnce(0.4);
+    localStorage.setItem(
+      STORAGE_KEY,
+      JSON.stringify({
+        spaces: [{ id: "workspace", title: "工作空间", lines: [{ text: "已有内容", indent: 0 }] }],
+        activeSpaceId: "workspace",
+      }),
+    );
     const wrapper = mountApp();
 
     try {
@@ -4257,7 +4160,7 @@ describe("App shell", () => {
       await wrapper.vm.$nextTick();
       const firstTips = wrapper.get('[data-testid="companion-confirm"]').text();
 
-      await wrapper.get(".note-panel").trigger("focusin");
+      wrapper.getComponent(SpacePanel).vm.$emit("focus", "workspace", wrapper.get(".text-panel").element as HTMLElement);
       await wrapper.vm.$nextTick();
 
       expect(wrapper.find('[data-testid="companion-confirm"]').exists()).toBe(false);
@@ -4438,7 +4341,7 @@ describe("App shell", () => {
     }
   });
 
-  it("anchors the companion near the focused todo section and tools area", async () => {
+  it("anchors the companion near the focused todo section", async () => {
     const wrapper = mountApp();
     const todoList = wrapper.get('[data-testid="todo-list-morning"]');
 
@@ -4472,24 +4375,6 @@ describe("App shell", () => {
     const todoStyle = wrapper.get('[data-testid="companion-bubble"]').attributes("style");
     expect(todoStyle).toContain("right: calc(10px + 100vw - 740px)");
     expect(todoStyle).toContain("bottom: calc(10px + 100vh - 394px)");
-
-    const tools = wrapper.get(".tool-panel");
-    vi.spyOn(tools.element, "getBoundingClientRect").mockReturnValue({
-      x: 720,
-      y: 0,
-      width: 360,
-      height: 900,
-      top: 0,
-      left: 720,
-      right: 1080,
-      bottom: 900,
-      toJSON: () => ({}),
-    });
-    await tools.trigger("focusin");
-
-    const toolsStyle = wrapper.get('[data-testid="companion-bubble"]').attributes("style");
-    expect(toolsStyle).toContain("right: calc(10px + 100vw - 1080px)");
-    expect(toolsStyle).toContain("bottom: calc(10px + 100vh - 900px)");
 
     wrapper.unmount();
   });
@@ -4528,8 +4413,8 @@ describe("App shell", () => {
 
       expect(wrapper.find('[data-testid="companion-confirm"]').exists()).toBe(true);
 
-      const tools = wrapper.get(".tool-panel");
-      vi.spyOn(tools.element, "getBoundingClientRect").mockReturnValue({
+      const workspacePanel = wrapper.get(".text-panel");
+      vi.spyOn(workspacePanel.element, "getBoundingClientRect").mockReturnValue({
         x: 720,
         y: 0,
         width: 360,
@@ -4540,11 +4425,12 @@ describe("App shell", () => {
         bottom: 900,
         toJSON: () => ({}),
       });
-      await tools.trigger("focusin");
+      wrapper.getComponent(SpacePanel).vm.$emit("focus", "workspace", workspacePanel.element as HTMLElement);
+      await wrapper.vm.$nextTick();
 
       expect(wrapper.find('[data-testid="companion-confirm"]').exists()).toBe(false);
       expect(wrapper.get('[data-testid="companion-bubble"]').attributes("style")).toContain("100vw - 1080px");
-      expect(wrapper.find(".focus-companion.is-visible img").exists()).toBe(true);
+      expect(wrapper.find(".focus-companion.is-visible").exists()).toBe(true);
 
       await vi.advanceTimersByTimeAsync(260);
       await wrapper.vm.$nextTick();
@@ -4555,36 +4441,6 @@ describe("App shell", () => {
 
       expect(wrapper.find(".focus-companion.is-visible").exists()).toBe(false);
       expect(wrapper.find('[data-testid="companion-confirm"]').exists()).toBe(false);
-    } finally {
-      wrapper.unmount();
-      vi.useRealTimers();
-    }
-  });
-
-  it("blurs the focused tool input on Escape", async () => {
-    vi.useFakeTimers();
-    localStorage.setItem(
-      STORAGE_KEY,
-      JSON.stringify({
-        spaces: [{ id: "workspace", title: "工作空间", lines: [{ text: "已有内容", indent: 0 }] }],
-        activeSpaceId: "workspace",
-      }),
-    );
-    const wrapper = mountApp();
-
-    try {
-      await wrapper.findAll(".tool-tab")[0].trigger("click");
-      const toolInput = wrapper.get('[data-testid="calculator-expression"]').element as HTMLInputElement;
-      toolInput.focus();
-      await vi.advanceTimersByTimeAsync(260);
-      await wrapper.vm.$nextTick();
-
-      expect(document.activeElement).toBe(toolInput);
-
-      window.dispatchEvent(new KeyboardEvent("keydown", { key: "Escape" }));
-      await wrapper.vm.$nextTick();
-
-      expect(document.activeElement).not.toBe(toolInput);
     } finally {
       wrapper.unmount();
       vi.useRealTimers();

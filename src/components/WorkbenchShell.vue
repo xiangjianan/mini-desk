@@ -388,7 +388,7 @@ onUnmounted(() => {
         <section class="workbench-zone workbench-zone-tasks" aria-label="任务流">
           <slot name="tasks" />
         </section>
-        <section class="workbench-zone workbench-zone-workspace" aria-label="工作区与工具">
+        <section class="workbench-zone workbench-zone-workspace" aria-label="工作区">
           <slot name="workspace" />
         </section>
         <button

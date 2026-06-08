@@ -10,7 +10,6 @@ import SettingsMenu from "./components/SettingsMenu.vue";
 import ShortcutHelp from "./components/ShortcutHelp.vue";
 import SpacePanel from "./components/SpacePanel.vue";
 import TodoPanel from "./components/TodoPanel.vue";
-import ToolPanel from "./components/ToolPanel.vue";
 import WorkbenchShell from "./components/WorkbenchShell.vue";
 import { getCompanionGifSrc, getCompanionNotificationIconSrc } from "./state/companionGifThemes";
 import {
@@ -1411,7 +1410,6 @@ function shouldSkipGlobalUndo(target: EventTarget | null): boolean {
   if (target.isContentEditable) return true;
   if (target.closest(".title-edit-input, .space-tab-edit-input, .todo-list-create-input, .gif-theme-custom-dialog")) return true;
   if (target instanceof HTMLTextAreaElement && target.closest(".text-panel")) return true;
-  if ((target instanceof HTMLInputElement || target instanceof HTMLTextAreaElement || target instanceof HTMLSelectElement) && target.closest(".tool-panel")) return true;
   return false;
 }
 
@@ -2158,19 +2156,6 @@ function moveItem<T extends { id: string }>(items: T[], dragId: string, targetId
       </template>
 
       <template #notes>
-        <ToolPanel
-          split
-          class="note-panel"
-          title-id="note-title"
-          :title="titles['note-title']"
-          :language="state.language"
-          :theme="state.theme"
-          @title-update="updateTitle"
-          @message="showToolBubble"
-          @dismiss-message="dismissToolBubble"
-          @focus="handleGuideFocus('tools', $event)"
-          @blur="handleCompanionBlur"
-        />
         <QuickButtons
           :title="titles['quick-title']"
           :tags="state.quickTags"

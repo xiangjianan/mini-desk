@@ -68,13 +68,14 @@ describe("localized public copy", () => {
     expect(SHORTCUT_HELP.zh.flatMap((section) => section.tips)).toEqual(expect.arrayContaining([
       "双击任意区域标题可以改名，包括今日重点和空间标签。",
       "右键空白处可以新增提醒列表，列表名也能拖动排序。",
-      "工具栏可以配置显示哪些工具，当前打开项会自动记住。",
+      "快捷动作可以按标签分组，也能拖到其他分类或无标签区域。",
     ]));
     expect(SHORTCUT_HELP.zh.flatMap((section) => section.shortcuts.map((shortcut) => shortcut.key))).toEqual(expect.arrayContaining([
       "Ctrl + S",
       "Esc / Space",
-      "工具区三点菜单",
+      "拖动按钮",
     ]));
+    expect(SHORTCUT_HELP.zh.flatMap((section) => [section.area, section.summary, ...section.tips, ...section.shortcuts.map((shortcut) => `${shortcut.key} ${shortcut.desc}`)]).join("\n")).not.toContain("工具");
     expect(SHORTCUT_HELP.en.flatMap((section) => section.tips)).toContain("Double-click section titles to rename them, including Focus and space tabs.");
   });
 

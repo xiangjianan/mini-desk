@@ -3914,6 +3914,14 @@ button.workbench-resizer {
 .workbench-zone-notes > .quick-block {
   flex: 1 1 0;
   min-height: 0;
+  background: color-mix(in srgb, var(--card) 92%, transparent);
+}
+
+.workbench-zone-notes > .quick-block:only-child {
+  flex: 1 1 auto;
+  height: 100%;
+  border-bottom: 0;
+  border-radius: var(--radius) !important;
 }
 
 @media (max-width: 1180px) {
