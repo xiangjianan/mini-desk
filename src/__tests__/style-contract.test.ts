@@ -53,11 +53,13 @@ describe("workbench style contract", () => {
     expectSelectorBody(styles, ".image-panel", "box-shadow: none");
     expectSelectorBody(styles, ".workbench-zone > .image-panel", "box-shadow: none");
     expectSelectorBody(styles, ".workbench-zone-notes > .quick-block", "background: color-mix(in srgb, var(--card) 92%, transparent)");
+    expectSelectorBody(styles, ".workbench-zone-notes > .quick-block", "border-radius: var(--radius) !important");
     expectSelectorBody(styles, ".workbench-zone-notes > .quick-block:only-child", "height: 100%");
-    expectSelectorBody(styles, ".workbench-zone-notes > .quick-block:only-child", "border-radius: var(--radius) !important");
     expectSelectorBody(styles, ".image-panel > .panel-header", "border-top-left-radius: var(--radius)");
     expectSelectorBody(styles, ".tool-panel > .panel-header", "border-top-left-radius: var(--radius)");
     expectSelectorBody(styles, ".tool-panel > .tool-panel-header", "border-top-left-radius: var(--radius)");
+    expectSelectorBody(styles, ".workbench-zone-notes > .quick-block > .panel-header", "border-top-left-radius: var(--radius)");
+    expectSelectorBody(styles, ".workbench-zone-notes > .quick-block > .panel-header", "border-top-right-radius: var(--radius)");
     expectSelectorBody(styles, ".note-panel.tool-panel.split-block", "border-top-left-radius: var(--radius) !important");
     expectSelectorBody(styles, ".note-panel.tool-panel.split-block", "border-top-right-radius: var(--radius) !important");
     expectSelectorBody(styles, ".todo-panel", "border-top-left-radius: var(--radius)");

@@ -3917,11 +3917,14 @@ button.workbench-resizer {
   background: color-mix(in srgb, var(--card) 92%, transparent);
 }
 
+.workbench-zone-notes > .quick-block {
+  border-radius: var(--radius) !important;
+}
+
 .workbench-zone-notes > .quick-block:only-child {
   flex: 1 1 auto;
   height: 100%;
   border-bottom: 0;
-  border-radius: var(--radius) !important;
 }
 
 @media (max-width: 1180px) {
@@ -4136,6 +4139,7 @@ html[data-theme="dark"] .workbench-shell {
 .image-panel > .panel-header,
 .tool-panel > .panel-header,
 .tool-panel > .tool-panel-header,
+.workbench-zone-notes > .quick-block > .panel-header,
 .todo-panel,
 .todo-panel > .today-focus-section,
 .todo-panel > .today-focus-section .today-focus-heading {
