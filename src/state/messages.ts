@@ -19,6 +19,7 @@ export type MessageKey =
   | "quickTextCopied"
   | "quickTextCopyFailed"
   | "declutter"
+  | "quickDeclutter"
   | "noCompletedTodos"
   | "dataExported"
   | "dataImported"
@@ -344,6 +345,22 @@ export const MESSAGE_CATALOG: Record<MessageKey, MessageEntry> = {
       "清掉几个低优先级吧",
       "给自己留一点空白",
       "把列表瘦身一下更清爽",
+    ],
+  },
+  quickDeclutter: {
+    mood: "warning",
+    surface: "companion",
+    variants: [
+      "快捷动作有点多，精简几个入口吧",
+      "快捷按钮太密了，留常用的就好",
+      "链接和 API 入口先收一收",
+      "快捷动作多了会变慢，适当减几个",
+      "把不常用的快捷入口先隐藏吧",
+      "按钮太多不好找，做点减法",
+      "快捷链接留重点，其他先清一清",
+      "API 入口有点满，适合瘦身",
+      "快捷区需要留白，删掉低频入口吧",
+      "常用按钮留下，少用的先移走",
     ],
   },
   noCompletedTodos: {
@@ -794,6 +811,7 @@ const EN_MESSAGE_VARIANTS = {
   quickTextCopied: ["Text copied", "Shortcut text copied", "Text is ready to paste"],
   quickTextCopyFailed: ["Could not copy text", "Text copy failed", "Try copying again"],
   declutter: ["There is a lot here. Trim a few things.", "Keep the important items and remove the rest.", "A lighter list is easier to act on."],
+  quickDeclutter: ["Too many quick actions. Keep the ones you use most.", "Trim a few quick links and API shortcuts.", "A lighter quick-action area is easier to scan."],
   noCompletedTodos: ["No completed reminders to clear", "Nothing completed here yet", "There are no completed items"],
   dataExported: ["Data exported", "Backup created", "Board data exported"],
   dataImported: ["Data imported", "Import complete", "Board data updated"],

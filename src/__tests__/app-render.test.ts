@@ -4067,6 +4067,46 @@ describe("App shell", () => {
     }
   });
 
+  it("keeps the declutter message bubble visible when blank-space creation focuses the new reminder", async () => {
+    vi.useFakeTimers();
+    localStorage.setItem(
+      STORAGE_KEY,
+      JSON.stringify({
+        ...defaultState(),
+        todos: {
+          morning: Array.from({ length: 7 }, (_, index) => ({
+            id: `todo-${index}`,
+            text: `提醒 ${index + 1}`,
+            done: false,
+          })),
+          noon: [],
+          evening: [],
+        },
+      }),
+    );
+    const randomSpy = vi.spyOn(Math, "random").mockReturnValue(0);
+    const wrapper = mountApp();
+
+    try {
+      await wrapper.get('.todo-section[data-list-id="morning"] .todo-list-shell').trigger("click");
+      await wrapper.vm.$nextTick();
+      await wrapper.vm.$nextTick();
+
+      expect(wrapper.findAll('[data-testid="todo-input-morning"]')).toHaveLength(8);
+      expect(wrapper.find(".focus-companion.is-visible img").exists()).toBe(true);
+
+      await vi.advanceTimersByTimeAsync(200);
+      await wrapper.vm.$nextTick();
+
+      const text = wrapper.get('[data-testid="companion-confirm"]').text();
+      expect(text).toContain("数量有点多，适当做减法");
+    } finally {
+      wrapper.unmount();
+      randomSpy.mockRestore();
+      vi.useRealTimers();
+    }
+  });
+
   it("shows a declutter companion bubble and GIF when clicking a quick-action area with more than twelve visible buttons", async () => {
     vi.useFakeTimers();
     localStorage.setItem(
@@ -4095,7 +4135,8 @@ describe("App shell", () => {
       await wrapper.vm.$nextTick();
 
       const text = wrapper.get('[data-testid="companion-confirm"]').text();
-      expect(text).toContain("数量有点多，适当做减法");
+      expect(text).toContain("快捷动作");
+      expect(text).not.toContain("提醒");
       expect(text).toContain("(・_・;)");
     } finally {
       wrapper.unmount();

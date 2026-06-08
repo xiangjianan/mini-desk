@@ -4829,11 +4829,6 @@ button[data-testid="password-generate"].tool-primary-action:focus-visible {
   overflow: hidden;
 }
 
-.image-card:hover,
-.image-card:focus-visible {
-  transform: translateY(-1px);
-}
-
 .image-index {
   position: absolute;
   top: 8px;

@@ -233,4 +233,12 @@ describe("ImagePanel", () => {
     expect(wrapper.findAll(".image-card")[0].classes()).not.toContain("is-dragging");
     wrapper.unmount();
   });
+
+  it("does not move image cards on hover or keyboard focus", () => {
+    const styles = readSource("styles.css");
+    const hoverRules = Array.from(styles.matchAll(/\.image-card:hover,\s*\.image-card:focus-visible\s*\{([^}]*)\}/g)).map((match) => match[1]);
+
+    expect(hoverRules.length).toBeGreaterThan(0);
+    expect(hoverRules.join("\n")).not.toMatch(/transform\s*:\s*translate/);
+  });
 });

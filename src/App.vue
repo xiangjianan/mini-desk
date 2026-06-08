@@ -392,6 +392,10 @@ function handleGuideClick(key: GuideKey, anchor?: HTMLElement, immediate = false
 }
 
 function showAreaGuide(key: GuideKey, anchor?: HTMLElement): void {
+  if (activeGuideKey.value === key && bubbleVisible.value && Boolean(bubbleMessage.value)) {
+    if (anchor) companionPosition.value = getCompanionPosition(anchor);
+    return;
+  }
   if (isGuideAreaEmpty(key, anchor)) {
     showGuideBubble(key, anchor, false);
     return;
@@ -1456,7 +1460,11 @@ function showToolBubble(message: string, anchor?: HTMLElement): void {
 }
 
 function showDeclutterBubble(anchor?: HTMLElement): void {
-  showBubble("declutter", anchor);
+  showBubble("declutter", anchor, { guideKey: "todos" });
+}
+
+function showQuickDeclutterBubble(anchor?: HTMLElement): void {
+  showBubble("quickDeclutter", anchor, { guideKey: "quickButtons" });
 }
 
 function dismissToolBubble(): void {
@@ -2050,7 +2058,7 @@ function moveItem<T extends { id: string }>(items: T[], dragId: string, targetId
           @toggle-show-hidden="state.showHiddenQuickButtons = !state.showHiddenQuickButtons; persistNow()"
           @reorder="reorderQuickButtons"
           @guide="handleGuideClick"
-          @declutter="showDeclutterBubble"
+          @declutter="showQuickDeclutterBubble"
         />
       </template>
 

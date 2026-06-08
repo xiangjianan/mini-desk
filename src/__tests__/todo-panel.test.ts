@@ -253,6 +253,7 @@ describe("TodoPanel", () => {
     expect(wrapper.findAll(".dropdown-option").map((option) => option.text())).toEqual([
       "清理已完成",
       "隐藏已完成",
+      "粘贴",
       "新建列表",
       "编辑列表",
       "删除列表",
@@ -319,6 +320,7 @@ describe("TodoPanel", () => {
     expect(wrapper.findAll(".dropdown-option").map((option) => option.text())).toEqual([
       "清理已完成",
       "隐藏已完成",
+      "粘贴",
       "新建列表",
       "编辑列表",
       "删除列表",
@@ -781,6 +783,7 @@ describe("TodoPanel", () => {
     expect(wrapper.findAll(".dropdown-option").map((option) => option.text())).toEqual([
       "清理已完成",
       "显示已完成",
+      "粘贴",
       "新建列表",
       "编辑列表",
       "删除列表",
@@ -834,6 +837,7 @@ describe("TodoPanel", () => {
     expect(wrapper.findAll(".dropdown-option").map((option) => option.text())).toEqual([
       "清理已完成",
       "显示已完成",
+      "粘贴",
       "新建列表",
       "编辑列表",
       "删除列表",
@@ -2852,6 +2856,53 @@ describe("TodoPanel", () => {
 
     expect(readText).toHaveBeenCalled();
     expect(wrapper.emitted("update")?.at(-1)).toEqual(["morning", "a", "第一项粘贴内容"]);
+    wrapper.unmount();
+  });
+
+  it("pastes clipboard text from a blank reminder list context menu above the new-list action", async () => {
+    const readText = vi.fn().mockResolvedValue("任务 A\n\n任务 B");
+    Object.assign(navigator, { clipboard: { readText, writeText: vi.fn() } });
+    const wrapper = mount(TodoPanel, {
+      props: {
+        todos: {
+          morning: [{ id: "a", text: "已有任务", done: false }],
+          noon: [],
+          evening: [],
+        },
+        showCompleted: { morning: false, noon: false, evening: false },
+        titles: DEFAULT_TITLES,
+      },
+      global: {
+        stubs: {
+          Button: true,
+          Checkbox: checkboxStub,
+          Dropdown: dropdownStub,
+          NCheckbox: checkboxStub,
+          NDropdown: dropdownStub,
+          NTooltip: tooltipStub,
+        },
+      },
+    });
+
+    await wrapper.get('.todo-section[data-period="morning"]').trigger("contextmenu");
+    const optionTexts = wrapper.findAll(".dropdown-option").map((option) => option.text());
+
+    expect(optionTexts).toEqual([
+      "清理已完成",
+      "显示已完成",
+      "粘贴",
+      "新建列表",
+      "编辑列表",
+      "删除列表",
+      "Tips",
+    ]);
+    expect(optionTexts.indexOf("粘贴")).toBeLessThan(optionTexts.indexOf("新建列表"));
+
+    await wrapper.findAll(".dropdown-option").find((option) => option.text() === "粘贴")?.trigger("click");
+    await Promise.resolve();
+
+    expect(readText).toHaveBeenCalled();
+    expect(wrapper.emitted("createFromText")?.[0]).toEqual(["morning", ["任务 A", "任务 B"]]);
     wrapper.unmount();
   });
 

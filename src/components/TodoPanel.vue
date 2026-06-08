@@ -151,6 +151,7 @@ const menuOptions = computed<DropdownOption[]>(() => {
     return [
       { label: uiText.value.todo.clearCompleted, key: "clear-completed", icon: renderIcon(CheckmarkDoneOutline) },
       { label: isCompletedVisible(list.id) ? uiText.value.todo.hideCompleted : uiText.value.todo.showCompleted, key: "toggle-completed", icon: renderIcon(isCompletedVisible(list.id) ? EyeOffOutline : EyeOutline) },
+      { label: uiText.value.common.paste, key: "paste", icon: renderIcon(ClipboardOutline) },
       { label: uiText.value.todo.newList, key: "create-list", icon: renderIcon(AddOutline) },
       { label: uiText.value.todo.editList, key: "edit-list", icon: renderIcon(CreateOutline) },
       { label: uiText.value.todo.deleteList, key: "delete-list", disabled: effectiveTodoLists.value.length <= 1, icon: renderIcon(TrashOutline) },
@@ -835,6 +836,11 @@ async function handleMenuSelect(key: string): Promise<void> {
     emit("clearCompleted", period, getTodoSectionAnchor(period));
     return;
   }
+  if (key === "paste" && !id) {
+    await pasteTodosFromClipboard(period);
+    closeMenu();
+    return;
+  }
   if (key === "copy" && id) {
     if (target && canCopyTextSelection(period, id, target)) {
       await copyTextSelection(target);
@@ -1040,6 +1046,24 @@ async function pasteTextFromClipboard(period: TodoPeriod, id: string, target: HT
     return;
   }
   emit("update", period, id, target.value);
+}
+
+async function pasteTodosFromClipboard(period: TodoPeriod): Promise<void> {
+  const text = await readClipboardText();
+  const texts = splitDroppedTodoText(text ?? "");
+  if (texts.length === 0) return;
+  emit("createFromText", period, texts);
+}
+
+async function readClipboardText(): Promise<string | undefined> {
+  if (navigator.clipboard?.readText) {
+    try {
+      return await navigator.clipboard.readText();
+    } catch {
+      return undefined;
+    }
+  }
+  return undefined;
 }
 
 function pasteTextWithBrowserCommand(target: HTMLInputElement, range: { start: number; end: number }): boolean {
