@@ -438,7 +438,7 @@ function handleInputFocus(period: TodoPeriod, todo: TodoItem, event: FocusEvent)
 }
 
 function emitDeclutterPrompt(period: TodoPeriod, anchor: HTMLElement): void {
-  if ((props.todos[period] ?? []).length < 7) return;
+  if ((visibleOrdered.value[period] ?? []).length < 7) return;
   emit("declutter", anchor);
 }
 

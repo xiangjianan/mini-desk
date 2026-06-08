@@ -169,6 +169,39 @@ describe("TodoPanel", () => {
     expect(wrapper.emitted("declutter")).toBeUndefined();
   });
 
+  it("counts only visible reminder items before emitting a declutter prompt", async () => {
+    const wrapper = mount(TodoPanel, {
+      props: {
+        todoLists: defaultTodoLists,
+        todos: {
+          morning: [
+            ...Array.from({ length: 6 }, (_, index) => ({ id: `todo-${index}`, text: `事项 ${index + 1}`, done: false })),
+            { id: "done", text: "已完成事项", done: true },
+          ],
+          noon: [],
+          evening: [],
+        },
+        showCompleted: { morning: false, noon: false, evening: false },
+        titles: DEFAULT_TITLES,
+      },
+      global: {
+        stubs: {
+          Checkbox: checkboxStub,
+          Dropdown: dropdownStub,
+          NCheckbox: checkboxStub,
+          NDatePicker: datePickerStub,
+          NDropdown: dropdownStub,
+          NTooltip: tooltipStub,
+        },
+      },
+    });
+
+    await wrapper.get('[data-testid="todo-input-morning"]').trigger("focus");
+
+    expect(wrapper.findAll('[data-testid="todo-input-morning"]')).toHaveLength(6);
+    expect(wrapper.emitted("declutter")).toBeUndefined();
+  });
+
   it("renders reminder sections from configurable todo lists", () => {
     const wrapper = mount(TodoPanel, {
       props: {
