@@ -58,7 +58,7 @@ describe("state compatibility", () => {
     expect(state.language).toBe("zh");
     expect(state.spaces).toEqual([{ id: "workspace", title: "📝 备忘录", lines: [] }]);
     expect(state.activeSpaceId).toBe("workspace");
-    expect(state.showCompletedTodos).toEqual({ morning: false, noon: false, evening: false });
+    expect(state.showCompletedTodos).toEqual({ morning: false });
   });
 
   it("normalizes and serializes the app language preference", () => {
@@ -90,11 +90,9 @@ describe("state compatibility", () => {
 
     expect(state.todoLists.map((list) => ({ id: list.id, title: list.title }))).toEqual([
       { id: "morning", title: "✅ 提醒事项" },
-      { id: "noon", title: "💻 工作" },
-      { id: "evening", title: "📚 学习" },
     ]);
-    expect(Object.keys(state.todos)).toEqual(["morning", "noon", "evening"]);
-    expect(state.showCompletedTodos).toEqual({ morning: false, noon: false, evening: false });
+    expect(Object.keys(state.todos)).toEqual(["morning"]);
+    expect(state.showCompletedTodos).toEqual({ morning: false });
   });
 
   it("migrates legacy fixed reminder lists into configurable todoLists", () => {
@@ -174,14 +172,12 @@ describe("state compatibility", () => {
 
     const expected = [
       { id: "morning", title: "✅ 提醒事项" },
-      { id: "noon", title: "💻 工作" },
-      { id: "evening", title: "📚 学习" },
     ];
 
     expect(emptyState.todoLists.map((list) => ({ id: list.id, title: list.title }))).toEqual(expected);
     expect(invalidState.todoLists.map((list) => ({ id: list.id, title: list.title }))).toEqual(expected);
-    expect(Object.keys(emptyState.todos)).toEqual(["morning", "noon", "evening"]);
-    expect(Object.keys(invalidState.todos)).toEqual(["morning", "noon", "evening"]);
+    expect(Object.keys(emptyState.todos)).toEqual(["morning"]);
+    expect(Object.keys(invalidState.todos)).toEqual(["morning"]);
   });
 
   it("serializes configurable todo lists without orphan records", () => {
@@ -324,9 +320,8 @@ describe("state compatibility", () => {
     });
     expect(state.todos.morning).toHaveLength(2);
     expect(state.todos.morning[0].starred).toBe(false);
-    expect(state.todos.noon).toEqual([]);
     expect(state.workspaceLines).toEqual([{ text: "child", indent: 1 }]);
-    expect(state.showCompletedTodos).toEqual({ morning: true, noon: true, evening: true });
+    expect(state.showCompletedTodos).toEqual({ morning: true });
   });
 
   it("normalizes per-period completed reminder visibility", () => {
@@ -337,7 +332,7 @@ describe("state compatibility", () => {
       },
     });
 
-    expect(state.showCompletedTodos).toEqual({ morning: true, noon: false, evening: false });
+    expect(state.showCompletedTodos).toEqual({ morning: true });
   });
 
   it("normalizes legacy API header text into key-value pairs", () => {

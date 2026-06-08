@@ -2532,7 +2532,7 @@ button.todo-notify-button.has-time {
 
 .todo-item.is-notify-flashing,
 .today-focus-item.is-notify-flashing {
-  animation: todo-notify-flash 0.8s ease-in-out 2;
+  animation: todo-notify-flash 0.8s ease-in-out 3;
 }
 
 .deadline-overdue .todo-deadline-label {

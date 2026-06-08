@@ -690,6 +690,7 @@ describe("TodoPanel", () => {
   it("shows completed reminders and a weak divider when enabled", () => {
     const wrapper = mount(TodoPanel, {
       props: {
+        todoLists: defaultTodoLists,
         showCompleted: { morning: true, noon: false, evening: false },
         todos: {
           morning: [
@@ -721,6 +722,7 @@ describe("TodoPanel", () => {
   it("shows a clear button on the completed divider", async () => {
     const wrapper = mount(TodoPanel, {
       props: {
+        todoLists: defaultTodoLists,
         showCompleted: { morning: true, noon: false, evening: false },
         todos: {
           morning: [
@@ -805,6 +807,7 @@ describe("TodoPanel", () => {
   it("applies completed visibility per reminder section", async () => {
     const wrapper = mount(TodoPanel, {
       props: {
+        todoLists: defaultTodoLists,
         showCompleted: { morning: true, noon: false, evening: false },
         todos: {
           morning: [
@@ -850,6 +853,7 @@ describe("TodoPanel", () => {
   it("emits star toggles and aggregates starred reminders into today's focus", async () => {
     const wrapper = mount(TodoPanel, {
       props: {
+        todoLists: defaultTodoLists,
         todos: {
           morning: [{ id: "a", text: "重点未完成", done: false, starred: true }],
           noon: [{ id: "b", text: "重点已完成", done: true, starred: true }],
@@ -903,6 +907,7 @@ describe("TodoPanel", () => {
   it("filters completed focus reminders through their source list completed visibility", () => {
     const wrapper = mount(TodoPanel, {
       props: {
+        todoLists: defaultTodoLists,
         todos: {
           morning: [
             { id: "a", text: "隐藏列表已完成重点", done: true, starred: true },
@@ -1127,6 +1132,7 @@ describe("TodoPanel", () => {
   it("sorts today's focus reminders by deadline before undated starred items", () => {
     const wrapper = mount(TodoPanel, {
       props: {
+        todoLists: defaultTodoLists,
         todos: {
           morning: [
             { id: "a", text: "明天早上", done: false, starred: true, notifyAt: new Date(2026, 4, 26, 9).getTime() },
@@ -2062,7 +2068,7 @@ describe("TodoPanel", () => {
     expect(deadlineLabelRule).not.toContain("text-overflow: ellipsis");
   });
 
-  it("marks the triggered reminder row with a two-pulse notification flash class", () => {
+  it("marks the triggered reminder row with a three-pulse notification flash class", () => {
     const wrapper = mount(TodoPanel, {
       props: {
         todos: {
@@ -2093,7 +2099,7 @@ describe("TodoPanel", () => {
     expect(wrapper.findAll(".todo-item")[0].classes()).toContain("is-notify-flashing");
     expect(wrapper.findAll(".todo-item")[1].classes()).not.toContain("is-notify-flashing");
     expect(flashRule).toContain("animation: todo-notify-flash");
-    expect(flashRule).toContain("2");
+    expect(flashRule).toContain("3");
     wrapper.unmount();
   });
 
@@ -2899,6 +2905,7 @@ describe("TodoPanel", () => {
     Object.assign(navigator, { clipboard: { readText, writeText: vi.fn() } });
     const wrapper = mount(TodoPanel, {
       props: {
+        todoLists: defaultTodoLists,
         todos: {
           morning: [{ id: "a", text: "已有任务", done: false }],
           noon: [],
@@ -3162,6 +3169,7 @@ describe("TodoPanel", () => {
   it("emits dropped external text from an existing reminder row", async () => {
     const wrapper = mount(TodoPanel, {
       props: {
+        todoLists: defaultTodoLists,
         todos: {
           morning: [{ id: "a", text: "已有任务", done: false }],
           noon: [],
@@ -3324,6 +3332,7 @@ describe("TodoPanel", () => {
   it("keeps internal dragged todo drops from creating external text todos", async () => {
     const wrapper = mount(TodoPanel, {
       props: {
+        todoLists: defaultTodoLists,
         todos: {
           morning: [{ id: "a", text: "已有任务", done: false }],
           noon: [],
@@ -3360,6 +3369,7 @@ describe("TodoPanel", () => {
   it("drops an internal reminder into another list at the mouse position instead of always at the bottom", async () => {
     const wrapper = mount(TodoPanel, {
       props: {
+        todoLists: defaultTodoLists,
         todos: {
           morning: [{ id: "a", text: "拖拽项", done: false }],
           noon: [

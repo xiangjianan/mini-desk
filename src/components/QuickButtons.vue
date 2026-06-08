@@ -30,6 +30,7 @@ const emit = defineEmits<{
   toggleShowHidden: [];
   reorder: [dragId: string, targetId: string];
   reorderTag: [dragId: string, targetId: string];
+  moveToTag: [buttonId: string, tagId?: string, targetId?: string];
   guide: [key: GuideKey, anchor: HTMLElement, immediate?: boolean];
   declutter: [anchor: HTMLElement];
 }>();
@@ -383,13 +384,57 @@ function onQuickAfterMove(el: Element): void {
 }
 
 function onTagDrop(groupId: string): void {
-  if (!draggingTagId.value || draggingTagId.value === groupId) return;
+  if (draggingId.value && isQuickButtonTargetGroup(groupId)) {
+    const targetTagId = getGroupTagId(groupId);
+    if (getQuickButtonTagId(draggingId.value) !== targetTagId) emit("moveToTag", draggingId.value, targetTagId);
+    return;
+  }
+  if (!draggingTagId.value || draggingTagId.value === groupId || !isRealTagGroup(groupId)) return;
   emit("reorderTag", draggingTagId.value, groupId);
 }
 
-function handleTagDragOver(event: DragEvent, reorderable: boolean): void {
-  if (!reorderable) return;
+function handleTagDragOver(event: DragEvent, groupId: string): void {
+  if (!isQuickButtonTargetGroup(groupId) && !isRealTagGroup(groupId)) return;
+  if (!draggingId.value && !draggingTagId.value) return;
+  if (draggingTagId.value && !isRealTagGroup(groupId)) return;
   event.preventDefault();
+}
+
+function getQuickButtonTagId(id: string): string | undefined {
+  return props.buttons.find((button) => button.id === id)?.tagId;
+}
+
+function isRealTagGroup(groupId: string): boolean {
+  return props.tags.some((tag) => tag.id === groupId);
+}
+
+function isQuickButtonTargetGroup(groupId: string): boolean {
+  return groupId === "__other" || isRealTagGroup(groupId);
+}
+
+function getGroupTagId(groupId: string): string | undefined {
+  return groupId === "__other" ? undefined : groupId;
+}
+
+function handleQuickButtonDrop(targetButtonId: string, targetGroupId: string): void {
+  if (!draggingId.value || draggingId.value === targetButtonId) return;
+  if (isQuickButtonTargetGroup(targetGroupId)) {
+    const targetTagId = getGroupTagId(targetGroupId);
+    if (getQuickButtonTagId(draggingId.value) !== targetTagId) {
+      emit("moveToTag", draggingId.value, targetTagId, targetButtonId);
+      return;
+    }
+  }
+  emit("reorder", draggingId.value, targetButtonId);
+}
+
+function handleQuickGroupDrop(groupId: string): void {
+  if (draggingId.value && isQuickButtonTargetGroup(groupId)) {
+    const targetTagId = getGroupTagId(groupId);
+    if (getQuickButtonTagId(draggingId.value) !== targetTagId) emit("moveToTag", draggingId.value, targetTagId);
+    return;
+  }
+  onTagDrop(groupId);
 }
 </script>
 
@@ -433,6 +478,8 @@ function handleTagDragOver(event: DragEvent, reorderable: boolean): void {
           :key="group.id"
           class="quick-tag-group"
           :data-tag-id="group.id"
+          @dragover="handleTagDragOver($event, group.id)"
+          @drop.stop.prevent="handleQuickGroupDrop(group.id)"
         >
           <div
             v-if="group.title"
@@ -440,8 +487,8 @@ function handleTagDragOver(event: DragEvent, reorderable: boolean): void {
             :class="{ 'is-dragging': draggingTagId === group.id, 'is-static': !group.reorderable }"
             :draggable="group.reorderable"
             @dragstart="group.reorderable && (draggingTagId = group.id)"
-            @dragover="handleTagDragOver($event, group.reorderable)"
-            @drop="group.reorderable && onTagDrop(group.id)"
+            @dragover="handleTagDragOver($event, group.id)"
+            @drop.stop.prevent="onTagDrop(group.id)"
             @dragend="draggingTagId = null"
           >
             <span class="quick-tag-title">{{ group.title }}</span>
@@ -472,7 +519,7 @@ function handleTagDragOver(event: DragEvent, reorderable: boolean): void {
               @contextmenu.stop="openMenu($event, button.id)"
               @dragstart="draggingId = button.id"
               @dragover.prevent
-              @drop="draggingId && draggingId !== button.id && emit('reorder', draggingId, button.id)"
+              @drop.stop.prevent="handleQuickButtonDrop(button.id, group.id)"
               @dragend="draggingId = null"
             >
               <NIcon v-if="button.type === 'text'" class="quick-button-icon" :component="CopyOutline" />

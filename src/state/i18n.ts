@@ -942,6 +942,13 @@ export function getDefaultTodoLists(language: AppLanguage = DEFAULT_LANGUAGE): T
   const titles = DEFAULT_TODO_TITLES[normalizeLanguage(language)];
   return [
     { id: "morning", title: titles.morning, collapsed: false, compact: false },
+  ];
+}
+
+export function getLegacyDefaultTodoLists(language: AppLanguage = DEFAULT_LANGUAGE): TodoListConfig[] {
+  const titles = DEFAULT_TODO_TITLES[normalizeLanguage(language)];
+  return [
+    { id: "morning", title: titles.morning, collapsed: false, compact: false },
     { id: "noon", title: titles.noon, collapsed: false, compact: false },
     { id: "evening", title: titles.evening, collapsed: false, compact: false },
   ];

@@ -213,6 +213,63 @@ describe("QuickButtons", () => {
     wrapper.unmount();
   });
 
+  it("emits a tag move when a quick button is dropped on another tag heading", async () => {
+    const wrapper = mountQuickButtons({
+      tags: [
+        { id: "tag-a", title: "标签 A" },
+        { id: "tag-b", title: "标签 B" },
+      ],
+      buttons: [
+        { id: "a", title: "A1", value: "a", type: "text", hidden: false, tagId: "tag-a" },
+        { id: "b", title: "B1", value: "b", type: "text", hidden: false, tagId: "tag-b" },
+      ],
+    });
+
+    await wrapper.findAll(".quick-button")[0].trigger("dragstart");
+    await wrapper.findAll(".quick-tag-heading")[1].trigger("drop");
+
+    expect(wrapper.emitted("moveToTag")?.[0]).toEqual(["a", "tag-b"]);
+
+    wrapper.unmount();
+  });
+
+  it("emits a tag move when a quick button is dropped on another tag area", async () => {
+    const wrapper = mountQuickButtons({
+      tags: [
+        { id: "tag-a", title: "标签 A" },
+        { id: "tag-b", title: "标签 B" },
+      ],
+      buttons: [
+        { id: "a", title: "A1", value: "a", type: "text", hidden: false, tagId: "tag-a" },
+        { id: "b", title: "B1", value: "b", type: "text", hidden: false, tagId: "tag-b" },
+      ],
+    });
+
+    await wrapper.findAll(".quick-button")[0].trigger("dragstart");
+    await wrapper.findAll(".quick-tag-group")[1].trigger("drop");
+
+    expect(wrapper.emitted("moveToTag")?.[0]).toEqual(["a", "tag-b"]);
+
+    wrapper.unmount();
+  });
+
+  it("emits an untagged move when a quick button is dropped on the other tag area", async () => {
+    const wrapper = mountQuickButtons({
+      tags: [{ id: "tag-a", title: "标签 A" }],
+      buttons: [
+        { id: "a", title: "A1", value: "a", type: "text", hidden: false, tagId: "tag-a" },
+        { id: "other", title: "未分类", value: "other", type: "text", hidden: false },
+      ],
+    });
+
+    await wrapper.findAll(".quick-button")[0].trigger("dragstart");
+    await wrapper.findAll(".quick-tag-group")[1].trigger("drop");
+
+    expect(wrapper.emitted("moveToTag")?.[0]).toEqual(["a", undefined]);
+
+    wrapper.unmount();
+  });
+
   it("emits a declutter prompt when one quick tag has more than twelve visible buttons", async () => {
     const wrapper = mountQuickButtons({
       tags: [{ id: "tag-work", title: "工作" }],

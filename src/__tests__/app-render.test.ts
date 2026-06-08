@@ -196,8 +196,8 @@ describe("App shell", () => {
       expect(wrapper.text()).not.toContain("🔧 Tools");
       expect(wrapper.text()).toContain("Quick Actions");
       expect(wrapper.text()).toContain("Reminders");
-      expect(wrapper.text()).toContain("Work");
-      expect(wrapper.text()).toContain("Study");
+      expect(wrapper.text()).not.toContain("💻 Work");
+      expect(wrapper.text()).not.toContain("📚 Study");
       expect(wrapper.findAll(".space-tab").map((tab) => tab.text())).toEqual(["📝 Memo"]);
       expect(wrapper.findAll(".tool-tab").map((tab) => tab.text().trim())).toEqual(["", ""]);
       expect(wrapper.findAll(".tool-tab").map((tab) => tab.attributes("aria-label"))).toEqual(["Calculator", "Color"]);
@@ -422,7 +422,7 @@ describe("App shell", () => {
       await nextTick();
 
       const stored = JSON.parse(localStorage.getItem(STORAGE_KEY) || "{}");
-      expect(stored.todoLists).toHaveLength(4);
+      expect(stored.todoLists).toHaveLength(2);
       expect(stored.todoLists.at(-1).title).toBe("工作提醒");
       expect(stored.todos[stored.todoLists.at(-1).id]).toEqual([]);
     } finally {
@@ -1481,7 +1481,12 @@ describe("App shell", () => {
 
       expect(wrapper.get('.todo-item[data-todo-id="todo-1"]').classes()).toContain("is-notify-flashing");
 
-      await vi.advanceTimersByTimeAsync(1600);
+      await vi.advanceTimersByTimeAsync(2399);
+      await wrapper.vm.$nextTick();
+
+      expect(wrapper.get('.todo-item[data-todo-id="todo-1"]').classes()).toContain("is-notify-flashing");
+
+      await vi.advanceTimersByTimeAsync(1);
       await wrapper.vm.$nextTick();
 
       expect(wrapper.get('.todo-item[data-todo-id="todo-1"]').classes()).not.toContain("is-notify-flashing");
@@ -2215,6 +2220,59 @@ describe("App shell", () => {
 
       const stored = JSON.parse(localStorage.getItem(STORAGE_KEY) || "{}");
       expect(stored.quickTags.map((tag: { id: string }) => tag.id)).toEqual(["tag-b", "tag-a"]);
+    } finally {
+      wrapper.unmount();
+    }
+  });
+
+  it("persists quick action tag changes when a quick button is moved to another tag", async () => {
+    localStorage.setItem(
+      STORAGE_KEY,
+      JSON.stringify({
+        ...defaultState(),
+        quickTags: [
+          { id: "tag-a", title: "标签 A" },
+          { id: "tag-b", title: "标签 B" },
+        ],
+        quickButtons: [
+          { id: "a", title: "A", value: "a", type: "text", hidden: false, tagId: "tag-a" },
+          { id: "b", title: "B", value: "b", type: "text", hidden: false, tagId: "tag-b" },
+        ],
+      }),
+    );
+    const wrapper = mountApp();
+
+    try {
+      wrapper.getComponent(QuickButtons).vm.$emit("moveToTag", "a", "tag-b");
+      await wrapper.vm.$nextTick();
+
+      const stored = JSON.parse(localStorage.getItem(STORAGE_KEY) || "{}");
+      expect(stored.quickButtons.find((button: { id: string }) => button.id === "a")).toMatchObject({ tagId: "tag-b" });
+    } finally {
+      wrapper.unmount();
+    }
+  });
+
+  it("persists quick action tag removal when a quick button is moved to the untagged area", async () => {
+    localStorage.setItem(
+      STORAGE_KEY,
+      JSON.stringify({
+        ...defaultState(),
+        quickTags: [{ id: "tag-a", title: "标签 A" }],
+        quickButtons: [
+          { id: "a", title: "A", value: "a", type: "text", hidden: false, tagId: "tag-a" },
+          { id: "other", title: "未分类", value: "other", type: "text", hidden: false },
+        ],
+      }),
+    );
+    const wrapper = mountApp();
+
+    try {
+      wrapper.getComponent(QuickButtons).vm.$emit("moveToTag", "a", undefined);
+      await wrapper.vm.$nextTick();
+
+      const stored = JSON.parse(localStorage.getItem(STORAGE_KEY) || "{}");
+      expect(stored.quickButtons.find((button: { id: string }) => button.id === "a")).not.toHaveProperty("tagId");
     } finally {
       wrapper.unmount();
     }

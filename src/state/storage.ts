@@ -1,7 +1,7 @@
 import { DEFAULT_SPACE_ID, DEFAULT_SPACE_TITLE, DEFAULT_TODO_LISTS, LEGACY_STORAGE_KEY, defaultState, STORAGE_KEY } from "./defaults";
 import { isValidDeadlineAt } from "./deadlines";
 import { normalizeCompanionGifTheme } from "./companionGifThemes";
-import { DEFAULT_SPACE_TITLES, DEFAULT_TITLES_BY_LANGUAGE, LEGACY_DEFAULT_TITLES_BY_LANGUAGE, OLDER_LEGACY_DEFAULT_TITLES_BY_LANGUAGE, getUiText, normalizeLanguage } from "./i18n";
+import { DEFAULT_SPACE_TITLES, DEFAULT_TITLES_BY_LANGUAGE, LEGACY_DEFAULT_TITLES_BY_LANGUAGE, OLDER_LEGACY_DEFAULT_TITLES_BY_LANGUAGE, getLegacyDefaultTodoLists, getUiText, normalizeLanguage } from "./i18n";
 import type {
   BoardState,
   CompanionCustomGif,
@@ -86,7 +86,7 @@ export function normalizeImportedState(payload: unknown): BoardState {
   const workspaceLines = normalizeLineCollection(typed.workspaceLines ?? typed.workspace);
   const storageLines = normalizeLineCollection(typed.storageLines ?? typed.storage);
   const spaces = normalizeSpaces(typed.spaces, workspaceLines, storageLines, customTitles);
-  const todoLists = normalizeTodoLists(typed.todoLists, customTitles);
+  const todoLists = normalizeTodoLists(typed.todoLists, customTitles, typed.todos, typed.showCompletedTodos);
   const language = normalizeLanguage(typed.language);
 
   const quickTags = normalizeQuickTags(typed.quickTags);
@@ -120,7 +120,12 @@ const LEGACY_TODO_TITLE_IDS: Record<string, string> = {
   evening: "todo-evening-title",
 };
 
-function normalizeTodoLists(value: unknown, customTitles: Record<string, string>): TodoListConfig[] {
+function normalizeTodoLists(
+  value: unknown,
+  customTitles: Record<string, string>,
+  legacyTodos?: unknown,
+  legacyCompletedVisibility?: unknown,
+): TodoListConfig[] {
   if (Array.isArray(value)) {
     const seen = new Set<string>();
     const lists = value
@@ -135,10 +140,31 @@ function normalizeTodoLists(value: unknown, customTitles: Record<string, string>
     if (lists.length > 0) return lists;
   }
 
-  return DEFAULT_TODO_LISTS.map((list) => ({
+  const fallbackLists = hasLegacyTodoListState(customTitles, legacyTodos, legacyCompletedVisibility)
+    ? getLegacyDefaultTodoLists()
+    : DEFAULT_TODO_LISTS;
+  return fallbackLists.map((list) => ({
     ...list,
     title: customTitles[LEGACY_TODO_TITLE_IDS[list.id] ?? ""] || list.title,
   }));
+}
+
+function hasLegacyTodoListState(
+  customTitles: Record<string, string>,
+  todos: unknown,
+  completedVisibility: unknown,
+): boolean {
+  const legacyIds = ["noon", "evening"];
+  if (legacyIds.some((id) => customTitles[LEGACY_TODO_TITLE_IDS[id]])) return true;
+  if (isPlainObject(todos)) {
+    const record = todos as Record<string, unknown>;
+    if (legacyIds.some((id) => Array.isArray(record[id]) && record[id].length > 0)) return true;
+  }
+  if (isPlainObject(completedVisibility)) {
+    const record = completedVisibility as Record<string, unknown>;
+    if (legacyIds.some((id) => record[id] === true)) return true;
+  }
+  return false;
 }
 
 function normalizeTodoListConfig(item: unknown): TodoListConfig | null {

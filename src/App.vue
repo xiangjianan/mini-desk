@@ -144,7 +144,7 @@ const MIN_COMPANION_POPOVER_RIGHT_EDGE = 260;
 const DEFAULT_DOCUMENT_TITLE = "Mini Desk";
 const NOTIFICATION_DOCUMENT_TITLE = "🔔 新提醒 · Mini Desk";
 const TITLE_FLASH_INTERVAL_MS = 750;
-const TODO_NOTIFICATION_FLASH_MS = 1600;
+const TODO_NOTIFICATION_FLASH_MS = 2400;
 const activeGuideKey = ref<GuideKey | null>(null);
 const versionBadgeTimer = ref<number | undefined>();
 
@@ -793,6 +793,15 @@ function reorderQuickButtons(dragId: string, targetId: string): void {
 
 function reorderQuickTags(dragId: string, targetId: string): void {
   moveItem(state.quickTags, dragId, targetId);
+  persistNow();
+}
+
+function moveQuickButtonToTag(buttonId: string, tagId?: string, targetId?: string): void {
+  const button = state.quickButtons.find((item) => item.id === buttonId);
+  if (!button) return;
+  if (tagId && !state.quickTags.some((tag) => tag.id === tagId)) return;
+  applyQuickTag(button, tagId);
+  if (targetId) moveItem(state.quickButtons, buttonId, targetId);
   persistNow();
 }
 
@@ -2176,6 +2185,7 @@ function moveItem<T extends { id: string }>(items: T[], dragId: string, targetId
           @toggle-show-hidden="state.showHiddenQuickButtons = !state.showHiddenQuickButtons; persistNow()"
           @reorder="reorderQuickButtons"
           @reorder-tag="reorderQuickTags"
+          @move-to-tag="moveQuickButtonToTag"
           @guide="handleGuideClick"
           @declutter="showQuickDeclutterBubble"
         />
