@@ -360,6 +360,28 @@ describe("state compatibility", () => {
     });
   });
 
+  it("normalizes quick action tags and keeps invalid tag references untagged", () => {
+    const state = normalizeImportedState({
+      quickTags: [
+        { id: "tag-a", title: "标签 A" },
+        { id: "tag-b", title: "标签 B" },
+        { id: "tag-a", title: "重复" },
+      ],
+      quickButtons: [
+        { id: "a", title: "A", value: "a", type: "text", tagId: "tag-a" },
+        { id: "orphan", title: "孤儿", value: "x", type: "text", tagId: "missing" },
+      ],
+    });
+
+    expect(state.quickTags).toEqual([
+      { id: "tag-a", title: "标签 A" },
+      { id: "tag-b", title: "标签 B" },
+    ]);
+    expect(state.quickButtons[0]).toMatchObject({ tagId: "tag-a" });
+    expect(state.quickButtons[1]).not.toHaveProperty("tagId");
+    expect(getSerializableState(state).quickTags).toEqual(state.quickTags);
+  });
+
   it("normalizes persisted spaces and starred reminders", () => {
     const state = normalizeImportedState({
       activeSpaceId: "project",

@@ -147,7 +147,93 @@ function readSource(path: string): string {
 }
 
 describe("QuickButtons", () => {
-  it("emits a declutter prompt when more than twelve visible quick buttons are clicked", async () => {
+  it("groups visible quick buttons by tag order and keeps untagged buttons under other", () => {
+    const wrapper = mountQuickButtons({
+      tags: [
+        { id: "tag-a", title: "标签 A" },
+        { id: "tag-b", title: "标签 B" },
+      ],
+      buttons: [
+        { id: "b", title: "B1", value: "b", type: "text", hidden: false, tagId: "tag-b" },
+        { id: "other", title: "未分类", value: "other", type: "text", hidden: false },
+        { id: "a", title: "A1", value: "a", type: "text", hidden: false, tagId: "tag-a" },
+      ],
+    });
+
+    expect(wrapper.findAll(".quick-tag-title").map((item) => item.text())).toEqual(["标签 A", "标签 B", "其他"]);
+    expect(wrapper.findAll(".quick-tag-group").map((group) => group.findAll(".quick-button").map((button) => button.text()))).toEqual([
+      ["A1"],
+      ["B1"],
+      ["未分类"],
+    ]);
+
+    wrapper.unmount();
+  });
+
+  it("offers existing quick tags as single-select choices while still allowing manual tag text", async () => {
+    const wrapper = mountQuickButtons({
+      tags: [{ id: "tag-tools", title: "工具" }],
+    });
+
+    await openDialog(wrapper);
+    expect(wrapper.get(".quick-tag-select").findAll("option").map((option) => option.text())).toEqual(["无标签", "工具"]);
+
+    await wrapper.findAll("input")[0].setValue("接口");
+    await wrapper.findAll("input")[1].setValue("https://api.example.test");
+    await wrapper.get(".quick-tag-select").setValue("工具");
+    await wrapper.get("form").trigger("submit.prevent");
+
+    expect(wrapper.emitted("save")?.[0][0]).toMatchObject({
+      title: "接口",
+      tagTitle: "工具",
+      value: "https://api.example.test",
+      type: "link",
+    });
+
+    wrapper.unmount();
+  });
+
+  it("emits tag reorder when a quick tag heading is dropped on another tag", async () => {
+    const wrapper = mountQuickButtons({
+      tags: [
+        { id: "tag-a", title: "标签 A" },
+        { id: "tag-b", title: "标签 B" },
+      ],
+      buttons: [
+        { id: "a", title: "A1", value: "a", type: "text", hidden: false, tagId: "tag-a" },
+        { id: "b", title: "B1", value: "b", type: "text", hidden: false, tagId: "tag-b" },
+      ],
+    });
+
+    await wrapper.findAll(".quick-tag-heading")[0].trigger("dragstart");
+    await wrapper.findAll(".quick-tag-heading")[1].trigger("drop");
+
+    expect(wrapper.emitted("reorderTag")?.[0]).toEqual(["tag-a", "tag-b"]);
+
+    wrapper.unmount();
+  });
+
+  it("emits a declutter prompt when one quick tag has more than twelve visible buttons", async () => {
+    const wrapper = mountQuickButtons({
+      tags: [{ id: "tag-work", title: "工作" }],
+      buttons: Array.from({ length: 13 }, (_, index) => ({
+        id: `quick-${index}`,
+        title: `按钮 ${index + 1}`,
+        value: `https://example.com/${index}`,
+        type: "link" as const,
+        hidden: false,
+        tagId: "tag-work",
+      })),
+    });
+
+    await wrapper.get(".quick-block").trigger("click");
+
+    expect(wrapper.emitted("declutter")?.[0]).toEqual([expect.any(HTMLElement)]);
+
+    wrapper.unmount();
+  });
+
+  it("emits a declutter prompt when the other quick tag has more than twelve visible buttons", async () => {
     const wrapper = mountQuickButtons({
       buttons: Array.from({ length: 13 }, (_, index) => ({
         id: `quick-${index}`,
@@ -161,6 +247,40 @@ describe("QuickButtons", () => {
     await wrapper.get(".quick-block").trigger("click");
 
     expect(wrapper.emitted("declutter")?.[0]).toEqual([expect.any(HTMLElement)]);
+
+    wrapper.unmount();
+  });
+
+  it("does not show a declutter prompt when more than twelve visible quick buttons are split across tags", async () => {
+    const wrapper = mountQuickButtons({
+      tags: [
+        { id: "tag-a", title: "标签 A" },
+        { id: "tag-b", title: "标签 B" },
+      ],
+      buttons: [
+        ...Array.from({ length: 7 }, (_, index) => ({
+          id: `a-${index}`,
+          title: `A ${index + 1}`,
+          value: `https://example.com/a/${index}`,
+          type: "link" as const,
+          hidden: false,
+          tagId: "tag-a",
+        })),
+        ...Array.from({ length: 7 }, (_, index) => ({
+          id: `b-${index}`,
+          title: `B ${index + 1}`,
+          value: `https://example.com/b/${index}`,
+          type: "link" as const,
+          hidden: false,
+          tagId: "tag-b",
+        })),
+      ],
+    });
+
+    await wrapper.get(".quick-block").trigger("click");
+
+    expect(wrapper.emitted("declutter")).toBeUndefined();
+    expect(wrapper.emitted("guide")?.[0]).toEqual(["quickButtons", expect.any(HTMLElement)]);
 
     wrapper.unmount();
   });
@@ -254,8 +374,8 @@ describe("QuickButtons", () => {
     await wrapper.findAll(".checkbox-stub")[2].trigger("click");
     await wrapper.findAll("input")[0].setValue("创建用户");
     await wrapper.findAll("input")[1].setValue("https://api.example.test/users");
-    await wrapper.findAll("select")[0].setValue("POST");
-    await wrapper.findAll("select")[1].setValue("json");
+    await wrapper.get(".quick-api-method-select").setValue("POST");
+    await wrapper.get(".quick-api-body-type-select").setValue("json");
     await wrapper.get(".quick-api-header-key").setValue("Authorization");
     await wrapper.get(".quick-api-header-value").setValue("Bearer test");
     await wrapper.get(".quick-api-add-header").trigger("click");

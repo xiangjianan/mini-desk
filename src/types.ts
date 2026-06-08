@@ -8,6 +8,10 @@ export interface QuickApiHeader {
   key: string;
   value: string;
 }
+export interface QuickTag {
+  id: string;
+  title: string;
+}
 export type TodoListId = string;
 export type TodoPeriod = TodoListId;
 export type TodoCompletedVisibility = Record<TodoListId, boolean>;
@@ -40,6 +44,7 @@ export interface QuickButton {
   title: string;
   value: string;
   type: QuickButtonType;
+  tagId?: string;
   apiMethod?: QuickApiMethod;
   apiHeaders?: QuickApiHeader[];
   apiBodyType?: QuickApiBodyType;
@@ -101,6 +106,7 @@ export interface BoardState {
   spaces: WorkspaceSpace[];
   activeSpaceId: string;
   images: StoredImage[];
+  quickTags: QuickTag[];
   quickButtons: QuickButton[];
   showHiddenQuickButtons: boolean;
   todoLists: TodoListConfig[];

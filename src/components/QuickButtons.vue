@@ -4,7 +4,7 @@ import type { Component, VNode } from "vue";
 import { NButton, NCheckbox, NDropdown, NIcon, NInput, NModal, NScrollbar, NSelect } from "naive-ui";
 import { AddOutline, CloudUploadOutline, CopyOutline, CreateOutline, EyeOffOutline, EyeOutline, HelpCircleOutline, TrashOutline } from "@vicons/ionicons5";
 import type { DropdownOption } from "naive-ui";
-import type { AppLanguage, GuideKey, QuickApiBodyType, QuickApiHeader, QuickApiMethod, QuickButton, QuickButtonType } from "../types";
+import type { AppLanguage, GuideKey, QuickApiBodyType, QuickApiHeader, QuickApiMethod, QuickButton, QuickButtonType, QuickTag } from "../types";
 import { GUIDE_MENU_OPTION } from "../state/defaults";
 import { getUiText } from "../state/i18n";
 import { CONTEXT_MENU_Z_INDEX, createExclusiveContextMenu } from "../utils/contextMenu";
@@ -13,20 +13,23 @@ import EditableTitle from "./EditableTitle.vue";
 const props = withDefaults(defineProps<{
   title: string;
   buttons: QuickButton[];
+  tags?: QuickTag[];
   showHidden: boolean;
   language?: AppLanguage;
 }>(), {
+  tags: () => [],
   language: "zh",
 });
 
 const emit = defineEmits<{
   titleUpdate: [id: string, value: string];
-  save: [payload: { id?: string; title: string; value: string; type: QuickButtonType; apiMethod?: QuickApiMethod; apiHeaders?: QuickApiHeader[]; apiBodyType?: QuickApiBodyType; apiBody?: string }];
+  save: [payload: { id?: string; title: string; value: string; type: QuickButtonType; tagTitle?: string; apiMethod?: QuickApiMethod; apiHeaders?: QuickApiHeader[]; apiBodyType?: QuickApiBodyType; apiBody?: string }];
   delete: [id: string, anchor?: HTMLElement];
   copy: [id: string, anchor?: HTMLElement];
   toggleHidden: [id: string];
   toggleShowHidden: [];
   reorder: [dragId: string, targetId: string];
+  reorderTag: [dragId: string, targetId: string];
   guide: [key: GuideKey, anchor: HTMLElement, immediate?: boolean];
   declutter: [anchor: HTMLElement];
 }>();
@@ -48,9 +51,10 @@ function createHeaderRows(headers: QuickApiHeader[] | undefined): QuickApiHeader
   return rows.length ? rows : [createHeaderRow()];
 }
 
-const form = reactive<{ title: string; value: string; type: QuickButtonType; apiMethod: QuickApiMethod; apiHeaders: QuickApiHeaderFormRow[]; apiBodyType: QuickApiBodyType; apiBody: string }>({
+const form = reactive<{ title: string; value: string; tagTitle: string; type: QuickButtonType; apiMethod: QuickApiMethod; apiHeaders: QuickApiHeaderFormRow[]; apiBodyType: QuickApiBodyType; apiBody: string }>({
   title: "",
   value: "",
+  tagTitle: "",
   type: "link",
   apiMethod: "GET",
   apiHeaders: [createHeaderRow()],
@@ -59,6 +63,7 @@ const form = reactive<{ title: string; value: string; type: QuickButtonType; api
 });
 const menu = ref<{ x: number; y: number; id?: string; anchor?: HTMLElement } | null>(null);
 const draggingId = ref<string | null>(null);
+const draggingTagId = ref<string | null>(null);
 const isDragHover = ref(false);
 const leavingHiddenIds = new Set<string>();
 const uiText = computed(() => getUiText(props.language));
@@ -73,6 +78,10 @@ const apiBodyTypeOptions = computed(() => [
   { label: uiText.value.quick.bodyText, value: "text" },
   { label: uiText.value.quick.bodyForm, value: "form" },
 ]);
+const tagOptions = computed(() => [
+  { label: uiText.value.quick.noTag, value: "" },
+  ...props.tags.map((tag) => ({ label: tag.title, value: tag.title })),
+]);
 
 function renderIcon(icon: Component): () => VNode {
   return () => h(NIcon, { size: 16 }, { default: () => h(icon) });
@@ -84,6 +93,24 @@ onUnmounted(exclusiveMenu.unmount);
 const visibleButtons = computed(() =>
   props.buttons.filter((button) => props.showHidden || !button.hidden),
 );
+const groupedButtons = computed(() => {
+  const visible = visibleButtons.value;
+  if (visible.length === 0) return [{ id: "__empty", title: "", buttons: [], reorderable: false }];
+  const groups = props.tags
+    .map((tag) => ({
+      id: tag.id,
+      title: tag.title,
+      buttons: visible.filter((button) => button.tagId === tag.id),
+      reorderable: true,
+    }))
+    .filter((group) => group.buttons.length > 0);
+  const taggedIds = new Set(props.tags.map((tag) => tag.id));
+  const otherButtons = visible.filter((button) => !button.tagId || !taggedIds.has(button.tagId));
+  if (otherButtons.length > 0) {
+    groups.push({ id: "__other", title: uiText.value.quick.otherTag, buttons: otherButtons, reorderable: false });
+  }
+  return groups.length > 0 ? groups : [{ id: "__empty", title: "", buttons: [], reorderable: false }];
+});
 const canSubmit = computed(() => {
   if (form.title.trim().length === 0 || form.value.trim().length === 0) return false;
   if (form.type !== "api") return true;
@@ -110,6 +137,7 @@ function openAdd(anchor?: HTMLElement): void {
   editingId.value = undefined;
   form.title = "";
   form.value = "";
+  form.tagTitle = "";
   form.type = "link";
   form.apiMethod = "GET";
   form.apiHeaders = [createHeaderRow()];
@@ -125,6 +153,7 @@ function openEdit(id: string): void {
   editingId.value = id;
   form.title = button.title;
   form.value = button.value;
+  form.tagTitle = getQuickTagTitle(button.tagId);
   form.type = button.type;
   form.apiMethod = button.apiMethod ?? "GET";
   form.apiHeaders = createHeaderRows(button.apiHeaders);
@@ -132,6 +161,11 @@ function openEdit(id: string): void {
   form.apiBody = button.apiBody ?? "";
   dialogOpen.value = true;
   menu.value = null;
+}
+
+function getQuickTagTitle(tagId?: string): string {
+  if (!tagId) return "";
+  return props.tags.find((tag) => tag.id === tagId)?.title ?? "";
 }
 
 function setQuickType(type: QuickButtonType): void {
@@ -168,6 +202,7 @@ function submit(): void {
     title: form.title.trim(),
     value: form.value,
     type: form.type,
+    tagTitle: form.tagTitle.trim(),
     ...(form.type === "api"
       ? { apiMethod: form.apiMethod, apiHeaders: getApiHeadersPayload(), apiBodyType: form.apiBodyType, apiBody: form.apiBody }
       : {}),
@@ -242,14 +277,23 @@ function handleAreaClick(event: MouseEvent): void {
   const target = event.target as HTMLElement;
   if (target.closest("button, input, textarea, .quick-button, .header-actions")) return;
   const anchor = event.currentTarget as HTMLElement;
-  if (visibleActiveButtonCount.value > 12) {
+  if (hasOverloadedVisibleGroup.value) {
     emit("declutter", anchor);
     return;
   }
   emit("guide", "quickButtons", anchor);
 }
 
-const visibleActiveButtonCount = computed(() => props.buttons.filter((button) => !button.hidden).length);
+const hasOverloadedVisibleGroup = computed(() => {
+  const tagIds = new Set(props.tags.map((tag) => tag.id));
+  const counts = new Map<string, number>();
+  props.buttons.forEach((button) => {
+    if (button.hidden) return;
+    const groupId = button.tagId && tagIds.has(button.tagId) ? button.tagId : "__other";
+    counts.set(groupId, (counts.get(groupId) ?? 0) + 1);
+  });
+  return Array.from(counts.values()).some((count) => count > 12);
+});
 
 function handleToggleShowHidden(anchor?: HTMLElement): void {
   emit("toggleShowHidden");
@@ -337,6 +381,16 @@ function onQuickAfterMove(el: Element): void {
   const e = el as HTMLElement;
   e.style.transition = "";
 }
+
+function onTagDrop(groupId: string): void {
+  if (!draggingTagId.value || draggingTagId.value === groupId) return;
+  emit("reorderTag", draggingTagId.value, groupId);
+}
+
+function handleTagDragOver(event: DragEvent, reorderable: boolean): void {
+  if (!reorderable) return;
+  event.preventDefault();
+}
 </script>
 
 <template>
@@ -373,40 +427,61 @@ function onQuickAfterMove(el: Element): void {
     </div>
 
     <NScrollbar class="quick-buttons-scrollbar" :aria-label="uiText.quick.list" @click="closeMenu" @contextmenu="openAreaMenu">
-      <TransitionGroup
-        :css="false"
-        tag="div"
-        class="quick-buttons"
-        @before-enter="onQuickBeforeEnter"
-        @enter="onQuickEnter"
-        @after-enter="onQuickAfterEnter"
-        @before-leave="onQuickBeforeLeave"
-        @leave="onQuickLeave"
-        @after-leave="onQuickAfterLeave"
-        @before-move="onQuickBeforeMove"
-        @move="onQuickMove"
-        @after-move="onQuickAfterMove"
-      >
-        <button
-          v-for="button in visibleButtons"
-          :key="button.id"
-          class="quick-button"
-          :class="{ 'is-hidden': button.hidden, 'is-copy': button.type === 'text', 'is-api': button.type === 'api', 'is-dragging': draggingId === button.id }"
-          :data-id="button.id"
-          type="button"
-          draggable="true"
-          @click="emit('copy', button.id, $event.currentTarget as HTMLElement)"
-          @contextmenu.stop="openMenu($event, button.id)"
-          @dragstart="draggingId = button.id"
-          @dragover.prevent
-          @drop="draggingId && draggingId !== button.id && emit('reorder', draggingId, button.id)"
-          @dragend="draggingId = null"
+      <div class="quick-tag-groups">
+        <section
+          v-for="group in groupedButtons"
+          :key="group.id"
+          class="quick-tag-group"
+          :data-tag-id="group.id"
         >
-          <NIcon v-if="button.type === 'text'" class="quick-button-icon" :component="CopyOutline" />
-          <NIcon v-else-if="button.type === 'api'" class="quick-button-icon" :component="CloudUploadOutline" />
-          <span>{{ button.title }}</span>
-        </button>
-      </TransitionGroup>
+          <div
+            v-if="group.title"
+            class="quick-tag-heading"
+            :class="{ 'is-dragging': draggingTagId === group.id, 'is-static': !group.reorderable }"
+            :draggable="group.reorderable"
+            @dragstart="group.reorderable && (draggingTagId = group.id)"
+            @dragover="handleTagDragOver($event, group.reorderable)"
+            @drop="group.reorderable && onTagDrop(group.id)"
+            @dragend="draggingTagId = null"
+          >
+            <span class="quick-tag-title">{{ group.title }}</span>
+          </div>
+          <TransitionGroup
+            :css="false"
+            tag="div"
+            class="quick-buttons"
+            @before-enter="onQuickBeforeEnter"
+            @enter="onQuickEnter"
+            @after-enter="onQuickAfterEnter"
+            @before-leave="onQuickBeforeLeave"
+            @leave="onQuickLeave"
+            @after-leave="onQuickAfterLeave"
+            @before-move="onQuickBeforeMove"
+            @move="onQuickMove"
+            @after-move="onQuickAfterMove"
+          >
+            <button
+              v-for="button in group.buttons"
+              :key="button.id"
+              class="quick-button"
+              :class="{ 'is-hidden': button.hidden, 'is-copy': button.type === 'text', 'is-api': button.type === 'api', 'is-dragging': draggingId === button.id }"
+              :data-id="button.id"
+              type="button"
+              draggable="true"
+              @click="emit('copy', button.id, $event.currentTarget as HTMLElement)"
+              @contextmenu.stop="openMenu($event, button.id)"
+              @dragstart="draggingId = button.id"
+              @dragover.prevent
+              @drop="draggingId && draggingId !== button.id && emit('reorder', draggingId, button.id)"
+              @dragend="draggingId = null"
+            >
+              <NIcon v-if="button.type === 'text'" class="quick-button-icon" :component="CopyOutline" />
+              <NIcon v-else-if="button.type === 'api'" class="quick-button-icon" :component="CloudUploadOutline" />
+              <span>{{ button.title }}</span>
+            </button>
+          </TransitionGroup>
+        </section>
+      </div>
     </NScrollbar>
 
     <NDropdown
@@ -460,10 +535,22 @@ function onQuickAfterMove(el: Element): void {
             :autosize="form.type === 'text' ? { minRows: 4, maxRows: 8 } : undefined"
           />
         </label>
+        <label>
+          <span>{{ uiText.quick.tag }}</span>
+          <NSelect
+            v-model:value="form.tagTitle"
+            class="quick-tag-select"
+            :options="tagOptions"
+            filterable
+            tag
+            clearable
+            :placeholder="uiText.quick.noTag"
+          />
+        </label>
         <template v-if="form.type === 'api'">
           <label>
             <span>{{ uiText.quick.requestMethod }}</span>
-            <NSelect v-model:value="form.apiMethod" :options="apiMethodOptions" />
+            <NSelect v-model:value="form.apiMethod" class="quick-api-method-select" :options="apiMethodOptions" />
           </label>
           <label>
             <span>{{ uiText.quick.requestHeaders }}</span>
@@ -499,7 +586,7 @@ function onQuickAfterMove(el: Element): void {
           </label>
           <label>
             <span>{{ uiText.quick.requestBodyType }}</span>
-            <NSelect v-model:value="form.apiBodyType" :options="apiBodyTypeOptions" />
+            <NSelect v-model:value="form.apiBodyType" class="quick-api-body-type-select" :options="apiBodyTypeOptions" />
           </label>
           <label v-if="form.apiBodyType !== 'none'">
             <span>{{ uiText.quick.requestBody }}</span>

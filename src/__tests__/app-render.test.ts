@@ -1368,6 +1368,131 @@ describe("App shell", () => {
     }
   });
 
+  it("flashes the browser title after a due reminder notification until the tab is visible", async () => {
+    vi.useFakeTimers();
+    vi.setSystemTime(new Date(2026, 4, 25, 8, 0, 0));
+    const originalVisibilityDescriptor = Object.getOwnPropertyDescriptor(Document.prototype, "visibilityState")
+      ?? Object.getOwnPropertyDescriptor(document, "visibilityState");
+    Object.defineProperty(document, "visibilityState", { configurable: true, get: () => "hidden" });
+    const notificationSpy = vi.fn();
+    class NotificationStub {
+      static permission: NotificationPermission = "granted";
+      static requestPermission = vi.fn();
+
+      constructor(title: string, options?: NotificationOptions) {
+        notificationSpy(title, options);
+      }
+    }
+    vi.stubGlobal("Notification", NotificationStub);
+    localStorage.setItem(
+      STORAGE_KEY,
+      JSON.stringify({
+        todos: {
+          morning: [{ id: "todo-1", text: "喝水", done: false }],
+        },
+      }),
+    );
+    const wrapper = mountApp();
+
+    try {
+      const notifyAt = new Date(2026, 4, 25, 8, 0, 1).getTime();
+      wrapper.getComponent(TodoPanel).vm.$emit("notify", "morning", "todo-1", notifyAt);
+      await vi.advanceTimersByTimeAsync(1000);
+
+      expect(notificationSpy).toHaveBeenCalledTimes(1);
+      expect(document.title).toContain("新提醒");
+
+      await vi.advanceTimersByTimeAsync(749);
+      expect(document.title).toContain("新提醒");
+
+      await vi.advanceTimersByTimeAsync(1);
+      expect(document.title).toBe("Mini Desk");
+
+      await vi.advanceTimersByTimeAsync(749);
+      expect(document.title).toBe("Mini Desk");
+
+      await vi.advanceTimersByTimeAsync(1);
+      expect(document.title).toContain("新提醒");
+
+      window.dispatchEvent(new Event("focus"));
+      expect(document.title).toBe("Mini Desk");
+
+      await vi.advanceTimersByTimeAsync(1200);
+      expect(document.title).toBe("Mini Desk");
+
+      const secondNotifyAt = new Date(2026, 4, 25, 8, 0, 3).getTime();
+      wrapper.getComponent(TodoPanel).vm.$emit("notify", "morning", "todo-1", secondNotifyAt);
+      await vi.advanceTimersByTimeAsync(2000);
+      expect(document.title).toContain("新提醒");
+
+      Object.defineProperty(document, "visibilityState", { configurable: true, get: () => "visible" });
+      document.dispatchEvent(new Event("visibilitychange"));
+      expect(document.title).toBe("Mini Desk");
+
+      await vi.advanceTimersByTimeAsync(1200);
+      expect(document.title).toBe("Mini Desk");
+    } finally {
+      wrapper.unmount();
+      document.title = "Mini Desk";
+      if (originalVisibilityDescriptor) Object.defineProperty(document, "visibilityState", originalVisibilityDescriptor);
+      vi.unstubAllGlobals();
+      vi.useRealTimers();
+    }
+  });
+
+  it("highlights the reminder row briefly when the user returns after a due notification", async () => {
+    vi.useFakeTimers();
+    vi.setSystemTime(new Date(2026, 4, 25, 8, 0, 0));
+    const originalVisibilityDescriptor = Object.getOwnPropertyDescriptor(Document.prototype, "visibilityState")
+      ?? Object.getOwnPropertyDescriptor(document, "visibilityState");
+    Object.defineProperty(document, "visibilityState", { configurable: true, get: () => "hidden" });
+    const notificationSpy = vi.fn();
+    class NotificationStub {
+      static permission: NotificationPermission = "granted";
+      static requestPermission = vi.fn();
+
+      constructor(title: string, options?: NotificationOptions) {
+        notificationSpy(title, options);
+      }
+    }
+    vi.stubGlobal("Notification", NotificationStub);
+    localStorage.setItem(
+      STORAGE_KEY,
+      JSON.stringify({
+        todos: {
+          morning: [{ id: "todo-1", text: "喝水", done: false }],
+        },
+      }),
+    );
+    const wrapper = mountApp();
+
+    try {
+      const notifyAt = new Date(2026, 4, 25, 8, 0, 1).getTime();
+      wrapper.getComponent(TodoPanel).vm.$emit("notify", "morning", "todo-1", notifyAt);
+      await vi.advanceTimersByTimeAsync(1000);
+      await wrapper.vm.$nextTick();
+
+      expect(notificationSpy).toHaveBeenCalledTimes(1);
+      expect(wrapper.get('.todo-item[data-todo-id="todo-1"]').classes()).not.toContain("is-notify-flashing");
+
+      Object.defineProperty(document, "visibilityState", { configurable: true, get: () => "visible" });
+      document.dispatchEvent(new Event("visibilitychange"));
+      await wrapper.vm.$nextTick();
+
+      expect(wrapper.get('.todo-item[data-todo-id="todo-1"]').classes()).toContain("is-notify-flashing");
+
+      await vi.advanceTimersByTimeAsync(1600);
+      await wrapper.vm.$nextTick();
+
+      expect(wrapper.get('.todo-item[data-todo-id="todo-1"]').classes()).not.toContain("is-notify-flashing");
+    } finally {
+      wrapper.unmount();
+      if (originalVisibilityDescriptor) Object.defineProperty(document, "visibilityState", originalVisibilityDescriptor);
+      vi.unstubAllGlobals();
+      vi.useRealTimers();
+    }
+  });
+
   it("sends future reminder notifications at the exact due time", async () => {
     vi.useFakeTimers();
     vi.setSystemTime(new Date(2026, 4, 25, 8, 0, 0));
@@ -2029,6 +2154,69 @@ describe("App shell", () => {
     } finally {
       wrapper.unmount();
       vi.useRealTimers();
+    }
+  });
+
+  it("creates quick action tags from save payloads and persists tag references", async () => {
+    const wrapper = mountApp();
+
+    try {
+      wrapper.getComponent(QuickButtons).vm.$emit("save", {
+        title: "接口",
+        value: "api.example.test",
+        type: "link",
+        tagTitle: "工作",
+      });
+      await wrapper.vm.$nextTick();
+
+      const stored = JSON.parse(localStorage.getItem(STORAGE_KEY) || "{}");
+      expect(stored.quickTags).toEqual([{ id: expect.any(String), title: "工作" }]);
+      expect(stored.quickButtons[0]).toMatchObject({
+        title: "接口",
+        tagId: stored.quickTags[0].id,
+      });
+
+      wrapper.getComponent(QuickButtons).vm.$emit("save", {
+        title: "文案",
+        value: "复制内容",
+        type: "text",
+        tagTitle: "工作",
+      });
+      await wrapper.vm.$nextTick();
+
+      const nextStored = JSON.parse(localStorage.getItem(STORAGE_KEY) || "{}");
+      expect(nextStored.quickTags).toHaveLength(1);
+      expect(nextStored.quickButtons[1]).toMatchObject({ tagId: nextStored.quickTags[0].id });
+    } finally {
+      wrapper.unmount();
+    }
+  });
+
+  it("persists quick action tag order when tag headings are reordered", async () => {
+    localStorage.setItem(
+      STORAGE_KEY,
+      JSON.stringify({
+        ...defaultState(),
+        quickTags: [
+          { id: "tag-a", title: "标签 A" },
+          { id: "tag-b", title: "标签 B" },
+        ],
+        quickButtons: [
+          { id: "a", title: "A", value: "a", type: "text", hidden: false, tagId: "tag-a" },
+          { id: "b", title: "B", value: "b", type: "text", hidden: false, tagId: "tag-b" },
+        ],
+      }),
+    );
+    const wrapper = mountApp();
+
+    try {
+      wrapper.getComponent(QuickButtons).vm.$emit("reorderTag", "tag-a", "tag-b");
+      await wrapper.vm.$nextTick();
+
+      const stored = JSON.parse(localStorage.getItem(STORAGE_KEY) || "{}");
+      expect(stored.quickTags.map((tag: { id: string }) => tag.id)).toEqual(["tag-b", "tag-a"]);
+    } finally {
+      wrapper.unmount();
     }
   });
 
@@ -4107,18 +4295,20 @@ describe("App shell", () => {
     }
   });
 
-  it("shows a declutter companion bubble and GIF when clicking a quick-action area with more than twelve visible buttons", async () => {
+  it("shows a declutter companion bubble and GIF when a quick-action tag has more than twelve visible buttons", async () => {
     vi.useFakeTimers();
     localStorage.setItem(
       STORAGE_KEY,
       JSON.stringify({
         ...defaultState(),
+        quickTags: [{ id: "tag-work", title: "工作" }],
         quickButtons: Array.from({ length: 13 }, (_, index) => ({
           id: `quick-${index}`,
           title: `按钮 ${index + 1}`,
           value: `https://example.com/${index}`,
           type: "link",
           hidden: false,
+          tagId: "tag-work",
         })),
       }),
     );
@@ -4141,6 +4331,51 @@ describe("App shell", () => {
     } finally {
       wrapper.unmount();
       randomSpy.mockRestore();
+      vi.useRealTimers();
+    }
+  });
+
+  it("does not show quick-action declutter when visible buttons are split under the per-tag limit", async () => {
+    vi.useFakeTimers();
+    localStorage.setItem(
+      STORAGE_KEY,
+      JSON.stringify({
+        ...defaultState(),
+        quickTags: [
+          { id: "tag-a", title: "标签 A" },
+          { id: "tag-b", title: "标签 B" },
+        ],
+        quickButtons: [
+          ...Array.from({ length: 7 }, (_, index) => ({
+            id: `a-${index}`,
+            title: `A ${index + 1}`,
+            value: `https://example.com/a/${index}`,
+            type: "link",
+            hidden: false,
+            tagId: "tag-a",
+          })),
+          ...Array.from({ length: 7 }, (_, index) => ({
+            id: `b-${index}`,
+            title: `B ${index + 1}`,
+            value: `https://example.com/b/${index}`,
+            type: "link",
+            hidden: false,
+            tagId: "tag-b",
+          })),
+        ],
+      }),
+    );
+    const wrapper = mountApp();
+
+    try {
+      await wrapper.get(".quick-block").trigger("click");
+      await wrapper.vm.$nextTick();
+      await vi.advanceTimersByTimeAsync(200);
+      await wrapper.vm.$nextTick();
+
+      expect(wrapper.find('[data-testid="companion-confirm"]').exists()).toBe(false);
+    } finally {
+      wrapper.unmount();
       vi.useRealTimers();
     }
   });

@@ -51,8 +51,10 @@ const props = withDefaults(defineProps<{
   titles: Record<string, string>;
   showCompleted?: TodoCompletedVisibility;
   editListId?: TodoListId | null;
+  notificationFlashKeys?: string[];
   language?: AppLanguage;
 }>(), {
+  notificationFlashKeys: () => [],
   language: "zh",
 });
 
@@ -914,6 +916,10 @@ function isTodoHighlighted(period: TodoPeriod, id: string): boolean {
   );
 }
 
+function isTodoNotificationFlashing(period: TodoPeriod, id: string): boolean {
+  return props.notificationFlashKeys.includes(todoKey(period, id));
+}
+
 function isTodoEditing(period: TodoPeriod, id: string): boolean {
   return editingTodoKey.value === todoKey(period, id);
 }
@@ -1239,7 +1245,7 @@ function buildTodoListEntries(period: TodoListId, todos: TodoItem[], deferredDon
             :key="`${item.period}-${item.todo.id}`"
             class="today-focus-item"
             :class="[
-              { 'is-done': item.todo.done, 'is-completing': pendingDoneReorderIds.includes(`${item.period}:${item.todo.id}`), 'is-editing': isTodoEditing(item.period, item.todo.id), 'is-menu-selected': isTodoHighlighted(item.period, item.todo.id), 'has-notify': Boolean(getTodoCompactNotifyLabel(item.todo)) },
+              { 'is-done': item.todo.done, 'is-completing': pendingDoneReorderIds.includes(`${item.period}:${item.todo.id}`), 'is-editing': isTodoEditing(item.period, item.todo.id), 'is-menu-selected': isTodoHighlighted(item.period, item.todo.id), 'is-notify-flashing': isTodoNotificationFlashing(item.period, item.todo.id), 'has-notify': Boolean(getTodoCompactNotifyLabel(item.todo)) },
               getTodoDeadlineClass(item.todo),
             ]"
             @contextmenu.stop="openMenu($event, item.period, item.todo.id)"
@@ -1394,7 +1400,7 @@ function buildTodoListEntries(period: TodoListId, todos: TodoItem[], deferredDon
                 class="todo-item"
                 :data-todo-id="entry.todo.id"
                 :class="[
-                  { 'is-done': entry.todo.done, 'is-starred': entry.todo.starred, 'is-editing': isTodoEditing(list.id, entry.todo.id), 'is-menu-selected': isTodoHighlighted(list.id, entry.todo.id), 'has-notify': Boolean(getTodoCompactNotifyLabel(entry.todo)) },
+                  { 'is-done': entry.todo.done, 'is-starred': entry.todo.starred, 'is-editing': isTodoEditing(list.id, entry.todo.id), 'is-menu-selected': isTodoHighlighted(list.id, entry.todo.id), 'is-notify-flashing': isTodoNotificationFlashing(list.id, entry.todo.id), 'has-notify': Boolean(getTodoCompactNotifyLabel(entry.todo)) },
                   getTodoDeadlineClass(entry.todo),
                 ]"
                 @contextmenu.stop="openMenu($event, list.id, entry.todo.id)"

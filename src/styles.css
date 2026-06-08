@@ -1574,6 +1574,7 @@ button.tool-tab:focus-visible {
 }
 
 .image-list,
+.quick-tag-groups,
 .quick-buttons,
 .todo-list {
   min-height: 0;
@@ -1596,6 +1597,7 @@ button.tool-tab:focus-visible {
 }
 
 .image-list-scrollbar .image-list,
+.quick-buttons-scrollbar .quick-tag-groups,
 .quick-buttons-scrollbar .quick-buttons,
 .todo-list-scrollbar .todo-list {
   overflow: visible;
@@ -1699,6 +1701,45 @@ button.image-card {
   flex-wrap: wrap;
   gap: 10px;
   padding: 10px 10px 18px;
+}
+
+.quick-tag-groups {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  padding: 8px 0 12px;
+}
+
+.quick-tag-group {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+}
+
+.quick-tag-heading {
+  display: flex;
+  align-items: center;
+  min-height: 24px;
+  padding: 0 12px;
+  color: var(--muted);
+  font-size: calc(var(--app-font-size) - 1px);
+  line-height: 1.4;
+  cursor: grab;
+  user-select: none;
+}
+
+.quick-tag-heading.is-static {
+  cursor: default;
+}
+
+.quick-tag-heading.is-dragging {
+  opacity: 0.52;
+}
+
+.quick-tag-title {
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
 }
 
 .quick-button {
@@ -2489,6 +2530,11 @@ button.todo-notify-button.has-time {
   background: transparent;
 }
 
+.todo-item.is-notify-flashing,
+.today-focus-item.is-notify-flashing {
+  animation: todo-notify-flash 0.8s ease-in-out 2;
+}
+
 .deadline-overdue .todo-deadline-label {
   color: #e88;
 }
@@ -2854,6 +2900,19 @@ button.todo-section-menu-button {
 
   100% {
     transform: scale(1);
+  }
+}
+
+@keyframes todo-notify-flash {
+  0%,
+  100% {
+    background: transparent;
+    box-shadow: none;
+  }
+
+  50% {
+    background: color-mix(in srgb, var(--primary) 18%, transparent);
+    box-shadow: inset 0 0 0 1px color-mix(in srgb, var(--primary) 48%, transparent);
   }
 }
 

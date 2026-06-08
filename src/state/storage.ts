@@ -9,6 +9,7 @@ import type {
   LineItem,
   QuickApiHeader,
   QuickButton,
+  QuickTag,
   QuickApiBodyType,
   QuickApiMethod,
   QuickButtonType,
@@ -66,6 +67,7 @@ export function getSerializableState(
     activeSpaceId: state.spaces.some((space) => space.id === state.activeSpaceId)
       ? state.activeSpaceId
       : state.spaces[0]?.id ?? DEFAULT_SPACE_ID,
+    quickTags: cloneQuickTags(state.quickTags),
     quickButtons: state.quickButtons.map((button) => ({ ...button })),
     customTitles: { ...state.customTitles },
   };
@@ -87,6 +89,8 @@ export function normalizeImportedState(payload: unknown): BoardState {
   const todoLists = normalizeTodoLists(typed.todoLists, customTitles);
   const language = normalizeLanguage(typed.language);
 
+  const quickTags = normalizeQuickTags(typed.quickTags);
+
   return {
     ...base,
     language,
@@ -101,7 +105,8 @@ export function normalizeImportedState(payload: unknown): BoardState {
     spaces,
     activeSpaceId: normalizeActiveSpaceId(typed.activeSpaceId, spaces),
     images: normalizeImages(typed.images),
-    quickButtons: normalizeQuickButtons(typed.quickButtons, language),
+    quickTags,
+    quickButtons: normalizeQuickButtons(typed.quickButtons, language, quickTags),
     showHiddenQuickButtons: Boolean(typed.showHiddenQuickButtons),
     todoLists,
     showCompletedTodos: normalizeCompletedVisibility(typed.showCompletedTodos, todoLists),
@@ -271,8 +276,25 @@ export function normalizeImages(images: unknown): StoredImage[] {
     .filter((item): item is StoredImage => Boolean(item));
 }
 
-export function normalizeQuickButtons(buttons: unknown, language = "zh"): QuickButton[] {
+export function normalizeQuickTags(tags: unknown): QuickTag[] {
+  if (!Array.isArray(tags)) return [];
+  const seen = new Set<string>();
+  return tags
+    .map((item) => {
+      if (!isPlainObject(item)) return null;
+      const record = item as Record<string, unknown>;
+      const id = typeof record.id === "string" ? record.id.trim() : "";
+      const title = typeof record.title === "string" ? record.title.trim() : "";
+      if (!id || !title || seen.has(id)) return null;
+      seen.add(id);
+      return { id, title };
+    })
+    .filter((item): item is QuickTag => Boolean(item));
+}
+
+export function normalizeQuickButtons(buttons: unknown, language = "zh", quickTags: QuickTag[] = []): QuickButton[] {
   if (!Array.isArray(buttons)) return [];
+  const validTagIds = new Set(quickTags.map((tag) => tag.id));
   return buttons
     .map((item) => {
       if (!isPlainObject(item)) return null;
@@ -283,11 +305,15 @@ export function normalizeQuickButtons(buttons: unknown, language = "zh"): QuickB
       const apiMethod = normalizeQuickApiMethod(record.apiMethod);
       const apiBodyType = normalizeQuickApiBodyType(record.apiBodyType);
       if (!title && !value) return null;
+      const tagId = typeof record.tagId === "string" && validTagIds.has(record.tagId.trim())
+        ? record.tagId.trim()
+        : undefined;
       return {
         id: typeof record.id === "string" ? record.id : createId(),
         title: title || getUntitledQuickTitle(type, language),
         value,
         type,
+        ...(tagId ? { tagId } : {}),
         ...(type === "api" ? {
           apiMethod,
           apiHeaders: normalizeQuickApiHeaders(record.apiHeaders),
@@ -441,6 +467,10 @@ function cloneCompletedVisibility(
   return Object.fromEntries(
     todoLists.map((list) => [list.id, Boolean(visibility[list.id])]),
   ) as TodoCompletedVisibility;
+}
+
+function cloneQuickTags(tags: QuickTag[] | undefined): QuickTag[] {
+  return (tags ?? []).map((tag) => ({ ...tag }));
 }
 
 function cloneTodos(todos: TodoMap, todoLists: TodoListConfig[]): TodoMap {

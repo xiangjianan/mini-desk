@@ -108,8 +108,14 @@ const bubbleClearSignal = ref(0);
 const saveStatusTimer = ref<number | undefined>();
 const todoNotificationTimer = ref<number | undefined>();
 const todoNotificationDueTimer = ref<number | undefined>();
+const titleFlashTimer = ref<number | undefined>();
+const titleFlashActive = ref(false);
+const titleFlashAltVisible = ref(false);
+const notificationFlashKeys = ref<string[]>([]);
+const pendingNotificationFlashKeys = ref<string[]>([]);
 const emptyTodoRemovalTimers = new Map<string, number>();
 const sentTodoNotifications = new Set<string>();
+const notificationFlashTimers = new Map<string, number>();
 const appVersion = ref(getIndexAppVersion());
 const storedAppVersion = ref<string | null>(null);
 const versionPromptVisible = ref(false);
@@ -135,6 +141,10 @@ const ABOUT_MESSAGE_DURATION_MS = 10000;
 const COMPANION_FADE_MS = 2000;
 const VERSION_BADGE_MAX_VISIBLE_MS = 10000;
 const MIN_COMPANION_POPOVER_RIGHT_EDGE = 260;
+const DEFAULT_DOCUMENT_TITLE = "Mini Desk";
+const NOTIFICATION_DOCUMENT_TITLE = "🔔 新提醒 · Mini Desk";
+const TITLE_FLASH_INTERVAL_MS = 750;
+const TODO_NOTIFICATION_FLASH_MS = 1600;
 const activeGuideKey = ref<GuideKey | null>(null);
 const versionBadgeTimer = ref<number | undefined>();
 
@@ -237,7 +247,9 @@ onMounted(async () => {
   if (!appMounted) return;
   checkAppVersion();
   window.addEventListener("keydown", handleGlobalKeydown);
+  window.addEventListener("focus", handleNotificationReturn);
   document.addEventListener("paste", handlePaste);
+  document.addEventListener("visibilitychange", handleDocumentVisibilityChange);
   todoNotificationTimer.value = window.setInterval(refreshTodoNotifications, TODO_NOTIFICATION_FALLBACK_INTERVAL_MS);
   refreshTodoNotifications();
 });
@@ -245,7 +257,9 @@ onMounted(async () => {
 onUnmounted(() => {
   appMounted = false;
   window.removeEventListener("keydown", handleGlobalKeydown);
+  window.removeEventListener("focus", handleNotificationReturn);
   document.removeEventListener("paste", handlePaste);
+  document.removeEventListener("visibilitychange", handleDocumentVisibilityChange);
   teardownMobileBreakpoint();
   clearTimers();
 });
@@ -687,14 +701,16 @@ function imageSourceToPngBlob(src: string): Promise<Blob> {
   });
 }
 
-function saveQuick(payload: { id?: string; title: string; value: string; type: QuickButtonType; apiMethod?: QuickApiMethod; apiHeaders?: QuickApiHeader[]; apiBodyType?: QuickApiBodyType; apiBody?: string }): void {
+function saveQuick(payload: { id?: string; title: string; value: string; type: QuickButtonType; tagTitle?: string; apiMethod?: QuickApiMethod; apiHeaders?: QuickApiHeader[]; apiBodyType?: QuickApiBodyType; apiBody?: string }): void {
   if (!payload.title && !payload.value) return;
+  const tagId = resolveQuickTagId(payload.tagTitle);
   if (payload.id) {
     const button = state.quickButtons.find((item) => item.id === payload.id);
     if (button) {
       button.title = payload.title || button.title;
       button.value = payload.value;
       button.type = payload.type;
+      applyQuickTag(button, tagId);
       applyQuickApiConfig(button, payload);
     }
   } else {
@@ -705,10 +721,29 @@ function saveQuick(payload: { id?: string; title: string; value: string; type: Q
       type: payload.type,
       hidden: false,
     };
+    applyQuickTag(button, tagId);
     applyQuickApiConfig(button, payload);
     state.quickButtons.push(button);
   }
   persistNow();
+}
+
+function resolveQuickTagId(tagTitle?: string): string | undefined {
+  const title = tagTitle?.trim();
+  if (!title) return undefined;
+  const existing = state.quickTags.find((tag) => tag.title === title);
+  if (existing) return existing.id;
+  const tag = { id: createId(), title };
+  state.quickTags.push(tag);
+  return tag.id;
+}
+
+function applyQuickTag(button: QuickButton, tagId: string | undefined): void {
+  if (tagId) {
+    button.tagId = tagId;
+    return;
+  }
+  delete button.tagId;
 }
 
 function getUntitledQuickTitle(type: QuickButtonType): string {
@@ -753,6 +788,11 @@ function toggleQuickHidden(id: string): void {
 
 function reorderQuickButtons(dragId: string, targetId: string): void {
   moveItem(state.quickButtons, dragId, targetId);
+  persistNow();
+}
+
+function reorderQuickTags(dragId: string, targetId: string): void {
+  moveItem(state.quickTags, dragId, targetId);
   persistNow();
 }
 
@@ -1622,6 +1662,7 @@ function isImportPayload(payload: unknown): payload is Record<string, unknown> {
     "spaces",
     "activeSpaceId",
     "images",
+    "quickTags",
     "quickButtons",
     "showHiddenQuickButtons",
     "todoLists",
@@ -1640,12 +1681,21 @@ function clearTimers(): void {
   window.clearTimeout(saveStatusTimer.value);
   window.clearTimeout(versionBadgeTimer.value);
   window.clearTimeout(todoNotificationDueTimer.value);
+  window.clearInterval(titleFlashTimer.value);
   window.clearTimeout(previewCloseTimer.value);
   previewCloseTimer.value = undefined;
   versionBadgeTimer.value = undefined;
   window.clearInterval(todoNotificationTimer.value);
   todoNotificationDueTimer.value = undefined;
   todoNotificationTimer.value = undefined;
+  titleFlashTimer.value = undefined;
+  titleFlashActive.value = false;
+  titleFlashAltVisible.value = false;
+  notificationFlashTimers.forEach((timer) => window.clearTimeout(timer));
+  notificationFlashTimers.clear();
+  notificationFlashKeys.value = [];
+  pendingNotificationFlashKeys.value = [];
+  document.title = DEFAULT_DOCUMENT_TITLE;
   emptyTodoRemovalTimers.forEach((timer) => window.clearTimeout(timer));
   emptyTodoRemovalTimers.clear();
 }
@@ -1702,6 +1752,8 @@ function triggerDueTodoNotifications(): void {
       try {
         new notificationApi(title, options);
         sentTodoNotifications.add(key);
+        startNotificationTitleFlash();
+        queueTodoNotificationFlash(period, todo.id);
       } catch (error) {
         console.warn("Failed to show reminder notification", error);
       }
@@ -1757,6 +1809,71 @@ function getReminderNotificationIcon(): string {
   } catch {
     return src;
   }
+}
+
+function startNotificationTitleFlash(): void {
+  if (document.visibilityState === "visible") return;
+  if (titleFlashActive.value) return;
+  titleFlashActive.value = true;
+  titleFlashAltVisible.value = true;
+  document.title = NOTIFICATION_DOCUMENT_TITLE;
+  titleFlashTimer.value = window.setInterval(toggleNotificationTitle, TITLE_FLASH_INTERVAL_MS);
+}
+
+function toggleNotificationTitle(): void {
+  if (!titleFlashActive.value) return;
+  titleFlashAltVisible.value = !titleFlashAltVisible.value;
+  document.title = titleFlashAltVisible.value ? NOTIFICATION_DOCUMENT_TITLE : DEFAULT_DOCUMENT_TITLE;
+}
+
+function stopNotificationTitleFlash(): void {
+  window.clearInterval(titleFlashTimer.value);
+  titleFlashTimer.value = undefined;
+  titleFlashActive.value = false;
+  titleFlashAltVisible.value = false;
+  document.title = DEFAULT_DOCUMENT_TITLE;
+}
+
+function handleDocumentVisibilityChange(): void {
+  if (document.visibilityState === "visible") handleNotificationReturn();
+}
+
+function handleNotificationReturn(): void {
+  stopNotificationTitleFlash();
+  flushPendingTodoNotificationFlashes();
+}
+
+function queueTodoNotificationFlash(period: TodoPeriod, id: string): void {
+  const key = todoKey(period, id);
+  if (document.visibilityState === "visible") {
+    flashTodoNotificationKey(key);
+    return;
+  }
+  if (!pendingNotificationFlashKeys.value.includes(key)) {
+    pendingNotificationFlashKeys.value = [...pendingNotificationFlashKeys.value, key];
+  }
+}
+
+function flushPendingTodoNotificationFlashes(): void {
+  if (pendingNotificationFlashKeys.value.length === 0) return;
+  const keys = pendingNotificationFlashKeys.value;
+  pendingNotificationFlashKeys.value = [];
+  keys.forEach(flashTodoNotificationKey);
+}
+
+function flashTodoNotificationKey(key: string): void {
+  const existingTimer = notificationFlashTimers.get(key);
+  if (existingTimer !== undefined) window.clearTimeout(existingTimer);
+  if (!notificationFlashKeys.value.includes(key)) {
+    notificationFlashKeys.value = [...notificationFlashKeys.value, key];
+  }
+  notificationFlashTimers.set(
+    key,
+    window.setTimeout(() => {
+      notificationFlashTimers.delete(key);
+      notificationFlashKeys.value = notificationFlashKeys.value.filter((item) => item !== key);
+    }, TODO_NOTIFICATION_FLASH_MS),
+  );
 }
 
 function todoKey(period: TodoPeriod, id: string): string {
@@ -2047,6 +2164,7 @@ function moveItem<T extends { id: string }>(items: T[], dragId: string, targetId
         />
         <QuickButtons
           :title="titles['quick-title']"
+          :tags="state.quickTags"
           :buttons="state.quickButtons"
           :show-hidden="state.showHiddenQuickButtons"
           :language="state.language"
@@ -2057,6 +2175,7 @@ function moveItem<T extends { id: string }>(items: T[], dragId: string, targetId
           @toggle-hidden="toggleQuickHidden"
           @toggle-show-hidden="state.showHiddenQuickButtons = !state.showHiddenQuickButtons; persistNow()"
           @reorder="reorderQuickButtons"
+          @reorder-tag="reorderQuickTags"
           @guide="handleGuideClick"
           @declutter="showQuickDeclutterBubble"
         />
@@ -2066,6 +2185,7 @@ function moveItem<T extends { id: string }>(items: T[], dragId: string, targetId
         <TodoPanel
           :todo-lists="displayTodoLists"
           :edit-list-id="pendingEditTodoListId"
+          :notification-flash-keys="notificationFlashKeys"
           :todos="state.todos"
           :titles="titles"
           :show-completed="state.showCompletedTodos"

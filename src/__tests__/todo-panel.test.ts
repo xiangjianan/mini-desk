@@ -2062,6 +2062,41 @@ describe("TodoPanel", () => {
     expect(deadlineLabelRule).not.toContain("text-overflow: ellipsis");
   });
 
+  it("marks the triggered reminder row with a two-pulse notification flash class", () => {
+    const wrapper = mount(TodoPanel, {
+      props: {
+        todos: {
+          morning: [
+            { id: "a", text: "触发提醒", done: false },
+            { id: "b", text: "普通提醒", done: false },
+          ],
+          noon: [],
+          evening: [],
+        },
+        titles: DEFAULT_TITLES,
+        notificationFlashKeys: ["morning:a"],
+      },
+      global: {
+        stubs: {
+          Button: true,
+          Checkbox: checkboxStub,
+          Dropdown: dropdownStub,
+          NCheckbox: checkboxStub,
+          NDropdown: dropdownStub,
+          NTooltip: tooltipStub,
+        },
+      },
+    });
+    const styles = readFileSync(resolve(__dirname, "../styles.css"), "utf8");
+    const flashRule = styles.match(/\.todo-item\.is-notify-flashing,[\s\S]*?\.today-focus-item\.is-notify-flashing\s*\{(?<body>[^}]*)\}/)?.groups?.body ?? "";
+
+    expect(wrapper.findAll(".todo-item")[0].classes()).toContain("is-notify-flashing");
+    expect(wrapper.findAll(".todo-item")[1].classes()).not.toContain("is-notify-flashing");
+    expect(flashRule).toContain("animation: todo-notify-flash");
+    expect(flashRule).toContain("2");
+    wrapper.unmount();
+  });
+
   it("emits the todo section as the completion anchor", async () => {
     const wrapper = mount(TodoPanel, {
       props: {

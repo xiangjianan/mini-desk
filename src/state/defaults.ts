@@ -46,6 +46,7 @@ export function defaultState(): BoardState {
     spaces: [{ id: DEFAULT_SPACE_ID, title: DEFAULT_SPACE_TITLE, lines: [] }],
     activeSpaceId: DEFAULT_SPACE_ID,
     images: [],
+    quickTags: [],
     quickButtons: [],
     showHiddenQuickButtons: false,
     todoLists: cloneDefaultTodoLists(),
