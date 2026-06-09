@@ -67,9 +67,18 @@ npx wrangler pages deploy dist --project-name=todolist
 gh release create "v<version>" "dist-<version>.zip" --title "v<version>" --notes "Release v<version>"
 ```
 
-8. Final response.
+8. Clean up the local release package.
+   - After the GitHub release is created successfully, delete the local `dist-<version>.zip`.
+   - Do not delete `dist/`; it is the current build output and may be useful for local inspection.
+
+```bash
+rm -f "dist-<version>.zip"
+```
+
+9. Final response.
    - Report the version, commit hash, pushed branch, Cloudflare Pages URL, GitHub release URL, release asset name, and verification commands.
-   - Mention any untracked artifacts left locally.
+   - Confirm that the local `dist-<version>.zip` was removed.
+   - Mention any other untracked artifacts left locally.
 
 ## Guardrails
 
