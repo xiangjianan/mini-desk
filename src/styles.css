@@ -1807,31 +1807,87 @@ button.quick-button {
   gap: 6px;
 }
 
+.quick-tag-field {
+  display: grid;
+  min-width: 0;
+  gap: 6px;
+}
+
+.quick-tag-choices {
+  display: flex;
+  flex-wrap: wrap;
+  min-width: 0;
+  gap: 6px;
+}
+
+.quick-tag-choice {
+  min-width: 0;
+  max-width: 100%;
+  min-height: 28px;
+  border: 1px solid color-mix(in srgb, var(--border) 86%, transparent);
+  border-radius: 999px;
+  background: var(--button);
+  color: var(--muted);
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.quick-tag-choice:hover,
+.quick-tag-choice:focus-visible {
+  color: var(--foreground);
+  background: var(--button-hover);
+}
+
+.quick-tag-choice.is-selected {
+  border-color: color-mix(in srgb, var(--primary) 44%, transparent);
+  background: color-mix(in srgb, var(--primary) 12%, transparent);
+  color: var(--primary);
+}
+
+.quick-tag-manager {
+  overflow-x: hidden;
+}
+
 .quick-tag-manager-body {
   display: grid;
+  min-width: 0;
   gap: 12px;
+  padding: 3px;
+  overflow-x: hidden;
 }
 
 .quick-tag-manager-list {
   display: grid;
+  min-width: 0;
   max-height: min(300px, 42vh);
   gap: 8px;
-  overflow: auto;
+  overflow-x: hidden;
+  overflow-y: auto;
   padding-right: 2px;
 }
 
 .quick-tag-manager-row {
   display: grid;
   grid-template-columns: minmax(0, 1fr) auto 30px;
+  min-width: 0;
   gap: 6px;
   align-items: center;
+  padding: 3px;
 }
 
 .quick-tag-add-row {
   display: grid;
   grid-template-columns: minmax(0, 1fr) auto;
+  min-width: 0;
   gap: 6px;
   align-items: center;
+  padding: 3px;
+}
+
+.quick-tag-name-input,
+.quick-tag-new-input {
+  min-width: 0;
 }
 
 .quick-tag-delete {

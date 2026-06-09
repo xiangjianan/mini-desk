@@ -86,7 +86,7 @@ const apiBodyTypeOptions = computed(() => [
   { label: uiText.value.quick.bodyText, value: "text" },
   { label: uiText.value.quick.bodyForm, value: "form" },
 ]);
-const tagOptions = computed(() => [
+const tagChoices = computed(() => [
   { label: uiText.value.quick.noTag, value: "" },
   ...props.tags.map((tag) => ({ label: tag.title, value: tag.title })),
 ]);
@@ -219,6 +219,10 @@ function setQuickType(type: QuickButtonType): void {
   } else if (form.apiHeaders.length === 0) {
     form.apiHeaders = [createHeaderRow()];
   }
+}
+
+function selectQuickTag(tagTitle: string): void {
+  form.tagTitle = tagTitle;
 }
 
 function addApiHeader(): void {
@@ -627,18 +631,22 @@ function handleQuickGroupDrop(groupId: string): void {
             :autosize="form.type === 'text' ? { minRows: 4, maxRows: 8 } : undefined"
           />
         </label>
-        <label>
+        <div class="quick-tag-field">
           <span>{{ uiText.quick.tag }}</span>
-          <NSelect
-            v-model:value="form.tagTitle"
-            class="quick-tag-select"
-            :options="tagOptions"
-            filterable
-            tag
-            clearable
-            :placeholder="uiText.quick.noTag"
-          />
-        </label>
+          <div class="quick-tag-choices" role="group" :aria-label="uiText.quick.tag">
+            <button
+              v-for="tag in tagChoices"
+              :key="tag.value || '__none'"
+              type="button"
+              class="quick-tag-choice"
+              :class="{ 'is-selected': form.tagTitle === tag.value }"
+              :aria-pressed="form.tagTitle === tag.value"
+              @click="selectQuickTag(tag.value)"
+            >
+              {{ tag.label }}
+            </button>
+          </div>
+        </div>
         <template v-if="form.type === 'api'">
           <label>
             <span>{{ uiText.quick.requestMethod }}</span>

@@ -170,17 +170,20 @@ describe("QuickButtons", () => {
     wrapper.unmount();
   });
 
-  it("offers existing quick tags as single-select choices while still allowing manual tag text", async () => {
+  it("offers existing quick tags as single-select button choices", async () => {
     const wrapper = mountQuickButtons({
       tags: [{ id: "tag-tools", title: "工具" }],
     });
 
     await openDialog(wrapper);
-    expect(wrapper.get(".quick-tag-select").findAll("option").map((option) => option.text())).toEqual(["无标签", "工具"]);
+    expect(wrapper.find(".quick-tag-select").exists()).toBe(false);
+    expect(wrapper.findAll(".quick-tag-choice").map((option) => option.text())).toEqual(["无标签", "工具"]);
+    expect(wrapper.findAll(".quick-tag-choice").map((option) => option.attributes("aria-pressed"))).toEqual(["true", "false"]);
 
     await wrapper.findAll("input")[0].setValue("接口");
     await wrapper.findAll("input")[1].setValue("https://api.example.test");
-    await wrapper.get(".quick-tag-select").setValue("工具");
+    await wrapper.findAll(".quick-tag-choice").find((option) => option.text() === "工具")?.trigger("click");
+    expect(wrapper.findAll(".quick-tag-choice").map((option) => option.attributes("aria-pressed"))).toEqual(["false", "true"]);
     await wrapper.get("form").trigger("submit.prevent");
 
     expect(wrapper.emitted("save")?.[0][0]).toMatchObject({
@@ -191,6 +194,16 @@ describe("QuickButtons", () => {
     });
 
     wrapper.unmount();
+  });
+
+  it("keeps the tag manager layout from creating horizontal scrolling", () => {
+    const styles = readSource("styles.css");
+
+    expect(styles).toMatch(/\.quick-tag-manager\s*\{[^}]*overflow-x: hidden/s);
+    expect(styles).toMatch(/\.quick-tag-manager-list\s*\{[^}]*overflow-x: hidden/s);
+    expect(styles).toMatch(/\.quick-tag-manager-row\s*\{[^}]*min-width: 0/s);
+    expect(styles).toMatch(/\.quick-tag-manager-body\s*\{[^}]*padding: 3px/s);
+    expect(styles).toMatch(/\.quick-tag-add-row\s*\{[^}]*padding: 3px/s);
   });
 
   it("emits tag reorder when a quick tag heading is dropped on another tag", async () => {
