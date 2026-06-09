@@ -1,0 +1,627 @@
+<!doctype html>
+<html lang="zh-CN">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <title>Mini Desk - 本地优先的桌面工作台</title>
+    <meta
+      name="description"
+      content="Mini Desk 帮你集中整理图片、快捷动作、提醒事项和备忘录，把零散工作收进一个安静桌面。"
+    />
+    <style>
+      :root {
+        --ink: #17202a;
+        --text: #405060;
+        --muted: #687685;
+        --line: rgba(23, 32, 42, 0.12);
+        --paper: #f7faf7;
+        --blue: #2f80ed;
+        --green: #27ae60;
+        --amber: #b77900;
+        --purple: #8b5cf6;
+        --dark: #19212b;
+        --shadow: 0 34px 110px rgba(23, 32, 42, 0.16);
+      }
+
+      * {
+        box-sizing: border-box;
+      }
+
+      html {
+        scroll-behavior: smooth;
+      }
+
+      body {
+        margin: 0;
+        min-width: 320px;
+        color: var(--ink);
+        background: linear-gradient(160deg, #fbf8f1 0%, #f5f7fb 50%, #edf7f1 100%);
+        font-family: "PingFang SC", "Hiragino Sans GB", "Microsoft YaHei", Arial, sans-serif;
+        letter-spacing: 0;
+      }
+
+      a {
+        color: inherit;
+        text-decoration: none;
+      }
+
+      img {
+        display: block;
+        max-width: 100%;
+      }
+
+      .site-header {
+        position: fixed;
+        z-index: 20;
+        top: 0;
+        left: 0;
+        right: 0;
+        display: flex;
+        align-items: center;
+        justify-content: space-between;
+        gap: 24px;
+        padding: 22px clamp(22px, 5vw, 76px);
+        background: rgba(248, 250, 248, 0.74);
+        border-bottom: 1px solid rgba(23, 32, 42, 0.08);
+        backdrop-filter: blur(18px);
+      }
+
+      .brand {
+        display: inline-flex;
+        align-items: center;
+        gap: 12px;
+        font-size: 18px;
+        font-weight: 800;
+      }
+
+      .brand img {
+        width: 28px;
+        height: 28px;
+      }
+
+      .nav {
+        display: flex;
+        align-items: center;
+        gap: 28px;
+        color: #536171;
+        font-size: 14px;
+        font-weight: 700;
+      }
+
+      .nav a:hover {
+        color: var(--ink);
+      }
+
+      .button {
+        display: inline-flex;
+        align-items: center;
+        justify-content: center;
+        min-height: 48px;
+        padding: 0 22px;
+        border-radius: 18px;
+        background: var(--dark);
+        color: #fff;
+        font-size: 15px;
+        font-weight: 850;
+        box-shadow: 0 18px 48px rgba(25, 33, 43, 0.22);
+      }
+
+      .button.secondary {
+        background: rgba(255, 255, 255, 0.72);
+        color: var(--ink);
+        border: 1px solid var(--line);
+        box-shadow: none;
+      }
+
+      .hero {
+        position: relative;
+        display: grid;
+        min-height: 88vh;
+        padding: 142px clamp(24px, 5vw, 86px) 78px;
+        overflow: hidden;
+      }
+
+      .hero::before {
+        content: "";
+        position: absolute;
+        inset: 0;
+        background:
+          linear-gradient(90deg, rgba(247, 250, 247, 0.98) 0%, rgba(247, 250, 247, 0.9) 37%, rgba(247, 250, 247, 0.18) 70%, rgba(247, 250, 247, 0.72) 100%),
+          url("./assets/mini-desk-ui.png") right 14% center / min(1120px, 72vw) auto no-repeat;
+      }
+
+      .hero-content {
+        position: relative;
+        z-index: 1;
+        max-width: 740px;
+        align-self: center;
+      }
+
+      h1 {
+        margin: 0;
+        color: var(--ink);
+        font-size: clamp(68px, 9vw, 128px);
+        line-height: 0.92;
+        letter-spacing: 0;
+        font-weight: 950;
+      }
+
+      .hero-title-line {
+        margin-top: 34px;
+        max-width: 680px;
+        color: var(--ink);
+        font-size: clamp(34px, 4.1vw, 62px);
+        line-height: 1.05;
+        font-weight: 920;
+      }
+
+      .hero-copy {
+        max-width: 640px;
+        margin: 30px 0 0;
+        color: var(--text);
+        font-size: clamp(19px, 2.2vw, 29px);
+        line-height: 1.48;
+        font-weight: 650;
+      }
+
+      .hero-actions {
+        display: flex;
+        flex-wrap: wrap;
+        gap: 14px;
+        margin-top: 38px;
+      }
+
+      .hero-note {
+        margin-top: 26px;
+        color: var(--muted);
+        font-size: 15px;
+        font-weight: 700;
+      }
+
+      .section {
+        padding: 100px clamp(24px, 5vw, 86px);
+      }
+
+      .section-inner {
+        max-width: 1220px;
+        margin: 0 auto;
+      }
+
+      .section h2 {
+        margin: 0;
+        max-width: 780px;
+        color: var(--ink);
+        font-size: clamp(38px, 4.7vw, 66px);
+        line-height: 1.05;
+        font-weight: 930;
+      }
+
+      .section-copy {
+        max-width: 760px;
+        margin: 22px 0 0;
+        color: var(--text);
+        font-size: 21px;
+        line-height: 1.55;
+        font-weight: 560;
+      }
+
+      .feature-grid {
+        display: grid;
+        grid-template-columns: repeat(4, minmax(0, 1fr));
+        gap: 18px;
+        margin-top: 46px;
+      }
+
+      .feature {
+        min-height: 260px;
+        padding: 28px;
+        border-radius: 8px;
+        background: rgba(255, 255, 255, 0.74);
+        border: 1px solid var(--line);
+      }
+
+      .feature-index {
+        margin-bottom: 28px;
+        font-size: 16px;
+        font-weight: 900;
+      }
+
+      .feature h3 {
+        margin: 0 0 16px;
+        font-size: 28px;
+        line-height: 1.1;
+        font-weight: 920;
+      }
+
+      .feature p {
+        margin: 0;
+        color: var(--text);
+        font-size: 17px;
+        line-height: 1.55;
+        font-weight: 550;
+      }
+
+      .blue {
+        color: var(--blue);
+      }
+
+      .amber {
+        color: var(--amber);
+      }
+
+      .green {
+        color: var(--green);
+      }
+
+      .purple {
+        color: var(--purple);
+      }
+
+      .privacy-band {
+        background: var(--dark);
+        color: #fff;
+      }
+
+      .privacy-layout {
+        display: grid;
+        grid-template-columns: minmax(0, 1fr) minmax(320px, 0.75fr);
+        gap: 58px;
+        align-items: center;
+      }
+
+      .privacy-band h2 {
+        color: #fff;
+      }
+
+      .privacy-band .section-copy {
+        color: #cad3dc;
+      }
+
+      .data-stack {
+        display: grid;
+        gap: 14px;
+      }
+
+      .data-row {
+        display: grid;
+        grid-template-columns: 140px 1fr;
+        gap: 18px;
+        align-items: center;
+        padding: 22px;
+        border-radius: 8px;
+        background: rgba(255, 255, 255, 0.08);
+        border: 1px solid rgba(255, 255, 255, 0.14);
+      }
+
+      .data-row strong {
+        font-size: 17px;
+      }
+
+      .data-row span {
+        color: #d7e0e8;
+        font-size: 16px;
+        line-height: 1.4;
+      }
+
+      .preview-layout {
+        display: grid;
+        grid-template-columns: minmax(0, 1.1fr) minmax(280px, 0.75fr);
+        gap: 52px;
+        align-items: center;
+      }
+
+      .product-frame {
+        padding: 20px;
+        border-radius: 34px;
+        background: rgba(255, 255, 255, 0.72);
+        border: 1px solid var(--line);
+        box-shadow: var(--shadow);
+      }
+
+      .product-frame img {
+        width: 100%;
+        border-radius: 22px;
+        border: 1px solid rgba(23, 32, 42, 0.08);
+      }
+
+      .workflow-list {
+        display: grid;
+        gap: 18px;
+        margin-top: 32px;
+      }
+
+      .workflow-item {
+        display: grid;
+        grid-template-columns: 38px 1fr;
+        gap: 16px;
+        align-items: start;
+      }
+
+      .workflow-item b {
+        display: grid;
+        width: 38px;
+        height: 38px;
+        place-items: center;
+        border-radius: 999px;
+        background: rgba(47, 128, 237, 0.1);
+        color: var(--blue);
+        font-size: 16px;
+      }
+
+      .workflow-item p {
+        margin: 3px 0 0;
+        color: var(--text);
+        font-size: 18px;
+        line-height: 1.45;
+      }
+
+      .poster-section {
+        padding-top: 76px;
+      }
+
+      .poster-layout {
+        display: grid;
+        grid-template-columns: minmax(260px, 0.55fr) minmax(0, 1fr);
+        gap: 60px;
+        align-items: center;
+      }
+
+      .poster-card {
+        overflow: hidden;
+        border-radius: 30px;
+        box-shadow: var(--shadow);
+      }
+
+      .poster-card img {
+        width: 100%;
+      }
+
+      .cta-section {
+        padding-top: 84px;
+        padding-bottom: 92px;
+      }
+
+      .cta-panel {
+        display: grid;
+        grid-template-columns: minmax(0, 1fr) auto;
+        gap: 32px;
+        align-items: center;
+        padding: 44px;
+        border-radius: 8px;
+        background: rgba(255, 255, 255, 0.78);
+        border: 1px solid var(--line);
+      }
+
+      .cta-panel h2 {
+        font-size: clamp(34px, 4vw, 58px);
+      }
+
+      .site-footer {
+        display: flex;
+        justify-content: space-between;
+        gap: 20px;
+        padding: 28px clamp(24px, 5vw, 86px) 42px;
+        color: var(--muted);
+        font-size: 14px;
+        font-weight: 700;
+      }
+
+      @media (max-width: 920px) {
+        .site-header {
+          position: absolute;
+        }
+
+        .nav {
+          display: none;
+        }
+
+        .hero {
+          min-height: 86vh;
+          padding-top: 118px;
+          padding-bottom: 52px;
+        }
+
+        .hero::before {
+          background:
+            linear-gradient(180deg, rgba(247, 250, 247, 0.98) 0%, rgba(247, 250, 247, 0.92) 46%, rgba(247, 250, 247, 0.46) 100%),
+            url("./assets/mini-desk-ui.png") center bottom 8% / 860px auto no-repeat;
+        }
+
+        .hero-content {
+          align-self: start;
+        }
+
+        .feature-grid,
+        .privacy-layout,
+        .preview-layout,
+        .poster-layout,
+        .cta-panel {
+          grid-template-columns: 1fr;
+        }
+
+        .section {
+          padding-top: 76px;
+          padding-bottom: 76px;
+        }
+
+        .product-frame {
+          padding: 12px;
+          border-radius: 24px;
+        }
+
+        .data-row {
+          grid-template-columns: 1fr;
+        }
+
+        .cta-panel {
+          padding: 28px;
+        }
+
+        .site-footer {
+          flex-direction: column;
+        }
+      }
+
+      @media (max-width: 560px) {
+        .brand {
+          font-size: 16px;
+        }
+
+        .button {
+          width: 100%;
+        }
+
+        .hero-actions {
+          width: 100%;
+        }
+
+        .hero-copy,
+        .section-copy {
+          font-size: 18px;
+        }
+
+        .feature {
+          min-height: 0;
+        }
+      }
+    </style>
+  </head>
+  <body>
+    <header class="site-header" aria-label="Mini Desk">
+      <a class="brand" href="#top" aria-label="Mini Desk 首页">
+        <img src="./assets/favicon.svg" alt="" />
+        <span>Mini Desk</span>
+      </a>
+      <nav class="nav" aria-label="页面导航">
+        <a href="#features">功能</a>
+        <a href="#privacy">本地数据</a>
+        <a href="#workflow">使用方式</a>
+        <a class="button" href="https://minidesk.online">立即体验</a>
+      </nav>
+    </header>
+
+    <main id="top">
+      <section class="hero" aria-labelledby="hero-title">
+        <div class="hero-content">
+          <h1 id="hero-title">Mini Desk</h1>
+          <div class="hero-title-line">把零散工作收进一个安静桌面</div>
+          <p class="hero-copy">图片、快捷动作、提醒事项、备忘录，一个页面推进。默认本地优先，适合个人浏览器工作流。</p>
+          <div class="hero-actions">
+            <a class="button" href="https://minidesk.online">立即体验 minidesk.online</a>
+            <a class="button secondary" href="#features">查看功能</a>
+          </div>
+          <div class="hero-note">无需后端服务 · 桌面端体验更完整</div>
+        </div>
+      </section>
+
+      <section id="features" class="section" aria-labelledby="features-title">
+        <div class="section-inner">
+          <h2 id="features-title">从临时材料到下一步行动，顺序保持清楚。</h2>
+          <p class="section-copy">Mini Desk 不把桌面变成复杂系统，而是把每天重复出现的四类内容放进同一张工作台。</p>
+          <div class="feature-grid">
+            <article class="feature">
+              <div class="feature-index blue">01</div>
+              <h3>图片</h3>
+              <p>Ctrl+V 粘贴截图，支持缩略图整理、预览、复制、删除和拖拽排序。</p>
+            </article>
+            <article class="feature">
+              <div class="feature-index amber">02</div>
+              <h3>快捷动作</h3>
+              <p>常用链接、复制文本和 API 请求做成按钮，重复操作点一下完成。</p>
+            </article>
+            <article class="feature">
+              <div class="feature-index green">03</div>
+              <h3>提醒事项</h3>
+              <p>星标事项自动聚合，截止时间、完成进度和提醒状态一眼可见。</p>
+            </article>
+            <article class="feature">
+              <div class="feature-index purple">04</div>
+              <h3>备忘录</h3>
+              <p>把临时想法和推进步骤写下来，和图片、动作、提醒放在同一桌面。</p>
+            </article>
+          </div>
+        </div>
+      </section>
+
+      <section id="privacy" class="section privacy-band" aria-labelledby="privacy-title">
+        <div class="section-inner privacy-layout">
+          <div>
+            <h2 id="privacy-title">绝不上传你的数据。</h2>
+            <p class="section-copy">Mini Desk 默认不依赖后端。你的状态、图片原文和自定义资源都留在当前浏览器站点内。</p>
+          </div>
+          <div class="data-stack" aria-label="本地数据保存方式">
+            <div class="data-row">
+              <strong>看板状态</strong>
+              <span>保存在 localStorage 的 mini-desk-state-v1。</span>
+            </div>
+            <div class="data-row">
+              <strong>图片原文</strong>
+              <span>保存在同源 IndexedDB 的 mini-desk-images-v1。</span>
+            </div>
+            <div class="data-row">
+              <strong>备份迁移</strong>
+              <span>通过数据导入与导出完成，删除和清理前遵循确认模式。</span>
+            </div>
+          </div>
+        </div>
+      </section>
+
+      <section id="workflow" class="section" aria-labelledby="workflow-title">
+        <div class="section-inner preview-layout">
+          <div class="product-frame">
+            <img src="./assets/mini-desk-ui.png" alt="Mini Desk 产品界面截图" />
+          </div>
+          <div>
+            <h2 id="workflow-title">打开就是工作台，不需要再搭流程。</h2>
+            <p class="section-copy">先收住图片和文本，再把重复动作按钮化，最后把关键事项放进今日重点。</p>
+            <div class="workflow-list">
+              <div class="workflow-item">
+                <b>1</b>
+                <p>粘贴图片或拖入素材，保留当下的视觉证据。</p>
+              </div>
+              <div class="workflow-item">
+                <b>2</b>
+                <p>把常用链接、复制文本和 API 请求做成快捷动作。</p>
+              </div>
+              <div class="workflow-item">
+                <b>3</b>
+                <p>单击新增提醒事项，星标后进入今日重点。</p>
+              </div>
+              <div class="workflow-item">
+                <b>4</b>
+                <p>在备忘录里记录推进步骤，减少上下文丢失。</p>
+              </div>
+            </div>
+          </div>
+        </div>
+      </section>
+
+      <section class="section poster-section" aria-labelledby="poster-title">
+        <div class="section-inner poster-layout">
+          <div class="poster-card">
+            <img src="./assets/mini-desk-promo-poster.png" alt="Mini Desk 宣传海报" />
+          </div>
+          <div>
+            <h2 id="poster-title">海报里的承诺，落到网页里的使用路径。</h2>
+            <p class="section-copy">Landing Page 保持同一套视觉语言：大标题、真实产品界面、本地优先承诺，以及四个清晰的功能入口。</p>
+          </div>
+        </div>
+      </section>
+
+      <section class="section cta-section" aria-labelledby="cta-title">
+        <div class="section-inner cta-panel">
+          <div>
+            <h2 id="cta-title">把今天的零散工作收进 Mini Desk。</h2>
+            <p class="section-copy">适合在电脑浏览器中使用。无需注册后端服务，打开就能开始整理。</p>
+          </div>
+          <a class="button" href="https://minidesk.online">立即体验</a>
+        </div>
+      </section>
+    </main>
+
+    <footer class="site-footer">
+      <span>Mini Desk · 本地优先的个人桌面工作台</span>
+      <a href="https://minidesk.online">https://minidesk.online</a>
+    </footer>
+  </body>
+</html>
