@@ -103,7 +103,7 @@
         font-weight: 700;
       }
 
-      .nav a:hover {
+      .nav a:not(.button):hover {
         color: var(--ink);
       }
 
@@ -128,6 +128,7 @@
       }
 
       .button:hover {
+        color: #fff;
         box-shadow: 0 24px 62px rgba(25, 33, 43, 0.28);
       }
 
@@ -140,6 +141,10 @@
         color: var(--ink);
         border: 1px solid var(--line);
         box-shadow: none;
+      }
+
+      .button.secondary:hover {
+        color: var(--ink);
       }
 
       .hero {
@@ -691,15 +696,15 @@
   </head>
   <body>
     <header class="site-header" aria-label="Mini Desk">
-      <a class="brand" href="#top" aria-label="Mini Desk 首页">
+      <a class="brand" href="#top" target="_blank" rel="noopener noreferrer" aria-label="Mini Desk 首页">
         <img src="./assets/favicon.svg" alt="" />
         <span>Mini Desk</span>
       </a>
       <nav class="nav" aria-label="页面导航">
-        <a href="#features">功能</a>
-        <a href="#privacy">本地数据</a>
-        <a href="#workflow">使用方式</a>
-        <a class="button" href="https://minidesk.online">立即体验</a>
+        <a href="#features" target="_blank" rel="noopener noreferrer">功能</a>
+        <a href="#privacy" target="_blank" rel="noopener noreferrer">本地数据</a>
+        <a href="#workflow" target="_blank" rel="noopener noreferrer">使用方式</a>
+        <a class="button" href="https://minidesk.online" target="_blank" rel="noopener noreferrer">立即体验</a>
       </nav>
     </header>
 
@@ -710,8 +715,8 @@
           <div class="hero-title-line">把零散工作收进一个安静桌面</div>
           <p class="hero-copy">图片、快捷动作、提醒事项、备忘录，一个页面推进。默认本地优先，适合个人浏览器工作流。</p>
           <div class="hero-actions">
-            <a class="button" href="https://minidesk.online">立即体验 minidesk.online</a>
-            <a class="button secondary" href="#features">查看功能</a>
+            <a class="button" href="https://minidesk.online" target="_blank" rel="noopener noreferrer">立即体验 minidesk.online</a>
+            <a class="button secondary" href="#features" target="_blank" rel="noopener noreferrer">查看功能</a>
           </div>
           <div class="hero-note">无需后端服务 · 桌面端体验更完整</div>
         </div>
@@ -817,14 +822,14 @@
             <h2 id="cta-title">把今天的零散工作收进 Mini Desk。</h2>
             <p class="section-copy">适合在电脑浏览器中使用。无需注册后端服务，打开就能开始整理。</p>
           </div>
-          <a class="button" href="https://minidesk.online">立即体验</a>
+          <a class="button" href="https://minidesk.online" target="_blank" rel="noopener noreferrer">立即体验</a>
         </div>
       </section>
     </main>
 
     <footer class="site-footer">
       <span>Mini Desk · 本地优先的个人桌面工作台</span>
-      <a href="https://minidesk.online">https://minidesk.online</a>
+      <a href="https://minidesk.online" target="_blank" rel="noopener noreferrer">https://minidesk.online</a>
     </footer>
     <script>
       (() => {
