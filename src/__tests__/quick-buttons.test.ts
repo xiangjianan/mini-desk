@@ -505,6 +505,45 @@ describe("QuickButtons", () => {
     wrapper.unmount();
   });
 
+  it("offers tag management from the header and blank-area quick menus", async () => {
+    const headerWrapper = mountQuickButtons();
+
+    await headerWrapper.get(".quick-menu-button").trigger("click");
+    expect(headerWrapper.findAll(".dropdown-option").map((option) => option.text())).toContain("标签管理");
+    headerWrapper.unmount();
+
+    const areaWrapper = mountQuickButtons();
+
+    await areaWrapper.get(".quick-buttons").trigger("contextmenu");
+    expect(areaWrapper.findAll(".dropdown-option").map((option) => option.text())).toContain("标签管理");
+    areaWrapper.unmount();
+  });
+
+  it("opens tag management and emits add, edit, and delete tag actions", async () => {
+    const wrapper = mountQuickButtons({
+      tags: [{ id: "tag-work", title: "工作" }],
+    });
+
+    await wrapper.get(".quick-menu-button").trigger("click");
+    await wrapper.findAll(".dropdown-option").find((option) => option.text() === "标签管理")?.trigger("click");
+
+    expect(wrapper.get(".quick-tag-manager").text()).toContain("标签管理");
+
+    await wrapper.get(".quick-tag-new-input").setValue("资料");
+    await wrapper.get(".quick-tag-add").trigger("click");
+
+    expect(wrapper.emitted("saveTag")?.[0]).toEqual([{ title: "资料" }]);
+
+    await wrapper.get(".quick-tag-name-input").setValue("工作台");
+    await wrapper.get(".quick-tag-save").trigger("click");
+    await wrapper.get(".quick-tag-delete").trigger("click");
+
+    expect(wrapper.emitted("saveTag")?.[1]).toEqual([{ id: "tag-work", title: "工作台" }]);
+    expect(wrapper.emitted("deleteTag")?.[0]).toEqual(["tag-work", expect.any(HTMLElement)]);
+
+    wrapper.unmount();
+  });
+
   it("keeps an empty quick-button area visually blank without rendering an empty box", async () => {
     const wrapper = mountQuickButtons();
 
@@ -544,6 +583,7 @@ describe("QuickButtons", () => {
     expect(wrapper.findAll(".dropdown-option").map((option) => option.text())).toEqual([
       "新增",
       "显示隐藏项",
+      "标签管理",
       "Tips",
     ]);
 
@@ -555,6 +595,7 @@ describe("QuickButtons", () => {
     expect(wrapper.findAll(".dropdown-option").map((option) => option.text())).toEqual([
       "新增",
       "收起隐藏项",
+      "标签管理",
       "Tips",
     ]);
 

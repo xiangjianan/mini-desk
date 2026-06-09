@@ -2173,6 +2173,61 @@ describe("App shell", () => {
     }
   });
 
+  it("persists quick action tag management and clears quick buttons when a tag is deleted", async () => {
+    vi.useFakeTimers();
+    vi.spyOn(Math, "random").mockReturnValue(0);
+    localStorage.setItem(
+      STORAGE_KEY,
+      JSON.stringify({
+        ...defaultState(),
+        quickTags: [
+          { id: "tag-a", title: "标签 A" },
+          { id: "tag-b", title: "标签 B" },
+        ],
+        quickButtons: [
+          { id: "a", title: "A", value: "a", type: "text", hidden: false, tagId: "tag-a" },
+          { id: "b", title: "B", value: "b", type: "text", hidden: false, tagId: "tag-b" },
+        ],
+      }),
+    );
+    const wrapper = mountApp();
+
+    try {
+      const quickButtons = wrapper.getComponent(QuickButtons);
+      quickButtons.vm.$emit("saveTag", { id: "tag-a", title: "标签 A+" });
+      await wrapper.vm.$nextTick();
+
+      let stored = JSON.parse(localStorage.getItem(STORAGE_KEY) || "{}");
+      expect(stored.quickTags.find((tag: { id: string }) => tag.id === "tag-a")).toMatchObject({ title: "标签 A+" });
+
+      quickButtons.vm.$emit("saveTag", { title: "资料" });
+      await wrapper.vm.$nextTick();
+
+      stored = JSON.parse(localStorage.getItem(STORAGE_KEY) || "{}");
+      expect(stored.quickTags.map((tag: { title: string }) => tag.title)).toContain("资料");
+
+      const updatedQuickButtons = wrapper.getComponent(QuickButtons);
+      updatedQuickButtons.vm.$emit("deleteTag", "tag-a", updatedQuickButtons.element as HTMLElement);
+      await wrapper.vm.$nextTick();
+      await vi.advanceTimersByTimeAsync(200);
+      await wrapper.vm.$nextTick();
+
+      expect(wrapper.get('[data-testid="companion-yes"]').text()).toBe("删除");
+      await wrapper.get('[data-testid="companion-yes"]').trigger("click");
+      await wrapper.vm.$nextTick();
+      await vi.advanceTimersByTimeAsync(200);
+      await wrapper.vm.$nextTick();
+
+      stored = JSON.parse(localStorage.getItem(STORAGE_KEY) || "{}");
+      expect(stored.quickTags.map((tag: { id: string }) => tag.id)).not.toContain("tag-a");
+      expect(stored.quickButtons.find((button: { id: string }) => button.id === "a")).not.toHaveProperty("tagId");
+      expect(stored.quickButtons.find((button: { id: string }) => button.id === "b")).toMatchObject({ tagId: "tag-b" });
+    } finally {
+      wrapper.unmount();
+      vi.useRealTimers();
+    }
+  });
+
   it("preserves newlines when copying text quick buttons", async () => {
     localStorage.setItem(
       STORAGE_KEY,

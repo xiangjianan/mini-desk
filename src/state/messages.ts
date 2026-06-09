@@ -26,6 +26,7 @@ export type MessageKey =
   | "dataCleared"
   | "deleteImage"
   | "deleteQuick"
+  | "deleteQuickTag"
   | "deleteTodo"
   | "deleteSpace"
   | "clearCompleted"
@@ -38,6 +39,7 @@ export type MessageKey =
   | "linkOpenFailed"
   | "confirmDeleteImage"
   | "confirmDeleteQuick"
+  | "confirmDeleteQuickTag"
   | "confirmDeleteTodo"
   | "confirmDeleteTodoList"
   | "confirmUnstarTodo"
@@ -459,6 +461,22 @@ export const MESSAGE_CATALOG: Record<MessageKey, MessageEntry> = {
       "快捷项已删除",
     ],
   },
+  deleteQuickTag: {
+    mood: "calm",
+    surface: "companion",
+    variants: [
+      "标签已删除",
+      "快捷已归到其他",
+      "按钮已归为无标签",
+      "标签已移除",
+      "入口保留在其他",
+      "快捷动作已保留",
+      "相关入口已保留",
+      "标签删除完成",
+      "按钮已转到其他",
+      "无标签分类已接收",
+    ],
+  },
   deleteTodo: {
     mood: "calm",
     surface: "companion",
@@ -651,6 +669,22 @@ export const MESSAGE_CATALOG: Record<MessageKey, MessageEntry> = {
       "要删除这个按钮？",
     ],
   },
+  confirmDeleteQuickTag: {
+    mood: "warning",
+    surface: "companion",
+    variants: [
+      "删除此标签？",
+      "标签删，按钮留？",
+      "快捷会归到其他",
+      "入口会变无标签",
+      "确认移除标签？",
+      "只删标签，留入口？",
+      "按钮不删，继续？",
+      "相关快捷会保留",
+      "移除此快捷标签？",
+      "归到其他分类？",
+    ],
+  },
   confirmDeleteTodo: {
     mood: "warning",
     surface: "companion",
@@ -818,6 +852,7 @@ const EN_MESSAGE_VARIANTS = {
   dataCleared: ["Data cleared", "Board reset", "Local data cleared"],
   deleteImage: ["Image deleted", "Screenshot removed", "Image removed from the list"],
   deleteQuick: ["Shortcut deleted", "Quick entry removed", "Shortcut removed"],
+  deleteQuickTag: ["Tag deleted. Shortcuts moved to Other.", "Tag removed. Shortcuts are now untagged.", "Quick tag deleted and entries kept."],
   deleteTodo: ["Reminder deleted", "Reminder removed", "Item deleted"],
   deleteSpace: ["Space deleted", "Memo removed", "Space removed"],
   clearCompleted: ["Completed reminders cleared", "Completed items removed", "Done items cleared"],
@@ -830,6 +865,7 @@ const EN_MESSAGE_VARIANTS = {
   linkOpenFailed: ["Could not open the link", "Check the URL", "The browser blocked this link"],
   confirmDeleteImage: ["Delete this image?", "Remove this image?", "This image will be removed."],
   confirmDeleteQuick: ["Delete this shortcut?", "Remove this quick entry?", "This shortcut will be removed."],
+  confirmDeleteQuickTag: ["Delete this tag? Shortcuts will move to Other.", "Remove this tag? Shortcuts will stay untagged.", "This tag will be removed while entries are kept."],
   confirmDeleteTodo: ["Delete this reminder?", "Remove this reminder?", "This reminder will be removed."],
   confirmDeleteTodoList: ["Delete this list?", "Reminders in this list will be deleted.", "Remove this reminder list?"],
   confirmUnstarTodo: ["Unpin this reminder?", "Remove it from pinned reminders?", "This reminder will return to the normal list."],

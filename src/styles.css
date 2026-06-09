@@ -1807,6 +1807,43 @@ button.quick-button {
   gap: 6px;
 }
 
+.quick-tag-manager-body {
+  display: grid;
+  gap: 12px;
+}
+
+.quick-tag-manager-list {
+  display: grid;
+  max-height: min(300px, 42vh);
+  gap: 8px;
+  overflow: auto;
+  padding-right: 2px;
+}
+
+.quick-tag-manager-row {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) auto 30px;
+  gap: 6px;
+  align-items: center;
+}
+
+.quick-tag-add-row {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) auto;
+  gap: 6px;
+  align-items: center;
+}
+
+.quick-tag-delete {
+  align-self: stretch;
+}
+
+.quick-tag-empty {
+  margin: 0;
+  color: var(--muted);
+  font-size: 13px;
+}
+
 .quick-api-headers {
   display: grid;
   gap: 8px;

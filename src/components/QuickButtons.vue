@@ -1,8 +1,8 @@
 <script setup lang="ts">
-import { computed, h, onMounted, onUnmounted, reactive, ref } from "vue";
+import { computed, h, onMounted, onUnmounted, reactive, ref, watch } from "vue";
 import type { Component, VNode } from "vue";
 import { NButton, NCheckbox, NDropdown, NIcon, NInput, NModal, NScrollbar, NSelect } from "naive-ui";
-import { AddOutline, CloudUploadOutline, CopyOutline, CreateOutline, EyeOffOutline, EyeOutline, HelpCircleOutline, TrashOutline } from "@vicons/ionicons5";
+import { AddOutline, CloudUploadOutline, CopyOutline, CreateOutline, EyeOffOutline, EyeOutline, HelpCircleOutline, PricetagsOutline, TrashOutline } from "@vicons/ionicons5";
 import type { DropdownOption } from "naive-ui";
 import type { AppLanguage, GuideKey, QuickApiBodyType, QuickApiHeader, QuickApiMethod, QuickButton, QuickButtonType, QuickTag } from "../types";
 import { GUIDE_MENU_OPTION } from "../state/defaults";
@@ -31,14 +31,18 @@ const emit = defineEmits<{
   reorder: [dragId: string, targetId: string];
   reorderTag: [dragId: string, targetId: string];
   moveToTag: [buttonId: string, tagId?: string, targetId?: string];
+  saveTag: [payload: { id?: string; title: string }];
+  deleteTag: [id: string, anchor?: HTMLElement];
   guide: [key: GuideKey, anchor: HTMLElement, immediate?: boolean];
   declutter: [anchor: HTMLElement];
 }>();
 
 const dialogOpen = ref(false);
+const tagManagerOpen = ref(false);
 const editingId = ref<string | undefined>();
 const titleRef = ref<{ openMenuAt: (x: number, y: number, event?: Event) => void } | null>(null);
 type QuickApiHeaderFormRow = QuickApiHeader & { id: string };
+type QuickTagDraft = QuickTag & { titleDraft: string };
 
 let headerRowId = 0;
 
@@ -63,6 +67,9 @@ const form = reactive<{ title: string; value: string; tagTitle: string; type: Qu
   apiBody: "",
 });
 const menu = ref<{ x: number; y: number; id?: string; anchor?: HTMLElement } | null>(null);
+const tagDrafts = ref<QuickTagDraft[]>([]);
+const newTagTitle = ref("");
+const tagManagerAnchor = ref<HTMLElement | undefined>();
 const draggingId = ref<string | null>(null);
 const draggingTagId = ref<string | null>(null);
 const isDragHover = ref(false);
@@ -90,6 +97,7 @@ function renderIcon(icon: Component): () => VNode {
 
 onMounted(exclusiveMenu.mount);
 onUnmounted(exclusiveMenu.unmount);
+watch(() => props.tags, refreshTagDrafts, { deep: true });
 
 const visibleButtons = computed(() =>
   props.buttons.filter((button) => props.showHidden || !button.hidden),
@@ -123,6 +131,7 @@ const menuOptions = computed<DropdownOption[]>(() => {
     return [
       { label: uiText.value.quick.add, key: "add", icon: renderIcon(AddOutline) },
       { label: props.showHidden ? uiText.value.quick.hideHidden : uiText.value.quick.showHidden, key: "toggle-show-hidden", icon: renderIcon(props.showHidden ? EyeOffOutline : EyeOutline) },
+      { label: uiText.value.quick.tagManage, key: "manage-tags", icon: renderIcon(PricetagsOutline) },
       { ...guideMenuOption.value, icon: renderIcon(HelpCircleOutline) },
     ];
   }
@@ -162,6 +171,38 @@ function openEdit(id: string): void {
   form.apiBody = button.apiBody ?? "";
   dialogOpen.value = true;
   menu.value = null;
+}
+
+function refreshTagDrafts(): void {
+  tagDrafts.value = props.tags.map((tag) => ({ ...tag, titleDraft: tag.title }));
+}
+
+function openTagManager(anchor?: HTMLElement): void {
+  refreshTagDrafts();
+  newTagTitle.value = "";
+  tagManagerAnchor.value = anchor;
+  tagManagerOpen.value = true;
+}
+
+function closeTagManager(): void {
+  tagManagerOpen.value = false;
+}
+
+function addTag(): void {
+  const title = newTagTitle.value.trim();
+  if (!title) return;
+  emit("saveTag", { title });
+  newTagTitle.value = "";
+}
+
+function saveTag(draft: QuickTagDraft): void {
+  const title = draft.titleDraft.trim();
+  if (!title || title === draft.title) return;
+  emit("saveTag", { id: draft.id, title });
+}
+
+function deleteTag(id: string, event: MouseEvent): void {
+  emit("deleteTag", id, event.currentTarget as HTMLElement ?? tagManagerAnchor.value);
 }
 
 function getQuickTagTitle(tagId?: string): string {
@@ -261,6 +302,10 @@ function handleMenuSelect(key: string): void {
   }
   if (key === "toggle-show-hidden") {
     handleToggleShowHidden(anchor);
+    return;
+  }
+  if (key === "manage-tags") {
+    openTagManager(anchor);
     return;
   }
   if (key === "guide" && anchor) emit("guide", "quickButtons", anchor, true);
@@ -650,6 +695,69 @@ function handleQuickGroupDrop(groupId: string): void {
           <NButton class="quick-dialog-action quick-dialog-submit" attr-type="submit" type="default" :disabled="!canSubmit">{{ uiText.common.save }}</NButton>
         </div>
       </form>
+    </NModal>
+
+    <NModal
+      v-model:show="tagManagerOpen"
+      preset="card"
+      class="quick-dialog quick-tag-manager"
+      :mask-closable="false"
+      :title="uiText.quick.tagManage"
+    >
+      <div class="quick-tag-manager-body">
+        <div v-if="tagDrafts.length" class="quick-tag-manager-list">
+          <div
+            v-for="tag in tagDrafts"
+            :key="tag.id"
+            class="quick-tag-manager-row"
+          >
+            <NInput
+              v-model:value="tag.titleDraft"
+              class="quick-tag-name-input"
+              :placeholder="uiText.quick.tagName"
+              autocomplete="off"
+              @keydown.enter.prevent="saveTag(tag)"
+            />
+            <NButton
+              class="quick-tag-save"
+              type="default"
+              :disabled="tag.titleDraft.trim().length === 0 || tag.titleDraft.trim() === tag.title"
+              @click="saveTag(tag)"
+            >
+              {{ uiText.quick.saveTag }}
+            </NButton>
+            <button
+              type="button"
+              class="quick-tag-delete icon-button"
+              :aria-label="uiText.quick.deleteTag"
+              @click="deleteTag(tag.id, $event)"
+            >
+              <NIcon :component="TrashOutline" />
+            </button>
+          </div>
+        </div>
+        <p v-else class="quick-tag-empty">{{ uiText.quick.emptyTags }}</p>
+        <div class="quick-tag-add-row">
+          <NInput
+            v-model:value="newTagTitle"
+            class="quick-tag-new-input"
+            :placeholder="uiText.quick.newTag"
+            autocomplete="off"
+            @keydown.enter.prevent="addTag"
+          />
+          <NButton
+            class="quick-tag-add"
+            type="default"
+            :disabled="newTagTitle.trim().length === 0"
+            @click="addTag"
+          >
+            {{ uiText.quick.addTag }}
+          </NButton>
+        </div>
+        <div class="dialog-actions">
+          <NButton class="quick-dialog-action" type="default" @click="closeTagManager">{{ uiText.common.cancel }}</NButton>
+        </div>
+      </div>
     </NModal>
   </section>
 </template>

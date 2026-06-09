@@ -737,6 +737,46 @@ function resolveQuickTagId(tagTitle?: string): string | undefined {
   return tag.id;
 }
 
+function saveQuickTag(payload: { id?: string; title: string }): void {
+  const title = payload.title.trim();
+  if (!title) return;
+  if (!payload.id) {
+    if (state.quickTags.some((tag) => tag.title === title)) return;
+    state.quickTags.push({ id: createId(), title });
+    persistNow();
+    return;
+  }
+
+  const current = state.quickTags.find((tag) => tag.id === payload.id);
+  if (!current) return;
+  const duplicate = state.quickTags.find((tag) => tag.id !== payload.id && tag.title === title);
+  if (duplicate) {
+    moveQuickButtonsToTag(payload.id, duplicate.id);
+    state.quickTags = state.quickTags.filter((tag) => tag.id !== payload.id);
+  } else {
+    current.title = title;
+  }
+  persistNow();
+}
+
+function deleteQuickTag(id: string, anchor?: HTMLElement): void {
+  const tag = state.quickTags.find((item) => item.id === id);
+  if (!tag) return;
+  requestConfirmation("confirmDeleteQuickTag", anchor, () => {
+    state.quickTags = state.quickTags.filter((item) => item.id !== id);
+    moveQuickButtonsToTag(id, undefined);
+    persistNow();
+    showBubble("deleteQuickTag", anchor, { hideCompanionAfter: true });
+  }, undefined, { confirmText: uiText.value.common.delete, cancelText: uiText.value.common.cancel });
+}
+
+function moveQuickButtonsToTag(fromTagId: string, toTagId: string | undefined): void {
+  state.quickButtons.forEach((button) => {
+    if (button.tagId !== fromTagId) return;
+    applyQuickTag(button, toTagId);
+  });
+}
+
 function applyQuickTag(button: QuickButton, tagId: string | undefined): void {
   if (tagId) {
     button.tagId = tagId;
@@ -2171,6 +2211,8 @@ function moveItem<T extends { id: string }>(items: T[], dragId: string, targetId
           @reorder="reorderQuickButtons"
           @reorder-tag="reorderQuickTags"
           @move-to-tag="moveQuickButtonToTag"
+          @save-tag="saveQuickTag"
+          @delete-tag="deleteQuickTag"
           @guide="handleGuideClick"
           @declutter="showQuickDeclutterBubble"
         />
