@@ -21,6 +21,8 @@
         --purple: #8b5cf6;
         --dark: #19212b;
         --shadow: 0 34px 110px rgba(23, 32, 42, 0.16);
+        --ease-out: cubic-bezier(0.16, 1, 0.3, 1);
+        --ease-premium: cubic-bezier(0.22, 1, 0.36, 1);
       }
 
       * {
@@ -64,6 +66,19 @@
         background: rgba(248, 250, 248, 0.74);
         border-bottom: 1px solid rgba(23, 32, 42, 0.08);
         backdrop-filter: blur(18px);
+        transition:
+          padding 260ms var(--ease-out),
+          background 260ms var(--ease-out),
+          box-shadow 260ms var(--ease-out),
+          border-color 260ms var(--ease-out);
+      }
+
+      .site-header.is-scrolled {
+        padding-top: 14px;
+        padding-bottom: 14px;
+        background: rgba(248, 250, 248, 0.88);
+        border-color: rgba(23, 32, 42, 0.12);
+        box-shadow: 0 18px 48px rgba(23, 32, 42, 0.08);
       }
 
       .brand {
@@ -104,6 +119,22 @@
         font-size: 15px;
         font-weight: 850;
         box-shadow: 0 18px 48px rgba(25, 33, 43, 0.22);
+        transition:
+          transform 240ms var(--ease-out),
+          box-shadow 240ms var(--ease-out),
+          background 240ms var(--ease-out),
+          border-color 240ms var(--ease-out);
+        will-change: transform;
+      }
+
+      .button:hover {
+        transform: translateY(-2px);
+        box-shadow: 0 24px 62px rgba(25, 33, 43, 0.28);
+      }
+
+      .button:active {
+        transform: translateY(0);
+        box-shadow: 0 14px 36px rgba(25, 33, 43, 0.2);
       }
 
       .button.secondary {
@@ -128,6 +159,7 @@
         background:
           linear-gradient(90deg, rgba(247, 250, 247, 0.98) 0%, rgba(247, 250, 247, 0.9) 37%, rgba(247, 250, 247, 0.18) 70%, rgba(247, 250, 247, 0.72) 100%),
           url("./assets/mini-desk-ui.png") right 14% center / min(1120px, 72vw) auto no-repeat;
+        transform-origin: 72% 54%;
       }
 
       .hero-content {
@@ -218,6 +250,18 @@
         border-radius: 8px;
         background: rgba(255, 255, 255, 0.74);
         border: 1px solid var(--line);
+        transition:
+          transform 320ms var(--ease-out),
+          border-color 320ms var(--ease-out),
+          box-shadow 320ms var(--ease-out),
+          background 320ms var(--ease-out);
+      }
+
+      .feature:hover {
+        transform: translateY(-6px);
+        background: rgba(255, 255, 255, 0.88);
+        border-color: rgba(23, 32, 42, 0.18);
+        box-shadow: 0 24px 70px rgba(23, 32, 42, 0.12);
       }
 
       .feature-index {
@@ -291,6 +335,16 @@
         border-radius: 8px;
         background: rgba(255, 255, 255, 0.08);
         border: 1px solid rgba(255, 255, 255, 0.14);
+        transition:
+          transform 280ms var(--ease-out),
+          background 280ms var(--ease-out),
+          border-color 280ms var(--ease-out);
+      }
+
+      .data-row:hover {
+        transform: translateX(4px);
+        background: rgba(255, 255, 255, 0.12);
+        border-color: rgba(255, 255, 255, 0.24);
       }
 
       .data-row strong {
@@ -316,6 +370,34 @@
         background: rgba(255, 255, 255, 0.72);
         border: 1px solid var(--line);
         box-shadow: var(--shadow);
+        position: relative;
+        overflow: hidden;
+        transition:
+          transform 420ms var(--ease-out),
+          box-shadow 420ms var(--ease-out),
+          border-color 420ms var(--ease-out);
+      }
+
+      .product-frame::after,
+      .poster-card::after {
+        content: "";
+        position: absolute;
+        inset: 0;
+        pointer-events: none;
+        background: linear-gradient(120deg, transparent 0%, rgba(255, 255, 255, 0.32) 43%, transparent 62%);
+        transform: translateX(-120%);
+        transition: transform 780ms var(--ease-premium);
+      }
+
+      .product-frame:hover {
+        transform: translateY(-8px) scale(1.01);
+        border-color: rgba(23, 32, 42, 0.18);
+        box-shadow: 0 44px 130px rgba(23, 32, 42, 0.2);
+      }
+
+      .product-frame:hover::after,
+      .poster-card:hover::after {
+        transform: translateX(120%);
       }
 
       .product-frame img {
@@ -335,6 +417,13 @@
         grid-template-columns: 38px 1fr;
         gap: 16px;
         align-items: start;
+        transition:
+          transform 260ms var(--ease-out),
+          opacity 260ms var(--ease-out);
+      }
+
+      .workflow-item:hover {
+        transform: translateX(6px);
       }
 
       .workflow-item b {
@@ -367,9 +456,18 @@
       }
 
       .poster-card {
+        position: relative;
         overflow: hidden;
         border-radius: 30px;
         box-shadow: var(--shadow);
+        transition:
+          transform 420ms var(--ease-out),
+          box-shadow 420ms var(--ease-out);
+      }
+
+      .poster-card:hover {
+        transform: translateY(-8px) rotate(-0.4deg);
+        box-shadow: 0 44px 120px rgba(23, 32, 42, 0.2);
       }
 
       .poster-card img {
@@ -390,6 +488,16 @@
         border-radius: 8px;
         background: rgba(255, 255, 255, 0.78);
         border: 1px solid var(--line);
+        transition:
+          transform 320ms var(--ease-out),
+          box-shadow 320ms var(--ease-out),
+          background 320ms var(--ease-out);
+      }
+
+      .cta-panel:hover {
+        transform: translateY(-4px);
+        background: rgba(255, 255, 255, 0.88);
+        box-shadow: 0 26px 86px rgba(23, 32, 42, 0.12);
       }
 
       .cta-panel h2 {
@@ -404,6 +512,132 @@
         color: var(--muted);
         font-size: 14px;
         font-weight: 700;
+      }
+
+      @media (prefers-reduced-motion: no-preference) {
+        .site-header {
+          animation: header-in 720ms var(--ease-premium) both;
+        }
+
+        .hero::before {
+          animation: hero-media-in 1100ms var(--ease-premium) 120ms both;
+        }
+
+        .hero-content > * {
+          animation: hero-copy-in 820ms var(--ease-premium) both;
+        }
+
+        .hero-content > *:nth-child(1) {
+          animation-delay: 80ms;
+        }
+
+        .hero-content > *:nth-child(2) {
+          animation-delay: 170ms;
+        }
+
+        .hero-content > *:nth-child(3) {
+          animation-delay: 260ms;
+        }
+
+        .hero-content > *:nth-child(4) {
+          animation-delay: 360ms;
+        }
+
+        .hero-content > *:nth-child(5) {
+          animation-delay: 440ms;
+        }
+
+        .motion-ready .reveal {
+          opacity: 0;
+          filter: blur(8px);
+          transform: translateY(28px);
+          transition:
+            opacity 760ms var(--ease-premium) var(--delay, 0ms),
+            filter 760ms var(--ease-premium) var(--delay, 0ms),
+            transform 760ms var(--ease-premium) var(--delay, 0ms);
+        }
+
+        .motion-ready .reveal.is-visible {
+          opacity: 1;
+          filter: blur(0);
+          transform: translateY(0);
+        }
+
+        .motion-ready .feature.reveal.is-visible:hover {
+          transform: translateY(-6px);
+        }
+
+        .motion-ready .data-row.reveal.is-visible:hover {
+          transform: translateX(4px);
+        }
+
+        .motion-ready .product-frame.reveal.is-visible:hover {
+          transform: translateY(-8px) scale(1.01);
+        }
+
+        .motion-ready .workflow-item.reveal.is-visible:hover {
+          transform: translateX(6px);
+        }
+
+        .motion-ready .poster-card.reveal.is-visible:hover {
+          transform: translateY(-8px) rotate(-0.4deg);
+        }
+
+        .motion-ready .cta-panel.reveal.is-visible:hover {
+          transform: translateY(-4px);
+        }
+
+        @keyframes header-in {
+          from {
+            opacity: 0;
+            transform: translateY(-18px);
+          }
+          to {
+            opacity: 1;
+            transform: translateY(0);
+          }
+        }
+
+        @keyframes hero-copy-in {
+          from {
+            opacity: 0;
+            filter: blur(10px);
+            transform: translateY(26px);
+          }
+          to {
+            opacity: 1;
+            filter: blur(0);
+            transform: translateY(0);
+          }
+        }
+
+        @keyframes hero-media-in {
+          from {
+            opacity: 0;
+            filter: blur(16px);
+            transform: scale(1.04) translateX(24px);
+          }
+          to {
+            opacity: 1;
+            filter: blur(0);
+            transform: scale(1) translateX(0);
+          }
+        }
+      }
+
+      @media (prefers-reduced-motion: reduce) {
+        html {
+          scroll-behavior: auto;
+        }
+
+        *,
+        *::before,
+        *::after {
+          animation-duration: 1ms !important;
+          animation-iteration-count: 1 !important;
+          scroll-behavior: auto !important;
+          transition-duration: 1ms !important;
+        }
       }
 
       @media (max-width: 920px) {
@@ -623,5 +857,54 @@
       <span>Mini Desk · 本地优先的个人桌面工作台</span>
       <a href="https://minidesk.online">https://minidesk.online</a>
     </footer>
+    <script>
+      (() => {
+        const reduceMotion = window.matchMedia("(prefers-reduced-motion: reduce)").matches;
+        const header = document.querySelector(".site-header");
+
+        const updateHeader = () => {
+          header?.classList.toggle("is-scrolled", window.scrollY > 12);
+        };
+
+        updateHeader();
+        window.addEventListener("scroll", updateHeader, { passive: true });
+
+        if (reduceMotion || !("IntersectionObserver" in window)) {
+          return;
+        }
+
+        document.documentElement.classList.add("motion-ready");
+
+        const revealTargets = [
+          ...document.querySelectorAll(
+            ".section h2, .section-copy, .feature, .data-row, .product-frame, .workflow-item, .poster-card, .cta-panel",
+          ),
+        ];
+
+        revealTargets.forEach((element, index) => {
+          element.classList.add("reveal");
+          element.style.setProperty("--delay", `${Math.min((index % 5) * 70, 280)}ms`);
+        });
+
+        const observer = new IntersectionObserver(
+          (entries) => {
+            entries.forEach((entry) => {
+              if (!entry.isIntersecting) {
+                return;
+              }
+
+              entry.target.classList.add("is-visible");
+              observer.unobserve(entry.target);
+            });
+          },
+          {
+            rootMargin: "0px 0px -8% 0px",
+            threshold: 0.16,
+          },
+        );
+
+        revealTargets.forEach((element) => observer.observe(element));
+      })();
+    </script>
   </body>
 </html>
