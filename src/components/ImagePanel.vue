@@ -163,6 +163,7 @@ function handleImageDragLeave(): void {
         type="button"
         draggable="true"
         @click="emit('preview', image.id)"
+        @dblclick.stop.prevent="emit('copy', image.id)"
         @contextmenu.stop="openMenu($event, image.id)"
         @dragstart="draggingId = image.id"
         @dragover.prevent

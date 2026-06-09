@@ -1813,6 +1813,10 @@ button.quick-button {
   gap: 6px;
 }
 
+.quick-tag-new-inline-input {
+  min-width: 0;
+}
+
 .quick-tag-choices {
   display: flex;
   flex-wrap: wrap;

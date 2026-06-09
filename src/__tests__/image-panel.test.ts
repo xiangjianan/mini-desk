@@ -174,6 +174,15 @@ describe("ImagePanel", () => {
     wrapper.unmount();
   });
 
+  it("emits copy when an image card is double-clicked", async () => {
+    const wrapper = mountImagePanel([{ id: "img-1", src: "data:image/png;base64,one", createdAt: 1 }]);
+
+    await wrapper.get(".image-card").trigger("dblclick");
+
+    expect(wrapper.emitted("copy")?.[0]).toEqual(["img-1"]);
+    wrapper.unmount();
+  });
+
   it("emits copy from the real image item dropdown menu", async () => {
     const wrapper = mount(ImagePanel, {
       attachTo: document.body,

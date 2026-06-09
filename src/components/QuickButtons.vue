@@ -56,10 +56,11 @@ function createHeaderRows(headers: QuickApiHeader[] | undefined): QuickApiHeader
   return rows.length ? rows : [createHeaderRow()];
 }
 
-const form = reactive<{ title: string; value: string; tagTitle: string; type: QuickButtonType; apiMethod: QuickApiMethod; apiHeaders: QuickApiHeaderFormRow[]; apiBodyType: QuickApiBodyType; apiBody: string }>({
+const form = reactive<{ title: string; value: string; tagTitle: string; customTagTitle: string; type: QuickButtonType; apiMethod: QuickApiMethod; apiHeaders: QuickApiHeaderFormRow[]; apiBodyType: QuickApiBodyType; apiBody: string }>({
   title: "",
   value: "",
   tagTitle: "",
+  customTagTitle: "",
   type: "link",
   apiMethod: "GET",
   apiHeaders: [createHeaderRow()],
@@ -148,6 +149,7 @@ function openAdd(anchor?: HTMLElement): void {
   form.title = "";
   form.value = "";
   form.tagTitle = "";
+  form.customTagTitle = "";
   form.type = "link";
   form.apiMethod = "GET";
   form.apiHeaders = [createHeaderRow()];
@@ -164,6 +166,7 @@ function openEdit(id: string): void {
   form.title = button.title;
   form.value = button.value;
   form.tagTitle = getQuickTagTitle(button.tagId);
+  form.customTagTitle = "";
   form.type = button.type;
   form.apiMethod = button.apiMethod ?? "GET";
   form.apiHeaders = createHeaderRows(button.apiHeaders);
@@ -223,6 +226,12 @@ function setQuickType(type: QuickButtonType): void {
 
 function selectQuickTag(tagTitle: string): void {
   form.tagTitle = tagTitle;
+  form.customTagTitle = "";
+}
+
+function setCustomQuickTag(tagTitle: string): void {
+  form.customTagTitle = tagTitle;
+  if (tagTitle.trim()) form.tagTitle = "";
 }
 
 function addApiHeader(): void {
@@ -248,7 +257,7 @@ function submit(): void {
     title: form.title.trim(),
     value: form.value,
     type: form.type,
-    tagTitle: form.tagTitle.trim(),
+    tagTitle: (form.customTagTitle.trim() || form.tagTitle).trim(),
     ...(form.type === "api"
       ? { apiMethod: form.apiMethod, apiHeaders: getApiHeadersPayload(), apiBodyType: form.apiBodyType, apiBody: form.apiBody }
       : {}),
@@ -639,13 +648,20 @@ function handleQuickGroupDrop(groupId: string): void {
               :key="tag.value || '__none'"
               type="button"
               class="quick-tag-choice"
-              :class="{ 'is-selected': form.tagTitle === tag.value }"
-              :aria-pressed="form.tagTitle === tag.value"
+              :class="{ 'is-selected': !form.customTagTitle.trim() && form.tagTitle === tag.value }"
+              :aria-pressed="!form.customTagTitle.trim() && form.tagTitle === tag.value"
               @click="selectQuickTag(tag.value)"
             >
               {{ tag.label }}
             </button>
           </div>
+          <NInput
+            :value="form.customTagTitle"
+            class="quick-tag-new-inline-input"
+            :placeholder="uiText.quick.newTag"
+            autocomplete="off"
+            @update:value="setCustomQuickTag"
+          />
         </div>
         <template v-if="form.type === 'api'">
           <label>

@@ -196,6 +196,31 @@ describe("QuickButtons", () => {
     wrapper.unmount();
   });
 
+  it("allows typing a new quick tag while keeping existing tag buttons single-select", async () => {
+    const wrapper = mountQuickButtons({
+      tags: [{ id: "tag-tools", title: "工具" }],
+    });
+
+    await openDialog(wrapper);
+    await wrapper.findAll("input")[0].setValue("资料入口");
+    await wrapper.findAll("input")[1].setValue("https://docs.example.test");
+    await wrapper.findAll(".quick-tag-choice").find((option) => option.text() === "工具")?.trigger("click");
+    await wrapper.get(".quick-tag-new-inline-input").setValue("资料");
+
+    expect(wrapper.findAll(".quick-tag-choice").map((option) => option.attributes("aria-pressed"))).toEqual(["false", "false"]);
+
+    await wrapper.get("form").trigger("submit.prevent");
+
+    expect(wrapper.emitted("save")?.[0][0]).toMatchObject({
+      title: "资料入口",
+      tagTitle: "资料",
+      value: "https://docs.example.test",
+      type: "link",
+    });
+
+    wrapper.unmount();
+  });
+
   it("keeps the tag manager layout from creating horizontal scrolling", () => {
     const styles = readSource("styles.css");
 
