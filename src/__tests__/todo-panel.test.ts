@@ -1059,6 +1059,7 @@ describe("TodoPanel", () => {
     expect(styles).toMatch(/\.todo-item\.is-starred\.is-done \.todo-input,[\s\S]*?text-decoration: line-through/s);
     expect(styles).toMatch(/\.todo-item\.is-starred\.is-done \.todo-input,[\s\S]*?animation: starred-text-flow/s);
     expect(styles).toMatch(/@keyframes starred-text-flow\s*\{[\s\S]*?background-position: 0% 50%[\s\S]*?background-position: -100% 50%/s);
+    expect(styles).toMatch(/\.todo-item\.is-starred \.todo-input::selection,[\s\S]*?\.today-focus-item \.today-focus-input::selection\s*\{[\s\S]*?-webkit-text-fill-color: #ffffff/s);
   });
 
   it("uses an inset soft background for the reminder editing state", () => {

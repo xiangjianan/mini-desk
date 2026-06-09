@@ -2786,6 +2786,13 @@ button.todo-star-button {
   animation: starred-text-flow 4.8s linear infinite;
 }
 
+.todo-item.is-starred .todo-input::selection,
+.today-focus-item .today-focus-input::selection {
+  color: #ffffff;
+  -webkit-text-fill-color: #ffffff;
+  background: color-mix(in srgb, var(--primary) 82%, transparent);
+}
+
 .todo-item.is-starred.is-done .todo-input,
 .today-focus-item.is-done .today-focus-input {
   text-decoration: line-through;
