@@ -379,8 +379,7 @@
           border-color 420ms var(--ease-out);
       }
 
-      .product-frame::after,
-      .poster-card::after {
+      .product-frame::after {
         content: "";
         position: absolute;
         inset: 0;
@@ -395,8 +394,7 @@
         box-shadow: 0 44px 130px rgba(23, 32, 42, 0.2);
       }
 
-      .product-frame:hover::after,
-      .poster-card:hover::after {
+      .product-frame:hover::after {
         transform: translateX(120%);
       }
 
@@ -442,35 +440,6 @@
         color: var(--text);
         font-size: 18px;
         line-height: 1.45;
-      }
-
-      .poster-section {
-        padding-top: 76px;
-      }
-
-      .poster-layout {
-        display: grid;
-        grid-template-columns: minmax(260px, 0.55fr) minmax(0, 1fr);
-        gap: 60px;
-        align-items: center;
-      }
-
-      .poster-card {
-        position: relative;
-        overflow: hidden;
-        border-radius: 30px;
-        box-shadow: var(--shadow);
-        transition:
-          transform 420ms var(--ease-out),
-          box-shadow 420ms var(--ease-out);
-      }
-
-      .poster-card:hover {
-        box-shadow: 0 44px 120px rgba(23, 32, 42, 0.2);
-      }
-
-      .poster-card img {
-        width: 100%;
       }
 
       .cta-section {
@@ -642,7 +611,6 @@
         .feature-grid,
         .privacy-layout,
         .preview-layout,
-        .poster-layout,
         .cta-panel {
           grid-template-columns: 1fr;
         }
@@ -804,18 +772,6 @@
         </div>
       </section>
 
-      <section class="section poster-section" aria-labelledby="poster-title">
-        <div class="section-inner poster-layout">
-          <div class="poster-card">
-            <img src="./assets/mini-desk-promo-poster.png" alt="Mini Desk 宣传海报" />
-          </div>
-          <div>
-            <h2 id="poster-title">海报里的承诺，落到网页里的使用路径。</h2>
-            <p class="section-copy">Landing Page 保持同一套视觉语言：大标题、真实产品界面、本地优先承诺，以及四个清晰的功能入口。</p>
-          </div>
-        </div>
-      </section>
-
       <section class="section cta-section" aria-labelledby="cta-title">
         <div class="section-inner cta-panel">
           <div>
@@ -851,7 +807,7 @@
 
         const revealTargets = [
           ...document.querySelectorAll(
-            ".section h2, .section-copy, .feature, .data-row, .product-frame, .workflow-item, .poster-card, .cta-panel",
+            ".section h2, .section-copy, .feature, .data-row, .product-frame, .workflow-item, .cta-panel",
           ),
         ];
 
