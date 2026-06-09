@@ -1,0 +1,288 @@
+<!doctype html>
+<html lang="zh-CN">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <title>Mini Desk 宣传海报</title>
+    <style>
+      * {
+        box-sizing: border-box;
+      }
+
+      body {
+        margin: 0;
+        background: #111827;
+        font-family: "PingFang SC", "Hiragino Sans GB", "Microsoft YaHei", Arial, sans-serif;
+      }
+
+      .poster {
+        position: relative;
+        width: 1600px;
+        height: 2000px;
+        overflow: hidden;
+        background:
+          radial-gradient(circle at 15% 12%, rgba(47, 128, 237, 0.16), transparent 30%),
+          radial-gradient(circle at 84% 24%, rgba(39, 174, 96, 0.15), transparent 34%),
+          linear-gradient(160deg, #fbf8f1 0%, #f5f7fb 52%, #edf7f1 100%);
+        color: #18202a;
+      }
+
+      .topbar {
+        position: absolute;
+        left: 92px;
+        top: 76px;
+        right: 92px;
+        display: flex;
+        align-items: center;
+        justify-content: space-between;
+        color: #4b5563;
+        font-size: 28px;
+        font-weight: 600;
+      }
+
+      .brand {
+        display: flex;
+        align-items: center;
+        gap: 18px;
+      }
+
+      .mark {
+        width: 42px;
+        height: 42px;
+        display: block;
+      }
+
+      .badge {
+        border: 1px solid rgba(24, 32, 42, 0.12);
+        border-radius: 999px;
+        padding: 14px 26px;
+        background: rgba(255, 255, 255, 0.7);
+        backdrop-filter: blur(18px);
+      }
+
+      .hero {
+        position: absolute;
+        left: 92px;
+        top: 190px;
+        width: 900px;
+      }
+
+      .eyebrow {
+        margin-bottom: 34px;
+        color: #2f80ed;
+        font-size: 30px;
+        font-weight: 800;
+        letter-spacing: 0;
+      }
+
+      h1 {
+        margin: 0;
+        font-size: 112px;
+        line-height: 1.02;
+        letter-spacing: 0;
+        font-weight: 900;
+      }
+
+      .subtitle {
+        width: 760px;
+        margin-top: 38px;
+        color: #52606d;
+        font-size: 38px;
+        line-height: 1.45;
+        font-weight: 500;
+      }
+
+      .cta {
+        display: inline-flex;
+        align-items: center;
+        gap: 18px;
+        margin-top: 54px;
+        padding: 24px 34px;
+        border-radius: 28px;
+        background: #18202a;
+        color: #ffffff;
+        font-size: 30px;
+        font-weight: 800;
+        box-shadow: 0 28px 80px rgba(24, 32, 42, 0.26);
+      }
+
+      .cta-dot {
+        width: 14px;
+        height: 14px;
+        border-radius: 999px;
+        background: #27ae60;
+        box-shadow: 0 0 0 10px rgba(39, 174, 96, 0.14);
+      }
+
+      .mockup-wrap {
+        position: absolute;
+        left: 160px;
+        top: 980px;
+        width: 1280px;
+        height: 620px;
+        border-radius: 46px;
+        background: rgba(255, 255, 255, 0.72);
+        border: 1px solid rgba(24, 32, 42, 0.1);
+        box-shadow: 0 48px 150px rgba(24, 32, 42, 0.2);
+        padding: 28px;
+      }
+
+      .mockup {
+        width: 100%;
+        height: 100%;
+        object-fit: cover;
+        object-position: top center;
+        border-radius: 30px;
+        border: 1px solid rgba(24, 32, 42, 0.08);
+      }
+
+      .feature-row {
+        position: absolute;
+        left: 92px;
+        right: 92px;
+        bottom: 218px;
+        display: grid;
+        grid-template-columns: repeat(3, 1fr);
+        gap: 28px;
+      }
+
+      .feature {
+        min-height: 188px;
+        padding: 34px 34px 30px;
+        border-radius: 34px;
+        background: rgba(255, 255, 255, 0.76);
+        border: 1px solid rgba(24, 32, 42, 0.1);
+      }
+
+      .feature-label {
+        margin-bottom: 18px;
+        font-size: 26px;
+        font-weight: 900;
+      }
+
+      .feature-copy {
+        color: #52606d;
+        font-size: 25px;
+        line-height: 1.42;
+        font-weight: 500;
+      }
+
+      .blue {
+        color: #2f80ed;
+      }
+
+      .green {
+        color: #27ae60;
+      }
+
+      .amber {
+        color: #b77900;
+      }
+
+      .footer {
+        position: absolute;
+        left: 92px;
+        right: 92px;
+        bottom: 78px;
+        display: flex;
+        justify-content: space-between;
+        align-items: center;
+        color: #66717f;
+        font-size: 24px;
+        font-weight: 600;
+      }
+
+      .url {
+        color: #18202a;
+        font-weight: 900;
+      }
+
+      .orb {
+        position: absolute;
+        right: -90px;
+        top: 390px;
+        width: 410px;
+        height: 410px;
+        border-radius: 50%;
+        background: linear-gradient(135deg, rgba(47, 128, 237, 0.18), rgba(39, 174, 96, 0.18));
+        filter: blur(4px);
+      }
+
+      .strip {
+        position: absolute;
+        right: 102px;
+        top: 648px;
+        width: 318px;
+        padding: 30px;
+        border-radius: 34px;
+        background: rgba(255, 255, 255, 0.78);
+        border: 1px solid rgba(24, 32, 42, 0.1);
+        box-shadow: 0 28px 90px rgba(24, 32, 42, 0.12);
+      }
+
+      .strip-title {
+        color: #18202a;
+        font-size: 30px;
+        font-weight: 900;
+        margin-bottom: 16px;
+      }
+
+      .strip-copy {
+        color: #52606d;
+        font-size: 24px;
+        line-height: 1.35;
+      }
+    </style>
+  </head>
+  <body>
+    <main class="poster">
+      <div class="orb"></div>
+      <div class="topbar">
+        <div class="brand">
+          <img class="mark" src="./assets/favicon.svg" alt="" />
+          <span>Mini Desk</span>
+        </div>
+        <div class="badge">本地优先 · 桌面工作台</div>
+      </div>
+
+      <section class="hero">
+        <div class="eyebrow">截图、提醒、快捷动作，一个页面推进</div>
+        <h1>把零散工作<br />收进一个<br />安静桌面</h1>
+        <p class="subtitle">Mini Desk 帮你集中整理截图、便签、提醒事项、快捷链接、常用工具和工作空间。</p>
+        <div class="cta">
+          <span class="cta-dot"></span>
+          <span>立即体验 minidesk.online</span>
+        </div>
+      </section>
+
+      <aside class="strip">
+        <div class="strip-title">默认不上传</div>
+        <div class="strip-copy">状态保存在浏览器 localStorage，图片原文保存在同源 IndexedDB。</div>
+      </aside>
+
+      <section class="mockup-wrap">
+        <img class="mockup" src="./assets/mini-desk-ui.png" alt="Mini Desk 网站界面截图" />
+      </section>
+
+      <section class="feature-row">
+        <div class="feature">
+          <div class="feature-label blue">图床与预览</div>
+          <div class="feature-copy">Ctrl+V 粘贴截图，支持缩略图整理、预览、复制、删除和拖拽排序。</div>
+        </div>
+        <div class="feature">
+          <div class="feature-label green">今日重点</div>
+          <div class="feature-copy">星标事项自动聚合，截止时间、完成进度和提醒状态一眼可见。</div>
+        </div>
+        <div class="feature">
+          <div class="feature-label amber">快捷动作</div>
+          <div class="feature-copy">常用链接、复制文本和 API 请求做成按钮，重复操作点一下完成。</div>
+        </div>
+      </section>
+
+      <footer class="footer">
+        <span>适合个人浏览器工作流 · 无需后端服务</span>
+        <span class="url">https://minidesk.online</span>
+      </footer>
+    </main>
+  </body>
+</html>
