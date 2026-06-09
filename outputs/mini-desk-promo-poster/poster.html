@@ -142,13 +142,13 @@
         right: 92px;
         bottom: 218px;
         display: grid;
-        grid-template-columns: repeat(3, 1fr);
-        gap: 28px;
+        grid-template-columns: repeat(4, 1fr);
+        gap: 22px;
       }
 
       .feature {
         min-height: 188px;
-        padding: 34px 34px 30px;
+        padding: 30px 28px 28px;
         border-radius: 34px;
         background: rgba(255, 255, 255, 0.76);
         border: 1px solid rgba(24, 32, 42, 0.1);
@@ -162,7 +162,7 @@
 
       .feature-copy {
         color: #52606d;
-        font-size: 25px;
+        font-size: 22px;
         line-height: 1.42;
         font-weight: 500;
       }
@@ -177,6 +177,10 @@
 
       .amber {
         color: #b77900;
+      }
+
+      .purple {
+        color: #8b5cf6;
       }
 
       .footer {
@@ -246,9 +250,9 @@
       </div>
 
       <section class="hero">
-        <div class="eyebrow">截图、提醒、快捷动作，一个页面推进</div>
+        <div class="eyebrow">图片、快捷动作、提醒事项、备忘录，一个页面推进</div>
         <h1>把零散工作<br />收进一个<br />安静桌面</h1>
-        <p class="subtitle">Mini Desk 帮你集中整理截图、便签、提醒事项、快捷链接、常用工具和工作空间。</p>
+        <p class="subtitle">Mini Desk 帮你集中整理图片、快捷动作、提醒事项和备忘录。</p>
         <div class="cta">
           <span class="cta-dot"></span>
           <span>立即体验 minidesk.online</span>
@@ -256,8 +260,8 @@
       </section>
 
       <aside class="strip">
-        <div class="strip-title">默认不上传</div>
-        <div class="strip-copy">状态保存在浏览器 localStorage，图片原文保存在同源 IndexedDB。</div>
+        <div class="strip-title">绝不上传</div>
+        <div class="strip-copy">你的数据只留在本地浏览器：状态进 localStorage，图片原文进同源 IndexedDB。</div>
       </aside>
 
       <section class="mockup-wrap">
@@ -266,16 +270,20 @@
 
       <section class="feature-row">
         <div class="feature">
-          <div class="feature-label blue">图床与预览</div>
+          <div class="feature-label blue">图片</div>
           <div class="feature-copy">Ctrl+V 粘贴截图，支持缩略图整理、预览、复制、删除和拖拽排序。</div>
-        </div>
-        <div class="feature">
-          <div class="feature-label green">今日重点</div>
-          <div class="feature-copy">星标事项自动聚合，截止时间、完成进度和提醒状态一眼可见。</div>
         </div>
         <div class="feature">
           <div class="feature-label amber">快捷动作</div>
           <div class="feature-copy">常用链接、复制文本和 API 请求做成按钮，重复操作点一下完成。</div>
+        </div>
+        <div class="feature">
+          <div class="feature-label green">提醒事项</div>
+          <div class="feature-copy">星标事项自动聚合，截止时间、完成进度和提醒状态一眼可见。</div>
+        </div>
+        <div class="feature">
+          <div class="feature-label purple">备忘录</div>
+          <div class="feature-copy">把临时想法和推进步骤写下来，和截图、动作、提醒放在同一桌面。</div>
         </div>
       </section>
 
