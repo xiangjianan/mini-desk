@@ -128,12 +128,10 @@
       }
 
       .button:hover {
-        transform: translateY(-2px);
         box-shadow: 0 24px 62px rgba(25, 33, 43, 0.28);
       }
 
       .button:active {
-        transform: translateY(0);
         box-shadow: 0 14px 36px rgba(25, 33, 43, 0.2);
       }
 
@@ -258,7 +256,6 @@
       }
 
       .feature:hover {
-        transform: translateY(-6px);
         background: rgba(255, 255, 255, 0.88);
         border-color: rgba(23, 32, 42, 0.18);
         box-shadow: 0 24px 70px rgba(23, 32, 42, 0.12);
@@ -342,7 +339,6 @@
       }
 
       .data-row:hover {
-        transform: translateX(4px);
         background: rgba(255, 255, 255, 0.12);
         border-color: rgba(255, 255, 255, 0.24);
       }
@@ -390,7 +386,6 @@
       }
 
       .product-frame:hover {
-        transform: translateY(-8px) scale(1.01);
         border-color: rgba(23, 32, 42, 0.18);
         box-shadow: 0 44px 130px rgba(23, 32, 42, 0.2);
       }
@@ -423,7 +418,7 @@
       }
 
       .workflow-item:hover {
-        transform: translateX(6px);
+        opacity: 0.82;
       }
 
       .workflow-item b {
@@ -466,7 +461,6 @@
       }
 
       .poster-card:hover {
-        transform: translateY(-8px) rotate(-0.4deg);
         box-shadow: 0 44px 120px rgba(23, 32, 42, 0.2);
       }
 
@@ -495,7 +489,6 @@
       }
 
       .cta-panel:hover {
-        transform: translateY(-4px);
         background: rgba(255, 255, 255, 0.88);
         box-shadow: 0 26px 86px rgba(23, 32, 42, 0.12);
       }
@@ -561,30 +554,6 @@
           opacity: 1;
           filter: blur(0);
           transform: translateY(0);
-        }
-
-        .motion-ready .feature.reveal.is-visible:hover {
-          transform: translateY(-6px);
-        }
-
-        .motion-ready .data-row.reveal.is-visible:hover {
-          transform: translateX(4px);
-        }
-
-        .motion-ready .product-frame.reveal.is-visible:hover {
-          transform: translateY(-8px) scale(1.01);
-        }
-
-        .motion-ready .workflow-item.reveal.is-visible:hover {
-          transform: translateX(6px);
-        }
-
-        .motion-ready .poster-card.reveal.is-visible:hover {
-          transform: translateY(-8px) rotate(-0.4deg);
-        }
-
-        .motion-ready .cta-panel.reveal.is-visible:hover {
-          transform: translateY(-4px);
         }
 
         @keyframes header-in {
