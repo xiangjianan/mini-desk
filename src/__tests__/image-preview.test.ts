@@ -31,7 +31,7 @@ const modalStub = {
 };
 
 describe("ImagePreview", () => {
-  it("closes when clicking blank preview space and keeps image clicks inside the preview", async () => {
+  it("keeps the preview open when clicking blank preview space or the image", async () => {
     vi.useFakeTimers();
     const wrapper = mount(ImagePreview, {
       props: {
@@ -55,19 +55,19 @@ describe("ImagePreview", () => {
 
     try {
       await wrapper.get(".preview-stage").trigger("click");
-      expect(wrapper.get(".image-preview").classes()).toContain("is-closing");
+      expect(wrapper.get(".image-preview").classes()).not.toContain("is-closing");
       expect(wrapper.emitted("close")).toBeUndefined();
 
       await vi.advanceTimersByTimeAsync(220);
 
-      expect(wrapper.emitted("close")).toHaveLength(1);
+      expect(wrapper.emitted("close")).toBeUndefined();
     } finally {
       wrapper.unmount();
       vi.useRealTimers();
     }
   });
 
-  it("shows a close action in the right-side preview surface", async () => {
+  it("shows a top-right icon close action in the preview surface", async () => {
     vi.useFakeTimers();
     const wrapper = mount(ImagePreview, {
       props: {
@@ -87,8 +87,8 @@ describe("ImagePreview", () => {
     });
 
     expect(wrapper.find(".preview-sidebar").exists()).toBe(false);
-    const closeButton = wrapper.findAll(".preview-actions button").find((button) => button.text() === "取消预览");
-    expect(closeButton).toBeTruthy();
+    const closeButton = wrapper.get(".preview-close-button");
+    expect(closeButton.attributes("aria-label")).toBe("取消预览");
 
     try {
       await closeButton?.trigger("click");
@@ -137,7 +137,7 @@ describe("ImagePreview", () => {
           { id: "img-1", src: "data:image/png;base64,one", createdAt: 1 },
           { id: "img-2", src: "data:image/png;base64,two", createdAt: 2 },
         ],
-        activeId: "img-1",
+        activeId: "img-2",
       },
       global: {
         stubs: {
@@ -157,17 +157,18 @@ describe("ImagePreview", () => {
 
     expect(event.defaultPrevented).toBe(false);
     expect(wrapper.get(".preview-stage img").attributes("style")).toContain("scale(1)");
+    expect(wrapper.emitted("navigate")).toBeUndefined();
     wrapper.unmount();
   });
 
-  it("zooms only from the right-side preview stage", async () => {
+  it("navigates by wheel direction from the right-side preview stage without zooming", async () => {
     const wrapper = mount(ImagePreview, {
       props: {
         images: [
           { id: "img-1", src: "data:image/png;base64,one", createdAt: 1 },
           { id: "img-2", src: "data:image/png;base64,two", createdAt: 2 },
         ],
-        activeId: "img-1",
+        activeId: "img-2",
       },
       global: {
         stubs: {
@@ -186,7 +187,37 @@ describe("ImagePreview", () => {
     await wrapper.vm.$nextTick();
 
     expect(event.defaultPrevented).toBe(true);
-    expect(wrapper.get(".preview-stage img").attributes("style")).toContain("scale(1.1)");
+    expect(wrapper.get(".preview-stage img").attributes("style")).toContain("scale(1)");
+    expect(wrapper.emitted("navigate")).toEqual([[-1]]);
+    wrapper.unmount();
+  });
+
+  it("renders side navigation controls and emits previous or next requests", async () => {
+    const wrapper = mount(ImagePreview, {
+      props: {
+        images: [
+          { id: "img-1", src: "data:image/png;base64,one", createdAt: 1 },
+          { id: "img-2", src: "data:image/png;base64,two", createdAt: 2 },
+          { id: "img-3", src: "data:image/png;base64,three", createdAt: 3 },
+        ],
+        activeId: "img-2",
+      },
+      global: {
+        stubs: {
+          Button: buttonStub,
+          Dropdown: dropdownStub,
+          Modal: modalStub,
+          NButton: buttonStub,
+          NDropdown: dropdownStub,
+          NModal: modalStub,
+        },
+      },
+    });
+
+    await wrapper.get(".preview-nav-button.is-previous").trigger("click");
+    await wrapper.get(".preview-nav-button.is-next").trigger("click");
+
+    expect(wrapper.emitted("navigate")).toEqual([[-1], [1]]);
     wrapper.unmount();
   });
 

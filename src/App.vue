@@ -2389,6 +2389,7 @@ function moveItem<T extends { id: string }>(items: T[], dragId: string, targetId
       @close="clearImagePreview"
       @copy="copyImage"
       @delete="deleteImage"
+      @navigate="navigatePreview"
     />
 
     <CompanionBubble

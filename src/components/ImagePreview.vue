@@ -1,7 +1,7 @@
 <script setup lang="ts">
 import { computed, h, onMounted, onUnmounted, ref, watch } from "vue";
 import type { Component, VNode } from "vue";
-import { CloseOutline, CopyOutline, HelpCircleOutline, TrashOutline } from "@vicons/ionicons5";
+import { ChevronBackOutline, ChevronForwardOutline, CloseOutline, CopyOutline, HelpCircleOutline, TrashOutline } from "@vicons/ionicons5";
 import { NButton, NDropdown, NIcon, NModal } from "naive-ui";
 import type { DropdownOption } from "naive-ui";
 import { getUiText } from "../state/i18n";
@@ -22,6 +22,7 @@ const emit = defineEmits<{
   close: [];
   copy: [id: string];
   delete: [id: string, anchor?: HTMLElement];
+  navigate: [direction: number];
 }>();
 
 const scale = ref(1);
@@ -34,6 +35,9 @@ let closeTimer: number | undefined;
 
 const uiText = computed(() => getUiText(props.language));
 const active = computed(() => props.images.find((image) => image.id === props.activeId));
+const activeIndex = computed(() => props.images.findIndex((image) => image.id === props.activeId));
+const canNavigatePrevious = computed(() => activeIndex.value > 0);
+const canNavigateNext = computed(() => activeIndex.value >= 0 && activeIndex.value < props.images.length - 1);
 const isClosing = computed(() => props.closing || localClosing.value);
 const menuOptions = computed<DropdownOption[]>(() => [
   { label: uiText.value.common.copy, key: "copy", icon: renderIcon(CopyOutline) },
@@ -78,7 +82,15 @@ function requestClose(): void {
 
 function wheel(event: WheelEvent): void {
   event.preventDefault();
-  scale.value = Math.min(5, Math.max(0.3, scale.value + (event.deltaY > 0 ? -0.1 : 0.1)));
+  if (event.deltaY === 0) return;
+  navigate(event.deltaY > 0 ? 1 : -1);
+}
+
+function navigate(direction: number): void {
+  if (direction < 0 && !canNavigatePrevious.value) return;
+  if (direction > 0 && !canNavigateNext.value) return;
+  closeMenu();
+  emit("navigate", direction);
 }
 
 function down(event: MouseEvent): void {
@@ -161,7 +173,41 @@ function handleKeydown(event: KeyboardEvent): void {
       @contextmenu.prevent="openMenu($event, active.id)"
     >
       <main class="preview-main">
-        <div class="preview-stage" @wheel="wheel" @mousedown="down" @click.self="requestClose">
+        <button
+          type="button"
+          class="preview-close-button"
+          :aria-label="uiText.preview.close"
+          @click.stop.prevent="requestClose"
+          @keydown.enter.stop.prevent="requestClose"
+          @keydown.space.stop.prevent="requestClose"
+        >
+          <NIcon size="20">
+            <CloseOutline />
+          </NIcon>
+        </button>
+        <button
+          type="button"
+          class="preview-nav-button is-previous"
+          :aria-label="uiText.preview.previous"
+          :disabled="!canNavigatePrevious"
+          @click="navigate(-1)"
+        >
+          <NIcon size="24">
+            <ChevronBackOutline />
+          </NIcon>
+        </button>
+        <button
+          type="button"
+          class="preview-nav-button is-next"
+          :aria-label="uiText.preview.next"
+          :disabled="!canNavigateNext"
+          @click="navigate(1)"
+        >
+          <NIcon size="24">
+            <ChevronForwardOutline />
+          </NIcon>
+        </button>
+        <div class="preview-stage" @wheel="wheel" @mousedown="down">
           <img
             v-if="active.src"
             :key="active.id"
@@ -174,7 +220,6 @@ function handleKeydown(event: KeyboardEvent): void {
         </div>
         <div class="preview-actions">
           <span>{{ uiText.preview.help }}</span>
-          <NButton size="small" @click="requestClose">{{ uiText.preview.close }}</NButton>
           <NButton size="small" @click="emit('copy', active.id)">{{ uiText.common.copy }}</NButton>
           <NButton size="small" type="error" ghost @click="emit('delete', active.id, $event.currentTarget as HTMLElement)">
             {{ uiText.common.delete }}

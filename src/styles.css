@@ -3024,7 +3024,7 @@ button.todo-section-menu-button {
   position: fixed;
   right: 54px;
   bottom: 16px;
-  z-index: 3200;
+  z-index: 4400;
   display: grid;
   justify-items: end;
   gap: 6px;
@@ -3376,7 +3376,7 @@ button.todo-section-menu-button {
   left: var(--image-preview-left, clamp(220px, 18vw, 320px));
   width: auto;
   height: 100vh;
-  z-index: 3000;
+  z-index: 4300;
   display: grid;
   grid-template-columns: minmax(0, 1fr);
   background: rgba(255, 255, 255, 0.72);
@@ -3691,7 +3691,7 @@ body:has(.image-preview) .image-panel .n-scrollbar {
     right: 18px;
     bottom: 28px;
     gap: 4px;
-    z-index: 3200;
+    z-index: 4400;
   }
 
   .focus-companion img {
@@ -5057,6 +5057,7 @@ html[data-theme="dark"] .image-preview {
 
 .preview-main {
   padding: 18px 18px 14px;
+  position: relative;
 }
 
 .preview-stage {
@@ -5075,6 +5076,77 @@ html[data-theme="dark"] .image-preview {
 
 .image-preview.is-closing .preview-stage img {
   animation: image-preview-photo-out 220ms ease-in forwards;
+}
+
+.preview-close-button,
+.preview-nav-button {
+  position: absolute;
+  z-index: 1;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  border: 1px solid color-mix(in srgb, var(--border) 72%, rgba(255, 255, 255, 0.36));
+  background: color-mix(in srgb, var(--card) 72%, transparent);
+  color: var(--text);
+  box-shadow:
+    0 8px 24px rgba(0, 0, 0, 0.16),
+    inset 0 1px 0 rgba(255, 255, 255, 0.24);
+  -webkit-backdrop-filter: blur(18px) saturate(1.55);
+  backdrop-filter: blur(18px) saturate(1.55);
+  cursor: pointer;
+  transition:
+    background-color 120ms ease,
+    border-color 120ms ease,
+    opacity 120ms ease,
+    transform 120ms ease;
+}
+
+.preview-close-button:hover,
+.preview-close-button:focus-visible,
+.preview-nav-button:hover,
+.preview-nav-button:focus-visible {
+  background: color-mix(in srgb, var(--card) 86%, transparent);
+  border-color: color-mix(in srgb, var(--primary) 34%, var(--border));
+}
+
+.preview-close-button:focus-visible,
+.preview-nav-button:focus-visible {
+  outline: 2px solid color-mix(in srgb, var(--primary) 46%, transparent);
+  outline-offset: 2px;
+}
+
+.preview-close-button {
+  top: 62px;
+  right: 10px;
+  width: 42px;
+  height: 42px;
+  border-radius: 999px;
+}
+
+.preview-nav-button {
+  top: 50%;
+  width: 58px;
+  height: 74px;
+  border-radius: 999px;
+  transform: translateY(-50%);
+}
+
+.preview-nav-button.is-previous {
+  left: 12px;
+}
+
+.preview-nav-button.is-next {
+  right: 12px;
+}
+
+.preview-nav-button:disabled {
+  opacity: 0.32;
+  cursor: default;
+}
+
+.preview-nav-button:disabled:hover {
+  background: color-mix(in srgb, var(--card) 72%, transparent);
+  border-color: color-mix(in srgb, var(--border) 72%, rgba(255, 255, 255, 0.36));
 }
 
 .preview-actions {
@@ -5364,6 +5436,8 @@ select {
   .shortcut-help-modal.n-card,
   .companion-popover-shell.n-popover,
   .preview-actions,
+  .preview-close-button,
+  .preview-nav-button,
   .image-preview {
     -webkit-backdrop-filter: none;
     backdrop-filter: none;

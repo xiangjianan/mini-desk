@@ -124,10 +124,15 @@ describe("Naive UI component usage", () => {
 
     expect(preview).toContain("@contextmenu.prevent");
     expect(preview).toContain(':mask-closable="false"');
-    expect(preview).toContain('@click.self="requestClose"');
+    expect(preview).not.toContain('@click.self="requestClose"');
+    expect(preview).toContain("preview-close-button");
+    expect(preview).toContain("preview-nav-button");
+    expect(preview).toContain('emit("navigate"');
     expect(preview).toContain("function requestClose");
     expect(preview).toContain("is-closing");
     expect(preview).toContain("uiText.preview.close");
+    expect(preview).toContain("uiText.preview.previous");
+    expect(preview).toContain("uiText.preview.next");
     expect(preview).toContain("uiText.common.copy");
     expect(preview).toContain("uiText.common.delete");
     expect(i18n).toContain("取消预览");
@@ -145,11 +150,14 @@ describe("Naive UI component usage", () => {
     expect(styles).toMatch(/\.image-preview\s*\{[^}]*background: rgba\(255, 255, 255/s);
     expect(styles).toMatch(/html\[data-theme="dark"\] \.image-preview\s*\{[^}]*background: rgba\(0, 0, 0/s);
     expect(styles).toContain("-webkit-backdrop-filter");
-    expect(styles).toMatch(/\.image-preview\s*\{[^}]*z-index: 3000/s);
+    expect(styles).toMatch(/\.image-preview\s*\{[^}]*z-index: 4300/s);
     expect(styles).toMatch(/\.image-preview\s*\{[^}]*animation: image-preview-in 120ms/s);
     expect(styles).toContain("@keyframes image-preview-photo-in");
+    expect(styles).toContain(".preview-close-button");
+    expect(styles).toContain(".preview-nav-button");
+    expect(styles).toContain("color-mix(in srgb, var(--card) 72%, transparent)");
     expect(styles).toMatch(/body:has\(\.image-preview\) \.image-panel \.n-scrollbar\s*\{[^}]*pointer-events: auto/s);
-    expect(styles).toMatch(/\.focus-companion\s*\{[^}]*z-index: 3200/s);
+    expect(styles).toMatch(/\.focus-companion\s*\{[^}]*z-index: 4400/s);
   });
 
   it("reuses the normal image list while previewing on the right side", () => {
