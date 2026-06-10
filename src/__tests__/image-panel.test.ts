@@ -2,7 +2,7 @@ import { mount } from "@vue/test-utils";
 import { readFileSync } from "fs";
 import { resolve } from "path";
 import { nextTick } from "vue";
-import { describe, expect, it } from "vitest";
+import { afterEach, describe, expect, it, vi } from "vitest";
 import ImagePanel from "../components/ImagePanel.vue";
 import type { StoredImage } from "../types";
 
@@ -46,6 +46,10 @@ function readSource(path: string): string {
 }
 
 describe("ImagePanel", () => {
+  afterEach(() => {
+    vi.restoreAllMocks();
+  });
+
   it("adds usage guidance to the blank image-list context menu", async () => {
     const wrapper = mountImagePanel();
 
@@ -171,6 +175,33 @@ describe("ImagePanel", () => {
     await wrapper.findAll(".image-card")[1].trigger("click");
 
     expect(wrapper.emitted("preview")?.[0]).toEqual(["img-2"]);
+    wrapper.unmount();
+  });
+
+  it("scrolls the active preview image into the middle of the shared image list", async () => {
+    const scrollIntoView = vi.fn();
+    vi.spyOn(HTMLElement.prototype, "scrollIntoView").mockImplementation(scrollIntoView);
+    const wrapper = mountImagePanel([
+      { id: "img-1", src: "data:image/png;base64,one", createdAt: 1 },
+      { id: "img-2", src: "data:image/png;base64,two", createdAt: 2 },
+      { id: "img-3", src: "data:image/png;base64,three", createdAt: 3 },
+    ]);
+
+    expect(scrollIntoView).not.toHaveBeenCalled();
+
+    await wrapper.setProps({ activePreviewId: "img-2" });
+    await nextTick();
+
+    expect(wrapper.findAll(".image-card")[1].classes()).toContain("is-active");
+    expect(scrollIntoView).toHaveBeenCalledWith({ block: "center", inline: "nearest" });
+    expect(scrollIntoView).toHaveBeenCalledTimes(1);
+
+    await wrapper.setProps({ activePreviewId: "img-3" });
+    await nextTick();
+
+    expect(wrapper.findAll(".image-card")[2].classes()).toContain("is-active");
+    expect(scrollIntoView).toHaveBeenLastCalledWith({ block: "center", inline: "nearest" });
+    expect(scrollIntoView).toHaveBeenCalledTimes(2);
     wrapper.unmount();
   });
 

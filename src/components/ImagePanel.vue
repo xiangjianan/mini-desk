@@ -1,6 +1,6 @@
 <script setup lang="ts">
-import { computed, h, onMounted, onUnmounted, ref } from "vue";
-import type { Component, VNode } from "vue";
+import { computed, h, nextTick, onMounted, onUnmounted, ref, watch } from "vue";
+import type { Component, ComponentPublicInstance, VNode } from "vue";
 import { NDropdown, NIcon, NScrollbar } from "naive-ui";
 import { ClipboardOutline, CloseOutline, CopyOutline, EyeOutline, HelpCircleOutline, TrashOutline } from "@vicons/ionicons5";
 import type { DropdownOption } from "naive-ui";
@@ -35,6 +35,7 @@ const menu = ref<{ x: number; y: number; id?: string; anchor?: HTMLElement } | n
 const draggingId = ref<string | null>(null);
 const isDragHover = ref(false);
 const titleRef = ref<{ openMenuAt: (x: number, y: number, event?: Event) => void } | null>(null);
+const imageCardRefs = new Map<string, HTMLElement>();
 const uiText = computed(() => getUiText(props.language));
 const guideMenuOption = computed<DropdownOption>(() => ({ ...GUIDE_MENU_OPTION, label: uiText.value.common.tips }));
 const exclusiveMenu = createExclusiveContextMenu(closeMenu);
@@ -46,6 +47,14 @@ function renderIcon(icon: Component): () => VNode {
 
 onMounted(exclusiveMenu.mount);
 onUnmounted(exclusiveMenu.unmount);
+
+watch(
+  () => [props.activePreviewId, props.images.map((image) => image.id).join("\u0000")] as const,
+  () => {
+    void scrollActivePreviewIntoView();
+  },
+  { flush: "post" },
+);
 
 const menuOptions = computed<DropdownOption[]>(() =>
   menu.value?.id
@@ -79,6 +88,23 @@ function openTitleMenu(event: MouseEvent): void {
 
 function closeMenu(): void {
   menu.value = null;
+}
+
+function setImageCardRef(id: string, element: Element | ComponentPublicInstance | null): void {
+  if (element instanceof HTMLElement) {
+    imageCardRefs.set(id, element);
+    return;
+  }
+
+  imageCardRefs.delete(id);
+}
+
+async function scrollActivePreviewIntoView(): Promise<void> {
+  const id = props.activePreviewId;
+  if (!id) return;
+
+  await nextTick();
+  imageCardRefs.get(id)?.scrollIntoView({ block: "center", inline: "nearest" });
 }
 
 function handleMenuSelect(key: string): void {
@@ -158,6 +184,7 @@ function handleImageDragLeave(): void {
       <button
         v-for="(image, index) in images"
         :key="image.id"
+        :ref="(element) => setImageCardRef(image.id, element)"
         class="image-card"
         :class="{ 'is-dragging': draggingId === image.id, 'is-active': image.id === activePreviewId }"
         type="button"
