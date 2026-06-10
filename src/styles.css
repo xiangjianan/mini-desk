@@ -5126,7 +5126,13 @@ html[data-theme="dark"] .image-preview {
   width: 58px;
   height: 74px;
   border-radius: 999px;
+  background: color-mix(in srgb, var(--card) 14%, transparent);
   transform: translateY(-50%);
+}
+
+.preview-nav-button:hover,
+.preview-nav-button:focus-visible {
+  background: color-mix(in srgb, var(--card) 24%, transparent);
 }
 
 .preview-nav-button.is-previous {
@@ -5151,7 +5157,7 @@ html[data-theme="dark"] .image-preview {
 }
 
 .preview-nav-button:disabled:hover {
-  background: color-mix(in srgb, var(--card) 22%, transparent);
+  background: color-mix(in srgb, var(--card) 14%, transparent);
   border-color: color-mix(in srgb, var(--border) 72%, rgba(255, 255, 255, 0.36));
 }
 
