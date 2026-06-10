@@ -1,9 +1,10 @@
 import { describe, expect, it } from "vitest";
 import { DEFAULT_COMPANION_GIF_THEME, getCompanionNotificationIconSrc } from "../state/companionGifThemes";
-import { defaultState } from "../state/defaults";
+import { defaultState, STORAGE_KEY } from "../state/defaults";
 import {
   getSerializableState,
   normalizeImportedState,
+  saveStateWithConflictCheck,
   serializeTextLines,
 } from "../state/storage";
 import {
@@ -273,6 +274,89 @@ describe("state compatibility", () => {
       id: "img-1",
       src: "data:image/png;base64,abc",
     });
+  });
+
+  it("merges image additions from a stale tab without overwriting the latest stored state", () => {
+    const storage = localStorage;
+    storage.clear();
+    const latest = normalizeImportedState({
+      sync: { revision: 2, updatedAt: 20, clientId: "tab-a" },
+      noteLines: [{ text: "new note", indent: 0 }],
+      images: [{ id: "a", createdAt: 1 }],
+    });
+    const staleWithImage = normalizeImportedState({
+      sync: { revision: 1, updatedAt: 10, clientId: "tab-b" },
+      noteLines: [{ text: "old note", indent: 0 }],
+      images: [{ id: "b", src: "data:image/png;base64,b", createdAt: 2 }],
+    });
+
+    saveStateWithConflictCheck(latest, { storage, clientId: "tab-a", now: () => 20 });
+    const result = saveStateWithConflictCheck(staleWithImage, {
+      storage,
+      clientId: "tab-b",
+      now: () => 30,
+      scope: "images",
+    });
+
+    const stored = normalizeImportedState(JSON.parse(storage.getItem(STORAGE_KEY) ?? "{}"));
+    expect(result.status).toBe("merged");
+    expect(stored.sync.revision).toBe(3);
+    expect(stored.noteLines).toEqual([{ text: "new note", indent: 0 }]);
+    expect(stored.images.map((image) => image.id)).toEqual(["a", "b"]);
+  });
+
+  it("rejects stale text saves instead of silently overwriting newer text", () => {
+    const storage = localStorage;
+    storage.clear();
+    const latest = normalizeImportedState({
+      sync: { revision: 2, updatedAt: 20, clientId: "tab-a" },
+      spaces: [{ id: "workspace", title: "Memo", lines: [{ text: "new text", indent: 0 }] }],
+      activeSpaceId: "workspace",
+    });
+    const staleTextEdit = normalizeImportedState({
+      sync: { revision: 1, updatedAt: 10, clientId: "tab-b" },
+      spaces: [{ id: "workspace", title: "Memo", lines: [{ text: "stale edit", indent: 0 }] }],
+      activeSpaceId: "workspace",
+    });
+
+    saveStateWithConflictCheck(latest, { storage, clientId: "tab-a", now: () => 20 });
+    const result = saveStateWithConflictCheck(staleTextEdit, {
+      storage,
+      clientId: "tab-b",
+      now: () => 30,
+      scope: "text",
+    });
+
+    const stored = normalizeImportedState(JSON.parse(storage.getItem(STORAGE_KEY) ?? "{}"));
+    expect(result.status).toBe("conflict");
+    expect(stored.sync.revision).toBe(2);
+    expect(stored.spaces[0].lines).toEqual([{ text: "new text", indent: 0 }]);
+  });
+
+  it("allows confirmed destructive writes to replace a newer stored revision", () => {
+    const storage = localStorage;
+    storage.clear();
+    const latest = normalizeImportedState({
+      sync: { revision: 2, updatedAt: 20, clientId: "tab-a" },
+      noteLines: [{ text: "new note", indent: 0 }],
+    });
+    const confirmedImport = normalizeImportedState({
+      sync: { revision: 1, updatedAt: 10, clientId: "tab-b" },
+      noteLines: [{ text: "imported note", indent: 0 }],
+    });
+
+    saveStateWithConflictCheck(latest, { storage, clientId: "tab-a", now: () => 20 });
+    const result = saveStateWithConflictCheck(confirmedImport, {
+      storage,
+      clientId: "tab-b",
+      force: true,
+      now: () => 30,
+    });
+
+    const stored = normalizeImportedState(JSON.parse(storage.getItem(STORAGE_KEY) ?? "{}"));
+    expect(result.status).toBe("saved");
+    expect(stored.sync.revision).toBe(3);
+    expect(stored.noteLines).toEqual([{ text: "imported note", indent: 0 }]);
   });
 
   it("normalizes quick buttons, todos, and text line indentation", () => {

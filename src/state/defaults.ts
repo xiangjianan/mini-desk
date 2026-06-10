@@ -34,6 +34,7 @@ export const CONTROL_HELP = CONTROL_HELP_BY_LANGUAGE.zh;
 
 export function defaultState(): BoardState {
   return {
+    sync: { revision: 0, updatedAt: 0, clientId: "" },
     language: DEFAULT_LANGUAGE,
     theme: "light",
     companionGifTheme: DEFAULT_COMPANION_GIF_THEME,

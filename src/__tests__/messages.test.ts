@@ -17,6 +17,7 @@ import { GUIDE_MESSAGES } from "../state/i18n";
 
 const messageKeys = [
   "save",
+  "stateConflict",
   "saveStatusLegend",
   "todoCompleted",
   "clipboardPasteUnsupported",

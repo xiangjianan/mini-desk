@@ -3,6 +3,7 @@ import { isValidDeadlineAt } from "./deadlines";
 import { normalizeCompanionGifTheme } from "./companionGifThemes";
 import { DEFAULT_SPACE_TITLES, DEFAULT_TITLES_BY_LANGUAGE, LEGACY_DEFAULT_TITLES_BY_LANGUAGE, OLDER_LEGACY_DEFAULT_TITLES_BY_LANGUAGE, getLegacyDefaultTodoLists, getUiText, normalizeLanguage } from "./i18n";
 import type {
+  BoardSyncState,
   BoardState,
   CompanionCustomGif,
   CompanionCustomGifStored,
@@ -22,6 +23,23 @@ import type {
   WorkspaceSpace,
 } from "../types";
 
+export type SaveScope = "all" | "images" | "text";
+
+export type SaveStateStatus = "saved" | "merged" | "conflict";
+
+export interface SaveStateOptions {
+  storage?: Storage;
+  clientId?: string;
+  force?: boolean;
+  now?: () => number;
+  scope?: SaveScope;
+}
+
+export interface SaveStateResult {
+  status: SaveStateStatus;
+  state: BoardState;
+}
+
 export function createId(): string {
   return `${Date.now().toString(36)}-${Math.random().toString(36).slice(2, 8)}`;
 }
@@ -40,6 +58,42 @@ export function saveState(state: BoardState, storage: Storage = localStorage): v
   storage.setItem(STORAGE_KEY, JSON.stringify(getSerializableState(state)));
 }
 
+export function saveStateWithConflictCheck(
+  state: BoardState,
+  options: SaveStateOptions = {},
+): SaveStateResult {
+  const storage = options.storage ?? localStorage;
+  const scope = options.scope ?? "all";
+  const current = loadCurrentPrimaryState(storage);
+  const local = getSerializableState(state);
+  const localRevision = normalizeSyncState(local.sync).revision;
+  const currentRevision = current ? normalizeSyncState(current.sync).revision : 0;
+
+  if (current && currentRevision > localRevision && current.sync.clientId !== options.clientId && !options.force) {
+    if (scope === "images") {
+      const merged = {
+        ...current,
+        images: mergeImageAdditions(current.images, local.images),
+      };
+      const saved = writeSyncedState(merged, storage, {
+        clientId: options.clientId,
+        now: options.now,
+        revision: currentRevision + 1,
+      });
+      return { status: "merged", state: saved };
+    }
+    return { status: "conflict", state: current };
+  }
+
+  const nextRevision = current ? currentRevision + 1 : Math.max(1, localRevision);
+  const saved = writeSyncedState(local, storage, {
+    clientId: options.clientId,
+    now: options.now,
+    revision: nextRevision,
+  });
+  return { status: "saved", state: saved };
+}
+
 export function getSerializableState(
   state: BoardState,
   options: SerializableOptions = {},
@@ -48,6 +102,7 @@ export function getSerializableState(
 
   return {
     ...state,
+    sync: { ...normalizeSyncState(state.sync) },
     customCompanionGif: options.includeCustomGifData ? cloneCustomCompanionGif(state.customCompanionGif) : {},
     customCompanionGifStored: getCustomCompanionGifStoredState(state.customCompanionGif, state.customCompanionGifStored),
     images: state.images.map((image) => {
@@ -93,6 +148,7 @@ export function normalizeImportedState(payload: unknown): BoardState {
 
   return {
     ...base,
+    sync: normalizeSyncState(typed.sync),
     language,
     theme: typed.theme === "dark" ? "dark" : "light",
     companionGifTheme: normalizeCompanionGifTheme(typed.companionGifTheme),
@@ -112,6 +168,58 @@ export function normalizeImportedState(payload: unknown): BoardState {
     showCompletedTodos: normalizeCompletedVisibility(typed.showCompletedTodos, todoLists),
     todos: normalizeTodos(typed.todos, todoLists),
   };
+}
+
+function loadCurrentPrimaryState(storage: Storage): BoardState | undefined {
+  try {
+    const raw = storage.getItem(STORAGE_KEY);
+    if (!raw) return undefined;
+    return normalizeImportedState(JSON.parse(raw));
+  } catch {
+    return undefined;
+  }
+}
+
+function writeSyncedState(
+  state: BoardState,
+  storage: Storage,
+  options: { clientId?: string; now?: () => number; revision: number },
+): BoardState {
+  const synced = getSerializableState({
+    ...state,
+    sync: {
+      revision: options.revision,
+      updatedAt: options.now?.() ?? Date.now(),
+      clientId: options.clientId ?? state.sync.clientId,
+    },
+  });
+  storage.setItem(STORAGE_KEY, JSON.stringify(synced));
+  return synced;
+}
+
+function mergeImageAdditions(currentImages: StoredImage[], localImages: StoredImage[]): StoredImage[] {
+  const localById = new Map(localImages.map((image) => [image.id, image]));
+  const seen = new Set(currentImages.map((image) => image.id));
+  const mergedCurrent = currentImages.map((image) => {
+    const local = localById.get(image.id);
+    return local ? { ...local, ...image, src: image.src ?? local.src } : { ...image };
+  });
+  const localAdditions = localImages
+    .filter((image) => !seen.has(image.id))
+    .map((image) => ({ ...image }));
+  return [...mergedCurrent, ...localAdditions];
+}
+
+function normalizeSyncState(value: unknown): BoardSyncState {
+  if (!isPlainObject(value)) return { revision: 0, updatedAt: 0, clientId: "" };
+  const revision = typeof value.revision === "number" && Number.isFinite(value.revision)
+    ? Math.max(0, Math.floor(value.revision))
+    : 0;
+  const updatedAt = typeof value.updatedAt === "number" && Number.isFinite(value.updatedAt)
+    ? Math.max(0, Math.floor(value.updatedAt))
+    : 0;
+  const clientId = typeof value.clientId === "string" ? value.clientId : "";
+  return { revision, updatedAt, clientId };
 }
 
 const LEGACY_TODO_TITLE_IDS: Record<string, string> = {

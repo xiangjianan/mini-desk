@@ -6,6 +6,7 @@ export type MessageSurface = "companion" | "naive-message";
 
 export type MessageKey =
   | "save"
+  | "stateConflict"
   | "saveStatusLegend"
   | "todoCompleted"
   | "clipboardPasteUnsupported"
@@ -139,6 +140,22 @@ export const MESSAGE_CATALOG: Record<MessageKey, MessageEntry> = {
       "内容稳稳保存",
       "记录已更新",
       "放心继续写",
+    ],
+  },
+  stateConflict: {
+    mood: "warning",
+    surface: "companion",
+    variants: [
+      "其他窗口有新内容",
+      "已阻止覆盖新版",
+      "先同步再保存",
+      "发现多窗口冲突",
+      "保存暂停防覆盖",
+      "另处有新版",
+      "当前不是最新版",
+      "先看另一窗口",
+      "避免覆盖已暂停",
+      "多窗口需同步",
     ],
   },
   saveStatusLegend: {
@@ -828,6 +845,7 @@ export const MESSAGE_CATALOG: Record<MessageKey, MessageEntry> = {
 
 const EN_MESSAGE_VARIANTS = {
   save: ["Saved", "Changes saved", "Your board is up to date"],
+  stateConflict: ["Another window saved newer changes", "Newer board data exists in another tab", "Save paused to avoid overwriting another tab"],
   saveStatusLegend: [
     "Green means saved. Red means unsaved. Orange means saving.",
     "Green is saved, red is unsaved, and orange is saving.",

@@ -2965,6 +2965,53 @@ describe("App shell", () => {
     }
   });
 
+  it("merges pasted images with newer storage from another tab", async () => {
+    vi.useFakeTimers();
+    localStorage.setItem(
+      STORAGE_KEY,
+      JSON.stringify({
+        sync: { revision: 1, updatedAt: 10, clientId: "tab-a" },
+        noteLines: [{ text: "old note", indent: 0 }],
+        images: [{ id: "existing", src: "data:image/png;base64,old", createdAt: 1 }],
+      }),
+    );
+    const imageBlob = new Blob(["img"], { type: "image/png" });
+    Object.assign(navigator, {
+      clipboard: {
+        read: vi.fn().mockResolvedValue([{ types: ["image/png"], getType: vi.fn().mockResolvedValue(imageBlob) }]),
+      },
+    });
+    const wrapper = mountApp();
+
+    try {
+      localStorage.setItem(
+        STORAGE_KEY,
+        JSON.stringify({
+          sync: { revision: 2, updatedAt: 20, clientId: "tab-b" },
+          noteLines: [{ text: "new note", indent: 0 }],
+          images: [{ id: "other-tab", src: "data:image/png;base64,other", createdAt: 2 }],
+        }),
+      );
+
+      wrapper.getComponent(ImagePanel).vm.$emit("paste");
+      await Promise.resolve();
+      await Promise.resolve();
+      await wrapper.vm.$nextTick();
+      await vi.advanceTimersByTimeAsync(200);
+      await Promise.resolve();
+      await wrapper.vm.$nextTick();
+
+      const stored = JSON.parse(localStorage.getItem(STORAGE_KEY) || "{}");
+      expect(stored.sync.revision).toBe(3);
+      expect(stored.noteLines).toEqual([{ text: "new note", indent: 0 }]);
+      expect(stored.images.map((image: { id: string }) => image.id)).toContain("other-tab");
+      expect(stored.images).toHaveLength(3);
+    } finally {
+      wrapper.unmount();
+      vi.useRealTimers();
+    }
+  });
+
   it("shows import and export success through the companion bubble", async () => {
     vi.useFakeTimers();
     const createObjectURL = vi.fn(() => "blob:todo-board");

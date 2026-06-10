@@ -93,7 +93,14 @@ export interface WorkspaceSpace {
   lines: LineItem[];
 }
 
+export interface BoardSyncState {
+  revision: number;
+  updatedAt: number;
+  clientId: string;
+}
+
 export interface BoardState {
+  sync: BoardSyncState;
   language: AppLanguage;
   theme: ThemeMode;
   companionGifTheme: CompanionGifTheme;

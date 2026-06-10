@@ -46,13 +46,13 @@ import {
   starTodo,
   updateTodoText,
 } from "./state/todos";
-import { defaultState } from "./state/defaults";
+import { defaultState, STORAGE_KEY } from "./state/defaults";
 import {
   createId,
   exportJsonState,
   loadState,
   normalizeImportedState,
-  saveState,
+  saveStateWithConflictCheck,
 } from "./state/storage";
 import {
   clearStaticCaches,
@@ -60,6 +60,7 @@ import {
   getStoredAppVersion,
   markAppVersionSeen,
 } from "./state/version";
+import type { SaveScope } from "./state/storage";
 import type { AppLanguage, BoardState, CompanionGifTheme, DraggedTodo, GuideKey, LineItem, QuickApiBodyType, QuickApiHeader, QuickApiMethod, QuickButton, QuickButtonType, StoredImage, TodoItem, TodoListConfig, TodoListId, TodoPeriod, TodoStarChange, WorkspaceSpace } from "./types";
 
 const MOBILE_BREAKPOINT_QUERY = "(max-width: 900px)";
@@ -67,6 +68,7 @@ const TODO_NOTIFICATION_FALLBACK_INTERVAL_MS = 30_000;
 const MAX_TODO_NOTIFICATION_TIMEOUT_MS = 2_147_483_647;
 const UNDO_HISTORY_LIMIT = 50;
 const IMAGE_PREVIEW_CLOSE_MS = 220;
+const STATE_SYNC_CHANNEL = "mini-desk-state-sync";
 const mobileCompanionPosition: { right: string; bottom: string } = { right: "18px", bottom: "28px" };
 
 function getInitialMobileBlocked(): boolean {
@@ -74,6 +76,7 @@ function getInitialMobileBlocked(): boolean {
 }
 
 const state = reactive<BoardState>(loadState());
+const syncClientId = createId();
 const undoSnapshots = ref<string[]>([]);
 const lastUndoSnapshot = ref(exportJsonState(state));
 const activePreviewId = ref<string | undefined>();
@@ -124,12 +127,17 @@ const isMobileBlocked = ref(getInitialMobileBlocked());
 const mobileMediaQuery = ref<MediaQueryList | null>(null);
 let appMounted = false;
 let restoringUndo = false;
+let stateSyncChannel: BroadcastChannel | null = null;
 
 type BubbleOptions = {
   hideCompanionAfter?: boolean;
   guideKey?: GuideKey;
   linkText?: string;
   linkHref?: string;
+};
+
+type PersistOptions = {
+  force?: boolean;
 };
 
 const GUIDE_MESSAGE_DURATION_MS = 5000;
@@ -235,7 +243,7 @@ onMounted(async () => {
     };
     if (state.customCompanionGif.light || state.customCompanionGif.dark) {
       await persistCustomCompanionGifPayloads(state.customCompanionGif);
-      saveState(state);
+      persistNow();
       lastUndoSnapshot.value = exportJsonState(state);
     }
   } catch {
@@ -247,8 +255,10 @@ onMounted(async () => {
   checkAppVersion();
   window.addEventListener("keydown", handleGlobalKeydown);
   window.addEventListener("focus", handleNotificationReturn);
+  window.addEventListener("storage", handleStorageEvent);
   document.addEventListener("paste", handlePaste);
   document.addEventListener("visibilitychange", handleDocumentVisibilityChange);
+  setupStateSyncChannel();
   todoNotificationTimer.value = window.setInterval(refreshTodoNotifications, TODO_NOTIFICATION_FALLBACK_INTERVAL_MS);
   refreshTodoNotifications();
 });
@@ -257,8 +267,10 @@ onUnmounted(() => {
   appMounted = false;
   window.removeEventListener("keydown", handleGlobalKeydown);
   window.removeEventListener("focus", handleNotificationReturn);
+  window.removeEventListener("storage", handleStorageEvent);
   document.removeEventListener("paste", handlePaste);
   document.removeEventListener("visibilitychange", handleDocumentVisibilityChange);
+  teardownStateSyncChannel();
   teardownMobileBreakpoint();
   clearTimers();
 });
@@ -374,7 +386,7 @@ function scheduleTextSave(): void {
   window.clearTimeout(textSaveTimer.value);
   textSaveTimer.value = window.setTimeout(() => {
     textSaveTimer.value = undefined;
-    persistNow();
+    persistNow("text");
     showSaveBubble();
   }, 3000);
 }
@@ -382,7 +394,7 @@ function scheduleTextSave(): void {
 function flushTextSave(): void {
   window.clearTimeout(textSaveTimer.value);
   textSaveTimer.value = undefined;
-  persistNow();
+  persistNow("text");
 }
 
 function showCompanion(anchor?: HTMLElement, guideKey?: GuideKey): void {
@@ -429,11 +441,90 @@ function handleCompanionBlur(): void {
   activeGuideKey.value = null;
 }
 
-function persistNow(): void {
+function persistNow(scope: SaveScope = "all", options: PersistOptions = {}): void {
   recordUndoCheckpoint();
   markSaving();
-  saveState(state);
+  const result = saveStateWithConflictCheck(state, {
+    clientId: syncClientId,
+    force: options.force,
+    scope,
+  });
+  if (result.status === "conflict") {
+    window.clearTimeout(saveStatusTimer.value);
+    saveStatus.value = "dirty";
+    showToast("stateConflict");
+    return;
+  }
+  state.sync = result.state.sync;
+  if (result.status === "merged") {
+    state.images = mergeVisibleImages(result.state.images, state.images);
+  }
+  broadcastStateSaved();
   markSavedSoon();
+}
+
+function mergeVisibleImages(savedImages: StoredImage[], visibleImages: StoredImage[]): StoredImage[] {
+  const visibleById = new Map(visibleImages.map((image) => [image.id, image]));
+  return savedImages.map((image) => ({
+    ...image,
+    src: image.src ?? visibleById.get(image.id)?.src,
+  }));
+}
+
+function setupStateSyncChannel(): void {
+  if (!("BroadcastChannel" in window)) return;
+  stateSyncChannel = new BroadcastChannel(STATE_SYNC_CHANNEL);
+  stateSyncChannel.addEventListener("message", handleStateSyncMessage);
+}
+
+function teardownStateSyncChannel(): void {
+  stateSyncChannel?.removeEventListener("message", handleStateSyncMessage);
+  stateSyncChannel?.close();
+  stateSyncChannel = null;
+}
+
+function broadcastStateSaved(): void {
+  stateSyncChannel?.postMessage({
+    type: "saved",
+    revision: state.sync.revision,
+    clientId: syncClientId,
+  });
+}
+
+function handleStateSyncMessage(event: MessageEvent): void {
+  const payload = event.data as { type?: string; revision?: number; clientId?: string };
+  if (payload.type !== "saved" || payload.clientId === syncClientId) return;
+  if (typeof payload.revision === "number" && payload.revision <= state.sync.revision) return;
+  void applyExternalStoredState();
+}
+
+function handleStorageEvent(event: StorageEvent): void {
+  if (event.key !== STORAGE_KEY || !event.newValue) return;
+  void applyExternalStoredState(event.newValue);
+}
+
+async function applyExternalStoredState(raw?: string): Promise<void> {
+  if (hasUnsavedLocalChanges()) {
+    showToast("stateConflict");
+    return;
+  }
+  try {
+    const source = raw ?? localStorage.getItem(STORAGE_KEY);
+    if (!source) return;
+    const nextState = normalizeImportedState(JSON.parse(source));
+    if (nextState.sync.revision <= state.sync.revision) return;
+    nextState.images = await hydrateStoredImages(nextState.images);
+    if (!appMounted) return;
+    Object.assign(state, nextState);
+    applyTheme();
+    lastUndoSnapshot.value = exportJsonState(state);
+  } catch {
+    // External storage may be mid-write or unavailable; keep this tab's current state.
+  }
+}
+
+function hasUnsavedLocalChanges(): boolean {
+  return Boolean(textSaveTimer.value) || saveStatus.value !== "saved";
 }
 
 function markDirty(): void {
@@ -541,7 +632,7 @@ async function addImageFile(file: File, options: { showMessage?: boolean } = {})
     return undefined;
   }
   state.images.push(image);
-  persistNow();
+  persistNow("images");
   if (options.showMessage ?? true) showBubble("imageAdded", undefined, { hideCompanionAfter: true });
   return image;
 }
@@ -1295,7 +1386,7 @@ function clearData(anchor?: HTMLElement): void {
       undoSnapshots.value = [];
       Object.assign(state, defaultState());
       await clearStoredImagePayloads();
-      persistNow();
+      persistNow("all", { force: true });
       refreshTodoNotifications();
       lastUndoSnapshot.value = exportJsonState(state);
       showBubble("dataCleared", anchor, { hideCompanionAfter: true });
@@ -1364,7 +1455,7 @@ async function importData(event: Event): Promise<void> {
       Object.assign(state, next);
       await persistCustomCompanionGifPayloads(state.customCompanionGif);
       await persistImagePayloads(state.images);
-      persistNow();
+      persistNow("all", { force: true });
       refreshTodoNotifications();
       showBubble("dataImported", importFeedbackAnchor.value, { hideCompanionAfter: true });
       importFeedbackAnchor.value = undefined;
@@ -1497,10 +1588,8 @@ function undoLastBoardChange(): void {
     pendingEditSpaceId.value = null;
     pendingEditTodoListId.value = null;
     Object.assign(state, nextState);
-    markSaving();
-    saveState(state);
+    persistNow();
     lastUndoSnapshot.value = exportJsonState(state);
-    markSavedSoon();
   } finally {
     restoringUndo = false;
   }
