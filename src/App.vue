@@ -676,8 +676,20 @@ function deleteImage(id: string, anchor?: HTMLElement): void {
   requestConfirmation("confirmDeleteImage", anchor, async () => {
     const index = state.images.findIndex((image) => image.id === id);
     if (index < 0) return;
+    const nextPreviewImage = state.images[index + 1] ?? state.images[index - 1];
     state.images = state.images.filter((image) => image.id !== id);
-    if (activePreviewId.value === id || closingPreviewId.value === id) clearImagePreview();
+    if (activePreviewId.value === id) {
+      if (nextPreviewImage) {
+        activePreviewId.value = nextPreviewImage.id;
+        closingPreviewId.value = undefined;
+        window.clearTimeout(previewCloseTimer.value);
+        previewCloseTimer.value = undefined;
+      } else {
+        clearImagePreview();
+      }
+    } else if (closingPreviewId.value === id) {
+      clearImagePreview();
+    }
     await deleteStoredImage(id);
     persistNow();
     showBubble("deleteImage", feedbackAnchor, { hideCompanionAfter: true });

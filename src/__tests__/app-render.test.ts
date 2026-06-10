@@ -1794,6 +1794,46 @@ describe("App shell", () => {
     }
   });
 
+  it("continues previewing the next image after deleting the active preview image", async () => {
+    vi.useFakeTimers();
+    vi.spyOn(Math, "random").mockReturnValue(0);
+    localStorage.setItem(
+      STORAGE_KEY,
+      JSON.stringify({
+        images: [
+          { id: "img-1", src: "data:image/png;base64,one", createdAt: 1 },
+          { id: "img-2", src: "data:image/png;base64,two", createdAt: 2 },
+          { id: "img-3", src: "data:image/png;base64,three", createdAt: 3 },
+        ],
+      }),
+    );
+    const wrapper = mountApp();
+
+    try {
+      wrapper.getComponent(ImagePanel).vm.$emit("preview", "img-1");
+      await wrapper.vm.$nextTick();
+
+      expect(wrapper.getComponent(ImagePreview).props("activeId")).toBe("img-1");
+
+      wrapper.getComponent(ImagePreview).vm.$emit("delete", "img-1", wrapper.get(".image-preview").element as HTMLElement);
+      await wrapper.vm.$nextTick();
+      await vi.advanceTimersByTimeAsync(200);
+      await wrapper.vm.$nextTick();
+
+      await wrapper.get('[data-testid="companion-yes"]').trigger("click");
+      await Promise.resolve();
+      await wrapper.vm.$nextTick();
+      await vi.advanceTimersByTimeAsync(200);
+      await wrapper.vm.$nextTick();
+
+      expect(wrapper.getComponent(ImagePreview).props("activeId")).toBe("img-2");
+      expect((wrapper.getComponent(ImagePanel).props("images") as Array<{ id: string }>).map((image) => image.id)).toEqual(["img-2", "img-3"]);
+    } finally {
+      wrapper.unmount();
+      vi.useRealTimers();
+    }
+  });
+
   it("anchors image deletion feedback to the screenshot panel after deleting an image card", async () => {
     vi.useFakeTimers();
     vi.spyOn(Math, "random").mockReturnValue(0);

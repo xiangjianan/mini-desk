@@ -718,7 +718,7 @@ export const UI_TEXT = {
       list: "预览图片列表",
       thumbnailAlt: "预览缩略图",
       imageAlt: "图片预览",
-      help: "方向键/滚轮切换 · 拖动平移 · Enter 复制 · Delete 删除 · Space/Esc 关闭",
+      help: "方向键切换 · 滚轮缩放 · 拖动平移 · Enter 复制 · Delete 删除 · Space/Esc 关闭",
     },
   },
   en: {
@@ -941,7 +941,7 @@ export const UI_TEXT = {
       list: "Preview image list",
       thumbnailAlt: "Preview thumbnail",
       imageAlt: "Image preview",
-      help: "Arrow keys/wheel switch · Drag pans · Enter copies · Delete removes · Space/Esc closes",
+      help: "Arrow keys switch · Wheel zooms · Drag pans · Enter copies · Delete removes · Space/Esc closes",
     },
   },
 } as const;

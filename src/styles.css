@@ -3213,12 +3213,10 @@ button.todo-section-menu-button {
 @keyframes image-preview-photo-out {
   from {
     opacity: 1;
-    transform: scale(1);
   }
 
   to {
     opacity: 0;
-    transform: scale(0.985);
   }
 }
 
@@ -5086,7 +5084,7 @@ html[data-theme="dark"] .image-preview {
   align-items: center;
   justify-content: center;
   border: 1px solid color-mix(in srgb, var(--border) 72%, rgba(255, 255, 255, 0.36));
-  background: color-mix(in srgb, var(--card) 72%, transparent);
+  background: color-mix(in srgb, var(--card) 42%, transparent);
   color: var(--text);
   box-shadow:
     0 8px 24px rgba(0, 0, 0, 0.16),
@@ -5105,7 +5103,7 @@ html[data-theme="dark"] .image-preview {
 .preview-close-button:focus-visible,
 .preview-nav-button:hover,
 .preview-nav-button:focus-visible {
-  background: color-mix(in srgb, var(--card) 86%, transparent);
+  background: color-mix(in srgb, var(--card) 56%, transparent);
   border-color: color-mix(in srgb, var(--primary) 34%, var(--border));
 }
 
@@ -5139,13 +5137,21 @@ html[data-theme="dark"] .image-preview {
   right: 12px;
 }
 
+.preview-nav-button.is-previous:active {
+  transform: translateY(-50%) translateX(-3px);
+}
+
+.preview-nav-button.is-next:active {
+  transform: translateY(-50%) translateX(3px);
+}
+
 .preview-nav-button:disabled {
   opacity: 0.32;
   cursor: default;
 }
 
 .preview-nav-button:disabled:hover {
-  background: color-mix(in srgb, var(--card) 72%, transparent);
+  background: color-mix(in srgb, var(--card) 42%, transparent);
   border-color: color-mix(in srgb, var(--border) 72%, rgba(255, 255, 255, 0.36));
 }
 

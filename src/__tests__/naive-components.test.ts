@@ -126,8 +126,10 @@ describe("Naive UI component usage", () => {
     expect(preview).toContain(':mask-closable="false"');
     expect(preview).not.toContain('@click.self="requestClose"');
     expect(preview).toContain("preview-close-button");
+    expect(preview).toContain("preview-action-close");
     expect(preview).toContain("preview-nav-button");
     expect(preview).toContain('emit("navigate"');
+    expect(preview).not.toContain('function wheel(event: WheelEvent): void {\n  event.preventDefault();\n  if (event.deltaY === 0) return;\n  navigate');
     expect(preview).toContain("function requestClose");
     expect(preview).toContain("is-closing");
     expect(preview).toContain("uiText.preview.close");
@@ -155,7 +157,18 @@ describe("Naive UI component usage", () => {
     expect(styles).toContain("@keyframes image-preview-photo-in");
     expect(styles).toContain(".preview-close-button");
     expect(styles).toContain(".preview-nav-button");
-    expect(styles).toContain("color-mix(in srgb, var(--card) 72%, transparent)");
+    expect(styles).toContain("color-mix(in srgb, var(--card) 42%, transparent)");
+    expect(styles).toMatch(/\.preview-nav-button\.is-previous:active\s*\{[^}]*translateY\(-50%\) translateX\(-3px\)/s);
+    expect(styles).toMatch(/\.preview-nav-button\.is-next:active\s*\{[^}]*translateY\(-50%\) translateX\(3px\)/s);
+    expect(styles).toContain(`@keyframes image-preview-photo-out {
+  from {
+    opacity: 1;
+  }
+
+  to {
+    opacity: 0;
+  }
+}`);
     expect(styles).toMatch(/body:has\(\.image-preview\) \.image-panel \.n-scrollbar\s*\{[^}]*pointer-events: auto/s);
     expect(styles).toMatch(/\.focus-companion\s*\{[^}]*z-index: 4400/s);
   });

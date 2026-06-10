@@ -82,8 +82,7 @@ function requestClose(): void {
 
 function wheel(event: WheelEvent): void {
   event.preventDefault();
-  if (event.deltaY === 0) return;
-  navigate(event.deltaY > 0 ? 1 : -1);
+  scale.value = Math.min(5, Math.max(0.3, scale.value + (event.deltaY > 0 ? -0.1 : 0.1)));
 }
 
 function navigate(direction: number): void {
@@ -221,6 +220,7 @@ function handleKeydown(event: KeyboardEvent): void {
         <div class="preview-actions">
           <span>{{ uiText.preview.help }}</span>
           <NButton size="small" @click="emit('copy', active.id)">{{ uiText.common.copy }}</NButton>
+          <NButton size="small" class="preview-action-close" @click="requestClose">{{ uiText.preview.close }}</NButton>
           <NButton size="small" type="error" ghost @click="emit('delete', active.id, $event.currentTarget as HTMLElement)">
             {{ uiText.common.delete }}
           </NButton>

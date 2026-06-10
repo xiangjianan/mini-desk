@@ -161,7 +161,7 @@ describe("ImagePreview", () => {
     wrapper.unmount();
   });
 
-  it("navigates by wheel direction from the right-side preview stage without zooming", async () => {
+  it("zooms only from the right-side preview stage", async () => {
     const wrapper = mount(ImagePreview, {
       props: {
         images: [
@@ -187,9 +187,44 @@ describe("ImagePreview", () => {
     await wrapper.vm.$nextTick();
 
     expect(event.defaultPrevented).toBe(true);
-    expect(wrapper.get(".preview-stage img").attributes("style")).toContain("scale(1)");
-    expect(wrapper.emitted("navigate")).toEqual([[-1]]);
+    expect(wrapper.get(".preview-stage img").attributes("style")).toContain("scale(1.1)");
+    expect(wrapper.emitted("navigate")).toBeUndefined();
     wrapper.unmount();
+  });
+
+  it("keeps the transformed image state while closing", async () => {
+    vi.useFakeTimers();
+    const wrapper = mount(ImagePreview, {
+      props: {
+        images: [{ id: "img-1", src: "data:image/png;base64,one", createdAt: 1 }],
+        activeId: "img-1",
+      },
+      global: {
+        stubs: {
+          Button: buttonStub,
+          Dropdown: dropdownStub,
+          Modal: modalStub,
+          NButton: buttonStub,
+          NDropdown: dropdownStub,
+          NModal: modalStub,
+        },
+      },
+    });
+    const event = new WheelEvent("wheel", { bubbles: true, cancelable: true, deltaY: -80 });
+
+    try {
+      wrapper.get(".preview-stage").element.dispatchEvent(event);
+      await wrapper.vm.$nextTick();
+      expect(wrapper.get(".preview-stage img").attributes("style")).toContain("scale(1.1)");
+
+      await wrapper.get(".preview-close-button").trigger("click");
+
+      expect(wrapper.get(".image-preview").classes()).toContain("is-closing");
+      expect(wrapper.get(".preview-stage img").attributes("style")).toContain("scale(1.1)");
+    } finally {
+      wrapper.unmount();
+      vi.useRealTimers();
+    }
   });
 
   it("renders side navigation controls and emits previous or next requests", async () => {
@@ -218,6 +253,32 @@ describe("ImagePreview", () => {
     await wrapper.get(".preview-nav-button.is-next").trigger("click");
 
     expect(wrapper.emitted("navigate")).toEqual([[-1], [1]]);
+    wrapper.unmount();
+  });
+
+  it("renders a bottom close action between copy and delete", async () => {
+    const wrapper = mount(ImagePreview, {
+      props: {
+        images: [{ id: "img-1", src: "data:image/png;base64,one", createdAt: 1 }],
+        activeId: "img-1",
+      },
+      global: {
+        stubs: {
+          Button: buttonStub,
+          Dropdown: dropdownStub,
+          Modal: modalStub,
+          NButton: buttonStub,
+          NDropdown: dropdownStub,
+          NModal: modalStub,
+        },
+      },
+    });
+
+    expect(wrapper.findAll(".preview-actions button").map((button) => button.text())).toEqual([
+      "复制",
+      "取消预览",
+      "删除",
+    ]);
     wrapper.unmount();
   });
 
