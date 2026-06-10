@@ -157,9 +157,10 @@ describe("Naive UI component usage", () => {
     expect(styles).toContain("@keyframes image-preview-photo-in");
     expect(styles).toContain(".preview-close-button");
     expect(styles).toContain(".preview-nav-button");
-    expect(styles).toContain("color-mix(in srgb, var(--card) 42%, transparent)");
-    expect(styles).toMatch(/\.preview-nav-button\.is-previous:active\s*\{[^}]*translateY\(-50%\) translateX\(-3px\)/s);
-    expect(styles).toMatch(/\.preview-nav-button\.is-next:active\s*\{[^}]*translateY\(-50%\) translateX\(3px\)/s);
+    expect(styles).toContain("color-mix(in srgb, var(--card) 30%, transparent)");
+    expect(styles).toContain("color-mix(in srgb, var(--card) 44%, transparent)");
+    expect(styles).toMatch(/\.preview-nav-button\.is-previous:active\s*\{[^}]*translateY\(-50%\) translateX\(-7px\)/s);
+    expect(styles).toMatch(/\.preview-nav-button\.is-next:active\s*\{[^}]*translateY\(-50%\) translateX\(7px\)/s);
     expect(styles).toContain(`@keyframes image-preview-photo-out {
   from {
     opacity: 1;
