@@ -5084,7 +5084,7 @@ html[data-theme="dark"] .image-preview {
   align-items: center;
   justify-content: center;
   border: 1px solid color-mix(in srgb, var(--border) 72%, rgba(255, 255, 255, 0.36));
-  background: color-mix(in srgb, var(--card) 30%, transparent);
+  background: color-mix(in srgb, var(--card) 22%, transparent);
   color: var(--text);
   box-shadow:
     0 8px 24px rgba(0, 0, 0, 0.16),
@@ -5103,7 +5103,7 @@ html[data-theme="dark"] .image-preview {
 .preview-close-button:focus-visible,
 .preview-nav-button:hover,
 .preview-nav-button:focus-visible {
-  background: color-mix(in srgb, var(--card) 44%, transparent);
+  background: color-mix(in srgb, var(--card) 34%, transparent);
   border-color: color-mix(in srgb, var(--primary) 34%, var(--border));
 }
 
@@ -5151,7 +5151,7 @@ html[data-theme="dark"] .image-preview {
 }
 
 .preview-nav-button:disabled:hover {
-  background: color-mix(in srgb, var(--card) 30%, transparent);
+  background: color-mix(in srgb, var(--card) 22%, transparent);
   border-color: color-mix(in srgb, var(--border) 72%, rgba(255, 255, 255, 0.36));
 }
 
