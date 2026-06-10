@@ -178,7 +178,7 @@ describe("ImagePanel", () => {
     wrapper.unmount();
   });
 
-  it("scrolls the active preview image into the middle of the shared image list", async () => {
+  it("smoothly scrolls the active preview image into the middle of the shared image list", async () => {
     const scrollIntoView = vi.fn();
     vi.spyOn(HTMLElement.prototype, "scrollIntoView").mockImplementation(scrollIntoView);
     const wrapper = mountImagePanel([
@@ -193,14 +193,14 @@ describe("ImagePanel", () => {
     await nextTick();
 
     expect(wrapper.findAll(".image-card")[1].classes()).toContain("is-active");
-    expect(scrollIntoView).toHaveBeenCalledWith({ block: "center", inline: "nearest" });
+    expect(scrollIntoView).toHaveBeenCalledWith({ block: "center", behavior: "smooth", inline: "nearest" });
     expect(scrollIntoView).toHaveBeenCalledTimes(1);
 
     await wrapper.setProps({ activePreviewId: "img-3" });
     await nextTick();
 
     expect(wrapper.findAll(".image-card")[2].classes()).toContain("is-active");
-    expect(scrollIntoView).toHaveBeenLastCalledWith({ block: "center", inline: "nearest" });
+    expect(scrollIntoView).toHaveBeenLastCalledWith({ block: "center", behavior: "smooth", inline: "nearest" });
     expect(scrollIntoView).toHaveBeenCalledTimes(2);
     wrapper.unmount();
   });

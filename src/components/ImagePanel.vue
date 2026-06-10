@@ -104,7 +104,7 @@ async function scrollActivePreviewIntoView(): Promise<void> {
   if (!id) return;
 
   await nextTick();
-  imageCardRefs.get(id)?.scrollIntoView({ block: "center", inline: "nearest" });
+  imageCardRefs.get(id)?.scrollIntoView({ block: "center", behavior: "smooth", inline: "nearest" });
 }
 
 function handleMenuSelect(key: string): void {
