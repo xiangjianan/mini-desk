@@ -3368,12 +3368,12 @@ button.todo-section-menu-button {
 
 .image-preview {
   position: fixed;
-  top: 0;
+  top: var(--image-preview-top, 72px);
   right: 0;
   bottom: 0;
   left: var(--image-preview-left, clamp(220px, 18vw, 320px));
   width: auto;
-  height: 100vh;
+  height: calc(100vh - var(--image-preview-top, 72px));
   z-index: 4300;
   display: grid;
   grid-template-columns: minmax(0, 1fr);
@@ -3437,7 +3437,7 @@ body:has(.image-preview) .image-panel .n-scrollbar {
   width: auto;
   height: auto;
   max-width: calc(100vw - var(--image-preview-left, clamp(220px, 18vw, 320px)) - 32px);
-  max-height: 88vh;
+  max-height: calc(100vh - var(--image-preview-top, 72px) - 96px);
   object-fit: contain;
   transform-origin: center;
   animation: image-preview-photo-in 140ms cubic-bezier(0.16, 1, 0.3, 1);
@@ -5066,7 +5066,7 @@ html[data-theme="dark"] .image-preview {
   width: auto;
   height: auto;
   max-width: min(100%, calc(100vw - 32px));
-  max-height: calc(100vh - 112px);
+  max-height: calc(100vh - var(--image-preview-top, 72px) - 96px);
   object-fit: contain;
   border-radius: calc(var(--radius) + 4px);
   box-shadow: 0 18px 60px rgba(0, 0, 0, 0.2);
@@ -5077,7 +5077,7 @@ html[data-theme="dark"] .image-preview {
 }
 
 .preview-close-button,
-.preview-nav-button {
+.preview-zoom-button {
   position: absolute;
   z-index: 1;
   display: inline-flex;
@@ -5101,14 +5101,14 @@ html[data-theme="dark"] .image-preview {
 
 .preview-close-button:hover,
 .preview-close-button:focus-visible,
-.preview-nav-button:hover,
-.preview-nav-button:focus-visible {
+.preview-zoom-button:hover,
+.preview-zoom-button:focus-visible {
   background: color-mix(in srgb, var(--card) 34%, transparent);
   border-color: color-mix(in srgb, var(--primary) 34%, var(--border));
 }
 
 .preview-close-button:focus-visible,
-.preview-nav-button:focus-visible {
+.preview-zoom-button:focus-visible {
   outline: 2px solid color-mix(in srgb, var(--primary) 46%, transparent);
   outline-offset: 2px;
 }
@@ -5119,46 +5119,6 @@ html[data-theme="dark"] .image-preview {
   width: 42px;
   height: 42px;
   border-radius: 999px;
-}
-
-.preview-nav-button {
-  top: 50%;
-  width: 58px;
-  height: 74px;
-  border-radius: 999px;
-  background: color-mix(in srgb, var(--card) 14%, transparent);
-  transform: translateY(-50%);
-}
-
-.preview-nav-button:hover,
-.preview-nav-button:focus-visible {
-  background: color-mix(in srgb, var(--card) 24%, transparent);
-}
-
-.preview-nav-button.is-previous {
-  left: 12px;
-}
-
-.preview-nav-button.is-next {
-  right: 12px;
-}
-
-.preview-nav-button.is-previous:active {
-  transform: translateY(-50%) translateX(-7px);
-}
-
-.preview-nav-button.is-next:active {
-  transform: translateY(-50%) translateX(7px);
-}
-
-.preview-nav-button:disabled {
-  opacity: 0.32;
-  cursor: default;
-}
-
-.preview-nav-button:disabled:hover {
-  background: color-mix(in srgb, var(--card) 14%, transparent);
-  border-color: color-mix(in srgb, var(--border) 72%, rgba(255, 255, 255, 0.36));
 }
 
 .preview-actions {
@@ -5181,25 +5141,11 @@ html[data-theme="dark"] .image-preview {
   white-space: nowrap;
 }
 
-.preview-actions .n-button {
-  min-width: 56px;
-  border-radius: 999px !important;
-}
-
-.preview-actions .n-button:not(.n-button--error-type) {
-  --n-color: var(--button) !important;
-  --n-color-hover: var(--button-hover) !important;
-  --n-text-color: var(--text) !important;
-  --n-text-color-hover: var(--text) !important;
-}
-
-.preview-actions .n-button--error-type {
-  --n-color: color-mix(in srgb, var(--danger) 9%, transparent) !important;
-  --n-color-hover: color-mix(in srgb, var(--danger) 14%, transparent) !important;
-  --n-border: 0 solid transparent !important;
-  --n-border-hover: 0 solid transparent !important;
-  --n-text-color: var(--danger) !important;
-  --n-text-color-hover: var(--danger) !important;
+.preview-zoom-button {
+  position: static;
+  width: 34px;
+  height: 30px;
+  border-radius: 999px;
 }
 
 .todo-collapse-button,
@@ -5449,7 +5395,7 @@ select {
   .companion-popover-shell.n-popover,
   .preview-actions,
   .preview-close-button,
-  .preview-nav-button,
+  .preview-zoom-button,
   .image-preview {
     -webkit-backdrop-filter: none;
     backdrop-filter: none;

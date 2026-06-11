@@ -1,8 +1,8 @@
 <script setup lang="ts">
 import { computed, h, onMounted, onUnmounted, ref, watch } from "vue";
 import type { Component, VNode } from "vue";
-import { ChevronBackOutline, ChevronForwardOutline, CloseOutline, CopyOutline, HelpCircleOutline, TrashOutline } from "@vicons/ionicons5";
-import { NButton, NDropdown, NIcon, NModal } from "naive-ui";
+import { AddOutline, CloseOutline, CopyOutline, HelpCircleOutline, RemoveOutline, TrashOutline } from "@vicons/ionicons5";
+import { NDropdown, NIcon, NModal } from "naive-ui";
 import type { DropdownOption } from "naive-ui";
 import { getUiText } from "../state/i18n";
 import type { AppLanguage, StoredImage } from "../types";
@@ -25,13 +25,21 @@ const emit = defineEmits<{
   navigate: [direction: number];
 }>();
 
+const WHEEL_NAVIGATION_COOLDOWN_MS = 260;
+const MIN_SCALE = 0.3;
+const MAX_SCALE = 5;
+const ZOOM_STEP = 0.1;
+const DOUBLE_CLICK_SCALE = 2;
+
 const scale = ref(1);
 const offset = ref({ x: 0, y: 0 });
 const dragging = ref(false);
 const localClosing = ref(false);
+const wheelNavigationLocked = ref(false);
 const start = ref({ x: 0, y: 0, ox: 0, oy: 0 });
 const menu = ref<{ x: number; y: number; id: string; anchor?: HTMLElement } | null>(null);
 let closeTimer: number | undefined;
+let wheelNavigationTimer: number | undefined;
 
 const uiText = computed(() => getUiText(props.language));
 const active = computed(() => props.images.find((image) => image.id === props.activeId));
@@ -55,14 +63,18 @@ onMounted(exclusiveMenu.mount);
 onUnmounted(() => {
   exclusiveMenu.unmount();
   window.clearTimeout(closeTimer);
+  window.clearTimeout(wheelNavigationTimer);
 });
 
 watch(
   () => props.activeId,
   () => {
     window.clearTimeout(closeTimer);
+    window.clearTimeout(wheelNavigationTimer);
     closeTimer = undefined;
+    wheelNavigationTimer = undefined;
     localClosing.value = false;
+    wheelNavigationLocked.value = false;
     scale.value = 1;
     offset.value = { x: 0, y: 0 };
   },
@@ -82,14 +94,42 @@ function requestClose(): void {
 
 function wheel(event: WheelEvent): void {
   event.preventDefault();
-  scale.value = Math.min(5, Math.max(0.3, scale.value + (event.deltaY > 0 ? -0.1 : 0.1)));
+  if (event.deltaY === 0 || wheelNavigationLocked.value) return;
+  if (!navigate(event.deltaY > 0 ? 1 : -1)) return;
+
+  wheelNavigationLocked.value = true;
+  window.clearTimeout(wheelNavigationTimer);
+  wheelNavigationTimer = window.setTimeout(() => {
+    wheelNavigationLocked.value = false;
+    wheelNavigationTimer = undefined;
+  }, WHEEL_NAVIGATION_COOLDOWN_MS);
 }
 
-function navigate(direction: number): void {
-  if (direction < 0 && !canNavigatePrevious.value) return;
-  if (direction > 0 && !canNavigateNext.value) return;
+function navigate(direction: number): boolean {
+  if (direction < 0 && !canNavigatePrevious.value) return false;
+  if (direction > 0 && !canNavigateNext.value) return false;
   closeMenu();
   emit("navigate", direction);
+  return true;
+}
+
+function clampScale(value: number): number {
+  return Number(Math.min(MAX_SCALE, Math.max(MIN_SCALE, value)).toFixed(2));
+}
+
+function adjustZoom(delta: number): void {
+  scale.value = clampScale(scale.value + delta);
+  if (scale.value === 1) offset.value = { x: 0, y: 0 };
+}
+
+function toggleZoom(): void {
+  if (scale.value === 1) {
+    scale.value = DOUBLE_CLICK_SCALE;
+    return;
+  }
+
+  scale.value = 1;
+  offset.value = { x: 0, y: 0 };
 }
 
 function down(event: MouseEvent): void {
@@ -184,28 +224,6 @@ function handleKeydown(event: KeyboardEvent): void {
             <CloseOutline />
           </NIcon>
         </button>
-        <button
-          type="button"
-          class="preview-nav-button is-previous"
-          :aria-label="uiText.preview.previous"
-          :disabled="!canNavigatePrevious"
-          @click="navigate(-1)"
-        >
-          <NIcon size="24">
-            <ChevronBackOutline />
-          </NIcon>
-        </button>
-        <button
-          type="button"
-          class="preview-nav-button is-next"
-          :aria-label="uiText.preview.next"
-          :disabled="!canNavigateNext"
-          @click="navigate(1)"
-        >
-          <NIcon size="24">
-            <ChevronForwardOutline />
-          </NIcon>
-        </button>
         <div class="preview-stage" @wheel="wheel" @mousedown="down">
           <img
             v-if="active.src"
@@ -215,15 +233,21 @@ function handleKeydown(event: KeyboardEvent): void {
             draggable="false"
             :style="{ transform: `translate(${offset.x}px, ${offset.y}px) scale(${scale})` }"
             @contextmenu.prevent="openMenu($event, active.id)"
+            @dblclick.stop.prevent="toggleZoom"
           />
         </div>
         <div class="preview-actions">
           <span>{{ uiText.preview.help }}</span>
-          <NButton size="small" @click="emit('copy', active.id)">{{ uiText.common.copy }}</NButton>
-          <NButton size="small" class="preview-action-close" @click="requestClose">{{ uiText.preview.close }}</NButton>
-          <NButton size="small" type="error" ghost @click="emit('delete', active.id, $event.currentTarget as HTMLElement)">
-            {{ uiText.common.delete }}
-          </NButton>
+          <button type="button" class="preview-zoom-button is-zoom-out" :aria-label="uiText.preview.zoomOut" @click="adjustZoom(-ZOOM_STEP)">
+            <NIcon size="19">
+              <RemoveOutline />
+            </NIcon>
+          </button>
+          <button type="button" class="preview-zoom-button is-zoom-in" :aria-label="uiText.preview.zoomIn" @click="adjustZoom(ZOOM_STEP)">
+            <NIcon size="19">
+              <AddOutline />
+            </NIcon>
+          </button>
         </div>
       </main>
       <NDropdown

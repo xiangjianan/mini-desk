@@ -130,12 +130,13 @@ describe("ImagePreview", () => {
     wrapper.unmount();
   });
 
-  it("does not zoom when wheel events happen outside the preview stage", async () => {
+  it("does not navigate when wheel events happen outside the preview stage", async () => {
     const wrapper = mount(ImagePreview, {
       props: {
         images: [
           { id: "img-1", src: "data:image/png;base64,one", createdAt: 1 },
           { id: "img-2", src: "data:image/png;base64,two", createdAt: 2 },
+          { id: "img-3", src: "data:image/png;base64,three", createdAt: 3 },
         ],
         activeId: "img-2",
       },
@@ -161,12 +162,14 @@ describe("ImagePreview", () => {
     wrapper.unmount();
   });
 
-  it("zooms only from the right-side preview stage", async () => {
+  it("navigates one image per wheel interval from the preview stage", async () => {
+    vi.useFakeTimers();
     const wrapper = mount(ImagePreview, {
       props: {
         images: [
           { id: "img-1", src: "data:image/png;base64,one", createdAt: 1 },
           { id: "img-2", src: "data:image/png;base64,two", createdAt: 2 },
+          { id: "img-3", src: "data:image/png;base64,three", createdAt: 3 },
         ],
         activeId: "img-2",
       },
@@ -181,15 +184,28 @@ describe("ImagePreview", () => {
         },
       },
     });
-    const event = new WheelEvent("wheel", { bubbles: true, cancelable: true, deltaY: -80 });
+    const first = new WheelEvent("wheel", { bubbles: true, cancelable: true, deltaY: 80 });
+    const ignored = new WheelEvent("wheel", { bubbles: true, cancelable: true, deltaY: 80 });
 
-    wrapper.get(".preview-stage").element.dispatchEvent(event);
-    await wrapper.vm.$nextTick();
+    try {
+      wrapper.get(".preview-stage").element.dispatchEvent(first);
+      wrapper.get(".preview-stage").element.dispatchEvent(ignored);
+      await wrapper.vm.$nextTick();
 
-    expect(event.defaultPrevented).toBe(true);
-    expect(wrapper.get(".preview-stage img").attributes("style")).toContain("scale(1.1)");
-    expect(wrapper.emitted("navigate")).toBeUndefined();
-    wrapper.unmount();
+      expect(first.defaultPrevented).toBe(true);
+      expect(ignored.defaultPrevented).toBe(true);
+      expect(wrapper.get(".preview-stage img").attributes("style")).toContain("scale(1)");
+      expect(wrapper.emitted("navigate")).toEqual([[1]]);
+
+      await vi.advanceTimersByTimeAsync(260);
+      wrapper.get(".preview-stage").element.dispatchEvent(new WheelEvent("wheel", { bubbles: true, cancelable: true, deltaY: -80 }));
+      await wrapper.vm.$nextTick();
+
+      expect(wrapper.emitted("navigate")).toEqual([[1], [-1]]);
+    } finally {
+      wrapper.unmount();
+      vi.useRealTimers();
+    }
   });
 
   it("keeps the transformed image state while closing", async () => {
@@ -210,11 +226,9 @@ describe("ImagePreview", () => {
         },
       },
     });
-    const event = new WheelEvent("wheel", { bubbles: true, cancelable: true, deltaY: -80 });
 
     try {
-      wrapper.get(".preview-stage").element.dispatchEvent(event);
-      await wrapper.vm.$nextTick();
+      await wrapper.get(".preview-zoom-button.is-zoom-in").trigger("click");
       expect(wrapper.get(".preview-stage img").attributes("style")).toContain("scale(1.1)");
 
       await wrapper.get(".preview-close-button").trigger("click");
@@ -227,7 +241,7 @@ describe("ImagePreview", () => {
     }
   });
 
-  it("renders side navigation controls and emits previous or next requests", async () => {
+  it("does not render side navigation controls", () => {
     const wrapper = mount(ImagePreview, {
       props: {
         images: [
@@ -249,14 +263,11 @@ describe("ImagePreview", () => {
       },
     });
 
-    await wrapper.get(".preview-nav-button.is-previous").trigger("click");
-    await wrapper.get(".preview-nav-button.is-next").trigger("click");
-
-    expect(wrapper.emitted("navigate")).toEqual([[-1], [1]]);
+    expect(wrapper.find(".preview-nav-button").exists()).toBe(false);
     wrapper.unmount();
   });
 
-  it("renders a bottom close action between copy and delete", async () => {
+  it("renders bottom zoom icon actions without copy close or delete actions", async () => {
     const wrapper = mount(ImagePreview, {
       props: {
         images: [{ id: "img-1", src: "data:image/png;base64,one", createdAt: 1 }],
@@ -274,11 +285,45 @@ describe("ImagePreview", () => {
       },
     });
 
-    expect(wrapper.findAll(".preview-actions button").map((button) => button.text())).toEqual([
-      "复制",
-      "取消预览",
-      "删除",
-    ]);
+    const buttons = wrapper.findAll(".preview-actions button");
+    expect(buttons).toHaveLength(2);
+    expect(buttons.map((button) => button.text())).toEqual(["", ""]);
+    expect(buttons.map((button) => button.attributes("aria-label"))).toEqual(["缩小图片", "放大图片"]);
+
+    await wrapper.get(".preview-zoom-button.is-zoom-in").trigger("click");
+    expect(wrapper.get(".preview-stage img").attributes("style")).toContain("scale(1.1)");
+
+    await wrapper.get(".preview-zoom-button.is-zoom-out").trigger("click");
+    expect(wrapper.get(".preview-stage img").attributes("style")).toContain("scale(1)");
+    expect(wrapper.emitted("copy")).toBeUndefined();
+    expect(wrapper.emitted("delete")).toBeUndefined();
+    expect(wrapper.emitted("close")).toBeUndefined();
+    wrapper.unmount();
+  });
+
+  it("toggles image zoom on double click", async () => {
+    const wrapper = mount(ImagePreview, {
+      props: {
+        images: [{ id: "img-1", src: "data:image/png;base64,one", createdAt: 1 }],
+        activeId: "img-1",
+      },
+      global: {
+        stubs: {
+          Button: buttonStub,
+          Dropdown: dropdownStub,
+          Modal: modalStub,
+          NButton: buttonStub,
+          NDropdown: dropdownStub,
+          NModal: modalStub,
+        },
+      },
+    });
+
+    await wrapper.get(".preview-stage img").trigger("dblclick");
+    expect(wrapper.get(".preview-stage img").attributes("style")).toContain("scale(2)");
+
+    await wrapper.get(".preview-stage img").trigger("dblclick");
+    expect(wrapper.get(".preview-stage img").attributes("style")).toContain("scale(1)");
     wrapper.unmount();
   });
 
