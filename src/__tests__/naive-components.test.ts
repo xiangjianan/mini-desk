@@ -176,13 +176,13 @@ describe("Naive UI component usage", () => {
     expect(styles).toMatch(/\.preview-nav-stack\s*\{[^}]*right: 14px/s);
     expect(styles).toMatch(/\.preview-nav-stack\s*\{[^}]*flex-direction: column/s);
     expect(styles).toMatch(/\.preview-nav-stack\s*\{[^}]*gap: 2px/s);
-    expect(styles).toMatch(/\.preview-nav-button\s*\{[^}]*width: 66px/s);
-    expect(styles).toMatch(/\.preview-nav-button\s*\{[^}]*height: 88px/s);
+    expect(styles).toMatch(/\.preview-nav-button\s*\{[^}]*width: 58px/s);
+    expect(styles).toMatch(/\.preview-nav-button\s*\{[^}]*height: 76px/s);
     expect(styles).toMatch(/\.preview-nav-button\s*\{[^}]*background: color-mix\(in srgb, var\(--card\) 26%, transparent\)/s);
     expect(styles).toMatch(/\.preview-nav-button\s*\{[^}]*opacity: 0\.58/s);
     expect(styles).toMatch(/\.preview-nav-button:hover,[\s\S]*?\.preview-nav-button:focus-visible\s*\{[^}]*opacity: 0\.82/s);
-    expect(styles).toMatch(/\.preview-nav-button\.is-previous:active\s*\{[^}]*transform: translateX\(-8px\)/s);
-    expect(styles).toMatch(/\.preview-nav-button\.is-next:active\s*\{[^}]*transform: translateX\(8px\)/s);
+    expect(styles).toMatch(/\.preview-nav-button\.is-previous:active\s*\{[^}]*transform: translateY\(-7px\)/s);
+    expect(styles).toMatch(/\.preview-nav-button\.is-next:active\s*\{[^}]*transform: translateY\(7px\)/s);
     expect(styles).toMatch(/\.preview-stage img\s*\{[^}]*max-height: calc\(100vh - var\(--image-preview-top, 52px\) - 96px\)/s);
     expect(styles).toMatch(/\.preview-stage img\s*\{[^}]*transition: transform 180ms cubic-bezier\(0\.2, 0, 0, 1\)/s);
     expect(styles).toContain(`@keyframes image-preview-photo-out {

@@ -5147,8 +5147,8 @@ html[data-theme="dark"] .image-preview {
 
 .preview-nav-button {
   position: static;
-  width: 66px;
-  height: 88px;
+  width: 58px;
+  height: 76px;
   border-radius: calc(var(--radius) + 10px);
   background: color-mix(in srgb, var(--card) 26%, transparent);
   opacity: 0.58;
@@ -5161,11 +5161,11 @@ html[data-theme="dark"] .image-preview {
 }
 
 .preview-nav-button.is-previous:active {
-  transform: translateX(-8px);
+  transform: translateY(-7px);
 }
 
 .preview-nav-button.is-next:active {
-  transform: translateX(8px);
+  transform: translateY(7px);
 }
 
 .preview-actions {
