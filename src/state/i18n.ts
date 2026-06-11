@@ -364,7 +364,7 @@ export const GUIDE_MESSAGES: Record<AppLanguage, Record<GuideKey, string[]>> = {
       "Drag images to reorder them.",
       "Click an image to preview it.",
       "Right-click an image to copy, preview, or delete it.",
-      "Use the wheel to switch images in preview.",
+      "Use the side buttons to switch images in preview.",
       "Drag inside preview to pan.",
       "Use arrow keys to switch images.",
       "Press Enter to copy the current image.",
@@ -720,7 +720,7 @@ export const UI_TEXT = {
       list: "预览图片列表",
       thumbnailAlt: "预览缩略图",
       imageAlt: "图片预览",
-      help: "滚轮切换图片 · 双击缩放 · 拖动平移 · Enter 复制 · Delete 删除 · Space/Esc 关闭",
+      help: "左右按钮切换图片 · 双击缩放 · 拖动平移 · Enter 复制 · Delete 删除 · Space/Esc 关闭",
     },
   },
   en: {
@@ -945,7 +945,7 @@ export const UI_TEXT = {
       list: "Preview image list",
       thumbnailAlt: "Preview thumbnail",
       imageAlt: "Image preview",
-      help: "Wheel switches images · Double-click zooms · Drag pans · Enter copies · Delete removes · Space/Esc closes",
+      help: "Side buttons switch images · Double-click zooms · Drag pans · Enter copies · Delete removes · Space/Esc closes",
     },
   },
 } as const;
@@ -1106,7 +1106,7 @@ export const SHORTCUT_HELP: Record<AppLanguage, ShortcutHelpSection[]> = {
       "Drag in preview to pan large images without opening another window.",
     ], shortcuts: [
       { key: "Ctrl + V / Drag image", desc: "Paste or import image" },
-      { key: "Scroll wheel", desc: "Switch preview image" },
+      { key: "Side buttons", desc: "Switch preview image" },
       { key: "Drag preview", desc: "Pan image" },
       { key: "← / →", desc: "Switch image" },
       { key: "Enter", desc: "Copy image" },

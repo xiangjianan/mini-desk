@@ -3375,12 +3375,12 @@ button.todo-section-menu-button {
 
 .image-preview {
   position: fixed;
-  top: var(--image-preview-top, 72px);
+  top: var(--image-preview-top, 52px);
   right: 0;
   bottom: 0;
   left: var(--image-preview-left, clamp(220px, 18vw, 320px));
   width: auto;
-  height: calc(100vh - var(--image-preview-top, 72px));
+  height: calc(100vh - var(--image-preview-top, 52px));
   z-index: 4300;
   display: grid;
   grid-template-columns: minmax(0, 1fr);
@@ -3444,7 +3444,7 @@ body:has(.image-preview) .image-panel .n-scrollbar {
   width: auto;
   height: auto;
   max-width: calc(100vw - var(--image-preview-left, clamp(220px, 18vw, 320px)) - 32px);
-  max-height: calc(100vh - var(--image-preview-top, 72px) - 96px);
+  max-height: calc(100vh - var(--image-preview-top, 52px) - 96px);
   object-fit: contain;
   transform-origin: center;
   animation: image-preview-photo-in 140ms cubic-bezier(0.16, 1, 0.3, 1);
@@ -5073,7 +5073,7 @@ html[data-theme="dark"] .image-preview {
   width: auto;
   height: auto;
   max-width: min(100%, calc(100vw - 32px));
-  max-height: calc(100vh - var(--image-preview-top, 72px) - 96px);
+  max-height: calc(100vh - var(--image-preview-top, 52px) - 96px);
   object-fit: contain;
   border-radius: calc(var(--radius) + 4px);
   box-shadow: 0 18px 60px rgba(0, 0, 0, 0.2);
@@ -5084,6 +5084,7 @@ html[data-theme="dark"] .image-preview {
 }
 
 .preview-close-button,
+.preview-nav-button,
 .preview-zoom-button {
   position: absolute;
   z-index: 1;
@@ -5108,6 +5109,8 @@ html[data-theme="dark"] .image-preview {
 
 .preview-close-button:hover,
 .preview-close-button:focus-visible,
+.preview-nav-button:hover,
+.preview-nav-button:focus-visible,
 .preview-zoom-button:hover,
 .preview-zoom-button:focus-visible {
   background: color-mix(in srgb, var(--card) 34%, transparent);
@@ -5115,17 +5118,43 @@ html[data-theme="dark"] .image-preview {
 }
 
 .preview-close-button:focus-visible,
+.preview-nav-button:focus-visible,
 .preview-zoom-button:focus-visible {
   outline: 2px solid color-mix(in srgb, var(--primary) 46%, transparent);
   outline-offset: 2px;
 }
 
 .preview-close-button {
-  top: 62px;
+  top: 10px;
   right: 10px;
   width: 42px;
   height: 42px;
   border-radius: 999px;
+}
+
+.preview-nav-button {
+  top: 50%;
+  width: 58px;
+  height: min(34vh, 188px);
+  min-height: 132px;
+  border-radius: calc(var(--radius) + 8px);
+  background: transparent;
+  opacity: 0.42;
+  transform: translateY(-50%);
+}
+
+.preview-nav-button:hover,
+.preview-nav-button:focus-visible {
+  background: color-mix(in srgb, var(--card) 14%, transparent);
+  opacity: 0.68;
+}
+
+.preview-nav-button.is-previous {
+  left: 14px;
+}
+
+.preview-nav-button.is-next {
+  right: 14px;
 }
 
 .preview-actions {
@@ -5402,6 +5431,7 @@ select {
   .companion-popover-shell.n-popover,
   .preview-actions,
   .preview-close-button,
+  .preview-nav-button,
   .preview-zoom-button,
   .image-preview {
     -webkit-backdrop-filter: none;

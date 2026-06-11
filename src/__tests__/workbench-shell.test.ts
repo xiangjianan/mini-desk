@@ -107,7 +107,7 @@ describe("WorkbenchShell", () => {
     expect(wrapper.find('[data-testid="actions-slot"]').exists()).toBe(true);
     expect(wrapper.find('[data-testid="workbench-header-show"]').exists()).toBe(false);
     await nextTick();
-    expect(document.documentElement.style.getPropertyValue("--image-preview-top")).toBe("72px");
+    expect(document.documentElement.style.getPropertyValue("--image-preview-top")).toBe("52px");
 
     await wrapper.get('[data-testid="workbench-header-hide"]').trigger("click");
     await nextTick();
@@ -138,7 +138,7 @@ describe("WorkbenchShell", () => {
     await nextTick();
 
     expect(localStorage.getItem(WORKBENCH_HEADER_STORAGE_KEY)).toBe("false");
-    expect(document.documentElement.style.getPropertyValue("--image-preview-top")).toBe("72px");
+    expect(document.documentElement.style.getPropertyValue("--image-preview-top")).toBe("52px");
     expect(wrapper.find('[data-testid="workbench-command-bar"]').exists()).toBe(true);
     expect(wrapper.find('[data-testid="workbench-theme"]').exists()).toBe(true);
     expect(wrapper.find('[data-testid="actions-slot"]').exists()).toBe(true);

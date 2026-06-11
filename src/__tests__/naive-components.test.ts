@@ -127,19 +127,18 @@ describe("Naive UI component usage", () => {
     expect(preview).not.toContain('@click.self="requestClose"');
     expect(preview).toContain("preview-close-button");
     expect(preview).not.toContain("preview-action-close");
-    expect(preview).not.toContain("preview-nav-button");
+    expect(preview).toContain("preview-nav-button");
     expect(preview).toContain("preview-zoom-button");
     expect(preview).toContain('emit("navigate"');
-    expect(preview).toContain('wheelNavigationLocked');
-    expect(preview).toContain('WHEEL_NAVIGATION_INITIAL_DELAY_MS');
-    expect(preview).toContain('WHEEL_NAVIGATION_MIN_DELAY_MS');
+    expect(preview).not.toContain('WHEEL_NAVIGATION_INITIAL_DELAY_MS');
+    expect(preview).not.toContain('WHEEL_NAVIGATION_MIN_DELAY_MS');
     expect(preview).toContain("function requestClose");
     expect(preview).toContain("is-closing");
     expect(preview).toContain("uiText.preview.close");
     expect(preview).toContain("uiText.preview.zoomOut");
     expect(preview).toContain("uiText.preview.zoomIn");
-    expect(preview).not.toContain("uiText.preview.previous");
-    expect(preview).not.toContain("uiText.preview.next");
+    expect(preview).toContain("uiText.preview.previous");
+    expect(preview).toContain("uiText.preview.next");
     expect(preview).not.toContain("uiText.common.copy");
     expect(preview).not.toContain("uiText.common.delete");
     expect(i18n).toContain("取消预览");
@@ -153,7 +152,7 @@ describe("Naive UI component usage", () => {
     expect(preview).not.toContain("@contextmenu.prevent.stop=\"openMenu\"");
     expect(preview).not.toContain("custom-menu");
     expect(preview).not.toContain('id="custom-menu"');
-    expect(styles).toMatch(/\.image-preview\s*\{[^}]*top: var\(--image-preview-top, 72px\)/s);
+    expect(styles).toMatch(/\.image-preview\s*\{[^}]*top: var\(--image-preview-top, 52px\)/s);
     expect(styles).toMatch(/\.image-preview\s*\{[^}]*left: var\(--image-preview-left, clamp\(220px, 18vw, 320px\)\)/s);
     expect(styles).toMatch(/\.image-preview\s*\{[^}]*right: 0/s);
     expect(styles).not.toMatch(/\.image-preview\s*\{[^}]*width: 90vw/s);
@@ -165,9 +164,16 @@ describe("Naive UI component usage", () => {
     expect(styles).toMatch(/\.image-preview\s*\{[^}]*animation: image-preview-in 120ms/s);
     expect(styles).toContain("@keyframes image-preview-photo-in");
     expect(styles).toContain(".preview-close-button");
-    expect(styles).not.toContain(".preview-nav-button");
+    expect(styles).toContain(".preview-nav-button");
     expect(styles).toContain(".preview-zoom-button");
-    expect(styles).toMatch(/\.preview-stage img\s*\{[^}]*max-height: calc\(100vh - var\(--image-preview-top, 72px\) - 96px\)/s);
+    expect(styles).toMatch(/\.preview-close-button\s*\{[^}]*top: 10px/s);
+    expect(styles).toMatch(/\.preview-close-button\s*\{[^}]*right: 10px/s);
+    expect(styles).toMatch(/\.preview-nav-button\s*\{[^}]*width: 58px/s);
+    expect(styles).toMatch(/\.preview-nav-button\s*\{[^}]*height: min\(34vh, 188px\)/s);
+    expect(styles).toMatch(/\.preview-nav-button\s*\{[^}]*min-height: 132px/s);
+    expect(styles).toMatch(/\.preview-nav-button\s*\{[^}]*background: transparent/s);
+    expect(styles).toMatch(/\.preview-nav-button:hover,[\s\S]*?\.preview-nav-button:focus-visible\s*\{[^}]*opacity: 0\.68/s);
+    expect(styles).toMatch(/\.preview-stage img\s*\{[^}]*max-height: calc\(100vh - var\(--image-preview-top, 52px\) - 96px\)/s);
     expect(styles).toMatch(/\.preview-stage img\s*\{[^}]*transition: transform 180ms cubic-bezier\(0\.2, 0, 0, 1\)/s);
     expect(styles).toContain(`@keyframes image-preview-photo-out {
   from {

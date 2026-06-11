@@ -1,7 +1,7 @@
 <script setup lang="ts">
 import { computed, h, onMounted, onUnmounted, ref, watch } from "vue";
 import type { Component, VNode } from "vue";
-import { AddOutline, CloseOutline, CopyOutline, HelpCircleOutline, RemoveOutline, TrashOutline } from "@vicons/ionicons5";
+import { AddOutline, ChevronBackOutline, ChevronForwardOutline, CloseOutline, CopyOutline, HelpCircleOutline, RemoveOutline, TrashOutline } from "@vicons/ionicons5";
 import { NDropdown, NIcon, NModal } from "naive-ui";
 import type { DropdownOption } from "naive-ui";
 import { getUiText } from "../state/i18n";
@@ -25,9 +25,6 @@ const emit = defineEmits<{
   navigate: [direction: number];
 }>();
 
-const WHEEL_NAVIGATION_INITIAL_DELAY_MS = 500;
-const WHEEL_NAVIGATION_MIN_DELAY_MS = 50;
-const WHEEL_NAVIGATION_ACCELERATION_STEP_MS = 100;
 const MIN_SCALE = 0.3;
 const MAX_SCALE = 5;
 const ZOOM_STEP = 0.1;
@@ -37,14 +34,9 @@ const scale = ref(1);
 const offset = ref({ x: 0, y: 0 });
 const dragging = ref(false);
 const localClosing = ref(false);
-const wheelNavigationLocked = ref(false);
 const start = ref({ x: 0, y: 0, ox: 0, oy: 0 });
 const menu = ref<{ x: number; y: number; id: string; anchor?: HTMLElement } | null>(null);
 let closeTimer: number | undefined;
-let wheelNavigationTimer: number | undefined;
-let wheelNavigationDelay = WHEEL_NAVIGATION_INITIAL_DELAY_MS;
-let wheelNavigationDirection = 0;
-let wheelContinuationRequested = false;
 
 const uiText = computed(() => getUiText(props.language));
 const active = computed(() => props.images.find((image) => image.id === props.activeId));
@@ -68,18 +60,16 @@ onMounted(exclusiveMenu.mount);
 onUnmounted(() => {
   exclusiveMenu.unmount();
   window.clearTimeout(closeTimer);
-  clearWheelNavigationLock();
 });
 
 watch(
   () => props.activeId,
-  (nextId) => {
+  () => {
     window.clearTimeout(closeTimer);
     closeTimer = undefined;
     localClosing.value = false;
     scale.value = 1;
     offset.value = { x: 0, y: 0 };
-    if (!nextId) clearWheelNavigationLock();
   },
 );
 
@@ -97,71 +87,6 @@ function requestClose(): void {
 
 function wheel(event: WheelEvent): void {
   event.preventDefault();
-  const direction = Math.sign(event.deltaY);
-  if (direction === 0) return;
-
-  if (wheelNavigationLocked.value) {
-    if (direction !== wheelNavigationDirection) {
-      if (!navigate(direction)) {
-        clearWheelNavigationLock();
-        return;
-      }
-      startWheelNavigation(direction);
-      return;
-    }
-    wheelContinuationRequested = true;
-    return;
-  }
-
-  if (!navigate(direction)) return;
-  startWheelNavigation(direction);
-}
-
-function startWheelNavigation(direction: number): void {
-  window.clearTimeout(wheelNavigationTimer);
-  wheelNavigationLocked.value = true;
-  wheelNavigationDirection = direction;
-  wheelNavigationDelay = WHEEL_NAVIGATION_INITIAL_DELAY_MS;
-  wheelContinuationRequested = false;
-  scheduleWheelNavigation();
-}
-
-function scheduleWheelNavigation(): void {
-  window.clearTimeout(wheelNavigationTimer);
-  wheelNavigationTimer = window.setTimeout(() => {
-    wheelNavigationTimer = undefined;
-    runWheelNavigation();
-  }, wheelNavigationDelay);
-}
-
-function clearWheelNavigationLock(): void {
-  window.clearTimeout(wheelNavigationTimer);
-  wheelNavigationTimer = undefined;
-  wheelNavigationLocked.value = false;
-  wheelNavigationDelay = WHEEL_NAVIGATION_INITIAL_DELAY_MS;
-  wheelNavigationDirection = 0;
-  wheelContinuationRequested = false;
-}
-
-function runWheelNavigation(): void {
-  if (!wheelNavigationLocked.value) return;
-  const direction = wheelNavigationDirection;
-  const shouldContinue = wheelContinuationRequested;
-  wheelContinuationRequested = false;
-  if (!shouldContinue) {
-    clearWheelNavigationLock();
-    return;
-  }
-  if (direction === 0 || !navigate(direction)) {
-    clearWheelNavigationLock();
-    return;
-  }
-
-  wheelNavigationDelay = Math.max(
-    WHEEL_NAVIGATION_MIN_DELAY_MS,
-    wheelNavigationDelay - WHEEL_NAVIGATION_ACCELERATION_STEP_MS,
-  );
-  scheduleWheelNavigation();
 }
 
 function navigate(direction: number): boolean {
@@ -299,6 +224,32 @@ function handleKeydown(event: KeyboardEvent): void {
         >
           <NIcon size="20">
             <CloseOutline />
+          </NIcon>
+        </button>
+        <button
+          v-if="canNavigatePrevious"
+          type="button"
+          class="preview-nav-button is-previous"
+          :aria-label="uiText.preview.previous"
+          @click.stop.prevent="navigate(-1)"
+          @keydown.enter.stop.prevent="navigate(-1)"
+          @keydown.space.stop.prevent="navigate(-1)"
+        >
+          <NIcon size="26">
+            <ChevronBackOutline />
+          </NIcon>
+        </button>
+        <button
+          v-if="canNavigateNext"
+          type="button"
+          class="preview-nav-button is-next"
+          :aria-label="uiText.preview.next"
+          @click.stop.prevent="navigate(1)"
+          @keydown.enter.stop.prevent="navigate(1)"
+          @keydown.space.stop.prevent="navigate(1)"
+        >
+          <NIcon size="26">
+            <ChevronForwardOutline />
           </NIcon>
         </button>
         <div class="preview-stage" @wheel="wheel" @mousedown="down">
