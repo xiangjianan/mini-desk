@@ -43,6 +43,7 @@ const MIN_COLUMN_WIDTHS = [160, 320, 320, 320] as const;
 const DEFAULT_GRID_GAP = 14;
 const DEFAULT_GRID_PADDING_X = 14;
 const DEFAULT_GRID_PADDING_Y = 14;
+const DEFAULT_IMAGE_PREVIEW_TOP = 72;
 const RESIZE_STEP = 24;
 const HEADER_REVEAL_AUTO_HIDE_MS = 2_000;
 
@@ -179,7 +180,12 @@ function syncImagePreviewLeft(): void {
   if (fallbackRight) document.documentElement.style.setProperty("--image-preview-left", `${Math.round(fallbackRight)}px`);
 }
 
+function syncImagePreviewTop(): void {
+  document.documentElement.style.setProperty("--image-preview-top", headerHidden.value ? "0px" : `${DEFAULT_IMAGE_PREVIEW_TOP}px`);
+}
+
 function refreshWorkbenchLayout(): void {
+  syncImagePreviewTop();
   const metrics = readGridMetrics();
   if (!metrics) return;
   if (window.innerWidth <= DESKTOP_RESIZE_BREAKPOINT) {
@@ -288,6 +294,7 @@ function handleHeaderRevealZoneLeave(): void {
 function setHeaderHidden(hidden: boolean): void {
   headerHidden.value = hidden;
   persistHeaderHidden(hidden);
+  syncImagePreviewTop();
   if (hidden) {
     headerRevealVisible.value = true;
     scheduleHeaderRevealHide();
@@ -313,6 +320,7 @@ onUnmounted(() => {
   clearHeaderRevealHideTimer();
   window.removeEventListener("resize", refreshWorkbenchLayout);
   document.documentElement.style.removeProperty("--image-preview-left");
+  document.documentElement.style.removeProperty("--image-preview-top");
 });
 </script>
 

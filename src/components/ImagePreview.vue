@@ -25,7 +25,7 @@ const emit = defineEmits<{
   navigate: [direction: number];
 }>();
 
-const WHEEL_NAVIGATION_COOLDOWN_MS = 260;
+const WHEEL_NAVIGATION_COOLDOWN_MS = 360;
 const MIN_SCALE = 0.3;
 const MAX_SCALE = 5;
 const ZOOM_STEP = 0.1;
@@ -122,8 +122,26 @@ function adjustZoom(delta: number): void {
   if (scale.value === 1) offset.value = { x: 0, y: 0 };
 }
 
-function toggleZoom(): void {
+function getAnchoredZoomOffset(event: MouseEvent, nextScale: number): { x: number; y: number } {
+  const target = event.currentTarget instanceof HTMLElement ? event.currentTarget : null;
+  if (!target || scale.value <= 0) return offset.value;
+
+  const rect = target.getBoundingClientRect();
+  const centerX = rect.left + rect.width / 2;
+  const centerY = rect.top + rect.height / 2;
+  const pointX = event.clientX - centerX;
+  const pointY = event.clientY - centerY;
+  const sourceX = (pointX - offset.value.x) / scale.value;
+  const sourceY = (pointY - offset.value.y) / scale.value;
+  return {
+    x: Number((pointX - nextScale * sourceX).toFixed(2)),
+    y: Number((pointY - nextScale * sourceY).toFixed(2)),
+  };
+}
+
+function toggleZoom(event: MouseEvent): void {
   if (scale.value === 1) {
+    offset.value = getAnchoredZoomOffset(event, DOUBLE_CLICK_SCALE);
     scale.value = DOUBLE_CLICK_SCALE;
     return;
   }

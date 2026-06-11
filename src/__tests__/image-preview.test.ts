@@ -201,6 +201,12 @@ describe("ImagePreview", () => {
       wrapper.get(".preview-stage").element.dispatchEvent(new WheelEvent("wheel", { bubbles: true, cancelable: true, deltaY: -80 }));
       await wrapper.vm.$nextTick();
 
+      expect(wrapper.emitted("navigate")).toEqual([[1]]);
+
+      await vi.advanceTimersByTimeAsync(100);
+      wrapper.get(".preview-stage").element.dispatchEvent(new WheelEvent("wheel", { bubbles: true, cancelable: true, deltaY: -80 }));
+      await wrapper.vm.$nextTick();
+
       expect(wrapper.emitted("navigate")).toEqual([[1], [-1]]);
     } finally {
       wrapper.unmount();
@@ -319,11 +325,26 @@ describe("ImagePreview", () => {
       },
     });
 
-    await wrapper.get(".preview-stage img").trigger("dblclick");
-    expect(wrapper.get(".preview-stage img").attributes("style")).toContain("scale(2)");
+    const image = wrapper.get(".preview-stage img");
+    Object.defineProperty(image.element, "getBoundingClientRect", {
+      value: () => ({
+        x: 50,
+        y: 50,
+        left: 50,
+        top: 50,
+        right: 250,
+        bottom: 150,
+        width: 200,
+        height: 100,
+        toJSON: () => undefined,
+      }),
+    });
+
+    await image.trigger("dblclick", { clientX: 200, clientY: 125 });
+    expect(wrapper.get(".preview-stage img").attributes("style")).toContain("translate(-50px, -25px) scale(2)");
 
     await wrapper.get(".preview-stage img").trigger("dblclick");
-    expect(wrapper.get(".preview-stage img").attributes("style")).toContain("scale(1)");
+    expect(wrapper.get(".preview-stage img").attributes("style")).toContain("translate(0px, 0px) scale(1)");
     wrapper.unmount();
   });
 
