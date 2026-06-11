@@ -124,7 +124,6 @@ const appVersion = ref(getIndexAppVersion());
 const availableAppVersion = ref(appVersion.value);
 const storedAppVersion = ref<string | null>(null);
 const versionPromptVisible = ref(false);
-const versionBadgeVisible = ref(false);
 const shortcutHelpVisible = ref(false);
 const isMobileBlocked = ref(getInitialMobileBlocked());
 const mobileMediaQuery = ref<MediaQueryList | null>(null);
@@ -149,14 +148,12 @@ const GITHUB_REPO_URL = "https://github.com/xiangjianan/mini-desk";
 const GITHUB_REPO_LABEL = "xiangjianan / mini-desk";
 const ABOUT_MESSAGE_DURATION_MS = 10000;
 const COMPANION_FADE_MS = 2000;
-const VERSION_BADGE_MAX_VISIBLE_MS = 10000;
 const MIN_COMPANION_POPOVER_RIGHT_EDGE = 260;
 const DEFAULT_DOCUMENT_TITLE = "Mini Desk";
 const NOTIFICATION_DOCUMENT_TITLE = "🔔 新提醒 · Mini Desk";
 const TITLE_FLASH_INTERVAL_MS = 750;
 const TODO_NOTIFICATION_FLASH_MS = 2400;
 const activeGuideKey = ref<GuideKey | null>(null);
-const versionBadgeTimer = ref<number | undefined>();
 const versionCheckTimer = ref<number | undefined>();
 
 const naiveTheme = computed(() => (state.theme === "dark" ? darkTheme : null));
@@ -1847,13 +1844,11 @@ function clearTimers(): void {
   window.clearTimeout(bubbleTimer.value);
   window.clearTimeout(bubbleFadeTimer.value);
   window.clearTimeout(saveStatusTimer.value);
-  window.clearTimeout(versionBadgeTimer.value);
   window.clearInterval(versionCheckTimer.value);
   window.clearTimeout(todoNotificationDueTimer.value);
   window.clearInterval(titleFlashTimer.value);
   window.clearTimeout(previewCloseTimer.value);
   previewCloseTimer.value = undefined;
-  versionBadgeTimer.value = undefined;
   versionCheckTimer.value = undefined;
   window.clearInterval(todoNotificationTimer.value);
   todoNotificationDueTimer.value = undefined;
@@ -2164,7 +2159,6 @@ function checkAppVersion(): void {
   }
   availableAppVersion.value = appVersion.value;
   versionPromptVisible.value = false;
-  versionBadgeVisible.value = false;
 }
 
 async function checkLatestAppVersion(): Promise<void> {
@@ -2174,36 +2168,17 @@ async function checkLatestAppVersion(): Promise<void> {
   if (latestVersion === appVersion.value) {
     availableAppVersion.value = appVersion.value;
     versionPromptVisible.value = false;
-    versionBadgeVisible.value = false;
-    window.clearTimeout(versionBadgeTimer.value);
-    versionBadgeTimer.value = undefined;
     return;
   }
 
-  const alreadyShowingVersion = versionPromptVisible.value && availableAppVersion.value === latestVersion;
   availableAppVersion.value = latestVersion;
   versionPromptVisible.value = true;
-  if (!alreadyShowingVersion) startVersionBadgeTimer();
 }
 
 async function updateStaticVersion(): Promise<void> {
   await clearStaticCaches();
   versionPromptVisible.value = false;
-  versionBadgeVisible.value = false;
-  window.clearTimeout(versionBadgeTimer.value);
-  versionBadgeTimer.value = undefined;
   window.location.reload();
-}
-
-function startVersionBadgeTimer(): void {
-  window.clearTimeout(versionBadgeTimer.value);
-  versionBadgeTimer.value = undefined;
-  versionBadgeVisible.value = versionPromptVisible.value;
-  if (!versionBadgeVisible.value) return;
-  versionBadgeTimer.value = window.setTimeout(() => {
-    versionBadgeVisible.value = false;
-    versionBadgeTimer.value = undefined;
-  }, VERSION_BADGE_MAX_VISIBLE_MS);
 }
 
 function getCompanionPosition(anchor?: HTMLElement): { right: string; bottom?: string; top?: string } | undefined {
@@ -2303,7 +2278,6 @@ function moveItem<T extends { id: string }>(items: T[], dragId: string, targetId
         <SettingsMenu
           :app-version="settingsAppVersion"
           :update-available="versionPromptVisible"
-          :update-badge-visible="versionBadgeVisible"
           :companion-gif-theme="state.companionGifTheme"
           :custom-companion-gif="state.customCompanionGif"
           :has-custom-companion-gif="Boolean(state.customCompanionGif.light || state.customCompanionGif.dark || state.customCompanionGifStored.light || state.customCompanionGifStored.dark)"

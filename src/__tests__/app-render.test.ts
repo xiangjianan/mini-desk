@@ -4665,7 +4665,7 @@ describe("App shell", () => {
     }
   });
 
-  it("hides the settings update dot after ten seconds without clearing update status", async () => {
+  it("keeps the settings update dot visible while a newer deployed version is available", async () => {
     vi.useFakeTimers();
     const deployedVersion = nextPatchVersion(FALLBACK_APP_VERSION);
     vi.stubGlobal("fetch", vi.fn().mockResolvedValue({
@@ -4687,7 +4687,7 @@ describe("App shell", () => {
 
       await vi.advanceTimersByTimeAsync(1);
       await wrapper.vm.$nextTick();
-      expect(wrapper.get('[aria-label="设置"]').attributes("data-update-available")).toBeUndefined();
+      expect(wrapper.get('[aria-label="设置"]').attributes("data-update-available")).toBe("true");
       expect(wrapper.getComponent(SettingsMenu).props("updateAvailable")).toBe(true);
     } finally {
       wrapper.unmount();
