@@ -55,7 +55,9 @@ import {
   saveStateWithConflictCheck,
 } from "./state/storage";
 import {
+  APP_VERSION_CHECK_INTERVAL_MS,
   clearStaticCaches,
+  fetchLatestAppVersion,
   getIndexAppVersion,
   getStoredAppVersion,
   markAppVersionSeen,
@@ -119,6 +121,7 @@ const emptyTodoRemovalTimers = new Map<string, number>();
 const sentTodoNotifications = new Set<string>();
 const notificationFlashTimers = new Map<string, number>();
 const appVersion = ref(getIndexAppVersion());
+const availableAppVersion = ref(appVersion.value);
 const storedAppVersion = ref<string | null>(null);
 const versionPromptVisible = ref(false);
 const versionBadgeVisible = ref(false);
@@ -154,6 +157,7 @@ const TITLE_FLASH_INTERVAL_MS = 750;
 const TODO_NOTIFICATION_FLASH_MS = 2400;
 const activeGuideKey = ref<GuideKey | null>(null);
 const versionBadgeTimer = ref<number | undefined>();
+const versionCheckTimer = ref<number | undefined>();
 
 const naiveTheme = computed(() => (state.theme === "dark" ? darkTheme : null));
 const naiveLocale = computed(() => (state.language === "en" ? enUS : zhCN));
@@ -165,6 +169,7 @@ const activeCompanionMessage = computed(() => (isMobileBlocked.value ? uiText.va
 const activeCompanionPosition = computed(() => (isMobileBlocked.value ? mobileCompanionPosition : companionPosition.value));
 const displayedPreviewId = computed(() => activePreviewId.value ?? closingPreviewId.value);
 const imagePreviewClosing = computed(() => Boolean(closingPreviewId.value) && !activePreviewId.value);
+const settingsAppVersion = computed(() => (versionPromptVisible.value ? availableAppVersion.value : appVersion.value));
 const saveStatus = ref<"saved" | "saving" | "dirty">("saved");
 const saveStatusLabel = computed(() => {
   if (saveStatus.value === "dirty") return uiText.value.app.dirty;
@@ -253,12 +258,16 @@ onMounted(async () => {
   await persistImagePayloads(state.images);
   if (!appMounted) return;
   checkAppVersion();
+  void checkLatestAppVersion();
   window.addEventListener("keydown", handleGlobalKeydown);
-  window.addEventListener("focus", handleNotificationReturn);
+  window.addEventListener("focus", handleWindowFocus);
   window.addEventListener("storage", handleStorageEvent);
   document.addEventListener("paste", handlePaste);
   document.addEventListener("visibilitychange", handleDocumentVisibilityChange);
   setupStateSyncChannel();
+  versionCheckTimer.value = window.setInterval(() => {
+    void checkLatestAppVersion();
+  }, APP_VERSION_CHECK_INTERVAL_MS);
   todoNotificationTimer.value = window.setInterval(refreshTodoNotifications, TODO_NOTIFICATION_FALLBACK_INTERVAL_MS);
   refreshTodoNotifications();
 });
@@ -266,7 +275,7 @@ onMounted(async () => {
 onUnmounted(() => {
   appMounted = false;
   window.removeEventListener("keydown", handleGlobalKeydown);
-  window.removeEventListener("focus", handleNotificationReturn);
+  window.removeEventListener("focus", handleWindowFocus);
   window.removeEventListener("storage", handleStorageEvent);
   document.removeEventListener("paste", handlePaste);
   document.removeEventListener("visibilitychange", handleDocumentVisibilityChange);
@@ -1839,11 +1848,13 @@ function clearTimers(): void {
   window.clearTimeout(bubbleFadeTimer.value);
   window.clearTimeout(saveStatusTimer.value);
   window.clearTimeout(versionBadgeTimer.value);
+  window.clearInterval(versionCheckTimer.value);
   window.clearTimeout(todoNotificationDueTimer.value);
   window.clearInterval(titleFlashTimer.value);
   window.clearTimeout(previewCloseTimer.value);
   previewCloseTimer.value = undefined;
   versionBadgeTimer.value = undefined;
+  versionCheckTimer.value = undefined;
   window.clearInterval(todoNotificationTimer.value);
   todoNotificationDueTimer.value = undefined;
   todoNotificationTimer.value = undefined;
@@ -1994,7 +2005,12 @@ function stopNotificationTitleFlash(): void {
 }
 
 function handleDocumentVisibilityChange(): void {
-  if (document.visibilityState === "visible") handleNotificationReturn();
+  if (document.visibilityState === "visible") handleWindowFocus();
+}
+
+function handleWindowFocus(): void {
+  handleNotificationReturn();
+  void checkLatestAppVersion();
 }
 
 function handleNotificationReturn(): void {
@@ -2142,19 +2158,36 @@ function invalidateGuideCompanion(nextKey: GuideKey): void {
 
 function checkAppVersion(): void {
   storedAppVersion.value = getStoredAppVersion();
-  if (!storedAppVersion.value) {
+  if (storedAppVersion.value !== appVersion.value) {
     markAppVersionSeen(appVersion.value);
     storedAppVersion.value = appVersion.value;
+  }
+  availableAppVersion.value = appVersion.value;
+  versionPromptVisible.value = false;
+  versionBadgeVisible.value = false;
+}
+
+async function checkLatestAppVersion(): Promise<void> {
+  const latestVersion = await fetchLatestAppVersion();
+  if (!appMounted || !latestVersion) return;
+
+  if (latestVersion === appVersion.value) {
+    availableAppVersion.value = appVersion.value;
+    versionPromptVisible.value = false;
     versionBadgeVisible.value = false;
+    window.clearTimeout(versionBadgeTimer.value);
+    versionBadgeTimer.value = undefined;
     return;
   }
-  versionPromptVisible.value = storedAppVersion.value !== appVersion.value;
-  startVersionBadgeTimer();
+
+  const alreadyShowingVersion = versionPromptVisible.value && availableAppVersion.value === latestVersion;
+  availableAppVersion.value = latestVersion;
+  versionPromptVisible.value = true;
+  if (!alreadyShowingVersion) startVersionBadgeTimer();
 }
 
 async function updateStaticVersion(): Promise<void> {
   await clearStaticCaches();
-  markAppVersionSeen(appVersion.value);
   versionPromptVisible.value = false;
   versionBadgeVisible.value = false;
   window.clearTimeout(versionBadgeTimer.value);
@@ -2268,7 +2301,7 @@ function moveItem<T extends { id: string }>(items: T[], dragId: string, targetId
 
       <template #actions>
         <SettingsMenu
-          :app-version="appVersion"
+          :app-version="settingsAppVersion"
           :update-available="versionPromptVisible"
           :update-badge-visible="versionBadgeVisible"
           :companion-gif-theme="state.companionGifTheme"

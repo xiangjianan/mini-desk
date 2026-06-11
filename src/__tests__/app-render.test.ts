@@ -11,6 +11,7 @@ import SpacePanel from "../components/SpacePanel.vue";
 import TodoPanel from "../components/TodoPanel.vue";
 import { defaultState, STORAGE_KEY } from "../state/defaults";
 import { KAOMOJI_BY_MOOD } from "../state/messages";
+import { FALLBACK_APP_VERSION } from "../state/version";
 
 vi.mock("naive-ui", async (importOriginal) => {
   const actual = await importOriginal<typeof import("naive-ui")>();
@@ -137,6 +138,11 @@ function createDeferred<T>() {
     reject = promiseReject;
   });
   return { promise, resolve, reject };
+}
+
+function nextPatchVersion(version: string): string {
+  const parts = version.split(".").map((part) => Number.parseInt(part, 10));
+  return `${parts[0]}.${parts[1]}.${parts[2] + 1}`;
 }
 
 beforeEach(() => {
@@ -4609,24 +4615,63 @@ describe("App shell", () => {
     }
   });
 
-  it("moves app version status into the settings menu and marks stale versions", async () => {
+  it("records the current app version without showing a stale local marker as an update", async () => {
     localStorage.setItem("todo-board-app-version", "0.9.0");
+    vi.stubGlobal("fetch", vi.fn().mockResolvedValue({
+      ok: true,
+      text: vi.fn().mockResolvedValue(`<meta name="app-version" content="${FALLBACK_APP_VERSION}">`),
+    }));
     const wrapper = mountApp();
-    await new Promise((resolve) => window.setTimeout(resolve, 0));
-    await wrapper.vm.$nextTick();
 
-    const settings = wrapper.getComponent(SettingsMenu);
-    expect(wrapper.find('[data-testid="app-version"]').exists()).toBe(false);
-    expect(settings.props("appVersion")).toMatch(/^\d+\.\d+\.\d+/);
-    expect(settings.props("updateAvailable")).toBe(true);
-    expect(wrapper.get('[aria-label="设置"]').attributes("data-update-available")).toBe("true");
+    try {
+      await new Promise((resolve) => window.setTimeout(resolve, 0));
+      await wrapper.vm.$nextTick();
 
-    wrapper.unmount();
+      const settings = wrapper.getComponent(SettingsMenu);
+      expect(wrapper.find('[data-testid="app-version"]').exists()).toBe(false);
+      expect(settings.props("appVersion")).toMatch(/^\d+\.\d+\.\d+/);
+      expect(settings.props("updateAvailable")).toBe(false);
+      expect(wrapper.get('[aria-label="设置"]').attributes("data-update-available")).toBeUndefined();
+      expect(localStorage.getItem("mini-desk-app-version")).toBe(settings.props("appVersion"));
+    } finally {
+      wrapper.unmount();
+      vi.unstubAllGlobals();
+    }
+  });
+
+  it("detects a newer deployed version without refreshing the current page", async () => {
+    vi.useFakeTimers();
+    const deployedVersion = nextPatchVersion(FALLBACK_APP_VERSION);
+    const fetchMock = vi.fn().mockResolvedValue({
+      ok: true,
+      text: vi.fn().mockResolvedValue(`<meta name="app-version" content="${deployedVersion}">`),
+    });
+    vi.stubGlobal("fetch", fetchMock);
+    const wrapper = mountApp();
+
+    try {
+      await vi.advanceTimersByTimeAsync(0);
+      await wrapper.vm.$nextTick();
+
+      const settings = wrapper.getComponent(SettingsMenu);
+      expect(settings.props("appVersion")).toBe(deployedVersion);
+      expect(settings.props("updateAvailable")).toBe(true);
+      expect(wrapper.get('[aria-label="设置"]').attributes("data-update-available")).toBe("true");
+      expect(localStorage.getItem("mini-desk-app-version")).not.toBe(deployedVersion);
+    } finally {
+      wrapper.unmount();
+      vi.unstubAllGlobals();
+      vi.useRealTimers();
+    }
   });
 
   it("hides the settings update dot after ten seconds without clearing update status", async () => {
     vi.useFakeTimers();
-    localStorage.setItem("todo-board-app-version", "0.9.0");
+    const deployedVersion = nextPatchVersion(FALLBACK_APP_VERSION);
+    vi.stubGlobal("fetch", vi.fn().mockResolvedValue({
+      ok: true,
+      text: vi.fn().mockResolvedValue(`<meta name="app-version" content="${deployedVersion}">`),
+    }));
     const wrapper = mountApp();
 
     try {
@@ -4646,6 +4691,7 @@ describe("App shell", () => {
       expect(wrapper.getComponent(SettingsMenu).props("updateAvailable")).toBe(true);
     } finally {
       wrapper.unmount();
+      vi.unstubAllGlobals();
       vi.useRealTimers();
     }
   });

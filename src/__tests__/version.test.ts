@@ -1,10 +1,12 @@
 import { readFileSync } from "node:fs";
 import { resolve } from "node:path";
-import { describe, expect, it } from "vitest";
+import { describe, expect, it, vi } from "vitest";
 import {
   APP_VERSION_STORAGE_KEY,
   FALLBACK_APP_VERSION,
   LEGACY_APP_VERSION_STORAGE_KEY,
+  fetchLatestAppVersion,
+  getAppVersionFromHtml,
   getIndexAppVersion,
   getStoredAppVersion,
   markAppVersionSeen,
@@ -44,5 +46,23 @@ describe("app version", () => {
     storage.setItem(LEGACY_APP_VERSION_STORAGE_KEY, "1.0.39");
 
     expect(getStoredAppVersion(storage)).toBe("1.0.39");
+  });
+
+  it("parses the app version from fetched index HTML", () => {
+    expect(getAppVersionFromHtml('<html><head><meta name="app-version" content="2.0.0"></head></html>')).toBe("2.0.0");
+    expect(getAppVersionFromHtml("<html><head></head></html>")).toBeNull();
+  });
+
+  it("fetches the latest app version with a cache-busting request", async () => {
+    const fetcher = vi.fn().mockResolvedValue({
+      ok: true,
+      text: vi.fn().mockResolvedValue('<meta name="app-version" content="2.0.1">'),
+    });
+
+    await expect(fetchLatestAppVersion(fetcher, "https://example.com/workbench")).resolves.toBe("2.0.1");
+
+    const [url, init] = fetcher.mock.calls[0];
+    expect(url).toMatch(/^https:\/\/example\.com\/\?_mini_desk_version=/);
+    expect(init).toMatchObject({ cache: "no-store", credentials: "same-origin" });
   });
 });
