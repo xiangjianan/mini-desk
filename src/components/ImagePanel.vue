@@ -40,6 +40,8 @@ const uiText = computed(() => getUiText(props.language));
 const guideMenuOption = computed<DropdownOption>(() => ({ ...GUIDE_MENU_OPTION, label: uiText.value.common.tips }));
 const exclusiveMenu = createExclusiveContextMenu(closeMenu);
 const isPreviewCloseMenuItem = computed(() => Boolean(menu.value?.id && props.activePreviewId));
+const DRAG_EDGE_SCROLL_THRESHOLD = 44;
+const DRAG_EDGE_SCROLL_STEP = 36;
 
 function renderIcon(icon: Component): () => VNode {
   return () => h(NIcon, { size: 16 }, { default: () => h(icon) });
@@ -49,7 +51,7 @@ onMounted(exclusiveMenu.mount);
 onUnmounted(exclusiveMenu.unmount);
 
 watch(
-  () => [props.activePreviewId, props.images.map((image) => image.id).join("\u0000")] as const,
+  () => props.activePreviewId,
   () => {
     void scrollActivePreviewIntoView();
   },
@@ -143,6 +145,29 @@ function handleImageDragEnter(event: DragEvent): void {
 function handleImageDragLeave(): void {
   isDragHover.value = false;
 }
+
+function getImageListScrollContainer(target: EventTarget | null): HTMLElement | null {
+  if (!(target instanceof HTMLElement)) return null;
+  const scrollbar = target.classList.contains("image-list-scrollbar") ? target : target.closest<HTMLElement>(".image-list-scrollbar");
+  return scrollbar?.querySelector<HTMLElement>(".n-scrollbar-container") ?? null;
+}
+
+function scrollImageListDuringDrag(event: DragEvent): void {
+  if (!draggingId.value) return;
+  const container = getImageListScrollContainer(event.currentTarget);
+  if (!container) return;
+
+  const rect = container.getBoundingClientRect();
+  if (event.clientY <= rect.top + DRAG_EDGE_SCROLL_THRESHOLD) {
+    container.scrollTop = Math.max(0, container.scrollTop - DRAG_EDGE_SCROLL_STEP);
+    return;
+  }
+
+  if (event.clientY >= rect.bottom - DRAG_EDGE_SCROLL_THRESHOLD) {
+    const maxScrollTop = Math.max(0, container.scrollHeight - container.clientHeight);
+    container.scrollTop = Math.min(maxScrollTop, container.scrollTop + DRAG_EDGE_SCROLL_STEP);
+  }
+}
 </script>
 
 <template>
@@ -176,11 +201,11 @@ function handleImageDragLeave(): void {
       class="image-list-scrollbar"
       :aria-label="uiText.images.list"
       @click="closeMenu"
-      @dragover.prevent
+      @dragover.prevent="scrollImageListDuringDrag"
       @drop.prevent.stop="handleExternalDrop"
       @contextmenu.prevent.stop="openMenu($event)"
     >
-      <TransitionGroup name="image-reorder" tag="div" class="image-list">
+      <TransitionGroup name="image-reorder" tag="div" class="image-list" @dragover.prevent="scrollImageListDuringDrag">
       <button
         v-for="(image, index) in images"
         :key="image.id"

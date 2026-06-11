@@ -205,6 +205,35 @@ describe("ImagePanel", () => {
     wrapper.unmount();
   });
 
+  it("does not recenter the active preview image when drag sorting changes image order", async () => {
+    const scrollIntoView = vi.fn();
+    vi.spyOn(HTMLElement.prototype, "scrollIntoView").mockImplementation(scrollIntoView);
+    const wrapper = mountImagePanel(
+      [
+        { id: "img-1", src: "data:image/png;base64,one", createdAt: 1 },
+        { id: "img-2", src: "data:image/png;base64,two", createdAt: 2 },
+        { id: "img-3", src: "data:image/png;base64,three", createdAt: 3 },
+      ],
+      { activePreviewId: "img-2" },
+    );
+
+    await nextTick();
+    expect(scrollIntoView).not.toHaveBeenCalled();
+
+    await wrapper.setProps({
+      images: [
+        { id: "img-2", src: "data:image/png;base64,two", createdAt: 2 },
+        { id: "img-1", src: "data:image/png;base64,one", createdAt: 1 },
+        { id: "img-3", src: "data:image/png;base64,three", createdAt: 3 },
+      ],
+    });
+    await nextTick();
+
+    expect(wrapper.findAll(".image-card")[0].classes()).toContain("is-active");
+    expect(scrollIntoView).not.toHaveBeenCalled();
+    wrapper.unmount();
+  });
+
   it("emits copy when an image card is double-clicked", async () => {
     const wrapper = mountImagePanel([{ id: "img-1", src: "data:image/png;base64,one", createdAt: 1 }]);
 
@@ -262,7 +291,8 @@ describe("ImagePanel", () => {
     const source = readSource("components/ImagePanel.vue");
     const styles = readSource("styles.css");
 
-    expect(source).toContain('<TransitionGroup name="image-reorder" tag="div" class="image-list">');
+    expect(source).toContain('<TransitionGroup name="image-reorder" tag="div" class="image-list"');
+    expect(source).toContain('@dragover.prevent="scrollImageListDuringDrag"');
     expect(styles).toMatch(/\.image-reorder-move,[\s\S]*?\.image-reorder-enter-active,[\s\S]*?\.image-reorder-leave-active\s*\{[^}]*transform 0\.22s/s);
     expect(styles).toMatch(/\.image-card\.is-dragging\s*\{[^}]*opacity: 0\.45/s);
 
@@ -271,6 +301,45 @@ describe("ImagePanel", () => {
 
     await wrapper.findAll(".image-card")[0].trigger("dragend");
     expect(wrapper.findAll(".image-card")[0].classes()).not.toContain("is-dragging");
+    wrapper.unmount();
+  });
+
+  it("auto-scrolls the image list while dragging near the top or bottom edge", async () => {
+    const wrapper = mountImagePanel([
+      { id: "a", src: "data:image/png;base64,a", createdAt: 1 },
+      { id: "b", src: "data:image/png;base64,b", createdAt: 2 },
+      { id: "c", src: "data:image/png;base64,c", createdAt: 3 },
+    ]);
+    const scrollbar = wrapper.get(".image-list-scrollbar").element as HTMLElement;
+    const scrollContainer = scrollbar.querySelector<HTMLElement>(".n-scrollbar-container");
+    expect(scrollContainer).toBeTruthy();
+    Object.defineProperty(scrollContainer, "scrollHeight", { configurable: true, value: 600 });
+    Object.defineProperty(scrollContainer, "clientHeight", { configurable: true, value: 200 });
+    Object.defineProperty(scrollContainer!, "getBoundingClientRect", {
+      configurable: true,
+      value: () => ({
+        x: 0,
+        y: 100,
+        left: 0,
+        top: 100,
+        right: 240,
+        bottom: 300,
+        width: 240,
+        height: 200,
+        toJSON: () => undefined,
+      }),
+    });
+
+    scrollContainer!.scrollTop = 120;
+    await wrapper.findAll(".image-card")[1].trigger("dragstart");
+    await wrapper.get(".image-list").trigger("dragover", { clientY: 108 });
+    expect(scrollContainer!.scrollTop).toBeLessThan(120);
+
+    scrollContainer!.scrollTop = 120;
+    await wrapper.get(".image-list").trigger("dragover", { clientY: 292 });
+    expect(scrollContainer!.scrollTop).toBeGreaterThan(120);
+
+    await wrapper.findAll(".image-card")[1].trigger("dragend");
     wrapper.unmount();
   });
 
