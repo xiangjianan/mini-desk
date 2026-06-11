@@ -167,6 +167,7 @@ describe("Naive UI component usage", () => {
     expect(styles).not.toContain(".preview-nav-button");
     expect(styles).toContain(".preview-zoom-button");
     expect(styles).toMatch(/\.preview-stage img\s*\{[^}]*max-height: calc\(100vh - var\(--image-preview-top, 72px\) - 96px\)/s);
+    expect(styles).toMatch(/\.preview-stage img\s*\{[^}]*transition: transform 180ms cubic-bezier\(0\.2, 0, 0, 1\)/s);
     expect(styles).toContain(`@keyframes image-preview-photo-out {
   from {
     opacity: 1;

@@ -3441,7 +3441,7 @@ body:has(.image-preview) .image-panel .n-scrollbar {
   object-fit: contain;
   transform-origin: center;
   animation: image-preview-photo-in 140ms cubic-bezier(0.16, 1, 0.3, 1);
-  transition: transform 0.04s linear;
+  transition: transform 180ms cubic-bezier(0.2, 0, 0, 1);
 }
 
 .preview-actions {
