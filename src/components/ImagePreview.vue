@@ -102,6 +102,10 @@ function wheel(event: WheelEvent): void {
 
   if (wheelNavigationLocked.value) {
     if (direction !== wheelNavigationDirection) {
+      if (!navigate(direction)) {
+        clearWheelNavigationLock();
+        return;
+      }
       startWheelNavigation(direction);
       return;
     }
@@ -109,6 +113,7 @@ function wheel(event: WheelEvent): void {
     return;
   }
 
+  if (!navigate(direction)) return;
   startWheelNavigation(direction);
 }
 
@@ -143,11 +148,11 @@ function runWheelNavigation(): void {
   const direction = wheelNavigationDirection;
   const shouldContinue = wheelContinuationRequested;
   wheelContinuationRequested = false;
-  if (direction === 0 || !navigate(direction)) {
+  if (!shouldContinue) {
     clearWheelNavigationLock();
     return;
   }
-  if (!shouldContinue) {
+  if (direction === 0 || !navigate(direction)) {
     clearWheelNavigationLock();
     return;
   }
