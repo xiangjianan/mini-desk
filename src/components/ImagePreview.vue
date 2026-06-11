@@ -25,7 +25,11 @@ const emit = defineEmits<{
   navigate: [direction: number];
 }>();
 
-const WHEEL_NAVIGATION_COOLDOWN_MS = 520;
+const WHEEL_NAVIGATION_COOLDOWN_MS = 380;
+const WHEEL_NAVIGATION_IDLE_MS = 180;
+const WHEEL_NAVIGATION_REPEAT_DELTA = 260;
+const WHEEL_DELTA_LINE_PIXELS = 40;
+const WHEEL_DELTA_PAGE_PIXELS = 800;
 const MIN_SCALE = 0.3;
 const MAX_SCALE = 5;
 const ZOOM_STEP = 0.1;
@@ -40,6 +44,9 @@ const start = ref({ x: 0, y: 0, ox: 0, oy: 0 });
 const menu = ref<{ x: number; y: number; id: string; anchor?: HTMLElement } | null>(null);
 let closeTimer: number | undefined;
 let wheelNavigationTimer: number | undefined;
+let wheelGestureIdleTimer: number | undefined;
+let wheelRepeatDelta = 0;
+let wheelRepeatDirection = 0;
 
 const uiText = computed(() => getUiText(props.language));
 const active = computed(() => props.images.find((image) => image.id === props.activeId));
@@ -92,29 +99,78 @@ function requestClose(): void {
 
 function wheel(event: WheelEvent): void {
   event.preventDefault();
-  if (event.deltaY === 0) return;
+  const direction = Math.sign(event.deltaY);
+  if (direction === 0) return;
+
+  scheduleWheelGestureIdleReset();
   if (wheelNavigationLocked.value) {
-    scheduleWheelNavigationUnlock();
+    trackWheelRepeat(event, direction);
     return;
   }
-  if (!navigate(event.deltaY > 0 ? 1 : -1)) return;
+  if (!navigate(direction)) return;
 
-  wheelNavigationLocked.value = true;
-  scheduleWheelNavigationUnlock();
+  startWheelNavigationLock(direction);
 }
 
-function scheduleWheelNavigationUnlock(): void {
+function startWheelNavigationLock(direction: number): void {
+  wheelNavigationLocked.value = true;
+  wheelRepeatDirection = direction;
+  wheelRepeatDelta = 0;
+  scheduleWheelNavigationRepeat();
+}
+
+function scheduleWheelNavigationRepeat(): void {
   window.clearTimeout(wheelNavigationTimer);
   wheelNavigationTimer = window.setTimeout(() => {
-    wheelNavigationLocked.value = false;
     wheelNavigationTimer = undefined;
+    repeatWheelNavigation();
   }, WHEEL_NAVIGATION_COOLDOWN_MS);
 }
 
 function clearWheelNavigationLock(): void {
   window.clearTimeout(wheelNavigationTimer);
+  window.clearTimeout(wheelGestureIdleTimer);
   wheelNavigationTimer = undefined;
+  wheelGestureIdleTimer = undefined;
   wheelNavigationLocked.value = false;
+  wheelRepeatDelta = 0;
+  wheelRepeatDirection = 0;
+}
+
+function scheduleWheelGestureIdleReset(): void {
+  window.clearTimeout(wheelGestureIdleTimer);
+  wheelGestureIdleTimer = window.setTimeout(clearWheelNavigationLock, WHEEL_NAVIGATION_IDLE_MS);
+}
+
+function trackWheelRepeat(event: WheelEvent, direction: number): void {
+  if (direction !== wheelRepeatDirection) {
+    wheelRepeatDirection = direction;
+    wheelRepeatDelta = 0;
+  }
+  wheelRepeatDelta += Math.abs(normalizeWheelDelta(event));
+}
+
+function repeatWheelNavigation(): void {
+  if (!wheelNavigationLocked.value) return;
+  if (wheelRepeatDirection === 0 || wheelRepeatDelta < WHEEL_NAVIGATION_REPEAT_DELTA) {
+    scheduleWheelNavigationRepeat();
+    return;
+  }
+
+  const direction = wheelRepeatDirection;
+  wheelRepeatDelta = 0;
+  if (!navigate(direction)) {
+    clearWheelNavigationLock();
+    return;
+  }
+
+  scheduleWheelNavigationRepeat();
+}
+
+function normalizeWheelDelta(event: WheelEvent): number {
+  if (event.deltaMode === 1) return event.deltaY * WHEEL_DELTA_LINE_PIXELS;
+  if (event.deltaMode === 2) return event.deltaY * WHEEL_DELTA_PAGE_PIXELS;
+  return event.deltaY;
 }
 
 function navigate(direction: number): boolean {
