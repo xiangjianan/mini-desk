@@ -200,7 +200,7 @@ describe("ImagePreview", () => {
     }
   });
 
-  it("renders side navigation controls that switch previous and next images", async () => {
+  it("renders right-stacked navigation controls that switch previous and next images", async () => {
     const wrapper = mount(ImagePreview, {
       props: {
         images: [
@@ -225,9 +225,14 @@ describe("ImagePreview", () => {
 
     const previous = wrapper.get(".preview-nav-button.is-previous");
     const next = wrapper.get(".preview-nav-button.is-next");
+    const stack = wrapper.get(".preview-nav-stack");
 
     expect(previous.attributes("aria-label")).toBe("上一张图片");
     expect(next.attributes("aria-label")).toBe("下一张图片");
+    expect(stack.findAll(".preview-nav-button").map((button) => button.attributes("aria-label"))).toEqual([
+      "上一张图片",
+      "下一张图片",
+    ]);
 
     await previous.trigger("click");
     await next.trigger("click");
@@ -291,6 +296,7 @@ describe("ImagePreview", () => {
       },
     });
 
+    expect(wrapper.find(".preview-nav-stack").exists()).toBe(true);
     expect(wrapper.find(".preview-nav-button.is-previous").exists()).toBe(false);
     expect(wrapper.find(".preview-nav-button.is-next").exists()).toBe(true);
     wrapper.unmount();
@@ -470,12 +476,13 @@ describe("ImagePreview", () => {
     });
 
     await wrapper.get(".image-preview").trigger("keydown", { key: "Enter" });
+    await wrapper.get(".image-preview").trigger("keydown", { key: "5" });
     await wrapper.get(".image-preview").trigger("keydown", { key: "Backspace" });
     await wrapper.get(".image-preview").trigger("keydown", { key: "Delete" });
     try {
       await wrapper.get(".image-preview").trigger("keydown", { key: "Escape" });
 
-      expect(wrapper.emitted("copy")?.[0]).toEqual(["img-1"]);
+      expect(wrapper.emitted("copy")).toEqual([["img-1"], ["img-1"]]);
       expect(wrapper.emitted("delete")?.map((event) => event[0])).toEqual(["img-1", "img-1"]);
       expect(wrapper.get(".image-preview").classes()).toContain("is-closing");
       expect(wrapper.emitted("close")).toBeUndefined();
@@ -487,5 +494,36 @@ describe("ImagePreview", () => {
       wrapper.unmount();
       vi.useRealTimers();
     }
+  });
+
+  it("uses WASD keys to navigate images", async () => {
+    const wrapper = mount(ImagePreview, {
+      props: {
+        images: [
+          { id: "img-1", src: "data:image/png;base64,one", createdAt: 1 },
+          { id: "img-2", src: "data:image/png;base64,two", createdAt: 2 },
+          { id: "img-3", src: "data:image/png;base64,three", createdAt: 3 },
+        ],
+        activeId: "img-2",
+      },
+      global: {
+        stubs: {
+          Button: buttonStub,
+          Dropdown: dropdownStub,
+          Modal: modalStub,
+          NButton: buttonStub,
+          NDropdown: dropdownStub,
+          NModal: modalStub,
+        },
+      },
+    });
+
+    await wrapper.get(".image-preview").trigger("keydown", { key: "w" });
+    await wrapper.get(".image-preview").trigger("keydown", { key: "A" });
+    await wrapper.get(".image-preview").trigger("keydown", { key: "s" });
+    await wrapper.get(".image-preview").trigger("keydown", { key: "D" });
+
+    expect(wrapper.emitted("navigate")).toEqual([[-1], [-1], [1], [1]]);
+    wrapper.unmount();
   });
 });

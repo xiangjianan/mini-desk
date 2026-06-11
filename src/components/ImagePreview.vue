@@ -1,7 +1,7 @@
 <script setup lang="ts">
 import { computed, h, onMounted, onUnmounted, ref, watch } from "vue";
 import type { Component, VNode } from "vue";
-import { AddOutline, ChevronBackOutline, ChevronForwardOutline, CloseOutline, CopyOutline, HelpCircleOutline, RemoveOutline, TrashOutline } from "@vicons/ionicons5";
+import { AddOutline, ChevronDownOutline, ChevronUpOutline, CloseOutline, CopyOutline, HelpCircleOutline, RemoveOutline, TrashOutline } from "@vicons/ionicons5";
 import { NDropdown, NIcon, NModal } from "naive-ui";
 import type { DropdownOption } from "naive-ui";
 import { getUiText } from "../state/i18n";
@@ -173,14 +173,25 @@ function handleMenuSelect(key: string): void {
 
 function handleKeydown(event: KeyboardEvent): void {
   if (!active.value) return;
+  const key = event.key.toLowerCase();
   if (event.key === "Escape" || event.key === " ") {
     event.preventDefault();
     requestClose();
     return;
   }
-  if (event.key === "Enter") {
+  if (event.key === "Enter" || event.key === "5") {
     event.preventDefault();
     emit("copy", active.value.id);
+    return;
+  }
+  if (key === "w" || key === "a") {
+    event.preventDefault();
+    navigate(-1);
+    return;
+  }
+  if (key === "s" || key === "d") {
+    event.preventDefault();
+    navigate(1);
     return;
   }
   if (event.key === "Delete" || event.key === "Backspace") {
@@ -227,32 +238,34 @@ function handleKeydown(event: KeyboardEvent): void {
             <CloseOutline />
           </NIcon>
         </button>
-        <button
-          v-if="canNavigatePrevious"
-          type="button"
-          class="preview-nav-button is-previous"
-          :aria-label="uiText.preview.previous"
-          @click.stop.prevent="navigate(-1)"
-          @keydown.enter.stop.prevent="navigate(-1)"
-          @keydown.space.stop.prevent="navigate(-1)"
-        >
-          <NIcon size="26">
-            <ChevronBackOutline />
-          </NIcon>
-        </button>
-        <button
-          v-if="canNavigateNext"
-          type="button"
-          class="preview-nav-button is-next"
-          :aria-label="uiText.preview.next"
-          @click.stop.prevent="navigate(1)"
-          @keydown.enter.stop.prevent="navigate(1)"
-          @keydown.space.stop.prevent="navigate(1)"
-        >
-          <NIcon size="26">
-            <ChevronForwardOutline />
-          </NIcon>
-        </button>
+        <div v-if="canNavigatePrevious || canNavigateNext" class="preview-nav-stack">
+          <button
+            v-if="canNavigatePrevious"
+            type="button"
+            class="preview-nav-button is-previous"
+            :aria-label="uiText.preview.previous"
+            @click.stop.prevent="navigate(-1)"
+            @keydown.enter.stop.prevent="navigate(-1)"
+            @keydown.space.stop.prevent="navigate(-1)"
+          >
+            <NIcon size="28">
+              <ChevronUpOutline />
+            </NIcon>
+          </button>
+          <button
+            v-if="canNavigateNext"
+            type="button"
+            class="preview-nav-button is-next"
+            :aria-label="uiText.preview.next"
+            @click.stop.prevent="navigate(1)"
+            @keydown.enter.stop.prevent="navigate(1)"
+            @keydown.space.stop.prevent="navigate(1)"
+          >
+            <NIcon size="28">
+              <ChevronDownOutline />
+            </NIcon>
+          </button>
+        </div>
         <div class="preview-stage" @wheel="wheel" @mousedown="down">
           <img
             v-if="active.src"

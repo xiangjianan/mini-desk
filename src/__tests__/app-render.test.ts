@@ -2407,7 +2407,7 @@ describe("App shell", () => {
     }
   });
 
-  it("switches image preview with vertical and horizontal arrow keys", async () => {
+  it("switches image preview with vertical, horizontal, and WASD keys", async () => {
     localStorage.setItem(
       STORAGE_KEY,
       JSON.stringify({
@@ -2431,6 +2431,22 @@ describe("App shell", () => {
     expect(wrapper.get(".image-panel .image-card.is-active .image-index").text()).toBe("1");
 
     window.dispatchEvent(new KeyboardEvent("keydown", { key: "ArrowRight" }));
+    await wrapper.vm.$nextTick();
+    expect(wrapper.get(".image-panel .image-card.is-active .image-index").text()).toBe("2");
+
+    window.dispatchEvent(new KeyboardEvent("keydown", { key: "w" }));
+    await wrapper.vm.$nextTick();
+    expect(wrapper.get(".image-panel .image-card.is-active .image-index").text()).toBe("1");
+
+    window.dispatchEvent(new KeyboardEvent("keydown", { key: "s" }));
+    await wrapper.vm.$nextTick();
+    expect(wrapper.get(".image-panel .image-card.is-active .image-index").text()).toBe("2");
+
+    window.dispatchEvent(new KeyboardEvent("keydown", { key: "A" }));
+    await wrapper.vm.$nextTick();
+    expect(wrapper.get(".image-panel .image-card.is-active .image-index").text()).toBe("1");
+
+    window.dispatchEvent(new KeyboardEvent("keydown", { key: "D" }));
     await wrapper.vm.$nextTick();
     expect(wrapper.get(".image-panel .image-card.is-active .image-index").text()).toBe("2");
 
@@ -2818,7 +2834,7 @@ describe("App shell", () => {
     }
   });
 
-  it("copies the current image when Enter is pressed immediately after preview opens", async () => {
+  it("copies the current image when Enter or 5 is pressed immediately after preview opens", async () => {
     localStorage.setItem(
       STORAGE_KEY,
       JSON.stringify({
@@ -2851,8 +2867,12 @@ describe("App shell", () => {
     await Promise.resolve();
     await Promise.resolve();
     await Promise.resolve();
+    window.dispatchEvent(new KeyboardEvent("keydown", { key: "5" }));
+    await Promise.resolve();
+    await Promise.resolve();
+    await Promise.resolve();
 
-    expect(write).toHaveBeenCalledTimes(1);
+    expect(write).toHaveBeenCalledTimes(2);
     vi.unstubAllGlobals();
     wrapper.unmount();
   });

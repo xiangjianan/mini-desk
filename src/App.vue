@@ -1499,12 +1499,13 @@ function handleGlobalKeydown(event: KeyboardEvent): void {
   if (event.defaultPrevented) return;
   const previewId = activePreviewId.value;
   if (previewId) {
+    const key = event.key.toLowerCase();
     if (event.key === "Escape" || event.key === " ") {
       event.preventDefault();
       closeImagePreview();
       return;
     }
-    if (event.key === "Enter") {
+    if (event.key === "Enter" || event.key === "5") {
       event.preventDefault();
       void copyImage(previewId, document.querySelector<HTMLElement>(".image-preview") ?? undefined);
       return;
@@ -1520,6 +1521,16 @@ function handleGlobalKeydown(event: KeyboardEvent): void {
       return;
     }
     if (event.key === "ArrowRight" || event.key === "ArrowDown") {
+      event.preventDefault();
+      navigatePreview(1);
+      return;
+    }
+    if (key === "w" || key === "a") {
+      event.preventDefault();
+      navigatePreview(-1);
+      return;
+    }
+    if (key === "s" || key === "d") {
       event.preventDefault();
       navigatePreview(1);
       return;
