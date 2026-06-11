@@ -59,12 +59,12 @@ watch(
 const menuOptions = computed<DropdownOption[]>(() =>
   menu.value?.id
     ? [
-        { label: uiText.value.common.copy, key: "copy", icon: renderIcon(CopyOutline) },
         {
           label: isPreviewCloseMenuItem.value ? uiText.value.preview.close : uiText.value.common.preview,
           key: isPreviewCloseMenuItem.value ? "close-preview" : "preview",
           icon: renderIcon(isPreviewCloseMenuItem.value ? CloseOutline : EyeOutline),
         },
+        { label: uiText.value.common.copy, key: "copy", icon: renderIcon(CopyOutline) },
         { label: uiText.value.common.delete, key: "delete", icon: renderIcon(TrashOutline) },
         { ...guideMenuOption.value, icon: renderIcon(HelpCircleOutline) },
       ]

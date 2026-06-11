@@ -98,8 +98,8 @@ describe("ImagePanel", () => {
     await wrapper.findAll(".image-card")[1].trigger("contextmenu");
 
     expect(wrapper.findAll(".dropdown-option").map((option) => option.text())).toEqual([
-      "复制",
       "预览",
+      "复制",
       "删除",
       "Tips",
     ]);
@@ -123,8 +123,8 @@ describe("ImagePanel", () => {
     await wrapper.findAll(".image-card")[1].trigger("contextmenu");
 
     expect(wrapper.findAll(".dropdown-option").map((option) => option.text())).toEqual([
-      "复制",
       "取消预览",
+      "复制",
       "删除",
       "Tips",
     ]);
@@ -148,8 +148,8 @@ describe("ImagePanel", () => {
     await wrapper.findAll(".image-card")[0].trigger("contextmenu");
 
     expect(wrapper.findAll(".dropdown-option").map((option) => option.text())).toEqual([
-      "复制",
       "取消预览",
+      "复制",
       "删除",
       "Tips",
     ]);
