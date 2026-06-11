@@ -61,6 +61,25 @@ describe("ShortcutHelp", () => {
     expect(wrapper.text()).not.toContain("tool panel");
   });
 
+  it("shows keyboard shortcuts as compact keyboard layouts", () => {
+    const wrapper = mountShortcutHelp("zh");
+
+    const saveRow = wrapper.findAll(".shortcut-row").find((row) => row.text().includes("立即保存"));
+    expect(saveRow?.find(".shortcut-keyboard-diagram").exists()).toBe(true);
+    expect(saveRow?.find(".shortcut-keycap--ctrl").text()).toBe("Ctrl");
+    expect(saveRow?.find(".shortcut-keycap--s").text()).toBe("S");
+
+    const previousImageRow = wrapper.findAll(".shortcut-row").find((row) => row.text().includes("上一张图片"));
+    expect(previousImageRow?.findAll(".shortcut-keyboard-row").map((row) => row.attributes("data-row"))).toEqual(
+      expect.arrayContaining(["letters-top", "letters-home", "arrows"]),
+    );
+    expect(previousImageRow?.find(".shortcut-keycap--arrow-up").text()).toBe("↑");
+    expect(previousImageRow?.find(".shortcut-keycap--arrow-left").text()).toBe("←");
+
+    const dragRow = wrapper.findAll(".shortcut-row").find((row) => row.text().includes("从外部创建提醒"));
+    expect(dragRow?.find(".shortcut-gesture-pill").text()).toBe("拖入文本");
+  });
+
   it("emits close when the modal is dismissed", async () => {
     const wrapper = mountShortcutHelp("zh");
 
