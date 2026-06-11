@@ -61,23 +61,31 @@ describe("ShortcutHelp", () => {
     expect(wrapper.text()).not.toContain("tool panel");
   });
 
-  it("shows keyboard shortcuts as compact keyboard layouts", () => {
+  it("shows keyboard shortcuts on a shared keyboard layout", () => {
     const wrapper = mountShortcutHelp("zh");
 
-    const saveRow = wrapper.findAll(".shortcut-row").find((row) => row.text().includes("立即保存"));
-    expect(saveRow?.find(".shortcut-keyboard-diagram").exists()).toBe(true);
-    expect(saveRow?.find(".shortcut-keycap--ctrl").text()).toBe("Ctrl");
-    expect(saveRow?.find(".shortcut-keycap--s").text()).toBe("S");
+    expect(wrapper.findAll(".shortcut-keyboard-diagram")).toHaveLength(1);
+    expect(wrapper.find(".shortcut-keyboard-diagram").classes()).toContain("shortcut-keyboard-diagram--shared");
+    expect(wrapper.findAll(".shortcut-keyboard-row").map((row) => row.attributes("data-row"))).toEqual([
+      "system",
+      "numbers",
+      "letters-top",
+      "letters-home",
+      "letters-bottom",
+      "controls",
+      "arrows",
+    ]);
+    expect(wrapper.find(".shortcut-keycap--ctrl").classes()).toContain("shortcut-keycap--active");
+    expect(wrapper.find(".shortcut-keycap--s").classes()).toContain("shortcut-keycap--active");
 
-    const previousImageRow = wrapper.findAll(".shortcut-row").find((row) => row.text().includes("上一张图片"));
-    expect(previousImageRow?.findAll(".shortcut-keyboard-row").map((row) => row.attributes("data-row"))).toEqual(
-      expect.arrayContaining(["letters-top", "letters-home", "arrows"]),
-    );
-    expect(previousImageRow?.find(".shortcut-keycap--arrow-up").text()).toBe("↑");
-    expect(previousImageRow?.find(".shortcut-keycap--arrow-left").text()).toBe("←");
+    expect(wrapper.find(".shortcut-keycap--arrow-up").text()).toBe("↑");
+    expect(wrapper.find(".shortcut-keycap--arrow-up").classes()).toContain("shortcut-keycap--active");
+    expect(wrapper.find(".shortcut-keycap--arrow-left").text()).toBe("←");
+    expect(wrapper.find(".shortcut-keycap--arrow-left").classes()).toContain("shortcut-keycap--active");
 
     const dragRow = wrapper.findAll(".shortcut-row").find((row) => row.text().includes("从外部创建提醒"));
     expect(dragRow?.find(".shortcut-gesture-pill").text()).toBe("拖入文本");
+    expect(dragRow?.find(".shortcut-keyboard-diagram").exists()).toBe(false);
   });
 
   it("emits close when the modal is dismissed", async () => {
