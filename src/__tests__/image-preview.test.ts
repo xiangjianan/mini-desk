@@ -430,8 +430,8 @@ describe("ImagePreview", () => {
 
     expect(event.defaultPrevented).toBe(true);
     expect(wrapper.findAll(".dropdown-option").map((option) => option.text())).toEqual([
-      "复制",
       "取消预览",
+      "复制",
       "删除",
       "Tips",
     ]);

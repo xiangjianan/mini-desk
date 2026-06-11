@@ -45,8 +45,8 @@ const canNavigatePrevious = computed(() => activeIndex.value > 0);
 const canNavigateNext = computed(() => activeIndex.value >= 0 && activeIndex.value < props.images.length - 1);
 const isClosing = computed(() => props.closing || localClosing.value);
 const menuOptions = computed<DropdownOption[]>(() => [
-  { label: uiText.value.common.copy, key: "copy", icon: renderIcon(CopyOutline) },
   { label: uiText.value.preview.close, key: "close", icon: renderIcon(CloseOutline) },
+  { label: uiText.value.common.copy, key: "copy", icon: renderIcon(CopyOutline) },
   { label: uiText.value.common.delete, key: "delete", icon: renderIcon(TrashOutline) },
   { label: uiText.value.common.tips, key: "tips", icon: renderIcon(HelpCircleOutline) },
 ]);
