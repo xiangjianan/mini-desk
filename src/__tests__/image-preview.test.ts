@@ -200,34 +200,34 @@ describe("ImagePreview", () => {
       expect(wrapper.emitted("navigate")).toEqual([[1]]);
       await wrapper.setProps({ activeId: "img-2" });
 
-      await vi.advanceTimersByTimeAsync(120);
+      await vi.advanceTimersByTimeAsync(25);
       await dispatchWheel();
-      await vi.advanceTimersByTimeAsync(120);
+      await vi.advanceTimersByTimeAsync(25);
       await dispatchWheel();
-      await vi.advanceTimersByTimeAsync(100);
+      await vi.advanceTimersByTimeAsync(25);
       await dispatchWheel();
-      await vi.advanceTimersByTimeAsync(20);
+      await vi.advanceTimersByTimeAsync(24);
       await dispatchWheel();
 
       expect(wrapper.emitted("navigate")).toEqual([[1]]);
 
-      await vi.advanceTimersByTimeAsync(20);
+      await vi.advanceTimersByTimeAsync(1);
 
       expect(wrapper.emitted("navigate")).toEqual([[1], [1]]);
       await wrapper.setProps({ activeId: "img-3" });
 
-      await vi.advanceTimersByTimeAsync(120);
+      await vi.advanceTimersByTimeAsync(25);
       await dispatchWheel();
-      await vi.advanceTimersByTimeAsync(120);
+      await vi.advanceTimersByTimeAsync(25);
       await dispatchWheel();
-      await vi.advanceTimersByTimeAsync(100);
+      await vi.advanceTimersByTimeAsync(25);
       await dispatchWheel();
-      await vi.advanceTimersByTimeAsync(20);
+      await vi.advanceTimersByTimeAsync(24);
       await dispatchWheel();
 
       expect(wrapper.emitted("navigate")).toEqual([[1], [1]]);
 
-      await vi.advanceTimersByTimeAsync(20);
+      await vi.advanceTimersByTimeAsync(1);
 
       expect(wrapper.emitted("navigate")).toEqual([[1], [1], [1]]);
     } finally {
