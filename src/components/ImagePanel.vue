@@ -31,19 +31,59 @@ const emit = defineEmits<{
   guide: [key: GuideKey, anchor: HTMLElement, immediate?: boolean];
 }>();
 
+interface ImagePointerDrag {
+  id: string;
+  image: StoredImage;
+  pointerId: number;
+  startX: number;
+  startY: number;
+  currentX: number;
+  currentY: number;
+  offsetX: number;
+  offsetY: number;
+  width: number;
+  height: number;
+  started: boolean;
+  scrollContainer: HTMLElement | null;
+}
+
+interface ImageDragPreview {
+  id: string;
+  src?: string;
+  index: number;
+  x: number;
+  y: number;
+  width: number;
+  height: number;
+}
+
 const menu = ref<{ x: number; y: number; id?: string; anchor?: HTMLElement } | null>(null);
 const draggingId = ref<string | null>(null);
 const isDragHover = ref(false);
 const panelRef = ref<HTMLElement | null>(null);
 const titleRef = ref<{ openMenuAt: (x: number, y: number, event?: Event) => void } | null>(null);
 const imageCardRefs = new Map<string, HTMLElement>();
+const imageDragPreview = ref<ImageDragPreview | null>(null);
 const uiText = computed(() => getUiText(props.language));
 const guideMenuOption = computed<DropdownOption>(() => ({ ...GUIDE_MENU_OPTION, label: uiText.value.common.tips }));
 const exclusiveMenu = createExclusiveContextMenu(closeMenu);
 const isPreviewCloseMenuItem = computed(() => Boolean(menu.value?.id && props.activePreviewId));
+const imageDragPreviewStyle = computed<Record<string, string>>(() => {
+  const preview = imageDragPreview.value;
+  if (!preview) return {} as Record<string, string>;
+  return {
+    width: `${preview.width}px`,
+    height: `${preview.height}px`,
+    transform: `translate3d(${preview.x}px, ${preview.y}px, 0)`,
+  };
+});
+const DRAG_START_THRESHOLD = 5;
 const DRAG_EDGE_SCROLL_THRESHOLD = 44;
 const DRAG_EDGE_SCROLL_STEP = 8;
 const DRAG_WHEEL_AUTO_SCROLL_PAUSE_MS = 150;
+const IMAGE_CLICK_SUPPRESS_MS = 350;
+let imagePointerDrag: ImagePointerDrag | null = null;
+let suppressImageClickUntil = 0;
 let dragScrollFrame: number | undefined;
 let dragScrollContainer: HTMLElement | null = null;
 let dragScrollDirection: -1 | 0 | 1 = 0;
@@ -60,6 +100,7 @@ onMounted(() => {
 onUnmounted(() => {
   exclusiveMenu.unmount();
   window.removeEventListener("wheel", handleImageDragWheel, { capture: true });
+  cleanupImagePointerDrag();
   resetImageDragAutoScroll();
 });
 
@@ -220,24 +261,160 @@ function startImageDragAutoScroll(container: HTMLElement, direction: -1 | 1): vo
   if (dragScrollFrame === undefined) dragScrollFrame = window.requestAnimationFrame(runImageDragAutoScroll);
 }
 
-function scrollImageListDuringDrag(event: DragEvent): void {
+function scrollImageListNearDragEdge(container: HTMLElement | null, clientY: number): void {
   if (!draggingId.value) return;
   if (dragWheelPauseTimer !== undefined) return;
-  const container = getImageListScrollContainer(event.currentTarget);
   if (!container) return;
 
   const rect = container.getBoundingClientRect();
-  if (event.clientY <= rect.top + DRAG_EDGE_SCROLL_THRESHOLD) {
+  if (clientY <= rect.top + DRAG_EDGE_SCROLL_THRESHOLD) {
     startImageDragAutoScroll(container, -1);
     return;
   }
 
-  if (event.clientY >= rect.bottom - DRAG_EDGE_SCROLL_THRESHOLD) {
+  if (clientY >= rect.bottom - DRAG_EDGE_SCROLL_THRESHOLD) {
     startImageDragAutoScroll(container, 1);
     return;
   }
 
   stopImageDragAutoScroll();
+}
+
+function getPointerId(event: PointerEvent): number {
+  return typeof event.pointerId === "number" ? event.pointerId : 1;
+}
+
+function updateImageDragPreview(state: ImagePointerDrag, event: PointerEvent): void {
+  state.currentX = event.clientX;
+  state.currentY = event.clientY;
+  const imageIndex = props.images.findIndex((image) => image.id === state.id);
+  imageDragPreview.value = {
+    id: state.id,
+    src: state.image.src,
+    index: imageIndex >= 0 ? imageIndex + 1 : 0,
+    x: event.clientX - state.offsetX,
+    y: event.clientY - state.offsetY,
+    width: Math.max(1, state.width),
+    height: Math.max(1, state.height),
+  };
+}
+
+function startImagePointerDrag(state: ImagePointerDrag, event: PointerEvent): void {
+  state.started = true;
+  draggingId.value = state.id;
+  closeMenu();
+  updateImageDragPreview(state, event);
+  scrollImageListNearDragEdge(state.scrollContainer ?? getCurrentImageListScrollContainer(), event.clientY);
+}
+
+function getImageDropTargetId(clientY: number): string | null {
+  let closest: { id: string; distance: number } | null = null;
+
+  for (const image of props.images) {
+    const element = imageCardRefs.get(image.id);
+    if (!element) continue;
+
+    const rect = element.getBoundingClientRect();
+    if (clientY >= rect.top && clientY <= rect.bottom) return image.id;
+
+    const centerY = rect.top + rect.height / 2;
+    const distance = Math.abs(clientY - centerY);
+    if (!closest || distance < closest.distance) closest = { id: image.id, distance };
+  }
+
+  return closest?.id ?? null;
+}
+
+function removeImagePointerListeners(): void {
+  window.removeEventListener("pointermove", handleImagePointerMove);
+  window.removeEventListener("pointerup", handleImagePointerUp);
+  window.removeEventListener("pointercancel", handleImagePointerCancel);
+}
+
+function cleanupImagePointerDrag(): void {
+  removeImagePointerListeners();
+  imagePointerDrag = null;
+  imageDragPreview.value = null;
+  draggingId.value = null;
+  resetImageDragAutoScroll();
+}
+
+function finishImagePointerDrag(event?: PointerEvent, canceled = false): void {
+  const state = imagePointerDrag;
+  if (!state) return;
+
+  removeImagePointerListeners();
+  if (state.started && event && !canceled) {
+    event.preventDefault();
+    suppressImageClickUntil = performance.now() + IMAGE_CLICK_SUPPRESS_MS;
+    const targetId = getImageDropTargetId(event.clientY);
+    if (targetId && targetId !== state.id) emit("reorder", state.id, targetId);
+  }
+
+  imagePointerDrag = null;
+  imageDragPreview.value = null;
+  draggingId.value = null;
+  resetImageDragAutoScroll();
+}
+
+function handleImagePointerDown(event: PointerEvent, image: StoredImage): void {
+  if (event.button !== 0) return;
+  const element = event.currentTarget as HTMLElement;
+  const rect = element.getBoundingClientRect();
+  cleanupImagePointerDrag();
+  imagePointerDrag = {
+    id: image.id,
+    image,
+    pointerId: getPointerId(event),
+    startX: event.clientX,
+    startY: event.clientY,
+    currentX: event.clientX,
+    currentY: event.clientY,
+    offsetX: event.clientX - rect.left,
+    offsetY: event.clientY - rect.top,
+    width: rect.width,
+    height: rect.height,
+    started: false,
+    scrollContainer: getCurrentImageListScrollContainer(),
+  };
+  window.addEventListener("pointermove", handleImagePointerMove, { passive: false });
+  window.addEventListener("pointerup", handleImagePointerUp);
+  window.addEventListener("pointercancel", handleImagePointerCancel);
+}
+
+function handleImagePointerMove(event: PointerEvent): void {
+  const state = imagePointerDrag;
+  if (!state || getPointerId(event) !== state.pointerId) return;
+
+  const moveDistance = Math.hypot(event.clientX - state.startX, event.clientY - state.startY);
+  if (!state.started) {
+    if (moveDistance < DRAG_START_THRESHOLD) return;
+    startImagePointerDrag(state, event);
+  }
+
+  event.preventDefault();
+  updateImageDragPreview(state, event);
+  scrollImageListNearDragEdge(state.scrollContainer ?? getCurrentImageListScrollContainer(), event.clientY);
+}
+
+function handleImagePointerUp(event: PointerEvent): void {
+  if (!imagePointerDrag || getPointerId(event) !== imagePointerDrag.pointerId) return;
+  finishImagePointerDrag(event);
+}
+
+function handleImagePointerCancel(event: PointerEvent): void {
+  if (!imagePointerDrag || getPointerId(event) !== imagePointerDrag.pointerId) return;
+  finishImagePointerDrag(event, true);
+}
+
+function handleImageCardClick(event: MouseEvent, id: string): void {
+  if (performance.now() < suppressImageClickUntil) {
+    event.preventDefault();
+    event.stopPropagation();
+    return;
+  }
+
+  emit("preview", id);
 }
 
 function scrollImageListByWheel(container: HTMLElement, event: WheelEvent): void {
@@ -295,7 +472,7 @@ function handleImageDragWheel(event: WheelEvent): void {
       class="image-list-scrollbar"
       :aria-label="uiText.images.list"
       @click="closeMenu"
-      @dragover.prevent="scrollImageListDuringDrag"
+      @dragover.prevent
       @drop.prevent.stop="handleExternalDrop"
       @contextmenu.prevent.stop="openMenu($event)"
     >
@@ -307,14 +484,10 @@ function handleImageDragWheel(event: WheelEvent): void {
         class="image-card"
         :class="{ 'is-dragging': draggingId === image.id, 'is-active': image.id === activePreviewId }"
         type="button"
-        draggable="true"
-        @click="emit('preview', image.id)"
+        @click="handleImageCardClick($event, image.id)"
         @dblclick.stop.prevent="emit('copy', image.id)"
         @contextmenu.stop="openMenu($event, image.id)"
-        @dragstart="draggingId = image.id"
-        @dragover.prevent
-        @drop="draggingId && draggingId !== image.id && emit('reorder', draggingId, image.id)"
-        @dragend="draggingId = null; resetImageDragAutoScroll()"
+        @pointerdown="handleImagePointerDown($event, image)"
       >
         <span class="image-index">{{ index + 1 }}</span>
         <img v-if="image.src" :src="image.src" :alt="uiText.images.thumbnailAlt" draggable="false" />
@@ -322,6 +495,17 @@ function handleImageDragWheel(event: WheelEvent): void {
       </button>
       </TransitionGroup>
     </NScrollbar>
+
+    <div
+      v-if="imageDragPreview"
+      class="image-drag-preview"
+      :style="imageDragPreviewStyle"
+      aria-hidden="true"
+    >
+      <span class="image-index">{{ imageDragPreview.index }}</span>
+      <img v-if="imageDragPreview.src" :src="imageDragPreview.src" :alt="uiText.images.thumbnailAlt" draggable="false" />
+      <span v-else class="image-missing">{{ uiText.images.loading }}</span>
+    </div>
 
     <NDropdown
       v-if="menu"

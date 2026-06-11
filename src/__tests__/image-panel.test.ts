@@ -45,6 +45,36 @@ function readSource(path: string): string {
   return readFileSync(resolve(__dirname, "..", path), "utf8");
 }
 
+function dispatchPointer(target: EventTarget, type: string, init: MouseEventInit = {}): MouseEvent {
+  const event = new MouseEvent(type, {
+    bubbles: true,
+    cancelable: true,
+    button: 0,
+    ...init,
+  });
+  Object.defineProperty(event, "pointerId", { configurable: true, value: 1 });
+  Object.defineProperty(event, "pointerType", { configurable: true, value: "mouse" });
+  target.dispatchEvent(event);
+  return event;
+}
+
+function mockRect(element: Element, rect: Partial<DOMRect>): void {
+  Object.defineProperty(element, "getBoundingClientRect", {
+    configurable: true,
+    value: () => ({
+      x: rect.left ?? 0,
+      y: rect.top ?? 0,
+      left: rect.left ?? 0,
+      top: rect.top ?? 0,
+      right: rect.right ?? (rect.left ?? 0) + (rect.width ?? 0),
+      bottom: rect.bottom ?? (rect.top ?? 0) + (rect.height ?? 0),
+      width: rect.width ?? 0,
+      height: rect.height ?? 0,
+      toJSON: () => undefined,
+    }),
+  });
+}
+
 describe("ImagePanel", () => {
   afterEach(() => {
     vi.restoreAllMocks();
@@ -283,7 +313,7 @@ describe("ImagePanel", () => {
     wrapper.unmount();
   });
 
-  it("keeps image reorder movement animated during drag sorting", async () => {
+  it("uses custom pointer drag for image sorting instead of native browser drag", async () => {
     const wrapper = mountImagePanel([
       { id: "a", src: "data:image/png;base64,a", createdAt: 1 },
       { id: "b", src: "data:image/png;base64,b", createdAt: 2 },
@@ -292,15 +322,33 @@ describe("ImagePanel", () => {
     const styles = readSource("styles.css");
 
     expect(source).toContain('<TransitionGroup name="image-reorder" tag="div" class="image-list"');
-    expect(source).toContain('@dragover.prevent="scrollImageListDuringDrag"');
+    expect(source).toContain('@pointerdown="handleImagePointerDown($event, image)"');
+    expect(source).not.toContain('draggable="true"');
+    expect(source).not.toContain("@dragstart=");
     expect(styles).toMatch(/\.image-reorder-move,[\s\S]*?\.image-reorder-enter-active,[\s\S]*?\.image-reorder-leave-active\s*\{[^}]*transform 0\.22s/s);
     expect(styles).toMatch(/\.image-card\.is-dragging\s*\{[^}]*opacity: 0\.45/s);
 
-    await wrapper.findAll(".image-card")[0].trigger("dragstart");
-    expect(wrapper.findAll(".image-card")[0].classes()).toContain("is-dragging");
+    const cards = wrapper.findAll(".image-card");
+    mockRect(cards[0].element, { left: 20, top: 100, width: 220, height: 74 });
+    mockRect(cards[1].element, { left: 20, top: 190, width: 220, height: 74 });
 
-    await wrapper.findAll(".image-card")[0].trigger("dragend");
+    dispatchPointer(cards[0].element, "pointerdown", { clientX: 40, clientY: 120 });
+    dispatchPointer(window, "pointermove", { clientX: 42, clientY: 132 });
+    await nextTick();
+
+    expect(wrapper.findAll(".image-card")[0].classes()).toContain("is-dragging");
+    expect(wrapper.find(".image-drag-preview").exists()).toBe(true);
+
+    dispatchPointer(window, "pointerup", { clientX: 40, clientY: 210 });
+    await nextTick();
+
     expect(wrapper.findAll(".image-card")[0].classes()).not.toContain("is-dragging");
+    expect(wrapper.find(".image-drag-preview").exists()).toBe(false);
+    expect(wrapper.emitted("reorder")?.[0]).toEqual(["a", "b"]);
+
+    await cards[0].trigger("click");
+
+    expect(wrapper.emitted("preview")).toBeUndefined();
     wrapper.unmount();
   });
 
@@ -316,35 +364,24 @@ describe("ImagePanel", () => {
     expect(scrollContainer).toBeTruthy();
     Object.defineProperty(scrollContainer, "scrollHeight", { configurable: true, value: 600 });
     Object.defineProperty(scrollContainer, "clientHeight", { configurable: true, value: 200 });
-    Object.defineProperty(scrollContainer!, "getBoundingClientRect", {
-      configurable: true,
-      value: () => ({
-        x: 0,
-        y: 100,
-        left: 0,
-        top: 100,
-        right: 240,
-        bottom: 300,
-        width: 240,
-        height: 200,
-        toJSON: () => undefined,
-      }),
-    });
+    mockRect(scrollContainer!, { left: 0, top: 100, width: 240, height: 200 });
+    const cards = wrapper.findAll(".image-card");
+    mockRect(cards[1].element, { left: 20, top: 170, width: 220, height: 74 });
 
     try {
       scrollContainer!.scrollTop = 120;
-      await wrapper.findAll(".image-card")[1].trigger("dragstart");
-      await wrapper.get(".image-list").trigger("dragover", { clientY: 108 });
+      dispatchPointer(cards[1].element, "pointerdown", { clientX: 40, clientY: 190 });
+      dispatchPointer(window, "pointermove", { clientX: 42, clientY: 108 });
       expect(scrollContainer!.scrollTop).toBe(120);
       await vi.advanceTimersByTimeAsync(16);
       expect(scrollContainer!.scrollTop).toBe(112);
 
       scrollContainer!.scrollTop = 120;
-      await wrapper.get(".image-list").trigger("dragover", { clientY: 292 });
+      dispatchPointer(window, "pointermove", { clientX: 42, clientY: 292 });
       await vi.advanceTimersByTimeAsync(16);
       expect(scrollContainer!.scrollTop).toBe(128);
 
-      await wrapper.findAll(".image-card")[1].trigger("dragend");
+      dispatchPointer(window, "pointerup", { clientX: 42, clientY: 292 });
       scrollContainer!.scrollTop = 120;
       await vi.advanceTimersByTimeAsync(32);
       expect(scrollContainer!.scrollTop).toBe(120);
@@ -365,20 +402,9 @@ describe("ImagePanel", () => {
     expect(scrollContainer).toBeTruthy();
     Object.defineProperty(scrollContainer, "scrollHeight", { configurable: true, value: 600 });
     Object.defineProperty(scrollContainer, "clientHeight", { configurable: true, value: 200 });
-    Object.defineProperty(scrollContainer!, "getBoundingClientRect", {
-      configurable: true,
-      value: () => ({
-        x: 0,
-        y: 100,
-        left: 0,
-        top: 100,
-        right: 240,
-        bottom: 300,
-        width: 240,
-        height: 200,
-        toJSON: () => undefined,
-      }),
-    });
+    mockRect(scrollContainer!, { left: 0, top: 100, width: 240, height: 200 });
+    const cards = wrapper.findAll(".image-card");
+    mockRect(cards[0].element, { left: 20, top: 120, width: 220, height: 74 });
     const idleWheel = new WheelEvent("wheel", { bubbles: true, cancelable: true, deltaY: 80 });
 
     try {
@@ -387,8 +413,8 @@ describe("ImagePanel", () => {
       expect(idleWheel.defaultPrevented).toBe(false);
       expect(scrollContainer!.scrollTop).toBe(120);
 
-      await wrapper.findAll(".image-card")[0].trigger("dragstart");
-      await wrapper.get(".image-list").trigger("dragover", { clientY: 108 });
+      dispatchPointer(cards[0].element, "pointerdown", { clientX: 40, clientY: 140 });
+      dispatchPointer(window, "pointermove", { clientX: 42, clientY: 108 });
       await vi.advanceTimersByTimeAsync(16);
       expect(scrollContainer!.scrollTop).toBe(112);
 
@@ -406,16 +432,16 @@ describe("ImagePanel", () => {
       expect(scrollContainer!.scrollTop).toBe(160);
 
       scrollContainer!.scrollTop = 120;
-      await wrapper.get(".image-list").trigger("dragover", { clientY: 108 });
+      dispatchPointer(window, "pointermove", { clientX: 42, clientY: 108 });
       await vi.advanceTimersByTimeAsync(16);
       expect(scrollContainer!.scrollTop).toBe(120);
 
       await vi.advanceTimersByTimeAsync(160);
-      await wrapper.get(".image-list").trigger("dragover", { clientY: 108 });
+      dispatchPointer(window, "pointermove", { clientX: 42, clientY: 108 });
       await vi.advanceTimersByTimeAsync(16);
       expect(scrollContainer!.scrollTop).toBe(112);
 
-      await wrapper.findAll(".image-card")[0].trigger("dragend");
+      dispatchPointer(window, "pointerup", { clientX: 42, clientY: 108 });
     } finally {
       wrapper.unmount();
       vi.useRealTimers();

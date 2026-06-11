@@ -1634,6 +1634,25 @@ button.image-card {
   opacity: 0.45;
 }
 
+.image-drag-preview {
+  position: fixed;
+  top: 0;
+  left: 0;
+  z-index: 4300;
+  display: grid;
+  grid-template-columns: minmax(0, 1fr);
+  align-items: center;
+  min-height: 74px;
+  overflow: hidden;
+  border: 1px solid color-mix(in srgb, var(--border) 64%, transparent);
+  border-radius: calc(var(--radius) + 2px);
+  background: color-mix(in srgb, var(--card) 88%, var(--button));
+  box-shadow: var(--shadow-soft);
+  pointer-events: none;
+  user-select: none;
+  will-change: transform;
+}
+
 .image-panel .image-card.is-active {
   border-color: var(--line-focus);
   box-shadow: none;
@@ -1662,7 +1681,8 @@ button.image-card {
   justify-content: center;
 }
 
-.image-card img {
+.image-card img,
+.image-drag-preview img {
   display: block;
   max-width: 100%;
   max-height: 120px;
@@ -5030,7 +5050,8 @@ button[data-testid="password-generate"].tool-primary-action:focus-visible {
   backdrop-filter: blur(16px) saturate(1.5);
 }
 
-.image-card img {
+.image-card img,
+.image-drag-preview img {
   width: 100%;
   max-height: 132px;
   margin: 0;
