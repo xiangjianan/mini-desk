@@ -354,7 +354,7 @@ describe("ImagePanel", () => {
     }
   });
 
-  it("allows wheel scrolling while dragging and pauses edge auto-scroll to avoid jitter", async () => {
+  it("scrolls the image list from window wheel events while dragging and pauses edge auto-scroll to avoid jitter", async () => {
     vi.useFakeTimers();
     const wrapper = mountImagePanel([
       { id: "a", src: "data:image/png;base64,a", createdAt: 1 },
@@ -379,12 +379,11 @@ describe("ImagePanel", () => {
         toJSON: () => undefined,
       }),
     });
-    const list = wrapper.get(".image-list").element;
     const idleWheel = new WheelEvent("wheel", { bubbles: true, cancelable: true, deltaY: 80 });
 
     try {
       scrollContainer!.scrollTop = 120;
-      list.dispatchEvent(idleWheel);
+      window.dispatchEvent(idleWheel);
       expect(idleWheel.defaultPrevented).toBe(false);
       expect(scrollContainer!.scrollTop).toBe(120);
 
@@ -395,10 +394,18 @@ describe("ImagePanel", () => {
 
       scrollContainer!.scrollTop = 120;
       const draggingWheel = new WheelEvent("wheel", { bubbles: true, cancelable: true, deltaY: 80 });
-      list.dispatchEvent(draggingWheel);
+      window.dispatchEvent(draggingWheel);
 
-      expect(draggingWheel.defaultPrevented).toBe(false);
+      expect(draggingWheel.defaultPrevented).toBe(true);
+      expect(scrollContainer!.scrollTop).toBe(200);
 
+      const upwardWheel = new WheelEvent("wheel", { bubbles: true, cancelable: true, deltaY: -40 });
+      window.dispatchEvent(upwardWheel);
+
+      expect(upwardWheel.defaultPrevented).toBe(true);
+      expect(scrollContainer!.scrollTop).toBe(160);
+
+      scrollContainer!.scrollTop = 120;
       await wrapper.get(".image-list").trigger("dragover", { clientY: 108 });
       await vi.advanceTimersByTimeAsync(16);
       expect(scrollContainer!.scrollTop).toBe(120);

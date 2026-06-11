@@ -34,6 +34,7 @@ const emit = defineEmits<{
 const menu = ref<{ x: number; y: number; id?: string; anchor?: HTMLElement } | null>(null);
 const draggingId = ref<string | null>(null);
 const isDragHover = ref(false);
+const panelRef = ref<HTMLElement | null>(null);
 const titleRef = ref<{ openMenuAt: (x: number, y: number, event?: Event) => void } | null>(null);
 const imageCardRefs = new Map<string, HTMLElement>();
 const uiText = computed(() => getUiText(props.language));
@@ -52,9 +53,13 @@ function renderIcon(icon: Component): () => VNode {
   return () => h(NIcon, { size: 16 }, { default: () => h(icon) });
 }
 
-onMounted(exclusiveMenu.mount);
+onMounted(() => {
+  exclusiveMenu.mount();
+  window.addEventListener("wheel", handleImageDragWheel, { capture: true, passive: false });
+});
 onUnmounted(() => {
   exclusiveMenu.unmount();
+  window.removeEventListener("wheel", handleImageDragWheel, { capture: true });
   resetImageDragAutoScroll();
 });
 
@@ -162,6 +167,10 @@ function getImageListScrollContainer(target: EventTarget | null): HTMLElement | 
   return scrollbar?.querySelector<HTMLElement>(".n-scrollbar-container") ?? null;
 }
 
+function getCurrentImageListScrollContainer(): HTMLElement | null {
+  return panelRef.value?.querySelector<HTMLElement>(".image-list-scrollbar .n-scrollbar-container") ?? null;
+}
+
 function stopImageDragAutoScroll(): void {
   if (dragScrollFrame !== undefined) window.cancelAnimationFrame(dragScrollFrame);
   dragScrollFrame = undefined;
@@ -231,14 +240,32 @@ function scrollImageListDuringDrag(event: DragEvent): void {
   stopImageDragAutoScroll();
 }
 
-function handleImageListWheel(event: WheelEvent): void {
+function scrollImageListByWheel(container: HTMLElement, event: WheelEvent): void {
+  const maxScrollTop = Math.max(0, container.scrollHeight - container.clientHeight);
+  const delta =
+    event.deltaMode === WheelEvent.DOM_DELTA_LINE
+      ? event.deltaY * 16
+      : event.deltaMode === WheelEvent.DOM_DELTA_PAGE
+        ? event.deltaY * container.clientHeight
+        : event.deltaY;
+  container.scrollTop = Math.min(maxScrollTop, Math.max(0, container.scrollTop + delta));
+}
+
+function handleImageDragWheel(event: WheelEvent): void {
   if (!draggingId.value) return;
+  const container = getImageListScrollContainer(event.target) ?? getCurrentImageListScrollContainer();
+  if (!container) return;
+
+  event.preventDefault();
+  event.stopPropagation();
   pauseImageDragAutoScrollForWheel();
+  scrollImageListByWheel(container, event);
 }
 </script>
 
 <template>
   <section
+    ref="panelRef"
     class="panel image-panel"
     :class="{ 'drag-hover': isDragHover }"
     aria-labelledby="image-title"
@@ -268,7 +295,6 @@ function handleImageListWheel(event: WheelEvent): void {
       class="image-list-scrollbar"
       :aria-label="uiText.images.list"
       @click="closeMenu"
-      @wheel.capture="handleImageListWheel"
       @dragover.prevent="scrollImageListDuringDrag"
       @drop.prevent.stop="handleExternalDrop"
       @contextmenu.prevent.stop="openMenu($event)"
