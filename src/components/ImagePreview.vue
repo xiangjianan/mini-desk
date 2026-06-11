@@ -25,7 +25,7 @@ const emit = defineEmits<{
   navigate: [direction: number];
 }>();
 
-const WHEEL_NAVIGATION_COOLDOWN_MS = 100;
+const WHEEL_NAVIGATION_COOLDOWN_MS = 25;
 const WHEEL_DELTA_RESET_MS = 180;
 const WHEEL_PIXEL_NOTCH_DELTA = 80;
 const WHEEL_LINE_NOTCH_DELTA = 3;

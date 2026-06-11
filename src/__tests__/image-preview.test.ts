@@ -206,7 +206,7 @@ describe("ImagePreview", () => {
 
       expect(wrapper.emitted("navigate")).toEqual([[1]]);
 
-      await vi.advanceTimersByTimeAsync(99);
+      await vi.advanceTimersByTimeAsync(24);
 
       expect(wrapper.emitted("navigate")).toEqual([[1]]);
 
@@ -217,12 +217,12 @@ describe("ImagePreview", () => {
 
       expect(wrapper.emitted("navigate")).toEqual([[1], [1]]);
 
-      await vi.advanceTimersByTimeAsync(100);
+      await vi.advanceTimersByTimeAsync(25);
 
       expect(wrapper.emitted("navigate")).toEqual([[1], [1], [1]]);
       await wrapper.setProps({ activeId: "img-4" });
 
-      await vi.advanceTimersByTimeAsync(100);
+      await vi.advanceTimersByTimeAsync(25);
 
       expect(wrapper.emitted("navigate")).toEqual([[1], [1], [1]]);
     } finally {
