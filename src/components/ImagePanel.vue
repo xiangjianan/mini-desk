@@ -213,6 +213,12 @@ function scrollImageListDuringDrag(event: DragEvent): void {
 
   stopImageDragAutoScroll();
 }
+
+function handleImageListWheel(event: WheelEvent): void {
+  if (!draggingId.value) return;
+  event.preventDefault();
+  event.stopPropagation();
+}
 </script>
 
 <template>
@@ -246,6 +252,7 @@ function scrollImageListDuringDrag(event: DragEvent): void {
       class="image-list-scrollbar"
       :aria-label="uiText.images.list"
       @click="closeMenu"
+      @wheel.capture="handleImageListWheel"
       @dragover.prevent="scrollImageListDuringDrag"
       @drop.prevent.stop="handleExternalDrop"
       @contextmenu.prevent.stop="openMenu($event)"

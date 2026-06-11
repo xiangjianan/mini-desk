@@ -354,6 +354,27 @@ describe("ImagePanel", () => {
     }
   });
 
+  it("prevents wheel scrolling while an image is being dragged", async () => {
+    const wrapper = mountImagePanel([
+      { id: "a", src: "data:image/png;base64,a", createdAt: 1 },
+      { id: "b", src: "data:image/png;base64,b", createdAt: 2 },
+    ]);
+    const list = wrapper.get(".image-list").element;
+    const idleWheel = new WheelEvent("wheel", { bubbles: true, cancelable: true, deltaY: 80 });
+
+    list.dispatchEvent(idleWheel);
+    expect(idleWheel.defaultPrevented).toBe(false);
+
+    await wrapper.findAll(".image-card")[0].trigger("dragstart");
+    const draggingWheel = new WheelEvent("wheel", { bubbles: true, cancelable: true, deltaY: 80 });
+    list.dispatchEvent(draggingWheel);
+
+    expect(draggingWheel.defaultPrevented).toBe(true);
+
+    await wrapper.findAll(".image-card")[0].trigger("dragend");
+    wrapper.unmount();
+  });
+
   it("does not move image cards on hover or keyboard focus", () => {
     const styles = readSource("styles.css");
     const hoverRules = Array.from(styles.matchAll(/\.image-card:hover,\s*\.image-card:focus-visible\s*\{([^}]*)\}/g)).map((match) => match[1]);
