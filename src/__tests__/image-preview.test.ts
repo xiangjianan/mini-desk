@@ -216,6 +216,53 @@ describe("ImagePreview", () => {
     }
   });
 
+  it("keeps a wheel gesture locked after the parent advances the active preview image", async () => {
+    vi.useFakeTimers();
+    const wrapper = mount(ImagePreview, {
+      props: {
+        images: [
+          { id: "img-1", src: "data:image/png;base64,one", createdAt: 1 },
+          { id: "img-2", src: "data:image/png;base64,two", createdAt: 2 },
+          { id: "img-3", src: "data:image/png;base64,three", createdAt: 3 },
+          { id: "img-4", src: "data:image/png;base64,four", createdAt: 4 },
+        ],
+        activeId: "img-1",
+      },
+      global: {
+        stubs: {
+          Button: buttonStub,
+          Dropdown: dropdownStub,
+          Modal: modalStub,
+          NButton: buttonStub,
+          NDropdown: dropdownStub,
+          NModal: modalStub,
+        },
+      },
+    });
+
+    try {
+      wrapper.get(".preview-stage").element.dispatchEvent(new WheelEvent("wheel", { bubbles: true, cancelable: true, deltaY: 80 }));
+      await wrapper.setProps({ activeId: "img-2" });
+
+      for (let index = 0; index < 5; index += 1) {
+        await vi.advanceTimersByTimeAsync(120);
+        wrapper.get(".preview-stage").element.dispatchEvent(new WheelEvent("wheel", { bubbles: true, cancelable: true, deltaY: 80 }));
+        await wrapper.vm.$nextTick();
+      }
+
+      expect(wrapper.emitted("navigate")).toEqual([[1]]);
+
+      await vi.advanceTimersByTimeAsync(520);
+      wrapper.get(".preview-stage").element.dispatchEvent(new WheelEvent("wheel", { bubbles: true, cancelable: true, deltaY: 80 }));
+      await wrapper.vm.$nextTick();
+
+      expect(wrapper.emitted("navigate")).toEqual([[1], [1]]);
+    } finally {
+      wrapper.unmount();
+      vi.useRealTimers();
+    }
+  });
+
   it("keeps the transformed image state while closing", async () => {
     vi.useFakeTimers();
     const wrapper = mount(ImagePreview, {

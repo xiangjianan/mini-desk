@@ -63,20 +63,18 @@ onMounted(exclusiveMenu.mount);
 onUnmounted(() => {
   exclusiveMenu.unmount();
   window.clearTimeout(closeTimer);
-  window.clearTimeout(wheelNavigationTimer);
+  clearWheelNavigationLock();
 });
 
 watch(
   () => props.activeId,
-  () => {
+  (nextId) => {
     window.clearTimeout(closeTimer);
-    window.clearTimeout(wheelNavigationTimer);
     closeTimer = undefined;
-    wheelNavigationTimer = undefined;
     localClosing.value = false;
-    wheelNavigationLocked.value = false;
     scale.value = 1;
     offset.value = { x: 0, y: 0 };
+    if (!nextId) clearWheelNavigationLock();
   },
 );
 
@@ -111,6 +109,12 @@ function scheduleWheelNavigationUnlock(): void {
     wheelNavigationLocked.value = false;
     wheelNavigationTimer = undefined;
   }, WHEEL_NAVIGATION_COOLDOWN_MS);
+}
+
+function clearWheelNavigationLock(): void {
+  window.clearTimeout(wheelNavigationTimer);
+  wheelNavigationTimer = undefined;
+  wheelNavigationLocked.value = false;
 }
 
 function navigate(direction: number): boolean {
