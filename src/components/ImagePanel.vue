@@ -218,6 +218,19 @@ function handleImageListWheel(event: WheelEvent): void {
   if (!draggingId.value) return;
   event.preventDefault();
   event.stopPropagation();
+  stopImageDragAutoScroll();
+
+  const container = getImageListScrollContainer(event.currentTarget);
+  if (!container) return;
+
+  const maxScrollTop = Math.max(0, container.scrollHeight - container.clientHeight);
+  const delta =
+    event.deltaMode === WheelEvent.DOM_DELTA_LINE
+      ? event.deltaY * 16
+      : event.deltaMode === WheelEvent.DOM_DELTA_PAGE
+        ? event.deltaY * container.clientHeight
+        : event.deltaY;
+  container.scrollTop = Math.min(maxScrollTop, Math.max(0, container.scrollTop + delta));
 }
 </script>
 

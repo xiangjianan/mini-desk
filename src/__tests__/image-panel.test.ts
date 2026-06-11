@@ -354,22 +354,36 @@ describe("ImagePanel", () => {
     }
   });
 
-  it("prevents wheel scrolling while an image is being dragged", async () => {
+  it("keeps wheel scrolling available while an image is being dragged without native wheel jitter", async () => {
     const wrapper = mountImagePanel([
       { id: "a", src: "data:image/png;base64,a", createdAt: 1 },
       { id: "b", src: "data:image/png;base64,b", createdAt: 2 },
     ]);
+    const scrollbar = wrapper.get(".image-list-scrollbar").element as HTMLElement;
+    const scrollContainer = scrollbar.querySelector<HTMLElement>(".n-scrollbar-container");
+    expect(scrollContainer).toBeTruthy();
+    Object.defineProperty(scrollContainer, "scrollHeight", { configurable: true, value: 600 });
+    Object.defineProperty(scrollContainer, "clientHeight", { configurable: true, value: 200 });
     const list = wrapper.get(".image-list").element;
     const idleWheel = new WheelEvent("wheel", { bubbles: true, cancelable: true, deltaY: 80 });
 
+    scrollContainer!.scrollTop = 120;
     list.dispatchEvent(idleWheel);
     expect(idleWheel.defaultPrevented).toBe(false);
+    expect(scrollContainer!.scrollTop).toBe(120);
 
     await wrapper.findAll(".image-card")[0].trigger("dragstart");
     const draggingWheel = new WheelEvent("wheel", { bubbles: true, cancelable: true, deltaY: 80 });
     list.dispatchEvent(draggingWheel);
 
     expect(draggingWheel.defaultPrevented).toBe(true);
+    expect(scrollContainer!.scrollTop).toBe(200);
+
+    const upwardWheel = new WheelEvent("wheel", { bubbles: true, cancelable: true, deltaY: -40 });
+    list.dispatchEvent(upwardWheel);
+
+    expect(upwardWheel.defaultPrevented).toBe(true);
+    expect(scrollContainer!.scrollTop).toBe(160);
 
     await wrapper.findAll(".image-card")[0].trigger("dragend");
     wrapper.unmount();
