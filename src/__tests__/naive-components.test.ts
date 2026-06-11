@@ -173,6 +173,8 @@ describe("Naive UI component usage", () => {
     expect(styles).toMatch(/\.preview-nav-button\s*\{[^}]*min-height: 132px/s);
     expect(styles).toMatch(/\.preview-nav-button\s*\{[^}]*background: transparent/s);
     expect(styles).toMatch(/\.preview-nav-button:hover,[\s\S]*?\.preview-nav-button:focus-visible\s*\{[^}]*opacity: 0\.68/s);
+    expect(styles).toMatch(/\.preview-nav-button\.is-previous:active\s*\{[^}]*transform: translateY\(-50%\) translateX\(-8px\)/s);
+    expect(styles).toMatch(/\.preview-nav-button\.is-next:active\s*\{[^}]*transform: translateY\(-50%\) translateX\(8px\)/s);
     expect(styles).toMatch(/\.preview-stage img\s*\{[^}]*max-height: calc\(100vh - var\(--image-preview-top, 52px\) - 96px\)/s);
     expect(styles).toMatch(/\.preview-stage img\s*\{[^}]*transition: transform 180ms cubic-bezier\(0\.2, 0, 0, 1\)/s);
     expect(styles).toContain(`@keyframes image-preview-photo-out {

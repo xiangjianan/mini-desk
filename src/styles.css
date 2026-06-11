@@ -5157,6 +5157,14 @@ html[data-theme="dark"] .image-preview {
   right: 14px;
 }
 
+.preview-nav-button.is-previous:active {
+  transform: translateY(-50%) translateX(-8px);
+}
+
+.preview-nav-button.is-next:active {
+  transform: translateY(-50%) translateX(8px);
+}
+
 .preview-actions {
   justify-self: center;
   min-height: 40px;
