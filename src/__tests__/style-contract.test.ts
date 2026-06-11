@@ -135,6 +135,7 @@ describe("workbench style contract", () => {
     expectSelectorBody(styles, ".workbench-grid", "padding: 14px");
     expectSelectorBody(styles, ".workbench-grid", "grid-row: 2");
     expectSelectorBody(styles, ".workbench-header-reveal-zone", "position: absolute");
+    expectSelectorBody(styles, ".workbench-header-reveal-zone", "z-index: 4500");
     expectSelectorBody(styles, ".workbench-header-reveal-zone", "top: 0");
     expectSelectorBody(styles, ".workbench-header-reveal-zone", "right: 100px");
     expectSelectorBody(styles, ".workbench-header-reveal-zone", "width: 32px");

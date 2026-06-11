@@ -162,7 +162,7 @@ describe("ImagePreview", () => {
     wrapper.unmount();
   });
 
-  it("queues one preview navigation per wheel notch", async () => {
+  it("delays the first wheel navigation and accelerates sustained wheel navigation by time", async () => {
     vi.useFakeTimers();
     const wrapper = mount(ImagePreview, {
       props: {
@@ -172,6 +172,8 @@ describe("ImagePreview", () => {
           { id: "img-3", src: "data:image/png;base64,three", createdAt: 3 },
           { id: "img-4", src: "data:image/png;base64,four", createdAt: 4 },
           { id: "img-5", src: "data:image/png;base64,five", createdAt: 5 },
+          { id: "img-6", src: "data:image/png;base64,six", createdAt: 6 },
+          { id: "img-7", src: "data:image/png;base64,seven", createdAt: 7 },
         ],
         activeId: "img-1",
       },
@@ -198,15 +200,29 @@ describe("ImagePreview", () => {
 
       expect(first.defaultPrevented).toBe(true);
       expect(wrapper.get(".preview-stage img").attributes("style")).toContain("scale(1)");
+      expect(wrapper.emitted("navigate")).toBeUndefined();
+
+      for (let index = 0; index < 4; index += 1) {
+        await vi.advanceTimersByTimeAsync(100);
+        await dispatchWheel();
+      }
+
+      await vi.advanceTimersByTimeAsync(99);
+
+      expect(wrapper.emitted("navigate")).toBeUndefined();
+
+      await vi.advanceTimersByTimeAsync(1);
+
       expect(wrapper.emitted("navigate")).toEqual([[1]]);
       await wrapper.setProps({ activeId: "img-2" });
 
-      await dispatchWheel();
-      await dispatchWheel();
-
       expect(wrapper.emitted("navigate")).toEqual([[1]]);
 
-      await vi.advanceTimersByTimeAsync(24);
+      for (let index = 0; index < 3; index += 1) {
+        await vi.advanceTimersByTimeAsync(100);
+        await dispatchWheel();
+      }
+      await vi.advanceTimersByTimeAsync(99);
 
       expect(wrapper.emitted("navigate")).toEqual([[1]]);
 
@@ -215,23 +231,57 @@ describe("ImagePreview", () => {
       expect(wrapper.emitted("navigate")).toEqual([[1], [1]]);
       await wrapper.setProps({ activeId: "img-3" });
 
+      for (let index = 0; index < 2; index += 1) {
+        await vi.advanceTimersByTimeAsync(100);
+        await dispatchWheel();
+      }
+      await vi.advanceTimersByTimeAsync(99);
+
       expect(wrapper.emitted("navigate")).toEqual([[1], [1]]);
 
-      await vi.advanceTimersByTimeAsync(25);
+      await vi.advanceTimersByTimeAsync(1);
 
       expect(wrapper.emitted("navigate")).toEqual([[1], [1], [1]]);
       await wrapper.setProps({ activeId: "img-4" });
 
-      await vi.advanceTimersByTimeAsync(25);
+      await vi.advanceTimersByTimeAsync(100);
+      await dispatchWheel();
+      await vi.advanceTimersByTimeAsync(99);
 
       expect(wrapper.emitted("navigate")).toEqual([[1], [1], [1]]);
+
+      await vi.advanceTimersByTimeAsync(1);
+
+      expect(wrapper.emitted("navigate")).toEqual([[1], [1], [1], [1]]);
+      await wrapper.setProps({ activeId: "img-5" });
+
+      await vi.advanceTimersByTimeAsync(50);
+      await dispatchWheel();
+      await vi.advanceTimersByTimeAsync(49);
+
+      expect(wrapper.emitted("navigate")).toEqual([[1], [1], [1], [1]]);
+
+      await vi.advanceTimersByTimeAsync(1);
+
+      expect(wrapper.emitted("navigate")).toEqual([[1], [1], [1], [1], [1]]);
+      await wrapper.setProps({ activeId: "img-6" });
+
+      await vi.advanceTimersByTimeAsync(25);
+      await dispatchWheel();
+      await vi.advanceTimersByTimeAsync(24);
+
+      expect(wrapper.emitted("navigate")).toEqual([[1], [1], [1], [1], [1]]);
+
+      await vi.advanceTimersByTimeAsync(1);
+
+      expect(wrapper.emitted("navigate")).toEqual([[1], [1], [1], [1], [1], [1]]);
     } finally {
       wrapper.unmount();
       vi.useRealTimers();
     }
   });
 
-  it("does not multiply a single wheel notch after the parent advances the active preview image", async () => {
+  it("does not continue navigating after a single wheel gesture", async () => {
     vi.useFakeTimers();
     const wrapper = mount(ImagePreview, {
       props: {
@@ -257,9 +307,17 @@ describe("ImagePreview", () => {
 
     try {
       wrapper.get(".preview-stage").element.dispatchEvent(new WheelEvent("wheel", { bubbles: true, cancelable: true, deltaY: 80 }));
+
+      await vi.advanceTimersByTimeAsync(499);
+
+      expect(wrapper.emitted("navigate")).toBeUndefined();
+
+      await vi.advanceTimersByTimeAsync(1);
+
+      expect(wrapper.emitted("navigate")).toEqual([[1]]);
       await wrapper.setProps({ activeId: "img-2" });
 
-      await vi.advanceTimersByTimeAsync(520);
+      await vi.advanceTimersByTimeAsync(500);
 
       expect(wrapper.emitted("navigate")).toEqual([[1]]);
     } finally {

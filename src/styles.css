@@ -3788,7 +3788,7 @@ body:has(.image-preview) .image-panel .n-scrollbar {
 
 .workbench-header-reveal-zone {
   position: absolute;
-  z-index: 8;
+  z-index: 4500;
   top: 0;
   right: 100px;
   width: 32px;

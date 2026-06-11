@@ -131,7 +131,8 @@ describe("Naive UI component usage", () => {
     expect(preview).toContain("preview-zoom-button");
     expect(preview).toContain('emit("navigate"');
     expect(preview).toContain('wheelNavigationLocked');
-    expect(preview).toContain('WHEEL_NAVIGATION_COOLDOWN_MS');
+    expect(preview).toContain('WHEEL_NAVIGATION_INITIAL_DELAY_MS');
+    expect(preview).toContain('WHEEL_NAVIGATION_MIN_DELAY_MS');
     expect(preview).toContain("function requestClose");
     expect(preview).toContain("is-closing");
     expect(preview).toContain("uiText.preview.close");
