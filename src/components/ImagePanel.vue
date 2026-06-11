@@ -42,9 +42,11 @@ const exclusiveMenu = createExclusiveContextMenu(closeMenu);
 const isPreviewCloseMenuItem = computed(() => Boolean(menu.value?.id && props.activePreviewId));
 const DRAG_EDGE_SCROLL_THRESHOLD = 44;
 const DRAG_EDGE_SCROLL_STEP = 8;
+const DRAG_WHEEL_AUTO_SCROLL_PAUSE_MS = 150;
 let dragScrollFrame: number | undefined;
 let dragScrollContainer: HTMLElement | null = null;
 let dragScrollDirection: -1 | 0 | 1 = 0;
+let dragWheelPauseTimer: number | undefined;
 
 function renderIcon(icon: Component): () => VNode {
   return () => h(NIcon, { size: 16 }, { default: () => h(icon) });
@@ -53,7 +55,7 @@ function renderIcon(icon: Component): () => VNode {
 onMounted(exclusiveMenu.mount);
 onUnmounted(() => {
   exclusiveMenu.unmount();
-  stopImageDragAutoScroll();
+  resetImageDragAutoScroll();
 });
 
 watch(
@@ -136,7 +138,7 @@ function handleGuideClick(event: MouseEvent): void {
 
 function handleExternalDrop(event: DragEvent): void {
   isDragHover.value = false;
-  stopImageDragAutoScroll();
+  resetImageDragAutoScroll();
   const files = Array.from(event.dataTransfer?.files ?? []);
   if (files.length === 0) return;
   emit("dropFiles", files, event.currentTarget as HTMLElement);
@@ -151,7 +153,7 @@ function handleImageDragEnter(event: DragEvent): void {
 
 function handleImageDragLeave(): void {
   isDragHover.value = false;
-  stopImageDragAutoScroll();
+  resetImageDragAutoScroll();
 }
 
 function getImageListScrollContainer(target: EventTarget | null): HTMLElement | null {
@@ -165,6 +167,20 @@ function stopImageDragAutoScroll(): void {
   dragScrollFrame = undefined;
   dragScrollContainer = null;
   dragScrollDirection = 0;
+}
+
+function resetImageDragAutoScroll(): void {
+  stopImageDragAutoScroll();
+  if (dragWheelPauseTimer !== undefined) window.clearTimeout(dragWheelPauseTimer);
+  dragWheelPauseTimer = undefined;
+}
+
+function pauseImageDragAutoScrollForWheel(): void {
+  stopImageDragAutoScroll();
+  if (dragWheelPauseTimer !== undefined) window.clearTimeout(dragWheelPauseTimer);
+  dragWheelPauseTimer = window.setTimeout(() => {
+    dragWheelPauseTimer = undefined;
+  }, DRAG_WHEEL_AUTO_SCROLL_PAUSE_MS);
 }
 
 function runImageDragAutoScroll(): void {
@@ -197,6 +213,7 @@ function startImageDragAutoScroll(container: HTMLElement, direction: -1 | 1): vo
 
 function scrollImageListDuringDrag(event: DragEvent): void {
   if (!draggingId.value) return;
+  if (dragWheelPauseTimer !== undefined) return;
   const container = getImageListScrollContainer(event.currentTarget);
   if (!container) return;
 
@@ -216,21 +233,7 @@ function scrollImageListDuringDrag(event: DragEvent): void {
 
 function handleImageListWheel(event: WheelEvent): void {
   if (!draggingId.value) return;
-  event.preventDefault();
-  event.stopPropagation();
-  stopImageDragAutoScroll();
-
-  const container = getImageListScrollContainer(event.currentTarget);
-  if (!container) return;
-
-  const maxScrollTop = Math.max(0, container.scrollHeight - container.clientHeight);
-  const delta =
-    event.deltaMode === WheelEvent.DOM_DELTA_LINE
-      ? event.deltaY * 16
-      : event.deltaMode === WheelEvent.DOM_DELTA_PAGE
-        ? event.deltaY * container.clientHeight
-        : event.deltaY;
-  container.scrollTop = Math.min(maxScrollTop, Math.max(0, container.scrollTop + delta));
+  pauseImageDragAutoScrollForWheel();
 }
 </script>
 
@@ -285,7 +288,7 @@ function handleImageListWheel(event: WheelEvent): void {
         @dragstart="draggingId = image.id"
         @dragover.prevent
         @drop="draggingId && draggingId !== image.id && emit('reorder', draggingId, image.id)"
-        @dragend="draggingId = null; stopImageDragAutoScroll()"
+        @dragend="draggingId = null; resetImageDragAutoScroll()"
       >
         <span class="image-index">{{ index + 1 }}</span>
         <img v-if="image.src" :src="image.src" :alt="uiText.images.thumbnailAlt" draggable="false" />

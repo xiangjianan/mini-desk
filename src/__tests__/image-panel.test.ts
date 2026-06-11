@@ -354,7 +354,8 @@ describe("ImagePanel", () => {
     }
   });
 
-  it("keeps wheel scrolling available while an image is being dragged without native wheel jitter", async () => {
+  it("allows wheel scrolling while dragging and pauses edge auto-scroll to avoid jitter", async () => {
+    vi.useFakeTimers();
     const wrapper = mountImagePanel([
       { id: "a", src: "data:image/png;base64,a", createdAt: 1 },
       { id: "b", src: "data:image/png;base64,b", createdAt: 2 },
@@ -364,29 +365,54 @@ describe("ImagePanel", () => {
     expect(scrollContainer).toBeTruthy();
     Object.defineProperty(scrollContainer, "scrollHeight", { configurable: true, value: 600 });
     Object.defineProperty(scrollContainer, "clientHeight", { configurable: true, value: 200 });
+    Object.defineProperty(scrollContainer!, "getBoundingClientRect", {
+      configurable: true,
+      value: () => ({
+        x: 0,
+        y: 100,
+        left: 0,
+        top: 100,
+        right: 240,
+        bottom: 300,
+        width: 240,
+        height: 200,
+        toJSON: () => undefined,
+      }),
+    });
     const list = wrapper.get(".image-list").element;
     const idleWheel = new WheelEvent("wheel", { bubbles: true, cancelable: true, deltaY: 80 });
 
-    scrollContainer!.scrollTop = 120;
-    list.dispatchEvent(idleWheel);
-    expect(idleWheel.defaultPrevented).toBe(false);
-    expect(scrollContainer!.scrollTop).toBe(120);
+    try {
+      scrollContainer!.scrollTop = 120;
+      list.dispatchEvent(idleWheel);
+      expect(idleWheel.defaultPrevented).toBe(false);
+      expect(scrollContainer!.scrollTop).toBe(120);
 
-    await wrapper.findAll(".image-card")[0].trigger("dragstart");
-    const draggingWheel = new WheelEvent("wheel", { bubbles: true, cancelable: true, deltaY: 80 });
-    list.dispatchEvent(draggingWheel);
+      await wrapper.findAll(".image-card")[0].trigger("dragstart");
+      await wrapper.get(".image-list").trigger("dragover", { clientY: 108 });
+      await vi.advanceTimersByTimeAsync(16);
+      expect(scrollContainer!.scrollTop).toBe(112);
 
-    expect(draggingWheel.defaultPrevented).toBe(true);
-    expect(scrollContainer!.scrollTop).toBe(200);
+      scrollContainer!.scrollTop = 120;
+      const draggingWheel = new WheelEvent("wheel", { bubbles: true, cancelable: true, deltaY: 80 });
+      list.dispatchEvent(draggingWheel);
 
-    const upwardWheel = new WheelEvent("wheel", { bubbles: true, cancelable: true, deltaY: -40 });
-    list.dispatchEvent(upwardWheel);
+      expect(draggingWheel.defaultPrevented).toBe(false);
 
-    expect(upwardWheel.defaultPrevented).toBe(true);
-    expect(scrollContainer!.scrollTop).toBe(160);
+      await wrapper.get(".image-list").trigger("dragover", { clientY: 108 });
+      await vi.advanceTimersByTimeAsync(16);
+      expect(scrollContainer!.scrollTop).toBe(120);
 
-    await wrapper.findAll(".image-card")[0].trigger("dragend");
-    wrapper.unmount();
+      await vi.advanceTimersByTimeAsync(160);
+      await wrapper.get(".image-list").trigger("dragover", { clientY: 108 });
+      await vi.advanceTimersByTimeAsync(16);
+      expect(scrollContainer!.scrollTop).toBe(112);
+
+      await wrapper.findAll(".image-card")[0].trigger("dragend");
+    } finally {
+      wrapper.unmount();
+      vi.useRealTimers();
+    }
   });
 
   it("does not move image cards on hover or keyboard focus", () => {
