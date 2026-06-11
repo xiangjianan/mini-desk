@@ -238,12 +238,13 @@ function handleKeydown(event: KeyboardEvent): void {
             <CloseOutline />
           </NIcon>
         </button>
-        <div v-if="canNavigatePrevious || canNavigateNext" class="preview-nav-stack">
+        <div class="preview-nav-stack">
           <button
-            v-if="canNavigatePrevious"
             type="button"
             class="preview-nav-button is-previous"
             :aria-label="uiText.preview.previous"
+            :aria-disabled="!canNavigatePrevious"
+            :disabled="!canNavigatePrevious"
             @click.stop.prevent="navigate(-1)"
             @keydown.enter.stop.prevent="navigate(-1)"
             @keydown.space.stop.prevent="navigate(-1)"
@@ -253,10 +254,11 @@ function handleKeydown(event: KeyboardEvent): void {
             </NIcon>
           </button>
           <button
-            v-if="canNavigateNext"
             type="button"
             class="preview-nav-button is-next"
             :aria-label="uiText.preview.next"
+            :aria-disabled="!canNavigateNext"
+            :disabled="!canNavigateNext"
             @click.stop.prevent="navigate(1)"
             @keydown.enter.stop.prevent="navigate(1)"
             @keydown.space.stop.prevent="navigate(1)"

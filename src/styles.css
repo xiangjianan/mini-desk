@@ -5147,17 +5147,29 @@ html[data-theme="dark"] .image-preview {
 
 .preview-nav-button {
   position: static;
-  width: 58px;
-  height: 76px;
+  width: 52px;
+  height: 68px;
   border-radius: calc(var(--radius) + 10px);
   background: color-mix(in srgb, var(--card) 26%, transparent);
   opacity: 0.58;
+}
+
+.preview-nav-button:disabled {
+  cursor: default;
+  opacity: 0.22;
 }
 
 .preview-nav-button:hover,
 .preview-nav-button:focus-visible {
   background: color-mix(in srgb, var(--card) 40%, transparent);
   opacity: 0.82;
+}
+
+.preview-nav-button:disabled:hover,
+.preview-nav-button:disabled:focus-visible {
+  background: color-mix(in srgb, var(--card) 26%, transparent);
+  border-color: color-mix(in srgb, var(--border) 72%, rgba(255, 255, 255, 0.36));
+  opacity: 0.22;
 }
 
 .preview-nav-button.is-previous:active {

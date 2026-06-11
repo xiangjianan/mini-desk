@@ -274,7 +274,7 @@ describe("ImagePreview", () => {
     }
   });
 
-  it("only renders available side navigation controls at image edges", () => {
+  it("keeps both stacked navigation controls visible and disables unavailable edge actions", async () => {
     const wrapper = mount(ImagePreview, {
       props: {
         images: [
@@ -297,8 +297,53 @@ describe("ImagePreview", () => {
     });
 
     expect(wrapper.find(".preview-nav-stack").exists()).toBe(true);
-    expect(wrapper.find(".preview-nav-button.is-previous").exists()).toBe(false);
-    expect(wrapper.find(".preview-nav-button.is-next").exists()).toBe(true);
+    const previous = wrapper.get(".preview-nav-button.is-previous");
+    const next = wrapper.get(".preview-nav-button.is-next");
+
+    expect(previous.attributes("disabled")).toBeDefined();
+    expect(previous.attributes("aria-disabled")).toBe("true");
+    expect(next.attributes("disabled")).toBeUndefined();
+
+    await previous.trigger("click");
+    await next.trigger("click");
+
+    expect(wrapper.emitted("navigate")).toEqual([[1]]);
+    wrapper.unmount();
+  });
+
+  it("disables the next stacked navigation control at the final image", async () => {
+    const wrapper = mount(ImagePreview, {
+      props: {
+        images: [
+          { id: "img-1", src: "data:image/png;base64,one", createdAt: 1 },
+          { id: "img-2", src: "data:image/png;base64,two", createdAt: 2 },
+          { id: "img-3", src: "data:image/png;base64,three", createdAt: 3 },
+        ],
+        activeId: "img-3",
+      },
+      global: {
+        stubs: {
+          Button: buttonStub,
+          Dropdown: dropdownStub,
+          Modal: modalStub,
+          NButton: buttonStub,
+          NDropdown: dropdownStub,
+          NModal: modalStub,
+        },
+      },
+    });
+
+    const previous = wrapper.get(".preview-nav-button.is-previous");
+    const next = wrapper.get(".preview-nav-button.is-next");
+
+    expect(previous.attributes("disabled")).toBeUndefined();
+    expect(next.attributes("disabled")).toBeDefined();
+    expect(next.attributes("aria-disabled")).toBe("true");
+
+    await previous.trigger("click");
+    await next.trigger("click");
+
+    expect(wrapper.emitted("navigate")).toEqual([[-1]]);
     wrapper.unmount();
   });
 

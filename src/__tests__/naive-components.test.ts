@@ -176,11 +176,13 @@ describe("Naive UI component usage", () => {
     expect(styles).toMatch(/\.preview-nav-stack\s*\{[^}]*right: 14px/s);
     expect(styles).toMatch(/\.preview-nav-stack\s*\{[^}]*flex-direction: column/s);
     expect(styles).toMatch(/\.preview-nav-stack\s*\{[^}]*gap: 2px/s);
-    expect(styles).toMatch(/\.preview-nav-button\s*\{[^}]*width: 58px/s);
-    expect(styles).toMatch(/\.preview-nav-button\s*\{[^}]*height: 76px/s);
+    expect(styles).toMatch(/\.preview-nav-button\s*\{[^}]*width: 52px/s);
+    expect(styles).toMatch(/\.preview-nav-button\s*\{[^}]*height: 68px/s);
     expect(styles).toMatch(/\.preview-nav-button\s*\{[^}]*background: color-mix\(in srgb, var\(--card\) 26%, transparent\)/s);
     expect(styles).toMatch(/\.preview-nav-button\s*\{[^}]*opacity: 0\.58/s);
     expect(styles).toMatch(/\.preview-nav-button:hover,[\s\S]*?\.preview-nav-button:focus-visible\s*\{[^}]*opacity: 0\.82/s);
+    expect(styles).toMatch(/\.preview-nav-button:disabled\s*\{[^}]*opacity: 0\.22/s);
+    expect(styles).toMatch(/\.preview-nav-button:disabled\s*\{[^}]*cursor: default/s);
     expect(styles).toMatch(/\.preview-nav-button\.is-previous:active\s*\{[^}]*transform: translateY\(-7px\)/s);
     expect(styles).toMatch(/\.preview-nav-button\.is-next:active\s*\{[^}]*transform: translateY\(7px\)/s);
     expect(styles).toMatch(/\.preview-stage img\s*\{[^}]*max-height: calc\(100vh - var\(--image-preview-top, 52px\) - 96px\)/s);
