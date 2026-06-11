@@ -26,10 +26,10 @@ const emit = defineEmits<{
 }>();
 
 const WHEEL_NAVIGATION_COOLDOWN_MS = 100;
-const WHEEL_NAVIGATION_IDLE_MS = 180;
-const WHEEL_NAVIGATION_REPEAT_DELTA = 260;
-const WHEEL_DELTA_LINE_PIXELS = 40;
-const WHEEL_DELTA_PAGE_PIXELS = 800;
+const WHEEL_DELTA_RESET_MS = 180;
+const WHEEL_PIXEL_NOTCH_DELTA = 80;
+const WHEEL_LINE_NOTCH_DELTA = 3;
+const WHEEL_PAGE_NOTCH_DELTA = 1;
 const MIN_SCALE = 0.3;
 const MAX_SCALE = 5;
 const ZOOM_STEP = 0.1;
@@ -44,9 +44,10 @@ const start = ref({ x: 0, y: 0, ox: 0, oy: 0 });
 const menu = ref<{ x: number; y: number; id: string; anchor?: HTMLElement } | null>(null);
 let closeTimer: number | undefined;
 let wheelNavigationTimer: number | undefined;
-let wheelGestureIdleTimer: number | undefined;
-let wheelRepeatDelta = 0;
-let wheelRepeatDirection = 0;
+let wheelDeltaResetTimer: number | undefined;
+let wheelPixelRemainder = 0;
+let wheelPendingSteps = 0;
+let wheelPendingDirection = 0;
 
 const uiText = computed(() => getUiText(props.language));
 const active = computed(() => props.images.find((image) => image.id === props.activeId));
@@ -101,21 +102,21 @@ function wheel(event: WheelEvent): void {
   event.preventDefault();
   const direction = Math.sign(event.deltaY);
   if (direction === 0) return;
+  const steps = getWheelStepCount(event);
+  if (steps <= 0) return;
 
-  scheduleWheelGestureIdleReset();
   if (wheelNavigationLocked.value) {
-    trackWheelRepeat(event, direction);
+    queueWheelNavigation(direction, steps);
     return;
   }
   if (!navigate(direction)) return;
 
-  startWheelNavigationLock(direction);
+  startWheelNavigationLock();
+  queueWheelNavigation(direction, steps - 1);
 }
 
-function startWheelNavigationLock(direction: number): void {
+function startWheelNavigationLock(): void {
   wheelNavigationLocked.value = true;
-  wheelRepeatDirection = direction;
-  wheelRepeatDelta = 0;
   scheduleWheelNavigationRepeat();
 }
 
@@ -129,36 +130,42 @@ function scheduleWheelNavigationRepeat(): void {
 
 function clearWheelNavigationLock(): void {
   window.clearTimeout(wheelNavigationTimer);
-  window.clearTimeout(wheelGestureIdleTimer);
+  window.clearTimeout(wheelDeltaResetTimer);
   wheelNavigationTimer = undefined;
-  wheelGestureIdleTimer = undefined;
+  wheelDeltaResetTimer = undefined;
   wheelNavigationLocked.value = false;
-  wheelRepeatDelta = 0;
-  wheelRepeatDirection = 0;
+  wheelPixelRemainder = 0;
+  wheelPendingSteps = 0;
+  wheelPendingDirection = 0;
 }
 
-function scheduleWheelGestureIdleReset(): void {
-  window.clearTimeout(wheelGestureIdleTimer);
-  wheelGestureIdleTimer = window.setTimeout(clearWheelNavigationLock, WHEEL_NAVIGATION_IDLE_MS);
+function scheduleWheelDeltaReset(): void {
+  window.clearTimeout(wheelDeltaResetTimer);
+  wheelDeltaResetTimer = window.setTimeout(() => {
+    wheelDeltaResetTimer = undefined;
+    wheelPixelRemainder = 0;
+  }, WHEEL_DELTA_RESET_MS);
 }
 
-function trackWheelRepeat(event: WheelEvent, direction: number): void {
-  if (direction !== wheelRepeatDirection) {
-    wheelRepeatDirection = direction;
-    wheelRepeatDelta = 0;
+function queueWheelNavigation(direction: number, steps: number): void {
+  if (steps <= 0) return;
+  if (wheelPendingDirection !== 0 && direction !== wheelPendingDirection) {
+    wheelPendingSteps = 0;
   }
-  wheelRepeatDelta += Math.abs(normalizeWheelDelta(event));
+  wheelPendingDirection = direction;
+  wheelPendingSteps += steps;
 }
 
 function repeatWheelNavigation(): void {
   if (!wheelNavigationLocked.value) return;
-  if (wheelRepeatDirection === 0 || wheelRepeatDelta < WHEEL_NAVIGATION_REPEAT_DELTA) {
-    scheduleWheelNavigationRepeat();
+  if (wheelPendingDirection === 0 || wheelPendingSteps <= 0) {
+    clearWheelNavigationLock();
     return;
   }
 
-  const direction = wheelRepeatDirection;
-  wheelRepeatDelta = 0;
+  const direction = wheelPendingDirection;
+  wheelPendingSteps -= 1;
+  if (wheelPendingSteps === 0) wheelPendingDirection = 0;
   if (!navigate(direction)) {
     clearWheelNavigationLock();
     return;
@@ -167,10 +174,22 @@ function repeatWheelNavigation(): void {
   scheduleWheelNavigationRepeat();
 }
 
-function normalizeWheelDelta(event: WheelEvent): number {
-  if (event.deltaMode === 1) return event.deltaY * WHEEL_DELTA_LINE_PIXELS;
-  if (event.deltaMode === 2) return event.deltaY * WHEEL_DELTA_PAGE_PIXELS;
-  return event.deltaY;
+function getWheelStepCount(event: WheelEvent): number {
+  const delta = Math.abs(event.deltaY);
+  if (event.deltaMode === 1) return Math.max(1, Math.round(delta / WHEEL_LINE_NOTCH_DELTA));
+  if (event.deltaMode === 2) return Math.max(1, Math.round(delta / WHEEL_PAGE_NOTCH_DELTA));
+
+  const direction = Math.sign(event.deltaY);
+  if (Math.sign(wheelPixelRemainder) !== 0 && Math.sign(wheelPixelRemainder) !== direction) {
+    wheelPixelRemainder = 0;
+  }
+  wheelPixelRemainder += event.deltaY;
+  scheduleWheelDeltaReset();
+  const steps = Math.trunc(Math.abs(wheelPixelRemainder) / WHEEL_PIXEL_NOTCH_DELTA);
+  if (steps <= 0) return 0;
+
+  wheelPixelRemainder -= steps * WHEEL_PIXEL_NOTCH_DELTA * direction;
+  return steps;
 }
 
 function navigate(direction: number): boolean {
