@@ -3388,6 +3388,8 @@ button.todo-section-menu-button {
   -webkit-backdrop-filter: blur(18px);
   backdrop-filter: blur(18px);
   color: var(--text);
+  -webkit-user-select: none;
+  user-select: none;
   animation: image-preview-in 120ms ease-out;
 }
 

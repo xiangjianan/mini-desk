@@ -145,6 +145,7 @@ describe("Naive UI component usage", () => {
     expect(i18n).toContain("缩小图片");
     expect(i18n).toContain("放大图片");
     expect(preview).toContain('@keydown="handleKeydown"');
+    expect(preview).toContain("@selectstart.prevent");
     expect(preview).toContain("NDropdown");
     expect(preview).toContain("openMenu");
     expect(preview).toContain('@contextmenu.prevent="openMenu($event, active.id)"');
@@ -155,6 +156,8 @@ describe("Naive UI component usage", () => {
     expect(styles).toMatch(/\.image-preview\s*\{[^}]*top: var\(--image-preview-top, 52px\)/s);
     expect(styles).toMatch(/\.image-preview\s*\{[^}]*left: var\(--image-preview-left, clamp\(220px, 18vw, 320px\)\)/s);
     expect(styles).toMatch(/\.image-preview\s*\{[^}]*right: 0/s);
+    expect(styles).toMatch(/\.image-preview\s*\{[^}]*user-select: none/s);
+    expect(styles).toMatch(/\.image-preview\s*\{[^}]*-webkit-user-select: none/s);
     expect(styles).not.toMatch(/\.image-preview\s*\{[^}]*width: 90vw/s);
     expect(styles).toContain("backdrop-filter");
     expect(styles).toMatch(/\.image-preview\s*\{[^}]*background: rgba\(255, 255, 255/s);

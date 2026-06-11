@@ -211,6 +211,7 @@ function handleKeydown(event: KeyboardEvent): void {
       @mouseup="dragging = false"
       @mouseleave="dragging = false"
       @keydown="handleKeydown"
+      @selectstart.prevent
       @contextmenu.prevent="openMenu($event, active.id)"
     >
       <main class="preview-main">
