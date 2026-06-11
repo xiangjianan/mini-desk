@@ -41,7 +41,7 @@ const guideMenuOption = computed<DropdownOption>(() => ({ ...GUIDE_MENU_OPTION, 
 const exclusiveMenu = createExclusiveContextMenu(closeMenu);
 const isPreviewCloseMenuItem = computed(() => Boolean(menu.value?.id && props.activePreviewId));
 const DRAG_EDGE_SCROLL_THRESHOLD = 44;
-const DRAG_EDGE_SCROLL_STEP = 36;
+const DRAG_EDGE_SCROLL_STEP = 18;
 
 function renderIcon(icon: Component): () => VNode {
   return () => h(NIcon, { size: 16 }, { default: () => h(icon) });
@@ -205,7 +205,7 @@ function scrollImageListDuringDrag(event: DragEvent): void {
       @drop.prevent.stop="handleExternalDrop"
       @contextmenu.prevent.stop="openMenu($event)"
     >
-      <TransitionGroup name="image-reorder" tag="div" class="image-list" @dragover.prevent="scrollImageListDuringDrag">
+      <TransitionGroup name="image-reorder" tag="div" class="image-list">
       <button
         v-for="(image, index) in images"
         :key="image.id"

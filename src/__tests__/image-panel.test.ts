@@ -333,11 +333,11 @@ describe("ImagePanel", () => {
     scrollContainer!.scrollTop = 120;
     await wrapper.findAll(".image-card")[1].trigger("dragstart");
     await wrapper.get(".image-list").trigger("dragover", { clientY: 108 });
-    expect(scrollContainer!.scrollTop).toBeLessThan(120);
+    expect(scrollContainer!.scrollTop).toBe(102);
 
     scrollContainer!.scrollTop = 120;
     await wrapper.get(".image-list").trigger("dragover", { clientY: 292 });
-    expect(scrollContainer!.scrollTop).toBeGreaterThan(120);
+    expect(scrollContainer!.scrollTop).toBe(138);
 
     await wrapper.findAll(".image-card")[1].trigger("dragend");
     wrapper.unmount();
