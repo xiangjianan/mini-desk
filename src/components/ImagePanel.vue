@@ -41,14 +41,20 @@ const guideMenuOption = computed<DropdownOption>(() => ({ ...GUIDE_MENU_OPTION, 
 const exclusiveMenu = createExclusiveContextMenu(closeMenu);
 const isPreviewCloseMenuItem = computed(() => Boolean(menu.value?.id && props.activePreviewId));
 const DRAG_EDGE_SCROLL_THRESHOLD = 44;
-const DRAG_EDGE_SCROLL_STEP = 18;
+const DRAG_EDGE_SCROLL_STEP = 8;
+let dragScrollFrame: number | undefined;
+let dragScrollContainer: HTMLElement | null = null;
+let dragScrollDirection: -1 | 0 | 1 = 0;
 
 function renderIcon(icon: Component): () => VNode {
   return () => h(NIcon, { size: 16 }, { default: () => h(icon) });
 }
 
 onMounted(exclusiveMenu.mount);
-onUnmounted(exclusiveMenu.unmount);
+onUnmounted(() => {
+  exclusiveMenu.unmount();
+  stopImageDragAutoScroll();
+});
 
 watch(
   () => props.activePreviewId,
@@ -130,6 +136,7 @@ function handleGuideClick(event: MouseEvent): void {
 
 function handleExternalDrop(event: DragEvent): void {
   isDragHover.value = false;
+  stopImageDragAutoScroll();
   const files = Array.from(event.dataTransfer?.files ?? []);
   if (files.length === 0) return;
   emit("dropFiles", files, event.currentTarget as HTMLElement);
@@ -144,12 +151,48 @@ function handleImageDragEnter(event: DragEvent): void {
 
 function handleImageDragLeave(): void {
   isDragHover.value = false;
+  stopImageDragAutoScroll();
 }
 
 function getImageListScrollContainer(target: EventTarget | null): HTMLElement | null {
   if (!(target instanceof HTMLElement)) return null;
   const scrollbar = target.classList.contains("image-list-scrollbar") ? target : target.closest<HTMLElement>(".image-list-scrollbar");
   return scrollbar?.querySelector<HTMLElement>(".n-scrollbar-container") ?? null;
+}
+
+function stopImageDragAutoScroll(): void {
+  if (dragScrollFrame !== undefined) window.cancelAnimationFrame(dragScrollFrame);
+  dragScrollFrame = undefined;
+  dragScrollContainer = null;
+  dragScrollDirection = 0;
+}
+
+function runImageDragAutoScroll(): void {
+  const container = dragScrollContainer;
+  if (!container || !draggingId.value || dragScrollDirection === 0) {
+    stopImageDragAutoScroll();
+    return;
+  }
+
+  const maxScrollTop = Math.max(0, container.scrollHeight - container.clientHeight);
+  const nextScrollTop =
+    dragScrollDirection < 0
+      ? Math.max(0, container.scrollTop - DRAG_EDGE_SCROLL_STEP)
+      : Math.min(maxScrollTop, container.scrollTop + DRAG_EDGE_SCROLL_STEP);
+  container.scrollTop = nextScrollTop;
+
+  if ((dragScrollDirection < 0 && nextScrollTop === 0) || (dragScrollDirection > 0 && nextScrollTop === maxScrollTop)) {
+    stopImageDragAutoScroll();
+    return;
+  }
+
+  dragScrollFrame = window.requestAnimationFrame(runImageDragAutoScroll);
+}
+
+function startImageDragAutoScroll(container: HTMLElement, direction: -1 | 1): void {
+  dragScrollContainer = container;
+  dragScrollDirection = direction;
+  if (dragScrollFrame === undefined) dragScrollFrame = window.requestAnimationFrame(runImageDragAutoScroll);
 }
 
 function scrollImageListDuringDrag(event: DragEvent): void {
@@ -159,14 +202,16 @@ function scrollImageListDuringDrag(event: DragEvent): void {
 
   const rect = container.getBoundingClientRect();
   if (event.clientY <= rect.top + DRAG_EDGE_SCROLL_THRESHOLD) {
-    container.scrollTop = Math.max(0, container.scrollTop - DRAG_EDGE_SCROLL_STEP);
+    startImageDragAutoScroll(container, -1);
     return;
   }
 
   if (event.clientY >= rect.bottom - DRAG_EDGE_SCROLL_THRESHOLD) {
-    const maxScrollTop = Math.max(0, container.scrollHeight - container.clientHeight);
-    container.scrollTop = Math.min(maxScrollTop, container.scrollTop + DRAG_EDGE_SCROLL_STEP);
+    startImageDragAutoScroll(container, 1);
+    return;
   }
+
+  stopImageDragAutoScroll();
 }
 </script>
 
@@ -220,7 +265,7 @@ function scrollImageListDuringDrag(event: DragEvent): void {
         @dragstart="draggingId = image.id"
         @dragover.prevent
         @drop="draggingId && draggingId !== image.id && emit('reorder', draggingId, image.id)"
-        @dragend="draggingId = null"
+        @dragend="draggingId = null; stopImageDragAutoScroll()"
       >
         <span class="image-index">{{ index + 1 }}</span>
         <img v-if="image.src" :src="image.src" :alt="uiText.images.thumbnailAlt" draggable="false" />

@@ -304,7 +304,8 @@ describe("ImagePanel", () => {
     wrapper.unmount();
   });
 
-  it("auto-scrolls the image list while dragging near the top or bottom edge", async () => {
+  it("smoothly auto-scrolls the image list while dragging near the top or bottom edge", async () => {
+    vi.useFakeTimers();
     const wrapper = mountImagePanel([
       { id: "a", src: "data:image/png;base64,a", createdAt: 1 },
       { id: "b", src: "data:image/png;base64,b", createdAt: 2 },
@@ -330,17 +331,27 @@ describe("ImagePanel", () => {
       }),
     });
 
-    scrollContainer!.scrollTop = 120;
-    await wrapper.findAll(".image-card")[1].trigger("dragstart");
-    await wrapper.get(".image-list").trigger("dragover", { clientY: 108 });
-    expect(scrollContainer!.scrollTop).toBe(102);
+    try {
+      scrollContainer!.scrollTop = 120;
+      await wrapper.findAll(".image-card")[1].trigger("dragstart");
+      await wrapper.get(".image-list").trigger("dragover", { clientY: 108 });
+      expect(scrollContainer!.scrollTop).toBe(120);
+      await vi.advanceTimersByTimeAsync(16);
+      expect(scrollContainer!.scrollTop).toBe(112);
 
-    scrollContainer!.scrollTop = 120;
-    await wrapper.get(".image-list").trigger("dragover", { clientY: 292 });
-    expect(scrollContainer!.scrollTop).toBe(138);
+      scrollContainer!.scrollTop = 120;
+      await wrapper.get(".image-list").trigger("dragover", { clientY: 292 });
+      await vi.advanceTimersByTimeAsync(16);
+      expect(scrollContainer!.scrollTop).toBe(128);
 
-    await wrapper.findAll(".image-card")[1].trigger("dragend");
-    wrapper.unmount();
+      await wrapper.findAll(".image-card")[1].trigger("dragend");
+      scrollContainer!.scrollTop = 120;
+      await vi.advanceTimersByTimeAsync(32);
+      expect(scrollContainer!.scrollTop).toBe(120);
+    } finally {
+      wrapper.unmount();
+      vi.useRealTimers();
+    }
   });
 
   it("does not move image cards on hover or keyboard focus", () => {
