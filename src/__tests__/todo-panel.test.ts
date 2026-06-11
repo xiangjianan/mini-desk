@@ -2096,11 +2096,19 @@ describe("TodoPanel", () => {
     });
     const styles = readFileSync(resolve(__dirname, "../styles.css"), "utf8");
     const flashRule = styles.match(/\.todo-item\.is-notify-flashing,[\s\S]*?\.today-focus-item\.is-notify-flashing\s*\{(?<body>[^}]*)\}/)?.groups?.body ?? "";
+    const flashKeyframesStart = styles.indexOf("@keyframes todo-notify-flash");
+    const flashKeyframesEnd = styles.indexOf(".focus-companion", flashKeyframesStart);
+    const flashKeyframes = styles.slice(flashKeyframesStart, flashKeyframesEnd);
 
     expect(wrapper.findAll(".todo-item")[0].classes()).toContain("is-notify-flashing");
     expect(wrapper.findAll(".todo-item")[1].classes()).not.toContain("is-notify-flashing");
     expect(flashRule).toContain("animation: todo-notify-flash");
+    expect(flashRule).toContain("var(--motion-ease)");
+    expect(flashRule).toContain("will-change: background-color, box-shadow");
     expect(flashRule).toContain("3");
+    expect(flashKeyframes).toContain("background-color: transparent");
+    expect(flashKeyframes).toContain("background-color: color-mix");
+    expect(flashKeyframes).not.toContain("background: ");
     wrapper.unmount();
   });
 

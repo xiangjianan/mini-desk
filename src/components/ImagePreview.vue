@@ -25,7 +25,7 @@ const emit = defineEmits<{
   navigate: [direction: number];
 }>();
 
-const WHEEL_NAVIGATION_COOLDOWN_MS = 360;
+const WHEEL_NAVIGATION_COOLDOWN_MS = 520;
 const MIN_SCALE = 0.3;
 const MAX_SCALE = 5;
 const ZOOM_STEP = 0.1;
@@ -94,10 +94,18 @@ function requestClose(): void {
 
 function wheel(event: WheelEvent): void {
   event.preventDefault();
-  if (event.deltaY === 0 || wheelNavigationLocked.value) return;
+  if (event.deltaY === 0) return;
+  if (wheelNavigationLocked.value) {
+    scheduleWheelNavigationUnlock();
+    return;
+  }
   if (!navigate(event.deltaY > 0 ? 1 : -1)) return;
 
   wheelNavigationLocked.value = true;
+  scheduleWheelNavigationUnlock();
+}
+
+function scheduleWheelNavigationUnlock(): void {
   window.clearTimeout(wheelNavigationTimer);
   wheelNavigationTimer = window.setTimeout(() => {
     wheelNavigationLocked.value = false;

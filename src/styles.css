@@ -2629,7 +2629,8 @@ button.todo-notify-button.has-time {
 
 .todo-item.is-notify-flashing,
 .today-focus-item.is-notify-flashing {
-  animation: todo-notify-flash 0.8s ease-in-out 3;
+  animation: todo-notify-flash 1.05s var(--motion-ease) 3;
+  will-change: background-color, box-shadow;
 }
 
 .deadline-overdue .todo-deadline-label {
@@ -3010,12 +3011,18 @@ button.todo-section-menu-button {
 @keyframes todo-notify-flash {
   0%,
   100% {
-    background: transparent;
+    background-color: transparent;
     box-shadow: none;
   }
 
+  18%,
+  82% {
+    background-color: color-mix(in srgb, var(--primary) 8%, transparent);
+    box-shadow: inset 0 0 0 1px color-mix(in srgb, var(--primary) 20%, transparent);
+  }
+
   50% {
-    background: color-mix(in srgb, var(--primary) 18%, transparent);
+    background-color: color-mix(in srgb, var(--primary) 18%, transparent);
     box-shadow: inset 0 0 0 1px color-mix(in srgb, var(--primary) 48%, transparent);
   }
 }

@@ -197,13 +197,15 @@ describe("ImagePreview", () => {
       expect(wrapper.get(".preview-stage img").attributes("style")).toContain("scale(1)");
       expect(wrapper.emitted("navigate")).toEqual([[1]]);
 
-      await vi.advanceTimersByTimeAsync(260);
-      wrapper.get(".preview-stage").element.dispatchEvent(new WheelEvent("wheel", { bubbles: true, cancelable: true, deltaY: -80 }));
-      await wrapper.vm.$nextTick();
+      for (let index = 0; index < 5; index += 1) {
+        await vi.advanceTimersByTimeAsync(180);
+        wrapper.get(".preview-stage").element.dispatchEvent(new WheelEvent("wheel", { bubbles: true, cancelable: true, deltaY: index % 2 === 0 ? 80 : -80 }));
+        await wrapper.vm.$nextTick();
+      }
 
       expect(wrapper.emitted("navigate")).toEqual([[1]]);
 
-      await vi.advanceTimersByTimeAsync(100);
+      await vi.advanceTimersByTimeAsync(520);
       wrapper.get(".preview-stage").element.dispatchEvent(new WheelEvent("wheel", { bubbles: true, cancelable: true, deltaY: -80 }));
       await wrapper.vm.$nextTick();
 
