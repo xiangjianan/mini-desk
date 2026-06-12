@@ -644,7 +644,7 @@ describe("ImagePreview", () => {
     }
   });
 
-  it("returns focus to the preview surface after pointer navigation so Enter does not repeat it", async () => {
+  it("returns focus to the preview surface after pointer navigation so Enter opens the editor without repeating navigation", async () => {
     const host = document.createElement("div");
     document.body.append(host);
     const wrapper = mount(ImagePreview, {
@@ -682,7 +682,8 @@ describe("ImagePreview", () => {
       await wrapper.vm.$nextTick();
 
       expect(wrapper.emitted("navigate")).toEqual([[1]]);
-      expect(wrapper.emitted("copy")).toEqual([["img-1"]]);
+      expect(wrapper.find(".image-editor").exists()).toBe(true);
+      expect(wrapper.emitted("copy")).toBeUndefined();
     } finally {
       wrapper.unmount();
       host.remove();
@@ -735,7 +736,7 @@ describe("ImagePreview", () => {
     }
   });
 
-  it("routes preview keyboard shortcuts to the active image", async () => {
+  it("opens the editor with Enter, keeps 5 as copy, and routes delete shortcuts to the active image", async () => {
     vi.useFakeTimers();
     const wrapper = mount(ImagePreview, {
       props: {
@@ -755,13 +756,16 @@ describe("ImagePreview", () => {
     });
 
     await wrapper.get(".image-preview").trigger("keydown", { key: "Enter" });
+    expect(wrapper.find(".image-editor").exists()).toBe(true);
+    expect(wrapper.emitted("copy")).toBeUndefined();
+
     await wrapper.get(".image-preview").trigger("keydown", { key: "5" });
     await wrapper.get(".image-preview").trigger("keydown", { key: "Backspace" });
     await wrapper.get(".image-preview").trigger("keydown", { key: "Delete" });
     try {
       await wrapper.get(".image-preview").trigger("keydown", { key: "Escape" });
 
-      expect(wrapper.emitted("copy")).toEqual([["img-1"], ["img-1"]]);
+      expect(wrapper.emitted("copy")).toEqual([["img-1"]]);
       expect(wrapper.emitted("delete")?.map((event) => event[0])).toEqual(["img-1", "img-1"]);
       expect(wrapper.get(".image-preview").classes()).toContain("is-closing");
       expect(wrapper.emitted("close")).toBeUndefined();
@@ -773,6 +777,40 @@ describe("ImagePreview", () => {
       wrapper.unmount();
       vi.useRealTimers();
     }
+  });
+
+  it("saves the image with Enter while the editor is open", async () => {
+    const wrapper = mount(ImagePreview, {
+      props: {
+        images: [{ id: "img-1", src: "data:image/png;base64,one", createdAt: 1, displayWidth: 400, displayHeight: 300 }],
+        activeId: "img-1",
+      },
+      global: {
+        stubs: {
+          Button: buttonStub,
+          Dropdown: dropdownStub,
+          Modal: modalStub,
+          NButton: buttonStub,
+          NDropdown: dropdownStub,
+          NModal: modalStub,
+        },
+      },
+    });
+
+    await wrapper.get(".image-preview").trigger("keydown", { key: "Enter" });
+    await wrapper.get(".image-preview").trigger("keydown", { key: "Enter" });
+
+    expect(wrapper.emitted("saveEdit")?.[0]).toEqual([
+      {
+        id: "img-1",
+        src: "data:image/png;base64,edited",
+        displayWidth: 400,
+        displayHeight: 300,
+      },
+    ]);
+    expect(wrapper.find(".image-editor").exists()).toBe(false);
+    expect(wrapper.emitted("copy")).toBeUndefined();
+    wrapper.unmount();
   });
 
   it("uses WASD keys to navigate images", async () => {

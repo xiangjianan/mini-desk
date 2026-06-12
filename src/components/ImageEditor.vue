@@ -36,6 +36,8 @@ const emit = defineEmits<{
   save: [payload: { id: string; src: string; displayWidth: number; displayHeight: number }];
 }>();
 
+defineExpose({ saveImage });
+
 const colorOptions: { value: EditorColor; key: "red" | "green" | "blue" | "yellow" | "black" | "white" }[] = [
   { value: "#ef4444", key: "red" },
   { value: "#22c55e", key: "green" },
@@ -354,7 +356,7 @@ function saveImage(): void {
 </script>
 
 <template>
-  <section class="image-editor" :aria-label="editorText.title">
+  <section class="image-editor" :aria-label="editorText.title" @keydown.enter.stop.prevent="saveImage">
     <header class="image-editor-toolbar">
       <div class="image-editor-tool-group" role="toolbar" :aria-label="editorText.tools">
         <button

@@ -201,4 +201,29 @@ describe("ImageEditor", () => {
     });
     wrapper.unmount();
   });
+
+  it("saves when Enter is pressed inside the editor", async () => {
+    const wrapper = mount(ImageEditor, {
+      props: {
+        image: { id: "img-1", src: "data:image/png;base64,one", createdAt: 1, displayWidth: 400, displayHeight: 300 },
+      },
+      global: {
+        stubs: {
+          NIcon: iconStub,
+        },
+      },
+    });
+
+    await wrapper.get(".image-editor").trigger("keydown", { key: "Enter" });
+
+    expect(wrapper.emitted("save")?.[0]).toEqual([
+      {
+        id: "img-1",
+        src: "data:image/png;base64,edited",
+        displayWidth: 400,
+        displayHeight: 300,
+      },
+    ]);
+    wrapper.unmount();
+  });
 });
