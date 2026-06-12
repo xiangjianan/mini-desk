@@ -70,6 +70,9 @@ const TODO_NOTIFICATION_FALLBACK_INTERVAL_MS = 30_000;
 const MAX_TODO_NOTIFICATION_TIMEOUT_MS = 2_147_483_647;
 const UNDO_HISTORY_LIMIT = 50;
 const IMAGE_PREVIEW_CLOSE_MS = 220;
+const IMAGE_PREVIEW_OVERLOAD_THRESHOLD = 20;
+const TODO_DENSITY_THRESHOLD = 7;
+const QUICK_DENSITY_THRESHOLD = 12;
 const STATE_SYNC_CHANNEL = "mini-desk-state-sync";
 const mobileCompanionPosition: { right: string; bottom: string } = { right: "18px", bottom: "28px" };
 
@@ -84,6 +87,7 @@ const lastUndoSnapshot = ref(exportJsonState(state));
 const activePreviewId = ref<string | undefined>();
 const closingPreviewId = ref<string | undefined>();
 const previewCloseTimer = ref<number | undefined>();
+const activeEditorId = ref<string | undefined>();
 const bubbleMessage = ref("");
 const bubbleLink = ref<{ text: string; href: string } | null>(null);
 const bubbleSignature = ref("");
@@ -144,6 +148,15 @@ type PersistOptions = {
   force?: boolean;
 };
 
+type WorkspaceDensityState = "saved" | "saving" | "dirty";
+type DensityAreaType = "todos" | "quickButtons" | "images";
+
+type DensityArea = {
+  type: DensityAreaType;
+  label: string;
+  count: number;
+};
+
 const GUIDE_MESSAGE_DURATION_MS = 5000;
 const GITHUB_ISSUE_URL = "https://github.com/xiangjianan/mini-desk/issues/new";
 const GITHUB_REPO_URL = "https://github.com/xiangjianan/mini-desk";
@@ -170,10 +183,18 @@ const displayedPreviewId = computed(() => activePreviewId.value ?? closingPrevie
 const imagePreviewClosing = computed(() => Boolean(closingPreviewId.value) && !activePreviewId.value);
 const settingsAppVersion = computed(() => (versionPromptVisible.value ? availableAppVersion.value : appVersion.value));
 const saveStatus = ref<"saved" | "saving" | "dirty">("saved");
-const saveStatusLabel = computed(() => {
-  if (saveStatus.value === "dirty") return uiText.value.app.dirty;
-  if (saveStatus.value === "saving") return uiText.value.app.saving;
-  return uiText.value.app.saved;
+const densityAreas = computed(() => getDensityAreas());
+const overLimitDensityAreas = computed(() => densityAreas.value.filter((area) => area.count > getDensityThreshold(area.type)));
+const workspaceDensityStatus = computed<WorkspaceDensityState>(() => {
+  const overTypes = new Set(overLimitDensityAreas.value.map((area) => area.type));
+  if (overTypes.size >= 3) return "dirty";
+  if (overTypes.size > 0) return "saving";
+  return "saved";
+});
+const workspaceDensityLabel = computed(() => {
+  if (workspaceDensityStatus.value === "dirty") return uiText.value.app.densityCrowded;
+  if (workspaceDensityStatus.value === "saving") return uiText.value.app.densityWarning;
+  return uiText.value.app.densityGood;
 });
 
 const titles = computed(() =>
@@ -697,6 +718,7 @@ function deleteImage(id: string, anchor?: HTMLElement): void {
     if (activePreviewId.value === id) {
       if (nextPreviewImage) {
         activePreviewId.value = nextPreviewImage.id;
+        activeEditorId.value = undefined;
         closingPreviewId.value = undefined;
         window.clearTimeout(previewCloseTimer.value);
         previewCloseTimer.value = undefined;
@@ -717,7 +739,20 @@ function openImagePreview(id: string): void {
   previewCloseTimer.value = undefined;
   closingPreviewId.value = undefined;
   hideCompanion();
+  activeEditorId.value = undefined;
   activePreviewId.value = id;
+  if (state.images.length > IMAGE_PREVIEW_OVERLOAD_THRESHOLD) {
+    showBubble("imageOverload", document.querySelector<HTMLElement>(".image-panel") ?? undefined, { hideCompanionAfter: true });
+  }
+}
+
+function openImageEditor(id: string): void {
+  window.clearTimeout(previewCloseTimer.value);
+  previewCloseTimer.value = undefined;
+  closingPreviewId.value = undefined;
+  hideCompanion();
+  activePreviewId.value = id;
+  activeEditorId.value = id;
 }
 
 function closeImagePreview(): void {
@@ -726,6 +761,7 @@ function closeImagePreview(): void {
   window.clearTimeout(previewCloseTimer.value);
   closingPreviewId.value = previewId;
   activePreviewId.value = undefined;
+  activeEditorId.value = undefined;
   previewCloseTimer.value = window.setTimeout(() => {
     closingPreviewId.value = undefined;
     previewCloseTimer.value = undefined;
@@ -736,7 +772,32 @@ function clearImagePreview(): void {
   window.clearTimeout(previewCloseTimer.value);
   previewCloseTimer.value = undefined;
   activePreviewId.value = undefined;
+  activeEditorId.value = undefined;
   closingPreviewId.value = undefined;
+}
+
+async function saveEditedImage(payload: { id: string; src: string; displayWidth: number; displayHeight: number }): Promise<void> {
+  if (shouldBlockBoardEffects()) return;
+  const image = state.images.find((item) => item.id === payload.id);
+  if (!image) return;
+  const nextImage: StoredImage = {
+    ...image,
+    src: payload.src,
+    displayWidth: payload.displayWidth,
+    displayHeight: payload.displayHeight,
+  };
+  try {
+    await storeImagePayload(nextImage);
+  } catch {
+    if (shouldBlockBoardEffects()) return;
+    showBubble("imageStoreFailed", document.querySelector<HTMLElement>(".image-preview") ?? undefined, { hideCompanionAfter: true });
+    return;
+  }
+  if (shouldBlockBoardEffects()) return;
+  Object.assign(image, nextImage);
+  persistNow("images");
+  activeEditorId.value = undefined;
+  showBubble("imageEdited", document.querySelector<HTMLElement>(".image-preview") ?? undefined, { hideCompanionAfter: true });
 }
 
 async function copyImage(id: string, anchor?: HTMLElement): Promise<void> {
@@ -1638,7 +1699,10 @@ function navigatePreview(direction: number): void {
   const index = state.images.findIndex((image) => image.id === activePreviewId.value);
   if (index < 0) return;
   const next = state.images[index + direction];
-  if (next) activePreviewId.value = next.id;
+  if (next) {
+    activePreviewId.value = next.id;
+    activeEditorId.value = undefined;
+  }
 }
 
 function showSaveBubble(): void {
@@ -1646,7 +1710,98 @@ function showSaveBubble(): void {
 }
 
 function showSaveStatusTip(anchor?: HTMLElement): void {
-  showBubble("saveStatusLegend", anchor);
+  if (workspaceDensityStatus.value === "saved") {
+    showBubble("workspaceDensityGood", anchor);
+    return;
+  }
+  if (workspaceDensityStatus.value === "dirty") {
+    const summary = overLimitDensityAreas.value
+      .map((area) => `${area.label} ${area.count}`)
+      .join("、");
+    showBubbleText(
+      formatDensitySummaryMessage(getMessage("workspaceDensityAllOver", Math.random, state.language), summary),
+      anchor,
+    );
+    return;
+  }
+  const area = randomDensityArea(overLimitDensityAreas.value);
+  if (!area) {
+    showBubble("workspaceDensityGood", anchor);
+    return;
+  }
+  showBubbleText(
+    formatDensityMessage(getMessage("workspaceDensityAreaOver", Math.random, state.language), area),
+    anchor,
+  );
+}
+
+function getDensityAreas(): DensityArea[] {
+  return [
+    {
+      type: "todos",
+      label: getDensityAreaLabel("todos"),
+      count: getLargestTodoListCount(),
+    },
+    {
+      type: "quickButtons",
+      label: getDensityAreaLabel("quickButtons"),
+      count: getLargestQuickCategoryCount(),
+    },
+    {
+      type: "images",
+      label: getDensityAreaLabel("images"),
+      count: state.images.length,
+    },
+  ];
+}
+
+function getDensityThreshold(type: DensityAreaType): number {
+  if (type === "todos") return TODO_DENSITY_THRESHOLD;
+  if (type === "quickButtons") return QUICK_DENSITY_THRESHOLD;
+  return IMAGE_PREVIEW_OVERLOAD_THRESHOLD;
+}
+
+function getDensityAreaLabel(type: DensityAreaType): string {
+  if (state.language === "en") {
+    if (type === "todos") return "Reminders";
+    if (type === "quickButtons") return "Quick Actions";
+    return "Images";
+  }
+  if (type === "todos") return "提醒事项";
+  if (type === "quickButtons") return "快捷动作";
+  return "图片";
+}
+
+function getLargestTodoListCount(): number {
+  return state.todoLists.reduce((max, list) => {
+    const activeCount = (state.todos[list.id] ?? []).filter((todo) => !todo.done).length;
+    return Math.max(max, activeCount);
+  }, 0);
+}
+
+function getLargestQuickCategoryCount(): number {
+  const counts = new Map<string, number>();
+  state.quickButtons.forEach((button) => {
+    if (button.hidden) return;
+    const tagId = button.tagId ?? "__untagged";
+    counts.set(tagId, (counts.get(tagId) ?? 0) + 1);
+  });
+  return Math.max(0, ...counts.values());
+}
+
+function randomDensityArea(areas: DensityArea[]): DensityArea | undefined {
+  if (areas.length === 0) return undefined;
+  return areas[Math.floor(Math.random() * areas.length)];
+}
+
+function formatDensityMessage(message: string, area: DensityArea): string {
+  return message
+    .replaceAll("{area}", area.label)
+    .replaceAll("{count}", String(area.count));
+}
+
+function formatDensitySummaryMessage(message: string, summary: string): string {
+  return message.replaceAll("{summary}", summary);
 }
 
 function showBubble(messageKey: MessageKey, anchor?: HTMLElement, options: BubbleOptions = {}): void {
@@ -2283,7 +2438,7 @@ function moveItem<T extends { id: string }>(items: T[], dragId: string, targetId
       v-if="!isMobileBlocked"
       title="Mini Desk"
       slogan="Do less, do it well."
-      :save-status-label="saveStatusLabel"
+      :save-status-label="workspaceDensityLabel"
       :theme="state.theme"
       @theme="handleThemeClick"
       @dragover.prevent
@@ -2293,9 +2448,9 @@ function moveItem<T extends { id: string }>(items: T[], dragId: string, targetId
         <span
           class="save-status"
           data-testid="save-status"
-          :data-state="saveStatus"
-          :aria-label="saveStatusLabel"
-          :title="saveStatusLabel"
+          :data-state="workspaceDensityStatus"
+          :aria-label="workspaceDensityLabel"
+          :title="workspaceDensityLabel"
           aria-live="polite"
           role="button"
           tabindex="0"
@@ -2303,7 +2458,7 @@ function moveItem<T extends { id: string }>(items: T[], dragId: string, targetId
           @keydown.enter.prevent="showSaveStatusTip($event.currentTarget as HTMLElement)"
           @keydown.space.prevent="showSaveStatusTip($event.currentTarget as HTMLElement)"
         >
-          <span class="save-status-label">{{ saveStatusLabel }}</span>
+          <span class="save-status-label">{{ workspaceDensityLabel }}</span>
         </span>
       </template>
 
@@ -2339,6 +2494,7 @@ function moveItem<T extends { id: string }>(items: T[], dragId: string, targetId
           @preview="openImagePreview"
           @close-preview="closeImagePreview"
           @copy="copyImage"
+          @edit="openImageEditor"
           @delete="deleteImage"
           @reorder="reorderImages"
           @paste="pasteImageFromClipboard"
@@ -2447,12 +2603,14 @@ function moveItem<T extends { id: string }>(items: T[], dragId: string, targetId
       v-if="!isMobileBlocked"
       :images="state.images"
       :active-id="displayedPreviewId"
+      :edit-id="activeEditorId"
       :closing="imagePreviewClosing"
       :language="state.language"
       @close="clearImagePreview"
       @copy="copyImage"
       @delete="deleteImage"
       @navigate="navigatePreview"
+      @save-edit="saveEditedImage"
     />
 
     <CompanionBubble

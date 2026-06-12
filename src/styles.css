@@ -3501,7 +3501,7 @@ body:has(.image-preview) .image-panel .n-scrollbar {
 
 .preview-main {
   display: grid;
-  grid-template-rows: minmax(0, 1fr) auto;
+  grid-template-rows: minmax(0, 1fr);
   min-width: 0;
   min-height: 0;
   color: var(--text);
@@ -3517,6 +3517,8 @@ body:has(.image-preview) .image-panel .n-scrollbar {
 .preview-stage img {
   width: auto;
   height: auto;
+  min-width: 0;
+  min-height: 0;
   max-width: calc(100vw - var(--image-preview-left, clamp(220px, 18vw, 320px)) - 32px);
   max-height: calc(100vh - var(--image-preview-top, 52px) - 96px);
   object-fit: contain;
@@ -5252,6 +5254,8 @@ html[data-theme="dark"] .image-preview {
 .preview-stage img {
   width: auto;
   height: auto;
+  min-width: 0;
+  min-height: 0;
   max-width: 100%;
   max-height: 100%;
   object-fit: contain;
@@ -5315,6 +5319,9 @@ html[data-theme="dark"] .image-preview {
 }
 
 .preview-actions {
+  position: absolute;
+  bottom: 14px;
+  left: 50%;
   justify-self: center;
   display: inline-flex;
   align-items: center;
@@ -5332,6 +5339,383 @@ html[data-theme="dark"] .image-preview {
     inset 0 -1px 0 rgba(255, 255, 255, 0.08);
   -webkit-backdrop-filter: blur(28px) saturate(1.75);
   backdrop-filter: blur(28px) saturate(1.75);
+  transform: translateX(-50%);
+}
+
+.image-editor {
+  display: grid;
+  grid-template-rows: auto minmax(0, 1fr);
+  min-width: 0;
+  min-height: 0;
+  padding: 12px;
+  color: var(--text);
+}
+
+.image-editor-toolbar {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  min-width: 0;
+  padding: 7px;
+  border: 1px solid color-mix(in srgb, var(--border) 64%, transparent);
+  border-radius: var(--radius);
+  background: color-mix(in srgb, var(--material-elevated) 82%, transparent);
+  -webkit-backdrop-filter: blur(22px) saturate(1.45);
+  backdrop-filter: blur(22px) saturate(1.45);
+}
+
+.image-editor-tool-group,
+.image-editor-actions {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  min-width: 0;
+}
+
+.image-editor-tool,
+.image-editor-color,
+.image-editor-reset {
+  position: relative;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 30px;
+  height: 30px;
+  min-width: 30px;
+  border: 1px solid transparent;
+  border-radius: 999px;
+  background: transparent;
+  color: var(--text);
+  cursor: pointer;
+  transition:
+    background-color 120ms ease,
+    border-color 120ms ease,
+    transform 120ms ease;
+}
+
+.image-editor-tool[data-tooltip]::after {
+  position: absolute;
+  top: calc(100% + 8px);
+  left: 50%;
+  z-index: 8;
+  display: block;
+  padding: 4px 7px;
+  border: 1px solid color-mix(in srgb, var(--border) 62%, transparent);
+  border-radius: 7px;
+  background: color-mix(in srgb, var(--material-elevated) 92%, transparent);
+  color: var(--text);
+  font-size: 12px;
+  line-height: 1.2;
+  white-space: nowrap;
+  pointer-events: none;
+  opacity: 0;
+  transform: translate(-50%, -2px);
+  transition:
+    opacity 120ms ease,
+    transform 120ms ease;
+  content: attr(data-tooltip);
+}
+
+.image-editor-tool[data-tooltip]:hover::after,
+.image-editor-tool[data-tooltip]:focus-visible::after {
+  opacity: 1;
+  transform: translate(-50%, 0);
+  content: attr(data-tooltip);
+}
+
+.image-editor-tool:hover,
+.image-editor-tool:focus-visible,
+.image-editor-reset:hover,
+.image-editor-reset:focus-visible {
+  background: color-mix(in srgb, var(--card) 48%, transparent);
+  outline: 0;
+}
+
+.image-editor-tool.is-active,
+.image-editor-color.is-active {
+  border-color: color-mix(in srgb, var(--line-focus) 86%, transparent);
+  background: color-mix(in srgb, var(--line-focus) 16%, transparent);
+}
+
+.image-editor-ellipse-icon {
+  width: 17px;
+  height: 11px;
+  border: 1px solid currentColor;
+  border-radius: 999px;
+}
+
+.image-editor-marker-icon {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 17px;
+  height: 17px;
+  border: 1px solid currentColor;
+  border-radius: 999px;
+  font-size: 10px;
+  font-weight: 600;
+  line-height: 1;
+}
+
+.image-editor-color {
+  width: 22px;
+  height: 22px;
+  min-width: 22px;
+  border-color: color-mix(in srgb, var(--border) 74%, rgba(255, 255, 255, 0.48));
+}
+
+.image-editor-width-label {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  min-width: 118px;
+  color: var(--muted);
+}
+
+.image-editor-width-preview {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 24px;
+  height: 24px;
+  min-width: 24px;
+  border: 1px solid color-mix(in srgb, var(--border) 64%, transparent);
+  border-radius: 999px;
+  background: color-mix(in srgb, var(--card) 42%, transparent);
+}
+
+.image-editor-width-preview-mark {
+  display: block;
+  min-width: 2px;
+  min-height: 2px;
+  max-width: 18px;
+  max-height: 18px;
+  border-radius: 999px;
+}
+
+.image-editor-width {
+  width: 88px;
+  accent-color: var(--line-focus);
+}
+
+.image-editor-actions {
+  margin-left: auto;
+}
+
+.image-editor-cancel,
+.image-editor-save {
+  min-width: 52px;
+  height: 30px;
+  padding: 0 12px;
+  border: 1px solid color-mix(in srgb, var(--border) 68%, transparent);
+  border-radius: var(--radius);
+  background: transparent;
+  color: var(--text);
+  font-size: var(--app-font-size);
+  cursor: pointer;
+}
+
+.image-editor-save {
+  border-color: color-mix(in srgb, var(--line-focus) 78%, transparent);
+  background: color-mix(in srgb, var(--line-focus) 14%, transparent);
+}
+
+.image-editor--preview {
+  position: relative;
+  display: grid;
+  grid-template-rows: minmax(0, 1fr);
+  min-width: 0;
+  min-height: 0;
+  padding: 0;
+}
+
+.preview-main > .image-editor--preview {
+  grid-area: 1 / 1;
+  min-height: 0;
+}
+
+.image-editor--preview .image-editor-toolbar.preview-actions {
+  position: absolute;
+  bottom: 14px;
+  left: 50%;
+  z-index: 5;
+  display: inline-flex;
+  width: auto;
+  min-height: 44px;
+  margin: 0;
+  padding: 5px 7px;
+  border: 1px solid color-mix(in srgb, var(--border) 58%, rgba(255, 255, 255, 0.38));
+  border-radius: 999px;
+  background: color-mix(in srgb, var(--material-elevated) 74%, transparent);
+  box-shadow:
+    0 14px 44px rgba(0, 0, 0, 0.16),
+    inset 0 1px 0 rgba(255, 255, 255, 0.26),
+    inset 0 -1px 0 rgba(255, 255, 255, 0.08);
+  -webkit-backdrop-filter: blur(28px) saturate(1.75);
+  backdrop-filter: blur(28px) saturate(1.75);
+  transform: translateX(-50%);
+}
+
+.image-editor--preview .image-editor-toolbar.preview-actions .image-editor-actions {
+  margin-left: 0;
+}
+
+.image-editor-stage {
+  position: relative;
+  display: grid;
+  place-items: center;
+  min-width: 0;
+  min-height: 0;
+  margin-top: 12px;
+  overflow: visible;
+}
+
+.image-editor--preview .image-editor-stage {
+  grid-area: 1 / 1;
+  width: 100%;
+  height: 100%;
+  margin-top: 0;
+  overflow: hidden;
+}
+
+.image-editor-canvas-wrap {
+  position: relative;
+  display: grid;
+  place-items: center;
+  max-width: 100%;
+  max-height: 100%;
+}
+
+.image-editor--preview .image-editor-canvas-wrap {
+  width: auto;
+  height: auto;
+  min-width: 0;
+  min-height: 0;
+  max-width: 100%;
+  max-height: 100%;
+}
+
+.image-editor-source,
+.image-editor-canvas {
+  grid-area: 1 / 1;
+  width: auto;
+  height: auto;
+  max-width: 100%;
+  max-height: 100%;
+  object-fit: contain;
+}
+
+.image-editor-source {
+  pointer-events: none;
+  user-select: none;
+}
+
+.image-editor-canvas {
+  border-radius: 0;
+  box-shadow: 0 10px 28px rgba(0, 0, 0, 0.14);
+  cursor: crosshair;
+  touch-action: none;
+  z-index: 1;
+}
+
+.image-editor-crop-actions {
+  position: absolute;
+  z-index: 2;
+  display: inline-flex;
+  gap: 6px;
+  transform: translate(8px, 8px);
+}
+
+.image-editor-crop-action {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 28px;
+  height: 28px;
+  border: 1px solid color-mix(in srgb, currentColor 42%, transparent);
+  border-radius: 999px;
+  background: color-mix(in srgb, var(--material-elevated) 82%, transparent);
+  -webkit-backdrop-filter: blur(16px) saturate(1.6);
+  backdrop-filter: blur(16px) saturate(1.6);
+  box-shadow: 0 6px 18px rgba(15, 23, 42, 0.2);
+  cursor: pointer;
+}
+
+.image-editor-crop-cancel {
+  color: #ef4444;
+}
+
+.image-editor-crop-apply {
+  color: #22c55e;
+}
+
+.image-editor-text-box {
+  position: absolute;
+  z-index: 3;
+  min-width: 112px;
+  cursor: move;
+}
+
+.image-editor-text-box.is-active .image-editor-text-input {
+  border-color: color-mix(in srgb, var(--line-focus) 82%, transparent);
+  box-shadow:
+    0 0 0 2px color-mix(in srgb, var(--line-focus) 16%, transparent),
+    0 8px 20px rgba(15, 23, 42, 0.16);
+}
+
+.image-editor-text-input {
+  min-width: 112px;
+  max-width: min(280px, 42vw);
+  min-height: 32px;
+  padding: 4px 8px;
+  border: 1px dashed transparent;
+  border-radius: 7px;
+  background: transparent;
+  color: currentColor;
+  font-family: system-ui, -apple-system, BlinkMacSystemFont, sans-serif;
+  font-weight: 600;
+  outline: 0;
+  cursor: text;
+  overflow: hidden;
+  resize: both;
+  text-shadow:
+    0 1px 0 #ffffff,
+    1px 0 0 #ffffff,
+    0 -1px 0 #ffffff,
+    -1px 0 0 #ffffff;
+  -webkit-backdrop-filter: blur(12px) saturate(1.4);
+  backdrop-filter: blur(12px) saturate(1.4);
+  field-sizing: content;
+}
+
+.image-editor-text-input.is-transparent {
+  border-color: transparent;
+  box-shadow: none;
+}
+
+.image-editor-text-box.is-active .image-editor-text-input.is-transparent {
+  border-color: transparent;
+  box-shadow: none;
+}
+
+.image-editor-text-input::placeholder {
+  color: color-mix(in srgb, currentColor 48%, transparent);
+}
+
+.image-editor-cursor {
+  position: absolute;
+  right: 12px;
+  bottom: 12px;
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  padding: 4px 7px;
+  border: 1px solid color-mix(in srgb, var(--border) 64%, transparent);
+  border-radius: 999px;
+  background: color-mix(in srgb, var(--material-elevated) 76%, transparent);
+  color: var(--muted);
+  font-size: 12px;
+  pointer-events: none;
 }
 
 .todo-collapse-button,

@@ -118,7 +118,7 @@ describe("ImagePanel", () => {
     wrapper.unmount();
   });
 
-  it("keeps image item context menus focused on preview, copy, delete, and guide actions", async () => {
+  it("keeps image item context menus focused on preview, copy, edit, delete, and guide actions", async () => {
     const wrapper = mountImagePanel([
       { id: "a", src: "data:image/png;base64,a", createdAt: 1 },
       { id: "b", src: "data:image/png;base64,b", createdAt: 2 },
@@ -130,6 +130,7 @@ describe("ImagePanel", () => {
     expect(wrapper.findAll(".dropdown-option").map((option) => option.text())).toEqual([
       "预览",
       "复制",
+      "编辑",
       "删除",
       "Tips",
     ]);
@@ -138,6 +139,30 @@ describe("ImagePanel", () => {
     expect(wrapper.text()).not.toContain("取消置顶");
     expect(wrapper.text()).not.toContain("置底");
 
+    wrapper.unmount();
+  });
+
+  it("emits edit from the image item context menu", async () => {
+    const wrapper = mountImagePanel([
+      { id: "img-1", src: "data:image/png;base64,one", createdAt: 1 },
+    ]);
+
+    await wrapper.get(".image-card").trigger("contextmenu");
+    await wrapper.findAll(".dropdown-option").find((option) => option.text() === "编辑")?.trigger("click");
+
+    expect(wrapper.emitted("edit")?.[0]).toEqual(["img-1"]);
+    wrapper.unmount();
+  });
+
+  it("opens editing from a focused image card when Enter is pressed", async () => {
+    const wrapper = mountImagePanel([
+      { id: "img-1", src: "data:image/png;base64,one", createdAt: 1 },
+    ]);
+
+    await wrapper.get(".image-card").trigger("keydown", { key: "Enter" });
+
+    expect(wrapper.emitted("edit")?.[0]).toEqual(["img-1"]);
+    expect(wrapper.emitted("copy")).toBeUndefined();
     wrapper.unmount();
   });
 
@@ -155,6 +180,7 @@ describe("ImagePanel", () => {
     expect(wrapper.findAll(".dropdown-option").map((option) => option.text())).toEqual([
       "取消预览",
       "复制",
+      "编辑",
       "删除",
       "Tips",
     ]);
@@ -180,6 +206,7 @@ describe("ImagePanel", () => {
     expect(wrapper.findAll(".dropdown-option").map((option) => option.text())).toEqual([
       "取消预览",
       "复制",
+      "编辑",
       "删除",
       "Tips",
     ]);

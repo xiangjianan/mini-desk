@@ -1,16 +1,18 @@
 <script setup lang="ts">
-import { computed, h, onMounted, onUnmounted, ref, watch } from "vue";
+import { computed, h, nextTick, onMounted, onUnmounted, ref, watch } from "vue";
 import type { Component, VNode } from "vue";
-import { AddOutline, ChevronDownOutline, ChevronUpOutline, CloseOutline, CopyOutline, HelpCircleOutline, RemoveOutline, TrashOutline } from "@vicons/ionicons5";
+import { AddOutline, ChevronDownOutline, ChevronUpOutline, CloseOutline, CopyOutline, CreateOutline, HelpCircleOutline, RemoveOutline, TrashOutline } from "@vicons/ionicons5";
 import { NDropdown, NIcon, NModal } from "naive-ui";
 import type { DropdownOption } from "naive-ui";
 import { getUiText } from "../state/i18n";
 import type { AppLanguage, StoredImage } from "../types";
 import { CONTEXT_MENU_Z_INDEX, createExclusiveContextMenu } from "../utils/contextMenu";
+import ImageEditor from "./ImageEditor.vue";
 
 const props = withDefaults(defineProps<{
   images: StoredImage[];
   activeId?: string;
+  editId?: string;
   language?: AppLanguage;
   closing?: boolean;
 }>(), {
@@ -23,6 +25,7 @@ const emit = defineEmits<{
   copy: [id: string];
   delete: [id: string, anchor?: HTMLElement];
   navigate: [direction: number];
+  saveEdit: [payload: { id: string; src: string; displayWidth: number; displayHeight: number }];
 }>();
 
 const MIN_SCALE = 0.3;
@@ -30,13 +33,21 @@ const MAX_SCALE = 5;
 const ZOOM_STEP = 0.1;
 const DOUBLE_CLICK_SCALE = 2;
 
+interface ImageSize {
+  width: number;
+  height: number;
+}
+
 const scale = ref(1);
 const offset = ref({ x: 0, y: 0 });
 const dragging = ref(false);
+const editing = ref(props.editId === props.activeId && Boolean(props.activeId));
 const localClosing = ref(false);
 const previewRef = ref<HTMLElement | null>(null);
+const previewImageRef = ref<HTMLImageElement | null>(null);
 const start = ref({ x: 0, y: 0, ox: 0, oy: 0 });
 const menu = ref<{ x: number; y: number; id: string; anchor?: HTMLElement } | null>(null);
+const editorFrame = ref<{ width: number; height: number } | null>(null);
 let closeTimer: number | undefined;
 
 const uiText = computed(() => getUiText(props.language));
@@ -45,19 +56,17 @@ const activeIndex = computed(() => props.images.findIndex((image) => image.id ==
 const canNavigatePrevious = computed(() => activeIndex.value > 0);
 const canNavigateNext = computed(() => activeIndex.value >= 0 && activeIndex.value < props.images.length - 1);
 const isClosing = computed(() => props.closing || localClosing.value);
+const isDirectEditMode = computed(() => Boolean(props.activeId) && props.editId === props.activeId);
 const activeImageStyle = computed(() => {
-  const style: { width?: string; height?: string; transform: string } = {
+  const style = {
     transform: `translate(${offset.value.x}px, ${offset.value.y}px) scale(${scale.value})`,
   };
-  if (isPositiveDimension(active.value?.displayWidth) && isPositiveDimension(active.value?.displayHeight)) {
-    style.width = `${active.value.displayWidth}px`;
-    style.height = `${active.value.displayHeight}px`;
-  }
   return style;
 });
 const menuOptions = computed<DropdownOption[]>(() => [
   { label: uiText.value.preview.close, key: "close", icon: renderIcon(CloseOutline) },
   { label: uiText.value.common.copy, key: "copy", icon: renderIcon(CopyOutline) },
+  { label: uiText.value.common.edit, key: "edit", icon: renderIcon(CreateOutline) },
   { label: uiText.value.common.delete, key: "delete", icon: renderIcon(TrashOutline) },
   { label: uiText.value.common.tips, key: "tips", icon: renderIcon(HelpCircleOutline) },
 ]);
@@ -67,13 +76,14 @@ function renderIcon(icon: Component): () => VNode {
   return () => h(NIcon, { size: 16 }, { default: () => h(icon) });
 }
 
-function isPositiveDimension(value: number | undefined): value is number {
-  return typeof value === "number" && Number.isFinite(value) && value > 0;
-}
-
-onMounted(exclusiveMenu.mount);
+onMounted(() => {
+  exclusiveMenu.mount();
+  window.addEventListener("keydown", handleWindowKeydown, { capture: true });
+  void syncDirectEditorFrame();
+});
 onUnmounted(() => {
   exclusiveMenu.unmount();
+  window.removeEventListener("keydown", handleWindowKeydown, { capture: true });
   window.clearTimeout(closeTimer);
 });
 
@@ -83,14 +93,26 @@ watch(
     window.clearTimeout(closeTimer);
     closeTimer = undefined;
     localClosing.value = false;
+    editing.value = props.editId === props.activeId && Boolean(props.activeId);
     scale.value = 1;
     offset.value = { x: 0, y: 0 };
+    editorFrame.value = null;
+    void syncDirectEditorFrame();
+  },
+);
+
+watch(
+  () => props.editId,
+  () => {
+    editing.value = props.editId === props.activeId && Boolean(props.activeId);
+    void syncDirectEditorFrame();
   },
 );
 
 function requestClose(): void {
   if (localClosing.value || props.closing) return;
   closeMenu();
+  editing.value = false;
   dragging.value = false;
   localClosing.value = true;
   window.clearTimeout(closeTimer);
@@ -108,6 +130,7 @@ function navigate(direction: number): boolean {
   if (direction < 0 && !canNavigatePrevious.value) return false;
   if (direction > 0 && !canNavigateNext.value) return false;
   closeMenu();
+  editing.value = false;
   emit("navigate", direction);
   return true;
 }
@@ -181,6 +204,85 @@ function closeMenu(): void {
   menu.value = null;
 }
 
+function openEditor(): void {
+  if (!active.value?.src) return;
+  closeMenu();
+  dragging.value = false;
+  editorFrame.value = measurePreviewImageFrame();
+  editing.value = true;
+}
+
+function closeEditor(): void {
+  editing.value = false;
+  editorFrame.value = null;
+}
+
+function exitEditorFromShortcut(): void {
+  requestClose();
+}
+
+function saveEditor(payload: { id: string; src: string; displayWidth: number; displayHeight: number }): void {
+  emit("saveEdit", payload);
+  editing.value = false;
+  editorFrame.value = null;
+}
+
+function measurePreviewImageFrame(): { width: number; height: number } | null {
+  const rect = previewImageRef.value?.getBoundingClientRect();
+  if (!rect || rect.width <= 0 || rect.height <= 0) return null;
+  const currentScale = scale.value || 1;
+  return {
+    width: rect.width / currentScale,
+    height: rect.height / currentScale,
+  };
+}
+
+async function syncDirectEditorFrame(): Promise<void> {
+  if (!editing.value || !isDirectEditMode.value) return;
+  const image = active.value;
+  const id = image?.id;
+  const src = image?.src;
+  if (!image || !id) return;
+  await nextTick();
+  const imageSize = await resolveImageSize(image);
+  if (!imageSize || !editing.value || !isDirectEditMode.value || active.value?.id !== id || active.value?.src !== src) return;
+  await nextTick();
+  const frame = measureDirectEditorFrame(imageSize);
+  if (frame) editorFrame.value = frame;
+}
+
+async function resolveImageSize(image: StoredImage): Promise<ImageSize | null> {
+  if (image.displayWidth && image.displayHeight && image.displayWidth > 0 && image.displayHeight > 0) {
+    return { width: image.displayWidth, height: image.displayHeight };
+  }
+  if (!image.src) return null;
+  return readImageSize(image.src);
+}
+
+function readImageSize(src: string): Promise<ImageSize | null> {
+  return new Promise((resolve) => {
+    const image = new Image();
+    image.onload = () => {
+      const width = image.naturalWidth || image.width;
+      const height = image.naturalHeight || image.height;
+      resolve(width > 0 && height > 0 ? { width, height } : null);
+    };
+    image.onerror = () => resolve(null);
+    image.src = src;
+  });
+}
+
+function measureDirectEditorFrame(imageSize: ImageSize): { width: number; height: number } | null {
+  const stage = previewRef.value?.querySelector<HTMLElement>(".image-editor-stage");
+  const rect = stage?.getBoundingClientRect();
+  if (!rect || rect.width <= 0 || rect.height <= 0) return null;
+  const fitScale = Math.min(1, rect.width / imageSize.width, rect.height / imageSize.height);
+  return {
+    width: imageSize.width * fitScale,
+    height: imageSize.height * fitScale,
+  };
+}
+
 function handleMenuSelect(key: string): void {
   const current = menu.value;
   if (!current) return;
@@ -190,6 +292,7 @@ function handleMenuSelect(key: string): void {
     return;
   }
   if (key === "copy") emit("copy", current.id);
+  if (key === "edit") openEditor();
   if (key === "close") requestClose();
   if (key === "delete") emit("delete", current.id, current.anchor);
 }
@@ -203,12 +306,28 @@ function deleteActive(event: MouseEvent): void {
 function handleKeydown(event: KeyboardEvent): void {
   if (!active.value) return;
   const key = event.key.toLowerCase();
+  if (editing.value && event.key === "Escape") {
+    event.preventDefault();
+    event.stopPropagation();
+    exitEditorFromShortcut();
+    return;
+  }
+  if (editing.value && isPreviewShortcutKey(event)) {
+    event.preventDefault();
+    event.stopPropagation();
+    return;
+  }
   if (event.key === "Escape" || event.key === " ") {
     event.preventDefault();
     requestClose();
     return;
   }
-  if (event.key === "Enter" || event.key === "5") {
+  if (event.key === "Enter") {
+    event.preventDefault();
+    openEditor();
+    return;
+  }
+  if (event.key === "5") {
     event.preventDefault();
     emit("copy", active.value.id);
     return;
@@ -229,6 +348,29 @@ function handleKeydown(event: KeyboardEvent): void {
   }
 }
 
+function handleWindowKeydown(event: KeyboardEvent): void {
+  if (!editing.value || !active.value || event.key !== "Escape") return;
+  event.preventDefault();
+  event.stopPropagation();
+  event.stopImmediatePropagation();
+  exitEditorFromShortcut();
+}
+
+function isPreviewShortcutKey(event: KeyboardEvent): boolean {
+  const key = event.key.toLowerCase();
+  return key === "escape"
+    || key === " "
+    || key === "spacebar"
+    || key === "enter"
+    || key === "5"
+    || key === "backspace"
+    || key === "delete"
+    || key === "w"
+    || key === "a"
+    || key === "s"
+    || key === "d";
+}
+
 </script>
 
 <template>
@@ -236,6 +378,7 @@ function handleKeydown(event: KeyboardEvent): void {
     v-if="active"
     :show="true"
     :mask-closable="false"
+    :close-on-esc="false"
     :auto-focus="false"
     :trap-focus="false"
     :block-scroll="false"
@@ -255,76 +398,94 @@ function handleKeydown(event: KeyboardEvent): void {
       @selectstart.prevent
       @contextmenu.prevent="openMenu($event, active.id)"
     >
-      <main class="preview-main">
-        <div class="preview-stage" @wheel="wheel" @mousedown="down">
-          <img
-            v-if="active.src"
-            :key="active.id"
-            :src="active.src"
-            :alt="uiText.preview.imageAlt"
-            draggable="false"
-            :style="activeImageStyle"
-            @contextmenu.prevent="openMenu($event, active.id)"
-            @dblclick.stop.prevent="toggleZoom"
-          />
-        </div>
-        <div class="preview-actions" role="toolbar" :aria-label="uiText.preview.help">
-          <button
-            type="button"
-            class="preview-toolbar-button preview-nav-button is-previous"
-            :aria-label="uiText.preview.previous"
-            :aria-disabled="!canNavigatePrevious"
-            :disabled="!canNavigatePrevious"
-            @click.stop.prevent="navigateFromToolbar(-1)"
-            @keydown.enter.stop.prevent="navigateFromToolbar(-1)"
-            @keydown.space.stop.prevent="requestClose"
-          >
-            <NIcon size="20">
-              <ChevronUpOutline />
-            </NIcon>
-          </button>
-          <button
-            type="button"
-            class="preview-toolbar-button preview-nav-button is-next"
-            :aria-label="uiText.preview.next"
-            :aria-disabled="!canNavigateNext"
-            :disabled="!canNavigateNext"
-            @click.stop.prevent="navigateFromToolbar(1)"
-            @keydown.enter.stop.prevent="navigateFromToolbar(1)"
-            @keydown.space.stop.prevent="requestClose"
-          >
-            <NIcon size="20">
-              <ChevronDownOutline />
-            </NIcon>
-          </button>
-          <button type="button" class="preview-toolbar-button preview-zoom-button is-zoom-out" :aria-label="uiText.preview.zoomOut" @click.stop.prevent="adjustZoom(-ZOOM_STEP)">
-            <NIcon size="18">
-              <RemoveOutline />
-            </NIcon>
-          </button>
-          <button type="button" class="preview-toolbar-button preview-zoom-button is-zoom-in" :aria-label="uiText.preview.zoomIn" @click.stop.prevent="adjustZoom(ZOOM_STEP)">
-            <NIcon size="18">
-              <AddOutline />
-            </NIcon>
-          </button>
-          <button type="button" class="preview-toolbar-button is-delete" :aria-label="uiText.common.delete" @click.stop.prevent="deleteActive">
-            <NIcon size="18">
-              <TrashOutline />
-            </NIcon>
-          </button>
-          <button
-            type="button"
-            class="preview-toolbar-button is-close"
-            :aria-label="uiText.preview.close"
-            @click.stop.prevent="requestClose"
-            @keydown.enter.stop.prevent="requestClose"
-            @keydown.space.stop.prevent="requestClose"
-          >
-            <NIcon size="18">
-              <CloseOutline />
-            </NIcon>
-          </button>
-        </div>
+      <main class="preview-main" :class="{ 'is-editing': editing }">
+        <ImageEditor
+          v-if="editing"
+          :image="active"
+          :language="language"
+          preview-layout
+          :preview-transform="activeImageStyle.transform"
+          :preview-frame="editorFrame"
+          @cancel="closeEditor"
+          @save="saveEditor"
+        />
+        <template v-else>
+          <div class="preview-stage" @wheel="wheel" @mousedown="down">
+            <img
+              v-if="active.src"
+              ref="previewImageRef"
+              :key="active.id"
+              :src="active.src"
+              :alt="uiText.preview.imageAlt"
+              draggable="false"
+              :style="activeImageStyle"
+              @contextmenu.prevent="openMenu($event, active.id)"
+              @dblclick.stop.prevent="toggleZoom"
+            />
+          </div>
+          <div class="preview-actions" role="toolbar" :aria-label="uiText.preview.help">
+            <button
+              type="button"
+              class="preview-toolbar-button preview-nav-button is-previous"
+              :aria-label="uiText.preview.previous"
+              :aria-disabled="!canNavigatePrevious"
+              :disabled="!canNavigatePrevious"
+              @click.stop.prevent="navigateFromToolbar(-1)"
+              @keydown.enter.stop.prevent="navigateFromToolbar(-1)"
+              @keydown.space.stop.prevent="requestClose"
+            >
+              <NIcon size="20">
+                <ChevronUpOutline />
+              </NIcon>
+            </button>
+            <button
+              type="button"
+              class="preview-toolbar-button preview-nav-button is-next"
+              :aria-label="uiText.preview.next"
+              :aria-disabled="!canNavigateNext"
+              :disabled="!canNavigateNext"
+              @click.stop.prevent="navigateFromToolbar(1)"
+              @keydown.enter.stop.prevent="navigateFromToolbar(1)"
+              @keydown.space.stop.prevent="requestClose"
+            >
+              <NIcon size="20">
+                <ChevronDownOutline />
+              </NIcon>
+            </button>
+            <button type="button" class="preview-toolbar-button preview-zoom-button is-zoom-out" :aria-label="uiText.preview.zoomOut" @click.stop.prevent="adjustZoom(-ZOOM_STEP)">
+              <NIcon size="18">
+                <RemoveOutline />
+              </NIcon>
+            </button>
+            <button type="button" class="preview-toolbar-button preview-zoom-button is-zoom-in" :aria-label="uiText.preview.zoomIn" @click.stop.prevent="adjustZoom(ZOOM_STEP)">
+              <NIcon size="18">
+                <AddOutline />
+              </NIcon>
+            </button>
+            <button type="button" class="preview-toolbar-button is-edit" :aria-label="uiText.common.edit" @click.stop.prevent="openEditor">
+              <NIcon size="18">
+                <CreateOutline />
+              </NIcon>
+            </button>
+            <button type="button" class="preview-toolbar-button is-delete" :aria-label="uiText.common.delete" @click.stop.prevent="deleteActive">
+              <NIcon size="18">
+                <TrashOutline />
+              </NIcon>
+            </button>
+            <button
+              type="button"
+              class="preview-toolbar-button is-close"
+              :aria-label="uiText.preview.close"
+              @click.stop.prevent="requestClose"
+              @keydown.enter.stop.prevent="requestClose"
+              @keydown.space.stop.prevent="requestClose"
+            >
+              <NIcon size="18">
+                <CloseOutline />
+              </NIcon>
+            </button>
+          </div>
+        </template>
       </main>
       <NDropdown
         v-if="menu"

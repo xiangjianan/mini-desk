@@ -124,6 +124,7 @@ describe("Naive UI component usage", () => {
 
     expect(preview).toContain("@contextmenu.prevent");
     expect(preview).toContain(':mask-closable="false"');
+    expect(preview).toContain(':close-on-esc="false"');
     expect(preview).not.toContain('@click.self="requestClose"');
     expect(preview).toContain("preview-toolbar-button");
     expect(preview).not.toContain("preview-close-button");

@@ -7,11 +7,15 @@ export type MessageSurface = "companion" | "naive-message";
 export type MessageKey =
   | "save"
   | "stateConflict"
-  | "saveStatusLegend"
+  | "workspaceDensityGood"
+  | "workspaceDensityAreaOver"
+  | "workspaceDensityAllOver"
   | "todoCompleted"
   | "clipboardPasteUnsupported"
   | "clipboardImageMissing"
   | "imageAdded"
+  | "imageOverload"
+  | "imageEdited"
   | "imageCopied"
   | "imageDataCopied"
   | "imageDropIgnored"
@@ -158,20 +162,52 @@ export const MESSAGE_CATALOG: Record<MessageKey, MessageEntry> = {
       "多窗口需同步",
     ],
   },
-  saveStatusLegend: {
+  workspaceDensityGood: {
     mood: "calm",
     surface: "companion",
     variants: [
-      "绿色=已保存；红色=未保存；橙色=保存中",
-      "绿色是已保存，红色是未保存，橙色是保存中",
-      "看到绿色就是已保存；红色是未保存；橙色是保存中",
-      "绿色表示已保存；红色表示未保存；橙色表示保存中",
-      "绿色=已保存；红色=未保存；橙色=保存中",
-      "绿色表示已保存，红色提醒未保存，橙色保存中",
-      "绿色代表已保存，红色代表未保存，橙色代表保存中",
-      "绿色是保存好了；红色是未保存；橙色是保存中",
-      "绿色已保存，红色未保存，橙色保存中",
-      "绿色已收好；红色有未保存内容；橙色保存中",
+      "绿色：各区都清爽",
+      "绿色：空间很轻",
+      "绿色：内容刚刚好",
+      "绿色：各区不拥挤",
+      "绿色：状态很轻松",
+      "绿色：桌面很利落",
+      "绿色：数量很稳",
+      "绿色：结构很轻",
+      "绿色：看板很清爽",
+      "绿色：继续保持",
+    ],
+  },
+  workspaceDensityAreaOver: {
+    mood: "warning",
+    surface: "companion",
+    variants: [
+      "黄色：{area}{count}偏多",
+      "黄色：{area}{count}有点满",
+      "黄色：{area}{count}需整理",
+      "黄色：{area}{count}略拥挤",
+      "黄色：{area}{count}过线了",
+      "黄色：{area}{count}先减点",
+      "黄色：{area}{count}太密了",
+      "黄色：{area}{count}可瘦身",
+      "黄色：{area}{count}建议清",
+      "黄色：{area}{count}留重点",
+    ],
+  },
+  workspaceDensityAllOver: {
+    mood: "warning",
+    surface: "companion",
+    variants: [
+      "红色：{summary}都偏多",
+      "红色：{summary}都过线",
+      "红色：{summary}都拥挤",
+      "红色：{summary}需整理",
+      "红色：{summary}一起减",
+      "红色：{summary}太满了",
+      "红色：{summary}要瘦身",
+      "红色：{summary}先清理",
+      "红色：{summary}负担重",
+      "红色：{summary}留重点",
     ],
   },
   todoCompleted: {
@@ -236,6 +272,38 @@ export const MESSAGE_CATALOG: Record<MessageKey, MessageEntry> = {
       "图片加入完成",
       "截图已添加",
       "图片已归位",
+    ],
+  },
+  imageOverload: {
+    mood: "warning",
+    surface: "companion",
+    variants: [
+      "图片太多，删几张吧",
+      "图片有点满，轻一点",
+      "截图太多，清一清",
+      "图片堆高了，减几张",
+      "列表太挤，收几张",
+      "图片太密，留重点",
+      "先删几张更清爽",
+      "图片爆棚，瘦身吧",
+      "截图太满，整理下",
+      "图片过载，减一点",
+    ],
+  },
+  imageEdited: {
+    mood: "happy",
+    surface: "companion",
+    variants: [
+      "图片已保存",
+      "编辑已保存",
+      "图片已更新",
+      "标注保存好了",
+      "修改已写入",
+      "图片更新完成",
+      "编辑结果已保存",
+      "这张图改好了",
+      "图片已替换",
+      "编辑完成",
     ],
   },
   imageCopied: {
@@ -846,15 +914,59 @@ export const MESSAGE_CATALOG: Record<MessageKey, MessageEntry> = {
 const EN_MESSAGE_VARIANTS = {
   save: ["Saved", "Changes saved", "Your board is up to date"],
   stateConflict: ["Another window saved newer changes", "Newer board data exists in another tab", "Save paused to avoid overwriting another tab"],
-  saveStatusLegend: [
-    "Green means saved. Red means unsaved. Orange means saving.",
-    "Green is saved, red is unsaved, and orange is saving.",
-    "Green means everything is saved. Red means unsaved. Orange means saving.",
+  workspaceDensityGood: [
+    "Green: every area feels light.",
+    "Green: the workspace is easy to scan.",
+    "Green: counts are under control.",
+    "Green: nothing is crowded.",
+    "Green: the board feels tidy.",
+    "Green: every area is manageable.",
+    "Green: the workspace is clear.",
+    "Green: keep this light shape.",
+    "Green: the board is balanced.",
+    "Green: each area has room.",
+  ],
+  workspaceDensityAreaOver: [
+    "Yellow: {area} has {count}.",
+    "Yellow: {area} is at {count}.",
+    "Yellow: trim {area} from {count}.",
+    "Yellow: {area} feels heavy at {count}.",
+    "Yellow: {area} crossed the line at {count}.",
+    "Yellow: clean up {area}; it has {count}.",
+    "Yellow: {area} has grown to {count}.",
+    "Yellow: reduce {area}; it has {count}.",
+    "Yellow: {area} is crowded at {count}.",
+    "Yellow: keep only key items in {area}; now {count}.",
+  ],
+  workspaceDensityAllOver: [
+    "Red: {summary} are all crowded.",
+    "Red: {summary} all crossed the line.",
+    "Red: {summary} all need cleanup.",
+    "Red: {summary} are all heavy.",
+    "Red: trim every area: {summary}.",
+    "Red: reduce the board load: {summary}.",
+    "Red: all key areas are over: {summary}.",
+    "Red: clean up across {summary}.",
+    "Red: the board is overloaded: {summary}.",
+    "Red: keep only essentials in {summary}.",
   ],
   todoCompleted: ["One more reminder completed", "Progress updated", "Reminder completed"],
   clipboardPasteUnsupported: ["Clipboard images are not available here", "Try pressing Ctrl+V to paste an image", "Use the paste shortcut instead"],
   clipboardImageMissing: ["No image found in the clipboard", "Copy an image first", "The clipboard does not contain an image"],
   imageAdded: ["Image added", "Screenshot saved", "Image placed in the list"],
+  imageOverload: [
+    "Too many images. Remove a few.",
+    "This image list is getting heavy.",
+    "Trim a few screenshots.",
+    "Keep the important images.",
+    "A lighter image list is easier to scan.",
+    "Clean up a few images.",
+    "The image area is crowded.",
+    "Archive or remove a few screenshots.",
+    "Reduce the image pile a little.",
+    "A smaller image list will feel lighter.",
+  ],
+  imageEdited: ["Image saved", "Image edit saved", "Image updated"],
   imageCopied: ["Image copied", "Image is ready to paste", "Screenshot copied"],
   imageDataCopied: ["Copied as a Data URL", "Image copied as text", "Data URL copied"],
   imageDropIgnored: ["Non-image files were skipped", "Only images were added", "Unsupported files were ignored"],

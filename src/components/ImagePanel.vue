@@ -2,7 +2,7 @@
 import { computed, h, nextTick, onMounted, onUnmounted, ref, watch } from "vue";
 import type { Component, ComponentPublicInstance, VNode } from "vue";
 import { NDropdown, NIcon, NScrollbar } from "naive-ui";
-import { ClipboardOutline, CloseOutline, CopyOutline, EyeOutline, HelpCircleOutline, TrashOutline } from "@vicons/ionicons5";
+import { ClipboardOutline, CloseOutline, CopyOutline, CreateOutline, EyeOutline, HelpCircleOutline, TrashOutline } from "@vicons/ionicons5";
 import type { DropdownOption } from "naive-ui";
 import type { AppLanguage, GuideKey, StoredImage } from "../types";
 import { GUIDE_MENU_OPTION } from "../state/defaults";
@@ -24,6 +24,7 @@ const emit = defineEmits<{
   preview: [id: string];
   closePreview: [];
   copy: [id: string];
+  edit: [id: string];
   delete: [id: string, anchor?: HTMLElement];
   reorder: [dragId: string, targetId: string];
   paste: [anchor?: HTMLElement];
@@ -121,6 +122,7 @@ const menuOptions = computed<DropdownOption[]>(() =>
           icon: renderIcon(isPreviewCloseMenuItem.value ? CloseOutline : EyeOutline),
         },
         { label: uiText.value.common.copy, key: "copy", icon: renderIcon(CopyOutline) },
+        { label: uiText.value.common.edit, key: "edit", icon: renderIcon(CreateOutline) },
         { label: uiText.value.common.delete, key: "delete", icon: renderIcon(TrashOutline) },
         { ...guideMenuOption.value, icon: renderIcon(HelpCircleOutline) },
       ]
@@ -173,6 +175,7 @@ function handleMenuSelect(key: string): void {
   if (key === "preview") emit("preview", id);
   if (key === "close-preview") emit("closePreview");
   if (key === "copy") emit("copy", id);
+  if (key === "edit") emit("edit", id);
   if (key === "delete") emit("delete", id, anchor);
 }
 
@@ -485,6 +488,7 @@ function handleImageDragWheel(event: WheelEvent): void {
         :class="{ 'is-dragging': draggingId === image.id, 'is-active': image.id === activePreviewId }"
         type="button"
         @click="handleImageCardClick($event, image.id)"
+        @keydown.enter.stop.prevent="emit('edit', image.id)"
         @dblclick.stop.prevent="emit('copy', image.id)"
         @contextmenu.stop="openMenu($event, image.id)"
         @pointerdown="handleImagePointerDown($event, image)"

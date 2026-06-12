@@ -49,6 +49,7 @@ describe("localized public copy", () => {
       "试试把外部图片拖到这里。",
       "Ctrl+V 可以直接粘贴图片。",
       "单击图片可以预览。",
+      "预览时 Enter 可以编辑图片，再按 Enter 保存。",
     ]));
     expect(GUIDE_MESSAGES.en.quickButtons).toEqual(expect.arrayContaining([
       "Use the context menu to hide an action.",
@@ -73,10 +74,25 @@ describe("localized public copy", () => {
     expect(SHORTCUT_HELP.zh.flatMap((section) => section.shortcuts.map((shortcut) => shortcut.key))).toEqual(expect.arrayContaining([
       "Ctrl + S",
       "Esc / Space",
+      "Enter",
+      "5",
       "拖动按钮",
+    ]));
+    const imageShortcuts = SHORTCUT_HELP.zh.find((section) => section.area === "图床与预览")?.shortcuts ?? [];
+    expect(imageShortcuts).toEqual(expect.arrayContaining([
+      { key: "Enter", desc: "编辑图片 / 保存编辑" },
+      { key: "5", desc: "复制图片" },
+    ]));
+    expect(imageShortcuts).not.toEqual(expect.arrayContaining([
+      { key: "5 / Enter", desc: "复制图片" },
     ]));
     expect(SHORTCUT_HELP.zh.flatMap((section) => [section.area, section.summary, ...section.tips, ...section.shortcuts.map((shortcut) => `${shortcut.key} ${shortcut.desc}`)]).join("\n")).not.toContain("工具");
     expect(SHORTCUT_HELP.en.flatMap((section) => section.tips)).toContain("Double-click section titles to rename them, including Focus and space tabs.");
+    const englishImageShortcuts = SHORTCUT_HELP.en.find((section) => section.area === "Images & Preview")?.shortcuts ?? [];
+    expect(englishImageShortcuts).toEqual(expect.arrayContaining([
+      { key: "Enter", desc: "Edit image / Save edit" },
+      { key: "5", desc: "Copy image" },
+    ]));
   });
 
   it("localizes shared menu labels", () => {
