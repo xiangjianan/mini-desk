@@ -520,6 +520,50 @@ describe("ImagePreview", () => {
     }
   });
 
+  it("returns focus to the preview surface after pointer navigation so Enter does not repeat it", async () => {
+    const host = document.createElement("div");
+    document.body.append(host);
+    const wrapper = mount(ImagePreview, {
+      attachTo: host,
+      props: {
+        images: [
+          { id: "img-1", src: "data:image/png;base64,one", createdAt: 1 },
+          { id: "img-2", src: "data:image/png;base64,two", createdAt: 2 },
+          { id: "img-3", src: "data:image/png;base64,three", createdAt: 3 },
+        ],
+        activeId: "img-1",
+      },
+      global: {
+        stubs: {
+          Button: buttonStub,
+          Dropdown: dropdownStub,
+          Modal: modalStub,
+          NButton: buttonStub,
+          NDropdown: dropdownStub,
+          NModal: modalStub,
+        },
+      },
+    });
+
+    try {
+      const next = wrapper.get(".preview-nav-button.is-next");
+      next.element.focus();
+      expect(document.activeElement).toBe(next.element);
+
+      await next.trigger("click");
+      expect(document.activeElement).toBe(wrapper.get(".image-preview").element);
+
+      document.activeElement?.dispatchEvent(new KeyboardEvent("keydown", { key: "Enter", bubbles: true, cancelable: true }));
+      await wrapper.vm.$nextTick();
+
+      expect(wrapper.emitted("navigate")).toEqual([[1]]);
+      expect(wrapper.emitted("copy")).toEqual([["img-1"]]);
+    } finally {
+      wrapper.unmount();
+      host.remove();
+    }
+  });
+
   it("opens a compact context menu over preview images", async () => {
     vi.useFakeTimers();
     const wrapper = mount(ImagePreview, {

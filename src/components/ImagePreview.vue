@@ -34,6 +34,7 @@ const scale = ref(1);
 const offset = ref({ x: 0, y: 0 });
 const dragging = ref(false);
 const localClosing = ref(false);
+const previewRef = ref<HTMLElement | null>(null);
 const start = ref({ x: 0, y: 0, ox: 0, oy: 0 });
 const menu = ref<{ x: number; y: number; id: string; anchor?: HTMLElement } | null>(null);
 let closeTimer: number | undefined;
@@ -95,6 +96,14 @@ function navigate(direction: number): boolean {
   closeMenu();
   emit("navigate", direction);
   return true;
+}
+
+function focusPreviewSurface(): void {
+  previewRef.value?.focus({ preventScroll: true });
+}
+
+function navigateFromToolbar(direction: number): void {
+  if (navigate(direction)) focusPreviewSurface();
 }
 
 function clampScale(value: number): number {
@@ -220,6 +229,7 @@ function handleKeydown(event: KeyboardEvent): void {
     @update:show="(show) => !show && requestClose()"
   >
     <div
+      ref="previewRef"
       class="image-preview"
       :class="{ 'is-closing': isClosing }"
       aria-hidden="false"
@@ -251,8 +261,8 @@ function handleKeydown(event: KeyboardEvent): void {
             :aria-label="uiText.preview.previous"
             :aria-disabled="!canNavigatePrevious"
             :disabled="!canNavigatePrevious"
-            @click.stop.prevent="navigate(-1)"
-            @keydown.enter.stop.prevent="navigate(-1)"
+            @click.stop.prevent="navigateFromToolbar(-1)"
+            @keydown.enter.stop.prevent="navigateFromToolbar(-1)"
             @keydown.space.stop.prevent="requestClose"
           >
             <NIcon size="20">
@@ -265,8 +275,8 @@ function handleKeydown(event: KeyboardEvent): void {
             :aria-label="uiText.preview.next"
             :aria-disabled="!canNavigateNext"
             :disabled="!canNavigateNext"
-            @click.stop.prevent="navigate(1)"
-            @keydown.enter.stop.prevent="navigate(1)"
+            @click.stop.prevent="navigateFromToolbar(1)"
+            @keydown.enter.stop.prevent="navigateFromToolbar(1)"
             @keydown.space.stop.prevent="requestClose"
           >
             <NIcon size="20">
