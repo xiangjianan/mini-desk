@@ -147,6 +147,14 @@ describe("workbench style contract", () => {
     expectSelectorBody(styles, ".preview-actions", "bottom: 14px");
     expectSelectorBody(styles, ".preview-toolbar-button:focus-visible", "outline: 0");
     expectSelectorBody(styles, ".preview-toolbar-button:focus-visible", "box-shadow: none");
+    expectSelectorBody(styles, ".image-editor--preview .image-editor-stage", "width: 100%");
+    expectSelectorBody(styles, ".image-editor--preview .image-editor-stage", "height: 100%");
+    expectSelectorBody(styles, ".image-editor--preview .image-editor-canvas-wrap", "max-width: 100%");
+    expectSelectorBody(styles, ".image-editor--preview .image-editor-canvas-wrap", "max-height: 100%");
+    expectSelectorBody(styles, ".image-editor-source", "max-width: 100%");
+    expectSelectorBody(styles, ".image-editor-source", "max-height: 100%");
+    expectSelectorBody(styles, ".image-editor-canvas", "max-width: 100%");
+    expectSelectorBody(styles, ".image-editor-canvas", "max-height: 100%");
     expectSelectorBody(styles, ".image-editor-stage", "overflow: visible");
     expectSelectorBody(styles, ".image-editor-crop-actions", "transform: translate(8px, 8px)");
     expectSelectorBody(styles, ".image-editor-tool[data-tooltip]:hover::after", "content: attr(data-tooltip)");

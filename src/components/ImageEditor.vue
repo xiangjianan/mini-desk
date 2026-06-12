@@ -31,9 +31,11 @@ const props = withDefaults(defineProps<{
   image: StoredImage;
   language?: AppLanguage;
   previewLayout?: boolean;
+  previewTransform?: string;
 }>(), {
   language: "zh",
   previewLayout: false,
+  previewTransform: undefined,
 });
 
 const emit = defineEmits<{
@@ -444,6 +446,13 @@ function getTextInputStyle(command: Extract<EditorCommand, { type: "text" }>): R
   };
 }
 
+function getCanvasWrapStyle(): Record<string, string> | undefined {
+  if (!props.previewLayout || !props.previewTransform) return undefined;
+  return {
+    transform: props.previewTransform,
+  };
+}
+
 function getTextFontSizeFromSlider(width: number): number {
   return Math.round(clamp(width, 2, 18) + TEXT_FONT_SIZE_OFFSET);
 }
@@ -720,7 +729,7 @@ function saveImage(): void {
     </header>
 
     <div class="image-editor-stage">
-      <div class="image-editor-canvas-wrap">
+      <div class="image-editor-canvas-wrap" :style="getCanvasWrapStyle()">
         <img
           v-if="workingImageSrc"
           class="image-editor-source"

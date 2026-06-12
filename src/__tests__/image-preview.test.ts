@@ -651,6 +651,34 @@ describe("ImagePreview", () => {
     wrapper.unmount();
   });
 
+  it("keeps the preview image transform when entering edit mode", async () => {
+    const wrapper = mount(ImagePreview, {
+      props: {
+        images: [{ id: "img-1", src: "data:image/png;base64,one", createdAt: 1 }],
+        activeId: "img-1",
+      },
+      global: {
+        stubs: {
+          Button: buttonStub,
+          Dropdown: dropdownStub,
+          Modal: modalStub,
+          NButton: buttonStub,
+          NDropdown: dropdownStub,
+          NModal: modalStub,
+        },
+      },
+    });
+
+    await wrapper.get(".preview-zoom-button.is-zoom-in").trigger("click");
+    const previewTransform = wrapper.get(".preview-stage img").attributes("style");
+    expect(previewTransform).toContain("scale(1.1)");
+
+    await wrapper.get(".preview-toolbar-button.is-edit").trigger("click");
+
+    expect(wrapper.get(".image-editor-canvas-wrap").attributes("style")).toContain("scale(1.1)");
+    wrapper.unmount();
+  });
+
   it("closes the preview when pressing Space", async () => {
     vi.useFakeTimers();
     const wrapper = mount(ImagePreview, {
@@ -952,6 +980,83 @@ describe("ImagePreview", () => {
     expect(wrapper.emitted("close")).toBeUndefined();
 
     wrapper.unmount();
+  });
+
+  it.each(["Escape", " "])("closes the preview on %s when editing was opened directly from the image list", async (key) => {
+    vi.useFakeTimers();
+    const wrapper = mount(ImagePreview, {
+      props: {
+        images: [{ id: "img-1", src: "data:image/png;base64,one", createdAt: 1 }],
+        activeId: "img-1",
+        editId: "img-1",
+      },
+      global: {
+        stubs: {
+          Button: buttonStub,
+          Dropdown: dropdownStub,
+          Modal: modalStub,
+          NButton: buttonStub,
+          NDropdown: dropdownStub,
+          NModal: modalStub,
+        },
+      },
+    });
+
+    try {
+      expect(wrapper.find(".image-editor").exists()).toBe(true);
+
+      await wrapper.get(".image-preview").trigger("keydown", { key });
+
+      expect(wrapper.find(".image-editor").exists()).toBe(false);
+      expect(wrapper.get(".image-preview").classes()).toContain("is-closing");
+      expect(wrapper.emitted("close")).toBeUndefined();
+
+      await vi.advanceTimersByTimeAsync(220);
+
+      expect(wrapper.emitted("close")).toHaveLength(1);
+    } finally {
+      wrapper.unmount();
+      vi.useRealTimers();
+    }
+  });
+
+  it.each(["Escape", " "])("captures window %s from direct edit mode and closes the preview", async (key) => {
+    vi.useFakeTimers();
+    const wrapper = mount(ImagePreview, {
+      props: {
+        images: [{ id: "img-1", src: "data:image/png;base64,one", createdAt: 1 }],
+        activeId: "img-1",
+        editId: "img-1",
+      },
+      global: {
+        stubs: {
+          Button: buttonStub,
+          Dropdown: dropdownStub,
+          Modal: modalStub,
+          NButton: buttonStub,
+          NDropdown: dropdownStub,
+          NModal: modalStub,
+        },
+      },
+    });
+    const event = new KeyboardEvent("keydown", { key, bubbles: true, cancelable: true });
+
+    try {
+      window.dispatchEvent(event);
+      await wrapper.vm.$nextTick();
+
+      expect(event.defaultPrevented).toBe(true);
+      expect(wrapper.find(".image-editor").exists()).toBe(false);
+      expect(wrapper.find(".image-preview").classes()).toContain("is-closing");
+      expect(wrapper.emitted("close")).toBeUndefined();
+
+      await vi.advanceTimersByTimeAsync(220);
+
+      expect(wrapper.emitted("close")).toHaveLength(1);
+    } finally {
+      wrapper.unmount();
+      vi.useRealTimers();
+    }
   });
 
   it("does not save the image with Enter while the editor is open", async () => {

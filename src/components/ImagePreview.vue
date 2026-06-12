@@ -49,6 +49,7 @@ const activeIndex = computed(() => props.images.findIndex((image) => image.id ==
 const canNavigatePrevious = computed(() => activeIndex.value > 0);
 const canNavigateNext = computed(() => activeIndex.value >= 0 && activeIndex.value < props.images.length - 1);
 const isClosing = computed(() => props.closing || localClosing.value);
+const isDirectEditMode = computed(() => Boolean(props.activeId) && props.editId === props.activeId);
 const activeImageStyle = computed(() => {
   const style = {
     transform: `translate(${offset.value.x}px, ${offset.value.y}px) scale(${scale.value})`,
@@ -196,13 +197,19 @@ function openEditor(): void {
   if (!active.value?.src) return;
   closeMenu();
   dragging.value = false;
-  scale.value = 1;
-  offset.value = { x: 0, y: 0 };
   editing.value = true;
 }
 
 function closeEditor(): void {
   editing.value = false;
+}
+
+function exitEditorFromShortcut(): void {
+  if (isDirectEditMode.value) {
+    requestClose();
+    return;
+  }
+  closeEditor();
 }
 
 function saveEditor(payload: { id: string; src: string; displayWidth: number; displayHeight: number }): void {
@@ -236,7 +243,7 @@ function handleKeydown(event: KeyboardEvent): void {
   if (editing.value && (event.key === "Escape" || event.key === " ")) {
     event.preventDefault();
     event.stopPropagation();
-    closeEditor();
+    exitEditorFromShortcut();
     return;
   }
   if (editing.value && isPreviewShortcutKey(event)) {
@@ -280,7 +287,7 @@ function handleWindowKeydown(event: KeyboardEvent): void {
   event.preventDefault();
   event.stopPropagation();
   event.stopImmediatePropagation();
-  closeEditor();
+  exitEditorFromShortcut();
 }
 
 function isPreviewShortcutKey(event: KeyboardEvent): boolean {
@@ -331,6 +338,7 @@ function isPreviewShortcutKey(event: KeyboardEvent): boolean {
           :image="active"
           :language="language"
           preview-layout
+          :preview-transform="activeImageStyle.transform"
           @cancel="closeEditor"
           @save="saveEditor"
         />
