@@ -1,6 +1,6 @@
 export const APP_VERSION_STORAGE_KEY = "mini-desk-app-version";
 export const LEGACY_APP_VERSION_STORAGE_KEY = "todo-board-app-version";
-export const FALLBACK_APP_VERSION = "1.0.65";
+export const FALLBACK_APP_VERSION = "1.0.66";
 export const APP_VERSION_CHECK_INTERVAL_MS = 24 * 60 * 60 * 1000;
 
 export function getIndexAppVersion(doc: Document = document): string {
