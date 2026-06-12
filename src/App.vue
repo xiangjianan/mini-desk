@@ -1499,9 +1499,9 @@ async function importData(event: Event): Promise<void> {
 
 function about(anchor?: HTMLElement): void {
   showBubbleText(
-    [uiText.value.app.aboutTitle, uiText.value.app.aboutDescription].join("\n"),
+    [`${uiText.value.app.aboutTitle} ${uiText.value.app.aboutSignature}`, uiText.value.app.aboutDescription].join("\n"),
     anchor,
-    { hideCompanionAfter: true, linkText: GITHUB_REPO_LABEL, linkHref: GITHUB_REPO_URL, signatureText: uiText.value.app.aboutSignature },
+    { hideCompanionAfter: true, linkText: GITHUB_REPO_LABEL, linkHref: GITHUB_REPO_URL },
     ABOUT_MESSAGE_DURATION_MS,
   );
 }

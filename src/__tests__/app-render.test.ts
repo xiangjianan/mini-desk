@@ -3593,17 +3593,13 @@ describe("App shell", () => {
       await vi.advanceTimersByTimeAsync(200);
       await wrapper.vm.$nextTick();
 
-      expect(wrapper.find('[data-testid="companion-confirm"]').text()).toContain("Mini Desk 看板");
+      expect(wrapper.find('[data-testid="companion-confirm"]').text()).toContain("Mini Desk 看板 (100% AI BUILT)");
       expect(wrapper.find('[data-testid="companion-confirm"]').text()).toContain("把截图、提醒事项、快捷动作和备忘录缝合得恰到好处");
       expect(wrapper.find('[data-testid="companion-confirm"]').text()).toContain("所有操作均在本地浏览器完成，绝不上传您的任何数据。");
-      const signature = wrapper.get('[data-testid="companion-signature"]');
       const repoLink = wrapper.get('[data-testid="companion-link"]');
-      expect(signature.text()).toBe("(100% AI Build)");
-      expect(repoLink.text()).toContain("xiangjianan / mini-desk");
-      expect(repoLink.text()).toContain("(100% AI Build)");
-      expect(signature.element.parentElement).toBe(repoLink.element);
+      expect(repoLink.text()).toBe("xiangjianan / mini-desk");
+      expect(wrapper.find('[data-testid="companion-signature"]').exists()).toBe(false);
       expect(wrapper.find('[data-testid="companion-confirm"]').text()).not.toContain("100% 由 AI 开发");
-      expect(signature.classes()).toContain("companion-signature");
       expect(wrapper.find('[data-testid="companion-confirm"]').text()).not.toContain("云霞 · 产品");
       expect(wrapper.find('[data-testid="companion-confirm"]').text()).not.toContain("佳男 · 开发");
       expect(wrapper.find('[data-testid="companion-confirm"]').text()).not.toContain("Codex · 协作支持");
@@ -3637,11 +3633,11 @@ describe("App shell", () => {
       await wrapper.vm.$nextTick();
 
       const aboutText = wrapper.find('[data-testid="companion-confirm"]').text();
-      expect(aboutText).toContain("Mini Desk");
+      expect(aboutText).toContain("Mini Desk (100% AI BUILT)");
       expect(aboutText).toContain("screenshots, reminders, quick actions, and a memo");
       expect(aboutText).toContain("Everything happens in your local browser. None of your data is ever uploaded.");
       expect(aboutText).not.toContain("100% developed by AI");
-      expect(wrapper.get('[data-testid="companion-signature"]').text()).toBe("(100% AI Build)");
+      expect(wrapper.find('[data-testid="companion-signature"]').exists()).toBe(false);
       expect(aboutText).not.toContain("workspaces");
     } finally {
       wrapper.unmount();
