@@ -3595,6 +3595,7 @@ describe("App shell", () => {
 
       expect(wrapper.find('[data-testid="companion-confirm"]').text()).toContain("Mini Desk 看板");
       expect(wrapper.find('[data-testid="companion-confirm"]').text()).toContain("把截图、提醒事项、快捷动作和备忘录缝合得恰到好处");
+      expect(wrapper.find('[data-testid="companion-confirm"]').text()).toContain("这个项目 100% 由 AI 开发。");
       expect(wrapper.find('[data-testid="companion-confirm"]').text()).toContain("所有操作均在本地浏览器完成，绝不上传您的任何数据。");
       expect(wrapper.find('[data-testid="companion-confirm"]').text()).not.toContain("云霞 · 产品");
       expect(wrapper.find('[data-testid="companion-confirm"]').text()).not.toContain("佳男 · 开发");
@@ -3631,6 +3632,7 @@ describe("App shell", () => {
       const aboutText = wrapper.find('[data-testid="companion-confirm"]').text();
       expect(aboutText).toContain("Mini Desk");
       expect(aboutText).toContain("screenshots, reminders, quick actions, and a memo");
+      expect(aboutText).toContain("This project is 100% developed by AI.");
       expect(aboutText).toContain("Everything happens in your local browser. None of your data is ever uploaded.");
       expect(aboutText).not.toContain("workspaces");
     } finally {
