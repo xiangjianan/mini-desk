@@ -84,6 +84,7 @@ const lastUndoSnapshot = ref(exportJsonState(state));
 const activePreviewId = ref<string | undefined>();
 const closingPreviewId = ref<string | undefined>();
 const previewCloseTimer = ref<number | undefined>();
+const activeEditorId = ref<string | undefined>();
 const bubbleMessage = ref("");
 const bubbleLink = ref<{ text: string; href: string } | null>(null);
 const bubbleSignature = ref("");
@@ -697,6 +698,7 @@ function deleteImage(id: string, anchor?: HTMLElement): void {
     if (activePreviewId.value === id) {
       if (nextPreviewImage) {
         activePreviewId.value = nextPreviewImage.id;
+        activeEditorId.value = undefined;
         closingPreviewId.value = undefined;
         window.clearTimeout(previewCloseTimer.value);
         previewCloseTimer.value = undefined;
@@ -717,7 +719,17 @@ function openImagePreview(id: string): void {
   previewCloseTimer.value = undefined;
   closingPreviewId.value = undefined;
   hideCompanion();
+  activeEditorId.value = undefined;
   activePreviewId.value = id;
+}
+
+function openImageEditor(id: string): void {
+  window.clearTimeout(previewCloseTimer.value);
+  previewCloseTimer.value = undefined;
+  closingPreviewId.value = undefined;
+  hideCompanion();
+  activePreviewId.value = id;
+  activeEditorId.value = id;
 }
 
 function closeImagePreview(): void {
@@ -726,6 +738,7 @@ function closeImagePreview(): void {
   window.clearTimeout(previewCloseTimer.value);
   closingPreviewId.value = previewId;
   activePreviewId.value = undefined;
+  activeEditorId.value = undefined;
   previewCloseTimer.value = window.setTimeout(() => {
     closingPreviewId.value = undefined;
     previewCloseTimer.value = undefined;
@@ -736,7 +749,32 @@ function clearImagePreview(): void {
   window.clearTimeout(previewCloseTimer.value);
   previewCloseTimer.value = undefined;
   activePreviewId.value = undefined;
+  activeEditorId.value = undefined;
   closingPreviewId.value = undefined;
+}
+
+async function saveEditedImage(payload: { id: string; src: string; displayWidth: number; displayHeight: number }): Promise<void> {
+  if (shouldBlockBoardEffects()) return;
+  const image = state.images.find((item) => item.id === payload.id);
+  if (!image) return;
+  const nextImage: StoredImage = {
+    ...image,
+    src: payload.src,
+    displayWidth: payload.displayWidth,
+    displayHeight: payload.displayHeight,
+  };
+  try {
+    await storeImagePayload(nextImage);
+  } catch {
+    if (shouldBlockBoardEffects()) return;
+    showBubble("imageStoreFailed", document.querySelector<HTMLElement>(".image-preview") ?? undefined, { hideCompanionAfter: true });
+    return;
+  }
+  if (shouldBlockBoardEffects()) return;
+  Object.assign(image, nextImage);
+  persistNow("images");
+  activeEditorId.value = undefined;
+  showBubble("imageEdited", document.querySelector<HTMLElement>(".image-preview") ?? undefined, { hideCompanionAfter: true });
 }
 
 async function copyImage(id: string, anchor?: HTMLElement): Promise<void> {
@@ -1638,7 +1676,10 @@ function navigatePreview(direction: number): void {
   const index = state.images.findIndex((image) => image.id === activePreviewId.value);
   if (index < 0) return;
   const next = state.images[index + direction];
-  if (next) activePreviewId.value = next.id;
+  if (next) {
+    activePreviewId.value = next.id;
+    activeEditorId.value = undefined;
+  }
 }
 
 function showSaveBubble(): void {
@@ -2339,6 +2380,7 @@ function moveItem<T extends { id: string }>(items: T[], dragId: string, targetId
           @preview="openImagePreview"
           @close-preview="closeImagePreview"
           @copy="copyImage"
+          @edit="openImageEditor"
           @delete="deleteImage"
           @reorder="reorderImages"
           @paste="pasteImageFromClipboard"
@@ -2447,12 +2489,14 @@ function moveItem<T extends { id: string }>(items: T[], dragId: string, targetId
       v-if="!isMobileBlocked"
       :images="state.images"
       :active-id="displayedPreviewId"
+      :edit-id="activeEditorId"
       :closing="imagePreviewClosing"
       :language="state.language"
       @close="clearImagePreview"
       @copy="copyImage"
       @delete="deleteImage"
       @navigate="navigatePreview"
+      @save-edit="saveEditedImage"
     />
 
     <CompanionBubble

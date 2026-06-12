@@ -12,6 +12,7 @@ export type MessageKey =
   | "clipboardPasteUnsupported"
   | "clipboardImageMissing"
   | "imageAdded"
+  | "imageEdited"
   | "imageCopied"
   | "imageDataCopied"
   | "imageDropIgnored"
@@ -236,6 +237,22 @@ export const MESSAGE_CATALOG: Record<MessageKey, MessageEntry> = {
       "图片加入完成",
       "截图已添加",
       "图片已归位",
+    ],
+  },
+  imageEdited: {
+    mood: "happy",
+    surface: "companion",
+    variants: [
+      "图片已保存",
+      "编辑已保存",
+      "图片已更新",
+      "标注保存好了",
+      "修改已写入",
+      "图片更新完成",
+      "编辑结果已保存",
+      "这张图改好了",
+      "图片已替换",
+      "编辑完成",
     ],
   },
   imageCopied: {
@@ -855,6 +872,7 @@ const EN_MESSAGE_VARIANTS = {
   clipboardPasteUnsupported: ["Clipboard images are not available here", "Try pressing Ctrl+V to paste an image", "Use the paste shortcut instead"],
   clipboardImageMissing: ["No image found in the clipboard", "Copy an image first", "The clipboard does not contain an image"],
   imageAdded: ["Image added", "Screenshot saved", "Image placed in the list"],
+  imageEdited: ["Image saved", "Image edit saved", "Image updated"],
   imageCopied: ["Image copied", "Image is ready to paste", "Screenshot copied"],
   imageDataCopied: ["Copied as a Data URL", "Image copied as text", "Data URL copied"],
   imageDropIgnored: ["Non-image files were skipped", "Only images were added", "Unsupported files were ignored"],

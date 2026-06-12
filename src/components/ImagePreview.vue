@@ -1,16 +1,18 @@
 <script setup lang="ts">
 import { computed, h, onMounted, onUnmounted, ref, watch } from "vue";
 import type { Component, VNode } from "vue";
-import { AddOutline, ChevronDownOutline, ChevronUpOutline, CloseOutline, CopyOutline, HelpCircleOutline, RemoveOutline, TrashOutline } from "@vicons/ionicons5";
+import { AddOutline, ChevronDownOutline, ChevronUpOutline, CloseOutline, CopyOutline, CreateOutline, HelpCircleOutline, RemoveOutline, TrashOutline } from "@vicons/ionicons5";
 import { NDropdown, NIcon, NModal } from "naive-ui";
 import type { DropdownOption } from "naive-ui";
 import { getUiText } from "../state/i18n";
 import type { AppLanguage, StoredImage } from "../types";
 import { CONTEXT_MENU_Z_INDEX, createExclusiveContextMenu } from "../utils/contextMenu";
+import ImageEditor from "./ImageEditor.vue";
 
 const props = withDefaults(defineProps<{
   images: StoredImage[];
   activeId?: string;
+  editId?: string;
   language?: AppLanguage;
   closing?: boolean;
 }>(), {
@@ -23,6 +25,7 @@ const emit = defineEmits<{
   copy: [id: string];
   delete: [id: string, anchor?: HTMLElement];
   navigate: [direction: number];
+  saveEdit: [payload: { id: string; src: string; displayWidth: number; displayHeight: number }];
 }>();
 
 const MIN_SCALE = 0.3;
@@ -33,6 +36,7 @@ const DOUBLE_CLICK_SCALE = 2;
 const scale = ref(1);
 const offset = ref({ x: 0, y: 0 });
 const dragging = ref(false);
+const editing = ref(props.editId === props.activeId && Boolean(props.activeId));
 const localClosing = ref(false);
 const previewRef = ref<HTMLElement | null>(null);
 const start = ref({ x: 0, y: 0, ox: 0, oy: 0 });
@@ -58,6 +62,7 @@ const activeImageStyle = computed(() => {
 const menuOptions = computed<DropdownOption[]>(() => [
   { label: uiText.value.preview.close, key: "close", icon: renderIcon(CloseOutline) },
   { label: uiText.value.common.copy, key: "copy", icon: renderIcon(CopyOutline) },
+  { label: uiText.value.common.edit, key: "edit", icon: renderIcon(CreateOutline) },
   { label: uiText.value.common.delete, key: "delete", icon: renderIcon(TrashOutline) },
   { label: uiText.value.common.tips, key: "tips", icon: renderIcon(HelpCircleOutline) },
 ]);
@@ -83,14 +88,23 @@ watch(
     window.clearTimeout(closeTimer);
     closeTimer = undefined;
     localClosing.value = false;
+    editing.value = props.editId === props.activeId && Boolean(props.activeId);
     scale.value = 1;
     offset.value = { x: 0, y: 0 };
+  },
+);
+
+watch(
+  () => props.editId,
+  () => {
+    editing.value = props.editId === props.activeId && Boolean(props.activeId);
   },
 );
 
 function requestClose(): void {
   if (localClosing.value || props.closing) return;
   closeMenu();
+  editing.value = false;
   dragging.value = false;
   localClosing.value = true;
   window.clearTimeout(closeTimer);
@@ -108,6 +122,7 @@ function navigate(direction: number): boolean {
   if (direction < 0 && !canNavigatePrevious.value) return false;
   if (direction > 0 && !canNavigateNext.value) return false;
   closeMenu();
+  editing.value = false;
   emit("navigate", direction);
   return true;
 }
@@ -181,6 +196,24 @@ function closeMenu(): void {
   menu.value = null;
 }
 
+function openEditor(): void {
+  if (!active.value?.src) return;
+  closeMenu();
+  dragging.value = false;
+  scale.value = 1;
+  offset.value = { x: 0, y: 0 };
+  editing.value = true;
+}
+
+function closeEditor(): void {
+  editing.value = false;
+}
+
+function saveEditor(payload: { id: string; src: string; displayWidth: number; displayHeight: number }): void {
+  emit("saveEdit", payload);
+  editing.value = false;
+}
+
 function handleMenuSelect(key: string): void {
   const current = menu.value;
   if (!current) return;
@@ -190,6 +223,7 @@ function handleMenuSelect(key: string): void {
     return;
   }
   if (key === "copy") emit("copy", current.id);
+  if (key === "edit") openEditor();
   if (key === "close") requestClose();
   if (key === "delete") emit("delete", current.id, current.anchor);
 }
@@ -255,7 +289,14 @@ function handleKeydown(event: KeyboardEvent): void {
       @selectstart.prevent
       @contextmenu.prevent="openMenu($event, active.id)"
     >
-      <main class="preview-main">
+      <ImageEditor
+        v-if="editing"
+        :image="active"
+        :language="language"
+        @cancel="closeEditor"
+        @save="saveEditor"
+      />
+      <main v-else class="preview-main">
         <div class="preview-stage" @wheel="wheel" @mousedown="down">
           <img
             v-if="active.src"
@@ -305,6 +346,11 @@ function handleKeydown(event: KeyboardEvent): void {
           <button type="button" class="preview-toolbar-button preview-zoom-button is-zoom-in" :aria-label="uiText.preview.zoomIn" @click.stop.prevent="adjustZoom(ZOOM_STEP)">
             <NIcon size="18">
               <AddOutline />
+            </NIcon>
+          </button>
+          <button type="button" class="preview-toolbar-button is-edit" :aria-label="uiText.common.edit" @click.stop.prevent="openEditor">
+            <NIcon size="18">
+              <CreateOutline />
             </NIcon>
           </button>
           <button type="button" class="preview-toolbar-button is-delete" :aria-label="uiText.common.delete" @click.stop.prevent="deleteActive">

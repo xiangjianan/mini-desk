@@ -1,5 +1,5 @@
 import { mount } from "@vue/test-utils";
-import { describe, expect, it, vi } from "vitest";
+import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import ImagePreview from "../components/ImagePreview.vue";
 
 const buttonStub = {
@@ -30,7 +30,58 @@ const modalStub = {
   template: '<section v-if="show" class="n-modal"><slot /></section>',
 };
 
+let originalGetContext: typeof HTMLCanvasElement.prototype.getContext;
+let originalToDataURL: typeof HTMLCanvasElement.prototype.toDataURL;
+
+function installCanvasMock(): void {
+  const context = {
+    clearRect: vi.fn(),
+    drawImage: vi.fn(),
+    beginPath: vi.fn(),
+    moveTo: vi.fn(),
+    lineTo: vi.fn(),
+    closePath: vi.fn(),
+    stroke: vi.fn(),
+    fill: vi.fn(),
+    fillRect: vi.fn(),
+    arc: vi.fn(),
+    ellipse: vi.fn(),
+    strokeRect: vi.fn(),
+    save: vi.fn(),
+    restore: vi.fn(),
+    fillText: vi.fn(),
+    setLineDash: vi.fn(),
+  };
+
+  originalGetContext = HTMLCanvasElement.prototype.getContext;
+  originalToDataURL = HTMLCanvasElement.prototype.toDataURL;
+  Object.defineProperty(HTMLCanvasElement.prototype, "getContext", {
+    configurable: true,
+    value: vi.fn(() => context as unknown as CanvasRenderingContext2D),
+  });
+  Object.defineProperty(HTMLCanvasElement.prototype, "toDataURL", {
+    configurable: true,
+    value: vi.fn(() => "data:image/png;base64,edited"),
+  });
+}
+
 describe("ImagePreview", () => {
+  beforeEach(() => {
+    installCanvasMock();
+  });
+
+  afterEach(() => {
+    vi.restoreAllMocks();
+    Object.defineProperty(HTMLCanvasElement.prototype, "getContext", {
+      configurable: true,
+      value: originalGetContext,
+    });
+    Object.defineProperty(HTMLCanvasElement.prototype, "toDataURL", {
+      configurable: true,
+      value: originalToDataURL,
+    });
+  });
+
   it("keeps the preview open when clicking blank preview space or the image", async () => {
     vi.useFakeTimers();
     const wrapper = mount(ImagePreview, {
@@ -406,13 +457,14 @@ describe("ImagePreview", () => {
     const toolbar = wrapper.get(".preview-actions");
     expect(toolbar.attributes("role")).toBe("toolbar");
     const buttons = toolbar.findAll("button");
-    expect(buttons).toHaveLength(6);
-    expect(buttons.map((button) => button.text())).toEqual(["", "", "", "", "", ""]);
+    expect(buttons).toHaveLength(7);
+    expect(buttons.map((button) => button.text())).toEqual(["", "", "", "", "", "", ""]);
     expect(buttons.map((button) => button.attributes("aria-label"))).toEqual([
       "上一张图片",
       "下一张图片",
       "缩小图片",
       "放大图片",
+      "编辑",
       "删除",
       "取消预览",
     ]);
@@ -423,6 +475,10 @@ describe("ImagePreview", () => {
 
       await wrapper.get(".preview-zoom-button.is-zoom-out").trigger("click");
       expect(wrapper.get(".preview-stage img").attributes("style")).toContain("scale(1)");
+
+      await wrapper.get(".preview-toolbar-button.is-edit").trigger("click");
+      expect(wrapper.find(".image-editor").exists()).toBe(true);
+      await wrapper.get(".image-editor-cancel").trigger("click");
 
       await wrapper.get(".preview-toolbar-button.is-delete").trigger("click");
       expect(wrapper.emitted("delete")?.[0]?.[0]).toBe("img-1");
@@ -436,6 +492,40 @@ describe("ImagePreview", () => {
       wrapper.unmount();
       vi.useRealTimers();
     }
+  });
+
+  it("opens the editor from the preview context menu", async () => {
+    const wrapper = mount(ImagePreview, {
+      props: {
+        images: [{ id: "img-1", src: "data:image/png;base64,one", createdAt: 1 }],
+        activeId: "img-1",
+      },
+      global: {
+        stubs: {
+          Button: buttonStub,
+          Dropdown: dropdownStub,
+          Modal: modalStub,
+          NButton: buttonStub,
+          NDropdown: dropdownStub,
+          NModal: modalStub,
+        },
+      },
+    });
+
+    await wrapper.get(".preview-stage img").trigger("contextmenu");
+
+    expect(wrapper.findAll(".dropdown-option").map((option) => option.text())).toEqual([
+      "取消预览",
+      "复制",
+      "编辑",
+      "删除",
+      "Tips",
+    ]);
+
+    await wrapper.findAll(".dropdown-option").find((option) => option.text() === "编辑")?.trigger("click");
+
+    expect(wrapper.find(".image-editor").exists()).toBe(true);
+    wrapper.unmount();
   });
 
   it("toggles image zoom on double click", async () => {
@@ -626,6 +716,7 @@ describe("ImagePreview", () => {
     expect(wrapper.findAll(".dropdown-option").map((option) => option.text())).toEqual([
       "取消预览",
       "复制",
+      "编辑",
       "删除",
       "Tips",
     ]);
