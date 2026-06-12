@@ -679,6 +679,92 @@ describe("ImagePreview", () => {
     wrapper.unmount();
   });
 
+  it("uses the measured preview image size as the editor canvas frame", async () => {
+    const wrapper = mount(ImagePreview, {
+      props: {
+        images: [{ id: "img-1", src: "data:image/png;base64,one", createdAt: 1 }],
+        activeId: "img-1",
+      },
+      global: {
+        stubs: {
+          Button: buttonStub,
+          Dropdown: dropdownStub,
+          Modal: modalStub,
+          NButton: buttonStub,
+          NDropdown: dropdownStub,
+          NModal: modalStub,
+        },
+      },
+    });
+
+    const image = wrapper.get(".preview-stage img");
+    Object.defineProperty(image.element, "getBoundingClientRect", {
+      configurable: true,
+      value: () => ({
+        x: 320,
+        y: 140,
+        left: 320,
+        top: 140,
+        right: 640,
+        bottom: 320,
+        width: 320,
+        height: 180,
+        toJSON: () => undefined,
+      }),
+    });
+
+    await wrapper.get(".preview-toolbar-button.is-edit").trigger("click");
+
+    const style = wrapper.get(".image-editor-canvas-wrap").attributes("style");
+    expect(style).toContain("width: 320px");
+    expect(style).toContain("height: 180px");
+    wrapper.unmount();
+  });
+
+  it("does not double-apply zoom when measuring the editor canvas frame", async () => {
+    const wrapper = mount(ImagePreview, {
+      props: {
+        images: [{ id: "img-1", src: "data:image/png;base64,one", createdAt: 1 }],
+        activeId: "img-1",
+      },
+      global: {
+        stubs: {
+          Button: buttonStub,
+          Dropdown: dropdownStub,
+          Modal: modalStub,
+          NButton: buttonStub,
+          NDropdown: dropdownStub,
+          NModal: modalStub,
+        },
+      },
+    });
+
+    await wrapper.get(".preview-zoom-button.is-zoom-in").trigger("click");
+    const image = wrapper.get(".preview-stage img");
+    Object.defineProperty(image.element, "getBoundingClientRect", {
+      configurable: true,
+      value: () => ({
+        x: 320,
+        y: 140,
+        left: 320,
+        top: 140,
+        right: 672,
+        bottom: 338,
+        width: 352,
+        height: 198,
+        toJSON: () => undefined,
+      }),
+    });
+
+    await wrapper.get(".preview-toolbar-button.is-edit").trigger("click");
+
+    const style = wrapper.get(".image-editor-canvas-wrap").attributes("style");
+    expect(style).toContain("width: 320px");
+    expect(style).toContain("height: 180px");
+    expect(style).toContain("scale(1.1)");
+    wrapper.unmount();
+  });
+
   it("closes the preview when pressing Space", async () => {
     vi.useFakeTimers();
     const wrapper = mount(ImagePreview, {

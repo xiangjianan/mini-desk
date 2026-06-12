@@ -21,6 +21,11 @@ interface EditorRect {
   height: number;
 }
 
+interface PreviewFrame {
+  width: number;
+  height: number;
+}
+
 type EditorCommand =
   | { type: "brush"; color: string; width: number; points: EditorPoint[] }
   | { type: "rectangle" | "ellipse" | "arrow"; color: string; width: number; start: EditorPoint; end: EditorPoint }
@@ -32,10 +37,12 @@ const props = withDefaults(defineProps<{
   language?: AppLanguage;
   previewLayout?: boolean;
   previewTransform?: string;
+  previewFrame?: PreviewFrame | null;
 }>(), {
   language: "zh",
   previewLayout: false,
   previewTransform: undefined,
+  previewFrame: null,
 });
 
 const emit = defineEmits<{
@@ -447,9 +454,13 @@ function getTextInputStyle(command: Extract<EditorCommand, { type: "text" }>): R
 }
 
 function getCanvasWrapStyle(): Record<string, string> | undefined {
-  if (!props.previewLayout || !props.previewTransform) return undefined;
+  if (!props.previewLayout && !props.previewTransform && !props.previewFrame) return undefined;
   return {
-    transform: props.previewTransform,
+    ...(props.previewFrame ? {
+      width: `${formatPixelValue(props.previewFrame.width)}px`,
+      height: `${formatPixelValue(props.previewFrame.height)}px`,
+    } : {}),
+    ...(props.previewTransform ? { transform: props.previewTransform } : {}),
   };
 }
 

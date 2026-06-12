@@ -39,8 +39,10 @@ const dragging = ref(false);
 const editing = ref(props.editId === props.activeId && Boolean(props.activeId));
 const localClosing = ref(false);
 const previewRef = ref<HTMLElement | null>(null);
+const previewImageRef = ref<HTMLImageElement | null>(null);
 const start = ref({ x: 0, y: 0, ox: 0, oy: 0 });
 const menu = ref<{ x: number; y: number; id: string; anchor?: HTMLElement } | null>(null);
+const editorFrame = ref<{ width: number; height: number } | null>(null);
 let closeTimer: number | undefined;
 
 const uiText = computed(() => getUiText(props.language));
@@ -88,6 +90,7 @@ watch(
     editing.value = props.editId === props.activeId && Boolean(props.activeId);
     scale.value = 1;
     offset.value = { x: 0, y: 0 };
+    editorFrame.value = null;
   },
 );
 
@@ -197,11 +200,13 @@ function openEditor(): void {
   if (!active.value?.src) return;
   closeMenu();
   dragging.value = false;
+  editorFrame.value = measurePreviewImageFrame();
   editing.value = true;
 }
 
 function closeEditor(): void {
   editing.value = false;
+  editorFrame.value = null;
 }
 
 function exitEditorFromShortcut(): void {
@@ -215,6 +220,17 @@ function exitEditorFromShortcut(): void {
 function saveEditor(payload: { id: string; src: string; displayWidth: number; displayHeight: number }): void {
   emit("saveEdit", payload);
   editing.value = false;
+  editorFrame.value = null;
+}
+
+function measurePreviewImageFrame(): { width: number; height: number } | null {
+  const rect = previewImageRef.value?.getBoundingClientRect();
+  if (!rect || rect.width <= 0 || rect.height <= 0) return null;
+  const currentScale = scale.value || 1;
+  return {
+    width: rect.width / currentScale,
+    height: rect.height / currentScale,
+  };
 }
 
 function handleMenuSelect(key: string): void {
@@ -339,6 +355,7 @@ function isPreviewShortcutKey(event: KeyboardEvent): boolean {
           :language="language"
           preview-layout
           :preview-transform="activeImageStyle.transform"
+          :preview-frame="editorFrame"
           @cancel="closeEditor"
           @save="saveEditor"
         />
@@ -346,6 +363,7 @@ function isPreviewShortcutKey(event: KeyboardEvent): boolean {
           <div class="preview-stage" @wheel="wheel" @mousedown="down">
             <img
               v-if="active.src"
+              ref="previewImageRef"
               :key="active.id"
               :src="active.src"
               :alt="uiText.preview.imageAlt"
