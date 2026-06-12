@@ -403,7 +403,10 @@ function createTextCommand(point: EditorPoint): void {
   ];
   activeTextId.value = id;
   void nextTick(() => {
-    document.querySelector<HTMLTextAreaElement>(`.image-editor-text-box[data-text-id="${id}"] .image-editor-text-input`)?.focus({ preventScroll: true });
+    const input = document.querySelector<HTMLTextAreaElement>(`.image-editor-text-box[data-text-id="${id}"] .image-editor-text-input`);
+    if (!input) return;
+    input.focus({ preventScroll: true });
+    input.setSelectionRange(input.value.length, input.value.length);
   });
 }
 

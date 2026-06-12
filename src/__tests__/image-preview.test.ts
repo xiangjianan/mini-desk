@@ -601,6 +601,8 @@ describe("ImagePreview", () => {
 
       const input = wrapper.get(".image-editor-text-input");
       expect(document.activeElement).toBe(input.element);
+      expect((input.element as HTMLTextAreaElement).selectionStart).toBe(0);
+      expect((input.element as HTMLTextAreaElement).selectionEnd).toBe(0);
       expect(input.classes()).toContain("is-transparent");
     } finally {
       wrapper.unmount();
@@ -816,7 +818,7 @@ describe("ImagePreview", () => {
     }
   });
 
-  it("opens the editor with Enter and ignores preview shortcuts until editing exits", async () => {
+  it("opens the editor with Enter and keeps destructive preview shortcuts disabled while editing", async () => {
     vi.useFakeTimers();
     const wrapper = mount(ImagePreview, {
       props: {
@@ -846,13 +848,10 @@ describe("ImagePreview", () => {
     await wrapper.get(".image-preview").trigger("keydown", { key: "5" });
     await wrapper.get(".image-preview").trigger("keydown", { key: "w" });
     await wrapper.get(".image-preview").trigger("keydown", { key: "D" });
-    await wrapper.get(".image-preview").trigger("keydown", { key: " " });
     await wrapper.get(".image-preview").trigger("keydown", { key: "Backspace" });
     await wrapper.get(".image-preview").trigger("keydown", { key: "Delete" });
     await wrapper.get(".image-preview").trigger("keydown", { key: "Enter" });
     try {
-      await wrapper.get(".image-preview").trigger("keydown", { key: "Escape" });
-
       expect(wrapper.emitted("copy")).toBeUndefined();
       expect(wrapper.emitted("navigate")).toBeUndefined();
       expect(wrapper.emitted("delete")).toBeUndefined();
@@ -878,6 +877,81 @@ describe("ImagePreview", () => {
       wrapper.unmount();
       vi.useRealTimers();
     }
+  });
+
+  it.each(["Escape", " "])("exits image editing on %s and closes the preview when pressed again", async (key) => {
+    vi.useFakeTimers();
+    const wrapper = mount(ImagePreview, {
+      props: {
+        images: [{ id: "img-1", src: "data:image/png;base64,one", createdAt: 1 }],
+        activeId: "img-1",
+      },
+      global: {
+        stubs: {
+          Button: buttonStub,
+          Dropdown: dropdownStub,
+          Modal: modalStub,
+          NButton: buttonStub,
+          NDropdown: dropdownStub,
+          NModal: modalStub,
+        },
+      },
+    });
+
+    try {
+      await wrapper.get(".image-preview").trigger("keydown", { key: "Enter" });
+      expect(wrapper.find(".image-editor").exists()).toBe(true);
+
+      await wrapper.get(".image-preview").trigger("keydown", { key });
+
+      expect(wrapper.find(".image-editor").exists()).toBe(false);
+      expect(wrapper.get(".image-preview").classes()).not.toContain("is-closing");
+      expect(wrapper.emitted("close")).toBeUndefined();
+
+      await wrapper.get(".image-preview").trigger("keydown", { key });
+      expect(wrapper.get(".image-preview").classes()).toContain("is-closing");
+      expect(wrapper.emitted("close")).toBeUndefined();
+
+      await vi.advanceTimersByTimeAsync(220);
+
+      expect(wrapper.emitted("close")).toHaveLength(1);
+    } finally {
+      wrapper.unmount();
+      vi.useRealTimers();
+    }
+  });
+
+  it.each(["Escape", " "])("captures window %s while editing so the app preview shortcut does not close first", async (key) => {
+    const wrapper = mount(ImagePreview, {
+      props: {
+        images: [{ id: "img-1", src: "data:image/png;base64,one", createdAt: 1 }],
+        activeId: "img-1",
+      },
+      global: {
+        stubs: {
+          Button: buttonStub,
+          Dropdown: dropdownStub,
+          Modal: modalStub,
+          NButton: buttonStub,
+          NDropdown: dropdownStub,
+          NModal: modalStub,
+        },
+      },
+    });
+    const event = new KeyboardEvent("keydown", { key, bubbles: true, cancelable: true });
+
+    await wrapper.get(".image-preview").trigger("keydown", { key: "Enter" });
+    expect(wrapper.find(".image-editor").exists()).toBe(true);
+
+    window.dispatchEvent(event);
+    await wrapper.vm.$nextTick();
+
+    expect(event.defaultPrevented).toBe(true);
+    expect(wrapper.find(".image-editor").exists()).toBe(false);
+    expect(wrapper.find(".image-preview").classes()).not.toContain("is-closing");
+    expect(wrapper.emitted("close")).toBeUndefined();
+
+    wrapper.unmount();
   });
 
   it("does not save the image with Enter while the editor is open", async () => {

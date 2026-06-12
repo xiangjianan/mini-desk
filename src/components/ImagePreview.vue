@@ -68,9 +68,13 @@ function renderIcon(icon: Component): () => VNode {
   return () => h(NIcon, { size: 16 }, { default: () => h(icon) });
 }
 
-onMounted(exclusiveMenu.mount);
+onMounted(() => {
+  exclusiveMenu.mount();
+  window.addEventListener("keydown", handleWindowKeydown, { capture: true });
+});
 onUnmounted(() => {
   exclusiveMenu.unmount();
+  window.removeEventListener("keydown", handleWindowKeydown, { capture: true });
   window.clearTimeout(closeTimer);
 });
 
@@ -229,6 +233,12 @@ function deleteActive(event: MouseEvent): void {
 function handleKeydown(event: KeyboardEvent): void {
   if (!active.value) return;
   const key = event.key.toLowerCase();
+  if (editing.value && (event.key === "Escape" || event.key === " ")) {
+    event.preventDefault();
+    event.stopPropagation();
+    closeEditor();
+    return;
+  }
   if (editing.value && isPreviewShortcutKey(event)) {
     event.preventDefault();
     event.stopPropagation();
@@ -265,6 +275,14 @@ function handleKeydown(event: KeyboardEvent): void {
   }
 }
 
+function handleWindowKeydown(event: KeyboardEvent): void {
+  if (!editing.value || !active.value || (event.key !== "Escape" && event.key !== " ")) return;
+  event.preventDefault();
+  event.stopPropagation();
+  event.stopImmediatePropagation();
+  closeEditor();
+}
+
 function isPreviewShortcutKey(event: KeyboardEvent): boolean {
   const key = event.key.toLowerCase();
   return key === "escape"
@@ -287,6 +305,7 @@ function isPreviewShortcutKey(event: KeyboardEvent): boolean {
     v-if="active"
     :show="true"
     :mask-closable="false"
+    :close-on-esc="false"
     :auto-focus="false"
     :trap-focus="false"
     :block-scroll="false"
