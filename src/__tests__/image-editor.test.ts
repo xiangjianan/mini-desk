@@ -188,6 +188,42 @@ describe("ImageEditor", () => {
     wrapper.unmount();
   });
 
+  it("confirms text input focus after the pointer click sequence finishes", async () => {
+    vi.useFakeTimers();
+    const focusSpy = vi.spyOn(HTMLTextAreaElement.prototype, "focus");
+    const wrapper = mount(ImageEditor, {
+      attachTo: document.body,
+      props: {
+        image: { id: "img-1", src: "data:image/png;base64,one", createdAt: 1, displayWidth: 400, displayHeight: 300 },
+      },
+      global: {
+        stubs: {
+          NIcon: iconStub,
+        },
+      },
+    });
+
+    try {
+      const canvas = wrapper.get(".image-editor-canvas");
+      mockRect(canvas.element);
+
+      await wrapper.findAll(".image-editor-tool").find((button) => button.attributes("aria-label") === "文本")?.trigger("click");
+      await dispatchPointer(canvas.element, "pointerdown", 100, 80);
+      await dispatchPointer(canvas.element, "pointerup", 100, 80);
+
+      expect(document.activeElement).toBe(wrapper.get(".image-editor-text-input").element);
+      const focusCountAfterPointer = focusSpy.mock.calls.length;
+
+      await vi.advanceTimersByTimeAsync(20);
+
+      expect(document.activeElement).toBe(wrapper.get(".image-editor-text-input").element);
+      expect(focusSpy.mock.calls.length).toBeGreaterThan(focusCountAfterPointer);
+    } finally {
+      wrapper.unmount();
+      vi.useRealTimers();
+    }
+  });
+
   it("scales the editing text preview to match the saved canvas text size", async () => {
     const wrapper = mount(ImageEditor, {
       attachTo: document.body,

@@ -412,11 +412,16 @@ function createTextCommand(point: EditorPoint): void {
   ];
   activeTextId.value = id;
   void nextTick(() => {
-    const input = document.querySelector<HTMLTextAreaElement>(`.image-editor-text-box[data-text-id="${id}"] .image-editor-text-input`);
-    if (!input) return;
-    input.focus({ preventScroll: true });
-    input.setSelectionRange(input.value.length, input.value.length);
+    focusTextInput(id);
+    window.requestAnimationFrame(() => focusTextInput(id));
   });
+}
+
+function focusTextInput(id: string): void {
+  const input = document.querySelector<HTMLTextAreaElement>(`.image-editor-text-box[data-text-id="${id}"] .image-editor-text-input`);
+  if (!input) return;
+  input.focus({ preventScroll: true });
+  input.setSelectionRange(input.value.length, input.value.length);
 }
 
 function updateTextCommand(id: string, text: string): void {
