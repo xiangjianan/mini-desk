@@ -430,6 +430,21 @@ function startTextDrag(event: PointerEvent, command: Extract<EditorCommand, { ty
   (event.currentTarget as HTMLElement).setPointerCapture?.(event.pointerId);
 }
 
+function handleTextInputPointerDown(event: PointerEvent, command: Extract<EditorCommand, { type: "text" }>): void {
+  selectTextCommand(command.id);
+  if (isTextResizeHandlePointer(event)) return;
+  startTextDrag(event, command);
+}
+
+function isTextResizeHandlePointer(event: PointerEvent): boolean {
+  const target = event.currentTarget;
+  if (!(target instanceof HTMLElement)) return false;
+  const rect = target.getBoundingClientRect();
+  const handleSize = 18;
+  if (rect.width <= handleSize || rect.height <= handleSize) return false;
+  return event.clientX >= rect.right - handleSize && event.clientY >= rect.bottom - handleSize;
+}
+
 function moveTextDrag(event: PointerEvent): void {
   const state = textDragState.value;
   if (!state || event.pointerId !== state.pointerId) return;
@@ -608,7 +623,7 @@ function saveImage(): void {
 </script>
 
 <template>
-  <section class="image-editor" :aria-label="editorText.title" @keydown.enter.stop.prevent="saveImage">
+  <section class="image-editor" :aria-label="editorText.title">
     <header class="image-editor-toolbar">
       <div class="image-editor-tool-group" role="toolbar" :aria-label="editorText.tools">
         <button
@@ -727,7 +742,7 @@ function saveImage(): void {
             @input="updateTextCommand(command.id, ($event.target as HTMLTextAreaElement).value)"
             @focus="selectTextCommand(command.id)"
             @click.stop="selectTextCommand(command.id)"
-            @pointerdown.stop="startTextDrag($event, command)"
+            @pointerdown.stop="handleTextInputPointerDown($event, command)"
             @pointermove.stop="moveTextDrag"
             @pointerup.stop="finishTextDrag"
             @pointercancel.stop="finishTextDrag"

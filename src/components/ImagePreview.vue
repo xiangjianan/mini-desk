@@ -39,7 +39,6 @@ const dragging = ref(false);
 const editing = ref(props.editId === props.activeId && Boolean(props.activeId));
 const localClosing = ref(false);
 const previewRef = ref<HTMLElement | null>(null);
-const editorRef = ref<{ saveImage: () => void } | null>(null);
 const start = ref({ x: 0, y: 0, ox: 0, oy: 0 });
 const menu = ref<{ x: number; y: number; id: string; anchor?: HTMLElement } | null>(null);
 let closeTimer: number | undefined;
@@ -214,10 +213,6 @@ function saveEditor(payload: { id: string; src: string; displayWidth: number; di
   editing.value = false;
 }
 
-function saveActiveEditor(): void {
-  editorRef.value?.saveImage();
-}
-
 function handleMenuSelect(key: string): void {
   const current = menu.value;
   if (!current) return;
@@ -241,6 +236,11 @@ function deleteActive(event: MouseEvent): void {
 function handleKeydown(event: KeyboardEvent): void {
   if (!active.value) return;
   const key = event.key.toLowerCase();
+  if (editing.value && isPreviewShortcutKey(event)) {
+    event.preventDefault();
+    event.stopPropagation();
+    return;
+  }
   if (event.key === "Escape" || event.key === " ") {
     event.preventDefault();
     requestClose();
@@ -248,10 +248,6 @@ function handleKeydown(event: KeyboardEvent): void {
   }
   if (event.key === "Enter") {
     event.preventDefault();
-    if (editing.value) {
-      saveActiveEditor();
-      return;
-    }
     openEditor();
     return;
   }
@@ -274,6 +270,21 @@ function handleKeydown(event: KeyboardEvent): void {
     event.preventDefault();
     emit("delete", active.value.id);
   }
+}
+
+function isPreviewShortcutKey(event: KeyboardEvent): boolean {
+  const key = event.key.toLowerCase();
+  return key === "escape"
+    || key === " "
+    || key === "spacebar"
+    || key === "enter"
+    || key === "5"
+    || key === "backspace"
+    || key === "delete"
+    || key === "w"
+    || key === "a"
+    || key === "s"
+    || key === "d";
 }
 
 </script>
@@ -304,7 +315,6 @@ function handleKeydown(event: KeyboardEvent): void {
     >
       <ImageEditor
         v-if="editing"
-        ref="editorRef"
         :image="active"
         :language="language"
         @cancel="closeEditor"

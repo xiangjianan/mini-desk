@@ -467,6 +467,51 @@ describe("ImageEditor", () => {
     wrapper.unmount();
   });
 
+  it("does not drag the text box when resizing from the textarea corner", async () => {
+    const wrapper = mount(ImageEditor, {
+      props: {
+        image: { id: "img-1", src: "data:image/png;base64,one", createdAt: 1, displayWidth: 400, displayHeight: 300 },
+      },
+      global: {
+        stubs: {
+          NIcon: iconStub,
+        },
+      },
+    });
+
+    const canvas = wrapper.get(".image-editor-canvas");
+    mockRect(canvas.element);
+
+    await wrapper.findAll(".image-editor-tool").find((button) => button.attributes("aria-label") === "文本")?.trigger("click");
+    await dispatchPointer(canvas.element, "pointerdown", 100, 80);
+    await wrapper.get(".image-editor-text-input").setValue("Resizable");
+
+    const input = wrapper.get(".image-editor-text-input");
+    Object.defineProperty(input.element, "getBoundingClientRect", {
+      configurable: true,
+      value: () => ({
+        x: 100,
+        y: 80,
+        left: 100,
+        top: 80,
+        right: 260,
+        bottom: 160,
+        width: 160,
+        height: 80,
+        toJSON: () => undefined,
+      }),
+    });
+
+    await dispatchPointer(input.element, "pointerdown", 258, 158);
+    await dispatchPointer(input.element, "pointermove", 300, 200);
+    await dispatchPointer(input.element, "pointerup", 300, 200);
+
+    expect(wrapper.get(".image-editor-text-box").attributes("style")).toContain("left: 25%");
+    expect(wrapper.get(".image-editor-text-box").attributes("style")).toContain("top: 26.666666666666668%");
+
+    wrapper.unmount();
+  });
+
   it("stops the arrow line behind a larger arrow head", async () => {
     const wrapper = mount(ImageEditor, {
       props: {
@@ -493,7 +538,7 @@ describe("ImageEditor", () => {
     wrapper.unmount();
   });
 
-  it("saves when Enter is pressed inside the editor", async () => {
+  it("does not save when Enter is pressed inside the editor", async () => {
     const wrapper = mount(ImageEditor, {
       props: {
         image: { id: "img-1", src: "data:image/png;base64,one", createdAt: 1, displayWidth: 400, displayHeight: 300 },
@@ -507,14 +552,7 @@ describe("ImageEditor", () => {
 
     await wrapper.get(".image-editor").trigger("keydown", { key: "Enter" });
 
-    expect(wrapper.emitted("save")?.[0]).toEqual([
-      {
-        id: "img-1",
-        src: "data:image/png;base64,edited",
-        displayWidth: 400,
-        displayHeight: 300,
-      },
-    ]);
+    expect(wrapper.emitted("save")).toBeUndefined();
     wrapper.unmount();
   });
 });
