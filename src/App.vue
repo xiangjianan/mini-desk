@@ -70,6 +70,7 @@ const TODO_NOTIFICATION_FALLBACK_INTERVAL_MS = 30_000;
 const MAX_TODO_NOTIFICATION_TIMEOUT_MS = 2_147_483_647;
 const UNDO_HISTORY_LIMIT = 50;
 const IMAGE_PREVIEW_CLOSE_MS = 220;
+const IMAGE_PREVIEW_OVERLOAD_THRESHOLD = 20;
 const STATE_SYNC_CHANNEL = "mini-desk-state-sync";
 const mobileCompanionPosition: { right: string; bottom: string } = { right: "18px", bottom: "28px" };
 
@@ -721,6 +722,9 @@ function openImagePreview(id: string): void {
   hideCompanion();
   activeEditorId.value = undefined;
   activePreviewId.value = id;
+  if (state.images.length > IMAGE_PREVIEW_OVERLOAD_THRESHOLD) {
+    showBubble("imageOverload", document.querySelector<HTMLElement>(".image-panel") ?? undefined, { hideCompanionAfter: true });
+  }
 }
 
 function openImageEditor(id: string): void {

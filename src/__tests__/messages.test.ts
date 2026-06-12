@@ -23,6 +23,7 @@ const messageKeys = [
   "clipboardPasteUnsupported",
   "clipboardImageMissing",
   "imageAdded",
+  "imageOverload",
   "imageEdited",
   "imageCopied",
   "imageDataCopied",

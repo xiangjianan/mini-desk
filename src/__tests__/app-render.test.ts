@@ -140,6 +140,14 @@ function createDeferred<T>() {
   return { promise, resolve, reject };
 }
 
+function buildStoredImages(count: number) {
+  return Array.from({ length: count }, (_item, index) => ({
+    id: `img-${index + 1}`,
+    src: `data:image/png;base64,${index + 1}`,
+    createdAt: index + 1,
+  }));
+}
+
 function nextPatchVersion(version: string): string {
   const parts = version.split(".").map((part) => Number.parseInt(part, 10));
   return `${parts[0]}.${parts[1]}.${parts[2] + 1}`;
@@ -2551,6 +2559,50 @@ describe("App shell", () => {
     } finally {
       wrapper.unmount();
       vi.useRealTimers();
+    }
+  });
+
+  it("does not warn when previewing the twentieth image", async () => {
+    localStorage.setItem(
+      STORAGE_KEY,
+      JSON.stringify({
+        images: buildStoredImages(20),
+      }),
+    );
+    const wrapper = mountApp();
+
+    try {
+      await wrapper.get(".image-card").trigger("click");
+      await wrapper.vm.$nextTick();
+
+      expect(wrapper.find(".image-preview").exists()).toBe(true);
+      expect(wrapper.find('[data-testid="companion-bubble"]').exists()).toBe(false);
+    } finally {
+      wrapper.unmount();
+    }
+  });
+
+  it("shows a declutter bubble when previewing images after the list passes twenty items", async () => {
+    vi.spyOn(Math, "random").mockReturnValue(0);
+    localStorage.setItem(
+      STORAGE_KEY,
+      JSON.stringify({
+        images: buildStoredImages(21),
+      }),
+    );
+    const wrapper = mountApp();
+
+    try {
+      await wrapper.get(".image-card").trigger("click");
+      await wrapper.vm.$nextTick();
+
+      expect(wrapper.find(".image-preview").exists()).toBe(true);
+      const companion = wrapper.getComponent(CompanionBubble);
+      expect(companion.props("visible")).toBe(true);
+      expect(companion.props("message")).toContain("图片太多，删几张吧");
+      expect(companion.props("message")).toContain(KAOMOJI_BY_MOOD.warning[0]);
+    } finally {
+      wrapper.unmount();
     }
   });
 

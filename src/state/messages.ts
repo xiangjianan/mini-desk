@@ -12,6 +12,7 @@ export type MessageKey =
   | "clipboardPasteUnsupported"
   | "clipboardImageMissing"
   | "imageAdded"
+  | "imageOverload"
   | "imageEdited"
   | "imageCopied"
   | "imageDataCopied"
@@ -237,6 +238,22 @@ export const MESSAGE_CATALOG: Record<MessageKey, MessageEntry> = {
       "图片加入完成",
       "截图已添加",
       "图片已归位",
+    ],
+  },
+  imageOverload: {
+    mood: "warning",
+    surface: "companion",
+    variants: [
+      "图片太多，删几张吧",
+      "图片有点满，轻一点",
+      "截图太多，清一清",
+      "图片堆高了，减几张",
+      "列表太挤，收几张",
+      "图片太密，留重点",
+      "先删几张更清爽",
+      "图片爆棚，瘦身吧",
+      "截图太满，整理下",
+      "图片过载，减一点",
     ],
   },
   imageEdited: {
@@ -872,6 +889,18 @@ const EN_MESSAGE_VARIANTS = {
   clipboardPasteUnsupported: ["Clipboard images are not available here", "Try pressing Ctrl+V to paste an image", "Use the paste shortcut instead"],
   clipboardImageMissing: ["No image found in the clipboard", "Copy an image first", "The clipboard does not contain an image"],
   imageAdded: ["Image added", "Screenshot saved", "Image placed in the list"],
+  imageOverload: [
+    "Too many images. Remove a few.",
+    "This image list is getting heavy.",
+    "Trim a few screenshots.",
+    "Keep the important images.",
+    "A lighter image list is easier to scan.",
+    "Clean up a few images.",
+    "The image area is crowded.",
+    "Archive or remove a few screenshots.",
+    "Reduce the image pile a little.",
+    "A smaller image list will feel lighter.",
+  ],
   imageEdited: ["Image saved", "Image edit saved", "Image updated"],
   imageCopied: ["Image copied", "Image is ready to paste", "Screenshot copied"],
   imageDataCopied: ["Copied as a Data URL", "Image copied as text", "Data URL copied"],
