@@ -257,7 +257,7 @@ onMounted(async () => {
   checkAppVersion();
   void checkLatestAppVersion();
   window.addEventListener("keydown", handleGlobalKeydown);
-  window.addEventListener("focus", handleWindowFocus);
+  window.addEventListener("focus", handleNotificationReturn);
   window.addEventListener("storage", handleStorageEvent);
   document.addEventListener("paste", handlePaste);
   document.addEventListener("visibilitychange", handleDocumentVisibilityChange);
@@ -272,7 +272,7 @@ onMounted(async () => {
 onUnmounted(() => {
   appMounted = false;
   window.removeEventListener("keydown", handleGlobalKeydown);
-  window.removeEventListener("focus", handleWindowFocus);
+  window.removeEventListener("focus", handleNotificationReturn);
   window.removeEventListener("storage", handleStorageEvent);
   document.removeEventListener("paste", handlePaste);
   document.removeEventListener("visibilitychange", handleDocumentVisibilityChange);
@@ -2000,12 +2000,7 @@ function stopNotificationTitleFlash(): void {
 }
 
 function handleDocumentVisibilityChange(): void {
-  if (document.visibilityState === "visible") handleWindowFocus();
-}
-
-function handleWindowFocus(): void {
-  handleNotificationReturn();
-  void checkLatestAppVersion();
+  if (document.visibilityState === "visible") handleNotificationReturn();
 }
 
 function handleNotificationReturn(): void {

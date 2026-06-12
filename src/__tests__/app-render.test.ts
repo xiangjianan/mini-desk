@@ -4665,6 +4665,32 @@ describe("App shell", () => {
     }
   });
 
+  it("does not check for deployed versions when the window regains focus or the page becomes visible", async () => {
+    vi.useFakeTimers();
+    const fetchMock = vi.fn().mockResolvedValue({
+      ok: true,
+      text: vi.fn().mockResolvedValue(`<meta name="app-version" content="${FALLBACK_APP_VERSION}">`),
+    });
+    vi.stubGlobal("fetch", fetchMock);
+    const wrapper = mountApp();
+
+    try {
+      await vi.advanceTimersByTimeAsync(0);
+      await wrapper.vm.$nextTick();
+      expect(fetchMock).toHaveBeenCalledTimes(1);
+
+      window.dispatchEvent(new Event("focus"));
+      document.dispatchEvent(new Event("visibilitychange"));
+      await wrapper.vm.$nextTick();
+
+      expect(fetchMock).toHaveBeenCalledTimes(1);
+    } finally {
+      wrapper.unmount();
+      vi.unstubAllGlobals();
+      vi.useRealTimers();
+    }
+  });
+
   it("keeps the settings update dot visible while a newer deployed version is available", async () => {
     vi.useFakeTimers();
     const deployedVersion = nextPatchVersion(FALLBACK_APP_VERSION);

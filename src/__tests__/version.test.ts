@@ -2,6 +2,7 @@ import { readFileSync } from "node:fs";
 import { resolve } from "node:path";
 import { describe, expect, it, vi } from "vitest";
 import {
+  APP_VERSION_CHECK_INTERVAL_MS,
   APP_VERSION_STORAGE_KEY,
   FALLBACK_APP_VERSION,
   LEGACY_APP_VERSION_STORAGE_KEY,
@@ -13,6 +14,10 @@ import {
 } from "../state/version";
 
 describe("app version", () => {
+  it("checks deployed versions at most once per day on the timer", () => {
+    expect(APP_VERSION_CHECK_INTERVAL_MS).toBe(24 * 60 * 60 * 1000);
+  });
+
   it("records the current static version in index.html", () => {
     const root = resolve(__dirname, "../..");
     const index = readFileSync(resolve(root, "index.html"), "utf8");
