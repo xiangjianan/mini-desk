@@ -10,6 +10,7 @@ const iconStub = {
 let originalGetContext: typeof HTMLCanvasElement.prototype.getContext;
 let originalToDataURL: typeof HTMLCanvasElement.prototype.toDataURL;
 let canvasContextMock: {
+  clearRect: ReturnType<typeof vi.fn>;
   drawImage: ReturnType<typeof vi.fn>;
   fillText: ReturnType<typeof vi.fn>;
   lineTo: ReturnType<typeof vi.fn>;
@@ -283,6 +284,76 @@ describe("ImageEditor", () => {
     expect(wrapper.emitted("save")?.[0]?.[0]).toMatchObject({
       id: "img-1",
       src: "data:image/png;base64,edited",
+    });
+    wrapper.unmount();
+  });
+
+  it("keeps existing markers visible when the crop overlay changes", async () => {
+    const wrapper = mount(ImageEditor, {
+      props: {
+        image: { id: "img-1", src: "data:image/png;base64,one", createdAt: 1, displayWidth: 400, displayHeight: 300 },
+      },
+      global: {
+        stubs: {
+          NIcon: iconStub,
+        },
+      },
+    });
+
+    const canvas = wrapper.get(".image-editor-canvas");
+    mockRect(canvas.element);
+
+    await wrapper.findAll(".image-editor-tool").find((button) => button.attributes("aria-label") === "标注")?.trigger("click");
+    await dispatchPointer(canvas.element, "pointerdown", 100, 80);
+    await wrapper.findAll(".image-editor-tool").find((button) => button.attributes("aria-label") === "裁切")?.trigger("click");
+
+    canvasContextMock.clearRect.mockClear();
+    canvasContextMock.fillText.mockClear();
+    await dispatchPointer(canvas.element, "pointerdown", 2, 2);
+    await dispatchPointer(canvas.element, "pointermove", 40, 30);
+
+    expect(canvasContextMock.fillText).toHaveBeenCalledWith("1", 100, 80.5);
+    expect(canvasContextMock.clearRect).not.toHaveBeenCalledWith(40, 30, 360, 270);
+    wrapper.unmount();
+  });
+
+  it("shows crop action buttons and applies crop without dropping existing markers", async () => {
+    const wrapper = mount(ImageEditor, {
+      props: {
+        image: { id: "img-1", src: "data:image/png;base64,one", createdAt: 1, displayWidth: 400, displayHeight: 300 },
+      },
+      global: {
+        stubs: {
+          NIcon: iconStub,
+        },
+      },
+    });
+
+    const canvas = wrapper.get(".image-editor-canvas");
+    mockRect(canvas.element);
+
+    await wrapper.findAll(".image-editor-tool").find((button) => button.attributes("aria-label") === "标注")?.trigger("click");
+    await dispatchPointer(canvas.element, "pointerdown", 100, 80);
+    await wrapper.findAll(".image-editor-tool").find((button) => button.attributes("aria-label") === "裁切")?.trigger("click");
+
+    expect(wrapper.get(".image-editor-crop-cancel").attributes("aria-label")).toBe("取消裁切");
+    expect(wrapper.get(".image-editor-crop-apply").attributes("aria-label")).toBe("应用裁切");
+
+    await dispatchPointer(canvas.element, "pointerdown", 2, 2);
+    await dispatchPointer(canvas.element, "pointermove", 40, 30);
+    await dispatchPointer(canvas.element, "pointerup", 40, 30);
+    await wrapper.get(".image-editor-crop-apply").trigger("click");
+
+    expect(wrapper.find(".image-editor").exists()).toBe(true);
+    expect(wrapper.find(".image-editor-crop-apply").exists()).toBe(false);
+
+    canvasContextMock.fillText.mockClear();
+    await wrapper.get(".image-editor-save").trigger("click");
+
+    expect(canvasContextMock.fillText).toHaveBeenCalledWith("1", 60, 50.5);
+    expect(wrapper.emitted("save")?.[0]?.[0]).toMatchObject({
+      displayWidth: 360,
+      displayHeight: 270,
     });
     wrapper.unmount();
   });

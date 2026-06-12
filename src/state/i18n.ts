@@ -741,6 +741,8 @@ export const UI_TEXT = {
       white: "白色",
       width: "画笔粗细",
       reset: "重置编辑",
+      cancelCrop: "取消裁切",
+      applyCrop: "应用裁切",
     },
   },
   en: {
@@ -986,6 +988,8 @@ export const UI_TEXT = {
       white: "White",
       width: "Brush width",
       reset: "Reset edits",
+      cancelCrop: "Cancel crop",
+      applyCrop: "Apply crop",
     },
   },
 } as const;

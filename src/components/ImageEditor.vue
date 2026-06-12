@@ -1,6 +1,6 @@
 <script setup lang="ts">
 import { computed, nextTick, onMounted, ref, shallowRef, watch } from "vue";
-import { ArrowUpRight, Circle, Crop, Highlighter, Minus, MousePointer2, Paintbrush, RectangleHorizontal, RotateCcw } from "lucide-vue-next";
+import { ArrowUpRight, Check, Circle, Crop, Highlighter, Minus, MousePointer2, Paintbrush, RectangleHorizontal, RotateCcw, X } from "lucide-vue-next";
 import { getUiText } from "../state/i18n";
 import type { AppLanguage, StoredImage } from "../types";
 
@@ -59,6 +59,9 @@ const toolOptions: { value: EditorTool; icon: typeof Crop; labelKey: "crop" | "b
 
 const canvasRef = ref<HTMLCanvasElement | null>(null);
 const sourceImage = shallowRef<HTMLImageElement | null>(null);
+const workingImageSrc = ref(props.image.src);
+const workingDisplayWidth = ref(props.image.displayWidth);
+const workingDisplayHeight = ref(props.image.displayHeight);
 const activeTool = ref<EditorTool>("brush");
 const selectedColor = ref<EditorColor>("#ef4444");
 const strokeWidth = ref(4);
@@ -69,17 +72,25 @@ const dragState = ref<{ pointerId: number; tool: EditorTool; start: EditorPoint;
 
 const uiText = computed(() => getUiText(props.language));
 const editorText = computed(() => uiText.value.imageEditor);
-const canvasWidth = computed(() => Math.max(1, Math.round(sourceImage.value?.naturalWidth || props.image.displayWidth || 800)));
-const canvasHeight = computed(() => Math.max(1, Math.round(sourceImage.value?.naturalHeight || props.image.displayHeight || 600)));
+const canvasWidth = computed(() => Math.max(1, Math.round(sourceImage.value?.naturalWidth || workingDisplayWidth.value || props.image.displayWidth || 800)));
+const canvasHeight = computed(() => Math.max(1, Math.round(sourceImage.value?.naturalHeight || workingDisplayHeight.value || props.image.displayHeight || 600)));
 const scaleX = computed(() => {
   const sourceWidth = sourceImage.value?.naturalWidth || canvasWidth.value;
-  const displayWidth = props.image.displayWidth || sourceWidth;
+  const displayWidth = workingDisplayWidth.value || props.image.displayWidth || sourceWidth;
   return displayWidth / sourceWidth;
 });
 const scaleY = computed(() => {
   const sourceHeight = sourceImage.value?.naturalHeight || canvasHeight.value;
-  const displayHeight = props.image.displayHeight || sourceHeight;
+  const displayHeight = workingDisplayHeight.value || props.image.displayHeight || sourceHeight;
   return displayHeight / sourceHeight;
+});
+const cropActionStyle = computed(() => {
+  const rect = cropRect.value;
+  if (!rect) return {};
+  return {
+    left: `${((rect.x + rect.width) / canvasWidth.value) * 100}%`,
+    top: `${((rect.y + rect.height) / canvasHeight.value) * 100}%`,
+  };
 });
 
 onMounted(() => {
@@ -89,6 +100,9 @@ onMounted(() => {
 watch(
   () => props.image.id,
   () => {
+    workingImageSrc.value = props.image.src;
+    workingDisplayWidth.value = props.image.displayWidth;
+    workingDisplayHeight.value = props.image.displayHeight;
     commands.value = [];
     previewCommand.value = null;
     cropRect.value = null;
@@ -109,7 +123,7 @@ function loadSourceImage(): void {
   }
 
   sourceImage.value = null;
-  if (!props.image.src) {
+  if (!workingImageSrc.value) {
     void nextTick(renderCanvas);
     return;
   }
@@ -127,7 +141,7 @@ function loadSourceImage(): void {
   image.onerror = () => {
     void nextTick(renderCanvas);
   };
-  image.src = props.image.src;
+  image.src = workingImageSrc.value;
   void nextTick(renderCanvas);
 }
 
@@ -223,14 +237,21 @@ function drawMarker(context: CanvasRenderingContext2D, command: Extract<EditorCo
 }
 
 function drawCropOverlay(context: CanvasRenderingContext2D, rect: EditorRect, width: number, height: number): void {
+  const left = clamp(rect.x, 0, width);
+  const top = clamp(rect.y, 0, height);
+  const right = clamp(rect.x + rect.width, left, width);
+  const bottom = clamp(rect.y + rect.height, top, height);
+
   context.save();
   context.fillStyle = "rgba(15, 23, 42, 0.34)";
-  context.fillRect(0, 0, width, height);
-  context.clearRect(rect.x, rect.y, rect.width, rect.height);
+  context.fillRect(0, 0, width, top);
+  context.fillRect(0, bottom, width, height - bottom);
+  context.fillRect(0, top, left, bottom - top);
+  context.fillRect(right, top, width - right, bottom - top);
   context.strokeStyle = "#ffffff";
   context.lineWidth = 2;
   context.setLineDash([8, 6]);
-  context.strokeRect(rect.x, rect.y, rect.width, rect.height);
+  context.strokeRect(left, top, right - left, bottom - top);
   context.restore();
 }
 
@@ -337,6 +358,12 @@ function resetEdits(): void {
   renderCanvas();
 }
 
+function cancelCrop(): void {
+  cropRect.value = null;
+  dragState.value = null;
+  renderCanvas();
+}
+
 function getFullCropRect(): EditorRect {
   return { x: 0, y: 0, width: canvasWidth.value, height: canvasHeight.value };
 }
@@ -395,6 +422,57 @@ function getExportRect(canvas: HTMLCanvasElement): EditorRect {
     width: Math.max(1, Math.round(rect.width)),
     height: Math.max(1, Math.round(rect.height)),
   };
+}
+
+function translatePointForCrop(point: EditorPoint, rect: EditorRect): EditorPoint {
+  return { x: point.x - rect.x, y: point.y - rect.y };
+}
+
+function translateCommandForCrop(command: EditorCommand, rect: EditorRect): EditorCommand {
+  if (command.type === "brush") {
+    return {
+      ...command,
+      points: command.points.map((point) => translatePointForCrop(point, rect)),
+    };
+  }
+  if (command.type === "marker") {
+    return {
+      ...command,
+      point: translatePointForCrop(command.point, rect),
+    };
+  }
+  return {
+    ...command,
+    start: translatePointForCrop(command.start, rect),
+    end: translatePointForCrop(command.end, rect),
+  };
+}
+
+function applyCrop(): void {
+  const canvas = canvasRef.value;
+  const rect = canvas ? getExportRect(canvas) : cropRect.value;
+  if (!rect || rect.width < 1 || rect.height < 1) return;
+
+  const nextDisplayWidth = Math.max(1, Math.round(rect.width * scaleX.value));
+  const nextDisplayHeight = Math.max(1, Math.round(rect.height * scaleY.value));
+  const output = document.createElement("canvas");
+  output.width = rect.width;
+  output.height = rect.height;
+  const context = output.getContext("2d");
+  if (!context) return;
+
+  if (sourceImage.value) {
+    context.drawImage(sourceImage.value, rect.x, rect.y, rect.width, rect.height, 0, 0, rect.width, rect.height);
+  }
+
+  commands.value = commands.value.map((command) => translateCommandForCrop(command, rect));
+  previewCommand.value = null;
+  cropRect.value = null;
+  dragState.value = null;
+  workingDisplayWidth.value = nextDisplayWidth;
+  workingDisplayHeight.value = nextDisplayHeight;
+  workingImageSrc.value = output.toDataURL("image/png");
+  loadSourceImage();
 }
 
 function saveImage(): void {
@@ -471,23 +549,47 @@ function saveImage(): void {
     </header>
 
     <div class="image-editor-stage">
-      <img
-        v-if="image.src"
-        class="image-editor-source"
-        :src="image.src"
-        :alt="editorText.title"
-        draggable="false"
-      />
-      <canvas
-        ref="canvasRef"
-        class="image-editor-canvas"
-        :width="canvasWidth"
-        :height="canvasHeight"
-        @pointerdown="handlePointerDown"
-        @pointermove="handlePointerMove"
-        @pointerup="handlePointerUp"
-        @pointercancel="handlePointerCancel"
-      />
+      <div class="image-editor-canvas-wrap">
+        <img
+          v-if="workingImageSrc"
+          class="image-editor-source"
+          :src="workingImageSrc"
+          :alt="editorText.title"
+          draggable="false"
+        />
+        <canvas
+          ref="canvasRef"
+          class="image-editor-canvas"
+          :width="canvasWidth"
+          :height="canvasHeight"
+          @pointerdown="handlePointerDown"
+          @pointermove="handlePointerMove"
+          @pointerup="handlePointerUp"
+          @pointercancel="handlePointerCancel"
+        />
+        <div v-if="activeTool === 'crop' && cropRect" class="image-editor-crop-actions" :style="cropActionStyle">
+          <button
+            type="button"
+            class="image-editor-crop-action image-editor-crop-cancel"
+            :aria-label="editorText.cancelCrop"
+            :title="editorText.cancelCrop"
+            @click.stop="cancelCrop"
+            @pointerdown.stop
+          >
+            <X :size="16" stroke-width="2.5" />
+          </button>
+          <button
+            type="button"
+            class="image-editor-crop-action image-editor-crop-apply"
+            :aria-label="editorText.applyCrop"
+            :title="editorText.applyCrop"
+            @click.stop="applyCrop"
+            @pointerdown.stop
+          >
+            <Check :size="16" stroke-width="2.5" />
+          </button>
+        </div>
+      </div>
       <div class="image-editor-cursor" aria-hidden="true">
         <MousePointer2 :size="13" stroke-width="2" />
         <span>{{ editorText[activeTool] }}</span>

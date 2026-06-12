@@ -5475,6 +5475,14 @@ html[data-theme="dark"] .image-preview {
   overflow: hidden;
 }
 
+.image-editor-canvas-wrap {
+  position: relative;
+  display: grid;
+  place-items: center;
+  max-width: 100%;
+  max-height: 100%;
+}
+
 .image-editor-source,
 .image-editor-canvas {
   grid-area: 1 / 1;
@@ -5496,6 +5504,37 @@ html[data-theme="dark"] .image-preview {
   cursor: crosshair;
   touch-action: none;
   z-index: 1;
+}
+
+.image-editor-crop-actions {
+  position: absolute;
+  z-index: 2;
+  display: inline-flex;
+  gap: 6px;
+  transform: translate(calc(-100% - 8px), calc(-100% - 8px));
+}
+
+.image-editor-crop-action {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 28px;
+  height: 28px;
+  border: 1px solid color-mix(in srgb, currentColor 42%, transparent);
+  border-radius: 999px;
+  background: color-mix(in srgb, var(--material-elevated) 82%, transparent);
+  -webkit-backdrop-filter: blur(16px) saturate(1.6);
+  backdrop-filter: blur(16px) saturate(1.6);
+  box-shadow: 0 6px 18px rgba(15, 23, 42, 0.2);
+  cursor: pointer;
+}
+
+.image-editor-crop-cancel {
+  color: #ef4444;
+}
+
+.image-editor-crop-apply {
+  color: #22c55e;
 }
 
 .image-editor-cursor {

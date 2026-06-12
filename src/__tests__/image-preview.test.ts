@@ -182,7 +182,7 @@ describe("ImagePreview", () => {
     wrapper.unmount();
   });
 
-  it("renders pasted screenshots at their stored display size", () => {
+  it("renders pasted screenshots without forcing a letterboxed image box", () => {
     const wrapper = mount(ImagePreview, {
       props: {
         images: [
@@ -210,7 +210,7 @@ describe("ImagePreview", () => {
 
     const style = wrapper.get(".preview-stage img").attributes("style");
     expect(style).toContain("width: 96px");
-    expect(style).toContain("height: 48px");
+    expect(style).not.toContain("height: 48px");
     expect(style).toContain("scale(1)");
 
     wrapper.unmount();

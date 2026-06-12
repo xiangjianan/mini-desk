@@ -54,9 +54,8 @@ const activeImageStyle = computed(() => {
   const style: { width?: string; height?: string; transform: string } = {
     transform: `translate(${offset.value.x}px, ${offset.value.y}px) scale(${scale.value})`,
   };
-  if (isPositiveDimension(active.value?.displayWidth) && isPositiveDimension(active.value?.displayHeight)) {
+  if (isPositiveDimension(active.value?.displayWidth)) {
     style.width = `${active.value.displayWidth}px`;
-    style.height = `${active.value.displayHeight}px`;
   }
   return style;
 });
