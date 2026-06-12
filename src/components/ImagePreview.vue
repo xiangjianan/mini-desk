@@ -1,5 +1,5 @@
 <script setup lang="ts">
-import { computed, h, onMounted, onUnmounted, ref, watch } from "vue";
+import { computed, h, nextTick, onMounted, onUnmounted, ref, watch } from "vue";
 import type { Component, VNode } from "vue";
 import { AddOutline, ChevronDownOutline, ChevronUpOutline, CloseOutline, CopyOutline, CreateOutline, HelpCircleOutline, RemoveOutline, TrashOutline } from "@vicons/ionicons5";
 import { NDropdown, NIcon, NModal } from "naive-ui";
@@ -32,6 +32,11 @@ const MIN_SCALE = 0.3;
 const MAX_SCALE = 5;
 const ZOOM_STEP = 0.1;
 const DOUBLE_CLICK_SCALE = 2;
+
+interface ImageSize {
+  width: number;
+  height: number;
+}
 
 const scale = ref(1);
 const offset = ref({ x: 0, y: 0 });
@@ -74,6 +79,7 @@ function renderIcon(icon: Component): () => VNode {
 onMounted(() => {
   exclusiveMenu.mount();
   window.addEventListener("keydown", handleWindowKeydown, { capture: true });
+  void syncDirectEditorFrame();
 });
 onUnmounted(() => {
   exclusiveMenu.unmount();
@@ -91,6 +97,7 @@ watch(
     scale.value = 1;
     offset.value = { x: 0, y: 0 };
     editorFrame.value = null;
+    void syncDirectEditorFrame();
   },
 );
 
@@ -98,6 +105,7 @@ watch(
   () => props.editId,
   () => {
     editing.value = props.editId === props.activeId && Boolean(props.activeId);
+    void syncDirectEditorFrame();
   },
 );
 
@@ -210,11 +218,7 @@ function closeEditor(): void {
 }
 
 function exitEditorFromShortcut(): void {
-  if (isDirectEditMode.value) {
-    requestClose();
-    return;
-  }
-  closeEditor();
+  requestClose();
 }
 
 function saveEditor(payload: { id: string; src: string; displayWidth: number; displayHeight: number }): void {
@@ -230,6 +234,52 @@ function measurePreviewImageFrame(): { width: number; height: number } | null {
   return {
     width: rect.width / currentScale,
     height: rect.height / currentScale,
+  };
+}
+
+async function syncDirectEditorFrame(): Promise<void> {
+  if (!editing.value || !isDirectEditMode.value) return;
+  const image = active.value;
+  const id = image?.id;
+  const src = image?.src;
+  if (!image || !id) return;
+  await nextTick();
+  const imageSize = await resolveImageSize(image);
+  if (!imageSize || !editing.value || !isDirectEditMode.value || active.value?.id !== id || active.value?.src !== src) return;
+  await nextTick();
+  const frame = measureDirectEditorFrame(imageSize);
+  if (frame) editorFrame.value = frame;
+}
+
+async function resolveImageSize(image: StoredImage): Promise<ImageSize | null> {
+  if (image.displayWidth && image.displayHeight && image.displayWidth > 0 && image.displayHeight > 0) {
+    return { width: image.displayWidth, height: image.displayHeight };
+  }
+  if (!image.src) return null;
+  return readImageSize(image.src);
+}
+
+function readImageSize(src: string): Promise<ImageSize | null> {
+  return new Promise((resolve) => {
+    const image = new Image();
+    image.onload = () => {
+      const width = image.naturalWidth || image.width;
+      const height = image.naturalHeight || image.height;
+      resolve(width > 0 && height > 0 ? { width, height } : null);
+    };
+    image.onerror = () => resolve(null);
+    image.src = src;
+  });
+}
+
+function measureDirectEditorFrame(imageSize: ImageSize): { width: number; height: number } | null {
+  const stage = previewRef.value?.querySelector<HTMLElement>(".image-editor-stage");
+  const rect = stage?.getBoundingClientRect();
+  if (!rect || rect.width <= 0 || rect.height <= 0) return null;
+  const fitScale = Math.min(1, rect.width / imageSize.width, rect.height / imageSize.height);
+  return {
+    width: imageSize.width * fitScale,
+    height: imageSize.height * fitScale,
   };
 }
 
@@ -256,7 +306,7 @@ function deleteActive(event: MouseEvent): void {
 function handleKeydown(event: KeyboardEvent): void {
   if (!active.value) return;
   const key = event.key.toLowerCase();
-  if (editing.value && (event.key === "Escape" || event.key === " ")) {
+  if (editing.value && event.key === "Escape") {
     event.preventDefault();
     event.stopPropagation();
     exitEditorFromShortcut();
@@ -299,7 +349,7 @@ function handleKeydown(event: KeyboardEvent): void {
 }
 
 function handleWindowKeydown(event: KeyboardEvent): void {
-  if (!editing.value || !active.value || (event.key !== "Escape" && event.key !== " ")) return;
+  if (!editing.value || !active.value || event.key !== "Escape") return;
   event.preventDefault();
   event.stopPropagation();
   event.stopImmediatePropagation();

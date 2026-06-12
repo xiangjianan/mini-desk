@@ -79,6 +79,12 @@ async function dispatchPointer(target: Element, type: string, clientX: number, c
   await Promise.resolve();
 }
 
+async function flushPendingImagePreviewWork(times = 6): Promise<void> {
+  for (let index = 0; index < times; index += 1) {
+    await Promise.resolve();
+  }
+}
+
 function mockRect(element: Element): void {
   Object.defineProperty(element, "getBoundingClientRect", {
     configurable: true,
@@ -765,6 +771,143 @@ describe("ImagePreview", () => {
     wrapper.unmount();
   });
 
+  it("uses the preview fit size when editing opens directly from the image list", async () => {
+    const getBoundingClientRect = vi.spyOn(Element.prototype, "getBoundingClientRect").mockImplementation(function (this: Element) {
+      if (this.classList.contains("image-editor-stage")) {
+        return {
+          x: 0,
+          y: 0,
+          left: 0,
+          top: 0,
+          right: 320,
+          bottom: 300,
+          width: 320,
+          height: 300,
+          toJSON: () => undefined,
+        } as DOMRect;
+      }
+      return {
+        x: 0,
+        y: 0,
+        left: 0,
+        top: 0,
+        right: 0,
+        bottom: 0,
+        width: 0,
+        height: 0,
+        toJSON: () => undefined,
+      } as DOMRect;
+    });
+    const wrapper = mount(ImagePreview, {
+      props: {
+        images: [{ id: "img-1", src: "data:image/png;base64,one", createdAt: 1, displayWidth: 800, displayHeight: 400 }],
+        activeId: "img-1",
+        editId: "img-1",
+      },
+      global: {
+        stubs: {
+          Button: buttonStub,
+          Dropdown: dropdownStub,
+          Modal: modalStub,
+          NButton: buttonStub,
+          NDropdown: dropdownStub,
+          NModal: modalStub,
+        },
+      },
+    });
+
+    await wrapper.vm.$nextTick();
+    await flushPendingImagePreviewWork();
+    await wrapper.vm.$nextTick();
+
+    const style = wrapper.get(".image-editor-canvas-wrap").attributes("style");
+    expect(style).toContain("width: 320px");
+    expect(style).toContain("height: 160px");
+
+    wrapper.unmount();
+    getBoundingClientRect.mockRestore();
+  });
+
+  it("uses the image natural size for direct editing when display size is unavailable", async () => {
+    const OriginalImage = globalThis.Image;
+    class TestImage {
+      naturalWidth = 1200;
+      naturalHeight = 600;
+      width = 1200;
+      height = 600;
+      onload: ((event: Event) => void) | null = null;
+      onerror: (() => void) | null = null;
+
+      set src(_value: string) {
+        queueMicrotask(() => this.onload?.(new Event("load")));
+      }
+    }
+    Object.defineProperty(globalThis, "Image", {
+      configurable: true,
+      value: TestImage,
+    });
+    const getBoundingClientRect = vi.spyOn(Element.prototype, "getBoundingClientRect").mockImplementation(function (this: Element) {
+      if (this.classList.contains("image-editor-stage")) {
+        return {
+          x: 0,
+          y: 0,
+          left: 0,
+          top: 0,
+          right: 300,
+          bottom: 200,
+          width: 300,
+          height: 200,
+          toJSON: () => undefined,
+        } as DOMRect;
+      }
+      return {
+        x: 0,
+        y: 0,
+        left: 0,
+        top: 0,
+        right: 0,
+        bottom: 0,
+        width: 0,
+        height: 0,
+        toJSON: () => undefined,
+      } as DOMRect;
+    });
+    const wrapper = mount(ImagePreview, {
+      props: {
+        images: [{ id: "img-1", src: "data:image/png;base64,one", createdAt: 1 }],
+        activeId: "img-1",
+        editId: "img-1",
+      },
+      global: {
+        stubs: {
+          Button: buttonStub,
+          Dropdown: dropdownStub,
+          Modal: modalStub,
+          NButton: buttonStub,
+          NDropdown: dropdownStub,
+          NModal: modalStub,
+        },
+      },
+    });
+
+    try {
+      await wrapper.vm.$nextTick();
+      await flushPendingImagePreviewWork();
+      await wrapper.vm.$nextTick();
+
+      const style = wrapper.get(".image-editor-canvas-wrap").attributes("style");
+      expect(style).toContain("width: 300px");
+      expect(style).toContain("height: 150px");
+    } finally {
+      wrapper.unmount();
+      getBoundingClientRect.mockRestore();
+      Object.defineProperty(globalThis, "Image", {
+        configurable: true,
+        value: OriginalImage,
+      });
+    }
+  });
+
   it("closes the preview when pressing Space", async () => {
     vi.useFakeTimers();
     const wrapper = mount(ImagePreview, {
@@ -993,7 +1136,7 @@ describe("ImagePreview", () => {
     }
   });
 
-  it.each(["Escape", " "])("exits image editing on %s and closes the preview when pressed again", async (key) => {
+  it("closes the preview on Escape while editing was opened from preview", async () => {
     vi.useFakeTimers();
     const wrapper = mount(ImagePreview, {
       props: {
@@ -1016,13 +1159,9 @@ describe("ImagePreview", () => {
       await wrapper.get(".image-preview").trigger("keydown", { key: "Enter" });
       expect(wrapper.find(".image-editor").exists()).toBe(true);
 
-      await wrapper.get(".image-preview").trigger("keydown", { key });
+      await wrapper.get(".image-preview").trigger("keydown", { key: "Escape" });
 
       expect(wrapper.find(".image-editor").exists()).toBe(false);
-      expect(wrapper.get(".image-preview").classes()).not.toContain("is-closing");
-      expect(wrapper.emitted("close")).toBeUndefined();
-
-      await wrapper.get(".image-preview").trigger("keydown", { key });
       expect(wrapper.get(".image-preview").classes()).toContain("is-closing");
       expect(wrapper.emitted("close")).toBeUndefined();
 
@@ -1035,7 +1174,7 @@ describe("ImagePreview", () => {
     }
   });
 
-  it.each(["Escape", " "])("captures window %s while editing so the app preview shortcut does not close first", async (key) => {
+  it("keeps editing active when Space is pressed in preview edit mode", async () => {
     const wrapper = mount(ImagePreview, {
       props: {
         images: [{ id: "img-1", src: "data:image/png;base64,one", createdAt: 1 }],
@@ -1052,23 +1191,60 @@ describe("ImagePreview", () => {
         },
       },
     });
-    const event = new KeyboardEvent("keydown", { key, bubbles: true, cancelable: true });
 
     await wrapper.get(".image-preview").trigger("keydown", { key: "Enter" });
     expect(wrapper.find(".image-editor").exists()).toBe(true);
 
-    window.dispatchEvent(event);
-    await wrapper.vm.$nextTick();
+    await wrapper.get(".image-preview").trigger("keydown", { key: " " });
 
-    expect(event.defaultPrevented).toBe(true);
-    expect(wrapper.find(".image-editor").exists()).toBe(false);
+    expect(wrapper.find(".image-editor").exists()).toBe(true);
     expect(wrapper.find(".image-preview").classes()).not.toContain("is-closing");
     expect(wrapper.emitted("close")).toBeUndefined();
-
     wrapper.unmount();
   });
 
-  it.each(["Escape", " "])("closes the preview on %s when editing was opened directly from the image list", async (key) => {
+  it("captures window Escape while editing and closes the preview", async () => {
+    vi.useFakeTimers();
+    const wrapper = mount(ImagePreview, {
+      props: {
+        images: [{ id: "img-1", src: "data:image/png;base64,one", createdAt: 1 }],
+        activeId: "img-1",
+      },
+      global: {
+        stubs: {
+          Button: buttonStub,
+          Dropdown: dropdownStub,
+          Modal: modalStub,
+          NButton: buttonStub,
+          NDropdown: dropdownStub,
+          NModal: modalStub,
+        },
+      },
+    });
+    const event = new KeyboardEvent("keydown", { key: "Escape", bubbles: true, cancelable: true });
+
+    try {
+      await wrapper.get(".image-preview").trigger("keydown", { key: "Enter" });
+      expect(wrapper.find(".image-editor").exists()).toBe(true);
+
+      window.dispatchEvent(event);
+      await wrapper.vm.$nextTick();
+
+      expect(event.defaultPrevented).toBe(true);
+      expect(wrapper.find(".image-editor").exists()).toBe(false);
+      expect(wrapper.find(".image-preview").classes()).toContain("is-closing");
+      expect(wrapper.emitted("close")).toBeUndefined();
+
+      await vi.advanceTimersByTimeAsync(220);
+
+      expect(wrapper.emitted("close")).toHaveLength(1);
+    } finally {
+      wrapper.unmount();
+      vi.useRealTimers();
+    }
+  });
+
+  it("closes the preview on Escape when editing was opened directly from the image list", async () => {
     vi.useFakeTimers();
     const wrapper = mount(ImagePreview, {
       props: {
@@ -1091,7 +1267,7 @@ describe("ImagePreview", () => {
     try {
       expect(wrapper.find(".image-editor").exists()).toBe(true);
 
-      await wrapper.get(".image-preview").trigger("keydown", { key });
+      await wrapper.get(".image-preview").trigger("keydown", { key: "Escape" });
 
       expect(wrapper.find(".image-editor").exists()).toBe(false);
       expect(wrapper.get(".image-preview").classes()).toContain("is-closing");
@@ -1106,7 +1282,34 @@ describe("ImagePreview", () => {
     }
   });
 
-  it.each(["Escape", " "])("captures window %s from direct edit mode and closes the preview", async (key) => {
+  it("keeps direct editing active when Space is pressed", async () => {
+    const wrapper = mount(ImagePreview, {
+      props: {
+        images: [{ id: "img-1", src: "data:image/png;base64,one", createdAt: 1 }],
+        activeId: "img-1",
+        editId: "img-1",
+      },
+      global: {
+        stubs: {
+          Button: buttonStub,
+          Dropdown: dropdownStub,
+          Modal: modalStub,
+          NButton: buttonStub,
+          NDropdown: dropdownStub,
+          NModal: modalStub,
+        },
+      },
+    });
+
+    await wrapper.get(".image-preview").trigger("keydown", { key: " " });
+
+    expect(wrapper.find(".image-editor").exists()).toBe(true);
+    expect(wrapper.find(".image-preview").classes()).not.toContain("is-closing");
+    expect(wrapper.emitted("close")).toBeUndefined();
+    wrapper.unmount();
+  });
+
+  it("captures window Escape from direct edit mode and closes the preview", async () => {
     vi.useFakeTimers();
     const wrapper = mount(ImagePreview, {
       props: {
@@ -1125,7 +1328,7 @@ describe("ImagePreview", () => {
         },
       },
     });
-    const event = new KeyboardEvent("keydown", { key, bubbles: true, cancelable: true });
+    const event = new KeyboardEvent("keydown", { key: "Escape", bubbles: true, cancelable: true });
 
     try {
       window.dispatchEvent(event);
