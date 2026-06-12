@@ -133,12 +133,12 @@ describe("workbench style contract", () => {
     expectSelectorBody(styles, ".image-preview", "right: 0");
     expect(ruleBodies(styles, ".image-preview").join("\n")).not.toContain("width: 90vw");
     expectSelectorBody(styles, ".preview-stage img", "max-width: calc(100vw - var(--image-preview-left, clamp(220px, 18vw, 320px)) - 32px)");
-    expectSelectorBody(styles, ".preview-stage img", "width: 100%");
-    expectSelectorBody(styles, ".preview-stage img", "height: 100%");
+    expectSelectorBody(styles, ".preview-stage img", "width: auto");
+    expectSelectorBody(styles, ".preview-stage img", "height: auto");
     expectSelectorBody(styles, ".preview-stage img", "min-width: 0");
     expectSelectorBody(styles, ".preview-stage img", "min-height: 0");
-    expectSelectorBody(styles, ".preview-stage img", "justify-self: stretch");
-    expectSelectorBody(styles, ".preview-stage img", "align-self: stretch");
+    expect(ruleBodies(styles, ".preview-stage img").join("\n")).not.toContain("justify-self: stretch");
+    expect(ruleBodies(styles, ".preview-stage img").join("\n")).not.toContain("align-self: stretch");
     expectSelectorBody(styles, ".preview-stage img", "max-width: 100%");
     expectSelectorBody(styles, ".preview-stage img", "max-height: 100%");
     expectSelectorBody(styles, ".preview-stage img", "object-fit: contain");

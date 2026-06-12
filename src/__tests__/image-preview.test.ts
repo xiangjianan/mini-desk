@@ -50,6 +50,7 @@ function installCanvasMock(): void {
     save: vi.fn(),
     restore: vi.fn(),
     fillText: vi.fn(),
+    strokeText: vi.fn(),
     setLineDash: vi.fn(),
   };
 
@@ -62,6 +63,36 @@ function installCanvasMock(): void {
   Object.defineProperty(HTMLCanvasElement.prototype, "toDataURL", {
     configurable: true,
     value: vi.fn(() => "data:image/png;base64,edited"),
+  });
+}
+
+async function dispatchPointer(target: Element, type: string, clientX: number, clientY: number): Promise<void> {
+  const event = new MouseEvent(type, {
+    bubbles: true,
+    cancelable: true,
+    clientX,
+    clientY,
+    button: 0,
+  });
+  Object.defineProperty(event, "pointerId", { configurable: true, value: 1 });
+  target.dispatchEvent(event);
+  await Promise.resolve();
+}
+
+function mockRect(element: Element): void {
+  Object.defineProperty(element, "getBoundingClientRect", {
+    configurable: true,
+    value: () => ({
+      x: 0,
+      y: 0,
+      left: 0,
+      top: 0,
+      right: 400,
+      bottom: 300,
+      width: 400,
+      height: 300,
+      toJSON: () => undefined,
+    }),
   });
 }
 
@@ -217,9 +248,8 @@ describe("ImagePreview", () => {
     });
 
     const style = wrapper.get(".preview-stage img").attributes("style");
-    expect(style).toContain("width: 100%");
-    expect(style).toContain("height: 100%");
-    expect(style).toContain("object-fit: contain");
+    expect(style).not.toContain("width: 100%");
+    expect(style).not.toContain("height: 100%");
     expect(style).toContain("scale(1)");
 
     wrapper.unmount();
@@ -486,7 +516,10 @@ describe("ImagePreview", () => {
       expect(wrapper.get(".preview-stage img").attributes("style")).toContain("scale(1)");
 
       await wrapper.get(".preview-toolbar-button.is-edit").trigger("click");
+      expect(wrapper.find(".preview-main").exists()).toBe(true);
+      expect(wrapper.find(".preview-stage .image-editor").exists()).toBe(false);
       expect(wrapper.find(".image-editor").exists()).toBe(true);
+      expect(wrapper.get(".image-editor-toolbar").classes()).toContain("preview-actions");
       await wrapper.get(".image-editor-cancel").trigger("click");
 
       await wrapper.get(".preview-toolbar-button.is-delete").trigger("click");
@@ -535,6 +568,44 @@ describe("ImagePreview", () => {
 
     expect(wrapper.find(".image-editor").exists()).toBe(true);
     wrapper.unmount();
+  });
+
+  it("focuses the text input immediately when creating text from preview edit mode", async () => {
+    const host = document.createElement("div");
+    document.body.append(host);
+    const wrapper = mount(ImagePreview, {
+      attachTo: host,
+      props: {
+        images: [{ id: "img-1", src: "data:image/png;base64,one", createdAt: 1, displayWidth: 400, displayHeight: 300 }],
+        activeId: "img-1",
+      },
+      global: {
+        stubs: {
+          Button: buttonStub,
+          Dropdown: dropdownStub,
+          Modal: modalStub,
+          NButton: buttonStub,
+          NDropdown: dropdownStub,
+          NModal: modalStub,
+        },
+      },
+    });
+
+    try {
+      await wrapper.get(".preview-toolbar-button.is-edit").trigger("click");
+      await wrapper.findAll(".image-editor-tool").find((button) => button.attributes("aria-label") === "文本")?.trigger("click");
+      const canvas = wrapper.get(".image-editor-canvas");
+      mockRect(canvas.element);
+
+      await dispatchPointer(canvas.element, "pointerdown", 100, 80);
+
+      const input = wrapper.get(".image-editor-text-input");
+      expect(document.activeElement).toBe(input.element);
+      expect(input.classes()).toContain("is-transparent");
+    } finally {
+      wrapper.unmount();
+      host.remove();
+    }
   });
 
   it("toggles image zoom on double click", async () => {

@@ -19,6 +19,7 @@ let canvasContextMock: {
   setLineDash: ReturnType<typeof vi.fn>;
   strokeRect: ReturnType<typeof vi.fn>;
   fillRect: ReturnType<typeof vi.fn>;
+  font?: string;
 };
 
 function installCanvasMock() {
@@ -70,7 +71,7 @@ async function dispatchPointer(target: Element, type: string, clientX: number, c
   await nextTick();
 }
 
-function mockRect(element: Element): void {
+function mockRect(element: Element, rect = { width: 400, height: 300 }): void {
   Object.defineProperty(element, "getBoundingClientRect", {
     configurable: true,
     value: () => ({
@@ -78,10 +79,10 @@ function mockRect(element: Element): void {
       y: 0,
       left: 0,
       top: 0,
-      right: 400,
-      bottom: 300,
-      width: 400,
-      height: 300,
+      right: rect.width,
+      bottom: rect.height,
+      width: rect.width,
+      height: rect.height,
       toJSON: () => undefined,
     }),
   });
@@ -183,6 +184,36 @@ describe("ImageEditor", () => {
 
     await wrapper.get(".image-editor-width").setValue(12);
     expect(wrapper.get(".image-editor-text-input").attributes("style")).toContain("font-size: 32px");
+
+    wrapper.unmount();
+  });
+
+  it("scales the editing text preview to match the saved canvas text size", async () => {
+    const wrapper = mount(ImageEditor, {
+      attachTo: document.body,
+      props: {
+        image: { id: "img-1", src: "data:image/png;base64,one", createdAt: 1, displayWidth: 400, displayHeight: 300 },
+      },
+      global: {
+        stubs: {
+          NIcon: iconStub,
+        },
+      },
+    });
+
+    const canvas = wrapper.get(".image-editor-canvas");
+    mockRect(canvas.element, { width: 200, height: 150 });
+
+    await wrapper.findAll(".image-editor-tool").find((button) => button.attributes("aria-label") === "文本")?.trigger("click");
+    await dispatchPointer(canvas.element, "pointerdown", 100, 80);
+    await wrapper.get(".image-editor-text-input").setValue("Scaled");
+
+    expect(wrapper.get(".image-editor-text-input").attributes("style")).toContain("font-size: 12px");
+
+    await wrapper.get(".image-editor-save").trigger("click");
+
+    expect(canvasContextMock.font).toContain("24px");
+    expect(canvasContextMock.fillText).toHaveBeenCalledWith("Scaled", 200, 160);
 
     wrapper.unmount();
   });

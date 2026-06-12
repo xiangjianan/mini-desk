@@ -30,8 +30,10 @@ type EditorCommand =
 const props = withDefaults(defineProps<{
   image: StoredImage;
   language?: AppLanguage;
+  previewLayout?: boolean;
 }>(), {
   language: "zh",
+  previewLayout: false,
 });
 
 const emit = defineEmits<{
@@ -431,8 +433,9 @@ function getTextBoxStyle(command: Extract<EditorCommand, { type: "text" }>): Rec
 }
 
 function getTextInputStyle(command: Extract<EditorCommand, { type: "text" }>): Record<string, string> {
+  const displayScale = getCanvasDisplayScale();
   return {
-    fontSize: `${command.fontSize}px`,
+    fontSize: `${formatPixelValue(command.fontSize * displayScale)}px`,
     lineHeight: String(TEXT_LINE_HEIGHT),
     letterSpacing: `${TEXT_LETTER_SPACING}px`,
   };
@@ -440,6 +443,17 @@ function getTextInputStyle(command: Extract<EditorCommand, { type: "text" }>): R
 
 function getTextFontSizeFromSlider(width: number): number {
   return Math.round(clamp(width, 2, 18) + TEXT_FONT_SIZE_OFFSET);
+}
+
+function getCanvasDisplayScale(): number {
+  const canvas = canvasRef.value;
+  const rect = canvas?.getBoundingClientRect();
+  if (!canvas || !rect || rect.width <= 0 || canvas.width <= 0) return 1;
+  return rect.width / canvas.width;
+}
+
+function formatPixelValue(value: number): string {
+  return Number(value.toFixed(2)).toString();
 }
 
 function startTextDrag(event: PointerEvent, command: Extract<EditorCommand, { type: "text" }>): void {
@@ -647,8 +661,8 @@ function saveImage(): void {
 </script>
 
 <template>
-  <section class="image-editor" :aria-label="editorText.title">
-    <header class="image-editor-toolbar">
+  <section class="image-editor" :class="{ 'image-editor--preview': previewLayout }" :aria-label="editorText.title">
+    <header class="image-editor-toolbar" :class="{ 'preview-actions image-editor-preview-actions': previewLayout }">
       <div class="image-editor-tool-group" role="toolbar" :aria-label="editorText.tools">
         <button
           v-for="tool in toolOptions"
