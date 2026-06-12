@@ -200,7 +200,7 @@ describe("ImagePreview", () => {
     }
   });
 
-  it("renders right-stacked navigation controls that switch previous and next images", async () => {
+  it("renders left-stacked navigation controls that switch previous and next images", async () => {
     const wrapper = mount(ImagePreview, {
       props: {
         images: [

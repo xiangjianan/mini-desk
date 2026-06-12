@@ -173,9 +173,9 @@ describe("Naive UI component usage", () => {
     expect(styles).toMatch(/\.preview-close-button\s*\{[^}]*top: 10px/s);
     expect(styles).toMatch(/\.preview-close-button\s*\{[^}]*right: 10px/s);
     expect(styles).toMatch(/\.preview-nav-stack\s*\{[^}]*top: 50%/s);
-    expect(styles).toMatch(/\.preview-nav-stack\s*\{[^}]*right: 14px/s);
+    expect(styles).toMatch(/\.preview-nav-stack\s*\{[^}]*left: 14px/s);
     expect(styles).toMatch(/\.preview-nav-stack\s*\{[^}]*flex-direction: column/s);
-    expect(styles).toMatch(/\.preview-nav-stack\s*\{[^}]*gap: 2px/s);
+    expect(styles).toMatch(/\.preview-nav-stack\s*\{[^}]*gap: 6px/s);
     expect(styles).toMatch(/\.preview-nav-button\s*\{[^}]*width: 52px/s);
     expect(styles).toMatch(/\.preview-nav-button\s*\{[^}]*height: 68px/s);
     expect(styles).toMatch(/\.preview-nav-button\s*\{[^}]*background: color-mix\(in srgb, var\(--card\) 26%, transparent\)/s);

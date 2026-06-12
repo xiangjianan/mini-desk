@@ -5255,11 +5255,11 @@ html[data-theme="dark"] .image-preview {
 .preview-nav-stack {
   position: absolute;
   top: 50%;
-  right: 14px;
+  left: 14px;
   z-index: 1;
   display: flex;
   flex-direction: column;
-  gap: 2px;
+  gap: 6px;
   transform: translateY(-50%);
 }
 
