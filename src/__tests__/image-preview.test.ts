@@ -67,7 +67,7 @@ describe("ImagePreview", () => {
     }
   });
 
-  it("shows a top-right icon close action in the preview surface", async () => {
+  it("shows a floating toolbar close action in the preview surface", async () => {
     vi.useFakeTimers();
     const wrapper = mount(ImagePreview, {
       props: {
@@ -87,7 +87,8 @@ describe("ImagePreview", () => {
     });
 
     expect(wrapper.find(".preview-sidebar").exists()).toBe(false);
-    const closeButton = wrapper.get(".preview-close-button");
+    expect(wrapper.find(".preview-close-button").exists()).toBe(false);
+    const closeButton = wrapper.get(".preview-toolbar-button.is-close");
     expect(closeButton.attributes("aria-label")).toBe("取消预览");
 
     try {
@@ -200,7 +201,7 @@ describe("ImagePreview", () => {
     }
   });
 
-  it("renders left-stacked navigation controls that switch previous and next images", async () => {
+  it("renders navigation controls in the liquid floating toolbar", async () => {
     const wrapper = mount(ImagePreview, {
       props: {
         images: [
@@ -225,11 +226,12 @@ describe("ImagePreview", () => {
 
     const previous = wrapper.get(".preview-nav-button.is-previous");
     const next = wrapper.get(".preview-nav-button.is-next");
-    const stack = wrapper.get(".preview-nav-stack");
+    const toolbar = wrapper.get(".preview-actions");
 
     expect(previous.attributes("aria-label")).toBe("上一张图片");
     expect(next.attributes("aria-label")).toBe("下一张图片");
-    expect(stack.findAll(".preview-nav-button").map((button) => button.attributes("aria-label"))).toEqual([
+    expect(wrapper.find(".preview-nav-stack").exists()).toBe(false);
+    expect(toolbar.findAll(".preview-nav-button").map((button) => button.attributes("aria-label"))).toEqual([
       "上一张图片",
       "下一张图片",
     ]);
@@ -264,7 +266,7 @@ describe("ImagePreview", () => {
       await wrapper.get(".preview-zoom-button.is-zoom-in").trigger("click");
       expect(wrapper.get(".preview-stage img").attributes("style")).toContain("scale(1.1)");
 
-      await wrapper.get(".preview-close-button").trigger("click");
+      await wrapper.get(".preview-toolbar-button.is-close").trigger("click");
 
       expect(wrapper.get(".image-preview").classes()).toContain("is-closing");
       expect(wrapper.get(".preview-stage img").attributes("style")).toContain("scale(1.1)");
@@ -296,7 +298,8 @@ describe("ImagePreview", () => {
       },
     });
 
-    expect(wrapper.find(".preview-nav-stack").exists()).toBe(true);
+    expect(wrapper.find(".preview-actions").exists()).toBe(true);
+    expect(wrapper.find(".preview-nav-stack").exists()).toBe(false);
     const previous = wrapper.get(".preview-nav-button.is-previous");
     const next = wrapper.get(".preview-nav-button.is-next");
 
@@ -347,7 +350,8 @@ describe("ImagePreview", () => {
     wrapper.unmount();
   });
 
-  it("renders bottom zoom icon actions without copy close or delete actions", async () => {
+  it("renders a liquid floating toolbar with navigation zoom delete and close actions", async () => {
+    vi.useFakeTimers();
     const wrapper = mount(ImagePreview, {
       props: {
         images: [{ id: "img-1", src: "data:image/png;base64,one", createdAt: 1 }],
@@ -365,20 +369,39 @@ describe("ImagePreview", () => {
       },
     });
 
-    const buttons = wrapper.findAll(".preview-actions button");
-    expect(buttons).toHaveLength(2);
-    expect(buttons.map((button) => button.text())).toEqual(["", ""]);
-    expect(buttons.map((button) => button.attributes("aria-label"))).toEqual(["缩小图片", "放大图片"]);
+    const toolbar = wrapper.get(".preview-actions");
+    expect(toolbar.attributes("role")).toBe("toolbar");
+    const buttons = toolbar.findAll("button");
+    expect(buttons).toHaveLength(6);
+    expect(buttons.map((button) => button.text())).toEqual(["", "", "", "", "", ""]);
+    expect(buttons.map((button) => button.attributes("aria-label"))).toEqual([
+      "上一张图片",
+      "下一张图片",
+      "缩小图片",
+      "放大图片",
+      "删除",
+      "取消预览",
+    ]);
 
-    await wrapper.get(".preview-zoom-button.is-zoom-in").trigger("click");
-    expect(wrapper.get(".preview-stage img").attributes("style")).toContain("scale(1.1)");
+    try {
+      await wrapper.get(".preview-zoom-button.is-zoom-in").trigger("click");
+      expect(wrapper.get(".preview-stage img").attributes("style")).toContain("scale(1.1)");
 
-    await wrapper.get(".preview-zoom-button.is-zoom-out").trigger("click");
-    expect(wrapper.get(".preview-stage img").attributes("style")).toContain("scale(1)");
-    expect(wrapper.emitted("copy")).toBeUndefined();
-    expect(wrapper.emitted("delete")).toBeUndefined();
-    expect(wrapper.emitted("close")).toBeUndefined();
-    wrapper.unmount();
+      await wrapper.get(".preview-zoom-button.is-zoom-out").trigger("click");
+      expect(wrapper.get(".preview-stage img").attributes("style")).toContain("scale(1)");
+
+      await wrapper.get(".preview-toolbar-button.is-delete").trigger("click");
+      expect(wrapper.emitted("delete")?.[0]?.[0]).toBe("img-1");
+      expect(wrapper.emitted("copy")).toBeUndefined();
+
+      await wrapper.get(".preview-toolbar-button.is-close").trigger("click");
+      expect(wrapper.get(".image-preview").classes()).toContain("is-closing");
+      await vi.advanceTimersByTimeAsync(220);
+      expect(wrapper.emitted("close")).toHaveLength(1);
+    } finally {
+      wrapper.unmount();
+      vi.useRealTimers();
+    }
   });
 
   it("toggles image zoom on double click", async () => {

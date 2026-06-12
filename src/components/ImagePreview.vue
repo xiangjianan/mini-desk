@@ -171,6 +171,12 @@ function handleMenuSelect(key: string): void {
   if (key === "delete") emit("delete", current.id, current.anchor);
 }
 
+function deleteActive(event: MouseEvent): void {
+  if (!active.value) return;
+  closeMenu();
+  emit("delete", active.value.id, event.currentTarget as HTMLElement);
+}
+
 function handleKeydown(event: KeyboardEvent): void {
   if (!active.value) return;
   const key = event.key.toLowerCase();
@@ -226,48 +232,6 @@ function handleKeydown(event: KeyboardEvent): void {
       @contextmenu.prevent="openMenu($event, active.id)"
     >
       <main class="preview-main">
-        <button
-          type="button"
-          class="preview-close-button"
-          :aria-label="uiText.preview.close"
-          @click.stop.prevent="requestClose"
-          @keydown.enter.stop.prevent="requestClose"
-          @keydown.space.stop.prevent="requestClose"
-        >
-          <NIcon size="20">
-            <CloseOutline />
-          </NIcon>
-        </button>
-        <div class="preview-nav-stack">
-          <button
-            type="button"
-            class="preview-nav-button is-previous"
-            :aria-label="uiText.preview.previous"
-            :aria-disabled="!canNavigatePrevious"
-            :disabled="!canNavigatePrevious"
-            @click.stop.prevent="navigate(-1)"
-            @keydown.enter.stop.prevent="navigate(-1)"
-            @keydown.space.stop.prevent="navigate(-1)"
-          >
-            <NIcon size="28">
-              <ChevronUpOutline />
-            </NIcon>
-          </button>
-          <button
-            type="button"
-            class="preview-nav-button is-next"
-            :aria-label="uiText.preview.next"
-            :aria-disabled="!canNavigateNext"
-            :disabled="!canNavigateNext"
-            @click.stop.prevent="navigate(1)"
-            @keydown.enter.stop.prevent="navigate(1)"
-            @keydown.space.stop.prevent="navigate(1)"
-          >
-            <NIcon size="28">
-              <ChevronDownOutline />
-            </NIcon>
-          </button>
-        </div>
         <div class="preview-stage" @wheel="wheel" @mousedown="down">
           <img
             v-if="active.src"
@@ -280,16 +244,60 @@ function handleKeydown(event: KeyboardEvent): void {
             @dblclick.stop.prevent="toggleZoom"
           />
         </div>
-        <div class="preview-actions">
-          <span>{{ uiText.preview.help }}</span>
-          <button type="button" class="preview-zoom-button is-zoom-out" :aria-label="uiText.preview.zoomOut" @click="adjustZoom(-ZOOM_STEP)">
-            <NIcon size="19">
+        <div class="preview-actions" role="toolbar" :aria-label="uiText.preview.help">
+          <button
+            type="button"
+            class="preview-toolbar-button preview-nav-button is-previous"
+            :aria-label="uiText.preview.previous"
+            :aria-disabled="!canNavigatePrevious"
+            :disabled="!canNavigatePrevious"
+            @click.stop.prevent="navigate(-1)"
+            @keydown.enter.stop.prevent="navigate(-1)"
+            @keydown.space.stop.prevent="navigate(-1)"
+          >
+            <NIcon size="20">
+              <ChevronUpOutline />
+            </NIcon>
+          </button>
+          <button
+            type="button"
+            class="preview-toolbar-button preview-nav-button is-next"
+            :aria-label="uiText.preview.next"
+            :aria-disabled="!canNavigateNext"
+            :disabled="!canNavigateNext"
+            @click.stop.prevent="navigate(1)"
+            @keydown.enter.stop.prevent="navigate(1)"
+            @keydown.space.stop.prevent="navigate(1)"
+          >
+            <NIcon size="20">
+              <ChevronDownOutline />
+            </NIcon>
+          </button>
+          <button type="button" class="preview-toolbar-button preview-zoom-button is-zoom-out" :aria-label="uiText.preview.zoomOut" @click.stop.prevent="adjustZoom(-ZOOM_STEP)">
+            <NIcon size="18">
               <RemoveOutline />
             </NIcon>
           </button>
-          <button type="button" class="preview-zoom-button is-zoom-in" :aria-label="uiText.preview.zoomIn" @click="adjustZoom(ZOOM_STEP)">
-            <NIcon size="19">
+          <button type="button" class="preview-toolbar-button preview-zoom-button is-zoom-in" :aria-label="uiText.preview.zoomIn" @click.stop.prevent="adjustZoom(ZOOM_STEP)">
+            <NIcon size="18">
               <AddOutline />
+            </NIcon>
+          </button>
+          <button type="button" class="preview-toolbar-button is-delete" :aria-label="uiText.common.delete" @click.stop.prevent="deleteActive">
+            <NIcon size="18">
+              <TrashOutline />
+            </NIcon>
+          </button>
+          <button
+            type="button"
+            class="preview-toolbar-button is-close"
+            :aria-label="uiText.preview.close"
+            @click.stop.prevent="requestClose"
+            @keydown.enter.stop.prevent="requestClose"
+            @keydown.space.stop.prevent="requestClose"
+          >
+            <NIcon size="18">
+              <CloseOutline />
             </NIcon>
           </button>
         </div>

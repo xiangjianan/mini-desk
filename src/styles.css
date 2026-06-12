@@ -5203,126 +5203,75 @@ html[data-theme="dark"] .image-preview {
   animation: image-preview-photo-out 220ms ease-in forwards;
 }
 
-.preview-close-button,
-.preview-nav-button,
-.preview-zoom-button {
-  position: absolute;
-  z-index: 1;
+.preview-toolbar-button {
+  position: static;
   display: inline-flex;
   align-items: center;
   justify-content: center;
-  border: 1px solid color-mix(in srgb, var(--border) 72%, rgba(255, 255, 255, 0.36));
-  background: color-mix(in srgb, var(--card) 22%, transparent);
+  width: 34px;
+  height: 34px;
+  border: 0;
+  border-radius: 999px;
+  background: transparent;
   color: var(--text);
-  box-shadow:
-    0 8px 24px rgba(0, 0, 0, 0.16),
-    inset 0 1px 0 rgba(255, 255, 255, 0.24);
-  -webkit-backdrop-filter: blur(18px) saturate(1.55);
-  backdrop-filter: blur(18px) saturate(1.55);
+  box-shadow: none;
   cursor: pointer;
+  opacity: 0.76;
   transition:
     background-color 120ms ease,
-    border-color 120ms ease,
+    color 120ms ease,
     opacity 120ms ease,
     transform 120ms ease;
 }
 
-.preview-close-button:hover,
-.preview-close-button:focus-visible,
-.preview-nav-button:hover,
-.preview-nav-button:focus-visible,
-.preview-zoom-button:hover,
-.preview-zoom-button:focus-visible {
+.preview-toolbar-button:hover,
+.preview-toolbar-button:focus-visible {
   background: color-mix(in srgb, var(--card) 34%, transparent);
-  border-color: color-mix(in srgb, var(--primary) 34%, var(--border));
+  opacity: 1;
 }
 
-.preview-close-button:focus-visible,
-.preview-nav-button:focus-visible,
-.preview-zoom-button:focus-visible {
+.preview-toolbar-button:focus-visible {
   outline: 2px solid color-mix(in srgb, var(--primary) 46%, transparent);
   outline-offset: 2px;
 }
 
-.preview-close-button {
-  top: 10px;
-  right: 10px;
-  width: 42px;
-  height: 42px;
-  border-radius: 999px;
-}
-
-.preview-nav-stack {
-  position: absolute;
-  top: 50%;
-  left: 14px;
-  z-index: 1;
-  display: flex;
-  flex-direction: column;
-  gap: 6px;
-  transform: translateY(-50%);
-}
-
-.preview-nav-button {
-  position: static;
-  width: 42px;
-  height: 42px;
-  border-radius: 999px;
-  background: color-mix(in srgb, var(--card) 26%, transparent);
-  opacity: 0.58;
-}
-
-.preview-nav-button:disabled {
+.preview-toolbar-button:disabled {
   cursor: default;
   opacity: 0.22;
 }
 
-.preview-nav-button:hover,
-.preview-nav-button:focus-visible {
-  background: color-mix(in srgb, var(--card) 40%, transparent);
-  opacity: 0.82;
-}
-
-.preview-nav-button:disabled:hover,
-.preview-nav-button:disabled:focus-visible {
-  background: color-mix(in srgb, var(--card) 26%, transparent);
-  border-color: color-mix(in srgb, var(--border) 72%, rgba(255, 255, 255, 0.36));
+.preview-toolbar-button:disabled:hover,
+.preview-toolbar-button:disabled:focus-visible {
+  background: transparent;
   opacity: 0.22;
 }
 
 .preview-nav-button.is-previous:active {
-  transform: translateY(-7px);
+  transform: translateY(-3px);
 }
 
 .preview-nav-button.is-next:active {
-  transform: translateY(7px);
+  transform: translateY(3px);
 }
 
 .preview-actions {
   justify-self: center;
-  min-height: 40px;
-  margin-top: 10px;
-  padding: 5px;
-  border: 0;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 3px;
+  min-height: 44px;
+  margin-top: 12px;
+  padding: 5px 7px;
+  border: 1px solid color-mix(in srgb, var(--border) 58%, rgba(255, 255, 255, 0.38));
   border-radius: 999px;
-  background: var(--material-elevated);
-  box-shadow: var(--shadow-soft);
-  backdrop-filter: blur(24px) saturate(1.7);
-}
-
-.preview-actions > span {
-  max-width: 38vw;
-  padding: 0 8px;
-  overflow: hidden;
-  text-overflow: ellipsis;
-  white-space: nowrap;
-}
-
-.preview-zoom-button {
-  position: static;
-  width: 34px;
-  height: 30px;
-  border-radius: 999px;
+  background: color-mix(in srgb, var(--material-elevated) 74%, transparent);
+  box-shadow:
+    0 14px 44px rgba(0, 0, 0, 0.16),
+    inset 0 1px 0 rgba(255, 255, 255, 0.26),
+    inset 0 -1px 0 rgba(255, 255, 255, 0.08);
+  -webkit-backdrop-filter: blur(28px) saturate(1.75);
+  backdrop-filter: blur(28px) saturate(1.75);
 }
 
 .todo-collapse-button,
@@ -5571,9 +5520,7 @@ select {
   .shortcut-help-modal.n-card,
   .companion-popover-shell.n-popover,
   .preview-actions,
-  .preview-close-button,
-  .preview-nav-button,
-  .preview-zoom-button,
+  .preview-toolbar-button,
   .image-preview {
     -webkit-backdrop-filter: none;
     backdrop-filter: none;
