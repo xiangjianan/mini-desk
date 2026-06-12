@@ -18,7 +18,9 @@ import { GUIDE_MESSAGES } from "../state/i18n";
 const messageKeys = [
   "save",
   "stateConflict",
-  "saveStatusLegend",
+  "workspaceDensityGood",
+  "workspaceDensityAreaOver",
+  "workspaceDensityAllOver",
   "todoCompleted",
   "clipboardPasteUnsupported",
   "clipboardImageMissing",
@@ -145,7 +147,9 @@ describe("message catalog", () => {
     for (const [key, entry] of Object.entries(MESSAGE_CATALOG)) {
       if (key === "about") continue;
       for (const variant of entry.variants) {
-        const maxLength = key === "saveStatusLegend" ? 28 : key === "confirmUnstarTodoDeadline" ? 24 : 15;
+        const maxLength = key.startsWith("workspaceDensity")
+          ? 28
+          : key === "confirmUnstarTodoDeadline" ? 24 : 15;
         expect(variant.length, `${key}: ${variant}`).toBeLessThanOrEqual(maxLength);
       }
     }

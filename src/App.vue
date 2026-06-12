@@ -71,6 +71,8 @@ const MAX_TODO_NOTIFICATION_TIMEOUT_MS = 2_147_483_647;
 const UNDO_HISTORY_LIMIT = 50;
 const IMAGE_PREVIEW_CLOSE_MS = 220;
 const IMAGE_PREVIEW_OVERLOAD_THRESHOLD = 20;
+const TODO_DENSITY_THRESHOLD = 7;
+const QUICK_DENSITY_THRESHOLD = 12;
 const STATE_SYNC_CHANNEL = "mini-desk-state-sync";
 const mobileCompanionPosition: { right: string; bottom: string } = { right: "18px", bottom: "28px" };
 
@@ -146,6 +148,15 @@ type PersistOptions = {
   force?: boolean;
 };
 
+type WorkspaceDensityState = "saved" | "saving" | "dirty";
+type DensityAreaType = "todos" | "quickButtons" | "images";
+
+type DensityArea = {
+  type: DensityAreaType;
+  label: string;
+  count: number;
+};
+
 const GUIDE_MESSAGE_DURATION_MS = 5000;
 const GITHUB_ISSUE_URL = "https://github.com/xiangjianan/mini-desk/issues/new";
 const GITHUB_REPO_URL = "https://github.com/xiangjianan/mini-desk";
@@ -172,10 +183,18 @@ const displayedPreviewId = computed(() => activePreviewId.value ?? closingPrevie
 const imagePreviewClosing = computed(() => Boolean(closingPreviewId.value) && !activePreviewId.value);
 const settingsAppVersion = computed(() => (versionPromptVisible.value ? availableAppVersion.value : appVersion.value));
 const saveStatus = ref<"saved" | "saving" | "dirty">("saved");
-const saveStatusLabel = computed(() => {
-  if (saveStatus.value === "dirty") return uiText.value.app.dirty;
-  if (saveStatus.value === "saving") return uiText.value.app.saving;
-  return uiText.value.app.saved;
+const densityAreas = computed(() => getDensityAreas());
+const overLimitDensityAreas = computed(() => densityAreas.value.filter((area) => area.count > getDensityThreshold(area.type)));
+const workspaceDensityStatus = computed<WorkspaceDensityState>(() => {
+  const overTypes = new Set(overLimitDensityAreas.value.map((area) => area.type));
+  if (overTypes.size >= 3) return "dirty";
+  if (overTypes.size > 0) return "saving";
+  return "saved";
+});
+const workspaceDensityLabel = computed(() => {
+  if (workspaceDensityStatus.value === "dirty") return uiText.value.app.densityCrowded;
+  if (workspaceDensityStatus.value === "saving") return uiText.value.app.densityWarning;
+  return uiText.value.app.densityGood;
 });
 
 const titles = computed(() =>
@@ -1691,7 +1710,95 @@ function showSaveBubble(): void {
 }
 
 function showSaveStatusTip(anchor?: HTMLElement): void {
-  showBubble("saveStatusLegend", anchor);
+  if (workspaceDensityStatus.value === "saved") {
+    showBubble("workspaceDensityGood", anchor);
+    return;
+  }
+  if (workspaceDensityStatus.value === "dirty") {
+    const summary = overLimitDensityAreas.value
+      .map((area) => `${area.label} ${area.count}`)
+      .join("、");
+    showBubbleText(
+      formatDensitySummaryMessage(getMessage("workspaceDensityAllOver", Math.random, state.language), summary),
+      anchor,
+    );
+    return;
+  }
+  const area = randomDensityArea(overLimitDensityAreas.value);
+  if (!area) {
+    showBubble("workspaceDensityGood", anchor);
+    return;
+  }
+  showBubbleText(
+    formatDensityMessage(getMessage("workspaceDensityAreaOver", Math.random, state.language), area),
+    anchor,
+  );
+}
+
+function getDensityAreas(): DensityArea[] {
+  return [
+    {
+      type: "todos",
+      label: getDensityAreaLabel("todos"),
+      count: getLargestTodoListCount(),
+    },
+    {
+      type: "quickButtons",
+      label: getDensityAreaLabel("quickButtons"),
+      count: getLargestQuickCategoryCount(),
+    },
+    {
+      type: "images",
+      label: getDensityAreaLabel("images"),
+      count: state.images.length,
+    },
+  ];
+}
+
+function getDensityThreshold(type: DensityAreaType): number {
+  if (type === "todos") return TODO_DENSITY_THRESHOLD;
+  if (type === "quickButtons") return QUICK_DENSITY_THRESHOLD;
+  return IMAGE_PREVIEW_OVERLOAD_THRESHOLD;
+}
+
+function getDensityAreaLabel(type: DensityAreaType): string {
+  if (state.language === "en") {
+    if (type === "todos") return "Reminders";
+    if (type === "quickButtons") return "Quick Actions";
+    return "Images";
+  }
+  if (type === "todos") return "提醒事项";
+  if (type === "quickButtons") return "快捷动作";
+  return "图片";
+}
+
+function getLargestTodoListCount(): number {
+  return state.todoLists.reduce((max, list) => Math.max(max, state.todos[list.id]?.length ?? 0), 0);
+}
+
+function getLargestQuickCategoryCount(): number {
+  const counts = new Map<string, number>();
+  state.quickButtons.forEach((button) => {
+    if (button.hidden) return;
+    const tagId = button.tagId ?? "__untagged";
+    counts.set(tagId, (counts.get(tagId) ?? 0) + 1);
+  });
+  return Math.max(0, ...counts.values());
+}
+
+function randomDensityArea(areas: DensityArea[]): DensityArea | undefined {
+  if (areas.length === 0) return undefined;
+  return areas[Math.floor(Math.random() * areas.length)];
+}
+
+function formatDensityMessage(message: string, area: DensityArea): string {
+  return message
+    .replaceAll("{area}", area.label)
+    .replaceAll("{count}", String(area.count));
+}
+
+function formatDensitySummaryMessage(message: string, summary: string): string {
+  return message.replaceAll("{summary}", summary);
 }
 
 function showBubble(messageKey: MessageKey, anchor?: HTMLElement, options: BubbleOptions = {}): void {
@@ -2328,7 +2435,7 @@ function moveItem<T extends { id: string }>(items: T[], dragId: string, targetId
       v-if="!isMobileBlocked"
       title="Mini Desk"
       slogan="Do less, do it well."
-      :save-status-label="saveStatusLabel"
+      :save-status-label="workspaceDensityLabel"
       :theme="state.theme"
       @theme="handleThemeClick"
       @dragover.prevent
@@ -2338,9 +2445,9 @@ function moveItem<T extends { id: string }>(items: T[], dragId: string, targetId
         <span
           class="save-status"
           data-testid="save-status"
-          :data-state="saveStatus"
-          :aria-label="saveStatusLabel"
-          :title="saveStatusLabel"
+          :data-state="workspaceDensityStatus"
+          :aria-label="workspaceDensityLabel"
+          :title="workspaceDensityLabel"
           aria-live="polite"
           role="button"
           tabindex="0"
@@ -2348,7 +2455,7 @@ function moveItem<T extends { id: string }>(items: T[], dragId: string, targetId
           @keydown.enter.prevent="showSaveStatusTip($event.currentTarget as HTMLElement)"
           @keydown.space.prevent="showSaveStatusTip($event.currentTarget as HTMLElement)"
         >
-          <span class="save-status-label">{{ saveStatusLabel }}</span>
+          <span class="save-status-label">{{ workspaceDensityLabel }}</span>
         </span>
       </template>
 
