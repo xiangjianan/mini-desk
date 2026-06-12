@@ -613,6 +613,7 @@ function handleQuickGroupDrop(groupId: string): void {
       preset="card"
       class="quick-dialog"
       :mask-closable="false"
+      :mask-style="{ background: 'transparent' }"
       :title="editingId ? uiText.quick.dialogEdit : uiText.quick.dialogAdd"
     >
       <form class="quick-form" @submit.prevent="submit">

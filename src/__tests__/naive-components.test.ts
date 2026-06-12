@@ -825,6 +825,7 @@ describe("Naive UI component usage", () => {
     const styles = read("src/styles.css");
 
     expect(quick).toContain(':mask-closable="false"');
+    expect(quick).toContain(":mask-style=\"{ background: 'transparent' }\"");
     expect(quick).not.toContain("handleDialogOutsideClick");
     expect(quick).not.toContain("@mask-click");
     expect(styles).toMatch(/\.quick-dialog\s*\{[^}]*width: min\(420px, calc\(100vw - 32px\)\)/s);
