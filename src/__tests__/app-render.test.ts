@@ -3597,9 +3597,11 @@ describe("App shell", () => {
       expect(wrapper.find('[data-testid="companion-confirm"]').text()).toContain("把截图、提醒事项、快捷动作和备忘录缝合得恰到好处");
       expect(wrapper.find('[data-testid="companion-confirm"]').text()).toContain("所有操作均在本地浏览器完成，绝不上传您的任何数据。");
       const signature = wrapper.get('[data-testid="companion-signature"]');
-      expect(signature.text()).toBe("(100% AI built)");
-      expect(signature.element.parentElement).toBe(wrapper.get(".companion-meta-row").element);
-      expect(wrapper.get('[data-testid="companion-link"]').element.parentElement).toBe(wrapper.get(".companion-meta-row").element);
+      const repoLink = wrapper.get('[data-testid="companion-link"]');
+      expect(signature.text()).toBe("(100% AI Build)");
+      expect(repoLink.text()).toContain("xiangjianan / mini-desk");
+      expect(repoLink.text()).toContain("(100% AI Build)");
+      expect(signature.element.parentElement).toBe(repoLink.element);
       expect(wrapper.find('[data-testid="companion-confirm"]').text()).not.toContain("100% 由 AI 开发");
       expect(signature.classes()).toContain("companion-signature");
       expect(wrapper.find('[data-testid="companion-confirm"]').text()).not.toContain("云霞 · 产品");
@@ -3639,7 +3641,7 @@ describe("App shell", () => {
       expect(aboutText).toContain("screenshots, reminders, quick actions, and a memo");
       expect(aboutText).toContain("Everything happens in your local browser. None of your data is ever uploaded.");
       expect(aboutText).not.toContain("100% developed by AI");
-      expect(wrapper.get('[data-testid="companion-signature"]').text()).toBe("(100% AI built)");
+      expect(wrapper.get('[data-testid="companion-signature"]').text()).toBe("(100% AI Build)");
       expect(aboutText).not.toContain("workspaces");
     } finally {
       wrapper.unmount();

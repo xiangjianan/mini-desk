@@ -387,14 +387,14 @@ function isPointInsideElement(x: number, y: number, element: HTMLElement | null)
           >
             <NIcon class="companion-link-icon" :component="LogoGithub" />
             {{ renderedLinkText }}
+            <span
+              v-if="renderedSignatureText"
+              class="companion-signature"
+              data-testid="companion-signature"
+            >
+              {{ renderedSignatureText }}
+            </span>
           </a>
-          <span
-            v-if="renderedSignatureText"
-            class="companion-signature"
-            data-testid="companion-signature"
-          >
-            {{ renderedSignatureText }}
-          </span>
         </div>
         <div v-if="renderedConfirm" class="companion-actions">
           <NButton size="tiny" class="companion-action-button" :class="{ 'is-danger': renderedConfirmDanger }" data-testid="companion-yes" @click="emit('yes')">{{ renderedConfirmText }}</NButton>
