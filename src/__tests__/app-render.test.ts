@@ -3593,7 +3593,7 @@ describe("App shell", () => {
       await vi.advanceTimersByTimeAsync(200);
       await wrapper.vm.$nextTick();
 
-      expect(wrapper.find('[data-testid="companion-confirm"]').text()).toContain("Mini Desk 看板 (100% AI BUILT)");
+      expect(wrapper.find('[data-testid="companion-confirm"]').text()).toContain("Mini Desk (100% AI BUILT)");
       expect(wrapper.find('[data-testid="companion-confirm"]').text()).toContain("把截图、提醒事项、快捷动作和备忘录缝合得恰到好处");
       expect(wrapper.find('[data-testid="companion-confirm"]').text()).toContain("所有操作均在本地浏览器完成，绝不上传您的任何数据。");
       const repoLink = wrapper.get('[data-testid="companion-link"]');
