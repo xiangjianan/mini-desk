@@ -102,7 +102,7 @@ describe("ImageEditor", () => {
     });
   });
 
-  it("renders crop, drawing, shape, arrow, marker, color, width, and save controls", () => {
+  it("renders editor tools with names, tooltips, and expected icon affordances", () => {
     const wrapper = mount(ImageEditor, {
       props: {
         image: { id: "img-1", src: "data:image/png;base64,one", createdAt: 1, displayWidth: 400, displayHeight: 300 },
@@ -122,7 +122,20 @@ describe("ImageEditor", () => {
       "圆形",
       "箭头",
       "标注",
+      "文本",
     ]);
+    expect(wrapper.findAll(".image-editor-tool").map((button) => button.attributes("data-tooltip"))).toEqual([
+      "裁切",
+      "画笔",
+      "矩形",
+      "圆形",
+      "箭头",
+      "标注",
+      "文本",
+    ]);
+    expect(wrapper.find('[aria-label="画笔"] .lucide-pen-line').exists()).toBe(true);
+    expect(wrapper.find('[aria-label="圆形"] .image-editor-ellipse-icon').exists()).toBe(true);
+    expect(wrapper.get('[aria-label="标注"] .image-editor-marker-icon').text()).toBe("①");
     expect(wrapper.findAll(".image-editor-color").map((button) => button.attributes("aria-label"))).toEqual([
       "红色",
       "绿色",
@@ -338,6 +351,8 @@ describe("ImageEditor", () => {
 
     expect(wrapper.get(".image-editor-crop-cancel").attributes("aria-label")).toBe("取消裁切");
     expect(wrapper.get(".image-editor-crop-apply").attributes("aria-label")).toBe("应用裁切");
+    expect(wrapper.get(".image-editor-crop-actions").attributes("style")).toContain("left: 100%");
+    expect(wrapper.get(".image-editor-crop-actions").attributes("style")).toContain("top: 100%");
 
     await dispatchPointer(canvas.element, "pointerdown", 2, 2);
     await dispatchPointer(canvas.element, "pointermove", 40, 30);
@@ -355,6 +370,46 @@ describe("ImageEditor", () => {
       displayWidth: 360,
       displayHeight: 270,
     });
+    wrapper.unmount();
+  });
+
+  it("supports multiple editable text boxes that can be selected, moved, and saved", async () => {
+    const wrapper = mount(ImageEditor, {
+      props: {
+        image: { id: "img-1", src: "data:image/png;base64,one", createdAt: 1, displayWidth: 400, displayHeight: 300 },
+      },
+      global: {
+        stubs: {
+          NIcon: iconStub,
+        },
+      },
+    });
+
+    const canvas = wrapper.get(".image-editor-canvas");
+    mockRect(canvas.element);
+
+    await wrapper.findAll(".image-editor-tool").find((button) => button.attributes("aria-label") === "文本")?.trigger("click");
+    await dispatchPointer(canvas.element, "pointerdown", 100, 80);
+    await wrapper.get(".image-editor-text-input").setValue("Hello");
+
+    await dispatchPointer(canvas.element, "pointerdown", 220, 140);
+    const textBoxes = wrapper.findAll(".image-editor-text-box");
+    expect(textBoxes).toHaveLength(2);
+    expect(textBoxes[1].classes()).toContain("is-active");
+
+    await textBoxes[0].trigger("click");
+    expect(wrapper.findAll(".image-editor-text-box")[0].classes()).toContain("is-active");
+
+    await dispatchPointer(wrapper.findAll(".image-editor-text-box")[0].element, "pointerdown", 100, 80);
+    await dispatchPointer(wrapper.findAll(".image-editor-text-box")[0].element, "pointermove", 140, 120);
+    await dispatchPointer(wrapper.findAll(".image-editor-text-box")[0].element, "pointerup", 140, 120);
+    expect(wrapper.findAll(".image-editor-text-box")[0].attributes("style")).toContain("left: 35%");
+    expect(wrapper.findAll(".image-editor-text-box")[0].attributes("style")).toContain("top: 40%");
+
+    canvasContextMock.fillText.mockClear();
+    await wrapper.get(".image-editor-save").trigger("click");
+    expect(canvasContextMock.fillText).toHaveBeenCalledWith("Hello", 140, 120);
+
     wrapper.unmount();
   });
 

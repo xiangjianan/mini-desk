@@ -1,10 +1,11 @@
 <script setup lang="ts">
 import { computed, nextTick, onMounted, ref, shallowRef, watch } from "vue";
-import { ArrowUpRight, Check, Circle, Crop, Highlighter, Minus, MousePointer2, Paintbrush, RectangleHorizontal, RotateCcw, X } from "lucide-vue-next";
+import type { Component } from "vue";
+import { ArrowUpRight, Check, Crop, Minus, MousePointer2, PenLine, RectangleHorizontal, RotateCcw, Type, X } from "lucide-vue-next";
 import { getUiText } from "../state/i18n";
 import type { AppLanguage, StoredImage } from "../types";
 
-type EditorTool = "crop" | "brush" | "rectangle" | "ellipse" | "arrow" | "marker";
+type EditorTool = "crop" | "brush" | "rectangle" | "ellipse" | "arrow" | "marker" | "text";
 type EditorColor = "#ef4444" | "#22c55e" | "#3b82f6" | "#facc15" | "#111827" | "#ffffff";
 type CropHandle = "move" | "left" | "right" | "top" | "bottom" | "top-left" | "top-right" | "bottom-left" | "bottom-right";
 
@@ -23,7 +24,8 @@ interface EditorRect {
 type EditorCommand =
   | { type: "brush"; color: string; width: number; points: EditorPoint[] }
   | { type: "rectangle" | "ellipse" | "arrow"; color: string; width: number; start: EditorPoint; end: EditorPoint }
-  | { type: "marker"; color: string; number: number; point: EditorPoint };
+  | { type: "marker"; color: string; number: number; point: EditorPoint }
+  | { type: "text"; id: string; color: string; fontSize: number; point: EditorPoint; text: string };
 
 const props = withDefaults(defineProps<{
   image: StoredImage;
@@ -48,13 +50,14 @@ const colorOptions: { value: EditorColor; key: "red" | "green" | "blue" | "yello
   { value: "#ffffff", key: "white" },
 ];
 
-const toolOptions: { value: EditorTool; icon: typeof Crop; labelKey: "crop" | "brush" | "rectangle" | "ellipse" | "arrow" | "marker" }[] = [
+const toolOptions: { value: EditorTool; icon?: Component; labelKey: "crop" | "brush" | "rectangle" | "ellipse" | "arrow" | "marker" | "text"; glyph?: string; customIcon?: "ellipse" }[] = [
   { value: "crop", icon: Crop, labelKey: "crop" },
-  { value: "brush", icon: Paintbrush, labelKey: "brush" },
+  { value: "brush", icon: PenLine, labelKey: "brush" },
   { value: "rectangle", icon: RectangleHorizontal, labelKey: "rectangle" },
-  { value: "ellipse", icon: Circle, labelKey: "ellipse" },
+  { value: "ellipse", labelKey: "ellipse", customIcon: "ellipse" },
   { value: "arrow", icon: ArrowUpRight, labelKey: "arrow" },
-  { value: "marker", icon: Highlighter, labelKey: "marker" },
+  { value: "marker", labelKey: "marker", glyph: "①" },
+  { value: "text", icon: Type, labelKey: "text" },
 ];
 
 const canvasRef = ref<HTMLCanvasElement | null>(null);
@@ -69,9 +72,13 @@ const commands = ref<EditorCommand[]>([]);
 const previewCommand = ref<EditorCommand | null>(null);
 const cropRect = ref<EditorRect | null>(null);
 const dragState = ref<{ pointerId: number; tool: EditorTool; start: EditorPoint; cropStart?: EditorRect; cropHandle?: CropHandle } | null>(null);
+const textDragState = ref<{ pointerId: number; id: string; start: EditorPoint; origin: EditorPoint } | null>(null);
+const activeTextId = ref<string | null>(null);
+let textIdSequence = 0;
 
 const uiText = computed(() => getUiText(props.language));
 const editorText = computed(() => uiText.value.imageEditor);
+const textCommands = computed(() => commands.value.filter((command): command is Extract<EditorCommand, { type: "text" }> => command.type === "text"));
 const canvasWidth = computed(() => Math.max(1, Math.round(sourceImage.value?.naturalWidth || workingDisplayWidth.value || props.image.displayWidth || 800)));
 const canvasHeight = computed(() => Math.max(1, Math.round(sourceImage.value?.naturalHeight || workingDisplayHeight.value || props.image.displayHeight || 600)));
 const scaleX = computed(() => {
@@ -107,6 +114,8 @@ watch(
     previewCommand.value = null;
     cropRect.value = null;
     dragState.value = null;
+    textDragState.value = null;
+    activeTextId.value = null;
     loadSourceImage();
   },
 );
@@ -149,7 +158,7 @@ function getCanvasContext(canvas = canvasRef.value): CanvasRenderingContext2D | 
   return canvas?.getContext("2d") ?? null;
 }
 
-function renderCanvas(showCropOverlay = true): void {
+function renderCanvas(showCropOverlay = true, includeText = false): void {
   const canvas = canvasRef.value;
   const context = getCanvasContext(canvas);
   if (!canvas || !context) return;
@@ -159,7 +168,9 @@ function renderCanvas(showCropOverlay = true): void {
 
   context.clearRect(0, 0, canvas.width, canvas.height);
   if (sourceImage.value) context.drawImage(sourceImage.value, 0, 0, canvas.width, canvas.height);
-  for (const command of commands.value) drawCommand(context, command);
+  for (const command of commands.value) {
+    if (command.type !== "text" || includeText) drawCommand(context, command);
+  }
   if (previewCommand.value) drawCommand(context, previewCommand.value);
   if (showCropOverlay && cropRect.value) drawCropOverlay(context, cropRect.value, canvas.width, canvas.height);
 }
@@ -177,6 +188,7 @@ function drawCommand(context: CanvasRenderingContext2D, command: EditorCommand):
   if (command.type === "ellipse") drawEllipse(context, command.start, command.end);
   if (command.type === "arrow") drawArrow(context, command.start, command.end);
   if (command.type === "marker") drawMarker(context, command);
+  if (command.type === "text") drawText(context, command);
 
   context.restore();
 }
@@ -236,6 +248,15 @@ function drawMarker(context: CanvasRenderingContext2D, command: Extract<EditorCo
   context.fillText(String(command.number), command.point.x, command.point.y + 0.5);
 }
 
+function drawText(context: CanvasRenderingContext2D, command: Extract<EditorCommand, { type: "text" }>): void {
+  if (!command.text.trim()) return;
+  context.fillStyle = command.color;
+  context.font = `600 ${command.fontSize}px system-ui, -apple-system, BlinkMacSystemFont, sans-serif`;
+  context.textAlign = "left";
+  context.textBaseline = "top";
+  context.fillText(command.text, command.point.x, command.point.y);
+}
+
 function drawCropOverlay(context: CanvasRenderingContext2D, rect: EditorRect, width: number, height: number): void {
   const left = clamp(rect.x, 0, width);
   const top = clamp(rect.y, 0, height);
@@ -286,6 +307,10 @@ function selectTool(tool: EditorTool): void {
 function handlePointerDown(event: PointerEvent): void {
   if (event.button !== 0) return;
   const point = getPointerPoint(event);
+  if (activeTool.value === "text") {
+    createTextCommand(point);
+    return;
+  }
   if (activeTool.value === "marker") {
     commands.value = [
       ...commands.value,
@@ -346,6 +371,64 @@ function handlePointerCancel(event: PointerEvent): void {
   previewCommand.value = null;
 }
 
+function createTextCommand(point: EditorPoint): void {
+  const id = `text-${++textIdSequence}`;
+  commands.value = [
+    ...commands.value,
+    { type: "text", id, color: selectedColor.value, fontSize: 20, point, text: "" },
+  ];
+  activeTextId.value = id;
+  void nextTick(() => {
+    document.querySelector<HTMLInputElement>(`.image-editor-text-box[data-text-id="${id}"] .image-editor-text-input`)?.focus({ preventScroll: true });
+  });
+}
+
+function updateTextCommand(id: string, text: string): void {
+  commands.value = commands.value.map((command) => command.type === "text" && command.id === id ? { ...command, text } : command);
+}
+
+function selectTextCommand(id: string): void {
+  activeTextId.value = id;
+}
+
+function getTextBoxStyle(command: Extract<EditorCommand, { type: "text" }>): Record<string, string> {
+  return {
+    left: `${(command.point.x / canvasWidth.value) * 100}%`,
+    top: `${(command.point.y / canvasHeight.value) * 100}%`,
+    color: command.color,
+  };
+}
+
+function startTextDrag(event: PointerEvent, command: Extract<EditorCommand, { type: "text" }>): void {
+  if (event.button !== 0) return;
+  activeTextId.value = command.id;
+  textDragState.value = {
+    pointerId: event.pointerId,
+    id: command.id,
+    start: getPointerPoint(event),
+    origin: command.point,
+  };
+  (event.currentTarget as HTMLElement).setPointerCapture?.(event.pointerId);
+}
+
+function moveTextDrag(event: PointerEvent): void {
+  const state = textDragState.value;
+  if (!state || event.pointerId !== state.pointerId) return;
+  const point = getPointerPoint(event);
+  const nextPoint = {
+    x: clamp(state.origin.x + point.x - state.start.x, 0, canvasWidth.value),
+    y: clamp(state.origin.y + point.y - state.start.y, 0, canvasHeight.value),
+  };
+  commands.value = commands.value.map((command) => command.type === "text" && command.id === state.id ? { ...command, point: nextPoint } : command);
+}
+
+function finishTextDrag(event: PointerEvent): void {
+  const state = textDragState.value;
+  if (!state || event.pointerId !== state.pointerId) return;
+  (event.currentTarget as HTMLElement).releasePointerCapture?.(event.pointerId);
+  textDragState.value = null;
+}
+
 function getNextMarkerNumber(): number {
   return commands.value.filter((command) => command.type === "marker").length + 1;
 }
@@ -355,6 +438,8 @@ function resetEdits(): void {
   previewCommand.value = null;
   cropRect.value = null;
   dragState.value = null;
+  textDragState.value = null;
+  activeTextId.value = null;
   renderCanvas();
 }
 
@@ -441,6 +526,12 @@ function translateCommandForCrop(command: EditorCommand, rect: EditorRect): Edit
       point: translatePointForCrop(command.point, rect),
     };
   }
+  if (command.type === "text") {
+    return {
+      ...command,
+      point: translatePointForCrop(command.point, rect),
+    };
+  }
   return {
     ...command,
     start: translatePointForCrop(command.start, rect),
@@ -476,7 +567,7 @@ function applyCrop(): void {
 }
 
 function saveImage(): void {
-  renderCanvas(false);
+  renderCanvas(false, true);
   const canvas = canvasRef.value;
   if (!canvas) return;
   const rect = getExportRect(canvas);
@@ -506,10 +597,13 @@ function saveImage(): void {
           class="image-editor-tool"
           :class="{ 'is-active': activeTool === tool.value }"
           :aria-label="editorText[tool.labelKey]"
+          :data-tooltip="editorText[tool.labelKey]"
           :title="editorText[tool.labelKey]"
           @click="selectTool(tool.value)"
         >
-          <component :is="tool.icon" :size="17" stroke-width="2" />
+          <span v-if="tool.customIcon === 'ellipse'" class="image-editor-ellipse-icon" aria-hidden="true" />
+          <span v-else-if="tool.glyph" class="image-editor-marker-icon" aria-hidden="true">{{ tool.glyph }}</span>
+          <component v-else-if="tool.icon" :is="tool.icon" :size="17" stroke-width="2" />
         </button>
       </div>
 
@@ -588,6 +682,31 @@ function saveImage(): void {
           >
             <Check :size="16" stroke-width="2.5" />
           </button>
+        </div>
+        <div
+          v-for="command in textCommands"
+          :key="command.id"
+          class="image-editor-text-box"
+          :class="{ 'is-active': activeTextId === command.id }"
+          :data-text-id="command.id"
+          :style="getTextBoxStyle(command)"
+          @click.stop="selectTextCommand(command.id)"
+          @pointerdown.stop="startTextDrag($event, command)"
+          @pointermove.stop="moveTextDrag"
+          @pointerup.stop="finishTextDrag"
+          @pointercancel.stop="finishTextDrag"
+        >
+          <input
+            class="image-editor-text-input"
+            :value="command.text"
+            :placeholder="editorText.textPlaceholder"
+            :aria-label="editorText.textInput"
+            @input="updateTextCommand(command.id, ($event.target as HTMLInputElement).value)"
+            @focus="selectTextCommand(command.id)"
+            @click.stop="selectTextCommand(command.id)"
+            @pointerdown.stop="selectTextCommand(command.id)"
+            @keydown.stop
+          />
         </div>
       </div>
       <div class="image-editor-cursor" aria-hidden="true">

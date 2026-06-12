@@ -5371,6 +5371,7 @@ html[data-theme="dark"] .image-preview {
 .image-editor-tool,
 .image-editor-color,
 .image-editor-reset {
+  position: relative;
   display: inline-flex;
   align-items: center;
   justify-content: center;
@@ -5388,6 +5389,36 @@ html[data-theme="dark"] .image-preview {
     transform 120ms ease;
 }
 
+.image-editor-tool[data-tooltip]::after {
+  position: absolute;
+  top: calc(100% + 8px);
+  left: 50%;
+  z-index: 8;
+  display: block;
+  padding: 4px 7px;
+  border: 1px solid color-mix(in srgb, var(--border) 62%, transparent);
+  border-radius: 7px;
+  background: color-mix(in srgb, var(--material-elevated) 92%, transparent);
+  color: var(--text);
+  font-size: 12px;
+  line-height: 1.2;
+  white-space: nowrap;
+  pointer-events: none;
+  opacity: 0;
+  transform: translate(-50%, -2px);
+  transition:
+    opacity 120ms ease,
+    transform 120ms ease;
+  content: attr(data-tooltip);
+}
+
+.image-editor-tool[data-tooltip]:hover::after,
+.image-editor-tool[data-tooltip]:focus-visible::after {
+  opacity: 1;
+  transform: translate(-50%, 0);
+  content: attr(data-tooltip);
+}
+
 .image-editor-tool:hover,
 .image-editor-tool:focus-visible,
 .image-editor-reset:hover,
@@ -5400,6 +5431,20 @@ html[data-theme="dark"] .image-preview {
 .image-editor-color.is-active {
   border-color: color-mix(in srgb, var(--line-focus) 86%, transparent);
   background: color-mix(in srgb, var(--line-focus) 16%, transparent);
+}
+
+.image-editor-ellipse-icon {
+  width: 17px;
+  height: 11px;
+  border: 1px solid currentColor;
+  border-radius: 999px;
+  box-shadow: inset 0 0 0 1px currentColor;
+}
+
+.image-editor-marker-icon {
+  font-size: 18px;
+  font-weight: 700;
+  line-height: 1;
 }
 
 .image-editor-color {
@@ -5472,7 +5517,7 @@ html[data-theme="dark"] .image-preview {
   min-width: 0;
   min-height: 0;
   margin-top: 12px;
-  overflow: hidden;
+  overflow: visible;
 }
 
 .image-editor-canvas-wrap {
@@ -5511,7 +5556,7 @@ html[data-theme="dark"] .image-preview {
   z-index: 2;
   display: inline-flex;
   gap: 6px;
-  transform: translate(calc(-100% - 8px), calc(-100% - 8px));
+  transform: translate(8px, 8px);
 }
 
 .image-editor-crop-action {
@@ -5535,6 +5580,40 @@ html[data-theme="dark"] .image-preview {
 
 .image-editor-crop-apply {
   color: #22c55e;
+}
+
+.image-editor-text-box {
+  position: absolute;
+  z-index: 3;
+  min-width: 112px;
+  cursor: move;
+}
+
+.image-editor-text-box.is-active .image-editor-text-input {
+  border-color: color-mix(in srgb, var(--line-focus) 82%, transparent);
+  box-shadow:
+    0 0 0 2px color-mix(in srgb, var(--line-focus) 16%, transparent),
+    0 8px 20px rgba(15, 23, 42, 0.16);
+}
+
+.image-editor-text-input {
+  min-width: 112px;
+  max-width: min(280px, 42vw);
+  height: 32px;
+  padding: 4px 8px;
+  border: 1px dashed color-mix(in srgb, currentColor 64%, transparent);
+  border-radius: 7px;
+  background: color-mix(in srgb, var(--material-elevated) 78%, transparent);
+  color: currentColor;
+  font: 600 20px/1.2 system-ui, -apple-system, BlinkMacSystemFont, sans-serif;
+  outline: 0;
+  cursor: text;
+  -webkit-backdrop-filter: blur(12px) saturate(1.4);
+  backdrop-filter: blur(12px) saturate(1.4);
+}
+
+.image-editor-text-input::placeholder {
+  color: color-mix(in srgb, currentColor 48%, transparent);
 }
 
 .image-editor-cursor {

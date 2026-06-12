@@ -733,6 +733,7 @@ export const UI_TEXT = {
       ellipse: "圆形",
       arrow: "箭头",
       marker: "标注",
+      text: "文本",
       red: "红色",
       green: "绿色",
       blue: "蓝色",
@@ -743,6 +744,8 @@ export const UI_TEXT = {
       reset: "重置编辑",
       cancelCrop: "取消裁切",
       applyCrop: "应用裁切",
+      textInput: "图片文本",
+      textPlaceholder: "输入文本",
     },
   },
   en: {
@@ -980,6 +983,7 @@ export const UI_TEXT = {
       ellipse: "Circle",
       arrow: "Arrow",
       marker: "Marker",
+      text: "Text",
       red: "Red",
       green: "Green",
       blue: "Blue",
@@ -990,6 +994,8 @@ export const UI_TEXT = {
       reset: "Reset edits",
       cancelCrop: "Cancel crop",
       applyCrop: "Apply crop",
+      textInput: "Image text",
+      textPlaceholder: "Type text",
     },
   },
 } as const;

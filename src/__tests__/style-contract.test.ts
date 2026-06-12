@@ -143,6 +143,9 @@ describe("workbench style contract", () => {
     expectSelectorBody(styles, ".preview-actions", "bottom: 14px");
     expectSelectorBody(styles, ".preview-toolbar-button:focus-visible", "outline: 0");
     expectSelectorBody(styles, ".preview-toolbar-button:focus-visible", "box-shadow: none");
+    expectSelectorBody(styles, ".image-editor-stage", "overflow: visible");
+    expectSelectorBody(styles, ".image-editor-crop-actions", "transform: translate(8px, 8px)");
+    expectSelectorBody(styles, ".image-editor-tool[data-tooltip]:hover::after", "content: attr(data-tooltip)");
     expectSelectorBody(styles, ".workbench-grid", "position: relative");
     expectSelectorBody(styles, ".workbench-grid", "grid-template-columns: minmax(160px, 0.15fr) minmax(320px, 0.2fr) minmax(320px, 0.35fr) minmax(320px, 0.3fr)");
     expectSelectorBody(styles, ".workbench-grid", "gap: 14px");
