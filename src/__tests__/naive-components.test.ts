@@ -442,6 +442,9 @@ describe("Naive UI component usage", () => {
     const styles = read("src/styles.css");
 
     expect(styles).toMatch(/\.shortcut-help-modal\s*\{[^}]*max-width: 620px/s);
+    expect(styles).toMatch(/body:has\(\.image-preview\) \.shortcut-help-modal\.n-card\s*\{[^}]*pointer-events: auto/s);
+    expect(styles).toMatch(/body:has\(\.image-preview\) \.shortcut-help-modal\.n-card\s*\{[^}]*user-select: text/s);
+    expect(styles).toMatch(/body:has\(\.image-preview\) \.shortcut-help-modal \.n-scrollbar\s*\{[^}]*pointer-events: auto/s);
     expect(styles).toMatch(/\.shortcut-section\s*\{[^}]*border: 1px solid color-mix\(in srgb, var\(--border\) 74%, transparent\)/s);
     expect(styles).toMatch(/\.shortcut-section-heading\s*\{[^}]*grid-template-columns: 26px minmax\(0, 1fr\)/s);
     expect(styles).toMatch(/\.shortcut-tip-list\s*\{[^}]*display: grid/s);

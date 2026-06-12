@@ -3437,6 +3437,20 @@ body:has(.image-preview) .n-modal-body-wrapper {
   pointer-events: none;
 }
 
+body:has(.image-preview) .shortcut-help-modal.n-card {
+  position: relative;
+  z-index: 4310;
+  pointer-events: auto;
+  -webkit-user-select: text;
+  user-select: text;
+}
+
+body:has(.image-preview) .shortcut-help-modal .n-scrollbar-container,
+body:has(.image-preview) .shortcut-help-modal .n-scrollbar-content,
+body:has(.image-preview) .shortcut-help-modal .n-scrollbar {
+  pointer-events: auto;
+}
+
 .image-preview {
   pointer-events: auto;
 }
