@@ -192,14 +192,16 @@ describe("CompanionBubble", () => {
     wrapper.unmount();
   });
 
-  it("renders an optional signature at the bottom left of the message bubble", async () => {
+  it("renders an optional signature beside the companion link", async () => {
     vi.useFakeTimers();
     const wrapper = mount(CompanionBubble, {
       attachTo: document.body,
       props: {
         visible: true,
         message: "项目信息",
-        signatureText: "100% AI BUILT",
+        linkText: "xiangjianan / mini-desk",
+        linkHref: "https://github.com/xiangjianan/mini-desk",
+        signatureText: "(100% AI built)",
       },
       global: {
         stubs: {
@@ -213,8 +215,12 @@ describe("CompanionBubble", () => {
     await wrapper.vm.$nextTick();
 
     const signature = document.body.querySelector<HTMLElement>('[data-testid="companion-signature"]');
-    expect(signature?.textContent).toBe("100% AI BUILT");
+    const link = document.body.querySelector<HTMLElement>('[data-testid="companion-link"]');
+    const row = document.body.querySelector<HTMLElement>(".companion-meta-row");
+    expect(signature?.textContent).toBe("(100% AI built)");
     expect(signature?.classList.contains("companion-signature")).toBe(true);
+    expect(signature?.parentElement).toBe(row);
+    expect(link?.parentElement).toBe(row);
 
     wrapper.unmount();
   });

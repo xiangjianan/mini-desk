@@ -376,24 +376,26 @@ function isPointInsideElement(x: number, y: number, element: HTMLElement | null)
         @mouseleave="handleCompanionMouseleave"
       >
         <span v-if="renderedMessage">{{ renderedMessage }}</span>
-        <a
-          v-if="renderedLinkText && renderedLinkHref"
-          class="companion-link"
-          :href="renderedLinkHref"
-          target="_blank"
-          rel="noopener noreferrer"
-          data-testid="companion-link"
-        >
-          <NIcon class="companion-link-icon" :component="LogoGithub" />
-          {{ renderedLinkText }}
-        </a>
-        <span
-          v-if="renderedSignatureText"
-          class="companion-signature"
-          data-testid="companion-signature"
-        >
-          {{ renderedSignatureText }}
-        </span>
+        <div v-if="renderedLinkText || renderedSignatureText" class="companion-meta-row">
+          <a
+            v-if="renderedLinkText && renderedLinkHref"
+            class="companion-link"
+            :href="renderedLinkHref"
+            target="_blank"
+            rel="noopener noreferrer"
+            data-testid="companion-link"
+          >
+            <NIcon class="companion-link-icon" :component="LogoGithub" />
+            {{ renderedLinkText }}
+          </a>
+          <span
+            v-if="renderedSignatureText"
+            class="companion-signature"
+            data-testid="companion-signature"
+          >
+            {{ renderedSignatureText }}
+          </span>
+        </div>
         <div v-if="renderedConfirm" class="companion-actions">
           <NButton size="tiny" class="companion-action-button" :class="{ 'is-danger': renderedConfirmDanger }" data-testid="companion-yes" @click="emit('yes')">{{ renderedConfirmText }}</NButton>
           <NButton size="tiny" class="companion-action-button" data-testid="companion-no" @click="emit('no')">{{ renderedCancelText }}</NButton>

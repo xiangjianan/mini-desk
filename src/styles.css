@@ -3123,10 +3123,19 @@ button.todo-section-menu-button {
   white-space: pre-line;
 }
 
+.companion-meta-row {
+  display: inline-flex;
+  align-items: center;
+  justify-self: start;
+  flex-wrap: nowrap;
+  gap: 4px;
+  max-width: 100%;
+  white-space: nowrap;
+}
+
 .companion-signature {
   justify-self: start;
   max-width: 100%;
-  margin-top: 2px;
   text-align: left;
   white-space: normal;
 }

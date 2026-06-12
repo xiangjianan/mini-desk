@@ -115,8 +115,11 @@ describe("workbench style contract", () => {
     expectSelectorBody(styles, ".companion-popover-shell.n-popover", "background: var(--popover) !important");
     expectSelectorBody(styles, ".companion-popover-shell.n-popover", "box-shadow: 0 6px 14px rgba(15, 23, 42, 0.045) !important");
     expectSelectorBody(styles, ".companion-popover-arrow", "border: 1px solid var(--border) !important");
-    expectSelectorBody(styles, ".companion-signature", "justify-self: start");
-    expectSelectorBody(styles, ".companion-signature", "text-align: left");
+    expectSelectorBody(styles, ".companion-meta-row", "display: inline-flex");
+    expectSelectorBody(styles, ".companion-meta-row", "align-items: center");
+    expectSelectorBody(styles, ".companion-meta-row", "justify-self: start");
+    expectSelectorBody(styles, ".companion-meta-row", "flex-wrap: nowrap");
+    expectSelectorBody(styles, ".companion-meta-row", "white-space: nowrap");
     expect(ruleBodies(styles, ".companion-signature").join("\n")).not.toContain("color:");
     expect(ruleBodies(styles, ".companion-signature").join("\n")).not.toContain("font-size:");
     expect(ruleBodies(styles, ".companion-popover-shell.n-popover").join("\n")).not.toContain("#111");
