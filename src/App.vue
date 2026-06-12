@@ -1773,7 +1773,10 @@ function getDensityAreaLabel(type: DensityAreaType): string {
 }
 
 function getLargestTodoListCount(): number {
-  return state.todoLists.reduce((max, list) => Math.max(max, state.todos[list.id]?.length ?? 0), 0);
+  return state.todoLists.reduce((max, list) => {
+    const activeCount = (state.todos[list.id] ?? []).filter((todo) => !todo.done).length;
+    return Math.max(max, activeCount);
+  }, 0);
 }
 
 function getLargestQuickCategoryCount(): number {

@@ -156,6 +156,14 @@ function buildTodos(count: number) {
   }));
 }
 
+function buildCompletedTodos(count: number) {
+  return Array.from({ length: count }, (_item, index) => ({
+    id: `done-todo-${index + 1}`,
+    text: `已完成事项 ${index + 1}`,
+    done: true,
+  }));
+}
+
 function buildQuickButtons(count: number, tagId = "tag-heavy") {
   return Array.from({ length: count }, (_item, index) => ({
     id: `quick-${index + 1}`,
@@ -987,6 +995,24 @@ describe("App shell", () => {
     } finally {
       wrapper.unmount();
       vi.useRealTimers();
+    }
+  });
+
+  it("keeps todo density green when a list only exceeds the limit with completed reminders", async () => {
+    localStorage.setItem(
+      STORAGE_KEY,
+      JSON.stringify({
+        todoLists: [{ id: "done-heavy", title: "已完成", collapsed: false, compact: false }],
+        todos: { "done-heavy": buildCompletedTodos(8) },
+      }),
+    );
+    const wrapper = mountApp();
+
+    try {
+      expect(wrapper.get('[data-testid="save-status"]').attributes("data-state")).toBe("saved");
+      expect(wrapper.get('[data-testid="save-status"]').attributes("aria-label")).toBe("工作空间清爽");
+    } finally {
+      wrapper.unmount();
     }
   });
 
