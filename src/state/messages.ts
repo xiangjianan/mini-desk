@@ -170,7 +170,7 @@ export const MESSAGE_CATALOG: Record<MessageKey, MessageEntry> = {
       "绿色：空间很轻",
       "绿色：内容刚刚好",
       "绿色：各区不拥挤",
-      "绿色：现在很舒服",
+      "绿色：状态很轻松",
       "绿色：桌面很利落",
       "绿色：数量很稳",
       "绿色：结构很轻",
