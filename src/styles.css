@@ -1809,7 +1809,7 @@ button.quick-button {
 }
 
 .n-modal-container:has(.quick-dialog) .n-modal-mask {
-  background: transparent !important;
+  background: rgba(0, 0, 0, 0.38) !important;
 }
 
 .quick-dialog .n-base-close {
@@ -2466,14 +2466,31 @@ button.todo-notify-button.has-time {
 }
 
 .notify-date-picker.n-date-panel {
+  --n-panel-color: transparent !important;
+  --n-calendar-title-color: var(--text) !important;
+  --n-calendar-days-text-color: var(--muted) !important;
+  --n-item-text-color: var(--text) !important;
+  --n-item-color-hover: var(--button-hover) !important;
+  --n-item-color-disabled: transparent !important;
+  --n-item-text-color-disabled: color-mix(in srgb, var(--muted) 52%, transparent) !important;
   width: var(--notify-date-column-width);
   margin: 0;
+  background: transparent !important;
   box-shadow: none !important;
   border-radius: 0;
 }
 
 .notify-date-picker .n-date-panel-calendar {
   width: var(--notify-date-column-width);
+  background: transparent !important;
+}
+
+html[data-theme="dark"] .notify-date-picker.n-date-panel {
+  background: transparent !important;
+}
+
+html[data-theme="dark"] .notify-date-picker .n-date-panel-calendar {
+  background: transparent !important;
 }
 
 .notify-time-panel {
@@ -5249,8 +5266,8 @@ html[data-theme="dark"] .image-preview {
 }
 
 .preview-toolbar-button:focus-visible {
-  outline: 2px solid color-mix(in srgb, var(--primary) 46%, transparent);
-  outline-offset: 2px;
+  outline: 0;
+  box-shadow: none;
 }
 
 .preview-toolbar-button:disabled {

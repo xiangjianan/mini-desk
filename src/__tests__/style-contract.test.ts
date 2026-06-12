@@ -129,6 +129,8 @@ describe("workbench style contract", () => {
     expectSelectorBody(styles, ".preview-stage img", "width: auto");
     expectSelectorBody(styles, ".preview-stage img", "height: auto");
     expectSelectorBody(styles, ".preview-stage img", "object-fit: contain");
+    expectSelectorBody(styles, ".preview-toolbar-button:focus-visible", "outline: 0");
+    expectSelectorBody(styles, ".preview-toolbar-button:focus-visible", "box-shadow: none");
     expectSelectorBody(styles, ".workbench-grid", "position: relative");
     expectSelectorBody(styles, ".workbench-grid", "grid-template-columns: minmax(160px, 0.15fr) minmax(320px, 0.2fr) minmax(320px, 0.35fr) minmax(320px, 0.3fr)");
     expectSelectorBody(styles, ".workbench-grid", "gap: 14px");
@@ -270,6 +272,8 @@ describe("workbench style contract", () => {
     expectSelectorBody(styles, ".notify-floating-date-picker", "border-radius: var(--radius)");
     expectSelectorBody(styles, ".notify-floating-date-picker", "box-shadow: 0 8px 22px rgba(15, 23, 42, 0.12)");
     expectSelectorBody(styles, ".notify-floating-date-picker", "padding-top: 8px");
+    expectSelectorBody(styles, ".notify-date-picker.n-date-panel", "background: transparent !important");
+    expectSelectorBody(styles, ".notify-date-picker .n-date-panel-calendar", "background: transparent !important");
     expectSelectorBody(styles, ".notify-time-columns", "grid-template-columns: 1fr 1fr");
     expectSelectorBody(styles, ".notify-time-panel", "border-radius: var(--radius)");
     expectSelectorBody(styles, ".notify-time-column", "overflow-y: auto");

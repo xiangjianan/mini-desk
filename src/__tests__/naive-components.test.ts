@@ -504,6 +504,9 @@ describe("Naive UI component usage", () => {
     expect(styles).toMatch(/\.notify-floating-date-picker\s*\{[^}]*border-radius: var\(--radius\)/s);
     expect(styles).toMatch(/\.notify-floating-date-picker\s*\{[^}]*box-shadow: 0 8px 22px rgba\(15, 23, 42, 0\.12\)/s);
     expect(styles).toMatch(/\.notify-floating-date-picker\s*\{[^}]*padding-top: 8px/s);
+    expect(styles).toMatch(/\.notify-date-picker\.n-date-panel\s*\{[^}]*background: transparent !important/s);
+    expect(styles).toMatch(/\.notify-date-picker \.n-date-panel-calendar\s*\{[^}]*background: transparent !important/s);
+    expect(styles).toMatch(/html\[data-theme="dark"\] \.notify-date-picker\.n-date-panel\s*\{[^}]*background: transparent !important/s);
     expect(styles).toMatch(/\.notify-floating-date-picker\s*\{[^}]*--notify-date-column-width: 332px/s);
     expect(styles).toMatch(/\.notify-floating-date-picker\s*\{[^}]*--notify-time-column-width: 114px/s);
     expect(styles).toMatch(/\.notify-floating-date-picker\s*\{[^}]*--notify-date-panel-height: 267px/s);
@@ -827,10 +830,10 @@ describe("Naive UI component usage", () => {
     const styles = read("src/styles.css");
 
     expect(quick).toContain(':mask-closable="false"');
-    expect(quick).toContain(":mask-style=\"{ background: 'transparent' }\"");
+    expect(quick).not.toContain(":mask-style=\"{ background: 'transparent' }\"");
     expect(quick).not.toContain("handleDialogOutsideClick");
     expect(quick).not.toContain("@mask-click");
-    expect(styles).toMatch(/\.n-modal-container:has\(\.quick-dialog\) \.n-modal-mask\s*\{[^}]*background: transparent !important/s);
+    expect(styles).toMatch(/\.n-modal-container:has\(\.quick-dialog\) \.n-modal-mask\s*\{[^}]*background: rgba\(0, 0, 0, 0\.38\) !important/s);
     expect(styles).toMatch(/\.quick-dialog\s*\{[^}]*width: min\(420px, calc\(100vw - 32px\)\)/s);
     expect(styles).toMatch(/\.quick-dialog \.n-base-close\s*\{[^}]*border: 0/s);
     expect(styles).toMatch(/\.quick-dialog \.n-base-close\s*\{[^}]*box-shadow: none/s);
