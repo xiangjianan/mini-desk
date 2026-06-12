@@ -5438,12 +5438,18 @@ html[data-theme="dark"] .image-preview {
   height: 11px;
   border: 1px solid currentColor;
   border-radius: 999px;
-  box-shadow: inset 0 0 0 1px currentColor;
 }
 
 .image-editor-marker-icon {
-  font-size: 18px;
-  font-weight: 700;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 17px;
+  height: 17px;
+  border: 1px solid currentColor;
+  border-radius: 999px;
+  font-size: 10px;
+  font-weight: 600;
   line-height: 1;
 }
 
@@ -5599,17 +5605,35 @@ html[data-theme="dark"] .image-preview {
 .image-editor-text-input {
   min-width: 112px;
   max-width: min(280px, 42vw);
-  height: 32px;
+  min-height: 32px;
   padding: 4px 8px;
-  border: 1px dashed color-mix(in srgb, currentColor 64%, transparent);
+  border: 1px dashed transparent;
   border-radius: 7px;
-  background: color-mix(in srgb, var(--material-elevated) 78%, transparent);
+  background: transparent;
   color: currentColor;
   font: 600 20px/1.2 system-ui, -apple-system, BlinkMacSystemFont, sans-serif;
   outline: 0;
   cursor: text;
+  overflow: hidden;
+  resize: both;
+  text-shadow:
+    0 1px 0 #ffffff,
+    1px 0 0 #ffffff,
+    0 -1px 0 #ffffff,
+    -1px 0 0 #ffffff;
   -webkit-backdrop-filter: blur(12px) saturate(1.4);
   backdrop-filter: blur(12px) saturate(1.4);
+  field-sizing: content;
+}
+
+.image-editor-text-input.is-transparent {
+  border-color: transparent;
+  box-shadow: none;
+}
+
+.image-editor-text-box.is-active .image-editor-text-input.is-transparent {
+  border-color: transparent;
+  box-shadow: none;
 }
 
 .image-editor-text-input::placeholder {

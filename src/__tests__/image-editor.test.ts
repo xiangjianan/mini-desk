@@ -13,6 +13,7 @@ let canvasContextMock: {
   clearRect: ReturnType<typeof vi.fn>;
   drawImage: ReturnType<typeof vi.fn>;
   fillText: ReturnType<typeof vi.fn>;
+  strokeText: ReturnType<typeof vi.fn>;
   lineTo: ReturnType<typeof vi.fn>;
   moveTo: ReturnType<typeof vi.fn>;
   setLineDash: ReturnType<typeof vi.fn>;
@@ -29,6 +30,7 @@ function installCanvasMock() {
     lineTo: vi.fn(),
     closePath: vi.fn(),
     stroke: vi.fn(),
+    strokeText: vi.fn(),
     fill: vi.fn(),
     fillRect: vi.fn(),
     arc: vi.fn(),
@@ -135,7 +137,7 @@ describe("ImageEditor", () => {
     ]);
     expect(wrapper.find('[aria-label="画笔"] .lucide-pen-line').exists()).toBe(true);
     expect(wrapper.find('[aria-label="圆形"] .image-editor-ellipse-icon').exists()).toBe(true);
-    expect(wrapper.get('[aria-label="标注"] .image-editor-marker-icon').text()).toBe("①");
+    expect(wrapper.get('[aria-label="标注"] .image-editor-marker-icon').text()).toBe("1");
     expect(wrapper.findAll(".image-editor-color").map((button) => button.attributes("aria-label"))).toEqual([
       "红色",
       "绿色",
@@ -409,6 +411,58 @@ describe("ImageEditor", () => {
     canvasContextMock.fillText.mockClear();
     await wrapper.get(".image-editor-save").trigger("click");
     expect(canvasContextMock.fillText).toHaveBeenCalledWith("Hello", 140, 120);
+
+    wrapper.unmount();
+  });
+
+  it("uses transparent multiline text boxes, removes empty text, and saves text with a white outline", async () => {
+    const wrapper = mount(ImageEditor, {
+      props: {
+        image: { id: "img-1", src: "data:image/png;base64,one", createdAt: 1, displayWidth: 400, displayHeight: 300 },
+      },
+      global: {
+        stubs: {
+          NIcon: iconStub,
+        },
+      },
+    });
+
+    const canvas = wrapper.get(".image-editor-canvas");
+    mockRect(canvas.element);
+
+    await wrapper.findAll(".image-editor-tool").find((button) => button.attributes("aria-label") === "文本")?.trigger("click");
+    await dispatchPointer(canvas.element, "pointerdown", 100, 80);
+
+    const emptyTextBox = wrapper.get(".image-editor-text-input");
+    expect(emptyTextBox.element.tagName).toBe("TEXTAREA");
+    expect(emptyTextBox.attributes("placeholder")).toBe("");
+    expect(emptyTextBox.classes()).toContain("is-transparent");
+
+    await wrapper.findAll(".image-editor-tool").find((button) => button.attributes("aria-label") === "画笔")?.trigger("click");
+    expect(wrapper.find(".image-editor-text-box").exists()).toBe(false);
+
+    await wrapper.findAll(".image-editor-tool").find((button) => button.attributes("aria-label") === "文本")?.trigger("click");
+    await dispatchPointer(canvas.element, "pointerdown", 120, 90);
+    await wrapper.get(".image-editor-text-input").setValue("Hello\nMini Desk");
+
+    await dispatchPointer(wrapper.get(".image-editor-text-input").element, "pointerdown", 120, 90);
+    await dispatchPointer(wrapper.get(".image-editor-text-input").element, "pointermove", 150, 120);
+    await dispatchPointer(wrapper.get(".image-editor-text-input").element, "pointerup", 150, 120);
+    expect(wrapper.get(".image-editor-text-box").attributes("style")).toContain("left: 37.5%");
+    expect(wrapper.get(".image-editor-text-box").attributes("style")).toContain("top: 40%");
+
+    canvasContextMock.strokeText.mockClear();
+    canvasContextMock.fillText.mockClear();
+    await wrapper.get(".image-editor-save").trigger("click");
+
+    expect(canvasContextMock.strokeText.mock.calls).toEqual(expect.arrayContaining([
+      ["Hello", 150, 120],
+      ["Mini Desk", 150, 144],
+    ]));
+    expect(canvasContextMock.fillText.mock.calls).toEqual(expect.arrayContaining([
+      ["Hello", 150, 120],
+      ["Mini Desk", 150, 144],
+    ]));
 
     wrapper.unmount();
   });

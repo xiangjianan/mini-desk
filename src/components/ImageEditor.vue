@@ -56,7 +56,7 @@ const toolOptions: { value: EditorTool; icon?: Component; labelKey: "crop" | "br
   { value: "rectangle", icon: RectangleHorizontal, labelKey: "rectangle" },
   { value: "ellipse", labelKey: "ellipse", customIcon: "ellipse" },
   { value: "arrow", icon: ArrowUpRight, labelKey: "arrow" },
-  { value: "marker", labelKey: "marker", glyph: "①" },
+  { value: "marker", labelKey: "marker", glyph: "1" },
   { value: "text", icon: Type, labelKey: "text" },
 ];
 
@@ -250,11 +250,19 @@ function drawMarker(context: CanvasRenderingContext2D, command: Extract<EditorCo
 
 function drawText(context: CanvasRenderingContext2D, command: Extract<EditorCommand, { type: "text" }>): void {
   if (!command.text.trim()) return;
-  context.fillStyle = command.color;
+  const lineHeight = Math.round(command.fontSize * 1.2);
   context.font = `600 ${command.fontSize}px system-ui, -apple-system, BlinkMacSystemFont, sans-serif`;
   context.textAlign = "left";
   context.textBaseline = "top";
-  context.fillText(command.text, command.point.x, command.point.y);
+  context.lineJoin = "round";
+  context.lineWidth = Math.max(3, Math.round(command.fontSize * 0.16));
+  context.strokeStyle = "#ffffff";
+  context.fillStyle = command.color;
+  for (const [index, line] of command.text.split(/\r?\n/).entries()) {
+    const y = command.point.y + index * lineHeight;
+    context.strokeText(line, command.point.x, y);
+    context.fillText(line, command.point.x, y);
+  }
 }
 
 function drawCropOverlay(context: CanvasRenderingContext2D, rect: EditorRect, width: number, height: number): void {
@@ -298,6 +306,7 @@ function getPointerPoint(event: PointerEvent): EditorPoint {
 }
 
 function selectTool(tool: EditorTool): void {
+  pruneEmptyTextCommands();
   activeTool.value = tool;
   if (tool === "crop" && !cropRect.value) {
     cropRect.value = { x: 0, y: 0, width: canvasWidth.value, height: canvasHeight.value };
@@ -372,6 +381,7 @@ function handlePointerCancel(event: PointerEvent): void {
 }
 
 function createTextCommand(point: EditorPoint): void {
+  pruneEmptyTextCommands();
   const id = `text-${++textIdSequence}`;
   commands.value = [
     ...commands.value,
@@ -379,7 +389,7 @@ function createTextCommand(point: EditorPoint): void {
   ];
   activeTextId.value = id;
   void nextTick(() => {
-    document.querySelector<HTMLInputElement>(`.image-editor-text-box[data-text-id="${id}"] .image-editor-text-input`)?.focus({ preventScroll: true });
+    document.querySelector<HTMLTextAreaElement>(`.image-editor-text-box[data-text-id="${id}"] .image-editor-text-input`)?.focus({ preventScroll: true });
   });
 }
 
@@ -388,7 +398,16 @@ function updateTextCommand(id: string, text: string): void {
 }
 
 function selectTextCommand(id: string): void {
+  pruneEmptyTextCommands(id);
   activeTextId.value = id;
+}
+
+function pruneEmptyTextCommands(exceptId?: string): void {
+  const nextCommands = commands.value.filter((command) => command.type !== "text" || command.id === exceptId || command.text.trim());
+  if (nextCommands.length !== commands.value.length) commands.value = nextCommands;
+  if (activeTextId.value && !nextCommands.some((command) => command.type === "text" && command.id === activeTextId.value)) {
+    activeTextId.value = null;
+  }
 }
 
 function getTextBoxStyle(command: Extract<EditorCommand, { type: "text" }>): Record<string, string> {
@@ -540,6 +559,7 @@ function translateCommandForCrop(command: EditorCommand, rect: EditorRect): Edit
 }
 
 function applyCrop(): void {
+  pruneEmptyTextCommands();
   const canvas = canvasRef.value;
   const rect = canvas ? getExportRect(canvas) : cropRect.value;
   if (!rect || rect.width < 1 || rect.height < 1) return;
@@ -567,6 +587,7 @@ function applyCrop(): void {
 }
 
 function saveImage(): void {
+  pruneEmptyTextCommands();
   renderCanvas(false, true);
   const canvas = canvasRef.value;
   if (!canvas) return;
@@ -696,15 +717,20 @@ function saveImage(): void {
           @pointerup.stop="finishTextDrag"
           @pointercancel.stop="finishTextDrag"
         >
-          <input
+          <textarea
             class="image-editor-text-input"
+            :class="{ 'is-transparent': !command.text }"
             :value="command.text"
-            :placeholder="editorText.textPlaceholder"
+            placeholder=""
+            rows="1"
             :aria-label="editorText.textInput"
-            @input="updateTextCommand(command.id, ($event.target as HTMLInputElement).value)"
+            @input="updateTextCommand(command.id, ($event.target as HTMLTextAreaElement).value)"
             @focus="selectTextCommand(command.id)"
             @click.stop="selectTextCommand(command.id)"
-            @pointerdown.stop="selectTextCommand(command.id)"
+            @pointerdown.stop="startTextDrag($event, command)"
+            @pointermove.stop="moveTextDrag"
+            @pointerup.stop="finishTextDrag"
+            @pointercancel.stop="finishTextDrag"
             @keydown.stop
           />
         </div>
