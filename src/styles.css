@@ -3124,13 +3124,10 @@ button.todo-section-menu-button {
 }
 
 .companion-signature {
-  justify-self: end;
+  justify-self: start;
   max-width: 100%;
   margin-top: 2px;
-  color: var(--muted-foreground);
-  font-size: 11px;
-  line-height: 1.25;
-  text-align: right;
+  text-align: left;
   white-space: normal;
 }
 
