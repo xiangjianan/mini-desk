@@ -50,12 +50,12 @@ const canNavigatePrevious = computed(() => activeIndex.value > 0);
 const canNavigateNext = computed(() => activeIndex.value >= 0 && activeIndex.value < props.images.length - 1);
 const isClosing = computed(() => props.closing || localClosing.value);
 const activeImageStyle = computed(() => {
-  const style: { width?: string; height?: string; transform: string } = {
+  const style = {
+    width: "100%",
+    height: "100%",
+    objectFit: "contain" as const,
     transform: `translate(${offset.value.x}px, ${offset.value.y}px) scale(${scale.value})`,
   };
-  if (isPositiveDimension(active.value?.displayWidth)) {
-    style.width = `${active.value.displayWidth}px`;
-  }
   return style;
 });
 const menuOptions = computed<DropdownOption[]>(() => [
@@ -69,10 +69,6 @@ const exclusiveMenu = createExclusiveContextMenu(closeMenu);
 
 function renderIcon(icon: Component): () => VNode {
   return () => h(NIcon, { size: 16 }, { default: () => h(icon) });
-}
-
-function isPositiveDimension(value: number | undefined): value is number {
-  return typeof value === "number" && Number.isFinite(value) && value > 0;
 }
 
 onMounted(exclusiveMenu.mount);

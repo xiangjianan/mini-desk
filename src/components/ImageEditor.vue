@@ -49,6 +49,9 @@ const colorOptions: { value: EditorColor; key: "red" | "green" | "blue" | "yello
   { value: "#111827", key: "black" },
   { value: "#ffffff", key: "white" },
 ];
+const TEXT_FONT_SIZE_OFFSET = 20;
+const TEXT_LINE_HEIGHT = 1.35;
+const TEXT_LETTER_SPACING = 0.4;
 
 const toolOptions: { value: EditorTool; icon?: Component; labelKey: "crop" | "brush" | "rectangle" | "ellipse" | "arrow" | "marker" | "text"; glyph?: string; customIcon?: "ellipse" }[] = [
   { value: "crop", icon: Crop, labelKey: "crop" },
@@ -65,7 +68,7 @@ const sourceImage = shallowRef<HTMLImageElement | null>(null);
 const workingImageSrc = ref(props.image.src);
 const workingDisplayWidth = ref(props.image.displayWidth);
 const workingDisplayHeight = ref(props.image.displayHeight);
-const activeTool = ref<EditorTool>("brush");
+const activeTool = ref<EditorTool>("rectangle");
 const selectedColor = ref<EditorColor>("#ef4444");
 const strokeWidth = ref(4);
 const commands = ref<EditorCommand[]>([]);
@@ -123,6 +126,14 @@ watch(
 watch([commands, previewCommand, cropRect, sourceImage], () => {
   renderCanvas();
 }, { deep: true });
+
+watch(strokeWidth, (width) => {
+  if (activeTool.value !== "text" || !activeTextId.value) return;
+  const fontSize = getTextFontSizeFromSlider(width);
+  commands.value = commands.value.map((command) => (
+    command.type === "text" && command.id === activeTextId.value ? { ...command, fontSize } : command
+  ));
+});
 
 function loadSourceImage(): void {
   const canvas = canvasRef.value;
@@ -250,8 +261,9 @@ function drawMarker(context: CanvasRenderingContext2D, command: Extract<EditorCo
 
 function drawText(context: CanvasRenderingContext2D, command: Extract<EditorCommand, { type: "text" }>): void {
   if (!command.text.trim()) return;
-  const lineHeight = Math.round(command.fontSize * 1.2);
+  const lineHeight = Math.round(command.fontSize * TEXT_LINE_HEIGHT);
   context.font = `600 ${command.fontSize}px system-ui, -apple-system, BlinkMacSystemFont, sans-serif`;
+  (context as CanvasRenderingContext2D & { letterSpacing?: string }).letterSpacing = `${TEXT_LETTER_SPACING}px`;
   context.textAlign = "left";
   context.textBaseline = "top";
   context.lineJoin = "round";
@@ -385,7 +397,7 @@ function createTextCommand(point: EditorPoint): void {
   const id = `text-${++textIdSequence}`;
   commands.value = [
     ...commands.value,
-    { type: "text", id, color: selectedColor.value, fontSize: 20, point, text: "" },
+    { type: "text", id, color: selectedColor.value, fontSize: getTextFontSizeFromSlider(strokeWidth.value), point, text: "" },
   ];
   activeTextId.value = id;
   void nextTick(() => {
@@ -416,6 +428,18 @@ function getTextBoxStyle(command: Extract<EditorCommand, { type: "text" }>): Rec
     top: `${(command.point.y / canvasHeight.value) * 100}%`,
     color: command.color,
   };
+}
+
+function getTextInputStyle(command: Extract<EditorCommand, { type: "text" }>): Record<string, string> {
+  return {
+    fontSize: `${command.fontSize}px`,
+    lineHeight: String(TEXT_LINE_HEIGHT),
+    letterSpacing: `${TEXT_LETTER_SPACING}px`,
+  };
+}
+
+function getTextFontSizeFromSlider(width: number): number {
+  return Math.round(clamp(width, 2, 18) + TEXT_FONT_SIZE_OFFSET);
 }
 
 function startTextDrag(event: PointerEvent, command: Extract<EditorCommand, { type: "text" }>): void {
@@ -736,6 +760,7 @@ function saveImage(): void {
             class="image-editor-text-input"
             :class="{ 'is-transparent': !command.text }"
             :value="command.text"
+            :style="getTextInputStyle(command)"
             placeholder=""
             rows="1"
             :aria-label="editorText.textInput"

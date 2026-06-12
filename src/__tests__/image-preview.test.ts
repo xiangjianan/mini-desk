@@ -190,7 +190,7 @@ describe("ImagePreview", () => {
     wrapper.unmount();
   });
 
-  it("renders pasted screenshots without forcing a letterboxed image box", () => {
+  it("fits preview images inside the preview region without overflowing", () => {
     const wrapper = mount(ImagePreview, {
       props: {
         images: [
@@ -217,8 +217,9 @@ describe("ImagePreview", () => {
     });
 
     const style = wrapper.get(".preview-stage img").attributes("style");
-    expect(style).toContain("width: 96px");
-    expect(style).not.toContain("height: 48px");
+    expect(style).toContain("width: 100%");
+    expect(style).toContain("height: 100%");
+    expect(style).toContain("object-fit: contain");
     expect(style).toContain("scale(1)");
 
     wrapper.unmount();

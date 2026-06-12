@@ -117,6 +117,7 @@ describe("ImageEditor", () => {
     });
 
     expect(wrapper.find(".image-editor").exists()).toBe(true);
+    expect(wrapper.get('[aria-label="矩形"]').classes()).toContain("is-active");
     expect(wrapper.findAll(".image-editor-tool").map((button) => button.attributes("aria-label"))).toEqual([
       "裁切",
       "画笔",
@@ -151,6 +152,37 @@ describe("ImageEditor", () => {
     expect(wrapper.get(".image-editor-width-preview-mark").attributes("style")).toContain("width: 4px");
     expect(wrapper.get(".image-editor-save").text()).toBe("保存");
     expect(wrapper.get(".image-editor-cancel").text()).toBe("取消");
+
+    wrapper.unmount();
+  });
+
+  it("creates a focused text box with the current slider-controlled text size", async () => {
+    const wrapper = mount(ImageEditor, {
+      attachTo: document.body,
+      props: {
+        image: { id: "img-1", src: "data:image/png;base64,one", createdAt: 1, displayWidth: 400, displayHeight: 300 },
+      },
+      global: {
+        stubs: {
+          NIcon: iconStub,
+        },
+      },
+    });
+
+    const canvas = wrapper.get(".image-editor-canvas");
+    mockRect(canvas.element);
+
+    await wrapper.findAll(".image-editor-tool").find((button) => button.attributes("aria-label") === "文本")?.trigger("click");
+    await wrapper.get(".image-editor-width").setValue(9);
+    await dispatchPointer(canvas.element, "pointerdown", 100, 80);
+
+    const input = wrapper.get(".image-editor-text-input");
+    expect(document.activeElement).toBe(input.element);
+    expect(input.attributes("style")).toContain("font-size: 29px");
+    expect(input.attributes("style")).toContain("line-height: 1.35");
+
+    await wrapper.get(".image-editor-width").setValue(12);
+    expect(wrapper.get(".image-editor-text-input").attributes("style")).toContain("font-size: 32px");
 
     wrapper.unmount();
   });
@@ -455,13 +487,15 @@ describe("ImageEditor", () => {
     canvasContextMock.fillText.mockClear();
     await wrapper.get(".image-editor-save").trigger("click");
 
+    expect(canvasContextMock.strokeText.mock.calls.length).toBeGreaterThan(0);
+    expect(canvasContextMock.fillText.mock.calls.length).toBeGreaterThan(0);
     expect(canvasContextMock.strokeText.mock.calls).toEqual(expect.arrayContaining([
       ["Hello", 150, 120],
-      ["Mini Desk", 150, 144],
+      ["Mini Desk", 150, 152],
     ]));
     expect(canvasContextMock.fillText.mock.calls).toEqual(expect.arrayContaining([
       ["Hello", 150, 120],
-      ["Mini Desk", 150, 144],
+      ["Mini Desk", 150, 152],
     ]));
 
     wrapper.unmount();
