@@ -3123,6 +3123,17 @@ button.todo-section-menu-button {
   white-space: pre-line;
 }
 
+.companion-signature {
+  justify-self: end;
+  max-width: 100%;
+  margin-top: 2px;
+  color: var(--muted-foreground);
+  font-size: 11px;
+  line-height: 1.25;
+  text-align: right;
+  white-space: normal;
+}
+
 .companion-link {
   display: inline-flex;
   align-items: center;

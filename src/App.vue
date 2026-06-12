@@ -86,6 +86,7 @@ const closingPreviewId = ref<string | undefined>();
 const previewCloseTimer = ref<number | undefined>();
 const bubbleMessage = ref("");
 const bubbleLink = ref<{ text: string; href: string } | null>(null);
+const bubbleSignature = ref("");
 const bubbleVisible = ref(false);
 const companionFocused = ref(false);
 const companionPosition = ref<{ right: string; bottom?: string; top?: string } | undefined>();
@@ -136,6 +137,7 @@ type BubbleOptions = {
   guideKey?: GuideKey;
   linkText?: string;
   linkHref?: string;
+  signatureText?: string;
 };
 
 type PersistOptions = {
@@ -1499,7 +1501,7 @@ function about(anchor?: HTMLElement): void {
   showBubbleText(
     [uiText.value.app.aboutTitle, uiText.value.app.aboutDescription].join("\n"),
     anchor,
-    { hideCompanionAfter: true, linkText: GITHUB_REPO_LABEL, linkHref: GITHUB_REPO_URL },
+    { hideCompanionAfter: true, linkText: GITHUB_REPO_LABEL, linkHref: GITHUB_REPO_URL, signatureText: uiText.value.app.aboutSignature },
     ABOUT_MESSAGE_DURATION_MS,
   );
 }
@@ -1658,6 +1660,7 @@ function showBubbleText(message: string, anchor?: HTMLElement, options: BubbleOp
   clearPendingConfirm();
   bubbleMessage.value = message;
   bubbleLink.value = options.linkText && options.linkHref ? { text: options.linkText, href: options.linkHref } : null;
+  bubbleSignature.value = options.signatureText ?? "";
   activeGuideKey.value = options.guideKey ?? null;
   companionFocused.value = true;
   if (anchor) {
@@ -1700,6 +1703,7 @@ function hideBubbleMessage(options: { clearRetainedContent?: boolean } = {}): vo
   bubbleVisible.value = false;
   bubbleMessage.value = "";
   bubbleLink.value = null;
+  bubbleSignature.value = "";
   if (options.clearRetainedContent) bubbleClearSignal.value += 1;
 }
 
@@ -1723,6 +1727,7 @@ function finishBubbleTimer(): void {
   bubbleVisible.value = false;
   bubbleMessage.value = "";
   bubbleLink.value = null;
+  bubbleSignature.value = "";
   if (options.guideKey) activeGuideKey.value = null;
   window.clearTimeout(bubbleFadeTimer.value);
   companionFadeRemaining.value = COMPANION_FADE_MS;
@@ -1755,7 +1760,7 @@ function pauseBubbleTimer(): void {
 }
 
 function resumeBubbleTimer(): void {
-  if (bubbleVisible.value && !bubbleTimer.value && !pendingConfirm.value && (bubbleMessage.value || bubbleLink.value)) {
+  if (bubbleVisible.value && !bubbleTimer.value && !pendingConfirm.value && (bubbleMessage.value || bubbleLink.value || bubbleSignature.value)) {
     if (bubbleRemainingMs.value <= 0) {
       finishBubbleTimer();
       return;
@@ -1785,6 +1790,7 @@ function requestConfirmation(
   bubbleTimerOptions.value = {};
   bubbleMessage.value = getMessage(messageKey, Math.random, state.language);
   bubbleLink.value = null;
+  bubbleSignature.value = "";
   pendingConfirm.value = {
     onConfirm,
     onCancel,
@@ -2454,6 +2460,7 @@ function moveItem<T extends { id: string }>(items: T[], dragId: string, targetId
       :message="activeCompanionMessage"
       :link-text="isMobileBlocked ? undefined : bubbleLink?.text"
       :link-href="isMobileBlocked ? undefined : bubbleLink?.href"
+      :signature-text="isMobileBlocked ? undefined : bubbleSignature"
       :confirm="!isMobileBlocked && Boolean(pendingConfirm)"
       :confirm-danger="!isMobileBlocked && Boolean(pendingConfirm?.danger)"
       :confirm-text="isMobileBlocked ? undefined : pendingConfirm?.confirmText"

@@ -539,7 +539,8 @@ export const UI_TEXT = {
       customGifSet: "已设置自定义 GIF",
       importOverwrite: "覆盖导入",
       aboutTitle: "Mini Desk 看板",
-      aboutDescription: "一个本地优先的轻量工作台，把截图、提醒事项、快捷动作和备忘录缝合得恰到好处。\n这个项目 100% 由 AI 开发。\n所有操作均在本地浏览器完成，绝不上传您的任何数据。",
+      aboutDescription: "一个本地优先的轻量工作台，把截图、提醒事项、快捷动作和备忘录缝合得恰到好处。\n所有操作均在本地浏览器完成，绝不上传您的任何数据。",
+      aboutSignature: "100% AI 设计与实现",
       reminderFallback: "提醒事项",
     },
     settings: {
@@ -764,7 +765,8 @@ export const UI_TEXT = {
       customGifSet: "Custom GIF set",
       importOverwrite: "Overwrite import",
       aboutTitle: "Mini Desk",
-      aboutDescription: "A local-first lightweight desk for organizing screenshots, reminders, quick actions, and a memo.\nThis project is 100% developed by AI.\nEverything happens in your local browser. None of your data is ever uploaded.",
+      aboutDescription: "A local-first lightweight desk for organizing screenshots, reminders, quick actions, and a memo.\nEverything happens in your local browser. None of your data is ever uploaded.",
+      aboutSignature: "100% AI-designed and built",
       reminderFallback: "Reminders",
     },
     settings: {

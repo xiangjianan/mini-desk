@@ -192,6 +192,33 @@ describe("CompanionBubble", () => {
     wrapper.unmount();
   });
 
+  it("renders an optional signature at the bottom right of the message bubble", async () => {
+    vi.useFakeTimers();
+    const wrapper = mount(CompanionBubble, {
+      attachTo: document.body,
+      props: {
+        visible: true,
+        message: "项目信息",
+        signatureText: "100% AI 设计与实现",
+      },
+      global: {
+        stubs: {
+          NButton: buttonStub,
+          NPopover: popoverStub,
+        },
+      },
+    });
+
+    await vi.advanceTimersByTimeAsync(200);
+    await wrapper.vm.$nextTick();
+
+    const signature = document.body.querySelector<HTMLElement>('[data-testid="companion-signature"]');
+    expect(signature?.textContent).toBe("100% AI 设计与实现");
+    expect(signature?.classList.contains("companion-signature")).toBe(true);
+
+    wrapper.unmount();
+  });
+
   it("emits pause and resume when the pointer enters and leaves the message bubble", async () => {
     vi.useFakeTimers();
     const wrapper = mount(CompanionBubble, {

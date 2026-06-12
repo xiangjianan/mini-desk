@@ -115,6 +115,8 @@ describe("workbench style contract", () => {
     expectSelectorBody(styles, ".companion-popover-shell.n-popover", "background: var(--popover) !important");
     expectSelectorBody(styles, ".companion-popover-shell.n-popover", "box-shadow: 0 6px 14px rgba(15, 23, 42, 0.045) !important");
     expectSelectorBody(styles, ".companion-popover-arrow", "border: 1px solid var(--border) !important");
+    expectSelectorBody(styles, ".companion-signature", "justify-self: end");
+    expectSelectorBody(styles, ".companion-signature", "text-align: right");
     expect(ruleBodies(styles, ".companion-popover-shell.n-popover").join("\n")).not.toContain("#111");
     expect(ruleBodies(styles, ".companion-popover-arrow").join("\n")).not.toContain("#111");
   });

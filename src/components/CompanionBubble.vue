@@ -15,6 +15,7 @@ const props = withDefaults(defineProps<{
   message: string;
   linkText?: string;
   linkHref?: string;
+  signatureText?: string;
   confirm?: boolean;
   confirmDanger?: boolean;
   confirmText?: string;
@@ -56,6 +57,7 @@ const gifFading = ref(false);
 const renderedMessage = ref("");
 const renderedLinkText = ref("");
 const renderedLinkHref = ref("");
+const renderedSignatureText = ref("");
 const renderedConfirm = ref(false);
 const renderedConfirmDanger = ref(false);
 const renderedConfirmText = ref("");
@@ -119,7 +121,7 @@ const gifSrc = computed(() =>
   }),
 );
 const shouldRenderGif = computed(() => Boolean(gifSrc.value));
-const hasPopoverPayload = computed(() => Boolean(props.message || props.confirm || props.linkText));
+const hasPopoverPayload = computed(() => Boolean(props.message || props.confirm || props.linkText || props.signatureText));
 const surfaceVisible = computed(() => {
   if (!props.visible) return false;
   if (shouldRenderGif.value) return gifVisible.value || gifFading.value;
@@ -146,6 +148,7 @@ watch(
         renderedMessage.value = "";
         renderedLinkText.value = "";
         renderedLinkHref.value = "";
+        renderedSignatureText.value = "";
         renderedConfirm.value = false;
         renderedConfirmDanger.value = false;
         renderedConfirmText.value = uiText.value.common.yes;
@@ -157,6 +160,7 @@ watch(
     renderedMessage.value = props.message;
     renderedLinkText.value = props.linkText ?? "";
     renderedLinkHref.value = props.linkHref ?? "";
+    renderedSignatureText.value = props.signatureText ?? "";
     renderedConfirm.value = Boolean(props.confirm);
     renderedConfirmDanger.value = Boolean(props.confirmDanger);
     renderedConfirmText.value = props.confirmText ?? uiText.value.common.yes;
@@ -177,6 +181,7 @@ watch(
       props.message,
       props.linkText,
       props.linkHref,
+      props.signatureText,
       props.confirm,
       props.confirmDanger,
       props.persistent,
@@ -217,6 +222,7 @@ watch(
     renderedMessage.value = props.message;
     renderedLinkText.value = props.linkText ?? "";
     renderedLinkHref.value = props.linkHref ?? "";
+    renderedSignatureText.value = props.signatureText ?? "";
     renderedConfirm.value = Boolean(props.confirm);
     renderedConfirmDanger.value = Boolean(props.confirmDanger);
     renderedConfirmText.value = props.confirmText ?? uiText.value.common.yes;
@@ -235,6 +241,7 @@ watch(
     renderedMessage.value = "";
     renderedLinkText.value = "";
     renderedLinkHref.value = "";
+    renderedSignatureText.value = "";
     renderedConfirm.value = false;
     renderedConfirmDanger.value = false;
     renderedConfirmText.value = uiText.value.common.yes;
@@ -380,6 +387,13 @@ function isPointInsideElement(x: number, y: number, element: HTMLElement | null)
           <NIcon class="companion-link-icon" :component="LogoGithub" />
           {{ renderedLinkText }}
         </a>
+        <span
+          v-if="renderedSignatureText"
+          class="companion-signature"
+          data-testid="companion-signature"
+        >
+          {{ renderedSignatureText }}
+        </span>
         <div v-if="renderedConfirm" class="companion-actions">
           <NButton size="tiny" class="companion-action-button" :class="{ 'is-danger': renderedConfirmDanger }" data-testid="companion-yes" @click="emit('yes')">{{ renderedConfirmText }}</NButton>
           <NButton size="tiny" class="companion-action-button" data-testid="companion-no" @click="emit('no')">{{ renderedCancelText }}</NButton>
