@@ -110,6 +110,8 @@ export function getSerializableState(
       return {
         id: image.id,
         createdAt: image.createdAt,
+        ...(image.displayWidth ? { displayWidth: image.displayWidth } : {}),
+        ...(image.displayHeight ? { displayHeight: image.displayHeight } : {}),
       };
     }),
     todoLists,
@@ -405,9 +407,18 @@ export function normalizeImages(images: unknown): StoredImage[] {
         createdAt: typeof record.createdAt === "number" ? record.createdAt : Date.now(),
       };
       if (typeof record.src === "string") image.src = record.src;
+      const displayWidth = normalizeImageDisplayDimension(record.displayWidth);
+      const displayHeight = normalizeImageDisplayDimension(record.displayHeight);
+      if (displayWidth) image.displayWidth = displayWidth;
+      if (displayHeight) image.displayHeight = displayHeight;
       return image;
     })
     .filter((item): item is StoredImage => Boolean(item));
+}
+
+function normalizeImageDisplayDimension(value: unknown): number | undefined {
+  if (typeof value !== "number" || !Number.isFinite(value) || value <= 0) return undefined;
+  return Math.max(1, Math.round(value));
 }
 
 export function normalizeQuickTags(tags: unknown): QuickTag[] {

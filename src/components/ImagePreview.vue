@@ -45,6 +45,16 @@ const activeIndex = computed(() => props.images.findIndex((image) => image.id ==
 const canNavigatePrevious = computed(() => activeIndex.value > 0);
 const canNavigateNext = computed(() => activeIndex.value >= 0 && activeIndex.value < props.images.length - 1);
 const isClosing = computed(() => props.closing || localClosing.value);
+const activeImageStyle = computed(() => {
+  const style: { width?: string; height?: string; transform: string } = {
+    transform: `translate(${offset.value.x}px, ${offset.value.y}px) scale(${scale.value})`,
+  };
+  if (isPositiveDimension(active.value?.displayWidth) && isPositiveDimension(active.value?.displayHeight)) {
+    style.width = `${active.value.displayWidth}px`;
+    style.height = `${active.value.displayHeight}px`;
+  }
+  return style;
+});
 const menuOptions = computed<DropdownOption[]>(() => [
   { label: uiText.value.preview.close, key: "close", icon: renderIcon(CloseOutline) },
   { label: uiText.value.common.copy, key: "copy", icon: renderIcon(CopyOutline) },
@@ -55,6 +65,10 @@ const exclusiveMenu = createExclusiveContextMenu(closeMenu);
 
 function renderIcon(icon: Component): () => VNode {
   return () => h(NIcon, { size: 16 }, { default: () => h(icon) });
+}
+
+function isPositiveDimension(value: number | undefined): value is number {
+  return typeof value === "number" && Number.isFinite(value) && value > 0;
 }
 
 onMounted(exclusiveMenu.mount);
@@ -249,7 +263,7 @@ function handleKeydown(event: KeyboardEvent): void {
             :src="active.src"
             :alt="uiText.preview.imageAlt"
             draggable="false"
-            :style="{ transform: `translate(${offset.x}px, ${offset.y}px) scale(${scale})` }"
+            :style="activeImageStyle"
             @contextmenu.prevent="openMenu($event, active.id)"
             @dblclick.stop.prevent="toggleZoom"
           />

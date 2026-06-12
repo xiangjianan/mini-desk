@@ -37,6 +37,8 @@ export interface StoredImage {
   id: string;
   src?: string;
   createdAt: number;
+  displayWidth?: number;
+  displayHeight?: number;
 }
 
 export interface QuickButton {

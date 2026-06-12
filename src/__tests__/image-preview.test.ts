@@ -131,6 +131,40 @@ describe("ImagePreview", () => {
     wrapper.unmount();
   });
 
+  it("renders pasted screenshots at their stored display size", () => {
+    const wrapper = mount(ImagePreview, {
+      props: {
+        images: [
+          {
+            id: "img-1",
+            src: "data:image/png;base64,one",
+            createdAt: 1,
+            displayWidth: 96,
+            displayHeight: 48,
+          },
+        ],
+        activeId: "img-1",
+      },
+      global: {
+        stubs: {
+          Button: buttonStub,
+          Dropdown: dropdownStub,
+          Modal: modalStub,
+          NButton: buttonStub,
+          NDropdown: dropdownStub,
+          NModal: modalStub,
+        },
+      },
+    });
+
+    const style = wrapper.get(".preview-stage img").attributes("style");
+    expect(style).toContain("width: 96px");
+    expect(style).toContain("height: 48px");
+    expect(style).toContain("scale(1)");
+
+    wrapper.unmount();
+  });
+
   it("does not navigate when wheel events happen outside the preview stage", async () => {
     const wrapper = mount(ImagePreview, {
       props: {
@@ -547,8 +581,9 @@ describe("ImagePreview", () => {
 
     try {
       const next = wrapper.get(".preview-nav-button.is-next");
-      next.element.focus();
-      expect(document.activeElement).toBe(next.element);
+      const nextElement = next.element as HTMLElement;
+      nextElement.focus();
+      expect(document.activeElement).toBe(nextElement);
 
       await next.trigger("click");
       expect(document.activeElement).toBe(wrapper.get(".image-preview").element);

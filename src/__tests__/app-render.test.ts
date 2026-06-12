@@ -3031,6 +3031,64 @@ describe("App shell", () => {
     }
   });
 
+  it("stores pasted screenshot display size using the device pixel ratio", async () => {
+    vi.useFakeTimers();
+    const originalDevicePixelRatio = window.devicePixelRatio;
+    const originalImage = window.Image;
+    const originalFileReader = window.FileReader;
+    Object.defineProperty(window, "devicePixelRatio", { configurable: true, value: 2 });
+    class SizedImage {
+      naturalWidth = 200;
+      naturalHeight = 100;
+      onload: (() => void) | null = null;
+      onerror: (() => void) | null = null;
+      set src(_value: string) {
+        queueMicrotask(() => this.onload?.());
+      }
+    }
+    class ImmediateFileReader {
+      result: string | ArrayBuffer | null = null;
+      error: DOMException | null = null;
+      onload: (() => void) | null = null;
+      onerror: (() => void) | null = null;
+      readAsDataURL(): void {
+        this.result = "data:image/png;base64,c3RvcmVk";
+        this.onload?.();
+      }
+    }
+    vi.stubGlobal("Image", SizedImage);
+    vi.stubGlobal("FileReader", ImmediateFileReader);
+    const imageBlob = new Blob(["img"], { type: "image/png" });
+    Object.assign(navigator, {
+      clipboard: {
+        read: vi.fn().mockResolvedValue([{ types: ["image/png"], getType: vi.fn().mockResolvedValue(imageBlob) }]),
+      },
+    });
+    const wrapper = mountApp();
+
+    try {
+      wrapper.getComponent(ImagePanel).vm.$emit("paste");
+      await Promise.resolve();
+      await Promise.resolve();
+      await wrapper.vm.$nextTick();
+      await vi.advanceTimersByTimeAsync(200);
+      await Promise.resolve();
+      await wrapper.vm.$nextTick();
+
+      const images = wrapper.getComponent(ImagePanel).props("images") as Array<{ displayWidth?: number; displayHeight?: number }>;
+      expect(images[0]).toMatchObject({ displayWidth: 100, displayHeight: 50 });
+      const stored = JSON.parse(localStorage.getItem(STORAGE_KEY) || "{}");
+      expect(stored.images[0]).toMatchObject({ displayWidth: 100, displayHeight: 50 });
+      expect(stored.images[0].src).toBeUndefined();
+    } finally {
+      wrapper.unmount();
+      vi.useRealTimers();
+      vi.stubGlobal("Image", originalImage);
+      vi.stubGlobal("FileReader", originalFileReader);
+      Object.defineProperty(window, "devicePixelRatio", { configurable: true, value: originalDevicePixelRatio });
+    }
+  });
+
   it("merges pasted images with newer storage from another tab", async () => {
     vi.useFakeTimers();
     localStorage.setItem(

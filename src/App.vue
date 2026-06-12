@@ -559,7 +559,7 @@ async function handlePaste(event: ClipboardEvent): Promise<void> {
   event.preventDefault();
   const file = imageItem.getAsFile();
   if (!file) return;
-  await addImageFile(file);
+  await addImageFile(file, { matchDisplaySizeToDevicePixelRatio: true });
 }
 
 async function pasteImageFromClipboard(anchor?: HTMLElement): Promise<void> {
@@ -594,7 +594,7 @@ async function pasteImageFromClipboard(anchor?: HTMLElement): Promise<void> {
       return;
     }
     if (shouldBlockBoardEffects()) return;
-    await addImageFile(new File([blob], "clipboard-image", { type }));
+    await addImageFile(new File([blob], "clipboard-image", { type }), { matchDisplaySizeToDevicePixelRatio: true });
     return;
   }
   if (shouldBlockBoardEffects()) return;
@@ -606,7 +606,10 @@ function pasteImageWithBrowserCommand(anchor?: HTMLElement): boolean {
   return Boolean(document.execCommand?.("paste"));
 }
 
-async function addImageFile(file: File, options: { showMessage?: boolean } = {}): Promise<StoredImage | undefined> {
+async function addImageFile(
+  file: File,
+  options: { showMessage?: boolean; matchDisplaySizeToDevicePixelRatio?: boolean } = {},
+): Promise<StoredImage | undefined> {
   if (shouldBlockBoardEffects()) return undefined;
   let src: string;
   try {
@@ -617,10 +620,15 @@ async function addImageFile(file: File, options: { showMessage?: boolean } = {})
     return undefined;
   }
   if (shouldBlockBoardEffects()) return undefined;
-  const image = {
+  const displaySize = options.matchDisplaySizeToDevicePixelRatio
+    ? await getDevicePixelRatioDisplaySize(src)
+    : undefined;
+  if (shouldBlockBoardEffects()) return undefined;
+  const image: StoredImage = {
     id: createId(),
     src,
     createdAt: Date.now(),
+    ...(displaySize ?? {}),
   };
   try {
     await storeImagePayload(image);
@@ -2218,6 +2226,30 @@ function fileToDataUrl(file: File): Promise<string> {
     reader.onload = () => resolve(String(reader.result));
     reader.onerror = () => reject(reader.error);
     reader.readAsDataURL(file);
+  });
+}
+
+async function getDevicePixelRatioDisplaySize(src: string): Promise<Pick<StoredImage, "displayWidth" | "displayHeight"> | undefined> {
+  const pixelRatio = window.devicePixelRatio;
+  if (!Number.isFinite(pixelRatio) || pixelRatio <= 1) return undefined;
+  const naturalSize = await readImageNaturalSize(src);
+  if (!naturalSize) return undefined;
+  return {
+    displayWidth: Math.max(1, Math.round(naturalSize.width / pixelRatio)),
+    displayHeight: Math.max(1, Math.round(naturalSize.height / pixelRatio)),
+  };
+}
+
+function readImageNaturalSize(src: string): Promise<{ width: number; height: number } | undefined> {
+  return new Promise((resolve) => {
+    const image = new Image();
+    image.onload = () => {
+      const width = image.naturalWidth || image.width;
+      const height = image.naturalHeight || image.height;
+      resolve(width > 0 && height > 0 ? { width, height } : undefined);
+    };
+    image.onerror = () => resolve(undefined);
+    image.src = src;
   });
 }
 

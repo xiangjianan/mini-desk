@@ -263,17 +263,34 @@ describe("state compatibility", () => {
           id: "img-1",
           src: "data:image/png;base64,abc",
           createdAt: 1,
+          displayWidth: 80,
+          displayHeight: 40,
         },
       ],
     };
 
     expect(getSerializableState(state).images).toEqual([
-      { id: "img-1", createdAt: 1 },
+      { id: "img-1", createdAt: 1, displayWidth: 80, displayHeight: 40 },
     ]);
     expect(getSerializableState(state, { includeImageData: true }).images[0]).toMatchObject({
       id: "img-1",
       src: "data:image/png;base64,abc",
+      displayWidth: 80,
+      displayHeight: 40,
     });
+  });
+
+  it("normalizes persisted image display dimensions", () => {
+    const state = normalizeImportedState({
+      images: [
+        { id: "img-1", createdAt: 1, displayWidth: 80.4, displayHeight: 40.6 },
+        { id: "img-2", createdAt: 2, displayWidth: 0, displayHeight: Number.POSITIVE_INFINITY },
+      ],
+    });
+
+    expect(state.images[0]).toMatchObject({ displayWidth: 80, displayHeight: 41 });
+    expect(state.images[1]).not.toHaveProperty("displayWidth");
+    expect(state.images[1]).not.toHaveProperty("displayHeight");
   });
 
   it("merges image additions from a stale tab without overwriting the latest stored state", () => {
