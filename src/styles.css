@@ -1808,6 +1808,10 @@ button.quick-button {
   max-width: calc(100vw - 32px);
 }
 
+.n-modal-container:has(.quick-dialog) .n-modal-mask {
+  background: transparent !important;
+}
+
 .quick-dialog .n-base-close {
   min-height: 0;
   padding: 0;

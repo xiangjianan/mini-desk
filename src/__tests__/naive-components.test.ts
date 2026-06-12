@@ -828,6 +828,7 @@ describe("Naive UI component usage", () => {
     expect(quick).toContain(":mask-style=\"{ background: 'transparent' }\"");
     expect(quick).not.toContain("handleDialogOutsideClick");
     expect(quick).not.toContain("@mask-click");
+    expect(styles).toMatch(/\.n-modal-container:has\(\.quick-dialog\) \.n-modal-mask\s*\{[^}]*background: transparent !important/s);
     expect(styles).toMatch(/\.quick-dialog\s*\{[^}]*width: min\(420px, calc\(100vw - 32px\)\)/s);
     expect(styles).toMatch(/\.quick-dialog \.n-base-close\s*\{[^}]*border: 0/s);
     expect(styles).toMatch(/\.quick-dialog \.n-base-close\s*\{[^}]*box-shadow: none/s);
