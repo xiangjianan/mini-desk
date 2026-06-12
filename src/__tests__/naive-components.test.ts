@@ -176,8 +176,9 @@ describe("Naive UI component usage", () => {
     expect(styles).toMatch(/\.preview-nav-stack\s*\{[^}]*left: 14px/s);
     expect(styles).toMatch(/\.preview-nav-stack\s*\{[^}]*flex-direction: column/s);
     expect(styles).toMatch(/\.preview-nav-stack\s*\{[^}]*gap: 6px/s);
-    expect(styles).toMatch(/\.preview-nav-button\s*\{[^}]*width: 52px/s);
-    expect(styles).toMatch(/\.preview-nav-button\s*\{[^}]*height: 68px/s);
+    expect(styles).toMatch(/\.preview-nav-button\s*\{[^}]*width: 42px/s);
+    expect(styles).toMatch(/\.preview-nav-button\s*\{[^}]*height: 42px/s);
+    expect(styles).toMatch(/\.preview-nav-button\s*\{[^}]*border-radius: 999px/s);
     expect(styles).toMatch(/\.preview-nav-button\s*\{[^}]*background: color-mix\(in srgb, var\(--card\) 26%, transparent\)/s);
     expect(styles).toMatch(/\.preview-nav-button\s*\{[^}]*opacity: 0\.58/s);
     expect(styles).toMatch(/\.preview-nav-button:hover,[\s\S]*?\.preview-nav-button:focus-visible\s*\{[^}]*opacity: 0\.82/s);

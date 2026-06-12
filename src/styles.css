@@ -5265,9 +5265,9 @@ html[data-theme="dark"] .image-preview {
 
 .preview-nav-button {
   position: static;
-  width: 52px;
-  height: 68px;
-  border-radius: calc(var(--radius) + 10px);
+  width: 42px;
+  height: 42px;
+  border-radius: 999px;
   background: color-mix(in srgb, var(--card) 26%, transparent);
   opacity: 0.58;
 }
