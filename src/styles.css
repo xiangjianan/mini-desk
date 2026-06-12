@@ -3818,6 +3818,12 @@ body:has(.image-preview) .image-panel .n-scrollbar {
   text-overflow: ellipsis;
 }
 
+.shortcut-key-pill {
+  background: color-mix(in srgb, var(--line-focus) 18%, var(--button));
+  border-color: color-mix(in srgb, var(--line-focus) 42%, var(--line-subtle));
+  box-shadow: inset 0 -1px 0 color-mix(in srgb, var(--line-focus) 28%, transparent);
+}
+
 .shortcut-key-separator {
   color: var(--muted);
   font-size: 11px;
@@ -5222,13 +5228,15 @@ html[data-theme="dark"] .image-preview {
 
 .preview-stage {
   border-radius: 0;
+  min-width: 0;
+  min-height: 0;
 }
 
 .preview-stage img {
   width: auto;
   height: auto;
-  max-width: min(100%, calc(100vw - 32px));
-  max-height: calc(100vh - var(--image-preview-top, 52px) - 96px);
+  max-width: 100%;
+  max-height: 100%;
   object-fit: contain;
   border-radius: 0;
   box-shadow: 0 10px 28px rgba(0, 0, 0, 0.14);

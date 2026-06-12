@@ -253,7 +253,7 @@ function handleKeydown(event: KeyboardEvent): void {
             :disabled="!canNavigatePrevious"
             @click.stop.prevent="navigate(-1)"
             @keydown.enter.stop.prevent="navigate(-1)"
-            @keydown.space.stop.prevent="navigate(-1)"
+            @keydown.space.stop.prevent="requestClose"
           >
             <NIcon size="20">
               <ChevronUpOutline />
@@ -267,7 +267,7 @@ function handleKeydown(event: KeyboardEvent): void {
             :disabled="!canNavigateNext"
             @click.stop.prevent="navigate(1)"
             @keydown.enter.stop.prevent="navigate(1)"
-            @keydown.space.stop.prevent="navigate(1)"
+            @keydown.space.stop.prevent="requestClose"
           >
             <NIcon size="20">
               <ChevronDownOutline />

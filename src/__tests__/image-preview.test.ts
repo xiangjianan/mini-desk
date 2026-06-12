@@ -479,6 +479,47 @@ describe("ImagePreview", () => {
     }
   });
 
+  it("closes the preview when Space is pressed after a navigation button keeps focus", async () => {
+    vi.useFakeTimers();
+    const wrapper = mount(ImagePreview, {
+      props: {
+        images: [
+          { id: "img-1", src: "data:image/png;base64,one", createdAt: 1 },
+          { id: "img-2", src: "data:image/png;base64,two", createdAt: 2 },
+          { id: "img-3", src: "data:image/png;base64,three", createdAt: 3 },
+        ],
+        activeId: "img-1",
+      },
+      global: {
+        stubs: {
+          Button: buttonStub,
+          Dropdown: dropdownStub,
+          Modal: modalStub,
+          NButton: buttonStub,
+          NDropdown: dropdownStub,
+          NModal: modalStub,
+        },
+      },
+    });
+
+    try {
+      const next = wrapper.get(".preview-nav-button.is-next");
+      await next.trigger("click");
+      await next.trigger("keydown", { key: " " });
+
+      expect(wrapper.emitted("navigate")).toEqual([[1]]);
+      expect(wrapper.get(".image-preview").classes()).toContain("is-closing");
+      expect(wrapper.emitted("close")).toBeUndefined();
+
+      await vi.advanceTimersByTimeAsync(220);
+
+      expect(wrapper.emitted("close")).toHaveLength(1);
+    } finally {
+      wrapper.unmount();
+      vi.useRealTimers();
+    }
+  });
+
   it("opens a compact context menu over preview images", async () => {
     vi.useFakeTimers();
     const wrapper = mount(ImagePreview, {

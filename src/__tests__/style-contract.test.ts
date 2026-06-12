@@ -128,6 +128,8 @@ describe("workbench style contract", () => {
     expectSelectorBody(styles, ".preview-stage img", "max-width: calc(100vw - var(--image-preview-left, clamp(220px, 18vw, 320px)) - 32px)");
     expectSelectorBody(styles, ".preview-stage img", "width: auto");
     expectSelectorBody(styles, ".preview-stage img", "height: auto");
+    expectSelectorBody(styles, ".preview-stage img", "max-width: 100%");
+    expectSelectorBody(styles, ".preview-stage img", "max-height: 100%");
     expectSelectorBody(styles, ".preview-stage img", "object-fit: contain");
     expectSelectorBody(styles, ".preview-toolbar-button:focus-visible", "outline: 0");
     expectSelectorBody(styles, ".preview-toolbar-button:focus-visible", "box-shadow: none");
@@ -292,6 +294,16 @@ describe("workbench style contract", () => {
     expectSelectorBody(styles, ".quick-dialog-submit.n-button:hover:not(.n-button--disabled)", "background: rgba(24, 160, 88, 0.1) !important");
     expectSelectorBody(styles, ".n-time-picker-panel .n-button--primary-type", "--n-text-color: #111111 !important");
     expectSelectorBody(styles, ".n-time-picker-panel .n-button--primary-type", "color: #111111 !important");
+  });
+
+  it("keeps shortcut help key pills visually tied to the shared keyboard", () => {
+    const styles = readFileSync(resolve(__dirname, "../styles.css"), "utf8");
+    const activeKeycap = ruleBodies(styles, ".shortcut-keyboard-diagram--shared .shortcut-keycap--active").join("\n");
+    const keyPill = ruleBodies(styles, ".shortcut-key-pill").join("\n");
+
+    expect(activeKeycap).toContain("background: color-mix(in srgb, var(--line-focus) 18%, var(--button))");
+    expect(keyPill).toContain("background: color-mix(in srgb, var(--line-focus) 18%, var(--button))");
+    expect(keyPill).toContain("border-color: color-mix(in srgb, var(--line-focus) 42%, var(--line-subtle))");
   });
 
   it("centers reminder star icons, unifies primary tool buttons, and unifies thin scrollbars", () => {
