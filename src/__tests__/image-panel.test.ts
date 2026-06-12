@@ -154,6 +154,18 @@ describe("ImagePanel", () => {
     wrapper.unmount();
   });
 
+  it("opens editing from a focused image card when Enter is pressed", async () => {
+    const wrapper = mountImagePanel([
+      { id: "img-1", src: "data:image/png;base64,one", createdAt: 1 },
+    ]);
+
+    await wrapper.get(".image-card").trigger("keydown", { key: "Enter" });
+
+    expect(wrapper.emitted("edit")?.[0]).toEqual(["img-1"]);
+    expect(wrapper.emitted("copy")).toBeUndefined();
+    wrapper.unmount();
+  });
+
   it("shows cancel preview for the active preview image context menu", async () => {
     const wrapper = mountImagePanel(
       [

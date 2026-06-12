@@ -6,6 +6,7 @@ import type { AppLanguage, StoredImage } from "../types";
 
 type EditorTool = "crop" | "brush" | "rectangle" | "ellipse" | "arrow" | "marker";
 type EditorColor = "#ef4444" | "#22c55e" | "#3b82f6" | "#facc15" | "#111827" | "#ffffff";
+type CropHandle = "move" | "left" | "right" | "top" | "bottom" | "top-left" | "top-right" | "bottom-left" | "bottom-right";
 
 interface EditorPoint {
   x: number;
@@ -64,11 +65,10 @@ const strokeWidth = ref(4);
 const commands = ref<EditorCommand[]>([]);
 const previewCommand = ref<EditorCommand | null>(null);
 const cropRect = ref<EditorRect | null>(null);
-const dragState = ref<{ pointerId: number; tool: EditorTool; start: EditorPoint } | null>(null);
+const dragState = ref<{ pointerId: number; tool: EditorTool; start: EditorPoint; cropStart?: EditorRect; cropHandle?: CropHandle } | null>(null);
 
 const uiText = computed(() => getUiText(props.language));
 const editorText = computed(() => uiText.value.imageEditor);
-const markerCommands = computed(() => commands.value.filter((command): command is Extract<EditorCommand, { type: "marker" }> => command.type === "marker"));
 const canvasWidth = computed(() => Math.max(1, Math.round(sourceImage.value?.naturalWidth || props.image.displayWidth || 800)));
 const canvasHeight = computed(() => Math.max(1, Math.round(sourceImage.value?.naturalHeight || props.image.displayHeight || 600)));
 const scaleX = computed(() => {
@@ -189,10 +189,14 @@ function drawEllipse(context: CanvasRenderingContext2D, start: EditorPoint, end:
 
 function drawArrow(context: CanvasRenderingContext2D, start: EditorPoint, end: EditorPoint): void {
   const angle = Math.atan2(end.y - start.y, end.x - start.x);
-  const headLength = Math.max(12, strokeWidth.value * 3);
+  const headLength = Math.max(28, strokeWidth.value * 5);
+  const lineEnd = {
+    x: end.x - Math.cos(angle) * Math.min(headLength * 0.42, headLength - 4),
+    y: end.y - Math.sin(angle) * Math.min(headLength * 0.42, headLength - 4),
+  };
   context.beginPath();
   context.moveTo(start.x, start.y);
-  context.lineTo(end.x, end.y);
+  context.lineTo(lineEnd.x, lineEnd.y);
   context.stroke();
   context.beginPath();
   context.moveTo(end.x, end.y);
@@ -253,6 +257,9 @@ function getPointerPoint(event: PointerEvent): EditorPoint {
 
 function selectTool(tool: EditorTool): void {
   activeTool.value = tool;
+  if (tool === "crop" && !cropRect.value) {
+    cropRect.value = { x: 0, y: 0, width: canvasWidth.value, height: canvasHeight.value };
+  }
 }
 
 function handlePointerDown(event: PointerEvent): void {
@@ -266,12 +273,18 @@ function handlePointerDown(event: PointerEvent): void {
     return;
   }
 
-  dragState.value = { pointerId: event.pointerId, tool: activeTool.value, start: point };
+  const cropHandle = activeTool.value === "crop" ? getCropHandle(point) : undefined;
+  dragState.value = {
+    pointerId: event.pointerId,
+    tool: activeTool.value,
+    start: point,
+    ...(activeTool.value === "crop" ? { cropStart: cropRect.value ?? getFullCropRect(), cropHandle } : {}),
+  };
   (event.currentTarget as HTMLElement).setPointerCapture?.(event.pointerId);
   if (activeTool.value === "brush") {
     previewCommand.value = { type: "brush", color: selectedColor.value, width: strokeWidth.value, points: [point] };
   }
-  if (activeTool.value === "crop") cropRect.value = { x: point.x, y: point.y, width: 0, height: 0 };
+  if (activeTool.value === "crop" && !cropRect.value) cropRect.value = getFullCropRect();
 }
 
 function handlePointerMove(event: PointerEvent): void {
@@ -280,7 +293,7 @@ function handlePointerMove(event: PointerEvent): void {
   const point = getPointerPoint(event);
 
   if (state.tool === "crop") {
-    cropRect.value = normalizeRect(state.start, point);
+    cropRect.value = resizeCropRect(state.cropStart ?? getFullCropRect(), state.cropHandle ?? getCropHandle(state.start), state.start, point);
     return;
   }
 
@@ -322,6 +335,55 @@ function resetEdits(): void {
   cropRect.value = null;
   dragState.value = null;
   renderCanvas();
+}
+
+function getFullCropRect(): EditorRect {
+  return { x: 0, y: 0, width: canvasWidth.value, height: canvasHeight.value };
+}
+
+function clamp(value: number, min: number, max: number): number {
+  return Math.min(max, Math.max(min, value));
+}
+
+function getCropHandle(point: EditorPoint): CropHandle {
+  const rect = cropRect.value ?? getFullCropRect();
+  const edge = Math.max(10, Math.min(canvasWidth.value, canvasHeight.value) * 0.035);
+  const nearLeft = Math.abs(point.x - rect.x) <= edge;
+  const nearRight = Math.abs(point.x - (rect.x + rect.width)) <= edge;
+  const nearTop = Math.abs(point.y - rect.y) <= edge;
+  const nearBottom = Math.abs(point.y - (rect.y + rect.height)) <= edge;
+  if (nearLeft && nearTop) return "top-left";
+  if (nearRight && nearTop) return "top-right";
+  if (nearLeft && nearBottom) return "bottom-left";
+  if (nearRight && nearBottom) return "bottom-right";
+  if (nearLeft) return "left";
+  if (nearRight) return "right";
+  if (nearTop) return "top";
+  if (nearBottom) return "bottom";
+  return "move";
+}
+
+function resizeCropRect(startRect: EditorRect, handle: CropHandle, start: EditorPoint, point: EditorPoint): EditorRect {
+  const minSize = 8;
+  const deltaX = point.x - start.x;
+  const deltaY = point.y - start.y;
+  let left = startRect.x;
+  let top = startRect.y;
+  let right = startRect.x + startRect.width;
+  let bottom = startRect.y + startRect.height;
+
+  if (handle === "move") {
+    const nextX = clamp(startRect.x + deltaX, 0, canvasWidth.value - startRect.width);
+    const nextY = clamp(startRect.y + deltaY, 0, canvasHeight.value - startRect.height);
+    return { x: nextX, y: nextY, width: startRect.width, height: startRect.height };
+  }
+
+  if (handle.includes("left")) left = clamp(point.x, 0, right - minSize);
+  if (handle.includes("right")) right = clamp(point.x, left + minSize, canvasWidth.value);
+  if (handle.includes("top")) top = clamp(point.y, 0, bottom - minSize);
+  if (handle.includes("bottom")) bottom = clamp(point.y, top + minSize, canvasHeight.value);
+
+  return { x: left, y: top, width: right - left, height: bottom - top };
 }
 
 function getExportRect(canvas: HTMLCanvasElement): EditorRect {
@@ -388,6 +450,12 @@ function saveImage(): void {
       </div>
 
       <label class="image-editor-width-label">
+        <span class="image-editor-width-preview" aria-hidden="true">
+          <span
+            class="image-editor-width-preview-mark"
+            :style="{ width: `${strokeWidth}px`, height: `${strokeWidth}px`, background: selectedColor }"
+          />
+        </span>
         <Minus :size="16" stroke-width="2" />
         <input v-model.number="strokeWidth" class="image-editor-width" type="range" min="2" max="18" step="1" :aria-label="editorText.width" />
       </label>
@@ -403,6 +471,13 @@ function saveImage(): void {
     </header>
 
     <div class="image-editor-stage">
+      <img
+        v-if="image.src"
+        class="image-editor-source"
+        :src="image.src"
+        :alt="editorText.title"
+        draggable="false"
+      />
       <canvas
         ref="canvasRef"
         class="image-editor-canvas"
@@ -413,14 +488,6 @@ function saveImage(): void {
         @pointerup="handlePointerUp"
         @pointercancel="handlePointerCancel"
       />
-      <span
-        v-for="command in markerCommands"
-        :key="command.number"
-        class="image-editor-marker-badge"
-        :style="{ left: `${(command.point.x / canvasWidth) * 100}%`, top: `${(command.point.y / canvasHeight) * 100}%`, background: command.color }"
-      >
-        {{ command.number }}
-      </span>
       <div class="image-editor-cursor" aria-hidden="true">
         <MousePointer2 :size="13" stroke-width="2" />
         <span>{{ editorText[activeTool] }}</span>

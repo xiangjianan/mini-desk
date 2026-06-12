@@ -3501,7 +3501,7 @@ body:has(.image-preview) .image-panel .n-scrollbar {
 
 .preview-main {
   display: grid;
-  grid-template-rows: minmax(0, 1fr) auto;
+  grid-template-rows: minmax(0, 1fr);
   min-width: 0;
   min-height: 0;
   color: var(--text);
@@ -5315,6 +5315,9 @@ html[data-theme="dark"] .image-preview {
 }
 
 .preview-actions {
+  position: absolute;
+  bottom: 14px;
+  left: 50%;
   justify-self: center;
   display: inline-flex;
   align-items: center;
@@ -5332,6 +5335,7 @@ html[data-theme="dark"] .image-preview {
     inset 0 -1px 0 rgba(255, 255, 255, 0.08);
   -webkit-backdrop-filter: blur(28px) saturate(1.75);
   backdrop-filter: blur(28px) saturate(1.75);
+  transform: translateX(-50%);
 }
 
 .image-editor {
@@ -5408,9 +5412,30 @@ html[data-theme="dark"] .image-preview {
 .image-editor-width-label {
   display: inline-flex;
   align-items: center;
-  gap: 4px;
-  min-width: 86px;
+  gap: 6px;
+  min-width: 118px;
   color: var(--muted);
+}
+
+.image-editor-width-preview {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 24px;
+  height: 24px;
+  min-width: 24px;
+  border: 1px solid color-mix(in srgb, var(--border) 64%, transparent);
+  border-radius: 999px;
+  background: color-mix(in srgb, var(--card) 42%, transparent);
+}
+
+.image-editor-width-preview-mark {
+  display: block;
+  min-width: 2px;
+  min-height: 2px;
+  max-width: 18px;
+  max-height: 18px;
+  border-radius: 999px;
 }
 
 .image-editor-width {
@@ -5450,32 +5475,27 @@ html[data-theme="dark"] .image-preview {
   overflow: hidden;
 }
 
+.image-editor-source,
 .image-editor-canvas {
+  grid-area: 1 / 1;
   width: auto;
   height: auto;
   max-width: 100%;
   max-height: 100%;
+  object-fit: contain;
+}
+
+.image-editor-source {
+  pointer-events: none;
+  user-select: none;
+}
+
+.image-editor-canvas {
   border-radius: 0;
   box-shadow: 0 10px 28px rgba(0, 0, 0, 0.14);
   cursor: crosshair;
   touch-action: none;
-}
-
-.image-editor-marker-badge {
-  position: absolute;
-  display: inline-flex;
-  align-items: center;
-  justify-content: center;
-  width: 28px;
-  height: 28px;
-  border: 1px solid #ffffff;
-  border-radius: 999px;
-  color: #ffffff;
-  font-size: 14px;
-  font-weight: 700;
-  pointer-events: none;
-  transform: translate(-50%, -50%);
-  box-shadow: 0 3px 10px rgba(0, 0, 0, 0.22);
+  z-index: 1;
 }
 
 .image-editor-cursor {

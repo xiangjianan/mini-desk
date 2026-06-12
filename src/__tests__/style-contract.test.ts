@@ -138,6 +138,9 @@ describe("workbench style contract", () => {
     expectSelectorBody(styles, ".preview-stage img", "max-width: 100%");
     expectSelectorBody(styles, ".preview-stage img", "max-height: 100%");
     expectSelectorBody(styles, ".preview-stage img", "object-fit: contain");
+    expectSelectorBody(styles, ".preview-main", "grid-template-rows: minmax(0, 1fr)");
+    expectSelectorBody(styles, ".preview-actions", "position: absolute");
+    expectSelectorBody(styles, ".preview-actions", "bottom: 14px");
     expectSelectorBody(styles, ".preview-toolbar-button:focus-visible", "outline: 0");
     expectSelectorBody(styles, ".preview-toolbar-button:focus-visible", "box-shadow: none");
     expectSelectorBody(styles, ".workbench-grid", "position: relative");

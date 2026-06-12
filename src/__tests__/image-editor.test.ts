@@ -10,6 +10,10 @@ const iconStub = {
 let originalGetContext: typeof HTMLCanvasElement.prototype.getContext;
 let originalToDataURL: typeof HTMLCanvasElement.prototype.toDataURL;
 let canvasContextMock: {
+  drawImage: ReturnType<typeof vi.fn>;
+  fillText: ReturnType<typeof vi.fn>;
+  lineTo: ReturnType<typeof vi.fn>;
+  moveTo: ReturnType<typeof vi.fn>;
   setLineDash: ReturnType<typeof vi.fn>;
   strokeRect: ReturnType<typeof vi.fn>;
   fillRect: ReturnType<typeof vi.fn>;
@@ -127,13 +131,31 @@ describe("ImageEditor", () => {
       "白色",
     ]);
     expect(wrapper.get(".image-editor-width").attributes("type")).toBe("range");
+    expect(wrapper.get(".image-editor-width-preview").attributes("aria-hidden")).toBe("true");
+    expect(wrapper.get(".image-editor-width-preview-mark").attributes("style")).toContain("width: 4px");
     expect(wrapper.get(".image-editor-save").text()).toBe("保存");
     expect(wrapper.get(".image-editor-cancel").text()).toBe("取消");
 
     wrapper.unmount();
   });
 
-  it("adds numbered marker badges in click order and saves the edited image", async () => {
+  it("keeps the source image visible behind the canvas while the editor is loading", () => {
+    const wrapper = mount(ImageEditor, {
+      props: {
+        image: { id: "img-1", src: "data:image/png;base64,one", createdAt: 1, displayWidth: 400, displayHeight: 300 },
+      },
+      global: {
+        stubs: {
+          NIcon: iconStub,
+        },
+      },
+    });
+
+    expect(wrapper.get(".image-editor-source").attributes("src")).toBe("data:image/png;base64,one");
+    wrapper.unmount();
+  });
+
+  it("adds numbered markers only once in click order and saves the edited image", async () => {
     const wrapper = mount(ImageEditor, {
       props: {
         image: { id: "img-1", src: "data:image/png;base64,one", createdAt: 1, displayWidth: 400, displayHeight: 300 },
@@ -152,7 +174,8 @@ describe("ImageEditor", () => {
     await dispatchPointer(canvas.element, "pointerdown", 100, 80);
     await dispatchPointer(canvas.element, "pointerdown", 140, 120);
 
-    expect(wrapper.findAll(".image-editor-marker-badge").map((badge) => badge.text())).toEqual(["1", "2"]);
+    expect(wrapper.findAll(".image-editor-marker-badge")).toHaveLength(0);
+    expect(canvasContextMock.fillText.mock.calls.map((call) => call[0])).toEqual(expect.arrayContaining(["1", "2"]));
 
     await wrapper.get(".image-editor-save").trigger("click");
 
@@ -164,6 +187,68 @@ describe("ImageEditor", () => {
         displayHeight: 300,
       },
     ]);
+    wrapper.unmount();
+  });
+
+  it("starts crop mode with a full-image dashed box and resizes from the right edge", async () => {
+    const wrapper = mount(ImageEditor, {
+      props: {
+        image: { id: "img-1", src: "data:image/png;base64,one", createdAt: 1, displayWidth: 400, displayHeight: 300 },
+      },
+      global: {
+        stubs: {
+          NIcon: iconStub,
+        },
+      },
+    });
+
+    const canvas = wrapper.get(".image-editor-canvas");
+    mockRect(canvas.element);
+
+    await wrapper.findAll(".image-editor-tool").find((button) => button.attributes("aria-label") === "裁切")?.trigger("click");
+    expect(canvasContextMock.strokeRect).toHaveBeenCalledWith(0, 0, 400, 300);
+
+    await dispatchPointer(canvas.element, "pointerdown", 398, 150);
+    await dispatchPointer(canvas.element, "pointermove", 300, 150);
+    await dispatchPointer(canvas.element, "pointerup", 300, 150);
+
+    await wrapper.get(".image-editor-save").trigger("click");
+
+    expect(wrapper.emitted("save")?.[0]?.[0]).toMatchObject({
+      id: "img-1",
+      src: "data:image/png;base64,edited",
+      displayWidth: 300,
+      displayHeight: 300,
+    });
+    wrapper.unmount();
+  });
+
+  it("resizes the crop box from a diagonal corner handle", async () => {
+    const wrapper = mount(ImageEditor, {
+      props: {
+        image: { id: "img-1", src: "data:image/png;base64,one", createdAt: 1, displayWidth: 400, displayHeight: 300 },
+      },
+      global: {
+        stubs: {
+          NIcon: iconStub,
+        },
+      },
+    });
+
+    const canvas = wrapper.get(".image-editor-canvas");
+    mockRect(canvas.element);
+
+    await wrapper.findAll(".image-editor-tool").find((button) => button.attributes("aria-label") === "裁切")?.trigger("click");
+    await dispatchPointer(canvas.element, "pointerdown", 398, 298);
+    await dispatchPointer(canvas.element, "pointermove", 320, 220);
+    await dispatchPointer(canvas.element, "pointerup", 320, 220);
+
+    await wrapper.get(".image-editor-save").trigger("click");
+
+    expect(wrapper.emitted("save")?.[0]?.[0]).toMatchObject({
+      displayWidth: 320,
+      displayHeight: 220,
+    });
     wrapper.unmount();
   });
 
@@ -183,9 +268,9 @@ describe("ImageEditor", () => {
     mockRect(canvas.element);
 
     await wrapper.findAll(".image-editor-tool").find((button) => button.attributes("aria-label") === "裁切")?.trigger("click");
-    await dispatchPointer(canvas.element, "pointerdown", 40, 40);
-    await dispatchPointer(canvas.element, "pointermove", 220, 160);
-    await dispatchPointer(canvas.element, "pointerup", 220, 160);
+    await dispatchPointer(canvas.element, "pointerdown", 398, 150);
+    await dispatchPointer(canvas.element, "pointermove", 220, 150);
+    await dispatchPointer(canvas.element, "pointerup", 220, 150);
 
     expect(canvasContextMock.setLineDash).toHaveBeenCalled();
     canvasContextMock.setLineDash.mockClear();
@@ -199,6 +284,32 @@ describe("ImageEditor", () => {
       id: "img-1",
       src: "data:image/png;base64,edited",
     });
+    wrapper.unmount();
+  });
+
+  it("stops the arrow line behind a larger arrow head", async () => {
+    const wrapper = mount(ImageEditor, {
+      props: {
+        image: { id: "img-1", src: "data:image/png;base64,one", createdAt: 1, displayWidth: 400, displayHeight: 300 },
+      },
+      global: {
+        stubs: {
+          NIcon: iconStub,
+        },
+      },
+    });
+
+    const canvas = wrapper.get(".image-editor-canvas");
+    mockRect(canvas.element);
+    await wrapper.findAll(".image-editor-tool").find((button) => button.attributes("aria-label") === "箭头")?.trigger("click");
+    await dispatchPointer(canvas.element, "pointerdown", 40, 80);
+    await dispatchPointer(canvas.element, "pointermove", 200, 80);
+    await dispatchPointer(canvas.element, "pointerup", 200, 80);
+
+    const firstLineTo = canvasContextMock.lineTo.mock.calls[0];
+    const arrowHeadLineCalls = canvasContextMock.lineTo.mock.calls.slice(1, 3);
+    expect(firstLineTo[0]).toBeLessThan(200);
+    expect(arrowHeadLineCalls[0][0]).toBeLessThanOrEqual(176);
     wrapper.unmount();
   });
 

@@ -488,6 +488,7 @@ function handleImageDragWheel(event: WheelEvent): void {
         :class="{ 'is-dragging': draggingId === image.id, 'is-active': image.id === activePreviewId }"
         type="button"
         @click="handleImageCardClick($event, image.id)"
+        @keydown.enter.stop.prevent="emit('edit', image.id)"
         @dblclick.stop.prevent="emit('copy', image.id)"
         @contextmenu.stop="openMenu($event, image.id)"
         @pointerdown="handleImagePointerDown($event, image)"
