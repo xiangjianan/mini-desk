@@ -5204,7 +5204,7 @@ html[data-theme="dark"] .image-preview {
 }
 
 .preview-stage {
-  border-radius: calc(var(--radius) + 8px);
+  border-radius: 0;
 }
 
 .preview-stage img {

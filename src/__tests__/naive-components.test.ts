@@ -185,7 +185,9 @@ describe("Naive UI component usage", () => {
     expect(styles).toMatch(/\.preview-toolbar-button:disabled\s*\{[^}]*cursor: default/s);
     expect(styles).toMatch(/\.preview-nav-button\.is-previous:active\s*\{[^}]*transform: translateY\(-3px\)/s);
     expect(styles).toMatch(/\.preview-nav-button\.is-next:active\s*\{[^}]*transform: translateY\(3px\)/s);
+    expect(styles).toMatch(/\.preview-stage\s*\{[^}]*border-radius: 0/s);
     expect(styles).toMatch(/\.preview-stage img\s*\{[^}]*max-height: calc\(100vh - var\(--image-preview-top, 52px\) - 96px\)/s);
+    expect(styles).toMatch(/\.preview-stage img\s*\{[^}]*border-radius: 0/s);
     expect(styles).toMatch(/\.preview-stage img\s*\{[^}]*transition: transform 180ms cubic-bezier\(0\.2, 0, 0, 1\)/s);
     expect(styles).toContain(`@keyframes image-preview-photo-out {
   from {
