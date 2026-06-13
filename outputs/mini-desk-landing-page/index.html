@@ -199,6 +199,25 @@
         font-weight: 650;
       }
 
+      .principle-line {
+        display: inline-flex;
+        align-items: center;
+        gap: 12px;
+        margin-top: 28px;
+        color: var(--ink);
+        font-size: clamp(18px, 1.8vw, 24px);
+        line-height: 1.25;
+        font-weight: 880;
+      }
+
+      .principle-line::before {
+        content: "";
+        width: 38px;
+        height: 2px;
+        border-radius: 999px;
+        background: var(--ink);
+      }
+
       .hero-actions {
         display: flex;
         flex-wrap: wrap;
@@ -245,6 +264,31 @@
         grid-template-columns: repeat(4, minmax(0, 1fr));
         gap: 18px;
         margin-top: 46px;
+      }
+
+      .principle-panel {
+        display: grid;
+        grid-template-columns: minmax(0, 0.7fr) minmax(0, 1fr);
+        gap: 42px;
+        align-items: end;
+        margin-top: 40px;
+        padding: 28px 0 0;
+        border-top: 1px solid var(--line);
+      }
+
+      .principle-panel strong {
+        color: var(--ink);
+        font-size: clamp(30px, 3.6vw, 52px);
+        line-height: 1;
+        font-weight: 940;
+      }
+
+      .principle-panel p {
+        margin: 0;
+        color: var(--text);
+        font-size: 20px;
+        line-height: 1.52;
+        font-weight: 560;
       }
 
       .feature {
@@ -554,6 +598,10 @@
           animation-delay: 440ms;
         }
 
+        .hero-content > *:nth-child(6) {
+          animation-delay: 520ms;
+        }
+
         .motion-ready .reveal {
           opacity: 0;
           filter: blur(8px);
@@ -649,6 +697,7 @@
         }
 
         .feature-grid,
+        .principle-panel,
         .privacy-layout,
         .preview-layout,
         .cta-panel {
@@ -725,8 +774,9 @@
       <section class="hero" aria-labelledby="hero-title">
         <div class="hero-content">
           <h1 id="hero-title">Mini Desk</h1>
-          <div class="hero-title-line">把零散工作收进一个安静桌面</div>
-          <p class="hero-copy">图片、快捷动作、提醒事项、备忘录，一个页面推进。本地优先，适合个人浏览器工作流。</p>
+          <div class="hero-title-line">Do less, do it well.</div>
+          <p class="hero-copy">把零散工作收进一个安静桌面：图片、快捷动作、提醒事项、备忘录，只保留每天真正要推进的部分。</p>
+          <div class="principle-line">少开工具，少搬上下文，把一件事做好。</div>
           <div class="hero-actions">
             <a class="button" href="https://minidesk.online" target="_blank" rel="noopener noreferrer">立即体验 minidesk.online</a>
             <a class="button secondary" href="#features" target="_blank" rel="noopener noreferrer">查看功能</a>
@@ -739,6 +789,10 @@
         <div class="section-inner">
           <h2 id="features-title">从临时材料到下一步行动，顺序保持清楚。</h2>
           <p class="section-copy">Mini Desk 不把桌面变成复杂系统，而是把每天重复出现的四类内容放进同一张工作台。</p>
+          <div class="principle-panel">
+            <strong>少做，但做好。</strong>
+            <p>它不追求覆盖所有项目管理场景，只服务个人桌面里最容易打断节奏的几件小事：收集、复用、提醒、记录。</p>
+          </div>
           <div class="feature-grid">
             <article class="feature">
               <div class="feature-index blue">01</div>
