@@ -2910,6 +2910,7 @@ button.todo-star-button {
   width: 260px;
   padding: 10px;
   border: 1px solid var(--line-control);
+  border-radius: var(--radius);
   background: var(--panel);
 }
 

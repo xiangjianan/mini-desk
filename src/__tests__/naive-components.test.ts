@@ -295,6 +295,7 @@ describe("Naive UI component usage", () => {
     expect(styles).toMatch(/\.todo-collapse-button:hover,[\s\S]*?\.todo-collapse-button:focus-visible\s*\{[^}]*background: transparent/s);
     expect(styles).toMatch(/\.todo-collapse-button \.n-icon\s*\{[^}]*transition: transform var\(--motion-medium\) var\(--motion-ease\)/s);
     expect(styles).toMatch(/\.todo-list-create-dialog\s*\{[^}]*width: 260px/s);
+    expect(styles).toMatch(/\.todo-list-create-dialog\s*\{[^}]*border-radius: var\(--radius\)/s);
     expect(styles).toMatch(/\.todo-list-drag-handle\s*\{[^}]*display: none/s);
     expect(styles).toMatch(/\.todo-section\.is-collapsed\s*\{[^}]*flex: 0 0 34px/s);
     expect(styles).toMatch(/\.todo-section\.is-compact\.is-collapsed\s*\{[^}]*flex: 0 0 34px/s);
