@@ -449,20 +449,19 @@ describe("App shell", () => {
     }
   });
 
-  it("starts editing a newly created reminder list title", async () => {
+  it("does not create a reminder list until the create-list dialog submits a title", async () => {
     const wrapper = mountApp();
 
     try {
+      const beforeCount = wrapper.findAll(".todo-section").length;
       wrapper.getComponent(TodoPanel).vm.$emit("createList", wrapper.get(".todo-panel").element as HTMLElement);
       await nextTick();
       await nextTick();
 
-      const newSection = wrapper.findAll(".todo-section").at(-1);
-      const input = newSection?.find(".title-edit-input");
-
-      expect(input?.exists()).toBe(true);
-      expect((input?.element as HTMLInputElement | undefined)?.value).toBe("未命名列表");
-      expect(document.activeElement).toBe(input?.element);
+      const after = JSON.parse(localStorage.getItem(STORAGE_KEY) || "{}");
+      expect(wrapper.findAll(".todo-section")).toHaveLength(beforeCount);
+      expect(after.todoLists ?? []).toHaveLength(0);
+      expect(wrapper.find(".title-edit-input").exists()).toBe(false);
     } finally {
       wrapper.unmount();
     }

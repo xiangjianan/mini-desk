@@ -1158,12 +1158,13 @@ async function copyText(text: string, shouldAbort: () => boolean = () => false):
 }
 
 function createTodoList(anchor?: HTMLElement, title?: string): void {
-  const id = createId();
   const trimmedTitle = title?.trim() ?? "";
-  state.todoLists.push({ id, title: trimmedTitle || uiText.value.app.unnamedList, collapsed: false, compact: false });
+  if (!trimmedTitle) return;
+  const id = createId();
+  state.todoLists.push({ id, title: trimmedTitle, collapsed: false, compact: false });
   state.todos[id] = [];
   state.showCompletedTodos[id] = false;
-  pendingEditTodoListId.value = trimmedTitle ? null : id;
+  pendingEditTodoListId.value = null;
   persistNow();
   showBubbleText(uiText.value.app.todoListAdded, anchor);
 }

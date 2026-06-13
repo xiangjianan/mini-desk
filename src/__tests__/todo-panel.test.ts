@@ -1,5 +1,5 @@
 import { defineComponent, nextTick, ref } from "vue";
-import { config, mount } from "@vue/test-utils";
+import { config, flushPromises, mount } from "@vue/test-utils";
 import { describe, expect, it, vi } from "vitest";
 import { readFileSync } from "node:fs";
 import { resolve } from "node:path";
@@ -266,6 +266,43 @@ describe("TodoPanel", () => {
 
     expect(wrapper.emitted("createList")?.[0]).toEqual([expect.any(HTMLElement), "工作提醒"]);
     expect(wrapper.find(".todo-list-create-dialog").exists()).toBe(false);
+  });
+
+  it("opens the create-list dialog from the section menu button without creating immediately", async () => {
+    const wrapper = mount(TodoPanel, {
+      props: {
+        todoLists: defaultTodoLists,
+        todos: { morning: [], noon: [], evening: [] },
+        showCompleted: { morning: true, noon: true, evening: true },
+        titles: DEFAULT_TITLES,
+      },
+      global: {
+        stubs: {
+          Checkbox: checkboxStub,
+          Dropdown: dropdownStub,
+          NCheckbox: checkboxStub,
+          NDatePicker: datePickerStub,
+          NDropdown: dropdownStub,
+          NTooltip: tooltipStub,
+        },
+      },
+    });
+
+    await wrapper.get('.todo-section[data-list-id="morning"] .todo-section-menu-button').trigger("click");
+    await wrapper.findAll(".dropdown-option").find((option) => option.text() === "新建列表")?.trigger("click");
+    await flushPromises();
+    await nextTick();
+
+    const dialog = wrapper.get(".todo-list-create-dialog");
+    const input = wrapper.get(".todo-list-create-input");
+    expect(dialog.attributes("aria-label")).toBe("新增提醒列表");
+    expect(wrapper.emitted("createList")).toBeUndefined();
+
+    await input.setValue("会议");
+    await wrapper.get(".todo-list-create-confirm").trigger("click");
+
+    expect(wrapper.emitted("createList")?.[0]).toEqual([expect.any(HTMLElement), "会议"]);
+    wrapper.unmount();
   });
 
   it("emits list title updates", async () => {
