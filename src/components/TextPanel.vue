@@ -316,6 +316,16 @@ function startEditingFromTextarea(textarea: HTMLTextAreaElement, keyboardFocus =
   if (preservedSelection) restoreSelection(textarea, preservedSelection);
 }
 
+function focusEditor(): void {
+  const textarea = textareaRef.value;
+  if (!textarea) return;
+  startEditingFromTextarea(textarea, true);
+}
+
+defineExpose({
+  focusEditor,
+});
+
 function unlockTextareaBeforeNativeFocus(textarea: HTMLTextAreaElement): void {
   if (editing.value) return;
   editing.value = true;

@@ -113,6 +113,39 @@ describe("SpacePanel", () => {
     wrapper.unmount();
   });
 
+  it("focuses the editor after committing a newly created space name with Enter", async () => {
+    const wrapper = mount(SpacePanel, {
+      attachTo: document.body,
+      props: {
+        activeSpaceId: "new",
+        editSpaceId: "new",
+        spaces: [
+          { id: "old", title: "旧空间", lines: [] },
+          { id: "new", title: "新空间", lines: [] },
+        ],
+      },
+      global: {
+        stubs: {
+          Dropdown: dropdownStub,
+          NDropdown: dropdownStub,
+        },
+      },
+    });
+
+    await wrapper.vm.$nextTick();
+    await wrapper.get(".space-tab-edit-input").setValue("项目备忘");
+    await wrapper.get(".space-tab-edit-input").trigger("keydown.enter");
+    await wrapper.vm.$nextTick();
+
+    const textarea = wrapper.get(".space-text-panel textarea").element as HTMLTextAreaElement;
+    expect(textarea.readOnly).toBe(false);
+    expect(textarea.getAttribute("inputmode")).toBe("text");
+    expect(document.activeElement).toBe(textarea);
+    expect(wrapper.emitted("rename")?.[0]).toEqual(["new", "项目备忘"]);
+    expect(wrapper.emitted("editDone")?.[0]).toEqual(["new"]);
+    wrapper.unmount();
+  });
+
   it("emits editDone when Esc cancels editing requested by editSpaceId", async () => {
     const wrapper = mount(SpacePanel, {
       props: {

@@ -39,6 +39,7 @@ const titleComposing = ref(false);
 const draggedSpaceId = ref<string | null>(null);
 const suppressTabCommitTransition = ref(false);
 const menu = ref<{ x: number; y: number; spaceId: string } | null>(null);
+const textPanelRef = ref<{ focusEditor: () => void } | null>(null);
 const uiText = computed(() => getUiText(props.language));
 const exclusiveMenu = createExclusiveContextMenu(closeMenu);
 let tabCommitTransitionTimer: number | undefined;
@@ -107,10 +108,11 @@ watch(
   { immediate: true },
 );
 
-function commitTabEdit(): void {
+function commitTabEdit(focusEditorAfterCommit = false): void {
   const id = editingSpaceId.value;
   if (!id) return;
   const title = editingTitle.value.trim();
+  const shouldFocusEditor = focusEditorAfterCommit && props.editSpaceId === id;
   suppressNextTabCommitTransition();
   titleComposing.value = false;
   editingSpaceId.value = null;
@@ -119,6 +121,11 @@ function commitTabEdit(): void {
   editingTabWidth.value = null;
   if (title) emit("rename", id, title);
   emit("editDone", id);
+  if (shouldFocusEditor) {
+    nextTick(() => {
+      textPanelRef.value?.focusEditor();
+    });
+  }
 }
 
 function cancelTabEdit(): void {
@@ -154,7 +161,7 @@ function suppressNextTabCommitTransition(): void {
 function handleTabEditEnter(event: KeyboardEvent): void {
   if (titleComposing.value || event.isComposing || event.key === "Process" || event.keyCode === 229) return;
   event.preventDefault();
-  commitTabEdit();
+  commitTabEdit(true);
 }
 
 function openTabMenu(event: MouseEvent, id: string): void {
@@ -260,7 +267,7 @@ function handleTabsWheel(event: WheelEvent): void {
                 @compositionend="titleComposing = false"
                 @keydown.enter="handleTabEditEnter"
                 @keydown.esc.prevent="cancelTabEdit"
-                @blur="commitTabEdit"
+                @blur="commitTabEdit()"
               />
             </span>
           </template>
@@ -280,6 +287,7 @@ function handleTabsWheel(event: WheelEvent): void {
     <div class="space-text-stage">
       <Transition name="space-panel-switch" mode="out-in" :duration="90">
         <TextPanel
+          ref="textPanelRef"
           v-if="activeSpace"
           :key="activeSpace.id"
           class="space-text-panel"
