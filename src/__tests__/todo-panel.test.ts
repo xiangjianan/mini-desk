@@ -91,6 +91,10 @@ function getLatestNotifyPickerElement(): HTMLElement | null {
   return Array.from(document.body.querySelectorAll<HTMLElement>(".notify-floating-date-picker")).at(-1) ?? null;
 }
 
+function getLatestListCreateDialogElement(): HTMLElement | null {
+  return Array.from(document.body.querySelectorAll<HTMLElement>(".todo-list-create-dialog")).at(-1) ?? null;
+}
+
 function clickTeleportedNotifyAction(label: string): void {
   const action = Array.from(getLatestNotifyPickerElement()?.querySelectorAll<HTMLElement>(".notify-panel-action") ?? []).reverse().find((button) =>
     button.textContent?.includes(label),
@@ -261,11 +265,18 @@ describe("TodoPanel", () => {
     ]);
 
     await wrapper.findAll(".dropdown-option").find((option) => option.text() === "新建列表")?.trigger("click");
-    await wrapper.get(".todo-list-create-input").setValue("工作提醒");
-    await wrapper.get(".todo-list-create-confirm").trigger("click");
+    await flushPromises();
+
+    const dialog = getLatestListCreateDialogElement();
+    expect(document.body.contains(dialog)).toBe(true);
+    expect(dialog?.closest(".workbench-zone, .todo-panel")).toBeNull();
+    (dialog?.querySelector(".todo-list-create-input") as HTMLInputElement | null)!.value = "工作提醒";
+    dialog?.querySelector<HTMLInputElement>(".todo-list-create-input")?.dispatchEvent(new Event("input", { bubbles: true }));
+    dialog?.querySelector<HTMLButtonElement>(".todo-list-create-confirm")?.click();
+    await nextTick();
 
     expect(wrapper.emitted("createList")?.[0]).toEqual([expect.any(HTMLElement), "工作提醒"]);
-    expect(wrapper.find(".todo-list-create-dialog").exists()).toBe(false);
+    expect(getLatestListCreateDialogElement()).toBeNull();
   });
 
   it("opens the create-list dialog from the section menu button without creating immediately", async () => {
@@ -293,13 +304,17 @@ describe("TodoPanel", () => {
     await flushPromises();
     await nextTick();
 
-    const dialog = wrapper.get(".todo-list-create-dialog");
-    const input = wrapper.get(".todo-list-create-input");
-    expect(dialog.attributes("aria-label")).toBe("新增提醒列表");
+    const dialog = getLatestListCreateDialogElement();
+    const input = dialog?.querySelector<HTMLInputElement>(".todo-list-create-input");
+    expect(dialog?.getAttribute("aria-label")).toBe("新增提醒列表");
+    expect(document.body.contains(dialog)).toBe(true);
+    expect(dialog?.closest(".workbench-zone, .todo-panel")).toBeNull();
     expect(wrapper.emitted("createList")).toBeUndefined();
 
-    await input.setValue("会议");
-    await wrapper.get(".todo-list-create-confirm").trigger("click");
+    input!.value = "会议";
+    input!.dispatchEvent(new Event("input", { bubbles: true }));
+    dialog?.querySelector<HTMLButtonElement>(".todo-list-create-confirm")?.click();
+    await nextTick();
 
     expect(wrapper.emitted("createList")?.[0]).toEqual([expect.any(HTMLElement), "会议"]);
     wrapper.unmount();

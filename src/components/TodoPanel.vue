@@ -1543,30 +1543,32 @@ function buildTodoListEntries(period: TodoListId, todos: TodoItem[], deferredDon
       </Transition>
     </Teleport>
 
-    <Transition name="floating-pop" :duration="240">
-      <section
-        v-if="listCreateDialog"
-        ref="listCreateDialogRef"
-        class="todo-list-create-dialog"
-        :style="listCreateDialogStyle"
-        :aria-label="uiText.todo.listDialog"
-      >
-        <label class="todo-list-create-label" for="todo-list-create-input">{{ uiText.todo.listName }}</label>
-        <input
-          id="todo-list-create-input"
-          ref="listCreateInputRef"
-          class="todo-list-create-input"
-          :value="listCreateDialog.title"
-          @input="updateCreateListTitle(($event.target as HTMLInputElement).value)"
-          @keydown.enter.prevent="confirmCreateListDialog"
-          @keydown.esc.prevent="closeCreateListDialog"
-        />
-        <div class="todo-list-create-actions">
-          <button class="todo-list-create-cancel" type="button" @click="closeCreateListDialog">{{ uiText.common.cancel }}</button>
-          <button class="todo-list-create-confirm" type="button" @click="confirmCreateListDialog">{{ uiText.common.confirm }}</button>
-        </div>
-      </section>
-    </Transition>
+    <Teleport to="body">
+      <Transition name="floating-pop" :duration="240">
+        <section
+          v-if="listCreateDialog"
+          ref="listCreateDialogRef"
+          class="todo-list-create-dialog"
+          :style="listCreateDialogStyle"
+          :aria-label="uiText.todo.listDialog"
+        >
+          <label class="todo-list-create-label" for="todo-list-create-input">{{ uiText.todo.listName }}</label>
+          <input
+            id="todo-list-create-input"
+            ref="listCreateInputRef"
+            class="todo-list-create-input"
+            :value="listCreateDialog.title"
+            @input="updateCreateListTitle(($event.target as HTMLInputElement).value)"
+            @keydown.enter.prevent="confirmCreateListDialog"
+            @keydown.esc.prevent="closeCreateListDialog"
+          />
+          <div class="todo-list-create-actions">
+            <button class="todo-list-create-cancel" type="button" @click="closeCreateListDialog">{{ uiText.common.cancel }}</button>
+            <button class="todo-list-create-confirm" type="button" @click="confirmCreateListDialog">{{ uiText.common.confirm }}</button>
+          </div>
+        </section>
+      </Transition>
+    </Teleport>
 
     <NDropdown
       v-if="menu"
