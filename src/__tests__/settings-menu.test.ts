@@ -168,8 +168,14 @@ describe("SettingsMenu", () => {
     });
 
     expect(wrapper.find('[data-key="gif-theme"]').text()).toBe("GIF 主题");
-    expect(wrapper.find('[data-key="gif-theme:ikun"]').text()).toBe("ikun");
+    expect(wrapper.findAll('[data-key^="gif-theme:"]').map((item) => item.attributes("data-key"))).toEqual([
+      "gif-theme:hermes",
+      "gif-theme:ikun",
+      "gif-theme:custom",
+      "gif-theme:none",
+    ]);
     expect(wrapper.find('[data-key="gif-theme:hermes"]').text()).toBe("云霞");
+    expect(wrapper.find('[data-key="gif-theme:ikun"]').text()).toBe("ikun");
     expect(wrapper.find('[data-key="gif-theme:custom"]').text()).toBe("自定义");
     expect(wrapper.find('[data-key="gif-theme:none"]').text()).toBe("不显示");
     expect(wrapper.find('[data-key="gif-theme:none"]').classes()).toContain("is-selected");
