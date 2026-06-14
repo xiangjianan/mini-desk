@@ -1954,6 +1954,54 @@ describe("App shell", () => {
     }
   });
 
+  it("reopens preview image editing with Enter after saving instead of copying the image", async () => {
+    localStorage.setItem(
+      STORAGE_KEY,
+      JSON.stringify({
+        images: [{ id: "img-1", src: "data:image/png;base64,b25l", createdAt: 1, displayWidth: 120, displayHeight: 80 }],
+      }),
+    );
+    const write = vi.fn().mockResolvedValue(undefined);
+    vi.stubGlobal(
+      "ClipboardItem",
+      class {
+        constructor(_items: Record<string, Blob | Promise<Blob>>) {}
+      },
+    );
+    Object.assign(navigator, {
+      clipboard: {
+        write,
+      },
+    });
+    const wrapper = mountApp();
+
+    try {
+      wrapper.getComponent(ImagePanel).vm.$emit("preview", "img-1");
+      await wrapper.vm.$nextTick();
+
+      wrapper.getComponent(ImagePreview).vm.$emit("saveEdit", {
+        id: "img-1",
+        src: "data:image/png;base64,dHdv",
+        displayWidth: 120,
+        displayHeight: 80,
+      });
+      await Promise.resolve();
+      await wrapper.vm.$nextTick();
+
+      const event = new KeyboardEvent("keydown", { key: "Enter", bubbles: true, cancelable: true });
+      window.dispatchEvent(event);
+      await wrapper.vm.$nextTick();
+      await Promise.resolve();
+
+      expect(event.defaultPrevented).toBe(true);
+      expect(wrapper.getComponent(ImagePreview).props("editId")).toBe("img-1");
+      expect(write).not.toHaveBeenCalled();
+    } finally {
+      wrapper.unmount();
+      vi.unstubAllGlobals();
+    }
+  });
+
   it("anchors image deletion feedback to the screenshot panel after deleting an image card", async () => {
     vi.useFakeTimers();
     vi.spyOn(Math, "random").mockReturnValue(0);
@@ -2998,7 +3046,7 @@ describe("App shell", () => {
     }
   });
 
-  it("copies the current image when Enter or 5 is pressed immediately after preview opens", async () => {
+  it("edits the current preview image with Enter and copies it with 5", async () => {
     localStorage.setItem(
       STORAGE_KEY,
       JSON.stringify({
@@ -3027,16 +3075,18 @@ describe("App shell", () => {
     const wrapper = mountApp();
 
     await wrapper.get(".image-card").trigger("click");
-    window.dispatchEvent(new KeyboardEvent("keydown", { key: "Enter" }));
-    await Promise.resolve();
-    await Promise.resolve();
+    const enterEvent = new KeyboardEvent("keydown", { key: "Enter", bubbles: true, cancelable: true });
+    window.dispatchEvent(enterEvent);
+    await wrapper.vm.$nextTick();
     await Promise.resolve();
     window.dispatchEvent(new KeyboardEvent("keydown", { key: "5" }));
     await Promise.resolve();
     await Promise.resolve();
     await Promise.resolve();
 
-    expect(write).toHaveBeenCalledTimes(2);
+    expect(enterEvent.defaultPrevented).toBe(true);
+    expect(wrapper.getComponent(ImagePreview).props("editId")).toBe("img-1");
+    expect(write).toHaveBeenCalledTimes(1);
     vi.unstubAllGlobals();
     wrapper.unmount();
   });

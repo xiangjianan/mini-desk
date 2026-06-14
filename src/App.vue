@@ -1583,7 +1583,12 @@ function handleGlobalKeydown(event: KeyboardEvent): void {
       closeImagePreview();
       return;
     }
-    if (event.key === "Enter" || event.key === "5") {
+    if (event.key === "Enter") {
+      event.preventDefault();
+      openImageEditor(previewId);
+      return;
+    }
+    if (event.key === "5") {
       event.preventDefault();
       void copyImage(previewId, document.querySelector<HTMLElement>(".image-preview") ?? undefined);
       return;
