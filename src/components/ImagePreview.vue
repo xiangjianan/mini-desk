@@ -45,6 +45,7 @@ const editing = ref(props.editId === props.activeId && Boolean(props.activeId));
 const localClosing = ref(false);
 const previewRef = ref<HTMLElement | null>(null);
 const previewImageRef = ref<HTMLImageElement | null>(null);
+const editorRef = ref<InstanceType<typeof ImageEditor> | null>(null);
 const start = ref({ x: 0, y: 0, ox: 0, oy: 0 });
 const menu = ref<{ x: number; y: number; id: string; anchor?: HTMLElement } | null>(null);
 const editorFrame = ref<{ width: number; height: number } | null>(null);
@@ -227,6 +228,10 @@ function saveEditor(payload: { id: string; src: string; displayWidth: number; di
   editorFrame.value = null;
 }
 
+function saveOpenEditor(): void {
+  editorRef.value?.saveImage();
+}
+
 function measurePreviewImageFrame(): { width: number; height: number } | null {
   const rect = previewImageRef.value?.getBoundingClientRect();
   if (!rect || rect.width <= 0 || rect.height <= 0) return null;
@@ -306,6 +311,12 @@ function deleteActive(event: MouseEvent): void {
 function handleKeydown(event: KeyboardEvent): void {
   if (!active.value) return;
   const key = event.key.toLowerCase();
+  if (editing.value && event.key === "Enter" && !isTextEntryTarget(event.target)) {
+    event.preventDefault();
+    event.stopPropagation();
+    saveOpenEditor();
+    return;
+  }
   if (editing.value && event.key === "Escape") {
     event.preventDefault();
     event.stopPropagation();
@@ -349,11 +360,25 @@ function handleKeydown(event: KeyboardEvent): void {
 }
 
 function handleWindowKeydown(event: KeyboardEvent): void {
-  if (!editing.value || !active.value || event.key !== "Escape") return;
+  if (!editing.value || !active.value) return;
+  if (event.key === "Enter") {
+    if (isTextEntryTarget(event.target)) return;
+    event.preventDefault();
+    event.stopPropagation();
+    event.stopImmediatePropagation();
+    saveOpenEditor();
+    return;
+  }
+  if (event.key !== "Escape") return;
   event.preventDefault();
   event.stopPropagation();
   event.stopImmediatePropagation();
   exitEditorFromShortcut();
+}
+
+function isTextEntryTarget(target: EventTarget | null): boolean {
+  if (!(target instanceof HTMLElement)) return false;
+  return Boolean(target.closest("input, textarea, select, [contenteditable='true'], [contenteditable='']"));
 }
 
 function isPreviewShortcutKey(event: KeyboardEvent): boolean {
@@ -401,6 +426,7 @@ function isPreviewShortcutKey(event: KeyboardEvent): boolean {
       <main class="preview-main" :class="{ 'is-editing': editing }">
         <ImageEditor
           v-if="editing"
+          ref="editorRef"
           :image="active"
           :language="language"
           preview-layout

@@ -1107,7 +1107,6 @@ describe("ImagePreview", () => {
     await wrapper.get(".image-preview").trigger("keydown", { key: "D" });
     await wrapper.get(".image-preview").trigger("keydown", { key: "Backspace" });
     await wrapper.get(".image-preview").trigger("keydown", { key: "Delete" });
-    await wrapper.get(".image-preview").trigger("keydown", { key: "Enter" });
     try {
       expect(wrapper.emitted("copy")).toBeUndefined();
       expect(wrapper.emitted("navigate")).toBeUndefined();
@@ -1348,7 +1347,7 @@ describe("ImagePreview", () => {
     }
   });
 
-  it("does not save the image with Enter while the editor is open", async () => {
+  it("saves and exits edit mode when Enter is pressed while the editor is open", async () => {
     const wrapper = mount(ImagePreview, {
       props: {
         images: [{ id: "img-1", src: "data:image/png;base64,one", createdAt: 1, displayWidth: 400, displayHeight: 300 }],
@@ -1369,9 +1368,49 @@ describe("ImagePreview", () => {
     await wrapper.get(".image-preview").trigger("keydown", { key: "Enter" });
     await wrapper.get(".image-preview").trigger("keydown", { key: "Enter" });
 
+    expect(wrapper.emitted("saveEdit")?.[0]?.[0]).toMatchObject({
+      id: "img-1",
+      src: "data:image/png;base64,edited",
+      displayWidth: 400,
+      displayHeight: 300,
+    });
+    expect(wrapper.find(".image-editor").exists()).toBe(false);
+    expect(wrapper.emitted("copy")).toBeUndefined();
+    wrapper.unmount();
+  });
+
+  it("keeps Enter available for new lines in image editor text inputs", async () => {
+    const wrapper = mount(ImagePreview, {
+      props: {
+        images: [{ id: "img-1", src: "data:image/png;base64,one", createdAt: 1, displayWidth: 400, displayHeight: 300 }],
+        activeId: "img-1",
+      },
+      global: {
+        stubs: {
+          Button: buttonStub,
+          Dropdown: dropdownStub,
+          Modal: modalStub,
+          NButton: buttonStub,
+          NDropdown: dropdownStub,
+          NModal: modalStub,
+        },
+      },
+    });
+
+    await wrapper.get(".image-preview").trigger("keydown", { key: "Enter" });
+    await wrapper.findAll(".image-editor-tool").find((button) => button.attributes("aria-label") === "文本")?.trigger("click");
+    const canvas = wrapper.get(".image-editor-canvas");
+    mockRect(canvas.element);
+    await dispatchPointer(canvas.element, "pointerdown", 120, 90);
+
+    const input = wrapper.get(".image-editor-text-input");
+    const event = new KeyboardEvent("keydown", { key: "Enter", bubbles: true, cancelable: true });
+    input.element.dispatchEvent(event);
+    await wrapper.vm.$nextTick();
+
+    expect(event.defaultPrevented).toBe(false);
     expect(wrapper.emitted("saveEdit")).toBeUndefined();
     expect(wrapper.find(".image-editor").exists()).toBe(true);
-    expect(wrapper.emitted("copy")).toBeUndefined();
     wrapper.unmount();
   });
 
