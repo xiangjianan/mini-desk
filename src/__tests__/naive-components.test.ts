@@ -333,8 +333,8 @@ describe("Naive UI component usage", () => {
     expect(styles).toContain(".focus-companion img");
     expect(styles).toMatch(/\.focus-companion img\s*\{[^}]*max-width: 50px/s);
     expect(styles).toMatch(/\.focus-companion img\s*\{[^}]*max-height: 50px/s);
-    expect(styles).toMatch(/\.focus-companion img\s*\{[^}]*width: auto/s);
-    expect(styles).toMatch(/\.focus-companion img\s*\{[^}]*height: auto/s);
+    expect(styles).toMatch(/\.focus-companion img\s*\{[^}]*width: 50px/s);
+    expect(styles).toMatch(/\.focus-companion img\s*\{[^}]*height: 50px/s);
     expect(styles).not.toContain("aspect-ratio: 1 / 1");
     expect(styles).toContain("object-fit: contain");
     expect(styles).toMatch(/\.focus-companion img\s*\{[^}]*border: 0/s);
@@ -717,7 +717,7 @@ describe("Naive UI component usage", () => {
     expect(styles).toContain("@keyframes companion-pop");
     expect(styles).toMatch(/\.companion-popover\s*\{[^}]*animation: companion-pop/s);
     expect(styles).toMatch(/\.companion-popover\s*\{[^}]*transform-origin: right bottom/s);
-    expect(styles).toMatch(/\.companion-popover-shell\.n-popover\s*\{[^}]*box-shadow: 0 6px 14px rgba\(15, 23, 42, 0\.045\) !important/s);
+    expect(styles).toMatch(/\.companion-popover-shell\.n-popover\s*\{[^}]*box-shadow: none !important/s);
     expect(styles).toMatch(/\.companion-popover-shell\.n-popover\s*\{[^}]*border: 1px solid var\(--border\) !important/s);
     expect(styles).toMatch(/\.companion-popover-shell\.n-popover\s*\{[^}]*background: var\(--popover\) !important/s);
     expect(styles).toMatch(/\.companion-popover-arrow\s*\{[^}]*box-shadow: none/s);

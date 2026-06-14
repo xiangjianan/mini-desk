@@ -122,7 +122,7 @@ describe("workbench style contract", () => {
     expectSelectorBody(styles, ".quick-button", "border-radius: var(--radius)");
     expectSelectorBody(styles, ".companion-popover-shell.n-popover", "border: 1px solid var(--border) !important");
     expectSelectorBody(styles, ".companion-popover-shell.n-popover", "background: var(--popover) !important");
-    expectSelectorBody(styles, ".companion-popover-shell.n-popover", "box-shadow: 0 6px 14px rgba(15, 23, 42, 0.045) !important");
+    expectSelectorBody(styles, ".companion-popover-shell.n-popover", "box-shadow: none !important");
     expectSelectorBody(styles, ".companion-popover-arrow", "border: 1px solid var(--border) !important");
     expectSelectorBody(styles, ".companion-meta-row", "display: inline-flex");
     expectSelectorBody(styles, ".companion-meta-row", "align-items: center");

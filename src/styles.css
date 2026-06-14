@@ -3159,7 +3159,7 @@ button.todo-section-menu-button {
   border: 1px solid var(--border) !important;
   background: var(--popover) !important;
   color: var(--popover-foreground) !important;
-  box-shadow: 0 6px 14px rgba(15, 23, 42, 0.045) !important;
+  box-shadow: none !important;
   transform-origin: right bottom;
   transition: opacity 0.26s ease, transform 0.26s ease;
 }
@@ -4284,8 +4284,7 @@ textarea:focus,
 .n-dialog,
 .n-modal .n-card,
 .quick-dialog.n-card,
-.shortcut-help-modal.n-card,
-.companion-popover-shell.n-popover {
+.shortcut-help-modal.n-card {
   backdrop-filter: blur(28px) saturate(1.7);
   background: var(--material-elevated) !important;
   box-shadow: var(--shadow-soft) !important;
