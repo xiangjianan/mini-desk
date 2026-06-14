@@ -3099,8 +3099,8 @@ button.todo-section-menu-button {
 .focus-companion img {
   max-width: 50px;
   max-height: 50px;
-  width: auto;
-  height: auto;
+  width: 50px;
+  height: 50px;
   border: 0;
   object-fit: contain;
   object-position: center;

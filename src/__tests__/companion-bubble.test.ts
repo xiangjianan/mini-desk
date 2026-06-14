@@ -60,6 +60,26 @@ describe("CompanionBubble", () => {
     wrapper.unmount();
   });
 
+  it("reserves the GIF box before the image finishes loading", async () => {
+    const wrapper = mount(CompanionBubble, {
+      props: {
+        visible: true,
+        message: "提示内容",
+      },
+      global: {
+        stubs: {
+          NPopover: popoverStub,
+        },
+      },
+    });
+
+    const gif = wrapper.get("img");
+    expect(gif.attributes("width")).toBe("50");
+    expect(gif.attributes("height")).toBe("50");
+
+    wrapper.unmount();
+  });
+
   it("fades the popover out before removing cleared message content", async () => {
     vi.useFakeTimers();
     const wrapper = mount(CompanionBubble, {
