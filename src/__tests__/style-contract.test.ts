@@ -92,6 +92,15 @@ describe("workbench style contract", () => {
     expectSelectorBody(styles, ".gif-theme-custom-dialog", "z-index: 4210");
   });
 
+  it("reserves the companion GIF trigger size before the asset loads", () => {
+    const styles = readFileSync(resolve(__dirname, "../styles.css"), "utf8");
+
+    expectSelectorBody(styles, ".focus-companion img", "width: 50px");
+    expectSelectorBody(styles, ".focus-companion img", "height: 50px");
+    expect(ruleBodies(styles, ".focus-companion img").join("\n")).not.toContain("width: auto");
+    expect(ruleBodies(styles, ".focus-companion img").join("\n")).not.toContain("height: auto");
+  });
+
   it("normalizes retained Naive UI and panel internals through shared tokens", () => {
     const styles = readFileSync(resolve(__dirname, "../styles.css"), "utf8");
 
