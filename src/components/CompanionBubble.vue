@@ -113,7 +113,7 @@ const placementStyle = computed(() => {
   };
 });
 
-const activeGifTheme = computed(() => props.gifTheme ?? "ikun");
+const activeGifTheme = computed(() => props.gifTheme ?? "hermes");
 const gifSrc = computed(() =>
   getCompanionGifSrc(activeGifTheme.value, props.theme ?? "light", {
     light: props.customGifLightSrc,

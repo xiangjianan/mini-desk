@@ -8,7 +8,7 @@ import ikunDarkNotificationIcon from "../../static/img/kun-dark.jpg?url";
 import hermesNotificationIcon from "../../static/img/yunxia.jpg?url";
 import hermesDarkNotificationIcon from "../../static/img/yunxia-dark.jpg?url";
 
-export const DEFAULT_COMPANION_GIF_THEME: CompanionGifTheme = "ikun";
+export const DEFAULT_COMPANION_GIF_THEME: CompanionGifTheme = "hermes";
 
 export const COMPANION_GIF_THEME_OPTIONS: Array<{
   value: CompanionGifTheme;

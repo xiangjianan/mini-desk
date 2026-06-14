@@ -535,7 +535,7 @@ describe("CompanionBubble", () => {
     wrapper.unmount();
   });
 
-  it("uses ikun GIF assets by default and switches them for dark theme", async () => {
+  it("uses yunxia GIF assets by default and switches them for dark theme", async () => {
     const wrapper = mount(CompanionBubble, {
       props: {
         visible: true,
@@ -549,11 +549,11 @@ describe("CompanionBubble", () => {
       },
     });
 
-    expect(wrapper.get("img").attributes("src")).toBe("/static/video/kun.gif");
+    expect(wrapper.get("img").attributes("src")).toBe("/static/video/yunxia.gif");
 
     await wrapper.setProps({ theme: "dark" });
 
-    expect(wrapper.get("img").attributes("src")).toBe("/static/video/kun-dark.gif");
+    expect(wrapper.get("img").attributes("src")).toBe("/static/video/yunxia-dark.gif");
 
     wrapper.unmount();
   });
