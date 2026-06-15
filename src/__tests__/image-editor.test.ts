@@ -1,4 +1,6 @@
 import { mount } from "@vue/test-utils";
+import { readFileSync } from "node:fs";
+import { resolve } from "node:path";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import { nextTick } from "vue";
 import ImageEditor from "../components/ImageEditor.vue";
@@ -6,6 +8,8 @@ import ImageEditor from "../components/ImageEditor.vue";
 const iconStub = {
   template: "<span><slot /></span>",
 };
+const root = resolve(__dirname, "../..");
+const read = (file: string) => readFileSync(resolve(root, file), "utf8");
 
 let originalGetContext: typeof HTMLCanvasElement.prototype.getContext;
 let originalToDataURL: typeof HTMLCanvasElement.prototype.toDataURL;
@@ -155,6 +159,16 @@ describe("ImageEditor", () => {
     expect(wrapper.get(".image-editor-cancel").text()).toBe("取消");
 
     wrapper.unmount();
+  });
+
+  it("allows custom text boxes to expand down and to the right", () => {
+    const styles = read("src/styles.css");
+
+    expect(styles).toMatch(/\.image-editor-text-box\s*\{[^}]*max-width: min\(560px, calc\(100vw - 48px\)\)/s);
+    expect(styles).toMatch(/\.image-editor-text-input\s*\{[^}]*width: 100%/s);
+    expect(styles).toMatch(/\.image-editor-text-input\s*\{[^}]*max-width: min\(560px, calc\(100vw - 48px\)\)/s);
+    expect(styles).toMatch(/\.image-editor-text-input\s*\{[^}]*resize: both/s);
+    expect(styles).not.toContain("max-width: min(280px, 42vw)");
   });
 
   it("creates a focused text box with the current slider-controlled text size", async () => {

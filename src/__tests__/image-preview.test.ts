@@ -576,6 +576,34 @@ describe("ImagePreview", () => {
     wrapper.unmount();
   });
 
+  it("emits preview tips from the context menu instead of using an alert dialog", async () => {
+    const alertSpy = vi.spyOn(window, "alert").mockImplementation(() => undefined);
+    const wrapper = mount(ImagePreview, {
+      props: {
+        images: [{ id: "img-1", src: "data:image/png;base64,one", createdAt: 1 }],
+        activeId: "img-1",
+      },
+      global: {
+        stubs: {
+          Button: buttonStub,
+          Dropdown: dropdownStub,
+          Modal: modalStub,
+          NButton: buttonStub,
+          NDropdown: dropdownStub,
+          NModal: modalStub,
+        },
+      },
+    });
+
+    await wrapper.get(".preview-stage img").trigger("contextmenu");
+    await wrapper.findAll(".dropdown-option").find((option) => option.text() === "Tips")?.trigger("click");
+
+    expect(alertSpy).not.toHaveBeenCalled();
+    expect(wrapper.emitted("tips")).toHaveLength(1);
+    expect(wrapper.emitted("tips")?.[0]?.[0]).toBe(wrapper.get(".preview-stage img").element);
+    wrapper.unmount();
+  });
+
   it("focuses the text input immediately when creating text from preview edit mode", async () => {
     const host = document.createElement("div");
     document.body.append(host);

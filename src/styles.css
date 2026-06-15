@@ -5652,7 +5652,9 @@ html[data-theme="dark"] .image-preview {
 .image-editor-text-box {
   position: absolute;
   z-index: 3;
+  width: max-content;
   min-width: 112px;
+  max-width: min(560px, calc(100vw - 48px));
   cursor: move;
 }
 
@@ -5664,8 +5666,9 @@ html[data-theme="dark"] .image-preview {
 }
 
 .image-editor-text-input {
+  width: 100%;
   min-width: 112px;
-  max-width: min(280px, 42vw);
+  max-width: min(560px, calc(100vw - 48px));
   min-height: 32px;
   padding: 4px 8px;
   border: 1px dashed transparent;

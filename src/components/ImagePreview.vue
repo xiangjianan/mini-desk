@@ -25,6 +25,7 @@ const emit = defineEmits<{
   copy: [id: string];
   delete: [id: string, anchor?: HTMLElement];
   navigate: [direction: number];
+  tips: [anchor?: HTMLElement];
   saveEdit: [payload: { id: string; src: string; displayWidth: number; displayHeight: number }];
 }>();
 
@@ -293,7 +294,7 @@ function handleMenuSelect(key: string): void {
   if (!current) return;
   closeMenu();
   if (key === "tips") {
-    window.alert(uiText.value.preview.help);
+    emit("tips", current.anchor);
     return;
   }
   if (key === "copy") emit("copy", current.id);

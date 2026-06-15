@@ -800,6 +800,10 @@ async function saveEditedImage(payload: { id: string; src: string; displayWidth:
   showBubble("imageEdited", document.querySelector<HTMLElement>(".image-preview") ?? undefined, { hideCompanionAfter: true });
 }
 
+function showPreviewTips(anchor?: HTMLElement): void {
+  showBubbleText(uiText.value.preview.help, anchor ?? document.querySelector<HTMLElement>(".image-preview") ?? undefined, { hideCompanionAfter: true }, 5200);
+}
+
 async function copyImage(id: string, anchor?: HTMLElement): Promise<void> {
   if (shouldBlockBoardEffects()) return;
   const image = state.images.find((item) => item.id === id);
@@ -2616,6 +2620,7 @@ function moveItem<T extends { id: string }>(items: T[], dragId: string, targetId
       @copy="copyImage"
       @delete="deleteImage"
       @navigate="navigatePreview"
+      @tips="showPreviewTips"
       @save-edit="saveEditedImage"
     />
 
