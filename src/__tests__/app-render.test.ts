@@ -1457,7 +1457,7 @@ describe("App shell", () => {
       expect(notificationSpy).toHaveBeenCalledWith("【✅ 提醒事项】", {
         body: "喝水",
         tag: `todo-1:${notifyAt}`,
-        icon: expect.stringMatching(/^https?:\/\/.*kun.*\.jpg/),
+        icon: expect.stringMatching(/^https?:\/\/.*(?:kun|yunxia).*\.jpg/),
       });
     } finally {
       wrapper.unmount();
@@ -1630,7 +1630,7 @@ describe("App shell", () => {
       expect(notificationSpy).toHaveBeenCalledWith("【✅ 提醒事项】", {
         body: "喝水",
         tag: `todo-1:${notifyAt}`,
-        icon: expect.stringMatching(/^https?:\/\/.*kun.*\.jpg/),
+        icon: expect.stringMatching(/^https?:\/\/.*(?:kun|yunxia).*\.jpg/),
       });
     } finally {
       wrapper.unmount();
@@ -1681,7 +1681,7 @@ describe("App shell", () => {
       expect(notificationSpy).toHaveBeenCalledWith("【✅ 提醒事项】", {
         body: "喝水",
         tag: `todo-1:${notifyAt}`,
-        icon: expect.stringMatching(/^https?:\/\/.*kun.*\.jpg/),
+        icon: expect.stringMatching(/^https?:\/\/.*(?:kun|yunxia).*\.jpg/),
       });
     } finally {
       wrapper.unmount();
