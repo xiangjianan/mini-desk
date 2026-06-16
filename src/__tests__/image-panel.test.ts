@@ -118,7 +118,7 @@ describe("ImagePanel", () => {
     wrapper.unmount();
   });
 
-  it("keeps image item context menus focused on preview, copy, edit, delete, and guide actions", async () => {
+  it("keeps image item context menus focused on pinning, preview, copy, edit, delete, and guide actions", async () => {
     const wrapper = mountImagePanel([
       { id: "a", src: "data:image/png;base64,a", createdAt: 1 },
       { id: "b", src: "data:image/png;base64,b", createdAt: 2 },
@@ -128,6 +128,7 @@ describe("ImagePanel", () => {
     await wrapper.findAll(".image-card")[1].trigger("contextmenu");
 
     expect(wrapper.findAll(".dropdown-option").map((option) => option.text())).toEqual([
+      "置顶",
       "预览",
       "复制",
       "编辑",
@@ -135,10 +136,23 @@ describe("ImagePanel", () => {
       "Tips",
     ]);
 
-    expect(wrapper.text()).not.toContain("置顶");
     expect(wrapper.text()).not.toContain("取消置顶");
     expect(wrapper.text()).not.toContain("置底");
 
+    wrapper.unmount();
+  });
+
+  it("emits reorder to move an image to the top from the context menu", async () => {
+    const wrapper = mountImagePanel([
+      { id: "a", src: "data:image/png;base64,a", createdAt: 1 },
+      { id: "b", src: "data:image/png;base64,b", createdAt: 2 },
+      { id: "c", src: "data:image/png;base64,c", createdAt: 3 },
+    ]);
+
+    await wrapper.findAll(".image-card")[1].trigger("contextmenu");
+    await wrapper.findAll(".dropdown-option").find((option) => option.text() === "置顶")?.trigger("click");
+
+    expect(wrapper.emitted("reorder")?.[0]).toEqual(["b", "a"]);
     wrapper.unmount();
   });
 
@@ -178,6 +192,7 @@ describe("ImagePanel", () => {
     await wrapper.findAll(".image-card")[1].trigger("contextmenu");
 
     expect(wrapper.findAll(".dropdown-option").map((option) => option.text())).toEqual([
+      "置顶",
       "取消预览",
       "复制",
       "编辑",
@@ -204,6 +219,7 @@ describe("ImagePanel", () => {
     await wrapper.findAll(".image-card")[0].trigger("contextmenu");
 
     expect(wrapper.findAll(".dropdown-option").map((option) => option.text())).toEqual([
+      "置顶",
       "取消预览",
       "复制",
       "编辑",

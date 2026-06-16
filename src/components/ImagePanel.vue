@@ -2,7 +2,7 @@
 import { computed, h, nextTick, onMounted, onUnmounted, ref, watch } from "vue";
 import type { Component, ComponentPublicInstance, VNode } from "vue";
 import { NDropdown, NIcon, NScrollbar } from "naive-ui";
-import { ClipboardOutline, CloseOutline, CopyOutline, CreateOutline, EyeOutline, HelpCircleOutline, TrashOutline } from "@vicons/ionicons5";
+import { ArrowUpOutline, ClipboardOutline, CloseOutline, CopyOutline, CreateOutline, EyeOutline, HelpCircleOutline, TrashOutline } from "@vicons/ionicons5";
 import type { DropdownOption } from "naive-ui";
 import type { AppLanguage, GuideKey, StoredImage } from "../types";
 import { GUIDE_MENU_OPTION } from "../state/defaults";
@@ -116,6 +116,7 @@ watch(
 const menuOptions = computed<DropdownOption[]>(() =>
   menu.value?.id
     ? [
+        { label: uiText.value.common.pinToTop, key: "pin-top", icon: renderIcon(ArrowUpOutline) },
         {
           label: isPreviewCloseMenuItem.value ? uiText.value.preview.close : uiText.value.common.preview,
           key: isPreviewCloseMenuItem.value ? "close-preview" : "preview",
@@ -172,6 +173,10 @@ function handleMenuSelect(key: string): void {
   if (key === "paste") emit("paste", anchor);
   if (key === "guide" && anchor) emit("guide", "images", anchor, true);
   if (!id) return;
+  if (key === "pin-top") {
+    const firstImageId = props.images[0]?.id;
+    if (firstImageId && firstImageId !== id) emit("reorder", id, firstImageId);
+  }
   if (key === "preview") emit("preview", id);
   if (key === "close-preview") emit("closePreview");
   if (key === "copy") emit("copy", id);
