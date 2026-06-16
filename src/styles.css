@@ -5898,7 +5898,6 @@ select {
   display: block;
   flex: 0 0 20px;
   box-sizing: border-box;
-  border: 1px solid #111111;
   object-fit: contain;
   image-rendering: pixelated;
   border-radius: 0;
