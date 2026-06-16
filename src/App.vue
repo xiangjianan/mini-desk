@@ -708,6 +708,14 @@ function reorderImages(dragId: string, targetId: string): void {
   persistNow();
 }
 
+function moveImageToBottom(id: string): void {
+  const index = state.images.findIndex((image) => image.id === id);
+  if (index < 0 || index === state.images.length - 1) return;
+  const [image] = state.images.splice(index, 1);
+  state.images.push(image);
+  persistNow();
+}
+
 function deleteImage(id: string, anchor?: HTMLElement): void {
   const feedbackAnchor = getImageUndoAnchor(anchor);
   requestConfirmation("confirmDeleteImage", anchor, async () => {
@@ -2507,6 +2515,7 @@ function moveItem<T extends { id: string }>(items: T[], dragId: string, targetId
           @edit="openImageEditor"
           @delete="deleteImage"
           @reorder="reorderImages"
+          @move-to-bottom="moveImageToBottom"
           @paste="pasteImageFromClipboard"
           @drop-files="addImageFiles"
           @guide="handleGuideClick"

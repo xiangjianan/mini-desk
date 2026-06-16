@@ -2686,6 +2686,29 @@ describe("App shell", () => {
     wrapper.unmount();
   });
 
+  it("moves an image to the bottom from the image panel context menu event", async () => {
+    localStorage.setItem(
+      STORAGE_KEY,
+      JSON.stringify({
+        images: [
+          { id: "img-1", src: "data:image/png;base64,one", createdAt: 1 },
+          { id: "img-2", src: "data:image/png;base64,two", createdAt: 2 },
+          { id: "img-3", src: "data:image/png;base64,three", createdAt: 3 },
+        ],
+      }),
+    );
+    const wrapper = mountApp();
+    const imagePanel = wrapper.getComponent(ImagePanel);
+
+    imagePanel.vm.$emit("moveToBottom", "img-1");
+    await wrapper.vm.$nextTick();
+
+    expect(imagePanel.props("images").map((image: { id: string }) => image.id)).toEqual(["img-2", "img-3", "img-1"]);
+    expect(JSON.parse(localStorage.getItem(STORAGE_KEY) || "{}").images.map((image: { id: string }) => image.id)).toEqual(["img-2", "img-3", "img-1"]);
+
+    wrapper.unmount();
+  });
+
   it("hides the current companion GIF when opening image preview", async () => {
     vi.useFakeTimers();
     localStorage.setItem(

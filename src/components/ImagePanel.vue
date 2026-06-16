@@ -2,7 +2,7 @@
 import { computed, h, nextTick, onMounted, onUnmounted, ref, watch } from "vue";
 import type { Component, ComponentPublicInstance, VNode } from "vue";
 import { NDropdown, NIcon, NScrollbar } from "naive-ui";
-import { ArrowUpOutline, ClipboardOutline, CloseOutline, CopyOutline, CreateOutline, EyeOutline, HelpCircleOutline, TrashOutline } from "@vicons/ionicons5";
+import { ArrowDownOutline, ArrowUpOutline, ClipboardOutline, CloseOutline, CopyOutline, CreateOutline, EyeOutline, HelpCircleOutline, TrashOutline } from "@vicons/ionicons5";
 import type { DropdownOption } from "naive-ui";
 import type { AppLanguage, GuideKey, StoredImage } from "../types";
 import { GUIDE_MENU_OPTION } from "../state/defaults";
@@ -27,6 +27,7 @@ const emit = defineEmits<{
   edit: [id: string];
   delete: [id: string, anchor?: HTMLElement];
   reorder: [dragId: string, targetId: string];
+  moveToBottom: [id: string];
   paste: [anchor?: HTMLElement];
   dropFiles: [files: File[], anchor?: HTMLElement];
   guide: [key: GuideKey, anchor: HTMLElement, immediate?: boolean];
@@ -116,7 +117,6 @@ watch(
 const menuOptions = computed<DropdownOption[]>(() =>
   menu.value?.id
     ? [
-        { label: uiText.value.common.pinToTop, key: "pin-top", icon: renderIcon(ArrowUpOutline) },
         {
           label: isPreviewCloseMenuItem.value ? uiText.value.preview.close : uiText.value.common.preview,
           key: isPreviewCloseMenuItem.value ? "close-preview" : "preview",
@@ -125,6 +125,8 @@ const menuOptions = computed<DropdownOption[]>(() =>
         { label: uiText.value.common.copy, key: "copy", icon: renderIcon(CopyOutline) },
         { label: uiText.value.common.edit, key: "edit", icon: renderIcon(CreateOutline) },
         { label: uiText.value.common.delete, key: "delete", icon: renderIcon(TrashOutline) },
+        { label: uiText.value.common.pinToTop, key: "pin-top", icon: renderIcon(ArrowUpOutline) },
+        { label: uiText.value.common.pinToBottom, key: "pin-bottom", icon: renderIcon(ArrowDownOutline) },
         { ...guideMenuOption.value, icon: renderIcon(HelpCircleOutline) },
       ]
     : [{ label: uiText.value.images.pasteImage, key: "paste", icon: renderIcon(ClipboardOutline) }, { ...guideMenuOption.value, icon: renderIcon(HelpCircleOutline) }],
@@ -176,6 +178,10 @@ function handleMenuSelect(key: string): void {
   if (key === "pin-top") {
     const firstImageId = props.images[0]?.id;
     if (firstImageId && firstImageId !== id) emit("reorder", id, firstImageId);
+  }
+  if (key === "pin-bottom") {
+    const lastImageId = props.images.at(-1)?.id;
+    if (lastImageId && lastImageId !== id) emit("moveToBottom", id);
   }
   if (key === "preview") emit("preview", id);
   if (key === "close-preview") emit("closePreview");
