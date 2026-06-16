@@ -55,6 +55,7 @@ describe("Naive UI component usage", () => {
 
     expect(companion).toContain("NPopover");
     expect(companion).toContain("NButton");
+    expect(companionGifThemes).toContain("mini-desk-cat-dark.gif");
     expect(companionGifThemes).toContain("kun-dark.gif");
     expect(companionGifThemes).toContain("yunxia-dark.gif");
     expect(companion).toContain("getCompanionGifSrc");

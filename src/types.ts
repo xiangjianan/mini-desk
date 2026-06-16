@@ -1,6 +1,6 @@
 export type ThemeMode = "light" | "dark";
 export type AppLanguage = "zh" | "en";
-export type CompanionGifTheme = "ikun" | "hermes" | "custom" | "none";
+export type CompanionGifTheme = "cat" | "ikun" | "hermes" | "custom" | "none";
 export type QuickButtonType = "link" | "text" | "api";
 export type QuickApiMethod = "GET" | "POST" | "PUT" | "PATCH" | "DELETE" | "HEAD" | "OPTIONS";
 export type QuickApiBodyType = "none" | "json" | "text" | "form";

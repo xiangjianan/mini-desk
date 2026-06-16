@@ -208,9 +208,9 @@ describe("state compatibility", () => {
     expect(removeEmptyTodo(state.todos, "morning", "missing")).toEqual(state.todos);
   });
 
-  it("defaults to the yunxia companion GIF theme", () => {
+  it("defaults to the pixel cat companion GIF theme", () => {
     expect(defaultState().companionGifTheme).toBe(DEFAULT_COMPANION_GIF_THEME);
-    expect(defaultState().companionGifTheme).toBe("hermes");
+    expect(defaultState().companionGifTheme).toBe("cat");
   });
 
   it("preserves the disabled companion GIF theme during import and serialization", () => {
@@ -239,13 +239,15 @@ describe("state compatibility", () => {
     expect(getSerializableState(state, { includeCustomGifData: true }).customCompanionGif).toEqual(state.customCompanionGif);
   });
 
-  it("normalizes unknown companion GIF themes to yunxia", () => {
-    expect(normalizeImportedState({ companionGifTheme: "future-theme" }).companionGifTheme).toBe("hermes");
-    expect(normalizeImportedState({ companionGifTheme: "" }).companionGifTheme).toBe("hermes");
-    expect(normalizeImportedState({ companionGifTheme: null }).companionGifTheme).toBe("hermes");
+  it("normalizes unknown companion GIF themes to the pixel cat", () => {
+    expect(normalizeImportedState({ companionGifTheme: "future-theme" }).companionGifTheme).toBe("cat");
+    expect(normalizeImportedState({ companionGifTheme: "" }).companionGifTheme).toBe("cat");
+    expect(normalizeImportedState({ companionGifTheme: null }).companionGifTheme).toBe("cat");
   });
 
   it("uses still image assets for built-in reminder notification icons", () => {
+    expect(getCompanionNotificationIconSrc("cat", "light")).toContain("mini-desk-cat.png");
+    expect(getCompanionNotificationIconSrc("cat", "dark")).toContain("mini-desk-cat-dark.png");
     expect(getCompanionNotificationIconSrc("ikun", "light")).toContain("kun.jpg");
     expect(getCompanionNotificationIconSrc("ikun", "dark")).toContain("kun-dark.jpg");
     expect(getCompanionNotificationIconSrc("hermes", "light")).toContain("yunxia.jpg");

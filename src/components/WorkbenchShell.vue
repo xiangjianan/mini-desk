@@ -4,12 +4,12 @@ import {
   MoonIcon,
   PanelTopCloseIcon,
   PanelTopOpenIcon,
-  SparklesIcon,
   SunIcon,
 } from "lucide-vue-next";
 import { Badge } from "./ui/badge";
 import { Button } from "./ui/button";
 import type { ThemeMode } from "../types";
+import miniDeskLogo from "../../static/img/mini-desk-cat.png?url";
 
 withDefaults(defineProps<{
   title: string;
@@ -330,7 +330,7 @@ onUnmounted(() => {
       <Transition name="workbench-header" :duration="200">
         <header v-if="!headerHidden" class="workbench-command-bar" data-testid="workbench-command-bar">
           <div class="workbench-title-group">
-            <SparklesIcon class="workbench-title-icon" aria-hidden="true" />
+            <img class="workbench-title-icon workbench-title-logo" :src="miniDeskLogo" alt="" aria-hidden="true" width="20" height="20" />
             <h1>{{ title }}</h1>
             <slot name="status">
               <Badge variant="secondary" data-testid="workbench-save-status">{{ saveStatusLabel }}</Badge>

@@ -5892,6 +5892,16 @@ select {
   stroke-width: var(--icon-stroke);
 }
 
+.workbench-title-logo {
+  width: 20px;
+  height: 20px;
+  display: block;
+  flex: 0 0 20px;
+  object-fit: contain;
+  image-rendering: pixelated;
+  border-radius: 4px;
+}
+
 .icon-button,
 .settings-btn.icon-button,
 .workbench-header-hide-button,
