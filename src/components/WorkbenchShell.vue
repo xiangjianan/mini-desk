@@ -371,10 +371,12 @@ onUnmounted(() => {
         v-if="headerHidden"
         class="workbench-header-reveal-zone"
         data-testid="workbench-header-reveal-zone"
+        @click="showHeaderRevealControl"
         @mouseenter="showHeaderRevealControl"
+        @pointermove="showHeaderRevealControl"
         @mouseleave="handleHeaderRevealZoneLeave"
       >
-        <Transition name="workbench-header-reveal" :duration="200">
+        <Transition name="workbench-header-reveal" :duration="100">
           <Button
             v-if="headerRevealVisible"
             variant="ghost"

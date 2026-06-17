@@ -141,7 +141,7 @@ describe("WorkbenchShell", () => {
 
     expect(wrapper.find('[data-testid="workbench-header-show"]').exists()).toBe(false);
 
-    await wrapper.get('[data-testid="workbench-header-reveal-zone"]').trigger("mouseenter");
+    await wrapper.get('[data-testid="workbench-header-reveal-zone"]').trigger("click");
     await nextTick();
 
     expect(wrapper.get('[data-testid="workbench-header-show"]').attributes("aria-label")).toBe("显示顶部菜单");

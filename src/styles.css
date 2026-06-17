@@ -4015,14 +4015,18 @@ body:has(.image-preview) .image-panel .n-scrollbar {
 .workbench-header-reveal-enter-active,
 .workbench-header-reveal-leave-active {
   transition:
-    opacity var(--motion-fast) ease,
-    transform 200ms var(--motion-ease);
+    opacity 80ms ease,
+    transform 100ms var(--motion-ease);
 }
 
-.workbench-header-reveal-enter-from,
+.workbench-header-reveal-enter-from {
+  opacity: 0;
+  transform: translateY(-32px);
+}
+
 .workbench-header-reveal-leave-to {
   opacity: 0;
-  transform: translateY(-12px);
+  transform: translateY(-16px);
 }
 
 .workbench-header-reveal-enter-to,
