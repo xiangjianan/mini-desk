@@ -51,6 +51,7 @@ const RESIZE_STEP = 24;
 const HEADER_COLLAPSE_REVEAL_DELAY_MS = 200;
 const HEADER_INITIAL_REVEAL_AUTO_HIDE_MS = 1_000;
 const HEADER_REVEAL_AUTO_HIDE_MS = 100;
+const HEADER_REVEAL_POINTER_LEAVE_HIDE_MS = 300;
 
 const gridRef = ref<HTMLElement | null>(null);
 const headerHidden = ref(false);
@@ -308,12 +309,11 @@ function showHeaderRevealControl(): void {
   if (headerRevealShowTimer !== undefined) return;
   clearHeaderRevealHideTimer();
   headerRevealVisible.value = true;
-  scheduleHeaderRevealHide();
 }
 
 function handleHeaderRevealZoneLeave(): void {
   if (!headerHidden.value) return;
-  scheduleHeaderRevealHide();
+  scheduleHeaderRevealHide(HEADER_REVEAL_POINTER_LEAVE_HIDE_MS);
 }
 
 function setHeaderHidden(hidden: boolean): void {
