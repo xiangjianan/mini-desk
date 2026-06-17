@@ -4796,6 +4796,16 @@ button.workbench-resizer:active {
   transform: translateY(0);
 }
 
+.workbench-header-reveal-enter-from:hover,
+.workbench-header-reveal-enter-from:focus-visible {
+  transform: translateY(-32px);
+}
+
+.workbench-header-reveal-leave-to:hover,
+.workbench-header-reveal-leave-to:focus-visible {
+  transform: translateY(-16px);
+}
+
 .workbench-header-reveal:active {
   color: var(--foreground);
   background: transparent;

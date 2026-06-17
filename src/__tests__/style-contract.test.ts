@@ -195,6 +195,8 @@ describe("workbench style contract", () => {
     expectSelectorBody(styles, ".workbench-header-reveal-enter-active", "transform 100ms var(--motion-ease)");
     expectSelectorBody(styles, ".workbench-header-reveal-enter-from", "transform: translateY(-32px)");
     expectSelectorBody(styles, ".workbench-header-reveal-leave-to", "transform: translateY(-16px)");
+    expectSelectorBody(styles, ".workbench-header-reveal-enter-from:hover", "transform: translateY(-32px)");
+    expectSelectorBody(styles, ".workbench-header-reveal-leave-to:hover", "transform: translateY(-16px)");
     expectSelectorBody(styles, ".workbench-header-enter-active", "transition:");
     expectSelectorBody(styles, ".workbench-header-enter-from", "transform: translateY(-100%)");
     expectSelectorBody(styles, ".workbench-resizer", "position: absolute");
