@@ -142,6 +142,17 @@ describe("ImagePanel", () => {
     wrapper.unmount();
   });
 
+  it("lets the browser lazy-load and asynchronously decode image thumbnails", () => {
+    const wrapper = mountImagePanel([
+      { id: "img-1", src: "data:image/png;base64,one", createdAt: 1 },
+    ]);
+    const thumbnail = wrapper.get(".image-card img");
+
+    expect(thumbnail.attributes("loading")).toBe("lazy");
+    expect(thumbnail.attributes("decoding")).toBe("async");
+    wrapper.unmount();
+  });
+
   it("emits reorder to move an image to the top from the context menu", async () => {
     const wrapper = mountImagePanel([
       { id: "a", src: "data:image/png;base64,a", createdAt: 1 },

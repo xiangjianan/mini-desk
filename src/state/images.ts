@@ -3,6 +3,11 @@ import type { CompanionCustomGif, CompanionCustomGifStored, StoredImage } from "
 
 const CUSTOM_COMPANION_GIF_LIGHT_ID = "__custom-companion-gif-light__";
 const CUSTOM_COMPANION_GIF_DARK_ID = "__custom-companion-gif-dark__";
+type ImagePayloadRecord = { id: string; src?: string };
+
+export interface HydrateStoredImagesOptions {
+  persistLegacyPayloads?: boolean;
+}
 
 export function openImageDb(name = IMAGE_DB_NAME): Promise<IDBDatabase> {
   return new Promise((resolve, reject) => {
@@ -22,18 +27,18 @@ export function openImageDb(name = IMAGE_DB_NAME): Promise<IDBDatabase> {
 export async function storeImagePayload(image: StoredImage): Promise<void> {
   if (!image.src || !("indexedDB" in window)) return;
   const db = await openImageDb();
-  await transact(db, "readwrite", (store) => store.put({ id: image.id, src: image.src }));
-  db.close();
+  try {
+    await transact(db, "readwrite", (store) => store.put({ id: image.id, src: image.src }));
+  } finally {
+    db.close();
+  }
 }
 
 export async function getStoredImagePayload(id: string): Promise<string | undefined> {
   if (!("indexedDB" in window)) return undefined;
-  const db = await openImageDb();
-  const record = await transact<{ id: string; src?: string } | undefined>(db, "readonly", (store) =>
-    store.get(id),
-  );
-  db.close();
-  if (record?.src) return record.src;
+  const records = await getStoredImagePayloads([id]);
+  const payload = records.get(id);
+  if (payload) return payload;
   return getLegacyStoredPayload(id);
 }
 
@@ -46,7 +51,18 @@ export async function deleteStoredImage(id: string): Promise<void> {
 
 export async function persistImagePayloads(images: StoredImage[]): Promise<void> {
   if (!("indexedDB" in window)) return;
-  await Promise.all(images.map((image) => storeImagePayload(image)));
+  const payloads = images.filter((image): image is StoredImage & { src: string } => Boolean(image.src));
+  if (payloads.length === 0) return;
+  const db = await openImageDb();
+  try {
+    await transactBatch(db, "readwrite", (store) => {
+      payloads.forEach((image) => {
+        store.put({ id: image.id, src: image.src });
+      });
+    });
+  } finally {
+    db.close();
+  }
 }
 
 export async function clearStoredImagePayloads(): Promise<void> {
@@ -96,14 +112,54 @@ export async function hydrateCustomCompanionGif(
   };
 }
 
-export async function hydrateStoredImages(images: StoredImage[]): Promise<StoredImage[]> {
+export async function hydrateStoredImages(
+  images: StoredImage[],
+  options: HydrateStoredImagesOptions = {},
+): Promise<StoredImage[]> {
   if (!("indexedDB" in window)) return images;
-  return Promise.all(
-    images.map(async (image) => ({
-      ...image,
-      src: image.src ?? (await getStoredImagePayload(image.id)),
-    })),
-  );
+  const missingIds = images.filter((image) => !image.src).map((image) => image.id);
+  if (missingIds.length === 0) return images;
+
+  const currentPayloads = await getStoredImagePayloads(missingIds);
+  const legacyIds = missingIds.filter((id) => !currentPayloads.has(id));
+  const legacyPayloads = await getLegacyStoredPayloads(legacyIds);
+  const hydratedImages = images.map((image) => ({
+    ...image,
+    src: image.src ?? currentPayloads.get(image.id) ?? legacyPayloads.get(image.id),
+  }));
+
+  if (options.persistLegacyPayloads && legacyPayloads.size > 0) {
+    await persistImagePayloads(
+      hydratedImages.filter((image): image is StoredImage & { src: string } => Boolean(image.src && legacyPayloads.has(image.id))),
+    );
+  }
+
+  return hydratedImages;
+}
+
+async function getStoredImagePayloads(ids: string[]): Promise<Map<string, string>> {
+  return getStoredImagePayloadsFromDb(IMAGE_DB_NAME, ids);
+}
+
+async function getStoredImagePayloadsFromDb(name: string, ids: string[]): Promise<Map<string, string>> {
+  const payloads = new Map<string, string>();
+  if (ids.length === 0) return payloads;
+
+  const db = await openImageDb(name);
+  try {
+    await transactBatch(db, "readonly", (store) => {
+      ids.forEach((id) => {
+        const request = store.get(id) as IDBRequest<ImagePayloadRecord | undefined>;
+        request.onsuccess = () => {
+          if (request.result?.src) payloads.set(id, request.result.src);
+        };
+      });
+    });
+  } finally {
+    db.close();
+  }
+
+  return payloads;
 }
 
 function transact<T>(
@@ -120,24 +176,49 @@ function transact<T>(
   });
 }
 
+function transactBatch(
+  db: IDBDatabase,
+  mode: IDBTransactionMode,
+  operation: (store: IDBObjectStore) => void,
+): Promise<void> {
+  return new Promise((resolve, reject) => {
+    const transaction = db.transaction(IMAGE_STORE_NAME, mode);
+    transaction.oncomplete = () => resolve();
+    transaction.onerror = () => reject(transaction.error);
+    transaction.onabort = () => reject(transaction.error);
+    try {
+      operation(transaction.objectStore(IMAGE_STORE_NAME));
+    } catch (error) {
+      reject(error);
+    }
+  });
+}
+
 async function getLegacyStoredPayload(id: string): Promise<string | undefined> {
   try {
-    const db = await openImageDb(LEGACY_IMAGE_DB_NAME);
-    const record = await transact<{ id: string; src?: string } | undefined>(db, "readonly", (store) =>
-      store.get(id),
-    );
-    db.close();
-    return record?.src;
+    const records = await getStoredImagePayloadsFromDb(LEGACY_IMAGE_DB_NAME, [id]);
+    return records.get(id);
   } catch {
     return undefined;
+  }
+}
+
+async function getLegacyStoredPayloads(ids: string[]): Promise<Map<string, string>> {
+  try {
+    return await getStoredImagePayloadsFromDb(LEGACY_IMAGE_DB_NAME, ids);
+  } catch {
+    return new Map();
   }
 }
 
 async function clearLegacyStoredPayloads(): Promise<void> {
   try {
     const db = await openImageDb(LEGACY_IMAGE_DB_NAME);
-    await transact(db, "readwrite", (store) => store.clear());
-    db.close();
+    try {
+      await transact(db, "readwrite", (store) => store.clear());
+    } finally {
+      db.close();
+    }
   } catch {
     // Legacy cleanup is best-effort; the active mini-desk database remains authoritative.
   }

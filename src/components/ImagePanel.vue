@@ -565,6 +565,8 @@ function handleImageDragWheel(event: WheelEvent): void {
           v-if="image.src"
           :src="image.src"
           :alt="uiText.images.thumbnailAlt"
+          loading="lazy"
+          decoding="async"
           draggable="true"
           @dragstart.stop="handleImageNativeDragStart($event, image, index)"
         />

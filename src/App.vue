@@ -274,8 +274,9 @@ onMounted(async () => {
   } catch {
     state.customCompanionGifStored = {};
   }
-  state.images = await hydrateStoredImages(state.images);
-  await persistImagePayloads(state.images);
+  const inlineImagePayloads = state.images.filter((image): image is StoredImage & { src: string } => Boolean(image.src));
+  state.images = await hydrateStoredImages(state.images, { persistLegacyPayloads: true });
+  await persistImagePayloads(inlineImagePayloads);
   if (!appMounted) return;
   checkAppVersion();
   void checkLatestAppVersion();
