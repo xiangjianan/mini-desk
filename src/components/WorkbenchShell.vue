@@ -48,7 +48,7 @@ const DEFAULT_GRID_PADDING_X = 14;
 const DEFAULT_GRID_PADDING_Y = 14;
 const DEFAULT_IMAGE_PREVIEW_TOP = 52;
 const RESIZE_STEP = 24;
-const HEADER_REVEAL_AUTO_HIDE_MS = 1_000;
+const HEADER_REVEAL_AUTO_HIDE_MS = 100;
 
 const gridRef = ref<HTMLElement | null>(null);
 const headerHidden = ref(false);
