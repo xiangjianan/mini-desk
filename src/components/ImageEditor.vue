@@ -1,7 +1,7 @@
 <script setup lang="ts">
 import { computed, nextTick, onMounted, ref, shallowRef, watch } from "vue";
 import type { Component } from "vue";
-import { ArrowUpRight, Check, Crop, Minus, MousePointer2, PenLine, RectangleHorizontal, RotateCcw, Type, X } from "lucide-vue-next";
+import { ArrowUpRight, Check, Crop, Minus, MousePointer2, PenLine, RectangleHorizontal, Redo2, RotateCcw, Type, Undo2, X } from "lucide-vue-next";
 import { getUiText } from "../state/i18n";
 import type { AppLanguage, StoredImage } from "../types";
 
@@ -31,6 +31,15 @@ type EditorCommand =
   | { type: "rectangle" | "ellipse" | "arrow"; color: string; width: number; start: EditorPoint; end: EditorPoint }
   | { type: "marker"; color: string; number: number; point: EditorPoint }
   | { type: "text"; id: string; color: string; fontSize: number; point: EditorPoint; text: string };
+
+interface EditorSnapshot {
+  workingImageSrc?: string;
+  workingDisplayWidth?: number;
+  workingDisplayHeight?: number;
+  commands: EditorCommand[];
+  cropRect: EditorRect | null;
+  activeTextId: string | null;
+}
 
 const props = withDefaults(defineProps<{
   image: StoredImage;
@@ -85,9 +94,12 @@ const strokeWidth = ref(4);
 const commands = ref<EditorCommand[]>([]);
 const previewCommand = ref<EditorCommand | null>(null);
 const cropRect = ref<EditorRect | null>(null);
+const undoSnapshots = ref<EditorSnapshot[]>([]);
+const redoSnapshots = ref<EditorSnapshot[]>([]);
 const dragState = ref<{ pointerId: number; tool: EditorTool; start: EditorPoint; cropStart?: EditorRect; cropHandle?: CropHandle } | null>(null);
 const textDragState = ref<{ pointerId: number; id: string; start: EditorPoint; origin: EditorPoint } | null>(null);
 const activeTextId = ref<string | null>(null);
+let restoringHistory = false;
 let textIdSequence = 0;
 
 const uiText = computed(() => getUiText(props.language));
@@ -127,6 +139,8 @@ watch(
     commands.value = [];
     previewCommand.value = null;
     cropRect.value = null;
+    undoSnapshots.value = [];
+    redoSnapshots.value = [];
     dragState.value = null;
     textDragState.value = null;
     activeTextId.value = null;
@@ -141,10 +155,15 @@ watch([commands, previewCommand, cropRect, sourceImage], () => {
 watch(strokeWidth, (width) => {
   if (activeTool.value !== "text" || !activeTextId.value) return;
   const fontSize = getTextFontSizeFromSlider(width);
+  const currentText = commands.value.find((command) => command.type === "text" && command.id === activeTextId.value);
+  if (currentText?.type === "text" && currentText.fontSize !== fontSize) recordEditorHistory();
   commands.value = commands.value.map((command) => (
     command.type === "text" && command.id === activeTextId.value ? { ...command, fontSize } : command
   ));
 });
+
+const canUndo = computed(() => undoSnapshots.value.length > 0);
+const canRedo = computed(() => redoSnapshots.value.length > 0);
 
 function loadSourceImage(): void {
   const canvas = canvasRef.value;
@@ -344,6 +363,7 @@ function handlePointerDown(event: PointerEvent): void {
     return;
   }
   if (activeTool.value === "marker") {
+    recordEditorHistory();
     commands.value = [
       ...commands.value,
       { type: "marker", color: selectedColor.value, number: getNextMarkerNumber(), point },
@@ -352,6 +372,7 @@ function handlePointerDown(event: PointerEvent): void {
   }
 
   const cropHandle = activeTool.value === "crop" ? getCropHandle(point) : undefined;
+  if (activeTool.value === "crop") recordEditorHistory();
   dragState.value = {
     pointerId: event.pointerId,
     tool: activeTool.value,
@@ -391,6 +412,7 @@ function handlePointerUp(event: PointerEvent): void {
 
   if (state.tool === "crop") return;
   if (previewCommand.value) {
+    recordEditorHistory();
     commands.value = [...commands.value, previewCommand.value];
     previewCommand.value = null;
   }
@@ -405,6 +427,7 @@ function handlePointerCancel(event: PointerEvent): void {
 
 function createTextCommand(point: EditorPoint): void {
   pruneEmptyTextCommands();
+  recordEditorHistory();
   const id = `text-${++textIdSequence}`;
   commands.value = [
     ...commands.value,
@@ -425,6 +448,8 @@ function focusTextInput(id: string): void {
 }
 
 function updateTextCommand(id: string, text: string): void {
+  const currentText = commands.value.find((command) => command.type === "text" && command.id === id);
+  if (currentText?.type === "text" && currentText.text !== text) recordEditorHistory();
   commands.value = commands.value.map((command) => command.type === "text" && command.id === id ? { ...command, text } : command);
 }
 
@@ -487,6 +512,7 @@ function formatPixelValue(value: number): string {
 function startTextDrag(event: PointerEvent, command: Extract<EditorCommand, { type: "text" }>): void {
   if (event.button !== 0) return;
   activeTextId.value = command.id;
+  recordEditorHistory();
   textDragState.value = {
     pointerId: event.pointerId,
     id: command.id,
@@ -534,6 +560,7 @@ function getNextMarkerNumber(): number {
 }
 
 function resetEdits(): void {
+  recordEditorHistory();
   commands.value = [];
   previewCommand.value = null;
   cropRect.value = null;
@@ -544,6 +571,7 @@ function resetEdits(): void {
 }
 
 function cancelCrop(): void {
+  recordEditorHistory();
   cropRect.value = null;
   dragState.value = null;
   renderCanvas();
@@ -644,6 +672,7 @@ function applyCrop(): void {
   const canvas = canvasRef.value;
   const rect = canvas ? getExportRect(canvas) : cropRect.value;
   if (!rect || rect.width < 1 || rect.height < 1) return;
+  recordEditorHistory();
 
   const nextDisplayWidth = Math.max(1, Math.round(rect.width * scaleX.value));
   const nextDisplayHeight = Math.max(1, Math.round(rect.height * scaleY.value));
@@ -685,6 +714,72 @@ function saveImage(): void {
     displayWidth: Math.max(1, Math.round(rect.width * scaleX.value)),
     displayHeight: Math.max(1, Math.round(rect.height * scaleY.value)),
   });
+}
+
+function cloneEditorCommands(value: EditorCommand[]): EditorCommand[] {
+  return value.map((command) => {
+    if (command.type === "brush") return { ...command, points: command.points.map((point) => ({ ...point })) };
+    if (command.type === "marker" || command.type === "text") return { ...command, point: { ...command.point } };
+    return { ...command, start: { ...command.start }, end: { ...command.end } };
+  });
+}
+
+function cloneEditorRect(value: EditorRect | null): EditorRect | null {
+  return value ? { ...value } : null;
+}
+
+function createEditorSnapshot(): EditorSnapshot {
+  return {
+    workingImageSrc: workingImageSrc.value,
+    workingDisplayWidth: workingDisplayWidth.value,
+    workingDisplayHeight: workingDisplayHeight.value,
+    commands: cloneEditorCommands(commands.value),
+    cropRect: cloneEditorRect(cropRect.value),
+    activeTextId: activeTextId.value,
+  };
+}
+
+function areEditorSnapshotsEqual(left: EditorSnapshot, right: EditorSnapshot): boolean {
+  return JSON.stringify(left) === JSON.stringify(right);
+}
+
+function recordEditorHistory(): void {
+  if (restoringHistory) return;
+  const snapshot = createEditorSnapshot();
+  if (undoSnapshots.value.at(-1) && areEditorSnapshotsEqual(undoSnapshots.value.at(-1)!, snapshot)) return;
+  undoSnapshots.value = [...undoSnapshots.value.slice(-49), snapshot];
+  redoSnapshots.value = [];
+}
+
+function restoreEditorSnapshot(snapshot: EditorSnapshot): void {
+  restoringHistory = true;
+  workingImageSrc.value = snapshot.workingImageSrc;
+  workingDisplayWidth.value = snapshot.workingDisplayWidth;
+  workingDisplayHeight.value = snapshot.workingDisplayHeight;
+  commands.value = cloneEditorCommands(snapshot.commands);
+  previewCommand.value = null;
+  cropRect.value = cloneEditorRect(snapshot.cropRect);
+  dragState.value = null;
+  textDragState.value = null;
+  activeTextId.value = snapshot.activeTextId;
+  loadSourceImage();
+  restoringHistory = false;
+}
+
+function undoEdit(): void {
+  const snapshot = undoSnapshots.value.at(-1);
+  if (!snapshot) return;
+  redoSnapshots.value = [...redoSnapshots.value.slice(-49), createEditorSnapshot()];
+  undoSnapshots.value = undoSnapshots.value.slice(0, -1);
+  restoreEditorSnapshot(snapshot);
+}
+
+function redoEdit(): void {
+  const snapshot = redoSnapshots.value.at(-1);
+  if (!snapshot) return;
+  undoSnapshots.value = [...undoSnapshots.value.slice(-49), createEditorSnapshot()];
+  redoSnapshots.value = redoSnapshots.value.slice(0, -1);
+  restoreEditorSnapshot(snapshot);
 }
 </script>
 
@@ -737,6 +832,15 @@ function saveImage(): void {
       <button type="button" class="image-editor-reset" :aria-label="editorText.reset" :title="editorText.reset" @click="resetEdits">
         <RotateCcw :size="16" stroke-width="2" />
       </button>
+
+      <div class="image-editor-tool-group image-editor-history" role="toolbar" :aria-label="editorText.history">
+        <button type="button" class="image-editor-reset" :aria-label="editorText.undo" :title="editorText.undo" :disabled="!canUndo" @click="undoEdit">
+          <Undo2 :size="16" stroke-width="2" />
+        </button>
+        <button type="button" class="image-editor-reset" :aria-label="editorText.redo" :title="editorText.redo" :disabled="!canRedo" @click="redoEdit">
+          <Redo2 :size="16" stroke-width="2" />
+        </button>
+      </div>
 
       <div class="image-editor-actions">
         <button type="button" class="image-editor-cancel" @click="emit('cancel')">{{ uiText.common.cancel }}</button>

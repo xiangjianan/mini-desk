@@ -5449,6 +5449,16 @@ html[data-theme="dark"] .image-preview {
   outline: 0;
 }
 
+.image-editor-reset:disabled {
+  cursor: default;
+  opacity: 0.32;
+}
+
+.image-editor-reset:disabled:hover,
+.image-editor-reset:disabled:focus-visible {
+  background: transparent;
+}
+
 .image-editor-tool.is-active,
 .image-editor-color.is-active {
   border-color: color-mix(in srgb, var(--line-focus) 86%, transparent);

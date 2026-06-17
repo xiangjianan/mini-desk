@@ -811,6 +811,7 @@ describe("Naive UI component usage", () => {
     const todo = read("src/components/TodoPanel.vue");
     const text = read("src/components/TextPanel.vue");
     const defaults = read("src/state/defaults.ts");
+    const imageContextMenu = read("src/state/imageContextMenu.ts");
     const i18n = read("src/state/i18n.ts");
 
     expect(defaults).toContain("GUIDE_MENU_OPTION");
@@ -819,7 +820,8 @@ describe("Naive UI component usage", () => {
       expect(source).toContain("GUIDE_MENU_OPTION");
       expect(source).toContain("common.tips");
     }
-    expect(image).toContain("uiText.value.images.pasteImage");
+    expect(image).toContain("getBlankImageContextMenuItems");
+    expect(imageContextMenu).toContain("uiText.images.pasteImage");
     expect(app).not.toContain("@focus=\"handleGuideFocus('tools', $event)\"");
     expect(app).toContain("@guide=\"(_, anchor, immediate) => handleGuideClick('workspace', anchor, immediate)\"");
     expect(app).toContain("showGuideBubble");

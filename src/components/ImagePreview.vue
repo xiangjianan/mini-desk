@@ -1,9 +1,11 @@
 <script setup lang="ts">
 import { computed, h, nextTick, onMounted, onUnmounted, ref, watch } from "vue";
 import type { Component, VNode } from "vue";
-import { AddOutline, ChevronDownOutline, ChevronUpOutline, CloseOutline, CopyOutline, CreateOutline, HelpCircleOutline, RemoveOutline, TrashOutline } from "@vicons/ionicons5";
+import { AddOutline, ArrowDownOutline, ArrowUpOutline, ChevronDownOutline, ChevronUpOutline, CloseOutline, CopyOutline, CreateOutline, HelpCircleOutline, RemoveOutline, TrashOutline } from "@vicons/ionicons5";
 import { NDropdown, NIcon, NModal } from "naive-ui";
 import type { DropdownOption } from "naive-ui";
+import { getImageItemContextMenuItems } from "../state/imageContextMenu";
+import type { ImageContextMenuKey } from "../state/imageContextMenu";
 import { getUiText } from "../state/i18n";
 import type { AppLanguage, StoredImage } from "../types";
 import { CONTEXT_MENU_Z_INDEX, createExclusiveContextMenu } from "../utils/contextMenu";
@@ -25,6 +27,8 @@ const emit = defineEmits<{
   copy: [id: string];
   delete: [id: string, anchor?: HTMLElement];
   navigate: [direction: number];
+  reorder: [dragId: string, targetId: string];
+  moveToBottom: [id: string];
   tips: [anchor?: HTMLElement];
   saveEdit: [payload: { id: string; src: string; displayWidth: number; displayHeight: number }];
 }>();
@@ -66,16 +70,26 @@ const activeImageStyle = computed(() => {
   return style;
 });
 const menuOptions = computed<DropdownOption[]>(() => [
-  { label: uiText.value.preview.close, key: "close", icon: renderIcon(CloseOutline) },
-  { label: uiText.value.common.copy, key: "copy", icon: renderIcon(CopyOutline) },
-  { label: uiText.value.common.edit, key: "edit", icon: renderIcon(CreateOutline) },
-  { label: uiText.value.common.delete, key: "delete", icon: renderIcon(TrashOutline) },
-  { label: uiText.value.common.tips, key: "tips", icon: renderIcon(HelpCircleOutline) },
+  ...getImageItemContextMenuItems(uiText.value, true).map((option) => ({
+    ...option,
+    icon: renderIcon(getImageMenuIcon(option.key)),
+  })),
 ]);
 const exclusiveMenu = createExclusiveContextMenu(closeMenu);
 
 function renderIcon(icon: Component): () => VNode {
   return () => h(NIcon, { size: 16 }, { default: () => h(icon) });
+}
+
+function getImageMenuIcon(key: ImageContextMenuKey): Component {
+  if (key === "preview") return ChevronDownOutline;
+  if (key === "close-preview") return CloseOutline;
+  if (key === "copy") return CopyOutline;
+  if (key === "edit") return CreateOutline;
+  if (key === "delete") return TrashOutline;
+  if (key === "pin-top") return ArrowUpOutline;
+  if (key === "pin-bottom") return ArrowDownOutline;
+  return HelpCircleOutline;
 }
 
 onMounted(() => {
@@ -297,9 +311,19 @@ function handleMenuSelect(key: string): void {
     emit("tips", current.anchor);
     return;
   }
+  if (key === "pin-top") {
+    const firstImageId = props.images[0]?.id;
+    if (firstImageId && firstImageId !== current.id) emit("reorder", current.id, firstImageId);
+    return;
+  }
+  if (key === "pin-bottom") {
+    const lastImageId = props.images.at(-1)?.id;
+    if (lastImageId && lastImageId !== current.id) emit("moveToBottom", current.id);
+    return;
+  }
   if (key === "copy") emit("copy", current.id);
   if (key === "edit") openEditor();
-  if (key === "close") requestClose();
+  if (key === "close-preview") requestClose();
   if (key === "delete") emit("delete", current.id, current.anchor);
 }
 

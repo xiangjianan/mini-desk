@@ -23,6 +23,7 @@ let canvasContextMock: {
   setLineDash: ReturnType<typeof vi.fn>;
   strokeRect: ReturnType<typeof vi.fn>;
   fillRect: ReturnType<typeof vi.fn>;
+  arc: ReturnType<typeof vi.fn>;
   font?: string;
 };
 
@@ -155,6 +156,8 @@ describe("ImageEditor", () => {
     expect(wrapper.get(".image-editor-width").attributes("type")).toBe("range");
     expect(wrapper.get(".image-editor-width-preview").attributes("aria-hidden")).toBe("true");
     expect(wrapper.get(".image-editor-width-preview-mark").attributes("style")).toContain("width: 4px");
+    expect(wrapper.get('[aria-label="撤销"]').attributes("disabled")).toBeDefined();
+    expect(wrapper.get('[aria-label="反撤销"]').attributes("disabled")).toBeDefined();
     expect(wrapper.get(".image-editor-save").text()).toBe("保存");
     expect(wrapper.get(".image-editor-cancel").text()).toBe("取消");
 
@@ -198,6 +201,45 @@ describe("ImageEditor", () => {
 
     await wrapper.get(".image-editor-width").setValue(12);
     expect(wrapper.get(".image-editor-text-input").attributes("style")).toContain("font-size: 32px");
+
+    wrapper.unmount();
+  });
+
+  it("undoes and redoes image annotation commands from the editor toolbar", async () => {
+    const wrapper = mount(ImageEditor, {
+      props: {
+        image: { id: "img-1", src: "data:image/png;base64,one", createdAt: 1, displayWidth: 400, displayHeight: 300 },
+      },
+      global: {
+        stubs: {
+          NIcon: iconStub,
+        },
+      },
+    });
+
+    const canvas = wrapper.get(".image-editor-canvas");
+    mockRect(canvas.element);
+
+    await wrapper.findAll(".image-editor-tool").find((button) => button.attributes("aria-label") === "标注")?.trigger("click");
+    await dispatchPointer(canvas.element, "pointerdown", 100, 80);
+
+    expect(wrapper.get('[aria-label="撤销"]').attributes("disabled")).toBeUndefined();
+    expect(wrapper.get('[aria-label="反撤销"]').attributes("disabled")).toBeDefined();
+
+    await wrapper.get('[aria-label="撤销"]').trigger("click");
+
+    expect(wrapper.get('[aria-label="撤销"]').attributes("disabled")).toBeDefined();
+    expect(wrapper.get('[aria-label="反撤销"]').attributes("disabled")).toBeUndefined();
+
+    canvasContextMock.arc.mockClear();
+    await wrapper.get(".image-editor-save").trigger("click");
+    expect(canvasContextMock.arc).not.toHaveBeenCalled();
+
+    await wrapper.get('[aria-label="反撤销"]').trigger("click");
+
+    canvasContextMock.arc.mockClear();
+    await wrapper.get(".image-editor-save").trigger("click");
+    expect(canvasContextMock.arc).toHaveBeenCalledWith(100, 80, 16, 0, Math.PI * 2);
 
     wrapper.unmount();
   });

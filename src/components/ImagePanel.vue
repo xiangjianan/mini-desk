@@ -6,6 +6,8 @@ import { ArrowDownOutline, ArrowUpOutline, ClipboardOutline, CloseOutline, CopyO
 import type { DropdownOption } from "naive-ui";
 import type { AppLanguage, GuideKey, StoredImage } from "../types";
 import { GUIDE_MENU_OPTION } from "../state/defaults";
+import { getBlankImageContextMenuItems, getImageItemContextMenuItems } from "../state/imageContextMenu";
+import type { ImageContextMenuKey } from "../state/imageContextMenu";
 import { getUiText } from "../state/i18n";
 import { CONTEXT_MENU_Z_INDEX, createExclusiveContextMenu } from "../utils/contextMenu";
 import EditableTitle from "./EditableTitle.vue";
@@ -95,6 +97,18 @@ function renderIcon(icon: Component): () => VNode {
   return () => h(NIcon, { size: 16 }, { default: () => h(icon) });
 }
 
+function getImageMenuIcon(key: ImageContextMenuKey): Component {
+  if (key === "preview") return EyeOutline;
+  if (key === "close-preview") return CloseOutline;
+  if (key === "copy") return CopyOutline;
+  if (key === "edit") return CreateOutline;
+  if (key === "delete") return TrashOutline;
+  if (key === "pin-top") return ArrowUpOutline;
+  if (key === "pin-bottom") return ArrowDownOutline;
+  if (key === "paste") return ClipboardOutline;
+  return HelpCircleOutline;
+}
+
 onMounted(() => {
   exclusiveMenu.mount();
   window.addEventListener("wheel", handleImageDragWheel, { capture: true, passive: false });
@@ -116,20 +130,15 @@ watch(
 
 const menuOptions = computed<DropdownOption[]>(() =>
   menu.value?.id
-    ? [
-        {
-          label: isPreviewCloseMenuItem.value ? uiText.value.preview.close : uiText.value.common.preview,
-          key: isPreviewCloseMenuItem.value ? "close-preview" : "preview",
-          icon: renderIcon(isPreviewCloseMenuItem.value ? CloseOutline : EyeOutline),
-        },
-        { label: uiText.value.common.copy, key: "copy", icon: renderIcon(CopyOutline) },
-        { label: uiText.value.common.edit, key: "edit", icon: renderIcon(CreateOutline) },
-        { label: uiText.value.common.delete, key: "delete", icon: renderIcon(TrashOutline) },
-        { label: uiText.value.common.pinToTop, key: "pin-top", icon: renderIcon(ArrowUpOutline) },
-        { label: uiText.value.common.pinToBottom, key: "pin-bottom", icon: renderIcon(ArrowDownOutline) },
-        { ...guideMenuOption.value, icon: renderIcon(HelpCircleOutline) },
-      ]
-    : [{ label: uiText.value.images.pasteImage, key: "paste", icon: renderIcon(ClipboardOutline) }, { ...guideMenuOption.value, icon: renderIcon(HelpCircleOutline) }],
+    ? getImageItemContextMenuItems(uiText.value, isPreviewCloseMenuItem.value).map((option) => ({
+        ...option,
+        icon: renderIcon(getImageMenuIcon(option.key)),
+      }))
+    : getBlankImageContextMenuItems(uiText.value).map((option) => ({
+        ...option,
+        ...(option.key === "tips" ? guideMenuOption.value : {}),
+        icon: renderIcon(getImageMenuIcon(option.key)),
+      })),
 );
 
 function openMenu(event: MouseEvent, id?: string): void {

@@ -2633,6 +2633,8 @@ function moveItem<T extends { id: string }>(items: T[], dragId: string, targetId
       @copy="copyImage"
       @delete="deleteImage"
       @navigate="navigatePreview"
+      @reorder="reorderImages"
+      @move-to-bottom="moveImageToBottom"
       @tips="showPreviewTips"
       @save-edit="saveEditedImage"
     />

@@ -567,12 +567,47 @@ describe("ImagePreview", () => {
       "复制",
       "编辑",
       "删除",
+      "置顶",
+      "置底",
       "Tips",
     ]);
 
     await wrapper.findAll(".dropdown-option").find((option) => option.text() === "编辑")?.trigger("click");
 
     expect(wrapper.find(".image-editor").exists()).toBe(true);
+    wrapper.unmount();
+  });
+
+  it("matches the image-list context menu pinning actions in preview", async () => {
+    const wrapper = mount(ImagePreview, {
+      props: {
+        images: [
+          { id: "img-1", src: "data:image/png;base64,one", createdAt: 1 },
+          { id: "img-2", src: "data:image/png;base64,two", createdAt: 2 },
+          { id: "img-3", src: "data:image/png;base64,three", createdAt: 3 },
+        ],
+        activeId: "img-2",
+      },
+      global: {
+        stubs: {
+          Button: buttonStub,
+          Dropdown: dropdownStub,
+          Modal: modalStub,
+          NButton: buttonStub,
+          NDropdown: dropdownStub,
+          NModal: modalStub,
+        },
+      },
+    });
+
+    await wrapper.get(".preview-stage img").trigger("contextmenu");
+    await wrapper.findAll(".dropdown-option").find((option) => option.text() === "置顶")?.trigger("click");
+    expect(wrapper.emitted("reorder")?.[0]).toEqual(["img-2", "img-1"]);
+
+    await wrapper.get(".preview-stage img").trigger("contextmenu");
+    await wrapper.findAll(".dropdown-option").find((option) => option.text() === "置底")?.trigger("click");
+    expect(wrapper.emitted("moveToBottom")?.[0]).toEqual(["img-2"]);
+
     wrapper.unmount();
   });
 
@@ -1086,6 +1121,8 @@ describe("ImagePreview", () => {
       "复制",
       "编辑",
       "删除",
+      "置顶",
+      "置底",
       "Tips",
     ]);
 
