@@ -134,6 +134,10 @@ export function exportJsonState(state: BoardState): string {
   return JSON.stringify(getSerializableState(state, { includeImageData: true, includeCustomGifData: true }), null, 2);
 }
 
+export function exportUndoSnapshotState(state: BoardState): string {
+  return JSON.stringify(getSerializableState(state));
+}
+
 export function normalizeImportedState(payload: unknown): BoardState {
   const source = isPlainObject(payload) ? payload : {};
   const base = defaultState();

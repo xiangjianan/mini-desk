@@ -252,6 +252,34 @@ describe("ImageEditor", () => {
     wrapper.unmount();
   });
 
+  it("records editor history without JSON-stringifying the image snapshot", async () => {
+    const wrapper = mount(ImageEditor, {
+      props: {
+        image: {
+          id: "img-1",
+          src: `data:image/png;base64,${"x".repeat(120_000)}`,
+          createdAt: 1,
+          displayWidth: 400,
+          displayHeight: 300,
+        },
+      },
+      global: {
+        stubs: {
+          NIcon: iconStub,
+        },
+      },
+    });
+    const canvas = wrapper.get(".image-editor-canvas");
+    mockRect(canvas.element);
+    const stringifySpy = vi.spyOn(JSON, "stringify");
+
+    await wrapper.findAll(".image-editor-tool").find((button) => button.attributes("aria-label") === "标注")?.trigger("click");
+    await dispatchPointer(canvas.element, "pointerdown", 100, 80);
+
+    expect(stringifySpy).not.toHaveBeenCalled();
+    wrapper.unmount();
+  });
+
   it("undoes only the latest drawn rectangle and redoes it back", async () => {
     const wrapper = mount(ImageEditor, {
       props: {

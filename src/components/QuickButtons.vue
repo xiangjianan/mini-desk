@@ -7,6 +7,7 @@ import type { DropdownOption } from "naive-ui";
 import type { AppLanguage, GuideKey, QuickApiBodyType, QuickApiHeader, QuickApiMethod, QuickButton, QuickButtonType, QuickTag } from "../types";
 import { GUIDE_MENU_OPTION } from "../state/defaults";
 import { getUiText } from "../state/i18n";
+import { buildVisibleQuickButtonGroups, hasOverloadedVisibleQuickButtonGroup } from "../state/quickButtons";
 import { CONTEXT_MENU_Z_INDEX, createExclusiveContextMenu } from "../utils/contextMenu";
 import EditableTitle from "./EditableTitle.vue";
 
@@ -100,27 +101,9 @@ onMounted(exclusiveMenu.mount);
 onUnmounted(exclusiveMenu.unmount);
 watch(() => props.tags, refreshTagDrafts, { deep: true });
 
-const visibleButtons = computed(() =>
-  props.buttons.filter((button) => props.showHidden || !button.hidden),
+const groupedButtons = computed(() =>
+  buildVisibleQuickButtonGroups(props.buttons, props.tags, props.showHidden, uiText.value.quick.otherTag),
 );
-const groupedButtons = computed(() => {
-  const visible = visibleButtons.value;
-  if (visible.length === 0) return [{ id: "__empty", title: "", buttons: [], reorderable: false }];
-  const groups = props.tags
-    .map((tag) => ({
-      id: tag.id,
-      title: tag.title,
-      buttons: visible.filter((button) => button.tagId === tag.id),
-      reorderable: true,
-    }))
-    .filter((group) => group.buttons.length > 0);
-  const taggedIds = new Set(props.tags.map((tag) => tag.id));
-  const otherButtons = visible.filter((button) => !button.tagId || !taggedIds.has(button.tagId));
-  if (otherButtons.length > 0) {
-    groups.push({ id: "__other", title: uiText.value.quick.otherTag, buttons: otherButtons, reorderable: false });
-  }
-  return groups.length > 0 ? groups : [{ id: "__empty", title: "", buttons: [], reorderable: false }];
-});
 const canSubmit = computed(() => {
   if (form.title.trim().length === 0 || form.value.trim().length === 0) return false;
   if (form.type !== "api") return true;
@@ -343,16 +326,9 @@ function handleAreaClick(event: MouseEvent): void {
   emit("guide", "quickButtons", anchor);
 }
 
-const hasOverloadedVisibleGroup = computed(() => {
-  const tagIds = new Set(props.tags.map((tag) => tag.id));
-  const counts = new Map<string, number>();
-  props.buttons.forEach((button) => {
-    if (button.hidden) return;
-    const groupId = button.tagId && tagIds.has(button.tagId) ? button.tagId : "__other";
-    counts.set(groupId, (counts.get(groupId) ?? 0) + 1);
-  });
-  return Array.from(counts.values()).some((count) => count > 12);
-});
+const hasOverloadedVisibleGroup = computed(() =>
+  hasOverloadedVisibleQuickButtonGroup(props.buttons, props.tags, 12),
+);
 
 function handleToggleShowHidden(anchor?: HTMLElement): void {
   emit("toggleShowHidden");

@@ -3,6 +3,7 @@ import { readFileSync } from "node:fs";
 import { resolve } from "node:path";
 import { describe, expect, it } from "vitest";
 import QuickButtons from "../components/QuickButtons.vue";
+import { buildVisibleQuickButtonGroups, hasOverloadedVisibleQuickButtonGroup } from "../state/quickButtons";
 
 const buttonStub = {
   template: '<button v-bind="$attrs"><slot /></button>',
@@ -147,6 +148,52 @@ function readSource(path: string): string {
 }
 
 describe("QuickButtons", () => {
+  it("builds visible quick button groups in tag order with untagged buttons last", () => {
+    const tags = [
+      { id: "tag-a", title: "标签 A" },
+      { id: "tag-b", title: "标签 B" },
+      { id: "tag-empty", title: "空标签" },
+    ];
+    const buttons = [
+      { id: "hidden", title: "Hidden", value: "hidden", type: "text" as const, hidden: true, tagId: "tag-a" },
+      { id: "b", title: "B1", value: "b", type: "text" as const, hidden: false, tagId: "tag-b" },
+      { id: "other", title: "Other", value: "other", type: "text" as const, hidden: false },
+      { id: "a", title: "A1", value: "a", type: "text" as const, hidden: false, tagId: "tag-a" },
+      { id: "orphan", title: "Orphan", value: "orphan", type: "text" as const, hidden: false, tagId: "missing" },
+    ];
+
+    const groups = buildVisibleQuickButtonGroups(buttons, tags, false, "其他");
+
+    expect(groups.map((group) => [group.id, group.title, group.reorderable, group.buttons.map((button) => button.id)])).toEqual([
+      ["tag-a", "标签 A", true, ["a"]],
+      ["tag-b", "标签 B", true, ["b"]],
+      ["__other", "其他", false, ["other", "orphan"]],
+    ]);
+  });
+
+  it("detects overloaded visible quick button groups while ignoring hidden buttons", () => {
+    const tags = [{ id: "tag-a", title: "标签 A" }];
+    const visibleButtons = Array.from({ length: 13 }, (_item, index) => ({
+      id: `button-${index}`,
+      title: `Button ${index}`,
+      value: String(index),
+      type: "text" as const,
+      hidden: false,
+      tagId: "tag-a",
+    }));
+    const hiddenButtons = Array.from({ length: 20 }, (_item, index) => ({
+      id: `hidden-${index}`,
+      title: `Hidden ${index}`,
+      value: String(index),
+      type: "text" as const,
+      hidden: true,
+      tagId: "tag-a",
+    }));
+
+    expect(hasOverloadedVisibleQuickButtonGroup([...visibleButtons, ...hiddenButtons], tags, 12)).toBe(true);
+    expect(hasOverloadedVisibleQuickButtonGroup([...visibleButtons.slice(0, 12), ...hiddenButtons], tags, 12)).toBe(false);
+  });
+
   it("groups visible quick buttons by tag order and keeps untagged buttons under other", () => {
     const wrapper = mountQuickButtons({
       tags: [

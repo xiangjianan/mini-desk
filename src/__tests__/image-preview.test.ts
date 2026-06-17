@@ -1536,11 +1536,17 @@ describe("ImagePreview", () => {
     await dispatchPointer(canvas.element, "pointerdown", 120, 90);
 
     const input = wrapper.get(".image-editor-text-input");
+    await wrapper.vm.$nextTick();
     const event = new KeyboardEvent("keydown", { key: "Enter", bubbles: true, cancelable: true });
+    const preventDefault = vi.fn();
+    Object.defineProperty(event, "preventDefault", {
+      configurable: true,
+      value: preventDefault,
+    });
     input.element.dispatchEvent(event);
     await wrapper.vm.$nextTick();
 
-    expect(event.defaultPrevented).toBe(false);
+    expect(preventDefault).not.toHaveBeenCalled();
     expect(wrapper.emitted("saveEdit")).toBeUndefined();
     expect(wrapper.find(".image-editor").exists()).toBe(true);
     wrapper.unmount();

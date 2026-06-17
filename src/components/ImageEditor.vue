@@ -770,7 +770,51 @@ function createEditorSnapshot(): EditorSnapshot {
 }
 
 function areEditorSnapshotsEqual(left: EditorSnapshot, right: EditorSnapshot): boolean {
-  return JSON.stringify(left) === JSON.stringify(right);
+  return left.workingImageSrc === right.workingImageSrc
+    && left.workingDisplayWidth === right.workingDisplayWidth
+    && left.workingDisplayHeight === right.workingDisplayHeight
+    && left.activeTextId === right.activeTextId
+    && areEditorRectsEqual(left.cropRect, right.cropRect)
+    && areEditorCommandsEqual(left.commands, right.commands);
+}
+
+function areEditorRectsEqual(left: EditorRect | null, right: EditorRect | null): boolean {
+  if (left === right) return true;
+  if (!left || !right) return false;
+  return left.x === right.x && left.y === right.y && left.width === right.width && left.height === right.height;
+}
+
+function areEditorPointsEqual(left: EditorPoint, right: EditorPoint): boolean {
+  return left.x === right.x && left.y === right.y;
+}
+
+function areEditorCommandsEqual(left: EditorCommand[], right: EditorCommand[]): boolean {
+  if (left.length !== right.length) return false;
+  return left.every((command, index) => areEditorCommandEqual(command, right[index]));
+}
+
+function areEditorCommandEqual(left: EditorCommand, right: EditorCommand): boolean {
+  if (left.type !== right.type || left.color !== right.color) return false;
+  if (left.type === "brush") {
+    if (right.type !== "brush" || left.width !== right.width || left.points.length !== right.points.length) return false;
+    return left.points.every((point, index) => areEditorPointsEqual(point, right.points[index]));
+  }
+  if (left.type === "marker") {
+    return right.type === "marker"
+      && left.number === right.number
+      && areEditorPointsEqual(left.point, right.point);
+  }
+  if (left.type === "text") {
+    return right.type === "text"
+      && left.id === right.id
+      && left.fontSize === right.fontSize
+      && left.text === right.text
+      && areEditorPointsEqual(left.point, right.point);
+  }
+  return (right.type === "rectangle" || right.type === "ellipse" || right.type === "arrow")
+    && left.width === right.width
+    && areEditorPointsEqual(left.start, right.start)
+    && areEditorPointsEqual(left.end, right.end);
 }
 
 function resetEditorHistory(): void {

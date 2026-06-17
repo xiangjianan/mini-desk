@@ -336,7 +336,8 @@ function deleteActive(event: MouseEvent): void {
 function handleKeydown(event: KeyboardEvent): void {
   if (!active.value) return;
   const key = event.key.toLowerCase();
-  if (editing.value && event.key === "Enter" && !isTextEntryTarget(event.target)) {
+  if (editing.value && isTextEntryTarget(event.target)) return;
+  if (editing.value && event.key === "Enter") {
     event.preventDefault();
     event.stopPropagation();
     saveOpenEditor();
@@ -425,8 +426,9 @@ function isEditorRedoShortcut(event: KeyboardEvent): boolean {
 }
 
 function isTextEntryTarget(target: EventTarget | null): boolean {
-  if (!(target instanceof HTMLElement)) return false;
-  return Boolean(target.closest("input, textarea, select, [contenteditable='true'], [contenteditable='']"));
+  const element = target as { closest?: (selector: string) => Element | null } | null;
+  if (typeof element?.closest !== "function") return false;
+  return Boolean(element.closest("input, textarea, select, [contenteditable='true'], [contenteditable='']"));
 }
 
 function isPreviewShortcutKey(event: KeyboardEvent): boolean {

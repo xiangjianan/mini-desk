@@ -50,6 +50,7 @@ import { defaultState, STORAGE_KEY } from "./state/defaults";
 import {
   createId,
   exportJsonState,
+  exportUndoSnapshotState,
   loadState,
   normalizeImportedState,
   saveStateWithConflictCheck,
@@ -83,7 +84,7 @@ function getInitialMobileBlocked(): boolean {
 const state = reactive<BoardState>(loadState());
 const syncClientId = createId();
 const undoSnapshots = ref<string[]>([]);
-const lastUndoSnapshot = ref(exportJsonState(state));
+const lastUndoSnapshot = ref(createUndoSnapshot());
 const activePreviewId = ref<string | undefined>();
 const closingPreviewId = ref<string | undefined>();
 const previewCloseTimer = ref<number | undefined>();
@@ -269,7 +270,7 @@ onMounted(async () => {
     if (state.customCompanionGif.light || state.customCompanionGif.dark) {
       await persistCustomCompanionGifPayloads(state.customCompanionGif);
       persistNow();
-      lastUndoSnapshot.value = exportJsonState(state);
+      lastUndoSnapshot.value = createUndoSnapshot();
     }
   } catch {
     state.customCompanionGifStored = {};
@@ -547,7 +548,7 @@ async function applyExternalStoredState(raw?: string): Promise<void> {
     if (!appMounted) return;
     Object.assign(state, nextState);
     applyTheme();
-    lastUndoSnapshot.value = exportJsonState(state);
+    lastUndoSnapshot.value = createUndoSnapshot();
   } catch {
     // External storage may be mid-write or unavailable; keep this tab's current state.
   }
@@ -1495,7 +1496,7 @@ function clearData(anchor?: HTMLElement): void {
       await clearStoredImagePayloads();
       persistNow("all", { force: true });
       refreshTodoNotifications();
-      lastUndoSnapshot.value = exportJsonState(state);
+      lastUndoSnapshot.value = createUndoSnapshot();
       showBubble("dataCleared", anchor, { hideCompanionAfter: true });
     },
     undefined,
@@ -1679,10 +1680,10 @@ function blurActiveBoardElement(): boolean {
 
 function recordUndoCheckpoint(): void {
   if (restoringUndo) {
-    lastUndoSnapshot.value = exportJsonState(state);
+    lastUndoSnapshot.value = createUndoSnapshot();
     return;
   }
-  const current = exportJsonState(state);
+  const current = createUndoSnapshot();
   if (current === lastUndoSnapshot.value) return;
   undoSnapshots.value = [
     ...undoSnapshots.value.slice(-(UNDO_HISTORY_LIMIT - 1)),
@@ -1699,7 +1700,7 @@ function undoLastBoardChange(): void {
   try {
     nextState = normalizeImportedState(JSON.parse(snapshot));
   } catch {
-    lastUndoSnapshot.value = exportJsonState(state);
+    lastUndoSnapshot.value = createUndoSnapshot();
     return;
   }
 
@@ -1712,12 +1713,17 @@ function undoLastBoardChange(): void {
     clearImagePreview();
     pendingEditSpaceId.value = null;
     pendingEditTodoListId.value = null;
+    nextState.images = mergeVisibleImages(nextState.images, state.images);
     Object.assign(state, nextState);
     persistNow();
-    lastUndoSnapshot.value = exportJsonState(state);
+    lastUndoSnapshot.value = createUndoSnapshot();
   } finally {
     restoringUndo = false;
   }
+}
+
+function createUndoSnapshot(): string {
+  return exportUndoSnapshotState(state);
 }
 
 function navigatePreview(direction: number): void {
@@ -1798,20 +1804,28 @@ function getDensityAreaLabel(type: DensityAreaType): string {
 }
 
 function getLargestTodoListCount(): number {
-  return state.todoLists.reduce((max, list) => {
-    const activeCount = (state.todos[list.id] ?? []).filter((todo) => !todo.done).length;
-    return Math.max(max, activeCount);
-  }, 0);
+  let max = 0;
+  for (const list of state.todoLists) {
+    let activeCount = 0;
+    for (const todo of state.todos[list.id] ?? []) {
+      if (!todo.done) activeCount += 1;
+    }
+    if (activeCount > max) max = activeCount;
+  }
+  return max;
 }
 
 function getLargestQuickCategoryCount(): number {
   const counts = new Map<string, number>();
-  state.quickButtons.forEach((button) => {
-    if (button.hidden) return;
+  let max = 0;
+  for (const button of state.quickButtons) {
+    if (button.hidden) continue;
     const tagId = button.tagId ?? "__untagged";
-    counts.set(tagId, (counts.get(tagId) ?? 0) + 1);
-  });
-  return Math.max(0, ...counts.values());
+    const count = (counts.get(tagId) ?? 0) + 1;
+    counts.set(tagId, count);
+    if (count > max) max = count;
+  }
+  return max;
 }
 
 function randomDensityArea(areas: DensityArea[]): DensityArea | undefined {
@@ -2277,7 +2291,7 @@ function isGuideAreaEmpty(key: GuideKey, anchor?: HTMLElement): boolean {
   if (key === "images") return state.images.length === 0;
   if (key === "note") return !hasLineContent(state.noteLines);
   if (key === "quickButtons") {
-    return state.quickButtons.filter((button) => state.showHiddenQuickButtons || !button.hidden).length === 0;
+    return !state.quickButtons.some((button) => state.showHiddenQuickButtons || !button.hidden);
   }
   if (key === "workspace") {
     const active = state.spaces.find((space) => space.id === state.activeSpaceId) ?? state.spaces[0];
@@ -2298,8 +2312,11 @@ function hasLineContent(lines: LineItem[]): boolean {
 }
 
 function isTodoPeriodEmpty(period: TodoPeriod): boolean {
-  const visible = getTodos(period).filter((todo) => state.showCompletedTodos[period] || !todo.done);
-  return visible.length === 0 || visible.every((todo) => todo.text.trim().length === 0);
+  for (const todo of getTodos(period)) {
+    if (!state.showCompletedTodos[period] && todo.done) continue;
+    if (todo.text.trim().length > 0) return false;
+  }
+  return true;
 }
 
 function getTodos(period: TodoPeriod): TodoItem[] {
