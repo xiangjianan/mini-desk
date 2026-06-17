@@ -6,7 +6,7 @@ import { CloseOutline, EyeOffOutline } from "@vicons/ionicons5";
 import { NButton, NDropdown, NIcon, NPopover } from "naive-ui";
 import type { DropdownOption } from "naive-ui";
 import type { AppLanguage, CompanionGifTheme } from "../types";
-import { getCompanionGifSrc } from "../state/companionGifThemes";
+import { DEFAULT_COMPANION_GIF_THEME, getCompanionGifSrc } from "../state/companionGifThemes";
 import { getUiText } from "../state/i18n";
 import { CONTEXT_MENU_Z_INDEX, createExclusiveContextMenu } from "../utils/contextMenu";
 
@@ -113,7 +113,7 @@ const placementStyle = computed(() => {
   };
 });
 
-const activeGifTheme = computed(() => props.gifTheme ?? "hermes");
+const activeGifTheme = computed(() => props.gifTheme ?? DEFAULT_COMPANION_GIF_THEME);
 const gifSrc = computed(() =>
   getCompanionGifSrc(activeGifTheme.value, props.theme ?? "light", {
     light: props.customGifLightSrc,

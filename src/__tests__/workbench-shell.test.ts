@@ -71,6 +71,18 @@ describe("WorkbenchShell", () => {
     expect(wrapper.get(".workbench-slogan").text()).toBe("Do less, do it well.");
   });
 
+  it("uses the dark pixel cat logo asset in dark theme", async () => {
+    const wrapper = mount(WorkbenchShell, {
+      props: defaultProps,
+    });
+
+    expect(wrapper.get(".workbench-title-logo").attributes("src")).toContain("mini-desk-cat.png");
+
+    await wrapper.setProps({ theme: "dark" });
+
+    expect(wrapper.get(".workbench-title-logo").attributes("src")).toContain("mini-desk-cat-dark.png");
+  });
+
   it("keeps the tool zone minimum width at 320px and fits columns without oscillating", () => {
     const source = readFileSync(resolve(__dirname, "../components/WorkbenchShell.vue"), "utf8");
 

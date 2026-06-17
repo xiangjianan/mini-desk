@@ -5049,6 +5049,31 @@ describe("App shell", () => {
     }
   });
 
+  it("keeps the selected companion GIF theme when toggling light and dark mode", async () => {
+    const wrapper = mountApp();
+
+    try {
+      wrapper.getComponent(SettingsMenu).vm.$emit("gifTheme", "ikun", wrapper.getComponent(SettingsMenu).element as HTMLElement);
+      await wrapper.vm.$nextTick();
+
+      await wrapper.get('[data-testid="workbench-theme"]').trigger("click");
+      await wrapper.vm.$nextTick();
+
+      expect(wrapper.getComponent(SettingsMenu).props("companionGifTheme")).toBe("ikun");
+      expect(wrapper.getComponent(CompanionBubble).props("gifTheme")).toBe("ikun");
+      expect(JSON.parse(localStorage.getItem(STORAGE_KEY) || "{}").companionGifTheme).toBe("ikun");
+
+      await wrapper.get('[data-testid="workbench-theme"]').trigger("click");
+      await wrapper.vm.$nextTick();
+
+      expect(wrapper.getComponent(SettingsMenu).props("companionGifTheme")).toBe("ikun");
+      expect(wrapper.getComponent(CompanionBubble).props("gifTheme")).toBe("ikun");
+      expect(JSON.parse(localStorage.getItem(STORAGE_KEY) || "{}").companionGifTheme).toBe("ikun");
+    } finally {
+      wrapper.unmount();
+    }
+  });
+
   it("persists custom companion GIF uploads from settings", async () => {
     const wrapper = mountApp();
     const light = new File(["light"], "light.gif", { type: "image/gif" });

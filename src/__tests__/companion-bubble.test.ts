@@ -535,7 +535,7 @@ describe("CompanionBubble", () => {
     wrapper.unmount();
   });
 
-  it("uses yunxia GIF assets by default and switches them for dark theme", async () => {
+  it("uses the default cat GIF assets and keeps that theme when switching dark mode", async () => {
     const wrapper = mount(CompanionBubble, {
       props: {
         visible: true,
@@ -549,11 +549,11 @@ describe("CompanionBubble", () => {
       },
     });
 
-    expect(wrapper.get("img").attributes("src")).toBe("/static/video/yunxia.gif");
+    expect(wrapper.get("img").attributes("src")).toBe("/static/video/mini-desk-cat.gif");
 
     await wrapper.setProps({ theme: "dark" });
 
-    expect(wrapper.get("img").attributes("src")).toBe("/static/video/yunxia-dark.gif");
+    expect(wrapper.get("img").attributes("src")).toBe("/static/video/mini-desk-cat-dark.gif");
 
     wrapper.unmount();
   });

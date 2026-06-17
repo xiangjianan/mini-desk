@@ -1609,6 +1609,8 @@ button.tool-tab:focus-visible {
   flex-direction: column;
   gap: 8px;
   padding: 6px;
+  -webkit-user-select: none;
+  user-select: none;
 }
 
 .image-card {
@@ -1624,6 +1626,8 @@ button.tool-tab:focus-visible {
   background: color-mix(in srgb, var(--card) 90%, var(--muted-surface));
   box-shadow: none;
   cursor: zoom-in;
+  -webkit-user-select: none;
+  user-select: none;
 }
 
 button.image-card {

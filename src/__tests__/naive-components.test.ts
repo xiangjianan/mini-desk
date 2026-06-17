@@ -416,6 +416,15 @@ describe("Naive UI component usage", () => {
     expect(styles).not.toContain(".notify-clock-button");
   });
 
+  it("prevents browser selection rectangles inside the image list", () => {
+    const styles = read("src/styles.css");
+
+    expect(styles).toMatch(/\.image-list\s*\{[^}]*-webkit-user-select: none/s);
+    expect(styles).toMatch(/\.image-list\s*\{[^}]*user-select: none/s);
+    expect(styles).toMatch(/\.image-card\s*\{[^}]*-webkit-user-select: none/s);
+    expect(styles).toMatch(/\.image-card\s*\{[^}]*user-select: none/s);
+  });
+
   it("renders context menus as bordered surfaces above companion bubbles", () => {
     const styles = read("src/styles.css");
     const contextMenu = read("src/utils/contextMenu.ts");
