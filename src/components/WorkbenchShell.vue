@@ -48,6 +48,7 @@ const DEFAULT_GRID_PADDING_X = 14;
 const DEFAULT_GRID_PADDING_Y = 14;
 const DEFAULT_IMAGE_PREVIEW_TOP = 52;
 const RESIZE_STEP = 24;
+const HEADER_COLLAPSE_REVEAL_DELAY_MS = 200;
 const HEADER_REVEAL_AUTO_HIDE_MS = 100;
 
 const gridRef = ref<HTMLElement | null>(null);
@@ -70,6 +71,7 @@ const gridTemplateColumns = computed(() =>
 const gridStyle = computed(() => gridTemplateColumns.value ? { gridTemplateColumns: gridTemplateColumns.value } : undefined);
 
 let headerRevealHideTimer: number | undefined;
+let headerRevealShowTimer: number | undefined;
 
 const resizeHandleStyles = computed(() => {
   if (columnWidths.value.length !== 4) return [];
@@ -274,6 +276,12 @@ function clearHeaderRevealHideTimer(): void {
   headerRevealHideTimer = undefined;
 }
 
+function clearHeaderRevealShowTimer(): void {
+  if (headerRevealShowTimer === undefined) return;
+  window.clearTimeout(headerRevealShowTimer);
+  headerRevealShowTimer = undefined;
+}
+
 function scheduleHeaderRevealHide(): void {
   clearHeaderRevealHideTimer();
   if (!headerHidden.value) return;
@@ -283,8 +291,20 @@ function scheduleHeaderRevealHide(): void {
   }, HEADER_REVEAL_AUTO_HIDE_MS);
 }
 
+function scheduleHeaderRevealAfterCollapse(): void {
+  clearHeaderRevealShowTimer();
+  headerRevealVisible.value = false;
+  headerRevealShowTimer = window.setTimeout(() => {
+    headerRevealShowTimer = undefined;
+    if (!headerHidden.value) return;
+    headerRevealVisible.value = true;
+    scheduleHeaderRevealHide();
+  }, HEADER_COLLAPSE_REVEAL_DELAY_MS);
+}
+
 function showHeaderRevealControl(): void {
   if (!headerHidden.value) return;
+  if (headerRevealShowTimer !== undefined) return;
   clearHeaderRevealHideTimer();
   headerRevealVisible.value = true;
 }
@@ -299,9 +319,9 @@ function setHeaderHidden(hidden: boolean): void {
   persistHeaderHidden(hidden);
   syncImagePreviewTop();
   if (hidden) {
-    headerRevealVisible.value = true;
-    scheduleHeaderRevealHide();
+    scheduleHeaderRevealAfterCollapse();
   } else {
+    clearHeaderRevealShowTimer();
     clearHeaderRevealHideTimer();
     headerRevealVisible.value = false;
   }
@@ -320,6 +340,7 @@ onMounted(() => {
 
 onUnmounted(() => {
   finishResize();
+  clearHeaderRevealShowTimer();
   clearHeaderRevealHideTimer();
   window.removeEventListener("resize", refreshWorkbenchLayout);
   document.documentElement.style.removeProperty("--image-preview-left");

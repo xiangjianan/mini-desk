@@ -131,6 +131,18 @@ describe("WorkbenchShell", () => {
     expect(wrapper.find('[data-testid="actions-slot"]').exists()).toBe(false);
     expect(wrapper.get(".workbench-main").classes()).toContain("is-header-hidden");
     expect(wrapper.find('[data-testid="workbench-header-reveal-zone"]').exists()).toBe(true);
+    expect(wrapper.find('[data-testid="workbench-header-show"]').exists()).toBe(false);
+
+    await wrapper.get('[data-testid="workbench-header-reveal-zone"]').trigger("click");
+    await nextTick();
+    expect(wrapper.find('[data-testid="workbench-header-show"]').exists()).toBe(false);
+
+    await vi.advanceTimersByTimeAsync(199);
+    await nextTick();
+    expect(wrapper.find('[data-testid="workbench-header-show"]').exists()).toBe(false);
+
+    await vi.advanceTimersByTimeAsync(1);
+    await nextTick();
     expect(wrapper.get('[data-testid="workbench-header-show"]').attributes("aria-label")).toBe("显示顶部菜单");
 
     await vi.advanceTimersByTimeAsync(99);
