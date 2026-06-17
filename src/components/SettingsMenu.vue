@@ -1,5 +1,5 @@
 <script setup lang="ts">
-import { computed, h, ref } from "vue";
+import { computed, h, onBeforeUnmount, ref } from "vue";
 import {
   CheckmarkOutline,
   CloudDownloadOutline,
@@ -52,7 +52,11 @@ const triggerRef = ref<HTMLElement | null>(null);
 const customGifDialogOpen = ref(false);
 const customGifLightFile = ref<File | undefined>();
 const customGifDarkFile = ref<File | undefined>();
+const customGifLightPreviewSrc = ref<string | undefined>();
+const customGifDarkPreviewSrc = ref<string | undefined>();
 const text = computed(() => getUiText(props.language));
+const customGifLightPreview = computed(() => customGifLightPreviewSrc.value ?? props.customCompanionGif.light);
+const customGifDarkPreview = computed(() => customGifDarkPreviewSrc.value ?? props.customCompanionGif.dark);
 const options = computed(() => [
   {
     label: text.value.settings.data,
@@ -139,8 +143,13 @@ function handleSelect(key: string): void {
 
 function handleCustomGifUpload(fileList: UploadFileInfo[], mode: "light" | "dark"): void {
   const file = fileList[0]?.file ?? undefined;
-  if (mode === "light") customGifLightFile.value = file;
-  else customGifDarkFile.value = file;
+  if (mode === "light") {
+    customGifLightFile.value = file;
+    setCustomGifPreview("light", file);
+    return;
+  }
+  customGifDarkFile.value = file;
+  setCustomGifPreview("dark", file);
 }
 
 function confirmCustomGif(): void {
@@ -162,13 +171,36 @@ function confirmCustomGif(): void {
   customGifDialogOpen.value = false;
   customGifLightFile.value = undefined;
   customGifDarkFile.value = undefined;
+  clearCustomGifPreviews();
 }
 
 function closeCustomGifDialog(): void {
   customGifDialogOpen.value = false;
   customGifLightFile.value = undefined;
   customGifDarkFile.value = undefined;
+  clearCustomGifPreviews();
 }
+
+function setCustomGifPreview(mode: "light" | "dark", file?: File): void {
+  revokeCustomGifPreview(mode);
+  const preview = file && typeof URL.createObjectURL === "function" ? URL.createObjectURL(file) : undefined;
+  if (mode === "light") customGifLightPreviewSrc.value = preview;
+  else customGifDarkPreviewSrc.value = preview;
+}
+
+function revokeCustomGifPreview(mode: "light" | "dark"): void {
+  const preview = mode === "light" ? customGifLightPreviewSrc.value : customGifDarkPreviewSrc.value;
+  if (preview && typeof URL.revokeObjectURL === "function") URL.revokeObjectURL(preview);
+  if (mode === "light") customGifLightPreviewSrc.value = undefined;
+  else customGifDarkPreviewSrc.value = undefined;
+}
+
+function clearCustomGifPreviews(): void {
+  revokeCustomGifPreview("light");
+  revokeCustomGifPreview("dark");
+}
+
+onBeforeUnmount(clearCustomGifPreviews);
 
 function getCompanionGifThemeLabel(theme: CompanionGifTheme): string {
   if (normalizeLanguage(props.language) === "zh") {
@@ -210,13 +242,14 @@ function renderIcon(component: Component) {
   <section v-if="customGifDialogOpen" class="gif-theme-custom-dialog" :aria-label="text.settings.customGif">
     <label>
       <span>{{ text.settings.lightGif }}</span>
-      <span v-if="customCompanionGif.light" class="gif-theme-custom-preview">
-        <img :src="customCompanionGif.light" alt="" />
+      <span v-if="customGifLightPreview" class="gif-theme-custom-preview">
+        <img :src="customGifLightPreview" alt="" />
       </span>
       <NUpload
         accept="image/gif,.gif"
         :max="1"
         :default-upload="false"
+        :show-file-list="false"
         @update:file-list="(files) => handleCustomGifUpload(files, 'light')"
       >
         <NButton size="small" class="gif-theme-upload-button">{{ text.settings.chooseLightGif }}</NButton>
@@ -224,13 +257,14 @@ function renderIcon(component: Component) {
     </label>
     <label>
       <span>{{ text.settings.darkGif }}</span>
-      <span v-if="customCompanionGif.dark" class="gif-theme-custom-preview">
-        <img :src="customCompanionGif.dark" alt="" />
+      <span v-if="customGifDarkPreview" class="gif-theme-custom-preview">
+        <img :src="customGifDarkPreview" alt="" />
       </span>
       <NUpload
         accept="image/gif,.gif"
         :max="1"
         :default-upload="false"
+        :show-file-list="false"
         @update:file-list="(files) => handleCustomGifUpload(files, 'dark')"
       >
         <NButton size="small" class="gif-theme-upload-button">{{ text.settings.chooseDarkGif }}</NButton>

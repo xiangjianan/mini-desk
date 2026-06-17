@@ -632,6 +632,30 @@ describe("CompanionBubble", () => {
     wrapper.unmount();
   });
 
+  it("hides the custom GIF in a mode that has no matching custom source", async () => {
+    const wrapper = mount(CompanionBubble, {
+      props: {
+        visible: true,
+        message: "",
+        theme: "light",
+        gifTheme: "custom",
+        customGifLightSrc: "data:image/gif;base64,light",
+      },
+      global: {
+        stubs: {
+          NPopover: popoverStub,
+        },
+      },
+    });
+
+    expect(wrapper.get("img").attributes("src")).toBe("data:image/gif;base64,light");
+
+    await wrapper.setProps({ theme: "dark" });
+
+    expect(wrapper.find("img").exists()).toBe(false);
+    wrapper.unmount();
+  });
+
   it("marks the confirmation button as danger when requested", async () => {
     vi.useFakeTimers();
     const wrapper = mount(CompanionBubble, {

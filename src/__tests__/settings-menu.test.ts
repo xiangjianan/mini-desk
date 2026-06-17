@@ -43,6 +43,7 @@ const uploadStub = defineComponent({
     accept: String,
     max: Number,
     defaultUpload: Boolean,
+    showFileList: Boolean,
   },
   emits: ["update:file-list"],
   template: '<div class="upload-stub"><slot /></div>',
@@ -278,6 +279,45 @@ describe("SettingsMenu", () => {
       expect.any(HTMLElement),
     ]);
     expect(wrapper.find(".gif-theme-custom-dialog").exists()).toBe(false);
+  });
+
+  it("replaces the custom GIF preview immediately without showing upload filenames", async () => {
+    const wrapper = mount(SettingsMenu, {
+      props: {
+        appVersion: "1.0.19",
+        updateAvailable: false,
+        companionGifTheme: "hermes",
+        customCompanionGif: {
+          light: "data:image/gif;base64,old-light",
+        },
+        hasCustomCompanionGif: true,
+        language: "zh",
+      },
+      global: {
+        stubs: {
+          Dropdown: dropdownStub,
+          NDropdown: dropdownStub,
+          NBadge: { template: "<span><slot /></span>" },
+          NButton: { template: "<button><slot /></button>" },
+          NIcon: { template: "<span />" },
+          NUpload: uploadStub,
+          Upload: uploadStub,
+        },
+      },
+    });
+    const light = new File(["new-light"], "new-light.gif", { type: "image/gif" });
+
+    await wrapper.find('[data-key="gif-theme:custom"]').trigger("click");
+    const uploads = wrapper.findAllComponents(uploadStub);
+    expect(uploads[0].props("showFileList")).toBe(false);
+    expect(uploads[1].props("showFileList")).toBe(false);
+
+    await uploads[0].vm.$emit("update:file-list", [{ file: light }]);
+    await wrapper.vm.$nextTick();
+
+    const lightPreview = wrapper.findAll(".gif-theme-custom-preview img")[0];
+    expect(lightPreview.attributes("src")).not.toBe("data:image/gif;base64,old-light");
+    expect(lightPreview.attributes("src")).toMatch(/^blob:/);
   });
 
   it("renders a language switch and emits the selected language", async () => {

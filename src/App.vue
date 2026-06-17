@@ -1443,18 +1443,17 @@ function updateCompanionGifTheme(theme: CompanionGifTheme, anchor?: HTMLElement)
 async function updateCustomCompanionGif(files: { light?: File; dark?: File }, anchor?: HTMLElement): Promise<void> {
   const light = await readGifFile(files.light);
   const dark = await readGifFile(files.dark);
-  const fallback = light ?? dark;
-  if (!fallback) {
+  if (!light && !dark) {
     showBubbleText(uiText.value.app.chooseGif, anchor);
     return;
   }
   state.customCompanionGif = {
-    light: light ?? fallback,
-    dark: dark ?? fallback,
+    ...(light ? { light } : {}),
+    ...(dark ? { dark } : {}),
   };
   state.customCompanionGifStored = {
-    light: true,
-    dark: true,
+    ...(light ? { light: true } : {}),
+    ...(dark ? { dark: true } : {}),
   };
   state.companionGifTheme = "custom";
   await persistCustomCompanionGifPayloads(state.customCompanionGif);

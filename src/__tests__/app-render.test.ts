@@ -5074,6 +5074,31 @@ describe("App shell", () => {
     }
   });
 
+  it("keeps the rendered selected companion GIF asset when toggling light and dark mode", async () => {
+    vi.useFakeTimers();
+    const wrapper = mountApp();
+
+    try {
+      wrapper.getComponent(SettingsMenu).vm.$emit("gifTheme", "ikun", wrapper.getComponent(SettingsMenu).element as HTMLElement);
+      await wrapper.vm.$nextTick();
+
+      expect(wrapper.get(".focus-companion.is-visible img").attributes("src")).toContain("kun");
+
+      await wrapper.get('[data-testid="workbench-theme"]').trigger("click");
+      await wrapper.vm.$nextTick();
+
+      await wrapper.get(".image-panel").trigger("click");
+      await wrapper.vm.$nextTick();
+
+      const darkSrc = wrapper.get(".focus-companion.is-visible img").attributes("src");
+      expect(darkSrc).toContain("kun-dark");
+      expect(darkSrc).not.toContain("yunxia");
+    } finally {
+      wrapper.unmount();
+      vi.useRealTimers();
+    }
+  });
+
   it("persists custom companion GIF uploads from settings", async () => {
     const wrapper = mountApp();
     const light = new File(["light"], "light.gif", { type: "image/gif" });
@@ -5096,6 +5121,46 @@ describe("App shell", () => {
       expect(wrapper.getComponent(CompanionBubble).props("customGifDarkSrc")).toMatch(/^data:image\/gif/);
     } finally {
       wrapper.unmount();
+    }
+  });
+
+  it("stores only the selected custom companion GIF mode", async () => {
+    const originalFileReader = window.FileReader;
+    class ImmediateFileReader {
+      result: string | ArrayBuffer | null = null;
+      error: DOMException | null = null;
+      onload: (() => void) | null = null;
+      onerror: (() => void) | null = null;
+      readAsDataURL(): void {
+        this.result = "data:image/gif;base64,light";
+        this.onload?.();
+      }
+    }
+    vi.stubGlobal("FileReader", ImmediateFileReader);
+    const wrapper = mountApp();
+    const light = new File(["light"], "light.gif", { type: "image/gif" });
+
+    try {
+      wrapper.getComponent(SettingsMenu).vm.$emit("customGif", { light }, wrapper.getComponent(SettingsMenu).element as HTMLElement);
+
+      await vi.waitFor(() => {
+        expect(JSON.parse(localStorage.getItem(STORAGE_KEY) || "{}").companionGifTheme).toBe("custom");
+      });
+      await wrapper.vm.$nextTick();
+
+      const stored = JSON.parse(localStorage.getItem(STORAGE_KEY) || "{}");
+      expect(stored.customCompanionGifStored).toEqual({ light: true });
+      expect(wrapper.getComponent(CompanionBubble).props("customGifLightSrc")).toBe("data:image/gif;base64,light");
+      expect(wrapper.getComponent(CompanionBubble).props("customGifDarkSrc")).toBeUndefined();
+
+      await wrapper.get('[data-testid="workbench-theme"]').trigger("click");
+      await wrapper.vm.$nextTick();
+
+      expect(wrapper.getComponent(CompanionBubble).props("gifTheme")).toBe("custom");
+      expect(wrapper.find(".focus-companion.is-visible img").exists()).toBe(false);
+    } finally {
+      wrapper.unmount();
+      vi.stubGlobal("FileReader", originalFileReader);
     }
   });
 
