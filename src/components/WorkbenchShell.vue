@@ -51,9 +51,10 @@ const RESIZE_STEP = 24;
 const HEADER_COLLAPSE_REVEAL_DELAY_MS = 200;
 const HEADER_INITIAL_REVEAL_AUTO_HIDE_MS = 1_000;
 const HEADER_REVEAL_AUTO_HIDE_MS = 100;
-const HEADER_REVEAL_POINTER_LEAVE_HIDE_MS = 300;
+const HEADER_REVEAL_POINTER_LEAVE_HIDE_MS = 150;
 
 const gridRef = ref<HTMLElement | null>(null);
+const headerRevealZoneRef = ref<HTMLElement | null>(null);
 const headerHidden = ref(false);
 const headerRevealVisible = ref(false);
 const columnWidths = ref<number[]>([]);
@@ -74,6 +75,7 @@ const gridStyle = computed(() => gridTemplateColumns.value ? { gridTemplateColum
 
 let headerRevealHideTimer: number | undefined;
 let headerRevealShowTimer: number | undefined;
+let lastPointerPosition: { x: number; y: number } | undefined;
 
 const resizeHandleStyles = computed(() => {
   if (columnWidths.value.length !== 4) return [];
@@ -284,6 +286,23 @@ function clearHeaderRevealShowTimer(): void {
   headerRevealShowTimer = undefined;
 }
 
+function rememberPointerPosition(event?: MouseEvent | PointerEvent): void {
+  if (!event || !Number.isFinite(event.clientX) || !Number.isFinite(event.clientY)) return;
+  lastPointerPosition = { x: event.clientX, y: event.clientY };
+}
+
+function isLastPointerInsideHeaderRevealZone(): boolean {
+  const zone = headerRevealZoneRef.value;
+  if (!zone || !lastPointerPosition) return false;
+  const rect = zone.getBoundingClientRect();
+  return (
+    lastPointerPosition.x >= rect.left &&
+    lastPointerPosition.x <= rect.right &&
+    lastPointerPosition.y >= rect.top &&
+    lastPointerPosition.y <= rect.bottom
+  );
+}
+
 function scheduleHeaderRevealHide(delay = HEADER_REVEAL_AUTO_HIDE_MS): void {
   clearHeaderRevealHideTimer();
   if (!headerHidden.value) return;
@@ -300,23 +319,33 @@ function scheduleHeaderRevealAfterCollapse(): void {
     headerRevealShowTimer = undefined;
     if (!headerHidden.value) return;
     headerRevealVisible.value = true;
-    scheduleHeaderRevealHide(HEADER_INITIAL_REVEAL_AUTO_HIDE_MS);
+    void nextTick(() => {
+      if (!headerHidden.value) return;
+      if (isLastPointerInsideHeaderRevealZone()) {
+        clearHeaderRevealHideTimer();
+        return;
+      }
+      scheduleHeaderRevealHide(HEADER_INITIAL_REVEAL_AUTO_HIDE_MS);
+    });
   }, HEADER_COLLAPSE_REVEAL_DELAY_MS);
 }
 
-function showHeaderRevealControl(): void {
+function showHeaderRevealControl(event?: MouseEvent | PointerEvent): void {
+  rememberPointerPosition(event);
   if (!headerHidden.value) return;
   if (headerRevealShowTimer !== undefined) return;
   clearHeaderRevealHideTimer();
   headerRevealVisible.value = true;
 }
 
-function handleHeaderRevealZoneLeave(): void {
+function handleHeaderRevealZoneLeave(event?: MouseEvent | PointerEvent): void {
+  rememberPointerPosition(event);
   if (!headerHidden.value) return;
   scheduleHeaderRevealHide(HEADER_REVEAL_POINTER_LEAVE_HIDE_MS);
 }
 
-function setHeaderHidden(hidden: boolean): void {
+function setHeaderHidden(hidden: boolean, event?: MouseEvent | PointerEvent): void {
+  rememberPointerPosition(event);
   headerHidden.value = hidden;
   persistHeaderHidden(hidden);
   syncImagePreviewTop();
@@ -337,6 +366,7 @@ onMounted(() => {
     scheduleHeaderRevealHide();
   }
   void nextTick(refreshWorkbenchLayout);
+  window.addEventListener("pointermove", rememberPointerPosition);
   window.addEventListener("resize", refreshWorkbenchLayout);
 });
 
@@ -344,6 +374,7 @@ onUnmounted(() => {
   finishResize();
   clearHeaderRevealShowTimer();
   clearHeaderRevealHideTimer();
+  window.removeEventListener("pointermove", rememberPointerPosition);
   window.removeEventListener("resize", refreshWorkbenchLayout);
   document.documentElement.style.removeProperty("--image-preview-left");
   document.documentElement.style.removeProperty("--image-preview-top");
@@ -370,7 +401,7 @@ onUnmounted(() => {
               class="workbench-header-hide-button"
               data-testid="workbench-header-hide"
               aria-label="隐藏顶部菜单"
-              @click="setHeaderHidden(true)"
+              @click="setHeaderHidden(true, $event)"
             >
               <PanelTopCloseIcon data-icon="inline-start" />
             </Button>
@@ -392,12 +423,13 @@ onUnmounted(() => {
 
       <div
         v-if="headerHidden"
+        ref="headerRevealZoneRef"
         class="workbench-header-reveal-zone"
         data-testid="workbench-header-reveal-zone"
-        @click="showHeaderRevealControl"
-        @mouseenter="showHeaderRevealControl"
-        @pointermove="showHeaderRevealControl"
-        @mouseleave="handleHeaderRevealZoneLeave"
+        @click="showHeaderRevealControl($event)"
+        @mouseenter="showHeaderRevealControl($event)"
+        @pointermove="showHeaderRevealControl($event)"
+        @mouseleave="handleHeaderRevealZoneLeave($event)"
       >
         <Transition name="workbench-header-reveal" :duration="100">
           <Button
@@ -407,7 +439,7 @@ onUnmounted(() => {
             class="workbench-header-reveal"
             data-testid="workbench-header-show"
             aria-label="显示顶部菜单"
-            @click="setHeaderHidden(false)"
+            @click="setHeaderHidden(false, $event)"
           >
             <PanelTopOpenIcon data-icon="inline-start" />
           </Button>

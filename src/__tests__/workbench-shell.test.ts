@@ -152,7 +152,7 @@ describe("WorkbenchShell", () => {
     expect(wrapper.find('[data-testid="workbench-header-show"]').exists()).toBe(true);
 
     await wrapper.get('[data-testid="workbench-header-reveal-zone"]').trigger("mouseleave");
-    await vi.advanceTimersByTimeAsync(299);
+    await vi.advanceTimersByTimeAsync(149);
     await nextTick();
     expect(wrapper.find('[data-testid="workbench-header-show"]').exists()).toBe(true);
 
@@ -169,7 +169,7 @@ describe("WorkbenchShell", () => {
     expect(wrapper.find('[data-testid="workbench-header-show"]').exists()).toBe(true);
 
     await wrapper.get('[data-testid="workbench-header-reveal-zone"]').trigger("mouseleave");
-    await vi.advanceTimersByTimeAsync(300);
+    await vi.advanceTimersByTimeAsync(150);
     await nextTick();
     expect(wrapper.find('[data-testid="workbench-header-show"]').exists()).toBe(false);
 
@@ -186,6 +186,54 @@ describe("WorkbenchShell", () => {
     expect(wrapper.find('[data-testid="workbench-theme"]').exists()).toBe(true);
     expect(wrapper.find('[data-testid="actions-slot"]').exists()).toBe(true);
 
+    vi.useRealTimers();
+  });
+
+  it("keeps the delayed reveal control open when the pointer is already over it", async () => {
+    vi.useFakeTimers();
+    const wrapper = mount(WorkbenchShell, {
+      props: defaultProps,
+    });
+
+    await wrapper.get('[data-testid="workbench-header-hide"]').trigger("click", { clientX: 110, clientY: 10 });
+    await nextTick();
+
+    Object.defineProperty(wrapper.get('[data-testid="workbench-header-reveal-zone"]').element, "getBoundingClientRect", {
+      configurable: true,
+      value: () => ({
+        x: 100,
+        y: 0,
+        left: 100,
+        top: 0,
+        right: 132,
+        bottom: 32,
+        width: 32,
+        height: 32,
+        toJSON: () => undefined,
+      }),
+    });
+
+    await vi.advanceTimersByTimeAsync(200);
+    await nextTick();
+    await nextTick();
+
+    expect(wrapper.find('[data-testid="workbench-header-show"]').exists()).toBe(true);
+
+    await vi.advanceTimersByTimeAsync(1_500);
+    await nextTick();
+
+    expect(wrapper.find('[data-testid="workbench-header-show"]').exists()).toBe(true);
+
+    await wrapper.get('[data-testid="workbench-header-reveal-zone"]').trigger("mouseleave", { clientX: 160, clientY: 40 });
+    await vi.advanceTimersByTimeAsync(149);
+    await nextTick();
+    expect(wrapper.find('[data-testid="workbench-header-show"]').exists()).toBe(true);
+
+    await vi.advanceTimersByTimeAsync(1);
+    await nextTick();
+    expect(wrapper.find('[data-testid="workbench-header-show"]').exists()).toBe(false);
+
+    wrapper.unmount();
     vi.useRealTimers();
   });
 
