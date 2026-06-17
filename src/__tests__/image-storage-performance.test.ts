@@ -202,4 +202,38 @@ describe("image storage startup performance", () => {
       wrapper.unmount();
     }
   });
+
+  it("does not serialize image payloads when recording board undo checkpoints", async () => {
+    const originalIndexedDB = window.indexedDB;
+    Reflect.deleteProperty(window, "indexedDB");
+    localStorage.setItem(
+      STORAGE_KEY,
+      JSON.stringify({
+        companionGifTheme: "none",
+        images: [
+          { id: "img-1", createdAt: 1, src: "data:image/png;base64,large-image-payload" },
+        ],
+      }),
+    );
+    const wrapper = mountApp();
+
+    try {
+      await wrapper.vm.$nextTick();
+      const serialized: string[] = [];
+      const stringify = JSON.stringify;
+      vi.spyOn(JSON, "stringify").mockImplementation((value: unknown, replacer?: Parameters<typeof JSON.stringify>[1], space?: Parameters<typeof JSON.stringify>[2]) => {
+        const result = stringify(value, replacer, space);
+        serialized.push(result);
+        return result;
+      });
+
+      await wrapper.get('[data-testid="todo-list-morning"]').trigger("click");
+      await wrapper.vm.$nextTick();
+
+      expect(serialized.some((value) => value.includes("large-image-payload"))).toBe(false);
+    } finally {
+      if (originalIndexedDB) vi.stubGlobal("indexedDB", originalIndexedDB);
+      wrapper.unmount();
+    }
+  });
 });
