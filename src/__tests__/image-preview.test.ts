@@ -32,6 +32,17 @@ const modalStub = {
 
 let originalGetContext: typeof HTMLCanvasElement.prototype.getContext;
 let originalToDataURL: typeof HTMLCanvasElement.prototype.toDataURL;
+let canvasContextMock: {
+  strokeRect: ReturnType<typeof vi.fn>;
+};
+
+function roundedStrokeRects(): number[][] {
+  return canvasContextMock.strokeRect.mock.calls.map((call) => call.map((value) => Math.round(Number(value))));
+}
+
+function uniqueRoundedStrokeRects(): number[][] {
+  return Array.from(new Map(roundedStrokeRects().map((rect) => [rect.join(","), rect])).values());
+}
 
 function installCanvasMock(): void {
   const context = {
@@ -53,6 +64,7 @@ function installCanvasMock(): void {
     strokeText: vi.fn(),
     setLineDash: vi.fn(),
   };
+  canvasContextMock = context;
 
   originalGetContext = HTMLCanvasElement.prototype.getContext;
   originalToDataURL = HTMLCanvasElement.prototype.toDataURL;
@@ -1197,6 +1209,61 @@ describe("ImagePreview", () => {
     } finally {
       wrapper.unmount();
       vi.useRealTimers();
+    }
+  });
+
+  it("routes window undo and redo shortcuts to the active image editor history", async () => {
+    const wrapper = mount(ImagePreview, {
+      props: {
+        images: [{ id: "img-1", src: "data:image/png;base64,one", createdAt: 1, displayWidth: 400, displayHeight: 300 }],
+        activeId: "img-1",
+      },
+      global: {
+        stubs: {
+          Button: buttonStub,
+          Dropdown: dropdownStub,
+          Modal: modalStub,
+          NButton: buttonStub,
+          NDropdown: dropdownStub,
+          NModal: modalStub,
+        },
+      },
+    });
+
+    try {
+      await wrapper.get(".image-preview").trigger("keydown", { key: "Enter" });
+      const canvas = wrapper.get(".image-editor-canvas");
+      mockRect(canvas.element);
+
+      await dispatchPointer(canvas.element, "pointerdown", 40, 40);
+      await dispatchPointer(canvas.element, "pointermove", 120, 100);
+      await dispatchPointer(canvas.element, "pointerup", 120, 100);
+      await dispatchPointer(canvas.element, "pointerdown", 180, 140);
+      await dispatchPointer(canvas.element, "pointermove", 260, 220);
+      await dispatchPointer(canvas.element, "pointerup", 260, 220);
+
+      const undoEvent = new KeyboardEvent("keydown", { key: "z", ctrlKey: true, bubbles: true, cancelable: true });
+      canvasContextMock.strokeRect.mockClear();
+      window.dispatchEvent(undoEvent);
+      await wrapper.vm.$nextTick();
+
+      expect(undoEvent.defaultPrevented).toBe(true);
+      expect(uniqueRoundedStrokeRects()).toEqual([[40, 40, 80, 60]]);
+      expect(wrapper.find(".image-editor").exists()).toBe(true);
+      expect(wrapper.emitted("close")).toBeUndefined();
+
+      const redoEvent = new KeyboardEvent("keydown", { key: "z", ctrlKey: true, shiftKey: true, bubbles: true, cancelable: true });
+      canvasContextMock.strokeRect.mockClear();
+      window.dispatchEvent(redoEvent);
+      await wrapper.vm.$nextTick();
+
+      expect(redoEvent.defaultPrevented).toBe(true);
+      expect(uniqueRoundedStrokeRects()).toEqual(expect.arrayContaining([
+        [40, 40, 80, 60],
+        [180, 140, 80, 80],
+      ]));
+    } finally {
+      wrapper.unmount();
     }
   });
 

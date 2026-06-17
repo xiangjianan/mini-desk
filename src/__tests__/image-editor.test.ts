@@ -295,6 +295,52 @@ describe("ImageEditor", () => {
     wrapper.unmount();
   });
 
+  it("handles editor undo and redo keyboard shortcuts one action at a time", async () => {
+    const wrapper = mount(ImageEditor, {
+      props: {
+        image: { id: "img-1", src: "data:image/png;base64,one", createdAt: 1, displayWidth: 400, displayHeight: 300 },
+      },
+      global: {
+        stubs: {
+          NIcon: iconStub,
+        },
+      },
+    });
+
+    const canvas = wrapper.get(".image-editor-canvas");
+    mockRect(canvas.element);
+
+    await dispatchPointer(canvas.element, "pointerdown", 40, 40);
+    await dispatchPointer(canvas.element, "pointermove", 120, 100);
+    await dispatchPointer(canvas.element, "pointerup", 120, 100);
+    await dispatchPointer(canvas.element, "pointerdown", 180, 140);
+    await dispatchPointer(canvas.element, "pointermove", 260, 220);
+    await dispatchPointer(canvas.element, "pointerup", 260, 220);
+
+    const undoEvent = new KeyboardEvent("keydown", { key: "z", ctrlKey: true, bubbles: true, cancelable: true });
+    wrapper.get(".image-editor").element.dispatchEvent(undoEvent);
+    await nextTick();
+
+    expect(undoEvent.defaultPrevented).toBe(true);
+    canvasContextMock.strokeRect.mockClear();
+    await wrapper.get(".image-editor-save").trigger("click");
+    expect(roundedStrokeRects()).toEqual([[40, 40, 80, 60]]);
+
+    const redoEvent = new KeyboardEvent("keydown", { key: "z", ctrlKey: true, shiftKey: true, bubbles: true, cancelable: true });
+    wrapper.get(".image-editor").element.dispatchEvent(redoEvent);
+    await nextTick();
+
+    expect(redoEvent.defaultPrevented).toBe(true);
+    canvasContextMock.strokeRect.mockClear();
+    await wrapper.get(".image-editor-save").trigger("click");
+    expect(roundedStrokeRects()).toEqual(expect.arrayContaining([
+      [40, 40, 80, 60],
+      [180, 140, 80, 80],
+    ]));
+
+    wrapper.unmount();
+  });
+
   it("confirms text input focus after the pointer click sequence finishes", async () => {
     vi.useFakeTimers();
     const focusSpy = vi.spyOn(HTMLTextAreaElement.prototype, "focus");

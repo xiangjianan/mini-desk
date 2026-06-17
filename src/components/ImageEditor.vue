@@ -59,7 +59,7 @@ const emit = defineEmits<{
   save: [payload: { id: string; src: string; displayWidth: number; displayHeight: number }];
 }>();
 
-defineExpose({ saveImage });
+defineExpose({ redoEdit, saveImage, undoEdit });
 
 const colorOptions: { value: EditorColor; key: "red" | "green" | "blue" | "yellow" | "black" | "white" }[] = [
   { value: "#ef4444", key: "red" },
@@ -164,6 +164,29 @@ watch(strokeWidth, (width) => {
 
 const canUndo = computed(() => historyIndex.value > 0);
 const canRedo = computed(() => historyIndex.value < historySnapshots.value.length - 1);
+
+function isEditorUndoShortcut(event: KeyboardEvent): boolean {
+  return (event.ctrlKey || event.metaKey) && !event.shiftKey && event.key.toLowerCase() === "z";
+}
+
+function isEditorRedoShortcut(event: KeyboardEvent): boolean {
+  const key = event.key.toLowerCase();
+  return (event.ctrlKey || event.metaKey) && ((event.shiftKey && key === "z") || key === "y");
+}
+
+function handleEditorKeydown(event: KeyboardEvent): void {
+  if (isEditorRedoShortcut(event)) {
+    event.preventDefault();
+    event.stopPropagation();
+    redoEdit();
+    return;
+  }
+  if (isEditorUndoShortcut(event)) {
+    event.preventDefault();
+    event.stopPropagation();
+    undoEdit();
+  }
+}
 
 function loadSourceImage(): void {
   const canvas = canvasRef.value;
@@ -789,7 +812,7 @@ function redoEdit(): void {
 </script>
 
 <template>
-  <section class="image-editor" :class="{ 'image-editor--preview': previewLayout }" :aria-label="editorText.title">
+  <section class="image-editor" :class="{ 'image-editor--preview': previewLayout }" :aria-label="editorText.title" @keydown.capture="handleEditorKeydown">
     <header class="image-editor-toolbar" :class="{ 'preview-actions image-editor-preview-actions': previewLayout }">
       <div class="image-editor-tool-group" role="toolbar" :aria-label="editorText.tools">
         <button

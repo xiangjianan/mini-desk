@@ -1659,8 +1659,10 @@ function isUndoShortcut(event: KeyboardEvent): boolean {
 }
 
 function shouldSkipGlobalUndo(target: EventTarget | null): boolean {
+  if (document.querySelector(".image-editor")) return true;
   if (!(target instanceof HTMLElement)) return false;
   if (target.isContentEditable) return true;
+  if (target.closest(".image-editor")) return true;
   if (target.closest(".title-edit-input, .space-tab-edit-input, .todo-list-create-input, .gif-theme-custom-dialog")) return true;
   if (target instanceof HTMLTextAreaElement && target.closest(".text-panel")) return true;
   return false;

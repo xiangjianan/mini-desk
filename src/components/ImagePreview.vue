@@ -386,6 +386,20 @@ function handleKeydown(event: KeyboardEvent): void {
 
 function handleWindowKeydown(event: KeyboardEvent): void {
   if (!editing.value || !active.value) return;
+  if (isEditorRedoShortcut(event)) {
+    event.preventDefault();
+    event.stopPropagation();
+    event.stopImmediatePropagation();
+    editorRef.value?.redoEdit();
+    return;
+  }
+  if (isEditorUndoShortcut(event)) {
+    event.preventDefault();
+    event.stopPropagation();
+    event.stopImmediatePropagation();
+    editorRef.value?.undoEdit();
+    return;
+  }
   if (event.key === "Enter") {
     if (isTextEntryTarget(event.target)) return;
     event.preventDefault();
@@ -399,6 +413,15 @@ function handleWindowKeydown(event: KeyboardEvent): void {
   event.stopPropagation();
   event.stopImmediatePropagation();
   exitEditorFromShortcut();
+}
+
+function isEditorUndoShortcut(event: KeyboardEvent): boolean {
+  return (event.ctrlKey || event.metaKey) && !event.shiftKey && event.key.toLowerCase() === "z";
+}
+
+function isEditorRedoShortcut(event: KeyboardEvent): boolean {
+  const key = event.key.toLowerCase();
+  return (event.ctrlKey || event.metaKey) && ((event.shiftKey && key === "z") || key === "y");
 }
 
 function isTextEntryTarget(target: EventTarget | null): boolean {
