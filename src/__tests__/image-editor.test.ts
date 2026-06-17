@@ -27,6 +27,10 @@ let canvasContextMock: {
   font?: string;
 };
 
+function roundedStrokeRects(): number[][] {
+  return canvasContextMock.strokeRect.mock.calls.map((call) => call.map((value) => Math.round(Number(value))));
+}
+
 function installCanvasMock() {
   const context = {
     clearRect: vi.fn(),
@@ -240,6 +244,53 @@ describe("ImageEditor", () => {
     canvasContextMock.arc.mockClear();
     await wrapper.get(".image-editor-save").trigger("click");
     expect(canvasContextMock.arc).toHaveBeenCalledWith(100, 80, 16, 0, Math.PI * 2);
+
+    wrapper.unmount();
+  });
+
+  it("undoes only the latest drawn rectangle and redoes it back", async () => {
+    const wrapper = mount(ImageEditor, {
+      props: {
+        image: { id: "img-1", src: "data:image/png;base64,one", createdAt: 1, displayWidth: 400, displayHeight: 300 },
+      },
+      global: {
+        stubs: {
+          NIcon: iconStub,
+        },
+      },
+    });
+
+    const canvas = wrapper.get(".image-editor-canvas");
+    mockRect(canvas.element);
+
+    await dispatchPointer(canvas.element, "pointerdown", 40, 40);
+    await dispatchPointer(canvas.element, "pointermove", 120, 100);
+    await dispatchPointer(canvas.element, "pointerup", 120, 100);
+    await dispatchPointer(canvas.element, "pointerdown", 180, 140);
+    await dispatchPointer(canvas.element, "pointermove", 260, 220);
+    await dispatchPointer(canvas.element, "pointerup", 260, 220);
+
+    canvasContextMock.strokeRect.mockClear();
+    await wrapper.get(".image-editor-save").trigger("click");
+    expect(roundedStrokeRects()).toEqual(expect.arrayContaining([
+      [40, 40, 80, 60],
+      [180, 140, 80, 80],
+    ]));
+
+    await wrapper.get('[aria-label="撤销"]').trigger("click");
+
+    canvasContextMock.strokeRect.mockClear();
+    await wrapper.get(".image-editor-save").trigger("click");
+    expect(roundedStrokeRects()).toEqual([[40, 40, 80, 60]]);
+
+    await wrapper.get('[aria-label="反撤销"]').trigger("click");
+
+    canvasContextMock.strokeRect.mockClear();
+    await wrapper.get(".image-editor-save").trigger("click");
+    expect(roundedStrokeRects()).toEqual(expect.arrayContaining([
+      [40, 40, 80, 60],
+      [180, 140, 80, 80],
+    ]));
 
     wrapper.unmount();
   });

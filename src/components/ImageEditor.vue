@@ -94,8 +94,8 @@ const strokeWidth = ref(4);
 const commands = ref<EditorCommand[]>([]);
 const previewCommand = ref<EditorCommand | null>(null);
 const cropRect = ref<EditorRect | null>(null);
-const undoSnapshots = ref<EditorSnapshot[]>([]);
-const redoSnapshots = ref<EditorSnapshot[]>([]);
+const historySnapshots = ref<EditorSnapshot[]>([]);
+const historyIndex = ref(0);
 const dragState = ref<{ pointerId: number; tool: EditorTool; start: EditorPoint; cropStart?: EditorRect; cropHandle?: CropHandle } | null>(null);
 const textDragState = ref<{ pointerId: number; id: string; start: EditorPoint; origin: EditorPoint } | null>(null);
 const activeTextId = ref<string | null>(null);
@@ -127,6 +127,7 @@ const cropActionStyle = computed(() => {
 });
 
 onMounted(() => {
+  resetEditorHistory();
   loadSourceImage();
 });
 
@@ -139,11 +140,10 @@ watch(
     commands.value = [];
     previewCommand.value = null;
     cropRect.value = null;
-    undoSnapshots.value = [];
-    redoSnapshots.value = [];
     dragState.value = null;
     textDragState.value = null;
     activeTextId.value = null;
+    resetEditorHistory();
     loadSourceImage();
   },
 );
@@ -156,14 +156,14 @@ watch(strokeWidth, (width) => {
   if (activeTool.value !== "text" || !activeTextId.value) return;
   const fontSize = getTextFontSizeFromSlider(width);
   const currentText = commands.value.find((command) => command.type === "text" && command.id === activeTextId.value);
-  if (currentText?.type === "text" && currentText.fontSize !== fontSize) recordEditorHistory();
   commands.value = commands.value.map((command) => (
     command.type === "text" && command.id === activeTextId.value ? { ...command, fontSize } : command
   ));
+  if (currentText?.type === "text" && currentText.fontSize !== fontSize) recordEditorHistory();
 });
 
-const canUndo = computed(() => undoSnapshots.value.length > 0);
-const canRedo = computed(() => redoSnapshots.value.length > 0);
+const canUndo = computed(() => historyIndex.value > 0);
+const canRedo = computed(() => historyIndex.value < historySnapshots.value.length - 1);
 
 function loadSourceImage(): void {
   const canvas = canvasRef.value;
@@ -363,16 +363,15 @@ function handlePointerDown(event: PointerEvent): void {
     return;
   }
   if (activeTool.value === "marker") {
-    recordEditorHistory();
     commands.value = [
       ...commands.value,
       { type: "marker", color: selectedColor.value, number: getNextMarkerNumber(), point },
     ];
+    recordEditorHistory();
     return;
   }
 
   const cropHandle = activeTool.value === "crop" ? getCropHandle(point) : undefined;
-  if (activeTool.value === "crop") recordEditorHistory();
   dragState.value = {
     pointerId: event.pointerId,
     tool: activeTool.value,
@@ -410,11 +409,14 @@ function handlePointerUp(event: PointerEvent): void {
   (event.currentTarget as HTMLElement).releasePointerCapture?.(event.pointerId);
   dragState.value = null;
 
-  if (state.tool === "crop") return;
-  if (previewCommand.value) {
+  if (state.tool === "crop") {
     recordEditorHistory();
+    return;
+  }
+  if (previewCommand.value) {
     commands.value = [...commands.value, previewCommand.value];
     previewCommand.value = null;
+    recordEditorHistory();
   }
 }
 
@@ -427,13 +429,13 @@ function handlePointerCancel(event: PointerEvent): void {
 
 function createTextCommand(point: EditorPoint): void {
   pruneEmptyTextCommands();
-  recordEditorHistory();
   const id = `text-${++textIdSequence}`;
   commands.value = [
     ...commands.value,
     { type: "text", id, color: selectedColor.value, fontSize: getTextFontSizeFromSlider(strokeWidth.value), point, text: "" },
   ];
   activeTextId.value = id;
+  recordEditorHistory();
   void nextTick(() => {
     focusTextInput(id);
     window.requestAnimationFrame(() => focusTextInput(id));
@@ -449,8 +451,8 @@ function focusTextInput(id: string): void {
 
 function updateTextCommand(id: string, text: string): void {
   const currentText = commands.value.find((command) => command.type === "text" && command.id === id);
-  if (currentText?.type === "text" && currentText.text !== text) recordEditorHistory();
   commands.value = commands.value.map((command) => command.type === "text" && command.id === id ? { ...command, text } : command);
+  if (currentText?.type === "text" && currentText.text !== text) recordEditorHistory();
 }
 
 function selectTextCommand(id: string): void {
@@ -512,7 +514,6 @@ function formatPixelValue(value: number): string {
 function startTextDrag(event: PointerEvent, command: Extract<EditorCommand, { type: "text" }>): void {
   if (event.button !== 0) return;
   activeTextId.value = command.id;
-  recordEditorHistory();
   textDragState.value = {
     pointerId: event.pointerId,
     id: command.id,
@@ -553,6 +554,7 @@ function finishTextDrag(event: PointerEvent): void {
   if (!state || event.pointerId !== state.pointerId) return;
   (event.currentTarget as HTMLElement).releasePointerCapture?.(event.pointerId);
   textDragState.value = null;
+  recordEditorHistory();
 }
 
 function getNextMarkerNumber(): number {
@@ -560,20 +562,20 @@ function getNextMarkerNumber(): number {
 }
 
 function resetEdits(): void {
-  recordEditorHistory();
   commands.value = [];
   previewCommand.value = null;
   cropRect.value = null;
   dragState.value = null;
   textDragState.value = null;
   activeTextId.value = null;
+  recordEditorHistory();
   renderCanvas();
 }
 
 function cancelCrop(): void {
-  recordEditorHistory();
   cropRect.value = null;
   dragState.value = null;
+  recordEditorHistory();
   renderCanvas();
 }
 
@@ -672,7 +674,6 @@ function applyCrop(): void {
   const canvas = canvasRef.value;
   const rect = canvas ? getExportRect(canvas) : cropRect.value;
   if (!rect || rect.width < 1 || rect.height < 1) return;
-  recordEditorHistory();
 
   const nextDisplayWidth = Math.max(1, Math.round(rect.width * scaleX.value));
   const nextDisplayHeight = Math.max(1, Math.round(rect.height * scaleY.value));
@@ -693,6 +694,7 @@ function applyCrop(): void {
   workingDisplayWidth.value = nextDisplayWidth;
   workingDisplayHeight.value = nextDisplayHeight;
   workingImageSrc.value = output.toDataURL("image/png");
+  recordEditorHistory();
   loadSourceImage();
 }
 
@@ -743,12 +745,19 @@ function areEditorSnapshotsEqual(left: EditorSnapshot, right: EditorSnapshot): b
   return JSON.stringify(left) === JSON.stringify(right);
 }
 
+function resetEditorHistory(): void {
+  historySnapshots.value = [createEditorSnapshot()];
+  historyIndex.value = 0;
+}
+
 function recordEditorHistory(): void {
   if (restoringHistory) return;
   const snapshot = createEditorSnapshot();
-  if (undoSnapshots.value.at(-1) && areEditorSnapshotsEqual(undoSnapshots.value.at(-1)!, snapshot)) return;
-  undoSnapshots.value = [...undoSnapshots.value.slice(-49), snapshot];
-  redoSnapshots.value = [];
+  const current = historySnapshots.value[historyIndex.value];
+  if (current && areEditorSnapshotsEqual(current, snapshot)) return;
+  const nextSnapshots = [...historySnapshots.value.slice(0, historyIndex.value + 1), snapshot].slice(-50);
+  historySnapshots.value = nextSnapshots;
+  historyIndex.value = nextSnapshots.length - 1;
 }
 
 function restoreEditorSnapshot(snapshot: EditorSnapshot): void {
@@ -767,19 +776,15 @@ function restoreEditorSnapshot(snapshot: EditorSnapshot): void {
 }
 
 function undoEdit(): void {
-  const snapshot = undoSnapshots.value.at(-1);
-  if (!snapshot) return;
-  redoSnapshots.value = [...redoSnapshots.value.slice(-49), createEditorSnapshot()];
-  undoSnapshots.value = undoSnapshots.value.slice(0, -1);
-  restoreEditorSnapshot(snapshot);
+  if (!canUndo.value) return;
+  historyIndex.value -= 1;
+  restoreEditorSnapshot(historySnapshots.value[historyIndex.value]);
 }
 
 function redoEdit(): void {
-  const snapshot = redoSnapshots.value.at(-1);
-  if (!snapshot) return;
-  undoSnapshots.value = [...undoSnapshots.value.slice(-49), createEditorSnapshot()];
-  redoSnapshots.value = redoSnapshots.value.slice(0, -1);
-  restoreEditorSnapshot(snapshot);
+  if (!canRedo.value) return;
+  historyIndex.value += 1;
+  restoreEditorSnapshot(historySnapshots.value[historyIndex.value]);
 }
 </script>
 
