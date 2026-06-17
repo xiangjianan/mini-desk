@@ -372,7 +372,32 @@ describe("ImagePanel", () => {
     wrapper.unmount();
   });
 
-  it("uses custom pointer drag for image sorting instead of native browser drag", async () => {
+  it("puts image file data on native thumbnail drags for browser-external drops", async () => {
+    const wrapper = mountImagePanel([{ id: "img-1", src: "data:image/png;base64,aW1n", createdAt: 1 }]);
+    const setData = vi.fn();
+    const add = vi.fn();
+    const setDragImage = vi.fn();
+    const dataTransfer = {
+      effectAllowed: "",
+      items: { add },
+      setData,
+      setDragImage,
+    };
+
+    await wrapper.get(".image-card img").trigger("dragstart", { dataTransfer });
+
+    expect(dataTransfer.effectAllowed).toBe("copy");
+    expect(setData).toHaveBeenCalledWith("DownloadURL", "image/png:mini-desk-image-1.png:data:image/png;base64,aW1n");
+    expect(setData).toHaveBeenCalledWith("text/uri-list", "data:image/png;base64,aW1n");
+    expect(setData).toHaveBeenCalledWith("text/plain", "data:image/png;base64,aW1n");
+    expect(add).toHaveBeenCalledWith(expect.any(File));
+    expect(add.mock.calls[0][0].name).toBe("mini-desk-image-1.png");
+    expect(add.mock.calls[0][0].type).toBe("image/png");
+    expect(setDragImage).toHaveBeenCalledWith(wrapper.get(".image-card img").element, 0, 0);
+    wrapper.unmount();
+  });
+
+  it("keeps custom pointer drag for image sorting while thumbnails support native browser drag", async () => {
     const wrapper = mountImagePanel([
       { id: "a", src: "data:image/png;base64,a", createdAt: 1 },
       { id: "b", src: "data:image/png;base64,b", createdAt: 2 },
@@ -382,8 +407,8 @@ describe("ImagePanel", () => {
 
     expect(source).toContain('<TransitionGroup name="image-reorder" tag="div" class="image-list"');
     expect(source).toContain('@pointerdown="handleImagePointerDown($event, image)"');
-    expect(source).not.toContain('draggable="true"');
-    expect(source).not.toContain("@dragstart=");
+    expect(source).toContain('draggable="true"');
+    expect(source).toContain("@dragstart.stop=\"handleImageNativeDragStart($event, image, index)\"");
     expect(styles).toMatch(/\.image-reorder-move,[\s\S]*?\.image-reorder-enter-active,[\s\S]*?\.image-reorder-leave-active\s*\{[^}]*transform 0\.22s/s);
     expect(styles).toMatch(/\.image-card\.is-dragging\s*\{[^}]*opacity: 0\.45/s);
 

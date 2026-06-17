@@ -204,6 +204,53 @@ function handleExternalDrop(event: DragEvent): void {
   emit("dropFiles", files, event.currentTarget as HTMLElement);
 }
 
+function getImageDragMimeType(src?: string): string {
+  const match = src?.match(/^data:([^;,]+)/);
+  return match?.[1] || "image/png";
+}
+
+function getImageDragExtension(mimeType: string): string {
+  if (mimeType === "image/jpeg") return "jpg";
+  if (mimeType === "image/gif") return "gif";
+  if (mimeType === "image/webp") return "webp";
+  return "png";
+}
+
+function getImageDragFileName(image: StoredImage, index: number): string {
+  const mimeType = getImageDragMimeType(image.src);
+  return `mini-desk-image-${index + 1}.${getImageDragExtension(mimeType)}`;
+}
+
+function dataUrlToFile(dataUrl: string, fileName: string): File | null {
+  const match = dataUrl.match(/^data:([^;,]+)?(;base64)?,(.*)$/);
+  if (!match) return null;
+
+  const mimeType = match[1] || "application/octet-stream";
+  const isBase64 = Boolean(match[2]);
+  const payload = match[3] || "";
+  const binary = isBase64 ? atob(payload) : decodeURIComponent(payload);
+  const bytes = new Uint8Array(binary.length);
+  for (let i = 0; i < binary.length; i += 1) bytes[i] = binary.charCodeAt(i);
+  return new File([bytes], fileName, { type: mimeType });
+}
+
+function handleImageNativeDragStart(event: DragEvent, image: StoredImage, index: number): void {
+  const transfer = event.dataTransfer;
+  if (!transfer || !image.src) return;
+
+  cleanupImagePointerDrag();
+  const mimeType = getImageDragMimeType(image.src);
+  const fileName = getImageDragFileName(image, index);
+  transfer.effectAllowed = "copy";
+  transfer.setData("DownloadURL", `${mimeType}:${fileName}:${image.src}`);
+  transfer.setData("text/uri-list", image.src);
+  transfer.setData("text/plain", image.src);
+
+  const file = dataUrlToFile(image.src, fileName);
+  if (file) transfer.items?.add(file);
+  transfer.setDragImage?.(event.currentTarget as Element, 0, 0);
+}
+
 function handleImageDragEnter(event: DragEvent): void {
   const types = Array.from(event.dataTransfer?.types ?? []);
   if (types.includes("text/plain") && !types.includes("Files")) {
@@ -505,7 +552,13 @@ function handleImageDragWheel(event: WheelEvent): void {
         @pointerdown="handleImagePointerDown($event, image)"
       >
         <span class="image-index">{{ index + 1 }}</span>
-        <img v-if="image.src" :src="image.src" :alt="uiText.images.thumbnailAlt" draggable="false" />
+        <img
+          v-if="image.src"
+          :src="image.src"
+          :alt="uiText.images.thumbnailAlt"
+          draggable="true"
+          @dragstart.stop="handleImageNativeDragStart($event, image, index)"
+        />
         <span v-else class="image-missing">{{ uiText.images.loading }}</span>
       </button>
       </TransitionGroup>

@@ -1447,13 +1447,18 @@ async function updateCustomCompanionGif(files: { light?: File; dark?: File }, an
     showBubbleText(uiText.value.app.chooseGif, anchor);
     return;
   }
-  state.customCompanionGif = {
+  const nextCustomGif = {
+    ...(state.customCompanionGif.light ? { light: state.customCompanionGif.light } : {}),
+    ...(state.customCompanionGif.dark ? { dark: state.customCompanionGif.dark } : {}),
     ...(light ? { light } : {}),
     ...(dark ? { dark } : {}),
   };
+  state.customCompanionGif = {
+    ...nextCustomGif,
+  };
   state.customCompanionGifStored = {
-    ...(light ? { light: true } : {}),
-    ...(dark ? { dark: true } : {}),
+    ...(nextCustomGif.light ? { light: true } : {}),
+    ...(nextCustomGif.dark ? { dark: true } : {}),
   };
   state.companionGifTheme = "custom";
   await persistCustomCompanionGifPayloads(state.customCompanionGif);

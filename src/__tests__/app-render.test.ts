@@ -5164,6 +5164,45 @@ describe("App shell", () => {
     }
   });
 
+  it("preserves an existing custom companion GIF mode when updating the other mode", async () => {
+    const originalFileReader = window.FileReader;
+    class NamedFileReader {
+      result: string | ArrayBuffer | null = null;
+      error: DOMException | null = null;
+      onload: (() => void) | null = null;
+      onerror: (() => void) | null = null;
+      readAsDataURL(file: File): void {
+        this.result = `data:image/gif;base64,${file.name.replace(".gif", "")}`;
+        this.onload?.();
+      }
+    }
+    vi.stubGlobal("FileReader", NamedFileReader);
+    const wrapper = mountApp();
+    const light = new File(["light"], "light.gif", { type: "image/gif" });
+    const dark = new File(["dark"], "dark.gif", { type: "image/gif" });
+
+    try {
+      wrapper.getComponent(SettingsMenu).vm.$emit("customGif", { light }, wrapper.getComponent(SettingsMenu).element as HTMLElement);
+      await vi.waitFor(() => {
+        expect(wrapper.getComponent(CompanionBubble).props("customGifLightSrc")).toBe("data:image/gif;base64,light");
+      });
+
+      wrapper.getComponent(SettingsMenu).vm.$emit("customGif", { dark }, wrapper.getComponent(SettingsMenu).element as HTMLElement);
+      await vi.waitFor(() => {
+        expect(wrapper.getComponent(CompanionBubble).props("customGifDarkSrc")).toBe("data:image/gif;base64,dark");
+      });
+      await wrapper.vm.$nextTick();
+
+      const stored = JSON.parse(localStorage.getItem(STORAGE_KEY) || "{}");
+      expect(stored.customCompanionGifStored).toEqual({ light: true, dark: true });
+      expect(wrapper.getComponent(CompanionBubble).props("customGifLightSrc")).toBe("data:image/gif;base64,light");
+      expect(wrapper.getComponent(CompanionBubble).props("customGifDarkSrc")).toBe("data:image/gif;base64,dark");
+    } finally {
+      wrapper.unmount();
+      vi.stubGlobal("FileReader", originalFileReader);
+    }
+  });
+
   it("loads persisted custom companion GIF sources after refresh", async () => {
     localStorage.setItem(
       STORAGE_KEY,
