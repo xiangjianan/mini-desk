@@ -49,6 +49,7 @@ const DEFAULT_GRID_PADDING_Y = 14;
 const DEFAULT_IMAGE_PREVIEW_TOP = 52;
 const RESIZE_STEP = 24;
 const HEADER_COLLAPSE_REVEAL_DELAY_MS = 200;
+const HEADER_INITIAL_REVEAL_AUTO_HIDE_MS = 1_000;
 const HEADER_REVEAL_AUTO_HIDE_MS = 100;
 
 const gridRef = ref<HTMLElement | null>(null);
@@ -282,13 +283,13 @@ function clearHeaderRevealShowTimer(): void {
   headerRevealShowTimer = undefined;
 }
 
-function scheduleHeaderRevealHide(): void {
+function scheduleHeaderRevealHide(delay = HEADER_REVEAL_AUTO_HIDE_MS): void {
   clearHeaderRevealHideTimer();
   if (!headerHidden.value) return;
   headerRevealHideTimer = window.setTimeout(() => {
     headerRevealVisible.value = false;
     headerRevealHideTimer = undefined;
-  }, HEADER_REVEAL_AUTO_HIDE_MS);
+  }, delay);
 }
 
 function scheduleHeaderRevealAfterCollapse(): void {
@@ -298,7 +299,7 @@ function scheduleHeaderRevealAfterCollapse(): void {
     headerRevealShowTimer = undefined;
     if (!headerHidden.value) return;
     headerRevealVisible.value = true;
-    scheduleHeaderRevealHide();
+    scheduleHeaderRevealHide(HEADER_INITIAL_REVEAL_AUTO_HIDE_MS);
   }, HEADER_COLLAPSE_REVEAL_DELAY_MS);
 }
 
@@ -307,6 +308,7 @@ function showHeaderRevealControl(): void {
   if (headerRevealShowTimer !== undefined) return;
   clearHeaderRevealHideTimer();
   headerRevealVisible.value = true;
+  scheduleHeaderRevealHide();
 }
 
 function handleHeaderRevealZoneLeave(): void {

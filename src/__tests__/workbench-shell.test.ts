@@ -145,7 +145,7 @@ describe("WorkbenchShell", () => {
     await nextTick();
     expect(wrapper.get('[data-testid="workbench-header-show"]').attributes("aria-label")).toBe("显示顶部菜单");
 
-    await vi.advanceTimersByTimeAsync(99);
+    await vi.advanceTimersByTimeAsync(999);
     expect(wrapper.find('[data-testid="workbench-header-show"]').exists()).toBe(true);
 
     await vi.advanceTimersByTimeAsync(1);
@@ -156,6 +156,14 @@ describe("WorkbenchShell", () => {
     await wrapper.get('[data-testid="workbench-header-reveal-zone"]').trigger("click");
     await nextTick();
 
+    expect(wrapper.get('[data-testid="workbench-header-show"]').attributes("aria-label")).toBe("显示顶部菜单");
+
+    await vi.advanceTimersByTimeAsync(100);
+    await nextTick();
+    expect(wrapper.find('[data-testid="workbench-header-show"]').exists()).toBe(false);
+
+    await wrapper.get('[data-testid="workbench-header-reveal-zone"]').trigger("click");
+    await nextTick();
     expect(wrapper.get('[data-testid="workbench-header-show"]').attributes("aria-label")).toBe("显示顶部菜单");
 
     await wrapper.get('[data-testid="workbench-header-show"]').trigger("click");
