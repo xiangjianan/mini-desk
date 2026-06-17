@@ -31,6 +31,10 @@ function roundedStrokeRects(): number[][] {
   return canvasContextMock.strokeRect.mock.calls.map((call) => call.map((value) => Math.round(Number(value))));
 }
 
+function uniqueRoundedStrokeRects(): number[][] {
+  return Array.from(new Map(roundedStrokeRects().map((rect) => [rect.join(","), rect])).values());
+}
+
 function installCanvasMock() {
   const context = {
     clearRect: vi.fn(),
@@ -318,10 +322,13 @@ describe("ImageEditor", () => {
     await dispatchPointer(canvas.element, "pointerup", 260, 220);
 
     const undoEvent = new KeyboardEvent("keydown", { key: "z", ctrlKey: true, bubbles: true, cancelable: true });
+    canvasContextMock.strokeRect.mockClear();
     wrapper.get(".image-editor").element.dispatchEvent(undoEvent);
     await nextTick();
 
     expect(undoEvent.defaultPrevented).toBe(true);
+    expect(uniqueRoundedStrokeRects()).toEqual([[40, 40, 80, 60]]);
+
     canvasContextMock.strokeRect.mockClear();
     await wrapper.get(".image-editor-save").trigger("click");
     expect(roundedStrokeRects()).toEqual([[40, 40, 80, 60]]);

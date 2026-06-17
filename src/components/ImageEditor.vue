@@ -100,6 +100,7 @@ const dragState = ref<{ pointerId: number; tool: EditorTool; start: EditorPoint;
 const textDragState = ref<{ pointerId: number; id: string; start: EditorPoint; origin: EditorPoint } | null>(null);
 const activeTextId = ref<string | null>(null);
 let restoringHistory = false;
+let sourceImageLoadId = 0;
 let textIdSequence = 0;
 
 const uiText = computed(() => getUiText(props.language));
@@ -189,6 +190,8 @@ function handleEditorKeydown(event: KeyboardEvent): void {
 }
 
 function loadSourceImage(): void {
+  sourceImageLoadId += 1;
+  const loadId = sourceImageLoadId;
   const canvas = canvasRef.value;
   if (canvas) {
     canvas.width = canvasWidth.value;
@@ -203,6 +206,7 @@ function loadSourceImage(): void {
 
   const image = new Image();
   image.onload = () => {
+    if (loadId !== sourceImageLoadId) return;
     sourceImage.value = image;
     const nextCanvas = canvasRef.value;
     if (nextCanvas) {
@@ -212,6 +216,7 @@ function loadSourceImage(): void {
     renderCanvas();
   };
   image.onerror = () => {
+    if (loadId !== sourceImageLoadId) return;
     void nextTick(renderCanvas);
   };
   image.src = workingImageSrc.value;
@@ -784,6 +789,7 @@ function recordEditorHistory(): void {
 }
 
 function restoreEditorSnapshot(snapshot: EditorSnapshot): void {
+  const shouldReloadSource = !sourceImage.value || workingImageSrc.value !== snapshot.workingImageSrc;
   restoringHistory = true;
   workingImageSrc.value = snapshot.workingImageSrc;
   workingDisplayWidth.value = snapshot.workingDisplayWidth;
@@ -794,8 +800,13 @@ function restoreEditorSnapshot(snapshot: EditorSnapshot): void {
   dragState.value = null;
   textDragState.value = null;
   activeTextId.value = snapshot.activeTextId;
-  loadSourceImage();
   restoringHistory = false;
+  if (shouldReloadSource) {
+    loadSourceImage();
+    return;
+  }
+  renderCanvas();
+  void nextTick(renderCanvas);
 }
 
 function undoEdit(): void {
