@@ -76,6 +76,7 @@ const uiText = computed(() => getUiText(props.language));
 
 const gifMenu = ref<{ x: number; y: number } | null>(null);
 const exclusiveMenu = createExclusiveContextMenu(() => { gifMenu.value = null; });
+let windowMousemoveActive = false;
 
 function renderGifMenuIcon(icon: Component): () => VNode {
   return () => h(NIcon, { size: 16 }, { default: () => h(icon) });
@@ -252,12 +253,11 @@ watch(
 
 onMounted(() => {
   exclusiveMenu.mount();
-  window.addEventListener("mousemove", handleWindowMousemove);
 });
 
 onUnmounted(() => {
   exclusiveMenu.unmount();
-  window.removeEventListener("mousemove", handleWindowMousemove);
+  stopWindowMousemoveTracking();
   window.clearTimeout(popoverTimer.value);
   window.clearTimeout(contentTimer.value);
   window.clearTimeout(gifTimer.value);
@@ -303,6 +303,7 @@ function resumeGifTimer(): void {
 function handleCompanionMouseenter(): void {
   if (hoveringCompanion.value) return;
   hoveringCompanion.value = true;
+  startWindowMousemoveTracking();
   pauseGifTimer();
   emit("pause");
 }
@@ -310,6 +311,7 @@ function handleCompanionMouseenter(): void {
 function handleCompanionMouseleave(): void {
   if (!hoveringCompanion.value) return;
   hoveringCompanion.value = false;
+  stopWindowMousemoveTracking();
   resumeGifTimer();
   emit("resume");
 }
@@ -323,6 +325,18 @@ function handleWindowMousemove(event: MouseEvent): void {
   if (isPointInsideElement(event.clientX, event.clientY, surfaceRef.value)) return;
   if (isPointInsideElement(event.clientX, event.clientY, popoverRef.value)) return;
   handleCompanionMouseleave();
+}
+
+function startWindowMousemoveTracking(): void {
+  if (windowMousemoveActive) return;
+  windowMousemoveActive = true;
+  window.addEventListener("mousemove", handleWindowMousemove);
+}
+
+function stopWindowMousemoveTracking(): void {
+  if (!windowMousemoveActive) return;
+  windowMousemoveActive = false;
+  window.removeEventListener("mousemove", handleWindowMousemove);
 }
 
 function isPointInsideElement(x: number, y: number, element: HTMLElement | null): boolean {

@@ -366,7 +366,6 @@ onMounted(() => {
     scheduleHeaderRevealHide();
   }
   void nextTick(refreshWorkbenchLayout);
-  window.addEventListener("pointermove", rememberPointerPosition);
   window.addEventListener("resize", refreshWorkbenchLayout);
 });
 
@@ -374,7 +373,6 @@ onUnmounted(() => {
   finishResize();
   clearHeaderRevealShowTimer();
   clearHeaderRevealHideTimer();
-  window.removeEventListener("pointermove", rememberPointerPosition);
   window.removeEventListener("resize", refreshWorkbenchLayout);
   document.documentElement.style.removeProperty("--image-preview-left");
   document.documentElement.style.removeProperty("--image-preview-top");
