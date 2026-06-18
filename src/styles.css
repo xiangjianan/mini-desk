@@ -2829,7 +2829,13 @@ button.todo-star-button {
   background-repeat: repeat-x;
   -webkit-background-clip: text;
   background-clip: text;
-  animation: starred-text-flow 4.8s linear infinite;
+}
+
+@media (prefers-reduced-motion: no-preference) {
+  .todo-item.is-starred .todo-input,
+  .today-focus-item .today-focus-input {
+    animation: starred-text-flow 4.8s linear infinite;
+  }
 }
 
 .todo-item.is-starred .todo-input::selection,
@@ -2848,7 +2854,13 @@ button.todo-star-button {
   background-repeat: repeat-x;
   -webkit-background-clip: text;
   background-clip: text;
-  animation: starred-text-flow 4.8s linear infinite;
+}
+
+@media (prefers-reduced-motion: no-preference) {
+  .todo-item.is-starred.is-done .todo-input,
+  .today-focus-item.is-done .today-focus-input {
+    animation: starred-text-flow 4.8s linear infinite;
+  }
 }
 
 .todo-item.deadline-overdue:not(.is-done) .todo-input,
