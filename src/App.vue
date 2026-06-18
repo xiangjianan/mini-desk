@@ -1,13 +1,11 @@
 <script setup lang="ts">
-import { computed, nextTick, onMounted, onUnmounted, reactive, ref, watch } from "vue";
+import { computed, defineAsyncComponent, nextTick, onMounted, onUnmounted, reactive, ref, watch } from "vue";
 import { MoonOutline, SunnyOutline } from "@vicons/ionicons5";
 import { darkTheme, dateEnUS, dateZhCN, enUS, NButton, NConfigProvider, NGlobalStyle, NIcon, zhCN } from "naive-ui";
 import CompanionBubble from "./components/CompanionBubble.vue";
 import ImagePanel from "./components/ImagePanel.vue";
-import ImagePreview from "./components/ImagePreview.vue";
 import QuickButtons from "./components/QuickButtons.vue";
 import SettingsMenu from "./components/SettingsMenu.vue";
-import ShortcutHelp from "./components/ShortcutHelp.vue";
 import SpacePanel from "./components/SpacePanel.vue";
 import TodoPanel from "./components/TodoPanel.vue";
 import WorkbenchShell from "./components/WorkbenchShell.vue";
@@ -65,6 +63,9 @@ import {
 } from "./state/version";
 import type { SaveScope } from "./state/storage";
 import type { AppLanguage, BoardState, CompanionGifTheme, DraggedTodo, GuideKey, LineItem, QuickApiBodyType, QuickApiHeader, QuickApiMethod, QuickButton, QuickButtonType, StoredImage, TodoItem, TodoListConfig, TodoListId, TodoPeriod, TodoStarChange, WorkspaceSpace } from "./types";
+
+const ImagePreview = defineAsyncComponent(() => import("./components/ImagePreview.vue"));
+const ShortcutHelp = defineAsyncComponent(() => import("./components/ShortcutHelp.vue"));
 
 const MOBILE_BREAKPOINT_QUERY = "(max-width: 900px)";
 const TODO_NOTIFICATION_FALLBACK_INTERVAL_MS = 30_000;
@@ -2643,7 +2644,7 @@ function moveItem<T extends { id: string }>(items: T[], dragId: string, targetId
     </main>
 
     <ImagePreview
-      v-if="!isMobileBlocked"
+      v-if="!isMobileBlocked && displayedPreviewId"
       :images="state.images"
       :active-id="displayedPreviewId"
       :edit-id="activeEditorId"
@@ -2684,6 +2685,6 @@ function moveItem<T extends { id: string }>(items: T[], dragId: string, targetId
       @gif-theme-change="(theme: string) => updateCompanionGifTheme(theme as CompanionGifTheme)"
     />
     <input ref="importInput" type="file" accept="application/json,.json" hidden @change="importData" />
-    <ShortcutHelp :show="shortcutHelpVisible" :language="state.language" @close="shortcutHelpVisible = false" />
+    <ShortcutHelp v-if="shortcutHelpVisible" :show="shortcutHelpVisible" :language="state.language" @close="shortcutHelpVisible = false" />
   </NConfigProvider>
 </template>

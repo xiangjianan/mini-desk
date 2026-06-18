@@ -1,10 +1,9 @@
 import { nextTick } from "vue";
-import { mount } from "@vue/test-utils";
+import { flushPromises, mount } from "@vue/test-utils";
 import { beforeEach, describe, expect, it, vi } from "vitest";
 import App from "../App.vue";
 import CompanionBubble from "../components/CompanionBubble.vue";
 import ImagePanel from "../components/ImagePanel.vue";
-import ImagePreview from "../components/ImagePreview.vue";
 import QuickButtons from "../components/QuickButtons.vue";
 import SettingsMenu from "../components/SettingsMenu.vue";
 import SpacePanel from "../components/SpacePanel.vue";
@@ -106,6 +105,16 @@ function mountAppWithPersistentPopover() {
   });
 }
 
+async function flushAsyncComponents() {
+  await flushPromises();
+  await vi.dynamicImportSettled();
+  await nextTick();
+}
+
+function getImagePreview(wrapper: ReturnType<typeof mountApp>) {
+  return wrapper.getComponent({ name: "ImagePreview" });
+}
+
 function stubMatchMedia(matches: boolean) {
   const listeners = new Set<(event: MediaQueryListEvent) => void>();
   const mediaQueryList = {
@@ -204,6 +213,7 @@ describe("App shell", () => {
     expect(wrapper.text()).toContain("✅ 提醒事项");
     expect(wrapper.text()).toContain("📝 备忘录");
     expect(wrapper.find(".tool-panel").exists()).toBe(false);
+    expect(wrapper.findComponent({ name: "ImagePreview" }).exists()).toBe(false);
     expect(wrapper.find(".workbench-zone-notes > .quick-block").exists()).toBe(true);
     expect(wrapper.findAll(".space-tab").map((tab) => tab.text())).toEqual(["📝 备忘录"]);
     expect(wrapper.find('[data-testid="workbench-theme"]').exists()).toBe(true);
@@ -292,7 +302,7 @@ describe("App shell", () => {
       expect(wrapper.findComponent(TodoPanel).exists()).toBe(false);
       expect(wrapper.findComponent(SpacePanel).exists()).toBe(false);
       expect(wrapper.findComponent(SettingsMenu).exists()).toBe(false);
-      expect(wrapper.findComponent(ImagePreview).exists()).toBe(false);
+      expect(wrapper.findComponent({ name: "ImagePreview" }).exists()).toBe(false);
       expect(wrapper.findAll("textarea")).toHaveLength(0);
       expect(wrapper.find('[aria-label="切换主题"]').exists()).toBe(true);
 
@@ -1932,10 +1942,11 @@ describe("App shell", () => {
     try {
       wrapper.getComponent(ImagePanel).vm.$emit("preview", "img-1");
       await wrapper.vm.$nextTick();
+      await flushAsyncComponents();
 
-      expect(wrapper.getComponent(ImagePreview).props("activeId")).toBe("img-1");
+      expect(getImagePreview(wrapper).props("activeId")).toBe("img-1");
 
-      wrapper.getComponent(ImagePreview).vm.$emit("delete", "img-1", wrapper.get(".image-preview").element as HTMLElement);
+      getImagePreview(wrapper).vm.$emit("delete", "img-1", wrapper.get(".image-preview").element as HTMLElement);
       await wrapper.vm.$nextTick();
       await vi.advanceTimersByTimeAsync(200);
       await wrapper.vm.$nextTick();
@@ -1946,7 +1957,7 @@ describe("App shell", () => {
       await vi.advanceTimersByTimeAsync(200);
       await wrapper.vm.$nextTick();
 
-      expect(wrapper.getComponent(ImagePreview).props("activeId")).toBe("img-2");
+      expect(getImagePreview(wrapper).props("activeId")).toBe("img-2");
       expect((wrapper.getComponent(ImagePanel).props("images") as Array<{ id: string }>).map((image) => image.id)).toEqual(["img-2", "img-3"]);
     } finally {
       wrapper.unmount();
@@ -1978,8 +1989,9 @@ describe("App shell", () => {
     try {
       wrapper.getComponent(ImagePanel).vm.$emit("preview", "img-1");
       await wrapper.vm.$nextTick();
+      await flushAsyncComponents();
 
-      wrapper.getComponent(ImagePreview).vm.$emit("saveEdit", {
+      getImagePreview(wrapper).vm.$emit("saveEdit", {
         id: "img-1",
         src: "data:image/png;base64,dHdv",
         displayWidth: 120,
@@ -1994,7 +2006,7 @@ describe("App shell", () => {
       await Promise.resolve();
 
       expect(event.defaultPrevented).toBe(true);
-      expect(wrapper.getComponent(ImagePreview).props("editId")).toBe("img-1");
+      expect(getImagePreview(wrapper).props("editId")).toBe("img-1");
       expect(write).not.toHaveBeenCalled();
     } finally {
       wrapper.unmount();
@@ -2127,6 +2139,7 @@ describe("App shell", () => {
 
       imagePanel.vm.$emit("preview", "img-1");
       await wrapper.vm.$nextTick();
+      await flushAsyncComponents();
 
       const preview = wrapper.get(".image-preview");
       vi.spyOn(preview.element, "getBoundingClientRect").mockReturnValue({
@@ -2140,7 +2153,7 @@ describe("App shell", () => {
         bottom: 720,
         toJSON: () => ({}),
       });
-      wrapper.getComponent(ImagePreview).vm.$emit("delete", "img-1", preview.element as HTMLElement);
+      getImagePreview(wrapper).vm.$emit("delete", "img-1", preview.element as HTMLElement);
       await wrapper.vm.$nextTick();
       await vi.advanceTimersByTimeAsync(200);
       await wrapper.vm.$nextTick();
@@ -2639,6 +2652,7 @@ describe("App shell", () => {
 
       imagePanel.vm.$emit("preview", "img-2");
       await wrapper.vm.$nextTick();
+      await flushAsyncComponents();
       expect(wrapper.find(".image-preview").exists()).toBe(true);
       expect(wrapper.get(".image-panel .image-card.is-active .image-index").text()).toBe("2");
 
@@ -2729,6 +2743,7 @@ describe("App shell", () => {
 
       await wrapper.get(".image-card").trigger("click");
       await wrapper.vm.$nextTick();
+      await flushAsyncComponents();
 
       expect(wrapper.find(".image-preview").exists()).toBe(true);
       expect(wrapper.find(".focus-companion.is-visible").exists()).toBe(false);
@@ -2751,6 +2766,7 @@ describe("App shell", () => {
     try {
       await wrapper.get(".image-card").trigger("click");
       await wrapper.vm.$nextTick();
+      await flushAsyncComponents();
 
       expect(wrapper.find(".image-preview").exists()).toBe(true);
       expect(wrapper.find('[data-testid="companion-bubble"]').exists()).toBe(false);
@@ -2772,6 +2788,7 @@ describe("App shell", () => {
     try {
       await wrapper.get(".image-card").trigger("click");
       await wrapper.vm.$nextTick();
+      await flushAsyncComponents();
 
       expect(wrapper.find(".image-preview").exists()).toBe(true);
       const companion = wrapper.getComponent(CompanionBubble);
@@ -3098,6 +3115,7 @@ describe("App shell", () => {
     const wrapper = mountApp();
 
     await wrapper.get(".image-card").trigger("click");
+    await flushAsyncComponents();
     const enterEvent = new KeyboardEvent("keydown", { key: "Enter", bubbles: true, cancelable: true });
     window.dispatchEvent(enterEvent);
     await wrapper.vm.$nextTick();
@@ -3108,7 +3126,7 @@ describe("App shell", () => {
     await Promise.resolve();
 
     expect(enterEvent.defaultPrevented).toBe(true);
-    expect(wrapper.getComponent(ImagePreview).props("editId")).toBe("img-1");
+    expect(getImagePreview(wrapper).props("editId")).toBe("img-1");
     expect(write).toHaveBeenCalledTimes(1);
     vi.unstubAllGlobals();
     wrapper.unmount();
