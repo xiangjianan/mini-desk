@@ -6,15 +6,12 @@ export type ImageContextMenuKey =
   | "preview"
   | "close-preview"
   | "copy"
+  | "paste"
   | "edit"
   | "delete"
-  | "paste-before"
-  | "paste-after"
-  | "paste-replace"
   | "pin-top"
   | "pin-bottom"
-  | "tips"
-  | "paste";
+  | "tips";
 
 export interface ImageContextMenuItem {
   key: ImageContextMenuKey;
@@ -32,17 +29,13 @@ export function getImageItemContextMenuItems(
       key: previewOpen ? "close-preview" : "preview",
     },
     { label: uiText.common.copy, key: "copy" },
-    { label: uiText.common.edit, key: "edit" },
-    { label: uiText.common.delete, key: "delete" },
     ...(includePasteActions
-      ? [
-          { label: uiText.images.pasteBefore, key: "paste-before" as const },
-          { label: uiText.images.pasteAfter, key: "paste-after" as const },
-          { label: uiText.images.pasteReplace, key: "paste-replace" as const },
-        ]
+      ? [{ label: uiText.images.paste, key: "paste" as const }]
       : []),
+    { label: uiText.common.edit, key: "edit" },
     { label: uiText.common.pinToTop, key: "pin-top" },
     { label: uiText.common.pinToBottom, key: "pin-bottom" },
+    { label: uiText.common.delete, key: "delete" },
     { label: uiText.common.tips, key: "tips" },
   ];
 }

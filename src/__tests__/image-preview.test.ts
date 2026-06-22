@@ -575,18 +575,14 @@ describe("ImagePreview", () => {
     await wrapper.get(".preview-stage img").trigger("contextmenu");
 
     const menuLabels = wrapper.findAll(".dropdown-option").map((option) => option.text());
-    expect(menuLabels).not.toEqual(expect.arrayContaining([
-      "粘贴图片到上方",
-      "粘贴图片到下方",
-      "粘贴替换当前图片",
-    ]));
+    expect(menuLabels).not.toContain("粘贴");
     expect(menuLabels).toEqual([
       "取消预览",
       "复制",
       "编辑",
-      "删除",
       "置顶",
       "置底",
+      "删除",
       "Tips",
     ]);
 
@@ -1138,9 +1134,9 @@ describe("ImagePreview", () => {
       "取消预览",
       "复制",
       "编辑",
-      "删除",
       "置顶",
       "置底",
+      "删除",
       "Tips",
     ]);
 

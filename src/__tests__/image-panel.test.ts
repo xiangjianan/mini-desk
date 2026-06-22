@@ -128,7 +128,7 @@ describe("ImagePanel", () => {
     wrapper.unmount();
   });
 
-  it("adds contextual paste actions to image item menus", async () => {
+  it("adds a single paste action to image item menus that pastes below the target", async () => {
     const wrapper = mountImagePanel([
       { id: "a", src: "data:image/png;base64,a", createdAt: 1 },
       { id: "b", src: "data:image/png;base64,b", createdAt: 2 },
@@ -141,31 +141,25 @@ describe("ImagePanel", () => {
     expect(wrapper.findAll(".dropdown-option").map((option) => option.text())).toEqual([
       "预览",
       "复制",
+      "粘贴",
       "编辑",
-      "删除",
-      "粘贴图片到上方",
-      "粘贴图片到下方",
-      "粘贴替换当前图片",
       "置顶",
       "置底",
+      "删除",
       "Tips",
     ]);
 
     expect(wrapper.text()).not.toContain("取消置顶");
+    expect(wrapper.text()).not.toContain("粘贴图片到上方");
+    expect(wrapper.text()).not.toContain("粘贴图片到下方");
+    expect(wrapper.text()).not.toContain("粘贴替换当前图片");
 
-    for (const [label, placement] of [
-      ["粘贴图片到上方", "before"],
-      ["粘贴图片到下方", "after"],
-      ["粘贴替换当前图片", "replace"],
-    ] as const) {
-      await card.trigger("contextmenu");
-      await wrapper.findAll(".dropdown-option").find((option) => option.text() === label)?.trigger("click");
-      expect(wrapper.emitted("paste")?.at(-1)).toEqual([{
-        placement,
-        targetId: "b",
-        anchor: card.element,
-      }]);
-    }
+    await wrapper.findAll(".dropdown-option").find((option) => option.text() === "粘贴")?.trigger("click");
+    expect(wrapper.emitted("paste")?.at(-1)).toEqual([{
+      placement: "after",
+      targetId: "b",
+      anchor: card.element,
+    }]);
 
     wrapper.unmount();
   });
@@ -247,13 +241,11 @@ describe("ImagePanel", () => {
     expect(wrapper.findAll(".dropdown-option").map((option) => option.text())).toEqual([
       "取消预览",
       "复制",
+      "粘贴",
       "编辑",
-      "删除",
-      "粘贴图片到上方",
-      "粘贴图片到下方",
-      "粘贴替换当前图片",
       "置顶",
       "置底",
+      "删除",
       "Tips",
     ]);
 
@@ -278,13 +270,11 @@ describe("ImagePanel", () => {
     expect(wrapper.findAll(".dropdown-option").map((option) => option.text())).toEqual([
       "取消预览",
       "复制",
+      "粘贴",
       "编辑",
-      "删除",
-      "粘贴图片到上方",
-      "粘贴图片到下方",
-      "粘贴替换当前图片",
       "置顶",
       "置底",
+      "删除",
       "Tips",
     ]);
 

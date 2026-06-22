@@ -106,12 +106,9 @@ describe("localized public copy", () => {
     expect(getUiText("zh").settings.language).toBe("Language");
   });
 
-  it("localizes contextual image paste actions in English", () => {
-    expect(getUiText("en").images).toMatchObject({
-      pasteBefore: "Paste image above",
-      pasteAfter: "Paste image below",
-      pasteReplace: "Paste and replace image",
-    });
+  it("localizes the merged image paste action in English", () => {
+    expect(getUiText("en").images.paste).toBe("Paste");
+    expect(getUiText("zh").images.paste).toBe("粘贴");
   });
 
   it("uses Mini Desk as the public app name while naming the Chinese about board", () => {

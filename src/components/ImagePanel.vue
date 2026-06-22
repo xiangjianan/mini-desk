@@ -109,7 +109,7 @@ function getImageMenuIcon(key: ImageContextMenuKey): Component {
   if (key === "delete") return TrashOutline;
   if (key === "pin-top") return ArrowUpOutline;
   if (key === "pin-bottom") return ArrowDownOutline;
-  if (["paste", "paste-before", "paste-after", "paste-replace"].includes(key)) return ClipboardOutline;
+  if (key === "paste") return ClipboardOutline;
   return HelpCircleOutline;
 }
 
@@ -212,12 +212,12 @@ function handleMenuSelect(key: string): void {
   const id = menu.value?.id;
   const anchor = menu.value?.anchor;
   closeMenu();
-  if (key === "paste") emit("paste", { placement: "append", anchor });
+  if (key === "paste") {
+    if (id && anchor) emit("paste", { placement: "after", targetId: id, anchor });
+    else emit("paste", { placement: "append", anchor });
+  }
   if (key === "guide" && anchor) emit("guide", "images", anchor, true);
   if (!id) return;
-  if (key === "paste-before" && anchor) emit("paste", { placement: "before", targetId: id, anchor });
-  if (key === "paste-after" && anchor) emit("paste", { placement: "after", targetId: id, anchor });
-  if (key === "paste-replace" && anchor) emit("paste", { placement: "replace", targetId: id, anchor });
   if (key === "pin-top") {
     const firstImageId = props.images[0]?.id;
     if (firstImageId && firstImageId !== id) emit("reorder", id, firstImageId);
