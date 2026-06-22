@@ -13,10 +13,12 @@ import { getCompanionGifSrc, getCompanionNotificationIconSrc } from "./state/com
 import {
   clearStoredImagePayloads,
   deleteStoredImage,
+  getImagePayloadId,
   hydrateCustomCompanionGif,
   hydrateStoredImages,
   persistCustomCompanionGifPayloads,
   persistImagePayloads,
+  pruneStoredImagePayloads,
   storeImagePayload,
 } from "./state/images";
 import { getMessage, withKaomoji, type MessageKey } from "./state/messages";
@@ -61,8 +63,8 @@ import {
   getStoredAppVersion,
   markAppVersionSeen,
 } from "./state/version";
-import type { SaveScope } from "./state/storage";
-import type { AppLanguage, BoardState, CompanionGifTheme, DraggedTodo, GuideKey, LineItem, QuickApiBodyType, QuickApiHeader, QuickApiMethod, QuickButton, QuickButtonType, StoredImage, TodoItem, TodoListConfig, TodoListId, TodoPeriod, TodoStarChange, WorkspaceSpace } from "./types";
+import type { ImagePlacementHint, ImageReplacementHint, SaveScope } from "./state/storage";
+import type { AppLanguage, BoardState, CompanionGifTheme, DraggedTodo, GuideKey, ImagePasteFeedback, ImagePasteRequest, LineItem, QuickApiBodyType, QuickApiHeader, QuickApiMethod, QuickButton, QuickButtonType, StoredImage, TodoItem, TodoListConfig, TodoListId, TodoPeriod, TodoStarChange, WorkspaceSpace } from "./types";
 
 const ImagePreview = defineAsyncComponent(() => import("./components/ImagePreview.vue"));
 const ShortcutHelp = defineAsyncComponent(() => import("./components/ShortcutHelp.vue"));
@@ -87,6 +89,7 @@ const syncClientId = createId();
 const undoSnapshots = ref<string[]>([]);
 const lastUndoSnapshot = ref(createUndoSnapshot());
 const activePreviewId = ref<string | undefined>();
+const pasteFeedback = ref<ImagePasteFeedback | undefined>();
 const closingPreviewId = ref<string | undefined>();
 const previewCloseTimer = ref<number | undefined>();
 const activeEditorId = ref<string | undefined>();
@@ -117,6 +120,7 @@ const companionFadeStartedAt = ref(0);
 const bubbleTimerOptions = ref<BubbleOptions>({});
 const bubbleClearSignal = ref(0);
 const saveStatusTimer = ref<number | undefined>();
+const imagePayloadPruneTimer = ref<number | undefined>();
 const todoNotificationTimer = ref<number | undefined>();
 const todoNotificationDueTimer = ref<number | undefined>();
 const titleFlashTimer = ref<number | undefined>();
@@ -135,7 +139,13 @@ const shortcutHelpVisible = ref(false);
 const isMobileBlocked = ref(getInitialMobileBlocked());
 const mobileMediaQuery = ref<MediaQueryList | null>(null);
 let appMounted = false;
+let pendingBrowserImagePasteRequest: { request: ImagePasteRequest; token: number } | undefined;
+let browserImagePasteRequestToken = 0;
+let pasteFeedbackToken = 0;
 let restoringUndo = false;
+let undoInFlight = false;
+let textEditGeneration = 0;
+let savedTextGeneration = 0;
 let stateSyncChannel: BroadcastChannel | null = null;
 
 type BubbleOptions = {
@@ -148,6 +158,8 @@ type BubbleOptions = {
 
 type PersistOptions = {
   force?: boolean;
+  imagePlacement?: ImagePlacementHint;
+  imageReplacement?: ImageReplacementHint;
 };
 
 type WorkspaceDensityState = "saved" | "saving" | "dirty";
@@ -331,6 +343,7 @@ function updateLanguage(language: AppLanguage): void {
 
 function updateLines(key: "noteLines" | "workspaceLines" | "storageLines", lines: LineItem[]): void {
   state[key] = lines;
+  textEditGeneration += 1;
   markDirty();
   scheduleTextSave();
 }
@@ -339,6 +352,7 @@ function updateSpaceLines(id: string, lines: LineItem[]): void {
   const space = state.spaces.find((item) => item.id === id);
   if (!space) return;
   space.lines = lines;
+  textEditGeneration += 1;
   syncLegacySpaceLines();
   markDirty();
   scheduleTextSave();
@@ -418,15 +432,36 @@ function scheduleTextSave(): void {
   window.clearTimeout(textSaveTimer.value);
   textSaveTimer.value = window.setTimeout(() => {
     textSaveTimer.value = undefined;
-    persistNow("text");
-    showSaveBubble();
+    void persistPendingText();
   }, 3000);
 }
 
 function flushTextSave(): void {
   window.clearTimeout(textSaveTimer.value);
   textSaveTimer.value = undefined;
-  persistNow("text");
+  void persistPendingText();
+}
+
+function resetTextGenerationBaseline(): void {
+  window.clearTimeout(textSaveTimer.value);
+  textSaveTimer.value = undefined;
+  savedTextGeneration = textEditGeneration;
+}
+
+async function persistPendingText(options: { retryOnce?: boolean } = {}): Promise<void> {
+  if (textEditGeneration === savedTextGeneration) return;
+  const attemptGeneration = textEditGeneration;
+  const persisted = persistNow("text");
+  if (!persisted) {
+    if (options.retryOnce && textEditGeneration !== savedTextGeneration) scheduleTextSave();
+    return;
+  }
+  savedTextGeneration = Math.max(savedTextGeneration, attemptGeneration);
+  if (textEditGeneration !== savedTextGeneration) {
+    scheduleTextSave();
+    return;
+  }
+  showSaveBubble();
 }
 
 function showCompanion(anchor?: HTMLElement, guideKey?: GuideKey): void {
@@ -473,19 +508,21 @@ function handleCompanionBlur(): void {
   activeGuideKey.value = null;
 }
 
-function persistNow(scope: SaveScope = "all", options: PersistOptions = {}): void {
+function persistNow(scope: SaveScope = "all", options: PersistOptions = {}): boolean {
   recordUndoCheckpoint();
   markSaving();
   const result = saveStateWithConflictCheck(state, {
     clientId: syncClientId,
     force: options.force,
     scope,
+    imagePlacement: options.imagePlacement,
+    imageReplacement: options.imageReplacement,
   });
   if (result.status === "conflict") {
     window.clearTimeout(saveStatusTimer.value);
     saveStatus.value = "dirty";
     showToast("stateConflict");
-    return;
+    return false;
   }
   state.sync = result.state.sync;
   if (result.status === "merged") {
@@ -493,14 +530,130 @@ function persistNow(scope: SaveScope = "all", options: PersistOptions = {}): voi
   }
   broadcastStateSaved();
   markSavedSoon();
+  scheduleImagePayloadPrune();
+  return true;
 }
 
 function mergeVisibleImages(savedImages: StoredImage[], visibleImages: StoredImage[]): StoredImage[] {
   const visibleById = new Map(visibleImages.map((image) => [image.id, image]));
-  return savedImages.map((image) => ({
-    ...image,
-    src: image.src ?? visibleById.get(image.id)?.src,
-  }));
+  return savedImages.map((image) => {
+    const visible = visibleById.get(image.id);
+    return {
+      ...image,
+      src: image.src ?? (visible && getImagePayloadId(visible) === getImagePayloadId(image) ? visible.src : undefined),
+    };
+  });
+}
+
+async function persistImageReplacement(
+  replacement: StoredImage,
+  expectedPayloadId: string,
+): Promise<boolean> {
+  const previousSnapshot = createUndoSnapshot();
+  const nextImages = state.images.map((image) => image.id === replacement.id ? replacement : image);
+  markSaving();
+  const result = saveStateWithConflictCheck({ ...state, images: nextImages }, {
+    clientId: syncClientId,
+    scope: "images",
+    imageReplacement: {
+      imageId: replacement.id,
+      expectedPayloadId,
+      newPayloadId: getImagePayloadId(replacement),
+    },
+  });
+  if (result.status === "conflict") {
+    await applyImageReplacementConflict(result.state);
+    return false;
+  }
+  state.sync = result.state.sync;
+  state.images = result.status === "merged"
+    ? mergeVisibleImages(result.state.images, nextImages)
+    : nextImages;
+  if (!restoringUndo) {
+    undoSnapshots.value = [
+      ...undoSnapshots.value.slice(-(UNDO_HISTORY_LIMIT - 1)),
+      previousSnapshot,
+    ];
+    lastUndoSnapshot.value = createUndoSnapshot();
+  }
+  broadcastStateSaved();
+  markSavedSoon();
+  scheduleImagePayloadPrune();
+  return true;
+}
+
+async function applyImageReplacementConflict(
+  latest = loadState(),
+): Promise<void> {
+  window.clearTimeout(saveStatusTimer.value);
+  saveStatus.value = "dirty";
+  showToast("stateConflict");
+  while (true) {
+    latest.images = await hydrateStoredImages(latest.images);
+    const newest = loadState();
+    if (newest.sync.revision <= latest.sync.revision) break;
+    latest = newest;
+  }
+  if (!appMounted || latest.sync.revision < state.sync.revision) return;
+  if (textEditGeneration !== savedTextGeneration) {
+    const localText = {
+      noteLines: state.noteLines.map((line) => ({ ...line })),
+      spaces: state.spaces.map((space) => ({
+        ...space,
+        lines: space.lines.map((line) => ({ ...line })),
+      })),
+      workspaceLines: state.workspaceLines.map((line) => ({ ...line })),
+      storageLines: state.storageLines.map((line) => ({ ...line })),
+    };
+    Object.assign(state, latest, localText);
+    applyTheme();
+    window.clearTimeout(saveStatusTimer.value);
+    saveStatus.value = "dirty";
+    void persistPendingText({ retryOnce: true });
+    return;
+  }
+  Object.assign(state, latest);
+  resetTextGenerationBaseline();
+  applyTheme();
+  lastUndoSnapshot.value = createUndoSnapshot();
+  window.clearTimeout(saveStatusTimer.value);
+  saveStatus.value = "saved";
+}
+
+function scheduleImagePayloadPrune(): void {
+  window.clearTimeout(imagePayloadPruneTimer.value);
+  imagePayloadPruneTimer.value = window.setTimeout(() => {
+    imagePayloadPruneTimer.value = undefined;
+    void pruneStoredImagePayloads(collectRetainedImagePayloadIds()).catch(() => {
+      // Payload pruning is best-effort and must not interrupt board persistence.
+    });
+  }, 500);
+}
+
+function collectRetainedImagePayloadIds(): Set<string> {
+  const retained = new Set(state.images.map((image) => getImagePayloadId(image)));
+  const addSnapshot = (snapshot: string) => {
+    try {
+      const parsed = JSON.parse(snapshot) as { images?: unknown };
+      if (!Array.isArray(parsed?.images)) return;
+      parsed.images.forEach((item) => {
+        if (!item || typeof item !== "object" || Array.isArray(item)) return;
+        const record = item as Record<string, unknown>;
+        const id = typeof record.id === "string" && record.id.trim() ? record.id : undefined;
+        const payloadId = typeof record.payloadId === "string" && record.payloadId.trim()
+          ? record.payloadId
+          : undefined;
+        if (payloadId ?? id) retained.add((payloadId ?? id)!);
+      });
+    } catch {
+      // Ignore malformed undo snapshots without normalizing them into generated IDs.
+    }
+  };
+  undoSnapshots.value.forEach(addSnapshot);
+  addSnapshot(lastUndoSnapshot.value);
+  const authoritative = localStorage.getItem(STORAGE_KEY);
+  if (authoritative) addSnapshot(authoritative);
+  return retained;
 }
 
 function setupStateSyncChannel(): void {
@@ -548,6 +701,7 @@ async function applyExternalStoredState(raw?: string): Promise<void> {
     nextState.images = await hydrateStoredImages(nextState.images);
     if (!appMounted) return;
     Object.assign(state, nextState);
+    resetTextGenerationBaseline();
     applyTheme();
     lastUndoSnapshot.value = createUndoSnapshot();
   } catch {
@@ -556,7 +710,7 @@ async function applyExternalStoredState(raw?: string): Promise<void> {
 }
 
 function hasUnsavedLocalChanges(): boolean {
-  return Boolean(textSaveTimer.value) || saveStatus.value !== "saved";
+  return textEditGeneration !== savedTextGeneration || saveStatus.value !== "saved";
 }
 
 function markDirty(): void {
@@ -578,6 +732,8 @@ function markSavedSoon(): void {
 }
 
 async function handlePaste(event: ClipboardEvent): Promise<void> {
+  const request = pendingBrowserImagePasteRequest?.request ?? { placement: "append" as const };
+  pendingBrowserImagePasteRequest = undefined;
   if (shouldBlockBoardEffects()) return;
   const items = Array.from(event.clipboardData?.items ?? []);
   const imageItem = items.find((item) => item.type.startsWith("image/"));
@@ -585,16 +741,16 @@ async function handlePaste(event: ClipboardEvent): Promise<void> {
   event.preventDefault();
   const file = imageItem.getAsFile();
   if (!file) return;
-  await addImageFile(file, { matchDisplaySizeToDevicePixelRatio: true });
+  await addPastedImageFile(file, request);
 }
 
-async function pasteImageFromClipboard(anchor?: HTMLElement): Promise<void> {
+async function pasteImageFromClipboard(request: ImagePasteRequest): Promise<void> {
   if (shouldBlockBoardEffects()) return;
   const clipboard = navigator.clipboard as Clipboard & {
     read?: () => Promise<ClipboardItem[]>;
   };
   if (!clipboard?.read) {
-    if (pasteImageWithBrowserCommand(anchor)) return;
+    if (pasteImageWithBrowserCommand(request)) return;
     showBubble("clipboardPasteUnsupported", undefined, { hideCompanionAfter: true });
     return;
   }
@@ -603,7 +759,7 @@ async function pasteImageFromClipboard(anchor?: HTMLElement): Promise<void> {
     items = await clipboard.read();
   } catch {
     if (shouldBlockBoardEffects()) return;
-    if (pasteImageWithBrowserCommand(anchor)) return;
+    if (pasteImageWithBrowserCommand(request)) return;
     showBubble("clipboardPermissionDenied", undefined, { hideCompanionAfter: true });
     return;
   }
@@ -620,21 +776,130 @@ async function pasteImageFromClipboard(anchor?: HTMLElement): Promise<void> {
       return;
     }
     if (shouldBlockBoardEffects()) return;
-    await addImageFile(new File([blob], "clipboard-image", { type }), { matchDisplaySizeToDevicePixelRatio: true });
+    await addPastedImageFile(new File([blob], "clipboard-image", { type }), request);
     return;
   }
   if (shouldBlockBoardEffects()) return;
   showBubble("clipboardImageMissing", undefined, { hideCompanionAfter: true });
 }
 
-function pasteImageWithBrowserCommand(anchor?: HTMLElement): boolean {
-  anchor?.focus({ preventScroll: true });
-  return Boolean(document.execCommand?.("paste"));
+function pasteImageWithBrowserCommand(request: ImagePasteRequest): boolean {
+  request.anchor?.focus({ preventScroll: true });
+  const token = ++browserImagePasteRequestToken;
+  pendingBrowserImagePasteRequest = { request, token };
+  const pasted = Boolean(document.execCommand?.("paste"));
+  if (!pasted) {
+    if (pendingBrowserImagePasteRequest?.token === token) pendingBrowserImagePasteRequest = undefined;
+    return false;
+  }
+  window.setTimeout(() => {
+    if (pendingBrowserImagePasteRequest?.token === token) pendingBrowserImagePasteRequest = undefined;
+  }, 0);
+  return pasted;
+}
+
+async function addPastedImageFile(file: File, request: ImagePasteRequest): Promise<StoredImage | undefined> {
+  if (request.placement === "append") {
+    return addImageFile(file, {
+      matchDisplaySizeToDevicePixelRatio: true,
+      onPersisted: (image) => publishPasteFeedback(image.id),
+    });
+  }
+  if (shouldBlockBoardEffects()) return undefined;
+  let src: string;
+  try {
+    src = await fileToDataUrl(file);
+  } catch {
+    if (shouldBlockBoardEffects()) return undefined;
+    showBubble("imageReadFailed", undefined, { hideCompanionAfter: true });
+    return undefined;
+  }
+  if (shouldBlockBoardEffects()) return undefined;
+
+  const target = state.images.find((image) => image.id === request.targetId);
+  if (!target) return undefined;
+  if (request.placement === "replace") {
+    const expectedPayloadId = getImagePayloadId(target);
+    const replacement = { ...target, payloadId: createId(), src };
+    try {
+      await storeImagePayload(replacement);
+    } catch {
+      if (shouldBlockBoardEffects()) return undefined;
+      showBubble("imageStoreFailed", undefined, { hideCompanionAfter: true });
+      return undefined;
+    }
+    const currentTarget = state.images.find((image) => image.id === request.targetId);
+    if (shouldBlockBoardEffects() || !currentTarget || getImagePayloadId(currentTarget) !== expectedPayloadId) {
+      try {
+        await deleteStoredImage(replacement);
+      } catch {
+        // Best-effort cleanup for an uncommitted replacement payload.
+      }
+      if (!shouldBlockBoardEffects()) await applyImageReplacementConflict();
+      return undefined;
+    }
+    if (!(await persistImageReplacement(replacement, expectedPayloadId))) {
+      try {
+        await deleteStoredImage(replacement);
+      } catch {
+        // Best-effort cleanup for a replacement that lost a storage conflict.
+      }
+      return undefined;
+    }
+    publishPasteFeedback(replacement.id);
+    showBubble("imageAdded", undefined, { hideCompanionAfter: true });
+    return replacement;
+  }
+
+  const displaySize = await getDevicePixelRatioDisplaySize(src);
+  if (shouldBlockBoardEffects()) return undefined;
+  if (!state.images.some((image) => image.id === request.targetId)) return undefined;
+  const image: StoredImage = {
+    id: createId(),
+    src,
+    createdAt: Date.now(),
+    ...(displaySize ?? {}),
+  };
+  try {
+    await storeImagePayload(image);
+  } catch {
+    if (shouldBlockBoardEffects()) return undefined;
+    showBubble("imageStoreFailed", undefined, { hideCompanionAfter: true });
+    return undefined;
+  }
+  const targetIndex = state.images.findIndex((item) => item.id === request.targetId);
+  if (shouldBlockBoardEffects() || targetIndex < 0) {
+    try {
+      await deleteStoredImage(image);
+    } catch {
+      // Best-effort cleanup when the target disappears after payload storage.
+    }
+    return undefined;
+  }
+  state.images.splice(targetIndex + (request.placement === "after" ? 1 : 0), 0, image);
+  const persisted = persistNow("images", {
+    imagePlacement: {
+      imageId: image.id,
+      targetId: request.targetId,
+      placement: request.placement,
+    },
+  });
+  if (persisted) publishPasteFeedback(image.id);
+  showBubble("imageAdded", undefined, { hideCompanionAfter: true });
+  return image;
+}
+
+function publishPasteFeedback(id: string): void {
+  pasteFeedback.value = { id, token: ++pasteFeedbackToken };
 }
 
 async function addImageFile(
   file: File,
-  options: { showMessage?: boolean; matchDisplaySizeToDevicePixelRatio?: boolean } = {},
+  options: {
+    showMessage?: boolean;
+    matchDisplaySizeToDevicePixelRatio?: boolean;
+    onPersisted?: (image: StoredImage) => void;
+  } = {},
 ): Promise<StoredImage | undefined> {
   if (shouldBlockBoardEffects()) return undefined;
   let src: string;
@@ -665,14 +930,14 @@ async function addImageFile(
   }
   if (shouldBlockBoardEffects()) {
     try {
-      await deleteStoredImage(image.id);
+      await deleteStoredImage(image);
     } catch {
       // Best-effort cleanup for payloads that were stored just before mobile handoff.
     }
     return undefined;
   }
   state.images.push(image);
-  persistNow("images");
+  if (persistNow("images")) options.onPersisted?.(image);
   if (options.showMessage ?? true) showBubble("imageAdded", undefined, { hideCompanionAfter: true });
   return image;
 }
@@ -739,7 +1004,6 @@ function deleteImage(id: string, anchor?: HTMLElement): void {
     } else if (closingPreviewId.value === id) {
       clearImagePreview();
     }
-    await deleteStoredImage(id);
     persistNow();
     showBubble("deleteImage", feedbackAnchor, { hideCompanionAfter: true });
   }, undefined, { confirmText: uiText.value.common.delete, cancelText: uiText.value.common.cancel });
@@ -791,8 +1055,10 @@ async function saveEditedImage(payload: { id: string; src: string; displayWidth:
   if (shouldBlockBoardEffects()) return;
   const image = state.images.find((item) => item.id === payload.id);
   if (!image) return;
+  const expectedPayloadId = getImagePayloadId(image);
   const nextImage: StoredImage = {
     ...image,
+    payloadId: createId(),
     src: payload.src,
     displayWidth: payload.displayWidth,
     displayHeight: payload.displayHeight,
@@ -804,9 +1070,24 @@ async function saveEditedImage(payload: { id: string; src: string; displayWidth:
     showBubble("imageStoreFailed", document.querySelector<HTMLElement>(".image-preview") ?? undefined, { hideCompanionAfter: true });
     return;
   }
-  if (shouldBlockBoardEffects()) return;
-  Object.assign(image, nextImage);
-  persistNow("images");
+  const currentImage = state.images.find((item) => item.id === payload.id);
+  if (shouldBlockBoardEffects() || !currentImage || getImagePayloadId(currentImage) !== expectedPayloadId) {
+    try {
+      await deleteStoredImage(nextImage);
+    } catch {
+      // Best-effort cleanup for an uncommitted edited payload.
+    }
+    if (!shouldBlockBoardEffects()) await applyImageReplacementConflict();
+    return;
+  }
+  if (!(await persistImageReplacement(nextImage, expectedPayloadId))) {
+    try {
+      await deleteStoredImage(nextImage);
+    } catch {
+      // Best-effort cleanup for an edit that lost a storage conflict.
+    }
+    return;
+  }
   activeEditorId.value = undefined;
   showBubble("imageEdited", document.querySelector<HTMLElement>(".image-preview") ?? undefined, { hideCompanionAfter: true });
 }
@@ -1494,6 +1775,7 @@ function clearData(anchor?: HTMLElement): void {
       pendingEditTodoListId.value = null;
       undoSnapshots.value = [];
       Object.assign(state, defaultState());
+      resetTextGenerationBaseline();
       await clearStoredImagePayloads();
       persistNow("all", { force: true });
       refreshTodoNotifications();
@@ -1562,6 +1844,7 @@ async function importData(event: Event): Promise<void> {
     importFeedbackAnchor.value,
     async () => {
       Object.assign(state, next);
+      resetTextGenerationBaseline();
       await persistCustomCompanionGifPayloads(state.customCompanionGif);
       await persistImagePayloads(state.images);
       persistNow("all", { force: true });
@@ -1640,7 +1923,7 @@ function handleGlobalKeydown(event: KeyboardEvent): void {
   }
   if (isUndoShortcut(event) && !shouldSkipGlobalUndo(event.target)) {
     event.preventDefault();
-    undoLastBoardChange();
+    void undoLastBoardChange();
     return;
   }
   if (event.key === "Escape") {
@@ -1693,10 +1976,10 @@ function recordUndoCheckpoint(): void {
   lastUndoSnapshot.value = current;
 }
 
-function undoLastBoardChange(): void {
+async function undoLastBoardChange(): Promise<void> {
+  if (undoInFlight || restoringUndo) return;
   const snapshot = undoSnapshots.value.at(-1);
   if (!snapshot) return;
-  undoSnapshots.value = undoSnapshots.value.slice(0, -1);
   let nextState: BoardState;
   try {
     nextState = normalizeImportedState(JSON.parse(snapshot));
@@ -1705,8 +1988,13 @@ function undoLastBoardChange(): void {
     return;
   }
 
-  restoringUndo = true;
+  const stateAtStart = createUndoSnapshot();
+  undoInFlight = true;
   try {
+    nextState.images = await hydrateStoredImages(nextState.images);
+    if (!appMounted || createUndoSnapshot() !== stateAtStart || undoSnapshots.value.at(-1) !== snapshot) return;
+    restoringUndo = true;
+    undoSnapshots.value = undoSnapshots.value.slice(0, -1);
     window.clearTimeout(textSaveTimer.value);
     textSaveTimer.value = undefined;
     emptyTodoRemovalTimers.forEach((timer) => window.clearTimeout(timer));
@@ -1714,12 +2002,13 @@ function undoLastBoardChange(): void {
     clearImagePreview();
     pendingEditSpaceId.value = null;
     pendingEditTodoListId.value = null;
-    nextState.images = mergeVisibleImages(nextState.images, state.images);
     Object.assign(state, nextState);
+    resetTextGenerationBaseline();
     persistNow();
     lastUndoSnapshot.value = createUndoSnapshot();
   } finally {
     restoringUndo = false;
+    undoInFlight = false;
   }
 }
 
@@ -2053,11 +2342,13 @@ function clearTimers(): void {
   window.clearTimeout(bubbleTimer.value);
   window.clearTimeout(bubbleFadeTimer.value);
   window.clearTimeout(saveStatusTimer.value);
+  window.clearTimeout(imagePayloadPruneTimer.value);
   window.clearInterval(versionCheckTimer.value);
   window.clearTimeout(todoNotificationDueTimer.value);
   window.clearInterval(titleFlashTimer.value);
   window.clearTimeout(previewCloseTimer.value);
   previewCloseTimer.value = undefined;
+  imagePayloadPruneTimer.value = undefined;
   versionCheckTimer.value = undefined;
   window.clearInterval(todoNotificationTimer.value);
   todoNotificationDueTimer.value = undefined;
@@ -2532,6 +2823,7 @@ function moveItem<T extends { id: string }>(items: T[], dragId: string, targetId
           :title="titles['image-title']"
           :images="state.images"
           :active-preview-id="activePreviewId"
+          :paste-feedback="pasteFeedback"
           :language="state.language"
           @title-update="updateTitle"
           @preview="openImagePreview"

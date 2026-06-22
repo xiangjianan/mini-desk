@@ -9,6 +9,8 @@ import SettingsMenu from "../components/SettingsMenu.vue";
 import SpacePanel from "../components/SpacePanel.vue";
 import TodoPanel from "../components/TodoPanel.vue";
 import { defaultState, STORAGE_KEY } from "../state/defaults";
+import { hydrateStoredImages, storeImagePayload } from "../state/images";
+import * as imageState from "../state/images";
 import { KAOMOJI_BY_MOOD } from "../state/messages";
 import { FALLBACK_APP_VERSION } from "../state/version";
 
@@ -113,6 +115,83 @@ async function flushAsyncComponents() {
 
 function getImagePreview(wrapper: ReturnType<typeof mountApp>) {
   return wrapper.getComponent({ name: "ImagePreview" });
+}
+
+function installMemoryImageDb(): () => void {
+  const originalIndexedDb = window.indexedDB;
+  const records = new Map<string, { id: string; src?: string }>();
+  const createRequest = <T,>(result: T, settled: () => void): IDBRequest<T> => {
+    const request = { result, error: null, onsuccess: null, onerror: null } as unknown as IDBRequest<T>;
+    queueMicrotask(() => {
+      request.onsuccess?.(new Event("success"));
+      settled();
+    });
+    return request;
+  };
+  const indexedDb = {
+    open: vi.fn(() => {
+      const db = {
+        objectStoreNames: { contains: () => true },
+        createObjectStore: vi.fn(),
+        transaction: vi.fn(() => {
+          let pending = 0;
+          let completed = false;
+          const transaction = {
+            objectStore: () => store,
+            oncomplete: null as ((event: Event) => void) | null,
+            onerror: null as ((event: Event) => void) | null,
+            error: null,
+          };
+          const finish = () => queueMicrotask(() => {
+            if (!completed && pending === 0) {
+              completed = true;
+              transaction.oncomplete?.(new Event("complete"));
+            }
+          });
+          const settle = () => {
+            pending -= 1;
+            finish();
+          };
+          const request = <T,>(result: T) => {
+            pending += 1;
+            return createRequest(result, settle);
+          };
+          const store = {
+            get: (id: string) => request(records.get(id)),
+            put: (record: { id: string; src?: string }) => {
+              records.set(record.id, { ...record });
+              return request(record.id);
+            },
+            delete: (id: string) => {
+              records.delete(id);
+              return request(undefined);
+            },
+            clear: () => {
+              records.clear();
+              return request(undefined);
+            },
+          };
+          finish();
+          return transaction;
+        }),
+        close: vi.fn(),
+      };
+      const request = {
+        result: db,
+        error: null,
+        onsuccess: null,
+        onerror: null,
+        onupgradeneeded: null,
+      } as unknown as IDBOpenDBRequest;
+      queueMicrotask(() => request.onsuccess?.(new Event("success")));
+      return request;
+    }),
+  };
+  vi.stubGlobal("indexedDB", indexedDb);
+  return () => {
+    if (originalIndexedDb) vi.stubGlobal("indexedDB", originalIndexedDb);
+    else Reflect.deleteProperty(window, "indexedDB");
+  };
 }
 
 function stubMatchMedia(matches: boolean) {
@@ -405,10 +484,40 @@ describe("App shell", () => {
       expect(wrapper.find('[data-testid="todo-input-morning"]').exists()).toBe(true);
 
       window.dispatchEvent(new KeyboardEvent("keydown", { key: "z", ctrlKey: true }));
+      await flushPromises();
       await wrapper.vm.$nextTick();
 
       expect(wrapper.find('[data-testid="todo-input-morning"]').exists()).toBe(false);
       expect(JSON.parse(localStorage.getItem(STORAGE_KEY) || "{}").todos.morning).toEqual([]);
+    } finally {
+      wrapper.unmount();
+    }
+  });
+
+  it("does not swallow a user change made while undo hydration is pending", async () => {
+    const wrapper = mountApp();
+
+    try {
+      await wrapper.get('[data-testid="todo-list-morning"]').trigger("click");
+      await wrapper.vm.$nextTick();
+      const deferred = createDeferred<Awaited<ReturnType<typeof hydrateStoredImages>>>();
+      vi.spyOn(imageState, "hydrateStoredImages").mockImplementationOnce(() => deferred.promise);
+
+      window.dispatchEvent(new KeyboardEvent("keydown", { key: "z", ctrlKey: true }));
+      wrapper.getComponent(SpacePanel).vm.$emit("create");
+      await wrapper.vm.$nextTick();
+      deferred.resolve([]);
+      await flushPromises();
+      await wrapper.vm.$nextTick();
+
+      expect(wrapper.find('[data-testid="todo-input-morning"]').exists()).toBe(true);
+      expect(wrapper.getComponent(SpacePanel).props("spaces")).toHaveLength(2);
+
+      window.dispatchEvent(new KeyboardEvent("keydown", { key: "z", ctrlKey: true }));
+      await flushPromises();
+      await wrapper.vm.$nextTick();
+      expect(wrapper.find('[data-testid="todo-input-morning"]').exists()).toBe(true);
+      expect(wrapper.getComponent(SpacePanel).props("spaces")).toHaveLength(1);
     } finally {
       wrapper.unmount();
     }
@@ -1940,6 +2049,13 @@ describe("App shell", () => {
     const wrapper = mountApp();
 
     try {
+      await storeImagePayload({
+        id: "img-1",
+        src: "data:image/png;base64,b25l",
+        createdAt: 1,
+        displayWidth: 120,
+        displayHeight: 80,
+      });
       wrapper.getComponent(ImagePanel).vm.$emit("preview", "img-1");
       await wrapper.vm.$nextTick();
       await flushAsyncComponents();
@@ -1966,6 +2082,7 @@ describe("App shell", () => {
   });
 
   it("reopens preview image editing with Enter after saving instead of copying the image", async () => {
+    const restoreIndexedDb = installMemoryImageDb();
     localStorage.setItem(
       STORAGE_KEY,
       JSON.stringify({
@@ -1997,8 +2114,25 @@ describe("App shell", () => {
         displayWidth: 120,
         displayHeight: 80,
       });
-      await Promise.resolve();
-      await wrapper.vm.$nextTick();
+      await vi.waitFor(() => {
+        const image = (wrapper.getComponent(ImagePanel).props("images") as Array<{
+          id: string;
+          payloadId?: string;
+          displayWidth?: number;
+          displayHeight?: number;
+        }>)[0];
+        expect(image).toMatchObject({
+          id: "img-1",
+          payloadId: expect.any(String),
+          displayWidth: 120,
+          displayHeight: 80,
+        });
+      });
+      const stored = JSON.parse(localStorage.getItem(STORAGE_KEY) || "{}");
+      expect(stored.images[0].payloadId).toEqual(expect.any(String));
+      await expect(hydrateStoredImages(stored.images)).resolves.toEqual([
+        expect.objectContaining({ id: "img-1", src: "data:image/png;base64,dHdv" }),
+      ]);
 
       const event = new KeyboardEvent("keydown", { key: "Enter", bubbles: true, cancelable: true });
       window.dispatchEvent(event);
@@ -2010,7 +2144,57 @@ describe("App shell", () => {
       expect(write).not.toHaveBeenCalled();
     } finally {
       wrapper.unmount();
+      restoreIndexedDb();
       vi.unstubAllGlobals();
+    }
+  });
+
+  it("hydrates the previous image payload when undoing an edit", async () => {
+    const restoreIndexedDb = installMemoryImageDb();
+    localStorage.setItem(
+      STORAGE_KEY,
+      JSON.stringify({
+        images: [{ id: "img-edit-undo", src: "data:image/png;base64,b2xk", createdAt: 1, displayWidth: 120, displayHeight: 80 }],
+      }),
+    );
+    const wrapper = mountApp();
+
+    try {
+      await storeImagePayload({ id: "img-edit-undo", src: "data:image/png;base64,b2xk", createdAt: 1 });
+      wrapper.getComponent(ImagePanel).vm.$emit("preview", "img-edit-undo");
+      await wrapper.vm.$nextTick();
+      await flushAsyncComponents();
+      getImagePreview(wrapper).vm.$emit("saveEdit", {
+        id: "img-edit-undo",
+        src: "data:image/png;base64,bmV3",
+        displayWidth: 200,
+        displayHeight: 140,
+      });
+      await vi.waitFor(() => {
+        expect((wrapper.getComponent(ImagePanel).props("images") as Array<{ payloadId?: string }>)[0].payloadId).toEqual(expect.any(String));
+      });
+
+      window.dispatchEvent(new KeyboardEvent("keydown", { key: "z", ctrlKey: true }));
+      await flushPromises();
+      await wrapper.vm.$nextTick();
+
+      const image = (wrapper.getComponent(ImagePanel).props("images") as Array<{
+        id: string;
+        payloadId?: string;
+        src?: string;
+        displayWidth?: number;
+        displayHeight?: number;
+      }>)[0];
+      expect(image).toMatchObject({
+        id: "img-edit-undo",
+        src: "data:image/png;base64,b2xk",
+        displayWidth: 120,
+        displayHeight: 80,
+      });
+      expect(image).not.toHaveProperty("payloadId");
+    } finally {
+      wrapper.unmount();
+      restoreIndexedDb();
     }
   });
 
@@ -3161,6 +3345,7 @@ describe("App shell", () => {
     await vi.waitFor(() => {
       expect((wrapper.getComponent(ImagePanel).props("images") as Array<{ id: string }>)).toHaveLength(2);
     });
+    expect(wrapper.getComponent(ImagePanel).props("pasteFeedback")).toBeUndefined();
     expect(write).toHaveBeenCalledTimes(1);
     vi.unstubAllGlobals();
     wrapper.unmount();
@@ -3218,16 +3403,17 @@ describe("App shell", () => {
     try {
       const imagePanel = wrapper.getComponent(ImagePanel);
 
-      imagePanel.vm.$emit("paste");
+      imagePanel.vm.$emit("paste", { placement: "append" });
       await Promise.resolve();
       await wrapper.vm.$nextTick();
       await vi.advanceTimersByTimeAsync(200);
       await wrapper.vm.$nextTick();
 
       expect(wrapper.find('[data-testid="companion-confirm"]').text()).toMatch(/没有|图片|剪贴板/);
+      expect(imagePanel.props("pasteFeedback")).toBeUndefined();
 
       await vi.advanceTimersByTimeAsync(3000);
-      imagePanel.vm.$emit("paste");
+      imagePanel.vm.$emit("paste", { placement: "append" });
       await Promise.resolve();
       await Promise.resolve();
       await wrapper.vm.$nextTick();
@@ -3263,7 +3449,7 @@ describe("App shell", () => {
     const wrapper = mountApp();
 
     try {
-      wrapper.getComponent(ImagePanel).vm.$emit("paste");
+      wrapper.getComponent(ImagePanel).vm.$emit("paste", { placement: "append" });
       await Promise.resolve();
       await Promise.resolve();
       await wrapper.vm.$nextTick();
@@ -3274,8 +3460,528 @@ describe("App shell", () => {
       const images = wrapper.getComponent(ImagePanel).props("images") as Array<{ id: string }>;
       expect(images).toHaveLength(2);
       expect(images[0].id).toBe("existing");
+      expect(wrapper.getComponent(ImagePanel).props("pasteFeedback")).toEqual({ id: images[1].id, token: 1 });
     } finally {
       wrapper.unmount();
+      vi.useRealTimers();
+    }
+  });
+
+  it("inserts pasted images before and after the requested targets", async () => {
+    localStorage.setItem(
+      STORAGE_KEY,
+      JSON.stringify({
+        images: [
+          { id: "first", src: "data:image/png;base64,first", createdAt: 1 },
+          { id: "second", src: "data:image/png;base64,second", createdAt: 2 },
+        ],
+      }),
+    );
+    const imageBlob = new Blob(["img"], { type: "image/png" });
+    Object.assign(navigator, {
+      clipboard: {
+        read: vi.fn().mockResolvedValue([{ types: ["image/png"], getType: vi.fn().mockResolvedValue(imageBlob) }]),
+      },
+    });
+    const wrapper = mountApp();
+    const imagePanel = wrapper.getComponent(ImagePanel);
+    const anchor = wrapper.get(".image-panel").element as HTMLElement;
+
+    imagePanel.vm.$emit("paste", { placement: "before", targetId: "second", anchor });
+    await vi.waitFor(() => {
+      expect((wrapper.getComponent(ImagePanel).props("images") as Array<{ id: string }>)).toHaveLength(3);
+    });
+    const afterBefore = wrapper.getComponent(ImagePanel).props("images") as Array<{ id: string }>;
+    expect(afterBefore[0].id).toBe("first");
+    expect(afterBefore[2].id).toBe("second");
+    const beforeId = afterBefore[1].id;
+    expect(wrapper.getComponent(ImagePanel).props("pasteFeedback")).toEqual({ id: beforeId, token: 1 });
+
+    imagePanel.vm.$emit("paste", { placement: "after", targetId: "second", anchor });
+    await vi.waitFor(() => {
+      expect((wrapper.getComponent(ImagePanel).props("images") as Array<{ id: string }>)).toHaveLength(4);
+    });
+    const afterAfter = wrapper.getComponent(ImagePanel).props("images") as Array<{ id: string }>;
+    expect(afterAfter.map((image) => image.id)).toEqual(["first", beforeId, "second", expect.any(String)]);
+    expect(wrapper.getComponent(ImagePanel).props("pasteFeedback")).toEqual({ id: afterAfter[3].id, token: 2 });
+
+    wrapper.unmount();
+  });
+
+  it("replaces pasted image data without changing list identity or display metadata", async () => {
+    const restoreIndexedDb = installMemoryImageDb();
+    localStorage.setItem(
+      STORAGE_KEY,
+      JSON.stringify({
+        images: [
+          { id: "first", src: "data:image/png;base64,first", createdAt: 1 },
+          {
+            id: "target",
+            src: "data:image/png;base64,old",
+            createdAt: 42,
+            displayWidth: 320,
+            displayHeight: 180,
+          },
+          { id: "last", src: "data:image/png;base64,last", createdAt: 3 },
+        ],
+      }),
+    );
+    const imageBlob = new Blob(["replacement"], { type: "image/png" });
+    Object.assign(navigator, {
+      clipboard: {
+        read: vi.fn().mockResolvedValue([{ types: ["image/png"], getType: vi.fn().mockResolvedValue(imageBlob) }]),
+      },
+    });
+    const wrapper = mountApp();
+    const anchor = wrapper.get(".image-panel").element as HTMLElement;
+
+    try {
+      await storeImagePayload({
+        id: "target",
+        src: "data:image/png;base64,old",
+        createdAt: 42,
+        displayWidth: 320,
+        displayHeight: 180,
+      });
+      wrapper.getComponent(ImagePanel).vm.$emit("paste", { placement: "replace", targetId: "target", anchor });
+      await vi.waitFor(() => {
+      const images = wrapper.getComponent(ImagePanel).props("images") as Array<{ id: string; src?: string }>;
+      expect(images.find((image) => image.id === "target")?.src).not.toBe("data:image/png;base64,old");
+      });
+
+      const images = wrapper.getComponent(ImagePanel).props("images") as Array<{
+      id: string;
+      payloadId?: string;
+      src?: string;
+      createdAt: number;
+      displayWidth?: number;
+      displayHeight?: number;
+    }>;
+      expect(images.map((image) => image.id)).toEqual(["first", "target", "last"]);
+      expect(images[1]).toMatchObject({
+      id: "target",
+      payloadId: expect.any(String),
+      createdAt: 42,
+      displayWidth: 320,
+      displayHeight: 180,
+      });
+      const stored = JSON.parse(localStorage.getItem(STORAGE_KEY) || "{}");
+      expect(stored.images.map((image: { id: string }) => image.id)).toEqual(["first", "target", "last"]);
+      expect(stored.images[1]).toMatchObject({
+      id: "target",
+      payloadId: images[1].payloadId,
+      createdAt: 42,
+      displayWidth: 320,
+      displayHeight: 180,
+      });
+      expect(stored.images[1].src).toBeUndefined();
+      await expect(hydrateStoredImages(stored.images)).resolves.toEqual([
+      expect.objectContaining({ id: "first" }),
+      expect.objectContaining({
+        id: "target",
+        payloadId: images[1].payloadId,
+        src: expect.not.stringMatching(/base64,old$/),
+        createdAt: 42,
+        displayWidth: 320,
+        displayHeight: 180,
+      }),
+      expect.objectContaining({ id: "last" }),
+      ]);
+      expect(wrapper.getComponent(ImagePanel).props("pasteFeedback")).toEqual({ id: "target", token: 1 });
+
+      window.dispatchEvent(new KeyboardEvent("keydown", { key: "z", ctrlKey: true }));
+      await vi.waitFor(() => {
+        expect((wrapper.getComponent(ImagePanel).props("images") as Array<{
+          id: string;
+          payloadId?: string;
+          src?: string;
+          displayWidth?: number;
+          displayHeight?: number;
+        }>)[1]).toMatchObject({
+          id: "target",
+          src: "data:image/png;base64,old",
+          displayWidth: 320,
+          displayHeight: 180,
+        });
+      });
+      expect((wrapper.getComponent(ImagePanel).props("images") as Array<{ payloadId?: string }>)[1]).not.toHaveProperty("payloadId");
+    } finally {
+      wrapper.unmount();
+      restoreIndexedDb();
+    }
+  });
+
+  it("does not revive an image deleted by another tab during replacement", async () => {
+    localStorage.setItem(
+      STORAGE_KEY,
+      JSON.stringify({
+        sync: { revision: 1, updatedAt: 10, clientId: "tab-a" },
+        images: [{ id: "target", src: "data:image/png;base64,old", createdAt: 1 }],
+      }),
+    );
+    const imageBlob = new Blob(["losing replacement"], { type: "image/png" });
+    Object.assign(navigator, {
+      clipboard: {
+        read: vi.fn().mockResolvedValue([{
+          types: ["image/png"],
+          getType: vi.fn(async () => {
+            localStorage.setItem(
+              STORAGE_KEY,
+              JSON.stringify({
+                sync: { revision: 2, updatedAt: 20, clientId: "tab-b" },
+                images: [{ id: "other", src: "data:image/png;base64,other", createdAt: 2 }],
+              }),
+            );
+            return imageBlob;
+          }),
+        }]),
+      },
+    });
+    const wrapper = mountApp();
+
+    try {
+      const anchor = wrapper.get(".image-panel").element as HTMLElement;
+      wrapper.getComponent(ImagePanel).vm.$emit("paste", { placement: "replace", targetId: "target", anchor });
+
+      await vi.waitFor(() => {
+        expect((wrapper.getComponent(ImagePanel).props("images") as Array<{ id: string }>).map((image) => image.id)).toEqual(["other"]);
+      });
+      expect(JSON.parse(localStorage.getItem(STORAGE_KEY) || "{}").images.map((image: { id: string }) => image.id)).toEqual(["other"]);
+      expect(wrapper.getComponent(ImagePanel).props("pasteFeedback")).toBeUndefined();
+    } finally {
+      wrapper.unmount();
+    }
+  });
+
+  it("keeps the winning payload when another tab replaces the same image first", async () => {
+    const restoreIndexedDb = installMemoryImageDb();
+    localStorage.setItem(
+      STORAGE_KEY,
+      JSON.stringify({
+        sync: { revision: 1, updatedAt: 10, clientId: "tab-a" },
+        images: [{ id: "target", payloadId: "target-v1", src: "data:image/png;base64,old", createdAt: 1 }],
+      }),
+    );
+    const imageBlob = new Blob(["losing replacement"], { type: "image/png" });
+    const getType = vi.fn(async () => {
+      await storeImagePayload({
+        id: "target",
+        payloadId: "winning-v2",
+        src: "data:image/png;base64,winning",
+        createdAt: 1,
+      });
+      localStorage.setItem(
+        STORAGE_KEY,
+        JSON.stringify({
+          sync: { revision: 2, updatedAt: 20, clientId: "tab-b" },
+          images: [{ id: "target", payloadId: "winning-v2", createdAt: 1 }],
+        }),
+      );
+      return imageBlob;
+    });
+    Object.assign(navigator, {
+      clipboard: {
+        read: vi.fn().mockResolvedValue([{
+          types: ["image/png"],
+          getType,
+        }]),
+      },
+    });
+    const wrapper = mountApp();
+
+    try {
+      await flushPromises();
+      await wrapper.vm.$nextTick();
+      const deferredHydration = createDeferred<Awaited<ReturnType<typeof hydrateStoredImages>>>();
+      const hydrateSpy = vi.spyOn(imageState, "hydrateStoredImages").mockImplementationOnce(() => deferredHydration.promise);
+      const anchor = wrapper.get(".image-panel").element as HTMLElement;
+      wrapper.getComponent(ImagePanel).vm.$emit("paste", { placement: "replace", targetId: "target", anchor });
+
+      await vi.waitFor(() => expect(getType).toHaveBeenCalled());
+      await vi.waitFor(() => expect(hydrateSpy).toHaveBeenCalled());
+      await storeImagePayload({
+        id: "target",
+        payloadId: "winning-v3",
+        src: "data:image/png;base64,winning-three",
+        createdAt: 1,
+      });
+      localStorage.setItem(
+        STORAGE_KEY,
+        JSON.stringify({
+          sync: { revision: 3, updatedAt: 30, clientId: "tab-c" },
+          images: [{ id: "target", payloadId: "winning-v3", createdAt: 1 }],
+        }),
+      );
+      deferredHydration.resolve([{ id: "target", payloadId: "winning-v2", src: "data:image/png;base64,winning", createdAt: 1 }]);
+
+      await vi.waitFor(() => {
+        expect((wrapper.getComponent(ImagePanel).props("images") as Array<{ id: string; payloadId?: string; src?: string }>)[0]).toMatchObject({
+          id: "target",
+          payloadId: "winning-v3",
+          src: "data:image/png;base64,winning-three",
+        });
+      });
+      expect(JSON.parse(localStorage.getItem(STORAGE_KEY) || "{}").images[0].payloadId).toBe("winning-v3");
+      expect(wrapper.getComponent(ImagePanel).props("pasteFeedback")).toBeUndefined();
+
+      const newerState = JSON.stringify({
+        sync: { revision: 4, updatedAt: 40, clientId: "tab-d" },
+        images: [{ id: "newer", src: "data:image/png;base64,newer", createdAt: 3 }],
+      });
+      localStorage.setItem(STORAGE_KEY, newerState);
+      window.dispatchEvent(new StorageEvent("storage", { key: STORAGE_KEY, newValue: newerState }));
+      await vi.waitFor(() => {
+        expect((wrapper.getComponent(ImagePanel).props("images") as Array<{ id: string }>).map((image) => image.id)).toEqual(["newer"]);
+      });
+    } finally {
+      wrapper.unmount();
+      restoreIndexedDb();
+    }
+  });
+
+  it("preserves pending workspace text when an image replacement conflicts", async () => {
+    localStorage.setItem(
+      STORAGE_KEY,
+      JSON.stringify({
+        sync: { revision: 1, updatedAt: 10, clientId: "tab-a" },
+        spaces: [{ id: "workspace", title: "Memo", lines: [{ text: "old", indent: 0 }] }],
+        activeSpaceId: "workspace",
+        images: [{ id: "target", src: "data:image/png;base64,old", createdAt: 1 }],
+      }),
+    );
+    const imageBlob = new Blob(["losing"], { type: "image/png" });
+    Object.assign(navigator, {
+      clipboard: {
+        read: vi.fn().mockResolvedValue([{
+          types: ["image/png"],
+          getType: vi.fn(async () => {
+            localStorage.setItem(
+              STORAGE_KEY,
+              JSON.stringify({
+                sync: { revision: 2, updatedAt: 20, clientId: "tab-b" },
+                language: "en",
+                spaces: [{ id: "workspace", title: "Memo", lines: [{ text: "remote", indent: 0 }] }],
+                activeSpaceId: "workspace",
+                images: [],
+              }),
+            );
+            return imageBlob;
+          }),
+        }]),
+      },
+    });
+    const wrapper = mountApp();
+
+    try {
+      await flushPromises();
+      await wrapper.vm.$nextTick();
+      wrapper.getComponent(SpacePanel).vm.$emit("update", "workspace", [{ text: "local draft", indent: 0 }]);
+      const anchor = wrapper.get(".image-panel").element as HTMLElement;
+      wrapper.getComponent(ImagePanel).vm.$emit("paste", { placement: "replace", targetId: "target", anchor });
+
+      await vi.waitFor(() => {
+        expect((wrapper.getComponent(ImagePanel).props("images") as Array<unknown>)).toHaveLength(0);
+      });
+      expect((wrapper.getComponent(SpacePanel).props("spaces") as Array<{ lines: Array<{ text: string }> }>)[0].lines[0].text).toBe("local draft");
+      expect(wrapper.getComponent(ImagePanel).props("title")).toBe("🎨 Images");
+
+      wrapper.getComponent(SpacePanel).vm.$emit("blur");
+      await vi.waitFor(() => {
+        const stored = JSON.parse(localStorage.getItem(STORAGE_KEY) || "{}");
+        expect(stored.sync.revision).toBe(3);
+        expect(stored.spaces[0].lines[0].text).toBe("local draft");
+        expect(stored.language).toBe("en");
+      });
+      await new Promise((resolve) => setTimeout(resolve, 150));
+      const newer = JSON.stringify({
+        sync: { revision: 4, updatedAt: 40, clientId: "tab-c" },
+        spaces: [{ id: "workspace", title: "Memo", lines: [{ text: "newer remote", indent: 0 }] }],
+        activeSpaceId: "workspace",
+        images: [{ id: "remote-image", createdAt: 3 }],
+      });
+      localStorage.setItem(STORAGE_KEY, newer);
+      window.dispatchEvent(new StorageEvent("storage", { key: STORAGE_KEY, newValue: newer }));
+      await Promise.resolve();
+      await wrapper.vm.$nextTick();
+      await vi.waitFor(() => {
+        expect((wrapper.getComponent(SpacePanel).props("spaces") as Array<{ lines: Array<{ text: string }> }>)[0].lines[0].text).toBe("newer remote");
+        expect((wrapper.getComponent(ImagePanel).props("images") as Array<unknown>)).toHaveLength(1);
+      });
+    } finally {
+      wrapper.unmount();
+    }
+  });
+
+  it.each([
+    { name: "starts during hydration", editBeforePaste: false, timerExpiresWhilePending: false },
+    { name: "conflicts when its timer expires during hydration", editBeforePaste: true, timerExpiresWhilePending: true },
+  ])("retries a text edit that $name", async ({ editBeforePaste, timerExpiresWhilePending }) => {
+    if (timerExpiresWhilePending) vi.useFakeTimers();
+    localStorage.setItem(
+      STORAGE_KEY,
+      JSON.stringify({
+        sync: { revision: 1, updatedAt: 10, clientId: "tab-a" },
+        spaces: [{ id: "workspace", title: "Memo", lines: [{ text: "old", indent: 0 }] }],
+        activeSpaceId: "workspace",
+        images: [{ id: "target", src: "data:image/png;base64,old", createdAt: 1 }],
+      }),
+    );
+    const imageBlob = new Blob(["losing"], { type: "image/png" });
+    Object.assign(navigator, {
+      clipboard: {
+        read: vi.fn().mockResolvedValue([{
+          types: ["image/png"],
+          getType: vi.fn(async () => {
+            localStorage.setItem(
+              STORAGE_KEY,
+              JSON.stringify({
+                sync: { revision: 2, updatedAt: 20, clientId: "tab-b" },
+                spaces: [{ id: "workspace", title: "Memo", lines: [{ text: "remote", indent: 0 }] }],
+                activeSpaceId: "workspace",
+                images: [],
+              }),
+            );
+            return imageBlob;
+          }),
+        }]),
+      },
+    });
+    const wrapper = mountApp();
+
+    try {
+      await flushPromises();
+      const deferredHydration = createDeferred<Awaited<ReturnType<typeof hydrateStoredImages>>>();
+      const hydrateSpy = vi.spyOn(imageState, "hydrateStoredImages").mockImplementationOnce(() => deferredHydration.promise);
+      if (editBeforePaste) {
+        wrapper.getComponent(SpacePanel).vm.$emit("update", "workspace", [{ text: "generation draft", indent: 0 }]);
+      }
+      const anchor = wrapper.get(".image-panel").element as HTMLElement;
+      wrapper.getComponent(ImagePanel).vm.$emit("paste", { placement: "replace", targetId: "target", anchor });
+      await vi.waitFor(() => expect(hydrateSpy).toHaveBeenCalled());
+      if (!editBeforePaste) {
+        wrapper.getComponent(SpacePanel).vm.$emit("update", "workspace", [{ text: "generation draft", indent: 0 }]);
+      }
+      if (timerExpiresWhilePending) await vi.advanceTimersByTimeAsync(3000);
+      deferredHydration.resolve([]);
+
+      await vi.waitFor(() => {
+        const stored = JSON.parse(localStorage.getItem(STORAGE_KEY) || "{}");
+        expect(stored.sync.revision).toBe(3);
+        expect(stored.spaces[0].lines[0].text).toBe("generation draft");
+      });
+      expect((wrapper.getComponent(SpacePanel).props("spaces") as Array<{ lines: Array<{ text: string }> }>)[0].lines[0].text).toBe("generation draft");
+    } finally {
+      wrapper.unmount();
+      if (timerExpiresWhilePending) vi.useRealTimers();
+    }
+  });
+
+  it("keeps an edit made during a text persistence attempt dirty", async () => {
+    const wrapper = mountApp();
+
+    try {
+      await flushPromises();
+      const spacePanel = wrapper.getComponent(SpacePanel);
+      spacePanel.vm.$emit("update", "workspace", [{ text: "first draft", indent: 0 }]);
+      const originalSetItem = Storage.prototype.setItem;
+      let injectedEdit = false;
+      vi.spyOn(Storage.prototype, "setItem").mockImplementation(function (this: Storage, key, value) {
+        if (key === STORAGE_KEY && !injectedEdit) {
+          injectedEdit = true;
+          spacePanel.vm.$emit("update", "workspace", [{ text: "second draft", indent: 0 }]);
+        }
+        return originalSetItem.call(this, key, value);
+      });
+
+      spacePanel.vm.$emit("blur");
+      expect(JSON.parse(localStorage.getItem(STORAGE_KEY) || "{}").spaces[0].lines[0].text).toBe("first draft");
+
+      spacePanel.vm.$emit("blur");
+      await vi.waitFor(() => {
+        const stored = JSON.parse(localStorage.getItem(STORAGE_KEY) || "{}");
+        expect(stored.spaces[0].lines[0].text).toBe("second draft");
+        expect(stored.sync.revision).toBe(2);
+      });
+    } finally {
+      wrapper.unmount();
+    }
+  });
+
+  it("does not retry an ordinary cross-tab text conflict forever", async () => {
+    vi.useFakeTimers();
+    localStorage.setItem(
+      STORAGE_KEY,
+      JSON.stringify({
+        sync: { revision: 1, updatedAt: 10, clientId: "tab-a" },
+        spaces: [{ id: "workspace", title: "Memo", lines: [{ text: "old", indent: 0 }] }],
+        activeSpaceId: "workspace",
+      }),
+    );
+    const wrapper = mountApp();
+
+    try {
+      await flushPromises();
+      wrapper.getComponent(SpacePanel).vm.$emit("update", "workspace", [{ text: "local draft", indent: 0 }]);
+      localStorage.setItem(
+        STORAGE_KEY,
+        JSON.stringify({
+          sync: { revision: 2, updatedAt: 20, clientId: "tab-b" },
+          spaces: [{ id: "workspace", title: "Memo", lines: [{ text: "remote", indent: 0 }] }],
+          activeSpaceId: "workspace",
+        }),
+      );
+      const originalGetItem = Storage.prototype.getItem;
+      const getItemSpy = vi.spyOn(Storage.prototype, "getItem").mockImplementation(function (this: Storage, key) {
+        return originalGetItem.call(this, key);
+      });
+
+      await vi.advanceTimersByTimeAsync(3000);
+      const attemptsAfterConflict = getItemSpy.mock.calls.filter(([key]) => key === STORAGE_KEY).length;
+      expect(attemptsAfterConflict).toBeGreaterThan(0);
+
+      await vi.advanceTimersByTimeAsync(9000);
+      expect(getItemSpy.mock.calls.filter(([key]) => key === STORAGE_KEY)).toHaveLength(attemptsAfterConflict);
+      expect((wrapper.getComponent(SpacePanel).props("spaces") as Array<{ lines: Array<{ text: string }> }>)[0].lines[0].text).toBe("local draft");
+      expect(JSON.parse(originalGetItem.call(localStorage, STORAGE_KEY) || "{}").sync.revision).toBe(2);
+    } finally {
+      wrapper.unmount();
+      vi.useRealTimers();
+    }
+  });
+
+  it("restores a deleted image payload through global undo", async () => {
+    vi.useFakeTimers();
+    const restoreIndexedDb = installMemoryImageDb();
+    localStorage.setItem(
+      STORAGE_KEY,
+      JSON.stringify({
+        images: [{ id: "img-undo", src: "data:image/png;base64,undo", createdAt: 7, displayWidth: 90, displayHeight: 60 }],
+      }),
+    );
+    const wrapper = mountApp();
+
+    try {
+      await storeImagePayload({ id: "img-undo", src: "data:image/png;base64,undo", createdAt: 7 });
+      const panel = wrapper.getComponent(ImagePanel);
+      panel.vm.$emit("delete", "img-undo", panel.element as HTMLElement);
+      await wrapper.vm.$nextTick();
+      await vi.advanceTimersByTimeAsync(200);
+      await wrapper.get('[data-testid="companion-yes"]').trigger("click");
+      await Promise.resolve();
+      await wrapper.vm.$nextTick();
+
+      expect((panel.props("images") as Array<{ id: string }>)).toHaveLength(0);
+
+      window.dispatchEvent(new KeyboardEvent("keydown", { key: "z", ctrlKey: true }));
+      await flushPromises();
+      await wrapper.vm.$nextTick();
+      expect((wrapper.getComponent(ImagePanel).props("images") as Array<{ id: string; src?: string }>)[0]).toMatchObject({
+        id: "img-undo",
+        src: "data:image/png;base64,undo",
+      });
+    } finally {
+      wrapper.unmount();
+      restoreIndexedDb();
       vi.useRealTimers();
     }
   });
@@ -3316,7 +4022,7 @@ describe("App shell", () => {
     const wrapper = mountApp();
 
     try {
-      wrapper.getComponent(ImagePanel).vm.$emit("paste");
+      wrapper.getComponent(ImagePanel).vm.$emit("paste", { placement: "append" });
       await Promise.resolve();
       await Promise.resolve();
       await wrapper.vm.$nextTick();
@@ -3366,7 +4072,7 @@ describe("App shell", () => {
         }),
       );
 
-      wrapper.getComponent(ImagePanel).vm.$emit("paste");
+      wrapper.getComponent(ImagePanel).vm.$emit("paste", { placement: "append" });
       await Promise.resolve();
       await Promise.resolve();
       await wrapper.vm.$nextTick();
@@ -3382,6 +4088,55 @@ describe("App shell", () => {
     } finally {
       wrapper.unmount();
       vi.useRealTimers();
+    }
+  });
+
+  it("preserves relative paste placement while merging newer storage from another tab", async () => {
+    localStorage.setItem(
+      STORAGE_KEY,
+      JSON.stringify({
+        sync: { revision: 1, updatedAt: 10, clientId: "tab-a" },
+        noteLines: [{ text: "old note", indent: 0 }],
+        images: [{ id: "target", src: "data:image/png;base64,target", createdAt: 1 }],
+      }),
+    );
+    const imageBlob = new Blob(["img"], { type: "image/png" });
+    Object.assign(navigator, {
+      clipboard: {
+        read: vi.fn().mockResolvedValue([{ types: ["image/png"], getType: vi.fn().mockResolvedValue(imageBlob) }]),
+      },
+    });
+    const wrapper = mountApp();
+
+    try {
+      localStorage.setItem(
+        STORAGE_KEY,
+        JSON.stringify({
+          sync: { revision: 2, updatedAt: 20, clientId: "tab-b" },
+          noteLines: [{ text: "new note", indent: 0 }],
+          images: [
+            { id: "other-tab", src: "data:image/png;base64,other", createdAt: 2 },
+            { id: "target", src: "data:image/png;base64,target", createdAt: 1 },
+            { id: "tail", src: "data:image/png;base64,tail", createdAt: 3 },
+          ],
+        }),
+      );
+      const anchor = wrapper.get(".image-panel").element as HTMLElement;
+      wrapper.getComponent(ImagePanel).vm.$emit("paste", { placement: "before", targetId: "target", anchor });
+
+      await vi.waitFor(() => {
+        expect(JSON.parse(localStorage.getItem(STORAGE_KEY) || "{}").sync.revision).toBe(3);
+      });
+      const stored = JSON.parse(localStorage.getItem(STORAGE_KEY) || "{}");
+      expect(stored.noteLines).toEqual([{ text: "new note", indent: 0 }]);
+      expect(stored.images.map((image: { id: string }) => image.id)).toEqual([
+        "other-tab",
+        expect.not.stringMatching(/^(other-tab|target|tail)$/),
+        "target",
+        "tail",
+      ]);
+    } finally {
+      wrapper.unmount();
     }
   });
 
@@ -4060,7 +4815,7 @@ describe("App shell", () => {
     const wrapper = mountApp();
 
     try {
-      wrapper.getComponent(ImagePanel).vm.$emit("paste");
+      wrapper.getComponent(ImagePanel).vm.$emit("paste", { placement: "append" });
       await Promise.resolve();
       await wrapper.vm.$nextTick();
       await vi.advanceTimersByTimeAsync(200);
@@ -4082,6 +4837,12 @@ describe("App shell", () => {
   });
 
   it("falls back to the browser paste command when clipboard image reading is denied", async () => {
+    localStorage.setItem(
+      STORAGE_KEY,
+      JSON.stringify({
+        images: [{ id: "existing", src: "data:image/png;base64,old", createdAt: 1 }],
+      }),
+    );
     const originalExecCommand = document.execCommand;
     const image = new File(["img"], "clip.png", { type: "image/png" });
     const pasteEvent = new Event("paste", { bubbles: true, cancelable: true });
@@ -4114,7 +4875,8 @@ describe("App shell", () => {
       await wrapper.vm.$nextTick();
       await Promise.resolve();
       await Promise.resolve();
-      wrapper.getComponent(ImagePanel).vm.$emit("paste", wrapper.get(".image-panel").element as HTMLElement);
+      const anchor = wrapper.get(".image-panel").element as HTMLElement;
+      wrapper.getComponent(ImagePanel).vm.$emit("paste", { placement: "before", targetId: "existing", anchor });
       await Promise.resolve();
       await Promise.resolve();
       await new Promise((resolve) => setTimeout(resolve, 0));
@@ -4123,8 +4885,63 @@ describe("App shell", () => {
 
       expect(execCommand).toHaveBeenCalledWith("paste");
       await vi.waitFor(() => {
-        expect((wrapper.getComponent(ImagePanel).props("images") as Array<{ id: string }>)).toHaveLength(1);
+        expect((wrapper.getComponent(ImagePanel).props("images") as Array<{ id: string }>)).toHaveLength(2);
       });
+      expect((wrapper.getComponent(ImagePanel).props("images") as Array<{ id: string }>)[1].id).toBe("existing");
+    } finally {
+      if (originalExecCommand) {
+        Object.defineProperty(document, "execCommand", {
+          value: originalExecCommand,
+          configurable: true,
+        });
+      } else {
+        Reflect.deleteProperty(document, "execCommand");
+      }
+      wrapper.unmount();
+    }
+  });
+
+  it("clears an unconsumed browser paste request before the next ordinary paste", async () => {
+    localStorage.setItem(
+      STORAGE_KEY,
+      JSON.stringify({
+        images: [{ id: "target", src: "data:image/png;base64,old", createdAt: 1 }],
+      }),
+    );
+    const originalExecCommand = document.execCommand;
+    Object.defineProperty(document, "execCommand", {
+      value: vi.fn(() => true),
+      configurable: true,
+    });
+    Object.assign(navigator, {
+      clipboard: {
+        read: vi.fn().mockRejectedValue(new DOMException("denied", "NotAllowedError")),
+      },
+    });
+    const wrapper = mountApp();
+
+    try {
+      const anchor = wrapper.get(".image-panel").element as HTMLElement;
+      wrapper.getComponent(ImagePanel).vm.$emit("paste", { placement: "replace", targetId: "target", anchor });
+      await Promise.resolve();
+      await Promise.resolve();
+      await new Promise((resolve) => setTimeout(resolve, 0));
+
+      const ordinaryPaste = new Event("paste", { bubbles: true, cancelable: true });
+      const image = new File(["ordinary"], "ordinary.png", { type: "image/png" });
+      Object.defineProperty(ordinaryPaste, "clipboardData", {
+        value: {
+          items: [{ type: "image/png", getAsFile: () => image }],
+        },
+      });
+      document.dispatchEvent(ordinaryPaste);
+
+      await vi.waitFor(() => {
+        expect((wrapper.getComponent(ImagePanel).props("images") as Array<{ id: string }>)).toHaveLength(2);
+      });
+      const images = wrapper.getComponent(ImagePanel).props("images") as Array<{ id: string }>;
+      expect(images[0].id).toBe("target");
+      expect(wrapper.getComponent(ImagePanel).props("pasteFeedback")).toEqual({ id: images[1].id, token: 1 });
     } finally {
       if (originalExecCommand) {
         Object.defineProperty(document, "execCommand", {
@@ -4161,7 +4978,7 @@ describe("App shell", () => {
     const wrapper = mountApp();
 
     try {
-      wrapper.getComponent(ImagePanel).vm.$emit("paste");
+      wrapper.getComponent(ImagePanel).vm.$emit("paste", { placement: "append" });
       await Promise.resolve();
       await Promise.resolve();
       await wrapper.vm.$nextTick();
@@ -4195,7 +5012,7 @@ describe("App shell", () => {
     const wrapper = mountApp();
 
     try {
-      wrapper.getComponent(ImagePanel).vm.$emit("paste");
+      wrapper.getComponent(ImagePanel).vm.$emit("paste", { placement: "append" });
       await Promise.resolve();
       await Promise.resolve();
       await wrapper.vm.$nextTick();
@@ -4207,6 +5024,7 @@ describe("App shell", () => {
 
       expect(wrapper.find('[data-testid="companion-confirm"]').text()).toMatch(/图片保存失败|重试/);
       expect(wrapper.find(".image-card").exists()).toBe(false);
+      expect(wrapper.getComponent(ImagePanel).props("pasteFeedback")).toBeUndefined();
     } finally {
       if (originalIndexedDB) {
         vi.stubGlobal("indexedDB", originalIndexedDB);

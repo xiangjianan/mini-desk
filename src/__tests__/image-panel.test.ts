@@ -82,10 +82,20 @@ describe("ImagePanel", () => {
 
   it("adds usage guidance to the blank image-list context menu", async () => {
     const wrapper = mountImagePanel();
+    const list = wrapper.get(".image-list-scrollbar");
 
-    await wrapper.get(".image-list").trigger("contextmenu");
+    await list.trigger("contextmenu");
 
     expect(wrapper.findAll(".dropdown-option").map((option) => option.text())).toEqual(["粘贴图片", "Tips"]);
+
+    await wrapper.findAll(".dropdown-option")[0].trigger("click");
+
+    expect(wrapper.emitted("paste")?.[0]).toEqual([{
+      placement: "append",
+      anchor: list.element,
+    }]);
+
+    await list.trigger("contextmenu");
 
     await wrapper.findAll(".dropdown-option")[1].trigger("click");
 
@@ -118,26 +128,44 @@ describe("ImagePanel", () => {
     wrapper.unmount();
   });
 
-  it("keeps image item context menus focused on pinning, preview, copy, edit, delete, and guide actions", async () => {
+  it("adds contextual paste actions to image item menus", async () => {
     const wrapper = mountImagePanel([
       { id: "a", src: "data:image/png;base64,a", createdAt: 1 },
       { id: "b", src: "data:image/png;base64,b", createdAt: 2 },
       { id: "c", src: "data:image/png;base64,c", createdAt: 3 },
     ]);
 
-    await wrapper.findAll(".image-card")[1].trigger("contextmenu");
+    const card = wrapper.findAll(".image-card")[1];
+    await card.trigger("contextmenu");
 
     expect(wrapper.findAll(".dropdown-option").map((option) => option.text())).toEqual([
       "预览",
       "复制",
       "编辑",
       "删除",
+      "粘贴图片到上方",
+      "粘贴图片到下方",
+      "粘贴替换当前图片",
       "置顶",
       "置底",
       "Tips",
     ]);
 
     expect(wrapper.text()).not.toContain("取消置顶");
+
+    for (const [label, placement] of [
+      ["粘贴图片到上方", "before"],
+      ["粘贴图片到下方", "after"],
+      ["粘贴替换当前图片", "replace"],
+    ] as const) {
+      await card.trigger("contextmenu");
+      await wrapper.findAll(".dropdown-option").find((option) => option.text() === label)?.trigger("click");
+      expect(wrapper.emitted("paste")?.at(-1)).toEqual([{
+        placement,
+        targetId: "b",
+        anchor: card.element,
+      }]);
+    }
 
     wrapper.unmount();
   });
@@ -221,6 +249,9 @@ describe("ImagePanel", () => {
       "复制",
       "编辑",
       "删除",
+      "粘贴图片到上方",
+      "粘贴图片到下方",
+      "粘贴替换当前图片",
       "置顶",
       "置底",
       "Tips",
@@ -249,6 +280,9 @@ describe("ImagePanel", () => {
       "复制",
       "编辑",
       "删除",
+      "粘贴图片到上方",
+      "粘贴图片到下方",
+      "粘贴替换当前图片",
       "置顶",
       "置底",
       "Tips",
@@ -303,6 +337,58 @@ describe("ImagePanel", () => {
     expect(scrollIntoView).toHaveBeenLastCalledWith({ block: "center", behavior: "smooth", inline: "nearest" });
     expect(scrollIntoView).toHaveBeenCalledTimes(2);
     wrapper.unmount();
+  });
+
+  it("reveals and briefly highlights each successful paste without changing preview state", async () => {
+    vi.useFakeTimers();
+    const scrollIntoView = vi.fn();
+    vi.spyOn(HTMLElement.prototype, "scrollIntoView").mockImplementation(scrollIntoView);
+    const wrapper = mountImagePanel(
+      [
+        { id: "img-1", src: "data:image/png;base64,one", createdAt: 1 },
+        { id: "img-2", src: "data:image/png;base64,two", createdAt: 2 },
+      ],
+      { activePreviewId: "img-1" },
+    );
+    const offsetWidth = vi.fn(() => 100);
+    Object.defineProperty(wrapper.findAll(".image-card")[1].element, "offsetWidth", {
+      configurable: true,
+      get: offsetWidth,
+    });
+
+    try {
+      await wrapper.setProps({ pasteFeedback: { id: "img-2", token: 1 } });
+      await nextTick();
+      await nextTick();
+
+      expect(scrollIntoView).toHaveBeenCalledWith({ block: "center", behavior: "smooth", inline: "nearest" });
+      expect(scrollIntoView).toHaveBeenCalledTimes(1);
+      expect(wrapper.findAll(".image-card")[1].classes()).toContain("is-paste-highlighted");
+      expect(wrapper.findAll(".image-card")[0].classes()).toContain("is-active");
+      expect(wrapper.emitted("preview")).toBeUndefined();
+      expect(offsetWidth).not.toHaveBeenCalled();
+
+      await vi.advanceTimersByTimeAsync(400);
+
+      await wrapper.setProps({ pasteFeedback: { id: "img-2", token: 2 } });
+      await nextTick();
+      await nextTick();
+
+      expect(scrollIntoView).toHaveBeenCalledTimes(2);
+      expect(offsetWidth).toHaveBeenCalledTimes(1);
+      expect(wrapper.findAll(".image-card")[1].classes()).toContain("is-paste-highlighted");
+      expect(wrapper.findAll(".image-card")[0].classes()).toContain("is-active");
+      expect(wrapper.emitted("preview")).toBeUndefined();
+
+      await vi.advanceTimersByTimeAsync(400);
+      expect(wrapper.findAll(".image-card")[1].classes()).toContain("is-paste-highlighted");
+
+      await vi.advanceTimersByTimeAsync(300);
+      expect(wrapper.findAll(".image-card")[1].classes()).not.toContain("is-paste-highlighted");
+    } finally {
+      wrapper.unmount();
+      vi.useRealTimers();
+    }
   });
 
   it("does not recenter the active preview image when drag sorting changes image order", async () => {

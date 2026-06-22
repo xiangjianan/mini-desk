@@ -27,12 +27,26 @@ export type SaveScope = "all" | "images" | "text";
 
 export type SaveStateStatus = "saved" | "merged" | "conflict";
 
+export interface ImagePlacementHint {
+  imageId: string;
+  targetId: string;
+  placement: "before" | "after";
+}
+
+export interface ImageReplacementHint {
+  imageId: string;
+  expectedPayloadId: string;
+  newPayloadId: string;
+}
+
 export interface SaveStateOptions {
   storage?: Storage;
   clientId?: string;
   force?: boolean;
   now?: () => number;
   scope?: SaveScope;
+  imagePlacement?: ImagePlacementHint;
+  imageReplacement?: ImageReplacementHint;
 }
 
 export interface SaveStateResult {
@@ -71,9 +85,12 @@ export function saveStateWithConflictCheck(
 
   if (current && currentRevision > localRevision && current.sync.clientId !== options.clientId && !options.force) {
     if (scope === "images") {
+      if (options.imageReplacement && !canMergeImageReplacement(current.images, local.images, options.imageReplacement)) {
+        return { status: "conflict", state: current };
+      }
       const merged = {
         ...current,
-        images: mergeImageAdditions(current.images, local.images),
+        images: mergeImageAdditions(current.images, local.images, options.imagePlacement, options.imageReplacement),
       };
       const saved = writeSyncedState(merged, storage, {
         clientId: options.clientId,
@@ -109,6 +126,7 @@ export function getSerializableState(
       if (options.includeImageData) return { ...image };
       return {
         id: image.id,
+        ...(image.payloadId ? { payloadId: image.payloadId } : {}),
         createdAt: image.createdAt,
         ...(image.displayWidth ? { displayWidth: image.displayWidth } : {}),
         ...(image.displayHeight ? { displayHeight: image.displayHeight } : {}),
@@ -203,17 +221,55 @@ function writeSyncedState(
   return synced;
 }
 
-function mergeImageAdditions(currentImages: StoredImage[], localImages: StoredImage[]): StoredImage[] {
+function mergeImageAdditions(
+  currentImages: StoredImage[],
+  localImages: StoredImage[],
+  placement?: ImagePlacementHint,
+  replacement?: ImageReplacementHint,
+): StoredImage[] {
   const localById = new Map(localImages.map((image) => [image.id, image]));
   const seen = new Set(currentImages.map((image) => image.id));
   const mergedCurrent = currentImages.map((image) => {
     const local = localById.get(image.id);
+    if (local && replacement?.imageId === image.id) {
+      return { ...image, ...local, src: local.src ?? image.src };
+    }
     return local ? { ...local, ...image, src: image.src ?? local.src } : { ...image };
   });
   const localAdditions = localImages
     .filter((image) => !seen.has(image.id))
     .map((image) => ({ ...image }));
-  return [...mergedCurrent, ...localAdditions];
+  const merged = [...mergedCurrent, ...localAdditions];
+  if (!placement || seen.has(placement.imageId)) return merged;
+  const imageIndex = merged.findIndex((image) => image.id === placement.imageId);
+  if (imageIndex < 0) return merged;
+  const [image] = merged.splice(imageIndex, 1);
+  const targetIndex = merged.findIndex((item) => item.id === placement.targetId);
+  if (targetIndex < 0) {
+    merged.push(image);
+    return merged;
+  }
+  merged.splice(targetIndex + (placement.placement === "after" ? 1 : 0), 0, image);
+  return merged;
+}
+
+function canMergeImageReplacement(
+  currentImages: StoredImage[],
+  localImages: StoredImage[],
+  replacement: ImageReplacementHint,
+): boolean {
+  const current = currentImages.find((image) => image.id === replacement.imageId);
+  const local = localImages.find((image) => image.id === replacement.imageId);
+  return Boolean(
+    current
+      && local
+      && getImagePayloadId(current) === replacement.expectedPayloadId
+      && getImagePayloadId(local) === replacement.newPayloadId,
+  );
+}
+
+function getImagePayloadId(image: StoredImage): string {
+  return image.payloadId ?? image.id;
 }
 
 function normalizeSyncState(value: unknown): BoardSyncState {
@@ -410,6 +466,7 @@ export function normalizeImages(images: unknown): StoredImage[] {
         id: typeof record.id === "string" ? record.id : createId(),
         createdAt: typeof record.createdAt === "number" ? record.createdAt : Date.now(),
       };
+      if (typeof record.payloadId === "string" && record.payloadId.trim()) image.payloadId = record.payloadId.trim();
       if (typeof record.src === "string") image.src = record.src;
       const displayWidth = normalizeImageDisplayDimension(record.displayWidth);
       const displayHeight = normalizeImageDisplayDimension(record.displayHeight);

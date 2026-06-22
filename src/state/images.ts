@@ -3,10 +3,22 @@ import type { CompanionCustomGif, CompanionCustomGifStored, StoredImage } from "
 
 const CUSTOM_COMPANION_GIF_LIGHT_ID = "__custom-companion-gif-light__";
 const CUSTOM_COMPANION_GIF_DARK_ID = "__custom-companion-gif-dark__";
-type ImagePayloadRecord = { id: string; src?: string };
+type ImagePayloadRecord = { id: string; imageId?: string; createdAt?: number; src?: string };
+
+export interface PruneStoredImagePayloadOptions {
+  maxVersions?: number;
+  minimumAgeMs?: number;
+  now?: () => number;
+}
 
 export interface HydrateStoredImagesOptions {
   persistLegacyPayloads?: boolean;
+}
+
+type ImagePayloadIdentity = string | Pick<StoredImage, "id" | "payloadId">;
+
+export function getImagePayloadId(image: ImagePayloadIdentity): string {
+  return typeof image === "string" ? image : image.payloadId ?? image.id;
 }
 
 export function openImageDb(name = IMAGE_DB_NAME): Promise<IDBDatabase> {
@@ -28,24 +40,28 @@ export async function storeImagePayload(image: StoredImage): Promise<void> {
   if (!image.src || !("indexedDB" in window)) return;
   const db = await openImageDb();
   try {
-    await transact(db, "readwrite", (store) => store.put({ id: image.id, src: image.src }));
+    await transact(db, "readwrite", (store) => store.put({
+      id: getImagePayloadId(image), imageId: image.id, createdAt: Date.now(), src: image.src,
+    }));
   } finally {
     db.close();
   }
 }
 
-export async function getStoredImagePayload(id: string): Promise<string | undefined> {
+export async function getStoredImagePayload(image: ImagePayloadIdentity): Promise<string | undefined> {
   if (!("indexedDB" in window)) return undefined;
-  const records = await getStoredImagePayloads([id]);
-  const payload = records.get(id);
+  const id = typeof image === "string" ? image : image.id;
+  const payloadId = getImagePayloadId(image);
+  const records = await getStoredImagePayloads(payloadId === id ? [id] : [payloadId, id]);
+  const payload = records.get(payloadId) ?? records.get(id);
   if (payload) return payload;
   return getLegacyStoredPayload(id);
 }
 
-export async function deleteStoredImage(id: string): Promise<void> {
+export async function deleteStoredImage(image: ImagePayloadIdentity): Promise<void> {
   if (!("indexedDB" in window)) return;
   const db = await openImageDb();
-  await transact(db, "readwrite", (store) => store.delete(id));
+  await transact(db, "readwrite", (store) => store.delete(getImagePayloadId(image)));
   db.close();
 }
 
@@ -57,7 +73,7 @@ export async function persistImagePayloads(images: StoredImage[]): Promise<void>
   try {
     await transactBatch(db, "readwrite", (store) => {
       payloads.forEach((image) => {
-        store.put({ id: image.id, src: image.src });
+        store.put({ id: getImagePayloadId(image), imageId: image.id, createdAt: Date.now(), src: image.src });
       });
     });
   } finally {
@@ -71,6 +87,47 @@ export async function clearStoredImagePayloads(): Promise<void> {
   await transact(db, "readwrite", (store) => store.clear());
   db.close();
   await clearLegacyStoredPayloads();
+}
+
+export async function pruneStoredImagePayloads(
+  retainedIds: Iterable<string>,
+  options: PruneStoredImagePayloadOptions = {},
+): Promise<void> {
+  if (!("indexedDB" in window)) return;
+  const retained = new Set(retainedIds);
+  const maxVersions = Math.max(1, options.maxVersions ?? 51);
+  const minimumAgeMs = Math.max(0, options.minimumAgeMs ?? 5 * 60_000);
+  const now = options.now?.() ?? Date.now();
+  const db = await openImageDb();
+  try {
+    await new Promise<void>((resolve, reject) => {
+      const transaction = db.transaction(IMAGE_STORE_NAME, "readwrite");
+      const store = transaction.objectStore(IMAGE_STORE_NAME);
+      const request = store.getAll() as IDBRequest<ImagePayloadRecord[]>;
+      request.onsuccess = () => {
+        const versionsByImage = new Map<string, ImagePayloadRecord[]>();
+        request.result.forEach((record) => {
+          if (!record.imageId || typeof record.createdAt !== "number" || !Number.isFinite(record.createdAt)) return;
+          const versions = versionsByImage.get(record.imageId) ?? [];
+          versions.push(record);
+          versionsByImage.set(record.imageId, versions);
+        });
+        versionsByImage.forEach((versions) => {
+          versions.sort((left, right) => right.createdAt! - left.createdAt!);
+          versions.forEach((record, index) => {
+            if (index < maxVersions || retained.has(record.id) || now - record.createdAt! < minimumAgeMs) return;
+            store.delete(record.id);
+          });
+        });
+      };
+      request.onerror = () => reject(request.error);
+      transaction.oncomplete = () => resolve();
+      transaction.onerror = () => reject(transaction.error);
+      transaction.onabort = () => reject(transaction.error);
+    });
+  } finally {
+    db.close();
+  }
 }
 
 export async function persistCustomCompanionGifPayloads(customGif: CompanionCustomGif): Promise<void> {
@@ -117,15 +174,24 @@ export async function hydrateStoredImages(
   options: HydrateStoredImagesOptions = {},
 ): Promise<StoredImage[]> {
   if (!("indexedDB" in window)) return images;
-  const missingIds = images.filter((image) => !image.src).map((image) => image.id);
-  if (missingIds.length === 0) return images;
+  const missingImages = images.filter((image) => !image.src);
+  if (missingImages.length === 0) return images;
 
-  const currentPayloads = await getStoredImagePayloads(missingIds);
-  const legacyIds = missingIds.filter((id) => !currentPayloads.has(id));
+  const currentKeys = Array.from(new Set(missingImages.flatMap((image) => {
+    const payloadId = getImagePayloadId(image);
+    return payloadId === image.id ? [image.id] : [payloadId, image.id];
+  })));
+  const currentPayloads = await getStoredImagePayloads(currentKeys);
+  const legacyIds = missingImages
+    .filter((image) => !currentPayloads.has(getImagePayloadId(image)) && !currentPayloads.has(image.id))
+    .map((image) => image.id);
   const legacyPayloads = await getLegacyStoredPayloads(legacyIds);
   const hydratedImages = images.map((image) => ({
     ...image,
-    src: image.src ?? currentPayloads.get(image.id) ?? legacyPayloads.get(image.id),
+    src: image.src
+      ?? currentPayloads.get(getImagePayloadId(image))
+      ?? currentPayloads.get(image.id)
+      ?? legacyPayloads.get(image.id),
   }));
 
   if (options.persistLegacyPayloads && legacyPayloads.size > 0) {

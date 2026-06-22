@@ -5240,6 +5240,22 @@ button[data-testid="password-generate"].tool-primary-action:focus-visible {
   box-shadow: none;
 }
 
+.image-panel .image-card.is-paste-highlighted {
+  animation: image-paste-highlight 700ms ease-out;
+}
+
+@keyframes image-paste-highlight {
+  0% {
+    background-color: color-mix(in srgb, var(--primary) 18%, var(--card));
+    box-shadow: 0 0 0 3px color-mix(in srgb, var(--primary) 30%, transparent);
+  }
+
+  100% {
+    background-color: color-mix(in srgb, var(--primary) 0%, var(--card));
+    box-shadow: 0 0 0 0 transparent;
+  }
+}
+
 .image-preview {
   background:
     radial-gradient(circle at 50% 18%, color-mix(in srgb, var(--card) 88%, transparent), transparent 42%),

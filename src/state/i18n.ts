@@ -615,6 +615,9 @@ export const UI_TEXT = {
       thumbnailAlt: "截图缩略图",
       loading: "图片载入中",
       pasteImage: "粘贴图片",
+      pasteBefore: "粘贴图片到上方",
+      pasteAfter: "粘贴图片到下方",
+      pasteReplace: "粘贴替换当前图片",
     },
     space: {
       panel: "空间",
@@ -873,6 +876,9 @@ export const UI_TEXT = {
       thumbnailAlt: "Screenshot thumbnail",
       loading: "Loading image",
       pasteImage: "Paste image",
+      pasteBefore: "Paste image above",
+      pasteAfter: "Paste image below",
+      pasteReplace: "Paste and replace image",
     },
     space: {
       panel: "Space",

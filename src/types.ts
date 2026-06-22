@@ -35,10 +35,26 @@ export interface LineItem {
 
 export interface StoredImage {
   id: string;
+  payloadId?: string;
   src?: string;
   createdAt: number;
   displayWidth?: number;
   displayHeight?: number;
+}
+
+export type ImagePastePlacement = "append" | "before" | "after" | "replace";
+
+export type ImagePasteRequest =
+  | { placement: "append"; anchor?: HTMLElement }
+  | {
+      placement: "before" | "after" | "replace";
+      targetId: string;
+      anchor: HTMLElement;
+    };
+
+export interface ImagePasteFeedback {
+  id: string;
+  token: number;
 }
 
 export interface QuickButton {
