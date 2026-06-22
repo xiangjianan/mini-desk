@@ -526,7 +526,7 @@ async function persistImageReplacement(
 ): Promise<boolean> {
   const previousSnapshot = createUndoSnapshot();
   const nextImages = state.images.map((image) => image.id === replacement.id ? replacement : image);
-  const hadUnsavedChanges = hasUnsavedLocalChanges();
+  const hadPendingText = textSaveTimer.value !== undefined;
   markSaving();
   const result = saveStateWithConflictCheck({ ...state, images: nextImages }, {
     clientId: syncClientId,
@@ -538,7 +538,7 @@ async function persistImageReplacement(
     },
   });
   if (result.status === "conflict") {
-    await applyImageReplacementConflict(result.state, hadUnsavedChanges);
+    await applyImageReplacementConflict(result.state, hadPendingText);
     return false;
   }
   state.sync = result.state.sync;
@@ -560,7 +560,7 @@ async function persistImageReplacement(
 
 async function applyImageReplacementConflict(
   latest = loadState(),
-  preserveLocalChanges = hasUnsavedLocalChanges(),
+  preservePendingText = textSaveTimer.value !== undefined,
 ): Promise<void> {
   window.clearTimeout(saveStatusTimer.value);
   saveStatus.value = "dirty";
@@ -572,9 +572,20 @@ async function applyImageReplacementConflict(
     latest = newest;
   }
   if (!appMounted || latest.sync.revision < state.sync.revision) return;
-  if (preserveLocalChanges) {
-    state.images = latest.images;
-    markDirty();
+  if (preservePendingText) {
+    const localText = {
+      noteLines: state.noteLines.map((line) => ({ ...line })),
+      spaces: state.spaces.map((space) => ({
+        ...space,
+        lines: space.lines.map((line) => ({ ...line })),
+      })),
+      workspaceLines: state.workspaceLines.map((line) => ({ ...line })),
+      storageLines: state.storageLines.map((line) => ({ ...line })),
+    };
+    Object.assign(state, latest, localText);
+    applyTheme();
+    window.clearTimeout(saveStatusTimer.value);
+    saveStatus.value = "dirty";
     return;
   }
   Object.assign(state, latest);

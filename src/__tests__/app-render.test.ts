@@ -3759,6 +3759,7 @@ describe("App shell", () => {
               STORAGE_KEY,
               JSON.stringify({
                 sync: { revision: 2, updatedAt: 20, clientId: "tab-b" },
+                language: "en",
                 spaces: [{ id: "workspace", title: "Memo", lines: [{ text: "remote", indent: 0 }] }],
                 activeSpaceId: "workspace",
                 images: [],
@@ -3782,8 +3783,18 @@ describe("App shell", () => {
         expect((wrapper.getComponent(ImagePanel).props("images") as Array<unknown>)).toHaveLength(0);
       });
       expect((wrapper.getComponent(SpacePanel).props("spaces") as Array<{ lines: Array<{ text: string }> }>)[0].lines[0].text).toBe("local draft");
+      expect(wrapper.getComponent(ImagePanel).props("title")).toBe("🎨 Images");
+
+      wrapper.getComponent(SpacePanel).vm.$emit("blur");
+      await vi.waitFor(() => {
+        const stored = JSON.parse(localStorage.getItem(STORAGE_KEY) || "{}");
+        expect(stored.sync.revision).toBe(3);
+        expect(stored.spaces[0].lines[0].text).toBe("local draft");
+        expect(stored.language).toBe("en");
+      });
+      await new Promise((resolve) => setTimeout(resolve, 150));
       const newer = JSON.stringify({
-        sync: { revision: 3, updatedAt: 30, clientId: "tab-c" },
+        sync: { revision: 4, updatedAt: 40, clientId: "tab-c" },
         spaces: [{ id: "workspace", title: "Memo", lines: [{ text: "newer remote", indent: 0 }] }],
         activeSpaceId: "workspace",
         images: [{ id: "remote-image", createdAt: 3 }],
@@ -3792,8 +3803,10 @@ describe("App shell", () => {
       window.dispatchEvent(new StorageEvent("storage", { key: STORAGE_KEY, newValue: newer }));
       await Promise.resolve();
       await wrapper.vm.$nextTick();
-      expect((wrapper.getComponent(SpacePanel).props("spaces") as Array<{ lines: Array<{ text: string }> }>)[0].lines[0].text).toBe("local draft");
-      expect((wrapper.getComponent(ImagePanel).props("images") as Array<unknown>)).toHaveLength(0);
+      await vi.waitFor(() => {
+        expect((wrapper.getComponent(SpacePanel).props("spaces") as Array<{ lines: Array<{ text: string }> }>)[0].lines[0].text).toBe("newer remote");
+        expect((wrapper.getComponent(ImagePanel).props("images") as Array<unknown>)).toHaveLength(1);
+      });
     } finally {
       wrapper.unmount();
     }
