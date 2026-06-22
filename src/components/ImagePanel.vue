@@ -4,7 +4,7 @@ import type { Component, ComponentPublicInstance, VNode } from "vue";
 import { NDropdown, NIcon, NScrollbar } from "naive-ui";
 import { ArrowDownOutline, ArrowUpOutline, ClipboardOutline, CloseOutline, CopyOutline, CreateOutline, EyeOutline, HelpCircleOutline, TrashOutline } from "@vicons/ionicons5";
 import type { DropdownOption } from "naive-ui";
-import type { AppLanguage, GuideKey, ImagePasteRequest, StoredImage } from "../types";
+import type { AppLanguage, GuideKey, ImagePasteFeedback, ImagePasteRequest, StoredImage } from "../types";
 import { GUIDE_MENU_OPTION } from "../state/defaults";
 import { getBlankImageContextMenuItems, getImageItemContextMenuItems } from "../state/imageContextMenu";
 import type { ImageContextMenuKey } from "../state/imageContextMenu";
@@ -16,6 +16,7 @@ const props = withDefaults(defineProps<{
   title: string;
   images: StoredImage[];
   activePreviewId?: string;
+  pasteFeedback?: ImagePasteFeedback;
   language?: AppLanguage;
 }>(), {
   language: "zh",
@@ -68,6 +69,7 @@ const panelRef = ref<HTMLElement | null>(null);
 const titleRef = ref<{ openMenuAt: (x: number, y: number, event?: Event) => void } | null>(null);
 const imageCardRefs = new Map<string, HTMLElement>();
 const imageDragPreview = ref<ImageDragPreview | null>(null);
+const pasteHighlightedId = ref<string | null>(null);
 const uiText = computed(() => getUiText(props.language));
 const guideMenuOption = computed<DropdownOption>(() => ({ ...GUIDE_MENU_OPTION, label: uiText.value.common.tips }));
 const exclusiveMenu = createExclusiveContextMenu(closeMenu);
@@ -92,6 +94,8 @@ let dragScrollFrame: number | undefined;
 let dragScrollContainer: HTMLElement | null = null;
 let dragScrollDirection: -1 | 0 | 1 = 0;
 let dragWheelPauseTimer: number | undefined;
+let pasteHighlightTimer: number | undefined;
+const PASTE_HIGHLIGHT_MS = 700;
 
 function renderIcon(icon: Component): () => VNode {
   return () => h(NIcon, { size: 16 }, { default: () => h(icon) });
@@ -118,12 +122,37 @@ onUnmounted(() => {
   window.removeEventListener("wheel", handleImageDragWheel, { capture: true });
   cleanupImagePointerDrag();
   resetImageDragAutoScroll();
+  if (pasteHighlightTimer !== undefined) window.clearTimeout(pasteHighlightTimer);
 });
 
 watch(
   () => props.activePreviewId,
   () => {
     void scrollActivePreviewIntoView();
+  },
+  { flush: "post" },
+);
+
+watch(
+  () => props.pasteFeedback?.token,
+  async (token) => {
+    if (pasteHighlightTimer !== undefined) window.clearTimeout(pasteHighlightTimer);
+    pasteHighlightTimer = undefined;
+    pasteHighlightedId.value = null;
+
+    await nextTick();
+    if (props.pasteFeedback?.token !== token) return;
+    const id = props.pasteFeedback?.id;
+    if (!id) return;
+    const card = imageCardRefs.get(id);
+    if (!card) return;
+
+    card.scrollIntoView({ block: "center", behavior: "smooth", inline: "nearest" });
+    pasteHighlightedId.value = id;
+    pasteHighlightTimer = window.setTimeout(() => {
+      pasteHighlightedId.value = null;
+      pasteHighlightTimer = undefined;
+    }, PASTE_HIGHLIGHT_MS);
   },
   { flush: "post" },
 );
@@ -555,7 +584,11 @@ function handleImageDragWheel(event: WheelEvent): void {
         :key="image.id"
         :ref="(element) => setImageCardRef(image.id, element)"
         class="image-card"
-        :class="{ 'is-dragging': draggingId === image.id, 'is-active': image.id === activePreviewId }"
+        :class="{
+          'is-dragging': draggingId === image.id,
+          'is-active': image.id === activePreviewId,
+          'is-paste-highlighted': image.id === pasteHighlightedId,
+        }"
         type="button"
         @click="handleImageCardClick($event, image.id)"
         @keydown.enter.stop.prevent="emit('edit', image.id)"

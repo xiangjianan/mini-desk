@@ -339,6 +339,51 @@ describe("ImagePanel", () => {
     wrapper.unmount();
   });
 
+  it("reveals and briefly highlights each successful paste without changing preview state", async () => {
+    vi.useFakeTimers();
+    const scrollIntoView = vi.fn();
+    vi.spyOn(HTMLElement.prototype, "scrollIntoView").mockImplementation(scrollIntoView);
+    const wrapper = mountImagePanel(
+      [
+        { id: "img-1", src: "data:image/png;base64,one", createdAt: 1 },
+        { id: "img-2", src: "data:image/png;base64,two", createdAt: 2 },
+      ],
+      { activePreviewId: "img-1" },
+    );
+
+    try {
+      await wrapper.setProps({ pasteFeedback: { id: "img-2", token: 1 } });
+      await nextTick();
+      await nextTick();
+
+      expect(scrollIntoView).toHaveBeenCalledWith({ block: "center", behavior: "smooth", inline: "nearest" });
+      expect(scrollIntoView).toHaveBeenCalledTimes(1);
+      expect(wrapper.findAll(".image-card")[1].classes()).toContain("is-paste-highlighted");
+      expect(wrapper.findAll(".image-card")[0].classes()).toContain("is-active");
+      expect(wrapper.emitted("preview")).toBeUndefined();
+
+      await vi.advanceTimersByTimeAsync(400);
+
+      await wrapper.setProps({ pasteFeedback: { id: "img-2", token: 2 } });
+      await nextTick();
+      await nextTick();
+
+      expect(scrollIntoView).toHaveBeenCalledTimes(2);
+      expect(wrapper.findAll(".image-card")[1].classes()).toContain("is-paste-highlighted");
+      expect(wrapper.findAll(".image-card")[0].classes()).toContain("is-active");
+      expect(wrapper.emitted("preview")).toBeUndefined();
+
+      await vi.advanceTimersByTimeAsync(400);
+      expect(wrapper.findAll(".image-card")[1].classes()).toContain("is-paste-highlighted");
+
+      await vi.advanceTimersByTimeAsync(300);
+      expect(wrapper.findAll(".image-card")[1].classes()).not.toContain("is-paste-highlighted");
+    } finally {
+      wrapper.unmount();
+      vi.useRealTimers();
+    }
+  });
+
   it("does not recenter the active preview image when drag sorting changes image order", async () => {
     const scrollIntoView = vi.fn();
     vi.spyOn(HTMLElement.prototype, "scrollIntoView").mockImplementation(scrollIntoView);

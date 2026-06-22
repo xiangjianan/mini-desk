@@ -62,7 +62,7 @@ import {
   markAppVersionSeen,
 } from "./state/version";
 import type { ImagePlacementHint, SaveScope } from "./state/storage";
-import type { AppLanguage, BoardState, CompanionGifTheme, DraggedTodo, GuideKey, ImagePasteRequest, LineItem, QuickApiBodyType, QuickApiHeader, QuickApiMethod, QuickButton, QuickButtonType, StoredImage, TodoItem, TodoListConfig, TodoListId, TodoPeriod, TodoStarChange, WorkspaceSpace } from "./types";
+import type { AppLanguage, BoardState, CompanionGifTheme, DraggedTodo, GuideKey, ImagePasteFeedback, ImagePasteRequest, LineItem, QuickApiBodyType, QuickApiHeader, QuickApiMethod, QuickButton, QuickButtonType, StoredImage, TodoItem, TodoListConfig, TodoListId, TodoPeriod, TodoStarChange, WorkspaceSpace } from "./types";
 
 const ImagePreview = defineAsyncComponent(() => import("./components/ImagePreview.vue"));
 const ShortcutHelp = defineAsyncComponent(() => import("./components/ShortcutHelp.vue"));
@@ -87,6 +87,7 @@ const syncClientId = createId();
 const undoSnapshots = ref<string[]>([]);
 const lastUndoSnapshot = ref(createUndoSnapshot());
 const activePreviewId = ref<string | undefined>();
+const pasteFeedback = ref<ImagePasteFeedback | undefined>();
 const closingPreviewId = ref<string | undefined>();
 const previewCloseTimer = ref<number | undefined>();
 const activeEditorId = ref<string | undefined>();
@@ -137,6 +138,7 @@ const mobileMediaQuery = ref<MediaQueryList | null>(null);
 let appMounted = false;
 let pendingBrowserImagePasteRequest: { request: ImagePasteRequest; token: number } | undefined;
 let browserImagePasteRequestToken = 0;
+let pasteFeedbackToken = 0;
 let restoringUndo = false;
 let stateSyncChannel: BroadcastChannel | null = null;
 
@@ -476,7 +478,7 @@ function handleCompanionBlur(): void {
   activeGuideKey.value = null;
 }
 
-function persistNow(scope: SaveScope = "all", options: PersistOptions = {}): void {
+function persistNow(scope: SaveScope = "all", options: PersistOptions = {}): boolean {
   recordUndoCheckpoint();
   markSaving();
   const result = saveStateWithConflictCheck(state, {
@@ -489,7 +491,7 @@ function persistNow(scope: SaveScope = "all", options: PersistOptions = {}): voi
     window.clearTimeout(saveStatusTimer.value);
     saveStatus.value = "dirty";
     showToast("stateConflict");
-    return;
+    return false;
   }
   state.sync = result.state.sync;
   if (result.status === "merged") {
@@ -497,6 +499,7 @@ function persistNow(scope: SaveScope = "all", options: PersistOptions = {}): voi
   }
   broadcastStateSaved();
   markSavedSoon();
+  return true;
 }
 
 function mergeVisibleImages(savedImages: StoredImage[], visibleImages: StoredImage[]): StoredImage[] {
@@ -650,7 +653,10 @@ function pasteImageWithBrowserCommand(request: ImagePasteRequest): boolean {
 
 async function addPastedImageFile(file: File, request: ImagePasteRequest): Promise<StoredImage | undefined> {
   if (request.placement === "append") {
-    return addImageFile(file, { matchDisplaySizeToDevicePixelRatio: true });
+    return addImageFile(file, {
+      matchDisplaySizeToDevicePixelRatio: true,
+      onPersisted: (image) => publishPasteFeedback(image.id),
+    });
   }
   if (shouldBlockBoardEffects()) return undefined;
   let src: string;
@@ -685,7 +691,7 @@ async function addPastedImageFile(file: File, request: ImagePasteRequest): Promi
       return undefined;
     }
     currentTarget.src = src;
-    persistNow("images");
+    if (persistNow("images")) publishPasteFeedback(currentTarget.id);
     showBubble("imageAdded", undefined, { hideCompanionAfter: true });
     return currentTarget;
   }
@@ -716,20 +722,29 @@ async function addPastedImageFile(file: File, request: ImagePasteRequest): Promi
     return undefined;
   }
   state.images.splice(targetIndex + (request.placement === "after" ? 1 : 0), 0, image);
-  persistNow("images", {
+  const persisted = persistNow("images", {
     imagePlacement: {
       imageId: image.id,
       targetId: request.targetId,
       placement: request.placement,
     },
   });
+  if (persisted) publishPasteFeedback(image.id);
   showBubble("imageAdded", undefined, { hideCompanionAfter: true });
   return image;
 }
 
+function publishPasteFeedback(id: string): void {
+  pasteFeedback.value = { id, token: ++pasteFeedbackToken };
+}
+
 async function addImageFile(
   file: File,
-  options: { showMessage?: boolean; matchDisplaySizeToDevicePixelRatio?: boolean } = {},
+  options: {
+    showMessage?: boolean;
+    matchDisplaySizeToDevicePixelRatio?: boolean;
+    onPersisted?: (image: StoredImage) => void;
+  } = {},
 ): Promise<StoredImage | undefined> {
   if (shouldBlockBoardEffects()) return undefined;
   let src: string;
@@ -767,7 +782,7 @@ async function addImageFile(
     return undefined;
   }
   state.images.push(image);
-  persistNow("images");
+  if (persistNow("images")) options.onPersisted?.(image);
   if (options.showMessage ?? true) showBubble("imageAdded", undefined, { hideCompanionAfter: true });
   return image;
 }
@@ -2627,6 +2642,7 @@ function moveItem<T extends { id: string }>(items: T[], dragId: string, targetId
           :title="titles['image-title']"
           :images="state.images"
           :active-preview-id="activePreviewId"
+          :paste-feedback="pasteFeedback"
           :language="state.language"
           @title-update="updateTitle"
           @preview="openImagePreview"

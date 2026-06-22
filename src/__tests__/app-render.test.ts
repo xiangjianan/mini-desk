@@ -3161,6 +3161,7 @@ describe("App shell", () => {
     await vi.waitFor(() => {
       expect((wrapper.getComponent(ImagePanel).props("images") as Array<{ id: string }>)).toHaveLength(2);
     });
+    expect(wrapper.getComponent(ImagePanel).props("pasteFeedback")).toBeUndefined();
     expect(write).toHaveBeenCalledTimes(1);
     vi.unstubAllGlobals();
     wrapper.unmount();
@@ -3225,6 +3226,7 @@ describe("App shell", () => {
       await wrapper.vm.$nextTick();
 
       expect(wrapper.find('[data-testid="companion-confirm"]').text()).toMatch(/没有|图片|剪贴板/);
+      expect(imagePanel.props("pasteFeedback")).toBeUndefined();
 
       await vi.advanceTimersByTimeAsync(3000);
       imagePanel.vm.$emit("paste", { placement: "append" });
@@ -3274,6 +3276,7 @@ describe("App shell", () => {
       const images = wrapper.getComponent(ImagePanel).props("images") as Array<{ id: string }>;
       expect(images).toHaveLength(2);
       expect(images[0].id).toBe("existing");
+      expect(wrapper.getComponent(ImagePanel).props("pasteFeedback")).toEqual({ id: images[1].id, token: 1 });
     } finally {
       wrapper.unmount();
       vi.useRealTimers();
@@ -3308,6 +3311,7 @@ describe("App shell", () => {
     expect(afterBefore[0].id).toBe("first");
     expect(afterBefore[2].id).toBe("second");
     const beforeId = afterBefore[1].id;
+    expect(wrapper.getComponent(ImagePanel).props("pasteFeedback")).toEqual({ id: beforeId, token: 1 });
 
     imagePanel.vm.$emit("paste", { placement: "after", targetId: "second", anchor });
     await vi.waitFor(() => {
@@ -3315,6 +3319,7 @@ describe("App shell", () => {
     });
     const afterAfter = wrapper.getComponent(ImagePanel).props("images") as Array<{ id: string }>;
     expect(afterAfter.map((image) => image.id)).toEqual(["first", beforeId, "second", expect.any(String)]);
+    expect(wrapper.getComponent(ImagePanel).props("pasteFeedback")).toEqual({ id: afterAfter[3].id, token: 2 });
 
     wrapper.unmount();
   });
@@ -3365,6 +3370,7 @@ describe("App shell", () => {
       displayWidth: 320,
       displayHeight: 180,
     });
+    expect(wrapper.getComponent(ImagePanel).props("pasteFeedback")).toEqual({ id: "target", token: 1 });
 
     wrapper.unmount();
   });
@@ -4322,7 +4328,9 @@ describe("App shell", () => {
       await vi.waitFor(() => {
         expect((wrapper.getComponent(ImagePanel).props("images") as Array<{ id: string }>)).toHaveLength(2);
       });
-      expect((wrapper.getComponent(ImagePanel).props("images") as Array<{ id: string }>)[0].id).toBe("target");
+      const images = wrapper.getComponent(ImagePanel).props("images") as Array<{ id: string }>;
+      expect(images[0].id).toBe("target");
+      expect(wrapper.getComponent(ImagePanel).props("pasteFeedback")).toEqual({ id: images[1].id, token: 1 });
     } finally {
       if (originalExecCommand) {
         Object.defineProperty(document, "execCommand", {
@@ -4405,6 +4413,7 @@ describe("App shell", () => {
 
       expect(wrapper.find('[data-testid="companion-confirm"]').text()).toMatch(/图片保存失败|重试/);
       expect(wrapper.find(".image-card").exists()).toBe(false);
+      expect(wrapper.getComponent(ImagePanel).props("pasteFeedback")).toBeUndefined();
     } finally {
       if (originalIndexedDB) {
         vi.stubGlobal("indexedDB", originalIndexedDB);
