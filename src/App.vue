@@ -448,12 +448,12 @@ function resetTextGenerationBaseline(): void {
   savedTextGeneration = textEditGeneration;
 }
 
-async function persistPendingText(): Promise<void> {
+async function persistPendingText(options: { retryOnce?: boolean } = {}): Promise<void> {
   if (textEditGeneration === savedTextGeneration) return;
   const attemptGeneration = textEditGeneration;
   const persisted = persistNow("text");
   if (!persisted) {
-    if (textEditGeneration !== savedTextGeneration) scheduleTextSave();
+    if (options.retryOnce && textEditGeneration !== savedTextGeneration) scheduleTextSave();
     return;
   }
   savedTextGeneration = Math.max(savedTextGeneration, attemptGeneration);
@@ -609,7 +609,7 @@ async function applyImageReplacementConflict(
     applyTheme();
     window.clearTimeout(saveStatusTimer.value);
     saveStatus.value = "dirty";
-    void persistPendingText();
+    void persistPendingText({ retryOnce: true });
     return;
   }
   Object.assign(state, latest);

@@ -3907,6 +3907,48 @@ describe("App shell", () => {
     }
   });
 
+  it("does not retry an ordinary cross-tab text conflict forever", async () => {
+    vi.useFakeTimers();
+    localStorage.setItem(
+      STORAGE_KEY,
+      JSON.stringify({
+        sync: { revision: 1, updatedAt: 10, clientId: "tab-a" },
+        spaces: [{ id: "workspace", title: "Memo", lines: [{ text: "old", indent: 0 }] }],
+        activeSpaceId: "workspace",
+      }),
+    );
+    const wrapper = mountApp();
+
+    try {
+      await flushPromises();
+      wrapper.getComponent(SpacePanel).vm.$emit("update", "workspace", [{ text: "local draft", indent: 0 }]);
+      localStorage.setItem(
+        STORAGE_KEY,
+        JSON.stringify({
+          sync: { revision: 2, updatedAt: 20, clientId: "tab-b" },
+          spaces: [{ id: "workspace", title: "Memo", lines: [{ text: "remote", indent: 0 }] }],
+          activeSpaceId: "workspace",
+        }),
+      );
+      const originalGetItem = Storage.prototype.getItem;
+      const getItemSpy = vi.spyOn(Storage.prototype, "getItem").mockImplementation(function (this: Storage, key) {
+        return originalGetItem.call(this, key);
+      });
+
+      await vi.advanceTimersByTimeAsync(3000);
+      const attemptsAfterConflict = getItemSpy.mock.calls.filter(([key]) => key === STORAGE_KEY).length;
+      expect(attemptsAfterConflict).toBeGreaterThan(0);
+
+      await vi.advanceTimersByTimeAsync(9000);
+      expect(getItemSpy.mock.calls.filter(([key]) => key === STORAGE_KEY)).toHaveLength(attemptsAfterConflict);
+      expect((wrapper.getComponent(SpacePanel).props("spaces") as Array<{ lines: Array<{ text: string }> }>)[0].lines[0].text).toBe("local draft");
+      expect(JSON.parse(originalGetItem.call(localStorage, STORAGE_KEY) || "{}").sync.revision).toBe(2);
+    } finally {
+      wrapper.unmount();
+      vi.useRealTimers();
+    }
+  });
+
   it("restores a deleted image payload through global undo", async () => {
     vi.useFakeTimers();
     const restoreIndexedDb = installMemoryImageDb();
