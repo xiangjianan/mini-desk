@@ -61,7 +61,7 @@ import {
   getStoredAppVersion,
   markAppVersionSeen,
 } from "./state/version";
-import type { SaveScope } from "./state/storage";
+import type { ImagePlacementHint, SaveScope } from "./state/storage";
 import type { AppLanguage, BoardState, CompanionGifTheme, DraggedTodo, GuideKey, ImagePasteRequest, LineItem, QuickApiBodyType, QuickApiHeader, QuickApiMethod, QuickButton, QuickButtonType, StoredImage, TodoItem, TodoListConfig, TodoListId, TodoPeriod, TodoStarChange, WorkspaceSpace } from "./types";
 
 const ImagePreview = defineAsyncComponent(() => import("./components/ImagePreview.vue"));
@@ -135,7 +135,8 @@ const shortcutHelpVisible = ref(false);
 const isMobileBlocked = ref(getInitialMobileBlocked());
 const mobileMediaQuery = ref<MediaQueryList | null>(null);
 let appMounted = false;
-let pendingBrowserImagePasteRequest: ImagePasteRequest | undefined;
+let pendingBrowserImagePasteRequest: { request: ImagePasteRequest; token: number } | undefined;
+let browserImagePasteRequestToken = 0;
 let restoringUndo = false;
 let stateSyncChannel: BroadcastChannel | null = null;
 
@@ -149,6 +150,7 @@ type BubbleOptions = {
 
 type PersistOptions = {
   force?: boolean;
+  imagePlacement?: ImagePlacementHint;
 };
 
 type WorkspaceDensityState = "saved" | "saving" | "dirty";
@@ -481,6 +483,7 @@ function persistNow(scope: SaveScope = "all", options: PersistOptions = {}): voi
     clientId: syncClientId,
     force: options.force,
     scope,
+    imagePlacement: options.imagePlacement,
   });
   if (result.status === "conflict") {
     window.clearTimeout(saveStatusTimer.value);
@@ -579,7 +582,7 @@ function markSavedSoon(): void {
 }
 
 async function handlePaste(event: ClipboardEvent): Promise<void> {
-  const request = pendingBrowserImagePasteRequest ?? { placement: "append" as const };
+  const request = pendingBrowserImagePasteRequest?.request ?? { placement: "append" as const };
   pendingBrowserImagePasteRequest = undefined;
   if (shouldBlockBoardEffects()) return;
   const items = Array.from(event.clipboardData?.items ?? []);
@@ -632,9 +635,16 @@ async function pasteImageFromClipboard(request: ImagePasteRequest): Promise<void
 
 function pasteImageWithBrowserCommand(request: ImagePasteRequest): boolean {
   request.anchor?.focus({ preventScroll: true });
-  pendingBrowserImagePasteRequest = request;
+  const token = ++browserImagePasteRequestToken;
+  pendingBrowserImagePasteRequest = { request, token };
   const pasted = Boolean(document.execCommand?.("paste"));
-  if (!pasted) pendingBrowserImagePasteRequest = undefined;
+  if (!pasted) {
+    if (pendingBrowserImagePasteRequest?.token === token) pendingBrowserImagePasteRequest = undefined;
+    return false;
+  }
+  window.setTimeout(() => {
+    if (pendingBrowserImagePasteRequest?.token === token) pendingBrowserImagePasteRequest = undefined;
+  }, 0);
   return pasted;
 }
 
@@ -706,7 +716,13 @@ async function addPastedImageFile(file: File, request: ImagePasteRequest): Promi
     return undefined;
   }
   state.images.splice(targetIndex + (request.placement === "after" ? 1 : 0), 0, image);
-  persistNow("images");
+  persistNow("images", {
+    imagePlacement: {
+      imageId: image.id,
+      targetId: request.targetId,
+      placement: request.placement,
+    },
+  });
   showBubble("imageAdded", undefined, { hideCompanionAfter: true });
   return image;
 }

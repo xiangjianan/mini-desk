@@ -332,6 +332,45 @@ describe("state compatibility", () => {
     expect(stored.images.map((image) => image.id)).toEqual(["a", "b"]);
   });
 
+  it.each([
+    { placement: "before" as const, expected: ["other", "new", "target", "tail"] },
+    { placement: "after" as const, expected: ["other", "target", "new", "tail"] },
+  ])("keeps a stale tab image addition $placement its target", ({ placement, expected }) => {
+    const storage = localStorage;
+    storage.clear();
+    const latest = normalizeImportedState({
+      sync: { revision: 2, updatedAt: 20, clientId: "tab-a" },
+      noteLines: [{ text: "latest note", indent: 0 }],
+      images: [
+        { id: "other", createdAt: 1 },
+        { id: "target", createdAt: 2 },
+        { id: "tail", createdAt: 3 },
+      ],
+    });
+    const staleWithImage = normalizeImportedState({
+      sync: { revision: 1, updatedAt: 10, clientId: "tab-b" },
+      noteLines: [{ text: "stale note", indent: 0 }],
+      images: [
+        { id: "target", createdAt: 2 },
+        { id: "new", src: "data:image/png;base64,new", createdAt: 4 },
+      ],
+    });
+
+    saveStateWithConflictCheck(latest, { storage, clientId: "tab-a", now: () => 20 });
+    const result = saveStateWithConflictCheck(staleWithImage, {
+      storage,
+      clientId: "tab-b",
+      now: () => 30,
+      scope: "images",
+      imagePlacement: { imageId: "new", targetId: "target", placement },
+    });
+
+    const stored = normalizeImportedState(JSON.parse(storage.getItem(STORAGE_KEY) ?? "{}"));
+    expect(result.status).toBe("merged");
+    expect(stored.noteLines).toEqual([{ text: "latest note", indent: 0 }]);
+    expect(stored.images.map((image) => image.id)).toEqual(expected);
+  });
+
   it("rejects stale text saves instead of silently overwriting newer text", () => {
     const storage = localStorage;
     storage.clear();

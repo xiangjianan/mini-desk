@@ -3474,6 +3474,55 @@ describe("App shell", () => {
     }
   });
 
+  it("preserves relative paste placement while merging newer storage from another tab", async () => {
+    localStorage.setItem(
+      STORAGE_KEY,
+      JSON.stringify({
+        sync: { revision: 1, updatedAt: 10, clientId: "tab-a" },
+        noteLines: [{ text: "old note", indent: 0 }],
+        images: [{ id: "target", src: "data:image/png;base64,target", createdAt: 1 }],
+      }),
+    );
+    const imageBlob = new Blob(["img"], { type: "image/png" });
+    Object.assign(navigator, {
+      clipboard: {
+        read: vi.fn().mockResolvedValue([{ types: ["image/png"], getType: vi.fn().mockResolvedValue(imageBlob) }]),
+      },
+    });
+    const wrapper = mountApp();
+
+    try {
+      localStorage.setItem(
+        STORAGE_KEY,
+        JSON.stringify({
+          sync: { revision: 2, updatedAt: 20, clientId: "tab-b" },
+          noteLines: [{ text: "new note", indent: 0 }],
+          images: [
+            { id: "other-tab", src: "data:image/png;base64,other", createdAt: 2 },
+            { id: "target", src: "data:image/png;base64,target", createdAt: 1 },
+            { id: "tail", src: "data:image/png;base64,tail", createdAt: 3 },
+          ],
+        }),
+      );
+      const anchor = wrapper.get(".image-panel").element as HTMLElement;
+      wrapper.getComponent(ImagePanel).vm.$emit("paste", { placement: "before", targetId: "target", anchor });
+
+      await vi.waitFor(() => {
+        expect(JSON.parse(localStorage.getItem(STORAGE_KEY) || "{}").sync.revision).toBe(3);
+      });
+      const stored = JSON.parse(localStorage.getItem(STORAGE_KEY) || "{}");
+      expect(stored.noteLines).toEqual([{ text: "new note", indent: 0 }]);
+      expect(stored.images.map((image: { id: string }) => image.id)).toEqual([
+        "other-tab",
+        expect.not.stringMatching(/^(other-tab|target|tail)$/),
+        "target",
+        "tail",
+      ]);
+    } finally {
+      wrapper.unmount();
+    }
+  });
+
   it("shows import and export success through the companion bubble", async () => {
     vi.useFakeTimers();
     const createObjectURL = vi.fn(() => "blob:todo-board");
@@ -4222,6 +4271,58 @@ describe("App shell", () => {
         expect((wrapper.getComponent(ImagePanel).props("images") as Array<{ id: string }>)).toHaveLength(2);
       });
       expect((wrapper.getComponent(ImagePanel).props("images") as Array<{ id: string }>)[1].id).toBe("existing");
+    } finally {
+      if (originalExecCommand) {
+        Object.defineProperty(document, "execCommand", {
+          value: originalExecCommand,
+          configurable: true,
+        });
+      } else {
+        Reflect.deleteProperty(document, "execCommand");
+      }
+      wrapper.unmount();
+    }
+  });
+
+  it("clears an unconsumed browser paste request before the next ordinary paste", async () => {
+    localStorage.setItem(
+      STORAGE_KEY,
+      JSON.stringify({
+        images: [{ id: "target", src: "data:image/png;base64,old", createdAt: 1 }],
+      }),
+    );
+    const originalExecCommand = document.execCommand;
+    Object.defineProperty(document, "execCommand", {
+      value: vi.fn(() => true),
+      configurable: true,
+    });
+    Object.assign(navigator, {
+      clipboard: {
+        read: vi.fn().mockRejectedValue(new DOMException("denied", "NotAllowedError")),
+      },
+    });
+    const wrapper = mountApp();
+
+    try {
+      const anchor = wrapper.get(".image-panel").element as HTMLElement;
+      wrapper.getComponent(ImagePanel).vm.$emit("paste", { placement: "replace", targetId: "target", anchor });
+      await Promise.resolve();
+      await Promise.resolve();
+      await new Promise((resolve) => setTimeout(resolve, 0));
+
+      const ordinaryPaste = new Event("paste", { bubbles: true, cancelable: true });
+      const image = new File(["ordinary"], "ordinary.png", { type: "image/png" });
+      Object.defineProperty(ordinaryPaste, "clipboardData", {
+        value: {
+          items: [{ type: "image/png", getAsFile: () => image }],
+        },
+      });
+      document.dispatchEvent(ordinaryPaste);
+
+      await vi.waitFor(() => {
+        expect((wrapper.getComponent(ImagePanel).props("images") as Array<{ id: string }>)).toHaveLength(2);
+      });
+      expect((wrapper.getComponent(ImagePanel).props("images") as Array<{ id: string }>)[0].id).toBe("target");
     } finally {
       if (originalExecCommand) {
         Object.defineProperty(document, "execCommand", {

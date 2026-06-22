@@ -27,12 +27,19 @@ export type SaveScope = "all" | "images" | "text";
 
 export type SaveStateStatus = "saved" | "merged" | "conflict";
 
+export interface ImagePlacementHint {
+  imageId: string;
+  targetId: string;
+  placement: "before" | "after";
+}
+
 export interface SaveStateOptions {
   storage?: Storage;
   clientId?: string;
   force?: boolean;
   now?: () => number;
   scope?: SaveScope;
+  imagePlacement?: ImagePlacementHint;
 }
 
 export interface SaveStateResult {
@@ -73,7 +80,7 @@ export function saveStateWithConflictCheck(
     if (scope === "images") {
       const merged = {
         ...current,
-        images: mergeImageAdditions(current.images, local.images),
+        images: mergeImageAdditions(current.images, local.images, options.imagePlacement),
       };
       const saved = writeSyncedState(merged, storage, {
         clientId: options.clientId,
@@ -203,7 +210,11 @@ function writeSyncedState(
   return synced;
 }
 
-function mergeImageAdditions(currentImages: StoredImage[], localImages: StoredImage[]): StoredImage[] {
+function mergeImageAdditions(
+  currentImages: StoredImage[],
+  localImages: StoredImage[],
+  placement?: ImagePlacementHint,
+): StoredImage[] {
   const localById = new Map(localImages.map((image) => [image.id, image]));
   const seen = new Set(currentImages.map((image) => image.id));
   const mergedCurrent = currentImages.map((image) => {
@@ -213,7 +224,18 @@ function mergeImageAdditions(currentImages: StoredImage[], localImages: StoredIm
   const localAdditions = localImages
     .filter((image) => !seen.has(image.id))
     .map((image) => ({ ...image }));
-  return [...mergedCurrent, ...localAdditions];
+  const merged = [...mergedCurrent, ...localAdditions];
+  if (!placement || seen.has(placement.imageId)) return merged;
+  const imageIndex = merged.findIndex((image) => image.id === placement.imageId);
+  if (imageIndex < 0) return merged;
+  const [image] = merged.splice(imageIndex, 1);
+  const targetIndex = merged.findIndex((item) => item.id === placement.targetId);
+  if (targetIndex < 0) {
+    merged.push(image);
+    return merged;
+  }
+  merged.splice(targetIndex + (placement.placement === "after" ? 1 : 0), 0, image);
+  return merged;
 }
 
 function normalizeSyncState(value: unknown): BoardSyncState {
