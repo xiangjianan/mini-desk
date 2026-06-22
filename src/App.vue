@@ -13,6 +13,7 @@ import { getCompanionGifSrc, getCompanionNotificationIconSrc } from "./state/com
 import {
   clearStoredImagePayloads,
   deleteStoredImage,
+  getImagePayloadId,
   hydrateCustomCompanionGif,
   hydrateStoredImages,
   persistCustomCompanionGifPayloads,
@@ -61,7 +62,7 @@ import {
   getStoredAppVersion,
   markAppVersionSeen,
 } from "./state/version";
-import type { ImagePlacementHint, SaveScope } from "./state/storage";
+import type { ImagePlacementHint, ImageReplacementHint, SaveScope } from "./state/storage";
 import type { AppLanguage, BoardState, CompanionGifTheme, DraggedTodo, GuideKey, ImagePasteFeedback, ImagePasteRequest, LineItem, QuickApiBodyType, QuickApiHeader, QuickApiMethod, QuickButton, QuickButtonType, StoredImage, TodoItem, TodoListConfig, TodoListId, TodoPeriod, TodoStarChange, WorkspaceSpace } from "./types";
 
 const ImagePreview = defineAsyncComponent(() => import("./components/ImagePreview.vue"));
@@ -153,6 +154,7 @@ type BubbleOptions = {
 type PersistOptions = {
   force?: boolean;
   imagePlacement?: ImagePlacementHint;
+  imageReplacement?: ImageReplacementHint;
 };
 
 type WorkspaceDensityState = "saved" | "saving" | "dirty";
@@ -486,6 +488,7 @@ function persistNow(scope: SaveScope = "all", options: PersistOptions = {}): boo
     force: options.force,
     scope,
     imagePlacement: options.imagePlacement,
+    imageReplacement: options.imageReplacement,
   });
   if (result.status === "conflict") {
     window.clearTimeout(saveStatusTimer.value);
@@ -504,10 +507,53 @@ function persistNow(scope: SaveScope = "all", options: PersistOptions = {}): boo
 
 function mergeVisibleImages(savedImages: StoredImage[], visibleImages: StoredImage[]): StoredImage[] {
   const visibleById = new Map(visibleImages.map((image) => [image.id, image]));
-  return savedImages.map((image) => ({
-    ...image,
-    src: image.src ?? visibleById.get(image.id)?.src,
-  }));
+  return savedImages.map((image) => {
+    const visible = visibleById.get(image.id);
+    return {
+      ...image,
+      src: image.src ?? (visible && getImagePayloadId(visible) === getImagePayloadId(image) ? visible.src : undefined),
+    };
+  });
+}
+
+async function persistImageReplacement(
+  replacement: StoredImage,
+  expectedPayloadId: string,
+): Promise<boolean> {
+  const nextImages = state.images.map((image) => image.id === replacement.id ? replacement : image);
+  recordUndoCheckpoint();
+  markSaving();
+  const result = saveStateWithConflictCheck({ ...state, images: nextImages }, {
+    clientId: syncClientId,
+    scope: "images",
+    imageReplacement: {
+      imageId: replacement.id,
+      expectedPayloadId,
+      newPayloadId: getImagePayloadId(replacement),
+    },
+  });
+  if (result.status === "conflict") {
+    await applyImageReplacementConflict(result.state);
+    return false;
+  }
+  state.sync = result.state.sync;
+  state.images = result.status === "merged"
+    ? mergeVisibleImages(result.state.images, nextImages)
+    : nextImages;
+  broadcastStateSaved();
+  markSavedSoon();
+  return true;
+}
+
+async function applyImageReplacementConflict(latest = loadState()): Promise<void> {
+  window.clearTimeout(saveStatusTimer.value);
+  saveStatus.value = "dirty";
+  showToast("stateConflict");
+  latest.images = await hydrateStoredImages(latest.images);
+  if (!appMounted || latest.sync.revision < state.sync.revision) return;
+  Object.assign(state, latest);
+  applyTheme();
+  lastUndoSnapshot.value = createUndoSnapshot();
 }
 
 function setupStateSyncChannel(): void {
@@ -672,7 +718,8 @@ async function addPastedImageFile(file: File, request: ImagePasteRequest): Promi
   const target = state.images.find((image) => image.id === request.targetId);
   if (!target) return undefined;
   if (request.placement === "replace") {
-    const replacement = { ...target, src };
+    const expectedPayloadId = getImagePayloadId(target);
+    const replacement = { ...target, payloadId: createId(), src };
     try {
       await storeImagePayload(replacement);
     } catch {
@@ -681,19 +728,26 @@ async function addPastedImageFile(file: File, request: ImagePasteRequest): Promi
       return undefined;
     }
     const currentTarget = state.images.find((image) => image.id === request.targetId);
-    if (shouldBlockBoardEffects() || !currentTarget) {
+    if (shouldBlockBoardEffects() || !currentTarget || getImagePayloadId(currentTarget) !== expectedPayloadId) {
       try {
-        if (target.src) await storeImagePayload(target);
-        else await deleteStoredImage(target.id);
+        await deleteStoredImage(replacement);
       } catch {
-        // Best-effort rollback when the target disappears during replacement.
+        // Best-effort cleanup for an uncommitted replacement payload.
+      }
+      if (!shouldBlockBoardEffects()) await applyImageReplacementConflict();
+      return undefined;
+    }
+    if (!(await persistImageReplacement(replacement, expectedPayloadId))) {
+      try {
+        await deleteStoredImage(replacement);
+      } catch {
+        // Best-effort cleanup for a replacement that lost a storage conflict.
       }
       return undefined;
     }
-    currentTarget.src = src;
-    if (persistNow("images")) publishPasteFeedback(currentTarget.id);
+    publishPasteFeedback(replacement.id);
     showBubble("imageAdded", undefined, { hideCompanionAfter: true });
-    return currentTarget;
+    return replacement;
   }
 
   const displaySize = await getDevicePixelRatioDisplaySize(src);
@@ -715,7 +769,7 @@ async function addPastedImageFile(file: File, request: ImagePasteRequest): Promi
   const targetIndex = state.images.findIndex((item) => item.id === request.targetId);
   if (shouldBlockBoardEffects() || targetIndex < 0) {
     try {
-      await deleteStoredImage(image.id);
+      await deleteStoredImage(image);
     } catch {
       // Best-effort cleanup when the target disappears after payload storage.
     }
@@ -775,7 +829,7 @@ async function addImageFile(
   }
   if (shouldBlockBoardEffects()) {
     try {
-      await deleteStoredImage(image.id);
+      await deleteStoredImage(image);
     } catch {
       // Best-effort cleanup for payloads that were stored just before mobile handoff.
     }
@@ -834,6 +888,7 @@ function deleteImage(id: string, anchor?: HTMLElement): void {
   requestConfirmation("confirmDeleteImage", anchor, async () => {
     const index = state.images.findIndex((image) => image.id === id);
     if (index < 0) return;
+    const image = state.images[index];
     const nextPreviewImage = state.images[index + 1] ?? state.images[index - 1];
     state.images = state.images.filter((image) => image.id !== id);
     if (activePreviewId.value === id) {
@@ -849,7 +904,7 @@ function deleteImage(id: string, anchor?: HTMLElement): void {
     } else if (closingPreviewId.value === id) {
       clearImagePreview();
     }
-    await deleteStoredImage(id);
+    await deleteStoredImage(image);
     persistNow();
     showBubble("deleteImage", feedbackAnchor, { hideCompanionAfter: true });
   }, undefined, { confirmText: uiText.value.common.delete, cancelText: uiText.value.common.cancel });
@@ -901,8 +956,10 @@ async function saveEditedImage(payload: { id: string; src: string; displayWidth:
   if (shouldBlockBoardEffects()) return;
   const image = state.images.find((item) => item.id === payload.id);
   if (!image) return;
+  const expectedPayloadId = getImagePayloadId(image);
   const nextImage: StoredImage = {
     ...image,
+    payloadId: createId(),
     src: payload.src,
     displayWidth: payload.displayWidth,
     displayHeight: payload.displayHeight,
@@ -914,9 +971,24 @@ async function saveEditedImage(payload: { id: string; src: string; displayWidth:
     showBubble("imageStoreFailed", document.querySelector<HTMLElement>(".image-preview") ?? undefined, { hideCompanionAfter: true });
     return;
   }
-  if (shouldBlockBoardEffects()) return;
-  Object.assign(image, nextImage);
-  persistNow("images");
+  const currentImage = state.images.find((item) => item.id === payload.id);
+  if (shouldBlockBoardEffects() || !currentImage || getImagePayloadId(currentImage) !== expectedPayloadId) {
+    try {
+      await deleteStoredImage(nextImage);
+    } catch {
+      // Best-effort cleanup for an uncommitted edited payload.
+    }
+    if (!shouldBlockBoardEffects()) await applyImageReplacementConflict();
+    return;
+  }
+  if (!(await persistImageReplacement(nextImage, expectedPayloadId))) {
+    try {
+      await deleteStoredImage(nextImage);
+    } catch {
+      // Best-effort cleanup for an edit that lost a storage conflict.
+    }
+    return;
+  }
   activeEditorId.value = undefined;
   showBubble("imageEdited", document.querySelector<HTMLElement>(".image-preview") ?? undefined, { hideCompanionAfter: true });
 }

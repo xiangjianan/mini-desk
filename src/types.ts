@@ -35,6 +35,7 @@ export interface LineItem {
 
 export interface StoredImage {
   id: string;
+  payloadId?: string;
   src?: string;
   createdAt: number;
   displayWidth?: number;

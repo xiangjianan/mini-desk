@@ -33,6 +33,12 @@ export interface ImagePlacementHint {
   placement: "before" | "after";
 }
 
+export interface ImageReplacementHint {
+  imageId: string;
+  expectedPayloadId: string;
+  newPayloadId: string;
+}
+
 export interface SaveStateOptions {
   storage?: Storage;
   clientId?: string;
@@ -40,6 +46,7 @@ export interface SaveStateOptions {
   now?: () => number;
   scope?: SaveScope;
   imagePlacement?: ImagePlacementHint;
+  imageReplacement?: ImageReplacementHint;
 }
 
 export interface SaveStateResult {
@@ -78,9 +85,12 @@ export function saveStateWithConflictCheck(
 
   if (current && currentRevision > localRevision && current.sync.clientId !== options.clientId && !options.force) {
     if (scope === "images") {
+      if (options.imageReplacement && !canMergeImageReplacement(current.images, local.images, options.imageReplacement)) {
+        return { status: "conflict", state: current };
+      }
       const merged = {
         ...current,
-        images: mergeImageAdditions(current.images, local.images, options.imagePlacement),
+        images: mergeImageAdditions(current.images, local.images, options.imagePlacement, options.imageReplacement),
       };
       const saved = writeSyncedState(merged, storage, {
         clientId: options.clientId,
@@ -116,6 +126,7 @@ export function getSerializableState(
       if (options.includeImageData) return { ...image };
       return {
         id: image.id,
+        ...(image.payloadId ? { payloadId: image.payloadId } : {}),
         createdAt: image.createdAt,
         ...(image.displayWidth ? { displayWidth: image.displayWidth } : {}),
         ...(image.displayHeight ? { displayHeight: image.displayHeight } : {}),
@@ -214,11 +225,15 @@ function mergeImageAdditions(
   currentImages: StoredImage[],
   localImages: StoredImage[],
   placement?: ImagePlacementHint,
+  replacement?: ImageReplacementHint,
 ): StoredImage[] {
   const localById = new Map(localImages.map((image) => [image.id, image]));
   const seen = new Set(currentImages.map((image) => image.id));
   const mergedCurrent = currentImages.map((image) => {
     const local = localById.get(image.id);
+    if (local && replacement?.imageId === image.id) {
+      return { ...image, ...local, src: local.src ?? image.src };
+    }
     return local ? { ...local, ...image, src: image.src ?? local.src } : { ...image };
   });
   const localAdditions = localImages
@@ -236,6 +251,25 @@ function mergeImageAdditions(
   }
   merged.splice(targetIndex + (placement.placement === "after" ? 1 : 0), 0, image);
   return merged;
+}
+
+function canMergeImageReplacement(
+  currentImages: StoredImage[],
+  localImages: StoredImage[],
+  replacement: ImageReplacementHint,
+): boolean {
+  const current = currentImages.find((image) => image.id === replacement.imageId);
+  const local = localImages.find((image) => image.id === replacement.imageId);
+  return Boolean(
+    current
+      && local
+      && getImagePayloadId(current) === replacement.expectedPayloadId
+      && getImagePayloadId(local) === replacement.newPayloadId,
+  );
+}
+
+function getImagePayloadId(image: StoredImage): string {
+  return image.payloadId ?? image.id;
 }
 
 function normalizeSyncState(value: unknown): BoardSyncState {
@@ -432,6 +466,7 @@ export function normalizeImages(images: unknown): StoredImage[] {
         id: typeof record.id === "string" ? record.id : createId(),
         createdAt: typeof record.createdAt === "number" ? record.createdAt : Date.now(),
       };
+      if (typeof record.payloadId === "string" && record.payloadId.trim()) image.payloadId = record.payloadId.trim();
       if (typeof record.src === "string") image.src = record.src;
       const displayWidth = normalizeImageDisplayDimension(record.displayWidth);
       const displayHeight = normalizeImageDisplayDimension(record.displayHeight);

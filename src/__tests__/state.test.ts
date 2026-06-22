@@ -303,6 +303,23 @@ describe("state compatibility", () => {
     expect(state.images[1]).not.toHaveProperty("displayHeight");
   });
 
+  it("normalizes and serializes immutable image payload ids", () => {
+    const state = normalizeImportedState({
+      images: [
+        { id: "img-1", payloadId: "payload-v2", createdAt: 1 },
+        { id: "img-2", payloadId: "", createdAt: 2 },
+      ],
+    });
+
+    expect(state.images[0]).toMatchObject({ id: "img-1", payloadId: "payload-v2" });
+    expect(state.images[1]).not.toHaveProperty("payloadId");
+    expect(getSerializableState(state).images[0]).toMatchObject({
+      id: "img-1",
+      payloadId: "payload-v2",
+      createdAt: 1,
+    });
+  });
+
   it("merges image additions from a stale tab without overwriting the latest stored state", () => {
     const storage = localStorage;
     storage.clear();
@@ -369,6 +386,88 @@ describe("state compatibility", () => {
     expect(result.status).toBe("merged");
     expect(stored.noteLines).toEqual([{ text: "latest note", indent: 0 }]);
     expect(stored.images.map((image) => image.id)).toEqual(expected);
+  });
+
+  it("merges an image replacement only when the latest payload version matches", () => {
+    const storage = localStorage;
+    storage.clear();
+    const latest = normalizeImportedState({
+      sync: { revision: 2, updatedAt: 20, clientId: "tab-a" },
+      noteLines: [{ text: "latest note", indent: 0 }],
+      images: [
+        { id: "other", payloadId: "other-v1", createdAt: 1 },
+        { id: "target", payloadId: "target-v1", createdAt: 2, displayWidth: 100, displayHeight: 50 },
+      ],
+    });
+    const staleReplacement = normalizeImportedState({
+      sync: { revision: 1, updatedAt: 10, clientId: "tab-b" },
+      noteLines: [{ text: "stale note", indent: 0 }],
+      images: [
+        { id: "target", payloadId: "target-v2", createdAt: 2, displayWidth: 240, displayHeight: 120 },
+      ],
+    });
+
+    saveStateWithConflictCheck(latest, { storage, clientId: "tab-a", now: () => 20 });
+    const result = saveStateWithConflictCheck(staleReplacement, {
+      storage,
+      clientId: "tab-b",
+      now: () => 30,
+      scope: "images",
+      imageReplacement: {
+        imageId: "target",
+        expectedPayloadId: "target-v1",
+        newPayloadId: "target-v2",
+      },
+    });
+
+    const stored = normalizeImportedState(JSON.parse(storage.getItem(STORAGE_KEY) ?? "{}"));
+    expect(result.status).toBe("merged");
+    expect(stored.noteLines).toEqual([{ text: "latest note", indent: 0 }]);
+    expect(stored.images.map((image) => image.id)).toEqual(["other", "target"]);
+    expect(stored.images[1]).toMatchObject({
+      payloadId: "target-v2",
+      displayWidth: 240,
+      displayHeight: 120,
+    });
+  });
+
+  it.each([
+    {
+      name: "deleted",
+      latestImages: [{ id: "other", payloadId: "other-v1", createdAt: 1 }],
+    },
+    {
+      name: "replaced",
+      latestImages: [{ id: "target", payloadId: "winning-v2", createdAt: 2 }],
+    },
+  ])("rejects a stale replacement when the latest target was $name", ({ latestImages }) => {
+    const storage = localStorage;
+    storage.clear();
+    const latest = normalizeImportedState({
+      sync: { revision: 2, updatedAt: 20, clientId: "tab-a" },
+      images: latestImages,
+    });
+    const staleReplacement = normalizeImportedState({
+      sync: { revision: 1, updatedAt: 10, clientId: "tab-b" },
+      images: [{ id: "target", payloadId: "losing-v2", createdAt: 2 }],
+    });
+
+    saveStateWithConflictCheck(latest, { storage, clientId: "tab-a", now: () => 20 });
+    const result = saveStateWithConflictCheck(staleReplacement, {
+      storage,
+      clientId: "tab-b",
+      now: () => 30,
+      scope: "images",
+      imageReplacement: {
+        imageId: "target",
+        expectedPayloadId: "target",
+        newPayloadId: "losing-v2",
+      },
+    });
+
+    const stored = normalizeImportedState(JSON.parse(storage.getItem(STORAGE_KEY) ?? "{}"));
+    expect(result.status).toBe("conflict");
+    expect(stored.images).toEqual(latest.images);
   });
 
   it("rejects stale text saves instead of silently overwriting newer text", () => {

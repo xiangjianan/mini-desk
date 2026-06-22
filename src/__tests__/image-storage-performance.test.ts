@@ -2,8 +2,8 @@ import { mount } from "@vue/test-utils";
 import { beforeEach, describe, expect, it, vi } from "vitest";
 import App from "../App.vue";
 import ImagePanel from "../components/ImagePanel.vue";
-import { IMAGE_DB_NAME, IMAGE_STORE_NAME, STORAGE_KEY } from "../state/defaults";
-import { hydrateStoredImages, persistImagePayloads } from "../state/images";
+import { IMAGE_DB_NAME, IMAGE_STORE_NAME, LEGACY_IMAGE_DB_NAME, STORAGE_KEY } from "../state/defaults";
+import { deleteStoredImage, getStoredImagePayload, hydrateStoredImages, persistImagePayloads, storeImagePayload } from "../state/images";
 
 type ImageRecord = { id: string; src?: string };
 
@@ -136,6 +136,65 @@ beforeEach(() => {
 });
 
 describe("image storage startup performance", () => {
+  it("stores, reads, and deletes image data by immutable payload id", async () => {
+    const fakeIndexedDb = installFakeIndexedDb({ [IMAGE_DB_NAME]: [] });
+    const image = {
+      id: "img-1",
+      payloadId: "payload-v2",
+      src: "data:image/png;base64,version-two",
+      createdAt: 1,
+    };
+
+    await storeImagePayload(image);
+
+    expect(fakeIndexedDb.putRecords).toEqual([
+      { id: "payload-v2", src: "data:image/png;base64,version-two" },
+    ]);
+    await expect(getStoredImagePayload(image)).resolves.toBe("data:image/png;base64,version-two");
+
+    await deleteStoredImage(image);
+
+    await expect(getStoredImagePayload(image)).resolves.toBeUndefined();
+  });
+
+  it("hydrates a missing version payload from the historical image id", async () => {
+    installFakeIndexedDb({
+      [IMAGE_DB_NAME]: [{ id: "img-1", src: "data:image/png;base64,historical" }],
+    });
+
+    const images = await hydrateStoredImages([
+      { id: "img-1", payloadId: "missing-version", createdAt: 1 },
+    ]);
+
+    expect(images[0]).toMatchObject({
+      id: "img-1",
+      payloadId: "missing-version",
+      src: "data:image/png;base64,historical",
+    });
+  });
+
+  it("prefers the immutable payload version and falls back to the legacy image id", async () => {
+    installFakeIndexedDb({
+      [IMAGE_DB_NAME]: [
+        { id: "img-current", src: "data:image/png;base64,old-current" },
+        { id: "payload-current-v2", src: "data:image/png;base64,current-v2" },
+      ],
+      [LEGACY_IMAGE_DB_NAME]: [
+        { id: "img-legacy", src: "data:image/png;base64,legacy" },
+      ],
+    });
+
+    const images = await hydrateStoredImages([
+      { id: "img-current", payloadId: "payload-current-v2", createdAt: 1 },
+      { id: "img-legacy", payloadId: "missing-legacy-version", createdAt: 2 },
+    ]);
+
+    expect(images.map((image) => image.src)).toEqual([
+      "data:image/png;base64,current-v2",
+      "data:image/png;base64,legacy",
+    ]);
+  });
+
   it("hydrates multiple stored image payloads with one active IndexedDB open", async () => {
     const fakeIndexedDb = installFakeIndexedDb({
       [IMAGE_DB_NAME]: [

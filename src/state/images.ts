@@ -9,6 +9,12 @@ export interface HydrateStoredImagesOptions {
   persistLegacyPayloads?: boolean;
 }
 
+type ImagePayloadIdentity = string | Pick<StoredImage, "id" | "payloadId">;
+
+export function getImagePayloadId(image: ImagePayloadIdentity): string {
+  return typeof image === "string" ? image : image.payloadId ?? image.id;
+}
+
 export function openImageDb(name = IMAGE_DB_NAME): Promise<IDBDatabase> {
   return new Promise((resolve, reject) => {
     const request = indexedDB.open(name, 1);
@@ -28,24 +34,26 @@ export async function storeImagePayload(image: StoredImage): Promise<void> {
   if (!image.src || !("indexedDB" in window)) return;
   const db = await openImageDb();
   try {
-    await transact(db, "readwrite", (store) => store.put({ id: image.id, src: image.src }));
+    await transact(db, "readwrite", (store) => store.put({ id: getImagePayloadId(image), src: image.src }));
   } finally {
     db.close();
   }
 }
 
-export async function getStoredImagePayload(id: string): Promise<string | undefined> {
+export async function getStoredImagePayload(image: ImagePayloadIdentity): Promise<string | undefined> {
   if (!("indexedDB" in window)) return undefined;
-  const records = await getStoredImagePayloads([id]);
-  const payload = records.get(id);
+  const id = typeof image === "string" ? image : image.id;
+  const payloadId = getImagePayloadId(image);
+  const records = await getStoredImagePayloads(payloadId === id ? [id] : [payloadId, id]);
+  const payload = records.get(payloadId) ?? records.get(id);
   if (payload) return payload;
   return getLegacyStoredPayload(id);
 }
 
-export async function deleteStoredImage(id: string): Promise<void> {
+export async function deleteStoredImage(image: ImagePayloadIdentity): Promise<void> {
   if (!("indexedDB" in window)) return;
   const db = await openImageDb();
-  await transact(db, "readwrite", (store) => store.delete(id));
+  await transact(db, "readwrite", (store) => store.delete(getImagePayloadId(image)));
   db.close();
 }
 
@@ -57,7 +65,7 @@ export async function persistImagePayloads(images: StoredImage[]): Promise<void>
   try {
     await transactBatch(db, "readwrite", (store) => {
       payloads.forEach((image) => {
-        store.put({ id: image.id, src: image.src });
+        store.put({ id: getImagePayloadId(image), src: image.src });
       });
     });
   } finally {
@@ -117,15 +125,24 @@ export async function hydrateStoredImages(
   options: HydrateStoredImagesOptions = {},
 ): Promise<StoredImage[]> {
   if (!("indexedDB" in window)) return images;
-  const missingIds = images.filter((image) => !image.src).map((image) => image.id);
-  if (missingIds.length === 0) return images;
+  const missingImages = images.filter((image) => !image.src);
+  if (missingImages.length === 0) return images;
 
-  const currentPayloads = await getStoredImagePayloads(missingIds);
-  const legacyIds = missingIds.filter((id) => !currentPayloads.has(id));
+  const currentKeys = Array.from(new Set(missingImages.flatMap((image) => {
+    const payloadId = getImagePayloadId(image);
+    return payloadId === image.id ? [image.id] : [payloadId, image.id];
+  })));
+  const currentPayloads = await getStoredImagePayloads(currentKeys);
+  const legacyIds = missingImages
+    .filter((image) => !currentPayloads.has(getImagePayloadId(image)) && !currentPayloads.has(image.id))
+    .map((image) => image.id);
   const legacyPayloads = await getLegacyStoredPayloads(legacyIds);
   const hydratedImages = images.map((image) => ({
     ...image,
-    src: image.src ?? currentPayloads.get(image.id) ?? legacyPayloads.get(image.id),
+    src: image.src
+      ?? currentPayloads.get(getImagePayloadId(image))
+      ?? currentPayloads.get(image.id)
+      ?? legacyPayloads.get(image.id),
   }));
 
   if (options.persistLegacyPayloads && legacyPayloads.size > 0) {

@@ -9,6 +9,7 @@ import SettingsMenu from "../components/SettingsMenu.vue";
 import SpacePanel from "../components/SpacePanel.vue";
 import TodoPanel from "../components/TodoPanel.vue";
 import { defaultState, STORAGE_KEY } from "../state/defaults";
+import { hydrateStoredImages, storeImagePayload } from "../state/images";
 import { KAOMOJI_BY_MOOD } from "../state/messages";
 import { FALLBACK_APP_VERSION } from "../state/version";
 
@@ -113,6 +114,83 @@ async function flushAsyncComponents() {
 
 function getImagePreview(wrapper: ReturnType<typeof mountApp>) {
   return wrapper.getComponent({ name: "ImagePreview" });
+}
+
+function installMemoryImageDb(): () => void {
+  const originalIndexedDb = window.indexedDB;
+  const records = new Map<string, { id: string; src?: string }>();
+  const createRequest = <T,>(result: T, settled: () => void): IDBRequest<T> => {
+    const request = { result, error: null, onsuccess: null, onerror: null } as unknown as IDBRequest<T>;
+    queueMicrotask(() => {
+      request.onsuccess?.(new Event("success"));
+      settled();
+    });
+    return request;
+  };
+  const indexedDb = {
+    open: vi.fn(() => {
+      const db = {
+        objectStoreNames: { contains: () => true },
+        createObjectStore: vi.fn(),
+        transaction: vi.fn(() => {
+          let pending = 0;
+          let completed = false;
+          const transaction = {
+            objectStore: () => store,
+            oncomplete: null as ((event: Event) => void) | null,
+            onerror: null as ((event: Event) => void) | null,
+            error: null,
+          };
+          const finish = () => queueMicrotask(() => {
+            if (!completed && pending === 0) {
+              completed = true;
+              transaction.oncomplete?.(new Event("complete"));
+            }
+          });
+          const settle = () => {
+            pending -= 1;
+            finish();
+          };
+          const request = <T,>(result: T) => {
+            pending += 1;
+            return createRequest(result, settle);
+          };
+          const store = {
+            get: (id: string) => request(records.get(id)),
+            put: (record: { id: string; src?: string }) => {
+              records.set(record.id, { ...record });
+              return request(record.id);
+            },
+            delete: (id: string) => {
+              records.delete(id);
+              return request(undefined);
+            },
+            clear: () => {
+              records.clear();
+              return request(undefined);
+            },
+          };
+          finish();
+          return transaction;
+        }),
+        close: vi.fn(),
+      };
+      const request = {
+        result: db,
+        error: null,
+        onsuccess: null,
+        onerror: null,
+        onupgradeneeded: null,
+      } as unknown as IDBOpenDBRequest;
+      queueMicrotask(() => request.onsuccess?.(new Event("success")));
+      return request;
+    }),
+  };
+  vi.stubGlobal("indexedDB", indexedDb);
+  return () => {
+    if (originalIndexedDb) vi.stubGlobal("indexedDB", originalIndexedDb);
+    else Reflect.deleteProperty(window, "indexedDB");
+  };
 }
 
 function stubMatchMedia(matches: boolean) {
@@ -1966,6 +2044,7 @@ describe("App shell", () => {
   });
 
   it("reopens preview image editing with Enter after saving instead of copying the image", async () => {
+    const restoreIndexedDb = installMemoryImageDb();
     localStorage.setItem(
       STORAGE_KEY,
       JSON.stringify({
@@ -1997,8 +2076,25 @@ describe("App shell", () => {
         displayWidth: 120,
         displayHeight: 80,
       });
-      await Promise.resolve();
-      await wrapper.vm.$nextTick();
+      await vi.waitFor(() => {
+        const image = (wrapper.getComponent(ImagePanel).props("images") as Array<{
+          id: string;
+          payloadId?: string;
+          displayWidth?: number;
+          displayHeight?: number;
+        }>)[0];
+        expect(image).toMatchObject({
+          id: "img-1",
+          payloadId: expect.any(String),
+          displayWidth: 120,
+          displayHeight: 80,
+        });
+      });
+      const stored = JSON.parse(localStorage.getItem(STORAGE_KEY) || "{}");
+      expect(stored.images[0].payloadId).toEqual(expect.any(String));
+      await expect(hydrateStoredImages(stored.images)).resolves.toEqual([
+        expect.objectContaining({ id: "img-1", src: "data:image/png;base64,dHdv" }),
+      ]);
 
       const event = new KeyboardEvent("keydown", { key: "Enter", bubbles: true, cancelable: true });
       window.dispatchEvent(event);
@@ -2010,6 +2106,7 @@ describe("App shell", () => {
       expect(write).not.toHaveBeenCalled();
     } finally {
       wrapper.unmount();
+      restoreIndexedDb();
       vi.unstubAllGlobals();
     }
   });
@@ -3325,6 +3422,7 @@ describe("App shell", () => {
   });
 
   it("replaces pasted image data without changing list identity or display metadata", async () => {
+    const restoreIndexedDb = installMemoryImageDb();
     localStorage.setItem(
       STORAGE_KEY,
       JSON.stringify({
@@ -3350,29 +3448,152 @@ describe("App shell", () => {
     const wrapper = mountApp();
     const anchor = wrapper.get(".image-panel").element as HTMLElement;
 
-    wrapper.getComponent(ImagePanel).vm.$emit("paste", { placement: "replace", targetId: "target", anchor });
-    await vi.waitFor(() => {
+    try {
+      wrapper.getComponent(ImagePanel).vm.$emit("paste", { placement: "replace", targetId: "target", anchor });
+      await vi.waitFor(() => {
       const images = wrapper.getComponent(ImagePanel).props("images") as Array<{ id: string; src?: string }>;
       expect(images.find((image) => image.id === "target")?.src).not.toBe("data:image/png;base64,old");
-    });
+      });
 
-    const images = wrapper.getComponent(ImagePanel).props("images") as Array<{
+      const images = wrapper.getComponent(ImagePanel).props("images") as Array<{
       id: string;
+      payloadId?: string;
       src?: string;
       createdAt: number;
       displayWidth?: number;
       displayHeight?: number;
     }>;
-    expect(images.map((image) => image.id)).toEqual(["first", "target", "last"]);
-    expect(images[1]).toMatchObject({
+      expect(images.map((image) => image.id)).toEqual(["first", "target", "last"]);
+      expect(images[1]).toMatchObject({
       id: "target",
+      payloadId: expect.any(String),
       createdAt: 42,
       displayWidth: 320,
       displayHeight: 180,
-    });
-    expect(wrapper.getComponent(ImagePanel).props("pasteFeedback")).toEqual({ id: "target", token: 1 });
+      });
+      const stored = JSON.parse(localStorage.getItem(STORAGE_KEY) || "{}");
+      expect(stored.images.map((image: { id: string }) => image.id)).toEqual(["first", "target", "last"]);
+      expect(stored.images[1]).toMatchObject({
+      id: "target",
+      payloadId: images[1].payloadId,
+      createdAt: 42,
+      displayWidth: 320,
+      displayHeight: 180,
+      });
+      expect(stored.images[1].src).toBeUndefined();
+      await expect(hydrateStoredImages(stored.images)).resolves.toEqual([
+      expect.objectContaining({ id: "first" }),
+      expect.objectContaining({
+        id: "target",
+        payloadId: images[1].payloadId,
+        src: expect.not.stringMatching(/base64,old$/),
+        createdAt: 42,
+        displayWidth: 320,
+        displayHeight: 180,
+      }),
+      expect.objectContaining({ id: "last" }),
+      ]);
+      expect(wrapper.getComponent(ImagePanel).props("pasteFeedback")).toEqual({ id: "target", token: 1 });
+    } finally {
+      wrapper.unmount();
+      restoreIndexedDb();
+    }
+  });
 
-    wrapper.unmount();
+  it("does not revive an image deleted by another tab during replacement", async () => {
+    localStorage.setItem(
+      STORAGE_KEY,
+      JSON.stringify({
+        sync: { revision: 1, updatedAt: 10, clientId: "tab-a" },
+        images: [{ id: "target", src: "data:image/png;base64,old", createdAt: 1 }],
+      }),
+    );
+    const imageBlob = new Blob(["losing replacement"], { type: "image/png" });
+    Object.assign(navigator, {
+      clipboard: {
+        read: vi.fn().mockResolvedValue([{
+          types: ["image/png"],
+          getType: vi.fn(async () => {
+            localStorage.setItem(
+              STORAGE_KEY,
+              JSON.stringify({
+                sync: { revision: 2, updatedAt: 20, clientId: "tab-b" },
+                images: [{ id: "other", src: "data:image/png;base64,other", createdAt: 2 }],
+              }),
+            );
+            return imageBlob;
+          }),
+        }]),
+      },
+    });
+    const wrapper = mountApp();
+
+    try {
+      const anchor = wrapper.get(".image-panel").element as HTMLElement;
+      wrapper.getComponent(ImagePanel).vm.$emit("paste", { placement: "replace", targetId: "target", anchor });
+
+      await vi.waitFor(() => {
+        expect((wrapper.getComponent(ImagePanel).props("images") as Array<{ id: string }>).map((image) => image.id)).toEqual(["other"]);
+      });
+      expect(JSON.parse(localStorage.getItem(STORAGE_KEY) || "{}").images.map((image: { id: string }) => image.id)).toEqual(["other"]);
+      expect(wrapper.getComponent(ImagePanel).props("pasteFeedback")).toBeUndefined();
+    } finally {
+      wrapper.unmount();
+    }
+  });
+
+  it("keeps the winning payload when another tab replaces the same image first", async () => {
+    const restoreIndexedDb = installMemoryImageDb();
+    localStorage.setItem(
+      STORAGE_KEY,
+      JSON.stringify({
+        sync: { revision: 1, updatedAt: 10, clientId: "tab-a" },
+        images: [{ id: "target", payloadId: "target-v1", src: "data:image/png;base64,old", createdAt: 1 }],
+      }),
+    );
+    const imageBlob = new Blob(["losing replacement"], { type: "image/png" });
+    Object.assign(navigator, {
+      clipboard: {
+        read: vi.fn().mockResolvedValue([{
+          types: ["image/png"],
+          getType: vi.fn(async () => {
+            await storeImagePayload({
+              id: "target",
+              payloadId: "winning-v2",
+              src: "data:image/png;base64,winning",
+              createdAt: 1,
+            });
+            localStorage.setItem(
+              STORAGE_KEY,
+              JSON.stringify({
+                sync: { revision: 2, updatedAt: 20, clientId: "tab-b" },
+                images: [{ id: "target", payloadId: "winning-v2", createdAt: 1 }],
+              }),
+            );
+            return imageBlob;
+          }),
+        }]),
+      },
+    });
+    const wrapper = mountApp();
+
+    try {
+      const anchor = wrapper.get(".image-panel").element as HTMLElement;
+      wrapper.getComponent(ImagePanel).vm.$emit("paste", { placement: "replace", targetId: "target", anchor });
+
+      await vi.waitFor(() => {
+        expect((wrapper.getComponent(ImagePanel).props("images") as Array<{ id: string; payloadId?: string; src?: string }>)[0]).toMatchObject({
+          id: "target",
+          payloadId: "winning-v2",
+          src: "data:image/png;base64,winning",
+        });
+      });
+      expect(JSON.parse(localStorage.getItem(STORAGE_KEY) || "{}").images[0].payloadId).toBe("winning-v2");
+      expect(wrapper.getComponent(ImagePanel).props("pasteFeedback")).toBeUndefined();
+    } finally {
+      wrapper.unmount();
+      restoreIndexedDb();
+    }
   });
 
   it("stores pasted screenshot display size using the device pixel ratio", async () => {
