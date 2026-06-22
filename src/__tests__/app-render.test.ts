@@ -3812,6 +3812,101 @@ describe("App shell", () => {
     }
   });
 
+  it.each([
+    { name: "starts during hydration", editBeforePaste: false, timerExpiresWhilePending: false },
+    { name: "conflicts when its timer expires during hydration", editBeforePaste: true, timerExpiresWhilePending: true },
+  ])("retries a text edit that $name", async ({ editBeforePaste, timerExpiresWhilePending }) => {
+    if (timerExpiresWhilePending) vi.useFakeTimers();
+    localStorage.setItem(
+      STORAGE_KEY,
+      JSON.stringify({
+        sync: { revision: 1, updatedAt: 10, clientId: "tab-a" },
+        spaces: [{ id: "workspace", title: "Memo", lines: [{ text: "old", indent: 0 }] }],
+        activeSpaceId: "workspace",
+        images: [{ id: "target", src: "data:image/png;base64,old", createdAt: 1 }],
+      }),
+    );
+    const imageBlob = new Blob(["losing"], { type: "image/png" });
+    Object.assign(navigator, {
+      clipboard: {
+        read: vi.fn().mockResolvedValue([{
+          types: ["image/png"],
+          getType: vi.fn(async () => {
+            localStorage.setItem(
+              STORAGE_KEY,
+              JSON.stringify({
+                sync: { revision: 2, updatedAt: 20, clientId: "tab-b" },
+                spaces: [{ id: "workspace", title: "Memo", lines: [{ text: "remote", indent: 0 }] }],
+                activeSpaceId: "workspace",
+                images: [],
+              }),
+            );
+            return imageBlob;
+          }),
+        }]),
+      },
+    });
+    const wrapper = mountApp();
+
+    try {
+      await flushPromises();
+      const deferredHydration = createDeferred<Awaited<ReturnType<typeof hydrateStoredImages>>>();
+      const hydrateSpy = vi.spyOn(imageState, "hydrateStoredImages").mockImplementationOnce(() => deferredHydration.promise);
+      if (editBeforePaste) {
+        wrapper.getComponent(SpacePanel).vm.$emit("update", "workspace", [{ text: "generation draft", indent: 0 }]);
+      }
+      const anchor = wrapper.get(".image-panel").element as HTMLElement;
+      wrapper.getComponent(ImagePanel).vm.$emit("paste", { placement: "replace", targetId: "target", anchor });
+      await vi.waitFor(() => expect(hydrateSpy).toHaveBeenCalled());
+      if (!editBeforePaste) {
+        wrapper.getComponent(SpacePanel).vm.$emit("update", "workspace", [{ text: "generation draft", indent: 0 }]);
+      }
+      if (timerExpiresWhilePending) await vi.advanceTimersByTimeAsync(3000);
+      deferredHydration.resolve([]);
+
+      await vi.waitFor(() => {
+        const stored = JSON.parse(localStorage.getItem(STORAGE_KEY) || "{}");
+        expect(stored.sync.revision).toBe(3);
+        expect(stored.spaces[0].lines[0].text).toBe("generation draft");
+      });
+      expect((wrapper.getComponent(SpacePanel).props("spaces") as Array<{ lines: Array<{ text: string }> }>)[0].lines[0].text).toBe("generation draft");
+    } finally {
+      wrapper.unmount();
+      if (timerExpiresWhilePending) vi.useRealTimers();
+    }
+  });
+
+  it("keeps an edit made during a text persistence attempt dirty", async () => {
+    const wrapper = mountApp();
+
+    try {
+      await flushPromises();
+      const spacePanel = wrapper.getComponent(SpacePanel);
+      spacePanel.vm.$emit("update", "workspace", [{ text: "first draft", indent: 0 }]);
+      const originalSetItem = Storage.prototype.setItem;
+      let injectedEdit = false;
+      vi.spyOn(Storage.prototype, "setItem").mockImplementation(function (this: Storage, key, value) {
+        if (key === STORAGE_KEY && !injectedEdit) {
+          injectedEdit = true;
+          spacePanel.vm.$emit("update", "workspace", [{ text: "second draft", indent: 0 }]);
+        }
+        return originalSetItem.call(this, key, value);
+      });
+
+      spacePanel.vm.$emit("blur");
+      expect(JSON.parse(localStorage.getItem(STORAGE_KEY) || "{}").spaces[0].lines[0].text).toBe("first draft");
+
+      spacePanel.vm.$emit("blur");
+      await vi.waitFor(() => {
+        const stored = JSON.parse(localStorage.getItem(STORAGE_KEY) || "{}");
+        expect(stored.spaces[0].lines[0].text).toBe("second draft");
+        expect(stored.sync.revision).toBe(2);
+      });
+    } finally {
+      wrapper.unmount();
+    }
+  });
+
   it("restores a deleted image payload through global undo", async () => {
     vi.useFakeTimers();
     const restoreIndexedDb = installMemoryImageDb();

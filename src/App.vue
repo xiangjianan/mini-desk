@@ -144,6 +144,8 @@ let browserImagePasteRequestToken = 0;
 let pasteFeedbackToken = 0;
 let restoringUndo = false;
 let undoInFlight = false;
+let textEditGeneration = 0;
+let savedTextGeneration = 0;
 let stateSyncChannel: BroadcastChannel | null = null;
 
 type BubbleOptions = {
@@ -341,6 +343,7 @@ function updateLanguage(language: AppLanguage): void {
 
 function updateLines(key: "noteLines" | "workspaceLines" | "storageLines", lines: LineItem[]): void {
   state[key] = lines;
+  textEditGeneration += 1;
   markDirty();
   scheduleTextSave();
 }
@@ -349,6 +352,7 @@ function updateSpaceLines(id: string, lines: LineItem[]): void {
   const space = state.spaces.find((item) => item.id === id);
   if (!space) return;
   space.lines = lines;
+  textEditGeneration += 1;
   syncLegacySpaceLines();
   markDirty();
   scheduleTextSave();
@@ -428,15 +432,36 @@ function scheduleTextSave(): void {
   window.clearTimeout(textSaveTimer.value);
   textSaveTimer.value = window.setTimeout(() => {
     textSaveTimer.value = undefined;
-    persistNow("text");
-    showSaveBubble();
+    void persistPendingText();
   }, 3000);
 }
 
 function flushTextSave(): void {
   window.clearTimeout(textSaveTimer.value);
   textSaveTimer.value = undefined;
-  persistNow("text");
+  void persistPendingText();
+}
+
+function resetTextGenerationBaseline(): void {
+  window.clearTimeout(textSaveTimer.value);
+  textSaveTimer.value = undefined;
+  savedTextGeneration = textEditGeneration;
+}
+
+async function persistPendingText(): Promise<void> {
+  if (textEditGeneration === savedTextGeneration) return;
+  const attemptGeneration = textEditGeneration;
+  const persisted = persistNow("text");
+  if (!persisted) {
+    if (textEditGeneration !== savedTextGeneration) scheduleTextSave();
+    return;
+  }
+  savedTextGeneration = Math.max(savedTextGeneration, attemptGeneration);
+  if (textEditGeneration !== savedTextGeneration) {
+    scheduleTextSave();
+    return;
+  }
+  showSaveBubble();
 }
 
 function showCompanion(anchor?: HTMLElement, guideKey?: GuideKey): void {
@@ -526,7 +551,6 @@ async function persistImageReplacement(
 ): Promise<boolean> {
   const previousSnapshot = createUndoSnapshot();
   const nextImages = state.images.map((image) => image.id === replacement.id ? replacement : image);
-  const hadPendingText = textSaveTimer.value !== undefined;
   markSaving();
   const result = saveStateWithConflictCheck({ ...state, images: nextImages }, {
     clientId: syncClientId,
@@ -538,7 +562,7 @@ async function persistImageReplacement(
     },
   });
   if (result.status === "conflict") {
-    await applyImageReplacementConflict(result.state, hadPendingText);
+    await applyImageReplacementConflict(result.state);
     return false;
   }
   state.sync = result.state.sync;
@@ -560,7 +584,6 @@ async function persistImageReplacement(
 
 async function applyImageReplacementConflict(
   latest = loadState(),
-  preservePendingText = textSaveTimer.value !== undefined,
 ): Promise<void> {
   window.clearTimeout(saveStatusTimer.value);
   saveStatus.value = "dirty";
@@ -572,7 +595,7 @@ async function applyImageReplacementConflict(
     latest = newest;
   }
   if (!appMounted || latest.sync.revision < state.sync.revision) return;
-  if (preservePendingText) {
+  if (textEditGeneration !== savedTextGeneration) {
     const localText = {
       noteLines: state.noteLines.map((line) => ({ ...line })),
       spaces: state.spaces.map((space) => ({
@@ -586,9 +609,11 @@ async function applyImageReplacementConflict(
     applyTheme();
     window.clearTimeout(saveStatusTimer.value);
     saveStatus.value = "dirty";
+    void persistPendingText();
     return;
   }
   Object.assign(state, latest);
+  resetTextGenerationBaseline();
   applyTheme();
   lastUndoSnapshot.value = createUndoSnapshot();
   window.clearTimeout(saveStatusTimer.value);
@@ -676,6 +701,7 @@ async function applyExternalStoredState(raw?: string): Promise<void> {
     nextState.images = await hydrateStoredImages(nextState.images);
     if (!appMounted) return;
     Object.assign(state, nextState);
+    resetTextGenerationBaseline();
     applyTheme();
     lastUndoSnapshot.value = createUndoSnapshot();
   } catch {
@@ -684,7 +710,7 @@ async function applyExternalStoredState(raw?: string): Promise<void> {
 }
 
 function hasUnsavedLocalChanges(): boolean {
-  return Boolean(textSaveTimer.value) || saveStatus.value !== "saved";
+  return textEditGeneration !== savedTextGeneration || saveStatus.value !== "saved";
 }
 
 function markDirty(): void {
@@ -1749,6 +1775,7 @@ function clearData(anchor?: HTMLElement): void {
       pendingEditTodoListId.value = null;
       undoSnapshots.value = [];
       Object.assign(state, defaultState());
+      resetTextGenerationBaseline();
       await clearStoredImagePayloads();
       persistNow("all", { force: true });
       refreshTodoNotifications();
@@ -1817,6 +1844,7 @@ async function importData(event: Event): Promise<void> {
     importFeedbackAnchor.value,
     async () => {
       Object.assign(state, next);
+      resetTextGenerationBaseline();
       await persistCustomCompanionGifPayloads(state.customCompanionGif);
       await persistImagePayloads(state.images);
       persistNow("all", { force: true });
@@ -1975,6 +2003,7 @@ async function undoLastBoardChange(): Promise<void> {
     pendingEditSpaceId.value = null;
     pendingEditTodoListId.value = null;
     Object.assign(state, nextState);
+    resetTextGenerationBaseline();
     persistNow();
     lastUndoSnapshot.value = createUndoSnapshot();
   } finally {
