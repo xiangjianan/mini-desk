@@ -143,6 +143,7 @@ let pendingBrowserImagePasteRequest: { request: ImagePasteRequest; token: number
 let browserImagePasteRequestToken = 0;
 let pasteFeedbackToken = 0;
 let restoringUndo = false;
+let undoInFlight = false;
 let stateSyncChannel: BroadcastChannel | null = null;
 
 type BubbleOptions = {
@@ -525,6 +526,7 @@ async function persistImageReplacement(
 ): Promise<boolean> {
   const previousSnapshot = createUndoSnapshot();
   const nextImages = state.images.map((image) => image.id === replacement.id ? replacement : image);
+  const hadUnsavedChanges = hasUnsavedLocalChanges();
   markSaving();
   const result = saveStateWithConflictCheck({ ...state, images: nextImages }, {
     clientId: syncClientId,
@@ -536,7 +538,7 @@ async function persistImageReplacement(
     },
   });
   if (result.status === "conflict") {
-    await applyImageReplacementConflict(result.state);
+    await applyImageReplacementConflict(result.state, hadUnsavedChanges);
     return false;
   }
   state.sync = result.state.sync;
@@ -556,12 +558,25 @@ async function persistImageReplacement(
   return true;
 }
 
-async function applyImageReplacementConflict(latest = loadState()): Promise<void> {
+async function applyImageReplacementConflict(
+  latest = loadState(),
+  preserveLocalChanges = hasUnsavedLocalChanges(),
+): Promise<void> {
   window.clearTimeout(saveStatusTimer.value);
   saveStatus.value = "dirty";
   showToast("stateConflict");
-  latest.images = await hydrateStoredImages(latest.images);
+  while (true) {
+    latest.images = await hydrateStoredImages(latest.images);
+    const newest = loadState();
+    if (newest.sync.revision <= latest.sync.revision) break;
+    latest = newest;
+  }
   if (!appMounted || latest.sync.revision < state.sync.revision) return;
+  if (preserveLocalChanges) {
+    state.images = latest.images;
+    markDirty();
+    return;
+  }
   Object.assign(state, latest);
   applyTheme();
   lastUndoSnapshot.value = createUndoSnapshot();
@@ -600,6 +615,8 @@ function collectRetainedImagePayloadIds(): Set<string> {
   };
   undoSnapshots.value.forEach(addSnapshot);
   addSnapshot(lastUndoSnapshot.value);
+  const authoritative = localStorage.getItem(STORAGE_KEY);
+  if (authoritative) addSnapshot(authoritative);
   return retained;
 }
 
@@ -1921,7 +1938,7 @@ function recordUndoCheckpoint(): void {
 }
 
 async function undoLastBoardChange(): Promise<void> {
-  if (restoringUndo) return;
+  if (undoInFlight || restoringUndo) return;
   const snapshot = undoSnapshots.value.at(-1);
   if (!snapshot) return;
   let nextState: BoardState;
@@ -1933,10 +1950,11 @@ async function undoLastBoardChange(): Promise<void> {
   }
 
   const stateAtStart = createUndoSnapshot();
-  restoringUndo = true;
+  undoInFlight = true;
   try {
     nextState.images = await hydrateStoredImages(nextState.images);
     if (!appMounted || createUndoSnapshot() !== stateAtStart || undoSnapshots.value.at(-1) !== snapshot) return;
+    restoringUndo = true;
     undoSnapshots.value = undoSnapshots.value.slice(0, -1);
     window.clearTimeout(textSaveTimer.value);
     textSaveTimer.value = undefined;
@@ -1950,6 +1968,7 @@ async function undoLastBoardChange(): Promise<void> {
     lastUndoSnapshot.value = createUndoSnapshot();
   } finally {
     restoringUndo = false;
+    undoInFlight = false;
   }
 }
 

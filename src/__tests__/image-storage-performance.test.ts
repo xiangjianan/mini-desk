@@ -6,7 +6,7 @@ import { IMAGE_DB_NAME, IMAGE_STORE_NAME, LEGACY_IMAGE_DB_NAME, STORAGE_KEY } fr
 import { deleteStoredImage, getStoredImagePayload, hydrateStoredImages, persistImagePayloads, storeImagePayload } from "../state/images";
 import * as imageState from "../state/images";
 
-type ImageRecord = { id: string; src?: string };
+type ImageRecord = { id: string; imageId?: string; createdAt?: number; src?: string };
 
 interface FakeIndexedDb {
   open: ReturnType<typeof vi.fn>;
@@ -71,6 +71,10 @@ function installFakeIndexedDb(seed: Record<string, ImageRecord[]>): FakeIndexedD
           getAllKeys: vi.fn(() => {
             pendingRequests += 1;
             return createAsyncRequest(Array.from(records.keys()), settleRequest);
+          }),
+          getAll: vi.fn(() => {
+            pendingRequests += 1;
+            return createAsyncRequest(Array.from(records.values()).map((record) => ({ ...record })), settleRequest);
           }),
           put: vi.fn((record: ImageRecord) => {
             pendingRequests += 1;
@@ -146,12 +150,17 @@ beforeEach(() => {
 });
 
 describe("image storage startup performance", () => {
-  it("prunes unretained image payload versions while preserving custom GIF payloads", async () => {
+  it("prunes only old versioned payloads beyond the safety window", async () => {
+    const now = 1_000_000;
     const fakeIndexedDb = installFakeIndexedDb({
       [IMAGE_DB_NAME]: [
-        { id: "v1", src: "data:image/png;base64,one" },
-        { id: "v2", src: "data:image/png;base64,two" },
-        { id: "v3", src: "data:image/png;base64,three" },
+        { id: "a-v1", imageId: "a", createdAt: 1, src: "data:image/png;base64,one" },
+        { id: "a-v2", imageId: "a", createdAt: 2, src: "data:image/png;base64,two" },
+        { id: "a-v3", imageId: "a", createdAt: 3, src: "data:image/png;base64,three" },
+        { id: "a-v4", imageId: "a", createdAt: 4, src: "data:image/png;base64,four" },
+        { id: "b-current", imageId: "b", createdAt: 5, src: "data:image/png;base64,current" },
+        { id: "b-inflight", imageId: "b", createdAt: now - 1, src: "data:image/png;base64,inflight" },
+        { id: "legacy-unknown", src: "data:image/png;base64,legacy" },
         { id: "__custom-companion-gif-light__", src: "data:image/gif;base64,light" },
         { id: "__custom-companion-gif-dark__", src: "data:image/gif;base64,dark" },
       ],
@@ -159,18 +168,30 @@ describe("image storage startup performance", () => {
     expect(imageState).toHaveProperty("pruneStoredImagePayloads");
 
     await (imageState as typeof imageState & {
-      pruneStoredImagePayloads: (retainedIds: Iterable<string>) => Promise<void>;
-    }).pruneStoredImagePayloads(new Set(["v2", "v3"]));
+      pruneStoredImagePayloads: (
+        retainedIds: Iterable<string>,
+        options?: { maxVersions?: number; minimumAgeMs?: number; now?: () => number },
+      ) => Promise<void>;
+    }).pruneStoredImagePayloads(new Set(["a-v1", "b-current"]), {
+      maxVersions: 2,
+      minimumAgeMs: 300_000,
+      now: () => now,
+    });
 
     expect(fakeIndexedDb.recordIds().sort()).toEqual([
       "__custom-companion-gif-dark__",
       "__custom-companion-gif-light__",
-      "v2",
-      "v3",
+      "a-v1",
+      "a-v3",
+      "a-v4",
+      "b-current",
+      "b-inflight",
+      "legacy-unknown",
     ]);
   });
 
   it("stores, reads, and deletes image data by immutable payload id", async () => {
+    vi.spyOn(Date, "now").mockReturnValue(123);
     const fakeIndexedDb = installFakeIndexedDb({ [IMAGE_DB_NAME]: [] });
     const image = {
       id: "img-1",
@@ -182,7 +203,7 @@ describe("image storage startup performance", () => {
     await storeImagePayload(image);
 
     expect(fakeIndexedDb.putRecords).toEqual([
-      { id: "payload-v2", src: "data:image/png;base64,version-two" },
+      { id: "payload-v2", imageId: "img-1", createdAt: 123, src: "data:image/png;base64,version-two" },
     ]);
     await expect(getStoredImagePayload(image)).resolves.toBe("data:image/png;base64,version-two");
 

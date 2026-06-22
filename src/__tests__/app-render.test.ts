@@ -10,6 +10,7 @@ import SpacePanel from "../components/SpacePanel.vue";
 import TodoPanel from "../components/TodoPanel.vue";
 import { defaultState, STORAGE_KEY } from "../state/defaults";
 import { hydrateStoredImages, storeImagePayload } from "../state/images";
+import * as imageState from "../state/images";
 import { KAOMOJI_BY_MOOD } from "../state/messages";
 import { FALLBACK_APP_VERSION } from "../state/version";
 
@@ -488,6 +489,35 @@ describe("App shell", () => {
 
       expect(wrapper.find('[data-testid="todo-input-morning"]').exists()).toBe(false);
       expect(JSON.parse(localStorage.getItem(STORAGE_KEY) || "{}").todos.morning).toEqual([]);
+    } finally {
+      wrapper.unmount();
+    }
+  });
+
+  it("does not swallow a user change made while undo hydration is pending", async () => {
+    const wrapper = mountApp();
+
+    try {
+      await wrapper.get('[data-testid="todo-list-morning"]').trigger("click");
+      await wrapper.vm.$nextTick();
+      const deferred = createDeferred<Awaited<ReturnType<typeof hydrateStoredImages>>>();
+      vi.spyOn(imageState, "hydrateStoredImages").mockImplementationOnce(() => deferred.promise);
+
+      window.dispatchEvent(new KeyboardEvent("keydown", { key: "z", ctrlKey: true }));
+      wrapper.getComponent(SpacePanel).vm.$emit("create");
+      await wrapper.vm.$nextTick();
+      deferred.resolve([]);
+      await flushPromises();
+      await wrapper.vm.$nextTick();
+
+      expect(wrapper.find('[data-testid="todo-input-morning"]').exists()).toBe(true);
+      expect(wrapper.getComponent(SpacePanel).props("spaces")).toHaveLength(2);
+
+      window.dispatchEvent(new KeyboardEvent("keydown", { key: "z", ctrlKey: true }));
+      await flushPromises();
+      await wrapper.vm.$nextTick();
+      expect(wrapper.find('[data-testid="todo-input-morning"]').exists()).toBe(true);
+      expect(wrapper.getComponent(SpacePanel).props("spaces")).toHaveLength(1);
     } finally {
       wrapper.unmount();
     }
@@ -3633,47 +3663,69 @@ describe("App shell", () => {
       }),
     );
     const imageBlob = new Blob(["losing replacement"], { type: "image/png" });
+    const getType = vi.fn(async () => {
+      await storeImagePayload({
+        id: "target",
+        payloadId: "winning-v2",
+        src: "data:image/png;base64,winning",
+        createdAt: 1,
+      });
+      localStorage.setItem(
+        STORAGE_KEY,
+        JSON.stringify({
+          sync: { revision: 2, updatedAt: 20, clientId: "tab-b" },
+          images: [{ id: "target", payloadId: "winning-v2", createdAt: 1 }],
+        }),
+      );
+      return imageBlob;
+    });
     Object.assign(navigator, {
       clipboard: {
         read: vi.fn().mockResolvedValue([{
           types: ["image/png"],
-          getType: vi.fn(async () => {
-            await storeImagePayload({
-              id: "target",
-              payloadId: "winning-v2",
-              src: "data:image/png;base64,winning",
-              createdAt: 1,
-            });
-            localStorage.setItem(
-              STORAGE_KEY,
-              JSON.stringify({
-                sync: { revision: 2, updatedAt: 20, clientId: "tab-b" },
-                images: [{ id: "target", payloadId: "winning-v2", createdAt: 1 }],
-              }),
-            );
-            return imageBlob;
-          }),
+          getType,
         }]),
       },
     });
     const wrapper = mountApp();
 
     try {
+      await flushPromises();
+      await wrapper.vm.$nextTick();
+      const deferredHydration = createDeferred<Awaited<ReturnType<typeof hydrateStoredImages>>>();
+      const hydrateSpy = vi.spyOn(imageState, "hydrateStoredImages").mockImplementationOnce(() => deferredHydration.promise);
       const anchor = wrapper.get(".image-panel").element as HTMLElement;
       wrapper.getComponent(ImagePanel).vm.$emit("paste", { placement: "replace", targetId: "target", anchor });
+
+      await vi.waitFor(() => expect(getType).toHaveBeenCalled());
+      await vi.waitFor(() => expect(hydrateSpy).toHaveBeenCalled());
+      await storeImagePayload({
+        id: "target",
+        payloadId: "winning-v3",
+        src: "data:image/png;base64,winning-three",
+        createdAt: 1,
+      });
+      localStorage.setItem(
+        STORAGE_KEY,
+        JSON.stringify({
+          sync: { revision: 3, updatedAt: 30, clientId: "tab-c" },
+          images: [{ id: "target", payloadId: "winning-v3", createdAt: 1 }],
+        }),
+      );
+      deferredHydration.resolve([{ id: "target", payloadId: "winning-v2", src: "data:image/png;base64,winning", createdAt: 1 }]);
 
       await vi.waitFor(() => {
         expect((wrapper.getComponent(ImagePanel).props("images") as Array<{ id: string; payloadId?: string; src?: string }>)[0]).toMatchObject({
           id: "target",
-          payloadId: "winning-v2",
-          src: "data:image/png;base64,winning",
+          payloadId: "winning-v3",
+          src: "data:image/png;base64,winning-three",
         });
       });
-      expect(JSON.parse(localStorage.getItem(STORAGE_KEY) || "{}").images[0].payloadId).toBe("winning-v2");
+      expect(JSON.parse(localStorage.getItem(STORAGE_KEY) || "{}").images[0].payloadId).toBe("winning-v3");
       expect(wrapper.getComponent(ImagePanel).props("pasteFeedback")).toBeUndefined();
 
       const newerState = JSON.stringify({
-        sync: { revision: 3, updatedAt: 30, clientId: "tab-c" },
+        sync: { revision: 4, updatedAt: 40, clientId: "tab-d" },
         images: [{ id: "newer", src: "data:image/png;base64,newer", createdAt: 3 }],
       });
       localStorage.setItem(STORAGE_KEY, newerState);
@@ -3684,6 +3736,66 @@ describe("App shell", () => {
     } finally {
       wrapper.unmount();
       restoreIndexedDb();
+    }
+  });
+
+  it("preserves pending workspace text when an image replacement conflicts", async () => {
+    localStorage.setItem(
+      STORAGE_KEY,
+      JSON.stringify({
+        sync: { revision: 1, updatedAt: 10, clientId: "tab-a" },
+        spaces: [{ id: "workspace", title: "Memo", lines: [{ text: "old", indent: 0 }] }],
+        activeSpaceId: "workspace",
+        images: [{ id: "target", src: "data:image/png;base64,old", createdAt: 1 }],
+      }),
+    );
+    const imageBlob = new Blob(["losing"], { type: "image/png" });
+    Object.assign(navigator, {
+      clipboard: {
+        read: vi.fn().mockResolvedValue([{
+          types: ["image/png"],
+          getType: vi.fn(async () => {
+            localStorage.setItem(
+              STORAGE_KEY,
+              JSON.stringify({
+                sync: { revision: 2, updatedAt: 20, clientId: "tab-b" },
+                spaces: [{ id: "workspace", title: "Memo", lines: [{ text: "remote", indent: 0 }] }],
+                activeSpaceId: "workspace",
+                images: [],
+              }),
+            );
+            return imageBlob;
+          }),
+        }]),
+      },
+    });
+    const wrapper = mountApp();
+
+    try {
+      await flushPromises();
+      await wrapper.vm.$nextTick();
+      wrapper.getComponent(SpacePanel).vm.$emit("update", "workspace", [{ text: "local draft", indent: 0 }]);
+      const anchor = wrapper.get(".image-panel").element as HTMLElement;
+      wrapper.getComponent(ImagePanel).vm.$emit("paste", { placement: "replace", targetId: "target", anchor });
+
+      await vi.waitFor(() => {
+        expect((wrapper.getComponent(ImagePanel).props("images") as Array<unknown>)).toHaveLength(0);
+      });
+      expect((wrapper.getComponent(SpacePanel).props("spaces") as Array<{ lines: Array<{ text: string }> }>)[0].lines[0].text).toBe("local draft");
+      const newer = JSON.stringify({
+        sync: { revision: 3, updatedAt: 30, clientId: "tab-c" },
+        spaces: [{ id: "workspace", title: "Memo", lines: [{ text: "newer remote", indent: 0 }] }],
+        activeSpaceId: "workspace",
+        images: [{ id: "remote-image", createdAt: 3 }],
+      });
+      localStorage.setItem(STORAGE_KEY, newer);
+      window.dispatchEvent(new StorageEvent("storage", { key: STORAGE_KEY, newValue: newer }));
+      await Promise.resolve();
+      await wrapper.vm.$nextTick();
+      expect((wrapper.getComponent(SpacePanel).props("spaces") as Array<{ lines: Array<{ text: string }> }>)[0].lines[0].text).toBe("local draft");
+      expect((wrapper.getComponent(ImagePanel).props("images") as Array<unknown>)).toHaveLength(0);
+    } finally {
+      wrapper.unmount();
     }
   });
 
