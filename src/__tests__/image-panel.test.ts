@@ -87,6 +87,15 @@ describe("ImagePanel", () => {
 
     expect(wrapper.findAll(".dropdown-option").map((option) => option.text())).toEqual(["粘贴图片", "Tips"]);
 
+    await wrapper.findAll(".dropdown-option")[0].trigger("click");
+
+    expect(wrapper.emitted("paste")?.[0]).toEqual([{
+      placement: "append",
+      anchor: expect.any(HTMLElement),
+    }]);
+
+    await wrapper.get(".image-list").trigger("contextmenu");
+
     await wrapper.findAll(".dropdown-option")[1].trigger("click");
 
     expect(wrapper.emitted("guide")?.[0]).toEqual(["images", expect.any(HTMLElement), true]);
@@ -118,7 +127,7 @@ describe("ImagePanel", () => {
     wrapper.unmount();
   });
 
-  it("keeps image item context menus focused on pinning, preview, copy, edit, delete, and guide actions", async () => {
+  it("adds contextual paste actions to image item menus", async () => {
     const wrapper = mountImagePanel([
       { id: "a", src: "data:image/png;base64,a", createdAt: 1 },
       { id: "b", src: "data:image/png;base64,b", createdAt: 2 },
@@ -132,12 +141,29 @@ describe("ImagePanel", () => {
       "复制",
       "编辑",
       "删除",
+      "粘贴图片到上方",
+      "粘贴图片到下方",
+      "粘贴替换当前图片",
       "置顶",
       "置底",
       "Tips",
     ]);
 
     expect(wrapper.text()).not.toContain("取消置顶");
+
+    for (const [label, placement] of [
+      ["粘贴图片到上方", "before"],
+      ["粘贴图片到下方", "after"],
+      ["粘贴替换当前图片", "replace"],
+    ] as const) {
+      await wrapper.findAll(".image-card")[1].trigger("contextmenu");
+      await wrapper.findAll(".dropdown-option").find((option) => option.text() === label)?.trigger("click");
+      expect(wrapper.emitted("paste")?.at(-1)).toEqual([{
+        placement,
+        targetId: "b",
+        anchor: expect.any(HTMLElement),
+      }]);
+    }
 
     wrapper.unmount();
   });
@@ -221,6 +247,9 @@ describe("ImagePanel", () => {
       "复制",
       "编辑",
       "删除",
+      "粘贴图片到上方",
+      "粘贴图片到下方",
+      "粘贴替换当前图片",
       "置顶",
       "置底",
       "Tips",
@@ -249,6 +278,9 @@ describe("ImagePanel", () => {
       "复制",
       "编辑",
       "删除",
+      "粘贴图片到上方",
+      "粘贴图片到下方",
+      "粘贴替换当前图片",
       "置顶",
       "置底",
       "Tips",

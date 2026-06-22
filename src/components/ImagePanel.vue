@@ -4,7 +4,7 @@ import type { Component, ComponentPublicInstance, VNode } from "vue";
 import { NDropdown, NIcon, NScrollbar } from "naive-ui";
 import { ArrowDownOutline, ArrowUpOutline, ClipboardOutline, CloseOutline, CopyOutline, CreateOutline, EyeOutline, HelpCircleOutline, TrashOutline } from "@vicons/ionicons5";
 import type { DropdownOption } from "naive-ui";
-import type { AppLanguage, GuideKey, StoredImage } from "../types";
+import type { AppLanguage, GuideKey, ImagePasteRequest, StoredImage } from "../types";
 import { GUIDE_MENU_OPTION } from "../state/defaults";
 import { getBlankImageContextMenuItems, getImageItemContextMenuItems } from "../state/imageContextMenu";
 import type { ImageContextMenuKey } from "../state/imageContextMenu";
@@ -30,7 +30,7 @@ const emit = defineEmits<{
   delete: [id: string, anchor?: HTMLElement];
   reorder: [dragId: string, targetId: string];
   moveToBottom: [id: string];
-  paste: [anchor?: HTMLElement];
+  paste: [request: ImagePasteRequest];
   dropFiles: [files: File[], anchor?: HTMLElement];
   guide: [key: GuideKey, anchor: HTMLElement, immediate?: boolean];
 }>();
@@ -105,7 +105,7 @@ function getImageMenuIcon(key: ImageContextMenuKey): Component {
   if (key === "delete") return TrashOutline;
   if (key === "pin-top") return ArrowUpOutline;
   if (key === "pin-bottom") return ArrowDownOutline;
-  if (key === "paste") return ClipboardOutline;
+  if (["paste", "paste-before", "paste-after", "paste-replace"].includes(key)) return ClipboardOutline;
   return HelpCircleOutline;
 }
 
@@ -181,9 +181,12 @@ function handleMenuSelect(key: string): void {
   const id = menu.value?.id;
   const anchor = menu.value?.anchor;
   closeMenu();
-  if (key === "paste") emit("paste", anchor);
+  if (key === "paste") emit("paste", { placement: "append", anchor });
   if (key === "guide" && anchor) emit("guide", "images", anchor, true);
   if (!id) return;
+  if (key === "paste-before") emit("paste", { placement: "before", targetId: id, anchor });
+  if (key === "paste-after") emit("paste", { placement: "after", targetId: id, anchor });
+  if (key === "paste-replace") emit("paste", { placement: "replace", targetId: id, anchor });
   if (key === "pin-top") {
     const firstImageId = props.images[0]?.id;
     if (firstImageId && firstImageId !== id) emit("reorder", id, firstImageId);

@@ -41,6 +41,19 @@ export interface StoredImage {
   displayHeight?: number;
 }
 
+export type ImagePastePlacement = "append" | "before" | "after" | "replace";
+
+export interface ImagePasteRequest {
+  placement: ImagePastePlacement;
+  targetId?: string;
+  anchor?: HTMLElement;
+}
+
+export interface ImagePasteFeedback {
+  id: string;
+  token: number;
+}
+
 export interface QuickButton {
   id: string;
   title: string;

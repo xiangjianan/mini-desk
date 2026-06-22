@@ -8,6 +8,9 @@ export type ImageContextMenuKey =
   | "copy"
   | "edit"
   | "delete"
+  | "paste-before"
+  | "paste-after"
+  | "paste-replace"
   | "pin-top"
   | "pin-bottom"
   | "tips"
@@ -27,6 +30,9 @@ export function getImageItemContextMenuItems(uiText: UiText, previewOpen: boolea
     { label: uiText.common.copy, key: "copy" },
     { label: uiText.common.edit, key: "edit" },
     { label: uiText.common.delete, key: "delete" },
+    { label: uiText.images.pasteBefore, key: "paste-before" },
+    { label: uiText.images.pasteAfter, key: "paste-after" },
+    { label: uiText.images.pasteReplace, key: "paste-replace" },
     { label: uiText.common.pinToTop, key: "pin-top" },
     { label: uiText.common.pinToBottom, key: "pin-bottom" },
     { label: uiText.common.tips, key: "tips" },
