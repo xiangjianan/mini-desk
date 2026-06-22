@@ -130,7 +130,7 @@ watch(
 
 const menuOptions = computed<DropdownOption[]>(() =>
   menu.value?.id
-    ? getImageItemContextMenuItems(uiText.value, isPreviewCloseMenuItem.value).map((option) => ({
+    ? getImageItemContextMenuItems(uiText.value, isPreviewCloseMenuItem.value, true).map((option) => ({
         ...option,
         icon: renderIcon(getImageMenuIcon(option.key)),
       }))

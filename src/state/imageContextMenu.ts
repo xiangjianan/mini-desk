@@ -21,7 +21,11 @@ export interface ImageContextMenuItem {
   label: string;
 }
 
-export function getImageItemContextMenuItems(uiText: UiText, previewOpen: boolean): ImageContextMenuItem[] {
+export function getImageItemContextMenuItems(
+  uiText: UiText,
+  previewOpen: boolean,
+  includePasteActions = false,
+): ImageContextMenuItem[] {
   return [
     {
       label: previewOpen ? uiText.preview.close : uiText.common.preview,
@@ -30,9 +34,13 @@ export function getImageItemContextMenuItems(uiText: UiText, previewOpen: boolea
     { label: uiText.common.copy, key: "copy" },
     { label: uiText.common.edit, key: "edit" },
     { label: uiText.common.delete, key: "delete" },
-    { label: uiText.images.pasteBefore, key: "paste-before" },
-    { label: uiText.images.pasteAfter, key: "paste-after" },
-    { label: uiText.images.pasteReplace, key: "paste-replace" },
+    ...(includePasteActions
+      ? [
+          { label: uiText.images.pasteBefore, key: "paste-before" as const },
+          { label: uiText.images.pasteAfter, key: "paste-after" as const },
+          { label: uiText.images.pasteReplace, key: "paste-replace" as const },
+        ]
+      : []),
     { label: uiText.common.pinToTop, key: "pin-top" },
     { label: uiText.common.pinToBottom, key: "pin-bottom" },
     { label: uiText.common.tips, key: "tips" },
