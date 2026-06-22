@@ -350,6 +350,11 @@ describe("ImagePanel", () => {
       ],
       { activePreviewId: "img-1" },
     );
+    const offsetWidth = vi.fn(() => 100);
+    Object.defineProperty(wrapper.findAll(".image-card")[1].element, "offsetWidth", {
+      configurable: true,
+      get: offsetWidth,
+    });
 
     try {
       await wrapper.setProps({ pasteFeedback: { id: "img-2", token: 1 } });
@@ -361,6 +366,7 @@ describe("ImagePanel", () => {
       expect(wrapper.findAll(".image-card")[1].classes()).toContain("is-paste-highlighted");
       expect(wrapper.findAll(".image-card")[0].classes()).toContain("is-active");
       expect(wrapper.emitted("preview")).toBeUndefined();
+      expect(offsetWidth).not.toHaveBeenCalled();
 
       await vi.advanceTimersByTimeAsync(400);
 
@@ -369,6 +375,7 @@ describe("ImagePanel", () => {
       await nextTick();
 
       expect(scrollIntoView).toHaveBeenCalledTimes(2);
+      expect(offsetWidth).toHaveBeenCalledTimes(1);
       expect(wrapper.findAll(".image-card")[1].classes()).toContain("is-paste-highlighted");
       expect(wrapper.findAll(".image-card")[0].classes()).toContain("is-active");
       expect(wrapper.emitted("preview")).toBeUndefined();

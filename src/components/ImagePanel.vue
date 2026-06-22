@@ -136,6 +136,7 @@ watch(
 watch(
   () => props.pasteFeedback?.token,
   async (token) => {
+    const previousHighlightedId = pasteHighlightedId.value;
     if (pasteHighlightTimer !== undefined) window.clearTimeout(pasteHighlightTimer);
     pasteHighlightTimer = undefined;
     pasteHighlightedId.value = null;
@@ -147,6 +148,7 @@ watch(
     const card = imageCardRefs.get(id);
     if (!card) return;
 
+    if (previousHighlightedId === id) void card.offsetWidth;
     card.scrollIntoView({ block: "center", behavior: "smooth", inline: "nearest" });
     pasteHighlightedId.value = id;
     pasteHighlightTimer = window.setTimeout(() => {
