@@ -82,8 +82,9 @@ describe("ImagePanel", () => {
 
   it("adds usage guidance to the blank image-list context menu", async () => {
     const wrapper = mountImagePanel();
+    const list = wrapper.get(".image-list-scrollbar");
 
-    await wrapper.get(".image-list").trigger("contextmenu");
+    await list.trigger("contextmenu");
 
     expect(wrapper.findAll(".dropdown-option").map((option) => option.text())).toEqual(["粘贴图片", "Tips"]);
 
@@ -91,10 +92,10 @@ describe("ImagePanel", () => {
 
     expect(wrapper.emitted("paste")?.[0]).toEqual([{
       placement: "append",
-      anchor: expect.any(HTMLElement),
+      anchor: list.element,
     }]);
 
-    await wrapper.get(".image-list").trigger("contextmenu");
+    await list.trigger("contextmenu");
 
     await wrapper.findAll(".dropdown-option")[1].trigger("click");
 
@@ -134,7 +135,8 @@ describe("ImagePanel", () => {
       { id: "c", src: "data:image/png;base64,c", createdAt: 3 },
     ]);
 
-    await wrapper.findAll(".image-card")[1].trigger("contextmenu");
+    const card = wrapper.findAll(".image-card")[1];
+    await card.trigger("contextmenu");
 
     expect(wrapper.findAll(".dropdown-option").map((option) => option.text())).toEqual([
       "预览",
@@ -156,12 +158,12 @@ describe("ImagePanel", () => {
       ["粘贴图片到下方", "after"],
       ["粘贴替换当前图片", "replace"],
     ] as const) {
-      await wrapper.findAll(".image-card")[1].trigger("contextmenu");
+      await card.trigger("contextmenu");
       await wrapper.findAll(".dropdown-option").find((option) => option.text() === label)?.trigger("click");
       expect(wrapper.emitted("paste")?.at(-1)).toEqual([{
         placement,
         targetId: "b",
-        anchor: expect.any(HTMLElement),
+        anchor: card.element,
       }]);
     }
 

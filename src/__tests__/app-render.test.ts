@@ -3218,7 +3218,7 @@ describe("App shell", () => {
     try {
       const imagePanel = wrapper.getComponent(ImagePanel);
 
-      imagePanel.vm.$emit("paste");
+      imagePanel.vm.$emit("paste", { placement: "append" });
       await Promise.resolve();
       await wrapper.vm.$nextTick();
       await vi.advanceTimersByTimeAsync(200);
@@ -3227,7 +3227,7 @@ describe("App shell", () => {
       expect(wrapper.find('[data-testid="companion-confirm"]').text()).toMatch(/没有|图片|剪贴板/);
 
       await vi.advanceTimersByTimeAsync(3000);
-      imagePanel.vm.$emit("paste");
+      imagePanel.vm.$emit("paste", { placement: "append" });
       await Promise.resolve();
       await Promise.resolve();
       await wrapper.vm.$nextTick();
@@ -3263,7 +3263,7 @@ describe("App shell", () => {
     const wrapper = mountApp();
 
     try {
-      wrapper.getComponent(ImagePanel).vm.$emit("paste");
+      wrapper.getComponent(ImagePanel).vm.$emit("paste", { placement: "append" });
       await Promise.resolve();
       await Promise.resolve();
       await wrapper.vm.$nextTick();
@@ -3278,6 +3278,95 @@ describe("App shell", () => {
       wrapper.unmount();
       vi.useRealTimers();
     }
+  });
+
+  it("inserts pasted images before and after the requested targets", async () => {
+    localStorage.setItem(
+      STORAGE_KEY,
+      JSON.stringify({
+        images: [
+          { id: "first", src: "data:image/png;base64,first", createdAt: 1 },
+          { id: "second", src: "data:image/png;base64,second", createdAt: 2 },
+        ],
+      }),
+    );
+    const imageBlob = new Blob(["img"], { type: "image/png" });
+    Object.assign(navigator, {
+      clipboard: {
+        read: vi.fn().mockResolvedValue([{ types: ["image/png"], getType: vi.fn().mockResolvedValue(imageBlob) }]),
+      },
+    });
+    const wrapper = mountApp();
+    const imagePanel = wrapper.getComponent(ImagePanel);
+    const anchor = wrapper.get(".image-panel").element as HTMLElement;
+
+    imagePanel.vm.$emit("paste", { placement: "before", targetId: "second", anchor });
+    await vi.waitFor(() => {
+      expect((wrapper.getComponent(ImagePanel).props("images") as Array<{ id: string }>)).toHaveLength(3);
+    });
+    const afterBefore = wrapper.getComponent(ImagePanel).props("images") as Array<{ id: string }>;
+    expect(afterBefore[0].id).toBe("first");
+    expect(afterBefore[2].id).toBe("second");
+    const beforeId = afterBefore[1].id;
+
+    imagePanel.vm.$emit("paste", { placement: "after", targetId: "second", anchor });
+    await vi.waitFor(() => {
+      expect((wrapper.getComponent(ImagePanel).props("images") as Array<{ id: string }>)).toHaveLength(4);
+    });
+    const afterAfter = wrapper.getComponent(ImagePanel).props("images") as Array<{ id: string }>;
+    expect(afterAfter.map((image) => image.id)).toEqual(["first", beforeId, "second", expect.any(String)]);
+
+    wrapper.unmount();
+  });
+
+  it("replaces pasted image data without changing list identity or display metadata", async () => {
+    localStorage.setItem(
+      STORAGE_KEY,
+      JSON.stringify({
+        images: [
+          { id: "first", src: "data:image/png;base64,first", createdAt: 1 },
+          {
+            id: "target",
+            src: "data:image/png;base64,old",
+            createdAt: 42,
+            displayWidth: 320,
+            displayHeight: 180,
+          },
+          { id: "last", src: "data:image/png;base64,last", createdAt: 3 },
+        ],
+      }),
+    );
+    const imageBlob = new Blob(["replacement"], { type: "image/png" });
+    Object.assign(navigator, {
+      clipboard: {
+        read: vi.fn().mockResolvedValue([{ types: ["image/png"], getType: vi.fn().mockResolvedValue(imageBlob) }]),
+      },
+    });
+    const wrapper = mountApp();
+    const anchor = wrapper.get(".image-panel").element as HTMLElement;
+
+    wrapper.getComponent(ImagePanel).vm.$emit("paste", { placement: "replace", targetId: "target", anchor });
+    await vi.waitFor(() => {
+      const images = wrapper.getComponent(ImagePanel).props("images") as Array<{ id: string; src?: string }>;
+      expect(images.find((image) => image.id === "target")?.src).not.toBe("data:image/png;base64,old");
+    });
+
+    const images = wrapper.getComponent(ImagePanel).props("images") as Array<{
+      id: string;
+      src?: string;
+      createdAt: number;
+      displayWidth?: number;
+      displayHeight?: number;
+    }>;
+    expect(images.map((image) => image.id)).toEqual(["first", "target", "last"]);
+    expect(images[1]).toMatchObject({
+      id: "target",
+      createdAt: 42,
+      displayWidth: 320,
+      displayHeight: 180,
+    });
+
+    wrapper.unmount();
   });
 
   it("stores pasted screenshot display size using the device pixel ratio", async () => {
@@ -3316,7 +3405,7 @@ describe("App shell", () => {
     const wrapper = mountApp();
 
     try {
-      wrapper.getComponent(ImagePanel).vm.$emit("paste");
+      wrapper.getComponent(ImagePanel).vm.$emit("paste", { placement: "append" });
       await Promise.resolve();
       await Promise.resolve();
       await wrapper.vm.$nextTick();
@@ -3366,7 +3455,7 @@ describe("App shell", () => {
         }),
       );
 
-      wrapper.getComponent(ImagePanel).vm.$emit("paste");
+      wrapper.getComponent(ImagePanel).vm.$emit("paste", { placement: "append" });
       await Promise.resolve();
       await Promise.resolve();
       await wrapper.vm.$nextTick();
@@ -4060,7 +4149,7 @@ describe("App shell", () => {
     const wrapper = mountApp();
 
     try {
-      wrapper.getComponent(ImagePanel).vm.$emit("paste");
+      wrapper.getComponent(ImagePanel).vm.$emit("paste", { placement: "append" });
       await Promise.resolve();
       await wrapper.vm.$nextTick();
       await vi.advanceTimersByTimeAsync(200);
@@ -4082,6 +4171,12 @@ describe("App shell", () => {
   });
 
   it("falls back to the browser paste command when clipboard image reading is denied", async () => {
+    localStorage.setItem(
+      STORAGE_KEY,
+      JSON.stringify({
+        images: [{ id: "existing", src: "data:image/png;base64,old", createdAt: 1 }],
+      }),
+    );
     const originalExecCommand = document.execCommand;
     const image = new File(["img"], "clip.png", { type: "image/png" });
     const pasteEvent = new Event("paste", { bubbles: true, cancelable: true });
@@ -4114,7 +4209,8 @@ describe("App shell", () => {
       await wrapper.vm.$nextTick();
       await Promise.resolve();
       await Promise.resolve();
-      wrapper.getComponent(ImagePanel).vm.$emit("paste", wrapper.get(".image-panel").element as HTMLElement);
+      const anchor = wrapper.get(".image-panel").element as HTMLElement;
+      wrapper.getComponent(ImagePanel).vm.$emit("paste", { placement: "before", targetId: "existing", anchor });
       await Promise.resolve();
       await Promise.resolve();
       await new Promise((resolve) => setTimeout(resolve, 0));
@@ -4123,8 +4219,9 @@ describe("App shell", () => {
 
       expect(execCommand).toHaveBeenCalledWith("paste");
       await vi.waitFor(() => {
-        expect((wrapper.getComponent(ImagePanel).props("images") as Array<{ id: string }>)).toHaveLength(1);
+        expect((wrapper.getComponent(ImagePanel).props("images") as Array<{ id: string }>)).toHaveLength(2);
       });
+      expect((wrapper.getComponent(ImagePanel).props("images") as Array<{ id: string }>)[1].id).toBe("existing");
     } finally {
       if (originalExecCommand) {
         Object.defineProperty(document, "execCommand", {
@@ -4161,7 +4258,7 @@ describe("App shell", () => {
     const wrapper = mountApp();
 
     try {
-      wrapper.getComponent(ImagePanel).vm.$emit("paste");
+      wrapper.getComponent(ImagePanel).vm.$emit("paste", { placement: "append" });
       await Promise.resolve();
       await Promise.resolve();
       await wrapper.vm.$nextTick();
@@ -4195,7 +4292,7 @@ describe("App shell", () => {
     const wrapper = mountApp();
 
     try {
-      wrapper.getComponent(ImagePanel).vm.$emit("paste");
+      wrapper.getComponent(ImagePanel).vm.$emit("paste", { placement: "append" });
       await Promise.resolve();
       await Promise.resolve();
       await wrapper.vm.$nextTick();

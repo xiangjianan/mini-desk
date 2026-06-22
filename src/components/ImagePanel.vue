@@ -184,9 +184,9 @@ function handleMenuSelect(key: string): void {
   if (key === "paste") emit("paste", { placement: "append", anchor });
   if (key === "guide" && anchor) emit("guide", "images", anchor, true);
   if (!id) return;
-  if (key === "paste-before") emit("paste", { placement: "before", targetId: id, anchor });
-  if (key === "paste-after") emit("paste", { placement: "after", targetId: id, anchor });
-  if (key === "paste-replace") emit("paste", { placement: "replace", targetId: id, anchor });
+  if (key === "paste-before" && anchor) emit("paste", { placement: "before", targetId: id, anchor });
+  if (key === "paste-after" && anchor) emit("paste", { placement: "after", targetId: id, anchor });
+  if (key === "paste-replace" && anchor) emit("paste", { placement: "replace", targetId: id, anchor });
   if (key === "pin-top") {
     const firstImageId = props.images[0]?.id;
     if (firstImageId && firstImageId !== id) emit("reorder", id, firstImageId);

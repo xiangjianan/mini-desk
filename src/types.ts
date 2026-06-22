@@ -43,11 +43,13 @@ export interface StoredImage {
 
 export type ImagePastePlacement = "append" | "before" | "after" | "replace";
 
-export interface ImagePasteRequest {
-  placement: ImagePastePlacement;
-  targetId?: string;
-  anchor?: HTMLElement;
-}
+export type ImagePasteRequest =
+  | { placement: "append"; anchor?: HTMLElement }
+  | {
+      placement: "before" | "after" | "replace";
+      targetId: string;
+      anchor: HTMLElement;
+    };
 
 export interface ImagePasteFeedback {
   id: string;

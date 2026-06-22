@@ -62,7 +62,7 @@ import {
   markAppVersionSeen,
 } from "./state/version";
 import type { SaveScope } from "./state/storage";
-import type { AppLanguage, BoardState, CompanionGifTheme, DraggedTodo, GuideKey, LineItem, QuickApiBodyType, QuickApiHeader, QuickApiMethod, QuickButton, QuickButtonType, StoredImage, TodoItem, TodoListConfig, TodoListId, TodoPeriod, TodoStarChange, WorkspaceSpace } from "./types";
+import type { AppLanguage, BoardState, CompanionGifTheme, DraggedTodo, GuideKey, ImagePasteRequest, LineItem, QuickApiBodyType, QuickApiHeader, QuickApiMethod, QuickButton, QuickButtonType, StoredImage, TodoItem, TodoListConfig, TodoListId, TodoPeriod, TodoStarChange, WorkspaceSpace } from "./types";
 
 const ImagePreview = defineAsyncComponent(() => import("./components/ImagePreview.vue"));
 const ShortcutHelp = defineAsyncComponent(() => import("./components/ShortcutHelp.vue"));
@@ -135,6 +135,7 @@ const shortcutHelpVisible = ref(false);
 const isMobileBlocked = ref(getInitialMobileBlocked());
 const mobileMediaQuery = ref<MediaQueryList | null>(null);
 let appMounted = false;
+let pendingBrowserImagePasteRequest: ImagePasteRequest | undefined;
 let restoringUndo = false;
 let stateSyncChannel: BroadcastChannel | null = null;
 
@@ -578,6 +579,8 @@ function markSavedSoon(): void {
 }
 
 async function handlePaste(event: ClipboardEvent): Promise<void> {
+  const request = pendingBrowserImagePasteRequest ?? { placement: "append" as const };
+  pendingBrowserImagePasteRequest = undefined;
   if (shouldBlockBoardEffects()) return;
   const items = Array.from(event.clipboardData?.items ?? []);
   const imageItem = items.find((item) => item.type.startsWith("image/"));
@@ -585,16 +588,16 @@ async function handlePaste(event: ClipboardEvent): Promise<void> {
   event.preventDefault();
   const file = imageItem.getAsFile();
   if (!file) return;
-  await addImageFile(file, { matchDisplaySizeToDevicePixelRatio: true });
+  await addPastedImageFile(file, request);
 }
 
-async function pasteImageFromClipboard(anchor?: HTMLElement): Promise<void> {
+async function pasteImageFromClipboard(request: ImagePasteRequest): Promise<void> {
   if (shouldBlockBoardEffects()) return;
   const clipboard = navigator.clipboard as Clipboard & {
     read?: () => Promise<ClipboardItem[]>;
   };
   if (!clipboard?.read) {
-    if (pasteImageWithBrowserCommand(anchor)) return;
+    if (pasteImageWithBrowserCommand(request)) return;
     showBubble("clipboardPasteUnsupported", undefined, { hideCompanionAfter: true });
     return;
   }
@@ -603,7 +606,7 @@ async function pasteImageFromClipboard(anchor?: HTMLElement): Promise<void> {
     items = await clipboard.read();
   } catch {
     if (shouldBlockBoardEffects()) return;
-    if (pasteImageWithBrowserCommand(anchor)) return;
+    if (pasteImageWithBrowserCommand(request)) return;
     showBubble("clipboardPermissionDenied", undefined, { hideCompanionAfter: true });
     return;
   }
@@ -620,16 +623,92 @@ async function pasteImageFromClipboard(anchor?: HTMLElement): Promise<void> {
       return;
     }
     if (shouldBlockBoardEffects()) return;
-    await addImageFile(new File([blob], "clipboard-image", { type }), { matchDisplaySizeToDevicePixelRatio: true });
+    await addPastedImageFile(new File([blob], "clipboard-image", { type }), request);
     return;
   }
   if (shouldBlockBoardEffects()) return;
   showBubble("clipboardImageMissing", undefined, { hideCompanionAfter: true });
 }
 
-function pasteImageWithBrowserCommand(anchor?: HTMLElement): boolean {
-  anchor?.focus({ preventScroll: true });
-  return Boolean(document.execCommand?.("paste"));
+function pasteImageWithBrowserCommand(request: ImagePasteRequest): boolean {
+  request.anchor?.focus({ preventScroll: true });
+  pendingBrowserImagePasteRequest = request;
+  const pasted = Boolean(document.execCommand?.("paste"));
+  if (!pasted) pendingBrowserImagePasteRequest = undefined;
+  return pasted;
+}
+
+async function addPastedImageFile(file: File, request: ImagePasteRequest): Promise<StoredImage | undefined> {
+  if (request.placement === "append") {
+    return addImageFile(file, { matchDisplaySizeToDevicePixelRatio: true });
+  }
+  if (shouldBlockBoardEffects()) return undefined;
+  let src: string;
+  try {
+    src = await fileToDataUrl(file);
+  } catch {
+    if (shouldBlockBoardEffects()) return undefined;
+    showBubble("imageReadFailed", undefined, { hideCompanionAfter: true });
+    return undefined;
+  }
+  if (shouldBlockBoardEffects()) return undefined;
+
+  const target = state.images.find((image) => image.id === request.targetId);
+  if (!target) return undefined;
+  if (request.placement === "replace") {
+    const replacement = { ...target, src };
+    try {
+      await storeImagePayload(replacement);
+    } catch {
+      if (shouldBlockBoardEffects()) return undefined;
+      showBubble("imageStoreFailed", undefined, { hideCompanionAfter: true });
+      return undefined;
+    }
+    const currentTarget = state.images.find((image) => image.id === request.targetId);
+    if (shouldBlockBoardEffects() || !currentTarget) {
+      try {
+        if (target.src) await storeImagePayload(target);
+        else await deleteStoredImage(target.id);
+      } catch {
+        // Best-effort rollback when the target disappears during replacement.
+      }
+      return undefined;
+    }
+    currentTarget.src = src;
+    persistNow("images");
+    showBubble("imageAdded", undefined, { hideCompanionAfter: true });
+    return currentTarget;
+  }
+
+  const displaySize = await getDevicePixelRatioDisplaySize(src);
+  if (shouldBlockBoardEffects()) return undefined;
+  if (!state.images.some((image) => image.id === request.targetId)) return undefined;
+  const image: StoredImage = {
+    id: createId(),
+    src,
+    createdAt: Date.now(),
+    ...(displaySize ?? {}),
+  };
+  try {
+    await storeImagePayload(image);
+  } catch {
+    if (shouldBlockBoardEffects()) return undefined;
+    showBubble("imageStoreFailed", undefined, { hideCompanionAfter: true });
+    return undefined;
+  }
+  const targetIndex = state.images.findIndex((item) => item.id === request.targetId);
+  if (shouldBlockBoardEffects() || targetIndex < 0) {
+    try {
+      await deleteStoredImage(image.id);
+    } catch {
+      // Best-effort cleanup when the target disappears after payload storage.
+    }
+    return undefined;
+  }
+  state.images.splice(targetIndex + (request.placement === "after" ? 1 : 0), 0, image);
+  persistNow("images");
+  showBubble("imageAdded", undefined, { hideCompanionAfter: true });
+  return image;
 }
 
 async function addImageFile(
