@@ -483,6 +483,7 @@ describe("App shell", () => {
       expect(wrapper.find('[data-testid="todo-input-morning"]').exists()).toBe(true);
 
       window.dispatchEvent(new KeyboardEvent("keydown", { key: "z", ctrlKey: true }));
+      await flushPromises();
       await wrapper.vm.$nextTick();
 
       expect(wrapper.find('[data-testid="todo-input-morning"]').exists()).toBe(false);
@@ -2018,6 +2019,13 @@ describe("App shell", () => {
     const wrapper = mountApp();
 
     try {
+      await storeImagePayload({
+        id: "img-1",
+        src: "data:image/png;base64,b25l",
+        createdAt: 1,
+        displayWidth: 120,
+        displayHeight: 80,
+      });
       wrapper.getComponent(ImagePanel).vm.$emit("preview", "img-1");
       await wrapper.vm.$nextTick();
       await flushAsyncComponents();
@@ -2108,6 +2116,55 @@ describe("App shell", () => {
       wrapper.unmount();
       restoreIndexedDb();
       vi.unstubAllGlobals();
+    }
+  });
+
+  it("hydrates the previous image payload when undoing an edit", async () => {
+    const restoreIndexedDb = installMemoryImageDb();
+    localStorage.setItem(
+      STORAGE_KEY,
+      JSON.stringify({
+        images: [{ id: "img-edit-undo", src: "data:image/png;base64,b2xk", createdAt: 1, displayWidth: 120, displayHeight: 80 }],
+      }),
+    );
+    const wrapper = mountApp();
+
+    try {
+      await storeImagePayload({ id: "img-edit-undo", src: "data:image/png;base64,b2xk", createdAt: 1 });
+      wrapper.getComponent(ImagePanel).vm.$emit("preview", "img-edit-undo");
+      await wrapper.vm.$nextTick();
+      await flushAsyncComponents();
+      getImagePreview(wrapper).vm.$emit("saveEdit", {
+        id: "img-edit-undo",
+        src: "data:image/png;base64,bmV3",
+        displayWidth: 200,
+        displayHeight: 140,
+      });
+      await vi.waitFor(() => {
+        expect((wrapper.getComponent(ImagePanel).props("images") as Array<{ payloadId?: string }>)[0].payloadId).toEqual(expect.any(String));
+      });
+
+      window.dispatchEvent(new KeyboardEvent("keydown", { key: "z", ctrlKey: true }));
+      await flushPromises();
+      await wrapper.vm.$nextTick();
+
+      const image = (wrapper.getComponent(ImagePanel).props("images") as Array<{
+        id: string;
+        payloadId?: string;
+        src?: string;
+        displayWidth?: number;
+        displayHeight?: number;
+      }>)[0];
+      expect(image).toMatchObject({
+        id: "img-edit-undo",
+        src: "data:image/png;base64,b2xk",
+        displayWidth: 120,
+        displayHeight: 80,
+      });
+      expect(image).not.toHaveProperty("payloadId");
+    } finally {
+      wrapper.unmount();
+      restoreIndexedDb();
     }
   });
 
@@ -3449,6 +3506,13 @@ describe("App shell", () => {
     const anchor = wrapper.get(".image-panel").element as HTMLElement;
 
     try {
+      await storeImagePayload({
+        id: "target",
+        src: "data:image/png;base64,old",
+        createdAt: 42,
+        displayWidth: 320,
+        displayHeight: 180,
+      });
       wrapper.getComponent(ImagePanel).vm.$emit("paste", { placement: "replace", targetId: "target", anchor });
       await vi.waitFor(() => {
       const images = wrapper.getComponent(ImagePanel).props("images") as Array<{ id: string; src?: string }>;
@@ -3494,6 +3558,23 @@ describe("App shell", () => {
       expect.objectContaining({ id: "last" }),
       ]);
       expect(wrapper.getComponent(ImagePanel).props("pasteFeedback")).toEqual({ id: "target", token: 1 });
+
+      window.dispatchEvent(new KeyboardEvent("keydown", { key: "z", ctrlKey: true }));
+      await vi.waitFor(() => {
+        expect((wrapper.getComponent(ImagePanel).props("images") as Array<{
+          id: string;
+          payloadId?: string;
+          src?: string;
+          displayWidth?: number;
+          displayHeight?: number;
+        }>)[1]).toMatchObject({
+          id: "target",
+          src: "data:image/png;base64,old",
+          displayWidth: 320,
+          displayHeight: 180,
+        });
+      });
+      expect((wrapper.getComponent(ImagePanel).props("images") as Array<{ payloadId?: string }>)[1]).not.toHaveProperty("payloadId");
     } finally {
       wrapper.unmount();
       restoreIndexedDb();
@@ -3590,9 +3671,56 @@ describe("App shell", () => {
       });
       expect(JSON.parse(localStorage.getItem(STORAGE_KEY) || "{}").images[0].payloadId).toBe("winning-v2");
       expect(wrapper.getComponent(ImagePanel).props("pasteFeedback")).toBeUndefined();
+
+      const newerState = JSON.stringify({
+        sync: { revision: 3, updatedAt: 30, clientId: "tab-c" },
+        images: [{ id: "newer", src: "data:image/png;base64,newer", createdAt: 3 }],
+      });
+      localStorage.setItem(STORAGE_KEY, newerState);
+      window.dispatchEvent(new StorageEvent("storage", { key: STORAGE_KEY, newValue: newerState }));
+      await vi.waitFor(() => {
+        expect((wrapper.getComponent(ImagePanel).props("images") as Array<{ id: string }>).map((image) => image.id)).toEqual(["newer"]);
+      });
     } finally {
       wrapper.unmount();
       restoreIndexedDb();
+    }
+  });
+
+  it("restores a deleted image payload through global undo", async () => {
+    vi.useFakeTimers();
+    const restoreIndexedDb = installMemoryImageDb();
+    localStorage.setItem(
+      STORAGE_KEY,
+      JSON.stringify({
+        images: [{ id: "img-undo", src: "data:image/png;base64,undo", createdAt: 7, displayWidth: 90, displayHeight: 60 }],
+      }),
+    );
+    const wrapper = mountApp();
+
+    try {
+      await storeImagePayload({ id: "img-undo", src: "data:image/png;base64,undo", createdAt: 7 });
+      const panel = wrapper.getComponent(ImagePanel);
+      panel.vm.$emit("delete", "img-undo", panel.element as HTMLElement);
+      await wrapper.vm.$nextTick();
+      await vi.advanceTimersByTimeAsync(200);
+      await wrapper.get('[data-testid="companion-yes"]').trigger("click");
+      await Promise.resolve();
+      await wrapper.vm.$nextTick();
+
+      expect((panel.props("images") as Array<{ id: string }>)).toHaveLength(0);
+
+      window.dispatchEvent(new KeyboardEvent("keydown", { key: "z", ctrlKey: true }));
+      await flushPromises();
+      await wrapper.vm.$nextTick();
+      expect((wrapper.getComponent(ImagePanel).props("images") as Array<{ id: string; src?: string }>)[0]).toMatchObject({
+        id: "img-undo",
+        src: "data:image/png;base64,undo",
+      });
+    } finally {
+      wrapper.unmount();
+      restoreIndexedDb();
+      vi.useRealTimers();
     }
   });
 

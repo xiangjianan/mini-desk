@@ -81,6 +81,32 @@ export async function clearStoredImagePayloads(): Promise<void> {
   await clearLegacyStoredPayloads();
 }
 
+export async function pruneStoredImagePayloads(retainedIds: Iterable<string>): Promise<void> {
+  if (!("indexedDB" in window)) return;
+  const retained = new Set(retainedIds);
+  retained.add(CUSTOM_COMPANION_GIF_LIGHT_ID);
+  retained.add(CUSTOM_COMPANION_GIF_DARK_ID);
+  const db = await openImageDb();
+  try {
+    await new Promise<void>((resolve, reject) => {
+      const transaction = db.transaction(IMAGE_STORE_NAME, "readwrite");
+      const store = transaction.objectStore(IMAGE_STORE_NAME);
+      const request = store.getAllKeys();
+      request.onsuccess = () => {
+        request.result.forEach((key) => {
+          if (typeof key === "string" && !retained.has(key)) store.delete(key);
+        });
+      };
+      request.onerror = () => reject(request.error);
+      transaction.oncomplete = () => resolve();
+      transaction.onerror = () => reject(transaction.error);
+      transaction.onabort = () => reject(transaction.error);
+    });
+  } finally {
+    db.close();
+  }
+}
+
 export async function persistCustomCompanionGifPayloads(customGif: CompanionCustomGif): Promise<void> {
   if (!("indexedDB" in window)) return;
   const db = await openImageDb();

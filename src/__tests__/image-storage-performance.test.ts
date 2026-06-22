@@ -4,12 +4,14 @@ import App from "../App.vue";
 import ImagePanel from "../components/ImagePanel.vue";
 import { IMAGE_DB_NAME, IMAGE_STORE_NAME, LEGACY_IMAGE_DB_NAME, STORAGE_KEY } from "../state/defaults";
 import { deleteStoredImage, getStoredImagePayload, hydrateStoredImages, persistImagePayloads, storeImagePayload } from "../state/images";
+import * as imageState from "../state/images";
 
 type ImageRecord = { id: string; src?: string };
 
 interface FakeIndexedDb {
   open: ReturnType<typeof vi.fn>;
   putRecords: ImageRecord[];
+  recordIds: () => string[];
 }
 
 function createAsyncRequest<T>(result: T, onSettled?: () => void): IDBRequest<T> {
@@ -66,6 +68,10 @@ function installFakeIndexedDb(seed: Record<string, ImageRecord[]>): FakeIndexedD
             pendingRequests += 1;
             return createAsyncRequest(records.get(id), settleRequest);
           }),
+          getAllKeys: vi.fn(() => {
+            pendingRequests += 1;
+            return createAsyncRequest(Array.from(records.keys()), settleRequest);
+          }),
           put: vi.fn((record: ImageRecord) => {
             pendingRequests += 1;
             const nextRecord = { ...record };
@@ -101,7 +107,11 @@ function installFakeIndexedDb(seed: Record<string, ImageRecord[]>): FakeIndexedD
   });
 
   vi.stubGlobal("indexedDB", { open });
-  return { open, putRecords };
+  return {
+    open,
+    putRecords,
+    recordIds: () => Array.from(stores.get(IMAGE_DB_NAME)?.keys() ?? []),
+  };
 }
 
 const dropdownStub = {
@@ -136,6 +146,30 @@ beforeEach(() => {
 });
 
 describe("image storage startup performance", () => {
+  it("prunes unretained image payload versions while preserving custom GIF payloads", async () => {
+    const fakeIndexedDb = installFakeIndexedDb({
+      [IMAGE_DB_NAME]: [
+        { id: "v1", src: "data:image/png;base64,one" },
+        { id: "v2", src: "data:image/png;base64,two" },
+        { id: "v3", src: "data:image/png;base64,three" },
+        { id: "__custom-companion-gif-light__", src: "data:image/gif;base64,light" },
+        { id: "__custom-companion-gif-dark__", src: "data:image/gif;base64,dark" },
+      ],
+    });
+    expect(imageState).toHaveProperty("pruneStoredImagePayloads");
+
+    await (imageState as typeof imageState & {
+      pruneStoredImagePayloads: (retainedIds: Iterable<string>) => Promise<void>;
+    }).pruneStoredImagePayloads(new Set(["v2", "v3"]));
+
+    expect(fakeIndexedDb.recordIds().sort()).toEqual([
+      "__custom-companion-gif-dark__",
+      "__custom-companion-gif-light__",
+      "v2",
+      "v3",
+    ]);
+  });
+
   it("stores, reads, and deletes image data by immutable payload id", async () => {
     const fakeIndexedDb = installFakeIndexedDb({ [IMAGE_DB_NAME]: [] });
     const image = {

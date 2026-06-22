@@ -18,6 +18,7 @@ import {
   hydrateStoredImages,
   persistCustomCompanionGifPayloads,
   persistImagePayloads,
+  pruneStoredImagePayloads,
   storeImagePayload,
 } from "./state/images";
 import { getMessage, withKaomoji, type MessageKey } from "./state/messages";
@@ -119,6 +120,7 @@ const companionFadeStartedAt = ref(0);
 const bubbleTimerOptions = ref<BubbleOptions>({});
 const bubbleClearSignal = ref(0);
 const saveStatusTimer = ref<number | undefined>();
+const imagePayloadPruneTimer = ref<number | undefined>();
 const todoNotificationTimer = ref<number | undefined>();
 const todoNotificationDueTimer = ref<number | undefined>();
 const titleFlashTimer = ref<number | undefined>();
@@ -502,6 +504,7 @@ function persistNow(scope: SaveScope = "all", options: PersistOptions = {}): boo
   }
   broadcastStateSaved();
   markSavedSoon();
+  scheduleImagePayloadPrune();
   return true;
 }
 
@@ -520,8 +523,8 @@ async function persistImageReplacement(
   replacement: StoredImage,
   expectedPayloadId: string,
 ): Promise<boolean> {
+  const previousSnapshot = createUndoSnapshot();
   const nextImages = state.images.map((image) => image.id === replacement.id ? replacement : image);
-  recordUndoCheckpoint();
   markSaving();
   const result = saveStateWithConflictCheck({ ...state, images: nextImages }, {
     clientId: syncClientId,
@@ -540,8 +543,16 @@ async function persistImageReplacement(
   state.images = result.status === "merged"
     ? mergeVisibleImages(result.state.images, nextImages)
     : nextImages;
+  if (!restoringUndo) {
+    undoSnapshots.value = [
+      ...undoSnapshots.value.slice(-(UNDO_HISTORY_LIMIT - 1)),
+      previousSnapshot,
+    ];
+    lastUndoSnapshot.value = createUndoSnapshot();
+  }
   broadcastStateSaved();
   markSavedSoon();
+  scheduleImagePayloadPrune();
   return true;
 }
 
@@ -554,6 +565,42 @@ async function applyImageReplacementConflict(latest = loadState()): Promise<void
   Object.assign(state, latest);
   applyTheme();
   lastUndoSnapshot.value = createUndoSnapshot();
+  window.clearTimeout(saveStatusTimer.value);
+  saveStatus.value = "saved";
+}
+
+function scheduleImagePayloadPrune(): void {
+  window.clearTimeout(imagePayloadPruneTimer.value);
+  imagePayloadPruneTimer.value = window.setTimeout(() => {
+    imagePayloadPruneTimer.value = undefined;
+    void pruneStoredImagePayloads(collectRetainedImagePayloadIds()).catch(() => {
+      // Payload pruning is best-effort and must not interrupt board persistence.
+    });
+  }, 500);
+}
+
+function collectRetainedImagePayloadIds(): Set<string> {
+  const retained = new Set(state.images.map((image) => getImagePayloadId(image)));
+  const addSnapshot = (snapshot: string) => {
+    try {
+      const parsed = JSON.parse(snapshot) as { images?: unknown };
+      if (!Array.isArray(parsed?.images)) return;
+      parsed.images.forEach((item) => {
+        if (!item || typeof item !== "object" || Array.isArray(item)) return;
+        const record = item as Record<string, unknown>;
+        const id = typeof record.id === "string" && record.id.trim() ? record.id : undefined;
+        const payloadId = typeof record.payloadId === "string" && record.payloadId.trim()
+          ? record.payloadId
+          : undefined;
+        if (payloadId ?? id) retained.add((payloadId ?? id)!);
+      });
+    } catch {
+      // Ignore malformed undo snapshots without normalizing them into generated IDs.
+    }
+  };
+  undoSnapshots.value.forEach(addSnapshot);
+  addSnapshot(lastUndoSnapshot.value);
+  return retained;
 }
 
 function setupStateSyncChannel(): void {
@@ -888,7 +935,6 @@ function deleteImage(id: string, anchor?: HTMLElement): void {
   requestConfirmation("confirmDeleteImage", anchor, async () => {
     const index = state.images.findIndex((image) => image.id === id);
     if (index < 0) return;
-    const image = state.images[index];
     const nextPreviewImage = state.images[index + 1] ?? state.images[index - 1];
     state.images = state.images.filter((image) => image.id !== id);
     if (activePreviewId.value === id) {
@@ -904,7 +950,6 @@ function deleteImage(id: string, anchor?: HTMLElement): void {
     } else if (closingPreviewId.value === id) {
       clearImagePreview();
     }
-    await deleteStoredImage(image);
     persistNow();
     showBubble("deleteImage", feedbackAnchor, { hideCompanionAfter: true });
   }, undefined, { confirmText: uiText.value.common.delete, cancelText: uiText.value.common.cancel });
@@ -1822,7 +1867,7 @@ function handleGlobalKeydown(event: KeyboardEvent): void {
   }
   if (isUndoShortcut(event) && !shouldSkipGlobalUndo(event.target)) {
     event.preventDefault();
-    undoLastBoardChange();
+    void undoLastBoardChange();
     return;
   }
   if (event.key === "Escape") {
@@ -1875,10 +1920,10 @@ function recordUndoCheckpoint(): void {
   lastUndoSnapshot.value = current;
 }
 
-function undoLastBoardChange(): void {
+async function undoLastBoardChange(): Promise<void> {
+  if (restoringUndo) return;
   const snapshot = undoSnapshots.value.at(-1);
   if (!snapshot) return;
-  undoSnapshots.value = undoSnapshots.value.slice(0, -1);
   let nextState: BoardState;
   try {
     nextState = normalizeImportedState(JSON.parse(snapshot));
@@ -1887,8 +1932,12 @@ function undoLastBoardChange(): void {
     return;
   }
 
+  const stateAtStart = createUndoSnapshot();
   restoringUndo = true;
   try {
+    nextState.images = await hydrateStoredImages(nextState.images);
+    if (!appMounted || createUndoSnapshot() !== stateAtStart || undoSnapshots.value.at(-1) !== snapshot) return;
+    undoSnapshots.value = undoSnapshots.value.slice(0, -1);
     window.clearTimeout(textSaveTimer.value);
     textSaveTimer.value = undefined;
     emptyTodoRemovalTimers.forEach((timer) => window.clearTimeout(timer));
@@ -1896,7 +1945,6 @@ function undoLastBoardChange(): void {
     clearImagePreview();
     pendingEditSpaceId.value = null;
     pendingEditTodoListId.value = null;
-    nextState.images = mergeVisibleImages(nextState.images, state.images);
     Object.assign(state, nextState);
     persistNow();
     lastUndoSnapshot.value = createUndoSnapshot();
@@ -2235,11 +2283,13 @@ function clearTimers(): void {
   window.clearTimeout(bubbleTimer.value);
   window.clearTimeout(bubbleFadeTimer.value);
   window.clearTimeout(saveStatusTimer.value);
+  window.clearTimeout(imagePayloadPruneTimer.value);
   window.clearInterval(versionCheckTimer.value);
   window.clearTimeout(todoNotificationDueTimer.value);
   window.clearInterval(titleFlashTimer.value);
   window.clearTimeout(previewCloseTimer.value);
   previewCloseTimer.value = undefined;
+  imagePayloadPruneTimer.value = undefined;
   versionCheckTimer.value = undefined;
   window.clearInterval(todoNotificationTimer.value);
   todoNotificationDueTimer.value = undefined;
