@@ -103,68 +103,103 @@ export function getDefaultNotifyDateTimeValue(now = new Date()): number {
   return new Date(now.getFullYear(), now.getMonth(), now.getDate(), 9, 0, 0, 0).getTime();
 }
 
+/**
+ * Applies the date-aware default notify time to a timestamp.
+ * Selected date === today → next whole hour after `now` (clamped to 23:00 once it is past 23:00,
+ * so the date never rolls into tomorrow); any other date → 09:00.
+ */
+export function withDefaultNotifyTime(dateTimestamp: number, now = new Date()): number {
+  const target = new Date(dateTimestamp);
+  const isToday = getLocalDateInputValue(target) === getLocalDateInputValue(now);
+  if (!isToday) {
+    target.setHours(9, 0, 0, 0);
+    return target.getTime();
+  }
+  const nextHour = now.getHours() + 1;
+  // Past 23:00 the next whole hour would be midnight (tomorrow); keep today and freeze at 23:00.
+  target.setHours(nextHour > 23 ? 23 : nextHour, 0, 0, 0);
+  return target.getTime();
+}
+
 export function getNotifyDisplay(notifyAt: number | undefined, now = Date.now(), language: AppLanguage = DEFAULT_LANGUAGE): NotifyDisplay | null {
   if (!isValidNotifyAt(notifyAt) || !isValidNotifyAt(now)) return null;
   const normalizedLanguage = normalizeLanguage(language);
+  const en = normalizedLanguage === "en";
 
   const notifyDate = new Date(notifyAt);
   const dayDistance = getLocalDayDistance(now, notifyAt);
   const timeLabel = getDisplayTimeLabel(notifyDate, normalizedLanguage);
   const compactTimeLabel = getCompactTimeLabel(notifyDate);
 
-  if (notifyAt < now) {
-    if (dayDistance === 0) {
-      return {
-        label: normalizedLanguage === "en" ? `Today ${timeLabel}` : `今天${timeLabel}`,
-        compactLabel: normalizedLanguage === "en" ? `Today ${compactTimeLabel}` : `今天 ${compactTimeLabel}`,
-        urgency: "overdue",
-      };
-    }
-    if (dayDistance === -1) {
-      return {
-        label: normalizedLanguage === "en" ? `Yesterday ${timeLabel}` : `昨天${timeLabel}`,
-        compactLabel: normalizedLanguage === "en" ? `Yesterday ${compactTimeLabel}` : `昨天 ${compactTimeLabel}`,
-        urgency: "overdue",
-      };
-    }
-    return {
-      label: `${notifyDate.getMonth() + 1}/${notifyDate.getDate()} ${timeLabel}`,
-      compactLabel: `${notifyDate.getMonth() + 1}/${notifyDate.getDate()} ${compactTimeLabel}`,
-      urgency: "overdue",
-    };
-  }
+  const isOverdue = notifyAt < now;
+  const urgency: NotifyUrgency = isOverdue
+    ? "overdue"
+    : notifyAt - now <= ONE_DAY_MS
+      ? "due-soon"
+      : Math.abs(dayDistance) <= 7
+        ? "upcoming"
+        : "later";
 
-  const isWithinDueSoonWindow = notifyAt - now <= ONE_DAY_MS;
-
-  if (isWithinDueSoonWindow && dayDistance === 0) {
+  const phrases = getRelativeDayPhrases(dayDistance, normalizedLanguage);
+  if (phrases) {
+    // 今天/明天/后天/昨天/前天 attach directly to the zh time label; compound phrases (N天后/1周…) use a space.
+    const simple = dayDistance >= -2 && dayDistance <= 2;
+    const label = en || !simple ? `${phrases.label} ${timeLabel}` : `${phrases.label}${timeLabel}`;
     return {
-      label: normalizedLanguage === "en" ? `Today ${timeLabel}` : `今天${timeLabel}`,
-      compactLabel: normalizedLanguage === "en" ? `Today ${compactTimeLabel}` : `今天 ${compactTimeLabel}`,
-      urgency: "due-soon",
-    };
-  }
-
-  if (isWithinDueSoonWindow && dayDistance === 1) {
-    return {
-      label: normalizedLanguage === "en" ? `Tomorrow ${timeLabel}` : `明天${timeLabel}`,
-      compactLabel: normalizedLanguage === "en" ? `Tomorrow ${compactTimeLabel}` : `明天 ${compactTimeLabel}`,
-      urgency: "due-soon",
-    };
-  }
-
-  if (dayDistance <= 3) {
-    return {
-      label: normalizedLanguage === "en" ? `In ${dayDistance} days ${timeLabel}` : `${dayDistance}天后 ${timeLabel}`,
-      compactLabel: normalizedLanguage === "en" ? `In ${dayDistance} days ${compactTimeLabel}` : `${dayDistance}天后 ${compactTimeLabel}`,
-      urgency: "upcoming",
+      label,
+      compactLabel: `${phrases.compact} ${compactTimeLabel}`,
+      urgency,
     };
   }
 
   return {
     label: `${notifyDate.getMonth() + 1}/${notifyDate.getDate()} ${timeLabel}`,
     compactLabel: `${notifyDate.getMonth() + 1}/${notifyDate.getDate()} ${compactTimeLabel}`,
-    urgency: "later",
+    urgency,
   };
+}
+
+/** Relative day phrases for |dayDistance| <= 7; null means fall back to an absolute date. */
+function getRelativeDayPhrases(dayDistance: number, language: AppLanguage): { label: string; compact: string } | null {
+  const en = normalizeLanguage(language) === "en";
+  const future = dayDistance > 0;
+  const abs = Math.abs(dayDistance);
+
+  if (dayDistance === 0) {
+    const text = en ? "Today" : "今天";
+    return { label: text, compact: text };
+  }
+  if (dayDistance === 1) {
+    const text = en ? "Tomorrow" : "明天";
+    return { label: text, compact: text };
+  }
+  if (dayDistance === -1) {
+    const text = en ? "Yesterday" : "昨天";
+    return { label: text, compact: text };
+  }
+  if (dayDistance === 2) {
+    return en ? { label: "Day after tomorrow", compact: "Day after" } : { label: "后天", compact: "后天" };
+  }
+  if (dayDistance === -2) {
+    return en ? { label: "Day before yesterday", compact: "Day before" } : { label: "前天", compact: "前天" };
+  }
+  if (abs <= 6) {
+    if (en) {
+      const text = future ? `In ${abs} days` : `${abs} days ago`;
+      return { label: text, compact: text };
+    }
+    const text = future ? `${abs}天后` : `${abs}天前`;
+    return { label: text, compact: text };
+  }
+  if (abs === 7) {
+    if (en) {
+      const text = future ? "In 1 week" : "1 week ago";
+      return { label: text, compact: text };
+    }
+    const text = future ? "1周后" : "1周前";
+    return { label: text, compact: text };
+  }
+  return null;
 }
 
 export function getNotifyTimeLabel(time: NotifyTimeOption, language: AppLanguage = DEFAULT_LANGUAGE): string {

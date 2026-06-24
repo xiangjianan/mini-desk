@@ -1159,11 +1159,11 @@ describe("TodoPanel", () => {
         expect(wrapper.findAll(".todo-deadline-label").map((item) => item.text())).toEqual([
           "今天 09",
           "今天 18",
-          "2天后 18",
+          "后天 18",
           "6/2 18",
           "今天 09",
           "今天 18",
-          "2天后 18",
+          "后天 18",
           "6/2 18",
         ]);
         expect(wrapper.findAll(".todo-item")[0].classes()).toContain("deadline-overdue");
@@ -1402,7 +1402,7 @@ describe("TodoPanel", () => {
     wrapper.unmount();
   });
 
-  it("opens a row Naive date picker with today 09:00 by default", async () => {
+  it("opens a row Naive date picker with today's next whole hour by default", async () => {
     vi.useFakeTimers();
     vi.setSystemTime(new Date(2026, 4, 25, 10));
     const wrapper = mount(TodoPanel, {
@@ -1437,7 +1437,7 @@ describe("TodoPanel", () => {
     expect(picker.props("format")).toBe("yyyy-MM-dd");
     expect(picker.props("valueFormat")).toBe("timestamp");
     expect(picker.props("actions")).toEqual([]);
-    expect(picker.props("value")).toBe(new Date(2026, 4, 25, 9).getTime());
+    expect(picker.props("value")).toBe(new Date(2026, 4, 25, 11).getTime());
     expect(document.body.querySelectorAll(".notify-time-column")).toHaveLength(2);
     const hourOptions = Array.from(document.body.querySelectorAll(".notify-time-column.is-hour .notify-time-option"));
     const minuteOptions = Array.from(document.body.querySelectorAll(".notify-time-column.is-minute .notify-time-option"));
@@ -1473,7 +1473,7 @@ describe("TodoPanel", () => {
       "02",
     ]);
     expect(minuteOptions.slice(57, 63).map((option) => option.textContent?.trim())).toEqual(["57", "58", "59", "00", "01", "02"]);
-    expect(document.body.querySelector(".notify-time-column.is-hour .notify-time-option.is-active")?.textContent).toContain("09");
+    expect(document.body.querySelector(".notify-time-column.is-hour .notify-time-option.is-active")?.textContent).toContain("11");
     expect(document.body.querySelector(".notify-time-column.is-minute .notify-time-option.is-active")?.textContent).toContain("00");
     expect(getTeleportedDatePickerText()).toContain("清除");
     expect(document.body.querySelector(".notify-panel-action.is-danger")?.textContent).toContain("清除");
@@ -1506,7 +1506,7 @@ describe("TodoPanel", () => {
     vi.useRealTimers();
   });
 
-  it("moves the notification picker date to today while preserving the selected time", async () => {
+  it("moves the notification picker date to today with the next whole hour", async () => {
     vi.useFakeTimers();
     vi.setSystemTime(new Date(2026, 4, 25, 10));
     const wrapper = mount(TodoPanel, {
@@ -1537,12 +1537,12 @@ describe("TodoPanel", () => {
     clickTeleportedNotifyAction("今天");
     await nextTick();
 
-    expect(wrapper.getComponent({ name: "NDatePicker" }).props("value")).toBe(new Date(2026, 4, 25, 15, 30).getTime());
+    expect(wrapper.getComponent({ name: "NDatePicker" }).props("value")).toBe(new Date(2026, 4, 25, 11).getTime());
     wrapper.unmount();
     vi.useRealTimers();
   });
 
-  it("preserves the selected notification time when switching dates", async () => {
+  it("keeps the selected hour and minute when switching dates", async () => {
     vi.useFakeTimers();
     vi.setSystemTime(new Date(2026, 4, 25, 10));
     const wrapper = mount(TodoPanel, {

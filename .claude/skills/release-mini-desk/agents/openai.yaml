@@ -1,0 +1,4 @@
+interface:
+  display_name: "Release Mini Desk"
+  short_description: "发布 Mini Desk 版本到 GitHub 和 Cloudflare"
+  default_prompt: "Use $release-mini-desk to publish a new Mini Desk version."

@@ -21,6 +21,8 @@ const messageKeys = [
   "workspaceDensityGood",
   "workspaceDensityAreaOver",
   "workspaceDensityAllOver",
+  "workspaceDensityQuickGroup",
+  "workspaceDensityTodoGroup",
   "todoCompleted",
   "clipboardPasteUnsupported",
   "clipboardImageMissing",

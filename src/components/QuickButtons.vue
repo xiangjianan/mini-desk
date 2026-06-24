@@ -1,14 +1,15 @@
 <script setup lang="ts">
-import { computed, h, onMounted, onUnmounted, reactive, ref, watch } from "vue";
-import type { Component, VNode } from "vue";
+import { computed, h, nextTick, onMounted, onUnmounted, reactive, ref, watch } from "vue";
+import type { Component, ComponentPublicInstance, VNode } from "vue";
 import { NButton, NCheckbox, NDropdown, NIcon, NInput, NModal, NScrollbar, NSelect } from "naive-ui";
 import { AddOutline, CloudUploadOutline, CopyOutline, CreateOutline, EyeOffOutline, EyeOutline, HelpCircleOutline, PricetagsOutline, TrashOutline } from "@vicons/ionicons5";
 import type { DropdownOption } from "naive-ui";
 import type { AppLanguage, GuideKey, QuickApiBodyType, QuickApiHeader, QuickApiMethod, QuickButton, QuickButtonType, QuickTag } from "../types";
 import { GUIDE_MENU_OPTION } from "../state/defaults";
 import { getUiText } from "../state/i18n";
-import { buildVisibleQuickButtonGroups, hasOverloadedVisibleQuickButtonGroup } from "../state/quickButtons";
+import { buildVisibleQuickButtonGroups, hasOverloadedVisibleQuickButtonGroup, QUICK_DENSITY_THRESHOLD } from "../state/quickButtons";
 import { CONTEXT_MENU_Z_INDEX, createExclusiveContextMenu } from "../utils/contextMenu";
+import { createDragAutoScroll, findDragScrollContainer } from "../utils/dragScroll";
 import EditableTitle from "./EditableTitle.vue";
 
 const props = withDefaults(defineProps<{
@@ -74,6 +75,10 @@ const newTagTitle = ref("");
 const tagManagerAnchor = ref<HTMLElement | undefined>();
 const draggingId = ref<string | null>(null);
 const draggingTagId = ref<string | null>(null);
+const dragScroll = createDragAutoScroll();
+const editingTagId = ref<string | null>(null);
+const inlineTagDraft = ref("");
+let inlineRenameInput: HTMLInputElement | null = null;
 const isDragHover = ref(false);
 const leavingHiddenIds = new Set<string>();
 const uiText = computed(() => getUiText(props.language));
@@ -170,8 +175,31 @@ function openTagManager(anchor?: HTMLElement): void {
   tagManagerOpen.value = true;
 }
 
-function closeTagManager(): void {
-  tagManagerOpen.value = false;
+function setInlineRenameInput(el: Element | ComponentPublicInstance | null): void {
+  inlineRenameInput = el instanceof HTMLInputElement ? el : null;
+}
+
+function startInlineTagRename(groupId: string, groupTitle: string): void {
+  if (!isRealTagGroup(groupId)) return;
+  editingTagId.value = groupId;
+  inlineTagDraft.value = groupTitle;
+  void nextTick(() => {
+    inlineRenameInput?.focus();
+    inlineRenameInput?.select();
+  });
+}
+
+function commitInlineTagRename(): void {
+  const id = editingTagId.value;
+  if (!id) return;
+  const title = inlineTagDraft.value.trim();
+  editingTagId.value = null;
+  const tag = props.tags.find((item) => item.id === id);
+  if (tag && title && title !== tag.title) emit("saveTag", { id, title });
+}
+
+function cancelInlineTagRename(): void {
+  editingTagId.value = null;
 }
 
 function addTag(): void {
@@ -327,7 +355,7 @@ function handleAreaClick(event: MouseEvent): void {
 }
 
 const hasOverloadedVisibleGroup = computed(() =>
-  hasOverloadedVisibleQuickButtonGroup(props.buttons, props.tags, 12),
+  hasOverloadedVisibleQuickButtonGroup(props.buttons, props.tags, QUICK_DENSITY_THRESHOLD),
 );
 
 function handleToggleShowHidden(anchor?: HTMLElement): void {
@@ -342,10 +370,18 @@ function handleQuickDragOver(event: DragEvent): void {
     event.dataTransfer!.dropEffect = "copy";
     isDragHover.value = true;
   }
+  if (draggingId.value || draggingTagId.value) {
+    dragScroll.update(findDragScrollContainer(event.target, "quick-buttons-scrollbar"), event.clientY);
+  }
 }
 
 function handleQuickDragLeave(): void {
   isDragHover.value = false;
+}
+
+function handleQuickDragEnd(): void {
+  handleQuickDragLeave();
+  dragScroll.stop();
 }
 
 function handleQuickDrop(event: DragEvent): void {
@@ -481,7 +517,7 @@ function handleQuickGroupDrop(groupId: string): void {
     @dragover="handleQuickDragOver"
     @dragleave="handleQuickDragLeave"
     @drop="handleQuickDrop"
-    @dragend="handleQuickDragLeave"
+    @dragend="handleQuickDragEnd"
   >
     <div class="panel-header" @contextmenu="openTitleMenu">
       <h2 id="quick-title">
@@ -518,14 +554,26 @@ function handleQuickGroupDrop(groupId: string): void {
           <div
             v-if="group.title"
             class="quick-tag-heading"
-            :class="{ 'is-dragging': draggingTagId === group.id, 'is-static': !group.reorderable }"
-            :draggable="group.reorderable"
-            @dragstart="group.reorderable && (draggingTagId = group.id)"
+            :class="{ 'is-dragging': draggingTagId === group.id, 'is-static': !group.reorderable, 'is-editing': editingTagId === group.id }"
+            :draggable="group.reorderable && editingTagId !== group.id"
+            @dblclick="startInlineTagRename(group.id, group.title)"
+            @dragstart="group.reorderable && editingTagId !== group.id && (draggingTagId = group.id)"
             @dragover="handleTagDragOver($event, group.id)"
             @drop.stop.prevent="onTagDrop(group.id)"
             @dragend="draggingTagId = null"
           >
-            <span class="quick-tag-title">{{ group.title }}</span>
+            <input
+              v-if="editingTagId === group.id"
+              :ref="setInlineRenameInput"
+              v-model="inlineTagDraft"
+              class="quick-tag-title-input"
+              :placeholder="uiText.quick.tagName"
+              autocomplete="off"
+              @keydown.enter.prevent="commitInlineTagRename"
+              @keydown.esc.prevent="cancelInlineTagRename"
+              @blur="commitInlineTagRename"
+            />
+            <span v-else class="quick-tag-title">{{ group.title }}</span>
           </div>
           <TransitionGroup
             :css="false"
@@ -701,7 +749,7 @@ function handleQuickGroupDrop(groupId: string): void {
       v-model:show="tagManagerOpen"
       preset="card"
       class="quick-dialog quick-tag-manager"
-      :mask-closable="false"
+      :mask-closable="true"
       :title="uiText.quick.tagManage"
     >
       <div class="quick-tag-manager-body">
@@ -717,15 +765,8 @@ function handleQuickGroupDrop(groupId: string): void {
               :placeholder="uiText.quick.tagName"
               autocomplete="off"
               @keydown.enter.prevent="saveTag(tag)"
+              @blur="saveTag(tag)"
             />
-            <NButton
-              class="quick-tag-save"
-              type="default"
-              :disabled="tag.titleDraft.trim().length === 0 || tag.titleDraft.trim() === tag.title"
-              @click="saveTag(tag)"
-            >
-              {{ uiText.quick.saveTag }}
-            </NButton>
             <button
               type="button"
               class="quick-tag-delete icon-button"
@@ -745,17 +786,15 @@ function handleQuickGroupDrop(groupId: string): void {
             autocomplete="off"
             @keydown.enter.prevent="addTag"
           />
-          <NButton
-            class="quick-tag-add"
-            type="default"
+          <button
+            type="button"
+            class="quick-tag-add icon-button"
+            :aria-label="uiText.quick.addTag"
             :disabled="newTagTitle.trim().length === 0"
             @click="addTag"
           >
-            {{ uiText.quick.addTag }}
-          </NButton>
-        </div>
-        <div class="dialog-actions">
-          <NButton class="quick-dialog-action" type="default" @click="closeTagManager">{{ uiText.common.cancel }}</NButton>
+            <NIcon :component="AddOutline" />
+          </button>
         </div>
       </div>
     </NModal>

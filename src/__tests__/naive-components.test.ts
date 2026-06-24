@@ -485,7 +485,7 @@ describe("Naive UI component usage", () => {
     expect(todo).toContain("NOTIFY_MINUTES");
     expect(todo).toContain("updateNotifyPickerTime");
     expect(todo).toContain("scrollNotifyTimePickerActiveItems");
-    expect(todo).toContain("active.offsetTop - column.offsetTop");
+    expect(todo).toContain("active.offsetTop - Math.round((column.clientHeight - active.offsetHeight) / 2)");
     expect(todo).not.toContain("handleNotifyPickerWheel");
     expect(todo).not.toContain('@wheel="handleNotifyPickerWheel"');
     expect(todo).not.toMatch(/<button[\s\S]{0,160}class="notify-time-option"/);

@@ -355,10 +355,10 @@ describe("QuickButtons", () => {
     wrapper.unmount();
   });
 
-  it("emits a declutter prompt when one quick tag has more than twelve visible buttons", async () => {
+  it("emits a declutter prompt when one quick tag has more than eight visible buttons", async () => {
     const wrapper = mountQuickButtons({
       tags: [{ id: "tag-work", title: "工作" }],
-      buttons: Array.from({ length: 13 }, (_, index) => ({
+      buttons: Array.from({ length: 9 }, (_, index) => ({
         id: `quick-${index}`,
         title: `按钮 ${index + 1}`,
         value: `https://example.com/${index}`,
@@ -375,9 +375,9 @@ describe("QuickButtons", () => {
     wrapper.unmount();
   });
 
-  it("emits a declutter prompt when the other quick tag has more than twelve visible buttons", async () => {
+  it("emits a declutter prompt when the other quick tag has more than eight visible buttons", async () => {
     const wrapper = mountQuickButtons({
-      buttons: Array.from({ length: 13 }, (_, index) => ({
+      buttons: Array.from({ length: 9 }, (_, index) => ({
         id: `quick-${index}`,
         title: `按钮 ${index + 1}`,
         value: `https://example.com/${index}`,
@@ -430,7 +430,7 @@ describe("QuickButtons", () => {
   it("ignores hidden quick buttons when deciding whether to show the declutter prompt", async () => {
     const wrapper = mountQuickButtons({
       buttons: [
-        ...Array.from({ length: 12 }, (_, index) => ({
+        ...Array.from({ length: 8 }, (_, index) => ({
           id: `quick-${index}`,
           title: `按钮 ${index + 1}`,
           value: `https://example.com/${index}`,
@@ -620,12 +620,31 @@ describe("QuickButtons", () => {
     expect(wrapper.emitted("saveTag")?.[0]).toEqual([{ title: "资料" }]);
 
     await wrapper.get(".quick-tag-name-input").setValue("工作台");
-    await wrapper.get(".quick-tag-save").trigger("click");
+    await wrapper.get(".quick-tag-name-input").trigger("blur");
     await wrapper.get(".quick-tag-delete").trigger("click");
 
     expect(wrapper.emitted("saveTag")?.[1]).toEqual([{ id: "tag-work", title: "工作台" }]);
     expect(wrapper.emitted("deleteTag")?.[0]).toEqual(["tag-work", expect.any(HTMLElement)]);
 
+    expect(wrapper.find(".quick-tag-save").exists()).toBe(false);
+    expect(wrapper.find(".quick-tag-manager .quick-dialog-action").exists()).toBe(false);
+
+    wrapper.unmount();
+  });
+
+  it("renames a tag inline by double-clicking its heading", async () => {
+    const wrapper = mountQuickButtons({
+      tags: [{ id: "tag-work", title: "工作" }],
+      buttons: [{ id: "b1", title: "Btn", value: "v", type: "link", tagId: "tag-work", hidden: false }],
+    });
+
+    await wrapper.get(".quick-tag-heading").trigger("dblclick");
+
+    const input = wrapper.get(".quick-tag-title-input");
+    await input.setValue("工作台");
+    await input.trigger("blur");
+
+    expect(wrapper.emitted("saveTag")?.[0]).toEqual([{ id: "tag-work", title: "工作台" }]);
     wrapper.unmount();
   });
 

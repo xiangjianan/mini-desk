@@ -9,6 +9,7 @@ import {
   getDefaultNotifySelection,
   getNotifyDisplay,
   getLocalDateInputValue,
+  withDefaultNotifyTime,
 } from "../state/deadlines";
 
 describe("notification time helpers", () => {
@@ -66,6 +67,22 @@ describe("notification time helpers", () => {
     expect(value).toBe(new Date(2026, 4, 25, 9, 0, 0, 0).getTime());
   });
 
+  it("defaults notify time to the next whole hour today and 09:00 on other days", () => {
+    const now = new Date(2026, 4, 25, 8, 30);
+    const today = new Date(2026, 4, 25, 0, 0).getTime();
+    const otherDay = new Date(2026, 5, 2, 0, 0).getTime();
+
+    expect(withDefaultNotifyTime(today, now)).toBe(new Date(2026, 4, 25, 9, 0, 0, 0).getTime());
+    expect(withDefaultNotifyTime(otherDay, now)).toBe(new Date(2026, 5, 2, 9, 0, 0, 0).getTime());
+  });
+
+  it("clamps today's default time to 23:00 instead of rolling into tomorrow when it is already late", () => {
+    const now = new Date(2026, 4, 25, 23, 30);
+    const today = new Date(2026, 4, 25, 0, 0).getTime();
+
+    expect(withDefaultNotifyTime(today, now)).toBe(new Date(2026, 4, 25, 23, 0, 0, 0).getTime());
+  });
+
   it("classifies overdue, due-soon, upcoming, and later notification times", () => {
     const now = new Date(2026, 4, 25, 10).getTime();
 
@@ -85,8 +102,8 @@ describe("notification time helpers", () => {
       urgency: "due-soon",
     });
     expect(getNotifyDisplay(new Date(2026, 4, 27, 18).getTime(), now)).toEqual({
-      label: "2天后 下午 6:00",
-      compactLabel: "2天后 18",
+      label: "后天下午 6:00",
+      compactLabel: "后天 18",
       urgency: "upcoming",
     });
     expect(getNotifyDisplay(new Date(2026, 5, 2, 18).getTime(), now)).toEqual({
@@ -100,9 +117,49 @@ describe("notification time helpers", () => {
     const now = new Date(2026, 4, 25, 0, 1).getTime();
 
     expect(getNotifyDisplay(new Date(2026, 4, 26, 23).getTime(), now)).toEqual({
-      label: "1天后 晚上 11:00",
-      compactLabel: "1天后 23",
+      label: "明天晚上 11:00",
+      compactLabel: "明天 23",
       urgency: "upcoming",
+    });
+  });
+
+  it("labels upcoming times up to one week and falls back to dates beyond it", () => {
+    const now = new Date(2026, 4, 25, 10).getTime();
+
+    expect(getNotifyDisplay(new Date(2026, 4, 29, 18).getTime(), now)).toEqual({
+      label: "4天后 下午 6:00",
+      compactLabel: "4天后 18",
+      urgency: "upcoming",
+    });
+    expect(getNotifyDisplay(new Date(2026, 5, 1, 18).getTime(), now)).toEqual({
+      label: "1周后 下午 6:00",
+      compactLabel: "1周后 18",
+      urgency: "upcoming",
+    });
+    expect(getNotifyDisplay(new Date(2026, 5, 2, 18).getTime(), now)).toEqual({
+      label: "6/2 下午 6:00",
+      compactLabel: "6/2 18",
+      urgency: "later",
+    });
+  });
+
+  it("labels overdue times up to one week ago and falls back to dates beyond it", () => {
+    const now = new Date(2026, 4, 25, 10).getTime();
+
+    expect(getNotifyDisplay(new Date(2026, 4, 22, 18).getTime(), now)).toEqual({
+      label: "3天前 下午 6:00",
+      compactLabel: "3天前 18",
+      urgency: "overdue",
+    });
+    expect(getNotifyDisplay(new Date(2026, 4, 18, 18).getTime(), now)).toEqual({
+      label: "1周前 下午 6:00",
+      compactLabel: "1周前 18",
+      urgency: "overdue",
+    });
+    expect(getNotifyDisplay(new Date(2026, 4, 17, 18).getTime(), now)).toEqual({
+      label: "5/17 下午 6:00",
+      compactLabel: "5/17 18",
+      urgency: "overdue",
     });
   });
 

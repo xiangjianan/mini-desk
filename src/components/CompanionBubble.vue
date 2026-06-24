@@ -253,16 +253,28 @@ watch(
 
 onMounted(() => {
   exclusiveMenu.mount();
+  window.addEventListener("keydown", handleConfirmKeydown, { capture: true });
 });
 
 onUnmounted(() => {
   exclusiveMenu.unmount();
+  window.removeEventListener("keydown", handleConfirmKeydown, { capture: true });
   stopWindowMousemoveTracking();
   window.clearTimeout(popoverTimer.value);
   window.clearTimeout(contentTimer.value);
   window.clearTimeout(gifTimer.value);
   window.clearTimeout(gifFadeTimer.value);
 });
+
+function handleConfirmKeydown(event: KeyboardEvent): void {
+  if (event.key !== "Enter") return;
+  if (!renderedConfirm.value || !visiblePopover.value) return;
+  const target = event.target;
+  if (target instanceof HTMLElement && target.closest("input, textarea, select, [contenteditable]")) return;
+  event.preventDefault();
+  event.stopPropagation();
+  emit("yes");
+}
 
 function startGifTimer(duration: number): void {
   window.clearTimeout(gifTimer.value);

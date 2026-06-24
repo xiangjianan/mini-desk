@@ -26,8 +26,10 @@ import {
   getDefaultNotifyDateTimeValue,
   getNotifyDisplay,
   isValidDeadlineAt,
+  withDefaultNotifyTime,
   type NotifyDisplay,
 } from "../state/deadlines";
+import { createDragAutoScroll, findDragScrollContainer } from "../utils/dragScroll";
 import type {
   DraggedTodo,
   GuideKey,
@@ -96,6 +98,7 @@ const menu = ref<{
   sectionActions?: boolean;
 } | null>(null);
 const dragged = ref<DraggedTodo | null>(null);
+const todoDragScroll = createDragAutoScroll();
 const draggedListId = ref<TodoListId | null>(null);
 const editingListTitleIds = ref<Set<TodoListId>>(new Set());
 const editingTodoKey = ref<string | null>(null);
@@ -198,6 +201,7 @@ const LIST_CREATE_DIALOG_HEIGHT = 112;
 const deadlineNow = ref(Date.now());
 const deadlineClockTimer = ref<number | undefined>();
 const resettingNotifyTimeColumns = new WeakSet<HTMLElement>();
+const centeringTimeColumns = new Map<HTMLElement, number>();
 
 const ordered = computed(() =>
   Object.fromEntries(
@@ -630,18 +634,29 @@ function openNotifyPicker(period: TodoPeriod, id: string, anchor?: HTMLElement):
   selectedMenuTodoKey.value = null;
   notifyPicker.value = { period, id, anchor, ...position };
   void nextTick(() => {
-    window.requestAnimationFrame(scrollNotifyTimePickerActiveItems);
+    window.requestAnimationFrame(() => scrollNotifyTimePickerActiveItems());
   });
 }
 
-function scrollNotifyTimePickerActiveItems(): void {
+function scrollNotifyTimePickerActiveItems(animated = false): void {
   notifyPickerRef.value
     ?.querySelectorAll<HTMLElement>(".notify-time-column")
     .forEach((column) => {
       const active = column.querySelector<HTMLElement>(".notify-time-option.is-scroll-anchor")
         ?? column.querySelector<HTMLElement>(".notify-time-option.is-active");
       if (!active) return;
-      column.scrollTop = Math.max(0, active.offsetTop - column.offsetTop);
+      // Center the active option. Use layout-only properties (offsetTop/offsetHeight/clientHeight)
+      // so the calc is immune to the floating-pop enter transform, which would skew getBoundingClientRect.
+      // .notify-time-column is position:relative, so offsetTop is relative to the column's content origin.
+      const target = Math.max(0, active.offsetTop - Math.round((column.clientHeight - active.offsetHeight) / 2));
+      if (animated && typeof column.scrollTo === "function") {
+        // Guard against the infinite-loop snap interrupting the smooth animation.
+        window.clearTimeout(centeringTimeColumns.get(column));
+        centeringTimeColumns.set(column, window.setTimeout(() => centeringTimeColumns.delete(column), 500));
+        column.scrollTo({ top: target, behavior: "smooth" });
+        return;
+      }
+      column.scrollTop = target;
     });
 }
 
@@ -660,7 +675,7 @@ function createNotifyTimeLoopOptions(values: number[]): NotifyTimeLoopOption[] {
 
 function handleNotifyTimeColumnScroll(event: Event, valueCount: number): void {
   const column = event.currentTarget;
-  if (!(column instanceof HTMLElement) || resettingNotifyTimeColumns.has(column)) return;
+  if (!(column instanceof HTMLElement) || resettingNotifyTimeColumns.has(column) || centeringTimeColumns.has(column)) return;
   const option = column.querySelector<HTMLElement>(".notify-time-option");
   const optionHeight = option?.offsetHeight ?? 0;
   if (optionHeight <= 0) return;
@@ -675,7 +690,9 @@ function handleNotifyTimeColumnScroll(event: Event, valueCount: number): void {
 }
 
 function getNotifyPickerInitialValue(todo?: TodoItem): number {
-  return isValidDeadlineAt(todo?.notifyAt) ? todo.notifyAt : getDefaultNotifyDateTimeValue();
+  if (isValidDeadlineAt(todo?.notifyAt)) return todo.notifyAt;
+  // New todo: today defaults to the next whole hour, per the date-aware rule.
+  return withDefaultNotifyTime(Date.now());
 }
 
 function getNotifyPickerValue(): number {
@@ -690,20 +707,8 @@ function updateNotifyPickerDraft(value: number | null): void {
   const picker = notifyPicker.value;
   if (!picker || value === null) return;
   const key = todoKey(picker.period, picker.id);
+  // Only the date changes — keep the selected hour:minute intact.
   notifyPickerDrafts.value = { ...notifyPickerDrafts.value, [key]: preserveNotifyTimeOnDateChange(getNotifyPickerValue(), value) };
-}
-
-function setNotifyPickerDraftToToday(): void {
-  const picker = notifyPicker.value;
-  if (!picker) return;
-  const key = todoKey(picker.period, picker.id);
-  const current = new Date(getNotifyPickerValue());
-  const today = new Date();
-  current.setFullYear(today.getFullYear(), today.getMonth(), today.getDate());
-  notifyPickerDrafts.value = { ...notifyPickerDrafts.value, [key]: current.getTime() };
-  void nextTick(() => {
-    window.requestAnimationFrame(scrollNotifyTimePickerActiveItems);
-  });
 }
 
 function preserveNotifyTimeOnDateChange(currentValue: number, nextValue: number): number {
@@ -711,6 +716,16 @@ function preserveNotifyTimeOnDateChange(currentValue: number, nextValue: number)
   const next = new Date(nextValue);
   next.setHours(current.getHours(), current.getMinutes(), current.getSeconds(), current.getMilliseconds());
   return next.getTime();
+}
+
+function setNotifyPickerDraftToToday(): void {
+  const picker = notifyPicker.value;
+  if (!picker) return;
+  const key = todoKey(picker.period, picker.id);
+  notifyPickerDrafts.value = { ...notifyPickerDrafts.value, [key]: withDefaultNotifyTime(Date.now()) };
+  void nextTick(() => {
+    window.requestAnimationFrame(() => scrollNotifyTimePickerActiveItems(true));
+  });
 }
 
 function getNotifyPickerHour(): number {
@@ -1156,10 +1171,18 @@ function handleTodoDragOver(event: DragEvent): void {
   if (types.includes("text/plain") && !types.includes("Files")) {
     dragHoverListId.value = getListIdFromDragEvent(event);
   }
+  if (dragged.value) {
+    todoDragScroll.update(findDragScrollContainer(event.target, "todo-list-scrollbar"), event.clientY);
+  }
 }
 
 function handleTodoDragLeave(): void {
   dragHoverListId.value = null;
+}
+
+function handleTodoDragEnd(): void {
+  handleTodoDragLeave();
+  todoDragScroll.stop();
 }
 
 function getTodos(period: TodoListId): TodoItem[] {
@@ -1221,7 +1244,7 @@ function buildTodoListEntries(period: TodoListId, todos: TodoItem[], deferredDon
 </script>
 
 <template>
-  <section class="panel todo-panel" aria-labelledby="todo-title" @dragleave="handleTodoDragLeave" @drop="handleTodoDragLeave" @dragend="handleTodoDragLeave">
+  <section class="panel todo-panel" aria-labelledby="todo-title" @dragleave="handleTodoDragLeave" @drop="handleTodoDragLeave" @dragend="handleTodoDragEnd">
     <Transition name="section-reveal" :duration="240">
       <section v-if="todayFocus.length" class="today-focus-section" :aria-label="uiText.todo.todayFocus">
         <div class="today-focus-heading" @contextmenu="openTodayFocusTitleMenu">

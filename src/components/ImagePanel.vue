@@ -163,6 +163,7 @@ const menuOptions = computed<DropdownOption[]>(() =>
   menu.value?.id
     ? getImageItemContextMenuItems(uiText.value, isPreviewCloseMenuItem.value, true).map((option) => ({
         ...option,
+        ...(option.key === "tips" ? guideMenuOption.value : {}),
         icon: renderIcon(getImageMenuIcon(option.key)),
       }))
     : getBlankImageContextMenuItems(uiText.value).map((option) => ({

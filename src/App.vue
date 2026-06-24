@@ -47,6 +47,7 @@ import {
   updateTodoText,
 } from "./state/todos";
 import { defaultState, STORAGE_KEY } from "./state/defaults";
+import { QUICK_DENSITY_THRESHOLD } from "./state/quickButtons";
 import {
   createId,
   exportJsonState,
@@ -74,9 +75,9 @@ const TODO_NOTIFICATION_FALLBACK_INTERVAL_MS = 30_000;
 const MAX_TODO_NOTIFICATION_TIMEOUT_MS = 2_147_483_647;
 const UNDO_HISTORY_LIMIT = 50;
 const IMAGE_PREVIEW_CLOSE_MS = 220;
-const IMAGE_PREVIEW_OVERLOAD_THRESHOLD = 20;
+const IMAGE_DENSITY_THRESHOLD = 10;
 const TODO_DENSITY_THRESHOLD = 7;
-const QUICK_DENSITY_THRESHOLD = 12;
+const WORKSPACE_DENSITY_GROUP_TIP_CHANCE = 0.5;
 const STATE_SYNC_CHANNEL = "mini-desk-state-sync";
 const mobileCompanionPosition: { right: string; bottom: string } = { right: "18px", bottom: "28px" };
 
@@ -197,6 +198,10 @@ const displayedPreviewId = computed(() => activePreviewId.value ?? closingPrevie
 const imagePreviewClosing = computed(() => Boolean(closingPreviewId.value) && !activePreviewId.value);
 const settingsAppVersion = computed(() => (versionPromptVisible.value ? availableAppVersion.value : appVersion.value));
 const saveStatus = ref<"saved" | "saving" | "dirty">("saved");
+const densityGroupingTipKeys: Partial<Record<DensityAreaType, MessageKey>> = {
+  todos: "workspaceDensityTodoGroup",
+  quickButtons: "workspaceDensityQuickGroup",
+};
 const densityAreas = computed(() => getDensityAreas());
 const overLimitDensityAreas = computed(() => densityAreas.value.filter((area) => area.count > getDensityThreshold(area.type)));
 const workspaceDensityStatus = computed<WorkspaceDensityState>(() => {
@@ -477,7 +482,7 @@ function handleGuideFocus(key: GuideKey, anchor?: HTMLElement): void {
 function handleGuideClick(key: GuideKey, anchor?: HTMLElement, immediate = false): void {
   invalidateGuideCompanion(key);
   if (immediate) {
-    showGuideBubble(key, anchor);
+    void showGuideBubble(key, anchor, true, activeGuideKey.value === key || bubbleVisible.value);
     return;
   }
   showAreaGuide(key, anchor);
@@ -1016,7 +1021,7 @@ function openImagePreview(id: string): void {
   hideCompanion();
   activeEditorId.value = undefined;
   activePreviewId.value = id;
-  if (state.images.length > IMAGE_PREVIEW_OVERLOAD_THRESHOLD) {
+  if (state.images.length > IMAGE_DENSITY_THRESHOLD) {
     showBubble("imageOverload", document.querySelector<HTMLElement>(".image-panel") ?? undefined, { hideCompanionAfter: true });
   }
 }
@@ -2050,6 +2055,11 @@ function showSaveStatusTip(anchor?: HTMLElement): void {
     showBubble("workspaceDensityGood", anchor);
     return;
   }
+  const groupingTipKey = densityGroupingTipKeys[area.type];
+  if (groupingTipKey && Math.random() < WORKSPACE_DENSITY_GROUP_TIP_CHANCE) {
+    showBubbleText(getMessage(groupingTipKey, Math.random, state.language), anchor);
+    return;
+  }
   showBubbleText(
     formatDensityMessage(getMessage("workspaceDensityAreaOver", Math.random, state.language), area),
     anchor,
@@ -2079,7 +2089,7 @@ function getDensityAreas(): DensityArea[] {
 function getDensityThreshold(type: DensityAreaType): number {
   if (type === "todos") return TODO_DENSITY_THRESHOLD;
   if (type === "quickButtons") return QUICK_DENSITY_THRESHOLD;
-  return IMAGE_PREVIEW_OVERLOAD_THRESHOLD;
+  return IMAGE_DENSITY_THRESHOLD;
 }
 
 function getDensityAreaLabel(type: DensityAreaType): string {
@@ -2561,11 +2571,15 @@ function clearEmptyTodoRemovalTimersForList(listId: TodoListId): void {
   }
 }
 
-function showGuideBubble(key: GuideKey, anchor?: HTMLElement, hideCompanionAfter = true): void {
+async function showGuideBubble(key: GuideKey, anchor?: HTMLElement, hideCompanionAfter = true, force = false): Promise<void> {
   if (pendingConfirm.value) return;
-  if (isRepeatLockedGuide(key)) {
+  if (!force && isRepeatLockedGuide(key)) {
     if (anchor) companionPosition.value = getCompanionPosition(anchor);
     return;
+  }
+  if (force) {
+    hideBubbleMessage({ clearRetainedContent: true });
+    await nextTick();
   }
   showBubbleText(
     withKaomoji(randomGuideMessage(key), "encouraging"),
@@ -2686,14 +2700,15 @@ function getCompanionPosition(anchor?: HTMLElement): { right: string; bottom?: s
       top: "118px",
     };
   }
-  const target = anchor?.closest(".image-preview, .preview-main, .preview-stage, .todo-list, .todo-section, .quick-block, .text-panel, .split-block, .panel") as HTMLElement | null;
+  const target = anchor?.closest(".image-preview, .preview-main, .preview-stage, .todo-section, .quick-block, .text-panel, .split-block, .panel") as HTMLElement | null;
   if (!target) return undefined;
   const rect = target.getBoundingClientRect();
   if (!rect.width && !rect.height) return undefined;
   const safeRight = Math.max(Math.round(rect.right), MIN_COMPANION_POPOVER_RIGHT_EDGE);
+  const safeBottom = Math.min(Math.round(rect.bottom), window.innerHeight);
   return {
     right: `calc(100vw - ${safeRight}px + 10px)`,
-    bottom: `calc(100vh - ${Math.round(rect.bottom)}px + 10px)`,
+    bottom: `calc(100vh - ${safeBottom}px + 10px)`,
   };
 }
 

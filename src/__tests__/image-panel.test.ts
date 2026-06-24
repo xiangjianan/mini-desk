@@ -215,6 +215,18 @@ describe("ImagePanel", () => {
     wrapper.unmount();
   });
 
+  it("emits guide from the image item context menu tips option", async () => {
+    const wrapper = mountImagePanel([
+      { id: "img-1", src: "data:image/png;base64,one", createdAt: 1 },
+    ]);
+
+    await wrapper.get(".image-card").trigger("contextmenu");
+    await wrapper.findAll(".dropdown-option").find((option) => option.text() === "Tips")?.trigger("click");
+
+    expect(wrapper.emitted("guide")?.[0]).toEqual(["images", expect.any(HTMLElement), true]);
+    wrapper.unmount();
+  });
+
   it("opens editing from a focused image card when Enter is pressed", async () => {
     const wrapper = mountImagePanel([
       { id: "img-1", src: "data:image/png;base64,one", createdAt: 1 },

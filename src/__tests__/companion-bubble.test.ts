@@ -404,6 +404,100 @@ describe("CompanionBubble", () => {
     wrapper.unmount();
   });
 
+  it("confirms the bubble immediately when pressing Enter", async () => {
+    vi.useFakeTimers();
+    const wrapper = mount(CompanionBubble, {
+      attachTo: document.body,
+      props: {
+        visible: true,
+        message: "确认删除吗",
+        confirm: true,
+      },
+      global: {
+        stubs: {
+          NButton: buttonStub,
+          NPopover: popoverStub,
+        },
+      },
+    });
+
+    await vi.advanceTimersByTimeAsync(200);
+    await wrapper.vm.$nextTick();
+
+    expect(wrapper.emitted("yes")).toBeUndefined();
+
+    window.dispatchEvent(new KeyboardEvent("keydown", { key: "Enter", bubbles: true }));
+
+    expect(wrapper.emitted("yes")).toHaveLength(1);
+
+    wrapper.unmount();
+  });
+
+  it("ignores Enter while editing a form field", async () => {
+    vi.useFakeTimers();
+    const input = document.createElement("input");
+    document.body.appendChild(input);
+    const wrapper = mount(CompanionBubble, {
+      attachTo: document.body,
+      props: {
+        visible: true,
+        message: "确认删除吗",
+        confirm: true,
+      },
+      global: {
+        stubs: {
+          NButton: buttonStub,
+          NPopover: popoverStub,
+        },
+      },
+    });
+
+    await vi.advanceTimersByTimeAsync(200);
+    await wrapper.vm.$nextTick();
+
+    input.dispatchEvent(new KeyboardEvent("keydown", { key: "Enter", bubbles: true }));
+
+    expect(wrapper.emitted("yes")).toBeUndefined();
+
+    wrapper.unmount();
+    document.body.removeChild(input);
+  });
+
+  it("captures Enter before inline target handlers so a visible confirm wins", async () => {
+    vi.useFakeTimers();
+    const target = document.createElement("div");
+    document.body.appendChild(target);
+    let targetHandled = false;
+    target.addEventListener("keydown", () => {
+      targetHandled = true;
+    });
+    const wrapper = mount(CompanionBubble, {
+      attachTo: document.body,
+      props: {
+        visible: true,
+        message: "确认删除吗",
+        confirm: true,
+      },
+      global: {
+        stubs: {
+          NButton: buttonStub,
+          NPopover: popoverStub,
+        },
+      },
+    });
+
+    await vi.advanceTimersByTimeAsync(200);
+    await wrapper.vm.$nextTick();
+
+    target.dispatchEvent(new KeyboardEvent("keydown", { key: "Enter", bubbles: true }));
+
+    expect(wrapper.emitted("yes")).toHaveLength(1);
+    expect(targetHandled).toBe(false);
+
+    wrapper.unmount();
+    target.remove();
+  });
+
   it("fades the GIF surface out after ten seconds before removing it", async () => {
     vi.useFakeTimers();
     const wrapper = mount(CompanionBubble, {

@@ -10,6 +10,8 @@ export type MessageKey =
   | "workspaceDensityGood"
   | "workspaceDensityAreaOver"
   | "workspaceDensityAllOver"
+  | "workspaceDensityQuickGroup"
+  | "workspaceDensityTodoGroup"
   | "todoCompleted"
   | "clipboardPasteUnsupported"
   | "clipboardImageMissing"
@@ -208,6 +210,38 @@ export const MESSAGE_CATALOG: Record<MessageKey, MessageEntry> = {
       "红色：{summary}先清理",
       "红色：{summary}负担重",
       "红色：{summary}留重点",
+    ],
+  },
+  workspaceDensityQuickGroup: {
+    mood: "warning",
+    surface: "companion",
+    variants: [
+      "黄色：快捷动作太散，分组吧",
+      "黄色：建标签把动作归类",
+      "黄色：快捷动作建议按标签分",
+      "黄色：散着的按钮，分组整理",
+      "黄色：给快捷动作分个组吧",
+      "黄色：标签分组，找得更快",
+      "黄色：快捷动作零散，归类下",
+      "黄色：用标签把动作收拢",
+      "黄色：分组建标签，更清爽",
+      "黄色：快捷动作归类更高效",
+    ],
+  },
+  workspaceDensityTodoGroup: {
+    mood: "warning",
+    surface: "companion",
+    variants: [
+      "黄色：提醒事项偏多，分清单",
+      "黄色：提醒事项太满，归类下",
+      "黄色：拆分到不同清单吧",
+      "黄色：提醒事项建议分组",
+      "黄色：分时段整理提醒事项",
+      "黄色：提醒事项多，分个类",
+      "黄色：用清单把事项归类",
+      "黄色：提醒事项零散，分组",
+      "黄色：分清单管理更高效",
+      "黄色：提醒事项归类下吧",
     ],
   },
   todoCompleted: {
@@ -949,6 +983,30 @@ const EN_MESSAGE_VARIANTS = {
     "Red: clean up across {summary}.",
     "Red: the board is overloaded: {summary}.",
     "Red: keep only essentials in {summary}.",
+  ],
+  workspaceDensityQuickGroup: [
+    "Yellow: quick actions are scattered, group them.",
+    "Yellow: tag your quick actions to tidy up.",
+    "Yellow: sort quick actions into tags.",
+    "Yellow: loose buttons? group them now.",
+    "Yellow: assign tags to quick actions.",
+    "Yellow: tags make quick actions findable.",
+    "Yellow: gather quick actions by tag.",
+    "Yellow: categorize quick actions with tags.",
+    "Yellow: tagging keeps quick actions tidy.",
+    "Yellow: group quick actions for faster access.",
+  ],
+  workspaceDensityTodoGroup: [
+    "Yellow: reminders pile up, split them into lists.",
+    "Yellow: too many reminders, group them.",
+    "Yellow: sort reminders into separate lists.",
+    "Yellow: break reminders into smaller lists.",
+    "Yellow: organize reminders by time of day.",
+    "Yellow: reminders feel heavy, categorize.",
+    "Yellow: use lists to tidy reminders.",
+    "Yellow: scattered reminders? group now.",
+    "Yellow: split lists to stay on top.",
+    "Yellow: group reminders for clarity.",
   ],
   todoCompleted: ["One more reminder completed", "Progress updated", "Reminder completed"],
   clipboardPasteUnsupported: ["Clipboard images are not available here", "Try pressing Ctrl+V to paste an image", "Use the paste shortcut instead"],

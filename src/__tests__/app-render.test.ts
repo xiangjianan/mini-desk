@@ -1169,6 +1169,230 @@ describe("App shell", () => {
     }
   });
 
+  it("suggests grouping when untagged quick actions pile up beyond the limit", async () => {
+    vi.useFakeTimers();
+    vi.spyOn(Math, "random").mockReturnValue(0);
+    localStorage.setItem(
+      STORAGE_KEY,
+      JSON.stringify({
+        quickButtons: buildQuickButtons(9, undefined),
+      }),
+    );
+    const wrapper = mountApp();
+
+    try {
+      expect(wrapper.get('[data-testid="save-status"]').attributes("data-state")).toBe("saving");
+      expect(wrapper.get('[data-testid="save-status"]').attributes("aria-label")).toBe("有区域内容偏多");
+
+      await wrapper.get('[data-testid="save-status"]').trigger("click");
+      await vi.advanceTimersByTimeAsync(200);
+      await wrapper.vm.$nextTick();
+
+      const message = wrapper.getComponent(CompanionBubble).props("message") as string;
+      expect(message).toContain("黄色");
+      expect(message).toContain("分组");
+      expect(KAOMOJI_BY_MOOD.warning.some((kaomoji) => message.endsWith(kaomoji))).toBe(true);
+    } finally {
+      wrapper.unmount();
+      vi.useRealTimers();
+    }
+  });
+
+  it("suggests grouping when reminders pile up beyond the limit", async () => {
+    vi.useFakeTimers();
+    vi.spyOn(Math, "random").mockReturnValue(0);
+    localStorage.setItem(
+      STORAGE_KEY,
+      JSON.stringify({
+        todoLists: [{ id: "heavy", title: "任务", collapsed: false, compact: false }],
+        todos: { heavy: buildTodos(8) },
+      }),
+    );
+    const wrapper = mountApp();
+
+    try {
+      expect(wrapper.get('[data-testid="save-status"]').attributes("data-state")).toBe("saving");
+      expect(wrapper.get('[data-testid="save-status"]').attributes("aria-label")).toBe("有区域内容偏多");
+
+      await wrapper.get('[data-testid="save-status"]').trigger("click");
+      await vi.advanceTimersByTimeAsync(200);
+      await wrapper.vm.$nextTick();
+
+      const message = wrapper.getComponent(CompanionBubble).props("message") as string;
+      expect(message).toContain("黄色");
+      expect(message).toMatch(/清单|分组/);
+      expect(KAOMOJI_BY_MOOD.warning.some((kaomoji) => message.endsWith(kaomoji))).toBe(true);
+    } finally {
+      wrapper.unmount();
+      vi.useRealTimers();
+    }
+  });
+
+  it("keeps quick action density green at exactly eight untagged buttons", () => {
+    localStorage.setItem(
+      STORAGE_KEY,
+      JSON.stringify({
+        quickButtons: buildQuickButtons(8, undefined),
+      }),
+    );
+    const wrapper = mountApp();
+
+    try {
+      expect(wrapper.get('[data-testid="save-status"]').attributes("data-state")).toBe("saved");
+      expect(wrapper.get('[data-testid="save-status"]').attributes("aria-label")).toBe("工作空间清爽");
+    } finally {
+      wrapper.unmount();
+    }
+  });
+
+  it("flags image density yellow once the list passes ten items", () => {
+    localStorage.setItem(
+      STORAGE_KEY,
+      JSON.stringify({
+        images: buildStoredImages(11),
+      }),
+    );
+    const wrapper = mountApp();
+
+    try {
+      expect(wrapper.get('[data-testid="save-status"]').attributes("data-state")).toBe("saving");
+      expect(wrapper.get('[data-testid="save-status"]').attributes("aria-label")).toBe("有区域内容偏多");
+    } finally {
+      wrapper.unmount();
+    }
+  });
+
+  it("keeps image density green at exactly ten items", () => {
+    localStorage.setItem(
+      STORAGE_KEY,
+      JSON.stringify({
+        images: buildStoredImages(10),
+      }),
+    );
+    const wrapper = mountApp();
+
+    try {
+      expect(wrapper.get('[data-testid="save-status"]').attributes("data-state")).toBe("saved");
+      expect(wrapper.get('[data-testid="save-status"]').attributes("aria-label")).toBe("工作空间清爽");
+    } finally {
+      wrapper.unmount();
+    }
+  });
+
+  it("keeps the companion bubble on screen when the reminder list is taller than the viewport", async () => {
+    vi.useFakeTimers();
+    vi.spyOn(Math, "random").mockReturnValue(0);
+    const viewportHeight = window.innerHeight;
+    const tallBottom = viewportHeight + 4000;
+    const rectSpy = vi.spyOn(Element.prototype, "getBoundingClientRect").mockImplementation(function (this: Element) {
+      if (this.classList.contains("todo-section")) {
+        return { top: 0, left: 0, right: 320, bottom: tallBottom, width: 320, height: tallBottom, x: 0, y: 0, toJSON: () => ({}) } as DOMRect;
+      }
+      return { top: 0, left: 0, right: 320, bottom: 300, width: 320, height: 300, x: 0, y: 0, toJSON: () => ({}) } as DOMRect;
+    });
+    localStorage.setItem(
+      STORAGE_KEY,
+      JSON.stringify({
+        todoLists: [{ id: "heavy", title: "任务", collapsed: false, compact: false }],
+        todos: { heavy: buildTodos(3) },
+      }),
+    );
+    const wrapper = mountApp();
+
+    try {
+      await wrapper.get(".todo-item").trigger("contextmenu");
+      await wrapper.findAll(".dropdown-option").find((option) => option.text() === "Tips")?.trigger("click");
+      await vi.advanceTimersByTimeAsync(200);
+      await wrapper.vm.$nextTick();
+
+      const position = wrapper.getComponent(CompanionBubble).props("position") as { bottom?: string } | undefined;
+      expect(position?.bottom).toBeTruthy();
+      expect(position?.bottom).toContain(`${viewportHeight}`);
+      expect(position?.bottom).not.toContain(`${tallBottom}`);
+    } finally {
+      rectSpy.mockRestore();
+      wrapper.unmount();
+      vi.useRealTimers();
+    }
+  });
+
+  it("force-resets and re-shows the guide bubble when Tips is clicked again after switching areas", async () => {
+    vi.useFakeTimers();
+    vi.spyOn(Math, "random").mockReturnValue(0);
+    localStorage.setItem(
+      STORAGE_KEY,
+      JSON.stringify({
+        todoLists: [{ id: "heavy", title: "任务", collapsed: false, compact: false }],
+        todos: { heavy: buildTodos(3) },
+      }),
+    );
+    const wrapper = mountApp();
+
+    try {
+      await wrapper.get(".todo-item").trigger("contextmenu");
+      await wrapper.findAll(".dropdown-option").find((option) => option.text() === "Tips")?.trigger("click");
+      await flushPromises();
+      await wrapper.vm.$nextTick();
+      const clearSignalAfterFirst = wrapper.getComponent(CompanionBubble).props("clearSignal") as number;
+
+      // Switching away blurs the todo panel, which clears activeGuideKey but leaves the bubble timer running.
+      wrapper.findComponent(TodoPanel).vm.$emit("blur");
+      await wrapper.vm.$nextTick();
+
+      await wrapper.get(".todo-item").trigger("contextmenu");
+      await wrapper.findAll(".dropdown-option").find((option) => option.text() === "Tips")?.trigger("click");
+      await flushPromises();
+      await wrapper.vm.$nextTick();
+
+      const companion = wrapper.getComponent(CompanionBubble);
+      expect(companion.props("clearSignal")).toBe(clearSignalAfterFirst + 1);
+      expect(companion.props("message")).toBeTruthy();
+    } finally {
+      wrapper.unmount();
+      vi.useRealTimers();
+    }
+  });
+
+  it("anchors the todo Tips bubble to the list section corner, not the last item", async () => {
+    vi.useFakeTimers();
+    vi.spyOn(Math, "random").mockReturnValue(0);
+    const viewportHeight = window.innerHeight;
+    const sectionBottom = Math.floor(viewportHeight * 0.6);
+    const listBottom = Math.floor(viewportHeight * 0.4);
+    const rectSpy = vi.spyOn(Element.prototype, "getBoundingClientRect").mockImplementation(function (this: Element) {
+      if (this.classList.contains("todo-section")) {
+        return { top: 0, left: 0, right: 320, bottom: sectionBottom, width: 320, height: sectionBottom, x: 0, y: 0, toJSON: () => ({}) } as DOMRect;
+      }
+      if (this.classList.contains("todo-list")) {
+        return { top: 0, left: 0, right: 320, bottom: listBottom, width: 320, height: listBottom, x: 0, y: 0, toJSON: () => ({}) } as DOMRect;
+      }
+      return { top: 0, left: 0, right: 320, bottom: 300, width: 320, height: 300, x: 0, y: 0, toJSON: () => ({}) } as DOMRect;
+    });
+    localStorage.setItem(
+      STORAGE_KEY,
+      JSON.stringify({
+        todoLists: [{ id: "heavy", title: "任务", collapsed: false, compact: false }],
+        todos: { heavy: buildTodos(3) },
+      }),
+    );
+    const wrapper = mountApp();
+
+    try {
+      await wrapper.get(".todo-item").trigger("contextmenu");
+      await wrapper.findAll(".dropdown-option").find((option) => option.text() === "Tips")?.trigger("click");
+      await flushPromises();
+      await wrapper.vm.$nextTick();
+
+      const position = wrapper.getComponent(CompanionBubble).props("position") as { bottom?: string } | undefined;
+      expect(position?.bottom).toContain(`${sectionBottom}`);
+      expect(position?.bottom).not.toContain(`${listBottom}`);
+    } finally {
+      rectSpy.mockRestore();
+      wrapper.unmount();
+      vi.useRealTimers();
+    }
+  });
+
   it("creates reminder lists with completed reminders hidden by default", async () => {
     const wrapper = mountApp();
 
@@ -2938,11 +3162,11 @@ describe("App shell", () => {
     }
   });
 
-  it("does not warn when previewing the twentieth image", async () => {
+  it("does not warn when previewing the tenth image", async () => {
     localStorage.setItem(
       STORAGE_KEY,
       JSON.stringify({
-        images: buildStoredImages(20),
+        images: buildStoredImages(10),
       }),
     );
     const wrapper = mountApp();
@@ -2959,12 +3183,12 @@ describe("App shell", () => {
     }
   });
 
-  it("shows a declutter bubble when previewing images after the list passes twenty items", async () => {
+  it("shows a declutter bubble when previewing images after the list passes ten items", async () => {
     vi.spyOn(Math, "random").mockReturnValue(0);
     localStorage.setItem(
       STORAGE_KEY,
       JSON.stringify({
-        images: buildStoredImages(21),
+        images: buildStoredImages(11),
       }),
     );
     const wrapper = mountApp();
@@ -5555,14 +5779,14 @@ describe("App shell", () => {
     }
   });
 
-  it("shows a declutter companion bubble and GIF when a quick-action tag has more than twelve visible buttons", async () => {
+  it("shows a declutter companion bubble and GIF when a quick-action tag has more than eight visible buttons", async () => {
     vi.useFakeTimers();
     localStorage.setItem(
       STORAGE_KEY,
       JSON.stringify({
         ...defaultState(),
         quickTags: [{ id: "tag-work", title: "工作" }],
-        quickButtons: Array.from({ length: 13 }, (_, index) => ({
+        quickButtons: Array.from({ length: 9 }, (_, index) => ({
           id: `quick-${index}`,
           title: `按钮 ${index + 1}`,
           value: `https://example.com/${index}`,
