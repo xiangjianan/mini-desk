@@ -1214,6 +1214,80 @@ describe("ImagePreview", () => {
     }
   });
 
+  it("copies the active image with Ctrl+C and pastes with Ctrl+V in preview", async () => {
+    const wrapper = mount(ImagePreview, {
+      props: {
+        images: [
+          { id: "img-1", src: "data:image/png;base64,one", createdAt: 1 },
+          { id: "img-2", src: "data:image/png;base64,two", createdAt: 2 },
+        ],
+        activeId: "img-2",
+      },
+      global: {
+        stubs: {
+          Button: buttonStub,
+          Dropdown: dropdownStub,
+          Modal: modalStub,
+          NButton: buttonStub,
+          NDropdown: dropdownStub,
+          NModal: modalStub,
+        },
+      },
+    });
+
+    try {
+      const surface = wrapper.get(".image-preview");
+
+      await surface.trigger("keydown", { key: "c", ctrlKey: true });
+      expect(wrapper.emitted("copy")).toEqual([["img-2"]]);
+
+      await surface.trigger("keydown", { key: "v", ctrlKey: true });
+      const pasteEvents = wrapper.emitted("paste");
+      expect(pasteEvents).toHaveLength(1);
+      const request = pasteEvents?.[0]?.[0] as { placement: string; targetId: string };
+      expect(request.placement).toBe("after");
+      expect(request.targetId).toBe("img-2");
+
+      // Cmd (meta) is equivalent to Ctrl on macOS.
+      await surface.trigger("keydown", { key: "c", metaKey: true });
+      expect(wrapper.emitted("copy")).toHaveLength(2);
+    } finally {
+      wrapper.unmount();
+    }
+  });
+
+  it("leaves Ctrl+C and Ctrl+V to the editor while editing", async () => {
+    const wrapper = mount(ImagePreview, {
+      props: {
+        images: [{ id: "img-1", src: "data:image/png;base64,one", createdAt: 1, displayWidth: 400, displayHeight: 300 }],
+        activeId: "img-1",
+      },
+      global: {
+        stubs: {
+          Button: buttonStub,
+          Dropdown: dropdownStub,
+          Modal: modalStub,
+          NButton: buttonStub,
+          NDropdown: dropdownStub,
+          NModal: modalStub,
+        },
+      },
+    });
+
+    try {
+      await wrapper.get(".image-preview").trigger("keydown", { key: "Enter" });
+      expect(wrapper.find(".image-editor").exists()).toBe(true);
+
+      await wrapper.get(".image-preview").trigger("keydown", { key: "c", ctrlKey: true });
+      await wrapper.get(".image-preview").trigger("keydown", { key: "v", ctrlKey: true });
+
+      expect(wrapper.emitted("copy")).toBeUndefined();
+      expect(wrapper.emitted("paste")).toBeUndefined();
+    } finally {
+      wrapper.unmount();
+    }
+  });
+
   it("routes window undo and redo shortcuts to the active image editor history", async () => {
     const wrapper = mount(ImagePreview, {
       props: {

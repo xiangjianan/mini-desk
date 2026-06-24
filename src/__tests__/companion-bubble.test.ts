@@ -433,6 +433,43 @@ describe("CompanionBubble", () => {
     wrapper.unmount();
   });
 
+  it("confirms via Enter before the 200ms popover entrance delay elapses", async () => {
+    vi.useFakeTimers();
+    const target = document.createElement("div");
+    document.body.appendChild(target);
+    let targetHandled = false;
+    target.addEventListener("keydown", () => {
+      targetHandled = true;
+    });
+    const wrapper = mount(CompanionBubble, {
+      attachTo: document.body,
+      props: {
+        visible: true,
+        message: "确认删除吗",
+        confirm: true,
+      },
+      global: {
+        stubs: {
+          NButton: buttonStub,
+          NPopover: popoverStub,
+        },
+      },
+    });
+
+    await wrapper.vm.$nextTick();
+    // The popover entrance animation has NOT finished yet (delayedPopoverVisible is still
+    // false until 200ms), but a confirm is logically pending — a fast Enter must still confirm.
+    expect(wrapper.emitted("yes")).toBeUndefined();
+
+    target.dispatchEvent(new KeyboardEvent("keydown", { key: "Enter", bubbles: true }));
+
+    expect(wrapper.emitted("yes")).toHaveLength(1);
+    expect(targetHandled).toBe(false);
+
+    wrapper.unmount();
+    target.remove();
+  });
+
   it("ignores Enter while editing a form field", async () => {
     vi.useFakeTimers();
     const input = document.createElement("input");

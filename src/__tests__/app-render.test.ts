@@ -2305,6 +2305,44 @@ describe("App shell", () => {
     }
   });
 
+  it("copies the previewed image through the global Cmd/Ctrl+C shortcut even when the preview surface is not focused", async () => {
+    installMemoryImageDb();
+    localStorage.setItem(
+      STORAGE_KEY,
+      JSON.stringify({
+        images: [{ id: "img-1", src: "data:image/png;base64,b25l", createdAt: 1, displayWidth: 120, displayHeight: 80 }],
+      }),
+    );
+    const write = vi.fn().mockResolvedValue(undefined);
+    vi.stubGlobal(
+      "ClipboardItem",
+      class {
+        constructor(_items: Record<string, Blob | Promise<Blob>>) {}
+      },
+    );
+    Object.assign(navigator, { clipboard: { write } });
+    const wrapper = mountApp();
+
+    try {
+      wrapper.getComponent(ImagePanel).vm.$emit("preview", "img-1");
+      await wrapper.vm.$nextTick();
+      await flushAsyncComponents();
+      expect(getImagePreview(wrapper).props("activeId")).toBe("img-1");
+
+      // Event dispatched on window (focus is not on the preview surface),
+      // so only the global keydown handler can service Cmd+C.
+      window.dispatchEvent(new KeyboardEvent("keydown", { key: "c", metaKey: true, cancelable: true }));
+
+      await vi.waitFor(() => {
+        expect(write).toHaveBeenCalledTimes(1);
+      });
+    } finally {
+      wrapper.unmount();
+      vi.unstubAllGlobals();
+      delete (navigator as { clipboard?: unknown }).clipboard;
+    }
+  });
+
   it("reopens preview image editing with Enter after saving instead of copying the image", async () => {
     const restoreIndexedDb = installMemoryImageDb();
     localStorage.setItem(

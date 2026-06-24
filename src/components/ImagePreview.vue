@@ -7,7 +7,7 @@ import type { DropdownOption } from "naive-ui";
 import { getImageItemContextMenuItems } from "../state/imageContextMenu";
 import type { ImageContextMenuKey } from "../state/imageContextMenu";
 import { getUiText } from "../state/i18n";
-import type { AppLanguage, StoredImage } from "../types";
+import type { AppLanguage, ImagePasteRequest, StoredImage } from "../types";
 import { CONTEXT_MENU_Z_INDEX, createExclusiveContextMenu } from "../utils/contextMenu";
 import ImageEditor from "./ImageEditor.vue";
 
@@ -29,6 +29,7 @@ const emit = defineEmits<{
   navigate: [direction: number];
   reorder: [dragId: string, targetId: string];
   moveToBottom: [id: string];
+  paste: [request: ImagePasteRequest];
   tips: [anchor?: HTMLElement];
   saveEdit: [payload: { id: string; src: string; displayWidth: number; displayHeight: number }];
 }>();
@@ -353,6 +354,23 @@ function handleKeydown(event: KeyboardEvent): void {
     event.preventDefault();
     event.stopPropagation();
     return;
+  }
+  if (!editing.value && (event.ctrlKey || event.metaKey)) {
+    if (key === "c") {
+      event.preventDefault();
+      event.stopPropagation();
+      emit("copy", active.value.id);
+      return;
+    }
+    if (key === "v") {
+      const anchor = previewImageRef.value ?? previewRef.value;
+      if (anchor) {
+        event.preventDefault();
+        event.stopPropagation();
+        emit("paste", { placement: "after", targetId: active.value.id, anchor });
+      }
+      return;
+    }
   }
   if (event.key === "Escape" || event.key === " ") {
     event.preventDefault();

@@ -1885,6 +1885,19 @@ function handleGlobalKeydown(event: KeyboardEvent): void {
   const previewId = activePreviewId.value;
   if (previewId) {
     const key = event.key.toLowerCase();
+    if ((event.ctrlKey || event.metaKey) && key === "c") {
+      event.preventDefault();
+      void copyImage(previewId, document.querySelector<HTMLElement>(".image-preview") ?? undefined);
+      return;
+    }
+    if ((event.ctrlKey || event.metaKey) && key === "v") {
+      event.preventDefault();
+      const anchor = document.querySelector<HTMLElement>(".preview-stage img")
+        ?? document.querySelector<HTMLElement>(".image-preview")
+        ?? document.body;
+      void pasteImageFromClipboard({ placement: "after", targetId: previewId, anchor });
+      return;
+    }
     if (event.key === "Escape" || event.key === " ") {
       event.preventDefault();
       closeImagePreview();
@@ -2959,6 +2972,7 @@ function moveItem<T extends { id: string }>(items: T[], dragId: string, targetId
       :language="state.language"
       @close="clearImagePreview"
       @copy="copyImage"
+      @paste="pasteImageFromClipboard"
       @delete="deleteImage"
       @navigate="navigatePreview"
       @reorder="reorderImages"

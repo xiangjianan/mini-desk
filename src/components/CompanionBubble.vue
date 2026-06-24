@@ -268,7 +268,11 @@ onUnmounted(() => {
 
 function handleConfirmKeydown(event: KeyboardEvent): void {
   if (event.key !== "Enter") return;
-  if (!renderedConfirm.value || !visiblePopover.value) return;
+  // Gate on the logical confirm state, not the popover's 200ms entrance animation
+  // (visiblePopover). A confirm is pending the moment `requestConfirmation` runs, so a
+  // fast Enter right after the trigger (e.g. Delete) must confirm immediately — otherwise
+  // it falls through to inline handlers (like the image preview's Enter-to-edit).
+  if (!props.confirm) return;
   const target = event.target;
   if (target instanceof HTMLElement && target.closest("input, textarea, select, [contenteditable]")) return;
   event.preventDefault();

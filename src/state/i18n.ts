@@ -727,7 +727,7 @@ export const UI_TEXT = {
       list: "预览图片列表",
       thumbnailAlt: "预览缩略图",
       imageAlt: "图片预览",
-      help: "上下按钮/WASD 切换图片 · 双击缩放 · 拖动平移 · Enter 编辑 · 5 复制 · Delete 删除 · Space/Esc 关闭",
+      help: "上下按钮/WASD 切换图片 · 双击缩放 · 拖动平移 · Enter 编辑 · Ctrl+C 复制 · Ctrl+V 粘贴 · Delete 删除 · Space/Esc 关闭",
     },
     imageEditor: {
       title: "编辑图片",
@@ -986,7 +986,7 @@ export const UI_TEXT = {
       list: "Preview image list",
       thumbnailAlt: "Preview thumbnail",
       imageAlt: "Image preview",
-      help: "Stacked buttons/WASD switch images · Double-click zooms · Drag pans · Enter edits · 5 copies · Delete removes · Space/Esc closes",
+      help: "Stacked buttons/WASD switch images · Double-click zooms · Drag pans · Enter edits · Ctrl+C copies · Ctrl+V pastes · Delete removes · Space/Esc closes",
     },
     imageEditor: {
       title: "Edit image",
