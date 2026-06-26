@@ -14,14 +14,17 @@ Use this workflow for this repository.
    - If not on `main`, switch only when it will not overwrite work.
    - Inspect dirty files before staging. Do not discard unrelated user changes.
 
-2. Bump the version in `package.json`.
+2. Bump the version in all three places it is hardcoded.
    - Read the current version.
    - If the user did not specify a version, increment the patch version.
-   - Use `npm version <version> --no-git-tag-version` or a scoped package edit.
-   - If `package-lock.json` exists, keep it in sync.
+   - Use `npm version <version> --no-git-tag-version` (updates `package.json` and `package-lock.json`).
+   - Also update the same version string in:
+     - `index.html` → `<meta name="app-version" content="<version>" />`
+     - `src/state/version.ts` → `FALLBACK_APP_VERSION`
+   - All three must match; `src/__tests__/version.test.ts` enforces consistency and will fail the release otherwise.
 
 3. Verify before committing.
-   - Run focused tests relevant to the current changes when known.
+   - Run `npm test` (this includes `version.test.ts`, which fails if the version locations disagree).
    - Run `npm run build`.
    - If verification fails, fix the failure before publishing.
 
