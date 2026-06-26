@@ -47,7 +47,7 @@ import {
   updateTodoText,
 } from "./state/todos";
 import { defaultState, STORAGE_KEY } from "./state/defaults";
-import { QUICK_DENSITY_THRESHOLD } from "./state/quickButtons";
+import { QUICK_DENSITY_THRESHOLD, formatQuickCopiedPreview } from "./state/quickButtons";
 import {
   createId,
   exportJsonState,
@@ -1325,6 +1325,11 @@ function moveQuickButtonToTag(buttonId: string, tagId?: string, targetId?: strin
   persistNow();
 }
 
+function getQuickTextCopiedMessage(value: string): string {
+  const preview = formatQuickCopiedPreview(value);
+  return state.language === "en" ? `📋 Copied: ${preview}` : `📋 已复制：${preview}`;
+}
+
 async function handleQuickButton(id: string, anchor?: HTMLElement): Promise<void> {
   const button = state.quickButtons.find((item) => item.id === id);
   if (!button) return;
@@ -1339,9 +1344,11 @@ async function handleQuickButton(id: string, anchor?: HTMLElement): Promise<void
   }
   const copied = await copyText(button.value, shouldBlockBoardEffects);
   if (shouldBlockBoardEffects()) return;
-  showBubble(copied ? "quickTextCopied" : "quickTextCopyFailed", anchor, {
-    hideCompanionAfter: true,
-  });
+  if (copied) {
+    showBubbleText(getQuickTextCopiedMessage(button.value), anchor, { hideCompanionAfter: true }, 4000);
+  } else {
+    showBubble("quickTextCopyFailed", anchor, { hideCompanionAfter: true });
+  }
 }
 
 async function callQuickApi(button: QuickButton, anchor?: HTMLElement): Promise<void> {

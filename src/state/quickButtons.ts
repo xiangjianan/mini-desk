@@ -66,3 +66,12 @@ export function hasOverloadedVisibleQuickButtonGroup(
 
   return false;
 }
+
+const QUICK_COPY_PREVIEW_MAX_LENGTH = 120;
+
+/** Collapse whitespace and cap length for showing copied text inside a bubble. */
+export function formatQuickCopiedPreview(value: string, maxLength = QUICK_COPY_PREVIEW_MAX_LENGTH): string {
+  const collapsed = value.replace(/\s+/g, " ").trim();
+  if (collapsed.length <= maxLength) return collapsed;
+  return `${collapsed.slice(0, maxLength)}…`;
+}

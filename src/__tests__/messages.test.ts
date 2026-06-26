@@ -34,7 +34,6 @@ const messageKeys = [
   "imageDropIgnored",
   "imageDropEmpty",
   "quickLinkCopied",
-  "quickTextCopied",
   "quickTextCopyFailed",
   "declutter",
   "quickDeclutter",

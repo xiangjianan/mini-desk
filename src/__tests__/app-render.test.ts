@@ -3010,8 +3010,10 @@ describe("App shell", () => {
       await vi.advanceTimersByTimeAsync(200);
       await wrapper.vm.$nextTick();
       expect(wrapper.find('[data-testid="companion-confirm"]').exists()).toBe(true);
+      expect(wrapper.get('[data-testid="companion-confirm"]').text()).toContain("已复制");
+      expect(wrapper.get('[data-testid="companion-confirm"]').text()).toContain("复制内容");
 
-      await vi.advanceTimersByTimeAsync(3000);
+      await vi.advanceTimersByTimeAsync(4000);
       await wrapper.vm.$nextTick();
 
       expect(wrapper.find(".companion-popover-shell").classes()).toContain("is-popover-fading");

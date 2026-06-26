@@ -365,7 +365,8 @@ function handleToggleShowHidden(anchor?: HTMLElement): void {
 
 function handleQuickDragOver(event: DragEvent): void {
   const types = Array.from(event.dataTransfer?.types ?? []);
-  if (types.includes("text/plain") && !types.includes("Files")) {
+  const hasText = types.includes("text/plain") || types.includes("text/uri-list");
+  if (hasText && !types.includes("Files")) {
     event.preventDefault();
     event.dataTransfer!.dropEffect = "copy";
     isDragHover.value = true;
@@ -384,19 +385,49 @@ function handleQuickDragEnd(): void {
   dragScroll.stop();
 }
 
+function readQuickDropText(transfer: DataTransfer | null): string {
+  if (!transfer) return "";
+  const plain = transfer.getData("text/plain");
+  if (plain.trim()) return plain;
+  // Windows often exposes dragged URLs only as text/uri-list (no text/plain flavor).
+  const uriList = transfer.getData("text/uri-list");
+  if (uriList.trim()) {
+    const firstUrl = uriList.split(/\r?\n/).find((line) => {
+      const trimmed = line.trim();
+      return trimmed.length > 0 && !trimmed.startsWith("#");
+    });
+    if (firstUrl) return firstUrl.trim();
+  }
+  return "";
+}
+
+function buildQuickDropPayload(rawText: string, groupId?: string): { title: string; value: string; type: QuickButtonType; tagTitle?: string } {
+  const text = rawText.trim();
+  const isUrl = /^https?:\/\//.test(text);
+  const title = isUrl
+    ? (() => { try { return new URL(text).hostname; } catch { return text.slice(0, 20); } })()
+    : text.slice(0, 20);
+  const type: QuickButtonType = isUrl ? "link" : "text";
+  const tagTitle = groupId && isRealTagGroup(groupId)
+    ? props.tags.find((tag) => tag.id === groupId)?.title
+    : undefined;
+  return { title, value: text, type, tagTitle };
+}
+
+function handleExternalQuickDrop(event: DragEvent, groupId: string): boolean {
+  if (draggingId.value || draggingTagId.value) return false;
+  const text = readQuickDropText(event.dataTransfer);
+  if (!text.trim()) return false;
+  emit("save", buildQuickDropPayload(text, groupId));
+  return true;
+}
+
 function handleQuickDrop(event: DragEvent): void {
   event.preventDefault();
   isDragHover.value = false;
-  const text = event.dataTransfer?.getData("text/plain") ?? "";
+  const text = readQuickDropText(event.dataTransfer);
   if (!text.trim()) return;
-
-  const isUrl = /^https?:\/\//.test(text.trim());
-  const title = isUrl
-    ? (() => { try { return new URL(text.trim()).hostname; } catch { return text.trim().slice(0, 20); } })()
-    : text.trim().slice(0, 20);
-  const type: QuickButtonType = isUrl ? "link" : "text";
-
-  emit("save", { title, value: text.trim(), type });
+  emit("save", buildQuickDropPayload(text));
 }
 
 const MOVE_DURATION = 220;
@@ -453,17 +484,26 @@ function onQuickAfterMove(el: Element): void {
   e.style.transition = "";
 }
 
-function onTagDrop(groupId: string): void {
+function onTagDrop(event: DragEvent, groupId: string): void {
   if (draggingId.value && isQuickButtonTargetGroup(groupId)) {
     const targetTagId = getGroupTagId(groupId);
     if (getQuickButtonTagId(draggingId.value) !== targetTagId) emit("moveToTag", draggingId.value, targetTagId);
     return;
   }
+  if (handleExternalQuickDrop(event, groupId)) return;
   if (!draggingTagId.value || draggingTagId.value === groupId || !isRealTagGroup(groupId)) return;
   emit("reorderTag", draggingTagId.value, groupId);
 }
 
 function handleTagDragOver(event: DragEvent, groupId: string): void {
+  const types = Array.from(event.dataTransfer?.types ?? []);
+  const isExternalText = !draggingId.value && !draggingTagId.value
+    && !types.includes("Files")
+    && (types.includes("text/plain") || types.includes("text/uri-list"));
+  if (isExternalText) {
+    event.preventDefault();
+    return;
+  }
   if (!isQuickButtonTargetGroup(groupId) && !isRealTagGroup(groupId)) return;
   if (!draggingId.value && !draggingTagId.value) return;
   if (draggingTagId.value && !isRealTagGroup(groupId)) return;
@@ -498,13 +538,14 @@ function handleQuickButtonDrop(targetButtonId: string, targetGroupId: string): v
   emit("reorder", draggingId.value, targetButtonId);
 }
 
-function handleQuickGroupDrop(groupId: string): void {
+function handleQuickGroupDrop(event: DragEvent, groupId: string): void {
   if (draggingId.value && isQuickButtonTargetGroup(groupId)) {
     const targetTagId = getGroupTagId(groupId);
     if (getQuickButtonTagId(draggingId.value) !== targetTagId) emit("moveToTag", draggingId.value, targetTagId);
     return;
   }
-  onTagDrop(groupId);
+  if (handleExternalQuickDrop(event, groupId)) return;
+  onTagDrop(event, groupId);
 }
 </script>
 
@@ -549,7 +590,7 @@ function handleQuickGroupDrop(groupId: string): void {
           class="quick-tag-group"
           :data-tag-id="group.id"
           @dragover="handleTagDragOver($event, group.id)"
-          @drop.stop.prevent="handleQuickGroupDrop(group.id)"
+          @drop.stop.prevent="handleQuickGroupDrop($event, group.id)"
         >
           <div
             v-if="group.title"
@@ -559,7 +600,7 @@ function handleQuickGroupDrop(groupId: string): void {
             @dblclick="startInlineTagRename(group.id, group.title)"
             @dragstart="group.reorderable && editingTagId !== group.id && (draggingTagId = group.id)"
             @dragover="handleTagDragOver($event, group.id)"
-            @drop.stop.prevent="onTagDrop(group.id)"
+            @drop.stop.prevent="onTagDrop($event, group.id)"
             @dragend="draggingTagId = null"
           >
             <input

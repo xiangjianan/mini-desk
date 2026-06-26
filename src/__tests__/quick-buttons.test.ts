@@ -3,7 +3,7 @@ import { readFileSync } from "node:fs";
 import { resolve } from "node:path";
 import { describe, expect, it } from "vitest";
 import QuickButtons from "../components/QuickButtons.vue";
-import { buildVisibleQuickButtonGroups, hasOverloadedVisibleQuickButtonGroup } from "../state/quickButtons";
+import { buildVisibleQuickButtonGroups, formatQuickCopiedPreview, hasOverloadedVisibleQuickButtonGroup } from "../state/quickButtons";
 
 const buttonStub = {
   template: '<button v-bind="$attrs"><slot /></button>',
@@ -351,6 +351,103 @@ describe("QuickButtons", () => {
     await wrapper.findAll(".quick-tag-group")[1].trigger("drop");
 
     expect(wrapper.emitted("moveToTag")?.[0]).toEqual(["a", undefined]);
+
+    wrapper.unmount();
+  });
+
+  it("accepts an external text/plain drop and creates a text quick button", async () => {
+    const wrapper = mountQuickButtons({
+      buttons: [{ id: "a", title: "A", value: "a", type: "text", hidden: false }],
+    });
+    const dataTransfer = {
+      types: ["text/plain"],
+      files: [],
+      getData: (type: string) => (type === "text/plain" ? "随便一段文字" : ""),
+    };
+
+    await wrapper.get(".quick-block").trigger("dragover", { dataTransfer });
+    expect(wrapper.get(".quick-block").classes()).toContain("drag-hover");
+
+    await wrapper.get(".quick-block").trigger("drop", { dataTransfer });
+
+    expect(wrapper.emitted("save")?.[0][0]).toMatchObject({
+      title: "随便一段文字",
+      value: "随便一段文字",
+      type: "text",
+    });
+
+    wrapper.unmount();
+  });
+
+  it("accepts an external text/uri-list drop without text/plain (Windows drag scenario)", async () => {
+    const wrapper = mountQuickButtons({
+      buttons: [{ id: "a", title: "A", value: "a", type: "text", hidden: false }],
+    });
+    const dataTransfer = {
+      types: ["text/uri-list"],
+      files: [],
+      getData: (type: string) => (type === "text/uri-list" ? "https://example.com/page" : ""),
+    };
+
+    await wrapper.get(".quick-block").trigger("dragover", { dataTransfer });
+    expect(wrapper.get(".quick-block").classes()).toContain("drag-hover");
+
+    await wrapper.get(".quick-block").trigger("drop", { dataTransfer });
+
+    expect(wrapper.emitted("save")?.[0][0]).toMatchObject({
+      title: "example.com",
+      value: "https://example.com/page",
+      type: "link",
+    });
+
+    wrapper.unmount();
+  });
+
+  it("creates a tagged quick button when external text is dropped on a tag group", async () => {
+    const wrapper = mountQuickButtons({
+      tags: [{ id: "tag-work", title: "工作" }],
+      buttons: [
+        { id: "tagged", title: "T", value: "t", type: "text", hidden: false, tagId: "tag-work" },
+        { id: "other", title: "未分类", value: "o", type: "text", hidden: false },
+      ],
+    });
+    const dataTransfer = {
+      types: ["text/uri-list"],
+      files: [],
+      getData: (type: string) => (type === "text/uri-list" ? "https://example.com/page" : ""),
+    };
+
+    await wrapper.findAll(".quick-tag-group")[0].trigger("drop", { dataTransfer });
+
+    expect(wrapper.emitted("save")?.[0][0]).toMatchObject({
+      title: "example.com",
+      value: "https://example.com/page",
+      type: "link",
+      tagTitle: "工作",
+    });
+
+    wrapper.unmount();
+  });
+
+  it("creates an untagged quick button when external text is dropped on the other group", async () => {
+    const wrapper = mountQuickButtons({
+      tags: [{ id: "tag-work", title: "工作" }],
+      buttons: [
+        { id: "tagged", title: "T", value: "t", type: "text", hidden: false, tagId: "tag-work" },
+        { id: "other", title: "未分类", value: "o", type: "text", hidden: false },
+      ],
+    });
+    const dataTransfer = {
+      types: ["text/plain"],
+      files: [],
+      getData: (type: string) => (type === "text/plain" ? "一段外部文字" : ""),
+    };
+
+    await wrapper.findAll(".quick-tag-group")[1].trigger("drop", { dataTransfer });
+
+    const savePayload = wrapper.emitted("save")?.[0][0] as Record<string, unknown>;
+    expect(savePayload).toMatchObject({ title: "一段外部文字", value: "一段外部文字", type: "text" });
+    expect(savePayload.tagTitle).toBeUndefined();
 
     wrapper.unmount();
   });
@@ -786,5 +883,22 @@ describe("QuickButtons", () => {
     await wrapper.findAll(".quick-button")[0].trigger("dragend");
     expect(wrapper.findAll(".quick-button")[0].classes()).not.toContain("is-dragging");
     wrapper.unmount();
+  });
+});
+
+describe("formatQuickCopiedPreview", () => {
+  it("collapses whitespace and trims the copied text", () => {
+    expect(formatQuickCopiedPreview("  hello   world  ")).toBe("hello world");
+  });
+
+  it("returns short text unchanged aside from trimming", () => {
+    expect(formatQuickCopiedPreview("已复制内容")).toBe("已复制内容");
+  });
+
+  it("truncates long text with an ellipsis", () => {
+    const long = "a".repeat(200);
+    const preview = formatQuickCopiedPreview(long);
+    expect(preview.length).toBeLessThan(long.length);
+    expect(preview.endsWith("…")).toBe(true);
   });
 });

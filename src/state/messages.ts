@@ -23,7 +23,6 @@ export type MessageKey =
   | "imageDropIgnored"
   | "imageDropEmpty"
   | "quickLinkCopied"
-  | "quickTextCopied"
   | "quickTextCopyFailed"
   | "declutter"
   | "quickDeclutter"
@@ -418,22 +417,6 @@ export const MESSAGE_CATALOG: Record<MessageKey, MessageEntry> = {
       "剪贴板有链接",
       "复制链接完成",
       "链接收进剪贴板",
-    ],
-  },
-  quickTextCopied: {
-    mood: "happy",
-    surface: "companion",
-    variants: [
-      "文本已复制",
-      "文字复制好了",
-      "剪贴板已收好",
-      "可以去粘贴啦",
-      "文本进剪贴板",
-      "复制文本完成",
-      "文字已备好",
-      "可以粘贴文本",
-      "文本已带走",
-      "内容已复制",
     ],
   },
   quickTextCopyFailed: {
@@ -1030,7 +1013,6 @@ const EN_MESSAGE_VARIANTS = {
   imageDropIgnored: ["Non-image files were skipped", "Only images were added", "Unsupported files were ignored"],
   imageDropEmpty: ["No valid images found", "Drop image files here", "Only image files are supported"],
   quickLinkCopied: ["Link copied", "Link is ready to paste", "Shortcut link copied"],
-  quickTextCopied: ["Text copied", "Shortcut text copied", "Text is ready to paste"],
   quickTextCopyFailed: ["Could not copy text", "Text copy failed", "Try copying again"],
   declutter: ["There is a lot here. Trim a few things.", "Keep the important items and remove the rest.", "A lighter list is easier to act on."],
   quickDeclutter: ["Too many quick actions. Keep the ones you use most.", "Trim a few quick links and API shortcuts.", "A lighter quick-action area is easier to scan."],
