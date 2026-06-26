@@ -416,6 +416,9 @@ function buildQuickDropPayload(rawText: string, groupId?: string): { title: stri
 
 function handleExternalQuickDrop(event: DragEvent, groupId: string): boolean {
   if (draggingId.value || draggingTagId.value) return false;
+  // Inner group/heading drops use .stop, so the outer handleQuickDrop (which clears
+  // isDragHover) never runs — clear the drag-hover frame here too.
+  isDragHover.value = false;
   const text = readQuickDropText(event.dataTransfer);
   if (!text.trim()) return false;
   emit("save", buildQuickDropPayload(text, groupId));
@@ -527,6 +530,7 @@ function getGroupTagId(groupId: string): string | undefined {
 }
 
 function handleQuickButtonDrop(targetButtonId: string, targetGroupId: string): void {
+  isDragHover.value = false;
   if (!draggingId.value || draggingId.value === targetButtonId) return;
   if (isQuickButtonTargetGroup(targetGroupId)) {
     const targetTagId = getGroupTagId(targetGroupId);

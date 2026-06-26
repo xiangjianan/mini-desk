@@ -452,6 +452,27 @@ describe("QuickButtons", () => {
     wrapper.unmount();
   });
 
+  it("clears the drag-hover frame after an external text drop on a tag group", async () => {
+    const wrapper = mountQuickButtons({
+      tags: [{ id: "tag-work", title: "工作" }],
+      buttons: [{ id: "tagged", title: "T", value: "t", type: "text", hidden: false, tagId: "tag-work" }],
+    });
+    const dataTransfer = {
+      types: ["text/plain"],
+      files: [],
+      getData: (type: string) => (type === "text/plain" ? "外部文字" : ""),
+    };
+
+    await wrapper.get(".quick-block").trigger("dragover", { dataTransfer });
+    expect(wrapper.get(".quick-block").classes()).toContain("drag-hover");
+
+    await wrapper.findAll(".quick-tag-group")[0].trigger("drop", { dataTransfer });
+
+    expect(wrapper.get(".quick-block").classes()).not.toContain("drag-hover");
+
+    wrapper.unmount();
+  });
+
   it("emits a declutter prompt when one quick tag has more than eight visible buttons", async () => {
     const wrapper = mountQuickButtons({
       tags: [{ id: "tag-work", title: "工作" }],
