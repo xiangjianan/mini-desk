@@ -179,8 +179,8 @@ const GITHUB_REPO_LABEL = "xiangjianan / mini-desk";
 const ABOUT_MESSAGE_DURATION_MS = 10000;
 const COMPANION_FADE_MS = 2000;
 const MIN_COMPANION_POPOVER_RIGHT_EDGE = 260;
-const DEFAULT_DOCUMENT_TITLE = "Mini Desk";
-const NOTIFICATION_DOCUMENT_TITLE = "🔔 新提醒 · Mini Desk";
+const DEFAULT_BOARD_TITLE = "Mini Desk";
+const DEFAULT_BOARD_SLOGAN = "Do less, do it well.";
 const TITLE_FLASH_INTERVAL_MS = 750;
 const TODO_NOTIFICATION_FLASH_MS = 2400;
 const activeGuideKey = ref<GuideKey | null>(null);
@@ -221,6 +221,9 @@ const titles = computed(() =>
     Object.entries(getDefaultTitles(state.language)).map(([id, title]) => [id, state.customTitles[id] || title]),
   ) as Record<string, string>,
 );
+const boardTitle = computed(() => state.customTitles["board-title"]?.trim() || DEFAULT_BOARD_TITLE);
+const boardSlogan = computed(() => state.customTitles["board-slogan"]?.trim() || DEFAULT_BOARD_SLOGAN);
+const notificationDocumentTitle = computed(() => `🔔 新提醒 · ${boardTitle.value}`);
 const displayTodoLists = computed<TodoListConfig[]>(() =>
   state.todoLists.map((list) => ({
     ...list,
@@ -278,6 +281,7 @@ function teardownMobileBreakpoint(): void {
 onMounted(async () => {
   appMounted = true;
   applyTheme();
+  document.title = boardTitle.value;
   setupMobileBreakpoint();
   try {
     state.customCompanionGif = await hydrateCustomCompanionGif(state.customCompanionGif, state.customCompanionGifStored);
@@ -331,6 +335,10 @@ watch(
     persistNow();
   },
 );
+
+watch(boardTitle, (value) => {
+  if (!titleFlashActive.value) document.title = value;
+});
 
 function updateTitle(id: string, value: string): void {
   const title = value.trim();
@@ -1342,6 +1350,18 @@ async function handleQuickButton(id: string, anchor?: HTMLElement): Promise<void
     await callQuickApi(button, anchor);
     return;
   }
+  const copied = await copyText(button.value, shouldBlockBoardEffects);
+  if (shouldBlockBoardEffects()) return;
+  if (copied) {
+    showBubbleText(getQuickTextCopiedMessage(button.value), anchor, { hideCompanionAfter: true }, 4000);
+  } else {
+    showBubble("quickTextCopyFailed", anchor, { hideCompanionAfter: true });
+  }
+}
+
+async function copyQuickLink(id: string, anchor?: HTMLElement): Promise<void> {
+  const button = state.quickButtons.find((item) => item.id === id);
+  if (!button) return;
   const copied = await copyText(button.value, shouldBlockBoardEffects);
   if (shouldBlockBoardEffects()) return;
   if (copied) {
@@ -2390,7 +2410,7 @@ function clearTimers(): void {
   notificationFlashTimers.clear();
   notificationFlashKeys.value = [];
   pendingNotificationFlashKeys.value = [];
-  document.title = DEFAULT_DOCUMENT_TITLE;
+  document.title = boardTitle.value;
   emptyTodoRemovalTimers.forEach((timer) => window.clearTimeout(timer));
   emptyTodoRemovalTimers.clear();
 }
@@ -2511,14 +2531,14 @@ function startNotificationTitleFlash(): void {
   if (titleFlashActive.value) return;
   titleFlashActive.value = true;
   titleFlashAltVisible.value = true;
-  document.title = NOTIFICATION_DOCUMENT_TITLE;
+  document.title = notificationDocumentTitle.value;
   titleFlashTimer.value = window.setInterval(toggleNotificationTitle, TITLE_FLASH_INTERVAL_MS);
 }
 
 function toggleNotificationTitle(): void {
   if (!titleFlashActive.value) return;
   titleFlashAltVisible.value = !titleFlashAltVisible.value;
-  document.title = titleFlashAltVisible.value ? NOTIFICATION_DOCUMENT_TITLE : DEFAULT_DOCUMENT_TITLE;
+  document.title = titleFlashAltVisible.value ? notificationDocumentTitle.value : boardTitle.value;
 }
 
 function stopNotificationTitleFlash(): void {
@@ -2526,7 +2546,7 @@ function stopNotificationTitleFlash(): void {
   titleFlashTimer.value = undefined;
   titleFlashActive.value = false;
   titleFlashAltVisible.value = false;
-  document.title = DEFAULT_DOCUMENT_TITLE;
+  document.title = boardTitle.value;
 }
 
 function handleDocumentVisibilityChange(): void {
@@ -2805,11 +2825,13 @@ function moveItem<T extends { id: string }>(items: T[], dragId: string, targetId
     <NGlobalStyle />
     <WorkbenchShell
       v-if="!isMobileBlocked"
-      title="Mini Desk"
-      slogan="Do less, do it well."
+      :title="boardTitle"
+      :slogan="boardSlogan"
       :save-status-label="workspaceDensityLabel"
       :theme="state.theme"
       @theme="handleThemeClick"
+      @update-title="(value) => updateTitle('board-title', value)"
+      @update-slogan="(value) => updateTitle('board-slogan', value)"
       @dragover.prevent
       @drop.prevent="handleBoardDrop"
     >
@@ -2885,6 +2907,7 @@ function moveItem<T extends { id: string }>(items: T[], dragId: string, targetId
           @save="saveQuick"
           @delete="deleteQuick"
           @copy="handleQuickButton"
+          @copy-link="copyQuickLink"
           @toggle-hidden="toggleQuickHidden"
           @toggle-show-hidden="state.showHiddenQuickButtons = !state.showHiddenQuickButtons; persistNow()"
           @reorder="reorderQuickButtons"

@@ -4063,6 +4063,13 @@ body:has(.image-preview) .image-panel .n-scrollbar {
   font-weight: 650;
 }
 
+.workbench-title-group h1 .title-edit-input {
+  max-width: 260px;
+  height: 24px;
+  font-size: 18px;
+  font-weight: 650;
+}
+
 .workbench-slogan {
   color: var(--muted-foreground);
   font-size: 11px;

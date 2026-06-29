@@ -28,6 +28,7 @@ const emit = defineEmits<{
   save: [payload: { id?: string; title: string; value: string; type: QuickButtonType; tagTitle?: string; apiMethod?: QuickApiMethod; apiHeaders?: QuickApiHeader[]; apiBodyType?: QuickApiBodyType; apiBody?: string }];
   delete: [id: string, anchor?: HTMLElement];
   copy: [id: string, anchor?: HTMLElement];
+  copyLink: [id: string, anchor?: HTMLElement];
   toggleHidden: [id: string];
   toggleShowHidden: [];
   reorder: [dragId: string, targetId: string];
@@ -127,6 +128,9 @@ const menuOptions = computed<DropdownOption[]>(() => {
   return [
     { label: uiText.value.common.edit, key: "edit", icon: renderIcon(CreateOutline) },
     { label: button?.hidden ? uiText.value.quick.show : uiText.value.quick.hide, key: "toggle-hidden", icon: renderIcon(button?.hidden ? EyeOutline : EyeOffOutline) },
+    ...(button?.type === "link"
+      ? [{ label: uiText.value.quick.copyLink, key: "copy-link", icon: renderIcon(CopyOutline) }]
+      : []),
     { label: uiText.value.common.delete, key: "delete", icon: renderIcon(TrashOutline) },
     { ...guideMenuOption.value, icon: renderIcon(HelpCircleOutline) },
   ];
@@ -334,6 +338,7 @@ function handleMenuSelect(key: string): void {
   }
   if (key === "guide" && anchor) emit("guide", "quickButtons", anchor, true);
   if (!id) return;
+  if (key === "copy-link") emit("copyLink", id, anchor);
   if (key === "edit") openEdit(id);
   if (key === "toggle-hidden") {
     const btn = props.buttons.find((b) => b.id === id);

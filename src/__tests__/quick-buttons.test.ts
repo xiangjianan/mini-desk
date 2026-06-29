@@ -843,6 +843,40 @@ describe("QuickButtons", () => {
     wrapper.unmount();
   });
 
+  it("offers copy-link in the context menu for link quick buttons and emits copyLink", async () => {
+    const wrapper = mountQuickButtons({
+      buttons: [{ id: "quick-1", title: "链接", value: "https://example.com", type: "link", hidden: false }],
+    });
+
+    await wrapper.get(".quick-button").trigger("contextmenu");
+
+    expect(wrapper.findAll(".dropdown-option").map((option) => option.text())).toEqual([
+      "编辑",
+      "隐藏",
+      "复制链接",
+      "删除",
+      "Tips",
+    ]);
+
+    await wrapper.findAll(".dropdown-option").find((option) => option.text() === "复制链接")?.trigger("click");
+
+    expect(wrapper.emitted("copyLink")?.[0]).toEqual(["quick-1", expect.any(HTMLElement)]);
+
+    wrapper.unmount();
+  });
+
+  it("does not offer copy-link for non-link quick buttons", async () => {
+    const wrapper = mountQuickButtons({
+      buttons: [{ id: "quick-1", title: "接口", value: "https://example.com/api", type: "api", hidden: false }],
+    });
+
+    await wrapper.get(".quick-button").trigger("contextmenu");
+
+    expect(wrapper.findAll(".dropdown-option").some((option) => option.text() === "复制链接")).toBe(false);
+
+    wrapper.unmount();
+  });
+
   it("emits delete from the quick-button context menu", async () => {
     const wrapper = mountQuickButtons({
       buttons: [{ id: "quick-1", title: "片段", value: "第一行\n第二行", type: "text", hidden: false }],

@@ -1809,6 +1809,30 @@ describe("App shell", () => {
     }
   });
 
+  it("keeps the browser tab title in sync with the editable board title", async () => {
+    localStorage.setItem(
+      STORAGE_KEY,
+      JSON.stringify({ customTitles: { "board-title": "我的桌面" } }),
+    );
+    const previousTitle = document.title;
+    const wrapper = mountApp();
+
+    try {
+      await nextTick();
+      expect(document.title).toBe("我的桌面");
+
+      await wrapper.get(".workbench-title-group h1 .editable-title").trigger("dblclick");
+      await wrapper.get(".workbench-title-group h1 .title-edit-input").setValue("工作台");
+      await wrapper.get(".workbench-title-group h1 .title-edit-input").trigger("blur");
+      await nextTick();
+
+      expect(document.title).toBe("工作台");
+    } finally {
+      wrapper.unmount();
+      document.title = previousTitle;
+    }
+  });
+
   it("flashes the browser title after a due reminder notification until the tab is visible", async () => {
     vi.useFakeTimers();
     vi.setSystemTime(new Date(2026, 4, 25, 8, 0, 0));

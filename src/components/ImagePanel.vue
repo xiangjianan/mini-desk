@@ -88,6 +88,7 @@ const DRAG_EDGE_SCROLL_THRESHOLD = 44;
 const DRAG_EDGE_SCROLL_STEP = 8;
 const DRAG_WHEEL_AUTO_SCROLL_PAUSE_MS = 150;
 const IMAGE_CLICK_SUPPRESS_MS = 350;
+const IMAGE_DRAG_SORT_MIME = "application/x-mini-desk-image";
 let imagePointerDrag: ImagePointerDrag | null = null;
 let suppressImageClickUntil = 0;
 let dragScrollFrame: number | undefined;
@@ -243,6 +244,7 @@ function handleGuideClick(event: MouseEvent): void {
 function handleExternalDrop(event: DragEvent): void {
   isDragHover.value = false;
   resetImageDragAutoScroll();
+  if (hasImageSortDrag(event)) return;
   const files = Array.from(event.dataTransfer?.files ?? []);
   if (files.length === 0) return;
   emit("dropFiles", files, event.currentTarget as HTMLElement);
@@ -285,10 +287,13 @@ function handleImageNativeDragStart(event: DragEvent, image: StoredImage, index:
   cleanupImagePointerDrag();
   const mimeType = getImageDragMimeType(image.src);
   const fileName = getImageDragFileName(image, index);
-  transfer.effectAllowed = "copy";
+  // "copyMove" allows both the in-panel move sort (drop on a card) and the
+  // browser-external copy/drag-out (DownloadURL to the desktop).
+  transfer.effectAllowed = "copyMove";
   transfer.setData("DownloadURL", `${mimeType}:${fileName}:${image.src}`);
   transfer.setData("text/uri-list", image.src);
   transfer.setData("text/plain", image.src);
+  transfer.setData(IMAGE_DRAG_SORT_MIME, image.id);
 
   const file = dataUrlToFile(image.src, fileName);
   if (file) transfer.items?.add(file);
@@ -297,6 +302,7 @@ function handleImageNativeDragStart(event: DragEvent, image: StoredImage, index:
 
 function handleImageDragEnter(event: DragEvent): void {
   const types = Array.from(event.dataTransfer?.types ?? []);
+  if (types.includes(IMAGE_DRAG_SORT_MIME)) return;
   if (types.includes("text/plain") && !types.includes("Files")) {
     isDragHover.value = true;
   }
@@ -428,6 +434,25 @@ function getImageDropTargetId(clientY: number): string | null {
   }
 
   return closest?.id ?? null;
+}
+
+function hasImageSortDrag(event: DragEvent): boolean {
+  return Array.from(event.dataTransfer?.types ?? []).includes(IMAGE_DRAG_SORT_MIME);
+}
+
+function handleImageCardDragOver(event: DragEvent): void {
+  if (!hasImageSortDrag(event)) return;
+  event.preventDefault();
+  if (event.dataTransfer) event.dataTransfer.dropEffect = "move";
+}
+
+function handleImageCardDrop(event: DragEvent, targetId: string): void {
+  if (!hasImageSortDrag(event)) return;
+  const sourceId = event.dataTransfer?.getData(IMAGE_DRAG_SORT_MIME);
+  if (!sourceId || sourceId === targetId) return;
+  event.preventDefault();
+  event.stopPropagation();
+  emit("reorder", sourceId, targetId);
 }
 
 function removeImagePointerListeners(): void {
@@ -597,6 +622,8 @@ function handleImageDragWheel(event: WheelEvent): void {
         @keydown.enter.stop.prevent="emit('edit', image.id)"
         @dblclick.stop.prevent="emit('copy', image.id)"
         @contextmenu.stop="openMenu($event, image.id)"
+        @dragover="handleImageCardDragOver($event)"
+        @drop="handleImageCardDrop($event, image.id)"
         @pointerdown="handleImagePointerDown($event, image)"
       >
         <span class="image-index">{{ index + 1 }}</span>

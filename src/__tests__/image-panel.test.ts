@@ -75,6 +75,32 @@ function mockRect(element: Element, rect: Partial<DOMRect>): void {
   });
 }
 
+function createImageDataTransfer(): {
+  files: File[];
+  types: string[];
+  items: { add: (file: File) => void };
+  effectAllowed: string;
+  setData: (mime: string, value: string) => void;
+  getData: (mime: string) => string;
+  setDragImage: (target: unknown, x: number, y: number) => void;
+} {
+  const data = new Map<string, string>();
+  const files: File[] = [];
+  const types: string[] = [];
+  return {
+    files,
+    types,
+    items: { add: (file) => files.push(file) },
+    effectAllowed: "",
+    setData: (mime, value) => {
+      if (!types.includes(mime)) types.push(mime);
+      data.set(mime, value);
+    },
+    getData: (mime) => data.get(mime) ?? "",
+    setDragImage: () => {},
+  };
+}
+
 describe("ImagePanel", () => {
   afterEach(() => {
     vi.restoreAllMocks();
@@ -485,7 +511,7 @@ describe("ImagePanel", () => {
 
     await wrapper.get(".image-card img").trigger("dragstart", { dataTransfer });
 
-    expect(dataTransfer.effectAllowed).toBe("copy");
+    expect(dataTransfer.effectAllowed).toBe("copyMove");
     expect(setData).toHaveBeenCalledWith("DownloadURL", "image/png:mini-desk-image-1.png:data:image/png;base64,aW1n");
     expect(setData).toHaveBeenCalledWith("text/uri-list", "data:image/png;base64,aW1n");
     expect(setData).toHaveBeenCalledWith("text/plain", "data:image/png;base64,aW1n");
@@ -493,6 +519,38 @@ describe("ImagePanel", () => {
     expect(add.mock.calls[0][0].name).toBe("mini-desk-image-1.png");
     expect(add.mock.calls[0][0].type).toBe("image/png");
     expect(setDragImage).toHaveBeenCalledWith(wrapper.get(".image-card img").element, 0, 0);
+    wrapper.unmount();
+  });
+
+  it("sorts images when a native thumbnail drag drops on another card", async () => {
+    const wrapper = mountImagePanel([
+      { id: "a", src: "data:image/png;base64,aW1n", createdAt: 1 },
+      { id: "b", src: "data:image/png;base64,YmFy", createdAt: 2 },
+    ]);
+    const cards = wrapper.findAll(".image-card");
+    mockRect(cards[0].element, { left: 20, top: 100, width: 220, height: 74 });
+    mockRect(cards[1].element, { left: 20, top: 190, width: 220, height: 74 });
+    const dataTransfer = createImageDataTransfer();
+
+    await wrapper.findAll(".image-card img")[0].trigger("dragstart", { dataTransfer });
+    await wrapper.findAll(".image-card")[1].trigger("drop", { dataTransfer });
+
+    expect(wrapper.emitted("reorder")?.[0]).toEqual(["a", "b"]);
+    expect(wrapper.emitted("dropFiles")).toBeUndefined();
+    wrapper.unmount();
+  });
+
+  it("does not duplicate an image when an in-panel thumbnail drag drops on the empty list area", async () => {
+    const wrapper = mountImagePanel([
+      { id: "a", src: "data:image/png;base64,aW1n", createdAt: 1 },
+    ]);
+    const dataTransfer = createImageDataTransfer();
+
+    await wrapper.get(".image-card img").trigger("dragstart", { dataTransfer });
+    await wrapper.get(".image-list").trigger("drop", { dataTransfer });
+
+    expect(wrapper.emitted("dropFiles")).toBeUndefined();
+    expect(wrapper.emitted("reorder")).toBeUndefined();
     wrapper.unmount();
   });
 

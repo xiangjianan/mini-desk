@@ -71,6 +71,36 @@ describe("WorkbenchShell", () => {
     expect(wrapper.get(".workbench-slogan").text()).toBe("Do less, do it well.");
   });
 
+  it("emits updateTitle when the board title is edited via double-click", async () => {
+    const wrapper = mount(WorkbenchShell, {
+      props: {
+        ...defaultProps,
+        slogan: "Do less, do it well.",
+      },
+    });
+
+    await wrapper.get(".workbench-title-group h1 .editable-title").trigger("dblclick");
+    await wrapper.get(".workbench-title-group h1 .title-edit-input").setValue("我的桌面");
+    await wrapper.get(".workbench-title-group h1 .title-edit-input").trigger("blur");
+
+    expect(wrapper.emitted("updateTitle")).toEqual([["我的桌面"]]);
+  });
+
+  it("emits updateSlogan when the slogan is edited via double-click", async () => {
+    const wrapper = mount(WorkbenchShell, {
+      props: {
+        ...defaultProps,
+        slogan: "Do less, do it well.",
+      },
+    });
+
+    await wrapper.get(".workbench-slogan .editable-title").trigger("dblclick");
+    await wrapper.get(".workbench-slogan .title-edit-input").setValue("少做，做好");
+    await wrapper.get(".workbench-slogan .title-edit-input").trigger("blur");
+
+    expect(wrapper.emitted("updateSlogan")).toEqual([["少做，做好"]]);
+  });
+
   it("uses the dark pixel cat logo asset in dark theme", async () => {
     const wrapper = mount(WorkbenchShell, {
       props: defaultProps,
