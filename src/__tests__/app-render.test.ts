@@ -1040,33 +1040,33 @@ describe("App shell", () => {
 
     try {
       expect(wrapper.get('[data-testid="save-status"]').attributes("data-state")).toBe("saved");
-      expect(wrapper.get('[data-testid="save-status"]').attributes("aria-label")).toBe("工作空间清爽");
+      expect(wrapper.get('[data-testid="save-status"]').attributes("aria-label")).toBe("今日桌面：轻盈");
 
       const textarea = wrapper.get("textarea");
       await textarea.trigger("dblclick");
       await textarea.setValue("临时记录");
 
       expect(wrapper.get('[data-testid="save-status"]').attributes("data-state")).toBe("saved");
-      expect(wrapper.get('[data-testid="save-status"]').attributes("aria-label")).toBe("工作空间清爽");
+      expect(wrapper.get('[data-testid="save-status"]').attributes("aria-label")).toBe("今日桌面：轻盈");
 
       window.dispatchEvent(new KeyboardEvent("keydown", { key: "s", ctrlKey: true }));
       await wrapper.vm.$nextTick();
 
       expect(wrapper.get('[data-testid="save-status"]').attributes("data-state")).toBe("saved");
-      expect(wrapper.get('[data-testid="save-status"]').attributes("aria-label")).toBe("工作空间清爽");
+      expect(wrapper.get('[data-testid="save-status"]').attributes("aria-label")).toBe("今日桌面：轻盈");
 
       await vi.advanceTimersByTimeAsync(120);
       await wrapper.vm.$nextTick();
 
       expect(wrapper.get('[data-testid="save-status"]').attributes("data-state")).toBe("saved");
-      expect(wrapper.get('[data-testid="save-status"]').attributes("aria-label")).toBe("工作空间清爽");
+      expect(wrapper.get('[data-testid="save-status"]').attributes("aria-label")).toBe("今日桌面：轻盈");
     } finally {
       wrapper.unmount();
       vi.useRealTimers();
     }
   });
 
-  it("shows a green workspace density tip when clicking the status lamp", async () => {
+  it("shows an airy workspace density tip when clicking the status lamp", async () => {
     vi.useFakeTimers();
     vi.spyOn(Math, "random").mockReturnValue(0);
     const wrapper = mountApp();
@@ -1077,8 +1077,8 @@ describe("App shell", () => {
       await wrapper.vm.$nextTick();
 
       const message = wrapper.getComponent(CompanionBubble).props("message") as string;
-      expect(message).toContain("绿色");
-      expect(message).toContain("各区都清爽");
+      expect(message).toContain("今日桌面");
+      expect(message).toContain("轻盈");
       expect(KAOMOJI_BY_MOOD.calm.some((kaomoji) => message.endsWith(kaomoji))).toBe(true);
     } finally {
       wrapper.unmount();
@@ -1086,7 +1086,7 @@ describe("App shell", () => {
     }
   });
 
-  it("shows a yellow workspace density status when any area is over the limit", async () => {
+  it("shows a full workspace density status when any area is over the limit", async () => {
     vi.useFakeTimers();
     vi.spyOn(Math, "random").mockReturnValue(0);
     localStorage.setItem(
@@ -1099,14 +1099,14 @@ describe("App shell", () => {
 
     try {
       expect(wrapper.get('[data-testid="save-status"]').attributes("data-state")).toBe("saving");
-      expect(wrapper.get('[data-testid="save-status"]').attributes("aria-label")).toBe("有区域内容偏多");
+      expect(wrapper.get('[data-testid="save-status"]').attributes("aria-label")).toBe("今日桌面：略满");
 
       await wrapper.get('[data-testid="save-status"]').trigger("click");
       await vi.advanceTimersByTimeAsync(200);
       await wrapper.vm.$nextTick();
 
       const message = wrapper.getComponent(CompanionBubble).props("message") as string;
-      expect(message).toContain("黄色");
+      expect(message).toContain("桌面");
       expect(message).toContain("图片");
       expect(message).toContain("21");
       expect(KAOMOJI_BY_MOOD.warning.some((kaomoji) => message.endsWith(kaomoji))).toBe(true);
@@ -1116,7 +1116,7 @@ describe("App shell", () => {
     }
   });
 
-  it("keeps todo density green when a list only exceeds the limit with completed reminders", async () => {
+  it("keeps todo density airy when a list only exceeds the limit with completed reminders", async () => {
     localStorage.setItem(
       STORAGE_KEY,
       JSON.stringify({
@@ -1128,13 +1128,13 @@ describe("App shell", () => {
 
     try {
       expect(wrapper.get('[data-testid="save-status"]').attributes("data-state")).toBe("saved");
-      expect(wrapper.get('[data-testid="save-status"]').attributes("aria-label")).toBe("工作空间清爽");
+      expect(wrapper.get('[data-testid="save-status"]').attributes("aria-label")).toBe("今日桌面：轻盈");
     } finally {
       wrapper.unmount();
     }
   });
 
-  it("shows a red workspace density status when todos, quick actions, and images are all over the limit", async () => {
+  it("shows a heated workspace density status when todos, quick actions, and images are all over the limit", async () => {
     vi.useFakeTimers();
     vi.spyOn(Math, "random").mockReturnValue(0);
     localStorage.setItem(
@@ -1151,14 +1151,15 @@ describe("App shell", () => {
 
     try {
       expect(wrapper.get('[data-testid="save-status"]').attributes("data-state")).toBe("dirty");
-      expect(wrapper.get('[data-testid="save-status"]').attributes("aria-label")).toBe("多个区域内容过多");
+      expect(wrapper.get('[data-testid="save-status"]').attributes("aria-label")).toBe("今日桌面：过热");
 
       await wrapper.get('[data-testid="save-status"]').trigger("click");
       await vi.advanceTimersByTimeAsync(200);
       await wrapper.vm.$nextTick();
 
       const message = wrapper.getComponent(CompanionBubble).props("message") as string;
-      expect(message).toContain("红色");
+      expect(message).toContain("今日桌面");
+      expect(message).toContain("过热");
       expect(message).toContain("提醒事项 8");
       expect(message).toContain("快捷动作 13");
       expect(message).toContain("图片 21");
@@ -1182,14 +1183,13 @@ describe("App shell", () => {
 
     try {
       expect(wrapper.get('[data-testid="save-status"]').attributes("data-state")).toBe("saving");
-      expect(wrapper.get('[data-testid="save-status"]').attributes("aria-label")).toBe("有区域内容偏多");
+      expect(wrapper.get('[data-testid="save-status"]').attributes("aria-label")).toBe("今日桌面：略满");
 
       await wrapper.get('[data-testid="save-status"]').trigger("click");
       await vi.advanceTimersByTimeAsync(200);
       await wrapper.vm.$nextTick();
 
       const message = wrapper.getComponent(CompanionBubble).props("message") as string;
-      expect(message).toContain("黄色");
       expect(message).toContain("分组");
       expect(KAOMOJI_BY_MOOD.warning.some((kaomoji) => message.endsWith(kaomoji))).toBe(true);
     } finally {
@@ -1212,14 +1212,13 @@ describe("App shell", () => {
 
     try {
       expect(wrapper.get('[data-testid="save-status"]').attributes("data-state")).toBe("saving");
-      expect(wrapper.get('[data-testid="save-status"]').attributes("aria-label")).toBe("有区域内容偏多");
+      expect(wrapper.get('[data-testid="save-status"]').attributes("aria-label")).toBe("今日桌面：略满");
 
       await wrapper.get('[data-testid="save-status"]').trigger("click");
       await vi.advanceTimersByTimeAsync(200);
       await wrapper.vm.$nextTick();
 
       const message = wrapper.getComponent(CompanionBubble).props("message") as string;
-      expect(message).toContain("黄色");
       expect(message).toMatch(/清单|分组/);
       expect(KAOMOJI_BY_MOOD.warning.some((kaomoji) => message.endsWith(kaomoji))).toBe(true);
     } finally {
@@ -1228,7 +1227,7 @@ describe("App shell", () => {
     }
   });
 
-  it("keeps quick action density green at exactly eight untagged buttons", () => {
+  it("keeps quick action density airy at exactly eight untagged buttons", () => {
     localStorage.setItem(
       STORAGE_KEY,
       JSON.stringify({
@@ -1239,13 +1238,13 @@ describe("App shell", () => {
 
     try {
       expect(wrapper.get('[data-testid="save-status"]').attributes("data-state")).toBe("saved");
-      expect(wrapper.get('[data-testid="save-status"]').attributes("aria-label")).toBe("工作空间清爽");
+      expect(wrapper.get('[data-testid="save-status"]').attributes("aria-label")).toBe("今日桌面：轻盈");
     } finally {
       wrapper.unmount();
     }
   });
 
-  it("flags image density yellow once the list passes ten items", () => {
+  it("flags image density full once the list passes ten items", () => {
     localStorage.setItem(
       STORAGE_KEY,
       JSON.stringify({
@@ -1256,13 +1255,13 @@ describe("App shell", () => {
 
     try {
       expect(wrapper.get('[data-testid="save-status"]').attributes("data-state")).toBe("saving");
-      expect(wrapper.get('[data-testid="save-status"]').attributes("aria-label")).toBe("有区域内容偏多");
+      expect(wrapper.get('[data-testid="save-status"]').attributes("aria-label")).toBe("今日桌面：略满");
     } finally {
       wrapper.unmount();
     }
   });
 
-  it("keeps image density green at exactly ten items", () => {
+  it("keeps image density airy at exactly ten items", () => {
     localStorage.setItem(
       STORAGE_KEY,
       JSON.stringify({
@@ -1273,7 +1272,7 @@ describe("App shell", () => {
 
     try {
       expect(wrapper.get('[data-testid="save-status"]').attributes("data-state")).toBe("saved");
-      expect(wrapper.get('[data-testid="save-status"]').attributes("aria-label")).toBe("工作空间清爽");
+      expect(wrapper.get('[data-testid="save-status"]').attributes("aria-label")).toBe("今日桌面：轻盈");
     } finally {
       wrapper.unmount();
     }
@@ -3265,7 +3264,7 @@ describe("App shell", () => {
       expect(wrapper.find(".image-preview").exists()).toBe(true);
       const companion = wrapper.getComponent(CompanionBubble);
       expect(companion.props("visible")).toBe(true);
-      expect(companion.props("message")).toContain("图片太多，删几张吧");
+      expect(companion.props("message")).toContain("桌面有点热，降温下");
       expect(companion.props("message")).toContain(KAOMOJI_BY_MOOD.warning[0]);
     } finally {
       wrapper.unmount();

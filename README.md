@@ -1,6 +1,14 @@
 # Mini Desk
 
-Mini Desk 是一个本地优先的个人桌面工作台，用来集中整理截图、备忘录、提醒事项、快捷动作、工作空间和常用工具。它基于 Vue 3、TypeScript、Vite、Naive UI 和轻量 shadcn 风格组件构建，界面风格参考 Apple Human Interface Guidelines，强调紧凑、清晰、低干扰的日常使用体验。
+Mini Desk 是一张安静的小桌面。
+
+截图、便签、提醒和快捷动作都在这里，但它不会催你成为机器。
+
+Do less, do it well.
+
+它把日常工作里的零碎东西收在一个本地优先的浏览器桌面里：截图可以先放下，想法可以先记住，提醒事项可以慢慢完成。桌面密度会变成轻盈、略满或过热的呼吸感提醒，动态头像也只在保存、完成、清理和内容变多时轻轻冒出来。
+
+Mini Desk 基于 Vue 3、TypeScript、Vite、Naive UI 和轻量 shadcn 风格组件构建，界面风格参考 Apple Human Interface Guidelines，强调紧凑、清晰、低干扰的日常使用体验。
 
 Mini Desk 的产品构思主要来自人类，界面与代码实现 100% 由 AI 完成。
 
