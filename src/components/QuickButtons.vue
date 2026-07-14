@@ -628,6 +628,7 @@ function handleQuickGroupDrop(event: DragEvent, groupId: string): void {
               :aria-label="group.collapsed ? uiText.quick.expandTag : uiText.quick.collapseTag"
               :aria-expanded="!group.collapsed"
               @click.stop="emit('toggleTagCollapsed', group.id)"
+              @dblclick.stop
             >
               <NIcon :component="ChevronDownOutline" />
             </button>
@@ -644,41 +645,47 @@ function handleQuickGroupDrop(event: DragEvent, groupId: string): void {
             />
             <span v-else class="quick-tag-title">{{ group.title }}</span>
           </div>
-          <TransitionGroup
-            v-if="!group.collapsed"
-            :css="false"
-            tag="div"
-            class="quick-buttons"
-            @before-enter="onQuickBeforeEnter"
-            @enter="onQuickEnter"
-            @after-enter="onQuickAfterEnter"
-            @before-leave="onQuickBeforeLeave"
-            @leave="onQuickLeave"
-            @after-leave="onQuickAfterLeave"
-            @before-move="onQuickBeforeMove"
-            @move="onQuickMove"
-            @after-move="onQuickAfterMove"
+          <div
+            class="quick-tag-content"
+            :class="{ 'is-collapsed': group.collapsed }"
+            :aria-hidden="group.collapsed"
+            :inert="group.collapsed"
           >
-            <button
-              v-for="button in group.buttons"
-              :key="button.id"
-              class="quick-button"
-              :class="{ 'is-hidden': button.hidden, 'is-copy': button.type === 'text', 'is-api': button.type === 'api', 'is-dragging': draggingId === button.id }"
-              :data-id="button.id"
-              type="button"
-              draggable="true"
-              @click="emit('copy', button.id, $event.currentTarget as HTMLElement)"
-              @contextmenu.stop="openMenu($event, button.id)"
-              @dragstart="draggingId = button.id"
-              @dragover.prevent
-              @drop.stop.prevent="handleQuickButtonDrop(button.id, group.id)"
-              @dragend="draggingId = null"
+            <TransitionGroup
+              :css="false"
+              tag="div"
+              class="quick-buttons"
+              @before-enter="onQuickBeforeEnter"
+              @enter="onQuickEnter"
+              @after-enter="onQuickAfterEnter"
+              @before-leave="onQuickBeforeLeave"
+              @leave="onQuickLeave"
+              @after-leave="onQuickAfterLeave"
+              @before-move="onQuickBeforeMove"
+              @move="onQuickMove"
+              @after-move="onQuickAfterMove"
             >
-              <NIcon v-if="button.type === 'text'" class="quick-button-icon" :component="CopyOutline" />
-              <NIcon v-else-if="button.type === 'api'" class="quick-button-icon" :component="CloudUploadOutline" />
-              <span>{{ button.title }}</span>
-            </button>
-          </TransitionGroup>
+              <button
+                v-for="button in group.buttons"
+                :key="button.id"
+                class="quick-button"
+                :class="{ 'is-hidden': button.hidden, 'is-copy': button.type === 'text', 'is-api': button.type === 'api', 'is-dragging': draggingId === button.id }"
+                :data-id="button.id"
+                type="button"
+                draggable="true"
+                @click="emit('copy', button.id, $event.currentTarget as HTMLElement)"
+                @contextmenu.stop="openMenu($event, button.id)"
+                @dragstart="draggingId = button.id"
+                @dragover.prevent
+                @drop.stop.prevent="handleQuickButtonDrop(button.id, group.id)"
+                @dragend="draggingId = null"
+              >
+                <NIcon v-if="button.type === 'text'" class="quick-button-icon" :component="CopyOutline" />
+                <NIcon v-else-if="button.type === 'api'" class="quick-button-icon" :component="CloudUploadOutline" />
+                <span>{{ button.title }}</span>
+              </button>
+            </TransitionGroup>
+          </div>
         </section>
       </div>
     </NScrollbar>

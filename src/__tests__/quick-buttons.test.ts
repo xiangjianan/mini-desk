@@ -237,7 +237,9 @@ describe("QuickButtons", () => {
       buttons: [{ id: "b1", title: "Btn", value: "v", type: "link", tagId: "tag-work", hidden: false }],
     });
 
-    expect(wrapper.find(".quick-button").exists()).toBe(false);
+    expect(wrapper.get(".quick-tag-content").classes()).toContain("is-collapsed");
+    expect(wrapper.get(".quick-tag-content").attributes("aria-hidden")).toBe("true");
+    expect(wrapper.get(".quick-tag-content").attributes()).toHaveProperty("inert");
     expect(wrapper.get(".quick-tag-collapse-button").attributes("aria-expanded")).toBe("false");
     await wrapper.get(".quick-tag-collapse-button").trigger("click");
     expect(wrapper.emitted("toggleTagCollapsed")?.[0]).toEqual(["tag-work"]);
@@ -251,11 +253,31 @@ describe("QuickButtons", () => {
     });
 
     expect(wrapper.get(".quick-tag-title").text()).toBe("其他");
-    expect(wrapper.find(".quick-button").exists()).toBe(false);
+    expect(wrapper.get(".quick-tag-content").classes()).toContain("is-collapsed");
+    expect(wrapper.get(".quick-tag-content").attributes("aria-hidden")).toBe("true");
     expect(wrapper.get(".quick-tag-collapse-button").attributes("aria-expanded")).toBe("false");
     await wrapper.get(".quick-tag-collapse-button").trigger("click");
     expect(wrapper.emitted("toggleTagCollapsed")?.[0]).toEqual(["__other"]);
     wrapper.unmount();
+  });
+
+  it("does not start tag renaming when the collapse icon is double-clicked", async () => {
+    const wrapper = mountQuickButtons({
+      tags: [{ id: "tag-work", title: "工作" }],
+      buttons: [{ id: "b1", title: "Btn", value: "v", type: "link", tagId: "tag-work", hidden: false }],
+    });
+
+    await wrapper.get(".quick-tag-collapse-button").trigger("dblclick");
+
+    expect(wrapper.find(".quick-tag-title-input").exists()).toBe(false);
+    expect(wrapper.get(".quick-tag-title").text()).toBe("工作");
+    wrapper.unmount();
+  });
+
+  it("defines a height and opacity transition for tag content", () => {
+    const styles = readFileSync(resolve(__dirname, "../styles.css"), "utf8");
+    expect(styles).toMatch(/\.quick-tag-content\s*\{[^}]*grid-template-rows:\s*1fr[^}]*transition:/s);
+    expect(styles).toMatch(/\.quick-tag-content\.is-collapsed\s*\{[^}]*grid-template-rows:\s*0fr[^}]*opacity:\s*0/s);
   });
 
   it("keeps externally revealed hidden actions dimmed during their enter transition", async () => {

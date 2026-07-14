@@ -1740,6 +1740,26 @@ button.image-card {
   gap: 6px;
 }
 
+.quick-tag-content {
+  display: grid;
+  grid-template-rows: 1fr;
+  opacity: 1;
+  transition:
+    grid-template-rows 0.22s cubic-bezier(0.2, 0, 0, 1),
+    opacity 0.16s ease;
+}
+
+.quick-tag-content.is-collapsed {
+  grid-template-rows: 0fr;
+  opacity: 0;
+  pointer-events: none;
+}
+
+.quick-tag-content > .quick-buttons {
+  min-height: 0;
+  overflow: hidden;
+}
+
 .quick-tag-heading {
   display: flex;
   align-items: center;
