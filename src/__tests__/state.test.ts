@@ -60,6 +60,15 @@ describe("state compatibility", () => {
     expect(state.spaces).toEqual([{ id: "workspace", title: "📝 备忘录", lines: [] }]);
     expect(state.activeSpaceId).toBe("workspace");
     expect(state.showCompletedTodos).toEqual({ morning: false });
+    expect(state.quickOtherCollapsed).toBe(false);
+  });
+
+  it("normalizes and serializes the Other quick-action group collapse state", () => {
+    const state = normalizeImportedState({ quickOtherCollapsed: true });
+
+    expect(state.quickOtherCollapsed).toBe(true);
+    expect(getSerializableState(state).quickOtherCollapsed).toBe(true);
+    expect(normalizeImportedState({}).quickOtherCollapsed).toBe(false);
   });
 
   it("normalizes and serializes the app language preference", () => {

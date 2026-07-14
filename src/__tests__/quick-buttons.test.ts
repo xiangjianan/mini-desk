@@ -244,6 +244,20 @@ describe("QuickButtons", () => {
     wrapper.unmount();
   });
 
+  it("collapses the Other group and emits the shared toggle action", async () => {
+    const wrapper = mountQuickButtons({
+      buttons: [{ id: "other", title: "未分类", value: "v", type: "link", hidden: false }],
+      otherCollapsed: true,
+    });
+
+    expect(wrapper.get(".quick-tag-title").text()).toBe("其他");
+    expect(wrapper.find(".quick-button").exists()).toBe(false);
+    expect(wrapper.get(".quick-tag-collapse-button").attributes("aria-expanded")).toBe("false");
+    await wrapper.get(".quick-tag-collapse-button").trigger("click");
+    expect(wrapper.emitted("toggleTagCollapsed")?.[0]).toEqual(["__other"]);
+    wrapper.unmount();
+  });
+
   it("keeps externally revealed hidden actions dimmed during their enter transition", async () => {
     const wrapper = mountQuickButtons({
       buttons: [{ id: "hidden", title: "Hidden", value: "v", type: "text", hidden: true }],

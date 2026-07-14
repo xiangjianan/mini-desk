@@ -49,6 +49,7 @@ export function defaultState(): BoardState {
     images: [],
     quickTags: [],
     quickButtons: [],
+    quickOtherCollapsed: false,
     showHiddenQuickButtons: false,
     todoLists: cloneDefaultTodoLists(),
     showCompletedTodos: createDefaultCompletedVisibility(),

@@ -47,7 +47,7 @@ import {
   updateTodoText,
 } from "./state/todos";
 import { defaultState, STORAGE_KEY } from "./state/defaults";
-import { QUICK_DENSITY_THRESHOLD, formatQuickCopiedPreview } from "./state/quickButtons";
+import { QUICK_BUTTON_OTHER_GROUP_ID, QUICK_DENSITY_THRESHOLD, formatQuickCopiedPreview } from "./state/quickButtons";
 import {
   createId,
   exportJsonState,
@@ -1249,6 +1249,11 @@ function saveQuickTag(payload: { id?: string; title: string }): void {
 }
 
 function toggleQuickTagCollapsed(id: string): void {
+  if (id === QUICK_BUTTON_OTHER_GROUP_ID) {
+    state.quickOtherCollapsed = !state.quickOtherCollapsed;
+    persistNow();
+    return;
+  }
   const tag = state.quickTags.find((item) => item.id === id);
   if (!tag) return;
   tag.collapsed = !tag.collapsed;
@@ -2384,6 +2389,7 @@ function isImportPayload(payload: unknown): payload is Record<string, unknown> {
     "images",
     "quickTags",
     "quickButtons",
+    "quickOtherCollapsed",
     "showHiddenQuickButtons",
     "todoLists",
     "showCompletedTodos",
@@ -2908,6 +2914,7 @@ function moveItem<T extends { id: string }>(items: T[], dragId: string, targetId
           :title="titles['quick-title']"
           :tags="state.quickTags"
           :buttons="state.quickButtons"
+          :other-collapsed="state.quickOtherCollapsed"
           :show-hidden="state.showHiddenQuickButtons"
           :language="state.language"
           @title-update="updateTitle"

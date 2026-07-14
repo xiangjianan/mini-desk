@@ -7,7 +7,7 @@ import type { DropdownOption } from "naive-ui";
 import type { AppLanguage, GuideKey, QuickApiBodyType, QuickApiHeader, QuickApiMethod, QuickButton, QuickButtonType, QuickTag } from "../types";
 import { GUIDE_MENU_OPTION } from "../state/defaults";
 import { getUiText } from "../state/i18n";
-import { buildVisibleQuickButtonGroups, hasOverloadedVisibleQuickButtonGroup, QUICK_DENSITY_THRESHOLD } from "../state/quickButtons";
+import { buildVisibleQuickButtonGroups, hasOverloadedVisibleQuickButtonGroup, QUICK_BUTTON_EMPTY_GROUP_ID, QUICK_DENSITY_THRESHOLD } from "../state/quickButtons";
 import { CONTEXT_MENU_Z_INDEX, createExclusiveContextMenu } from "../utils/contextMenu";
 import { createDragAutoScroll, findDragScrollContainer } from "../utils/dragScroll";
 import EditableTitle from "./EditableTitle.vue";
@@ -17,9 +17,11 @@ const props = withDefaults(defineProps<{
   buttons: QuickButton[];
   tags?: QuickTag[];
   showHidden: boolean;
+  otherCollapsed?: boolean;
   language?: AppLanguage;
 }>(), {
   tags: () => [],
+  otherCollapsed: false,
   language: "zh",
 });
 
@@ -109,7 +111,7 @@ onUnmounted(exclusiveMenu.unmount);
 watch(() => props.tags, refreshTagDrafts, { deep: true });
 
 const groupedButtons = computed(() =>
-  buildVisibleQuickButtonGroups(props.buttons, props.tags, props.showHidden, uiText.value.quick.otherTag),
+  buildVisibleQuickButtonGroups(props.buttons, props.tags, props.showHidden, uiText.value.quick.otherTag, props.otherCollapsed),
 );
 const canSubmit = computed(() => {
   if (form.title.trim().length === 0 || form.value.trim().length === 0) return false;
@@ -619,7 +621,7 @@ function handleQuickGroupDrop(event: DragEvent, groupId: string): void {
             @dragend="draggingTagId = null"
           >
             <button
-              v-if="group.reorderable && editingTagId !== group.id"
+              v-if="group.id !== QUICK_BUTTON_EMPTY_GROUP_ID && editingTagId !== group.id"
               type="button"
               class="quick-tag-collapse-button"
               :class="{ 'is-collapsed': group.collapsed }"

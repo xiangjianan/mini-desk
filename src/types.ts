@@ -134,6 +134,7 @@ export interface BoardState {
   images: StoredImage[];
   quickTags: QuickTag[];
   quickButtons: QuickButton[];
+  quickOtherCollapsed: boolean;
   showHiddenQuickButtons: boolean;
   todoLists: TodoListConfig[];
   showCompletedTodos: TodoCompletedVisibility;

@@ -2832,6 +2832,28 @@ describe("App shell", () => {
     }
   });
 
+  it("persists the Other quick-action group collapse state", async () => {
+    localStorage.setItem(
+      STORAGE_KEY,
+      JSON.stringify({
+        ...defaultState(),
+        quickButtons: [{ id: "other", title: "未分类", value: "a", type: "text", hidden: false }],
+      }),
+    );
+    const wrapper = mountApp();
+
+    try {
+      wrapper.getComponent(QuickButtons).vm.$emit("toggleTagCollapsed", "__other");
+      await wrapper.vm.$nextTick();
+
+      const stored = JSON.parse(localStorage.getItem(STORAGE_KEY) || "{}");
+      expect(stored.quickOtherCollapsed).toBe(true);
+      expect(wrapper.getComponent(QuickButtons).props("otherCollapsed")).toBe(true);
+    } finally {
+      wrapper.unmount();
+    }
+  });
+
   it("persists quick action tag changes when a quick button is moved to another tag", async () => {
     localStorage.setItem(
       STORAGE_KEY,

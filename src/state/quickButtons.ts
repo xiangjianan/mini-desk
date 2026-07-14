@@ -17,6 +17,7 @@ export function buildVisibleQuickButtonGroups(
   tags: QuickTag[],
   showHidden: boolean,
   otherTitle: string,
+  otherCollapsed = false,
 ): QuickButtonGroup[] {
   const taggedButtons = new Map(tags.map((tag) => [tag.id, [] as QuickButton[]]));
   const otherButtons: QuickButton[] = [];
@@ -41,7 +42,7 @@ export function buildVisibleQuickButtonGroups(
       title: otherTitle,
       buttons: otherButtons,
       reorderable: false,
-      collapsed: false,
+      collapsed: otherCollapsed,
     });
   }
 

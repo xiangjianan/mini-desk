@@ -187,6 +187,7 @@ export function normalizeImportedState(payload: unknown): BoardState {
     images: normalizeImages(typed.images),
     quickTags,
     quickButtons: normalizeQuickButtons(typed.quickButtons, language, quickTags),
+    quickOtherCollapsed: Boolean(typed.quickOtherCollapsed),
     showHiddenQuickButtons: Boolean(typed.showHiddenQuickButtons),
     todoLists,
     showCompletedTodos: normalizeCompletedVisibility(typed.showCompletedTodos, todoLists),
