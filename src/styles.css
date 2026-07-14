@@ -1737,7 +1737,7 @@ button.image-card {
 .quick-tag-group {
   display: flex;
   flex-direction: column;
-  gap: 6px;
+  gap: 0;
 }
 
 .quick-tag-content {
@@ -1746,11 +1746,17 @@ button.image-card {
   opacity: 1;
   transition:
     grid-template-rows 0.22s cubic-bezier(0.2, 0, 0, 1),
-    opacity 0.16s ease;
+    opacity 0.16s ease,
+    margin-top 0.22s cubic-bezier(0.2, 0, 0, 1);
+}
+
+.quick-tag-heading + .quick-tag-content {
+  margin-top: 6px;
 }
 
 .quick-tag-content.is-collapsed {
   grid-template-rows: 0fr;
+  margin-top: 0;
   opacity: 0;
   pointer-events: none;
 }
