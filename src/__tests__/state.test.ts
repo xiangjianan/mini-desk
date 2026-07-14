@@ -607,7 +607,7 @@ describe("state compatibility", () => {
   it("normalizes quick action tags and keeps invalid tag references untagged", () => {
     const state = normalizeImportedState({
       quickTags: [
-        { id: "tag-a", title: "标签 A" },
+        { id: "tag-a", title: "标签 A", collapsed: true },
         { id: "tag-b", title: "标签 B" },
         { id: "tag-a", title: "重复" },
       ],
@@ -618,7 +618,7 @@ describe("state compatibility", () => {
     });
 
     expect(state.quickTags).toEqual([
-      { id: "tag-a", title: "标签 A" },
+      { id: "tag-a", title: "标签 A", collapsed: true },
       { id: "tag-b", title: "标签 B" },
     ]);
     expect(state.quickButtons[0]).toMatchObject({ tagId: "tag-a" });

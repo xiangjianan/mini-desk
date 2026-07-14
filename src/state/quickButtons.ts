@@ -5,6 +5,7 @@ export interface QuickButtonGroup {
   title: string;
   buttons: QuickButton[];
   reorderable: boolean;
+  collapsed: boolean;
 }
 
 export const QUICK_BUTTON_EMPTY_GROUP_ID = "__empty";
@@ -30,7 +31,7 @@ export function buildVisibleQuickButtonGroups(
   const groups = tags.flatMap((tag): QuickButtonGroup[] => {
     const groupButtons = taggedButtons.get(tag.id) ?? [];
     return groupButtons.length > 0
-      ? [{ id: tag.id, title: tag.title, buttons: groupButtons, reorderable: true }]
+      ? [{ id: tag.id, title: tag.title, buttons: groupButtons, reorderable: true, collapsed: Boolean(tag.collapsed) }]
       : [];
   });
 
@@ -40,12 +41,13 @@ export function buildVisibleQuickButtonGroups(
       title: otherTitle,
       buttons: otherButtons,
       reorderable: false,
+      collapsed: false,
     });
   }
 
   return groups.length > 0
     ? groups
-    : [{ id: QUICK_BUTTON_EMPTY_GROUP_ID, title: "", buttons: [], reorderable: false }];
+    : [{ id: QUICK_BUTTON_EMPTY_GROUP_ID, title: "", buttons: [], reorderable: false, collapsed: false }];
 }
 
 export function hasOverloadedVisibleQuickButtonGroup(

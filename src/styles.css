@@ -1766,6 +1766,30 @@ button.image-card {
   white-space: nowrap;
 }
 
+.quick-tag-collapse-button {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  flex: 0 0 20px;
+  width: 20px;
+  height: 20px;
+  margin: 0 2px 0 -4px;
+  padding: 0;
+  border: 0;
+  color: var(--muted);
+  background: transparent;
+  cursor: pointer;
+}
+
+.quick-tag-collapse-button .n-icon {
+  font-size: 12px;
+  transition: transform var(--motion-medium) var(--motion-ease);
+}
+
+.quick-tag-collapse-button.is-collapsed .n-icon {
+  transform: rotate(-90deg);
+}
+
 .quick-tag-heading.is-editing {
   cursor: text;
   user-select: text;
@@ -1812,7 +1836,7 @@ button.quick-button {
 }
 
 .quick-button.is-hidden {
-  opacity: 0.42;
+  opacity: 0.42 !important;
   border-style: dashed;
 }
 
@@ -2035,6 +2059,14 @@ button.quick-button {
   grid-template-columns: 42px minmax(0, 1fr) minmax(0, 64px) 26px;
 }
 
+.today-focus-item.has-link {
+  grid-template-columns: 42px minmax(0, 1fr) 26px 26px 26px;
+}
+
+.today-focus-item.has-link.has-notify {
+  grid-template-columns: 42px minmax(0, 1fr) 26px minmax(0, 64px) 26px;
+}
+
 .today-focus-item.is-done {
   opacity: 1;
 }
@@ -2151,6 +2183,14 @@ button.quick-button {
 
 .todo-item.has-notify {
   grid-template-columns: 22px 32px minmax(0, 1fr) minmax(0, 64px) 26px;
+}
+
+.todo-item.has-link {
+  grid-template-columns: 22px 32px minmax(0, 1fr) 26px 26px 26px;
+}
+
+.todo-item.has-link.has-notify {
+  grid-template-columns: 22px 32px minmax(0, 1fr) 26px minmax(0, 64px) 26px;
 }
 
 .todo-section.is-compact .todo-item,
@@ -2408,6 +2448,48 @@ button.todo-collapse-button {
   opacity: 0;
   pointer-events: none;
   transition: opacity 0.18s ease, color 0.18s ease;
+}
+
+.todo-link-button {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 26px;
+  min-width: 26px;
+  height: 26px;
+  color: var(--muted);
+  border-radius: 50%;
+  opacity: 0.72;
+  transition: color 0.18s ease, opacity 0.18s ease;
+}
+
+.todo-link-button:hover,
+.todo-link-button:focus-visible {
+  color: var(--text);
+  opacity: 1;
+}
+
+.todo-link-button .n-icon,
+.todo-link-button svg {
+  width: 14px;
+  height: 14px;
+  font-size: 14px;
+}
+
+.todo-item.has-link .todo-link-button {
+  grid-column: 4;
+}
+
+.todo-item.has-link .todo-notify-button {
+  grid-column: 5;
+}
+
+.today-focus-item.has-link .todo-link-button {
+  grid-column: 3;
+}
+
+.today-focus-item.has-link .todo-notify-button {
+  grid-column: 4;
 }
 
 .todo-notify-button.has-time {
@@ -3123,6 +3205,16 @@ button.todo-section-menu-button {
   border: 0;
   object-fit: contain;
   object-position: center;
+}
+
+.companion-gif-fade-enter-active,
+.companion-gif-fade-leave-active {
+  transition: opacity 0.26s ease;
+}
+
+.companion-gif-fade-enter-from,
+.companion-gif-fade-leave-to {
+  opacity: 0;
 }
 
 .companion-popover-anchor {

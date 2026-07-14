@@ -2,7 +2,7 @@
 import { computed, h, nextTick, onMounted, onUnmounted, reactive, ref, watch } from "vue";
 import type { Component, ComponentPublicInstance, VNode } from "vue";
 import { NButton, NCheckbox, NDropdown, NIcon, NInput, NModal, NScrollbar, NSelect } from "naive-ui";
-import { AddOutline, CloudUploadOutline, CopyOutline, CreateOutline, EyeOffOutline, EyeOutline, HelpCircleOutline, PricetagsOutline, TrashOutline } from "@vicons/ionicons5";
+import { AddOutline, ChevronDownOutline, CloudUploadOutline, CopyOutline, CreateOutline, EyeOffOutline, EyeOutline, HelpCircleOutline, PricetagsOutline, TrashOutline } from "@vicons/ionicons5";
 import type { DropdownOption } from "naive-ui";
 import type { AppLanguage, GuideKey, QuickApiBodyType, QuickApiHeader, QuickApiMethod, QuickButton, QuickButtonType, QuickTag } from "../types";
 import { GUIDE_MENU_OPTION } from "../state/defaults";
@@ -35,6 +35,7 @@ const emit = defineEmits<{
   reorderTag: [dragId: string, targetId: string];
   moveToTag: [buttonId: string, tagId?: string, targetId?: string];
   saveTag: [payload: { id?: string; title: string }];
+  toggleTagCollapsed: [id: string];
   deleteTag: [id: string, anchor?: HTMLElement];
   guide: [key: GuideKey, anchor: HTMLElement, immediate?: boolean];
   declutter: [anchor: HTMLElement];
@@ -70,7 +71,7 @@ const form = reactive<{ title: string; value: string; tagTitle: string; customTa
   apiBodyType: "none",
   apiBody: "",
 });
-const menu = ref<{ x: number; y: number; id?: string; anchor?: HTMLElement } | null>(null);
+const menu = ref<{ x: number; y: number; id?: string; anchor?: HTMLElement; tagTitle?: string } | null>(null);
 const tagDrafts = ref<QuickTagDraft[]>([]);
 const newTagTitle = ref("");
 const tagManagerAnchor = ref<HTMLElement | undefined>();
@@ -136,11 +137,11 @@ const menuOptions = computed<DropdownOption[]>(() => {
   ];
 });
 
-function openAdd(anchor?: HTMLElement): void {
+function openAdd(anchor?: HTMLElement, tagTitle = ""): void {
   editingId.value = undefined;
   form.title = "";
   form.value = "";
-  form.tagTitle = "";
+  form.tagTitle = tagTitle;
   form.customTagTitle = "";
   form.type = "link";
   form.apiMethod = "GET";
@@ -298,7 +299,12 @@ function openAreaMenu(event: MouseEvent): void {
   event.preventDefault();
   event.stopPropagation();
   exclusiveMenu.notifyOpen(event, { replacingExistingMenu: Boolean(menu.value) });
-  menu.value = { x: event.clientX, y: event.clientY, anchor: event.currentTarget as HTMLElement };
+  const group = target.closest<HTMLElement>(".quick-tag-group");
+  const tagId = group?.dataset.tagId;
+  const tagTitle = tagId && isRealTagGroup(tagId)
+    ? props.tags.find((tag) => tag.id === tagId)?.title
+    : undefined;
+  menu.value = { x: event.clientX, y: event.clientY, anchor: event.currentTarget as HTMLElement, tagTitle };
 }
 
 function openHeaderMenu(event: MouseEvent): void {
@@ -322,10 +328,10 @@ function closeMenu(): void {
 
 function handleMenuSelect(key: string): void {
   if (!menu.value) return;
-  const { id, anchor } = menu.value;
+  const { id, anchor, tagTitle } = menu.value;
   closeMenu();
   if (key === "add") {
-    openAdd(anchor);
+    openAdd(anchor, tagTitle);
     return;
   }
   if (key === "toggle-show-hidden") {
@@ -449,7 +455,7 @@ function onQuickEnter(el: Element, done: () => void): void {
   const e = el as HTMLElement;
   requestAnimationFrame(() => {
     e.style.transition = `opacity 0.18s ease, transform 0.22s cubic-bezier(0.2, 0, 0, 1)`;
-    e.style.opacity = "1";
+    e.style.opacity = e.classList.contains("is-hidden") ? "0.42" : "1";
   });
   setTimeout(done, 220);
 }
@@ -612,6 +618,17 @@ function handleQuickGroupDrop(event: DragEvent, groupId: string): void {
             @drop.stop.prevent="onTagDrop($event, group.id)"
             @dragend="draggingTagId = null"
           >
+            <button
+              v-if="group.reorderable && editingTagId !== group.id"
+              type="button"
+              class="quick-tag-collapse-button"
+              :class="{ 'is-collapsed': group.collapsed }"
+              :aria-label="group.collapsed ? uiText.quick.expandTag : uiText.quick.collapseTag"
+              :aria-expanded="!group.collapsed"
+              @click.stop="emit('toggleTagCollapsed', group.id)"
+            >
+              <NIcon :component="ChevronDownOutline" />
+            </button>
             <input
               v-if="editingTagId === group.id"
               :ref="setInlineRenameInput"
@@ -626,6 +643,7 @@ function handleQuickGroupDrop(event: DragEvent, groupId: string): void {
             <span v-else class="quick-tag-title">{{ group.title }}</span>
           </div>
           <TransitionGroup
+            v-if="!group.collapsed"
             :css="false"
             tag="div"
             class="quick-buttons"

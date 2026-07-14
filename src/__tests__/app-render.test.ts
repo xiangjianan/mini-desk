@@ -2810,6 +2810,28 @@ describe("App shell", () => {
     }
   });
 
+  it("persists quick action tag collapse state", async () => {
+    localStorage.setItem(
+      STORAGE_KEY,
+      JSON.stringify({
+        ...defaultState(),
+        quickTags: [{ id: "tag-a", title: "标签 A" }],
+        quickButtons: [{ id: "a", title: "A", value: "a", type: "text", hidden: false, tagId: "tag-a" }],
+      }),
+    );
+    const wrapper = mountApp();
+
+    try {
+      wrapper.getComponent(QuickButtons).vm.$emit("toggleTagCollapsed", "tag-a");
+      await wrapper.vm.$nextTick();
+
+      const stored = JSON.parse(localStorage.getItem(STORAGE_KEY) || "{}");
+      expect(stored.quickTags).toEqual([{ id: "tag-a", title: "标签 A", collapsed: true }]);
+    } finally {
+      wrapper.unmount();
+    }
+  });
+
   it("persists quick action tag changes when a quick button is moved to another tag", async () => {
     localStorage.setItem(
       STORAGE_KEY,

@@ -359,6 +359,31 @@ describe("TextPanel", () => {
     expect(textarea.selectionStart).toBe("    root".length);
   });
 
+  it("restarts an ordered list at one when indenting a numbered line", async () => {
+    const wrapper = mount(TextPanel, {
+      props: {
+        titleId: "note-title",
+        title: "备忘录",
+        lines: [
+          { text: "1. 第一项", indent: 0 },
+          { text: "2. 第二项", indent: 0 },
+        ],
+      },
+    });
+    const textarea = wrapper.get("textarea").element as HTMLTextAreaElement;
+    const caret = textarea.value.indexOf("第二项");
+    textarea.setSelectionRange(caret, caret);
+
+    await wrapper.get("textarea").trigger("dblclick");
+    await wrapper.get("textarea").trigger("keydown", { key: "Tab" });
+
+    expect(textarea.value).toBe("1. 第一项\n    1. 第二项");
+    expect(wrapper.emitted("update")?.at(-1)?.[0]).toEqual([
+      { text: "1. 第一项", indent: 0 },
+      { text: "1. 第二项", indent: 1 },
+    ]);
+  });
+
   it("does not intercept Enter while Chinese IME composition is active", async () => {
     const wrapper = mount(TextPanel, {
       props: {

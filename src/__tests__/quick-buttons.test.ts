@@ -217,6 +217,46 @@ describe("QuickButtons", () => {
     wrapper.unmount();
   });
 
+  it("preselects the tag at the right-click position when adding a quick action", async () => {
+    const wrapper = mountQuickButtons({
+      tags: [{ id: "tag-work", title: "工作" }],
+      buttons: [{ id: "b1", title: "Btn", value: "v", type: "link", tagId: "tag-work", hidden: false }],
+    });
+
+    await wrapper.get(".quick-tag-group .quick-buttons").trigger("contextmenu");
+    await wrapper.findAll(".dropdown-option").find((option) => option.text() === "新增")?.trigger("click");
+
+    const choices = wrapper.findAll(".quick-tag-choice");
+    expect(choices.find((choice) => choice.text() === "工作")?.attributes("aria-pressed")).toBe("true");
+    wrapper.unmount();
+  });
+
+  it("collapses a persisted quick tag and emits its toggle action", async () => {
+    const wrapper = mountQuickButtons({
+      tags: [{ id: "tag-work", title: "工作", collapsed: true }],
+      buttons: [{ id: "b1", title: "Btn", value: "v", type: "link", tagId: "tag-work", hidden: false }],
+    });
+
+    expect(wrapper.find(".quick-button").exists()).toBe(false);
+    expect(wrapper.get(".quick-tag-collapse-button").attributes("aria-expanded")).toBe("false");
+    await wrapper.get(".quick-tag-collapse-button").trigger("click");
+    expect(wrapper.emitted("toggleTagCollapsed")?.[0]).toEqual(["tag-work"]);
+    wrapper.unmount();
+  });
+
+  it("keeps externally revealed hidden actions dimmed during their enter transition", async () => {
+    const wrapper = mountQuickButtons({
+      buttons: [{ id: "hidden", title: "Hidden", value: "v", type: "text", hidden: true }],
+      showHidden: false,
+    });
+    await wrapper.setProps({ showHidden: true });
+    await wrapper.vm.$nextTick();
+    expect(wrapper.get(".quick-button").classes()).toContain("is-hidden");
+    const styles = readFileSync(resolve(__dirname, "../styles.css"), "utf8");
+    expect(styles).toMatch(/\.quick-button\.is-hidden\s*\{[^}]*opacity:\s*0\.42\s*!important/s);
+    wrapper.unmount();
+  });
+
   it("offers existing quick tags as single-select button choices", async () => {
     const wrapper = mountQuickButtons({
       tags: [{ id: "tag-tools", title: "工具" }],

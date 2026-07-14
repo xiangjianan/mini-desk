@@ -1,4 +1,6 @@
 import { mount } from "@vue/test-utils";
+import { readFileSync } from "node:fs";
+import { resolve } from "node:path";
 import { afterEach, describe, expect, it, vi } from "vitest";
 import CompanionBubble from "../components/CompanionBubble.vue";
 
@@ -25,6 +27,15 @@ const buttonStub = {
 };
 
 describe("CompanionBubble", () => {
+  it("fades GIF images in and out when their source changes", () => {
+    const component = readFileSync(resolve(__dirname, "../components/CompanionBubble.vue"), "utf8");
+    const styles = readFileSync(resolve(__dirname, "../styles.css"), "utf8");
+
+    expect(component).toContain('name="companion-gif-fade"');
+    expect(component).toContain(':key="gifSrc"');
+    expect(styles).toContain(".companion-gif-fade-enter-active");
+    expect(styles).toContain(".companion-gif-fade-leave-to");
+  });
   afterEach(() => {
     vi.useRealTimers();
     document.body.innerHTML = "";

@@ -2650,6 +2650,52 @@ describe("TodoPanel", () => {
     wrapper.unmount();
   });
 
+  it("creates a blank reminder after the current item with Shift+Enter", async () => {
+    const wrapper = mount(TodoPanel, {
+      props: {
+        todos: {
+          morning: [{ id: "a", text: "第一项内容", done: false }],
+          noon: [],
+          evening: [],
+        },
+        titles: DEFAULT_TITLES,
+      },
+      global: {
+        stubs: { Button: true, Checkbox: checkboxStub, Dropdown: dropdownStub, NCheckbox: checkboxStub, NDropdown: dropdownStub, NTooltip: tooltipStub },
+      },
+    });
+
+    await wrapper.get("input.todo-input").trigger("click");
+    await wrapper.get("input.todo-input").trigger("keydown", { key: "Enter", shiftKey: true });
+
+    expect(wrapper.emitted("create")?.[0]).toEqual(["morning", "a"]);
+    expect(wrapper.emitted("split")).toBeUndefined();
+    wrapper.unmount();
+  });
+
+  it("shows a shortcut icon for the first link in a reminder", () => {
+    const wrapper = mount(TodoPanel, {
+      props: {
+        todos: {
+          morning: [{ id: "a", text: "查看 https://example.com/docs。", done: false }],
+          noon: [],
+          evening: [],
+        },
+        titles: DEFAULT_TITLES,
+      },
+      global: {
+        stubs: { Button: true, Checkbox: checkboxStub, Dropdown: dropdownStub, Icon: true, NCheckbox: checkboxStub, NDropdown: dropdownStub, NIcon: true, NTooltip: tooltipStub },
+      },
+    });
+
+    const link = wrapper.get(".todo-link-button");
+    expect(link.attributes("href")).toBe("https://example.com/docs");
+    expect(link.attributes("target")).toBe("_blank");
+    expect(link.attributes("rel")).toBe("noopener noreferrer");
+    expect(link.attributes("aria-label")).toBe("打开提醒中的链接");
+    wrapper.unmount();
+  });
+
   it("does not split reminders while Chinese IME composition is confirming with Enter", async () => {
     const wrapper = mount(TodoPanel, {
       props: {

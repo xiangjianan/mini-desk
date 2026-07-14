@@ -1248,6 +1248,13 @@ function saveQuickTag(payload: { id?: string; title: string }): void {
   persistNow();
 }
 
+function toggleQuickTagCollapsed(id: string): void {
+  const tag = state.quickTags.find((item) => item.id === id);
+  if (!tag) return;
+  tag.collapsed = !tag.collapsed;
+  persistNow();
+}
+
 function deleteQuickTag(id: string, anchor?: HTMLElement): void {
   const tag = state.quickTags.find((item) => item.id === id);
   if (!tag) return;
@@ -2914,6 +2921,7 @@ function moveItem<T extends { id: string }>(items: T[], dragId: string, targetId
           @reorder-tag="reorderQuickTags"
           @move-to-tag="moveQuickButtonToTag"
           @save-tag="saveQuickTag"
+          @toggle-tag-collapsed="toggleQuickTagCollapsed"
           @delete-tag="deleteQuickTag"
           @guide="handleGuideClick"
           @declutter="showQuickDeclutterBubble"

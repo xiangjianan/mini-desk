@@ -83,7 +83,11 @@ export function handleTextareaTab(textarea: HTMLTextAreaElement, outdent = false
   const lines = selected.split("\n");
   const firstLineIndentDelta = outdent ? -getRemovedIndentLength(lines[0] ?? "") : INDENT_UNIT.length;
   const transformed = lines
-    .map((line) => (outdent ? removeOneIndentUnit(line) : `${INDENT_UNIT}${line}`))
+    .map((line, index) => {
+      const shifted = outdent ? removeOneIndentUnit(line) : `${INDENT_UNIT}${line}`;
+      if (outdent || index > 0) return shifted;
+      return shifted.replace(/^(\s*)\d+(\.\s+)/, (_match, indent: string, suffix: string) => `${indent}1${suffix}`);
+    })
     .join("\n");
 
   textarea.setRangeText(transformed, range.start, range.end, "preserve");

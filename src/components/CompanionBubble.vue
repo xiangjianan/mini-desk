@@ -390,8 +390,10 @@ function isPointInsideElement(x: number, y: number, element: HTMLElement | null)
       :style="{ maxWidth: '240px', '--n-box-shadow': 'none' }"
     >
       <template #trigger>
-        <img v-if="shouldRenderGif" :src="gifSrc" width="50" height="50" alt="" />
-        <span v-else class="companion-popover-anchor" aria-hidden="true" />
+        <Transition name="companion-gif-fade" mode="out-in">
+          <img v-if="shouldRenderGif" :key="gifSrc" :src="gifSrc" width="50" height="50" alt="" />
+          <span v-else class="companion-popover-anchor" aria-hidden="true" />
+        </Transition>
       </template>
 
       <div

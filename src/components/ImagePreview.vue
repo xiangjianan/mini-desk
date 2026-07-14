@@ -141,6 +141,12 @@ function requestClose(): void {
 
 function wheel(event: WheelEvent): void {
   event.preventDefault();
+  if (!event.ctrlKey && !event.metaKey) return;
+  const nextScale = clampScale(scale.value + (event.deltaY < 0 ? ZOOM_STEP : -ZOOM_STEP));
+  if (nextScale === scale.value) return;
+  offset.value = getAnchoredZoomOffset(event, nextScale);
+  scale.value = nextScale;
+  if (scale.value === 1) offset.value = { x: 0, y: 0 };
 }
 
 function navigate(direction: number): boolean {
@@ -169,7 +175,7 @@ function adjustZoom(delta: number): void {
   if (scale.value === 1) offset.value = { x: 0, y: 0 };
 }
 
-function getAnchoredZoomOffset(event: MouseEvent, nextScale: number): { x: number; y: number } {
+function getAnchoredZoomOffset(event: MouseEvent | WheelEvent, nextScale: number): { x: number; y: number } {
   const target = event.currentTarget instanceof HTMLElement ? event.currentTarget : null;
   if (!target || scale.value <= 0) return offset.value;
 

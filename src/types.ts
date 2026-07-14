@@ -11,6 +11,7 @@ export interface QuickApiHeader {
 export interface QuickTag {
   id: string;
   title: string;
+  collapsed?: boolean;
 }
 export type TodoListId = string;
 export type TodoPeriod = TodoListId;

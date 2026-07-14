@@ -12,6 +12,7 @@ import {
   EyeOffOutline,
   EyeOutline,
   HelpCircleOutline,
+  LinkOutline,
   ListOutline,
   NotificationsOutline,
   Star,
@@ -408,12 +409,21 @@ function handleEnter(event: KeyboardEvent, period: TodoPeriod, todo: TodoItem): 
   if (!isTodoEditable(period, todo)) return;
   if (event.isComposing || event.key === "Process" || event.keyCode === 229) return;
   event.preventDefault();
+  if (event.shiftKey) {
+    emit("create", period, todo.id);
+    return;
+  }
   const input = event.currentTarget as HTMLInputElement;
   const start = input.selectionStart ?? input.value.length;
   const end = input.selectionEnd ?? start;
   const before = input.value.slice(0, start);
   const after = input.value.slice(end);
   emit("split", period, todo.id, before, after);
+}
+
+function getTodoLink(todo: TodoItem): string | undefined {
+  const match = todo.text.match(/https?:\/\/[^\s<>"']+/i)?.[0];
+  return match?.replace(/[),.;!?，。；！？]+$/, "");
 }
 
 function handleChecked(period: TodoPeriod, id: string, checked: boolean): void {
@@ -1268,7 +1278,7 @@ function buildTodoListEntries(period: TodoListId, todos: TodoItem[], deferredDon
             :key="`${item.period}-${item.todo.id}`"
             class="today-focus-item"
             :class="[
-              { 'is-done': item.todo.done, 'is-completing': pendingDoneReorderIds.includes(`${item.period}:${item.todo.id}`), 'is-editing': isTodoEditing(item.period, item.todo.id), 'is-menu-selected': isTodoHighlighted(item.period, item.todo.id), 'is-notify-flashing': isTodoNotificationFlashing(item.period, item.todo.id), 'has-notify': Boolean(getTodoCompactNotifyLabel(item.todo)) },
+              { 'is-done': item.todo.done, 'is-completing': pendingDoneReorderIds.includes(`${item.period}:${item.todo.id}`), 'is-editing': isTodoEditing(item.period, item.todo.id), 'is-menu-selected': isTodoHighlighted(item.period, item.todo.id), 'is-notify-flashing': isTodoNotificationFlashing(item.period, item.todo.id), 'has-notify': Boolean(getTodoCompactNotifyLabel(item.todo)), 'has-link': Boolean(getTodoLink(item.todo)) },
               getTodoDeadlineClass(item.todo),
             ]"
             @contextmenu.stop="openMenu($event, item.period, item.todo.id)"
@@ -1292,6 +1302,17 @@ function buildTodoListEntries(period: TodoListId, todos: TodoItem[], deferredDon
               @focus="handleInputFocus(item.period, item.todo, $event)"
               @blur="handleInputBlur(item.period, item.todo.id)"
             />
+            <a
+              v-if="getTodoLink(item.todo)"
+              class="todo-link-button"
+              :href="getTodoLink(item.todo)"
+              target="_blank"
+              rel="noopener noreferrer"
+              :aria-label="uiText.todo.openLink"
+              @click.stop
+            >
+              <NIcon :component="LinkOutline" />
+            </a>
             <button
               class="todo-notify-button"
               :class="{ 'todo-deadline-slot': Boolean(getTodoCompactNotifyLabel(item.todo)), 'has-time': Boolean(getTodoCompactNotifyLabel(item.todo)) }"
@@ -1423,7 +1444,7 @@ function buildTodoListEntries(period: TodoListId, todos: TodoItem[], deferredDon
                 class="todo-item"
                 :data-todo-id="entry.todo.id"
                 :class="[
-                  { 'is-done': entry.todo.done, 'is-starred': entry.todo.starred, 'is-editing': isTodoEditing(list.id, entry.todo.id), 'is-menu-selected': isTodoHighlighted(list.id, entry.todo.id), 'is-notify-flashing': isTodoNotificationFlashing(list.id, entry.todo.id), 'has-notify': Boolean(getTodoCompactNotifyLabel(entry.todo)) },
+                  { 'is-done': entry.todo.done, 'is-starred': entry.todo.starred, 'is-editing': isTodoEditing(list.id, entry.todo.id), 'is-menu-selected': isTodoHighlighted(list.id, entry.todo.id), 'is-notify-flashing': isTodoNotificationFlashing(list.id, entry.todo.id), 'has-notify': Boolean(getTodoCompactNotifyLabel(entry.todo)), 'has-link': Boolean(getTodoLink(entry.todo)) },
                   getTodoDeadlineClass(entry.todo),
                 ]"
                 @contextmenu.stop="openMenu($event, list.id, entry.todo.id)"
@@ -1459,6 +1480,17 @@ function buildTodoListEntries(period: TodoListId, todos: TodoItem[], deferredDon
                   @focus="handleInputFocus(list.id, entry.todo, $event)"
                   @blur="handleInputBlur(list.id, entry.todo.id)"
                 />
+                <a
+                  v-if="getTodoLink(entry.todo)"
+                  class="todo-link-button"
+                  :href="getTodoLink(entry.todo)"
+                  target="_blank"
+                  rel="noopener noreferrer"
+                  :aria-label="uiText.todo.openLink"
+                  @click.stop
+                >
+                  <NIcon :component="LinkOutline" />
+                </a>
                 <button
                   class="todo-notify-button"
                   :class="{ 'todo-deadline-slot': Boolean(getTodoCompactNotifyLabel(entry.todo)), 'has-time': Boolean(getTodoCompactNotifyLabel(entry.todo)) }"

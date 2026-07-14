@@ -343,6 +343,34 @@ describe("ImagePreview", () => {
     }
   });
 
+  it("zooms the preview with Ctrl or Command plus the mouse wheel", async () => {
+    const wrapper = mount(ImagePreview, {
+      props: {
+        images: [{ id: "img-1", src: "data:image/png;base64,one", createdAt: 1 }],
+        activeId: "img-1",
+      },
+      global: {
+        stubs: {
+          Button: buttonStub,
+          Dropdown: dropdownStub,
+          Modal: modalStub,
+          NButton: buttonStub,
+          NDropdown: dropdownStub,
+          NModal: modalStub,
+        },
+      },
+    });
+    const stage = wrapper.get(".preview-stage").element;
+    stage.dispatchEvent(new WheelEvent("wheel", { bubbles: true, cancelable: true, deltaY: -120, ctrlKey: true }));
+    await wrapper.vm.$nextTick();
+    expect(wrapper.get(".preview-stage img").attributes("style")).toContain("scale(1.1)");
+
+    stage.dispatchEvent(new WheelEvent("wheel", { bubbles: true, cancelable: true, deltaY: -120, metaKey: true }));
+    await wrapper.vm.$nextTick();
+    expect(wrapper.get(".preview-stage img").attributes("style")).toContain("scale(1.2)");
+    wrapper.unmount();
+  });
+
   it("renders navigation controls in the liquid floating toolbar", async () => {
     const wrapper = mount(ImagePreview, {
       props: {

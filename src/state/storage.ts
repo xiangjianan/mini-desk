@@ -493,7 +493,7 @@ export function normalizeQuickTags(tags: unknown): QuickTag[] {
       const title = typeof record.title === "string" ? record.title.trim() : "";
       if (!id || !title || seen.has(id)) return null;
       seen.add(id);
-      return { id, title };
+      return { id, title, ...(record.collapsed === true ? { collapsed: true } : {}) };
     })
     .filter((item): item is QuickTag => Boolean(item));
 }
