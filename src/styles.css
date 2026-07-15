@@ -2518,12 +2518,20 @@ button.todo-collapse-button {
   grid-column: 5;
 }
 
+.todo-item.has-link .todo-star-button {
+  grid-column: 6;
+}
+
 .today-focus-item.has-link .todo-link-button {
   grid-column: 3;
 }
 
 .today-focus-item.has-link .todo-notify-button {
   grid-column: 4;
+}
+
+.today-focus-item.has-link .todo-star-button {
+  grid-column: 5;
 }
 
 .todo-notify-button.has-time {

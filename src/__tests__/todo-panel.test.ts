@@ -2693,6 +2693,9 @@ describe("TodoPanel", () => {
     expect(link.attributes("target")).toBe("_blank");
     expect(link.attributes("rel")).toBe("noopener noreferrer");
     expect(link.attributes("aria-label")).toBe("打开提醒中的链接");
+    const styles = readFileSync(resolve(__dirname, "../styles.css"), "utf8");
+    expect(styles).toMatch(/\.todo-item\.has-link \.todo-star-button\s*\{[^}]*grid-column:\s*6/s);
+    expect(styles).toMatch(/\.today-focus-item\.has-link \.todo-star-button\s*\{[^}]*grid-column:\s*5/s);
     wrapper.unmount();
   });
 
