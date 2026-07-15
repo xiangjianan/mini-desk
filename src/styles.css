@@ -1761,6 +1761,11 @@ button.image-card {
   pointer-events: none;
 }
 
+.quick-tag-content.is-collapsed > .quick-buttons {
+  padding-top: 0;
+  padding-bottom: 0;
+}
+
 .quick-tag-content > .quick-buttons {
   flex: 0 0 auto;
   min-height: 0;
