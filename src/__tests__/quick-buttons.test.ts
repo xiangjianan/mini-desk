@@ -280,6 +280,7 @@ describe("QuickButtons", () => {
     expect(styles).toMatch(/\.quick-tag-heading \+ \.quick-tag-content\s*\{[^}]*margin-top:\s*6px/s);
     expect(styles).toMatch(/\.quick-tag-content\.is-collapsed\s*\{[^}]*grid-template-rows:\s*0fr[^}]*margin-top:\s*0[^}]*opacity:\s*0/s);
     expect(styles).toMatch(/\.quick-tag-group\s*\{[^}]*gap:\s*0/s);
+    expect(styles).toMatch(/\.quick-tag-content > \.quick-buttons\s*\{[^}]*flex:\s*0 0 auto/s);
   });
 
   it("keeps externally revealed hidden actions dimmed during their enter transition", async () => {

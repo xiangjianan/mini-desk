@@ -1762,6 +1762,7 @@ button.image-card {
 }
 
 .quick-tag-content > .quick-buttons {
+  flex: 0 0 auto;
   min-height: 0;
   overflow: hidden;
 }
