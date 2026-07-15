@@ -1751,7 +1751,7 @@ button.image-card {
 }
 
 .quick-tag-heading + .quick-tag-content {
-  margin-top: 6px;
+  margin-top: 2px;
 }
 
 .quick-tag-content.is-collapsed {
@@ -1764,6 +1764,7 @@ button.image-card {
 .quick-tag-content > .quick-buttons {
   flex: 0 0 auto;
   min-height: 0;
+  padding-top: 4px;
   overflow: hidden;
 }
 

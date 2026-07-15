@@ -277,10 +277,11 @@ describe("QuickButtons", () => {
   it("defines a height and opacity transition for tag content", () => {
     const styles = readFileSync(resolve(__dirname, "../styles.css"), "utf8");
     expect(styles).toMatch(/\.quick-tag-content\s*\{[^}]*grid-template-rows:\s*1fr[^}]*transition:/s);
-    expect(styles).toMatch(/\.quick-tag-heading \+ \.quick-tag-content\s*\{[^}]*margin-top:\s*6px/s);
+    expect(styles).toMatch(/\.quick-tag-heading \+ \.quick-tag-content\s*\{[^}]*margin-top:\s*2px/s);
     expect(styles).toMatch(/\.quick-tag-content\.is-collapsed\s*\{[^}]*grid-template-rows:\s*0fr[^}]*margin-top:\s*0[^}]*opacity:\s*0/s);
     expect(styles).toMatch(/\.quick-tag-group\s*\{[^}]*gap:\s*0/s);
     expect(styles).toMatch(/\.quick-tag-content > \.quick-buttons\s*\{[^}]*flex:\s*0 0 auto/s);
+    expect(styles).toMatch(/\.quick-tag-content > \.quick-buttons\s*\{[^}]*padding-top:\s*4px/s);
   });
 
   it("keeps externally revealed hidden actions dimmed during their enter transition", async () => {
