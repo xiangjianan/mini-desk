@@ -84,6 +84,8 @@
         z-index: 0;
         pointer-events: none;
         overflow: hidden;
+        transform: translate3d(0, calc(var(--sp, 0) * -16vh), 0);
+        will-change: transform;
       }
 
       .aurora span {
@@ -115,6 +117,21 @@
         width: 44vw;
         height: 44vw;
         background: radial-gradient(circle, rgba(86, 204, 242, 0.14), transparent 65%);
+      }
+
+      /* ---------- scroll progress bar ---------- */
+
+      .scroll-progress {
+        position: fixed;
+        top: 0;
+        left: 0;
+        right: 0;
+        z-index: 70;
+        height: 2px;
+        background: linear-gradient(90deg, var(--indigo), var(--violet), var(--cyan));
+        transform: scaleX(var(--sp, 0));
+        transform-origin: left center;
+        pointer-events: none;
       }
 
       /* ---------- header ---------- */
@@ -267,12 +284,28 @@
           linear-gradient(rgba(255, 255, 255, 0.035) 1px, transparent 1px),
           linear-gradient(90deg, rgba(255, 255, 255, 0.035) 1px, transparent 1px);
         background-size: 72px 72px;
+        background-position:
+          0 calc(var(--hp, 0) * 80px),
+          0 calc(var(--hp, 0) * 80px);
         mask-image: radial-gradient(ellipse 90% 62% at 50% 0%, #000 30%, transparent 78%);
         -webkit-mask-image: radial-gradient(ellipse 90% 62% at 50% 0%, #000 30%, transparent 78%);
+        will-change: background-position;
+      }
+
+      .hero-content {
+        position: relative;
+        z-index: 1;
+        display: flex;
+        flex-direction: column;
+        align-items: center;
+        width: 100%;
+        opacity: calc(1 - var(--hp, 0) * 1.05);
+        transform: translate3d(0, calc(var(--hp, 0) * -64px), 0);
+        filter: blur(calc(var(--hp, 0) * 5px));
+        will-change: transform, opacity, filter;
       }
 
       .hero-badge {
-        position: relative;
         display: inline-flex;
         align-items: center;
         gap: 9px;
@@ -296,7 +329,6 @@
       }
 
       .hero h1 {
-        position: relative;
         margin: 30px 0 0;
         max-width: 980px;
         font-size: clamp(52px, 8.4vw, 118px);
@@ -313,7 +345,6 @@
       }
 
       .hero-copy {
-        position: relative;
         max-width: 620px;
         margin: 26px auto 0;
         color: var(--text);
@@ -323,7 +354,6 @@
       }
 
       .hero-actions {
-        position: relative;
         display: flex;
         flex-wrap: wrap;
         justify-content: center;
@@ -332,7 +362,6 @@
       }
 
       .hero-note {
-        position: relative;
         margin-top: 22px;
         color: var(--muted);
         font-size: 13.5px;
@@ -357,7 +386,7 @@
         height: 60%;
         background: linear-gradient(100deg, rgba(110, 139, 255, 0.4), rgba(167, 139, 250, 0.32), rgba(86, 204, 242, 0.3));
         filter: blur(90px);
-        opacity: 0.55;
+        opacity: calc(0.22 + var(--fp, 1) * 0.33);
         pointer-events: none;
       }
 
@@ -371,13 +400,12 @@
           0 0 0 1px rgba(255, 255, 255, 0.04) inset,
           0 40px 120px rgba(0, 0, 0, 0.55);
         overflow: hidden;
-        transform: rotateX(7deg);
+        transform:
+          rotateX(calc((1 - var(--fp, 1)) * 14deg))
+          scale(calc(0.94 + var(--fp, 1) * 0.06))
+          translateY(calc((1 - var(--fp, 1)) * 26px));
         transform-origin: center 120%;
-        transition: transform 700ms var(--ease-premium);
-      }
-
-      .hero-visual:hover .browser-frame {
-        transform: rotateX(2deg);
+        will-change: transform;
       }
 
       .browser-bar {
@@ -491,10 +519,12 @@
         background: linear-gradient(180deg, rgba(255, 255, 255, 0.045), rgba(255, 255, 255, 0.015));
         border: 1px solid var(--line);
         overflow: hidden;
+        transform: translateY(calc((1 - var(--p, 1)) * 34px));
         transition:
           transform 340ms var(--ease-out),
           border-color 340ms var(--ease-out),
           background 340ms var(--ease-out);
+        will-change: transform;
       }
 
       .card::before {
@@ -520,7 +550,7 @@
       }
 
       .card:hover {
-        transform: translateY(-3px);
+        transform: translateY(calc((1 - var(--p, 1)) * 34px - 3px));
         border-color: rgba(255, 255, 255, 0.16);
       }
 
@@ -606,7 +636,7 @@
         border-top: 1px solid var(--line);
         border-bottom: 1px solid var(--line);
         background:
-          radial-gradient(ellipse 60% 90% at 50% 110%, rgba(110, 139, 255, 0.1), transparent 70%),
+          radial-gradient(ellipse 60% 90% at 50% calc(118% - var(--bp, 1) * 68%), rgba(110, 139, 255, 0.1), transparent 70%),
           var(--bg-soft);
         overflow: hidden;
       }
@@ -626,10 +656,16 @@
         line-height: 1.22;
         letter-spacing: -0.025em;
         font-weight: 700;
-      }
-
-      .principle-band blockquote .dim {
-        color: var(--muted);
+        background-image: linear-gradient(
+          100deg,
+          #f5f7fc 0%,
+          #e8edf7 calc(var(--p, 1) * 120% - 20%),
+          rgba(232, 237, 247, 0.15) calc(var(--p, 1) * 120% + 12%),
+          rgba(232, 237, 247, 0.15) 100%
+        );
+        -webkit-background-clip: text;
+        background-clip: text;
+        color: transparent;
       }
 
       .principle-band p {
@@ -664,14 +700,16 @@
         border-radius: 16px;
         background: rgba(255, 255, 255, 0.03);
         border: 1px solid var(--line);
+        transform: translateX(calc((1 - var(--p, 1)) * 22px));
         transition:
           transform 300ms var(--ease-out),
           border-color 300ms var(--ease-out),
           background 300ms var(--ease-out);
+        will-change: transform;
       }
 
       .data-row:hover {
-        transform: translateX(4px);
+        transform: translateX(calc((1 - var(--p, 1)) * 22px + 4px));
         border-color: rgba(255, 255, 255, 0.16);
         background: rgba(255, 255, 255, 0.05);
       }
@@ -713,9 +751,13 @@
         background: linear-gradient(180deg, rgba(255, 255, 255, 0.06), rgba(255, 255, 255, 0.02));
         border: 1px solid var(--line-strong);
         box-shadow: 0 40px 110px rgba(0, 0, 0, 0.5);
+        transform:
+          translateY(calc((1 - var(--p, 1)) * 40px))
+          scale(calc(0.965 + var(--p, 1) * 0.035));
         transition:
           transform 480ms var(--ease-out),
           box-shadow 480ms var(--ease-out);
+        will-change: transform;
       }
 
       .product-frame::before {
@@ -729,7 +771,9 @@
       }
 
       .product-frame:hover {
-        transform: translateY(-5px);
+        transform:
+          translateY(calc((1 - var(--p, 1)) * 40px - 5px))
+          scale(calc(0.965 + var(--p, 1) * 0.035));
         box-shadow: 0 54px 140px rgba(0, 0, 0, 0.6);
       }
 
@@ -753,6 +797,9 @@
         left: 17px;
         width: 1px;
         background: linear-gradient(180deg, rgba(110, 139, 255, 0.5), rgba(167, 139, 250, 0.3), transparent);
+        transform: scaleY(var(--p, 1));
+        transform-origin: center top;
+        will-change: transform;
       }
 
       .workflow-item {
@@ -807,10 +854,12 @@
         text-align: center;
         border: 1px solid var(--line-strong);
         background:
-          radial-gradient(ellipse 70% 120% at 50% -20%, rgba(110, 139, 255, 0.18), transparent 60%),
-          radial-gradient(ellipse 50% 90% at 85% 120%, rgba(167, 139, 250, 0.12), transparent 65%),
+          radial-gradient(ellipse 70% 120% at 50% -20%, rgba(110, 139, 255, calc(0.07 + var(--p, 1) * 0.12)), transparent 60%),
+          radial-gradient(ellipse 50% 90% at 85% 120%, rgba(167, 139, 250, calc(0.05 + var(--p, 1) * 0.08)), transparent 65%),
           linear-gradient(180deg, rgba(255, 255, 255, 0.05), rgba(255, 255, 255, 0.015));
         overflow: hidden;
+        transform: translateY(calc((1 - var(--p, 1)) * 34px));
+        will-change: transform;
       }
 
       .cta-panel::before {
@@ -902,7 +951,16 @@
         fill: currentColor;
       }
 
-      /* ---------- motion ---------- */
+      /* ---------- scroll-scrubbed motion ---------- */
+
+      .motion-scrub .scrub {
+        opacity: var(--p, 1);
+        filter: blur(calc((1 - var(--p, 1)) * 6px));
+      }
+
+      .motion-scrub .scrub:not(.card):not(.data-row):not(.product-frame):not(.cta-panel) {
+        transform: translateY(calc((1 - var(--p, 1)) * 34px));
+      }
 
       @media (prefers-reduced-motion: no-preference) {
         .aurora .a1 {
@@ -994,22 +1052,6 @@
             filter: blur(0);
             transform: translateY(0) scale(1);
           }
-        }
-
-        .motion-ready .reveal {
-          opacity: 0;
-          filter: blur(8px);
-          transform: translateY(28px);
-          transition:
-            opacity 800ms var(--ease-premium) var(--delay, 0ms),
-            filter 800ms var(--ease-premium) var(--delay, 0ms),
-            transform 800ms var(--ease-premium) var(--delay, 0ms);
-        }
-
-        .motion-ready .reveal.is-visible {
-          opacity: 1;
-          filter: blur(0);
-          transform: translateY(0);
         }
       }
 
@@ -1112,6 +1154,7 @@
       <span class="a3"></span>
     </div>
     <div class="noise" aria-hidden="true"></div>
+    <div class="scroll-progress" aria-hidden="true"></div>
 
     <header class="site-header" aria-label="Mini Desk">
       <a class="brand" href="#top" aria-label="Mini Desk 首页">
@@ -1128,22 +1171,24 @@
 
     <main id="top">
       <section class="hero" aria-labelledby="hero-title">
-        <div class="hero-badge">
-          <span class="dot"></span>
-          本地优先 · 无需注册 · 打开即用
+        <div class="hero-content">
+          <div class="hero-badge">
+            <span class="dot"></span>
+            本地优先 · 无需注册 · 打开即用
+          </div>
+          <h1 id="hero-title">一张<span class="grad">安静</span>的<br />小桌面。</h1>
+          <p class="hero-copy">
+            截图、便签、提醒和快捷动作都在这里。Mini Desk 把一切收进你的浏览器，但它不会催你成为机器。
+          </p>
+          <div class="hero-actions">
+            <a class="button" href="https://minidesk.online" target="_blank" rel="noopener noreferrer">
+              立即体验
+              <span class="arrow">→</span>
+            </a>
+            <a class="button secondary" href="#features">感受桌面</a>
+          </div>
+          <div class="hero-note">DO LESS, DO IT WELL — 桌面端体验更完整</div>
         </div>
-        <h1 id="hero-title">一张<span class="grad">安静</span>的<br />小桌面。</h1>
-        <p class="hero-copy">
-          截图、便签、提醒和快捷动作都在这里。Mini Desk 把一切收进你的浏览器，但它不会催你成为机器。
-        </p>
-        <div class="hero-actions">
-          <a class="button" href="https://minidesk.online" target="_blank" rel="noopener noreferrer">
-            立即体验
-            <span class="arrow">→</span>
-          </a>
-          <a class="button secondary" href="#features">感受桌面</a>
-        </div>
-        <div class="hero-note">DO LESS, DO IT WELL — 桌面端体验更完整</div>
         <div class="hero-visual">
           <div class="browser-frame">
             <div class="browser-bar" aria-hidden="true">
@@ -1212,9 +1257,7 @@
 
       <section class="principle-band" aria-labelledby="principle-title">
         <div class="kicker">设计原则</div>
-        <blockquote id="principle-title">
-          桌面会呼吸。<span class="dim">东西多起来，它会轻轻提醒你降温。</span>
-        </blockquote>
+        <blockquote id="principle-title">桌面会呼吸。东西多起来，它会轻轻提醒你降温。</blockquote>
         <p>
           内容少的时候，它是轻盈的；东西多起来，它会变成略满；再堆下去，它会提醒你：桌面有点热，要不要一起降温。
         </p>
@@ -1333,7 +1376,7 @@
         updateHeader();
         window.addEventListener("scroll", updateHeader, { passive: true });
 
-        // spotlight hover on bento cards
+        // pointer spotlight on bento cards
         document.querySelectorAll(".card").forEach((card) => {
           card.addEventListener("pointermove", (event) => {
             const rect = card.getBoundingClientRect();
@@ -1342,41 +1385,86 @@
           });
         });
 
-        if (reduceMotion || !("IntersectionObserver" in window)) {
+        if (reduceMotion) {
           return;
         }
 
-        document.documentElement.classList.add("motion-ready");
+        /* ---------- scroll-scrubbed animation engine ----------
+           Every effect below is mapped directly to scroll position:
+           scrolling down advances it, scrolling up reverses it. */
 
-        const revealTargets = [
+        const root = document.documentElement;
+        root.classList.add("motion-scrub");
+
+        const clamp01 = (value) => Math.min(1, Math.max(0, value));
+
+        const hero = document.querySelector(".hero");
+        const heroVisual = document.querySelector(".hero-visual");
+        const principleBand = document.querySelector(".principle-band");
+        const workflowList = document.querySelector(".workflow-list");
+
+        const scrubTargets = [
           ...document.querySelectorAll(
-            ".eyebrow, .section h2, .section-copy, .card, .data-row, .product-frame, .workflow-item, .cta-panel, .principle-band > *",
+            ".eyebrow, .section h2, .section-copy, .card, .data-row, .product-frame, .workflow-item, .cta-panel, .principle-band .kicker, .principle-band blockquote, .principle-band p",
           ),
         ];
 
-        revealTargets.forEach((element, index) => {
-          element.classList.add("reveal");
-          element.style.setProperty("--delay", `${Math.min((index % 5) * 70, 280)}ms`);
-        });
+        scrubTargets.forEach((element) => element.classList.add("scrub"));
 
-        const observer = new IntersectionObserver(
-          (entries) => {
-            entries.forEach((entry) => {
-              if (!entry.isIntersecting) {
-                return;
-              }
+        // progress of an element travelling from `startR` to `endR` of viewport height
+        const travel = (element, startR, endR, vh) => {
+          const top = element.getBoundingClientRect().top;
+          const start = vh * startR;
+          const end = vh * endR;
+          return clamp01((start - top) / (start - end));
+        };
 
-              entry.target.classList.add("is-visible");
-              observer.unobserve(entry.target);
-            });
-          },
-          {
-            rootMargin: "0px 0px -8% 0px",
-            threshold: 0.16,
-          },
-        );
+        let ticking = false;
 
-        revealTargets.forEach((element) => observer.observe(element));
+        const update = () => {
+          ticking = false;
+          const vh = window.innerHeight;
+          const maxScroll = root.scrollHeight - vh;
+
+          // global page progress: progress bar + aurora drift
+          root.style.setProperty("--sp", maxScroll > 0 ? clamp01(window.scrollY / maxScroll) : 0);
+
+          // hero parallax: text floats away, grid slides as the hero scrolls out
+          if (hero) {
+            hero.style.setProperty("--hp", clamp01(window.scrollY / (hero.offsetHeight * 0.85)));
+          }
+
+          // browser frame flattens/scales as it travels through the viewport
+          if (heroVisual) {
+            heroVisual.style.setProperty("--fp", travel(heroVisual, 1.0, 0.45, vh));
+          }
+
+          // principle band glow rises as the band enters
+          if (principleBand) {
+            principleBand.style.setProperty("--bp", travel(principleBand, 1.0, 0.35, vh));
+          }
+
+          // workflow timeline draws itself while the list passes by
+          if (workflowList) {
+            workflowList.style.setProperty("--p", travel(workflowList, 0.85, 0.3, vh));
+          }
+
+          // generic rise/focus scrub for section content
+          for (const element of scrubTargets) {
+            element.style.setProperty("--p", travel(element, 0.94, 0.6, vh));
+          }
+        };
+
+        const requestUpdate = () => {
+          if (!ticking) {
+            ticking = true;
+            requestAnimationFrame(update);
+          }
+        };
+
+        update();
+        window.addEventListener("scroll", requestUpdate, { passive: true });
+        window.addEventListener("resize", requestUpdate);
       })();
     </script>
   </body>
