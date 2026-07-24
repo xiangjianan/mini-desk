@@ -511,17 +511,19 @@ function isPreviewShortcutKey(event: KeyboardEvent): boolean {
         />
         <template v-else>
           <div class="preview-stage" @wheel="wheel" @mousedown="down">
-            <img
-              v-if="active.src"
-              ref="previewImageRef"
-              :key="active.id"
-              :src="active.src"
-              :alt="uiText.preview.imageAlt"
-              draggable="false"
-              :style="activeImageStyle"
-              @contextmenu.prevent="openMenu($event, active.id)"
-              @dblclick.stop.prevent="toggleZoom"
-            />
+            <Transition name="preview-photo" appear>
+              <img
+                v-if="active.src"
+                ref="previewImageRef"
+                :key="active.id"
+                :src="active.src"
+                :alt="uiText.preview.imageAlt"
+                draggable="false"
+                :style="activeImageStyle"
+                @contextmenu.prevent="openMenu($event, active.id)"
+                @dblclick.stop.prevent="toggleZoom"
+              />
+            </Transition>
           </div>
           <div class="preview-actions" role="toolbar" :aria-label="uiText.preview.help">
             <button

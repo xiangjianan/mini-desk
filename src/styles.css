@@ -2518,20 +2518,12 @@ button.todo-collapse-button {
   grid-column: 5;
 }
 
-.todo-item.has-link .todo-star-button {
-  grid-column: 6;
-}
-
 .today-focus-item.has-link .todo-link-button {
   grid-column: 3;
 }
 
 .today-focus-item.has-link .todo-notify-button {
   grid-column: 4;
-}
-
-.today-focus-item.has-link .todo-star-button {
-  grid-column: 5;
 }
 
 .todo-notify-button.has-time {
@@ -2817,6 +2809,14 @@ html[data-theme="dark"] .notify-date-picker .n-date-panel-calendar {
   will-change: background-color, box-shadow;
 }
 
+.todo-heading > h3.is-notify-flashing {
+  padding: 2px 6px;
+  margin: -2px -6px;
+  border-radius: 6px;
+  animation: todo-notify-flash 1.05s var(--motion-ease) 3;
+  will-change: background-color, box-shadow;
+}
+
 .deadline-overdue .todo-deadline-label {
   color: #e88;
 }
@@ -2855,6 +2855,14 @@ button.todo-star-button {
 
 .today-focus-item .todo-star-button {
   grid-column: 4;
+}
+
+.todo-item.has-link .todo-star-button {
+  grid-column: 6;
+}
+
+.today-focus-item.has-link .todo-star-button {
+  grid-column: 5;
 }
 
 .todo-item:hover .todo-star-button,
@@ -3669,6 +3677,7 @@ body:has(.image-preview) .image-panel .n-scrollbar {
 }
 
 .preview-stage img {
+  grid-area: 1 / 1;
   width: auto;
   height: auto;
   min-width: 0;
@@ -3677,8 +3686,19 @@ body:has(.image-preview) .image-panel .n-scrollbar {
   max-height: calc(100vh - var(--image-preview-top, 52px) - 96px);
   object-fit: contain;
   transform-origin: center;
-  animation: image-preview-photo-in 140ms cubic-bezier(0.16, 1, 0.3, 1);
   transition: transform 180ms cubic-bezier(0.2, 0, 0, 1);
+}
+
+.preview-photo-enter-active {
+  animation: image-preview-photo-in 180ms cubic-bezier(0.16, 1, 0.3, 1);
+}
+
+.preview-photo-enter-from {
+  opacity: 0;
+}
+
+.preview-photo-leave-active {
+  animation: image-preview-photo-out 180ms ease-in forwards;
 }
 
 .preview-actions {

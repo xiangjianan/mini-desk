@@ -144,6 +144,68 @@ describe("TodoPanel", () => {
     expect(wrapper.emitted("declutter")?.[0]).toEqual([expect.any(HTMLElement)]);
   });
 
+  it("flashes the collapsed list title when a reminder fires while the list is collapsed", async () => {
+    const wrapper = mount(TodoPanel, {
+      props: {
+        todoLists: [{ id: "morning", title: "☀️ 早上", collapsed: true, compact: false }],
+        todos: {
+          morning: [{ id: "todo-1", text: "提醒事项", done: false }],
+          noon: [],
+          evening: [],
+        },
+        showCompleted: { morning: false, noon: false, evening: false },
+        titles: DEFAULT_TITLES,
+        notificationFlashKeys: ["morning:todo-1"],
+      },
+      global: {
+        stubs: {
+          Checkbox: checkboxStub,
+          Dropdown: dropdownStub,
+          NCheckbox: checkboxStub,
+          NDatePicker: datePickerStub,
+          NDropdown: dropdownStub,
+          NTooltip: tooltipStub,
+        },
+      },
+    });
+    await flushPromises();
+
+    const heading = wrapper.get('.todo-section[data-list-id="morning"] .todo-heading h3');
+    expect(heading.classes()).toContain("is-notify-flashing");
+    wrapper.unmount();
+  });
+
+  it("does not flash the title when the list is expanded (the row flashes instead)", async () => {
+    const wrapper = mount(TodoPanel, {
+      props: {
+        todoLists: [{ id: "morning", title: "☀️ 早上", collapsed: false, compact: false }],
+        todos: {
+          morning: [{ id: "todo-1", text: "提醒事项", done: false }],
+          noon: [],
+          evening: [],
+        },
+        showCompleted: { morning: false, noon: false, evening: false },
+        titles: DEFAULT_TITLES,
+        notificationFlashKeys: ["morning:todo-1"],
+      },
+      global: {
+        stubs: {
+          Checkbox: checkboxStub,
+          Dropdown: dropdownStub,
+          NCheckbox: checkboxStub,
+          NDatePicker: datePickerStub,
+          NDropdown: dropdownStub,
+          NTooltip: tooltipStub,
+        },
+      },
+    });
+    await flushPromises();
+
+    const heading = wrapper.get('.todo-section[data-list-id="morning"] .todo-heading h3');
+    expect(heading.classes()).not.toContain("is-notify-flashing");
+    wrapper.unmount();
+  });
+
   it("does not emit a declutter prompt while a reminder list has fewer than seven items", async () => {
     const wrapper = mount(TodoPanel, {
       props: {

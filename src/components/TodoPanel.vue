@@ -945,6 +945,15 @@ function isTodoNotificationFlashing(period: TodoPeriod, id: string): boolean {
   return props.notificationFlashKeys.includes(todoKey(period, id));
 }
 
+function listHasNotificationFlash(listId: TodoListId): boolean {
+  const prefix = `${listId}:`;
+  return props.notificationFlashKeys.some((key) => key.startsWith(prefix));
+}
+
+function isListTitleNotificationFlashing(list: TodoListConfig): boolean {
+  return list.collapsed && listHasNotificationFlash(list.id);
+}
+
 function isTodoEditing(period: TodoPeriod, id: string): boolean {
   return editingTodoKey.value === todoKey(period, id);
 }
@@ -1366,7 +1375,7 @@ function buildTodoListEntries(period: TodoListId, todos: TodoItem[], deferredDon
             class="todo-list-drag-handle"
             :aria-label="uiText.todo.dragList"
           />
-          <h3>
+          <h3 :class="{ 'is-notify-flashing': isListTitleNotificationFlashing(list) }">
             <EditableTitle
               :id="list.id"
               :value="list.title"

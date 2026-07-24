@@ -359,7 +359,7 @@ describe("TextPanel", () => {
     expect(textarea.selectionStart).toBe("    root".length);
   });
 
-  it("restarts an ordered list at one when indenting a numbered line", async () => {
+  it("converts a numbered line into an indented bullet when Tab is pressed at the marker", async () => {
     const wrapper = mount(TextPanel, {
       props: {
         titleId: "note-title",
@@ -371,7 +371,34 @@ describe("TextPanel", () => {
       },
     });
     const textarea = wrapper.get("textarea").element as HTMLTextAreaElement;
+    // Caret right after the "2. " marker (start of the item text).
     const caret = textarea.value.indexOf("第二项");
+    textarea.setSelectionRange(caret, caret);
+
+    await wrapper.get("textarea").trigger("dblclick");
+    await wrapper.get("textarea").trigger("keydown", { key: "Tab" });
+
+    expect(textarea.value).toBe("1. 第一项\n    - 第二项");
+    expect(wrapper.emitted("update")?.at(-1)?.[0]).toEqual([
+      { text: "1. 第一项", indent: 0 },
+      { text: "- 第二项", indent: 1 },
+    ]);
+  });
+
+  it("restarts an ordered list at one when indenting with the caret inside the text", async () => {
+    const wrapper = mount(TextPanel, {
+      props: {
+        titleId: "note-title",
+        title: "备忘录",
+        lines: [
+          { text: "1. 第一项", indent: 0 },
+          { text: "2. 第二项", indent: 0 },
+        ],
+      },
+    });
+    const textarea = wrapper.get("textarea").element as HTMLTextAreaElement;
+    // Caret inside the item text (not at the marker) keeps the regular indent.
+    const caret = textarea.value.indexOf("第二项") + 1;
     textarea.setSelectionRange(caret, caret);
 
     await wrapper.get("textarea").trigger("dblclick");
