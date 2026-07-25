@@ -4828,7 +4828,7 @@ button.quick-button {
 
 .todo-item:hover,
 .today-focus-item:hover {
-  background: color-mix(in srgb, var(--button) 72%, transparent);
+  background: color-mix(in srgb, var(--foreground) 5%, transparent);
 }
 
 .todo-item.is-editing::before,
@@ -4890,7 +4890,7 @@ button.todo-notify-button.has-time {
 
 .workbench-resizer:hover::before,
 .workbench-resizer:focus-visible::before {
-  background: color-mix(in srgb, var(--primary) 48%, transparent);
+  background: color-mix(in srgb, var(--foreground) 22%, transparent);
 }
 
 @media (max-width: 1180px) {
@@ -4953,7 +4953,7 @@ button.workbench-resizer:active {
 
 .workbench-resizer:active::before {
   left: 50%;
-  background: color-mix(in srgb, var(--primary) 48%, transparent);
+  background: color-mix(in srgb, var(--foreground) 42%, transparent);
   transform: translateX(-50%);
 }
 
