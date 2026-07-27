@@ -46,16 +46,42 @@ describe("WorkbenchShell", () => {
     expect(wrapper.get('[data-testid="workbench-command-bar"]').text()).not.toContain("搜索或执行命令");
     expect(wrapper.get('[data-testid="workbench-command-bar"]').text()).not.toContain("⌘K");
     expect(wrapper.get('[data-testid="workbench-save-status"]').text()).toBe("已保存");
-    expect(wrapper.find('[aria-label="素材"]').exists()).toBe(true);
-    expect(wrapper.find('[aria-label="笔记与快捷动作"]').exists()).toBe(true);
-    expect(wrapper.find('[aria-label="任务流"]').exists()).toBe(true);
-    expect(wrapper.find('[aria-label="工作区"]').exists()).toBe(true);
+    expect(wrapper.get(".workbench-zone-assets").attributes("aria-label")).toBe("🎨 图片");
+    expect(wrapper.get(".workbench-zone-notes").attributes("aria-label")).toBe("⚡ 快捷动作");
+    expect(wrapper.get(".workbench-zone-tasks").attributes("aria-label")).toBe("提醒事项");
+    expect(wrapper.get(".workbench-zone-workspace").attributes("aria-label")).toBe("备忘录");
     expect(wrapper.get('[data-testid="assets-slot"]').text()).toBe("assets");
     expect(wrapper.get('[data-testid="notes-slot"]').text()).toBe("notes");
     expect(wrapper.get('[data-testid="tasks-slot"]').text()).toBe("tasks");
     expect(wrapper.get('[data-testid="workspace-slot"]').text()).toBe("workspace");
     expect(wrapper.get('[data-testid="actions-slot"]').text()).toBe("settings");
     expect(wrapper.find('[data-testid="workbench-theme"][aria-label="切换到深色"]').exists()).toBe(true);
+  });
+
+  it("labels each collapsed rail with the zone's area title or a fixed name", () => {
+    const wrapper = mount(WorkbenchShell, {
+      props: {
+        ...defaultProps,
+        assetsTitle: "我的图床",
+        notesTitle: "常用动作",
+      },
+    });
+
+    // Rails are visually hidden until a zone collapses, but their text content
+    // is always present in the DOM.
+    expect(wrapper.get(".workbench-zone-assets .workbench-zone-rail").text()).toBe("我的图床");
+    expect(wrapper.get(".workbench-zone-notes .workbench-zone-rail").text()).toBe("常用动作");
+    expect(wrapper.get(".workbench-zone-tasks .workbench-zone-rail").text()).toBe("提醒事项");
+    expect(wrapper.get(".workbench-zone-workspace .workbench-zone-rail").text()).toBe("备忘录");
+  });
+
+  it("falls back to the default area titles when no custom title is provided", () => {
+    const wrapper = mount(WorkbenchShell, {
+      props: defaultProps,
+    });
+
+    expect(wrapper.get(".workbench-zone-assets .workbench-zone-rail").text()).toBe("🎨 图片");
+    expect(wrapper.get(".workbench-zone-notes .workbench-zone-rail").text()).toBe("⚡ 快捷动作");
   });
 
   it("renders a compact slogan after the title and save status when provided", () => {
@@ -113,10 +139,10 @@ describe("WorkbenchShell", () => {
     expect(wrapper.get(".workbench-title-logo").attributes("src")).toContain("mini-desk-cat-dark.png");
   });
 
-  it("keeps the tool zone minimum width at 320px and fits columns without oscillating", () => {
+  it("keeps every zone minimum width at 100px and fits columns without oscillating", () => {
     const source = readFileSync(resolve(__dirname, "../components/WorkbenchShell.vue"), "utf8");
 
-    expect(source).toContain("const MIN_COLUMN_WIDTHS = [160, 320, 320, 320] as const");
+    expect(source).toContain("const MIN_COLUMN_WIDTHS = [100, 100, 100, 100] as const");
     expect(source).toContain("fitColumnsToWidth");
     expect(source).toContain("remainingDelta");
   });
@@ -313,7 +339,7 @@ describe("WorkbenchShell", () => {
     vi.useRealTimers();
   });
 
-  it("uses the compact initial desktop workbench column widths with a 320px tool zone", async () => {
+  it("uses the compact initial desktop workbench column widths with a 100px minimum per zone", async () => {
     vi.spyOn(window, "innerWidth", "get").mockReturnValue(1600);
     HTMLElement.prototype.getBoundingClientRect = function getMockRect() {
       if (this instanceof HTMLElement && this.classList.contains("workbench-grid")) {
@@ -339,7 +365,7 @@ describe("WorkbenchShell", () => {
     await nextTick();
 
     const grid = wrapper.get(".workbench-grid");
-    expect(grid.attributes("style")).toContain("grid-template-columns: 166px 328px 333px 331px");
+    expect(grid.attributes("style")).toContain("grid-template-columns: 214px 252px 365px 327px");
 
     wrapper.unmount();
   });
@@ -391,7 +417,7 @@ describe("WorkbenchShell", () => {
     wrapper.unmount();
   });
 
-  it("continues shrinking earlier left zones when the rightmost resizer passes the task minimum", async () => {
+  it("keeps shrinking a zone past its minimum into a collapsed title rail", async () => {
     vi.spyOn(window, "innerWidth", "get").mockReturnValue(1600);
     HTMLElement.prototype.getBoundingClientRect = function getMockRect() {
       if (this instanceof HTMLElement && this.classList.contains("workbench-grid")) {
@@ -416,16 +442,117 @@ describe("WorkbenchShell", () => {
     await nextTick();
     await nextTick();
 
-    expect(wrapper.get(".workbench-grid").attributes("style")).toContain("grid-template-columns: 166px 328px 333px 331px");
+    expect(wrapper.get(".workbench-grid").attributes("style")).toContain("grid-template-columns: 214px 252px 365px 327px");
+    expect(wrapper.get(".workbench-zone-tasks").classes()).not.toContain("workbench-zone-collapsed");
 
     const pointerDown = new MouseEvent("pointerdown", { bubbles: true, cancelable: true });
     Object.defineProperty(pointerDown, "clientX", { value: 900 });
     wrapper.findAll(".workbench-resizer")[2].element.dispatchEvent(pointerDown);
-    window.dispatchEvent(new MouseEvent("pointermove", { clientX: 700 }));
+    window.dispatchEvent(new MouseEvent("pointermove", { clientX: 600 }));
     window.dispatchEvent(new MouseEvent("pointerup"));
     await nextTick();
 
-    expect(wrapper.get(".workbench-grid").attributes("style")).toContain("grid-template-columns: 160px 320px 320px 358px");
+    // The task zone shrinks below its 100px minimum (down to ~65px) instead of
+    // clamping, collapses to the title rail, and the freed space flows to the
+    // neighboring workspace zone.
+    expect(wrapper.get(".workbench-grid").attributes("style")).toContain("grid-template-columns: 214px 252px 65px 627px");
+    expect(wrapper.get(".workbench-zone-tasks").classes()).toContain("workbench-zone-collapsed");
+    expect(wrapper.get(".workbench-zone-tasks .workbench-zone-rail").text()).toBe("提醒事项");
+    expect(wrapper.findAll(".workbench-zone-notes .workbench-zone-rail")).toHaveLength(1);
+
+    wrapper.unmount();
+  });
+
+  it("expands a collapsed zone back above its minimum to reveal its content", async () => {
+    vi.spyOn(window, "innerWidth", "get").mockReturnValue(1600);
+    HTMLElement.prototype.getBoundingClientRect = function getMockRect() {
+      if (this instanceof HTMLElement && this.classList.contains("workbench-grid")) {
+        return {
+          x: 0,
+          y: 52,
+          left: 0,
+          top: 52,
+          right: 1200,
+          bottom: 800,
+          width: 1200,
+          height: 748,
+          toJSON: () => undefined,
+        };
+      }
+      return originalGetBoundingClientRect.call(this);
+    };
+    const wrapper = mount(WorkbenchShell, {
+      attachTo: document.body,
+      props: defaultProps,
+    });
+    await nextTick();
+    await nextTick();
+
+    // Collapse the notes zone by dragging the assets/notes divider rightward.
+    const collapseDown = new MouseEvent("pointerdown", { bubbles: true, cancelable: true });
+    Object.defineProperty(collapseDown, "clientX", { value: 200 });
+    wrapper.findAll(".workbench-resizer")[0].element.dispatchEvent(collapseDown);
+    window.dispatchEvent(new MouseEvent("pointermove", { clientX: 400 }));
+    window.dispatchEvent(new MouseEvent("pointerup"));
+    await nextTick();
+    expect(wrapper.get(".workbench-zone-notes").classes()).toContain("workbench-zone-collapsed");
+
+    // Drag the notes/tasks divider rightward to grow the notes zone back above
+    // its 100px minimum; the collapsed rail hides and content reappears.
+    const expandDown = new MouseEvent("pointerdown", { bubbles: true, cancelable: true });
+    Object.defineProperty(expandDown, "clientX", { value: 500 });
+    wrapper.findAll(".workbench-resizer")[1].element.dispatchEvent(expandDown);
+    window.dispatchEvent(new MouseEvent("pointermove", { clientX: 600 }));
+    window.dispatchEvent(new MouseEvent("pointerup"));
+    await nextTick();
+
+    expect(wrapper.get(".workbench-zone-notes").classes()).not.toContain("workbench-zone-collapsed");
+
+    wrapper.unmount();
+  });
+
+  it("expands a collapsed zone to its default width when its rail is clicked", async () => {
+    vi.spyOn(window, "innerWidth", "get").mockReturnValue(1600);
+    HTMLElement.prototype.getBoundingClientRect = function getMockRect() {
+      if (this instanceof HTMLElement && this.classList.contains("workbench-grid")) {
+        return {
+          x: 0,
+          y: 52,
+          left: 0,
+          top: 52,
+          right: 1200,
+          bottom: 800,
+          width: 1200,
+          height: 748,
+          toJSON: () => undefined,
+        };
+      }
+      return originalGetBoundingClientRect.call(this);
+    };
+    const wrapper = mount(WorkbenchShell, {
+      attachTo: document.body,
+      props: defaultProps,
+    });
+    await nextTick();
+    await nextTick();
+
+    // Collapse the tasks zone by dragging the tasks/workspace divider leftward.
+    const collapseDown = new MouseEvent("pointerdown", { bubbles: true, cancelable: true });
+    Object.defineProperty(collapseDown, "clientX", { value: 900 });
+    wrapper.findAll(".workbench-resizer")[2].element.dispatchEvent(collapseDown);
+    window.dispatchEvent(new MouseEvent("pointermove", { clientX: 600 }));
+    window.dispatchEvent(new MouseEvent("pointerup"));
+    await nextTick();
+    expect(wrapper.get(".workbench-zone-tasks").classes()).toContain("workbench-zone-collapsed");
+
+    // Click the collapsed rail: tasks returns to its default width (~365px) and
+    // content reappears, funded by shrinking the expanded neighbors.
+    await wrapper.get(".workbench-zone-tasks .workbench-zone-rail").trigger("click");
+    await nextTick();
+
+    expect(wrapper.get(".workbench-zone-tasks").classes()).not.toContain("workbench-zone-collapsed");
+    expect(wrapper.get(".workbench-grid").attributes("style")).toContain("365px");
+    expect(localStorage.getItem(WORKBENCH_WIDTH_STORAGE_KEY)).not.toBeNull();
 
     wrapper.unmount();
   });
@@ -456,16 +583,19 @@ describe("WorkbenchShell", () => {
     await nextTick();
     await nextTick();
 
+    // Dragging the assets/notes divider rightward shrinks the notes zone below
+    // its 100px minimum, collapsing it to the title rail.
     const pointerDown = new MouseEvent("pointerdown", { bubbles: true, cancelable: true });
     Object.defineProperty(pointerDown, "clientX", { value: 200 });
     wrapper.findAll(".workbench-resizer")[0].element.dispatchEvent(pointerDown);
-    window.dispatchEvent(new MouseEvent("pointermove", { clientX: 280 }));
+    window.dispatchEvent(new MouseEvent("pointermove", { clientX: 400 }));
     window.dispatchEvent(new MouseEvent("pointerup"));
     await nextTick();
 
-    const savedTemplate = wrapper.get(".workbench-grid").attributes("style");
+    expect(wrapper.get(".workbench-zone-notes").classes()).toContain("workbench-zone-collapsed");
     const storedWidths = JSON.parse(localStorage.getItem(WORKBENCH_WIDTH_STORAGE_KEY) ?? "[]") as number[];
     expect(storedWidths).toHaveLength(4);
+    expect(storedWidths[1]).toBeLessThan(100);
     wrapper.unmount();
 
     const restored = mount(WorkbenchShell, {
@@ -475,7 +605,10 @@ describe("WorkbenchShell", () => {
     await nextTick();
     await nextTick();
 
-    expect(restored.get(".workbench-grid").attributes("style")).toBe(savedTemplate);
+    // The collapsed notes zone stays collapsed after remount (pinned to the rail
+    // width) and the saved layout is reapplied from storage.
+    expect(restored.get(".workbench-zone-notes").classes()).toContain("workbench-zone-collapsed");
+    expect(restored.get(".workbench-grid").attributes("style")).toContain("grid-template-columns:");
     expect(document.documentElement.style.getPropertyValue("--image-preview-left")).toMatch(/px$/);
 
     restored.unmount();
@@ -483,7 +616,9 @@ describe("WorkbenchShell", () => {
 
   it("restores legacy resized workbench widths after the project rename", async () => {
     vi.spyOn(window, "innerWidth", "get").mockReturnValue(1600);
-    localStorage.setItem(LEGACY_WORKBENCH_WIDTH_STORAGE_KEY, JSON.stringify([170, 320, 330, 310]));
+    // Legacy widths are always at or above the column minimums (the old shrink
+    // logic clamped at the same minima), so use realistic >=min values.
+    localStorage.setItem(LEGACY_WORKBENCH_WIDTH_STORAGE_KEY, JSON.stringify([180, 360, 340, 380]));
     HTMLElement.prototype.getBoundingClientRect = function getMockRect() {
       if (this instanceof HTMLElement && this.classList.contains("workbench-grid")) {
         return {
@@ -508,7 +643,9 @@ describe("WorkbenchShell", () => {
     await nextTick();
     await nextTick();
 
-    expect(wrapper.get(".workbench-grid").attributes("style")).toContain("grid-template-columns: 179px 320px 339px 320px");
+    expect(wrapper.get(".workbench-grid").attributes("style")).toContain("grid-template-columns: 171px 329px 312px 347px");
+    // No zone is collapsed because the legacy widths are all at/above their minima.
+    expect(wrapper.find(".workbench-zone-collapsed").exists()).toBe(false);
 
     wrapper.unmount();
   });

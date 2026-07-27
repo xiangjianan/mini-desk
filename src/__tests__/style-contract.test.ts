@@ -168,7 +168,7 @@ describe("workbench style contract", () => {
     expectSelectorBody(styles, ".image-editor-crop-actions", "transform: translate(8px, 8px)");
     expectSelectorBody(styles, ".image-editor-tool[data-tooltip]:hover::after", "content: attr(data-tooltip)");
     expectSelectorBody(styles, ".workbench-grid", "position: relative");
-    expectSelectorBody(styles, ".workbench-grid", "grid-template-columns: minmax(160px, 0.15fr) minmax(320px, 0.2fr) minmax(320px, 0.35fr) minmax(320px, 0.3fr)");
+    expectSelectorBody(styles, ".workbench-grid", "grid-template-columns: minmax(100px, 0.15fr) minmax(100px, 0.2fr) minmax(100px, 0.35fr) minmax(100px, 0.3fr)");
     expectSelectorBody(styles, ".workbench-grid", "gap: 14px");
     expectSelectorBody(styles, ".workbench-grid", "padding: 14px");
     expectSelectorBody(styles, ".workbench-grid", "grid-row: 2");

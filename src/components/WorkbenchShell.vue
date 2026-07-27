@@ -9,7 +9,12 @@ import {
 import { Badge } from "./ui/badge";
 import { Button } from "./ui/button";
 import EditableTitle from "./EditableTitle.vue";
-import type { ThemeMode } from "../types";
+import type { AppLanguage, ThemeMode } from "../types";
+import {
+  DEFAULT_LANGUAGE,
+  WORKBENCH_COLLAPSED_FIXED_LABELS_BY_LANGUAGE,
+  getDefaultTitles,
+} from "../state/i18n";
 import miniDeskLogo from "../../static/img/mini-desk-cat.png?url";
 import miniDeskDarkLogo from "../../static/img/mini-desk-cat-dark.png?url";
 
@@ -17,10 +22,32 @@ const props = withDefaults(defineProps<{
   title: string;
   saveStatusLabel: string;
   theme: ThemeMode;
+  language?: AppLanguage;
+  assetsTitle?: string;
+  notesTitle?: string;
   slogan?: string;
 }>(), {
+  language: DEFAULT_LANGUAGE,
+  assetsTitle: "",
+  notesTitle: "",
   slogan: "",
 });
+
+// Collapsed-rail labels per zone. Assets and notes follow their editable area
+// titles; tasks and workspace use fixed labels (they hold multiple lists/spaces
+// with no single heading).
+const zoneLabels = computed<readonly string[]>(() => {
+  const defaults = getDefaultTitles(props.language);
+  const fixed = WORKBENCH_COLLAPSED_FIXED_LABELS_BY_LANGUAGE[props.language];
+  return [
+    props.assetsTitle || defaults["image-title"],
+    props.notesTitle || defaults["quick-title"],
+    fixed.tasks,
+    fixed.workspace,
+  ];
+});
+
+const expandHint = computed(() => (props.language === "en" ? "Click to expand" : "点击展开"));
 
 const emit = defineEmits<{
   theme: [];
@@ -45,12 +72,15 @@ const LEGACY_WORKBENCH_WIDTH_STORAGE_KEY = "todo-board-workbench-widths";
 const WORKBENCH_HEADER_STORAGE_KEY = "mini-desk-workbench-header-hidden";
 const LEGACY_WORKBENCH_HEADER_STORAGE_KEY = "todo-board-workbench-header-hidden";
 const DEFAULT_COLUMN_WEIGHTS = [0.15, 0.2, 0.35, 0.3] as const;
-const MIN_COLUMN_WIDTHS = [160, 320, 320, 320] as const;
+const MIN_COLUMN_WIDTHS = [100, 100, 100, 100] as const;
 const DEFAULT_GRID_GAP = 14;
 const DEFAULT_GRID_PADDING_X = 14;
 const DEFAULT_GRID_PADDING_Y = 14;
 const DEFAULT_IMAGE_PREVIEW_TOP = 52;
 const RESIZE_STEP = 24;
+// Floor a zone can be dragged down to once it passes its minimum width.
+// Below it the zone collapses to a vertical title rail and content is hidden.
+const COLLAPSED_COLUMN_WIDTH = 44;
 const HEADER_COLLAPSE_REVEAL_DELAY_MS = 200;
 const HEADER_INITIAL_REVEAL_AUTO_HIDE_MS = 1_000;
 const HEADER_REVEAL_AUTO_HIDE_MS = 100;
@@ -75,6 +105,16 @@ const gridTemplateColumns = computed(() =>
 );
 
 const gridStyle = computed(() => gridTemplateColumns.value ? { gridTemplateColumns: gridTemplateColumns.value } : undefined);
+
+// A zone collapses to its vertical title rail once its width drops below the
+// column minimum: content is hidden and only the title remains visible.
+const zoneCollapsed = computed<boolean[]>(() => {
+  const widths = columnWidths.value;
+  if (widths.length !== MIN_COLUMN_WIDTHS.length) {
+    return MIN_COLUMN_WIDTHS.map(() => false);
+  }
+  return MIN_COLUMN_WIDTHS.map((min, index) => widths[index] < min);
+});
 
 let headerRevealHideTimer: number | undefined;
 let headerRevealShowTimer: number | undefined;
@@ -162,20 +202,52 @@ function readGridMetrics(): { rect: DOMRect; contentWidth: number } | undefined 
 
 function fitColumnsToWidth(width: number, currentWidths?: readonly number[]): number[] {
   if (width <= 0) return [];
-  const minTotal = MIN_COLUMN_WIDTHS.reduce((sum, value) => sum + value, 0);
-  if (width <= minTotal) {
-    return [...MIN_COLUMN_WIDTHS];
+
+  const hasCurrent = currentWidths?.length === MIN_COLUMN_WIDTHS.length;
+  const collapsedFlags = MIN_COLUMN_WIDTHS.map((min, index) =>
+    hasCurrent ? currentWidths![index] < min : false,
+  );
+
+  if (!collapsedFlags.some(Boolean)) {
+    const minTotal = MIN_COLUMN_WIDTHS.reduce((sum, value) => sum + value, 0);
+    if (width <= minTotal) {
+      return [...MIN_COLUMN_WIDTHS];
+    }
+
+    const source = hasCurrent ? currentWidths! : DEFAULT_COLUMN_WEIGHTS;
+    const sourceWeights = source.map((value, index) => currentWidths?.length === 4 ? Math.max(0, value - MIN_COLUMN_WIDTHS[index]) : value);
+    const effectiveWeights = sourceWeights.reduce((sum, value) => sum + value, 0) > 0 ? sourceWeights : [...DEFAULT_COLUMN_WEIGHTS];
+    const sourceTotal = effectiveWeights.reduce((sum, value) => sum + value, 0);
+    const remainingDelta = width - minTotal;
+    return MIN_COLUMN_WIDTHS.map((minWidth, index) => {
+      const weight = effectiveWeights[index];
+      return minWidth + (remainingDelta * weight) / sourceTotal;
+    });
   }
 
-  const source = currentWidths?.length === 4 ? currentWidths : DEFAULT_COLUMN_WEIGHTS;
-  const sourceWeights = source.map((value, index) => currentWidths?.length === 4 ? Math.max(0, value - MIN_COLUMN_WIDTHS[index]) : value);
-  const effectiveWeights = sourceWeights.reduce((sum, value) => sum + value, 0) > 0 ? sourceWeights : [...DEFAULT_COLUMN_WEIGHTS];
+  // Some zones are intentionally collapsed (below their minimum): pin them to the
+  // rail width and distribute the freed space across the expanded zones.
+  const collapsedCount = collapsedFlags.filter(Boolean).length;
+  const collapsedTotal = COLLAPSED_COLUMN_WIDTH * collapsedCount;
+  const visibleMinTotal = MIN_COLUMN_WIDTHS.reduce((sum, min, index) =>
+    collapsedFlags[index] ? sum : sum + min, 0);
+  if (width <= collapsedTotal + visibleMinTotal) {
+    return MIN_COLUMN_WIDTHS.map((min, index) => (collapsedFlags[index] ? COLLAPSED_COLUMN_WIDTH : min));
+  }
+  const excessWeights = MIN_COLUMN_WIDTHS.map((min, index) =>
+    collapsedFlags[index] ? 0 : Math.max(0, currentWidths![index] - min),
+  );
+  const excessTotal = excessWeights.reduce((sum, value) => sum + value, 0);
+  const effectiveWeights = excessTotal > 0
+    ? excessWeights
+    : MIN_COLUMN_WIDTHS.map((_, index) => (collapsedFlags[index] ? 0 : DEFAULT_COLUMN_WEIGHTS[index]));
   const sourceTotal = effectiveWeights.reduce((sum, value) => sum + value, 0);
-  const remainingDelta = width - minTotal;
-  return MIN_COLUMN_WIDTHS.map((minWidth, index) => {
-    const weight = effectiveWeights[index];
-    return minWidth + (remainingDelta * weight) / sourceTotal;
-  });
+  const remainingDelta = width - collapsedTotal - visibleMinTotal;
+  return MIN_COLUMN_WIDTHS.map((min, index) =>
+    collapsedFlags[index]
+      ? COLLAPSED_COLUMN_WIDTH
+      : min + (remainingDelta * effectiveWeights[index]) / sourceTotal,
+  );
 }
 
 function syncImagePreviewLeft(): void {
@@ -217,7 +289,9 @@ function shrinkColumns(widths: number[], indices: number[], requestedShrink: num
 
   for (const index of indices) {
     if (remainingShrink <= 0) break;
-    const shrinkableWidth = Math.max(0, nextWidths[index] - MIN_COLUMN_WIDTHS[index]);
+    // Allow shrinking past the minimum all the way down to the collapsed rail
+    // width so a zone can be dragged below its minimum and collapsed.
+    const shrinkableWidth = Math.max(0, nextWidths[index] - COLLAPSED_COLUMN_WIDTH);
     const columnShrink = Math.min(shrinkableWidth, remainingShrink);
     nextWidths[index] -= columnShrink;
     remainingShrink -= columnShrink;
@@ -275,6 +349,37 @@ function resizeWithKeyboard(event: KeyboardEvent, index: number): void {
   if (columnWidths.value.length !== 4) return;
   event.preventDefault();
   applyResizeDelta(index, event.key === "ArrowRight" ? RESIZE_STEP : -RESIZE_STEP, columnWidths.value);
+}
+
+function expandZoneToDefault(index: number): void {
+  const widths = columnWidths.value;
+  if (widths.length !== MIN_COLUMN_WIDTHS.length) return;
+  // Only collapsed zones (below their minimum) expand on click.
+  if (widths[index] >= MIN_COLUMN_WIDTHS[index]) return;
+  const metrics = readGridMetrics();
+  if (!metrics) return;
+
+  // The zone returns to its default proportional width. Fund the growth from
+  // expanded neighbors (proportional to their excess above the minimum); collapsed
+  // neighbors stay collapsed and expanded neighbors never collapse as a side effect.
+  const target = fitColumnsToWidth(metrics.contentWidth)[index];
+  const grow = Math.max(0, target - widths[index]);
+  const fundable = MIN_COLUMN_WIDTHS.map((min, i) =>
+    i === index || widths[i] < min ? 0 : Math.max(0, widths[i] - min),
+  );
+  const fundableTotal = fundable.reduce((sum, value) => sum + value, 0);
+  const actualGrow = Math.min(grow, fundableTotal);
+  const nextWidths = [...widths];
+  nextWidths[index] = widths[index] + actualGrow;
+  if (fundableTotal > 0) {
+    MIN_COLUMN_WIDTHS.forEach((min, i) => {
+      if (i === index || widths[i] < min) return;
+      nextWidths[i] = widths[i] - (actualGrow * fundable[i]) / fundableTotal;
+    });
+  }
+  columnWidths.value = nextWidths;
+  persistColumnWidths(nextWidths);
+  syncImagePreviewLeft();
 }
 
 function clearHeaderRevealHideTimer(): void {
@@ -460,16 +565,36 @@ onUnmounted(() => {
       </div>
 
       <div ref="gridRef" class="workbench-grid" :style="gridStyle">
-        <section class="workbench-zone workbench-zone-assets" aria-label="素材">
+        <section
+          class="workbench-zone workbench-zone-assets"
+          :class="{ 'workbench-zone-collapsed': zoneCollapsed[0] }"
+          :aria-label="zoneLabels[0]"
+        >
+          <div class="workbench-zone-rail" aria-hidden="true" :title="expandHint" @click="expandZoneToDefault(0)">{{ zoneLabels[0] }}</div>
           <slot name="assets" />
         </section>
-        <section class="workbench-zone workbench-zone-notes" aria-label="笔记与快捷动作">
+        <section
+          class="workbench-zone workbench-zone-notes"
+          :class="{ 'workbench-zone-collapsed': zoneCollapsed[1] }"
+          :aria-label="zoneLabels[1]"
+        >
+          <div class="workbench-zone-rail" aria-hidden="true" :title="expandHint" @click="expandZoneToDefault(1)">{{ zoneLabels[1] }}</div>
           <slot name="notes" />
         </section>
-        <section class="workbench-zone workbench-zone-tasks" aria-label="任务流">
+        <section
+          class="workbench-zone workbench-zone-tasks"
+          :class="{ 'workbench-zone-collapsed': zoneCollapsed[2] }"
+          :aria-label="zoneLabels[2]"
+        >
+          <div class="workbench-zone-rail" aria-hidden="true" :title="expandHint" @click="expandZoneToDefault(2)">{{ zoneLabels[2] }}</div>
           <slot name="tasks" />
         </section>
-        <section class="workbench-zone workbench-zone-workspace" aria-label="工作区">
+        <section
+          class="workbench-zone workbench-zone-workspace"
+          :class="{ 'workbench-zone-collapsed': zoneCollapsed[3] }"
+          :aria-label="zoneLabels[3]"
+        >
+          <div class="workbench-zone-rail" aria-hidden="true" :title="expandHint" @click="expandZoneToDefault(3)">{{ zoneLabels[3] }}</div>
           <slot name="workspace" />
         </section>
         <button

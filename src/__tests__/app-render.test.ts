@@ -282,10 +282,10 @@ describe("App shell", () => {
     expect(wrapper.find('[data-testid="workbench-command-bar"]').text()).toContain("Mini Desk");
     expect(wrapper.find('[data-testid="workbench-command-bar"]').text()).not.toContain("搜索或执行命令");
     expect(wrapper.find('[data-testid="workbench-command-bar"]').text()).not.toContain("⌘K");
-    expect(wrapper.find('[aria-label="素材"]').exists()).toBe(true);
-    expect(wrapper.find('[aria-label="笔记与快捷动作"]').exists()).toBe(true);
-    expect(wrapper.find('[aria-label="任务流"]').exists()).toBe(true);
-    expect(wrapper.find('[aria-label="工作区"]').exists()).toBe(true);
+    expect(wrapper.get(".workbench-zone-assets").attributes("aria-label")).toBe("🎨 图片");
+    expect(wrapper.get(".workbench-zone-notes").attributes("aria-label")).toBe("⚡ 快捷动作");
+    expect(wrapper.get(".workbench-zone-tasks").attributes("aria-label")).toBe("提醒事项");
+    expect(wrapper.get(".workbench-zone-workspace").attributes("aria-label")).toBe("备忘录");
     expect(wrapper.find('[aria-label="Mini Desk"]').exists()).toBe(false);
     expect(wrapper.text()).toContain("🎨 图片");
     expect(wrapper.text()).toContain("快捷动作");

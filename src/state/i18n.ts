@@ -99,6 +99,15 @@ export const DEFAULT_TITLES_BY_LANGUAGE: Record<AppLanguage, Record<string, stri
   },
 };
 
+// Fixed collapsed-rail labels for the tasks and workspace zones. The assets and
+// notes rails instead follow each zone's editable title (passed as props), since
+// those have a single editable heading; tasks and workspace hold multiple lists
+// or spaces, so they use a fixed label.
+export const WORKBENCH_COLLAPSED_FIXED_LABELS_BY_LANGUAGE: Record<AppLanguage, { tasks: string; workspace: string }> = {
+  zh: { tasks: "提醒事项", workspace: "备忘录" },
+  en: { tasks: "Reminders", workspace: "Memo" },
+};
+
 export const LEGACY_DEFAULT_TITLES_BY_LANGUAGE: Record<AppLanguage, Record<string, string>> = {
   zh: {
     "image-title": "🎨 图床",
