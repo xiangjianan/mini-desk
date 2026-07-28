@@ -116,6 +116,25 @@ const groupedButtons = computed(() => {
   const base = buildVisibleQuickButtonGroups(props.buttons, props.tags, props.showHidden, uiText.value.quick.otherTag, props.otherCollapsed);
   return filterVisibleQuickButtonGroups(base, globalSearchNormalized.value);
 });
+const searchOpen = ref(false);
+const searchInputRef = ref<{ focus?: () => void } | null>(null);
+
+function openSearch(): void {
+  searchOpen.value = true;
+  void nextTick(() => {
+    searchInputRef.value?.focus?.();
+  });
+}
+
+function closeSearch(): void {
+  searchOpen.value = false;
+  clearGlobalSearch();
+}
+
+function toggleSearch(): void {
+  if (searchOpen.value) closeSearch();
+  else openSearch();
+}
 const canSubmit = computed(() => {
   if (form.title.trim().length === 0 || form.value.trim().length === 0) return false;
   if (form.type !== "api") return true;
@@ -591,19 +610,29 @@ function handleQuickGroupDrop(event: DragEvent, groupId: string): void {
         />
       </h2>
       <div class="header-actions">
-        <NInput
-          class="quick-search-input"
-          :value="globalSearchQuery"
-          :placeholder="uiText.quick.searchPlaceholder"
-          :aria-label="uiText.quick.searchPlaceholder"
-          clearable
-          @update:value="setGlobalSearch"
-          @keydown.esc.prevent.stop="clearGlobalSearch"
-        >
-          <template #prefix>
+        <div class="quick-search" :class="{ 'is-open': searchOpen }">
+          <button
+            type="button"
+            class="quick-search-toggle icon-button"
+            :aria-label="uiText.quick.searchPlaceholder"
+            :aria-expanded="searchOpen"
+            @click="toggleSearch"
+          >
             <NIcon :component="SearchOutline" />
-          </template>
-        </NInput>
+          </button>
+          <div class="quick-search-input-wrapper">
+            <NInput
+              ref="searchInputRef"
+              class="quick-search-input"
+              :value="globalSearchQuery"
+              :placeholder="uiText.quick.searchPlaceholder"
+              :aria-label="uiText.quick.searchPlaceholder"
+              clearable
+              @update:value="setGlobalSearch"
+              @keydown.esc.prevent.stop="closeSearch"
+            />
+          </div>
+        </div>
         <button
           type="button"
           class="quick-menu-button icon-button"

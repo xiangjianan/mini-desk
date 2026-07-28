@@ -6581,6 +6581,26 @@ body,
   letter-spacing: -0.01em;
 }
 
+.quick-search {
+  display: inline-flex;
+  align-items: center;
+  gap: 2px;
+}
+
+.quick-search-toggle {
+  border-radius: 999px;
+}
+
+.quick-search-input-wrapper {
+  width: 0;
+  overflow: hidden;
+  transition: width var(--motion-medium) var(--motion-ease);
+}
+
+.quick-search.is-open .quick-search-input-wrapper {
+  width: 140px;
+}
+
 .quick-search-input {
-  width: 120px;
+  width: 140px;
 }
