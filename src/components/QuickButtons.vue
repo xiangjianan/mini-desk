@@ -135,6 +135,20 @@ function toggleSearch(): void {
   if (searchOpen.value) closeSearch();
   else openSearch();
 }
+
+function handleSearchClickOutside(event: MouseEvent): void {
+  if (!searchOpen.value) return;
+  const target = event.target as HTMLElement | null;
+  if (target?.closest?.(".quick-search")) return;
+  closeSearch();
+}
+
+onMounted(() => {
+  document.addEventListener("click", handleSearchClickOutside);
+});
+onUnmounted(() => {
+  document.removeEventListener("click", handleSearchClickOutside);
+});
 const canSubmit = computed(() => {
   if (form.title.trim().length === 0 || form.value.trim().length === 0) return false;
   if (form.type !== "api") return true;

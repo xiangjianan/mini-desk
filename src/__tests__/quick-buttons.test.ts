@@ -182,6 +182,20 @@ describe("QuickButtons", () => {
     expect(wrapper.find(".quick-search").classes()).not.toContain("is-open");
   });
 
+  it("collapses the quick search when clicking outside", async () => {
+    const wrapper = mountQuickButtons({
+      tags: [{ id: "tag-a", title: "工作" }],
+      buttons: [
+        { id: "a1", title: "GitHub", value: "https://github.com", type: "link", hidden: false, tagId: "tag-a" },
+      ],
+    });
+    await wrapper.find(".quick-search-toggle").trigger("click");
+    expect(wrapper.find(".quick-search").classes()).toContain("is-open");
+    document.body.click();
+    await wrapper.vm.$nextTick();
+    expect(wrapper.find(".quick-search").classes()).not.toContain("is-open");
+  });
+
   it("filters buttons globally and force-expands matching groups while a query is active", async () => {
     setGlobalSearch("git");
     const wrapper = mountQuickButtons({

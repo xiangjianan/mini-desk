@@ -6587,8 +6587,12 @@ body,
   gap: 2px;
 }
 
-.quick-search-toggle {
-  border-radius: 999px;
+.quick-search .quick-search-toggle {
+  width: 30px;
+  height: 30px;
+  min-width: 30px;
+  padding: 0;
+  border-radius: 50%;
 }
 
 .quick-search-input-wrapper {
@@ -6603,4 +6607,9 @@ body,
 
 .quick-search-input {
   width: 140px;
+}
+
+.quick-search-input.n-input--focus {
+  border-color: var(--border);
+  box-shadow: none !important;
 }
