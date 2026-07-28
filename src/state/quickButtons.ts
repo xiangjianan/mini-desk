@@ -1,4 +1,5 @@
 import type { QuickButton, QuickTag } from "../types";
+import { matchesSearch } from "../utils/searchHighlight";
 
 export interface QuickButtonGroup {
   id: string;
@@ -77,4 +78,23 @@ export function formatQuickCopiedPreview(value: string, maxLength = QUICK_COPY_P
   const collapsed = value.replace(/\s+/g, " ").trim();
   if (collapsed.length <= maxLength) return collapsed;
   return `${collapsed.slice(0, maxLength)}…`;
+}
+
+export function filterVisibleQuickButtonGroups(
+  groups: QuickButtonGroup[],
+  normalized: string,
+): QuickButtonGroup[] {
+  if (!normalized) return groups;
+  return groups
+    .map((group): QuickButtonGroup | null => {
+      if (matchesSearch(group.title, normalized)) {
+        return group.collapsed ? { ...group, collapsed: false } : group;
+      }
+      const matchedButtons = group.buttons.filter(
+        (button) => matchesSearch(button.title, normalized) || matchesSearch(button.value, normalized),
+      );
+      if (matchedButtons.length === 0) return null;
+      return { ...group, buttons: matchedButtons, collapsed: false };
+    })
+    .filter((group): group is QuickButtonGroup => group !== null);
 }
