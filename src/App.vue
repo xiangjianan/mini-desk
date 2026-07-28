@@ -2900,7 +2900,7 @@ function moveItem<T extends { id: string }>(items: T[], dragId: string, targetId
           :aria-label="uiText.app.searchPlaceholder"
           clearable
           @update:value="setGlobalSearch"
-          @keydown.esc.prevent="clearGlobalSearch"
+          @keydown.esc.prevent.stop="clearGlobalSearch"
         >
           <template #prefix>
             <NIcon :component="SearchOutline" />
