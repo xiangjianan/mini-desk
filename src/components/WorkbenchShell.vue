@@ -513,6 +513,7 @@ onUnmounted(() => {
             </p>
           </div>
           <div class="workbench-command-actions">
+            <slot name="search" />
             <Button
               variant="ghost"
               size="icon"
