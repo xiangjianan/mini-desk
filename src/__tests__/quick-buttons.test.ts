@@ -158,6 +158,44 @@ describe("QuickButtons", () => {
     resetGlobalSearch();
   });
 
+  it("renders the quick search input in the header", () => {
+    const wrapper = mountQuickButtons({
+      tags: [{ id: "tag-a", title: "工作" }],
+      buttons: [
+        { id: "a1", title: "GitHub", value: "https://github.com", type: "link", hidden: false, tagId: "tag-a" },
+      ],
+    });
+    expect(wrapper.find(".quick-search-input").exists()).toBe(true);
+  });
+
+  it("expands the quick search input when the toggle is clicked and collapses on second click", async () => {
+    const wrapper = mountQuickButtons({
+      tags: [{ id: "tag-a", title: "工作" }],
+      buttons: [
+        { id: "a1", title: "GitHub", value: "https://github.com", type: "link", hidden: false, tagId: "tag-a" },
+      ],
+    });
+    expect(wrapper.find(".quick-search").classes()).not.toContain("is-open");
+    await wrapper.find(".quick-search-toggle").trigger("click");
+    expect(wrapper.find(".quick-search").classes()).toContain("is-open");
+    await wrapper.find(".quick-search-toggle").trigger("click");
+    expect(wrapper.find(".quick-search").classes()).not.toContain("is-open");
+  });
+
+  it("collapses the quick search when clicking outside", async () => {
+    const wrapper = mountQuickButtons({
+      tags: [{ id: "tag-a", title: "工作" }],
+      buttons: [
+        { id: "a1", title: "GitHub", value: "https://github.com", type: "link", hidden: false, tagId: "tag-a" },
+      ],
+    });
+    await wrapper.find(".quick-search-toggle").trigger("click");
+    expect(wrapper.find(".quick-search").classes()).toContain("is-open");
+    document.body.click();
+    await wrapper.vm.$nextTick();
+    expect(wrapper.find(".quick-search").classes()).not.toContain("is-open");
+  });
+
   it("filters buttons globally and force-expands matching groups while a query is active", async () => {
     setGlobalSearch("git");
     const wrapper = mountQuickButtons({
@@ -354,8 +392,8 @@ describe("QuickButtons", () => {
     expect(wrapper.findAll(".quick-tag-choice").map((option) => option.text())).toEqual(["无标签", "工具"]);
     expect(wrapper.findAll(".quick-tag-choice").map((option) => option.attributes("aria-pressed"))).toEqual(["true", "false"]);
 
-    await wrapper.findAll("input")[0].setValue("接口");
-    await wrapper.findAll("input")[1].setValue("https://api.example.test");
+    await wrapper.findAll(".quick-form input")[0].setValue("接口");
+    await wrapper.findAll(".quick-form input")[1].setValue("https://api.example.test");
     await wrapper.findAll(".quick-tag-choice").find((option) => option.text() === "工具")?.trigger("click");
     expect(wrapper.findAll(".quick-tag-choice").map((option) => option.attributes("aria-pressed"))).toEqual(["false", "true"]);
     await wrapper.get("form").trigger("submit.prevent");
@@ -376,8 +414,8 @@ describe("QuickButtons", () => {
     });
 
     await openDialog(wrapper);
-    await wrapper.findAll("input")[0].setValue("资料入口");
-    await wrapper.findAll("input")[1].setValue("https://docs.example.test");
+    await wrapper.findAll(".quick-form input")[0].setValue("资料入口");
+    await wrapper.findAll(".quick-form input")[1].setValue("https://docs.example.test");
     await wrapper.findAll(".quick-tag-choice").find((option) => option.text() === "工具")?.trigger("click");
     await wrapper.get(".quick-tag-new-inline-input").setValue("资料");
 
@@ -711,7 +749,7 @@ describe("QuickButtons", () => {
     const wrapper = mountQuickButtons();
 
     await openDialog(wrapper);
-    await wrapper.findAll("input")[1].setValue("https://example.com");
+    await wrapper.findAll(".quick-form input")[1].setValue("https://example.com");
     await wrapper.get("form").trigger("submit.prevent");
 
     expect(wrapper.emitted("save")).toBeUndefined();
@@ -724,7 +762,7 @@ describe("QuickButtons", () => {
     const wrapper = mountQuickButtons();
 
     await openDialog(wrapper);
-    await wrapper.findAll("input")[0].setValue("示例链接");
+    await wrapper.findAll(".quick-form input")[0].setValue("示例链接");
     await wrapper.get("form").trigger("submit.prevent");
 
     expect(wrapper.emitted("save")).toBeUndefined();
@@ -759,8 +797,8 @@ describe("QuickButtons", () => {
 
     await openDialog(wrapper);
     await wrapper.findAll(".checkbox-stub")[2].trigger("click");
-    await wrapper.findAll("input")[0].setValue("创建用户");
-    await wrapper.findAll("input")[1].setValue("https://api.example.test/users");
+    await wrapper.findAll(".quick-form input")[0].setValue("创建用户");
+    await wrapper.findAll(".quick-form input")[1].setValue("https://api.example.test/users");
     await wrapper.get(".quick-api-method-select").setValue("POST");
     await wrapper.get(".quick-api-body-type-select").setValue("json");
     await wrapper.get(".quick-api-header-key").setValue("Authorization");
@@ -792,7 +830,7 @@ describe("QuickButtons", () => {
 
     await openDialog(wrapper);
     await wrapper.findAll(".checkbox-stub")[1].trigger("click");
-    await wrapper.findAll("input")[0].setValue("片段");
+    await wrapper.findAll(".quick-form input")[0].setValue("片段");
     await wrapper.get("textarea").setValue("第一行\n第二行");
     await wrapper.get("form").trigger("submit.prevent");
 

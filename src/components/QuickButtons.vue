@@ -2,13 +2,13 @@
 import { computed, h, nextTick, onMounted, onUnmounted, reactive, ref, watch } from "vue";
 import type { Component, ComponentPublicInstance, VNode } from "vue";
 import { NButton, NCheckbox, NDropdown, NIcon, NInput, NModal, NScrollbar, NSelect } from "naive-ui";
-import { AddOutline, ChevronDownOutline, CloudUploadOutline, CopyOutline, CreateOutline, EyeOffOutline, EyeOutline, HelpCircleOutline, PricetagsOutline, TrashOutline } from "@vicons/ionicons5";
+import { AddOutline, ChevronDownOutline, CloudUploadOutline, CopyOutline, CreateOutline, EyeOffOutline, EyeOutline, HelpCircleOutline, PricetagsOutline, SearchOutline, TrashOutline } from "@vicons/ionicons5";
 import type { DropdownOption } from "naive-ui";
 import type { AppLanguage, GuideKey, QuickApiBodyType, QuickApiHeader, QuickApiMethod, QuickButton, QuickButtonType, QuickTag } from "../types";
 import { GUIDE_MENU_OPTION } from "../state/defaults";
 import { getUiText } from "../state/i18n";
 import { buildVisibleQuickButtonGroups, filterVisibleQuickButtonGroups, hasOverloadedVisibleQuickButtonGroup, QUICK_BUTTON_EMPTY_GROUP_ID, QUICK_DENSITY_THRESHOLD } from "../state/quickButtons";
-import { globalSearchNormalized, globalSearchQuery } from "../state/globalSearch";
+import { clearGlobalSearch, globalSearchNormalized, globalSearchQuery, setGlobalSearch } from "../state/globalSearch";
 import { CONTEXT_MENU_Z_INDEX, createExclusiveContextMenu } from "../utils/contextMenu";
 import { createDragAutoScroll, findDragScrollContainer } from "../utils/dragScroll";
 import EditableTitle from "./EditableTitle.vue";
@@ -115,6 +115,39 @@ watch(() => props.tags, refreshTagDrafts, { deep: true });
 const groupedButtons = computed(() => {
   const base = buildVisibleQuickButtonGroups(props.buttons, props.tags, props.showHidden, uiText.value.quick.otherTag, props.otherCollapsed);
   return filterVisibleQuickButtonGroups(base, globalSearchNormalized.value);
+});
+const searchOpen = ref(false);
+const searchInputRef = ref<{ focus?: () => void } | null>(null);
+
+function openSearch(): void {
+  searchOpen.value = true;
+  void nextTick(() => {
+    searchInputRef.value?.focus?.();
+  });
+}
+
+function closeSearch(): void {
+  searchOpen.value = false;
+  clearGlobalSearch();
+}
+
+function toggleSearch(): void {
+  if (searchOpen.value) closeSearch();
+  else openSearch();
+}
+
+function handleSearchClickOutside(event: MouseEvent): void {
+  if (!searchOpen.value) return;
+  const target = event.target as HTMLElement | null;
+  if (target?.closest?.(".quick-search")) return;
+  closeSearch();
+}
+
+onMounted(() => {
+  document.addEventListener("click", handleSearchClickOutside);
+});
+onUnmounted(() => {
+  document.removeEventListener("click", handleSearchClickOutside);
 });
 const canSubmit = computed(() => {
   if (form.title.trim().length === 0 || form.value.trim().length === 0) return false;
@@ -591,6 +624,29 @@ function handleQuickGroupDrop(event: DragEvent, groupId: string): void {
         />
       </h2>
       <div class="header-actions">
+        <div class="quick-search" :class="{ 'is-open': searchOpen }">
+          <button
+            type="button"
+            class="quick-search-toggle icon-button"
+            :aria-label="uiText.quick.searchPlaceholder"
+            :aria-expanded="searchOpen"
+            @click="toggleSearch"
+          >
+            <NIcon :component="SearchOutline" />
+          </button>
+          <div class="quick-search-input-wrapper">
+            <NInput
+              ref="searchInputRef"
+              class="quick-search-input"
+              :value="globalSearchQuery"
+              :placeholder="uiText.quick.searchPlaceholder"
+              :aria-label="uiText.quick.searchPlaceholder"
+              clearable
+              @update:value="setGlobalSearch"
+              @keydown.esc.prevent.stop="closeSearch"
+            />
+          </div>
+        </div>
         <button
           type="button"
           class="quick-menu-button icon-button"
