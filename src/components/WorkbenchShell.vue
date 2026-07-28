@@ -60,6 +60,7 @@ const miniDeskLogoSrc = computed(() => (props.theme === "dark" ? miniDeskDarkLog
 defineSlots<{
   status?: () => unknown;
   actions?: () => unknown;
+  search?: () => unknown;
   assets?: () => unknown;
   notes?: () => unknown;
   tasks?: () => unknown;

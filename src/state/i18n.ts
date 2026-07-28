@@ -556,6 +556,7 @@ export const UI_TEXT = {
       aboutDescription: "一个本地优先的轻量工作台，把截图、提醒事项、快捷动作和备忘录缝合得恰到好处。\n所有操作均在本地浏览器完成，绝不上传您的任何数据。",
       aboutSignature: "(100% AI BUILT)",
       reminderFallback: "提醒事项",
+      searchPlaceholder: "搜索快捷动作 / 提醒事项 / 备忘录",
     },
     settings: {
       button: "设置",
@@ -819,6 +820,7 @@ export const UI_TEXT = {
       aboutDescription: "A local-first lightweight desk for organizing screenshots, reminders, quick actions, and a memo.\nEverything happens in your local browser. None of your data is ever uploaded.",
       aboutSignature: "(100% AI BUILT)",
       reminderFallback: "Reminders",
+      searchPlaceholder: "Search quick actions / todos / memos",
     },
     settings: {
       button: "Settings",
