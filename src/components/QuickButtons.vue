@@ -7,10 +7,12 @@ import type { DropdownOption } from "naive-ui";
 import type { AppLanguage, GuideKey, QuickApiBodyType, QuickApiHeader, QuickApiMethod, QuickButton, QuickButtonType, QuickTag } from "../types";
 import { GUIDE_MENU_OPTION } from "../state/defaults";
 import { getUiText } from "../state/i18n";
-import { buildVisibleQuickButtonGroups, hasOverloadedVisibleQuickButtonGroup, QUICK_BUTTON_EMPTY_GROUP_ID, QUICK_DENSITY_THRESHOLD } from "../state/quickButtons";
+import { buildVisibleQuickButtonGroups, filterVisibleQuickButtonGroups, hasOverloadedVisibleQuickButtonGroup, QUICK_BUTTON_EMPTY_GROUP_ID, QUICK_DENSITY_THRESHOLD } from "../state/quickButtons";
+import { globalSearchNormalized, globalSearchQuery } from "../state/globalSearch";
 import { CONTEXT_MENU_Z_INDEX, createExclusiveContextMenu } from "../utils/contextMenu";
 import { createDragAutoScroll, findDragScrollContainer } from "../utils/dragScroll";
 import EditableTitle from "./EditableTitle.vue";
+import HighlightText from "./HighlightText.vue";
 
 const props = withDefaults(defineProps<{
   title: string;
@@ -110,9 +112,10 @@ onMounted(exclusiveMenu.mount);
 onUnmounted(exclusiveMenu.unmount);
 watch(() => props.tags, refreshTagDrafts, { deep: true });
 
-const groupedButtons = computed(() =>
-  buildVisibleQuickButtonGroups(props.buttons, props.tags, props.showHidden, uiText.value.quick.otherTag, props.otherCollapsed),
-);
+const groupedButtons = computed(() => {
+  const base = buildVisibleQuickButtonGroups(props.buttons, props.tags, props.showHidden, uiText.value.quick.otherTag, props.otherCollapsed);
+  return filterVisibleQuickButtonGroups(base, globalSearchNormalized.value);
+});
 const canSubmit = computed(() => {
   if (form.title.trim().length === 0 || form.value.trim().length === 0) return false;
   if (form.type !== "api") return true;
@@ -644,6 +647,7 @@ function handleQuickGroupDrop(event: DragEvent, groupId: string): void {
               @blur="commitInlineTagRename"
             />
             <span v-else class="quick-tag-title">{{ group.title }}</span>
+            <span v-if="editingTagId !== group.id" class="quick-tag-count">{{ group.buttons.length }}</span>
           </div>
           <div
             class="quick-tag-content"
@@ -671,6 +675,7 @@ function handleQuickGroupDrop(event: DragEvent, groupId: string): void {
                 class="quick-button"
                 :class="{ 'is-hidden': button.hidden, 'is-copy': button.type === 'text', 'is-api': button.type === 'api', 'is-dragging': draggingId === button.id }"
                 :data-id="button.id"
+                :title="button.title"
                 type="button"
                 draggable="true"
                 @click="emit('copy', button.id, $event.currentTarget as HTMLElement)"
@@ -682,7 +687,7 @@ function handleQuickGroupDrop(event: DragEvent, groupId: string): void {
               >
                 <NIcon v-if="button.type === 'text'" class="quick-button-icon" :component="CopyOutline" />
                 <NIcon v-else-if="button.type === 'api'" class="quick-button-icon" :component="CloudUploadOutline" />
-                <span>{{ button.title }}</span>
+                <HighlightText class="quick-button-label" :text="button.title" :query="globalSearchQuery" />
               </button>
             </TransitionGroup>
           </div>

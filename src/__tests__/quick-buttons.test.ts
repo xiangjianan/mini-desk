@@ -1,7 +1,7 @@
 import { mount } from "@vue/test-utils";
 import { readFileSync } from "node:fs";
 import { resolve } from "node:path";
-import { describe, expect, it } from "vitest";
+import { afterEach, describe, expect, it } from "vitest";
 import QuickButtons from "../components/QuickButtons.vue";
 import {
   buildVisibleQuickButtonGroups,
@@ -9,6 +9,7 @@ import {
   formatQuickCopiedPreview,
   hasOverloadedVisibleQuickButtonGroup,
 } from "../state/quickButtons";
+import { resetGlobalSearch } from "../state/globalSearch";
 
 const buttonStub = {
   template: '<button v-bind="$attrs"><slot /></button>',
@@ -153,6 +154,27 @@ function readSource(path: string): string {
 }
 
 describe("QuickButtons", () => {
+  afterEach(() => {
+    resetGlobalSearch();
+  });
+
+  it("renders a count badge per tag group and a title tooltip per button", async () => {
+    const wrapper = mountQuickButtons({
+      tags: [{ id: "tag-a", title: "工作" }],
+      buttons: [
+        { id: "a1", title: "GitHub", value: "https://github.com", type: "link", hidden: false, tagId: "tag-a" },
+        { id: "a2", title: "部署", value: "deploy", type: "text", hidden: false, tagId: "tag-a" },
+      ],
+    });
+    await wrapper.vm.$nextTick();
+    const counts = wrapper.findAll(".quick-tag-count");
+    expect(counts.length).toBe(1);
+    expect(counts[0].text()).toBe("2");
+    const buttons = wrapper.findAll(".quick-button");
+    expect(buttons[0].attributes("title")).toBe("GitHub");
+    expect(buttons[0].find(".quick-button-label").exists()).toBe(true);
+  });
+
   it("builds visible quick button groups in tag order with untagged buttons last", () => {
     const tags = [
       { id: "tag-a", title: "标签 A" },
