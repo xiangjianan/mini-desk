@@ -1,9 +1,15 @@
 import { mount } from "@vue/test-utils";
 import { readFileSync } from "node:fs";
 import { resolve } from "node:path";
-import { describe, expect, it } from "vitest";
+import { afterEach, describe, expect, it } from "vitest";
 import QuickButtons from "../components/QuickButtons.vue";
-import { buildVisibleQuickButtonGroups, formatQuickCopiedPreview, hasOverloadedVisibleQuickButtonGroup } from "../state/quickButtons";
+import {
+  buildVisibleQuickButtonGroups,
+  filterVisibleQuickButtonGroups,
+  formatQuickCopiedPreview,
+  hasOverloadedVisibleQuickButtonGroup,
+} from "../state/quickButtons";
+import { resetGlobalSearch, setGlobalSearch } from "../state/globalSearch";
 
 const buttonStub = {
   template: '<button v-bind="$attrs"><slot /></button>',
@@ -148,6 +154,44 @@ function readSource(path: string): string {
 }
 
 describe("QuickButtons", () => {
+  afterEach(() => {
+    resetGlobalSearch();
+  });
+
+  it("filters buttons globally and force-expands matching groups while a query is active", async () => {
+    setGlobalSearch("git");
+    const wrapper = mountQuickButtons({
+      tags: [{ id: "tag-a", title: "工作" }],
+      buttons: [
+        { id: "a1", title: "GitHub", value: "https://github.com", type: "link", hidden: false, tagId: "tag-a" },
+        { id: "a2", title: "部署", value: "deploy", type: "text", hidden: false, tagId: "tag-a" },
+      ],
+    });
+    await wrapper.vm.$nextTick();
+    const buttons = wrapper.findAll(".quick-button");
+    expect(buttons.length).toBe(1);
+    expect(buttons[0].attributes("title")).toBe("GitHub");
+    // 命中时该组内容不收起
+    expect(wrapper.find(".quick-tag-content.is-collapsed").exists()).toBe(false);
+  });
+
+  it("renders a count badge per tag group and a title tooltip per button", async () => {
+    const wrapper = mountQuickButtons({
+      tags: [{ id: "tag-a", title: "工作" }],
+      buttons: [
+        { id: "a1", title: "GitHub", value: "https://github.com", type: "link", hidden: false, tagId: "tag-a" },
+        { id: "a2", title: "部署", value: "deploy", type: "text", hidden: false, tagId: "tag-a" },
+      ],
+    });
+    await wrapper.vm.$nextTick();
+    const counts = wrapper.findAll(".quick-tag-count");
+    expect(counts.length).toBe(1);
+    expect(counts[0].text()).toBe("2");
+    const buttons = wrapper.findAll(".quick-button");
+    expect(buttons[0].attributes("title")).toBe("GitHub");
+    expect(buttons[0].find(".quick-button-label").exists()).toBe(true);
+  });
+
   it("builds visible quick button groups in tag order with untagged buttons last", () => {
     const tags = [
       { id: "tag-a", title: "标签 A" },
@@ -1038,5 +1082,45 @@ describe("formatQuickCopiedPreview", () => {
     const preview = formatQuickCopiedPreview(long);
     expect(preview.length).toBeLessThan(long.length);
     expect(preview.endsWith("…")).toBe(true);
+  });
+});
+
+describe("filterVisibleQuickButtonGroups", () => {
+  const groups = [
+    { id: "tag-a", title: "工作", buttons: [
+      { id: "a1", title: "GitHub", value: "https://github.com", type: "link" as const, hidden: false },
+      { id: "a2", title: "部署", value: "deploy-prod", type: "text" as const, hidden: false },
+    ], reorderable: true, collapsed: false },
+    { id: "tag-b", title: "生活", buttons: [
+      { id: "b1", title: "外卖", value: "waimai", type: "text" as const, hidden: false },
+    ], reorderable: true, collapsed: true },
+  ];
+
+  it("returns groups unchanged when normalized query is empty", () => {
+    expect(filterVisibleQuickButtonGroups(groups, "")).toEqual(groups);
+  });
+
+  it("keeps a whole group (force-expanded) when the tag title matches", () => {
+    const result = filterVisibleQuickButtonGroups(groups, "工");
+    expect(result.map((g) => g.id)).toEqual(["tag-a"]);
+    expect(result[0].buttons.map((b) => b.id)).toEqual(["a1", "a2"]);
+    expect(result[0].collapsed).toBe(false);
+  });
+
+  it("keeps only matching buttons and force-expands when a button matches by title", () => {
+    const result = filterVisibleQuickButtonGroups(groups, "git");
+    expect(result.map((g) => g.id)).toEqual(["tag-a"]);
+    expect(result[0].buttons.map((b) => b.id)).toEqual(["a1"]);
+    expect(result[0].collapsed).toBe(false);
+  });
+
+  it("matches by value when title does not match", () => {
+    const result = filterVisibleQuickButtonGroups(groups, "deploy");
+    expect(result[0].buttons.map((b) => b.id)).toEqual(["a2"]);
+  });
+
+  it("drops groups with no matches", () => {
+    const result = filterVisibleQuickButtonGroups(groups, "zzz");
+    expect(result).toEqual([]);
   });
 });

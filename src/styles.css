@@ -1778,6 +1778,9 @@ button.image-card {
   padding-top: 4px;
   padding-bottom: 6px;
   overflow: hidden;
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(80px, 1fr));
+  gap: 8px;
 }
 
 .quick-tag-heading {
@@ -1785,8 +1788,9 @@ button.image-card {
   align-items: center;
   min-height: 24px;
   padding: 0 12px;
-  color: var(--muted);
-  font-size: calc(var(--app-font-size) - 1px);
+  color: var(--text);
+  font-size: var(--app-font-size);
+  font-weight: 600;
   line-height: 1.4;
   cursor: grab;
   user-select: none;
@@ -1801,9 +1805,23 @@ button.image-card {
 }
 
 .quick-tag-title {
+  flex: 1 1 auto;
+  min-width: 0;
   overflow: hidden;
   text-overflow: ellipsis;
   white-space: nowrap;
+}
+
+.quick-tag-count {
+  flex: 0 0 auto;
+  margin-left: 8px;
+  padding: 0 7px;
+  border-radius: 999px;
+  background: var(--muted-surface);
+  color: var(--muted);
+  font-size: calc(var(--app-font-size) - 2px);
+  font-weight: 500;
+  line-height: 1.6;
 }
 
 .quick-tag-collapse-button {
@@ -1882,6 +1900,19 @@ button.quick-button {
 
 .quick-button.is-dragging {
   opacity: 0.45;
+}
+
+.quick-button-label {
+  min-width: 0;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.highlight-text mark {
+  background: color-mix(in srgb, var(--line-focus) 32%, transparent);
+  color: inherit;
+  border-radius: 2px;
 }
 
 .quick-form {
@@ -6546,4 +6577,15 @@ body,
 .mobile-handoff-message h2 {
   font-weight: 650;
   letter-spacing: -0.01em;
+}
+
+.global-search-input {
+  width: 220px;
+  max-width: 30vw;
+}
+
+@media (max-width: 960px) {
+  .global-search-input {
+    width: 140px;
+  }
 }
