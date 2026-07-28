@@ -9,7 +9,7 @@ import {
   formatQuickCopiedPreview,
   hasOverloadedVisibleQuickButtonGroup,
 } from "../state/quickButtons";
-import { resetGlobalSearch } from "../state/globalSearch";
+import { resetGlobalSearch, setGlobalSearch } from "../state/globalSearch";
 
 const buttonStub = {
   template: '<button v-bind="$attrs"><slot /></button>',
@@ -156,6 +156,23 @@ function readSource(path: string): string {
 describe("QuickButtons", () => {
   afterEach(() => {
     resetGlobalSearch();
+  });
+
+  it("filters buttons globally and force-expands matching groups while a query is active", async () => {
+    setGlobalSearch("git");
+    const wrapper = mountQuickButtons({
+      tags: [{ id: "tag-a", title: "工作" }],
+      buttons: [
+        { id: "a1", title: "GitHub", value: "https://github.com", type: "link", hidden: false, tagId: "tag-a" },
+        { id: "a2", title: "部署", value: "deploy", type: "text", hidden: false, tagId: "tag-a" },
+      ],
+    });
+    await wrapper.vm.$nextTick();
+    const buttons = wrapper.findAll(".quick-button");
+    expect(buttons.length).toBe(1);
+    expect(buttons[0].attributes("title")).toBe("GitHub");
+    // 命中时该组内容不收起
+    expect(wrapper.find(".quick-tag-content.is-collapsed").exists()).toBe(false);
   });
 
   it("renders a count badge per tag group and a title tooltip per button", async () => {
