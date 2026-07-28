@@ -221,3 +221,7 @@ base: process.env.VITE_BASE ?? "/"
 - `src/state/`：默认状态、消息文案、版本信息、GIF 主题、localStorage/IndexedDB 存取、导入导出归一化和待办领域逻辑。
 - `src/utils/`：文本编辑缩进与行处理工具。
 - `src/__tests__/`：组件渲染、状态兼容、交互契约、部署配置和消息文案测试。
+
+## 致谢
+
+感谢 [LINUX DO](https://linux.do) 社区，本项目在分享与讨论中获得了来自社区朋友的反馈与支持。
