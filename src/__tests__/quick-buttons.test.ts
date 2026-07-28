@@ -9,7 +9,7 @@ import {
   formatQuickCopiedPreview,
   hasOverloadedVisibleQuickButtonGroup,
 } from "../state/quickButtons";
-import { resetGlobalSearch, setGlobalSearch } from "../state/globalSearch";
+import { globalSearchQuery, resetGlobalSearch, setGlobalSearch } from "../state/globalSearch";
 
 const buttonStub = {
   template: '<button v-bind="$attrs"><slot /></button>',
@@ -194,6 +194,26 @@ describe("QuickButtons", () => {
     document.body.click();
     await wrapper.vm.$nextTick();
     expect(wrapper.find(".quick-search").classes()).not.toContain("is-open");
+  });
+
+  it("keeps the search query when clicking a quick action button", async () => {
+    setGlobalSearch("git");
+    const wrapper = mountQuickButtons({
+      tags: [{ id: "tag-a", title: "工作" }],
+      buttons: [
+        { id: "a1", title: "GitHub", value: "https://github.com", type: "link", hidden: false, tagId: "tag-a" },
+        { id: "a2", title: "部署", value: "deploy", type: "text", hidden: false, tagId: "tag-a" },
+      ],
+    });
+    await wrapper.find(".quick-search-toggle").trigger("click");
+    expect(wrapper.find(".quick-search").classes()).toContain("is-open");
+
+    await wrapper.find(".quick-button").trigger("click");
+    await wrapper.vm.$nextTick();
+
+    // 点击快捷动作按钮不应清除搜索输入框，也不应收起搜索面板
+    expect(globalSearchQuery.value).toBe("git");
+    expect(wrapper.find(".quick-search").classes()).toContain("is-open");
   });
 
   it("filters buttons globally and force-expands matching groups while a query is active", async () => {

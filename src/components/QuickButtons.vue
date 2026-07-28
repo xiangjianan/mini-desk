@@ -140,6 +140,8 @@ function handleSearchClickOutside(event: MouseEvent): void {
   if (!searchOpen.value) return;
   const target = event.target as HTMLElement | null;
   if (target?.closest?.(".quick-search")) return;
+  // Clicking a quick action button should not clear the search input.
+  if (target?.closest?.(".quick-button")) return;
   closeSearch();
 }
 

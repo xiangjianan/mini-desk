@@ -6592,7 +6592,15 @@ body,
   height: 30px;
   min-width: 30px;
   padding: 0;
+  border: 0;
   border-radius: 50%;
+  box-shadow: none;
+}
+
+.quick-search .quick-search-toggle:hover,
+.quick-search .quick-search-toggle:focus-visible,
+.quick-search .quick-search-toggle:active {
+  box-shadow: none;
 }
 
 .quick-search-input-wrapper {
