@@ -1,7 +1,7 @@
 <script setup lang="ts">
 import { computed, defineAsyncComponent, nextTick, onMounted, onUnmounted, reactive, ref, watch } from "vue";
-import { MoonOutline, SearchOutline, SunnyOutline } from "@vicons/ionicons5";
-import { darkTheme, dateEnUS, dateZhCN, enUS, NButton, NConfigProvider, NGlobalStyle, NIcon, NInput, zhCN } from "naive-ui";
+import { MoonOutline, SunnyOutline } from "@vicons/ionicons5";
+import { darkTheme, dateEnUS, dateZhCN, enUS, NButton, NConfigProvider, NGlobalStyle, NIcon, zhCN } from "naive-ui";
 import CompanionBubble from "./components/CompanionBubble.vue";
 import ImagePanel from "./components/ImagePanel.vue";
 import QuickButtons from "./components/QuickButtons.vue";
@@ -10,7 +10,6 @@ import SpacePanel from "./components/SpacePanel.vue";
 import TodoPanel from "./components/TodoPanel.vue";
 import WorkbenchShell from "./components/WorkbenchShell.vue";
 import { getCompanionGifSrc, getCompanionNotificationIconSrc } from "./state/companionGifThemes";
-import { clearGlobalSearch, globalSearchQuery, setGlobalSearch } from "./state/globalSearch";
 import {
   clearStoredImagePayloads,
   deleteStoredImage,
@@ -2892,21 +2891,6 @@ function moveItem<T extends { id: string }>(items: T[], dragId: string, targetId
         />
       </template>
 
-      <template #search>
-        <NInput
-          class="global-search-input"
-          :value="globalSearchQuery"
-          :placeholder="uiText.app.searchPlaceholder"
-          :aria-label="uiText.app.searchPlaceholder"
-          clearable
-          @update:value="setGlobalSearch"
-          @keydown.esc.prevent.stop="clearGlobalSearch"
-        >
-          <template #prefix>
-            <NIcon :component="SearchOutline" />
-          </template>
-        </NInput>
-      </template>
 
       <template #assets>
         <ImagePanel

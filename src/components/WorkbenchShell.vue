@@ -60,7 +60,6 @@ const miniDeskLogoSrc = computed(() => (props.theme === "dark" ? miniDeskDarkLog
 defineSlots<{
   status?: () => unknown;
   actions?: () => unknown;
-  search?: () => unknown;
   assets?: () => unknown;
   notes?: () => unknown;
   tasks?: () => unknown;
@@ -514,7 +513,6 @@ onUnmounted(() => {
             </p>
           </div>
           <div class="workbench-command-actions">
-            <slot name="search" />
             <Button
               variant="ghost"
               size="icon"

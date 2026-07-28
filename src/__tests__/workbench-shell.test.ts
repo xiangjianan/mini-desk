@@ -650,16 +650,6 @@ describe("WorkbenchShell", () => {
     wrapper.unmount();
   });
 
-  it("renders the search slot inside the command actions", () => {
-    const wrapper = mount(WorkbenchShell, {
-      props: defaultProps,
-      slots: {
-        search: '<div data-testid="search-slot">search</div>',
-      },
-    });
-    expect(wrapper.get('[data-testid="search-slot"]').text()).toBe("search");
-  });
-
   it("emits theme requests from the top command theme action", async () => {
     const wrapper = mount(WorkbenchShell, {
       props: {

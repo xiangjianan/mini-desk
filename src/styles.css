@@ -6581,13 +6581,6 @@ body,
   letter-spacing: -0.01em;
 }
 
-.global-search-input {
-  width: 220px;
-  max-width: 30vw;
-}
-
-@media (max-width: 960px) {
-  .global-search-input {
-    width: 140px;
-  }
+.quick-search-input {
+  width: 120px;
 }
