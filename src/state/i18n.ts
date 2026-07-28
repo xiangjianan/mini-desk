@@ -104,8 +104,8 @@ export const DEFAULT_TITLES_BY_LANGUAGE: Record<AppLanguage, Record<string, stri
 // those have a single editable heading; tasks and workspace hold multiple lists
 // or spaces, so they use a fixed label.
 export const WORKBENCH_COLLAPSED_FIXED_LABELS_BY_LANGUAGE: Record<AppLanguage, { tasks: string; workspace: string }> = {
-  zh: { tasks: "提醒事项", workspace: "备忘录" },
-  en: { tasks: "Reminders", workspace: "Memo" },
+  zh: { tasks: "✅ 提醒事项", workspace: "📝 备忘录" },
+  en: { tasks: "✅ Reminders", workspace: "📝 Memo" },
 };
 
 export const LEGACY_DEFAULT_TITLES_BY_LANGUAGE: Record<AppLanguage, Record<string, string>> = {

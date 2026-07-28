@@ -70,7 +70,11 @@
   --focus-ring: 0 0 0 3px color-mix(in srgb, var(--ring) 24%, transparent);
   --motion-fast: 160ms;
   --motion-medium: 240ms;
+  --motion-slow: 340ms;
   --motion-ease: cubic-bezier(0.2, 0, 0, 1);
+  --motion-spring: cubic-bezier(0.34, 1.42, 0.64, 1);
+  --shadow-lift: 0 1px 2px rgba(15, 23, 42, 0.05), 0 10px 24px rgba(15, 23, 42, 0.1);
+  --shadow-glow-primary: 0 0 0 1px color-mix(in srgb, var(--primary) 24%, transparent), 0 6px 18px color-mix(in srgb, var(--primary) 22%, transparent);
 }
 
 html[data-theme="dark"] {
@@ -111,6 +115,8 @@ html[data-theme="dark"] {
   --shadow-soft: 0 1px 2px rgba(0, 0, 0, 0.18), 0 16px 36px rgba(0, 0, 0, 0.24);
   --shadow-control: 0 1px 1px rgba(0, 0, 0, 0.18), 0 0 0 1px color-mix(in srgb, var(--border) 88%, transparent);
   --focus-ring: 0 0 0 3px color-mix(in srgb, var(--ring) 34%, transparent);
+  --shadow-lift: 0 1px 2px rgba(0, 0, 0, 0.2), 0 14px 30px rgba(0, 0, 0, 0.32);
+  --shadow-glow-primary: 0 0 0 1px color-mix(in srgb, var(--primary) 32%, transparent), 0 8px 22px color-mix(in srgb, var(--primary) 30%, transparent);
 }
 
 * {
@@ -6279,4 +6285,265 @@ select {
 :dir(rtl) .todo-input,
 :dir(rtl) .today-focus-input {
   text-align: right;
+}
+
+/* ============================================================
+   Visual refresh pass: ambient mesh backdrop, smooth theme
+   cross-fade, entrance choreography, layered elevation, and
+   spring micro-interactions. Contract-critical declarations stay
+   in the rules above; this pass only adds or overrides polish.
+   ============================================================ */
+
+:root {
+  color-scheme: light;
+}
+
+html[data-theme="dark"] {
+  color-scheme: dark;
+}
+
+/* Ambient mesh backdrop: soft color washes over the base gradient. */
+.workbench-shell {
+  background:
+    radial-gradient(56% 44% at 10% -6%, color-mix(in srgb, var(--primary) 10%, transparent) 0%, transparent 70%),
+    radial-gradient(44% 40% at 90% 2%, color-mix(in srgb, #7c5cff 8%, transparent) 0%, transparent 72%),
+    radial-gradient(64% 56% at 50% 110%, color-mix(in srgb, #0ea5e9 7%, transparent) 0%, transparent 74%),
+    linear-gradient(180deg, color-mix(in srgb, var(--background) 65%, #ffffff) 0%, var(--background) 100%);
+}
+
+html[data-theme="dark"] .workbench-shell {
+  background:
+    radial-gradient(56% 44% at 10% -6%, rgba(10, 132, 255, 0.16) 0%, transparent 70%),
+    radial-gradient(44% 40% at 90% 2%, rgba(124, 92, 255, 0.13) 0%, transparent 72%),
+    radial-gradient(64% 56% at 50% 110%, rgba(14, 165, 233, 0.11) 0%, transparent 74%),
+    linear-gradient(180deg, color-mix(in srgb, var(--background) 82%, #000000) 0%, var(--background) 100%);
+}
+
+/* Cross-fade the large static surfaces when toggling light/dark. */
+body,
+.workbench-shell,
+.workbench-zone,
+.panel-header,
+.todo-heading,
+.today-focus-heading {
+  transition:
+    background-color var(--motion-slow) ease,
+    border-color var(--motion-slow) ease,
+    box-shadow var(--motion-slow) ease;
+}
+
+/* Keep the header collapse transition intact while cross-fading colors. */
+.workbench-main {
+  transition:
+    grid-template-rows 200ms var(--motion-ease),
+    background-color var(--motion-slow) ease,
+    box-shadow var(--motion-slow) ease;
+}
+
+.workbench-command-bar:not(.workbench-header-enter-active):not(.workbench-header-leave-active) {
+  transition:
+    background-color var(--motion-slow) ease,
+    border-color var(--motion-slow) ease,
+    box-shadow var(--motion-slow) ease;
+}
+
+/* Entrance choreography: the bar settles first, zones rise in a stagger. */
+@keyframes workbench-bar-enter {
+  from {
+    opacity: 0;
+    transform: translateY(-10px);
+  }
+
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+@keyframes workbench-zone-enter {
+  from {
+    opacity: 0;
+    transform: translateY(12px) scale(0.985);
+  }
+
+  to {
+    opacity: 1;
+    transform: translateY(0) scale(1);
+  }
+}
+
+.workbench-command-bar {
+  animation: workbench-bar-enter var(--motion-slow) var(--motion-ease) backwards;
+}
+
+.workbench-zone {
+  animation: workbench-zone-enter var(--motion-slow) var(--motion-ease) backwards;
+}
+
+.workbench-zone:nth-child(1) {
+  animation-delay: 40ms;
+}
+
+.workbench-zone:nth-child(2) {
+  animation-delay: 80ms;
+}
+
+.workbench-zone:nth-child(3) {
+  animation-delay: 120ms;
+}
+
+.workbench-zone:nth-child(4) {
+  animation-delay: 160ms;
+}
+
+/* Signature title: tight tracking with a subtle foreground-to-primary wash. */
+.workbench-title-group h1 {
+  letter-spacing: -0.012em;
+}
+
+.workbench-title-group h1 .editable-title {
+  background: linear-gradient(96deg, var(--foreground) 20%, color-mix(in srgb, var(--foreground) 68%, var(--primary)) 100%);
+  -webkit-background-clip: text;
+  background-clip: text;
+  color: transparent;
+}
+
+/* Image cards stay put for drag-reorder stability; hover elevates
+   the shadow and zooms the thumbnail inside the fixed frame. */
+.image-card:hover,
+.image-card:focus-visible {
+  box-shadow: var(--shadow-lift);
+}
+
+.image-card img {
+  transition: transform var(--motion-medium) var(--motion-ease);
+}
+
+.image-card:hover img {
+  transform: scale(1.03);
+}
+
+/* Quick actions float on hover and press with a spring. */
+.quick-button {
+  transition:
+    background-color var(--motion-fast) ease,
+    box-shadow var(--motion-fast) ease,
+    color var(--motion-fast) ease,
+    opacity var(--motion-fast) ease,
+    transform var(--motion-medium) var(--motion-spring);
+}
+
+.quick-button:hover,
+.quick-button:focus-visible {
+  box-shadow: var(--shadow-lift);
+  transform: translateY(-1px);
+}
+
+.quick-button:active {
+  transform: translateY(0) scale(0.96);
+}
+
+/* Round icon buttons pick up a soft elevation on hover. */
+.icon-button:hover,
+.settings-btn.icon-button:hover,
+.workbench-header-hide-button:hover,
+.workbench-theme-button:hover {
+  box-shadow: var(--shadow-lift);
+}
+
+/* The active workspace tab reads as a raised pill. */
+.space-tab.is-active {
+  box-shadow: 0 1px 3px color-mix(in srgb, var(--foreground) 10%, transparent);
+}
+
+/* Checkboxes pop under the pointer for tactile completion. */
+.todo-item .n-checkbox .n-checkbox-box,
+.today-focus-item .n-checkbox .n-checkbox-box {
+  transition:
+    transform var(--motion-fast) var(--motion-spring),
+    background-color var(--motion-fast) ease,
+    border-color var(--motion-fast) ease,
+    box-shadow var(--motion-fast) ease;
+}
+
+.todo-item .n-checkbox:active .n-checkbox-box,
+.today-focus-item .n-checkbox:active .n-checkbox-box {
+  transform: scale(0.82);
+}
+
+/* Calculator keys float on hover and press deeper. */
+.calculator-key {
+  transition:
+    background-color var(--motion-fast) ease,
+    box-shadow var(--motion-fast) ease,
+    color var(--motion-fast) ease,
+    transform var(--motion-fast) var(--motion-spring);
+}
+
+.calculator-key:hover {
+  box-shadow: var(--shadow-lift);
+  transform: translateY(-1px);
+}
+
+.calculator-key:active {
+  transform: translateY(0) scale(0.94);
+}
+
+/* Tool primary actions glow faintly in the accent color on hover. */
+.tool-primary-action:hover,
+.tool-primary-action:focus-visible,
+.tool-secondary-action:hover,
+.tool-secondary-action:focus-visible,
+.codec-actions > button:hover,
+.codec-actions > button:focus-visible {
+  box-shadow: 0 2px 10px color-mix(in srgb, var(--primary) 20%, transparent);
+}
+
+/* Filled primary buttons carry an accent-tinted elevation. */
+.n-button--primary-type {
+  box-shadow:
+    0 1px 2px color-mix(in srgb, var(--primary) 26%, transparent),
+    0 4px 14px color-mix(in srgb, var(--primary) 22%, transparent);
+}
+
+/* Today's focus section gets a quiet accent gradient at the top. */
+.today-focus-section {
+  background: linear-gradient(180deg, color-mix(in srgb, var(--primary) 7%, transparent) 0%, transparent 132px);
+}
+
+/* The companion avatar idles with a gentle float. */
+@keyframes companion-float {
+  0%,
+  100% {
+    transform: translateY(0);
+  }
+
+  50% {
+    transform: translateY(-3px);
+  }
+}
+
+.focus-companion.is-visible img {
+  animation: companion-float 3.6s ease-in-out 0.4s infinite;
+}
+
+/* Mobile handoff: ambient backdrop and a floating glass card. */
+.mobile-handoff {
+  background:
+    radial-gradient(84% 58% at 50% -12%, color-mix(in srgb, var(--primary) 13%, transparent) 0%, transparent 72%),
+    var(--bg);
+}
+
+.mobile-handoff-message {
+  border: 1px solid color-mix(in srgb, var(--border) 60%, transparent);
+  border-radius: calc(var(--radius) + 6px);
+  background: var(--material-elevated);
+  box-shadow: var(--shadow-soft);
+  -webkit-backdrop-filter: blur(24px) saturate(1.6);
+  backdrop-filter: blur(24px) saturate(1.6);
+}
+
+.mobile-handoff-message h2 {
+  font-weight: 650;
+  letter-spacing: -0.01em;
 }
