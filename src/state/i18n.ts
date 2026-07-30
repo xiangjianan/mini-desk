@@ -629,6 +629,7 @@ export const UI_TEXT = {
       loading: "图片载入中",
       pasteImage: "粘贴图片",
       paste: "粘贴",
+      addImage: "新增图片",
     },
     space: {
       panel: "空间",
@@ -893,6 +894,7 @@ export const UI_TEXT = {
       loading: "Loading image",
       pasteImage: "Paste image",
       paste: "Paste",
+      addImage: "Add image",
     },
     space: {
       panel: "Space",

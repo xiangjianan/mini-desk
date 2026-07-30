@@ -2,7 +2,7 @@
 import { computed, h, nextTick, onMounted, onUnmounted, ref, watch } from "vue";
 import type { Component, ComponentPublicInstance, VNode } from "vue";
 import { NDropdown, NIcon, NScrollbar } from "naive-ui";
-import { ArrowDownOutline, ArrowUpOutline, ClipboardOutline, CloseOutline, CopyOutline, CreateOutline, EyeOutline, HelpCircleOutline, TrashOutline } from "@vicons/ionicons5";
+import { AddOutline, ArrowDownOutline, ArrowUpOutline, ClipboardOutline, CloseOutline, CopyOutline, CreateOutline, EyeOutline, HelpCircleOutline, TrashOutline } from "@vicons/ionicons5";
 import type { DropdownOption } from "naive-ui";
 import type { AppLanguage, GuideKey, ImagePasteFeedback, ImagePasteRequest, StoredImage } from "../types";
 import { GUIDE_MENU_OPTION } from "../state/defaults";
@@ -70,6 +70,8 @@ const titleRef = ref<{ openMenuAt: (x: number, y: number, event?: Event) => void
 const imageCardRefs = new Map<string, HTMLElement>();
 const imageDragPreview = ref<ImageDragPreview | null>(null);
 const pasteHighlightedId = ref<string | null>(null);
+const addButtonRef = ref<HTMLElement | null>(null);
+let pickerInput: HTMLInputElement | null = null;
 const uiText = computed(() => getUiText(props.language));
 const guideMenuOption = computed<DropdownOption>(() => ({ ...GUIDE_MENU_OPTION, label: uiText.value.common.tips }));
 const exclusiveMenu = createExclusiveContextMenu(closeMenu);
@@ -123,6 +125,7 @@ onUnmounted(() => {
   window.removeEventListener("wheel", handleImageDragWheel, { capture: true });
   cleanupImagePointerDrag();
   resetImageDragAutoScroll();
+  cleanupPickerInput();
   if (pasteHighlightTimer !== undefined) window.clearTimeout(pasteHighlightTimer);
 });
 
@@ -191,6 +194,40 @@ function openTitleMenu(event: MouseEvent): void {
 
 function closeMenu(): void {
   menu.value = null;
+}
+
+function openImagePicker(event: MouseEvent): void {
+  event.stopPropagation();
+  // Build the picker on demand and remove it after use. A transient
+  // <input type="file"> (rather than a persistent one in the template) avoids
+  // shadowing the app-level import input, which tests and a11y tools select as
+  // the document's first file input.
+  cleanupPickerInput();
+  const input = document.createElement("input");
+  input.type = "file";
+  input.accept = "image/*";
+  input.multiple = true;
+  input.className = "image-file-input";
+  input.setAttribute("aria-label", uiText.value.images.addImage);
+  input.addEventListener("change", handleImageInputChange);
+  document.body.appendChild(input);
+  pickerInput = input;
+  input.click();
+}
+
+function handleImageInputChange(event: Event): void {
+  const input = event.target as HTMLInputElement;
+  const files = Array.from(input.files ?? []);
+  cleanupPickerInput();
+  if (files.length === 0) return;
+  emit("dropFiles", files, addButtonRef.value ?? undefined);
+}
+
+function cleanupPickerInput(): void {
+  if (!pickerInput) return;
+  pickerInput.removeEventListener("change", handleImageInputChange);
+  pickerInput.remove();
+  pickerInput = null;
 }
 
 function setImageCardRef(id: string, element: Element | ComponentPublicInstance | null): void {
@@ -595,7 +632,19 @@ function handleImageDragWheel(event: WheelEvent): void {
           @update="(id, value) => emit('titleUpdate', id, value)"
         />
       </h1>
-      <span class="count">{{ images.length }}</span>
+      <div class="header-actions">
+        <span class="count">{{ images.length }}</span>
+        <button
+          ref="addButtonRef"
+          class="image-add-button icon-button"
+          type="button"
+          :aria-label="uiText.images.addImage"
+          :title="uiText.images.addImage"
+          @click="openImagePicker"
+        >
+          <NIcon :component="AddOutline" />
+        </button>
+      </div>
     </div>
 
     <NScrollbar
