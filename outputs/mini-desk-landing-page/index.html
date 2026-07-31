@@ -24,6 +24,38 @@
         --amber: #f5c06a;
         --ease-out: cubic-bezier(0.16, 1, 0.3, 1);
         --ease-premium: cubic-bezier(0.22, 1, 0.36, 1);
+
+        /* elevation + surface */
+        --bg-elev: #0e1219;
+        --ring: rgba(110, 139, 255, 0.6);
+        --shadow-soft: 0 14px 40px rgba(0, 0, 0, 0.4);
+        --shadow-glow: 0 18px 54px rgba(110, 139, 255, 0.28);
+
+        /* radius scale */
+        --radius-sm: 12px;
+        --radius-md: 16px;
+        --radius-lg: 22px;
+        --radius-xl: 30px;
+        --radius-pill: 999px;
+
+        /* spacing scale (4px base) */
+        --space-1: 4px;
+        --space-2: 8px;
+        --space-3: 12px;
+        --space-4: 16px;
+        --space-5: 20px;
+        --space-6: 24px;
+        --space-8: 32px;
+        --space-10: 40px;
+        --space-12: 48px;
+        --space-16: 64px;
+
+        /* z-index scale */
+        --z-progress: 70;
+        --z-skip: 90;
+        --z-toast: 80;
+        --z-totop: 60;
+        --z-menu: 49;
       }
 
       * {
@@ -59,11 +91,224 @@
       a {
         color: inherit;
         text-decoration: none;
+        -webkit-tap-highlight-color: transparent;
       }
 
       img {
         display: block;
         max-width: 100%;
+      }
+
+      /* ---------- interaction layer (progress, menu, toast, focus) ---------- */
+
+      /* scroll progress bar */
+      .scroll-progress {
+        position: fixed;
+        top: 0;
+        left: 0;
+        right: 0;
+        height: 2px;
+        z-index: 70;
+        pointer-events: none;
+      }
+
+      .scroll-progress__bar {
+        display: block;
+        height: 100%;
+        width: 0%;
+        background: linear-gradient(90deg, var(--indigo), var(--violet), var(--cyan));
+        box-shadow: 0 0 12px rgba(110, 139, 255, 0.65);
+        transform-origin: left center;
+        transition: width 120ms linear;
+      }
+
+      /* skip-to-content link (a11y) */
+      .skip-link {
+        position: absolute;
+        left: 16px;
+        top: -64px;
+        z-index: 90;
+        padding: 10px 16px;
+        border-radius: 10px;
+        background: var(--indigo);
+        color: #07101f;
+        font-size: 14px;
+        font-weight: 650;
+        transition: top 220ms var(--ease-out);
+      }
+
+      .skip-link:focus {
+        top: 16px;
+      }
+
+      /* mobile menu toggle */
+      .menu-toggle {
+        display: none;
+        width: 40px;
+        height: 40px;
+        align-items: center;
+        justify-content: center;
+        border-radius: 12px;
+        border: 1px solid var(--line);
+        background: rgba(255, 255, 255, 0.04);
+        color: var(--ink);
+        cursor: pointer;
+        transition: background 220ms var(--ease-out), border-color 220ms var(--ease-out);
+      }
+
+      .menu-toggle:hover {
+        background: rgba(255, 255, 255, 0.08);
+        border-color: var(--line-strong);
+      }
+
+      .menu-toggle svg {
+        width: 20px;
+        height: 20px;
+      }
+
+      .menu-toggle .icon-close {
+        display: none;
+      }
+
+      .site-header.menu-open .menu-toggle .icon-open {
+        display: none;
+      }
+
+      .site-header.menu-open .menu-toggle .icon-close {
+        display: block;
+      }
+
+      .mobile-menu {
+        position: fixed;
+        top: 64px;
+        left: 0;
+        right: 0;
+        z-index: 49;
+        display: grid;
+        gap: 4px;
+        padding: 16px clamp(22px, 5vw, 72px) 26px;
+        background: rgba(7, 9, 13, 0.94);
+        border-bottom: 1px solid var(--line);
+        backdrop-filter: blur(20px) saturate(1.4);
+        -webkit-backdrop-filter: blur(20px) saturate(1.4);
+        transform: translateY(-14px);
+        opacity: 0;
+        pointer-events: none;
+        transition: transform 320ms var(--ease-out), opacity 320ms var(--ease-out);
+      }
+
+      .mobile-menu a {
+        padding: 14px 16px;
+        border-radius: 12px;
+        color: var(--text);
+        font-size: 15px;
+        font-weight: 550;
+        transition: background 200ms var(--ease-out), color 200ms var(--ease-out);
+      }
+
+      .mobile-menu a:hover {
+        background: rgba(255, 255, 255, 0.05);
+        color: var(--ink);
+      }
+
+      .mobile-menu .button {
+        margin-top: 10px;
+        width: 100%;
+      }
+
+      /* back to top */
+      .back-top {
+        position: fixed;
+        right: clamp(18px, 3vw, 36px);
+        bottom: clamp(18px, 3vw, 36px);
+        z-index: 60;
+        width: 48px;
+        height: 48px;
+        border-radius: 999px;
+        display: inline-flex;
+        align-items: center;
+        justify-content: center;
+        background: rgba(255, 255, 255, 0.06);
+        border: 1px solid var(--line-strong);
+        color: var(--ink);
+        cursor: pointer;
+        backdrop-filter: blur(12px);
+        -webkit-backdrop-filter: blur(12px);
+        box-shadow: var(--shadow-soft);
+        opacity: 0;
+        transform: translateY(16px) scale(0.9);
+        pointer-events: none;
+        transition:
+          opacity 320ms var(--ease-out),
+          transform 320ms var(--ease-out),
+          background 220ms var(--ease-out),
+          border-color 220ms var(--ease-out);
+      }
+
+      .back-top.is-visible {
+        opacity: 1;
+        transform: translateY(0) scale(1);
+        pointer-events: auto;
+      }
+
+      .back-top:hover {
+        background: rgba(255, 255, 255, 0.1);
+        border-color: var(--indigo);
+      }
+
+      .back-top svg {
+        width: 18px;
+        height: 18px;
+        transition: transform 280ms var(--ease-out);
+      }
+
+      .back-top:hover svg {
+        transform: translateY(-2px);
+      }
+
+      /* toast */
+      .toast {
+        position: fixed;
+        left: 50%;
+        bottom: 32px;
+        z-index: 80;
+        display: inline-flex;
+        align-items: center;
+        gap: 10px;
+        padding: 12px 18px;
+        border-radius: 14px;
+        background: rgba(20, 24, 33, 0.92);
+        border: 1px solid var(--line-strong);
+        color: var(--ink);
+        font-size: 14px;
+        font-weight: 550;
+        box-shadow: 0 18px 50px rgba(0, 0, 0, 0.45);
+        backdrop-filter: blur(14px);
+        -webkit-backdrop-filter: blur(14px);
+        opacity: 0;
+        transform: translate(-50%, 20px);
+        pointer-events: none;
+        transition: opacity 280ms var(--ease-out), transform 280ms var(--ease-out);
+      }
+
+      .toast.is-visible {
+        opacity: 1;
+        transform: translate(-50%, 0);
+      }
+
+      .toast__dot {
+        width: 8px;
+        height: 8px;
+        border-radius: 999px;
+        background: var(--mint);
+        box-shadow: 0 0 10px rgba(79, 209, 165, 0.8);
+      }
+
+      /* keyboard focus-visible rings */
+      :where(a, button, .menu-toggle, .back-top, .data-row code, .footer-icon-link):focus-visible {
+        outline: 2px solid var(--ring);
+        outline-offset: 3px;
+        border-radius: 8px;
       }
 
       /* ---------- ambient layers ---------- */
@@ -173,13 +418,39 @@
         font-weight: 500;
       }
 
+      .nav-links {
+        display: flex;
+        align-items: center;
+        gap: 30px;
+      }
+
       .nav a:not(.button) {
         position: relative;
         transition: color 220ms var(--ease-out);
       }
 
-      .nav a:not(.button):hover {
+      .nav a:not(.button)::after {
+        content: "";
+        position: absolute;
+        left: 0;
+        right: 0;
+        bottom: -7px;
+        height: 2px;
+        border-radius: 2px;
+        background: linear-gradient(90deg, var(--indigo), var(--cyan));
+        transform: scaleX(0);
+        transform-origin: center;
+        transition: transform 280ms var(--ease-out);
+      }
+
+      .nav a:not(.button):hover,
+      .nav a.active {
         color: var(--ink);
+      }
+
+      .nav a:not(.button):hover::after,
+      .nav a.active::after {
+        transform: scaleX(1);
       }
 
       /* ---------- buttons ---------- */
@@ -205,6 +476,7 @@
           transform 260ms var(--ease-out),
           box-shadow 260ms var(--ease-out),
           background 260ms var(--ease-out);
+        overflow: hidden;
         will-change: transform;
       }
 
@@ -226,6 +498,23 @@
 
       .button:hover .arrow {
         transform: translateX(3px);
+      }
+
+      .button::before {
+        content: "";
+        position: absolute;
+        inset: 0;
+        border-radius: inherit;
+        background: linear-gradient(120deg, transparent 32%, rgba(255, 255, 255, 0.28) 50%, transparent 68%);
+        transform: translateX(-130%);
+        opacity: 0;
+        transition: transform 650ms var(--ease-out), opacity 200ms var(--ease-out);
+        pointer-events: none;
+      }
+
+      .button:hover::before {
+        transform: translateX(130%);
+        opacity: 1;
       }
 
       .button.secondary {
@@ -493,22 +782,29 @@
         grid-template-columns: repeat(6, minmax(0, 1fr));
         gap: 16px;
         margin-top: 60px;
+        perspective: 1100px;
       }
 
       .card {
         --mx: 50%;
         --my: 50%;
+        --rx: 0deg;
+        --ry: 0deg;
         position: relative;
         padding: 34px;
         border-radius: 22px;
         background: linear-gradient(180deg, rgba(255, 255, 255, 0.045), rgba(255, 255, 255, 0.015));
         border: 1px solid var(--line);
         overflow: hidden;
-        transform: translateY(calc((1 - var(--p, 1)) * 34px));
+        transform:
+          translateY(calc((1 - var(--p, 1)) * 34px))
+          rotateX(var(--rx))
+          rotateY(var(--ry));
+        transform-style: preserve-3d;
         transition:
-          transform 340ms var(--ease-out),
-          border-color 340ms var(--ease-out),
-          background 340ms var(--ease-out);
+          transform 300ms var(--ease-out),
+          border-color 300ms var(--ease-out),
+          background 300ms var(--ease-out);
         will-change: transform;
       }
 
@@ -535,7 +831,10 @@
       }
 
       .card:hover {
-        transform: translateY(calc((1 - var(--p, 1)) * 34px - 3px));
+        transform:
+          translateY(calc((1 - var(--p, 1)) * 34px - 3px))
+          rotateX(var(--rx))
+          rotateY(var(--ry));
         border-color: rgba(255, 255, 255, 0.16);
       }
 
@@ -718,6 +1017,14 @@
         color: #b9c6ff;
         font-size: 12px;
         font-family: "SF Mono", ui-monospace, Menlo, monospace;
+        cursor: pointer;
+        transition: background 200ms var(--ease-out), border-color 200ms var(--ease-out), color 200ms var(--ease-out);
+      }
+
+      .data-row code:hover {
+        background: rgba(110, 139, 255, 0.22);
+        border-color: rgba(110, 139, 255, 0.5);
+        color: #cdd8ff;
       }
 
       /* ---------- workflow ---------- */
@@ -1062,8 +1369,22 @@
       /* ---------- responsive ---------- */
 
       @media (max-width: 920px) {
-        .nav a:not(.button) {
+        .nav-links {
           display: none;
+        }
+
+        .nav > .button {
+          display: none;
+        }
+
+        .menu-toggle {
+          display: inline-flex;
+        }
+
+        .mobile-menu.is-open {
+          transform: translateY(0);
+          opacity: 1;
+          pointer-events: auto;
         }
 
         .hero {
@@ -1133,12 +1454,14 @@
     </style>
   </head>
   <body>
+    <a class="skip-link" href="#top">跳到主内容</a>
     <div class="aurora" aria-hidden="true">
       <span class="a1"></span>
       <span class="a2"></span>
       <span class="a3"></span>
     </div>
     <div class="noise" aria-hidden="true"></div>
+    <div class="scroll-progress" aria-hidden="true"><span class="scroll-progress__bar"></span></div>
 
     <header class="site-header" aria-label="Mini Desk">
       <a class="brand" href="#top" aria-label="Mini Desk 首页">
@@ -1146,12 +1469,29 @@
         <span>Mini Desk</span>
       </a>
       <nav class="nav" aria-label="页面导航">
-        <a href="#features">桌面感</a>
-        <a href="#privacy">本地安放</a>
-        <a href="#workflow">日常节奏</a>
+        <div class="nav-links">
+          <a href="#features">桌面感</a>
+          <a href="#privacy">本地安放</a>
+          <a href="#workflow">日常节奏</a>
+        </div>
         <a class="button small" href="https://minidesk.online" target="_blank" rel="noopener noreferrer">立即体验</a>
+        <button class="menu-toggle" type="button" aria-label="打开菜单" aria-expanded="false" aria-controls="mobile-menu">
+          <svg class="icon-open" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" aria-hidden="true">
+            <path d="M4 7h16M4 12h16M4 17h16" />
+          </svg>
+          <svg class="icon-close" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" aria-hidden="true">
+            <path d="M6 6l12 12M18 6 6 18" />
+          </svg>
+        </button>
       </nav>
     </header>
+
+    <div class="mobile-menu" id="mobile-menu" aria-label="移动端导航">
+      <a href="#features">桌面感</a>
+      <a href="#privacy">本地安放</a>
+      <a href="#workflow">日常节奏</a>
+      <a class="button secondary" href="https://minidesk.online" target="_blank" rel="noopener noreferrer">立即体验 <span class="arrow">→</span></a>
+    </div>
 
     <main id="top">
       <section class="hero" aria-labelledby="hero-title">
@@ -1348,19 +1688,125 @@
       </div>
     </footer>
 
+    <button class="back-top" type="button" aria-label="回到顶部">
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+        <path d="M12 19V5M5 12l7-7 7 7" />
+      </svg>
+    </button>
+    <div class="toast" role="status" aria-live="polite">
+      <span class="toast__dot"></span>
+      <span class="toast__msg">已复制到剪贴板</span>
+    </div>
+
     <script>
       (() => {
         const reduceMotion = window.matchMedia("(prefers-reduced-motion: reduce)").matches;
+        const root = document.documentElement;
         const header = document.querySelector(".site-header");
 
+        /* ---------- header scroll state ---------- */
         const updateHeader = () => {
           header?.classList.toggle("is-scrolled", window.scrollY > 12);
         };
-
         updateHeader();
         window.addEventListener("scroll", updateHeader, { passive: true });
 
-        // pointer spotlight on bento cards
+        /* ---------- mobile menu ---------- */
+        const menuToggle = document.querySelector(".menu-toggle");
+        const mobileMenu = document.querySelector(".mobile-menu");
+        const openMenu = () => {
+          mobileMenu?.classList.add("is-open");
+          menuToggle?.setAttribute("aria-expanded", "true");
+          header?.classList.add("menu-open");
+          document.body.style.overflow = "hidden";
+        };
+        const closeMenu = () => {
+          mobileMenu?.classList.remove("is-open");
+          menuToggle?.setAttribute("aria-expanded", "false");
+          header?.classList.remove("menu-open");
+          document.body.style.overflow = "";
+        };
+        menuToggle?.addEventListener("click", () => {
+          if (mobileMenu?.classList.contains("is-open")) closeMenu();
+          else openMenu();
+        });
+        mobileMenu?.querySelectorAll("a").forEach((a) => a.addEventListener("click", closeMenu));
+        document.addEventListener("keydown", (e) => {
+          if (e.key === "Escape") closeMenu();
+        });
+        window.addEventListener("resize", () => {
+          if (window.innerWidth > 920) closeMenu();
+        });
+        document.addEventListener("click", (e) => {
+          if (!mobileMenu?.classList.contains("is-open")) return;
+          if (mobileMenu.contains(e.target) || menuToggle?.contains(e.target)) return;
+          closeMenu();
+        });
+
+        /* ---------- scroll progress ---------- */
+        const progressBar = document.querySelector(".scroll-progress__bar");
+
+        /* ---------- scrollspy (active nav state) ---------- */
+        const navLinks = [...document.querySelectorAll(".nav-links a")];
+        const sections = navLinks
+          .map((a) => document.querySelector(a.getAttribute("href")))
+          .filter(Boolean);
+        const spy = new IntersectionObserver(
+          (entries) => {
+            entries.forEach((entry) => {
+              if (!entry.isIntersecting) return;
+              const id = entry.target.id;
+              navLinks.forEach((a) =>
+                a.classList.toggle("active", a.getAttribute("href") === `#${id}`),
+              );
+            });
+          },
+          { rootMargin: "-45% 0px -50% 0px", threshold: 0 },
+        );
+        sections.forEach((s) => spy.observe(s));
+
+        /* ---------- back to top ---------- */
+        const backTop = document.querySelector(".back-top");
+        const updateBackTop = () => {
+          backTop?.classList.toggle("is-visible", window.scrollY > window.innerHeight * 0.6);
+        };
+        backTop?.addEventListener("click", () => {
+          window.scrollTo({ top: 0, behavior: reduceMotion ? "auto" : "smooth" });
+        });
+
+        /* ---------- copy-to-clipboard micro-interaction ---------- */
+        const toast = document.querySelector(".toast");
+        const toastMsg = toast?.querySelector(".toast__msg");
+        let toastTimer;
+        const showToast = (msg) => {
+          if (!toast || !toastMsg) return;
+          toastMsg.textContent = msg;
+          toast.classList.add("is-visible");
+          clearTimeout(toastTimer);
+          toastTimer = setTimeout(() => toast.classList.remove("is-visible"), 2000);
+        };
+        document.querySelectorAll(".data-row code").forEach((code) => {
+          code.setAttribute("role", "button");
+          code.setAttribute("tabindex", "0");
+          code.setAttribute("title", "点击复制");
+          const copy = async () => {
+            try {
+              await navigator.clipboard.writeText(code.textContent.trim());
+              showToast(`已复制：${code.textContent.trim()}`);
+            } catch {
+              showToast("复制失败，请手动选择");
+            }
+          };
+          code.addEventListener("click", copy);
+          code.addEventListener("keydown", (e) => {
+            if (e.key === "Enter" || e.key === " ") {
+              e.preventDefault();
+              copy();
+            }
+          });
+        });
+
+        /* ---------- card spotlight (pointer track) ---------- */
         document.querySelectorAll(".card").forEach((card) => {
           card.addEventListener("pointermove", (event) => {
             const rect = card.getBoundingClientRect();
@@ -1369,15 +1815,25 @@
           });
         });
 
+        /* ---------- reduced motion: keep functional bits only ---------- */
         if (reduceMotion) {
+          const basic = () => {
+            const maxScroll = root.scrollHeight - window.innerHeight;
+            if (progressBar) {
+              progressBar.style.width = `${maxScroll > 0 ? Math.min(1, Math.max(0, window.scrollY / maxScroll)) * 100 : 0}%`;
+            }
+            updateHeader();
+            updateBackTop();
+          };
+          basic();
+          window.addEventListener("scroll", basic, { passive: true });
+          window.addEventListener("resize", basic);
           return;
         }
 
         /* ---------- scroll-scrubbed animation engine ----------
            Every effect below is mapped directly to scroll position:
            scrolling down advances it, scrolling up reverses it. */
-
-        const root = document.documentElement;
         root.classList.add("motion-scrub");
 
         const clamp01 = (value) => Math.min(1, Math.max(0, value));
@@ -1392,8 +1848,19 @@
             ".eyebrow, .section h2, .section-copy, .card, .data-row, .product-frame, .workflow-item, .cta-panel, .principle-band .kicker, .principle-band blockquote, .principle-band p",
           ),
         ];
-
         scrubTargets.forEach((element) => element.classList.add("scrub"));
+
+        // staggered groups so items within a section reveal in sequence
+        const staggerMap = new Map();
+        [
+          { sel: ".bento .card", base: 0.94, step: 0.05 },
+          { sel: ".data-row", base: 0.92, step: 0.04 },
+          { sel: ".workflow-item", base: 0.9, step: 0.045 },
+        ].forEach((g) => {
+          [...document.querySelectorAll(g.sel)].forEach((el, i) => {
+            staggerMap.set(el, { start: g.base + i * g.step, end: 0.55 });
+          });
+        });
 
         // progress of an element travelling from `startR` to `endR` of viewport height
         const travel = (element, startR, endR, vh) => {
@@ -1403,6 +1870,22 @@
           return clamp01((start - top) / (start - end));
         };
 
+        /* ---------- subtle card tilt (restrained) ---------- */
+        const MAX_TILT = 5;
+        document.querySelectorAll(".card").forEach((card) => {
+          card.addEventListener("pointermove", (event) => {
+            const rect = card.getBoundingClientRect();
+            const px = (event.clientX - rect.left) / rect.width - 0.5;
+            const py = (event.clientY - rect.top) / rect.height - 0.5;
+            card.style.setProperty("--ry", `${px * MAX_TILT}deg`);
+            card.style.setProperty("--rx", `${-py * MAX_TILT}deg`);
+          });
+          card.addEventListener("pointerleave", () => {
+            card.style.setProperty("--rx", "0deg");
+            card.style.setProperty("--ry", "0deg");
+          });
+        });
+
         let ticking = false;
 
         const update = () => {
@@ -1410,33 +1893,33 @@
           const vh = window.innerHeight;
           const maxScroll = root.scrollHeight - vh;
 
-          // global page progress: progress bar + aurora drift
           root.style.setProperty("--sp", maxScroll > 0 ? clamp01(window.scrollY / maxScroll) : 0);
+          if (progressBar) {
+            progressBar.style.width = `${clamp01(window.scrollY / (maxScroll || 1)) * 100}%`;
+          }
 
-          // hero parallax: text floats away, grid slides as the hero scrolls out
           if (hero) {
             hero.style.setProperty("--hp", clamp01(window.scrollY / (hero.offsetHeight * 0.85)));
           }
-
-          // browser frame flattens/scales as it travels through the viewport
           if (heroVisual) {
             heroVisual.style.setProperty("--fp", travel(heroVisual, 1.0, 0.45, vh));
           }
-
-          // principle band glow rises as the band enters
           if (principleBand) {
             principleBand.style.setProperty("--bp", travel(principleBand, 1.0, 0.35, vh));
           }
-
-          // workflow timeline draws itself while the list passes by
           if (workflowList) {
             workflowList.style.setProperty("--p", travel(workflowList, 0.85, 0.3, vh));
           }
 
-          // generic rise/focus scrub for section content
           for (const element of scrubTargets) {
-            element.style.setProperty("--p", travel(element, 0.94, 0.6, vh));
+            const s = staggerMap.get(element);
+            element.style.setProperty(
+              "--p",
+              s ? travel(element, s.start, s.end, vh) : travel(element, 0.94, 0.6, vh),
+            );
           }
+
+          updateBackTop();
         };
 
         const requestUpdate = () => {
