@@ -563,8 +563,6 @@ export const UI_TEXT = {
       workspaceTitlePlaceholder: "给这个空间起个名字",
       workspaceSloganPlaceholder: "一句话签名（选填）",
       keepOneWorkspace: "至少保留一个工作空间",
-      workspaceCreated: "已新建工作空间",
-      workspaceSwitched: "已切换工作空间",
       workspaceExportSingle: "导出此空间",
     },
     settings: {
@@ -839,8 +837,6 @@ export const UI_TEXT = {
       workspaceTitlePlaceholder: "Name this workspace",
       workspaceSloganPlaceholder: "A one-line signature (optional)",
       keepOneWorkspace: "Keep at least one workspace",
-      workspaceCreated: "Workspace created",
-      workspaceSwitched: "Workspace switched",
       workspaceExportSingle: "Export this workspace",
     },
     settings: {
