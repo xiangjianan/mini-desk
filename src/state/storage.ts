@@ -102,10 +102,12 @@ export function saveStateWithConflictCheck(
   if (current && currentRevision > localRevision && current.sync.clientId !== options.clientId && !options.force) {
     if (scope === "images") {
       const localWorkspace = findWorkspace(local);
-      const currentWorkspace = findWorkspace(current);
+      if (!localWorkspace) {
+        return { status: "conflict", state: current };
+      }
+      const currentWorkspace = current.workspaces.find((workspace) => workspace.id === localWorkspace.id);
       if (
-        !localWorkspace
-        || !currentWorkspace
+        !currentWorkspace
         || (options.imageReplacement
           && !canMergeImageReplacement(currentWorkspace.images, localWorkspace.images, options.imageReplacement))
       ) {
@@ -177,6 +179,9 @@ export function getSerializableState(
   state: BoardState,
   options: SerializableOptions = {},
 ): BoardState {
+  // Fields are listed explicitly (not spread from `state`) so that un-cloned
+  // references don't leak into the serialized output. When adding a new global
+  // preference, register it both here and in normalizeImportedState's `shared`.
   return {
     sync: { ...normalizeSyncState(state.sync) },
     language: state.language,
@@ -202,7 +207,6 @@ export function exportUndoSnapshotState(state: BoardState): string {
 export function normalizeImportedState(payload: unknown): BoardState {
   const source = isPlainObject(payload) ? payload : {};
   const typed = source as Record<string, unknown>;
-  const base = defaultState();
   const language = normalizeLanguage(typed.language);
 
   const shared = {
@@ -217,7 +221,6 @@ export function normalizeImportedState(payload: unknown): BoardState {
   if (Array.isArray(typed.workspaces)) {
     const workspaces = normalizeWorkspaceList(typed.workspaces, language);
     return {
-      ...base,
       ...shared,
       workspaces,
       activeWorkspaceId: normalizeActiveWorkspaceId(typed.activeWorkspaceId, workspaces),
@@ -226,7 +229,6 @@ export function normalizeImportedState(payload: unknown): BoardState {
 
   const workspace = normalizeLegacyWorkspace(typed, language);
   return {
-    ...base,
     ...shared,
     workspaces: [workspace],
     activeWorkspaceId: workspace.id,

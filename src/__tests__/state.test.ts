@@ -4,7 +4,6 @@ import { defaultState, defaultWorkspace, STORAGE_KEY } from "../state/defaults";
 import {
   getSerializableState,
   normalizeImportedState,
-  normalizeWorkspaceData,
   saveStateWithConflictCheck,
   serializeTextLines,
 } from "../state/storage";
@@ -807,6 +806,42 @@ describe("state compatibility", () => {
       id: "img-1",
       src: "data:image/png;base64,abc",
     });
+  });
+
+  it("跨标签把图片新增合并进同一个工作空间（按 id 定位）", () => {
+    const storage = localStorage;
+    storage.clear();
+    const latest = normalizeImportedState({
+      sync: { revision: 2, updatedAt: 20, clientId: "tab-a" },
+      workspaces: [
+        { id: "ws-a", images: [{ id: "a-img", createdAt: 1 }] },
+        { id: "ws-b", images: [] },
+      ],
+      activeWorkspaceId: "ws-a",
+    });
+    const staleWithImage = normalizeImportedState({
+      sync: { revision: 1, updatedAt: 10, clientId: "tab-b" },
+      workspaces: [
+        { id: "ws-a", images: [{ id: "a-img", createdAt: 1 }] },
+        { id: "ws-b", images: [{ id: "b-img", src: "data:image/png;base64,b", createdAt: 2 }] },
+      ],
+      activeWorkspaceId: "ws-b",
+    });
+
+    saveStateWithConflictCheck(latest, { storage, clientId: "tab-a", now: () => 20 });
+    const result = saveStateWithConflictCheck(staleWithImage, {
+      storage,
+      clientId: "tab-b",
+      now: () => 30,
+      scope: "images",
+    });
+
+    const stored = normalizeImportedState(JSON.parse(storage.getItem(STORAGE_KEY) ?? "{}"));
+    expect(result.status).toBe("merged");
+    const storedA = stored.workspaces.find((w) => w.id === "ws-a")!;
+    const storedB = stored.workspaces.find((w) => w.id === "ws-b")!;
+    expect(storedA.images.map((image) => image.id)).toEqual(["a-img"]);
+    expect(storedB.images.map((image) => image.id)).toEqual(["b-img"]);
   });
 });
 

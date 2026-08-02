@@ -112,6 +112,12 @@ export interface WorkspaceSpace {
   lines: LineItem[];
 }
 
+/**
+ * A top-level board workspace (identified by `DEFAULT_WORKSPACE_ID`, distinct
+ * from the `DEFAULT_SPACE_ID = "workspace"` sub-panel). Each workspace owns its
+ * own note/workspace/storage lines, images, quick buttons, todo lists, and a
+ * set of `spaces: WorkspaceSpace[]` sub-panels.
+ */
 export interface WorkspaceData {
   id: string;
   createdAt: number;
