@@ -1797,8 +1797,10 @@ button.image-card {
   padding-top: 4px;
   padding-bottom: 6px;
   overflow: hidden;
-  display: grid;
-  grid-template-columns: repeat(auto-fill, minmax(80px, 1fr));
+  display: flex;
+  flex-wrap: wrap;
+  align-items: flex-start;
+  align-content: flex-start;
   gap: 8px;
 }
 
@@ -1897,9 +1899,6 @@ button.image-card {
   border: 1px solid var(--line-control);
   border-color: var(--border);
   border-radius: var(--radius);
-  overflow: hidden;
-  text-overflow: ellipsis;
-  white-space: nowrap;
 }
 
 button.quick-button {
@@ -1923,9 +1922,7 @@ button.quick-button {
 
 .quick-button-label {
   min-width: 0;
-  overflow: hidden;
-  text-overflow: ellipsis;
-  white-space: nowrap;
+  word-break: break-word;
 }
 
 .highlight-text mark {
