@@ -47,6 +47,7 @@ import {
   updateTodoText,
 } from "./state/todos";
 import { defaultState, STORAGE_KEY } from "./state/defaults";
+import { createWorkspaceData, ensureUniqueWorkspaceTitle, removeWorkspace, reorderWorkspaces } from "./state/workspaces";
 import { QUICK_BUTTON_OTHER_GROUP_ID, QUICK_DENSITY_THRESHOLD, formatQuickCopiedPreview } from "./state/quickButtons";
 import {
   createId,
@@ -432,6 +433,81 @@ function deleteSpace(id: string): void {
 function reorderSpaces(dragId: string, targetId: string): void {
   moveItem(activeWorkspace.value.spaces, dragId, targetId);
   syncLegacySpaceLines();
+  persistNow();
+}
+
+function workspaceCreatedMessage(): string {
+  return state.language === "en" ? "Workspace created (｡•̀ᴗ-)✧" : "已新建工作空间 (｡•̀ᴗ-)✧";
+}
+
+function createWorkspace(title: string, slogan: string): void {
+  const workspace = ensureUniqueWorkspaceTitle(createWorkspaceData(title, slogan, Date.now()), state.workspaces);
+  state.workspaces = [...state.workspaces, workspace];
+  state.activeWorkspaceId = workspace.id;
+  pendingEditSpaceId.value = null;
+  pendingEditTodoListId.value = null;
+  clearImagePreview();
+  persistNow();
+  showBubbleText(workspaceCreatedMessage());
+}
+
+async function switchWorkspace(id: string): Promise<void> {
+  if (!state.workspaces.some((workspace) => workspace.id === id) || state.activeWorkspaceId === id) return;
+  if (textEditGeneration !== savedTextGeneration) flushTextSave();
+  const target = state.workspaces.find((workspace) => workspace.id === id);
+  if (target) {
+    // Hydrate the target workspace's image payloads before it becomes visible.
+    // Cross-tab sync / undo / conflict resolution only hydrate the active workspace,
+    // so an inactive workspace may carry src-less metadata until switched to.
+    target.images = await hydrateStoredImages(target.images);
+  }
+  state.activeWorkspaceId = id;
+  pendingEditSpaceId.value = null;
+  pendingEditTodoListId.value = null;
+  clearImagePreview();
+  persistNow();
+}
+
+function renameWorkspace(id: string, title: string, slogan: string): void {
+  const workspace = state.workspaces.find((item) => item.id === id);
+  if (!workspace) return;
+  const nextTitles = { ...workspace.customTitles };
+  const trimmedTitle = title.trim();
+  const trimmedSlogan = slogan.trim();
+  if (trimmedTitle) nextTitles["board-title"] = trimmedTitle;
+  else delete nextTitles["board-title"];
+  if (trimmedSlogan) nextTitles["board-slogan"] = trimmedSlogan;
+  else delete nextTitles["board-slogan"];
+  workspace.customTitles = nextTitles;
+  persistNow();
+}
+
+function deleteWorkspace(id: string, anchor?: HTMLElement): void {
+  if (state.workspaces.length <= 1) {
+    showBubbleText(uiText.value.app.keepOneWorkspace, anchor);
+    return;
+  }
+  requestConfirmation(
+    "confirmDeleteWorkspace",
+    anchor,
+    () => {
+      const result = removeWorkspace(state.workspaces, state.activeWorkspaceId, id);
+      if (result.workspaces === state.workspaces) return;
+      state.workspaces = result.workspaces;
+      state.activeWorkspaceId = result.activeWorkspaceId;
+      pendingEditSpaceId.value = null;
+      pendingEditTodoListId.value = null;
+      clearImagePreview();
+      persistNow();
+      showBubble("deleteWorkspace", anchor, { hideCompanionAfter: true });
+    },
+    undefined,
+    { confirmText: uiText.value.common.delete, cancelText: uiText.value.common.cancel, danger: true },
+  );
+}
+
+function reorderWorkspaceSections(dragId: string, targetId: string): void {
+  state.workspaces = reorderWorkspaces(state.workspaces, dragId, targetId);
   persistNow();
 }
 
