@@ -670,17 +670,28 @@ function collectRetainedImagePayloadIds(): Set<string> {
   }
   const addSnapshot = (snapshot: string) => {
     try {
-      const parsed = JSON.parse(snapshot) as { images?: unknown };
-      if (!Array.isArray(parsed?.images)) return;
-      parsed.images.forEach((item) => {
-        if (!item || typeof item !== "object" || Array.isArray(item)) return;
-        const record = item as Record<string, unknown>;
-        const id = typeof record.id === "string" && record.id.trim() ? record.id : undefined;
-        const payloadId = typeof record.payloadId === "string" && record.payloadId.trim()
-          ? record.payloadId
-          : undefined;
-        if (payloadId ?? id) retained.add((payloadId ?? id)!);
-      });
+      const parsed = JSON.parse(snapshot) as { images?: unknown; workspaces?: unknown };
+      const imageLists: unknown[] = [];
+      if (Array.isArray(parsed?.images)) imageLists.push(parsed.images);
+      if (Array.isArray(parsed?.workspaces)) {
+        for (const workspace of parsed.workspaces) {
+          if (!workspace || typeof workspace !== "object" || Array.isArray(workspace)) continue;
+          const record = workspace as Record<string, unknown>;
+          if (Array.isArray(record.images)) imageLists.push(record.images);
+        }
+      }
+      if (imageLists.length === 0) return;
+      for (const list of imageLists) {
+        (list as unknown[]).forEach((item) => {
+          if (!item || typeof item !== "object" || Array.isArray(item)) return;
+          const record = item as Record<string, unknown>;
+          const id = typeof record.id === "string" && record.id.trim() ? record.id : undefined;
+          const payloadId = typeof record.payloadId === "string" && record.payloadId.trim()
+            ? record.payloadId
+            : undefined;
+          if (payloadId ?? id) retained.add((payloadId ?? id)!);
+        });
+      }
     } catch {
       // Ignore malformed undo snapshots without normalizing them into generated IDs.
     }
