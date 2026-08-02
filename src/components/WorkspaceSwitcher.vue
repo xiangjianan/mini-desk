@@ -16,7 +16,7 @@ const props = defineProps<{
 
 const emit = defineEmits<{
   switch: [id: string];
-  create: [title: string, slogan: string];
+  create: [];
   rename: [id: string, title: string, slogan: string];
   delete: [id: string, anchor: HTMLElement];
   reorder: [dragId: string, targetId: string];
@@ -25,9 +25,6 @@ const emit = defineEmits<{
 
 const text = computed(() => getUiText(props.language));
 const open = ref(false);
-const creating = ref(false);
-const draftTitle = ref("");
-const draftSlogan = ref("");
 const dragId = ref<string | null>(null);
 
 const activeWorkspace = computed<WorkspaceData>(
@@ -38,18 +35,10 @@ const activeTitle = computed(() => activeWorkspace.value?.customTitles["board-ti
 
 function toggleOpen(): void {
   open.value = !open.value;
-  if (!open.value) resetCreate();
 }
 
 function close(): void {
   open.value = false;
-  resetCreate();
-}
-
-function resetCreate(): void {
-  creating.value = false;
-  draftTitle.value = "";
-  draftSlogan.value = "";
 }
 
 function handleSwitch(id: string): void {
@@ -58,17 +47,6 @@ function handleSwitch(id: string): void {
     return;
   }
   emit("switch", id);
-  close();
-}
-
-function startCreate(): void {
-  creating.value = true;
-}
-
-function confirmCreate(): void {
-  const title = draftTitle.value.trim();
-  if (!title) return;
-  emit("create", title, draftSlogan.value);
   close();
 }
 
@@ -171,46 +149,11 @@ function onDrop(targetId: string): void {
         </li>
       </ul>
 
-      <div v-if="!creating" class="workspace-switcher-footer">
-        <button type="button" class="workspace-switcher-create" data-testid="workspace-create-button" @click="startCreate">
+      <div class="workspace-switcher-footer">
+        <button type="button" class="workspace-switcher-create" data-testid="workspace-create-button" @click="emit('create')">
           <NIcon :component="AddOutline" size="14" />
           <span>{{ text.app.newWorkspace }}</span>
         </button>
-      </div>
-
-      <div v-else class="workspace-switcher-form">
-        <label class="workspace-switcher-field">
-          <span>{{ text.app.workspaceTitle }}</span>
-          <input
-            v-model="draftTitle"
-            type="text"
-            class="workspace-switcher-input"
-            data-testid="workspace-title-input"
-            :placeholder="text.app.workspaceTitlePlaceholder"
-          />
-        </label>
-        <label class="workspace-switcher-field">
-          <span>{{ text.app.workspaceSlogan }}</span>
-          <input
-            v-model="draftSlogan"
-            type="text"
-            class="workspace-switcher-input"
-            data-testid="workspace-slogan-input"
-            :placeholder="text.app.workspaceSloganPlaceholder"
-          />
-        </label>
-        <div class="workspace-switcher-form-actions">
-          <button type="button" class="workspace-switcher-cancel" @click="resetCreate">{{ text.common.cancel }}</button>
-          <button
-            type="button"
-            class="workspace-switcher-confirm"
-            data-testid="workspace-create-confirm"
-            :disabled="!draftTitle.trim()"
-            @click="confirmCreate"
-          >
-            {{ text.common.confirm }}
-          </button>
-        </div>
       </div>
     </div>
   </NPopover>

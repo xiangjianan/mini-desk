@@ -118,10 +118,11 @@ const importInput = ref<HTMLInputElement | null>(null);
 const importFeedbackAnchor = ref<HTMLElement | undefined>();
 const pendingEditSpaceId = ref<string | null>(null);
 const pendingEditTodoListId = ref<string | null>(null);
-const renameWorkspaceVisible = ref(false);
-const renameWorkspaceId = ref<string | null>(null);
-const renameDraftTitle = ref("");
-const renameDraftSlogan = ref("");
+const workspaceDialogVisible = ref(false);
+const workspaceDialogMode = ref<"create" | "rename">("create");
+const workspaceDialogId = ref<string | null>(null);
+const workspaceDraftTitle = ref("");
+const workspaceDraftSlogan = ref("");
 const textSaveTimer = ref<number | undefined>();
 const bubbleTimer = ref<number | undefined>();
 const bubbleFadeTimer = ref<number | undefined>();
@@ -477,29 +478,40 @@ async function switchWorkspace(id: string): Promise<void> {
   persistNow();
 }
 
-function renameWorkspace(id: string, title: string, slogan: string): void {
-  renameWorkspaceId.value = id;
-  renameDraftTitle.value = title;
-  renameDraftSlogan.value = slogan;
-  renameWorkspaceVisible.value = true;
+function openCreateWorkspace(): void {
+  workspaceDialogMode.value = "create";
+  workspaceDialogId.value = null;
+  workspaceDraftTitle.value = "";
+  workspaceDraftSlogan.value = "";
+  workspaceDialogVisible.value = true;
 }
 
-function confirmRenameWorkspace(): void {
-  if (!renameWorkspaceId.value) return;
-  const workspace = state.workspaces.find((item) => item.id === renameWorkspaceId.value);
-  if (workspace) {
-    const nextTitles = { ...workspace.customTitles };
-    const trimmedTitle = renameDraftTitle.value.trim();
-    const trimmedSlogan = renameDraftSlogan.value.trim();
-    if (trimmedTitle) nextTitles["board-title"] = trimmedTitle;
-    else delete nextTitles["board-title"];
-    if (trimmedSlogan) nextTitles["board-slogan"] = trimmedSlogan;
-    else delete nextTitles["board-slogan"];
-    workspace.customTitles = nextTitles;
-    persistNow();
+function renameWorkspace(id: string, title: string, slogan: string): void {
+  workspaceDialogMode.value = "rename";
+  workspaceDialogId.value = id;
+  workspaceDraftTitle.value = title;
+  workspaceDraftSlogan.value = slogan;
+  workspaceDialogVisible.value = true;
+}
+
+function confirmWorkspaceDialog(): void {
+  const title = workspaceDraftTitle.value.trim();
+  if (!title) return;
+  if (workspaceDialogMode.value === "create") {
+    createWorkspace(title, workspaceDraftSlogan.value);
+  } else {
+    const workspace = state.workspaces.find((item) => item.id === workspaceDialogId.value);
+    if (workspace) {
+      const trimmedSlogan = workspaceDraftSlogan.value.trim();
+      const nextTitles: Record<string, string> = { ...workspace.customTitles, "board-title": title };
+      if (trimmedSlogan) nextTitles["board-slogan"] = trimmedSlogan;
+      else delete nextTitles["board-slogan"];
+      workspace.customTitles = nextTitles;
+      persistNow();
+    }
   }
-  renameWorkspaceVisible.value = false;
-  renameWorkspaceId.value = null;
+  workspaceDialogVisible.value = false;
+  workspaceDialogId.value = null;
 }
 
 function slugifyTitle(title: string): string {
@@ -3066,7 +3078,7 @@ function moveItem<T extends { id: string }>(items: T[], dragId: string, targetId
           :theme="state.theme"
           :language="state.language"
           @switch="switchWorkspace"
-          @create="createWorkspace"
+          @create="openCreateWorkspace"
           @rename="renameWorkspace"
           @delete="deleteWorkspace"
           @reorder="reorderWorkspaceSections"
@@ -3281,24 +3293,24 @@ function moveItem<T extends { id: string }>(items: T[], dragId: string, targetId
     <input ref="importInput" type="file" accept="application/json,.json" hidden @change="importData" />
     <ShortcutHelp v-if="shortcutHelpVisible" :show="shortcutHelpVisible" :language="state.language" @close="shortcutHelpVisible = false" />
     <NModal
-      v-model:show="renameWorkspaceVisible"
+      v-model:show="workspaceDialogVisible"
       preset="card"
-      :title="uiText.app.workspaces"
+      :title="workspaceDialogMode === 'create' ? uiText.app.newWorkspace : uiText.common.rename"
       style="max-width: 360px"
       :mask-closable="true"
     >
       <div style="display:flex; flex-direction:column; gap:12px;">
         <label style="display:flex; flex-direction:column; gap:4px;">
           <span>{{ uiText.app.workspaceTitle }}</span>
-          <NInput v-model:value="renameDraftTitle" :placeholder="uiText.app.workspaceTitlePlaceholder" />
+          <NInput v-model:value="workspaceDraftTitle" :placeholder="uiText.app.workspaceTitlePlaceholder" />
         </label>
         <label style="display:flex; flex-direction:column; gap:4px;">
           <span>{{ uiText.app.workspaceSlogan }}</span>
-          <NInput v-model:value="renameDraftSlogan" :placeholder="uiText.app.workspaceSloganPlaceholder" />
+          <NInput v-model:value="workspaceDraftSlogan" :placeholder="uiText.app.workspaceSloganPlaceholder" />
         </label>
         <div style="display:flex; justify-content:flex-end; gap:8px;">
-          <NButton @click="renameWorkspaceVisible = false">{{ uiText.common.cancel }}</NButton>
-          <NButton type="primary" :disabled="!renameDraftTitle.trim()" @click="confirmRenameWorkspace">{{ uiText.common.confirm }}</NButton>
+          <NButton @click="workspaceDialogVisible = false">{{ uiText.common.cancel }}</NButton>
+          <NButton type="primary" :disabled="!workspaceDraftTitle.trim()" @click="confirmWorkspaceDialog">{{ uiText.common.confirm }}</NButton>
         </div>
       </div>
     </NModal>

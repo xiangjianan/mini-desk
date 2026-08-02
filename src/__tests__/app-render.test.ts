@@ -1887,6 +1887,32 @@ describe("App shell", () => {
     }
   });
 
+  it("creates a new workspace from the unified create dialog", async () => {
+    const previousTitle = document.title;
+    const wrapper = mountApp();
+
+    try {
+      // Open the switcher and request a new workspace via the shared dialog.
+      await wrapper.get('[data-testid="workspace-trigger"]').trigger("click");
+      await wrapper.get('[data-testid="workspace-create-button"]').trigger("click");
+      await nextTick();
+      expect(wrapper.find(".n-modal").exists()).toBe(true);
+      await wrapper.get(".n-modal input").setValue("新桌面");
+      await wrapper.get(".n-modal .n-button--primary-type").trigger("click");
+      await nextTick();
+
+      expect(document.title).toBe("新桌面");
+      const stored = JSON.parse(localStorage.getItem(STORAGE_KEY) || "{}");
+      // The default state ships a single workspace; creating adds a second.
+      expect(stored.workspaces).toHaveLength(2);
+      expect(stored.workspaces.at(-1).customTitles["board-title"]).toBe("新桌面");
+      expect(stored.activeWorkspaceId).toBe(stored.workspaces.at(-1).id);
+    } finally {
+      wrapper.unmount();
+      document.title = previousTitle;
+    }
+  });
+
   it("flashes the browser title after a due reminder notification until the tab is visible", async () => {
     vi.useFakeTimers();
     vi.setSystemTime(new Date(2026, 4, 25, 8, 0, 0));

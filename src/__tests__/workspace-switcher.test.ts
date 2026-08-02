@@ -26,18 +26,13 @@ describe("WorkspaceSwitcher", () => {
     expect(wrapper.emitted("switch")).toEqual([["b"]]);
   });
 
-  it("提交新建表单时 emit create", async () => {
+  it("点击新建按钮 emit create", async () => {
     const wrapper = mount(WorkspaceSwitcher, {
       props: { workspaces, activeWorkspaceId: "a", theme: "light", language: "zh" },
     });
     await wrapper.find('[data-testid="workspace-trigger"]').trigger("click");
     await wrapper.find('[data-testid="workspace-create-button"]').trigger("click");
-    const titleInput = wrapper.find('[data-testid="workspace-title-input"]');
-    const sloganInput = wrapper.find('[data-testid="workspace-slogan-input"]');
-    await titleInput.setValue("新空间");
-    await sloganInput.setValue("冲");
-    await wrapper.find('[data-testid="workspace-create-confirm"]').trigger("click");
-    expect(wrapper.emitted("create")).toEqual([["新空间", "冲"]]);
+    expect(wrapper.emitted("create")).toHaveLength(1);
   });
 
   it("点击删除 emit delete", async () => {
