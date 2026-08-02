@@ -51,6 +51,9 @@ export type MessageKey =
   | "confirmUnstarTodo"
   | "confirmUnstarTodoDeadline"
   | "confirmDeleteSpace"
+  | "confirmDeleteWorkspace"
+  | "deleteWorkspace"
+  | "confirmImportWorkspace"
   | "confirmClearCompleted"
   | "confirmImportData"
   | "confirmClearData"
@@ -867,6 +870,54 @@ export const MESSAGE_CATALOG: Record<MessageKey, MessageEntry> = {
       "确定移除空间？不可恢复",
     ],
   },
+  deleteWorkspace: {
+    mood: "calm",
+    surface: "companion",
+    variants: [
+      "工作空间已删除",
+      "这个空间已移除",
+      "空间已从列表删除",
+      "工作空间已清掉",
+      "空间内容已清空",
+      "这个工作空间已移除",
+      "空间已收起归档",
+      "空间从桌面移除",
+      "工作空间清理完成",
+      "那个空间已不在了",
+    ],
+  },
+  confirmDeleteWorkspace: {
+    mood: "warning",
+    surface: "companion",
+    variants: [
+      "删除这个工作空间？",
+      "永久移除该空间？",
+      "空间内容会全部清空",
+      "确定删除此空间？",
+      "删掉后无法恢复哦",
+      "这个空间不要了？",
+      "移除整个工作空间？",
+      "清理这个空间？",
+      "空间将彻底删除",
+      "删除后不可撤销",
+    ],
+  },
+  confirmImportWorkspace: {
+    mood: "happy",
+    surface: "companion",
+    variants: [
+      "作为新空间导入？",
+      "追加为新工作空间？",
+      "导入这个空间？",
+      "加入为新空间？",
+      "作为新空间加入？",
+      "导入不影响现有空间",
+      "新空间将加入列表",
+      "把这个空间导进来？",
+      "追加到空间列表？",
+      "作为新工作空间？",
+    ],
+  },
   confirmClearCompleted: {
     mood: "warning",
     surface: "companion",
@@ -1041,6 +1092,9 @@ const EN_MESSAGE_VARIANTS = {
   confirmUnstarTodo: ["Unpin this reminder?", "Remove it from pinned reminders?", "This reminder will return to the normal list."],
   confirmUnstarTodoDeadline: ["Unpinning also clears the notification time.", "Unpin this reminder and clear its notification?", "This reminder will no longer use its notification time."],
   confirmDeleteSpace: ["Delete this space? This cannot be undone.", "Remove this space permanently?", "This space and its content will be deleted."],
+  deleteWorkspace: ["Workspace deleted", "Workspace removed", "This workspace is gone"],
+  confirmDeleteWorkspace: ["Delete this workspace? This cannot be undone.", "Remove this workspace permanently?", "This workspace and all its content will be deleted."],
+  confirmImportWorkspace: ["Import this as a new workspace?", "It will be added as a new workspace; existing ones stay.", "A new workspace will be appended to the list."],
   confirmClearCompleted: ["Clear completed reminders?", "Remove completed items?", "Completed reminders will be removed."],
   confirmImportData: ["Importing will overwrite current data.", "Overwrite this board with the backup?", "Current board data will be replaced."],
   confirmClearData: ["Clear all local data?", "This will reset the board.", "Current data will be cleared."],
