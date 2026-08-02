@@ -4290,11 +4290,6 @@ body:has(.image-preview) .image-panel .n-scrollbar {
   cursor: pointer;
 }
 
-.workbench-title-icon {
-  width: 16px;
-  height: 16px;
-}
-
 .workbench-command-button {
   height: 32px;
   min-width: 220px;
@@ -4597,10 +4592,6 @@ html[data-theme="dark"] .workbench-shell {
   color: var(--foreground);
   font-size: 17px;
   letter-spacing: 0;
-}
-
-.workbench-title-icon {
-  color: var(--primary);
 }
 
 .workbench-slogan {
@@ -6183,7 +6174,6 @@ select {
 .n-icon,
 .icon-button .n-icon,
 .tool-tab-icon .n-icon,
-.workbench-title-icon,
 .workbench-header-hide-button svg,
 .workbench-theme-button svg,
 .workbench-header-reveal svg,
@@ -6208,17 +6198,6 @@ select {
 .todo-section-menu-button svg,
 .tool-panel-menu-button svg {
   stroke-width: var(--icon-stroke);
-}
-
-.workbench-title-logo {
-  width: 20px;
-  height: 20px;
-  display: block;
-  flex: 0 0 20px;
-  box-sizing: border-box;
-  object-fit: contain;
-  image-rendering: pixelated;
-  border-radius: 0;
 }
 
 .icon-button,

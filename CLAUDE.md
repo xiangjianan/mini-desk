@@ -17,22 +17,34 @@ CSS Grid 5-column layout (`.board`): Image panel (10%) | Notes+Links (20%) | Tod
 ### State Management
 
 - All state is held in a single `state` object, persisted to `localStorage` under key `mini-desk-state-v1`, with legacy reads from `todo-board-state-v1`.
-- `loadState()` and `normalizeImportedState()` live in `src/state/storage.ts` and handle legacy migrations, malformed imports, and missing collections.
+- `loadState()` and `normalizeImportedState()` live in `src/state/storage.ts` and handle legacy migrations, malformed imports, and missing collections. Legacy single-board (flat) payloads are wrapped into a single `WorkspaceData` on load; multi-workspace payloads are normalized per workspace.
 - `saveState()` serializes the full state while omitting large image payloads from localStorage.
+- **Multi-workspace:** the board supports multiple independent workspaces. Global prefs (theme/language/companion GIF) are shared; all board content lives per-workspace. The active workspace is read/mutated through an `activeWorkspace` computed projection in `App.vue` (`activeWorkspace.value.*`); switching only changes `state.activeWorkspaceId`. Workspace helpers live in `src/state/workspaces.ts`; image payload pruning scans every workspace (and undo snapshots).
 
 ### Key State Shape
 
 ```
 state = {
+  // global prefs (shared across all workspaces)
   theme: "light" | "dark",
-  customTitles: { [headingId]: string },
-  noteLines: [{ text, indent }],
-  workspaceLines: [{ text, indent }],
-  storageLines: [{ text, indent }],
+  language: "zh" | "en",
+  companionGifTheme, customCompanionGif, customCompanionGifStored,
+  sync: { revision, updatedAt, clientId },
+  workspaces: [WorkspaceData],   // each workspace is a fully independent board
+  activeWorkspaceId: string,
+}
+
+WorkspaceData = {
+  id, createdAt,
+  customTitles: { [headingId]: string },  // incl. "board-title", "board-slogan", and panel titles
+  noteLines, workspaceLines, storageLines: [{ text, indent }],
+  spaces: [{ id, title, lines }], activeSpaceId,  // middle-column sub-tabs
   images: [{ id, src (data URL), createdAt }],
-  quickButtons: [{ id, title, value, type: "link"|"text", hidden }],
-  showHiddenQuickButtons: boolean,
-  todos: { morning: [], noon: [], evening: [] }  // each: { id, text, done }
+  quickTags, quickButtons: [{ id, title, value, type: "link"|"text"|"api", hidden }],
+  quickOtherCollapsed, showHiddenQuickButtons,
+  todoLists: [{ id, title, collapsed, compact }],
+  showCompletedTodos: { [listId]: boolean },
+  todos: { [listId]: [{ id, text, done }] },
 }
 ```
 
