@@ -4290,11 +4290,6 @@ body:has(.image-preview) .image-panel .n-scrollbar {
   cursor: pointer;
 }
 
-.workbench-title-icon {
-  width: 16px;
-  height: 16px;
-}
-
 .workbench-command-button {
   height: 32px;
   min-width: 220px;
@@ -4597,10 +4592,6 @@ html[data-theme="dark"] .workbench-shell {
   color: var(--foreground);
   font-size: 17px;
   letter-spacing: 0;
-}
-
-.workbench-title-icon {
-  color: var(--primary);
 }
 
 .workbench-slogan {
@@ -6183,7 +6174,6 @@ select {
 .n-icon,
 .icon-button .n-icon,
 .tool-tab-icon .n-icon,
-.workbench-title-icon,
 .workbench-header-hide-button svg,
 .workbench-theme-button svg,
 .workbench-header-reveal svg,
@@ -6208,17 +6198,6 @@ select {
 .todo-section-menu-button svg,
 .tool-panel-menu-button svg {
   stroke-width: var(--icon-stroke);
-}
-
-.workbench-title-logo {
-  width: 20px;
-  height: 20px;
-  display: block;
-  flex: 0 0 20px;
-  box-sizing: border-box;
-  object-fit: contain;
-  image-rendering: pixelated;
-  border-radius: 0;
 }
 
 .icon-button,
@@ -6643,3 +6622,40 @@ body,
   border-color: var(--border);
   box-shadow: none !important;
 }
+
+.workspace-trigger {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  background: transparent;
+  border: none;
+  padding: 2px 6px;
+  border-radius: 8px;
+  cursor: pointer;
+  color: inherit;
+  font: inherit;
+}
+.workspace-trigger:hover { background: var(--color-hover, rgba(0,0,0,0.05)); }
+.workspace-trigger-logo { display: inline-block; }
+.workspace-trigger-title { font-weight: 600; line-height: 1; }
+
+.workspace-switcher-list { list-style: none; margin: 0; padding: 0; max-height: 280px; overflow: auto; }
+.workspace-switcher-item {
+  display: flex; align-items: center; justify-content: space-between;
+  gap: 8px; padding: 6px 8px; border-radius: 8px; cursor: pointer;
+}
+.workspace-switcher-item.is-active { font-weight: 600; }
+.workspace-switcher-item:hover { background: var(--color-hover, rgba(0,0,0,0.05)); }
+.workspace-switcher-name { line-height: 1; }
+.workspace-switcher-actions { display: inline-flex; gap: 4px; opacity: 0.7; }
+.workspace-switcher-action {
+  display: inline-flex; align-items: center; justify-content: center; background: transparent; border: none; cursor: pointer; padding: 2px; border-radius: 6px; color: inherit;
+}
+.workspace-switcher-action:hover { background: var(--color-hover, rgba(0,0,0,0.08)); opacity: 1; }
+
+.workspace-switcher-footer { margin-top: 6px; padding-top: 6px; border-top: 1px solid var(--color-border, rgba(0,0,0,0.1)); }
+.workspace-switcher-create {
+  display: inline-flex; align-items: center; gap: 6px; width: 100%;
+  background: transparent; border: none; cursor: pointer; padding: 6px 8px; border-radius: 8px; color: inherit;
+}
+.workspace-switcher-create:hover { background: var(--color-hover, rgba(0,0,0,0.05)); }

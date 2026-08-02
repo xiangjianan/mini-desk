@@ -112,19 +112,15 @@ export interface WorkspaceSpace {
   lines: LineItem[];
 }
 
-export interface BoardSyncState {
-  revision: number;
-  updatedAt: number;
-  clientId: string;
-}
-
-export interface BoardState {
-  sync: BoardSyncState;
-  language: AppLanguage;
-  theme: ThemeMode;
-  companionGifTheme: CompanionGifTheme;
-  customCompanionGif: CompanionCustomGif;
-  customCompanionGifStored: CompanionCustomGifStored;
+/**
+ * A top-level board workspace (identified by `DEFAULT_WORKSPACE_ID`, distinct
+ * from the `DEFAULT_SPACE_ID = "workspace"` sub-panel). Each workspace owns its
+ * own note/workspace/storage lines, images, quick buttons, todo lists, and a
+ * set of `spaces: WorkspaceSpace[]` sub-panels.
+ */
+export interface WorkspaceData {
+  id: string;
+  createdAt: number;
   customTitles: Record<string, string>;
   noteLines: LineItem[];
   workspaceLines: LineItem[];
@@ -139,6 +135,23 @@ export interface BoardState {
   todoLists: TodoListConfig[];
   showCompletedTodos: TodoCompletedVisibility;
   todos: TodoMap;
+}
+
+export interface BoardSyncState {
+  revision: number;
+  updatedAt: number;
+  clientId: string;
+}
+
+export interface BoardState {
+  sync: BoardSyncState;
+  language: AppLanguage;
+  theme: ThemeMode;
+  companionGifTheme: CompanionGifTheme;
+  customCompanionGif: CompanionCustomGif;
+  customCompanionGifStored: CompanionCustomGifStored;
+  workspaces: WorkspaceData[];
+  activeWorkspaceId: string;
 }
 
 export interface SerializableOptions {

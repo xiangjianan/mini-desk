@@ -2,7 +2,7 @@ import { mount } from "@vue/test-utils";
 import { beforeEach, describe, expect, it, vi } from "vitest";
 import App from "../App.vue";
 import ImagePanel from "../components/ImagePanel.vue";
-import { IMAGE_DB_NAME, IMAGE_STORE_NAME, LEGACY_IMAGE_DB_NAME, STORAGE_KEY } from "../state/defaults";
+import { IMAGE_DB_NAME, IMAGE_STORE_NAME, LEGACY_IMAGE_DB_NAME, STORAGE_KEY, defaultWorkspace } from "../state/defaults";
 import { deleteStoredImage, getStoredImagePayload, hydrateStoredImages, persistImagePayloads, storeImagePayload } from "../state/images";
 import * as imageState from "../state/images";
 
@@ -288,10 +288,10 @@ describe("image storage startup performance", () => {
       STORAGE_KEY,
       JSON.stringify({
         companionGifTheme: "none",
-        images: [
+        workspaces: [{ ...defaultWorkspace(), images: [
           { id: "img-1", createdAt: 1 },
           { id: "img-2", createdAt: 2 },
-        ],
+        ] }],
       }),
     );
     const fakeIndexedDb = installFakeIndexedDb({
@@ -311,6 +311,8 @@ describe("image storage startup performance", () => {
       });
       await new Promise((resolve) => setTimeout(resolve, 0));
 
+      // Images were hydrated from the current image database; startup must not
+      // rewrite those payloads (the fixture images carry no inline src to migrate).
       expect(fakeIndexedDb.putRecords).toEqual([]);
     } finally {
       wrapper.unmount();
@@ -324,9 +326,9 @@ describe("image storage startup performance", () => {
       STORAGE_KEY,
       JSON.stringify({
         companionGifTheme: "none",
-        images: [
+        workspaces: [{ ...defaultWorkspace(), images: [
           { id: "img-1", createdAt: 1, src: "data:image/png;base64,large-image-payload" },
-        ],
+        ] }],
       }),
     );
     const wrapper = mountApp();

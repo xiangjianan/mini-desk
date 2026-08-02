@@ -46,6 +46,7 @@ const messageKeys = [
   "deleteQuickTag",
   "deleteTodo",
   "deleteSpace",
+  "deleteWorkspace",
   "clearCompleted",
   "importJsonInvalid",
   "importDataInvalid",
@@ -62,8 +63,10 @@ const messageKeys = [
   "confirmUnstarTodo",
   "confirmUnstarTodoDeadline",
   "confirmDeleteSpace",
+  "confirmDeleteWorkspace",
   "confirmClearCompleted",
   "confirmImportData",
+  "confirmImportWorkspace",
   "confirmClearData",
   "about",
 ] as const;

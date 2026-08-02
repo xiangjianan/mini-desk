@@ -8,7 +8,7 @@ import QuickButtons from "../components/QuickButtons.vue";
 import SettingsMenu from "../components/SettingsMenu.vue";
 import SpacePanel from "../components/SpacePanel.vue";
 import TodoPanel from "../components/TodoPanel.vue";
-import { defaultState, STORAGE_KEY } from "../state/defaults";
+import { defaultState, defaultWorkspace, STORAGE_KEY } from "../state/defaults";
 import { hydrateStoredImages, storeImagePayload } from "../state/images";
 import * as imageState from "../state/images";
 import { KAOMOJI_BY_MOOD } from "../state/messages";
@@ -309,9 +309,12 @@ describe("App shell", () => {
   it("switches default public titles to English while preserving custom titles", async () => {
     localStorage.setItem(STORAGE_KEY, JSON.stringify({
       ...defaultState(),
-      customTitles: {
-        "quick-title": "我的快捷",
-      },
+      workspaces: [{
+        ...defaultWorkspace(),
+        customTitles: {
+          "quick-title": "我的快捷",
+        },
+      }],
     }));
     const wrapper = mountApp();
 
@@ -353,8 +356,9 @@ describe("App shell", () => {
 
     expect(wrapper.findAll('[data-testid="todo-input-custom"]')).toHaveLength(2);
     const stored = JSON.parse(localStorage.getItem(STORAGE_KEY) || "{}");
-    expect(stored.todoLists.map((list: { id: string }) => list.id)).toEqual(["custom"]);
-    expect(stored.todos.custom.at(-1)).toMatchObject({
+    const workspace = stored.workspaces[0];
+    expect(workspace.todoLists.map((list: { id: string }) => list.id)).toEqual(["custom"]);
+    expect(workspace.todos.custom.at(-1)).toMatchObject({
       text: "",
       done: false,
     });
@@ -488,7 +492,7 @@ describe("App shell", () => {
       await wrapper.vm.$nextTick();
 
       expect(wrapper.find('[data-testid="todo-input-morning"]').exists()).toBe(false);
-      expect(JSON.parse(localStorage.getItem(STORAGE_KEY) || "{}").todos.morning).toEqual([]);
+      expect(JSON.parse(localStorage.getItem(STORAGE_KEY) || "{}").workspaces[0].todos.morning).toEqual([]);
     } finally {
       wrapper.unmount();
     }
@@ -534,9 +538,10 @@ describe("App shell", () => {
         .findAll('[data-testid="todo-input-morning"]')
         .map((input) => (input.element as HTMLInputElement).value);
       const stored = JSON.parse(localStorage.getItem(STORAGE_KEY) || "{}");
+      const workspace = stored.workspaces[0];
 
       expect(renderedTexts).toEqual(["任务 A", "任务 B"]);
-      expect(stored.todos.morning.map((todo: { text: string; done: boolean }) => ({
+      expect(workspace.todos.morning.map((todo: { text: string; done: boolean }) => ({
         text: todo.text,
         done: todo.done,
       }))).toEqual([
@@ -560,9 +565,10 @@ describe("App shell", () => {
       await nextTick();
 
       const stored = JSON.parse(localStorage.getItem(STORAGE_KEY) || "{}");
-      expect(stored.todoLists).toHaveLength(2);
-      expect(stored.todoLists.at(-1).title).toBe("工作提醒");
-      expect(stored.todos[stored.todoLists.at(-1).id]).toEqual([]);
+      const workspace = stored.workspaces[0];
+      expect(workspace.todoLists).toHaveLength(2);
+      expect(workspace.todoLists.at(-1).title).toBe("工作提醒");
+      expect(workspace.todos[workspace.todoLists.at(-1).id]).toEqual([]);
     } finally {
       wrapper.unmount();
     }
@@ -589,9 +595,12 @@ describe("App shell", () => {
   it("persists reminder list title updates", async () => {
     localStorage.setItem(STORAGE_KEY, JSON.stringify({
       ...defaultState(),
-      todoLists: [{ id: "work", title: "工作", collapsed: false, compact: false }],
-      todos: { work: [] },
-      showCompletedTodos: { work: false },
+      workspaces: [{
+        ...defaultWorkspace(),
+        todoLists: [{ id: "work", title: "工作", collapsed: false, compact: false }],
+        todos: { work: [] },
+        showCompletedTodos: { work: false },
+      }],
     }));
     const wrapper = mountApp();
 
@@ -600,7 +609,8 @@ describe("App shell", () => {
       await nextTick();
 
       const stored = JSON.parse(localStorage.getItem(STORAGE_KEY) || "{}");
-      expect(stored.todoLists.find((list: { id: string }) => list.id === "work").title).toBe("工作提醒");
+      const workspace = stored.workspaces[0];
+      expect(workspace.todoLists.find((list: { id: string }) => list.id === "work").title).toBe("工作提醒");
     } finally {
       wrapper.unmount();
     }
@@ -609,9 +619,12 @@ describe("App shell", () => {
   it("persists reminder list collapsed and compact flags", async () => {
     localStorage.setItem(STORAGE_KEY, JSON.stringify({
       ...defaultState(),
-      todoLists: [{ id: "work", title: "工作", collapsed: false, compact: false }],
-      todos: { work: [] },
-      showCompletedTodos: { work: false },
+      workspaces: [{
+        ...defaultWorkspace(),
+        todoLists: [{ id: "work", title: "工作", collapsed: false, compact: false }],
+        todos: { work: [] },
+        showCompletedTodos: { work: false },
+      }],
     }));
     const wrapper = mountApp();
 
@@ -621,7 +634,8 @@ describe("App shell", () => {
       await nextTick();
 
       const stored = JSON.parse(localStorage.getItem(STORAGE_KEY) || "{}");
-      expect(stored.todoLists.find((list: { id: string }) => list.id === "work")).toMatchObject({
+      const workspace = stored.workspaces[0];
+      expect(workspace.todoLists.find((list: { id: string }) => list.id === "work")).toMatchObject({
         collapsed: true,
         compact: true,
       });
@@ -634,12 +648,15 @@ describe("App shell", () => {
     vi.useFakeTimers();
     localStorage.setItem(STORAGE_KEY, JSON.stringify({
       ...defaultState(),
-      todoLists: [
-        { id: "work", title: "工作", collapsed: false, compact: false },
-        { id: "home", title: "生活", collapsed: false, compact: false },
-      ],
-      todos: { work: [{ id: "a", text: "A", done: false }], home: [] },
-      showCompletedTodos: { work: false, home: false },
+      workspaces: [{
+        ...defaultWorkspace(),
+        todoLists: [
+          { id: "work", title: "工作", collapsed: false, compact: false },
+          { id: "home", title: "生活", collapsed: false, compact: false },
+        ],
+        todos: { work: [{ id: "a", text: "A", done: false }], home: [] },
+        showCompletedTodos: { work: false, home: false },
+      }],
     }));
     const wrapper = mountApp();
 
@@ -655,8 +672,9 @@ describe("App shell", () => {
       await nextTick();
 
       const stored = JSON.parse(localStorage.getItem(STORAGE_KEY) || "{}");
-      expect(stored.todoLists.some((list: { id: string }) => list.id === "work")).toBe(false);
-      expect(stored.todos.work).toBeUndefined();
+      const workspace = stored.workspaces[0];
+      expect(workspace.todoLists.some((list: { id: string }) => list.id === "work")).toBe(false);
+      expect(workspace.todos.work).toBeUndefined();
     } finally {
       wrapper.unmount();
       vi.useRealTimers();
@@ -667,12 +685,15 @@ describe("App shell", () => {
     vi.useFakeTimers();
     localStorage.setItem(STORAGE_KEY, JSON.stringify({
       ...defaultState(),
-      todoLists: [
-        { id: "work", title: "工作", collapsed: false, compact: false },
-        { id: "home", title: "生活", collapsed: false, compact: false },
-      ],
-      todos: { work: [], home: [] },
-      showCompletedTodos: { work: false, home: false },
+      workspaces: [{
+        ...defaultWorkspace(),
+        todoLists: [
+          { id: "work", title: "工作", collapsed: false, compact: false },
+          { id: "home", title: "生活", collapsed: false, compact: false },
+        ],
+        todos: { work: [], home: [] },
+        showCompletedTodos: { work: false, home: false },
+      }],
     }));
     const wrapper = mountApp();
 
@@ -683,12 +704,12 @@ describe("App shell", () => {
       await nextTick();
 
       expect(wrapper.get('[data-testid="companion-confirm"]').text()).toMatch(/删除列表|提醒列表/);
-      expect(JSON.parse(localStorage.getItem(STORAGE_KEY) || "{}").todoLists.map((list: { id: string }) => list.id)).toEqual(["work", "home"]);
+      expect(JSON.parse(localStorage.getItem(STORAGE_KEY) || "{}").workspaces[0].todoLists.map((list: { id: string }) => list.id)).toEqual(["work", "home"]);
 
       await wrapper.get('[data-testid="companion-yes"]').trigger("click");
       await nextTick();
 
-      expect(JSON.parse(localStorage.getItem(STORAGE_KEY) || "{}").todoLists.map((list: { id: string }) => list.id)).toEqual(["home"]);
+      expect(JSON.parse(localStorage.getItem(STORAGE_KEY) || "{}").workspaces[0].todoLists.map((list: { id: string }) => list.id)).toEqual(["home"]);
     } finally {
       wrapper.unmount();
       vi.useRealTimers();
@@ -699,9 +720,12 @@ describe("App shell", () => {
     vi.useFakeTimers();
     localStorage.setItem(STORAGE_KEY, JSON.stringify({
       ...defaultState(),
-      todoLists: [{ id: "work", title: "工作", collapsed: false, compact: false }],
-      todos: { work: [] },
-      showCompletedTodos: { work: false },
+      workspaces: [{
+        ...defaultWorkspace(),
+        todoLists: [{ id: "work", title: "工作", collapsed: false, compact: false }],
+        todos: { work: [] },
+        showCompletedTodos: { work: false },
+      }],
     }));
     const wrapper = mountApp();
 
@@ -712,8 +736,9 @@ describe("App shell", () => {
       await nextTick();
 
       const stored = JSON.parse(localStorage.getItem(STORAGE_KEY) || "{}");
-      expect(stored.todoLists.map((list: { id: string }) => list.id)).toEqual(["work"]);
-      expect(stored.todos.work).toEqual([]);
+      const workspace = stored.workspaces[0];
+      expect(workspace.todoLists.map((list: { id: string }) => list.id)).toEqual(["work"]);
+      expect(workspace.todos.work).toEqual([]);
       expect(wrapper.get('[data-testid="companion-confirm"]').text()).toContain("至少保留一个提醒列表");
     } finally {
       wrapper.unmount();
@@ -724,12 +749,15 @@ describe("App shell", () => {
   it("persists reminder list reorder", async () => {
     localStorage.setItem(STORAGE_KEY, JSON.stringify({
       ...defaultState(),
-      todoLists: [
-        { id: "a", title: "A", collapsed: false, compact: false },
-        { id: "b", title: "B", collapsed: false, compact: false },
-      ],
-      todos: { a: [], b: [] },
-      showCompletedTodos: { a: false, b: false },
+      workspaces: [{
+        ...defaultWorkspace(),
+        todoLists: [
+          { id: "a", title: "A", collapsed: false, compact: false },
+          { id: "b", title: "B", collapsed: false, compact: false },
+        ],
+        todos: { a: [], b: [] },
+        showCompletedTodos: { a: false, b: false },
+      }],
     }));
     const wrapper = mountApp();
 
@@ -738,7 +766,8 @@ describe("App shell", () => {
       await wrapper.get('.todo-section[data-list-id="a"]').trigger("drop");
 
       const stored = JSON.parse(localStorage.getItem(STORAGE_KEY) || "{}");
-      expect(stored.todoLists.map((list: { id: string }) => list.id)).toEqual(["b", "a"]);
+      const workspace = stored.workspaces[0];
+      expect(workspace.todoLists.map((list: { id: string }) => list.id)).toEqual(["b", "a"]);
     } finally {
       wrapper.unmount();
     }
@@ -747,13 +776,16 @@ describe("App shell", () => {
   it("uses the same before-target ordering for adjacent and non-adjacent list reorders", async () => {
     localStorage.setItem(STORAGE_KEY, JSON.stringify({
       ...defaultState(),
-      todoLists: [
-        { id: "a", title: "A", collapsed: false, compact: false },
-        { id: "b", title: "B", collapsed: false, compact: false },
-        { id: "c", title: "C", collapsed: false, compact: false },
-      ],
-      todos: { a: [], b: [], c: [] },
-      showCompletedTodos: { a: false, b: false, c: false },
+      workspaces: [{
+        ...defaultWorkspace(),
+        todoLists: [
+          { id: "a", title: "A", collapsed: false, compact: false },
+          { id: "b", title: "B", collapsed: false, compact: false },
+          { id: "c", title: "C", collapsed: false, compact: false },
+        ],
+        todos: { a: [], b: [], c: [] },
+        showCompletedTodos: { a: false, b: false, c: false },
+      }],
     }));
     const wrapper = mountApp();
 
@@ -762,7 +794,8 @@ describe("App shell", () => {
       await wrapper.get('.todo-section[data-list-id="b"]').trigger("drop");
 
       const stored = JSON.parse(localStorage.getItem(STORAGE_KEY) || "{}");
-      expect(stored.todoLists.map((list: { id: string }) => list.id)).toEqual(["a", "b", "c"]);
+      const workspace = stored.workspaces[0];
+      expect(workspace.todoLists.map((list: { id: string }) => list.id)).toEqual(["a", "b", "c"]);
     } finally {
       wrapper.unmount();
     }
@@ -771,9 +804,12 @@ describe("App shell", () => {
   it("focuses todos for imported list ids with selector characters", async () => {
     localStorage.setItem(STORAGE_KEY, JSON.stringify({
       ...defaultState(),
-      todoLists: [{ id: 'bad"]id', title: "特殊", collapsed: false, compact: false }],
-      todos: { 'bad"]id': [] },
-      showCompletedTodos: { 'bad"]id': false },
+      workspaces: [{
+        ...defaultWorkspace(),
+        todoLists: [{ id: 'bad"]id', title: "特殊", collapsed: false, compact: false }],
+        todos: { 'bad"]id': [] },
+        showCompletedTodos: { 'bad"]id': false },
+      }],
     }));
     const wrapper = mountApp();
 
@@ -783,8 +819,9 @@ describe("App shell", () => {
       await nextTick();
 
       const stored = JSON.parse(localStorage.getItem(STORAGE_KEY) || "{}");
-      expect(stored.todos['bad"]id']).toHaveLength(1);
-      expect(stored.todos['bad"]id'][0]).toMatchObject({ text: "", done: false });
+      const workspace = stored.workspaces[0];
+      expect(workspace.todos['bad"]id']).toHaveLength(1);
+      expect(workspace.todos['bad"]id'][0]).toMatchObject({ text: "", done: false });
       expect(
         wrapper
           .findAll("input.todo-input")
@@ -798,9 +835,12 @@ describe("App shell", () => {
   it("ignores stale create events without restoring deleted default lists", async () => {
     localStorage.setItem(STORAGE_KEY, JSON.stringify({
       ...defaultState(),
-      todoLists: [{ id: "custom", title: "自定义", collapsed: false, compact: false }],
-      todos: { custom: [{ id: "blank", text: "", done: false }] },
-      showCompletedTodos: { custom: false },
+      workspaces: [{
+        ...defaultWorkspace(),
+        todoLists: [{ id: "custom", title: "自定义", collapsed: false, compact: false }],
+        todos: { custom: [{ id: "blank", text: "", done: false }] },
+        showCompletedTodos: { custom: false },
+      }],
     }));
     const wrapper = mountApp();
 
@@ -809,11 +849,12 @@ describe("App shell", () => {
       await nextTick();
 
       const stored = JSON.parse(localStorage.getItem(STORAGE_KEY) || "{}");
-      expect(stored.todoLists.map((list: { id: string }) => list.id)).toEqual(["custom"]);
-      expect(stored.todos).toEqual({
+      const workspace = stored.workspaces[0];
+      expect(workspace.todoLists.map((list: { id: string }) => list.id)).toEqual(["custom"]);
+      expect(workspace.todos).toEqual({
         custom: [{ id: "blank", text: "", done: false }],
       });
-      expect(stored.showCompletedTodos).toEqual({ custom: false });
+      expect(workspace.showCompletedTodos).toEqual({ custom: false });
     } finally {
       wrapper.unmount();
     }
@@ -822,15 +863,18 @@ describe("App shell", () => {
   it("ignores stale drop update and move events without orphan todo records", async () => {
     localStorage.setItem(STORAGE_KEY, JSON.stringify({
       ...defaultState(),
-      todoLists: [
-        { id: "home", title: "生活", collapsed: false, compact: false },
-        { id: "work", title: "工作", collapsed: false, compact: false },
-      ],
-      todos: {
-        home: [{ id: "home-a", text: "Home", done: false }],
-        work: [],
-      },
-      showCompletedTodos: { home: false, work: false },
+      workspaces: [{
+        ...defaultWorkspace(),
+        todoLists: [
+          { id: "home", title: "生活", collapsed: false, compact: false },
+          { id: "work", title: "工作", collapsed: false, compact: false },
+        ],
+        todos: {
+          home: [{ id: "home-a", text: "Home", done: false }],
+          work: [],
+        },
+        showCompletedTodos: { home: false, work: false },
+      }],
     }));
     const wrapper = mountApp();
 
@@ -847,13 +891,14 @@ describe("App shell", () => {
       await nextTick();
 
       const stored = JSON.parse(localStorage.getItem(STORAGE_KEY) || "{}");
-      expect(stored.todoLists.map((list: { id: string }) => list.id)).toEqual(["home"]);
-      expect(stored.todos.home).toEqual([
+      const workspace = stored.workspaces[0];
+      expect(workspace.todoLists.map((list: { id: string }) => list.id)).toEqual(["home"]);
+      expect(workspace.todos.home).toEqual([
         expect.objectContaining({ id: "home-a", text: "Home", done: false }),
       ]);
-      expect(stored.showCompletedTodos).toEqual({ home: false });
-      expect(stored.todos.work).toBeUndefined();
-      expect(stored.todos.morning).toBeUndefined();
+      expect(workspace.showCompletedTodos).toEqual({ home: false });
+      expect(workspace.todos.work).toBeUndefined();
+      expect(workspace.todos.morning).toBeUndefined();
     } finally {
       wrapper.unmount();
     }
@@ -1400,8 +1445,9 @@ describe("App shell", () => {
       await wrapper.vm.$nextTick();
 
       const stored = JSON.parse(localStorage.getItem(STORAGE_KEY) || "{}");
-      const listId = stored.todoLists.at(-1).id;
-      expect(stored.showCompletedTodos[listId]).toBe(false);
+      const workspace = stored.workspaces[0];
+      const listId = workspace.todoLists.at(-1).id;
+      expect(workspace.showCompletedTodos[listId]).toBe(false);
     } finally {
       wrapper.unmount();
     }
@@ -1754,7 +1800,7 @@ describe("App shell", () => {
         notifyAt: 1779721200000,
       });
       expect(wrapper.getComponent(TodoPanel).props("todos").morning[0]).not.toHaveProperty("deadlineAt");
-      expect(JSON.parse(localStorage.getItem(STORAGE_KEY) || "{}").todos.morning[0]).toMatchObject({
+      expect(JSON.parse(localStorage.getItem(STORAGE_KEY) || "{}").workspaces[0].todos.morning[0]).toMatchObject({
         notifyAt: 1779721200000,
       });
     } finally {
@@ -1808,10 +1854,10 @@ describe("App shell", () => {
     }
   });
 
-  it("keeps the browser tab title in sync with the editable board title", async () => {
+  it("keeps the browser tab title in sync with the workspace title via the rename dialog", async () => {
     localStorage.setItem(
       STORAGE_KEY,
-      JSON.stringify({ customTitles: { "board-title": "我的桌面" } }),
+      JSON.stringify({ workspaces: [{ ...defaultWorkspace(), customTitles: { "board-title": "我的桌面" } }] }),
     );
     const previousTitle = document.title;
     const wrapper = mountApp();
@@ -1819,13 +1865,48 @@ describe("App shell", () => {
     try {
       await nextTick();
       expect(document.title).toBe("我的桌面");
+      // The WorkspaceSwitcher trigger fills the title slot; the fallback must NOT render.
+      expect(wrapper.find(".workbench-title-fallback").exists()).toBe(false);
+      expect(wrapper.get('[data-testid="workspace-trigger"]').text()).toContain("我的桌面");
 
-      await wrapper.get(".workbench-title-group h1 .editable-title").trigger("dblclick");
-      await wrapper.get(".workbench-title-group h1 .title-edit-input").setValue("工作台");
-      await wrapper.get(".workbench-title-group h1 .title-edit-input").trigger("blur");
+      // Open the switcher and rename the active ("default") workspace via the dialog.
+      await wrapper.get('[data-testid="workspace-trigger"]').trigger("click");
+      await wrapper.get('[data-testid="workspace-rename-default"]').trigger("click");
+      await nextTick();
+      expect(wrapper.find(".n-modal").exists()).toBe(true);
+      await wrapper.get(".n-modal input").setValue("工作台");
+      await wrapper.get(".n-modal .n-button--primary-type").trigger("click");
       await nextTick();
 
       expect(document.title).toBe("工作台");
+      const stored = JSON.parse(localStorage.getItem(STORAGE_KEY) || "{}");
+      expect(stored.workspaces[0].customTitles["board-title"]).toBe("工作台");
+    } finally {
+      wrapper.unmount();
+      document.title = previousTitle;
+    }
+  });
+
+  it("creates a new workspace from the unified create dialog", async () => {
+    const previousTitle = document.title;
+    const wrapper = mountApp();
+
+    try {
+      // Open the switcher and request a new workspace via the shared dialog.
+      await wrapper.get('[data-testid="workspace-trigger"]').trigger("click");
+      await wrapper.get('[data-testid="workspace-create-button"]').trigger("click");
+      await nextTick();
+      expect(wrapper.find(".n-modal").exists()).toBe(true);
+      await wrapper.get(".n-modal input").setValue("新桌面");
+      await wrapper.get(".n-modal .n-button--primary-type").trigger("click");
+      await nextTick();
+
+      expect(document.title).toBe("新桌面");
+      const stored = JSON.parse(localStorage.getItem(STORAGE_KEY) || "{}");
+      // The default state ships a single workspace; creating adds a second.
+      expect(stored.workspaces).toHaveLength(2);
+      expect(stored.workspaces.at(-1).customTitles["board-title"]).toBe("新桌面");
+      expect(stored.activeWorkspaceId).toBe(stored.workspaces.at(-1).id);
     } finally {
       wrapper.unmount();
       document.title = previousTitle;
@@ -2122,7 +2203,7 @@ describe("App shell", () => {
         starred: true,
       });
       expect(wrapper.getComponent(TodoPanel).props("todos").morning[0]).not.toHaveProperty("notifyAt");
-      expect(JSON.parse(localStorage.getItem(STORAGE_KEY) || "{}").todos.morning[0]).not.toHaveProperty("notifyAt");
+      expect(JSON.parse(localStorage.getItem(STORAGE_KEY) || "{}").workspaces[0].todos.morning[0]).not.toHaveProperty("notifyAt");
       expect(wrapper.find('[data-testid="companion-confirm"]').exists()).toBe(false);
     } finally {
       wrapper.unmount();
@@ -2414,8 +2495,9 @@ describe("App shell", () => {
         });
       });
       const stored = JSON.parse(localStorage.getItem(STORAGE_KEY) || "{}");
-      expect(stored.images[0].payloadId).toEqual(expect.any(String));
-      await expect(hydrateStoredImages(stored.images)).resolves.toEqual([
+      const workspace = stored.workspaces[0];
+      expect(workspace.images[0].payloadId).toEqual(expect.any(String));
+      await expect(hydrateStoredImages(workspace.images)).resolves.toEqual([
         expect.objectContaining({ id: "img-1", src: "data:image/png;base64,dHdv" }),
       ]);
 
@@ -2760,10 +2842,11 @@ describe("App shell", () => {
       await wrapper.vm.$nextTick();
 
       const stored = JSON.parse(localStorage.getItem(STORAGE_KEY) || "{}");
-      expect(stored.quickTags).toEqual([{ id: expect.any(String), title: "工作" }]);
-      expect(stored.quickButtons[0]).toMatchObject({
+      const workspace = stored.workspaces[0];
+      expect(workspace.quickTags).toEqual([{ id: expect.any(String), title: "工作" }]);
+      expect(workspace.quickButtons[0]).toMatchObject({
         title: "接口",
-        tagId: stored.quickTags[0].id,
+        tagId: workspace.quickTags[0].id,
       });
 
       wrapper.getComponent(QuickButtons).vm.$emit("save", {
@@ -2775,8 +2858,9 @@ describe("App shell", () => {
       await wrapper.vm.$nextTick();
 
       const nextStored = JSON.parse(localStorage.getItem(STORAGE_KEY) || "{}");
-      expect(nextStored.quickTags).toHaveLength(1);
-      expect(nextStored.quickButtons[1]).toMatchObject({ tagId: nextStored.quickTags[0].id });
+      const nextWorkspace = nextStored.workspaces[0];
+      expect(nextWorkspace.quickTags).toHaveLength(1);
+      expect(nextWorkspace.quickButtons[1]).toMatchObject({ tagId: nextWorkspace.quickTags[0].id });
     } finally {
       wrapper.unmount();
     }
@@ -2787,14 +2871,17 @@ describe("App shell", () => {
       STORAGE_KEY,
       JSON.stringify({
         ...defaultState(),
-        quickTags: [
-          { id: "tag-a", title: "标签 A" },
-          { id: "tag-b", title: "标签 B" },
-        ],
-        quickButtons: [
-          { id: "a", title: "A", value: "a", type: "text", hidden: false, tagId: "tag-a" },
-          { id: "b", title: "B", value: "b", type: "text", hidden: false, tagId: "tag-b" },
-        ],
+        workspaces: [{
+          ...defaultWorkspace(),
+          quickTags: [
+            { id: "tag-a", title: "标签 A" },
+            { id: "tag-b", title: "标签 B" },
+          ],
+          quickButtons: [
+            { id: "a", title: "A", value: "a", type: "text", hidden: false, tagId: "tag-a" },
+            { id: "b", title: "B", value: "b", type: "text", hidden: false, tagId: "tag-b" },
+          ],
+        }],
       }),
     );
     const wrapper = mountApp();
@@ -2804,7 +2891,8 @@ describe("App shell", () => {
       await wrapper.vm.$nextTick();
 
       const stored = JSON.parse(localStorage.getItem(STORAGE_KEY) || "{}");
-      expect(stored.quickTags.map((tag: { id: string }) => tag.id)).toEqual(["tag-b", "tag-a"]);
+      const workspace = stored.workspaces[0];
+      expect(workspace.quickTags.map((tag: { id: string }) => tag.id)).toEqual(["tag-b", "tag-a"]);
     } finally {
       wrapper.unmount();
     }
@@ -2815,8 +2903,11 @@ describe("App shell", () => {
       STORAGE_KEY,
       JSON.stringify({
         ...defaultState(),
-        quickTags: [{ id: "tag-a", title: "标签 A" }],
-        quickButtons: [{ id: "a", title: "A", value: "a", type: "text", hidden: false, tagId: "tag-a" }],
+        workspaces: [{
+          ...defaultWorkspace(),
+          quickTags: [{ id: "tag-a", title: "标签 A" }],
+          quickButtons: [{ id: "a", title: "A", value: "a", type: "text", hidden: false, tagId: "tag-a" }],
+        }],
       }),
     );
     const wrapper = mountApp();
@@ -2826,7 +2917,8 @@ describe("App shell", () => {
       await wrapper.vm.$nextTick();
 
       const stored = JSON.parse(localStorage.getItem(STORAGE_KEY) || "{}");
-      expect(stored.quickTags).toEqual([{ id: "tag-a", title: "标签 A", collapsed: true }]);
+      const workspace = stored.workspaces[0];
+      expect(workspace.quickTags).toEqual([{ id: "tag-a", title: "标签 A", collapsed: true }]);
     } finally {
       wrapper.unmount();
     }
@@ -2837,7 +2929,10 @@ describe("App shell", () => {
       STORAGE_KEY,
       JSON.stringify({
         ...defaultState(),
-        quickButtons: [{ id: "other", title: "未分类", value: "a", type: "text", hidden: false }],
+        workspaces: [{
+          ...defaultWorkspace(),
+          quickButtons: [{ id: "other", title: "未分类", value: "a", type: "text", hidden: false }],
+        }],
       }),
     );
     const wrapper = mountApp();
@@ -2847,7 +2942,8 @@ describe("App shell", () => {
       await wrapper.vm.$nextTick();
 
       const stored = JSON.parse(localStorage.getItem(STORAGE_KEY) || "{}");
-      expect(stored.quickOtherCollapsed).toBe(true);
+      const workspace = stored.workspaces[0];
+      expect(workspace.quickOtherCollapsed).toBe(true);
       expect(wrapper.getComponent(QuickButtons).props("otherCollapsed")).toBe(true);
     } finally {
       wrapper.unmount();
@@ -2859,14 +2955,17 @@ describe("App shell", () => {
       STORAGE_KEY,
       JSON.stringify({
         ...defaultState(),
-        quickTags: [
-          { id: "tag-a", title: "标签 A" },
-          { id: "tag-b", title: "标签 B" },
-        ],
-        quickButtons: [
-          { id: "a", title: "A", value: "a", type: "text", hidden: false, tagId: "tag-a" },
-          { id: "b", title: "B", value: "b", type: "text", hidden: false, tagId: "tag-b" },
-        ],
+        workspaces: [{
+          ...defaultWorkspace(),
+          quickTags: [
+            { id: "tag-a", title: "标签 A" },
+            { id: "tag-b", title: "标签 B" },
+          ],
+          quickButtons: [
+            { id: "a", title: "A", value: "a", type: "text", hidden: false, tagId: "tag-a" },
+            { id: "b", title: "B", value: "b", type: "text", hidden: false, tagId: "tag-b" },
+          ],
+        }],
       }),
     );
     const wrapper = mountApp();
@@ -2876,7 +2975,8 @@ describe("App shell", () => {
       await wrapper.vm.$nextTick();
 
       const stored = JSON.parse(localStorage.getItem(STORAGE_KEY) || "{}");
-      expect(stored.quickButtons.find((button: { id: string }) => button.id === "a")).toMatchObject({ tagId: "tag-b" });
+      const workspace = stored.workspaces[0];
+      expect(workspace.quickButtons.find((button: { id: string }) => button.id === "a")).toMatchObject({ tagId: "tag-b" });
     } finally {
       wrapper.unmount();
     }
@@ -2887,11 +2987,14 @@ describe("App shell", () => {
       STORAGE_KEY,
       JSON.stringify({
         ...defaultState(),
-        quickTags: [{ id: "tag-a", title: "标签 A" }],
-        quickButtons: [
-          { id: "a", title: "A", value: "a", type: "text", hidden: false, tagId: "tag-a" },
-          { id: "other", title: "未分类", value: "other", type: "text", hidden: false },
-        ],
+        workspaces: [{
+          ...defaultWorkspace(),
+          quickTags: [{ id: "tag-a", title: "标签 A" }],
+          quickButtons: [
+            { id: "a", title: "A", value: "a", type: "text", hidden: false, tagId: "tag-a" },
+            { id: "other", title: "未分类", value: "other", type: "text", hidden: false },
+          ],
+        }],
       }),
     );
     const wrapper = mountApp();
@@ -2901,7 +3004,8 @@ describe("App shell", () => {
       await wrapper.vm.$nextTick();
 
       const stored = JSON.parse(localStorage.getItem(STORAGE_KEY) || "{}");
-      expect(stored.quickButtons.find((button: { id: string }) => button.id === "a")).not.toHaveProperty("tagId");
+      const workspace = stored.workspaces[0];
+      expect(workspace.quickButtons.find((button: { id: string }) => button.id === "a")).not.toHaveProperty("tagId");
     } finally {
       wrapper.unmount();
     }
@@ -2914,14 +3018,17 @@ describe("App shell", () => {
       STORAGE_KEY,
       JSON.stringify({
         ...defaultState(),
-        quickTags: [
-          { id: "tag-a", title: "标签 A" },
-          { id: "tag-b", title: "标签 B" },
-        ],
-        quickButtons: [
-          { id: "a", title: "A", value: "a", type: "text", hidden: false, tagId: "tag-a" },
-          { id: "b", title: "B", value: "b", type: "text", hidden: false, tagId: "tag-b" },
-        ],
+        workspaces: [{
+          ...defaultWorkspace(),
+          quickTags: [
+            { id: "tag-a", title: "标签 A" },
+            { id: "tag-b", title: "标签 B" },
+          ],
+          quickButtons: [
+            { id: "a", title: "A", value: "a", type: "text", hidden: false, tagId: "tag-a" },
+            { id: "b", title: "B", value: "b", type: "text", hidden: false, tagId: "tag-b" },
+          ],
+        }],
       }),
     );
     const wrapper = mountApp();
@@ -2932,13 +3039,13 @@ describe("App shell", () => {
       await wrapper.vm.$nextTick();
 
       let stored = JSON.parse(localStorage.getItem(STORAGE_KEY) || "{}");
-      expect(stored.quickTags.find((tag: { id: string }) => tag.id === "tag-a")).toMatchObject({ title: "标签 A+" });
+      expect(stored.workspaces[0].quickTags.find((tag: { id: string }) => tag.id === "tag-a")).toMatchObject({ title: "标签 A+" });
 
       quickButtons.vm.$emit("saveTag", { title: "资料" });
       await wrapper.vm.$nextTick();
 
       stored = JSON.parse(localStorage.getItem(STORAGE_KEY) || "{}");
-      expect(stored.quickTags.map((tag: { title: string }) => tag.title)).toContain("资料");
+      expect(stored.workspaces[0].quickTags.map((tag: { title: string }) => tag.title)).toContain("资料");
 
       const updatedQuickButtons = wrapper.getComponent(QuickButtons);
       updatedQuickButtons.vm.$emit("deleteTag", "tag-a", updatedQuickButtons.element as HTMLElement);
@@ -2953,9 +3060,9 @@ describe("App shell", () => {
       await wrapper.vm.$nextTick();
 
       stored = JSON.parse(localStorage.getItem(STORAGE_KEY) || "{}");
-      expect(stored.quickTags.map((tag: { id: string }) => tag.id)).not.toContain("tag-a");
-      expect(stored.quickButtons.find((button: { id: string }) => button.id === "a")).not.toHaveProperty("tagId");
-      expect(stored.quickButtons.find((button: { id: string }) => button.id === "b")).toMatchObject({ tagId: "tag-b" });
+      expect(stored.workspaces[0].quickTags.map((tag: { id: string }) => tag.id)).not.toContain("tag-a");
+      expect(stored.workspaces[0].quickButtons.find((button: { id: string }) => button.id === "a")).not.toHaveProperty("tagId");
+      expect(stored.workspaces[0].quickButtons.find((button: { id: string }) => button.id === "b")).toMatchObject({ tagId: "tag-b" });
     } finally {
       wrapper.unmount();
       vi.useRealTimers();
@@ -3233,7 +3340,7 @@ describe("App shell", () => {
     await wrapper.vm.$nextTick();
 
     expect(imagePanel.props("images").map((image: { id: string }) => image.id)).toEqual(["img-2", "img-3", "img-1"]);
-    expect(JSON.parse(localStorage.getItem(STORAGE_KEY) || "{}").images.map((image: { id: string }) => image.id)).toEqual(["img-2", "img-3", "img-1"]);
+    expect(JSON.parse(localStorage.getItem(STORAGE_KEY) || "{}").workspaces[0].images.map((image: { id: string }) => image.id)).toEqual(["img-2", "img-3", "img-1"]);
 
     wrapper.unmount();
   });
@@ -3897,16 +4004,16 @@ describe("App shell", () => {
       displayHeight: 180,
       });
       const stored = JSON.parse(localStorage.getItem(STORAGE_KEY) || "{}");
-      expect(stored.images.map((image: { id: string }) => image.id)).toEqual(["first", "target", "last"]);
-      expect(stored.images[1]).toMatchObject({
+      expect(stored.workspaces[0].images.map((image: { id: string }) => image.id)).toEqual(["first", "target", "last"]);
+      expect(stored.workspaces[0].images[1]).toMatchObject({
       id: "target",
       payloadId: images[1].payloadId,
       createdAt: 42,
       displayWidth: 320,
       displayHeight: 180,
       });
-      expect(stored.images[1].src).toBeUndefined();
-      await expect(hydrateStoredImages(stored.images)).resolves.toEqual([
+      expect(stored.workspaces[0].images[1].src).toBeUndefined();
+      await expect(hydrateStoredImages(stored.workspaces[0].images)).resolves.toEqual([
       expect.objectContaining({ id: "first" }),
       expect.objectContaining({
         id: "target",
@@ -3960,7 +4067,7 @@ describe("App shell", () => {
               STORAGE_KEY,
               JSON.stringify({
                 sync: { revision: 2, updatedAt: 20, clientId: "tab-b" },
-                images: [{ id: "other", src: "data:image/png;base64,other", createdAt: 2 }],
+                workspaces: [{ ...defaultWorkspace(), images: [{ id: "other", src: "data:image/png;base64,other", createdAt: 2 }] }],
               }),
             );
             return imageBlob;
@@ -3977,7 +4084,7 @@ describe("App shell", () => {
       await vi.waitFor(() => {
         expect((wrapper.getComponent(ImagePanel).props("images") as Array<{ id: string }>).map((image) => image.id)).toEqual(["other"]);
       });
-      expect(JSON.parse(localStorage.getItem(STORAGE_KEY) || "{}").images.map((image: { id: string }) => image.id)).toEqual(["other"]);
+      expect(JSON.parse(localStorage.getItem(STORAGE_KEY) || "{}").workspaces[0].images.map((image: { id: string }) => image.id)).toEqual(["other"]);
       expect(wrapper.getComponent(ImagePanel).props("pasteFeedback")).toBeUndefined();
     } finally {
       wrapper.unmount();
@@ -4005,7 +4112,7 @@ describe("App shell", () => {
         STORAGE_KEY,
         JSON.stringify({
           sync: { revision: 2, updatedAt: 20, clientId: "tab-b" },
-          images: [{ id: "target", payloadId: "winning-v2", createdAt: 1 }],
+          workspaces: [{ ...defaultWorkspace(), images: [{ id: "target", payloadId: "winning-v2", createdAt: 1 }] }],
         }),
       );
       return imageBlob;
@@ -4040,7 +4147,7 @@ describe("App shell", () => {
         STORAGE_KEY,
         JSON.stringify({
           sync: { revision: 3, updatedAt: 30, clientId: "tab-c" },
-          images: [{ id: "target", payloadId: "winning-v3", createdAt: 1 }],
+          workspaces: [{ ...defaultWorkspace(), images: [{ id: "target", payloadId: "winning-v3", createdAt: 1 }] }],
         }),
       );
       deferredHydration.resolve([{ id: "target", payloadId: "winning-v2", src: "data:image/png;base64,winning", createdAt: 1 }]);
@@ -4052,12 +4159,12 @@ describe("App shell", () => {
           src: "data:image/png;base64,winning-three",
         });
       });
-      expect(JSON.parse(localStorage.getItem(STORAGE_KEY) || "{}").images[0].payloadId).toBe("winning-v3");
+      expect(JSON.parse(localStorage.getItem(STORAGE_KEY) || "{}").workspaces[0].images[0].payloadId).toBe("winning-v3");
       expect(wrapper.getComponent(ImagePanel).props("pasteFeedback")).toBeUndefined();
 
       const newerState = JSON.stringify({
         sync: { revision: 4, updatedAt: 40, clientId: "tab-d" },
-        images: [{ id: "newer", src: "data:image/png;base64,newer", createdAt: 3 }],
+        workspaces: [{ ...defaultWorkspace(), images: [{ id: "newer", src: "data:image/png;base64,newer", createdAt: 3 }] }],
       });
       localStorage.setItem(STORAGE_KEY, newerState);
       window.dispatchEvent(new StorageEvent("storage", { key: STORAGE_KEY, newValue: newerState }));
@@ -4091,9 +4198,12 @@ describe("App shell", () => {
               JSON.stringify({
                 sync: { revision: 2, updatedAt: 20, clientId: "tab-b" },
                 language: "en",
-                spaces: [{ id: "workspace", title: "Memo", lines: [{ text: "remote", indent: 0 }] }],
-                activeSpaceId: "workspace",
-                images: [],
+                workspaces: [{
+                  ...defaultWorkspace(),
+                  spaces: [{ id: "workspace", title: "Memo", lines: [{ text: "remote", indent: 0 }] }],
+                  activeSpaceId: "workspace",
+                  images: [],
+                }],
               }),
             );
             return imageBlob;
@@ -4111,24 +4221,27 @@ describe("App shell", () => {
       wrapper.getComponent(ImagePanel).vm.$emit("paste", { placement: "replace", targetId: "target", anchor });
 
       await vi.waitFor(() => {
-        expect((wrapper.getComponent(ImagePanel).props("images") as Array<unknown>)).toHaveLength(0);
+        expect(wrapper.getComponent(ImagePanel).props("title")).toBe("🎨 Images");
       });
+      expect((wrapper.getComponent(ImagePanel).props("images") as Array<unknown>)).toHaveLength(1);
       expect((wrapper.getComponent(SpacePanel).props("spaces") as Array<{ lines: Array<{ text: string }> }>)[0].lines[0].text).toBe("local draft");
-      expect(wrapper.getComponent(ImagePanel).props("title")).toBe("🎨 Images");
 
       wrapper.getComponent(SpacePanel).vm.$emit("blur");
       await vi.waitFor(() => {
         const stored = JSON.parse(localStorage.getItem(STORAGE_KEY) || "{}");
         expect(stored.sync.revision).toBe(3);
-        expect(stored.spaces[0].lines[0].text).toBe("local draft");
+        expect(stored.workspaces[0].spaces[0].lines[0].text).toBe("local draft");
         expect(stored.language).toBe("en");
       });
       await new Promise((resolve) => setTimeout(resolve, 150));
       const newer = JSON.stringify({
         sync: { revision: 4, updatedAt: 40, clientId: "tab-c" },
-        spaces: [{ id: "workspace", title: "Memo", lines: [{ text: "newer remote", indent: 0 }] }],
-        activeSpaceId: "workspace",
-        images: [{ id: "remote-image", createdAt: 3 }],
+        workspaces: [{
+          ...defaultWorkspace(),
+          spaces: [{ id: "workspace", title: "Memo", lines: [{ text: "newer remote", indent: 0 }] }],
+          activeSpaceId: "workspace",
+          images: [{ id: "remote-image", createdAt: 3 }],
+        }],
       });
       localStorage.setItem(STORAGE_KEY, newer);
       window.dispatchEvent(new StorageEvent("storage", { key: STORAGE_KEY, newValue: newer }));
@@ -4198,7 +4311,7 @@ describe("App shell", () => {
       await vi.waitFor(() => {
         const stored = JSON.parse(localStorage.getItem(STORAGE_KEY) || "{}");
         expect(stored.sync.revision).toBe(3);
-        expect(stored.spaces[0].lines[0].text).toBe("generation draft");
+        expect(stored.workspaces[0].spaces[0].lines[0].text).toBe("generation draft");
       });
       expect((wrapper.getComponent(SpacePanel).props("spaces") as Array<{ lines: Array<{ text: string }> }>)[0].lines[0].text).toBe("generation draft");
     } finally {
@@ -4225,12 +4338,12 @@ describe("App shell", () => {
       });
 
       spacePanel.vm.$emit("blur");
-      expect(JSON.parse(localStorage.getItem(STORAGE_KEY) || "{}").spaces[0].lines[0].text).toBe("first draft");
+      expect(JSON.parse(localStorage.getItem(STORAGE_KEY) || "{}").workspaces[0].spaces[0].lines[0].text).toBe("first draft");
 
       spacePanel.vm.$emit("blur");
       await vi.waitFor(() => {
         const stored = JSON.parse(localStorage.getItem(STORAGE_KEY) || "{}");
-        expect(stored.spaces[0].lines[0].text).toBe("second draft");
+        expect(stored.workspaces[0].spaces[0].lines[0].text).toBe("second draft");
         expect(stored.sync.revision).toBe(2);
       });
     } finally {
@@ -4364,8 +4477,8 @@ describe("App shell", () => {
       const images = wrapper.getComponent(ImagePanel).props("images") as Array<{ displayWidth?: number; displayHeight?: number }>;
       expect(images[0]).toMatchObject({ displayWidth: 100, displayHeight: 50 });
       const stored = JSON.parse(localStorage.getItem(STORAGE_KEY) || "{}");
-      expect(stored.images[0]).toMatchObject({ displayWidth: 100, displayHeight: 50 });
-      expect(stored.images[0].src).toBeUndefined();
+      expect(stored.workspaces[0].images[0]).toMatchObject({ displayWidth: 100, displayHeight: 50 });
+      expect(stored.workspaces[0].images[0].src).toBeUndefined();
     } finally {
       wrapper.unmount();
       vi.useRealTimers();
@@ -4413,9 +4526,9 @@ describe("App shell", () => {
 
       const stored = JSON.parse(localStorage.getItem(STORAGE_KEY) || "{}");
       expect(stored.sync.revision).toBe(3);
-      expect(stored.noteLines).toEqual([{ text: "new note", indent: 0 }]);
-      expect(stored.images.map((image: { id: string }) => image.id)).toContain("other-tab");
-      expect(stored.images).toHaveLength(3);
+      expect(stored.workspaces[0].noteLines).toEqual([{ text: "new note", indent: 0 }]);
+      expect(stored.workspaces[0].images.map((image: { id: string }) => image.id)).toContain("other-tab");
+      expect(stored.workspaces[0].images).toHaveLength(3);
     } finally {
       wrapper.unmount();
       vi.useRealTimers();
@@ -4459,8 +4572,8 @@ describe("App shell", () => {
         expect(JSON.parse(localStorage.getItem(STORAGE_KEY) || "{}").sync.revision).toBe(3);
       });
       const stored = JSON.parse(localStorage.getItem(STORAGE_KEY) || "{}");
-      expect(stored.noteLines).toEqual([{ text: "new note", indent: 0 }]);
-      expect(stored.images.map((image: { id: string }) => image.id)).toEqual([
+      expect(stored.workspaces[0].noteLines).toEqual([{ text: "new note", indent: 0 }]);
+      expect(stored.workspaces[0].images.map((image: { id: string }) => image.id)).toEqual([
         "other-tab",
         expect.not.stringMatching(/^(other-tab|target|tail)$/),
         "target",
@@ -4519,7 +4632,7 @@ describe("App shell", () => {
 
       expect(wrapper.find('[data-testid="companion-confirm"]').text()).toMatch(/导入|同步|生效|就位|更新/);
       const stored = JSON.parse(localStorage.getItem(STORAGE_KEY) || "{}");
-      expect(stored.workspaceLines).toEqual([{ text: "导入内容", indent: 0 }]);
+      expect(stored.workspaces[0].workspaceLines).toEqual([{ text: "导入内容", indent: 0 }]);
     } finally {
       wrapper.unmount();
       vi.useRealTimers();
@@ -4576,13 +4689,16 @@ describe("App shell", () => {
     localStorage.setItem(STORAGE_KEY, JSON.stringify({
       ...defaultState(),
       theme: "dark",
-      workspaceLines: [{ text: "待清空", indent: 0 }],
-      quickButtons: [{ id: "q", title: "按钮", value: "文本", type: "text", hidden: false }],
-      todos: {
-        morning: [{ id: "t", text: "提醒", done: false }],
-        noon: [],
-        evening: [],
-      },
+      workspaces: [{
+        ...defaultWorkspace(),
+        workspaceLines: [{ text: "待清空", indent: 0 }],
+        quickButtons: [{ id: "q", title: "按钮", value: "文本", type: "text", hidden: false }],
+        todos: {
+          morning: [{ id: "t", text: "提醒", done: false }],
+          noon: [],
+          evening: [],
+        },
+      }],
     }));
     const wrapper = mountApp();
 
@@ -4604,12 +4720,13 @@ describe("App shell", () => {
       await wrapper.vm.$nextTick();
 
       const stored = JSON.parse(localStorage.getItem(STORAGE_KEY) || "{}");
+      const workspace = stored.workspaces[0];
       expect(stored).toMatchObject({
         theme: "light",
-        workspaceLines: [],
-        quickButtons: [],
       });
-      expect(stored.todos.morning).toEqual([]);
+      expect(workspace.workspaceLines).toEqual([]);
+      expect(workspace.quickButtons).toEqual([]);
+      expect(workspace.todos.morning).toEqual([]);
       expect(wrapper.find('[data-testid="companion-confirm"]').text()).toMatch(/清空|已重置|数据|初始/);
     } finally {
       wrapper.unmount();
@@ -4773,11 +4890,12 @@ describe("App shell", () => {
       await wrapper.vm.$nextTick();
 
       const stored = JSON.parse(localStorage.getItem(STORAGE_KEY) || "{}");
-      expect(stored.todoLists).toEqual([
+      const workspace = stored.workspaces[0];
+      expect(workspace.todoLists).toEqual([
         { id: "solo", title: "单独列表", collapsed: false, compact: false },
       ]);
-      expect(stored.todos.solo).toEqual([]);
-      expect(stored.showCompletedTodos.solo).toBe(true);
+      expect(workspace.todos.solo).toEqual([]);
+      expect(workspace.showCompletedTodos.solo).toBe(true);
       expect(wrapper.find('.todo-section[data-list-id="solo"]').exists()).toBe(true);
     } finally {
       wrapper.unmount();
@@ -5813,15 +5931,18 @@ describe("App shell", () => {
       STORAGE_KEY,
       JSON.stringify({
         ...defaultState(),
-        todos: {
-          morning: Array.from({ length: 7 }, (_, index) => ({
-            id: `todo-${index}`,
-            text: `提醒 ${index + 1}`,
-            done: false,
-          })),
-          noon: [],
-          evening: [],
-        },
+        workspaces: [{
+          ...defaultWorkspace(),
+          todos: {
+            morning: Array.from({ length: 7 }, (_, index) => ({
+              id: `todo-${index}`,
+              text: `提醒 ${index + 1}`,
+              done: false,
+            })),
+            noon: [],
+            evening: [],
+          },
+        }],
       }),
     );
     const randomSpy = vi.spyOn(Math, "random").mockReturnValue(0);
@@ -5852,15 +5973,18 @@ describe("App shell", () => {
       STORAGE_KEY,
       JSON.stringify({
         ...defaultState(),
-        todos: {
-          morning: Array.from({ length: 7 }, (_, index) => ({
-            id: `todo-${index}`,
-            text: `提醒 ${index + 1}`,
-            done: false,
-          })),
-          noon: [],
-          evening: [],
-        },
+        workspaces: [{
+          ...defaultWorkspace(),
+          todos: {
+            morning: Array.from({ length: 7 }, (_, index) => ({
+              id: `todo-${index}`,
+              text: `提醒 ${index + 1}`,
+              done: false,
+            })),
+            noon: [],
+            evening: [],
+          },
+        }],
       }),
     );
     const randomSpy = vi.spyOn(Math, "random").mockReturnValue(0);
@@ -5892,15 +6016,18 @@ describe("App shell", () => {
       STORAGE_KEY,
       JSON.stringify({
         ...defaultState(),
-        quickTags: [{ id: "tag-work", title: "工作" }],
-        quickButtons: Array.from({ length: 9 }, (_, index) => ({
-          id: `quick-${index}`,
-          title: `按钮 ${index + 1}`,
-          value: `https://example.com/${index}`,
-          type: "link",
-          hidden: false,
-          tagId: "tag-work",
-        })),
+        workspaces: [{
+          ...defaultWorkspace(),
+          quickTags: [{ id: "tag-work", title: "工作" }],
+          quickButtons: Array.from({ length: 9 }, (_, index) => ({
+            id: `quick-${index}`,
+            title: `按钮 ${index + 1}`,
+            value: `https://example.com/${index}`,
+            type: "link",
+            hidden: false,
+            tagId: "tag-work",
+          })),
+        }],
       }),
     );
     const randomSpy = vi.spyOn(Math, "random").mockReturnValue(0);
@@ -5932,28 +6059,31 @@ describe("App shell", () => {
       STORAGE_KEY,
       JSON.stringify({
         ...defaultState(),
-        quickTags: [
-          { id: "tag-a", title: "标签 A" },
-          { id: "tag-b", title: "标签 B" },
-        ],
-        quickButtons: [
-          ...Array.from({ length: 7 }, (_, index) => ({
-            id: `a-${index}`,
-            title: `A ${index + 1}`,
-            value: `https://example.com/a/${index}`,
-            type: "link",
-            hidden: false,
-            tagId: "tag-a",
-          })),
-          ...Array.from({ length: 7 }, (_, index) => ({
-            id: `b-${index}`,
-            title: `B ${index + 1}`,
-            value: `https://example.com/b/${index}`,
-            type: "link",
-            hidden: false,
-            tagId: "tag-b",
-          })),
-        ],
+        workspaces: [{
+          ...defaultWorkspace(),
+          quickTags: [
+            { id: "tag-a", title: "标签 A" },
+            { id: "tag-b", title: "标签 B" },
+          ],
+          quickButtons: [
+            ...Array.from({ length: 7 }, (_, index) => ({
+              id: `a-${index}`,
+              title: `A ${index + 1}`,
+              value: `https://example.com/a/${index}`,
+              type: "link",
+              hidden: false,
+              tagId: "tag-a",
+            })),
+            ...Array.from({ length: 7 }, (_, index) => ({
+              id: `b-${index}`,
+              title: `B ${index + 1}`,
+              value: `https://example.com/b/${index}`,
+              type: "link",
+              hidden: false,
+              tagId: "tag-b",
+            })),
+          ],
+        }],
       }),
     );
     const wrapper = mountApp();

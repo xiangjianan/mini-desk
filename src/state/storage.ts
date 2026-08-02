@@ -1,8 +1,9 @@
-import { DEFAULT_SPACE_ID, DEFAULT_SPACE_TITLE, DEFAULT_TODO_LISTS, LEGACY_STORAGE_KEY, defaultState, STORAGE_KEY } from "./defaults";
+import { DEFAULT_SPACE_ID, DEFAULT_SPACE_TITLE, DEFAULT_TODO_LISTS, DEFAULT_WORKSPACE_ID, LEGACY_STORAGE_KEY, defaultState, defaultWorkspace, STORAGE_KEY } from "./defaults";
 import { isValidDeadlineAt } from "./deadlines";
 import { normalizeCompanionGifTheme } from "./companionGifThemes";
-import { DEFAULT_SPACE_TITLES, DEFAULT_TITLES_BY_LANGUAGE, LEGACY_DEFAULT_TITLES_BY_LANGUAGE, OLDER_LEGACY_DEFAULT_TITLES_BY_LANGUAGE, getLegacyDefaultTodoLists, getUiText, normalizeLanguage } from "./i18n";
+import { DEFAULT_LANGUAGE, DEFAULT_SPACE_TITLES, DEFAULT_TITLES_BY_LANGUAGE, LEGACY_DEFAULT_TITLES_BY_LANGUAGE, OLDER_LEGACY_DEFAULT_TITLES_BY_LANGUAGE, getLegacyDefaultTodoLists, getUiText, normalizeLanguage } from "./i18n";
 import type {
+  AppLanguage,
   BoardSyncState,
   BoardState,
   CompanionCustomGif,
@@ -16,10 +17,12 @@ import type {
   QuickButtonType,
   SerializableOptions,
   StoredImage,
+  ThemeMode,
   TodoCompletedVisibility,
   TodoItem,
   TodoListConfig,
   TodoMap,
+  WorkspaceData,
   WorkspaceSpace,
 } from "../types";
 
@@ -72,6 +75,19 @@ export function saveState(state: BoardState, storage: Storage = localStorage): v
   storage.setItem(STORAGE_KEY, JSON.stringify(getSerializableState(state)));
 }
 
+function findWorkspace(state: BoardState): WorkspaceData | undefined {
+  return state.workspaces.find((workspace) => workspace.id === state.activeWorkspaceId) ?? state.workspaces[0];
+}
+
+function replaceWorkspaceImages(state: BoardState, workspaceId: string, images: StoredImage[]): BoardState {
+  return {
+    ...state,
+    workspaces: state.workspaces.map((workspace) =>
+      workspace.id === workspaceId ? { ...workspace, images } : workspace,
+    ),
+  };
+}
+
 export function saveStateWithConflictCheck(
   state: BoardState,
   options: SaveStateOptions = {},
@@ -85,13 +101,25 @@ export function saveStateWithConflictCheck(
 
   if (current && currentRevision > localRevision && current.sync.clientId !== options.clientId && !options.force) {
     if (scope === "images") {
-      if (options.imageReplacement && !canMergeImageReplacement(current.images, local.images, options.imageReplacement)) {
+      const localWorkspace = findWorkspace(local);
+      if (!localWorkspace) {
         return { status: "conflict", state: current };
       }
-      const merged = {
-        ...current,
-        images: mergeImageAdditions(current.images, local.images, options.imagePlacement, options.imageReplacement),
-      };
+      const currentWorkspace = current.workspaces.find((workspace) => workspace.id === localWorkspace.id);
+      if (
+        !currentWorkspace
+        || (options.imageReplacement
+          && !canMergeImageReplacement(currentWorkspace.images, localWorkspace.images, options.imageReplacement))
+      ) {
+        return { status: "conflict", state: current };
+      }
+      const mergedImages = mergeImageAdditions(
+        currentWorkspace.images,
+        localWorkspace.images,
+        options.imagePlacement,
+        options.imageReplacement,
+      );
+      const merged = replaceWorkspaceImages(current, currentWorkspace.id, mergedImages);
       const saved = writeSyncedState(merged, storage, {
         clientId: options.clientId,
         now: options.now,
@@ -111,18 +139,23 @@ export function saveStateWithConflictCheck(
   return { status: "saved", state: saved };
 }
 
-export function getSerializableState(
-  state: BoardState,
+export function getSerializableWorkspace(
+  workspace: WorkspaceData,
   options: SerializableOptions = {},
-): BoardState {
-  const todoLists = cloneTodoLists(state.todoLists);
-
+): WorkspaceData {
+  const todoLists = cloneTodoLists(workspace.todoLists);
   return {
-    ...state,
-    sync: { ...normalizeSyncState(state.sync) },
-    customCompanionGif: options.includeCustomGifData ? cloneCustomCompanionGif(state.customCompanionGif) : {},
-    customCompanionGifStored: getCustomCompanionGifStoredState(state.customCompanionGif, state.customCompanionGifStored),
-    images: state.images.map((image) => {
+    id: workspace.id,
+    createdAt: workspace.createdAt,
+    customTitles: { ...workspace.customTitles },
+    noteLines: cloneLines(workspace.noteLines),
+    workspaceLines: cloneLines(workspace.workspaceLines),
+    storageLines: cloneLines(workspace.storageLines),
+    spaces: cloneSpaces(workspace.spaces),
+    activeSpaceId: workspace.spaces.some((space) => space.id === workspace.activeSpaceId)
+      ? workspace.activeSpaceId
+      : workspace.spaces[0]?.id ?? DEFAULT_SPACE_ID,
+    images: workspace.images.map((image) => {
       if (options.includeImageData) return { ...image };
       return {
         id: image.id,
@@ -133,18 +166,33 @@ export function getSerializableState(
       };
     }),
     todoLists,
-    showCompletedTodos: cloneCompletedVisibility(state.showCompletedTodos, todoLists),
-    todos: cloneTodos(state.todos, todoLists),
-    noteLines: cloneLines(state.noteLines),
-    workspaceLines: cloneLines(state.workspaceLines),
-    storageLines: cloneLines(state.storageLines),
-    spaces: cloneSpaces(state.spaces),
-    activeSpaceId: state.spaces.some((space) => space.id === state.activeSpaceId)
-      ? state.activeSpaceId
-      : state.spaces[0]?.id ?? DEFAULT_SPACE_ID,
-    quickTags: cloneQuickTags(state.quickTags),
-    quickButtons: state.quickButtons.map((button) => ({ ...button })),
-    customTitles: { ...state.customTitles },
+    showCompletedTodos: cloneCompletedVisibility(workspace.showCompletedTodos, todoLists),
+    todos: cloneTodos(workspace.todos, todoLists),
+    quickTags: cloneQuickTags(workspace.quickTags),
+    quickButtons: workspace.quickButtons.map((button) => ({ ...button })),
+    quickOtherCollapsed: workspace.quickOtherCollapsed,
+    showHiddenQuickButtons: workspace.showHiddenQuickButtons,
+  };
+}
+
+export function getSerializableState(
+  state: BoardState,
+  options: SerializableOptions = {},
+): BoardState {
+  // Fields are listed explicitly (not spread from `state`) so that un-cloned
+  // references don't leak into the serialized output. When adding a new global
+  // preference, register it both here and in normalizeImportedState's `shared`.
+  return {
+    sync: { ...normalizeSyncState(state.sync) },
+    language: state.language,
+    theme: state.theme,
+    companionGifTheme: state.companionGifTheme,
+    customCompanionGif: options.includeCustomGifData ? cloneCustomCompanionGif(state.customCompanionGif) : {},
+    customCompanionGifStored: getCustomCompanionGifStoredState(state.customCompanionGif, state.customCompanionGifStored),
+    workspaces: state.workspaces.map((workspace) => getSerializableWorkspace(workspace, options)),
+    activeWorkspaceId: state.workspaces.some((workspace) => workspace.id === state.activeWorkspaceId)
+      ? state.activeWorkspaceId
+      : state.workspaces[0]?.id ?? DEFAULT_WORKSPACE_ID,
   };
 }
 
@@ -158,26 +206,49 @@ export function exportUndoSnapshotState(state: BoardState): string {
 
 export function normalizeImportedState(payload: unknown): BoardState {
   const source = isPlainObject(payload) ? payload : {};
-  const base = defaultState();
   const typed = source as Record<string, unknown>;
+  const language = normalizeLanguage(typed.language);
+
+  const shared = {
+    sync: normalizeSyncState(typed.sync),
+    language,
+    theme: (typed.theme === "dark" ? "dark" : "light") as ThemeMode,
+    companionGifTheme: normalizeCompanionGifTheme(typed.companionGifTheme),
+    customCompanionGif: normalizeCustomCompanionGif(typed.customCompanionGif),
+    customCompanionGifStored: normalizeCustomCompanionGifStored(typed.customCompanionGifStored, typed.customCompanionGif),
+  };
+
+  if (Array.isArray(typed.workspaces)) {
+    const workspaces = normalizeWorkspaceList(typed.workspaces, language);
+    return {
+      ...shared,
+      workspaces,
+      activeWorkspaceId: normalizeActiveWorkspaceId(typed.activeWorkspaceId, workspaces),
+    };
+  }
+
+  const workspace = normalizeLegacyWorkspace(typed, language);
+  return {
+    ...shared,
+    workspaces: [workspace],
+    activeWorkspaceId: workspace.id,
+  };
+}
+
+export function normalizeWorkspaceData(item: unknown, language: AppLanguage = DEFAULT_LANGUAGE): WorkspaceData {
+  const typed = isPlainObject(item) ? (item as Record<string, unknown>) : {};
   const customTitles = normalizeCustomTitles(typed.customTitles);
   const noteLines = normalizeLineCollection(typed.noteLines ?? typed.note);
   const workspaceLines = normalizeLineCollection(typed.workspaceLines ?? typed.workspace);
   const storageLines = normalizeLineCollection(typed.storageLines ?? typed.storage);
   const spaces = normalizeSpaces(typed.spaces, workspaceLines, storageLines, customTitles);
   const todoLists = normalizeTodoLists(typed.todoLists, customTitles, typed.todos, typed.showCompletedTodos);
-  const language = normalizeLanguage(typed.language);
-
   const quickTags = normalizeQuickTags(typed.quickTags);
-
+  const id = typeof typed.id === "string" && typed.id.trim() ? typed.id.trim() : createId();
+  const createdAt = typeof typed.createdAt === "number" && Number.isFinite(typed.createdAt) ? typed.createdAt : 0;
   return {
-    ...base,
-    sync: normalizeSyncState(typed.sync),
-    language,
-    theme: typed.theme === "dark" ? "dark" : "light",
-    companionGifTheme: normalizeCompanionGifTheme(typed.companionGifTheme),
-    customCompanionGif: normalizeCustomCompanionGif(typed.customCompanionGif),
-    customCompanionGifStored: normalizeCustomCompanionGifStored(typed.customCompanionGifStored, typed.customCompanionGif),
+    id,
+    createdAt,
     customTitles,
     noteLines,
     workspaceLines,
@@ -193,6 +264,27 @@ export function normalizeImportedState(payload: unknown): BoardState {
     showCompletedTodos: normalizeCompletedVisibility(typed.showCompletedTodos, todoLists),
     todos: normalizeTodos(typed.todos, todoLists),
   };
+}
+
+function normalizeWorkspaceList(value: unknown, language: AppLanguage): WorkspaceData[] {
+  if (!Array.isArray(value)) return [defaultWorkspace()];
+  const seen = new Set<string>();
+  const workspaces = value
+    .map((item) => normalizeWorkspaceData(item, language))
+    .map((workspace) => {
+      let id = workspace.id;
+      while (seen.has(id)) id = createId();
+      seen.add(id);
+      return { ...workspace, id };
+    });
+  return workspaces.length > 0 ? workspaces : [defaultWorkspace()];
+}
+
+function normalizeLegacyWorkspace(typed: Record<string, unknown>, language: AppLanguage): WorkspaceData {
+  const workspace = normalizeWorkspaceData(typed, language);
+  const sync = isPlainObject(typed.sync) ? (typed.sync as Record<string, unknown>) : {};
+  const updatedAt = typeof sync.updatedAt === "number" && Number.isFinite(sync.updatedAt) ? sync.updatedAt : 0;
+  return { ...workspace, id: DEFAULT_WORKSPACE_ID, createdAt: updatedAt };
 }
 
 function loadCurrentPrimaryState(storage: Storage): BoardState | undefined {
@@ -420,6 +512,11 @@ function normalizeSpace(item: unknown): WorkspaceSpace | null {
 function normalizeActiveSpaceId(value: unknown, spaces: WorkspaceSpace[]): string {
   const fallback = spaces[0]?.id ?? DEFAULT_SPACE_ID;
   return typeof value === "string" && spaces.some((space) => space.id === value) ? value : fallback;
+}
+
+function normalizeActiveWorkspaceId(value: unknown, workspaces: WorkspaceData[]): string {
+  const fallback = workspaces[0]?.id ?? DEFAULT_WORKSPACE_ID;
+  return typeof value === "string" && workspaces.some((workspace) => workspace.id === value) ? value : fallback;
 }
 
 export function normalizeLineCollection(value: unknown): LineItem[] {

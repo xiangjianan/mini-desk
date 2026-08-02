@@ -97,46 +97,24 @@ describe("WorkbenchShell", () => {
     expect(wrapper.get(".workbench-slogan").text()).toBe("Do less, do it well.");
   });
 
-  it("emits updateTitle when the board title is edited via double-click", async () => {
-    const wrapper = mount(WorkbenchShell, {
-      props: {
-        ...defaultProps,
-        slogan: "Do less, do it well.",
-      },
-    });
-
-    await wrapper.get(".workbench-title-group h1 .editable-title").trigger("dblclick");
-    await wrapper.get(".workbench-title-group h1 .title-edit-input").setValue("我的桌面");
-    await wrapper.get(".workbench-title-group h1 .title-edit-input").trigger("blur");
-
-    expect(wrapper.emitted("updateTitle")).toEqual([["我的桌面"]]);
-  });
-
-  it("emits updateSlogan when the slogan is edited via double-click", async () => {
-    const wrapper = mount(WorkbenchShell, {
-      props: {
-        ...defaultProps,
-        slogan: "Do less, do it well.",
-      },
-    });
-
-    await wrapper.get(".workbench-slogan .editable-title").trigger("dblclick");
-    await wrapper.get(".workbench-slogan .title-edit-input").setValue("少做，做好");
-    await wrapper.get(".workbench-slogan .title-edit-input").trigger("blur");
-
-    expect(wrapper.emitted("updateSlogan")).toEqual([["少做，做好"]]);
-  });
-
-  it("uses the dark pixel cat logo asset in dark theme", async () => {
+  it("renders the title fallback when no workspace-trigger slot is provided", () => {
     const wrapper = mount(WorkbenchShell, {
       props: defaultProps,
     });
 
-    expect(wrapper.get(".workbench-title-logo").attributes("src")).toContain("mini-desk-cat.png");
+    expect(wrapper.get(".workbench-title-fallback").text()).toBe("Mini Desk");
+  });
 
-    await wrapper.setProps({ theme: "dark" });
+  it("renders provided workspace-trigger slot content in place of the fallback", () => {
+    const wrapper = mount(WorkbenchShell, {
+      props: defaultProps,
+      slots: {
+        "workspace-trigger": "<button data-testid='slotted-trigger'>switcher</button>",
+      },
+    });
 
-    expect(wrapper.get(".workbench-title-logo").attributes("src")).toContain("mini-desk-cat-dark.png");
+    expect(wrapper.find(".workbench-title-fallback").exists()).toBe(false);
+    expect(wrapper.get('[data-testid="slotted-trigger"]').text()).toBe("switcher");
   });
 
   it("keeps every zone minimum width at 100px and fits columns without oscillating", () => {

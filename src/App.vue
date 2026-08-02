@@ -1,7 +1,7 @@
 <script setup lang="ts">
 import { computed, defineAsyncComponent, nextTick, onMounted, onUnmounted, reactive, ref, watch } from "vue";
 import { MoonOutline, SunnyOutline } from "@vicons/ionicons5";
-import { darkTheme, dateEnUS, dateZhCN, enUS, NButton, NConfigProvider, NGlobalStyle, NIcon, zhCN } from "naive-ui";
+import { darkTheme, dateEnUS, dateZhCN, enUS, NButton, NConfigProvider, NGlobalStyle, NIcon, NInput, NModal, zhCN } from "naive-ui";
 import CompanionBubble from "./components/CompanionBubble.vue";
 import ImagePanel from "./components/ImagePanel.vue";
 import QuickButtons from "./components/QuickButtons.vue";
@@ -9,6 +9,7 @@ import SettingsMenu from "./components/SettingsMenu.vue";
 import SpacePanel from "./components/SpacePanel.vue";
 import TodoPanel from "./components/TodoPanel.vue";
 import WorkbenchShell from "./components/WorkbenchShell.vue";
+import WorkspaceSwitcher from "./components/WorkspaceSwitcher.vue";
 import { getCompanionGifSrc, getCompanionNotificationIconSrc } from "./state/companionGifThemes";
 import {
   clearStoredImagePayloads,
@@ -47,13 +48,16 @@ import {
   updateTodoText,
 } from "./state/todos";
 import { defaultState, STORAGE_KEY } from "./state/defaults";
+import { createWorkspaceData, ensureUniqueWorkspaceTitle, removeWorkspace, reorderWorkspaces } from "./state/workspaces";
 import { QUICK_BUTTON_OTHER_GROUP_ID, QUICK_DENSITY_THRESHOLD, formatQuickCopiedPreview } from "./state/quickButtons";
 import {
   createId,
   exportJsonState,
   exportUndoSnapshotState,
+  getSerializableWorkspace,
   loadState,
   normalizeImportedState,
+  normalizeWorkspaceData,
   saveStateWithConflictCheck,
 } from "./state/storage";
 import {
@@ -65,7 +69,7 @@ import {
   markAppVersionSeen,
 } from "./state/version";
 import type { ImagePlacementHint, ImageReplacementHint, SaveScope } from "./state/storage";
-import type { AppLanguage, BoardState, CompanionGifTheme, DraggedTodo, GuideKey, ImagePasteFeedback, ImagePasteRequest, LineItem, QuickApiBodyType, QuickApiHeader, QuickApiMethod, QuickButton, QuickButtonType, StoredImage, TodoItem, TodoListConfig, TodoListId, TodoPeriod, TodoStarChange, WorkspaceSpace } from "./types";
+import type { AppLanguage, BoardState, CompanionGifTheme, DraggedTodo, GuideKey, ImagePasteFeedback, ImagePasteRequest, LineItem, QuickApiBodyType, QuickApiHeader, QuickApiMethod, QuickButton, QuickButtonType, StoredImage, TodoItem, TodoListConfig, TodoListId, TodoPeriod, TodoStarChange, WorkspaceData, WorkspaceSpace } from "./types";
 
 const ImagePreview = defineAsyncComponent(() => import("./components/ImagePreview.vue"));
 const ShortcutHelp = defineAsyncComponent(() => import("./components/ShortcutHelp.vue"));
@@ -86,6 +90,9 @@ function getInitialMobileBlocked(): boolean {
 }
 
 const state = reactive<BoardState>(loadState());
+const activeWorkspace = computed<WorkspaceData>(
+  () => state.workspaces.find((workspace) => workspace.id === state.activeWorkspaceId) ?? state.workspaces[0],
+);
 const syncClientId = createId();
 const undoSnapshots = ref<string[]>([]);
 const lastUndoSnapshot = ref(createUndoSnapshot());
@@ -111,6 +118,11 @@ const importInput = ref<HTMLInputElement | null>(null);
 const importFeedbackAnchor = ref<HTMLElement | undefined>();
 const pendingEditSpaceId = ref<string | null>(null);
 const pendingEditTodoListId = ref<string | null>(null);
+const workspaceDialogVisible = ref(false);
+const workspaceDialogMode = ref<"create" | "rename">("create");
+const workspaceDialogId = ref<string | null>(null);
+const workspaceDraftTitle = ref("");
+const workspaceDraftSlogan = ref("");
 const textSaveTimer = ref<number | undefined>();
 const bubbleTimer = ref<number | undefined>();
 const bubbleFadeTimer = ref<number | undefined>();
@@ -216,22 +228,22 @@ const workspaceDensityLabel = computed(() => {
   return uiText.value.app.densityGood;
 });
 
+const boardTitle = computed(() => activeWorkspace.value.customTitles["board-title"]?.trim() || DEFAULT_BOARD_TITLE);
+const boardSlogan = computed(() => activeWorkspace.value.customTitles["board-slogan"]?.trim() || DEFAULT_BOARD_SLOGAN);
+const notificationDocumentTitle = computed(() => `🔔 新提醒 · ${boardTitle.value}`);
 const titles = computed(() =>
   Object.fromEntries(
-    Object.entries(getDefaultTitles(state.language)).map(([id, title]) => [id, state.customTitles[id] || title]),
+    Object.entries(getDefaultTitles(state.language)).map(([id, title]) => [id, activeWorkspace.value.customTitles[id] || title]),
   ) as Record<string, string>,
 );
-const boardTitle = computed(() => state.customTitles["board-title"]?.trim() || DEFAULT_BOARD_TITLE);
-const boardSlogan = computed(() => state.customTitles["board-slogan"]?.trim() || DEFAULT_BOARD_SLOGAN);
-const notificationDocumentTitle = computed(() => `🔔 新提醒 · ${boardTitle.value}`);
 const displayTodoLists = computed<TodoListConfig[]>(() =>
-  state.todoLists.map((list) => ({
+  activeWorkspace.value.todoLists.map((list) => ({
     ...list,
     title: getDisplayTodoListTitle(list, state.language),
   })),
 );
 const displaySpaces = computed<WorkspaceSpace[]>(() =>
-  state.spaces.map((space) => ({
+  activeWorkspace.value.spaces.map((space) => ({
     ...space,
     title: getDisplaySpaceTitle(space, state.language),
   })),
@@ -297,8 +309,15 @@ onMounted(async () => {
   } catch {
     state.customCompanionGifStored = {};
   }
-  const inlineImagePayloads = state.images.filter((image): image is StoredImage & { src: string } => Boolean(image.src));
-  state.images = await hydrateStoredImages(state.images, { persistLegacyPayloads: true });
+  const inlineImagePayloads: (StoredImage & { src: string })[] = [];
+  for (const workspace of state.workspaces) {
+    for (const image of workspace.images) {
+      if (image.src) inlineImagePayloads.push(image as StoredImage & { src: string });
+    }
+  }
+  for (const workspace of state.workspaces) {
+    workspace.images = await hydrateStoredImages(workspace.images, { persistLegacyPayloads: true });
+  }
   await persistImagePayloads(inlineImagePayloads);
   if (!appMounted) return;
   checkAppVersion();
@@ -342,8 +361,8 @@ watch(boardTitle, (value) => {
 
 function updateTitle(id: string, value: string): void {
   const title = value.trim();
-  if (title) state.customTitles[id] = title;
-  else delete state.customTitles[id];
+  if (title) activeWorkspace.value.customTitles[id] = title;
+  else delete activeWorkspace.value.customTitles[id];
   persistNow();
 }
 
@@ -355,14 +374,14 @@ function updateLanguage(language: AppLanguage): void {
 }
 
 function updateLines(key: "noteLines" | "workspaceLines" | "storageLines", lines: LineItem[]): void {
-  state[key] = lines;
+  activeWorkspace.value[key] = lines;
   textEditGeneration += 1;
   markDirty();
   scheduleTextSave();
 }
 
 function updateSpaceLines(id: string, lines: LineItem[]): void {
-  const space = state.spaces.find((item) => item.id === id);
+  const space = activeWorkspace.value.spaces.find((item) => item.id === id);
   if (!space) return;
   space.lines = lines;
   textEditGeneration += 1;
@@ -372,26 +391,26 @@ function updateSpaceLines(id: string, lines: LineItem[]): void {
 }
 
 function activateSpace(id: string): void {
-  if (!state.spaces.some((space) => space.id === id)) return;
-  state.activeSpaceId = id;
+  if (!activeWorkspace.value.spaces.some((space) => space.id === id)) return;
+  activeWorkspace.value.activeSpaceId = id;
   persistNow();
 }
 
 function createSpace(): void {
   const id = createId();
-  state.spaces.push({
+  activeWorkspace.value.spaces.push({
     id,
     title: nextSpaceTitle(),
     lines: [],
   });
-  state.activeSpaceId = id;
+  activeWorkspace.value.activeSpaceId = id;
   pendingEditSpaceId.value = id;
   syncLegacySpaceLines();
   persistNow();
 }
 
 function renameSpace(id: string, title: string): void {
-  const space = state.spaces.find((item) => item.id === id);
+  const space = activeWorkspace.value.spaces.find((item) => item.id === id);
   if (!space) return;
   space.title = getStoredSpaceTitle(id, title) || space.title;
   if (pendingEditSpaceId.value === id) pendingEditSpaceId.value = null;
@@ -403,17 +422,17 @@ function finishSpaceEdit(id: string): void {
 }
 
 function deleteSpace(id: string): void {
-  if (state.spaces.length <= 1) {
+  if (activeWorkspace.value.spaces.length <= 1) {
     showBubbleText(uiText.value.app.keepOneSpace);
     return;
   }
   const anchor = getSpacePanelAnchor();
   requestConfirmation("confirmDeleteSpace", anchor, () => {
-    const index = state.spaces.findIndex((space) => space.id === id);
-    if (index < 0 || state.spaces.length <= 1) return;
-    state.spaces.splice(index, 1);
-    if (state.activeSpaceId === id) {
-      state.activeSpaceId = state.spaces[Math.max(0, index - 1)]?.id ?? state.spaces[0].id;
+    const index = activeWorkspace.value.spaces.findIndex((space) => space.id === id);
+    if (index < 0 || activeWorkspace.value.spaces.length <= 1) return;
+    activeWorkspace.value.spaces.splice(index, 1);
+    if (activeWorkspace.value.activeSpaceId === id) {
+      activeWorkspace.value.activeSpaceId = activeWorkspace.value.spaces[Math.max(0, index - 1)]?.id ?? activeWorkspace.value.spaces[0].id;
     }
     syncLegacySpaceLines();
     persistNow();
@@ -422,14 +441,131 @@ function deleteSpace(id: string): void {
 }
 
 function reorderSpaces(dragId: string, targetId: string): void {
-  moveItem(state.spaces, dragId, targetId);
+  moveItem(activeWorkspace.value.spaces, dragId, targetId);
   syncLegacySpaceLines();
+  persistNow();
+}
+
+function workspaceCreatedMessage(): string {
+  return state.language === "en" ? "Workspace created (｡•̀ᴗ-)✧" : "已新建工作空间 (｡•̀ᴗ-)✧";
+}
+
+function createWorkspace(title: string, slogan: string): void {
+  const workspace = ensureUniqueWorkspaceTitle(createWorkspaceData(title, slogan, Date.now()), state.workspaces);
+  state.workspaces = [...state.workspaces, workspace];
+  state.activeWorkspaceId = workspace.id;
+  pendingEditSpaceId.value = null;
+  pendingEditTodoListId.value = null;
+  clearImagePreview();
+  persistNow();
+  showBubbleText(workspaceCreatedMessage());
+}
+
+async function switchWorkspace(id: string): Promise<void> {
+  if (!state.workspaces.some((workspace) => workspace.id === id) || state.activeWorkspaceId === id) return;
+  if (textEditGeneration !== savedTextGeneration) flushTextSave();
+  const target = state.workspaces.find((workspace) => workspace.id === id);
+  if (target) {
+    // Hydrate the target workspace's image payloads before it becomes visible.
+    // Cross-tab sync / undo / conflict resolution only hydrate the active workspace,
+    // so an inactive workspace may carry src-less metadata until switched to.
+    target.images = await hydrateStoredImages(target.images);
+  }
+  state.activeWorkspaceId = id;
+  pendingEditSpaceId.value = null;
+  pendingEditTodoListId.value = null;
+  clearImagePreview();
+  persistNow();
+}
+
+function openCreateWorkspace(): void {
+  workspaceDialogMode.value = "create";
+  workspaceDialogId.value = null;
+  workspaceDraftTitle.value = "";
+  workspaceDraftSlogan.value = "";
+  workspaceDialogVisible.value = true;
+}
+
+function renameWorkspace(id: string, title: string, slogan: string): void {
+  workspaceDialogMode.value = "rename";
+  workspaceDialogId.value = id;
+  workspaceDraftTitle.value = title;
+  workspaceDraftSlogan.value = slogan;
+  workspaceDialogVisible.value = true;
+}
+
+function confirmWorkspaceDialog(): void {
+  const title = workspaceDraftTitle.value.trim();
+  if (!title) return;
+  if (workspaceDialogMode.value === "create") {
+    createWorkspace(title, workspaceDraftSlogan.value);
+  } else {
+    const workspace = state.workspaces.find((item) => item.id === workspaceDialogId.value);
+    if (workspace) {
+      const trimmedSlogan = workspaceDraftSlogan.value.trim();
+      const nextTitles: Record<string, string> = { ...workspace.customTitles, "board-title": title };
+      if (trimmedSlogan) nextTitles["board-slogan"] = trimmedSlogan;
+      else delete nextTitles["board-slogan"];
+      workspace.customTitles = nextTitles;
+      persistNow();
+    }
+  }
+  workspaceDialogVisible.value = false;
+  workspaceDialogId.value = null;
+}
+
+function slugifyTitle(title: string): string {
+  const trimmed = title.trim();
+  if (!trimmed) return "workspace";
+  return trimmed.replace(/[\\/:*?"<>|]/g, "").slice(0, 24).trim() || "workspace";
+}
+
+function exportWorkspaceById(id: string, anchor?: HTMLElement): void {
+  const workspace = state.workspaces.find((item) => item.id === id);
+  if (!workspace) return;
+  const serialized = getSerializableWorkspace(workspace, { includeImageData: true });
+  const content = JSON.stringify({ miniDeskWorkspaceExport: true, version: 1, workspace: serialized }, null, 2);
+  const title = workspace.customTitles["board-title"]?.trim() || "Mini Desk";
+  downloadExportFile(content, `mini-desk-${slugifyTitle(title)}-${new Date().toISOString().slice(0, 10)}.json`);
+  showBubble("dataExported", anchor, { hideCompanionAfter: true });
+}
+
+function exportCurrentWorkspace(anchor?: HTMLElement): void {
+  exportWorkspaceById(state.activeWorkspaceId, anchor);
+}
+
+function deleteWorkspace(id: string, anchor?: HTMLElement): void {
+  if (state.workspaces.length <= 1) {
+    showBubbleText(uiText.value.app.keepOneWorkspace, anchor);
+    return;
+  }
+  requestConfirmation(
+    "confirmDeleteWorkspace",
+    anchor,
+    () => {
+      const result = removeWorkspace(state.workspaces, state.activeWorkspaceId, id);
+      if (result.workspaces === state.workspaces) return;
+      state.workspaces = result.workspaces;
+      state.activeWorkspaceId = result.activeWorkspaceId;
+      pendingEditSpaceId.value = null;
+      pendingEditTodoListId.value = null;
+      clearImagePreview();
+      persistNow();
+      showBubble("deleteWorkspace", anchor, { hideCompanionAfter: true });
+    },
+    undefined,
+    { confirmText: uiText.value.common.delete, cancelText: uiText.value.common.cancel, danger: true },
+  );
+}
+
+function reorderWorkspaceSections(dragId: string, targetId: string): void {
+  state.workspaces = reorderWorkspaces(state.workspaces, dragId, targetId);
   persistNow();
 }
 
 function nextSpaceTitle(): string {
   const base = uiText.value.app.newSpace;
-  const titles = new Set(state.spaces.map((space) => space.title));
+  const titles = new Set(activeWorkspace.value.spaces.map((space) => space.title));
   if (!titles.has(base)) return base;
   let index = 2;
   while (titles.has(`${base} ${index}`)) index += 1;
@@ -437,8 +573,8 @@ function nextSpaceTitle(): string {
 }
 
 function syncLegacySpaceLines(): void {
-  state.workspaceLines = state.spaces[0]?.lines.map((line) => ({ ...line })) ?? [];
-  state.storageLines = state.spaces[1]?.lines.map((line) => ({ ...line })) ?? [];
+  activeWorkspace.value.workspaceLines = activeWorkspace.value.spaces[0]?.lines.map((line) => ({ ...line })) ?? [];
+  activeWorkspace.value.storageLines = activeWorkspace.value.spaces[1]?.lines.map((line) => ({ ...line })) ?? [];
 }
 
 function scheduleTextSave(): void {
@@ -539,7 +675,8 @@ function persistNow(scope: SaveScope = "all", options: PersistOptions = {}): boo
   }
   state.sync = result.state.sync;
   if (result.status === "merged") {
-    state.images = mergeVisibleImages(result.state.images, state.images);
+    const savedActive = result.state.workspaces.find((w) => w.id === state.activeWorkspaceId) ?? result.state.workspaces[0];
+    activeWorkspace.value.images = mergeVisibleImages(savedActive?.images ?? [], activeWorkspace.value.images);
   }
   broadcastStateSaved();
   markSavedSoon();
@@ -563,9 +700,15 @@ async function persistImageReplacement(
   expectedPayloadId: string,
 ): Promise<boolean> {
   const previousSnapshot = createUndoSnapshot();
-  const nextImages = state.images.map((image) => image.id === replacement.id ? replacement : image);
+  const nextImages = activeWorkspace.value.images.map((image) => (image.id === replacement.id ? replacement : image));
   markSaving();
-  const result = saveStateWithConflictCheck({ ...state, images: nextImages }, {
+  const stateWithReplacement: BoardState = {
+    ...state,
+    workspaces: state.workspaces.map((workspace) =>
+      workspace.id === state.activeWorkspaceId ? { ...workspace, images: nextImages } : workspace,
+    ),
+  };
+  const result = saveStateWithConflictCheck(stateWithReplacement, {
     clientId: syncClientId,
     scope: "images",
     imageReplacement: {
@@ -579,8 +722,9 @@ async function persistImageReplacement(
     return false;
   }
   state.sync = result.state.sync;
-  state.images = result.status === "merged"
-    ? mergeVisibleImages(result.state.images, nextImages)
+  const savedActive = result.state.workspaces.find((w) => w.id === state.activeWorkspaceId) ?? result.state.workspaces[0];
+  activeWorkspace.value.images = result.status === "merged"
+    ? mergeVisibleImages(savedActive?.images ?? [], nextImages)
     : nextImages;
   if (!restoringUndo) {
     undoSnapshots.value = [
@@ -602,23 +746,27 @@ async function applyImageReplacementConflict(
   saveStatus.value = "dirty";
   showToast("stateConflict");
   while (true) {
-    latest.images = await hydrateStoredImages(latest.images);
+    const activeLatest = latest.workspaces.find((w) => w.id === latest.activeWorkspaceId) ?? latest.workspaces[0];
+    if (activeLatest) {
+      activeLatest.images = await hydrateStoredImages(activeLatest.images);
+    }
     const newest = loadState();
     if (newest.sync.revision <= latest.sync.revision) break;
     latest = newest;
   }
   if (!appMounted || latest.sync.revision < state.sync.revision) return;
   if (textEditGeneration !== savedTextGeneration) {
-    const localText = {
-      noteLines: state.noteLines.map((line) => ({ ...line })),
-      spaces: state.spaces.map((space) => ({
-        ...space,
-        lines: space.lines.map((line) => ({ ...line })),
-      })),
-      workspaceLines: state.workspaceLines.map((line) => ({ ...line })),
-      storageLines: state.storageLines.map((line) => ({ ...line })),
+    const active = activeWorkspace.value;
+    const localTextWorkspace: WorkspaceData = {
+      ...active,
+      noteLines: active.noteLines.map((line) => ({ ...line })),
+      spaces: active.spaces.map((space) => ({ ...space, lines: space.lines.map((line) => ({ ...line })) })),
+      workspaceLines: active.workspaceLines.map((line) => ({ ...line })),
+      storageLines: active.storageLines.map((line) => ({ ...line })),
     };
-    Object.assign(state, latest, localText);
+    Object.assign(state, latest, {
+      workspaces: latest.workspaces.map((workspace) => (workspace.id === active.id ? localTextWorkspace : workspace)),
+    });
     applyTheme();
     window.clearTimeout(saveStatusTimer.value);
     saveStatus.value = "dirty";
@@ -644,20 +792,34 @@ function scheduleImagePayloadPrune(): void {
 }
 
 function collectRetainedImagePayloadIds(): Set<string> {
-  const retained = new Set(state.images.map((image) => getImagePayloadId(image)));
+  const retained = new Set<string>();
+  for (const workspace of state.workspaces) {
+    for (const image of workspace.images) retained.add(getImagePayloadId(image));
+  }
   const addSnapshot = (snapshot: string) => {
     try {
-      const parsed = JSON.parse(snapshot) as { images?: unknown };
-      if (!Array.isArray(parsed?.images)) return;
-      parsed.images.forEach((item) => {
-        if (!item || typeof item !== "object" || Array.isArray(item)) return;
-        const record = item as Record<string, unknown>;
-        const id = typeof record.id === "string" && record.id.trim() ? record.id : undefined;
-        const payloadId = typeof record.payloadId === "string" && record.payloadId.trim()
-          ? record.payloadId
-          : undefined;
-        if (payloadId ?? id) retained.add((payloadId ?? id)!);
-      });
+      const parsed = JSON.parse(snapshot) as { images?: unknown; workspaces?: unknown };
+      const imageLists: unknown[] = [];
+      if (Array.isArray(parsed?.images)) imageLists.push(parsed.images);
+      if (Array.isArray(parsed?.workspaces)) {
+        for (const workspace of parsed.workspaces) {
+          if (!workspace || typeof workspace !== "object" || Array.isArray(workspace)) continue;
+          const record = workspace as Record<string, unknown>;
+          if (Array.isArray(record.images)) imageLists.push(record.images);
+        }
+      }
+      if (imageLists.length === 0) return;
+      for (const list of imageLists) {
+        (list as unknown[]).forEach((item) => {
+          if (!item || typeof item !== "object" || Array.isArray(item)) return;
+          const record = item as Record<string, unknown>;
+          const id = typeof record.id === "string" && record.id.trim() ? record.id : undefined;
+          const payloadId = typeof record.payloadId === "string" && record.payloadId.trim()
+            ? record.payloadId
+            : undefined;
+          if (payloadId ?? id) retained.add((payloadId ?? id)!);
+        });
+      }
     } catch {
       // Ignore malformed undo snapshots without normalizing them into generated IDs.
     }
@@ -711,7 +873,10 @@ async function applyExternalStoredState(raw?: string): Promise<void> {
     if (!source) return;
     const nextState = normalizeImportedState(JSON.parse(source));
     if (nextState.sync.revision <= state.sync.revision) return;
-    nextState.images = await hydrateStoredImages(nextState.images);
+    const activeExternal = nextState.workspaces.find((w) => w.id === nextState.activeWorkspaceId) ?? nextState.workspaces[0];
+    if (activeExternal) {
+      activeExternal.images = await hydrateStoredImages(activeExternal.images);
+    }
     if (!appMounted) return;
     Object.assign(state, nextState);
     resetTextGenerationBaseline();
@@ -829,7 +994,7 @@ async function addPastedImageFile(file: File, request: ImagePasteRequest): Promi
   }
   if (shouldBlockBoardEffects()) return undefined;
 
-  const target = state.images.find((image) => image.id === request.targetId);
+  const target = activeWorkspace.value.images.find((image) => image.id === request.targetId);
   if (!target) return undefined;
   if (request.placement === "replace") {
     const expectedPayloadId = getImagePayloadId(target);
@@ -841,7 +1006,7 @@ async function addPastedImageFile(file: File, request: ImagePasteRequest): Promi
       showBubble("imageStoreFailed", undefined, { hideCompanionAfter: true });
       return undefined;
     }
-    const currentTarget = state.images.find((image) => image.id === request.targetId);
+    const currentTarget = activeWorkspace.value.images.find((image) => image.id === request.targetId);
     if (shouldBlockBoardEffects() || !currentTarget || getImagePayloadId(currentTarget) !== expectedPayloadId) {
       try {
         await deleteStoredImage(replacement);
@@ -866,7 +1031,7 @@ async function addPastedImageFile(file: File, request: ImagePasteRequest): Promi
 
   const displaySize = await getDevicePixelRatioDisplaySize(src);
   if (shouldBlockBoardEffects()) return undefined;
-  if (!state.images.some((image) => image.id === request.targetId)) return undefined;
+  if (!activeWorkspace.value.images.some((image) => image.id === request.targetId)) return undefined;
   const image: StoredImage = {
     id: createId(),
     src,
@@ -880,7 +1045,7 @@ async function addPastedImageFile(file: File, request: ImagePasteRequest): Promi
     showBubble("imageStoreFailed", undefined, { hideCompanionAfter: true });
     return undefined;
   }
-  const targetIndex = state.images.findIndex((item) => item.id === request.targetId);
+  const targetIndex = activeWorkspace.value.images.findIndex((item) => item.id === request.targetId);
   if (shouldBlockBoardEffects() || targetIndex < 0) {
     try {
       await deleteStoredImage(image);
@@ -889,7 +1054,7 @@ async function addPastedImageFile(file: File, request: ImagePasteRequest): Promi
     }
     return undefined;
   }
-  state.images.splice(targetIndex + (request.placement === "after" ? 1 : 0), 0, image);
+  activeWorkspace.value.images.splice(targetIndex + (request.placement === "after" ? 1 : 0), 0, image);
   const persisted = persistNow("images", {
     imagePlacement: {
       imageId: image.id,
@@ -949,7 +1114,7 @@ async function addImageFile(
     }
     return undefined;
   }
-  state.images.push(image);
+  activeWorkspace.value.images.push(image);
   if (persistNow("images")) options.onPersisted?.(image);
   if (options.showMessage ?? true) showBubble("imageAdded", undefined, { hideCompanionAfter: true });
   return image;
@@ -985,25 +1150,25 @@ function handleBoardDrop(event: DragEvent): void {
 }
 
 function reorderImages(dragId: string, targetId: string): void {
-  moveItem(state.images, dragId, targetId);
+  moveItem(activeWorkspace.value.images, dragId, targetId);
   persistNow();
 }
 
 function moveImageToBottom(id: string): void {
-  const index = state.images.findIndex((image) => image.id === id);
-  if (index < 0 || index === state.images.length - 1) return;
-  const [image] = state.images.splice(index, 1);
-  state.images.push(image);
+  const index = activeWorkspace.value.images.findIndex((image) => image.id === id);
+  if (index < 0 || index === activeWorkspace.value.images.length - 1) return;
+  const [image] = activeWorkspace.value.images.splice(index, 1);
+  activeWorkspace.value.images.push(image);
   persistNow();
 }
 
 function deleteImage(id: string, anchor?: HTMLElement): void {
   const feedbackAnchor = getImageUndoAnchor(anchor);
   requestConfirmation("confirmDeleteImage", anchor, async () => {
-    const index = state.images.findIndex((image) => image.id === id);
+    const index = activeWorkspace.value.images.findIndex((image) => image.id === id);
     if (index < 0) return;
-    const nextPreviewImage = state.images[index + 1] ?? state.images[index - 1];
-    state.images = state.images.filter((image) => image.id !== id);
+    const nextPreviewImage = activeWorkspace.value.images[index + 1] ?? activeWorkspace.value.images[index - 1];
+    activeWorkspace.value.images = activeWorkspace.value.images.filter((image) => image.id !== id);
     if (activePreviewId.value === id) {
       if (nextPreviewImage) {
         activePreviewId.value = nextPreviewImage.id;
@@ -1029,7 +1194,7 @@ function openImagePreview(id: string): void {
   hideCompanion();
   activeEditorId.value = undefined;
   activePreviewId.value = id;
-  if (state.images.length > IMAGE_DENSITY_THRESHOLD) {
+  if (activeWorkspace.value.images.length > IMAGE_DENSITY_THRESHOLD) {
     showBubble("imageOverload", document.querySelector<HTMLElement>(".image-panel") ?? undefined, { hideCompanionAfter: true });
   }
 }
@@ -1066,7 +1231,7 @@ function clearImagePreview(): void {
 
 async function saveEditedImage(payload: { id: string; src: string; displayWidth: number; displayHeight: number }): Promise<void> {
   if (shouldBlockBoardEffects()) return;
-  const image = state.images.find((item) => item.id === payload.id);
+  const image = activeWorkspace.value.images.find((item) => item.id === payload.id);
   if (!image) return;
   const expectedPayloadId = getImagePayloadId(image);
   const nextImage: StoredImage = {
@@ -1083,7 +1248,7 @@ async function saveEditedImage(payload: { id: string; src: string; displayWidth:
     showBubble("imageStoreFailed", document.querySelector<HTMLElement>(".image-preview") ?? undefined, { hideCompanionAfter: true });
     return;
   }
-  const currentImage = state.images.find((item) => item.id === payload.id);
+  const currentImage = activeWorkspace.value.images.find((item) => item.id === payload.id);
   if (shouldBlockBoardEffects() || !currentImage || getImagePayloadId(currentImage) !== expectedPayloadId) {
     try {
       await deleteStoredImage(nextImage);
@@ -1111,7 +1276,7 @@ function showPreviewTips(anchor?: HTMLElement): void {
 
 async function copyImage(id: string, anchor?: HTMLElement): Promise<void> {
   if (shouldBlockBoardEffects()) return;
-  const image = state.images.find((item) => item.id === id);
+  const image = activeWorkspace.value.images.find((item) => item.id === id);
   if (!image?.src) return;
   const clipboard = navigator.clipboard as Clipboard & {
     write?: (items: ClipboardItem[]) => Promise<void>;
@@ -1193,7 +1358,7 @@ function saveQuick(payload: { id?: string; title: string; value: string; type: Q
   if (!payload.title && !payload.value) return;
   const tagId = resolveQuickTagId(payload.tagTitle);
   if (payload.id) {
-    const button = state.quickButtons.find((item) => item.id === payload.id);
+    const button = activeWorkspace.value.quickButtons.find((item) => item.id === payload.id);
     if (button) {
       button.title = payload.title || button.title;
       button.value = payload.value;
@@ -1211,7 +1376,7 @@ function saveQuick(payload: { id?: string; title: string; value: string; type: Q
     };
     applyQuickTag(button, tagId);
     applyQuickApiConfig(button, payload);
-    state.quickButtons.push(button);
+    activeWorkspace.value.quickButtons.push(button);
   }
   persistNow();
 }
@@ -1219,10 +1384,10 @@ function saveQuick(payload: { id?: string; title: string; value: string; type: Q
 function resolveQuickTagId(tagTitle?: string): string | undefined {
   const title = tagTitle?.trim();
   if (!title) return undefined;
-  const existing = state.quickTags.find((tag) => tag.title === title);
+  const existing = activeWorkspace.value.quickTags.find((tag) => tag.title === title);
   if (existing) return existing.id;
   const tag = { id: createId(), title };
-  state.quickTags.push(tag);
+  activeWorkspace.value.quickTags.push(tag);
   return tag.id;
 }
 
@@ -1230,18 +1395,18 @@ function saveQuickTag(payload: { id?: string; title: string }): void {
   const title = payload.title.trim();
   if (!title) return;
   if (!payload.id) {
-    if (state.quickTags.some((tag) => tag.title === title)) return;
-    state.quickTags.push({ id: createId(), title });
+    if (activeWorkspace.value.quickTags.some((tag) => tag.title === title)) return;
+    activeWorkspace.value.quickTags.push({ id: createId(), title });
     persistNow();
     return;
   }
 
-  const current = state.quickTags.find((tag) => tag.id === payload.id);
+  const current = activeWorkspace.value.quickTags.find((tag) => tag.id === payload.id);
   if (!current) return;
-  const duplicate = state.quickTags.find((tag) => tag.id !== payload.id && tag.title === title);
+  const duplicate = activeWorkspace.value.quickTags.find((tag) => tag.id !== payload.id && tag.title === title);
   if (duplicate) {
     moveQuickButtonsToTag(payload.id, duplicate.id);
-    state.quickTags = state.quickTags.filter((tag) => tag.id !== payload.id);
+    activeWorkspace.value.quickTags = activeWorkspace.value.quickTags.filter((tag) => tag.id !== payload.id);
   } else {
     current.title = title;
   }
@@ -1250,21 +1415,21 @@ function saveQuickTag(payload: { id?: string; title: string }): void {
 
 function toggleQuickTagCollapsed(id: string): void {
   if (id === QUICK_BUTTON_OTHER_GROUP_ID) {
-    state.quickOtherCollapsed = !state.quickOtherCollapsed;
+    activeWorkspace.value.quickOtherCollapsed = !activeWorkspace.value.quickOtherCollapsed;
     persistNow();
     return;
   }
-  const tag = state.quickTags.find((item) => item.id === id);
+  const tag = activeWorkspace.value.quickTags.find((item) => item.id === id);
   if (!tag) return;
   tag.collapsed = !tag.collapsed;
   persistNow();
 }
 
 function deleteQuickTag(id: string, anchor?: HTMLElement): void {
-  const tag = state.quickTags.find((item) => item.id === id);
+  const tag = activeWorkspace.value.quickTags.find((item) => item.id === id);
   if (!tag) return;
   requestConfirmation("confirmDeleteQuickTag", anchor, () => {
-    state.quickTags = state.quickTags.filter((item) => item.id !== id);
+    activeWorkspace.value.quickTags = activeWorkspace.value.quickTags.filter((item) => item.id !== id);
     moveQuickButtonsToTag(id, undefined);
     persistNow();
     showBubble("deleteQuickTag", anchor, { hideCompanionAfter: true });
@@ -1272,7 +1437,7 @@ function deleteQuickTag(id: string, anchor?: HTMLElement): void {
 }
 
 function moveQuickButtonsToTag(fromTagId: string, toTagId: string | undefined): void {
-  state.quickButtons.forEach((button) => {
+  activeWorkspace.value.quickButtons.forEach((button) => {
     if (button.tagId !== fromTagId) return;
     applyQuickTag(button, toTagId);
   });
@@ -1311,37 +1476,37 @@ function applyQuickApiConfig(
 
 function deleteQuick(id: string, anchor?: HTMLElement): void {
   requestConfirmation("confirmDeleteQuick", anchor, () => {
-    const index = state.quickButtons.findIndex((button) => button.id === id);
+    const index = activeWorkspace.value.quickButtons.findIndex((button) => button.id === id);
     if (index < 0) return;
-    state.quickButtons = state.quickButtons.filter((button) => button.id !== id);
+    activeWorkspace.value.quickButtons = activeWorkspace.value.quickButtons.filter((button) => button.id !== id);
     persistNow();
     showBubble("deleteQuick", anchor, { hideCompanionAfter: true });
   }, undefined, { confirmText: uiText.value.common.delete, cancelText: uiText.value.common.cancel });
 }
 
 function toggleQuickHidden(id: string): void {
-  const button = state.quickButtons.find((item) => item.id === id);
+  const button = activeWorkspace.value.quickButtons.find((item) => item.id === id);
   if (!button) return;
   button.hidden = !button.hidden;
   persistNow();
 }
 
 function reorderQuickButtons(dragId: string, targetId: string): void {
-  moveItem(state.quickButtons, dragId, targetId);
+  moveItem(activeWorkspace.value.quickButtons, dragId, targetId);
   persistNow();
 }
 
 function reorderQuickTags(dragId: string, targetId: string): void {
-  moveItem(state.quickTags, dragId, targetId);
+  moveItem(activeWorkspace.value.quickTags, dragId, targetId);
   persistNow();
 }
 
 function moveQuickButtonToTag(buttonId: string, tagId?: string, targetId?: string): void {
-  const button = state.quickButtons.find((item) => item.id === buttonId);
+  const button = activeWorkspace.value.quickButtons.find((item) => item.id === buttonId);
   if (!button) return;
-  if (tagId && !state.quickTags.some((tag) => tag.id === tagId)) return;
+  if (tagId && !activeWorkspace.value.quickTags.some((tag) => tag.id === tagId)) return;
   applyQuickTag(button, tagId);
-  if (targetId) moveItem(state.quickButtons, buttonId, targetId);
+  if (targetId) moveItem(activeWorkspace.value.quickButtons, buttonId, targetId);
   persistNow();
 }
 
@@ -1351,7 +1516,7 @@ function getQuickTextCopiedMessage(value: string): string {
 }
 
 async function handleQuickButton(id: string, anchor?: HTMLElement): Promise<void> {
-  const button = state.quickButtons.find((item) => item.id === id);
+  const button = activeWorkspace.value.quickButtons.find((item) => item.id === id);
   if (!button) return;
   if (button.type === "link") {
     const opened = window.open(normalizeLink(button.value), "_blank", "noopener,noreferrer");
@@ -1372,7 +1537,7 @@ async function handleQuickButton(id: string, anchor?: HTMLElement): Promise<void
 }
 
 async function copyQuickLink(id: string, anchor?: HTMLElement): Promise<void> {
-  const button = state.quickButtons.find((item) => item.id === id);
+  const button = activeWorkspace.value.quickButtons.find((item) => item.id === id);
   if (!button) return;
   const copied = await copyText(button.value, shouldBlockBoardEffects);
   if (shouldBlockBoardEffects()) return;
@@ -1501,16 +1666,16 @@ function createTodoList(anchor?: HTMLElement, title?: string): void {
   const trimmedTitle = title?.trim() ?? "";
   if (!trimmedTitle) return;
   const id = createId();
-  state.todoLists.push({ id, title: trimmedTitle, collapsed: false, compact: false });
-  state.todos[id] = [];
-  state.showCompletedTodos[id] = false;
+  activeWorkspace.value.todoLists.push({ id, title: trimmedTitle, collapsed: false, compact: false });
+  activeWorkspace.value.todos[id] = [];
+  activeWorkspace.value.showCompletedTodos[id] = false;
   pendingEditTodoListId.value = null;
   persistNow();
   showBubbleText(uiText.value.app.todoListAdded, anchor);
 }
 
 function updateTodoListTitle(listId: TodoListId, title: string): void {
-  const list = state.todoLists.find((item) => item.id === listId);
+  const list = activeWorkspace.value.todoLists.find((item) => item.id === listId);
   if (!list) return;
   list.title = getStoredTodoListTitle(listId, title) || uiText.value.app.unnamedList;
   if (pendingEditTodoListId.value === listId) pendingEditTodoListId.value = null;
@@ -1518,25 +1683,25 @@ function updateTodoListTitle(listId: TodoListId, title: string): void {
 }
 
 function toggleTodoListCollapsed(listId: TodoListId, collapsed: boolean): void {
-  const list = state.todoLists.find((item) => item.id === listId);
+  const list = activeWorkspace.value.todoLists.find((item) => item.id === listId);
   if (!list) return;
   list.collapsed = collapsed;
   persistNow();
 }
 
 function toggleTodoListCompact(listId: TodoListId, compact: boolean): void {
-  const list = state.todoLists.find((item) => item.id === listId);
+  const list = activeWorkspace.value.todoLists.find((item) => item.id === listId);
   if (!list) return;
   list.compact = compact;
   persistNow();
 }
 
 function deleteTodoList(listId: TodoListId, anchor?: HTMLElement): void {
-  if (state.todoLists.length <= 1) {
+  if (activeWorkspace.value.todoLists.length <= 1) {
     showBubbleText(uiText.value.app.keepOneTodoList, anchor);
     return;
   }
-  const list = state.todoLists.find((item) => item.id === listId);
+  const list = activeWorkspace.value.todoLists.find((item) => item.id === listId);
   if (!list) return;
   const remove = () => removeTodoList(listId, anchor);
   requestConfirmation(
@@ -1549,12 +1714,12 @@ function deleteTodoList(listId: TodoListId, anchor?: HTMLElement): void {
 }
 
 function removeTodoList(listId: TodoListId, anchor?: HTMLElement): void {
-  const index = state.todoLists.findIndex((list) => list.id === listId);
-  if (index < 0 || state.todoLists.length <= 1) return;
-  state.todoLists.splice(index, 1);
-  const next = removeTodoListData(state.todos, state.showCompletedTodos, listId);
-  state.todos = next.todos;
-  state.showCompletedTodos = next.showCompletedTodos;
+  const index = activeWorkspace.value.todoLists.findIndex((list) => list.id === listId);
+  if (index < 0 || activeWorkspace.value.todoLists.length <= 1) return;
+  activeWorkspace.value.todoLists.splice(index, 1);
+  const next = removeTodoListData(activeWorkspace.value.todos, activeWorkspace.value.showCompletedTodos, listId);
+  activeWorkspace.value.todos = next.todos;
+  activeWorkspace.value.showCompletedTodos = next.showCompletedTodos;
   clearEmptyTodoRemovalTimersForList(listId);
   if (pendingEditTodoListId.value === listId) pendingEditTodoListId.value = null;
   persistNow();
@@ -1562,10 +1727,10 @@ function removeTodoList(listId: TodoListId, anchor?: HTMLElement): void {
 }
 
 function reorderTodoListSections(draggedId: TodoListId, targetId: TodoListId): void {
-  const sourceIndex = state.todoLists.findIndex((list) => list.id === draggedId);
-  const targetIndex = state.todoLists.findIndex((list) => list.id === targetId);
+  const sourceIndex = activeWorkspace.value.todoLists.findIndex((list) => list.id === draggedId);
+  const targetIndex = activeWorkspace.value.todoLists.findIndex((list) => list.id === targetId);
   if (sourceIndex < 0 || targetIndex < 0 || sourceIndex === targetIndex) return;
-  state.todoLists = reorderTodoLists(state.todoLists, draggedId, targetId);
+  activeWorkspace.value.todoLists = reorderTodoLists(activeWorkspace.value.todoLists, draggedId, targetId);
   persistNow();
 }
 
@@ -1578,16 +1743,16 @@ function createTodo(period: TodoPeriod, afterId?: string): void {
       if (blankTodo.period === period) {
         const input = getTodoInput(blankTodo.period, blankTodo.id);
         input?.blur();
-        state.todos = removeTodoFromMap(state.todos, blankTodo.period, blankTodo.id);
+        activeWorkspace.value.todos = removeTodoFromMap(activeWorkspace.value.todos, blankTodo.period, blankTodo.id);
         persistNow();
         return;
       }
-      state.todos = removeTodoFromMap(state.todos, blankTodo.period, blankTodo.id);
+      activeWorkspace.value.todos = removeTodoFromMap(activeWorkspace.value.todos, blankTodo.period, blankTodo.id);
     }
   }
   const id = createId();
-  state.todos = addTodoToMap(
-    state.todos,
+  activeWorkspace.value.todos = addTodoToMap(
+    activeWorkspace.value.todos,
     period,
     {
       id,
@@ -1603,7 +1768,7 @@ function createTodo(period: TodoPeriod, afterId?: string): void {
 function createTodosFromText(period: TodoPeriod, texts: string[]): void {
   if (!isConfiguredTodoListId(period)) return;
   texts.forEach((text) => {
-    state.todos = addTodoToMap(state.todos, period, {
+    activeWorkspace.value.todos = addTodoToMap(activeWorkspace.value.todos, period, {
       id: createId(),
       text,
       done: false,
@@ -1640,7 +1805,7 @@ function getTodoInput(period: TodoPeriod, id: string): HTMLInputElement | undefi
 function updateTodo(period: TodoPeriod, id: string, text: string): void {
   if (!isConfiguredTodoListId(period)) return;
   cancelEmptyTodoRemoval(period, id);
-  state.todos = updateTodoText(state.todos, period, id, text);
+  activeWorkspace.value.todos = updateTodoText(activeWorkspace.value.todos, period, id, text);
   persistNow();
 }
 
@@ -1648,8 +1813,8 @@ function splitTodo(period: TodoPeriod, id: string, before: string, after: string
   if (!isConfiguredTodoListId(period)) return;
   cancelEmptyTodoRemoval(period, id);
   const nextId = createId();
-  state.todos = splitTodoInMap(
-    state.todos,
+  activeWorkspace.value.todos = splitTodoInMap(
+    activeWorkspace.value.todos,
     period,
     id,
     {
@@ -1665,7 +1830,7 @@ function splitTodo(period: TodoPeriod, id: string, before: string, after: string
 
 function complete(period: TodoPeriod, id: string, done: boolean, anchor?: HTMLElement): void {
   if (!isConfiguredTodoListId(period)) return;
-  state.todos = completeTodo(state.todos, period, id, done);
+  activeWorkspace.value.todos = completeTodo(activeWorkspace.value.todos, period, id, done);
   persistNow();
   if (done) showBubble("todoCompleted", anchor);
 }
@@ -1676,13 +1841,13 @@ function toggleTodoStar(change: TodoStarChange): void {
   const todo = getTodos(period).find((item) => item.id === id);
   if (!todo) return;
   if (!starred && !todo.starred) return;
-  state.todos = starTodo(state.todos, period, id, starred);
+  activeWorkspace.value.todos = starTodo(activeWorkspace.value.todos, period, id, starred);
   persistNow();
 }
 
 function updateTodoNotify(period: TodoPeriod, id: string, notifyAt: number | undefined, anchor?: HTMLElement): void {
   if (!isConfiguredTodoListId(period)) return;
-  state.todos = setTodoNotifyAt(state.todos, period, id, notifyAt);
+  activeWorkspace.value.todos = setTodoNotifyAt(activeWorkspace.value.todos, period, id, notifyAt);
   persistNow();
   scheduleNextTodoNotification();
   if (notifyAt === undefined) showBubbleText(uiText.value.app.notifyCleared, anchor);
@@ -1695,7 +1860,7 @@ function removeTodo(period: TodoPeriod, id: string, anchor?: HTMLElement): void 
     if (!isConfiguredTodoListId(period)) return;
     const index = getTodos(period).findIndex((todo) => todo.id === id);
     if (index < 0) return;
-    state.todos = removeTodoFromMap(state.todos, period, id);
+    activeWorkspace.value.todos = removeTodoFromMap(activeWorkspace.value.todos, period, id);
     persistNow();
     showBubble("deleteTodo", anchor, { hideCompanionAfter: true });
   }, undefined, { confirmText: uiText.value.common.delete, cancelText: uiText.value.common.cancel });
@@ -1712,7 +1877,7 @@ function clearDone(period: TodoPeriod, anchor?: HTMLElement): void {
     anchor,
     () => {
       if (!isConfiguredTodoListId(period)) return;
-      state.todos = clearCompleted(state.todos, period);
+      activeWorkspace.value.todos = clearCompleted(activeWorkspace.value.todos, period);
       persistNow();
       showBubble("clearCompleted", anchor, { hideCompanionAfter: true });
     },
@@ -1723,7 +1888,7 @@ function clearDone(period: TodoPeriod, anchor?: HTMLElement): void {
 
 function toggleCompletedVisibility(period: TodoPeriod, showCompleted: boolean): void {
   if (!isConfiguredTodoListId(period)) return;
-  state.showCompletedTodos[period] = showCompleted;
+  activeWorkspace.value.showCompletedTodos[period] = showCompleted;
   persistNow();
 }
 
@@ -1740,7 +1905,7 @@ function blurEmptyTodo(period: TodoPeriod, id: string): void {
         emptyTodoRemovalTimers.delete(key);
         return;
       }
-      state.todos = removeEmptyTodo(state.todos, period, id);
+      activeWorkspace.value.todos = removeEmptyTodo(activeWorkspace.value.todos, period, id);
       emptyTodoRemovalTimers.delete(key);
       persistNow();
     }, 260),
@@ -1749,7 +1914,7 @@ function blurEmptyTodo(period: TodoPeriod, id: string): void {
 
 function moveTodo(dragged: DraggedTodo, destinationPeriod: TodoPeriod, targetId?: string): void {
   if (!isConfiguredTodoListId(dragged.period) || !isConfiguredTodoListId(destinationPeriod)) return;
-  state.todos = moveTodoInMap(state.todos, dragged.period, dragged.id, destinationPeriod, targetId);
+  activeWorkspace.value.todos = moveTodoInMap(activeWorkspace.value.todos, dragged.period, dragged.id, destinationPeriod, targetId);
   persistNow();
 }
 
@@ -1849,6 +2014,16 @@ function requestImport(anchor?: HTMLElement): void {
   importInput.value?.click();
 }
 
+async function persistWorkspaceImages(workspaces: WorkspaceData[]): Promise<void> {
+  const inline: (StoredImage & { src: string })[] = [];
+  for (const workspace of workspaces) {
+    for (const image of workspace.images) {
+      if (image.src) inline.push(image as StoredImage & { src: string });
+    }
+  }
+  if (inline.length > 0) await persistImagePayloads(inline);
+}
+
 async function importData(event: Event): Promise<void> {
   const input = event.target as HTMLInputElement;
   const file = input.files?.[0];
@@ -1874,6 +2049,44 @@ async function importData(event: Event): Promise<void> {
     input.value = "";
     return;
   }
+
+  if (isSingleWorkspaceExport(parsed as Record<string, unknown>)) {
+    let importedWorkspace: WorkspaceData;
+    try {
+      const raw = (parsed as { workspace?: unknown }).workspace;
+      importedWorkspace = normalizeWorkspaceData(raw, state.language);
+    } catch {
+      showBubble("importDataInvalid", importFeedbackAnchor.value, { hideCompanionAfter: true });
+      importFeedbackAnchor.value = undefined;
+      input.value = "";
+      return;
+    }
+    requestConfirmation(
+      "confirmImportWorkspace",
+      importFeedbackAnchor.value,
+      async () => {
+        const workspace = ensureUniqueWorkspaceTitle(
+          { ...importedWorkspace, id: createId(), createdAt: Date.now() },
+          state.workspaces,
+        );
+        state.workspaces = [...state.workspaces, workspace];
+        state.activeWorkspaceId = workspace.id;
+        await persistWorkspaceImages([workspace]);
+        persistNow("all", { force: true });
+        refreshTodoNotifications();
+        showBubble("dataImported", importFeedbackAnchor.value, { hideCompanionAfter: true });
+        importFeedbackAnchor.value = undefined;
+        input.value = "";
+      },
+      () => {
+        importFeedbackAnchor.value = undefined;
+        input.value = "";
+      },
+      { confirmText: uiText.value.common.add, cancelText: uiText.value.common.cancel },
+    );
+    return;
+  }
+
   let next: BoardState;
   try {
     next = normalizeImportedState(parsed);
@@ -1890,7 +2103,7 @@ async function importData(event: Event): Promise<void> {
       Object.assign(state, next);
       resetTextGenerationBaseline();
       await persistCustomCompanionGifPayloads(state.customCompanionGif);
-      await persistImagePayloads(state.images);
+      await persistWorkspaceImages(state.workspaces);
       persistNow("all", { force: true });
       refreshTodoNotifications();
       showBubble("dataImported", importFeedbackAnchor.value, { hideCompanionAfter: true });
@@ -2048,7 +2261,10 @@ async function undoLastBoardChange(): Promise<void> {
   const stateAtStart = createUndoSnapshot();
   undoInFlight = true;
   try {
-    nextState.images = await hydrateStoredImages(nextState.images);
+    const activeUndoWorkspace = nextState.workspaces.find((w) => w.id === nextState.activeWorkspaceId) ?? nextState.workspaces[0];
+    if (activeUndoWorkspace) {
+      activeUndoWorkspace.images = await hydrateStoredImages(activeUndoWorkspace.images);
+    }
     if (!appMounted || createUndoSnapshot() !== stateAtStart || undoSnapshots.value.at(-1) !== snapshot) return;
     restoringUndo = true;
     undoSnapshots.value = undoSnapshots.value.slice(0, -1);
@@ -2074,9 +2290,9 @@ function createUndoSnapshot(): string {
 }
 
 function navigatePreview(direction: number): void {
-  const index = state.images.findIndex((image) => image.id === activePreviewId.value);
+  const index = activeWorkspace.value.images.findIndex((image) => image.id === activePreviewId.value);
   if (index < 0) return;
-  const next = state.images[index + direction];
+  const next = activeWorkspace.value.images[index + direction];
   if (next) {
     activePreviewId.value = next.id;
     activeEditorId.value = undefined;
@@ -2133,7 +2349,7 @@ function getDensityAreas(): DensityArea[] {
     {
       type: "images",
       label: getDensityAreaLabel("images"),
-      count: state.images.length,
+      count: activeWorkspace.value.images.length,
     },
   ];
 }
@@ -2157,9 +2373,9 @@ function getDensityAreaLabel(type: DensityAreaType): string {
 
 function getLargestTodoListCount(): number {
   let max = 0;
-  for (const list of state.todoLists) {
+  for (const list of activeWorkspace.value.todoLists) {
     let activeCount = 0;
-    for (const todo of state.todos[list.id] ?? []) {
+    for (const todo of activeWorkspace.value.todos[list.id] ?? []) {
       if (!todo.done) activeCount += 1;
     }
     if (activeCount > max) max = activeCount;
@@ -2170,7 +2386,7 @@ function getLargestTodoListCount(): number {
 function getLargestQuickCategoryCount(): number {
   const counts = new Map<string, number>();
   let max = 0;
-  for (const button of state.quickButtons) {
+  for (const button of activeWorkspace.value.quickButtons) {
     if (button.hidden) continue;
     const tagId = button.tagId ?? "__untagged";
     const count = (counts.get(tagId) ?? 0) + 1;
@@ -2375,7 +2591,9 @@ function showToast(messageKey: MessageKey): void {
 
 function isImportPayload(payload: unknown): payload is Record<string, unknown> {
   if (!payload || typeof payload !== "object" || Array.isArray(payload)) return false;
-  const keys = new Set(Object.keys(payload));
+  const keys = new Set(Object.keys(payload as Record<string, unknown>));
+  if (keys.has("miniDeskWorkspaceExport")) return true;
+  if (keys.has("workspaces")) return true;
   return [
     "theme",
     "companionGifTheme",
@@ -2398,6 +2616,10 @@ function isImportPayload(payload: unknown): payload is Record<string, unknown> {
     "workspace",
     "storage",
   ].some((key) => keys.has(key));
+}
+
+function isSingleWorkspaceExport(payload: Record<string, unknown>): boolean {
+  return payload.miniDeskWorkspaceExport === true;
 }
 
 function clearTimers(): void {
@@ -2647,17 +2869,17 @@ function isRepeatLockedGuide(key: GuideKey): boolean {
 }
 
 function isGuideAreaEmpty(key: GuideKey, anchor?: HTMLElement): boolean {
-  if (key === "images") return state.images.length === 0;
-  if (key === "note") return !hasLineContent(state.noteLines);
+  if (key === "images") return activeWorkspace.value.images.length === 0;
+  if (key === "note") return !hasLineContent(activeWorkspace.value.noteLines);
   if (key === "quickButtons") {
-    return !state.quickButtons.some((button) => state.showHiddenQuickButtons || !button.hidden);
+    return !activeWorkspace.value.quickButtons.some((button) => activeWorkspace.value.showHiddenQuickButtons || !button.hidden);
   }
   if (key === "workspace") {
-    const active = state.spaces.find((space) => space.id === state.activeSpaceId) ?? state.spaces[0];
+    const active = activeWorkspace.value.spaces.find((space) => space.id === activeWorkspace.value.activeSpaceId) ?? activeWorkspace.value.spaces[0];
     return !active || !hasLineContent(active.lines);
   }
   if (key === "tools") return false;
-  if (key === "storage") return !hasLineContent(state.storageLines);
+  if (key === "storage") return !hasLineContent(activeWorkspace.value.storageLines);
   if (key === "todos") {
     const period = getTodoPeriodFromAnchor(anchor);
     if (!period) return getTodoListIds().every((item) => isTodoPeriodEmpty(item));
@@ -2672,18 +2894,18 @@ function hasLineContent(lines: LineItem[]): boolean {
 
 function isTodoPeriodEmpty(period: TodoPeriod): boolean {
   for (const todo of getTodos(period)) {
-    if (!state.showCompletedTodos[period] && todo.done) continue;
+    if (!activeWorkspace.value.showCompletedTodos[period] && todo.done) continue;
     if (todo.text.trim().length > 0) return false;
   }
   return true;
 }
 
 function getTodos(period: TodoPeriod): TodoItem[] {
-  return state.todos[period] ?? [];
+  return activeWorkspace.value.todos[period] ?? [];
 }
 
 function isConfiguredTodoListId(listId: TodoListId): listId is TodoListId {
-  return state.todoLists.some((list) => list.id === listId);
+  return activeWorkspace.value.todoLists.some((list) => list.id === listId);
 }
 
 function getTodoPeriodFromAnchor(anchor?: HTMLElement): TodoPeriod | undefined {
@@ -2697,11 +2919,11 @@ function isTodoPeriod(value: unknown): value is TodoPeriod {
 }
 
 function getTodoListIds(): TodoListId[] {
-  return state.todoLists.map((list) => list.id);
+  return activeWorkspace.value.todoLists.map((list) => list.id);
 }
 
 function getTodoListTitle(listId: TodoListId): string {
-  const list = state.todoLists.find((item) => item.id === listId);
+  const list = activeWorkspace.value.todoLists.find((item) => item.id === listId);
   if (list?.title) return getDisplayTodoListTitle(list, state.language);
   return getDefaultTitles(state.language)[`todo-${listId}-title`] ?? uiText.value.app.reminderFallback;
 }
@@ -2846,11 +3068,24 @@ function moveItem<T extends { id: string }>(items: T[], dragId: string, targetId
       :assets-title="titles['image-title']"
       :notes-title="titles['quick-title']"
       @theme="handleThemeClick"
-      @update-title="(value) => updateTitle('board-title', value)"
-      @update-slogan="(value) => updateTitle('board-slogan', value)"
       @dragover.prevent
       @drop.prevent="handleBoardDrop"
     >
+      <template #workspace-trigger>
+        <WorkspaceSwitcher
+          :workspaces="state.workspaces"
+          :active-workspace-id="state.activeWorkspaceId"
+          :theme="state.theme"
+          :language="state.language"
+          @switch="switchWorkspace"
+          @create="openCreateWorkspace"
+          @rename="renameWorkspace"
+          @delete="deleteWorkspace"
+          @reorder="reorderWorkspaceSections"
+          @export-workspace="exportWorkspaceById"
+        />
+      </template>
+
       <template #status>
         <span
           class="save-status"
@@ -2878,6 +3113,7 @@ function moveItem<T extends { id: string }>(items: T[], dragId: string, targetId
           :has-custom-companion-gif="Boolean(state.customCompanionGif.light || state.customCompanionGif.dark || state.customCompanionGifStored.light || state.customCompanionGifStored.dark)"
           :language="state.language"
           @export="exportData"
+          @export-workspace="exportCurrentWorkspace"
           @import="requestImport"
           @clear-data="clearData"
           @about="about"
@@ -2895,7 +3131,7 @@ function moveItem<T extends { id: string }>(items: T[], dragId: string, targetId
       <template #assets>
         <ImagePanel
           :title="titles['image-title']"
-          :images="state.images"
+          :images="activeWorkspace.images"
           :active-preview-id="activePreviewId"
           :paste-feedback="pasteFeedback"
           :language="state.language"
@@ -2916,10 +3152,10 @@ function moveItem<T extends { id: string }>(items: T[], dragId: string, targetId
       <template #notes>
         <QuickButtons
           :title="titles['quick-title']"
-          :tags="state.quickTags"
-          :buttons="state.quickButtons"
-          :other-collapsed="state.quickOtherCollapsed"
-          :show-hidden="state.showHiddenQuickButtons"
+          :tags="activeWorkspace.quickTags"
+          :buttons="activeWorkspace.quickButtons"
+          :other-collapsed="activeWorkspace.quickOtherCollapsed"
+          :show-hidden="activeWorkspace.showHiddenQuickButtons"
           :language="state.language"
           @title-update="updateTitle"
           @save="saveQuick"
@@ -2927,7 +3163,7 @@ function moveItem<T extends { id: string }>(items: T[], dragId: string, targetId
           @copy="handleQuickButton"
           @copy-link="copyQuickLink"
           @toggle-hidden="toggleQuickHidden"
-          @toggle-show-hidden="state.showHiddenQuickButtons = !state.showHiddenQuickButtons; persistNow()"
+          @toggle-show-hidden="activeWorkspace.showHiddenQuickButtons = !activeWorkspace.showHiddenQuickButtons; persistNow()"
           @reorder="reorderQuickButtons"
           @reorder-tag="reorderQuickTags"
           @move-to-tag="moveQuickButtonToTag"
@@ -2944,9 +3180,9 @@ function moveItem<T extends { id: string }>(items: T[], dragId: string, targetId
           :todo-lists="displayTodoLists"
           :edit-list-id="pendingEditTodoListId"
           :notification-flash-keys="notificationFlashKeys"
-          :todos="state.todos"
+          :todos="activeWorkspace.todos"
           :titles="titles"
-          :show-completed="state.showCompletedTodos"
+          :show-completed="activeWorkspace.showCompletedTodos"
           :language="state.language"
           @title-update="updateTitle"
           @create-list="createTodoList"
@@ -2978,7 +3214,7 @@ function moveItem<T extends { id: string }>(items: T[], dragId: string, targetId
         <SpacePanel
           class="workspace-panel"
           :spaces="displaySpaces"
-          :active-space-id="state.activeSpaceId"
+          :active-space-id="activeWorkspace.activeSpaceId"
           :edit-space-id="pendingEditSpaceId"
           :language="state.language"
           @activate="activateSpace"
@@ -3014,7 +3250,7 @@ function moveItem<T extends { id: string }>(items: T[], dragId: string, targetId
 
     <ImagePreview
       v-if="!isMobileBlocked && displayedPreviewId"
-      :images="state.images"
+      :images="activeWorkspace.images"
       :active-id="displayedPreviewId"
       :edit-id="activeEditorId"
       :closing="imagePreviewClosing"
@@ -3056,5 +3292,27 @@ function moveItem<T extends { id: string }>(items: T[], dragId: string, targetId
     />
     <input ref="importInput" type="file" accept="application/json,.json" hidden @change="importData" />
     <ShortcutHelp v-if="shortcutHelpVisible" :show="shortcutHelpVisible" :language="state.language" @close="shortcutHelpVisible = false" />
+    <NModal
+      v-model:show="workspaceDialogVisible"
+      preset="card"
+      :title="workspaceDialogMode === 'create' ? uiText.app.newWorkspace : uiText.common.rename"
+      style="max-width: 360px"
+      :mask-closable="true"
+    >
+      <div style="display:flex; flex-direction:column; gap:12px;">
+        <label style="display:flex; flex-direction:column; gap:4px;">
+          <span>{{ uiText.app.workspaceTitle }}</span>
+          <NInput v-model:value="workspaceDraftTitle" :placeholder="uiText.app.workspaceTitlePlaceholder" />
+        </label>
+        <label style="display:flex; flex-direction:column; gap:4px;">
+          <span>{{ uiText.app.workspaceSlogan }}</span>
+          <NInput v-model:value="workspaceDraftSlogan" :placeholder="uiText.app.workspaceSloganPlaceholder" />
+        </label>
+        <div style="display:flex; justify-content:flex-end; gap:8px;">
+          <NButton @click="workspaceDialogVisible = false">{{ uiText.common.cancel }}</NButton>
+          <NButton type="primary" :disabled="!workspaceDraftTitle.trim()" @click="confirmWorkspaceDialog">{{ uiText.common.confirm }}</NButton>
+        </div>
+      </div>
+    </NModal>
   </NConfigProvider>
 </template>

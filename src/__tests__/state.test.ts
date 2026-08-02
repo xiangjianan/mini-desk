@@ -1,9 +1,10 @@
 import { describe, expect, it } from "vitest";
 import { DEFAULT_COMPANION_GIF_THEME, getCompanionGifSrc, getCompanionNotificationIconSrc } from "../state/companionGifThemes";
-import { defaultState, STORAGE_KEY } from "../state/defaults";
+import { defaultState, defaultWorkspace, STORAGE_KEY } from "../state/defaults";
 import {
   getSerializableState,
   normalizeImportedState,
+  normalizeWorkspaceData,
   saveStateWithConflictCheck,
   serializeTextLines,
 } from "../state/storage";
@@ -28,14 +29,15 @@ describe("state compatibility", () => {
       note: "idea",
       storage: "\tcommand",
     });
+    const ws = () => state.workspaces[0];
 
-    expect(state.workspaceLines).toEqual([
+    expect(ws().workspaceLines).toEqual([
       { text: "alpha", indent: 0 },
       { text: "beta", indent: 1 },
     ]);
-    expect(state.noteLines).toEqual([{ text: "idea", indent: 0 }]);
-    expect(state.storageLines).toEqual([{ text: "command", indent: 1 }]);
-    expect(state.spaces).toEqual([
+    expect(ws().noteLines).toEqual([{ text: "idea", indent: 0 }]);
+    expect(ws().storageLines).toEqual([{ text: "command", indent: 1 }]);
+    expect(ws().spaces).toEqual([
       {
         id: "workspace",
         title: "📝 备忘录",
@@ -50,25 +52,26 @@ describe("state compatibility", () => {
         lines: [{ text: "command", indent: 1 }],
       },
     ]);
-    expect(state.activeSpaceId).toBe("workspace");
+    expect(ws().activeSpaceId).toBe("workspace");
   });
 
   it("creates one default workspace space for new users", () => {
     const state = defaultState();
+    const ws = () => state.workspaces[0];
 
     expect(state.language).toBe("zh");
-    expect(state.spaces).toEqual([{ id: "workspace", title: "📝 备忘录", lines: [] }]);
-    expect(state.activeSpaceId).toBe("workspace");
-    expect(state.showCompletedTodos).toEqual({ morning: false });
-    expect(state.quickOtherCollapsed).toBe(false);
+    expect(ws().spaces).toEqual([{ id: "workspace", title: "📝 备忘录", lines: [] }]);
+    expect(ws().activeSpaceId).toBe("workspace");
+    expect(ws().showCompletedTodos).toEqual({ morning: false });
+    expect(ws().quickOtherCollapsed).toBe(false);
   });
 
   it("normalizes and serializes the Other quick-action group collapse state", () => {
     const state = normalizeImportedState({ quickOtherCollapsed: true });
 
-    expect(state.quickOtherCollapsed).toBe(true);
-    expect(getSerializableState(state).quickOtherCollapsed).toBe(true);
-    expect(normalizeImportedState({}).quickOtherCollapsed).toBe(false);
+    expect(state.workspaces[0].quickOtherCollapsed).toBe(true);
+    expect(getSerializableState(state).workspaces[0].quickOtherCollapsed).toBe(true);
+    expect(normalizeImportedState({}).workspaces[0].quickOtherCollapsed).toBe(false);
   });
 
   it("normalizes and serializes the app language preference", () => {
@@ -89,20 +92,22 @@ describe("state compatibility", () => {
         "workspace-title": "📝 Memo.txt",
       },
     });
+    const ws = () => state.workspaces[0];
 
-    expect(state.customTitles).toEqual({ "note-title": "我的便签" });
-    expect(state.todoLists[0].title).toBe("✅ 提醒事项");
-    expect(state.spaces[0].title).toBe("📝 备忘录");
+    expect(ws().customTitles).toEqual({ "note-title": "我的便签" });
+    expect(ws().todoLists[0].title).toBe("✅ 提醒事项");
+    expect(ws().spaces[0].title).toBe("📝 备忘录");
   });
 
   it("creates default configurable todo lists for new users", () => {
     const state = defaultState();
+    const ws = () => state.workspaces[0];
 
-    expect(state.todoLists.map((list) => ({ id: list.id, title: list.title }))).toEqual([
+    expect(ws().todoLists.map((list) => ({ id: list.id, title: list.title }))).toEqual([
       { id: "morning", title: "✅ 提醒事项" },
     ]);
-    expect(Object.keys(state.todos)).toEqual(["morning"]);
-    expect(state.showCompletedTodos).toEqual({ morning: false });
+    expect(Object.keys(ws().todos)).toEqual(["morning"]);
+    expect(ws().showCompletedTodos).toEqual({ morning: false });
   });
 
   it("migrates legacy fixed reminder lists into configurable todoLists", () => {
@@ -118,15 +123,16 @@ describe("state compatibility", () => {
         evening: [],
       },
     });
+    const ws = () => state.workspaces[0];
 
-    expect(state.todoLists.map((list) => [list.id, list.title])).toEqual([
+    expect(ws().todoLists.map((list) => [list.id, list.title])).toEqual([
       ["morning", "上午"],
       ["noon", "中段"],
       ["evening", "📚 学习"],
     ]);
-    expect(state.todos.morning.map((todo) => todo.text)).toEqual(["A"]);
-    expect(state.todos.noon.map((todo) => todo.text)).toEqual(["B"]);
-    expect(state.showCompletedTodos).toEqual({ morning: true, noon: false, evening: false });
+    expect(ws().todos.morning.map((todo) => todo.text)).toEqual(["A"]);
+    expect(ws().todos.noon.map((todo) => todo.text)).toEqual(["B"]);
+    expect(ws().showCompletedTodos).toEqual({ morning: true, noon: false, evening: false });
   });
 
   it("normalizes persisted dynamic todo lists and drops orphan todo records", () => {
@@ -142,13 +148,14 @@ describe("state compatibility", () => {
         orphan: [{ id: "x", text: "X", done: false }],
       },
     });
+    const ws = () => state.workspaces[0];
 
-    expect(state.todoLists).toEqual([
+    expect(ws().todoLists).toEqual([
       { id: "work", title: "工作", collapsed: true, compact: false },
       { id: "life", title: "未命名列表", collapsed: false, compact: true },
     ]);
-    expect(Object.keys(state.todos)).toEqual(["work", "life"]);
-    expect(state.showCompletedTodos).toEqual({ work: true, life: false });
+    expect(Object.keys(ws().todos)).toEqual(["work", "life"]);
+    expect(ws().showCompletedTodos).toEqual({ work: true, life: false });
   });
 
   it("renames duplicate persisted todo list ids while keeping list order", () => {
@@ -161,13 +168,14 @@ describe("state compatibility", () => {
         work: [{ id: "a", text: "A", done: false }],
       },
     });
+    const ws = () => state.workspaces[0];
 
-    expect(state.todoLists).toHaveLength(2);
-    expect(state.todoLists[0]).toEqual({ id: "work", title: "工作", collapsed: false, compact: false });
-    expect(state.todoLists[1]).toMatchObject({ title: "重复工作", collapsed: true, compact: true });
-    expect(state.todoLists[1].id).not.toBe("work");
-    expect(new Set(state.todoLists.map((list) => list.id)).size).toBe(2);
-    expect(Object.keys(state.todos)).toEqual(state.todoLists.map((list) => list.id));
+    expect(ws().todoLists).toHaveLength(2);
+    expect(ws().todoLists[0]).toEqual({ id: "work", title: "工作", collapsed: false, compact: false });
+    expect(ws().todoLists[1]).toMatchObject({ title: "重复工作", collapsed: true, compact: true });
+    expect(ws().todoLists[1].id).not.toBe("work");
+    expect(new Set(ws().todoLists.map((list) => list.id)).size).toBe(2);
+    expect(Object.keys(ws().todos)).toEqual(ws().todoLists.map((list) => list.id));
   });
 
   it("falls back to default todo lists when persisted todoLists is empty or invalid", () => {
@@ -179,15 +187,17 @@ describe("state compatibility", () => {
         { title: "缺少 id" },
       ],
     });
+    const emptyWs = () => emptyState.workspaces[0];
+    const invalidWs = () => invalidState.workspaces[0];
 
     const expected = [
       { id: "morning", title: "✅ 提醒事项" },
     ];
 
-    expect(emptyState.todoLists.map((list) => ({ id: list.id, title: list.title }))).toEqual(expected);
-    expect(invalidState.todoLists.map((list) => ({ id: list.id, title: list.title }))).toEqual(expected);
-    expect(Object.keys(emptyState.todos)).toEqual(["morning"]);
-    expect(Object.keys(invalidState.todos)).toEqual(["morning"]);
+    expect(emptyWs().todoLists.map((list) => ({ id: list.id, title: list.title }))).toEqual(expected);
+    expect(invalidWs().todoLists.map((list) => ({ id: list.id, title: list.title }))).toEqual(expected);
+    expect(Object.keys(emptyWs().todos)).toEqual(["morning"]);
+    expect(Object.keys(invalidWs().todos)).toEqual(["morning"]);
   });
 
   it("serializes configurable todo lists without orphan records", () => {
@@ -198,10 +208,11 @@ describe("state compatibility", () => {
     });
 
     const stored = getSerializableState(state);
+    const ws = () => stored.workspaces[0];
 
-    expect(stored.todoLists).toEqual([{ id: "custom", title: "自定义", collapsed: false, compact: true }]);
-    expect(Object.keys(stored.todos)).toEqual(["custom"]);
-    expect(stored.showCompletedTodos).toEqual({ custom: true });
+    expect(ws().todoLists).toEqual([{ id: "custom", title: "自定义", collapsed: false, compact: true }]);
+    expect(Object.keys(ws().todos)).toEqual(["custom"]);
+    expect(ws().showCompletedTodos).toEqual({ custom: true });
   });
 
   it("keeps todo helpers safe when fixed-period arrays are missing", () => {
@@ -209,12 +220,13 @@ describe("state compatibility", () => {
       todoLists: [{ id: "custom", title: "自定义", collapsed: false, compact: false }],
       todos: { custom: [{ id: "c", text: "C", done: false }] },
     });
+    const ws = () => state.workspaces[0];
 
-    const withMorning = addTodo(state.todos, "morning", { id: "m", text: "M", done: false });
+    const withMorning = addTodo(ws().todos, "morning", { id: "m", text: "M", done: false });
 
     expect(withMorning.custom.map((todo) => todo.text)).toEqual(["C"]);
     expect(withMorning.morning.map((todo) => todo.text)).toEqual(["M"]);
-    expect(removeEmptyTodo(state.todos, "morning", "missing")).toEqual(state.todos);
+    expect(removeEmptyTodo(ws().todos, "morning", "missing")).toEqual(ws().todos);
   });
 
   it("defaults to the pixel cat companion GIF theme", () => {
@@ -277,21 +289,26 @@ describe("state compatibility", () => {
   it("serializes image metadata without large payloads for localStorage", () => {
     const state: BoardState = {
       ...defaultState(),
-      images: [
+      workspaces: [
         {
-          id: "img-1",
-          src: "data:image/png;base64,abc",
-          createdAt: 1,
-          displayWidth: 80,
-          displayHeight: 40,
+          ...defaultWorkspace(),
+          images: [
+            {
+              id: "img-1",
+              src: "data:image/png;base64,abc",
+              createdAt: 1,
+              displayWidth: 80,
+              displayHeight: 40,
+            },
+          ],
         },
       ],
     };
 
-    expect(getSerializableState(state).images).toEqual([
+    expect(getSerializableState(state).workspaces[0].images).toEqual([
       { id: "img-1", createdAt: 1, displayWidth: 80, displayHeight: 40 },
     ]);
-    expect(getSerializableState(state, { includeImageData: true }).images[0]).toMatchObject({
+    expect(getSerializableState(state, { includeImageData: true }).workspaces[0].images[0]).toMatchObject({
       id: "img-1",
       src: "data:image/png;base64,abc",
       displayWidth: 80,
@@ -306,10 +323,11 @@ describe("state compatibility", () => {
         { id: "img-2", createdAt: 2, displayWidth: 0, displayHeight: Number.POSITIVE_INFINITY },
       ],
     });
+    const ws = () => state.workspaces[0];
 
-    expect(state.images[0]).toMatchObject({ displayWidth: 80, displayHeight: 41 });
-    expect(state.images[1]).not.toHaveProperty("displayWidth");
-    expect(state.images[1]).not.toHaveProperty("displayHeight");
+    expect(ws().images[0]).toMatchObject({ displayWidth: 80, displayHeight: 41 });
+    expect(ws().images[1]).not.toHaveProperty("displayWidth");
+    expect(ws().images[1]).not.toHaveProperty("displayHeight");
   });
 
   it("normalizes and serializes immutable image payload ids", () => {
@@ -319,10 +337,11 @@ describe("state compatibility", () => {
         { id: "img-2", payloadId: "", createdAt: 2 },
       ],
     });
+    const ws = () => state.workspaces[0];
 
-    expect(state.images[0]).toMatchObject({ id: "img-1", payloadId: "payload-v2" });
-    expect(state.images[1]).not.toHaveProperty("payloadId");
-    expect(getSerializableState(state).images[0]).toMatchObject({
+    expect(ws().images[0]).toMatchObject({ id: "img-1", payloadId: "payload-v2" });
+    expect(ws().images[1]).not.toHaveProperty("payloadId");
+    expect(getSerializableState(state).workspaces[0].images[0]).toMatchObject({
       id: "img-1",
       payloadId: "payload-v2",
       createdAt: 1,
@@ -352,10 +371,11 @@ describe("state compatibility", () => {
     });
 
     const stored = normalizeImportedState(JSON.parse(storage.getItem(STORAGE_KEY) ?? "{}"));
+    const ws = () => stored.workspaces[0];
     expect(result.status).toBe("merged");
     expect(stored.sync.revision).toBe(3);
-    expect(stored.noteLines).toEqual([{ text: "new note", indent: 0 }]);
-    expect(stored.images.map((image) => image.id)).toEqual(["a", "b"]);
+    expect(ws().noteLines).toEqual([{ text: "new note", indent: 0 }]);
+    expect(ws().images.map((image) => image.id)).toEqual(["a", "b"]);
   });
 
   it.each([
@@ -392,9 +412,10 @@ describe("state compatibility", () => {
     });
 
     const stored = normalizeImportedState(JSON.parse(storage.getItem(STORAGE_KEY) ?? "{}"));
+    const ws = () => stored.workspaces[0];
     expect(result.status).toBe("merged");
-    expect(stored.noteLines).toEqual([{ text: "latest note", indent: 0 }]);
-    expect(stored.images.map((image) => image.id)).toEqual(expected);
+    expect(ws().noteLines).toEqual([{ text: "latest note", indent: 0 }]);
+    expect(ws().images.map((image) => image.id)).toEqual(expected);
   });
 
   it("merges an image replacement only when the latest payload version matches", () => {
@@ -430,10 +451,11 @@ describe("state compatibility", () => {
     });
 
     const stored = normalizeImportedState(JSON.parse(storage.getItem(STORAGE_KEY) ?? "{}"));
+    const ws = () => stored.workspaces[0];
     expect(result.status).toBe("merged");
-    expect(stored.noteLines).toEqual([{ text: "latest note", indent: 0 }]);
-    expect(stored.images.map((image) => image.id)).toEqual(["other", "target"]);
-    expect(stored.images[1]).toMatchObject({
+    expect(ws().noteLines).toEqual([{ text: "latest note", indent: 0 }]);
+    expect(ws().images.map((image) => image.id)).toEqual(["other", "target"]);
+    expect(ws().images[1]).toMatchObject({
       payloadId: "target-v2",
       displayWidth: 240,
       displayHeight: 120,
@@ -476,7 +498,7 @@ describe("state compatibility", () => {
 
     const stored = normalizeImportedState(JSON.parse(storage.getItem(STORAGE_KEY) ?? "{}"));
     expect(result.status).toBe("conflict");
-    expect(stored.images).toEqual(latest.images);
+    expect(stored.workspaces[0].images).toEqual(latest.workspaces[0].images);
   });
 
   it("rejects stale text saves instead of silently overwriting newer text", () => {
@@ -504,7 +526,7 @@ describe("state compatibility", () => {
     const stored = normalizeImportedState(JSON.parse(storage.getItem(STORAGE_KEY) ?? "{}"));
     expect(result.status).toBe("conflict");
     expect(stored.sync.revision).toBe(2);
-    expect(stored.spaces[0].lines).toEqual([{ text: "new text", indent: 0 }]);
+    expect(stored.workspaces[0].spaces[0].lines).toEqual([{ text: "new text", indent: 0 }]);
   });
 
   it("allows confirmed destructive writes to replace a newer stored revision", () => {
@@ -530,7 +552,7 @@ describe("state compatibility", () => {
     const stored = normalizeImportedState(JSON.parse(storage.getItem(STORAGE_KEY) ?? "{}"));
     expect(result.status).toBe("saved");
     expect(stored.sync.revision).toBe(3);
-    expect(stored.noteLines).toEqual([{ text: "imported note", indent: 0 }]);
+    expect(stored.workspaces[0].noteLines).toEqual([{ text: "imported note", indent: 0 }]);
   });
 
   it("normalizes quick buttons, todos, and text line indentation", () => {
@@ -556,14 +578,15 @@ describe("state compatibility", () => {
       },
       workspaceLines: ["\tchild"],
     });
+    const ws = () => state.workspaces[0];
 
-    expect(state.quickButtons[0]).toMatchObject({
+    expect(ws().quickButtons[0]).toMatchObject({
       title: "Docs",
       value: "https://example.com",
       type: "link",
       hidden: false,
     });
-    expect(state.quickButtons[1]).toMatchObject({
+    expect(ws().quickButtons[1]).toMatchObject({
       title: "接口",
       value: "https://api.example.com",
       type: "api",
@@ -576,10 +599,10 @@ describe("state compatibility", () => {
       apiBody: '{"id":1}',
       hidden: false,
     });
-    expect(state.todos.morning).toHaveLength(2);
-    expect(state.todos.morning[0].starred).toBe(false);
-    expect(state.workspaceLines).toEqual([{ text: "child", indent: 1 }]);
-    expect(state.showCompletedTodos).toEqual({ morning: true });
+    expect(ws().todos.morning).toHaveLength(2);
+    expect(ws().todos.morning[0].starred).toBe(false);
+    expect(ws().workspaceLines).toEqual([{ text: "child", indent: 1 }]);
+    expect(ws().showCompletedTodos).toEqual({ morning: true });
   });
 
   it("normalizes per-period completed reminder visibility", () => {
@@ -590,7 +613,7 @@ describe("state compatibility", () => {
       },
     });
 
-    expect(state.showCompletedTodos).toEqual({ morning: true });
+    expect(state.workspaces[0].showCompletedTodos).toEqual({ morning: true });
   });
 
   it("normalizes legacy API header text into key-value pairs", () => {
@@ -605,7 +628,7 @@ describe("state compatibility", () => {
       ],
     });
 
-    expect(state.quickButtons[0]).toMatchObject({
+    expect(state.workspaces[0].quickButtons[0]).toMatchObject({
       apiHeaders: [
         { key: "Authorization", value: "Bearer test" },
         { key: "X-Trace-Id", value: "abc" },
@@ -625,14 +648,15 @@ describe("state compatibility", () => {
         { id: "orphan", title: "孤儿", value: "x", type: "text", tagId: "missing" },
       ],
     });
+    const ws = () => state.workspaces[0];
 
-    expect(state.quickTags).toEqual([
+    expect(ws().quickTags).toEqual([
       { id: "tag-a", title: "标签 A", collapsed: true },
       { id: "tag-b", title: "标签 B" },
     ]);
-    expect(state.quickButtons[0]).toMatchObject({ tagId: "tag-a" });
-    expect(state.quickButtons[1]).not.toHaveProperty("tagId");
-    expect(getSerializableState(state).quickTags).toEqual(state.quickTags);
+    expect(ws().quickButtons[0]).toMatchObject({ tagId: "tag-a" });
+    expect(ws().quickButtons[1]).not.toHaveProperty("tagId");
+    expect(getSerializableState(state).workspaces[0].quickTags).toEqual(ws().quickTags);
   });
 
   it("normalizes persisted spaces and starred reminders", () => {
@@ -649,17 +673,18 @@ describe("state compatibility", () => {
         morning: [{ id: "a", text: "重点", done: false, starred: true, deadlineAt: 1779721200000 }],
       },
     });
+    const ws = () => state.workspaces[0];
 
-    expect(state.spaces).toEqual([
+    expect(ws().spaces).toEqual([
       {
         id: "project",
         title: "项目",
         lines: [{ text: "note", indent: 0 }],
       },
     ]);
-    expect(state.activeSpaceId).toBe("project");
-    expect(state.todos.morning[0]).toMatchObject({ starred: true, notifyAt: 1779721200000 });
-    expect(state.todos.morning[0]).not.toHaveProperty("deadlineAt");
+    expect(ws().activeSpaceId).toBe("project");
+    expect(ws().todos.morning[0]).toMatchObject({ starred: true, notifyAt: 1779721200000 });
+    expect(ws().todos.morning[0]).not.toHaveProperty("deadlineAt");
   });
 
   it("migrates valid todo deadlines during import regardless of starred state", () => {
@@ -672,12 +697,13 @@ describe("state compatibility", () => {
         ],
       },
     });
+    const ws = () => state.workspaces[0];
 
-    expect(state.todos.morning[0]).toMatchObject({ starred: true, notifyAt: 1779721200000 });
-    expect(state.todos.morning[1]).toMatchObject({ starred: true });
-    expect(state.todos.morning[1]).not.toHaveProperty("notifyAt");
-    expect(state.todos.morning[2]).toMatchObject({ starred: false, notifyAt: 1779721200000 });
-    expect(state.todos.morning[2]).not.toHaveProperty("deadlineAt");
+    expect(ws().todos.morning[0]).toMatchObject({ starred: true, notifyAt: 1779721200000 });
+    expect(ws().todos.morning[1]).toMatchObject({ starred: true });
+    expect(ws().todos.morning[1]).not.toHaveProperty("notifyAt");
+    expect(ws().todos.morning[2]).toMatchObject({ starred: false, notifyAt: 1779721200000 });
+    expect(ws().todos.morning[2]).not.toHaveProperty("deadlineAt");
   });
 
   it("migrates legacy deadlineAt to notifyAt and serializes only notifyAt", () => {
@@ -689,11 +715,12 @@ describe("state compatibility", () => {
         evening: [],
       },
     });
+    const ws = () => state.workspaces[0];
 
-    expect(state.todos.morning[0]).toMatchObject({ notifyAt: legacyAt });
-    expect("deadlineAt" in state.todos.morning[0]).toBe(false);
-    expect(getSerializableState(state).todos.morning[0]).toMatchObject({ notifyAt: legacyAt });
-    expect("deadlineAt" in getSerializableState(state).todos.morning[0]).toBe(false);
+    expect(ws().todos.morning[0]).toMatchObject({ notifyAt: legacyAt });
+    expect("deadlineAt" in ws().todos.morning[0]).toBe(false);
+    expect(getSerializableState(state).workspaces[0].todos.morning[0]).toMatchObject({ notifyAt: legacyAt });
+    expect("deadlineAt" in getSerializableState(state).workspaces[0].todos.morning[0]).toBe(false);
   });
 
   it("prefers notifyAt over legacy deadlineAt during import and serialization", () => {
@@ -706,11 +733,12 @@ describe("state compatibility", () => {
         evening: [],
       },
     });
+    const ws = () => state.workspaces[0];
 
-    expect(state.todos.morning[0]).toMatchObject({ notifyAt });
-    expect("deadlineAt" in state.todos.morning[0]).toBe(false);
-    expect(getSerializableState(state).todos.morning[0]).toMatchObject({ notifyAt });
-    expect("deadlineAt" in getSerializableState(state).todos.morning[0]).toBe(false);
+    expect(ws().todos.morning[0]).toMatchObject({ notifyAt });
+    expect("deadlineAt" in ws().todos.morning[0]).toBe(false);
+    expect(getSerializableState(state).workspaces[0].todos.morning[0]).toMatchObject({ notifyAt });
+    expect("deadlineAt" in getSerializableState(state).workspaces[0].todos.morning[0]).toBe(false);
   });
 
   it("serializes textarea text into indented line records", () => {
@@ -719,6 +747,126 @@ describe("state compatibility", () => {
       { text: "child", indent: 1 },
       { text: "leaf", indent: 2 },
     ]);
+  });
+
+  it("defaultState 提供一个默认工作空间", () => {
+    const state = defaultState();
+
+    expect(state.workspaces).toHaveLength(1);
+    expect(state.activeWorkspaceId).toBe(state.workspaces[0].id);
+    expect(state.workspaces[0].spaces).toEqual([{ id: "workspace", title: "📝 备忘录", lines: [] }]);
+    expect(state.workspaces[0].todoLists.map((list) => list.id)).toEqual(["morning"]);
+  });
+
+  it("把旧扁平数据迁移进单个工作空间", () => {
+    const state = normalizeImportedState({
+      language: "en",
+      note: "idea",
+      images: [{ id: "img-1", createdAt: 1 }],
+      todos: { morning: [{ id: "a", text: "A", done: false }] },
+    });
+
+    expect(state.workspaces).toHaveLength(1);
+    expect(state.workspaces[0].id).toBe("default");
+    expect(state.workspaces[0].noteLines).toEqual([{ text: "idea", indent: 0 }]);
+    expect(state.workspaces[0].images.map((image) => image.id)).toEqual(["img-1"]);
+    expect(state.workspaces[0].todos.morning.map((todo) => todo.text)).toEqual(["A"]);
+    expect(state.activeWorkspaceId).toBe("default");
+  });
+
+  it("规范化多工作空间结构并回退非法 activeWorkspaceId", () => {
+    const state = normalizeImportedState({
+      workspaces: [
+        { id: "ws-a", customTitles: { "board-title": "A" }, noteLines: [{ text: "a", indent: 0 }] },
+        { id: "ws-a", customTitles: { "board-title": "重复" } },
+      ],
+      activeWorkspaceId: "missing",
+    });
+
+    expect(state.workspaces).toHaveLength(2);
+    expect(state.workspaces[0].id).toBe("ws-a");
+    expect(state.workspaces[1].id).not.toBe("ws-a");
+    expect(state.activeWorkspaceId).toBe("ws-a");
+    expect(state.workspaces[0].customTitles["board-title"]).toBe("A");
+  });
+
+  it("序列化时为每个工作空间剥离图片 payload", () => {
+    const state: BoardState = {
+      ...defaultState(),
+      workspaces: [
+        {
+          ...defaultWorkspace("ws-1"),
+          images: [{ id: "img-1", src: "data:image/png;base64,abc", createdAt: 1 }],
+        },
+      ],
+    };
+
+    const stored = getSerializableState(state);
+    expect(stored.workspaces[0].images).toEqual([{ id: "img-1", createdAt: 1 }]);
+    expect(getSerializableState(state, { includeImageData: true }).workspaces[0].images[0]).toMatchObject({
+      id: "img-1",
+      src: "data:image/png;base64,abc",
+    });
+  });
+
+  it("跨标签把图片新增合并进同一个工作空间（按 id 定位）", () => {
+    const storage = localStorage;
+    storage.clear();
+    const latest = normalizeImportedState({
+      sync: { revision: 2, updatedAt: 20, clientId: "tab-a" },
+      workspaces: [
+        { id: "ws-a", images: [{ id: "a-img", createdAt: 1 }] },
+        { id: "ws-b", images: [] },
+      ],
+      activeWorkspaceId: "ws-a",
+    });
+    const staleWithImage = normalizeImportedState({
+      sync: { revision: 1, updatedAt: 10, clientId: "tab-b" },
+      workspaces: [
+        { id: "ws-a", images: [{ id: "a-img", createdAt: 1 }] },
+        { id: "ws-b", images: [{ id: "b-img", src: "data:image/png;base64,b", createdAt: 2 }] },
+      ],
+      activeWorkspaceId: "ws-b",
+    });
+
+    saveStateWithConflictCheck(latest, { storage, clientId: "tab-a", now: () => 20 });
+    const result = saveStateWithConflictCheck(staleWithImage, {
+      storage,
+      clientId: "tab-b",
+      now: () => 30,
+      scope: "images",
+    });
+
+    const stored = normalizeImportedState(JSON.parse(storage.getItem(STORAGE_KEY) ?? "{}"));
+    expect(result.status).toBe("merged");
+    const storedA = stored.workspaces.find((w) => w.id === "ws-a")!;
+    const storedB = stored.workspaces.find((w) => w.id === "ws-b")!;
+    expect(storedA.images.map((image) => image.id)).toEqual(["a-img"]);
+    expect(storedB.images.map((image) => image.id)).toEqual(["b-img"]);
+  });
+
+  it("normalizeImportedState 接受多工作空间全量结构", () => {
+    const state = normalizeImportedState({
+      language: "en",
+      workspaces: [
+        { id: "a", customTitles: { "board-title": "A" } },
+        { id: "b", customTitles: { "board-title": "B" } },
+      ],
+      activeWorkspaceId: "b",
+    });
+    expect(state.workspaces.map((w) => w.id)).toEqual(["a", "b"]);
+    expect(state.activeWorkspaceId).toBe("b");
+    expect(state.language).toBe("en");
+  });
+
+  it("normalizeWorkspaceData 解析单空间信封里的 workspace", () => {
+    const workspace = normalizeWorkspaceData(
+      { id: "x", customTitles: { "board-title": "导入空间" }, noteLines: [{ text: "n", indent: 0 }] },
+      "zh",
+    );
+    expect(workspace.customTitles["board-title"]).toBe("导入空间");
+    expect(workspace.noteLines).toEqual([{ text: "n", indent: 0 }]);
+    expect(workspace.id).toBe("x");
   });
 });
 
@@ -762,9 +910,10 @@ describe("todo behavior", () => {
         c: [],
       },
     });
+    const ws = () => state.workspaces[0];
 
-    const reordered = reorderTodoLists(state.todoLists, "c", "a");
-    const removed = removeTodoListData(state.todos, state.showCompletedTodos, "b");
+    const reordered = reorderTodoLists(ws().todoLists, "c", "a");
+    const removed = removeTodoListData(ws().todos, ws().showCompletedTodos, "b");
 
     expect(reordered.map((list) => list.id)).toEqual(["c", "a", "b"]);
     expect(Object.keys(removed.todos)).toEqual(["a", "c"]);
@@ -815,8 +964,9 @@ describe("todo behavior", () => {
         c: [],
       },
     });
+    const ws = () => state.workspaces[0];
 
-    const reordered = reorderTodoLists(state.todoLists, "a", "c");
+    const reordered = reorderTodoLists(ws().todoLists, "a", "c");
 
     expect(reordered.map((list) => list.id)).toEqual(["b", "a", "c"]);
   });
@@ -927,9 +1077,9 @@ describe("todo behavior", () => {
 
   it("sets and clears todo star state through starTodo", () => {
     const state = defaultState();
-    state.todos.morning = [{ id: "a", text: "重点", done: false }];
+    state.workspaces[0].todos.morning = [{ id: "a", text: "重点", done: false }];
 
-    const starred = starTodo(state.todos, "morning", "a", true);
+    const starred = starTodo(state.workspaces[0].todos, "morning", "a", true);
     expect(starred.morning[0]).toMatchObject({ starred: true });
     expect(starred.morning[0]).not.toHaveProperty("notifyAt");
 
@@ -942,11 +1092,11 @@ describe("todo behavior", () => {
 
   it("inserts a new open todo before completed todos to avoid visual reordering", () => {
     const state = defaultState();
-    state.todos.morning = [
+    state.workspaces[0].todos.morning = [
       { id: "done", text: "已完成", done: true },
     ];
 
-    const next = addTodo(state.todos, "morning", { id: "blank", text: "", done: false });
+    const next = addTodo(state.workspaces[0].todos, "morning", { id: "blank", text: "", done: false });
 
     expect(next.morning.map((todo) => todo.id)).toEqual(["blank", "done"]);
     expect(getOrderedTodos(next.morning).map((todo) => todo.id)).toEqual(["blank", "done"]);
@@ -954,12 +1104,12 @@ describe("todo behavior", () => {
 
   it("inserts a blank-space todo after existing open todos even when completed todos were stored first", () => {
     const state = defaultState();
-    state.todos.morning = [
+    state.workspaces[0].todos.morning = [
       { id: "done", text: "已完成", done: true },
       { id: "open", text: "未完成", done: false },
     ];
 
-    const next = addTodo(state.todos, "morning", { id: "blank", text: "", done: false });
+    const next = addTodo(state.workspaces[0].todos, "morning", { id: "blank", text: "", done: false });
 
     expect(next.morning.map((todo) => todo.id)).toEqual(["done", "open", "blank"]);
     expect(getOrderedTodos(next.morning).map((todo) => todo.id)).toEqual(["open", "blank", "done"]);
@@ -967,13 +1117,13 @@ describe("todo behavior", () => {
 
   it("moves todos across periods and can mark completion", () => {
     const state = defaultState();
-    state.todos.morning = [
+    state.workspaces[0].todos.morning = [
       { id: "a", text: "Alpha", done: false },
       { id: "b", text: "Beta", done: false },
     ];
-    state.todos.noon = [{ id: "c", text: "Gamma", done: false }];
+    state.workspaces[0].todos.noon = [{ id: "c", text: "Gamma", done: false }];
 
-    const moved = moveTodo(state.todos, "morning", "b", "noon", "c");
+    const moved = moveTodo(state.workspaces[0].todos, "morning", "b", "noon", "c");
     const completed = completeTodo(moved, "noon", "b", true);
 
     expect(completed.morning.map((todo) => todo.id)).toEqual(["a"]);

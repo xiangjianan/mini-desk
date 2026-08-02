@@ -8,15 +8,12 @@ import {
 } from "lucide-vue-next";
 import { Badge } from "./ui/badge";
 import { Button } from "./ui/button";
-import EditableTitle from "./EditableTitle.vue";
 import type { AppLanguage, ThemeMode } from "../types";
 import {
   DEFAULT_LANGUAGE,
   WORKBENCH_COLLAPSED_FIXED_LABELS_BY_LANGUAGE,
   getDefaultTitles,
 } from "../state/i18n";
-import miniDeskLogo from "../../static/img/mini-desk-cat.png?url";
-import miniDeskDarkLogo from "../../static/img/mini-desk-cat-dark.png?url";
 
 const props = withDefaults(defineProps<{
   title: string;
@@ -51,13 +48,10 @@ const expandHint = computed(() => (props.language === "en" ? "Click to expand" :
 
 const emit = defineEmits<{
   theme: [];
-  updateTitle: [value: string];
-  updateSlogan: [value: string];
 }>();
 
-const miniDeskLogoSrc = computed(() => (props.theme === "dark" ? miniDeskDarkLogo : miniDeskLogo));
-
 defineSlots<{
+  "workspace-trigger"?: () => unknown;
   status?: () => unknown;
   actions?: () => unknown;
   assets?: () => unknown;
@@ -493,24 +487,13 @@ onUnmounted(() => {
       <Transition name="workbench-header" :duration="200">
         <header v-if="!headerHidden" class="workbench-command-bar" data-testid="workbench-command-bar">
           <div class="workbench-title-group">
-            <img class="workbench-title-icon workbench-title-logo" :src="miniDeskLogoSrc" alt="" aria-hidden="true" width="20" height="20" />
-            <h1>
-              <EditableTitle
-                id="board-title"
-                :value="title"
-                @update="(_id, value) => emit('updateTitle', value)"
-              />
-            </h1>
+            <slot name="workspace-trigger">
+              <span class="workbench-title-fallback">{{ title }}</span>
+            </slot>
             <slot name="status">
               <Badge variant="secondary" data-testid="workbench-save-status">{{ saveStatusLabel }}</Badge>
             </slot>
-            <p v-if="slogan" class="workbench-slogan">
-              <EditableTitle
-                id="board-slogan"
-                :value="slogan"
-                @update="(_id, value) => emit('updateSlogan', value)"
-              />
-            </p>
+            <p v-if="slogan" class="workbench-slogan">{{ slogan }}</p>
           </div>
           <div class="workbench-command-actions">
             <Button
