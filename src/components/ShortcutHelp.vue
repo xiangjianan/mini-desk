@@ -175,7 +175,7 @@ function createKeyboardRows(keys: ShortcutKeycap[]): ShortcutKeyboardRow[] {
 </script>
 
 <template>
-  <NModal :show="show" preset="card" :title="uiText.settings.shortcutHelp" class="shortcut-help-modal" @update:show="(v: boolean) => !v && emit('close')">
+  <NModal :show="show" preset="card" :mask-closable="false" :title="uiText.settings.shortcutHelp" class="shortcut-help-modal" @update:show="(v: boolean) => !v && emit('close')">
     <NScrollbar class="shortcut-help-content" @wheel.stop>
       <div class="shortcut-help-inner">
         <div class="shortcut-keyboard-overview" aria-label="Keyboard shortcut layout">

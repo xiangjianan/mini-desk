@@ -849,13 +849,36 @@ describe("Naive UI component usage", () => {
     expect(quick).not.toContain(":mask-style=\"{ background: 'transparent' }\"");
     expect(quick).not.toContain("handleDialogOutsideClick");
     expect(quick).not.toContain("@mask-click");
-    expect(styles).toMatch(/\.n-modal-container:has\(\.quick-dialog\) \.n-modal-mask\s*\{[^}]*background: rgba\(0, 0, 0, 0\.38\) !important/s);
+    expect(styles).toMatch(/\.n-modal-mask\s*\{[^}]*backdrop-filter:\s*blur\(/s);
+    expect(styles).toMatch(/\.n-modal-container,[\s\S]*?\.n-modal-body-wrapper\s*\{[^}]*z-index:\s*10000 !important/s);
+    expect(styles).not.toMatch(/\.n-modal-mask\s*\{[^}]*z-index/s);
     expect(styles).toMatch(/\.quick-dialog\s*\{[^}]*width: min\(420px, calc\(100vw - 32px\)\)/s);
     expect(styles).toMatch(/\.quick-dialog \.n-base-close\s*\{[^}]*border: 0/s);
     expect(styles).toMatch(/\.quick-dialog \.n-base-close\s*\{[^}]*box-shadow: none/s);
     expect(styles).toMatch(/\.panel\.is-focused,[\s\S]*?\.todo-section\.is-focused\s*\{[^}]*box-shadow: none/s);
     expect(styles).toMatch(/\.todo-section\.is-focused::before\s*\{[^}]*content: none/s);
     expect(styles).not.toMatch(/\.todo-section\.is-focused::before\s*\{[^}]*border: 1px solid var\(--line-focus\)/s);
+  });
+
+  it("unifies modal close behavior: clicking the mask never closes, only the X button does", () => {
+    const modalSources = [
+      "src/App.vue",
+      "src/components/QuickButtons.vue",
+      "src/components/ShortcutHelp.vue",
+      "src/components/SupportAuthor.vue",
+      "src/components/ImagePreview.vue",
+    ];
+
+    for (const file of modalSources) {
+      const source = read(file);
+
+      // No modal may close when its surrounding mask is clicked.
+      expect(source, file).not.toContain(':mask-closable="true"');
+      // Every modal that declares mask-closable must opt out of mask closing.
+      if (source.includes("<NModal")) {
+        expect(source, file).toContain(':mask-closable="false"');
+      }
+    }
   });
 
   it("uses a slightly stronger gradient for completed pinned reminders", () => {

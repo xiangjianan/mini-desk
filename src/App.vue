@@ -73,6 +73,7 @@ import type { AppLanguage, BoardState, CompanionGifTheme, DraggedTodo, GuideKey,
 
 const ImagePreview = defineAsyncComponent(() => import("./components/ImagePreview.vue"));
 const ShortcutHelp = defineAsyncComponent(() => import("./components/ShortcutHelp.vue"));
+const SupportAuthor = defineAsyncComponent(() => import("./components/SupportAuthor.vue"));
 
 const MOBILE_BREAKPOINT_QUERY = "(max-width: 900px)";
 const TODO_NOTIFICATION_FALLBACK_INTERVAL_MS = 30_000;
@@ -149,6 +150,7 @@ const availableAppVersion = ref(appVersion.value);
 const storedAppVersion = ref<string | null>(null);
 const versionPromptVisible = ref(false);
 const shortcutHelpVisible = ref(false);
+const supportDialogVisible = ref(false);
 const isMobileBlocked = ref(getInitialMobileBlocked());
 const mobileMediaQuery = ref<MediaQueryList | null>(null);
 let appMounted = false;
@@ -3118,6 +3120,7 @@ function moveItem<T extends { id: string }>(items: T[], dragId: string, targetId
           @clear-data="clearData"
           @about="about"
           @suggest="suggestIssue"
+          @support="supportDialogVisible = true"
           @shortcut-help="shortcutHelpVisible = true"
           @update="updateStaticVersion"
           @language="updateLanguage"
@@ -3291,13 +3294,14 @@ function moveItem<T extends { id: string }>(items: T[], dragId: string, targetId
       @gif-theme-change="(theme: string) => updateCompanionGifTheme(theme as CompanionGifTheme)"
     />
     <input ref="importInput" type="file" accept="application/json,.json" hidden @change="importData" />
-    <ShortcutHelp v-if="shortcutHelpVisible" :show="shortcutHelpVisible" :language="state.language" @close="shortcutHelpVisible = false" />
+    <ShortcutHelp :show="shortcutHelpVisible" :language="state.language" @close="shortcutHelpVisible = false" />
+    <SupportAuthor :show="supportDialogVisible" :language="state.language" @close="supportDialogVisible = false" />
     <NModal
       v-model:show="workspaceDialogVisible"
       preset="card"
       :title="workspaceDialogMode === 'create' ? uiText.app.newWorkspace : uiText.common.rename"
       style="max-width: 360px"
-      :mask-closable="true"
+      :mask-closable="false"
     >
       <div style="display:flex; flex-direction:column; gap:12px;">
         <label style="display:flex; flex-direction:column; gap:4px;">

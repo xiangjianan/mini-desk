@@ -889,7 +889,7 @@ function handleQuickGroupDrop(event: DragEvent, groupId: string): void {
       v-model:show="tagManagerOpen"
       preset="card"
       class="quick-dialog quick-tag-manager"
-      :mask-closable="true"
+      :mask-closable="false"
       :title="uiText.quick.tagManage"
     >
       <div class="quick-tag-manager-body">

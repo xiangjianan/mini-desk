@@ -6,6 +6,7 @@ import {
   CloudUploadOutline,
   CreateOutline,
   GlobeOutline,
+  HeartOutline,
   ImagesOutline,
   InformationCircleOutline,
   KeyOutline,
@@ -40,6 +41,7 @@ const emit = defineEmits<{
   clearData: [anchor?: HTMLElement];
   about: [anchor?: HTMLElement];
   suggest: [anchor?: HTMLElement];
+  support: [anchor?: HTMLElement];
   shortcutHelp: [];
   update: [];
   language: [language: AppLanguage, anchor?: HTMLElement];
@@ -47,6 +49,9 @@ const emit = defineEmits<{
   customGif: [files: { light?: File; dark?: File }, anchor?: HTMLElement];
   guide: [key: GuideKey, anchor: HTMLElement];
 }>();
+
+// Temporarily disabled — the QR-code "支持作者" flow is hidden until re-enabled.
+const SUPPORT_AUTHOR_ENABLED = false;
 
 const menuOpen = ref(false);
 const triggerRef = ref<HTMLElement | null>(null);
@@ -98,6 +103,9 @@ const options = computed(() => [
     })),
   },
   { label: text.value.settings.suggest, key: "suggest", icon: renderIcon(CreateOutline) },
+  ...(SUPPORT_AUTHOR_ENABLED
+    ? [{ label: text.value.settings.support, key: "support", icon: renderIcon(HeartOutline) }]
+    : []),
   { label: text.value.settings.shortcutHelp, key: "shortcut-help", icon: renderIcon(KeyOutline) },
   { label: text.value.settings.about, key: "about", icon: renderIcon(InformationCircleOutline) },
   { type: "divider", key: "version-divider" },
@@ -119,6 +127,7 @@ function handleSelect(key: string): void {
   if (key === "import") emit("import", triggerRef.value ?? undefined);
   if (key === "clear-data") emit("clearData", triggerRef.value ?? undefined);
   if (key === "suggest") emit("suggest", triggerRef.value ?? undefined);
+  if (key === "support") emit("support", triggerRef.value ?? undefined);
   if (key === "about") emit("about", triggerRef.value ?? undefined);
   if (key === "shortcut-help") {
     emit("shortcutHelp");

@@ -378,6 +378,51 @@ h3 {
   box-shadow: 0 6px 14px rgba(15, 23, 42, 0.045) !important;
 }
 
+/* Modal backdrop: a full-screen frosted-glass (Gaussian blur) overlay that
+   covers the entire viewport, including the top command bar.
+   Naive UI's zindexable directive assigns .n-modal-container an inline
+   z-index from a counter that starts at 2000, while the command bar sits at
+   z-index 4200 — so by default the whole modal (mask included) renders BELOW
+   the command bar and never covers it. Hoisting the container (and body
+   wrapper) above 4200 fixes that. The mask and dialog card are left at their
+   natural z-index so the card still paints above the mask and stays crisp
+   (raising the mask's z-index would blur the dialog itself). The mask's
+   backdrop-filter blurs everything painted behind it across the whole screen. */
+.n-modal-container,
+.n-modal-body-wrapper {
+  z-index: 10000 !important;
+}
+
+.n-modal-mask {
+  -webkit-backdrop-filter: blur(6px) saturate(1.2);
+  backdrop-filter: blur(6px) saturate(1.2);
+  background: rgba(15, 23, 42, 0.16);
+}
+
+html[data-theme="dark"] .n-modal-mask {
+  background: rgba(0, 0, 0, 0.32);
+}
+
+/* Smooth fade-in/fade-out for modal dialogs. Naive UI's default card transition
+   scales up from 0.5 over 0.25s, which feels stiff/poppy; replace it with a
+   gentle pure-opacity fade so dialogs (Help & Shortcuts, etc.) ease in and out.
+   The mask already fades smoothly at 0.25s, so only the card is overridden.
+   Scoped to no-preference so users who set reduced-motion still get instant
+   dialogs (the global prefers-reduced-motion query shortens transitions). */
+@media (prefers-reduced-motion: no-preference) {
+  .n-modal.fade-in-scale-up-transition-enter-active,
+  .n-modal.fade-in-scale-up-transition-leave-active {
+    transition: opacity 0.28s cubic-bezier(0.22, 1, 0.36, 1) !important;
+  }
+
+  .n-modal.fade-in-scale-up-transition-enter-from,
+  .n-modal.fade-in-scale-up-transition-leave-to {
+    opacity: 0 !important;
+    transform: none !important;
+  }
+}
+
+
 .n-button:not(.n-button--primary-type):not(.n-button--error-type) {
   --n-color: var(--button) !important;
   --n-color-hover: var(--button-hover) !important;
@@ -1941,8 +1986,82 @@ button.quick-button {
   max-width: calc(100vw - 32px);
 }
 
-.n-modal-container:has(.quick-dialog) .n-modal-mask {
-  background: rgba(0, 0, 0, 0.38) !important;
+.support-dialog {
+  width: min(420px, calc(100vw - 32px));
+}
+
+.support-content {
+  display: grid;
+  gap: 16px;
+}
+
+.support-description {
+  margin: 0;
+  color: var(--muted);
+  font-size: var(--app-font-size);
+  line-height: 1.6;
+}
+
+.support-section {
+  display: grid;
+  gap: 8px;
+}
+
+.support-label {
+  color: var(--foreground);
+  font-size: 13px;
+  font-weight: 600;
+}
+
+.support-amounts {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 8px;
+}
+
+.support-custom-input {
+  width: 120px;
+}
+
+.support-codes {
+  display: flex;
+  flex-wrap: wrap;
+  justify-content: center;
+  gap: 20px;
+}
+
+.support-code {
+  display: grid;
+  justify-items: center;
+  gap: 8px;
+  margin: 0;
+}
+
+.support-qr {
+  width: 140px;
+  height: 140px;
+  object-fit: contain;
+  border: 1px solid var(--border);
+  border-radius: var(--radius);
+  background: #fff;
+}
+
+.support-code figcaption {
+  color: var(--muted);
+  font-size: 13px;
+}
+
+.support-thanks {
+  margin: 0;
+  text-align: center;
+  color: var(--primary);
+  font-size: 13px;
+}
+
+.support-footer {
+  display: flex;
+  justify-content: flex-end;
 }
 
 .quick-dialog .n-base-close {
@@ -3675,6 +3794,8 @@ html[data-theme="dark"] .image-preview {
 body:has(.image-preview) .n-modal-mask {
   pointer-events: none;
   background: transparent !important;
+  -webkit-backdrop-filter: none;
+  backdrop-filter: none;
 }
 
 body:has(.image-preview) .n-modal-scroll-content {
