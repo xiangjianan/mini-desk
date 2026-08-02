@@ -1,7 +1,7 @@
 <script setup lang="ts">
 import { computed, defineAsyncComponent, nextTick, onMounted, onUnmounted, reactive, ref, watch } from "vue";
 import { MoonOutline, SunnyOutline } from "@vicons/ionicons5";
-import { darkTheme, dateEnUS, dateZhCN, enUS, NButton, NConfigProvider, NGlobalStyle, NIcon, zhCN } from "naive-ui";
+import { darkTheme, dateEnUS, dateZhCN, enUS, NButton, NConfigProvider, NGlobalStyle, NIcon, NInput, NModal, zhCN } from "naive-ui";
 import CompanionBubble from "./components/CompanionBubble.vue";
 import ImagePanel from "./components/ImagePanel.vue";
 import QuickButtons from "./components/QuickButtons.vue";
@@ -9,6 +9,7 @@ import SettingsMenu from "./components/SettingsMenu.vue";
 import SpacePanel from "./components/SpacePanel.vue";
 import TodoPanel from "./components/TodoPanel.vue";
 import WorkbenchShell from "./components/WorkbenchShell.vue";
+import WorkspaceSwitcher from "./components/WorkspaceSwitcher.vue";
 import { getCompanionGifSrc, getCompanionNotificationIconSrc } from "./state/companionGifThemes";
 import {
   clearStoredImagePayloads,
@@ -53,6 +54,7 @@ import {
   createId,
   exportJsonState,
   exportUndoSnapshotState,
+  getSerializableWorkspace,
   loadState,
   normalizeImportedState,
   saveStateWithConflictCheck,
@@ -115,6 +117,10 @@ const importInput = ref<HTMLInputElement | null>(null);
 const importFeedbackAnchor = ref<HTMLElement | undefined>();
 const pendingEditSpaceId = ref<string | null>(null);
 const pendingEditTodoListId = ref<string | null>(null);
+const renameWorkspaceVisible = ref(false);
+const renameWorkspaceId = ref<string | null>(null);
+const renameDraftTitle = ref("");
+const renameDraftSlogan = ref("");
 const textSaveTimer = ref<number | undefined>();
 const bubbleTimer = ref<number | undefined>();
 const bubbleFadeTimer = ref<number | undefined>();
@@ -469,17 +475,44 @@ async function switchWorkspace(id: string): Promise<void> {
 }
 
 function renameWorkspace(id: string, title: string, slogan: string): void {
+  renameWorkspaceId.value = id;
+  renameDraftTitle.value = title;
+  renameDraftSlogan.value = slogan;
+  renameWorkspaceVisible.value = true;
+}
+
+function confirmRenameWorkspace(): void {
+  if (!renameWorkspaceId.value) return;
+  const workspace = state.workspaces.find((item) => item.id === renameWorkspaceId.value);
+  if (workspace) {
+    const nextTitles = { ...workspace.customTitles };
+    const trimmedTitle = renameDraftTitle.value.trim();
+    const trimmedSlogan = renameDraftSlogan.value.trim();
+    if (trimmedTitle) nextTitles["board-title"] = trimmedTitle;
+    else delete nextTitles["board-title"];
+    if (trimmedSlogan) nextTitles["board-slogan"] = trimmedSlogan;
+    else delete nextTitles["board-slogan"];
+    workspace.customTitles = nextTitles;
+    persistNow();
+  }
+  renameWorkspaceVisible.value = false;
+  renameWorkspaceId.value = null;
+}
+
+function slugifyTitle(title: string): string {
+  const trimmed = title.trim();
+  if (!trimmed) return "workspace";
+  return trimmed.replace(/[\\/:*?"<>|]/g, "").slice(0, 24).trim() || "workspace";
+}
+
+function exportWorkspaceById(id: string, anchor?: HTMLElement): void {
   const workspace = state.workspaces.find((item) => item.id === id);
   if (!workspace) return;
-  const nextTitles = { ...workspace.customTitles };
-  const trimmedTitle = title.trim();
-  const trimmedSlogan = slogan.trim();
-  if (trimmedTitle) nextTitles["board-title"] = trimmedTitle;
-  else delete nextTitles["board-title"];
-  if (trimmedSlogan) nextTitles["board-slogan"] = trimmedSlogan;
-  else delete nextTitles["board-slogan"];
-  workspace.customTitles = nextTitles;
-  persistNow();
+  const serialized = getSerializableWorkspace(workspace, { includeImageData: true });
+  const content = JSON.stringify({ miniDeskWorkspaceExport: true, version: 1, workspace: serialized }, null, 2);
+  const title = workspace.customTitles["board-title"]?.trim() || "Mini Desk";
+  downloadExportFile(content, `mini-desk-${slugifyTitle(title)}-${new Date().toISOString().slice(0, 10)}.json`);
+  showBubble("dataExported", anchor, { hideCompanionAfter: true });
 }
 
 function deleteWorkspace(id: string, anchor?: HTMLElement): void {
@@ -2962,11 +2995,24 @@ function moveItem<T extends { id: string }>(items: T[], dragId: string, targetId
       :assets-title="titles['image-title']"
       :notes-title="titles['quick-title']"
       @theme="handleThemeClick"
-      @update-title="(value) => updateTitle('board-title', value)"
-      @update-slogan="(value) => updateTitle('board-slogan', value)"
       @dragover.prevent
       @drop.prevent="handleBoardDrop"
     >
+      <template #workspace-trigger>
+        <WorkspaceSwitcher
+          :workspaces="state.workspaces"
+          :active-workspace-id="state.activeWorkspaceId"
+          :theme="state.theme"
+          :language="state.language"
+          @switch="switchWorkspace"
+          @create="createWorkspace"
+          @rename="renameWorkspace"
+          @delete="deleteWorkspace"
+          @reorder="reorderWorkspaceSections"
+          @export-workspace="exportWorkspaceById"
+        />
+      </template>
+
       <template #status>
         <span
           class="save-status"
@@ -3172,5 +3218,27 @@ function moveItem<T extends { id: string }>(items: T[], dragId: string, targetId
     />
     <input ref="importInput" type="file" accept="application/json,.json" hidden @change="importData" />
     <ShortcutHelp v-if="shortcutHelpVisible" :show="shortcutHelpVisible" :language="state.language" @close="shortcutHelpVisible = false" />
+    <NModal
+      v-model:show="renameWorkspaceVisible"
+      preset="card"
+      :title="uiText.app.workspaces"
+      style="max-width: 360px"
+      :mask-closable="true"
+    >
+      <div style="display:flex; flex-direction:column; gap:12px;">
+        <label style="display:flex; flex-direction:column; gap:4px;">
+          <span>{{ uiText.app.workspaceTitle }}</span>
+          <NInput v-model:value="renameDraftTitle" :placeholder="uiText.app.workspaceTitlePlaceholder" />
+        </label>
+        <label style="display:flex; flex-direction:column; gap:4px;">
+          <span>{{ uiText.app.workspaceSlogan }}</span>
+          <NInput v-model:value="renameDraftSlogan" :placeholder="uiText.app.workspaceSloganPlaceholder" />
+        </label>
+        <div style="display:flex; justify-content:flex-end; gap:8px;">
+          <NButton @click="renameWorkspaceVisible = false">{{ uiText.common.cancel }}</NButton>
+          <NButton type="primary" :disabled="!renameDraftTitle.trim()" @click="confirmRenameWorkspace">{{ uiText.common.confirm }}</NButton>
+        </div>
+      </div>
+    </NModal>
   </NConfigProvider>
 </template>

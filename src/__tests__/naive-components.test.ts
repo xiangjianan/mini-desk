@@ -39,7 +39,9 @@ describe("Naive UI component usage", () => {
     const preview = read("src/components/ImagePreview.vue");
     const quick = read("src/components/QuickButtons.vue");
 
-    expect(app).not.toContain("NModal");
+    // App.vue hosts the workspace rename dialog as an NModal; other about/info
+    // surfaces stay routed through the companion bubble (no about-modal, no alert).
+    expect(app).toContain("NModal");
     expect(app).not.toContain('class="about-modal"');
     expect(app).not.toContain("window.alert");
     expect(preview).toContain("NModal");
