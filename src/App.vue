@@ -57,6 +57,7 @@ import {
   getSerializableWorkspace,
   loadState,
   normalizeImportedState,
+  normalizeWorkspaceData,
   saveStateWithConflictCheck,
 } from "./state/storage";
 import {
@@ -515,6 +516,10 @@ function exportWorkspaceById(id: string, anchor?: HTMLElement): void {
   const title = workspace.customTitles["board-title"]?.trim() || "Mini Desk";
   downloadExportFile(content, `mini-desk-${slugifyTitle(title)}-${new Date().toISOString().slice(0, 10)}.json`);
   showBubble("dataExported", anchor, { hideCompanionAfter: true });
+}
+
+function exportCurrentWorkspace(anchor?: HTMLElement): void {
+  exportWorkspaceById(state.activeWorkspaceId, anchor);
 }
 
 function deleteWorkspace(id: string, anchor?: HTMLElement): void {
@@ -1997,6 +2002,16 @@ function requestImport(anchor?: HTMLElement): void {
   importInput.value?.click();
 }
 
+async function persistWorkspaceImages(workspaces: WorkspaceData[]): Promise<void> {
+  const inline: (StoredImage & { src: string })[] = [];
+  for (const workspace of workspaces) {
+    for (const image of workspace.images) {
+      if (image.src) inline.push(image as StoredImage & { src: string });
+    }
+  }
+  if (inline.length > 0) await persistImagePayloads(inline);
+}
+
 async function importData(event: Event): Promise<void> {
   const input = event.target as HTMLInputElement;
   const file = input.files?.[0];
@@ -2022,6 +2037,44 @@ async function importData(event: Event): Promise<void> {
     input.value = "";
     return;
   }
+
+  if (isSingleWorkspaceExport(parsed as Record<string, unknown>)) {
+    let importedWorkspace: WorkspaceData;
+    try {
+      const raw = (parsed as { workspace?: unknown }).workspace;
+      importedWorkspace = normalizeWorkspaceData(raw, state.language);
+    } catch {
+      showBubble("importDataInvalid", importFeedbackAnchor.value, { hideCompanionAfter: true });
+      importFeedbackAnchor.value = undefined;
+      input.value = "";
+      return;
+    }
+    requestConfirmation(
+      "confirmImportWorkspace",
+      importFeedbackAnchor.value,
+      async () => {
+        const workspace = ensureUniqueWorkspaceTitle(
+          { ...importedWorkspace, id: createId(), createdAt: Date.now() },
+          state.workspaces,
+        );
+        state.workspaces = [...state.workspaces, workspace];
+        state.activeWorkspaceId = workspace.id;
+        await persistWorkspaceImages([workspace]);
+        persistNow("all", { force: true });
+        refreshTodoNotifications();
+        showBubble("dataImported", importFeedbackAnchor.value, { hideCompanionAfter: true });
+        importFeedbackAnchor.value = undefined;
+        input.value = "";
+      },
+      () => {
+        importFeedbackAnchor.value = undefined;
+        input.value = "";
+      },
+      { confirmText: uiText.value.common.add, cancelText: uiText.value.common.cancel },
+    );
+    return;
+  }
+
   let next: BoardState;
   try {
     next = normalizeImportedState(parsed);
@@ -2038,7 +2091,7 @@ async function importData(event: Event): Promise<void> {
       Object.assign(state, next);
       resetTextGenerationBaseline();
       await persistCustomCompanionGifPayloads(state.customCompanionGif);
-      await persistImagePayloads(activeWorkspace.value.images);
+      await persistWorkspaceImages(state.workspaces);
       persistNow("all", { force: true });
       refreshTodoNotifications();
       showBubble("dataImported", importFeedbackAnchor.value, { hideCompanionAfter: true });
@@ -2526,7 +2579,9 @@ function showToast(messageKey: MessageKey): void {
 
 function isImportPayload(payload: unknown): payload is Record<string, unknown> {
   if (!payload || typeof payload !== "object" || Array.isArray(payload)) return false;
-  const keys = new Set(Object.keys(payload));
+  const keys = new Set(Object.keys(payload as Record<string, unknown>));
+  if (keys.has("miniDeskWorkspaceExport")) return true;
+  if (keys.has("workspaces")) return true;
   return [
     "theme",
     "companionGifTheme",
@@ -2549,6 +2604,10 @@ function isImportPayload(payload: unknown): payload is Record<string, unknown> {
     "workspace",
     "storage",
   ].some((key) => keys.has(key));
+}
+
+function isSingleWorkspaceExport(payload: Record<string, unknown>): boolean {
+  return payload.miniDeskWorkspaceExport === true;
 }
 
 function clearTimers(): void {
@@ -3042,6 +3101,7 @@ function moveItem<T extends { id: string }>(items: T[], dragId: string, targetId
           :has-custom-companion-gif="Boolean(state.customCompanionGif.light || state.customCompanionGif.dark || state.customCompanionGifStored.light || state.customCompanionGifStored.dark)"
           :language="state.language"
           @export="exportData"
+          @export-workspace="exportCurrentWorkspace"
           @import="requestImport"
           @clear-data="clearData"
           @about="about"

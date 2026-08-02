@@ -4,6 +4,7 @@ import { defaultState, defaultWorkspace, STORAGE_KEY } from "../state/defaults";
 import {
   getSerializableState,
   normalizeImportedState,
+  normalizeWorkspaceData,
   saveStateWithConflictCheck,
   serializeTextLines,
 } from "../state/storage";
@@ -842,6 +843,30 @@ describe("state compatibility", () => {
     const storedB = stored.workspaces.find((w) => w.id === "ws-b")!;
     expect(storedA.images.map((image) => image.id)).toEqual(["a-img"]);
     expect(storedB.images.map((image) => image.id)).toEqual(["b-img"]);
+  });
+
+  it("normalizeImportedState 接受多工作空间全量结构", () => {
+    const state = normalizeImportedState({
+      language: "en",
+      workspaces: [
+        { id: "a", customTitles: { "board-title": "A" } },
+        { id: "b", customTitles: { "board-title": "B" } },
+      ],
+      activeWorkspaceId: "b",
+    });
+    expect(state.workspaces.map((w) => w.id)).toEqual(["a", "b"]);
+    expect(state.activeWorkspaceId).toBe("b");
+    expect(state.language).toBe("en");
+  });
+
+  it("normalizeWorkspaceData 解析单空间信封里的 workspace", () => {
+    const workspace = normalizeWorkspaceData(
+      { id: "x", customTitles: { "board-title": "导入空间" }, noteLines: [{ text: "n", indent: 0 }] },
+      "zh",
+    );
+    expect(workspace.customTitles["board-title"]).toBe("导入空间");
+    expect(workspace.noteLines).toEqual([{ text: "n", indent: 0 }]);
+    expect(workspace.id).toBe("x");
   });
 });
 

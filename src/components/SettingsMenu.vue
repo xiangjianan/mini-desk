@@ -35,6 +35,7 @@ const props = withDefaults(defineProps<{
 
 const emit = defineEmits<{
   export: [anchor?: HTMLElement];
+  exportWorkspace: [anchor?: HTMLElement];
   import: [anchor?: HTMLElement];
   clearData: [anchor?: HTMLElement];
   about: [anchor?: HTMLElement];
@@ -64,6 +65,7 @@ const options = computed(() => [
     icon: renderIcon(ServerOutline),
     children: [
       { label: text.value.settings.export, key: "export", icon: renderIcon(CloudDownloadOutline) },
+      { label: text.value.settings.exportCurrentWorkspace, key: "export-workspace", icon: renderIcon(CloudDownloadOutline) },
       { label: text.value.settings.import, key: "import", icon: renderIcon(CloudUploadOutline) },
       { label: text.value.settings.clearData, key: "clear-data", icon: renderIcon(TrashOutline) },
     ],
@@ -113,6 +115,7 @@ const options = computed(() => [
 
 function handleSelect(key: string): void {
   if (key === "export") emit("export", triggerRef.value ?? undefined);
+  if (key === "export-workspace") emit("exportWorkspace", triggerRef.value ?? undefined);
   if (key === "import") emit("import", triggerRef.value ?? undefined);
   if (key === "clear-data") emit("clearData", triggerRef.value ?? undefined);
   if (key === "suggest") emit("suggest", triggerRef.value ?? undefined);
