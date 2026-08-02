@@ -1854,7 +1854,7 @@ describe("App shell", () => {
     }
   });
 
-  it("keeps the browser tab title in sync with the editable board title", async () => {
+  it("keeps the browser tab title in sync with the workspace title via the rename dialog", async () => {
     localStorage.setItem(
       STORAGE_KEY,
       JSON.stringify({ workspaces: [{ ...defaultWorkspace(), customTitles: { "board-title": "我的桌面" } }] }),
@@ -1865,7 +1865,22 @@ describe("App shell", () => {
     try {
       await nextTick();
       expect(document.title).toBe("我的桌面");
-      expect(wrapper.get(".workbench-title-group .workbench-title-fallback").text()).toBe("我的桌面");
+      // The WorkspaceSwitcher trigger fills the title slot; the fallback must NOT render.
+      expect(wrapper.find(".workbench-title-fallback").exists()).toBe(false);
+      expect(wrapper.get('[data-testid="workspace-trigger"]').text()).toContain("我的桌面");
+
+      // Open the switcher and rename the active ("default") workspace via the dialog.
+      await wrapper.get('[data-testid="workspace-trigger"]').trigger("click");
+      await wrapper.get('[data-testid="workspace-rename-default"]').trigger("click");
+      await nextTick();
+      expect(wrapper.find(".n-modal").exists()).toBe(true);
+      await wrapper.get(".n-modal input").setValue("工作台");
+      await wrapper.get(".n-modal .n-button--primary-type").trigger("click");
+      await nextTick();
+
+      expect(document.title).toBe("工作台");
+      const stored = JSON.parse(localStorage.getItem(STORAGE_KEY) || "{}");
+      expect(stored.workspaces[0].customTitles["board-title"]).toBe("工作台");
     } finally {
       wrapper.unmount();
       document.title = previousTitle;

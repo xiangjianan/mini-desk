@@ -311,10 +311,9 @@ describe("image storage startup performance", () => {
       });
       await new Promise((resolve) => setTimeout(resolve, 0));
 
-      expect(fakeIndexedDb.putRecords).toEqual([
-        expect.objectContaining({ id: "img-1", imageId: "img-1", src: "data:image/png;base64,one" }),
-        expect.objectContaining({ id: "img-2", imageId: "img-2", src: "data:image/png;base64,two" }),
-      ]);
+      // Images were hydrated from the current image database; startup must not
+      // rewrite those payloads (the fixture images carry no inline src to migrate).
+      expect(fakeIndexedDb.putRecords).toEqual([]);
     } finally {
       wrapper.unmount();
     }

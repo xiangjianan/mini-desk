@@ -309,10 +309,12 @@ onMounted(async () => {
   }
   const inlineImagePayloads: (StoredImage & { src: string })[] = [];
   for (const workspace of state.workspaces) {
-    workspace.images = await hydrateStoredImages(workspace.images, { persistLegacyPayloads: true });
     for (const image of workspace.images) {
       if (image.src) inlineImagePayloads.push(image as StoredImage & { src: string });
     }
+  }
+  for (const workspace of state.workspaces) {
+    workspace.images = await hydrateStoredImages(workspace.images, { persistLegacyPayloads: true });
   }
   await persistImagePayloads(inlineImagePayloads);
   if (!appMounted) return;

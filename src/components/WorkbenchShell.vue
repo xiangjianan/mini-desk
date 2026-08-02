@@ -51,7 +51,7 @@ const emit = defineEmits<{
 }>();
 
 defineSlots<{
-  workspaceTrigger?: () => unknown;
+  "workspace-trigger"?: () => unknown;
   status?: () => unknown;
   actions?: () => unknown;
   assets?: () => unknown;
@@ -487,7 +487,7 @@ onUnmounted(() => {
       <Transition name="workbench-header" :duration="200">
         <header v-if="!headerHidden" class="workbench-command-bar" data-testid="workbench-command-bar">
           <div class="workbench-title-group">
-            <slot name="workspaceTrigger">
+            <slot name="workspace-trigger">
               <span class="workbench-title-fallback">{{ title }}</span>
             </slot>
             <slot name="status">

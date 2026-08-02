@@ -109,7 +109,7 @@ describe("WorkbenchShell", () => {
     const wrapper = mount(WorkbenchShell, {
       props: defaultProps,
       slots: {
-        workspaceTrigger: "<button data-testid='slotted-trigger'>switcher</button>",
+        "workspace-trigger": "<button data-testid='slotted-trigger'>switcher</button>",
       },
     });
 

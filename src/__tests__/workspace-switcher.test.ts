@@ -51,4 +51,17 @@ describe("WorkspaceSwitcher", () => {
     expect(deleteEvents?.[0]?.[0]).toBe("b");
     wrapper.unmount();
   });
+
+  it("点击重命名 emit rename", async () => {
+    const wrapper = mount(WorkspaceSwitcher, {
+      props: { workspaces, activeWorkspaceId: "a", theme: "light", language: "zh" },
+      attachTo: document.body,
+    });
+    await wrapper.find('[data-testid="workspace-trigger"]').trigger("click");
+    await wrapper.find('[data-testid="workspace-rename-b"]').trigger("click");
+    const renameEvents = wrapper.emitted("rename");
+    // workspace b carries board-title "副空间" and no slogan.
+    expect(renameEvents?.[0]).toEqual(["b", "副空间", ""]);
+    wrapper.unmount();
+  });
 });
