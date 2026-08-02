@@ -1,4 +1,4 @@
-import type { BoardState, TodoListConfig, TodoListId, TodoMap } from "../types";
+import type { BoardState, TodoListConfig, TodoListId, TodoMap, WorkspaceData } from "../types";
 import { DEFAULT_COMPANION_GIF_THEME } from "./companionGifThemes";
 import {
   AREA_HELP_BY_LANGUAGE,
@@ -17,6 +17,7 @@ export const LEGACY_IMAGE_DB_NAME = "todo-board-images-v1";
 export const IMAGE_STORE_NAME = "images";
 export const DEFAULT_SPACE_ID = "workspace";
 export const DEFAULT_SPACE_TITLE = DEFAULT_SPACE_TITLES.zh.workspace;
+export const DEFAULT_WORKSPACE_ID = "default";
 
 export const DEFAULT_TODO_LISTS: TodoListConfig[] = getDefaultTodoLists(DEFAULT_LANGUAGE);
 
@@ -32,14 +33,10 @@ export const AREA_HELP = AREA_HELP_BY_LANGUAGE.zh;
 
 export const CONTROL_HELP = CONTROL_HELP_BY_LANGUAGE.zh;
 
-export function defaultState(): BoardState {
+export function defaultWorkspace(id: string = DEFAULT_WORKSPACE_ID): WorkspaceData {
   return {
-    sync: { revision: 0, updatedAt: 0, clientId: "" },
-    language: DEFAULT_LANGUAGE,
-    theme: "light",
-    companionGifTheme: DEFAULT_COMPANION_GIF_THEME,
-    customCompanionGif: {},
-    customCompanionGifStored: {},
+    id,
+    createdAt: 0,
     customTitles: {},
     noteLines: [],
     workspaceLines: [],
@@ -54,6 +51,19 @@ export function defaultState(): BoardState {
     todoLists: cloneDefaultTodoLists(),
     showCompletedTodos: createDefaultCompletedVisibility(),
     todos: createDefaultTodoMap(),
+  };
+}
+
+export function defaultState(): BoardState {
+  return {
+    sync: { revision: 0, updatedAt: 0, clientId: "" },
+    language: DEFAULT_LANGUAGE,
+    theme: "light",
+    companionGifTheme: DEFAULT_COMPANION_GIF_THEME,
+    customCompanionGif: {},
+    customCompanionGifStored: {},
+    workspaces: [defaultWorkspace(DEFAULT_WORKSPACE_ID)],
+    activeWorkspaceId: DEFAULT_WORKSPACE_ID,
   };
 }
 

@@ -112,19 +112,9 @@ export interface WorkspaceSpace {
   lines: LineItem[];
 }
 
-export interface BoardSyncState {
-  revision: number;
-  updatedAt: number;
-  clientId: string;
-}
-
-export interface BoardState {
-  sync: BoardSyncState;
-  language: AppLanguage;
-  theme: ThemeMode;
-  companionGifTheme: CompanionGifTheme;
-  customCompanionGif: CompanionCustomGif;
-  customCompanionGifStored: CompanionCustomGifStored;
+export interface WorkspaceData {
+  id: string;
+  createdAt: number;
   customTitles: Record<string, string>;
   noteLines: LineItem[];
   workspaceLines: LineItem[];
@@ -139,6 +129,23 @@ export interface BoardState {
   todoLists: TodoListConfig[];
   showCompletedTodos: TodoCompletedVisibility;
   todos: TodoMap;
+}
+
+export interface BoardSyncState {
+  revision: number;
+  updatedAt: number;
+  clientId: string;
+}
+
+export interface BoardState {
+  sync: BoardSyncState;
+  language: AppLanguage;
+  theme: ThemeMode;
+  companionGifTheme: CompanionGifTheme;
+  customCompanionGif: CompanionCustomGif;
+  customCompanionGifStored: CompanionCustomGifStored;
+  workspaces: WorkspaceData[];
+  activeWorkspaceId: string;
 }
 
 export interface SerializableOptions {
