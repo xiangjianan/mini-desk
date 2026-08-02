@@ -3,10 +3,10 @@
   <head>
     <meta charset="utf-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1" />
-    <title>Mini Desk — 一张安静的小桌面</title>
+    <title>Mini Desk · 把今天散落的零碎，收回一张安静桌面</title>
     <meta
       name="description"
-      content="Mini Desk 是一张安静的小桌面，把截图、便签、提醒和快捷动作收在本地浏览器里，但不会催你成为机器。"
+      content="Mini Desk 把你今天散落的截图、链接、念头和待办，收回一张安静的桌面。本地优先、免注册、打开即用——不催你成为机器。"
     />
     <style>
       :root {
@@ -604,7 +604,7 @@
 
       .hero h1 {
         margin: 30px 0 0;
-        max-width: 980px;
+        max-width: 1140px;
         font-size: clamp(52px, 8.4vw, 118px);
         line-height: 1.02;
         letter-spacing: -0.045em;
@@ -773,6 +773,165 @@
         font-size: 17.5px;
         line-height: 1.65;
         font-weight: 450;
+      }
+
+      /* ---------- contrast cards (散落 → 收拢) ---------- */
+
+      .contrast {
+        position: relative;
+        z-index: 1;
+        padding: 32px clamp(22px, 5vw, 72px) 0;
+      }
+
+      .contrast-inner {
+        max-width: 1180px;
+        margin: 0 auto;
+        display: grid;
+        grid-template-columns: 1fr 72px 1fr;
+        gap: 8px;
+        align-items: stretch;
+      }
+
+      .contrast-col {
+        --mx: 50%;
+        --my: 50%;
+        position: relative;
+        padding: 34px;
+        border-radius: 22px;
+        border: 1px solid var(--line);
+        background:
+          radial-gradient(420px circle at var(--mx) var(--my), rgba(255, 255, 255, 0.05), transparent 62%),
+          rgba(255, 255, 255, 0.025);
+        overflow: hidden;
+        transform: translateY(calc((1 - var(--p, 1)) * 34px));
+        transition:
+          transform 360ms var(--ease-out),
+          border-color 360ms var(--ease-out),
+          box-shadow 360ms var(--ease-out),
+          background 360ms var(--ease-out);
+        will-change: transform;
+      }
+
+      .contrast-col:hover {
+        transform: translateY(calc((1 - var(--p, 1)) * 34px - 4px));
+        border-color: rgba(255, 255, 255, 0.16);
+        box-shadow: 0 30px 70px rgba(0, 0, 0, 0.42);
+      }
+
+      .contrast-col .ck {
+        display: block;
+        margin-bottom: 20px;
+        color: var(--muted);
+        font-size: 12.5px;
+        font-weight: 650;
+        letter-spacing: 0.16em;
+        text-transform: uppercase;
+      }
+
+      .contrast-col ul {
+        margin: 0;
+        padding: 0;
+        list-style: none;
+        display: grid;
+        gap: 13px;
+      }
+
+      .contrast-col li {
+        display: flex;
+        gap: 12px;
+        align-items: flex-start;
+        color: var(--text);
+        font-size: 15px;
+        line-height: 1.55;
+      }
+
+      .contrast-col li svg {
+        flex: none;
+        width: 17px;
+        height: 17px;
+        margin-top: 2px;
+        stroke-width: 2;
+      }
+
+      .contrast-col.before li {
+        color: var(--muted);
+      }
+
+      .contrast-col.before li svg {
+        color: rgba(255, 255, 255, 0.3);
+      }
+
+      .contrast-col.after {
+        border-color: rgba(110, 139, 255, 0.34);
+        background:
+          radial-gradient(440px circle at var(--mx) var(--my), rgba(110, 139, 255, 0.14), transparent 62%),
+          linear-gradient(180deg, rgba(110, 139, 255, 0.09), rgba(110, 139, 255, 0.015));
+        box-shadow: 0 0 0 1px rgba(110, 139, 255, 0.08) inset, 0 24px 60px rgba(110, 139, 255, 0.1);
+      }
+
+      .contrast-col.after .ck {
+        color: var(--indigo);
+      }
+
+      .contrast-col.after li svg {
+        color: var(--mint);
+      }
+
+      .contrast-col.after:hover {
+        border-color: rgba(110, 139, 255, 0.5);
+        box-shadow: 0 0 0 1px rgba(110, 139, 255, 0.12) inset, 0 34px 80px rgba(110, 139, 255, 0.18);
+      }
+
+      .contrast-arrow {
+        display: grid;
+        place-items: center;
+        color: var(--indigo);
+      }
+
+      .contrast-arrow svg {
+        width: 30px;
+        height: 30px;
+      }
+
+      /* gentle arrow nudge + glow pulse — the "gather" motion */
+      @media (prefers-reduced-motion: no-preference) {
+        .contrast-arrow {
+          animation: contrast-arrow-nudge 2.8s var(--ease-out) infinite;
+        }
+
+        .contrast-arrow svg {
+          animation: contrast-arrow-glow 2.8s ease-in-out infinite;
+        }
+
+        @keyframes contrast-arrow-nudge {
+          0%, 100% {
+            transform: translateX(0);
+          }
+          42%, 58% {
+            transform: translateX(5px);
+          }
+        }
+
+        @keyframes contrast-arrow-glow {
+          0%, 100% {
+            filter: drop-shadow(0 0 7px rgba(110, 139, 255, 0.3));
+          }
+          50% {
+            filter: drop-shadow(0 0 16px rgba(110, 139, 255, 0.75));
+          }
+        }
+      }
+
+      @media (max-width: 760px) {
+        .contrast-inner {
+          grid-template-columns: 1fr;
+          gap: 18px;
+        }
+
+        .contrast-arrow {
+          animation: none;
+          transform: rotate(90deg);
+        }
       }
 
       /* ---------- bento features ---------- */
@@ -1250,7 +1409,7 @@
         filter: blur(calc((1 - var(--p, 1)) * 6px));
       }
 
-      .motion-scrub .scrub:not(.card):not(.data-row):not(.product-frame):not(.cta-panel) {
+      .motion-scrub .scrub:not(.card):not(.data-row):not(.product-frame):not(.cta-panel):not(.contrast-col) {
         transform: translateY(calc((1 - var(--p, 1)) * 34px));
       }
 
@@ -1474,7 +1633,7 @@
           <a href="#privacy">本地安放</a>
           <a href="#workflow">日常节奏</a>
         </div>
-        <a class="button small" href="https://minidesk.online" target="_blank" rel="noopener noreferrer">立即体验</a>
+        <a class="button small" href="https://minidesk.online" target="_blank" rel="noopener noreferrer">打开桌面</a>
         <button class="menu-toggle" type="button" aria-label="打开菜单" aria-expanded="false" aria-controls="mobile-menu">
           <svg class="icon-open" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" aria-hidden="true">
             <path d="M4 7h16M4 12h16M4 17h16" />
@@ -1490,7 +1649,7 @@
       <a href="#features">桌面感</a>
       <a href="#privacy">本地安放</a>
       <a href="#workflow">日常节奏</a>
-      <a class="button secondary" href="https://minidesk.online" target="_blank" rel="noopener noreferrer">立即体验 <span class="arrow">→</span></a>
+      <a class="button secondary" href="https://minidesk.online" target="_blank" rel="noopener noreferrer">打开我的桌面 <span class="arrow">→</span></a>
     </div>
 
     <main id="top">
@@ -1498,20 +1657,20 @@
         <div class="hero-content">
           <div class="hero-badge">
             <span class="dot"></span>
-            本地优先 · 无需注册 · 打开即用
+            本地优先 · 免注册 · 打开就在
           </div>
-          <h1 id="hero-title">一张<span class="grad">安静</span>的<br />小桌面。</h1>
+          <h1 id="hero-title">一张<span class="grad">安静</span>的小桌面</h1>
           <p class="hero-copy">
-            截图、便签、提醒和快捷动作都在这里。Mini Desk 把一切收进你的浏览器，但它不会催你成为机器。
+            截图、链接、念头、待办——都收进一张桌面，打开就在，关上就静，不催你成为机器。
           </p>
           <div class="hero-actions">
             <a class="button" href="https://minidesk.online" target="_blank" rel="noopener noreferrer">
-              立即体验
+              打开我的桌面
               <span class="arrow">→</span>
             </a>
-            <a class="button secondary" href="#features">感受桌面</a>
+            <a class="button secondary" href="#features">先逛一圈</a>
           </div>
-          <div class="hero-note">DO LESS, DO IT WELL — 桌面端体验更完整</div>
+          <div class="hero-note">DO LESS, DO IT WELL · 电脑浏览器打开，体验最完整</div>
         </div>
         <div class="hero-visual">
           <div class="browser-frame">
@@ -1525,12 +1684,62 @@
         </div>
       </section>
 
+      <section class="contrast" aria-label="现在与 Mini Desk 的对比">
+        <div class="contrast-inner">
+          <div class="contrast-col before">
+            <span class="ck">现在 · 你的今天散在</span>
+            <ul>
+              <li>
+                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M4 5h16v12H4z" /><path d="M4 10h16M8 14h4" /></svg>
+                微信里那张刚截的图
+              </li>
+              <li>
+                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><circle cx="12" cy="12" r="9" /><path d="M3 12h18M12 3a14 14 0 0 1 0 18M12 3a14 14 0 0 0 0 18" /></svg>
+                浏览器开着的一排标签
+              </li>
+              <li>
+                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M5 4h11l3 3v13H5z" /><path d="M16 4v3h3M9 12h6M9 16h4" /></svg>
+                备忘录里没写完的半句话
+              </li>
+              <li>
+                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M12 3a4 4 0 0 0-4 4v1a3 3 0 0 0-3 3v2a3 3 0 0 0 3 3 4 4 0 0 0 8 0 3 3 0 0 0 3-3v-2a3 3 0 0 0-3-3V7a4 4 0 0 0-4-4z" /></svg>
+                脑子里那件一直没做的事
+              </li>
+            </ul>
+          </div>
+          <div class="contrast-arrow" aria-hidden="true">
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M5 12h14M13 6l6 6-6 6" /></svg>
+          </div>
+          <div class="contrast-col after">
+            <span class="ck">Mini Desk · 全部收进一张桌面</span>
+            <ul>
+              <li>
+                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M20 6 9 17l-5-5" /></svg>
+                截图、链接、想法、待办，各归其位
+              </li>
+              <li>
+                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M20 6 9 17l-5-5" /></svg>
+                打开就在，本地保存，只有你能看见
+              </li>
+              <li>
+                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M20 6 9 17l-5-5" /></svg>
+                关上就静，桌面会提醒你慢下来
+              </li>
+              <li>
+                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M20 6 9 17l-5-5" /></svg>
+                离开再回来，上次的线索还在
+              </li>
+            </ul>
+          </div>
+        </div>
+      </section>
+
       <section id="features" class="section" aria-labelledby="features-title">
         <div class="section-inner">
           <div class="eyebrow">Features</div>
           <h2 id="features-title">先放下，再慢慢推进。</h2>
           <p class="section-copy">
-            Mini Desk 不把桌面变成复杂系统。它只是把每天容易散掉的几样东西放近一点。
+            Mini Desk 不是一个会给你派活的系统。它只是把每天容易散掉的几样东西——放近一点，收好一点。
           </p>
           <div class="bento">
             <article class="card span-4">
@@ -1542,7 +1751,7 @@
                 </svg>
               </div>
               <h3>截图先收好</h3>
-              <p>Ctrl+V 粘贴截图，缩略图、预览、复制和拖拽排序都在同一处，不急着打断当下。</p>
+              <p>Ctrl+V 一粘，截图就收进桌面。不用再翻聊天记录、不用堆满桌面——想要的那张图，一抬眼就在。</p>
               <span class="tag">Ctrl + V</span>
             </article>
             <article class="card span-2">
@@ -1552,7 +1761,7 @@
                 </svg>
               </div>
               <h3>动作少走路</h3>
-              <p>常用链接、复制文本和 API 请求做成按钮，重复操作轻轻点一下就好。</p>
+              <p>每天要打开十次的链接、要复制十次的文本，做成一个按钮。点一下，省下十次来回。</p>
             </article>
             <article class="card span-2">
               <div class="card-icon t-mint">
@@ -1561,7 +1770,7 @@
                 </svg>
               </div>
               <h3>提醒不催人</h3>
-              <p>星标事项聚到今日重点，截止时间和完成进度看得见，但语气保持克制。</p>
+              <p>今天真正要做的几件事，轻轻放在眼前。它会让你看见进度，但绝不会用红点催你。</p>
             </article>
             <article class="card span-4">
               <div class="card-icon t-violet">
@@ -1572,7 +1781,7 @@
                 </svg>
               </div>
               <h3>想法有抽屉</h3>
-              <p>临时想法和推进步骤可以先写下来，和图片、动作、提醒放在同一张桌面。</p>
+              <p>脑子里冒出来的念头，随手就放进抽屉。和图、链接、待办待在同一张桌面，再也不会想了就忘。</p>
               <span class="tag">Notes · Images · Actions · Reminders</span>
             </article>
           </div>
@@ -1581,9 +1790,9 @@
 
       <section class="principle-band" aria-labelledby="principle-title">
         <div class="kicker">设计原则</div>
-        <blockquote id="principle-title">桌面会呼吸。东西多起来，它会轻轻提醒你降温。</blockquote>
+        <blockquote id="principle-title">桌面会呼吸。东西堆多了，它会轻轻提醒你慢下来。</blockquote>
         <p>
-          内容少的时候，它是轻盈的；东西多起来，它会变成略满；再堆下去，它会提醒你：桌面有点热，要不要一起降温。
+          内容少的时候它是轻盈的，多起来会略满，再堆下去——它会提醒你：桌面有点热了，要不要一起降降温。这不是又一张待办清单，而是一张会替你看着自己的桌面。少一点，慢一点，反而做得完。
         </p>
       </section>
 
@@ -1591,9 +1800,9 @@
         <div class="section-inner privacy-layout">
           <div>
             <div class="eyebrow">Privacy</div>
-            <h2 id="privacy-title">东西留在你的浏览器里。</h2>
+            <h2 id="privacy-title">最让人安心的：它只待在你这里。</h2>
             <p class="section-copy">
-              Mini Desk 默认不依赖后端。看板状态、图片原文和自定义资源都安放在当前浏览器站点内，没有账号，也没有上传。
+              不用上传，不用账号，也不用去相信某个云。桌面上的每一笔、每一张图，都只活在这台设备、这个浏览器里——它是你的桌面，只有你能看见。
             </p>
           </div>
           <div class="data-stack" aria-label="本地数据安放方式">
@@ -1620,9 +1829,9 @@
           </div>
           <div>
             <div class="eyebrow">Workflow</div>
-            <h2 id="workflow-title">打开就是桌面，不需要再搭流程。</h2>
+            <h2 id="workflow-title">打开，就是你的桌面。</h2>
             <p class="section-copy">
-              先把零碎材料放下，再把重复动作收短，最后只盯住今天真正要推进的几件事。
+              不用搭建、不用配置。打开就是一张空桌面——先把零碎放下，再把重复收短，最后只盯今天真正要推完的几件事。
             </p>
             <div class="workflow-list">
               <div class="workflow-item">
@@ -1661,23 +1870,24 @@
       <section class="section cta-section" aria-labelledby="cta-title">
         <div class="section-inner">
           <div class="cta-panel">
-            <h2 id="cta-title">给今天留一张安静桌面。</h2>
+            <h2 id="cta-title">你离一张安静的桌面，只差一次打开。</h2>
             <p class="section-copy">
-              适合在电脑浏览器中使用。无需注册后端服务，打开就能把零散工作先放好。
+              电脑浏览器打开即可，免注册、免安装。把你今天散落的零碎，现在就收进一张桌面。
             </p>
             <div class="cta-actions" aria-label="行动入口">
               <a class="button" href="https://minidesk.online" target="_blank" rel="noopener noreferrer">
-                立即体验 minidesk.online
+                打开我的桌面
                 <span class="arrow">→</span>
               </a>
             </div>
+            <p class="hero-note" style="margin-top: 20px;">minidesk.online · 免费 · 免登录 · 数据只留在你这里</p>
           </div>
         </div>
       </section>
     </main>
 
     <footer class="site-footer">
-      <span>Mini Desk · 一张本地优先的安静小桌面</span>
+      <span>Mini Desk · 为不想被工具推着走的人，做了一张不催人的桌面</span>
       <div class="footer-links">
         <a class="footer-icon-link" href="https://github.com/xiangjianan/mini-desk" target="_blank" rel="noopener noreferrer" aria-label="查看项目源码">
           <svg viewBox="0 0 24 24" aria-hidden="true">
@@ -1807,7 +2017,7 @@
         });
 
         /* ---------- card spotlight (pointer track) ---------- */
-        document.querySelectorAll(".card").forEach((card) => {
+        document.querySelectorAll(".card, .contrast-col").forEach((card) => {
           card.addEventListener("pointermove", (event) => {
             const rect = card.getBoundingClientRect();
             card.style.setProperty("--mx", `${event.clientX - rect.left}px`);
@@ -1845,7 +2055,7 @@
 
         const scrubTargets = [
           ...document.querySelectorAll(
-            ".eyebrow, .section h2, .section-copy, .card, .data-row, .product-frame, .workflow-item, .cta-panel, .principle-band .kicker, .principle-band blockquote, .principle-band p",
+            ".eyebrow, .section h2, .section-copy, .card, .data-row, .product-frame, .workflow-item, .cta-panel, .principle-band .kicker, .principle-band blockquote, .principle-band p, .contrast-col",
           ),
         ];
         scrubTargets.forEach((element) => element.classList.add("scrub"));
