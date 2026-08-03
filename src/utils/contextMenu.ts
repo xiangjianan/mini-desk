@@ -1,6 +1,14 @@
 const CONTEXT_MENU_OPENED = "mini-desk-context-menu-opened";
 
-export const CONTEXT_MENU_Z_INDEX = 3400;
+/**
+ * z-index for transient overlays (context menus, dropdowns, confirm bubbles).
+ * This MUST sit above the modal layer (10000, see styles.css
+ * `.n-modal-container`/`.n-modal-body-wrapper`) so overlays opened from within a
+ * modal — right-clicking an image inside the preview, the quick-action menu, or
+ * the companion confirm bubble shown over a workspace/tag dialog — are never
+ * trapped behind the modal's full-screen frosted mask.
+ */
+export const CONTEXT_MENU_Z_INDEX = 10100;
 
 let nextContextMenuId = 0;
 

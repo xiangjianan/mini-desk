@@ -26,6 +26,20 @@ describe("WorkspaceSwitcher", () => {
     expect(wrapper.emitted("switch")).toEqual([["b"]]);
   });
 
+  it("再次点击触发按钮收起下拉框（一展开一收起）", async () => {
+    const wrapper = mount(WorkspaceSwitcher, {
+      props: { workspaces, activeWorkspaceId: "a", theme: "light", language: "zh" },
+      attachTo: document.body,
+    });
+    const trigger = wrapper.find('[data-testid="workspace-trigger"]');
+    await trigger.trigger("click");
+    expect(trigger.attributes("aria-expanded")).toBe("true");
+    expect(wrapper.find('[data-testid="workspace-option-b"]').exists()).toBe(true);
+    await trigger.trigger("click");
+    expect(trigger.attributes("aria-expanded")).toBe("false");
+    wrapper.unmount();
+  });
+
   it("点击新建按钮 emit create", async () => {
     const wrapper = mount(WorkspaceSwitcher, {
       props: { workspaces, activeWorkspaceId: "a", theme: "light", language: "zh" },
@@ -33,6 +47,19 @@ describe("WorkspaceSwitcher", () => {
     await wrapper.find('[data-testid="workspace-trigger"]').trigger("click");
     await wrapper.find('[data-testid="workspace-create-button"]').trigger("click");
     expect(wrapper.emitted("create")).toHaveLength(1);
+  });
+
+  it("点击导入按钮 emit import（带 anchor）", async () => {
+    const wrapper = mount(WorkspaceSwitcher, {
+      props: { workspaces, activeWorkspaceId: "a", theme: "light", language: "zh" },
+      attachTo: document.body,
+    });
+    await wrapper.find('[data-testid="workspace-trigger"]').trigger("click");
+    await wrapper.find('[data-testid="workspace-import-button"]').trigger("click");
+    const importEvents = wrapper.emitted("import");
+    expect(importEvents).toHaveLength(1);
+    expect(importEvents?.[0]?.[0]).toBeInstanceOf(HTMLElement);
+    wrapper.unmount();
   });
 
   it("点击删除 emit delete", async () => {

@@ -203,7 +203,10 @@ describe("Naive UI component usage", () => {
   }
 }`);
     expect(styles).toMatch(/body:has\(\.image-preview\) \.image-panel \.n-scrollbar\s*\{[^}]*pointer-events: auto/s);
-    expect(styles).toMatch(/\.focus-companion\s*\{[^}]*z-index: 4400/s);
+    // Companion GIF sits above the modal mask (10000) so it isn't hidden when a
+    // confirm bubble shows over a workspace/tag dialog, but below the overlay
+    // tier (10100) so menus/bubbles still paint above the GIF.
+    expect(styles).toMatch(/\.focus-companion\s*\{[^}]*z-index: 10050/s);
   });
 
   it("reuses the normal image list while previewing on the right side", () => {
@@ -445,8 +448,11 @@ describe("Naive UI component usage", () => {
     expect(styles).toMatch(/\.n-dropdown-menu,[\s\S]*?\.shortcut-help-modal\.n-card\s*\{[^}]*background: var\(--popover\) !important/s);
     expect(styles).toMatch(/\.n-dropdown-menu,[\s\S]*?\.shortcut-help-modal\.n-card\s*\{[^}]*color: var\(--popover-foreground\) !important/s);
     expect(styles).toMatch(/\.n-dropdown-menu,[\s\S]*?\.shortcut-help-modal\.n-card\s*\{[^}]*box-shadow: 0 6px 14px rgba\(15, 23, 42, 0\.045\) !important/s);
-    expect(contextMenu).toContain("export const CONTEXT_MENU_Z_INDEX = 3400");
-    expect(companion).toContain(':z-index="3300"');
+    // Transient overlays (context menus, dropdowns, the companion confirm
+    // bubble) must render ABOVE the modal layer (10000) so they are never
+    // trapped behind a modal's full-screen frosted mask.
+    expect(contextMenu).toContain("export const CONTEXT_MENU_Z_INDEX = 10100");
+    expect(companion).toContain(':z-index="CONTEXT_MENU_Z_INDEX"');
     for (const file of dropdownFiles) {
       const source = read(file);
       expect(source, file).toContain("CONTEXT_MENU_Z_INDEX");

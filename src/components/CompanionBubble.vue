@@ -384,7 +384,7 @@ function isPointInsideElement(x: number, y: number, element: HTMLElement | null)
       :show-arrow="true"
       :arrow-point-to-center="true"
       :animated="false"
-      :z-index="3300"
+      :z-index="CONTEXT_MENU_Z_INDEX"
       :class="['companion-popover-shell', { 'is-popover-fading': retainingPopoverContent }]"
       arrow-class="companion-popover-arrow"
       :style="{ maxWidth: '240px', '--n-box-shadow': 'none' }"

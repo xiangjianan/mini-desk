@@ -2138,6 +2138,69 @@ describe("App shell", () => {
     }
   });
 
+  it("跨空间到期提醒：非激活空间到期时弹出切换气泡，点击否视为忽略", async () => {
+    vi.useFakeTimers();
+    vi.setSystemTime(new Date(2026, 4, 25, 8, 0, 0));
+    const warnSpy = vi.spyOn(console, "warn").mockImplementation(() => undefined);
+    const notificationSpy = vi.fn();
+    class NotificationStub {
+      static permission: NotificationPermission = "granted";
+      static requestPermission = vi.fn();
+      constructor(title: string, options?: NotificationOptions) {
+        notificationSpy(title, options);
+      }
+    }
+    vi.stubGlobal("Notification", NotificationStub);
+
+    const overdue = new Date(2026, 4, 25, 7, 0, 0).getTime();
+    localStorage.setItem(
+      STORAGE_KEY,
+      JSON.stringify({
+        ...defaultState(),
+        activeWorkspaceId: "ws-b",
+        workspaces: [
+          {
+            ...defaultWorkspace("ws-a"),
+            customTitles: { ...defaultWorkspace("ws-a").customTitles, "board-title": "空间一" },
+            todoLists: [{ id: "morning", title: "", collapsed: false, compact: false }],
+            todos: { morning: [{ id: "todo-1", text: "空间一的提醒", done: false, notifyAt: overdue }] },
+            showCompletedTodos: { morning: false },
+          },
+          {
+            ...defaultWorkspace("ws-b"),
+            customTitles: { ...defaultWorkspace("ws-b").customTitles, "board-title": "空间二" },
+          },
+        ],
+      }),
+    );
+    const wrapper = mountApp();
+
+    try {
+      await nextTick();
+      await vi.advanceTimersByTimeAsync(200);
+      await nextTick();
+
+      // Active workspace is 空间二; the overdue reminder lives in 空间一 → cross-workspace prompt.
+      const confirm = wrapper.get('[data-testid="companion-confirm"]');
+      expect(confirm.text()).toContain("空间一");
+      expect(confirm.text()).toContain("空间一的提醒");
+      // Native notifications are NOT fired for the non-active workspace before switching.
+      expect(notificationSpy).not.toHaveBeenCalled();
+
+      await wrapper.get('[data-testid="companion-no"]').trigger("click");
+      await nextTick();
+
+      // "No" = ignore: stay in 空间二, still no native notification.
+      expect(JSON.parse(localStorage.getItem(STORAGE_KEY) || "{}").activeWorkspaceId).toBe("ws-b");
+      expect(notificationSpy).not.toHaveBeenCalled();
+    } finally {
+      wrapper.unmount();
+      warnSpy.mockRestore();
+      vi.unstubAllGlobals();
+      vi.useRealTimers();
+    }
+  });
+
   it("omits the reminder notification GIF when the companion GIF theme is none", async () => {
     vi.useFakeTimers();
     vi.setSystemTime(new Date(2026, 4, 25, 8, 0, 0));

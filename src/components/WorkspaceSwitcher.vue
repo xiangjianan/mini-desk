@@ -1,7 +1,7 @@
 <script setup lang="ts">
-import { computed, ref } from "vue";
+import { computed, nextTick, onUnmounted, ref, watch } from "vue";
 import { NPopover, NIcon } from "naive-ui";
-import { ChevronDownOutline, AddOutline, CreateOutline, TrashOutline, DownloadOutline } from "@vicons/ionicons5";
+import { ChevronDownOutline, AddOutline, CreateOutline, TrashOutline, DownloadOutline, CloudUploadOutline } from "@vicons/ionicons5";
 import { getUiText } from "../state/i18n";
 import type { AppLanguage, ThemeMode, WorkspaceData } from "../types";
 import miniDeskLogo from "../../static/img/mini-desk-cat.png?url";
@@ -21,11 +21,13 @@ const emit = defineEmits<{
   delete: [id: string, anchor: HTMLElement];
   reorder: [dragId: string, targetId: string];
   exportWorkspace: [id: string, anchor: HTMLElement];
+  import: [anchor: HTMLElement];
 }>();
 
 const text = computed(() => getUiText(props.language));
 const open = ref(false);
 const dragId = ref<string | null>(null);
+let outsideClickGuard: ((event: MouseEvent) => void) | null = null;
 
 const activeWorkspace = computed<WorkspaceData>(
   () => props.workspaces.find((workspace) => workspace.id === props.activeWorkspaceId) ?? props.workspaces[0],
@@ -40,6 +42,38 @@ function toggleOpen(): void {
 function close(): void {
   open.value = false;
 }
+
+// Race-free outside-click handling. Naive UI's `@clickoutside` and the trigger's
+// own `@click="toggleOpen"` can fire on the same gesture (mousedown closes via
+// clickoutside, then click re-toggles open), so a second trigger click never
+// collapses the dropdown. We listen on the same `click` event and exclude the
+// trigger + popover content, making the trigger a true toggle and outside
+// clicks a clean close with no overlap.
+function attachOutsideClickGuard(): void {
+  if (outsideClickGuard) return;
+  outsideClickGuard = (event: MouseEvent): void => {
+    const target = event.target as HTMLElement | null;
+    if (!target) return;
+    if (target.closest('[data-testid="workspace-trigger"]')) return;
+    if (target.closest(".workspace-switcher")) return;
+    close();
+  };
+  document.addEventListener("click", outsideClickGuard);
+}
+
+function detachOutsideClickGuard(): void {
+  if (!outsideClickGuard) return;
+  document.removeEventListener("click", outsideClickGuard);
+  outsideClickGuard = null;
+}
+
+watch(open, (isOpen) => {
+  // nextTick avoids catching the opening click itself.
+  if (isOpen) void nextTick(attachOutsideClickGuard);
+  else detachOutsideClickGuard();
+});
+
+onUnmounted(detachOutsideClickGuard);
 
 function handleSwitch(id: string): void {
   if (id === props.activeWorkspaceId) {
@@ -64,6 +98,13 @@ function handleExport(event: MouseEvent, id: string): void {
   close();
 }
 
+function handleImport(event: MouseEvent): void {
+  event.stopPropagation();
+  const anchor = event.currentTarget as HTMLElement;
+  emit("import", anchor);
+  close();
+}
+
 function onDragStart(id: string): void {
   dragId.value = id;
 }
@@ -81,7 +122,6 @@ function onDrop(targetId: string): void {
     :show="open"
     :width="248"
     :to="false"
-    @clickoutside="close"
   >
     <template #trigger>
       <button
@@ -89,6 +129,7 @@ function onDrop(targetId: string): void {
         class="workspace-trigger"
         data-testid="workspace-trigger"
         :aria-label="text.app.workspaces"
+        :aria-expanded="open"
         @click="toggleOpen"
       >
         <img class="workspace-trigger-logo" :src="logoSrc" alt="" aria-hidden="true" width="20" height="20" />
@@ -153,6 +194,16 @@ function onDrop(targetId: string): void {
         <button type="button" class="workspace-switcher-create" data-testid="workspace-create-button" @click="emit('create')">
           <NIcon :component="AddOutline" size="14" />
           <span>{{ text.app.newWorkspace }}</span>
+        </button>
+        <button
+          type="button"
+          class="workspace-switcher-import"
+          data-testid="workspace-import-button"
+          :aria-label="text.app.workspaceImport"
+          @click="handleImport($event)"
+        >
+          <NIcon :component="CloudUploadOutline" size="14" />
+          <span>{{ text.app.workspaceImport }}</span>
         </button>
       </div>
     </div>

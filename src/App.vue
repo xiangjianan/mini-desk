@@ -449,7 +449,7 @@ function reorderSpaces(dragId: string, targetId: string): void {
 }
 
 function workspaceCreatedMessage(): string {
-  return state.language === "en" ? "Workspace created (｡•̀ᴗ-)✧" : "已新建工作空间 (｡•̀ᴗ-)✧";
+  return state.language === "en" ? "Workspace created (｡•̀ᴗ-)✧" : "已新建空间 (｡•̀ᴗ-)✧";
 }
 
 function createWorkspace(title: string, slogan: string): void {
@@ -2683,34 +2683,132 @@ function refreshTodoNotifications(): void {
   scheduleNextTodoNotification();
 }
 
-function triggerDueTodoNotifications(): void {
-  const notificationApi = getNotificationApi();
-  pruneSentTodoNotifications();
-  if (!notificationApi || notificationApi.permission !== "granted") return;
-  const now = Date.now();
-  const notificationIcon = getReminderNotificationIcon();
-  for (const period of getTodoListIds()) {
-    for (const todo of getTodos(period)) {
-      if (todo.done || !Number.isFinite(todo.notifyAt) || todo.notifyAt === undefined || todo.notifyAt > now) continue;
-      const key = getTodoNotificationKey(period, todo);
-      if (sentTodoNotifications.has(key)) continue;
-      const title = `【${getTodoListTitle(period)}】`;
-      const body = formatNotificationBody(todo.text, state.language);
-      const options: NotificationOptions = {
-        body,
-        tag: getTodoNotificationTag(todo),
-      };
-      if (notificationIcon) options.icon = notificationIcon;
-      try {
-        new notificationApi(title, options);
-        sentTodoNotifications.add(key);
-        startNotificationTitleFlash();
-        queueTodoNotificationFlash(period, todo.id);
-      } catch (error) {
-        console.warn("Failed to show reminder notification", error);
+interface NotifiableTodo {
+  workspaceId: string;
+  workspace: WorkspaceData;
+  period: TodoPeriod;
+  todo: TodoItem;
+}
+
+/** Every todo carrying a reminder across ALL workspaces. Reminders fire
+ *  workspace-agnostically: a due reminder in a non-active workspace must still
+ *  surface, otherwise it silently waits until the user switches back. */
+function collectNotifiableTodos(): NotifiableTodo[] {
+  const result: NotifiableTodo[] = [];
+  for (const workspace of state.workspaces) {
+    for (const list of workspace.todoLists) {
+      const period = list.id;
+      for (const todo of workspace.todos[period] ?? []) {
+        result.push({ workspaceId: workspace.id, workspace, period, todo });
       }
     }
   }
+  return result;
+}
+
+function getWorkspaceTodoListTitle(workspace: WorkspaceData, listId: TodoListId): string {
+  const list = workspace.todoLists.find((item) => item.id === listId);
+  if (list?.title) return getDisplayTodoListTitle(list, state.language);
+  return getDefaultTitles(state.language)[`todo-${listId}-title`] ?? uiText.value.app.reminderFallback;
+}
+
+function fireNativeTodoNotification(item: NotifiableTodo): boolean {
+  const notificationApi = getNotificationApi();
+  if (!notificationApi || notificationApi.permission !== "granted") return false;
+  const title = `【${getWorkspaceTodoListTitle(item.workspace, item.period)}】`;
+  const options: NotificationOptions = {
+    body: formatNotificationBody(item.todo.text, state.language),
+    tag: getTodoNotificationTag(item.todo),
+  };
+  const icon = getReminderNotificationIcon();
+  if (icon) options.icon = icon;
+  try {
+    new notificationApi(title, options);
+    return true;
+  } catch (error) {
+    console.warn("Failed to show reminder notification", error);
+    return false;
+  }
+}
+
+function triggerDueTodoNotifications(): void {
+  pruneSentTodoNotifications();
+  const now = Date.now();
+  const all = collectNotifiableTodos();
+
+  // Phase 1 — active workspace: fire native notifications + in-app flash
+  // (permission-gated, unchanged behavior).
+  for (const item of all) {
+    if (item.workspaceId !== state.activeWorkspaceId) continue;
+    const { period, todo } = item;
+    if (todo.done || !Number.isFinite(todo.notifyAt) || todo.notifyAt === undefined || todo.notifyAt > now) continue;
+    const key = getTodoNotificationKey(item.workspaceId, period, todo);
+    if (sentTodoNotifications.has(key)) continue;
+    // On constructor failure, leave the todo unsent so the fallback interval
+    // retries it (the browser Notification constructor can fail transiently).
+    if (!fireNativeTodoNotification(item)) continue;
+    sentTodoNotifications.add(key);
+    startNotificationTitleFlash();
+    queueTodoNotificationFlash(period, todo.id);
+  }
+
+  // Phase 2 — non-active workspace: prompt to switch (one at a time). This is
+  // an in-app companion-bubble prompt, so it does NOT depend on notification
+  // permission. Skip while another confirm is mid-flight; the todo stays unsent
+  // so the next refresh retries instead of being silently dropped.
+  if (pendingConfirm.value || shouldBlockBoardEffects()) return;
+  let target: NotifiableTodo | undefined;
+  for (const item of all) {
+    if (item.workspaceId === state.activeWorkspaceId) continue;
+    const { todo } = item;
+    if (todo.done || !Number.isFinite(todo.notifyAt) || todo.notifyAt === undefined || todo.notifyAt > now) continue;
+    if (sentTodoNotifications.has(getTodoNotificationKey(item.workspaceId, item.period, todo))) continue;
+    if (!target || (todo.notifyAt ?? 0) < (target.todo.notifyAt ?? 0)) target = item;
+  }
+  if (!target) return;
+  sentTodoNotifications.add(getTodoNotificationKey(target.workspaceId, target.period, target.todo));
+  startNotificationTitleFlash();
+  showCrossWorkspaceReminderPrompt(target);
+}
+
+/** Shows the "another workspace has a reminder — switch?" companion bubble. */
+function showCrossWorkspaceReminderPrompt(item: NotifiableTodo): void {
+  const workspaceTitle = item.workspace.customTitles["board-title"]?.trim() || "Mini Desk";
+  const prompt = uiText.value.app.crossWorkspaceReminder
+    .replace("{workspace}", workspaceTitle)
+    .replace("{text}", item.todo.text.trim());
+  window.clearTimeout(bubbleTimer.value);
+  window.clearTimeout(bubbleFadeTimer.value);
+  bubbleTimer.value = undefined;
+  bubbleRemainingMs.value = 0;
+  bubbleTimerStartedAt.value = 0;
+  bubbleTimerOptions.value = {};
+  bubbleMessage.value = prompt;
+  bubbleLink.value = null;
+  bubbleSignature.value = "";
+  pendingConfirm.value = {
+    onConfirm: () => void switchToWorkspaceWithReminder(item),
+    onCancel: undefined,
+    confirmText: uiText.value.common.yes,
+    cancelText: uiText.value.common.no,
+    danger: false,
+  };
+  activeGuideKey.value = null;
+  bubbleVisible.value = true;
+  companionFocused.value = true;
+  companionPosition.value = undefined;
+}
+
+/** "Yes" handler for the cross-workspace prompt: switch and surface the
+ *  reminder in context. The todo is already marked sent, so we fire it directly
+ *  rather than relying on the next scan. */
+async function switchToWorkspaceWithReminder(item: NotifiableTodo): Promise<void> {
+  if (item.workspaceId !== state.activeWorkspaceId) {
+    await switchWorkspace(item.workspaceId);
+  }
+  fireNativeTodoNotification(item);
+  startNotificationTitleFlash();
+  queueTodoNotificationFlash(item.period, item.todo.id);
 }
 
 function scheduleNextTodoNotification(): void {
@@ -2719,12 +2817,11 @@ function scheduleNextTodoNotification(): void {
   todoNotificationDueTimer.value = undefined;
   const now = Date.now();
   let nextNotifyAt: number | undefined;
-  for (const period of getTodoListIds()) {
-    for (const todo of getTodos(period)) {
-      if (todo.done || !Number.isFinite(todo.notifyAt) || todo.notifyAt === undefined || todo.notifyAt <= now) continue;
-      if (sentTodoNotifications.has(getTodoNotificationKey(period, todo))) continue;
-      if (nextNotifyAt === undefined || todo.notifyAt < nextNotifyAt) nextNotifyAt = todo.notifyAt;
-    }
+  for (const item of collectNotifiableTodos()) {
+    const { todo } = item;
+    if (todo.done || !Number.isFinite(todo.notifyAt) || todo.notifyAt === undefined || todo.notifyAt <= now) continue;
+    if (sentTodoNotifications.has(getTodoNotificationKey(item.workspaceId, item.period, todo))) continue;
+    if (nextNotifyAt === undefined || todo.notifyAt < nextNotifyAt) nextNotifyAt = todo.notifyAt;
   }
   if (nextNotifyAt === undefined) return;
   const delay = Math.min(nextNotifyAt - now, MAX_TODO_NOTIFICATION_TIMEOUT_MS);
@@ -2733,11 +2830,10 @@ function scheduleNextTodoNotification(): void {
 
 function pruneSentTodoNotifications(): void {
   const activeKeys = new Set<string>();
-  for (const period of getTodoListIds()) {
-    for (const todo of getTodos(period)) {
-      if (Number.isFinite(todo.notifyAt) && todo.notifyAt !== undefined && !todo.done) {
-        activeKeys.add(getTodoNotificationKey(period, todo));
-      }
+  for (const item of collectNotifiableTodos()) {
+    const { todo } = item;
+    if (Number.isFinite(todo.notifyAt) && todo.notifyAt !== undefined && !todo.done) {
+      activeKeys.add(getTodoNotificationKey(item.workspaceId, item.period, todo));
     }
   }
   for (const key of sentTodoNotifications) {
@@ -2745,8 +2841,8 @@ function pruneSentTodoNotifications(): void {
   }
 }
 
-function getTodoNotificationKey(period: TodoPeriod, todo: TodoItem): string {
-  return `${period}:${todo.id}:${todo.notifyAt}`;
+function getTodoNotificationKey(workspaceId: string, period: TodoPeriod, todo: TodoItem): string {
+  return `${workspaceId}:${period}:${todo.id}:${todo.notifyAt}`;
 }
 
 function getTodoNotificationTag(todo: TodoItem): string {
@@ -2924,12 +3020,6 @@ function getTodoListIds(): TodoListId[] {
   return activeWorkspace.value.todoLists.map((list) => list.id);
 }
 
-function getTodoListTitle(listId: TodoListId): string {
-  const list = activeWorkspace.value.todoLists.find((item) => item.id === listId);
-  if (list?.title) return getDisplayTodoListTitle(list, state.language);
-  return getDefaultTitles(state.language)[`todo-${listId}-title`] ?? uiText.value.app.reminderFallback;
-}
-
 function randomGuideMessage(key: GuideKey): string {
   const messages = getGuideMessages(state.language)[key];
   return messages[Math.floor(Math.random() * messages.length)];
@@ -3085,6 +3175,7 @@ function moveItem<T extends { id: string }>(items: T[], dragId: string, targetId
           @delete="deleteWorkspace"
           @reorder="reorderWorkspaceSections"
           @export-workspace="exportWorkspaceById"
+          @import="requestImport"
         />
       </template>
 
