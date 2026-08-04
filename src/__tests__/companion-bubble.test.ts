@@ -27,12 +27,15 @@ const buttonStub = {
 };
 
 describe("CompanionBubble", () => {
-  it("fades GIF images in and out when their source changes", () => {
+  it("uses a typed opacity transition for the GIF", () => {
     const component = readFileSync(resolve(__dirname, "../components/CompanionBubble.vue"), "utf8");
     const styles = readFileSync(resolve(__dirname, "../styles.css"), "utf8");
 
     expect(component).toContain('name="companion-gif-fade"');
-    expect(component).toContain(':key="gifSrc"');
+    // type="transition" makes Vue key the swap off the 0.26s opacity transition
+    // (transitionend) instead of the infinite companion-float animation, whose
+    // animationend never fires and would otherwise stall the new GIF ~4s.
+    expect(component).toContain('type="transition"');
     expect(styles).toContain(".companion-gif-fade-enter-active");
     expect(styles).toContain(".companion-gif-fade-leave-to");
   });
