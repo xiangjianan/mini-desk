@@ -12,6 +12,8 @@ export interface QuickTag {
   id: string;
   title: string;
   collapsed?: boolean;
+  /** One of QUICK_TAG_COLORS. Persisted so a tag keeps its color for its lifetime. */
+  color?: string;
 }
 export type TodoListId = string;
 export type TodoPeriod = TodoListId;

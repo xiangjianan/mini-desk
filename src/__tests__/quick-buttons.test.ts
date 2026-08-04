@@ -7,6 +7,7 @@ import {
   buildVisibleQuickButtonGroups,
   filterVisibleQuickButtonGroups,
   formatQuickCopiedPreview,
+  getQuickTagColor,
   hasOverloadedVisibleQuickButtonGroup,
 } from "../state/quickButtons";
 import { globalSearchQuery, resetGlobalSearch, setGlobalSearch } from "../state/globalSearch";
@@ -926,7 +927,7 @@ describe("QuickButtons", () => {
     await wrapper.get(".quick-tag-name-input").trigger("blur");
     await wrapper.get(".quick-tag-delete").trigger("click");
 
-    expect(wrapper.emitted("saveTag")?.[1]).toEqual([{ id: "tag-work", title: "工作台" }]);
+    expect(wrapper.emitted("saveTag")?.[1]).toEqual([{ id: "tag-work", title: "工作台", color: getQuickTagColor(0) }]);
     expect(wrapper.emitted("deleteTag")?.[0]).toEqual(["tag-work", expect.any(HTMLElement)]);
 
     expect(wrapper.find(".quick-tag-save").exists()).toBe(false);

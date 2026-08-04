@@ -1,6 +1,7 @@
 import { DEFAULT_SPACE_ID, DEFAULT_SPACE_TITLE, DEFAULT_TODO_LISTS, DEFAULT_WORKSPACE_ID, LEGACY_STORAGE_KEY, defaultState, defaultWorkspace, STORAGE_KEY } from "./defaults";
 import { isValidDeadlineAt } from "./deadlines";
 import { normalizeCompanionGifTheme } from "./companionGifThemes";
+import { getQuickTagColor, normalizeQuickTagColor } from "./quickButtons";
 import { DEFAULT_LANGUAGE, DEFAULT_SPACE_TITLES, DEFAULT_TITLES_BY_LANGUAGE, LEGACY_DEFAULT_TITLES_BY_LANGUAGE, OLDER_LEGACY_DEFAULT_TITLES_BY_LANGUAGE, getLegacyDefaultTodoLists, getUiText, normalizeLanguage } from "./i18n";
 import type {
   AppLanguage,
@@ -584,16 +585,17 @@ export function normalizeQuickTags(tags: unknown): QuickTag[] {
   if (!Array.isArray(tags)) return [];
   const seen = new Set<string>();
   return tags
-    .map((item) => {
+    .map((item, index): QuickTag | null => {
       if (!isPlainObject(item)) return null;
       const record = item as Record<string, unknown>;
       const id = typeof record.id === "string" ? record.id.trim() : "";
       const title = typeof record.title === "string" ? record.title.trim() : "";
       if (!id || !title || seen.has(id)) return null;
       seen.add(id);
-      return { id, title, ...(record.collapsed === true ? { collapsed: true } : {}) };
+      const color = normalizeQuickTagColor(record.color, getQuickTagColor(index));
+      return { id, title, color, ...(record.collapsed === true ? { collapsed: true } : {}) };
     })
-    .filter((item): item is QuickTag => Boolean(item));
+    .filter((item): item is QuickTag => item !== null);
 }
 
 export function normalizeQuickButtons(buttons: unknown, language = "zh", quickTags: QuickTag[] = []): QuickButton[] {

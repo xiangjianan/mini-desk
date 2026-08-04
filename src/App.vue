@@ -49,7 +49,7 @@ import {
 } from "./state/todos";
 import { defaultState, STORAGE_KEY } from "./state/defaults";
 import { createWorkspaceData, ensureUniqueWorkspaceTitle, removeWorkspace, reorderWorkspaces } from "./state/workspaces";
-import { QUICK_BUTTON_OTHER_GROUP_ID, QUICK_DENSITY_THRESHOLD, formatQuickCopiedPreview } from "./state/quickButtons";
+import { QUICK_BUTTON_OTHER_GROUP_ID, QUICK_DENSITY_THRESHOLD, formatQuickCopiedPreview, getQuickTagColor } from "./state/quickButtons";
 import {
   createId,
   exportJsonState,
@@ -1388,17 +1388,18 @@ function resolveQuickTagId(tagTitle?: string): string | undefined {
   if (!title) return undefined;
   const existing = activeWorkspace.value.quickTags.find((tag) => tag.title === title);
   if (existing) return existing.id;
-  const tag = { id: createId(), title };
+  const tag = { id: createId(), title, color: getQuickTagColor(activeWorkspace.value.quickTags.length) };
   activeWorkspace.value.quickTags.push(tag);
   return tag.id;
 }
 
-function saveQuickTag(payload: { id?: string; title: string }): void {
+function saveQuickTag(payload: { id?: string; title: string; color?: string }): void {
   const title = payload.title.trim();
   if (!title) return;
   if (!payload.id) {
     if (activeWorkspace.value.quickTags.some((tag) => tag.title === title)) return;
-    activeWorkspace.value.quickTags.push({ id: createId(), title });
+    const color = payload.color ?? getQuickTagColor(activeWorkspace.value.quickTags.length);
+    activeWorkspace.value.quickTags.push({ id: createId(), title, color });
     persistNow();
     return;
   }
@@ -1411,6 +1412,7 @@ function saveQuickTag(payload: { id?: string; title: string }): void {
     activeWorkspace.value.quickTags = activeWorkspace.value.quickTags.filter((tag) => tag.id !== payload.id);
   } else {
     current.title = title;
+    if (payload.color) current.color = payload.color;
   }
   persistNow();
 }

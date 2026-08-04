@@ -7,7 +7,7 @@ import type { DropdownOption } from "naive-ui";
 import type { AppLanguage, GuideKey, QuickApiBodyType, QuickApiHeader, QuickApiMethod, QuickButton, QuickButtonType, QuickTag } from "../types";
 import { GUIDE_MENU_OPTION } from "../state/defaults";
 import { getUiText } from "../state/i18n";
-import { buildVisibleQuickButtonGroups, filterVisibleQuickButtonGroups, hasOverloadedVisibleQuickButtonGroup, QUICK_BUTTON_EMPTY_GROUP_ID, QUICK_DENSITY_THRESHOLD } from "../state/quickButtons";
+import { buildVisibleQuickButtonGroups, filterVisibleQuickButtonGroups, getQuickTagColor, hasOverloadedVisibleQuickButtonGroup, normalizeQuickTagColor, QUICK_BUTTON_EMPTY_GROUP_ID, QUICK_DENSITY_THRESHOLD, QUICK_TAG_COLORS, QUICK_TAG_DEFAULT_COLOR } from "../state/quickButtons";
 import { clearGlobalSearch, globalSearchNormalized, globalSearchQuery, setGlobalSearch } from "../state/globalSearch";
 import { CONTEXT_MENU_Z_INDEX, createExclusiveContextMenu } from "../utils/contextMenu";
 import { createDragAutoScroll, findDragScrollContainer } from "../utils/dragScroll";
@@ -38,7 +38,7 @@ const emit = defineEmits<{
   reorder: [dragId: string, targetId: string];
   reorderTag: [dragId: string, targetId: string];
   moveToTag: [buttonId: string, tagId?: string, targetId?: string];
-  saveTag: [payload: { id?: string; title: string }];
+  saveTag: [payload: { id?: string; title: string; color?: string }];
   toggleTagCollapsed: [id: string];
   deleteTag: [id: string, anchor?: HTMLElement];
   guide: [key: GuideKey, anchor: HTMLElement, immediate?: boolean];
@@ -50,7 +50,7 @@ const tagManagerOpen = ref(false);
 const editingId = ref<string | undefined>();
 const titleRef = ref<{ openMenuAt: (x: number, y: number, event?: Event) => void } | null>(null);
 type QuickApiHeaderFormRow = QuickApiHeader & { id: string };
-type QuickTagDraft = QuickTag & { titleDraft: string };
+type QuickTagDraft = QuickTag & { titleDraft: string; colorDraft: string };
 
 let headerRowId = 0;
 
@@ -210,7 +210,11 @@ function openEdit(id: string): void {
 }
 
 function refreshTagDrafts(): void {
-  tagDrafts.value = props.tags.map((tag) => ({ ...tag, titleDraft: tag.title }));
+  tagDrafts.value = props.tags.map((tag, index) => ({
+    ...tag,
+    titleDraft: tag.title,
+    colorDraft: normalizeQuickTagColor(tag.color, getQuickTagColor(index)),
+  }));
 }
 
 function openTagManager(anchor?: HTMLElement): void {
@@ -256,8 +260,15 @@ function addTag(): void {
 
 function saveTag(draft: QuickTagDraft): void {
   const title = draft.titleDraft.trim();
-  if (!title || title === draft.title) return;
-  emit("saveTag", { id: draft.id, title });
+  const color = draft.colorDraft;
+  if (!title) return;
+  if (title === draft.title && color === draft.color) return;
+  emit("saveTag", { id: draft.id, title, color });
+}
+
+function setTagColor(draft: QuickTagDraft, color: string): void {
+  draft.colorDraft = color;
+  emit("saveTag", { id: draft.id, title: draft.titleDraft.trim() || draft.title, color });
 }
 
 function deleteTag(id: string, event: MouseEvent): void {
@@ -661,12 +672,13 @@ function handleQuickGroupDrop(event: DragEvent, groupId: string): void {
     </div>
 
     <NScrollbar class="quick-buttons-scrollbar" :aria-label="uiText.quick.list" @click="closeMenu" @contextmenu="openAreaMenu">
-      <div class="quick-tag-groups">
+      <TransitionGroup tag="div" class="quick-tag-groups" name="quick-tag-group">
         <section
           v-for="group in groupedButtons"
           :key="group.id"
-          class="quick-tag-group"
+          :class="['quick-tag-group', { 'has-tag-color': Boolean(group.color) }]"
           :data-tag-id="group.id"
+          :style="group.color ? { '--tag-bg': group.color } : undefined"
           @dragover="handleTagDragOver($event, group.id)"
           @drop.stop.prevent="handleQuickGroupDrop($event, group.id)"
         >
@@ -750,7 +762,7 @@ function handleQuickGroupDrop(event: DragEvent, groupId: string): void {
             </TransitionGroup>
           </div>
         </section>
-      </div>
+      </TransitionGroup>
     </NScrollbar>
 
     <NDropdown
@@ -907,6 +919,27 @@ function handleQuickGroupDrop(event: DragEvent, groupId: string): void {
               @keydown.enter.prevent="saveTag(tag)"
               @blur="saveTag(tag)"
             />
+            <div class="quick-tag-color-picker" role="group" :aria-label="uiText.quick.tagColor">
+              <button
+                type="button"
+                class="quick-tag-color-swatch quick-tag-color-swatch--default"
+                :class="{ 'is-selected': tag.colorDraft === QUICK_TAG_DEFAULT_COLOR }"
+                :aria-label="uiText.quick.tagColorDefault"
+                :title="uiText.quick.tagColorDefault"
+                @click="setTagColor(tag, QUICK_TAG_DEFAULT_COLOR)"
+              />
+              <button
+                v-for="color in QUICK_TAG_COLORS"
+                :key="color"
+                type="button"
+                class="quick-tag-color-swatch"
+                :class="{ 'is-selected': tag.colorDraft === color }"
+                :style="{ '--swatch-color': color }"
+                :aria-label="color"
+                :title="color"
+                @click="setTagColor(tag, color)"
+              />
+            </div>
             <button
               type="button"
               class="quick-tag-delete icon-button"

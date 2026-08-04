@@ -20,6 +20,7 @@ import {
   starTodo,
   updateTodoText,
 } from "../state/todos";
+import { getQuickTagColor } from "../state/quickButtons";
 import type { BoardState } from "../types";
 
 describe("state compatibility", () => {
@@ -651,8 +652,8 @@ describe("state compatibility", () => {
     const ws = () => state.workspaces[0];
 
     expect(ws().quickTags).toEqual([
-      { id: "tag-a", title: "标签 A", collapsed: true },
-      { id: "tag-b", title: "标签 B" },
+      { id: "tag-a", title: "标签 A", collapsed: true, color: getQuickTagColor(0) },
+      { id: "tag-b", title: "标签 B", color: getQuickTagColor(1) },
     ]);
     expect(ws().quickButtons[0]).toMatchObject({ tagId: "tag-a" });
     expect(ws().quickButtons[1]).not.toHaveProperty("tagId");

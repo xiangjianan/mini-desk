@@ -2906,7 +2906,7 @@ describe("App shell", () => {
 
       const stored = JSON.parse(localStorage.getItem(STORAGE_KEY) || "{}");
       const workspace = stored.workspaces[0];
-      expect(workspace.quickTags).toEqual([{ id: expect.any(String), title: "工作" }]);
+      expect(workspace.quickTags).toEqual([{ id: expect.any(String), title: "工作", color: expect.any(String) }]);
       expect(workspace.quickButtons[0]).toMatchObject({
         title: "接口",
         tagId: workspace.quickTags[0].id,
@@ -2981,7 +2981,7 @@ describe("App shell", () => {
 
       const stored = JSON.parse(localStorage.getItem(STORAGE_KEY) || "{}");
       const workspace = stored.workspaces[0];
-      expect(workspace.quickTags).toEqual([{ id: "tag-a", title: "标签 A", collapsed: true }]);
+      expect(workspace.quickTags).toEqual([{ id: "tag-a", title: "标签 A", color: expect.any(String), collapsed: true }]);
     } finally {
       wrapper.unmount();
     }

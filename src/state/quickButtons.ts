@@ -7,11 +7,43 @@ export interface QuickButtonGroup {
   buttons: QuickButton[];
   reorderable: boolean;
   collapsed: boolean;
+  /** Resolved palette color; undefined for the untagged/empty groups (no tint). */
+  color?: string;
 }
 
 export const QUICK_BUTTON_EMPTY_GROUP_ID = "__empty";
 export const QUICK_BUTTON_OTHER_GROUP_ID = "__other";
 export const QUICK_DENSITY_THRESHOLD = 8;
+
+/**
+ * Subtle hue per quick-tag group so buttons in different groups are easy to tell
+ * apart. Cycled by group position (not persisted) — the goal is visual distinction
+ * in the moment, not a stable color identity per tag.
+ */
+export const QUICK_TAG_COLORS = [
+  "#3b82f6", // blue
+  "#22c55e", // green
+  "#f59e0b", // amber
+  "#a855f7", // purple
+  "#ec4899", // pink
+  "#14b8a6", // teal
+  "#ef4444", // red
+  "#6366f1", // indigo
+] as const;
+
+/** Sentinel for "use the default button color" (no tint): white in light, dark in dark. */
+export const QUICK_TAG_DEFAULT_COLOR = "default";
+
+export function getQuickTagColor(index: number): string {
+  const colors = QUICK_TAG_COLORS;
+  return colors[((index % colors.length) + colors.length) % colors.length];
+}
+
+/** Keep only values that are part of the system palette (or the default sentinel); otherwise fall back. */
+export function normalizeQuickTagColor(color: unknown, fallback: string): string {
+  if (color === QUICK_TAG_DEFAULT_COLOR) return QUICK_TAG_DEFAULT_COLOR;
+  return typeof color === "string" && (QUICK_TAG_COLORS as readonly string[]).includes(color) ? color : fallback;
+}
 
 export function buildVisibleQuickButtonGroups(
   buttons: QuickButton[],
@@ -30,11 +62,18 @@ export function buildVisibleQuickButtonGroups(
     else otherButtons.push(button);
   }
 
-  const groups = tags.flatMap((tag): QuickButtonGroup[] => {
+  const groups = tags.flatMap((tag, tagIndex): QuickButtonGroup[] => {
     const groupButtons = taggedButtons.get(tag.id) ?? [];
-    return groupButtons.length > 0
-      ? [{ id: tag.id, title: tag.title, buttons: groupButtons, reorderable: true, collapsed: Boolean(tag.collapsed) }]
-      : [];
+    if (groupButtons.length === 0) return [];
+    const resolvedColor = normalizeQuickTagColor(tag.color, getQuickTagColor(tagIndex));
+    return [{
+      id: tag.id,
+      title: tag.title,
+      buttons: groupButtons,
+      reorderable: true,
+      collapsed: Boolean(tag.collapsed),
+      color: resolvedColor === QUICK_TAG_DEFAULT_COLOR ? undefined : resolvedColor,
+    }];
   });
 
   if (otherButtons.length > 0) {

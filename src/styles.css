@@ -74,7 +74,7 @@
   --motion-ease: cubic-bezier(0.2, 0, 0, 1);
   --motion-spring: cubic-bezier(0.34, 1.42, 0.64, 1);
   --shadow-lift: 0 1px 2px rgba(15, 23, 42, 0.05), 0 10px 24px rgba(15, 23, 42, 0.1);
-  --shadow-quick-hover: 0 1px 2px rgba(15, 23, 42, 0.05), 0 4px 10px rgba(15, 23, 42, 0.08);
+  --shadow-quick-hover: 0 1px 2px rgba(15, 23, 42, 0.05), 0 2px 5px rgba(15, 23, 42, 0.07);
   --shadow-glow-primary: 0 0 0 1px color-mix(in srgb, var(--primary) 24%, transparent), 0 6px 18px color-mix(in srgb, var(--primary) 22%, transparent);
 }
 
@@ -117,7 +117,7 @@ html[data-theme="dark"] {
   --shadow-control: 0 1px 1px rgba(0, 0, 0, 0.18), 0 0 0 1px color-mix(in srgb, var(--border) 88%, transparent);
   --focus-ring: 0 0 0 3px color-mix(in srgb, var(--ring) 34%, transparent);
   --shadow-lift: 0 1px 2px rgba(0, 0, 0, 0.2), 0 14px 30px rgba(0, 0, 0, 0.32);
-  --shadow-quick-hover: 0 1px 2px rgba(0, 0, 0, 0.2), 0 5px 12px rgba(0, 0, 0, 0.3);
+  --shadow-quick-hover: 0 1px 2px rgba(0, 0, 0, 0.18), 0 2px 6px rgba(0, 0, 0, 0.24);
   --shadow-glow-primary: 0 0 0 1px color-mix(in srgb, var(--primary) 32%, transparent), 0 8px 22px color-mix(in srgb, var(--primary) 30%, transparent);
 }
 
@@ -2149,7 +2149,7 @@ button.quick-button {
 
 .quick-tag-manager-row {
   display: grid;
-  grid-template-columns: minmax(0, 1fr) 30px;
+  grid-template-columns: minmax(0, 1fr) auto 30px;
   min-width: 0;
   gap: 6px;
   align-items: center;
@@ -2168,6 +2168,52 @@ button.quick-button {
 .quick-tag-name-input,
 .quick-tag-new-input {
   min-width: 0;
+}
+
+/* Tag color picker in the tag manager — a compact row of palette swatches.
+   Only system-provided colors are offered (no custom picker). */
+.quick-tag-color-picker {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  flex-shrink: 0;
+}
+
+.quick-tag-color-swatch {
+  width: 18px;
+  height: 18px;
+  padding: 0;
+  border: 1px solid var(--swatch-color);
+  border-radius: 50%;
+  background: color-mix(in srgb, var(--swatch-color) 18%, var(--button));
+  cursor: pointer;
+  transition: transform var(--motion-fast) ease, box-shadow var(--motion-fast) ease;
+}
+
+/* Swatch fill mirrors the actual (tinted) button color in each theme; the raw
+   colored border keeps the small swatches easy to tell apart. */
+html[data-theme="dark"] .quick-tag-color-swatch {
+  background: color-mix(in srgb, var(--swatch-color) 24%, var(--button));
+}
+
+.quick-tag-color-swatch:hover {
+  transform: scale(1.15);
+}
+
+.quick-tag-color-swatch.is-selected {
+  box-shadow: 0 0 0 2px var(--card), 0 0 0 3px var(--swatch-color);
+}
+
+/* "Default" swatch = the plain button color (white in light, dark in dark),
+   i.e. no tag tint. Doubled class keeps specificity above the dark-theme
+   background override so --button wins in both themes. */
+.quick-tag-color-swatch.quick-tag-color-swatch--default {
+  background: var(--button);
+  border: 1px dashed var(--muted);
+}
+
+.quick-tag-color-swatch.quick-tag-color-swatch--default.is-selected {
+  box-shadow: 0 0 0 2px var(--card), 0 0 0 3px var(--muted);
 }
 
 .quick-tag-empty {
@@ -5006,6 +5052,42 @@ button.quick-button {
   background: var(--button-hover);
 }
 
+/* Subtle per-tag-group tint so buttons in different groups read as different
+   colors. --tag-bg is the tag's persisted palette color, set on each
+   .has-tag-color group in QuickButtons.vue (the untagged/empty groups stay
+   plain). Strength is kept low so it stays soft rather than loud. */
+.quick-tag-group.has-tag-color .quick-button,
+.quick-tag-group.has-tag-color button.quick-button {
+  background: color-mix(in srgb, var(--tag-bg) 18%, var(--button));
+}
+
+html[data-theme="dark"] .quick-tag-group.has-tag-color .quick-button,
+html[data-theme="dark"] .quick-tag-group.has-tag-color button.quick-button {
+  background: color-mix(in srgb, var(--tag-bg) 24%, var(--button));
+}
+
+/* Hover deepens the SAME hue (not the global primary tint), so the hovered
+   button stays tonally consistent with its group. !important is needed to
+   override the generic button-hover rule further down. */
+.quick-tag-group.has-tag-color .quick-button:hover,
+.quick-tag-group.has-tag-color .quick-button:focus-visible,
+.quick-tag-group.has-tag-color button.quick-button:hover,
+.quick-tag-group.has-tag-color button.quick-button:focus-visible {
+  background: color-mix(in srgb, var(--tag-bg) 30%, var(--button)) !important;
+}
+
+html[data-theme="dark"] .quick-tag-group.has-tag-color .quick-button:hover,
+html[data-theme="dark"] .quick-tag-group.has-tag-color .quick-button:focus-visible,
+html[data-theme="dark"] .quick-tag-group.has-tag-color button.quick-button:hover,
+html[data-theme="dark"] .quick-tag-group.has-tag-color button.quick-button:focus-visible {
+  background: color-mix(in srgb, var(--tag-bg) 38%, var(--button)) !important;
+}
+
+/* Animate tag groups sliding into place when the tag list is reordered. */
+.quick-tag-group-move {
+  transition: transform var(--motion-medium) var(--motion-spring);
+}
+
 .todo-section {
   border-bottom-color: color-mix(in srgb, var(--border) 78%, transparent);
 }
@@ -6591,7 +6673,6 @@ body,
 .quick-button:hover,
 .quick-button:focus-visible {
   box-shadow: var(--shadow-quick-hover);
-  transform: translateY(-1px);
 }
 
 .quick-button:active {
