@@ -195,7 +195,6 @@ const ABOUT_MESSAGE_DURATION_MS = 10000;
 const COMPANION_FADE_MS = 2000;
 const MIN_COMPANION_POPOVER_RIGHT_EDGE = 260;
 const DEFAULT_BOARD_TITLE = "Mini Desk";
-const DEFAULT_BOARD_SLOGAN = "Do less, do it well.";
 const TITLE_FLASH_INTERVAL_MS = 750;
 const TODO_NOTIFICATION_FLASH_MS = 2400;
 const activeGuideKey = ref<GuideKey | null>(null);
@@ -232,7 +231,7 @@ const workspaceDensityLabel = computed(() => {
 });
 
 const boardTitle = computed(() => activeWorkspace.value.customTitles["board-title"]?.trim() || DEFAULT_BOARD_TITLE);
-const boardSlogan = computed(() => activeWorkspace.value.customTitles["board-slogan"]?.trim() || DEFAULT_BOARD_SLOGAN);
+const boardSlogan = computed(() => activeWorkspace.value.customTitles["board-slogan"]?.trim() ?? "");
 const notificationDocumentTitle = computed(() => `🔔 新提醒 · ${boardTitle.value}`);
 const titles = computed(() =>
   Object.fromEntries(
@@ -492,8 +491,11 @@ function openCreateWorkspace(): void {
 function renameWorkspace(id: string, title: string, slogan: string): void {
   workspaceDialogMode.value = "rename";
   workspaceDialogId.value = id;
-  workspaceDraftTitle.value = title;
-  workspaceDraftSlogan.value = slogan;
+  // The title is always displayed (falling back to the brand default), so the
+  // dialog mirrors that. The slogan, though, is optional: leave it blank when
+  // unset instead of surfacing the default tagline as if the user typed it.
+  workspaceDraftTitle.value = title.trim() || DEFAULT_BOARD_TITLE;
+  workspaceDraftSlogan.value = slogan.trim();
   workspaceDialogVisible.value = true;
 }
 

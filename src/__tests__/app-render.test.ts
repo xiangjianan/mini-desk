@@ -1887,6 +1887,85 @@ describe("App shell", () => {
     }
   });
 
+  it("pre-fills the rename dialog title with the displayed name but leaves slogan blank when unset", async () => {
+    // The default workspace ships with empty customTitles, so the board title falls
+    // back to DEFAULT_BOARD_TITLE. The rename dialog must surface that name, yet keep
+    // the optional slogan input empty rather than surfacing the default tagline.
+    localStorage.removeItem(STORAGE_KEY);
+    const wrapper = mountApp();
+
+    try {
+      await nextTick();
+      await wrapper.get('[data-testid="workspace-trigger"]').trigger("click");
+      await wrapper.get('[data-testid="workspace-rename-default"]').trigger("click");
+      await nextTick();
+
+      const inputs = wrapper.findAll(".n-modal input");
+      expect((inputs[0].element as HTMLInputElement).value).toBe("Mini Desk");
+      expect((inputs[1].element as HTMLInputElement).value).toBe("");
+    } finally {
+      wrapper.unmount();
+    }
+  });
+
+  it("pre-fills the rename dialog with an explicit workspace slogan when set", async () => {
+    localStorage.setItem(
+      STORAGE_KEY,
+      JSON.stringify({
+        workspaces: [
+          { ...defaultWorkspace(), customTitles: { "board-title": "我的桌面", "board-slogan": "加油干" } },
+        ],
+      }),
+    );
+    const wrapper = mountApp();
+
+    try {
+      await nextTick();
+      await wrapper.get('[data-testid="workspace-trigger"]').trigger("click");
+      await wrapper.get('[data-testid="workspace-rename-default"]').trigger("click");
+      await nextTick();
+
+      const inputs = wrapper.findAll(".n-modal input");
+      expect((inputs[0].element as HTMLInputElement).value).toBe("我的桌面");
+      expect((inputs[1].element as HTMLInputElement).value).toBe("加油干");
+    } finally {
+      wrapper.unmount();
+    }
+  });
+
+  it("hides the header slogan when the active workspace has no slogan set", async () => {
+    // The default workspace ships with no slogan. The header must not surface the
+    // brand tagline ("Do less, do it well.") as if it were the workspace's slogan.
+    localStorage.removeItem(STORAGE_KEY);
+    const wrapper = mountApp();
+
+    try {
+      await nextTick();
+      expect(wrapper.find(".workbench-slogan").exists()).toBe(false);
+    } finally {
+      wrapper.unmount();
+    }
+  });
+
+  it("shows the header slogan when the active workspace has one set", async () => {
+    localStorage.setItem(
+      STORAGE_KEY,
+      JSON.stringify({
+        workspaces: [
+          { ...defaultWorkspace(), customTitles: { "board-title": "我的桌面", "board-slogan": "加油干" } },
+        ],
+      }),
+    );
+    const wrapper = mountApp();
+
+    try {
+      await nextTick();
+      expect(wrapper.get(".workbench-slogan").text()).toBe("加油干");
+    } finally {
+      wrapper.unmount();
+    }
+  });
+
   it("creates a new workspace from the unified create dialog", async () => {
     const previousTitle = document.title;
     const wrapper = mountApp();
