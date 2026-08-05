@@ -819,7 +819,7 @@ describe("QuickButtons", () => {
     await openDialog(wrapper);
 
     const options = wrapper.findAll(".checkbox-stub");
-    expect(options.map((option) => option.text())).toEqual(["链接属性", "复制文本属性", "接口调用属性", "打开应用"]);
+    expect(options.map((option) => option.text())).toEqual(["链接", "复制文本", "接口调用", "打开应用"]);
     expect(options.map((option) => option.attributes("data-checked"))).toEqual(["true", "false", "false", "false"]);
 
     await options[3].trigger("click");

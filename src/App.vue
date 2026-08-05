@@ -3196,6 +3196,7 @@ function moveItem<T extends { id: string }>(items: T[], dragId: string, targetId
       :language="state.language"
       :assets-title="titles['image-title']"
       :notes-title="titles['quick-title']"
+      :image-preview-open="Boolean(displayedPreviewId)"
       @theme="handleThemeClick"
       @dragover.prevent
       @drop.prevent="handleBoardDrop"

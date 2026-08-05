@@ -842,8 +842,8 @@ describe("Naive UI component usage", () => {
     expect(quick).toContain("setQuickType");
     expect(quick).toContain("uiText.quick.linkType");
     expect(quick).toContain("uiText.quick.textType");
-    expect(i18n).toContain("链接属性");
-    expect(i18n).toContain("复制文本属性");
+    expect(i18n).toContain('linkType: "链接"');
+    expect(i18n).toContain('textType: "复制文本"');
     expect(quick).not.toContain("v-model:checked=\"form.isLink\"");
   });
 

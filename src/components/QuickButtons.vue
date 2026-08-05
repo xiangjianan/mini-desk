@@ -8,7 +8,7 @@ import type { AppLanguage, GuideKey, QuickApiBodyType, QuickApiHeader, QuickApiM
 import { GUIDE_MENU_OPTION } from "../state/defaults";
 import { getUiText } from "../state/i18n";
 import { buildVisibleQuickButtonGroups, filterVisibleQuickButtonGroups, getQuickTagColor, hasOverloadedVisibleQuickButtonGroup, normalizeQuickTagColor, QUICK_BUTTON_EMPTY_GROUP_ID, QUICK_DENSITY_THRESHOLD, QUICK_TAG_COLORS, QUICK_TAG_DEFAULT_COLOR } from "../state/quickButtons";
-import { findQuickAppPresetByScheme, getQuickAppPresetTitle, QUICK_APP_PRESETS } from "../state/quickApps";
+import { findQuickAppPresetByScheme, getQuickAppPresetHint, getQuickAppPresetTitle, QUICK_APP_PRESETS } from "../state/quickApps";
 import { clearGlobalSearch, globalSearchNormalized, globalSearchQuery, setGlobalSearch } from "../state/globalSearch";
 import { CONTEXT_MENU_Z_INDEX, createExclusiveContextMenu } from "../utils/contextMenu";
 import { createDragAutoScroll, findDragScrollContainer } from "../utils/dragScroll";
@@ -106,7 +106,11 @@ const tagChoices = computed(() => [
 ]);
 const appPresetOptions = computed(() => [
   { label: uiText.value.quick.commonApp, value: "" },
-  ...QUICK_APP_PRESETS.map((preset) => ({ label: getQuickAppPresetTitle(preset, props.language), value: preset.scheme })),
+  ...QUICK_APP_PRESETS.map((preset) => {
+    const title = getQuickAppPresetTitle(preset, props.language);
+    const hint = getQuickAppPresetHint(preset, props.language);
+    return { label: hint ? `${title}（${hint}）` : title, value: preset.scheme };
+  }),
 ]);
 const selectedAppScheme = computed(() => {
   const preset = findQuickAppPresetByScheme(form.value);

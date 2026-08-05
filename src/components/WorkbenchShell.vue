@@ -1,5 +1,5 @@
 <script setup lang="ts">
-import { computed, nextTick, onMounted, onUnmounted, ref } from "vue";
+import { computed, nextTick, onMounted, onUnmounted, ref, watch } from "vue";
 import {
   MoonIcon,
   PanelTopCloseIcon,
@@ -23,11 +23,13 @@ const props = withDefaults(defineProps<{
   assetsTitle?: string;
   notesTitle?: string;
   slogan?: string;
+  imagePreviewOpen?: boolean;
 }>(), {
   language: DEFAULT_LANGUAGE,
   assetsTitle: "",
   notesTitle: "",
   slogan: "",
+  imagePreviewOpen: false,
 });
 
 // Collapsed-rail labels per zone. Assets and notes follow their editable area
@@ -250,12 +252,21 @@ function syncImagePreviewLeft(): void {
   const metrics = readGridMetrics();
   const firstWidth = columnWidths.value[0];
   if (metrics && firstWidth) {
-    document.documentElement.style.setProperty("--image-preview-left", `${Math.round(metrics.rect.left + gridPadding.value.left + firstWidth)}px`);
+    // Align the preview's left edge with the quick-actions (notes) zone's left
+    // edge — i.e. one gap to the right of the image list — so the gap between
+    // the image list and quick actions stays exposed as the drag strip. The
+    // resizer handle sits in the centre of that gap.
+    const notesLeft = metrics.rect.left + gridPadding.value.left + firstWidth + gridGap.value;
+    applyImagePreviewVars(notesLeft);
     return;
   }
   const assets = grid.querySelector<HTMLElement>(".workbench-zone-assets");
   const fallbackRight = assets?.getBoundingClientRect().right;
-  if (fallbackRight) document.documentElement.style.setProperty("--image-preview-left", `${Math.round(fallbackRight)}px`);
+  if (fallbackRight) applyImagePreviewVars(fallbackRight + gridGap.value);
+}
+
+function applyImagePreviewVars(notesLeft: number): void {
+  document.documentElement.style.setProperty("--image-preview-left", `${Math.round(notesLeft)}px`);
 }
 
 function syncImagePreviewTop(): void {
@@ -460,6 +471,18 @@ function setHeaderHidden(hidden: boolean, event?: MouseEvent | PointerEvent): vo
   }
   void nextTick(refreshWorkbenchLayout);
 }
+
+// When the image preview opens, re-sync the preview's left edge to the current
+// image-column width. Column widths only change through resize/expand/window
+// resize (each of which already syncs), but a fresh sync on open guarantees the
+// overlay starts exactly at the image list's right boundary even if the layout
+// hasn't been touched since load.
+watch(
+  () => props.imagePreviewOpen,
+  (open) => {
+    if (open) void nextTick(syncImagePreviewLeft);
+  },
+);
 
 onMounted(() => {
   if (readStoredHeaderHidden()) {
