@@ -50,6 +50,7 @@ import {
 import { defaultState, STORAGE_KEY } from "./state/defaults";
 import { createWorkspaceData, ensureUniqueWorkspaceTitle, removeWorkspace, reorderWorkspaces } from "./state/workspaces";
 import { QUICK_BUTTON_OTHER_GROUP_ID, QUICK_DENSITY_THRESHOLD, formatQuickCopiedPreview, getQuickTagColor } from "./state/quickButtons";
+import { isQuickAppScheme } from "./state/quickApps";
 import {
   createId,
   exportJsonState,
@@ -1458,6 +1459,7 @@ function applyQuickTag(button: QuickButton, tagId: string | undefined): void {
 function getUntitledQuickTitle(type: QuickButtonType): string {
   if (type === "link") return uiText.value.quick.untitledLink;
   if (type === "api") return uiText.value.quick.untitledApi;
+  if (type === "app") return uiText.value.quick.untitledApp;
   return uiText.value.quick.untitledText;
 }
 
@@ -1519,12 +1521,45 @@ function getQuickTextCopiedMessage(value: string): string {
   return state.language === "en" ? `📋 Copied: ${preview}` : `📋 已复制：${preview}`;
 }
 
+function getQuickAppOpeningMessage(title: string): string {
+  return state.language === "en" ? `🚀 Opening ${title}…` : `🚀 正在打开 ${title}…`;
+}
+
+function getQuickAppInvalidSchemeMessage(): string {
+  return state.language === "en" ? "⚠️ Invalid app scheme" : "⚠️ 应用协议格式不正确";
+}
+
+/**
+ * Launch a native app via its registered URL scheme (e.g. `wechat://`). Browsers
+ * cannot reliably report whether the app actually opened, so we only signal that
+ * the launch was requested. A hidden anchor click is the most reliable trigger:
+ * it isn't blocked by popup blockers and doesn't navigate the page away.
+ */
+function openQuickApp(button: QuickButton, anchor?: HTMLElement): void {
+  const scheme = button.value.trim();
+  if (!isQuickAppScheme(scheme)) {
+    showBubbleText(getQuickAppInvalidSchemeMessage(), anchor, { hideCompanionAfter: true }, 3000);
+    return;
+  }
+  const trigger = document.createElement("a");
+  trigger.href = scheme;
+  trigger.style.display = "none";
+  document.body.appendChild(trigger);
+  trigger.click();
+  trigger.remove();
+  showBubbleText(getQuickAppOpeningMessage(button.title || scheme), anchor, { hideCompanionAfter: true }, 2200);
+}
+
 async function handleQuickButton(id: string, anchor?: HTMLElement): Promise<void> {
   const button = activeWorkspace.value.quickButtons.find((item) => item.id === id);
   if (!button) return;
   if (button.type === "link") {
     const opened = window.open(normalizeLink(button.value), "_blank", "noopener,noreferrer");
     if (!opened) showBubble("linkOpenFailed", anchor, { hideCompanionAfter: true });
+    return;
+  }
+  if (button.type === "app") {
+    openQuickApp(button, anchor);
     return;
   }
   if (button.type === "api") {

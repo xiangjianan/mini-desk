@@ -565,6 +565,27 @@ describe("QuickButtons", () => {
     wrapper.unmount();
   });
 
+  it("creates an app quick button when a custom URL scheme is dropped", async () => {
+    const wrapper = mountQuickButtons({
+      buttons: [{ id: "a", title: "A", value: "a", type: "text", hidden: false }],
+    });
+    const dataTransfer = {
+      types: ["text/plain"],
+      files: [],
+      getData: (type: string) => (type === "text/plain" ? "wechat://chat" : ""),
+    };
+
+    await wrapper.get(".quick-block").trigger("drop", { dataTransfer });
+
+    expect(wrapper.emitted("save")?.[0][0]).toMatchObject({
+      title: "wechat://chat",
+      value: "wechat://chat",
+      type: "app",
+    });
+
+    wrapper.unmount();
+  });
+
   it("accepts an external text/uri-list drop without text/plain (Windows drag scenario)", async () => {
     const wrapper = mountQuickButtons({
       buttons: [{ id: "a", title: "A", value: "a", type: "text", hidden: false }],
@@ -792,23 +813,54 @@ describe("QuickButtons", () => {
     wrapper.unmount();
   });
 
-  it("shows mutually exclusive link, text, and API type checkboxes with link selected by default", async () => {
+  it("shows mutually exclusive link, text, API, and app type checkboxes with link selected by default", async () => {
     const wrapper = mountQuickButtons();
 
     await openDialog(wrapper);
 
     const options = wrapper.findAll(".checkbox-stub");
-    expect(options.map((option) => option.text())).toEqual(["链接属性", "复制文本属性", "接口调用属性"]);
-    expect(options[0].attributes("data-checked")).toBe("true");
-    expect(options[1].attributes("data-checked")).toBe("false");
-    expect(options[2].attributes("data-checked")).toBe("false");
+    expect(options.map((option) => option.text())).toEqual(["链接属性", "复制文本属性", "接口调用属性", "打开应用"]);
+    expect(options.map((option) => option.attributes("data-checked"))).toEqual(["true", "false", "false", "false"]);
 
-    await options[1].trigger("click");
+    await options[3].trigger("click");
     await wrapper.vm.$nextTick();
 
-    expect(options[0].attributes("data-checked")).toBe("false");
-    expect(options[1].attributes("data-checked")).toBe("true");
-    expect(options[2].attributes("data-checked")).toBe("false");
+    expect(options.map((option) => option.attributes("data-checked"))).toEqual(["false", "false", "false", "true"]);
+
+    wrapper.unmount();
+  });
+
+  it("fills the title and scheme when an app preset is selected", async () => {
+    const wrapper = mountQuickButtons();
+
+    await openDialog(wrapper);
+    await wrapper.findAll(".checkbox-stub")[3].trigger("click");
+    await wrapper.get(".quick-app-preset-select").setValue("wechat://");
+    await wrapper.get("form").trigger("submit.prevent");
+
+    expect(wrapper.emitted("save")?.[0][0]).toMatchObject({
+      title: "微信",
+      value: "wechat://",
+      type: "app",
+    });
+
+    wrapper.unmount();
+  });
+
+  it("saves a custom app scheme typed directly into the scheme field", async () => {
+    const wrapper = mountQuickButtons();
+
+    await openDialog(wrapper);
+    await wrapper.findAll(".checkbox-stub")[3].trigger("click");
+    await wrapper.findAll(".quick-form input")[0].setValue("我的应用");
+    await wrapper.findAll(".quick-form input")[1].setValue("myapp://open");
+    await wrapper.get("form").trigger("submit.prevent");
+
+    expect(wrapper.emitted("save")?.[0][0]).toMatchObject({
+      title: "我的应用",
+      value: "myapp://open",
+      type: "app",
+    });
 
     wrapper.unmount();
   });

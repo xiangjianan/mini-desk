@@ -1,7 +1,7 @@
 export type ThemeMode = "light" | "dark";
 export type AppLanguage = "zh" | "en";
 export type CompanionGifTheme = "cat" | "ikun" | "hermes" | "custom" | "none";
-export type QuickButtonType = "link" | "text" | "api";
+export type QuickButtonType = "link" | "text" | "api" | "app";
 export type QuickApiMethod = "GET" | "POST" | "PUT" | "PATCH" | "DELETE" | "HEAD" | "OPTIONS";
 export type QuickApiBodyType = "none" | "json" | "text" | "form";
 export interface QuickApiHeader {

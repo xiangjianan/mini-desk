@@ -2,12 +2,13 @@
 import { computed, h, nextTick, onMounted, onUnmounted, reactive, ref, watch } from "vue";
 import type { Component, ComponentPublicInstance, VNode } from "vue";
 import { NButton, NCheckbox, NDropdown, NIcon, NInput, NModal, NScrollbar, NSelect } from "naive-ui";
-import { AddOutline, ChevronDownOutline, CloudUploadOutline, CopyOutline, CreateOutline, EyeOffOutline, EyeOutline, HelpCircleOutline, PricetagsOutline, SearchOutline, TrashOutline } from "@vicons/ionicons5";
+import { AddOutline, AppsOutline, ChevronDownOutline, CloudUploadOutline, CopyOutline, CreateOutline, EyeOffOutline, EyeOutline, HelpCircleOutline, PricetagsOutline, SearchOutline, TrashOutline } from "@vicons/ionicons5";
 import type { DropdownOption } from "naive-ui";
 import type { AppLanguage, GuideKey, QuickApiBodyType, QuickApiHeader, QuickApiMethod, QuickButton, QuickButtonType, QuickTag } from "../types";
 import { GUIDE_MENU_OPTION } from "../state/defaults";
 import { getUiText } from "../state/i18n";
 import { buildVisibleQuickButtonGroups, filterVisibleQuickButtonGroups, getQuickTagColor, hasOverloadedVisibleQuickButtonGroup, normalizeQuickTagColor, QUICK_BUTTON_EMPTY_GROUP_ID, QUICK_DENSITY_THRESHOLD, QUICK_TAG_COLORS, QUICK_TAG_DEFAULT_COLOR } from "../state/quickButtons";
+import { findQuickAppPresetByScheme, getQuickAppPresetTitle, QUICK_APP_PRESETS } from "../state/quickApps";
 import { clearGlobalSearch, globalSearchNormalized, globalSearchQuery, setGlobalSearch } from "../state/globalSearch";
 import { CONTEXT_MENU_Z_INDEX, createExclusiveContextMenu } from "../utils/contextMenu";
 import { createDragAutoScroll, findDragScrollContainer } from "../utils/dragScroll";
@@ -103,6 +104,14 @@ const tagChoices = computed(() => [
   { label: uiText.value.quick.noTag, value: "" },
   ...props.tags.map((tag) => ({ label: tag.title, value: tag.title })),
 ]);
+const appPresetOptions = computed(() => [
+  { label: uiText.value.quick.commonApp, value: "" },
+  ...QUICK_APP_PRESETS.map((preset) => ({ label: getQuickAppPresetTitle(preset, props.language), value: preset.scheme })),
+]);
+const selectedAppScheme = computed(() => {
+  const preset = findQuickAppPresetByScheme(form.value);
+  return preset ? preset.scheme : "";
+});
 
 function renderIcon(icon: Component): () => VNode {
   return () => h(NIcon, { size: 16 }, { default: () => h(icon) });
@@ -301,6 +310,14 @@ function setCustomQuickTag(tagTitle: string): void {
   if (tagTitle.trim()) form.tagTitle = "";
 }
 
+function selectAppPreset(scheme: string): void {
+  if (!scheme) return;
+  const preset = QUICK_APP_PRESETS.find((item) => item.scheme === scheme);
+  if (!preset) return;
+  form.value = preset.scheme;
+  form.title = getQuickAppPresetTitle(preset, props.language);
+}
+
 function addApiHeader(): void {
   form.apiHeaders.push(createHeaderRow());
 }
@@ -465,11 +482,12 @@ function readQuickDropText(transfer: DataTransfer | null): string {
 
 function buildQuickDropPayload(rawText: string, groupId?: string): { title: string; value: string; type: QuickButtonType; tagTitle?: string } {
   const text = rawText.trim();
-  const isUrl = /^https?:\/\//.test(text);
-  const title = isUrl
+  const isWebUrl = /^https?:\/\//.test(text);
+  const isAppScheme = /^[a-z][a-z0-9+.\-]*:\/\//i.test(text) && !isWebUrl;
+  const title = isWebUrl
     ? (() => { try { return new URL(text).hostname; } catch { return text.slice(0, 20); } })()
     : text.slice(0, 20);
-  const type: QuickButtonType = isUrl ? "link" : "text";
+  const type: QuickButtonType = isWebUrl ? "link" : isAppScheme ? "app" : "text";
   const tagTitle = groupId && isRealTagGroup(groupId)
     ? props.tags.find((tag) => tag.id === groupId)?.title
     : undefined;
@@ -743,7 +761,7 @@ function handleQuickGroupDrop(event: DragEvent, groupId: string): void {
                 v-for="button in group.buttons"
                 :key="button.id"
                 class="quick-button"
-                :class="{ 'is-hidden': button.hidden, 'is-copy': button.type === 'text', 'is-api': button.type === 'api', 'is-dragging': draggingId === button.id }"
+                :class="{ 'is-hidden': button.hidden, 'is-copy': button.type === 'text', 'is-api': button.type === 'api', 'is-app': button.type === 'app', 'is-dragging': draggingId === button.id }"
                 :data-id="button.id"
                 :title="button.title"
                 type="button"
@@ -757,6 +775,7 @@ function handleQuickGroupDrop(event: DragEvent, groupId: string): void {
               >
                 <NIcon v-if="button.type === 'text'" class="quick-button-icon" :component="CopyOutline" />
                 <NIcon v-else-if="button.type === 'api'" class="quick-button-icon" :component="CloudUploadOutline" />
+                <NIcon v-else-if="button.type === 'app'" class="quick-button-icon" :component="AppsOutline" />
                 <HighlightText class="quick-button-label" :text="button.title" :query="globalSearchQuery" />
               </button>
             </TransitionGroup>
@@ -806,9 +825,21 @@ function handleQuickGroupDrop(event: DragEvent, groupId: string): void {
           <label class="checkbox-row">
             <NCheckbox :checked="form.type === 'api'" @update:checked="setQuickType('api')">{{ uiText.quick.apiType }}</NCheckbox>
           </label>
+          <label class="checkbox-row">
+            <NCheckbox :checked="form.type === 'app'" @update:checked="setQuickType('app')">{{ uiText.quick.appType }}</NCheckbox>
+          </label>
         </div>
+        <label v-if="form.type === 'app'">
+          <span>{{ uiText.quick.commonApp }}</span>
+          <NSelect
+            :value="selectedAppScheme"
+            class="quick-app-preset-select"
+            :options="appPresetOptions"
+            @update:value="selectAppPreset"
+          />
+        </label>
         <label>
-          <span>{{ form.type === "api" ? uiText.quick.requestUrl : form.type === "link" ? "URL" : uiText.quick.copyText }}</span>
+          <span>{{ form.type === "api" ? uiText.quick.requestUrl : form.type === "link" ? "URL" : form.type === "app" ? uiText.quick.appScheme : uiText.quick.copyText }}</span>
           <NInput
             v-model:value="form.value"
             :type="form.type === 'text' ? 'textarea' : 'text'"

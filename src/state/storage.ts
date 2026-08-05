@@ -607,7 +607,7 @@ export function normalizeQuickButtons(buttons: unknown, language = "zh", quickTa
       const record = item as Record<string, unknown>;
       const title = typeof record.title === "string" ? record.title.trim() : "";
       const value = typeof record.value === "string" ? record.value : "";
-      const type: QuickButtonType = record.type === "text" ? "text" : record.type === "api" ? "api" : "link";
+      const type: QuickButtonType = record.type === "text" ? "text" : record.type === "api" ? "api" : record.type === "app" ? "app" : "link";
       const apiMethod = normalizeQuickApiMethod(record.apiMethod);
       const apiBodyType = normalizeQuickApiBodyType(record.apiBodyType);
       if (!title && !value) return null;
@@ -636,6 +636,7 @@ function getUntitledQuickTitle(type: QuickButtonType, language: string): string 
   const quickText = getUiText(normalizeLanguage(language)).quick;
   if (type === "link") return quickText.untitledLink;
   if (type === "api") return quickText.untitledApi;
+  if (type === "app") return quickText.untitledApp;
   return quickText.untitledText;
 }
 

@@ -572,6 +572,7 @@ describe("state compatibility", () => {
           apiBodyType: "json",
           apiBody: '{"id":1}',
         },
+        { title: "微信", value: "wechat://", type: "app" },
       ],
       showCompletedTodos: true,
       todos: {
@@ -598,6 +599,12 @@ describe("state compatibility", () => {
       ],
       apiBodyType: "json",
       apiBody: '{"id":1}',
+      hidden: false,
+    });
+    expect(ws().quickButtons[2]).toMatchObject({
+      title: "微信",
+      value: "wechat://",
+      type: "app",
       hidden: false,
     });
     expect(ws().todos.morning).toHaveLength(2);
