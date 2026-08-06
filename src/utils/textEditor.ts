@@ -106,6 +106,36 @@ function getPreviousLineAtDepth(value: string, lineStart: number, depth: number)
   return null;
 }
 
+type ListMarkerKind = "numbered" | "bullet" | "plain";
+
+function getMarkerKind(line: string): ListMarkerKind {
+  if (NUMBERED_LINE_PATTERN.test(line)) return "numbered";
+  const indentLen = line.match(/^[ \t]*/)?.[0].length ?? 0;
+  return UNORDERED_LINE_PATTERN.test(line.slice(indentLen)) ? "bullet" : "plain";
+}
+
+/**
+ * Resolve the list marker for a line that has just moved to `targetDepth`.
+ * The marker type is inherited from the nearest preceding non-empty line at the
+ * same depth: numbered -> "1. " (the editor's renumber pass assigns the real
+ * number), bullet -> "- ", plain -> a bullet when `plainAsBullet` else removed.
+ * With no sibling above, fall back to a bullet so indenting into a fresh level
+ * still starts a list. Returns the marker text and the caret offset to the text.
+ */
+function resolveListMarker(
+  value: string,
+  lineStart: number,
+  targetDepth: number,
+  plainAsBullet: boolean,
+): { marker: string; textStart: number } {
+  const sibling = getPreviousLineAtDepth(value, lineStart, targetDepth);
+  if (!sibling) return { marker: "- ", textStart: 2 };
+  const kind = getMarkerKind(sibling);
+  if (kind === "numbered") return { marker: "1. ", textStart: 3 };
+  if (kind === "bullet") return { marker: "- ", textStart: 2 };
+  return plainAsBullet ? { marker: "- ", textStart: 2 } : { marker: "", textStart: 0 };
+}
+
 /**
  * Tab turns a line into an indented bullet ("- "):
  *  - a numbered line ("1. ") with the caret at the line head or right after the
@@ -126,18 +156,20 @@ function tryTabConvertToBullet(value: string, caret: number): { text: string; ca
     // Convert when the caret sits anywhere on the marker (line head through the
     // end of the "N. "); once it is inside the item text, fall back to indent.
     if (caretInLine > markerEnd) return null;
-    const prefix = `${indentMatch}${INDENT_UNIT}${BULLET_MARKER}`;
+    const resolved = resolveListMarker(value, lineStart, getIndentInfo(line).depth + 1, true);
+    const prefix = `${indentMatch}${INDENT_UNIT}${resolved.marker}`;
     return {
       text: `${value.slice(0, lineStart)}${prefix}${ordered[3]}${value.slice(lineEnd)}`,
-      caret: lineStart + indent + INDENT_UNIT.length + BULLET_MARKER.length,
+      caret: lineStart + indent + INDENT_UNIT.length + resolved.textStart,
     };
   }
 
   if (caretInLine === 0 && indent === 0 && !UNORDERED_LINE_PATTERN.test(body)) {
-    const prefix = `${INDENT_UNIT}${BULLET_MARKER}`;
+    const resolved = resolveListMarker(value, lineStart, 1, true);
+    const prefix = `${INDENT_UNIT}${resolved.marker}`;
     return {
       text: `${value.slice(0, lineStart)}${prefix}${body}${value.slice(lineEnd)}`,
-      caret: lineStart + prefix.length,
+      caret: lineStart + INDENT_UNIT.length + resolved.textStart,
     };
   }
 
@@ -145,13 +177,12 @@ function tryTabConvertToBullet(value: string, caret: number): { text: string; ca
 }
 
 /**
- * Shift+Tab on a bullet line outdents one level. The bullet is only reverted
- * once the line reaches the root (no indentation left):
- *  - at the root, with a numbered line at the same (root) level above — even
- *    across nested bullets in between — it becomes a numbered marker again
- *    ("1. ", renumbered by the editor);
- *  - at the root with no numbered line above, the bullet is removed (plain);
- *  - while still nested it stays a bullet (just outdented).
+ * Shift+Tab on a bullet line outdents one level. The marker for the resulting
+ * (shallower) depth is inherited from the nearest preceding non-empty line at
+ * that same depth — across any nested bullets in between:
+ *  - a numbered sibling turns it back into "1. " (renumbered by the editor);
+ *  - a bullet sibling keeps it "- ";
+ *  - a plain sibling (or no sibling) drops the marker (plain).
  * The caret keeps its offset within the item text and always lands after the
  * marker. Returns null for regular outdent.
  */
@@ -172,23 +203,13 @@ function tryShiftTabOnBulletLine(value: string, caret: number): { text: string; 
   const textOffset = Math.max(0, caretInLine - (indent + markerLen));
 
   const outdentedIndent = removeOneIndentUnit(indentMatch);
-  const reachedRoot = outdentedIndent.length === 0;
-
-  let prefix: string;
-  let newTextStart: number;
-  if (reachedRoot) {
-    const previousRootLine = getPreviousLineAtDepth(value, lineStart, 0);
-    const toNumbered = Boolean(previousRootLine && NUMBERED_LINE_PATTERN.test(previousRootLine));
-    prefix = toNumbered ? "1. " : "";
-    newTextStart = prefix.length;
-  } else {
-    prefix = `${outdentedIndent}${bullet[0]}`;
-    newTextStart = outdentedIndent.length + markerLen;
-  }
+  const outdented = outdentedIndent.length < indentMatch.length;
+  const targetDepth = outdented ? getIndentInfo(line).depth - 1 : getIndentInfo(line).depth;
+  const resolved = resolveListMarker(value, lineStart, targetDepth, false);
 
   return {
-    text: `${value.slice(0, lineStart)}${prefix}${textContent}${value.slice(lineEnd)}`,
-    caret: lineStart + newTextStart + textOffset,
+    text: `${value.slice(0, lineStart)}${outdentedIndent}${resolved.marker}${textContent}${value.slice(lineEnd)}`,
+    caret: lineStart + outdentedIndent.length + resolved.textStart + textOffset,
   };
 }
 

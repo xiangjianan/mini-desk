@@ -126,6 +126,34 @@ describe("handleTextareaTab — Shift+Tab outdents a bullet line", () => {
   });
 });
 
+describe("handleTextareaTab — marker follows the nearest same-level sibling", () => {
+  it("indents a plain line into a numbered level as a numbered item", () => {
+    // "c" indents under the level-1 numbered line "    1. b".
+    const result = apply("1. a\n    1. b\nc", 14);
+    expect(result.value).toBe("1. a\n    1. b\n    1. c");
+    expect(renumbered(result.value)).toBe("1. a\n    1. b\n    2. c");
+  });
+
+  it("indents a plain line into a bullet level as a bullet", () => {
+    // "c" indents under the level-1 bullet line "    - b".
+    const result = apply("- a\n    - b\nc", 12);
+    expect(result.value).toBe("- a\n    - b\n    - c");
+  });
+
+  it("outdents a nested bullet into a numbered level as a numbered item", () => {
+    // "        - c" outdents to level 1, whose nearest sibling "    1. b" is numbered.
+    const result = apply("1. a\n    1. b\n        - c", 23, true);
+    expect(result.value).toBe("1. a\n    1. b\n    1. c");
+    expect(renumbered(result.value)).toBe("1. a\n    1. b\n    2. c");
+  });
+
+  it("outdents a nested bullet into a bullet level keeping the bullet", () => {
+    // "        - c" outdents to level 1, whose nearest sibling "    - b" is a bullet.
+    const result = apply("- a\n    - b\n        - c", 22, true);
+    expect(result.value).toBe("- a\n    - b\n    - c");
+  });
+});
+
 describe("handleTextareaTab — preserved indent/outdent behavior", () => {
   it("still indents when the caret is not at the start of a plain line", () => {
     const result = apply("买牛奶", 2);
