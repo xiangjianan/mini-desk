@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { handleTextareaTab, renumberOrderedListText } from "../utils/textEditor";
+import { handleTextareaTab, moveCaretToLineBoundary, renumberOrderedListText } from "../utils/textEditor";
 
 function textareaWith(value: string, caret: number): HTMLTextAreaElement {
   const textarea = document.createElement("textarea");
@@ -122,5 +122,95 @@ describe("handleTextareaTab — preserved indent/outdent behavior", () => {
     textarea.setSelectionRange(0, textarea.value.length);
     handleTextareaTab(textarea, false);
     expect(textarea.value).toBe("    第一行\n    第二行");
+  });
+});
+
+describe("moveCaretToLineBoundary — Cmd/Ctrl+Arrow line start/end", () => {
+  function move(value: string, caret: number, edge: "start" | "end"): { value: string; caret: number } {
+    const textarea = textareaWith(value, caret);
+    const next = moveCaretToLineBoundary(textarea, edge);
+    return { value: textarea.value, caret: next };
+  }
+
+  it("jumps a plain line to its head on 'start'", () => {
+    const result = move("买牛奶", 2, "start");
+    expect(result.caret).toBe(0);
+    expect(result.value).toBe("买牛奶");
+  });
+
+  it("jumps a plain line to its end on 'end'", () => {
+    const result = move("买牛奶\n第二行", 2, "end");
+    // "买牛奶" is 3 chars; caret at 2 -> end of that line is index 3.
+    expect(result.caret).toBe(3);
+  });
+
+  it("lands just after a numbered marker ('1. ') on 'start'", () => {
+    // "1. 第一项": marker "1. " is 3 chars; text "第一项" starts at index 3.
+    const result = move("1. 第一项", 5, "start");
+    expect(result.caret).toBe(3);
+  });
+
+  it("on a second press collapses to the absolute line head", () => {
+    // Caret already at the text start (3) -> falls back to the line head (0).
+    const result = move("1. 第一项", 3, "start");
+    expect(result.caret).toBe(0);
+  });
+
+  it("stays at the line head when already there", () => {
+    const result = move("1. 第一项", 0, "start");
+    expect(result.caret).toBe(0);
+  });
+
+  it("lands just after a dash marker ('- ') on 'start'", () => {
+    // "- 买牛奶": marker "- " is 2 chars; text starts at index 2.
+    const result = move("- 买牛奶", 4, "start");
+    expect(result.caret).toBe(2);
+  });
+
+  it("on a second press collapses past a dash marker to the line head", () => {
+    const result = move("- 买牛奶", 2, "start");
+    expect(result.caret).toBe(0);
+  });
+
+  it("accounts for indentation before a numbered marker", () => {
+    // 4-space indent + "1. " (3) -> text start at index 7.
+    const result = move("    1. text", 8, "start");
+    expect(result.caret).toBe(7);
+  });
+
+  it("accounts for indentation before a dash marker", () => {
+    // 4-space indent + "- " (2) -> text start at index 6.
+    const result = move("    - text", 8, "start");
+    expect(result.caret).toBe(6);
+  });
+
+  it("jumps to the end of a numbered line on 'end'", () => {
+    // "1. 第一项" length is 6.
+    const result = move("1. 第一项", 3, "end");
+    expect(result.caret).toBe(6);
+  });
+
+  it("targets the correct line in multi-line text", () => {
+    // Line 2 "1. 第二" starts at index 3 ("第一\n"); its text start is index 6.
+    const result = move("第一\n1. 第二\n第三", 7, "start");
+    expect(result.caret).toBe(6);
+  });
+
+  it("collapses a selection to the start edge", () => {
+    const textarea = textareaWith("1. 第一项", 0);
+    textarea.setSelectionRange(2, 5);
+    const next = moveCaretToLineBoundary(textarea, "start");
+    expect(next).toBe(0);
+    expect(textarea.selectionStart).toBe(0);
+    expect(textarea.selectionEnd).toBe(0);
+  });
+
+  it("collapses a selection to the end edge", () => {
+    const textarea = textareaWith("1. 第一项", 0);
+    textarea.setSelectionRange(2, 5);
+    const next = moveCaretToLineBoundary(textarea, "end");
+    expect(next).toBe(6);
+    expect(textarea.selectionStart).toBe(6);
+    expect(textarea.selectionEnd).toBe(6);
   });
 });

@@ -260,6 +260,41 @@ export function insertPlainLineBreak(textarea: HTMLTextAreaElement): string {
   return textarea.value;
 }
 
+/**
+ * Cmd/Ctrl+Left and Cmd/Ctrl+Right jump to the start/end of the current line.
+ * On a list line the "start" is the left edge of the item text — just past the
+ * leading marker ("1. " / "- ") — so the first press lands at the text; when the
+ * caret is already there it collapses to the absolute line head. Plain lines go
+ * to the line head. A selection collapses to the chosen edge. Returns the new
+ * caret offset; the caller owns preventDefault.
+ */
+export function moveCaretToLineBoundary(textarea: HTMLTextAreaElement, edge: "start" | "end"): number {
+  const { selectionStart, selectionEnd, value } = textarea;
+  const caret = edge === "start" ? Math.min(selectionStart, selectionEnd) : Math.max(selectionStart, selectionEnd);
+  const { start: lineStart, end: lineEnd } = getLineAt(value, caret);
+  let target: number;
+  if (edge === "end") {
+    target = lineEnd;
+  } else {
+    const textStart = lineStart + getLineTextStartOffset(value.slice(lineStart, lineEnd));
+    // First press lands at the item text; a second press collapses to the line head.
+    target = caret > textStart ? textStart : lineStart;
+  }
+  textarea.setSelectionRange(target, target);
+  return target;
+}
+
+/** Offset of the item text within a line: leading indent + list marker, else 0. */
+function getLineTextStartOffset(line: string): number {
+  const indent = line.match(/^[ \t]*/)?.[0] ?? "";
+  const body = line.slice(indent.length);
+  const ordered = body.match(/^\d+\.\s+/);
+  if (ordered) return indent.length + ordered[0].length;
+  const unordered = UNORDERED_LINE_PATTERN.exec(body);
+  if (unordered) return indent.length + unordered[0].length;
+  return 0;
+}
+
 export function outdentEmptyIndentedLine(textarea: HTMLTextAreaElement): string | undefined {
   const { selectionStart, selectionEnd, value } = textarea;
   if (selectionStart !== selectionEnd) return undefined;

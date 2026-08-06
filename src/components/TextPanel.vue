@@ -13,6 +13,7 @@ import {
   handleTextareaTab,
   insertIndentedLineBreak,
   insertPlainLineBreak,
+  moveCaretToLineBoundary,
   renumberOrderedListText,
   textLinesToEditorText,
 } from "../utils/textEditor";
@@ -121,6 +122,12 @@ function handleKeydown(event: KeyboardEvent): void {
   if ((event.ctrlKey || event.metaKey) && event.key.toLowerCase() === "z") {
     event.preventDefault();
     undoLastTextChange(textarea);
+    return;
+  }
+  if (!event.shiftKey && (event.metaKey || event.ctrlKey) && (event.key === "ArrowLeft" || event.key === "ArrowRight")) {
+    event.preventDefault();
+    const edge = event.key === "ArrowLeft" ? "start" : "end";
+    lastCaret.value = moveCaretToLineBoundary(textarea, edge);
     return;
   }
   if (event.key === "Tab") {
