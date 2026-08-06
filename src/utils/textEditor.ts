@@ -75,7 +75,6 @@ export function renumberOrderedListText(value = ""): string {
   }).join("\n");
 }
 
-const BULLET_MARKER = "- ";
 const ORDERED_LINE_PATTERN = /^(\d+)(\.\s+)(.*)$/;
 const UNORDERED_LINE_PATTERN = /^([-*])\s+/;
 const NUMBERED_LINE_PATTERN = /^\s*\d+\.\s+/;
@@ -137,13 +136,18 @@ function resolveListMarker(
 }
 
 /**
- * Tab turns a line into an indented bullet ("- "):
- *  - a numbered line ("1. ") with the caret at the line head or right after the
- *    marker becomes a bullet (the number is replaced);
- *  - a root-level plain line with the caret at the line head becomes a bullet.
- * Returns null when the regular indent behavior should apply instead.
+ * Indent (Tab) or outdent (Shift+Tab) a single line. The marker at the line's
+ * new depth is inherited from the nearest preceding non-empty line at that same
+ * depth, so markers stay consistent within a level: a numbered line dropped
+ * under a dash sibling becomes a dash, and a dash under a numbered sibling
+ * becomes "1. " (the editor's renumber pass assigns the real number). With no
+ * sibling above the marker defaults to a bullet; a plain sibling removes the
+ * marker on outdent but keeps a bullet on indent. Plain lines only gain a
+ * marker when indented from the root head; otherwise they move without one. The
+ * caret keeps its offset within the item text. Multi-line selections use the
+ * regular path in handleTextareaTab.
  */
-function tryTabConvertToBullet(value: string, caret: number): { text: string; caret: number } | null {
+function applySingleLineIndent(value: string, caret: number, outdent: boolean): { text: string; caret: number } {
   const { start: lineStart, end: lineEnd, text: line } = getLineAt(value, caret);
   const caretInLine = caret - lineStart;
   const indentMatch = line.match(/^[ \t]*/)?.[0] ?? "";
@@ -151,80 +155,40 @@ function tryTabConvertToBullet(value: string, caret: number): { text: string; ca
   const body = line.slice(indent);
 
   const ordered = ORDERED_LINE_PATTERN.exec(body);
-  if (ordered) {
-    const markerEnd = indent + ordered[1].length + ordered[2].length;
-    // Convert when the caret sits anywhere on the marker (line head through the
-    // end of the "N. "); once it is inside the item text, fall back to indent.
-    if (caretInLine > markerEnd) return null;
-    const resolved = resolveListMarker(value, lineStart, getIndentInfo(line).depth + 1, true);
-    const prefix = `${indentMatch}${INDENT_UNIT}${resolved.marker}`;
-    return {
-      text: `${value.slice(0, lineStart)}${prefix}${ordered[3]}${value.slice(lineEnd)}`,
-      caret: lineStart + indent + INDENT_UNIT.length + resolved.textStart,
-    };
-  }
+  const unordered = UNORDERED_LINE_PATTERN.exec(body);
+  const marker = ordered ? ordered[1] + ordered[2] : unordered ? unordered[0] : "";
+  const textContent = ordered ? ordered[3] : marker ? body.slice(marker.length) : body;
 
-  if (caretInLine === 0 && indent === 0 && !UNORDERED_LINE_PATTERN.test(body)) {
-    const resolved = resolveListMarker(value, lineStart, 1, true);
-    const prefix = `${INDENT_UNIT}${resolved.marker}`;
-    return {
-      text: `${value.slice(0, lineStart)}${prefix}${body}${value.slice(lineEnd)}`,
-      caret: lineStart + INDENT_UNIT.length + resolved.textStart,
-    };
-  }
+  const currentDepth = getIndentInfo(line).depth;
+  const newIndent = outdent ? removeOneIndentUnit(indentMatch) : `${indentMatch}${INDENT_UNIT}`;
+  const indentChanged = newIndent.length !== indentMatch.length;
+  const newDepth = indentChanged ? (outdent ? currentDepth - 1 : currentDepth + 1) : currentDepth;
 
-  return null;
-}
+  const hasMarker = marker.length > 0;
+  const startsPlainList = !outdent && caretInLine === 0 && indent === 0;
+  const resolvedMarker = (hasMarker || startsPlainList)
+    ? resolveListMarker(value, lineStart, newDepth, !outdent).marker
+    : "";
 
-/**
- * Shift+Tab on a bullet line outdents one level. The marker for the resulting
- * (shallower) depth is inherited from the nearest preceding non-empty line at
- * that same depth — across any nested bullets in between:
- *  - a numbered sibling turns it back into "1. " (renumbered by the editor);
- *  - a bullet sibling keeps it "- ";
- *  - a plain sibling (or no sibling) drops the marker (plain).
- * The caret keeps its offset within the item text and always lands after the
- * marker. Returns null for regular outdent.
- */
-function tryShiftTabOnBulletLine(value: string, caret: number): { text: string; caret: number } | null {
-  const { start: lineStart, end: lineEnd, text: line } = getLineAt(value, caret);
-  const caretInLine = caret - lineStart;
-  const indentMatch = line.match(/^[ \t]*/)?.[0] ?? "";
-  const indent = indentMatch.length;
-  const body = line.slice(indent);
-
-  const bullet = UNORDERED_LINE_PATTERN.exec(body);
-  if (!bullet) return null;
-
-  const markerLen = bullet[0].length;
-  const textContent = body.slice(markerLen);
   // Preserve the caret's offset within the item text; if it was on the indent
-  // or marker, drop it just after the marker.
-  const textOffset = Math.max(0, caretInLine - (indent + markerLen));
-
-  const outdentedIndent = removeOneIndentUnit(indentMatch);
-  const outdented = outdentedIndent.length < indentMatch.length;
-  const targetDepth = outdented ? getIndentInfo(line).depth - 1 : getIndentInfo(line).depth;
-  const resolved = resolveListMarker(value, lineStart, targetDepth, false);
+  // or marker, drop it just after the new marker.
+  const textOffset = Math.max(0, caretInLine - (indent + marker.length));
+  const newLine = `${newIndent}${resolvedMarker}${textContent}`;
+  const newCaret = Math.min(lineStart + newIndent.length + resolvedMarker.length + textOffset, lineStart + newLine.length);
 
   return {
-    text: `${value.slice(0, lineStart)}${outdentedIndent}${resolved.marker}${textContent}${value.slice(lineEnd)}`,
-    caret: lineStart + outdentedIndent.length + resolved.textStart + textOffset,
+    text: `${value.slice(0, lineStart)}${newLine}${value.slice(lineEnd)}`,
+    caret: newCaret,
   };
 }
 
 export function handleTextareaTab(textarea: HTMLTextAreaElement, outdent = false): string {
   const { selectionStart, selectionEnd, value } = textarea;
-  const isCollapsedSelection = selectionStart === selectionEnd;
-  if (isCollapsedSelection) {
-    const bullet = outdent
-      ? tryShiftTabOnBulletLine(value, selectionStart)
-      : tryTabConvertToBullet(value, selectionStart);
-    if (bullet) {
-      textarea.value = bullet.text;
-      textarea.setSelectionRange(bullet.caret, bullet.caret);
-      return bullet.text;
-    }
+  if (selectionStart === selectionEnd) {
+    const result = applySingleLineIndent(value, selectionStart, outdent);
+    textarea.value = result.text;
+    textarea.setSelectionRange(result.caret, result.caret);
+    return result.text;
   }
   const range = getSelectedLineRange(value, selectionStart, selectionEnd);
   const selected = value.slice(range.start, range.end);
@@ -240,12 +204,6 @@ export function handleTextareaTab(textarea: HTMLTextAreaElement, outdent = false
 
   textarea.setRangeText(transformed, range.start, range.end, "preserve");
   const delta = transformed.length - selected.length;
-  if (isCollapsedSelection) {
-    const cursor = Math.max(range.start, selectionStart + firstLineIndentDelta);
-    textarea.setSelectionRange(cursor, cursor);
-    return textarea.value;
-  }
-
   textarea.setSelectionRange(
     Math.max(range.start, selectionStart + firstLineIndentDelta),
     Math.max(range.start, selectionEnd + delta),

@@ -52,9 +52,10 @@ describe("handleTextareaTab — Tab turns a line into an indented bullet", () =>
     expect(renumbered(result.value)).toBe("1. 第一\n    - 第二\n2. 第三");
   });
 
-  it("does not convert a numbered line when the caret is inside its text", () => {
+  it("syncs a numbered line to a bullet on Tab even with the caret in the text", () => {
+    // No level-1 sibling above -> default bullet, regardless of caret position.
     const result = apply("1. 任务", 4);
-    expect(result.value).toBe("    1. 任务");
+    expect(result.value).toBe("    - 任务");
   });
 
   it("does not double-bullet a line that already starts with '- '", () => {
@@ -151,6 +152,18 @@ describe("handleTextareaTab — marker follows the nearest same-level sibling", 
     // "        - c" outdents to level 1, whose nearest sibling "    - b" is a bullet.
     const result = apply("- a\n    - b\n        - c", 22, true);
     expect(result.value).toBe("- a\n    - b\n    - c");
+  });
+
+  it("indents a numbered line under a dash sibling into a dash", () => {
+    // "1. c" (caret in its text) indents to level 1, whose nearest sibling "    - b" is a dash.
+    const result = apply("- a\n    - b\n1. c", 15);
+    expect(result.value).toBe("- a\n    - b\n    - c");
+  });
+
+  it("outdents a numbered line under a dash sibling into a dash", () => {
+    // "    1. b" outdents to the root, whose nearest sibling "- a" is a dash.
+    const result = apply("- a\n    1. b", 11, true);
+    expect(result.value).toBe("- a\n- b");
   });
 });
 

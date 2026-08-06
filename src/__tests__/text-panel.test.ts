@@ -385,7 +385,7 @@ describe("TextPanel", () => {
     ]);
   });
 
-  it("restarts an ordered list at one when indenting with the caret inside the text", async () => {
+  it("indents a numbered item to a bullet when no same-level sibling exists (caret in text)", async () => {
     const wrapper = mount(TextPanel, {
       props: {
         titleId: "note-title",
@@ -397,17 +397,17 @@ describe("TextPanel", () => {
       },
     });
     const textarea = wrapper.get("textarea").element as HTMLTextAreaElement;
-    // Caret inside the item text (not at the marker) keeps the regular indent.
+    // Caret inside the item text (not at the marker) still syncs the marker.
     const caret = textarea.value.indexOf("第二项") + 1;
     textarea.setSelectionRange(caret, caret);
 
     await wrapper.get("textarea").trigger("dblclick");
     await wrapper.get("textarea").trigger("keydown", { key: "Tab" });
 
-    expect(textarea.value).toBe("1. 第一项\n    1. 第二项");
+    expect(textarea.value).toBe("1. 第一项\n    - 第二项");
     expect(wrapper.emitted("update")?.at(-1)?.[0]).toEqual([
       { text: "1. 第一项", indent: 0 },
-      { text: "1. 第二项", indent: 1 },
+      { text: "- 第二项", indent: 1 },
     ]);
   });
 
