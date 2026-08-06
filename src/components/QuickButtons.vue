@@ -2,7 +2,7 @@
 import { computed, h, nextTick, onMounted, onUnmounted, reactive, ref, watch } from "vue";
 import type { Component, ComponentPublicInstance, VNode } from "vue";
 import { NButton, NCheckbox, NDropdown, NIcon, NInput, NModal, NScrollbar, NSelect } from "naive-ui";
-import { AddOutline, AppsOutline, ChevronDownOutline, CloudUploadOutline, CopyOutline, CreateOutline, EyeOffOutline, EyeOutline, HelpCircleOutline, PricetagsOutline, SearchOutline, TrashOutline } from "@vicons/ionicons5";
+import { AddOutline, AppsOutline, ChevronDownOutline, CloudUploadOutline, CopyOutline, CreateOutline, DocumentTextOutline, EyeOffOutline, EyeOutline, HelpCircleOutline, PricetagsOutline, SearchOutline, TrashOutline } from "@vicons/ionicons5";
 import type { DropdownOption } from "naive-ui";
 import type { AppLanguage, GuideKey, QuickApiBodyType, QuickApiHeader, QuickApiMethod, QuickButton, QuickButtonType, QuickTag } from "../types";
 import { GUIDE_MENU_OPTION } from "../state/defaults";
@@ -33,6 +33,7 @@ const emit = defineEmits<{
   save: [payload: { id?: string; title: string; value: string; type: QuickButtonType; tagTitle?: string; apiMethod?: QuickApiMethod; apiHeaders?: QuickApiHeader[]; apiBodyType?: QuickApiBodyType; apiBody?: string }];
   delete: [id: string, anchor?: HTMLElement];
   copy: [id: string, anchor?: HTMLElement];
+  copyText: [id: string, anchor?: HTMLElement];
   copyLink: [id: string, anchor?: HTMLElement];
   toggleHidden: [id: string];
   toggleShowHidden: [];
@@ -183,7 +184,10 @@ const menuOptions = computed<DropdownOption[]>(() => {
     { label: uiText.value.common.edit, key: "edit", icon: renderIcon(CreateOutline) },
     { label: button?.hidden ? uiText.value.quick.show : uiText.value.quick.hide, key: "toggle-hidden", icon: renderIcon(button?.hidden ? EyeOutline : EyeOffOutline) },
     ...(button?.type === "link"
-      ? [{ label: uiText.value.quick.copyLink, key: "copy-link", icon: renderIcon(CopyOutline) }]
+      ? [
+          { label: uiText.value.quick.copyText, key: "copy-text", icon: renderIcon(DocumentTextOutline) },
+          { label: uiText.value.quick.copyLink, key: "copy-link", icon: renderIcon(CopyOutline) },
+        ]
       : []),
     { label: uiText.value.common.delete, key: "delete", icon: renderIcon(TrashOutline) },
     { ...guideMenuOption.value, icon: renderIcon(HelpCircleOutline) },
@@ -416,6 +420,7 @@ function handleMenuSelect(key: string): void {
   }
   if (key === "guide" && anchor) emit("guide", "quickButtons", anchor, true);
   if (!id) return;
+  if (key === "copy-text") emit("copyText", id, anchor);
   if (key === "copy-link") emit("copyLink", id, anchor);
   if (key === "edit") openEdit(id);
   if (key === "toggle-hidden") {

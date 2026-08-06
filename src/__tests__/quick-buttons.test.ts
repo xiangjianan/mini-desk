@@ -1091,6 +1091,7 @@ describe("QuickButtons", () => {
     expect(wrapper.findAll(".dropdown-option").map((option) => option.text())).toEqual([
       "编辑",
       "隐藏",
+      "复制文本",
       "复制链接",
       "删除",
       "Tips",
@@ -1103,6 +1104,23 @@ describe("QuickButtons", () => {
     wrapper.unmount();
   });
 
+  it("offers copy-text above copy-link and emits copyText for link quick buttons", async () => {
+    const wrapper = mountQuickButtons({
+      buttons: [{ id: "quick-1", title: "链接", value: "https://example.com", type: "link", hidden: false }],
+    });
+
+    await wrapper.get(".quick-button").trigger("contextmenu");
+
+    const labels = wrapper.findAll(".dropdown-option").map((option) => option.text());
+    expect(labels.indexOf("复制文本")).toBeLessThan(labels.indexOf("复制链接"));
+
+    await wrapper.findAll(".dropdown-option").find((option) => option.text() === "复制文本")?.trigger("click");
+
+    expect(wrapper.emitted("copyText")?.[0]).toEqual(["quick-1", expect.any(HTMLElement)]);
+
+    wrapper.unmount();
+  });
+
   it("does not offer copy-link for non-link quick buttons", async () => {
     const wrapper = mountQuickButtons({
       buttons: [{ id: "quick-1", title: "接口", value: "https://example.com/api", type: "api", hidden: false }],
@@ -1111,6 +1129,7 @@ describe("QuickButtons", () => {
     await wrapper.get(".quick-button").trigger("contextmenu");
 
     expect(wrapper.findAll(".dropdown-option").some((option) => option.text() === "复制链接")).toBe(false);
+    expect(wrapper.findAll(".dropdown-option").some((option) => option.text() === "复制文本")).toBe(false);
 
     wrapper.unmount();
   });

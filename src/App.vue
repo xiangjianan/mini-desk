@@ -1589,6 +1589,18 @@ async function copyQuickLink(id: string, anchor?: HTMLElement): Promise<void> {
   }
 }
 
+async function copyQuickText(id: string, anchor?: HTMLElement): Promise<void> {
+  const button = activeWorkspace.value.quickButtons.find((item) => item.id === id);
+  if (!button) return;
+  const copied = await copyText(button.title, shouldBlockBoardEffects);
+  if (shouldBlockBoardEffects()) return;
+  if (copied) {
+    showBubbleText(getQuickTextCopiedMessage(button.title), anchor, { hideCompanionAfter: true }, 4000);
+  } else {
+    showBubble("quickTextCopyFailed", anchor, { hideCompanionAfter: true });
+  }
+}
+
 async function callQuickApi(button: QuickButton, anchor?: HTMLElement): Promise<void> {
   showBubbleText(getQuickApiInvokedMessage(button.title), anchor, { hideCompanionAfter: true }, 2200);
   try {
@@ -3296,6 +3308,7 @@ function moveItem<T extends { id: string }>(items: T[], dragId: string, targetId
           @delete="deleteQuick"
           @copy="handleQuickButton"
           @copy-link="copyQuickLink"
+          @copy-text="copyQuickText"
           @toggle-hidden="toggleQuickHidden"
           @toggle-show-hidden="activeWorkspace.showHiddenQuickButtons = !activeWorkspace.showHiddenQuickButtons; persistNow()"
           @reorder="reorderQuickButtons"
