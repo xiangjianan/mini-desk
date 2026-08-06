@@ -20,6 +20,7 @@ import type { UploadFileInfo } from "naive-ui";
 import { COMPANION_GIF_THEME_OPTIONS } from "../state/companionGifThemes";
 import { getUiText, normalizeLanguage } from "../state/i18n";
 import type { AppLanguage, CompanionCustomGif, CompanionGifTheme, GuideKey } from "../types";
+import { CONTEXT_MENU_Z_INDEX } from "../utils/contextMenu";
 
 const props = withDefaults(defineProps<{
   appVersion: string;
@@ -232,6 +233,7 @@ function renderIcon(component: Component) {
   <NDropdown
     trigger="click"
     placement="bottom-end"
+    :z-index="CONTEXT_MENU_Z_INDEX"
     :options="options"
     @select="handleSelect"
     @update:show="menuOpen = $event"

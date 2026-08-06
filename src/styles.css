@@ -4370,6 +4370,15 @@ body:has(.image-preview) .image-panel .n-scrollbar {
   height: 32px;
 }
 
+/* While the image preview is open the modal container is hoisted to z-index
+   10000 (see .n-modal-container above). At its base z-index (4500) the
+   drop-down header reveal control paints behind that layer and can't be
+   hovered/clicked, so the expand-header affordance vanishes under the preview.
+   Lift it above the modal layer for as long as the preview is visible. */
+body:has(.image-preview) .workbench-header-reveal-zone {
+  z-index: 10100;
+}
+
 .workbench-header-reveal {
   position: absolute;
   top: 1px;
