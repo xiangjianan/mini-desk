@@ -109,6 +109,21 @@ describe("handleTextareaTab — Shift+Tab outdents a bullet line", () => {
     const result = apply("    缩进行", 0, true);
     expect(result.value).toBe("缩进行");
   });
+
+  it("outdenting a nested bullet back to the root rejoins the numbered list above", () => {
+    // Two nested bullets sit under "1. 第一". Outdenting the empty second bullet
+    // to the root should rejoin the numbered list (-> "2."), not drop the marker.
+    const result = apply("1. 第一\n    - 第二\n    - ", 21, true);
+    expect(result.value).toBe("1. 第一\n    - 第二\n1. ");
+    expect(renumbered(result.value)).toBe("1. 第一\n    - 第二\n2. ");
+    expect(result.caret).toBe(18);
+  });
+
+  it("outdenting a nested bullet with text rejoins the numbered list above", () => {
+    const result = apply("1. 第一\n    - 第二\n    - 第三", 23, true);
+    expect(result.value).toBe("1. 第一\n    - 第二\n1. 第三");
+    expect(renumbered(result.value)).toBe("1. 第一\n    - 第二\n2. 第三");
+  });
 });
 
 describe("handleTextareaTab — preserved indent/outdent behavior", () => {

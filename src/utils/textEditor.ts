@@ -93,13 +93,13 @@ function getLineAt(value: string, caret: number): LineSlice {
   return { start, end, text: value.slice(start, end) };
 }
 
-/** The closest non-empty line above `lineStart`, or null when there is none. */
-function getPreviousNonEmptyLine(value: string, lineStart: number): string | null {
+/** Closest preceding non-empty line at the given indent depth, or null. */
+function getPreviousLineAtDepth(value: string, lineStart: number, depth: number): string | null {
   let end = lineStart - 1;
   while (end >= 0) {
     const start = value.lastIndexOf("\n", end - 1) + 1;
     const text = value.slice(start, end);
-    if (text.trim()) return text;
+    if (text.trim() && getIndentInfo(text).depth === depth) return text;
     if (start === 0) return null;
     end = start - 1;
   }
@@ -147,8 +147,9 @@ function tryTabConvertToBullet(value: string, caret: number): { text: string; ca
 /**
  * Shift+Tab on a bullet line outdents one level. The bullet is only reverted
  * once the line reaches the root (no indentation left):
- *  - at the root, with a numbered line above, it becomes a numbered marker
- *    again ("1. ", renumbered by the editor);
+ *  - at the root, with a numbered line at the same (root) level above — even
+ *    across nested bullets in between — it becomes a numbered marker again
+ *    ("1. ", renumbered by the editor);
  *  - at the root with no numbered line above, the bullet is removed (plain);
  *  - while still nested it stays a bullet (just outdented).
  * The caret keeps its offset within the item text and always lands after the
@@ -176,8 +177,8 @@ function tryShiftTabOnBulletLine(value: string, caret: number): { text: string; 
   let prefix: string;
   let newTextStart: number;
   if (reachedRoot) {
-    const previousLine = getPreviousNonEmptyLine(value, lineStart);
-    const toNumbered = Boolean(previousLine && NUMBERED_LINE_PATTERN.test(previousLine));
+    const previousRootLine = getPreviousLineAtDepth(value, lineStart, 0);
+    const toNumbered = Boolean(previousRootLine && NUMBERED_LINE_PATTERN.test(previousRootLine));
     prefix = toNumbered ? "1. " : "";
     newTextStart = prefix.length;
   } else {
