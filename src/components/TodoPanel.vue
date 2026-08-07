@@ -140,8 +140,8 @@ const todoSectionRefs = new Map<TodoListId, HTMLElement>();
 const notifyPickerAnchors = new Map<string, HTMLElement>();
 const uiText = computed(() => getUiText(props.language));
 const guideMenuOption = computed<DropdownOption>(() => ({ ...GUIDE_MENU_OPTION, label: uiText.value.common.tips }));
-function renderIcon(icon: Component): () => VNode {
-  return () => h(NIcon, { size: 16 }, { default: () => h(icon) });
+function renderIcon(icon: Component, danger = false): () => VNode {
+  return () => h(NIcon, { size: 16, ...(danger ? { color: "var(--danger)" } : {}) }, { default: () => h(icon) });
 }
 const exclusiveMenu = createExclusiveContextMenu(closeMenu);
 const legacyTodoTitleIds: Record<TodoListId, string> = {
@@ -169,7 +169,7 @@ const menuOptions = computed<DropdownOption[]>(() => {
       { label: uiText.value.common.paste, key: "paste", icon: renderIcon(ClipboardOutline) },
       { label: uiText.value.todo.newList, key: "create-list", icon: renderIcon(AddOutline) },
       { label: uiText.value.todo.editList, key: "edit-list", icon: renderIcon(CreateOutline) },
-      { label: uiText.value.todo.deleteList, key: "delete-list", disabled: effectiveTodoLists.value.length <= 1, icon: renderIcon(TrashOutline) },
+      { label: uiText.value.todo.deleteList, key: "delete-list", disabled: effectiveTodoLists.value.length <= 1, icon: renderIcon(TrashOutline, true) },
       { ...guideMenuOption.value, icon: renderIcon(HelpCircleOutline) },
     ];
   }
@@ -188,7 +188,7 @@ const menuOptions = computed<DropdownOption[]>(() => {
       key: "notify",
       icon: renderIcon(NotificationsOutline),
     });
-    options.push({ label: uiText.value.common.delete, key: "delete", icon: renderIcon(TrashOutline) });
+    options.push({ label: uiText.value.common.delete, key: "delete", icon: renderIcon(TrashOutline, true) });
     options.push({ label: todo?.starred ? uiText.value.todo.unstar : uiText.value.todo.star, key: "star", icon: renderIcon(todo?.starred ? Star : StarOutline) });
   }
   options.push({ ...guideMenuOption.value, icon: renderIcon(HelpCircleOutline) });

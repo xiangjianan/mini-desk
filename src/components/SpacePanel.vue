@@ -56,13 +56,13 @@ const activeSpace = computed(() =>
 
 const canDeleteSpaces = computed(() => props.spaces.length > 1);
 
-function renderIcon(icon: Component): () => VNode {
-  return () => h(NIcon, { size: 16 }, { default: () => h(icon) });
+function renderIcon(icon: Component, danger = false): () => VNode {
+  return () => h(NIcon, { size: 16, ...(danger ? { color: "var(--danger)" } : {}) }, { default: () => h(icon) });
 }
 
 const menuOptions = computed<DropdownOption[]>(() => [
   { label: uiText.value.common.rename, key: "edit", icon: renderIcon(CreateOutline) },
-  { label: uiText.value.common.delete, key: "delete", disabled: !canDeleteSpaces.value, icon: renderIcon(TrashOutline) },
+  { label: uiText.value.common.delete, key: "delete", disabled: !canDeleteSpaces.value, icon: renderIcon(TrashOutline, true) },
 ]);
 
 function handleRename(_titleId: string, title: string): void {

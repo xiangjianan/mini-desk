@@ -179,7 +179,7 @@ function onDrop(targetId: string): void {
             <button
               v-if="workspaces.length > 1"
               type="button"
-              class="workspace-switcher-action"
+              class="workspace-switcher-action is-delete"
               :data-testid="`workspace-delete-${workspace.id}`"
               :aria-label="text.common.delete"
               @click="handleDelete($event, workspace.id)"

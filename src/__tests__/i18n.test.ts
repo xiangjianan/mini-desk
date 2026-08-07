@@ -21,13 +21,13 @@ describe("localized public copy", () => {
       "todo-morning-title": "✅ Reminders",
       "todo-noon-title": "💻 Work",
       "todo-evening-title": "📚 Study",
-      "workspace-title": "📝 Memo.txt",
+      "workspace-title": "📝 Sticky.txt",
       "tools-title": "🔧 Tools",
     });
 
     expect(getDisplayTodoListTitle({ id: "morning", title: "✅ 待办", collapsed: false, compact: false }, "en")).toBe("✅ Reminders");
     expect(getDisplayTodoListTitle({ id: "morning", title: "客户跟进", collapsed: false, compact: false }, "en")).toBe("客户跟进");
-    expect(getDisplaySpaceTitle({ id: "workspace", title: "备忘录", lines: [] }, "en")).toBe("📝 Memo");
+    expect(getDisplaySpaceTitle({ id: "workspace", title: "备忘录", lines: [] }, "en")).toBe("📝 Sticky");
     expect(getDisplaySpaceTitle({ id: "workspace", title: "个人计划", lines: [] }, "en")).toBe("个人计划");
   });
 
@@ -116,23 +116,23 @@ describe("localized public copy", () => {
     expect(getUiText("zh").app.mobileTitle).toBe("Mini Desk");
     expect(getUiText("zh").app.aboutTitle).toBe("Mini Desk");
     expect(getUiText("zh").app.aboutDescription).toBe(
-      "一个本地优先的轻量工作台，把截图、提醒事项、快捷动作和备忘录缝合得恰到好处。\n所有操作均在本地浏览器完成，绝不上传您的任何数据。",
+      "一个本地优先的轻量工作台，把截图、提醒事项、快捷动作和便签缝合得恰到好处。\n所有操作均在本地浏览器完成，绝不上传您的任何数据。",
     );
     expect(getUiText("zh").app.aboutSignature).toBe("(100% AI BUILT)");
     expect(getUiText("en").app.boardLabel).toBe("Mini Desk");
     expect(getUiText("en").app.mobileTitle).toBe("Mini Desk");
-    expect(getUiText("en").app.mobileDescription).toBe("This board is designed for desktop workflows to organize screenshots, notes, reminders, quick actions, and a memo.");
+    expect(getUiText("en").app.mobileDescription).toBe("This board is designed for desktop workflows to organize screenshots, notes, reminders, quick actions, and sticky notes.");
     expect(getUiText("en").app.aboutTitle).toBe("Mini Desk");
     expect(getUiText("en").app.aboutDescription).toBe(
-      "A local-first lightweight desk for organizing screenshots, reminders, quick actions, and a memo.\nEverything happens in your local browser. None of your data is ever uploaded.",
+      "A local-first lightweight desk for organizing screenshots, reminders, quick actions, and sticky notes.\nEverything happens in your local browser. None of your data is ever uploaded.",
     );
     expect(getUiText("en").app.aboutSignature).toBe("(100% AI BUILT)");
   });
 
-  it("uses the memo emoji in default memo names", () => {
-    expect(getDisplaySpaceTitle({ id: "workspace", title: "备忘录", lines: [] }, "zh")).toBe("📝 备忘录");
-    expect(getDisplaySpaceTitle({ id: "workspace", title: "📕 备忘录", lines: [] }, "zh")).toBe("📝 备忘录");
-    expect(getDisplaySpaceTitle({ id: "workspace", title: "备忘录", lines: [] }, "en")).toBe("📝 Memo");
-    expect(getDisplaySpaceTitle({ id: "workspace", title: "Workspace", lines: [] }, "en")).toBe("📝 Memo");
+  it("uses the memo emoji in default sticky names", () => {
+    expect(getDisplaySpaceTitle({ id: "workspace", title: "备忘录", lines: [] }, "zh")).toBe("📝 便签");
+    expect(getDisplaySpaceTitle({ id: "workspace", title: "📕 备忘录", lines: [] }, "zh")).toBe("📝 便签");
+    expect(getDisplaySpaceTitle({ id: "workspace", title: "备忘录", lines: [] }, "en")).toBe("📝 Sticky");
+    expect(getDisplaySpaceTitle({ id: "workspace", title: "Workspace", lines: [] }, "en")).toBe("📝 Sticky");
   });
 });

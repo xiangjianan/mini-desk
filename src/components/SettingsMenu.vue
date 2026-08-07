@@ -73,7 +73,7 @@ const options = computed(() => [
       { label: text.value.settings.export, key: "export", icon: renderIcon(CloudDownloadOutline) },
       { label: text.value.settings.exportCurrentWorkspace, key: "export-workspace", icon: renderIcon(CloudDownloadOutline) },
       { label: text.value.settings.import, key: "import", icon: renderIcon(CloudUploadOutline) },
-      { label: text.value.settings.clearData, key: "clear-data", icon: renderIcon(TrashOutline) },
+      { label: text.value.settings.clearData, key: "clear-data", icon: renderIcon(TrashOutline, true) },
     ],
   },
   {
@@ -224,8 +224,8 @@ function getCompanionGifThemeLabel(theme: CompanionGifTheme): string {
   return theme;
 }
 
-function renderIcon(component: Component) {
-  return () => h(NIcon, { component });
+function renderIcon(component: Component, danger = false) {
+  return () => h(NIcon, { component, ...(danger ? { color: "var(--danger)" } : {}) });
 }
 </script>
 

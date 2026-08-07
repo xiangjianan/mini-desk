@@ -92,7 +92,7 @@ describe("SettingsMenu", () => {
     expect(source).toMatch(/key:\s*"data"[\s\S]*?icon:\s*renderIcon\(ServerOutline\)/);
     expect(source).toMatch(/key:\s*"export"[\s\S]*?icon:\s*renderIcon\(CloudDownloadOutline\)/);
     expect(source).toMatch(/key:\s*"import"[\s\S]*?icon:\s*renderIcon\(CloudUploadOutline\)/);
-    expect(source).toMatch(/key:\s*"clear-data"[\s\S]*?icon:\s*renderIcon\(TrashOutline\)/);
+    expect(source).toMatch(/key:\s*"clear-data"[\s\S]*?icon:\s*renderIcon\(TrashOutline,\s*true\)/);
   });
 
   it("adds a suggestion action that emits from the settings menu", async () => {

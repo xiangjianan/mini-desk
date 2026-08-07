@@ -285,16 +285,16 @@ describe("App shell", () => {
     expect(wrapper.get(".workbench-zone-assets").attributes("aria-label")).toBe("🎨 图片");
     expect(wrapper.get(".workbench-zone-notes").attributes("aria-label")).toBe("⚡ 快捷动作");
     expect(wrapper.get(".workbench-zone-tasks").attributes("aria-label")).toBe("✅ 提醒事项");
-    expect(wrapper.get(".workbench-zone-workspace").attributes("aria-label")).toBe("📝 备忘录");
+    expect(wrapper.get(".workbench-zone-workspace").attributes("aria-label")).toBe("📝 便签");
     expect(wrapper.find('[aria-label="Mini Desk"]').exists()).toBe(false);
     expect(wrapper.text()).toContain("🎨 图片");
     expect(wrapper.text()).toContain("快捷动作");
     expect(wrapper.text()).toContain("✅ 提醒事项");
-    expect(wrapper.text()).toContain("📝 备忘录");
+    expect(wrapper.text()).toContain("📝 便签");
     expect(wrapper.find(".tool-panel").exists()).toBe(false);
     expect(wrapper.findComponent({ name: "ImagePreview" }).exists()).toBe(false);
     expect(wrapper.find(".workbench-zone-notes > .quick-block").exists()).toBe(true);
-    expect(wrapper.findAll(".space-tab").map((tab) => tab.text())).toEqual(["📝 备忘录"]);
+    expect(wrapper.findAll(".space-tab").map((tab) => tab.text())).toEqual(["📝 便签"]);
     expect(wrapper.find('[data-testid="workbench-theme"]').exists()).toBe(true);
     expect(wrapper.find('[aria-label="快捷动作菜单"]').exists()).toBe(true);
     expect(wrapper.find('[aria-label="设置"]').exists()).toBe(true);
@@ -327,7 +327,7 @@ describe("App shell", () => {
       expect(wrapper.text()).toContain("Reminders");
       expect(wrapper.text()).not.toContain("💻 Work");
       expect(wrapper.text()).not.toContain("📚 Study");
-      expect(wrapper.findAll(".space-tab").map((tab) => tab.text())).toEqual(["📝 Memo"]);
+      expect(wrapper.findAll(".space-tab").map((tab) => tab.text())).toEqual(["📝 Sticky"]);
       expect(wrapper.find(".tool-panel").exists()).toBe(false);
       expect(wrapper.text()).not.toContain("快捷动作");
       expect(JSON.parse(localStorage.getItem(STORAGE_KEY) || "{}").language).toBe("en");
@@ -5209,7 +5209,7 @@ describe("App shell", () => {
       await wrapper.vm.$nextTick();
 
       expect(wrapper.find('[data-testid="companion-confirm"]').text()).toContain("Mini Desk (100% AI BUILT)");
-      expect(wrapper.find('[data-testid="companion-confirm"]').text()).toContain("把截图、提醒事项、快捷动作和备忘录缝合得恰到好处");
+      expect(wrapper.find('[data-testid="companion-confirm"]').text()).toContain("把截图、提醒事项、快捷动作和便签缝合得恰到好处");
       expect(wrapper.find('[data-testid="companion-confirm"]').text()).toContain("所有操作均在本地浏览器完成，绝不上传您的任何数据。");
       const repoLink = wrapper.get('[data-testid="companion-link"]');
       expect(repoLink.text()).toBe("xiangjianan / mini-desk");
@@ -5249,7 +5249,7 @@ describe("App shell", () => {
 
       const aboutText = wrapper.find('[data-testid="companion-confirm"]').text();
       expect(aboutText).toContain("Mini Desk (100% AI BUILT)");
-      expect(aboutText).toContain("screenshots, reminders, quick actions, and a memo");
+      expect(aboutText).toContain("screenshots, reminders, quick actions, and sticky notes");
       expect(aboutText).toContain("Everything happens in your local browser. None of your data is ever uploaded.");
       expect(aboutText).not.toContain("100% developed by AI");
       expect(wrapper.find('[data-testid="companion-signature"]').exists()).toBe(false);
