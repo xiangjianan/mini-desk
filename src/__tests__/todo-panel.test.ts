@@ -2069,8 +2069,8 @@ describe("TodoPanel", () => {
     expect(wrapper.findAll(".dropdown-option").map((option) => option.text())).toEqual([
       "复制",
       "设置通知时间",
-      "删除",
       "取消星标",
+      "删除",
       "Tips",
     ]);
 
@@ -2706,8 +2706,8 @@ describe("TodoPanel", () => {
     expect(wrapper.findAll(".dropdown-option").map((option) => option.text())).toEqual([
       "复制",
       "设置通知时间",
-      "删除",
       "星标",
+      "删除",
       "Tips",
     ]);
 
@@ -2980,8 +2980,8 @@ describe("TodoPanel", () => {
     expect(wrapper.findAll(".dropdown-option").map((option) => option.text())).toEqual([
       "复制",
       "设置通知时间",
-      "删除",
       "星标",
+      "删除",
       "Tips",
     ]);
 
@@ -3029,8 +3029,8 @@ describe("TodoPanel", () => {
     expect(wrapper.findAll(".dropdown-option").map((option) => option.text())).toEqual([
       "复制",
       "设置通知时间",
-      "删除",
       "星标",
+      "删除",
       "Tips",
     ]);
     wrapper.unmount();
@@ -3105,8 +3105,8 @@ describe("TodoPanel", () => {
       "复制",
       "粘贴",
       "设置通知时间",
-      "删除",
       "星标",
+      "删除",
       "Tips",
     ]);
 
