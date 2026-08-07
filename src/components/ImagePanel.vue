@@ -101,8 +101,8 @@ let dragWheelPauseTimer: number | undefined;
 let pasteHighlightTimer: number | undefined;
 const PASTE_HIGHLIGHT_MS = 700;
 
-function renderIcon(icon: Component): () => VNode {
-  return () => h(NIcon, { size: 16 }, { default: () => h(icon) });
+function renderIcon(icon: Component, danger = false): () => VNode {
+  return () => h(NIcon, { size: 16, ...(danger ? { color: "var(--danger)" } : {}) }, { default: () => h(icon) });
 }
 
 function getImageMenuIcon(key: ImageContextMenuKey): Component {
@@ -169,12 +169,12 @@ const menuOptions = computed<DropdownOption[]>(() =>
     ? getImageItemContextMenuItems(uiText.value, isPreviewCloseMenuItem.value, true).map((option) => ({
         ...option,
         ...(option.key === "tips" ? guideMenuOption.value : {}),
-        icon: renderIcon(getImageMenuIcon(option.key)),
+        icon: renderIcon(getImageMenuIcon(option.key), option.key === "delete"),
       }))
     : getBlankImageContextMenuItems(uiText.value).map((option) => ({
         ...option,
         ...(option.key === "tips" ? guideMenuOption.value : {}),
-        icon: renderIcon(getImageMenuIcon(option.key)),
+        icon: renderIcon(getImageMenuIcon(option.key), option.key === "delete"),
       })),
 );
 

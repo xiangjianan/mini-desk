@@ -74,13 +74,13 @@ const activeImageStyle = computed(() => {
 const menuOptions = computed<DropdownOption[]>(() => [
   ...getImageItemContextMenuItems(uiText.value, true).map((option) => ({
     ...option,
-    icon: renderIcon(getImageMenuIcon(option.key)),
+    icon: renderIcon(getImageMenuIcon(option.key), option.key === "delete"),
   })),
 ]);
 const exclusiveMenu = createExclusiveContextMenu(closeMenu);
 
-function renderIcon(icon: Component): () => VNode {
-  return () => h(NIcon, { size: 16 }, { default: () => h(icon) });
+function renderIcon(icon: Component, danger = false): () => VNode {
+  return () => h(NIcon, { size: 16, ...(danger ? { color: "var(--danger)" } : {}) }, { default: () => h(icon) });
 }
 
 function getImageMenuIcon(key: ImageContextMenuKey): Component {

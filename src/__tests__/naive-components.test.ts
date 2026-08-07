@@ -500,6 +500,14 @@ describe("Naive UI component usage", () => {
     expect(styles).not.toMatch(/body:has\(\.image-preview\) \.n-modal-container:has\(\.workspace-dialog-modal\) \.n-modal-mask\s*\{[^}]*z-index/s);
   });
 
+  it("renders every delete/trash affordance in the destructive color", () => {
+    // All delete operations (clear data, delete workspace/list/space/image, etc.)
+    // must use the --danger color so they read as destructive at a glance.
+    const styles = read("src/styles.css");
+
+    expect(styles).toMatch(/\.icon-button\.is-delete[\s\S]*?\.workspace-switcher-action\.is-delete[\s\S]*?\.preview-toolbar-button\.is-delete\s*\{[^}]*color:\s*var\(--danger\)/s);
+  });
+
   it("uses row Naive date pickers for notification time editing", () => {
     const todo = read("src/components/TodoPanel.vue");
     const styles = read("src/styles.css");

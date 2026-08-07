@@ -119,8 +119,8 @@ const selectedAppScheme = computed(() => {
   return preset ? preset.scheme : "";
 });
 
-function renderIcon(icon: Component): () => VNode {
-  return () => h(NIcon, { size: 16 }, { default: () => h(icon) });
+function renderIcon(icon: Component, danger = false): () => VNode {
+  return () => h(NIcon, { size: 16, ...(danger ? { color: "var(--danger)" } : {}) }, { default: () => h(icon) });
 }
 
 onMounted(exclusiveMenu.mount);
@@ -190,7 +190,7 @@ const menuOptions = computed<DropdownOption[]>(() => {
           { label: uiText.value.quick.copyLink, key: "copy-link", icon: renderIcon(CopyOutline) },
         ]
       : []),
-    { label: uiText.value.common.delete, key: "delete", icon: renderIcon(TrashOutline) },
+    { label: uiText.value.common.delete, key: "delete", icon: renderIcon(TrashOutline, true) },
     { ...guideMenuOption.value, icon: renderIcon(HelpCircleOutline) },
   ];
 });
@@ -928,7 +928,7 @@ function handleQuickGroupDrop(event: DragEvent, groupId: string): void {
                 />
                 <button
                   type="button"
-                  class="quick-api-remove-header icon-button"
+                  class="quick-api-remove-header icon-button is-delete"
                   :aria-label="uiText.quick.removeRequestHeader"
                   @click="removeApiHeader(header.id)"
                 >
@@ -1004,7 +1004,7 @@ function handleQuickGroupDrop(event: DragEvent, groupId: string): void {
             </div>
             <button
               type="button"
-              class="quick-tag-delete icon-button"
+              class="quick-tag-delete icon-button is-delete"
               :aria-label="uiText.quick.deleteTag"
               @click="deleteTag(tag.id, $event)"
             >
