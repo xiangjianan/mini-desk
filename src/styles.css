@@ -6873,21 +6873,7 @@ body,
   background: linear-gradient(180deg, color-mix(in srgb, var(--primary) 7%, transparent) 0%, transparent 132px);
 }
 
-/* The companion avatar idles with a gentle float. */
-@keyframes companion-float {
-  0%,
-  100% {
-    transform: translateY(0);
-  }
-
-  50% {
-    transform: translateY(-3px);
-  }
-}
-
-.focus-companion.is-visible img {
-  animation: companion-float 3.6s ease-in-out 0.4s infinite;
-}
+/* The companion avatar holds still once visible (no idle float). */
 
 /* Mobile handoff: ambient backdrop and a floating glass card. */
 .mobile-handoff {
