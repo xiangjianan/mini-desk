@@ -1604,6 +1604,52 @@ describe("TodoPanel", () => {
     vi.useRealTimers();
   });
 
+  it("commits a quick preset deadline in one step", async () => {
+    vi.useFakeTimers();
+    vi.setSystemTime(new Date(2026, 4, 25, 10, 30));
+    const wrapper = mount(TodoPanel, {
+      props: {
+        todos: {
+          morning: [{ id: "a", text: "第一项", done: false }],
+          noon: [],
+          evening: [],
+        },
+        titles: DEFAULT_TITLES,
+      },
+      global: {
+        stubs: {
+          Button: true,
+          Checkbox: checkboxStub,
+          Dropdown: dropdownStub,
+          NCheckbox: checkboxStub,
+          NDatePicker: datePickerStub,
+          NDropdown: dropdownStub,
+          NTooltip: tooltipStub,
+        },
+      },
+    });
+
+    await wrapper.get("input.todo-input").trigger("contextmenu");
+    await wrapper.findAll(".dropdown-option").find((option) => option.text() === "设置通知时间")?.trigger("click");
+
+    const pickerEl = document.body.querySelector(".notify-floating-date-picker") as HTMLElement | null;
+    expect(pickerEl).toBeTruthy();
+    expect(getTeleportedDatePickerText()).toContain("1 小时");
+
+    const presetBtn = Array.from(pickerEl!.querySelectorAll(".notify-panel-preset"))
+      .find((btn) => (btn as HTMLElement).textContent?.trim() === "1 小时") as HTMLButtonElement;
+    presetBtn.click();
+
+    expect(wrapper.emitted("notify")?.[0]).toEqual([
+      "morning",
+      "a",
+      new Date(2026, 4, 25, 11, 30).getTime(),
+      expect.any(HTMLElement),
+    ]);
+    wrapper.unmount();
+    vi.useRealTimers();
+  });
+
   it("keeps the selected hour and minute when switching dates", async () => {
     vi.useFakeTimers();
     vi.setSystemTime(new Date(2026, 4, 25, 10));

@@ -2242,6 +2242,36 @@ html[data-theme="dark"] .quick-tag-color-swatch {
   align-self: stretch;
 }
 
+.quick-api-templates {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 6px;
+}
+
+.quick-api-templates-label {
+  color: var(--muted);
+  font-size: var(--app-font-size);
+}
+
+.quick-api-template {
+  height: 26px;
+  padding: 0 10px;
+  border: 1px solid var(--line-control);
+  border-radius: 999px;
+  background: var(--button);
+  color: var(--text);
+  font-size: var(--app-font-size);
+  white-space: nowrap;
+  cursor: pointer;
+}
+
+.quick-api-template:hover {
+  background: var(--button-hover);
+  border-color: var(--foreground);
+  color: var(--foreground);
+}
+
 .checkbox-row {
   display: flex;
   align-items: center;
@@ -2922,6 +2952,58 @@ html[data-theme="dark"] .notify-date-picker .n-date-panel-calendar {
 .notify-time-option.is-active {
   background: rgba(24, 160, 88, 0.1);
   color: #18a058;
+}
+
+.notify-panel-presets {
+  grid-column: 1 / -1;
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  padding: 12px 8px 8px;
+}
+
+.notify-panel-preset-group {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+}
+
+.notify-panel-preset-label {
+  flex: 0 0 auto;
+  padding-left: 4px;
+  font-size: 12px;
+  line-height: 1;
+  color: var(--muted);
+}
+
+.notify-panel-preset {
+  flex: 1 1 0;
+  height: 26px;
+  min-width: 0;
+  padding: 0 4px;
+  border: 1px solid var(--line-control);
+  border-radius: 8px;
+  background: var(--button);
+  color: var(--text);
+  font-size: var(--app-font-size);
+  line-height: 1;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  cursor: pointer;
+  box-shadow: 0 1px 2px rgba(0, 0, 0, 0.1);
+  transition:
+    background-color var(--motion-fast) ease,
+    border-color var(--motion-fast) ease,
+    color var(--motion-fast) ease,
+    box-shadow var(--motion-fast) ease;
+}
+
+.notify-panel-preset:hover {
+  background: var(--button-hover);
+  border-color: var(--foreground);
+  color: var(--foreground);
+  box-shadow: 0 1px 3px rgba(0, 0, 0, 0.14);
 }
 
 .notify-panel-actions {

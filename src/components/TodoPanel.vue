@@ -26,6 +26,7 @@ import { getDisplayTodoListTitle, getUiText } from "../state/i18n";
 import {
   getDefaultNotifyDateTimeValue,
   getNotifyDisplay,
+  getNotifyPresets,
   isValidDeadlineAt,
   withDefaultNotifyTime,
   type NotifyDisplay,
@@ -114,6 +115,14 @@ const notifyPicker = ref<{
   y: number;
 } | null>(null);
 const notifyPickerDrafts = ref<Record<string, number>>({});
+// Quick deadline presets refresh each time the picker opens so the relative
+// durations and today-vs-tomorrow time slots stay current.
+const notifyPresets = computed(() => {
+  if (!notifyPicker.value) return [];
+  return getNotifyPresets();
+});
+const relativeNotifyPresets = computed(() => notifyPresets.value.filter((preset) => preset.group === "relative"));
+const timeNotifyPresets = computed(() => notifyPresets.value.filter((preset) => preset.group === "time"));
 const listCreateDialogRef = ref<HTMLElement | null>(null);
 const listCreateInputRef = ref<HTMLInputElement | null>(null);
 const todayFocusTitleRef = ref<{ openMenuAt: (x: number, y: number, event?: Event) => void } | null>(null);
@@ -1596,6 +1605,32 @@ function buildTodoListEntries(period: TodoListId, todos: TodoItem[], deferredDon
                   {{ formatNotifyTimeUnit(minute.value) }}
                 </div>
               </div>
+            </div>
+          </div>
+          <div class="notify-panel-presets">
+            <div class="notify-panel-preset-group">
+              <span class="notify-panel-preset-label">{{ uiText.todo.notifyPresets.relativeLabel }}</span>
+              <button
+                v-for="preset in relativeNotifyPresets"
+                :key="preset.key"
+                type="button"
+                class="notify-panel-preset"
+                @click="confirmNotifyPicker(preset.at)"
+              >
+                {{ uiText.todo.notifyPresets[preset.key] }}
+              </button>
+            </div>
+            <div class="notify-panel-preset-group">
+              <span class="notify-panel-preset-label">{{ uiText.todo.notifyPresets.timeLabel }}</span>
+              <button
+                v-for="preset in timeNotifyPresets"
+                :key="preset.key"
+                type="button"
+                class="notify-panel-preset"
+                @click="confirmNotifyPicker(preset.at)"
+              >
+                {{ uiText.todo.notifyPresets[preset.key] }}
+              </button>
             </div>
           </div>
           <div class="notify-panel-actions">

@@ -121,6 +121,58 @@ export function withDefaultNotifyTime(dateTimestamp: number, now = new Date()): 
   return target.getTime();
 }
 
+export type NotifyPresetGroup = "relative" | "time";
+
+export type NotifyPresetKey =
+  | "in15m" | "in30m" | "in1h" | "in3h" | "in6h"
+  | "at10" | "at14" | "at19" | "tomorrow9" | "dayAfter9";
+
+export interface NotifyPreset {
+  key: NotifyPresetKey;
+  group: NotifyPresetGroup;
+  at: number;
+}
+
+/**
+ * Quick deadline presets for the notify picker, in two groups: relative
+ * durations and time-of-day slots. Durations add to `now` (seconds cleared);
+ * time-of-day slots land on today's slot when it is still upcoming and otherwise
+ * roll to tomorrow, so the user never has to also pick a date. Picked presets
+ * commit immediately.
+ */
+export function getNotifyPresets(now = new Date()): NotifyPreset[] {
+  const inMinutes = (minutes: number): number => {
+    const next = new Date(now.getTime() + minutes * 60 * 1000);
+    next.setSeconds(0, 0);
+    return next.getTime();
+  };
+
+  const nextOccurrence = (hour: number): number => {
+    const today = new Date(now.getFullYear(), now.getMonth(), now.getDate(), hour, 0, 0, 0);
+    if (today.getTime() > now.getTime()) return today.getTime();
+    return new Date(now.getFullYear(), now.getMonth(), now.getDate() + 1, hour, 0, 0, 0).getTime();
+  };
+
+  const tomorrowAt = (hour: number): number =>
+    new Date(now.getFullYear(), now.getMonth(), now.getDate() + 1, hour, 0, 0, 0).getTime();
+
+  const dayAfterAt = (hour: number): number =>
+    new Date(now.getFullYear(), now.getMonth(), now.getDate() + 2, hour, 0, 0, 0).getTime();
+
+  return [
+    { key: "in15m", group: "relative", at: inMinutes(15) },
+    { key: "in30m", group: "relative", at: inMinutes(30) },
+    { key: "in1h", group: "relative", at: inMinutes(60) },
+    { key: "in3h", group: "relative", at: inMinutes(180) },
+    { key: "in6h", group: "relative", at: inMinutes(360) },
+    { key: "at10", group: "time", at: nextOccurrence(10) },
+    { key: "at14", group: "time", at: nextOccurrence(14) },
+    { key: "at19", group: "time", at: nextOccurrence(19) },
+    { key: "tomorrow9", group: "time", at: tomorrowAt(9) },
+    { key: "dayAfter9", group: "time", at: dayAfterAt(9) },
+  ];
+}
+
 export function getNotifyDisplay(notifyAt: number | undefined, now = Date.now(), language: AppLanguage = DEFAULT_LANGUAGE): NotifyDisplay | null {
   if (!isValidNotifyAt(notifyAt) || !isValidNotifyAt(now)) return null;
   const normalizedLanguage = normalizeLanguage(language);

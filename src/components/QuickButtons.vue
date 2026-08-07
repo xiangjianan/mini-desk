@@ -9,6 +9,7 @@ import { GUIDE_MENU_OPTION } from "../state/defaults";
 import { getUiText } from "../state/i18n";
 import { buildVisibleQuickButtonGroups, filterVisibleQuickButtonGroups, getQuickTagColor, hasOverloadedVisibleQuickButtonGroup, normalizeQuickTagColor, QUICK_BUTTON_EMPTY_GROUP_ID, QUICK_DENSITY_THRESHOLD, QUICK_TAG_COLORS, QUICK_TAG_DEFAULT_COLOR } from "../state/quickButtons";
 import { findQuickAppPresetByScheme, getQuickAppPresetHint, getQuickAppPresetTitle, QUICK_APP_PRESETS } from "../state/quickApps";
+import { findQuickApiTemplate, QUICK_API_TEMPLATES } from "../state/quickApiTemplates";
 import { clearGlobalSearch, globalSearchNormalized, globalSearchQuery, setGlobalSearch } from "../state/globalSearch";
 import { CONTEXT_MENU_Z_INDEX, createExclusiveContextMenu } from "../utils/contextMenu";
 import { createDragAutoScroll, findDragScrollContainer } from "../utils/dragScroll";
@@ -324,6 +325,15 @@ function selectAppPreset(scheme: string): void {
   if (!preset) return;
   form.value = preset.scheme;
   form.title = getQuickAppPresetTitle(preset, props.language);
+}
+
+function selectApiTemplate(key: string): void {
+  const template = findQuickApiTemplate(key);
+  if (!template) return;
+  form.apiMethod = template.method;
+  form.apiHeaders = createHeaderRows(template.headers);
+  form.apiBodyType = template.bodyType;
+  form.apiBody = template.body;
 }
 
 function addApiHeader(): void {
@@ -880,6 +890,18 @@ function handleQuickGroupDrop(event: DragEvent, groupId: string): void {
           />
         </div>
         <template v-if="form.type === 'api'">
+          <div class="quick-api-templates">
+            <span class="quick-api-templates-label">{{ uiText.quick.apiTemplates.label }}</span>
+            <button
+              v-for="template in QUICK_API_TEMPLATES"
+              :key="template.key"
+              type="button"
+              :class="['quick-api-template', `quick-api-template-${template.key}`]"
+              @click="selectApiTemplate(template.key)"
+            >
+              {{ uiText.quick.apiTemplates[template.key] }}
+            </button>
+          </div>
           <label>
             <span>{{ uiText.quick.requestMethod }}</span>
             <NSelect v-model:value="form.apiMethod" class="quick-api-method-select" :options="apiMethodOptions" />

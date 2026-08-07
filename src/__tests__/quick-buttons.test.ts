@@ -847,6 +847,50 @@ describe("QuickButtons", () => {
     wrapper.unmount();
   });
 
+  it("fills the request shape when the GET JSON API template is selected", async () => {
+    const wrapper = mountQuickButtons();
+
+    await openDialog(wrapper);
+    await wrapper.findAll(".checkbox-stub")[2].trigger("click"); // 接口调用
+    await wrapper.get(".quick-api-template-getJson").trigger("click");
+    await wrapper.findAll(".quick-form input")[0].setValue("获取用户");
+    await wrapper.findAll(".quick-form input")[1].setValue("https://api.example.test/users");
+    await wrapper.get("form").trigger("submit.prevent");
+
+    expect(wrapper.emitted("save")?.[0][0]).toMatchObject({
+      title: "获取用户",
+      value: "https://api.example.test/users",
+      type: "api",
+      apiMethod: "GET",
+      apiHeaders: [{ key: "Content-Type", value: "application/json" }],
+      apiBodyType: "none",
+      apiBody: "",
+    });
+
+    wrapper.unmount();
+  });
+
+  it("fills a JSON body when the POST JSON API template is selected", async () => {
+    const wrapper = mountQuickButtons();
+
+    await openDialog(wrapper);
+    await wrapper.findAll(".checkbox-stub")[2].trigger("click"); // 接口调用
+    await wrapper.get(".quick-api-template-postJson").trigger("click");
+    await wrapper.findAll(".quick-form input")[0].setValue("创建用户");
+    await wrapper.findAll(".quick-form input")[1].setValue("https://api.example.test/users");
+    await wrapper.get("form").trigger("submit.prevent");
+
+    expect(wrapper.emitted("save")?.[0][0]).toMatchObject({
+      type: "api",
+      apiMethod: "POST",
+      apiHeaders: [{ key: "Content-Type", value: "application/json" }],
+      apiBodyType: "json",
+      apiBody: "{}",
+    });
+
+    wrapper.unmount();
+  });
+
   it("saves a custom app scheme typed directly into the scheme field", async () => {
     const wrapper = mountQuickButtons();
 
