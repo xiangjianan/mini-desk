@@ -30,11 +30,11 @@ const LEGACY_DEFAULT_TODO_TITLES: Record<AppLanguage, Record<string, string>> = 
 
 export const DEFAULT_SPACE_TITLES: Record<AppLanguage, Record<string, string>> = {
   zh: {
-    workspace: "📝 备忘录",
+    workspace: "📝 便签",
     storage: "工程文件",
   },
   en: {
-    workspace: "📝 Memo",
+    workspace: "📝 Sticky",
     storage: "Project Files",
   },
 };
@@ -81,7 +81,7 @@ export const DEFAULT_TITLES_BY_LANGUAGE: Record<AppLanguage, Record<string, stri
     "todo-morning-title": "✅ 提醒事项",
     "todo-noon-title": "💻 工作",
     "todo-evening-title": "📚 学习",
-    "workspace-title": "📝 备忘录.txt",
+    "workspace-title": "📝 便签.txt",
     "tools-title": "🔧 工具",
     "storage-title": "🛠 双击可改名",
   },
@@ -93,7 +93,7 @@ export const DEFAULT_TITLES_BY_LANGUAGE: Record<AppLanguage, Record<string, stri
     "todo-morning-title": "✅ Reminders",
     "todo-noon-title": "💻 Work",
     "todo-evening-title": "📚 Study",
-    "workspace-title": "📝 Memo.txt",
+    "workspace-title": "📝 Sticky.txt",
     "tools-title": "🔧 Tools",
     "storage-title": "🛠 Double-click to rename",
   },
@@ -104,8 +104,8 @@ export const DEFAULT_TITLES_BY_LANGUAGE: Record<AppLanguage, Record<string, stri
 // those have a single editable heading; tasks and workspace hold multiple lists
 // or spaces, so they use a fixed label.
 export const WORKBENCH_COLLAPSED_FIXED_LABELS_BY_LANGUAGE: Record<AppLanguage, { tasks: string; workspace: string }> = {
-  zh: { tasks: "✅ 提醒事项", workspace: "📝 备忘录" },
-  en: { tasks: "✅ Reminders", workspace: "📝 Memo" },
+  zh: { tasks: "✅ 提醒事项", workspace: "📝 便签" },
+  en: { tasks: "✅ Reminders", workspace: "📝 Sticky" },
 };
 
 export const LEGACY_DEFAULT_TITLES_BY_LANGUAGE: Record<AppLanguage, Record<string, string>> = {
@@ -200,7 +200,7 @@ export const AREA_HELP_BY_LANGUAGE: Record<AppLanguage, Record<"images" | "note"
     note: "Quick Actions: open links or copy text.",
     quickButtons: "Quick Actions: open links or copy text.",
     todos: "Reminders: double-click titles to rename.",
-    workspace: "Memo: break work into steps.",
+    workspace: "Sticky: break work into steps.",
     tools: "Quick Actions: organize frequent links and snippets with tags.",
     storage: "Storage: keep long-lived reference material.",
   },
@@ -541,7 +541,7 @@ export const UI_TEXT = {
       densityCrowded: "今日桌面：过热",
       theme: "切换主题",
       unnamedList: "未命名列表",
-      newSpace: "新空间",
+      newSpace: "新便签",
       keepOneSpace: "至少保留一个空间",
       deleteSpace: "删除空间",
       keepOneTodoList: "至少保留一个提醒列表",
@@ -554,7 +554,7 @@ export const UI_TEXT = {
       customGifSet: "已设置自定义 GIF",
       importOverwrite: "覆盖导入",
       aboutTitle: "Mini Desk",
-      aboutDescription: "一个本地优先的轻量工作台，把截图、提醒事项、快捷动作和备忘录缝合得恰到好处。\n所有操作均在本地浏览器完成，绝不上传您的任何数据。",
+      aboutDescription: "一个本地优先的轻量工作台，把截图、提醒事项、快捷动作和便签缝合得恰到好处。\n所有操作均在本地浏览器完成，绝不上传您的任何数据。",
       aboutSignature: "(100% AI BUILT)",
       reminderFallback: "提醒事项",
       workspaces: "工作空间",
@@ -849,7 +849,7 @@ export const UI_TEXT = {
       mobileTitle: "Mini Desk",
       mobileHeading: "The desktop experience is more complete",
       mobileMessage: "Open this in a desktop browser for the full experience (｡•̀ᴗ-)✧",
-      mobileDescription: "This board is designed for desktop workflows to organize screenshots, notes, reminders, quick actions, and a memo.",
+      mobileDescription: "This board is designed for desktop workflows to organize screenshots, notes, reminders, quick actions, and sticky notes.",
       saved: "Saved",
       saving: "Saving",
       dirty: "Unsaved changes",
@@ -858,7 +858,7 @@ export const UI_TEXT = {
       densityCrowded: "Today: heated desk",
       theme: "Switch theme",
       unnamedList: "Untitled List",
-      newSpace: "New Space",
+      newSpace: "New Sticky",
       keepOneSpace: "Keep at least one space",
       deleteSpace: "Delete space",
       keepOneTodoList: "Keep at least one reminder list",
@@ -871,7 +871,7 @@ export const UI_TEXT = {
       customGifSet: "Custom GIF set",
       importOverwrite: "Overwrite import",
       aboutTitle: "Mini Desk",
-      aboutDescription: "A local-first lightweight desk for organizing screenshots, reminders, quick actions, and a memo.\nEverything happens in your local browser. None of your data is ever uploaded.",
+      aboutDescription: "A local-first lightweight desk for organizing screenshots, reminders, quick actions, and sticky notes.\nEverything happens in your local browser. None of your data is ever uploaded.",
       aboutSignature: "(100% AI BUILT)",
       reminderFallback: "Reminders",
       workspaces: "Workspaces",
@@ -1234,7 +1234,7 @@ export type ShortcutHelpSection = {
 
 export const SHORTCUT_HELP: Record<AppLanguage, ShortcutHelpSection[]> = {
   zh: [
-    { area: "工作台", icon: "⌘", summary: "把图片、提醒、快捷动作和备忘录放在一个桌面里。", tips: [
+    { area: "工作台", icon: "⌘", summary: "把图片、提醒、快捷动作和便签放在一个桌面里。", tips: [
       "拖动栏间分隔线可以调整宽度，布局会自动记住。",
       "顶部菜单可以收起，适合给内容区让出空间。",
       "双击任意区域标题可以改名，包括今日重点和空间标签。",

@@ -49,7 +49,7 @@ describe("WorkbenchShell", () => {
     expect(wrapper.get(".workbench-zone-assets").attributes("aria-label")).toBe("🎨 图片");
     expect(wrapper.get(".workbench-zone-notes").attributes("aria-label")).toBe("⚡ 快捷动作");
     expect(wrapper.get(".workbench-zone-tasks").attributes("aria-label")).toBe("✅ 提醒事项");
-    expect(wrapper.get(".workbench-zone-workspace").attributes("aria-label")).toBe("📝 备忘录");
+    expect(wrapper.get(".workbench-zone-workspace").attributes("aria-label")).toBe("📝 便签");
     expect(wrapper.get('[data-testid="assets-slot"]').text()).toBe("assets");
     expect(wrapper.get('[data-testid="notes-slot"]').text()).toBe("notes");
     expect(wrapper.get('[data-testid="tasks-slot"]').text()).toBe("tasks");
@@ -72,7 +72,7 @@ describe("WorkbenchShell", () => {
     expect(wrapper.get(".workbench-zone-assets .workbench-zone-rail").text()).toBe("我的图床");
     expect(wrapper.get(".workbench-zone-notes .workbench-zone-rail").text()).toBe("常用动作");
     expect(wrapper.get(".workbench-zone-tasks .workbench-zone-rail").text()).toBe("✅ 提醒事项");
-    expect(wrapper.get(".workbench-zone-workspace .workbench-zone-rail").text()).toBe("📝 备忘录");
+    expect(wrapper.get(".workbench-zone-workspace .workbench-zone-rail").text()).toBe("📝 便签");
   });
 
   it("falls back to the default area titles when no custom title is provided", () => {

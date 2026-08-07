@@ -32,7 +32,7 @@ describe("workspace helpers", () => {
   });
 
   it("createWorkspaceData 新建空间不沿用默认 slogan", () => {
-    const workspace = createWorkspaceData("新空间", "", 1, "ws-3");
+    const workspace = createWorkspaceData("我的桌面", "", 1, "ws-3");
 
     expect(workspace.customTitles["board-slogan"]).toBeUndefined();
   });

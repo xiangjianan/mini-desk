@@ -972,7 +972,7 @@ export const MESSAGE_CATALOG: Record<MessageKey, MessageEntry> = {
     variants: [
       [
         "Mini Desk",
-        "一个本地优先的轻量工作台，把截图、提醒事项、快捷动作和备忘录缝合得恰到好处。",
+        "一个本地优先的轻量工作台，把截图、提醒事项、快捷动作和便签缝合得恰到好处。",
         "所有操作均在本地浏览器完成，绝不上传您的任何数据。",
       ].join("\n"),
     ],
@@ -1101,7 +1101,7 @@ const EN_MESSAGE_VARIANTS = {
   about: [
     [
       "Mini Desk",
-      "A local-first lightweight desk for organizing screenshots, reminders, quick links, and a memo.",
+      "A local-first lightweight desk for organizing screenshots, reminders, quick links, and sticky notes.",
       "Everything happens in your local browser. None of your data is ever uploaded.",
     ].join("\n"),
   ],
