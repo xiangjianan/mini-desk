@@ -188,8 +188,8 @@ const menuOptions = computed<DropdownOption[]>(() => {
       key: "notify",
       icon: renderIcon(NotificationsOutline),
     });
-    options.push({ label: uiText.value.common.delete, key: "delete", icon: renderIcon(TrashOutline, true) });
     options.push({ label: todo?.starred ? uiText.value.todo.unstar : uiText.value.todo.star, key: "star", icon: renderIcon(todo?.starred ? Star : StarOutline) });
+    options.push({ label: uiText.value.common.delete, key: "delete", icon: renderIcon(TrashOutline, true) });
   }
   options.push({ ...guideMenuOption.value, icon: renderIcon(HelpCircleOutline) });
   return options;
