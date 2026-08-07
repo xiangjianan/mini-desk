@@ -74,6 +74,21 @@ describe("WorkspaceSwitcher", () => {
     wrapper.unmount();
   });
 
+  it("仅有一个工作空间时仍渲染红色删除按钮（三按钮齐全）", async () => {
+    const single: WorkspaceData[] = [
+      { ...defaultWorkspace("a"), customTitles: { "board-title": "主空间", "board-slogan": "S1" } },
+    ];
+    const wrapper = mount(WorkspaceSwitcher, {
+      props: { workspaces: single, activeWorkspaceId: "a", theme: "light", language: "zh" },
+      attachTo: document.body,
+    });
+    await wrapper.find('[data-testid="workspace-trigger"]').trigger("click");
+    const deleteButton = wrapper.find('[data-testid="workspace-delete-a"]');
+    expect(deleteButton.exists()).toBe(true);
+    expect(deleteButton.classes()).toContain("is-delete");
+    wrapper.unmount();
+  });
+
   it("点击重命名 emit rename", async () => {
     const wrapper = mount(WorkspaceSwitcher, {
       props: { workspaces, activeWorkspaceId: "a", theme: "light", language: "zh" },

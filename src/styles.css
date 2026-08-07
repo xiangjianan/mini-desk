@@ -3042,9 +3042,11 @@ html[data-theme="dark"] .notify-date-picker .n-date-panel-calendar {
 /* Every delete/trash affordance reads as destructive: the trash icon buttons
    (screenshot delete, quick tag/header delete, workspace delete) paint in the
    danger color so they stand out from ordinary actions. Dropdown menu delete
-   items color their trash icon directly via renderIcon(..., true). */
+   items color their trash icon directly via renderIcon(..., true). The workspace
+   selector is scoped under .workspace-switcher-actions so its specificity (0,3,0)
+   beats the equal-or-higher `color: inherit` on the base action rule below. */
 .icon-button.is-delete,
-.workspace-switcher-action.is-delete,
+.workspace-switcher-actions .workspace-switcher-action.is-delete,
 .preview-toolbar-button.is-delete {
   color: var(--danger);
 }

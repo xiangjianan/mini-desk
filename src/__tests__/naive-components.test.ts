@@ -505,7 +505,7 @@ describe("Naive UI component usage", () => {
     // must use the --danger color so they read as destructive at a glance.
     const styles = read("src/styles.css");
 
-    expect(styles).toMatch(/\.icon-button\.is-delete[\s\S]*?\.workspace-switcher-action\.is-delete[\s\S]*?\.preview-toolbar-button\.is-delete\s*\{[^}]*color:\s*var\(--danger\)/s);
+    expect(styles).toMatch(/\.icon-button\.is-delete[\s\S]*?\.workspace-switcher-actions \.workspace-switcher-action\.is-delete[\s\S]*?\.preview-toolbar-button\.is-delete\s*\{[^}]*color:\s*var\(--danger\)/s);
   });
 
   it("uses row Naive date pickers for notification time editing", () => {

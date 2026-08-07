@@ -177,7 +177,6 @@ function onDrop(targetId: string): void {
               <NIcon :component="CreateOutline" size="14" />
             </button>
             <button
-              v-if="workspaces.length > 1"
               type="button"
               class="workspace-switcher-action is-delete"
               :data-testid="`workspace-delete-${workspace.id}`"
