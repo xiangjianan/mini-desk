@@ -33,8 +33,7 @@ describe("CompanionBubble", () => {
 
     expect(component).toContain('name="companion-gif-fade"');
     // type="transition" makes Vue key the swap off the 0.26s opacity transition
-    // (transitionend) instead of the infinite companion-float animation, whose
-    // animationend never fires and would otherwise stall the new GIF ~4s.
+    // (transitionend) so the new GIF appears as soon as the fade completes.
     expect(component).toContain('type="transition"');
     expect(styles).toContain(".companion-gif-fade-enter-active");
     expect(styles).toContain(".companion-gif-fade-leave-to");
