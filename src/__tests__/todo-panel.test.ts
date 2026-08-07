@@ -987,7 +987,7 @@ describe("TodoPanel", () => {
       },
     });
 
-    expect(wrapper.get(".today-focus-section").text()).toContain("❗️ 重点事项");
+    expect(wrapper.get(".today-focus-section").text()).toContain("‼️ 重点事项");
     expect(wrapper.findAll(".today-focus-input").map((item) => (item.element as HTMLInputElement).value)).toEqual([
       "重点未完成",
       "重点已完成",
@@ -2034,10 +2034,10 @@ describe("TodoPanel", () => {
     });
 
     await wrapper.get(".today-focus-heading .editable-title").trigger("dblclick");
-    await wrapper.get(".today-focus-heading .title-edit-input").setValue("❗️ 本日重点");
+    await wrapper.get(".today-focus-heading .title-edit-input").setValue("‼️ 本日重点");
     await wrapper.get(".today-focus-heading .title-edit-input").trigger("blur");
 
-    expect(wrapper.emitted("titleUpdate")?.[0]).toEqual(["today-focus-title", "❗️ 本日重点"]);
+    expect(wrapper.emitted("titleUpdate")?.[0]).toEqual(["today-focus-title", "‼️ 本日重点"]);
     wrapper.unmount();
   });
 

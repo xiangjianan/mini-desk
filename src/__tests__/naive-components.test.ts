@@ -480,6 +480,26 @@ describe("Naive UI component usage", () => {
     expect(styles).toMatch(/\.shortcut-help-modal \.n-base-close \.n-base-close__state-border[\s\S]*?\.shortcut-help-modal \.n-base-close \.n-base-close__border\s*\{[^}]*display: none/s);
   });
 
+  it("lifts the workspace create/rename dialog above the image preview", () => {
+    // While the image preview is open, Naive modal containers drop to
+    // pointer-events: none and the preview side panel sits at z-index 4300. The
+    // workspace dialog must still paint above the preview and stay interactive.
+    const app = read("src/App.vue");
+    const styles = read("src/styles.css");
+
+    expect(app).toContain('class="workspace-dialog-modal"');
+    expect(styles).toMatch(/body:has\(\.image-preview\) \.n-modal-container:has\(\.workspace-dialog-modal\)\s*\{[^}]*z-index: 10100/s);
+    expect(styles).toMatch(/body:has\(\.image-preview\) \.workspace-dialog-modal\.n-card\s*\{[^}]*z-index: 4310/s);
+    expect(styles).toMatch(/body:has\(\.image-preview\) \.workspace-dialog-modal\.n-card\s*\{[^}]*pointer-events: auto/s);
+    expect(styles).toMatch(/body:has\(\.image-preview\) \.workspace-dialog-modal\.n-card\s*\{[^}]*user-select: text/s);
+    // The dialog's frosted mask is normally blanked while the preview is open;
+    // restore it (scoped to this dialog's container) so the preview is dimmed
+    // behind the dialog. The mask itself must not carry a z-index.
+    expect(styles).toMatch(/body:has\(\.image-preview\) \.n-modal-container:has\(\.workspace-dialog-modal\) \.n-modal-mask\s*\{[^}]*pointer-events: auto/s);
+    expect(styles).toMatch(/body:has\(\.image-preview\) \.n-modal-container:has\(\.workspace-dialog-modal\) \.n-modal-mask\s*\{[^}]*backdrop-filter: blur/s);
+    expect(styles).not.toMatch(/body:has\(\.image-preview\) \.n-modal-container:has\(\.workspace-dialog-modal\) \.n-modal-mask\s*\{[^}]*z-index/s);
+  });
+
   it("uses row Naive date pickers for notification time editing", () => {
     const todo = read("src/components/TodoPanel.vue");
     const styles = read("src/styles.css");
@@ -823,7 +843,7 @@ describe("Naive UI component usage", () => {
     const i18n = read("src/state/i18n.ts");
 
     expect(defaults).toContain("GUIDE_MENU_OPTION");
-    expect(i18n).toContain('"today-focus-title": "❗️ 重点事项"');
+    expect(i18n).toContain('"today-focus-title": "‼️ 重点事项"');
     for (const source of [image, quick, todo, text]) {
       expect(source).toContain("GUIDE_MENU_OPTION");
       expect(source).toContain("common.tips");

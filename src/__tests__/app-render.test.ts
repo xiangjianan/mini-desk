@@ -1888,10 +1888,13 @@ describe("App shell", () => {
   });
 
   it("pre-fills the rename dialog title with the displayed name but leaves slogan blank when unset", async () => {
-    // The default workspace ships with empty customTitles, so the board title falls
-    // back to DEFAULT_BOARD_TITLE. The rename dialog must surface that name, yet keep
-    // the optional slogan input empty rather than surfacing the default tagline.
-    localStorage.removeItem(STORAGE_KEY);
+    // A workspace with no custom title falls back to DEFAULT_BOARD_TITLE, and one
+    // with no slogan must keep the optional slogan input empty. Seed an explicit
+    // empty-customTitles workspace (the shipped default now carries a slogan).
+    localStorage.setItem(
+      STORAGE_KEY,
+      JSON.stringify({ workspaces: [{ ...defaultWorkspace(), customTitles: {} }] }),
+    );
     const wrapper = mountApp();
 
     try {
@@ -1933,10 +1936,27 @@ describe("App shell", () => {
     }
   });
 
-  it("hides the header slogan when the active workspace has no slogan set", async () => {
-    // The default workspace ships with no slogan. The header must not surface the
-    // brand tagline ("Do less, do it well.") as if it were the workspace's slogan.
+  it("ships the default workspace with the default slogan on first open", async () => {
+    // A brand-new user (no persisted state) gets the default workspace, which now
+    // carries the default slogan "Do less, do it well." in its customTitles.
     localStorage.removeItem(STORAGE_KEY);
+    const wrapper = mountApp();
+
+    try {
+      await nextTick();
+      expect(wrapper.get(".workbench-slogan").text()).toBe("Do less, do it well.");
+    } finally {
+      wrapper.unmount();
+    }
+  });
+
+  it("hides the header slogan when the active workspace has no slogan set", async () => {
+    // A workspace without a slogan must not surface anything in the header, even
+    // though the shipped default workspace carries the default tagline.
+    localStorage.setItem(
+      STORAGE_KEY,
+      JSON.stringify({ workspaces: [{ ...defaultWorkspace(), customTitles: {} }] }),
+    );
     const wrapper = mountApp();
 
     try {

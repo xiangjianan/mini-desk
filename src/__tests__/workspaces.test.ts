@@ -25,6 +25,18 @@ describe("workspace helpers", () => {
     expect(workspace.customTitles).toEqual({});
   });
 
+  it("defaultWorkspace 带有默认 slogan，供首次打开的默认空间展示", () => {
+    const workspace = defaultWorkspace();
+
+    expect(workspace.customTitles["board-slogan"]).toBe("Do less, do it well.");
+  });
+
+  it("createWorkspaceData 新建空间不沿用默认 slogan", () => {
+    const workspace = createWorkspaceData("新空间", "", 1, "ws-3");
+
+    expect(workspace.customTitles["board-slogan"]).toBeUndefined();
+  });
+
   it("ensureUniqueWorkspaceTitle 为重名标题加后缀", () => {
     const existing: WorkspaceData[] = [
       { ...defaultWorkspace("a"), customTitles: { "board-title": "项目" } },

@@ -1284,6 +1284,45 @@ describe("ImagePreview", () => {
     }
   });
 
+  it("emits dropped files with the active image id when an external file is dropped on the preview", async () => {
+    const wrapper = mount(ImagePreview, {
+      props: {
+        images: [
+          { id: "img-1", src: "data:image/png;base64,one", createdAt: 1 },
+          { id: "img-2", src: "data:image/png;base64,two", createdAt: 2 },
+        ],
+        activeId: "img-2",
+      },
+      global: {
+        stubs: {
+          Button: buttonStub,
+          Dropdown: dropdownStub,
+          Modal: modalStub,
+          NButton: buttonStub,
+          NDropdown: dropdownStub,
+          NModal: modalStub,
+        },
+      },
+    });
+
+    try {
+      const file = new File(["img"], "screen.png", { type: "image/png" });
+      const surface = wrapper.get(".image-preview");
+
+      await surface.trigger("drop", {
+        dataTransfer: { types: ["Files"], files: [file] },
+      });
+
+      const dropEvents = wrapper.emitted("dropFiles");
+      expect(dropEvents).toHaveLength(1);
+      expect(dropEvents?.[0]?.[0]).toEqual([file]);
+      expect(dropEvents?.[0]?.[1]).toBe(surface.element);
+      expect(dropEvents?.[0]?.[2]).toBe("img-2");
+    } finally {
+      wrapper.unmount();
+    }
+  });
+
   it("leaves Ctrl+C and Ctrl+V to the editor while editing", async () => {
     const wrapper = mount(ImagePreview, {
       props: {

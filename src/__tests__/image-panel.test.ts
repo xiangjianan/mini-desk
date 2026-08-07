@@ -497,6 +497,43 @@ describe("ImagePanel", () => {
     wrapper.unmount();
   });
 
+  it("emits browser-external dropped files with the target card id when dropped on a card", async () => {
+    const wrapper = mountImagePanel([
+      { id: "a", src: "data:image/png;base64,aW1n", createdAt: 1 },
+      { id: "b", src: "data:image/png;base64,YmFy", createdAt: 2 },
+      { id: "c", src: "data:image/png;base64,Y2F0", createdAt: 3 },
+    ]);
+    const image = new File(["img"], "screen.png", { type: "image/png" });
+    const cards = wrapper.findAll(".image-card");
+    const dataTransfer = { types: ["Files"], files: [image] };
+
+    await cards[1].trigger("dragover", { dataTransfer });
+    await cards[1].trigger("drop", { dataTransfer });
+
+    expect(wrapper.emitted("dropFiles")).toHaveLength(1);
+    expect(wrapper.emitted("dropFiles")?.[0]).toEqual([[image], expect.any(HTMLElement), "b"]);
+    wrapper.unmount();
+  });
+
+  it("highlights the target card while an external file drag hovers over it", async () => {
+    const wrapper = mountImagePanel([
+      { id: "a", src: "data:image/png;base64,aW1n", createdAt: 1 },
+      { id: "b", src: "data:image/png;base64,YmFy", createdAt: 2 },
+    ]);
+    const cards = wrapper.findAll(".image-card");
+    const dataTransfer = { types: ["Files"], files: [] };
+
+    await cards[1].trigger("dragover", { dataTransfer });
+
+    expect(cards[1].classes()).toContain("is-drop-target");
+    expect(cards[0].classes()).not.toContain("is-drop-target");
+
+    await cards[1].trigger("dragleave", { dataTransfer });
+
+    expect(cards[1].classes()).not.toContain("is-drop-target");
+    wrapper.unmount();
+  });
+
   it("renders an add button that opens the native file picker on click", async () => {
     const clickSpy = vi.spyOn(HTMLInputElement.prototype, "click").mockImplementation(() => {});
     const wrapper = mountImagePanel();

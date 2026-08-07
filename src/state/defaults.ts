@@ -19,6 +19,8 @@ export const DEFAULT_SPACE_ID = "workspace";
 export const DEFAULT_SPACE_TITLE = DEFAULT_SPACE_TITLES.zh.workspace;
 export const DEFAULT_WORKSPACE_ID = "default";
 
+export const DEFAULT_BOARD_SLOGAN = "Do less, do it well.";
+
 export const DEFAULT_TODO_LISTS: TodoListConfig[] = getDefaultTodoLists(DEFAULT_LANGUAGE);
 
 export const TODO_PERIODS: TodoListId[] = DEFAULT_TODO_LISTS.map((list) => list.id);
@@ -37,7 +39,7 @@ export function defaultWorkspace(id: string = DEFAULT_WORKSPACE_ID): WorkspaceDa
   return {
     id,
     createdAt: 0,
-    customTitles: {},
+    customTitles: { "board-slogan": DEFAULT_BOARD_SLOGAN },
     noteLines: [],
     workspaceLines: [],
     storageLines: [],

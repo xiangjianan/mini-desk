@@ -30,6 +30,7 @@ const emit = defineEmits<{
   reorder: [dragId: string, targetId: string];
   moveToBottom: [id: string];
   paste: [request: ImagePasteRequest];
+  dropFiles: [files: File[], anchor: HTMLElement, targetId: string];
   tips: [anchor?: HTMLElement];
   saveEdit: [payload: { id: string; src: string; displayWidth: number; displayHeight: number }];
 }>();
@@ -214,6 +215,13 @@ function move(event: MouseEvent): void {
     x: start.value.ox + event.clientX - start.value.x,
     y: start.value.oy + event.clientY - start.value.y,
   };
+}
+
+function handleExternalDrop(event: DragEvent): void {
+  if (!active.value) return;
+  const files = Array.from(event.dataTransfer?.files ?? []);
+  if (files.length === 0) return;
+  emit("dropFiles", files, event.currentTarget as HTMLElement, active.value.id);
 }
 
 function openMenu(event: MouseEvent, id: string): void {
@@ -495,6 +503,8 @@ function isPreviewShortcutKey(event: KeyboardEvent): boolean {
       @mouseleave="dragging = false"
       @keydown="handleKeydown"
       @selectstart.prevent
+      @dragover.prevent
+      @drop.prevent.stop="handleExternalDrop"
       @contextmenu.prevent="openMenu($event, active.id)"
     >
       <main class="preview-main" :class="{ 'is-editing': editing }">

@@ -3949,6 +3949,35 @@ body:has(.image-preview) .shortcut-help-modal.n-card {
   user-select: text;
 }
 
+/* The workspace create/rename dialog can be opened from the left switcher while
+   the image preview side panel is open. All Naive modal containers share
+   z-index 10000, so by DOM order the preview can paint over this dialog; lift
+   this dialog's container above that shared layer. The open preview also blanks
+   every mask and disables container pointer-events, so restore this dialog's
+   own frosted mask and re-enable interaction on the mask and card. */
+body:has(.image-preview) .n-modal-container:has(.workspace-dialog-modal) {
+  z-index: 10100 !important;
+}
+
+body:has(.image-preview) .workspace-dialog-modal.n-card {
+  position: relative;
+  z-index: 4310;
+  pointer-events: auto;
+  -webkit-user-select: text;
+  user-select: text;
+}
+
+body:has(.image-preview) .n-modal-container:has(.workspace-dialog-modal) .n-modal-mask {
+  pointer-events: auto;
+  background: rgba(15, 23, 42, 0.16) !important;
+  -webkit-backdrop-filter: blur(6px) saturate(1.2);
+  backdrop-filter: blur(6px) saturate(1.2);
+}
+
+html[data-theme="dark"] body:has(.image-preview) .n-modal-container:has(.workspace-dialog-modal) .n-modal-mask {
+  background: rgba(0, 0, 0, 0.32) !important;
+}
+
 body:has(.image-preview) .shortcut-help-modal .n-scrollbar-container,
 body:has(.image-preview) .shortcut-help-modal .n-scrollbar-content,
 body:has(.image-preview) .shortcut-help-modal .n-scrollbar {
@@ -5797,6 +5826,12 @@ button[data-testid="password-generate"].tool-primary-action:focus-visible {
   background: color-mix(in srgb, var(--primary) 8%, var(--card));
   border-color: var(--line-focus);
   box-shadow: none;
+}
+
+.image-panel .image-card.is-drop-target {
+  border-color: color-mix(in srgb, var(--primary) 55%, var(--line-focus));
+  background-color: color-mix(in srgb, var(--primary) 10%, var(--card));
+  box-shadow: 0 0 0 2px color-mix(in srgb, var(--primary) 35%, transparent);
 }
 
 .image-panel .image-card.is-paste-highlighted {

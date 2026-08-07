@@ -1076,11 +1076,25 @@ function publishPasteFeedback(id: string): void {
   pasteFeedback.value = { id, token: ++pasteFeedbackToken };
 }
 
+function insertStoredImage(image: StoredImage, afterId?: string): void {
+  if (!afterId) {
+    activeWorkspace.value.images.push(image);
+    return;
+  }
+  const index = activeWorkspace.value.images.findIndex((item) => item.id === afterId);
+  if (index < 0) {
+    activeWorkspace.value.images.push(image);
+    return;
+  }
+  activeWorkspace.value.images.splice(index + 1, 0, image);
+}
+
 async function addImageFile(
   file: File,
   options: {
     showMessage?: boolean;
     matchDisplaySizeToDevicePixelRatio?: boolean;
+    insertAfterId?: string;
     onPersisted?: (image: StoredImage) => void;
   } = {},
 ): Promise<StoredImage | undefined> {
@@ -1119,13 +1133,13 @@ async function addImageFile(
     }
     return undefined;
   }
-  activeWorkspace.value.images.push(image);
+  insertStoredImage(image, options.insertAfterId);
   if (persistNow("images")) options.onPersisted?.(image);
   if (options.showMessage ?? true) showBubble("imageAdded", undefined, { hideCompanionAfter: true });
   return image;
 }
 
-async function addImageFiles(files: File[], anchor?: HTMLElement): Promise<void> {
+async function addImageFiles(files: File[], anchor?: HTMLElement, targetId?: string): Promise<void> {
   if (shouldBlockBoardEffects()) return;
   const imageFiles = files.filter((file) => file.type.startsWith("image/"));
   const ignoredCount = files.length - imageFiles.length;
@@ -1135,14 +1149,24 @@ async function addImageFiles(files: File[], anchor?: HTMLElement): Promise<void>
   }
 
   const added: StoredImage[] = [];
+  // When a target is supplied, chain each file after the previous insert so a
+  // multi-file drop keeps its file order immediately after the target image.
+  let insertAfterId = targetId;
   for (const file of imageFiles) {
-    const image = await addImageFile(file, { showMessage: false });
+    const image = await addImageFile(file, { showMessage: false, insertAfterId });
     if (shouldBlockBoardEffects()) return;
-    if (image) added.push(image);
+    if (image) {
+      added.push(image);
+      insertAfterId = image.id;
+    }
   }
   if (added.length === 0) return;
   if (shouldBlockBoardEffects()) return;
-  await copyImage(added.at(-1)!.id, anchor);
+  if (targetId) {
+    publishPasteFeedback(added.at(-1)!.id);
+  } else {
+    await copyImage(added.at(-1)!.id, anchor);
+  }
   if (shouldBlockBoardEffects()) return;
   if (ignoredCount > 0) showBubble("imageDropIgnored", anchor, { hideCompanionAfter: true });
 }
@@ -3405,6 +3429,7 @@ function moveItem<T extends { id: string }>(items: T[], dragId: string, targetId
       @close="clearImagePreview"
       @copy="copyImage"
       @paste="pasteImageFromClipboard"
+      @drop-files="addImageFiles"
       @delete="deleteImage"
       @navigate="navigatePreview"
       @reorder="reorderImages"
@@ -3443,6 +3468,7 @@ function moveItem<T extends { id: string }>(items: T[], dragId: string, targetId
     <NModal
       v-model:show="workspaceDialogVisible"
       preset="card"
+      class="workspace-dialog-modal"
       :title="workspaceDialogMode === 'create' ? uiText.app.newWorkspace : uiText.common.rename"
       style="max-width: 360px"
       :mask-closable="false"

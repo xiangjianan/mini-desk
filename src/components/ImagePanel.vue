@@ -32,7 +32,7 @@ const emit = defineEmits<{
   reorder: [dragId: string, targetId: string];
   moveToBottom: [id: string];
   paste: [request: ImagePasteRequest];
-  dropFiles: [files: File[], anchor?: HTMLElement];
+  dropFiles: [files: File[], anchor?: HTMLElement, targetId?: string];
   guide: [key: GuideKey, anchor: HTMLElement, immediate?: boolean];
 }>();
 
@@ -70,6 +70,7 @@ const titleRef = ref<{ openMenuAt: (x: number, y: number, event?: Event) => void
 const imageCardRefs = new Map<string, HTMLElement>();
 const imageDragPreview = ref<ImageDragPreview | null>(null);
 const pasteHighlightedId = ref<string | null>(null);
+const externalDropTargetId = ref<string | null>(null);
 const addButtonRef = ref<HTMLElement | null>(null);
 let pickerInput: HTMLInputElement | null = null;
 const uiText = computed(() => getUiText(props.language));
@@ -280,6 +281,7 @@ function handleGuideClick(event: MouseEvent): void {
 
 function handleExternalDrop(event: DragEvent): void {
   isDragHover.value = false;
+  externalDropTargetId.value = null;
   resetImageDragAutoScroll();
   if (hasImageSortDrag(event)) return;
   const files = Array.from(event.dataTransfer?.files ?? []);
@@ -347,6 +349,7 @@ function handleImageDragEnter(event: DragEvent): void {
 
 function handleImageDragLeave(): void {
   isDragHover.value = false;
+  externalDropTargetId.value = null;
   resetImageDragAutoScroll();
 }
 
@@ -477,19 +480,45 @@ function hasImageSortDrag(event: DragEvent): boolean {
   return Array.from(event.dataTransfer?.types ?? []).includes(IMAGE_DRAG_SORT_MIME);
 }
 
-function handleImageCardDragOver(event: DragEvent): void {
-  if (!hasImageSortDrag(event)) return;
+function isExternalFileDrag(event: DragEvent): boolean {
+  const types = Array.from(event.dataTransfer?.types ?? []);
+  if (types.includes(IMAGE_DRAG_SORT_MIME)) return false;
+  return types.includes("Files");
+}
+
+function handleImageCardDragOver(event: DragEvent, targetId: string): void {
+  if (hasImageSortDrag(event)) {
+    event.preventDefault();
+    if (event.dataTransfer) event.dataTransfer.dropEffect = "move";
+    return;
+  }
+  if (!isExternalFileDrag(event)) return;
+  // External file drags only fire `drop` on the card when dragover allows it.
   event.preventDefault();
-  if (event.dataTransfer) event.dataTransfer.dropEffect = "move";
+  if (event.dataTransfer) event.dataTransfer.dropEffect = "copy";
+  externalDropTargetId.value = targetId;
+}
+
+function handleImageCardDragLeave(targetId: string): void {
+  if (externalDropTargetId.value === targetId) externalDropTargetId.value = null;
 }
 
 function handleImageCardDrop(event: DragEvent, targetId: string): void {
-  if (!hasImageSortDrag(event)) return;
-  const sourceId = event.dataTransfer?.getData(IMAGE_DRAG_SORT_MIME);
-  if (!sourceId || sourceId === targetId) return;
+  if (hasImageSortDrag(event)) {
+    const sourceId = event.dataTransfer?.getData(IMAGE_DRAG_SORT_MIME);
+    if (!sourceId || sourceId === targetId) return;
+    event.preventDefault();
+    event.stopPropagation();
+    emit("reorder", sourceId, targetId);
+    return;
+  }
+  if (!isExternalFileDrag(event)) return;
+  const files = Array.from(event.dataTransfer?.files ?? []);
+  if (files.length === 0) return;
   event.preventDefault();
   event.stopPropagation();
-  emit("reorder", sourceId, targetId);
+  externalDropTargetId.value = null;
+  emit("dropFiles", files, event.currentTarget as HTMLElement, targetId);
 }
 
 function removeImagePointerListeners(): void {
@@ -665,13 +694,15 @@ function handleImageDragWheel(event: WheelEvent): void {
           'is-dragging': draggingId === image.id,
           'is-active': image.id === activePreviewId,
           'is-paste-highlighted': image.id === pasteHighlightedId,
+          'is-drop-target': image.id === externalDropTargetId,
         }"
         type="button"
         @click="handleImageCardClick($event, image.id)"
         @keydown.enter.stop.prevent="emit('edit', image.id)"
         @dblclick.stop.prevent="emit('copy', image.id)"
         @contextmenu.stop="openMenu($event, image.id)"
-        @dragover="handleImageCardDragOver($event)"
+        @dragover="handleImageCardDragOver($event, image.id)"
+        @dragleave="handleImageCardDragLeave(image.id)"
         @drop="handleImageCardDrop($event, image.id)"
         @pointerdown="handleImagePointerDown($event, image)"
       >
