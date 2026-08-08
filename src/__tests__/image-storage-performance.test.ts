@@ -352,4 +352,37 @@ describe("image storage startup performance", () => {
       wrapper.unmount();
     }
   });
+
+  it("reclaims IndexedDB payloads for fully-deleted images after the safety window", async () => {
+    const now = 1_000_000;
+    const fakeIndexedDb = installFakeIndexedDb({
+      [IMAGE_DB_NAME]: [
+        // Active image still on the board (its current payload is retained): keep its versions.
+        { id: "keep-current", imageId: "keep", createdAt: 1, src: "data:image/png;base64,keep" },
+        { id: "keep-old", imageId: "keep", createdAt: 0, src: "data:image/png;base64,keep-old" },
+        // Deleted image — no payload is retained, so every version is an orphan.
+        { id: "del-v1", imageId: "del", createdAt: 1, src: "data:image/png;base64,del-one" },
+        { id: "del-v2", imageId: "del", createdAt: 2, src: "data:image/png;base64,del-two" },
+        // Orphan within the safety window: must be kept until it ages out.
+        { id: "del-recent", imageId: "del-recent", createdAt: now - 1, src: "data:image/png;base64,recent" },
+      ],
+    });
+
+    await (imageState as typeof imageState & {
+      pruneStoredImagePayloads: (
+        retainedIds: Iterable<string>,
+        options?: { maxVersions?: number; minimumAgeMs?: number; now?: () => number },
+      ) => Promise<void>;
+    }).pruneStoredImagePayloads(new Set(["keep-current"]), {
+      maxVersions: 2,
+      minimumAgeMs: 300_000,
+      now: () => now,
+    });
+
+    expect(fakeIndexedDb.recordIds().sort()).toEqual([
+      "del-recent",
+      "keep-current",
+      "keep-old",
+    ]);
+  });
 });

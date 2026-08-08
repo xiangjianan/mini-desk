@@ -79,6 +79,7 @@ const MOBILE_BREAKPOINT_QUERY = "(max-width: 900px)";
 const TODO_NOTIFICATION_FALLBACK_INTERVAL_MS = 30_000;
 const MAX_TODO_NOTIFICATION_TIMEOUT_MS = 2_147_483_647;
 const UNDO_HISTORY_LIMIT = 50;
+const IMAGE_DELETE_GRACE_MS = 5000;
 const IMAGE_PREVIEW_CLOSE_MS = 220;
 const IMAGE_DENSITY_THRESHOLD = 10;
 const TODO_DENSITY_THRESHOLD = 7;
@@ -143,6 +144,7 @@ const titleFlashAltVisible = ref(false);
 const notificationFlashKeys = ref<string[]>([]);
 const pendingNotificationFlashKeys = ref<string[]>([]);
 const emptyTodoRemovalTimers = new Map<string, number>();
+const pendingImagePayloadDeletions = new Map<string, number>();
 const sentTodoNotifications = new Set<string>();
 const notificationFlashTimers = new Map<string, number>();
 const appVersion = ref(getIndexAppVersion());
@@ -795,6 +797,33 @@ function scheduleImagePayloadPrune(): void {
   }, 500);
 }
 
+function isImagePayloadRetained(payloadId: string): boolean {
+  return state.workspaces.some((workspace) =>
+    workspace.images.some((image) => getImagePayloadId(image) === payloadId),
+  );
+}
+
+// A deleted image's IndexedDB payload is kept for a short grace window so the user
+// can undo the deletion. If the image has not come back by the time the window
+// expires, the payload is reclaimed.
+function scheduleImagePayloadDeletion(payloadId: string): void {
+  const existing = pendingImagePayloadDeletions.get(payloadId);
+  if (existing !== undefined) window.clearTimeout(existing);
+  const timer = window.setTimeout(() => {
+    pendingImagePayloadDeletions.delete(payloadId);
+    if (isImagePayloadRetained(payloadId)) return;
+    void deleteStoredImage(payloadId).catch(() => {
+      // Best-effort IndexedDB cleanup; the board state already dropped the image.
+    });
+  }, IMAGE_DELETE_GRACE_MS);
+  pendingImagePayloadDeletions.set(payloadId, timer);
+}
+
+function clearPendingImagePayloadDeletions(): void {
+  pendingImagePayloadDeletions.forEach((timer) => window.clearTimeout(timer));
+  pendingImagePayloadDeletions.clear();
+}
+
 function collectRetainedImagePayloadIds(): Set<string> {
   const retained = new Set<string>();
   for (const workspace of state.workspaces) {
@@ -1195,6 +1224,7 @@ function deleteImage(id: string, anchor?: HTMLElement): void {
   requestConfirmation("confirmDeleteImage", anchor, async () => {
     const index = activeWorkspace.value.images.findIndex((image) => image.id === id);
     if (index < 0) return;
+    const deletedImage = activeWorkspace.value.images[index];
     const nextPreviewImage = activeWorkspace.value.images[index + 1] ?? activeWorkspace.value.images[index - 1];
     activeWorkspace.value.images = activeWorkspace.value.images.filter((image) => image.id !== id);
     if (activePreviewId.value === id) {
@@ -1211,6 +1241,7 @@ function deleteImage(id: string, anchor?: HTMLElement): void {
       clearImagePreview();
     }
     persistNow();
+    scheduleImagePayloadDeletion(getImagePayloadId(deletedImage));
     showBubble("deleteImage", feedbackAnchor, { hideCompanionAfter: true });
   }, undefined, { confirmText: uiText.value.common.delete, cancelText: uiText.value.common.cancel });
 }
@@ -2048,6 +2079,7 @@ function clearData(anchor?: HTMLElement): void {
       textSaveTimer.value = undefined;
       emptyTodoRemovalTimers.forEach((timer) => window.clearTimeout(timer));
       emptyTodoRemovalTimers.clear();
+      clearPendingImagePayloadDeletions();
       clearImagePreview();
       pendingEditSpaceId.value = null;
       pendingEditTodoListId.value = null;
@@ -2312,7 +2344,10 @@ async function undoLastBoardChange(): Promise<void> {
   try {
     const activeUndoWorkspace = nextState.workspaces.find((w) => w.id === nextState.activeWorkspaceId) ?? nextState.workspaces[0];
     if (activeUndoWorkspace) {
-      activeUndoWorkspace.images = await hydrateStoredImages(activeUndoWorkspace.images);
+      // Drop images whose payload can no longer be hydrated (e.g. reclaimed after the
+      // delete grace window) so undo does not resurrect permanent empty "ghost" entries.
+      activeUndoWorkspace.images = (await hydrateStoredImages(activeUndoWorkspace.images))
+        .filter((image) => Boolean(image.src));
     }
     if (!appMounted || createUndoSnapshot() !== stateAtStart || undoSnapshots.value.at(-1) !== snapshot) return;
     restoringUndo = true;
@@ -2697,6 +2732,7 @@ function clearTimers(): void {
   document.title = boardTitle.value;
   emptyTodoRemovalTimers.forEach((timer) => window.clearTimeout(timer));
   emptyTodoRemovalTimers.clear();
+  clearPendingImagePayloadDeletions();
 }
 
 function getNotificationApi(): typeof Notification | undefined {

@@ -4592,6 +4592,87 @@ describe("App shell", () => {
     }
   });
 
+  it("reclaims the IndexedDB payload after the delete grace window", async () => {
+    vi.useFakeTimers();
+    const restoreIndexedDb = installMemoryImageDb();
+    localStorage.setItem(
+      STORAGE_KEY,
+      JSON.stringify({
+        images: [{ id: "img-del", src: "data:image/png;base64,del", createdAt: 7 }],
+      }),
+    );
+    const deleteSpy = vi.spyOn(imageState, "deleteStoredImage").mockResolvedValue(undefined);
+    const wrapper = mountApp();
+
+    try {
+      await storeImagePayload({ id: "img-del", src: "data:image/png;base64,del", createdAt: 7 });
+      const panel = wrapper.getComponent(ImagePanel);
+      panel.vm.$emit("delete", "img-del", panel.element as HTMLElement);
+      await wrapper.vm.$nextTick();
+      await vi.advanceTimersByTimeAsync(200);
+      await wrapper.get('[data-testid="companion-yes"]').trigger("click");
+      await Promise.resolve();
+      await wrapper.vm.$nextTick();
+
+      expect((panel.props("images") as Array<{ id: string }>)).toHaveLength(0);
+
+      // Within the grace window the payload is still retained for undo.
+      await vi.advanceTimersByTimeAsync(4000);
+      expect(deleteSpy).not.toHaveBeenCalled();
+
+      // Once the grace window elapses without an undo, the payload is reclaimed.
+      await vi.advanceTimersByTimeAsync(1500);
+      expect(deleteSpy).toHaveBeenCalledWith("img-del");
+    } finally {
+      wrapper.unmount();
+      restoreIndexedDb();
+      vi.useRealTimers();
+    }
+  });
+
+  it("keeps the IndexedDB payload when the delete is undone within the grace window", async () => {
+    vi.useFakeTimers();
+    const restoreIndexedDb = installMemoryImageDb();
+    localStorage.setItem(
+      STORAGE_KEY,
+      JSON.stringify({
+        images: [{ id: "img-del", src: "data:image/png;base64,del", createdAt: 7 }],
+      }),
+    );
+    const deleteSpy = vi.spyOn(imageState, "deleteStoredImage").mockResolvedValue(undefined);
+    const wrapper = mountApp();
+
+    try {
+      await storeImagePayload({ id: "img-del", src: "data:image/png;base64,del", createdAt: 7 });
+      const panel = wrapper.getComponent(ImagePanel);
+      panel.vm.$emit("delete", "img-del", panel.element as HTMLElement);
+      await wrapper.vm.$nextTick();
+      await vi.advanceTimersByTimeAsync(200);
+      await wrapper.get('[data-testid="companion-yes"]').trigger("click");
+      await Promise.resolve();
+      await wrapper.vm.$nextTick();
+
+      expect((panel.props("images") as Array<{ id: string }>)).toHaveLength(0);
+
+      // Undo restores the image well within the grace window.
+      window.dispatchEvent(new KeyboardEvent("keydown", { key: "z", ctrlKey: true }));
+      await flushPromises();
+      await wrapper.vm.$nextTick();
+      expect((panel.props("images") as Array<{ id: string; src?: string }>)[0]).toMatchObject({
+        id: "img-del",
+        src: "data:image/png;base64,del",
+      });
+
+      // Past the grace window the payload is still kept because the image came back.
+      await vi.advanceTimersByTimeAsync(6000);
+      expect(deleteSpy).not.toHaveBeenCalled();
+    } finally {
+      wrapper.unmount();
+      restoreIndexedDb();
+      vi.useRealTimers();
+    }
+  });
+
   it("stores pasted screenshot display size using the device pixel ratio", async () => {
     vi.useFakeTimers();
     const originalDevicePixelRatio = window.devicePixelRatio;

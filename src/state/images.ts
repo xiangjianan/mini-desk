@@ -120,8 +120,15 @@ export async function pruneStoredImagePayloads(
         });
         versionsByImage.forEach((versions) => {
           versions.sort((left, right) => right.createdAt! - left.createdAt!);
+          // An image is "active" while any of its payload versions is still referenced by
+          // the board or an undo snapshot (i.e. present in `retained`). Active images keep
+          // their newest `maxVersions` edits for undo. Fully-deleted images have no retained
+          // version, so once their payloads age past the safety window they are reclaimed.
+          const isActiveImage = versions.some((record) => retained.has(record.id));
           versions.forEach((record, index) => {
-            if (index < maxVersions || retained.has(record.id) || now - record.createdAt! < minimumAgeMs) return;
+            if (now - record.createdAt! < minimumAgeMs) return;
+            if (retained.has(record.id)) return;
+            if (isActiveImage && index < maxVersions) return;
             store.delete(record.id);
           });
         });
