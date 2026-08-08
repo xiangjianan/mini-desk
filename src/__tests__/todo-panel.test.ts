@@ -2726,6 +2726,175 @@ describe("TodoPanel", () => {
     wrapper.unmount();
   });
 
+  it("moves focus between reminders with ArrowUp and ArrowDown", async () => {
+    const wrapper = mount(TodoPanel, {
+      attachTo: document.body,
+      props: {
+        todos: {
+          morning: [
+            { id: "a", text: "第一项", done: false },
+            { id: "b", text: "第二项", done: false },
+            { id: "c", text: "第三项", done: false },
+          ],
+          noon: [],
+          evening: [],
+        },
+        titles: DEFAULT_TITLES,
+      },
+      global: {
+        stubs: {
+          Button: true,
+          Checkbox: checkboxStub,
+          Dropdown: dropdownStub,
+          NCheckbox: checkboxStub,
+          NDropdown: dropdownStub,
+          NTooltip: tooltipStub,
+        },
+      },
+    });
+
+    const inputs = wrapper.findAll("input.todo-input");
+
+    await inputs[0].trigger("keydown", { key: "ArrowDown" });
+    await nextTick();
+    expect(document.activeElement).toBe(inputs[1].element);
+
+    await inputs[1].trigger("keydown", { key: "ArrowDown" });
+    await nextTick();
+    expect(document.activeElement).toBe(inputs[2].element);
+
+    await inputs[2].trigger("keydown", { key: "ArrowUp" });
+    await nextTick();
+    expect(document.activeElement).toBe(inputs[1].element);
+
+    wrapper.unmount();
+  });
+
+  it("moves focus between today focus reminders with arrow keys", async () => {
+    const wrapper = mount(TodoPanel, {
+      attachTo: document.body,
+      props: {
+        todos: {
+          morning: [
+            { id: "a", text: "重点一", done: false, starred: true },
+            { id: "b", text: "重点二", done: false, starred: true },
+          ],
+          noon: [],
+          evening: [],
+        },
+        titles: DEFAULT_TITLES,
+      },
+      global: {
+        stubs: {
+          Button: true,
+          Checkbox: checkboxStub,
+          Dropdown: dropdownStub,
+          NCheckbox: checkboxStub,
+          NDropdown: dropdownStub,
+          NTooltip: tooltipStub,
+        },
+      },
+    });
+
+    const inputs = wrapper.findAll("input.today-focus-input");
+    expect(inputs).toHaveLength(2);
+
+    await inputs[0].trigger("keydown", { key: "ArrowDown" });
+    await nextTick();
+
+    expect(document.activeElement).toBe(inputs[1].element);
+    wrapper.unmount();
+  });
+
+  it("toggles a four-space indent prefix on the focused reminder with Tab", async () => {
+    const Harness = defineComponent({
+      components: { TodoPanel },
+      setup() {
+        const todos = ref<TodoMap>({
+          morning: [{ id: "a", text: "提醒事项", done: false }],
+          noon: [],
+          evening: [],
+        });
+        const update = (period: TodoPeriod, id: string, text: string) => {
+          todos.value = {
+            ...todos.value,
+            [period]: todos.value[period].map((todo) => (todo.id === id ? { ...todo, text } : todo)),
+          };
+        };
+        return { todos, update, titles: DEFAULT_TITLES };
+      },
+      template: '<TodoPanel :todos="todos" :titles="titles" @update="update" />',
+    });
+
+    const wrapper = mount(Harness, {
+      global: {
+        stubs: {
+          Button: true,
+          Checkbox: checkboxStub,
+          Dropdown: dropdownStub,
+          NCheckbox: checkboxStub,
+          NDropdown: dropdownStub,
+          NTooltip: tooltipStub,
+        },
+      },
+    });
+
+    const input = wrapper.get("input.todo-input");
+    await input.trigger("keydown", { key: "Tab" });
+    await nextTick();
+    expect((input.element as HTMLInputElement).value).toBe("    提醒事项");
+
+    await input.trigger("keydown", { key: "Tab" });
+    await nextTick();
+    expect((input.element as HTMLInputElement).value).toBe("提醒事项");
+
+    wrapper.unmount();
+  });
+
+  it("keeps the caret column when toggling the Tab indent", async () => {
+    const Harness = defineComponent({
+      components: { TodoPanel },
+      setup() {
+        const todos = ref<TodoMap>({
+          morning: [{ id: "a", text: "提醒事项", done: false }],
+          noon: [],
+          evening: [],
+        });
+        const update = (period: TodoPeriod, id: string, text: string) => {
+          todos.value = {
+            ...todos.value,
+            [period]: todos.value[period].map((todo) => (todo.id === id ? { ...todo, text } : todo)),
+          };
+        };
+        return { todos, update, titles: DEFAULT_TITLES };
+      },
+      template: '<TodoPanel :todos="todos" :titles="titles" @update="update" />',
+    });
+
+    const wrapper = mount(Harness, {
+      attachTo: document.body,
+      global: {
+        stubs: {
+          Button: true,
+          Checkbox: checkboxStub,
+          Dropdown: dropdownStub,
+          NCheckbox: checkboxStub,
+          NDropdown: dropdownStub,
+          NTooltip: tooltipStub,
+        },
+      },
+    });
+
+    const inputElement = wrapper.get("input.todo-input").element as HTMLInputElement;
+    inputElement.setSelectionRange(2, 2);
+    await wrapper.get("input.todo-input").trigger("keydown", { key: "Tab" });
+    await nextTick();
+
+    // caret shifts right by 4 to stay at the same logical column
+    expect(inputElement.selectionStart).toBe(6);
+    wrapper.unmount();
+  });
+
   it("splits a reminder into two items when Enter is pressed in the middle of editable text", async () => {
     const wrapper = mount(TodoPanel, {
       props: {

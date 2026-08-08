@@ -430,6 +430,60 @@ function handleEnter(event: KeyboardEvent, period: TodoPeriod, todo: TodoItem): 
   emit("split", period, todo.id, before, after);
 }
 
+const TODO_INDENT = "    ";
+
+function getAdjacentTodoInput(currentInput: HTMLInputElement, direction: -1 | 1): HTMLInputElement | null {
+  const list = currentInput.closest<HTMLElement>(".todo-list, .today-focus-list");
+  if (!list) return null;
+  const inputs = Array.from(list.querySelectorAll<HTMLInputElement>("input.todo-input, input.today-focus-input"));
+  const index = inputs.indexOf(currentInput);
+  if (index < 0) return null;
+  return inputs[index + direction] ?? null;
+}
+
+function getTodoInputIdentity(input: HTMLInputElement): { period: TodoPeriod; id: string } | null {
+  const id = input.dataset.todoId;
+  const period = input.dataset.period ?? input.closest<HTMLElement>(".todo-section")?.dataset.period;
+  if (!id || !period) return null;
+  return { period: period as TodoPeriod, id };
+}
+
+function handleTodoArrowKey(event: KeyboardEvent, period: TodoPeriod, todo: TodoItem): void {
+  if (event.isComposing || event.key === "Process" || event.keyCode === 229) return;
+  const direction: -1 | 1 | 0 = event.key === "ArrowUp" ? -1 : event.key === "ArrowDown" ? 1 : 0;
+  if (direction === 0) return;
+  const input = event.currentTarget as HTMLInputElement;
+  const target = getAdjacentTodoInput(input, direction);
+  if (!target) return;
+  event.preventDefault();
+  const caret = input.selectionStart ?? input.value.length;
+  const identity = getTodoInputIdentity(target);
+  if (identity) {
+    const targetTodo = getTodoById(identity.period, identity.id);
+    if (targetTodo && !targetTodo.done) editingTodoKey.value = todoKey(identity.period, identity.id);
+  }
+  void nextTick(() => {
+    target.focus({ preventScroll: true });
+    const position = Math.max(0, Math.min(caret, target.value.length));
+    target.setSelectionRange(position, position);
+  });
+}
+
+function handleTodoTab(event: KeyboardEvent, period: TodoPeriod, todo: TodoItem): void {
+  if (event.isComposing || event.key === "Process" || event.keyCode === 229) return;
+  event.preventDefault();
+  const input = event.currentTarget as HTMLInputElement;
+  const indented = input.value.startsWith(TODO_INDENT);
+  const nextText = indented ? input.value.slice(TODO_INDENT.length) : `${TODO_INDENT}${input.value}`;
+  if (!todo.done) editingTodoKey.value = todoKey(period, todo.id);
+  emit("update", period, todo.id, nextText);
+  const caret = input.selectionStart ?? input.value.length;
+  const position = Math.max(0, Math.min(caret + (indented ? -TODO_INDENT.length : TODO_INDENT.length), nextText.length));
+  void nextTick(() => {
+    input.setSelectionRange(position, position);
+  });
+}
+
 function getTodoLink(todo: TodoItem): string | undefined {
   const match = todo.text.match(/https?:\/\/[^\s<>"']+/i)?.[0];
   return match?.replace(/[),.;!?，。；！？]+$/, "");
@@ -1308,11 +1362,16 @@ function buildTodoListEntries(period: TodoListId, todos: TodoItem[], deferredDon
             />
             <input
               class="today-focus-input"
+              :data-todo-id="item.todo.id"
+              :data-period="item.period"
               :value="item.todo.text"
               :readonly="!isTodoEditable(item.period, item.todo)"
               draggable="false"
               @input="emit('update', item.period, item.todo.id, ($event.target as HTMLInputElement).value)"
               @keydown.enter="handleEnter($event, item.period, item.todo)"
+              @keydown.up="handleTodoArrowKey($event, item.period, item.todo)"
+              @keydown.down="handleTodoArrowKey($event, item.period, item.todo)"
+              @keydown.tab="handleTodoTab($event, item.period, item.todo)"
               @mouseup="rememberTodoCaret(item.period, item.todo.id, $event)"
               @select="handleTodoSelection(item.period, item.todo.id, $event)"
               @contextmenu.stop="openTodoTextMenu($event, item.period, item.todo)"
@@ -1486,11 +1545,15 @@ function buildTodoListEntries(period: TodoListId, todos: TodoItem[], deferredDon
                   class="todo-input"
                   :data-testid="`todo-input-${list.id}`"
                   :data-todo-id="entry.todo.id"
+                  :data-period="list.id"
                   :value="entry.todo.text"
                   :readonly="!isTodoEditable(list.id, entry.todo)"
                   draggable="false"
                   @input="emit('update', list.id, entry.todo.id, ($event.target as HTMLInputElement).value)"
                   @keydown.enter="handleEnter($event, list.id, entry.todo)"
+                  @keydown.up="handleTodoArrowKey($event, list.id, entry.todo)"
+                  @keydown.down="handleTodoArrowKey($event, list.id, entry.todo)"
+                  @keydown.tab="handleTodoTab($event, list.id, entry.todo)"
                   @mouseup="rememberTodoCaret(list.id, entry.todo.id, $event)"
                   @select="handleTodoSelection(list.id, entry.todo.id, $event)"
                   @contextmenu.stop="openTodoTextMenu($event, list.id, entry.todo)"
