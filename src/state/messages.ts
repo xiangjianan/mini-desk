@@ -38,6 +38,7 @@ export type MessageKey =
   | "clearCompleted"
   | "importJsonInvalid"
   | "importDataInvalid"
+  | "importSingleWorkspaceOnly"
   | "imageStoreFailed"
   | "imageReadFailed"
   | "clipboardPermissionDenied"
@@ -55,7 +56,6 @@ export type MessageKey =
   | "deleteWorkspace"
   | "confirmImportWorkspace"
   | "confirmClearCompleted"
-  | "confirmImportData"
   | "confirmClearData"
   | "about";
 
@@ -662,6 +662,22 @@ export const MESSAGE_CATALOG: Record<MessageKey, MessageEntry> = {
       "请导入看板备份",
     ],
   },
+  importSingleWorkspaceOnly: {
+    mood: "warning",
+    surface: "companion",
+    variants: [
+      "仅支持导入单个空间的文件",
+      "请导入单个空间的导出文件",
+      "整盘文件不再支持导入",
+      "请先导出单个空间再导入",
+      "该文件不是单个空间导出",
+      "只接收单空间导出文件",
+      "请选择单空间文件",
+      "整盘导入已停用",
+      "换一个单空间文件试试",
+      "仅支持单空间导入",
+    ],
+  },
   imageStoreFailed: {
     mood: "warning",
     surface: "companion",
@@ -934,22 +950,6 @@ export const MESSAGE_CATALOG: Record<MessageKey, MessageEntry> = {
       "确定清理完成项？",
     ],
   },
-  confirmImportData: {
-    mood: "warning",
-    surface: "companion",
-    variants: [
-      "导入会覆盖当前数据，确认吗",
-      "当前数据会被覆盖，继续导入吗",
-      "确认导入并覆盖现有数据",
-      "导入会覆盖当前数据",
-      "覆盖当前看板？",
-      "当前内容将被覆盖",
-      "确认覆盖导入？",
-      "导入后现有数据会变更",
-      "覆盖后当前内容丢失",
-      "确认用备份覆盖？",
-    ],
-  },
   confirmClearData: {
     mood: "warning",
     surface: "companion",
@@ -1079,6 +1079,7 @@ const EN_MESSAGE_VARIANTS = {
   clearCompleted: ["Completed reminders cleared", "Completed items removed", "Done items cleared"],
   importJsonInvalid: ["Invalid JSON file", "Could not read that JSON", "Choose a valid board backup"],
   importDataInvalid: ["Import data does not match this board", "Invalid board backup", "That backup cannot be imported"],
+  importSingleWorkspaceOnly: ["Only single-workspace files can be imported", "Import a single workspace export", "Full-board files are no longer supported"],
   imageStoreFailed: ["Image storage failed", "Could not store this image", "Try adding the image again"],
   imageReadFailed: ["Image read failed", "Could not read this image", "Try another image"],
   clipboardPermissionDenied: ["Clipboard permission was denied", "Allow clipboard access and try again", "Clipboard access is blocked"],
@@ -1096,7 +1097,6 @@ const EN_MESSAGE_VARIANTS = {
   confirmDeleteWorkspace: ["Delete this workspace? This cannot be undone.", "Remove this workspace permanently?", "This workspace and all its content will be deleted."],
   confirmImportWorkspace: ["Import this as a new workspace?", "It will be added as a new workspace; existing ones stay.", "A new workspace will be appended to the list."],
   confirmClearCompleted: ["Clear completed reminders?", "Remove completed items?", "Completed reminders will be removed."],
-  confirmImportData: ["Importing will overwrite current data.", "Overwrite this board with the backup?", "Current board data will be replaced."],
   confirmClearData: ["Clear all local data?", "This will reset the board.", "Current data will be cleared."],
   about: [
     [

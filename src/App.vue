@@ -12,7 +12,7 @@ import WorkbenchShell from "./components/WorkbenchShell.vue";
 import WorkspaceSwitcher from "./components/WorkspaceSwitcher.vue";
 import { getCompanionGifSrc, getCompanionNotificationIconSrc } from "./state/companionGifThemes";
 import {
-  clearStoredImagePayloads,
+  deleteImageDatabases,
   deleteStoredImage,
   getImagePayloadId,
   hydrateCustomCompanionGif,
@@ -53,7 +53,6 @@ import { QUICK_BUTTON_OTHER_GROUP_ID, QUICK_DENSITY_THRESHOLD, formatQuickCopied
 import { isQuickAppScheme } from "./state/quickApps";
 import {
   createId,
-  exportJsonState,
   exportUndoSnapshotState,
   getSerializableWorkspace,
   loadState,
@@ -2040,13 +2039,6 @@ function applyTheme(): void {
   document.documentElement.dataset.theme = state.theme;
 }
 
-function exportData(anchor?: HTMLElement): void {
-  const content = exportJsonState(state);
-  const filename = `mini-desk-${new Date().toISOString().slice(0, 10)}.json`;
-  downloadExportFile(content, filename);
-  showBubble("dataExported", anchor, { hideCompanionAfter: true });
-}
-
 function clearData(anchor?: HTMLElement): void {
   requestConfirmation(
     "confirmClearData",
@@ -2062,8 +2054,11 @@ function clearData(anchor?: HTMLElement): void {
       undoSnapshots.value = [];
       Object.assign(state, defaultState());
       resetTextGenerationBaseline();
-      await clearStoredImagePayloads();
-      persistNow("all", { force: true });
+      // Flush reactive watchers (the theme watcher persists on change) before wiping, so
+      // their writes land first and the clear below leaves localStorage truly empty.
+      await nextTick();
+      localStorage.clear();
+      await deleteImageDatabases();
       refreshTodoNotifications();
       lastUndoSnapshot.value = createUndoSnapshot();
       showBubble("dataCleared", anchor, { hideCompanionAfter: true });
@@ -2164,35 +2159,10 @@ async function importData(event: Event): Promise<void> {
     return;
   }
 
-  let next: BoardState;
-  try {
-    next = normalizeImportedState(parsed);
-  } catch {
-    showBubble("importDataInvalid", importFeedbackAnchor.value, { hideCompanionAfter: true });
-    importFeedbackAnchor.value = undefined;
-    input.value = "";
-    return;
-  }
-  requestConfirmation(
-    "confirmImportData",
-    importFeedbackAnchor.value,
-    async () => {
-      Object.assign(state, next);
-      resetTextGenerationBaseline();
-      await persistCustomCompanionGifPayloads(state.customCompanionGif);
-      await persistWorkspaceImages(state.workspaces);
-      persistNow("all", { force: true });
-      refreshTodoNotifications();
-      showBubble("dataImported", importFeedbackAnchor.value, { hideCompanionAfter: true });
-      importFeedbackAnchor.value = undefined;
-      input.value = "";
-    },
-    () => {
-      importFeedbackAnchor.value = undefined;
-      input.value = "";
-    },
-    { confirmText: uiText.value.app.importOverwrite, cancelText: uiText.value.common.cancel, danger: true },
-  );
+  // 整盘导出/导入已停用：导入只接收单个空间文件，永远新增、不覆盖现有数据。
+  showBubble("importSingleWorkspaceOnly", importFeedbackAnchor.value, { hideCompanionAfter: true });
+  importFeedbackAnchor.value = undefined;
+  input.value = "";
 }
 
 function about(anchor?: HTMLElement): void {
@@ -3281,7 +3251,7 @@ function moveItem<T extends { id: string }>(items: T[], dragId: string, targetId
           :custom-companion-gif="state.customCompanionGif"
           :has-custom-companion-gif="Boolean(state.customCompanionGif.light || state.customCompanionGif.dark || state.customCompanionGifStored.light || state.customCompanionGifStored.dark)"
           :language="state.language"
-          @export="exportData"
+          @create-workspace="openCreateWorkspace"
           @export-workspace="exportCurrentWorkspace"
           @import="requestImport"
           @clear-data="clearData"

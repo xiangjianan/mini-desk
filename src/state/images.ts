@@ -81,12 +81,18 @@ export async function persistImagePayloads(images: StoredImage[]): Promise<void>
   }
 }
 
-export async function clearStoredImagePayloads(): Promise<void> {
-  if (!("indexedDB" in window)) return;
-  const db = await openImageDb();
-  await transact(db, "readwrite", (store) => store.clear());
-  db.close();
-  await clearLegacyStoredPayloads();
+export async function deleteImageDatabases(): Promise<void> {
+  await Promise.all([deleteImageDatabase(IMAGE_DB_NAME), deleteImageDatabase(LEGACY_IMAGE_DB_NAME)]);
+}
+
+function deleteImageDatabase(name: string): Promise<void> {
+  return new Promise((resolve) => {
+    if (!("indexedDB" in window)) return resolve();
+    const request = indexedDB.deleteDatabase(name);
+    request.onsuccess = () => resolve();
+    request.onerror = () => resolve();
+    request.onblocked = () => resolve();
+  });
 }
 
 export async function pruneStoredImagePayloads(
@@ -274,18 +280,5 @@ async function getLegacyStoredPayloads(ids: string[]): Promise<Map<string, strin
     return await getStoredImagePayloadsFromDb(LEGACY_IMAGE_DB_NAME, ids);
   } catch {
     return new Map();
-  }
-}
-
-async function clearLegacyStoredPayloads(): Promise<void> {
-  try {
-    const db = await openImageDb(LEGACY_IMAGE_DB_NAME);
-    try {
-      await transact(db, "readwrite", (store) => store.clear());
-    } finally {
-      db.close();
-    }
-  } catch {
-    // Legacy cleanup is best-effort; the active mini-desk database remains authoritative.
   }
 }

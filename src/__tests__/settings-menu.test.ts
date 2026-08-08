@@ -72,12 +72,17 @@ describe("SettingsMenu", () => {
     });
 
     expect(wrapper.find('[data-key="data"]').text()).toBe("数据");
-    expect(wrapper.findAll('[data-key="export"]')).toHaveLength(1);
+    expect(wrapper.findAll('[data-key="create-workspace"]')).toHaveLength(1);
     expect(wrapper.findAll('[data-key="import"]')).toHaveLength(1);
+    expect(wrapper.findAll('[data-key="export-workspace"]')).toHaveLength(1);
     expect(wrapper.find('[data-key="clear-data"]').text()).toBe("清空数据");
-    expect(wrapper.find('[data-key="export"]').classes()).toContain("dropdown-child-option");
+    expect(wrapper.find('[data-key="create-workspace"]').classes()).toContain("dropdown-child-option");
     expect(wrapper.find('[data-key="import"]').classes()).toContain("dropdown-child-option");
+    expect(wrapper.find('[data-key="export-workspace"]').classes()).toContain("dropdown-child-option");
     expect(wrapper.find('[data-key="clear-data"]').classes()).toContain("dropdown-child-option");
+
+    await wrapper.find('[data-key="create-workspace"]').trigger("click");
+    expect(wrapper.emitted("createWorkspace")).toHaveLength(1);
 
     await wrapper.find('[data-key="clear-data"]').trigger("click");
 
@@ -90,8 +95,9 @@ describe("SettingsMenu", () => {
     expect(source).toContain("ServerOutline");
     expect(source).toContain("TrashOutline");
     expect(source).toMatch(/key:\s*"data"[\s\S]*?icon:\s*renderIcon\(ServerOutline\)/);
-    expect(source).toMatch(/key:\s*"export"[\s\S]*?icon:\s*renderIcon\(CloudDownloadOutline\)/);
+    expect(source).toMatch(/key:\s*"create-workspace"[\s\S]*?icon:\s*renderIcon\(AddOutline\)/);
     expect(source).toMatch(/key:\s*"import"[\s\S]*?icon:\s*renderIcon\(CloudUploadOutline\)/);
+    expect(source).toMatch(/key:\s*"export-workspace"[\s\S]*?icon:\s*renderIcon\(CloudDownloadOutline\)/);
     expect(source).toMatch(/key:\s*"clear-data"[\s\S]*?icon:\s*renderIcon\(TrashOutline,\s*true\)/);
   });
 

@@ -4756,7 +4756,7 @@ describe("App shell", () => {
 
     try {
       const settings = wrapper.getComponent(SettingsMenu);
-      settings.vm.$emit("export", settings.element as HTMLElement);
+      settings.vm.$emit("exportWorkspace", settings.element as HTMLElement);
       await wrapper.vm.$nextTick();
 
       expect(createObjectURL).toHaveBeenCalled();
@@ -4770,7 +4770,11 @@ describe("App shell", () => {
       await vi.advanceTimersByTimeAsync(3000);
       settings.vm.$emit("import", settings.element as HTMLElement);
       const input = wrapper.get('input[type="file"]').element as HTMLInputElement;
-      const file = new File([JSON.stringify({ workspaceLines: ["导入内容"] })], "todo.json", {
+      const file = new File([JSON.stringify({
+        miniDeskWorkspaceExport: true,
+        version: 1,
+        workspace: { workspaceLines: ["导入内容"] },
+      })], "todo.json", {
         type: "application/json",
       });
       Object.defineProperty(input, "files", { value: [file], configurable: true });
@@ -4780,10 +4784,9 @@ describe("App shell", () => {
       await vi.advanceTimersByTimeAsync(200);
       await wrapper.vm.$nextTick();
 
-      expect(wrapper.find('[data-testid="companion-confirm"]').text()).toMatch(/覆盖|导入|当前数据/);
+      expect(wrapper.find('[data-testid="companion-confirm"]').text()).toMatch(/导入|空间|新增/);
       expect(wrapper.find('[data-testid="companion-yes"]').exists()).toBe(true);
-      expect(wrapper.get('[data-testid="companion-yes"]').text()).toBe("覆盖导入");
-      expect(wrapper.get('[data-testid="companion-yes"]').classes()).toContain("is-danger");
+      expect(wrapper.get('[data-testid="companion-yes"]').text()).toBe("新增");
       expect(wrapper.text()).not.toContain("导入内容");
 
       await wrapper.get('[data-testid="companion-yes"]').trigger("click");
@@ -4794,7 +4797,8 @@ describe("App shell", () => {
 
       expect(wrapper.find('[data-testid="companion-confirm"]').text()).toMatch(/导入|同步|生效|就位|更新/);
       const stored = JSON.parse(localStorage.getItem(STORAGE_KEY) || "{}");
-      expect(stored.workspaces[0].workspaceLines).toEqual([{ text: "导入内容", indent: 0 }]);
+      expect(stored.workspaces).toHaveLength(2);
+      expect(stored.workspaces[1].workspaceLines).toEqual([{ text: "导入内容", indent: 0 }]);
     } finally {
       wrapper.unmount();
       vi.useRealTimers();
@@ -4819,7 +4823,7 @@ describe("App shell", () => {
 
     try {
       const settings = wrapper.getComponent(SettingsMenu);
-      settings.vm.$emit("export", settings.element as HTMLElement);
+      settings.vm.$emit("exportWorkspace", settings.element as HTMLElement);
       await wrapper.vm.$nextTick();
 
       expect(showSaveFilePicker).not.toHaveBeenCalled();
@@ -4827,12 +4831,13 @@ describe("App shell", () => {
       expect(createObjectURL).toHaveBeenCalledWith(expect.any(Blob));
       expect(anchorClick).toHaveBeenCalled();
       expect(revokeObjectURL).toHaveBeenCalledWith("blob:todo-board");
-      expect((anchorClick.mock.instances[0] as HTMLAnchorElement).download).toMatch(/^mini-desk-\d{4}-\d{2}-\d{2}\.json$/);
+      expect((anchorClick.mock.instances[0] as HTMLAnchorElement).download).toMatch(/^mini-desk-.+-\d{4}-\d{2}-\d{2}\.json$/);
 
       expect(exportedBlob).toBeInstanceOf(Blob);
       if (!exportedBlob) throw new Error("Expected export blob");
       const exported = await exportedBlob.text();
-      expect(JSON.parse(exported)).toMatchObject({ theme: "light" });
+      expect(JSON.parse(exported)).toMatchObject({ miniDeskWorkspaceExport: true, version: 1 });
+      expect(JSON.parse(exported).workspace).toBeTruthy();
 
       await vi.advanceTimersByTimeAsync(200);
       await wrapper.vm.$nextTick();
@@ -4848,6 +4853,15 @@ describe("App shell", () => {
 
   it("clears all board data from the settings data menu after confirmation", async () => {
     vi.useFakeTimers();
+    const deleteDatabase = vi.fn(() => {
+      const request: { onsuccess: (() => void) | null; onerror: (() => void) | null; onblocked: (() => void) | null } = {
+        onsuccess: null,
+        onerror: null,
+        onblocked: null,
+      };
+      queueMicrotask(() => request.onsuccess?.());
+      return request;
+    });
     localStorage.setItem(STORAGE_KEY, JSON.stringify({
       ...defaultState(),
       theme: "dark",
@@ -4862,7 +4876,9 @@ describe("App shell", () => {
         },
       }],
     }));
+    localStorage.setItem("unrelated-key", "keep-me");
     const wrapper = mountApp();
+    vi.stubGlobal("indexedDB", { deleteDatabase });
 
     try {
       const settings = wrapper.getComponent(SettingsMenu);
@@ -4881,139 +4897,16 @@ describe("App shell", () => {
       await vi.advanceTimersByTimeAsync(200);
       await wrapper.vm.$nextTick();
 
-      const stored = JSON.parse(localStorage.getItem(STORAGE_KEY) || "{}");
-      const workspace = stored.workspaces[0];
-      expect(stored).toMatchObject({
-        theme: "light",
-      });
-      expect(workspace.workspaceLines).toEqual([]);
-      expect(workspace.quickButtons).toEqual([]);
-      expect(workspace.todos.morning).toEqual([]);
+      // localStorage fully wiped — every key, not just the app key
+      expect(localStorage.length).toBe(0);
+      expect(localStorage.getItem(STORAGE_KEY)).toBeNull();
+      expect(localStorage.getItem("unrelated-key")).toBeNull();
+      // entire IndexedDB image database deleted (current + legacy)
+      expect(deleteDatabase).toHaveBeenCalledWith("mini-desk-images-v1");
+      expect(deleteDatabase).toHaveBeenCalledWith("todo-board-images-v1");
+      // in-memory board reset to defaults
+      expect(wrapper.text()).not.toContain("待清空");
       expect(wrapper.find('[data-testid="companion-confirm"]').text()).toMatch(/清空|已重置|数据|初始/);
-    } finally {
-      wrapper.unmount();
-      vi.useRealTimers();
-    }
-  });
-
-  it("accepts imports that only change the companion GIF theme", async () => {
-    vi.useFakeTimers();
-    const wrapper = mountApp();
-
-    try {
-      const settings = wrapper.getComponent(SettingsMenu);
-      settings.vm.$emit("import", settings.element as HTMLElement);
-      const input = wrapper.get('input[type="file"]').element as HTMLInputElement;
-      const file = new File([JSON.stringify({ companionGifTheme: "none" })], "todo.json", {
-        type: "application/json",
-      });
-      Object.defineProperty(input, "files", { value: [file], configurable: true });
-
-      await wrapper.get('input[type="file"]').trigger("change");
-      await Promise.resolve();
-      await wrapper.vm.$nextTick();
-      await vi.advanceTimersByTimeAsync(200);
-      await wrapper.vm.$nextTick();
-
-      expect(wrapper.find('[data-testid="companion-confirm"]').text()).toMatch(/覆盖|导入|当前数据/);
-
-      await wrapper.get('[data-testid="companion-yes"]').trigger("click");
-      await Promise.resolve();
-      await wrapper.vm.$nextTick();
-
-      expect(wrapper.getComponent(SettingsMenu).props("companionGifTheme")).toBe("none");
-      expect(JSON.parse(localStorage.getItem(STORAGE_KEY) || "{}").companionGifTheme).toBe("none");
-    } finally {
-      wrapper.unmount();
-      vi.useRealTimers();
-    }
-  });
-
-  it("stores imported custom companion GIF payloads outside localStorage before refresh", async () => {
-    vi.useFakeTimers();
-    const putRecords: Array<{ id: string; src?: string }> = [];
-    const fakeStore = {
-      put: vi.fn((record: { id: string; src?: string }) => {
-        putRecords.push(record);
-        const request: { result: string; error: null; onsuccess: (() => void) | null; onerror: (() => void) | null } = {
-          result: record.id,
-          error: null,
-          onsuccess: null,
-          onerror: null,
-        };
-        queueMicrotask(() => request.onsuccess?.());
-        return request;
-      }),
-      delete: vi.fn(() => {
-        const request: { result: undefined; error: null; onsuccess: (() => void) | null; onerror: (() => void) | null } = {
-          result: undefined,
-          error: null,
-          onsuccess: null,
-          onerror: null,
-        };
-        queueMicrotask(() => request.onsuccess?.());
-        return request;
-      }),
-    };
-    const fakeDb = {
-      objectStoreNames: { contains: vi.fn(() => true) },
-      transaction: vi.fn(() => ({
-        objectStore: vi.fn(() => fakeStore),
-        onerror: undefined,
-        error: null,
-      })),
-      close: vi.fn(),
-    };
-    vi.stubGlobal("indexedDB", {
-      open: vi.fn(() => {
-        const request: {
-          result: typeof fakeDb;
-          error: null;
-          onsuccess: (() => void) | null;
-          onerror: (() => void) | null;
-          onupgradeneeded: (() => void) | null;
-        } = { result: fakeDb, error: null, onsuccess: null, onerror: null, onupgradeneeded: null };
-        queueMicrotask(() => request.onsuccess?.());
-        return request;
-      }),
-    });
-    const wrapper = mountApp();
-
-    try {
-      const settings = wrapper.getComponent(SettingsMenu);
-      settings.vm.$emit("import", settings.element as HTMLElement);
-      const input = wrapper.get('input[type="file"]').element as HTMLInputElement;
-      const file = new File([
-        JSON.stringify({
-          companionGifTheme: "custom",
-          customCompanionGif: {
-            light: "data:image/gif;base64,light",
-            dark: "data:image/gif;base64,dark",
-          },
-        }),
-      ], "mini-desk.json", { type: "application/json" });
-      Object.defineProperty(input, "files", { value: [file], configurable: true });
-
-      await wrapper.get('input[type="file"]').trigger("change");
-      await Promise.resolve();
-      await wrapper.vm.$nextTick();
-      await vi.advanceTimersByTimeAsync(200);
-      await wrapper.vm.$nextTick();
-      await wrapper.get('[data-testid="companion-yes"]').trigger("click");
-      await vi.waitFor(() => {
-        expect(putRecords.some((record) => record.id === "__custom-companion-gif-light__")).toBe(true);
-        expect(putRecords.some((record) => record.id === "__custom-companion-gif-dark__")).toBe(true);
-      });
-      await vi.waitFor(() => {
-        expect(JSON.parse(localStorage.getItem(STORAGE_KEY) || "{}").companionGifTheme).toBe("custom");
-      });
-
-      const stored = JSON.parse(localStorage.getItem(STORAGE_KEY) || "{}");
-      expect(stored.companionGifTheme).toBe("custom");
-      expect(stored.customCompanionGif).toEqual({});
-      expect(stored.customCompanionGifStored).toEqual({ light: true, dark: true });
-      expect(wrapper.getComponent(CompanionBubble).props("customGifLightSrc")).toBe("data:image/gif;base64,light");
-      expect(wrapper.getComponent(CompanionBubble).props("customGifDarkSrc")).toBe("data:image/gif;base64,dark");
     } finally {
       wrapper.unmount();
       vi.unstubAllGlobals();
@@ -5031,8 +4924,12 @@ describe("App shell", () => {
       const input = wrapper.get('input[type="file"]').element as HTMLInputElement;
       const file = new File([
         JSON.stringify({
-          todoLists: [{ id: "solo", title: "单独列表", collapsed: false, compact: false }],
-          showCompletedTodos: { solo: true },
+          miniDeskWorkspaceExport: true,
+          version: 1,
+          workspace: {
+            todoLists: [{ id: "solo", title: "单独列表", collapsed: false, compact: false }],
+            showCompletedTodos: { solo: true },
+          },
         }),
       ], "todo-lists.json", {
         type: "application/json",
@@ -5045,14 +4942,15 @@ describe("App shell", () => {
       await vi.advanceTimersByTimeAsync(200);
       await wrapper.vm.$nextTick();
 
-      expect(wrapper.find('[data-testid="companion-confirm"]').text()).toMatch(/覆盖|导入|当前数据/);
+      expect(wrapper.find('[data-testid="companion-confirm"]').text()).toMatch(/导入|空间|新增/);
 
       await wrapper.get('[data-testid="companion-yes"]').trigger("click");
       await Promise.resolve();
       await wrapper.vm.$nextTick();
 
       const stored = JSON.parse(localStorage.getItem(STORAGE_KEY) || "{}");
-      const workspace = stored.workspaces[0];
+      expect(stored.workspaces).toHaveLength(2);
+      const workspace = stored.workspaces[1];
       expect(workspace.todoLists).toEqual([
         { id: "solo", title: "单独列表", collapsed: false, compact: false },
       ]);
@@ -5095,7 +4993,11 @@ describe("App shell", () => {
       const settings = wrapper.getComponent(SettingsMenu);
       const input = wrapper.get('input[type="file"]').element as HTMLInputElement;
       settings.vm.$emit("import", settings.element as HTMLElement);
-      const file = new File([JSON.stringify({ workspaceLines: ["切换中导入"] })], "todo.json", {
+      const file = new File([JSON.stringify({
+        miniDeskWorkspaceExport: true,
+        version: 1,
+        workspace: { workspaceLines: ["切换中导入"] },
+      })], "todo.json", {
         type: "application/json",
       });
       Object.defineProperty(input, "files", { value: [file], configurable: true });

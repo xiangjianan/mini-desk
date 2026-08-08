@@ -1,6 +1,7 @@
 <script setup lang="ts">
 import { computed, h, onBeforeUnmount, ref } from "vue";
 import {
+  AddOutline,
   CheckmarkOutline,
   CloudDownloadOutline,
   CloudUploadOutline,
@@ -36,7 +37,7 @@ const props = withDefaults(defineProps<{
 });
 
 const emit = defineEmits<{
-  export: [anchor?: HTMLElement];
+  createWorkspace: [];
   exportWorkspace: [anchor?: HTMLElement];
   import: [anchor?: HTMLElement];
   clearData: [anchor?: HTMLElement];
@@ -70,9 +71,9 @@ const options = computed(() => [
     key: "data",
     icon: renderIcon(ServerOutline),
     children: [
-      { label: text.value.settings.export, key: "export", icon: renderIcon(CloudDownloadOutline) },
-      { label: text.value.settings.exportCurrentWorkspace, key: "export-workspace", icon: renderIcon(CloudDownloadOutline) },
+      { label: text.value.settings.createWorkspace, key: "create-workspace", icon: renderIcon(AddOutline) },
       { label: text.value.settings.import, key: "import", icon: renderIcon(CloudUploadOutline) },
+      { label: text.value.settings.exportCurrentWorkspace, key: "export-workspace", icon: renderIcon(CloudDownloadOutline) },
       { label: text.value.settings.clearData, key: "clear-data", icon: renderIcon(TrashOutline, true) },
     ],
   },
@@ -123,7 +124,7 @@ const options = computed(() => [
 ]);
 
 function handleSelect(key: string): void {
-  if (key === "export") emit("export", triggerRef.value ?? undefined);
+  if (key === "create-workspace") emit("createWorkspace");
   if (key === "export-workspace") emit("exportWorkspace", triggerRef.value ?? undefined);
   if (key === "import") emit("import", triggerRef.value ?? undefined);
   if (key === "clear-data") emit("clearData", triggerRef.value ?? undefined);

@@ -197,10 +197,6 @@ export function getSerializableState(
   };
 }
 
-export function exportJsonState(state: BoardState): string {
-  return JSON.stringify(getSerializableState(state, { includeImageData: true, includeCustomGifData: true }), null, 2);
-}
-
 export function exportUndoSnapshotState(state: BoardState): string {
   return JSON.stringify(getSerializableState(state));
 }
