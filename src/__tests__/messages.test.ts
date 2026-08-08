@@ -198,8 +198,8 @@ describe("message catalog", () => {
     expect(MESSAGE_CATALOG.about.variants.join("\n")).not.toContain("https://github.com/xiangjianan/todolist");
     expect(MESSAGE_CATALOG.about.variants.join("\n")).not.toContain("下方");
     expect(MESSAGE_CATALOG.about.variants.join("\n")).not.toContain("给老婆做的 todolist 看板");
-    expect(appSource).toContain("GITHUB_ISSUE_URL");
-    expect(appSource).toContain("/issues/new");
+    expect(appSource).toContain("SUGGEST_EMAIL");
+    expect(appSource).toContain("mailto:");
     expect(appSource).not.toContain("GITHUB_REPO_NAME");
     expect(appSource).not.toContain("绿色表示已保存");
     expect(appSource).not.toContain("Green means saved");

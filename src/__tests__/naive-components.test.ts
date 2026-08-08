@@ -926,7 +926,7 @@ describe("Naive UI component usage", () => {
     expect(rule).toContain("#f87171");
   });
 
-  it("routes about information through the companion bubble and suggestions to GitHub issues", () => {
+  it("routes about information through the companion bubble and suggestions via email", () => {
     const app = read("src/App.vue");
     const companion = read("src/components/CompanionBubble.vue");
     const messages = read("src/state/messages.ts");
@@ -949,8 +949,8 @@ describe("Naive UI component usage", () => {
     expect(companion).toContain("LogoGithub");
     expect(companion).toContain("companion-link-icon");
     expect(companion).toContain('data-testid="companion-link"');
-    expect(app).toContain("GITHUB_ISSUE_URL");
-    expect(app).toContain("/issues/new");
+    expect(app).toContain("SUGGEST_EMAIL");
+    expect(app).toContain("mailto:");
     expect(app).not.toContain("LogoGithub");
     expect(app).not.toContain("about-github-link");
     expect(app).not.toContain("aboutVisible");

@@ -187,7 +187,7 @@ type DensityArea = {
 };
 
 const GUIDE_MESSAGE_DURATION_MS = 5000;
-const GITHUB_ISSUE_URL = "https://github.com/xiangjianan/mini-desk/issues/new";
+const SUGGEST_EMAIL = "xiang9872@gmail.com";
 const GITHUB_REPO_URL = "https://github.com/xiangjianan/mini-desk";
 const GITHUB_REPO_LABEL = "xiangjianan / mini-desk";
 const ABOUT_MESSAGE_DURATION_MS = 10000;
@@ -2175,7 +2175,9 @@ function about(anchor?: HTMLElement): void {
 }
 
 function suggestIssue(): void {
-  window.open(GITHUB_ISSUE_URL, "_blank", "noopener,noreferrer");
+  const subject = encodeURIComponent(uiText.value.app.suggestEmailSubject);
+  const body = encodeURIComponent(uiText.value.app.suggestEmailBody);
+  window.open(`mailto:${SUGGEST_EMAIL}?subject=${subject}&body=${body}`, "_blank", "noopener,noreferrer");
 }
 
 function handleGlobalKeydown(event: KeyboardEvent): void {
