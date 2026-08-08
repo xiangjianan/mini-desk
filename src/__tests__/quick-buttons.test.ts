@@ -1,7 +1,7 @@
 import { mount } from "@vue/test-utils";
 import { readFileSync } from "node:fs";
 import { resolve } from "node:path";
-import { afterEach, describe, expect, it } from "vitest";
+import { afterEach, describe, expect, it, vi } from "vitest";
 import QuickButtons from "../components/QuickButtons.vue";
 import {
   buildVisibleQuickButtonGroups,
@@ -586,6 +586,42 @@ describe("QuickButtons", () => {
     wrapper.unmount();
   });
 
+  it("creates a link quick button when a URL is pasted from the area context menu", async () => {
+    Object.assign(navigator, { clipboard: { readText: vi.fn().mockResolvedValue("https://example.com/page"), writeText: vi.fn() } });
+    const wrapper = mountQuickButtons({ buttons: [] });
+
+    await wrapper.get(".quick-block").trigger("contextmenu");
+    await wrapper.findAll(".dropdown-option").find((option) => option.text() === "粘贴")?.trigger("click");
+    await Promise.resolve();
+    await wrapper.vm.$nextTick();
+
+    expect(wrapper.emitted("save")?.[0][0]).toMatchObject({
+      title: "example.com",
+      value: "https://example.com/page",
+      type: "link",
+    });
+
+    wrapper.unmount();
+  });
+
+  it("creates a text quick button when plain text is pasted from the area context menu", async () => {
+    Object.assign(navigator, { clipboard: { readText: vi.fn().mockResolvedValue("一段普通文本"), writeText: vi.fn() } });
+    const wrapper = mountQuickButtons({ buttons: [] });
+
+    await wrapper.get(".quick-block").trigger("contextmenu");
+    await wrapper.findAll(".dropdown-option").find((option) => option.text() === "粘贴")?.trigger("click");
+    await Promise.resolve();
+    await wrapper.vm.$nextTick();
+
+    expect(wrapper.emitted("save")?.[0][0]).toMatchObject({
+      title: "一段普通文本",
+      value: "一段普通文本",
+      type: "text",
+    });
+
+    wrapper.unmount();
+  });
+
   it("accepts an external text/uri-list drop without text/plain (Windows drag scenario)", async () => {
     const wrapper = mountQuickButtons({
       buttons: [{ id: "a", title: "A", value: "a", type: "text", hidden: false }],
@@ -1086,6 +1122,7 @@ describe("QuickButtons", () => {
 
     expect(wrapper.findAll(".dropdown-option").map((option) => option.text())).toEqual([
       "新增",
+      "粘贴",
       "显示隐藏项",
       "标签管理",
       "Tips",
@@ -1098,6 +1135,7 @@ describe("QuickButtons", () => {
     await wrapper.get(".quick-menu-button").trigger("click");
     expect(wrapper.findAll(".dropdown-option").map((option) => option.text())).toEqual([
       "新增",
+      "粘贴",
       "收起隐藏项",
       "标签管理",
       "Tips",

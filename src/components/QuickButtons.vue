@@ -2,7 +2,7 @@
 import { computed, h, nextTick, onMounted, onUnmounted, reactive, ref, watch } from "vue";
 import type { Component, ComponentPublicInstance, VNode } from "vue";
 import { NButton, NCheckbox, NDropdown, NIcon, NInput, NModal, NScrollbar, NSelect } from "naive-ui";
-import { AddOutline, AppsOutline, ChevronDownOutline, CloudUploadOutline, CopyOutline, CreateOutline, DocumentTextOutline, EyeOffOutline, EyeOutline, HelpCircleOutline, PricetagsOutline, SearchOutline, TrashOutline } from "@vicons/ionicons5";
+import { AddOutline, AppsOutline, ChevronDownOutline, ClipboardOutline, CloudUploadOutline, CopyOutline, CreateOutline, DocumentTextOutline, EyeOffOutline, EyeOutline, HelpCircleOutline, PricetagsOutline, SearchOutline, TrashOutline } from "@vicons/ionicons5";
 import type { DropdownOption } from "naive-ui";
 import type { AppLanguage, GuideKey, QuickApiBodyType, QuickApiHeader, QuickApiMethod, QuickButton, QuickButtonType, QuickTag } from "../types";
 import { GUIDE_MENU_OPTION } from "../state/defaults";
@@ -176,6 +176,7 @@ const menuOptions = computed<DropdownOption[]>(() => {
   if (!menu.value?.id) {
     return [
       { label: uiText.value.quick.add, key: "add", icon: renderIcon(AddOutline) },
+      { label: uiText.value.common.paste, key: "paste", icon: renderIcon(ClipboardOutline) },
       { label: props.showHidden ? uiText.value.quick.hideHidden : uiText.value.quick.showHidden, key: "toggle-show-hidden", icon: renderIcon(props.showHidden ? EyeOffOutline : EyeOutline) },
       { label: uiText.value.quick.tagManage, key: "manage-tags", icon: renderIcon(PricetagsOutline) },
       { ...guideMenuOption.value, icon: renderIcon(HelpCircleOutline) },
@@ -428,6 +429,10 @@ function handleMenuSelect(key: string): void {
     openTagManager(anchor);
     return;
   }
+  if (key === "paste") {
+    void pasteQuick(tagTitle);
+    return;
+  }
   if (key === "guide" && anchor) emit("guide", "quickButtons", anchor, true);
   if (!id) return;
   if (key === "copy-text") emit("copyText", id, anchor);
@@ -499,7 +504,7 @@ function readQuickDropText(transfer: DataTransfer | null): string {
   return "";
 }
 
-function buildQuickDropPayload(rawText: string, groupId?: string): { title: string; value: string; type: QuickButtonType; tagTitle?: string } {
+function classifyQuickText(rawText: string): { title: string; value: string; type: QuickButtonType } {
   const text = rawText.trim();
   const isWebUrl = /^https?:\/\//.test(text);
   const isAppScheme = /^[a-z][a-z0-9+.\-]*:\/\//i.test(text) && !isWebUrl;
@@ -507,10 +512,28 @@ function buildQuickDropPayload(rawText: string, groupId?: string): { title: stri
     ? (() => { try { return new URL(text).hostname; } catch { return text.slice(0, 20); } })()
     : text.slice(0, 20);
   const type: QuickButtonType = isWebUrl ? "link" : isAppScheme ? "app" : "text";
+  return { title, value: text, type };
+}
+
+function buildQuickDropPayload(rawText: string, groupId?: string): { title: string; value: string; type: QuickButtonType; tagTitle?: string } {
   const tagTitle = groupId && isRealTagGroup(groupId)
     ? props.tags.find((tag) => tag.id === groupId)?.title
     : undefined;
-  return { title, value: text, type, tagTitle };
+  return { ...classifyQuickText(rawText), tagTitle };
+}
+
+async function pasteQuick(tagTitle?: string): Promise<void> {
+  if (!navigator.clipboard?.readText) return;
+  let text: string;
+  try {
+    text = await navigator.clipboard.readText();
+  } catch {
+    // Clipboard read can be blocked (permission denied, insecure context); nothing to paste then.
+    return;
+  }
+  const trimmed = text.trim();
+  if (!trimmed) return;
+  emit("save", { ...classifyQuickText(trimmed), tagTitle });
 }
 
 function handleExternalQuickDrop(event: DragEvent, groupId: string): boolean {
