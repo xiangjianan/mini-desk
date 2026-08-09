@@ -2964,8 +2964,9 @@ html[data-theme="dark"] .notify-date-picker .n-date-panel-calendar {
 
 .notify-panel-preset-group {
   display: flex;
+  flex-wrap: wrap;
   align-items: center;
-  gap: 6px;
+  gap: 4px;
 }
 
 .notify-panel-preset-label {
@@ -2976,16 +2977,17 @@ html[data-theme="dark"] .notify-date-picker .n-date-panel-calendar {
   color: var(--muted);
 }
 
-.notify-panel-preset {
-  flex: 1 1 0;
-  height: 26px;
+button.notify-panel-preset {
+  flex: 0 0 70px;
+  height: 20px;
+  min-height: 0;
   min-width: 0;
-  padding: 0 4px;
+  padding: 0 6px;
   border: 1px solid var(--line-control);
-  border-radius: 8px;
+  border-radius: 5px;
   background: var(--button);
   color: var(--text);
-  font-size: var(--app-font-size);
+  font-size: 11px;
   line-height: 1;
   white-space: nowrap;
   overflow: hidden;

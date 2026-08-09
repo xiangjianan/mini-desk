@@ -135,10 +135,10 @@ export interface NotifyPreset {
 
 /**
  * Quick deadline presets for the notify picker, in two groups: relative
- * durations and time-of-day slots. Durations add to `now` (seconds cleared);
- * time-of-day slots land on today's slot when it is still upcoming and otherwise
- * roll to tomorrow, so the user never has to also pick a date. Picked presets
- * commit immediately.
+ * durations and time-of-day slots. Durations add to `now` (seconds cleared).
+ * The 上午 10 点 / 下午 2 点 / 晚上 7 点 slots always land on today (the picker's
+ * default date); 明天 9 点 / 后天 9 点 are explicit +1 / +2 day offsets. Picked
+ * presets commit immediately; the user can still shift the date via the picker.
  */
 export function getNotifyPresets(now = new Date()): NotifyPreset[] {
   const inMinutes = (minutes: number): number => {
@@ -147,11 +147,8 @@ export function getNotifyPresets(now = new Date()): NotifyPreset[] {
     return next.getTime();
   };
 
-  const nextOccurrence = (hour: number): number => {
-    const today = new Date(now.getFullYear(), now.getMonth(), now.getDate(), hour, 0, 0, 0);
-    if (today.getTime() > now.getTime()) return today.getTime();
-    return new Date(now.getFullYear(), now.getMonth(), now.getDate() + 1, hour, 0, 0, 0).getTime();
-  };
+  const todayAt = (hour: number): number =>
+    new Date(now.getFullYear(), now.getMonth(), now.getDate(), hour, 0, 0, 0).getTime();
 
   const tomorrowAt = (hour: number): number =>
     new Date(now.getFullYear(), now.getMonth(), now.getDate() + 1, hour, 0, 0, 0).getTime();
@@ -165,9 +162,9 @@ export function getNotifyPresets(now = new Date()): NotifyPreset[] {
     { key: "in1h", group: "relative", at: inMinutes(60) },
     { key: "in3h", group: "relative", at: inMinutes(180) },
     { key: "in6h", group: "relative", at: inMinutes(360) },
-    { key: "at10", group: "time", at: nextOccurrence(10) },
-    { key: "at14", group: "time", at: nextOccurrence(14) },
-    { key: "at19", group: "time", at: nextOccurrence(19) },
+    { key: "at10", group: "time", at: todayAt(10) },
+    { key: "at14", group: "time", at: todayAt(14) },
+    { key: "at19", group: "time", at: todayAt(19) },
     { key: "tomorrow9", group: "time", at: tomorrowAt(9) },
     { key: "dayAfter9", group: "time", at: dayAfterAt(9) },
   ];

@@ -191,23 +191,23 @@ describe("notification time helpers", () => {
     expect(presets[3].at).toBe(new Date(2024, 0, 15, 13, 30, 0, 0).getTime()); // +3h → 13:30
     expect(presets[4].at).toBe(new Date(2024, 0, 15, 16, 30, 0, 0).getTime()); // +6h → 16:30
 
-    // Time-of-day: upcoming slots land today, passed slots roll to tomorrow;
-    // tomorrow9 / dayAfter9 are fixed offsets.
-    expect(presets[5].at).toBe(new Date(2024, 0, 16, 10, 0, 0, 0).getTime()); // 10:00 passed → tomorrow
+    // Time-of-day: 10:00/14:00/19:00 always land on today (even 10:00, which
+    // has already passed); tomorrow9 / dayAfter9 are fixed +1 / +2 day offsets.
+    expect(presets[5].at).toBe(new Date(2024, 0, 15, 10, 0, 0, 0).getTime()); // 10:00 today
     expect(presets[6].at).toBe(new Date(2024, 0, 15, 14, 0, 0, 0).getTime()); // 14:00 today
     expect(presets[7].at).toBe(new Date(2024, 0, 15, 19, 0, 0, 0).getTime()); // 19:00 today
     expect(presets[8].at).toBe(new Date(2024, 0, 16, 9, 0, 0, 0).getTime()); // tomorrow 09:00
     expect(presets[9].at).toBe(new Date(2024, 0, 17, 9, 0, 0, 0).getTime()); // day after tomorrow 09:00
   });
 
-  it("rolls all passed time-of-day presets to tomorrow late in the day", () => {
-    // 20:00 — 10:00/14:00/19:00 have all passed today.
+  it("keeps time-of-day presets on today even when late in the day", () => {
+    // 20:00 — 10:00/14:00/19:00 have all passed today, but still land on today.
     const now = new Date(2024, 0, 15, 20, 0, 0, 0);
     const presets = getNotifyPresets(now);
 
-    expect(presets[5].at).toBe(new Date(2024, 0, 16, 10, 0, 0, 0).getTime()); // 10:00 → tomorrow
-    expect(presets[6].at).toBe(new Date(2024, 0, 16, 14, 0, 0, 0).getTime()); // 14:00 → tomorrow
-    expect(presets[7].at).toBe(new Date(2024, 0, 16, 19, 0, 0, 0).getTime()); // 19:00 → tomorrow
+    expect(presets[5].at).toBe(new Date(2024, 0, 15, 10, 0, 0, 0).getTime()); // 10:00 today
+    expect(presets[6].at).toBe(new Date(2024, 0, 15, 14, 0, 0, 0).getTime()); // 14:00 today
+    expect(presets[7].at).toBe(new Date(2024, 0, 15, 19, 0, 0, 0).getTime()); // 19:00 today
     expect(presets[9].at).toBe(new Date(2024, 0, 17, 9, 0, 0, 0).getTime()); // day after tomorrow 09:00
   });
 });
