@@ -433,5 +433,6 @@ describe("workbench style contract", () => {
     // 多列阈值 + auto-fit 网格(列数随宽度伸缩,并被列表数量自动封顶)
     expect(styles).toContain("@container (min-width: 680px)");
     expect(styles).toContain("grid-template-columns: repeat(auto-fit, minmax(340px, 1fr))");
+    expect(styles).toContain("grid-auto-rows: minmax(0, 1fr)");
   });
 });
