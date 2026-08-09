@@ -2285,6 +2285,23 @@ html[data-theme="dark"] .quick-tag-color-swatch {
   overflow: hidden;
 }
 
+.todo-panel {
+  container-type: inline-size;
+}
+
+/* 提醒事项多列自适应:容器查询 + auto-fit 网格。
+   宽度 ≥ 680px(= 2 × 340)进入多列;auto-fit 把列数自动封顶在列表数量,
+   故单列表始终单列、多列表随宽度伸缩。窄于阈值时上面的 flex column 规则继续生效。 */
+@container (min-width: 680px) {
+  .todo-sections {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(340px, 1fr));
+    grid-auto-rows: minmax(0, 1fr);
+    column-gap: 10px;
+    row-gap: 8px;
+  }
+}
+
 .today-focus-section {
   flex: 0 0 auto;
   border-top: 0;

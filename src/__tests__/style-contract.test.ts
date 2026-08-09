@@ -424,4 +424,14 @@ describe("workbench style contract", () => {
     expect(calculatorInputRules).not.toContain("font-size: 20px");
     expect(calculatorInputRules).not.toContain("height: 42px");
   });
+
+  it("auto-splits reminder lists into multiple columns above a width threshold", () => {
+    const styles = readFileSync(resolve(__dirname, "../styles.css"), "utf8");
+
+    // 容器查询容器:提醒事项根节点
+    expectSelectorBody(styles, ".todo-panel", "container-type: inline-size");
+    // 多列阈值 + auto-fit 网格(列数随宽度伸缩,并被列表数量自动封顶)
+    expect(styles).toContain("@container (min-width: 680px)");
+    expect(styles).toContain("grid-template-columns: repeat(auto-fit, minmax(340px, 1fr))");
+  });
 });
