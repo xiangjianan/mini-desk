@@ -691,7 +691,7 @@ describe("Naive UI component usage", () => {
     expect(styles).toMatch(/\.today-focus-item::after,[\s\S]*?\.todo-item::after\s*\{[^}]*left: 6px/s);
     expect(styles).toMatch(/\.today-focus-item::after,[\s\S]*?\.todo-item::after\s*\{[^}]*right: 6px/s);
     expect(styles).toMatch(/\.today-focus-item:last-child::after\s*\{[^}]*display: none/s);
-    expect(styles).toMatch(/\.today-focus-section \+ \.todo-sections \.todo-section:first-child \.todo-heading\s*\{[^}]*border-top: 1px solid var\(--line-section\)/s);
+    expect(styles).toMatch(/\.today-focus-section \+ \.todo-sections\s*\{[^}]*border-top: 1px solid var\(--line-section\)/s);
     expect(styles).toMatch(/\.todo-item \.n-checkbox\s*\{[^}]*justify-self: center/s);
     expect(styles).toMatch(/\.today-focus-item \.n-checkbox\s*\{[^}]*justify-self: start/s);
     expect(styles).toMatch(/\.today-focus-item \.n-checkbox\s*\{[^}]*margin-left: 20px/s);

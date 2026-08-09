@@ -2553,7 +2553,8 @@ html[data-theme="dark"] .quick-tag-color-swatch {
   display: none;
 }
 
-.today-focus-section + .todo-sections .todo-section:first-child .todo-heading {
+.today-focus-section + .todo-sections {
+  /* 分隔线挂在 .todo-sections 容器上(而非首个列表标题),确保多列布局下也是通栏完整线 */
   border-top: 1px solid var(--line-section);
 }
 
