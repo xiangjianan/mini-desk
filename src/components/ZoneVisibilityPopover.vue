@@ -41,7 +41,7 @@ function toggle(zone: ZoneKey): void {
         :aria-label="text.zoneVisibility.title"
         @click.stop
       >
-        <NIcon :component="GridOutline" size="14" />
+        <NIcon :component="GridOutline" size="12" />
       </button>
     </template>
     <div class="zone-visibility-popover" role="group" :aria-label="text.zoneVisibility.title">

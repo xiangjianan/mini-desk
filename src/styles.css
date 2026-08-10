@@ -7007,6 +7007,9 @@ body,
   line-height: 0;
 }
 .workspace-switcher-actions .workspace-switcher-action:hover { background: var(--color-hover, rgba(0,0,0,0.08)); opacity: 1; }
+/* Vertical-alignment knob for the grid glyph vs. the lighter line icons beside
+   it (kept as a single value so it's easy to nudge by ±1px). 0 = centered. */
+.workspace-switcher-actions .workspace-switcher-action.zone-visibility-trigger .n-icon { transform: translateY(1px); }
 
 .workspace-switcher-footer { display: flex; flex-direction: column; gap: 2px; margin-top: 6px; padding-top: 6px; border-top: 1px solid var(--color-border, rgba(0,0,0,0.1)); }
 .workspace-switcher-create,
