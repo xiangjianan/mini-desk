@@ -42,6 +42,7 @@ import {
   removeTodo as removeTodoFromMap,
   removeTodoListData,
   reorderTodoLists,
+  reorderTodoListAfter,
   setTodoNotifyAt,
   splitTodo as splitTodoInMap,
   starTodo,
@@ -1850,6 +1851,11 @@ function reorderTodoListSections(draggedId: TodoListId, targetId: TodoListId): v
   persistNow();
 }
 
+function reorderTodoListSectionsAfter(draggedId: TodoListId, anchorId: TodoListId | null): void {
+  activeWorkspace.value.todoLists = reorderTodoListAfter(activeWorkspace.value.todoLists, draggedId, anchorId);
+  persistNow();
+}
+
 function createTodo(period: TodoPeriod, afterId?: string): void {
   if (!isConfiguredTodoListId(period)) return;
   if (!afterId) {
@@ -3381,6 +3387,7 @@ function moveItem<T extends { id: string }>(items: T[], dragId: string, targetId
           @toggle-list-compact="toggleTodoListCompact"
           @delete-list="deleteTodoList"
           @reorder-lists="reorderTodoListSections"
+          @reorder-list-after="reorderTodoListSectionsAfter"
           @create="createTodo"
           @create-from-text="createTodosFromText"
           @update="updateTodo"

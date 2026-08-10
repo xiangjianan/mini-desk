@@ -175,6 +175,36 @@ export function reorderTodoLists(
   return next;
 }
 
+/**
+ * Move the dragged list to the position right after `anchorId`.
+ *
+ * Used when a list is dropped into blank space (e.g. below the last list of a
+ * masonry column, where no single list is under the cursor): the caller finds
+ * the nearest list that precedes the drop point in reading order and passes it
+ * as the anchor. A null anchor inserts at the very start. No-op when the
+ * dragged list is missing, the anchor is missing, or both refer to the same
+ * list (dropping a list right below itself).
+ */
+export function reorderTodoListAfter(
+  lists: TodoListConfig[],
+  draggedId: TodoListId,
+  anchorId: TodoListId | null,
+): TodoListConfig[] {
+  const sourceIndex = lists.findIndex((list) => list.id === draggedId);
+  if (sourceIndex < 0) return lists;
+  if (anchorId !== null && anchorId === draggedId) return lists;
+  const next = lists.map((list) => ({ ...list }));
+  const [item] = next.splice(sourceIndex, 1);
+  if (anchorId === null) {
+    next.unshift(item);
+    return next;
+  }
+  const anchorIndex = next.findIndex((list) => list.id === anchorId);
+  if (anchorIndex < 0) return lists;
+  next.splice(anchorIndex + 1, 0, item);
+  return next;
+}
+
 export function cloneTodoMap(todos: TodoMap): TodoMap {
   return Object.fromEntries(
     Object.entries(todos).map(([period, list]) => [period, list.map((todo) => ({ ...todo }))]),

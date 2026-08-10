@@ -70,6 +70,7 @@ const emit = defineEmits<{
   toggleListCompact: [listId: TodoListId, compact: boolean];
   deleteList: [listId: TodoListId, anchor?: HTMLElement];
   reorderLists: [draggedId: TodoListId, targetId: TodoListId];
+  reorderListAfter: [draggedId: TodoListId, anchorId: TodoListId | null];
   create: [period: TodoPeriod, afterId?: string];
   update: [period: TodoPeriod, id: string, text: string];
   split: [period: TodoPeriod, id: string, before: string, after: string];
@@ -389,6 +390,48 @@ function handleListSectionDrop(event: DragEvent, listId: TodoListId): void {
     return;
   }
   handleTodoSectionDrop(event, listId);
+}
+
+/**
+ * Handle dropping a list into blank space inside the sections container
+ * (e.g. below the last list of a masonry column, where no single list is under
+ * the cursor). Falls through unchanged for non-list drags so todo drops keep
+ * their existing behaviour.
+ */
+function handleListContainerDrop(event: DragEvent): void {
+  if (!draggedListId.value) return;
+  event.preventDefault();
+  event.stopPropagation();
+  emit("reorderListAfter", draggedListId.value, computeListDropAnchor(event));
+  draggedListId.value = null;
+}
+
+/**
+ * Find the list that precedes the drop point in reading order, so the dragged
+ * list can be inserted right after it. Masonry columns fill top-to-bottom then
+ * left-to-right, so DOM order matches reading order; each list's `left`
+ * identifies its column. Returns null to insert at the very start.
+ */
+function computeListDropAnchor(event: DragEvent): TodoListId | null {
+  const dropX = event.clientX;
+  const dropY = event.clientY;
+  const entries = effectiveTodoLists.value
+    .map((list) => ({ list, section: todoSectionRefs.get(list.id) }))
+    .filter((entry): entry is { list: TodoListConfig; section: HTMLElement } => entry.section instanceof HTMLElement);
+  if (entries.length === 0) return null;
+  const rects = entries.map((entry) => entry.section.getBoundingClientRect());
+  const columnLefts = Array.from(new Set(rects.map((rect) => Math.round(rect.left)))).sort((left, right) => left - right);
+  const dropColumnLeft = columnLefts.reduce((acc, left) => (left <= dropX ? left : acc), columnLefts[0]);
+  const dropColumnIndex = columnLefts.indexOf(dropColumnLeft);
+  let anchorId: TodoListId | null = null;
+  entries.forEach((entry, index) => {
+    const rect = rects[index];
+    const columnIndex = columnLefts.indexOf(Math.round(rect.left));
+    const isBefore = columnIndex < dropColumnIndex
+      || (columnIndex === dropColumnIndex && rect.bottom <= dropY);
+    if (isBefore) anchorId = entry.list.id;
+  });
+  return anchorId;
 }
 
 function handleListDragStart(event: DragEvent, listId: TodoListId): void {
@@ -1416,7 +1459,7 @@ function buildTodoListEntries(period: TodoListId, todos: TodoItem[], deferredDon
         </NScrollbar>
       </section>
     </Transition>
-    <TransitionGroup name="todo-section-reorder" tag="div" class="todo-sections">
+    <TransitionGroup name="todo-section-reorder" tag="div" class="todo-sections" @dragover.prevent @drop="handleListContainerDrop">
       <section
         v-for="list in effectiveTodoLists"
         :key="list.id"

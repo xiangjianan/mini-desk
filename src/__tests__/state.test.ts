@@ -17,6 +17,7 @@ import {
   removeEmptyTodo,
   removeTodoListData,
   reorderTodoLists,
+  reorderTodoListAfter,
   setTodoNotifyAt,
   starTodo,
   updateTodoText,
@@ -1015,6 +1016,42 @@ describe("todo behavior", () => {
     const reordered = reorderTodoLists(ws().todoLists, "a", "c");
 
     expect(reordered.map((list) => list.id)).toEqual(["b", "a", "c"]);
+  });
+
+  it("moves a todo list after the anchor when dropped into blank space", () => {
+    const lists = [
+      { id: "a", title: "A" },
+      { id: "b", title: "B" },
+      { id: "c", title: "C" },
+      { id: "d", title: "D" },
+    ];
+
+    // drop below the list that precedes the target column → after "c"
+    expect(reorderTodoListAfter(lists, "a", "c").map((list) => list.id)).toEqual(["b", "c", "a", "d"]);
+    // dragged already after the anchor → still lands right after it
+    expect(reorderTodoListAfter(lists, "d", "a").map((list) => list.id)).toEqual(["a", "d", "b", "c"]);
+  });
+
+  it("moves a todo list to the start when blank-space drop has no preceding list", () => {
+    const lists = [
+      { id: "a", title: "A" },
+      { id: "b", title: "B" },
+      { id: "c", title: "C" },
+    ];
+
+    expect(reorderTodoListAfter(lists, "c", null).map((list) => list.id)).toEqual(["c", "a", "b"]);
+  });
+
+  it("leaves order unchanged when dropping a list below itself or onto a missing anchor", () => {
+    const lists = [
+      { id: "a", title: "A" },
+      { id: "b", title: "B" },
+      { id: "c", title: "C" },
+    ];
+
+    expect(reorderTodoListAfter(lists, "b", "b").map((list) => list.id)).toEqual(["a", "b", "c"]);
+    expect(reorderTodoListAfter(lists, "b", "missing").map((list) => list.id)).toEqual(["a", "b", "c"]);
+    expect(reorderTodoListAfter(lists, "missing", "a").map((list) => list.id)).toEqual(["a", "b", "c"]);
   });
 
   it("keeps completed todos at the bottom", () => {

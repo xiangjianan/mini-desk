@@ -607,7 +607,7 @@ describe("TodoPanel", () => {
     const source = readFileSync(resolve(__dirname, "../components/TodoPanel.vue"), "utf8");
     const styles = readFileSync(resolve(__dirname, "../styles.css"), "utf8");
 
-    expect(source).toContain('<TransitionGroup name="todo-section-reorder" tag="div" class="todo-sections">');
+    expect(source).toMatch(/<TransitionGroup name="todo-section-reorder" tag="div" class="todo-sections"/);
     expect(styles).toMatch(/\.todo-section-reorder-move,[\s\S]*?\.todo-section-reorder-enter-active,[\s\S]*?\.todo-section-reorder-leave-active\s*\{[^}]*transform 0\.22s/s);
 
     await wrapper.get('.todo-section[data-list-id="morning"] .todo-heading').trigger("dragstart", { dataTransfer });
