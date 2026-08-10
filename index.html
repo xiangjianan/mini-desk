@@ -8,9 +8,99 @@
     <link rel="icon" type="image/png" href="favicon.png" />
     <link rel="apple-touch-icon" href="favicon.png">
     <title>Mini Desk</title>
+    <style>
+      /* 首屏 loading 骨架:Vue 挂载 #app 时会自动替换,无需手动清理 */
+      .app-boot {
+        position: fixed;
+        inset: 0;
+        display: flex;
+        flex-direction: column;
+        align-items: center;
+        justify-content: center;
+        gap: 16px;
+        background: #f5f5f7;
+        color: #6e6e73;
+        font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", "PingFang SC", "Microsoft YaHei", sans-serif;
+        z-index: 9999;
+      }
+      html[data-theme="dark"] .app-boot {
+        background: #1c1c1e;
+        color: rgba(235, 235, 245, 0.66);
+      }
+      .app-boot-icon {
+        width: 38px;
+        height: 30px;
+        border-radius: 8px;
+        background: #ffffff;
+        border: 1px solid rgba(60, 60, 67, 0.14);
+        box-shadow: 0 1px 2px rgba(15, 23, 42, 0.04), 0 12px 32px rgba(15, 23, 42, 0.07);
+        position: relative;
+        animation: app-boot-float 2s ease-in-out infinite;
+      }
+      html[data-theme="dark"] .app-boot-icon {
+        background: #2c2c2e;
+        border-color: rgba(84, 84, 88, 0.5);
+        box-shadow: 0 1px 2px rgba(0, 0, 0, 0.18), 0 16px 36px rgba(0, 0, 0, 0.24);
+      }
+      .app-boot-icon::before {
+        content: "";
+        position: absolute;
+        top: 6px;
+        left: 50%;
+        width: 4px;
+        height: 4px;
+        border-radius: 50%;
+        background: #007aff;
+        opacity: 0.7;
+        transform: translateX(-50%);
+        box-shadow: -7px 0 0 rgba(60, 60, 67, 0.12), 7px 0 0 rgba(60, 60, 67, 0.12);
+      }
+      html[data-theme="dark"] .app-boot-icon::before {
+        background: #0a84ff;
+        box-shadow: -7px 0 0 rgba(235, 235, 245, 0.14), 7px 0 0 rgba(235, 235, 245, 0.14);
+      }
+      .app-boot-icon::after {
+        content: "";
+        position: absolute;
+        top: 0;
+        left: 0;
+        right: 0;
+        height: 14px;
+        border-bottom: 1px solid rgba(60, 60, 67, 0.14);
+      }
+      html[data-theme="dark"] .app-boot-icon::after {
+        border-bottom-color: rgba(84, 84, 88, 0.5);
+      }
+      .app-boot-label {
+        font-size: 12px;
+        letter-spacing: 0.04em;
+      }
+      @keyframes app-boot-float {
+        0%, 100% { opacity: 0.6; transform: translateY(0); }
+        50% { opacity: 1; transform: translateY(-2px); }
+      }
+    </style>
+    <script>
+      // 在 JS bundle 执行前提前应用持久化主题,避免 loading 与最终主题之间的明暗闪烁
+      try {
+        var saved = localStorage.getItem("mini-desk-state-v1");
+        if (saved) {
+          var theme = JSON.parse(saved).theme;
+          if (theme === "dark" || theme === "light") {
+            document.documentElement.setAttribute("data-theme", theme);
+          }
+        }
+      } catch (e) {
+      }
+    </script>
   </head>
   <body>
-    <div id="app"></div>
+    <div id="app">
+      <div class="app-boot" role="status" aria-label="加载中">
+        <div class="app-boot-icon" aria-hidden="true"></div>
+        <div class="app-boot-label">Mini Desk</div>
+      </div>
+    </div>
     <script type="module" src="/src/main.ts"></script>
   </body>
 </html>
