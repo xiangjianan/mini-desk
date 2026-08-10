@@ -1,8 +1,9 @@
 import { describe, expect, it } from "vitest";
 import { DEFAULT_COMPANION_GIF_THEME, getCompanionGifSrc, getCompanionNotificationIconSrc } from "../state/companionGifThemes";
-import { defaultState, defaultWorkspace, STORAGE_KEY } from "../state/defaults";
+import { DEFAULT_ZONE_VISIBILITY, defaultState, defaultWorkspace, STORAGE_KEY } from "../state/defaults";
 import {
   getSerializableState,
+  getSerializableWorkspace,
   normalizeImportedState,
   normalizeWorkspaceData,
   saveStateWithConflictCheck,
@@ -84,14 +85,41 @@ describe("state compatibility", () => {
     expect(unknown.language).toBe("zh");
   });
 
-  it("normalizes and serializes the zone visibility preference", () => {
-    const partial = normalizeImportedState({ zoneVisibility: { tasks: false } });
-    const allVisible = { assets: true, notes: true, tasks: true, workspace: true };
+  it("stores zone visibility per workspace and defaults to all visible", () => {
+    const allVisible = { ...DEFAULT_ZONE_VISIBILITY };
 
-    expect(partial.zoneVisibility).toEqual({ ...allVisible, tasks: false });
-    expect(normalizeImportedState({}).zoneVisibility).toEqual(allVisible);
-    expect(getSerializableState(partial).zoneVisibility).toEqual({ ...allVisible, tasks: false });
-    expect(defaultState().zoneVisibility).toEqual(allVisible);
+    expect(defaultWorkspace().zoneVisibility).toEqual(allVisible);
+    expect(defaultState().workspaces[0].zoneVisibility).toEqual(allVisible);
+    expect(normalizeImportedState({}).workspaces[0].zoneVisibility).toEqual(allVisible);
+
+    const ws = normalizeWorkspaceData({ id: "a", zoneVisibility: { tasks: false, notes: false } });
+    expect(ws.zoneVisibility).toEqual({ ...allVisible, tasks: false, notes: false });
+  });
+
+  it("serializes and clones each workspace's zone visibility", () => {
+    const workspace = defaultWorkspace("a");
+    workspace.zoneVisibility = { assets: true, notes: false, tasks: false, workspace: true };
+    const serialized = getSerializableWorkspace(workspace);
+
+    expect(serialized.zoneVisibility).toEqual({ assets: true, notes: false, tasks: false, workspace: true });
+    // The serialized visibility is an isolated clone.
+    workspace.zoneVisibility.notes = true;
+    expect(serialized.zoneVisibility.notes).toBe(false);
+  });
+
+  it("seeds every workspace from the legacy global zone visibility on load", () => {
+    const state = normalizeImportedState({
+      zoneVisibility: { tasks: false },
+      workspaces: [
+        { id: "a", noteLines: [{ text: "a", indent: 0 }] },
+        { id: "b", zoneVisibility: { notes: false }, noteLines: [{ text: "b", indent: 0 }] },
+      ],
+    });
+
+    // A workspace without its own visibility inherits the legacy global value.
+    expect(state.workspaces[0].zoneVisibility).toEqual({ assets: true, notes: true, tasks: false, workspace: true });
+    // A workspace that already declares its own visibility keeps it.
+    expect(state.workspaces[1].zoneVisibility).toEqual({ assets: true, notes: false, tasks: true, workspace: true });
   });
 
   it("drops legacy default custom titles while preserving real custom titles", () => {

@@ -3,7 +3,7 @@ export type AppLanguage = "zh" | "en";
 
 /** Canonical workbench zones, in left-to-right grid order. */
 export type ZoneKey = "assets" | "notes" | "tasks" | "workspace";
-/** Per-zone show/hide preference (shared across workspaces). Defaults to all visible. */
+/** Per-zone show/hide preference. Owned per-workspace (each space configures its own layout). Defaults to all visible. */
 export type ZoneVisibility = Record<ZoneKey, boolean>;
 export type CompanionGifTheme = "cat" | "ikun" | "hermes" | "custom" | "none";
 export type QuickButtonType = "link" | "text" | "api" | "app";
@@ -142,6 +142,7 @@ export interface WorkspaceData {
   todoLists: TodoListConfig[];
   showCompletedTodos: TodoCompletedVisibility;
   todos: TodoMap;
+  zoneVisibility: ZoneVisibility;
 }
 
 export interface BoardSyncState {
@@ -157,7 +158,6 @@ export interface BoardState {
   companionGifTheme: CompanionGifTheme;
   customCompanionGif: CompanionCustomGif;
   customCompanionGifStored: CompanionCustomGifStored;
-  zoneVisibility: ZoneVisibility;
   workspaces: WorkspaceData[];
   activeWorkspaceId: string;
 }

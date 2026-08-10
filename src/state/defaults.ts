@@ -61,6 +61,7 @@ export function defaultWorkspace(id: string = DEFAULT_WORKSPACE_ID): WorkspaceDa
     todoLists: cloneDefaultTodoLists(),
     showCompletedTodos: createDefaultCompletedVisibility(),
     todos: createDefaultTodoMap(),
+    zoneVisibility: { ...DEFAULT_ZONE_VISIBILITY },
   };
 }
 
@@ -72,7 +73,6 @@ export function defaultState(): BoardState {
     companionGifTheme: DEFAULT_COMPANION_GIF_THEME,
     customCompanionGif: {},
     customCompanionGifStored: {},
-    zoneVisibility: { ...DEFAULT_ZONE_VISIBILITY },
     workspaces: [defaultWorkspace(DEFAULT_WORKSPACE_ID)],
     activeWorkspaceId: DEFAULT_WORKSPACE_ID,
   };

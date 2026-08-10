@@ -174,6 +174,7 @@ export function getSerializableWorkspace(
     quickButtons: workspace.quickButtons.map((button) => ({ ...button })),
     quickOtherCollapsed: workspace.quickOtherCollapsed,
     showHiddenQuickButtons: workspace.showHiddenQuickButtons,
+    zoneVisibility: normalizeZoneVisibility(workspace.zoneVisibility),
   };
 }
 
@@ -191,7 +192,6 @@ export function getSerializableState(
     companionGifTheme: state.companionGifTheme,
     customCompanionGif: options.includeCustomGifData ? cloneCustomCompanionGif(state.customCompanionGif) : {},
     customCompanionGifStored: getCustomCompanionGifStoredState(state.customCompanionGif, state.customCompanionGifStored),
-    zoneVisibility: normalizeZoneVisibility(state.zoneVisibility),
     workspaces: state.workspaces.map((workspace) => getSerializableWorkspace(workspace, options)),
     activeWorkspaceId: state.workspaces.some((workspace) => workspace.id === state.activeWorkspaceId)
       ? state.activeWorkspaceId
@@ -208,6 +208,12 @@ export function normalizeImportedState(payload: unknown): BoardState {
   const typed = source as Record<string, unknown>;
   const language = normalizeLanguage(typed.language);
 
+  // The zone-visibility preference was previously a single global field on the
+  // board state. It now lives per-workspace, so seed every workspace from the
+  // legacy global value (defaulting to all-visible) to preserve the user's
+  // existing layout on load.
+  const legacyGlobalVisibility = normalizeZoneVisibility(typed.zoneVisibility);
+
   const shared = {
     sync: normalizeSyncState(typed.sync),
     language,
@@ -215,11 +221,10 @@ export function normalizeImportedState(payload: unknown): BoardState {
     companionGifTheme: normalizeCompanionGifTheme(typed.companionGifTheme),
     customCompanionGif: normalizeCustomCompanionGif(typed.customCompanionGif),
     customCompanionGifStored: normalizeCustomCompanionGifStored(typed.customCompanionGifStored, typed.customCompanionGif),
-    zoneVisibility: normalizeZoneVisibility(typed.zoneVisibility),
   };
 
   if (Array.isArray(typed.workspaces)) {
-    const workspaces = normalizeWorkspaceList(typed.workspaces, language);
+    const workspaces = normalizeWorkspaceList(typed.workspaces, language, legacyGlobalVisibility);
     return {
       ...shared,
       workspaces,
@@ -227,7 +232,7 @@ export function normalizeImportedState(payload: unknown): BoardState {
     };
   }
 
-  const workspace = normalizeLegacyWorkspace(typed, language);
+  const workspace = normalizeLegacyWorkspace(typed, language, legacyGlobalVisibility);
   return {
     ...shared,
     workspaces: [workspace],
@@ -235,7 +240,7 @@ export function normalizeImportedState(payload: unknown): BoardState {
   };
 }
 
-export function normalizeWorkspaceData(item: unknown, language: AppLanguage = DEFAULT_LANGUAGE): WorkspaceData {
+export function normalizeWorkspaceData(item: unknown, language: AppLanguage = DEFAULT_LANGUAGE, fallbackVisibility?: ZoneVisibility): WorkspaceData {
   const typed = isPlainObject(item) ? (item as Record<string, unknown>) : {};
   const customTitles = normalizeCustomTitles(typed.customTitles);
   const noteLines = normalizeLineCollection(typed.noteLines ?? typed.note);
@@ -263,14 +268,15 @@ export function normalizeWorkspaceData(item: unknown, language: AppLanguage = DE
     todoLists,
     showCompletedTodos: normalizeCompletedVisibility(typed.showCompletedTodos, todoLists),
     todos: normalizeTodos(typed.todos, todoLists),
+    zoneVisibility: normalizeZoneVisibility(typed.zoneVisibility ?? fallbackVisibility),
   };
 }
 
-function normalizeWorkspaceList(value: unknown, language: AppLanguage): WorkspaceData[] {
+function normalizeWorkspaceList(value: unknown, language: AppLanguage, fallbackVisibility?: ZoneVisibility): WorkspaceData[] {
   if (!Array.isArray(value)) return [defaultWorkspace()];
   const seen = new Set<string>();
   const workspaces = value
-    .map((item) => normalizeWorkspaceData(item, language))
+    .map((item) => normalizeWorkspaceData(item, language, fallbackVisibility))
     .map((workspace) => {
       let id = workspace.id;
       while (seen.has(id)) id = createId();
@@ -280,8 +286,8 @@ function normalizeWorkspaceList(value: unknown, language: AppLanguage): Workspac
   return workspaces.length > 0 ? workspaces : [defaultWorkspace()];
 }
 
-function normalizeLegacyWorkspace(typed: Record<string, unknown>, language: AppLanguage): WorkspaceData {
-  const workspace = normalizeWorkspaceData(typed, language);
+function normalizeLegacyWorkspace(typed: Record<string, unknown>, language: AppLanguage, fallbackVisibility?: ZoneVisibility): WorkspaceData {
+  const workspace = normalizeWorkspaceData(typed, language, fallbackVisibility);
   const sync = isPlainObject(typed.sync) ? (typed.sync as Record<string, unknown>) : {};
   const updatedAt = typeof sync.updatedAt === "number" && Number.isFinite(sync.updatedAt) ? sync.updatedAt : 0;
   return { ...workspace, id: DEFAULT_WORKSPACE_ID, createdAt: updatedAt };

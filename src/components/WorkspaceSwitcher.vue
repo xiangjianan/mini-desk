@@ -3,7 +3,8 @@ import { computed, nextTick, onUnmounted, ref, watch } from "vue";
 import { NPopover, NIcon } from "naive-ui";
 import { ChevronDownOutline, AddOutline, CreateOutline, TrashOutline, DownloadOutline, CloudUploadOutline } from "@vicons/ionicons5";
 import { getUiText } from "../state/i18n";
-import type { AppLanguage, ThemeMode, WorkspaceData } from "../types";
+import type { AppLanguage, ThemeMode, WorkspaceData, ZoneKey } from "../types";
+import ZoneVisibilityPopover from "./ZoneVisibilityPopover.vue";
 import miniDeskLogo from "../../static/img/mini-desk-cat.png?url";
 import miniDeskDarkLogo from "../../static/img/mini-desk-cat-dark.png?url";
 
@@ -22,6 +23,7 @@ const emit = defineEmits<{
   reorder: [dragId: string, targetId: string];
   exportWorkspace: [id: string, anchor: HTMLElement];
   import: [anchor: HTMLElement];
+  toggleZone: [workspaceId: string, zone: ZoneKey];
 }>();
 
 const text = computed(() => getUiText(props.language));
@@ -56,6 +58,9 @@ function attachOutsideClickGuard(): void {
     if (!target) return;
     if (target.closest('[data-testid="workspace-trigger"]')) return;
     if (target.closest(".workspace-switcher")) return;
+    // The per-workspace zone-visibility popover teleports to <body>, so it lives
+    // outside .workspace-switcher; keep the switcher open while interacting with it.
+    if (target.closest(".zone-visibility-popover")) return;
     close();
   };
   document.addEventListener("click", outsideClickGuard);
@@ -158,6 +163,11 @@ function onDrop(targetId: string): void {
             {{ workspace.customTitles["board-title"]?.trim() || "Mini Desk" }}
           </span>
           <span class="workspace-switcher-actions">
+            <ZoneVisibilityPopover
+              :visibility="workspace.zoneVisibility"
+              :language="language"
+              @toggle="emit('toggleZone', workspace.id, $event)"
+            />
             <button
               type="button"
               class="workspace-switcher-action"

@@ -7,7 +7,6 @@ import {
   CloudUploadOutline,
   CreateOutline,
   GlobeOutline,
-  GridOutline,
   HeartOutline,
   ImagesOutline,
   InformationCircleOutline,
@@ -21,7 +20,7 @@ import type { Component } from "vue";
 import type { UploadFileInfo } from "naive-ui";
 import { COMPANION_GIF_THEME_OPTIONS } from "../state/companionGifThemes";
 import { getUiText, normalizeLanguage } from "../state/i18n";
-import type { AppLanguage, CompanionCustomGif, CompanionGifTheme, GuideKey, ZoneKey, ZoneVisibility } from "../types";
+import type { AppLanguage, CompanionCustomGif, CompanionGifTheme, GuideKey } from "../types";
 import { CONTEXT_MENU_Z_INDEX } from "../utils/contextMenu";
 
 const props = withDefaults(defineProps<{
@@ -31,12 +30,10 @@ const props = withDefaults(defineProps<{
   customCompanionGif?: CompanionCustomGif;
   hasCustomCompanionGif?: boolean;
   language?: AppLanguage;
-  zoneVisibility?: ZoneVisibility;
 }>(), {
   language: "zh",
   customCompanionGif: () => ({}),
   hasCustomCompanionGif: false,
-  zoneVisibility: () => ({ assets: true, notes: true, tasks: true, workspace: true }),
 });
 
 const emit = defineEmits<{
@@ -53,16 +50,12 @@ const emit = defineEmits<{
   gifTheme: [theme: CompanionGifTheme, anchor?: HTMLElement];
   customGif: [files: { light?: File; dark?: File }, anchor?: HTMLElement];
   guide: [key: GuideKey, anchor: HTMLElement];
-  updateZoneVisibility: [visibility: ZoneVisibility];
 }>();
 
 // Temporarily disabled — the QR-code "支持作者" flow is hidden until re-enabled.
 const SUPPORT_AUTHOR_ENABLED = false;
 
 const menuOpen = ref(false);
-// Toggling a zone checkbox should NOT close the dropdown (unlike theme/language).
-// Set before emit; the imminent close is vetoed in handleDropdownShow.
-let suppressZoneClose = false;
 const triggerRef = ref<HTMLElement | null>(null);
 const customGifDialogOpen = ref(false);
 const customGifLightFile = ref<File | undefined>();
@@ -72,23 +65,7 @@ const customGifDarkPreviewSrc = ref<string | undefined>();
 const text = computed(() => getUiText(props.language));
 const customGifLightPreview = computed(() => customGifLightPreviewSrc.value ?? props.customCompanionGif.light);
 const customGifDarkPreview = computed(() => customGifDarkPreviewSrc.value ?? props.customCompanionGif.dark);
-const zoneChildren = computed(() => [
-  { key: "zone:assets" as const, label: text.value.zoneVisibility.assets, checked: props.zoneVisibility.assets },
-  { key: "zone:notes" as const, label: text.value.zoneVisibility.notes, checked: props.zoneVisibility.notes },
-  { key: "zone:tasks" as const, label: text.value.zoneVisibility.tasks, checked: props.zoneVisibility.tasks },
-  { key: "zone:workspace" as const, label: text.value.zoneVisibility.workspace, checked: props.zoneVisibility.workspace },
-]);
 const options = computed(() => [
-  {
-    label: text.value.settings.configure,
-    key: "configure",
-    icon: renderIcon(GridOutline),
-    children: zoneChildren.value.map((zone) => ({
-      label: zone.label,
-      key: zone.key,
-      icon: renderZoneCheckIcon(zone.checked),
-    })),
-  },
   {
     label: text.value.settings.data,
     key: "data",
@@ -147,14 +124,6 @@ const options = computed(() => [
 ]);
 
 function handleSelect(key: string): void {
-  if (key.startsWith("zone:")) {
-    const zone = key.replace("zone:", "") as ZoneKey;
-    // Keep the menu open so the user can toggle multiple zones in one go. The
-    // close NDropdown emits right after select is vetoed in handleDropdownShow.
-    suppressZoneClose = true;
-    emit("updateZoneVisibility", { ...props.zoneVisibility, [zone]: !props.zoneVisibility[zone] });
-    return;
-  }
   if (key === "create-workspace") emit("createWorkspace");
   if (key === "export-workspace") emit("exportWorkspace", triggerRef.value ?? undefined);
   if (key === "import") emit("import", triggerRef.value ?? undefined);
@@ -187,12 +156,6 @@ function handleSelect(key: string): void {
 }
 
 function handleDropdownShow(value: boolean): void {
-  // Veto the close that follows a zone checkbox toggle so the menu stays open.
-  if (!value && suppressZoneClose) {
-    suppressZoneClose = false;
-    return;
-  }
-  suppressZoneClose = false;
   menuOpen.value = value;
 }
 
@@ -268,12 +231,6 @@ function getCompanionGifThemeLabel(theme: CompanionGifTheme): string {
 
 function renderIcon(component: Component, danger = false) {
   return () => h(NIcon, { component, ...(danger ? { color: "var(--danger)" } : {}) });
-}
-
-// Always occupy the icon slot (transparent when unchecked) so the label column
-// stays aligned whether or not any zone is checked — the text never jumps left.
-function renderZoneCheckIcon(checked: boolean) {
-  return () => h(NIcon, { component: CheckmarkOutline, ...(checked ? {} : { color: "transparent" }) });
 }
 </script>
 

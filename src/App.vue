@@ -69,7 +69,7 @@ import {
   markAppVersionSeen,
 } from "./state/version";
 import type { ImagePlacementHint, ImageReplacementHint, SaveScope } from "./state/storage";
-import type { AppLanguage, BoardState, CompanionGifTheme, DraggedTodo, GuideKey, ImagePasteFeedback, ImagePasteRequest, LineItem, QuickApiBodyType, QuickApiHeader, QuickApiMethod, QuickButton, QuickButtonType, StoredImage, TodoItem, TodoListConfig, TodoListId, TodoPeriod, TodoStarChange, WorkspaceData, WorkspaceSpace, ZoneVisibility } from "./types";
+import type { AppLanguage, BoardState, CompanionGifTheme, DraggedTodo, GuideKey, ImagePasteFeedback, ImagePasteRequest, LineItem, QuickApiBodyType, QuickApiHeader, QuickApiMethod, QuickButton, QuickButtonType, StoredImage, TodoItem, TodoListConfig, TodoListId, TodoPeriod, TodoStarChange, WorkspaceData, WorkspaceSpace, ZoneKey } from "./types";
 
 const ImagePreview = defineAsyncComponent(() => import("./components/ImagePreview.vue"));
 const ShortcutHelp = defineAsyncComponent(() => import("./components/ShortcutHelp.vue"));
@@ -376,8 +376,12 @@ function updateLanguage(language: AppLanguage): void {
   persistNow();
 }
 
-function updateZoneVisibility(next: ZoneVisibility): void {
-  state.zoneVisibility = { ...next };
+function toggleWorkspaceZone(workspaceId: string, zone: ZoneKey): void {
+  state.workspaces = state.workspaces.map((workspace) =>
+    workspace.id === workspaceId
+      ? { ...workspace, zoneVisibility: { ...workspace.zoneVisibility, [zone]: !workspace.zoneVisibility[zone] } }
+      : workspace,
+  );
   persistNow();
 }
 
@@ -3248,7 +3252,7 @@ function moveItem<T extends { id: string }>(items: T[], dragId: string, targetId
       :assets-title="titles['image-title']"
       :notes-title="titles['quick-title']"
       :image-preview-open="Boolean(displayedPreviewId)"
-      :zone-visibility="state.zoneVisibility"
+      :zone-visibility="activeWorkspace.zoneVisibility"
       @theme="handleThemeClick"
       @dragover.prevent
       @drop.prevent="handleBoardDrop"
@@ -3266,6 +3270,7 @@ function moveItem<T extends { id: string }>(items: T[], dragId: string, targetId
           @reorder="reorderWorkspaceSections"
           @export-workspace="exportWorkspaceById"
           @import="requestImport"
+          @toggle-zone="toggleWorkspaceZone"
         />
       </template>
 
@@ -3295,7 +3300,6 @@ function moveItem<T extends { id: string }>(items: T[], dragId: string, targetId
           :custom-companion-gif="state.customCompanionGif"
           :has-custom-companion-gif="Boolean(state.customCompanionGif.light || state.customCompanionGif.dark || state.customCompanionGifStored.light || state.customCompanionGifStored.dark)"
           :language="state.language"
-          :zone-visibility="state.zoneVisibility"
           @create-workspace="openCreateWorkspace"
           @export-workspace="exportCurrentWorkspace"
           @import="requestImport"
@@ -3309,7 +3313,6 @@ function moveItem<T extends { id: string }>(items: T[], dragId: string, targetId
           @gif-theme="updateCompanionGifTheme"
           @custom-gif="updateCustomCompanionGif"
           @guide="handleGuideClick"
-          @update-zone-visibility="updateZoneVisibility"
         />
       </template>
 
