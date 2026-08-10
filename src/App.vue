@@ -10,6 +10,8 @@ import SpacePanel from "./components/SpacePanel.vue";
 import TodoPanel from "./components/TodoPanel.vue";
 import WorkbenchShell from "./components/WorkbenchShell.vue";
 import WorkspaceSwitcher from "./components/WorkspaceSwitcher.vue";
+import miniDeskLogo from "../static/img/mini-desk-cat.png?url";
+import miniDeskDarkLogo from "../static/img/mini-desk-cat-dark.png?url";
 import { getCompanionGifSrc, getCompanionNotificationIconSrc } from "./state/companionGifThemes";
 import {
   deleteImageDatabases,
@@ -3467,7 +3469,17 @@ function moveItem<T extends { id: string }>(items: T[], dragId: string, targetId
 
     <main v-else class="mobile-handoff" :aria-label="uiText.app.mobileLabel">
       <header class="mobile-handoff-header">
-        <h1 class="mobile-handoff-title">{{ uiText.app.mobileTitle }}</h1>
+        <div class="mobile-handoff-brand">
+          <img
+            class="mobile-handoff-logo"
+            :src="state.theme === 'dark' ? miniDeskDarkLogo : miniDeskLogo"
+            alt=""
+            aria-hidden="true"
+            width="20"
+            height="20"
+          />
+          <h1 class="mobile-handoff-title">{{ uiText.app.mobileTitle }}</h1>
+        </div>
         <NButton quaternary size="small" class="mobile-handoff-theme" :aria-label="uiText.app.theme" @click="handleThemeClick">
           <NIcon :component="state.theme === 'dark' ? SunnyOutline : MoonOutline" />
         </NButton>

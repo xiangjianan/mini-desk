@@ -4111,13 +4111,21 @@ body:has(.image-preview) .image-panel .n-scrollbar {
   background: var(--panel);
 }
 
-.mobile-handoff-title {
+.mobile-handoff-brand {
   display: flex;
   align-items: center;
+  gap: 8px;
   min-width: 0;
   padding: 0 12px;
+}
+
+.mobile-handoff-title {
   font-size: var(--app-font-size);
   font-weight: 400;
+}
+
+.mobile-handoff-logo {
+  flex-shrink: 0;
 }
 
 .mobile-handoff-theme {
