@@ -1,4 +1,4 @@
-import type { BoardState, TodoListConfig, TodoListId, TodoMap, WorkspaceData } from "../types";
+import type { BoardState, TodoListConfig, TodoListId, TodoMap, WorkspaceData, ZoneVisibility } from "../types";
 import { DEFAULT_COMPANION_GIF_THEME } from "./companionGifThemes";
 import {
   AREA_HELP_BY_LANGUAGE,
@@ -20,6 +20,14 @@ export const DEFAULT_SPACE_TITLE = DEFAULT_SPACE_TITLES.zh.workspace;
 export const DEFAULT_WORKSPACE_ID = "default";
 
 export const DEFAULT_BOARD_SLOGAN = "Do less, do it well.";
+
+/** Every workbench zone visible by default. */
+export const DEFAULT_ZONE_VISIBILITY: ZoneVisibility = {
+  assets: true,
+  notes: true,
+  tasks: true,
+  workspace: true,
+};
 
 export const DEFAULT_TODO_LISTS: TodoListConfig[] = getDefaultTodoLists(DEFAULT_LANGUAGE);
 
@@ -64,6 +72,7 @@ export function defaultState(): BoardState {
     companionGifTheme: DEFAULT_COMPANION_GIF_THEME,
     customCompanionGif: {},
     customCompanionGifStored: {},
+    zoneVisibility: { ...DEFAULT_ZONE_VISIBILITY },
     workspaces: [defaultWorkspace(DEFAULT_WORKSPACE_ID)],
     activeWorkspaceId: DEFAULT_WORKSPACE_ID,
   };

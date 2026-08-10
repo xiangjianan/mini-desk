@@ -5,9 +5,22 @@ import { readFileSync } from "node:fs";
 import { resolve } from "node:path";
 import SettingsMenu from "../components/SettingsMenu.vue";
 
-const dropdownStub = {
-  props: ["options"],
-  emits: ["select"],
+const dropdownStub = defineComponent({
+  props: ["options", "show"],
+  emits: ["select", "update:show"],
+  methods: {
+    // Mirrors the visible-checkmark semantics: an option is "checked" when it has
+    // an icon that isn't the transparent placeholder used to reserve icon space.
+    isChecked(option: { icon?: () => unknown }) {
+      if (typeof option.icon !== "function") return false;
+      try {
+        const vnode = option.icon() as { props?: { color?: string } } | null;
+        return vnode?.props?.color !== "transparent";
+      } catch {
+        return true;
+      }
+    },
+  },
   template: `
     <div>
       <slot />
@@ -25,7 +38,7 @@ const dropdownStub = {
           v-for="child in option.children || []"
           :key="child.key"
           class="dropdown-option dropdown-child-option"
-          :class="{ 'is-selected': Boolean(child.icon) }"
+          :class="{ 'is-selected': isChecked(child) }"
           :data-key="child.key"
           type="button"
           @click="$emit('select', child.key)"
@@ -35,7 +48,7 @@ const dropdownStub = {
       </template>
     </div>
   `,
-};
+});
 
 const uploadStub = defineComponent({
   name: "Upload",
@@ -383,5 +396,142 @@ describe("SettingsMenu", () => {
 
     expect(wrapper.find('[data-key="language"]').text()).toBe("语言");
     expect(wrapper.find('[data-key="language:en"]').classes()).toContain("is-selected");
+  });
+
+  it("places the configure action at the very top of the settings menu", () => {
+    const source = readFileSync(resolve(__dirname, "../components/SettingsMenu.vue"), "utf8");
+
+    expect(source).toContain("GridOutline");
+    expect(source).toMatch(/key:\s*"configure"[\s\S]*?icon:\s*renderIcon\(GridOutline\)/);
+  });
+
+  it("renders a zone toggle submenu under the configure action", () => {
+    const wrapper = mount(SettingsMenu, {
+      props: {
+        appVersion: "1.0.40",
+        updateAvailable: false,
+        companionGifTheme: "hermes",
+        language: "zh",
+        zoneVisibility: { assets: true, notes: true, tasks: true, workspace: true },
+      },
+      global: {
+        stubs: {
+          Dropdown: dropdownStub,
+          NDropdown: dropdownStub,
+          NBadge: { template: "<span><slot /></span>" },
+          NButton: { template: "<button><slot /></button>" },
+          NIcon: { template: "<span />" },
+        },
+      },
+    });
+
+    const topLevelKeys = wrapper
+      .findAll(".dropdown-option")
+      .filter((option) => !option.classes("dropdown-child-option"))
+      .map((option) => option.attributes("data-key"));
+    expect(topLevelKeys[0]).toBe("configure");
+    expect(wrapper.find('[data-key="configure"]').text()).toBe("配置");
+
+    expect(wrapper.findAll('[data-key^="zone:"]')).toHaveLength(4);
+    expect(wrapper.find('[data-key="zone:assets"]').text()).toBe("图片");
+    expect(wrapper.find('[data-key="zone:notes"]').text()).toBe("快捷动作");
+    expect(wrapper.find('[data-key="zone:tasks"]').text()).toBe("提醒事项");
+    expect(wrapper.find('[data-key="zone:workspace"]').text()).toBe("便签");
+    // Every visible zone shows a checkmark.
+    expect(
+      wrapper.findAll('[data-key^="zone:"]').filter((option) => option.classes("is-selected")),
+    ).toHaveLength(4);
+  });
+
+  it("shows a checkmark only for the visible zones", () => {
+    const wrapper = mount(SettingsMenu, {
+      props: {
+        appVersion: "1.0.40",
+        updateAvailable: false,
+        companionGifTheme: "hermes",
+        language: "zh",
+        zoneVisibility: { assets: true, notes: true, tasks: false, workspace: true },
+      },
+      global: {
+        stubs: {
+          Dropdown: dropdownStub,
+          NDropdown: dropdownStub,
+          NBadge: { template: "<span><slot /></span>" },
+          NButton: { template: "<button><slot /></button>" },
+          NIcon: { template: "<span />" },
+        },
+      },
+    });
+
+    const checkedKeys = wrapper
+      .findAll('[data-key^="zone:"]')
+      .filter((option) => option.classes("is-selected"))
+      .map((option) => option.attributes("data-key"));
+    expect(checkedKeys).toEqual(["zone:assets", "zone:notes", "zone:workspace"]);
+    expect(wrapper.find('[data-key="zone:tasks"]').classes()).not.toContain("is-selected");
+  });
+
+  it("toggles a zone's visibility when its submenu item is clicked", async () => {
+    const wrapper = mount(SettingsMenu, {
+      props: {
+        appVersion: "1.0.40",
+        updateAvailable: false,
+        companionGifTheme: "hermes",
+        language: "zh",
+        zoneVisibility: { assets: true, notes: true, tasks: true, workspace: true },
+      },
+      global: {
+        stubs: {
+          Dropdown: dropdownStub,
+          NDropdown: dropdownStub,
+          NBadge: { template: "<span><slot /></span>" },
+          NButton: { template: "<button><slot /></button>" },
+          NIcon: { template: "<span />" },
+        },
+      },
+    });
+
+    await wrapper.find('[data-key="zone:tasks"]').trigger("click");
+
+    expect(wrapper.emitted("updateZoneVisibility")?.[0]).toEqual([
+      { assets: true, notes: true, tasks: false, workspace: true },
+    ]);
+  });
+
+  it("keeps the dropdown open after toggling a zone checkbox", async () => {
+    const wrapper = mount(SettingsMenu, {
+      props: {
+        appVersion: "1.0.40",
+        updateAvailable: false,
+        companionGifTheme: "hermes",
+        language: "zh",
+        zoneVisibility: { assets: true, notes: true, tasks: true, workspace: true },
+      },
+      global: {
+        stubs: {
+          Dropdown: dropdownStub,
+          NDropdown: dropdownStub,
+          NBadge: { template: "<span><slot /></span>" },
+          NButton: { template: "<button><slot /></button>" },
+          NIcon: { template: "<span />" },
+        },
+      },
+    });
+
+    // Open the menu, then the dropdown tries to close on each zone toggle.
+    const dropdown = wrapper.findComponent(dropdownStub);
+    dropdown.vm.$emit("update:show", true);
+    await wrapper.vm.$nextTick();
+    expect(dropdown.props("show")).toBe(true);
+
+    await wrapper.find('[data-key="zone:tasks"]').trigger("click");
+    dropdown.vm.$emit("update:show", false);
+    await wrapper.vm.$nextTick();
+
+    // The veto keeps show true so the user can keep toggling.
+    expect(dropdown.props("show")).toBe(true);
+    expect(wrapper.emitted("updateZoneVisibility")?.[0]).toEqual([
+      { assets: true, notes: true, tasks: false, workspace: true },
+    ]);
   });
 });

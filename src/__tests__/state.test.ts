@@ -84,6 +84,16 @@ describe("state compatibility", () => {
     expect(unknown.language).toBe("zh");
   });
 
+  it("normalizes and serializes the zone visibility preference", () => {
+    const partial = normalizeImportedState({ zoneVisibility: { tasks: false } });
+    const allVisible = { assets: true, notes: true, tasks: true, workspace: true };
+
+    expect(partial.zoneVisibility).toEqual({ ...allVisible, tasks: false });
+    expect(normalizeImportedState({}).zoneVisibility).toEqual(allVisible);
+    expect(getSerializableState(partial).zoneVisibility).toEqual({ ...allVisible, tasks: false });
+    expect(defaultState().zoneVisibility).toEqual(allVisible);
+  });
+
   it("drops legacy default custom titles while preserving real custom titles", () => {
     const state = normalizeImportedState({
       customTitles: {

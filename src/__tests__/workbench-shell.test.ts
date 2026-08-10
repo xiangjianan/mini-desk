@@ -628,6 +628,136 @@ describe("WorkbenchShell", () => {
     wrapper.unmount();
   });
 
+  const mockWideGridMetrics = () => {
+    vi.spyOn(window, "innerWidth", "get").mockReturnValue(1600);
+    HTMLElement.prototype.getBoundingClientRect = function getMockRect() {
+      if (this instanceof HTMLElement && this.classList.contains("workbench-grid")) {
+        return {
+          x: 0,
+          y: 52,
+          left: 0,
+          top: 52,
+          right: 1200,
+          bottom: 800,
+          width: 1200,
+          height: 748,
+          toJSON: () => undefined,
+        };
+      }
+      return originalGetBoundingClientRect.call(this);
+    };
+  };
+
+  const readColumnTracks = (wrapper: ReturnType<typeof mount>) => {
+    const style = wrapper.get(".workbench-grid").attributes("style") ?? "";
+    const value = style.match(/grid-template-columns:\s*([^;]+)/)?.[1].trim();
+    return value ? value.split(/\s+/) : [];
+  };
+
+  it("hides a zone entirely and redivides the width across the remaining zones", async () => {
+    mockWideGridMetrics();
+    const wrapper = mount(WorkbenchShell, {
+      attachTo: document.body,
+      props: {
+        ...defaultProps,
+        zoneVisibility: { assets: true, notes: true, tasks: false, workspace: true },
+      },
+    });
+    await nextTick();
+    await nextTick();
+
+    expect(wrapper.find(".workbench-zone-tasks").exists()).toBe(false);
+    expect(wrapper.findAll(".workbench-zone")).toHaveLength(3);
+    expect(wrapper.find(".workbench-zone-assets").exists()).toBe(true);
+    expect(wrapper.find(".workbench-zone-notes").exists()).toBe(true);
+    expect(wrapper.find(".workbench-zone-workspace").exists()).toBe(true);
+    expect(wrapper.findAll(".workbench-resizer")).toHaveLength(2);
+    expect(readColumnTracks(wrapper)).toHaveLength(3);
+
+    wrapper.unmount();
+  });
+
+  it("widens the remaining zones when one is hidden versus all visible", async () => {
+    mockWideGridMetrics();
+    const allVisible = mount(WorkbenchShell, {
+      attachTo: document.body,
+      props: defaultProps,
+    });
+    await nextTick();
+    await nextTick();
+    const allVisibleAssets = Number.parseFloat(readColumnTracks(allVisible)[0]);
+    allVisible.unmount();
+
+    mockWideGridMetrics();
+    const hiddenTasks = mount(WorkbenchShell, {
+      attachTo: document.body,
+      props: {
+        ...defaultProps,
+        zoneVisibility: { assets: true, notes: true, tasks: false, workspace: true },
+      },
+    });
+    await nextTick();
+    await nextTick();
+    const hiddenTasksAssets = Number.parseFloat(readColumnTracks(hiddenTasks)[0]);
+
+    expect(hiddenTasksAssets).toBeGreaterThan(allVisibleAssets);
+
+    hiddenTasks.unmount();
+  });
+
+  it("restores all four zones when a hidden zone becomes visible again", async () => {
+    mockWideGridMetrics();
+    const wrapper = mount(WorkbenchShell, {
+      attachTo: document.body,
+      props: {
+        ...defaultProps,
+        zoneVisibility: { assets: true, notes: true, tasks: false, workspace: true },
+      },
+    });
+    await nextTick();
+    await nextTick();
+    expect(wrapper.find(".workbench-zone-tasks").exists()).toBe(false);
+
+    await wrapper.setProps({
+      zoneVisibility: { assets: true, notes: true, tasks: true, workspace: true },
+    });
+    await nextTick();
+    await nextTick();
+
+    expect(wrapper.findAll(".workbench-zone")).toHaveLength(4);
+    expect(wrapper.find(".workbench-zone-tasks").exists()).toBe(true);
+    expect(wrapper.findAll(".workbench-resizer")).toHaveLength(3);
+    expect(readColumnTracks(wrapper)).toHaveLength(4);
+
+    wrapper.unmount();
+  });
+
+  it("keeps the image zone narrow when it is the only visible zone", async () => {
+    mockWideGridMetrics();
+    const wrapper = mount(WorkbenchShell, {
+      attachTo: document.body,
+      props: {
+        ...defaultProps,
+        zoneVisibility: { assets: true, notes: false, tasks: false, workspace: false },
+      },
+    });
+    await nextTick();
+    await nextTick();
+
+    expect(wrapper.findAll(".workbench-zone")).toHaveLength(1);
+    expect(wrapper.find(".workbench-zone-assets").exists()).toBe(true);
+    expect(wrapper.findAll(".workbench-resizer")).toHaveLength(0);
+
+    const tracks = readColumnTracks(wrapper);
+    expect(tracks).toHaveLength(1);
+    const width = Number.parseFloat(tracks[0]);
+    // ~10% of the 1200px grid (not stretched to the full ~1170px content width).
+    expect(width).toBeGreaterThan(80);
+    expect(width).toBeLessThan(180);
+
+    wrapper.unmount();
+  });
+
   it("emits theme requests from the top command theme action", async () => {
     const wrapper = mount(WorkbenchShell, {
       props: {

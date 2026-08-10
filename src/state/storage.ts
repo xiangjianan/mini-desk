@@ -25,6 +25,7 @@ import type {
   TodoMap,
   WorkspaceData,
   WorkspaceSpace,
+  ZoneVisibility,
 } from "../types";
 
 export type SaveScope = "all" | "images" | "text";
@@ -190,6 +191,7 @@ export function getSerializableState(
     companionGifTheme: state.companionGifTheme,
     customCompanionGif: options.includeCustomGifData ? cloneCustomCompanionGif(state.customCompanionGif) : {},
     customCompanionGifStored: getCustomCompanionGifStoredState(state.customCompanionGif, state.customCompanionGifStored),
+    zoneVisibility: normalizeZoneVisibility(state.zoneVisibility),
     workspaces: state.workspaces.map((workspace) => getSerializableWorkspace(workspace, options)),
     activeWorkspaceId: state.workspaces.some((workspace) => workspace.id === state.activeWorkspaceId)
       ? state.activeWorkspaceId
@@ -213,6 +215,7 @@ export function normalizeImportedState(payload: unknown): BoardState {
     companionGifTheme: normalizeCompanionGifTheme(typed.companionGifTheme),
     customCompanionGif: normalizeCustomCompanionGif(typed.customCompanionGif),
     customCompanionGifStored: normalizeCustomCompanionGifStored(typed.customCompanionGifStored, typed.customCompanionGif),
+    zoneVisibility: normalizeZoneVisibility(typed.zoneVisibility),
   };
 
   if (Array.isArray(typed.workspaces)) {
@@ -733,6 +736,16 @@ function normalizeCustomCompanionGifStored(value: unknown, customCompanionGif: u
 
 function normalizeGifDataUrl(value: unknown): string | undefined {
   return typeof value === "string" && /^data:image\/gif(?:;[^,]*)?,/i.test(value) ? value : undefined;
+}
+
+function normalizeZoneVisibility(value: unknown): ZoneVisibility {
+  const record = isPlainObject(value) ? value as Record<string, unknown> : {};
+  return {
+    assets: record.assets === false ? false : true,
+    notes: record.notes === false ? false : true,
+    tasks: record.tasks === false ? false : true,
+    workspace: record.workspace === false ? false : true,
+  };
 }
 
 function normalizeStringRecord(value: unknown): Record<string, string> {

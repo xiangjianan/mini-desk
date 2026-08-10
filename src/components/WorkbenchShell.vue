@@ -8,7 +8,7 @@ import {
 } from "lucide-vue-next";
 import { Badge } from "./ui/badge";
 import { Button } from "./ui/button";
-import type { AppLanguage, ThemeMode } from "../types";
+import type { AppLanguage, ThemeMode, ZoneVisibility } from "../types";
 import {
   DEFAULT_LANGUAGE,
   WORKBENCH_COLLAPSED_FIXED_LABELS_BY_LANGUAGE,
@@ -24,12 +24,14 @@ const props = withDefaults(defineProps<{
   notesTitle?: string;
   slogan?: string;
   imagePreviewOpen?: boolean;
+  zoneVisibility?: ZoneVisibility;
 }>(), {
   language: DEFAULT_LANGUAGE,
   assetsTitle: "",
   notesTitle: "",
   slogan: "",
   imagePreviewOpen: false,
+  zoneVisibility: () => ({ assets: true, notes: true, tasks: true, workspace: true }),
 });
 
 // Collapsed-rail labels per zone. Assets and notes follow their editable area
@@ -69,9 +71,15 @@ const WORKBENCH_HEADER_STORAGE_KEY = "mini-desk-workbench-header-hidden";
 const LEGACY_WORKBENCH_HEADER_STORAGE_KEY = "todo-board-workbench-header-hidden";
 const DEFAULT_COLUMN_WEIGHTS = [0.15, 0.2, 0.35, 0.3] as const;
 const MIN_COLUMN_WIDTHS = [100, 100, 100, 100] as const;
+// Canonical zone order matches DEFAULT_COLUMN_WEIGHTS / MIN_COLUMN_WIDTHS indices.
+const ZONE_INDEX = { assets: 0, notes: 1, tasks: 2, workspace: 3 } as const;
+const CANONICAL_ZONE_ORDER = [0, 1, 2, 3];
 const DEFAULT_GRID_GAP = 14;
 const DEFAULT_GRID_PADDING_X = 14;
 const DEFAULT_GRID_PADDING_Y = 14;
+// When only the image zone is visible, keep it narrow on the left and leave the
+// rest of the board empty as a preview area instead of stretching it to 100%.
+const SOLO_ASSETS_WIDTH_RATIO = 0.1;
 const DEFAULT_IMAGE_PREVIEW_TOP = 52;
 const RESIZE_STEP = 24;
 // Floor a zone can be dragged down to once it passes its minimum width.
@@ -96,20 +104,43 @@ const gridPadding = ref({
 });
 const activeResize = ref<{ index: number; startX: number; startWidths: number[] } | null>(null);
 
+// Visible (active) zones drive the rendered grid. Hidden zones drop out of the
+// grid entirely (no track, no resizer); the remaining zones re-fit the width.
+const activeIndices = computed<number[]>(() => {
+  const visibility = [
+    props.zoneVisibility.assets,
+    props.zoneVisibility.notes,
+    props.zoneVisibility.tasks,
+    props.zoneVisibility.workspace,
+  ];
+  return CANONICAL_ZONE_ORDER.filter((index) => visibility[index]);
+});
+const activeWeights = computed(() => activeIndices.value.map((index) => DEFAULT_COLUMN_WEIGHTS[index]));
+const activeMins = computed(() => activeIndices.value.map((index) => MIN_COLUMN_WIDTHS[index]));
+
 const gridTemplateColumns = computed(() =>
-  columnWidths.value.length === 4 ? columnWidths.value.map((width) => `${Math.round(width)}px`).join(" ") : undefined,
+  columnWidths.value.length === activeMins.value.length && activeMins.value.length > 0
+    ? columnWidths.value.map((width) => `${Math.round(width)}px`).join(" ")
+    : undefined,
 );
 
 const gridStyle = computed(() => gridTemplateColumns.value ? { gridTemplateColumns: gridTemplateColumns.value } : undefined);
 
 // A zone collapses to its vertical title rail once its width drops below the
-// column minimum: content is hidden and only the title remains visible.
+// column minimum: content is hidden and only the title remains visible. Indexed
+// by canonical zone (always length 4) so template sections can look up directly.
 const zoneCollapsed = computed<boolean[]>(() => {
   const widths = columnWidths.value;
-  if (widths.length !== MIN_COLUMN_WIDTHS.length) {
-    return MIN_COLUMN_WIDTHS.map(() => false);
+  const mins = activeMins.value;
+  const indices = activeIndices.value;
+  if (widths.length !== mins.length || widths.length !== indices.length) {
+    return CANONICAL_ZONE_ORDER.map(() => false);
   }
-  return MIN_COLUMN_WIDTHS.map((min, index) => widths[index] < min);
+  const collapsedByCanonical = new Map<number, boolean>();
+  indices.forEach((canonicalIndex, pos) => {
+    collapsedByCanonical.set(canonicalIndex, widths[pos] < mins[pos]);
+  });
+  return CANONICAL_ZONE_ORDER.map((canonicalIndex) => collapsedByCanonical.get(canonicalIndex) ?? false);
 });
 
 let headerRevealHideTimer: number | undefined;
@@ -117,7 +148,7 @@ let headerRevealShowTimer: number | undefined;
 let lastPointerPosition: { x: number; y: number } | undefined;
 
 const resizeHandleStyles = computed(() => {
-  if (columnWidths.value.length !== 4) return [];
+  if (columnWidths.value.length !== activeMins.value.length) return [];
   let cumulativeWidth = 0;
   return columnWidths.value.slice(0, -1).map((width, index) => {
     cumulativeWidth += width;
@@ -135,12 +166,12 @@ function readPixel(value: string, fallback: number): number {
   return Number.isFinite(parsed) ? parsed : fallback;
 }
 
-function readStoredColumnWidths(): number[] | undefined {
+function readStoredColumnWidths(expectedLength: number = MIN_COLUMN_WIDTHS.length): number[] | undefined {
   if (typeof localStorage === "undefined") return undefined;
   try {
     const raw = localStorage.getItem(WORKBENCH_WIDTH_STORAGE_KEY) ?? localStorage.getItem(LEGACY_WORKBENCH_WIDTH_STORAGE_KEY);
     const parsed = JSON.parse(raw ?? "null");
-    if (!Array.isArray(parsed) || parsed.length !== 4) return undefined;
+    if (!Array.isArray(parsed) || parsed.length !== expectedLength) return undefined;
     const widths = parsed.map((value) => Number(value));
     return widths.every((value) => Number.isFinite(value) && value > 0) ? widths : undefined;
   } catch {
@@ -190,32 +221,39 @@ function readGridMetrics(): { rect: DOMRect; contentWidth: number } | undefined 
   };
   gridGap.value = gap;
   gridPadding.value = padding;
+  // Gaps sit between adjacent visible columns only.
+  const gapCount = Math.max(0, activeMins.value.length - 1);
   return {
     rect,
-    contentWidth: Math.max(0, rect.width - padding.left - padding.right - gap * (DEFAULT_COLUMN_WEIGHTS.length - 1)),
+    contentWidth: Math.max(0, rect.width - padding.left - padding.right - gap * gapCount),
   };
 }
 
-function fitColumnsToWidth(width: number, currentWidths?: readonly number[]): number[] {
+function fitColumnsToWidth(
+  width: number,
+  currentWidths?: readonly number[],
+  mins: readonly number[] = MIN_COLUMN_WIDTHS,
+  weights: readonly number[] = DEFAULT_COLUMN_WEIGHTS,
+): number[] {
   if (width <= 0) return [];
 
-  const hasCurrent = currentWidths?.length === MIN_COLUMN_WIDTHS.length;
-  const collapsedFlags = MIN_COLUMN_WIDTHS.map((min, index) =>
+  const hasCurrent = currentWidths?.length === mins.length;
+  const collapsedFlags = mins.map((min, index) =>
     hasCurrent ? currentWidths![index] < min : false,
   );
 
   if (!collapsedFlags.some(Boolean)) {
-    const minTotal = MIN_COLUMN_WIDTHS.reduce((sum, value) => sum + value, 0);
+    const minTotal = mins.reduce((sum, value) => sum + value, 0);
     if (width <= minTotal) {
-      return [...MIN_COLUMN_WIDTHS];
+      return [...mins];
     }
 
-    const source = hasCurrent ? currentWidths! : DEFAULT_COLUMN_WEIGHTS;
-    const sourceWeights = source.map((value, index) => currentWidths?.length === 4 ? Math.max(0, value - MIN_COLUMN_WIDTHS[index]) : value);
-    const effectiveWeights = sourceWeights.reduce((sum, value) => sum + value, 0) > 0 ? sourceWeights : [...DEFAULT_COLUMN_WEIGHTS];
+    const source = hasCurrent ? currentWidths! : weights;
+    const sourceWeights = source.map((value, index) => currentWidths?.length === mins.length ? Math.max(0, value - mins[index]) : value);
+    const effectiveWeights = sourceWeights.reduce((sum, value) => sum + value, 0) > 0 ? sourceWeights : [...weights];
     const sourceTotal = effectiveWeights.reduce((sum, value) => sum + value, 0);
     const remainingDelta = width - minTotal;
-    return MIN_COLUMN_WIDTHS.map((minWidth, index) => {
+    return mins.map((minWidth, index) => {
       const weight = effectiveWeights[index];
       return minWidth + (remainingDelta * weight) / sourceTotal;
     });
@@ -225,21 +263,21 @@ function fitColumnsToWidth(width: number, currentWidths?: readonly number[]): nu
   // rail width and distribute the freed space across the expanded zones.
   const collapsedCount = collapsedFlags.filter(Boolean).length;
   const collapsedTotal = COLLAPSED_COLUMN_WIDTH * collapsedCount;
-  const visibleMinTotal = MIN_COLUMN_WIDTHS.reduce((sum, min, index) =>
+  const visibleMinTotal = mins.reduce((sum, min, index) =>
     collapsedFlags[index] ? sum : sum + min, 0);
   if (width <= collapsedTotal + visibleMinTotal) {
-    return MIN_COLUMN_WIDTHS.map((min, index) => (collapsedFlags[index] ? COLLAPSED_COLUMN_WIDTH : min));
+    return mins.map((min, index) => (collapsedFlags[index] ? COLLAPSED_COLUMN_WIDTH : min));
   }
-  const excessWeights = MIN_COLUMN_WIDTHS.map((min, index) =>
+  const excessWeights = mins.map((min, index) =>
     collapsedFlags[index] ? 0 : Math.max(0, currentWidths![index] - min),
   );
   const excessTotal = excessWeights.reduce((sum, value) => sum + value, 0);
   const effectiveWeights = excessTotal > 0
     ? excessWeights
-    : MIN_COLUMN_WIDTHS.map((_, index) => (collapsedFlags[index] ? 0 : DEFAULT_COLUMN_WEIGHTS[index]));
+    : mins.map((_, index) => (collapsedFlags[index] ? 0 : weights[index]));
   const sourceTotal = effectiveWeights.reduce((sum, value) => sum + value, 0);
   const remainingDelta = width - collapsedTotal - visibleMinTotal;
-  return MIN_COLUMN_WIDTHS.map((min, index) =>
+  return mins.map((min, index) =>
     collapsedFlags[index]
       ? COLLAPSED_COLUMN_WIDTH
       : min + (remainingDelta * effectiveWeights[index]) / sourceTotal,
@@ -250,14 +288,26 @@ function syncImagePreviewLeft(): void {
   const grid = gridRef.value;
   if (!grid) return;
   const metrics = readGridMetrics();
-  const firstWidth = columnWidths.value[0];
-  if (metrics && firstWidth) {
+  const widths = columnWidths.value;
+  const indices = activeIndices.value;
+  if (metrics && widths.length === indices.length && widths.length > 0) {
+    const contentLeft = metrics.rect.left + gridPadding.value.left;
     // Align the preview's left edge with the quick-actions (notes) zone's left
-    // edge — i.e. one gap to the right of the image list — so the gap between
-    // the image list and quick actions stays exposed as the drag strip. The
-    // resizer handle sits in the centre of that gap.
-    const notesLeft = metrics.rect.left + gridPadding.value.left + firstWidth + gridGap.value;
-    applyImagePreviewVars(notesLeft);
+    // edge so the gap before it stays exposed as the drag strip. When notes is
+    // hidden, fall back to the assets zone's right edge, else the grid's left.
+    const notesPos = indices.indexOf(ZONE_INDEX.notes);
+    if (notesPos >= 0) {
+      const precedingWidth = widths.slice(0, notesPos).reduce((sum, value) => sum + value, 0);
+      applyImagePreviewVars(contentLeft + precedingWidth + gridGap.value * notesPos);
+      return;
+    }
+    const assetsPos = indices.indexOf(ZONE_INDEX.assets);
+    if (assetsPos >= 0) {
+      const upToAssets = widths.slice(0, assetsPos + 1).reduce((sum, value) => sum + value, 0);
+      applyImagePreviewVars(contentLeft + upToAssets + gridGap.value * (assetsPos + 1));
+      return;
+    }
+    applyImagePreviewVars(contentLeft);
     return;
   }
   const assets = grid.querySelector<HTMLElement>(".workbench-zone-assets");
@@ -282,8 +332,17 @@ function refreshWorkbenchLayout(): void {
     void nextTick(syncImagePreviewLeft);
     return;
   }
-  const sourceWidths = columnWidths.value.length === 4 ? columnWidths.value : readStoredColumnWidths();
-  columnWidths.value = fitColumnsToWidth(metrics.contentWidth, sourceWidths);
+  const mins = activeMins.value;
+  const indices = activeIndices.value;
+  // When only the image zone is visible, pin it to ~10% on the left and leave the
+  // remaining width empty rather than letting the single column stretch full-width.
+  if (indices.length === 1 && indices[0] === ZONE_INDEX.assets) {
+    columnWidths.value = [Math.max(mins[0], Math.round(metrics.contentWidth * SOLO_ASSETS_WIDTH_RATIO))];
+    void nextTick(syncImagePreviewLeft);
+    return;
+  }
+  const sourceWidths = columnWidths.value.length === mins.length ? columnWidths.value : readStoredColumnWidths(mins.length);
+  columnWidths.value = fitColumnsToWidth(metrics.contentWidth, sourceWidths, activeMins.value, activeWeights.value);
   void nextTick(syncImagePreviewLeft);
 }
 
@@ -339,8 +398,8 @@ function finishResize(): void {
 }
 
 function startResize(event: PointerEvent, index: number): void {
-  if (columnWidths.value.length !== 4) refreshWorkbenchLayout();
-  if (columnWidths.value.length !== 4) return;
+  if (columnWidths.value.length !== activeMins.value.length) refreshWorkbenchLayout();
+  if (columnWidths.value.length !== activeMins.value.length) return;
   event.preventDefault();
   activeResize.value = { index, startX: event.clientX, startWidths: [...columnWidths.value] };
   window.addEventListener("pointermove", handleResizeMove);
@@ -351,34 +410,37 @@ function startResize(event: PointerEvent, index: number): void {
 
 function resizeWithKeyboard(event: KeyboardEvent, index: number): void {
   if (!["ArrowLeft", "ArrowRight"].includes(event.key)) return;
-  if (columnWidths.value.length !== 4) return;
+  if (columnWidths.value.length !== activeMins.value.length) return;
   event.preventDefault();
   applyResizeDelta(index, event.key === "ArrowRight" ? RESIZE_STEP : -RESIZE_STEP, columnWidths.value);
 }
 
-function expandZoneToDefault(index: number): void {
+function expandZoneToDefault(canonicalIndex: number): void {
+  const pos = activeIndices.value.indexOf(canonicalIndex);
+  if (pos < 0) return;
   const widths = columnWidths.value;
-  if (widths.length !== MIN_COLUMN_WIDTHS.length) return;
+  const mins = activeMins.value;
+  if (widths.length !== mins.length) return;
   // Only collapsed zones (below their minimum) expand on click.
-  if (widths[index] >= MIN_COLUMN_WIDTHS[index]) return;
+  if (widths[pos] >= mins[pos]) return;
   const metrics = readGridMetrics();
   if (!metrics) return;
 
   // The zone returns to its default proportional width. Fund the growth from
   // expanded neighbors (proportional to their excess above the minimum); collapsed
   // neighbors stay collapsed and expanded neighbors never collapse as a side effect.
-  const target = fitColumnsToWidth(metrics.contentWidth)[index];
-  const grow = Math.max(0, target - widths[index]);
-  const fundable = MIN_COLUMN_WIDTHS.map((min, i) =>
-    i === index || widths[i] < min ? 0 : Math.max(0, widths[i] - min),
+  const target = fitColumnsToWidth(metrics.contentWidth, undefined, mins, activeWeights.value)[pos];
+  const grow = Math.max(0, target - widths[pos]);
+  const fundable = mins.map((min, i) =>
+    i === pos || widths[i] < min ? 0 : Math.max(0, widths[i] - min),
   );
   const fundableTotal = fundable.reduce((sum, value) => sum + value, 0);
   const actualGrow = Math.min(grow, fundableTotal);
   const nextWidths = [...widths];
-  nextWidths[index] = widths[index] + actualGrow;
+  nextWidths[pos] = widths[pos] + actualGrow;
   if (fundableTotal > 0) {
-    MIN_COLUMN_WIDTHS.forEach((min, i) => {
-      if (i === index || widths[i] < min) return;
+    mins.forEach((min, i) => {
+      if (i === pos || widths[i] < min) return;
       nextWidths[i] = widths[i] - (actualGrow * fundable[i]) / fundableTotal;
     });
   }
@@ -484,6 +546,16 @@ watch(
   },
 );
 
+// When zones are shown/hidden the active column set changes: re-fit the visible
+// zones to the grid width so they redivide the freed space.
+watch(
+  () => props.zoneVisibility,
+  () => {
+    void nextTick(refreshWorkbenchLayout);
+  },
+  { deep: true },
+);
+
 onMounted(() => {
   if (readStoredHeaderHidden()) {
     headerHidden.value = true;
@@ -572,6 +644,7 @@ onUnmounted(() => {
 
       <div ref="gridRef" class="workbench-grid" :style="gridStyle">
         <section
+          v-if="zoneVisibility.assets"
           class="workbench-zone workbench-zone-assets"
           :class="{ 'workbench-zone-collapsed': zoneCollapsed[0] }"
           :aria-label="zoneLabels[0]"
@@ -580,6 +653,7 @@ onUnmounted(() => {
           <slot name="assets" />
         </section>
         <section
+          v-if="zoneVisibility.notes"
           class="workbench-zone workbench-zone-notes"
           :class="{ 'workbench-zone-collapsed': zoneCollapsed[1] }"
           :aria-label="zoneLabels[1]"
@@ -588,6 +662,7 @@ onUnmounted(() => {
           <slot name="notes" />
         </section>
         <section
+          v-if="zoneVisibility.tasks"
           class="workbench-zone workbench-zone-tasks"
           :class="{ 'workbench-zone-collapsed': zoneCollapsed[2] }"
           :aria-label="zoneLabels[2]"
@@ -596,6 +671,7 @@ onUnmounted(() => {
           <slot name="tasks" />
         </section>
         <section
+          v-if="zoneVisibility.workspace"
           class="workbench-zone workbench-zone-workspace"
           :class="{ 'workbench-zone-collapsed': zoneCollapsed[3] }"
           :aria-label="zoneLabels[3]"
