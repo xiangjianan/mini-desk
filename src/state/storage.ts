@@ -174,6 +174,7 @@ export function getSerializableWorkspace(
     quickButtons: workspace.quickButtons.map((button) => ({ ...button })),
     quickOtherCollapsed: workspace.quickOtherCollapsed,
     showHiddenQuickButtons: workspace.showHiddenQuickButtons,
+    todoLayoutManual: workspace.todoLayoutManual,
     zoneVisibility: normalizeZoneVisibility(workspace.zoneVisibility),
   };
 }
@@ -265,6 +266,7 @@ export function normalizeWorkspaceData(item: unknown, language: AppLanguage = DE
     quickButtons: normalizeQuickButtons(typed.quickButtons, language, quickTags),
     quickOtherCollapsed: Boolean(typed.quickOtherCollapsed),
     showHiddenQuickButtons: Boolean(typed.showHiddenQuickButtons),
+    todoLayoutManual: Boolean(typed.todoLayoutManual),
     todoLists,
     showCompletedTodos: normalizeCompletedVisibility(typed.showCompletedTodos, todoLists),
     todos: normalizeTodos(typed.todos, todoLists),
@@ -448,6 +450,8 @@ function normalizeTodoListConfig(item: unknown): TodoListConfig | null {
     title,
     collapsed: Boolean(record.collapsed),
     compact: Boolean(record.compact),
+    // Numeric guard (not Boolean): column 0 is valid and falsy.
+    column: typeof record.column === "number" && Number.isFinite(record.column) ? Math.max(0, Math.floor(record.column)) : 0,
   };
 }
 

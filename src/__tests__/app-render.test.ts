@@ -5033,7 +5033,7 @@ describe("App shell", () => {
       expect(stored.workspaces).toHaveLength(2);
       const workspace = stored.workspaces[1];
       expect(workspace.todoLists).toEqual([
-        { id: "solo", title: "单独列表", collapsed: false, compact: false },
+        { id: "solo", title: "单独列表", collapsed: false, compact: false, column: 0 },
       ]);
       expect(workspace.todos.solo).toEqual([]);
       expect(workspace.showCompletedTodos.solo).toBe(true);

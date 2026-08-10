@@ -11,13 +11,13 @@ import {
 } from "../state/storage";
 import {
   addTodo,
+  assignTodoListColumn,
   completeTodo,
+  distributeTodoListColumns,
   getOrderedTodos,
   moveTodo,
   removeEmptyTodo,
   removeTodoListData,
-  reorderTodoLists,
-  reorderTodoListAfter,
   setTodoNotifyAt,
   starTodo,
   updateTodoText,
@@ -191,8 +191,8 @@ describe("state compatibility", () => {
     const ws = () => state.workspaces[0];
 
     expect(ws().todoLists).toEqual([
-      { id: "work", title: "工作", collapsed: true, compact: false },
-      { id: "life", title: "未命名列表", collapsed: false, compact: true },
+      { id: "work", title: "工作", collapsed: true, compact: false, column: 0 },
+      { id: "life", title: "未命名列表", collapsed: false, compact: true, column: 0 },
     ]);
     expect(Object.keys(ws().todos)).toEqual(["work", "life"]);
     expect(ws().showCompletedTodos).toEqual({ work: true, life: false });
@@ -211,7 +211,7 @@ describe("state compatibility", () => {
     const ws = () => state.workspaces[0];
 
     expect(ws().todoLists).toHaveLength(2);
-    expect(ws().todoLists[0]).toEqual({ id: "work", title: "工作", collapsed: false, compact: false });
+    expect(ws().todoLists[0]).toEqual({ id: "work", title: "工作", collapsed: false, compact: false, column: 0 });
     expect(ws().todoLists[1]).toMatchObject({ title: "重复工作", collapsed: true, compact: true });
     expect(ws().todoLists[1].id).not.toBe("work");
     expect(new Set(ws().todoLists.map((list) => list.id)).size).toBe(2);
@@ -250,7 +250,7 @@ describe("state compatibility", () => {
     const stored = getSerializableState(state);
     const ws = () => stored.workspaces[0];
 
-    expect(ws().todoLists).toEqual([{ id: "custom", title: "自定义", collapsed: false, compact: true }]);
+    expect(ws().todoLists).toEqual([{ id: "custom", title: "自定义", collapsed: false, compact: true, column: 0 }]);
     expect(Object.keys(ws().todos)).toEqual(["custom"]);
     expect(ws().showCompletedTodos).toEqual({ custom: true });
   });
@@ -959,7 +959,7 @@ describe("todo behavior", () => {
     });
     const ws = () => state.workspaces[0];
 
-    const reordered = reorderTodoLists(ws().todoLists, "c", "a");
+    const reordered = assignTodoListColumn(ws().todoLists, "c", 0, "a", true);
     const removed = removeTodoListData(ws().todos, ws().showCompletedTodos, "b");
 
     expect(reordered.map((list) => list.id)).toEqual(["c", "a", "b"]);
@@ -998,60 +998,73 @@ describe("todo behavior", () => {
     expect(nonAdjacent.custom.map((todo) => todo.id)).toEqual(["b", "c", "a"]);
   });
 
-  it("reorders configurable todo lists before the target when moving downward", () => {
-    const state = normalizeImportedState({
-      todoLists: [
-        { id: "a", title: "A" },
-        { id: "b", title: "B" },
-        { id: "c", title: "C" },
-      ],
-      todos: {
-        a: [],
-        b: [],
-        c: [],
-      },
+  it("auto-distributes todo lists across columns column-major (balanced)", () => {
+    const ids = (lists: { id: string }[]) => lists.map((list) => list.id);
+    const columnsOf = (lists: { id: string; column: number }[]) =>
+      lists.reduce<Record<string, number>>((acc, list) => ({ ...acc, [list.id]: list.column }), {});
+
+    // 8 lists → 4 columns of 2
+    const eight = Array.from({ length: 8 }, (_, i) => ({ id: `l${i}`, title: `L${i}`, collapsed: false, compact: false }));
+    expect(columnsOf(distributeTodoListColumns(eight, 4) as { id: string; column: number }[])).toEqual({
+      l0: 0, l1: 0, l2: 1, l3: 1, l4: 2, l5: 2, l6: 3, l7: 3,
     });
-    const ws = () => state.workspaces[0];
+    expect(ids(distributeTodoListColumns(eight, 4))).toEqual(["l0", "l1", "l2", "l3", "l4", "l5", "l6", "l7"]);
 
-    const reordered = reorderTodoLists(ws().todoLists, "a", "c");
+    // 7 lists → 3 columns: 3/3/1 (remainder stays in the last column)
+    const seven = Array.from({ length: 7 }, (_, i) => ({ id: `l${i}`, title: `L${i}`, collapsed: false, compact: false }));
+    expect(columnsOf(distributeTodoListColumns(seven, 3) as { id: string; column: number }[])).toEqual({
+      l0: 0, l1: 0, l2: 0, l3: 1, l4: 1, l5: 1, l6: 2,
+    });
 
-    expect(reordered.map((list) => list.id)).toEqual(["b", "a", "c"]);
+    // 1 column → everything in column 0
+    expect(columnsOf(distributeTodoListColumns(eight, 1) as { id: string; column: number }[])).toEqual({
+      l0: 0, l1: 0, l2: 0, l3: 0, l4: 0, l5: 0, l6: 0, l7: 0,
+    });
   });
 
-  it("moves a todo list after the anchor when dropped into blank space", () => {
+  it("assigns a dragged todo list into a target column before its anchor list", () => {
     const lists = [
-      { id: "a", title: "A" },
-      { id: "b", title: "B" },
-      { id: "c", title: "C" },
-      { id: "d", title: "D" },
+      { id: "a", title: "A", collapsed: false, compact: false, column: 0 },
+      { id: "b", title: "B", collapsed: false, compact: false, column: 0 },
+      { id: "c", title: "C", collapsed: false, compact: false, column: 1 },
+      { id: "d", title: "D", collapsed: false, compact: false, column: 1 },
     ];
 
-    // drop below the list that precedes the target column → after "c"
-    expect(reorderTodoListAfter(lists, "a", "c").map((list) => list.id)).toEqual(["b", "c", "a", "d"]);
-    // dragged already after the anchor → still lands right after it
-    expect(reorderTodoListAfter(lists, "d", "a").map((list) => list.id)).toEqual(["a", "d", "b", "c"]);
+    // Drop "a" onto "c" → joins column 1, placed right before "c".
+    const onto = assignTodoListColumn(lists, "a", 1, "c", true);
+    expect(onto.map((list) => list.id)).toEqual(["b", "a", "c", "d"]);
+    expect(onto.map((l) => ({ id: l.id, column: l.column }))).toEqual([
+      { id: "b", column: 0 },
+      { id: "a", column: 1 },
+      { id: "c", column: 1 },
+      { id: "d", column: 1 },
+    ]);
   });
 
-  it("moves a todo list to the start when blank-space drop has no preceding list", () => {
+  it("appends a dragged todo list to a column when dropped into its blank space", () => {
     const lists = [
-      { id: "a", title: "A" },
-      { id: "b", title: "B" },
-      { id: "c", title: "C" },
+      { id: "a", title: "A", collapsed: false, compact: false, column: 0 },
+      { id: "b", title: "B", collapsed: false, compact: false, column: 0 },
+      { id: "c", title: "C", collapsed: false, compact: false, column: 1 },
     ];
 
-    expect(reorderTodoListAfter(lists, "c", null).map((list) => list.id)).toEqual(["c", "a", "b"]);
+    // Drop "a" into column 1's blank space → appended after column 1's last list.
+    const moved = assignTodoListColumn(lists, "a", 1, null, false);
+    expect(moved.map((l) => ({ id: l.id, column: l.column }))).toEqual([
+      { id: "b", column: 0 },
+      { id: "c", column: 1 },
+      { id: "a", column: 1 },
+    ]);
   });
 
-  it("leaves order unchanged when dropping a list below itself or onto a missing anchor", () => {
+  it("leaves a todo list unchanged when assigning it below itself or onto a missing dragged id", () => {
     const lists = [
-      { id: "a", title: "A" },
-      { id: "b", title: "B" },
-      { id: "c", title: "C" },
+      { id: "a", title: "A", collapsed: false, compact: false, column: 0 },
+      { id: "b", title: "B", collapsed: false, compact: false, column: 1 },
+      { id: "c", title: "C", collapsed: false, compact: false, column: 1 },
     ];
 
-    expect(reorderTodoListAfter(lists, "b", "b").map((list) => list.id)).toEqual(["a", "b", "c"]);
-    expect(reorderTodoListAfter(lists, "b", "missing").map((list) => list.id)).toEqual(["a", "b", "c"]);
-    expect(reorderTodoListAfter(lists, "missing", "a").map((list) => list.id)).toEqual(["a", "b", "c"]);
+    expect(assignTodoListColumn(lists, "missing", 1, null, false).map((l) => l.id)).toEqual(["a", "b", "c"]);
   });
 
   it("keeps completed todos at the bottom", () => {

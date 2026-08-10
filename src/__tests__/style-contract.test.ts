@@ -425,17 +425,17 @@ describe("workbench style contract", () => {
     expect(calculatorInputRules).not.toContain("height: 42px");
   });
 
-  it("auto-splits reminder lists into independent masonry columns above a width threshold", () => {
+  it("renders reminder lists in explicit independent columns (not CSS multicol)", () => {
     const styles = readFileSync(resolve(__dirname, "../styles.css"), "utf8");
 
-    // 容器查询容器:提醒事项根节点
-    expectSelectorBody(styles, ".todo-panel", "container-type: inline-size");
-    // 多列阈值(列数随宽度自适应)
-    expect(styles).toContain("@container (min-width: 680px)");
-    // 用 CSS 多列(瀑布流)而非网格:列宽 340px,列与列高度互相独立、不再强行等高。
-    // 收起某列后它只占标题高度,不再占用多余纵向空间。
-    expect(styles).toContain("column-width: 340px");
-    expect(styles).toContain("break-inside: avoid");
+    // 显式分列:每列是独立的 .todo-column flex 容器,列表按 column 字段归入;
+    // 列数由 JS 写到 .todo-sections 的内联 grid-template-columns。
+    expect(styles).toContain(".todo-sections.is-multi-column");
+    expect(styles).toContain(".todo-column");
+    // 多列模式下列宽由内联 repeat() 控制(不再用 CSS 多列 / 容器查询)。
+    expect(styles).not.toContain("column-width: 340px");
+    expect(styles).not.toContain("break-inside: avoid");
+    expect(styles).not.toContain("@container (min-width: 680px)");
     expect(styles).not.toContain("grid-auto-rows: minmax(0, 1fr)");
   });
 

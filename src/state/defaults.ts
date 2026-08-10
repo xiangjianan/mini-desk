@@ -58,6 +58,7 @@ export function defaultWorkspace(id: string = DEFAULT_WORKSPACE_ID): WorkspaceDa
     quickButtons: [],
     quickOtherCollapsed: false,
     showHiddenQuickButtons: false,
+    todoLayoutManual: false,
     todoLists: cloneDefaultTodoLists(),
     showCompletedTodos: createDefaultCompletedVisibility(),
     todos: createDefaultTodoMap(),

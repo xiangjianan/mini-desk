@@ -607,7 +607,8 @@ describe("TodoPanel", () => {
     const source = readFileSync(resolve(__dirname, "../components/TodoPanel.vue"), "utf8");
     const styles = readFileSync(resolve(__dirname, "../styles.css"), "utf8");
 
-    expect(source).toMatch(/<TransitionGroup name="todo-section-reorder" tag="div" class="todo-sections"/);
+    expect(source).toMatch(/class="todo-sections"/);
+    expect(source).toMatch(/<TransitionGroup[\s\S]*?class="todo-column"/);
     expect(styles).toMatch(/\.todo-section-reorder-move,[\s\S]*?\.todo-section-reorder-enter-active,[\s\S]*?\.todo-section-reorder-leave-active\s*\{[^}]*transform 0\.22s/s);
 
     await wrapper.get('.todo-section[data-list-id="morning"] .todo-heading').trigger("dragstart", { dataTransfer });
@@ -618,7 +619,7 @@ describe("TodoPanel", () => {
     expect(dataTransfer.effectAllowed).toBe("move");
     expect(dataTransfer.setData).not.toHaveBeenCalledWith("text/plain", "☀️ 早上");
     expect(dataTransfer.setData).toHaveBeenCalledWith("application/x-todo-list-id", "morning");
-    expect(wrapper.emitted("reorderLists")?.[0]).toEqual(["morning", "noon"]);
+    expect(wrapper.emitted("assignListColumn")?.[0]).toEqual(["morning", 0, "noon", true]);
     expect(wrapper.emitted("move")).toBeUndefined();
 
     await wrapper.get('.todo-section[data-list-id="morning"] .todo-heading').trigger("dragend");
@@ -653,7 +654,7 @@ describe("TodoPanel", () => {
     await wrapper.get('.todo-section[data-list-id="morning"] .todo-heading').trigger("dragstart", { dataTransfer });
     await wrapper.get('[data-testid="todo-list-noon"]').trigger("drop", { dataTransfer });
 
-    expect(wrapper.emitted("reorderLists")?.[0]).toEqual(["morning", "noon"]);
+    expect(wrapper.emitted("assignListColumn")?.[0]).toEqual(["morning", 0, "noon", true]);
     expect(wrapper.emitted("createFromText")).toBeUndefined();
   });
 

@@ -160,48 +160,61 @@ export function removeTodoListData(
   return { todos: nextTodos, showCompletedTodos: nextVisibility };
 }
 
-export function reorderTodoLists(
+/**
+ * Auto-distribute lists across `columnCount` columns, column-major (fills
+ * column 0 top-to-bottom, then column 1, …) so column heights stay balanced.
+ * Runs only while the layout is not yet manual. Each list's `column` is
+ * overwritten; array order is preserved.
+ */
+export function distributeTodoListColumns(
   lists: TodoListConfig[],
-  draggedId: TodoListId,
-  targetId: TodoListId,
+  columnCount: number,
 ): TodoListConfig[] {
-  const sourceIndex = lists.findIndex((list) => list.id === draggedId);
-  const targetIndex = lists.findIndex((list) => list.id === targetId);
-  if (sourceIndex < 0 || targetIndex < 0 || sourceIndex === targetIndex) return lists;
-  const next = lists.map((list) => ({ ...list }));
-  const [item] = next.splice(sourceIndex, 1);
-  const nextTargetIndex = next.findIndex((list) => list.id === targetId);
-  next.splice(nextTargetIndex, 0, item);
-  return next;
+  const columns = Math.max(1, Math.floor(columnCount));
+  if (columns === 1) {
+    return lists.map((list) => (list.column === 0 ? list : { ...list, column: 0 }));
+  }
+  const perColumn = Math.ceil(lists.length / columns);
+  return lists.map((list, index) => {
+    const column = Math.min(Math.floor(index / perColumn), columns - 1);
+    return list.column === column ? list : { ...list, column };
+  });
 }
 
 /**
- * Move the dragged list to the position right after `anchorId`.
- *
- * Used when a list is dropped into blank space (e.g. below the last list of a
- * masonry column, where no single list is under the cursor): the caller finds
- * the nearest list that precedes the drop point in reading order and passes it
- * as the anchor. A null anchor inserts at the very start. No-op when the
- * dragged list is missing, the anchor is missing, or both refer to the same
- * list (dropping a list right below itself).
+ * Move the dragged list into `targetColumn`, positioned relative to an anchor
+ * list (which must already be in that column). Used for both dropping onto a
+ * list (`insertBefore` controls before/after the anchor) and dropping into a
+ * column's blank space (`anchorId === null` → appended after the last list
+ * currently in `targetColumn`). Always updates the dragged list's `column`.
+ * No-op when the dragged list is missing or the target column is negative.
  */
-export function reorderTodoListAfter(
+export function assignTodoListColumn(
   lists: TodoListConfig[],
   draggedId: TodoListId,
+  targetColumn: number,
   anchorId: TodoListId | null,
+  insertBefore: boolean,
 ): TodoListConfig[] {
   const sourceIndex = lists.findIndex((list) => list.id === draggedId);
-  if (sourceIndex < 0) return lists;
-  if (anchorId !== null && anchorId === draggedId) return lists;
+  if (sourceIndex < 0 || targetColumn < 0) return lists;
+  const column = Math.floor(targetColumn);
   const next = lists.map((list) => ({ ...list }));
-  const [item] = next.splice(sourceIndex, 1);
-  if (anchorId === null) {
-    next.unshift(item);
-    return next;
+  const [dragged] = next.splice(sourceIndex, 1);
+  const moved = dragged.column === column ? dragged : { ...dragged, column };
+  let insertIndex: number;
+  if (anchorId !== null && anchorId !== draggedId) {
+    const anchorIndex = next.findIndex((list) => list.id === anchorId);
+    insertIndex = anchorIndex >= 0 ? (insertBefore ? anchorIndex : anchorIndex + 1) : next.length;
+  } else {
+    // Blank space: land at the end of targetColumn's current lists.
+    let lastInColumn = -1;
+    next.forEach((list, index) => {
+      if (list.column === column) lastInColumn = index;
+    });
+    insertIndex = lastInColumn + 1;
   }
-  const anchorIndex = next.findIndex((list) => list.id === anchorId);
-  if (anchorIndex < 0) return lists;
-  next.splice(anchorIndex + 1, 0, item);
+  next.splice(insertIndex, 0, moved);
   return next;
 }
 

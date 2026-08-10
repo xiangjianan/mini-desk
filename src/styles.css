@@ -2285,30 +2285,36 @@ html[data-theme="dark"] .quick-tag-color-swatch {
   overflow: hidden;
 }
 
-.todo-panel {
-  container-type: inline-size;
+/* 提醒事项显式分列(替代 CSS 多列)。列数由 JS 按面板宽度测量得出并写到
+   .todo-sections 的内联 grid-template-columns;每个 .todo-column 是独立的
+   flex 列,各列表按自身内容撑开高度,因此收起某一列里的列表不会把其它列
+   的列表吸过来,列与列高度也互不强制对齐。
+   未加 .is-multi-column 时(单列/窄屏)沿用上面的 flex column 布局。 */
+.todo-sections.is-multi-column {
+  display: grid;
+  height: 100%;
+  min-height: 0;
+  column-gap: 10px;
+  /* 多列内容超出可视高度时由容器整体纵向滚动。 */
+  overflow-y: auto;
 }
 
-/* 提醒事项多列(瀑布流):宽度 ≥ 680px(= 2 × 340)进入多列。
-   改用 CSS 多列(masonry)而非网格:每列高度互相独立,各列表按自身内容撑开高度;
-   收起某一列后它只占标题高度,不再占用多余纵向空间;列与列之间不再强行等高。
-   列数由 column-width 自适应(与原先 minmax(340px) 阈值一致)。
-   窄于阈值时上面的单列 flex column 布局继续生效。 */
-@container (min-width: 680px) {
-  .todo-sections {
-    display: block;
-    column-width: 340px;
-    column-gap: 10px;
-    /* 多列内容超出可视高度时由容器整体纵向滚动(替代原先网格内每列各自滚动)。 */
-    overflow-y: auto;
-  }
+.todo-column {
+  display: flex;
+  flex-direction: column;
+  flex: 1 1 auto;
+  min-height: 0;
+  min-width: 0;
+}
 
-  .todo-section {
-    width: 100%;
-    margin-bottom: 8px;
-    break-inside: avoid;
-    -webkit-column-break-inside: avoid;
-  }
+.todo-sections.is-multi-column .todo-column {
+  row-gap: 8px;
+}
+
+/* 多列下列表按内容自然撑高,不再用 flex:1 1 33.33% 均分容器高度。 */
+.todo-sections.is-multi-column .todo-section {
+  flex: 0 0 auto;
+  margin-bottom: 0;
 }
 
 .today-focus-section {

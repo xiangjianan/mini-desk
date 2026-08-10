@@ -35,14 +35,14 @@ import {
 } from "./state/i18n";
 import {
   addTodo as addTodoToMap,
+  assignTodoListColumn,
   clearCompleted,
   completeTodo,
+  distributeTodoListColumns,
   moveTodo as moveTodoInMap,
   removeEmptyTodo,
   removeTodo as removeTodoFromMap,
   removeTodoListData,
-  reorderTodoLists,
-  reorderTodoListAfter,
   setTodoNotifyAt,
   splitTodo as splitTodoInMap,
   starTodo,
@@ -362,6 +362,34 @@ watch(
 watch(boardTitle, (value) => {
   if (!titleFlashActive.value) document.title = value;
 });
+
+const todoColumnCount = ref(1);
+// distributionKey dedupes the auto-distribute watcher so it only re-runs when
+// the workspace, column count, or list count actually changes (not every tick).
+const distributionKey = ref("");
+
+// Auto-distribute todo lists across columns while the layout is not yet manual.
+// Re-runs only when the active workspace, measured column count, or list count
+// changes (distributionKey dedupes). Once `todoLayoutManual` is true this is a
+// no-op — assignments are frozen and only changed by explicit drag reordering.
+watch(
+  () => [state.activeWorkspaceId, todoColumnCount.value, activeWorkspace.value.todoLists.length],
+  () => {
+    if (activeWorkspace.value.todoLayoutManual) return;
+    // Single column ⇒ nothing to distribute (every list is column 0; narrower
+    // windows just clamp the display). Skipping here also avoids a pointless
+    // persist that would race with async image-sync handling.
+    if (todoColumnCount.value <= 1) return;
+    const key = `${state.activeWorkspaceId}:${todoColumnCount.value}:${activeWorkspace.value.todoLists.length}`;
+    if (key === distributionKey.value) return;
+    distributionKey.value = key;
+    activeWorkspace.value.todoLists = distributeTodoListColumns(
+      activeWorkspace.value.todoLists,
+      todoColumnCount.value,
+    );
+    persistNow();
+  },
+);
 
 function updateTitle(id: string, value: string): void {
   const title = value.trim();
@@ -1783,7 +1811,7 @@ function createTodoList(anchor?: HTMLElement, title?: string): void {
   const trimmedTitle = title?.trim() ?? "";
   if (!trimmedTitle) return;
   const id = createId();
-  activeWorkspace.value.todoLists.push({ id, title: trimmedTitle, collapsed: false, compact: false });
+  activeWorkspace.value.todoLists.push({ id, title: trimmedTitle, collapsed: false, compact: false, column: 0 });
   activeWorkspace.value.todos[id] = [];
   activeWorkspace.value.showCompletedTodos[id] = false;
   pendingEditTodoListId.value = null;
@@ -1843,16 +1871,25 @@ function removeTodoList(listId: TodoListId, anchor?: HTMLElement): void {
   showBubbleText(uiText.value.app.todoListDeleted, anchor, { hideCompanionAfter: true });
 }
 
-function reorderTodoListSections(draggedId: TodoListId, targetId: TodoListId): void {
-  const sourceIndex = activeWorkspace.value.todoLists.findIndex((list) => list.id === draggedId);
-  const targetIndex = activeWorkspace.value.todoLists.findIndex((list) => list.id === targetId);
-  if (sourceIndex < 0 || targetIndex < 0 || sourceIndex === targetIndex) return;
-  activeWorkspace.value.todoLists = reorderTodoLists(activeWorkspace.value.todoLists, draggedId, targetId);
-  persistNow();
+function onTodoColumnCountChange(count: number): void {
+  todoColumnCount.value = count;
 }
 
-function reorderTodoListSectionsAfter(draggedId: TodoListId, anchorId: TodoListId | null): void {
-  activeWorkspace.value.todoLists = reorderTodoListAfter(activeWorkspace.value.todoLists, draggedId, anchorId);
+function assignTodoListSections(
+  draggedId: TodoListId,
+  targetColumn: number,
+  anchorId: TodoListId | null,
+  insertBefore: boolean,
+): void {
+  // Any manual drag freezes auto-distribution permanently for this workspace.
+  activeWorkspace.value.todoLayoutManual = true;
+  activeWorkspace.value.todoLists = assignTodoListColumn(
+    activeWorkspace.value.todoLists,
+    draggedId,
+    targetColumn,
+    anchorId,
+    insertBefore,
+  );
   persistNow();
 }
 
@@ -3386,8 +3423,8 @@ function moveItem<T extends { id: string }>(items: T[], dragId: string, targetId
           @toggle-list-collapsed="toggleTodoListCollapsed"
           @toggle-list-compact="toggleTodoListCompact"
           @delete-list="deleteTodoList"
-          @reorder-lists="reorderTodoListSections"
-          @reorder-list-after="reorderTodoListSectionsAfter"
+          @column-count-change="onTodoColumnCountChange"
+          @assign-list-column="assignTodoListSections"
           @create="createTodo"
           @create-from-text="createTodosFromText"
           @update="updateTodo"

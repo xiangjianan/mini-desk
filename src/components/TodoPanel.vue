@@ -1,5 +1,5 @@
 <script setup lang="ts">
-import { computed, h, nextTick, onMounted, onUnmounted, ref } from "vue";
+import { computed, h, nextTick, onMounted, onUnmounted, ref, watch } from "vue";
 import type { Component, VNode } from "vue";
 import {
   AddOutline,
@@ -69,8 +69,8 @@ const emit = defineEmits<{
   toggleListCollapsed: [listId: TodoListId, collapsed: boolean];
   toggleListCompact: [listId: TodoListId, compact: boolean];
   deleteList: [listId: TodoListId, anchor?: HTMLElement];
-  reorderLists: [draggedId: TodoListId, targetId: TodoListId];
-  reorderListAfter: [draggedId: TodoListId, anchorId: TodoListId | null];
+  columnCountChange: [count: number];
+  assignListColumn: [draggedId: TodoListId, targetColumn: number, anchorId: TodoListId | null, insertBefore: boolean];
   create: [period: TodoPeriod, afterId?: string];
   update: [period: TodoPeriod, id: string, text: string];
   split: [period: TodoPeriod, id: string, before: string, after: string];
@@ -103,6 +103,9 @@ const menu = ref<{
 const dragged = ref<DraggedTodo | null>(null);
 const todoDragScroll = createDragAutoScroll();
 const draggedListId = ref<TodoListId | null>(null);
+const panelRef = ref<HTMLElement | null>(null);
+// Measured content width of the todo panel, kept in sync via ResizeObserver.
+const measuredPanelWidth = ref(0);
 const editingListTitleIds = ref<Set<TodoListId>>(new Set());
 const editingTodoKey = ref<string | null>(null);
 const selectedMenuTodoKey = ref<string | null>(null);
@@ -159,6 +162,20 @@ const effectiveTodoLists = computed(() => {
     ...list,
     title: getDisplayTodoListTitle(list, props.language),
   }));
+});
+// Number of masonry columns: derived from the measured panel width and clamped
+// to the list count so a few lists never leave empty columns. 1 = single column.
+const columnCount = computed(() => computeColumnCount(measuredPanelWidth.value, effectiveTodoLists.value.length));
+watch(columnCount, (next) => emit("columnCountChange", next));
+// Group lists into explicit column buckets by their pinned `column`, clamped to
+// the current column count. Array order within a bucket = vertical order.
+const listsByColumn = computed<TodoListConfig[][]>(() => {
+  const columns = columnCount.value;
+  const buckets: TodoListConfig[][] = Array.from({ length: columns }, () => []);
+  effectiveTodoLists.value.forEach((list) => {
+    buckets[clampColumn(list.column ?? 0)].push(list);
+  });
+  return buckets;
 });
 const menuOptions = computed<DropdownOption[]>(() => {
   if (menu.value?.sectionActions) {
@@ -308,6 +325,22 @@ const listEntries = computed(() =>
   ) as Record<TodoListId, TodoListEntry[]>,
 );
 
+// Width below which the panel stays single-column (= 2 × the target column width).
+const TODO_MULTI_COLUMN_THRESHOLD = 680;
+const TODO_COLUMN_TARGET_WIDTH = 340;
+let columnResizeObserver: ResizeObserver | undefined;
+
+/**
+ * Map a measured panel content width to a column count: 1 below the threshold,
+ * then +1 column per additional TODO_COLUMN_TARGET_WIDTH, clamped to the number
+ * of lists (so few lists never leave empty columns).
+ */
+function computeColumnCount(width: number, listCount: number): number {
+  if (width < TODO_MULTI_COLUMN_THRESHOLD || listCount <= 1) return 1;
+  const computed = 2 + Math.floor((width - TODO_MULTI_COLUMN_THRESHOLD) / TODO_COLUMN_TARGET_WIDTH);
+  return Math.max(1, Math.min(computed, listCount));
+}
+
 onMounted(() => {
   exclusiveMenu.mount();
   refreshNotifyNow();
@@ -315,6 +348,14 @@ onMounted(() => {
   window.addEventListener("focus", refreshNotifyNow);
   document.addEventListener("visibilitychange", handleVisibilityChange);
   deadlineClockTimer.value = window.setInterval(refreshNotifyNow, DEADLINE_CLOCK_INTERVAL_MS);
+  // Track the panel's content width so the column count reacts to window resize,
+  // workbench resizer drags, and zone show/hide (none of which fire window resize).
+  if (panelRef.value && typeof ResizeObserver !== "undefined") {
+    columnResizeObserver = new ResizeObserver((entries) => {
+      measuredPanelWidth.value = entries[0]?.contentRect.width ?? 0;
+    });
+    columnResizeObserver.observe(panelRef.value);
+  }
 });
 
 onUnmounted(() => {
@@ -324,6 +365,8 @@ onUnmounted(() => {
   window.removeEventListener("focus", refreshNotifyNow);
   document.removeEventListener("visibilitychange", handleVisibilityChange);
   window.clearInterval(deadlineClockTimer.value);
+  columnResizeObserver?.disconnect();
+  columnResizeObserver = undefined;
 });
 
 function refreshNotifyNow(): void {
@@ -347,7 +390,8 @@ function handleTodoTextDrop(event: DragEvent, period: TodoPeriod): void {
   if (draggedListId.value) {
     event.preventDefault();
     event.stopPropagation();
-    emit("reorderLists", draggedListId.value, period);
+    const targetList = getListById(period);
+    emit("assignListColumn", draggedListId.value, targetList ? clampColumn(targetList.column ?? 0) : 0, period, true);
     draggedListId.value = null;
     return;
   }
@@ -381,57 +425,33 @@ function handleTodoSectionDrop(event: DragEvent, period: TodoPeriod): void {
   handleTodoTextDrop(event, period);
 }
 
-function handleListSectionDrop(event: DragEvent, listId: TodoListId): void {
+function handleListSectionDrop(event: DragEvent, list: TodoListConfig): void {
   if (draggedListId.value) {
     event.preventDefault();
     event.stopPropagation();
-    emit("reorderLists", draggedListId.value, listId);
+    // Drop onto a list: join that list's column, placed right before it.
+    emit("assignListColumn", draggedListId.value, clampColumn(list.column ?? 0), list.id, true);
     draggedListId.value = null;
     return;
   }
-  handleTodoSectionDrop(event, listId);
+  handleTodoSectionDrop(event, list.id);
 }
 
 /**
- * Handle dropping a list into blank space inside the sections container
- * (e.g. below the last list of a masonry column, where no single list is under
- * the cursor). Falls through unchanged for non-list drags so todo drops keep
- * their existing behaviour.
+ * Drop a list into a column's blank space (no list under the cursor): join that
+ * column, appended after its last list. Falls through for non-list drags so todo
+ * drops keep their existing behaviour.
  */
-function handleListContainerDrop(event: DragEvent): void {
+function handleColumnDrop(event: DragEvent, columnIndex: number): void {
   if (!draggedListId.value) return;
   event.preventDefault();
   event.stopPropagation();
-  emit("reorderListAfter", draggedListId.value, computeListDropAnchor(event));
+  emit("assignListColumn", draggedListId.value, columnIndex, null, false);
   draggedListId.value = null;
 }
 
-/**
- * Find the list that precedes the drop point in reading order, so the dragged
- * list can be inserted right after it. Masonry columns fill top-to-bottom then
- * left-to-right, so DOM order matches reading order; each list's `left`
- * identifies its column. Returns null to insert at the very start.
- */
-function computeListDropAnchor(event: DragEvent): TodoListId | null {
-  const dropX = event.clientX;
-  const dropY = event.clientY;
-  const entries = effectiveTodoLists.value
-    .map((list) => ({ list, section: todoSectionRefs.get(list.id) }))
-    .filter((entry): entry is { list: TodoListConfig; section: HTMLElement } => entry.section instanceof HTMLElement);
-  if (entries.length === 0) return null;
-  const rects = entries.map((entry) => entry.section.getBoundingClientRect());
-  const columnLefts = Array.from(new Set(rects.map((rect) => Math.round(rect.left)))).sort((left, right) => left - right);
-  const dropColumnLeft = columnLefts.reduce((acc, left) => (left <= dropX ? left : acc), columnLefts[0]);
-  const dropColumnIndex = columnLefts.indexOf(dropColumnLeft);
-  let anchorId: TodoListId | null = null;
-  entries.forEach((entry, index) => {
-    const rect = rects[index];
-    const columnIndex = columnLefts.indexOf(Math.round(rect.left));
-    const isBefore = columnIndex < dropColumnIndex
-      || (columnIndex === dropColumnIndex && rect.bottom <= dropY);
-    if (isBefore) anchorId = entry.list.id;
-  });
-  return anchorId;
+function clampColumn(column: number): number {
+  return Math.max(0, Math.min(column, columnCount.value - 1));
 }
 
 function handleListDragStart(event: DragEvent, listId: TodoListId): void {
@@ -1369,7 +1389,7 @@ function buildTodoListEntries(period: TodoListId, todos: TodoItem[], deferredDon
 </script>
 
 <template>
-  <section class="panel todo-panel" aria-labelledby="todo-title" @dragleave="handleTodoDragLeave" @drop="handleTodoDragLeave" @dragend="handleTodoDragEnd">
+  <section ref="panelRef" class="panel todo-panel" aria-labelledby="todo-title" @dragleave="handleTodoDragLeave" @drop="handleTodoDragLeave" @dragend="handleTodoDragEnd">
     <Transition name="section-reveal" :duration="240">
       <section v-if="todayFocus.length" class="today-focus-section" :aria-label="uiText.todo.todayFocus">
         <div class="today-focus-heading" @contextmenu="openTodayFocusTitleMenu">
@@ -1459,9 +1479,22 @@ function buildTodoListEntries(period: TodoListId, todos: TodoItem[], deferredDon
         </NScrollbar>
       </section>
     </Transition>
-    <TransitionGroup name="todo-section-reorder" tag="div" class="todo-sections" @dragover.prevent @drop="handleListContainerDrop">
+    <div
+      class="todo-sections"
+      :class="{ 'is-multi-column': columnCount > 1 }"
+      :style="columnCount > 1 ? { gridTemplateColumns: `repeat(${columnCount}, minmax(0, 1fr))` } : undefined"
+    >
+      <TransitionGroup
+        v-for="(bucket, columnIndex) in listsByColumn"
+        :key="columnIndex"
+        name="todo-section-reorder"
+        tag="div"
+        class="todo-column"
+        @dragover.prevent
+        @drop="handleColumnDrop($event, columnIndex)"
+      >
       <section
-        v-for="list in effectiveTodoLists"
+        v-for="list in bucket"
         :key="list.id"
         :ref="(element) => setTodoSectionRef(list.id, element as Element | null)"
         class="todo-section"
@@ -1471,7 +1504,7 @@ function buildTodoListEntries(period: TodoListId, todos: TodoItem[], deferredDon
         @click="handleSectionGuideClick"
         @contextmenu="openSectionMenu($event, list.id)"
         @dragover.prevent="handleTodoDragOver"
-        @drop="handleListSectionDrop($event, list.id)"
+        @drop="handleListSectionDrop($event, list)"
       >
         <div
           class="todo-heading"
@@ -1480,7 +1513,7 @@ function buildTodoListEntries(period: TodoListId, todos: TodoItem[], deferredDon
           @dragstart="handleListDragStart($event, list.id)"
           @dragend="draggedListId = null"
           @dragover.prevent
-          @drop="handleListSectionDrop($event, list.id)"
+          @drop="handleListSectionDrop($event, list)"
         >
           <span
             class="todo-list-drag-handle"
@@ -1656,7 +1689,8 @@ function buildTodoListEntries(period: TodoListId, todos: TodoItem[], deferredDon
           </NScrollbar>
         </div>
       </section>
-    </TransitionGroup>
+      </TransitionGroup>
+    </div>
 
     <Teleport to="body">
       <Transition name="floating-pop" :duration="240">

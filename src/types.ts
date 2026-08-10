@@ -102,6 +102,14 @@ export interface TodoListConfig {
   title: string;
   collapsed: boolean;
   compact: boolean;
+  /**
+   * Which masonry column (0-indexed) this list is pinned to. Auto-distributed
+   * while `WorkspaceData.todoLayoutManual` is false; frozen once the user
+   * manually reorders. Displayed value is clamped to the current column count.
+   * Always present on persisted/migrated data; optional only so test fixtures
+   * can omit it (treated as column 0).
+   */
+  column?: number;
 }
 
 export type TodoMap = Record<TodoListId, TodoItem[]>;
@@ -139,6 +147,11 @@ export interface WorkspaceData {
   quickButtons: QuickButton[];
   quickOtherCollapsed: boolean;
   showHiddenQuickButtons: boolean;
+  /**
+   * Once true, todo lists stop auto-distributing across columns on width/list
+   * changes — each list's `column` is only changed by explicit drag reordering.
+   */
+  todoLayoutManual: boolean;
   todoLists: TodoListConfig[];
   showCompletedTodos: TodoCompletedVisibility;
   todos: TodoMap;
