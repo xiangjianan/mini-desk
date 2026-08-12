@@ -24,13 +24,14 @@ export function createWorkspaceData(
   };
 }
 
-export function ensureUniqueWorkspaceTitle(workspace: WorkspaceData, existing: WorkspaceData[]): WorkspaceData {
-  const title = workspace.customTitles["board-title"]?.trim();
+export function ensureUniqueWorkspaceTitle(workspace: WorkspaceData, existing: WorkspaceData[], fallbackTitle = ""): WorkspaceData {
+  const fallback = fallbackTitle.trim();
+  const title = workspace.customTitles["board-title"]?.trim() || fallback;
   if (!title) return workspace;
   const taken = new Set(
     existing
       .filter((item) => item.id !== workspace.id)
-      .map((item) => item.customTitles["board-title"]?.trim())
+      .map((item) => item.customTitles["board-title"]?.trim() || fallback)
       .filter((value): value is string => Boolean(value)),
   );
   if (!taken.has(title)) return workspace;

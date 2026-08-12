@@ -501,7 +501,7 @@ function workspaceCreatedMessage(): string {
 }
 
 function createWorkspace(title: string, slogan: string): void {
-  const workspace = ensureUniqueWorkspaceTitle(createWorkspaceData(title, slogan, Date.now()), state.workspaces);
+  const workspace = ensureUniqueWorkspaceTitle(createWorkspaceData(title, slogan, Date.now()), state.workspaces, DEFAULT_BOARD_TITLE);
   state.workspaces = [...state.workspaces, workspace];
   state.activeWorkspaceId = workspace.id;
   pendingEditSpaceId.value = null;
@@ -2247,6 +2247,7 @@ async function importData(event: Event): Promise<void> {
       const workspace = ensureUniqueWorkspaceTitle(
         { ...importedWorkspace, id: createId(), createdAt: Date.now() },
         state.workspaces,
+        DEFAULT_BOARD_TITLE,
       );
       state.workspaces = [...state.workspaces, workspace];
       state.activeWorkspaceId = workspace.id;
@@ -2266,10 +2267,11 @@ async function importData(event: Event): Promise<void> {
       await finishImport(replacement);
     };
 
-    const importedTitle = importedWorkspace.customTitles["board-title"]?.trim() ?? "";
-    const conflictTarget = importedTitle
-      ? state.workspaces.find((item) => (item.customTitles["board-title"]?.trim() ?? "") === importedTitle)
-      : undefined;
+    // Resolve titles with the "Mini Desk" fallback so default-named (unnamed)
+    // workspaces are treated as their displayed title, not as empty/non-matching.
+    const resolveTitle = (workspace: WorkspaceData): string => workspace.customTitles["board-title"]?.trim() || DEFAULT_BOARD_TITLE;
+    const importedTitle = resolveTitle(importedWorkspace);
+    const conflictTarget = state.workspaces.find((item) => resolveTitle(item) === importedTitle);
 
     if (conflictTarget) {
       // Same-name workspace exists: offer overwrite vs add-new (which auto-numbers).

@@ -4867,10 +4867,11 @@ describe("App shell", () => {
 
       expect(wrapper.find('[data-testid="companion-confirm"]').text()).toMatch(/导入|空间|新增/);
       expect(wrapper.find('[data-testid="companion-yes"]').exists()).toBe(true);
-      expect(wrapper.get('[data-testid="companion-yes"]').text()).toBe("新增");
+      expect(wrapper.get('[data-testid="companion-yes"]').text()).toBe("覆盖");
+      expect(wrapper.get('[data-testid="companion-secondary"]').text()).toBe("新增");
       expect(wrapper.text()).not.toContain("导入内容");
 
-      await wrapper.get('[data-testid="companion-yes"]').trigger("click");
+      await wrapper.get('[data-testid="companion-secondary"]').trigger("click");
       await Promise.resolve();
       await wrapper.vm.$nextTick();
       await vi.advanceTimersByTimeAsync(200);
@@ -4982,6 +4983,54 @@ describe("App shell", () => {
       expect(stored.workspaces).toHaveLength(1);
       expect(stored.workspaces[0].id).toBe("existing");
       expect(stored.workspaces[0].workspaceLines).toEqual([{ text: "导入内容", indent: 0 }]);
+    } finally {
+      wrapper.unmount();
+      vi.useRealTimers();
+    }
+  });
+
+  it("treats default-named (unnamed) workspaces as their displayed title on import conflict", async () => {
+    vi.useFakeTimers();
+    Object.assign(URL, { createObjectURL: vi.fn(() => "blob:todo-board"), revokeObjectURL: vi.fn() });
+    vi.spyOn(HTMLAnchorElement.prototype, "click").mockImplementation(() => {});
+    // Existing workspace is unnamed → displayed as the default "Mini Desk".
+    localStorage.setItem(STORAGE_KEY, JSON.stringify({
+      ...defaultState(),
+      workspaces: [{ ...defaultWorkspace("existing"), workspaceLines: [{ text: "原有内容", indent: 0 }] }],
+    }));
+    const wrapper = mountApp();
+
+    try {
+      const settings = wrapper.getComponent(SettingsMenu);
+      settings.vm.$emit("import", settings.element as HTMLElement);
+      const input = wrapper.get('input[type="file"]').element as HTMLInputElement;
+      // Imported workspace is also unnamed → same displayed title "Mini Desk".
+      const file = new File([JSON.stringify({
+        miniDeskWorkspaceExport: true,
+        version: 1,
+        workspace: { workspaceLines: [{ text: "导入内容", indent: 0 }] },
+      })], "todo.json", { type: "application/json" });
+      Object.defineProperty(input, "files", { value: [file], configurable: true });
+      await wrapper.get('input[type="file"]').trigger("change");
+      await Promise.resolve();
+      await wrapper.vm.$nextTick();
+      await vi.advanceTimersByTimeAsync(200);
+      await wrapper.vm.$nextTick();
+
+      // The default-name collision still triggers the overwrite/add-new prompt.
+      expect(wrapper.get('[data-testid="companion-yes"]').text()).toBe("覆盖");
+      expect(wrapper.get('[data-testid="companion-secondary"]').text()).toBe("新增");
+
+      await wrapper.get('[data-testid="companion-secondary"]').trigger("click");
+      await Promise.resolve();
+      await wrapper.vm.$nextTick();
+      await vi.advanceTimersByTimeAsync(200);
+      await wrapper.vm.$nextTick();
+
+      const stored = JSON.parse(localStorage.getItem(STORAGE_KEY) || "{}");
+      const resolveTitle = (workspace: { customTitles?: Record<string, string> }) => workspace.customTitles?.["board-title"]?.trim() || "Mini Desk";
+      // Add-new auto-numbers so no two workspaces share the displayed name.
+      expect(stored.workspaces.map(resolveTitle)).toEqual(["Mini Desk", "Mini Desk 2"]);
     } finally {
       wrapper.unmount();
       vi.useRealTimers();
@@ -5133,8 +5182,10 @@ describe("App shell", () => {
       await wrapper.vm.$nextTick();
 
       expect(wrapper.find('[data-testid="companion-confirm"]').text()).toMatch(/导入|空间|新增/);
+      expect(wrapper.get('[data-testid="companion-yes"]').text()).toBe("覆盖");
+      expect(wrapper.get('[data-testid="companion-secondary"]').text()).toBe("新增");
 
-      await wrapper.get('[data-testid="companion-yes"]').trigger("click");
+      await wrapper.get('[data-testid="companion-secondary"]').trigger("click");
       await Promise.resolve();
       await wrapper.vm.$nextTick();
 
