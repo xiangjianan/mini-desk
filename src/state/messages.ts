@@ -55,6 +55,7 @@ export type MessageKey =
   | "confirmDeleteWorkspace"
   | "deleteWorkspace"
   | "confirmImportWorkspace"
+  | "confirmImportWorkspaceConflict"
   | "confirmClearCompleted"
   | "confirmClearData"
   | "about";
@@ -934,6 +935,22 @@ export const MESSAGE_CATALOG: Record<MessageKey, MessageEntry> = {
       "作为新工作空间？",
     ],
   },
+  confirmImportWorkspaceConflict: {
+    mood: "warning",
+    surface: "companion",
+    variants: [
+      "已存在同名空间，覆盖还是新增？",
+      "同名空间已存在，如何处理？",
+      "发现同名空间，覆盖它还是另存？",
+      "同名空间冲突：覆盖或新增？",
+      "已有同名空间，选择处理方式",
+      "该空间名称已存在",
+      "同名空间重复，覆盖或新增？",
+      "名称冲突：覆盖现有还是新增？",
+      "检测到同名空间",
+      "已有同名空间，怎么导入？",
+    ],
+  },
   confirmClearCompleted: {
     mood: "warning",
     surface: "companion",
@@ -1096,6 +1113,7 @@ const EN_MESSAGE_VARIANTS = {
   deleteWorkspace: ["Workspace deleted", "Workspace removed", "This workspace is gone"],
   confirmDeleteWorkspace: ["Delete this workspace? This cannot be undone.", "Remove this workspace permanently?", "This workspace and all its content will be deleted."],
   confirmImportWorkspace: ["Import this as a new workspace?", "It will be added as a new workspace; existing ones stay.", "A new workspace will be appended to the list."],
+  confirmImportWorkspaceConflict: ["A workspace with this name already exists. Overwrite or add?", "Same-name workspace found — overwrite or add new?", "This name is taken. Overwrite the existing one or add as new?"],
   confirmClearCompleted: ["Clear completed reminders?", "Remove completed items?", "Completed reminders will be removed."],
   confirmClearData: ["Clear all local data?", "This will reset the board.", "Current data will be cleared."],
   about: [

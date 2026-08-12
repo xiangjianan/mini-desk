@@ -101,6 +101,10 @@ const activeWorkspace = computed<WorkspaceData>(
 const syncClientId = createId();
 const undoSnapshots = ref<string[]>([]);
 const lastUndoSnapshot = ref(createUndoSnapshot());
+// Bumped after "clear data" so the whole workbench shell remounts and its
+// entrance choreography (command bar settles, zones rise left→right) replays —
+// the same animation as a fresh page load.
+const boardEpoch = ref(0);
 const activePreviewId = ref<string | undefined>();
 const pasteFeedback = ref<ImagePasteFeedback | undefined>();
 const closingPreviewId = ref<string | undefined>();
@@ -118,6 +122,9 @@ const pendingConfirm = ref<{
   confirmText: string;
   cancelText: string;
   danger: boolean;
+  confirmHint?: string;
+  secondaryText?: string;
+  onSecondary?: () => void | Promise<void>;
 } | null>(null);
 const importInput = ref<HTMLInputElement | null>(null);
 const importFeedbackAnchor = ref<HTMLElement | undefined>();
@@ -2147,10 +2154,13 @@ function clearData(anchor?: HTMLElement): void {
       await deleteImageDatabases();
       refreshTodoNotifications();
       lastUndoSnapshot.value = createUndoSnapshot();
+      // Remount the workbench shell so its entrance choreography (bar settles,
+      // zones rise left→right) replays — the same animation as a fresh page load.
+      boardEpoch.value += 1;
       showBubble("dataCleared", anchor, { hideCompanionAfter: true });
     },
     undefined,
-    { confirmText: uiText.value.settings.clearData, cancelText: uiText.value.common.cancel, danger: true },
+    { confirmText: uiText.value.settings.clearData, cancelText: uiText.value.common.cancel, danger: true, confirmHint: uiText.value.settings.clearDataHint },
   );
 }
 
@@ -2219,33 +2229,78 @@ async function importData(event: Event): Promise<void> {
       input.value = "";
       return;
     }
+    const finishImport = async (workspace: WorkspaceData): Promise<void> => {
+      await persistWorkspaceImages([workspace]);
+      persistNow("all", { force: true });
+      refreshTodoNotifications();
+      showBubble("dataImported", importFeedbackAnchor.value, { hideCompanionAfter: true });
+      importFeedbackAnchor.value = undefined;
+      input.value = "";
+    };
+    const cancelImport = (): void => {
+      importFeedbackAnchor.value = undefined;
+      input.value = "";
+    };
+    // Add as a new workspace; a colliding title is auto-suffixed with a number so
+    // duplicate names are never created.
+    const addAsNewWorkspace = async (): Promise<void> => {
+      const workspace = ensureUniqueWorkspaceTitle(
+        { ...importedWorkspace, id: createId(), createdAt: Date.now() },
+        state.workspaces,
+      );
+      state.workspaces = [...state.workspaces, workspace];
+      state.activeWorkspaceId = workspace.id;
+      await finishImport(workspace);
+    };
+    // Overwrite the existing same-name workspace in place (keep its id/createdAt,
+    // take content from the import); falls back to add-new if the target vanished.
+    const overwriteConflictWorkspace = async (targetId: string): Promise<void> => {
+      const target = state.workspaces.find((item) => item.id === targetId);
+      if (!target) {
+        await addAsNewWorkspace();
+        return;
+      }
+      const replacement: WorkspaceData = { ...importedWorkspace, id: target.id, createdAt: target.createdAt };
+      state.workspaces = state.workspaces.map((item) => (item.id === target.id ? replacement : item));
+      state.activeWorkspaceId = target.id;
+      await finishImport(replacement);
+    };
+
+    const importedTitle = importedWorkspace.customTitles["board-title"]?.trim() ?? "";
+    const conflictTarget = importedTitle
+      ? state.workspaces.find((item) => (item.customTitles["board-title"]?.trim() ?? "") === importedTitle)
+      : undefined;
+
+    if (conflictTarget) {
+      // Same-name workspace exists: offer overwrite vs add-new (which auto-numbers).
+      requestConfirmation(
+        "confirmImportWorkspaceConflict",
+        importFeedbackAnchor.value,
+        () => overwriteConflictWorkspace(conflictTarget.id),
+        cancelImport,
+        {
+          confirmText: uiText.value.common.overwrite,
+          cancelText: uiText.value.common.cancel,
+          danger: true,
+          confirmHint: importedTitle,
+          secondaryText: uiText.value.common.add,
+          onSecondary: addAsNewWorkspace,
+        },
+      );
+      return;
+    }
+
     requestConfirmation(
       "confirmImportWorkspace",
       importFeedbackAnchor.value,
-      async () => {
-        const workspace = ensureUniqueWorkspaceTitle(
-          { ...importedWorkspace, id: createId(), createdAt: Date.now() },
-          state.workspaces,
-        );
-        state.workspaces = [...state.workspaces, workspace];
-        state.activeWorkspaceId = workspace.id;
-        await persistWorkspaceImages([workspace]);
-        persistNow("all", { force: true });
-        refreshTodoNotifications();
-        showBubble("dataImported", importFeedbackAnchor.value, { hideCompanionAfter: true });
-        importFeedbackAnchor.value = undefined;
-        input.value = "";
-      },
-      () => {
-        importFeedbackAnchor.value = undefined;
-        input.value = "";
-      },
+      addAsNewWorkspace,
+      cancelImport,
       { confirmText: uiText.value.common.add, cancelText: uiText.value.common.cancel },
     );
     return;
   }
 
-  // 整盘导出/导入已停用：导入只接收单个空间文件，永远新增、不覆盖现有数据。
+  // 整盘导出/导入已停用：导入只接收单个空间文件（同名时可选覆盖或新增）。
   showBubble("importSingleWorkspaceOnly", importFeedbackAnchor.value, { hideCompanionAfter: true });
   importFeedbackAnchor.value = undefined;
   input.value = "";
@@ -2679,7 +2734,7 @@ function requestConfirmation(
   anchor: HTMLElement | undefined,
   onConfirm: () => void | Promise<void>,
   onCancel?: () => void,
-  options: { confirmText?: string; cancelText?: string; danger?: boolean } = {},
+  options: { confirmText?: string; cancelText?: string; danger?: boolean; confirmHint?: string; secondaryText?: string; onSecondary?: () => void | Promise<void> } = {},
 ): void {
   if (shouldBlockBoardEffects()) return;
   window.clearTimeout(bubbleTimer.value);
@@ -2697,6 +2752,9 @@ function requestConfirmation(
     confirmText: options.confirmText ?? uiText.value.common.yes,
     cancelText: options.cancelText ?? uiText.value.common.no,
     danger: options.danger ?? /删除|清理|Delete|Clear/.test(options.confirmText ?? ""),
+    confirmHint: options.confirmHint,
+    secondaryText: options.secondaryText,
+    onSecondary: options.onSecondary,
   };
   activeGuideKey.value = null;
   bubbleVisible.value = true;
@@ -2710,6 +2768,15 @@ async function confirmCompanionAction(): Promise<void> {
   hideCompanion();
   (document.activeElement as HTMLElement | null)?.blur();
   await action.onConfirm();
+}
+
+async function secondaryCompanionAction(): Promise<void> {
+  const action = pendingConfirm.value;
+  if (!action?.onSecondary) return;
+  hideCompanion();
+  (document.activeElement as HTMLElement | null)?.blur();
+  pendingConfirm.value = null;
+  await action.onSecondary();
 }
 
 function cancelCompanionAction(): void {
@@ -3289,6 +3356,7 @@ function moveItem<T extends { id: string }>(items: T[], dragId: string, targetId
     <NGlobalStyle />
     <WorkbenchShell
       v-if="!isMobileBlocked"
+      :key="boardEpoch"
       :title="boardTitle"
       :slogan="boardSlogan"
       :save-status-label="workspaceDensityLabel"
@@ -3523,6 +3591,8 @@ function moveItem<T extends { id: string }>(items: T[], dragId: string, targetId
       :confirm-danger="!isMobileBlocked && Boolean(pendingConfirm?.danger)"
       :confirm-text="isMobileBlocked ? undefined : pendingConfirm?.confirmText"
       :cancel-text="isMobileBlocked ? undefined : pendingConfirm?.cancelText"
+      :confirm-hint="isMobileBlocked ? undefined : pendingConfirm?.confirmHint"
+      :secondary-text="isMobileBlocked ? undefined : pendingConfirm?.secondaryText"
       :clear-signal="bubbleClearSignal"
       :persistent="isMobileBlocked"
       :position="activeCompanionPosition"
@@ -3533,6 +3603,7 @@ function moveItem<T extends { id: string }>(items: T[], dragId: string, targetId
       :custom-gif-dark-src="state.customCompanionGif.dark"
       @yes="confirmCompanionAction"
       @no="cancelCompanionAction"
+      @secondary="secondaryCompanionAction"
       @pause="pauseBubbleTimer"
       @resume="resumeBubbleTimer"
       @gif-theme-change="(theme: string) => updateCompanionGifTheme(theme as CompanionGifTheme)"

@@ -69,7 +69,7 @@ const WORKBENCH_WIDTH_STORAGE_KEY = "mini-desk-workbench-widths";
 const LEGACY_WORKBENCH_WIDTH_STORAGE_KEY = "todo-board-workbench-widths";
 const WORKBENCH_HEADER_STORAGE_KEY = "mini-desk-workbench-header-hidden";
 const LEGACY_WORKBENCH_HEADER_STORAGE_KEY = "todo-board-workbench-header-hidden";
-const DEFAULT_COLUMN_WEIGHTS = [0.15, 0.2, 0.35, 0.3] as const;
+const DEFAULT_COLUMN_WEIGHTS = [0.1, 0.25, 0.35, 0.3] as const;
 const MIN_COLUMN_WIDTHS = [100, 100, 100, 100] as const;
 // Canonical zone order matches DEFAULT_COLUMN_WEIGHTS / MIN_COLUMN_WIDTHS indices.
 const ZONE_INDEX = { assets: 0, notes: 1, tasks: 2, workspace: 3 } as const;
@@ -79,7 +79,7 @@ const DEFAULT_GRID_PADDING_X = 14;
 const DEFAULT_GRID_PADDING_Y = 14;
 // When only the image zone is visible, keep it narrow on the left and leave the
 // rest of the board empty as a preview area instead of stretching it to 100%.
-const SOLO_ASSETS_WIDTH_RATIO = 0.1;
+const SOLO_ASSETS_WIDTH_RATIO = 0.15;
 const DEFAULT_IMAGE_PREVIEW_TOP = 52;
 const RESIZE_STEP = 24;
 // Floor a zone can be dragged down to once it passes its minimum width.
@@ -102,7 +102,11 @@ const gridPadding = ref({
   bottom: DEFAULT_GRID_PADDING_Y,
   left: DEFAULT_GRID_PADDING_X,
 });
-const activeResize = ref<{ index: number; startX: number; startWidths: number[] } | null>(null);
+const activeResize = ref<{ index: number; startX: number; startWidths: number[]; trailing?: boolean } | null>(null);
+// True while the board is showing only the assets zone. Lets a solo layout keep
+// a user-adjusted width across window resizes (instead of snapping back to the
+// 10% default on every refresh); reset whenever we leave solo mode.
+const soloAssetsEngaged = ref(false);
 
 // Visible (active) zones drive the rendered grid. Hidden zones drop out of the
 // grid entirely (no track, no resizer); the remaining zones re-fit the width.
@@ -149,16 +153,48 @@ let lastPointerPosition: { x: number; y: number } | undefined;
 
 const resizeHandleStyles = computed(() => {
   if (columnWidths.value.length !== activeMins.value.length) return [];
+  const widths = columnWidths.value;
+  const handles: Array<{
+    style: Record<string, string>;
+    column: number;
+    trailing: boolean;
+    label: string;
+  }> = [];
   let cumulativeWidth = 0;
-  return columnWidths.value.slice(0, -1).map((width, index) => {
+  // Inter-column resizers: one per gap between adjacent visible columns.
+  widths.slice(0, -1).forEach((width, index) => {
     cumulativeWidth += width;
     const left = gridPadding.value.left + cumulativeWidth + gridGap.value * index + gridGap.value / 2;
-    return {
-      left: `${Math.round(left)}px`,
-      top: `${gridPadding.value.top}px`,
-      bottom: `${gridPadding.value.bottom}px`,
-    };
+    handles.push({
+      style: {
+        left: `${Math.round(left)}px`,
+        top: `${gridPadding.value.top}px`,
+        bottom: `${gridPadding.value.bottom}px`,
+      },
+      column: index,
+      trailing: false,
+      label: `调整区域宽度 ${index + 1}`,
+    });
   });
+  // Trailing resizer on the right edge of a solo assets zone: there is no right
+  // neighbor to absorb the space, so dragging it widens/narrows the column
+  // against the empty area instead.
+  if (activeIndices.value.length === 1 && activeIndices.value[0] === ZONE_INDEX.assets) {
+    cumulativeWidth += widths[widths.length - 1];
+    const gapFactor = widths.length - 1;
+    const left = gridPadding.value.left + cumulativeWidth + gridGap.value * gapFactor + gridGap.value / 2;
+    handles.push({
+      style: {
+        left: `${Math.round(left)}px`,
+        top: `${gridPadding.value.top}px`,
+        bottom: `${gridPadding.value.bottom}px`,
+      },
+      column: widths.length - 1,
+      trailing: true,
+      label: "调整图片区域宽度",
+    });
+  }
+  return handles;
 });
 
 function readPixel(value: string, fallback: number): number {
@@ -329,18 +365,32 @@ function refreshWorkbenchLayout(): void {
   if (!metrics) return;
   if (window.innerWidth <= DESKTOP_RESIZE_BREAKPOINT) {
     columnWidths.value = [];
+    soloAssetsEngaged.value = false;
     void nextTick(syncImagePreviewLeft);
     return;
   }
   const mins = activeMins.value;
   const indices = activeIndices.value;
-  // When only the image zone is visible, pin it to ~10% on the left and leave the
+  // When only the image zone is visible, pin it to ~15% on the left and leave the
   // remaining width empty rather than letting the single column stretch full-width.
   if (indices.length === 1 && indices[0] === ZONE_INDEX.assets) {
-    columnWidths.value = [Math.max(mins[0], Math.round(metrics.contentWidth * SOLO_ASSETS_WIDTH_RATIO))];
+    if (!soloAssetsEngaged.value) {
+      // Just entered solo mode: reset to the default ratio.
+      columnWidths.value = [Math.max(mins[0], Math.round(metrics.contentWidth * SOLO_ASSETS_WIDTH_RATIO))];
+      soloAssetsEngaged.value = true;
+    } else {
+      // Already in solo mode (e.g. a window resize): keep the user-adjusted
+      // width, only clamping it to the new content bounds.
+      const current = columnWidths.value[0];
+      const base = Number.isFinite(current) && current > 0
+        ? current
+        : Math.round(metrics.contentWidth * SOLO_ASSETS_WIDTH_RATIO);
+      columnWidths.value = [Math.min(metrics.contentWidth, Math.max(COLLAPSED_COLUMN_WIDTH, base))];
+    }
     void nextTick(syncImagePreviewLeft);
     return;
   }
+  soloAssetsEngaged.value = false;
   const sourceWidths = columnWidths.value.length === mins.length ? columnWidths.value : readStoredColumnWidths(mins.length);
   columnWidths.value = fitColumnsToWidth(metrics.contentWidth, sourceWidths, activeMins.value, activeWeights.value);
   void nextTick(syncImagePreviewLeft);
@@ -365,7 +415,20 @@ function shrinkColumns(widths: number[], indices: number[], requestedShrink: num
   return { widths: nextWidths, actualShrink };
 }
 
-function applyResizeDelta(index: number, delta: number, startWidths: number[]): void {
+function applyResizeDelta(index: number, delta: number, startWidths: number[], trailing = false): void {
+  // Trailing edge (solo assets): no right neighbor absorbs the space, so the
+  // column grows/shrinks directly against the empty area, clamped to
+  // [collapsed rail, content width]. Width is session-only (solo resets to the
+  // default ratio on reload), so it is not persisted.
+  if (trailing) {
+    const metrics = readGridMetrics();
+    const maxWidth = metrics?.contentWidth ?? startWidths[index];
+    const next = Math.min(maxWidth, Math.max(COLLAPSED_COLUMN_WIDTH, startWidths[index] + delta));
+    if (columnWidths.value.length === 1 && columnWidths.value[0] === next) return;
+    columnWidths.value = [next];
+    syncImagePreviewLeft();
+    return;
+  }
   const nextWidths = [...startWidths];
   if (delta < 0) {
     const leftShrinkOrder = Array.from({ length: index + 1 }, (_, offset) => index - offset);
@@ -386,7 +449,7 @@ function applyResizeDelta(index: number, delta: number, startWidths: number[]): 
 function handleResizeMove(event: PointerEvent | MouseEvent): void {
   const current = activeResize.value;
   if (!current) return;
-  applyResizeDelta(current.index, event.clientX - current.startX, current.startWidths);
+  applyResizeDelta(current.index, event.clientX - current.startX, current.startWidths, current.trailing);
 }
 
 function finishResize(): void {
@@ -397,22 +460,22 @@ function finishResize(): void {
   window.removeEventListener("mouseup", finishResize);
 }
 
-function startResize(event: PointerEvent, index: number): void {
+function startResize(event: PointerEvent, index: number, trailing = false): void {
   if (columnWidths.value.length !== activeMins.value.length) refreshWorkbenchLayout();
   if (columnWidths.value.length !== activeMins.value.length) return;
   event.preventDefault();
-  activeResize.value = { index, startX: event.clientX, startWidths: [...columnWidths.value] };
+  activeResize.value = { index, startX: event.clientX, startWidths: [...columnWidths.value], trailing };
   window.addEventListener("pointermove", handleResizeMove);
   window.addEventListener("pointerup", finishResize);
   window.addEventListener("mousemove", handleResizeMove);
   window.addEventListener("mouseup", finishResize);
 }
 
-function resizeWithKeyboard(event: KeyboardEvent, index: number): void {
+function resizeWithKeyboard(event: KeyboardEvent, index: number, trailing = false): void {
   if (!["ArrowLeft", "ArrowRight"].includes(event.key)) return;
   if (columnWidths.value.length !== activeMins.value.length) return;
   event.preventDefault();
-  applyResizeDelta(index, event.key === "ArrowRight" ? RESIZE_STEP : -RESIZE_STEP, columnWidths.value);
+  applyResizeDelta(index, event.key === "ArrowRight" ? RESIZE_STEP : -RESIZE_STEP, columnWidths.value, trailing);
 }
 
 function expandZoneToDefault(canonicalIndex: number): void {
@@ -425,6 +488,18 @@ function expandZoneToDefault(canonicalIndex: number): void {
   if (widths[pos] >= mins[pos]) return;
   const metrics = readGridMetrics();
   if (!metrics) return;
+
+  // Solo assets has no neighbors to fund an expansion; the empty area absorbs
+  // it, so jump straight to the default ratio instead of the proportional fit
+  // (which would otherwise fill the whole width for a single column).
+  if (activeIndices.value.length === 1 && activeIndices.value[0] === ZONE_INDEX.assets) {
+    const soloTarget = Math.max(mins[pos], Math.round(metrics.contentWidth * SOLO_ASSETS_WIDTH_RATIO));
+    if (widths[pos] < soloTarget) {
+      columnWidths.value = [soloTarget];
+      syncImagePreviewLeft();
+    }
+    return;
+  }
 
   // The zone returns to its default proportional width. Fund the growth from
   // expanded neighbors (proportional to their excess above the minimum); collapsed
@@ -680,16 +755,16 @@ onUnmounted(() => {
           <slot name="workspace" />
         </section>
         <button
-          v-for="(_, index) in resizeHandleStyles"
+          v-for="(handle, index) in resizeHandleStyles"
           :key="index"
           type="button"
           class="workbench-resizer"
           role="separator"
           aria-orientation="vertical"
-          :aria-label="`调整区域宽度 ${index + 1}`"
-          :style="resizeHandleStyles[index]"
-          @pointerdown="startResize($event, index)"
-          @keydown="resizeWithKeyboard($event, index)"
+          :aria-label="handle.label"
+          :style="handle.style"
+          @pointerdown="startResize($event, handle.column, handle.trailing)"
+          @keydown="resizeWithKeyboard($event, handle.column, handle.trailing)"
         />
       </div>
     </section>

@@ -20,6 +20,8 @@ const props = withDefaults(defineProps<{
   confirmDanger?: boolean;
   confirmText?: string;
   cancelText?: string;
+  confirmHint?: string;
+  secondaryText?: string;
   actionText?: string;
   clearSignal?: number;
   persistent?: boolean;
@@ -40,6 +42,7 @@ const props = withDefaults(defineProps<{
 const emit = defineEmits<{
   yes: [];
   no: [];
+  secondary: [];
   action: [];
   pause: [];
   resume: [];
@@ -62,6 +65,8 @@ const renderedConfirm = ref(false);
 const renderedConfirmDanger = ref(false);
 const renderedConfirmText = ref("");
 const renderedCancelText = ref("");
+const renderedConfirmHint = ref("");
+const renderedSecondaryText = ref("");
 const renderedActionText = ref("");
 const popoverTimer = ref<number | undefined>();
 const contentTimer = ref<number | undefined>();
@@ -154,6 +159,8 @@ watch(
         renderedConfirmDanger.value = false;
         renderedConfirmText.value = uiText.value.common.yes;
         renderedCancelText.value = uiText.value.common.no;
+        renderedConfirmHint.value = "";
+        renderedSecondaryText.value = "";
         renderedActionText.value = "";
       }, POPOVER_HIDE_CONTENT_MS);
       return;
@@ -166,6 +173,8 @@ watch(
     renderedConfirmDanger.value = Boolean(props.confirmDanger);
     renderedConfirmText.value = props.confirmText ?? uiText.value.common.yes;
     renderedCancelText.value = props.cancelText ?? uiText.value.common.no;
+    renderedConfirmHint.value = props.confirmHint ?? "";
+    renderedSecondaryText.value = props.secondaryText ?? "";
     renderedActionText.value = "";
     retainingPopoverContent.value = false;
     popoverTimer.value = window.setTimeout(() => {
@@ -217,7 +226,7 @@ watch(
 );
 
 watch(
-  () => [props.message, props.linkText, props.linkHref, props.confirm, props.confirmDanger, props.confirmText, props.cancelText, props.actionText, props.language] as const,
+  () => [props.message, props.linkText, props.linkHref, props.confirm, props.confirmDanger, props.confirmText, props.cancelText, props.confirmHint, props.secondaryText, props.actionText, props.language] as const,
   () => {
     if (!popoverVisible.value) return;
     renderedMessage.value = props.message;
@@ -228,6 +237,8 @@ watch(
     renderedConfirmDanger.value = Boolean(props.confirmDanger);
     renderedConfirmText.value = props.confirmText ?? uiText.value.common.yes;
     renderedCancelText.value = props.cancelText ?? uiText.value.common.no;
+    renderedConfirmHint.value = props.confirmHint ?? "";
+    renderedSecondaryText.value = props.secondaryText ?? "";
     renderedActionText.value = "";
   },
 );
@@ -408,6 +419,7 @@ function isPointInsideElement(x: number, y: number, element: HTMLElement | null)
         @mouseleave="handleCompanionMouseleave"
       >
         <span v-if="renderedMessage">{{ renderedMessage }}</span>
+        <p v-if="renderedConfirmHint" class="companion-confirm-hint">{{ renderedConfirmHint }}</p>
         <div v-if="renderedLinkText || renderedSignatureText" class="companion-meta-row">
           <a
             v-if="renderedLinkText && renderedLinkHref"
@@ -430,6 +442,7 @@ function isPointInsideElement(x: number, y: number, element: HTMLElement | null)
         </div>
         <div v-if="renderedConfirm" class="companion-actions">
           <NButton size="tiny" class="companion-action-button" :class="{ 'is-danger': renderedConfirmDanger }" data-testid="companion-yes" @click="emit('yes')">{{ renderedConfirmText }}</NButton>
+          <NButton v-if="renderedSecondaryText" size="tiny" class="companion-action-button" data-testid="companion-secondary" @click="emit('secondary')">{{ renderedSecondaryText }}</NButton>
           <NButton size="tiny" class="companion-action-button" data-testid="companion-no" @click="emit('no')">{{ renderedCancelText }}</NButton>
         </div>
         <div v-else-if="renderedActionText" class="companion-actions">

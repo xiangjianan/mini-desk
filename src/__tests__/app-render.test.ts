@@ -4886,6 +4886,108 @@ describe("App shell", () => {
     }
   });
 
+  it("offers add-new with an auto-numbered title when importing a same-name workspace", async () => {
+    vi.useFakeTimers();
+    Object.assign(URL, { createObjectURL: vi.fn(() => "blob:todo-board"), revokeObjectURL: vi.fn() });
+    vi.spyOn(HTMLAnchorElement.prototype, "click").mockImplementation(() => {});
+    localStorage.setItem(STORAGE_KEY, JSON.stringify({
+      ...defaultState(),
+      workspaces: [{
+        ...defaultWorkspace("existing"),
+        customTitles: { "board-title": "我的桌面" },
+        workspaceLines: [{ text: "原有内容", indent: 0 }],
+      }],
+    }));
+    const wrapper = mountApp();
+
+    try {
+      const settings = wrapper.getComponent(SettingsMenu);
+      settings.vm.$emit("import", settings.element as HTMLElement);
+      const input = wrapper.get('input[type="file"]').element as HTMLInputElement;
+      const file = new File([JSON.stringify({
+        miniDeskWorkspaceExport: true,
+        version: 1,
+        workspace: { customTitles: { "board-title": "我的桌面" }, workspaceLines: [{ text: "导入内容", indent: 0 }] },
+      })], "todo.json", { type: "application/json" });
+      Object.defineProperty(input, "files", { value: [file], configurable: true });
+      await wrapper.get('input[type="file"]').trigger("change");
+      await Promise.resolve();
+      await wrapper.vm.$nextTick();
+      await vi.advanceTimersByTimeAsync(200);
+      await wrapper.vm.$nextTick();
+
+      // Conflict prompt: overwrite / add-new / cancel, with the colliding name surfaced.
+      expect(wrapper.find('[data-testid="companion-confirm"]').text()).toMatch(/同名|冲突/);
+      expect(wrapper.get('[data-testid="companion-yes"]').text()).toBe("覆盖");
+      expect(wrapper.get('[data-testid="companion-secondary"]').text()).toBe("新增");
+      expect(wrapper.get('[data-testid="companion-confirm"]').text()).toContain("我的桌面");
+
+      // Add-new: duplicate name is auto-suffixed so no two workspaces share a name.
+      await wrapper.get('[data-testid="companion-secondary"]').trigger("click");
+      await Promise.resolve();
+      await wrapper.vm.$nextTick();
+      await vi.advanceTimersByTimeAsync(200);
+      await wrapper.vm.$nextTick();
+
+      const stored = JSON.parse(localStorage.getItem(STORAGE_KEY) || "{}");
+      expect(stored.workspaces).toHaveLength(2);
+      expect(stored.workspaces.map((workspace: { customTitles: Record<string, string> }) => workspace.customTitles?.["board-title"]))
+        .toEqual(["我的桌面", "我的桌面 2"]);
+    } finally {
+      wrapper.unmount();
+      vi.useRealTimers();
+    }
+  });
+
+  it("overwrites the existing workspace in place when importing a same-name workspace", async () => {
+    vi.useFakeTimers();
+    Object.assign(URL, { createObjectURL: vi.fn(() => "blob:todo-board"), revokeObjectURL: vi.fn() });
+    vi.spyOn(HTMLAnchorElement.prototype, "click").mockImplementation(() => {});
+    localStorage.setItem(STORAGE_KEY, JSON.stringify({
+      ...defaultState(),
+      workspaces: [{
+        ...defaultWorkspace("existing"),
+        customTitles: { "board-title": "我的桌面" },
+        workspaceLines: [{ text: "原有内容", indent: 0 }],
+      }],
+    }));
+    const wrapper = mountApp();
+
+    try {
+      const settings = wrapper.getComponent(SettingsMenu);
+      settings.vm.$emit("import", settings.element as HTMLElement);
+      const input = wrapper.get('input[type="file"]').element as HTMLInputElement;
+      const file = new File([JSON.stringify({
+        miniDeskWorkspaceExport: true,
+        version: 1,
+        workspace: { customTitles: { "board-title": "我的桌面" }, workspaceLines: [{ text: "导入内容", indent: 0 }] },
+      })], "todo.json", { type: "application/json" });
+      Object.defineProperty(input, "files", { value: [file], configurable: true });
+      await wrapper.get('input[type="file"]').trigger("change");
+      await Promise.resolve();
+      await wrapper.vm.$nextTick();
+      await vi.advanceTimersByTimeAsync(200);
+      await wrapper.vm.$nextTick();
+
+      expect(wrapper.get('[data-testid="companion-yes"]').text()).toBe("覆盖");
+
+      // Overwrite replaces the existing workspace's content, keeping its id (count unchanged).
+      await wrapper.get('[data-testid="companion-yes"]').trigger("click");
+      await Promise.resolve();
+      await wrapper.vm.$nextTick();
+      await vi.advanceTimersByTimeAsync(200);
+      await wrapper.vm.$nextTick();
+
+      const stored = JSON.parse(localStorage.getItem(STORAGE_KEY) || "{}");
+      expect(stored.workspaces).toHaveLength(1);
+      expect(stored.workspaces[0].id).toBe("existing");
+      expect(stored.workspaces[0].workspaceLines).toEqual([{ text: "导入内容", indent: 0 }]);
+    } finally {
+      wrapper.unmount();
+      vi.useRealTimers();
+    }
+  });
+
   it("exports through a generated browser download without requesting file-system access", async () => {
     vi.useFakeTimers();
     const showSaveFilePicker = vi.fn();
@@ -4971,6 +5073,10 @@ describe("App shell", () => {
       expect(wrapper.get('[data-testid="companion-confirm"]').text()).toMatch(/清空|当前数据|不可恢复/);
       expect(wrapper.get('[data-testid="companion-yes"]').text()).toBe("清空数据");
       expect(wrapper.get('[data-testid="companion-yes"]').classes()).toContain("is-danger");
+      // the destructive-action hint (all workspaces cleared, back up first) is shown
+      expect(wrapper.get('[data-testid="companion-confirm"]').text()).toMatch(/所有空间都会被清空/);
+
+      const gridBefore = wrapper.find(".workbench-grid").element;
 
       await wrapper.get('[data-testid="companion-yes"]').trigger("click");
       await Promise.resolve();
@@ -4988,6 +5094,9 @@ describe("App shell", () => {
       // in-memory board reset to defaults
       expect(wrapper.text()).not.toContain("待清空");
       expect(wrapper.find('[data-testid="companion-confirm"]').text()).toMatch(/清空|已重置|数据|初始/);
+      // the workbench shell remounts so its entrance animation replays
+      const gridAfter = wrapper.find(".workbench-grid").element;
+      expect(gridAfter).not.toBe(gridBefore);
     } finally {
       wrapper.unmount();
       vi.unstubAllGlobals();

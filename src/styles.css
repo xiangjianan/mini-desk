@@ -239,7 +239,7 @@ h3 {
 
 .board {
   display: grid;
-  grid-template-columns: 10% 20% 20% 50%;
+  grid-template-columns: 10% 25% 35% 30%;
   width: 100vw;
   height: 100vh;
   background: var(--bg);
@@ -3642,6 +3642,13 @@ button.todo-section-menu-button {
   white-space: pre-line;
 }
 
+.companion-confirm-hint {
+  margin: 0;
+  font-size: 0.85em;
+  color: color-mix(in srgb, var(--foreground) 62%, transparent);
+  white-space: pre-line;
+}
+
 .companion-meta-row {
   display: inline-flex;
   align-items: center;
@@ -3695,6 +3702,7 @@ button.todo-section-menu-button {
 
 .companion-actions {
   display: flex;
+  flex-wrap: wrap;
   gap: 6px;
   margin-top: 6px;
 }

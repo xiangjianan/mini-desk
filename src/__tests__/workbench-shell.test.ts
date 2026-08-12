@@ -343,7 +343,7 @@ describe("WorkbenchShell", () => {
     await nextTick();
 
     const grid = wrapper.get(".workbench-grid");
-    expect(grid.attributes("style")).toContain("grid-template-columns: 214px 252px 365px 327px");
+    expect(grid.attributes("style")).toContain("grid-template-columns: 176px 290px 365px 327px");
 
     wrapper.unmount();
   });
@@ -420,7 +420,7 @@ describe("WorkbenchShell", () => {
     await nextTick();
     await nextTick();
 
-    expect(wrapper.get(".workbench-grid").attributes("style")).toContain("grid-template-columns: 214px 252px 365px 327px");
+    expect(wrapper.get(".workbench-grid").attributes("style")).toContain("grid-template-columns: 176px 290px 365px 327px");
     expect(wrapper.get(".workbench-zone-tasks").classes()).not.toContain("workbench-zone-collapsed");
 
     const pointerDown = new MouseEvent("pointerdown", { bubbles: true, cancelable: true });
@@ -433,7 +433,7 @@ describe("WorkbenchShell", () => {
     // The task zone shrinks below its 100px minimum (down to ~65px) instead of
     // clamping, collapses to the title rail, and the freed space flows to the
     // neighboring workspace zone.
-    expect(wrapper.get(".workbench-grid").attributes("style")).toContain("grid-template-columns: 214px 252px 65px 627px");
+    expect(wrapper.get(".workbench-grid").attributes("style")).toContain("grid-template-columns: 176px 290px 65px 627px");
     expect(wrapper.get(".workbench-zone-tasks").classes()).toContain("workbench-zone-collapsed");
     expect(wrapper.get(".workbench-zone-tasks .workbench-zone-rail").text()).toBe("✅ 提醒事项");
     expect(wrapper.findAll(".workbench-zone-notes .workbench-zone-rail")).toHaveLength(1);
@@ -746,14 +746,38 @@ describe("WorkbenchShell", () => {
 
     expect(wrapper.findAll(".workbench-zone")).toHaveLength(1);
     expect(wrapper.find(".workbench-zone-assets").exists()).toBe(true);
-    expect(wrapper.findAll(".workbench-resizer")).toHaveLength(0);
+    // A trailing resizer sits on the right edge of the solo image zone so it can
+    // be widened/narrowed against the empty area (there is no right neighbor).
+    expect(wrapper.findAll(".workbench-resizer")).toHaveLength(1);
 
     const tracks = readColumnTracks(wrapper);
     expect(tracks).toHaveLength(1);
     const width = Number.parseFloat(tracks[0]);
-    // ~10% of the 1200px grid (not stretched to the full ~1170px content width).
-    expect(width).toBeGreaterThan(80);
-    expect(width).toBeLessThan(180);
+    // ~15% of the 1200px grid (not stretched to the full ~1170px content width).
+    expect(width).toBeGreaterThan(150);
+    expect(width).toBeLessThan(200);
+
+    // Dragging the trailing resizer widens the image zone...
+    const resizer = wrapper.findAll(".workbench-resizer")[0];
+    const widenDown = new MouseEvent("pointerdown", { bubbles: true, cancelable: true });
+    Object.defineProperty(widenDown, "clientX", { value: 200 });
+    resizer.element.dispatchEvent(widenDown);
+    window.dispatchEvent(new MouseEvent("pointermove", { clientX: 320 }));
+    window.dispatchEvent(new MouseEvent("pointerup"));
+    await nextTick();
+    const widened = Number.parseFloat(readColumnTracks(wrapper)[0]);
+    expect(widened).toBeGreaterThan(width);
+
+    // ...and dragging it back narrows the zone again (down to the rail floor).
+    const narrowDown = new MouseEvent("pointerdown", { bubbles: true, cancelable: true });
+    Object.defineProperty(narrowDown, "clientX", { value: 200 });
+    resizer.element.dispatchEvent(narrowDown);
+    window.dispatchEvent(new MouseEvent("pointermove", { clientX: 140 }));
+    window.dispatchEvent(new MouseEvent("pointerup"));
+    await nextTick();
+    const narrowed = Number.parseFloat(readColumnTracks(wrapper)[0]);
+    expect(narrowed).toBeLessThan(widened);
+    expect(narrowed).toBeGreaterThan(44);
 
     wrapper.unmount();
   });

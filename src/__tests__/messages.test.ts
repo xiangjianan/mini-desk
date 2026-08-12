@@ -67,6 +67,7 @@ const messageKeys = [
   "confirmDeleteWorkspace",
   "confirmClearCompleted",
   "confirmImportWorkspace",
+  "confirmImportWorkspaceConflict",
   "confirmClearData",
   "about",
 ] as const;
