@@ -3304,6 +3304,14 @@ button.todo-star-button {
   font-size: var(--app-font-size);
 }
 
+/* While the hover marquee is running, show the overflowing text in full
+   instead of the "…" truncation, so the hidden characters are readable as
+   they scroll past. The ellipsis is restored when the cursor leaves. */
+.todo-input.is-marquee,
+.today-focus-input.is-marquee {
+  text-overflow: clip;
+}
+
 .today-focus-input {
   height: 34px;
 }
@@ -6884,15 +6892,9 @@ body,
 .todo-item .n-checkbox .n-checkbox-box,
 .today-focus-item .n-checkbox .n-checkbox-box {
   transition:
-    transform var(--motion-fast) var(--motion-spring),
     background-color var(--motion-fast) ease,
     border-color var(--motion-fast) ease,
     box-shadow var(--motion-fast) ease;
-}
-
-.todo-item .n-checkbox:active .n-checkbox-box,
-.today-focus-item .n-checkbox:active .n-checkbox-box {
-  transform: scale(0.82);
 }
 
 /* Calculator keys float on hover and press deeper. */

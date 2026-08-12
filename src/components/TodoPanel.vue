@@ -367,6 +367,8 @@ onUnmounted(() => {
   window.clearInterval(deadlineClockTimer.value);
   columnResizeObserver?.disconnect();
   columnResizeObserver = undefined;
+  hoverScrollCleanup.forEach((cancel) => cancel());
+  hoverScrollCleanup.clear();
 });
 
 function refreshNotifyNow(): void {
@@ -578,6 +580,76 @@ function handleInputFocus(period: TodoPeriod, todo: TodoItem, event: FocusEvent)
   const anchor = todoSectionRefs.get(period) ?? (event.currentTarget as HTMLElement);
   emit("focus", anchor);
   emitDeclutterPrompt(period, anchor);
+}
+
+// Hover-driven horizontal marquee for todo inputs whose text overflows the row.
+// Animates the input's native scrollLeft, then resets on mouse leave. It never
+// runs while the input is focused/editing so it can't fight the caret, and it
+// auto-stops the moment focus lands on the input.
+const hoverScrollCleanup = new Map<HTMLInputElement, () => void>();
+const HOVER_SCROLL_SPEED = 0.05; // px per ms (~50px/s, comfortable reading pace)
+const HOVER_SCROLL_PAUSE_START = 320;
+const HOVER_SCROLL_PAUSE_END = 760;
+
+function startHoverScroll(input: HTMLInputElement | null): void {
+  if (!input) return;
+  if (document.activeElement === input) return;
+  const overflow = input.scrollWidth - input.clientWidth;
+  if (overflow <= 1) return;
+  stopHoverScroll(input);
+  // Drop the ellipsis while scrolling so the full text is visible, not "...".
+  input.classList.add("is-marquee");
+
+  const maxScroll = overflow;
+  const travel = maxScroll / HOVER_SCROLL_SPEED;
+  const cycle = HOVER_SCROLL_PAUSE_START + travel + HOVER_SCROLL_PAUSE_END + travel;
+
+  let raf = 0;
+  let cancelled = false;
+  let origin = 0;
+
+  const tick = (now: number) => {
+    if (cancelled || !input.isConnected || document.activeElement === input) return;
+    if (!origin) origin = now;
+    const t = (now - origin) % cycle;
+    let x: number;
+    if (t < HOVER_SCROLL_PAUSE_START) {
+      x = 0;
+    } else if (t < HOVER_SCROLL_PAUSE_START + travel) {
+      x = ((t - HOVER_SCROLL_PAUSE_START) / travel) * maxScroll;
+    } else if (t < HOVER_SCROLL_PAUSE_START + travel + HOVER_SCROLL_PAUSE_END) {
+      x = maxScroll;
+    } else {
+      x = maxScroll * (1 - (t - HOVER_SCROLL_PAUSE_START - travel - HOVER_SCROLL_PAUSE_END) / travel);
+    }
+    input.scrollLeft = x;
+    raf = requestAnimationFrame(tick);
+  };
+  raf = requestAnimationFrame(tick);
+  hoverScrollCleanup.set(input, () => {
+    cancelled = true;
+    if (raf) cancelAnimationFrame(raf);
+  });
+}
+
+function stopHoverScroll(input: HTMLInputElement | null): void {
+  if (!input) return;
+  const cancel = hoverScrollCleanup.get(input);
+  if (cancel) {
+    cancel();
+    hoverScrollCleanup.delete(input);
+  }
+  input.classList.remove("is-marquee");
+  // Don't yank the scroll position while the user is actively editing.
+  if (document.activeElement === input) return;
+  input.scrollLeft = 0;
+}
+
+function handleTodoHover(event: MouseEvent, enter: boolean): void {
+  const row = event.currentTarget as HTMLElement | null;
+  const input = row?.querySelector<HTMLInputElement>(".todo-input, .today-focus-input") ?? null;
+  if (enter) startHoverScroll(input);
+  else stopHoverScroll(input);
 }
 
 function emitDeclutterPrompt(period: TodoPeriod, anchor: HTMLElement): void {
@@ -1417,6 +1489,8 @@ function buildTodoListEntries(period: TodoListId, todos: TodoItem[], deferredDon
               getTodoDeadlineClass(item.todo),
             ]"
             @contextmenu.stop="openMenu($event, item.period, item.todo.id)"
+            @mouseenter="handleTodoHover($event, true)"
+            @mouseleave="handleTodoHover($event, false)"
           >
             <NCheckbox
               :checked="item.todo.done"
@@ -1603,6 +1677,8 @@ function buildTodoListEntries(period: TodoListId, todos: TodoItem[], deferredDon
                 @contextmenu.stop="openMenu($event, list.id, entry.todo.id)"
                 @dragover.prevent
                 @drop="handleTodoItemDrop($event, list.id, entry.todo.id)"
+                @mouseenter="handleTodoHover($event, true)"
+                @mouseleave="handleTodoHover($event, false)"
               >
                 <button
                   class="todo-drag-handle"
