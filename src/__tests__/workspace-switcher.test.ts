@@ -1,5 +1,6 @@
 import { describe, expect, it } from "vitest";
 import { mount } from "@vue/test-utils";
+import { nextTick } from "vue";
 import WorkspaceSwitcher from "../components/WorkspaceSwitcher.vue";
 import { defaultWorkspace } from "../state/defaults";
 import type { WorkspaceData } from "../types";
@@ -24,6 +25,44 @@ describe("WorkspaceSwitcher", () => {
     await wrapper.find('[data-testid="workspace-trigger"]').trigger("click");
     await wrapper.find('[data-testid="workspace-option-b"]').trigger("click");
     expect(wrapper.emitted("switch")).toEqual([["b"]]);
+  });
+
+  it("点击空白区域收起下拉框（outside click 关闭）", async () => {
+    const wrapper = mount(WorkspaceSwitcher, {
+      props: { workspaces, activeWorkspaceId: "a", theme: "light", language: "zh" },
+      attachTo: document.body,
+    });
+    const trigger = wrapper.find('[data-testid="workspace-trigger"]');
+    await trigger.trigger("click");
+    await nextTick(); // outside-click guard attaches on nextTick after open
+    expect(trigger.attributes("aria-expanded")).toBe("true");
+    // Simulate a click on blank board area (document.body) that bubbles to document.
+    document.body.dispatchEvent(new MouseEvent("click", { bubbles: true }));
+    await nextTick();
+    expect(trigger.attributes("aria-expanded")).toBe("false");
+    wrapper.unmount();
+  });
+
+  it("点击调用了 stopPropagation 的空白区域仍收起下拉框（capture 阶段兜底）", async () => {
+    // Several board panels (todo list blank space, context menus, drop targets)
+    // call event.stopPropagation() on click. A bubble-phase document listener
+    // never sees those clicks, so the dropdown stayed open. The guard must run
+    // in the capture phase to close reliably regardless of such handlers.
+    const wrapper = mount(WorkspaceSwitcher, {
+      props: { workspaces, activeWorkspaceId: "a", theme: "light", language: "zh" },
+      attachTo: document.body,
+    });
+    const trigger = wrapper.find('[data-testid="workspace-trigger"]');
+    await trigger.trigger("click");
+    await nextTick();
+    const blocker = document.createElement("div");
+    blocker.addEventListener("click", (event) => event.stopPropagation());
+    document.body.append(blocker);
+    blocker.dispatchEvent(new MouseEvent("click", { bubbles: true }));
+    await nextTick();
+    expect(trigger.attributes("aria-expanded")).toBe("false");
+    blocker.remove();
+    wrapper.unmount();
   });
 
   it("再次点击触发按钮收起下拉框（一展开一收起）", async () => {

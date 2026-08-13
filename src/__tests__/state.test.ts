@@ -1010,10 +1010,18 @@ describe("todo behavior", () => {
     });
     expect(ids(distributeTodoListColumns(eight, 4))).toEqual(["l0", "l1", "l2", "l3", "l4", "l5", "l6", "l7"]);
 
-    // 7 lists → 3 columns: 3/3/1 (remainder stays in the last column)
+    // 7 lists → 3 columns: 3/2/2 (left-biased balanced — the left column is
+    // never shorter than the right, and no trailing column is left near-empty)
     const seven = Array.from({ length: 7 }, (_, i) => ({ id: `l${i}`, title: `L${i}`, collapsed: false, compact: false }));
     expect(columnsOf(distributeTodoListColumns(seven, 3) as { id: string; column: number }[])).toEqual({
-      l0: 0, l1: 0, l2: 0, l3: 1, l4: 1, l5: 1, l6: 2,
+      l0: 0, l1: 0, l2: 0, l3: 1, l4: 1, l5: 2, l6: 2,
+    });
+
+    // 4 lists → 3 columns: 2/1/1 (remainder goes to the leftmost column so the
+    // rightmost column is never empty, and the left column stays ahead)
+    const four = Array.from({ length: 4 }, (_, i) => ({ id: `l${i}`, title: `L${i}`, collapsed: false, compact: false }));
+    expect(columnsOf(distributeTodoListColumns(four, 3) as { id: string; column: number }[])).toEqual({
+      l0: 0, l1: 0, l2: 1, l3: 2,
     });
 
     // 1 column → everything in column 0

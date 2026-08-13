@@ -162,8 +162,11 @@ export function removeTodoListData(
 
 /**
  * Auto-distribute lists across `columnCount` columns, column-major (fills
- * column 0 top-to-bottom, then column 1, …) so column heights stay balanced.
- * Runs only while the layout is not yet manual. Each list's `column` is
+ * column 0 top-to-bottom, then column 1, …) with a left-biased balance: every
+ * column gets `floor(N / C)` lists, and the first `N mod C` columns get one
+ * extra. This guarantees a column is never shorter than the one to its right
+ * (the left column always stays "ahead") and never leaves a trailing column
+ * empty. Runs only while the layout is not yet manual. Each list's `column` is
  * overwritten; array order is preserved.
  */
 export function distributeTodoListColumns(
@@ -174,9 +177,21 @@ export function distributeTodoListColumns(
   if (columns === 1) {
     return lists.map((list) => (list.column === 0 ? list : { ...list, column: 0 }));
   }
-  const perColumn = Math.ceil(lists.length / columns);
+  const base = Math.floor(lists.length / columns);
+  const remainder = lists.length % columns;
+  // Map each list index to its column by walking the per-column sizes left to
+  // right. Column c holds `base + 1` lists while c < remainder, else `base`.
+  const columnOfIndex = new Array<number>(lists.length);
+  let cursor = 0;
+  for (let column = 0; column < columns; column += 1) {
+    const size = base + (column < remainder ? 1 : 0);
+    for (let offset = 0; offset < size; offset += 1) {
+      columnOfIndex[cursor] = column;
+      cursor += 1;
+    }
+  }
   return lists.map((list, index) => {
-    const column = Math.min(Math.floor(index / perColumn), columns - 1);
+    const column = columnOfIndex[index] ?? columns - 1;
     return list.column === column ? list : { ...list, column };
   });
 }

@@ -45,12 +45,14 @@ function close(): void {
   open.value = false;
 }
 
-// Race-free outside-click handling. Naive UI's `@clickoutside` and the trigger's
-// own `@click="toggleOpen"` can fire on the same gesture (mousedown closes via
-// clickoutside, then click re-toggles open), so a second trigger click never
-// collapses the dropdown. We listen on the same `click` event and exclude the
-// trigger + popover content, making the trigger a true toggle and outside
-// clicks a clean close with no overlap.
+// Outside-click handling that survives event propagation being stopped. Many
+// board surfaces (todo list blank space, context menus, drop targets, …) call
+// event.stopPropagation() on click, so a bubble-phase document listener never
+// sees those clicks and the dropdown would stay open. Listening in the CAPTURE
+// phase fires before any such handler runs, so any click outside the trigger
+// and popover content closes the dropdown reliably. We exclude the trigger +
+// popover content so the trigger stays a true toggle (a second click collapses
+// instead of re-opening) with no overlap.
 function attachOutsideClickGuard(): void {
   if (outsideClickGuard) return;
   outsideClickGuard = (event: MouseEvent): void => {
@@ -63,12 +65,12 @@ function attachOutsideClickGuard(): void {
     if (target.closest(".zone-visibility-popover")) return;
     close();
   };
-  document.addEventListener("click", outsideClickGuard);
+  document.addEventListener("click", outsideClickGuard, true);
 }
 
 function detachOutsideClickGuard(): void {
   if (!outsideClickGuard) return;
-  document.removeEventListener("click", outsideClickGuard);
+  document.removeEventListener("click", outsideClickGuard, true);
   outsideClickGuard = null;
 }
 
