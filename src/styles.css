@@ -2311,9 +2311,12 @@ html[data-theme="dark"] .quick-tag-color-swatch {
   row-gap: 8px;
 }
 
-/* 多列下列表按内容自然撑高,不再用 flex:1 1 33.33% 均分容器高度。 */
+/* 多列下,同一列里展开的列表平分该列剩余的垂直高度;收起的列表仍占固定
+   34px(由 .todo-section.is-compact.is-collapsed 覆盖)。列高由 .todo-sections
+   的 100% 高度撑开,各展开列表 flex:1 1 0 等分空间,内部内容超出时由各自的
+   NScrollbar 滚动。 */
 .todo-sections.is-multi-column .todo-section {
-  flex: 0 0 auto;
+  flex: 1 1 0;
   margin-bottom: 0;
 }
 
@@ -3166,6 +3169,19 @@ button.notify-panel-preset {
 
 .deadline-overdue .todo-deadline-label {
   color: #e88;
+}
+
+/* Small red dot on a list heading when it contains a non-done overdue (expired)
+   reminder. Lives inside the <h3> next to the title so it stays visible even
+   when the list is collapsed — only the content area (.todo-list-shell) hides. */
+.todo-heading > h3 > .todo-overdue-dot {
+  flex: 0 0 auto;
+  width: 6px;
+  height: 6px;
+  margin-right: 6px;
+  border-radius: 50%;
+  background: var(--danger);
+  box-shadow: 0 0 0 1px rgb(255 255 255 / 35%);
 }
 
 .todo-star-button {

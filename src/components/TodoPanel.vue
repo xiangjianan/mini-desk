@@ -1152,6 +1152,16 @@ function isListTitleNotificationFlashing(list: TodoListConfig): boolean {
   return list.collapsed && listHasNotificationFlash(list.id);
 }
 
+// Whether a list currently holds any non-done, expired (overdue) reminder. Drives
+// the red dot on the list heading so an overdue item is still visible when the
+// list is collapsed. Depends on deadlineNow so it re-evaluates every minute.
+function listHasOverdue(listId: TodoListId): boolean {
+  const now = deadlineNow.value;
+  return (ordered.value[listId] ?? []).some(
+    (todo) => !todo.done && isValidDeadlineAt(todo.notifyAt) && todo.notifyAt < now,
+  );
+}
+
 function isTodoEditing(period: TodoPeriod, id: string): boolean {
   return editingTodoKey.value === todoKey(period, id);
 }
@@ -1594,6 +1604,12 @@ function buildTodoListEntries(period: TodoListId, todos: TodoItem[], deferredDon
             :aria-label="uiText.todo.dragList"
           />
           <h3 :class="{ 'is-notify-flashing': isListTitleNotificationFlashing(list) }">
+            <span
+              v-if="listHasOverdue(list.id)"
+              class="todo-overdue-dot"
+              role="img"
+              :aria-label="uiText.todo.overdue"
+            />
             <EditableTitle
               :id="list.id"
               :value="list.title"

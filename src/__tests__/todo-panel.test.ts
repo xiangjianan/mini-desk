@@ -1237,6 +1237,53 @@ describe("TodoPanel", () => {
         expect(wrapper.findAll(".today-focus-item")[1].classes()).toContain("deadline-due-soon");
         expect(wrapper.findAll(".today-focus-item")[2].classes()).toContain("deadline-upcoming");
         expect(wrapper.findAll(".today-focus-item")[3].classes()).toContain("deadline-later");
+        // A list containing an overdue (expired) item shows a red dot on its
+        // heading (visible even when collapsed); empty/non-overdue lists don't.
+        expect(wrapper.find('.todo-section[data-period="morning"] .todo-overdue-dot').exists()).toBe(true);
+        expect(wrapper.find('.todo-section[data-period="noon"] .todo-overdue-dot').exists()).toBe(false);
+        expect(wrapper.find('.todo-section[data-period="evening"] .todo-overdue-dot').exists()).toBe(false);
+      } finally {
+        wrapper.unmount();
+      }
+    } finally {
+      vi.useRealTimers();
+    }
+  });
+
+  it("shows the overdue dot on a collapsed list's heading so it stays visible", () => {
+    vi.useFakeTimers();
+    try {
+      vi.setSystemTime(new Date(2026, 4, 25, 10));
+      const wrapper = mount(TodoPanel, {
+        props: {
+          todoLists: [
+            { id: "morning", title: "☀️ 早上", collapsed: true, compact: false },
+            { id: "noon", title: "🌤️ 中午", collapsed: true, compact: false },
+          ],
+          todos: {
+            morning: [{ id: "a", text: "过期事项", done: false, notifyAt: new Date(2026, 4, 25, 9).getTime() }],
+            noon: [{ id: "b", text: "未到时间", done: false, notifyAt: new Date(2026, 4, 26, 9).getTime() }],
+          },
+          titles: DEFAULT_TITLES,
+        },
+        global: {
+          stubs: {
+            Button: true,
+            Checkbox: checkboxStub,
+            Dropdown: dropdownStub,
+            NCheckbox: checkboxStub,
+            NDropdown: dropdownStub,
+            NTooltip: tooltipStub,
+          },
+        },
+      });
+      try {
+        // Both lists are collapsed (content hidden) — the overdue one still
+        // surfaces a red dot on its heading; the non-overdue one doesn't.
+        expect(wrapper.find('.todo-section[data-period="morning"] .todo-list-shell').classes()).toContain("is-hidden");
+        expect(wrapper.find('.todo-section[data-period="morning"] .todo-overdue-dot').exists()).toBe(true);
+        expect(wrapper.find('.todo-section[data-period="noon"] .todo-list-shell').classes()).toContain("is-hidden");
+        expect(wrapper.find('.todo-section[data-period="noon"] .todo-overdue-dot').exists()).toBe(false);
       } finally {
         wrapper.unmount();
       }
