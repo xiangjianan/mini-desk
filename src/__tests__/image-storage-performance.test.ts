@@ -12,6 +12,7 @@ interface FakeIndexedDb {
   open: ReturnType<typeof vi.fn>;
   putRecords: ImageRecord[];
   recordIds: () => string[];
+  calls: (method: string) => number;
 }
 
 function createAsyncRequest<T>(result: T, onSettled?: () => void): IDBRequest<T> {
@@ -35,6 +36,7 @@ function installFakeIndexedDb(seed: Record<string, ImageRecord[]>): FakeIndexedD
     Object.entries(seed).map(([name, records]) => [name, new Map(records.map((record) => [record.id, { ...record }]))]),
   );
   const putRecords: ImageRecord[] = [];
+  const storeMocks = new Map<string, Record<string, unknown>>();
 
   const open = vi.fn((name = IMAGE_DB_NAME) => {
     if (!stores.has(name)) stores.set(name, new Map());
@@ -76,6 +78,32 @@ function installFakeIndexedDb(seed: Record<string, ImageRecord[]>): FakeIndexedD
             pendingRequests += 1;
             return createAsyncRequest(Array.from(records.values()).map((record) => ({ ...record })), settleRequest);
           }),
+          openCursor: vi.fn(() => {
+            pendingRequests += 1;
+            const entries = Array.from(records.values()).map((record) => ({ ...record }));
+            const request = {
+              result: null,
+              error: null,
+              onsuccess: null as ((event: Event) => void) | null,
+              onerror: null as ((event: Event) => void) | null,
+            };
+            let index = -1;
+            const advance = () => {
+              queueMicrotask(() => {
+                index += 1;
+                (request as { result: unknown }).result = index < entries.length
+                  ? {
+                      value: entries[index],
+                      continue: () => advance(),
+                    }
+                  : null;
+                request.onsuccess?.(new Event("success"));
+                if (index >= entries.length) settleRequest();
+              });
+            };
+            advance();
+            return request;
+          }),
           put: vi.fn((record: ImageRecord) => {
             pendingRequests += 1;
             const nextRecord = { ...record };
@@ -94,6 +122,7 @@ function installFakeIndexedDb(seed: Record<string, ImageRecord[]>): FakeIndexedD
             return createAsyncRequest(undefined, settleRequest);
           }),
         };
+        storeMocks.set(name, store as unknown as Record<string, unknown>);
         finishIfIdle();
         return transaction;
       }),
@@ -115,6 +144,11 @@ function installFakeIndexedDb(seed: Record<string, ImageRecord[]>): FakeIndexedD
     open,
     putRecords,
     recordIds: () => Array.from(stores.get(IMAGE_DB_NAME)?.keys() ?? []),
+    calls: (method: string) => {
+      const storeMock = storeMocks.get(IMAGE_DB_NAME);
+      const fn = storeMock?.[method] as { mock?: { calls: unknown[] } } | undefined;
+      return fn?.mock?.calls.length ?? 0;
+    },
   };
 }
 
@@ -177,6 +211,10 @@ describe("image storage startup performance", () => {
       minimumAgeMs: 300_000,
       now: () => now,
     });
+
+    // The cursor-based prune must never materialize the whole store (getAll);
+    // with large payloads that would allocate every data URL at once.
+    expect(fakeIndexedDb.calls("getAll")).toBe(0);
 
     expect(fakeIndexedDb.recordIds().sort()).toEqual([
       "__custom-companion-gif-dark__",

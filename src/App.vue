@@ -100,7 +100,15 @@ const activeWorkspace = computed<WorkspaceData>(
   () => state.workspaces.find((workspace) => workspace.id === state.activeWorkspaceId) ?? state.workspaces[0],
 );
 const syncClientId = createId();
-const undoSnapshots = ref<string[]>([]);
+// Undo snapshots pair the serialized state with the set of image payload ids it
+// references. Caching the ids at enqueue time lets payload-prune retention checks
+// run without re-parsing every snapshot string (51 × full-state JSON.parse per
+// save would otherwise dominate the post-save budget).
+interface UndoSnapshot {
+  text: string;
+  retainedImageIds: Set<string>;
+}
+const undoSnapshots = ref<UndoSnapshot[]>([]);
 const lastUndoSnapshot = ref(createUndoSnapshot());
 // Bumped after "clear data" so the whole workbench shell remounts and its
 // entrance choreography (command bar settles, zones rise left→right) replays —
@@ -788,7 +796,9 @@ function persistNow(scope: SaveScope = "all", options: PersistOptions = {}): boo
   }
   broadcastStateSaved();
   markSavedSoon();
-  scheduleImagePayloadPrune();
+  // Payload pruning only matters when image sets may have changed; a text/todo
+  // debounce flush cannot orphan a payload, so skip the IndexedDB sweep.
+  if (scope !== "text") scheduleImagePayloadPrune();
   return true;
 }
 
@@ -931,38 +941,20 @@ function collectRetainedImagePayloadIds(): Set<string> {
   for (const workspace of state.workspaces) {
     for (const image of workspace.images) retained.add(getImagePayloadId(image));
   }
-  const addSnapshot = (snapshot: string) => {
-    try {
-      const parsed = JSON.parse(snapshot) as { images?: unknown; workspaces?: unknown };
-      const imageLists: unknown[] = [];
-      if (Array.isArray(parsed?.images)) imageLists.push(parsed.images);
-      if (Array.isArray(parsed?.workspaces)) {
-        for (const workspace of parsed.workspaces) {
-          if (!workspace || typeof workspace !== "object" || Array.isArray(workspace)) continue;
-          const record = workspace as Record<string, unknown>;
-          if (Array.isArray(record.images)) imageLists.push(record.images);
-        }
-      }
-      if (imageLists.length === 0) return;
-      for (const list of imageLists) {
-        (list as unknown[]).forEach((item) => {
-          if (!item || typeof item !== "object" || Array.isArray(item)) return;
-          const record = item as Record<string, unknown>;
-          const id = typeof record.id === "string" && record.id.trim() ? record.id : undefined;
-          const payloadId = typeof record.payloadId === "string" && record.payloadId.trim()
-            ? record.payloadId
-            : undefined;
-          if (payloadId ?? id) retained.add((payloadId ?? id)!);
-        });
-      }
-    } catch {
-      // Ignore malformed undo snapshots without normalizing them into generated IDs.
+  // Snapshots carry pre-extracted payload-id sets, so retention checks no longer
+  // re-parse every historical snapshot string on each save.
+  for (const snapshot of undoSnapshots.value) {
+    snapshot.retainedImageIds.forEach((id) => retained.add(id));
+  }
+  lastUndoSnapshot.value.retainedImageIds.forEach((id) => retained.add(id));
+  try {
+    const authoritative = localStorage.getItem(STORAGE_KEY);
+    if (authoritative) {
+      extractRetainedImageIds(JSON.parse(authoritative)).forEach((id) => retained.add(id));
     }
-  };
-  undoSnapshots.value.forEach(addSnapshot);
-  addSnapshot(lastUndoSnapshot.value);
-  const authoritative = localStorage.getItem(STORAGE_KEY);
-  if (authoritative) addSnapshot(authoritative);
+  } catch {
+    // Ignore malformed stored state without normalizing it into generated IDs.
+  }
   return retained;
 }
 
@@ -2492,7 +2484,7 @@ function recordUndoCheckpoint(): void {
     return;
   }
   const current = createUndoSnapshot();
-  if (current === lastUndoSnapshot.value) return;
+  if (current.text === lastUndoSnapshot.value.text) return;
   undoSnapshots.value = [
     ...undoSnapshots.value.slice(-(UNDO_HISTORY_LIMIT - 1)),
     lastUndoSnapshot.value,
@@ -2506,7 +2498,7 @@ async function undoLastBoardChange(): Promise<void> {
   if (!snapshot) return;
   let nextState: BoardState;
   try {
-    nextState = normalizeImportedState(JSON.parse(snapshot));
+    nextState = normalizeImportedState(JSON.parse(snapshot.text));
   } catch {
     lastUndoSnapshot.value = createUndoSnapshot();
     return;
@@ -2522,7 +2514,7 @@ async function undoLastBoardChange(): Promise<void> {
       activeUndoWorkspace.images = (await hydrateStoredImages(activeUndoWorkspace.images))
         .filter((image) => Boolean(image.src));
     }
-    if (!appMounted || createUndoSnapshot() !== stateAtStart || undoSnapshots.value.at(-1) !== snapshot) return;
+    if (!appMounted || createUndoSnapshot().text !== stateAtStart.text || undoSnapshots.value.at(-1) !== snapshot) return;
     restoringUndo = true;
     undoSnapshots.value = undoSnapshots.value.slice(0, -1);
     window.clearTimeout(textSaveTimer.value);
@@ -2542,8 +2534,37 @@ async function undoLastBoardChange(): Promise<void> {
   }
 }
 
-function createUndoSnapshot(): string {
-  return exportUndoSnapshotState(state);
+function createUndoSnapshot(): UndoSnapshot {
+  const text = exportUndoSnapshotState(state);
+  return { text, retainedImageIds: extractRetainedImageIds(JSON.parse(text) as unknown) };
+}
+
+/** Image payload ids referenced by a serialized state (payloadId ?? id per image). */
+function extractRetainedImageIds(parsed: unknown): Set<string> {
+  const retained = new Set<string>();
+  const root = parsed as { images?: unknown; workspaces?: unknown } | null;
+  if (!root || typeof root !== "object") return retained;
+  const imageLists: unknown[] = [];
+  if (Array.isArray(root.images)) imageLists.push(root.images);
+  if (Array.isArray(root.workspaces)) {
+    for (const workspace of root.workspaces) {
+      if (!workspace || typeof workspace !== "object" || Array.isArray(workspace)) continue;
+      const record = workspace as Record<string, unknown>;
+      if (Array.isArray(record.images)) imageLists.push(record.images);
+    }
+  }
+  for (const list of imageLists) {
+    (list as unknown[]).forEach((item) => {
+      if (!item || typeof item !== "object" || Array.isArray(item)) return;
+      const record = item as Record<string, unknown>;
+      const id = typeof record.id === "string" && record.id.trim() ? record.id : undefined;
+      const payloadId = typeof record.payloadId === "string" && record.payloadId.trim()
+        ? record.payloadId
+        : undefined;
+      if (payloadId ?? id) retained.add((payloadId ?? id)!);
+    });
+  }
+  return retained;
 }
 
 function navigatePreview(direction: number): void {
