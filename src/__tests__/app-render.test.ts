@@ -8,6 +8,7 @@ import QuickButtons from "../components/QuickButtons.vue";
 import SettingsMenu from "../components/SettingsMenu.vue";
 import SpacePanel from "../components/SpacePanel.vue";
 import TodoPanel from "../components/TodoPanel.vue";
+import WorkspaceSwitcher from "../components/WorkspaceSwitcher.vue";
 import { defaultState, defaultWorkspace, STORAGE_KEY } from "../state/defaults";
 import { hydrateStoredImages, storeImagePayload } from "../state/images";
 import * as imageState from "../state/images";
@@ -589,6 +590,50 @@ describe("App shell", () => {
       expect(wrapper.find(".title-edit-input").exists()).toBe(false);
     } finally {
       wrapper.unmount();
+    }
+  });
+
+  it("hydrates only the active workspace's images at startup and frees them on switch", async () => {
+    const restoreImageDb = installMemoryImageDb();
+    localStorage.setItem(STORAGE_KEY, JSON.stringify({
+      ...defaultState(),
+      workspaces: [
+        {
+          ...defaultWorkspace(),
+          id: "ws-active",
+          title: "活跃",
+          images: [{ id: "img-active", src: "data:image/png;base64,ACTIVE" }],
+        },
+        {
+          ...defaultWorkspace(),
+          id: "ws-idle",
+          title: "闲置",
+          images: [{ id: "img-idle", src: "data:image/png;base64,IDLE" }],
+        },
+      ],
+      activeWorkspaceId: "ws-active",
+    }));
+    const wrapper = mountApp();
+
+    try {
+      await flushPromises();
+
+      // Reach state through the component instance's setup bindings.
+      const app = wrapper.vm as unknown as {
+        state: { workspaces: Array<{ id: string; images: Array<{ id: string; src?: string }> }> };
+      };
+      const byId = (id: string) => app.state.workspaces.find((workspace) => workspace.id === id);
+      expect(byId("ws-active")?.images[0].src).toBe("data:image/png;base64,ACTIVE");
+      expect(byId("ws-idle")?.images[0].src).toBeUndefined();
+
+      wrapper.getComponent(WorkspaceSwitcher).vm.$emit("switch", "ws-idle");
+      await flushPromises();
+
+      expect(byId("ws-active")?.images[0].src).toBeUndefined();
+      expect(byId("ws-idle")?.images[0].src).toBe("data:image/png;base64,IDLE");
+    } finally {
+      wrapper.unmount();
+      restoreImageDb();
     }
   });
 

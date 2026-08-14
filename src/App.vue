@@ -83,6 +83,9 @@ const MOBILE_BREAKPOINT_QUERY = "(max-width: 900px)";
 const TODO_NOTIFICATION_FALLBACK_INTERVAL_MS = 30_000;
 const MAX_TODO_NOTIFICATION_TIMEOUT_MS = 2_147_483_647;
 const UNDO_HISTORY_LIMIT = 50;
+// Undo snapshots are full-state JSON strings; a large board would otherwise pin
+// 50 × state-size in memory. Evict oldest entries past this byte budget first.
+const UNDO_HISTORY_BYTE_BUDGET = 8 * 1024 * 1024;
 const IMAGE_DELETE_GRACE_MS = 5000;
 const IMAGE_PREVIEW_CLOSE_MS = 220;
 const IMAGE_DENSITY_THRESHOLD = 10;
@@ -342,10 +345,15 @@ onMounted(async () => {
       if (image.src) inlineImagePayloads.push(image as StoredImage & { src: string });
     }
   }
-  for (const workspace of state.workspaces) {
-    workspace.images = await hydrateStoredImages(workspace.images, { persistLegacyPayloads: true });
-  }
+  // One-time legacy migration still walks every workspace (inline payloads must
+  // reach IndexedDB before any src is dropped), but runtime hydration below only
+  // needs the active workspace — inactive ones hydrate lazily on switch.
   await persistImagePayloads(inlineImagePayloads);
+  const startupWorkspace = state.workspaces.find((workspace) => workspace.id === state.activeWorkspaceId) ?? state.workspaces[0];
+  if (startupWorkspace) {
+    startupWorkspace.images = await hydrateStoredImages(startupWorkspace.images, { persistLegacyPayloads: true });
+  }
+  releaseInactiveWorkspaceImages(state.activeWorkspaceId);
   if (!appMounted) return;
   checkAppVersion();
   void checkLatestAppVersion();
@@ -549,10 +557,22 @@ async function switchWorkspace(id: string): Promise<void> {
     target.images = await hydrateStoredImages(target.images);
   }
   state.activeWorkspaceId = id;
+  // Free the previous workspace's hydrated payload strings; its metadata stays
+  // and rehydrates on next switch. Keeps memory at O(active) instead of O(all).
+  releaseInactiveWorkspaceImages(id);
   pendingEditSpaceId.value = null;
   pendingEditTodoListId.value = null;
   clearImagePreview();
   persistNow();
+}
+
+/** Drop in-memory data URLs of every workspace except `keepActiveId`. */
+function releaseInactiveWorkspaceImages(keepActiveId: string): void {
+  for (const workspace of state.workspaces) {
+    if (workspace.id === keepActiveId) continue;
+    if (!workspace.images.some((image) => image.src)) continue;
+    workspace.images = workspace.images.map((image) => ({ ...image, src: undefined }));
+  }
 }
 
 function openCreateWorkspace(): void {
@@ -2485,11 +2505,22 @@ function recordUndoCheckpoint(): void {
   }
   const current = createUndoSnapshot();
   if (current.text === lastUndoSnapshot.value.text) return;
-  undoSnapshots.value = [
-    ...undoSnapshots.value.slice(-(UNDO_HISTORY_LIMIT - 1)),
+  undoSnapshots.value = capUndoHistory([
+    ...undoSnapshots.value,
     lastUndoSnapshot.value,
-  ];
+  ]);
   lastUndoSnapshot.value = current;
+}
+
+/** Enforce both the entry-count and byte-budget caps, evicting oldest first. */
+function capUndoHistory(snapshots: UndoSnapshot[]): UndoSnapshot[] {
+  let capped = snapshots.slice(-UNDO_HISTORY_LIMIT);
+  let totalBytes = capped.reduce((sum, snapshot) => sum + snapshot.text.length, 0);
+  while (capped.length > 1 && totalBytes > UNDO_HISTORY_BYTE_BUDGET) {
+    totalBytes -= capped[0].text.length;
+    capped = capped.slice(1);
+  }
+  return capped;
 }
 
 async function undoLastBoardChange(): Promise<void> {
