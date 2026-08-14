@@ -1,6 +1,11 @@
 import type { TodoCompletedVisibility, TodoItem, TodoListConfig, TodoListId, TodoMap, TodoPeriod } from "../types";
 import { isValidDeadlineAt } from "./deadlines";
 
+/** Stable identity key for a todo within its list (used by undo timers, menus, edit state). */
+export function todoKey(period: TodoPeriod, id: string): string {
+  return `${period}:${id}`;
+}
+
 export function getOrderedTodos(todos: TodoItem[] = [], deferredDoneIds: ReadonlySet<string> = new Set()): TodoItem[] {
   const openTodos = todos.filter((todo) => !todo.done || deferredDoneIds.has(todo.id));
   const completedTodos = todos.filter((todo) => todo.done && !deferredDoneIds.has(todo.id));

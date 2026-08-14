@@ -9,6 +9,7 @@ import type { ImageContextMenuKey } from "../state/imageContextMenu";
 import { getUiText } from "../state/i18n";
 import type { AppLanguage, ImagePasteRequest, StoredImage } from "../types";
 import { CONTEXT_MENU_Z_INDEX, createExclusiveContextMenu } from "../utils/contextMenu";
+import { renderIcon } from "../utils/dropdownIcons";
 import ImageEditor from "./ImageEditor.vue";
 
 const props = withDefaults(defineProps<{
@@ -79,9 +80,6 @@ const menuOptions = computed<DropdownOption[]>(() => [
 ]);
 const exclusiveMenu = createExclusiveContextMenu(closeMenu);
 
-function renderIcon(icon: Component, danger = false): () => VNode {
-  return () => h(NIcon, { size: 16, ...(danger ? { color: "var(--danger)" } : {}) }, { default: () => h(icon) });
-}
 
 function getImageMenuIcon(key: ImageContextMenuKey): Component {
   if (key === "preview") return ChevronDownOutline;

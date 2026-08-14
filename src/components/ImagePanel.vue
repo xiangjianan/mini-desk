@@ -10,6 +10,7 @@ import { getBlankImageContextMenuItems, getImageItemContextMenuItems } from "../
 import type { ImageContextMenuKey } from "../state/imageContextMenu";
 import { getUiText } from "../state/i18n";
 import { CONTEXT_MENU_Z_INDEX, createExclusiveContextMenu } from "../utils/contextMenu";
+import { renderIcon } from "../utils/dropdownIcons";
 import EditableTitle from "./EditableTitle.vue";
 
 const props = withDefaults(defineProps<{
@@ -101,9 +102,6 @@ let dragWheelPauseTimer: number | undefined;
 let pasteHighlightTimer: number | undefined;
 const PASTE_HIGHLIGHT_MS = 700;
 
-function renderIcon(icon: Component, danger = false): () => VNode {
-  return () => h(NIcon, { size: 16, ...(danger ? { color: "var(--danger)" } : {}) }, { default: () => h(icon) });
-}
 
 function getImageMenuIcon(key: ImageContextMenuKey): Component {
   if (key === "preview") return EyeOutline;

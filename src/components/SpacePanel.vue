@@ -7,6 +7,8 @@ import type { DropdownOption } from "naive-ui";
 import type { AppLanguage, GuideKey, LineItem, WorkspaceSpace } from "../types";
 import { getUiText } from "../state/i18n";
 import { CONTEXT_MENU_Z_INDEX, createExclusiveContextMenu } from "../utils/contextMenu";
+import { renderIcon } from "../utils/dropdownIcons";
+import { isImeComposing } from "../utils/ime";
 import TextPanel from "./TextPanel.vue";
 
 const props = withDefaults(defineProps<{
@@ -56,9 +58,6 @@ const activeSpace = computed(() =>
 
 const canDeleteSpaces = computed(() => props.spaces.length > 1);
 
-function renderIcon(icon: Component, danger = false): () => VNode {
-  return () => h(NIcon, { size: 16, ...(danger ? { color: "var(--danger)" } : {}) }, { default: () => h(icon) });
-}
 
 const menuOptions = computed<DropdownOption[]>(() => [
   { label: uiText.value.common.rename, key: "edit", icon: renderIcon(CreateOutline) },
@@ -159,7 +158,7 @@ function suppressNextTabCommitTransition(): void {
 }
 
 function handleTabEditEnter(event: KeyboardEvent): void {
-  if (titleComposing.value || event.isComposing || event.key === "Process" || event.keyCode === 229) return;
+  if (titleComposing.value || isImeComposing(event)) return;
   event.preventDefault();
   commitTabEdit(true);
 }

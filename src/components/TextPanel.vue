@@ -18,6 +18,9 @@ import {
   textLinesToEditorText,
 } from "../utils/textEditor";
 import { CONTEXT_MENU_Z_INDEX, createExclusiveContextMenu } from "../utils/contextMenu";
+import { copySelection, getSelectionRange, hasSelection, pasteIntoField, hasAsyncClipboard as hasClipboardApi } from "../utils/clipboard";
+import { renderIcon } from "../utils/dropdownIcons";
+import { isImeComposing } from "../utils/ime";
 import EditableTitle from "./EditableTitle.vue";
 
 const props = withDefaults(defineProps<{
@@ -72,9 +75,6 @@ const canDragSelectedText = computed(() => {
 onMounted(exclusiveMenu.mount);
 onUnmounted(exclusiveMenu.unmount);
 
-function renderIcon(icon: Component): () => VNode {
-  return () => h(NIcon, { size: 16 }, { default: () => h(icon) });
-}
 
 const menuOptions = computed<DropdownOption[]>(() => {
   const options: DropdownOption[] = [];
@@ -118,7 +118,7 @@ function handleKeydown(event: KeyboardEvent): void {
   const textarea = textareaRef.value;
   if (!textarea) return;
   if (!editing.value) return;
-  if (event.isComposing || event.key === "Process" || event.keyCode === 229) return;
+  if (isImeComposing(event)) return;
   if ((event.ctrlKey || event.metaKey) && event.key.toLowerCase() === "z") {
     event.preventDefault();
     undoLastTextChange(textarea);
@@ -432,10 +432,6 @@ async function handleMenuSelect(key: string): Promise<void> {
   if (key === "guide" && anchor) emit("guide", anchor, true);
 }
 
-function hasSelection(target: HTMLTextAreaElement | HTMLInputElement): boolean {
-  return (target.selectionStart ?? 0) !== (target.selectionEnd ?? 0);
-}
-
 function rememberTextSelection(target: HTMLTextAreaElement): void {
   if (!hasSelection(target)) return;
   lastTextSelection.value = {
@@ -445,16 +441,7 @@ function rememberTextSelection(target: HTMLTextAreaElement): void {
 }
 
 function getTextSelectionRange(target: HTMLTextAreaElement): { start: number; end: number } {
-  if (hasSelection(target)) {
-    return {
-      start: target.selectionStart ?? 0,
-      end: target.selectionEnd ?? 0,
-    };
-  }
-  const fallback = lastTextSelection.value;
-  if (fallback && fallback.start !== fallback.end && fallback.end <= target.value.length) return fallback;
-  const caret = target.selectionStart ?? 0;
-  return { start: caret, end: caret };
+  return getSelectionRange(target, lastTextSelection.value ?? undefined);
 }
 
 function canCopyTextSelection(target: HTMLTextAreaElement): boolean {
@@ -467,67 +454,24 @@ function canPasteText(target: HTMLTextAreaElement): boolean {
 }
 
 async function copyTextSelection(target: HTMLTextAreaElement | HTMLInputElement): Promise<void> {
-  const { start, end } = target instanceof HTMLTextAreaElement
+  const range = target instanceof HTMLTextAreaElement
     ? getTextSelectionRange(target)
     : { start: target.selectionStart ?? 0, end: target.selectionEnd ?? target.selectionStart ?? 0 };
-  const selectedText = target.value.slice(start, end);
-  if (!selectedText) return;
-  if (navigator.clipboard?.writeText) {
-    try {
-      await navigator.clipboard.writeText(selectedText);
-      return;
-    } catch {
-      // Fall back below when async clipboard access is denied.
-    }
-  }
-  copyTextWithBrowserCommand(selectedText);
-}
-
-function copyTextWithBrowserCommand(selectedText: string): void {
-  const textarea = document.createElement("textarea");
-  textarea.value = selectedText;
-  textarea.setAttribute("readonly", "");
-  textarea.style.position = "fixed";
-  textarea.style.left = "-9999px";
-  document.body.append(textarea);
-  textarea.focus();
-  textarea.setSelectionRange(0, textarea.value.length);
-  document.execCommand?.("copy");
-  textarea.remove();
+  await copySelection(target, range);
 }
 
 async function pasteTextFromClipboard(target: HTMLTextAreaElement): Promise<void> {
   const range = getTextSelectionRange(target);
   if (!editing.value || target.readOnly) startEditingFromTextarea(target);
   target.setSelectionRange(range.start, range.end);
-  let pastedText: string | undefined;
-  if (navigator.clipboard?.readText) {
-    try {
-      pastedText = await navigator.clipboard.readText();
-    } catch {
-      pastedText = undefined;
-    }
-  }
-  if (typeof pastedText === "string") {
-    if (!pastedText) return;
-    target.setRangeText(pastedText, range.start, range.end, "end");
-  } else if (!pasteTextWithBrowserCommand(target, range)) {
-    return;
-  }
+  const pasted = await pasteIntoField(target, range);
+  if (!pasted) return;
   normalizeTextareaText(target);
   emit("update", editorTextToLines(text.value));
 }
 
-function pasteTextWithBrowserCommand(target: HTMLTextAreaElement, range: { start: number; end: number }): boolean {
-  const before = target.value;
-  target.focus({ preventScroll: true });
-  target.setSelectionRange(range.start, range.end);
-  const pasted = Boolean(document.execCommand?.("paste"));
-  return pasted && target.value !== before;
-}
-
 function hasAsyncClipboard(): boolean {
-  return typeof navigator.clipboard?.readText === "function" && typeof navigator.clipboard?.writeText === "function";
+  return hasClipboardApi();
 }
 
 function applyEditorText(next: string): void {

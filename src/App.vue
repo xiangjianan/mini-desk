@@ -48,12 +48,14 @@ import {
   setTodoNotifyAt,
   splitTodo as splitTodoInMap,
   starTodo,
+  todoKey,
   updateTodoText,
 } from "./state/todos";
 import { defaultState, STORAGE_KEY } from "./state/defaults";
 import { createWorkspaceData, ensureUniqueWorkspaceTitle, removeWorkspace, reorderWorkspaces } from "./state/workspaces";
 import { QUICK_BUTTON_OTHER_GROUP_ID, QUICK_DENSITY_THRESHOLD, formatQuickCopiedPreview, getQuickTagColor } from "./state/quickButtons";
 import { isQuickAppScheme } from "./state/quickApps";
+import { copyTextWithBrowserCommand } from "./utils/clipboard";
 import {
   createId,
   exportUndoSnapshotState,
@@ -1873,13 +1875,7 @@ async function copyText(text: string, shouldAbort: () => boolean = () => false):
     return true;
   } catch {
     if (shouldAbort()) return false;
-    const textarea = document.createElement("textarea");
-    textarea.value = text;
-    document.body.append(textarea);
-    textarea.select();
-    const copied = document.execCommand("copy");
-    textarea.remove();
-    return copied;
+    return copyTextWithBrowserCommand(text);
   }
 }
 
@@ -3252,9 +3248,6 @@ function flashTodoNotificationKey(key: string): void {
   );
 }
 
-function todoKey(period: TodoPeriod, id: string): string {
-  return `${period}:${id}`;
-}
 
 function cancelEmptyTodoRemoval(period: TodoPeriod, id: string): void {
   const key = todoKey(period, id);

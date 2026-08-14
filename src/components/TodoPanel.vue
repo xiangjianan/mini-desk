@@ -44,9 +44,12 @@ import type {
   TodoPeriod,
   TodoStarChange,
 } from "../types";
-import { getOrderedTodos } from "../state/todos";
+import { getOrderedTodos, todoKey } from "../state/todos";
 import { splitDroppedTodoText } from "../utils/textEditor";
+import { copySelection, copyTextToClipboard, getSelectionRange, pasteIntoField, readClipboardText } from "../utils/clipboard";
 import { CONTEXT_MENU_Z_INDEX, createExclusiveContextMenu } from "../utils/contextMenu";
+import { renderIcon } from "../utils/dropdownIcons";
+import { isImeComposing } from "../utils/ime";
 import EditableTitle from "./EditableTitle.vue";
 
 const props = withDefaults(defineProps<{
@@ -144,9 +147,6 @@ const todoSectionRefs = new Map<TodoListId, HTMLElement>();
 const notifyPickerAnchors = new Map<string, HTMLElement>();
 const uiText = computed(() => getUiText(props.language));
 const guideMenuOption = computed<DropdownOption>(() => ({ ...GUIDE_MENU_OPTION, label: uiText.value.common.tips }));
-function renderIcon(icon: Component, danger = false): () => VNode {
-  return () => h(NIcon, { size: 16, ...(danger ? { color: "var(--danger)" } : {}) }, { default: () => h(icon) });
-}
 const exclusiveMenu = createExclusiveContextMenu(closeMenu);
 const legacyTodoTitleIds: Record<TodoListId, string> = {
   morning: "todo-morning-title",
@@ -481,7 +481,7 @@ function handleSectionGuideClick(event: MouseEvent): void {
 
 function handleEnter(event: KeyboardEvent, period: TodoPeriod, todo: TodoItem): void {
   if (!isTodoEditable(period, todo)) return;
-  if (event.isComposing || event.key === "Process" || event.keyCode === 229) return;
+  if (isImeComposing(event)) return;
   event.preventDefault();
   if (event.shiftKey) {
     emit("create", period, todo.id);
@@ -514,7 +514,7 @@ function getTodoInputIdentity(input: HTMLInputElement): { period: TodoPeriod; id
 }
 
 function handleTodoArrowKey(event: KeyboardEvent, period: TodoPeriod, todo: TodoItem): void {
-  if (event.isComposing || event.key === "Process" || event.keyCode === 229) return;
+  if (isImeComposing(event)) return;
   const direction: -1 | 1 | 0 = event.key === "ArrowUp" ? -1 : event.key === "ArrowDown" ? 1 : 0;
   if (direction === 0) return;
   const input = event.currentTarget as HTMLInputElement;
@@ -535,7 +535,7 @@ function handleTodoArrowKey(event: KeyboardEvent, period: TodoPeriod, todo: Todo
 }
 
 function handleTodoTab(event: KeyboardEvent, period: TodoPeriod, todo: TodoItem): void {
-  if (event.isComposing || event.key === "Process" || event.keyCode === 229) return;
+  if (isImeComposing(event)) return;
   event.preventDefault();
   const input = event.currentTarget as HTMLInputElement;
   const indented = input.value.startsWith(TODO_INDENT);
@@ -1104,9 +1104,6 @@ async function handleMenuSelect(key: string): Promise<void> {
   if (key === "delete") emit("remove", period, id, getTodoSectionAnchor(period));
 }
 
-function todoKey(period: TodoPeriod, id: string): string {
-  return `${period}:${id}`;
-}
 
 function isTodoEditable(period: TodoPeriod, todo: TodoItem): boolean {
   return editingTodoKey.value === todoKey(period, todo.id) || (!todo.done && todo.text.trim().length === 0);
@@ -1218,16 +1215,7 @@ function rememberTodoSelection(period: TodoPeriod, id: string, target: HTMLInput
 }
 
 function getTodoSelectionRange(period: TodoPeriod, id: string, target: HTMLInputElement): { start: number; end: number } {
-  if (hasSelection(target)) {
-    return {
-      start: target.selectionStart ?? 0,
-      end: target.selectionEnd ?? 0,
-    };
-  }
-  const fallback = lastTodoSelections.get(todoKey(period, id));
-  if (fallback && fallback.start !== fallback.end && fallback.end <= target.value.length) return fallback;
-  const caret = target.selectionStart ?? 0;
-  return { start: caret, end: caret };
+  return getSelectionRange(target, lastTodoSelections.get(todoKey(period, id)));
 }
 
 function canCopyTextSelection(period: TodoPeriod, id: string, target: HTMLInputElement): boolean {
@@ -1242,67 +1230,23 @@ function canPasteTodoText(period: TodoPeriod, id: string, target: HTMLInputEleme
 
 async function copyTextSelection(target: HTMLTextAreaElement | HTMLInputElement): Promise<void> {
   const current = menu.value;
-  const { start, end } = target instanceof HTMLInputElement && current?.id
+  const range = target instanceof HTMLInputElement && current?.id
     ? getTodoSelectionRange(current.period, current.id, target)
     : { start: target.selectionStart ?? 0, end: target.selectionEnd ?? target.selectionStart ?? 0 };
-  const selectedText = target.value.slice(start, end);
-  if (!selectedText) return;
-  if (navigator.clipboard?.writeText) {
-    try {
-      await navigator.clipboard.writeText(selectedText);
-      return;
-    } catch {
-      // Fall back below when async clipboard access is denied.
-    }
-  }
-  copyTextWithBrowserCommand(selectedText);
+  await copySelection(target, range);
 }
 
 async function copyTodoText(period: TodoPeriod, id: string): Promise<void> {
   const text = getTodoById(period, id)?.text ?? "";
   if (!text) return;
-  if (navigator.clipboard?.writeText) {
-    try {
-      await navigator.clipboard.writeText(text);
-      return;
-    } catch {
-      // Fall back below when async clipboard access is denied.
-    }
-  }
-  copyTextWithBrowserCommand(text);
-}
-
-function copyTextWithBrowserCommand(text: string): void {
-  const textarea = document.createElement("textarea");
-  textarea.value = text;
-  textarea.setAttribute("readonly", "");
-  textarea.style.position = "fixed";
-  textarea.style.left = "-9999px";
-  document.body.append(textarea);
-  textarea.focus();
-  textarea.setSelectionRange(0, textarea.value.length);
-  document.execCommand?.("copy");
-  textarea.remove();
+  await copyTextToClipboard(text);
 }
 
 async function pasteTextFromClipboard(period: TodoPeriod, id: string, target: HTMLInputElement): Promise<void> {
   const start = target.selectionStart ?? target.value.length;
   const end = target.selectionEnd ?? start;
-  let pastedText: string | undefined;
-  if (navigator.clipboard?.readText) {
-    try {
-      pastedText = await navigator.clipboard.readText();
-    } catch {
-      pastedText = undefined;
-    }
-  }
-  if (typeof pastedText === "string") {
-    if (!pastedText) return;
-    target.setRangeText(pastedText, start, end, "end");
-  } else if (!pasteTextWithBrowserCommand(target, { start, end })) {
-    return;
-  }
-  emit("update", period, id, target.value);
+  const pasted = await pasteIntoField(target, { start, end });
+  if (pasted) emit("update", period, id, target.value);
 }
 
 async function pasteTodosFromClipboard(period: TodoPeriod): Promise<void> {
@@ -1310,25 +1254,6 @@ async function pasteTodosFromClipboard(period: TodoPeriod): Promise<void> {
   const texts = splitDroppedTodoText(text ?? "");
   if (texts.length === 0) return;
   emit("createFromText", period, texts);
-}
-
-async function readClipboardText(): Promise<string | undefined> {
-  if (navigator.clipboard?.readText) {
-    try {
-      return await navigator.clipboard.readText();
-    } catch {
-      return undefined;
-    }
-  }
-  return undefined;
-}
-
-function pasteTextWithBrowserCommand(target: HTMLInputElement, range: { start: number; end: number }): boolean {
-  const before = target.value;
-  target.focus({ preventScroll: true });
-  target.setSelectionRange(range.start, range.end);
-  const pasted = Boolean(document.execCommand?.("paste"));
-  return pasted && target.value !== before;
 }
 
 async function startTodoEdit(event: MouseEvent, period: TodoPeriod, id: string): Promise<void> {

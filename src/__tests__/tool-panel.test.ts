@@ -546,6 +546,10 @@ describe("ToolPanel", () => {
     expect(styles).toMatch(/\.note-panel\.tool-panel \.codec-actions,[\s\S]*?\.note-panel\.tool-panel \.password-options\s*\{[^}]*grid-template-columns: repeat\(2, minmax\(0, 1fr\)\)/s);
 
     await wrapper.get('[data-testid="copy-password"]').trigger("click");
+    // copyPassword awaits the async clipboard before clearing the output; let
+    // that microtask chain settle before asserting the cleared value.
+    await wrapper.vm.$nextTick();
+    await Promise.resolve();
 
     expect(writeText).toHaveBeenCalledWith(password);
     expect((wrapper.get('[data-testid="password-output"]').element as HTMLInputElement).value).toBe("");

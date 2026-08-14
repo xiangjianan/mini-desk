@@ -12,6 +12,7 @@ import { findQuickAppPresetByScheme, getQuickAppPresetHint, getQuickAppPresetTit
 import { findQuickApiTemplate, QUICK_API_TEMPLATES } from "../state/quickApiTemplates";
 import { clearGlobalSearch, globalSearchNormalized, globalSearchQuery, setGlobalSearch } from "../state/globalSearch";
 import { CONTEXT_MENU_Z_INDEX, createExclusiveContextMenu } from "../utils/contextMenu";
+import { renderIcon } from "../utils/dropdownIcons";
 import { createDragAutoScroll, findDragScrollContainer } from "../utils/dragScroll";
 import EditableTitle from "./EditableTitle.vue";
 import HighlightText from "./HighlightText.vue";
@@ -119,9 +120,6 @@ const selectedAppScheme = computed(() => {
   return preset ? preset.scheme : "";
 });
 
-function renderIcon(icon: Component, danger = false): () => VNode {
-  return () => h(NIcon, { size: 16, ...(danger ? { color: "var(--danger)" } : {}) }, { default: () => h(icon) });
-}
 
 onMounted(exclusiveMenu.mount);
 onUnmounted(exclusiveMenu.unmount);
