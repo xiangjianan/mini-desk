@@ -60,6 +60,7 @@ import { extractRetainedImageIds, useUndoHistory } from "./composables/useUndoHi
 import { useTodoNotifications } from "./composables/useTodoNotifications";
 import { useCompanionBubble } from "./composables/useCompanionBubble";
 import { useBoardPersistence } from "./composables/useBoardPersistence";
+import { useAppVersionCheck } from "./composables/useAppVersionCheck";
 import type { NotifiableTodo } from "./composables/useTodoNotifications";
 import {
   createId,
@@ -70,14 +71,6 @@ import {
   normalizeWorkspaceData,
   saveStateWithConflictCheck,
 } from "./state/storage";
-import {
-  APP_VERSION_CHECK_INTERVAL_MS,
-  clearStaticCaches,
-  fetchLatestAppVersion,
-  getIndexAppVersion,
-  getStoredAppVersion,
-  markAppVersionSeen,
-} from "./state/version";
 import type { ImagePlacementHint, ImageReplacementHint, SaveScope } from "./state/storage";
 import type { AppLanguage, BoardState, CompanionGifTheme, DraggedTodo, GuideKey, ImagePasteFeedback, ImagePasteRequest, LineItem, QuickApiBodyType, QuickApiHeader, QuickApiMethod, QuickButton, QuickButtonType, StoredImage, TodoItem, TodoListConfig, TodoListId, TodoPeriod, TodoStarChange, WorkspaceData, WorkspaceSpace, ZoneKey } from "./types";
 
@@ -165,6 +158,17 @@ const {
 });
 
 const {
+  appVersion,
+  availableAppVersion,
+  versionPromptVisible,
+  checkAppVersion,
+  checkLatestAppVersion,
+  updateStaticVersion,
+  startPolling: startVersionPolling,
+  clearTimers: clearVersionTimers,
+} = useAppVersionCheck(() => appMounted);
+
+const {
   notificationFlashKeys,
   notificationTitleFlashing,
   prepareTodoNotifications,
@@ -243,10 +247,6 @@ const workspaceDraftSlogan = ref("");
 const imagePayloadPruneTimer = ref<number | undefined>();
 const emptyTodoRemovalTimers = new Map<string, number>();
 const pendingImagePayloadDeletions = new Map<string, number>();
-const appVersion = ref(getIndexAppVersion());
-const availableAppVersion = ref(appVersion.value);
-const storedAppVersion = ref<string | null>(null);
-const versionPromptVisible = ref(false);
 const shortcutHelpVisible = ref(false);
 const supportDialogVisible = ref(false);
 const changelogVisible = ref(false);
@@ -288,7 +288,6 @@ const GITHUB_REPO_LABEL = "xiangjianan / mini-desk";
 const ABOUT_MESSAGE_DURATION_MS = 10000;
 const DEFAULT_BOARD_TITLE = "Mini Desk";
 const activeGuideKey = ref<GuideKey | null>(null);
-const versionCheckTimer = ref<number | undefined>();
 
 const naiveTheme = computed(() => (state.theme === "dark" ? darkTheme : null));
 const naiveLocale = computed(() => (state.language === "en" ? enUS : zhCN));
@@ -428,9 +427,7 @@ onMounted(async () => {
   document.addEventListener("paste", handlePaste);
   document.addEventListener("visibilitychange", handleDocumentVisibilityChange);
   setupStateSyncChannel();
-  versionCheckTimer.value = window.setInterval(() => {
-    void checkLatestAppVersion();
-  }, APP_VERSION_CHECK_INTERVAL_MS);
+  startVersionPolling();
   startNotificationFallbackInterval();
   refreshTodoNotifications();
 });
@@ -2633,11 +2630,10 @@ function clearTimers(): void {
   clearPersistenceTimers();
   clearBubbleTimers();
   window.clearTimeout(imagePayloadPruneTimer.value);
-  window.clearInterval(versionCheckTimer.value);
+  clearVersionTimers();
   window.clearTimeout(previewCloseTimer.value);
   previewCloseTimer.value = undefined;
   imagePayloadPruneTimer.value = undefined;
-  versionCheckTimer.value = undefined;
   clearNotificationTimers();
   document.title = boardTitle.value;
   emptyTodoRemovalTimers.forEach((timer) => window.clearTimeout(timer));
@@ -2782,36 +2778,6 @@ function randomGuideMessage(key: GuideKey): string {
 function invalidateGuideCompanion(nextKey: GuideKey): void {
   if (!activeGuideKey.value || activeGuideKey.value === nextKey || pendingConfirm.value) return;
   hideCompanion();
-}
-
-function checkAppVersion(): void {
-  storedAppVersion.value = getStoredAppVersion();
-  if (storedAppVersion.value !== appVersion.value) {
-    markAppVersionSeen(appVersion.value);
-    storedAppVersion.value = appVersion.value;
-  }
-  availableAppVersion.value = appVersion.value;
-  versionPromptVisible.value = false;
-}
-
-async function checkLatestAppVersion(): Promise<void> {
-  const latestVersion = await fetchLatestAppVersion();
-  if (!appMounted || !latestVersion) return;
-
-  if (latestVersion === appVersion.value) {
-    availableAppVersion.value = appVersion.value;
-    versionPromptVisible.value = false;
-    return;
-  }
-
-  availableAppVersion.value = latestVersion;
-  versionPromptVisible.value = true;
-}
-
-async function updateStaticVersion(): Promise<void> {
-  await clearStaticCaches();
-  versionPromptVisible.value = false;
-  window.location.reload();
 }
 
 // "Update now" from the changelog modal — close it, then run the same cache-clear + reload.
