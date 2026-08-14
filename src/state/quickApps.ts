@@ -50,7 +50,42 @@ export function findQuickAppPresetByScheme(scheme: string): QuickAppPreset | und
   return QUICK_APP_PRESETS.find((preset) => preset.scheme === trimmed);
 }
 
-/** A custom URL scheme looks like `name://` or `name:` (not a plain web URL). */
+/**
+ * Schemes that execute script or read local/user resources when activated via
+ * an anchor click. They must never be launchable from a quick button, because
+ * imported workspace files can plant them (stored XSS).
+ */
+const DANGEROUS_QUICK_APP_SCHEMES = new Set([
+  "javascript",
+  "data",
+  "vbscript",
+  "blob",
+  "file",
+  "filesystem",
+  "view-source",
+  "about",
+  "chrome",
+  "chrome-extension",
+  "moz-extension",
+  "edge",
+  "resource",
+  "jar",
+  "ws",
+  "wss",
+]);
+
+/** Extract the scheme token of a URL-like value ("" when none), ignoring the
+    whitespace browsers strip inside anchors (a classic filter bypass: an anchor
+    with href "jav\tascript:x" navigates to "javascript:x"). */
+function getUrlScheme(value: string): string {
+  const sanitized = value.replace(/[\t\n\r]/g, "").trim();
+  const match = /^[a-z][a-z0-9+.\-]*:/i.exec(sanitized);
+  return match ? match[0].slice(0, -1).toLowerCase() : "";
+}
+
+/** A custom URL scheme looks like `name://` or `name:` (not a plain web URL,
+    not a web URL, and not a scheme that executes script or reads local files). */
 export function isQuickAppScheme(value: string): boolean {
-  return /^[a-z][a-z0-9+.\-]*:/i.test(value.trim()) && !/^https?:\/\//i.test(value.trim());
+  const scheme = getUrlScheme(value);
+  return scheme !== "" && scheme !== "http" && scheme !== "https" && !DANGEROUS_QUICK_APP_SCHEMES.has(scheme);
 }
