@@ -7,15 +7,19 @@ export default defineConfig({
   base: process.env.VITE_BASE ?? "/",
   plugins: [vue(), tailwindcss()],
   build: {
-    rollupOptions: {
+    // Vite 8 runs on rolldown; the legacy `manualChunks` hook is a compatibility
+    // shim that silently drops groups (the old vendor-vue rule never emitted a
+    // chunk). `advancedChunks` groups are the supported way to pin vendor splits.
+    rolldownOptions: {
       output: {
-        manualChunks(id) {
-          if (!id.includes("node_modules")) return undefined;
-          if (id.includes("/node_modules/vue/") || id.includes("/node_modules/@vue/")) return "vendor-vue";
-          if (id.includes("/node_modules/naive-ui/")) return "vendor-naive";
-          if (id.includes("/node_modules/@vicons/") || id.includes("/node_modules/lucide-vue-next/")) return "vendor-icons";
-          if (id.includes("/node_modules/reka-ui/") || id.includes("/node_modules/@vueuse/")) return "vendor-ui";
-          return "vendor";
+        advancedChunks: {
+          groups: [
+            { name: "vendor-vue", test: /[\\/]node_modules[\\/](vue|@vue)[\\/]/ },
+            { name: "vendor-naive", test: /[\\/]node_modules[\\/]naive-ui[\\/]/ },
+            { name: "vendor-icons", test: /[\\/]node_modules[\\/](@vicons|lucide-vue-next)[\\/]/ },
+            { name: "vendor-ui", test: /[\\/]node_modules[\\/](reka-ui|@vueuse)[\\/]/ },
+            { name: "vendor", test: /[\\/]node_modules[\\/]/ },
+          ],
         },
       },
     },
