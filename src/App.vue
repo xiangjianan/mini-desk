@@ -58,6 +58,7 @@ import { isQuickAppScheme } from "./state/quickApps";
 import { copyTextWithBrowserCommand } from "./utils/clipboard";
 import { extractRetainedImageIds, useUndoHistory } from "./composables/useUndoHistory";
 import { useTodoNotifications } from "./composables/useTodoNotifications";
+import { useCompanionBubble } from "./composables/useCompanionBubble";
 import type { NotifiableTodo } from "./composables/useTodoNotifications";
 import {
   createId,
@@ -149,6 +150,45 @@ const {
   hasPendingConfirm: () => Boolean(pendingConfirm.value),
   showCrossWorkspacePrompt: showCrossWorkspaceReminderPrompt,
 });
+
+const {
+  bubbleMessage,
+  bubbleLink,
+  bubbleSignature,
+  bubbleVisible,
+  companionFocused,
+  companionPosition,
+  pendingConfirm,
+  bubbleClearSignal,
+  showBubble,
+  showBubbleText,
+  hideBubbleMessage,
+  pauseBubbleTimer,
+  resumeBubbleTimer,
+  requestConfirmation,
+  confirmCompanionAction,
+  secondaryCompanionAction,
+  cancelCompanionAction,
+  clearPendingConfirm,
+  getCompanionPosition,
+  setBubbleExpiredHandler,
+  setHostHideCompanion,
+  clearTimers: clearBubbleTimers,
+} = useCompanionBubble({
+  state,
+  setActiveGuideKey: (key) => { activeGuideKey.value = key; },
+  confirmLabels: () => ({ yes: uiText.value.common.yes, no: uiText.value.common.no }),
+  isBoardBlocked: shouldBlockBoardEffects,
+  isMobileLayout,
+});
+setBubbleExpiredHandler((options) => {
+  if (options.guideKey) activeGuideKey.value = null;
+});
+setHostHideCompanion(() => {
+  hideBubbleMessage();
+  companionFocused.value = false;
+  activeGuideKey.value = null;
+});
 // Bumped after "clear data" so the whole workbench shell remounts and its
 // entrance choreography (command bar settles, zones rise left→right) replays —
 // the same animation as a fresh page load.
@@ -158,22 +198,6 @@ const pasteFeedback = ref<ImagePasteFeedback | undefined>();
 const closingPreviewId = ref<string | undefined>();
 const previewCloseTimer = ref<number | undefined>();
 const activeEditorId = ref<string | undefined>();
-const bubbleMessage = ref("");
-const bubbleLink = ref<{ text: string; href: string } | null>(null);
-const bubbleSignature = ref("");
-const bubbleVisible = ref(false);
-const companionFocused = ref(false);
-const companionPosition = ref<{ right: string; bottom?: string; top?: string } | undefined>();
-const pendingConfirm = ref<{
-  onConfirm: () => void | Promise<void>;
-  onCancel?: () => void;
-  confirmText: string;
-  cancelText: string;
-  danger: boolean;
-  confirmHint?: string;
-  secondaryText?: string;
-  onSecondary?: () => void | Promise<void>;
-} | null>(null);
 const importInput = ref<HTMLInputElement | null>(null);
 const importFeedbackAnchor = ref<HTMLElement | undefined>();
 const pendingEditSpaceId = ref<string | null>(null);
@@ -185,14 +209,6 @@ const workspaceDraftTitle = ref("");
 const workspaceDraftSlogan = ref("");
 const textSaveTimer = ref<number | undefined>();
 const todoSaveTimer = ref<number | undefined>();
-const bubbleTimer = ref<number | undefined>();
-const bubbleFadeTimer = ref<number | undefined>();
-const bubbleRemainingMs = ref(0);
-const bubbleTimerStartedAt = ref(0);
-const companionFadeRemaining = ref(2000);
-const companionFadeStartedAt = ref(0);
-const bubbleTimerOptions = ref<BubbleOptions>({});
-const bubbleClearSignal = ref(0);
 const saveStatusTimer = ref<number | undefined>();
 const imagePayloadPruneTimer = ref<number | undefined>();
 const emptyTodoRemovalTimers = new Map<string, number>();
@@ -242,8 +258,6 @@ const SUGGEST_EMAIL = "xiang9872@gmail.com";
 const GITHUB_REPO_URL = "https://github.com/xiangjianan/mini-desk";
 const GITHUB_REPO_LABEL = "xiangjianan / mini-desk";
 const ABOUT_MESSAGE_DURATION_MS = 10000;
-const COMPANION_FADE_MS = 2000;
-const MIN_COMPANION_POPOVER_RIGHT_EDGE = 260;
 const DEFAULT_BOARD_TITLE = "Mini Desk";
 const activeGuideKey = ref<GuideKey | null>(null);
 const versionCheckTimer = ref<number | undefined>();
@@ -2644,28 +2658,6 @@ function formatDensitySummaryMessage(message: string, summary: string): string {
   return message.replaceAll("{summary}", summary);
 }
 
-function showBubble(messageKey: MessageKey, anchor?: HTMLElement, options: BubbleOptions = {}): void {
-  showBubbleText(getMessage(messageKey, Math.random, state.language), anchor, options);
-}
-
-function showBubbleText(message: string, anchor?: HTMLElement, options: BubbleOptions = {}, duration = 3000): void {
-  if (shouldBlockBoardEffects()) return;
-  window.clearTimeout(bubbleTimer.value);
-  window.clearTimeout(bubbleFadeTimer.value);
-  clearPendingConfirm();
-  bubbleMessage.value = message;
-  bubbleLink.value = options.linkText && options.linkHref ? { text: options.linkText, href: options.linkHref } : null;
-  bubbleSignature.value = options.signatureText ?? "";
-  activeGuideKey.value = options.guideKey ?? null;
-  companionFocused.value = true;
-  if (anchor) {
-    companionPosition.value = getCompanionPosition(anchor);
-  }
-  bubbleVisible.value = true;
-  bubbleTimerOptions.value = options;
-  startBubbleTimer(duration);
-}
-
 function showToolBubble(message: string, anchor?: HTMLElement): void {
   showBubbleText(message, anchor, { hideCompanionAfter: true }, 3000);
 }
@@ -2684,150 +2676,10 @@ function dismissToolBubble(): void {
   activeGuideKey.value = null;
 }
 
-function hideBubbleMessage(options: { clearRetainedContent?: boolean } = {}): void {
-  window.clearTimeout(bubbleTimer.value);
-  window.clearTimeout(bubbleFadeTimer.value);
-  bubbleTimer.value = undefined;
-  bubbleFadeTimer.value = undefined;
-  bubbleRemainingMs.value = 0;
-  bubbleTimerStartedAt.value = 0;
-  companionFadeRemaining.value = 0;
-  companionFadeStartedAt.value = 0;
-  bubbleTimerOptions.value = {};
-  clearPendingConfirm();
-  bubbleVisible.value = false;
-  bubbleMessage.value = "";
-  bubbleLink.value = null;
-  bubbleSignature.value = "";
-  if (options.clearRetainedContent) bubbleClearSignal.value += 1;
-}
-
 function hideCompanion(): void {
   hideBubbleMessage();
   companionFocused.value = false;
   activeGuideKey.value = null;
-}
-
-function startBubbleTimer(duration: number): void {
-  bubbleRemainingMs.value = duration;
-  bubbleTimerStartedAt.value = Date.now();
-  bubbleTimer.value = window.setTimeout(finishBubbleTimer, duration);
-}
-
-function finishBubbleTimer(): void {
-  const options = bubbleTimerOptions.value;
-  bubbleTimer.value = undefined;
-  bubbleRemainingMs.value = 0;
-  bubbleTimerStartedAt.value = 0;
-  bubbleVisible.value = false;
-  bubbleMessage.value = "";
-  bubbleLink.value = null;
-  bubbleSignature.value = "";
-  if (options.guideKey) activeGuideKey.value = null;
-  window.clearTimeout(bubbleFadeTimer.value);
-  companionFadeRemaining.value = COMPANION_FADE_MS;
-  companionFadeStartedAt.value = Date.now();
-  bubbleFadeTimer.value = window.setTimeout(finishCompanionFade, COMPANION_FADE_MS);
-}
-
-function finishCompanionFade(): void {
-  bubbleFadeTimer.value = undefined;
-  companionFadeRemaining.value = 0;
-  companionFadeStartedAt.value = 0;
-  companionFocused.value = false;
-}
-
-function pauseBubbleTimer(): void {
-  if (bubbleVisible.value && bubbleTimer.value && !pendingConfirm.value) {
-    window.clearTimeout(bubbleTimer.value);
-    bubbleTimer.value = undefined;
-    const elapsed = Date.now() - bubbleTimerStartedAt.value;
-    bubbleRemainingMs.value = Math.max(0, bubbleRemainingMs.value - elapsed);
-    bubbleTimerStartedAt.value = 0;
-  }
-  if (bubbleFadeTimer.value) {
-    window.clearTimeout(bubbleFadeTimer.value);
-    bubbleFadeTimer.value = undefined;
-    const elapsed = Date.now() - companionFadeStartedAt.value;
-    companionFadeRemaining.value = Math.max(0, companionFadeRemaining.value - elapsed);
-    companionFadeStartedAt.value = 0;
-  }
-}
-
-function resumeBubbleTimer(): void {
-  if (bubbleVisible.value && !bubbleTimer.value && !pendingConfirm.value && (bubbleMessage.value || bubbleLink.value || bubbleSignature.value)) {
-    if (bubbleRemainingMs.value <= 0) {
-      finishBubbleTimer();
-      return;
-    }
-    bubbleTimerStartedAt.value = Date.now();
-    bubbleTimer.value = window.setTimeout(finishBubbleTimer, bubbleRemainingMs.value);
-  }
-  if (!bubbleFadeTimer.value && companionFadeRemaining.value > 0 && !bubbleVisible.value) {
-    companionFadeStartedAt.value = Date.now();
-    bubbleFadeTimer.value = window.setTimeout(finishCompanionFade, companionFadeRemaining.value);
-  }
-}
-
-function requestConfirmation(
-  messageKey: MessageKey,
-  anchor: HTMLElement | undefined,
-  onConfirm: () => void | Promise<void>,
-  onCancel?: () => void,
-  options: { confirmText?: string; cancelText?: string; danger?: boolean; confirmHint?: string; secondaryText?: string; onSecondary?: () => void | Promise<void> } = {},
-): void {
-  if (shouldBlockBoardEffects()) return;
-  window.clearTimeout(bubbleTimer.value);
-  window.clearTimeout(bubbleFadeTimer.value);
-  bubbleTimer.value = undefined;
-  bubbleRemainingMs.value = 0;
-  bubbleTimerStartedAt.value = 0;
-  bubbleTimerOptions.value = {};
-  bubbleMessage.value = getMessage(messageKey, Math.random, state.language);
-  bubbleLink.value = null;
-  bubbleSignature.value = "";
-  pendingConfirm.value = {
-    onConfirm,
-    onCancel,
-    confirmText: options.confirmText ?? uiText.value.common.yes,
-    cancelText: options.cancelText ?? uiText.value.common.no,
-    danger: options.danger ?? /删除|清理|Delete|Clear/.test(options.confirmText ?? ""),
-    confirmHint: options.confirmHint,
-    secondaryText: options.secondaryText,
-    onSecondary: options.onSecondary,
-  };
-  activeGuideKey.value = null;
-  bubbleVisible.value = true;
-  companionFocused.value = true;
-  companionPosition.value = getCompanionPosition(anchor);
-}
-
-async function confirmCompanionAction(): Promise<void> {
-  const action = pendingConfirm.value;
-  if (!action) return;
-  hideCompanion();
-  (document.activeElement as HTMLElement | null)?.blur();
-  await action.onConfirm();
-}
-
-async function secondaryCompanionAction(): Promise<void> {
-  const action = pendingConfirm.value;
-  if (!action?.onSecondary) return;
-  hideCompanion();
-  (document.activeElement as HTMLElement | null)?.blur();
-  pendingConfirm.value = null;
-  await action.onSecondary();
-}
-
-function cancelCompanionAction(): void {
-  clearPendingConfirm(true);
-  hideCompanion();
-}
-
-function clearPendingConfirm(runCancel = false): void {
-  const action = pendingConfirm.value;
-  pendingConfirm.value = null;
-  if (runCancel) action?.onCancel?.();
 }
 
 function showToast(messageKey: MessageKey): void {
@@ -2870,8 +2722,7 @@ function isSingleWorkspaceExport(payload: Record<string, unknown>): boolean {
 function clearTimers(): void {
   window.clearTimeout(textSaveTimer.value);
   window.clearTimeout(todoSaveTimer.value);
-  window.clearTimeout(bubbleTimer.value);
-  window.clearTimeout(bubbleFadeTimer.value);
+  clearBubbleTimers();
   window.clearTimeout(saveStatusTimer.value);
   window.clearTimeout(imagePayloadPruneTimer.value);
   window.clearInterval(versionCheckTimer.value);
@@ -2896,15 +2747,8 @@ function showCrossWorkspaceReminderPrompt(item: NotifiableTodo): void {
   const prompt = uiText.value.app.crossWorkspaceReminder
     .replace("{workspace}", workspaceTitle)
     .replace("{text}", item.todo.text.trim());
-  window.clearTimeout(bubbleTimer.value);
-  window.clearTimeout(bubbleFadeTimer.value);
-  bubbleTimer.value = undefined;
-  bubbleRemainingMs.value = 0;
-  bubbleTimerStartedAt.value = 0;
-  bubbleTimerOptions.value = {};
+  hideBubbleMessage();
   bubbleMessage.value = prompt;
-  bubbleLink.value = null;
-  bubbleSignature.value = "";
   pendingConfirm.value = {
     onConfirm: () => void switchToWorkspaceWithReminder(item),
     onCancel: undefined,
@@ -3066,25 +2910,6 @@ async function updateStaticVersion(): Promise<void> {
 async function applyChangelogUpdate(): Promise<void> {
   changelogVisible.value = false;
   await updateStaticVersion();
-}
-
-function getCompanionPosition(anchor?: HTMLElement): { right: string; bottom?: string; top?: string } | undefined {
-  if (isMobileLayout()) {
-    return {
-      right: "12px",
-      top: "118px",
-    };
-  }
-  const target = anchor?.closest(".image-preview, .preview-main, .preview-stage, .todo-section, .quick-block, .text-panel, .split-block, .panel") as HTMLElement | null;
-  if (!target) return undefined;
-  const rect = target.getBoundingClientRect();
-  if (!rect.width && !rect.height) return undefined;
-  const safeRight = Math.max(Math.round(rect.right), MIN_COMPANION_POPOVER_RIGHT_EDGE);
-  const safeBottom = Math.min(Math.round(rect.bottom), window.innerHeight);
-  return {
-    right: `calc(100vw - ${safeRight}px + 10px)`,
-    bottom: `calc(100vh - ${safeBottom}px + 10px)`,
-  };
 }
 
 function getImageUndoAnchor(anchor?: HTMLElement): HTMLElement | undefined {
