@@ -2084,6 +2084,44 @@ describe("App shell", () => {
     }
   });
 
+  it("uses the English notification document title when the language is English", async () => {
+    vi.useFakeTimers();
+    vi.setSystemTime(new Date(2026, 4, 25, 8, 0, 0));
+    const originalVisibilityDescriptor = Object.getOwnPropertyDescriptor(Document.prototype, "visibilityState")
+      ?? Object.getOwnPropertyDescriptor(document, "visibilityState");
+    Object.defineProperty(document, "visibilityState", { configurable: true, get: () => "hidden" });
+    class NotificationStub {
+      static permission: NotificationPermission = "granted";
+      static requestPermission = vi.fn();
+    }
+    vi.stubGlobal("Notification", NotificationStub);
+    localStorage.setItem(
+      STORAGE_KEY,
+      JSON.stringify({
+        language: "en",
+        todos: {
+          morning: [{ id: "todo-1", text: "Drink water", done: false }],
+        },
+      }),
+    );
+    const wrapper = mountApp();
+
+    try {
+      const notifyAt = new Date(2026, 4, 25, 8, 0, 1).getTime();
+      wrapper.getComponent(TodoPanel).vm.$emit("notify", "morning", "todo-1", notifyAt);
+      await vi.advanceTimersByTimeAsync(1000);
+
+      expect(document.title).toContain("New reminder");
+      expect(document.title).not.toContain("新提醒");
+    } finally {
+      wrapper.unmount();
+      document.title = "Mini Desk";
+      if (originalVisibilityDescriptor) Object.defineProperty(document, "visibilityState", originalVisibilityDescriptor);
+      vi.unstubAllGlobals();
+      vi.useRealTimers();
+    }
+  });
+
   it("highlights the reminder row briefly when the user returns after a due notification", async () => {
     vi.useFakeTimers();
     vi.setSystemTime(new Date(2026, 4, 25, 8, 0, 0));

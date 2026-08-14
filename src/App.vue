@@ -245,7 +245,7 @@ const workspaceDensityLabel = computed(() => {
 
 const boardTitle = computed(() => activeWorkspace.value.customTitles["board-title"]?.trim() || DEFAULT_BOARD_TITLE);
 const boardSlogan = computed(() => activeWorkspace.value.customTitles["board-slogan"]?.trim() ?? "");
-const notificationDocumentTitle = computed(() => `🔔 新提醒 · ${boardTitle.value}`);
+const notificationDocumentTitle = computed(() => `${uiText.value.app.notificationTitle} · ${boardTitle.value}`);
 const titles = computed(() =>
   Object.fromEntries(
     Object.entries(getDefaultTitles(state.language)).map(([id, title]) => [id, activeWorkspace.value.customTitles[id] || title]),
