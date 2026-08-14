@@ -56,6 +56,7 @@ import { createWorkspaceData, ensureUniqueWorkspaceTitle, removeWorkspace, reord
 import { QUICK_BUTTON_OTHER_GROUP_ID, QUICK_DENSITY_THRESHOLD, formatQuickCopiedPreview, getQuickTagColor } from "./state/quickButtons";
 import { isQuickAppScheme } from "./state/quickApps";
 import { copyTextWithBrowserCommand } from "./utils/clipboard";
+import { extractRetainedImageIds, useUndoHistory } from "./composables/useUndoHistory";
 import {
   createId,
   exportUndoSnapshotState,
@@ -84,10 +85,6 @@ const VersionHistory = defineAsyncComponent(() => import("./components/VersionHi
 const MOBILE_BREAKPOINT_QUERY = "(max-width: 900px)";
 const TODO_NOTIFICATION_FALLBACK_INTERVAL_MS = 30_000;
 const MAX_TODO_NOTIFICATION_TIMEOUT_MS = 2_147_483_647;
-const UNDO_HISTORY_LIMIT = 50;
-// Undo snapshots are full-state JSON strings; a large board would otherwise pin
-// 50 × state-size in memory. Evict oldest entries past this byte budget first.
-const UNDO_HISTORY_BYTE_BUDGET = 8 * 1024 * 1024;
 const IMAGE_DELETE_GRACE_MS = 5000;
 const IMAGE_PREVIEW_CLOSE_MS = 220;
 const IMAGE_DENSITY_THRESHOLD = 10;
@@ -105,16 +102,33 @@ const activeWorkspace = computed<WorkspaceData>(
   () => state.workspaces.find((workspace) => workspace.id === state.activeWorkspaceId) ?? state.workspaces[0],
 );
 const syncClientId = createId();
-// Undo snapshots pair the serialized state with the set of image payload ids it
-// references. Caching the ids at enqueue time lets payload-prune retention checks
-// run without re-parsing every snapshot string (51 × full-state JSON.parse per
-// save would otherwise dominate the post-save budget).
-interface UndoSnapshot {
-  text: string;
-  retainedImageIds: Set<string>;
-}
-const undoSnapshots = ref<UndoSnapshot[]>([]);
-const lastUndoSnapshot = ref(createUndoSnapshot());
+const {
+  undoSnapshots,
+  lastUndoSnapshot,
+  recordUndoCheckpoint,
+  createUndoSnapshot,
+  undoLastBoardChange,
+  resetHistory: resetUndoHistory,
+  isRestoring: isUndoRestoring,
+} = useUndoHistory(state, {
+  isMounted: () => appMounted,
+  cancelPendingEdits: () => {
+    window.clearTimeout(textSaveTimer.value);
+    textSaveTimer.value = undefined;
+    flushTodoSave();
+    emptyTodoRemovalTimers.forEach((timer) => window.clearTimeout(timer));
+    emptyTodoRemovalTimers.clear();
+  },
+  clearTransientUi: () => {
+    clearImagePreview();
+    pendingEditSpaceId.value = null;
+    pendingEditTodoListId.value = null;
+  },
+  persistAfterRestore: () => {
+    resetTextGenerationBaseline();
+    persistNow();
+  },
+});
 // Bumped after "clear data" so the whole workbench shell remounts and its
 // entrance choreography (command bar settles, zones rise left→right) replays —
 // the same animation as a fresh page load.
@@ -185,8 +199,6 @@ let appMounted = false;
 let pendingBrowserImagePasteRequest: { request: ImagePasteRequest; token: number } | undefined;
 let browserImagePasteRequestToken = 0;
 let pasteFeedbackToken = 0;
-let restoringUndo = false;
-let undoInFlight = false;
 let textEditGeneration = 0;
 let savedTextGeneration = 0;
 let stateSyncChannel: BroadcastChannel | null = null;
@@ -866,9 +878,9 @@ async function persistImageReplacement(
   activeWorkspace.value.images = result.status === "merged"
     ? mergeVisibleImages(savedActive?.images ?? [], nextImages)
     : nextImages;
-  if (!restoringUndo) {
+  if (!isUndoRestoring()) {
     undoSnapshots.value = [
-      ...undoSnapshots.value.slice(-(UNDO_HISTORY_LIMIT - 1)),
+      ...undoSnapshots.value,
       previousSnapshot,
     ];
     lastUndoSnapshot.value = createUndoSnapshot();
@@ -2213,7 +2225,7 @@ function clearData(anchor?: HTMLElement): void {
       clearImagePreview();
       pendingEditSpaceId.value = null;
       pendingEditTodoListId.value = null;
-      undoSnapshots.value = [];
+      resetUndoHistory();
       Object.assign(state, defaultState());
       resetTextGenerationBaseline();
       // Flush reactive watchers (the theme watcher persists on change) before wiping, so
@@ -2492,106 +2504,6 @@ function blurActiveBoardElement(): boolean {
   if (!active.closest(".workbench-shell")) return false;
   active.blur();
   return true;
-}
-
-function recordUndoCheckpoint(): void {
-  if (restoringUndo) {
-    lastUndoSnapshot.value = createUndoSnapshot();
-    return;
-  }
-  const current = createUndoSnapshot();
-  if (current.text === lastUndoSnapshot.value.text) return;
-  undoSnapshots.value = capUndoHistory([
-    ...undoSnapshots.value,
-    lastUndoSnapshot.value,
-  ]);
-  lastUndoSnapshot.value = current;
-}
-
-/** Enforce both the entry-count and byte-budget caps, evicting oldest first. */
-function capUndoHistory(snapshots: UndoSnapshot[]): UndoSnapshot[] {
-  let capped = snapshots.slice(-UNDO_HISTORY_LIMIT);
-  let totalBytes = capped.reduce((sum, snapshot) => sum + snapshot.text.length, 0);
-  while (capped.length > 1 && totalBytes > UNDO_HISTORY_BYTE_BUDGET) {
-    totalBytes -= capped[0].text.length;
-    capped = capped.slice(1);
-  }
-  return capped;
-}
-
-async function undoLastBoardChange(): Promise<void> {
-  if (undoInFlight || restoringUndo) return;
-  const snapshot = undoSnapshots.value.at(-1);
-  if (!snapshot) return;
-  let nextState: BoardState;
-  try {
-    nextState = normalizeImportedState(JSON.parse(snapshot.text));
-  } catch {
-    lastUndoSnapshot.value = createUndoSnapshot();
-    return;
-  }
-
-  const stateAtStart = createUndoSnapshot();
-  undoInFlight = true;
-  try {
-    const activeUndoWorkspace = nextState.workspaces.find((w) => w.id === nextState.activeWorkspaceId) ?? nextState.workspaces[0];
-    if (activeUndoWorkspace) {
-      // Drop images whose payload can no longer be hydrated (e.g. reclaimed after the
-      // delete grace window) so undo does not resurrect permanent empty "ghost" entries.
-      activeUndoWorkspace.images = (await hydrateStoredImages(activeUndoWorkspace.images))
-        .filter((image) => Boolean(image.src));
-    }
-    if (!appMounted || createUndoSnapshot().text !== stateAtStart.text || undoSnapshots.value.at(-1) !== snapshot) return;
-    restoringUndo = true;
-    undoSnapshots.value = undoSnapshots.value.slice(0, -1);
-    window.clearTimeout(textSaveTimer.value);
-    textSaveTimer.value = undefined;
-    emptyTodoRemovalTimers.forEach((timer) => window.clearTimeout(timer));
-    emptyTodoRemovalTimers.clear();
-    clearImagePreview();
-    pendingEditSpaceId.value = null;
-    pendingEditTodoListId.value = null;
-    Object.assign(state, nextState);
-    resetTextGenerationBaseline();
-    persistNow();
-    lastUndoSnapshot.value = createUndoSnapshot();
-  } finally {
-    restoringUndo = false;
-    undoInFlight = false;
-  }
-}
-
-function createUndoSnapshot(): UndoSnapshot {
-  const text = exportUndoSnapshotState(state);
-  return { text, retainedImageIds: extractRetainedImageIds(JSON.parse(text) as unknown) };
-}
-
-/** Image payload ids referenced by a serialized state (payloadId ?? id per image). */
-function extractRetainedImageIds(parsed: unknown): Set<string> {
-  const retained = new Set<string>();
-  const root = parsed as { images?: unknown; workspaces?: unknown } | null;
-  if (!root || typeof root !== "object") return retained;
-  const imageLists: unknown[] = [];
-  if (Array.isArray(root.images)) imageLists.push(root.images);
-  if (Array.isArray(root.workspaces)) {
-    for (const workspace of root.workspaces) {
-      if (!workspace || typeof workspace !== "object" || Array.isArray(workspace)) continue;
-      const record = workspace as Record<string, unknown>;
-      if (Array.isArray(record.images)) imageLists.push(record.images);
-    }
-  }
-  for (const list of imageLists) {
-    (list as unknown[]).forEach((item) => {
-      if (!item || typeof item !== "object" || Array.isArray(item)) return;
-      const record = item as Record<string, unknown>;
-      const id = typeof record.id === "string" && record.id.trim() ? record.id : undefined;
-      const payloadId = typeof record.payloadId === "string" && record.payloadId.trim()
-        ? record.payloadId
-        : undefined;
-      if (payloadId ?? id) retained.add((payloadId ?? id)!);
-    });
-  }
-  return retained;
 }
 
 function navigatePreview(direction: number): void {
