@@ -19,7 +19,7 @@ import {
   StarOutline,
   TrashOutline,
 } from "@vicons/ionicons5";
-import { NCheckbox, NDatePicker, NDropdown, NIcon, NScrollbar } from "naive-ui";
+import { NDatePicker, NDropdown, NIcon, NScrollbar } from "naive-ui";
 import type { DropdownOption } from "naive-ui";
 import { DEFAULT_TODO_LISTS, GUIDE_MENU_OPTION } from "../state/defaults";
 import { getDisplayTodoListTitle, getUiText } from "../state/i18n";
@@ -1436,10 +1436,12 @@ function buildTodoListEntries(period: TodoListId, todos: TodoItem[], deferredDon
             @mouseenter="handleTodoHover($event, true)"
             @mouseleave="handleTodoHover($event, false)"
           >
-            <NCheckbox
+            <input
+              type="checkbox"
+              class="todo-checkbox"
               :checked="item.todo.done"
               :aria-label="uiText.todo.done"
-              @update:checked="(checked) => handleChecked(item.period, item.todo.id, checked)"
+              @change="handleChecked(item.period, item.todo.id, ($event.target as HTMLInputElement).checked)"
             />
             <input
               class="today-focus-input"
@@ -1640,10 +1642,12 @@ function buildTodoListEntries(period: TodoListId, todos: TodoItem[], deferredDon
                   @dragstart="handleTodoDragStart($event, list.id, entry.todo)"
                   @dragend="dragged = null"
                 />
-                <NCheckbox
+                <input
+                  type="checkbox"
+                  class="todo-checkbox"
                   :checked="entry.todo.done"
                   :aria-label="uiText.todo.done"
-                  @update:checked="(checked) => handleChecked(list.id, entry.todo.id, checked)"
+                  @change="handleChecked(list.id, entry.todo.id, ($event.target as HTMLInputElement).checked)"
                 />
                 <input
                   class="todo-input"

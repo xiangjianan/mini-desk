@@ -3262,6 +3262,29 @@ button.todo-star-button {
   margin-left: 20px;
 }
 
+/* Native per-row checkbox (replaced NCheckbox instances: one Vue component per
+   todo row was measurable overhead on dense boards). Mirrors the naive-ui
+   checkbox look already themed above — 14px box, green check, radius. */
+.todo-item .todo-checkbox,
+.today-focus-item .todo-checkbox {
+  justify-self: center;
+  width: 14px;
+  height: 14px;
+  margin: 0;
+  accent-color: #22c55e;
+  cursor: pointer;
+}
+
+.today-focus-item .todo-checkbox {
+  justify-self: start;
+  margin-left: 20px;
+}
+
+.todo-item.is-done .todo-checkbox,
+.today-focus-item.is-done .todo-checkbox {
+  opacity: 0.78;
+}
+
 .todo-item .n-checkbox-box--checked,
 .today-focus-item .n-checkbox-box--checked {
   --n-color-checked: #22c55e !important;
