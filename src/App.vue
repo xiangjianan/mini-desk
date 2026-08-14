@@ -59,6 +59,7 @@ import { copyTextWithBrowserCommand } from "./utils/clipboard";
 import { extractRetainedImageIds, useUndoHistory } from "./composables/useUndoHistory";
 import { useTodoNotifications } from "./composables/useTodoNotifications";
 import { useCompanionBubble } from "./composables/useCompanionBubble";
+import { useBoardPersistence } from "./composables/useBoardPersistence";
 import type { NotifiableTodo } from "./composables/useTodoNotifications";
 import {
   createId,
@@ -129,6 +130,38 @@ const {
     resetTextGenerationBaseline();
     persistNow();
   },
+});
+
+const {
+  saveStatus,
+  textSaveTimer,
+  todoSaveTimer,
+  scheduleTextSave,
+  scheduleTodoSave,
+  flushTodoSave,
+  flushTextSave,
+  resetTextGenerationBaseline,
+  bumpTextGeneration,
+  persistPendingText,
+  persistNow,
+  markDirty,
+  markSaving,
+  markSavedNow,
+  markSavedSoon,
+  hasUnsavedLocalChanges,
+  hasPendingEdits,
+  clearTimers: clearPersistenceTimers,
+} = useBoardPersistence({
+  state,
+  clientId: syncClientId,
+  onBeforeSave: recordUndoCheckpoint,
+  onConflict: () => showToast("stateConflict"),
+  onMerged: (savedImages) => {
+    activeWorkspace.value.images = mergeVisibleImages(savedImages as StoredImage[], activeWorkspace.value.images);
+  },
+  onSaved: broadcastStateSaved,
+  scheduleImagePayloadPrune,
+  showSaveBubble,
 });
 
 const {
@@ -207,9 +240,6 @@ const workspaceDialogMode = ref<"create" | "rename">("create");
 const workspaceDialogId = ref<string | null>(null);
 const workspaceDraftTitle = ref("");
 const workspaceDraftSlogan = ref("");
-const textSaveTimer = ref<number | undefined>();
-const todoSaveTimer = ref<number | undefined>();
-const saveStatusTimer = ref<number | undefined>();
 const imagePayloadPruneTimer = ref<number | undefined>();
 const emptyTodoRemovalTimers = new Map<string, number>();
 const pendingImagePayloadDeletions = new Map<string, number>();
@@ -226,8 +256,6 @@ let appMounted = false;
 let pendingBrowserImagePasteRequest: { request: ImagePasteRequest; token: number } | undefined;
 let browserImagePasteRequestToken = 0;
 let pasteFeedbackToken = 0;
-let textEditGeneration = 0;
-let savedTextGeneration = 0;
 let stateSyncChannel: BroadcastChannel | null = null;
 
 type BubbleOptions = {
@@ -273,7 +301,6 @@ const activeCompanionPosition = computed(() => (isMobileBlocked.value ? mobileCo
 const displayedPreviewId = computed(() => activePreviewId.value ?? closingPreviewId.value);
 const imagePreviewClosing = computed(() => Boolean(closingPreviewId.value) && !activePreviewId.value);
 const settingsAppVersion = computed(() => (versionPromptVisible.value ? availableAppVersion.value : appVersion.value));
-const saveStatus = ref<"saved" | "saving" | "dirty">("saved");
 const densityGroupingTipKeys: Partial<Record<DensityAreaType, MessageKey>> = {
   todos: "workspaceDensityTodoGroup",
   quickButtons: "workspaceDensityQuickGroup",
@@ -424,7 +451,7 @@ onUnmounted(() => {
 // Closing the tab mid-debounce would drop the last second of todo/line edits;
 // flush synchronously before the page goes away.
 function handleBeforeUnload(): void {
-  if (textEditGeneration === savedTextGeneration) return;
+  if (!hasPendingEdits()) return;
   flushTodoSave();
   flushTextSave();
 }
@@ -494,7 +521,7 @@ function toggleWorkspaceZone(workspaceId: string, zone: ZoneKey): void {
 
 function updateLines(key: "noteLines" | "workspaceLines" | "storageLines", lines: LineItem[]): void {
   activeWorkspace.value[key] = lines;
-  textEditGeneration += 1;
+  bumpTextGeneration();
   markDirty();
   scheduleTextSave();
 }
@@ -503,7 +530,7 @@ function updateSpaceLines(id: string, lines: LineItem[]): void {
   const space = activeWorkspace.value.spaces.find((item) => item.id === id);
   if (!space) return;
   space.lines = lines;
-  textEditGeneration += 1;
+  bumpTextGeneration();
   syncLegacySpaceLines();
   markDirty();
   scheduleTextSave();
@@ -582,7 +609,7 @@ function createWorkspace(title: string, slogan: string): void {
 
 async function switchWorkspace(id: string): Promise<void> {
   if (!state.workspaces.some((workspace) => workspace.id === id) || state.activeWorkspaceId === id) return;
-  if (textEditGeneration !== savedTextGeneration) {
+  if (hasPendingEdits()) {
     flushTodoSave();
     flushTextSave();
   }
@@ -714,62 +741,11 @@ function syncLegacySpaceLines(): void {
   activeWorkspace.value.storageLines = activeWorkspace.value.spaces[1]?.lines.map((line) => ({ ...line })) ?? [];
 }
 
-function scheduleTextSave(): void {
-  window.clearTimeout(textSaveTimer.value);
-  textSaveTimer.value = window.setTimeout(() => {
-    textSaveTimer.value = undefined;
-    void persistPendingText();
-  }, 3000);
-}
-
 // Todo input saves share the text pipeline's generation baseline so a debounced
 // todo edit and a debounced line edit can never overwrite each other, while the
 // separate timer keeps "stop typing in todos" from delaying a pending line save
 // (and vice versa).
-function scheduleTodoSave(): void {
-  window.clearTimeout(todoSaveTimer.value);
-  todoSaveTimer.value = window.setTimeout(() => {
-    todoSaveTimer.value = undefined;
-    void persistPendingText();
-  }, 1000);
-}
 
-function flushTodoSave(): void {
-  const pending = todoSaveTimer.value !== undefined;
-  window.clearTimeout(todoSaveTimer.value);
-  todoSaveTimer.value = undefined;
-  if (pending) void persistPendingText();
-}
-
-function flushTextSave(): void {
-  window.clearTimeout(textSaveTimer.value);
-  textSaveTimer.value = undefined;
-  void persistPendingText();
-}
-
-function resetTextGenerationBaseline(): void {
-  window.clearTimeout(textSaveTimer.value);
-  textSaveTimer.value = undefined;
-  flushTodoSave();
-  savedTextGeneration = textEditGeneration;
-}
-
-async function persistPendingText(options: { retryOnce?: boolean } = {}): Promise<void> {
-  if (textEditGeneration === savedTextGeneration) return;
-  const attemptGeneration = textEditGeneration;
-  const persisted = persistNow("text");
-  if (!persisted) {
-    if (options.retryOnce && textEditGeneration !== savedTextGeneration) scheduleTextSave();
-    return;
-  }
-  savedTextGeneration = Math.max(savedTextGeneration, attemptGeneration);
-  if (textEditGeneration !== savedTextGeneration) {
-    scheduleTextSave();
-    return;
-  }
-  showSaveBubble();
-  showSaveBubbleSoon();
-}
 
 function showCompanion(anchor?: HTMLElement, guideKey?: GuideKey): void {
   hideBubbleMessage({ clearRetainedContent: true });
@@ -817,47 +793,6 @@ function handleCompanionBlur(): void {
   flushTodoSave();
 }
 
-function persistNow(scope: SaveScope = "all", options: PersistOptions = {}): boolean {
-  recordUndoCheckpoint();
-  markSaving();
-  // A direct save supersedes any pending debounced todo/text save: it persists
-  // the whole in-memory state anyway, so retire the timers and adopt the current
-  // generation as saved to keep persistPendingText from double-saving (and
-  // double-bubbling) right after. Capture the generation BEFORE saving — an
-  // edit injected mid-save (e.g. re-entrant from a storage spy) must stay dirty.
-  const generationAtSave = textEditGeneration;
-  const supersededPendingEdit = generationAtSave !== savedTextGeneration;
-  if (supersededPendingEdit) {
-    window.clearTimeout(textSaveTimer.value);
-    textSaveTimer.value = undefined;
-    flushTodoSave();
-  }
-  const result = saveStateWithConflictCheck(state, {
-    clientId: syncClientId,
-    force: options.force,
-    scope,
-    imagePlacement: options.imagePlacement,
-    imageReplacement: options.imageReplacement,
-  });
-  if (result.status === "conflict") {
-    window.clearTimeout(saveStatusTimer.value);
-    saveStatus.value = "dirty";
-    showToast("stateConflict");
-    return false;
-  }
-  if (supersededPendingEdit) savedTextGeneration = generationAtSave;
-  state.sync = result.state.sync;
-  if (result.status === "merged") {
-    const savedActive = result.state.workspaces.find((w) => w.id === state.activeWorkspaceId) ?? result.state.workspaces[0];
-    activeWorkspace.value.images = mergeVisibleImages(savedActive?.images ?? [], activeWorkspace.value.images);
-  }
-  broadcastStateSaved();
-  markSavedSoon();
-  // Payload pruning only matters when image sets may have changed; a text/todo
-  // debounce flush cannot orphan a payload, so skip the IndexedDB sweep.
-  if (scope !== "text") scheduleImagePayloadPrune();
-  return true;
-}
 
 function mergeVisibleImages(savedImages: StoredImage[], visibleImages: StoredImage[]): StoredImage[] {
   const visibleById = new Map(visibleImages.map((image) => [image.id, image]));
@@ -917,8 +852,7 @@ async function persistImageReplacement(
 async function applyImageReplacementConflict(
   latest = loadState(),
 ): Promise<void> {
-  window.clearTimeout(saveStatusTimer.value);
-  saveStatus.value = "dirty";
+  markDirty();
   showToast("stateConflict");
   while (true) {
     const activeLatest = latest.workspaces.find((w) => w.id === latest.activeWorkspaceId) ?? latest.workspaces[0];
@@ -930,7 +864,7 @@ async function applyImageReplacementConflict(
     latest = newest;
   }
   if (!appMounted || latest.sync.revision < state.sync.revision) return;
-  if (textEditGeneration !== savedTextGeneration) {
+  if (hasPendingEdits()) {
     const active = activeWorkspace.value;
     const localTextWorkspace: WorkspaceData = {
       ...active,
@@ -943,8 +877,7 @@ async function applyImageReplacementConflict(
       workspaces: latest.workspaces.map((workspace) => (workspace.id === active.id ? localTextWorkspace : workspace)),
     });
     applyTheme();
-    window.clearTimeout(saveStatusTimer.value);
-    saveStatus.value = "dirty";
+    markDirty();
     void persistPendingText({ retryOnce: true });
     return;
   }
@@ -952,8 +885,7 @@ async function applyImageReplacementConflict(
   resetTextGenerationBaseline();
   applyTheme();
   lastUndoSnapshot.value = createUndoSnapshot();
-  window.clearTimeout(saveStatusTimer.value);
-  saveStatus.value = "saved";
+  markSavedNow();
 }
 
 function scheduleImagePayloadPrune(): void {
@@ -1069,28 +1001,6 @@ async function applyExternalStoredState(raw?: string): Promise<void> {
   } catch {
     // External storage may be mid-write or unavailable; keep this tab's current state.
   }
-}
-
-function hasUnsavedLocalChanges(): boolean {
-  return textEditGeneration !== savedTextGeneration || saveStatus.value !== "saved";
-}
-
-function markDirty(): void {
-  recordUndoCheckpoint();
-  window.clearTimeout(saveStatusTimer.value);
-  saveStatus.value = "dirty";
-}
-
-function markSaving(): void {
-  window.clearTimeout(saveStatusTimer.value);
-  saveStatus.value = "saving";
-}
-
-function markSavedSoon(): void {
-  window.clearTimeout(saveStatusTimer.value);
-  saveStatusTimer.value = window.setTimeout(() => {
-    saveStatus.value = "saved";
-  }, 100);
 }
 
 async function handlePaste(event: ClipboardEvent): Promise<void> {
@@ -2076,7 +1986,7 @@ function updateTodo(period: TodoPeriod, id: string, text: string): void {
   // localStorage round-trip per keystroke, amplified by IME composition). Debounce
   // through the shared text pipeline; blur/Enter/structural edits flush via
   // persistNow, and undo snapshots still record every change.
-  textEditGeneration += 1;
+  bumpTextGeneration();
   markDirty();
   scheduleTodoSave();
 }
@@ -2720,10 +2630,8 @@ function isSingleWorkspaceExport(payload: Record<string, unknown>): boolean {
 }
 
 function clearTimers(): void {
-  window.clearTimeout(textSaveTimer.value);
-  window.clearTimeout(todoSaveTimer.value);
+  clearPersistenceTimers();
   clearBubbleTimers();
-  window.clearTimeout(saveStatusTimer.value);
   window.clearTimeout(imagePayloadPruneTimer.value);
   window.clearInterval(versionCheckTimer.value);
   window.clearTimeout(previewCloseTimer.value);
