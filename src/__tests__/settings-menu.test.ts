@@ -142,6 +142,59 @@ describe("SettingsMenu", () => {
     expect(wrapper.emitted("suggest")?.[0]).toEqual([expect.any(HTMLElement)]);
   });
 
+  it("点击版本号打开更新记录（无更新时也可点）", async () => {
+    const wrapper = mount(SettingsMenu, {
+      props: {
+        appVersion: "1.0.11",
+        updateAvailable: false,
+        companionGifTheme: "hermes",
+        language: "zh",
+      },
+      global: {
+        stubs: {
+          Dropdown: dropdownStub,
+          NDropdown: dropdownStub,
+          NBadge: { template: "<span><slot /></span>" },
+          NButton: { template: "<button><slot /></button>" },
+          NIcon: { template: "<span />" },
+          NUpload: uploadStub,
+          Upload: uploadStub,
+        },
+      },
+    });
+
+    await wrapper.find('[data-key="version"]').trigger("click");
+
+    expect(wrapper.emitted("changelog")).toHaveLength(1);
+  });
+
+  it("有更新时点击版本号也打开更新记录而非直接更新", async () => {
+    const wrapper = mount(SettingsMenu, {
+      props: {
+        appVersion: "1.0.11",
+        updateAvailable: true,
+        companionGifTheme: "hermes",
+        language: "zh",
+      },
+      global: {
+        stubs: {
+          Dropdown: dropdownStub,
+          NDropdown: dropdownStub,
+          NBadge: { template: "<span><slot /></span>" },
+          NButton: { template: "<button><slot /></button>" },
+          NIcon: { template: "<span />" },
+          NUpload: uploadStub,
+          Upload: uploadStub,
+        },
+      },
+    });
+
+    await wrapper.find('[data-key="version"]').trigger("click");
+
+    expect(wrapper.emitted("changelog")).toHaveLength(1);
+    expect(wrapper.emitted("update")).toBeUndefined();
+  });
+
   it("shows help and shortcut copy from the settings menu", async () => {
     const wrapper = mount(SettingsMenu, {
       props: {

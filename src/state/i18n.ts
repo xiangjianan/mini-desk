@@ -593,6 +593,7 @@ export const UI_TEXT = {
       english: "English",
       exportCurrentWorkspace: "导出空间",
       support: "打赏作者",
+      changelog: "更新记录",
     },
     zoneVisibility: {
       title: "显示区域",
@@ -835,6 +836,11 @@ export const UI_TEXT = {
       textInput: "图片文本",
       textPlaceholder: "输入文本",
     },
+    changelog: {
+      title: "更新记录",
+      latest: "最新",
+      updateTo: "立即更新到 v{version}",
+    },
   },
   en: {
     common: {
@@ -922,6 +928,7 @@ export const UI_TEXT = {
       english: "English",
       exportCurrentWorkspace: "Export workspace",
       support: "Support author",
+      changelog: "Release notes",
     },
     zoneVisibility: {
       title: "Visible areas",
@@ -1163,6 +1170,11 @@ export const UI_TEXT = {
       applyCrop: "Apply crop",
       textInput: "Image text",
       textPlaceholder: "Type text",
+    },
+    changelog: {
+      title: "Release notes",
+      latest: "Latest",
+      updateTo: "Update to v{version}",
     },
   },
 } as const;

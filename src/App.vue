@@ -77,6 +77,7 @@ import type { AppLanguage, BoardState, CompanionGifTheme, DraggedTodo, GuideKey,
 const ImagePreview = defineAsyncComponent(() => import("./components/ImagePreview.vue"));
 const ShortcutHelp = defineAsyncComponent(() => import("./components/ShortcutHelp.vue"));
 const SupportAuthor = defineAsyncComponent(() => import("./components/SupportAuthor.vue"));
+const VersionHistory = defineAsyncComponent(() => import("./components/VersionHistory.vue"));
 
 const MOBILE_BREAKPOINT_QUERY = "(max-width: 900px)";
 const TODO_NOTIFICATION_FALLBACK_INTERVAL_MS = 30_000;
@@ -163,6 +164,7 @@ const storedAppVersion = ref<string | null>(null);
 const versionPromptVisible = ref(false);
 const shortcutHelpVisible = ref(false);
 const supportDialogVisible = ref(false);
+const changelogVisible = ref(false);
 const isMobileBlocked = ref(getInitialMobileBlocked());
 const mobileMediaQuery = ref<MediaQueryList | null>(null);
 let appMounted = false;
@@ -3266,6 +3268,12 @@ async function updateStaticVersion(): Promise<void> {
   window.location.reload();
 }
 
+// "Update now" from the changelog modal — close it, then run the same cache-clear + reload.
+async function applyChangelogUpdate(): Promise<void> {
+  changelogVisible.value = false;
+  await updateStaticVersion();
+}
+
 function getCompanionPosition(anchor?: HTMLElement): { right: string; bottom?: string; top?: string } | undefined {
   if (isMobileLayout()) {
     return {
@@ -3423,7 +3431,7 @@ function moveItem<T extends { id: string }>(items: T[], dragId: string, targetId
           @suggest="suggestIssue"
           @support="supportDialogVisible = true"
           @shortcut-help="shortcutHelpVisible = true"
-          @update="updateStaticVersion"
+          @changelog="changelogVisible = true"
           @language="updateLanguage"
           @gif-theme="updateCompanionGifTheme"
           @custom-gif="updateCustomCompanionGif"
@@ -3613,6 +3621,14 @@ function moveItem<T extends { id: string }>(items: T[], dragId: string, targetId
     <input ref="importInput" type="file" accept="application/json,.json" hidden @change="importData" />
     <ShortcutHelp :show="shortcutHelpVisible" :language="state.language" @close="shortcutHelpVisible = false" />
     <SupportAuthor :show="supportDialogVisible" :language="state.language" @close="supportDialogVisible = false" />
+    <VersionHistory
+      :show="changelogVisible"
+      :language="state.language"
+      :update-available="versionPromptVisible"
+      :available-version="availableAppVersion"
+      @close="changelogVisible = false"
+      @update="applyChangelogUpdate"
+    />
     <NModal
       v-model:show="workspaceDialogVisible"
       preset="card"

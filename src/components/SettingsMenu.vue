@@ -45,7 +45,7 @@ const emit = defineEmits<{
   suggest: [anchor?: HTMLElement];
   support: [anchor?: HTMLElement];
   shortcutHelp: [];
-  update: [];
+  changelog: [];
   language: [language: AppLanguage, anchor?: HTMLElement];
   gifTheme: [theme: CompanionGifTheme, anchor?: HTMLElement];
   customGif: [files: { light?: File; dark?: File }, anchor?: HTMLElement];
@@ -116,10 +116,8 @@ const options = computed(() => [
       h("span", { class: "settings-version-item", "data-testid": "settings-version" }, [
         h("span", `v${props.appVersion}`),
         props.updateAvailable ? h("span", { class: "settings-version-dot", "aria-hidden": "true" }) : null,
-        props.updateAvailable ? h("span", { class: "settings-version-action" }, text.value.settings.update) : null,
       ]),
     key: "version",
-    disabled: !props.updateAvailable,
   },
 ]);
 
@@ -135,7 +133,10 @@ function handleSelect(key: string): void {
     emit("shortcutHelp");
     return;
   }
-  if (key === "version" && props.updateAvailable) emit("update");
+  if (key === "version") {
+    emit("changelog");
+    return;
+  }
   if (key.startsWith("language:")) {
     emit("language", normalizeLanguage(key.replace("language:", "")), triggerRef.value ?? undefined);
     return;

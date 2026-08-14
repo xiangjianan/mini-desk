@@ -4271,6 +4271,113 @@ body:has(.image-preview) .image-panel .n-scrollbar {
   padding: 14px 16px 18px;
 }
 
+.version-history-modal {
+  width: min(560px, calc(100vw - 32px)) !important;
+  max-width: 560px !important;
+  margin: 0 auto;
+}
+
+.version-history-modal .n-card__content {
+  padding: 0 !important;
+}
+
+.version-history-content {
+  max-height: min(68vh, 680px);
+}
+
+.version-history-inner {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+  padding: 12px 16px 18px;
+}
+
+.version-history-update {
+  align-self: flex-start;
+  margin: 2px 0 8px;
+  padding: 6px 14px;
+  border: 0;
+  border-radius: var(--radius);
+  background: var(--danger);
+  color: #fff;
+  font-size: var(--app-font-size);
+  line-height: 1.4;
+  cursor: pointer;
+  transition: opacity 0.18s ease;
+}
+
+.version-history-update:hover {
+  opacity: 0.88;
+}
+
+.version-history-list {
+  display: flex;
+  flex-direction: column;
+  gap: 14px;
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+
+.version-history-entry {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+  padding-bottom: 14px;
+  border-bottom: 1px solid var(--line-main);
+}
+
+.version-history-list .version-history-entry:last-child {
+  padding-bottom: 0;
+  border-bottom: 0;
+}
+
+.version-history-entry-head {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.version-history-version {
+  font-weight: 600;
+  font-size: calc(var(--app-font-size) + 1px);
+  color: var(--text);
+}
+
+.version-history-badge {
+  padding: 1px 6px;
+  border-radius: 999px;
+  background: color-mix(in srgb, var(--danger) 16%, transparent);
+  color: var(--danger);
+  font-size: calc(var(--app-font-size) - 3px);
+  line-height: 1.5;
+}
+
+.version-history-date {
+  margin-left: auto;
+  color: var(--muted);
+  font-size: calc(var(--app-font-size) - 2px);
+}
+
+.version-history-notes {
+  margin: 0;
+  padding-left: 18px;
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+  color: var(--text);
+  font-size: var(--app-font-size);
+  line-height: 1.55;
+}
+
+.version-history-notes li {
+  padding-left: 2px;
+}
+
+.version-history-notes li::marker {
+  color: var(--muted);
+}
+
 .shortcut-keyboard-overview {
   padding: 12px;
   border: 1px solid color-mix(in srgb, var(--border) 74%, transparent);
