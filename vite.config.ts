@@ -1,11 +1,10 @@
 import path from "node:path";
-import tailwindcss from "@tailwindcss/vite";
 import { defineConfig } from "vite";
 import vue from "@vitejs/plugin-vue";
 
 export default defineConfig({
   base: process.env.VITE_BASE ?? "/",
-  plugins: [vue(), tailwindcss()],
+  plugins: [vue()],
   build: {
     // Vite 8 runs on rolldown; the legacy `manualChunks` hook is a compatibility
     // shim that silently drops groups (the old vendor-vue rule never emitted a
