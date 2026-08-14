@@ -4551,6 +4551,70 @@ describe("App shell", () => {
     }
   });
 
+  it("debounces todo text edits instead of persisting every keystroke", async () => {
+    vi.useFakeTimers();
+    const wrapper = mountApp();
+
+    try {
+      const todoPanel = wrapper.getComponent(TodoPanel);
+      await wrapper.get('[data-testid="todo-list-morning"]').trigger("click");
+      await nextTick();
+      const todoId = wrapper.getComponent(TodoPanel).props("todos").morning[0].id;
+
+      todoPanel.vm.$emit("update", "morning", todoId, "草");
+      todoPanel.vm.$emit("update", "morning", todoId, "草稿");
+      todoPanel.vm.$emit("update", "morning", todoId, "草稿文");
+      await nextTick();
+
+      // In-memory state reflects every keystroke, but nothing hit storage yet.
+      expect(todoPanel.props("todos").morning[0].text).toBe("草稿文");
+      const storedMidDebounce = JSON.parse(localStorage.getItem(STORAGE_KEY) || "{}");
+      expect(storedMidDebounce.workspaces[0].todos.morning[0].text).toBe("");
+
+      await vi.advanceTimersByTimeAsync(1000);
+      const stored = JSON.parse(localStorage.getItem(STORAGE_KEY) || "{}");
+      expect(stored.workspaces[0].todos.morning[0].text).toBe("草稿文");
+    } finally {
+      wrapper.unmount();
+      vi.useRealTimers();
+    }
+  });
+
+  it("flushes a pending todo edit on blur and superseding structural save", async () => {
+    vi.useFakeTimers();
+    const wrapper = mountApp();
+
+    try {
+      await wrapper.get('[data-testid="todo-list-morning"]').trigger("click");
+      await nextTick();
+      const todoPanel = wrapper.getComponent(TodoPanel);
+      const todoId = todoPanel.props("todos").morning[0].id;
+
+      todoPanel.vm.$emit("update", "morning", todoId, "失焦前");
+      await nextTick();
+      todoPanel.vm.$emit("blur");
+      await flushPromises();
+      await nextTick();
+
+      expect(JSON.parse(localStorage.getItem(STORAGE_KEY) || "{}").workspaces[0].todos.morning[0].text).toBe("失焦前");
+
+      // A structural change (adding another todo) mid-debounce must carry the
+      // pending text edit along with it.
+      todoPanel.vm.$emit("update", "morning", todoId, "结构保存前");
+      await nextTick();
+      todoPanel.vm.$emit("createFromText", "morning", ["结构变化"]);
+      await vi.advanceTimersByTimeAsync(0);
+
+      const stored = JSON.parse(localStorage.getItem(STORAGE_KEY) || "{}");
+      const morning = stored.workspaces[0].todos.morning;
+      expect(morning.find((todo: { id: string }) => todo.id === todoId).text).toBe("结构保存前");
+      expect(morning.some((todo: { text: string }) => todo.text === "结构变化")).toBe(true);
+    } finally {
+      wrapper.unmount();
+      vi.useRealTimers();
+    }
+  });
+
   it("does not retry an ordinary cross-tab text conflict forever", async () => {
     vi.useFakeTimers();
     localStorage.setItem(

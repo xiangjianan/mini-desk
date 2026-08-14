@@ -115,6 +115,50 @@ const defaultTodoLists = [
 ];
 
 describe("TodoPanel", () => {
+  it("suppresses update emits during IME composition and emits the committed text", async () => {
+    const wrapper = mount(TodoPanel, {
+      props: {
+        todoLists: defaultTodoLists,
+        todos: {
+          morning: [{ id: "todo-1", text: "", done: false }],
+          noon: [],
+          evening: [],
+        },
+        showCompleted: { morning: false, noon: false, evening: false },
+        titles: DEFAULT_TITLES,
+      },
+      global: {
+        stubs: {
+          Checkbox: checkboxStub,
+          Dropdown: dropdownStub,
+          NCheckbox: checkboxStub,
+          NDatePicker: datePickerStub,
+          NDropdown: dropdownStub,
+          NTooltip: tooltipStub,
+        },
+      },
+    });
+
+    const input = wrapper.get('[data-testid="todo-input-morning"]');
+
+    await input.trigger("compositionstart");
+    (input.element as HTMLInputElement).value = "中";
+    await input.trigger("input");
+    await input.trigger("compositionupdate");
+    (input.element as HTMLInputElement).value = "中文";
+    await input.trigger("input");
+
+    expect(wrapper.emitted("update")).toBeUndefined();
+
+    await input.trigger("compositionend");
+    (input.element as HTMLInputElement).value = "中文输入";
+    await input.trigger("input");
+
+    expect(wrapper.emitted("update")).toEqual([["morning", "todo-1", "中文输入"]]);
+
+    wrapper.unmount();
+  });
+
   it("emits a declutter prompt when a reminder list with at least seven items is focused", async () => {
     const wrapper = mount(TodoPanel, {
       props: {

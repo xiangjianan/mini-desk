@@ -56,8 +56,9 @@ The note, workspace, and storage panels use a custom line editor (not `<textarea
 
 - `Ctrl+S`: immediate full save with save bubble animation.
 - Line editor input: 3-second debounce, flushed on blur.
-- Todo input: saved on each keystroke (no debounce).
-- Save bubble shows a random message + kaomoji from predefined arrays.
+- Todo text input: 1-second debounce (shares the text pipeline's generation baseline), flushed on blur, Ctrl+S, structural saves, workspace switch, and beforeunload. IME composition events are suppressed until commit.
+- Structural edits (add/split/complete/remove/...) save immediately via `persistNow()` and supersede pending debounced saves.
+- Save bubble shows a random message + kaomoji from predefined arrays (explicit saves only; debounced auto-saves stay quiet).
 
 ### Theme System
 

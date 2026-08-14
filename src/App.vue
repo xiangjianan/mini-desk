@@ -137,6 +137,7 @@ const workspaceDialogId = ref<string | null>(null);
 const workspaceDraftTitle = ref("");
 const workspaceDraftSlogan = ref("");
 const textSaveTimer = ref<number | undefined>();
+const todoSaveTimer = ref<number | undefined>();
 const bubbleTimer = ref<number | undefined>();
 const bubbleFadeTimer = ref<number | undefined>();
 const bubbleRemainingMs = ref(0);
@@ -269,7 +270,10 @@ function updateMobileBlocked(source?: MediaQueryList | MediaQueryListEvent): voi
   const wasMobileBlocked = isMobileBlocked.value;
   if (matches && !wasMobileBlocked) {
     clearImagePreview();
-    if (textSaveTimer.value !== undefined) flushTextSave();
+    if (textSaveTimer.value !== undefined || todoSaveTimer.value !== undefined) {
+      flushTodoSave();
+      flushTextSave();
+    }
     clearPendingConfirm(true);
     hideBubbleMessage({ clearRetainedContent: true });
     companionFocused.value = false;
@@ -340,6 +344,7 @@ onMounted(async () => {
   window.addEventListener("keydown", handleGlobalKeydown);
   window.addEventListener("focus", handleNotificationReturn);
   window.addEventListener("storage", handleStorageEvent);
+  window.addEventListener("beforeunload", handleBeforeUnload);
   document.addEventListener("paste", handlePaste);
   document.addEventListener("visibilitychange", handleDocumentVisibilityChange);
   setupStateSyncChannel();
@@ -355,12 +360,21 @@ onUnmounted(() => {
   window.removeEventListener("keydown", handleGlobalKeydown);
   window.removeEventListener("focus", handleNotificationReturn);
   window.removeEventListener("storage", handleStorageEvent);
+  window.removeEventListener("beforeunload", handleBeforeUnload);
   document.removeEventListener("paste", handlePaste);
   document.removeEventListener("visibilitychange", handleDocumentVisibilityChange);
   teardownStateSyncChannel();
   teardownMobileBreakpoint();
   clearTimers();
 });
+
+// Closing the tab mid-debounce would drop the last second of todo/line edits;
+// flush synchronously before the page goes away.
+function handleBeforeUnload(): void {
+  if (textEditGeneration === savedTextGeneration) return;
+  flushTodoSave();
+  flushTextSave();
+}
 
 watch(
   () => state.theme,
@@ -515,7 +529,10 @@ function createWorkspace(title: string, slogan: string): void {
 
 async function switchWorkspace(id: string): Promise<void> {
   if (!state.workspaces.some((workspace) => workspace.id === id) || state.activeWorkspaceId === id) return;
-  if (textEditGeneration !== savedTextGeneration) flushTextSave();
+  if (textEditGeneration !== savedTextGeneration) {
+    flushTodoSave();
+    flushTextSave();
+  }
   const target = state.workspaces.find((workspace) => workspace.id === id);
   if (target) {
     // Hydrate the target workspace's image payloads before it becomes visible.
@@ -640,6 +657,25 @@ function scheduleTextSave(): void {
   }, 3000);
 }
 
+// Todo input saves share the text pipeline's generation baseline so a debounced
+// todo edit and a debounced line edit can never overwrite each other, while the
+// separate timer keeps "stop typing in todos" from delaying a pending line save
+// (and vice versa).
+function scheduleTodoSave(): void {
+  window.clearTimeout(todoSaveTimer.value);
+  todoSaveTimer.value = window.setTimeout(() => {
+    todoSaveTimer.value = undefined;
+    void persistPendingText();
+  }, 1000);
+}
+
+function flushTodoSave(): void {
+  const pending = todoSaveTimer.value !== undefined;
+  window.clearTimeout(todoSaveTimer.value);
+  todoSaveTimer.value = undefined;
+  if (pending) void persistPendingText();
+}
+
 function flushTextSave(): void {
   window.clearTimeout(textSaveTimer.value);
   textSaveTimer.value = undefined;
@@ -649,6 +685,7 @@ function flushTextSave(): void {
 function resetTextGenerationBaseline(): void {
   window.clearTimeout(textSaveTimer.value);
   textSaveTimer.value = undefined;
+  flushTodoSave();
   savedTextGeneration = textEditGeneration;
 }
 
@@ -666,6 +703,7 @@ async function persistPendingText(options: { retryOnce?: boolean } = {}): Promis
     return;
   }
   showSaveBubble();
+  showSaveBubbleSoon();
 }
 
 function showCompanion(anchor?: HTMLElement, guideKey?: GuideKey): void {
@@ -703,6 +741,7 @@ function handleEditorBlur(): void {
   if (pendingConfirm.value) return;
   companionFocused.value = false;
   activeGuideKey.value = null;
+  flushTodoSave();
   flushTextSave();
 }
 
@@ -710,11 +749,24 @@ function handleCompanionBlur(): void {
   if (pendingConfirm.value) return;
   companionFocused.value = false;
   activeGuideKey.value = null;
+  flushTodoSave();
 }
 
 function persistNow(scope: SaveScope = "all", options: PersistOptions = {}): boolean {
   recordUndoCheckpoint();
   markSaving();
+  // A direct save supersedes any pending debounced todo/text save: it persists
+  // the whole in-memory state anyway, so retire the timers and adopt the current
+  // generation as saved to keep persistPendingText from double-saving (and
+  // double-bubbling) right after. Capture the generation BEFORE saving — an
+  // edit injected mid-save (e.g. re-entrant from a storage spy) must stay dirty.
+  const generationAtSave = textEditGeneration;
+  const supersededPendingEdit = generationAtSave !== savedTextGeneration;
+  if (supersededPendingEdit) {
+    window.clearTimeout(textSaveTimer.value);
+    textSaveTimer.value = undefined;
+    flushTodoSave();
+  }
   const result = saveStateWithConflictCheck(state, {
     clientId: syncClientId,
     force: options.force,
@@ -728,6 +780,7 @@ function persistNow(scope: SaveScope = "all", options: PersistOptions = {}): boo
     showToast("stateConflict");
     return false;
   }
+  if (supersededPendingEdit) savedTextGeneration = generationAtSave;
   state.sync = result.state.sync;
   if (result.status === "merged") {
     const savedActive = result.state.workspaces.find((w) => w.id === state.activeWorkspaceId) ?? result.state.workspaces[0];
@@ -1976,7 +2029,13 @@ function updateTodo(period: TodoPeriod, id: string, text: string): void {
   if (!isConfiguredTodoListId(period)) return;
   cancelEmptyTodoRemoval(period, id);
   activeWorkspace.value.todos = updateTodoText(activeWorkspace.value.todos, period, id, text);
-  persistNow();
+  // Text edits are cheap to redo but full-state saves are not (serialization +
+  // localStorage round-trip per keystroke, amplified by IME composition). Debounce
+  // through the shared text pipeline; blur/Enter/structural edits flush via
+  // persistNow, and undo snapshots still record every change.
+  textEditGeneration += 1;
+  markDirty();
+  scheduleTodoSave();
 }
 
 function splitTodo(period: TodoPeriod, id: string, before: string, after: string): void {
@@ -2399,6 +2458,7 @@ function handleGlobalKeydown(event: KeyboardEvent): void {
   }
   if ((event.ctrlKey || event.metaKey) && event.key.toLowerCase() === "s") {
     event.preventDefault();
+    flushTodoSave();
     flushTextSave();
     showSaveBubble();
   }
@@ -2498,6 +2558,13 @@ function navigatePreview(direction: number): void {
 
 function showSaveBubble(): void {
   showBubble("save");
+}
+
+// The Ctrl+S bubble animation is a spectacle; firing it on every debounced
+// todo auto-save would be noise, so auto-saves only nudge the save status.
+function showSaveBubbleSoon(): void {
+  // no-op placeholder kept separate from showSaveBubble so explicit saves can
+  // keep the celebration while automatic ones stay quiet.
 }
 
 function showSaveStatusTip(anchor?: HTMLElement): void {
@@ -2833,6 +2900,7 @@ function isSingleWorkspaceExport(payload: Record<string, unknown>): boolean {
 
 function clearTimers(): void {
   window.clearTimeout(textSaveTimer.value);
+  window.clearTimeout(todoSaveTimer.value);
   window.clearTimeout(bubbleTimer.value);
   window.clearTimeout(bubbleFadeTimer.value);
   window.clearTimeout(saveStatusTimer.value);

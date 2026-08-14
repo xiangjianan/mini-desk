@@ -574,6 +574,15 @@ function handleInputBlur(period: TodoPeriod, id: string): void {
   emit("blur");
 }
 
+// IME composition fires a burst of input events per committed word; suppressing
+// update emits during composition keeps the parent's debounced saves (and its
+// undo snapshots) from churning on intermediate pinyin states.
+const todoComposing = ref(false);
+
+function handleInputComposition(event: CompositionEvent): void {
+  todoComposing.value = event.type === "compositionstart";
+}
+
 function handleInputFocus(period: TodoPeriod, todo: TodoItem, event: FocusEvent): void {
   focusedListId.value = period;
   if (!todo.done && todo.text.trim().length === 0) editingTodoKey.value = todoKey(period, todo.id);
@@ -1514,7 +1523,9 @@ function buildTodoListEntries(period: TodoListId, todos: TodoItem[], deferredDon
               :value="item.todo.text"
               :readonly="!isTodoEditable(item.period, item.todo)"
               draggable="false"
-              @input="emit('update', item.period, item.todo.id, ($event.target as HTMLInputElement).value)"
+              @input="!todoComposing && emit('update', item.period, item.todo.id, ($event.target as HTMLInputElement).value)"
+              @compositionstart="handleInputComposition"
+              @compositionend="handleInputComposition"
               @keydown.enter="handleEnter($event, item.period, item.todo)"
               @keydown.up="handleTodoArrowKey($event, item.period, item.todo)"
               @keydown.down="handleTodoArrowKey($event, item.period, item.todo)"
@@ -1717,7 +1728,9 @@ function buildTodoListEntries(period: TodoListId, todos: TodoItem[], deferredDon
                   :value="entry.todo.text"
                   :readonly="!isTodoEditable(list.id, entry.todo)"
                   draggable="false"
-                  @input="emit('update', list.id, entry.todo.id, ($event.target as HTMLInputElement).value)"
+                  @input="!todoComposing && emit('update', list.id, entry.todo.id, ($event.target as HTMLInputElement).value)"
+                  @compositionstart="handleInputComposition"
+                  @compositionend="handleInputComposition"
                   @keydown.enter="handleEnter($event, list.id, entry.todo)"
                   @keydown.up="handleTodoArrowKey($event, list.id, entry.todo)"
                   @keydown.down="handleTodoArrowKey($event, list.id, entry.todo)"
