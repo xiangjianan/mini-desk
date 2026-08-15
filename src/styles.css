@@ -161,7 +161,7 @@ select {
   color: inherit;
 }
 
-button:not([data-slot="button"]) {
+button:not(.icon-button) {
   border: 0;
   border-radius: var(--radius);
   min-height: 30px;
@@ -3237,16 +3237,41 @@ button.todo-star-button {
 }
 
 /* Native per-row checkbox (replaced NCheckbox instances: one Vue component per
-   todo row was measurable overhead on dense boards). Mirrors the naive-ui
-   checkbox look already themed above — 14px box, green check, radius. */
+   todo row was measurable overhead on dense boards). Drawn as a transparent
+   circle: bare ring at rest, green fill + white check when done. */
 .todo-item .todo-checkbox,
 .today-focus-item .todo-checkbox {
   justify-self: center;
-  width: 14px;
-  height: 14px;
+  appearance: none;
+  -webkit-appearance: none;
+  width: 15px;
+  height: 15px;
   margin: 0;
-  accent-color: #22c55e;
+  border: 1px solid color-mix(in srgb, var(--foreground) 38%, transparent);
+  border-radius: 50%;
+  background: transparent;
   cursor: pointer;
+  transition:
+    background-color var(--motion-fast) ease,
+    border-color var(--motion-fast) ease;
+}
+
+.todo-item .todo-checkbox:checked,
+.today-focus-item .todo-checkbox:checked {
+  border-color: #22c55e;
+  background: #22c55e;
+}
+
+.todo-item .todo-checkbox:checked::after,
+.today-focus-item .todo-checkbox:checked::after {
+  content: "";
+  display: block;
+  width: 8px;
+  height: 4.5px;
+  margin: 3px auto 0;
+  border: solid #fff;
+  border-width: 0 0 1.5px 1.5px;
+  transform: rotate(-45deg);
 }
 
 .today-focus-item .todo-checkbox {
@@ -5004,8 +5029,7 @@ button.workbench-resizer {
   box-shadow: var(--focus-ring);
 }
 
-button:not([data-slot="button"]):active,
-[data-slot="button"]:active,
+button:active,
 .n-button:active {
   transform: scale(0.98);
 }
@@ -5092,13 +5116,6 @@ html[data-theme="dark"] .workbench-shell {
 
 .workbench-slogan {
   color: var(--muted);
-}
-
-[data-slot="badge"] {
-  border-color: transparent;
-  background: color-mix(in srgb, var(--primary) 10%, transparent);
-  color: var(--primary);
-  font-weight: 600;
 }
 
 .save-status::before {
@@ -7165,7 +7182,7 @@ body,
 .workspace-switcher-item:hover { background: var(--color-hover, rgba(0,0,0,0.05)); }
 .workspace-switcher-name { line-height: 1; }
 .workspace-switcher-actions { display: inline-flex; align-items: center; gap: 1px; opacity: 0.7; }
-/* Specificity must beat the global `button:not([data-slot="button"])` rule, which
+/* Specificity must beat the global `button:not(.icon-button)` rule, which
    forces min-height:30px + horizontal padding and would otherwise turn these into
    tall ellipses instead of true circles. */
 .workspace-switcher-actions .workspace-switcher-action {

@@ -73,15 +73,17 @@ describe("workbench style contract", () => {
     expectSelectorBody(styles, ".image-index", "border-right: 0");
   });
 
-  it("keeps legacy native button styling from overriding shadcn buttons", () => {
+  it("keeps legacy native button styling from overriding circular icon buttons", () => {
     const styles = readFileSync(resolve(__dirname, "../styles.css"), "utf8");
     const bareButtonBodies = ruleBodies(styles, "button");
 
     expect(bareButtonBodies.join("\n")).not.toMatch(/\b(border|background|border-radius|min-height|padding):/);
-    expectSelectorBody(styles, 'button:not([data-slot="button"])', "border: 0");
-    expect(ruleBodies(styles, 'button:not([data-slot="button"])').join("\n")).not.toContain("background:");
-    expect(styles).not.toContain('button:not([data-slot="button"]):hover');
-    expectSelectorBody(styles, 'button:not([data-slot="button"])', "min-height: 30px");
+    // The global rule must exclude .icon-button so its 50% radius can win
+    // without !important (the old data-slot exclusion served the deleted shadcn set).
+    expectSelectorBody(styles, "button:not(.icon-button)", "border: 0");
+    expect(ruleBodies(styles, "button:not(.icon-button)").join("\n")).not.toContain("background:");
+    expect(styles).not.toContain("button:not(.icon-button):hover");
+    expectSelectorBody(styles, "button:not(.icon-button)", "min-height: 30px");
   });
 
   it("keeps the settings custom GIF dialog above workspace content", () => {

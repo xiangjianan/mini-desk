@@ -407,8 +407,8 @@ describe("Naive UI component usage", () => {
   it("keeps bordered controls and popup surfaces aligned to shared radius tokens", () => {
     const styles = read("src/styles.css");
 
-    expect(styles).toMatch(/button:not\(\[data-slot="button"\]\)\s*\{[^}]*border: 0/s);
-    expect(styles).toMatch(/button:not\(\[data-slot="button"\]\)\s*\{[^}]*border-radius: var\(--radius\)/s);
+    expect(styles).toMatch(/button:not\(\.icon-button\)\s*\{[^}]*border: 0/s);
+    expect(styles).toMatch(/button:not\(\.icon-button\)\s*\{[^}]*border-radius: var\(--radius\)/s);
     expect(styles).toMatch(/input,[\s\S]*?textarea\s*\{[^}]*border-radius: var\(--radius\)/s);
     expect(styles).toMatch(/\.n-button,[\s\S]*?\.n-dropdown-menu,[\s\S]*?\.n-checkbox-box\s*\{[^}]*border-radius: var\(--radius\)/s);
     expect(styles).toMatch(/\.n-button \.n-button__border,[\s\S]*?\.n-button \.n-button__state-border\s*\{[^}]*border-radius: var\(--radius\)/s);
