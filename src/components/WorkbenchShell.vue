@@ -1,7 +1,8 @@
 <script setup lang="ts">
 import { computed, nextTick, onMounted, onUnmounted, ref, watch } from "vue";
-import { ContractOutline, ExpandOutline, MoonOutline, SunnyOutline } from "@vicons/ionicons5";
+import { SunnyOutline } from "@vicons/ionicons5";
 import { NIcon } from "naive-ui";
+import { Moon as LucideMoon, PanelTopClose, PanelTopOpen } from "lucide-vue-next";
 import type { AppLanguage, ThemeMode, ZoneVisibility } from "../types";
 import {
   DEFAULT_LANGUAGE,
@@ -665,9 +666,10 @@ onUnmounted(() => {
               class="icon-button workbench-header-hide-button"
               data-testid="workbench-header-hide"
               aria-label="隐藏顶部菜单"
+              title="隐藏顶部菜单"
               @click="setHeaderHidden(true, $event)"
             >
-              <NIcon :component="ContractOutline" />
+              <PanelTopClose :size="16" />
             </button>
             <button
               type="button"
@@ -677,7 +679,7 @@ onUnmounted(() => {
               @click="emit('theme')"
             >
               <NIcon v-if="theme === 'dark'" :component="SunnyOutline" />
-              <NIcon v-else :component="MoonOutline" />
+              <LucideMoon v-else :size="16" />
             </button>
             <slot name="actions" />
           </div>
@@ -701,9 +703,10 @@ onUnmounted(() => {
             class="workbench-header-reveal"
             data-testid="workbench-header-show"
             aria-label="显示顶部菜单"
+            title="显示顶部菜单"
             @click="setHeaderHidden(false, $event)"
           >
-            <NIcon :component="ExpandOutline" />
+            <PanelTopOpen :size="16" />
           </button>
         </Transition>
       </div>

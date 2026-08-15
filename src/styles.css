@@ -3247,7 +3247,8 @@ button.todo-star-button {
   width: 15px;
   height: 15px;
   margin: 0;
-  border: 1px solid color-mix(in srgb, var(--foreground) 38%, transparent);
+  /* 0.5px renders as a hairline on hi-dpi screens (snaps to 1px on 1x). */
+  border: 0.5px solid color-mix(in srgb, var(--foreground) 38%, transparent);
   border-radius: 50%;
   background: transparent;
   cursor: pointer;
@@ -5288,6 +5289,13 @@ html[data-theme="dark"] .workbench-shell {
   background: transparent;
 }
 
+/* The shared .icon-button min-size rule (var(--control-hit-size)) would make
+   this 34px tall inside the 30px tab row and push the + below the tab labels. */
+.space-tabs .space-add-button {
+  min-width: 30px;
+  min-height: 30px;
+}
+
 .tool-tabs {
   padding: 4px 0;
   border-right: 1px solid color-mix(in srgb, var(--border) 72%, transparent);
@@ -7122,10 +7130,14 @@ body,
   gap: 2px;
 }
 
+/* Sized to --control-hit-size like the sibling .quick-menu-button: the shared
+   icon-button min-height rule would otherwise stretch the 30px-wide toggle
+   into a vertical ellipse. */
 .quick-search .quick-search-toggle {
-  width: 30px;
-  height: 30px;
-  min-width: 30px;
+  width: var(--control-hit-size);
+  height: var(--control-hit-size);
+  min-width: var(--control-hit-size);
+  min-height: var(--control-hit-size);
   padding: 0;
   border: 0;
   border-radius: 50%;
