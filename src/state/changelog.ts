@@ -25,6 +25,18 @@ export interface ChangelogEntry {
 
 export const CHANGELOG: ChangelogEntry[] = [
   {
+    version: "1.0.128",
+    date: "2026-08-15",
+    notes: {
+      zh: [
+        "修复安全策略误拦首屏主题预载脚本的问题——暗色模式用户启动时不再闪现亮色加载页",
+      ],
+      en: [
+        "Fix: the content security policy no longer blocks the pre-paint theme script, so dark-mode users no longer see a light boot flash on startup",
+      ],
+    },
+  },
+  {
     version: "1.0.127",
     date: "2026-08-15",
     notes: {
