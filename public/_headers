@@ -1,10 +1,14 @@
 # Defense-in-depth for the quick-button scheme guard (src/state/quickApps.ts):
 # script-src 'self' blocks javascript: URIs from executing even if a dangerous
-# scheme ever slips past validation. Inline styles are allowed because Vue
-# bindings and the companion/gif positioning rely on them; blob:/data: images
-# cover pasted screenshots and object-URL previews. connect-src https: matches
-# the user-configured API quick buttons (normalized to https://).
+# scheme ever slips past validation. No 'unsafe-inline': the pre-paint theme
+# bootstrap lives in /boot-theme.js instead of an inline <script>. The
+# cloudflareinsights.com origin is the Web Analytics beacon Cloudflare injects
+# into proxied responses (zone setting, not app code). Inline styles are
+# allowed because Vue bindings and the companion/gif positioning rely on them;
+# blob:/data: images cover pasted screenshots and object-URL previews.
+# connect-src https: matches the user-configured API quick buttons
+# (normalized to https://).
 /*
-  Content-Security-Policy: default-src 'self'; script-src 'self'; object-src 'none'; base-uri 'none'; style-src 'self' 'unsafe-inline'; img-src 'self' data: blob:; connect-src 'self' https: data: blob:; frame-ancestors 'none'
+  Content-Security-Policy: default-src 'self'; script-src 'self' https://static.cloudflareinsights.com; object-src 'none'; base-uri 'none'; style-src 'self' 'unsafe-inline'; img-src 'self' data: blob:; connect-src 'self' https: data: blob:; frame-ancestors 'none'
   X-Content-Type-Options: nosniff
   Referrer-Policy: strict-origin-when-cross-origin
