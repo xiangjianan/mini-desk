@@ -3513,6 +3513,23 @@ button.todo-star-button {
   opacity: 0;
 }
 
+/* FLIP: pull the leaving row out of flow so the rows below start sliding up
+   immediately (via the *-move transform) instead of jumping once the removal
+   finishes. The lists become the positioning context; left/right match their
+   6px side padding so the leaving row keeps its exact in-flow width. */
+.todo-list,
+.today-focus-list {
+  position: relative;
+}
+
+.todo-move-leave-active,
+.today-focus-move-leave-active {
+  position: absolute;
+  left: 6px;
+  right: 6px;
+  pointer-events: none;
+}
+
 .section-reveal-enter-active,
 .section-reveal-leave-active {
   overflow: hidden;
