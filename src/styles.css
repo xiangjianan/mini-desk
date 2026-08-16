@@ -7159,6 +7159,7 @@ body,
   border: 0;
   border-radius: 50%;
   box-shadow: none;
+  cursor: pointer;
 }
 
 .quick-search .quick-search-toggle:hover,
@@ -7168,12 +7169,17 @@ body,
 }
 
 /* Dark mode: no filled circle behind the search glyph (matches the transparent
-   sibling .quick-menu-button), also on hover so the circle never reappears. */
+   sibling .quick-menu-button); hovering fades in a soft foreground wash so the
+   toggle still reads as clickable. */
 html[data-theme="dark"] .quick-search .quick-search-toggle,
-html[data-theme="dark"] .quick-search .quick-search-toggle:hover,
-html[data-theme="dark"] .quick-search .quick-search-toggle:focus-visible,
 html[data-theme="dark"] .quick-search .quick-search-toggle:active {
   background: transparent;
+  box-shadow: none;
+}
+
+html[data-theme="dark"] .quick-search .quick-search-toggle:hover,
+html[data-theme="dark"] .quick-search .quick-search-toggle:focus-visible {
+  background: color-mix(in srgb, var(--foreground) 10%, transparent);
   box-shadow: none;
 }
 
