@@ -7130,23 +7130,39 @@ body,
   gap: 2px;
 }
 
-/* Sized to --control-hit-size like the sibling .quick-menu-button: the shared
-   icon-button min-height rule would otherwise stretch the 30px-wide toggle
-   into a vertical ellipse. */
+/* 30px circle — the base .icon-button size, one step below the 34px hit size.
+   The shared icon-button min-size rule is overridden as well, otherwise it
+   would stretch the 30px-wide toggle back into a vertical ellipse. */
 .quick-search .quick-search-toggle {
-  width: var(--control-hit-size);
-  height: var(--control-hit-size);
-  min-width: var(--control-hit-size);
-  min-height: var(--control-hit-size);
+  width: 30px;
+  height: 30px;
+  min-width: 30px;
+  min-height: 30px;
   padding: 0;
   border: 0;
   border-radius: 50%;
   box-shadow: none;
+  cursor: pointer;
 }
 
 .quick-search .quick-search-toggle:hover,
 .quick-search .quick-search-toggle:focus-visible,
 .quick-search .quick-search-toggle:active {
+  box-shadow: none;
+}
+
+/* Dark mode: no filled circle behind the search glyph (matches the transparent
+   sibling .quick-menu-button); hovering fades in a soft foreground wash so the
+   toggle still reads as clickable. */
+html[data-theme="dark"] .quick-search .quick-search-toggle,
+html[data-theme="dark"] .quick-search .quick-search-toggle:active {
+  background: transparent;
+  box-shadow: none;
+}
+
+html[data-theme="dark"] .quick-search .quick-search-toggle:hover,
+html[data-theme="dark"] .quick-search .quick-search-toggle:focus-visible {
+  background: color-mix(in srgb, var(--foreground) 10%, transparent);
   box-shadow: none;
 }
 
