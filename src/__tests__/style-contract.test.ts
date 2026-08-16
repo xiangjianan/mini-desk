@@ -225,6 +225,7 @@ describe("workbench style contract", () => {
     expectSelectorBody(styles, ".settings-btn.icon-button .n-icon", "font-size: 16px");
     expectSelectorBody(styles, ".settings-btn.icon-button svg", "stroke-width: 1.8");
     expectSelectorBody(styles, ".icon-button", "border-radius: 50%");
+    expectSelectorBody(styles, ".icon-button", "cursor: pointer");
     expectSelectorBody(styles, ".n-button.icon-button", "border-radius: 50% !important");
     expectSelectorBody(styles, ".icon-button .n-icon", "font-size: 16px");
     expectSelectorBody(styles, ".icon-button svg", "font-size: 16px");

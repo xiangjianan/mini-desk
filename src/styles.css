@@ -555,6 +555,7 @@ html[data-theme="dark"] .n-modal-mask {
   font-size: var(--app-font-size);
   border: 0;
   background: var(--button);
+  cursor: pointer;
 }
 
 .icon-button .n-button__content {
@@ -7159,7 +7160,6 @@ body,
   border: 0;
   border-radius: 50%;
   box-shadow: none;
-  cursor: pointer;
 }
 
 .quick-search .quick-search-toggle:hover,
