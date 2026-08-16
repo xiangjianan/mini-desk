@@ -84,6 +84,11 @@ const IMAGE_DELETE_GRACE_MS = 5000;
 const IMAGE_PREVIEW_CLOSE_MS = 220;
 const IMAGE_DENSITY_THRESHOLD = 10;
 const TODO_DENSITY_THRESHOLD = 7;
+// Consecutive-delete confirmation: the first TODO_DELETE_CONFIRM_MAX deletes in
+// a streak each ask for confirmation; once the streak exceeds that (and stays
+// within TODO_DELETE_STREAK_RESET_MS between deletes) the rest delete directly.
+const TODO_DELETE_CONFIRM_MAX = 2;
+const TODO_DELETE_STREAK_RESET_MS = 30_000;
 const WORKSPACE_DENSITY_GROUP_TIP_CHANCE = 0.5;
 const STATE_SYNC_CHANNEL = "mini-desk-state-sync";
 const mobileCompanionPosition: { right: string; bottom: string } = { right: "18px", bottom: "28px" };
@@ -2033,16 +2038,37 @@ function updateTodoNotify(period: TodoPeriod, id: string, notifyAt: number | und
   else void prepareTodoNotifications();
 }
 
+let consecutiveTodoDeletes = 0;
+let lastTodoDeleteAt = 0;
+
+function todoDeleteStreakActive(): boolean {
+  return consecutiveTodoDeletes > 0 && Date.now() - lastTodoDeleteAt <= TODO_DELETE_STREAK_RESET_MS;
+}
+
+function deleteTodoNow(period: TodoPeriod, id: string, anchor?: HTMLElement): boolean {
+  if (!isConfiguredTodoListId(period)) return false;
+  if (getTodos(period).findIndex((todo) => todo.id === id) < 0) return false;
+  activeWorkspace.value.todos = removeTodoFromMap(activeWorkspace.value.todos, period, id);
+  persistNow();
+  lastTodoDeleteAt = Date.now();
+  showBubble("deleteTodo", anchor, { hideCompanionAfter: true });
+  return true;
+}
+
 function removeTodo(period: TodoPeriod, id: string, anchor?: HTMLElement): void {
   if (!isConfiguredTodoListId(period)) return;
+  // Beyond the confirm limit inside an active streak the delete runs directly,
+  // so bulk cleanups are not interrupted by one confirm bubble per todo.
+  if (todoDeleteStreakActive() && consecutiveTodoDeletes >= TODO_DELETE_CONFIRM_MAX) {
+    deleteTodoNow(period, id, anchor);
+    return;
+  }
   requestConfirmation("confirmDeleteTodo", anchor, () => {
-    if (!isConfiguredTodoListId(period)) return;
-    const index = getTodos(period).findIndex((todo) => todo.id === id);
-    if (index < 0) return;
-    activeWorkspace.value.todos = removeTodoFromMap(activeWorkspace.value.todos, period, id);
-    persistNow();
-    showBubble("deleteTodo", anchor, { hideCompanionAfter: true });
-  }, undefined, { confirmText: uiText.value.common.delete, cancelText: uiText.value.common.cancel });
+    if (!deleteTodoNow(period, id, anchor)) return;
+    consecutiveTodoDeletes += 1;
+  }, () => {
+    consecutiveTodoDeletes = 0;
+  }, { confirmText: uiText.value.common.delete, cancelText: uiText.value.common.cancel });
 }
 
 function clearDone(period: TodoPeriod, anchor?: HTMLElement): void {

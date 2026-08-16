@@ -219,7 +219,10 @@ watch(
     }
     gifVisible.value = true;
     gifFading.value = false;
-    if (props.persistent) return;
+    // A pending confirm must stay on screen until answered: like `persistent`,
+    // it never expires on the GIF window, otherwise the confirm popover (and the
+    // GIF it anchors to) fades away while `pendingConfirm` is still set.
+    if (props.persistent || props.confirm) return;
     if (!hoveringCompanion.value) startGifTimer(GIF_MAX_VISIBLE_MS);
   },
   { immediate: true },
@@ -319,7 +322,7 @@ function pauseGifTimer(): void {
 }
 
 function resumeGifTimer(): void {
-  if (props.persistent || !gifVisible.value || gifFading.value || gifTimer.value) return;
+  if (props.persistent || props.confirm || !gifVisible.value || gifFading.value || gifTimer.value) return;
   if (gifRemainingMs.value <= 0) {
     finishGifTimer();
     return;

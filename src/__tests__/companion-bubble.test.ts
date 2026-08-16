@@ -580,6 +580,39 @@ describe("CompanionBubble", () => {
     wrapper.unmount();
   });
 
+  it("keeps a pending confirm on screen past the ten-second GIF window", async () => {
+    vi.useFakeTimers();
+    const wrapper = mount(CompanionBubble, {
+      attachTo: document.body,
+      props: {
+        visible: true,
+        message: "确认删除这条提醒？",
+        confirm: true,
+        confirmText: "删除",
+        cancelText: "取消",
+      },
+      global: {
+        stubs: {
+          NButton: buttonStub,
+          NPopover: popoverStub,
+        },
+      },
+    });
+
+    // The pending confirm must never expire: the GIF (and the popover anchored
+    // to it) stays visible until the user answers, instead of self-destructing
+    // on the regular 10s GIF window and leaving an invisible zombie confirm.
+    await vi.advanceTimersByTimeAsync(12000);
+    await wrapper.vm.$nextTick();
+
+    expect(wrapper.find('[data-testid="companion-bubble"]').exists()).toBe(true);
+    expect(wrapper.get('[data-testid="companion-bubble"]').classes()).toContain("is-visible");
+    expect(wrapper.get('[data-testid="companion-bubble"]').classes()).not.toContain("is-fading");
+    expect(document.body.querySelector('[data-testid="companion-yes"]')).not.toBeNull();
+
+    wrapper.unmount();
+  });
+
   it("keeps the GIF surface visible while the pointer is hovering past ten seconds", async () => {
     vi.useFakeTimers();
     const wrapper = mount(CompanionBubble, {

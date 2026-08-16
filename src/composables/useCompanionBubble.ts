@@ -198,8 +198,13 @@ export function useCompanionBubble(deps: CompanionBubbleDeps) {
     window.clearTimeout(bubbleTimer.value);
     window.clearTimeout(bubbleFadeTimer.value);
     bubbleTimer.value = undefined;
+    bubbleFadeTimer.value = undefined;
     bubbleRemainingMs.value = 0;
     bubbleTimerStartedAt.value = 0;
+    // Cancel any in-progress companion fade: the confirm keeps the companion
+    // visible until it is answered, so no leftover fade may resume afterwards.
+    companionFadeRemaining.value = 0;
+    companionFadeStartedAt.value = 0;
     bubbleTimerOptions.value = {};
     bubbleMessage.value = getMessage(messageKey, Math.random, deps.state.language);
     bubbleLink.value = null;
