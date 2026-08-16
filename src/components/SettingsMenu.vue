@@ -22,6 +22,7 @@ import { COMPANION_GIF_THEME_OPTIONS } from "../state/companionGifThemes";
 import { getUiText, normalizeLanguage } from "../state/i18n";
 import type { AppLanguage, CompanionCustomGif, CompanionGifTheme, GuideKey } from "../types";
 import { CONTEXT_MENU_Z_INDEX } from "../utils/contextMenu";
+import { renderIcon } from "../utils/dropdownIcons";
 
 const props = withDefaults(defineProps<{
   appVersion: string;
@@ -230,9 +231,6 @@ function getCompanionGifThemeLabel(theme: CompanionGifTheme): string {
   return theme;
 }
 
-function renderIcon(component: Component, danger = false) {
-  return () => h(NIcon, { component, ...(danger ? { color: "var(--danger)" } : {}) });
-}
 </script>
 
 <template>

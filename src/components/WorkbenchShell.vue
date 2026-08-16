@@ -1,13 +1,8 @@
 <script setup lang="ts">
 import { computed, nextTick, onMounted, onUnmounted, ref, watch } from "vue";
-import {
-  MoonIcon,
-  PanelTopCloseIcon,
-  PanelTopOpenIcon,
-  SunIcon,
-} from "lucide-vue-next";
-import { Badge } from "./ui/badge";
-import { Button } from "./ui/button";
+import { SunnyOutline } from "@vicons/ionicons5";
+import { NIcon } from "naive-ui";
+import { Moon as LucideMoon, PanelTopClose, PanelTopOpen } from "lucide-vue-next";
 import type { AppLanguage, ThemeMode, ZoneVisibility } from "../types";
 import {
   DEFAULT_LANGUAGE,
@@ -661,32 +656,31 @@ onUnmounted(() => {
               <span class="workbench-title-fallback">{{ title }}</span>
             </slot>
             <slot name="status">
-              <Badge variant="secondary" data-testid="workbench-save-status">{{ saveStatusLabel }}</Badge>
+              <span class="workbench-save-badge" data-testid="workbench-save-status">{{ saveStatusLabel }}</span>
             </slot>
             <p v-if="slogan" class="workbench-slogan">{{ slogan }}</p>
           </div>
           <div class="workbench-command-actions">
-            <Button
-              variant="ghost"
-              size="icon"
-              class="workbench-header-hide-button"
+            <button
+              type="button"
+              class="icon-button workbench-header-hide-button"
               data-testid="workbench-header-hide"
               aria-label="隐藏顶部菜单"
+              title="隐藏顶部菜单"
               @click="setHeaderHidden(true, $event)"
             >
-              <PanelTopCloseIcon data-icon="inline-start" />
-            </Button>
-            <Button
-              variant="ghost"
-              size="icon"
-              class="workbench-theme-button"
+              <PanelTopClose :size="16" />
+            </button>
+            <button
+              type="button"
+              class="icon-button workbench-theme-button"
               data-testid="workbench-theme"
               :aria-label="theme === 'dark' ? '切换到浅色' : '切换到深色'"
               @click="emit('theme')"
             >
-              <SunIcon v-if="theme === 'dark'" data-icon="inline-start" />
-              <MoonIcon v-else data-icon="inline-start" />
-            </Button>
+              <NIcon v-if="theme === 'dark'" :component="SunnyOutline" />
+              <LucideMoon v-else :size="16" />
+            </button>
             <slot name="actions" />
           </div>
         </header>
@@ -703,17 +697,17 @@ onUnmounted(() => {
         @mouseleave="handleHeaderRevealZoneLeave($event)"
       >
         <Transition name="workbench-header-reveal" :duration="100">
-          <Button
+          <button
             v-if="headerRevealVisible"
-            variant="ghost"
-            size="icon"
+            type="button"
             class="workbench-header-reveal"
             data-testid="workbench-header-show"
             aria-label="显示顶部菜单"
+            title="显示顶部菜单"
             @click="setHeaderHidden(false, $event)"
           >
-            <PanelTopOpenIcon data-icon="inline-start" />
-          </Button>
+            <PanelTopOpen :size="16" />
+          </button>
         </Transition>
       </div>
 

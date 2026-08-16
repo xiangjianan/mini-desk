@@ -652,6 +652,39 @@ describe("state compatibility", () => {
     expect(ws().showCompletedTodos).toEqual({ morning: true });
   });
 
+  it("drops imported app quick buttons with dangerous URL schemes", () => {
+    // A malicious workspace export could plant an "app" button whose scheme
+    // executes script on click (stored XSS). Normalization must drop it.
+    const state = normalizeImportedState({
+      quickButtons: [
+        { title: "微信", value: "wechat://", type: "app" },
+        { title: "陷阱1", value: "javascript:alert(document.domain)", type: "app" },
+        { title: "陷阱2", value: "data:text/html,<script>alert(1)</script>", type: "app" },
+        { title: "陷阱3", value: "JAVASCRIPT:alert(1)", type: "app" },
+        { title: "陷阱4", value: "jav\tascript:alert(1)", type: "app" },
+        { title: "陷阱5", value: "file:///etc/passwd", type: "app" },
+      ],
+    });
+
+    expect(state.workspaces[0].quickButtons).toHaveLength(1);
+    expect(state.workspaces[0].quickButtons[0]).toMatchObject({
+      title: "微信",
+      value: "wechat://",
+      type: "app",
+    });
+  });
+
+  it("keeps imported app quick buttons with custom but safe schemes", () => {
+    const state = normalizeImportedState({
+      quickButtons: [
+        { title: "IM", value: "im:10012345", type: "app" },
+        { title: "VS Code", value: "vscode://file/~/todo.md", type: "app" },
+      ],
+    });
+
+    expect(state.workspaces[0].quickButtons).toHaveLength(2);
+  });
+
   it("normalizes per-period completed reminder visibility", () => {
     const state = normalizeImportedState({
       showCompletedTodos: {

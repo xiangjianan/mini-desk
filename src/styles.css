@@ -1,29 +1,3 @@
-@import "tailwindcss";
-
-@theme inline {
-  --color-background: var(--background);
-  --color-foreground: var(--foreground);
-  --color-card: var(--card);
-  --color-card-foreground: var(--card-foreground);
-  --color-popover: var(--popover);
-  --color-popover-foreground: var(--popover-foreground);
-  --color-primary: var(--primary);
-  --color-primary-foreground: var(--primary-foreground);
-  --color-secondary: var(--secondary);
-  --color-secondary-foreground: var(--secondary-foreground);
-  --color-muted: var(--muted-surface);
-  --color-muted-foreground: var(--muted-foreground);
-  --color-accent: var(--accent);
-  --color-accent-foreground: var(--accent-foreground);
-  --color-destructive: var(--destructive);
-  --color-border: var(--border);
-  --color-input: var(--input-token);
-  --color-ring: var(--ring);
-  --radius-sm: calc(var(--radius) - 2px);
-  --radius-md: var(--radius);
-  --radius-lg: calc(var(--radius) + 2px);
-}
-
 :root {
   --app-font-size: 12px;
   --scrollbar-size: 2px;
@@ -187,7 +161,7 @@ select {
   color: inherit;
 }
 
-button:not([data-slot="button"]) {
+button:not(.icon-button) {
   border: 0;
   border-radius: var(--radius);
   min-height: 30px;
@@ -3262,6 +3236,55 @@ button.todo-star-button {
   margin-left: 20px;
 }
 
+/* Native per-row checkbox (replaced NCheckbox instances: one Vue component per
+   todo row was measurable overhead on dense boards). Drawn as a transparent
+   circle: bare ring at rest, green fill + white check when done. */
+.todo-item .todo-checkbox,
+.today-focus-item .todo-checkbox {
+  justify-self: center;
+  appearance: none;
+  -webkit-appearance: none;
+  width: 15px;
+  height: 15px;
+  margin: 0;
+  /* 0.5px renders as a hairline on hi-dpi screens (snaps to 1px on 1x). */
+  border: 0.5px solid color-mix(in srgb, var(--foreground) 38%, transparent);
+  border-radius: 50%;
+  background: transparent;
+  cursor: pointer;
+  transition:
+    background-color var(--motion-fast) ease,
+    border-color var(--motion-fast) ease;
+}
+
+.todo-item .todo-checkbox:checked,
+.today-focus-item .todo-checkbox:checked {
+  border-color: #22c55e;
+  background: #22c55e;
+}
+
+.todo-item .todo-checkbox:checked::after,
+.today-focus-item .todo-checkbox:checked::after {
+  content: "";
+  display: block;
+  width: 8px;
+  height: 4.5px;
+  margin: 3px auto 0;
+  border: solid #fff;
+  border-width: 0 0 1.5px 1.5px;
+  transform: rotate(-45deg);
+}
+
+.today-focus-item .todo-checkbox {
+  justify-self: start;
+  margin-left: 20px;
+}
+
+.todo-item.is-done .todo-checkbox,
+.today-focus-item.is-done .todo-checkbox {
+  opacity: 0.78;
+}
+
 .todo-item .n-checkbox-box--checked,
 .today-focus-item .n-checkbox-box--checked {
   --n-color-checked: #22c55e !important;
@@ -4755,6 +4778,17 @@ body:has(.image-preview) .workbench-header-reveal-zone {
   min-width: 0;
 }
 
+/* Save-status badge (native span replacing the shadcn Badge; same pill look). */
+.workbench-save-badge {
+  display: inline-flex;
+  align-items: center;
+  padding: 2px 8px;
+  border-radius: var(--radius);
+  font-size: var(--app-font-size);
+  color: var(--secondary-foreground);
+  background: var(--secondary);
+}
+
 .workbench-title-group h1 {
   font-size: 18px;
   font-weight: 650;
@@ -4996,8 +5030,7 @@ button.workbench-resizer {
   box-shadow: var(--focus-ring);
 }
 
-button:not([data-slot="button"]):active,
-[data-slot="button"]:active,
+button:active,
 .n-button:active {
   transform: scale(0.98);
 }
@@ -5084,13 +5117,6 @@ html[data-theme="dark"] .workbench-shell {
 
 .workbench-slogan {
   color: var(--muted);
-}
-
-[data-slot="badge"] {
-  border-color: transparent;
-  background: color-mix(in srgb, var(--primary) 10%, transparent);
-  color: var(--primary);
-  font-weight: 600;
 }
 
 .save-status::before {
@@ -5261,6 +5287,13 @@ html[data-theme="dark"] .workbench-shell {
 
 .space-add-button {
   background: transparent;
+}
+
+/* The shared .icon-button min-size rule (var(--control-hit-size)) would make
+   this 34px tall inside the 30px tab row and push the + below the tab labels. */
+.space-tabs .space-add-button {
+  min-width: 30px;
+  min-height: 30px;
 }
 
 .tool-tabs {
@@ -7097,10 +7130,14 @@ body,
   gap: 2px;
 }
 
+/* Sized to --control-hit-size like the sibling .quick-menu-button: the shared
+   icon-button min-height rule would otherwise stretch the 30px-wide toggle
+   into a vertical ellipse. */
 .quick-search .quick-search-toggle {
-  width: 30px;
-  height: 30px;
-  min-width: 30px;
+  width: var(--control-hit-size);
+  height: var(--control-hit-size);
+  min-width: var(--control-hit-size);
+  min-height: var(--control-hit-size);
   padding: 0;
   border: 0;
   border-radius: 50%;
@@ -7157,7 +7194,7 @@ body,
 .workspace-switcher-item:hover { background: var(--color-hover, rgba(0,0,0,0.05)); }
 .workspace-switcher-name { line-height: 1; }
 .workspace-switcher-actions { display: inline-flex; align-items: center; gap: 1px; opacity: 0.7; }
-/* Specificity must beat the global `button:not([data-slot="button"])` rule, which
+/* Specificity must beat the global `button:not(.icon-button)` rule, which
    forces min-height:30px + horizontal padding and would otherwise turn these into
    tall ellipses instead of true circles. */
 .workspace-switcher-actions .workspace-switcher-action {

@@ -109,31 +109,45 @@ export async function pruneStoredImagePayloads(
     await new Promise<void>((resolve, reject) => {
       const transaction = db.transaction(IMAGE_STORE_NAME, "readwrite");
       const store = transaction.objectStore(IMAGE_STORE_NAME);
-      const request = store.getAll() as IDBRequest<ImagePayloadRecord[]>;
-      request.onsuccess = () => {
-        const versionsByImage = new Map<string, ImagePayloadRecord[]>();
-        request.result.forEach((record) => {
-          if (!record.imageId || typeof record.createdAt !== "number" || !Number.isFinite(record.createdAt)) return;
-          const versions = versionsByImage.get(record.imageId) ?? [];
-          versions.push(record);
-          versionsByImage.set(record.imageId, versions);
-        });
-        versionsByImage.forEach((versions) => {
-          versions.sort((left, right) => right.createdAt! - left.createdAt!);
-          // An image is "active" while any of its payload versions is still referenced by
-          // the board or an undo snapshot (i.e. present in `retained`). Active images keep
-          // their newest `maxVersions` edits for undo. Fully-deleted images have no retained
-          // version, so once their payloads age past the safety window they are reclaimed.
-          const isActiveImage = versions.some((record) => retained.has(record.id));
-          versions.forEach((record, index) => {
-            if (now - record.createdAt! < minimumAgeMs) return;
-            if (retained.has(record.id)) return;
-            if (isActiveImage && index < maxVersions) return;
-            store.delete(record.id);
+      // Cursor pass collects only id/imageId/createdAt metadata — payload src
+      // strings (the bulk of the store) are dropped immediately instead of being
+      // materialized all at once by getAll(). Deletion decisions run when the
+      // cursor drains (result === null), while the transaction is still live.
+      const versionsByImage = new Map<string, Array<{ id: string; createdAt: number }>>();
+      const cursorRequest = store.openCursor();
+      cursorRequest.onsuccess = () => {
+        const cursor = cursorRequest.result;
+        if (!cursor) {
+          versionsByImage.forEach((versions) => {
+            versions.sort((left, right) => right.createdAt - left.createdAt);
+            // An image is "active" while any of its payload versions is still referenced by
+            // the board or an undo snapshot (i.e. present in `retained`). Active images keep
+            // their newest `maxVersions` edits for undo. Fully-deleted images have no retained
+            // version, so once their payloads age past the safety window they are reclaimed.
+            const isActiveImage = versions.some((version) => retained.has(version.id));
+            versions.forEach((version, index) => {
+              if (now - version.createdAt < minimumAgeMs) return;
+              if (retained.has(version.id)) return;
+              if (isActiveImage && index < maxVersions) return;
+              store.delete(version.id);
+            });
           });
-        });
+          return;
+        }
+        const record = cursor.value as ImagePayloadRecord;
+        if (
+          record.imageId
+          && typeof record.createdAt === "number"
+          && Number.isFinite(record.createdAt)
+          && !record.id.startsWith("__custom-companion-gif")
+        ) {
+          const versions = versionsByImage.get(record.imageId) ?? [];
+          versions.push({ id: record.id, createdAt: record.createdAt });
+          versionsByImage.set(record.imageId, versions);
+        }
+        cursor.continue();
       };
-      request.onerror = () => reject(request.error);
+      cursorRequest.onerror = () => reject(cursorRequest.error);
       transaction.oncomplete = () => resolve();
       transaction.onerror = () => reject(transaction.error);
       transaction.onabort = () => reject(transaction.error);

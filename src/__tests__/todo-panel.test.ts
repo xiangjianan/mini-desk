@@ -8,12 +8,6 @@ import { DEFAULT_TITLES } from "../state/defaults";
 import { completeTodo } from "../state/todos";
 import type { TodoMap, TodoPeriod } from "../types";
 
-const checkboxStub = {
-  props: ["checked"],
-  emits: ["update:checked"],
-  template: '<button class="checkbox-stub" type="button" @click="$emit(\'update:checked\', true)"></button>',
-};
-
 const dropdownStub = {
   props: ["options"],
   emits: ["select"],
@@ -115,6 +109,48 @@ const defaultTodoLists = [
 ];
 
 describe("TodoPanel", () => {
+  it("suppresses update emits during IME composition and emits the committed text", async () => {
+    const wrapper = mount(TodoPanel, {
+      props: {
+        todoLists: defaultTodoLists,
+        todos: {
+          morning: [{ id: "todo-1", text: "", done: false }],
+          noon: [],
+          evening: [],
+        },
+        showCompleted: { morning: false, noon: false, evening: false },
+        titles: DEFAULT_TITLES,
+      },
+      global: {
+        stubs: {
+          Dropdown: dropdownStub,
+          NDatePicker: datePickerStub,
+          NDropdown: dropdownStub,
+          NTooltip: tooltipStub,
+        },
+      },
+    });
+
+    const input = wrapper.get('[data-testid="todo-input-morning"]');
+
+    await input.trigger("compositionstart");
+    (input.element as HTMLInputElement).value = "中";
+    await input.trigger("input");
+    await input.trigger("compositionupdate");
+    (input.element as HTMLInputElement).value = "中文";
+    await input.trigger("input");
+
+    expect(wrapper.emitted("update")).toBeUndefined();
+
+    await input.trigger("compositionend");
+    (input.element as HTMLInputElement).value = "中文输入";
+    await input.trigger("input");
+
+    expect(wrapper.emitted("update")).toEqual([["morning", "todo-1", "中文输入"]]);
+
+    wrapper.unmount();
+  });
+
   it("emits a declutter prompt when a reminder list with at least seven items is focused", async () => {
     const wrapper = mount(TodoPanel, {
       props: {
@@ -129,9 +165,7 @@ describe("TodoPanel", () => {
       },
       global: {
         stubs: {
-          Checkbox: checkboxStub,
           Dropdown: dropdownStub,
-          NCheckbox: checkboxStub,
           NDatePicker: datePickerStub,
           NDropdown: dropdownStub,
           NTooltip: tooltipStub,
@@ -159,9 +193,7 @@ describe("TodoPanel", () => {
       },
       global: {
         stubs: {
-          Checkbox: checkboxStub,
           Dropdown: dropdownStub,
-          NCheckbox: checkboxStub,
           NDatePicker: datePickerStub,
           NDropdown: dropdownStub,
           NTooltip: tooltipStub,
@@ -190,9 +222,7 @@ describe("TodoPanel", () => {
       },
       global: {
         stubs: {
-          Checkbox: checkboxStub,
           Dropdown: dropdownStub,
-          NCheckbox: checkboxStub,
           NDatePicker: datePickerStub,
           NDropdown: dropdownStub,
           NTooltip: tooltipStub,
@@ -220,9 +250,7 @@ describe("TodoPanel", () => {
       },
       global: {
         stubs: {
-          Checkbox: checkboxStub,
           Dropdown: dropdownStub,
-          NCheckbox: checkboxStub,
           NDatePicker: datePickerStub,
           NDropdown: dropdownStub,
           NTooltip: tooltipStub,
@@ -252,9 +280,7 @@ describe("TodoPanel", () => {
       },
       global: {
         stubs: {
-          Checkbox: checkboxStub,
           Dropdown: dropdownStub,
-          NCheckbox: checkboxStub,
           NDatePicker: datePickerStub,
           NDropdown: dropdownStub,
           NTooltip: tooltipStub,
@@ -278,9 +304,7 @@ describe("TodoPanel", () => {
       },
       global: {
         stubs: {
-          Checkbox: checkboxStub,
           Dropdown: dropdownStub,
-          NCheckbox: checkboxStub,
           NDatePicker: datePickerStub,
           NDropdown: dropdownStub,
           NTooltip: tooltipStub,
@@ -303,9 +327,7 @@ describe("TodoPanel", () => {
       },
       global: {
         stubs: {
-          Checkbox: checkboxStub,
           Dropdown: dropdownStub,
-          NCheckbox: checkboxStub,
           NDatePicker: datePickerStub,
           NDropdown: dropdownStub,
           NTooltip: tooltipStub,
@@ -351,9 +373,7 @@ describe("TodoPanel", () => {
       },
       global: {
         stubs: {
-          Checkbox: checkboxStub,
           Dropdown: dropdownStub,
-          NCheckbox: checkboxStub,
           NDatePicker: datePickerStub,
           NDropdown: dropdownStub,
           NTooltip: tooltipStub,
@@ -392,9 +412,7 @@ describe("TodoPanel", () => {
       },
       global: {
         stubs: {
-          Checkbox: checkboxStub,
           Dropdown: dropdownStub,
-          NCheckbox: checkboxStub,
           NDatePicker: datePickerStub,
           NDropdown: dropdownStub,
           NTooltip: tooltipStub,
@@ -419,9 +437,7 @@ describe("TodoPanel", () => {
       },
       global: {
         stubs: {
-          Checkbox: checkboxStub,
           Dropdown: dropdownStub,
-          NCheckbox: checkboxStub,
           NDatePicker: datePickerStub,
           NDropdown: dropdownStub,
           NTooltip: tooltipStub,
@@ -459,9 +475,7 @@ describe("TodoPanel", () => {
       attachTo: document.body,
       global: {
         stubs: {
-          Checkbox: checkboxStub,
           Dropdown: dropdownStub,
-          NCheckbox: checkboxStub,
           NDropdown: dropdownStub,
           NTooltip: tooltipStub,
         },
@@ -489,9 +503,7 @@ describe("TodoPanel", () => {
       },
       global: {
         stubs: {
-          Checkbox: checkboxStub,
           Dropdown: dropdownStub,
-          NCheckbox: checkboxStub,
           NDropdown: dropdownStub,
           NTooltip: tooltipStub,
         },
@@ -518,9 +530,7 @@ describe("TodoPanel", () => {
       },
       global: {
         stubs: {
-          Checkbox: checkboxStub,
           Dropdown: dropdownStub,
-          NCheckbox: checkboxStub,
           NDropdown: dropdownStub,
           NTooltip: tooltipStub,
         },
@@ -560,9 +570,7 @@ describe("TodoPanel", () => {
       },
       global: {
         stubs: {
-          Checkbox: checkboxStub,
           Dropdown: dropdownStub,
-          NCheckbox: checkboxStub,
           NDropdown: dropdownStub,
           NTooltip: tooltipStub,
         },
@@ -592,9 +600,7 @@ describe("TodoPanel", () => {
       },
       global: {
         stubs: {
-          Checkbox: checkboxStub,
           Dropdown: dropdownStub,
-          NCheckbox: checkboxStub,
           NDropdown: dropdownStub,
           NTooltip: tooltipStub,
         },
@@ -636,9 +642,7 @@ describe("TodoPanel", () => {
       },
       global: {
         stubs: {
-          Checkbox: checkboxStub,
           Dropdown: dropdownStub,
-          NCheckbox: checkboxStub,
           NDropdown: dropdownStub,
           NTooltip: tooltipStub,
         },
@@ -671,9 +675,7 @@ describe("TodoPanel", () => {
       global: {
         stubs: {
           Button: true,
-          Checkbox: checkboxStub,
           Dropdown: dropdownStub,
-          NCheckbox: checkboxStub,
           NDropdown: dropdownStub,
           NTooltip: tooltipStub,
         },
@@ -701,9 +703,7 @@ describe("TodoPanel", () => {
       global: {
         stubs: {
           Button: true,
-          Checkbox: checkboxStub,
           Dropdown: dropdownStub,
-          NCheckbox: checkboxStub,
           NDropdown: dropdownStub,
           NTooltip: tooltipStub,
         },
@@ -729,9 +729,7 @@ describe("TodoPanel", () => {
       global: {
         stubs: {
           Button: true,
-          Checkbox: checkboxStub,
           Dropdown: dropdownStub,
-          NCheckbox: checkboxStub,
           NDropdown: dropdownStub,
           NTooltip: tooltipStub,
         },
@@ -757,9 +755,7 @@ describe("TodoPanel", () => {
       global: {
         stubs: {
           Button: true,
-          Checkbox: checkboxStub,
           Dropdown: dropdownStub,
-          NCheckbox: checkboxStub,
           NDropdown: dropdownStub,
           NTooltip: tooltipStub,
         },
@@ -787,9 +783,7 @@ describe("TodoPanel", () => {
       global: {
         stubs: {
           Button: true,
-          Checkbox: checkboxStub,
           Dropdown: dropdownStub,
-          NCheckbox: checkboxStub,
           NDropdown: dropdownStub,
           NTooltip: tooltipStub,
         },
@@ -820,9 +814,7 @@ describe("TodoPanel", () => {
       global: {
         stubs: {
           Button: true,
-          Checkbox: checkboxStub,
           Dropdown: dropdownStub,
-          NCheckbox: checkboxStub,
           NDropdown: dropdownStub,
           NTooltip: tooltipStub,
         },
@@ -852,9 +844,7 @@ describe("TodoPanel", () => {
       global: {
         stubs: {
           Button: true,
-          Checkbox: checkboxStub,
           Dropdown: dropdownStub,
-          NCheckbox: checkboxStub,
           NDropdown: dropdownStub,
           NTooltip: tooltipStub,
         },
@@ -886,9 +876,7 @@ describe("TodoPanel", () => {
       global: {
         stubs: {
           Button: true,
-          Checkbox: checkboxStub,
           Dropdown: dropdownStub,
-          NCheckbox: checkboxStub,
           NDropdown: dropdownStub,
           NTooltip: tooltipStub,
         },
@@ -940,9 +928,7 @@ describe("TodoPanel", () => {
       global: {
         stubs: {
           Button: true,
-          Checkbox: checkboxStub,
           Dropdown: dropdownStub,
-          NCheckbox: checkboxStub,
           NDropdown: dropdownStub,
           NTooltip: tooltipStub,
         },
@@ -979,9 +965,7 @@ describe("TodoPanel", () => {
       global: {
         stubs: {
           Button: true,
-          Checkbox: checkboxStub,
           Dropdown: dropdownStub,
-          NCheckbox: checkboxStub,
           NDropdown: dropdownStub,
           NTooltip: tooltipStub,
         },
@@ -1037,9 +1021,7 @@ describe("TodoPanel", () => {
       global: {
         stubs: {
           Button: true,
-          Checkbox: checkboxStub,
           Dropdown: dropdownStub,
-          NCheckbox: checkboxStub,
           NDropdown: dropdownStub,
           NTooltip: tooltipStub,
         },
@@ -1078,9 +1060,7 @@ describe("TodoPanel", () => {
       global: {
         stubs: {
           Button: true,
-          Checkbox: checkboxStub,
           Dropdown: dropdownStub,
-          NCheckbox: checkboxStub,
           NDropdown: dropdownStub,
           NTooltip: tooltipStub,
         },
@@ -1089,7 +1069,9 @@ describe("TodoPanel", () => {
 
     expect(todayFocusValues(wrapper)).toEqual(["第一重点", "第二重点"]);
 
-    await wrapper.get(".today-focus-item .checkbox-stub").trigger("click");
+    const checkbox = wrapper.get(".today-focus-item .todo-checkbox");
+    (checkbox.element as HTMLInputElement).checked = true;
+    await checkbox.trigger("change");
     await nextTick();
 
     expect(todayFocusValues(wrapper)).toEqual(["第一重点", "第二重点"]);
@@ -1134,9 +1116,7 @@ describe("TodoPanel", () => {
       global: {
         stubs: {
           Button: true,
-          Checkbox: checkboxStub,
           Dropdown: dropdownStub,
-          NCheckbox: checkboxStub,
           NDropdown: dropdownStub,
           NTooltip: tooltipStub,
         },
@@ -1145,7 +1125,9 @@ describe("TodoPanel", () => {
 
     expect(todayFocusValues(wrapper)).toEqual(["完成后隐藏重点", "仍然显示重点"]);
 
-    await wrapper.get(".today-focus-item .checkbox-stub").trigger("click");
+    const checkbox = wrapper.get(".today-focus-item .todo-checkbox");
+    (checkbox.element as HTMLInputElement).checked = true;
+    await checkbox.trigger("change");
     await nextTick();
 
     expect(todayFocusValues(wrapper)).toEqual(["完成后隐藏重点", "仍然显示重点"]);
@@ -1210,9 +1192,7 @@ describe("TodoPanel", () => {
         global: {
           stubs: {
             Button: true,
-            Checkbox: checkboxStub,
             Dropdown: dropdownStub,
-            NCheckbox: checkboxStub,
             NDropdown: dropdownStub,
             NTooltip: tooltipStub,
           },
@@ -1269,9 +1249,7 @@ describe("TodoPanel", () => {
         global: {
           stubs: {
             Button: true,
-            Checkbox: checkboxStub,
             Dropdown: dropdownStub,
-            NCheckbox: checkboxStub,
             NDropdown: dropdownStub,
             NTooltip: tooltipStub,
           },
@@ -1313,9 +1291,7 @@ describe("TodoPanel", () => {
       global: {
         stubs: {
           Button: true,
-          Checkbox: checkboxStub,
           Dropdown: dropdownStub,
-          NCheckbox: checkboxStub,
           NDropdown: dropdownStub,
           NTooltip: tooltipStub,
         },
@@ -1354,9 +1330,7 @@ describe("TodoPanel", () => {
       global: {
         stubs: {
           Button: true,
-          Checkbox: checkboxStub,
           Dropdown: dropdownStub,
-          NCheckbox: checkboxStub,
           NDropdown: dropdownStub,
           NTooltip: tooltipStub,
         },
@@ -1395,9 +1369,7 @@ describe("TodoPanel", () => {
         global: {
           stubs: {
             Button: true,
-            Checkbox: checkboxStub,
             Dropdown: dropdownStub,
-            NCheckbox: checkboxStub,
             NDropdown: dropdownStub,
             NTooltip: tooltipStub,
           },
@@ -1459,9 +1431,7 @@ describe("TodoPanel", () => {
       global: {
         stubs: {
           Button: true,
-          Checkbox: checkboxStub,
           Dropdown: dropdownStub,
-          NCheckbox: checkboxStub,
           NDropdown: dropdownStub,
           NTooltip: tooltipStub,
         },
@@ -1494,9 +1464,7 @@ describe("TodoPanel", () => {
       global: {
         stubs: {
           Button: true,
-          Checkbox: checkboxStub,
           Dropdown: dropdownStub,
-          NCheckbox: checkboxStub,
           NDropdown: dropdownStub,
           NTooltip: tooltipStub,
         },
@@ -1527,9 +1495,7 @@ describe("TodoPanel", () => {
       global: {
         stubs: {
           Button: true,
-          Checkbox: checkboxStub,
           Dropdown: dropdownStub,
-          NCheckbox: checkboxStub,
           NDatePicker: datePickerStub,
           NDropdown: dropdownStub,
           NTooltip: tooltipStub,
@@ -1631,9 +1597,7 @@ describe("TodoPanel", () => {
       global: {
         stubs: {
           Button: true,
-          Checkbox: checkboxStub,
           Dropdown: dropdownStub,
-          NCheckbox: checkboxStub,
           NDatePicker: datePickerStub,
           NDropdown: dropdownStub,
           NTooltip: tooltipStub,
@@ -1667,9 +1631,7 @@ describe("TodoPanel", () => {
       global: {
         stubs: {
           Button: true,
-          Checkbox: checkboxStub,
           Dropdown: dropdownStub,
-          NCheckbox: checkboxStub,
           NDatePicker: datePickerStub,
           NDropdown: dropdownStub,
           NTooltip: tooltipStub,
@@ -1713,9 +1675,7 @@ describe("TodoPanel", () => {
       global: {
         stubs: {
           Button: true,
-          Checkbox: checkboxStub,
           Dropdown: dropdownStub,
-          NCheckbox: checkboxStub,
           NDatePicker: datePickerStub,
           NDropdown: dropdownStub,
           NTooltip: tooltipStub,
@@ -1748,9 +1708,7 @@ describe("TodoPanel", () => {
       global: {
         stubs: {
           Button: true,
-          Checkbox: checkboxStub,
           Dropdown: dropdownStub,
-          NCheckbox: checkboxStub,
           NDatePicker: datePickerStub,
           NDropdown: dropdownStub,
           NTooltip: tooltipStub,
@@ -1783,9 +1741,7 @@ describe("TodoPanel", () => {
       global: {
         stubs: {
           Button: true,
-          Checkbox: checkboxStub,
           Dropdown: dropdownStub,
-          NCheckbox: checkboxStub,
           NDatePicker: datePickerStub,
           NDropdown: dropdownStub,
           NTooltip: tooltipStub,
@@ -1825,9 +1781,7 @@ describe("TodoPanel", () => {
       global: {
         stubs: {
           Button: true,
-          Checkbox: checkboxStub,
           Dropdown: dropdownStub,
-          NCheckbox: checkboxStub,
           NDropdown: dropdownStub,
           NTooltip: tooltipStub,
         },
@@ -1859,9 +1813,7 @@ describe("TodoPanel", () => {
       global: {
         stubs: {
           Button: true,
-          Checkbox: checkboxStub,
           Dropdown: dropdownStub,
-          NCheckbox: checkboxStub,
           NDropdown: dropdownStub,
           NTooltip: tooltipStub,
         },
@@ -1894,9 +1846,7 @@ describe("TodoPanel", () => {
       global: {
         stubs: {
           Button: true,
-          Checkbox: checkboxStub,
           Dropdown: dropdownStub,
-          NCheckbox: checkboxStub,
           NDatePicker: datePickerStub,
           NDropdown: dropdownStub,
           NTooltip: tooltipStub,
@@ -1942,9 +1892,7 @@ describe("TodoPanel", () => {
       global: {
         stubs: {
           Button: true,
-          Checkbox: checkboxStub,
           Dropdown: dropdownStub,
-          NCheckbox: checkboxStub,
           NDropdown: dropdownStub,
           NTooltip: tooltipStub,
         },
@@ -1976,9 +1924,7 @@ describe("TodoPanel", () => {
       global: {
         stubs: {
           Button: true,
-          Checkbox: checkboxStub,
           Dropdown: dropdownStub,
-          NCheckbox: checkboxStub,
           NDropdown: dropdownStub,
           NTooltip: tooltipStub,
         },
@@ -2009,9 +1955,7 @@ describe("TodoPanel", () => {
       global: {
         stubs: {
           Button: true,
-          Checkbox: checkboxStub,
           Dropdown: dropdownStub,
-          NCheckbox: checkboxStub,
           NDropdown: dropdownStub,
           NTooltip: tooltipStub,
         },
@@ -2040,9 +1984,7 @@ describe("TodoPanel", () => {
       global: {
         stubs: {
           Button: true,
-          Checkbox: checkboxStub,
           Dropdown: dropdownStub,
-          NCheckbox: checkboxStub,
           NDropdown: dropdownStub,
           NTooltip: tooltipStub,
         },
@@ -2072,9 +2014,7 @@ describe("TodoPanel", () => {
       global: {
         stubs: {
           Button: true,
-          Checkbox: checkboxStub,
           Dropdown: dropdownStub,
-          NCheckbox: checkboxStub,
           NDropdown: dropdownStub,
           NTooltip: tooltipStub,
         },
@@ -2102,9 +2042,7 @@ describe("TodoPanel", () => {
       global: {
         stubs: {
           Button: true,
-          Checkbox: checkboxStub,
           Dropdown: dropdownStub,
-          NCheckbox: checkboxStub,
           NDropdown: dropdownStub,
           NTooltip: tooltipStub,
         },
@@ -2152,9 +2090,7 @@ describe("TodoPanel", () => {
       global: {
         stubs: {
           Button: true,
-          Checkbox: checkboxStub,
           Dropdown: dropdownStub,
-          NCheckbox: checkboxStub,
           NDatePicker: datePickerStub,
           NDropdown: dropdownStub,
           NTooltip: tooltipStub,
@@ -2201,9 +2137,7 @@ describe("TodoPanel", () => {
       global: {
         stubs: {
           Button: true,
-          Checkbox: checkboxStub,
           Dropdown: dropdownStub,
-          NCheckbox: checkboxStub,
           NDropdown: dropdownStub,
           NTooltip: tooltipStub,
         },
@@ -2215,7 +2149,7 @@ describe("TodoPanel", () => {
     );
 
     expect(rowChildren[0]).toContain("todo-drag-handle");
-    expect(rowChildren[1]).toContain("checkbox-stub");
+    expect(rowChildren[1]).toContain("todo-checkbox");
     expect(rowChildren[2]).toContain("todo-input");
     expect(rowChildren[3]).toContain("todo-deadline-slot");
     expect(rowChildren[4]).toContain("todo-star-button");
@@ -2235,9 +2169,7 @@ describe("TodoPanel", () => {
       global: {
         stubs: {
           Button: true,
-          Checkbox: checkboxStub,
           Dropdown: dropdownStub,
-          NCheckbox: checkboxStub,
           NDropdown: dropdownStub,
           NTooltip: tooltipStub,
         },
@@ -2248,7 +2180,7 @@ describe("TodoPanel", () => {
       (child as HTMLElement).className,
     );
 
-    expect(rowChildren[0]).toContain("checkbox-stub");
+    expect(rowChildren[0]).toContain("todo-checkbox");
     expect(rowChildren[1]).toContain("today-focus-input");
     expect(rowChildren[2]).toContain("todo-deadline-slot");
     expect(rowChildren[3]).toContain("todo-star-button");
@@ -2294,9 +2226,7 @@ describe("TodoPanel", () => {
       global: {
         stubs: {
           Button: true,
-          Checkbox: checkboxStub,
           Dropdown: dropdownStub,
-          NCheckbox: checkboxStub,
           NDropdown: dropdownStub,
           NTooltip: tooltipStub,
         },
@@ -2333,16 +2263,16 @@ describe("TodoPanel", () => {
       global: {
         stubs: {
           Button: true,
-          Checkbox: checkboxStub,
           Dropdown: dropdownStub,
-          NCheckbox: checkboxStub,
           NDropdown: dropdownStub,
           NTooltip: tooltipStub,
         },
       },
     });
 
-    await wrapper.get(".todo-item .checkbox-stub").trigger("click");
+    const checkbox = wrapper.get(".todo-item .todo-checkbox");
+    (checkbox.element as HTMLInputElement).checked = true;
+    await checkbox.trigger("change");
 
     const emitted = wrapper.emitted("complete")?.[0];
     expect(emitted?.slice(0, 3)).toEqual(["morning", "a", true]);
@@ -2363,9 +2293,7 @@ describe("TodoPanel", () => {
       global: {
         stubs: {
           Button: true,
-          Checkbox: checkboxStub,
           Dropdown: dropdownStub,
-          NCheckbox: checkboxStub,
           NDropdown: dropdownStub,
           NTooltip: tooltipStub,
         },
@@ -2405,9 +2333,7 @@ describe("TodoPanel", () => {
       global: {
         stubs: {
           Button: true,
-          Checkbox: checkboxStub,
           Dropdown: dropdownStub,
-          NCheckbox: checkboxStub,
           NDropdown: dropdownStub,
           NTooltip: tooltipStub,
         },
@@ -2416,7 +2342,9 @@ describe("TodoPanel", () => {
 
     expect(values(wrapper)).toEqual(["第一项", "第二项"]);
 
-    await wrapper.get(".checkbox-stub").trigger("click");
+    const checkbox = wrapper.get(".todo-checkbox");
+    (checkbox.element as HTMLInputElement).checked = true;
+    await checkbox.trigger("change");
     await nextTick();
 
     expect(values(wrapper)).toEqual(["第一项", "第二项"]);
@@ -2450,16 +2378,16 @@ describe("TodoPanel", () => {
       global: {
         stubs: {
           Button: true,
-          Checkbox: checkboxStub,
           Dropdown: dropdownStub,
-          NCheckbox: checkboxStub,
           NDropdown: dropdownStub,
           NTooltip: tooltipStub,
         },
       },
     });
 
-    await wrapper.get(".checkbox-stub").trigger("click");
+    const checkbox = wrapper.get(".todo-checkbox");
+    (checkbox.element as HTMLInputElement).checked = true;
+    await checkbox.trigger("change");
     await wrapper.get('[data-testid="todo-list-morning"]').trigger("click");
 
     expect(wrapper.emitted("complete")?.[0].slice(0, 3)).toEqual(["morning", "a", true]);
@@ -2480,9 +2408,7 @@ describe("TodoPanel", () => {
       global: {
         stubs: {
           Button: true,
-          Checkbox: checkboxStub,
           Dropdown: dropdownStub,
-          NCheckbox: checkboxStub,
           NDropdown: dropdownStub,
           NTooltip: tooltipStub,
         },
@@ -2508,9 +2434,7 @@ describe("TodoPanel", () => {
       global: {
         stubs: {
           Button: true,
-          Checkbox: checkboxStub,
           Dropdown: dropdownStub,
-          NCheckbox: checkboxStub,
           NDropdown: dropdownStub,
           NTooltip: tooltipStub,
         },
@@ -2539,9 +2463,7 @@ describe("TodoPanel", () => {
       global: {
         stubs: {
           Button: true,
-          Checkbox: checkboxStub,
           Dropdown: dropdownStub,
-          NCheckbox: checkboxStub,
           NDropdown: dropdownStub,
           NTooltip: tooltipStub,
         },
@@ -2575,9 +2497,7 @@ describe("TodoPanel", () => {
       global: {
         stubs: {
           Button: true,
-          Checkbox: checkboxStub,
           Dropdown: dropdownStub,
-          NCheckbox: checkboxStub,
           NDropdown: dropdownStub,
           NTooltip: tooltipStub,
         },
@@ -2609,9 +2529,7 @@ describe("TodoPanel", () => {
       global: {
         stubs: {
           Button: true,
-          Checkbox: checkboxStub,
           Dropdown: dropdownStub,
-          NCheckbox: checkboxStub,
           NDropdown: dropdownStub,
           NTooltip: tooltipStub,
         },
@@ -2643,9 +2561,7 @@ describe("TodoPanel", () => {
       global: {
         stubs: {
           Button: true,
-          Checkbox: checkboxStub,
           Dropdown: dropdownStub,
-          NCheckbox: checkboxStub,
           NDropdown: dropdownStub,
           NTooltip: tooltipStub,
         },
@@ -2678,9 +2594,7 @@ describe("TodoPanel", () => {
       global: {
         stubs: {
           Button: true,
-          Checkbox: checkboxStub,
           Dropdown: dropdownStub,
-          NCheckbox: checkboxStub,
           NDropdown: dropdownStub,
           NTooltip: tooltipStub,
         },
@@ -2704,9 +2618,7 @@ describe("TodoPanel", () => {
       global: {
         stubs: {
           Button: true,
-          Checkbox: checkboxStub,
           Dropdown: dropdownStub,
-          NCheckbox: checkboxStub,
           NDropdown: dropdownStub,
           NTooltip: tooltipStub,
         },
@@ -2739,9 +2651,7 @@ describe("TodoPanel", () => {
       global: {
         stubs: {
           Button: true,
-          Checkbox: checkboxStub,
           Dropdown: dropdownStub,
-          NCheckbox: checkboxStub,
           NDropdown: dropdownStub,
           NTooltip: tooltipStub,
         },
@@ -2792,9 +2702,7 @@ describe("TodoPanel", () => {
       global: {
         stubs: {
           Button: true,
-          Checkbox: checkboxStub,
           Dropdown: dropdownStub,
-          NCheckbox: checkboxStub,
           NDropdown: dropdownStub,
           NTooltip: tooltipStub,
         },
@@ -2835,9 +2743,7 @@ describe("TodoPanel", () => {
       global: {
         stubs: {
           Button: true,
-          Checkbox: checkboxStub,
           Dropdown: dropdownStub,
-          NCheckbox: checkboxStub,
           NDropdown: dropdownStub,
           NTooltip: tooltipStub,
         },
@@ -2878,9 +2784,7 @@ describe("TodoPanel", () => {
       global: {
         stubs: {
           Button: true,
-          Checkbox: checkboxStub,
           Dropdown: dropdownStub,
-          NCheckbox: checkboxStub,
           NDropdown: dropdownStub,
           NTooltip: tooltipStub,
         },
@@ -2924,9 +2828,7 @@ describe("TodoPanel", () => {
       global: {
         stubs: {
           Button: true,
-          Checkbox: checkboxStub,
           Dropdown: dropdownStub,
-          NCheckbox: checkboxStub,
           NDropdown: dropdownStub,
           NTooltip: tooltipStub,
         },
@@ -2956,9 +2858,7 @@ describe("TodoPanel", () => {
       global: {
         stubs: {
           Button: true,
-          Checkbox: checkboxStub,
           Dropdown: dropdownStub,
-          NCheckbox: checkboxStub,
           NDropdown: dropdownStub,
           NTooltip: tooltipStub,
         },
@@ -2986,7 +2886,7 @@ describe("TodoPanel", () => {
         titles: DEFAULT_TITLES,
       },
       global: {
-        stubs: { Button: true, Checkbox: checkboxStub, Dropdown: dropdownStub, NCheckbox: checkboxStub, NDropdown: dropdownStub, NTooltip: tooltipStub },
+        stubs: { Button: true, Dropdown: dropdownStub, NNDropdown: dropdownStub, NTooltip: tooltipStub },
       },
     });
 
@@ -3009,7 +2909,7 @@ describe("TodoPanel", () => {
         titles: DEFAULT_TITLES,
       },
       global: {
-        stubs: { Button: true, Checkbox: checkboxStub, Dropdown: dropdownStub, Icon: true, NCheckbox: checkboxStub, NDropdown: dropdownStub, NIcon: true, NTooltip: tooltipStub },
+        stubs: { Button: true, Dropdown: dropdownStub, Icon: true, NNDropdown: dropdownStub, NIcon: true, NTooltip: tooltipStub },
       },
     });
 
@@ -3037,9 +2937,7 @@ describe("TodoPanel", () => {
       global: {
         stubs: {
           Button: true,
-          Checkbox: checkboxStub,
           Dropdown: dropdownStub,
-          NCheckbox: checkboxStub,
           NDropdown: dropdownStub,
           NTooltip: tooltipStub,
         },
@@ -3068,9 +2966,7 @@ describe("TodoPanel", () => {
       global: {
         stubs: {
           Button: true,
-          Checkbox: checkboxStub,
           Dropdown: dropdownStub,
-          NCheckbox: checkboxStub,
           NDropdown: dropdownStub,
           NTooltip: tooltipStub,
         },
@@ -3106,9 +3002,7 @@ describe("TodoPanel", () => {
       global: {
         stubs: {
           Button: true,
-          Checkbox: checkboxStub,
           Dropdown: dropdownStub,
-          NCheckbox: checkboxStub,
           NDropdown: dropdownStub,
           NTooltip: tooltipStub,
         },
@@ -3140,9 +3034,7 @@ describe("TodoPanel", () => {
       global: {
         stubs: {
           Button: true,
-          Checkbox: checkboxStub,
           Dropdown: dropdownStub,
-          NCheckbox: checkboxStub,
           NDropdown: dropdownStub,
           NTooltip: tooltipStub,
         },
@@ -3181,9 +3073,7 @@ describe("TodoPanel", () => {
       global: {
         stubs: {
           Button: true,
-          Checkbox: checkboxStub,
           Dropdown: dropdownStub,
-          NCheckbox: checkboxStub,
           NDropdown: dropdownStub,
           NTooltip: tooltipStub,
         },
@@ -3223,9 +3113,7 @@ describe("TodoPanel", () => {
       global: {
         stubs: {
           Button: true,
-          Checkbox: checkboxStub,
           Dropdown: dropdownStub,
-          NCheckbox: checkboxStub,
           NDropdown: dropdownStub,
           NTooltip: tooltipStub,
         },
@@ -3270,9 +3158,7 @@ describe("TodoPanel", () => {
       global: {
         stubs: {
           Button: true,
-          Checkbox: checkboxStub,
           Dropdown: dropdownStub,
-          NCheckbox: checkboxStub,
           NDropdown: dropdownStub,
           NTooltip: tooltipStub,
         },
@@ -3303,9 +3189,7 @@ describe("TodoPanel", () => {
       global: {
         stubs: {
           Button: true,
-          Checkbox: checkboxStub,
           Dropdown: dropdownStub,
-          NCheckbox: checkboxStub,
           NDropdown: dropdownStub,
           NTooltip: tooltipStub,
         },
@@ -3352,9 +3236,7 @@ describe("TodoPanel", () => {
       global: {
         stubs: {
           Button: true,
-          Checkbox: checkboxStub,
           Dropdown: dropdownStub,
-          NCheckbox: checkboxStub,
           NDropdown: dropdownStub,
           NTooltip: tooltipStub,
         },
@@ -3398,9 +3280,7 @@ describe("TodoPanel", () => {
       global: {
         stubs: {
           Button: true,
-          Checkbox: checkboxStub,
           Dropdown: dropdownStub,
-          NCheckbox: checkboxStub,
           NDropdown: dropdownStub,
           NTooltip: tooltipStub,
         },
@@ -3433,9 +3313,7 @@ describe("TodoPanel", () => {
       global: {
         stubs: {
           Button: true,
-          Checkbox: checkboxStub,
           Dropdown: dropdownStub,
-          NCheckbox: checkboxStub,
           NDropdown: dropdownStub,
           NTooltip: tooltipStub,
         },
@@ -3461,9 +3339,7 @@ describe("TodoPanel", () => {
       global: {
         stubs: {
           Button: true,
-          Checkbox: checkboxStub,
           Dropdown: dropdownStub,
-          NCheckbox: checkboxStub,
           NDropdown: dropdownStub,
           NTooltip: tooltipStub,
         },
@@ -3495,9 +3371,7 @@ describe("TodoPanel", () => {
       global: {
         stubs: {
           Button: true,
-          Checkbox: checkboxStub,
           Dropdown: dropdownStub,
-          NCheckbox: checkboxStub,
           NDropdown: dropdownStub,
           NTooltip: tooltipStub,
         },
@@ -3530,9 +3404,7 @@ describe("TodoPanel", () => {
       global: {
         stubs: {
           Button: true,
-          Checkbox: checkboxStub,
           Dropdown: dropdownStub,
-          NCheckbox: checkboxStub,
           NDropdown: dropdownStub,
           NTooltip: tooltipStub,
         },
@@ -3559,9 +3431,7 @@ describe("TodoPanel", () => {
       global: {
         stubs: {
           Button: true,
-          Checkbox: checkboxStub,
           Dropdown: dropdownStub,
-          NCheckbox: checkboxStub,
           NDropdown: dropdownStub,
           NTooltip: tooltipStub,
         },
@@ -3580,9 +3450,7 @@ describe("TodoPanel", () => {
       global: {
         stubs: {
           Button: true,
-          Checkbox: checkboxStub,
           Dropdown: dropdownStub,
-          NCheckbox: checkboxStub,
           NDropdown: dropdownStub,
           NTooltip: tooltipStub,
         },
@@ -3615,9 +3483,7 @@ describe("TodoPanel", () => {
       global: {
         stubs: {
           Button: true,
-          Checkbox: checkboxStub,
           Dropdown: dropdownStub,
-          NCheckbox: checkboxStub,
           NDropdown: dropdownStub,
           NTooltip: tooltipStub,
         },
@@ -3649,9 +3515,7 @@ describe("TodoPanel", () => {
       global: {
         stubs: {
           Button: true,
-          Checkbox: checkboxStub,
           Dropdown: dropdownStub,
-          NCheckbox: checkboxStub,
           NDropdown: dropdownStub,
           NTooltip: tooltipStub,
         },
@@ -3684,9 +3548,7 @@ describe("TodoPanel", () => {
       global: {
         stubs: {
           Button: true,
-          Checkbox: checkboxStub,
           Dropdown: dropdownStub,
-          NCheckbox: checkboxStub,
           NDropdown: dropdownStub,
           NTooltip: tooltipStub,
         },
@@ -3713,9 +3575,7 @@ describe("TodoPanel", () => {
       global: {
         stubs: {
           Button: true,
-          Checkbox: checkboxStub,
           Dropdown: dropdownStub,
-          NCheckbox: checkboxStub,
           NDropdown: dropdownStub,
           NTooltip: tooltipStub,
         },
@@ -3743,9 +3603,7 @@ describe("TodoPanel", () => {
       global: {
         stubs: {
           Button: true,
-          Checkbox: checkboxStub,
           Dropdown: dropdownStub,
-          NCheckbox: checkboxStub,
           NDropdown: dropdownStub,
           NTooltip: tooltipStub,
         },
@@ -3778,9 +3636,7 @@ describe("TodoPanel", () => {
       global: {
         stubs: {
           Button: true,
-          Checkbox: checkboxStub,
           Dropdown: dropdownStub,
-          NCheckbox: checkboxStub,
           NDropdown: dropdownStub,
           NTooltip: tooltipStub,
         },
@@ -3818,9 +3674,7 @@ describe("TodoPanel", () => {
       global: {
         stubs: {
           Button: true,
-          Checkbox: checkboxStub,
           Dropdown: dropdownStub,
-          NCheckbox: checkboxStub,
           NDropdown: dropdownStub,
           NTooltip: tooltipStub,
         },
@@ -3875,9 +3729,7 @@ describe("TodoPanel", () => {
       global: {
         stubs: {
           Button: true,
-          Checkbox: checkboxStub,
           Dropdown: dropdownStub,
-          NCheckbox: checkboxStub,
           NDropdown: dropdownStub,
           NTooltip: tooltipStub,
         },
@@ -3905,9 +3757,7 @@ describe("TodoPanel", () => {
       global: {
         stubs: {
           Button: true,
-          Checkbox: checkboxStub,
           Dropdown: dropdownStub,
-          NCheckbox: checkboxStub,
           NDropdown: dropdownStub,
           NTooltip: tooltipStub,
         },

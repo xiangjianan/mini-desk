@@ -5,6 +5,8 @@ import { NDropdown, NIcon } from "naive-ui";
 import type { DropdownOption } from "naive-ui";
 import { CreateOutline } from "@vicons/ionicons5";
 import { CONTEXT_MENU_Z_INDEX, createExclusiveContextMenu } from "../utils/contextMenu";
+import { renderIcon } from "../utils/dropdownIcons";
+import { isImeComposing } from "../utils/ime";
 
 const props = withDefaults(defineProps<{
   id: string;
@@ -29,9 +31,6 @@ const composing = ref(false);
 const menu = ref<{ x: number; y: number } | null>(null);
 const menuOptions = computed<DropdownOption[]>(() => [{ label: props.editLabel, key: "edit", icon: renderIcon(CreateOutline) }]);
 
-function renderIcon(icon: Component): () => VNode {
-  return () => h(NIcon, { size: 16 }, { default: () => h(icon) });
-}
 const exclusiveMenu = createExclusiveContextMenu(closeMenu);
 
 onMounted(exclusiveMenu.mount);
@@ -114,7 +113,7 @@ function cancel(): void {
 }
 
 function handleEnter(event: KeyboardEvent): void {
-  if (composing.value || event.isComposing || event.key === "Process" || event.keyCode === 229) return;
+  if (composing.value || isImeComposing(event)) return;
   event.preventDefault();
   commit();
 }

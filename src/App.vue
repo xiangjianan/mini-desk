@@ -48,12 +48,20 @@ import {
   setTodoNotifyAt,
   splitTodo as splitTodoInMap,
   starTodo,
+  todoKey,
   updateTodoText,
 } from "./state/todos";
 import { defaultState, STORAGE_KEY } from "./state/defaults";
 import { createWorkspaceData, ensureUniqueWorkspaceTitle, removeWorkspace, reorderWorkspaces } from "./state/workspaces";
 import { QUICK_BUTTON_OTHER_GROUP_ID, QUICK_DENSITY_THRESHOLD, formatQuickCopiedPreview, getQuickTagColor } from "./state/quickButtons";
 import { isQuickAppScheme } from "./state/quickApps";
+import { copyTextWithBrowserCommand } from "./utils/clipboard";
+import { extractRetainedImageIds, useUndoHistory } from "./composables/useUndoHistory";
+import { useTodoNotifications } from "./composables/useTodoNotifications";
+import { useCompanionBubble } from "./composables/useCompanionBubble";
+import { useBoardPersistence } from "./composables/useBoardPersistence";
+import { useAppVersionCheck } from "./composables/useAppVersionCheck";
+import type { NotifiableTodo } from "./composables/useTodoNotifications";
 import {
   createId,
   exportUndoSnapshotState,
@@ -63,14 +71,6 @@ import {
   normalizeWorkspaceData,
   saveStateWithConflictCheck,
 } from "./state/storage";
-import {
-  APP_VERSION_CHECK_INTERVAL_MS,
-  clearStaticCaches,
-  fetchLatestAppVersion,
-  getIndexAppVersion,
-  getStoredAppVersion,
-  markAppVersionSeen,
-} from "./state/version";
 import type { ImagePlacementHint, ImageReplacementHint, SaveScope } from "./state/storage";
 import type { AppLanguage, BoardState, CompanionGifTheme, DraggedTodo, GuideKey, ImagePasteFeedback, ImagePasteRequest, LineItem, QuickApiBodyType, QuickApiHeader, QuickApiMethod, QuickButton, QuickButtonType, StoredImage, TodoItem, TodoListConfig, TodoListId, TodoPeriod, TodoStarChange, WorkspaceData, WorkspaceSpace, ZoneKey } from "./types";
 
@@ -80,9 +80,6 @@ const SupportAuthor = defineAsyncComponent(() => import("./components/SupportAut
 const VersionHistory = defineAsyncComponent(() => import("./components/VersionHistory.vue"));
 
 const MOBILE_BREAKPOINT_QUERY = "(max-width: 900px)";
-const TODO_NOTIFICATION_FALLBACK_INTERVAL_MS = 30_000;
-const MAX_TODO_NOTIFICATION_TIMEOUT_MS = 2_147_483_647;
-const UNDO_HISTORY_LIMIT = 50;
 const IMAGE_DELETE_GRACE_MS = 5000;
 const IMAGE_PREVIEW_CLOSE_MS = 220;
 const IMAGE_DENSITY_THRESHOLD = 10;
@@ -100,8 +97,135 @@ const activeWorkspace = computed<WorkspaceData>(
   () => state.workspaces.find((workspace) => workspace.id === state.activeWorkspaceId) ?? state.workspaces[0],
 );
 const syncClientId = createId();
-const undoSnapshots = ref<string[]>([]);
-const lastUndoSnapshot = ref(createUndoSnapshot());
+const {
+  undoSnapshots,
+  lastUndoSnapshot,
+  recordUndoCheckpoint,
+  createUndoSnapshot,
+  undoLastBoardChange,
+  resetHistory: resetUndoHistory,
+  isRestoring: isUndoRestoring,
+} = useUndoHistory(state, {
+  isMounted: () => appMounted,
+  cancelPendingEdits: () => {
+    window.clearTimeout(textSaveTimer.value);
+    textSaveTimer.value = undefined;
+    flushTodoSave();
+    emptyTodoRemovalTimers.forEach((timer) => window.clearTimeout(timer));
+    emptyTodoRemovalTimers.clear();
+  },
+  clearTransientUi: () => {
+    clearImagePreview();
+    pendingEditSpaceId.value = null;
+    pendingEditTodoListId.value = null;
+  },
+  persistAfterRestore: () => {
+    resetTextGenerationBaseline();
+    persistNow();
+  },
+});
+
+const {
+  saveStatus,
+  textSaveTimer,
+  todoSaveTimer,
+  scheduleTextSave,
+  scheduleTodoSave,
+  flushTodoSave,
+  flushTextSave,
+  resetTextGenerationBaseline,
+  bumpTextGeneration,
+  persistPendingText,
+  persistNow,
+  markDirty,
+  markSaving,
+  markSavedNow,
+  markSavedSoon,
+  hasUnsavedLocalChanges,
+  hasPendingEdits,
+  clearTimers: clearPersistenceTimers,
+} = useBoardPersistence({
+  state,
+  clientId: syncClientId,
+  onBeforeSave: recordUndoCheckpoint,
+  onConflict: () => showToast("stateConflict"),
+  onMerged: (savedImages) => {
+    activeWorkspace.value.images = mergeVisibleImages(savedImages as StoredImage[], activeWorkspace.value.images);
+  },
+  onSaved: broadcastStateSaved,
+  scheduleImagePayloadPrune,
+  showSaveBubble,
+});
+
+const {
+  appVersion,
+  availableAppVersion,
+  versionPromptVisible,
+  checkAppVersion,
+  checkLatestAppVersion,
+  updateStaticVersion,
+  startPolling: startVersionPolling,
+  clearTimers: clearVersionTimers,
+} = useAppVersionCheck(() => appMounted);
+
+const {
+  notificationFlashKeys,
+  notificationTitleFlashing,
+  prepareTodoNotifications,
+  refreshTodoNotifications,
+  scheduleNextTodoNotification,
+  fireNativeTodoNotification,
+  startNotificationTitleFlash,
+  queueTodoNotificationFlash,
+  handleNotificationReturn,
+  startFallbackInterval: startNotificationFallbackInterval,
+  clearTimers: clearNotificationTimers,
+} = useTodoNotifications(state, {
+  isMounted: () => appMounted,
+  boardTitle: () => boardTitle.value,
+  isBoardBlocked: shouldBlockBoardEffects,
+  hasPendingConfirm: () => Boolean(pendingConfirm.value),
+  showCrossWorkspacePrompt: showCrossWorkspaceReminderPrompt,
+});
+
+const {
+  bubbleMessage,
+  bubbleLink,
+  bubbleSignature,
+  bubbleVisible,
+  companionFocused,
+  companionPosition,
+  pendingConfirm,
+  bubbleClearSignal,
+  showBubble,
+  showBubbleText,
+  hideBubbleMessage,
+  pauseBubbleTimer,
+  resumeBubbleTimer,
+  requestConfirmation,
+  confirmCompanionAction,
+  secondaryCompanionAction,
+  cancelCompanionAction,
+  clearPendingConfirm,
+  getCompanionPosition,
+  setBubbleExpiredHandler,
+  setHostHideCompanion,
+  clearTimers: clearBubbleTimers,
+} = useCompanionBubble({
+  state,
+  setActiveGuideKey: (key) => { activeGuideKey.value = key; },
+  confirmLabels: () => ({ yes: uiText.value.common.yes, no: uiText.value.common.no }),
+  isBoardBlocked: shouldBlockBoardEffects,
+  isMobileLayout,
+});
+setBubbleExpiredHandler((options) => {
+  if (options.guideKey) activeGuideKey.value = null;
+});
+setHostHideCompanion(() => {
+  hideBubbleMessage();
+  companionFocused.value = false;
+  activeGuideKey.value = null;
+});
 // Bumped after "clear data" so the whole workbench shell remounts and its
 // entrance choreography (command bar settles, zones rise left→right) replays —
 // the same animation as a fresh page load.
@@ -111,22 +235,6 @@ const pasteFeedback = ref<ImagePasteFeedback | undefined>();
 const closingPreviewId = ref<string | undefined>();
 const previewCloseTimer = ref<number | undefined>();
 const activeEditorId = ref<string | undefined>();
-const bubbleMessage = ref("");
-const bubbleLink = ref<{ text: string; href: string } | null>(null);
-const bubbleSignature = ref("");
-const bubbleVisible = ref(false);
-const companionFocused = ref(false);
-const companionPosition = ref<{ right: string; bottom?: string; top?: string } | undefined>();
-const pendingConfirm = ref<{
-  onConfirm: () => void | Promise<void>;
-  onCancel?: () => void;
-  confirmText: string;
-  cancelText: string;
-  danger: boolean;
-  confirmHint?: string;
-  secondaryText?: string;
-  onSecondary?: () => void | Promise<void>;
-} | null>(null);
 const importInput = ref<HTMLInputElement | null>(null);
 const importFeedbackAnchor = ref<HTMLElement | undefined>();
 const pendingEditSpaceId = ref<string | null>(null);
@@ -136,32 +244,9 @@ const workspaceDialogMode = ref<"create" | "rename">("create");
 const workspaceDialogId = ref<string | null>(null);
 const workspaceDraftTitle = ref("");
 const workspaceDraftSlogan = ref("");
-const textSaveTimer = ref<number | undefined>();
-const bubbleTimer = ref<number | undefined>();
-const bubbleFadeTimer = ref<number | undefined>();
-const bubbleRemainingMs = ref(0);
-const bubbleTimerStartedAt = ref(0);
-const companionFadeRemaining = ref(2000);
-const companionFadeStartedAt = ref(0);
-const bubbleTimerOptions = ref<BubbleOptions>({});
-const bubbleClearSignal = ref(0);
-const saveStatusTimer = ref<number | undefined>();
 const imagePayloadPruneTimer = ref<number | undefined>();
-const todoNotificationTimer = ref<number | undefined>();
-const todoNotificationDueTimer = ref<number | undefined>();
-const titleFlashTimer = ref<number | undefined>();
-const titleFlashActive = ref(false);
-const titleFlashAltVisible = ref(false);
-const notificationFlashKeys = ref<string[]>([]);
-const pendingNotificationFlashKeys = ref<string[]>([]);
 const emptyTodoRemovalTimers = new Map<string, number>();
 const pendingImagePayloadDeletions = new Map<string, number>();
-const sentTodoNotifications = new Set<string>();
-const notificationFlashTimers = new Map<string, number>();
-const appVersion = ref(getIndexAppVersion());
-const availableAppVersion = ref(appVersion.value);
-const storedAppVersion = ref<string | null>(null);
-const versionPromptVisible = ref(false);
 const shortcutHelpVisible = ref(false);
 const supportDialogVisible = ref(false);
 const changelogVisible = ref(false);
@@ -171,10 +256,6 @@ let appMounted = false;
 let pendingBrowserImagePasteRequest: { request: ImagePasteRequest; token: number } | undefined;
 let browserImagePasteRequestToken = 0;
 let pasteFeedbackToken = 0;
-let restoringUndo = false;
-let undoInFlight = false;
-let textEditGeneration = 0;
-let savedTextGeneration = 0;
 let stateSyncChannel: BroadcastChannel | null = null;
 
 type BubbleOptions = {
@@ -205,13 +286,8 @@ const SUGGEST_EMAIL = "xiang9872@gmail.com";
 const GITHUB_REPO_URL = "https://github.com/xiangjianan/mini-desk";
 const GITHUB_REPO_LABEL = "xiangjianan / mini-desk";
 const ABOUT_MESSAGE_DURATION_MS = 10000;
-const COMPANION_FADE_MS = 2000;
-const MIN_COMPANION_POPOVER_RIGHT_EDGE = 260;
 const DEFAULT_BOARD_TITLE = "Mini Desk";
-const TITLE_FLASH_INTERVAL_MS = 750;
-const TODO_NOTIFICATION_FLASH_MS = 2400;
 const activeGuideKey = ref<GuideKey | null>(null);
-const versionCheckTimer = ref<number | undefined>();
 
 const naiveTheme = computed(() => (state.theme === "dark" ? darkTheme : null));
 const naiveLocale = computed(() => (state.language === "en" ? enUS : zhCN));
@@ -224,7 +300,6 @@ const activeCompanionPosition = computed(() => (isMobileBlocked.value ? mobileCo
 const displayedPreviewId = computed(() => activePreviewId.value ?? closingPreviewId.value);
 const imagePreviewClosing = computed(() => Boolean(closingPreviewId.value) && !activePreviewId.value);
 const settingsAppVersion = computed(() => (versionPromptVisible.value ? availableAppVersion.value : appVersion.value));
-const saveStatus = ref<"saved" | "saving" | "dirty">("saved");
 const densityGroupingTipKeys: Partial<Record<DensityAreaType, MessageKey>> = {
   todos: "workspaceDensityTodoGroup",
   quickButtons: "workspaceDensityQuickGroup",
@@ -245,7 +320,7 @@ const workspaceDensityLabel = computed(() => {
 
 const boardTitle = computed(() => activeWorkspace.value.customTitles["board-title"]?.trim() || DEFAULT_BOARD_TITLE);
 const boardSlogan = computed(() => activeWorkspace.value.customTitles["board-slogan"]?.trim() ?? "");
-const notificationDocumentTitle = computed(() => `🔔 新提醒 · ${boardTitle.value}`);
+const notificationDocumentTitle = computed(() => `${uiText.value.app.notificationTitle} · ${boardTitle.value}`);
 const titles = computed(() =>
   Object.fromEntries(
     Object.entries(getDefaultTitles(state.language)).map(([id, title]) => [id, activeWorkspace.value.customTitles[id] || title]),
@@ -269,7 +344,10 @@ function updateMobileBlocked(source?: MediaQueryList | MediaQueryListEvent): voi
   const wasMobileBlocked = isMobileBlocked.value;
   if (matches && !wasMobileBlocked) {
     clearImagePreview();
-    if (textSaveTimer.value !== undefined) flushTextSave();
+    if (textSaveTimer.value !== undefined || todoSaveTimer.value !== undefined) {
+      flushTodoSave();
+      flushTextSave();
+    }
     clearPendingConfirm(true);
     hideBubbleMessage({ clearRetainedContent: true });
     companionFocused.value = false;
@@ -330,23 +408,27 @@ onMounted(async () => {
       if (image.src) inlineImagePayloads.push(image as StoredImage & { src: string });
     }
   }
-  for (const workspace of state.workspaces) {
-    workspace.images = await hydrateStoredImages(workspace.images, { persistLegacyPayloads: true });
-  }
+  // One-time legacy migration still walks every workspace (inline payloads must
+  // reach IndexedDB before any src is dropped), but runtime hydration below only
+  // needs the active workspace — inactive ones hydrate lazily on switch.
   await persistImagePayloads(inlineImagePayloads);
+  const startupWorkspace = state.workspaces.find((workspace) => workspace.id === state.activeWorkspaceId) ?? state.workspaces[0];
+  if (startupWorkspace) {
+    startupWorkspace.images = await hydrateStoredImages(startupWorkspace.images, { persistLegacyPayloads: true });
+  }
+  releaseInactiveWorkspaceImages(state.activeWorkspaceId);
   if (!appMounted) return;
   checkAppVersion();
   void checkLatestAppVersion();
   window.addEventListener("keydown", handleGlobalKeydown);
   window.addEventListener("focus", handleNotificationReturn);
   window.addEventListener("storage", handleStorageEvent);
+  window.addEventListener("beforeunload", handleBeforeUnload);
   document.addEventListener("paste", handlePaste);
   document.addEventListener("visibilitychange", handleDocumentVisibilityChange);
   setupStateSyncChannel();
-  versionCheckTimer.value = window.setInterval(() => {
-    void checkLatestAppVersion();
-  }, APP_VERSION_CHECK_INTERVAL_MS);
-  todoNotificationTimer.value = window.setInterval(refreshTodoNotifications, TODO_NOTIFICATION_FALLBACK_INTERVAL_MS);
+  startVersionPolling();
+  startNotificationFallbackInterval();
   refreshTodoNotifications();
 });
 
@@ -355,12 +437,21 @@ onUnmounted(() => {
   window.removeEventListener("keydown", handleGlobalKeydown);
   window.removeEventListener("focus", handleNotificationReturn);
   window.removeEventListener("storage", handleStorageEvent);
+  window.removeEventListener("beforeunload", handleBeforeUnload);
   document.removeEventListener("paste", handlePaste);
   document.removeEventListener("visibilitychange", handleDocumentVisibilityChange);
   teardownStateSyncChannel();
   teardownMobileBreakpoint();
   clearTimers();
 });
+
+// Closing the tab mid-debounce would drop the last second of todo/line edits;
+// flush synchronously before the page goes away.
+function handleBeforeUnload(): void {
+  if (!hasPendingEdits()) return;
+  flushTodoSave();
+  flushTextSave();
+}
 
 watch(
   () => state.theme,
@@ -371,7 +462,7 @@ watch(
 );
 
 watch(boardTitle, (value) => {
-  if (!titleFlashActive.value) document.title = value;
+  if (!notificationTitleFlashing()) document.title = value;
 });
 
 const todoColumnCount = ref(1);
@@ -427,7 +518,7 @@ function toggleWorkspaceZone(workspaceId: string, zone: ZoneKey): void {
 
 function updateLines(key: "noteLines" | "workspaceLines" | "storageLines", lines: LineItem[]): void {
   activeWorkspace.value[key] = lines;
-  textEditGeneration += 1;
+  bumpTextGeneration();
   markDirty();
   scheduleTextSave();
 }
@@ -436,7 +527,7 @@ function updateSpaceLines(id: string, lines: LineItem[]): void {
   const space = activeWorkspace.value.spaces.find((item) => item.id === id);
   if (!space) return;
   space.lines = lines;
-  textEditGeneration += 1;
+  bumpTextGeneration();
   syncLegacySpaceLines();
   markDirty();
   scheduleTextSave();
@@ -515,7 +606,10 @@ function createWorkspace(title: string, slogan: string): void {
 
 async function switchWorkspace(id: string): Promise<void> {
   if (!state.workspaces.some((workspace) => workspace.id === id) || state.activeWorkspaceId === id) return;
-  if (textEditGeneration !== savedTextGeneration) flushTextSave();
+  if (hasPendingEdits()) {
+    flushTodoSave();
+    flushTextSave();
+  }
   const target = state.workspaces.find((workspace) => workspace.id === id);
   if (target) {
     // Hydrate the target workspace's image payloads before it becomes visible.
@@ -524,10 +618,22 @@ async function switchWorkspace(id: string): Promise<void> {
     target.images = await hydrateStoredImages(target.images);
   }
   state.activeWorkspaceId = id;
+  // Free the previous workspace's hydrated payload strings; its metadata stays
+  // and rehydrates on next switch. Keeps memory at O(active) instead of O(all).
+  releaseInactiveWorkspaceImages(id);
   pendingEditSpaceId.value = null;
   pendingEditTodoListId.value = null;
   clearImagePreview();
   persistNow();
+}
+
+/** Drop in-memory data URLs of every workspace except `keepActiveId`. */
+function releaseInactiveWorkspaceImages(keepActiveId: string): void {
+  for (const workspace of state.workspaces) {
+    if (workspace.id === keepActiveId) continue;
+    if (!workspace.images.some((image) => image.src)) continue;
+    workspace.images = workspace.images.map((image) => ({ ...image, src: undefined }));
+  }
 }
 
 function openCreateWorkspace(): void {
@@ -632,41 +738,11 @@ function syncLegacySpaceLines(): void {
   activeWorkspace.value.storageLines = activeWorkspace.value.spaces[1]?.lines.map((line) => ({ ...line })) ?? [];
 }
 
-function scheduleTextSave(): void {
-  window.clearTimeout(textSaveTimer.value);
-  textSaveTimer.value = window.setTimeout(() => {
-    textSaveTimer.value = undefined;
-    void persistPendingText();
-  }, 3000);
-}
+// Todo input saves share the text pipeline's generation baseline so a debounced
+// todo edit and a debounced line edit can never overwrite each other, while the
+// separate timer keeps "stop typing in todos" from delaying a pending line save
+// (and vice versa).
 
-function flushTextSave(): void {
-  window.clearTimeout(textSaveTimer.value);
-  textSaveTimer.value = undefined;
-  void persistPendingText();
-}
-
-function resetTextGenerationBaseline(): void {
-  window.clearTimeout(textSaveTimer.value);
-  textSaveTimer.value = undefined;
-  savedTextGeneration = textEditGeneration;
-}
-
-async function persistPendingText(options: { retryOnce?: boolean } = {}): Promise<void> {
-  if (textEditGeneration === savedTextGeneration) return;
-  const attemptGeneration = textEditGeneration;
-  const persisted = persistNow("text");
-  if (!persisted) {
-    if (options.retryOnce && textEditGeneration !== savedTextGeneration) scheduleTextSave();
-    return;
-  }
-  savedTextGeneration = Math.max(savedTextGeneration, attemptGeneration);
-  if (textEditGeneration !== savedTextGeneration) {
-    scheduleTextSave();
-    return;
-  }
-  showSaveBubble();
-}
 
 function showCompanion(anchor?: HTMLElement, guideKey?: GuideKey): void {
   hideBubbleMessage({ clearRetainedContent: true });
@@ -703,6 +779,7 @@ function handleEditorBlur(): void {
   if (pendingConfirm.value) return;
   companionFocused.value = false;
   activeGuideKey.value = null;
+  flushTodoSave();
   flushTextSave();
 }
 
@@ -710,34 +787,9 @@ function handleCompanionBlur(): void {
   if (pendingConfirm.value) return;
   companionFocused.value = false;
   activeGuideKey.value = null;
+  flushTodoSave();
 }
 
-function persistNow(scope: SaveScope = "all", options: PersistOptions = {}): boolean {
-  recordUndoCheckpoint();
-  markSaving();
-  const result = saveStateWithConflictCheck(state, {
-    clientId: syncClientId,
-    force: options.force,
-    scope,
-    imagePlacement: options.imagePlacement,
-    imageReplacement: options.imageReplacement,
-  });
-  if (result.status === "conflict") {
-    window.clearTimeout(saveStatusTimer.value);
-    saveStatus.value = "dirty";
-    showToast("stateConflict");
-    return false;
-  }
-  state.sync = result.state.sync;
-  if (result.status === "merged") {
-    const savedActive = result.state.workspaces.find((w) => w.id === state.activeWorkspaceId) ?? result.state.workspaces[0];
-    activeWorkspace.value.images = mergeVisibleImages(savedActive?.images ?? [], activeWorkspace.value.images);
-  }
-  broadcastStateSaved();
-  markSavedSoon();
-  scheduleImagePayloadPrune();
-  return true;
-}
 
 function mergeVisibleImages(savedImages: StoredImage[], visibleImages: StoredImage[]): StoredImage[] {
   const visibleById = new Map(visibleImages.map((image) => [image.id, image]));
@@ -781,9 +833,9 @@ async function persistImageReplacement(
   activeWorkspace.value.images = result.status === "merged"
     ? mergeVisibleImages(savedActive?.images ?? [], nextImages)
     : nextImages;
-  if (!restoringUndo) {
+  if (!isUndoRestoring()) {
     undoSnapshots.value = [
-      ...undoSnapshots.value.slice(-(UNDO_HISTORY_LIMIT - 1)),
+      ...undoSnapshots.value,
       previousSnapshot,
     ];
     lastUndoSnapshot.value = createUndoSnapshot();
@@ -797,8 +849,7 @@ async function persistImageReplacement(
 async function applyImageReplacementConflict(
   latest = loadState(),
 ): Promise<void> {
-  window.clearTimeout(saveStatusTimer.value);
-  saveStatus.value = "dirty";
+  markDirty();
   showToast("stateConflict");
   while (true) {
     const activeLatest = latest.workspaces.find((w) => w.id === latest.activeWorkspaceId) ?? latest.workspaces[0];
@@ -810,7 +861,7 @@ async function applyImageReplacementConflict(
     latest = newest;
   }
   if (!appMounted || latest.sync.revision < state.sync.revision) return;
-  if (textEditGeneration !== savedTextGeneration) {
+  if (hasPendingEdits()) {
     const active = activeWorkspace.value;
     const localTextWorkspace: WorkspaceData = {
       ...active,
@@ -823,8 +874,7 @@ async function applyImageReplacementConflict(
       workspaces: latest.workspaces.map((workspace) => (workspace.id === active.id ? localTextWorkspace : workspace)),
     });
     applyTheme();
-    window.clearTimeout(saveStatusTimer.value);
-    saveStatus.value = "dirty";
+    markDirty();
     void persistPendingText({ retryOnce: true });
     return;
   }
@@ -832,8 +882,7 @@ async function applyImageReplacementConflict(
   resetTextGenerationBaseline();
   applyTheme();
   lastUndoSnapshot.value = createUndoSnapshot();
-  window.clearTimeout(saveStatusTimer.value);
-  saveStatus.value = "saved";
+  markSavedNow();
 }
 
 function scheduleImagePayloadPrune(): void {
@@ -878,38 +927,20 @@ function collectRetainedImagePayloadIds(): Set<string> {
   for (const workspace of state.workspaces) {
     for (const image of workspace.images) retained.add(getImagePayloadId(image));
   }
-  const addSnapshot = (snapshot: string) => {
-    try {
-      const parsed = JSON.parse(snapshot) as { images?: unknown; workspaces?: unknown };
-      const imageLists: unknown[] = [];
-      if (Array.isArray(parsed?.images)) imageLists.push(parsed.images);
-      if (Array.isArray(parsed?.workspaces)) {
-        for (const workspace of parsed.workspaces) {
-          if (!workspace || typeof workspace !== "object" || Array.isArray(workspace)) continue;
-          const record = workspace as Record<string, unknown>;
-          if (Array.isArray(record.images)) imageLists.push(record.images);
-        }
-      }
-      if (imageLists.length === 0) return;
-      for (const list of imageLists) {
-        (list as unknown[]).forEach((item) => {
-          if (!item || typeof item !== "object" || Array.isArray(item)) return;
-          const record = item as Record<string, unknown>;
-          const id = typeof record.id === "string" && record.id.trim() ? record.id : undefined;
-          const payloadId = typeof record.payloadId === "string" && record.payloadId.trim()
-            ? record.payloadId
-            : undefined;
-          if (payloadId ?? id) retained.add((payloadId ?? id)!);
-        });
-      }
-    } catch {
-      // Ignore malformed undo snapshots without normalizing them into generated IDs.
+  // Snapshots carry pre-extracted payload-id sets, so retention checks no longer
+  // re-parse every historical snapshot string on each save.
+  for (const snapshot of undoSnapshots.value) {
+    snapshot.retainedImageIds.forEach((id) => retained.add(id));
+  }
+  lastUndoSnapshot.value.retainedImageIds.forEach((id) => retained.add(id));
+  try {
+    const authoritative = localStorage.getItem(STORAGE_KEY);
+    if (authoritative) {
+      extractRetainedImageIds(JSON.parse(authoritative)).forEach((id) => retained.add(id));
     }
-  };
-  undoSnapshots.value.forEach(addSnapshot);
-  addSnapshot(lastUndoSnapshot.value);
-  const authoritative = localStorage.getItem(STORAGE_KEY);
-  if (authoritative) addSnapshot(authoritative);
+  } catch {
+    // Ignore malformed stored state without normalizing it into generated IDs.
+  }
   return retained;
 }
 
@@ -967,28 +998,6 @@ async function applyExternalStoredState(raw?: string): Promise<void> {
   } catch {
     // External storage may be mid-write or unavailable; keep this tab's current state.
   }
-}
-
-function hasUnsavedLocalChanges(): boolean {
-  return textEditGeneration !== savedTextGeneration || saveStatus.value !== "saved";
-}
-
-function markDirty(): void {
-  recordUndoCheckpoint();
-  window.clearTimeout(saveStatusTimer.value);
-  saveStatus.value = "dirty";
-}
-
-function markSaving(): void {
-  window.clearTimeout(saveStatusTimer.value);
-  saveStatus.value = "saving";
-}
-
-function markSavedSoon(): void {
-  window.clearTimeout(saveStatusTimer.value);
-  saveStatusTimer.value = window.setTimeout(() => {
-    saveStatus.value = "saved";
-  }, 100);
 }
 
 async function handlePaste(event: ClipboardEvent): Promise<void> {
@@ -1808,13 +1817,7 @@ async function copyText(text: string, shouldAbort: () => boolean = () => false):
     return true;
   } catch {
     if (shouldAbort()) return false;
-    const textarea = document.createElement("textarea");
-    textarea.value = text;
-    document.body.append(textarea);
-    textarea.select();
-    const copied = document.execCommand("copy");
-    textarea.remove();
-    return copied;
+    return copyTextWithBrowserCommand(text);
   }
 }
 
@@ -1976,7 +1979,13 @@ function updateTodo(period: TodoPeriod, id: string, text: string): void {
   if (!isConfiguredTodoListId(period)) return;
   cancelEmptyTodoRemoval(period, id);
   activeWorkspace.value.todos = updateTodoText(activeWorkspace.value.todos, period, id, text);
-  persistNow();
+  // Text edits are cheap to redo but full-state saves are not (serialization +
+  // localStorage round-trip per keystroke, amplified by IME composition). Debounce
+  // through the shared text pipeline; blur/Enter/structural edits flush via
+  // persistNow, and undo snapshots still record every change.
+  bumpTextGeneration();
+  markDirty();
+  scheduleTodoSave();
 }
 
 function splitTodo(period: TodoPeriod, id: string, before: string, after: string): void {
@@ -2146,7 +2155,7 @@ function clearData(anchor?: HTMLElement): void {
       clearImagePreview();
       pendingEditSpaceId.value = null;
       pendingEditTodoListId.value = null;
-      undoSnapshots.value = [];
+      resetUndoHistory();
       Object.assign(state, defaultState());
       resetTextGenerationBaseline();
       // Flush reactive watchers (the theme watcher persists on change) before wiping, so
@@ -2399,6 +2408,7 @@ function handleGlobalKeydown(event: KeyboardEvent): void {
   }
   if ((event.ctrlKey || event.metaKey) && event.key.toLowerCase() === "s") {
     event.preventDefault();
+    flushTodoSave();
     flushTextSave();
     showSaveBubble();
   }
@@ -2426,66 +2436,6 @@ function blurActiveBoardElement(): boolean {
   return true;
 }
 
-function recordUndoCheckpoint(): void {
-  if (restoringUndo) {
-    lastUndoSnapshot.value = createUndoSnapshot();
-    return;
-  }
-  const current = createUndoSnapshot();
-  if (current === lastUndoSnapshot.value) return;
-  undoSnapshots.value = [
-    ...undoSnapshots.value.slice(-(UNDO_HISTORY_LIMIT - 1)),
-    lastUndoSnapshot.value,
-  ];
-  lastUndoSnapshot.value = current;
-}
-
-async function undoLastBoardChange(): Promise<void> {
-  if (undoInFlight || restoringUndo) return;
-  const snapshot = undoSnapshots.value.at(-1);
-  if (!snapshot) return;
-  let nextState: BoardState;
-  try {
-    nextState = normalizeImportedState(JSON.parse(snapshot));
-  } catch {
-    lastUndoSnapshot.value = createUndoSnapshot();
-    return;
-  }
-
-  const stateAtStart = createUndoSnapshot();
-  undoInFlight = true;
-  try {
-    const activeUndoWorkspace = nextState.workspaces.find((w) => w.id === nextState.activeWorkspaceId) ?? nextState.workspaces[0];
-    if (activeUndoWorkspace) {
-      // Drop images whose payload can no longer be hydrated (e.g. reclaimed after the
-      // delete grace window) so undo does not resurrect permanent empty "ghost" entries.
-      activeUndoWorkspace.images = (await hydrateStoredImages(activeUndoWorkspace.images))
-        .filter((image) => Boolean(image.src));
-    }
-    if (!appMounted || createUndoSnapshot() !== stateAtStart || undoSnapshots.value.at(-1) !== snapshot) return;
-    restoringUndo = true;
-    undoSnapshots.value = undoSnapshots.value.slice(0, -1);
-    window.clearTimeout(textSaveTimer.value);
-    textSaveTimer.value = undefined;
-    emptyTodoRemovalTimers.forEach((timer) => window.clearTimeout(timer));
-    emptyTodoRemovalTimers.clear();
-    clearImagePreview();
-    pendingEditSpaceId.value = null;
-    pendingEditTodoListId.value = null;
-    Object.assign(state, nextState);
-    resetTextGenerationBaseline();
-    persistNow();
-    lastUndoSnapshot.value = createUndoSnapshot();
-  } finally {
-    restoringUndo = false;
-    undoInFlight = false;
-  }
-}
-
-function createUndoSnapshot(): string {
-  return exportUndoSnapshotState(state);
-}
-
 function navigatePreview(direction: number): void {
   const index = activeWorkspace.value.images.findIndex((image) => image.id === activePreviewId.value);
   if (index < 0) return;
@@ -2498,6 +2448,13 @@ function navigatePreview(direction: number): void {
 
 function showSaveBubble(): void {
   showBubble("save");
+}
+
+// The Ctrl+S bubble animation is a spectacle; firing it on every debounced
+// todo auto-save would be noise, so auto-saves only nudge the save status.
+function showSaveBubbleSoon(): void {
+  // no-op placeholder kept separate from showSaveBubble so explicit saves can
+  // keep the celebration while automatic ones stay quiet.
 }
 
 function showSaveStatusTip(anchor?: HTMLElement): void {
@@ -2608,28 +2565,6 @@ function formatDensitySummaryMessage(message: string, summary: string): string {
   return message.replaceAll("{summary}", summary);
 }
 
-function showBubble(messageKey: MessageKey, anchor?: HTMLElement, options: BubbleOptions = {}): void {
-  showBubbleText(getMessage(messageKey, Math.random, state.language), anchor, options);
-}
-
-function showBubbleText(message: string, anchor?: HTMLElement, options: BubbleOptions = {}, duration = 3000): void {
-  if (shouldBlockBoardEffects()) return;
-  window.clearTimeout(bubbleTimer.value);
-  window.clearTimeout(bubbleFadeTimer.value);
-  clearPendingConfirm();
-  bubbleMessage.value = message;
-  bubbleLink.value = options.linkText && options.linkHref ? { text: options.linkText, href: options.linkHref } : null;
-  bubbleSignature.value = options.signatureText ?? "";
-  activeGuideKey.value = options.guideKey ?? null;
-  companionFocused.value = true;
-  if (anchor) {
-    companionPosition.value = getCompanionPosition(anchor);
-  }
-  bubbleVisible.value = true;
-  bubbleTimerOptions.value = options;
-  startBubbleTimer(duration);
-}
-
 function showToolBubble(message: string, anchor?: HTMLElement): void {
   showBubbleText(message, anchor, { hideCompanionAfter: true }, 3000);
 }
@@ -2648,150 +2583,10 @@ function dismissToolBubble(): void {
   activeGuideKey.value = null;
 }
 
-function hideBubbleMessage(options: { clearRetainedContent?: boolean } = {}): void {
-  window.clearTimeout(bubbleTimer.value);
-  window.clearTimeout(bubbleFadeTimer.value);
-  bubbleTimer.value = undefined;
-  bubbleFadeTimer.value = undefined;
-  bubbleRemainingMs.value = 0;
-  bubbleTimerStartedAt.value = 0;
-  companionFadeRemaining.value = 0;
-  companionFadeStartedAt.value = 0;
-  bubbleTimerOptions.value = {};
-  clearPendingConfirm();
-  bubbleVisible.value = false;
-  bubbleMessage.value = "";
-  bubbleLink.value = null;
-  bubbleSignature.value = "";
-  if (options.clearRetainedContent) bubbleClearSignal.value += 1;
-}
-
 function hideCompanion(): void {
   hideBubbleMessage();
   companionFocused.value = false;
   activeGuideKey.value = null;
-}
-
-function startBubbleTimer(duration: number): void {
-  bubbleRemainingMs.value = duration;
-  bubbleTimerStartedAt.value = Date.now();
-  bubbleTimer.value = window.setTimeout(finishBubbleTimer, duration);
-}
-
-function finishBubbleTimer(): void {
-  const options = bubbleTimerOptions.value;
-  bubbleTimer.value = undefined;
-  bubbleRemainingMs.value = 0;
-  bubbleTimerStartedAt.value = 0;
-  bubbleVisible.value = false;
-  bubbleMessage.value = "";
-  bubbleLink.value = null;
-  bubbleSignature.value = "";
-  if (options.guideKey) activeGuideKey.value = null;
-  window.clearTimeout(bubbleFadeTimer.value);
-  companionFadeRemaining.value = COMPANION_FADE_MS;
-  companionFadeStartedAt.value = Date.now();
-  bubbleFadeTimer.value = window.setTimeout(finishCompanionFade, COMPANION_FADE_MS);
-}
-
-function finishCompanionFade(): void {
-  bubbleFadeTimer.value = undefined;
-  companionFadeRemaining.value = 0;
-  companionFadeStartedAt.value = 0;
-  companionFocused.value = false;
-}
-
-function pauseBubbleTimer(): void {
-  if (bubbleVisible.value && bubbleTimer.value && !pendingConfirm.value) {
-    window.clearTimeout(bubbleTimer.value);
-    bubbleTimer.value = undefined;
-    const elapsed = Date.now() - bubbleTimerStartedAt.value;
-    bubbleRemainingMs.value = Math.max(0, bubbleRemainingMs.value - elapsed);
-    bubbleTimerStartedAt.value = 0;
-  }
-  if (bubbleFadeTimer.value) {
-    window.clearTimeout(bubbleFadeTimer.value);
-    bubbleFadeTimer.value = undefined;
-    const elapsed = Date.now() - companionFadeStartedAt.value;
-    companionFadeRemaining.value = Math.max(0, companionFadeRemaining.value - elapsed);
-    companionFadeStartedAt.value = 0;
-  }
-}
-
-function resumeBubbleTimer(): void {
-  if (bubbleVisible.value && !bubbleTimer.value && !pendingConfirm.value && (bubbleMessage.value || bubbleLink.value || bubbleSignature.value)) {
-    if (bubbleRemainingMs.value <= 0) {
-      finishBubbleTimer();
-      return;
-    }
-    bubbleTimerStartedAt.value = Date.now();
-    bubbleTimer.value = window.setTimeout(finishBubbleTimer, bubbleRemainingMs.value);
-  }
-  if (!bubbleFadeTimer.value && companionFadeRemaining.value > 0 && !bubbleVisible.value) {
-    companionFadeStartedAt.value = Date.now();
-    bubbleFadeTimer.value = window.setTimeout(finishCompanionFade, companionFadeRemaining.value);
-  }
-}
-
-function requestConfirmation(
-  messageKey: MessageKey,
-  anchor: HTMLElement | undefined,
-  onConfirm: () => void | Promise<void>,
-  onCancel?: () => void,
-  options: { confirmText?: string; cancelText?: string; danger?: boolean; confirmHint?: string; secondaryText?: string; onSecondary?: () => void | Promise<void> } = {},
-): void {
-  if (shouldBlockBoardEffects()) return;
-  window.clearTimeout(bubbleTimer.value);
-  window.clearTimeout(bubbleFadeTimer.value);
-  bubbleTimer.value = undefined;
-  bubbleRemainingMs.value = 0;
-  bubbleTimerStartedAt.value = 0;
-  bubbleTimerOptions.value = {};
-  bubbleMessage.value = getMessage(messageKey, Math.random, state.language);
-  bubbleLink.value = null;
-  bubbleSignature.value = "";
-  pendingConfirm.value = {
-    onConfirm,
-    onCancel,
-    confirmText: options.confirmText ?? uiText.value.common.yes,
-    cancelText: options.cancelText ?? uiText.value.common.no,
-    danger: options.danger ?? /删除|清理|Delete|Clear/.test(options.confirmText ?? ""),
-    confirmHint: options.confirmHint,
-    secondaryText: options.secondaryText,
-    onSecondary: options.onSecondary,
-  };
-  activeGuideKey.value = null;
-  bubbleVisible.value = true;
-  companionFocused.value = true;
-  companionPosition.value = getCompanionPosition(anchor);
-}
-
-async function confirmCompanionAction(): Promise<void> {
-  const action = pendingConfirm.value;
-  if (!action) return;
-  hideCompanion();
-  (document.activeElement as HTMLElement | null)?.blur();
-  await action.onConfirm();
-}
-
-async function secondaryCompanionAction(): Promise<void> {
-  const action = pendingConfirm.value;
-  if (!action?.onSecondary) return;
-  hideCompanion();
-  (document.activeElement as HTMLElement | null)?.blur();
-  pendingConfirm.value = null;
-  await action.onSecondary();
-}
-
-function cancelCompanionAction(): void {
-  clearPendingConfirm(true);
-  hideCompanion();
-}
-
-function clearPendingConfirm(runCancel = false): void {
-  const action = pendingConfirm.value;
-  pendingConfirm.value = null;
-  if (runCancel) action?.onCancel?.();
 }
 
 function showToast(messageKey: MessageKey): void {
@@ -2832,168 +2627,32 @@ function isSingleWorkspaceExport(payload: Record<string, unknown>): boolean {
 }
 
 function clearTimers(): void {
-  window.clearTimeout(textSaveTimer.value);
-  window.clearTimeout(bubbleTimer.value);
-  window.clearTimeout(bubbleFadeTimer.value);
-  window.clearTimeout(saveStatusTimer.value);
+  clearPersistenceTimers();
+  clearBubbleTimers();
   window.clearTimeout(imagePayloadPruneTimer.value);
-  window.clearInterval(versionCheckTimer.value);
-  window.clearTimeout(todoNotificationDueTimer.value);
-  window.clearInterval(titleFlashTimer.value);
+  clearVersionTimers();
   window.clearTimeout(previewCloseTimer.value);
   previewCloseTimer.value = undefined;
   imagePayloadPruneTimer.value = undefined;
-  versionCheckTimer.value = undefined;
-  window.clearInterval(todoNotificationTimer.value);
-  todoNotificationDueTimer.value = undefined;
-  todoNotificationTimer.value = undefined;
-  titleFlashTimer.value = undefined;
-  titleFlashActive.value = false;
-  titleFlashAltVisible.value = false;
-  notificationFlashTimers.forEach((timer) => window.clearTimeout(timer));
-  notificationFlashTimers.clear();
-  notificationFlashKeys.value = [];
-  pendingNotificationFlashKeys.value = [];
+  clearNotificationTimers();
   document.title = boardTitle.value;
   emptyTodoRemovalTimers.forEach((timer) => window.clearTimeout(timer));
   emptyTodoRemovalTimers.clear();
   clearPendingImagePayloadDeletions();
 }
 
-function getNotificationApi(): typeof Notification | undefined {
-  return typeof Notification === "undefined" ? undefined : Notification;
-}
-
-async function prepareTodoNotifications(): Promise<void> {
-  const notificationApi = getNotificationApi();
-  if (!notificationApi) return;
-  if (notificationApi.permission === "default" && typeof notificationApi.requestPermission === "function") {
-    try {
-      await notificationApi.requestPermission();
-    } catch (error) {
-      console.warn("Failed to request reminder notification permission", error);
-    }
-  }
-  refreshTodoNotifications();
-}
-
-const URL_LINE_PATTERN = /^https?:\/\//i;
-
-function formatNotificationBody(text: string, language: AppLanguage): string {
-  const prefix = language === "en" ? "From ——\n" : "来自于——\n";
-  const lines = text.split("\n");
-  const result = lines.map((line) => (URL_LINE_PATTERN.test(line.trim()) ? prefix + line : line));
-  return result.join("\n");
-}
-
-function refreshTodoNotifications(): void {
-  triggerDueTodoNotifications();
-  scheduleNextTodoNotification();
-}
-
-interface NotifiableTodo {
-  workspaceId: string;
-  workspace: WorkspaceData;
-  period: TodoPeriod;
-  todo: TodoItem;
-}
-
-/** Every todo carrying a reminder across ALL workspaces. Reminders fire
- *  workspace-agnostically: a due reminder in a non-active workspace must still
- *  surface, otherwise it silently waits until the user switches back. */
-function collectNotifiableTodos(): NotifiableTodo[] {
-  const result: NotifiableTodo[] = [];
-  for (const workspace of state.workspaces) {
-    for (const list of workspace.todoLists) {
-      const period = list.id;
-      for (const todo of workspace.todos[period] ?? []) {
-        result.push({ workspaceId: workspace.id, workspace, period, todo });
-      }
-    }
-  }
-  return result;
-}
-
-function getWorkspaceTodoListTitle(workspace: WorkspaceData, listId: TodoListId): string {
-  const list = workspace.todoLists.find((item) => item.id === listId);
-  if (list?.title) return getDisplayTodoListTitle(list, state.language);
-  return getDefaultTitles(state.language)[`todo-${listId}-title`] ?? uiText.value.app.reminderFallback;
-}
-
-function fireNativeTodoNotification(item: NotifiableTodo): boolean {
-  const notificationApi = getNotificationApi();
-  if (!notificationApi || notificationApi.permission !== "granted") return false;
-  const title = `【${getWorkspaceTodoListTitle(item.workspace, item.period)}】`;
-  const options: NotificationOptions = {
-    body: formatNotificationBody(item.todo.text, state.language),
-    tag: getTodoNotificationTag(item.todo),
-  };
-  const icon = getReminderNotificationIcon();
-  if (icon) options.icon = icon;
-  try {
-    new notificationApi(title, options);
-    return true;
-  } catch (error) {
-    console.warn("Failed to show reminder notification", error);
-    return false;
-  }
-}
-
-function triggerDueTodoNotifications(): void {
-  pruneSentTodoNotifications();
-  const now = Date.now();
-  const all = collectNotifiableTodos();
-
-  // Phase 1 — active workspace: fire native notifications + in-app flash
-  // (permission-gated, unchanged behavior).
-  for (const item of all) {
-    if (item.workspaceId !== state.activeWorkspaceId) continue;
-    const { period, todo } = item;
-    if (todo.done || !Number.isFinite(todo.notifyAt) || todo.notifyAt === undefined || todo.notifyAt > now) continue;
-    const key = getTodoNotificationKey(item.workspaceId, period, todo);
-    if (sentTodoNotifications.has(key)) continue;
-    // On constructor failure, leave the todo unsent so the fallback interval
-    // retries it (the browser Notification constructor can fail transiently).
-    if (!fireNativeTodoNotification(item)) continue;
-    sentTodoNotifications.add(key);
-    startNotificationTitleFlash();
-    queueTodoNotificationFlash(period, todo.id);
-  }
-
-  // Phase 2 — non-active workspace: prompt to switch (one at a time). This is
-  // an in-app companion-bubble prompt, so it does NOT depend on notification
-  // permission. Skip while another confirm is mid-flight; the todo stays unsent
-  // so the next refresh retries instead of being silently dropped.
-  if (pendingConfirm.value || shouldBlockBoardEffects()) return;
-  let target: NotifiableTodo | undefined;
-  for (const item of all) {
-    if (item.workspaceId === state.activeWorkspaceId) continue;
-    const { todo } = item;
-    if (todo.done || !Number.isFinite(todo.notifyAt) || todo.notifyAt === undefined || todo.notifyAt > now) continue;
-    if (sentTodoNotifications.has(getTodoNotificationKey(item.workspaceId, item.period, todo))) continue;
-    if (!target || (todo.notifyAt ?? 0) < (target.todo.notifyAt ?? 0)) target = item;
-  }
-  if (!target) return;
-  sentTodoNotifications.add(getTodoNotificationKey(target.workspaceId, target.period, target.todo));
-  startNotificationTitleFlash();
-  showCrossWorkspaceReminderPrompt(target);
-}
-
 /** Shows the "another workspace has a reminder — switch?" companion bubble. */
+function handleDocumentVisibilityChange(): void {
+  if (document.visibilityState === "visible") handleNotificationReturn();
+}
+
 function showCrossWorkspaceReminderPrompt(item: NotifiableTodo): void {
   const workspaceTitle = item.workspace.customTitles["board-title"]?.trim() || "Mini Desk";
   const prompt = uiText.value.app.crossWorkspaceReminder
     .replace("{workspace}", workspaceTitle)
     .replace("{text}", item.todo.text.trim());
-  window.clearTimeout(bubbleTimer.value);
-  window.clearTimeout(bubbleFadeTimer.value);
-  bubbleTimer.value = undefined;
-  bubbleRemainingMs.value = 0;
-  bubbleTimerStartedAt.value = 0;
-  bubbleTimerOptions.value = {};
+  hideBubbleMessage();
   bubbleMessage.value = prompt;
-  bubbleLink.value = null;
-  bubbleSignature.value = "";
   pendingConfirm.value = {
     onConfirm: () => void switchToWorkspaceWithReminder(item),
     onCancel: undefined,
@@ -3017,123 +2676,6 @@ async function switchToWorkspaceWithReminder(item: NotifiableTodo): Promise<void
   fireNativeTodoNotification(item);
   startNotificationTitleFlash();
   queueTodoNotificationFlash(item.period, item.todo.id);
-}
-
-function scheduleNextTodoNotification(): void {
-  if (!appMounted) return;
-  window.clearTimeout(todoNotificationDueTimer.value);
-  todoNotificationDueTimer.value = undefined;
-  const now = Date.now();
-  let nextNotifyAt: number | undefined;
-  for (const item of collectNotifiableTodos()) {
-    const { todo } = item;
-    if (todo.done || !Number.isFinite(todo.notifyAt) || todo.notifyAt === undefined || todo.notifyAt <= now) continue;
-    if (sentTodoNotifications.has(getTodoNotificationKey(item.workspaceId, item.period, todo))) continue;
-    if (nextNotifyAt === undefined || todo.notifyAt < nextNotifyAt) nextNotifyAt = todo.notifyAt;
-  }
-  if (nextNotifyAt === undefined) return;
-  const delay = Math.min(nextNotifyAt - now, MAX_TODO_NOTIFICATION_TIMEOUT_MS);
-  todoNotificationDueTimer.value = window.setTimeout(refreshTodoNotifications, delay);
-}
-
-function pruneSentTodoNotifications(): void {
-  const activeKeys = new Set<string>();
-  for (const item of collectNotifiableTodos()) {
-    const { todo } = item;
-    if (Number.isFinite(todo.notifyAt) && todo.notifyAt !== undefined && !todo.done) {
-      activeKeys.add(getTodoNotificationKey(item.workspaceId, item.period, todo));
-    }
-  }
-  for (const key of sentTodoNotifications) {
-    if (!activeKeys.has(key)) sentTodoNotifications.delete(key);
-  }
-}
-
-function getTodoNotificationKey(workspaceId: string, period: TodoPeriod, todo: TodoItem): string {
-  return `${workspaceId}:${period}:${todo.id}:${todo.notifyAt}`;
-}
-
-function getTodoNotificationTag(todo: TodoItem): string {
-  return `${todo.id}:${todo.notifyAt}`;
-}
-
-function getReminderNotificationIcon(): string {
-  const src = getCompanionNotificationIconSrc(state.companionGifTheme, state.theme, state.customCompanionGif);
-  if (!src) return "";
-  try {
-    return new URL(src, window.location.href).href;
-  } catch {
-    return src;
-  }
-}
-
-function startNotificationTitleFlash(): void {
-  if (document.visibilityState === "visible") return;
-  if (titleFlashActive.value) return;
-  titleFlashActive.value = true;
-  titleFlashAltVisible.value = true;
-  document.title = notificationDocumentTitle.value;
-  titleFlashTimer.value = window.setInterval(toggleNotificationTitle, TITLE_FLASH_INTERVAL_MS);
-}
-
-function toggleNotificationTitle(): void {
-  if (!titleFlashActive.value) return;
-  titleFlashAltVisible.value = !titleFlashAltVisible.value;
-  document.title = titleFlashAltVisible.value ? notificationDocumentTitle.value : boardTitle.value;
-}
-
-function stopNotificationTitleFlash(): void {
-  window.clearInterval(titleFlashTimer.value);
-  titleFlashTimer.value = undefined;
-  titleFlashActive.value = false;
-  titleFlashAltVisible.value = false;
-  document.title = boardTitle.value;
-}
-
-function handleDocumentVisibilityChange(): void {
-  if (document.visibilityState === "visible") handleNotificationReturn();
-}
-
-function handleNotificationReturn(): void {
-  stopNotificationTitleFlash();
-  flushPendingTodoNotificationFlashes();
-}
-
-function queueTodoNotificationFlash(period: TodoPeriod, id: string): void {
-  const key = todoKey(period, id);
-  if (document.visibilityState === "visible") {
-    flashTodoNotificationKey(key);
-    return;
-  }
-  if (!pendingNotificationFlashKeys.value.includes(key)) {
-    pendingNotificationFlashKeys.value = [...pendingNotificationFlashKeys.value, key];
-  }
-}
-
-function flushPendingTodoNotificationFlashes(): void {
-  if (pendingNotificationFlashKeys.value.length === 0) return;
-  const keys = pendingNotificationFlashKeys.value;
-  pendingNotificationFlashKeys.value = [];
-  keys.forEach(flashTodoNotificationKey);
-}
-
-function flashTodoNotificationKey(key: string): void {
-  const existingTimer = notificationFlashTimers.get(key);
-  if (existingTimer !== undefined) window.clearTimeout(existingTimer);
-  if (!notificationFlashKeys.value.includes(key)) {
-    notificationFlashKeys.value = [...notificationFlashKeys.value, key];
-  }
-  notificationFlashTimers.set(
-    key,
-    window.setTimeout(() => {
-      notificationFlashTimers.delete(key);
-      notificationFlashKeys.value = notificationFlashKeys.value.filter((item) => item !== key);
-    }, TODO_NOTIFICATION_FLASH_MS),
-  );
-}
-
-function todoKey(period: TodoPeriod, id: string): string {
-  return `${period}:${id}`;
 }
 
 function cancelEmptyTodoRemoval(period: TodoPeriod, id: string): void {
@@ -3238,59 +2780,10 @@ function invalidateGuideCompanion(nextKey: GuideKey): void {
   hideCompanion();
 }
 
-function checkAppVersion(): void {
-  storedAppVersion.value = getStoredAppVersion();
-  if (storedAppVersion.value !== appVersion.value) {
-    markAppVersionSeen(appVersion.value);
-    storedAppVersion.value = appVersion.value;
-  }
-  availableAppVersion.value = appVersion.value;
-  versionPromptVisible.value = false;
-}
-
-async function checkLatestAppVersion(): Promise<void> {
-  const latestVersion = await fetchLatestAppVersion();
-  if (!appMounted || !latestVersion) return;
-
-  if (latestVersion === appVersion.value) {
-    availableAppVersion.value = appVersion.value;
-    versionPromptVisible.value = false;
-    return;
-  }
-
-  availableAppVersion.value = latestVersion;
-  versionPromptVisible.value = true;
-}
-
-async function updateStaticVersion(): Promise<void> {
-  await clearStaticCaches();
-  versionPromptVisible.value = false;
-  window.location.reload();
-}
-
 // "Update now" from the changelog modal — close it, then run the same cache-clear + reload.
 async function applyChangelogUpdate(): Promise<void> {
   changelogVisible.value = false;
   await updateStaticVersion();
-}
-
-function getCompanionPosition(anchor?: HTMLElement): { right: string; bottom?: string; top?: string } | undefined {
-  if (isMobileLayout()) {
-    return {
-      right: "12px",
-      top: "118px",
-    };
-  }
-  const target = anchor?.closest(".image-preview, .preview-main, .preview-stage, .todo-section, .quick-block, .text-panel, .split-block, .panel") as HTMLElement | null;
-  if (!target) return undefined;
-  const rect = target.getBoundingClientRect();
-  if (!rect.width && !rect.height) return undefined;
-  const safeRight = Math.max(Math.round(rect.right), MIN_COMPANION_POPOVER_RIGHT_EDGE);
-  const safeBottom = Math.min(Math.round(rect.bottom), window.innerHeight);
-  return {
-    right: `calc(100vw - ${safeRight}px + 10px)`,
-    bottom: `calc(100vh - ${safeBottom}px + 10px)`,
-  };
 }
 
 function getImageUndoAnchor(anchor?: HTMLElement): HTMLElement | undefined {

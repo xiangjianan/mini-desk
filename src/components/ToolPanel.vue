@@ -20,6 +20,8 @@ import type { AppLanguage, ThemeMode } from "../types";
 import { getUiText } from "../state/i18n";
 import { withKaomoji, type MessageMood } from "../state/messages";
 import { CONTEXT_MENU_Z_INDEX, createExclusiveContextMenu } from "../utils/contextMenu";
+import { copyTextToClipboard } from "../utils/clipboard";
+import { renderIcon } from "../utils/dropdownIcons";
 import EditableTitle from "./EditableTitle.vue";
 
 type ToolId = "calculator" | "base" | "color" | "codec" | "password";
@@ -180,9 +182,6 @@ const calculatorKeys: CalculatorKey[] = [
   { label: "=", value: "equals", testId: "calculator-key-equals", kind: "equals" },
 ];
 
-function renderIcon(icon: Component): () => VNode {
-  return () => h(NIcon, { size: 16 }, { default: () => h(icon) });
-}
 
 function isToolId(value: unknown): value is ToolId {
   return typeof value === "string" && (TOOL_IDS as readonly string[]).includes(value);
@@ -714,16 +713,7 @@ function uniqueChars(value: string): string {
 
 async function copyToolText(value: string): Promise<boolean> {
   if (!value || value === "--") return false;
-  let copied = false;
-  if (navigator.clipboard?.writeText) {
-    try {
-      await navigator.clipboard.writeText(value);
-      copied = true;
-    } catch {
-      // Fall back below when async clipboard access is denied.
-    }
-  }
-  if (!copied) copied = copyTextWithBrowserCommand(value);
+  const copied = await copyTextToClipboard(value);
   notifyToolMessage(copied ? uiText.value.tools.copySuccess : uiText.value.tools.copyFailed);
   return copied;
 }
@@ -733,19 +723,6 @@ async function copyPassword(): Promise<void> {
   if (copied) passwordOutput.value = "";
 }
 
-function copyTextWithBrowserCommand(value: string): boolean {
-  const textarea = document.createElement("textarea");
-  textarea.value = value;
-  textarea.setAttribute("readonly", "");
-  textarea.style.position = "fixed";
-  textarea.style.left = "-9999px";
-  document.body.append(textarea);
-  textarea.focus();
-  textarea.setSelectionRange(0, textarea.value.length);
-  const copied = document.execCommand?.("copy") ?? false;
-  textarea.remove();
-  return copied;
-}
 </script>
 
 <template>

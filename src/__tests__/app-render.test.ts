@@ -8,6 +8,7 @@ import QuickButtons from "../components/QuickButtons.vue";
 import SettingsMenu from "../components/SettingsMenu.vue";
 import SpacePanel from "../components/SpacePanel.vue";
 import TodoPanel from "../components/TodoPanel.vue";
+import WorkspaceSwitcher from "../components/WorkspaceSwitcher.vue";
 import { defaultState, defaultWorkspace, STORAGE_KEY } from "../state/defaults";
 import { hydrateStoredImages, storeImagePayload } from "../state/images";
 import * as imageState from "../state/images";
@@ -589,6 +590,50 @@ describe("App shell", () => {
       expect(wrapper.find(".title-edit-input").exists()).toBe(false);
     } finally {
       wrapper.unmount();
+    }
+  });
+
+  it("hydrates only the active workspace's images at startup and frees them on switch", async () => {
+    const restoreImageDb = installMemoryImageDb();
+    localStorage.setItem(STORAGE_KEY, JSON.stringify({
+      ...defaultState(),
+      workspaces: [
+        {
+          ...defaultWorkspace(),
+          id: "ws-active",
+          title: "活跃",
+          images: [{ id: "img-active", src: "data:image/png;base64,ACTIVE" }],
+        },
+        {
+          ...defaultWorkspace(),
+          id: "ws-idle",
+          title: "闲置",
+          images: [{ id: "img-idle", src: "data:image/png;base64,IDLE" }],
+        },
+      ],
+      activeWorkspaceId: "ws-active",
+    }));
+    const wrapper = mountApp();
+
+    try {
+      await flushPromises();
+
+      // Reach state through the component instance's setup bindings.
+      const app = wrapper.vm as unknown as {
+        state: { workspaces: Array<{ id: string; images: Array<{ id: string; src?: string }> }> };
+      };
+      const byId = (id: string) => app.state.workspaces.find((workspace) => workspace.id === id);
+      expect(byId("ws-active")?.images[0].src).toBe("data:image/png;base64,ACTIVE");
+      expect(byId("ws-idle")?.images[0].src).toBeUndefined();
+
+      wrapper.getComponent(WorkspaceSwitcher).vm.$emit("switch", "ws-idle");
+      await flushPromises();
+
+      expect(byId("ws-active")?.images[0].src).toBeUndefined();
+      expect(byId("ws-idle")?.images[0].src).toBe("data:image/png;base64,IDLE");
+    } finally {
+      wrapper.unmount();
+      restoreImageDb();
     }
   });
 
@@ -2075,6 +2120,44 @@ describe("App shell", () => {
 
       await vi.advanceTimersByTimeAsync(1200);
       expect(document.title).toBe("Mini Desk");
+    } finally {
+      wrapper.unmount();
+      document.title = "Mini Desk";
+      if (originalVisibilityDescriptor) Object.defineProperty(document, "visibilityState", originalVisibilityDescriptor);
+      vi.unstubAllGlobals();
+      vi.useRealTimers();
+    }
+  });
+
+  it("uses the English notification document title when the language is English", async () => {
+    vi.useFakeTimers();
+    vi.setSystemTime(new Date(2026, 4, 25, 8, 0, 0));
+    const originalVisibilityDescriptor = Object.getOwnPropertyDescriptor(Document.prototype, "visibilityState")
+      ?? Object.getOwnPropertyDescriptor(document, "visibilityState");
+    Object.defineProperty(document, "visibilityState", { configurable: true, get: () => "hidden" });
+    class NotificationStub {
+      static permission: NotificationPermission = "granted";
+      static requestPermission = vi.fn();
+    }
+    vi.stubGlobal("Notification", NotificationStub);
+    localStorage.setItem(
+      STORAGE_KEY,
+      JSON.stringify({
+        language: "en",
+        todos: {
+          morning: [{ id: "todo-1", text: "Drink water", done: false }],
+        },
+      }),
+    );
+    const wrapper = mountApp();
+
+    try {
+      const notifyAt = new Date(2026, 4, 25, 8, 0, 1).getTime();
+      wrapper.getComponent(TodoPanel).vm.$emit("notify", "morning", "todo-1", notifyAt);
+      await vi.advanceTimersByTimeAsync(1000);
+
+      expect(document.title).toContain("New reminder");
+      expect(document.title).not.toContain("新提醒");
     } finally {
       wrapper.unmount();
       document.title = "Mini Desk";
@@ -4510,6 +4593,70 @@ describe("App shell", () => {
       });
     } finally {
       wrapper.unmount();
+    }
+  });
+
+  it("debounces todo text edits instead of persisting every keystroke", async () => {
+    vi.useFakeTimers();
+    const wrapper = mountApp();
+
+    try {
+      const todoPanel = wrapper.getComponent(TodoPanel);
+      await wrapper.get('[data-testid="todo-list-morning"]').trigger("click");
+      await nextTick();
+      const todoId = wrapper.getComponent(TodoPanel).props("todos").morning[0].id;
+
+      todoPanel.vm.$emit("update", "morning", todoId, "草");
+      todoPanel.vm.$emit("update", "morning", todoId, "草稿");
+      todoPanel.vm.$emit("update", "morning", todoId, "草稿文");
+      await nextTick();
+
+      // In-memory state reflects every keystroke, but nothing hit storage yet.
+      expect(todoPanel.props("todos").morning[0].text).toBe("草稿文");
+      const storedMidDebounce = JSON.parse(localStorage.getItem(STORAGE_KEY) || "{}");
+      expect(storedMidDebounce.workspaces[0].todos.morning[0].text).toBe("");
+
+      await vi.advanceTimersByTimeAsync(1000);
+      const stored = JSON.parse(localStorage.getItem(STORAGE_KEY) || "{}");
+      expect(stored.workspaces[0].todos.morning[0].text).toBe("草稿文");
+    } finally {
+      wrapper.unmount();
+      vi.useRealTimers();
+    }
+  });
+
+  it("flushes a pending todo edit on blur and superseding structural save", async () => {
+    vi.useFakeTimers();
+    const wrapper = mountApp();
+
+    try {
+      await wrapper.get('[data-testid="todo-list-morning"]').trigger("click");
+      await nextTick();
+      const todoPanel = wrapper.getComponent(TodoPanel);
+      const todoId = todoPanel.props("todos").morning[0].id;
+
+      todoPanel.vm.$emit("update", "morning", todoId, "失焦前");
+      await nextTick();
+      todoPanel.vm.$emit("blur");
+      await flushPromises();
+      await nextTick();
+
+      expect(JSON.parse(localStorage.getItem(STORAGE_KEY) || "{}").workspaces[0].todos.morning[0].text).toBe("失焦前");
+
+      // A structural change (adding another todo) mid-debounce must carry the
+      // pending text edit along with it.
+      todoPanel.vm.$emit("update", "morning", todoId, "结构保存前");
+      await nextTick();
+      todoPanel.vm.$emit("createFromText", "morning", ["结构变化"]);
+      await vi.advanceTimersByTimeAsync(0);
+
+      const stored = JSON.parse(localStorage.getItem(STORAGE_KEY) || "{}");
+      const morning = stored.workspaces[0].todos.morning;
+      expect(morning.find((todo: { id: string }) => todo.id === todoId).text).toBe("结构保存前");
+      expect(morning.some((todo: { text: string }) => todo.text === "结构变化")).toBe(true);
+    } finally {
+      wrapper.unmount();
+      vi.useRealTimers();
     }
   });
 
