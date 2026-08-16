@@ -25,6 +25,28 @@ export interface ChangelogEntry {
 
 export const CHANGELOG: ChangelogEntry[] = [
   {
+    version: "1.0.129",
+    date: "2026-08-16",
+    notes: {
+      zh: [
+        "性能优化：待办输入改为防抖保存，保存与撤销的内存开销大幅降低，大量待办与图片下打字更流畅",
+        "首屏加载体积减少约 344KB（伙伴 GIF 素材压缩 + 打包分包修正）",
+        "提醒事项勾选完成或删除后，下方条目平滑上移，不再生硬跳动",
+        "连续删除提醒事项时每次都会弹出确认气泡，连续删除超过两次后直接删除",
+        "提醒勾选框重绘为透明圆形细描边，勾选后绿色实心；顶部工具栏按钮统一为正圆样式",
+        "安全修复：阻断快捷按钮配置中的 javascript:/data: 等危险链接协议",
+      ],
+      en: [
+        "Performance: debounced todo-input saves and much lower save/undo memory overhead — smoother typing with many todos and images",
+        "First-load payload reduced by ~344KB (compressed companion GIFs + fixed vendor chunking)",
+        "Reminder items now slide up smoothly after being checked or deleted",
+        "Deleting reminders in a row now confirms each time, then deletes directly after two consecutive deletes",
+        "Todo checkbox redrawn as a thin-outline circle that fills green when done; toolbar buttons unified to circles",
+        "Security: block javascript:/data: and other dangerous URL schemes in quick-button configs",
+      ],
+    },
+  },
+  {
     version: "1.0.126",
     date: "2026-08-14",
     notes: {
