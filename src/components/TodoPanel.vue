@@ -13,7 +13,6 @@ import {
   EyeOutline,
   HelpCircleOutline,
   LinkOutline,
-  ListOutline,
   NotificationsOutline,
   Star,
   StarOutline,
@@ -194,7 +193,7 @@ const menuOptions = computed<DropdownOption[]>(() => {
   const options: DropdownOption[] = [];
   const todo = getMenuTodo();
   if (!menu.value?.id) {
-    options.push({ label: uiText.value.todo.newList, key: "create-list", icon: renderIcon(ListOutline) });
+    options.push({ label: uiText.value.todo.newList, key: "create-list", icon: renderIcon(AddOutline) });
   }
   if (menu.value?.id) {
     options.push({ label: uiText.value.common.copy, key: "copy", icon: renderIcon(CopyOutline) });
@@ -711,6 +710,24 @@ function openSectionMenu(event: MouseEvent, period: TodoPeriod): void {
     anchor: event.currentTarget as HTMLElement,
     sectionActions: true,
   };
+}
+
+// Blank panel space (e.g. below fully-collapsed lists) also opens a menu, so
+// 新建列表 stays reachable without expanding anything. Sections and the
+// today-focus area own their context menus; clicks that reach this handler
+// from inside them are the native-menu cases their own guards allow through.
+function openPanelMenu(event: MouseEvent): void {
+  const target = event.target as HTMLElement;
+  if (target.closest(".todo-section, .today-focus-section, button, input, textarea, [contenteditable]")) return;
+  const period = effectiveTodoLists.value[0]?.id;
+  if (!period) return;
+  event.preventDefault();
+  event.stopPropagation();
+  selectedMenuTodoKey.value = null;
+  exclusiveMenu.notifyOpen(event, { replacingExistingMenu: Boolean(menu.value) });
+  // `period` only satisfies the menu shape — with no id/sectionActions the
+  // rendered options are the list-agnostic ones (新建列表 / Tips).
+  menu.value = { x: event.clientX, y: event.clientY, period, anchor: event.currentTarget as HTMLElement };
 }
 
 function openSectionActions(event: MouseEvent, period: TodoListId): void {
@@ -1405,7 +1422,7 @@ function buildTodoListEntries(period: TodoListId, todos: TodoItem[], deferredDon
 </script>
 
 <template>
-  <section ref="panelRef" class="panel todo-panel" aria-labelledby="todo-title" @dragleave="handleTodoDragLeave" @drop="handleTodoDragLeave" @dragend="handleTodoDragEnd">
+  <section ref="panelRef" class="panel todo-panel" aria-labelledby="todo-title" @contextmenu="openPanelMenu" @dragleave="handleTodoDragLeave" @drop="handleTodoDragLeave" @dragend="handleTodoDragEnd">
     <Transition name="section-reveal" :duration="240">
       <section v-if="todayFocus.length" class="today-focus-section" :aria-label="uiText.todo.todayFocus">
         <div class="today-focus-heading" @contextmenu="openTodayFocusTitleMenu">

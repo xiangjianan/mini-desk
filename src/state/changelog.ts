@@ -25,26 +25,18 @@ export interface ChangelogEntry {
 
 export const CHANGELOG: ChangelogEntry[] = [
   {
-    version: "1.0.131",
+    version: "1.0.132",
     date: "2026-08-17",
     notes: {
       zh: [
+        "修复：暗色模式下打开页面先闪一下亮色的问题（防闪烁脚本改为外链，不再被 CSP 拦截）",
         "修复：导入的工作区提醒事项较多（≥7 条）时，连续右键删除从第二次起确认气泡不再弹出的问题",
+        "新增：提醒事项列表全部收起时，右键空白区域也能弹出菜单快速新建列表",
       ],
       en: [
+        "Fix: light-theme flash on page load in dark mode (the anti-flash script now ships as an external file CSP won't block)",
         "Fix: in imported workspaces with many todos (≥7 visible), the delete-confirm bubble stopped appearing from the second consecutive right-click delete",
-      ],
-    },
-  },
-  {
-    version: "1.0.130",
-    date: "2026-08-17",
-    notes: {
-      zh: [
-        "修复：暗色模式下每次打开页面先闪一下亮色的问题（防闪烁脚本此前被 CSP 误拦截，现改为外链脚本）",
-      ],
-      en: [
-        "Fix: light-theme flash on every page load in dark mode (the anti-flash script was blocked by CSP and now ships as an external script)",
+        "New: right-click the blank area of the reminder panel (lists all collapsed) to open a menu and create a list",
       ],
     },
   },

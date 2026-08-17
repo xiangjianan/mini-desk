@@ -1,6 +1,8 @@
 import { defineComponent, nextTick, ref } from "vue";
+import type { VNode } from "vue";
 import { config, flushPromises, mount } from "@vue/test-utils";
 import { describe, expect, it, vi } from "vitest";
+import { AddOutline } from "@vicons/ionicons5";
 import { readFileSync } from "node:fs";
 import { resolve } from "node:path";
 import TodoPanel from "../components/TodoPanel.vue";
@@ -3774,5 +3776,50 @@ describe("TodoPanel", () => {
     await wrapper.get('[data-testid="todo-list-morning"]').element.dispatchEvent(event);
 
     expect(wrapper.emitted("createFromText")).toBeUndefined();
+  });
+
+  it("opens the create-list menu when right-clicking the blank area below collapsed lists", async () => {
+    document.body.innerHTML = "";
+    const wrapper = mount(TodoPanel, {
+      attachTo: document.body,
+      props: {
+        todoLists: [{ id: "morning", title: "☀️ 早上", collapsed: true, compact: false }],
+        todos: { morning: [{ id: "todo-1", text: "写周报", done: false }] },
+        showCompleted: { morning: false },
+        titles: DEFAULT_TITLES,
+      },
+      global: {
+        stubs: {
+          Dropdown: dropdownStub,
+          NDropdown: dropdownStub,
+          NTooltip: tooltipStub,
+        },
+      },
+    });
+
+    // Every list is collapsed, so the panel is mostly blank space. A right
+    // click on that blank area (the panel root, outside any .todo-section)
+    // must open the context menu like an expanded section does.
+    await wrapper.get("section.todo-panel").trigger("contextmenu", { clientX: 24, clientY: 320 });
+
+    const options = wrapper.findAll(".dropdown-option");
+    const createOption = options.find((option) => option.attributes("data-key") === "create-list");
+    expect(options.length, "blank-area right-click should open a menu").toBeGreaterThan(0);
+    expect(createOption, "the menu should offer 新建列表").toBeDefined();
+
+    // 新建列表 must reuse the section menu's plus (AddOutline) icon so the
+    // blank-area menu matches the look of the existing list menus.
+    const menuProps = wrapper.findComponent(dropdownStub).props("options") as Array<{ key?: string | number; icon?: () => VNode }>;
+    const createListOption = menuProps.find((option) => option.key === "create-list");
+    const iconVNode = createListOption?.icon?.();
+    const innerIcon = (iconVNode?.children as { default: () => VNode } | undefined)?.default();
+    expect(innerIcon?.type, "新建列表 should use the AddOutline plus icon like the section menu").toBe(AddOutline);
+
+    await createOption!.trigger("click");
+    await nextTick();
+    expect(getLatestListCreateDialogElement(), "clicking 新建列表 should open the create dialog").not.toBeNull();
+
+    wrapper.unmount();
+    document.body.innerHTML = "";
   });
 });
