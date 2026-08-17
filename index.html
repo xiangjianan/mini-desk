@@ -80,19 +80,8 @@
         50% { opacity: 1; transform: translateY(-2px); }
       }
     </style>
-    <script>
-      // 在 JS bundle 执行前提前应用持久化主题,避免 loading 与最终主题之间的明暗闪烁
-      try {
-        var saved = localStorage.getItem("mini-desk-state-v1");
-        if (saved) {
-          var theme = JSON.parse(saved).theme;
-          if (theme === "dark" || theme === "light") {
-            document.documentElement.setAttribute("data-theme", theme);
-          }
-        }
-      } catch (e) {
-      }
-    </script>
+    <!-- 防主题闪烁:同步外链脚本,需在首帧渲染前执行;不可内联(CSP script-src 'self' 会拦截) -->
+    <script src="/theme-boot.js"></script>
   </head>
   <body>
     <div id="app">

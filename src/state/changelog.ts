@@ -25,6 +25,18 @@ export interface ChangelogEntry {
 
 export const CHANGELOG: ChangelogEntry[] = [
   {
+    version: "1.0.130",
+    date: "2026-08-17",
+    notes: {
+      zh: [
+        "修复：暗色模式下每次打开页面先闪一下亮色的问题（防闪烁脚本此前被 CSP 误拦截，现改为外链脚本）",
+      ],
+      en: [
+        "Fix: light-theme flash on every page load in dark mode (the anti-flash script was blocked by CSP and now ships as an external script)",
+      ],
+    },
+  },
+  {
     version: "1.0.129",
     date: "2026-08-16",
     notes: {
