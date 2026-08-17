@@ -25,6 +25,18 @@ export interface ChangelogEntry {
 
 export const CHANGELOG: ChangelogEntry[] = [
   {
+    version: "1.0.131",
+    date: "2026-08-17",
+    notes: {
+      zh: [
+        "修复：导入的工作区提醒事项较多（≥7 条）时，连续右键删除从第二次起确认气泡不再弹出的问题",
+      ],
+      en: [
+        "Fix: in imported workspaces with many todos (≥7 visible), the delete-confirm bubble stopped appearing from the second consecutive right-click delete",
+      ],
+    },
+  },
+  {
     version: "1.0.130",
     date: "2026-08-17",
     notes: {

@@ -145,6 +145,7 @@ watch(
   popoverVisible,
   (visible) => {
     window.clearTimeout(popoverTimer.value);
+    popoverTimer.value = undefined;
     window.clearTimeout(contentTimer.value);
     if (!visible) {
       delayedPopoverVisible.value = false;
@@ -178,6 +179,7 @@ watch(
     renderedActionText.value = "";
     retainingPopoverContent.value = false;
     popoverTimer.value = window.setTimeout(() => {
+      popoverTimer.value = undefined;
       delayedPopoverVisible.value = true;
     }, POPOVER_DELAY_MS);
   },
@@ -232,6 +234,20 @@ watch(
   () => [props.message, props.linkText, props.linkHref, props.confirm, props.confirmDanger, props.confirmText, props.cancelText, props.confirmHint, props.secondaryText, props.actionText, props.language] as const,
   () => {
     if (!popoverVisible.value) return;
+    // The clearSignal watch can strand `delayedPopoverVisible` at false while
+    // `popoverVisible` stays bridged true: focus fires hideBubbleMessage (bumps
+    // clearSignal) and a same-tick tip re-show, so popoverVisible never makes
+    // an F→T transition and its T-branch never restarts the delay timer. Any
+    // NEW content arriving in that state — a confirm, a toast — would render
+    // invisibly. Heal it here: fresh content while shown re-arms the entrance
+    // delay instead of staying silenced.
+    if (!delayedPopoverVisible.value && popoverTimer.value === undefined) {
+      popoverTimer.value = window.setTimeout(() => {
+        popoverTimer.value = undefined;
+        delayedPopoverVisible.value = true;
+      }, POPOVER_DELAY_MS);
+    } else {
+    }
     renderedMessage.value = props.message;
     renderedLinkText.value = props.linkText ?? "";
     renderedLinkHref.value = props.linkHref ?? "";
@@ -250,6 +266,7 @@ watch(
   () => props.clearSignal,
   () => {
     window.clearTimeout(popoverTimer.value);
+    popoverTimer.value = undefined;
     window.clearTimeout(contentTimer.value);
     delayedPopoverVisible.value = false;
     retainingPopoverContent.value = false;
