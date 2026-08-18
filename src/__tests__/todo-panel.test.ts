@@ -144,9 +144,60 @@ describe("TodoPanel", () => {
 
     expect(wrapper.emitted("update")).toBeUndefined();
 
+    // Safari order: the DOM already holds the committed text when
+    // compositionend fires, and the final `input` arrives after it.
+    (input.element as HTMLInputElement).value = "中文输入";
     await input.trigger("compositionend");
+    await input.trigger("input");
+
+    // One emit from compositionend, one duplicate from the trailing input —
+    // both carry the committed text (same tradeoff as Vue's own v-model).
+    expect(wrapper.emitted("update")).toEqual([
+      ["morning", "todo-1", "中文输入"],
+      ["morning", "todo-1", "中文输入"],
+    ]);
+
+    wrapper.unmount();
+  });
+
+  it("emits the committed text on compositionend when the final input fires before compositionend", async () => {
+    // Chromium delivers the session's final `input` (already holding the
+    // committed text) BEFORE `compositionend`, unlike the Safari order above.
+    // Regression: the committed value used to be dropped entirely, so the todo
+    // still read as empty and the blur cleanup deleted the user's text.
+    const wrapper = mount(TodoPanel, {
+      props: {
+        todoLists: defaultTodoLists,
+        todos: {
+          morning: [{ id: "todo-1", text: "", done: false }],
+          noon: [],
+          evening: [],
+        },
+        showCompleted: { morning: false, noon: false, evening: false },
+        titles: DEFAULT_TITLES,
+      },
+      global: {
+        stubs: {
+          Dropdown: dropdownStub,
+          NDatePicker: datePickerStub,
+          NDropdown: dropdownStub,
+          NTooltip: tooltipStub,
+        },
+      },
+    });
+
+    const input = wrapper.get('[data-testid="todo-input-morning"]');
+
+    await input.trigger("compositionstart");
+    (input.element as HTMLInputElement).value = "中";
+    await input.trigger("input");
+    await input.trigger("compositionupdate");
     (input.element as HTMLInputElement).value = "中文输入";
     await input.trigger("input");
+
+    expect(wrapper.emitted("update")).toBeUndefined();
+
+    await input.trigger("compositionend");
 
     expect(wrapper.emitted("update")).toEqual([["morning", "todo-1", "中文输入"]]);
 

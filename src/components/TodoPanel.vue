@@ -580,6 +580,18 @@ const todoComposing = ref(false);
 
 function handleInputComposition(event: CompositionEvent): void {
   todoComposing.value = event.type === "compositionstart";
+  if (todoComposing.value) return;
+  // Chromium delivers the session's final `input` (holding the committed text)
+  // BEFORE `compositionend`, so the template's composing guard swallowed it.
+  // Emit the committed value here or state never sees it: the row then reads
+  // as empty on blur and the empty-row cleanup deletes the user's text. The
+  // text comparison keeps Safari (real input after compositionend) from
+  // emitting the same value twice.
+  const input = event.target instanceof HTMLInputElement ? event.target : null;
+  const identity = input ? getTodoInputIdentity(input) : null;
+  if (input && identity && getTodoById(identity.period, identity.id)?.text !== input.value) {
+    emit("update", identity.period, identity.id, input.value);
+  }
 }
 
 function handleInputFocus(period: TodoPeriod, todo: TodoItem, event: FocusEvent): void {

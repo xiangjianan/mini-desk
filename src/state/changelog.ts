@@ -25,6 +25,18 @@ export interface ChangelogEntry {
 
 export const CHANGELOG: ChangelogEntry[] = [
   {
+    version: "1.0.133",
+    date: "2026-08-18",
+    notes: {
+      zh: [
+        "修复：使用中文输入法编辑提醒事项后点击别处，新输入的文字不再丢失（输入法提交的内容此前未进入自动保存）",
+      ],
+      en: [
+        "Fix: text typed into reminders via an IME (e.g. Chinese pinyin) no longer disappears when clicking elsewhere — the committed text previously never reached the auto-save",
+      ],
+    },
+  },
+  {
     version: "1.0.132",
     date: "2026-08-17",
     notes: {
