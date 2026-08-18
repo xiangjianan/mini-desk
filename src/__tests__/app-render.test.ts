@@ -5065,7 +5065,9 @@ describe("App shell", () => {
       await wrapper.vm.$nextTick();
 
       // Conflict prompt: overwrite / add-new / cancel, with the colliding name surfaced.
-      expect(wrapper.find('[data-testid="companion-confirm"]').text()).toMatch(/同名|冲突/);
+      // The bubble text is picked at random from several variants — the regex
+      // must match every one of them (该空间名称已存在 has neither 同名 nor 冲突).
+      expect(wrapper.find('[data-testid="companion-confirm"]').text()).toMatch(/同名|冲突|已存在/);
       expect(wrapper.get('[data-testid="companion-yes"]').text()).toBe("覆盖");
       expect(wrapper.get('[data-testid="companion-secondary"]').text()).toBe("新增");
       expect(wrapper.get('[data-testid="companion-confirm"]').text()).toContain("我的桌面");
