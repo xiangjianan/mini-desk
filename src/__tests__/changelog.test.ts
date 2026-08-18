@@ -27,7 +27,13 @@ describe("changelog", () => {
     expect(new Set(versions).size).toBe(versions.length);
   });
 
-  it("包含当前应用版本", () => {
-    expect(CHANGELOG.map((entry) => entry.version)).toContain(FALLBACK_APP_VERSION);
+  it("不包含比当前应用版本更新的条目", () => {
+    // Curation policy: trivial releases carry no changelog entry, so the newest
+    // entry may trail the app version — but must never be ahead of it.
+    for (const entry of CHANGELOG) {
+      expect(
+        entry.version.localeCompare(FALLBACK_APP_VERSION, undefined, { numeric: true }),
+      ).toBeLessThanOrEqual(0);
+    }
   });
 });

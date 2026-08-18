@@ -27,14 +27,6 @@ export interface ChangelogEntry {
 
 export const CHANGELOG: ChangelogEntry[] = [
   {
-    version: "1.0.134",
-    date: "2026-08-18",
-    notes: {
-      zh: ["更新记录精简：相邻小版本合并，描述更短"],
-      en: ["Release notes condensed: adjacent minor versions merged, shorter bullets"],
-    },
-  },
-  {
     version: "1.0.133",
     date: "2026-08-18",
     notes: {
