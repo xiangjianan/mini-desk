@@ -5,7 +5,9 @@
  * new features, and major changes/optimizations users will clearly notice.
  * Tiny changes (small style tweaks, minor fixes) are intentionally omitted.
  * Keep each bullet short; adjacent minor releases are merged into their
- * newest version's entry.
+ * newest version's entry. The newest entry's version must always equal the
+ * current app version — a release with nothing significant to record merges
+ * into the top entry and bumps its version label.
  *
  * The release skill appends a new entry at the top of `CHANGELOG` for each
  * release that carries significant changes (and skips trivial ones).
@@ -27,7 +29,7 @@ export interface ChangelogEntry {
 
 export const CHANGELOG: ChangelogEntry[] = [
   {
-    version: "1.0.133",
+    version: "1.0.136",
     date: "2026-08-18",
     notes: {
       zh: [

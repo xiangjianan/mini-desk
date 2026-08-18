@@ -27,13 +27,9 @@ describe("changelog", () => {
     expect(new Set(versions).size).toBe(versions.length);
   });
 
-  it("不包含比当前应用版本更新的条目", () => {
-    // Curation policy: trivial releases carry no changelog entry, so the newest
-    // entry may trail the app version — but must never be ahead of it.
-    for (const entry of CHANGELOG) {
-      expect(
-        entry.version.localeCompare(FALLBACK_APP_VERSION, undefined, { numeric: true }),
-      ).toBeLessThanOrEqual(0);
-    }
+  it("包含当前应用版本", () => {
+    // 琐碎发版不新增条目，而是并入顶部条目并推进其版本号，
+    // 保证更新记录的最新版本始终与应用版本一致。
+    expect(CHANGELOG.map((entry) => entry.version)).toContain(FALLBACK_APP_VERSION);
   });
 });

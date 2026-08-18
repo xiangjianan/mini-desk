@@ -33,7 +33,7 @@ The code commit is pushed to `main` first; the release commit is created only af
        - Pick the prefix from the dominant change. When several types are mixed, prefer the most significant (`feat:` / `fix:` over `chore:`).
        - Real examples from this repo: `fix: 移动端主题按钮去除点击 focus 蓝色背景`, `perf: 添加首屏 loading 骨架消除白屏`, `feat: 提醒事项列宽超过阈值自动分多列`.
        - **Do not** use the `release <version>` message here — that is reserved for step 6.
-     - **Append the changelog entry (before committing):** determine this release's target version now — patch+1 unless the user specified a version; step 4 must reuse the same value. **Curation policy — only significant, user-facing updates belong in the changelog**: new features, and major changes/optimizations users will clearly notice. Do NOT record tiny changes (small style tweaks, minor fixes). If this release contains only trivial changes, skip the append entirely. Otherwise insert a new entry at the **top** of `CHANGELOG` in `src/state/changelog.ts`:
+     - **Append the changelog entry (before committing):** determine this release's target version now — patch+1 unless the user specified a version; step 4 must reuse the same value. **Curation policy — only significant, user-facing updates belong in the changelog**: new features, and major changes/optimizations users will clearly notice. Do NOT record tiny changes (small style tweaks, minor fixes). If this release contains only trivial changes, do NOT add a new entry — instead bump the existing top entry's `version` (and `date`) to the target version so the changelog's newest version always matches the released app version (`src/__tests__/changelog.test.ts` enforces this). Otherwise insert a new entry at the **top** of `CHANGELOG` in `src/state/changelog.ts`:
        ```ts
        {
          version: "<target version>",
@@ -55,7 +55,7 @@ The code commit is pushed to `main` first; the release commit is created only af
 
 4. Bump the version in all three places it is hardcoded.
    - Read the current version.
-   - Use the target version already determined in step 2. If step 2 produced no target version (clean tree, or changelog append skipped as trivial), use patch+1 unless the user specified a version.
+   - Use the target version already determined in step 2. If step 2 produced no target version (clean tree, version-only release), use patch+1 unless the user specified a version — and bump the changelog top entry's version to match.
    - Use `npm version <version> --no-git-tag-version` (updates `package.json` and `package-lock.json`).
    - Also update the same version string in:
      - `index.html` → `<meta name="app-version" content="<version>" />`
