@@ -7226,6 +7226,14 @@ html[data-theme="dark"] .quick-search .quick-search-toggle:focus-visible {
 .workspace-trigger-title { font-weight: 600; line-height: 1; }
 .workspace-trigger-chevron { opacity: 0.55; }
 
+/* The switcher dropdown sits above dense board text, so it uses a nearly
+   opaque surface (instead of the shared translucent material) to keep the
+   content underneath from bleeding through. Specificity must beat the global
+   `.n-popover` background rule, which also uses !important. */
+.workspace-switcher-popover.n-popover {
+  background: color-mix(in srgb, var(--popover) 97%, transparent) !important;
+}
+
 /* ClickUp-style header card: large rounded tile + active workspace name/slogan. */
 .workspace-switcher-header {
   display: flex; align-items: center; gap: 10px;

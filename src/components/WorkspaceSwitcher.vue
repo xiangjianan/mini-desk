@@ -130,6 +130,7 @@ function onDrop(targetId: string): void {
     :show="open"
     :width="264"
     :to="false"
+    class="workspace-switcher-popover"
   >
     <template #trigger>
       <button
