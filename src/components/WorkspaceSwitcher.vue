@@ -1,7 +1,7 @@
 <script setup lang="ts">
 import { computed, nextTick, onUnmounted, ref, watch } from "vue";
 import { NPopover, NIcon } from "naive-ui";
-import { ChevronDownOutline, AddOutline, CreateOutline, TrashOutline, DownloadOutline, CloudUploadOutline } from "@vicons/ionicons5";
+import { ChevronDownOutline, AddOutline, CreateOutline, TrashOutline, DownloadOutline, CloudUploadOutline, CheckmarkOutline } from "@vicons/ionicons5";
 import { getUiText } from "../state/i18n";
 import type { AppLanguage, ThemeMode, WorkspaceData, ZoneKey } from "../types";
 import ZoneVisibilityPopover from "./ZoneVisibilityPopover.vue";
@@ -36,6 +36,7 @@ const activeWorkspace = computed<WorkspaceData>(
 );
 const logoSrc = computed(() => (props.theme === "dark" ? miniDeskDarkLogo : miniDeskLogo));
 const activeTitle = computed(() => activeWorkspace.value?.customTitles["board-title"]?.trim() || "Mini Desk");
+const activeSlogan = computed(() => activeWorkspace.value?.customTitles["board-slogan"]?.trim() ?? "");
 
 function toggleOpen(): void {
   open.value = !open.value;
@@ -127,7 +128,7 @@ function onDrop(targetId: string): void {
     trigger="manual"
     placement="bottom-start"
     :show="open"
-    :width="248"
+    :width="264"
     :to="false"
   >
     <template #trigger>
@@ -139,13 +140,27 @@ function onDrop(targetId: string): void {
         :aria-expanded="open"
         @click="toggleOpen"
       >
-        <img class="workspace-trigger-logo" :src="logoSrc" alt="" aria-hidden="true" width="20" height="20" />
+        <span class="workspace-trigger-tile" aria-hidden="true">
+          <img class="workspace-trigger-logo" :src="logoSrc" alt="" width="18" height="18" />
+        </span>
         <span class="workspace-trigger-title">{{ activeTitle }}</span>
-        <NIcon :component="ChevronDownOutline" size="14" />
+        <NIcon class="workspace-trigger-chevron" :component="ChevronDownOutline" size="13" />
       </button>
     </template>
 
     <div class="workspace-switcher" role="listbox" :aria-label="text.app.workspaces">
+      <div class="workspace-switcher-header">
+        <span class="workspace-switcher-header-tile" aria-hidden="true">
+          <img class="workspace-switcher-header-logo" :src="logoSrc" alt="" width="24" height="24" />
+        </span>
+        <span class="workspace-switcher-header-text">
+          <span class="workspace-switcher-header-title">{{ activeTitle }}</span>
+          <span v-if="activeSlogan" class="workspace-switcher-header-slogan">{{ activeSlogan }}</span>
+        </span>
+      </div>
+
+      <p class="workspace-switcher-section">{{ text.app.workspaces }}</p>
+
       <ul class="workspace-switcher-list">
         <li
           v-for="workspace in workspaces"
@@ -161,6 +176,9 @@ function onDrop(targetId: string): void {
           @dragover.prevent
           @drop="onDrop(workspace.id)"
         >
+          <span class="workspace-switcher-check" aria-hidden="true">
+            <NIcon v-if="workspace.id === activeWorkspaceId" :component="CheckmarkOutline" size="13" />
+          </span>
           <span class="workspace-switcher-name">
             {{ workspace.customTitles["board-title"]?.trim() || "Mini Desk" }}
           </span>
