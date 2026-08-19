@@ -1,0 +1,154 @@
+{
+  "miniDeskWorkspaceExport": true,
+  "version": 1,
+  "workspace": {
+    "id": "sample-bucket-list",
+    "createdAt": 1767571200000,
+    "customTitles": {
+      "board-title": "人生清单",
+      "board-slogan": "想做的事，一件件打勾",
+      "quick-title": "⚡ 清单工具",
+      "today-focus-title": "‼️ 最近要圆的梦"
+    },
+    "noteLines": [],
+    "workspaceLines": [],
+    "storageLines": [],
+    "spaces": [
+      {
+        "id": "bucket-core",
+        "title": "📝 人生清单.txt",
+        "lines": [
+          { "text": "🫧 人生清单 · 想做的事，趁早开始", "indent": 0 },
+          { "text": "🌍 冒险", "indent": 1 },
+          { "text": "看一次极光（挪威 / 冰岛 / 漠河三选一）", "indent": 2 },
+          { "text": "完成一次跳伞（串联，3000 米起）", "indent": 2 },
+          { "text": "考潜水证 OW，去一次仙本那", "indent": 2 },
+          { "text": "💛 感受", "indent": 1 },
+          { "text": "在敦煌沙漠里看一次星空", "indent": 2 },
+          { "text": "听一场喜欢了十年的歌手的演唱会", "indent": 2 },
+          { "text": "🪄 创造", "indent": 1 },
+          { "text": "写一本 5 万字的小书，哪怕自费出版", "indent": 2 },
+          { "text": "办一次自己的摄影展（30 张起）", "indent": 2 },
+          { "text": "👨‍👩‍👧 陪伴", "indent": 1 },
+          { "text": "带爸妈旅行一次，目的地他们定", "indent": 2 },
+          { "text": "和最好的朋友来一场说走就走", "indent": 2 }
+        ]
+      },
+      {
+        "id": "bucket-progress",
+        "title": "📈 打卡进度",
+        "lines": [
+          { "text": "2026 年进度：3 / 24", "indent": 0 },
+          { "text": "✅ 已完成", "indent": 1 },
+          { "text": "连续 100 天晨间日记（5 月 11 日达成）", "indent": 2 },
+          { "text": "西湖夜骑 + 断桥看日出", "indent": 2 },
+          { "text": "🔺 进行中", "indent": 1 },
+          { "text": "全马训练：周跑量 35 km，第 6 / 16 周", "indent": 2 },
+          { "text": "钢琴：车尔尼 599 第 32 条", "indent": 2 },
+          { "text": "⚪ 排队中", "indent": 1 },
+          { "text": "极光 / 沙漠星空 / 跳伞 / 摄影展", "indent": 2 }
+        ]
+      },
+      {
+        "id": "bucket-fund",
+        "title": "💰 梦想基金",
+        "lines": [
+          { "text": "目标：30000 元（极光 + 陪爸妈旅行）", "indent": 0 },
+          { "text": "每月发薪日转入 1500，已存 9 个月", "indent": 1 },
+          { "text": "当前 13500 元 ██████░░░░░░ 45%", "indent": 1 },
+          { "text": "省钱小技巧", "indent": 1 },
+          { "text": "少打车，通勤改骑行（省约 400/月）", "indent": 2 },
+          { "text": "大件放购物车冷静 7 天再决定", "indent": 2 }
+        ]
+      }
+    ],
+    "activeSpaceId": "bucket-core",
+    "images": [],
+    "quickTags": [
+      { "id": "tag-bucket-fund", "title": "攒钱计划", "color": "#3b82f6" },
+      { "id": "tag-bucket-go", "title": "说走就走", "color": "#f59e0b" },
+      { "id": "tag-bucket-skill", "title": "新技能", "color": "#a855f7" }
+    ],
+    "quickButtons": [
+      {
+        "id": "qb-fund-note",
+        "tagId": "tag-bucket-fund",
+        "type": "text",
+        "title": "基金存入备注",
+        "value": "梦想基金 2026-08：+1500（累计 13500 / 30000）",
+        "hidden": false
+      },
+      {
+        "id": "qb-fund-rate",
+        "tagId": "tag-bucket-fund",
+        "type": "link",
+        "title": "外汇牌价",
+        "value": "https://www.boc.cn/sourcedb/whpj/",
+        "hidden": false
+      },
+      {
+        "id": "qb-go-train",
+        "tagId": "tag-bucket-go",
+        "type": "link",
+        "title": "12306 火车票",
+        "value": "https://www.12306.cn/",
+        "hidden": false
+      },
+      {
+        "id": "qb-go-flight",
+        "tagId": "tag-bucket-go",
+        "type": "link",
+        "title": "航旅纵横",
+        "value": "https://www.umetrip.com/",
+        "hidden": false
+      },
+      {
+        "id": "qb-skill-bili",
+        "tagId": "tag-bucket-skill",
+        "type": "link",
+        "title": "B 站搜教程",
+        "value": "https://search.bilibili.com/",
+        "hidden": false
+      },
+      {
+        "id": "qb-aurora",
+        "type": "link",
+        "title": "极光活动预报",
+        "value": "https://spaceweatherlive.com/zh.html",
+        "hidden": false
+      },
+      {
+        "id": "qb-travel-tpl",
+        "type": "text",
+        "title": "行前清单模板",
+        "value": "证件：护照 / 身份证（有效期＞6 个月）\n健康：体检报告、常用药、旅行保险\n装备：转换插头、充电宝、离线地图\n预算：现金 + 双币卡，留 20% 余量",
+        "hidden": false
+      }
+    ],
+    "quickOtherCollapsed": false,
+    "showHiddenQuickButtons": false,
+    "todoLayoutManual": false,
+    "todoLists": [
+      { "id": "dream", "title": "✅ 此生必做", "collapsed": false, "compact": false, "column": 0 },
+      { "id": "travel", "title": "✈️ 旅行地图", "collapsed": false, "compact": false, "column": 0 }
+    ],
+    "showCompletedTodos": { "dream": true, "travel": false },
+    "todos": {
+      "dream": [
+        { "id": "td-aurora", "text": "和最爱的人看一次极光（挪威 7 日）", "done": false, "starred": true, "notifyAt": 1798765200000 },
+        { "id": "td-marathon", "text": "跑完一次全程马拉松（10 月家门口场次）", "done": false, "starred": false, "notifyAt": 1790807400000 },
+        { "id": "td-parents", "text": "带爸妈旅行一次，目的地他们定", "done": false, "starred": true, "notifyAt": 1794441600000 },
+        { "id": "td-piano", "text": "学会一首拿得出手的钢琴曲", "done": false, "starred": false, "notifyAt": 1798731900000 },
+        { "id": "td-book", "text": "写一本自己的小书（5 万字起步）", "done": false, "starred": false },
+        { "id": "td-journal", "text": "连续 100 天晨间日记", "done": true, "starred": false }
+      ],
+      "travel": [
+        { "id": "td-tibet", "text": "西藏：布达拉宫 + 阿里大环线（预留 15 天）", "done": false, "starred": true, "notifyAt": 1803862800000 },
+        { "id": "td-japan", "text": "日本：樱花季京都徒步（3 月底—4 月初）", "done": false, "starred": false },
+        { "id": "td-nz", "text": "新西兰：南岛自驾（先办驾照公证）", "done": false, "starred": false },
+        { "id": "td-hangzhou", "text": "杭州：雨天灵隐寺 + 龙井村", "done": true, "starred": false }
+      ]
+    },
+    "zoneVisibility": { "assets": true, "notes": true, "tasks": true, "workspace": true }
+  }
+}

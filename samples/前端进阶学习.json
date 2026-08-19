@@ -1,0 +1,154 @@
+{
+  "miniDeskWorkspaceExport": true,
+  "version": 1,
+  "workspace": {
+    "id": "sample-frontend-study",
+    "createdAt": 1785110400000,
+    "customTitles": {
+      "board-title": "前端进阶学习",
+      "board-slogan": "每天进步一点点",
+      "today-focus-title": "‼️ 今日必修"
+    },
+    "noteLines": [],
+    "workspaceLines": [],
+    "storageLines": [],
+    "spaces": [
+      {
+        "id": "study-roadmap",
+        "title": "🗺 学习路线",
+        "lines": [
+          { "text": "目标：6 个月达到初级前端上岗水平", "indent": 0 },
+          { "text": "阶段一 HTML / CSS 基础（已完成）", "indent": 1 },
+          { "text": "静态页还原：小兔鲜 / 尚品汇", "indent": 2 },
+          { "text": "阶段二 JavaScript 核心", "indent": 1 },
+          { "text": "红宝书精读 + 50 个小 demo", "indent": 2 },
+          { "text": "异步：Promise / async-await / 事件循环", "indent": 2 },
+          { "text": "阶段三 Vue 3 + TypeScript", "indent": 1 },
+          { "text": "官网教程过一遍，仿写一个 Mini Desk", "indent": 2 },
+          { "text": "阶段四 工程化与就业", "indent": 1 },
+          { "text": "Vite / ESLint / Git 工作流", "indent": 2 },
+          { "text": "简历 + 8 道面试高频题复盘", "indent": 2 }
+        ]
+      },
+      {
+        "id": "study-notes",
+        "title": "📝 错题本",
+        "lines": [
+          { "text": "== 与 === 的区别（第 3 次做错）", "indent": 0 },
+          { "text": "== 会隐式类型转换，比较前先 ToPrimitive", "indent": 1 },
+          { "text": "闭包：for 循环 var vs let 输出", "indent": 0 },
+          { "text": "var 无块级作用域，用 let 或 IIFE 保存 i", "indent": 1 },
+          { "text": "CSS：flex: 1 是什么的缩写", "indent": 0 },
+          { "text": "flex-grow:1 + flex-shrink:1 + flex-basis:0%", "indent": 1 }
+        ]
+      },
+      {
+        "id": "study-resources",
+        "title": "📚 资源池",
+        "lines": [
+          { "text": "官方文档优先，教程次之，视频最后", "indent": 0 },
+          { "text": "MDN：查 API 只认它", "indent": 1 },
+          { "text": "Vue 3 中文文档 + TypeScript Handbook", "indent": 1 },
+          { "text": "面试：前端面试之道 + 掘金小册", "indent": 1 }
+        ]
+      }
+    ],
+    "activeSpaceId": "study-roadmap",
+    "images": [],
+    "quickTags": [
+      { "id": "tag-study-doc", "title": "课程文档", "color": "#22c55e" },
+      { "id": "tag-study-drill", "title": "刷题练习", "color": "#ec4899" }
+    ],
+    "quickButtons": [
+      {
+        "id": "qb-mdn",
+        "tagId": "tag-study-doc",
+        "type": "link",
+        "title": "MDN JS",
+        "value": "https://developer.mozilla.org/zh-CN/docs/Web/JavaScript",
+        "hidden": false
+      },
+      {
+        "id": "qb-vue-doc",
+        "tagId": "tag-study-doc",
+        "type": "link",
+        "title": "Vue 3 文档",
+        "value": "https://cn.vuejs.org/",
+        "hidden": false
+      },
+      {
+        "id": "qb-ts-guide",
+        "tagId": "tag-study-doc",
+        "type": "link",
+        "title": "TS 入门教程",
+        "value": "https://ts.xcatliu.com/",
+        "hidden": false
+      },
+      {
+        "id": "qb-leetcode",
+        "tagId": "tag-study-drill",
+        "type": "link",
+        "title": "LeetCode 刷题",
+        "value": "https://leetcode.cn/",
+        "hidden": false
+      },
+      {
+        "id": "qb-fcc",
+        "tagId": "tag-study-drill",
+        "type": "link",
+        "title": "freeCodeCamp",
+        "value": "https://chinese.freecodecamp.org/",
+        "hidden": false
+      },
+      {
+        "id": "qb-vscode",
+        "type": "app",
+        "title": "打开 VS Code",
+        "value": "vscode://",
+        "hidden": false
+      },
+      {
+        "id": "qb-quote",
+        "type": "api",
+        "title": "抽一句学习格言",
+        "value": "https://v1.hitokoto.cn/",
+        "apiMethod": "GET",
+        "apiHeaders": [],
+        "apiBodyType": "none",
+        "apiBody": "",
+        "hidden": false
+      },
+      {
+        "id": "qb-daily-log",
+        "type": "text",
+        "title": "学习日报模板",
+        "value": "今日学习：\n耗时：\n卡点：\n明日计划：",
+        "hidden": false
+      }
+    ],
+    "quickOtherCollapsed": false,
+    "showHiddenQuickButtons": false,
+    "todoLayoutManual": false,
+    "todoLists": [
+      { "id": "daily", "title": "📖 每日打卡", "collapsed": false, "compact": false, "column": 0 },
+      { "id": "stage", "title": "🎯 阶段目标", "collapsed": false, "compact": false, "column": 0 }
+    ],
+    "showCompletedTodos": { "daily": true, "stage": true },
+    "todos": {
+      "daily": [
+        { "id": "td-algo", "text": "LeetCode 两题：双指针 ×1、滑动窗口 ×1", "done": false, "starred": true, "notifyAt": 1787230800000 },
+        { "id": "td-read", "text": "红宝书第 6 章，输出 300 字笔记", "done": false, "starred": false, "notifyAt": 1787234400000 },
+        { "id": "td-css", "text": "CSS 专项：手写圣杯布局 + 双飞翼", "done": false, "starred": false },
+        { "id": "td-commit", "text": "复盘今日代码，push 到 GitHub", "done": true, "starred": false }
+      ],
+      "stage": [
+        { "id": "td-stage1", "text": "阶段一：HTML/CSS → 完成 2 套静态页还原", "done": true, "starred": false },
+        { "id": "td-stage2", "text": "阶段二：JS 核心 → 50 个小 demo 全绿", "done": false, "starred": true },
+        { "id": "td-stage3", "text": "阶段三：Vue 3 + TS → 仿写一个 Mini Desk", "done": false, "starred": true, "notifyAt": 1790764200000 },
+        { "id": "td-stage4", "text": "阶段四：配一套 Vite + ESLint + CI 模板", "done": false, "starred": false },
+        { "id": "td-resume", "text": "投出第一份前端简历", "done": false, "starred": false, "notifyAt": 1797222800000 }
+      ]
+    },
+    "zoneVisibility": { "assets": true, "notes": true, "tasks": true, "workspace": true }
+  }
+}

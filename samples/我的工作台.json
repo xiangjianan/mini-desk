@@ -1,0 +1,143 @@
+{
+  "miniDeskWorkspaceExport": true,
+  "version": 1,
+  "workspace": {
+    "id": "sample-work-desk",
+    "createdAt": 1786320000000,
+    "customTitles": {
+      "board-title": "我的工作台",
+      "board-slogan": "少开会，多做事",
+      "today-focus-title": "‼️ 今日三件事"
+    },
+    "noteLines": [],
+    "workspaceLines": [],
+    "storageLines": [],
+    "spaces": [
+      {
+        "id": "work-okr",
+        "title": "🎯 OKR 对齐",
+        "lines": [
+          { "text": "O：让 3.0 版本按时高质量上线", "indent": 0 },
+          { "text": "KR1 需求冻结 8 月底前完成（70%）", "indent": 1 },
+          { "text": "KR2 核心链路压测 QPS ≥ 5000（40%）", "indent": 1 },
+          { "text": "KR3 灰度 5% 用户，NPS 不降（10%）", "indent": 1 },
+          { "text": "O：个人成长", "indent": 0 },
+          { "text": "每月一次跨团队分享，已做 2 / 12", "indent": 1 }
+        ]
+      },
+      {
+        "id": "work-meeting",
+        "title": "📝 会议待办",
+        "lines": [
+          { "text": "周三评审会待办", "indent": 0 },
+          { "text": "把「一键导出」的边界条件补进 PRD", "indent": 1 },
+          { "text": "找设计确认空态插画排期", "indent": 1 },
+          { "text": "和测试对齐回归范围，别全量", "indent": 1 }
+        ]
+      },
+      {
+        "id": "work-inbox",
+        "title": "📥 杂事收纳箱",
+        "lines": [
+          { "text": "两分钟内能做完的，马上做，别记", "indent": 0 },
+          { "text": "报销：出差发票贴好待提交", "indent": 1 },
+          { "text": "工位：入一个人体工学靠垫", "indent": 1 },
+          { "text": "帮新同学申请代码仓库权限", "indent": 1 }
+        ]
+      }
+    ],
+    "activeSpaceId": "work-okr",
+    "images": [],
+    "quickTags": [
+      { "id": "tag-work-entry", "title": "高频入口", "color": "#14b8a6" },
+      { "id": "tag-work-team", "title": "协同工具", "color": "#6366f1" }
+    ],
+    "quickButtons": [
+      {
+        "id": "qb-repo",
+        "tagId": "tag-work-entry",
+        "type": "link",
+        "title": "项目仓库",
+        "value": "https://github.com/",
+        "hidden": false
+      },
+      {
+        "id": "qb-docs",
+        "tagId": "tag-work-entry",
+        "type": "link",
+        "title": "语雀文档",
+        "value": "https://www.yuque.com/",
+        "hidden": false
+      },
+      {
+        "id": "qb-vscode-work",
+        "tagId": "tag-work-entry",
+        "type": "app",
+        "title": "VS Code",
+        "value": "vscode://",
+        "hidden": false
+      },
+      {
+        "id": "qb-dingtalk",
+        "tagId": "tag-work-team",
+        "type": "app",
+        "title": "钉钉",
+        "value": "dingtalk://",
+        "hidden": false
+      },
+      {
+        "id": "qb-lark",
+        "tagId": "tag-work-team",
+        "type": "app",
+        "title": "飞书",
+        "value": "lark://",
+        "hidden": false
+      },
+      {
+        "id": "qb-wecom",
+        "tagId": "tag-work-team",
+        "type": "app",
+        "title": "企业微信",
+        "value": "wxwork://",
+        "hidden": false
+      },
+      {
+        "id": "qb-daily-report",
+        "type": "text",
+        "title": "日报模板",
+        "value": "【日报】\n今日进展：\n明日计划：\n风险 / 需支持：",
+        "hidden": false
+      },
+      {
+        "id": "qb-minutes",
+        "type": "text",
+        "title": "会议纪要模板",
+        "value": "【会议纪要】\n时间 / 与会人：\n结论：\n待办（谁 · 何时）：",
+        "hidden": false
+      }
+    ],
+    "quickOtherCollapsed": false,
+    "showHiddenQuickButtons": false,
+    "todoLayoutManual": false,
+    "todoLists": [
+      { "id": "today", "title": "🔥 今日要务", "collapsed": false, "compact": false, "column": 0 },
+      { "id": "week", "title": "📅 本周跟进", "collapsed": false, "compact": false, "column": 0 }
+    ],
+    "showCompletedTodos": { "today": true, "week": false },
+    "todos": {
+      "today": [
+        { "id": "td-review-doc", "text": "评审 Q3 需求文档，结论同步给开发", "done": false, "starred": true, "notifyAt": 1787191200000 },
+        { "id": "td-callback", "text": "回访 3 个客户，反馈整理进表格", "done": false, "starred": false, "notifyAt": 1787214600000 },
+        { "id": "td-blockers", "text": "处理群里抛来的阻塞问题（随时插队）", "done": false, "starred": false },
+        { "id": "td-standup", "text": "晨会：同步项目风险两天工作量", "done": true, "starred": false }
+      ],
+      "week": [
+        { "id": "td-weekly-report", "text": "周报：三个小组排期对齐后发出", "done": false, "starred": true, "notifyAt": 1787304600000 },
+        { "id": "td-weekly-meeting", "text": "周会：演示新版本 demo", "done": false, "starred": false, "notifyAt": 1787535000000 },
+        { "id": "td-sprint", "text": "Sprint 评审 + 回顾会", "done": false, "starred": false, "notifyAt": 1788501600000 },
+        { "id": "td-expense", "text": "报销单提交（别拖过月底）", "done": false, "starred": false, "notifyAt": 1787909400000 }
+      ]
+    },
+    "zoneVisibility": { "assets": true, "notes": true, "tasks": true, "workspace": true }
+  }
+}
