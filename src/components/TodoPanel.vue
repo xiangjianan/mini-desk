@@ -43,7 +43,7 @@ import type {
   TodoPeriod,
   TodoStarChange,
 } from "../types";
-import { getOrderedTodos, todoKey } from "../state/todos";
+import { getOrderedTodos, getTodoReorderTarget, todoKey } from "../state/todos";
 import { splitDroppedTodoText } from "../utils/textEditor";
 import { copySelection, copyTextToClipboard, getSelectionRange, pasteIntoField, readClipboardText } from "../utils/clipboard";
 import { CONTEXT_MENU_Z_INDEX, createExclusiveContextMenu } from "../utils/contextMenu";
@@ -512,11 +512,17 @@ function getTodoInputIdentity(input: HTMLInputElement): { period: TodoPeriod; id
   return { period: period as TodoPeriod, id };
 }
 
-function handleTodoArrowKey(event: KeyboardEvent, period: TodoPeriod, todo: TodoItem): void {
+function handleTodoArrowKey(event: KeyboardEvent, period: TodoPeriod, todo: TodoItem, allowReorder = false): void {
   if (isImeComposing(event)) return;
   const direction: -1 | 1 | 0 = event.key === "ArrowUp" ? -1 : event.key === "ArrowDown" ? 1 : 0;
   if (direction === 0) return;
   const input = event.currentTarget as HTMLInputElement;
+  // Ctrl/Cmd+Up/Down 在普通列表里移动条目顺序；今日聚焦区（allowReorder=false）
+  // 是跨列表置顶视图，回落为普通焦点移动。
+  if (allowReorder && (event.ctrlKey || event.metaKey)) {
+    handleTodoReorder(event, input, period, todo, direction);
+    return;
+  }
   const target = getAdjacentTodoInput(input, direction);
   if (!target) return;
   event.preventDefault();
@@ -531,6 +537,31 @@ function handleTodoArrowKey(event: KeyboardEvent, period: TodoPeriod, todo: Todo
     const position = Math.max(0, Math.min(caret, target.value.length));
     target.setSelectionRange(position, position);
   });
+}
+
+/** Ctrl/Cmd+Up/Down：在同一视觉分组内移动条目，焦点与光标随行保留。 */
+function handleTodoReorder(event: KeyboardEvent, input: HTMLInputElement, period: TodoPeriod, todo: TodoItem, direction: -1 | 1): void {
+  if (input.readOnly) return;
+  const target = getTodoReorderTarget(visibleOrdered.value[period] ?? [], todo.id, direction);
+  if (!target) return;
+  event.preventDefault();
+  const caret = input.selectionStart ?? input.value.length;
+  if (!todo.done) editingTodoKey.value = todoKey(period, todo.id);
+  emitTodoMove({ period, id: todo.id }, period, target.targetId);
+  void nextTick(() => {
+    const position = Math.max(0, Math.min(caret, input.value.length));
+    input.setSelectionRange(position, position);
+  });
+}
+
+/** Ctrl/Cmd+Left/Right 跳到提醒文本的行首/行尾（单行输入，无列表标记）。 */
+function handleTodoHorizontalArrow(event: KeyboardEvent): void {
+  if (!(event.ctrlKey || event.metaKey) || event.shiftKey || isImeComposing(event)) return;
+  const input = event.currentTarget as HTMLInputElement;
+  if (input.readOnly) return;
+  event.preventDefault();
+  const position = event.key === "ArrowLeft" ? 0 : input.value.length;
+  input.setSelectionRange(position, position);
 }
 
 function handleTodoTab(event: KeyboardEvent, period: TodoPeriod, todo: TodoItem): void {
@@ -1485,6 +1516,8 @@ function buildTodoListEntries(period: TodoListId, todos: TodoItem[], deferredDon
               @keydown.enter="handleEnter($event, item.period, item.todo)"
               @keydown.up="handleTodoArrowKey($event, item.period, item.todo)"
               @keydown.down="handleTodoArrowKey($event, item.period, item.todo)"
+              @keydown.left="handleTodoHorizontalArrow"
+              @keydown.right="handleTodoHorizontalArrow"
               @keydown.tab="handleTodoTab($event, item.period, item.todo)"
               @mouseup="rememberTodoCaret(item.period, item.todo.id, $event)"
               @select="handleTodoSelection(item.period, item.todo.id, $event)"
@@ -1690,8 +1723,10 @@ function buildTodoListEntries(period: TodoListId, todos: TodoItem[], deferredDon
                   @compositionstart="handleInputComposition"
                   @compositionend="handleInputComposition"
                   @keydown.enter="handleEnter($event, list.id, entry.todo)"
-                  @keydown.up="handleTodoArrowKey($event, list.id, entry.todo)"
-                  @keydown.down="handleTodoArrowKey($event, list.id, entry.todo)"
+                  @keydown.up="handleTodoArrowKey($event, list.id, entry.todo, true)"
+                  @keydown.down="handleTodoArrowKey($event, list.id, entry.todo, true)"
+                  @keydown.left="handleTodoHorizontalArrow"
+                  @keydown.right="handleTodoHorizontalArrow"
                   @keydown.tab="handleTodoTab($event, list.id, entry.todo)"
                   @mouseup="rememberTodoCaret(list.id, entry.todo.id, $event)"
                   @select="handleTodoSelection(list.id, entry.todo.id, $event)"

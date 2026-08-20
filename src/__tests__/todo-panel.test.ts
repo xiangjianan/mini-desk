@@ -3874,3 +3874,83 @@ describe("TodoPanel", () => {
     document.body.innerHTML = "";
   });
 });
+
+describe("TodoPanel 编辑快捷键", () => {
+  function mountKeyboardPanel(todos: TodoMap) {
+    return mount(TodoPanel, {
+      props: {
+        todoLists: defaultTodoLists,
+        todos,
+        showCompleted: { morning: false, noon: false, evening: false },
+        titles: DEFAULT_TITLES,
+      },
+      global: {
+        stubs: {
+          Dropdown: dropdownStub,
+          NDatePicker: datePickerStub,
+          NDropdown: dropdownStub,
+          NTooltip: tooltipStub,
+        },
+      },
+    });
+  }
+
+  it("Ctrl+左右方向键跳到行首/行尾", async () => {
+    const wrapper = mountKeyboardPanel({
+      morning: [{ id: "todo-1", text: "买牛奶", done: false }],
+      noon: [], evening: [],
+    });
+    const input = wrapper.get('[data-testid="todo-input-morning"]');
+    await input.trigger("click");
+    await nextTick();
+    (input.element as HTMLInputElement).setSelectionRange(2, 2);
+    await input.trigger("keydown", { key: "ArrowLeft", ctrlKey: true });
+    expect((input.element as HTMLInputElement).selectionStart).toBe(0);
+    await input.trigger("keydown", { key: "ArrowRight", ctrlKey: true });
+    expect((input.element as HTMLInputElement).selectionStart).toBe(3);
+    wrapper.unmount();
+  });
+
+  it("Ctrl+下方向键在同组内下移并 emit move", async () => {
+    const wrapper = mountKeyboardPanel({
+      morning: [
+        { id: "todo-1", text: "第一", done: false },
+        { id: "todo-2", text: "第二", done: false },
+        { id: "todo-3", text: "第三", done: false },
+      ],
+      noon: [], evening: [],
+    });
+    const input = wrapper.get('[data-testid="todo-input-morning"]');
+    await input.trigger("click");
+    await nextTick();
+    await input.trigger("keydown", { key: "ArrowDown", ctrlKey: true });
+    expect(wrapper.emitted("move")?.[0]).toEqual([{ period: "morning", id: "todo-1" }, "morning", "todo-3"]);
+    wrapper.unmount();
+  });
+
+  it("组内第一条 Ctrl+上移不产生 move", async () => {
+    const wrapper = mountKeyboardPanel({
+      morning: [{ id: "todo-1", text: "第一", done: false }],
+      noon: [], evening: [],
+    });
+    const input = wrapper.get('[data-testid="todo-input-morning"]');
+    await input.trigger("click");
+    await nextTick();
+    await input.trigger("keydown", { key: "ArrowUp", ctrlKey: true });
+    expect(wrapper.emitted("move")).toBeUndefined();
+    wrapper.unmount();
+  });
+
+  it("今日聚焦区 Ctrl+下方向键回落为焦点移动，不产生 move", async () => {
+    const wrapper = mountKeyboardPanel({
+      morning: [{ id: "todo-1", text: "重点", done: false, starred: true }],
+      noon: [], evening: [],
+    });
+    const input = wrapper.get("input.today-focus-input");
+    await input.trigger("click");
+    await nextTick();
+    await input.trigger("keydown", { key: "ArrowDown", ctrlKey: true });
+    expect(wrapper.emitted("move")).toBeUndefined();
+    wrapper.unmount();
+  });
+});

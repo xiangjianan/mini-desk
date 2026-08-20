@@ -17,7 +17,7 @@ describe("getTodoReorderTarget — Ctrl+Up/Down 换算为 insert-before 目标",
   });
 
   it("下移到组内末尾：省略 targetId（由 moveTodo 追加）", () => {
-    expect(getTodoReorderTarget(todos, "b", 1)).toEqual({});
+    expect(getTodoReorderTarget(todos, "b", 1)).toStrictEqual({});
   });
 
   it("组边界返回 null（无操作）", () => {
