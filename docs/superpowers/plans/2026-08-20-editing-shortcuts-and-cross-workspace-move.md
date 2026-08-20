@@ -1955,6 +1955,7 @@ Expected: 成功。
 10. 可选负向断言：点击父项「移动到空间」本身不触发移动（stub 会为父项 emit select；真 naive-ui 只展开）。
 11. `moveTargets: []` 渲染缺席断言补到 todo-panel 与 quick-buttons 两套件（各 buildXxxMoveOptions 的 JSDoc 承诺「无目标空间时不渲染」但均无测试钉死；QuickButtons 已有等价的「无其他空间时不渲染移动菜单项」，TodoPanel 侧缺失）。
 12. 可选：`buildTodoMoveOptions` JSDoc 补一句「`move-todo-ws:` 中间键仅用于展开/禁用，刻意不路由」（`-ws:` 后缀在列表级是可选叶子、条目级是仅展开父项，语义双重载）；`handleMenuSelect` 匹配循环内的 `if (id)` 守卫提升到循环之前。
+13. 排查全量套件中偶发的 1 例 flaky（Task 10 规格审查 12 次全量采样出现 1 次未捕获名称的单测失败、11 次无法复现；疑为 jsdom resize-observer/MutationObserver 计时栈）。定位测试名，判断修复或隔离。
 
 - [ ] **Step 5: 收尾提交（如有修正）**
 
