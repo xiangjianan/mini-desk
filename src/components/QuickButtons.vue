@@ -2,9 +2,9 @@
 import { computed, h, nextTick, onMounted, onUnmounted, reactive, ref, watch } from "vue";
 import type { Component, ComponentPublicInstance, VNode } from "vue";
 import { NButton, NCheckbox, NDropdown, NIcon, NInput, NModal, NScrollbar, NSelect } from "naive-ui";
-import { AddOutline, AppsOutline, ChevronDownOutline, ClipboardOutline, CloudUploadOutline, CopyOutline, CreateOutline, DocumentTextOutline, EyeOffOutline, EyeOutline, HelpCircleOutline, PricetagsOutline, SearchOutline, TrashOutline } from "@vicons/ionicons5";
+import { AddOutline, AppsOutline, ChevronDownOutline, ClipboardOutline, CloudUploadOutline, CopyOutline, CreateOutline, DocumentTextOutline, EyeOffOutline, EyeOutline, HelpCircleOutline, PricetagsOutline, SearchOutline, SwapHorizontalOutline, TrashOutline } from "@vicons/ionicons5";
 import type { DropdownOption } from "naive-ui";
-import type { AppLanguage, GuideKey, QuickApiBodyType, QuickApiHeader, QuickApiMethod, QuickButton, QuickButtonType, QuickTag } from "../types";
+import type { AppLanguage, GuideKey, QuickApiBodyType, QuickApiHeader, QuickApiMethod, QuickButton, QuickButtonType, QuickTag, WorkspaceMoveTarget } from "../types";
 import { GUIDE_MENU_OPTION } from "../state/defaults";
 import { getUiText } from "../state/i18n";
 import { buildVisibleQuickButtonGroups, filterVisibleQuickButtonGroups, getQuickTagColor, hasOverloadedVisibleQuickButtonGroup, normalizeQuickTagColor, QUICK_BUTTON_EMPTY_GROUP_ID, QUICK_DENSITY_THRESHOLD, QUICK_TAG_COLORS, QUICK_TAG_DEFAULT_COLOR } from "../state/quickButtons";
@@ -24,10 +24,12 @@ const props = withDefaults(defineProps<{
   showHidden: boolean;
   otherCollapsed?: boolean;
   language?: AppLanguage;
+  moveTargets?: WorkspaceMoveTarget[];
 }>(), {
   tags: () => [],
   otherCollapsed: false,
   language: "zh",
+  moveTargets: () => [],
 });
 
 const emit = defineEmits<{
@@ -47,6 +49,8 @@ const emit = defineEmits<{
   deleteTag: [id: string, anchor?: HTMLElement];
   guide: [key: GuideKey, anchor: HTMLElement, immediate?: boolean];
   declutter: [anchor: HTMLElement];
+  moveButtonToWorkspace: [buttonId: string, workspaceId: string];
+  moveTagToWorkspace: [tagId: string, workspaceId: string];
 }>();
 
 const dialogOpen = ref(false);
@@ -79,7 +83,7 @@ const form = reactive<{ title: string; value: string; tagTitle: string; customTa
   apiBodyType: "none",
   apiBody: "",
 });
-const menu = ref<{ x: number; y: number; id?: string; anchor?: HTMLElement; tagTitle?: string } | null>(null);
+const menu = ref<{ x: number; y: number; id?: string; anchor?: HTMLElement; tagTitle?: string; tagId?: string } | null>(null);
 const tagDrafts = ref<QuickTagDraft[]>([]);
 const newTagTitle = ref("");
 const tagManagerAnchor = ref<HTMLElement | undefined>();
@@ -169,8 +173,21 @@ const canSubmit = computed(() => {
   if (form.type !== "api") return true;
   return form.apiBodyType === "none" || form.apiBody.trim().length > 0;
 });
+const moveMenuChildren = computed<DropdownOption[]>(() =>
+  props.moveTargets.map((target) => ({ label: target.title, key: `move-ws:${target.id}` })),
+);
 const menuOptions = computed<DropdownOption[]>(() => {
   const button = props.buttons.find((item) => item.id === menu.value?.id);
+  if (menu.value?.tagId) {
+    return moveMenuChildren.value.length > 0
+      ? [{
+          label: uiText.value.common.moveToWorkspace,
+          key: "move-tag",
+          icon: renderIcon(SwapHorizontalOutline),
+          children: moveMenuChildren.value,
+        }]
+      : [];
+  }
   if (!menu.value?.id) {
     return [
       { label: uiText.value.quick.add, key: "add", icon: renderIcon(AddOutline) },
@@ -188,6 +205,14 @@ const menuOptions = computed<DropdownOption[]>(() => {
           { label: uiText.value.quick.copyText, key: "copy-text", icon: renderIcon(DocumentTextOutline) },
           { label: uiText.value.quick.copyLink, key: "copy-link", icon: renderIcon(CopyOutline) },
         ]
+      : []),
+    ...(moveMenuChildren.value.length > 0
+      ? [{
+          label: uiText.value.common.moveToWorkspace,
+          key: "move-button",
+          icon: renderIcon(SwapHorizontalOutline),
+          children: moveMenuChildren.value,
+        }]
       : []),
     { label: uiText.value.common.delete, key: "delete", icon: renderIcon(TrashOutline, true) },
     { ...guideMenuOption.value, icon: renderIcon(HelpCircleOutline) },
@@ -392,6 +417,17 @@ function openAreaMenu(event: MouseEvent): void {
   menu.value = { x: event.clientX, y: event.clientY, anchor: event.currentTarget as HTMLElement, tagTitle };
 }
 
+/** 标签头右键：仅真实标签提供「移动到空间」；其他目标回落到区域菜单。 */
+function openTagMenu(event: MouseEvent, tagId: string): void {
+  const target = event.target as HTMLElement;
+  if (target.closest("button, input, textarea")) return;
+  if (!isRealTagGroup(tagId)) return;
+  event.preventDefault();
+  event.stopPropagation();
+  exclusiveMenu.notifyOpen(event, { replacingExistingMenu: Boolean(menu.value) });
+  menu.value = { x: event.clientX, y: event.clientY, tagId };
+}
+
 function openHeaderMenu(event: MouseEvent): void {
   event.preventDefault();
   event.stopPropagation();
@@ -413,8 +449,14 @@ function closeMenu(): void {
 
 function handleMenuSelect(key: string): void {
   if (!menu.value) return;
-  const { id, anchor, tagTitle } = menu.value;
+  const { id, anchor, tagTitle, tagId } = menu.value;
   closeMenu();
+  if (key.startsWith("move-ws:")) {
+    const workspaceId = key.slice("move-ws:".length);
+    if (tagId) emit("moveTagToWorkspace", tagId, workspaceId);
+    else if (id) emit("moveButtonToWorkspace", id, workspaceId);
+    return;
+  }
   if (key === "add") {
     openAdd(anchor, tagTitle);
     return;
@@ -746,6 +788,7 @@ function handleQuickGroupDrop(event: DragEvent, groupId: string): void {
             :class="{ 'is-dragging': draggingTagId === group.id, 'is-static': !group.reorderable, 'is-editing': editingTagId === group.id }"
             :draggable="group.reorderable && editingTagId !== group.id"
             @dblclick="startInlineTagRename(group.id, group.title)"
+            @contextmenu="openTagMenu($event, group.id)"
             @dragstart="group.reorderable && editingTagId !== group.id && (draggingTagId = group.id)"
             @dragover="handleTagDragOver($event, group.id)"
             @drop.stop.prevent="onTagDrop($event, group.id)"

@@ -1336,3 +1336,86 @@ describe("filterVisibleQuickButtonGroups", () => {
     expect(result).toEqual([]);
   });
 });
+
+const menuDropdownStub = {
+  props: ["options"],
+  emits: ["select"],
+  template: `
+    <div>
+      <slot />
+      <template v-for="option in options" :key="option.key">
+        <button
+          class="dropdown-option"
+          :data-key="option.key"
+          :disabled="option.disabled"
+          type="button"
+          @click="!option.disabled && $emit('select', option.key)"
+        >{{ option.label }}</button>
+        <button
+          v-for="child in option.children ?? []"
+          :key="child.key"
+          class="dropdown-option"
+          :data-key="child.key"
+          :disabled="child.disabled"
+          type="button"
+          @click="!child.disabled && $emit('select', child.key)"
+        >{{ child.label }}</button>
+      </template>
+    </div>
+  `,
+};
+
+describe("QuickButtons 跨空间移动", () => {
+  function mountQuickPanel(props: Partial<InstanceType<typeof QuickButtons>["$props"]>) {
+    return mount(QuickButtons, {
+      props: { title: "快捷按钮", buttons: [], showHidden: false, ...props },
+      global: {
+        stubs: {
+          NDropdown: menuDropdownStub,
+          Dropdown: menuDropdownStub,
+          NButton: buttonStub,
+          NCheckbox: checkboxStub,
+          NInput: inputStub,
+          NSelect: selectStub,
+          NModal: modalStub,
+          NIcon: true,
+          Icon: true,
+        },
+      },
+    });
+  }
+
+  it("按钮右键菜单可将按钮移动到其他空间", async () => {
+    const wrapper = mountQuickPanel({
+      buttons: [{ id: "btn-1", title: "搜索", value: "https://example.com", type: "link", hidden: false }],
+      tags: [],
+      moveTargets: [{ id: "ws-b", title: "B 空间", lists: [] }],
+    });
+    await wrapper.get(".quick-button").trigger("contextmenu");
+    await wrapper.get('[data-key="move-ws:ws-b"]').trigger("click");
+    expect(wrapper.emitted("moveButtonToWorkspace")?.[0]).toEqual(["btn-1", "ws-b"]);
+    wrapper.unmount();
+  });
+
+  it("标签头右键菜单可将标签移动到其他空间", async () => {
+    const wrapper = mountQuickPanel({
+      buttons: [{ id: "btn-1", title: "搜索", value: "https://example.com", type: "link", tagId: "tag-1", hidden: false }],
+      tags: [{ id: "tag-1", title: "常用" }],
+      moveTargets: [{ id: "ws-b", title: "B 空间", lists: [] }],
+    });
+    await wrapper.get(".quick-tag-title").trigger("contextmenu");
+    await wrapper.get('[data-key="move-ws:ws-b"]').trigger("click");
+    expect(wrapper.emitted("moveTagToWorkspace")?.[0]).toEqual(["tag-1", "ws-b"]);
+    wrapper.unmount();
+  });
+
+  it("没有其他空间时不渲染移动菜单项", async () => {
+    const wrapper = mountQuickPanel({
+      buttons: [{ id: "btn-1", title: "搜索", value: "https://example.com", type: "link", hidden: false }],
+      tags: [],
+    });
+    await wrapper.get(".quick-button").trigger("contextmenu");
+    expect(wrapper.findAll('[data-key^="move-ws:"]')).toHaveLength(0);
+    wrapper.unmount();
+  });
+});
