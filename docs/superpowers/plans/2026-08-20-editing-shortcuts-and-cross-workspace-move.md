@@ -1956,6 +1956,9 @@ Expected: 成功。
 11. `moveTargets: []` 渲染缺席断言补到 todo-panel 与 quick-buttons 两套件（各 buildXxxMoveOptions 的 JSDoc 承诺「无目标空间时不渲染」但均无测试钉死；QuickButtons 已有等价的「无其他空间时不渲染移动菜单项」，TodoPanel 侧缺失）。
 12. 可选：`buildTodoMoveOptions` JSDoc 补一句「`move-todo-ws:` 中间键仅用于展开/禁用，刻意不路由」（`-ws:` 后缀在列表级是可选叶子、条目级是仅展开父项，语义双重载）；`handleMenuSelect` 匹配循环内的 `if (id)` 守卫提升到循环之前。
 13. 排查全量套件中偶发的 1 例 flaky（Task 10 规格审查 12 次全量采样出现 1 次未捕获名称的单测失败、11 次无法复现；疑为 jsdom resize-observer/MutationObserver 计时栈）。定位测试名，判断修复或隔离。
+14. SpacePanel 菜单键 `move` 重命名为 `move-space`（家族命名统一；同步 space-panel.test.ts 两处 `[data-key="move"]` 选择器；顺带删 SpacePanel.vue:63-64 双空行）。
+15. 提取 `src/__tests__/helpers/` 共享 stub 时，规范注释补「无孙级时该层惰性、三份拷贝文本一致」条款（space-panel 拷贝的出处注释现描述的是 todo-panel 的三级菜单，语义错位）。
+16. 可选归一：QuickButtons 的父选项字面量两处内联（:181-188、:209-216）提取为构建函数；SpacePanel/TodoPanel 的 `<= 1` 禁用谓词共享 computed。行为均有测试钉死，纯 churn，量力而行。
 
 - [ ] **Step 5: 收尾提交（如有修正）**
 
