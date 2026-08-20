@@ -765,6 +765,21 @@ describe("moveTodoListToWorkspace", () => {
     const workspaces = [single, target];
     expect(moveTodoListToWorkspace(workspaces, "ws-a", "list-1", "ws-b")).toBe(workspaces);
   });
+
+  it("目标已有同 id 列表时重新生成列表 id 并迁移数据键", () => {
+    const clashList = { id: "list-1", title: "目标自己的", collapsed: true, compact: false };
+    const clashy = workspace("ws-b", {
+      todoLists: [clashList],
+      todos: { "list-1": [{ id: "todo-x", text: "目标自己的提醒", done: false }] } as TodoMap,
+    });
+    const next = moveTodoListToWorkspace([source, clashy], "ws-a", "list-1", "ws-b");
+    const to = next.find((w) => w.id === "ws-b")!;
+    expect(to.todoLists).toHaveLength(2);
+    expect(to.todoLists[0]).toMatchObject({ id: "list-1", title: "目标自己的" });
+    expect(to.todoLists[1].id).not.toBe("list-1");
+    expect(to.todos["list-1"]).toEqual([{ id: "todo-x", text: "目标自己的提醒", done: false }]);
+    expect(to.todoLists[1].id && to.todos[to.todoLists[1].id]).toEqual([{ id: "todo-1", text: "任务", done: false }]);
+  });
 });
 
 describe("moveTodoToWorkspace", () => {
@@ -788,6 +803,18 @@ describe("moveTodoToWorkspace", () => {
   it("目标列表不存在时返回原数组", () => {
     const workspaces = [source, target];
     expect(moveTodoToWorkspace(workspaces, "ws-a", "list-1", "todo-open", "ws-b", "missing")).toBe(workspaces);
+  });
+
+  it("目标列表已有同 id 提醒时重新生成提醒 id", () => {
+    const clashy = workspace("ws-b", {
+      todoLists: [{ id: "list-b1", title: "目标清单", collapsed: false, compact: false }],
+      todos: { "list-b1": [{ id: "todo-open", text: "目标自己的", done: false }] } as TodoMap,
+    });
+    const next = moveTodoToWorkspace([source, clashy], "ws-a", "list-1", "todo-open", "ws-b", "list-b1");
+    const to = next.find((w) => w.id === "ws-b")!;
+    const ids = to.todos["list-b1"].map((t) => t.id);
+    expect(new Set(ids).size).toBe(2);
+    expect(to.todos["list-b1"].some((t) => t.text === "进行中")).toBe(true);
   });
 });
 ```
@@ -813,7 +840,8 @@ import { addTodo as addTodoToMap, removeTodo as removeTodoFromMap } from "./todo
 /**
  * 移动整个提醒列表（配置 + 提醒 + 完成区可见性）到目标空间列表末尾。
  * `column` 保留原值（展示端会按目标列数收敛）。源只剩一个列表时拒绝——
- * 每个空间至少保留一个列表。
+ * 每个空间至少保留一个列表。目标已有同 id 列表时重新生成列表 id，
+ * 并同步迁移 todos/showCompletedTodos 的键，避免覆盖目标自身数据。
  */
 export function moveTodoListToWorkspace(
   workspaces: WorkspaceData[],
@@ -828,6 +856,7 @@ export function moveTodoListToWorkspace(
 
     const { [listId]: movedTodos = [], ...restTodos } = from.todos;
     const { [listId]: movedVisibility, ...restVisibility } = from.showCompletedTodos;
+    const movedListId = to.todoLists.some((item) => item.id === listId) ? createId() : listId;
 
     return {
       from: {
@@ -838,17 +867,20 @@ export function moveTodoListToWorkspace(
       },
       to: {
         ...to,
-        todoLists: [...to.todoLists, { ...list }],
-        todos: { ...to.todos, [listId]: movedTodos.map((todo) => ({ ...todo })) },
+        todoLists: [...to.todoLists, { ...list, id: movedListId }],
+        todos: { ...to.todos, [movedListId]: movedTodos.map((todo) => ({ ...todo })) },
         showCompletedTodos: movedVisibility === undefined
           ? to.showCompletedTodos
-          : { ...to.showCompletedTodos, [listId]: movedVisibility },
+          : { ...to.showCompletedTodos, [movedListId]: movedVisibility },
       },
     };
   });
 }
 
-/** 移动单条提醒到目标空间的指定列表，插在目标最后一条未完成之后。 */
+/**
+ * 移动单条提醒到目标空间的指定列表，插在目标最后一条未完成之后。
+ * 目标列表已有同 id 提醒时重新生成提醒 id，避免跨空间 id 碰撞。
+ */
 export function moveTodoToWorkspace(
   workspaces: WorkspaceData[],
   fromWorkspaceId: string,
@@ -862,9 +894,12 @@ export function moveTodoToWorkspace(
     if (!todo) return null;
     if (!to.todoLists.some((list) => list.id === toListId)) return null;
 
+    const todoIdTaken = (to.todos[toListId] ?? []).some((item) => item.id === todo.id);
+    const moved: TodoItem = { ...todo, ...(todoIdTaken ? { id: createId() } : {}) };
+
     return {
       from: { ...from, todos: removeTodoFromMap(from.todos, fromListId, todoId) },
-      to: { ...to, todos: addTodoToMap(to.todos, toListId, { ...todo }) },
+      to: { ...to, todos: addTodoToMap(to.todos, toListId, moved) },
     };
   });
 }
