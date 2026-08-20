@@ -11,7 +11,7 @@
 **背景知识（给零上下文的工程师）:**
 - 测试：`npx vitest run <文件>`；全量 `npm test`。测试位于 `src/__tests__/`，同一文件内追加 describe 即可。
 - 组件右键菜单统一模式：组件持有 `menu` ref（坐标 + 目标 id），`NDropdown trigger="manual" :show="true"`，`createExclusiveContextMenu` 管互斥，`menuOptions` computed 产出 `DropdownOption[]`（`{ label, key, icon, disabled, children }`，children 即子菜单，select 时把叶子 key 传给 handler）。
-- 提醒事项显示顺序：`getOrderedTodos`（`src/state/todos.ts`）= 未完成（星标在前）+ 已完成沉底；`moveTodoInMap` 是 insert-before-`targetId` 语义，无 `targetId` 追加到数组末尾。
+- 提醒事项显示顺序：`getOrderedTodos`（`src/state/todos.ts`）= 未完成（星标在前）+ 已完成沉底；`moveTodo` 落位语义：`targetIndex` 在移除被移条目前计算（上移 = 插到目标前，下移 = 落在目标原索引即其后），无 `targetId` 追加到数组末尾。
 - 「空间」= 工作空间 `WorkspaceData`（`src/types.ts`）；中栏 Tab 页 `WorkspaceSpace` 也叫便签。
 - 提交信息格式 `<type>: <description>`，不加署名尾注。
 
