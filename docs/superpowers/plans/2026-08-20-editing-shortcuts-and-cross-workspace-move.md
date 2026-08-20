@@ -961,6 +961,16 @@ describe("moveSpaceToWorkspace", () => {
     const workspaces = [single, target];
     expect(moveSpaceToWorkspace(workspaces, "ws-a", "space-1", "ws-b")).toBe(workspaces);
   });
+
+  it("目标已有同 id 空间时重新生成 id 且保留目标原空间", () => {
+    const clashing = workspace("ws-b", { spaces: [{ id: "space-1", title: "目标同名", lines: [] }] });
+    const next = moveSpaceToWorkspace([source, clashing], "ws-a", "space-1", "ws-b");
+    const to = next.find((w) => w.id === "ws-b")!;
+    expect(to.spaces).toHaveLength(2);
+    expect(to.spaces[0]).toEqual({ id: "space-1", title: "目标同名", lines: [] });
+    expect(to.spaces[1].id).not.toBe("space-1");
+    expect(to.spaces[1].lines).toEqual([{ text: "内容", indent: 0 }]);
+  });
 });
 ```
 
@@ -977,6 +987,7 @@ Expected: FAIL。
 /**
  * 移动便签 Tab 页到目标空间末尾。源只剩一个空间时拒绝。移动的是源激活
  * 空间时，源 activeSpaceId 切到相邻空间（优先前一个，同 deleteSpace 规则）。
+ * 目标已存在同 id 空间时重新生成 id（同一导入文件可进两个空间产生重复 id）。
  */
 export function moveSpaceToWorkspace(
   workspaces: WorkspaceData[],
@@ -994,10 +1005,16 @@ export function moveSpaceToWorkspace(
     const activeSpaceId = from.activeSpaceId === spaceId
       ? remainingSpaces[Math.max(0, index - 1)]?.id ?? remainingSpaces[0].id
       : from.activeSpaceId;
+    const spaceIdTaken = to.spaces.some((item) => item.id === space.id);
+    const movedSpace = {
+      ...space,
+      ...(spaceIdTaken ? { id: createId() } : {}),
+      lines: space.lines.map((line) => ({ ...line })),
+    };
 
     return {
       from: { ...from, spaces: remainingSpaces, activeSpaceId },
-      to: { ...to, spaces: [...to.spaces, { ...space, lines: space.lines.map((line) => ({ ...line })) }] },
+      to: { ...to, spaces: [...to.spaces, movedSpace] },
     };
   });
 }
