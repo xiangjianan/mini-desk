@@ -53,6 +53,7 @@ import {
 } from "./state/todos";
 import { defaultState, STORAGE_KEY } from "./state/defaults";
 import { createWorkspaceData, ensureUniqueWorkspaceTitle, removeWorkspace, reorderWorkspaces } from "./state/workspaces";
+import * as workspaceMover from "./state/workspaceMoves";
 import { QUICK_BUTTON_OTHER_GROUP_ID, QUICK_DENSITY_THRESHOLD, formatQuickCopiedPreview, getQuickTagColor } from "./state/quickButtons";
 import { isQuickAppScheme } from "./state/quickApps";
 import { copyTextWithBrowserCommand } from "./utils/clipboard";
@@ -72,7 +73,7 @@ import {
   saveStateWithConflictCheck,
 } from "./state/storage";
 import type { ImagePlacementHint, ImageReplacementHint, SaveScope } from "./state/storage";
-import type { AppLanguage, BoardState, CompanionGifTheme, DraggedTodo, GuideKey, ImagePasteFeedback, ImagePasteRequest, LineItem, QuickApiBodyType, QuickApiHeader, QuickApiMethod, QuickButton, QuickButtonType, StoredImage, TodoItem, TodoListConfig, TodoListId, TodoPeriod, TodoStarChange, WorkspaceData, WorkspaceSpace, ZoneKey } from "./types";
+import type { AppLanguage, BoardState, CompanionGifTheme, DraggedTodo, GuideKey, ImagePasteFeedback, ImagePasteRequest, LineItem, QuickApiBodyType, QuickApiHeader, QuickApiMethod, QuickButton, QuickButtonType, StoredImage, TodoItem, TodoListConfig, TodoListId, TodoPeriod, TodoStarChange, WorkspaceData, WorkspaceMoveTarget, WorkspaceSpace, ZoneKey } from "./types";
 
 const ImagePreview = defineAsyncComponent(() => import("./components/ImagePreview.vue"));
 const ShortcutHelp = defineAsyncComponent(() => import("./components/ShortcutHelp.vue"));
@@ -100,6 +101,16 @@ function getInitialMobileBlocked(): boolean {
 const state = reactive<BoardState>(loadState());
 const activeWorkspace = computed<WorkspaceData>(
   () => state.workspaces.find((workspace) => workspace.id === state.activeWorkspaceId) ?? state.workspaces[0],
+);
+/** 右键「移动到空间」子菜单的目标（已排除当前空间；标题与切换器一致）。 */
+const workspaceMoveTargets = computed<WorkspaceMoveTarget[]>(() =>
+  state.workspaces
+    .filter((workspace) => workspace.id !== state.activeWorkspaceId)
+    .map((workspace) => ({
+      id: workspace.id,
+      title: workspace.customTitles["board-title"]?.trim() || DEFAULT_BOARD_TITLE,
+      lists: workspace.todoLists.map((list) => ({ id: list.id, title: getDisplayTodoListTitle(list, state.language) })),
+    })),
 );
 const syncClientId = createId();
 const {
@@ -590,6 +601,45 @@ function deleteSpace(id: string): void {
 
 function reorderSpaces(dragId: string, targetId: string): void {
   moveItem(activeWorkspace.value.spaces, dragId, targetId);
+  syncLegacySpaceLines();
+  persistNow();
+}
+
+function applyWorkspaceMove(next: WorkspaceData[]): void {
+  if (next === state.workspaces) return;
+  state.workspaces = next;
+  persistNow();
+}
+
+function moveQuickButtonAcrossWorkspaces(buttonId: string, workspaceId: string): void {
+  applyWorkspaceMove(workspaceMover.moveQuickButtonToWorkspace(state.workspaces, state.activeWorkspaceId, buttonId, workspaceId));
+}
+
+function moveQuickTagAcrossWorkspaces(tagId: string, workspaceId: string): void {
+  applyWorkspaceMove(workspaceMover.moveQuickTagToWorkspace(state.workspaces, state.activeWorkspaceId, tagId, workspaceId));
+}
+
+function moveTodoListAcrossWorkspaces(listId: TodoListId, workspaceId: string): void {
+  if (displayTodoLists.value.length <= 1) {
+    showBubbleText(uiText.value.app.keepOneTodoList);
+    return;
+  }
+  applyWorkspaceMove(workspaceMover.moveTodoListToWorkspace(state.workspaces, state.activeWorkspaceId, listId, workspaceId));
+}
+
+function moveTodoAcrossWorkspaces(period: TodoPeriod, todoId: string, workspaceId: string, listId: TodoListId): void {
+  applyWorkspaceMove(workspaceMover.moveTodoToWorkspace(state.workspaces, state.activeWorkspaceId, period, todoId, workspaceId, listId));
+}
+
+function moveSpaceAcrossWorkspaces(spaceId: string, workspaceId: string): void {
+  if (activeWorkspace.value.spaces.length <= 1) {
+    showBubbleText(uiText.value.app.keepOneSpace);
+    return;
+  }
+  const next = workspaceMover.moveSpaceToWorkspace(state.workspaces, state.activeWorkspaceId, spaceId, workspaceId);
+  if (next === state.workspaces) return;
+  if (pendingEditSpaceId.value === spaceId) pendingEditSpaceId.value = null;
+  state.workspaces = next;
   syncLegacySpaceLines();
   persistNow();
 }
@@ -2988,6 +3038,7 @@ function moveItem<T extends { id: string }>(items: T[], dragId: string, targetId
           :other-collapsed="activeWorkspace.quickOtherCollapsed"
           :show-hidden="activeWorkspace.showHiddenQuickButtons"
           :language="state.language"
+          :move-targets="workspaceMoveTargets"
           @title-update="updateTitle"
           @save="saveQuick"
           @delete="deleteQuick"
@@ -2999,6 +3050,8 @@ function moveItem<T extends { id: string }>(items: T[], dragId: string, targetId
           @reorder="reorderQuickButtons"
           @reorder-tag="reorderQuickTags"
           @move-to-tag="moveQuickButtonToTag"
+          @move-button-to-workspace="moveQuickButtonAcrossWorkspaces"
+          @move-tag-to-workspace="moveQuickTagAcrossWorkspaces"
           @save-tag="saveQuickTag"
           @toggle-tag-collapsed="toggleQuickTagCollapsed"
           @delete-tag="deleteQuickTag"
@@ -3016,6 +3069,7 @@ function moveItem<T extends { id: string }>(items: T[], dragId: string, targetId
           :titles="titles"
           :show-completed="activeWorkspace.showCompletedTodos"
           :language="state.language"
+          :move-targets="workspaceMoveTargets"
           @title-update="updateTitle"
           @create-list="createTodoList"
           @update-list-title="updateTodoListTitle"
@@ -3037,6 +3091,8 @@ function moveItem<T extends { id: string }>(items: T[], dragId: string, targetId
           @blur-empty="blurEmptyTodo"
           @blur="handleCompanionBlur"
           @move="moveTodo"
+          @move-list-to-workspace="moveTodoListAcrossWorkspaces"
+          @move-todo-to-workspace="moveTodoAcrossWorkspaces"
           @focus="handleGuideFocus('todos', $event)"
           @guide="handleGuideClick"
           @declutter="showDeclutterBubble"
@@ -3050,6 +3106,7 @@ function moveItem<T extends { id: string }>(items: T[], dragId: string, targetId
           :active-space-id="activeWorkspace.activeSpaceId"
           :edit-space-id="pendingEditSpaceId"
           :language="state.language"
+          :move-targets="workspaceMoveTargets"
           @activate="activateSpace"
           @create="createSpace"
           @rename="renameSpace"
@@ -3057,6 +3114,7 @@ function moveItem<T extends { id: string }>(items: T[], dragId: string, targetId
           @update="updateSpaceLines"
           @delete="deleteSpace"
           @reorder="reorderSpaces"
+          @move-space-to-workspace="moveSpaceAcrossWorkspaces"
           @focus="(_, element) => handleGuideFocus('workspace', element)"
           @guide="(_, anchor, immediate) => handleGuideClick('workspace', anchor, immediate)"
           @blur="handleEditorBlur"
