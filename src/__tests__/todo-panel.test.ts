@@ -3975,6 +3975,7 @@ describe("TodoPanel 编辑快捷键", () => {
     expect(moves?.[1]).toEqual([{ period: "morning", id: "todo-2" }, "morning", "todo-1"]);
     expect(document.activeElement).toBe(input.element);
     wrapper.unmount();
+    document.body.innerHTML = "";
   });
 
   it("组内第一条 Ctrl+上移不产生 move", async () => {
