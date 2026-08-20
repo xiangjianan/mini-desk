@@ -784,7 +784,7 @@ describe("App shell", () => {
       const workspace = stored.workspaces[0];
       expect(workspace.todoLists.map((list: { id: string }) => list.id)).toEqual(["work"]);
       expect(workspace.todos.work).toEqual([]);
-      expect(wrapper.get('[data-testid="companion-confirm"]').text()).toContain("至少保留一个提醒列表");
+      expect(wrapper.get('[data-testid="companion-confirm"]').text()).toContain("至少保留一个提醒事项列表");
     } finally {
       wrapper.unmount();
       vi.useRealTimers();

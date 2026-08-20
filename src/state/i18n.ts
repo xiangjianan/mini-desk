@@ -546,7 +546,7 @@ export const UI_TEXT = {
       newSpace: "新便签",
       keepOneSpace: "至少保留一个空间",
       deleteSpace: "删除空间",
-      keepOneTodoList: "至少保留一个提醒列表",
+      keepOneTodoList: "至少保留一个提醒事项列表",
       todoListDeleted: "提醒列表已删除",
       todoListAdded: "已新增提醒列表",
       notifyCleared: "已取消通知时间",
