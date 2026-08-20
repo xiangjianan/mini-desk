@@ -86,17 +86,17 @@
 
 | 函数 | 行为 |
 |---|---|
-| `moveQuickButtonToWorkspace` | 按钮追加到目标 `quickButtons` 末尾；若带 `tagId`，目标按**标签标题**匹配：有同名挂现有标签，没有则新建同名同色标签 |
+| `moveQuickButtonToWorkspace` | 按钮追加到目标 `quickButtons` 末尾；若带有效 `tagId`（标签仍存在于源空间），目标按**标签标题**匹配：有同名挂现有标签，没有则新建同名同色标签；`tagId` 悬空（标签已不存在）视为无标签，直接迁移 |
 | `moveQuickTagToWorkspace` | 标签 + 其下全部按钮一起迁移，分别追加到目标 `quickTags` / `quickButtons` 末尾 |
-| `moveTodoListToWorkspace` | 迁移 `TodoListConfig` + `todos[listId]` + `showCompletedTodos[listId]`，追加到目标 `todoLists` 末尾；源只剩 1 个列表时拒绝（返回原数组） |
+| `moveTodoListToWorkspace` | 迁移 `TodoListConfig` + `todos[listId]` + `showCompletedTodos[listId]`，追加到目标 `todoLists` 末尾；列表的 `column` 保留原值（展示时会被现有 clamp 逻辑收敛）；源只剩 1 个列表时拒绝（返回原数组） |
 | `moveTodoToWorkspace` | 单条提醒迁移到目标空间指定列表，插在「最后一条未完成之后」（复用 `addTodo` 语义） |
-| `moveSpaceToWorkspace` | `WorkspaceSpace` 追加到目标 `spaces` 末尾；源只剩 1 个空间时拒绝；移动的是源激活空间时，源 `activeSpaceId` 切到相邻空间 |
+| `moveSpaceToWorkspace` | `WorkspaceSpace` 追加到目标 `spaces` 末尾；源只剩 1 个空间时拒绝；移动的是源激活空间时，源 `activeSpaceId` 切到相邻空间（优先前一个，同 `deleteSpace` 规则） |
 
 ### UI 层
 
 - 各面板新增 `moveTargets` prop：`{ id, title; lists?: { id; title }[] }[]`，App 侧已排除当前空间；空数组则不渲染移动菜单项。
 - **快捷按钮**右键菜单：加「移动到空间 ›」子菜单（子项 = 空间名）。
-- **快捷标签**：`.quick-tag-heading` 新增专属右键菜单（含「移动到空间 ›」）；「其他」伪分组（`__other`）不提供移动。
+- **快捷标签**：`.quick-tag-heading` 新增专属右键菜单，仅含「移动到空间 ›」一项（重命名仍是双击，删除仍在标签管理弹窗）；「其他」伪分组（`__other`）不提供右键移动。
 - **提醒条目**右键：加「移动到空间 › 空间 › 列表」三级子菜单。
 - **提醒列表**右键（sectionActions 菜单）：加「移动到空间 ›」；源只剩 1 个列表时禁用。
 - **便签 Tab**右键（现有 重命名/删除 菜单）：加「移动到空间 ›」；源空间只剩 1 个便签时禁用。
