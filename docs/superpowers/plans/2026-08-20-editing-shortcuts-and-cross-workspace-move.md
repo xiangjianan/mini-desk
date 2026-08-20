@@ -1615,7 +1615,7 @@ git commit -m "feat: 提醒条目与列表右键菜单支持移动到其他空�
 
 - [ ] **Step 1: 写失败测试**
 
-在 `src/__tests__/space-panel.test.ts` 末尾追加（`dropdownStub` 已在文件顶部；它不渲染 children，本组测试定义 children 版本）：
+在 `src/__tests__/space-panel.test.ts` 末尾追加（`dropdownStub` 已在文件顶部；它不渲染 children。**复制 `todo-panel.test.ts` 的超集版 `menuDropdownStub`**（含孙级渲染）——无孙级时该层惰性，这样三份拷贝文本一致，Task 12 合并即为纯搬移）：
 
 ```ts
 const menuDropdownStub = {
@@ -1732,25 +1732,26 @@ const props = withDefaults(defineProps<{
   moveSpaceToWorkspace: [spaceId: string, workspaceId: string];
 ```
 
-3d. `menuOptions`（62-65 行）替换为：
+3d. `menuOptions`（62-65 行）替换为（**用构建函数形态**，与 TodoPanel 的 `buildListMoveOptions`/`buildTodoMoveOptions` 约定统一；构建函数仅在 `menuOptions` computed 内调用以保持响应式依赖追踪）：
 
 ```ts
-const menuOptions = computed<DropdownOption[]>(() => {
-  const options: DropdownOption[] = [
-    { label: uiText.value.common.rename, key: "edit", icon: renderIcon(CreateOutline) },
-  ];
-  if (props.moveTargets.length > 0) {
-    options.push({
-      label: uiText.value.common.moveToWorkspace,
-      key: "move",
-      icon: renderIcon(SwapHorizontalOutline),
-      disabled: props.spaces.length <= 1,
-      children: props.moveTargets.map((target) => ({ label: target.title, key: `move-ws:${target.id}` })),
-    });
-  }
-  options.push({ label: uiText.value.common.delete, key: "delete", disabled: !canDeleteSpaces.value, icon: renderIcon(TrashOutline, true) });
-  return options;
-});
+/** 「移动到空间」子菜单；仅一个便签时禁用，无目标空间时不渲染。 */
+function buildSpaceMoveOptions(): DropdownOption[] {
+  if (props.moveTargets.length === 0) return [];
+  return [{
+    label: uiText.value.common.moveToWorkspace,
+    key: "move",
+    icon: renderIcon(SwapHorizontalOutline),
+    disabled: props.spaces.length <= 1,
+    children: props.moveTargets.map((target) => ({ label: target.title, key: `move-ws:${target.id}` })),
+  }];
+}
+
+const menuOptions = computed<DropdownOption[]>(() => [
+  { label: uiText.value.common.rename, key: "edit", icon: renderIcon(CreateOutline) },
+  ...buildSpaceMoveOptions(),
+  { label: uiText.value.common.delete, key: "delete", disabled: !canDeleteSpaces.value, icon: renderIcon(TrashOutline, true) },
+]);
 ```
 
 3e. `handleMenuSelect`（177-186 行）替换为：
@@ -1952,6 +1953,8 @@ Expected: 成功。
 8. 可选：`shortcut-help.test.ts` 钉死本次新增的两条快捷键条目与改写的 Tab 文案（当前删掉它们不会挂任何测试）；顺带考虑补一个 UI_TEXT zh/en 键位一致性测试（规格审查确认现状并无此测试，计划中「i18n 测试会校验键位一致」的说法不成立）。
 9. `quick-buttons.test.ts`：用 `menuDropdownStub`（strict 超集）替换既有 `dropdownStub` 并删除 `mountQuickPanel`（改用 `mountQuickButtons`）——同文件养两份 90% 相同的 stub 会埋双改遗漏。Task 9/10 各自复制 stub 后，一并评估提取 `src/__tests__/helpers/` 共享下拉 stub 模块（rule-of-three 已满足）。
 10. 可选负向断言：点击父项「移动到空间」本身不触发移动（stub 会为父项 emit select；真 naive-ui 只展开）。
+11. `moveTargets: []` 渲染缺席断言补到 todo-panel 与 quick-buttons 两套件（各 buildXxxMoveOptions 的 JSDoc 承诺「无目标空间时不渲染」但均无测试钉死；QuickButtons 已有等价的「无其他空间时不渲染移动菜单项」，TodoPanel 侧缺失）。
+12. 可选：`buildTodoMoveOptions` JSDoc 补一句「`move-todo-ws:` 中间键仅用于展开/禁用，刻意不路由」（`-ws:` 后缀在列表级是可选叶子、条目级是仅展开父项，语义双重载）；`handleMenuSelect` 匹配循环内的 `if (id)` 守卫提升到循环之前。
 
 - [ ] **Step 5: 收尾提交（如有修正）**
 
