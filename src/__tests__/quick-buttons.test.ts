@@ -11,6 +11,7 @@ import {
   hasOverloadedVisibleQuickButtonGroup,
 } from "../state/quickButtons";
 import { globalSearchQuery, resetGlobalSearch, setGlobalSearch } from "../state/globalSearch";
+import { menuDropdownStub } from "./helpers/menu-dropdown-stub";
 
 const buttonStub = {
   template: '<button v-bind="$attrs"><slot /></button>',
@@ -65,25 +66,6 @@ const persistentModalStub = {
   template: '<section class="quick-dialog" :data-show="show ? \'true\' : \'false\'"><h2>{{ title }}</h2><slot /></section>',
 };
 
-const dropdownStub = {
-  props: ["options"],
-  emits: ["select"],
-  template: `
-    <div>
-      <slot />
-      <button
-        v-for="option in options"
-        :key="option.key"
-        class="dropdown-option"
-        type="button"
-        @click="$emit('select', option.key)"
-      >
-        {{ option.label }}
-      </button>
-    </div>
-  `,
-};
-
 function mountQuickButtons(options: Partial<InstanceType<typeof QuickButtons>["$props"]> = {}) {
   return mount(QuickButtons, {
     props: {
@@ -96,14 +78,14 @@ function mountQuickButtons(options: Partial<InstanceType<typeof QuickButtons>["$
       stubs: {
         Button: buttonStub,
         Checkbox: checkboxStub,
-        Dropdown: dropdownStub,
+        Dropdown: menuDropdownStub,
         Icon: true,
         Input: inputStub,
         Modal: modalStub,
         Select: selectStub,
         NButton: buttonStub,
         NCheckbox: checkboxStub,
-        NDropdown: dropdownStub,
+        NDropdown: menuDropdownStub,
         NIcon: true,
         NInput: inputStub,
         NModal: modalStub,
@@ -126,14 +108,14 @@ function mountQuickButtonsWithPersistentModal(options: Partial<InstanceType<type
       stubs: {
         Button: buttonStub,
         Checkbox: checkboxStub,
-        Dropdown: dropdownStub,
+        Dropdown: menuDropdownStub,
         Icon: true,
         Input: inputStub,
         Modal: persistentModalStub,
         Select: selectStub,
         NButton: buttonStub,
         NCheckbox: checkboxStub,
-        NDropdown: dropdownStub,
+        NDropdown: menuDropdownStub,
         NIcon: true,
         NInput: inputStub,
         NModal: persistentModalStub,
@@ -1337,56 +1319,9 @@ describe("filterVisibleQuickButtonGroups", () => {
   });
 });
 
-const menuDropdownStub = {
-  props: ["options"],
-  emits: ["select"],
-  template: `
-    <div>
-      <slot />
-      <template v-for="option in options" :key="option.key">
-        <button
-          class="dropdown-option"
-          :data-key="option.key"
-          :disabled="option.disabled"
-          type="button"
-          @click="!option.disabled && $emit('select', option.key)"
-        >{{ option.label }}</button>
-        <button
-          v-for="child in option.children ?? []"
-          :key="child.key"
-          class="dropdown-option"
-          :data-key="child.key"
-          :disabled="child.disabled"
-          type="button"
-          @click="!child.disabled && $emit('select', child.key)"
-        >{{ child.label }}</button>
-      </template>
-    </div>
-  `,
-};
-
 describe("QuickButtons 跨空间移动", () => {
-  function mountQuickPanel(props: Partial<InstanceType<typeof QuickButtons>["$props"]>) {
-    return mount(QuickButtons, {
-      props: { title: "快捷按钮", buttons: [], showHidden: false, ...props },
-      global: {
-        stubs: {
-          NDropdown: menuDropdownStub,
-          Dropdown: menuDropdownStub,
-          NButton: buttonStub,
-          NCheckbox: checkboxStub,
-          NInput: inputStub,
-          NSelect: selectStub,
-          NModal: modalStub,
-          NIcon: true,
-          Icon: true,
-        },
-      },
-    });
-  }
-
   it("按钮右键菜单可将按钮移动到其他空间", async () => {
-    const wrapper = mountQuickPanel({
+    const wrapper = mountQuickButtons({
       buttons: [{ id: "btn-1", title: "搜索", value: "https://example.com", type: "link", hidden: false }],
       tags: [],
       moveTargets: [{ id: "ws-b", title: "B 空间", lists: [] }],
@@ -1398,7 +1333,7 @@ describe("QuickButtons 跨空间移动", () => {
   });
 
   it("标签头右键菜单可将标签移动到其他空间", async () => {
-    const wrapper = mountQuickPanel({
+    const wrapper = mountQuickButtons({
       buttons: [{ id: "btn-1", title: "搜索", value: "https://example.com", type: "link", tagId: "tag-1", hidden: false }],
       tags: [{ id: "tag-1", title: "常用" }],
       moveTargets: [{ id: "ws-b", title: "B 空间", lists: [] }],
@@ -1410,7 +1345,7 @@ describe("QuickButtons 跨空间移动", () => {
   });
 
   it("没有其他空间时不渲染移动菜单项", async () => {
-    const wrapper = mountQuickPanel({
+    const wrapper = mountQuickButtons({
       buttons: [{ id: "btn-1", title: "搜索", value: "https://example.com", type: "link", hidden: false }],
       tags: [],
     });
@@ -1420,7 +1355,7 @@ describe("QuickButtons 跨空间移动", () => {
   });
 
   it("没有其他空间时标签头右键回落区域菜单", async () => {
-    const wrapper = mountQuickPanel({
+    const wrapper = mountQuickButtons({
       buttons: [{ id: "btn-1", title: "搜索", value: "https://example.com", type: "link", tagId: "tag-1", hidden: false }],
       tags: [{ id: "tag-1", title: "常用" }],
     });
@@ -1432,7 +1367,7 @@ describe("QuickButtons 跨空间移动", () => {
   });
 
   it("有其他空间时右键其他伪分组头仍回落区域菜单", async () => {
-    const wrapper = mountQuickPanel({
+    const wrapper = mountQuickButtons({
       buttons: [{ id: "btn-1", title: "搜索", value: "https://example.com", type: "link", hidden: false }],
       tags: [],
       moveTargets: [{ id: "ws-b", title: "B 空间", lists: [] }],
@@ -1445,7 +1380,7 @@ describe("QuickButtons 跨空间移动", () => {
   });
 
   it("点击父项「移动到空间」本身不触发移动事件（真 naive-ui 仅展开子级）", async () => {
-    const wrapper = mountQuickPanel({
+    const wrapper = mountQuickButtons({
       buttons: [{ id: "btn-1", title: "搜索", value: "https://example.com", type: "link", tagId: "tag-1", hidden: false }],
       tags: [{ id: "tag-1", title: "常用" }],
       moveTargets: [{ id: "ws-b", title: "B 空间", lists: [] }],

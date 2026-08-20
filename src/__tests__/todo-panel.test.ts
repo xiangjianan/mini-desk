@@ -9,6 +9,7 @@ import TodoPanel from "../components/TodoPanel.vue";
 import { DEFAULT_TITLES } from "../state/defaults";
 import { completeTodo } from "../state/todos";
 import type { TodoMap, TodoPeriod } from "../types";
+import { menuDropdownStub } from "./helpers/menu-dropdown-stub";
 
 const dropdownStub = {
   props: ["options"],
@@ -4016,45 +4017,6 @@ describe("TodoPanel 编辑快捷键", () => {
     wrapper.unmount();
   });
 });
-
-// 与 quick-buttons.test.ts 的 menuDropdownStub 同源；提醒条目的移动菜单是
-// 「移动到空间 → 空间 → 列表」三级，故在子级之外再渲染一层孙级 children。
-const menuDropdownStub = {
-  props: ["options"],
-  emits: ["select"],
-  template: `
-    <div>
-      <slot />
-      <template v-for="option in options" :key="option.key">
-        <button
-          class="dropdown-option"
-          :data-key="option.key"
-          :disabled="option.disabled"
-          type="button"
-          @click="!option.disabled && $emit('select', option.key)"
-        >{{ option.label }}</button>
-        <template v-for="child in option.children ?? []" :key="child.key">
-          <button
-            class="dropdown-option"
-            :data-key="child.key"
-            :disabled="child.disabled"
-            type="button"
-            @click="!child.disabled && $emit('select', child.key)"
-          >{{ child.label }}</button>
-          <button
-            v-for="grandchild in child.children ?? []"
-            :key="grandchild.key"
-            class="dropdown-option"
-            :data-key="grandchild.key"
-            :disabled="grandchild.disabled"
-            type="button"
-            @click="!grandchild.disabled && $emit('select', grandchild.key)"
-          >{{ grandchild.label }}</button>
-        </template>
-      </template>
-    </div>
-  `,
-};
 
 describe("TodoPanel 跨空间移动菜单", () => {
   const moveTargets = [
