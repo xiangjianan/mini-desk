@@ -1942,6 +1942,8 @@ Expected: 成功。
 6. `workspaceMoves.ts` ~99 行 `takenButtonIds` Set 在 uniqueIdAmong 改写后成为摆设（助手每次 `[...]` 摊平线性扫）：改传 `to.quickButtons.map((item) => item.id)` 并删 Set 行，行为不变。
 7. `moveSpaceToWorkspace` JSDoc 补对称句：默认空间共享 `workspace` id，天然互撞，重生成是预期路径（与列表函数的补句对称）。
 8. 可选：`shortcut-help.test.ts` 钉死本次新增的两条快捷键条目与改写的 Tab 文案（当前删掉它们不会挂任何测试）；顺带考虑补一个 UI_TEXT zh/en 键位一致性测试（规格审查确认现状并无此测试，计划中「i18n 测试会校验键位一致」的说法不成立）。
+9. `quick-buttons.test.ts`：用 `menuDropdownStub`（strict 超集）替换既有 `dropdownStub` 并删除 `mountQuickPanel`（改用 `mountQuickButtons`）——同文件养两份 90% 相同的 stub 会埋双改遗漏。Task 9/10 各自复制 stub 后，一并评估提取 `src/__tests__/helpers/` 共享下拉 stub 模块（rule-of-three 已满足）。
+10. 可选负向断言：点击父项「移动到空间」本身不触发移动（stub 会为父项 emit select；真 naive-ui 只展开）。
 
 - [ ] **Step 5: 收尾提交（如有修正）**
 
