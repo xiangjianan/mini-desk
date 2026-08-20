@@ -340,7 +340,7 @@ describe("TextPanel", () => {
     expect(workspaceRule).toContain("line-height: 1.82");
   });
 
-  it("keeps the caret collapsed when indenting a root line", async () => {
+  it("turns a root line into an indented bullet with a collapsed trailing caret", async () => {
     const wrapper = mount(TextPanel, {
       props: {
         titleId: "workspace-title",

@@ -141,6 +141,19 @@ describe("handleTextareaTab — marker follows the nearest same-level sibling", 
     expect(result.value).toBe("- a\n    - b\n    - c");
   });
 
+  it("inherits the numbered sibling marker with the caret mid-line", () => {
+    // 光标落在 "ccc" 文本中间（非行首）：上一行有标记且目标层级存在同级
+    // 兄弟时，Tab 同样继承编号标记，而不是退回默认短横线。
+    const result = apply("1. a\n    1. b\nccc", 15);
+    expect(result.value).toBe("1. a\n    1. b\n    1. ccc");
+    expect(renumbered(result.value)).toBe("1. a\n    1. b\n    2. ccc");
+  });
+
+  it("inherits the bullet sibling marker with the caret mid-line", () => {
+    const result = apply("- a\n    - b\nccc", 13);
+    expect(result.value).toBe("- a\n    - b\n    - ccc");
+  });
+
   it("outdents a nested bullet into a numbered level as a numbered item", () => {
     // "        - c" outdents to level 1, whose nearest sibling "    1. b" is numbered.
     const result = apply("1. a\n    1. b\n        - c", 23, true);

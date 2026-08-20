@@ -4129,4 +4129,29 @@ describe("TodoPanel 跨空间移动菜单", () => {
     expect((option.element as HTMLButtonElement).disabled).toBe(true);
     wrapper.unmount();
   });
+
+  it("没有目标空间时不渲染移动菜单项（moveTargets 缺省为空）", async () => {
+    const wrapper = mount(TodoPanel, {
+      props: {
+        todoLists: defaultTodoLists,
+        todos: { morning: [{ id: "todo-1", text: "任务", done: false }], noon: [], evening: [] },
+        showCompleted: { morning: false, noon: false, evening: false },
+        titles: DEFAULT_TITLES,
+      },
+      global: {
+        stubs: {
+          Dropdown: menuDropdownStub,
+          NDatePicker: datePickerStub,
+          NDropdown: menuDropdownStub,
+          NTooltip: tooltipStub,
+        },
+      },
+    });
+    await wrapper.get(".todo-item").trigger("contextmenu");
+    expect(wrapper.findAll('[data-key^="move-todo"]')).toHaveLength(0);
+
+    await wrapper.get(".todo-section").trigger("contextmenu");
+    expect(wrapper.findAll('[data-key^="move-list"]')).toHaveLength(0);
+    wrapper.unmount();
+  });
 });

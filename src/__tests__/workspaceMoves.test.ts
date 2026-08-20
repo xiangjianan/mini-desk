@@ -170,6 +170,25 @@ describe("moveTodoListToWorkspace", () => {
     expect(moveTodoListToWorkspace(workspaces, "ws-a", "list-1", "ws-b")).toBe(workspaces);
   });
 
+  it("未知列表 id 返回原数组引用", () => {
+    const workspaces = [source, target];
+    expect(moveTodoListToWorkspace(workspaces, "ws-a", "missing", "ws-b")).toBe(workspaces);
+  });
+
+  it("源列表无完成区可见性记录时，目标的可见性原样保留", () => {
+    // movedVisibility === undefined：不为迁移列表写入新键，目标已有键不受影响。
+    const bareSource = workspace("ws-a", {
+      todoLists: [list, { id: "list-2", title: "清单二", collapsed: false, compact: false }],
+      todos: { "list-1": [{ id: "todo-1", text: "任务", done: false }] } as TodoMap,
+      showCompletedTodos: { "list-2": true },
+    });
+    const visibleTarget = workspace("ws-b", { todoLists: [], todos: {} as TodoMap, showCompletedTodos: { "other-list": false } });
+    const next = moveTodoListToWorkspace([bareSource, visibleTarget], "ws-a", "list-1", "ws-b");
+    const to = next.find((w) => w.id === "ws-b")!;
+    expect(to.showCompletedTodos).toEqual({ "other-list": false });
+    expect(Object.keys(to.showCompletedTodos)).not.toContain("list-1");
+  });
+
   it("目标已有同 id 列表时重新生成列表 id 并迁移数据键", () => {
     const clashList = { id: "list-1", title: "目标自己的", collapsed: true, compact: false };
     const clashy = workspace("ws-b", {
@@ -178,11 +197,12 @@ describe("moveTodoListToWorkspace", () => {
     });
     const next = moveTodoListToWorkspace([source, clashy], "ws-a", "list-1", "ws-b");
     const to = next.find((w) => w.id === "ws-b")!;
+    const [, movedList] = to.todoLists;
     expect(to.todoLists).toHaveLength(2);
     expect(to.todoLists[0]).toMatchObject({ id: "list-1", title: "目标自己的" });
-    expect(to.todoLists[1].id).not.toBe("list-1");
+    expect(movedList.id).not.toBe("list-1");
     expect(to.todos["list-1"]).toEqual([{ id: "todo-x", text: "目标自己的提醒", done: false }]);
-    expect(to.todoLists[1].id && to.todos[to.todoLists[1].id]).toEqual([{ id: "todo-1", text: "任务", done: false }]);
+    expect(to.todos[movedList.id]).toEqual([{ id: "todo-1", text: "任务", done: false }]);
   });
 });
 
@@ -207,6 +227,11 @@ describe("moveTodoToWorkspace", () => {
   it("目标列表不存在时返回原数组", () => {
     const workspaces = [source, target];
     expect(moveTodoToWorkspace(workspaces, "ws-a", "list-1", "todo-open", "ws-b", "missing")).toBe(workspaces);
+  });
+
+  it("未知提醒 id 返回原数组引用", () => {
+    const workspaces = [source, target];
+    expect(moveTodoToWorkspace(workspaces, "ws-a", "list-1", "missing", "ws-b", "list-b1")).toBe(workspaces);
   });
 
   it("目标列表已有同 id 提醒时重新生成提醒 id", () => {
@@ -250,6 +275,24 @@ describe("moveSpaceToWorkspace", () => {
     const single = workspace("ws-a", { spaces: [spaces[0]], activeSpaceId: "space-1" });
     const workspaces = [single, target];
     expect(moveSpaceToWorkspace(workspaces, "ws-a", "space-1", "ws-b")).toBe(workspaces);
+  });
+
+  it("未知空间 id 返回原数组引用", () => {
+    const workspaces = [source, target];
+    expect(moveSpaceToWorkspace(workspaces, "ws-a", "missing", "ws-b")).toBe(workspaces);
+  });
+
+  it("移动的是激活且为首的空间时，源切到第一个剩余空间（index 0 钳位）", () => {
+    const three = [
+      { id: "space-1", title: "便签一", lines: [] },
+      { id: "space-2", title: "便签二", lines: [] },
+      { id: "space-3", title: "便签三", lines: [] },
+    ];
+    const activeFirst = workspace("ws-a", { spaces: three, activeSpaceId: "space-1" });
+    const next = moveSpaceToWorkspace([activeFirst, target], "ws-a", "space-1", "ws-b");
+    const from = next.find((w) => w.id === "ws-a")!;
+    expect(from.spaces.map((s) => s.id)).toEqual(["space-2", "space-3"]);
+    expect(from.activeSpaceId).toBe("space-2");
   });
 
   it("目标已有同 id 空间时重新生成 id 且保留目标原空间", () => {

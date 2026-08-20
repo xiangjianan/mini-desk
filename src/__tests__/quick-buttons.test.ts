@@ -1443,4 +1443,20 @@ describe("QuickButtons 跨空间移动", () => {
     expect(wrapper.find('[data-key="add"]').exists()).toBe(true);
     wrapper.unmount();
   });
+
+  it("点击父项「移动到空间」本身不触发移动事件（真 naive-ui 仅展开子级）", async () => {
+    const wrapper = mountQuickPanel({
+      buttons: [{ id: "btn-1", title: "搜索", value: "https://example.com", type: "link", tagId: "tag-1", hidden: false }],
+      tags: [{ id: "tag-1", title: "常用" }],
+      moveTargets: [{ id: "ws-b", title: "B 空间", lists: [] }],
+    });
+    await wrapper.get(".quick-button").trigger("contextmenu");
+    await wrapper.get('[data-key="move-button"]').trigger("click");
+    expect(wrapper.emitted("moveButtonToWorkspace")).toBeUndefined();
+
+    await wrapper.get(".quick-tag-title").trigger("contextmenu");
+    await wrapper.get('[data-key="move-tag"]').trigger("click");
+    expect(wrapper.emitted("moveTagToWorkspace")).toBeUndefined();
+    wrapper.unmount();
+  });
 });
