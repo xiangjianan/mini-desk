@@ -9,6 +9,9 @@ assets/landing-shots/
 assets/cards/
 assets/captions/
 assets/seg/
+assets/cards-v/
+assets/captions-v/
+assets/seg-v/
 out/
 
 # local tooling caches

@@ -136,3 +136,6 @@ export function newestRawVideo() {
   files.sort((a, b) => statSync(join(RAW_DIR, b)).mtimeMs - statSync(join(RAW_DIR, a)).mtimeMs);
   return files[0];
 }
+
+// Exported so the vertical recorder can reuse the same fake cursor.
+export { CURSOR_SCRIPT };
