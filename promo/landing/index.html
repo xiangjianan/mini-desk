@@ -1,0 +1,190 @@
+<!doctype html>
+<html lang="zh-CN">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>Mini Desk — 本地优先的个人桌面工作台</title>
+    <meta name="description" content="Mini Desk 是一张浏览器里的安静小桌面：截图、便签、提醒和快捷动作都收在这里。本地优先，无需注册，打开即用。" />
+    <link rel="icon" type="image/png" href="/logo.png" />
+  </head>
+  <body>
+    <div class="aurora" aria-hidden="true"><i class="aurora-blob a1"></i><i class="aurora-blob a2"></i><i class="aurora-blob a3"></i></div>
+
+    <header class="nav" id="nav">
+      <a class="nav-brand" href="#top">
+        <img src="/logo.png" alt="Mini Desk" width="26" height="26" />
+        <span>Mini&nbsp;Desk</span>
+      </a>
+      <nav class="nav-links">
+        <a href="#features">功能</a>
+        <a href="#themes">主题空间</a>
+        <a href="#privacy">本地优先</a>
+      </nav>
+      <a class="nav-cta" href="https://minidesk.online" target="_blank" rel="noreferrer">立即体验</a>
+    </header>
+
+    <main id="top">
+      <!-- ============ HERO ============ -->
+      <section class="hero">
+        <div class="hero-copy reveal">
+          <span class="eyebrow"><i class="dot"></i>本地优先 · 无需注册 · 免费开源</span>
+          <h1>把零碎的一天，<br /><span class="grad hero-grad-line">收进一张安静的小桌面</span></h1>
+          <p class="hero-sub">
+            Mini&nbsp;Desk 是一张浏览器里的个人工作台：截图、便签、提醒和快捷动作都在这里。
+            它不会催你成为机器 —— Do&nbsp;less,&nbsp;do&nbsp;it&nbsp;well.
+          </p>
+          <div class="hero-actions">
+            <a class="btn primary" href="https://minidesk.online" target="_blank" rel="noreferrer">打开 Mini Desk<span class="arr">→</span></a>
+            <a class="btn ghost" href="#film">观看宣传片</a>
+          </div>
+          <ul class="hero-meta">
+            <li>四栏桌面布局</li>
+            <li>数据只在浏览器</li>
+            <li>浅色 / 深色</li>
+          </ul>
+        </div>
+
+        <div class="hero-stage reveal" id="film">
+          <div class="browser-mock">
+            <div class="browser-bar"><i></i><i></i><i></i><span class="browser-url">minidesk.online</span></div>
+            <div class="browser-body">
+              <video id="promoVideo" src="/media/promo.mp4" poster="/media/posters/promo.jpg" muted loop autoplay playsinline preload="metadata"></video>
+              <button class="video-sound" id="soundToggle" type="button" aria-label="播放声音">🔇 点开有声版</button>
+            </div>
+          </div>
+          <div class="hero-glow" aria-hidden="true"></div>
+        </div>
+      </section>
+
+      <!-- ============ MARQUEE ============ -->
+      <div class="marquee" aria-hidden="true">
+        <div class="marquee-track" id="marqueeTrack">
+          <span>人生清单</span><span>前端进阶学习</span><span>我的工作台</span><span>健身训练站</span><span>旅行手账</span><span>内容创作工坊</span><span>家庭账本</span>
+        </div>
+      </div>
+
+      <!-- ============ FEATURES ============ -->
+      <section class="section" id="features">
+        <div class="section-head reveal">
+          <span class="kicker">功能全景</span>
+          <h2>一天的碎事，<span class="grad">各就各位</span></h2>
+          <p>从导入一套主题空间开始：快捷动作、提醒事项、便签和图床，十分钟布置好自己的节奏。</p>
+        </div>
+
+        <article class="feature-row reveal">
+          <div class="feature-text">
+            <span class="feature-index">01</span>
+            <h3>导入主题空间，十秒上手</h3>
+            <p>设置 → 导入空间，选一个 JSON 文件，看板即刻成形。同名空间可选覆盖或新增，示例空间开箱即用。</p>
+            <ul class="feature-points"><li>单空间 JSON 导入导出</li><li>同名冲突自动处理</li><li>7 套官方主题示例</li></ul>
+          </div>
+          <div class="feature-media"><video src="/media/features/import.mp4" muted loop playsinline preload="metadata" poster="/media/posters/import.jpg"></video></div>
+        </article>
+
+        <article class="feature-row flip reveal">
+          <div class="feature-text">
+            <span class="feature-index">02</span>
+            <h3>提醒事项，轻重自分</h3>
+            <p>星标置顶、截止时间、今日重点自动聚合到顶部。临近和超期的事项会用底色和警示线轻轻提醒，不吵不闹。</p>
+            <ul class="feature-points"><li>星标 + 常用整点截止</li><li>完成进度一眼看清</li><li>双列表自由分组</li></ul>
+          </div>
+          <div class="feature-media"><video src="/media/features/todos.mp4" muted loop playsinline preload="metadata" poster="/media/posters/todos.jpg"></video></div>
+        </article>
+
+        <article class="feature-row reveal">
+          <div class="feature-text">
+            <span class="feature-index">03</span>
+            <h3>截图照片，先放进图床</h3>
+            <p>Ctrl+V 粘贴截图，或者把照片直接从桌面拖进来。点开大图慢慢看，滚轮缩放、键盘切换，原文躺在 IndexedDB 里。</p>
+            <ul class="feature-points"><li>粘贴 / 拖放即入</li><li>原图预览与缩放</li><li>大图不占 localStorage</li></ul>
+          </div>
+          <div class="feature-media"><video src="/media/features/images.mp4" muted loop playsinline preload="metadata" poster="/media/posters/images.jpg"></video></div>
+        </article>
+
+        <div class="feature-grid">
+          <article class="feature-card reveal">
+            <div class="feature-media sm"><video src="/media/features/quick.mp4" muted loop playsinline preload="metadata"></video></div>
+            <h3>快捷动作</h3>
+            <p>链接、应用、API、文本模板。一键打开钉钉飞书，一键复制日报模板。</p>
+          </article>
+          <article class="feature-card reveal">
+            <div class="feature-media sm"><video src="/media/features/notes.mp4" muted loop playsinline preload="metadata"></video></div>
+            <h3>便签多页签</h3>
+            <p>点进去就写，Tab 缩进、Shift+Tab 回退。一个页签一个主题。</p>
+          </article>
+          <article class="feature-card reveal">
+            <div class="feature-media sm"><video src="/media/features/switcher.mp4" muted loop playsinline preload="metadata"></video></div>
+            <h3>多工作空间</h3>
+            <p>工作、学习、旅行各就各位，顶栏一键切换，互不打扰。</p>
+          </article>
+          <article class="feature-card reveal">
+            <div class="feature-media sm"><video src="/media/features/theme.mp4" muted loop playsinline preload="metadata"></video></div>
+            <h3>浅色 / 深色</h3>
+            <p>随手切换主题，参考 Apple HIG 的紧凑低干扰界面。</p>
+          </article>
+        </div>
+      </section>
+
+      <!-- ============ THEMES ============ -->
+      <section class="section" id="themes">
+        <div class="section-head reveal">
+          <span class="kicker">主题空间</span>
+          <h2>七套主题，<span class="grad">总有一款适合你</span></h2>
+          <p>每套主题空间都预置了便签页、快捷按钮和带提醒的清单。导入即用，改改成你的。</p>
+        </div>
+        <div class="theme-grid" id="themeGrid"></div>
+        <p class="themes-note reveal">以上画面全部来自真实导入后的看板录屏。</p>
+      </section>
+
+      <!-- ============ PRIVACY ============ -->
+      <section class="section" id="privacy">
+        <div class="section-head reveal">
+          <span class="kicker">本地优先</span>
+          <h2>你的数据，<span class="grad">只在你的浏览器</span></h2>
+        </div>
+        <div class="privacy-grid">
+          <article class="glass-card reveal">
+            <span class="pc-icon">💾</span>
+            <h3>无后端，无账号</h3>
+            <p>看板状态保存在浏览器 localStorage，图片原文保存在同站点 IndexedDB。没有服务器替你“保管”任何东西。</p>
+          </article>
+          <article class="glass-card reveal">
+            <span class="pc-icon">📦</span>
+            <h3>随时导出备份</h3>
+            <p>每个空间都可以导出为单个 JSON 文件，换台电脑导入即可继续。迁移成本约等于零。</p>
+          </article>
+          <article class="glass-card reveal">
+            <span class="pc-icon">🌱</span>
+            <h3>打开即用</h3>
+            <p>无需注册、免费使用。打开 minidesk.online，三分钟布置好你的小桌面。</p>
+          </article>
+        </div>
+      </section>
+
+      <!-- ============ CTA ============ -->
+      <section class="cta reveal">
+        <div class="cta-card">
+          <h2>Do less, do it well.</h2>
+          <p>现在就打开浏览器，给零碎的一天安个家。</p>
+          <div class="hero-actions center">
+            <a class="btn primary lg" href="https://minidesk.online" target="_blank" rel="noreferrer">进入 Mini Desk<span class="arr">→</span></a>
+            <a class="btn ghost lg" href="https://github.com/xiangjianan/todolist/tree/master/samples" target="_blank" rel="noreferrer">下载主题空间</a>
+          </div>
+        </div>
+      </section>
+    </main>
+
+    <footer class="footer">
+      <div class="footer-inner">
+        <div class="footer-brand"><img src="/logo.png" alt="" width="22" height="22" /><span>Mini Desk</span></div>
+        <p>一张安静的小桌面 · 界面与代码 100% 由 AI 完成</p>
+        <div class="footer-links">
+          <a href="https://minidesk.online" target="_blank" rel="noreferrer">在线体验</a>
+          <a href="https://github.com/xiangjianan/todolist" target="_blank" rel="noreferrer">GitHub</a>
+        </div>
+      </div>
+    </footer>
+
+    <script type="module" src="/src/main.ts"></script>
+  </body>
+</html>

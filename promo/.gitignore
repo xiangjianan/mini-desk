@@ -1,0 +1,14 @@
+# dependencies
+node_modules/
+landing/dist/
+
+# recording intermediates & build artifacts (regenerable via harness scripts)
+assets/raw/
+assets/shots/
+assets/landing-shots/
+assets/cards/
+assets/captions/
+assets/seg/
+out/
+
+# local tooling caches

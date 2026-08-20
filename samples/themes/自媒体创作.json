@@ -1,0 +1,144 @@
+{
+  "miniDeskWorkspaceExport": true,
+  "version": 1,
+  "workspace": {
+    "id": "sample-creator-studio",
+    "createdAt": 1787356800000,
+    "customTitles": {
+      "board-title": "内容创作工坊",
+      "board-slogan": "持续更新，比灵感更可靠",
+      "quick-title": "⚡ 创作工具",
+      "today-focus-title": "‼️ 本周更新目标"
+    },
+    "noteLines": [],
+    "workspaceLines": [],
+    "storageLines": [],
+    "spaces": [
+      {
+        "id": "creator-topics",
+        "title": "💡 选题库",
+        "lines": [
+          { "text": "打分标准：搜索量 40% + 差异化 30% + 制作成本 30%", "indent": 0 },
+          { "text": "🔥 高优先", "indent": 1 },
+          { "text": "「AI 工具实测」系列第 4 期：本地大模型跑图横评", "indent": 2 },
+          { "text": "桌面工作台收纳术：从凌乱到心流（可挂好物）", "indent": 2 },
+          { "text": "🧊 观察中", "indent": 1 },
+          { "text": "自由职业一年的账本公开（数据敏感，先做匿名化）", "indent": 2 },
+          { "text": "键盘入坑指南：量产 vs 客制化", "indent": 2 }
+        ]
+      },
+      {
+        "id": "creator-script",
+        "title": "✍️ 脚本大纲",
+        "lines": [
+          { "text": "本期：《AI 工具实测 04 · 本地跑图横评》", "indent": 0 },
+          { "text": "00:00-00:15 钩子：同一张提示词，5 个模型差距有多大", "indent": 1 },
+          { "text": "00:15-01:30 参赛选手 + 测试方法（固定 seed）", "indent": 1 },
+          { "text": "01:30-05:00 三轮实测：人像 / 场景 / 文字渲染", "indent": 1 },
+          { "text": "05:00-06:00 结论 + 配置推荐（弹幕投票）", "indent": 1 },
+          { "text": "金句位：工具没有高下，只有合不合适的场景", "indent": 1 }
+        ]
+      },
+      {
+        "id": "creator-review",
+        "title": "📈 数据复盘",
+        "lines": [
+          { "text": "上期《桌面收纳术》发布 7 天数据", "indent": 0 },
+          { "text": "播放 4.2w ｜ 完播 38% ｜ 点赞 2100 ｜ 收藏 3400", "indent": 1 },
+          { "text": "收藏 > 点赞：工具类内容，下次加强清单感", "indent": 2 },
+          { "text": "掉点集中在 01:40：口播太长，下版砍到 20 秒内", "indent": 2 },
+          { "text": "本月目标：粉丝 1.5w → 1.8w，商单报价更新一次", "indent": 0 }
+        ]
+      }
+    ],
+    "activeSpaceId": "creator-topics",
+    "images": [],
+    "quickTags": [
+      { "id": "tag-creator-tool", "title": "创作工具", "color": "#8b5cf6" },
+      { "id": "tag-creator-admin", "title": "平台后台", "color": "#ec4899" }
+    ],
+    "quickButtons": [
+      {
+        "id": "qb-creator-figma",
+        "tagId": "tag-creator-tool",
+        "type": "app",
+        "title": "Figma 封面模板",
+        "value": "figma://",
+        "hidden": false
+      },
+      {
+        "id": "qb-creator-canva",
+        "tagId": "tag-creator-tool",
+        "type": "link",
+        "title": "Canva 可画",
+        "value": "https://www.canva.cn/",
+        "hidden": false
+      },
+      {
+        "id": "qb-creator-quote",
+        "tagId": "tag-creator-tool",
+        "type": "api",
+        "title": "抽一句文案灵感",
+        "value": "https://v1.hitokoto.cn/?c=k",
+        "apiMethod": "GET",
+        "apiHeaders": [],
+        "apiBodyType": "none",
+        "apiBody": "",
+        "hidden": false
+      },
+      {
+        "id": "qb-creator-bili",
+        "tagId": "tag-creator-admin",
+        "type": "link",
+        "title": "B 站创作中心",
+        "value": "https://member.bilibili.com/platform/home",
+        "hidden": false
+      },
+      {
+        "id": "qb-creator-douyin",
+        "tagId": "tag-creator-admin",
+        "type": "link",
+        "title": "抖音创作者中心",
+        "value": "https://creator.douyin.com/",
+        "hidden": false
+      },
+      {
+        "id": "qb-creator-newrank",
+        "tagId": "tag-creator-admin",
+        "type": "link",
+        "title": "新榜热榜",
+        "value": "https://www.newrank.cn/",
+        "hidden": false
+      },
+      {
+        "id": "qb-creator-publish",
+        "type": "text",
+        "title": "发布文案模板",
+        "value": "标题：数字 + 悬念，≤ 26 字\n简介：一句话结论 + 3 个看点 + 时间轴\n标签：1 大词 + 2 精准词 + 1 长尾词\n置顶评论：资源清单 + 下期预告",
+        "hidden": false
+      }
+    ],
+    "quickOtherCollapsed": false,
+    "showHiddenQuickButtons": false,
+    "todoLayoutManual": false,
+    "todoLists": [
+      { "id": "weekly", "title": "🎬 本周更新", "collapsed": false, "compact": false, "column": 0 },
+      { "id": "lab", "title": "🧪 选题实验", "collapsed": false, "compact": false, "column": 0 }
+    ],
+    "showCompletedTodos": { "weekly": true, "lab": false },
+    "todos": {
+      "weekly": [
+        { "id": "td-cre-shoot", "text": "拍摄 A-Roll：口播 2 遍 + 特写机位", "done": false, "starred": true, "notifyAt": 1787481000000 },
+        { "id": "td-cre-edit", "text": "粗剪 + 字幕，导出第一版给搭档看", "done": false, "starred": true, "notifyAt": 1787918400000 },
+        { "id": "td-cre-publish", "text": "周五 18:00 定时发布，置顶评论预埋", "done": false, "starred": false, "notifyAt": 1789038000000 },
+        { "id": "td-cre-script", "text": "脚本大纲定稿（见「脚本大纲」页）", "done": true, "starred": false }
+      ],
+      "lab": [
+        { "id": "td-cre-review", "text": "上期 7 天数据复盘，更新「数据复盘」页", "done": false, "starred": false, "notifyAt": 1789866000000 },
+        { "id": "td-cre-ab", "text": "封面 A/B 测试：大字版 vs 对比图版", "done": false, "starred": false },
+        { "id": "td-cre-collab", "text": "约一期联动：找同量级数码区 UP 主", "done": false, "starred": false, "notifyAt": 1802566800000 }
+      ]
+    },
+    "zoneVisibility": { "assets": true, "notes": true, "tasks": true, "workspace": true }
+  }
+}

@@ -1,0 +1,12 @@
+{
+  "name": "mini-desk-promo-harness",
+  "private": true,
+  "type": "module",
+  "scripts": {
+    "record": "node record.mjs",
+    "assemble": "node assemble.mjs"
+  },
+  "dependencies": {
+    "playwright-core": "^1.55.0"
+  }
+}

@@ -1,0 +1,142 @@
+{
+  "miniDeskWorkspaceExport": true,
+  "version": 1,
+  "workspace": {
+    "id": "sample-fitness-lab",
+    "createdAt": 1787184000000,
+    "customTitles": {
+      "board-title": "健身训练站",
+      "board-slogan": "练出线条，也练出耐心",
+      "quick-title": "⚡ 训练工具",
+      "today-focus-title": "‼️ 今日训练重点"
+    },
+    "noteLines": [],
+    "workspaceLines": [],
+    "storageLines": [],
+    "spaces": [
+      {
+        "id": "fit-plan",
+        "title": "🗓 训练计划",
+        "lines": [
+          { "text": "目标：12 周体脂 22% → 18%，引体向上 8 个", "indent": 0 },
+          { "text": "周一 胸 + 三头", "indent": 1 },
+          { "text": "卧推 4×8 ｜ 上斜哑铃 3×10 ｜ 绳索下压 3×12", "indent": 2 },
+          { "text": "周三 背 + 二头", "indent": 1 },
+          { "text": "引体向上 4×力竭 ｜ 划船 4×10 ｜ 弯举 3×12", "indent": 2 },
+          { "text": "周五 腿 + 肩", "indent": 1 },
+          { "text": "深蹲 4×8 ｜ 硬拉 3×6 ｜ 侧平举 4×15", "indent": 2 },
+          { "text": "周末 二选一", "indent": 1 },
+          { "text": "晨跑 5 km（配速 6'30\" 以内）或游泳 40 分钟", "indent": 2 }
+        ]
+      },
+      {
+        "id": "fit-diet",
+        "title": "🍗 饮食记录",
+        "lines": [
+          { "text": "每日蛋白目标：体重 70 kg × 1.8 g ≈ 126 g", "indent": 0 },
+          { "text": "早餐：3 个鸡蛋 + 燕麦 + 黑咖啡（约 25 g）", "indent": 1 },
+          { "text": "午餐：鸡胸 / 牛肉 200 g + 杂粮饭（约 45 g）", "indent": 1 },
+          { "text": "练后：乳清蛋白粉一勺（约 24 g）", "indent": 1 },
+          { "text": "晚餐：鱼虾 + 大量蔬菜，少油（约 30 g）", "indent": 1 },
+          { "text": "红线：含糖饮料 ❌ ｜ 夜宵 ❌ ｜ 酒每周 ≤ 1 次", "indent": 0 }
+        ]
+      },
+      {
+        "id": "fit-stats",
+        "title": "📏 身体数据",
+        "lines": [
+          { "text": "2026-08 起点：70.2 kg ｜ 体脂 22.1% ｜ 腰围 84 cm", "indent": 0 },
+          { "text": "第 2 周：69.8 kg ｜ 体脂 21.7%", "indent": 1 },
+          { "text": "第 4 周：69.1 kg ｜ 体脂 21.0% ｜ 腰围 82.5 cm", "indent": 1 },
+          { "text": "趋势 ████████░░░░░░ 距目标还有 4 周", "indent": 0 },
+          { "text": "每月 1 号早上空腹测一次，数据记在这里", "indent": 0 }
+        ]
+      }
+    ],
+    "activeSpaceId": "fit-plan",
+    "images": [],
+    "quickTags": [
+      { "id": "tag-fit-resource", "title": "训练资源", "color": "#22c55e" },
+      { "id": "tag-fit-tool", "title": "数据工具", "color": "#f97316" }
+    ],
+    "quickButtons": [
+      {
+        "id": "qb-fit-bili",
+        "tagId": "tag-fit-resource",
+        "type": "link",
+        "title": "B 站健身区",
+        "value": "https://www.bilibili.com/v/life/fitness/",
+        "hidden": false
+      },
+      {
+        "id": "qb-fit-playlist",
+        "tagId": "tag-fit-resource",
+        "type": "app",
+        "title": "健身歌单",
+        "value": "spotify://",
+        "hidden": false
+      },
+      {
+        "id": "qb-fit-group",
+        "tagId": "tag-fit-resource",
+        "type": "app",
+        "title": "微信打卡群",
+        "value": "wechat://",
+        "hidden": false
+      },
+      {
+        "id": "qb-fit-boohee",
+        "tagId": "tag-fit-tool",
+        "type": "link",
+        "title": "薄荷食物库",
+        "value": "https://www.boohee.com/food/",
+        "hidden": false
+      },
+      {
+        "id": "qb-fit-keep",
+        "tagId": "tag-fit-tool",
+        "type": "link",
+        "title": "Keep 课程",
+        "value": "https://www.gotokeep.com/",
+        "hidden": false
+      },
+      {
+        "id": "qb-fit-log",
+        "type": "text",
+        "title": "训练打卡模板",
+        "value": "【训练打卡】\n日期：\n部位：\n动作 / 重量 / 组数：\n体感（1-10）：\n明日调整：",
+        "hidden": false
+      },
+      {
+        "id": "qb-fit-stretch",
+        "type": "text",
+        "title": "练后拉伸清单",
+        "value": "胸肩：门框拉伸 30s × 2\n背阔：泡沫轴 60s\n腿：股四 / 腘绳各 30s × 2\n髋：鸽子式 45s 每侧",
+        "hidden": false
+      }
+    ],
+    "quickOtherCollapsed": false,
+    "showHiddenQuickButtons": false,
+    "todoLayoutManual": false,
+    "todoLists": [
+      { "id": "train", "title": "🏋️ 本周训练", "collapsed": false, "compact": false, "column": 0 },
+      { "id": "recover", "title": "🥗 饮食与恢复", "collapsed": false, "compact": false, "column": 0 }
+    ],
+    "showCompletedTodos": { "train": true, "recover": true },
+    "todos": {
+      "train": [
+        { "id": "td-fit-run", "text": "晨跑 5 km，配速进 6'30\"", "done": false, "starred": true, "notifyAt": 1787268600000 },
+        { "id": "td-fit-back", "text": "背 + 二头：引体向上一组多做一个", "done": false, "starred": false, "notifyAt": 1787360400000 },
+        { "id": "td-fit-leg", "text": "腿 + 肩：深蹲冲 60 kg × 8", "done": false, "starred": false },
+        { "id": "td-fit-review", "text": "上周训练复盘：卧推加到 52.5 kg", "done": true, "starred": false }
+      ],
+      "recover": [
+        { "id": "td-fit-fat", "text": "测体脂 + 腰围，更新「身体数据」页", "done": false, "starred": true, "notifyAt": 1787616000000 },
+        { "id": "td-fit-month", "text": "月度体测：拍照对比 + 体重曲线", "done": false, "starred": false, "notifyAt": 1788224400000 },
+        { "id": "td-fit-protein", "text": "补货：乳清蛋白粉 + 肌酸", "done": false, "starred": false, "notifyAt": 1787918400000 },
+        { "id": "td-fit-sleep", "text": "连续 7 天 23:30 前睡（第 4 天）", "done": false, "starred": false }
+      ]
+    },
+    "zoneVisibility": { "assets": true, "notes": true, "tasks": true, "workspace": true }
+  }
+}

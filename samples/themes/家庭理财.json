@@ -1,0 +1,139 @@
+{
+  "miniDeskWorkspaceExport": true,
+  "version": 1,
+  "workspace": {
+    "id": "sample-family-finance",
+    "createdAt": 1787443200000,
+    "customTitles": {
+      "board-title": "家庭账本",
+      "board-slogan": "钱不多，但要心里有数",
+      "quick-title": "⚡ 理财工具",
+      "today-focus-title": "‼️ 本月要紧账单"
+    },
+    "noteLines": [],
+    "workspaceLines": [],
+    "storageLines": [],
+    "spaces": [
+      {
+        "id": "fin-fixed",
+        "title": "🧾 固定支出",
+        "lines": [
+          { "text": "每月固定支出合计：8600 元", "indent": 0 },
+          { "text": "房租 3800（1 号扣款）", "indent": 1 },
+          { "text": "房贷以外的保险：重疾 + 医疗 ≈ 900 / 月均", "indent": 1 },
+          { "text": "水电燃气网费 ≈ 450", "indent": 1 },
+          { "text": "交通：地铁通勤 240 + 偶尔打车 300", "indent": 1 },
+          { "text": "餐饮：工作日带饭，预算 2200", "indent": 1 },
+          { "text": "弹性额度 710：超支就从下月补回来", "indent": 1 }
+        ]
+      },
+      {
+        "id": "fin-goal",
+        "title": "🎯 储蓄目标",
+        "lines": [
+          { "text": "2026 目标：应急金 6 个月生活费 = 52000", "indent": 0 },
+          { "text": "当前进度 38500 ████████░░░ 74%", "indent": 1 },
+          { "text": "每月发薪日自动转入 3000（先存后花）", "indent": 1 },
+          { "text": "长期账户：指数基金定投 1500 / 月，不看短期涨跌", "indent": 0 },
+          { "text": "愿望清单：换一台 MacBook（等奖金，不动应急金）", "indent": 0 }
+        ]
+      },
+      {
+        "id": "fin-review",
+        "title": "📊 月度复盘",
+        "lines": [
+          { "text": "8 月复盘（截至 19 号）", "indent": 0 },
+          { "text": "餐饮超支 260：朋友聚餐 3 次，下月控制在 2 次", "indent": 1 },
+          { "text": "冲动消费：机械键盘 899（购物车冷静期没扛住）", "indent": 1 },
+          { "text": "惊喜：副业进账 1200，全部转入应急金", "indent": 1 },
+          { "text": "9 月动作：周末买菜代替外食，目标省 400", "indent": 1 }
+        ]
+      }
+    ],
+    "activeSpaceId": "fin-fixed",
+    "images": [],
+    "quickTags": [
+      { "id": "tag-fin-bank", "title": "银行与支付", "color": "#10b981" },
+      { "id": "tag-fin-learn", "title": "理财学习", "color": "#f59e0b" }
+    ],
+    "quickButtons": [
+      {
+        "id": "qb-fin-cmb",
+        "tagId": "tag-fin-bank",
+        "type": "link",
+        "title": "招商银行",
+        "value": "https://www.cmbchina.com/",
+        "hidden": false
+      },
+      {
+        "id": "qb-fin-alipay",
+        "tagId": "tag-fin-bank",
+        "type": "link",
+        "title": "支付宝账单",
+        "value": "https://www.alipay.com/",
+        "hidden": false
+      },
+      {
+        "id": "qb-fin-wechat",
+        "tagId": "tag-fin-bank",
+        "type": "app",
+        "title": "微信收付款",
+        "value": "wechat://",
+        "hidden": false
+      },
+      {
+        "id": "qb-fin-index",
+        "tagId": "tag-fin-learn",
+        "type": "link",
+        "title": "中证指数",
+        "value": "https://www.csindex.com.cn/",
+        "hidden": false
+      },
+      {
+        "id": "qb-fin-rss",
+        "tagId": "tag-fin-learn",
+        "type": "link",
+        "title": "有知有行",
+        "value": "https://youzhiyouxing.cn/",
+        "hidden": false
+      },
+      {
+        "id": "qb-fin-budget",
+        "type": "text",
+        "title": "月度预算模板",
+        "value": "【月度预算】\n收入：\n固定支出：房租 / 保险 / 水电 / 交通 / 餐饮\n储蓄：先存后花，发薪日自动转\n弹性额度：超支部分下月补回",
+        "hidden": false
+      },
+      {
+        "id": "qb-fin-billday",
+        "type": "text",
+        "title": "账单日提醒清单",
+        "value": "1 号：房租 3800\n5 号：信用卡还款日（全额，不分期）\n10 号：定投扣款 1500\n15 号：复盘上月账单，更新「月度复盘」页",
+        "hidden": false
+      }
+    ],
+    "quickOtherCollapsed": false,
+    "showHiddenQuickButtons": false,
+    "todoLayoutManual": false,
+    "todoLists": [
+      { "id": "bills", "title": "📅 本月账单", "collapsed": false, "compact": false, "column": 0 },
+      { "id": "invest", "title": "💎 储蓄与定投", "collapsed": false, "compact": false, "column": 0 }
+    ],
+    "showCompletedTodos": { "bills": true, "invest": false },
+    "todos": {
+      "bills": [
+        { "id": "td-fin-rent", "text": "房租 3800 转账（1 号前）", "done": false, "starred": true, "notifyAt": 1788224400000 },
+        { "id": "td-fin-card", "text": "信用卡全额还款，检查自动扣款余额", "done": false, "starred": true, "notifyAt": 1788573600000 },
+        { "id": "td-fin-utility", "text": "缴水电燃气费，截图存档", "done": false, "starred": false },
+        { "id": "td-fin-phone", "text": "话费套餐续费（已改为 8 元保号）", "done": true, "starred": false }
+      ],
+      "invest": [
+        { "id": "td-fin-dca", "text": "定投日：确认扣款 1500，不盯盘", "done": false, "starred": true, "notifyAt": 1789038000000 },
+        { "id": "td-fin-review", "text": "15 号月度复盘：更新「月度复盘」页", "done": false, "starred": false, "notifyAt": 1790812800000 },
+        { "id": "td-fin-annual", "text": "年度资产盘点：四个账户拉一张总表", "done": false, "starred": false, "notifyAt": 1798765200000 },
+        { "id": "td-fin-book", "text": "读完《小狗钱钱》第 2 册，写 3 条行动", "done": false, "starred": false }
+      ]
+    },
+    "zoneVisibility": { "assets": true, "notes": true, "tasks": true, "workspace": true }
+  }
+}

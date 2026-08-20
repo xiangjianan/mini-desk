@@ -1,0 +1,141 @@
+{
+  "miniDeskWorkspaceExport": true,
+  "version": 1,
+  "workspace": {
+    "id": "sample-travel-planner",
+    "createdAt": 1787270400000,
+    "customTitles": {
+      "board-title": "旅行手账",
+      "board-slogan": "把远方，拆成一张张小票",
+      "quick-title": "⚡ 出行工具",
+      "today-focus-title": "‼️ 出发前必办"
+    },
+    "noteLines": [],
+    "workspaceLines": [],
+    "storageLines": [],
+    "spaces": [
+      {
+        "id": "trip-route",
+        "title": "🗺 川西 7 日行程",
+        "lines": [
+          { "text": "D1 成都集合：宽窄巷子逛吃，早点睡适应海拔", "indent": 0 },
+          { "text": "D2 成都 → 康定（4 h）：折多山垭口看云海", "indent": 0 },
+          { "text": "D3 康定 → 新都桥：摄影天堂，住观景民宿", "indent": 0 },
+          { "text": "D4 新都桥 → 稻城：理塘勒通古镇，注意高反", "indent": 0 },
+          { "text": "D5 稻城亚丁长线：牛奶海 + 五色海（体力分配 3-3-4）", "indent": 0 },
+          { "text": "D6 亚丁短线：冲古寺 + 珍珠海，下午返程", "indent": 0 },
+          { "text": "D7 康定 → 成都：火锅收尾，解散", "indent": 0 },
+          { "text": "备选：若 D5 天气差，长线短线对调", "indent": 0 }
+        ]
+      },
+      {
+        "id": "trip-gear",
+        "title": "🎒 装备清单",
+        "lines": [
+          { "text": "证件：身份证、驾驶证（租车用）、少量现金", "indent": 0 },
+          { "text": "衣物：冲锋衣、抓绒、速干内搭、羽绒背心（垭口 0℃）", "indent": 0 },
+          { "text": "徒步：登山鞋、登山杖、护膝、头灯", "indent": 0 },
+          { "text": "高反：葡萄糖、布洛芬、氧气瓶 × 2（成都买好）", "indent": 0 },
+          { "text": "其他：防晒霜 SPF50+、墨镜、保温杯、充电宝 2 万毫安", "indent": 0 }
+        ]
+      },
+      {
+        "id": "trip-budget",
+        "title": "💴 预算速算",
+        "lines": [
+          { "text": "总预算：6500 元 / 人", "indent": 0 },
+          { "text": "大交通：往返机票 2200 ｜ 当地包车 6 天 1300", "indent": 1 },
+          { "text": "住宿：6 晚 × 260 ≈ 1560（观景民宿略贵）", "indent": 1 },
+          { "text": "门票：亚丁 270 + 观光车 120", "indent": 1 },
+          { "text": "餐饮杂项：1000（牦牛肉火锅必吃）", "indent": 1 },
+          { "text": "已付定金 ██████░░░░ 包车 500 ｜ 民宿 300", "indent": 0 }
+        ]
+      }
+    ],
+    "activeSpaceId": "trip-route",
+    "images": [],
+    "quickTags": [
+      { "id": "tag-trip-book", "title": "订票订房", "color": "#0ea5e9" },
+      { "id": "tag-trip-idea", "title": "目的地灵感", "color": "#f43f5e" }
+    ],
+    "quickButtons": [
+      {
+        "id": "qb-trip-ctrip",
+        "tagId": "tag-trip-book",
+        "type": "link",
+        "title": "携程机票",
+        "value": "https://flights.ctrip.com/",
+        "hidden": false
+      },
+      {
+        "id": "qb-trip-train",
+        "tagId": "tag-trip-book",
+        "type": "link",
+        "title": "12306 火车票",
+        "value": "https://www.12306.cn/",
+        "hidden": false
+      },
+      {
+        "id": "qb-trip-map",
+        "tagId": "tag-trip-book",
+        "type": "link",
+        "title": "高德路书",
+        "value": "https://www.amap.com/",
+        "hidden": false
+      },
+      {
+        "id": "qb-trip-mafengwo",
+        "tagId": "tag-trip-idea",
+        "type": "link",
+        "title": "马蜂窝攻略",
+        "value": "https://www.mafengwo.cn/",
+        "hidden": false
+      },
+      {
+        "id": "qb-trip-note",
+        "tagId": "tag-trip-idea",
+        "type": "app",
+        "title": "Notion 灵感库",
+        "value": "notion://",
+        "hidden": false
+      },
+      {
+        "id": "qb-trip-checklist",
+        "type": "text",
+        "title": "行前检查模板",
+        "value": "证件：身份证 / 驾驶证 / 现金\n健康：常用药、保险单号、紧急联系人\n装备：见「装备清单」页，逐项打勾\n房屋：水电燃气关好、垃圾倒掉、钥匙留一把给邻居",
+        "hidden": false
+      },
+      {
+        "id": "qb-trip-journal",
+        "type": "text",
+        "title": "每日游记模板",
+        "value": "【D__】\n今日路线：\n海拔 / 体感：\n最佳瞬间：\n花费小计：",
+        "hidden": false
+      }
+    ],
+    "quickOtherCollapsed": false,
+    "showHiddenQuickButtons": false,
+    "todoLayoutManual": false,
+    "todoLists": [
+      { "id": "before", "title": "🧳 出发前", "collapsed": false, "compact": false, "column": 0 },
+      { "id": "during", "title": "🏔 旅途中", "collapsed": false, "compact": false, "column": 0 }
+    ],
+    "showCompletedTodos": { "before": true, "during": false },
+    "todos": {
+      "before": [
+        { "id": "td-trip-flight", "text": "订往返机票（周二下午票价最低）", "done": false, "starred": true, "notifyAt": 1788573600000 },
+        { "id": "td-trip-hotel", "text": "订新都桥 + 稻城 3 晚民宿", "done": false, "starred": true, "notifyAt": 1789038000000 },
+        { "id": "td-trip-insurance", "text": "买高原旅行险（含紧急救援）", "done": false, "starred": false, "notifyAt": 1789866000000 },
+        { "id": "td-trip-id", "text": "检查证件有效期 + 复印一份放行李箱", "done": false, "starred": false },
+        { "id": "td-trip-oxygen", "text": "氧气瓶、葡萄糖提前买好", "done": true, "starred": false }
+      ],
+      "during": [
+        { "id": "td-trip-d1", "text": "D1 成都集合，早班机别误机", "done": false, "starred": true, "notifyAt": 1790812800000 },
+        { "id": "td-trip-d5", "text": "D5 亚丁长线：7:00 进景区抢头班观光车", "done": false, "starred": true, "notifyAt": 1790992800000 },
+        { "id": "td-trip-journal", "text": "每晚写「每日游记」，3 行也行", "done": false, "starred": false }
+      ]
+    },
+    "zoneVisibility": { "assets": true, "notes": true, "tasks": true, "workspace": true }
+  }
+}
