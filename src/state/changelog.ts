@@ -193,7 +193,7 @@ export const CHANGELOG: ChangelogEntry[] = [
       zh: [
         "首个正式版：图片/便签/提醒事项/工作区四区看板",
         "行编辑器 Tab 缩进、Enter 分行、拖拽排序；提醒支持截止时间与到期通知",
-        "自定义提醒事项列表、今日重点视图、陪伴 GIF 主题与移动端适配",
+        "自定义提醒列表、今日重点视图、陪伴 GIF 主题与移动端适配",
       ],
       en: [
         "First official release: the four-zone board (images / notes / reminders / workspace)",
