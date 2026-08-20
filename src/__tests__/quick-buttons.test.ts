@@ -1418,4 +1418,16 @@ describe("QuickButtons 跨空间移动", () => {
     expect(wrapper.findAll('[data-key^="move-ws:"]')).toHaveLength(0);
     wrapper.unmount();
   });
+
+  it("没有其他空间时标签头右键回落区域菜单", async () => {
+    const wrapper = mountQuickPanel({
+      buttons: [{ id: "btn-1", title: "搜索", value: "https://example.com", type: "link", tagId: "tag-1", hidden: false }],
+      tags: [{ id: "tag-1", title: "常用" }],
+    });
+    await wrapper.get(".quick-tag-title").trigger("contextmenu");
+    expect(wrapper.findAll('[data-key^="move-ws:"]')).toHaveLength(0);
+    expect(wrapper.find('[data-key="move-tag"]').exists()).toBe(false);
+    expect(wrapper.find('[data-key="add"]').exists()).toBe(true);
+    wrapper.unmount();
+  });
 });

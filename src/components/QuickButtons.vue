@@ -422,6 +422,7 @@ function openTagMenu(event: MouseEvent, tagId: string): void {
   const target = event.target as HTMLElement;
   if (target.closest("button, input, textarea")) return;
   if (!isRealTagGroup(tagId)) return;
+  if (moveMenuChildren.value.length === 0) return;
   event.preventDefault();
   event.stopPropagation();
   exclusiveMenu.notifyOpen(event, { replacingExistingMenu: Boolean(menu.value) });
