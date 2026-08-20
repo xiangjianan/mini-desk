@@ -177,7 +177,6 @@ const moveMenuChildren = computed<DropdownOption[]>(() =>
   props.moveTargets.map((target) => ({ label: target.title, key: `move-ws:${target.id}` })),
 );
 const menuOptions = computed<DropdownOption[]>(() => {
-  const button = props.buttons.find((item) => item.id === menu.value?.id);
   if (menu.value?.tagId) {
     return moveMenuChildren.value.length > 0
       ? [{
@@ -188,6 +187,7 @@ const menuOptions = computed<DropdownOption[]>(() => {
         }]
       : [];
   }
+  const button = props.buttons.find((item) => item.id === menu.value?.id);
   if (!menu.value?.id) {
     return [
       { label: uiText.value.quick.add, key: "add", icon: renderIcon(AddOutline) },
@@ -426,6 +426,7 @@ function openTagMenu(event: MouseEvent, tagId: string): void {
   event.preventDefault();
   event.stopPropagation();
   exclusiveMenu.notifyOpen(event, { replacingExistingMenu: Boolean(menu.value) });
+  // 标签菜单当前只有移动项，无需 anchor 定位气泡/指南；将来加删除/指南类项时需补 anchor。
   menu.value = { x: event.clientX, y: event.clientY, tagId };
 }
 

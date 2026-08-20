@@ -1430,4 +1430,17 @@ describe("QuickButtons 跨空间移动", () => {
     expect(wrapper.find('[data-key="add"]').exists()).toBe(true);
     wrapper.unmount();
   });
+
+  it("有其他空间时右键其他伪分组头仍回落区域菜单", async () => {
+    const wrapper = mountQuickPanel({
+      buttons: [{ id: "btn-1", title: "搜索", value: "https://example.com", type: "link", hidden: false }],
+      tags: [],
+      moveTargets: [{ id: "ws-b", title: "B 空间", lists: [] }],
+    });
+    await wrapper.get(".quick-tag-title").trigger("contextmenu");
+    expect(wrapper.findAll('[data-key^="move-ws:"]')).toHaveLength(0);
+    expect(wrapper.find('[data-key="move-tag"]').exists()).toBe(false);
+    expect(wrapper.find('[data-key="add"]').exists()).toBe(true);
+    wrapper.unmount();
+  });
 });
