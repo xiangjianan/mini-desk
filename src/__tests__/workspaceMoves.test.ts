@@ -2,6 +2,7 @@ import { describe, expect, it } from "vitest";
 import {
   moveQuickButtonToWorkspace,
   moveQuickTagToWorkspace,
+  moveSpaceToWorkspace,
   moveTodoListToWorkspace,
   moveTodoToWorkspace,
 } from "../state/workspaceMoves";
@@ -218,5 +219,46 @@ describe("moveTodoToWorkspace", () => {
     const ids = to.todos["list-b1"].map((t) => t.id);
     expect(new Set(ids).size).toBe(2);
     expect(to.todos["list-b1"].some((t) => t.text === "进行中")).toBe(true);
+  });
+});
+
+describe("moveSpaceToWorkspace", () => {
+  const spaces = [
+    { id: "space-1", title: "便签一", lines: [{ text: "内容", indent: 0 }] },
+    { id: "space-2", title: "便签二", lines: [] },
+  ];
+  const source = workspace("ws-a", { spaces, activeSpaceId: "space-2" });
+  const target = workspace("ws-b", { spaces: [{ id: "space-b1", title: "目标便签", lines: [] }] });
+
+  it("移动到目标末尾并克隆行数据", () => {
+    const next = moveSpaceToWorkspace([source, target], "ws-a", "space-1", "ws-b");
+    const from = next.find((w) => w.id === "ws-a")!;
+    const to = next.find((w) => w.id === "ws-b")!;
+    expect(from.spaces.map((s) => s.id)).toEqual(["space-2"]);
+    expect(from.activeSpaceId).toBe("space-2");
+    expect(to.spaces.map((s) => s.id)).toEqual(["space-b1", "space-1"]);
+    expect(to.spaces[1].lines).toEqual([{ text: "内容", indent: 0 }]);
+  });
+
+  it("移动的是激活空间时，源切换到前一个邻居", () => {
+    const next = moveSpaceToWorkspace([source, target], "ws-a", "space-2", "ws-b");
+    const from = next.find((w) => w.id === "ws-a")!;
+    expect(from.activeSpaceId).toBe("space-1");
+  });
+
+  it("源只剩一个空间时拒绝", () => {
+    const single = workspace("ws-a", { spaces: [spaces[0]], activeSpaceId: "space-1" });
+    const workspaces = [single, target];
+    expect(moveSpaceToWorkspace(workspaces, "ws-a", "space-1", "ws-b")).toBe(workspaces);
+  });
+
+  it("目标已有同 id 空间时重新生成 id 且保留目标原空间", () => {
+    const clashing = workspace("ws-b", { spaces: [{ id: "space-1", title: "目标同名", lines: [] }] });
+    const next = moveSpaceToWorkspace([source, clashing], "ws-a", "space-1", "ws-b");
+    const to = next.find((w) => w.id === "ws-b")!;
+    expect(to.spaces).toHaveLength(2);
+    expect(to.spaces[0]).toEqual({ id: "space-1", title: "目标同名", lines: [] });
+    expect(to.spaces[1].id).not.toBe("space-1");
+    expect(to.spaces[1].lines).toEqual([{ text: "内容", indent: 0 }]);
   });
 });

@@ -28,6 +28,11 @@ function transferWorkspaceItem(
   });
 }
 
+/** 目标已占用同一 id 时重新生成（同一导入文件可进两个空间产生重复 id）。 */
+function uniqueIdAmong(taken: Iterable<string>, desired: string): string {
+  return [...taken].includes(desired) ? createId() : desired;
+}
+
 /**
  * 移动单个快捷按钮。标签仍存在时保留分组：使用目标的同名标签，没有则在
  * 目标新建同名同色标签；悬空 tagId 视为无标签（落入目标的「其他」分组）。
@@ -42,8 +47,6 @@ export function moveQuickButtonToWorkspace(
   return transferWorkspaceItem(workspaces, fromWorkspaceId, toWorkspaceId, (from, to) => {
     const button = from.quickButtons.find((item) => item.id === buttonId);
     if (!button) return null;
-
-    const buttonIdTaken = to.quickButtons.some((item) => item.id === button.id);
 
     let quickTags = to.quickTags;
     let tagId: string | undefined;
@@ -61,7 +64,10 @@ export function moveQuickButtonToWorkspace(
       }
     }
 
-    const moved: QuickButton = { ...button, ...(buttonIdTaken ? { id: createId() } : {}) };
+    const moved: QuickButton = {
+      ...button,
+      id: uniqueIdAmong(to.quickButtons.map((item) => item.id), button.id),
+    };
     if (tagId) moved.tagId = tagId;
     else delete moved.tagId;
 
@@ -88,14 +94,15 @@ export function moveQuickTagToWorkspace(
     if (!tag) return null;
 
     const existing = to.quickTags.find((item) => item.title === tag.title);
-    const tagIdTaken = !existing && to.quickTags.some((item) => item.id === tag.id);
-    const movedTagId = existing ? existing.id : tagIdTaken ? createId() : tag.id;
+    const movedTagId = existing
+      ? existing.id
+      : uniqueIdAmong(to.quickTags.map((item) => item.id), tag.id);
     const takenButtonIds = new Set(to.quickButtons.map((item) => item.id));
     const movedButtons = from.quickButtons
       .filter((button) => button.tagId === tagId)
       .map((button) => ({
         ...button,
-        ...(takenButtonIds.has(button.id) ? { id: createId() } : {}),
+        id: uniqueIdAmong(takenButtonIds, button.id),
         tagId: movedTagId,
       }));
 
@@ -119,6 +126,7 @@ export function moveQuickTagToWorkspace(
  * `column` 保留原值（展示端会按目标列数收敛）。源只剩一个列表时拒绝——
  * 每个空间至少保留一个列表。目标已有同 id 列表时重新生成列表 id，
  * 并同步迁移 todos/showCompletedTodos 的键，避免覆盖目标自身数据。
+ * 默认空间的 morning/noon/evening 列表 id 天然互撞，重生成是预期路径而非异常。
  */
 export function moveTodoListToWorkspace(
   workspaces: WorkspaceData[],
@@ -133,7 +141,7 @@ export function moveTodoListToWorkspace(
 
     const { [listId]: movedTodos = [], ...restTodos } = from.todos;
     const { [listId]: movedVisibility, ...restVisibility } = from.showCompletedTodos;
-    const movedListId = to.todoLists.some((item) => item.id === listId) ? createId() : listId;
+    const movedListId = uniqueIdAmong(to.todoLists.map((item) => item.id), listId);
 
     return {
       from: {
@@ -171,12 +179,53 @@ export function moveTodoToWorkspace(
     if (!todo) return null;
     if (!to.todoLists.some((list) => list.id === toListId)) return null;
 
-    const todoIdTaken = (to.todos[toListId] ?? []).some((item) => item.id === todo.id);
-    const moved: TodoItem = { ...todo, ...(todoIdTaken ? { id: createId() } : {}) };
+    const moved: TodoItem = {
+      ...todo,
+      id: uniqueIdAmong((to.todos[toListId] ?? []).map((item) => item.id), todo.id),
+    };
 
     return {
       from: { ...from, todos: removeTodoFromMap(from.todos, fromListId, todoId) },
       to: { ...to, todos: addTodoToMap(to.todos, toListId, moved) },
+    };
+  });
+}
+
+/**
+ * 移动便签 Tab 页到目标空间末尾。源只剩一个空间时拒绝。移动的是源激活
+ * 空间时，源 activeSpaceId 切到相邻空间（优先前一个，同 deleteSpace 规则）。
+ * 目标已存在同 id 空间时重新生成 id（经 uniqueIdAmong）。
+ */
+export function moveSpaceToWorkspace(
+  workspaces: WorkspaceData[],
+  fromWorkspaceId: string,
+  spaceId: string,
+  toWorkspaceId: string,
+): WorkspaceData[] {
+  return transferWorkspaceItem(workspaces, fromWorkspaceId, toWorkspaceId, (from, to) => {
+    if (from.spaces.length <= 1) return null;
+    const index = from.spaces.findIndex((space) => space.id === spaceId);
+    if (index < 0) return null;
+
+    const space = from.spaces[index];
+    const remainingSpaces = from.spaces.filter((_, itemIndex) => itemIndex !== index);
+    const activeSpaceId = from.activeSpaceId === spaceId
+      ? remainingSpaces[Math.max(0, index - 1)]?.id ?? remainingSpaces[0].id
+      : from.activeSpaceId;
+
+    return {
+      from: { ...from, spaces: remainingSpaces, activeSpaceId },
+      to: {
+        ...to,
+        spaces: [
+          ...to.spaces,
+          {
+            ...space,
+            id: uniqueIdAmong(to.spaces.map((item) => item.id), space.id),
+            lines: space.lines.map((line) => ({ ...line })),
+          },
+        ],
+      },
     };
   });
 }
