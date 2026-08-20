@@ -4,7 +4,7 @@ import { readFileSync } from "node:fs";
 import { resolve } from "node:path";
 import SpacePanel from "../components/SpacePanel.vue";
 import TextPanel from "../components/TextPanel.vue";
-import type { WorkspaceSpace } from "../types";
+import type { WorkspaceMoveTarget, WorkspaceSpace } from "../types";
 
 const dropdownStub = {
   props: ["options"],
@@ -476,5 +476,91 @@ describe("SpacePanel", () => {
     const hoverRule = styles.match(/\.space-tab:hover \{([\s\S]*?)\}/)?.[1] ?? "";
 
     expect(hoverRule).toContain("border-right-color: transparent");
+  });
+});
+
+// 与 quick-buttons.test.ts 的 menuDropdownStub 同源；提醒条目的移动菜单是
+// 「移动到空间 → 空间 → 列表」三级，故在子级之外再渲染一层孙级 children。
+const menuDropdownStub = {
+  props: ["options"],
+  emits: ["select"],
+  template: `
+    <div>
+      <slot />
+      <template v-for="option in options" :key="option.key">
+        <button
+          class="dropdown-option"
+          :data-key="option.key"
+          :disabled="option.disabled"
+          type="button"
+          @click="!option.disabled && $emit('select', option.key)"
+        >{{ option.label }}</button>
+        <template v-for="child in option.children ?? []" :key="child.key">
+          <button
+            class="dropdown-option"
+            :data-key="child.key"
+            :disabled="child.disabled"
+            type="button"
+            @click="!child.disabled && $emit('select', child.key)"
+          >{{ child.label }}</button>
+          <button
+            v-for="grandchild in child.children ?? []"
+            :key="grandchild.key"
+            class="dropdown-option"
+            :data-key="grandchild.key"
+            :disabled="grandchild.disabled"
+            type="button"
+            @click="!grandchild.disabled && $emit('select', grandchild.key)"
+          >{{ grandchild.label }}</button>
+        </template>
+      </template>
+    </div>
+  `,
+};
+
+describe("SpacePanel 跨空间移动", () => {
+  function mountWithTargets(spaces: WorkspaceSpace[], moveTargets: WorkspaceMoveTarget[]) {
+    return mount(SpacePanel, {
+      props: { spaces, activeSpaceId: spaces[0].id, moveTargets },
+      global: { stubs: { Dropdown: menuDropdownStub, NDropdown: menuDropdownStub } },
+    });
+  }
+
+  it("Tab 右键菜单可移动到其他空间", async () => {
+    const wrapper = mountWithTargets(
+      [
+        { id: "workspace", title: "工作空间", lines: [] },
+        { id: "project", title: "项目", lines: [] },
+      ],
+      [{ id: "ws-b", title: "B 空间", lists: [] }],
+    );
+    await wrapper.findAll(".space-tab")[1].trigger("contextmenu");
+    await wrapper.get('[data-key="move-ws:ws-b"]').trigger("click");
+    expect(wrapper.emitted("moveSpaceToWorkspace")?.[0]).toEqual(["project", "ws-b"]);
+    wrapper.unmount();
+  });
+
+  it("只剩一个便签时移动项禁用", async () => {
+    const wrapper = mountWithTargets(
+      [{ id: "workspace", title: "工作空间", lines: [] }],
+      [{ id: "ws-b", title: "B 空间", lists: [] }],
+    );
+    await wrapper.get(".space-tab").trigger("contextmenu");
+    const option = wrapper.get('[data-key="move"]');
+    expect((option.element as HTMLButtonElement).disabled).toBe(true);
+    wrapper.unmount();
+  });
+
+  it("没有其他空间时不渲染移动项", async () => {
+    const wrapper = mountWithTargets(
+      [
+        { id: "workspace", title: "工作空间", lines: [] },
+        { id: "project", title: "项目", lines: [] },
+      ],
+      [],
+    );
+    await wrapper.get(".space-tab").trigger("contextmenu");
+    expect(wrapper.findAll('[data-key="move"]')).toHaveLength(0);
+    wrapper.unmount();
   });
 });

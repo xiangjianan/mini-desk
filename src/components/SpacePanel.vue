@@ -2,9 +2,9 @@
 import { computed, h, nextTick, onMounted, onUnmounted, ref, watch } from "vue";
 import type { Component, VNode } from "vue";
 import { NDropdown, NIcon, NScrollbar } from "naive-ui";
-import { CreateOutline, TrashOutline } from "@vicons/ionicons5";
+import { CreateOutline, SwapHorizontalOutline, TrashOutline } from "@vicons/ionicons5";
 import type { DropdownOption } from "naive-ui";
-import type { AppLanguage, GuideKey, LineItem, WorkspaceSpace } from "../types";
+import type { AppLanguage, GuideKey, LineItem, WorkspaceMoveTarget, WorkspaceSpace } from "../types";
 import { getUiText } from "../state/i18n";
 import { CONTEXT_MENU_Z_INDEX, createExclusiveContextMenu } from "../utils/contextMenu";
 import { renderIcon } from "../utils/dropdownIcons";
@@ -16,8 +16,10 @@ const props = withDefaults(defineProps<{
   activeSpaceId: string;
   editSpaceId?: string | null;
   language?: AppLanguage;
+  moveTargets?: WorkspaceMoveTarget[];
 }>(), {
   language: "zh",
+  moveTargets: () => [],
 });
 
 const emit = defineEmits<{
@@ -31,6 +33,7 @@ const emit = defineEmits<{
   focus: [key: GuideKey, element: HTMLElement];
   blur: [];
   guide: [key: GuideKey, anchor: HTMLElement, immediate?: boolean];
+  moveSpaceToWorkspace: [spaceId: string, workspaceId: string];
 }>();
 
 const editingSpaceId = ref<string | null>(null);
@@ -59,8 +62,21 @@ const activeSpace = computed(() =>
 const canDeleteSpaces = computed(() => props.spaces.length > 1);
 
 
+/** 「移动到空间」子菜单；仅一个便签时禁用，无目标空间时不渲染。 */
+function buildSpaceMoveOptions(): DropdownOption[] {
+  if (props.moveTargets.length === 0) return [];
+  return [{
+    label: uiText.value.common.moveToWorkspace,
+    key: "move",
+    icon: renderIcon(SwapHorizontalOutline),
+    disabled: props.spaces.length <= 1,
+    children: props.moveTargets.map((target) => ({ label: target.title, key: `move-ws:${target.id}` })),
+  }];
+}
+
 const menuOptions = computed<DropdownOption[]>(() => [
   { label: uiText.value.common.rename, key: "edit", icon: renderIcon(CreateOutline) },
+  ...buildSpaceMoveOptions(),
   { label: uiText.value.common.delete, key: "delete", disabled: !canDeleteSpaces.value, icon: renderIcon(TrashOutline, true) },
 ]);
 
@@ -180,6 +196,10 @@ function handleMenuSelect(key: string): void {
   closeMenu();
   if (key === "edit") {
     startTabEdit(current.spaceId);
+    return;
+  }
+  if (key.startsWith("move-ws:")) {
+    emit("moveSpaceToWorkspace", current.spaceId, key.slice("move-ws:".length));
     return;
   }
   if (key === "delete" && canDeleteSpaces.value) emit("delete", current.spaceId);
