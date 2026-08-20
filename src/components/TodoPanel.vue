@@ -232,7 +232,8 @@ function buildListMoveOptions(): DropdownOption[] {
   }];
 }
 
-/** 条目级「移动到空间 → 列表」三级子菜单；无目标空间时不渲染。 */
+/** 条目级「移动到空间 → 列表」三级子菜单；无目标空间时不渲染。
+ * 中间键 `move-todo-ws:*` 仅用于展开与禁用展示，刻意不参与路由。 */
 function buildTodoMoveOptions(): DropdownOption[] {
   if (props.moveTargets.length === 0) return [];
   return [{
@@ -1153,10 +1154,11 @@ async function handleMenuSelect(key: string): Promise<void> {
     closeMenu();
     // 不用 split(":") 解析三段 key：导入数据的手改 id 可能含冒号会错位；
     // 按生成侧（buildTodoMoveOptions）全键匹配，天然免疫。
+    if (!id) return;
     for (const target of props.moveTargets) {
       for (const list of target.lists) {
         if (key === `move-todo:${target.id}:${list.id}`) {
-          if (id) emit("moveTodoToWorkspace", period, id, target.id, list.id);
+          emit("moveTodoToWorkspace", period, id, target.id, list.id);
           return;
         }
       }

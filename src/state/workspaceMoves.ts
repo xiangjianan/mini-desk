@@ -97,12 +97,11 @@ export function moveQuickTagToWorkspace(
     const movedTagId = existing
       ? existing.id
       : uniqueIdAmong(to.quickTags.map((item) => item.id), tag.id);
-    const takenButtonIds = new Set(to.quickButtons.map((item) => item.id));
     const movedButtons = from.quickButtons
       .filter((button) => button.tagId === tagId)
       .map((button) => ({
         ...button,
-        id: uniqueIdAmong(takenButtonIds, button.id),
+        id: uniqueIdAmong(to.quickButtons.map((item) => item.id), button.id),
         tagId: movedTagId,
       }));
 
@@ -194,7 +193,8 @@ export function moveTodoToWorkspace(
 /**
  * 移动便签 Tab 页到目标空间末尾。源只剩一个空间时拒绝。移动的是源激活
  * 空间时，源 activeSpaceId 切到相邻空间（优先前一个，同 deleteSpace 规则）。
- * 目标已存在同 id 空间时重新生成 id（经 uniqueIdAmong）。
+ * 目标已存在同 id 空间时重新生成 id（经 uniqueIdAmong）。默认空间的便签
+ * 共享固定 id「workspace」、天然互撞，重生成是预期路径而非异常。
  */
 export function moveSpaceToWorkspace(
   workspaces: WorkspaceData[],

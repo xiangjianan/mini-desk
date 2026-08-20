@@ -1,6 +1,11 @@
-import { defaultWorkspace } from "./defaults";
+import { DEFAULT_BOARD_TITLE, defaultWorkspace } from "./defaults";
 import { createId } from "./storage";
 import type { WorkspaceData } from "../types";
+
+/** 工作空间看板标题：自定义标题去空白后为空时回退默认标题「Mini Desk」。 */
+export function getWorkspaceBoardTitle(workspace: WorkspaceData): string {
+  return workspace.customTitles["board-title"]?.trim() || DEFAULT_BOARD_TITLE;
+}
 
 export function buildWorkspaceCustomTitles(title: string, slogan: string): Record<string, string> {
   const titles: Record<string, string> = {};

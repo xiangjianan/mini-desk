@@ -546,7 +546,7 @@ describe("SpacePanel 跨空间移动", () => {
       [{ id: "ws-b", title: "B 空间", lists: [] }],
     );
     await wrapper.get(".space-tab").trigger("contextmenu");
-    const option = wrapper.get('[data-key="move"]');
+    const option = wrapper.get('[data-key="move-space"]');
     expect((option.element as HTMLButtonElement).disabled).toBe(true);
     wrapper.unmount();
   });
@@ -560,7 +560,7 @@ describe("SpacePanel 跨空间移动", () => {
       [],
     );
     await wrapper.get(".space-tab").trigger("contextmenu");
-    expect(wrapper.findAll('[data-key="move"]')).toHaveLength(0);
+    expect(wrapper.findAll('[data-key="move-space"]')).toHaveLength(0);
     wrapper.unmount();
   });
 });

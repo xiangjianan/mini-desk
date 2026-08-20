@@ -181,7 +181,7 @@ function applySingleLineIndent(value: string, caret: number, outdent: boolean): 
     const previousLine = getPreviousPhysicalLine(value, lineStart);
     const previousMarked = previousLine !== null && getMarkerKind(previousLine) !== "plain";
     resolvedMarker = previousMarked
-      ? resolveListMarker(value, lineStart, newDepth, true).marker
+      ? resolveListMarker(value, lineStart, newDepth, !outdent).marker
       : "- ";
   }
 

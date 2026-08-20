@@ -51,8 +51,8 @@ import {
   todoKey,
   updateTodoText,
 } from "./state/todos";
-import { defaultState, STORAGE_KEY } from "./state/defaults";
-import { createWorkspaceData, ensureUniqueWorkspaceTitle, removeWorkspace, reorderWorkspaces } from "./state/workspaces";
+import { DEFAULT_BOARD_TITLE, defaultState, STORAGE_KEY } from "./state/defaults";
+import { createWorkspaceData, ensureUniqueWorkspaceTitle, getWorkspaceBoardTitle, removeWorkspace, reorderWorkspaces } from "./state/workspaces";
 import * as workspaceMover from "./state/workspaceMoves";
 import { QUICK_BUTTON_OTHER_GROUP_ID, QUICK_DENSITY_THRESHOLD, formatQuickCopiedPreview, getQuickTagColor } from "./state/quickButtons";
 import { isQuickAppScheme } from "./state/quickApps";
@@ -108,7 +108,7 @@ const workspaceMoveTargets = computed<WorkspaceMoveTarget[]>(() =>
     .filter((workspace) => workspace.id !== state.activeWorkspaceId)
     .map((workspace) => ({
       id: workspace.id,
-      title: workspace.customTitles["board-title"]?.trim() || DEFAULT_BOARD_TITLE,
+      title: getWorkspaceBoardTitle(workspace),
       lists: workspace.todoLists.map((list) => ({ id: list.id, title: getDisplayTodoListTitle(list, state.language) })),
     })),
 );
@@ -302,7 +302,6 @@ const SUGGEST_EMAIL = "xiang9872@gmail.com";
 const GITHUB_REPO_URL = "https://github.com/xiangjianan/mini-desk";
 const GITHUB_REPO_LABEL = "xiangjianan / mini-desk";
 const ABOUT_MESSAGE_DURATION_MS = 10000;
-const DEFAULT_BOARD_TITLE = "Mini Desk";
 const activeGuideKey = ref<GuideKey | null>(null);
 
 const naiveTheme = computed(() => (state.theme === "dark" ? darkTheme : null));
@@ -334,7 +333,7 @@ const workspaceDensityLabel = computed(() => {
   return uiText.value.app.densityGood;
 });
 
-const boardTitle = computed(() => activeWorkspace.value.customTitles["board-title"]?.trim() || DEFAULT_BOARD_TITLE);
+const boardTitle = computed(() => getWorkspaceBoardTitle(activeWorkspace.value));
 const boardSlogan = computed(() => activeWorkspace.value.customTitles["board-slogan"]?.trim() ?? "");
 const notificationDocumentTitle = computed(() => `${uiText.value.app.notificationTitle} · ${boardTitle.value}`);
 const titles = computed(() =>
@@ -627,6 +626,7 @@ function moveTodoListAcrossWorkspaces(listId: TodoListId, workspaceId: string): 
   applyWorkspaceMove(workspaceMover.moveTodoListToWorkspace(state.workspaces, state.activeWorkspaceId, listId, workspaceId));
 }
 
+// TodoPeriod ≡ TodoListId：period 即该提醒所属源列表的键，位置上直接转发。
 function moveTodoAcrossWorkspaces(period: TodoPeriod, todoId: string, workspaceId: string, listId: TodoListId): void {
   applyWorkspaceMove(workspaceMover.moveTodoToWorkspace(state.workspaces, state.activeWorkspaceId, period, todoId, workspaceId, listId));
 }
@@ -741,7 +741,7 @@ function exportWorkspaceById(id: string, anchor?: HTMLElement): void {
   if (!workspace) return;
   const serialized = getSerializableWorkspace(workspace, { includeImageData: true });
   const content = JSON.stringify({ miniDeskWorkspaceExport: true, version: 1, workspace: serialized }, null, 2);
-  const title = workspace.customTitles["board-title"]?.trim() || "Mini Desk";
+  const title = getWorkspaceBoardTitle(workspace);
   downloadExportFile(content, `mini-desk-${slugifyTitle(title)}-${new Date().toISOString().slice(0, 10)}.json`);
   showBubble("dataExported", anchor, { hideCompanionAfter: true });
 }
@@ -2356,7 +2356,7 @@ async function importData(event: Event): Promise<void> {
 
     // Resolve titles with the "Mini Desk" fallback so default-named (unnamed)
     // workspaces are treated as their displayed title, not as empty/non-matching.
-    const resolveTitle = (workspace: WorkspaceData): string => workspace.customTitles["board-title"]?.trim() || DEFAULT_BOARD_TITLE;
+    const resolveTitle = (workspace: WorkspaceData): string => getWorkspaceBoardTitle(workspace);
     const importedTitle = resolveTitle(importedWorkspace);
     const conflictTarget = state.workspaces.find((item) => resolveTitle(item) === importedTitle);
 
@@ -2723,7 +2723,7 @@ function handleDocumentVisibilityChange(): void {
 }
 
 function showCrossWorkspaceReminderPrompt(item: NotifiableTodo): void {
-  const workspaceTitle = item.workspace.customTitles["board-title"]?.trim() || "Mini Desk";
+  const workspaceTitle = getWorkspaceBoardTitle(item.workspace);
   const prompt = uiText.value.app.crossWorkspaceReminder
     .replace("{workspace}", workspaceTitle)
     .replace("{text}", item.todo.text.trim());

@@ -61,13 +61,12 @@ const activeSpace = computed(() =>
 
 const canDeleteSpaces = computed(() => props.spaces.length > 1);
 
-
 /** 「移动到空间」子菜单；仅一个便签时禁用，无目标空间时不渲染。 */
 function buildSpaceMoveOptions(): DropdownOption[] {
   if (props.moveTargets.length === 0) return [];
   return [{
     label: uiText.value.common.moveToWorkspace,
-    key: "move",
+    key: "move-space",
     icon: renderIcon(SwapHorizontalOutline),
     disabled: props.spaces.length <= 1,
     children: props.moveTargets.map((target) => ({ label: target.title, key: `move-ws:${target.id}` })),
