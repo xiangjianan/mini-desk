@@ -1578,9 +1578,17 @@ function buildTodoMoveOptions(): DropdownOption[] {
     return;
   }
   if (key.startsWith("move-todo:")) {
-    const [, workspaceId, listId] = key.split(":");
     closeMenu();
-    if (id && workspaceId && listId) emit("moveTodoToWorkspace", period, id, workspaceId, listId);
+    // 不用 split(":") 解析三段 key：导入数据的手改 id 可能含冒号会错位；
+    // 按生成侧（buildTodoMoveOptions）全键匹配，天然免疫。
+    for (const target of props.moveTargets) {
+      for (const list of target.lists) {
+        if (key === `move-todo:${target.id}:${list.id}`) {
+          if (id) emit("moveTodoToWorkspace", period, id, target.id, list.id);
+          return;
+        }
+      }
+    }
     return;
   }
 ```
