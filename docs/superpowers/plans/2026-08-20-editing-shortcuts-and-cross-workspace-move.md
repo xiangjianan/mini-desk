@@ -1959,6 +1959,8 @@ Expected: 成功。
 14. SpacePanel 菜单键 `move` 重命名为 `move-space`（家族命名统一；同步 space-panel.test.ts 两处 `[data-key="move"]` 选择器；顺带删 SpacePanel.vue:63-64 双空行）。
 15. 提取 `src/__tests__/helpers/` 共享 stub 时，规范注释补「无孙级时该层惰性、三份拷贝文本一致」条款（space-panel 拷贝的出处注释现描述的是 todo-panel 的三级菜单，语义错位）。
 16. 可选归一：QuickButtons 的父选项字面量两处内联（:181-188、:209-216）提取为构建函数；SpacePanel/TodoPanel 的 `<= 1` 禁用谓词共享 computed。行为均有测试钉死，纯 churn，量力而行。
+17. 提取 `state/workspaces.ts` 的 `getWorkspaceBoardTitle(workspace)`（`customTitles["board-title"]?.trim() || DEFAULT_BOARD_TITLE`），统一 App.vue 全部 5 处拷贝（:111 新增、:337 `boardTitle`、:2359 `resolveTitle`），并顺手修复 :744、:2726 两处硬编码 `"Mini Desk"` 字面量的潜在分歧（既有隐患，非本次引入）。
+18. `moveTodoAcrossWorkspaces` 的 `period → fromListId` 位置转发处（App.vue:630-631）补一行注释自证（`TodoPeriod ≡ TodoListId`，period 即源列表键），降低六参纯函数调用的换位风险。
 
 - [ ] **Step 5: 收尾提交（如有修正）**
 
