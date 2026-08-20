@@ -168,9 +168,9 @@ describe("handleTextareaTab — marker follows the nearest same-level sibling", 
 });
 
 describe("handleTextareaTab — preserved indent/outdent behavior", () => {
-  it("still indents when the caret is not at the start of a plain line", () => {
+  it("indents and bulletizes a plain line even with the caret in the text", () => {
     const result = apply("买牛奶", 2);
-    expect(result.value).toBe("    买牛奶");
+    expect(result.value).toBe("    - 买牛奶");
   });
 
   it("still indents a multi-line selection", () => {
@@ -178,6 +178,33 @@ describe("handleTextareaTab — preserved indent/outdent behavior", () => {
     textarea.setSelectionRange(0, textarea.value.length);
     handleTextareaTab(textarea, false);
     expect(textarea.value).toBe("    第一行\n    第二行");
+  });
+});
+
+describe("handleTextareaTab — Tab 短横线跟随紧邻上一行", () => {
+  it("上一行无标记（光标在行中）→ 缩进 + 短横线", () => {
+    const result = apply("购物清单\n买牛奶", 8);
+    expect(result.value).toBe("购物清单\n    - 买牛奶");
+  });
+
+  it("上一行是空行 → 缩进 + 短横线", () => {
+    const result = apply("备注\n\n买牛奶", 4);
+    expect(result.value).toBe("备注\n\n    - 买牛奶");
+  });
+
+  it("首行（没有上一行）→ 缩进 + 短横线", () => {
+    const result = apply("买牛奶", 3);
+    expect(result.value).toBe("    - 买牛奶");
+  });
+
+  it("已有缩进的普通行，上一行无标记 → 再加一级缩进 + 短横线", () => {
+    const result = apply("备注\n    买牛奶", 7);
+    expect(result.value).toBe("备注\n        - 买牛奶");
+  });
+
+  it("上一行有标记但目标层级无同级兄弟 → 默认短横线（不再依赖光标位置）", () => {
+    const result = apply("1. a\nb", 5);
+    expect(result.value).toBe("1. a\n    - b");
   });
 });
 

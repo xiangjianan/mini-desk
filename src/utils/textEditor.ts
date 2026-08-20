@@ -135,17 +135,26 @@ function resolveListMarker(
   return plainAsBullet ? { marker: "- ", textStart: 2 } : { marker: "", textStart: 0 };
 }
 
+/** 物理上紧邻的上一行（可能是空行）；首行返回 null。 */
+function getPreviousPhysicalLine(value: string, lineStart: number): string | null {
+  if (lineStart === 0) return null;
+  const prevEnd = lineStart - 1;
+  const prevStart = value.lastIndexOf("\n", prevEnd - 1) + 1;
+  return value.slice(prevStart, prevEnd);
+}
+
 /**
  * Indent (Tab) or outdent (Shift+Tab) a single line. The marker at the line's
  * new depth is inherited from the nearest preceding non-empty line at that same
  * depth, so markers stay consistent within a level: a numbered line dropped
  * under a dash sibling becomes a dash, and a dash under a numbered sibling
  * becomes "1. " (the editor's renumber pass assigns the real number). With no
- * sibling above the marker defaults to a bullet; a plain sibling removes the
- * marker on outdent but keeps a bullet on indent. Plain lines only gain a
- * marker when indented from the root head; otherwise they move without one. The
- * caret keeps its offset within the item text. Multi-line selections use the
- * regular path in handleTextareaTab.
+ * sibling above the marker defaults to a bullet. Tab on a marker-less line
+ * always adds a marker, regardless of caret position or current indent: a dash
+ * when the physically preceding line is missing, empty, or itself unmarked,
+ * otherwise the inherited marker. Outdent keeps plain lines plain. The caret
+ * keeps its offset within the item text. Multi-line selections use the regular
+ * path in handleTextareaTab.
  */
 function applySingleLineIndent(value: string, caret: number, outdent: boolean): { text: string; caret: number } {
   const { start: lineStart, end: lineEnd, text: line } = getLineAt(value, caret);
@@ -165,10 +174,16 @@ function applySingleLineIndent(value: string, caret: number, outdent: boolean): 
   const newDepth = indentChanged ? (outdent ? currentDepth - 1 : currentDepth + 1) : currentDepth;
 
   const hasMarker = marker.length > 0;
-  const startsPlainList = !outdent && caretInLine === 0 && indent === 0;
-  const resolvedMarker = (hasMarker || startsPlainList)
-    ? resolveListMarker(value, lineStart, newDepth, !outdent).marker
-    : "";
+  let resolvedMarker = "";
+  if (hasMarker) {
+    resolvedMarker = resolveListMarker(value, lineStart, newDepth, !outdent).marker;
+  } else if (!outdent) {
+    const previousLine = getPreviousPhysicalLine(value, lineStart);
+    const previousMarked = previousLine !== null && getMarkerKind(previousLine) !== "plain";
+    resolvedMarker = previousMarked
+      ? resolveListMarker(value, lineStart, newDepth, true).marker
+      : "- ";
+  }
 
   // Preserve the caret's offset within the item text; if it was on the indent
   // or marker, drop it just after the new marker.

@@ -354,9 +354,9 @@ describe("TextPanel", () => {
     await wrapper.get("textarea").trigger("dblclick");
     await wrapper.get("textarea").trigger("keydown", { key: "Tab" });
 
-    expect(textarea.value).toBe("    root");
+    expect(textarea.value).toBe("    - root");
     expect(textarea.selectionStart).toBe(textarea.selectionEnd);
-    expect(textarea.selectionStart).toBe("    root".length);
+    expect(textarea.selectionStart).toBe("    - root".length);
   });
 
   it("converts a numbered line into an indented bullet when Tab is pressed at the marker", async () => {
