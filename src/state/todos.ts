@@ -272,3 +272,41 @@ function getOpenTodoRank(todo: TodoItem): number {
   if (todo.starred) return 0;
   return 1;
 }
+
+function getTodoGroupKey(todo: TodoItem): string {
+  return `${todo.done ? "done" : "open"}:${todo.starred ? "starred" : "plain"}`;
+}
+
+/**
+ * Ctrl/Cmd+Up/Down 的移动目标，按 moveTodo() 的 insert-before 语义表达。
+ * `ordered` 是该列表的可见显示顺序（getOrderedTodos 的结果）。移动限制在
+ * 同一视觉分组（相同 done + starred）：跨组换位在显示上没有效果，所以返回
+ * null 表示无操作。上移 → 插到上一个同组成员前（即交换）；下移 → 插到
+ * 下一条的同组再下一条前；当移动后会成为组内最后一条时省略 targetId
+ * （moveTodo 追加到末尾）。找不到条目或没有移动空间返回 null。
+ */
+export function getTodoReorderTarget(ordered: TodoItem[], id: string, direction: -1 | 1): { targetId?: string } | null {
+  const index = ordered.findIndex((todo) => todo.id === id);
+  if (index < 0) return null;
+  const key = getTodoGroupKey(ordered[index]);
+
+  if (direction === -1) {
+    for (let i = index - 1; i >= 0; i -= 1) {
+      if (getTodoGroupKey(ordered[i]) === key) return { targetId: ordered[i].id };
+    }
+    return null;
+  }
+
+  let next: number | null = null;
+  for (let i = index + 1; i < ordered.length; i += 1) {
+    if (getTodoGroupKey(ordered[i]) === key) {
+      next = i;
+      break;
+    }
+  }
+  if (next === null) return null;
+  for (let i = next + 1; i < ordered.length; i += 1) {
+    if (getTodoGroupKey(ordered[i]) === key) return { targetId: ordered[i].id };
+  }
+  return {};
+}
