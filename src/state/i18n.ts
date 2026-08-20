@@ -526,6 +526,7 @@ export const UI_TEXT = {
       yes: "是",
       no: "否",
       close: "关闭",
+      moveToWorkspace: "移动到空间",
     },
     app: {
       boardLabel: "Mini Desk",
@@ -862,6 +863,7 @@ export const UI_TEXT = {
       yes: "Yes",
       no: "No",
       close: "Close",
+      moveToWorkspace: "Move to workspace",
     },
     app: {
       boardLabel: "Mini Desk",
@@ -1301,6 +1303,8 @@ export const SHORTCUT_HELP: Record<AppLanguage, ShortcutHelpSection[]> = {
     ], shortcuts: [
       { key: "拖入文本", desc: "从外部创建提醒" },
       { key: "拖动条目", desc: "排序或跨列表移动" },
+      { key: "Ctrl/⌘ + ←/→", desc: "跳到行首/行尾" },
+      { key: "Ctrl/⌘ + ↑/↓", desc: "上移/下移提醒顺序" },
       { key: "右键条目", desc: "复制 / 删除 / 星标 / 通知" },
       { key: "右键空白", desc: "新增提醒列表" },
     ]},
@@ -1309,7 +1313,7 @@ export const SHORTCUT_HELP: Record<AppLanguage, ShortcutHelpSection[]> = {
       "删除空间前会确认；系统会至少保留一个空间。",
       "空缩进行继续按 Backspace，会先取消缩进再合并内容。",
     ], shortcuts: [
-      { key: "Tab", desc: "增加缩进" },
+      { key: "Tab", desc: "增加缩进；上一行无序号/短横线时自动补 -" },
       { key: "Shift + Tab", desc: "减少缩进" },
       { key: "Enter", desc: "换行（延续缩进）" },
       { key: "Backspace", desc: "空缩进行减少缩进" },
@@ -1355,6 +1359,8 @@ export const SHORTCUT_HELP: Record<AppLanguage, ShortcutHelpSection[]> = {
     ], shortcuts: [
       { key: "Drag text", desc: "Create reminder from outside text" },
       { key: "Drag item", desc: "Reorder or move across lists" },
+      { key: "Ctrl/⌘ + ←/→", desc: "Jump to line start/end" },
+      { key: "Ctrl/⌘ + ↑/↓", desc: "Move reminder up/down" },
       { key: "Right-click item", desc: "Copy / Delete / Star / Notify" },
       { key: "Right-click blank", desc: "New reminder list" },
     ]},
@@ -1363,7 +1369,7 @@ export const SHORTCUT_HELP: Record<AppLanguage, ShortcutHelpSection[]> = {
       "Deleting a space asks for confirmation; at least one space is always kept.",
       "Backspace on an empty indented line reduces indent before merging text.",
     ], shortcuts: [
-      { key: "Tab", desc: "Increase indent" },
+      { key: "Tab", desc: "Indent; adds a dash when the line above is unmarked" },
       { key: "Shift + Tab", desc: "Decrease indent" },
       { key: "Enter", desc: "New line (keep indent)" },
       { key: "Backspace", desc: "Decrease indent on empty line" },
