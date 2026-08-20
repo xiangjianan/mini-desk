@@ -89,9 +89,14 @@ export function moveQuickTagToWorkspace(
     const existing = to.quickTags.find((item) => item.title === tag.title);
     const tagIdTaken = !existing && to.quickTags.some((item) => item.id === tag.id);
     const movedTagId = existing ? existing.id : tagIdTaken ? createId() : tag.id;
+    const takenButtonIds = new Set(to.quickButtons.map((item) => item.id));
     const movedButtons = from.quickButtons
       .filter((button) => button.tagId === tagId)
-      .map((button) => ({ ...button, tagId: movedTagId }));
+      .map((button) => ({
+        ...button,
+        ...(takenButtonIds.has(button.id) ? { id: createId() } : {}),
+        tagId: movedTagId,
+      }));
 
     return {
       from: {

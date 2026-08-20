@@ -127,4 +127,14 @@ describe("moveQuickTagToWorkspace", () => {
     expect(to.quickTags[1].id).not.toBe("tag-1");
     expect(to.quickButtons[0].tagId).toBe(to.quickTags[1].id);
   });
+
+  it("随标签移动的按钮与目标已有同 id 时重新生成", () => {
+    const clash = { id: "btn-1", title: "同名", value: "v", type: "text" as const, hidden: false };
+    const next = moveQuickTagToWorkspace([source, workspace("ws-b", { quickButtons: [clash] })], "ws-a", "tag-1", "ws-b");
+    const to = next.find((w) => w.id === "ws-b")!;
+    expect(to.quickButtons).toHaveLength(2);
+    const ids = to.quickButtons.map((b) => b.id);
+    expect(new Set(ids).size).toBe(2);
+    expect(to.quickButtons[1].tagId).toBeDefined();
+  });
 });
