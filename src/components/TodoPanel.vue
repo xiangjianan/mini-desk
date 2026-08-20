@@ -16,6 +16,7 @@ import {
   NotificationsOutline,
   Star,
   StarOutline,
+  SwapHorizontalOutline,
   TrashOutline,
 } from "@vicons/ionicons5";
 import { NDatePicker, NDropdown, NIcon, NScrollbar } from "naive-ui";
@@ -42,6 +43,7 @@ import type {
   TodoMap,
   TodoPeriod,
   TodoStarChange,
+  WorkspaceMoveTarget,
 } from "../types";
 import { getOrderedTodos, getTodoReorderTarget, todoKey } from "../state/todos";
 import { splitDroppedTodoText } from "../utils/textEditor";
@@ -59,9 +61,11 @@ const props = withDefaults(defineProps<{
   editListId?: TodoListId | null;
   notificationFlashKeys?: string[];
   language?: AppLanguage;
+  moveTargets?: WorkspaceMoveTarget[];
 }>(), {
   notificationFlashKeys: () => [],
   language: "zh",
+  moveTargets: () => [],
 });
 
 const emit = defineEmits<{
@@ -89,6 +93,8 @@ const emit = defineEmits<{
   focus: [element: HTMLElement];
   guide: [key: GuideKey, anchor: HTMLElement, immediate?: boolean];
   declutter: [anchor: HTMLElement];
+  moveListToWorkspace: [listId: TodoListId, workspaceId: string];
+  moveTodoToWorkspace: [period: TodoPeriod, todoId: string, workspaceId: string, listId: TodoListId];
 }>();
 
 const focusedListId = ref<TodoListId | null>(null);
@@ -186,6 +192,7 @@ const menuOptions = computed<DropdownOption[]>(() => {
       { label: uiText.value.common.paste, key: "paste", icon: renderIcon(ClipboardOutline) },
       { label: uiText.value.todo.newList, key: "create-list", icon: renderIcon(AddOutline) },
       { label: uiText.value.todo.editList, key: "edit-list", icon: renderIcon(CreateOutline) },
+      ...buildListMoveOptions(),
       { label: uiText.value.todo.deleteList, key: "delete-list", disabled: effectiveTodoLists.value.length <= 1, icon: renderIcon(TrashOutline, true) },
       { ...guideMenuOption.value, icon: renderIcon(HelpCircleOutline) },
     ];
@@ -206,11 +213,40 @@ const menuOptions = computed<DropdownOption[]>(() => {
       icon: renderIcon(NotificationsOutline),
     });
     options.push({ label: todo?.starred ? uiText.value.todo.unstar : uiText.value.todo.star, key: "star", icon: renderIcon(todo?.starred ? Star : StarOutline) });
+    options.push(...buildTodoMoveOptions());
     options.push({ label: uiText.value.common.delete, key: "delete", icon: renderIcon(TrashOutline, true) });
   }
   options.push({ ...guideMenuOption.value, icon: renderIcon(HelpCircleOutline) });
   return options;
 });
+
+/** 列表级「移动到空间」子菜单；仅一个列表时禁用，无目标空间时不渲染。 */
+function buildListMoveOptions(): DropdownOption[] {
+  if (props.moveTargets.length === 0) return [];
+  return [{
+    label: uiText.value.common.moveToWorkspace,
+    key: "move-list",
+    icon: renderIcon(SwapHorizontalOutline),
+    disabled: effectiveTodoLists.value.length <= 1,
+    children: props.moveTargets.map((target) => ({ label: target.title, key: `move-list-ws:${target.id}` })),
+  }];
+}
+
+/** 条目级「移动到空间 → 列表」三级子菜单；无目标空间时不渲染。 */
+function buildTodoMoveOptions(): DropdownOption[] {
+  if (props.moveTargets.length === 0) return [];
+  return [{
+    label: uiText.value.common.moveToWorkspace,
+    key: "move-todo",
+    icon: renderIcon(SwapHorizontalOutline),
+    children: props.moveTargets.map((target) => ({
+      label: target.title,
+      key: `move-todo-ws:${target.id}`,
+      disabled: target.lists.length === 0,
+      children: target.lists.map((list) => ({ label: list.title, key: `move-todo:${target.id}:${list.id}` })),
+    })),
+  }];
+}
 
 const todayFocusTitleId = "today-focus-title";
 const DEADLINE_CLOCK_INTERVAL_MS = 60_000;
@@ -1108,6 +1144,25 @@ function handleFloatingEditorOutsidePointerDown(event: PointerEvent): void {
 async function handleMenuSelect(key: string): Promise<void> {
   if (!menu.value) return;
   const { period, id, anchor, target, x, y } = menu.value;
+  if (key.startsWith("move-list-ws:")) {
+    closeMenu();
+    emit("moveListToWorkspace", period, key.slice("move-list-ws:".length));
+    return;
+  }
+  if (key.startsWith("move-todo:")) {
+    closeMenu();
+    // 不用 split(":") 解析三段 key：导入数据的手改 id 可能含冒号会错位；
+    // 按生成侧（buildTodoMoveOptions）全键匹配，天然免疫。
+    for (const target of props.moveTargets) {
+      for (const list of target.lists) {
+        if (key === `move-todo:${target.id}:${list.id}`) {
+          if (id) emit("moveTodoToWorkspace", period, id, target.id, list.id);
+          return;
+        }
+      }
+    }
+    return;
+  }
   if (key === "edit-list") {
     closeMenu();
     await startListTitleEdit(period);

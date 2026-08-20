@@ -4016,3 +4016,117 @@ describe("TodoPanel 编辑快捷键", () => {
     wrapper.unmount();
   });
 });
+
+// 与 quick-buttons.test.ts 的 menuDropdownStub 同源；提醒条目的移动菜单是
+// 「移动到空间 → 空间 → 列表」三级，故在子级之外再渲染一层孙级 children。
+const menuDropdownStub = {
+  props: ["options"],
+  emits: ["select"],
+  template: `
+    <div>
+      <slot />
+      <template v-for="option in options" :key="option.key">
+        <button
+          class="dropdown-option"
+          :data-key="option.key"
+          :disabled="option.disabled"
+          type="button"
+          @click="!option.disabled && $emit('select', option.key)"
+        >{{ option.label }}</button>
+        <template v-for="child in option.children ?? []" :key="child.key">
+          <button
+            class="dropdown-option"
+            :data-key="child.key"
+            :disabled="child.disabled"
+            type="button"
+            @click="!child.disabled && $emit('select', child.key)"
+          >{{ child.label }}</button>
+          <button
+            v-for="grandchild in child.children ?? []"
+            :key="grandchild.key"
+            class="dropdown-option"
+            :data-key="grandchild.key"
+            :disabled="grandchild.disabled"
+            type="button"
+            @click="!grandchild.disabled && $emit('select', grandchild.key)"
+          >{{ grandchild.label }}</button>
+        </template>
+      </template>
+    </div>
+  `,
+};
+
+describe("TodoPanel 跨空间移动菜单", () => {
+  const moveTargets = [
+    { id: "ws-b", title: "B 空间", lists: [{ id: "list-b1", title: "清单一" }] },
+    { id: "ws-c", title: "C 空间", lists: [] },
+  ];
+
+  function mountMovePanel(todos: TodoMap) {
+    return mount(TodoPanel, {
+      props: {
+        todoLists: defaultTodoLists,
+        todos,
+        showCompleted: { morning: false, noon: false, evening: false },
+        titles: DEFAULT_TITLES,
+        moveTargets,
+      },
+      global: {
+        stubs: {
+          Dropdown: menuDropdownStub,
+          NDatePicker: datePickerStub,
+          NDropdown: menuDropdownStub,
+          NTooltip: tooltipStub,
+        },
+      },
+    });
+  }
+
+  it("条目右键：空间 → 列表 三级选择后 emit", async () => {
+    const wrapper = mountMovePanel({ morning: [{ id: "todo-1", text: "任务", done: false }], noon: [], evening: [] });
+    await wrapper.get(".todo-item").trigger("contextmenu");
+    await wrapper.get('[data-key="move-todo:ws-b:list-b1"]').trigger("click");
+    expect(wrapper.emitted("moveTodoToWorkspace")?.[0]).toEqual(["morning", "todo-1", "ws-b", "list-b1"]);
+    wrapper.unmount();
+  });
+
+  it("无列表的目标空间整组禁用", async () => {
+    const wrapper = mountMovePanel({ morning: [{ id: "todo-1", text: "任务", done: false }], noon: [], evening: [] });
+    await wrapper.get(".todo-item").trigger("contextmenu");
+    const option = wrapper.get('[data-key="move-todo-ws:ws-c"]');
+    expect((option.element as HTMLButtonElement).disabled).toBe(true);
+    wrapper.unmount();
+  });
+
+  it("列表右键（sectionActions）emit 移动列表", async () => {
+    const wrapper = mountMovePanel({ morning: [{ id: "todo-1", text: "任务", done: false }], noon: [], evening: [] });
+    await wrapper.get(".todo-section").trigger("contextmenu");
+    await wrapper.get('[data-key="move-list-ws:ws-b"]').trigger("click");
+    expect(wrapper.emitted("moveListToWorkspace")?.[0]).toEqual(["morning", "ws-b"]);
+    wrapper.unmount();
+  });
+
+  it("只剩一个列表时移动项禁用", async () => {
+    const wrapper = mount(TodoPanel, {
+      props: {
+        todoLists: [{ id: "morning", title: "☀️ 早上", collapsed: false, compact: false }],
+        todos: { morning: [{ id: "todo-1", text: "任务", done: false }] },
+        showCompleted: { morning: false },
+        titles: DEFAULT_TITLES,
+        moveTargets,
+      },
+      global: {
+        stubs: {
+          Dropdown: menuDropdownStub,
+          NDatePicker: datePickerStub,
+          NDropdown: menuDropdownStub,
+          NTooltip: tooltipStub,
+        },
+      },
+    });
+    await wrapper.get(".todo-section").trigger("contextmenu");
+    const option = wrapper.get('[data-key="move-list"]');
+    expect((option.element as HTMLButtonElement).disabled).toBe(true);
+    wrapper.unmount();
+  });
+});
