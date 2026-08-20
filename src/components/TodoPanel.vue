@@ -582,7 +582,12 @@ function restoreTodoCaret(input: HTMLInputElement, caret: number): void {
   });
 }
 
-/** Ctrl/Cmd+Up/Down：在同一视觉分组内移动条目，焦点与光标随行保留。 */
+/**
+ * Ctrl/Cmd+Up/Down：在同一视觉分组内移动条目，焦点与光标随行保留。
+ * 真实浏览器里 Vue patch / TransitionGroup FLIP 动画期间可能瞬时 blur，
+ * blur 会清掉 editingTodoKey 使输入框变 readonly；因此 nextTick 里重查当前
+ * 渲染节点并重申编辑态，再恢复焦点与光标，保证连续移动不掉焦。
+ */
 function handleTodoReorder(event: KeyboardEvent, input: HTMLInputElement, period: TodoPeriod, todo: TodoItem, direction: -1 | 1): void {
   if (input.readOnly) return;
   const target = getTodoReorderTarget(visibleOrdered.value[period] ?? [], todo.id, direction);
@@ -592,8 +597,10 @@ function handleTodoReorder(event: KeyboardEvent, input: HTMLInputElement, period
   if (!todo.done) editingTodoKey.value = todoKey(period, todo.id);
   emitTodoMove({ period, id: todo.id }, period, target.targetId);
   void nextTick(() => {
-    input.focus({ preventScroll: true });
-    restoreTodoCaret(input, caret);
+    const moved = todoSectionRefs.get(period)?.querySelector<HTMLInputElement>(`input.todo-input[data-todo-id="${todo.id}"]`) ?? input;
+    if (!todo.done) editingTodoKey.value = todoKey(period, todo.id);
+    moved.focus({ preventScroll: true });
+    restoreTodoCaret(moved, caret);
   });
 }
 

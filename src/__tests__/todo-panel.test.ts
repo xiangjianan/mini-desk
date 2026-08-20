@@ -3877,8 +3877,9 @@ describe("TodoPanel", () => {
 });
 
 describe("TodoPanel 编辑快捷键", () => {
-  function mountKeyboardPanel(todos: TodoMap) {
+  function mountKeyboardPanel(todos: TodoMap, options: { attachTo?: HTMLElement } = {}) {
     return mount(TodoPanel, {
+      ...options,
       props: {
         todoLists: defaultTodoLists,
         todos,
@@ -3926,6 +3927,53 @@ describe("TodoPanel 编辑快捷键", () => {
     await nextTick();
     await input.trigger("keydown", { key: "ArrowDown", ctrlKey: true });
     expect(wrapper.emitted("move")?.[0]).toEqual([{ period: "morning", id: "todo-1" }, "morning", "todo-2"]);
+    wrapper.unmount();
+  });
+
+  it("Ctrl+上方向键在同组内上移并 emit move", async () => {
+    const wrapper = mountKeyboardPanel({
+      morning: [
+        { id: "todo-1", text: "第一", done: false },
+        { id: "todo-2", text: "第二", done: false },
+        { id: "todo-3", text: "第三", done: false },
+      ],
+      noon: [], evening: [],
+    });
+    const input = wrapper.get('input.todo-input[data-todo-id="todo-2"]');
+    await input.trigger("click");
+    await nextTick();
+    await input.trigger("keydown", { key: "ArrowUp", ctrlKey: true });
+    expect(wrapper.emitted("move")?.[0]).toEqual([{ period: "morning", id: "todo-2" }, "morning", "todo-1"]);
+    wrapper.unmount();
+  });
+
+  it("patch 期瞬时 blur 后连续换序不中断", async () => {
+    const wrapper = mountKeyboardPanel({
+      morning: [
+        { id: "todo-1", text: "第一", done: false },
+        { id: "todo-2", text: "第二", done: false },
+        { id: "todo-3", text: "第三", done: false },
+      ],
+      noon: [], evening: [],
+    }, { attachTo: document.body });
+    const input = wrapper.get('input.todo-input[data-todo-id="todo-2"]');
+    await input.trigger("click");
+    await nextTick();
+    (input.element as HTMLInputElement).focus();
+    // keydown 同步分发、nextTick 尚未冲刷时插入 blur，模拟真实浏览器里
+    // Vue patch/TransitionGroup FLIP 动画期间的瞬时失焦。
+    const pending = input.trigger("keydown", { key: "ArrowUp", ctrlKey: true });
+    (input.element as HTMLInputElement).blur();
+    await pending;
+    await nextTick();
+    // 瞬时 blur 曾清掉编辑态使输入框变 readonly，第二次 Ctrl+↑ 必须
+    // 仍然可移动（不因 readOnly 早退）且焦点留在本行。
+    await input.trigger("keydown", { key: "ArrowUp", ctrlKey: true });
+    await nextTick();
+    const moves = wrapper.emitted("move");
+    expect(moves).toHaveLength(2);
+    expect(moves?.[1]).toEqual([{ period: "morning", id: "todo-2" }, "morning", "todo-1"]);
+    expect(document.activeElement).toBe(input.element);
     wrapper.unmount();
   });
 
