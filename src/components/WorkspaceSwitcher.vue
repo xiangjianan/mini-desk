@@ -3,6 +3,8 @@ import { computed, nextTick, onUnmounted, ref, watch } from "vue";
 import { NPopover, NIcon } from "naive-ui";
 import { ChevronDownOutline, AddOutline, CreateOutline, TrashOutline, DownloadOutline, CloudUploadOutline, CheckmarkOutline } from "@vicons/ionicons5";
 import { getUiText } from "../state/i18n";
+import { DEFAULT_BOARD_TITLE } from "../state/defaults";
+import { getWorkspaceBoardTitle } from "../state/workspaces";
 import type { AppLanguage, ThemeMode, WorkspaceData, ZoneKey } from "../types";
 import ZoneVisibilityPopover from "./ZoneVisibilityPopover.vue";
 import miniDeskLogo from "../../static/img/mini-desk-cat.png?url";
@@ -35,7 +37,9 @@ const activeWorkspace = computed<WorkspaceData>(
   () => props.workspaces.find((workspace) => workspace.id === props.activeWorkspaceId) ?? props.workspaces[0],
 );
 const logoSrc = computed(() => (props.theme === "dark" ? miniDeskDarkLogo : miniDeskLogo));
-const activeTitle = computed(() => activeWorkspace.value?.customTitles["board-title"]?.trim() || "Mini Desk");
+const activeTitle = computed(() =>
+  activeWorkspace.value ? getWorkspaceBoardTitle(activeWorkspace.value) : DEFAULT_BOARD_TITLE,
+);
 const activeSlogan = computed(() => activeWorkspace.value?.customTitles["board-slogan"]?.trim() ?? "");
 
 function toggleOpen(): void {
@@ -181,7 +185,7 @@ function onDrop(targetId: string): void {
             <NIcon v-if="workspace.id === activeWorkspaceId" :component="CheckmarkOutline" size="13" />
           </span>
           <span class="workspace-switcher-name">
-            {{ workspace.customTitles["board-title"]?.trim() || "Mini Desk" }}
+            {{ getWorkspaceBoardTitle(workspace) }}
           </span>
           <span class="workspace-switcher-actions">
             <ZoneVisibilityPopover

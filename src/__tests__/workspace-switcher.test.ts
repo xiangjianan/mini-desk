@@ -140,4 +140,21 @@ describe("WorkspaceSwitcher", () => {
     expect(renameEvents?.[0]).toEqual(["b", "副空间", ""]);
     wrapper.unmount();
   });
+
+  it("无自定义标题或标题全空白时回退默认标题 Mini Desk", async () => {
+    const plain: WorkspaceData[] = [
+      defaultWorkspace("a"),
+      { ...defaultWorkspace("b"), customTitles: { "board-title": "   " } },
+    ];
+    const wrapper = mount(WorkspaceSwitcher, {
+      props: { workspaces: plain, activeWorkspaceId: "a", theme: "light", language: "zh" },
+      attachTo: document.body,
+    });
+    // workspace a has no custom board-title: the trigger falls back to the default.
+    expect(wrapper.get(".workspace-trigger-title").text()).toBe("Mini Desk");
+    // workspace b has a whitespace-only title: the dropdown entry falls back too.
+    await wrapper.find('[data-testid="workspace-trigger"]').trigger("click");
+    expect(wrapper.get('[data-testid="workspace-option-b"] .workspace-switcher-name').text().trim()).toBe("Mini Desk");
+    wrapper.unmount();
+  });
 });
