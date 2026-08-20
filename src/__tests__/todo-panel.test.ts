@@ -441,7 +441,7 @@ describe("TodoPanel", () => {
 
     const dialog = getLatestListCreateDialogElement();
     const input = dialog?.querySelector<HTMLInputElement>(".todo-list-create-input");
-    expect(dialog?.getAttribute("aria-label")).toBe("新增提醒列表");
+    expect(dialog?.getAttribute("aria-label")).toBe("新增提醒事项列表");
     expect(document.body.contains(dialog)).toBe(true);
     expect(dialog?.closest(".workbench-zone, .todo-panel")).toBeNull();
     expect(wrapper.emitted("createList")).toBeUndefined();

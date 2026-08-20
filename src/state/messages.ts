@@ -829,7 +829,7 @@ export const MESSAGE_CATALOG: Record<MessageKey, MessageEntry> = {
     variants: [
       "确认删除列表？",
       "提醒事项会删除",
-      "删除此提醒列表？",
+      "删除此提醒事项列表？",
       "列表提醒会移除",
       "确认移除列表？",
       "提醒会一起删除",
