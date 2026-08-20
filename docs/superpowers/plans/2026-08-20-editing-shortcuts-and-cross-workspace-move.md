@@ -1932,7 +1932,15 @@ Expected: 成功。
 3. 右键快捷按钮/标签头/提醒条目/提醒列表头/便签 Tab → 「移动到空间」子菜单 → 移动后切到目标空间核对内容、Ctrl+Z 可撤销。
 4. 守卫：单列表空间右键列表 → 移动项禁用；单便签空间 → 禁用。
 
-- [ ] **Step 4: 收尾提交（如有修正）**
+- [ ] **Step 4: 遗留 Minor 批量处理（历次审查 deferred，酌情处理）**
+
+1. `src/utils/textEditor.ts` ~184 行 `true` → `!outdent`（与分支语义对称）。
+2. `src/__tests__/text-panel.test.ts` ~344 行测试名改为与新 Tab 语义一致。
+3. text-editor 可选补测：上一行有标记且光标在行中的用例。
+4. `workspaceMoves.ts` 可选补测三条 no-op 分支：`moveTodoToWorkspace` 未知 todoId、`moveTodoListToWorkspace` 未知 listId（均应返回原引用）；`movedVisibility === undefined` 时目标可见性原样保留。
+5. `workspaceMoves.test.ts` ~167 行断言可读性：`const [, movedList] = to.todoLists` 后断言 `to.todos[movedList.id]`，替换 `id &&` 写法。
+
+- [ ] **Step 5: 收尾提交（如有修正）**
 
 ```bash
 git add -A && git commit -m "fix: 跨空间移动与快捷键手动验证修正"
