@@ -98,8 +98,34 @@ describe("ShortcutHelp", () => {
   });
 });
 
-describe("SHORTCUT_HELP 快捷键条目", () => {
-  it("钉死提醒事项的 Ctrl+←/→ 与 Ctrl+↑/↓ 快捷键条目", () => {
+type ShortcutHelpSections = typeof SHORTCUT_HELP.zh;
+
+// 剥离本地化描述后比较组合键骨架；纯符号键（⌘ ← ↑ ↓）走严格比较。
+function keyBinding(key: string): string {
+  return key.split(" / ")[0].replace(/[一-鿿]/g, "").trim();
+}
+
+function collectKeyBindingMismatches(zh: ShortcutHelpSections, en: ShortcutHelpSections): string[] {
+  const mismatches: string[] = [];
+  zh.forEach((zhSection, sectionIndex) => {
+    zhSection.shortcuts.forEach((zhItem, shortcutIndex) => {
+      const enKey = en[sectionIndex]?.shortcuts[shortcutIndex]?.key ?? "<missing>";
+      if (!/[一-鿿]/.test(zhItem.key)) {
+        if (enKey !== zhItem.key) mismatches.push(`[${zhSection.area}] ${zhItem.key} ≠ ${enKey}`);
+        return;
+      }
+      // 混合键里「 / 」之后是本地化手势（拖拽图片 / Drag image），允许各自表述；
+      // 之前的前缀组合键（Ctrl + V）语言无关，漂移必须报出。骨架剥空即纯手势，跳过。
+      const binding = keyBinding(zhItem.key);
+      if (!binding) return;
+      if (keyBinding(enKey) !== binding) mismatches.push(`[${zhSection.area}] ${binding} ≠ ${keyBinding(enKey)}`);
+    });
+  });
+  return mismatches;
+}
+
+describe("SHORTCUT_HELP entries", () => {
+  it("pins the reminder Ctrl+←/→ and Ctrl+↑/↓ shortcut entries", () => {
     const zhSection = SHORTCUT_HELP.zh.find((section) => section.area === "提醒事项");
     expect(zhSection?.shortcuts).toContainEqual({ key: "Ctrl/⌘ + ←/→", desc: "跳到行首 / 行尾" });
     expect(zhSection?.shortcuts).toContainEqual({ key: "Ctrl/⌘ + ↑/↓", desc: "上移 / 下移提醒顺序" });
@@ -109,7 +135,7 @@ describe("SHORTCUT_HELP 快捷键条目", () => {
     expect(enSection?.shortcuts).toContainEqual({ key: "Ctrl/⌘ + ↑/↓", desc: "Move reminder up / down" });
   });
 
-  it("钉死便签 Tab 的短横线补全文案", () => {
+  it("pins the Tab dash-autofill copy for notes", () => {
     const zhSection = SHORTCUT_HELP.zh.find((section) => section.area === "工作空间与文本");
     expect(zhSection?.shortcuts).toContainEqual({ key: "Tab", desc: "缩进；未标记的行自动补 -" });
 
@@ -117,7 +143,7 @@ describe("SHORTCUT_HELP 快捷键条目", () => {
     expect(enSection?.shortcuts).toContainEqual({ key: "Tab", desc: "Indent; unmarked lines get a dash" });
   });
 
-  it("帮助面板实际渲染新增的两条提醒快捷键与 Tab 短横线文案", () => {
+  it("renders the new reminder shortcuts and the Tab dash copy in the panel", () => {
     const wrapper = mountShortcutHelp("zh");
     const rowTexts = wrapper.findAll(".shortcut-row").map((row) => row.text());
 
@@ -126,19 +152,28 @@ describe("SHORTCUT_HELP 快捷键条目", () => {
     expect(rowTexts.some((text) => text.includes("Tab") && text.includes("缩进；未标记的行自动补 -"))).toBe(true);
   });
 
-  it("zh/en 的快捷键条目一一对应，纯键位逐字一致", () => {
+  it("keeps zh/en shortcut entries aligned with identical key bindings", () => {
     expect(SHORTCUT_HELP.en).toHaveLength(SHORTCUT_HELP.zh.length);
     SHORTCUT_HELP.zh.forEach((zhSection, index) => {
       const enSection = SHORTCUT_HELP.en[index];
       expect(enSection.icon).toBe(zhSection.icon);
       expect(enSection.tips).toHaveLength(zhSection.tips.length);
       expect(enSection.shortcuts).toHaveLength(zhSection.shortcuts.length);
-      zhSection.shortcuts.forEach((zhItem, shortcutIndex) => {
-        // 键名不含汉字即为纯键位（Ctrl/Tab/方向键…），与语言无关，必须逐字一致；
-        // 含汉字的（「拖入文本」等手势描述）按语言本地化，仅受上面的条目数对齐约束。
-        if (/[一-鿿]/.test(zhItem.key)) return;
-        expect(enSection.shortcuts[shortcutIndex].key).toBe(zhItem.key);
-      });
     });
+    expect(collectKeyBindingMismatches(SHORTCUT_HELP.zh, SHORTCUT_HELP.en)).toEqual([]);
+  });
+
+  it("flags drift in the ASCII binding half of a mixed-language key", () => {
+    const drifted = JSON.parse(JSON.stringify(SHORTCUT_HELP.zh)) as ShortcutHelpSections;
+    const pasteEntry = drifted
+      .find((section) => section.area === "图床与预览")
+      ?.shortcuts.find((item) => item.key === "Ctrl + V / 拖拽图片");
+    expect(pasteEntry).toBeDefined();
+    pasteEntry!.key = "⌘ + V / 拖拽图片";
+
+    const mismatches = collectKeyBindingMismatches(drifted, SHORTCUT_HELP.en);
+    expect(mismatches).toHaveLength(1);
+    expect(mismatches[0]).toContain("Ctrl + V");
+    expect(mismatches[0]).toContain("⌘ + V");
   });
 });
