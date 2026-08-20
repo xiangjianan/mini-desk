@@ -518,8 +518,8 @@ function handleTodoArrowKey(event: KeyboardEvent, period: TodoPeriod, todo: Todo
   if (direction === 0) return;
   const input = event.currentTarget as HTMLInputElement;
   // Ctrl/Cmd+Up/Down 在普通列表里移动条目顺序；今日聚焦区（allowReorder=false）
-  // 是跨列表置顶视图，回落为普通焦点移动。
-  if (allowReorder && (event.ctrlKey || event.metaKey)) {
+  // 是跨列表置顶视图，回落为普通焦点移动。Shift 组合保留给扩展选择。
+  if (allowReorder && (event.ctrlKey || event.metaKey) && !event.shiftKey) {
     handleTodoReorder(event, input, period, todo, direction);
     return;
   }
@@ -534,8 +534,14 @@ function handleTodoArrowKey(event: KeyboardEvent, period: TodoPeriod, todo: Todo
   }
   void nextTick(() => {
     target.focus({ preventScroll: true });
-    const position = Math.max(0, Math.min(caret, target.value.length));
-    target.setSelectionRange(position, position);
+    restoreTodoCaret(target, caret);
+  });
+}
+
+function restoreTodoCaret(input: HTMLInputElement, caret: number): void {
+  void nextTick(() => {
+    const position = Math.max(0, Math.min(caret, input.value.length));
+    input.setSelectionRange(position, position);
   });
 }
 
@@ -549,8 +555,8 @@ function handleTodoReorder(event: KeyboardEvent, input: HTMLInputElement, period
   if (!todo.done) editingTodoKey.value = todoKey(period, todo.id);
   emitTodoMove({ period, id: todo.id }, period, target.targetId);
   void nextTick(() => {
-    const position = Math.max(0, Math.min(caret, input.value.length));
-    input.setSelectionRange(position, position);
+    input.focus({ preventScroll: true });
+    restoreTodoCaret(input, caret);
   });
 }
 
@@ -573,10 +579,7 @@ function handleTodoTab(event: KeyboardEvent, period: TodoPeriod, todo: TodoItem)
   if (!todo.done) editingTodoKey.value = todoKey(period, todo.id);
   emit("update", period, todo.id, nextText);
   const caret = input.selectionStart ?? input.value.length;
-  const position = Math.max(0, Math.min(caret + (indented ? -TODO_INDENT.length : TODO_INDENT.length), nextText.length));
-  void nextTick(() => {
-    input.setSelectionRange(position, position);
-  });
+  restoreTodoCaret(input, caret + (indented ? -TODO_INDENT.length : TODO_INDENT.length));
 }
 
 function getTodoLink(todo: TodoItem): string | undefined {

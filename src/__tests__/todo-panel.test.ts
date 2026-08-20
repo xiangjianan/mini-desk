@@ -3953,4 +3953,66 @@ describe("TodoPanel 编辑快捷键", () => {
     expect(wrapper.emitted("move")).toBeUndefined();
     wrapper.unmount();
   });
+
+  it("metaKey（Mac Cmd）同样触发下移", async () => {
+    const wrapper = mountKeyboardPanel({
+      morning: [
+        { id: "todo-1", text: "第一", done: false },
+        { id: "todo-2", text: "第二", done: false },
+      ],
+      noon: [], evening: [],
+    });
+    const input = wrapper.get('[data-testid="todo-input-morning"]');
+    await input.trigger("click");
+    await nextTick();
+    await input.trigger("keydown", { key: "ArrowDown", metaKey: true });
+    expect(wrapper.emitted("move")?.[0]).toEqual([{ period: "morning", id: "todo-1" }, "morning", "todo-2"]);
+    wrapper.unmount();
+  });
+
+  it("Ctrl+Shift+方向键不触发换序（保留给扩展选择）", async () => {
+    const wrapper = mountKeyboardPanel({
+      morning: [
+        { id: "todo-1", text: "第一", done: false },
+        { id: "todo-2", text: "第二", done: false },
+      ],
+      noon: [], evening: [],
+    });
+    const input = wrapper.get('[data-testid="todo-input-morning"]');
+    await input.trigger("click");
+    await nextTick();
+    await input.trigger("keydown", { key: "ArrowDown", ctrlKey: true, shiftKey: true });
+    expect(wrapper.emitted("move")).toBeUndefined();
+    wrapper.unmount();
+  });
+
+  it("换序后光标偏移保留", async () => {
+    const wrapper = mountKeyboardPanel({
+      morning: [
+        { id: "todo-1", text: "买牛奶", done: false },
+        { id: "todo-2", text: "第二", done: false },
+      ],
+      noon: [], evening: [],
+    });
+    const input = wrapper.get('[data-testid="todo-input-morning"]');
+    await input.trigger("click");
+    await nextTick();
+    (input.element as HTMLInputElement).setSelectionRange(2, 2);
+    await input.trigger("keydown", { key: "ArrowDown", ctrlKey: true });
+    await nextTick();
+    await nextTick();
+    expect((input.element as HTMLInputElement).selectionStart).toBe(2);
+    wrapper.unmount();
+  });
+
+  it("只读（未进入编辑）行 Ctrl+方向键无操作", async () => {
+    const wrapper = mountKeyboardPanel({
+      morning: [{ id: "todo-1", text: "买牛奶", done: false }],
+      noon: [], evening: [],
+    });
+    const input = wrapper.get('[data-testid="todo-input-morning"]');
+    await input.trigger("keydown", { key: "ArrowDown", ctrlKey: true });
+    expect(wrapper.emitted("move")).toBeUndefined();
+    wrapper.unmount();
+  });
 });
