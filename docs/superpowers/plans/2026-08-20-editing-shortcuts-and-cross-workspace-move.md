@@ -981,13 +981,27 @@ Expected: FAIL。
 
 - [ ] **Step 3: 实现**
 
-`src/state/workspaceMoves.ts` 末尾追加：
+先在 `transferWorkspaceItem` 附近提取碰撞助手（Task 5 质量审查建议——同一模式已出现多处）：
+
+```ts
+/** 目标已占用同一 id 时重新生成（同一导入文件可进两个空间产生重复 id）。 */
+function uniqueIdAmong(taken: Iterable<string>, desired: string): string {
+  return [...taken].includes(desired) ? createId() : desired;
+}
+```
+
+再把既有各处 `xxxTaken ? { id: createId() } : {}` 内联碰撞检查改写为
+`id: uniqueIdAmong(<目标既有 id 集合>, <期望 id>)`（行为不变，既有 20 例测试是
+重构安全网，必须全数通过）。同时给 `moveTodoListToWorkspace` 的 JSDoc 补一句：
+「默认空间的 morning/noon/evening 列表 id 天然互撞，重生成是预期路径而非异常。」
+
+末尾追加：
 
 ```ts
 /**
  * 移动便签 Tab 页到目标空间末尾。源只剩一个空间时拒绝。移动的是源激活
  * 空间时，源 activeSpaceId 切到相邻空间（优先前一个，同 deleteSpace 规则）。
- * 目标已存在同 id 空间时重新生成 id（同一导入文件可进两个空间产生重复 id）。
+ * 目标已存在同 id 空间时重新生成 id（经 uniqueIdAmong）。
  */
 export function moveSpaceToWorkspace(
   workspaces: WorkspaceData[],
@@ -1005,16 +1019,20 @@ export function moveSpaceToWorkspace(
     const activeSpaceId = from.activeSpaceId === spaceId
       ? remainingSpaces[Math.max(0, index - 1)]?.id ?? remainingSpaces[0].id
       : from.activeSpaceId;
-    const spaceIdTaken = to.spaces.some((item) => item.id === space.id);
-    const movedSpace = {
-      ...space,
-      ...(spaceIdTaken ? { id: createId() } : {}),
-      lines: space.lines.map((line) => ({ ...line })),
-    };
 
     return {
       from: { ...from, spaces: remainingSpaces, activeSpaceId },
-      to: { ...to, spaces: [...to.spaces, movedSpace] },
+      to: {
+        ...to,
+        spaces: [
+          ...to.spaces,
+          {
+            ...space,
+            id: uniqueIdAmong(to.spaces.map((item) => item.id), space.id),
+            lines: space.lines.map((line) => ({ ...line })),
+          },
+        ],
+      },
     };
   });
 }
@@ -1029,7 +1047,7 @@ Expected: PASS。
 
 ```bash
 git add src/state/workspaceMoves.ts src/__tests__/workspaceMoves.test.ts
-git commit -m "feat: 便签 Tab 页的跨空间移动纯函数"
+git commit -m "feat: 便签 Tab 页的跨空间移动并提取 id 撞名助手"
 ```
 
 ---
