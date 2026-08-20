@@ -35,10 +35,10 @@
 - 在 `handleTodoArrowKey` 内分流：带 Ctrl/Cmd → 移动条目顺序；不带 → 维持现状（焦点上下移动）。
 - 作用域：仅普通提醒列表；today-focus 区不启用（跨列表置顶视图，移动语义不明确），Ctrl+↑↓ 在该区回落为普通焦点移动。
 - 移动限制在**同一视觉分组**内（相同 done + 相同 starred），因为已完成沉底、置顶上浮，跨组移动在数组换位后视觉上无变化。
-- 复用现有 `move` 事件与 `state/todos.ts` 的 `moveTodoInMap`（insert-before 语义）：
-  - 上移：`targetId` = 上一条同组可见提醒的 id（插到它前面 = 交换）。
-  - 下移：`targetId` = 下一条同组提醒的**再下一条**的 id；无再下一条则省略 `targetId`（追加到列表末尾）。
-- 偏移换算封装为 `state/todos.ts` 纯函数 `getTodoReorderTarget(orderedTodos, id, direction)`：返回 `{ targetId?: string }`，组内无移动空间时返回 `null` 表示无操作（不触发保存）。
+- 复用现有 `move` 事件与 `state/todos.ts` 的 `moveTodo`（落位语义：`targetIndex` 在移除被移条目前计算——上移 = 插到目标前，下移 = 落在目标原索引处即目标之后；已由 `state.test.ts` 的 image-style ordering 用例固化）：
+  - 上移：`targetId` = 上一条同组可见提醒的 id。
+  - 下移：`targetId` = 下一条同组提醒的 id。
+- 偏移换算封装为 `state/todos.ts` 纯函数 `getTodoReorderTarget(orderedTodos, id, direction)`：返回 `{ targetId: string }`，组内无移动空间时返回 `null` 表示无操作（不触发保存）。（勘误：初稿按 insert-before 写成"下移取再下一条"，实施时对照 `moveTodo` 源码与既有测试证伪并修正。）
 - 条目随 DOM 重排保持焦点，`nextTick` 后把光标放回原偏移位置，可连续按。
 - 边界：组内第一条上移 / 最后一条下移 → 无操作。
 

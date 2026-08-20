@@ -1,7 +1,7 @@
 import { describe, expect, it } from "vitest";
 import { getTodoReorderTarget } from "../state/todos";
 
-describe("getTodoReorderTarget — Ctrl+Up/Down 换算为 insert-before 目标", () => {
+describe("getTodoReorderTarget — Ctrl+Up/Down 换算为 moveTodo 落位目标", () => {
   const todos = [
     { id: "a", text: "a", done: false },
     { id: "b", text: "b", done: false },

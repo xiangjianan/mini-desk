@@ -28,7 +28,7 @@
 在 `src/__tests__/todos.test.ts` 顶部现有 `import { ... } from "../state/todos"` 中加入 `getTodoReorderTarget`（若无该 import 则新增一行），文件末尾追加：
 
 ```ts
-describe("getTodoReorderTarget — Ctrl+Up/Down 换算为 insert-before 目标", () => {
+describe("getTodoReorderTarget — Ctrl+Up/Down 换算为 moveTodo 落位目标", () => {
   const todos = [
     { id: "a", text: "a", done: false },
     { id: "b", text: "b", done: false },
@@ -39,17 +39,16 @@ describe("getTodoReorderTarget — Ctrl+Up/Down 换算为 insert-before 目标",
     expect(getTodoReorderTarget(todos, "b", -1)).toEqual({ targetId: "a" });
   });
 
-  it("下移：目标是下一条的同组再下一条", () => {
-    expect(getTodoReorderTarget(todos, "a", 1)).toEqual({ targetId: "c" });
+  it("下移：目标是下一个同组成员（moveTodo 落在其原索引之后）", () => {
+    expect(getTodoReorderTarget(todos, "a", 1)).toEqual({ targetId: "b" });
   });
 
-  it("下移到组内末尾：省略 targetId（由 moveTodo 追加）", () => {
-    expect(getTodoReorderTarget(todos, "b", 1)).toEqual({});
+  it("下移到组内末尾：返回 null", () => {
+    expect(getTodoReorderTarget(todos, "c", 1)).toBeNull();
   });
 
   it("组边界返回 null（无操作）", () => {
     expect(getTodoReorderTarget(todos, "a", -1)).toBeNull();
-    expect(getTodoReorderTarget(todos, "c", 1)).toBeNull();
     expect(getTodoReorderTarget(todos, "missing", 1)).toBeNull();
   });
 
@@ -81,37 +80,23 @@ function getTodoGroupKey(todo: TodoItem): string {
 }
 
 /**
- * Ctrl/Cmd+Up/Down 的移动目标，按 moveTodo() 的 insert-before 语义表达。
- * `ordered` 是该列表的可见显示顺序（getOrderedTodos 的结果）。移动限制在
- * 同一视觉分组（相同 done + starred）：跨组换位在显示上没有效果，所以返回
- * null 表示无操作。上移 → 插到上一个同组成员前（即交换）；下移 → 插到
- * 下一条的同组再下一条前；当移动后会成为组内最后一条时省略 targetId
- * （moveTodo 追加到末尾）。找不到条目或没有移动空间返回 null。
+ * Ctrl/Cmd+Up/Down 的移动目标，按 moveTodo() 的落位语义表达（targetIndex
+ * 在移除被移条目前计算：上移 = 插到目标前，下移 = 落在目标原索引处，即
+ * 目标之后）。`ordered` 是该列表的可见显示顺序（getOrderedTodos 的结果）。
+ * 移动限制在同一视觉分组（相同 done + starred）：跨组换位在显示上没有
+ * 效果。上移 → 上一个同组成员；下移 → 下一个同组成员；组内无移动空间
+ * 或找不到条目返回 null（无操作，不触发保存）。
  */
-export function getTodoReorderTarget(ordered: TodoItem[], id: string, direction: -1 | 1): { targetId?: string } | null {
+export function getTodoReorderTarget(ordered: TodoItem[], id: string, direction: -1 | 1): { targetId: string } | null {
   const index = ordered.findIndex((todo) => todo.id === id);
   if (index < 0) return null;
   const key = getTodoGroupKey(ordered[index]);
 
-  if (direction === -1) {
-    for (let i = index - 1; i >= 0; i -= 1) {
-      if (getTodoGroupKey(ordered[i]) === key) return { targetId: ordered[i].id };
-    }
-    return null;
-  }
-
-  let next: number | null = null;
-  for (let i = index + 1; i < ordered.length; i += 1) {
-    if (getTodoGroupKey(ordered[i]) === key) {
-      next = i;
-      break;
-    }
-  }
-  if (next === null) return null;
-  for (let i = next + 1; i < ordered.length; i += 1) {
+  const step = direction === -1 ? -1 : 1;
+  for (let i = index + step; i >= 0 && i < ordered.length; i += step) {
     if (getTodoGroupKey(ordered[i]) === key) return { targetId: ordered[i].id };
   }
-  return {};
+  return null;
 }
 ```
 
@@ -325,7 +310,7 @@ describe("TodoPanel 编辑快捷键", () => {
     await input.trigger("click");
     await nextTick();
     await input.trigger("keydown", { key: "ArrowDown", ctrlKey: true });
-    expect(wrapper.emitted("move")?.[0]).toEqual([{ period: "morning", id: "todo-1" }, "morning", "todo-3"]);
+    expect(wrapper.emitted("move")?.[0]).toEqual([{ period: "morning", id: "todo-1" }, "morning", "todo-2"]);
     wrapper.unmount();
   });
 
