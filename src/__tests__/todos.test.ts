@@ -12,17 +12,16 @@ describe("getTodoReorderTarget — Ctrl+Up/Down 换算为 insert-before 目标",
     expect(getTodoReorderTarget(todos, "b", -1)).toEqual({ targetId: "a" });
   });
 
-  it("下移：目标是下一条的同组再下一条", () => {
-    expect(getTodoReorderTarget(todos, "a", 1)).toEqual({ targetId: "c" });
+  it("下移：目标是下一个同组成员（moveTodo 落在其原索引之后）", () => {
+    expect(getTodoReorderTarget(todos, "a", 1)).toEqual({ targetId: "b" });
   });
 
-  it("下移到组内末尾：省略 targetId（由 moveTodo 追加）", () => {
-    expect(getTodoReorderTarget(todos, "b", 1)).toStrictEqual({});
+  it("下移到组内末尾：返回 null", () => {
+    expect(getTodoReorderTarget(todos, "c", 1)).toBeNull();
   });
 
   it("组边界返回 null（无操作）", () => {
     expect(getTodoReorderTarget(todos, "a", -1)).toBeNull();
-    expect(getTodoReorderTarget(todos, "c", 1)).toBeNull();
     expect(getTodoReorderTarget(todos, "missing", 1)).toBeNull();
   });
 
@@ -35,5 +34,14 @@ describe("getTodoReorderTarget — Ctrl+Up/Down 换算为 insert-before 目标",
     expect(getTodoReorderTarget(mixed, "s", 1)).toBeNull();
     expect(getTodoReorderTarget(mixed, "d", -1)).toBeNull();
     expect(getTodoReorderTarget(mixed, "o", -1)).toBeNull();
+  });
+
+  it("星标组内同样可移动", () => {
+    const starred = [
+      { id: "s1", text: "s1", done: false, starred: true },
+      { id: "s2", text: "s2", done: false, starred: true },
+      { id: "o1", text: "o1", done: false },
+    ];
+    expect(getTodoReorderTarget(starred, "s1", 1)).toStrictEqual({ targetId: "s2" });
   });
 });

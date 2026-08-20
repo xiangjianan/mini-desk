@@ -3924,7 +3924,7 @@ describe("TodoPanel 编辑快捷键", () => {
     await input.trigger("click");
     await nextTick();
     await input.trigger("keydown", { key: "ArrowDown", ctrlKey: true });
-    expect(wrapper.emitted("move")?.[0]).toEqual([{ period: "morning", id: "todo-1" }, "morning", "todo-3"]);
+    expect(wrapper.emitted("move")?.[0]).toEqual([{ period: "morning", id: "todo-1" }, "morning", "todo-2"]);
     wrapper.unmount();
   });
 
