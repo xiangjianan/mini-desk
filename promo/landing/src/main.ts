@@ -28,8 +28,9 @@ if (grid) {
     (t) => `
     <article class="theme-card reveal" style="--tc: ${t.color}" data-slug="${t.slug}">
       <span class="t-live">录屏直出</span>
-      <div class="theme-media">
-        <video src="/media/themes/${t.slug}.mp4" poster="/media/posters/${t.slug}.jpg" muted loop playsinline preload="metadata" aria-label="${t.name} 看板演示"></video>
+      <div class="theme-media hover-play" data-video="/media/themes/${t.slug}.mp4" role="button" aria-label="播放 ${t.name} 看板演示">
+        <img src="/media/posters/${t.slug}.jpg" alt="${t.name} 看板截图" loading="lazy" />
+        <span class="play-badge" aria-hidden="true">▶</span>
       </div>
       <div class="theme-body">
         <div class="theme-name"><i class="t-dot"></i>${t.name}</div>
@@ -39,6 +40,44 @@ if (grid) {
     </article>`,
   ).join("");
 }
+
+/* ---------- hover / tap to play: static poster by default, video on demand ---------- */
+function initHoverPlay(container: HTMLElement): void {
+  const src = container.dataset.video;
+  if (!src) return;
+  let video: HTMLVideoElement | null = null;
+  const ensureVideo = (): HTMLVideoElement => {
+    if (!video) {
+      video = document.createElement("video");
+      video.src = src;
+      video.muted = true;
+      video.loop = true;
+      video.playsInline = true;
+      video.preload = "metadata";
+      container.appendChild(video);
+    }
+    return video;
+  };
+  const play = () => {
+    const v = ensureVideo();
+    container.classList.add("playing");
+    v.play().catch(() => {});
+  };
+  const stop = () => {
+    container.classList.remove("playing");
+    video?.pause();
+  };
+  if (isTouch) {
+    container.addEventListener("click", () => {
+      if (container.classList.contains("playing")) stop();
+      else play();
+    });
+  } else {
+    container.addEventListener("pointerenter", play);
+    container.addEventListener("pointerleave", stop);
+  }
+}
+document.querySelectorAll<HTMLElement>(".hover-play").forEach(initHoverPlay);
 
 /* ---------- marquee (seamless loop needs the track duplicated) ---------- */
 const marqueeTrack = document.getElementById("marqueeTrack");
