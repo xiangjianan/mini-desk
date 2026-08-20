@@ -30,6 +30,7 @@ function transferWorkspaceItem(
 /**
  * 移动单个快捷按钮。标签仍存在时保留分组：使用目标的同名标签，没有则在
  * 目标新建同名同色标签；悬空 tagId 视为无标签（落入目标的「其他」分组）。
+ * 目标已有同 id 时重新生成 id，避免跨空间 id 碰撞。
  */
 export function moveQuickButtonToWorkspace(
   workspaces: WorkspaceData[],
@@ -40,6 +41,8 @@ export function moveQuickButtonToWorkspace(
   return transferWorkspaceItem(workspaces, fromWorkspaceId, toWorkspaceId, (from, to) => {
     const button = from.quickButtons.find((item) => item.id === buttonId);
     if (!button) return null;
+
+    const buttonIdTaken = to.quickButtons.some((item) => item.id === button.id);
 
     let quickTags = to.quickTags;
     let tagId: string | undefined;
@@ -57,7 +60,7 @@ export function moveQuickButtonToWorkspace(
       }
     }
 
-    const moved: QuickButton = { ...button };
+    const moved: QuickButton = { ...button, ...(buttonIdTaken ? { id: createId() } : {}) };
     if (tagId) moved.tagId = tagId;
     else delete moved.tagId;
 
@@ -71,6 +74,7 @@ export function moveQuickButtonToWorkspace(
 /**
  * 移动快捷标签及其下全部按钮。目标已有同名标签时合并进去（按钮改挂现有
  * 标签），否则标签追加到目标 quickTags 末尾，按钮追加到 quickButtons 末尾。
+ * 目标已有同 id 时重新生成 id，避免跨空间 id 碰撞。
  */
 export function moveQuickTagToWorkspace(
   workspaces: WorkspaceData[],
@@ -83,7 +87,8 @@ export function moveQuickTagToWorkspace(
     if (!tag) return null;
 
     const existing = to.quickTags.find((item) => item.title === tag.title);
-    const movedTagId = existing ? existing.id : tag.id;
+    const tagIdTaken = !existing && to.quickTags.some((item) => item.id === tag.id);
+    const movedTagId = existing ? existing.id : tagIdTaken ? createId() : tag.id;
     const movedButtons = from.quickButtons
       .filter((button) => button.tagId === tagId)
       .map((button) => ({ ...button, tagId: movedTagId }));
@@ -96,7 +101,7 @@ export function moveQuickTagToWorkspace(
       },
       to: {
         ...to,
-        quickTags: existing ? to.quickTags : [...to.quickTags, { ...tag }],
+        quickTags: existing ? to.quickTags : [...to.quickTags, { ...tag, id: movedTagId }],
         quickButtons: [...to.quickButtons, ...movedButtons],
       },
     };
