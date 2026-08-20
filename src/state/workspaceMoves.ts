@@ -1,5 +1,6 @@
 import { createId } from "./storage";
-import type { QuickButton, QuickTag, WorkspaceData } from "../types";
+import { addTodo as addTodoToMap, removeTodo as removeTodoFromMap } from "./todos";
+import type { QuickButton, QuickTag, TodoItem, TodoListId, TodoMap, WorkspaceData } from "../types";
 
 /**
  * 跨工作空间移动：快捷按钮/标签、提醒列表/单条提醒、便签 Tab 页。
@@ -109,6 +110,73 @@ export function moveQuickTagToWorkspace(
         quickTags: existing ? to.quickTags : [...to.quickTags, { ...tag, id: movedTagId }],
         quickButtons: [...to.quickButtons, ...movedButtons],
       },
+    };
+  });
+}
+
+/**
+ * 移动整个提醒列表（配置 + 提醒 + 完成区可见性）到目标空间列表末尾。
+ * `column` 保留原值（展示端会按目标列数收敛）。源只剩一个列表时拒绝——
+ * 每个空间至少保留一个列表。目标已有同 id 列表时重新生成列表 id，
+ * 并同步迁移 todos/showCompletedTodos 的键，避免覆盖目标自身数据。
+ */
+export function moveTodoListToWorkspace(
+  workspaces: WorkspaceData[],
+  fromWorkspaceId: string,
+  listId: TodoListId,
+  toWorkspaceId: string,
+): WorkspaceData[] {
+  return transferWorkspaceItem(workspaces, fromWorkspaceId, toWorkspaceId, (from, to) => {
+    if (from.todoLists.length <= 1) return null;
+    const list = from.todoLists.find((item) => item.id === listId);
+    if (!list) return null;
+
+    const { [listId]: movedTodos = [], ...restTodos } = from.todos;
+    const { [listId]: movedVisibility, ...restVisibility } = from.showCompletedTodos;
+    const movedListId = to.todoLists.some((item) => item.id === listId) ? createId() : listId;
+
+    return {
+      from: {
+        ...from,
+        todoLists: from.todoLists.filter((item) => item.id !== listId),
+        todos: restTodos as TodoMap,
+        showCompletedTodos: restVisibility,
+      },
+      to: {
+        ...to,
+        todoLists: [...to.todoLists, { ...list, id: movedListId }],
+        todos: { ...to.todos, [movedListId]: movedTodos.map((todo) => ({ ...todo })) },
+        showCompletedTodos: movedVisibility === undefined
+          ? to.showCompletedTodos
+          : { ...to.showCompletedTodos, [movedListId]: movedVisibility },
+      },
+    };
+  });
+}
+
+/**
+ * 移动单条提醒到目标空间的指定列表，插在目标最后一条未完成之后。
+ * 目标列表已有同 id 提醒时重新生成提醒 id，避免跨空间 id 碰撞。
+ */
+export function moveTodoToWorkspace(
+  workspaces: WorkspaceData[],
+  fromWorkspaceId: string,
+  fromListId: TodoListId,
+  todoId: string,
+  toWorkspaceId: string,
+  toListId: TodoListId,
+): WorkspaceData[] {
+  return transferWorkspaceItem(workspaces, fromWorkspaceId, toWorkspaceId, (from, to) => {
+    const todo = from.todos[fromListId]?.find((item) => item.id === todoId);
+    if (!todo) return null;
+    if (!to.todoLists.some((list) => list.id === toListId)) return null;
+
+    const todoIdTaken = (to.todos[toListId] ?? []).some((item) => item.id === todo.id);
+    const moved: TodoItem = { ...todo, ...(todoIdTaken ? { id: createId() } : {}) };
+
+    return {
+      from: { ...from, todos: removeTodoFromMap(from.todos, fromListId, todoId) },
+      to: { ...to, todos: addTodoToMap(to.todos, toListId, moved) },
     };
   });
 }

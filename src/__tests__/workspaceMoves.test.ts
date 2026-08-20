@@ -2,9 +2,11 @@ import { describe, expect, it } from "vitest";
 import {
   moveQuickButtonToWorkspace,
   moveQuickTagToWorkspace,
+  moveTodoListToWorkspace,
+  moveTodoToWorkspace,
 } from "../state/workspaceMoves";
 import { defaultWorkspace } from "../state/defaults";
-import type { WorkspaceData } from "../types";
+import type { TodoMap, WorkspaceData } from "../types";
 
 function workspace(id: string, overrides: Partial<WorkspaceData> = {}): WorkspaceData {
   return { ...defaultWorkspace(id), ...overrides };
@@ -136,5 +138,85 @@ describe("moveQuickTagToWorkspace", () => {
     const ids = to.quickButtons.map((b) => b.id);
     expect(new Set(ids).size).toBe(2);
     expect(to.quickButtons[1].tagId).toBeDefined();
+  });
+});
+
+describe("moveTodoListToWorkspace", () => {
+  const list = { id: "list-1", title: "清单一", collapsed: false, compact: false, column: 1 };
+  const source = workspace("ws-a", {
+    todoLists: [list, { id: "list-2", title: "清单二", collapsed: false, compact: false }],
+    todos: { "list-1": [{ id: "todo-1", text: "任务", done: false }] } as TodoMap,
+    showCompletedTodos: { "list-1": false },
+  });
+  const target = workspace("ws-b", { todoLists: [], todos: {} as TodoMap, showCompletedTodos: {} });
+
+  it("迁移列表配置、提醒与完成区可见性到目标末尾", () => {
+    const next = moveTodoListToWorkspace([source, target], "ws-a", "list-1", "ws-b");
+    const from = next.find((w) => w.id === "ws-a")!;
+    const to = next.find((w) => w.id === "ws-b")!;
+    expect(from.todoLists.map((l) => l.id)).toEqual(["list-2"]);
+    expect(from.todos["list-1"]).toBeUndefined();
+    expect(from.showCompletedTodos["list-1"]).toBeUndefined();
+    expect(to.todoLists.map((l) => l.id)).toEqual(["list-1"]);
+    expect(to.todoLists[0].column).toBe(1);
+    expect(to.todos["list-1"]).toEqual([{ id: "todo-1", text: "任务", done: false }]);
+    expect(to.showCompletedTodos["list-1"]).toBe(false);
+  });
+
+  it("源只剩一个列表时拒绝（返回原数组）", () => {
+    const single = workspace("ws-a", { todoLists: [list], todos: { "list-1": [] } as TodoMap });
+    const workspaces = [single, target];
+    expect(moveTodoListToWorkspace(workspaces, "ws-a", "list-1", "ws-b")).toBe(workspaces);
+  });
+
+  it("目标已有同 id 列表时重新生成列表 id 并迁移数据键", () => {
+    const clashList = { id: "list-1", title: "目标自己的", collapsed: true, compact: false };
+    const clashy = workspace("ws-b", {
+      todoLists: [clashList],
+      todos: { "list-1": [{ id: "todo-x", text: "目标自己的提醒", done: false }] } as TodoMap,
+    });
+    const next = moveTodoListToWorkspace([source, clashy], "ws-a", "list-1", "ws-b");
+    const to = next.find((w) => w.id === "ws-b")!;
+    expect(to.todoLists).toHaveLength(2);
+    expect(to.todoLists[0]).toMatchObject({ id: "list-1", title: "目标自己的" });
+    expect(to.todoLists[1].id).not.toBe("list-1");
+    expect(to.todos["list-1"]).toEqual([{ id: "todo-x", text: "目标自己的提醒", done: false }]);
+    expect(to.todoLists[1].id && to.todos[to.todoLists[1].id]).toEqual([{ id: "todo-1", text: "任务", done: false }]);
+  });
+});
+
+describe("moveTodoToWorkspace", () => {
+  const source = workspace("ws-a", {
+    todoLists: [{ id: "list-1", title: "清单一", collapsed: false, compact: false }],
+    todos: { "list-1": [{ id: "todo-open", text: "进行中", done: false }, { id: "todo-2", text: "完成", done: true }] } as TodoMap,
+  });
+  const target = workspace("ws-b", {
+    todoLists: [{ id: "list-b1", title: "目标清单", collapsed: false, compact: false }],
+    todos: { "list-b1": [{ id: "todo-done", text: "已完成", done: true }] } as TodoMap,
+  });
+
+  it("插入目标列表最后一条未完成之后（完成区之前）", () => {
+    const next = moveTodoToWorkspace([source, target], "ws-a", "list-1", "todo-open", "ws-b", "list-b1");
+    const from = next.find((w) => w.id === "ws-a")!;
+    const to = next.find((w) => w.id === "ws-b")!;
+    expect(from.todos["list-1"].map((t) => t.id)).toEqual(["todo-2"]);
+    expect(to.todos["list-b1"].map((t) => t.id)).toEqual(["todo-open", "todo-done"]);
+  });
+
+  it("目标列表不存在时返回原数组", () => {
+    const workspaces = [source, target];
+    expect(moveTodoToWorkspace(workspaces, "ws-a", "list-1", "todo-open", "ws-b", "missing")).toBe(workspaces);
+  });
+
+  it("目标列表已有同 id 提醒时重新生成提醒 id", () => {
+    const clashy = workspace("ws-b", {
+      todoLists: [{ id: "list-b1", title: "目标清单", collapsed: false, compact: false }],
+      todos: { "list-b1": [{ id: "todo-open", text: "目标自己的", done: false }] } as TodoMap,
+    });
+    const next = moveTodoToWorkspace([source, clashy], "ws-a", "list-1", "todo-open", "ws-b", "list-b1");
+    const to = next.find((w) => w.id === "ws-b")!;
+    const ids = to.todos["list-b1"].map((t) => t.id);
+    expect(new Set(ids).size).toBe(2);
+    expect(to.todos["list-b1"].some((t) => t.text === "进行中")).toBe(true);
   });
 });
