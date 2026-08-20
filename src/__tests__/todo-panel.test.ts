@@ -3978,6 +3978,23 @@ describe("TodoPanel 编辑快捷键", () => {
     document.body.innerHTML = "";
   });
 
+  it("提醒 id 含双引号与反斜杠时换序焦点重查不抛错", async () => {
+    const weirdId = 'we"ird\\id';
+    const wrapper = mountKeyboardPanel({
+      morning: [
+        { id: weirdId, text: "第一", done: false },
+        { id: "todo-2", text: "第二", done: false },
+      ],
+      noon: [], evening: [],
+    });
+    const input = wrapper.findAll("input.todo-input")[0];
+    await input.trigger("click");
+    await nextTick();
+    await input.trigger("keydown", { key: "ArrowDown", ctrlKey: true });
+    expect(wrapper.emitted("move")?.[0]).toEqual([{ period: "morning", id: weirdId }, "morning", "todo-2"]);
+    wrapper.unmount();
+  });
+
   it("组内第一条 Ctrl+上移不产生 move", async () => {
     const wrapper = mountKeyboardPanel({
       morning: [{ id: "todo-1", text: "第一", done: false }],

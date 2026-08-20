@@ -586,7 +586,8 @@ function restoreTodoCaret(input: HTMLInputElement, caret: number): void {
  * Ctrl/Cmd+Up/Down：在同一视觉分组内移动条目，焦点与光标随行保留。
  * 真实浏览器里 Vue patch / TransitionGroup FLIP 动画期间可能瞬时 blur，
  * blur 会清掉 editingTodoKey 使输入框变 readonly；因此 nextTick 里重查当前
- * 渲染节点并重申编辑态，再恢复焦点与光标，保证连续移动不掉焦。
+ * 渲染节点并重申编辑态，再恢复焦点与光标，保证连续移动不掉焦。重查按
+ * dataset.todoId 匹配，id 含引号/反斜杠等特殊字符（手改导入数据）也安全。
  */
 function handleTodoReorder(event: KeyboardEvent, input: HTMLInputElement, period: TodoPeriod, todo: TodoItem, direction: -1 | 1): void {
   if (input.readOnly) return;
@@ -597,7 +598,10 @@ function handleTodoReorder(event: KeyboardEvent, input: HTMLInputElement, period
   if (!todo.done) editingTodoKey.value = todoKey(period, todo.id);
   emitTodoMove({ period, id: todo.id }, period, target.targetId);
   void nextTick(() => {
-    const moved = todoSectionRefs.get(period)?.querySelector<HTMLInputElement>(`input.todo-input[data-todo-id="${todo.id}"]`) ?? input;
+    // 不把 todo.id 拼进选择器字符串：特殊字符会产生 SyntaxError（jsdom 无
+    // CSS.escape 可用），改为逐个比对 dataset.todoId，天然免疫任意 id 字符。
+    const moved = Array.from(todoSectionRefs.get(period)?.querySelectorAll<HTMLInputElement>("input.todo-input") ?? [])
+      .find((candidate) => candidate.dataset.todoId === todo.id) ?? input;
     if (!todo.done) editingTodoKey.value = todoKey(period, todo.id);
     moved.focus({ preventScroll: true });
     restoreTodoCaret(moved, caret);
