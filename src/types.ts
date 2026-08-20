@@ -184,3 +184,11 @@ export interface DraggedTodo {
   period: TodoPeriod;
   id: string;
 }
+
+/** 右键「移动到空间」子菜单的目标工作空间（已排除当前空间）。 */
+export interface WorkspaceMoveTarget {
+  id: string;
+  title: string;
+  /** 提醒事项条目移动时需要的第二级列表选择；其他场景不使用。 */
+  lists: { id: string; title: string }[];
+}
