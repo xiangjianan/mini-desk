@@ -1937,8 +1937,10 @@ Expected: 成功。
 1. `src/utils/textEditor.ts` ~184 行 `true` → `!outdent`（与分支语义对称）。
 2. `src/__tests__/text-panel.test.ts` ~344 行测试名改为与新 Tab 语义一致。
 3. text-editor 可选补测：上一行有标记且光标在行中的用例。
-4. `workspaceMoves.ts` 可选补测三条 no-op 分支：`moveTodoToWorkspace` 未知 todoId、`moveTodoListToWorkspace` 未知 listId（均应返回原引用）；`movedVisibility === undefined` 时目标可见性原样保留。
+4. `workspaceMoves.ts` 可选补测 no-op 分支：`moveTodoToWorkspace` 未知 todoId、`moveTodoListToWorkspace` 未知 listId（均应返回原引用）；`movedVisibility === undefined` 时目标可见性原样保留；`moveSpaceToWorkspace` 未知 spaceId 原引用、激活且为首空间（index 0 钳位）时源切到第一个剩余空间。
 5. `workspaceMoves.test.ts` ~167 行断言可读性：`const [, movedList] = to.todoLists` 后断言 `to.todos[movedList.id]`，替换 `id &&` 写法。
+6. `workspaceMoves.ts` ~99 行 `takenButtonIds` Set 在 uniqueIdAmong 改写后成为摆设（助手每次 `[...]` 摊平线性扫）：改传 `to.quickButtons.map((item) => item.id)` 并删 Set 行，行为不变。
+7. `moveSpaceToWorkspace` JSDoc 补对称句：默认空间共享 `workspace` id，天然互撞，重生成是预期路径（与列表函数的补句对称）。
 
 - [ ] **Step 5: 收尾提交（如有修正）**
 
