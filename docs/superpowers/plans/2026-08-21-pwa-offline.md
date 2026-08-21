@@ -419,7 +419,7 @@ async function handleNavigation(event, request) {
       // clone 必须在返回前同步完成，避免 body 被页面消费后无法克隆。
       const cloned = response.clone();
       event.waitUntil(
-        caches.open(CACHE_VERSION).then((cache) => cache.put(new URL("/", self.location.origin).href, cloned)),
+        caches.open(CACHE_VERSION).then((cache) => cache.put(new URL("/", self.location.origin).href, cloned)).catch(() => null),
       );
       return response;
     }

@@ -59,12 +59,12 @@ SW 的 `fetch` 处理规则（仅拦截同源 GET）：
 |---|---|---|
 | `request.mode === "navigate"` | 网络优先 + 3s 超时竞赛，失败/超时回退缓存的 `index.html` | 在线永远最新；宕机/挂起时离线兜底 |
 | pathname 以 `/assets/` 开头 | 缓存优先，未命中走网络并写入 | 哈希文件名内容变则名变，永不陈旧；满足"静态资源本地优先" |
-| `theme-boot.js`、manifest、favicon、`/icons/*` | SWR（先回缓存、后台更新） | 防主题闪烁脚本需即时；体积小可后台保鲜 |
+| `theme-boot.js`、manifest、`/icons/*` | SWR（先回缓存、后台更新） | 防主题闪烁脚本需即时；体积小可后台保鲜。注：favicon 经 Vite 哈希进 `/assets/`，由上一行 `/assets/` 缓存优先规则覆盖（已按构建产物核实），不单独列入 SWR |
 | 其他一切（版本检查 fetch、API 快捷按钮外部请求、跨源、非 GET） | 不拦截，直接放行 | 现有 `fetchLatestAppVersion()`（`no-store` + 时间戳参数）是非导航请求，天然落在放行区，更新检查零影响 |
 
 SW 生命周期事件：
 
-- `install`：预缓存 app shell（`index.html`、`theme-boot.js`、`manifest.webmanifest`、favicon、`/icons/*`）；任一失败则本次安装失败，下次访问自动重试，页面不受影响（页面不依赖 SW 存在）。
+- `install`：预缓存 app shell（`index.html`、`theme-boot.js`、`manifest.webmanifest`、`/icons/*`；favicon 哈希进 `/assets/` 按需缓存，不预缓存）；任一失败则本次安装失败，下次访问自动重试，页面不受影响（页面不依赖 SW 存在）。
 - `activate`：删除所有非当前版本前缀的缓存；`clients.claim()` 接管已打开页面（仅影响 fetch 拦截，不打断运行；claim ≠ skipWaiting——首次安装时必须 claim，否则首访页面的资源请求不经过 SW、运行时缓存为空，离线要等第二次访问才生效）。
 - `message`：收到 `{ type: "SKIP_WAITING" }` → `self.skipWaiting()`。
 - fetch 处理器全程 try/catch，异常时 fall through：先试缓存，再放行浏览器默认行为；绝不让 SW 错误破坏页面。
