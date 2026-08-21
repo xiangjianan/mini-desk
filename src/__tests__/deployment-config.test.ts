@@ -24,3 +24,28 @@ describe("deployment configuration", () => {
     );
   });
 });
+
+describe("pwa configuration", () => {
+  it("links the manifest and registers the service worker in the production entry", () => {
+    const index = read("index.html");
+
+    expect(index).toContain('<link rel="manifest" href="/manifest.webmanifest"');
+    expect(read("src/main.ts")).toContain("registerServiceWorker");
+  });
+
+  it("serves sw.js and the manifest with no-cache headers", () => {
+    const headers = read("public/_headers");
+
+    expect(headers).toContain("/sw.js");
+    expect(headers).toContain("Cache-Control: no-cache");
+  });
+
+  it("pre-caches the app shell declared by the service worker", () => {
+    const sw = read("public/sw.js");
+
+    expect(sw).toContain('"/theme-boot.js"');
+    expect(sw).toContain('"/manifest.webmanifest"');
+    expect(sw).toContain('"/icons/icon-192.png"');
+    expect(sw).toContain('"/icons/icon-512.png"');
+  });
+});

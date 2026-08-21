@@ -76,6 +76,17 @@ describe("useAppVersionCheck red-dot channels", () => {
 
     expect(versionPromptVisible.value).toBe(false);
   });
+
+  it("keeps the dot lit for a waiting service worker even after the version channel clears", async () => {
+    const { versionPromptVisible, checkLatestAppVersion, checkAppVersion } = setup();
+    fetchMock.mockResolvedValue("99.0.0");
+    await checkLatestAppVersion();
+
+    swUpdateReady.value = true;
+    checkAppVersion();
+
+    expect(versionPromptVisible.value).toBe(true);
+  });
 });
 
 describe("useAppVersionCheck updateStaticVersion ordering", () => {
@@ -87,18 +98,22 @@ describe("useAppVersionCheck updateStaticVersion ordering", () => {
     clearMock.mockImplementation(async () => {
       order.push("clear");
     });
-    const reload = vi.fn();
+    const reload = vi.fn(() => order.push("reload"));
     // jsdom 的 location.reload 是不可配置自有属性（WebIDL LegacyUnforgeable），
     // vi.spyOn 直接改写会抛 "Cannot redefine property"；先 stubGlobal 换成普通对象再 spy。
     vi.stubGlobal("location", { ...window.location });
     vi.spyOn(window.location, "reload").mockImplementation(reload);
 
-    const { updateStaticVersion } = setup();
-    await updateStaticVersion();
+    try {
+      const { updateStaticVersion } = setup();
+      await updateStaticVersion();
 
-    expect(order).toEqual(["activate", "clear"]);
-    expect(reload).toHaveBeenCalled();
-    vi.mocked(window.location.reload).mockRestore();
-    vi.unstubAllGlobals();
+      expect(order).toEqual(["activate", "clear", "reload"]);
+      expect(reload).toHaveBeenCalled();
+    } finally {
+      // 先在 stub 仍然生效时还原 spy，再撤掉全局 stub。
+      vi.mocked(window.location.reload).mockRestore();
+      vi.unstubAllGlobals();
+    }
   });
 });
