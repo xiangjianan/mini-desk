@@ -3978,6 +3978,41 @@ describe("TodoPanel 编辑快捷键", () => {
     document.body.innerHTML = "";
   });
 
+  it("换序窗口内的瞬时 blur 被吞掉，窗口关闭后真实 blur 照常", async () => {
+    const wrapper = mountKeyboardPanel({
+      morning: [
+        { id: "todo-1", text: "第一", done: false },
+        { id: "todo-2", text: "第二", done: false },
+        { id: "todo-3", text: "第三", done: false },
+      ],
+      noon: [], evening: [],
+    }, { attachTo: document.body });
+    const input = wrapper.get('input.todo-input[data-todo-id="todo-2"]');
+    await input.trigger("click");
+    await nextTick();
+    (input.element as HTMLInputElement).focus();
+    const blurCount = wrapper.emitted("blur")?.length ?? 0;
+    const blurEmptyCount = wrapper.emitted("blurEmpty")?.length ?? 0;
+    // 与上一个测试同一时序：keydown 同步段结束后、flush 前派发 blur，
+    // 模拟真实浏览器里 Vue patch 摘下焦点行触发的瞬时失焦。这次换序
+    // 自身造成的 blur 必须被守卫吞掉：清空 editingTodoKey 会让输入框
+    // 变 readonly，且同 flush 追加的渲染会清空 TransitionGroup 的
+    // prevChildren，上移排序的 FLIP 动画因此被整体跳过。
+    const pending = input.trigger("keydown", { key: "ArrowUp", ctrlKey: true });
+    (input.element as HTMLInputElement).blur();
+    await pending;
+    await nextTick();
+    expect(wrapper.emitted("blur")?.length ?? 0).toBe(blurCount);
+    expect(wrapper.emitted("blurEmpty")?.length ?? 0).toBe(blurEmptyCount);
+    expect((input.element as HTMLInputElement).readOnly).toBe(false);
+    // 守卫只覆盖换序的微任务窗口：窗口外的真实 blur 正常派发事件链。
+    (input.element as HTMLInputElement).blur();
+    await nextTick();
+    expect(wrapper.emitted("blur")?.length ?? 0).toBeGreaterThan(blurCount);
+    wrapper.unmount();
+    document.body.innerHTML = "";
+  });
+
   it("提醒 id 含双引号与反斜杠时换序焦点重查不抛错", async () => {
     const weirdId = 'we"ird\\id';
     const wrapper = mountKeyboardPanel({

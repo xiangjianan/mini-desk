@@ -596,6 +596,7 @@ function handleTodoReorder(event: KeyboardEvent, input: HTMLInputElement, period
   event.preventDefault();
   const caret = input.selectionStart ?? input.value.length;
   if (!todo.done) editingTodoKey.value = todoKey(period, todo.id);
+  todoReorderBlurGuard++;
   emitTodoMove({ period, id: todo.id }, period, target.targetId);
   void nextTick(() => {
     // 不把 todo.id 拼进选择器字符串：特殊字符会产生 SyntaxError（jsdom 无
@@ -605,8 +606,17 @@ function handleTodoReorder(event: KeyboardEvent, input: HTMLInputElement, period
     if (!todo.done) editingTodoKey.value = todoKey(period, todo.id);
     moved.focus({ preventScroll: true });
     restoreTodoCaret(moved, caret);
+    todoReorderBlurGuard--;
   });
 }
+
+// 上移换序时被物理搬动的恰是焦点行：Vue patch 把它摘离 DOM 的瞬间浏览器
+// 会派发 blur。这个 blur 里清 focusedListId/editingTodoKey 不仅是旧失焦
+// bug 的源头，还会在同一 flush 里追加一次渲染，把 TransitionGroup 的
+// prevChildren 清空，onUpdated 的 FLIP 排序动画因此被整体跳过（上移生
+// 硬、下移正常）。用非响应式计数器把这类换序自身造成的 blur 整个吞掉；
+// 真实用户 blur 都发生在宏任务里，不会落进这个微任务级窗口。
+let todoReorderBlurGuard = 0;
 
 /** Ctrl/Cmd+Left/Right 跳到提醒文本的行首/行尾（单行输入，无列表标记）。 */
 function handleTodoHorizontalArrow(event: KeyboardEvent): void {
@@ -649,6 +659,9 @@ function handleChecked(period: TodoPeriod, id: string, checked: boolean): void {
 }
 
 function handleInputBlur(period: TodoPeriod, id: string): void {
+  // 换序 patch 摘下焦点行时派发的瞬时 blur：吞掉（见 todoReorderBlurGuard
+  // 声明处注释），焦点与编辑态在同一个交互内就会恢复。
+  if (todoReorderBlurGuard > 0) return;
   focusedListId.value = null;
   if (editingTodoKey.value === todoKey(period, id)) editingTodoKey.value = null;
   emit("blurEmpty", period, id);
