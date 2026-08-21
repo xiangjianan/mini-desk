@@ -10,6 +10,8 @@
 
 **Spec:** `docs/superpowers/specs/2026-08-21-pwa-offline-design.md`（已批准）
 
+> 注：本文档只记录 Task 1–5 的执行计划，代码块与当时代码保持字节一致；发布后的后续迭代不回填本文档，改动见 spec 的「变更记录」章节。
+
 **约定：** 提交信息用 `<type>: <描述>` 格式，不加 Co-Authored-By（用户全局已禁用 attribution）。测试命令均在仓库根目录执行。
 
 ---
