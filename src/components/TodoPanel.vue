@@ -596,8 +596,12 @@ function handleTodoReorder(event: KeyboardEvent, input: HTMLInputElement, period
   event.preventDefault();
   const caret = input.selectionStart ?? input.value.length;
   if (!todo.done) editingTodoKey.value = todoKey(period, todo.id);
-  todoReorderBlurGuard++;
   emitTodoMove({ period, id: todo.id }, period, target.targetId);
+  // ++ 必须放在 emitTodoMove 之后：该链路同步穿到 persistNow 的
+  // localStorage.setItem（无 try/catch），配额溢出抛错时若已 ++ 而
+  // nextTick 未注册，守卫会永久卡在 1，吞掉此后所有真实 blur。要吞的
+  // blur 最早也发生在 handler 返回后的 flush 里，这里上闸足够早。
+  todoReorderBlurGuard++;
   void nextTick(() => {
     // 不把 todo.id 拼进选择器字符串：特殊字符会产生 SyntaxError（jsdom 无
     // CSS.escape 可用），改为逐个比对 dataset.todoId，天然免疫任意 id 字符。
@@ -606,6 +610,8 @@ function handleTodoReorder(event: KeyboardEvent, input: HTMLInputElement, period
     if (!todo.done) editingTodoKey.value = todoKey(period, todo.id);
     moved.focus({ preventScroll: true });
     restoreTodoCaret(moved, caret);
+    // 必须在 focus() 之后递减：focus() 抢占他人焦点会同步派发 blur，
+    // 同样要吞；挪到 focus() 之前会静默回归。
     todoReorderBlurGuard--;
   });
 }
@@ -615,7 +621,8 @@ function handleTodoReorder(event: KeyboardEvent, input: HTMLInputElement, period
 // bug 的源头，还会在同一 flush 里追加一次渲染，把 TransitionGroup 的
 // prevChildren 清空，onUpdated 的 FLIP 排序动画因此被整体跳过（上移生
 // 硬、下移正常）。用非响应式计数器把这类换序自身造成的 blur 整个吞掉；
-// 真实用户 blur 都发生在宏任务里，不会落进这个微任务级窗口。
+// 真实用户 blur 都发生在宏任务里，不会落进这个微任务级窗口。计数器而
+// 非布尔值：同一宏任务内嵌套换序（++→++→回调→回调）窗口语义仍正确。
 let todoReorderBlurGuard = 0;
 
 /** Ctrl/Cmd+Left/Right 跳到提醒文本的行首/行尾（单行输入，无列表标记）。 */
