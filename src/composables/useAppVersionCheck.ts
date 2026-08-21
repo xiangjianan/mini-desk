@@ -1,4 +1,4 @@
-import { ref } from "vue";
+import { computed, ref } from "vue";
 import {
   APP_VERSION_CHECK_INTERVAL_MS,
   clearStaticCaches,
@@ -7,17 +7,21 @@ import {
   getStoredAppVersion,
   markAppVersionSeen,
 } from "../state/version";
+import { activateWaitingServiceWorker, swUpdateReady } from "../pwa";
 
 /**
  * App version watcher: seeds the running version, polls the deployed
  * index.html for a newer one, and marks the running version as seen in
- * localStorage so a fresh visit doesn't re-prompt.
+ * localStorage so a fresh visit doesn't re-prompt. The prompt is fed by
+ * two channels: deployed-version polling and a waiting service worker.
  */
 export function useAppVersionCheck(isMounted: () => boolean) {
   const appVersion = ref(getIndexAppVersion());
   const availableAppVersion = ref(appVersion.value);
   const storedAppVersion = ref<string | null>(null);
-  const versionPromptVisible = ref(false);
+  const versionChannelVisible = ref(false);
+  // 红点双通道：版本号轮询（通道 1）或新 SW waiting（通道 2），见 spec §5。
+  const versionPromptVisible = computed(() => versionChannelVisible.value || swUpdateReady.value);
   const versionCheckTimer = ref<number | undefined>();
 
   function checkAppVersion(): void {
@@ -27,7 +31,7 @@ export function useAppVersionCheck(isMounted: () => boolean) {
       storedAppVersion.value = appVersion.value;
     }
     availableAppVersion.value = appVersion.value;
-    versionPromptVisible.value = false;
+    versionChannelVisible.value = false;
   }
 
   async function checkLatestAppVersion(): Promise<void> {
@@ -36,17 +40,18 @@ export function useAppVersionCheck(isMounted: () => boolean) {
 
     if (latestVersion === appVersion.value) {
       availableAppVersion.value = appVersion.value;
-      versionPromptVisible.value = false;
+      versionChannelVisible.value = false;
       return;
     }
 
     availableAppVersion.value = latestVersion;
-    versionPromptVisible.value = true;
+    versionChannelVisible.value = true;
   }
 
   async function updateStaticVersion(): Promise<void> {
+    await activateWaitingServiceWorker();
     await clearStaticCaches();
-    versionPromptVisible.value = false;
+    versionChannelVisible.value = false;
     window.location.reload();
   }
 
