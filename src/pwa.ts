@@ -7,6 +7,10 @@ export const swUpdateReady = ref(false);
 
 /** 生产环境注册 Service Worker 并监听新 SW 进入 waiting；开发环境与不支持环境直接跳过。 */
 export async function registerServiceWorker(): Promise<void> {
+  // 不主动弹浏览器安装横幅（用户仍可从浏览器菜单手动安装）。
+  if (typeof window !== "undefined") {
+    window.addEventListener("beforeinstallprompt", (event) => event.preventDefault());
+  }
   if (!import.meta.env.PROD) return;
   if (typeof navigator === "undefined" || !("serviceWorker" in navigator)) return;
 

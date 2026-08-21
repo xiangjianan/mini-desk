@@ -216,4 +216,14 @@ describe("service worker registration (src/pwa.ts)", () => {
     await expect(pwa.activateWaitingServiceWorker()).resolves.toBeUndefined();
     await expect(pwa.registerServiceWorker()).resolves.toBeUndefined();
   });
+
+  it("prevents the browser's automatic install banner (beforeinstallprompt)", async () => {
+    const register = vi.fn().mockResolvedValue(makeRegistration().registration);
+    installNavigatorServiceWorker({ controller: null, register, registration: makeRegistration().registration });
+    const pwa = await loadPwa();
+    await pwa.registerServiceWorker();
+
+    // cancelable 事件 defaultPrevented 时 dispatchEvent 返回 false。
+    expect(window.dispatchEvent(new Event("beforeinstallprompt", { cancelable: true }))).toBe(false);
+  });
 });
