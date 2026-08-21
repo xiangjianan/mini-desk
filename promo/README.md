@@ -38,7 +38,7 @@ bash media.sh                  # → promo/landing/public/media/**
 cd ../landing && npm install && npm run dev
 ```
 
-Landing Page 的浏览器冒烟测试（DOM 契约、滚动 reveal、视频可见性播放、明暗与色系切换持久化、三断点横向溢出检查）：
+Landing Page 的浏览器冒烟测试（DOM 契约、滚动 reveal、视频可见性播放、系统主题跟随与手动覆盖、三断点横向溢出检查）：
 
 ```bash
 # 需要先构建并启动 vite preview（默认 http://127.0.0.1:4173/）
@@ -46,10 +46,10 @@ cd promo/landing && npm run build && npm run preview -- --port 4173 &
 node smoke.mjs   # 截图输出 smoke-*.png（已 gitignore）
 ```
 
-Landing Page 支持明暗主题与色系切换（导航栏右侧）：默认深色 + 极光色系（原版视觉），
-另提供海洋 / 落日 / 星紫三套色系，浅色模式下色系会自动加深保证对比度。选择持久化在
-localStorage（`mini-desk-landing-prefs`），`public/theme-boot.js` 在首帧渲染前恢复，
-避免闪烁。
+Landing Page 支持明暗主题（导航栏右侧按钮）：默认跟随系统 `prefers-color-scheme`（未覆盖时
+系统切换会实时跟随），手动切换后以 localStorage 覆盖值为准（`mini-desk-landing-theme`），
+`public/theme-boot.js` 在首帧渲染前恢复，避免闪烁。浅色 / 深色均为极光色系，浅色模式下
+accent 会加深保证对比度。
 
 ## 素材来源说明
 

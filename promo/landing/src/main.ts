@@ -21,102 +21,48 @@ const THEMES: ThemeDef[] = [
 const prefersReducedMotion = window.matchMedia("(prefers-reduced-motion: reduce)").matches;
 const isTouch = window.matchMedia("(hover: none)").matches;
 
-/* ---------- theme (light/dark) + palette switching ---------- */
-interface PaletteDef {
-  id: string;
-  name: string;
-  swatch: [string, string, string];
+/* ---------- theme (light/dark): follows system by default, manual toggle persists an override ---------- */
+const THEME_KEY = "mini-desk-landing-theme";
+const systemDark = window.matchMedia("(prefers-color-scheme: dark)");
+
+function currentTheme(): "light" | "dark" {
+  return document.documentElement.getAttribute("data-theme") === "light" ? "light" : "dark";
 }
 
-const PALETTES: PaletteDef[] = [
-  { id: "aurora", name: "极光", swatch: ["#5eeabe", "#22d3ee", "#a78bfa"] },
-  { id: "ocean", name: "海洋", swatch: ["#7dd3fc", "#38bdf8", "#818cf8"] },
-  { id: "sunset", name: "落日", swatch: ["#fbbf24", "#fb7185", "#e879f9"] },
-  { id: "violet", name: "星紫", swatch: ["#c4b5fd", "#a78bfa", "#67e8f9"] },
-];
-
-const PREFS_KEY = "mini-desk-landing-prefs";
-
-function currentPrefs(): { theme: string; palette: string } {
-  return {
-    theme: document.documentElement.getAttribute("data-theme") === "light" ? "light" : "dark",
-    palette: document.documentElement.getAttribute("data-palette") || "aurora",
-  };
-}
-
-function savePrefs(): void {
+function savedThemeOverride(): string | null {
   try {
-    localStorage.setItem(PREFS_KEY, JSON.stringify(currentPrefs()));
+    return localStorage.getItem(THEME_KEY);
   } catch {
-    /* 隐私模式等场景下静默降级为会话内切换 */
+    return null;
   }
 }
 
-/* 同步浏览器 chrome 颜色与色系菜单的选中态 */
-function syncChromeState(): void {
-  /* 从 --bg 变量取值而非 body 的 computed style:body 背景有过渡动画,切换瞬间读到的是旧值 */
+/* 同步浏览器 chrome 颜色:从 --bg 变量取值而非 body 的 computed style,
+   body 背景有过渡动画,切换瞬间读到的是旧值。 */
+function applyTheme(theme: "light" | "dark"): void {
+  document.documentElement.setAttribute("data-theme", theme);
   const bg = getComputedStyle(document.documentElement).getPropertyValue("--bg").trim();
   document.querySelector('meta[name="theme-color"]')?.setAttribute("content", bg);
-  const active = currentPrefs().palette;
-  document.querySelectorAll<HTMLButtonElement>(".palette-opt").forEach((btn) => {
-    btn.setAttribute("aria-checked", String(btn.dataset.palette === active));
-  });
 }
 
 const themeToggle = document.getElementById("themeToggle");
 themeToggle?.addEventListener("click", () => {
-  const el = document.documentElement;
-  el.setAttribute("data-theme", el.getAttribute("data-theme") === "light" ? "dark" : "light");
-  savePrefs();
-  syncChromeState();
+  const next: "light" | "dark" = currentTheme() === "light" ? "dark" : "light";
+  applyTheme(next);
+  try {
+    localStorage.setItem(THEME_KEY, next);
+  } catch {
+    /* 隐私模式等场景下静默降级为会话内切换 */
+  }
 });
 
-const paletteBtn = document.getElementById("paletteBtn");
-const palettePop = document.getElementById("palettePop");
-if (palettePop) {
-  palettePop.innerHTML = PALETTES.map(
-    (p) => `
-    <button class="palette-opt" type="button" role="menuitemradio" aria-checked="false" data-palette="${p.id}">
-      <span class="opt-dot" style="background: linear-gradient(135deg, ${p.swatch[0]}, ${p.swatch[1]} 55%, ${p.swatch[2]})"></span>
-      <span>${p.name}</span>
-      <svg class="opt-check" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M20 6 9 17l-5-5"/></svg>
-    </button>`,
-  ).join("");
-
-  const closePop = () => {
-    palettePop.classList.remove("open");
-    paletteBtn?.setAttribute("aria-expanded", "false");
-  };
-  const openPop = () => {
-    palettePop.classList.add("open");
-    paletteBtn?.setAttribute("aria-expanded", "true");
-  };
-
-  palettePop.querySelectorAll<HTMLButtonElement>(".palette-opt").forEach((btn) => {
-    btn.addEventListener("click", () => {
-      document.documentElement.setAttribute("data-palette", btn.dataset.palette || "aurora");
-      savePrefs();
-      syncChromeState();
-      closePop();
-    });
-  });
-
-  paletteBtn?.addEventListener("click", (event) => {
-    event.stopPropagation();
-    if (palettePop.classList.contains("open")) closePop();
-    else openPop();
-  });
-  /* 点击气泡外部关闭 */
-  document.addEventListener("click", (event) => {
-    if (palettePop.classList.contains("open") && !(event.target as Element | null)?.closest?.(".palette-wrap")) {
-      closePop();
-    }
-  });
-  document.addEventListener("keydown", (event) => {
-    if (event.key === "Escape") closePop();
-  });
-}
-syncChromeState();
+/* 未手动覆盖时,跟随系统主题实时变化 */
+systemDark.addEventListener("change", () => {
+  if (savedThemeOverride() !== "light" && savedThemeOverride() !== "dark") {
+    applyTheme(systemDark.matches ? "dark" : "light");
+  }
+});
+applyTheme(currentTheme());
 
 /* ---------- theme gallery ---------- */
 const grid = document.getElementById("themeGrid");
