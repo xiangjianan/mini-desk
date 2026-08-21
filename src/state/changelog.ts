@@ -29,24 +29,34 @@ export interface ChangelogEntry {
 
 export const CHANGELOG: ChangelogEntry[] = [
   {
+    version: "1.0.138",
+    date: "2026-08-22",
+    notes: {
+      zh: [
+        "新增：离线可用——首次访问后断网也能完整打开",
+        "新增：可安装为桌面应用，标题栏颜色随明暗主题自动切换",
+        "优化：安装提示不再主动弹出，可从浏览器菜单手动安装",
+      ],
+      en: [
+        "New: offline support — the board fully opens with no network after the first visit",
+        "New: installable as a desktop app; the title-bar color follows the light/dark theme",
+        "Improved: no more automatic install banner — install from the browser menu instead",
+      ],
+    },
+  },
+  {
     version: "1.0.137",
     date: "2026-08-21",
     notes: {
       zh: [
-        "新增：提醒事项 Ctrl+←/→ 跳行首行尾，Ctrl+↑/↓ 组内上下移动且焦点跟随",
-        "新增：便签在空行或短横线行按 Tab 自动补短横线",
-        "新增：快捷按钮、标签、提醒列表、单条提醒、便签 Tab 右键「移动到空间」",
-        "优化：工作空间切换器下拉改为 ClickUp 风格布局",
-        "修复：Ctrl+↑ 连续移动提醒时第二次起失焦变只读",
-        "修复：Ctrl+↑ 上移缺少过渡动画，现与下移一致",
+        "新增：提醒事项 Ctrl+方向键跳行首尾、组内上下移动",
+        "新增：便签 Tab 补短横线；多类条目右键「移动到空间」",
+        "优化：工作空间切换器改为 ClickUp 风格；修复 Ctrl+↑ 连续移动失焦与动画缺失",
       ],
       en: [
-        "Added: Ctrl+←/→ jumps to line start/end in todos; Ctrl+↑/↓ reorders within its group while keeping focus",
-        "Added: Tab on an empty or dash line in notes auto-inserts a dash indent",
-        "Added: right-click \"move to workspace\" for quick buttons, tags, todo lists, single todos, and note tabs",
-        "Improved: workspace switcher dropdown restyled with a ClickUp-style layout",
-        "Fixed: repeated Ctrl+↑ todo moves used to lose focus and turn the row read-only",
-        "Fixed: Ctrl+↑ reorder now animates as smoothly as Ctrl+↓",
+        "Added: Ctrl+arrow keys jump to line ends and reorder todos within their group",
+        "Added: Tab auto-dashes note lines; right-click \"move to workspace\" for many item types",
+        "Improved: ClickUp-style workspace switcher; fixed Ctrl+↑ repeated-move focus loss and missing animation",
       ],
     },
   },
