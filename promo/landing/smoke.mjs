@@ -1,6 +1,7 @@
 /* Landing page smoke test: loads the built preview, checks console errors and
    failed requests, verifies the DOM contract, scroll reveal, video visibility
-   playback, and horizontal overflow across desktop/tablet/mobile viewports. */
+   playback, light/dark + palette switching with persistence, and horizontal
+   overflow across desktop/tablet/mobile viewports. */
 import { chromium } from "../harness/node_modules/playwright-core/index.mjs";
 
 const BASE = process.env.BASE_URL ?? "http://127.0.0.1:4173/";
@@ -41,8 +42,15 @@ async function openPage(viewport, label) {
     featureRows: await page.locator(".feature-row").count(),
     featureCards: await page.locator(".feature-card").count(),
     videos: await page.locator("video").count(),
+    theme: await page.evaluate(() => document.documentElement.getAttribute("data-theme")),
+    palette: await page.evaluate(() => document.documentElement.getAttribute("data-palette")),
+    bodyBg: await page.evaluate(() => getComputedStyle(document.body).backgroundColor),
   };
   console.log("checks:", JSON.stringify(checks, null, 2));
+  // default must stay the original dark aurora look
+  if (checks.theme !== "dark" || checks.palette !== "aurora" || checks.bodyBg !== "rgb(7, 9, 15)") {
+    errors.push(`default should be dark+aurora (#07090f), got ${checks.theme}+${checks.palette} ${checks.bodyBg}`);
+  }
 
   // Hero promo video should be playing (autoplay while visible)
   const heroPlaying = await page.evaluate(() => {
@@ -77,7 +85,67 @@ async function openPage(viewport, label) {
     errors.push("video visibility observer misbehaving");
   }
 
-  await page.screenshot({ path: "smoke.png" });
+  /* ---------- palette switching ---------- */
+  await page.evaluate(() => window.scrollTo(0, 0));
+  await page.waitForTimeout(400);
+  await page.click("#paletteBtn");
+  await page.waitForTimeout(300);
+  const popOpen = await page.locator(".palette-pop.open").count();
+  const optCount = await page.locator(".palette-opt").count();
+  console.log("palette popover open:", popOpen === 1, "| options:", optCount);
+  if (popOpen !== 1 || optCount !== 4) errors.push("palette popover did not open with 4 options");
+
+  const auroraAccent = await page.evaluate(() => getComputedStyle(document.documentElement).getPropertyValue("--accent").trim());
+  await page.click('.palette-opt[data-palette="ocean"]');
+  await page.waitForTimeout(400);
+  const oceanAccent = await page.evaluate(() => getComputedStyle(document.documentElement).getPropertyValue("--accent").trim());
+  console.log("accent aurora→ocean:", auroraAccent, "→", oceanAccent);
+  if (auroraAccent !== "#5eeabe" || oceanAccent !== "#7dd3fc") errors.push("palette switch did not update --accent");
+
+  // popover should close after selecting, and on outside click when reopened
+  const closedAfterSelect = (await page.locator(".palette-pop.open").count()) === 0;
+  await page.click("#paletteBtn");
+  await page.waitForTimeout(200);
+  await page.click("h1"); // click outside
+  await page.waitForTimeout(200);
+  const closedOutside = (await page.locator(".palette-pop.open").count()) === 0;
+  console.log("popover closes on select:", closedAfterSelect, "| on outside click:", closedOutside);
+  if (!closedAfterSelect || !closedOutside) errors.push("palette popover close behavior broken");
+
+  /* ---------- theme switching ---------- */
+  await page.click("#themeToggle");
+  await page.waitForTimeout(500);
+  const lightBg = await page.evaluate(() => getComputedStyle(document.body).backgroundColor);
+  const stored = await page.evaluate(() => localStorage.getItem("mini-desk-landing-prefs"));
+  const metaColor = await page.evaluate(() => document.querySelector('meta[name="theme-color"]').getAttribute("content"));
+  console.log("light bg:", lightBg, "| stored:", stored, "| meta theme-color:", metaColor);
+  if (lightBg !== "rgb(245, 246, 250)") errors.push(`light theme bg wrong: ${lightBg}`);
+  if (stored !== '{"theme":"light","palette":"ocean"}') errors.push(`prefs not persisted correctly: ${stored}`);
+  if (metaColor !== "#f5f6fa") errors.push(`meta theme-color not updated: ${metaColor}`);
+
+  await page.screenshot({ path: "smoke-light-ocean.png" });
+
+  // reload: both choices must survive
+  await page.reload({ waitUntil: "domcontentloaded" });
+  await page.waitForTimeout(1500);
+  const persisted = await page.evaluate(() => ({
+    theme: document.documentElement.getAttribute("data-theme"),
+    palette: document.documentElement.getAttribute("data-palette"),
+    bg: getComputedStyle(document.body).backgroundColor,
+  }));
+  console.log("persisted after reload:", JSON.stringify(persisted));
+  if (persisted.theme !== "light" || persisted.palette !== "ocean") errors.push("prefs did not survive reload");
+
+  // switch back to dark + aurora for the default-look screenshot
+  await page.click("#themeToggle");
+  await page.waitForTimeout(400);
+  await page.click("#paletteBtn");
+  await page.click('.palette-opt[data-palette="aurora"]');
+  await page.waitForTimeout(400);
+  await page.screenshot({ path: "smoke-dark-aurora.png" });
+  const backToDark = await page.evaluate(() => getComputedStyle(document.body).backgroundColor);
+  if (backToDark !== "rgb(7, 9, 15)") errors.push(`dark+aurora restore failed: ${backToDark}`);
+
   await page.close();
 }
 
@@ -108,7 +176,7 @@ for (const vp of [
   if (overflow) errors.push(`[${vp.name}] horizontal overflow: ${JSON.stringify(overflow)}`);
 
   if (vp.name === "mobile") {
-    // nav CTA should sit at the right edge when nav links are hidden
+    // nav controls + CTA should sit at the right edge when nav links are hidden
     const cta = await page.evaluate(() => {
       const r = document.querySelector(".nav-cta").getBoundingClientRect();
       return { right: Math.round(r.right), winW: window.innerWidth };
@@ -126,4 +194,4 @@ if (errors.length) {
   console.log("ERRORS:\n" + errors.join("\n"));
   process.exit(1);
 }
-console.log("SMOKE OK — no console errors, no failed requests, no overflow");
+console.log("SMOKE OK — no console errors, no failed requests, no overflow, theme/palette switching verified");
