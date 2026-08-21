@@ -75,7 +75,10 @@ npm install
 npm run dev
 npm test
 npm run build
+npm run preview
 ```
+
+`npm run preview` builds and serves the production bundle locally — the only way to verify Service Worker offline behavior, since dev mode deliberately never registers the SW (unhashed assets + HMR make SW caching in dev an anti-pattern).
 
 ## Conventions
 

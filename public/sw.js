@@ -40,6 +40,10 @@ self.addEventListener("activate", (event) => {
       await Promise.all(keys.filter((key) => key !== CACHE_VERSION).map((key) => caches.delete(key)));
       // claim ≠ skipWaiting：首次安装必须 claim，否则首访页面资源请求不经过 SW，运行时缓存为空（spec §4）。
       await self.clients.claim();
+      // 首访页面的资源请求发生在 SW 接管之前，不会进入运行时缓存；
+      // 这里主动拉取各打开页面的 HTML 并预缓存其中引用的 /assets/*，
+      // 让「首次访问后立刻断网」也能完整离线（spec §5 离线行为）。
+      await warmClientAssets();
     })(),
   );
 });
@@ -90,8 +94,36 @@ async function handleNavigation(event, request) {
   throw new Error("offline-no-cache");
 }
 
-function withTimeout(promise, ms) {
-  return Promise.race([
+async function warmClientAssets() {
+  const clientList = await self.clients.matchAll({ type: "window" });
+  await Promise.all(
+    clientList.map(async (client) => {
+      try {
+        const response = await fetch(client.url, { cache: "reload" });
+        if (!response || !response.ok) return;
+        const urls = extractAssetUrls(await response.text());
+        if (urls.length === 0) return;
+        const cache = await caches.open(CACHE_VERSION);
+        await cache.addAll(urls.map((url) => new Request(url, { cache: "reload" })));
+      } catch {
+        // 预热尽力而为：失败不影响激活，后续访问仍会按需缓存（spec §7）。
+      }
+    }),
+  );
+}
+
+// 从 HTML 中提取根相对的 /assets/* 引用（构建产物里 JS/CSS/图片/favicon 均为哈希命名）。
+function extractAssetUrls(html) {
+  const urls = new Set();
+  const pattern = /(?:src|href)=["'](\/assets\/[^"']+)["']/g;
+  let match;
+  while ((match = pattern.exec(html)) !== null) {
+    urls.add(new URL(match[1], self.location.origin).href);
+  }
+  return [...urls];
+}
+
+function withTimeout(promise, ms) {  return Promise.race([
     promise,
     new Promise((_, reject) => {
       setTimeout(() => reject(new Error("navigation-timeout")), ms);

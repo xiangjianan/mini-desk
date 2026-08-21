@@ -89,6 +89,7 @@ interface SwHarness {
   fetchMock: ReturnType<typeof vi.fn>;
   skipWaiting: ReturnType<typeof vi.fn>;
   claim: ReturnType<typeof vi.fn>;
+  matchAllClients: ReturnType<typeof vi.fn>;
 }
 
 function makeLoadSw() {
@@ -96,13 +97,14 @@ function makeLoadSw() {
     const listeners = new Map<string, Listener>();
     const skipWaiting = vi.fn();
     const claim = vi.fn();
+    const matchAllClients = vi.fn().mockResolvedValue([]);
     const fetchMock = vi.fn();
     const caches = createCacheStorage(fetchMock);
 
     const swScope = {
       location: { origin: ORIGIN },
       skipWaiting,
-      clients: { claim },
+      clients: { claim, matchAll: matchAllClients },
       addEventListener: (type: string, listener: Listener) => listeners.set(type, listener),
     };
 
@@ -119,7 +121,7 @@ function makeLoadSw() {
     const code = readFileSync(resolve(__dirname, "../../public/sw.js"), "utf8");
     vm.runInNewContext(code, sandbox);
 
-    return { listeners, caches, fetchMock, skipWaiting, claim };
+    return { listeners, caches, fetchMock, skipWaiting, claim, matchAllClients };
   };
 }
 
@@ -389,5 +391,62 @@ describe("service worker activate and message", () => {
     (sw.listeners.get("message") as (e: { data: { type: string } }) => void)({ data: { type: "SKIP_WAITING" } });
 
     expect(sw.skipWaiting).toHaveBeenCalled();
+  });
+});
+
+describe("service worker first-visit warm-up", () => {
+  it("pre-caches /assets/* referenced by open pages right after activation", async () => {
+    const sw = await loadSw();
+    sw.matchAllClients.mockResolvedValue([{ url: `${ORIGIN}/` }]);
+    sw.fetchMock.mockImplementation(async (input: RequestInfo | URL) => {
+      const href = typeof input === "string" ? input : input instanceof URL ? input.href : input.url;
+      if (href === `${ORIGIN}/`) {
+        return new Response(
+          `<script type="module" src="/assets/index-abc.js"></script>` +
+            `<link rel="stylesheet" href="/assets/index-def.css">` +
+            `<link rel="icon" href="/assets/favicon-ghi.ico">`,
+        );
+      }
+      return new Response(`body:${href}`);
+    });
+
+    await runLifecycle(sw, "activate");
+
+    expect(await sw.caches.match(`${ORIGIN}/assets/index-abc.js`)).toBeTruthy();
+    expect(await sw.caches.match(`${ORIGIN}/assets/index-def.css`)).toBeTruthy();
+    expect(await sw.caches.match(`${ORIGIN}/assets/favicon-ghi.ico`)).toBeTruthy();
+  });
+
+  it("ignores non-asset references and de-duplicates repeated ones", async () => {
+    const sw = await loadSw();
+    sw.matchAllClients.mockResolvedValue([{ url: `${ORIGIN}/` }]);
+    sw.fetchMock.mockImplementation(async (input: RequestInfo | URL) => {
+      const href = typeof input === "string" ? input : input instanceof URL ? input.href : input.url;
+      if (href === `${ORIGIN}/`) {
+        return new Response(
+          `<script src="/assets/a.js"></script><script src="/assets/a.js"></script>` +
+            `<link href="/assets/b.css"><img src="/logo.png">`,
+        );
+      }
+      return new Response(`body:${href}`);
+    });
+
+    await runLifecycle(sw, "activate");
+
+    expect(await sw.caches.match(`${ORIGIN}/assets/a.js`)).toBeTruthy();
+    expect(await sw.caches.match(`${ORIGIN}/assets/b.css`)).toBeTruthy();
+    expect(await sw.caches.match(`${ORIGIN}/logo.png`)).toBeFalsy();
+    // 1 次 HTML 拉取 + 2 个去重后的资源。
+    expect(sw.fetchMock).toHaveBeenCalledTimes(3);
+  });
+
+  it("keeps activation healthy when the warm-up fetch fails", async () => {
+    const sw = await loadSw();
+    sw.matchAllClients.mockResolvedValue([{ url: `${ORIGIN}/` }]);
+    sw.fetchMock.mockRejectedValue(new Error("offline"));
+
+    await expect(runLifecycle(sw, "activate")).resolves.toBeUndefined();
+
+    expect(sw.claim).toHaveBeenCalled();
   });
 });

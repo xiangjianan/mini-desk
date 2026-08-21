@@ -48,4 +48,11 @@ describe("pwa configuration", () => {
     expect(sw).toContain('"/icons/icon-192.png"');
     expect(sw).toContain('"/icons/icon-512.png"');
   });
+
+  it("offers a one-key local preview of the production build for offline verification", () => {
+    const packageJson = read("package.json");
+
+    expect(packageJson).toContain('"preview": "npm run build && vite preview"');
+    expect(read("CLAUDE.md")).toContain("npm run preview");
+  });
 });

@@ -160,3 +160,10 @@ SW 生命周期事件：
 - **清缓存后离线**：用户点击红点必然是在线场景（版本检查刚成功）；极端情况下清缓存后立刻断网会失去离线兜底，下次在线自愈。
 - **多标签页**：SKIP_WAITING 后其他标签页由新 SW 接管 fetch 拦截，已加载页面继续运行旧资源（内存中），行为一致无害。
 - **CSP**：`script-src 'self'` 不影响 SW（worker-src 回退到 script-src，同源放行）与 manifest link。
+
+## 10. 变更记录
+
+- **2026-08-22**（验收反馈三项调整）：
+  1. **抑制安装横幅**：`src/pwa.ts` 监听 `beforeinstallprompt` 并 `preventDefault()`，浏览器不再主动弹「安装 Mini Desk」提示；用户仍可从浏览器菜单手动安装。
+  2. **标题栏颜色随主题联动**：standalone 窗口标题栏浅色 `#f5f5f7` / 深色 `#1c1c1e`（与画布底色一致）。`theme-boot.js` 首帧前同步 meta、`applyTheme()` 运行时同步、`index.html` 静态值与 manifest `theme_color` 改为浅色默认，并补充 manifest `"id": "/"`。
+  3. **首访缓存预热 + 本地离线验证**：SW `activate` 后对每个打开的 window client 拉取页面 HTML，解析并预缓存其中引用的 `/assets/*`，使「首次访问后立刻断网」也能完整离线。开发模式仍不注册 SW（无哈希资源 + HMR 下缓存属反模式），本地验证离线统一用 `npm run preview`（build + preview 一键）。
