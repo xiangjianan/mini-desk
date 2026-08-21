@@ -58,17 +58,18 @@ function createCacheStorage(fetchFn: (request: RequestInfo | URL) => Promise<Res
           }
         },
         async put(request: RequestInfo | URL, response: Response): Promise<void> {
-          store.set(keyOf(request), response);
+          store.set(keyOf(request), response.clone());
         },
         async match(request: RequestInfo | URL): Promise<Response | null> {
-          return store.get(keyOf(request)) ?? null;
+          const hit = store.get(keyOf(request));
+          return hit ? hit.clone() : null;
         },
       };
     },
     async match(request: RequestInfo | URL): Promise<Response | undefined> {
       for (const store of stores.values()) {
         const hit = store.get(keyOf(request));
-        if (hit) return hit;
+        if (hit) return hit.clone();
       }
       return undefined;
     },
@@ -128,16 +129,36 @@ function navigateRequest(url: string): FetchRequestLike {
   return { method: "GET", mode: "navigate", url };
 }
 
-async function driveFetch(harness: SwHarness, request: FetchRequestLike | Request): Promise<Response | undefined> {
+interface DrivenFetch {
+  response: Response | undefined;
+  respondWith: ReturnType<typeof vi.fn>;
+  waitUntil: ReturnType<typeof vi.fn>;
+}
+
+// vm 沙箱与宿主分属不同 realm，instanceof Promise 对沙箱 promise 恒为 false，改用鸭子类型判断 thenable。
+function isThenable(value: Response | PromiseLike<Response> | undefined): value is PromiseLike<Response> {
+  return typeof value === "object" && value !== null && typeof (value as PromiseLike<Response>).then === "function";
+}
+
+async function driveFetchWithEvent(
+  harness: SwHarness,
+  request: FetchRequestLike | Request,
+): Promise<DrivenFetch> {
   const respondWith = vi.fn().mockResolvedValue(undefined);
-  const event: FetchEventLike = {
-    request,
-    respondWith,
-    waitUntil: vi.fn().mockResolvedValue(undefined),
-  };
+  const waitUntil = vi.fn().mockResolvedValue(undefined);
+  const event: FetchEventLike = { request, respondWith, waitUntil };
   (harness.listeners.get("fetch") as (e: FetchEventLike) => void)(event);
-  const arg = respondWith.mock.calls[0]?.[0];
-  return arg instanceof Promise ? await arg : arg;
+  const arg = respondWith.mock.calls[0]?.[0] as Response | PromiseLike<Response> | undefined;
+  const response = isThenable(arg) ? await arg : arg;
+  return { response, respondWith, waitUntil };
+}
+
+function driveFetch(harness: SwHarness, request: FetchRequestLike | Request): Promise<Response | undefined> {
+  return driveFetchWithEvent(harness, request).then((driven) => driven.response);
+}
+
+async function awaitBackgroundWork(driven: DrivenFetch): Promise<unknown> {
+  return Promise.all(driven.waitUntil.mock.calls.map((call) => call[0] as Promise<unknown>));
 }
 
 async function runLifecycle(harness: SwHarness, type: "install" | "activate"): Promise<void> {
@@ -180,12 +201,26 @@ describe("service worker fetch strategies", () => {
     const sw = await loadSw();
     sw.fetchMock.mockResolvedValue(new Response("fresh index"));
 
-    const response = await driveFetch(sw, navigateRequest(`${ORIGIN}/`));
+    const driven = await driveFetchWithEvent(sw, navigateRequest(`${ORIGIN}/`));
 
-    expect(await response?.text()).toBe("fresh index");
+    expect(await driven.response?.text()).toBe("fresh index");
     expect(sw.fetchMock).toHaveBeenCalledTimes(1);
+    // 先响应后写缓存：等待 waitUntil 里的后台写入完成后再断言缓存内容。
+    expect(driven.waitUntil).toHaveBeenCalled();
+    await awaitBackgroundWork(driven);
     const cached = await sw.caches.match("/");
     expect(await cached?.text()).toBe("fresh index");
+  });
+
+  it("falls back to the cached shell when navigation gets a server error", async () => {
+    const sw = await loadSw();
+    sw.fetchMock.mockImplementation(async (request: Request) => new Response(`body:${request.url}`));
+    await runLifecycle(sw, "install");
+    sw.fetchMock.mockResolvedValue(new Response("boom", { status: 500 }));
+
+    const { response } = await driveFetchWithEvent(sw, navigateRequest(`${ORIGIN}/`));
+
+    expect(await response?.text()).toBe(`body:${ORIGIN}/`);
   });
 
   it("falls back to the cached shell when the network is down", async () => {
@@ -230,6 +265,17 @@ describe("service worker fetch strategies", () => {
     expect(sw.fetchMock).toHaveBeenCalledTimes(1);
   });
 
+  it("returns a non-ok asset response as-is without caching it", async () => {
+    const sw = await loadSw();
+    sw.fetchMock.mockResolvedValue(new Response("missing", { status: 404 }));
+
+    const { response } = await driveFetchWithEvent(sw, new Request(`${ORIGIN}/assets/app-missing.js`));
+
+    expect(response?.status).toBe(404);
+    expect(await response?.text()).toBe("missing");
+    expect(await sw.caches.match(`${ORIGIN}/assets/app-missing.js`)).toBeFalsy();
+  });
+
   it("serves fixed-name small files stale-while-revalidate", async () => {
     const sw = await loadSw();
     sw.fetchMock.mockResolvedValue(new Response("boot v1"));
@@ -245,6 +291,53 @@ describe("service worker fetch strategies", () => {
       const cached = await sw.caches.match(`${ORIGIN}/theme-boot.js`);
       expect(await cached?.text()).toBe("boot v2");
     });
+  });
+
+  it("serves the cached copy while the network is still pending", async () => {
+    const sw = await loadSw();
+    sw.fetchMock.mockImplementation(async (request: Request) => new Response(`body:${request.url}`));
+    await runLifecycle(sw, "install"); // 种下缓存
+
+    let releaseNetwork!: (value: Response) => void;
+    sw.fetchMock.mockReturnValue(new Promise<Response>((resolve) => { releaseNetwork = resolve; }));
+
+    const driven = driveFetchWithEvent(sw, new Request(`${ORIGIN}/theme-boot.js`));
+    const settled = await Promise.race([
+      driven.then(() => true),
+      new Promise<boolean>((resolve) => { setTimeout(() => resolve(false), 0); }),
+    ]);
+    expect(settled).toBe(true); // 阻塞式实现会在这里失败
+    const { response, waitUntil } = await driven;
+    expect(await response?.text()).toBe(`body:${ORIGIN}/theme-boot.js`);
+
+    // waitUntil 传播：后台保鲜 promise 在网络释放前不得 settle。
+    expect(waitUntil).toHaveBeenCalled();
+    const background = waitUntil.mock.calls[0][0] as Promise<unknown>;
+    let backgroundSettled = false;
+    void background.then(() => { backgroundSettled = true; });
+    await new Promise((resolve) => setTimeout(resolve, 0));
+    expect(backgroundSettled).toBe(false);
+
+    releaseNetwork(new Response("boot v2"));
+    await background;
+    await vi.waitFor(async () => {
+      expect(await (await sw.caches.match(`${ORIGIN}/theme-boot.js`))?.text()).toBe("boot v2");
+    });
+  });
+
+  it("does not let a failing SWR revalidation overwrite the cached copy", async () => {
+    const sw = await loadSw();
+    sw.fetchMock.mockImplementation(async (request: Request) => new Response(`body:${request.url}`));
+    await runLifecycle(sw, "install");
+
+    sw.fetchMock.mockResolvedValue(new Response("server error", { status: 500 }));
+    const driven = await driveFetchWithEvent(sw, new Request(`${ORIGIN}/theme-boot.js`));
+
+    expect(await driven.response?.text()).toBe(`body:${ORIGIN}/theme-boot.js`);
+    expect(driven.waitUntil).toHaveBeenCalled();
+    await awaitBackgroundWork(driven);
+    const cached = await sw.caches.match(`${ORIGIN}/theme-boot.js`);
+    expect(await cached?.text()).toBe(`body:${ORIGIN}/theme-boot.js`);
   });
 
   it("does not intercept the daily version-check fetch (non-navigation with no-store style params)", async () => {
