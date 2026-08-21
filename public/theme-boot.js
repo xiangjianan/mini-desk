@@ -7,6 +7,12 @@ try {
     var theme = JSON.parse(saved).theme;
     if (theme === "dark" || theme === "light") {
       document.documentElement.setAttribute("data-theme", theme);
+      // 同步 standalone 标题栏底色，避免安装态首帧出现默认色闪烁；
+      // 取值与 src/state/theme-color.ts 的映射保持一致（有测试守护）。
+      var themeColorMeta = document.querySelector('meta[name="theme-color"]');
+      if (themeColorMeta) {
+        themeColorMeta.setAttribute("content", theme === "dark" ? "#1c1c1e" : "#f5f5f7");
+      }
     }
   }
 } catch (e) {

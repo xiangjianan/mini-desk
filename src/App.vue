@@ -52,6 +52,7 @@ import {
   updateTodoText,
 } from "./state/todos";
 import { DEFAULT_BOARD_TITLE, defaultState, STORAGE_KEY } from "./state/defaults";
+import { applyThemeColor } from "./state/theme-color";
 import { createWorkspaceData, ensureUniqueWorkspaceTitle, getWorkspaceBoardTitle, removeWorkspace, reorderWorkspaces } from "./state/workspaces";
 import * as workspaceMover from "./state/workspaceMoves";
 import { QUICK_BUTTON_OTHER_GROUP_ID, QUICK_DENSITY_THRESHOLD, formatQuickCopiedPreview, getQuickTagColor } from "./state/quickButtons";
@@ -2216,6 +2217,8 @@ async function updateCustomCompanionGif(files: { light?: File; dark?: File }, an
 
 function applyTheme(): void {
   document.documentElement.dataset.theme = state.theme;
+  // standalone 标题栏颜色随应用主题联动（浅色 #f5f5f7 / 深色 #1c1c1e）。
+  applyThemeColor(state.theme);
 }
 
 function clearData(anchor?: HTMLElement): void {
