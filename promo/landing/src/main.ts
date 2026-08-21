@@ -21,6 +21,18 @@ const THEMES: ThemeDef[] = [
 const prefersReducedMotion = window.matchMedia("(prefers-reduced-motion: reduce)").matches;
 const isTouch = window.matchMedia("(hover: none)").matches;
 
+/* ---------- theme toggle (mirrors the app's light/dark switch) ---------- */
+const themeToggle = document.getElementById("themeToggle");
+themeToggle?.addEventListener("click", () => {
+  const next = document.documentElement.getAttribute("data-theme") === "dark" ? "light" : "dark";
+  document.documentElement.setAttribute("data-theme", next);
+  try {
+    localStorage.setItem("mini-desk-landing-theme", next);
+  } catch {
+    /* 隐私模式等场景下静默降级为会话内切换 */
+  }
+});
+
 /* ---------- theme gallery ---------- */
 const grid = document.getElementById("themeGrid");
 if (grid) {
@@ -125,6 +137,7 @@ document.querySelectorAll("video").forEach((video) => {
 /* ---------- hero sound toggle ---------- */
 const promoVideo = document.getElementById("promoVideo") as HTMLVideoElement | null;
 const soundToggle = document.getElementById("soundToggle") as HTMLButtonElement | null;
+const soundLabel = document.getElementById("soundLabel");
 soundToggle?.addEventListener("click", () => {
   if (!promoVideo) return;
   promoVideo.muted = !promoVideo.muted;
@@ -132,7 +145,8 @@ soundToggle?.addEventListener("click", () => {
     promoVideo.currentTime = 0;
     promoVideo.play().catch(() => {});
   }
-  soundToggle.textContent = promoVideo.muted ? "🔇 点开有声版" : "🔊 正在播放声音";
+  if (soundLabel) soundLabel.textContent = promoVideo.muted ? "点开有声版" : "正在播放声音";
+  soundToggle.setAttribute("aria-label", promoVideo.muted ? "播放宣传片声音" : "关闭宣传片声音");
 });
 
 /* ---------- subtle 3D tilt on theme cards ---------- */
@@ -142,7 +156,7 @@ if (!isTouch && !prefersReducedMotion) {
       const rect = card.getBoundingClientRect();
       const px = (event.clientX - rect.left) / rect.width - 0.5;
       const py = (event.clientY - rect.top) / rect.height - 0.5;
-      card.style.transform = `perspective(900px) rotateY(${px * 5}deg) rotateX(${py * -5}deg) translateY(-4px)`;
+      card.style.transform = `perspective(900px) rotateY(${px * 4}deg) rotateX(${py * -4}deg) translateY(-3px)`;
     });
     card.addEventListener("pointerleave", () => {
       card.style.transform = "";
