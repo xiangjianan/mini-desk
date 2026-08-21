@@ -19,7 +19,7 @@ interface MockRegistration {
 function makeRegistration(options: { waiting?: { postMessage: (message: unknown) => void } | null } = {}): {
   registration: MockRegistration;
   fireUpdateFound: () => void;
-  fireStateChange: () => void;
+  fireStateChange: (nextState?: string) => void;
   installing: MockServiceWorker;
 } {
   const listeners = { updateFound: [] as Array<() => void>, stateChange: [] as Array<() => void> };
@@ -38,8 +38,8 @@ function makeRegistration(options: { waiting?: { postMessage: (message: unknown)
     registration,
     installing,
     fireUpdateFound: () => listeners.updateFound.forEach((cb) => cb()),
-    fireStateChange: () => {
-      installing.state = "installed";
+    fireStateChange: (nextState = "installed") => {
+      installing.state = nextState;
       listeners.stateChange.forEach((cb) => cb());
     },
   };
@@ -48,7 +48,7 @@ function makeRegistration(options: { waiting?: { postMessage: (message: unknown)
 function installNavigatorServiceWorker(options: {
   controller: unknown;
   register: ReturnType<typeof vi.fn>;
-  registration: MockRegistration;
+  registration: MockRegistration | undefined;
 }): void {
   Object.defineProperty(navigator, "serviceWorker", {
     configurable: true,
@@ -134,6 +134,46 @@ describe("service worker registration (src/pwa.ts)", () => {
     expect(pwa.swUpdateReady.value).toBe(false);
   });
 
+  it("does not mark update-ready when the installing worker ends in a non-installed state", async () => {
+    const harness = makeRegistration();
+    const register = vi.fn().mockResolvedValue(harness.registration);
+    installNavigatorServiceWorker({ controller: {}, register, registration: harness.registration });
+    const pwa = await loadPwa();
+    await pwa.registerServiceWorker();
+
+    harness.fireUpdateFound();
+    harness.fireStateChange("redundant");
+
+    expect(pwa.swUpdateReady.value).toBe(false);
+  });
+
+  it("ignores updatefound when no worker is installing yet", async () => {
+    const harness = makeRegistration();
+    harness.registration.installing = null;
+    const register = vi.fn().mockResolvedValue(harness.registration);
+    installNavigatorServiceWorker({ controller: {}, register, registration: harness.registration });
+    const pwa = await loadPwa();
+    await pwa.registerServiceWorker();
+
+    harness.fireUpdateFound();
+
+    expect(pwa.swUpdateReady.value).toBe(false);
+  });
+
+  it("marks update-ready for a worker already installing when registration resolves", async () => {
+    const harness = makeRegistration();
+    const register = vi.fn().mockResolvedValue(harness.registration);
+    installNavigatorServiceWorker({ controller: {}, register, registration: harness.registration });
+    const pwa = await loadPwa();
+    await pwa.registerServiceWorker();
+    expect(pwa.swUpdateReady.value).toBe(false);
+
+    // 不经过 updatefound：覆盖注册返回时已在安装、statechange 监听器需要补挂的竞态窗口。
+    harness.fireStateChange();
+
+    expect(pwa.swUpdateReady.value).toBe(true);
+  });
+
   it("swallows registration failures silently", async () => {
     const register = vi.fn().mockRejectedValue(new Error("insecure context"));
     installNavigatorServiceWorker({
@@ -155,6 +195,18 @@ describe("service worker registration (src/pwa.ts)", () => {
     await pwa.activateWaitingServiceWorker();
 
     expect(postMessage).toHaveBeenCalledWith({ type: "SKIP_WAITING" });
+  });
+
+  it("resolves cleanly without postMessage when getRegistration resolves undefined", async () => {
+    const postMessage = vi.fn();
+    const { registration } = makeRegistration({ waiting: { postMessage } });
+    installNavigatorServiceWorker({ controller: {}, register: vi.fn(), registration });
+    vi.mocked(navigator.serviceWorker.getRegistration).mockResolvedValue(undefined);
+    const pwa = await loadPwa();
+
+    await expect(pwa.activateWaitingServiceWorker()).resolves.toBeUndefined();
+
+    expect(postMessage).not.toHaveBeenCalled();
   });
 
   it("does nothing without serviceWorker support", async () => {

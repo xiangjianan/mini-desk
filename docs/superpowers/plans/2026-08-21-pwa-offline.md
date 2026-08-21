@@ -670,6 +670,8 @@ describe("service worker registration (src/pwa.ts)", () => {
 });
 ```
 
+*注：上块为计划初稿，已提交的 `src/__tests__/pwa-register.test.ts` 后续经质量评审加固（`fireStateChange` 参数化支持传入任意状态；新增 4 个用例：非 installed 状态不点亮 / updatefound 时 `installing` 为 null 不崩不点亮 / `getRegistration()` 解析 undefined 时干净 no-op / 注册返回时已在安装的 worker 不经 updatefound 直接补挂），共 11 个用例，以提交文件为准。*
+
 - [ ] **Step 2: 运行确认失败**
 
 Run: `npx vitest run src/__tests__/pwa-register.test.ts`
@@ -694,7 +696,7 @@ export async function registerServiceWorker(): Promise<void> {
     const registration = await navigator.serviceWorker.register(SW_REGISTER_URL);
     if (registration.waiting) swUpdateReady.value = true;
 
-    registration.addEventListener("updatefound", () => {
+    const watchInstallingWorker = (): void => {
       const installing = registration.installing;
       if (!installing) return;
       installing.addEventListener("statechange", () => {
@@ -703,7 +705,11 @@ export async function registerServiceWorker(): Promise<void> {
           swUpdateReady.value = true;
         }
       });
-    });
+    };
+
+    // 注册返回时可能已有 worker 在安装（updatefound 早于监听器挂载就触发过），立即补挂。
+    watchInstallingWorker();
+    registration.addEventListener("updatefound", watchInstallingWorker);
   } catch {
     // 注册失败静默降级：应用本身不依赖 SW（spec §7）。
   }
@@ -724,7 +730,7 @@ export async function activateWaitingServiceWorker(): Promise<void> {
 - [ ] **Step 4: 运行确认通过**
 
 Run: `npx vitest run src/__tests__/pwa-register.test.ts`
-Expected: PASS（7 个用例全绿）
+Expected: PASS（11 个用例全绿）
 
 - [ ] **Step 5: 提交**
 

@@ -14,7 +14,7 @@ export async function registerServiceWorker(): Promise<void> {
     const registration = await navigator.serviceWorker.register(SW_REGISTER_URL);
     if (registration.waiting) swUpdateReady.value = true;
 
-    registration.addEventListener("updatefound", () => {
+    const watchInstallingWorker = (): void => {
       const installing = registration.installing;
       if (!installing) return;
       installing.addEventListener("statechange", () => {
@@ -23,7 +23,11 @@ export async function registerServiceWorker(): Promise<void> {
           swUpdateReady.value = true;
         }
       });
-    });
+    };
+
+    // 注册返回时可能已有 worker 在安装（updatefound 早于监听器挂载就触发过），立即补挂。
+    watchInstallingWorker();
+    registration.addEventListener("updatefound", watchInstallingWorker);
   } catch {
     // 注册失败静默降级：应用本身不依赖 SW（spec §7）。
   }
