@@ -8,6 +8,7 @@
     "build": "vue-tsc --noEmit && vite build",
     "preview": "npm run build && vite preview",
     "deploy:cloudflare": "npm run build && npx wrangler pages deploy dist --project-name=todolist",
+    "deploy:worker": "npx wrangler deploy --config worker/wrangler.toml",
     "test": "vitest run",
     "test:watch": "vitest"
   },

@@ -1,0 +1,10 @@
+name = "mini-desk-inbox"
+main = "index.ts"
+compatibility_date = "2026-08-23"
+
+[[kv_namespaces]]
+binding = "INBOX"
+id = "PENDING-KV-NAMESPACE-ID"
+
+[vars]
+ALLOWED_ORIGINS = "https://todolist.pages.dev,http://localhost:5173,http://127.0.0.1:5173"
