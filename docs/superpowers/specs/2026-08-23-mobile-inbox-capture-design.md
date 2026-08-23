@@ -110,7 +110,7 @@ interface WorkspaceInbox {
 ## 导出与导入
 
 - 导出：`inbox` 是 `WorkspaceData` 普通字段，`exportWorkspaceById` 自动携带，无需特判。
-- 导入：`normalizeWorkspaceData` 新增 `normalizeWorkspaceInbox` 清洗——码不匹配 `/^[0-9A-Z2-9]{12}$/` 则丢弃整个 `inbox`；`todoListId` 不在该工作区清单中则回退第一个清单；`noteTarget` 非法回退 `"note"`；`lastSeenAt` 非有限数回退 0。
+- 导入：`normalizeWorkspaceData` 新增 `normalizeWorkspaceInbox` 清洗——码不匹配 `/^[0-9A-HJKMNP-TV-Z]{12}$/`（Crockford base32，排除 I/L/O/U）则丢弃整个 `inbox`；`todoListId` 不在该工作区清单中则回退第一个清单；`noteTarget` 非法回退 `"note"`；`lastSeenAt` 非有限数回退 0。
 - 安全提示：配对码即密钥，导出文件携带它意味着「分享导出文件 = 分享该工作区的手机录入通道」。导入检测到带 `inbox` 时提示：若文件来自他人，建议导入后轮换配对码。
 
 ## 错误处理

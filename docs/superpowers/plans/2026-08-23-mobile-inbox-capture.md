@@ -164,7 +164,7 @@ export function normalizeWorkspaceInbox(value: unknown, todoLists: TodoListConfi
 - [ ] **Step 4: 跑测试确认通过**
 
 Run: `npx vitest run src/__tests__/workspace-inbox.test.ts`
-Expected: PASS（8 个用例）。
+Expected: PASS（7 个用例）。
 
 - [ ] **Step 5: 全量回归**
 
