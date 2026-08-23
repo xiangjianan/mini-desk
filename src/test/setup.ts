@@ -1,4 +1,14 @@
+import { webcrypto } from "node:crypto";
 import { vi } from "vitest";
+
+// jsdom 只提供 getRandomValues；同步加解密测试需要 Node 的 WebCrypto。
+if (!globalThis.crypto?.subtle) {
+  Object.defineProperty(globalThis, "crypto", {
+    configurable: true,
+    writable: true,
+    value: webcrypto,
+  });
+}
 
 Object.defineProperty(window, "matchMedia", {
   writable: true,
