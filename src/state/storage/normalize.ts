@@ -115,7 +115,10 @@ export function normalizeWorkspaceInbox(value: unknown, todoLists: TodoListConfi
   if (!todoListId) return undefined;
   const noteTarget: WorkspaceInboxNoteTarget =
     typed.noteTarget === "workspace" || typed.noteTarget === "storage" ? typed.noteTarget : "note";
-  const lastSeenAt = typeof typed.lastSeenAt === "number" && Number.isFinite(typed.lastSeenAt) ? typed.lastSeenAt : 0;
+  const lastSeenAt =
+    typeof typed.lastSeenAt === "number" && Number.isFinite(typed.lastSeenAt)
+      ? Math.max(0, Math.floor(typed.lastSeenAt))
+      : 0;
   return { code: typed.code, todoListId, noteTarget, lastSeenAt };
 }
 

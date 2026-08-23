@@ -24,6 +24,9 @@ describe("normalizeWorkspaceInbox", () => {
     expect(normalizeWorkspaceInbox({ ...validInbox(), code: "short" }, LISTS)).toBeUndefined();
     // 字母表排除 I L O U
     expect(normalizeWorkspaceInbox({ ...validInbox(), code: "ABCDEFGHIJKL" }, LISTS)).toBeUndefined();
+    expect(normalizeWorkspaceInbox({ ...validInbox(), code: 123 as unknown as string }, LISTS)).toBeUndefined();
+    expect(normalizeWorkspaceInbox({ ...validInbox(), code: "ab2cde4fghjk" }, LISTS)).toBeUndefined();
+    expect(normalizeWorkspaceInbox({ ...validInbox(), code: "AB2CDE4FGHJKM" }, LISTS)).toBeUndefined();
   });
 
   it("todoListId 不在清单中时回退第一个清单", () => {
@@ -59,5 +62,9 @@ describe("WorkspaceData.inbox", () => {
     expect(serialized.inbox).toEqual(validInbox());
     expect(serialized.inbox).not.toBe(workspace.inbox);
     expect(getSerializableWorkspace(defaultWorkspace("b")).inbox).toBeUndefined();
+  });
+
+  it("todoLists 为空数组时返回 undefined", () => {
+    expect(normalizeWorkspaceInbox(validInbox(), [])).toBeUndefined();
   });
 });
