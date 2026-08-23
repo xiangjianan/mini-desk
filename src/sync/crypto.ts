@@ -44,6 +44,8 @@ async function deriveAesKey(code: string, salt: Uint8Array<ArrayBuffer>): Promis
 
 /** 密文格式：base64(salt[16] || nonce[12] || AES-GCM ciphertext)。 */
 export async function encryptInboxPayload(code: string, plain: InboxPlainItem): Promise<string> {
+  // 缺 Web Crypto 时先给出模块自己的明确错误，而非 getRandomValues 的裸 TypeError。
+  void subtle();
   const salt = crypto.getRandomValues(new Uint8Array(SALT_BYTES));
   const nonce = crypto.getRandomValues(new Uint8Array(NONCE_BYTES));
   const key = await deriveAesKey(code, salt);
@@ -59,8 +61,10 @@ export async function encryptInboxPayload(code: string, plain: InboxPlainItem): 
   return toBase64(packed);
 }
 
-/** 解密并校验明文结构；任何失败（错码/损坏/结构非法）返回 null，不抛异常。 */
+/** 解密并校验明文结构；条目级失败（错码/损坏/结构非法）返回 null，不抛异常。
+ *  环境级失败（Web Crypto 缺失）在 try 外抛出，让拉取层中止整批而非当作坏条目推进水位线。 */
 export async function decryptInboxPayload(code: string, payload: string): Promise<InboxPlainItem | null> {
+  void subtle();
   try {
     const packed = fromBase64(payload);
     if (packed.length <= SALT_BYTES + NONCE_BYTES) return null;

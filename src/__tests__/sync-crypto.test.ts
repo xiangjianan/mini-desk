@@ -33,6 +33,16 @@ describe("inbox crypto", () => {
     expect(await decryptInboxPayload(CODE, payload)).toBeNull();
   });
 
+  it("明文为 JSON null 返回 null", async () => {
+    const payload = await encryptInboxPayload(CODE, null as unknown as InboxPlainItem);
+    expect(await decryptInboxPayload(CODE, payload)).toBeNull();
+  });
+
+  it("createdAt 缺失回退为 0", async () => {
+    const payload = await encryptInboxPayload(CODE, { kind: "note", text: "x" } as unknown as InboxPlainItem);
+    expect(await decryptInboxPayload(CODE, payload)).toEqual({ kind: "note", text: "x", createdAt: 0 });
+  });
+
   it("inboxKeyHash 返回 64 位 hex 且与码一一对应", async () => {
     const hash = await inboxKeyHash(CODE);
     expect(hash).toMatch(/^[0-9a-f]{64}$/);
