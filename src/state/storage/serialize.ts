@@ -52,6 +52,7 @@ export function getSerializableWorkspace(
     showHiddenQuickButtons: workspace.showHiddenQuickButtons,
     todoLayoutManual: workspace.todoLayoutManual,
     zoneVisibility: normalizeZoneVisibility(workspace.zoneVisibility),
+    ...(workspace.inbox ? { inbox: { ...workspace.inbox } } : {}),
   };
 }
 

@@ -156,6 +156,21 @@ export interface WorkspaceData {
   showCompletedTodos: TodoCompletedVisibility;
   todos: TodoMap;
   zoneVisibility: ZoneVisibility;
+  inbox?: WorkspaceInbox;
+}
+
+export type WorkspaceInboxNoteTarget = "note" | "workspace" | "storage";
+
+/**
+ * 手机速记（单向收件箱）配对配置。字段存在即启用该工作区的拉取同步。
+ * `code` 兼作加密密钥（12 位 Crockford base32）；`lastSeenAt` 是服务端
+ * 时间戳水位线，随工作区导出迁移，防止新机器导入后重灌历史条目。
+ */
+export interface WorkspaceInbox {
+  code: string;
+  todoListId: TodoListId;
+  noteTarget: WorkspaceInboxNoteTarget;
+  lastSeenAt: number;
 }
 
 export interface BoardSyncState {

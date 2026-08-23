@@ -21,8 +21,11 @@ import type {
   TodoCompletedVisibility,
   TodoItem,
   TodoListConfig,
+  TodoListId,
   TodoMap,
   WorkspaceData,
+  WorkspaceInbox,
+  WorkspaceInboxNoteTarget,
   WorkspaceSpace,
   ZoneVisibility,
 } from "../../types";
@@ -96,7 +99,24 @@ export function normalizeWorkspaceData(item: unknown, language: AppLanguage = DE
     showCompletedTodos: normalizeCompletedVisibility(typed.showCompletedTodos, todoLists),
     todos: normalizeTodos(typed.todos, todoLists),
     zoneVisibility: normalizeZoneVisibility(typed.zoneVisibility ?? fallbackVisibility),
+    inbox: normalizeWorkspaceInbox(typed.inbox, todoLists),
   };
+}
+
+const INBOX_CODE_PATTERN = /^[0-9A-HJKMNP-TV-Z]{12}$/;
+
+export function normalizeWorkspaceInbox(value: unknown, todoLists: TodoListConfig[]): WorkspaceInbox | undefined {
+  if (!isPlainObject(value)) return undefined;
+  const typed = value as Record<string, unknown>;
+  if (typeof typed.code !== "string" || !INBOX_CODE_PATTERN.test(typed.code)) return undefined;
+  const todoListId = todoLists.some((list) => list.id === typed.todoListId)
+    ? (typed.todoListId as TodoListId)
+    : todoLists[0]?.id;
+  if (!todoListId) return undefined;
+  const noteTarget: WorkspaceInboxNoteTarget =
+    typed.noteTarget === "workspace" || typed.noteTarget === "storage" ? typed.noteTarget : "note";
+  const lastSeenAt = typeof typed.lastSeenAt === "number" && Number.isFinite(typed.lastSeenAt) ? typed.lastSeenAt : 0;
+  return { code: typed.code, todoListId, noteTarget, lastSeenAt };
 }
 
 function normalizeWorkspaceList(value: unknown, language: AppLanguage, fallbackVisibility?: ZoneVisibility): WorkspaceData[] {
