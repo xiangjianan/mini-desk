@@ -63,6 +63,7 @@ Mini Desk 是本地优先的纯静态 PWA（Cloudflare Pages，零后端），�
 - 密文格式：`base64(salt[16B] || nonce[12B] || ciphertext)`。
 - 明文 JSON：`{ kind: "todo" | "note", text: string, createdAt: number }`（手机端生成的时间戳仅作参考显示；水位线使用服务端 `createdAt`）。
 - 全部使用内置 Web Crypto API，不引入加密依赖。
+- 已接受的权衡：路由键为无盐单次 SHA-256，码熵 ≈60 bit——仅当攻击者能读取中转方存储（内部人员/平台泄露）时才可离线爆破码值。鉴于明文价值（个人速记）、TTL 30 天与爆破成本不匹配，接受该风险；若日后提升安全等级，可将路由键同样过慢速 KDF。
 
 ## 状态模型
 
