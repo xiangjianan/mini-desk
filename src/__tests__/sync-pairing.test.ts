@@ -30,10 +30,19 @@ describe("地址与 fragment", () => {
     expect(parseInboxFragment("")).toBeNull();
     expect(parseInboxFragment("#inbox=short")).toBeNull();
     expect(parseInboxFragment("#other=AB2CDE4FGHJK")).toBeNull();
+    expect(parseInboxFragment("#inbox=AB2CDE4FGHJK&x=1")).toBeNull();
+    expect(parseInboxFragment("inbox=AB2CDE4FGHJK")).toBeNull();
   });
 
   it("buildInboxAddress 拼装当前 origin + fragment", () => {
     const address = buildInboxAddress("AB2CDE4FGHJK");
     expect(address).toBe(`${window.location.origin}${window.location.pathname}#inbox=AB2CDE4FGHJK`);
+  });
+
+  it("生成→地址→解析往返一致", () => {
+    const code = generateInboxCode();
+    const address = buildInboxAddress(code);
+    const hash = address.slice(address.indexOf("#"));
+    expect(parseInboxFragment(hash)).toBe(code);
   });
 });
