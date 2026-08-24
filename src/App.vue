@@ -808,7 +808,7 @@ async function pullInboxes(): Promise<void> {
       const workspace = workspaces.find((item) => item.id === report.workspaceId);
       if (!workspace) continue;
       showBubbleText(
-        uiText.value.app.inboxReceived.replace("{title}", () => getWorkspaceBoardTitle(workspace)).replace("{count}", () => String(report.imported)),
+        uiText.value.app.inboxReceived.replace("{count}", () => String(report.imported)).replace("{title}", () => getWorkspaceBoardTitle(workspace)),
         undefined,
         { hideCompanionAfter: true },
       );
