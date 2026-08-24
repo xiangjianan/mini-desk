@@ -59,7 +59,14 @@ import * as workspaceMover from "./state/workspaceMoves";
 import { QUICK_BUTTON_OTHER_GROUP_ID, QUICK_DENSITY_THRESHOLD, formatQuickCopiedPreview, getQuickTagColor } from "./state/quickButtons";
 import { isQuickAppScheme } from "./state/quickApps";
 import { INBOX_FOCUS_THROTTLE_MS, INBOX_PULL_INTERVAL_MS } from "./sync/config";
-import { importedPayloadHasInbox, isValidInboxCode, normalizeInboxCode, parseInboxFragment } from "./sync/pairing";
+import {
+  importedPayloadHasInbox,
+  isValidInboxCode,
+  loadRememberedInboxCode,
+  normalizeInboxCode,
+  parseInboxFragment,
+  saveRememberedInboxCode,
+} from "./sync/pairing";
 import { applyInboxItems, pullAllInboxes } from "./sync/pull";
 import { copyTextWithBrowserCommand } from "./utils/clipboard";
 import { extractRetainedImageIds, useUndoHistory } from "./composables/useUndoHistory";
@@ -277,10 +284,19 @@ const supportDialogVisible = ref(false);
 const changelogVisible = ref(false);
 const isMobileBlocked = ref(getInitialMobileBlocked());
 const mobileMediaQuery = ref<MediaQueryList | null>(null);
-// URL 带 #inbox=<12位码> 时，移动端引导壳内直接显示速记表单；纯浏览器环境，无 SSR 顾虑。
-const mobileInboxCode = ref<string | null>(parseInboxFragment(window.location.hash));
+// URL 带 #inbox=<12位码> 时优先；否则回退手机壳本地记忆（主屏图标/微信入口丢 fragment 的场景）。
+const mobileInboxCode = ref<string | null>(parseInboxFragment(window.location.hash) ?? loadRememberedInboxCode());
 const mobileInboxDraftCode = ref("");
 const mobileInboxCodeError = ref(false);
+// 手机壳内任何来源（初始 URL 解析/hashchange/手动输码）的有效码都顺手记住，裸访问下次自动配对；
+// 桌面端不写（不产生手机记忆副作用）。immediate 覆盖初始 fragment 场景，重复写入幂等。
+watch(
+  [mobileInboxCode, isMobileBlocked],
+  ([code, blocked]) => {
+    if (blocked && code) saveRememberedInboxCode(code);
+  },
+  { immediate: true },
+);
 let appMounted = false;
 let pendingBrowserImagePasteRequest: { request: ImagePasteRequest; token: number } | undefined;
 let browserImagePasteRequestToken = 0;

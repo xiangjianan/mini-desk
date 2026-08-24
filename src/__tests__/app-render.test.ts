@@ -15,6 +15,7 @@ import { hydrateStoredImages, storeImagePayload } from "../state/images";
 import * as imageState from "../state/images";
 import { KAOMOJI_BY_MOOD } from "../state/messages";
 import { INBOX_FOCUS_THROTTLE_MS } from "../sync/config";
+import { REMEMBERED_INBOX_CODE_KEY } from "../sync/pairing";
 import { pullAllInboxes } from "../sync/pull";
 import type { InboxPullResult } from "../sync/pull";
 import { FALLBACK_APP_VERSION } from "../state/version";
@@ -446,6 +447,88 @@ describe("App shell", () => {
       expect(wrapper.get(".mobile-inbox-heading").text()).toBe("手机速记");
       expect(wrapper.find('[data-testid="mobile-inbox-text"]').exists()).toBe(true);
       expect(wrapper.find('[data-testid="mobile-inbox-code-input"]').exists()).toBe(false);
+    } finally {
+      wrapper?.unmount();
+      window.location.hash = "";
+      vi.unstubAllGlobals();
+      vi.useRealTimers();
+    }
+  });
+
+  it("auto-pairs from the remembered code on a bare mobile visit", async () => {
+    vi.useFakeTimers();
+    stubMatchMedia(true);
+    window.location.hash = "";
+    localStorage.setItem(REMEMBERED_INBOX_CODE_KEY, "AB2CDE4FGHJK");
+    let wrapper: ReturnType<typeof mountApp> | undefined;
+
+    try {
+      wrapper = mountApp();
+
+      expect(wrapper.find('[data-testid="mobile-inbox-text"]').exists()).toBe(true);
+      expect(wrapper.find('[data-testid="mobile-inbox-code-input"]').exists()).toBe(false);
+    } finally {
+      wrapper?.unmount();
+      window.location.hash = "";
+      vi.unstubAllGlobals();
+      vi.useRealTimers();
+    }
+  });
+
+  it("prefers the URL fragment over the remembered code and overwrites the memory", async () => {
+    vi.useFakeTimers();
+    stubMatchMedia(true);
+    window.location.hash = "#inbox=ZZZ0ZZZ0ZZZ0";
+    localStorage.setItem(REMEMBERED_INBOX_CODE_KEY, "AB2CDE4FGHJK");
+    let wrapper: ReturnType<typeof mountApp> | undefined;
+
+    try {
+      wrapper = mountApp();
+
+      expect(wrapper.find('[data-testid="mobile-inbox-text"]').exists()).toBe(true);
+      expect(localStorage.getItem(REMEMBERED_INBOX_CODE_KEY)).toBe("ZZZ0ZZZ0ZZZ0");
+    } finally {
+      wrapper?.unmount();
+      window.location.hash = "";
+      vi.unstubAllGlobals();
+      vi.useRealTimers();
+    }
+  });
+
+  it("remembers a manually confirmed code", async () => {
+    vi.useFakeTimers();
+    stubMatchMedia(true);
+    window.location.hash = "";
+    let wrapper: ReturnType<typeof mountApp> | undefined;
+
+    try {
+      wrapper = mountApp();
+
+      await wrapper.get('[data-testid="mobile-inbox-code-input"]').setValue("ab2c de4f ghjk");
+      await wrapper.get('[data-testid="mobile-inbox-code-confirm"]').trigger("click");
+      await wrapper.vm.$nextTick();
+
+      expect(wrapper.find('[data-testid="mobile-inbox-text"]').exists()).toBe(true);
+      expect(localStorage.getItem(REMEMBERED_INBOX_CODE_KEY)).toBe("AB2CDE4FGHJK");
+    } finally {
+      wrapper?.unmount();
+      window.location.hash = "";
+      vi.unstubAllGlobals();
+      vi.useRealTimers();
+    }
+  });
+
+  it("does not write the remembered code when a desktop viewport visits with a fragment", async () => {
+    vi.useFakeTimers();
+    stubMatchMedia(false);
+    window.location.hash = "#inbox=AB2CDE4FGHJK";
+    let wrapper: ReturnType<typeof mountApp> | undefined;
+
+    try {
+      wrapper = mountApp();
+
+      expect(wrapper.find(".mobile-handoff").exists()).toBe(false);
+      expect(localStorage.getItem(REMEMBERED_INBOX_CODE_KEY)).toBeNull();
     } finally {
       wrapper?.unmount();
       window.location.hash = "";
