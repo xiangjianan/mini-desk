@@ -16,9 +16,10 @@ vi.mock("../sync/crypto", () => ({
 
 import { fetchInboxItems } from "../sync/inboxClient";
 import { applyInboxItems, pullAllInboxes } from "../sync/pull";
-import type { InboxPlainItem } from "../sync/crypto";
+import { decryptInboxPayload, type InboxPlainItem } from "../sync/crypto";
 
 const fetchMock = vi.mocked(fetchInboxItems);
+const decryptMock = vi.mocked(decryptInboxPayload);
 
 function workspace(id: string, inbox?: WorkspaceInbox): WorkspaceData {
   return { ...defaultWorkspace(id), ...(inbox ? { inbox } : {}) };
@@ -60,6 +61,13 @@ describe("applyInboxItems", () => {
     );
     expect(merged.storageLines).toEqual([{ text: "x", indent: 0 }]);
     expect(merged.noteLines).toEqual([]);
+
+    const wsMerged = applyInboxItems(
+      workspace("a", inbox({ noteTarget: "workspace" })),
+      [{ kind: "note", text: "w", createdAt: 1 }],
+      1,
+    );
+    expect(wsMerged.workspaceLines).toEqual([{ text: "w", indent: 0 }]);
   });
 
   it("todoListId 失效时回退第一个清单；文本裁剪 500 字", () => {
@@ -88,24 +96,41 @@ describe("pullAllInboxes", () => {
 
   it("水位线跳过已消费条目；解密失败条目跳过但水位线照常推进", async () => {
     const paired = workspace("paired", inbox({ lastSeenAt: 10 }));
-    fetchMock.mockResolvedValue([item("i1", 5), item("bad", 15, "BAD"), item("i3", 20)]);
+    fetchMock.mockResolvedValue([item("i1", 5), item("edge", 10), item("bad", 15, "BAD"), item("i3", 20)]);
     const { workspaces, reports } = await pullAllInboxes([paired]);
     expect(workspaces[0].todos.morning.map((todo) => todo.text)).toEqual(["条目i3"]);
     expect(workspaces[0].inbox?.lastSeenAt).toBe(20);
     expect(reports).toEqual([{ workspaceId: "paired", imported: 1 }]);
   });
 
-  it("无新条目时只推水位线；拉取失败时原样返回且无报告", async () => {
+  it("无导入且水位线未动时原样返回；纯垃圾条目推进水位线且标记 changed；拉取失败无报告", async () => {
     const paired = workspace("paired", inbox({ lastSeenAt: 10 }));
     fetchMock.mockResolvedValue([item("i1", 5)]);
-    const advanced = await pullAllInboxes([paired]);
-    expect(advanced.workspaces[0].inbox?.lastSeenAt).toBe(10); // max(10,5)=10 不变
-    expect(advanced.workspaces[0]).not.toBe(paired); // 返回了新数组但内容相同
+    const stale = await pullAllInboxes([paired]);
+    expect(stale.workspaces[0]).toBe(paired); // 全过期：不换对象
+    expect(stale.changed).toBe(false);
+
+    fetchMock.mockResolvedValue([item("bad", 15, "BAD")]);
+    const garbage = await pullAllInboxes([paired]);
+    expect(garbage.changed).toBe(true);
+    expect(garbage.workspaces[0].inbox?.lastSeenAt).toBe(15); // 水位线照常推进并持久化
+    expect(garbage.reports).toEqual([]); // 无导入不报告
 
     fetchMock.mockResolvedValue(null);
     const failed = await pullAllInboxes([paired]);
     expect(failed.workspaces[0]).toBe(paired);
+    expect(failed.changed).toBe(false);
     expect(failed.reports).toEqual([]);
+  });
+
+  it("环境级解密异常时工作区原样返回且无报告", async () => {
+    const paired = workspace("paired", inbox({ lastSeenAt: 10 }));
+    fetchMock.mockResolvedValue([item("i1", 20)]);
+    decryptMock.mockRejectedValueOnce(new Error("Web Crypto is unavailable"));
+    const { workspaces, changed, reports } = await pullAllInboxes([paired]);
+    expect(workspaces[0]).toBe(paired);
+    expect(changed).toBe(false);
+    expect(reports).toEqual([]);
   });
 
   it("多工作区并发互不影响", async () => {

@@ -12,6 +12,8 @@ export interface InboxPullReport {
 export interface InboxPullResult {
   workspaces: WorkspaceData[];
   reports: InboxPullReport[];
+  /** 任一工作区有导入或水位线前进时为 true；调用方仅在此为 true 时替换状态并持久化。 */
+  changed: boolean;
 }
 
 /** 纯合并：todo 追加为未完成条目（落点清单失效则回退第一个清单），note 按 noteTarget 追加一行 indent 0。
@@ -54,7 +56,9 @@ function resolveTodoListId(workspace: WorkspaceData, preferred: TodoListId): Tod
 
 /** 遍历所有配置了 inbox 的工作区：拉取 → 解密 → 水位线过滤 → 返回合并后的新数组。失败静默，不抛异常。
  *  环境级异常（Web Crypto 缺失导致 crypto 抛出）会让该工作区的 promise 被拒，
- *  allSettled 将其视为未变更——水位线不推进，队列留待环境恢复，避免静默丢条目。 */
+ *  allSettled 将其视为未变更——水位线不推进，队列留待环境恢复，避免静默丢条目。
+ *  非单飞：四个触发点（启动/聚焦/定时/Ctrl+S）可能并发调用，调用方必须用 in-flight 守卫串行化，
+ *  否则并发快照双双合并会以新 ID 重复导入同一条目。 */
 export async function pullAllInboxes(workspaces: WorkspaceData[]): Promise<InboxPullResult> {
   // 单工作区内条目解密保持串行：每次解密是一次 600k 迭代的 PBKDF2（约 60-80ms），并行会放大 CPU 峰值。
   // 工作区之间互相独立，用 allSettled 并发互不拖累。
@@ -64,6 +68,8 @@ export async function pullAllInboxes(workspaces: WorkspaceData[]): Promise<Inbox
       if (!inbox) return null;
       const stored = await fetchInboxItems(await inboxKeyHash(inbox.code));
       if (!stored) return null;
+      // createdAt 由 Worker 时钟签发（客户端不可控）；此处信任服务器时钟。若中转被替换为恶意镜像，
+      // 远未来时间戳会推爆水位线——该前提已记录在设计文档威胁模型权衡中。
       const maxSeenAt = stored.reduce((max, entry) => Math.max(max, entry.createdAt), inbox.lastSeenAt);
       const plains: InboxPlainItem[] = [];
       for (const entry of stored) {
@@ -72,7 +78,9 @@ export async function pullAllInboxes(workspaces: WorkspaceData[]): Promise<Inbox
         if (plain) plains.push(plain);
         else console.warn("[inbox] 跳过无法解密的条目", { workspaceId: workspace.id, itemId: entry.id });
       }
-      return { workspace: applyInboxItems(workspace, plains, maxSeenAt), imported: plains.length };
+      // 无导入且水位线未动时不换对象：避免调用方每个轮询周期都空转持久化/跨标签页广播/回滚编辑中内容。
+      const dirty = plains.length > 0 || maxSeenAt !== inbox.lastSeenAt;
+      return dirty ? { workspace: applyInboxItems(workspace, plains, maxSeenAt), imported: plains.length } : null;
     }),
   );
   const reports: InboxPullReport[] = [];
@@ -84,5 +92,5 @@ export async function pullAllInboxes(workspaces: WorkspaceData[]): Promise<Inbox
     if (result.value.imported > 0) reports.push({ workspaceId: workspace.id, imported: result.value.imported });
     return result.value.workspace;
   });
-  return { workspaces: changed ? nextWorkspaces : workspaces, reports };
+  return { workspaces: changed ? nextWorkspaces : workspaces, reports, changed };
 }
