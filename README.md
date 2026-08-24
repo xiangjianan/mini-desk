@@ -179,9 +179,11 @@ mini-desk-images-v1
 
 自定义 GIF 资源也保存在同站点 IndexedDB。历史版本使用的 `todo-board-state-v1` 和 `todo-board-images-v1` 会在读取时兼容。清空浏览器站点数据会清除看板内容、图片和自定义 GIF。只删除 `localStorage` 键会清除看板状态，但 IndexedDB 中可能仍保留图片原文。
 
+手机速记的中转 Worker 只存储端到端加密后的密文（配对码即密钥，服务器只见配对码哈希），条目送达桌面端或 30 天过期后即不可再读。中转不保存看板数据、图片或任何账号信息。
+
 ## 移动端说明
 
-当前看板主要为桌面端工作流设计。移动端会显示引导页，提示用户在电脑浏览器打开，以获得完整体验。
+当前看板主要为桌面端工作流设计。移动端会显示引导页，提示用户在电脑浏览器打开，以获得完整体验。已配对手机速记的工作区可通过配对地址在移动端录入提醒事项与便签，内容经加密中转同步到桌面端。
 
 ## 部署
 
@@ -199,6 +201,12 @@ npm run build
 
 ```bash
 npm run deploy:cloudflare
+```
+
+手机速记中转 Worker 部署在 <https://inbox.minidesk.online>（Cloudflare Worker + KV，配置在 `worker/wrangler.toml`）：
+
+```bash
+npm run deploy:worker
 ```
 
 发布版本时，先构建 `dist`，再将编译产物压缩为 release asset：

@@ -2,10 +2,14 @@ name = "mini-desk-inbox"
 main = "index.ts"
 compatibility_date = "2026-08-23"
 
+# workers.dev 在部分网络被 DNS 污染，绑定自有域子域保证直连可达。
+routes = [
+  { pattern = "inbox.minidesk.online", custom_domain = true }
+]
+
 [[kv_namespaces]]
 binding = "INBOX"
-# TODO(Task 12): 先 npx wrangler login，再 npx wrangler kv namespace create INBOX --config worker/wrangler.toml，用输出 id 替换下行。
-id = "PENDING-KV-NAMESPACE-ID"
+id = "30a05e0a03994963853639720f46626f"
 
 [vars]
-ALLOWED_ORIGINS = "https://todolist.pages.dev,http://localhost:5173,http://127.0.0.1:5173"
+ALLOWED_ORIGINS = "https://minidesk.online,https://todolist-7i5.pages.dev,http://localhost:5173,http://127.0.0.1:5173"

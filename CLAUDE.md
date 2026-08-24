@@ -42,6 +42,7 @@ WorkspaceData = {
   images: [{ id, src (data URL), createdAt }],
   quickTags, quickButtons: [{ id, title, value, type: "link"|"text"|"api", hidden }],
   quickOtherCollapsed, showHiddenQuickButtons,
+  inbox?: { code, todoListId, noteTarget, lastSeenAt },  // 手机速记配对（noteTarget 为目标空间 Tab 的 id，失效回退第一个空间）；存在即启用拉取
   todoLists: [{ id, title, collapsed, compact }],
   showCompletedTodos: { [listId]: boolean },
   todos: { [listId]: [{ id, text, done }] },
@@ -79,6 +80,8 @@ npm run preview
 ```
 
 `npm run preview` builds and serves the production bundle locally — the only way to verify Service Worker offline behavior, since dev mode deliberately never registers the SW (unhashed assets + HMR make SW caching in dev an anti-pattern).
+
+`npm run deploy:worker` deploys the mobile-inbox relay Worker (Cloudflare Worker + KV, config in `worker/wrangler.toml`). Local relay testing: point `VITE_INBOX_WORKER_URL` in `.env.local` at `http://127.0.0.1:8787` and run `npx wrangler dev --config worker/wrangler.toml`.
 
 ## Conventions
 
