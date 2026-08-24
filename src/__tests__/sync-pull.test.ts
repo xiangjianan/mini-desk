@@ -79,6 +79,17 @@ describe("applyInboxItems", () => {
     expect(merged.storageLines).toEqual([{ text: "s1", indent: 1 }]);
   });
 
+  it("noteTarget 指向 storage 空间时追加该空间末行，storageLines 投影同步且 workspaceLines 不变", () => {
+    const merged = applyInboxItems(
+      workspace("a", inbox({ noteTarget: "storage" })),
+      [{ kind: "note", text: "x", createdAt: 1 }],
+      1,
+    );
+    expect(merged.spaces[1].lines).toEqual([{ text: "s1", indent: 1 }, { text: "x", indent: 0 }]);
+    expect(merged.storageLines).toEqual([{ text: "s1", indent: 1 }, { text: "x", indent: 0 }]);
+    expect(merged.workspaceLines).toEqual([{ text: "w1", indent: 0 }]);
+  });
+
   it("noteTarget 指向不存在/已删除的空间 id 时回退第一个空间", () => {
     const merged = applyInboxItems(
       workspace("a", inbox({ noteTarget: "ghost" })),

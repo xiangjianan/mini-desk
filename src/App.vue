@@ -53,7 +53,7 @@ import {
 } from "./state/todos";
 import { DEFAULT_BOARD_TITLE, defaultState, STORAGE_KEY } from "./state/defaults";
 import { applyThemeColor } from "./state/theme-color";
-import { createWorkspaceData, ensureUniqueWorkspaceTitle, getWorkspaceBoardTitle, removeWorkspace, reorderWorkspaces } from "./state/workspaces";
+import { createWorkspaceData, ensureUniqueWorkspaceTitle, getWorkspaceBoardTitle, projectLegacySpaceLines, removeWorkspace, reorderWorkspaces } from "./state/workspaces";
 import * as workspaceMover from "./state/workspaceMoves";
 import { QUICK_BUTTON_OTHER_GROUP_ID, QUICK_DENSITY_THRESHOLD, formatQuickCopiedPreview, getQuickTagColor } from "./state/quickButtons";
 import { isQuickAppScheme } from "./state/quickApps";
@@ -790,8 +790,9 @@ function nextSpaceTitle(): string {
 }
 
 function syncLegacySpaceLines(): void {
-  activeWorkspace.value.workspaceLines = activeWorkspace.value.spaces[0]?.lines.map((line) => ({ ...line })) ?? [];
-  activeWorkspace.value.storageLines = activeWorkspace.value.spaces[1]?.lines.map((line) => ({ ...line })) ?? [];
+  const projected = projectLegacySpaceLines(activeWorkspace.value.spaces);
+  activeWorkspace.value.workspaceLines = projected.workspaceLines;
+  activeWorkspace.value.storageLines = projected.storageLines;
 }
 
 // Todo input saves share the text pipeline's generation baseline so a debounced
