@@ -8,13 +8,20 @@ afterEach(() => {
 });
 
 describe("inboxClient", () => {
-  it("postInboxItem 成功返回 true，失败/网络错误返回 false", async () => {
+  it("postInboxItem 成功返回 ok:true，失败/网络错误返回带原因分类", async () => {
     vi.stubGlobal("fetch", vi.fn(async () => new Response("{\"ok\":true}", { status: 200 })));
-    expect(await postInboxItem(KEY, "i1", "AAA")).toBe(true);
+    expect(await postInboxItem(KEY, "i1", "AAA")).toEqual({ ok: true });
     vi.stubGlobal("fetch", vi.fn(async () => new Response("{}", { status: 429 })));
-    expect(await postInboxItem(KEY, "i1", "AAA")).toBe(false);
+    expect(await postInboxItem(KEY, "i1", "AAA")).toEqual({ ok: false, reason: "rate_limited" });
     vi.stubGlobal("fetch", vi.fn(async () => { throw new TypeError("offline"); }));
-    expect(await postInboxItem(KEY, "i1", "AAA")).toBe(false);
+    expect(await postInboxItem(KEY, "i1", "AAA")).toEqual({ ok: false, reason: "network" });
+  });
+
+  it("POST 状态码映射到失败原因", async () => {
+    for (const [status, reason] of [[409, "queue_full"], [413, "too_large"], [400, "bad_request"], [500, "server"]] as const) {
+      vi.stubGlobal("fetch", vi.fn(async () => new Response("{}", { status })));
+      expect(await postInboxItem(KEY, "i1", "AAA")).toEqual({ ok: false, reason });
+    }
   });
 
   it("fetchInboxItems 解析并过滤结构非法的条目", async () => {
@@ -44,5 +51,21 @@ describe("inboxClient", () => {
     expect(url.endsWith(`/inbox/${KEY}`)).toBe(true);
     expect(init.method).toBe("POST");
     expect(JSON.parse(init.body as string)).toEqual({ id: "i1", payload: "AAA" });
+    expect(init.signal).toBeInstanceOf(AbortSignal);
+  });
+
+  it("GET 200 非 JSON body 返回 null", async () => {
+    vi.stubGlobal("fetch", vi.fn(async () => new Response("not json", { status: 200, headers: { "Content-Type": "application/json" } })));
+    expect(await fetchInboxItems(KEY)).toBeNull();
+  });
+
+  it("GET 200 无 items 键返回 null", async () => {
+    vi.stubGlobal("fetch", vi.fn(async () => new Response("{}", { status: 200, headers: { "Content-Type": "application/json" } })));
+    expect(await fetchInboxItems(KEY)).toBeNull();
+  });
+
+  it("GET 200 空队列返回空数组（区别于 null）", async () => {
+    vi.stubGlobal("fetch", vi.fn(async () => new Response("{\"items\":[]}", { status: 200, headers: { "Content-Type": "application/json" } })));
+    expect(await fetchInboxItems(KEY)).toEqual([]);
   });
 });
