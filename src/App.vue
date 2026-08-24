@@ -4,6 +4,7 @@ import { MoonOutline, SunnyOutline } from "@vicons/ionicons5";
 import { darkTheme, dateEnUS, dateZhCN, enUS, NButton, NConfigProvider, NGlobalStyle, NIcon, NInput, NModal, zhCN } from "naive-ui";
 import CompanionBubble from "./components/CompanionBubble.vue";
 import ImagePanel from "./components/ImagePanel.vue";
+import MobileInboxCapture from "./components/MobileInboxCapture.vue";
 import QuickButtons from "./components/QuickButtons.vue";
 import SettingsMenu from "./components/SettingsMenu.vue";
 import SpacePanel from "./components/SpacePanel.vue";
@@ -59,6 +60,7 @@ import * as workspaceMover from "./state/workspaceMoves";
 import { QUICK_BUTTON_OTHER_GROUP_ID, QUICK_DENSITY_THRESHOLD, formatQuickCopiedPreview, getQuickTagColor } from "./state/quickButtons";
 import { isQuickAppScheme } from "./state/quickApps";
 import { INBOX_FOCUS_THROTTLE_MS, INBOX_PULL_INTERVAL_MS } from "./sync/config";
+import { isValidInboxCode, normalizeInboxCode, parseInboxFragment } from "./sync/pairing";
 import { pullAllInboxes } from "./sync/pull";
 import { copyTextWithBrowserCommand } from "./utils/clipboard";
 import { extractRetainedImageIds, useUndoHistory } from "./composables/useUndoHistory";
@@ -274,6 +276,10 @@ const supportDialogVisible = ref(false);
 const changelogVisible = ref(false);
 const isMobileBlocked = ref(getInitialMobileBlocked());
 const mobileMediaQuery = ref<MediaQueryList | null>(null);
+// URL 带 #inbox=<12位码> 时，移动端引导壳内直接显示速记表单；纯浏览器环境，无 SSR 顾虑。
+const mobileInboxCode = ref<string | null>(parseInboxFragment(window.location.hash));
+const mobileInboxDraftCode = ref("");
+const mobileInboxCodeError = ref(false);
 let appMounted = false;
 let pendingBrowserImagePasteRequest: { request: ImagePasteRequest; token: number } | undefined;
 let browserImagePasteRequestToken = 0;
@@ -381,6 +387,26 @@ function shouldBlockBoardEffects(): boolean {
   return isMobileBlocked.value;
 }
 
+function handleHashChange(): void {
+  // 仅在有合法码时跟进：清掉 fragment 不退出速记页，避免误触返回键丢失入口。
+  const code = parseInboxFragment(window.location.hash);
+  if (code) mobileInboxCode.value = code;
+}
+
+function confirmMobileInboxCode(): void {
+  const code = normalizeInboxCode(mobileInboxDraftCode.value);
+  if (!isValidInboxCode(code)) {
+    // 移动壳上 showBubbleText 被 shouldBlockBoardEffects 拦截，提示就近显示在输码区。
+    mobileInboxCodeError.value = true;
+    return;
+  }
+  mobileInboxCodeError.value = false;
+  mobileInboxCode.value = code;
+  mobileInboxDraftCode.value = "";
+  // 写回 fragment：刷新/再次打开仍停留在速记页。
+  window.location.hash = `#inbox=${code}`;
+}
+
 function setupMobileBreakpoint(): void {
   if (!window.matchMedia) return;
   const query = window.matchMedia(MOBILE_BREAKPOINT_QUERY);
@@ -449,6 +475,7 @@ onMounted(async () => {
   document.addEventListener("visibilitychange", handleDocumentVisibilityChange);
   setupStateSyncChannel();
   window.addEventListener("focus", handleWindowFocusInbox);
+  window.addEventListener("hashchange", handleHashChange);
   // 启动拉取非阻塞（不 await）：首屏渲染不等收件箱网络往返。
   if (hasInboxConfigured.value) {
     void pullInboxes();
@@ -469,6 +496,7 @@ onUnmounted(() => {
   document.removeEventListener("visibilitychange", handleDocumentVisibilityChange);
   teardownStateSyncChannel();
   window.removeEventListener("focus", handleWindowFocusInbox);
+  window.removeEventListener("hashchange", handleHashChange);
   stopInboxPolling();
   teardownMobileBreakpoint();
   clearTimers();
@@ -3236,11 +3264,46 @@ function moveItem<T extends { id: string }>(items: T[], dragId: string, targetId
         </NButton>
       </header>
 
-      <section class="mobile-handoff-body" aria-labelledby="mobile-handoff-title">
-        <div class="mobile-handoff-message">
+      <section
+        class="mobile-handoff-body"
+        :aria-labelledby="mobileInboxCode ? 'mobile-inbox-heading' : 'mobile-handoff-title'"
+      >
+        <MobileInboxCapture v-if="mobileInboxCode" :code="mobileInboxCode" :language="state.language" />
+        <div v-else class="mobile-handoff-message">
           <h2 id="mobile-handoff-title">{{ uiText.app.mobileHeading }}</h2>
           <p>{{ uiText.app.mobileDescription }}</p>
           <p>{{ uiText.app.mobileMessage }}</p>
+          <div class="mobile-inbox-code-entry">
+            <label class="mobile-inbox-code-label" for="mobile-inbox-code-input">{{ uiText.app.mobileInboxEnterCode }}</label>
+            <div class="mobile-inbox-code-row">
+              <input
+                id="mobile-inbox-code-input"
+                v-model="mobileInboxDraftCode"
+                class="mobile-inbox-code-input"
+                type="text"
+                maxlength="12"
+                autocomplete="off"
+                autocapitalize="characters"
+                spellcheck="false"
+                data-testid="mobile-inbox-code-input"
+                :placeholder="uiText.app.mobileInboxCodePlaceholder"
+                :aria-invalid="mobileInboxCodeError ? 'true' : undefined"
+                @input="mobileInboxCodeError = false"
+                @keydown.enter="confirmMobileInboxCode"
+              />
+              <NButton
+                size="small"
+                type="primary"
+                data-testid="mobile-inbox-code-confirm"
+                @click="confirmMobileInboxCode"
+              >
+                {{ uiText.app.mobileInboxCodeConfirm }}
+              </NButton>
+            </div>
+            <p v-if="mobileInboxCodeError" class="mobile-inbox-code-error" data-testid="mobile-inbox-code-error">
+              {{ uiText.app.mobileInboxCodeInvalid }}
+            </p>
+          </div>
         </div>
       </section>
     </main>

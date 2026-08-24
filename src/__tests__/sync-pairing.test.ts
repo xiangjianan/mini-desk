@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { buildInboxAddress, generateInboxCode, isValidInboxCode, parseInboxFragment } from "../sync/pairing";
+import { buildInboxAddress, generateInboxCode, isValidInboxCode, normalizeInboxCode, parseInboxFragment } from "../sync/pairing";
 
 describe("generateInboxCode", () => {
   it("生成 12 位 Crockford base32（不含 I L O U）", () => {
@@ -21,6 +21,22 @@ describe("isValidInboxCode", () => {
     expect(isValidInboxCode("ABCDEFGHIJKL")).toBe(false);
     expect(isValidInboxCode("AB2CDE4FGHJ")).toBe(false);
     expect(isValidInboxCode(123 as unknown as string)).toBe(false);
+  });
+});
+
+describe("normalizeInboxCode", () => {
+  it("去空白、大写、混淆字符归一（I/L→1、O→0）", () => {
+    expect(normalizeInboxCode(" ab2cdeiloghjk ")).toBe("AB2CDE110GHJK");
+  });
+
+  it("U 不做映射直接保留（字母表不含 U，交给 isValidInboxCode 拒绝）", () => {
+    expect(normalizeInboxCode("abucde4fghjk")).toBe("ABUCDE4FGHJK");
+    expect(isValidInboxCode(normalizeInboxCode("abucde4fghjk"))).toBe(false);
+  });
+
+  it("归一后的常规手输码通过校验", () => {
+    expect(isValidInboxCode(normalizeInboxCode("ab2cde4fghjk"))).toBe(true);
+    expect(isValidInboxCode(normalizeInboxCode("  oB2cde4fghjI "))).toBe(true);
   });
 });
 
