@@ -16,8 +16,9 @@ class MockKV implements InboxKVStore {
   }
   async list(options: { prefix: string }): Promise<{ keys: { name: string; metadata?: Record<string, unknown> }[] }> {
     return {
-      keys: Array.from(this.store.keys())
+      keys: [...this.store.keys()]
         .filter((name) => name.startsWith(options.prefix))
+        .sort()
         .map((name) => ({ name, metadata: this.store.get(name)?.metadata })),
     };
   }
@@ -76,7 +77,8 @@ describe("inbox worker", () => {
     expect((await post(env, KEY, { id: "i1", payload: big })).status).toBe(413);
   });
 
-  it("队列超 200 条且非重复 id 时返回 409", async () => {
+  it("当日尝试数饱和（attempts≥200）返回 409", async () => {
+    // 注：日限流 429 掉了 61 以后的写入，存量停在 60；此 409 由 attempts≥200 触发（index.ts 饱和门右操作数），存量分支见下一直接灌库用例。
     const env = makeEnv();
     for (let i = 0; i < 200; i += 1) {
       await post(env, KEY, { id: `item-${i}`, payload: "AAA" });
@@ -85,12 +87,35 @@ describe("inbox worker", () => {
     expect((await post(env, KEY, { id: "item-0", payload: "BBB" })).status).toBe(200); // 已存在的 id 仍可覆盖
   });
 
+  it("存量达到 200 条（跨天硬上限）返回 409，幂等重试仍放行", async () => {
+    const env = makeEnv();
+    const kv = env.INBOX;
+    // 直接灌库绕过 POST 计数：把 stored 拉满而 attempts 保持 0，
+    // 隔离验证 listed.keys.length >= MAX_QUEUE_ITEMS 分支。
+    for (let i = 0; i < 200; i += 1) {
+      await kv.put(`${KEY}:item:seed-${i}`, "AAA", { metadata: { createdAt: i } });
+    }
+    expect((await post(env, KEY, { id: "new", payload: "AAA" })).status).toBe(409);
+    expect((await post(env, KEY, { id: "seed-0", payload: "BBB" })).status).toBe(200);
+  });
+
   it("每日 60 条写入限流返回 429", async () => {
     const env = makeEnv();
     for (let i = 0; i < 60; i += 1) {
       await post(env, OTHER, { id: `item-${i}`, payload: "AAA" });
     }
     expect((await post(env, OTHER, { id: "overflow", payload: "AAA" })).status).toBe(429);
+    expect((await post(env, OTHER, { id: "item-0", payload: "BBB" })).status).toBe(200); // 幂等重试绕过限流门
+  });
+
+  it("未知方法返回 405 且带 Allow 头", async () => {
+    const env = makeEnv();
+    const response = await handleInboxRequest(
+      new Request(`https://worker.test/inbox/${KEY}`, { method: "PUT", headers: { Origin: ORIGIN } }),
+      env,
+    );
+    expect(response.status).toBe(405);
+    expect(response.headers.get("Allow")).toBe("GET, POST, OPTIONS");
   });
 
   it("CORS：白名单外 Origin 不回显，OPTIONS 返回 204", async () => {

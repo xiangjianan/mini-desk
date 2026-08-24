@@ -4,6 +4,7 @@ compatibility_date = "2026-08-23"
 
 [[kv_namespaces]]
 binding = "INBOX"
+# TODO(Task 12): 先 npx wrangler login，再 npx wrangler kv namespace create INBOX --config worker/wrangler.toml，用输出 id 替换下行。
 id = "PENDING-KV-NAMESPACE-ID"
 
 [vars]

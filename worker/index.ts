@@ -15,7 +15,6 @@ export interface InboxEnv {
   ALLOWED_ORIGINS?: string;
 }
 
-const KEY_HASH_PATTERN = /^[0-9a-f]{64}$/;
 const MAX_CIPHER_BYTES = 4096;
 const MAX_QUEUE_ITEMS = 200;
 const DAILY_WRITE_LIMIT = 60;
@@ -51,11 +50,11 @@ export async function handleInboxRequest(request: Request, env: InboxEnv): Promi
   if (request.method === "OPTIONS") return new Response(null, { status: 204, headers: cors });
   const url = new URL(request.url);
   const match = /^\/inbox\/([0-9a-f]{64})$/.exec(url.pathname);
-  if (!match || !KEY_HASH_PATTERN.test(match[1])) return jsonResponse({ error: "not_found" }, 404, cors);
+  if (!match) return jsonResponse({ error: "not_found" }, 404, cors);
   const keyHash = match[1];
   if (request.method === "POST") return handlePost(request, env, keyHash, cors);
   if (request.method === "GET") return handleGet(env, keyHash, cors);
-  return jsonResponse({ error: "method_not_allowed" }, 405, cors);
+  return jsonResponse({ error: "method_not_allowed" }, 405, { ...cors, Allow: "GET, POST, OPTIONS" });
 }
 
 async function handlePost(request: Request, env: InboxEnv, keyHash: string, cors: Record<string, string>): Promise<Response> {
@@ -116,6 +115,11 @@ async function handleGet(env: InboxEnv, keyHash: string, cors: Record<string, st
 
 export default {
   async fetch(request: Request, env: InboxEnv): Promise<Response> {
-    return handleInboxRequest(request, env);
+    try {
+      return await handleInboxRequest(request, env);
+    } catch {
+      // 运行时错误（如 KV 故障）也带 CORS，浏览器端才能分类错误而不是只看到网络失败。
+      return jsonResponse({ error: "internal" }, 500, corsHeaders(request.headers.get("Origin"), env));
+    }
   },
 };
