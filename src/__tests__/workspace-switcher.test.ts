@@ -158,3 +158,15 @@ describe("WorkspaceSwitcher", () => {
     wrapper.unmount();
   });
 });
+
+describe("WorkspaceSwitcher 配对入口", () => {
+  it("每个工作区提供配对手机按钮并 emit pairInbox", async () => {
+    const wrapper = mount(WorkspaceSwitcher, {
+      props: { workspaces, activeWorkspaceId: "a", theme: "light", language: "zh" },
+    });
+    await wrapper.find('[data-testid="workspace-trigger"]').trigger("click");
+    await wrapper.find('[data-testid="workspace-pair-a"]').trigger("click");
+    expect(wrapper.emitted("pairInbox")).toHaveLength(1);
+    expect(wrapper.emitted("pairInbox")?.[0]).toEqual(["a"]);
+  });
+});

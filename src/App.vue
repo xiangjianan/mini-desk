@@ -9,6 +9,7 @@ import SettingsMenu from "./components/SettingsMenu.vue";
 import SpacePanel from "./components/SpacePanel.vue";
 import TodoPanel from "./components/TodoPanel.vue";
 import WorkbenchShell from "./components/WorkbenchShell.vue";
+import WorkspaceInboxDialog from "./components/WorkspaceInboxDialog.vue";
 import WorkspaceSwitcher from "./components/WorkspaceSwitcher.vue";
 import miniDeskLogo from "../static/img/mini-desk-cat.png?url";
 import miniDeskDarkLogo from "../static/img/mini-desk-cat-dark.png?url";
@@ -74,7 +75,7 @@ import {
   saveStateWithConflictCheck,
 } from "./state/storage";
 import type { ImagePlacementHint, ImageReplacementHint, SaveScope } from "./state/storage";
-import type { AppLanguage, BoardState, CompanionGifTheme, DraggedTodo, GuideKey, ImagePasteFeedback, ImagePasteRequest, LineItem, QuickApiBodyType, QuickApiHeader, QuickApiMethod, QuickButton, QuickButtonType, StoredImage, TodoItem, TodoListConfig, TodoListId, TodoPeriod, TodoStarChange, WorkspaceData, WorkspaceMoveTarget, WorkspaceSpace, ZoneKey } from "./types";
+import type { AppLanguage, BoardState, CompanionGifTheme, DraggedTodo, GuideKey, ImagePasteFeedback, ImagePasteRequest, LineItem, QuickApiBodyType, QuickApiHeader, QuickApiMethod, QuickButton, QuickButtonType, StoredImage, TodoItem, TodoListConfig, TodoListId, TodoPeriod, TodoStarChange, WorkspaceData, WorkspaceInbox, WorkspaceMoveTarget, WorkspaceSpace, ZoneKey } from "./types";
 
 const ImagePreview = defineAsyncComponent(() => import("./components/ImagePreview.vue"));
 const ShortcutHelp = defineAsyncComponent(() => import("./components/ShortcutHelp.vue"));
@@ -261,6 +262,8 @@ const workspaceDialogMode = ref<"create" | "rename">("create");
 const workspaceDialogId = ref<string | null>(null);
 const workspaceDraftTitle = ref("");
 const workspaceDraftSlogan = ref("");
+const inboxPairingWorkspaceId = ref<string | null>(null);
+const inboxPairTarget = computed(() => state.workspaces.find((workspace) => workspace.id === inboxPairingWorkspaceId.value) ?? null);
 const imagePayloadPruneTimer = ref<number | undefined>();
 const emptyTodoRemovalTimers = new Map<string, number>();
 const pendingImagePayloadDeletions = new Map<string, number>();
@@ -749,6 +752,25 @@ function exportWorkspaceById(id: string, anchor?: HTMLElement): void {
 
 function exportCurrentWorkspace(anchor?: HTMLElement): void {
   exportWorkspaceById(state.activeWorkspaceId, anchor);
+}
+
+/** 配对弹窗保存/清除：按 id 不可变替换目标工作区，随后立即落盘并关闭弹窗。 */
+function handleInboxUpdate(inbox: WorkspaceInbox | null): void {
+  const id = inboxPairingWorkspaceId.value;
+  if (!id) return;
+  const workspace = state.workspaces.find((item) => item.id === id);
+  if (!workspace) return;
+  let next: WorkspaceData;
+  if (inbox) {
+    next = { ...workspace, inbox };
+  } else {
+    next = { ...workspace };
+    delete next.inbox;
+  }
+  state.workspaces = state.workspaces.map((item) => (item.id === id ? next : item));
+  persistNow();
+  showBubbleText(inbox ? uiText.value.app.inboxSaved : uiText.value.app.inboxCleared, undefined, { hideCompanionAfter: true });
+  inboxPairingWorkspaceId.value = null;
 }
 
 function deleteWorkspace(id: string, anchor?: HTMLElement): void {
@@ -2966,6 +2988,7 @@ function moveItem<T extends { id: string }>(items: T[], dragId: string, targetId
           @reorder="reorderWorkspaceSections"
           @export-workspace="exportWorkspaceById"
           @import="requestImport"
+          @pair-inbox="(id: string) => { inboxPairingWorkspaceId = id; }"
           @toggle-zone="toggleWorkspaceZone"
         />
       </template>
@@ -3152,6 +3175,14 @@ function moveItem<T extends { id: string }>(items: T[], dragId: string, targetId
         </div>
       </section>
     </main>
+
+    <WorkspaceInboxDialog
+      v-if="inboxPairTarget"
+      :workspace="inboxPairTarget"
+      :language="state.language"
+      @update="handleInboxUpdate"
+      @close="inboxPairingWorkspaceId = null"
+    />
 
     <ImagePreview
       v-if="!isMobileBlocked && displayedPreviewId"

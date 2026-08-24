@@ -1,7 +1,7 @@
 <script setup lang="ts">
 import { computed, nextTick, onUnmounted, ref, watch } from "vue";
 import { NPopover, NIcon } from "naive-ui";
-import { ChevronDownOutline, AddOutline, CreateOutline, TrashOutline, DownloadOutline, CloudUploadOutline, CheckmarkOutline } from "@vicons/ionicons5";
+import { ChevronDownOutline, AddOutline, CreateOutline, TrashOutline, DownloadOutline, CloudUploadOutline, CheckmarkOutline, PhonePortraitOutline } from "@vicons/ionicons5";
 import { getUiText } from "../state/i18n";
 import { DEFAULT_BOARD_TITLE } from "../state/defaults";
 import { getWorkspaceBoardTitle } from "../state/workspaces";
@@ -25,6 +25,7 @@ const emit = defineEmits<{
   reorder: [dragId: string, targetId: string];
   exportWorkspace: [id: string, anchor: HTMLElement];
   import: [anchor: HTMLElement];
+  pairInbox: [id: string];
   toggleZone: [workspaceId: string, zone: ZoneKey];
 }>();
 
@@ -107,6 +108,12 @@ function handleExport(event: MouseEvent, id: string): void {
   event.stopPropagation();
   const anchor = event.currentTarget as HTMLElement;
   emit("exportWorkspace", id, anchor);
+  close();
+}
+
+function handlePair(event: MouseEvent, id: string): void {
+  event.stopPropagation();
+  emit("pairInbox", id);
   close();
 }
 
@@ -201,6 +208,15 @@ function onDrop(targetId: string): void {
               @click="handleExport($event, workspace.id)"
             >
               <NIcon :component="DownloadOutline" size="14" />
+            </button>
+            <button
+              type="button"
+              class="workspace-switcher-action"
+              :data-testid="`workspace-pair-${workspace.id}`"
+              :aria-label="text.app.inboxPair"
+              @click="handlePair($event, workspace.id)"
+            >
+              <NIcon :component="PhonePortraitOutline" size="14" />
             </button>
             <button
               type="button"
