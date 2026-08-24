@@ -14,9 +14,9 @@ export function isValidInboxCode(code: unknown): code is string {
   return typeof code === "string" && INBOX_CODE_PATTERN.test(code);
 }
 
-/** 手动输码容错：去空白、大写、混淆字符归一（I/L→1、O→0；Crockford base32 不含这三个字母）。 */
+/** 手动输码容错：移除全部空白（含分组粘贴的内部空格）、大写、混淆字符归一（I/L→1、O→0；Crockford base32 不含这三个字母）。 */
 export function normalizeInboxCode(input: string): string {
-  return input.trim().toUpperCase().replace(/[IL]/g, "1").replace(/O/g, "0");
+  return input.replace(/\s+/g, "").toUpperCase().replace(/[IL]/g, "1").replace(/O/g, "0");
 }
 
 export function parseInboxFragment(hash: string): string | null {

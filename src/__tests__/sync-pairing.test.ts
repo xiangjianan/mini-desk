@@ -38,6 +38,11 @@ describe("normalizeInboxCode", () => {
     expect(isValidInboxCode(normalizeInboxCode("ab2cde4fghjk"))).toBe(true);
     expect(isValidInboxCode(normalizeInboxCode("  oB2cde4fghjI "))).toBe(true);
   });
+
+  it("移除分组粘贴的内部空白后得到合法码", () => {
+    expect(normalizeInboxCode("ab2c de4f ghjk")).toBe("AB2CDE4FGHJK");
+    expect(isValidInboxCode(normalizeInboxCode("ab2c de4f ghjk"))).toBe(true);
+  });
 });
 
 describe("地址与 fragment", () => {

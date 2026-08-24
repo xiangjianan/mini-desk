@@ -49,10 +49,23 @@ describe("MobileInboxCapture", () => {
     const wrapper = mountCapture();
 
     expect(wrapper.get(".mobile-inbox-heading").text()).toBe("手机速记");
+    expect(wrapper.get(".mobile-inbox-toggle").attributes("role")).toBe("group");
     expect(wrapper.get('[data-testid="mobile-inbox-kind-todo"]').text()).toBe("提醒事项");
+    expect(wrapper.get('[data-testid="mobile-inbox-kind-todo"]').attributes("aria-pressed")).toBe("true");
     expect(wrapper.get('[data-testid="mobile-inbox-kind-note"]').text()).toBe("便签");
+    expect(wrapper.get('[data-testid="mobile-inbox-kind-note"]').attributes("aria-pressed")).toBe("false");
     expect(wrapper.get('[data-testid="mobile-inbox-text"]').attributes("placeholder")).toBe("记点什么…");
     expect(wrapper.get('[data-testid="mobile-inbox-send"]').text()).toBe("发送");
+  });
+
+  it("切换按钮以 aria-pressed 表达选中态（toggle button 语义）", async () => {
+    const wrapper = mountCapture();
+
+    await wrapper.get('[data-testid="mobile-inbox-kind-note"]').trigger("click");
+
+    expect(wrapper.get('[data-testid="mobile-inbox-kind-todo"]').attributes("aria-pressed")).toBe("false");
+    expect(wrapper.get('[data-testid="mobile-inbox-kind-note"]').attributes("aria-pressed")).toBe("true");
+    expect(wrapper.get('[data-testid="mobile-inbox-kind-note"]').classes()).toContain("is-active");
   });
 
   it("提交成功：keyHash 为 64 位 hex、payload 可解密、显示已发送并清空输入", async () => {
@@ -69,6 +82,8 @@ describe("MobileInboxCapture", () => {
     expect(payload.length).toBeGreaterThan(40);
     expect(await decryptInboxPayload(CODE, payload)).toMatchObject({ kind: "todo", text: "买牛奶" });
     await until(() => expect(wrapper.get(".mobile-inbox-status").text()).toContain("已发送"));
+    expect(wrapper.get(".mobile-inbox-status").attributes("role")).toBe("status");
+    expect(wrapper.get(".mobile-inbox-status").attributes("aria-live")).toBe("polite");
     expect(draftValue(wrapper)).toBe("");
   });
 
@@ -81,6 +96,8 @@ describe("MobileInboxCapture", () => {
     postMock.mockResolvedValue({ ok: false, reason: "network" });
     await fillAndSend(wrapper, "离线时记的话");
     await until(() => expect(wrapper.get('[data-testid="mobile-inbox-error"]').text()).toBe("网络异常，请检查网络后重试"));
+    expect(wrapper.get('[data-testid="mobile-inbox-error"]').attributes("role")).toBe("status");
+    expect(wrapper.get('[data-testid="mobile-inbox-error"]').attributes("aria-live")).toBe("polite");
     expect(draftValue(wrapper)).toBe("离线时记的话");
   });
 

@@ -3281,13 +3281,14 @@ function moveItem<T extends { id: string }>(items: T[], dragId: string, targetId
                 v-model="mobileInboxDraftCode"
                 class="mobile-inbox-code-input"
                 type="text"
-                maxlength="12"
+                maxlength="16"
                 autocomplete="off"
                 autocapitalize="characters"
                 spellcheck="false"
                 data-testid="mobile-inbox-code-input"
                 :placeholder="uiText.app.mobileInboxCodePlaceholder"
                 :aria-invalid="mobileInboxCodeError ? 'true' : undefined"
+                :aria-describedby="mobileInboxCodeError ? 'mobile-inbox-code-error' : undefined"
                 @input="mobileInboxCodeError = false"
                 @keydown.enter="confirmMobileInboxCode"
               />
@@ -3300,7 +3301,12 @@ function moveItem<T extends { id: string }>(items: T[], dragId: string, targetId
                 {{ uiText.app.mobileInboxCodeConfirm }}
               </NButton>
             </div>
-            <p v-if="mobileInboxCodeError" class="mobile-inbox-code-error" data-testid="mobile-inbox-code-error">
+            <p
+              v-if="mobileInboxCodeError"
+              id="mobile-inbox-code-error"
+              class="mobile-inbox-code-error"
+              data-testid="mobile-inbox-code-error"
+            >
               {{ uiText.app.mobileInboxCodeInvalid }}
             </p>
           </div>

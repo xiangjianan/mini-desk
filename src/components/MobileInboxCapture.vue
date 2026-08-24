@@ -4,7 +4,7 @@ import { getUiText } from "../state/i18n";
 import { createId } from "../state/storage";
 import { INBOX_PLAINTEXT_MAX_CHARS } from "../sync/config";
 import { encryptInboxPayload, inboxKeyHash, type InboxPlainItem } from "../sync/crypto";
-import { postInboxItem, type InboxPostResult } from "../sync/inboxClient";
+import { postInboxItem, type InboxPostFailure } from "../sync/inboxClient";
 import type { AppLanguage } from "../types";
 
 const props = defineProps<{
@@ -20,7 +20,7 @@ const draft = ref("");
 const status = ref<CaptureStatus>("idle");
 const errorText = ref("");
 
-function errorTextFor(reason: Exclude<InboxPostResult, { ok: true }>["reason"]): string {
+function errorTextFor(reason: InboxPostFailure): string {
   switch (reason) {
     case "rate_limited":
       return app.value.mobileInboxErrorRateLimited;
@@ -32,8 +32,14 @@ function errorTextFor(reason: Exclude<InboxPostResult, { ok: true }>["reason"]):
       return app.value.mobileInboxErrorBadRequest;
     case "server":
       return app.value.mobileInboxErrorServer;
-    default:
+    case "network":
       return app.value.mobileInboxErrorNetwork;
+    default: {
+      // 穷尽性校验：InboxPostFailure 新增成员而未补映射时，在此编译期报错。
+      const exhaustive: never = reason;
+      void exhaustive;
+      return app.value.mobileInboxErrorNetwork;
+    }
   }
 }
 
@@ -64,13 +70,12 @@ async function send(): Promise<void> {
   <div class="mobile-inbox-wrap">
     <h2 id="mobile-inbox-heading" class="mobile-inbox-heading">{{ app.mobileInboxHeading }}</h2>
 
-    <div class="mobile-inbox-toggle" role="tablist" :aria-label="app.mobileInboxHeading">
+    <div class="mobile-inbox-toggle" role="group" :aria-label="app.mobileInboxHeading">
       <button
         type="button"
         class="mobile-inbox-tab"
         :class="{ 'is-active': kind === 'todo' }"
-        role="tab"
-        :aria-selected="kind === 'todo'"
+        :aria-pressed="kind === 'todo'"
         data-testid="mobile-inbox-kind-todo"
         @click="kind = 'todo'"
       >
@@ -80,8 +85,7 @@ async function send(): Promise<void> {
         type="button"
         class="mobile-inbox-tab"
         :class="{ 'is-active': kind === 'note' }"
-        role="tab"
-        :aria-selected="kind === 'note'"
+        :aria-pressed="kind === 'note'"
         data-testid="mobile-inbox-kind-note"
         @click="kind = 'note'"
       >
@@ -111,8 +115,17 @@ async function send(): Promise<void> {
       </button>
     </form>
 
-    <p v-if="status === 'sent'" class="mobile-inbox-status" data-status="sent">{{ app.mobileInboxSent }}</p>
-    <p v-else-if="status === 'error'" class="mobile-inbox-status" data-status="error" data-testid="mobile-inbox-error">
+    <p v-if="status === 'sent'" class="mobile-inbox-status" role="status" aria-live="polite" data-status="sent">
+      {{ app.mobileInboxSent }}
+    </p>
+    <p
+      v-else-if="status === 'error'"
+      class="mobile-inbox-status"
+      role="status"
+      aria-live="polite"
+      data-status="error"
+      data-testid="mobile-inbox-error"
+    >
       {{ errorText }}
     </p>
   </div>

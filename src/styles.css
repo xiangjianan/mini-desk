@@ -4225,6 +4225,10 @@ body:has(.image-preview) .image-panel .n-scrollbar {
   min-width: 0;
   min-height: 0;
   padding: 24px 16px 112px;
+  /* 横屏短视口（如 375px 高）下内容超出时允许滚动，避免发送按钮落入裁剪区。 */
+  overflow-y: auto;
+  /* safe 对齐：内容高于容器时退回起点对齐，保证顶部（标题）不会被居中裁剪到不可滚动区；不支持的浏览器忽略本行。 */
+  align-content: safe center;
 }
 
 .mobile-handoff-message {
@@ -7484,6 +7488,11 @@ button.mobile-inbox-send:disabled {
 
 .mobile-inbox-code-input[aria-invalid="true"] {
   border-color: var(--destructive);
+}
+
+.mobile-inbox-code-input:focus-visible {
+  outline: 2px solid var(--line-focus);
+  outline-offset: -1px;
 }
 
 .mobile-inbox-code-error {

@@ -433,6 +433,82 @@ describe("App shell", () => {
     }
   });
 
+  it("renders the mobile capture form directly when the URL carries a valid inbox fragment", async () => {
+    vi.useFakeTimers();
+    stubMatchMedia(true);
+    window.location.hash = "#inbox=AB2CDE4FGHJK";
+    let wrapper: ReturnType<typeof mountApp> | undefined;
+
+    try {
+      wrapper = mountApp();
+
+      expect(wrapper.find(".mobile-handoff").exists()).toBe(true);
+      expect(wrapper.get(".mobile-inbox-heading").text()).toBe("手机速记");
+      expect(wrapper.find('[data-testid="mobile-inbox-text"]').exists()).toBe(true);
+      expect(wrapper.find('[data-testid="mobile-inbox-code-input"]').exists()).toBe(false);
+    } finally {
+      wrapper?.unmount();
+      window.location.hash = "";
+      vi.unstubAllGlobals();
+      vi.useRealTimers();
+    }
+  });
+
+  it("shows the manual code entry and an inline error with aria linkage for an invalid code", async () => {
+    vi.useFakeTimers();
+    stubMatchMedia(true);
+    window.location.hash = "";
+    let wrapper: ReturnType<typeof mountApp> | undefined;
+
+    try {
+      wrapper = mountApp();
+
+      expect(wrapper.find('[data-testid="mobile-inbox-text"]').exists()).toBe(false);
+      expect(wrapper.find('[data-testid="mobile-inbox-code-input"]').exists()).toBe(true);
+      expect(wrapper.find('[data-testid="mobile-inbox-code-error"]').exists()).toBe(false);
+
+      await wrapper.get('[data-testid="mobile-inbox-code-input"]').setValue("abc");
+      await wrapper.get('[data-testid="mobile-inbox-code-confirm"]').trigger("click");
+      await wrapper.vm.$nextTick();
+
+      expect(wrapper.get('[data-testid="mobile-inbox-code-error"]').text()).toBe("配对码格式不对，请检查后重试");
+      expect(wrapper.get('[data-testid="mobile-inbox-code-error"]').attributes("id")).toBe("mobile-inbox-code-error");
+      expect(wrapper.get('[data-testid="mobile-inbox-code-input"]').attributes("aria-invalid")).toBe("true");
+      expect(wrapper.get('[data-testid="mobile-inbox-code-input"]').attributes("aria-describedby")).toBe("mobile-inbox-code-error");
+      expect(wrapper.find('[data-testid="mobile-inbox-text"]').exists()).toBe(false);
+    } finally {
+      wrapper?.unmount();
+      window.location.hash = "";
+      vi.unstubAllGlobals();
+      vi.useRealTimers();
+    }
+  });
+
+  it("normalizes a grouped lowercase code into the capture form and writes back the fragment", async () => {
+    vi.useFakeTimers();
+    stubMatchMedia(true);
+    window.location.hash = "";
+    let wrapper: ReturnType<typeof mountApp> | undefined;
+
+    try {
+      wrapper = mountApp();
+
+      await wrapper.get('[data-testid="mobile-inbox-code-input"]').setValue("ab2c de4f ghjk");
+      await wrapper.get('[data-testid="mobile-inbox-code-confirm"]').trigger("click");
+      await wrapper.vm.$nextTick();
+
+      expect(wrapper.find('[data-testid="mobile-inbox-code-input"]').exists()).toBe(false);
+      expect(wrapper.get(".mobile-inbox-heading").text()).toBe("手机速记");
+      expect(wrapper.find('[data-testid="mobile-inbox-text"]').exists()).toBe(true);
+      expect(window.location.hash).toContain("#inbox=AB2CDE4FGHJK");
+    } finally {
+      wrapper?.unmount();
+      window.location.hash = "";
+      vi.unstubAllGlobals();
+      vi.useRealTimers();
+    }
+  });
+
   it("creates a todo from an empty section click", async () => {
     const wrapper = mountApp();
 
