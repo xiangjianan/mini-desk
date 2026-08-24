@@ -7294,6 +7294,58 @@ describe("App inbox pull wiring", () => {
     }
   });
 
+  it("skips the patch when the watermark already advanced mid-pull (cross-tab adoption)", async () => {
+    seedPairedState();
+    let resolvePull!: (result: InboxPullResult) => void;
+    vi.mocked(pullAllInboxes).mockImplementationOnce(
+      () => new Promise<InboxPullResult>((resolve) => {
+        resolvePull = resolve;
+      }),
+    );
+    const wrapper = mountApp();
+
+    try {
+      await flushAsyncComponents();
+      expect(pullAllInboxes).toHaveBeenCalledTimes(1);
+
+      // 在途期间模拟跨标签页采纳：另一标签页先完成拉取并广播，本标签页整体采纳其状态——
+      // 同批条目已入库且水位线推到本批最大值（与在途补丁的 lastSeenAt 相等）。
+      const app = wrapper.vm as unknown as {
+        state: { workspaces: Array<{ id: string; inbox?: { lastSeenAt: number }; todos: Record<string, Array<{ id: string; text: string; done: boolean }>> }> };
+      };
+      const live = app.state.workspaces.find((workspace) => workspace.id === DEFAULT_WORKSPACE_ID);
+      expect(live?.inbox).toBeTruthy();
+      live!.inbox!.lastSeenAt = 999;
+      live!.todos = {
+        ...live!.todos,
+        morning: [...live!.todos.morning, { id: "adopted", text: "来自手机的速记", done: false }],
+      };
+
+      resolvePull({
+        patches: [
+          {
+            workspaceId: DEFAULT_WORKSPACE_ID,
+            plains: [{ kind: "todo", text: "来自手机的速记", createdAt: 999 }],
+            lastSeenAt: 999,
+          },
+        ],
+        reports: [{ workspaceId: DEFAULT_WORKSPACE_ID, imported: 1 }],
+        changed: true,
+      });
+      await flushAsyncComponents();
+
+      // 断言活状态：重放门控只决定是否合入活对象；采纳内容的落盘由采纳方自己负责。
+      const after = app.state.workspaces.find((workspace) => workspace.id === DEFAULT_WORKSPACE_ID);
+      const texts = after!.todos.morning.map((todo) => todo.text);
+      // 补丁水位线未严格领先（== 采纳值）：不重放，同文本不会以新 ID 出现第二份。
+      expect(texts.filter((text) => text === "来自手机的速记")).toHaveLength(1);
+      expect(after!.inbox?.lastSeenAt).toBe(999); // 水位线不被回拨
+      expect(wrapper.text()).not.toContain("收到"); // 被跳过的补丁不弹「收到 N 条」
+    } finally {
+      wrapper.unmount();
+    }
+  });
+
   it("skips the patch for a workspace deleted mid-pull without resurrecting it", async () => {
     vi.useFakeTimers();
     // 两个工作区：删除守卫要求至少保留一个，删除配对的 default 后只剩 backup。

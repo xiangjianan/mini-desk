@@ -825,18 +825,27 @@ async function pullInboxes(): Promise<void> {
   try {
     const { patches, reports, changed } = await pullAllInboxes(state.workspaces);
     if (!appMounted) return;
+    // 水位线单调门控：拉取在途期间，跨标签页广播采纳（applyExternalStoredState 整体覆盖）
+    // 或同名导入覆盖都可能已把同批条目合入并推进水位线。补丁水位线未严格领先即说明本批
+    // 已被应用过，重放会以新 ID 重复导入同文本——先按当前活对象过滤，只保留仍严格领先的补丁。
+    const applicable = patches.filter((patch) => {
+      const workspace = state.workspaces.find((item) => item.id === patch.workspaceId);
+      return workspace?.inbox !== undefined && patch.lastSeenAt > workspace.inbox.lastSeenAt;
+    });
+    // 补丁全部失配（工作区已删/配对已清/水位线已被采纳或导入推进）：无落点或本批已应用过，
+    // 直接返回，跳过空转的整组替换与持久化，也不弹「收到 N 条」。
+    if (!changed || applicable.length === 0) return;
     // 补丁重放：在 await 之后的同一同步块内对当前活对象合并，读-合-写之间零宏任务间隙，
     // 用户在途编辑（同对象字段替换，不换数组身份）无法插入，也就不会被旧快照覆盖。
-    // 结构性变更天然安全：工作区已删则按 id 查无目标自然跳过；配对已清除则
-    // applyInboxItems 顶部 !inbox 守卫自然空转——无需丢弃整批，水位线留在补丁里下次重拉。
-    if (changed) {
-      state.workspaces = state.workspaces.map((workspace) => {
-        const patch = patches.find((candidate) => candidate.workspaceId === workspace.id);
-        return patch ? applyInboxItems(workspace, patch.plains, patch.lastSeenAt) : workspace;
-      });
-      persistNow();
-    }
+    // 结构性变更天然安全：工作区已删则按 id 查无目标自然跳过；配对已清除则不在 applicable 中。
+    state.workspaces = state.workspaces.map((workspace) => {
+      const patch = applicable.find((candidate) => candidate.workspaceId === workspace.id);
+      return patch ? applyInboxItems(workspace, patch.plains, patch.lastSeenAt) : workspace;
+    });
+    persistNow();
     for (const report of reports) {
+      // 被门控跳过的补丁不提示：跨标签页场景条目实际由另一标签页应用，两边各弹一次会误导。
+      if (!applicable.some((patch) => patch.workspaceId === report.workspaceId)) continue;
       const workspace = state.workspaces.find((item) => item.id === report.workspaceId);
       if (!workspace) continue;
       showBubbleText(
