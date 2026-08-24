@@ -81,6 +81,26 @@ describe("importedPayloadHasInbox", () => {
     expect(importedPayloadHasInbox({ workspaces: [{}, { inbox: { code: "AB2CDE4FGHJK" } }] })).toBe(true);
   });
 
+  it("识别真实单工作区导出信封中的 inbox", () => {
+    expect(
+      importedPayloadHasInbox({
+        miniDeskWorkspaceExport: true,
+        version: 1,
+        workspace: { inbox: { code: "AB2CDE4FGHJK", todoListId: "morning", noteTarget: "workspace", lastSeenAt: 0 } },
+      }),
+    ).toBe(true);
+  });
+
+  it("码不合法（会被 normalize 丢弃）不触发提示，与导入侧校验对齐", () => {
+    expect(importedPayloadHasInbox({ workspace: { inbox: { code: "short" } } })).toBe(false);
+    expect(importedPayloadHasInbox({ workspaces: [{ inbox: { code: "ab2cde4fghjk" } }] })).toBe(false);
+  });
+
+  it("workspaces 非数组时回退检查 workspace 键", () => {
+    expect(importedPayloadHasInbox({ workspaces: "junk", workspace: { inbox: { code: "AB2CDE4FGHJK" } } })).toBe(true);
+    expect(importedPayloadHasInbox({ workspaces: "junk" })).toBe(false);
+  });
+
   it("无 inbox 或结构非法返回 false", () => {
     expect(importedPayloadHasInbox({ workspace: {} })).toBe(false);
     expect(importedPayloadHasInbox({ workspaces: [{ inbox: null }] })).toBe(false);

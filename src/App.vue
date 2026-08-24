@@ -2447,7 +2447,7 @@ async function importData(event: Event): Promise<void> {
       refreshTodoNotifications();
       showBubble("dataImported", importFeedbackAnchor.value, { hideCompanionAfter: true });
       if (importedHasInbox) {
-        showBubbleText(uiText.value.app.inboxImportNotice, undefined, { hideCompanionAfter: true });
+        showBubbleText(uiText.value.app.inboxImportNotice, importFeedbackAnchor.value, { hideCompanionAfter: true }, 5000);
       }
       importFeedbackAnchor.value = undefined;
       input.value = "";

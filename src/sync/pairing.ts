@@ -36,6 +36,7 @@ export function importedPayloadHasInbox(parsed: unknown): boolean {
   return candidates.some((item) => {
     if (typeof item !== "object" || item === null) return false;
     const inbox = (item as Record<string, unknown>).inbox;
-    return typeof inbox === "object" && inbox !== null && typeof (inbox as Record<string, unknown>).code === "string";
+    // 与 normalizeWorkspaceInbox 同规则校验码格式：短码等无效载荷会被 normalize 丢弃，不触发提示。
+    return typeof inbox === "object" && inbox !== null && isValidInboxCode((inbox as Record<string, unknown>).code);
   });
 }
