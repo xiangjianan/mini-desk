@@ -60,7 +60,7 @@ import * as workspaceMover from "./state/workspaceMoves";
 import { QUICK_BUTTON_OTHER_GROUP_ID, QUICK_DENSITY_THRESHOLD, formatQuickCopiedPreview, getQuickTagColor } from "./state/quickButtons";
 import { isQuickAppScheme } from "./state/quickApps";
 import { INBOX_FOCUS_THROTTLE_MS, INBOX_PULL_INTERVAL_MS } from "./sync/config";
-import { isValidInboxCode, normalizeInboxCode, parseInboxFragment } from "./sync/pairing";
+import { importedPayloadHasInbox, isValidInboxCode, normalizeInboxCode, parseInboxFragment } from "./sync/pairing";
 import { pullAllInboxes } from "./sync/pull";
 import { copyTextWithBrowserCommand } from "./utils/clipboard";
 import { extractRetainedImageIds, useUndoHistory } from "./composables/useUndoHistory";
@@ -2426,6 +2426,9 @@ async function importData(event: Event): Promise<void> {
     input.value = "";
     return;
   }
+  // 配对码即手机录入通道的密钥：导出文件携带 inbox 意味着「分享文件 = 分享通道」，
+  // 导入成功后提示来自他人的文件应轮换配对码。
+  const importedHasInbox = importedPayloadHasInbox(parsed);
 
   if (isSingleWorkspaceExport(parsed as Record<string, unknown>)) {
     let importedWorkspace: WorkspaceData;
@@ -2443,6 +2446,9 @@ async function importData(event: Event): Promise<void> {
       persistNow("all", { force: true });
       refreshTodoNotifications();
       showBubble("dataImported", importFeedbackAnchor.value, { hideCompanionAfter: true });
+      if (importedHasInbox) {
+        showBubbleText(uiText.value.app.inboxImportNotice, undefined, { hideCompanionAfter: true });
+      }
       importFeedbackAnchor.value = undefined;
       input.value = "";
     };

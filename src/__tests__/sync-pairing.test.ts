@@ -1,5 +1,12 @@
 import { describe, expect, it } from "vitest";
-import { buildInboxAddress, generateInboxCode, isValidInboxCode, normalizeInboxCode, parseInboxFragment } from "../sync/pairing";
+import {
+  buildInboxAddress,
+  generateInboxCode,
+  importedPayloadHasInbox,
+  isValidInboxCode,
+  normalizeInboxCode,
+  parseInboxFragment,
+} from "../sync/pairing";
 
 describe("generateInboxCode", () => {
   it("生成 12 位 Crockford base32（不含 I L O U）", () => {
@@ -65,5 +72,18 @@ describe("地址与 fragment", () => {
     const address = buildInboxAddress(code);
     const hash = address.slice(address.indexOf("#"));
     expect(parseInboxFragment(hash)).toBe(code);
+  });
+});
+
+describe("importedPayloadHasInbox", () => {
+  it("识别单工作区与多工作区导出中的 inbox", () => {
+    expect(importedPayloadHasInbox({ workspace: { inbox: { code: "AB2CDE4FGHJK" } } })).toBe(true);
+    expect(importedPayloadHasInbox({ workspaces: [{}, { inbox: { code: "AB2CDE4FGHJK" } }] })).toBe(true);
+  });
+
+  it("无 inbox 或结构非法返回 false", () => {
+    expect(importedPayloadHasInbox({ workspace: {} })).toBe(false);
+    expect(importedPayloadHasInbox({ workspaces: [{ inbox: null }] })).toBe(false);
+    expect(importedPayloadHasInbox("junk")).toBe(false);
   });
 });
