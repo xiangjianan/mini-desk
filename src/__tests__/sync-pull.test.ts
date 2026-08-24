@@ -1,6 +1,6 @@
 import { beforeEach, describe, expect, it, vi } from "vitest";
 import { defaultWorkspace } from "../state/defaults";
-import type { WorkspaceData, WorkspaceInbox } from "../types";
+import type { WorkspaceData, WorkspaceInbox, WorkspaceSpace } from "../types";
 
 vi.mock("../sync/inboxClient", () => ({
   fetchInboxItems: vi.fn(),
@@ -21,12 +21,24 @@ import { decryptInboxPayload, type InboxPlainItem } from "../sync/crypto";
 const fetchMock = vi.mocked(fetchInboxItems);
 const decryptMock = vi.mocked(decryptInboxPayload);
 
+const THREE_SPACES: WorkspaceSpace[] = [
+  { id: "workspace", title: "便签", lines: [{ text: "w1", indent: 0 }] },
+  { id: "storage", title: "储物", lines: [{ text: "s1", indent: 1 }] },
+  { id: "extra", title: "自定义", lines: [{ text: "e1", indent: 0 }] },
+];
+
 function workspace(id: string, inbox?: WorkspaceInbox): WorkspaceData {
-  return { ...defaultWorkspace(id), ...(inbox ? { inbox } : {}) };
+  const base = defaultWorkspace(id);
+  return {
+    ...base,
+    spaces: THREE_SPACES.map((space) => ({ ...space, lines: space.lines.map((line) => ({ ...line })) })),
+    activeSpaceId: THREE_SPACES[0].id,
+    ...(inbox ? { inbox } : {}),
+  };
 }
 
 function inbox(overrides: Partial<WorkspaceInbox> = {}): WorkspaceInbox {
-  return { code: "AB2CDE4FGHJK", todoListId: "morning", noteTarget: "note", lastSeenAt: 0, ...overrides };
+  return { code: "AB2CDE4FGHJK", todoListId: "morning", noteTarget: "workspace", lastSeenAt: 0, ...overrides };
 }
 
 function item(id: string, createdAt: number, payload?: string): { id: string; payload: string; createdAt: number } {
@@ -38,8 +50,8 @@ beforeEach(() => {
 });
 
 describe("applyInboxItems", () => {
-  it("todo 追加到落点清单为未完成条目，note 追加一行 indent 0，水位线推进", () => {
-    const base = workspace("a", inbox({ todoListId: "morning", noteTarget: "note" }));
+  it("todo 追加到落点清单为未完成条目，note 追加到目标空间一行 indent 0，水位线推进", () => {
+    const base = workspace("a", inbox({ todoListId: "morning", noteTarget: "workspace" }));
     const plains: InboxPlainItem[] = [
       { kind: "todo", text: "买牛奶", createdAt: 1 },
       { kind: "note", text: "想法", createdAt: 2 },
@@ -47,27 +59,35 @@ describe("applyInboxItems", () => {
     const merged = applyInboxItems(base, plains, 2);
     expect(merged.todos.morning.at(-1)).toMatchObject({ text: "买牛奶", done: false });
     expect(merged.todos.morning.at(-1)?.id).toBeTruthy();
-    expect(merged.noteLines.at(-1)).toEqual({ text: "想法", indent: 0 });
+    expect(merged.spaces[0].lines.at(-1)).toEqual({ text: "想法", indent: 0 });
+    expect(merged.workspaceLines.at(-1)).toEqual({ text: "想法", indent: 0 }); // 投影字段同步刷新
     expect(merged.inbox?.lastSeenAt).toBe(2);
     // 不改原对象（不可变）
     expect(base.todos.morning.at(-1)?.text).not.toBe("买牛奶");
+    expect(base.spaces[0].lines.at(-1)?.text).toBe("w1");
   });
 
-  it("noteTarget 路由到 workspaceLines/storageLines", () => {
+  it("noteTarget 指向第三个空间时追加该空间，投影仍按不变量取前两个空间", () => {
     const merged = applyInboxItems(
-      workspace("a", inbox({ noteTarget: "storage" })),
+      workspace("a", inbox({ noteTarget: "extra" })),
       [{ kind: "note", text: "x", createdAt: 1 }],
       1,
     );
-    expect(merged.storageLines).toEqual([{ text: "x", indent: 0 }]);
-    expect(merged.noteLines).toEqual([]);
+    expect(merged.spaces[2].lines).toEqual([{ text: "e1", indent: 0 }, { text: "x", indent: 0 }]);
+    expect(merged.spaces[0].lines).toEqual([{ text: "w1", indent: 0 }]);
+    expect(merged.workspaceLines).toEqual([{ text: "w1", indent: 0 }]);
+    expect(merged.storageLines).toEqual([{ text: "s1", indent: 1 }]);
+  });
 
-    const wsMerged = applyInboxItems(
-      workspace("a", inbox({ noteTarget: "workspace" })),
-      [{ kind: "note", text: "w", createdAt: 1 }],
+  it("noteTarget 指向不存在/已删除的空间 id 时回退第一个空间", () => {
+    const merged = applyInboxItems(
+      workspace("a", inbox({ noteTarget: "ghost" })),
+      [{ kind: "note", text: "x", createdAt: 1 }],
       1,
     );
-    expect(wsMerged.workspaceLines).toEqual([{ text: "w", indent: 0 }]);
+    expect(merged.spaces[0].lines.at(-1)).toEqual({ text: "x", indent: 0 });
+    expect(merged.spaces[2].lines).toEqual([{ text: "e1", indent: 0 }]);
+    expect(merged.workspaceLines.at(-1)).toEqual({ text: "x", indent: 0 });
   });
 
   it("todoListId 失效时回退第一个清单；文本裁剪 500 字", () => {

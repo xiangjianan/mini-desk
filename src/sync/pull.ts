@@ -16,7 +16,9 @@ export interface InboxPullResult {
   changed: boolean;
 }
 
-/** 纯合并：todo 追加为未完成条目（落点清单失效则回退第一个清单），note 按 noteTarget 追加一行 indent 0。
+/** 纯合并：todo 追加为未完成条目（落点清单失效则回退第一个清单），note 按 noteTarget 追加一行
+ *  indent 0 到目标空间 Tab（落点空间失效则回退第一个空间），并按 App.vue syncLegacySpaceLines
+ *  的不变量刷新投影字段（workspaceLines/storageLines = 前两个空间的浅拷贝）。
  *  不做任何拉取/解密，输入对象不被修改，水位线直接取调用方计算好的 lastSeenAt。 */
 export function applyInboxItems(workspace: WorkspaceData, plains: InboxPlainItem[], lastSeenAt: number): WorkspaceData {
   const inbox = workspace.inbox;
@@ -43,9 +45,14 @@ export function applyInboxItems(workspace: WorkspaceData, plains: InboxPlainItem
   }
   if (notes.length > 0) {
     const appended: LineItem[] = notes.map((plain) => ({ text: plain.text.slice(0, INBOX_PLAINTEXT_MAX_CHARS), indent: 0 }));
-    if (inbox.noteTarget === "workspace") next = { ...next, workspaceLines: [...next.workspaceLines, ...appended] };
-    else if (inbox.noteTarget === "storage") next = { ...next, storageLines: [...next.storageLines, ...appended] };
-    else next = { ...next, noteLines: [...next.noteLines, ...appended] };
+    const targetId = next.spaces.some((space) => space.id === inbox.noteTarget) ? inbox.noteTarget : next.spaces[0]?.id;
+    const spaces = next.spaces.map((space) => (space.id === targetId ? { ...space, lines: [...space.lines, ...appended] } : space));
+    next = {
+      ...next,
+      spaces,
+      workspaceLines: spaces[0]?.lines.map((line) => ({ ...line })) ?? [],
+      storageLines: spaces[1]?.lines.map((line) => ({ ...line })) ?? [],
+    };
   }
   return next;
 }

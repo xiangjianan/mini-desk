@@ -159,8 +159,6 @@ export interface WorkspaceData {
   inbox?: WorkspaceInbox;
 }
 
-export type WorkspaceInboxNoteTarget = "note" | "workspace" | "storage";
-
 /**
  * 手机速记（单向收件箱）配对配置。字段存在即启用该工作区的拉取同步。
  * `code` 兼作加密密钥（12 位 Crockford base32）；`lastSeenAt` 是服务端
@@ -169,7 +167,8 @@ export type WorkspaceInboxNoteTarget = "note" | "workspace" | "storage";
 export interface WorkspaceInbox {
   code: string;
   todoListId: TodoListId;
-  noteTarget: WorkspaceInboxNoteTarget;
+  /** 便签落点 = 目标空间 Tab 的 id；指向不存在/已删除的空间时回退第一个空间。 */
+  noteTarget: string;
   lastSeenAt: number;
 }
 

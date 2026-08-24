@@ -25,7 +25,6 @@ import type {
   TodoMap,
   WorkspaceData,
   WorkspaceInbox,
-  WorkspaceInboxNoteTarget,
   WorkspaceSpace,
   ZoneVisibility,
 } from "../../types";
@@ -99,13 +98,13 @@ export function normalizeWorkspaceData(item: unknown, language: AppLanguage = DE
     showCompletedTodos: normalizeCompletedVisibility(typed.showCompletedTodos, todoLists),
     todos: normalizeTodos(typed.todos, todoLists),
     zoneVisibility: normalizeZoneVisibility(typed.zoneVisibility ?? fallbackVisibility),
-    inbox: normalizeWorkspaceInbox(typed.inbox, todoLists),
+    inbox: normalizeWorkspaceInbox(typed.inbox, todoLists, spaces),
   };
 }
 
 const INBOX_CODE_PATTERN = /^[0-9A-HJKMNP-TV-Z]{12}$/;
 
-export function normalizeWorkspaceInbox(value: unknown, todoLists: TodoListConfig[]): WorkspaceInbox | undefined {
+export function normalizeWorkspaceInbox(value: unknown, todoLists: TodoListConfig[], spaces: WorkspaceSpace[]): WorkspaceInbox | undefined {
   if (!isPlainObject(value)) return undefined;
   const typed = value as Record<string, unknown>;
   if (typeof typed.code !== "string" || !INBOX_CODE_PATTERN.test(typed.code)) return undefined;
@@ -113,8 +112,12 @@ export function normalizeWorkspaceInbox(value: unknown, todoLists: TodoListConfi
     ? (typed.todoListId as TodoListId)
     : todoLists[0]?.id;
   if (!todoListId) return undefined;
-  const noteTarget: WorkspaceInboxNoteTarget =
-    typed.noteTarget === "workspace" || typed.noteTarget === "storage" ? typed.noteTarget : "note";
+  const noteTarget =
+    typeof typed.noteTarget === "string" && spaces.some((space) => space.id === typed.noteTarget)
+      ? typed.noteTarget
+      : spaces[0]?.id;
+  // normalizeSpaces 保证至少一个空间；空 spaces 属于异常防御，丢弃整个 inbox。
+  if (!noteTarget) return undefined;
   const lastSeenAt =
     typeof typed.lastSeenAt === "number" && Number.isFinite(typed.lastSeenAt)
       ? Math.max(0, Math.floor(typed.lastSeenAt))
