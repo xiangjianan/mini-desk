@@ -54,7 +54,7 @@ describe("MobileInboxCapture", () => {
     expect(wrapper.get('[data-testid="mobile-inbox-kind-todo"]').attributes("aria-pressed")).toBe("true");
     expect(wrapper.get('[data-testid="mobile-inbox-kind-note"]').text()).toBe("便签");
     expect(wrapper.get('[data-testid="mobile-inbox-kind-note"]').attributes("aria-pressed")).toBe("false");
-    expect(wrapper.get('[data-testid="mobile-inbox-text"]').attributes("placeholder")).toBe("记点什么…");
+    expect(wrapper.get('[data-testid="mobile-inbox-text"]').attributes("placeholder")).toBe("记点什么（每行一条）…");
     expect(wrapper.get('[data-testid="mobile-inbox-send"]').text()).toBe("发送");
   });
 
@@ -162,5 +162,56 @@ describe("MobileInboxCapture", () => {
 
     expect(postMock).toHaveBeenCalledTimes(1);
     await until(() => expect(wrapper.get(".mobile-inbox-status").text()).toContain("已发送"));
+  });
+
+  it("多行待办按行拆分逐条发送：空行跳过、提示已发送 N 条、清空输入", async () => {
+    const wrapper = mountCapture();
+
+    await fillAndSend(wrapper, "买牛奶\n\n  买鸡蛋  \n取快递");
+
+    await until(() => expect(postMock).toHaveBeenCalledTimes(3));
+    const plains = await Promise.all(
+      postMock.mock.calls.map(async ([, , payload]) => await decryptInboxPayload(CODE, payload)),
+    );
+    expect(plains.map((plain) => plain?.text)).toEqual(["买牛奶", "买鸡蛋", "取快递"]);
+    expect(plains.every((plain) => plain?.kind === "todo")).toBe(true);
+    await until(() => expect(wrapper.get(".mobile-inbox-status").text()).toContain("已发送 3 条"));
+    expect(draftValue(wrapper)).toBe("");
+  });
+
+  it("中途失败：未发送的行（含失败行）放回输入框，已成功行不重复", async () => {
+    let call = 0;
+    postMock.mockImplementation(async () => (call++ === 0 ? { ok: true } : { ok: false, reason: "network" }));
+    const wrapper = mountCapture();
+
+    await fillAndSend(wrapper, "第一条\n第二条\n第三条");
+
+    await until(() => expect(wrapper.get('[data-testid="mobile-inbox-error"]').text()).toBe("网络异常，请检查网络后重试"));
+    expect(postMock).toHaveBeenCalledTimes(2);
+    expect(draftValue(wrapper)).toBe("第二条\n第三条");
+  });
+
+  it("超过单次行数上限：报错且不发送，输入保留", async () => {
+    const wrapper = mountCapture();
+
+    await fillAndSend(wrapper, Array.from({ length: 21 }, (_, i) => `第${i + 1}行`).join("\n"));
+
+    await until(() => expect(wrapper.get('[data-testid="mobile-inbox-error"]').text()).toBe("一次最多 20 行，请分批发送"));
+    expect(postMock).not.toHaveBeenCalled();
+    expect(draftValue(wrapper).split("\n").length).toBe(21);
+  });
+
+  it("便签多行同样按行拆分（kind 均为 note）", async () => {
+    const wrapper = mountCapture();
+
+    await wrapper.get('[data-testid="mobile-inbox-kind-note"]').trigger("click");
+    await fillAndSend(wrapper, "想法一\n想法二");
+
+    await until(() => expect(postMock).toHaveBeenCalledTimes(2));
+    const plains = await Promise.all(
+      postMock.mock.calls.map(async ([, , payload]) => await decryptInboxPayload(CODE, payload)),
+    );
+    expect(plains.map((plain) => plain?.text)).toEqual(["想法一", "想法二"]);
+    expect(plains.every((plain) => plain?.kind === "note")).toBe(true);
   });
 });

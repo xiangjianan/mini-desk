@@ -14,11 +14,16 @@ const props = defineProps<{
 
 type CaptureStatus = "idle" | "sending" | "sent" | "error";
 
+/** 单次发送的行数上限：每行一条独立条目（各自占一条每日写入配额），防一次粘贴烧光 60 条/天的额度。 */
+const MAX_LINES_PER_SEND = 20;
+
 const app = computed(() => getUiText(props.language).app);
 const kind = ref<InboxPlainItem["kind"]>("todo");
 const draft = ref("");
 const status = ref<CaptureStatus>("idle");
 const errorText = ref("");
+const sentCount = ref(0);
+const sentText = computed(() => app.value.mobileInboxSent.replace("{count}", () => String(sentCount.value)));
 
 function errorTextFor(reason: InboxPostFailure): string {
   switch (reason) {
@@ -43,26 +48,50 @@ function errorTextFor(reason: InboxPostFailure): string {
   }
 }
 
-/** 发送中再次触发直接忽略（同步判定，先于任何 await 生效）。 */
+/** 发送中再次触发直接忽略（同步判定，先于任何 await 生效）。
+ *  多行输入按行拆分：待办每行一条、便签每行落一行（与桌面行编辑器模型一致）；
+ *  逐条加密串行发送，中途失败把未发送的行放回输入框供直接重试。 */
 async function send(): Promise<void> {
-  const text = draft.value.trim().slice(0, INBOX_PLAINTEXT_MAX_CHARS);
-  if (!text || status.value === "sending") return;
-  status.value = "sending";
-  try {
-    const payload = await encryptInboxPayload(props.code, { kind: kind.value, text, createdAt: Date.now() });
-    const result = await postInboxItem(await inboxKeyHash(props.code), createId(), payload);
-    if (result.ok) {
-      status.value = "sent";
-      draft.value = "";
-      return;
-    }
+  const lines = draft.value
+    .split(/\r?\n/)
+    .map((line) => line.trim().slice(0, INBOX_PLAINTEXT_MAX_CHARS))
+    .filter((line) => line.length > 0);
+  if (lines.length === 0 || status.value === "sending") return;
+  if (lines.length > MAX_LINES_PER_SEND) {
     status.value = "error";
-    errorText.value = errorTextFor(result.reason);
-  } catch {
-    // 加密/哈希异常与网络异常同等对待：内容保留，用户可直接重试。
-    status.value = "error";
-    errorText.value = app.value.mobileInboxErrorNetwork;
+    errorText.value = app.value.mobileInboxErrorTooManyLines.replace("{count}", () => String(MAX_LINES_PER_SEND));
+    return;
   }
+  status.value = "sending";
+  /** 失败即停：未发送的行（含当前失败行）放回输入框，直接重试不会重复已成功的行。 */
+  const failAt = (index: number, message: string): void => {
+    status.value = "error";
+    errorText.value = message;
+    draft.value = lines.slice(index).join("\n");
+  };
+  try {
+    const keyHash = await inboxKeyHash(props.code);
+    for (let index = 0; index < lines.length; index += 1) {
+      try {
+        const payload = await encryptInboxPayload(props.code, { kind: kind.value, text: lines[index], createdAt: Date.now() });
+        const result = await postInboxItem(keyHash, createId(), payload);
+        if (!result.ok) {
+          failAt(index, errorTextFor(result.reason));
+          return;
+        }
+      } catch {
+        // 加密/哈希异常与网络异常同等对待。
+        failAt(index, app.value.mobileInboxErrorNetwork);
+        return;
+      }
+    }
+  } catch {
+    failAt(0, app.value.mobileInboxErrorNetwork);
+    return;
+  }
+  sentCount.value = lines.length;
+  status.value = "sent";
+  draft.value = "";
 }
 </script>
 
@@ -98,7 +127,7 @@ async function send(): Promise<void> {
         v-model="draft"
         class="mobile-inbox-textarea"
         data-testid="mobile-inbox-text"
-        :maxlength="INBOX_PLAINTEXT_MAX_CHARS"
+        :maxlength="MAX_LINES_PER_SEND * INBOX_PLAINTEXT_MAX_CHARS"
         :placeholder="app.mobileInboxPlaceholder"
         :aria-label="app.mobileInboxPlaceholder"
         rows="5"
@@ -116,7 +145,7 @@ async function send(): Promise<void> {
     </form>
 
     <p v-if="status === 'sent'" class="mobile-inbox-status" role="status" aria-live="polite" data-status="sent">
-      {{ app.mobileInboxSent }}
+      {{ sentText }}
     </p>
     <p
       v-else-if="status === 'error'"
