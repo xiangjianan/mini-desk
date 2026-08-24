@@ -29,6 +29,22 @@ export interface ChangelogEntry {
 
 export const CHANGELOG: ChangelogEntry[] = [
   {
+    version: "1.0.139",
+    date: "2026-08-24",
+    notes: {
+      zh: [
+        "新增：手机速记——扫码配对后手机随手记待办与便签，自动同步到电脑",
+        "新增：端到端加密中转，服务器只存密文，条目送达或 30 天过期即不可再读",
+        "新增：配对支持轮换与清除，随空间导出迁移；导入他人文件后提示轮换配对码",
+      ],
+      en: [
+        "New: mobile quick capture — pair by QR code, jot todos and notes on the phone, auto-synced to the desktop",
+        "New: end-to-end encrypted relay — the server stores ciphertext only; entries become unreadable once delivered or after 30 days",
+        "New: pairing supports rotate/clear and travels with workspace exports; importing someone else's file prompts a code rotation",
+      ],
+    },
+  },
+  {
     version: "1.0.138",
     date: "2026-08-22",
     notes: {
