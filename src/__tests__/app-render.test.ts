@@ -17,7 +17,6 @@ import { KAOMOJI_BY_MOOD } from "../state/messages";
 import { INBOX_FOCUS_THROTTLE_MS } from "../sync/config";
 import { pullAllInboxes } from "../sync/pull";
 import type { InboxPullResult } from "../sync/pull";
-import type { WorkspaceData } from "../types";
 import { FALLBACK_APP_VERSION } from "../state/version";
 
 vi.mock("naive-ui", async (importOriginal) => {
@@ -46,10 +45,11 @@ vi.mock("naive-ui", async (importOriginal) => {
 });
 
 // 收件箱拉取是纯函数模块（无 import 副作用），且 pullAllInboxes 只有收件箱接线调用：
-// 文件级 mock 对其它用例零影响。默认实现按契约返回入参同引用 + changed:false，
-// 等价于「拉取无变更」，未显式设值的用例行为与真实模块一致。
-vi.mock("../sync/pull", () => ({
-  pullAllInboxes: vi.fn(async (workspaces: WorkspaceData[]): Promise<InboxPullResult> => ({ workspaces, reports: [], changed: false })),
+// 文件级 mock 对其它用例零影响。applyInboxItems 保留真实现——补丁重放路径必须走真实合并；
+// 默认实现按契约返回空补丁 + changed:false，等价于「拉取无变更」，未显式设值的用例行为与真实模块一致。
+vi.mock("../sync/pull", async (importOriginal) => ({
+  ...(await importOriginal<typeof import("../sync/pull")>()),
+  pullAllInboxes: vi.fn(async (): Promise<InboxPullResult> => ({ patches: [], reports: [], changed: false })),
 }));
 
 const dropdownStub = {
@@ -7174,7 +7174,7 @@ describe("App inbox pull wiring", () => {
     // vi.restoreAllMocks() 不重置 vi.fn() 的实现，逐用例显式回到安全默认值，
     // 避免上一个用例的 mockResolvedValueOnce 泄漏到后续用例。
     vi.mocked(pullAllInboxes).mockReset();
-    vi.mocked(pullAllInboxes).mockImplementation(async (workspaces) => ({ workspaces, reports: [], changed: false }));
+    vi.mocked(pullAllInboxes).mockImplementation(async () => ({ patches: [], reports: [], changed: false }));
   });
 
   it("pulls inboxes exactly once on startup when a workspace is paired", async () => {
@@ -7189,15 +7189,15 @@ describe("App inbox pull wiring", () => {
     }
   });
 
-  it("replaces workspaces, persists, and toasts when a pull imports items", async () => {
+  it("replays patches onto live workspaces, persists, and toasts when a pull imports items", async () => {
     vi.useFakeTimers();
     seedPairedState();
     vi.mocked(pullAllInboxes).mockResolvedValueOnce({
-      workspaces: [
+      patches: [
         {
-          ...defaultWorkspace(),
-          inbox: { code: "AB2CDE4FGHJK", todoListId: "morning", noteTarget: DEFAULT_SPACE_ID, lastSeenAt: 999 },
-          spaces: [{ id: DEFAULT_SPACE_ID, title: "便签", lines: [{ text: "来自手机的速记", indent: 0 }] }],
+          workspaceId: DEFAULT_WORKSPACE_ID,
+          plains: [{ kind: "note", text: "来自手机的速记", createdAt: 999 }],
+          lastSeenAt: 999,
         },
       ],
       reports: [{ workspaceId: DEFAULT_WORKSPACE_ID, imported: 1 }],
@@ -7240,7 +7240,7 @@ describe("App inbox pull wiring", () => {
     }
   });
 
-  it("discards the stale pull batch when workspaces are structurally replaced mid-flight", async () => {
+  it("keeps in-flight field-level edits when the pull resolves (merge reads the live object)", async () => {
     seedPairedState();
     let resolvePull!: (result: InboxPullResult) => void;
     vi.mocked(pullAllInboxes).mockImplementationOnce(
@@ -7248,50 +7248,159 @@ describe("App inbox pull wiring", () => {
         resolvePull = resolve;
       }),
     );
-    const previousTitle = document.title;
     const wrapper = mountApp();
 
     try {
-      // 启动拉取挂起在 deferred 上，快照身份已捕获。
+      // 启动拉取挂起在 deferred 上：模拟多工作区配对时 B 仍在串行 PBKDF2 解密的秒级窗口。
       await flushAsyncComponents();
       expect(pullAllInboxes).toHaveBeenCalledTimes(1);
 
-      // 在途期间新建工作区：createWorkspace 整组替换 state.workspaces（数组身份变化）。
-      await wrapper.get('[data-testid="workspace-trigger"]').trigger("click");
-      await wrapper.get('[data-testid="workspace-create-button"]').trigger("click");
-      await nextTick();
-      await wrapper.get(".n-modal input").setValue("竞态新桌面");
-      await wrapper.get(".n-modal .n-button--primary-type").trigger("click");
-      await nextTick();
+      // 在途期间对待办做字段级编辑：同一工作区对象上替换 todos 字段（数组身份不变，
+      // 旧实现的快照身份守卫拦不住，基于旧字段快照的合并会把它覆盖丢失）。
+      const app = wrapper.vm as unknown as {
+        state: { workspaces: Array<{ id: string; todos: Record<string, Array<{ id: string; text: string; done: boolean }>> }> };
+      };
+      const live = app.state.workspaces.find((workspace) => workspace.id === DEFAULT_WORKSPACE_ID);
+      expect(live).toBeTruthy();
+      live!.todos = {
+        ...live!.todos,
+        morning: [...live!.todos.morning, { id: "user-edit", text: "在途用户编辑", done: false }],
+      };
 
-      // 基于挂起前种子构造的过期批次：不含新建工作区，且带一条本会被合并的便签。
       resolvePull({
-        workspaces: [
+        patches: [
           {
-            ...defaultWorkspace(),
-            inbox: { code: "AB2CDE4FGHJK", todoListId: "morning", noteTarget: DEFAULT_SPACE_ID, lastSeenAt: 999 },
-            spaces: [{ id: DEFAULT_SPACE_ID, title: "便签", lines: [{ text: "来自手机的速记", indent: 0 }] }],
+            workspaceId: DEFAULT_WORKSPACE_ID,
+            plains: [{ kind: "todo", text: "来自手机的速记", createdAt: 999 }],
+            lastSeenAt: 999,
           },
         ],
-        reports: [],
+        reports: [{ workspaceId: DEFAULT_WORKSPACE_ID, imported: 1 }],
         changed: true,
       });
       await flushAsyncComponents();
 
       const persisted = JSON.parse(localStorage.getItem(STORAGE_KEY) || "{}") as {
-        workspaces: { customTitles: Record<string, string>; spaces: { lines: { text: string }[] }[] }[];
+        workspaces: { inbox?: { lastSeenAt: number }; todos: Record<string, Array<{ text: string }>> }[];
       };
-      // 新建工作区未被旧快照覆写：仍完整落盘。
-      expect(persisted.workspaces).toHaveLength(2);
-      expect(persisted.workspaces.at(-1)?.customTitles["board-title"]).toBe("竞态新桌面");
-      // 过期批次被丢弃：本会被合并进种子的便签文本未落盘。
+      const texts = persisted.workspaces[0].todos.morning.map((todo) => todo.text);
+      expect(texts).toContain("在途用户编辑"); // 用户在途编辑未被合并覆盖
+      expect(texts).toContain("来自手机的速记"); // 导入条目与编辑内容同存
+      expect(persisted.workspaces[0].inbox?.lastSeenAt).toBe(999);
+    } finally {
+      wrapper.unmount();
+    }
+  });
+
+  it("skips the patch for a workspace deleted mid-pull without resurrecting it", async () => {
+    vi.useFakeTimers();
+    // 两个工作区：删除守卫要求至少保留一个，删除配对的 default 后只剩 backup。
+    localStorage.setItem(
+      STORAGE_KEY,
+      JSON.stringify({
+        ...defaultState(),
+        workspaces: [
+          {
+            ...defaultWorkspace(),
+            inbox: { code: "AB2CDE4FGHJK", todoListId: "morning", noteTarget: DEFAULT_SPACE_ID, lastSeenAt: 7 },
+          },
+          { ...defaultWorkspace("backup"), customTitles: { "board-title": "备用桌面" } },
+        ],
+      }),
+    );
+    let resolvePull!: (result: InboxPullResult) => void;
+    vi.mocked(pullAllInboxes).mockImplementationOnce(
+      () => new Promise<InboxPullResult>((resolve) => {
+        resolvePull = resolve;
+      }),
+    );
+    const wrapper = mountApp();
+
+    try {
+      await flushAsyncComponents();
+      expect(pullAllInboxes).toHaveBeenCalledTimes(1);
+
+      // 在途期间删除配对工作区：state.workspaces 整组替换且不再含 default。
+      await wrapper.get('[data-testid="workspace-trigger"]').trigger("click");
+      await wrapper.get(`[data-testid="workspace-delete-${DEFAULT_WORKSPACE_ID}"]`).trigger("click");
+      await vi.advanceTimersByTimeAsync(200);
+      await nextTick();
+      await wrapper.get('[data-testid="companion-yes"]').trigger("click");
+      await nextTick();
+
+      // 过期补丁仍指向已删除的 default 并携带条目：按 id 查无目标应自然跳过。
+      resolvePull({
+        patches: [
+          {
+            workspaceId: DEFAULT_WORKSPACE_ID,
+            plains: [{ kind: "note", text: "来自手机的速记", createdAt: 999 }],
+            lastSeenAt: 999,
+          },
+        ],
+        reports: [{ workspaceId: DEFAULT_WORKSPACE_ID, imported: 1 }],
+        changed: true,
+      });
+      await flushAsyncComponents();
+
+      const persisted = JSON.parse(localStorage.getItem(STORAGE_KEY) || "{}") as {
+        workspaces: { id: string; spaces: { lines: { text: string }[] }[] }[];
+      };
+      // 不复活：删除结果保持，条目不导入，过程无报错。
+      expect(persisted.workspaces).toHaveLength(1);
+      expect(persisted.workspaces[0].id).toBe("backup");
       const allLineTexts = persisted.workspaces.flatMap((workspace) =>
         workspace.spaces.flatMap((space) => space.lines.map((line) => line.text)),
       );
       expect(allLineTexts).not.toContain("来自手机的速记");
     } finally {
       wrapper.unmount();
-      document.title = previousTitle;
+      vi.useRealTimers();
+    }
+  });
+
+  it("no-ops the patch when pairing is cleared mid-pull", async () => {
+    seedPairedState();
+    let resolvePull!: (result: InboxPullResult) => void;
+    vi.mocked(pullAllInboxes).mockImplementationOnce(
+      () => new Promise<InboxPullResult>((resolve) => {
+        resolvePull = resolve;
+      }),
+    );
+    vi.spyOn(window, "confirm").mockReturnValue(true);
+    const wrapper = mountApp();
+
+    try {
+      await flushAsyncComponents();
+      expect(pullAllInboxes).toHaveBeenCalledTimes(1);
+
+      // 在途期间从配对弹窗清除配对：工作区对象被替换且不再含 inbox 字段。
+      await wrapper.get('[data-testid="workspace-trigger"]').trigger("click");
+      await wrapper.get('[data-testid="workspace-pair-default"]').trigger("click");
+      await flushAsyncComponents();
+      await wrapper.get('[data-testid="inbox-clear"]').trigger("click");
+      await nextTick();
+
+      resolvePull({
+        patches: [
+          {
+            workspaceId: DEFAULT_WORKSPACE_ID,
+            plains: [{ kind: "todo", text: "来自手机的速记", createdAt: 999 }],
+            lastSeenAt: 999,
+          },
+        ],
+        reports: [{ workspaceId: DEFAULT_WORKSPACE_ID, imported: 1 }],
+        changed: true,
+      });
+      await flushAsyncComponents();
+
+      const persisted = JSON.parse(localStorage.getItem(STORAGE_KEY) || "{}") as {
+        workspaces: { inbox?: { lastSeenAt: number }; todos: Record<string, Array<{ text: string }>> }[];
+      };
+      // applyInboxItems 顶部 !inbox 守卫空转：配对保持清除、条目不导入、无报错。
+      expect(persisted.workspaces[0].inbox).toBeUndefined();
+      expect(persisted.workspaces[0].todos.morning.map((todo) => todo.text)).toEqual([]);
+    } finally {
+      wrapper.unmount();
     }
   });
 

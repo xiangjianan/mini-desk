@@ -112,54 +112,66 @@ describe("applyInboxItems", () => {
 });
 
 describe("pullAllInboxes", () => {
-  it("只拉取配置了 inbox 的工作区，解密过滤后合并并出报告", async () => {
+  it("只拉取配置了 inbox 的工作区，产出补丁与报告且不合并输入对象", async () => {
     const plain = workspace("plain");
     const paired = workspace("paired", inbox());
     fetchMock.mockResolvedValue([item("i1", 10), item("i2", 20), item("i3", 5)]);
-    const { workspaces, reports } = await pullAllInboxes([plain, paired]);
+    const { patches, reports, changed } = await pullAllInboxes([plain, paired]);
     expect(fetchMock).toHaveBeenCalledTimes(1);
     expect(fetchMock).toHaveBeenCalledWith("hash-of-AB2CDE4FGHJK");
-    expect(workspaces[0]).toBe(plain);
-    expect(workspaces[1].todos.morning).toHaveLength(3);
-    expect(workspaces[1].inbox?.lastSeenAt).toBe(20);
+    expect(patches).toEqual([
+      {
+        workspaceId: "paired",
+        plains: [
+          { kind: "todo", text: "条目i1", createdAt: 10 },
+          { kind: "todo", text: "条目i2", createdAt: 20 },
+          { kind: "todo", text: "条目i3", createdAt: 5 },
+        ],
+        lastSeenAt: 20,
+      },
+    ]);
     expect(reports).toEqual([{ workspaceId: "paired", imported: 3 }]);
+    expect(changed).toBe(true);
+    // 合并责任已移交调用方：pull 不改输入对象，补丁对当前活对象重放。
+    expect(paired.todos.morning).toHaveLength(0);
+    expect(paired.inbox?.lastSeenAt).toBe(0);
   });
 
   it("水位线跳过已消费条目；解密失败条目跳过但水位线照常推进", async () => {
     const paired = workspace("paired", inbox({ lastSeenAt: 10 }));
     fetchMock.mockResolvedValue([item("i1", 5), item("edge", 10), item("bad", 15, "BAD"), item("i3", 20)]);
-    const { workspaces, reports } = await pullAllInboxes([paired]);
-    expect(workspaces[0].todos.morning.map((todo) => todo.text)).toEqual(["条目i3"]);
-    expect(workspaces[0].inbox?.lastSeenAt).toBe(20);
+    const { patches, reports } = await pullAllInboxes([paired]);
+    expect(patches[0]?.plains.map((plain) => plain.text)).toEqual(["条目i3"]);
+    expect(patches[0]?.lastSeenAt).toBe(20);
     expect(reports).toEqual([{ workspaceId: "paired", imported: 1 }]);
   });
 
-  it("无导入且水位线未动时原样返回；纯垃圾条目推进水位线且标记 changed；拉取失败无报告", async () => {
+  it("无导入且水位线未动时不产补丁；纯垃圾条目产出空 plains 补丁且标记 changed；拉取失败无补丁", async () => {
     const paired = workspace("paired", inbox({ lastSeenAt: 10 }));
     fetchMock.mockResolvedValue([item("i1", 5)]);
     const stale = await pullAllInboxes([paired]);
-    expect(stale.workspaces[0]).toBe(paired); // 全过期：不换对象
+    expect(stale.patches).toEqual([]); // 全过期：不产补丁
     expect(stale.changed).toBe(false);
 
     fetchMock.mockResolvedValue([item("bad", 15, "BAD")]);
     const garbage = await pullAllInboxes([paired]);
     expect(garbage.changed).toBe(true);
-    expect(garbage.workspaces[0].inbox?.lastSeenAt).toBe(15); // 水位线照常推进并持久化
+    expect(garbage.patches).toEqual([{ workspaceId: "paired", plains: [], lastSeenAt: 15 }]); // 纯水位线前进：空 plains 补丁照常产出
     expect(garbage.reports).toEqual([]); // 无导入不报告
 
     fetchMock.mockResolvedValue(null);
     const failed = await pullAllInboxes([paired]);
-    expect(failed.workspaces[0]).toBe(paired);
+    expect(failed.patches).toEqual([]);
     expect(failed.changed).toBe(false);
     expect(failed.reports).toEqual([]);
   });
 
-  it("环境级解密异常时工作区原样返回且无报告", async () => {
+  it("环境级解密异常时无补丁且无报告", async () => {
     const paired = workspace("paired", inbox({ lastSeenAt: 10 }));
     fetchMock.mockResolvedValue([item("i1", 20)]);
     decryptMock.mockRejectedValueOnce(new Error("Web Crypto is unavailable"));
-    const { workspaces, changed, reports } = await pullAllInboxes([paired]);
-    expect(workspaces[0]).toBe(paired);
+    const { patches, changed, reports } = await pullAllInboxes([paired]);
+    expect(patches).toEqual([]);
     expect(changed).toBe(false);
     expect(reports).toEqual([]);
   });

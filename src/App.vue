@@ -61,7 +61,7 @@ import { QUICK_BUTTON_OTHER_GROUP_ID, QUICK_DENSITY_THRESHOLD, formatQuickCopied
 import { isQuickAppScheme } from "./state/quickApps";
 import { INBOX_FOCUS_THROTTLE_MS, INBOX_PULL_INTERVAL_MS } from "./sync/config";
 import { importedPayloadHasInbox, isValidInboxCode, normalizeInboxCode, parseInboxFragment } from "./sync/pairing";
-import { pullAllInboxes } from "./sync/pull";
+import { applyInboxItems, pullAllInboxes } from "./sync/pull";
 import { copyTextWithBrowserCommand } from "./utils/clipboard";
 import { extractRetainedImageIds, useUndoHistory } from "./composables/useUndoHistory";
 import { useTodoNotifications } from "./composables/useTodoNotifications";
@@ -822,18 +822,21 @@ async function pullInboxes(): Promise<void> {
   inboxPullInFlight = true;
   inboxLastPullAt = Date.now();
   try {
-    const snapshot = state.workspaces;
-    const { workspaces, reports, changed } = await pullAllInboxes(snapshot);
-    // 拉取在途期间发生结构性整组替换（删工作区/清除配对/导入）：丢弃本批。
-    // 水位线未持久化，下次触发会重拉同批条目，不会重复导入；就地文本编辑不改变
-    // 数组身份，因此该守卫恰好只拦截结构性竞态，不影响正常合并。
-    if (!appMounted || state.workspaces !== snapshot) return;
+    const { patches, reports, changed } = await pullAllInboxes(state.workspaces);
+    if (!appMounted) return;
+    // 补丁重放：在 await 之后的同一同步块内对当前活对象合并，读-合-写之间零宏任务间隙，
+    // 用户在途编辑（同对象字段替换，不换数组身份）无法插入，也就不会被旧快照覆盖。
+    // 结构性变更天然安全：工作区已删则按 id 查无目标自然跳过；配对已清除则
+    // applyInboxItems 顶部 !inbox 守卫自然空转——无需丢弃整批，水位线留在补丁里下次重拉。
     if (changed) {
-      state.workspaces = workspaces;
+      state.workspaces = state.workspaces.map((workspace) => {
+        const patch = patches.find((candidate) => candidate.workspaceId === workspace.id);
+        return patch ? applyInboxItems(workspace, patch.plains, patch.lastSeenAt) : workspace;
+      });
       persistNow();
     }
     for (const report of reports) {
-      const workspace = workspaces.find((item) => item.id === report.workspaceId);
+      const workspace = state.workspaces.find((item) => item.id === report.workspaceId);
       if (!workspace) continue;
       showBubbleText(
         uiText.value.app.inboxReceived.replace("{count}", () => String(report.imported)).replace("{title}", () => getWorkspaceBoardTitle(workspace)),
