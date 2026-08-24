@@ -7145,6 +7145,80 @@ describe("App inbox pull wiring", () => {
     }
   });
 
+  it("leaves localStorage sync fields and UI untouched when a pull reports no changes", async () => {
+    seedPairedState();
+    const wrapper = mountApp();
+
+    try {
+      // 挂载初始快照：启动拉取尚未完成，此处落盘内容即 changed:false 契约下的负向基线。
+      const initial = JSON.parse(localStorage.getItem(STORAGE_KEY) || "{}") as { sync?: { revision?: number; updatedAt?: number } };
+      await flushAsyncComponents();
+
+      expect(pullAllInboxes).toHaveBeenCalledTimes(1);
+      const persisted = JSON.parse(localStorage.getItem(STORAGE_KEY) || "{}") as { sync?: { revision?: number; updatedAt?: number } };
+      expect(persisted.sync?.revision).toBe(initial.sync?.revision);
+      expect(persisted.sync?.updatedAt).toBe(initial.sync?.updatedAt);
+      expect(wrapper.text()).not.toContain("收到");
+    } finally {
+      wrapper.unmount();
+    }
+  });
+
+  it("discards the stale pull batch when workspaces are structurally replaced mid-flight", async () => {
+    seedPairedState();
+    let resolvePull!: (result: InboxPullResult) => void;
+    vi.mocked(pullAllInboxes).mockImplementationOnce(
+      () => new Promise<InboxPullResult>((resolve) => {
+        resolvePull = resolve;
+      }),
+    );
+    const previousTitle = document.title;
+    const wrapper = mountApp();
+
+    try {
+      // 启动拉取挂起在 deferred 上，快照身份已捕获。
+      await flushAsyncComponents();
+      expect(pullAllInboxes).toHaveBeenCalledTimes(1);
+
+      // 在途期间新建工作区：createWorkspace 整组替换 state.workspaces（数组身份变化）。
+      await wrapper.get('[data-testid="workspace-trigger"]').trigger("click");
+      await wrapper.get('[data-testid="workspace-create-button"]').trigger("click");
+      await nextTick();
+      await wrapper.get(".n-modal input").setValue("竞态新桌面");
+      await wrapper.get(".n-modal .n-button--primary-type").trigger("click");
+      await nextTick();
+
+      // 基于挂起前种子构造的过期批次：不含新建工作区，且带一条本会被合并的便签。
+      resolvePull({
+        workspaces: [
+          {
+            ...defaultWorkspace(),
+            inbox: { code: "AB2CDE4FGHJK", todoListId: "morning", noteTarget: DEFAULT_SPACE_ID, lastSeenAt: 999 },
+            spaces: [{ id: DEFAULT_SPACE_ID, title: "便签", lines: [{ text: "来自手机的速记", indent: 0 }] }],
+          },
+        ],
+        reports: [],
+        changed: true,
+      });
+      await flushAsyncComponents();
+
+      const persisted = JSON.parse(localStorage.getItem(STORAGE_KEY) || "{}") as {
+        workspaces: { customTitles: Record<string, string>; spaces: { lines: { text: string }[] }[] }[];
+      };
+      // 新建工作区未被旧快照覆写：仍完整落盘。
+      expect(persisted.workspaces).toHaveLength(2);
+      expect(persisted.workspaces.at(-1)?.customTitles["board-title"]).toBe("竞态新桌面");
+      // 过期批次被丢弃：本会被合并进种子的便签文本未落盘。
+      const allLineTexts = persisted.workspaces.flatMap((workspace) =>
+        workspace.spaces.flatMap((space) => space.lines.map((line) => line.text)),
+      );
+      expect(allLineTexts).not.toContain("来自手机的速记");
+    } finally {
+      wrapper.unmount();
+      document.title = previousTitle;
+    }
+  });
+
   it("throttles focus-triggered pulls and pulls again once the window passes", async () => {
     vi.useFakeTimers();
     seedPairedState();

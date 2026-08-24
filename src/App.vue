@@ -794,7 +794,12 @@ async function pullInboxes(): Promise<void> {
   inboxPullInFlight = true;
   inboxLastPullAt = Date.now();
   try {
-    const { workspaces, reports, changed } = await pullAllInboxes(state.workspaces);
+    const snapshot = state.workspaces;
+    const { workspaces, reports, changed } = await pullAllInboxes(snapshot);
+    // 拉取在途期间发生结构性整组替换（删工作区/清除配对/导入）：丢弃本批。
+    // 水位线未持久化，下次触发会重拉同批条目，不会重复导入；就地文本编辑不改变
+    // 数组身份，因此该守卫恰好只拦截结构性竞态，不影响正常合并。
+    if (!appMounted || state.workspaces !== snapshot) return;
     if (changed) {
       state.workspaces = workspaces;
       persistNow();
@@ -803,7 +808,7 @@ async function pullInboxes(): Promise<void> {
       const workspace = workspaces.find((item) => item.id === report.workspaceId);
       if (!workspace) continue;
       showBubbleText(
-        uiText.value.app.inboxReceived.replace("{title}", getWorkspaceBoardTitle(workspace)).replace("{count}", String(report.imported)),
+        uiText.value.app.inboxReceived.replace("{title}", () => getWorkspaceBoardTitle(workspace)).replace("{count}", () => String(report.imported)),
         undefined,
         { hideCompanionAfter: true },
       );
