@@ -81,6 +81,8 @@ npm run preview
 
 `npm run preview` builds and serves the production bundle locally — the only way to verify Service Worker offline behavior, since dev mode deliberately never registers the SW (unhashed assets + HMR make SW caching in dev an anti-pattern).
 
+`npm run preview:lan` additionally serves on all interfaces with self-signed HTTPS (`MINI_DESK_LAN=1` + `@vitejs/plugin-basic-ssl`) for real-device LAN testing — the mobile-inbox crypto (`crypto.subtle`) requires a secure context, so plain-HTTP LAN access would break capture sends. Devices must accept the certificate warning once.
+
 `npm run deploy:worker` deploys the mobile-inbox relay Worker (Cloudflare Worker + KV, config in `worker/wrangler.toml`). Local relay testing: point `VITE_INBOX_WORKER_URL` in `.env.local` at `http://127.0.0.1:8787` and run `npx wrangler dev --config worker/wrangler.toml`.
 
 ## Conventions

@@ -1,10 +1,13 @@
 import path from "node:path";
 import { defineConfig } from "vite";
 import vue from "@vitejs/plugin-vue";
+import basicSsl from "@vitejs/plugin-basic-ssl";
 
 export default defineConfig({
   base: process.env.VITE_BASE ?? "/",
-  plugins: [vue()],
+  // LAN 模式（preview:lan）：自签 HTTPS + 监听全部网卡，供手机等同网设备真机访问。
+  // 手机端加密（crypto.subtle）要求安全上下文，局域网裸 HTTP 会导致速记发送必败。
+  plugins: process.env.MINI_DESK_LAN === "1" ? [vue(), basicSsl()] : [vue()],
   build: {
     // Vite 8 runs on rolldown; the legacy `manualChunks` hook is a compatibility
     // shim that silently drops groups (the old vendor-vue rule never emitted a

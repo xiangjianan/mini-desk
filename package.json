@@ -8,6 +8,7 @@
     "build": "vue-tsc --noEmit && npm run typecheck:worker && vite build",
     "typecheck:worker": "tsc -p worker/tsconfig.json",
     "preview": "npm run build && vite preview",
+    "preview:lan": "npm run build && MINI_DESK_LAN=1 vite preview --host",
     "deploy:cloudflare": "npm run build && npx wrangler pages deploy dist --project-name=todolist",
     "deploy:worker": "npx wrangler deploy --config worker/wrangler.toml",
     "test": "vitest run",
@@ -23,6 +24,7 @@
   "devDependencies": {
     "@types/node": "^25.9.1",
     "@types/qrcode": "^1.5.6",
+    "@vitejs/plugin-basic-ssl": "^2.3.0",
     "@vitejs/plugin-vue": "latest",
     "@vue/test-utils": "latest",
     "jsdom": "latest",
