@@ -72,7 +72,7 @@ Mini Desk 是本地优先的纯静态 PWA（Cloudflare Pages，零后端），�
 interface WorkspaceInbox {
   code: string                              // 12 位 Crockford base32
   todoListId: TodoListId                    // 待办落点（该工作区的清单）
-  noteTarget: "note" | "workspace" | "storage" // 便签落点（三栏任选）
+  noteTarget: string                        // 便签落点（目标空间 Tab 的 id，失效回退第一个空间）
   lastSeenAt: number                        // 已消费水位线（服务端毫秒时间戳）
 }
 
@@ -88,7 +88,7 @@ interface WorkspaceInbox {
 ### 配对 UI
 
 - 入口在 `WorkspaceSwitcher` 每个工作区菜单内（「导出此空间」旁新增「配对手机」），打开配对面板。
-- 面板内容：配对码展示、完整地址 `https://<域名>/#inbox=<码>`、二维码（新增 `qrcode` 依赖渲染 canvas）、轮换按钮（重新生成码，保留落点与水位线；旧队列换键后自然过期）、清除配对（删除 `inbox` 字段）、落点选择（待办清单下拉 + 便签落点三选一）。
+- 面板内容：配对码展示、完整地址 `https://<域名>/#inbox=<码>`、二维码（新增 `qrcode` 依赖渲染 canvas）、轮换按钮（重新生成码，保留落点与水位线；旧队列换键后自然过期）、清除配对（删除 `inbox` 字段）、落点选择（待办清单下拉 + 便签落点下拉，动态列出该工作区全部空间 Tab 的实际标题，默认第一个空间）。
 
 ### 拉取与合并
 
@@ -96,7 +96,7 @@ interface WorkspaceInbox {
 - 触发时机：页面加载完成、window focus（60 秒节流）、每 5 分钟定时器、Ctrl+S 顺带。仅当存在任一配置了 `inbox` 的工作区时才注册定时器。
 - 每次拉取遍历所有配置了 `inbox` 的工作区（`Promise.allSettled` 并发），逐个解密、按 `kind` 路由：
   - `todo`：向 `todos[todoListId]` 追加 `{ id: 新ID, text, done: false }`。
-  - `note`：向目标栏 `noteLines` / `workspaceLines` / `storageLines` 追加一行 `{ text, indent: 0 }`。
+  - `note`：向目标空间 `spaces[noteTarget]` 的 `lines` 追加一行 `{ text, indent: 0 }`（目标空间已被删则回退第一个空间），并同步刷新 `workspaceLines`/`storageLines` 投影字段，维持「投影 = spaces[0]/spaces[1]」的既有不变量。
 - 明文校验：`text` 裁剪到 500 字；解密失败或格式非法的条目跳过，但仍参与水位线推进，不阻塞其他条目。
 - 合并属于结构性修改，走现有状态助手 + `persistNow()` 立即保存。
 - 有新条目时用现有 `CompanionBubble` 提示：「工作区「XX」收到 N 条来自手机的记录」（i18n 双语）。
@@ -111,7 +111,7 @@ interface WorkspaceInbox {
 ## 导出与导入
 
 - 导出：`inbox` 是 `WorkspaceData` 普通字段，`exportWorkspaceById` 自动携带，无需特判。
-- 导入：`normalizeWorkspaceData` 新增 `normalizeWorkspaceInbox` 清洗——码不匹配 `/^[0-9A-HJKMNP-TV-Z]{12}$/`（Crockford base32，排除 I/L/O/U）则丢弃整个 `inbox`；`todoListId` 不在该工作区清单中则回退第一个清单；`noteTarget` 非法回退 `"note"`；`lastSeenAt` 非有限数回退 0。
+- 导入：`normalizeWorkspaceData` 新增 `normalizeWorkspaceInbox` 清洗——码不匹配 `/^[0-9A-HJKMNP-TV-Z]{12}$/`（Crockford base32，排除 I/L/O/U）则丢弃整个 `inbox`；`todoListId` 不在该工作区清单中则回退第一个清单；`noteTarget` 不在该工作区空间 id 中则回退第一个空间 id；`lastSeenAt` 非有限数回退 0。
 - 安全提示：配对码即密钥，导出文件携带它意味着「分享导出文件 = 分享该工作区的手机录入通道」。导入检测到带 `inbox` 时提示：若文件来自他人，建议导入后轮换配对码。
 
 ## 错误处理
@@ -150,4 +150,21 @@ interface WorkspaceInbox {
 | 写入限流 | 60 条/天/码 |
 | 拉取频率 | 定时 5 分钟 + 聚焦节流 60 秒 + 启动 + Ctrl+S |
 | 待办落点默认 | 该工作区第一个清单 |
-| 便签落点默认 | 便签面板（`note`） |
+| 便签落点默认 | 第一个空间 Tab（`spaces[0]`） |
+
+## 变更记录
+
+### 2026-08-24 便签落点改为目标空间 Tab（spaceId）
+
+首次实现进行到配对弹窗（Task 8）前复核看板实际结构，发现本设计对便签落点的前提有误：
+
+- 设计假设 `noteLines` / `workspaceLines` / `storageLines` 是三个可见的行编辑面板，便签落点「三栏任选」。
+- 实际看板中可见的行编辑器只有 SpacePanel 的空间 Tab（`spaces[].lines`）；`workspaceLines`/`storageLines` 是 `syncLegacySpaceLines()` 从 `spaces[0]`/`spaces[1]` 单向复制出的兼容投影字段（UI 从不读取），`noteLines` 更是彻底无渲染的遗留字段。
+- 后果：若维持原设计，手机端发送的便签无论选择哪个落点，桌面端都不可见。
+
+经用户确认，落点模型调整为：
+
+- `WorkspaceInbox.noteTarget` 由闭合枚举 `"note" | "workspace" | "storage"` 改为 `string`，存目标空间的 id。
+- 配对面板的便签落点下拉动态列出该工作区全部空间 Tab 的实际标题（含用户新建 Tab），默认第一个空间；不再需要静态落点文案键（原 `inboxTargetNotes` 删除）。
+- 拉取合并写入 `spaces[noteTarget].lines`，目标失效回退第一个空间，并同步刷新两个投影字段维持既有不变量。
+- 导入清洗：`noteTarget` 不在该工作区空间 id 中则回退第一个空间 id。
