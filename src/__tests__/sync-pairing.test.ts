@@ -1,11 +1,15 @@
 import { describe, expect, it } from "vitest";
 import {
   buildInboxAddress,
+  clearRememberedInboxCode,
+  formatInboxCode,
   generateInboxCode,
   importedPayloadHasInbox,
   isValidInboxCode,
+  loadRememberedInboxCode,
   normalizeInboxCode,
   parseInboxFragment,
+  saveRememberedInboxCode,
 } from "../sync/pairing";
 
 describe("generateInboxCode", () => {
@@ -105,5 +109,64 @@ describe("importedPayloadHasInbox", () => {
     expect(importedPayloadHasInbox({ workspace: {} })).toBe(false);
     expect(importedPayloadHasInbox({ workspaces: [{ inbox: null }] })).toBe(false);
     expect(importedPayloadHasInbox("junk")).toBe(false);
+  });
+});
+
+/** 与全局 localStorage 隔离的内存 Storage，避免单测间状态串扰。 */
+function createMemoryStorage(): Storage {
+  const map = new Map<string, string>();
+  return {
+    get length() {
+      return map.size;
+    },
+    clear: () => map.clear(),
+    getItem: (key: string) => map.get(key) ?? null,
+    key: (index: number) => [...map.keys()][index] ?? null,
+    removeItem: (key: string) => {
+      map.delete(key);
+    },
+    setItem: (key: string, value: string) => {
+      map.set(key, String(value));
+    },
+  };
+}
+
+describe("手机壳配对码记忆", () => {
+  it("save→load 往返一致；clear 后 load 返回 null", () => {
+    const storage = createMemoryStorage();
+
+    saveRememberedInboxCode("AB2CDE4FGHJK", storage);
+    expect(loadRememberedInboxCode(storage)).toBe("AB2CDE4FGHJK");
+
+    clearRememberedInboxCode(storage);
+    expect(loadRememberedInboxCode(storage)).toBeNull();
+  });
+
+  it("重复保存以后写的码优先（最后使用的配对优先）", () => {
+    const storage = createMemoryStorage();
+
+    saveRememberedInboxCode("AB2CDE4FGHJK", storage);
+    saveRememberedInboxCode("ZZZ0ZZZ0ZZZ0", storage);
+
+    expect(loadRememberedInboxCode(storage)).toBe("ZZZ0ZZZ0ZZZ0");
+  });
+
+  it("损坏/非法/缺失的存储值返回 null，落回输码表单自愈", () => {
+    const storage = createMemoryStorage();
+
+    storage.setItem("mini-desk-inbox-code", "corrupted");
+    expect(loadRememberedInboxCode(storage)).toBeNull();
+
+    storage.setItem("mini-desk-inbox-code", "ab2cde4fghjk");
+    expect(loadRememberedInboxCode(storage)).toBeNull();
+
+    storage.removeItem("mini-desk-inbox-code");
+    expect(loadRememberedInboxCode(storage)).toBeNull();
+  });
+});
+
+describe("formatInboxCode", () => {
+  it("12 位码按 4 位分组展示", () => {
+    expect(formatInboxCode("AB2CDE4FGHJK")).toBe("AB2C DE4F GHJK");
   });
 });

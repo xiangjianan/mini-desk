@@ -28,6 +28,28 @@ export function buildInboxAddress(code: string): string {
   return `${window.location.origin}${window.location.pathname}#inbox=${code}`;
 }
 
+const REMEMBERED_INBOX_CODE_KEY = "mini-desk-inbox-code";
+
+/** 手机壳本地记忆最近配对码：主屏图标（start_url=/）与微信重开都会丢 fragment，裸访问时用它自动配对。
+ *  码即密钥，明文存 localStorage 与桌面端 state 存码一致（威胁模型见设计文档）。 */
+export function loadRememberedInboxCode(storage: Storage = localStorage): string | null {
+  const stored = storage.getItem(REMEMBERED_INBOX_CODE_KEY);
+  return stored !== null && isValidInboxCode(stored) ? stored : null;
+}
+
+export function saveRememberedInboxCode(code: string, storage: Storage = localStorage): void {
+  storage.setItem(REMEMBERED_INBOX_CODE_KEY, code);
+}
+
+export function clearRememberedInboxCode(storage: Storage = localStorage): void {
+  storage.removeItem(REMEMBERED_INBOX_CODE_KEY);
+}
+
+/** 12 位码按 4 位分组展示（速记页脚与桌面配对面板人工比对用）。 */
+export function formatInboxCode(code: string): string {
+  return code.replace(/(.{4})(?=.)/g, "$1 ");
+}
+
 /** 导入载荷（单工作区 `workspace` 或全量 `workspaces[]`）是否携带配对码——用于导入后的轮换提醒。 */
 export function importedPayloadHasInbox(parsed: unknown): boolean {
   if (typeof parsed !== "object" || parsed === null) return false;
