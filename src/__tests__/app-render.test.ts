@@ -7141,6 +7141,8 @@ describe("App shell", () => {
     try {
       await wrapper.get('[data-testid="workspace-trigger"]').trigger("click");
       await wrapper.get('[data-testid="workspace-pair-default"]').trigger("click");
+      // 配对弹窗按需异步加载（qrcode 不进主包）：先等动态 import 落定再断言与交互。
+      await flushAsyncComponents();
       expect(wrapper.findComponent(WorkspaceInboxDialog).exists()).toBe(true);
 
       await wrapper.get('[data-testid="inbox-clear"]').trigger("click");

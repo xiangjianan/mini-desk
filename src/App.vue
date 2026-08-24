@@ -10,7 +10,6 @@ import SettingsMenu from "./components/SettingsMenu.vue";
 import SpacePanel from "./components/SpacePanel.vue";
 import TodoPanel from "./components/TodoPanel.vue";
 import WorkbenchShell from "./components/WorkbenchShell.vue";
-import WorkspaceInboxDialog from "./components/WorkspaceInboxDialog.vue";
 import WorkspaceSwitcher from "./components/WorkspaceSwitcher.vue";
 import miniDeskLogo from "../static/img/mini-desk-cat.png?url";
 import miniDeskDarkLogo from "../static/img/mini-desk-cat-dark.png?url";
@@ -85,6 +84,8 @@ const ImagePreview = defineAsyncComponent(() => import("./components/ImagePrevie
 const ShortcutHelp = defineAsyncComponent(() => import("./components/ShortcutHelp.vue"));
 const SupportAuthor = defineAsyncComponent(() => import("./components/SupportAuthor.vue"));
 const VersionHistory = defineAsyncComponent(() => import("./components/VersionHistory.vue"));
+// 配对弹窗含 qrcode 依赖，异步加载避免二维码库进主包；v-if + :key 用法与同步组件一致。
+const WorkspaceInboxDialog = defineAsyncComponent(() => import("./components/WorkspaceInboxDialog.vue"));
 
 const MOBILE_BREAKPOINT_QUERY = "(max-width: 900px)";
 const IMAGE_DELETE_GRACE_MS = 5000;

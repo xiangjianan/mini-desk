@@ -3,6 +3,7 @@ import { isValidDeadlineAt } from "../deadlines";
 import { normalizeCompanionGifTheme } from "../companionGifThemes";
 import { getQuickTagColor, normalizeQuickTagColor } from "../quickButtons";
 import { isQuickAppScheme } from "../quickApps";
+import { INBOX_CODE_PATTERN } from "../../sync/pairing";
 import { DEFAULT_LANGUAGE, DEFAULT_SPACE_TITLES, DEFAULT_TITLES_BY_LANGUAGE, LEGACY_DEFAULT_TITLES_BY_LANGUAGE, OLDER_LEGACY_DEFAULT_TITLES_BY_LANGUAGE, getLegacyDefaultTodoLists, getUiText, normalizeLanguage } from "../i18n";
 import type {
   AppLanguage,
@@ -101,8 +102,6 @@ export function normalizeWorkspaceData(item: unknown, language: AppLanguage = DE
     inbox: normalizeWorkspaceInbox(typed.inbox, todoLists, spaces),
   };
 }
-
-const INBOX_CODE_PATTERN = /^[0-9A-HJKMNP-TV-Z]{12}$/;
 
 export function normalizeWorkspaceInbox(value: unknown, todoLists: TodoListConfig[], spaces: WorkspaceSpace[]): WorkspaceInbox | undefined {
   if (!isPlainObject(value)) return undefined;

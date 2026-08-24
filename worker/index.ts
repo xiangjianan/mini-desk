@@ -73,8 +73,9 @@ async function handlePost(request: Request, env: InboxEnv, keyHash: string, cors
   const listed = await env.INBOX.list({ prefix: `${keyHash}:item:` });
   const isRetry = listed.keys.some((key) => key.name === itemKey(keyHash, id));
   const day = dayKey(keyHash);
-  // 当日计数按“写入尝试”累计：被限流拒绝的尝试同样占用配额（固定窗口限流的常规语义，
-  // 防止无限免费探测）；同 id 重试不计数，保证幂等重试永不被限流或拒收。
+  // 当日计数语义：成功写入与被限流拒绝（429）都递增——限流拒绝也计数，防止无限免费探测；
+  // 队列满（409）不递增，重试不应被已饱和的队列饿死；同 id 重试不计数，保证幂等重试
+  // 永不被限流或拒收。
   const attempts = Number((await env.INBOX.get(day)) ?? "0");
   if (!isRetry) {
     // 队列饱和：存量条目达到上限（跨天硬上限），或当日写入尝试达到上限（单日饱和）。
