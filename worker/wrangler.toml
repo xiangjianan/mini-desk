@@ -12,4 +12,4 @@ binding = "INBOX"
 id = "30a05e0a03994963853639720f46626f"
 
 [vars]
-ALLOWED_ORIGINS = "https://minidesk.online,https://todolist-7i5.pages.dev,http://localhost:5173,http://127.0.0.1:5173"
+ALLOWED_ORIGINS = "https://minidesk.online,https://todolist-7i5.pages.dev,http://localhost:5173,http://127.0.0.1:5173,https://localhost:4173,https://127.0.0.1:4173,https://192.168.4.63:4173"
