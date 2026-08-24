@@ -10,10 +10,14 @@ import SpacePanel from "../components/SpacePanel.vue";
 import TodoPanel from "../components/TodoPanel.vue";
 import WorkspaceInboxDialog from "../components/WorkspaceInboxDialog.vue";
 import WorkspaceSwitcher from "../components/WorkspaceSwitcher.vue";
-import { defaultState, defaultWorkspace, STORAGE_KEY } from "../state/defaults";
+import { DEFAULT_SPACE_ID, DEFAULT_WORKSPACE_ID, defaultState, defaultWorkspace, STORAGE_KEY } from "../state/defaults";
 import { hydrateStoredImages, storeImagePayload } from "../state/images";
 import * as imageState from "../state/images";
 import { KAOMOJI_BY_MOOD } from "../state/messages";
+import { INBOX_FOCUS_THROTTLE_MS } from "../sync/config";
+import { pullAllInboxes } from "../sync/pull";
+import type { InboxPullResult } from "../sync/pull";
+import type { WorkspaceData } from "../types";
 import { FALLBACK_APP_VERSION } from "../state/version";
 
 vi.mock("naive-ui", async (importOriginal) => {
@@ -40,6 +44,13 @@ vi.mock("naive-ui", async (importOriginal) => {
     },
   };
 });
+
+// 收件箱拉取是纯函数模块（无 import 副作用），且 pullAllInboxes 只有收件箱接线调用：
+// 文件级 mock 对其它用例零影响。默认实现按契约返回入参同引用 + changed:false，
+// 等价于「拉取无变更」，未显式设值的用例行为与真实模块一致。
+vi.mock("../sync/pull", () => ({
+  pullAllInboxes: vi.fn(async (workspaces: WorkspaceData[]): Promise<InboxPullResult> => ({ workspaces, reports: [], changed: false })),
+}));
 
 const dropdownStub = {
   props: ["options"],
@@ -7061,6 +7072,112 @@ describe("App shell", () => {
       const persisted = JSON.parse(localStorage.getItem(STORAGE_KEY) || "{}");
       expect(persisted.workspaces[0].inbox).toBeUndefined();
       expect(wrapper.findComponent(WorkspaceInboxDialog).exists()).toBe(false);
+    } finally {
+      wrapper.unmount();
+    }
+  });
+});
+
+describe("App inbox pull wiring", () => {
+  function seedPairedState(): void {
+    localStorage.setItem(
+      STORAGE_KEY,
+      JSON.stringify({
+        ...defaultState(),
+        workspaces: [
+          {
+            ...defaultWorkspace(),
+            inbox: { code: "AB2CDE4FGHJK", todoListId: "morning", noteTarget: DEFAULT_SPACE_ID, lastSeenAt: 7 },
+          },
+        ],
+      }),
+    );
+  }
+
+  beforeEach(() => {
+    // vi.restoreAllMocks() 不重置 vi.fn() 的实现，逐用例显式回到安全默认值，
+    // 避免上一个用例的 mockResolvedValueOnce 泄漏到后续用例。
+    vi.mocked(pullAllInboxes).mockReset();
+    vi.mocked(pullAllInboxes).mockImplementation(async (workspaces) => ({ workspaces, reports: [], changed: false }));
+  });
+
+  it("pulls inboxes exactly once on startup when a workspace is paired", async () => {
+    seedPairedState();
+    const wrapper = mountApp();
+
+    try {
+      await flushAsyncComponents();
+      expect(pullAllInboxes).toHaveBeenCalledTimes(1);
+    } finally {
+      wrapper.unmount();
+    }
+  });
+
+  it("replaces workspaces, persists, and toasts when a pull imports items", async () => {
+    vi.useFakeTimers();
+    seedPairedState();
+    vi.mocked(pullAllInboxes).mockResolvedValueOnce({
+      workspaces: [
+        {
+          ...defaultWorkspace(),
+          inbox: { code: "AB2CDE4FGHJK", todoListId: "morning", noteTarget: DEFAULT_SPACE_ID, lastSeenAt: 999 },
+          spaces: [{ id: DEFAULT_SPACE_ID, title: "便签", lines: [{ text: "来自手机的速记", indent: 0 }] }],
+        },
+      ],
+      reports: [{ workspaceId: DEFAULT_WORKSPACE_ID, imported: 1 }],
+      changed: true,
+    });
+    const wrapper = mountApp();
+
+    try {
+      await vi.advanceTimersByTimeAsync(300);
+      await wrapper.vm.$nextTick();
+
+      const persisted = JSON.parse(localStorage.getItem(STORAGE_KEY) || "{}") as {
+        workspaces: { inbox?: { lastSeenAt: number }; spaces: { lines: { text: string }[] }[] }[];
+      };
+      expect(persisted.workspaces[0].spaces[0].lines.map((line) => line.text)).toContain("来自手机的速记");
+      expect(persisted.workspaces[0].inbox?.lastSeenAt).toBe(999);
+      expect(wrapper.text()).toContain("收到");
+    } finally {
+      wrapper.unmount();
+      vi.useRealTimers();
+    }
+  });
+
+  it("throttles focus-triggered pulls and pulls again once the window passes", async () => {
+    vi.useFakeTimers();
+    seedPairedState();
+    const wrapper = mountApp();
+
+    try {
+      await vi.advanceTimersByTimeAsync(20);
+      expect(pullAllInboxes).toHaveBeenCalledTimes(1);
+
+      window.dispatchEvent(new Event("focus"));
+      await vi.advanceTimersByTimeAsync(20);
+      expect(pullAllInboxes).toHaveBeenCalledTimes(1);
+
+      await vi.advanceTimersByTimeAsync(INBOX_FOCUS_THROTTLE_MS + 1);
+      window.dispatchEvent(new Event("focus"));
+      await vi.advanceTimersByTimeAsync(20);
+      expect(pullAllInboxes).toHaveBeenCalledTimes(2);
+    } finally {
+      wrapper.unmount();
+      vi.useRealTimers();
+    }
+  });
+
+  it("never pulls when no workspace is paired", async () => {
+    localStorage.setItem(STORAGE_KEY, JSON.stringify(defaultState()));
+    const wrapper = mountApp();
+
+    try {
+      await flushAsyncComponents();
+      window.dispatchEvent(new Event("focus"));
+      window.dispatchEvent(new KeyboardEvent("keydown", { key: "s", ctrlKey: true }));
+      await flushAsyncComponents();
+      expect(pullAllInboxes).not.toHaveBeenCalled();
     } finally {
       wrapper.unmount();
     }

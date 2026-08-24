@@ -58,6 +58,8 @@ import { createWorkspaceData, ensureUniqueWorkspaceTitle, getWorkspaceBoardTitle
 import * as workspaceMover from "./state/workspaceMoves";
 import { QUICK_BUTTON_OTHER_GROUP_ID, QUICK_DENSITY_THRESHOLD, formatQuickCopiedPreview, getQuickTagColor } from "./state/quickButtons";
 import { isQuickAppScheme } from "./state/quickApps";
+import { INBOX_FOCUS_THROTTLE_MS, INBOX_PULL_INTERVAL_MS } from "./sync/config";
+import { pullAllInboxes } from "./sync/pull";
 import { copyTextWithBrowserCommand } from "./utils/clipboard";
 import { extractRetainedImageIds, useUndoHistory } from "./composables/useUndoHistory";
 import { useTodoNotifications } from "./composables/useTodoNotifications";
@@ -446,6 +448,12 @@ onMounted(async () => {
   document.addEventListener("paste", handlePaste);
   document.addEventListener("visibilitychange", handleDocumentVisibilityChange);
   setupStateSyncChannel();
+  window.addEventListener("focus", handleWindowFocusInbox);
+  // 启动拉取非阻塞（不 await）：首屏渲染不等收件箱网络往返。
+  if (hasInboxConfigured.value) {
+    void pullInboxes();
+    startInboxPolling();
+  }
   startVersionPolling();
   startNotificationFallbackInterval();
   refreshTodoNotifications();
@@ -460,6 +468,8 @@ onUnmounted(() => {
   document.removeEventListener("paste", handlePaste);
   document.removeEventListener("visibilitychange", handleDocumentVisibilityChange);
   teardownStateSyncChannel();
+  window.removeEventListener("focus", handleWindowFocusInbox);
+  stopInboxPolling();
   teardownMobileBreakpoint();
   clearTimers();
 });
@@ -771,6 +781,60 @@ function handleInboxUpdate(inbox: WorkspaceInbox | null): void {
   persistNow();
   showBubbleText(inbox ? uiText.value.app.inboxSaved : uiText.value.app.inboxCleared, undefined, { hideCompanionAfter: true });
 }
+
+// 手机速记拉取（单向收件箱）：启动/窗口聚焦（节流）/定时/Ctrl+S 四个触发点共用 pullInboxes，
+// in-flight 守卫串行化并发快照（pullAllInboxes 契约要求，否则并发合并会以新 ID 重复导入）。
+let inboxPullTimer: number | undefined;
+let inboxLastPullAt = 0;
+let inboxPullInFlight = false;
+const hasInboxConfigured = computed(() => state.workspaces.some((workspace) => workspace.inbox));
+
+async function pullInboxes(): Promise<void> {
+  if (!appMounted || inboxPullInFlight || !hasInboxConfigured.value) return;
+  inboxPullInFlight = true;
+  inboxLastPullAt = Date.now();
+  try {
+    const { workspaces, reports, changed } = await pullAllInboxes(state.workspaces);
+    if (changed) {
+      state.workspaces = workspaces;
+      persistNow();
+    }
+    for (const report of reports) {
+      const workspace = workspaces.find((item) => item.id === report.workspaceId);
+      if (!workspace) continue;
+      showBubbleText(
+        uiText.value.app.inboxReceived.replace("{title}", getWorkspaceBoardTitle(workspace)).replace("{count}", String(report.imported)),
+        undefined,
+        { hideCompanionAfter: true },
+      );
+    }
+  } finally {
+    inboxPullInFlight = false;
+  }
+}
+
+function startInboxPolling(): void {
+  if (inboxPullTimer !== undefined) return;
+  inboxPullTimer = window.setInterval(() => {
+    void pullInboxes();
+  }, INBOX_PULL_INTERVAL_MS);
+}
+
+function stopInboxPolling(): void {
+  if (inboxPullTimer === undefined) return;
+  window.clearInterval(inboxPullTimer);
+  inboxPullTimer = undefined;
+}
+
+function handleWindowFocusInbox(): void {
+  if (Date.now() - inboxLastPullAt < INBOX_FOCUS_THROTTLE_MS) return;
+  void pullInboxes();
+}
+
+watch(hasInboxConfigured, (configured) => {
+  if (configured) startInboxPolling();
+  else stopInboxPolling();
+});
 
 function deleteWorkspace(id: string, anchor?: HTMLElement): void {
   if (state.workspaces.length <= 1) {
@@ -2512,6 +2576,7 @@ function handleGlobalKeydown(event: KeyboardEvent): void {
     flushTodoSave();
     flushTextSave();
     showSaveBubble();
+    void pullInboxes();
   }
 }
 
