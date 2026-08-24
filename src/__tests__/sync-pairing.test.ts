@@ -9,6 +9,7 @@ import {
   loadRememberedInboxCode,
   normalizeInboxCode,
   parseInboxFragment,
+  REMEMBERED_INBOX_CODE_KEY,
   saveRememberedInboxCode,
 } from "../sync/pairing";
 
@@ -154,13 +155,13 @@ describe("手机壳配对码记忆", () => {
   it("损坏/非法/缺失的存储值返回 null，落回输码表单自愈", () => {
     const storage = createMemoryStorage();
 
-    storage.setItem("mini-desk-inbox-code", "corrupted");
+    storage.setItem(REMEMBERED_INBOX_CODE_KEY, "corrupted");
     expect(loadRememberedInboxCode(storage)).toBeNull();
 
-    storage.setItem("mini-desk-inbox-code", "ab2cde4fghjk");
+    storage.setItem(REMEMBERED_INBOX_CODE_KEY, "ab2cde4fghjk");
     expect(loadRememberedInboxCode(storage)).toBeNull();
 
-    storage.removeItem("mini-desk-inbox-code");
+    storage.removeItem(REMEMBERED_INBOX_CODE_KEY);
     expect(loadRememberedInboxCode(storage)).toBeNull();
   });
 });

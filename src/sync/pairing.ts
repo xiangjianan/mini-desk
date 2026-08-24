@@ -28,7 +28,7 @@ export function buildInboxAddress(code: string): string {
   return `${window.location.origin}${window.location.pathname}#inbox=${code}`;
 }
 
-const REMEMBERED_INBOX_CODE_KEY = "mini-desk-inbox-code";
+export const REMEMBERED_INBOX_CODE_KEY = "mini-desk-inbox-code";
 
 /** 手机壳本地记忆最近配对码：主屏图标（start_url=/）与微信重开都会丢 fragment，裸访问时用它自动配对。
  *  码即密钥，明文存 localStorage 与桌面端 state 存码一致（威胁模型见设计文档）。 */
@@ -37,6 +37,7 @@ export function loadRememberedInboxCode(storage: Storage = localStorage): string
   return stored !== null && isValidInboxCode(stored) ? stored : null;
 }
 
+/** 调用方保证 code 已过校验（三处来源均先验证）；load 侧仍会自愈非法值。 */
 export function saveRememberedInboxCode(code: string, storage: Storage = localStorage): void {
   storage.setItem(REMEMBERED_INBOX_CODE_KEY, code);
 }
