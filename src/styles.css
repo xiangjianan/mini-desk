@@ -7344,7 +7344,7 @@ html[data-theme="dark"] .quick-search .quick-search-toggle:focus-visible {
 .workspace-inbox-label { color: var(--muted); font-size: 12px; }
 .workspace-inbox-code-row { display: flex; align-items: center; justify-content: space-between; gap: 8px; min-width: 0; }
 .workspace-inbox-code { font-family: ui-monospace, SFMono-Regular, Menlo, monospace; letter-spacing: 2px; font-weight: 600; }
-.workspace-inbox-rotate { justify-self: end; border: none; background: none; color: var(--primary); font-size: 12px; cursor: pointer; padding: 2px 4px; flex: none; }
+.workspace-inbox-rotate { border: none; background: none; color: var(--primary); font-size: 12px; cursor: pointer; padding: 2px 4px; flex: none; }
 .workspace-inbox-address { font-size: 11px; color: var(--muted); word-break: break-all; user-select: all; }
 .workspace-inbox-qr { display: block; margin: 8px auto; border: 1px solid var(--line-subtle); border-radius: 8px; }
 .workspace-inbox-empty { display: flex; justify-content: center; padding: 12px 0; }

@@ -8,6 +8,7 @@ import QuickButtons from "../components/QuickButtons.vue";
 import SettingsMenu from "../components/SettingsMenu.vue";
 import SpacePanel from "../components/SpacePanel.vue";
 import TodoPanel from "../components/TodoPanel.vue";
+import WorkspaceInboxDialog from "../components/WorkspaceInboxDialog.vue";
 import WorkspaceSwitcher from "../components/WorkspaceSwitcher.vue";
 import { defaultState, defaultWorkspace, STORAGE_KEY } from "../state/defaults";
 import { hydrateStoredImages, storeImagePayload } from "../state/images";
@@ -7031,6 +7032,37 @@ describe("App shell", () => {
     } finally {
       wrapper.unmount();
       vi.useRealTimers();
+    }
+  });
+
+  it("clears workspace pairing from the inbox dialog and persists immediately", async () => {
+    localStorage.setItem(
+      STORAGE_KEY,
+      JSON.stringify({
+        ...defaultState(),
+        workspaces: [
+          {
+            ...defaultWorkspace(),
+            inbox: { code: "AB2CDE4FGHJK", todoListId: "morning", noteTarget: "workspace", lastSeenAt: 7 },
+          },
+        ],
+      }),
+    );
+    vi.spyOn(window, "confirm").mockReturnValue(true);
+    const wrapper = mountApp();
+
+    try {
+      await wrapper.get('[data-testid="workspace-trigger"]').trigger("click");
+      await wrapper.get('[data-testid="workspace-pair-default"]').trigger("click");
+      expect(wrapper.findComponent(WorkspaceInboxDialog).exists()).toBe(true);
+
+      await wrapper.get('[data-testid="inbox-clear"]').trigger("click");
+
+      const persisted = JSON.parse(localStorage.getItem(STORAGE_KEY) || "{}");
+      expect(persisted.workspaces[0].inbox).toBeUndefined();
+      expect(wrapper.findComponent(WorkspaceInboxDialog).exists()).toBe(false);
+    } finally {
+      wrapper.unmount();
     }
   });
 });

@@ -754,7 +754,7 @@ function exportCurrentWorkspace(anchor?: HTMLElement): void {
   exportWorkspaceById(state.activeWorkspaceId, anchor);
 }
 
-/** 配对弹窗保存/清除：按 id 不可变替换目标工作区，随后立即落盘并关闭弹窗。 */
+/** 配对弹窗更新/清除：按 id 不可变替换目标工作区并立即落盘。弹窗开合由弹窗自身的 close 事件驱动（轮换仅更新、不关闭）。 */
 function handleInboxUpdate(inbox: WorkspaceInbox | null): void {
   const id = inboxPairingWorkspaceId.value;
   if (!id) return;
@@ -770,7 +770,6 @@ function handleInboxUpdate(inbox: WorkspaceInbox | null): void {
   state.workspaces = state.workspaces.map((item) => (item.id === id ? next : item));
   persistNow();
   showBubbleText(inbox ? uiText.value.app.inboxSaved : uiText.value.app.inboxCleared, undefined, { hideCompanionAfter: true });
-  inboxPairingWorkspaceId.value = null;
 }
 
 function deleteWorkspace(id: string, anchor?: HTMLElement): void {
@@ -3178,6 +3177,7 @@ function moveItem<T extends { id: string }>(items: T[], dragId: string, targetId
 
     <WorkspaceInboxDialog
       v-if="inboxPairTarget"
+      :key="inboxPairTarget.id"
       :workspace="inboxPairTarget"
       :language="state.language"
       @update="handleInboxUpdate"
