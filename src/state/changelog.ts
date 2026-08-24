@@ -29,6 +29,20 @@ export interface ChangelogEntry {
 
 export const CHANGELOG: ChangelogEntry[] = [
   {
+    version: "1.0.140",
+    date: "2026-08-25",
+    notes: {
+      zh: [
+        "新增：手机速记支持多行输入，按行拆分为多条逐条发送",
+        "优化：手机端点按输入框不再触发 iOS 自动缩放",
+      ],
+      en: [
+        "New: mobile quick capture accepts multi-line input — each line becomes its own entry, sent one by one",
+        "Improved: tapping the input on the phone no longer triggers iOS auto-zoom",
+      ],
+    },
+  },
+  {
     version: "1.0.139",
     date: "2026-08-24",
     notes: {
