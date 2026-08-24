@@ -7410,7 +7410,8 @@ button.mobile-inbox-tab {
   border-radius: var(--radius-control);
   background: var(--panel);
   color: var(--text);
-  font-size: var(--app-font-size);
+  /* iOS 聚焦字号 <16px 的输入框会自动放大页面，固定 16px 抑制缩放（仅手机页渲染，不影响桌面） */
+  font-size: 16px;
   line-height: 1.6;
   resize: vertical;
 }
@@ -7481,7 +7482,8 @@ button.mobile-inbox-send:disabled {
   background: var(--panel);
   color: var(--text);
   font-family: ui-monospace, SFMono-Regular, Menlo, monospace;
-  font-size: 14px;
+  /* 同 .mobile-inbox-textarea：≥16px 抑制 iOS 聚焦自动缩放 */
+  font-size: 16px;
   letter-spacing: 0.08em;
   text-transform: uppercase;
 }
