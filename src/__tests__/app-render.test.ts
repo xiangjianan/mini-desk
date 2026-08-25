@@ -7716,6 +7716,75 @@ describe("App inbox pull wiring", () => {
       wrapper.unmount();
     }
   });
+
+  function seedMixedState(): void {
+    localStorage.setItem(
+      STORAGE_KEY,
+      JSON.stringify({
+        ...defaultState(),
+        workspaces: [
+          defaultWorkspace(),
+          {
+            ...defaultWorkspace("b"),
+            inbox: { code: "AB2CDE4FGHJK", todoListId: "morning", noteTarget: DEFAULT_SPACE_ID, lastSeenAt: 7 },
+          },
+        ],
+      }),
+    );
+  }
+
+  it("pulls immediately when switching to a paired workspace and stops on unpaired", async () => {
+    seedMixedState();
+    const wrapper = mountApp();
+
+    try {
+      await flushAsyncComponents();
+      // 启动停在未配对空间：零请求（既有行为）。
+      expect(pullAllInboxes).not.toHaveBeenCalled();
+
+      const app = wrapper.vm as unknown as { state: { activeWorkspaceId: string } };
+      app.state.activeWorkspaceId = "b";
+      await flushAsyncComponents();
+      expect(pullAllInboxes).toHaveBeenCalledTimes(1);
+
+      app.state.activeWorkspaceId = DEFAULT_WORKSPACE_ID;
+      await flushAsyncComponents();
+      expect(pullAllInboxes).toHaveBeenCalledTimes(1);
+    } finally {
+      wrapper.unmount();
+    }
+  });
+
+  it("pulls on every switch between two paired workspaces", async () => {
+    localStorage.setItem(
+      STORAGE_KEY,
+      JSON.stringify({
+        ...defaultState(),
+        activeWorkspaceId: "a",
+        workspaces: [
+          { ...defaultWorkspace("a"), inbox: { code: "AB2CDE4FGHJK", todoListId: "morning", noteTarget: DEFAULT_SPACE_ID, lastSeenAt: 7 } },
+          { ...defaultWorkspace("b"), inbox: { code: "ZZ9YXW8VTSRQ", todoListId: "morning", noteTarget: DEFAULT_SPACE_ID, lastSeenAt: 7 } },
+        ],
+      }),
+    );
+    const wrapper = mountApp();
+
+    try {
+      await flushAsyncComponents();
+      expect(pullAllInboxes).toHaveBeenCalledTimes(1); // 启动拉取
+
+      const app = wrapper.vm as unknown as { state: { activeWorkspaceId: string } };
+      app.state.activeWorkspaceId = "b";
+      await flushAsyncComponents();
+      expect(pullAllInboxes).toHaveBeenCalledTimes(2);
+
+      app.state.activeWorkspaceId = "a";
+      await flushAsyncComponents();
+      expect(pullAllInboxes).toHaveBeenCalledTimes(3);
+    } finally {
+      wrapper.unmount();
+    }
+  });
 });
 
 describe("App inbox revoke wiring", () => {

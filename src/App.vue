@@ -931,9 +931,15 @@ function handleWindowFocusInbox(): void {
   void pullInboxes();
 }
 
-watch(hasInboxConfigured, (configured) => {
-  if (configured) startInboxPolling();
-  else stopInboxPolling();
+// 轮询跟随当前活动空间：停未配对空间全静默；切到/配对成功已配对空间时除定时轮询外立即拉取一次
+// （启动拉取仍由 onMounted 负责，此 watch 非 immediate，不产生重复）。
+watch([() => state.activeWorkspaceId, hasInboxConfigured], ([, configured]) => {
+  if (configured) {
+    startInboxPolling();
+    void pullInboxes();
+  } else {
+    stopInboxPolling();
+  }
 });
 
 function deleteWorkspace(id: string, anchor?: HTMLElement): void {
