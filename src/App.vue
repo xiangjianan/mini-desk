@@ -70,6 +70,8 @@ import {
   saveRememberedInboxCode,
 } from "./sync/pairing";
 import { applyInboxItems, pullAllInboxes } from "./sync/pull";
+import { inboxKeyHash } from "./sync/crypto";
+import { revokeInboxKey } from "./sync/inboxClient";
 import { copyTextWithBrowserCommand } from "./utils/clipboard";
 import { extractRetainedImageIds, useUndoHistory } from "./composables/useUndoHistory";
 import { useTodoNotifications } from "./composables/useTodoNotifications";
@@ -834,6 +836,7 @@ function handleInboxUpdate(inbox: WorkspaceInbox | null): void {
   if (!id) return;
   const workspace = state.workspaces.find((item) => item.id === id);
   if (!workspace) return;
+  const oldCode = workspace.inbox?.code;
   let next: WorkspaceData;
   if (inbox) {
     next = { ...workspace, inbox };
@@ -844,6 +847,20 @@ function handleInboxUpdate(inbox: WorkspaceInbox | null): void {
   state.workspaces = state.workspaces.map((item) => (item.id === id ? next : item));
   persistNow();
   showBubbleText(inbox ? uiText.value.app.inboxSaved : uiText.value.app.inboxCleared, undefined, { hideCompanionAfter: true });
+  // 清除或轮换（新码≠旧码）：旧码云端队列一并注销；失败不阻塞本地变更，仅气泡警告。
+  if (oldCode !== undefined && (inbox === null || inbox.code !== oldCode)) {
+    void revokeInbox(oldCode);
+  }
+}
+
+/** 注销旧配对码：任何失败（网络/服务端/哈希异常）只提示，不抛出。 */
+async function revokeInbox(oldCode: string): Promise<void> {
+  try {
+    const ok = await revokeInboxKey(await inboxKeyHash(oldCode));
+    if (!ok) showBubbleText(uiText.value.app.inboxRevokeFailed, undefined, { hideCompanionAfter: true });
+  } catch {
+    showBubbleText(uiText.value.app.inboxRevokeFailed, undefined, { hideCompanionAfter: true });
+  }
 }
 
 // 手机速记拉取（单向收件箱）：启动/窗口聚焦（节流）/定时/Ctrl+S 四个触发点共用 pullInboxes，

@@ -15,6 +15,7 @@ import { hydrateStoredImages, storeImagePayload } from "../state/images";
 import * as imageState from "../state/images";
 import { KAOMOJI_BY_MOOD } from "../state/messages";
 import { INBOX_FOCUS_THROTTLE_MS } from "../sync/config";
+import { revokeInboxKey } from "../sync/inboxClient";
 import { REMEMBERED_INBOX_CODE_KEY } from "../sync/pairing";
 import { pullAllInboxes } from "../sync/pull";
 import type { InboxPullResult } from "../sync/pull";
@@ -51,6 +52,12 @@ vi.mock("naive-ui", async (importOriginal) => {
 vi.mock("../sync/pull", async (importOriginal) => ({
   ...(await importOriginal<typeof import("../sync/pull")>()),
   pullAllInboxes: vi.fn(async (): Promise<InboxPullResult> => ({ patches: [], reports: [], changed: false })),
+}));
+
+// App 只消费 revokeInboxKey；postInboxItem/fetchInboxItems 保留真实现（经 mocked 的 pull.ts 隔离）。
+vi.mock("../sync/inboxClient", async (importOriginal) => ({
+  ...(await importOriginal<typeof import("../sync/inboxClient")>()),
+  revokeInboxKey: vi.fn(async () => true),
 }));
 
 const dropdownStub = {
@@ -7707,6 +7714,94 @@ describe("App inbox pull wiring", () => {
       expect(pullAllInboxes).not.toHaveBeenCalled();
     } finally {
       wrapper.unmount();
+    }
+  });
+});
+
+describe("App inbox revoke wiring", () => {
+  function seedPaired(): void {
+    localStorage.setItem(
+      STORAGE_KEY,
+      JSON.stringify({
+        ...defaultState(),
+        workspaces: [
+          {
+            ...defaultWorkspace(),
+            inbox: { code: "AB2CDE4FGHJK", todoListId: "morning", noteTarget: DEFAULT_SPACE_ID, lastSeenAt: 7 },
+          },
+        ],
+      }),
+    );
+  }
+
+  beforeEach(() => {
+    vi.mocked(revokeInboxKey).mockClear();
+    vi.mocked(revokeInboxKey).mockResolvedValue(true);
+  });
+
+  async function openInboxDialog(wrapper: ReturnType<typeof mountApp>): Promise<void> {
+    await wrapper.get('[data-testid="workspace-trigger"]').trigger("click");
+    await wrapper.get('[data-testid="workspace-pair-default"]').trigger("click");
+    await flushAsyncComponents();
+  }
+
+  it("清除配对后对旧码 keyHash 发送注销且不弹失败警告", async () => {
+    seedPaired();
+    vi.spyOn(window, "confirm").mockReturnValue(true);
+    const wrapper = mountApp();
+
+    try {
+      await openInboxDialog(wrapper);
+      await wrapper.get('[data-testid="inbox-clear"]').trigger("click");
+      await flushAsyncComponents();
+
+      expect(revokeInboxKey).toHaveBeenCalledTimes(1);
+      const [keyHash] = vi.mocked(revokeInboxKey).mock.calls[0];
+      expect(keyHash).toMatch(/^[0-9a-f]{64}$/);
+      expect(wrapper.text()).not.toContain("云端清理失败");
+    } finally {
+      wrapper.unmount();
+    }
+  });
+
+  it("轮换配对（新码≠旧码）同样注销旧码；保存未改码不注销", async () => {
+    seedPaired();
+    vi.spyOn(window, "confirm").mockReturnValue(true);
+    const wrapper = mountApp();
+
+    try {
+      await openInboxDialog(wrapper);
+      await wrapper.get('[data-testid="inbox-rotate"]').trigger("click");
+      await flushAsyncComponents();
+      expect(revokeInboxKey).toHaveBeenCalledTimes(1);
+
+      await wrapper.get('[data-testid="inbox-save"]').trigger("click");
+      await flushAsyncComponents();
+      expect(revokeInboxKey).toHaveBeenCalledTimes(1); // 新码原样保存：不再注销
+    } finally {
+      wrapper.unmount();
+    }
+  });
+
+  it("注销失败时气泡警告云端清理失败", async () => {
+    seedPaired();
+    vi.useFakeTimers();
+    vi.spyOn(window, "confirm").mockReturnValue(true);
+    vi.mocked(revokeInboxKey).mockResolvedValue(false);
+    const wrapper = mountApp();
+
+    try {
+      await openInboxDialog(wrapper);
+      await wrapper.get('[data-testid="inbox-clear"]').trigger("click");
+      await flushAsyncComponents();
+      // 气泡文案有 200ms 入场延迟（POPOVER_DELAY_MS）：推进假时钟越过它再断言 DOM 文本。
+      await vi.advanceTimersByTimeAsync(300);
+      await wrapper.vm.$nextTick();
+
+      expect(wrapper.text()).toContain("云端清理失败，数据将在 30 天保留期内自动过期");
+    } finally {
+      wrapper.unmount();
+      vi.useRealTimers();
     }
   });
 });
