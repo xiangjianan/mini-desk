@@ -29,6 +29,22 @@ export interface ChangelogEntry {
 
 export const CHANGELOG: ChangelogEntry[] = [
   {
+    version: "1.0.143",
+    date: "2026-08-25",
+    notes: {
+      zh: [
+        "优化：手机速记中继迁移到自建服务器（阿里云 + MySQL），发送不限次数",
+        "优化：桌面端同步间隔从每 1 小时缩短为每 5 分钟，速记秒级可达",
+        "优化：手机速记取消单次 20 行上限，一次可粘贴任意多行",
+      ],
+      en: [
+        "Improved: mobile quick capture relay migrated to a self-hosted server (Aliyun + MySQL) — unlimited sends",
+        "Improved: desktop sync interval shortened from hourly to every 5 minutes",
+        "Improved: removed the 20-lines-per-send cap on mobile quick capture",
+      ],
+    },
+  },
+  {
     version: "1.0.142",
     date: "2026-08-25",
     notes: {
