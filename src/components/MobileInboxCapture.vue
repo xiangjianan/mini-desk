@@ -16,11 +16,13 @@ type CaptureStatus = "idle" | "sending" | "sent" | "error";
 
 const app = computed(() => getUiText(props.language).app);
 const kind = ref<InboxPlainItem["kind"]>("todo");
-const draft = ref("");
+// 草稿上提到父级（App.vue）：换码导致组件卸载重挂后内容不丢。
+const draft = defineModel<string>({ default: "" });
 const status = ref<CaptureStatus>("idle");
 const errorText = ref("");
 const sentCount = ref(0);
 const sentText = computed(() => app.value.mobileInboxSent.replace("{count}", () => String(sentCount.value)));
+const placeholder = computed(() => (kind.value === "todo" ? app.value.mobileInboxPlaceholderTodo : app.value.mobileInboxPlaceholderNote));
 
 function errorTextFor(reason: InboxPostFailure): string {
   switch (reason) {
@@ -121,8 +123,8 @@ async function send(): Promise<void> {
         v-model="draft"
         class="mobile-inbox-textarea"
         data-testid="mobile-inbox-text"
-        :placeholder="app.mobileInboxPlaceholder"
-        :aria-label="app.mobileInboxPlaceholder"
+        :placeholder="placeholder"
+        :aria-label="placeholder"
         rows="5"
       ></textarea>
       <!-- textarea 内 Enter 是换行，提交只能经由本按钮；@submit.prevent 仅兜底防止未来误触发整页刷新。 -->

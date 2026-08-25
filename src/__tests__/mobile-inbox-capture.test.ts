@@ -54,7 +54,7 @@ describe("MobileInboxCapture", () => {
     expect(wrapper.get('[data-testid="mobile-inbox-kind-todo"]').attributes("aria-pressed")).toBe("true");
     expect(wrapper.get('[data-testid="mobile-inbox-kind-note"]').text()).toBe("便签");
     expect(wrapper.get('[data-testid="mobile-inbox-kind-note"]').attributes("aria-pressed")).toBe("false");
-    expect(wrapper.get('[data-testid="mobile-inbox-text"]').attributes("placeholder")).toBe("记点什么（每行一条）…");
+    expect(wrapper.get('[data-testid="mobile-inbox-text"]').attributes("placeholder")).toBe("每行一条提醒，如：周五前取快递");
     expect(wrapper.get('[data-testid="mobile-inbox-send"]').text()).toBe("发送");
   });
 
@@ -223,5 +223,29 @@ describe("MobileInboxCapture", () => {
     await until(() =>
       expect(wrapper.get('[data-testid="mobile-inbox-error"]').text()).toBe("配对码已失效，可能已在桌面端被清除"),
     );
+  });
+
+  it("占位词随 kind 切换：便签给段落式提示", async () => {
+    const wrapper = mountCapture();
+
+    await wrapper.get('[data-testid="mobile-inbox-kind-note"]').trigger("click");
+
+    expect(wrapper.get('[data-testid="mobile-inbox-text"]').attributes("placeholder")).toBe("写一段便签，可换行，换行会保留…");
+    expect(wrapper.get('[data-testid="mobile-inbox-text"]').attributes("aria-label")).toBe("写一段便签，可换行，换行会保留…");
+    await wrapper.get('[data-testid="mobile-inbox-kind-todo"]').trigger("click");
+    expect(wrapper.get('[data-testid="mobile-inbox-text"]').attributes("placeholder")).toBe("每行一条提醒，如：周五前取快递");
+  });
+
+  it("草稿经 v-model 上提：外部初始值渲染、输入回传、卸载重挂不丢", async () => {
+    const wrapper = mount(MobileInboxCapture, { props: { code: CODE, language: "zh", modelValue: "外部草稿" } });
+    expect(draftValue(wrapper)).toBe("外部草稿");
+
+    await wrapper.find('[data-testid="mobile-inbox-text"]').setValue("补充一行");
+    expect(wrapper.emitted("update:modelValue")?.at(-1)?.[0]).toBe("补充一行");
+
+    // 换码场景：组件卸载后父级带着同一 v-model 值重挂，草稿仍在输入框。
+    wrapper.unmount();
+    const reborn = mount(MobileInboxCapture, { props: { code: "ZZ9YXW8VTSRQ", language: "zh", modelValue: "补充一行" } });
+    expect(draftValue(reborn)).toBe("补充一行");
   });
 });
