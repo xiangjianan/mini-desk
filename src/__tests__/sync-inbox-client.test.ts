@@ -1,5 +1,5 @@
 import { afterEach, describe, expect, it, vi } from "vitest";
-import { fetchInboxItems, postInboxItem } from "../sync/inboxClient";
+import { fetchInboxItems, postInboxItem, revokeInboxKey } from "../sync/inboxClient";
 
 const KEY = "a".repeat(64);
 
@@ -67,5 +67,31 @@ describe("inboxClient", () => {
   it("GET 200 空队列返回空数组（区别于 null）", async () => {
     vi.stubGlobal("fetch", vi.fn(async () => new Response("{\"items\":[]}", { status: 200, headers: { "Content-Type": "application/json" } })));
     expect(await fetchInboxItems(KEY)).toEqual([]);
+  });
+
+  it("410 映射为 code_revoked（配对码已注销）", async () => {
+    vi.stubGlobal("fetch", vi.fn(async () => new Response("{\"error\":\"revoked\"}", { status: 410 })));
+    expect(await postInboxItem(KEY, "i1", "AAA")).toEqual({ ok: false, reason: "code_revoked" });
+  });
+
+  it("revokeInboxKey：DELETE /inbox/:keyHash，成功 true、非 2xx/网络异常 false", async () => {
+    vi.stubGlobal("fetch", vi.fn(async () => new Response("{\"ok\":true}", { status: 200 })));
+    expect(await revokeInboxKey(KEY)).toBe(true);
+
+    vi.stubGlobal("fetch", vi.fn(async () => new Response("{}", { status: 500 })));
+    expect(await revokeInboxKey(KEY)).toBe(false);
+
+    vi.stubGlobal("fetch", vi.fn(async () => { throw new TypeError("offline"); }));
+    expect(await revokeInboxKey(KEY)).toBe(false);
+  });
+
+  it("revokeInboxKey 请求打到 DELETE /inbox/:keyHash 且无 body", async () => {
+    const fetchMock = vi.fn(async () => new Response("{\"ok\":true}", { status: 200 }));
+    vi.stubGlobal("fetch", fetchMock);
+    await revokeInboxKey(KEY);
+    const [url, init] = fetchMock.mock.calls[0] as unknown as [string, RequestInit];
+    expect(url.endsWith(`/inbox/${KEY}`)).toBe(true);
+    expect(init.method).toBe("DELETE");
+    expect(init.signal).toBeInstanceOf(AbortSignal);
   });
 });

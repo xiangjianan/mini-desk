@@ -215,4 +215,13 @@ describe("MobileInboxCapture", () => {
     expect(plains.map((plain) => plain?.text)).toEqual(["想法一", "想法二"]);
     expect(plains.every((plain) => plain?.kind === "note")).toBe(true);
   });
+
+  it("失败原因映射：code_revoked 提示配对码已失效", async () => {
+    postMock.mockResolvedValue({ ok: false, reason: "code_revoked" });
+    const wrapper = mountCapture();
+    await fillAndSend(wrapper, "死码内容");
+    await until(() =>
+      expect(wrapper.get('[data-testid="mobile-inbox-error"]').text()).toBe("配对码已失效，可能已在桌面端被清除"),
+    );
+  });
 });

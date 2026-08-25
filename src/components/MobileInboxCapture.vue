@@ -30,6 +30,8 @@ function errorTextFor(reason: InboxPostFailure): string {
       return app.value.mobileInboxErrorQueueFull;
     case "too_large":
       return app.value.mobileInboxErrorTooLarge;
+    case "code_revoked":
+      return app.value.mobileInboxErrorRevoked;
     case "bad_request":
       return app.value.mobileInboxErrorBadRequest;
     case "server":

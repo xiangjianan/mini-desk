@@ -6,7 +6,7 @@ export interface InboxStoredItem {
   createdAt: number;
 }
 
-export type InboxPostFailure = "rate_limited" | "queue_full" | "too_large" | "bad_request" | "server" | "network";
+export type InboxPostFailure = "rate_limited" | "queue_full" | "too_large" | "bad_request" | "code_revoked" | "server" | "network";
 
 export type InboxPostResult = { ok: true } | { ok: false; reason: InboxPostFailure };
 
@@ -23,6 +23,7 @@ function fetchWithTimeout(url: string, init?: RequestInit): Promise<Response> {
 function postFailureForStatus(status: number): InboxPostFailure {
   if (status === 429) return "rate_limited";
   if (status === 409) return "queue_full";
+  if (status === 410) return "code_revoked";
   if (status === 413) return "too_large";
   if (status === 400) return "bad_request";
   return "server";
@@ -59,5 +60,15 @@ export async function fetchInboxItems(keyHash: string): Promise<InboxStoredItem[
     });
   } catch {
     return null;
+  }
+}
+
+/** 注销旧配对码（DELETE 清队列+登记）：失败一律 false，不抛异常——调用方照常清本地配对，仅气泡提示。 */
+export async function revokeInboxKey(keyHash: string): Promise<boolean> {
+  try {
+    const response = await fetchWithTimeout(inboxUrl(keyHash), { method: "DELETE" });
+    return response.ok;
+  } catch {
+    return false;
   }
 }
