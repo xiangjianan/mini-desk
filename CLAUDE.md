@@ -83,7 +83,7 @@ npm run preview
 
 `npm run preview:lan` additionally serves on all interfaces with self-signed HTTPS (`MINI_DESK_LAN=1` + `@vitejs/plugin-basic-ssl`) for real-device LAN testing — the mobile-inbox crypto (`crypto.subtle`) requires a secure context, so plain-HTTP LAN access would break capture sends. Devices must accept the certificate warning once.
 
-`npm run deploy:worker` deploys the mobile-inbox relay Worker (Cloudflare Worker + KV, config in `worker/wrangler.toml`). Local relay testing: point `VITE_INBOX_WORKER_URL` in `.env.local` at `http://127.0.0.1:8787` and run `npx wrangler dev --config worker/wrangler.toml`.
+The mobile-inbox relay is self-hosted: `server/` is a Flask + MySQL app (protocol identical to the legacy Worker in `worker/`, which stays deployed until decommissioned). It runs on the aliyun host at `/opt/minidesk-inbox` behind nginx on `https://relay.minidesk.online:8443`; `server/deploy.sh` rsyncs and restarts it. Local backend tests: `cd server && ./.venv/bin/python -m pytest` (needs MySQL on 127.0.0.1:3306, root passwordless). Local relay testing: point `VITE_INBOX_WORKER_URL` in `.env.local` at `http://127.0.0.1:8787` and run `gunicorn -b 127.0.0.1:8787 app:app` from `server/`.
 
 ## Conventions
 
