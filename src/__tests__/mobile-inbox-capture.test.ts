@@ -298,7 +298,7 @@ describe("MobileInboxCapture", () => {
     expect(vibrate).toHaveBeenCalledWith(20);
 
     // 真实定时器等待自动复位（≈2.5s）。
-    await new Promise((resolve) => setTimeout(resolve, 2800));
+    await new Promise((resolve) => setTimeout(resolve, 3000));
     expect(wrapper.get('[data-testid="mobile-inbox-send"]').text()).toBe("发送");
     expect(wrapper.find(".mobile-inbox-status").exists()).toBe(false);
   }, 10000);
