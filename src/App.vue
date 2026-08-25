@@ -849,7 +849,9 @@ function handleInboxUpdate(inbox: WorkspaceInbox | null): void {
 let inboxPullTimer: number | undefined;
 let inboxLastPullAt = 0;
 let inboxPullInFlight = false;
-const hasInboxConfigured = computed(() => state.workspaces.some((workspace) => workspace.inbox));
+// 轮询跟随当前活动空间：只有停在配置过配对码的空间才拉取；
+// 切到未配对空间时定时/聚焦/启动/Ctrl+S 全部静默，不发任何请求。
+const hasInboxConfigured = computed(() => activeWorkspace.value.inbox !== undefined);
 
 async function pullInboxes(): Promise<void> {
   if (!appMounted || inboxPullInFlight || !hasInboxConfigured.value) return;
