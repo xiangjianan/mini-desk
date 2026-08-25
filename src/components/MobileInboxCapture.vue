@@ -14,9 +14,6 @@ const props = defineProps<{
 
 type CaptureStatus = "idle" | "sending" | "sent" | "error";
 
-/** 单次发送的行数上限：每行一条独立条目（各自占一条每日写入配额），防一次粘贴烧光 60 条/天的额度。 */
-const MAX_LINES_PER_SEND = 20;
-
 const app = computed(() => getUiText(props.language).app);
 const kind = ref<InboxPlainItem["kind"]>("todo");
 const draft = ref("");
@@ -57,11 +54,6 @@ async function send(): Promise<void> {
     .map((line) => line.trim().slice(0, INBOX_PLAINTEXT_MAX_CHARS))
     .filter((line) => line.length > 0);
   if (lines.length === 0 || status.value === "sending") return;
-  if (lines.length > MAX_LINES_PER_SEND) {
-    status.value = "error";
-    errorText.value = app.value.mobileInboxErrorTooManyLines.replace("{count}", () => String(MAX_LINES_PER_SEND));
-    return;
-  }
   status.value = "sending";
   /** 失败即停：未发送的行（含当前失败行）放回输入框，直接重试不会重复已成功的行。 */
   const failAt = (index: number, message: string): void => {
@@ -127,7 +119,6 @@ async function send(): Promise<void> {
         v-model="draft"
         class="mobile-inbox-textarea"
         data-testid="mobile-inbox-text"
-        :maxlength="MAX_LINES_PER_SEND * INBOX_PLAINTEXT_MAX_CHARS"
         :placeholder="app.mobileInboxPlaceholder"
         :aria-label="app.mobileInboxPlaceholder"
         rows="5"

@@ -191,15 +191,15 @@ describe("MobileInboxCapture", () => {
     expect(draftValue(wrapper)).toBe("第二条\n第三条");
   });
 
-  it("超过单次行数上限：报错且不发送，输入保留", async () => {
+  it("无行数上限：21 行也全部逐条发送并提示 21 条", async () => {
     const wrapper = mountCapture();
 
     await fillAndSend(wrapper, Array.from({ length: 21 }, (_, i) => `第${i + 1}行`).join("\n"));
 
-    await until(() => expect(wrapper.get('[data-testid="mobile-inbox-error"]').text()).toBe("一次最多 20 行，请分批发送"));
-    expect(postMock).not.toHaveBeenCalled();
-    expect(draftValue(wrapper).split("\n").length).toBe(21);
-  });
+    await until(() => expect(postMock).toHaveBeenCalledTimes(21));
+    await until(() => expect(wrapper.get(".mobile-inbox-status").text()).toContain("已发送 21 条"));
+    expect(draftValue(wrapper)).toBe("");
+  }, 20000);
 
   it("便签多行同样按行拆分（kind 均为 note）", async () => {
     const wrapper = mountCapture();
