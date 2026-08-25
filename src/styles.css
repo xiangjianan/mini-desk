@@ -7452,6 +7452,19 @@ button.mobile-inbox-send:disabled {
   color: var(--destructive);
 }
 
+button.mobile-inbox-revoked-change {
+  justify-self: start;
+  min-height: 34px;
+  padding: 0 14px;
+  border: 1px solid var(--line-main);
+  border-radius: var(--radius-control);
+  background: var(--panel);
+  color: var(--accent-foreground);
+  font-size: var(--app-font-size);
+  font-weight: 600;
+  cursor: pointer;
+}
+
 /* 速记页脚：当前配对码（人工比对）与更换入口 */
 .mobile-inbox-paired {
   display: flex;

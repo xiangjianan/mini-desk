@@ -12,6 +12,8 @@ const props = defineProps<{
   language: AppLanguage;
 }>();
 
+const emit = defineEmits<{ "change-code": [] }>();
+
 type CaptureStatus = "idle" | "sending" | "sent" | "error";
 
 const app = computed(() => getUiText(props.language).app);
@@ -20,6 +22,8 @@ const kind = ref<InboxPlainItem["kind"]>("todo");
 const draft = defineModel<string>({ default: "" });
 const status = ref<CaptureStatus>("idle");
 const errorText = ref("");
+/** 仅 code_revoked 时为 true：错误区据此渲染「去更换配对码」入口。 */
+const codeRevoked = ref(false);
 const sentCount = ref(0);
 const sentText = computed(() => app.value.mobileInboxSent.replace("{count}", () => String(sentCount.value)));
 const placeholder = computed(() => (kind.value === "todo" ? app.value.mobileInboxPlaceholderTodo : app.value.mobileInboxPlaceholderNote));
@@ -59,10 +63,12 @@ async function send(): Promise<void> {
     .filter((line) => line.length > 0);
   if (lines.length === 0 || status.value === "sending") return;
   status.value = "sending";
+  codeRevoked.value = false;
   /** 失败即停：未发送的行（含当前失败行）放回输入框，直接重试不会重复已成功的行。 */
-  const failAt = (index: number, message: string): void => {
+  const failAt = (index: number, reason: InboxPostFailure): void => {
     status.value = "error";
-    errorText.value = message;
+    codeRevoked.value = reason === "code_revoked";
+    errorText.value = errorTextFor(reason);
     draft.value = lines.slice(index).join("\n");
   };
   try {
@@ -72,17 +78,17 @@ async function send(): Promise<void> {
         const payload = await encryptInboxPayload(props.code, { kind: kind.value, text: lines[index], createdAt: Date.now() });
         const result = await postInboxItem(keyHash, createId(), payload);
         if (!result.ok) {
-          failAt(index, errorTextFor(result.reason));
+          failAt(index, result.reason);
           return;
         }
       } catch {
         // 加密/哈希异常与网络异常同等对待。
-        failAt(index, app.value.mobileInboxErrorNetwork);
+        failAt(index, "network");
         return;
       }
     }
   } catch {
-    failAt(0, app.value.mobileInboxErrorNetwork);
+    failAt(0, "network");
     return;
   }
   sentCount.value = lines.length;
@@ -152,5 +158,15 @@ async function send(): Promise<void> {
     >
       {{ errorText }}
     </p>
+
+    <button
+      v-if="status === 'error' && codeRevoked"
+      type="button"
+      class="mobile-inbox-revoked-change"
+      data-testid="mobile-inbox-revoked-change"
+      @click="emit('change-code')"
+    >
+      {{ app.mobileInboxRevokedChange }}
+    </button>
   </div>
 </template>

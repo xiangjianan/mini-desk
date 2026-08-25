@@ -142,4 +142,11 @@ describe("localized public copy", () => {
     expect(getUiText("en").app.mobileInboxPlaceholderTodo).toBe("One reminder per line, e.g. Pick up the package Friday");
     expect(getUiText("en").app.mobileInboxPlaceholderNote).toBe("Write a note — line breaks are kept…");
   });
+
+  it("配对码失效提示与换码按钮文案中英齐全", () => {
+    expect(getUiText("zh").app.mobileInboxErrorRevoked).toBe("配对码已失效，可能已在桌面端被清除");
+    expect(getUiText("zh").app.mobileInboxRevokedChange).toBe("去更换配对码");
+    expect(getUiText("en").app.mobileInboxErrorRevoked).toBe("This pairing code is no longer active — it may have been cleared on the desktop");
+    expect(getUiText("en").app.mobileInboxRevokedChange).toBe("Change pairing code");
+  });
 });

@@ -248,4 +248,41 @@ describe("MobileInboxCapture", () => {
     const reborn = mount(MobileInboxCapture, { props: { code: "ZZ9YXW8VTSRQ", language: "zh", modelValue: "补充一行" } });
     expect(draftValue(reborn)).toBe("补充一行");
   });
+
+  it("410 失效：显示失效提示与换码按钮，点击 emit change-code，草稿保留", async () => {
+    postMock.mockResolvedValue({ ok: false, reason: "code_revoked" });
+    const wrapper = mountCapture();
+
+    await fillAndSend(wrapper, "死码内容");
+
+    await until(() =>
+      expect(wrapper.get('[data-testid="mobile-inbox-error"]').text()).toBe("配对码已失效，可能已在桌面端被清除"),
+    );
+    expect(draftValue(wrapper)).toBe("死码内容");
+    const change = wrapper.get('[data-testid="mobile-inbox-revoked-change"]');
+    expect(change.text()).toBe("去更换配对码");
+    await change.trigger("click");
+    expect(wrapper.emitted("change-code")).toHaveLength(1);
+  });
+
+  it("多行发送中途 410：已成功行不重发，剩余行回输入框且换码按钮可见", async () => {
+    let call = 0;
+    postMock.mockImplementation(async () => (call++ === 0 ? { ok: true } : { ok: false, reason: "code_revoked" }));
+    const wrapper = mountCapture();
+
+    await fillAndSend(wrapper, "第一条\n第二条");
+
+    await until(() => expect(wrapper.get('[data-testid="mobile-inbox-error"]').text()).toBe("配对码已失效，可能已在桌面端被清除"));
+    expect(postMock).toHaveBeenCalledTimes(2);
+    expect(draftValue(wrapper)).toBe("第二条");
+    expect(wrapper.find('[data-testid="mobile-inbox-revoked-change"]').exists()).toBe(true);
+  });
+
+  it("非失效错误不渲染换码按钮", async () => {
+    postMock.mockResolvedValue({ ok: false, reason: "network" });
+    const wrapper = mountCapture();
+    await fillAndSend(wrapper, "离线内容");
+    await until(() => expect(wrapper.get('[data-testid="mobile-inbox-error"]').text()).toBe("网络异常，请检查网络后重试"));
+    expect(wrapper.find('[data-testid="mobile-inbox-revoked-change"]').exists()).toBe(false);
+  });
 });
