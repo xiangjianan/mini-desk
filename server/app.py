@@ -82,10 +82,6 @@ def create_app() -> Flask:
         return handle_get(key_hash)
 
     def handle_post(key_hash: str) -> tuple:
-        with pymysql.connect(**database_kwargs()) as conn, conn.cursor() as cursor:
-            cursor.execute("SELECT 1 FROM revoked_keys WHERE key_hash = %s", (key_hash,))
-            if cursor.fetchone() is not None:
-                return error_response(410, "revoked")
         body = request.get_json(silent=True)
         if not isinstance(body, dict):
             return error_response(400, "bad_request")
@@ -100,6 +96,9 @@ def create_app() -> Flask:
             return error_response(413, "payload_too_large")
         created_at = int(time.time() * 1000)
         with pymysql.connect(**database_kwargs()) as conn, conn.cursor() as cursor:
+            cursor.execute("SELECT 1 FROM revoked_keys WHERE key_hash = %s", (key_hash,))
+            if cursor.fetchone() is not None:
+                return error_response(410, "revoked")
             cursor.execute(
                 "INSERT INTO inbox_items (key_hash, id, payload, created_at) VALUES (%s, %s, %s, %s) "
                 "AS new ON DUPLICATE KEY UPDATE payload = new.payload, created_at = new.created_at",
