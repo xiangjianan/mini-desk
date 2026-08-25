@@ -1,5 +1,7 @@
 """中继契约测试：语义对照 worker/__tests__/inbox-worker.test.ts（去掉其 429/409 限流用例）。"""
 
+import time
+
 ORIGIN = "https://todolist.pages.dev"
 KEY = "a" * 64
 OTHER = "b" * 64
@@ -91,3 +93,23 @@ class TestContract:
         assert preflight.status_code == 204
         assert preflight.headers["Access-Control-Allow-Origin"] == ORIGIN
         assert preflight.headers["Vary"] == "Origin"
+
+
+class TestRetention:
+    def test_post_purges_rows_older_than_30_days(self, client, db):
+        now = int(time.time() * 1000)
+        with db.cursor() as cursor:
+            cursor.executemany(
+                "INSERT INTO inbox_items (key_hash, id, payload, created_at) VALUES (%s, %s, %s, %s)",
+                [
+                    (KEY, "stale", "OLD", now - 31 * 24 * 3600 * 1000),
+                    (KEY, "recent", "KEEP", now - 29 * 24 * 3600 * 1000),
+                ],
+            )
+
+        assert post(client, KEY, {"id": "fresh", "payload": "NEW"}).status_code == 200
+
+        ids = [item["id"] for item in get(client, KEY).get_json()["items"]]
+        assert "stale" not in ids
+        assert "recent" in ids
+        assert "fresh" in ids

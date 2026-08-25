@@ -13,6 +13,7 @@ from werkzeug.exceptions import HTTPException
 
 MAX_CIPHER_BYTES = 4096
 MAX_ID_LENGTH = 64
+RETENTION_MS = 30 * 24 * 60 * 60 * 1000
 HEX_DIGITS = set("0123456789abcdef")
 
 
@@ -98,6 +99,7 @@ def create_app() -> Flask:
                 "AS new ON DUPLICATE KEY UPDATE payload = new.payload, created_at = new.created_at",
                 (key_hash, item_id, payload, created_at),
             )
+            cursor.execute("DELETE FROM inbox_items WHERE created_at < %s", (created_at - RETENTION_MS,))
         return jsonify({"ok": True})
 
     def handle_get(key_hash: str) -> tuple:
