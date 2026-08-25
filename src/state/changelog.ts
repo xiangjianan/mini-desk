@@ -29,6 +29,20 @@ export interface ChangelogEntry {
 
 export const CHANGELOG: ChangelogEntry[] = [
   {
+    version: "1.0.144",
+    date: "2026-08-25",
+    notes: {
+      zh: [
+        "优化：手机速记中继改为「读即消费」——每条数据只响应一次，桌面端读取后即从队列移除",
+        "优化：收件箱轮询跟随当前工作区——只在配置过配对码的空间轮询，停留未配对空间期间零请求",
+      ],
+      en: [
+        "Improved: relay now serves each item exactly once — consumed on desktop read, then removed from the queue",
+        "Improved: inbox polling follows the active workspace — requests only while a paired workspace is active",
+      ],
+    },
+  },
+  {
     version: "1.0.143",
     date: "2026-08-25",
     notes: {
