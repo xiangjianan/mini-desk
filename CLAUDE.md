@@ -83,7 +83,9 @@ npm run preview
 
 `npm run preview:lan` additionally serves on all interfaces with self-signed HTTPS (`MINI_DESK_LAN=1` + `@vitejs/plugin-basic-ssl`) for real-device LAN testing — the mobile-inbox crypto (`crypto.subtle`) requires a secure context, so plain-HTTP LAN access would break capture sends. Devices must accept the certificate warning once.
 
-The mobile-inbox relay is self-hosted: `server/` is a Flask + MySQL app (protocol identical to the legacy Worker in `worker/`, which stays deployed until decommissioned). It runs on the aliyun host at `/opt/minidesk-inbox` behind nginx on `https://relay.minidesk.online:8443`; `server/deploy.sh` rsyncs and restarts it. Local backend tests: `cd server && ./.venv/bin/python -m pytest` (needs MySQL on 127.0.0.1:3306, root passwordless). Local relay testing: point `VITE_INBOX_WORKER_URL` in `.env.local` at `http://127.0.0.1:8787` and run `gunicorn -b 127.0.0.1:8787 app:app` from `server/`.
+The mobile-inbox relay is self-hosted: `server/` is a Flask + MySQL app (legacy-Worker-compatible protocol plus `DELETE /inbox/<key_hash>` revocation — clearing/rotating a pairing code purges its queue and permanently blocks further POSTs with 410; the `revoked_keys` table must be created manually on the server before deploying). It runs on the aliyun host at `/opt/minidesk-inbox` behind nginx on `https://relay.minidesk.online:8443`; `server/deploy.sh` rsyncs and restarts it. Local backend tests: `cd server && ./.venv/bin/python -m pytest` (needs MySQL on 127.0.0.1:3306, root passwordless). Local relay testing: point `VITE_INBOX_WORKER_URL` in `.env.local` at `http://127.0.0.1:8787` and run `gunicorn -b 127.0.0.1:8787 app:app` from `server/`.
+
+Desktop clear/rotate of a pairing key fires the relay revocation in the background (failure only warns); switching to (or pairing) a workspace with an inbox triggers an immediate pull in addition to the 5-minute poll, and the mobile capture page shows a dedicated invalid-code error with a change-code action, keeps the draft across code changes, hides the bottom-right hint once paired, and differentiates reminder/note placeholders.
 
 ## Conventions
 
