@@ -853,13 +853,13 @@ function handleInboxUpdate(inbox: WorkspaceInbox | null): void {
   }
 }
 
-/** 注销旧配对码：任何失败（网络/服务端/哈希异常）只提示，不抛出。 */
+/** 注销旧配对码：任何失败（网络/服务端/哈希异常）只提示，不抛出；卸载后不再弹气泡。 */
 async function revokeInbox(oldCode: string): Promise<void> {
   try {
     const ok = await revokeInboxKey(await inboxKeyHash(oldCode));
-    if (!ok) showBubbleText(uiText.value.app.inboxRevokeFailed, undefined, { hideCompanionAfter: true });
+    if (!ok && appMounted) showBubbleText(uiText.value.app.inboxRevokeFailed, undefined, { hideCompanionAfter: true });
   } catch {
-    showBubbleText(uiText.value.app.inboxRevokeFailed, undefined, { hideCompanionAfter: true });
+    if (appMounted) showBubbleText(uiText.value.app.inboxRevokeFailed, undefined, { hideCompanionAfter: true });
   }
 }
 
