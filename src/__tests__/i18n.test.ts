@@ -149,4 +149,9 @@ describe("localized public copy", () => {
     expect(getUiText("en").app.mobileInboxErrorRevoked).toBe("This pairing code is no longer active — it may have been cleared on the desktop");
     expect(getUiText("en").app.mobileInboxRevokedChange).toBe("Change pairing code");
   });
+
+  it("发送按钮成功态文案中英齐全", () => {
+    expect(getUiText("zh").app.mobileInboxSentButton).toBe("已发送");
+    expect(getUiText("en").app.mobileInboxSentButton).toBe("Sent");
+  });
 });

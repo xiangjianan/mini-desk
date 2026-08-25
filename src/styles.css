@@ -7441,6 +7441,56 @@ button.mobile-inbox-send:disabled {
   cursor: default;
 }
 
+button.mobile-inbox-send.is-sent {
+  background: var(--primary);
+  color: var(--primary-foreground);
+  animation: mobile-inbox-pop 320ms var(--motion-ease, ease-out);
+}
+
+button.mobile-inbox-send:disabled {
+  animation: mobile-inbox-pulse 1.2s ease-in-out infinite;
+}
+
+.mobile-inbox-status.is-slide-in {
+  animation: mobile-inbox-slide-in 240ms ease-out;
+}
+
+.mobile-inbox-status.is-shake {
+  animation: mobile-inbox-shake 360ms ease-in-out;
+}
+
+@keyframes mobile-inbox-pop {
+  0% { transform: scale(0.92); }
+  55% { transform: scale(1.04); }
+  100% { transform: scale(1); }
+}
+
+@keyframes mobile-inbox-pulse {
+  0%, 100% { opacity: 0.6; }
+  50% { opacity: 1; }
+}
+
+@keyframes mobile-inbox-slide-in {
+  from { opacity: 0; transform: translateY(4px); }
+  to { opacity: 1; transform: none; }
+}
+
+@keyframes mobile-inbox-shake {
+  0%, 100% { transform: translateX(0); }
+  25% { transform: translateX(-4px); }
+  50% { transform: translateX(4px); }
+  75% { transform: translateX(-2px); }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  button.mobile-inbox-send.is-sent,
+  button.mobile-inbox-send:disabled,
+  .mobile-inbox-status.is-slide-in,
+  .mobile-inbox-status.is-shake {
+    animation: none;
+  }
+}
+
 .mobile-inbox-status {
   margin: 0;
   color: var(--muted);

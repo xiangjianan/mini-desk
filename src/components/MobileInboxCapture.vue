@@ -1,5 +1,5 @@
 <script setup lang="ts">
-import { computed, ref } from "vue";
+import { computed, onBeforeUnmount, ref } from "vue";
 import { getUiText } from "../state/i18n";
 import { createId } from "../state/storage";
 import { INBOX_PLAINTEXT_MAX_CHARS } from "../sync/config";
@@ -27,6 +27,21 @@ const codeRevoked = ref(false);
 const sentCount = ref(0);
 const sentText = computed(() => app.value.mobileInboxSent.replace("{count}", () => String(sentCount.value)));
 const placeholder = computed(() => (kind.value === "todo" ? app.value.mobileInboxPlaceholderTodo : app.value.mobileInboxPlaceholderNote));
+
+const SENT_RESET_MS = 2500;
+let sentResetTimer: number | undefined;
+
+/** 触觉反馈：不支持的机型（iOS Safari）静默忽略。 */
+function vibrate(pattern: number | number[]): void {
+  navigator.vibrate?.(pattern);
+}
+
+function clearSentResetTimer(): void {
+  if (sentResetTimer !== undefined) {
+    window.clearTimeout(sentResetTimer);
+    sentResetTimer = undefined;
+  }
+}
 
 function errorTextFor(reason: InboxPostFailure): string {
   switch (reason) {
@@ -64,9 +79,11 @@ async function send(): Promise<void> {
   if (lines.length === 0 || status.value === "sending") return;
   status.value = "sending";
   codeRevoked.value = false;
+  clearSentResetTimer();
   /** 失败即停：未发送的行（含当前失败行）放回输入框，直接重试不会重复已成功的行。 */
   const failAt = (index: number, reason: InboxPostFailure): void => {
     status.value = "error";
+    vibrate([40, 60, 40]);
     codeRevoked.value = reason === "code_revoked";
     errorText.value = errorTextFor(reason);
     draft.value = lines.slice(index).join("\n");
@@ -94,7 +111,17 @@ async function send(): Promise<void> {
   sentCount.value = lines.length;
   status.value = "sent";
   draft.value = "";
+  vibrate(20);
+  sentResetTimer = window.setTimeout(() => {
+    // 仍在 sent 态才复位：期间用户再次发送会重置定时器。
+    if (status.value === "sent") {
+      status.value = "idle";
+      sentCount.value = 0;
+    }
+  }, SENT_RESET_MS);
 }
+
+onBeforeUnmount(clearSentResetTimer);
 </script>
 
 <template>
@@ -137,20 +164,21 @@ async function send(): Promise<void> {
       <button
         type="button"
         class="mobile-inbox-send"
+        :class="{ 'is-sent': status === 'sent' }"
         data-testid="mobile-inbox-send"
         :disabled="status === 'sending'"
         @click="send"
       >
-        {{ status === "sending" ? app.mobileInboxSending : app.mobileInboxSend }}
+        {{ status === "sending" ? app.mobileInboxSending : status === "sent" ? `✓ ${app.mobileInboxSentButton}` : app.mobileInboxSend }}
       </button>
     </form>
 
-    <p v-if="status === 'sent'" class="mobile-inbox-status" role="status" aria-live="polite" data-status="sent">
+    <p v-if="status === 'sent'" class="mobile-inbox-status is-slide-in" role="status" aria-live="polite" data-status="sent">
       {{ sentText }}
     </p>
     <p
       v-else-if="status === 'error'"
-      class="mobile-inbox-status"
+      class="mobile-inbox-status is-shake"
       role="status"
       aria-live="polite"
       data-status="error"

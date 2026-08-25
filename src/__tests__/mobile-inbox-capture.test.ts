@@ -285,4 +285,34 @@ describe("MobileInboxCapture", () => {
     await until(() => expect(wrapper.get('[data-testid="mobile-inbox-error"]').text()).toBe("网络异常，请检查网络后重试"));
     expect(wrapper.find('[data-testid="mobile-inbox-revoked-change"]').exists()).toBe(false);
   });
+
+  it("发送成功：按钮进入 ✓已发送 态并自动复位，触觉反馈触发", async () => {
+    const vibrate = vi.fn();
+    Object.defineProperty(navigator, "vibrate", { value: vibrate, configurable: true });
+    const wrapper = mountCapture();
+
+    await fillAndSend(wrapper, "动画内容");
+
+    await until(() => expect(wrapper.get('[data-testid="mobile-inbox-send"]').text()).toContain("已发送"));
+    expect(wrapper.get('[data-testid="mobile-inbox-send"]').classes()).toContain("is-sent");
+    expect(vibrate).toHaveBeenCalledWith(20);
+
+    // 真实定时器等待自动复位（≈2.5s）。
+    await new Promise((resolve) => setTimeout(resolve, 2800));
+    expect(wrapper.get('[data-testid="mobile-inbox-send"]').text()).toBe("发送");
+    expect(wrapper.find(".mobile-inbox-status").exists()).toBe(false);
+  }, 10000);
+
+  it("发送失败：错误行带抖动标记并触发失败触觉", async () => {
+    const vibrate = vi.fn();
+    Object.defineProperty(navigator, "vibrate", { value: vibrate, configurable: true });
+    postMock.mockResolvedValue({ ok: false, reason: "network" });
+    const wrapper = mountCapture();
+
+    await fillAndSend(wrapper, "抖动内容");
+
+    await until(() => expect(wrapper.get('[data-testid="mobile-inbox-error"]').text()).toBe("网络异常，请检查网络后重试"));
+    expect(wrapper.get('[data-testid="mobile-inbox-error"]').classes()).toContain("is-shake");
+    expect(vibrate).toHaveBeenCalledWith([40, 60, 40]);
+  });
 });
