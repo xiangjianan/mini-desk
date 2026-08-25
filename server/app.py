@@ -103,12 +103,25 @@ def create_app() -> Flask:
         return jsonify({"ok": True})
 
     def handle_get(key_hash: str) -> tuple:
-        with pymysql.connect(**database_kwargs()) as conn, conn.cursor() as cursor:
-            cursor.execute(
-                "SELECT id, payload, created_at FROM inbox_items WHERE key_hash = %s ORDER BY created_at, id",
-                (key_hash,),
-            )
-            rows = cursor.fetchall()
+        # 读即消费（软删除）：同一事务内 FOR UPDATE 锁定未读行并标记 read_at，
+        # 每条数据只响应一次，下次 GET 只返回新数据。并发 GET 不会重复响应同一批。
+        now = int(time.time() * 1000)
+        with pymysql.connect(**database_kwargs()) as conn:
+            conn.begin()
+            with conn.cursor() as cursor:
+                cursor.execute(
+                    "SELECT id, payload, created_at FROM inbox_items "
+                    "WHERE key_hash = %s AND read_at IS NULL ORDER BY created_at, id FOR UPDATE",
+                    (key_hash,),
+                )
+                rows = cursor.fetchall()
+                if rows:
+                    placeholders = ", ".join(["%s"] * len(rows))
+                    cursor.execute(
+                        f"UPDATE inbox_items SET read_at = %s WHERE key_hash = %s AND id IN ({placeholders})",
+                        [now, key_hash, *(row["id"] for row in rows)],
+                    )
+            conn.commit()
         items = [{"id": row["id"], "payload": row["payload"], "createdAt": row["created_at"]} for row in rows]
         return jsonify({"items": items})
 

@@ -113,3 +113,39 @@ class TestRetention:
         assert "stale" not in ids
         assert "recent" in ids
         assert "fresh" in ids
+
+
+class TestConsumeOnRead:
+    def test_each_item_served_exactly_once(self, client):
+        assert post(client, KEY, {"id": "i1", "payload": "AAA"}).status_code == 200
+
+        first = get(client, KEY).get_json()["items"]
+        second = get(client, KEY).get_json()["items"]
+
+        assert [item["id"] for item in first] == ["i1"]
+        assert second == []
+
+        assert post(client, KEY, {"id": "i2", "payload": "BBB"}).status_code == 200
+        third = get(client, KEY).get_json()["items"]
+        assert [item["id"] for item in third] == ["i2"]
+
+    def test_consumption_is_per_key_hash(self, client):
+        post(client, KEY, {"id": "shared", "payload": "AAA"})
+        post(client, OTHER, {"id": "shared", "payload": "BBB"})
+
+        assert [item["id"] for item in get(client, KEY).get_json()["items"]] == ["shared"]
+        assert [item["id"] for item in get(client, OTHER).get_json()["items"]] == ["shared"]
+
+    def test_retention_purges_read_rows_too(self, client, db):
+        now = int(time.time() * 1000)
+        with db.cursor() as cursor:
+            cursor.execute(
+                "INSERT INTO inbox_items (key_hash, id, payload, created_at, read_at) VALUES (%s, %s, %s, %s, %s)",
+                (KEY, "stale-read", "OLD", now - 31 * 24 * 3600 * 1000, now - 30 * 24 * 3600 * 1000),
+            )
+
+        assert post(client, KEY, {"id": "fresh", "payload": "NEW"}).status_code == 200
+
+        with db.cursor() as cursor:
+            cursor.execute("SELECT COUNT(*) FROM inbox_items WHERE id = 'stale-read'")
+            assert cursor.fetchone()[0] == 0
