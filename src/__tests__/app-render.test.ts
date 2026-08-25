@@ -537,6 +537,79 @@ describe("App shell", () => {
     }
   });
 
+  it("shows the paired code in the footer and switches pairing via the change button", async () => {
+    vi.useFakeTimers();
+    stubMatchMedia(true);
+    window.location.hash = "#inbox=AB2CDE4FGHJK";
+    let wrapper: ReturnType<typeof mountApp> | undefined;
+
+    try {
+      wrapper = mountApp();
+
+      expect(wrapper.get('[data-testid="mobile-inbox-paired-code"]').text()).toBe("已配对：AB2C DE4F GHJK");
+
+      await wrapper.get('[data-testid="mobile-inbox-change-code"]').trigger("click");
+      await wrapper.vm.$nextTick();
+
+      expect(wrapper.find('[data-testid="mobile-inbox-text"]').exists()).toBe(false);
+      expect(wrapper.find('[data-testid="mobile-inbox-code-input"]').exists()).toBe(true);
+      expect(localStorage.getItem(REMEMBERED_INBOX_CODE_KEY)).toBeNull();
+      expect(window.location.hash).toBe("");
+    } finally {
+      wrapper?.unmount();
+      window.location.hash = "";
+      vi.unstubAllGlobals();
+      vi.useRealTimers();
+    }
+  });
+
+  it("persists a code that arrives via hashchange mid-session", async () => {
+    vi.useFakeTimers();
+    stubMatchMedia(true);
+    window.location.hash = "#inbox=AB2CDE4FGHJK";
+    let wrapper: ReturnType<typeof mountApp> | undefined;
+
+    try {
+      wrapper = mountApp();
+      await flushPromises();
+      window.location.hash = "#inbox=ZZZ0ZZZ0ZZZ0";
+      window.dispatchEvent(new HashChangeEvent("hashchange"));
+      await wrapper.vm.$nextTick();
+
+      expect(wrapper.find('[data-testid="mobile-inbox-text"]').exists()).toBe(true);
+      expect(localStorage.getItem(REMEMBERED_INBOX_CODE_KEY)).toBe("ZZZ0ZZZ0ZZZ0");
+      expect(wrapper.get('[data-testid="mobile-inbox-paired-code"]').text()).toBe("已配对：ZZZ0 ZZZ0 ZZZ0");
+    } finally {
+      wrapper?.unmount();
+      window.location.hash = "";
+      vi.unstubAllGlobals();
+      vi.useRealTimers();
+    }
+  });
+
+  it("writes the remembered code only after the viewport flips to mobile", async () => {
+    vi.useFakeTimers();
+    const mediaQueryList = stubMatchMedia(false);
+    window.location.hash = "#inbox=AB2CDE4FGHJK";
+    let wrapper: ReturnType<typeof mountApp> | undefined;
+
+    try {
+      wrapper = mountApp();
+
+      expect(localStorage.getItem(REMEMBERED_INBOX_CODE_KEY)).toBeNull();
+
+      mediaQueryList.dispatchEvent({ matches: true, media: "(max-width: 900px)" } as MediaQueryListEvent);
+      await wrapper.vm.$nextTick();
+
+      expect(localStorage.getItem(REMEMBERED_INBOX_CODE_KEY)).toBe("AB2CDE4FGHJK");
+    } finally {
+      wrapper?.unmount();
+      window.location.hash = "";
+      vi.unstubAllGlobals();
+      vi.useRealTimers();
+    }
+  });
+
   it("shows the manual code entry and an inline error with aria linkage for an invalid code", async () => {
     vi.useFakeTimers();
     stubMatchMedia(true);

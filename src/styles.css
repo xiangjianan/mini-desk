@@ -7452,6 +7452,32 @@ button.mobile-inbox-send:disabled {
   color: var(--destructive);
 }
 
+/* 速记页脚：当前配对码（人工比对）与更换入口 */
+.mobile-inbox-paired {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 6px;
+  margin-top: 4px;
+}
+
+.mobile-inbox-paired-code {
+  margin: 0;
+  color: var(--muted);
+  font-size: var(--app-font-size);
+  letter-spacing: 0.04em;
+}
+
+button.mobile-inbox-paired-change {
+  padding: 0;
+  border: none;
+  background: none;
+  color: var(--muted);
+  font-size: var(--app-font-size);
+  text-decoration: underline;
+  cursor: pointer;
+}
+
 /* 引导页底部的手动输码区 */
 .mobile-inbox-code-entry {
   display: grid;

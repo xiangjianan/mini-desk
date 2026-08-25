@@ -60,6 +60,8 @@ import { QUICK_BUTTON_OTHER_GROUP_ID, QUICK_DENSITY_THRESHOLD, formatQuickCopied
 import { isQuickAppScheme } from "./state/quickApps";
 import { INBOX_FOCUS_THROTTLE_MS, INBOX_PULL_INTERVAL_MS } from "./sync/config";
 import {
+  clearRememberedInboxCode,
+  formatInboxCode,
   importedPayloadHasInbox,
   isValidInboxCode,
   loadRememberedInboxCode,
@@ -423,6 +425,21 @@ function confirmMobileInboxCode(): void {
   // 写回 fragment：刷新/再次打开仍停留在速记页。
   window.location.hash = `#inbox=${code}`;
 }
+
+/** 更换配对码：清本地记忆与 URL 残留 fragment（replaceState 不触发 hashchange，也不留历史记录），回到输码表单并重置错误态。
+ *  不弹确认——没有可破坏的数据，码随时可从桌面配对面板重新获得。 */
+function forgetMobileInboxCode(): void {
+  clearRememberedInboxCode();
+  mobileInboxCode.value = null;
+  mobileInboxCodeError.value = false;
+  window.history.replaceState(null, "", `${window.location.pathname}${window.location.search}`);
+}
+
+/** 页脚分组码：模板内 vue-tsc 不跨元素收窄 string|null，挪进 computed（同 MobileInboxCapture.sentText 模式）。 */
+const mobileInboxCodeLabel = computed(() => {
+  const code = mobileInboxCode.value;
+  return code === null ? "" : uiText.value.app.mobileInboxPairedAs.replace("{code}", () => formatInboxCode(code));
+});
 
 function setupMobileBreakpoint(): void {
   if (!window.matchMedia) return;
@@ -3303,7 +3320,22 @@ function moveItem<T extends { id: string }>(items: T[], dragId: string, targetId
         class="mobile-handoff-body"
         :aria-labelledby="mobileInboxCode ? 'mobile-inbox-heading' : 'mobile-handoff-title'"
       >
-        <MobileInboxCapture v-if="mobileInboxCode" :code="mobileInboxCode" :language="state.language" />
+        <template v-if="mobileInboxCode">
+          <MobileInboxCapture :code="mobileInboxCode" :language="state.language" />
+          <div class="mobile-inbox-paired">
+            <p class="mobile-inbox-paired-code" data-testid="mobile-inbox-paired-code">
+              {{ mobileInboxCodeLabel }}
+            </p>
+            <button
+              type="button"
+              class="mobile-inbox-paired-change"
+              data-testid="mobile-inbox-change-code"
+              @click="forgetMobileInboxCode"
+            >
+              {{ uiText.app.mobileInboxChangeCode }}
+            </button>
+          </div>
+        </template>
         <div v-else class="mobile-handoff-message">
           <h2 id="mobile-handoff-title">{{ uiText.app.mobileHeading }}</h2>
           <p>{{ uiText.app.mobileDescription }}</p>
