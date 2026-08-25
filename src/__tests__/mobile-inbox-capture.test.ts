@@ -32,8 +32,8 @@ function draftValue(wrapper: ReturnType<typeof mountCapture>): string {
 }
 
 /** 发送链路含真实 PBKDF2（百毫秒级），轮询断言而非一次性 await。 */
-async function until(assertion: () => void): Promise<void> {
-  await vi.waitFor(assertion, { timeout: 4000, interval: 20 });
+async function until(assertion: () => void, timeout = 4000): Promise<void> {
+  await vi.waitFor(assertion, { timeout, interval: 20 });
 }
 
 function lastPayload(): string {
@@ -196,7 +196,8 @@ describe("MobileInboxCapture", () => {
 
     await fillAndSend(wrapper, Array.from({ length: 21 }, (_, i) => `第${i + 1}行`).join("\n"));
 
-    await until(() => expect(postMock).toHaveBeenCalledTimes(21));
+    // 21 次串行 PBKDF2 在整包并发下可能超过默认 4s 轮询窗口，放宽到 15s 消除偶发失败
+    await until(() => expect(postMock).toHaveBeenCalledTimes(21), 15000);
     await until(() => expect(wrapper.get(".mobile-inbox-status").text()).toContain("已发送 21 条"));
     expect(draftValue(wrapper)).toBe("");
   }, 20000);
