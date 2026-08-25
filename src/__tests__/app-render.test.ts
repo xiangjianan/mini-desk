@@ -486,7 +486,7 @@ describe("App shell", () => {
       await wrapper.get('[data-testid="mobile-inbox-code-input"]').setValue("AB2CDE4FGHJK");
       await wrapper.get('[data-testid="mobile-inbox-code-confirm"]').trigger("click");
       await wrapper.vm.$nextTick();
-      expect(wrapper.get('[data-testid="mobile-inbox-text"]').exists()).toBe(true);
+      expect(wrapper.find('[data-testid="mobile-inbox-text"]').exists()).toBe(true);
       expect(wrapper.find('[data-testid="companion-bubble"]').exists()).toBe(false);
     } finally {
       window.location.hash = "";

@@ -1018,7 +1018,7 @@ describe("Naive UI component usage", () => {
     expect(app).toContain('class="mobile-handoff-title"');
     expect(app).toContain('class="mobile-handoff-theme"');
     expect(app).toContain('v-if="!isMobileBlocked"');
-    expect(app).toContain("isMobileBlocked.value || companionVisible.value");
+    expect(app).toContain("(isMobileBlocked.value && mobileInboxCode.value === null) || companionVisible.value");
     expect(i18n).toContain("建议在电脑浏览器打开，以获得完整体验");
     expect(app).not.toContain('class="mobile-nav"');
     expect(app).not.toContain('class="mobile-drawer-trigger"');
