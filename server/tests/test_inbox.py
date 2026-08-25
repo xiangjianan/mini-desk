@@ -82,7 +82,7 @@ class TestContract:
         response = client.put(f"/inbox/{KEY}", headers={"Origin": ORIGIN})
 
         assert response.status_code == 405
-        assert response.headers["Allow"] == "GET, POST, OPTIONS"
+        assert response.headers["Allow"] == "GET, POST, DELETE, OPTIONS"
         assert response.get_json() == {"error": "method_not_allowed"}
 
     def test_cors_whitelist_and_preflight(self, client):
@@ -149,3 +149,53 @@ class TestConsumeOnRead:
         with db.cursor() as cursor:
             cursor.execute("SELECT COUNT(*) FROM inbox_items WHERE id = 'stale-read'")
             assert cursor.fetchone()[0] == 0
+
+
+class TestRevocation:
+    def test_delete_removes_items_and_revokes_future_posts(self, client):
+        assert post(client, KEY, {"id": "i1", "payload": "AAA"}).status_code == 200
+
+        assert client.delete(f"/inbox/{KEY}", headers={"Origin": ORIGIN}).status_code == 200
+        assert client.delete(f"/inbox/{KEY}").get_json() == {"ok": True}  # 幂等
+
+        assert post(client, KEY, {"id": "i2", "payload": "BBB"}).status_code == 410
+        assert post(client, KEY, {"id": "i2", "payload": "BBB"}).get_json() == {"error": "revoked"}
+        assert get(client, KEY).get_json()["items"] == []
+
+    def test_delete_unknown_key_still_ok(self, client):
+        assert client.delete(f"/inbox/{OTHER}").get_json() == {"ok": True}
+
+    def test_delete_invalid_key_hash_404(self, client):
+        assert client.delete("/inbox/XYZ").status_code == 404
+        assert client.delete("/inbox/XYZ").get_json() == {"error": "not_found"}
+
+    def test_revocation_is_per_key_hash(self, client):
+        post(client, KEY, {"id": "i1", "payload": "AAA"})
+        client.delete(f"/inbox/{KEY}")
+        assert post(client, OTHER, {"id": "i1", "payload": "BBB"}).status_code == 200
+
+    def test_revoked_keys_survive_retention_sweep(self, client, db):
+        now = int(time.time() * 1000)
+        with db.cursor() as cursor:
+            cursor.execute(
+                "INSERT INTO revoked_keys (key_hash, revoked_at) VALUES (%s, %s)",
+                (KEY, now - 40 * 24 * 3600 * 1000),
+            )
+            cursor.execute(
+                "INSERT INTO inbox_items (key_hash, id, payload, created_at) VALUES (%s, %s, %s, %s)",
+                (OTHER, "stale", "OLD", now - 31 * 24 * 3600 * 1000),
+            )
+
+        assert post(client, OTHER, {"id": "fresh", "payload": "NEW"}).status_code == 200
+
+        with db.cursor() as cursor:
+            cursor.execute("SELECT COUNT(*) FROM inbox_items WHERE id = 'stale'")
+            assert cursor.fetchone()[0] == 0  # inbox_items 过期行照常被清扫
+            cursor.execute("SELECT COUNT(*) FROM revoked_keys WHERE key_hash = %s", (KEY,))
+            assert cursor.fetchone()[0] == 1  # 注销记录不随清扫删除
+        assert post(client, KEY, {"id": "x", "payload": "AAA"}).status_code == 410
+
+    def test_cors_allows_delete(self, client):
+        response = client.delete(f"/inbox/{KEY}", headers={"Origin": ORIGIN})
+
+        assert response.headers["Access-Control-Allow-Methods"] == "GET, POST, DELETE, OPTIONS"

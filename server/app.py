@@ -1,7 +1,7 @@
 """手机速记中继：只存 AES-GCM 密文队列（协议与原 Cloudflare Worker 完全一致）。
 
 路由键是 SHA-256(配对码) 的 hex；条目保留 30 天，无账号、无按条删除
-（多台桌面共用一个码，回收交给保留期清理）。幂等：同 id 覆盖。
+（多台桌面共用一个码，回收交给保留期清理；DELETE 注销后 POST 一律 410，注销记录永久保留）。幂等：同 id 覆盖。
 自建服务器无次数限制：只做输入校验，不做限流/配额。
 """
 import os
@@ -46,7 +46,7 @@ def create_app() -> Flask:
         # 白名单内回显；白名单外回落到第一个（与 Worker 行为一致），绝不回显陌生 Origin。
         allow = origin if origin in allowed_origins else (allowed_origins[0] if allowed_origins else "")
         response.headers["Access-Control-Allow-Origin"] = allow
-        response.headers["Access-Control-Allow-Methods"] = "GET, POST, OPTIONS"
+        response.headers["Access-Control-Allow-Methods"] = "GET, POST, DELETE, OPTIONS"
         response.headers["Access-Control-Allow-Headers"] = "Content-Type"
         response.headers["Vary"] = "Origin"
         return response
@@ -57,7 +57,7 @@ def create_app() -> Flask:
     @app.errorhandler(HTTPException)
     def http_error(err: HTTPException) -> tuple:
         code_by_status = {404: "not_found", 405: "method_not_allowed"}
-        headers = {"Allow": "GET, POST, OPTIONS"} if err.code == 405 else None
+        headers = {"Allow": "GET, POST, DELETE, OPTIONS"} if err.code == 405 else None
         return error_response(err.code or 500, code_by_status.get(err.code, "internal"), headers)
 
     @app.errorhandler(Exception)
@@ -69,7 +69,7 @@ def create_app() -> Flask:
     def healthz():
         return jsonify({"ok": True})
 
-    @app.route("/inbox/<key_hash>", methods=["GET", "POST", "OPTIONS"])
+    @app.route("/inbox/<key_hash>", methods=["GET", "POST", "DELETE", "OPTIONS"])
     def inbox(key_hash: str):
         if request.method == "OPTIONS":
             return Response(status=204)
@@ -77,9 +77,15 @@ def create_app() -> Flask:
             return error_response(404, "not_found")
         if request.method == "POST":
             return handle_post(key_hash)
+        if request.method == "DELETE":
+            return handle_delete(key_hash)
         return handle_get(key_hash)
 
     def handle_post(key_hash: str) -> tuple:
+        with pymysql.connect(**database_kwargs()) as conn, conn.cursor() as cursor:
+            cursor.execute("SELECT 1 FROM revoked_keys WHERE key_hash = %s", (key_hash,))
+            if cursor.fetchone() is not None:
+                return error_response(410, "revoked")
         body = request.get_json(silent=True)
         if not isinstance(body, dict):
             return error_response(400, "bad_request")
@@ -100,6 +106,22 @@ def create_app() -> Flask:
                 (key_hash, item_id, payload, created_at),
             )
             cursor.execute("DELETE FROM inbox_items WHERE created_at < %s", (created_at - RETENTION_MS,))
+        return jsonify({"ok": True})
+
+    def handle_delete(key_hash: str) -> tuple:
+        # 注销：单事务清空该队列并登记注销记录；revoked_keys 永久保留（见设计文档）。
+        # 幂等：重复注销、注销从未存在过的码均返回 ok。
+        now = int(time.time() * 1000)
+        with pymysql.connect(**database_kwargs()) as conn:
+            conn.begin()
+            with conn.cursor() as cursor:
+                cursor.execute("DELETE FROM inbox_items WHERE key_hash = %s", (key_hash,))
+                cursor.execute(
+                    "INSERT INTO revoked_keys (key_hash, revoked_at) VALUES (%s, %s) "
+                    "AS new ON DUPLICATE KEY UPDATE revoked_at = new.revoked_at",
+                    (key_hash, now),
+                )
+            conn.commit()
         return jsonify({"ok": True})
 
     def handle_get(key_hash: str) -> tuple:

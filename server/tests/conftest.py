@@ -4,6 +4,7 @@ from pathlib import Path
 
 import pymysql
 import pytest
+from pymysql.constants import CLIENT
 
 # 让 tests/ 能 import server/ 下的 app.py（无包结构，手动置路径）
 sys.path.insert(0, str(Path(__file__).resolve().parent.parent))
@@ -29,8 +30,11 @@ def _schema():
         cursor.execute(f"DROP DATABASE IF EXISTS {TEST_DB}")
         cursor.execute(f"CREATE DATABASE {TEST_DB} CHARACTER SET utf8mb4 COLLATE utf8mb4_bin")
     schema_sql = (Path(__file__).resolve().parent.parent / "schema.sql").read_text(encoding="utf-8")
-    with pymysql.connect(**{**_mysql_kwargs(), "database": TEST_DB}) as conn, conn.cursor() as cursor:
+    # schema.sql 含多条 DDL，需多语句执行；逐个消费结果集再关连接。
+    with pymysql.connect(**{**_mysql_kwargs(), "database": TEST_DB, "client_flag": CLIENT.MULTI_STATEMENTS}) as conn, conn.cursor() as cursor:
         cursor.execute(schema_sql)
+        while cursor.nextset():
+            pass
     yield
     with pymysql.connect(**_mysql_kwargs()) as conn, conn.cursor() as cursor:
         cursor.execute(f"DROP DATABASE IF EXISTS {TEST_DB}")
@@ -42,6 +46,7 @@ def db(_schema):
     conn = pymysql.connect(**{**_mysql_kwargs(), "database": TEST_DB})
     with conn.cursor() as cursor:
         cursor.execute("TRUNCATE TABLE inbox_items")
+        cursor.execute("TRUNCATE TABLE revoked_keys")
     yield conn
     conn.close()
 
