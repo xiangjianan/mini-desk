@@ -447,11 +447,69 @@ describe("App shell", () => {
       expect(wrapper.get(".mobile-inbox-heading").text()).toBe("手机速记");
       expect(wrapper.find('[data-testid="mobile-inbox-text"]').exists()).toBe(true);
       expect(wrapper.find('[data-testid="mobile-inbox-code-input"]').exists()).toBe(false);
+      // 已配对进入速记态：右下角「建议在浏览器打开」伙伴气泡整体隐藏。
+      expect(wrapper.find('[data-testid="companion-bubble"]').exists()).toBe(false);
     } finally {
       wrapper?.unmount();
       window.location.hash = "";
       vi.unstubAllGlobals();
       vi.useRealTimers();
+    }
+  });
+
+  it("keeps the mobile companion hidden while paired and restores it after changing code", async () => {
+    vi.useFakeTimers();
+    stubMatchMedia(true);
+    window.location.hash = "#inbox=AB2CDE4FGHJK";
+    let wrapper: ReturnType<typeof mountApp> | undefined;
+
+    try {
+      wrapper = mountApp();
+
+      await vi.advanceTimersByTimeAsync(10500);
+      await wrapper.vm.$nextTick();
+      expect(wrapper.find('[data-testid="companion-bubble"]').exists()).toBe(false);
+
+      // 点「更换配对码」：回到输码表单，伙伴气泡恢复、草稿保留。
+      await wrapper.get('[data-testid="mobile-inbox-change-code"]').trigger("click");
+      await wrapper.vm.$nextTick();
+      expect(wrapper.find('[data-testid="mobile-inbox-code-input"]').exists()).toBe(true);
+      expect(wrapper.find('[data-testid="companion-bubble"]').exists()).toBe(true);
+
+      await wrapper.get('[data-testid="mobile-inbox-code-input"]').setValue("AB2CDE4FGHJK");
+      await wrapper.get('[data-testid="mobile-inbox-code-confirm"]').trigger("click");
+      await wrapper.vm.$nextTick();
+      expect(wrapper.get('[data-testid="mobile-inbox-text"]').exists()).toBe(true);
+      expect(wrapper.find('[data-testid="companion-bubble"]').exists()).toBe(false);
+    } finally {
+      window.location.hash = "";
+      wrapper?.unmount();
+      vi.unstubAllGlobals();
+      vi.useRealTimers();
+    }
+  });
+
+  it("preserves the capture draft across a code change and re-pairing", async () => {
+    stubMatchMedia(true);
+    window.location.hash = "#inbox=AB2CDE4FGHJK";
+    let wrapper: ReturnType<typeof mountApp> | undefined;
+
+    try {
+      wrapper = mountApp();
+
+      await wrapper.get('[data-testid="mobile-inbox-text"]').setValue("换码前的想法");
+      await wrapper.get('[data-testid="mobile-inbox-change-code"]').trigger("click");
+      await wrapper.vm.$nextTick();
+      await wrapper.get('[data-testid="mobile-inbox-code-input"]').setValue("AB2CDE4FGHJK");
+      await wrapper.get('[data-testid="mobile-inbox-code-confirm"]').trigger("click");
+      await wrapper.vm.$nextTick();
+
+      const textarea = wrapper.get('[data-testid="mobile-inbox-text"]').element as HTMLTextAreaElement;
+      expect(textarea.value).toBe("换码前的想法");
+    } finally {
+      window.location.hash = "";
+      wrapper?.unmount();
+      vi.unstubAllGlobals();
     }
   });
 

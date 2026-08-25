@@ -290,6 +290,8 @@ const mobileMediaQuery = ref<MediaQueryList | null>(null);
 const mobileInboxCode = ref<string | null>(parseInboxFragment(window.location.hash) ?? loadRememberedInboxCode());
 const mobileInboxDraftCode = ref("");
 const mobileInboxCodeError = ref(false);
+// 手机速记草稿上提：换码卸载重挂（甚至跨会话内的多次换码）内容不丢。
+const mobileInboxDraftText = ref("");
 // 手机壳内任何来源（初始 URL 解析/hashchange/手动输码）的有效码都顺手记住，裸访问下次自动配对；
 // 桌面端不写（不产生手机记忆副作用）。immediate 覆盖初始 fragment 场景，重复写入幂等。
 watch(
@@ -340,7 +342,7 @@ const naiveLocale = computed(() => (state.language === "en" ? enUS : zhCN));
 const naiveDateLocale = computed(() => (state.language === "en" ? dateEnUS : dateZhCN));
 const uiText = computed(() => getUiText(state.language));
 const companionVisible = computed(() => companionFocused.value || bubbleVisible.value);
-const activeCompanionVisible = computed(() => isMobileBlocked.value || companionVisible.value);
+const activeCompanionVisible = computed(() => (isMobileBlocked.value && mobileInboxCode.value === null) || companionVisible.value);
 const activeCompanionMessage = computed(() => (isMobileBlocked.value ? uiText.value.app.mobileMessage : bubbleMessage.value));
 const activeCompanionPosition = computed(() => (isMobileBlocked.value ? mobileCompanionPosition : companionPosition.value));
 const displayedPreviewId = computed(() => activePreviewId.value ?? closingPreviewId.value);
@@ -3323,7 +3325,7 @@ function moveItem<T extends { id: string }>(items: T[], dragId: string, targetId
         :aria-labelledby="mobileInboxCode ? 'mobile-inbox-heading' : 'mobile-handoff-title'"
       >
         <template v-if="mobileInboxCode">
-          <MobileInboxCapture :code="mobileInboxCode" :language="state.language" />
+          <MobileInboxCapture v-model="mobileInboxDraftText" :code="mobileInboxCode" :language="state.language" @change-code="forgetMobileInboxCode" />
           <div class="mobile-inbox-paired">
             <p class="mobile-inbox-paired-code" data-testid="mobile-inbox-paired-code">
               {{ mobileInboxCodeLabel }}
