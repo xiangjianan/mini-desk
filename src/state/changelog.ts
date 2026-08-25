@@ -29,6 +29,20 @@ export interface ChangelogEntry {
 
 export const CHANGELOG: ChangelogEntry[] = [
   {
+    version: "1.0.142",
+    date: "2026-08-25",
+    notes: {
+      zh: [
+        "新增：手机速记记住配对码——主屏图标或微信重新打开免输码，自动恢复配对",
+        "新增：速记页脚显示当前配对码（4-4-4 分组），支持一键更换",
+      ],
+      en: [
+        "New: mobile quick capture remembers the pairing code — reopening from the home screen or WeChat auto-restores pairing, no re-entry needed",
+        "New: the capture footer shows the current pairing code (grouped 4-4-4) with a one-tap change button",
+      ],
+    },
+  },
+  {
     version: "1.0.141",
     date: "2026-08-25",
     notes: {
