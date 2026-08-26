@@ -657,6 +657,39 @@ describe("App shell", () => {
     }
   });
 
+  it("copies the pairing code on tap and shows a copy-success toast", async () => {
+    vi.useFakeTimers();
+    stubMatchMedia(true);
+    window.location.hash = "#inbox=AB2CDE4FGHJK";
+    const writeText = vi.fn().mockResolvedValue(undefined);
+    const previousClipboard = Object.getOwnPropertyDescriptor(globalThis.navigator, "clipboard");
+    Object.defineProperty(globalThis.navigator, "clipboard", { value: { writeText }, configurable: true });
+    let wrapper: ReturnType<typeof mountApp> | undefined;
+
+    try {
+      wrapper = mountApp();
+
+      await wrapper.get('[data-testid="mobile-inbox-paired-code"]').trigger("click");
+      await vi.advanceTimersByTimeAsync(0);
+      await wrapper.vm.$nextTick();
+
+      expect(writeText).toHaveBeenCalledWith("AB2C DE4F GHJK");
+      expect(wrapper.get('[data-testid="mobile-inbox-copy-toast"]').text()).toBe("复制成功");
+
+      // 提示短暂停留后自动消失。
+      await vi.advanceTimersByTimeAsync(1800);
+      await wrapper.vm.$nextTick();
+      expect(wrapper.find('[data-testid="mobile-inbox-copy-toast"]').exists()).toBe(false);
+    } finally {
+      wrapper?.unmount();
+      window.location.hash = "";
+      if (previousClipboard) Object.defineProperty(globalThis.navigator, "clipboard", previousClipboard);
+      else Reflect.deleteProperty(globalThis.navigator, "clipboard");
+      vi.unstubAllGlobals();
+      vi.useRealTimers();
+    }
+  });
+
   it("persists a code that arrives via hashchange mid-session", async () => {
     vi.useFakeTimers();
     stubMatchMedia(true);
@@ -7246,6 +7279,8 @@ describe("App shell", () => {
 
   it("keeps the rendered selected companion GIF asset when toggling light and dark mode", async () => {
     vi.useFakeTimers();
+    // 从明确的浅色起始态切换，验证「浅→深」GIF 资产切换不受默认 auto 模式影响。
+    localStorage.setItem(STORAGE_KEY, JSON.stringify({ theme: "light" }));
     const wrapper = mountApp();
 
     try {

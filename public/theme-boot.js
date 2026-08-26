@@ -5,13 +5,19 @@ try {
   var saved = localStorage.getItem("mini-desk-state-v1");
   if (saved) {
     var theme = JSON.parse(saved).theme;
-    if (theme === "dark" || theme === "light") {
-      document.documentElement.setAttribute("data-theme", theme);
+    // 显式明/暗直接应用；auto（跟随系统）由 prefers-color-scheme 解析，避免暗色系统下首帧闪白。
+    var resolved = theme === "dark" || theme === "light"
+      ? theme
+      : (typeof window.matchMedia === "function" && window.matchMedia("(prefers-color-scheme: dark)").matches
+          ? "dark"
+          : "light");
+    if (resolved === "dark" || resolved === "light") {
+      document.documentElement.setAttribute("data-theme", resolved);
       // 同步 standalone 标题栏底色，避免安装态首帧出现默认色闪烁；
       // 取值与 src/state/theme-color.ts 的映射保持一致（有测试守护）。
       var themeColorMeta = document.querySelector('meta[name="theme-color"]');
       if (themeColorMeta) {
-        themeColorMeta.setAttribute("content", theme === "dark" ? "#1c1c1e" : "#f5f5f7");
+        themeColorMeta.setAttribute("content", resolved === "dark" ? "#1c1c1e" : "#f5f5f7");
       }
     }
   }

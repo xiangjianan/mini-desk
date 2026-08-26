@@ -1,4 +1,4 @@
-export type ThemeMode = "light" | "dark";
+export type ThemeMode = "light" | "dark" | "auto";
 export type AppLanguage = "zh" | "en";
 
 /** Canonical workbench zones, in left-to-right grid order. */

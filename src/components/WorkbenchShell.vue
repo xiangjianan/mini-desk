@@ -1,6 +1,6 @@
 <script setup lang="ts">
 import { computed, nextTick, onMounted, onUnmounted, ref, watch } from "vue";
-import { SunnyOutline } from "@vicons/ionicons5";
+import { ContrastOutline, SunnyOutline } from "@vicons/ionicons5";
 import { NIcon } from "naive-ui";
 import { Moon as LucideMoon, PanelTopClose, PanelTopOpen } from "lucide-vue-next";
 import type { AppLanguage, ThemeMode, ZoneVisibility } from "../types";
@@ -675,10 +675,12 @@ onUnmounted(() => {
               type="button"
               class="icon-button workbench-theme-button"
               data-testid="workbench-theme"
-              :aria-label="theme === 'dark' ? '切换到浅色' : '切换到深色'"
+              :aria-label="theme === 'dark' ? '切换到浅色' : theme === 'auto' ? '切换为跟随系统' : '切换到深色'"
+              :title="theme === 'dark' ? '切换到浅色' : theme === 'auto' ? '切换为跟随系统' : '切换到深色'"
               @click="emit('theme')"
             >
               <NIcon v-if="theme === 'dark'" :component="SunnyOutline" />
+              <NIcon v-else-if="theme === 'auto'" :component="ContrastOutline" />
               <LucideMoon v-else :size="16" />
             </button>
             <slot name="actions" />

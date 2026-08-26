@@ -71,7 +71,7 @@ export function defaultState(): BoardState {
   return {
     sync: { revision: 0, updatedAt: 0, clientId: "" },
     language: DEFAULT_LANGUAGE,
-    theme: "light",
+    theme: "auto",
     companionGifTheme: DEFAULT_COMPANION_GIF_THEME,
     customCompanionGif: {},
     customCompanionGifStored: {},

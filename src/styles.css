@@ -4163,6 +4163,9 @@ body:has(.image-preview) .image-panel .n-scrollbar {
   overflow: hidden;
   background: var(--bg);
   color: var(--text);
+  /* 移动壳整体禁用长按选中，仅 input/textarea 例外（见下方 user-select: text）。 */
+  -webkit-user-select: none;
+  user-select: none;
 }
 
 .mobile-handoff-header {
@@ -4171,7 +4174,8 @@ body:has(.image-preview) .image-panel .n-scrollbar {
   justify-content: space-between;
   min-height: 47px;
   border-bottom: 1px solid var(--line-main);
-  background: var(--panel);
+  /* 与页面主体同底色：深色模式下顶栏（含系统状态栏色带）不再与正文背景出现断层。 */
+  background: var(--bg);
 }
 
 .mobile-handoff-brand {
@@ -7386,6 +7390,9 @@ html[data-theme="dark"] .quick-search .quick-search-toggle:focus-visible {
   font-size: 16px;
   line-height: 1.6;
   resize: vertical;
+  /* 唯一的可选中区域：输入内容支持长按选中。 */
+  -webkit-user-select: text;
+  user-select: text;
 }
 
 .mobile-inbox-textarea::placeholder {
@@ -7393,8 +7400,10 @@ html[data-theme="dark"] .quick-search .quick-search-toggle:focus-visible {
 }
 
 .mobile-inbox-textarea:focus-visible {
-  outline: 2px solid var(--accent-foreground);
-  outline-offset: -1px;
+  /* 与主页输入框聚焦一致：细蓝描边 + 柔和焦点环，深色下不再刺眼、浅色下不再深蓝偏色。 */
+  outline: 0;
+  border-color: var(--line-focus);
+  box-shadow: var(--focus-ring);
 }
 
 button.mobile-inbox-send {
@@ -7487,7 +7496,7 @@ button.mobile-inbox-revoked-change {
   cursor: pointer;
 }
 
-/* 速记页脚：当前配对码（人工比对）与更换入口 */
+/* 速记页脚：当前配对码（点击复制）与更换入口 */
 .mobile-inbox-paired {
   display: flex;
   flex-direction: column;
@@ -7496,11 +7505,29 @@ button.mobile-inbox-revoked-change {
   margin-top: 4px;
 }
 
-.mobile-inbox-paired-code {
+button.mobile-inbox-paired-code {
   margin: 0;
+  padding: 0;
+  border: none;
+  background: none;
+  font: inherit;
   color: var(--muted);
   font-size: var(--app-font-size);
   letter-spacing: 0.04em;
+  cursor: pointer;
+  -webkit-tap-highlight-color: transparent;
+}
+
+button.mobile-inbox-paired-code:hover,
+button.mobile-inbox-paired-code:focus-visible {
+  color: var(--text);
+  text-decoration: underline;
+}
+
+button.mobile-inbox-paired-code:focus-visible {
+  outline: 0;
+  border-radius: 4px;
+  box-shadow: var(--focus-ring);
 }
 
 button.mobile-inbox-paired-change {
@@ -7511,6 +7538,37 @@ button.mobile-inbox-paired-change {
   font-size: var(--app-font-size);
   text-decoration: underline;
   cursor: pointer;
+}
+
+/* 点击配对码后的「复制成功/失败」浮动提示（iOS 风格居中吐司） */
+.mobile-inbox-copy-toast {
+  position: fixed;
+  left: 50%;
+  bottom: 56px;
+  transform: translateX(-50%);
+  max-width: calc(100vw - 32px);
+  margin: 0;
+  padding: 8px 16px;
+  border-radius: 999px;
+  background: color-mix(in srgb, var(--text) 92%, transparent);
+  color: var(--bg);
+  font-size: var(--app-font-size);
+  font-weight: 600;
+  text-align: center;
+  box-shadow: var(--shadow-lift);
+  pointer-events: none;
+  z-index: 50;
+}
+
+.mobile-inbox-toast-enter-active,
+.mobile-inbox-toast-leave-active {
+  transition: opacity 200ms var(--motion-ease), transform 200ms var(--motion-ease);
+}
+
+.mobile-inbox-toast-enter-from,
+.mobile-inbox-toast-leave-to {
+  opacity: 0;
+  transform: translateX(-50%) translateY(6px);
 }
 
 /* 引导页底部的手动输码区 */
@@ -7547,6 +7605,9 @@ button.mobile-inbox-paired-change {
   font-size: 16px;
   letter-spacing: 0.08em;
   text-transform: uppercase;
+  /* 输码框内容同样支持长按选中/光标操作。 */
+  -webkit-user-select: text;
+  user-select: text;
 }
 
 .mobile-inbox-code-input[aria-invalid="true"] {
@@ -7554,8 +7615,9 @@ button.mobile-inbox-paired-change {
 }
 
 .mobile-inbox-code-input:focus-visible {
-  outline: 2px solid var(--line-focus);
-  outline-offset: -1px;
+  outline: 0;
+  border-color: var(--line-focus);
+  box-shadow: var(--focus-ring);
 }
 
 .mobile-inbox-code-error {

@@ -1,6 +1,6 @@
 <script setup lang="ts">
 import { computed, defineAsyncComponent, nextTick, onMounted, onUnmounted, reactive, ref, watch } from "vue";
-import { MoonOutline, SunnyOutline } from "@vicons/ionicons5";
+import { ContrastOutline, MoonOutline, SunnyOutline } from "@vicons/ionicons5";
 import { darkTheme, dateEnUS, dateZhCN, enUS, NButton, NConfigProvider, NGlobalStyle, NIcon, NInput, NModal, zhCN } from "naive-ui";
 import CompanionBubble from "./components/CompanionBubble.vue";
 import ImagePanel from "./components/ImagePanel.vue";
@@ -14,6 +14,7 @@ import WorkspaceSwitcher from "./components/WorkspaceSwitcher.vue";
 import miniDeskLogo from "../static/img/mini-desk-cat.png?url";
 import miniDeskDarkLogo from "../static/img/mini-desk-cat-dark.png?url";
 import { getCompanionGifSrc, getCompanionNotificationIconSrc } from "./state/companionGifThemes";
+import { nextThemeMode, resolveTheme, type ResolvedTheme } from "./state/theme";
 import {
   deleteImageDatabases,
   deleteStoredImage,
@@ -340,7 +341,18 @@ const GITHUB_REPO_LABEL = "xiangjianan / mini-desk";
 const ABOUT_MESSAGE_DURATION_MS = 10000;
 const activeGuideKey = ref<GuideKey | null>(null);
 
-const naiveTheme = computed(() => (state.theme === "dark" ? darkTheme : null));
+/** 系统明暗偏好：默认 false（浅色），监听 prefers-color-scheme 变化。 */
+const systemDark = ref(false);
+/** 解析后的实际渲染主题：auto 时跟随 systemDark。 */
+const effectiveTheme = computed<ResolvedTheme>(() => resolveTheme(state.theme, systemDark.value));
+const naiveTheme = computed(() => (effectiveTheme.value === "dark" ? darkTheme : null));
+/** 主题按钮图标/文案随模式变化：浅→深、深→自动、自动→浅。 */
+const themeSwitchIcon = computed(() => (state.theme === "dark" ? SunnyOutline : state.theme === "auto" ? ContrastOutline : MoonOutline));
+const themeSwitchLabel = computed(() => {
+  if (state.theme === "dark") return uiText.value.app.themeToLight;
+  if (state.theme === "auto") return uiText.value.app.themeToAuto;
+  return uiText.value.app.themeToDark;
+});
 const naiveLocale = computed(() => (state.language === "en" ? enUS : zhCN));
 const naiveDateLocale = computed(() => (state.language === "en" ? dateEnUS : dateZhCN));
 const uiText = computed(() => getUiText(state.language));
@@ -473,6 +485,29 @@ const mobileInboxCodeLabel = computed(() => {
   return code === null ? "" : uiText.value.app.mobileInboxPairedAs.replace("{code}", () => formatInboxCode(code));
 });
 
+/** 速记页复制反馈：点击配对码 → 复制分组码文本 → 短暂弹「复制成功/失败」提示。 */
+const mobileCopyToast = ref("");
+let mobileCopyToastTimer: number | undefined;
+
+function clearMobileCopyToast(): void {
+  if (mobileCopyToastTimer !== undefined) {
+    window.clearTimeout(mobileCopyToastTimer);
+    mobileCopyToastTimer = undefined;
+  }
+}
+
+async function copyMobileInboxCode(): Promise<void> {
+  const code = mobileInboxCode.value;
+  if (!code) return;
+  const copied = await copyText(formatInboxCode(code));
+  clearMobileCopyToast();
+  mobileCopyToast.value = copied ? uiText.value.app.mobileInboxCodeCopied : uiText.value.app.mobileInboxCodeCopyFailed;
+  mobileCopyToastTimer = window.setTimeout(() => {
+    mobileCopyToast.value = "";
+    mobileCopyToastTimer = undefined;
+  }, 1800);
+}
+
 function setupMobileBreakpoint(): void {
   if (!window.matchMedia) return;
   const query = window.matchMedia(MOBILE_BREAKPOINT_QUERY);
@@ -496,11 +531,45 @@ function teardownMobileBreakpoint(): void {
   mobileMediaQuery.value = null;
 }
 
+/** 系统明暗偏好监听：auto 模式下系统切主题即时生效。 */
+let systemThemeQuery: MediaQueryList | undefined;
+let systemThemeListener: ((event: MediaQueryListEvent) => void) | undefined;
+
+function setupSystemThemeListener(): void {
+  if (!window.matchMedia) return;
+  const query = window.matchMedia("(prefers-color-scheme: dark)");
+  systemThemeQuery = query;
+  systemDark.value = query.matches;
+  systemThemeListener = (event) => {
+    systemDark.value = event.matches;
+  };
+  if (query.addEventListener) {
+    query.addEventListener("change", systemThemeListener);
+    return;
+  }
+  query.addListener(systemThemeListener);
+}
+
+function teardownSystemThemeListener(): void {
+  const query = systemThemeQuery;
+  const listener = systemThemeListener;
+  if (!query || !listener) return;
+  if (query.removeEventListener) {
+    query.removeEventListener("change", listener);
+  } else {
+    query.removeListener(listener);
+  }
+  systemThemeQuery = undefined;
+  systemThemeListener = undefined;
+}
+
 onMounted(async () => {
   appMounted = true;
-  applyTheme();
   document.title = boardTitle.value;
   setupMobileBreakpoint();
+  // 先同步一次系统明暗偏好，再 applyTheme：auto 模式下首帧即为正确的明/暗，避免先浅后深。
+  setupSystemThemeListener();
+  applyTheme();
   try {
     state.customCompanionGif = await hydrateCustomCompanionGif(state.customCompanionGif, state.customCompanionGifStored);
     state.customCompanionGifStored = {
@@ -569,7 +638,9 @@ onUnmounted(() => {
   window.removeEventListener("hashchange", handleHashChange);
   stopInboxPolling();
   teardownMobileBreakpoint();
+  teardownSystemThemeListener();
   clearTimers();
+  clearMobileCopyToast();
 });
 
 // Closing the tab mid-debounce would drop the last second of todo/line edits;
@@ -587,6 +658,11 @@ watch(
     persistNow();
   },
 );
+
+// auto 模式下系统明暗变化即时生效（仅重着色，不改持久化偏好）。
+watch(systemDark, () => {
+  if (state.theme === "auto") applyTheme();
+});
 
 watch(boardTitle, (value) => {
   if (!notificationTitleFlashing()) document.title = value;
@@ -2416,12 +2492,8 @@ function moveTodo(dragged: DraggedTodo, destinationPeriod: TodoPeriod, targetId?
   persistNow();
 }
 
-function toggleTheme(): void {
-  state.theme = state.theme === "dark" ? "light" : "dark";
-}
-
 function handleThemeClick(): void {
-  toggleTheme();
+  state.theme = nextThemeMode(state.theme);
   hideCompanion();
 }
 
@@ -2458,9 +2530,10 @@ async function updateCustomCompanionGif(files: { light?: File; dark?: File }, an
 }
 
 function applyTheme(): void {
-  document.documentElement.dataset.theme = state.theme;
+  // auto 模式由 effectiveTheme 解析系统偏好后落到 data-theme 与标题栏色。
+  document.documentElement.dataset.theme = effectiveTheme.value;
   // standalone 标题栏颜色随应用主题联动（浅色 #f5f5f7 / 深色 #1c1c1e）。
-  applyThemeColor(state.theme);
+  applyThemeColor(effectiveTheme.value);
 }
 
 function clearData(anchor?: HTMLElement): void {
@@ -3205,7 +3278,7 @@ function moveItem<T extends { id: string }>(items: T[], dragId: string, targetId
         <WorkspaceSwitcher
           :workspaces="state.workspaces"
           :active-workspace-id="state.activeWorkspaceId"
-          :theme="state.theme"
+          :theme="effectiveTheme"
           :language="state.language"
           @switch="switchWorkspace"
           @create="openCreateWorkspace"
@@ -3380,7 +3453,7 @@ function moveItem<T extends { id: string }>(items: T[], dragId: string, targetId
         <div class="mobile-handoff-brand">
           <img
             class="mobile-handoff-logo"
-            :src="state.theme === 'dark' ? miniDeskDarkLogo : miniDeskLogo"
+            :src="effectiveTheme === 'dark' ? miniDeskDarkLogo : miniDeskLogo"
             alt=""
             aria-hidden="true"
             width="20"
@@ -3388,8 +3461,8 @@ function moveItem<T extends { id: string }>(items: T[], dragId: string, targetId
           />
           <h1 class="mobile-handoff-title">{{ uiText.app.mobileTitle }}</h1>
         </div>
-        <NButton quaternary size="small" class="mobile-handoff-theme" :aria-label="uiText.app.theme" @click="handleThemeClick">
-          <NIcon :component="state.theme === 'dark' ? SunnyOutline : MoonOutline" />
+        <NButton quaternary size="small" class="mobile-handoff-theme" :aria-label="uiText.app.theme" :title="themeSwitchLabel" @click="handleThemeClick">
+          <NIcon :component="themeSwitchIcon" />
         </NButton>
       </header>
 
@@ -3400,9 +3473,15 @@ function moveItem<T extends { id: string }>(items: T[], dragId: string, targetId
         <template v-if="mobileInboxCode">
           <MobileInboxCapture v-model="mobileInboxDraftText" :code="mobileInboxCode" :language="state.language" @change-code="forgetMobileInboxCode" />
           <div class="mobile-inbox-paired">
-            <p class="mobile-inbox-paired-code" data-testid="mobile-inbox-paired-code">
+            <button
+              type="button"
+              class="mobile-inbox-paired-code"
+              data-testid="mobile-inbox-paired-code"
+              :title="uiText.app.mobileInboxCodeCopyHint"
+              @click="copyMobileInboxCode"
+            >
               {{ mobileInboxCodeLabel }}
-            </p>
+            </button>
             <button
               type="button"
               class="mobile-inbox-paired-change"
@@ -3457,6 +3536,12 @@ function moveItem<T extends { id: string }>(items: T[], dragId: string, targetId
           </div>
         </div>
       </section>
+
+      <Transition name="mobile-inbox-toast">
+        <p v-if="mobileCopyToast" class="mobile-inbox-copy-toast" role="status" aria-live="polite" data-testid="mobile-inbox-copy-toast">
+          {{ mobileCopyToast }}
+        </p>
+      </Transition>
     </main>
 
     <WorkspaceInboxDialog
@@ -3502,7 +3587,7 @@ function moveItem<T extends { id: string }>(items: T[], dragId: string, targetId
       :clear-signal="bubbleClearSignal"
       :persistent="isMobileBlocked"
       :position="activeCompanionPosition"
-      :theme="state.theme"
+      :theme="effectiveTheme"
       :language="state.language"
       :gif-theme="state.companionGifTheme"
       :custom-gif-light-src="state.customCompanionGif.light"

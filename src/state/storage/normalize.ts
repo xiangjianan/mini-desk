@@ -5,6 +5,7 @@ import { getQuickTagColor, normalizeQuickTagColor } from "../quickButtons";
 import { isQuickAppScheme } from "../quickApps";
 import { INBOX_CODE_PATTERN } from "../../sync/pairing";
 import { DEFAULT_LANGUAGE, DEFAULT_SPACE_TITLES, DEFAULT_TITLES_BY_LANGUAGE, LEGACY_DEFAULT_TITLES_BY_LANGUAGE, OLDER_LEGACY_DEFAULT_TITLES_BY_LANGUAGE, getLegacyDefaultTodoLists, getUiText, normalizeLanguage } from "../i18n";
+import { normalizeThemeMode } from "../theme";
 import type {
   AppLanguage,
   BoardState,
@@ -18,7 +19,6 @@ import type {
   QuickButtonType,
   QuickTag,
   StoredImage,
-  ThemeMode,
   TodoCompletedVisibility,
   TodoItem,
   TodoListConfig,
@@ -46,7 +46,7 @@ export function normalizeImportedState(payload: unknown): BoardState {
   const shared = {
     sync: normalizeSyncState(typed.sync),
     language,
-    theme: (typed.theme === "dark" ? "dark" : "light") as ThemeMode,
+    theme: normalizeThemeMode(typed.theme),
     companionGifTheme: normalizeCompanionGifTheme(typed.companionGifTheme),
     customCompanionGif: normalizeCustomCompanionGif(typed.customCompanionGif),
     customCompanionGifStored: normalizeCustomCompanionGifStored(typed.customCompanionGifStored, typed.customCompanionGif),

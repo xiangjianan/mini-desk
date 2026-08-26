@@ -37,7 +37,7 @@ describe("theme-color meta (src/state/theme-color.ts)", () => {
   it("keeps the standalone title bar in sync from applyTheme in App.vue", () => {
     const app = readFileSync("src/App.vue", "utf8");
 
-    expect(app).toContain("applyThemeColor(state.theme)");
+    expect(app).toContain("applyThemeColor(effectiveTheme.value)");
   });
 
   it("keeps the static fallback and boot script aligned with the runtime mapping", () => {
