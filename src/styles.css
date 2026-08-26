@@ -4175,9 +4175,11 @@ body:has(.image-preview) .image-panel .n-scrollbar {
   color: var(--text);
 }
 
-/* 键盘弹出（iOS 不压缩布局视口）：内层滚动容器补出滚动余量，使聚焦输入框可滚到键盘上方。 */
+/* 键盘弹出（iOS 不压缩布局视口）：内层滚动容器补出滚动余量并改顶端对齐——
+   居中会把表单整体顶高（发送按钮悬空），最终位置交给 JS 精确滚动（表单底边贴键盘上沿）。 */
 .mobile-handoff.is-keyboard .mobile-handoff-body {
   padding-bottom: 50vh;
+  align-content: safe start;
 }
 
 .mobile-handoff-header {

@@ -295,6 +295,7 @@ const mobileInboxCodeError = ref<string | null>(null);
 const mobileInboxCodeChecking = ref(false);
 // 键盘避让兜底（iOS）：根布局不可滚 + 外壳 overflow hidden，浏览器首次弹键盘时常不滚动聚焦输入框。
 const MOBILE_KEYBOARD_DETECT_PX = 120;
+const MOBILE_KEYBOARD_GAP_PX = 12;
 const mobileKeyboardOpen = ref(false);
 const mobileHandoffRef = ref<HTMLElement | null>(null);
 // 手机速记草稿上提：换码卸载重挂（甚至跨会话内的多次换码）内容不丢。
@@ -471,6 +472,18 @@ function confirmForgetMobileInboxCode(): void {
   forgetMobileInboxCode();
 }
 
+/** 把聚焦输入框所在表单的底边（发送/确认按钮）滚到键盘上沿上方 GAP 处：按当前几何精确计算，
+ *  每次基于最新位置收敛，键盘动画期间重复触发也不会累计过头。 */
+function scrollFocusedAboveKeyboard(target: HTMLElement): void {
+  const viewport = window.visualViewport;
+  const scroller = target.closest<HTMLElement>(".mobile-handoff-body");
+  if (!viewport || !scroller) return;
+  const anchor = target.closest<HTMLElement>("form, .mobile-inbox-code-entry") ?? target;
+  const anchorBottom = anchor.getBoundingClientRect().bottom;
+  const keyboardTop = viewport.height + viewport.offsetTop;
+  scroller.scrollTop += anchorBottom + MOBILE_KEYBOARD_GAP_PX - keyboardTop;
+}
+
 /** iOS 键盘不压缩布局视口（100dvh 不变），避让只能靠滚动；首次弹键盘浏览器常不滚（已知怪癖）。
  *  视觉视口缩水超阈值 → 手机壳进入 is-keyboard 态（内层容器补出滚动余量）并滚动聚焦输入框。 */
 function syncMobileKeyboardState(): void {
@@ -480,16 +493,16 @@ function syncMobileKeyboardState(): void {
   mobileKeyboardOpen.value = window.innerHeight - viewport.height > MOBILE_KEYBOARD_DETECT_PX;
   const active = document.activeElement;
   if (mobileKeyboardOpen.value && (active instanceof HTMLInputElement || active instanceof HTMLTextAreaElement)) {
-    active.scrollIntoView({ block: "nearest" });
+    scrollFocusedAboveKeyboard(active);
   }
 }
 
-/** 聚焦兜底：双 rAF 等视觉视口稳定后补一次滚动，覆盖首次弹键盘避让失效的场景。 */
+/** 聚焦兜底：双 rAF 等视觉视口稳定后补一次精确滚动，覆盖首次弹键盘避让失效的场景。 */
 function handleMobileFocusIn(event: FocusEvent): void {
   const target = event.target;
   if (!(target instanceof HTMLInputElement) && !(target instanceof HTMLTextAreaElement)) return;
   window.requestAnimationFrame(() => {
-    window.requestAnimationFrame(() => target.scrollIntoView({ block: "nearest" }));
+    window.requestAnimationFrame(() => scrollFocusedAboveKeyboard(target));
   });
 }
 
