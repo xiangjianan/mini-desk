@@ -29,6 +29,20 @@ export interface ChangelogEntry {
 
 export const CHANGELOG: ChangelogEntry[] = [
   {
+    version: "1.0.146",
+    date: "2026-08-26",
+    notes: {
+      zh: [
+        "新增：配对码注册制——不存在的配对码无法配对，手机输码时联网校验并明确提示",
+        "优化：配对码由桌面端自动注册到中继，清除/轮换后立即失效（含历史码自动迁移）",
+      ],
+      en: [
+        "New: pairing-code registration — non-existent codes can no longer be paired; phones verify online when typing a code with a clear message",
+        "Improved: codes are registered with the relay automatically by the desktop, and clearing/rotating takes effect immediately (existing codes migrate automatically)",
+      ],
+    },
+  },
+  {
     version: "1.0.145",
     date: "2026-08-26",
     notes: {
