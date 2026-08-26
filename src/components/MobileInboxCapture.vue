@@ -1,5 +1,7 @@
 <script setup lang="ts">
-import { computed, onBeforeUnmount, ref } from "vue";
+import { computed, nextTick, onBeforeUnmount, onMounted, ref } from "vue";
+import { CreateOutline, NotificationsOutline } from "@vicons/ionicons5";
+import { NIcon } from "naive-ui";
 import { getUiText } from "../state/i18n";
 import { createId } from "../state/storage";
 import { INBOX_PLAINTEXT_MAX_CHARS } from "../sync/config";
@@ -20,6 +22,7 @@ type CaptureKind = InboxPlainItem["kind"];
 const app = computed(() => getUiText(props.language).app);
 // 草稿上提到父级（App.vue）：换码导致组件卸载重挂后内容不丢。
 const draft = defineModel<string>({ default: "" });
+const textareaRef = ref<HTMLTextAreaElement | null>(null);
 const status = ref<CaptureStatus>("idle");
 /** sending/sent 态修饰哪个按钮：发送中/成功反馈只落在实际使用的那个按钮上。 */
 const activeKind = ref<CaptureKind | null>(null);
@@ -29,12 +32,27 @@ const codeUnusable = ref(false);
 const sentCount = ref(0);
 const sentText = computed(() => app.value.mobileInboxSent.replace("{count}", () => String(sentCount.value)));
 
+/** 输入中实时预览「按行拆分」的条数：发送到提醒/便签都会把每一行当作一条记录逐条发送。
+ *  只有 ≥2 行时才提示（单行即单条，无需解释），帮助用户建立多行=多条的心智模型。 */
+const splitCount = computed(() =>
+  draft.value
+    .split(/\r?\n/)
+    .map((line) => line.trim())
+    .filter((line) => line.length > 0).length,
+);
+const showSplitHint = computed(() => splitCount.value >= 2);
+const splitHintText = computed(() => app.value.mobileInboxSplitHint.replace("{count}", () => String(splitCount.value)));
+
 const SENT_RESET_MS = 2500;
 let sentResetTimer: number | undefined;
 
 /** 触觉反馈：不支持的机型（iOS Safari）静默忽略。 */
 function vibrate(pattern: number | number[]): void {
   navigator.vibrate?.(pattern);
+}
+
+function focusInput(): void {
+  void nextTick(() => textareaRef.value?.focus());
 }
 
 function clearSentResetTimer(): void {
@@ -117,6 +135,8 @@ async function send(kind: CaptureKind): Promise<void> {
   status.value = "sent";
   draft.value = "";
   vibrate(20);
+  // 发送成功后把焦点还给输入框，方便继续下一条速记（键盘不收起）。
+  focusInput();
   sentResetTimer = window.setTimeout(() => {
     // 仍在 sent 态才复位：期间用户再次发送会重置定时器。
     if (status.value === "sent") {
@@ -136,6 +156,7 @@ function buttonLabel(kind: CaptureKind): string {
   return kind === "todo" ? app.value.mobileInboxSendTodo : app.value.mobileInboxSendNote;
 }
 
+onMounted(focusInput);
 onBeforeUnmount(clearSentResetTimer);
 </script>
 
@@ -145,6 +166,7 @@ onBeforeUnmount(clearSentResetTimer);
 
     <form class="mobile-inbox-form" @submit.prevent>
       <textarea
+        ref="textareaRef"
         v-model="draft"
         class="mobile-inbox-textarea"
         data-testid="mobile-inbox-text"
@@ -152,6 +174,10 @@ onBeforeUnmount(clearSentResetTimer);
         :aria-label="app.mobileInboxPlaceholder"
         rows="5"
       ></textarea>
+      <!-- 多行输入会被按行拆成多条记录：≥2 行时给出实时提示，避免用户误以为整段只发一条。 -->
+      <p v-if="showSplitHint" class="mobile-inbox-hint" data-testid="mobile-inbox-split-hint" aria-live="polite">
+        {{ splitHintText }}
+      </p>
       <!-- 目标类型由按钮直接携带：点「发送到提醒」或「发送到便签」；textarea 内 Enter 是换行，两个按钮均为 type="button"，@submit.prevent 仅兜底防止未来误触发整页刷新。 -->
       <div class="mobile-inbox-actions">
         <button
@@ -162,7 +188,7 @@ onBeforeUnmount(clearSentResetTimer);
           :disabled="status === 'sending'"
           @click="send('todo')"
         >
-          {{ buttonLabel("todo") }}
+          <NIcon :component="NotificationsOutline" aria-hidden="true" /><span>{{ buttonLabel("todo") }}</span>
         </button>
         <button
           type="button"
@@ -172,7 +198,7 @@ onBeforeUnmount(clearSentResetTimer);
           :disabled="status === 'sending'"
           @click="send('note')"
         >
-          {{ buttonLabel("note") }}
+          <NIcon :component="CreateOutline" aria-hidden="true" /><span>{{ buttonLabel("note") }}</span>
         </button>
       </div>
     </form>

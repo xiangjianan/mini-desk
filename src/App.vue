@@ -1,6 +1,6 @@
 <script setup lang="ts">
 import { computed, defineAsyncComponent, nextTick, onMounted, onUnmounted, reactive, ref, watch } from "vue";
-import { MoonOutline, SunnyOutline } from "@vicons/ionicons5";
+import { CopyOutline, MoonOutline, SunnyOutline } from "@vicons/ionicons5";
 import { darkTheme, dateEnUS, dateZhCN, enUS, NButton, NConfigProvider, NGlobalStyle, NIcon, NInput, NModal, zhCN } from "naive-ui";
 import CompanionBubble from "./components/CompanionBubble.vue";
 import ImagePanel from "./components/ImagePanel.vue";
@@ -3484,8 +3484,9 @@ function moveItem<T extends { id: string }>(items: T[], dragId: string, targetId
               :title="uiText.app.mobileInboxCodeCopyHint"
               @click="copyMobileInboxCode"
             >
-              {{ mobileInboxCodeLabel }}
+              {{ mobileInboxCodeLabel }}<NIcon :component="CopyOutline" class="mobile-inbox-copy-glyph" aria-hidden="true" />
             </button>
+            <div class="mobile-inbox-paired-divider" role="separator" aria-hidden="true"></div>
             <button
               type="button"
               class="mobile-inbox-paired-change"

@@ -7124,7 +7124,8 @@ body,
 /* Mobile handoff: ambient backdrop and a floating glass card. */
 .mobile-handoff {
   background:
-    radial-gradient(84% 58% at 50% -12%, color-mix(in srgb, var(--primary) 13%, transparent) 0%, transparent 72%),
+    radial-gradient(92% 64% at 50% -14%, color-mix(in srgb, var(--primary) 17%, transparent) 0%, transparent 70%),
+    radial-gradient(72% 42% at 84% 110%, color-mix(in srgb, var(--primary) 8%, transparent) 0%, transparent 66%),
     var(--bg);
 }
 
@@ -7391,12 +7392,24 @@ html[data-theme="dark"] .quick-search .quick-search-toggle:focus-visible {
 .mobile-inbox-wrap {
   width: min(100%, 360px);
   display: grid;
-  gap: 14px;
-  padding: 18px 16px;
-  border: 1px solid var(--line-main);
+  gap: 16px;
+  padding: 20px 18px;
+  border: 1px solid color-mix(in srgb, var(--border) 60%, transparent);
   border-radius: calc(var(--radius) + 6px);
-  background: var(--panel);
+  background: var(--material-elevated);
+  box-shadow: var(--shadow-soft);
+  -webkit-backdrop-filter: blur(24px) saturate(1.6);
+  backdrop-filter: blur(24px) saturate(1.6);
   color: var(--text);
+}
+
+/* 卡片标题的下方辅助行：当输入包含多行时实时提示「按行拆分」的条数，
+   让用户在上滑发送前就明白每一行都会成为一条独立记录。 */
+.mobile-inbox-hint {
+  margin: -4px 0 0;
+  color: var(--muted);
+  font-size: calc(var(--app-font-size) - 1px);
+  line-height: 1.5;
 }
 
 .mobile-inbox-heading {
@@ -7445,7 +7458,12 @@ html[data-theme="dark"] .quick-search .quick-search-toggle:focus-visible {
 }
 
 button.mobile-inbox-send {
-  min-height: 42px;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 6px;
+  min-height: 44px;
+  padding: 0 12px;
   border: 1px solid transparent;
   border-radius: var(--radius-control);
   background: var(--accent);
@@ -7453,6 +7471,24 @@ button.mobile-inbox-send {
   font-size: var(--app-font-size);
   font-weight: 600;
   cursor: pointer;
+  -webkit-tap-highlight-color: transparent;
+  transition: background var(--motion-fast) var(--motion-ease), transform var(--motion-fast) var(--motion-ease);
+}
+
+/* 图标字量与按钮文字同色、同基线；加粗按钮内的铃铛/便签图标略小一号以免抢戏。 */
+button.mobile-inbox-send .n-icon {
+  font-size: calc(var(--app-font-size) + 2px);
+  flex: none;
+}
+
+/* 轻量按压反馈：触摸即缩小一点点，松手回弹；触屏设备最自然的一档。 */
+button.mobile-inbox-send:active {
+  transform: scale(0.97);
+}
+
+button.mobile-inbox-send:focus-visible {
+  outline: 0;
+  box-shadow: var(--focus-ring);
 }
 
 button.mobile-inbox-send:disabled {
@@ -7539,42 +7575,81 @@ button.mobile-inbox-revoked-change {
   display: flex;
   flex-direction: column;
   align-items: center;
-  gap: 6px;
-  margin-top: 4px;
+  gap: 8px;
+  margin-top: 2px;
 }
 
+/* 配对码胶囊：可点可复制，用浅底描边把它从「纯文本」提升为「可交互对象」，
+   旁边放一个复制图标进一步暗示点按即可复制。 */
 button.mobile-inbox-paired-code {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
   margin: 0;
-  padding: 0;
-  border: none;
-  background: none;
+  padding: 8px 14px;
+  border: 1px solid var(--line-subtle);
+  border-radius: 999px;
+  background: color-mix(in srgb, var(--panel) 64%, transparent);
   font: inherit;
-  color: var(--muted);
+  color: var(--text);
   font-size: var(--app-font-size);
   letter-spacing: 0.04em;
+  font-variant-numeric: tabular-nums;
   cursor: pointer;
   -webkit-tap-highlight-color: transparent;
+  transition: background var(--motion-fast) var(--motion-ease), border-color var(--motion-fast) var(--motion-ease), transform var(--motion-fast) var(--motion-ease);
 }
 
 button.mobile-inbox-paired-code:hover,
 button.mobile-inbox-paired-code:focus-visible {
-  color: var(--text);
+  border-color: var(--line-main);
+  background: color-mix(in srgb, var(--panel) 82%, transparent);
+}
+
+button.mobile-inbox-paired-code:active {
+  transform: scale(0.98);
 }
 
 button.mobile-inbox-paired-code:focus-visible {
   outline: 0;
-  border-radius: 4px;
   box-shadow: var(--focus-ring);
 }
 
+/* 胶囊里的复制图标：弱化为 muted，聚焦/悬停时随文字一并提亮。 */
+button.mobile-inbox-paired-code .mobile-inbox-copy-glyph {
+  color: var(--muted);
+  font-size: calc(var(--app-font-size) + 1px);
+  flex: none;
+}
+
+/* 代码胶囊与「更换配对码」之间的一条细分隔线，划清「可复制状态」与「可执行动作」。 */
+.mobile-inbox-paired-divider {
+  width: 44px;
+  height: 1px;
+  background: var(--line-subtle);
+}
+
 button.mobile-inbox-paired-change {
-  padding: 0;
+  padding: 2px 4px;
   border: none;
   background: none;
   color: var(--muted);
-  font-size: var(--app-font-size);
+  font-size: calc(var(--app-font-size) - 1px);
   text-decoration: underline;
+  text-underline-offset: 3px;
   cursor: pointer;
+  -webkit-tap-highlight-color: transparent;
+}
+
+button.mobile-inbox-paired-change:hover,
+button.mobile-inbox-paired-change:focus-visible {
+  color: var(--text);
+}
+
+button.mobile-inbox-paired-change:focus-visible {
+  outline: 0;
+  border-radius: 6px;
+  box-shadow: var(--focus-ring);
 }
 
 /* 点击配对码后的「复制成功/失败」浮动提示（iOS 风格居中吐司） */

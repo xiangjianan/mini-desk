@@ -311,4 +311,29 @@ describe("MobileInboxCapture", () => {
     expect(wrapper.get('[data-testid="mobile-inbox-error"]').classes()).toContain("is-shake");
     expect(vibrate).toHaveBeenCalledWith([40, 60, 40]);
   });
+
+  it("多行输入实时提示按行拆分的条数，单行/空时不提示", async () => {
+    const wrapper = mountCapture();
+    expect(wrapper.find('[data-testid="mobile-inbox-split-hint"]').exists()).toBe(false);
+
+    // 单行：只有一条，无需提示。
+    await wrapper.find('[data-testid="mobile-inbox-text"]').setValue("单独一条");
+    expect(wrapper.find('[data-testid="mobile-inbox-split-hint"]').exists()).toBe(false);
+
+    // 多行（含空行与首尾空白）：按 trim 后的非空行计数，帮助用户理解「每行=一条」。
+    await wrapper.find('[data-testid="mobile-inbox-text"]').setValue("买牛奶\n\n  买鸡蛋  \n取快递");
+    const hint = wrapper.get('[data-testid="mobile-inbox-split-hint"]');
+    expect(hint.text()).toBe("发送时将按行拆成 3 条");
+    expect(hint.attributes("aria-live")).toBe("polite");
+
+    // 清空后提示隐藏。
+    await wrapper.find('[data-testid="mobile-inbox-text"]').setValue("");
+    expect(wrapper.find('[data-testid="mobile-inbox-split-hint"]').exists()).toBe(false);
+  });
+
+  it("拆分提示文案中英齐全", async () => {
+    const en = mount(MobileInboxCapture, { props: { code: CODE, language: "en" } });
+    await en.find('[data-testid="mobile-inbox-text"]').setValue("a\nb\nc");
+    expect(en.get('[data-testid="mobile-inbox-split-hint"]').text()).toBe("Will be split by line into 3 items");
+  });
 });

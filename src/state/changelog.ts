@@ -36,11 +36,13 @@ export const CHANGELOG: ChangelogEntry[] = [
         "新增：配对弹窗配对码旁一键复制，成功后自动浮现「已复制」提示",
         "调整：主题简化为明/暗两态，手动切换后不再跟随系统（跟随系统仅作初始默认）",
         "优化：工作区切换器的导出/配对/改名/删除收进「⋯」菜单，列表更清爽",
+        "优化：手机速记页速记卡片更精致——输入自动聚焦、实时提示按行拆分条数，双按钮加图标更易分辨",
       ],
       en: [
         "New: one-tap copy for the pairing code, with an auto \"Copied\" hint",
         "Changed: theme is now a simple light/dark toggle — a manual choice stops following the system (system-follow stays the initial default)",
         "Improved: workspace export/pair/rename/delete actions moved into a \"⋯\" menu for a cleaner list",
+        "Improved: a more polished mobile quick-capture card — auto-focus input, live split-by-line count, and icons on the two send buttons",
       ],
     },
   },
