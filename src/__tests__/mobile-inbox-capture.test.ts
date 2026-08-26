@@ -22,9 +22,9 @@ function mountCapture() {
   return mount(MobileInboxCapture, { props: { code: CODE, language: "zh" } });
 }
 
-async function fillAndSend(wrapper: ReturnType<typeof mountCapture>, text: string) {
+async function fillAndSend(wrapper: ReturnType<typeof mountCapture>, text: string, kind: "todo" | "note" = "todo") {
   await wrapper.find('[data-testid="mobile-inbox-text"]').setValue(text);
-  await wrapper.find('[data-testid="mobile-inbox-send"]').trigger("click");
+  await wrapper.find(`[data-testid="mobile-inbox-send-${kind}"]`).trigger("click");
 }
 
 function draftValue(wrapper: ReturnType<typeof mountCapture>): string {
@@ -45,27 +45,15 @@ function lastPayload(): string {
 }
 
 describe("MobileInboxCapture", () => {
-  it("渲染标题、待办/便签切换与输入框", () => {
+  it("渲染标题、双发送按钮与输入框（无类型切换）", () => {
     const wrapper = mountCapture();
 
     expect(wrapper.get(".mobile-inbox-heading").text()).toBe("手机速记");
-    expect(wrapper.get(".mobile-inbox-toggle").attributes("role")).toBe("group");
-    expect(wrapper.get('[data-testid="mobile-inbox-kind-todo"]').text()).toBe("提醒事项");
-    expect(wrapper.get('[data-testid="mobile-inbox-kind-todo"]').attributes("aria-pressed")).toBe("true");
-    expect(wrapper.get('[data-testid="mobile-inbox-kind-note"]').text()).toBe("便签");
-    expect(wrapper.get('[data-testid="mobile-inbox-kind-note"]').attributes("aria-pressed")).toBe("false");
-    expect(wrapper.get('[data-testid="mobile-inbox-text"]').attributes("placeholder")).toBe("每行一条提醒");
-    expect(wrapper.get('[data-testid="mobile-inbox-send"]').text()).toBe("发送");
-  });
-
-  it("切换按钮以 aria-pressed 表达选中态（toggle button 语义）", async () => {
-    const wrapper = mountCapture();
-
-    await wrapper.get('[data-testid="mobile-inbox-kind-note"]').trigger("click");
-
-    expect(wrapper.get('[data-testid="mobile-inbox-kind-todo"]').attributes("aria-pressed")).toBe("false");
-    expect(wrapper.get('[data-testid="mobile-inbox-kind-note"]').attributes("aria-pressed")).toBe("true");
-    expect(wrapper.get('[data-testid="mobile-inbox-kind-note"]').classes()).toContain("is-active");
+    expect(wrapper.find(".mobile-inbox-toggle").exists()).toBe(false);
+    expect(wrapper.find(".mobile-inbox-tab").exists()).toBe(false);
+    expect(wrapper.get('[data-testid="mobile-inbox-send-todo"]').text()).toBe("发送到提醒");
+    expect(wrapper.get('[data-testid="mobile-inbox-send-note"]').text()).toBe("发送到便签");
+    expect(wrapper.get('[data-testid="mobile-inbox-text"]').attributes("placeholder")).toBe("想到什么就记下来，可多行…");
   });
 
   it("提交成功：keyHash 为 64 位 hex、payload 可解密、显示已发送并清空输入", async () => {
@@ -131,11 +119,10 @@ describe("MobileInboxCapture", () => {
     }
   });
 
-  it("切到便签后 kind 为 note（解密回验）", async () => {
+  it("点「发送到便签」kind 为 note（解密回验）", async () => {
     const wrapper = mountCapture();
 
-    await wrapper.get('[data-testid="mobile-inbox-kind-note"]').trigger("click");
-    await fillAndSend(wrapper, "一个想法");
+    await fillAndSend(wrapper, "一个想法", "note");
 
     await until(() => expect(postMock).toHaveBeenCalledTimes(1));
     expect(await decryptInboxPayload(CODE, lastPayload())).toMatchObject({ kind: "note", text: "一个想法" });
@@ -153,7 +140,7 @@ describe("MobileInboxCapture", () => {
 
   it("发送中不重复提交", async () => {
     const wrapper = mountCapture();
-    const send = wrapper.get('[data-testid="mobile-inbox-send"]');
+    const send = wrapper.get('[data-testid="mobile-inbox-send-todo"]');
     await wrapper.find('[data-testid="mobile-inbox-text"]').setValue("只发一次");
 
     void send.trigger("click");
@@ -205,8 +192,7 @@ describe("MobileInboxCapture", () => {
   it("便签多行同样按行拆分（kind 均为 note）", async () => {
     const wrapper = mountCapture();
 
-    await wrapper.get('[data-testid="mobile-inbox-kind-note"]').trigger("click");
-    await fillAndSend(wrapper, "想法一\n想法二");
+    await fillAndSend(wrapper, "想法一\n想法二", "note");
 
     await until(() => expect(postMock).toHaveBeenCalledTimes(2));
     const plains = await Promise.all(
@@ -225,15 +211,11 @@ describe("MobileInboxCapture", () => {
     );
   });
 
-  it("占位词随 kind 切换：便签给段落式提示", async () => {
+  it("占位词为通用文案并同步 aria-label", () => {
     const wrapper = mountCapture();
 
-    await wrapper.get('[data-testid="mobile-inbox-kind-note"]').trigger("click");
-
-    expect(wrapper.get('[data-testid="mobile-inbox-text"]').attributes("placeholder")).toBe("写一段便签，可换行，换行会保留…");
-    expect(wrapper.get('[data-testid="mobile-inbox-text"]').attributes("aria-label")).toBe("写一段便签，可换行，换行会保留…");
-    await wrapper.get('[data-testid="mobile-inbox-kind-todo"]').trigger("click");
-    expect(wrapper.get('[data-testid="mobile-inbox-text"]').attributes("placeholder")).toBe("每行一条提醒");
+    expect(wrapper.get('[data-testid="mobile-inbox-text"]').attributes("placeholder")).toBe("想到什么就记下来，可多行…");
+    expect(wrapper.get('[data-testid="mobile-inbox-text"]').attributes("aria-label")).toBe("想到什么就记下来，可多行…");
   });
 
   it("草稿经 v-model 上提：外部初始值渲染、输入回传、卸载重挂不丢", async () => {
@@ -286,20 +268,21 @@ describe("MobileInboxCapture", () => {
     expect(wrapper.find('[data-testid="mobile-inbox-revoked-change"]').exists()).toBe(false);
   });
 
-  it("发送成功：按钮进入 ✓已发送 态并自动复位，触觉反馈触发", async () => {
+  it("发送成功：所用按钮进入 ✓已发送 态并自动复位，另一按钮不受影响", async () => {
     const vibrate = vi.fn();
     Object.defineProperty(navigator, "vibrate", { value: vibrate, configurable: true });
     const wrapper = mountCapture();
 
-    await fillAndSend(wrapper, "动画内容");
+    await fillAndSend(wrapper, "动画内容", "note");
 
-    await until(() => expect(wrapper.get('[data-testid="mobile-inbox-send"]').text()).toContain("已发送"));
-    expect(wrapper.get('[data-testid="mobile-inbox-send"]').classes()).toContain("is-sent");
+    await until(() => expect(wrapper.get('[data-testid="mobile-inbox-send-note"]').text()).toContain("已发送"));
+    expect(wrapper.get('[data-testid="mobile-inbox-send-note"]').classes()).toContain("is-sent");
+    expect(wrapper.get('[data-testid="mobile-inbox-send-todo"]').text()).toBe("发送到提醒");
     expect(vibrate).toHaveBeenCalledWith(20);
 
     // 真实定时器等待自动复位（≈2.5s）。
     await new Promise((resolve) => setTimeout(resolve, 3000));
-    expect(wrapper.get('[data-testid="mobile-inbox-send"]').text()).toBe("发送");
+    expect(wrapper.get('[data-testid="mobile-inbox-send-note"]').text()).toBe("发送到便签");
     expect(wrapper.find(".mobile-inbox-status").exists()).toBe(false);
   }, 10000);
 

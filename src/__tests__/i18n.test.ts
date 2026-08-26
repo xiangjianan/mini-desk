@@ -136,11 +136,13 @@ describe("localized public copy", () => {
     expect(getDisplaySpaceTitle({ id: "workspace", title: "Workspace", lines: [] }, "en")).toBe("📝 Sticky");
   });
 
-  it("手机速记占位词按类型区分且中英齐全", () => {
-    expect(getUiText("zh").app.mobileInboxPlaceholderTodo).toBe("每行一条提醒");
-    expect(getUiText("zh").app.mobileInboxPlaceholderNote).toBe("写一段便签，可换行，换行会保留…");
-    expect(getUiText("en").app.mobileInboxPlaceholderTodo).toBe("One reminder per line");
-    expect(getUiText("en").app.mobileInboxPlaceholderNote).toBe("Write a note — line breaks are kept…");
+  it("手机速记占位词与双发送按钮文案中英齐全", () => {
+    expect(getUiText("zh").app.mobileInboxPlaceholder).toBe("想到什么就记下来，可多行…");
+    expect(getUiText("en").app.mobileInboxPlaceholder).toBe("Capture a thought — multiple lines are fine…");
+    expect(getUiText("zh").app.mobileInboxSendTodo).toBe("发送到提醒");
+    expect(getUiText("zh").app.mobileInboxSendNote).toBe("发送到便签");
+    expect(getUiText("en").app.mobileInboxSendTodo).toBe("Send to reminders");
+    expect(getUiText("en").app.mobileInboxSendNote).toBe("Send to notes");
   });
 
   it("更换配对码确认文案中英齐全", () => {

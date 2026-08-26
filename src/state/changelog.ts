@@ -29,6 +29,20 @@ export interface ChangelogEntry {
 
 export const CHANGELOG: ChangelogEntry[] = [
   {
+    version: "1.0.149",
+    date: "2026-08-26",
+    notes: {
+      zh: [
+        "改版：手机速记去掉「提醒事项/便签」切换，输入框下方直接提供「发送到提醒」「发送到便签」两个按钮，写完一步直发",
+        "优化：提醒时间选择后立即保存，移除确定按钮",
+      ],
+      en: [
+        "Redesign: mobile quick capture drops the reminder/note toggle — the input now has two direct buttons, Send to reminders / Send to notes",
+        "Improved: reminder time is saved immediately on selection; the confirm button is gone",
+      ],
+    },
+  },
+  {
     version: "1.0.148",
     date: "2026-08-26",
     notes: {

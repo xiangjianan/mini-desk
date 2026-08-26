@@ -15,18 +15,19 @@ const props = defineProps<{
 const emit = defineEmits<{ "change-code": [] }>();
 
 type CaptureStatus = "idle" | "sending" | "sent" | "error";
+type CaptureKind = InboxPlainItem["kind"];
 
 const app = computed(() => getUiText(props.language).app);
-const kind = ref<InboxPlainItem["kind"]>("todo");
 // 草稿上提到父级（App.vue）：换码导致组件卸载重挂后内容不丢。
 const draft = defineModel<string>({ default: "" });
 const status = ref<CaptureStatus>("idle");
+/** sending/sent 态修饰哪个按钮：发送中/成功反馈只落在实际使用的那个按钮上。 */
+const activeKind = ref<CaptureKind | null>(null);
 const errorText = ref("");
 /** code_revoked / unknown_code 时为 true：错误区据此渲染「去更换配对码」入口。 */
 const codeUnusable = ref(false);
 const sentCount = ref(0);
 const sentText = computed(() => app.value.mobileInboxSent.replace("{count}", () => String(sentCount.value)));
-const placeholder = computed(() => (kind.value === "todo" ? app.value.mobileInboxPlaceholderTodo : app.value.mobileInboxPlaceholderNote));
 
 const SENT_RESET_MS = 2500;
 let sentResetTimer: number | undefined;
@@ -73,18 +74,20 @@ function errorTextFor(reason: InboxPostFailure): string {
 /** 发送中再次触发直接忽略（同步判定，先于任何 await 生效）。
  *  多行输入按行拆分：待办每行一条、便签每行落一行（与桌面行编辑器模型一致）；
  *  逐条加密串行发送，中途失败把未发送的行放回输入框供直接重试。 */
-async function send(): Promise<void> {
+async function send(kind: CaptureKind): Promise<void> {
   const lines = draft.value
     .split(/\r?\n/)
     .map((line) => line.trim().slice(0, INBOX_PLAINTEXT_MAX_CHARS))
     .filter((line) => line.length > 0);
   if (lines.length === 0 || status.value === "sending") return;
   status.value = "sending";
+  activeKind.value = kind;
   codeUnusable.value = false;
   clearSentResetTimer();
   /** 失败即停：未发送的行（含当前失败行）放回输入框，直接重试不会重复已成功的行。 */
   const failAt = (index: number, reason: InboxPostFailure): void => {
     status.value = "error";
+    activeKind.value = null;
     vibrate([40, 60, 40]);
     codeUnusable.value = reason === "code_revoked" || reason === "unknown_code";
     errorText.value = errorTextFor(reason);
@@ -94,7 +97,7 @@ async function send(): Promise<void> {
     const keyHash = await inboxKeyHash(props.code);
     for (let index = 0; index < lines.length; index += 1) {
       try {
-        const payload = await encryptInboxPayload(props.code, { kind: kind.value, text: lines[index], createdAt: Date.now() });
+        const payload = await encryptInboxPayload(props.code, { kind, text: lines[index], createdAt: Date.now() });
         const result = await postInboxItem(keyHash, createId(), payload);
         if (!result.ok) {
           failAt(index, result.reason);
@@ -118,9 +121,19 @@ async function send(): Promise<void> {
     // 仍在 sent 态才复位：期间用户再次发送会重置定时器。
     if (status.value === "sent") {
       status.value = "idle";
+      activeKind.value = null;
       sentCount.value = 0;
     }
   }, SENT_RESET_MS);
+}
+
+/** 发送中/成功反馈只修饰本次使用的按钮，另一个按钮保持自身文案。 */
+function buttonLabel(kind: CaptureKind): string {
+  if (activeKind.value === kind) {
+    if (status.value === "sending") return app.value.mobileInboxSending;
+    if (status.value === "sent") return `✓ ${app.value.mobileInboxSentButton}`;
+  }
+  return kind === "todo" ? app.value.mobileInboxSendTodo : app.value.mobileInboxSendNote;
 }
 
 onBeforeUnmount(clearSentResetTimer);
@@ -130,49 +143,38 @@ onBeforeUnmount(clearSentResetTimer);
   <div class="mobile-inbox-wrap">
     <h2 id="mobile-inbox-heading" class="mobile-inbox-heading">{{ app.mobileInboxHeading }}</h2>
 
-    <div class="mobile-inbox-toggle" role="group" :aria-label="app.mobileInboxHeading">
-      <button
-        type="button"
-        class="mobile-inbox-tab"
-        :class="{ 'is-active': kind === 'todo' }"
-        :aria-pressed="kind === 'todo'"
-        data-testid="mobile-inbox-kind-todo"
-        @click="kind = 'todo'"
-      >
-        {{ app.mobileInboxTodo }}
-      </button>
-      <button
-        type="button"
-        class="mobile-inbox-tab"
-        :class="{ 'is-active': kind === 'note' }"
-        :aria-pressed="kind === 'note'"
-        data-testid="mobile-inbox-kind-note"
-        @click="kind = 'note'"
-      >
-        {{ app.mobileInboxNote }}
-      </button>
-    </div>
-
-    <form class="mobile-inbox-form" @submit.prevent="send">
+    <form class="mobile-inbox-form" @submit.prevent>
       <textarea
         v-model="draft"
         class="mobile-inbox-textarea"
         data-testid="mobile-inbox-text"
-        :placeholder="placeholder"
-        :aria-label="placeholder"
+        :placeholder="app.mobileInboxPlaceholder"
+        :aria-label="app.mobileInboxPlaceholder"
         rows="5"
       ></textarea>
-      <!-- textarea 内 Enter 是换行，提交只能经由本按钮；@submit.prevent 仅兜底防止未来误触发整页刷新。 -->
-      <button
-        type="button"
-        class="mobile-inbox-send"
-        :class="{ 'is-sent': status === 'sent' }"
-        data-testid="mobile-inbox-send"
-        :disabled="status === 'sending'"
-        @click="send"
-      >
-        {{ status === "sending" ? app.mobileInboxSending : status === "sent" ? `✓ ${app.mobileInboxSentButton}` : app.mobileInboxSend }}
-      </button>
+      <!-- 目标类型由按钮直接携带：点「发送到提醒」或「发送到便签」；textarea 内 Enter 是换行，两个按钮均为 type="button"，@submit.prevent 仅兜底防止未来误触发整页刷新。 -->
+      <div class="mobile-inbox-actions">
+        <button
+          type="button"
+          class="mobile-inbox-send"
+          :class="{ 'is-sent': status === 'sent' && activeKind === 'todo' }"
+          data-testid="mobile-inbox-send-todo"
+          :disabled="status === 'sending'"
+          @click="send('todo')"
+        >
+          {{ buttonLabel("todo") }}
+        </button>
+        <button
+          type="button"
+          class="mobile-inbox-send"
+          :class="{ 'is-sent': status === 'sent' && activeKind === 'note' }"
+          data-testid="mobile-inbox-send-note"
+          :disabled="status === 'sending'"
+          @click="send('note')"
+        >
+          {{ buttonLabel("note") }}
+        </button>
+      </div>
     </form>
 
     <p v-if="status === 'sent'" class="mobile-inbox-status is-slide-in" role="status" aria-live="polite" data-status="sent">

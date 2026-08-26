@@ -7364,28 +7364,10 @@ html[data-theme="dark"] .quick-search .quick-search-toggle:focus-visible {
   letter-spacing: -0.01em;
 }
 
-.mobile-inbox-toggle {
+.mobile-inbox-actions {
   display: grid;
   grid-template-columns: 1fr 1fr;
   gap: 8px;
-}
-
-button.mobile-inbox-tab {
-  min-height: 38px;
-  padding: 0 12px;
-  border: 1px solid var(--line-main);
-  border-radius: var(--radius-control);
-  background: var(--panel);
-  color: var(--muted);
-  font-size: var(--app-font-size);
-  cursor: pointer;
-}
-
-.mobile-inbox-tab.is-active {
-  border-color: transparent;
-  background: var(--accent);
-  color: var(--accent-foreground);
-  font-weight: 600;
 }
 
 .mobile-inbox-form {
