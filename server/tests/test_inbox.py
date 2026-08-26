@@ -2,6 +2,8 @@
 
 import time
 
+import pytest
+
 ORIGIN = "https://todolist.pages.dev"
 KEY = "a" * 64
 OTHER = "b" * 64
@@ -13,6 +15,17 @@ def post(client, key_hash, body, origin=ORIGIN):
 
 def get(client, key_hash, origin=ORIGIN):
     return client.get(f"/inbox/{key_hash}", headers={"Origin": origin})
+
+
+def register(client, key_hash, origin=ORIGIN):
+    return client.post(f"/inbox/{key_hash}/register", headers={"Origin": origin})
+
+
+@pytest.fixture(autouse=True)
+def _preregistered_keys(client):
+    """注册制默认钥匙：既有契约用例零改动直接可用；unknown 语义用独立新 hash 覆盖。"""
+    register(client, KEY)
+    register(client, OTHER)
 
 
 class TestHealthz:
@@ -178,8 +191,9 @@ class TestRevocation:
         now = int(time.time() * 1000)
         with db.cursor() as cursor:
             cursor.execute(
-                "INSERT INTO revoked_keys (key_hash, revoked_at) VALUES (%s, %s)",
-                (KEY, now - 40 * 24 * 3600 * 1000),
+                "INSERT INTO pairing_keys (key_hash, registered_at, revoked_at) VALUES (%s, %s, %s) "
+                "AS new ON DUPLICATE KEY UPDATE revoked_at = new.revoked_at",
+                (KEY, now - 40 * 24 * 3600 * 1000, now - 40 * 24 * 3600 * 1000),
             )
             cursor.execute(
                 "INSERT INTO inbox_items (key_hash, id, payload, created_at) VALUES (%s, %s, %s, %s)",
@@ -191,7 +205,7 @@ class TestRevocation:
         with db.cursor() as cursor:
             cursor.execute("SELECT COUNT(*) FROM inbox_items WHERE id = 'stale'")
             assert cursor.fetchone()[0] == 0  # inbox_items 过期行照常被清扫
-            cursor.execute("SELECT COUNT(*) FROM revoked_keys WHERE key_hash = %s", (KEY,))
+            cursor.execute("SELECT COUNT(*) FROM pairing_keys WHERE key_hash = %s", (KEY,))
             assert cursor.fetchone()[0] == 1  # 注销记录不随清扫删除
         assert post(client, KEY, {"id": "x", "payload": "AAA"}).status_code == 410
 
@@ -199,3 +213,51 @@ class TestRevocation:
         response = client.delete(f"/inbox/{KEY}", headers={"Origin": ORIGIN})
 
         assert response.headers["Access-Control-Allow-Methods"] == "GET, POST, DELETE, OPTIONS"
+
+
+class TestRegistration:
+    def test_unregistered_key_post_404_get_permissive(self, client):
+        fresh = "c" * 64
+        assert post(client, fresh, {"id": "i1", "payload": "AAA"}).status_code == 404
+        assert post(client, fresh, {"id": "i1", "payload": "AAA"}).get_json() == {"error": "unknown_code"}
+        # GET 宽松：未知码返回空列表不报错（升级窗口容错）。
+        assert get(client, fresh).get_json()["items"] == []
+
+    def test_register_idempotent_and_enables_posts(self, client):
+        fresh = "d" * 64
+        assert register(client, fresh).status_code == 200
+        assert register(client, fresh).get_json() == {"ok": True}
+        assert post(client, fresh, {"id": "i1", "payload": "AAA"}).status_code == 200
+
+    def test_register_does_not_revive_revoked(self, client):
+        fresh = "e" * 64
+        register(client, fresh)
+        assert client.delete(f"/inbox/{fresh}").status_code == 200
+        assert register(client, fresh).get_json() == {"ok": True}
+        assert post(client, fresh, {"id": "i1", "payload": "AAA"}).status_code == 410
+
+    def test_status_three_states(self, client):
+        fresh = "f" * 64
+        assert client.get(f"/inbox/{fresh}/status").get_json() == {"status": "unknown"}
+        register(client, fresh)
+        assert client.get(f"/inbox/{fresh}/status").get_json() == {"status": "active"}
+        client.delete(f"/inbox/{fresh}")
+        assert client.get(f"/inbox/{fresh}/status").get_json() == {"status": "revoked"}
+
+    def test_delete_unregistered_marks_revoked(self, client):
+        fresh = "1" * 64
+        assert client.delete(f"/inbox/{fresh}").get_json() == {"ok": True}
+        assert post(client, fresh, {"id": "i1", "payload": "AAA"}).status_code == 410
+
+    def test_register_and_status_invalid_hash_404(self, client):
+        assert client.post("/inbox/XYZ/register").status_code == 404
+        assert client.get("/inbox/XYZ/status").status_code == 404
+
+
+class TestRegisterCors:
+    def test_register_preflight_allows_post(self, client):
+        preflight = client.open(
+            f"/inbox/{KEY}/register", method="OPTIONS", headers={"Origin": ORIGIN}
+        )
+        assert preflight.status_code == 204
+        assert preflight.headers["Access-Control-Allow-Origin"] == ORIGIN

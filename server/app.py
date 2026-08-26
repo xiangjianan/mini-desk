@@ -1,7 +1,8 @@
 """手机速记中继：只存 AES-GCM 密文队列（协议与原 Cloudflare Worker 完全一致）。
 
-路由键是 SHA-256(配对码) 的 hex；条目保留 30 天，无账号、无按条删除
-（多台桌面共用一个码，回收交给保留期清理；DELETE 注销后 POST 一律 410，注销记录永久保留）。幂等：同 id 覆盖。
+路由键是 SHA-256(配对码) 的 hex；条目保留 30 天，无账号、无按条删除（回收交给保留期清理）。
+注册制：pairing_keys 三态（unknown/active/revoked），桌面端保存/轮换/启动时注册，
+未注册码 POST 404、已注销码 POST 410（注销即永久，注册不复活）。幂等：同 id 覆盖。
 自建服务器无次数限制：只做输入校验，不做限流/配额。
 """
 import os
@@ -81,6 +82,36 @@ def create_app() -> Flask:
             return handle_delete(key_hash)
         return handle_get(key_hash)
 
+    @app.route("/inbox/<key_hash>/register", methods=["POST", "OPTIONS"])
+    def inbox_register(key_hash: str):
+        if request.method == "OPTIONS":
+            return Response(status=204)
+        if not is_valid_key_hash(key_hash):
+            return error_response(404, "not_found")
+        # INSERT IGNORE：幂等，且不复活已注销行（注销即永久）。
+        now = int(time.time() * 1000)
+        with pymysql.connect(**database_kwargs()) as conn, conn.cursor() as cursor:
+            cursor.execute(
+                "INSERT IGNORE INTO pairing_keys (key_hash, registered_at) VALUES (%s, %s)",
+                (key_hash, now),
+            )
+        return jsonify({"ok": True})
+
+    @app.route("/inbox/<key_hash>/status", methods=["GET"])
+    def inbox_status(key_hash: str):
+        if not is_valid_key_hash(key_hash):
+            return error_response(404, "not_found")
+        with pymysql.connect(**database_kwargs()) as conn, conn.cursor() as cursor:
+            cursor.execute("SELECT revoked_at FROM pairing_keys WHERE key_hash = %s", (key_hash,))
+            row = cursor.fetchone()
+        if row is None:
+            status = "unknown"
+        elif row["revoked_at"] is not None:
+            status = "revoked"
+        else:
+            status = "active"
+        return jsonify({"status": status})
+
     def handle_post(key_hash: str) -> tuple:
         body = request.get_json(silent=True)
         if not isinstance(body, dict):
@@ -96,8 +127,11 @@ def create_app() -> Flask:
             return error_response(413, "payload_too_large")
         created_at = int(time.time() * 1000)
         with pymysql.connect(**database_kwargs()) as conn, conn.cursor() as cursor:
-            cursor.execute("SELECT 1 FROM revoked_keys WHERE key_hash = %s", (key_hash,))
-            if cursor.fetchone() is not None:
+            cursor.execute("SELECT revoked_at FROM pairing_keys WHERE key_hash = %s", (key_hash,))
+            key_row = cursor.fetchone()
+            if key_row is None:
+                return error_response(404, "unknown_code")
+            if key_row["revoked_at"] is not None:
                 return error_response(410, "revoked")
             cursor.execute(
                 "INSERT INTO inbox_items (key_hash, id, payload, created_at) VALUES (%s, %s, %s, %s) "
@@ -108,7 +142,7 @@ def create_app() -> Flask:
         return jsonify({"ok": True})
 
     def handle_delete(key_hash: str) -> tuple:
-        # 注销：单事务清空该队列并登记注销记录；revoked_keys 永久保留（见设计文档）。
+        # 注销：单事务清空该队列并在 pairing_keys 置 revoked（未注册过的码也落 revoked 行）；注销即永久。
         # 幂等：重复注销、注销从未存在过的码均返回 ok。
         now = int(time.time() * 1000)
         with pymysql.connect(**database_kwargs()) as conn:
@@ -116,9 +150,9 @@ def create_app() -> Flask:
             with conn.cursor() as cursor:
                 cursor.execute("DELETE FROM inbox_items WHERE key_hash = %s", (key_hash,))
                 cursor.execute(
-                    "INSERT INTO revoked_keys (key_hash, revoked_at) VALUES (%s, %s) "
+                    "INSERT INTO pairing_keys (key_hash, registered_at, revoked_at) VALUES (%s, %s, %s) "
                     "AS new ON DUPLICATE KEY UPDATE revoked_at = new.revoked_at",
-                    (key_hash, now),
+                    (key_hash, now, now),
                 )
             conn.commit()
         return jsonify({"ok": True})

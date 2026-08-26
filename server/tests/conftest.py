@@ -46,7 +46,7 @@ def db(_schema):
     conn = pymysql.connect(**{**_mysql_kwargs(), "database": TEST_DB})
     with conn.cursor() as cursor:
         cursor.execute("TRUNCATE TABLE inbox_items")
-        cursor.execute("TRUNCATE TABLE revoked_keys")
+        cursor.execute("TRUNCATE TABLE pairing_keys")
     yield conn
     conn.close()
 
