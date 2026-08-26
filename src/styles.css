@@ -3064,16 +3064,6 @@ button.notify-panel-preset {
   color: var(--danger);
 }
 
-.notify-panel-action.is-confirm {
-  color: #18a058;
-  background: var(--button);
-}
-
-.notify-panel-action.is-confirm:hover:not(:disabled) {
-  color: #18a058;
-  background: rgba(24, 160, 88, 0.1);
-}
-
 .n-time-picker-panel .n-button--primary-type {
   --n-text-color: #111111 !important;
   --n-text-color-hover: #111111 !important;

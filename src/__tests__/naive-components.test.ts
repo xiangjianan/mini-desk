@@ -531,9 +531,9 @@ describe("Naive UI component usage", () => {
     expect(todo).toContain("panel");
     expect(todo).not.toContain(':to="false"');
     expect(todo).not.toContain(':show="isNotifyPickerShown');
-    expect(todo).toContain('@update:value="updateNotifyPickerDraft"');
-    expect(todo).toContain("confirmCurrentNotifyPicker");
-    expect(todo).toContain("setNotifyPickerDraftToToday");
+    expect(todo).toContain('@update:value="updateNotifyPickerDate"');
+    expect(todo).toContain("commitNotifyPickerSelection");
+    expect(todo).toContain("applyNotifyPickerToday");
     expect(todo).toContain("clearNotifyPicker");
     expect(todo).toContain("notify-time-column is-hour");
     expect(todo).toContain("notify-time-column is-minute");
@@ -543,7 +543,8 @@ describe("Naive UI component usage", () => {
     expect(i18n).toContain('today: "今天"');
     expect(todo).not.toContain('此刻');
     expect(todo).toContain("uiText.common.confirm");
-    expect(todo).toContain("notify-panel-action is-confirm");
+    expect(todo).not.toContain("confirmCurrentNotifyPicker");
+    expect(todo).not.toContain("notify-panel-action is-confirm");
     expect(todo).not.toContain('class="deadline-editor notify-editor"');
     expect(todo).not.toContain("notify-calendar-grid");
     expect(todo).not.toContain("notify-clock-options");
@@ -571,8 +572,6 @@ describe("Naive UI component usage", () => {
     expect(styles).not.toMatch(/\.notify-time-columns\s*\{[^}]*height: 168px/s);
     expect(styles).toMatch(/\.notify-time-column\s*\{[^}]*-webkit-overflow-scrolling: touch/s);
     expect(styles).toMatch(/\.notify-panel-actions\s*\{[^}]*justify-content: flex-end/s);
-    expect(styles).toMatch(/\.notify-panel-action\.is-confirm\s*\{[^}]*color: #18a058/s);
-    expect(styles).toMatch(/\.notify-panel-action\.is-confirm\s*\{[^}]*background: var\(--button\)/s);
     expect(styles).toMatch(/\.todo-notify-button\s*\{[^}]*align-items: center/s);
     expect(styles).not.toContain(".notify-editor");
     expect(styles).not.toContain(".deadline-editor-actions");

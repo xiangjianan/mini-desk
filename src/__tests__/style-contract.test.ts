@@ -305,9 +305,6 @@ describe("workbench style contract", () => {
     expectSelectorBody(styles, ".today-focus-item.is-done .n-checkbox", "opacity: 0.78");
     expectSelectorBody(styles, ".todo-item.is-done .todo-star-button.is-starred", "opacity: 0.78");
     expectSelectorBody(styles, ".today-focus-item.is-done .todo-star-button.is-starred", "opacity: 0.78");
-    expectSelectorBody(styles, ".notify-panel-action.is-confirm", "color: #18a058");
-    expectSelectorBody(styles, ".notify-panel-action.is-confirm", "background: var(--button)");
-    expectSelectorBody(styles, ".notify-panel-action.is-confirm:hover:not(:disabled)", "background: rgba(24, 160, 88, 0.1)");
     expectSelectorBody(styles, ".notify-floating-date-picker", "--notify-date-column-width: 332px");
     expectSelectorBody(styles, ".notify-floating-date-picker", "--notify-time-column-width: 114px");
     expectSelectorBody(styles, ".notify-floating-date-picker", "grid-template-columns: var(--notify-date-column-width) var(--notify-time-column-width)");

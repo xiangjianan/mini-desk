@@ -1051,12 +1051,14 @@ function getNotifyPickerValue(): number {
   return notifyPickerDrafts.value[key] ?? getNotifyPickerInitialValue(todo);
 }
 
-function updateNotifyPickerDraft(value: number | null): void {
+function updateNotifyPickerDate(value: number | null): void {
   const picker = notifyPicker.value;
   if (!picker || value === null) return;
   const key = todoKey(picker.period, picker.id);
   // Only the date changes — keep the selected hour:minute intact.
-  notifyPickerDrafts.value = { ...notifyPickerDrafts.value, [key]: preserveNotifyTimeOnDateChange(getNotifyPickerValue(), value) };
+  const next = preserveNotifyTimeOnDateChange(getNotifyPickerValue(), value);
+  notifyPickerDrafts.value = { ...notifyPickerDrafts.value, [key]: next };
+  commitNotifyPickerSelection(next);
 }
 
 function preserveNotifyTimeOnDateChange(currentValue: number, nextValue: number): number {
@@ -1066,14 +1068,16 @@ function preserveNotifyTimeOnDateChange(currentValue: number, nextValue: number)
   return next.getTime();
 }
 
-function setNotifyPickerDraftToToday(): void {
+function applyNotifyPickerToday(): void {
   const picker = notifyPicker.value;
   if (!picker) return;
   const key = todoKey(picker.period, picker.id);
-  notifyPickerDrafts.value = { ...notifyPickerDrafts.value, [key]: withDefaultNotifyTime(Date.now()) };
+  const next = withDefaultNotifyTime(Date.now());
+  notifyPickerDrafts.value = { ...notifyPickerDrafts.value, [key]: next };
   void nextTick(() => {
     window.requestAnimationFrame(() => scrollNotifyTimePickerActiveItems(true));
   });
+  commitNotifyPickerSelection(next);
 }
 
 function getNotifyPickerHour(): number {
@@ -1096,11 +1100,21 @@ function updateNotifyPickerTime(unit: "hour" | "minute", value: number): void {
   if (unit === "hour") current.setHours(value);
   else current.setMinutes(value);
   current.setSeconds(0, 0);
-  notifyPickerDrafts.value = { ...notifyPickerDrafts.value, [key]: current.getTime() };
+  const next = current.getTime();
+  notifyPickerDrafts.value = { ...notifyPickerDrafts.value, [key]: next };
+  commitNotifyPickerSelection(next);
 }
 
-function confirmCurrentNotifyPicker(): void {
-  confirmNotifyPicker(getNotifyPickerValue());
+/**
+ * Saves the picked value right away — no confirm step. The picker stays open so
+ * the user can keep fine-tuning (every manual date/time pick commits), and a
+ * later outside click just dismisses it without discarding the saved value.
+ */
+function commitNotifyPickerSelection(value: number): void {
+  const picker = notifyPicker.value;
+  if (!picker) return;
+  const key = todoKey(picker.period, picker.id);
+  emit("notify", picker.period, picker.id, value, notifyPickerAnchors.get(key));
 }
 
 function confirmNotifyPicker(value: number | null): void {
@@ -1899,7 +1913,7 @@ function buildTodoListEntries(period: TodoListId, todos: TodoItem[], deferredDon
             format="yyyy-MM-dd"
             value-format="timestamp"
             :actions="[]"
-            @update:value="updateNotifyPickerDraft"
+            @update:value="updateNotifyPickerDate"
           />
           <div class="notify-time-panel" :aria-label="uiText.todo.setNotify">
             <div class="notify-time-preview">
@@ -1964,8 +1978,7 @@ function buildTodoListEntries(period: TodoListId, todos: TodoItem[], deferredDon
           </div>
           <div class="notify-panel-actions">
             <button class="notify-panel-action is-danger" type="button" @click="clearNotifyPicker">{{ uiText.todo.clear }}</button>
-            <button class="notify-panel-action" type="button" @click="setNotifyPickerDraftToToday">{{ uiText.todo.today }}</button>
-            <button class="notify-panel-action is-confirm" type="button" @click="confirmCurrentNotifyPicker">{{ uiText.common.confirm }}</button>
+            <button class="notify-panel-action" type="button" @click="applyNotifyPickerToday">{{ uiText.todo.today }}</button>
           </div>
         </div>
       </Transition>
