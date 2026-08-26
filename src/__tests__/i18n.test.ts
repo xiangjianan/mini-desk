@@ -137,9 +137,9 @@ describe("localized public copy", () => {
   });
 
   it("手机速记占位词按类型区分且中英齐全", () => {
-    expect(getUiText("zh").app.mobileInboxPlaceholderTodo).toBe("每行一条提醒，如：周五前取快递");
+    expect(getUiText("zh").app.mobileInboxPlaceholderTodo).toBe("每行一条提醒");
     expect(getUiText("zh").app.mobileInboxPlaceholderNote).toBe("写一段便签，可换行，换行会保留…");
-    expect(getUiText("en").app.mobileInboxPlaceholderTodo).toBe("One reminder per line, e.g. Pick up the package Friday");
+    expect(getUiText("en").app.mobileInboxPlaceholderTodo).toBe("One reminder per line");
     expect(getUiText("en").app.mobileInboxPlaceholderNote).toBe("Write a note — line breaks are kept…");
   });
 

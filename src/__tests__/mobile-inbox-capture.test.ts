@@ -54,7 +54,7 @@ describe("MobileInboxCapture", () => {
     expect(wrapper.get('[data-testid="mobile-inbox-kind-todo"]').attributes("aria-pressed")).toBe("true");
     expect(wrapper.get('[data-testid="mobile-inbox-kind-note"]').text()).toBe("便签");
     expect(wrapper.get('[data-testid="mobile-inbox-kind-note"]').attributes("aria-pressed")).toBe("false");
-    expect(wrapper.get('[data-testid="mobile-inbox-text"]').attributes("placeholder")).toBe("每行一条提醒，如：周五前取快递");
+    expect(wrapper.get('[data-testid="mobile-inbox-text"]').attributes("placeholder")).toBe("每行一条提醒");
     expect(wrapper.get('[data-testid="mobile-inbox-send"]').text()).toBe("发送");
   });
 
@@ -233,7 +233,7 @@ describe("MobileInboxCapture", () => {
     expect(wrapper.get('[data-testid="mobile-inbox-text"]').attributes("placeholder")).toBe("写一段便签，可换行，换行会保留…");
     expect(wrapper.get('[data-testid="mobile-inbox-text"]').attributes("aria-label")).toBe("写一段便签，可换行，换行会保留…");
     await wrapper.get('[data-testid="mobile-inbox-kind-todo"]').trigger("click");
-    expect(wrapper.get('[data-testid="mobile-inbox-text"]').attributes("placeholder")).toBe("每行一条提醒，如：周五前取快递");
+    expect(wrapper.get('[data-testid="mobile-inbox-text"]').attributes("placeholder")).toBe("每行一条提醒");
   });
 
   it("草稿经 v-model 上提：外部初始值渲染、输入回传、卸载重挂不丢", async () => {
