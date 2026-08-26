@@ -469,6 +469,7 @@ describe("App shell", () => {
   it("keeps the mobile companion hidden while paired and restores it after changing code", async () => {
     vi.useFakeTimers();
     stubMatchMedia(true);
+    vi.spyOn(window, "confirm").mockReturnValue(true);
     window.location.hash = "#inbox=AB2CDE4FGHJK";
     let wrapper: ReturnType<typeof mountApp> | undefined;
 
@@ -499,8 +500,30 @@ describe("App shell", () => {
     }
   });
 
+  it("更换配对码需二次确认：取消则留在速记页", async () => {
+    stubMatchMedia(true);
+    window.location.hash = "#inbox=AB2CDE4FGHJK";
+    let wrapper: ReturnType<typeof mountApp> | undefined;
+
+    try {
+      wrapper = mountApp();
+      vi.spyOn(window, "confirm").mockReturnValue(false);
+
+      await wrapper.get('[data-testid="mobile-inbox-change-code"]').trigger("click");
+      await wrapper.vm.$nextTick();
+
+      expect(wrapper.get('[data-testid="mobile-inbox-text"]').exists()).toBe(true);
+      expect(wrapper.find('[data-testid="mobile-inbox-code-input"]').exists()).toBe(false);
+    } finally {
+      window.location.hash = "";
+      wrapper?.unmount();
+      vi.unstubAllGlobals();
+    }
+  });
+
   it("preserves the capture draft across a code change and re-pairing", async () => {
     stubMatchMedia(true);
+    vi.spyOn(window, "confirm").mockReturnValue(true);
     window.location.hash = "#inbox=AB2CDE4FGHJK";
     let wrapper: ReturnType<typeof mountApp> | undefined;
 
@@ -610,6 +633,7 @@ describe("App shell", () => {
   it("shows the paired code in the footer and switches pairing via the change button", async () => {
     vi.useFakeTimers();
     stubMatchMedia(true);
+    vi.spyOn(window, "confirm").mockReturnValue(true);
     window.location.hash = "#inbox=AB2CDE4FGHJK";
     let wrapper: ReturnType<typeof mountApp> | undefined;
 

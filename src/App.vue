@@ -452,13 +452,19 @@ async function confirmMobileInboxCode(): Promise<void> {
   window.location.hash = `#inbox=${code}`;
 }
 
-/** 更换配对码：清本地记忆与 URL 残留 fragment（replaceState 不触发 hashchange，也不留历史记录），回到输码表单并重置错误态。
- *  不弹确认——没有可破坏的数据，码随时可从桌面配对面板重新获得。 */
+/** 清码回到输码表单：清本地记忆与 URL 残留 fragment（replaceState 不触发 hashchange，也不留历史记录）并重置错误态。
+ *  页脚入口经 confirmForgetMobileInboxCode 二次确认；失效提示的 change-code 事件直接调用（报错后的主动动作）。 */
 function forgetMobileInboxCode(): void {
   clearRememberedInboxCode();
   mobileInboxCode.value = null;
   mobileInboxCodeError.value = null;
   window.history.replaceState(null, "", `${window.location.pathname}${window.location.search}`);
+}
+
+/** 更换配对码（页脚入口）：二次确认防误触——确认前不动已配对状态。 */
+function confirmForgetMobileInboxCode(): void {
+  if (!window.confirm(uiText.value.app.mobileInboxChangeCodeConfirm)) return;
+  forgetMobileInboxCode();
 }
 
 /** 页脚分组码：模板内 vue-tsc 不跨元素收窄 string|null，挪进 computed（同 MobileInboxCapture.sentText 模式）。 */
@@ -3401,7 +3407,7 @@ function moveItem<T extends { id: string }>(items: T[], dragId: string, targetId
               type="button"
               class="mobile-inbox-paired-change"
               data-testid="mobile-inbox-change-code"
-              @click="forgetMobileInboxCode"
+              @click="confirmForgetMobileInboxCode"
             >
               {{ uiText.app.mobileInboxChangeCode }}
             </button>

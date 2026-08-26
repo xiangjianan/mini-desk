@@ -143,6 +143,11 @@ describe("localized public copy", () => {
     expect(getUiText("en").app.mobileInboxPlaceholderNote).toBe("Write a note — line breaks are kept…");
   });
 
+  it("更换配对码确认文案中英齐全", () => {
+    expect(getUiText("zh").app.mobileInboxChangeCodeConfirm).toBe("更换后需要重新输入配对码，确定更换吗？");
+    expect(getUiText("en").app.mobileInboxChangeCodeConfirm).toBe("You'll need to re-enter a pairing code after changing. Change anyway?");
+  });
+
   it("配对码失效提示与换码按钮文案中英齐全", () => {
     expect(getUiText("zh").app.mobileInboxErrorRevoked).toBe("配对码已失效，可能已在桌面端被清除");
     expect(getUiText("zh").app.mobileInboxRevokedChange).toBe("去更换配对码");
