@@ -7996,6 +7996,26 @@ describe("App inbox revoke wiring", () => {
     await flushAsyncComponents();
   }
 
+  // 配对落点是第二个空间：删除「落点」与删除「其它空间」两种路径的共用种子。
+  function seedPairedWithNoteTarget(): void {
+    localStorage.setItem(
+      STORAGE_KEY,
+      JSON.stringify({
+        ...defaultState(),
+        workspaces: [
+          {
+            ...defaultWorkspace(),
+            spaces: [
+              { id: DEFAULT_SPACE_ID, title: "便签", lines: [] },
+              { id: "target", title: "落点", lines: [] },
+            ],
+            inbox: { code: "AB2CDE4FGHJK", todoListId: "morning", noteTarget: "target", lastSeenAt: 7 },
+          },
+        ],
+      }),
+    );
+  }
+
   it("清除配对后对旧码 keyHash 发送注销且不弹失败警告", async () => {
     seedPaired();
     vi.spyOn(window, "confirm").mockReturnValue(true);
@@ -8053,6 +8073,55 @@ describe("App inbox revoke wiring", () => {
     } finally {
       wrapper.unmount();
       vi.useRealTimers();
+    }
+  });
+
+  it("删除配对便签落点的空间时清空配对并注销旧码", async () => {
+    seedPairedWithNoteTarget();
+    const wrapper = mountApp();
+
+    try {
+      wrapper.getComponent(SpacePanel).vm.$emit("delete", "target");
+      await nextTick();
+      // Enter 直达逻辑确认态（不等 200ms 气泡入场动画，同 handleConfirmKeydown 契约）。
+      const event = new KeyboardEvent("keydown", { key: "Enter", bubbles: true, cancelable: true });
+      window.dispatchEvent(event);
+      await nextTick();
+      await flushAsyncComponents();
+      expect(event.defaultPrevented).toBe(true);
+
+      const stored = JSON.parse(localStorage.getItem(STORAGE_KEY) || "{}");
+      const workspace = stored.workspaces[0];
+      expect(workspace.spaces.map((space: { id: string }) => space.id)).toEqual([DEFAULT_SPACE_ID]);
+      expect(workspace.inbox).toBeUndefined();
+      expect(revokeInboxKey).toHaveBeenCalledTimes(1);
+      const [keyHash] = vi.mocked(revokeInboxKey).mock.calls[0];
+      expect(keyHash).toMatch(/^[0-9a-f]{64}$/);
+    } finally {
+      wrapper.unmount();
+    }
+  });
+
+  it("删除非落点空间时保留配对且不注销", async () => {
+    seedPairedWithNoteTarget();
+    const wrapper = mountApp();
+
+    try {
+      wrapper.getComponent(SpacePanel).vm.$emit("delete", DEFAULT_SPACE_ID);
+      await nextTick();
+      const event = new KeyboardEvent("keydown", { key: "Enter", bubbles: true, cancelable: true });
+      window.dispatchEvent(event);
+      await nextTick();
+      await flushAsyncComponents();
+      expect(event.defaultPrevented).toBe(true);
+
+      const stored = JSON.parse(localStorage.getItem(STORAGE_KEY) || "{}");
+      const workspace = stored.workspaces[0];
+      expect(workspace.spaces.map((space: { id: string }) => space.id)).toEqual(["target"]);
+      expect(workspace.inbox).toEqual({ code: "AB2CDE4FGHJK", todoListId: "morning", noteTarget: "target", lastSeenAt: 7 });
+      expect(revokeInboxKey).not.toHaveBeenCalled();
+    } finally {
+      wrapper.unmount();
     }
   });
 });

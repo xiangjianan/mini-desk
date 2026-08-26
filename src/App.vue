@@ -777,6 +777,12 @@ function deleteSpace(id: string): void {
     if (activeWorkspace.value.activeSpaceId === id) {
       activeWorkspace.value.activeSpaceId = activeWorkspace.value.spaces[Math.max(0, index - 1)]?.id ?? activeWorkspace.value.spaces[0].id;
     }
+    // 便签落点空间被删：配对码一并清空（手机端立即失效），云端队列走手动清除同路径注销，失败仅气泡警告。
+    const removedInbox = activeWorkspace.value.inbox;
+    if (removedInbox && removedInbox.noteTarget === id) {
+      delete activeWorkspace.value.inbox;
+      void revokeInbox(removedInbox.code);
+    }
     syncLegacySpaceLines();
     persistNow();
     showBubble("deleteSpace", anchor, { hideCompanionAfter: true });
