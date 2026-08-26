@@ -293,6 +293,10 @@ const mobileInboxCode = ref<string | null>(parseInboxFragment(window.location.ha
 const mobileInboxDraftCode = ref("");
 const mobileInboxCodeError = ref<string | null>(null);
 const mobileInboxCodeChecking = ref(false);
+// 键盘避让兜底（iOS）：根布局不可滚 + 外壳 overflow hidden，浏览器首次弹键盘时常不滚动聚焦输入框。
+const MOBILE_KEYBOARD_DETECT_PX = 120;
+const mobileKeyboardOpen = ref(false);
+const mobileHandoffRef = ref<HTMLElement | null>(null);
 // 手机速记草稿上提：换码卸载重挂（甚至跨会话内的多次换码）内容不丢。
 const mobileInboxDraftText = ref("");
 // 手机壳内任何来源（初始 URL 解析/hashchange/手动输码）的有效码都顺手记住，裸访问下次自动配对；
@@ -467,6 +471,28 @@ function confirmForgetMobileInboxCode(): void {
   forgetMobileInboxCode();
 }
 
+/** iOS 键盘不压缩布局视口（100dvh 不变），避让只能靠滚动；首次弹键盘浏览器常不滚（已知怪癖）。
+ *  视觉视口缩水超阈值 → 手机壳进入 is-keyboard 态（内层容器补出滚动余量）并滚动聚焦输入框。 */
+function syncMobileKeyboardState(): void {
+  if (!isMobileBlocked.value) return;
+  const viewport = window.visualViewport;
+  if (!viewport) return;
+  mobileKeyboardOpen.value = window.innerHeight - viewport.height > MOBILE_KEYBOARD_DETECT_PX;
+  const active = document.activeElement;
+  if (mobileKeyboardOpen.value && (active instanceof HTMLInputElement || active instanceof HTMLTextAreaElement)) {
+    active.scrollIntoView({ block: "nearest" });
+  }
+}
+
+/** 聚焦兜底：双 rAF 等视觉视口稳定后补一次滚动，覆盖首次弹键盘避让失效的场景。 */
+function handleMobileFocusIn(event: FocusEvent): void {
+  const target = event.target;
+  if (!(target instanceof HTMLInputElement) && !(target instanceof HTMLTextAreaElement)) return;
+  window.requestAnimationFrame(() => {
+    window.requestAnimationFrame(() => target.scrollIntoView({ block: "nearest" }));
+  });
+}
+
 /** 页脚分组码：模板内 vue-tsc 不跨元素收窄 string|null，挪进 computed（同 MobileInboxCapture.sentText 模式）。 */
 const mobileInboxCodeLabel = computed(() => {
   const code = mobileInboxCode.value;
@@ -542,6 +568,7 @@ onMounted(async () => {
   setupStateSyncChannel();
   window.addEventListener("focus", handleWindowFocusInbox);
   window.addEventListener("hashchange", handleHashChange);
+  window.visualViewport?.addEventListener("resize", syncMobileKeyboardState);
   // 启动拉取非阻塞（不 await）：首屏渲染不等收件箱网络往返。
   if (hasInboxConfigured.value) {
     void pullInboxes();
@@ -567,6 +594,7 @@ onUnmounted(() => {
   teardownStateSyncChannel();
   window.removeEventListener("focus", handleWindowFocusInbox);
   window.removeEventListener("hashchange", handleHashChange);
+  window.visualViewport?.removeEventListener("resize", syncMobileKeyboardState);
   stopInboxPolling();
   teardownMobileBreakpoint();
   clearTimers();
@@ -3375,7 +3403,14 @@ function moveItem<T extends { id: string }>(items: T[], dragId: string, targetId
       </template>
     </WorkbenchShell>
 
-    <main v-else class="mobile-handoff" :aria-label="uiText.app.mobileLabel">
+    <main
+      v-else
+      ref="mobileHandoffRef"
+      class="mobile-handoff"
+      :class="{ 'is-keyboard': mobileKeyboardOpen }"
+      :aria-label="uiText.app.mobileLabel"
+      @focusin="handleMobileFocusIn"
+    >
       <header class="mobile-handoff-header">
         <div class="mobile-handoff-brand">
           <img
