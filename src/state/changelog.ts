@@ -29,6 +29,24 @@ export interface ChangelogEntry {
 
 export const CHANGELOG: ChangelogEntry[] = [
   {
+    version: "1.0.145",
+    date: "2026-08-26",
+    notes: {
+      zh: [
+        "新增：清除/轮换配对码会同步注销云端队列——手机端立即感知失效并引导更换配对码，输入内容不丢失",
+        "优化：切换到已配对的工作空间时立即拉取一次手机速记，不再等 5 分钟轮询",
+        "优化：手机速记占位词按提醒事项/便签区分；配对后隐藏右下角「建议在浏览器打开」",
+        "优化：发送成功/失败增加动画与触觉反馈",
+      ],
+      en: [
+        "New: clearing or rotating a pairing code now revokes the relay queue — phones immediately see the invalid-code notice with a change-code action, and the draft is preserved",
+        "Improved: switching to a paired workspace pulls new captures immediately instead of waiting for the 5-minute poll",
+        "Improved: differentiated placeholders for reminders vs notes; the bottom-right \"open on desktop\" hint is hidden once paired",
+        "Improved: success/failure send feedback animations and haptic response",
+      ],
+    },
+  },
+  {
     version: "1.0.144",
     date: "2026-08-25",
     notes: {
