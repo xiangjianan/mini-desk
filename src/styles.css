@@ -4175,11 +4175,6 @@ body:has(.image-preview) .image-panel .n-scrollbar {
   color: var(--text);
 }
 
-/* 键盘弹出（iOS 不压缩布局视口）：内层滚动容器补出滚动余量，使聚焦输入框可滚到键盘上方。 */
-.mobile-handoff.is-keyboard .mobile-handoff-body {
-  padding-bottom: 50vh;
-}
-
 .mobile-handoff-header {
   display: flex;
   align-items: stretch;

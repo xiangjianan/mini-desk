@@ -547,64 +547,6 @@ describe("App shell", () => {
     }
   });
 
-  it("手机页聚焦输入框后主动滚动到可见区（首开键盘避让兜底）", async () => {
-    stubMatchMedia(true);
-    window.location.hash = "#inbox=AB2CDE4FGHJK";
-    let wrapper: ReturnType<typeof mountApp> | undefined;
-
-    try {
-      wrapper = mountApp();
-      const scrollIntoView = vi.fn();
-      (wrapper.get('[data-testid="mobile-inbox-text"]').element as HTMLTextAreaElement).scrollIntoView = scrollIntoView;
-
-      await wrapper.get('[data-testid="mobile-inbox-text"]').trigger("focusin");
-
-      await vi.waitFor(() => expect(scrollIntoView).toHaveBeenCalledWith({ block: "nearest" }));
-    } finally {
-      window.location.hash = "";
-      wrapper?.unmount();
-      vi.unstubAllGlobals();
-    }
-  });
-
-  it("键盘弹出时手机壳进入 is-keyboard 态，收起后复位", async () => {
-    stubMatchMedia(true);
-    window.location.hash = "#inbox=AB2CDE4FGHJK";
-    let wrapper: ReturnType<typeof mountApp> | undefined;
-    const resizeListeners: (() => void)[] = [];
-    const fakeViewport = {
-      height: window.innerHeight,
-      offsetTop: 0,
-      addEventListener: (type: string, listener: () => void) => {
-        if (type === "resize") resizeListeners.push(listener);
-      },
-      removeEventListener: () => undefined,
-    };
-    vi.stubGlobal("visualViewport", fakeViewport);
-
-    try {
-      wrapper = mountApp();
-      // onMounted 的监听注册在异步图片水合之后，先冲净再断言/派发。
-      await flushAsyncComponents();
-      const shell = wrapper.get(".mobile-handoff");
-      expect(shell.classes()).not.toContain("is-keyboard");
-
-      fakeViewport.height = window.innerHeight - 300;
-      for (const listener of resizeListeners) listener();
-      await wrapper.vm.$nextTick();
-      expect(shell.classes()).toContain("is-keyboard");
-
-      fakeViewport.height = window.innerHeight;
-      for (const listener of resizeListeners) listener();
-      await wrapper.vm.$nextTick();
-      expect(shell.classes()).not.toContain("is-keyboard");
-    } finally {
-      window.location.hash = "";
-      wrapper?.unmount();
-      vi.unstubAllGlobals();
-    }
-  });
-
   it("auto-pairs from the remembered code on a bare mobile visit", async () => {
     vi.useFakeTimers();
     stubMatchMedia(true);
