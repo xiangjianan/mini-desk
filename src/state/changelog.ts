@@ -29,6 +29,20 @@ export interface ChangelogEntry {
 
 export const CHANGELOG: ChangelogEntry[] = [
   {
+    version: "1.0.153",
+    date: "2026-08-27",
+    notes: {
+      zh: [
+        "修复：删除配对的工作区时自动注销其配对码，手机端立即失效",
+        "修复：清空数据时同步注销全部配对码，不再遗留无人接收的死队列",
+      ],
+      en: [
+        "Fixed: deleting a paired workspace now revokes its pairing code, cutting off phones immediately",
+        "Fixed: clearing all data now revokes every pairing code, leaving no unattended queues behind",
+      ],
+    },
+  },
+  {
     version: "1.0.152",
     date: "2026-08-27",
     notes: {

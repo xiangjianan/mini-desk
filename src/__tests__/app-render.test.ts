@@ -8016,6 +8016,23 @@ describe("App inbox revoke wiring", () => {
     );
   }
 
+  // default 配对、backup 干净：删除配对区与删除干净区两种路径的共用种子。
+  function seedPairedWorkspaces(): void {
+    localStorage.setItem(
+      STORAGE_KEY,
+      JSON.stringify({
+        ...defaultState(),
+        workspaces: [
+          {
+            ...defaultWorkspace(),
+            inbox: { code: "AB2CDE4FGHJK", todoListId: "morning", noteTarget: DEFAULT_SPACE_ID, lastSeenAt: 7 },
+          },
+          { ...defaultWorkspace("backup") },
+        ],
+      }),
+    );
+  }
+
   it("清除配对后对旧码 keyHash 发送注销且不弹失败警告", async () => {
     seedPaired();
     vi.spyOn(window, "confirm").mockReturnValue(true);
@@ -8122,6 +8139,91 @@ describe("App inbox revoke wiring", () => {
       expect(revokeInboxKey).not.toHaveBeenCalled();
     } finally {
       wrapper.unmount();
+    }
+  });
+
+  it("删除配对工作区时注销其配对码", async () => {
+    seedPairedWorkspaces();
+    const wrapper = mountApp();
+
+    try {
+      await wrapper.get('[data-testid="workspace-trigger"]').trigger("click");
+      await openWorkspaceMenu(wrapper);
+      await wrapper.get(`[data-testid="workspace-delete-${DEFAULT_WORKSPACE_ID}"]`).trigger("click");
+      await nextTick();
+      const event = new KeyboardEvent("keydown", { key: "Enter", bubbles: true, cancelable: true });
+      window.dispatchEvent(event);
+      await nextTick();
+      await flushAsyncComponents();
+      expect(event.defaultPrevented).toBe(true);
+
+      const stored = JSON.parse(localStorage.getItem(STORAGE_KEY) || "{}");
+      expect(stored.workspaces.map((workspace: { id: string }) => workspace.id)).toEqual(["backup"]);
+      expect(revokeInboxKey).toHaveBeenCalledTimes(1);
+      const [keyHash] = vi.mocked(revokeInboxKey).mock.calls[0];
+      expect(keyHash).toMatch(/^[0-9a-f]{64}$/);
+    } finally {
+      wrapper.unmount();
+    }
+  });
+
+  it("删除未配对工作区时不注销", async () => {
+    seedPairedWorkspaces();
+    const wrapper = mountApp();
+
+    try {
+      await wrapper.get('[data-testid="workspace-trigger"]').trigger("click");
+      await openWorkspaceMenu(wrapper, "backup");
+      await wrapper.get('[data-testid="workspace-delete-backup"]').trigger("click");
+      await nextTick();
+      const event = new KeyboardEvent("keydown", { key: "Enter", bubbles: true, cancelable: true });
+      window.dispatchEvent(event);
+      await nextTick();
+      await flushAsyncComponents();
+      expect(event.defaultPrevented).toBe(true);
+
+      const stored = JSON.parse(localStorage.getItem(STORAGE_KEY) || "{}");
+      expect(stored.workspaces.map((workspace: { id: string }) => workspace.id)).toEqual([DEFAULT_WORKSPACE_ID]);
+      expect(stored.workspaces[0].inbox).toEqual({ code: "AB2CDE4FGHJK", todoListId: "morning", noteTarget: DEFAULT_SPACE_ID, lastSeenAt: 7 });
+      expect(revokeInboxKey).not.toHaveBeenCalled();
+    } finally {
+      wrapper.unmount();
+    }
+  });
+
+  it("清空数据时注销所有工作区的配对码", async () => {
+    localStorage.setItem(
+      STORAGE_KEY,
+      JSON.stringify({
+        ...defaultState(),
+        workspaces: [
+          { ...defaultWorkspace(), inbox: { code: "AB2CDE4FGHJK", todoListId: "morning", noteTarget: DEFAULT_SPACE_ID, lastSeenAt: 7 } },
+          { ...defaultWorkspace("backup"), inbox: { code: "ZZ9YXW8VTSRQ", todoListId: "morning", noteTarget: DEFAULT_SPACE_ID, lastSeenAt: 7 } },
+        ],
+      }),
+    );
+    const deleteDatabase = vi.fn();
+    vi.stubGlobal("indexedDB", { deleteDatabase });
+    const wrapper = mountApp();
+
+    try {
+      const settings = wrapper.getComponent(SettingsMenu);
+      settings.vm.$emit("clearData", settings.element as HTMLElement);
+      await nextTick();
+      const event = new KeyboardEvent("keydown", { key: "Enter", bubbles: true, cancelable: true });
+      window.dispatchEvent(event);
+      await nextTick();
+      await flushAsyncComponents();
+      expect(event.defaultPrevented).toBe(true);
+
+      expect(localStorage.getItem(STORAGE_KEY)).toBeNull();
+      expect(revokeInboxKey).toHaveBeenCalledTimes(2);
+      for (const [keyHash] of vi.mocked(revokeInboxKey).mock.calls) {
+        expect(keyHash).toMatch(/^[0-9a-f]{64}$/);
+      }
+    } finally {
+      wrapper.unmount();
+      vi.unstubAllGlobals();
     }
   });
 });

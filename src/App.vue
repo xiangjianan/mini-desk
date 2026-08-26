@@ -1080,6 +1080,8 @@ function deleteWorkspace(id: string, anchor?: HTMLElement): void {
     "confirmDeleteWorkspace",
     anchor,
     () => {
+      // 整区删除连坐配对：被删工作区的配对码随区消失，云端队列同步注销（失败仅气泡警告）。
+      const doomedInboxCode = state.workspaces.find((workspace) => workspace.id === id)?.inbox?.code;
       const result = removeWorkspace(state.workspaces, state.activeWorkspaceId, id);
       if (result.workspaces === state.workspaces) return;
       state.workspaces = result.workspaces;
@@ -1088,6 +1090,7 @@ function deleteWorkspace(id: string, anchor?: HTMLElement): void {
       pendingEditTodoListId.value = null;
       clearImagePreview();
       persistNow();
+      if (doomedInboxCode !== undefined) void revokeInbox(doomedInboxCode);
       showBubble("deleteWorkspace", anchor, { hideCompanionAfter: true });
     },
     undefined,
@@ -2545,6 +2548,9 @@ function clearData(anchor?: HTMLElement): void {
     "confirmClearData",
     anchor,
     async () => {
+      // 清空数据 = 全部配对一起消失：先留底所有配对码，本地抹掉后逐个注销云端队列，
+      // 否则手机会继续发进无人拉取的死队列（同删除工作区的连坐规则）。
+      const doomedInboxCodes = state.workspaces.flatMap((workspace) => (workspace.inbox ? [workspace.inbox.code] : []));
       window.clearTimeout(textSaveTimer.value);
       textSaveTimer.value = undefined;
       emptyTodoRemovalTimers.forEach((timer) => window.clearTimeout(timer));
@@ -2555,6 +2561,7 @@ function clearData(anchor?: HTMLElement): void {
       pendingEditTodoListId.value = null;
       resetUndoHistory();
       Object.assign(state, defaultState());
+      doomedInboxCodes.forEach((code) => void revokeInbox(code));
       resetTextGenerationBaseline();
       // Flush reactive watchers (the theme watcher persists on change) before wiping, so
       // their writes land first and the clear below leaves localStorage truly empty.
