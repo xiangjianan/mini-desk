@@ -547,24 +547,19 @@ describe("App shell", () => {
     }
   });
 
-  it("手机页聚焦输入框后按键盘几何精确滚动（表单底边贴键盘上沿）", async () => {
+  it("手机页聚焦输入框后主动滚动到可见区（首开键盘避让兜底）", async () => {
     stubMatchMedia(true);
     window.location.hash = "#inbox=AB2CDE4FGHJK";
     let wrapper: ReturnType<typeof mountApp> | undefined;
-    const fakeViewport = { height: 600, offsetTop: 0, addEventListener: () => undefined, removeEventListener: () => undefined };
-    vi.stubGlobal("visualViewport", fakeViewport);
 
     try {
       wrapper = mountApp();
-      const scroller = wrapper.get(".mobile-handoff-body").element as HTMLElement;
-      const anchor = wrapper.get(".mobile-inbox-form").element as HTMLElement;
-      expect(scroller.scrollTop).toBe(0);
-      // 表单底边在 900px、键盘顶在 600px：应滚到 900 + 12 - 600 = 312。
-      vi.spyOn(anchor, "getBoundingClientRect").mockReturnValue({ bottom: 900 } as DOMRect);
+      const scrollIntoView = vi.fn();
+      (wrapper.get('[data-testid="mobile-inbox-text"]').element as HTMLTextAreaElement).scrollIntoView = scrollIntoView;
 
       await wrapper.get('[data-testid="mobile-inbox-text"]').trigger("focusin");
 
-      await vi.waitFor(() => expect(scroller.scrollTop).toBe(312));
+      await vi.waitFor(() => expect(scrollIntoView).toHaveBeenCalledWith({ block: "nearest" }));
     } finally {
       window.location.hash = "";
       wrapper?.unmount();
