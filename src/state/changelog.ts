@@ -29,6 +29,20 @@ export interface ChangelogEntry {
 
 export const CHANGELOG: ChangelogEntry[] = [
   {
+    version: "1.0.147",
+    date: "2026-08-26",
+    notes: {
+      zh: [
+        "修复：手机端首次点击输入框弹出键盘时输入框不上移的问题（键盘避让兜底）",
+        "优化：「更换配对码」增加二次确认，避免误触退出已配对状态",
+      ],
+      en: [
+        "Fixed: input no longer stays behind the keyboard on the first tap on mobile (keyboard-avoidance fallback)",
+        "Improved: \"Change pairing code\" now asks for confirmation to avoid accidental taps",
+      ],
+    },
+  },
+  {
     version: "1.0.146",
     date: "2026-08-26",
     notes: {
