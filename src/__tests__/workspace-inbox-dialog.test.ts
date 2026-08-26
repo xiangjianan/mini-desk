@@ -82,10 +82,71 @@ describe("WorkspaceInboxDialog", () => {
     expect(wrapper.find('[data-testid="inbox-address"]').text()).toContain("#inbox=AB2CDE4FGHJK");
   });
 
-  it("渲染介绍与队列上限提示", () => {
+  it("配对码旁的复制按钮：写入剪贴板并短暂反馈「已复制」", async () => {
+    vi.useFakeTimers();
+    const writeText = vi.fn().mockResolvedValue(undefined);
+    const previousClipboard = Object.getOwnPropertyDescriptor(globalThis.navigator, "clipboard");
+    Object.defineProperty(globalThis.navigator, "clipboard", { value: { writeText }, configurable: true });
     const wrapper = mountDialog(INBOX);
-    // inboxQueueHint 含「200 条」。
-    expect(wrapper.text()).toContain("200 条");
+
+    try {
+      expect(wrapper.get('[data-testid="inbox-copy"]').attributes("aria-label")).toBe("复制配对码");
+      await wrapper.get('[data-testid="inbox-copy"]').trigger("click");
+      await vi.advanceTimersByTimeAsync(0);
+      await wrapper.vm.$nextTick();
+
+      expect(writeText).toHaveBeenCalledWith("AB2CDE4FGHJK");
+      expect(wrapper.get('[data-testid="inbox-copy"]').attributes("aria-label")).toBe("已复制");
+      // 无需 hover：成功反馈以气泡自动浮现在按钮下方。
+      expect(wrapper.get('[data-testid="inbox-copy-hint"]').text()).toBe("已复制");
+      expect(wrapper.get('[data-testid="inbox-copy-hint"]').attributes("role")).toBe("status");
+
+      // 反馈短暂停留后自动还原。
+      await vi.advanceTimersByTimeAsync(1800);
+      await wrapper.vm.$nextTick();
+      expect(wrapper.get('[data-testid="inbox-copy"]').attributes("aria-label")).toBe("复制配对码");
+      expect(wrapper.find('[data-testid="inbox-copy-hint"]').exists()).toBe(false);
+    } finally {
+      wrapper.unmount();
+      if (previousClipboard) Object.defineProperty(globalThis.navigator, "clipboard", previousClipboard);
+      else Reflect.deleteProperty(globalThis.navigator, "clipboard");
+      vi.useRealTimers();
+    }
+  });
+
+  it("复制失败：反馈「复制失败」后同样自动还原", async () => {
+    vi.useFakeTimers();
+    // writeText 拒绝且 jsdom 无 execCommand，两层复制路径均失败。
+    const writeText = vi.fn().mockRejectedValue(new Error("denied"));
+    const previousClipboard = Object.getOwnPropertyDescriptor(globalThis.navigator, "clipboard");
+    Object.defineProperty(globalThis.navigator, "clipboard", { value: { writeText }, configurable: true });
+    const wrapper = mountDialog(INBOX);
+
+    try {
+      await wrapper.get('[data-testid="inbox-copy"]').trigger("click");
+      await vi.advanceTimersByTimeAsync(0);
+      await wrapper.vm.$nextTick();
+
+      expect(wrapper.get('[data-testid="inbox-copy"]').attributes("aria-label")).toBe("复制失败");
+      expect(wrapper.get('[data-testid="inbox-copy-hint"]').text()).toBe("复制失败");
+
+      await vi.advanceTimersByTimeAsync(1800);
+      await wrapper.vm.$nextTick();
+      expect(wrapper.get('[data-testid="inbox-copy"]').attributes("aria-label")).toBe("复制配对码");
+      expect(wrapper.find('[data-testid="inbox-copy-hint"]').exists()).toBe(false);
+    } finally {
+      wrapper.unmount();
+      if (previousClipboard) Object.defineProperty(globalThis.navigator, "clipboard", previousClipboard);
+      else Reflect.deleteProperty(globalThis.navigator, "clipboard");
+      vi.useRealTimers();
+    }
+  });
+
+  it("渲染介绍与同步频率提示（不再展示队列上限）", () => {
+    const wrapper = mountDialog(INBOX);
+    // inboxSyncHint 提示每 5 分钟自动同步一次。
+    expect(wrapper.text()).toContain("每 5 分钟");
+    expect(wrapper.text()).not.toContain("200 条");
   });
 
   it("保存时 emit update 并保留水位线与落点", async () => {
@@ -119,15 +180,16 @@ describe("WorkspaceInboxDialog", () => {
     expect((wrapper.get('[data-testid="inbox-note-target"]').element as HTMLSelectElement).value).toBe("s3");
   });
 
-  it("轮换 confirm 拒绝时保持原码且不 emit", async () => {
+  it("重置 confirm 拒绝时保持原码且不 emit", async () => {
     vi.spyOn(window, "confirm").mockReturnValue(false);
     const wrapper = mountDialog(INBOX);
+    expect(wrapper.find('[data-testid="inbox-rotate"]').text()).toBe("重置配对码");
     await wrapper.find('[data-testid="inbox-rotate"]').trigger("click");
     expect(wrapper.find('[data-testid="inbox-code"]').text()).toBe("AB2CDE4FGHJK");
     expect(wrapper.emitted("update")).toBeUndefined();
   });
 
-  it("轮换确认后立即 emit 新码并保持弹窗打开，保存时新码紧随 close", async () => {
+  it("重置确认后立即 emit 新码并保持弹窗打开，保存时新码紧随 close", async () => {
     vi.spyOn(window, "confirm").mockReturnValue(true);
     // 记录事件顺序以验证「update 后紧随 close」。
     const order: string[] = [];

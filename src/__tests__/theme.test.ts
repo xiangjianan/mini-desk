@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { nextThemeMode, normalizeThemeMode, resolveTheme } from "../state/theme";
+import { nextManualTheme, normalizeThemeMode, resolveTheme } from "../state/theme";
 import { defaultState } from "../state/defaults";
 
 describe("theme mode helpers (src/state/theme.ts)", () => {
@@ -15,10 +15,12 @@ describe("theme mode helpers (src/state/theme.ts)", () => {
     expect(resolveTheme("auto", false)).toBe("light");
   });
 
-  it("nextThemeMode cycles light → dark → auto → light", () => {
-    expect(nextThemeMode("light")).toBe("dark");
-    expect(nextThemeMode("dark")).toBe("auto");
-    expect(nextThemeMode("auto")).toBe("light");
+  it("nextManualTheme 切到当前实际主题的反色，并固化为显式明/暗（不再回到跟随系统）", () => {
+    expect(nextManualTheme("light", true)).toBe("dark");
+    expect(nextManualTheme("dark", true)).toBe("light");
+    // auto：按系统解析后取反色；一经手动点击即脱离跟随系统。
+    expect(nextManualTheme("auto", true)).toBe("light");
+    expect(nextManualTheme("auto", false)).toBe("dark");
   });
 
   it("normalizeThemeMode keeps explicit modes and falls back to auto for unknown/missing", () => {

@@ -1,9 +1,11 @@
 <script setup lang="ts">
-import { computed, onMounted, ref, watch } from "vue";
-import { NButton, NModal, NSelect } from "naive-ui";
+import { computed, onBeforeUnmount, onMounted, ref, watch } from "vue";
+import { NButton, NIcon, NModal, NSelect } from "naive-ui";
+import { CheckmarkOutline, CloseCircleOutline, CopyOutline } from "@vicons/ionicons5";
 import QRCode from "qrcode";
 import { buildInboxAddress, generateInboxCode, isValidInboxCode } from "../sync/pairing";
 import { getDisplaySpaceTitle, getDisplayTodoListTitle, getUiText } from "../state/i18n";
+import { copyTextToClipboard } from "../utils/clipboard";
 import type { AppLanguage, WorkspaceData, WorkspaceInbox } from "../types";
 
 type InboxOption = { label: string; value: string };
@@ -50,6 +52,7 @@ function renderQr(): void {
 onMounted(renderQr);
 // flush: "post" 保证地址变化后先等 canvas 挂载/更新再重绘。
 watch(address, renderQr, { flush: "post" });
+onBeforeUnmount(clearCopyResetTimer);
 
 function generate(): void {
   code.value = generateInboxCode();
@@ -76,6 +79,38 @@ function rotate(): void {
   emit("update", buildInbox());
 }
 
+/** 配对码一键复制：图标短暂切为成功/失败标记，超时自动还原。 */
+const COPY_FEEDBACK_MS = 1800;
+type CopyState = "idle" | "ok" | "fail";
+const copyState = ref<CopyState>("idle");
+let copyResetTimer: number | undefined;
+
+function clearCopyResetTimer(): void {
+  if (copyResetTimer !== undefined) {
+    window.clearTimeout(copyResetTimer);
+    copyResetTimer = undefined;
+  }
+}
+
+const copyIcon = computed(() =>
+  copyState.value === "ok" ? CheckmarkOutline : copyState.value === "fail" ? CloseCircleOutline : CopyOutline,
+);
+const copyLabel = computed(() => {
+  if (copyState.value === "ok") return text.value.app.inboxCopied;
+  if (copyState.value === "fail") return text.value.app.inboxCopyFailed;
+  return text.value.app.inboxCopyCode;
+});
+
+async function copyCode(): Promise<void> {
+  const ok = await copyTextToClipboard(code.value);
+  clearCopyResetTimer();
+  copyState.value = ok ? "ok" : "fail";
+  copyResetTimer = window.setTimeout(() => {
+    copyState.value = "idle";
+    copyResetTimer = undefined;
+  }, COPY_FEEDBACK_MS);
+}
+
 function clear(): void {
   if (!window.confirm(text.value.app.inboxClearConfirm)) return;
   emit("update", null);
@@ -100,7 +135,7 @@ function save(): void {
     @update:show="emit('close')"
   >
     <p class="workspace-inbox-intro">{{ text.app.inboxDialogIntro }}</p>
-    <p class="workspace-inbox-hint">{{ text.app.inboxQueueHint }}</p>
+    <p class="workspace-inbox-hint">{{ text.app.inboxSyncHint }}</p>
 
     <div v-if="!hasCode" class="workspace-inbox-empty">
       <NButton type="primary" data-testid="inbox-generate" @click="generate">{{ text.app.inboxGenerate }}</NButton>
@@ -110,7 +145,33 @@ function save(): void {
       <div class="workspace-inbox-field">
         <span class="workspace-inbox-label">{{ text.app.inboxCodeLabel }}</span>
         <span class="workspace-inbox-code-row">
-          <span class="workspace-inbox-code" data-testid="inbox-code">{{ code }}</span>
+          <span class="workspace-inbox-code-group">
+            <span class="workspace-inbox-code" data-testid="inbox-code">{{ code }}</span>
+            <span class="workspace-inbox-copy-wrap">
+              <button
+                type="button"
+                class="workspace-inbox-copy"
+                :class="{ 'is-ok': copyState === 'ok', 'is-fail': copyState === 'fail' }"
+                data-testid="inbox-copy"
+                :aria-label="copyLabel"
+                :title="copyLabel"
+                @click="copyCode"
+              >
+                <NIcon :component="copyIcon" :size="14" />
+              </button>
+              <!-- 原生 title 在指针已悬停时属性变化不会重新弹出，成功/失败反馈由本气泡自动浮现。 -->
+              <span
+                v-if="copyState !== 'idle'"
+                class="workspace-inbox-copy-hint"
+                :class="{ 'is-fail': copyState === 'fail' }"
+                role="status"
+                aria-live="polite"
+                data-testid="inbox-copy-hint"
+              >
+                {{ copyState === "ok" ? text.app.inboxCopied : text.app.inboxCopyFailed }}
+              </span>
+            </span>
+          </span>
           <button
             type="button"
             class="workspace-inbox-rotate"

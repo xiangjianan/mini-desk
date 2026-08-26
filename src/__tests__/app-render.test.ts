@@ -136,6 +136,14 @@ async function flushAsyncComponents() {
   await nextTick();
 }
 
+// The workspace row's overflow menu (NPopover under the shared stub) opens once
+// its controlled `:show` flips, after which the menu items render inline in the
+// component subtree and are reachable via wrapper.get.
+async function openWorkspaceMenu(wrapper: ReturnType<typeof mountApp>, id = DEFAULT_WORKSPACE_ID): Promise<void> {
+  await wrapper.get(`[data-testid="workspace-menu-${id}"]`).trigger("click");
+  await nextTick();
+}
+
 function getImagePreview(wrapper: ReturnType<typeof mountApp>) {
   return wrapper.getComponent({ name: "ImagePreview" });
 }
@@ -2193,6 +2201,28 @@ describe("App shell", () => {
     wrapper.unmount();
   });
 
+  it("主题手动切换固化为明/暗两态，不再轮换出跟随系统", async () => {
+    const wrapper = mountApp();
+
+    try {
+      // 默认 auto + jsdom 无 matchMedia（systemDark=false）：实际渲染浅色，按钮提示切深色。
+      expect(wrapper.get('[data-testid="workbench-theme"]').attributes("aria-label")).toBe("切换到深色");
+
+      await wrapper.get('[data-testid="workbench-theme"]').trigger("click");
+      await wrapper.vm.$nextTick();
+      expect(JSON.parse(localStorage.getItem(STORAGE_KEY) || "{}").theme).toBe("dark");
+      expect(document.documentElement.dataset.theme).toBe("dark");
+      expect(wrapper.get('[data-testid="workbench-theme"]').attributes("aria-label")).toBe("切换到浅色");
+
+      await wrapper.get('[data-testid="workbench-theme"]').trigger("click");
+      await wrapper.vm.$nextTick();
+      expect(JSON.parse(localStorage.getItem(STORAGE_KEY) || "{}").theme).toBe("light");
+      expect(document.documentElement.dataset.theme).toBe("light");
+    } finally {
+      wrapper.unmount();
+    }
+  });
+
   it("confirms clearing completed todos with the companion bubble", async () => {
     vi.useFakeTimers();
     vi.spyOn(Math, "random").mockReturnValue(0);
@@ -2368,6 +2398,7 @@ describe("App shell", () => {
 
       // Open the switcher and rename the active ("default") workspace via the dialog.
       await wrapper.get('[data-testid="workspace-trigger"]').trigger("click");
+      await openWorkspaceMenu(wrapper);
       await wrapper.get('[data-testid="workspace-rename-default"]').trigger("click");
       await nextTick();
       expect(wrapper.find(".n-modal").exists()).toBe(true);
@@ -2397,6 +2428,7 @@ describe("App shell", () => {
     try {
       await nextTick();
       await wrapper.get('[data-testid="workspace-trigger"]').trigger("click");
+      await openWorkspaceMenu(wrapper);
       await wrapper.get('[data-testid="workspace-rename-default"]').trigger("click");
       await nextTick();
 
@@ -2422,6 +2454,7 @@ describe("App shell", () => {
     try {
       await nextTick();
       await wrapper.get('[data-testid="workspace-trigger"]').trigger("click");
+      await openWorkspaceMenu(wrapper);
       await wrapper.get('[data-testid="workspace-rename-default"]').trigger("click");
       await nextTick();
 
@@ -7506,6 +7539,7 @@ describe("App shell", () => {
 
     try {
       await wrapper.get('[data-testid="workspace-trigger"]').trigger("click");
+      await openWorkspaceMenu(wrapper);
       await wrapper.get('[data-testid="workspace-pair-default"]').trigger("click");
       // 配对弹窗按需异步加载（qrcode 不进主包）：先等动态 import 落定再断言与交互。
       await flushAsyncComponents();
@@ -7742,6 +7776,7 @@ describe("App inbox pull wiring", () => {
 
       // 在途期间删除配对工作区：state.workspaces 整组替换且不再含 default。
       await wrapper.get('[data-testid="workspace-trigger"]').trigger("click");
+      await openWorkspaceMenu(wrapper);
       await wrapper.get(`[data-testid="workspace-delete-${DEFAULT_WORKSPACE_ID}"]`).trigger("click");
       await vi.advanceTimersByTimeAsync(200);
       await nextTick();
@@ -7795,6 +7830,7 @@ describe("App inbox pull wiring", () => {
 
       // 在途期间从配对弹窗清除配对：工作区对象被替换且不再含 inbox 字段。
       await wrapper.get('[data-testid="workspace-trigger"]').trigger("click");
+      await openWorkspaceMenu(wrapper);
       await wrapper.get('[data-testid="workspace-pair-default"]').trigger("click");
       await flushAsyncComponents();
       await wrapper.get('[data-testid="inbox-clear"]').trigger("click");
@@ -7955,6 +7991,7 @@ describe("App inbox revoke wiring", () => {
 
   async function openInboxDialog(wrapper: ReturnType<typeof mountApp>): Promise<void> {
     await wrapper.get('[data-testid="workspace-trigger"]').trigger("click");
+    await openWorkspaceMenu(wrapper);
     await wrapper.get('[data-testid="workspace-pair-default"]').trigger("click");
     await flushAsyncComponents();
   }
@@ -7978,7 +8015,7 @@ describe("App inbox revoke wiring", () => {
     }
   });
 
-  it("轮换配对（新码≠旧码）同样注销旧码；保存未改码不注销", async () => {
+  it("重置配对（新码≠旧码）同样注销旧码；保存未改码不注销", async () => {
     seedPaired();
     vi.spyOn(window, "confirm").mockReturnValue(true);
     const wrapper = mountApp();
@@ -8043,6 +8080,7 @@ describe("App inbox register wiring", () => {
 
   async function openInboxDialog(wrapper: ReturnType<typeof mountApp>): Promise<void> {
     await wrapper.get('[data-testid="workspace-trigger"]').trigger("click");
+    await openWorkspaceMenu(wrapper);
     await wrapper.get('[data-testid="workspace-pair-default"]').trigger("click");
     await flushAsyncComponents();
   }

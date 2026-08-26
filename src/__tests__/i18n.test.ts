@@ -176,12 +176,10 @@ describe("localized public copy", () => {
     expect(getUiText("en").app.mobileInboxCodeCopyHint).toBe("Tap to copy the pairing code");
   });
 
-  it("主题切换三态文案中英齐全", () => {
+  it("主题切换文案中英齐全（两态，无跟随系统档）", () => {
     expect(getUiText("zh").app.themeToDark).toBe("切换到深色");
     expect(getUiText("zh").app.themeToLight).toBe("切换到浅色");
-    expect(getUiText("zh").app.themeToAuto).toBe("切换为跟随系统");
     expect(getUiText("en").app.themeToDark).toBe("Switch to dark");
     expect(getUiText("en").app.themeToLight).toBe("Switch to light");
-    expect(getUiText("en").app.themeToAuto).toBe("Follow system");
   });
 });

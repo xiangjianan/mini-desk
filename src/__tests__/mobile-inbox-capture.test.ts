@@ -101,7 +101,7 @@ describe("MobileInboxCapture", () => {
     const queueWrapper = mountCapture();
     await fillAndSend(queueWrapper, "队列满内容");
     await until(() =>
-      expect(queueWrapper.get('[data-testid="mobile-inbox-error"]').text()).toBe("收件队列已满，请在电脑端轮换配对码"),
+      expect(queueWrapper.get('[data-testid="mobile-inbox-error"]').text()).toBe("收件队列已满，请在电脑端重置配对码"),
     );
   });
 

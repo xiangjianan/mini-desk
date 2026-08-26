@@ -1,7 +1,7 @@
 <script setup lang="ts">
 import { computed, nextTick, onUnmounted, ref, watch } from "vue";
 import { NPopover, NIcon } from "naive-ui";
-import { ChevronDownOutline, AddOutline, CreateOutline, TrashOutline, DownloadOutline, CloudUploadOutline, CheckmarkOutline, PhonePortraitOutline } from "@vicons/ionicons5";
+import { ChevronDownOutline, AddOutline, CreateOutline, TrashOutline, DownloadOutline, CloudUploadOutline, CheckmarkOutline, PhonePortraitOutline, EllipsisHorizontalOutline } from "@vicons/ionicons5";
 import { getUiText } from "../state/i18n";
 import { DEFAULT_BOARD_TITLE } from "../state/defaults";
 import { getWorkspaceBoardTitle } from "../state/workspaces";
@@ -31,6 +31,7 @@ const emit = defineEmits<{
 
 const text = computed(() => getUiText(props.language));
 const open = ref(false);
+const menuOpenId = ref<string | null>(null);
 const dragId = ref<string | null>(null);
 let outsideClickGuard: ((event: MouseEvent) => void) | null = null;
 
@@ -44,11 +45,17 @@ const activeTitle = computed(() =>
 const activeSlogan = computed(() => activeWorkspace.value?.customTitles["board-slogan"]?.trim() ?? "");
 
 function toggleOpen(): void {
-  open.value = !open.value;
+  if (open.value) close();
+  else open.value = true;
 }
 
 function close(): void {
   open.value = false;
+  menuOpenId.value = null;
+}
+
+function toggleMenu(id: string): void {
+  menuOpenId.value = menuOpenId.value === id ? null : id;
 }
 
 // Outside-click handling that survives event propagation being stopped. Many
@@ -65,10 +72,21 @@ function attachOutsideClickGuard(): void {
     const target = event.target as HTMLElement | null;
     if (!target) return;
     if (target.closest('[data-testid="workspace-trigger"]')) return;
-    if (target.closest(".workspace-switcher")) return;
+    if (target.closest(".workspace-switcher")) {
+      // Inside the switcher: an open overflow ("⋯") menu closes when the click
+      // lands elsewhere in the list, but stays open when clicking its own trigger
+      // or the (teleported) menu itself.
+      if (menuOpenId.value && !target.closest(".workspace-switcher-menu") && !target.closest(".workspace-switcher-kebab")) {
+        menuOpenId.value = null;
+      }
+      return;
+    }
     // The per-workspace zone-visibility popover teleports to <body>, so it lives
     // outside .workspace-switcher; keep the switcher open while interacting with it.
     if (target.closest(".zone-visibility-popover")) return;
+    // Likewise the per-workspace overflow ("⋯") menu teleports to <body>; keeping
+    // the switcher open lets the user pick an action without the dropdown closing.
+    if (target.closest(".workspace-switcher-menu")) return;
     close();
   };
   document.addEventListener("click", outsideClickGuard, true);
@@ -114,6 +132,13 @@ function handleExport(event: MouseEvent, id: string): void {
 function handlePair(event: MouseEvent, id: string): void {
   event.stopPropagation();
   emit("pairInbox", id);
+  close();
+}
+
+function handleRename(event: MouseEvent, id: string): void {
+  event.stopPropagation();
+  const workspace = props.workspaces.find((item) => item.id === id);
+  emit("rename", id, workspace?.customTitles["board-title"] ?? "", workspace?.customTitles["board-slogan"] ?? "");
   close();
 }
 
@@ -200,42 +225,66 @@ function onDrop(targetId: string): void {
               :language="language"
               @toggle="emit('toggleZone', workspace.id, $event)"
             />
-            <button
-              type="button"
-              class="workspace-switcher-action"
-              :data-testid="`workspace-export-${workspace.id}`"
-              :aria-label="text.app.workspaceExportSingle"
-              @click="handleExport($event, workspace.id)"
+            <NPopover
+              trigger="manual"
+              placement="right-start"
+              :show="menuOpenId === workspace.id"
             >
-              <NIcon :component="DownloadOutline" size="14" />
-            </button>
-            <button
-              type="button"
-              class="workspace-switcher-action"
-              :data-testid="`workspace-pair-${workspace.id}`"
-              :aria-label="text.app.inboxPair"
-              @click="handlePair($event, workspace.id)"
-            >
-              <NIcon :component="PhonePortraitOutline" size="14" />
-            </button>
-            <button
-              type="button"
-              class="workspace-switcher-action"
-              :data-testid="`workspace-rename-${workspace.id}`"
-              :aria-label="text.common.rename"
-              @click.stop="emit('rename', workspace.id, workspace.customTitles['board-title'] ?? '', workspace.customTitles['board-slogan'] ?? ''); close()"
-            >
-              <NIcon :component="CreateOutline" size="14" />
-            </button>
-            <button
-              type="button"
-              class="workspace-switcher-action is-delete"
-              :data-testid="`workspace-delete-${workspace.id}`"
-              :aria-label="text.common.delete"
-              @click="handleDelete($event, workspace.id)"
-            >
-              <NIcon :component="TrashOutline" size="14" />
-            </button>
+              <template #trigger>
+                <button
+                  type="button"
+                  class="workspace-switcher-action workspace-switcher-kebab"
+                  :data-testid="`workspace-menu-${workspace.id}`"
+                  :aria-label="text.app.workspaceMenuActions"
+                  :aria-expanded="menuOpenId === workspace.id"
+                  @click.stop="toggleMenu(workspace.id)"
+                >
+                  <NIcon :component="EllipsisHorizontalOutline" size="14" />
+                </button>
+              </template>
+              <div class="workspace-switcher-menu" role="menu" :aria-label="text.app.workspaceMenuActions">
+                <button
+                  type="button"
+                  class="workspace-switcher-menu-item"
+                  role="menuitem"
+                  :data-testid="`workspace-export-${workspace.id}`"
+                  @click="handleExport($event, workspace.id)"
+                >
+                  <NIcon :component="DownloadOutline" size="14" />
+                  <span>{{ text.app.workspaceExportSingle }}</span>
+                </button>
+                <button
+                  type="button"
+                  class="workspace-switcher-menu-item"
+                  role="menuitem"
+                  :data-testid="`workspace-pair-${workspace.id}`"
+                  @click="handlePair($event, workspace.id)"
+                >
+                  <NIcon :component="PhonePortraitOutline" size="14" />
+                  <span>{{ text.app.inboxPair }}</span>
+                </button>
+                <button
+                  type="button"
+                  class="workspace-switcher-menu-item"
+                  role="menuitem"
+                  :data-testid="`workspace-rename-${workspace.id}`"
+                  @click="handleRename($event, workspace.id)"
+                >
+                  <NIcon :component="CreateOutline" size="14" />
+                  <span>{{ text.common.rename }}</span>
+                </button>
+                <button
+                  type="button"
+                  class="workspace-switcher-menu-item is-delete"
+                  role="menuitem"
+                  :data-testid="`workspace-delete-${workspace.id}`"
+                  @click="handleDelete($event, workspace.id)"
+                >
+                  <NIcon :component="TrashOutline" size="14" />
+                  <span>{{ text.common.delete }}</span>
+                </button>
+              </div>
+            </NPopover>
           </span>
         </li>
       </ul>

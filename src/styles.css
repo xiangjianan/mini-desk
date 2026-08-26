@@ -3053,13 +3053,13 @@ button.notify-panel-preset {
 }
 
 /* Every delete/trash affordance reads as destructive: the trash icon buttons
-   (screenshot delete, quick tag/header delete, workspace delete) paint in the
-   danger color so they stand out from ordinary actions. Dropdown menu delete
-   items color their trash icon directly via renderIcon(..., true). The workspace
-   selector is scoped under .workspace-switcher-actions so its specificity (0,3,0)
-   beats the equal-or-higher `color: inherit` on the base action rule below. */
+   (screenshot delete, quick tag/header delete) and the workspace overflow-menu
+   delete item paint in the danger color so they stand out from ordinary actions.
+   The workspace selector is scoped under .workspace-switcher-menu so its
+   specificity (0,3,0) beats the equal-or-higher `color: inherit` on the base
+   menu-item rule below. */
 .icon-button.is-delete,
-.workspace-switcher-actions .workspace-switcher-action.is-delete,
+.workspace-switcher-menu .workspace-switcher-menu-item.is-delete,
 .preview-toolbar-button.is-delete {
   color: var(--danger);
 }
@@ -7296,9 +7296,11 @@ html[data-theme="dark"] .quick-search .quick-search-toggle:focus-visible {
   line-height: 0;
 }
 .workspace-switcher-actions .workspace-switcher-action:hover { background: var(--color-hover, rgba(0,0,0,0.08)); opacity: 1; }
-/* Vertical-alignment knob for the grid glyph vs. the lighter line icons beside
-   it (kept as a single value so it's easy to nudge by ±1px). 0 = centered. */
-.workspace-switcher-actions .workspace-switcher-action.zone-visibility-trigger .n-icon { transform: translateY(1px); }
+/* The grid glyph (GridOutline) is geometrically symmetric in its viewBox, so with
+   the flex-centered action button no vertical nudge is needed — keep it centered.
+   (A historical +1px aligned the small grid against the taller line icons that
+   used to sit beside it in a 5-icon row; now that only ▦ and ⋮ remain, that
+   offset makes the grid sit a pixel low.) */
 
 /* ClickUp-style outlined button pair pinned to the bottom of the dropdown. */
 .workspace-switcher-footer {
@@ -7336,6 +7338,17 @@ html[data-theme="dark"] .quick-search .quick-search-toggle:focus-visible {
 .zone-visibility-check { display: inline-flex; align-items: center; justify-content: center; width: 16px; height: 16px; flex: none; }
 .zone-visibility-label { line-height: 1; }
 
+/* Per-workspace overflow ("⋯") menu: gathers the lower-frequency actions so the
+   list row only shows the zone-visibility grid plus a single kebab trigger. */
+.workspace-switcher-menu { min-width: 178px; padding: 2px 0; }
+.workspace-switcher-menu .workspace-switcher-menu-item {
+  display: inline-flex; align-items: center; gap: 8px; width: 100%;
+  background: transparent; border: none; cursor: pointer; padding: 5px 10px; border-radius: 8px; color: inherit;
+  font-size: 13px; line-height: 1; min-height: 0;
+}
+.workspace-switcher-menu .workspace-switcher-menu-item:hover { background: var(--color-hover, rgba(0,0,0,0.06)); }
+.workspace-switcher-menu .workspace-switcher-menu-item .n-icon { flex: none; }
+
 
 /* ---- 手机速记配对弹窗 ---- */
 .workspace-inbox-intro { margin: 0 0 6px; color: var(--muted); font-size: 12px; line-height: 1.6; }
@@ -7343,7 +7356,30 @@ html[data-theme="dark"] .quick-search .quick-search-toggle:focus-visible {
 .workspace-inbox-field { display: grid; grid-template-columns: 64px 1fr; align-items: center; gap: 8px; margin: 8px 0; }
 .workspace-inbox-label { color: var(--muted); font-size: 12px; }
 .workspace-inbox-code-row { display: flex; align-items: center; justify-content: space-between; gap: 8px; min-width: 0; }
+.workspace-inbox-code-group { display: inline-flex; align-items: center; gap: 4px; min-width: 0; }
 .workspace-inbox-code { font-family: ui-monospace, SFMono-Regular, Menlo, monospace; letter-spacing: 2px; font-weight: 600; }
+/* 配对码旁的一键复制：默认复制图标，成功 ✓ / 失败 × 短暂替换后自动还原。 */
+.workspace-inbox-copy { display: inline-flex; align-items: center; justify-content: center; width: 22px; height: 22px; border: none; border-radius: var(--radius-control); background: none; color: var(--primary); cursor: pointer; padding: 0; flex: none; }
+.workspace-inbox-copy:hover { background: var(--button); }
+.workspace-inbox-copy.is-fail { color: var(--destructive); }
+/* 复制反馈气泡：成功/失败时自动浮现在按钮下方，无需 hover，短暂停留后随状态还原消失。 */
+.workspace-inbox-copy-wrap { position: relative; display: inline-flex; flex: none; }
+.workspace-inbox-copy-hint {
+  position: absolute;
+  top: calc(100% + 6px);
+  left: 50%;
+  transform: translateX(-50%);
+  padding: 2px 8px;
+  border-radius: calc(var(--radius-control) - 2px);
+  background: var(--primary);
+  color: var(--primary-foreground);
+  font-size: 11px;
+  line-height: 1.5;
+  white-space: nowrap;
+  pointer-events: none;
+  z-index: 1;
+}
+.workspace-inbox-copy-hint.is-fail { background: var(--destructive); color: var(--primary-foreground); }
 .workspace-inbox-rotate { border: none; background: none; color: var(--primary); font-size: 12px; cursor: pointer; padding: 2px 4px; flex: none; }
 .workspace-inbox-address { font-size: 11px; color: var(--muted); word-break: break-all; user-select: all; }
 .workspace-inbox-qr { display: block; margin: 8px auto; border: 1px solid var(--line-subtle); border-radius: 8px; }

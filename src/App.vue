@@ -1,6 +1,6 @@
 <script setup lang="ts">
 import { computed, defineAsyncComponent, nextTick, onMounted, onUnmounted, reactive, ref, watch } from "vue";
-import { ContrastOutline, MoonOutline, SunnyOutline } from "@vicons/ionicons5";
+import { MoonOutline, SunnyOutline } from "@vicons/ionicons5";
 import { darkTheme, dateEnUS, dateZhCN, enUS, NButton, NConfigProvider, NGlobalStyle, NIcon, NInput, NModal, zhCN } from "naive-ui";
 import CompanionBubble from "./components/CompanionBubble.vue";
 import ImagePanel from "./components/ImagePanel.vue";
@@ -14,7 +14,7 @@ import WorkspaceSwitcher from "./components/WorkspaceSwitcher.vue";
 import miniDeskLogo from "../static/img/mini-desk-cat.png?url";
 import miniDeskDarkLogo from "../static/img/mini-desk-cat-dark.png?url";
 import { getCompanionGifSrc, getCompanionNotificationIconSrc } from "./state/companionGifThemes";
-import { nextThemeMode, resolveTheme, type ResolvedTheme } from "./state/theme";
+import { nextManualTheme, resolveTheme, type ResolvedTheme } from "./state/theme";
 import {
   deleteImageDatabases,
   deleteStoredImage,
@@ -347,12 +347,9 @@ const systemDark = ref(false);
 const effectiveTheme = computed<ResolvedTheme>(() => resolveTheme(state.theme, systemDark.value));
 const naiveTheme = computed(() => (effectiveTheme.value === "dark" ? darkTheme : null));
 /** 主题按钮图标/文案随模式变化：浅→深、深→自动、自动→浅。 */
-const themeSwitchIcon = computed(() => (state.theme === "dark" ? SunnyOutline : state.theme === "auto" ? ContrastOutline : MoonOutline));
-const themeSwitchLabel = computed(() => {
-  if (state.theme === "dark") return uiText.value.app.themeToLight;
-  if (state.theme === "auto") return uiText.value.app.themeToAuto;
-  return uiText.value.app.themeToDark;
-});
+/** 图标/提示词基于实际生效主题（auto 时按系统解析结果）：手动切换只有明/暗两态。 */
+const themeSwitchIcon = computed(() => (effectiveTheme.value === "dark" ? SunnyOutline : MoonOutline));
+const themeSwitchLabel = computed(() => (effectiveTheme.value === "dark" ? uiText.value.app.themeToLight : uiText.value.app.themeToDark));
 const naiveLocale = computed(() => (state.language === "en" ? enUS : zhCN));
 const naiveDateLocale = computed(() => (state.language === "en" ? dateEnUS : dateZhCN));
 const uiText = computed(() => getUiText(state.language));
@@ -2493,7 +2490,8 @@ function moveTodo(dragged: DraggedTodo, destinationPeriod: TodoPeriod, targetId?
 }
 
 function handleThemeClick(): void {
-  state.theme = nextThemeMode(state.theme);
+  // 切到当前实际主题的反色并固化；一经手动选择即脱离跟随系统。
+  state.theme = nextManualTheme(state.theme, systemDark.value);
   hideCompanion();
 }
 
@@ -2623,7 +2621,7 @@ async function importData(event: Event): Promise<void> {
     return;
   }
   // 配对码即手机录入通道的密钥：导出文件携带 inbox 意味着「分享文件 = 分享通道」，
-  // 导入成功后提示来自他人的文件应轮换配对码。
+  // 导入成功后提示来自他人的文件应重置配对码。
   const importedHasInbox = importedPayloadHasInbox(parsed);
 
   if (isSingleWorkspaceExport(parsed as Record<string, unknown>)) {
@@ -3264,7 +3262,7 @@ function moveItem<T extends { id: string }>(items: T[], dragId: string, targetId
       :title="boardTitle"
       :slogan="boardSlogan"
       :save-status-label="workspaceDensityLabel"
-      :theme="state.theme"
+      :theme="effectiveTheme"
       :language="state.language"
       :assets-title="titles['image-title']"
       :notes-title="titles['quick-title']"

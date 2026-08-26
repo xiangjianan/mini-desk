@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { mount } from "@vue/test-utils";
+import { mount, type VueWrapper } from "@vue/test-utils";
 import { nextTick } from "vue";
 import WorkspaceSwitcher from "../components/WorkspaceSwitcher.vue";
 import { defaultWorkspace } from "../state/defaults";
@@ -9,6 +9,25 @@ const workspaces: WorkspaceData[] = [
   { ...defaultWorkspace("a"), customTitles: { "board-title": "主空间", "board-slogan": "S1" } },
   { ...defaultWorkspace("b"), customTitles: { "board-title": "副空间" } },
 ];
+
+// The kebab ("⋯") menu teleports to <body> via NPopover, so menu items must be
+// found through the document rather than the component subtree.
+function menuAction(id: string, action: "export" | "pair" | "rename" | "delete"): HTMLElement {
+  const item = document.body.querySelector<HTMLElement>(`[data-testid="workspace-${action}-${id}"]`);
+  if (!item) throw new Error(`Menu action not found: workspace-${action}-${id}`);
+  return item;
+}
+
+async function openWorkspaceMenu(wrapper: VueWrapper, id: string): Promise<void> {
+  await wrapper.find(`[data-testid="workspace-menu-${id}"]`).trigger("click");
+  await nextTick();
+}
+
+async function clickMenuAction(wrapper: VueWrapper, id: string, action: "export" | "pair" | "rename" | "delete"): Promise<void> {
+  await openWorkspaceMenu(wrapper, id);
+  menuAction(id, action).click();
+  await nextTick();
+}
 
 describe("WorkspaceSwitcher", () => {
   it("渲染当前工作空间标题作为触发按钮", () => {
@@ -107,7 +126,7 @@ describe("WorkspaceSwitcher", () => {
       attachTo: document.body,
     });
     await wrapper.find('[data-testid="workspace-trigger"]').trigger("click");
-    await wrapper.find('[data-testid="workspace-delete-b"]').trigger("click");
+    await clickMenuAction(wrapper, "b", "delete");
     const deleteEvents = wrapper.emitted("delete");
     expect(deleteEvents?.[0]?.[0]).toBe("b");
     wrapper.unmount();
@@ -122,9 +141,10 @@ describe("WorkspaceSwitcher", () => {
       attachTo: document.body,
     });
     await wrapper.find('[data-testid="workspace-trigger"]').trigger("click");
-    const deleteButton = wrapper.find('[data-testid="workspace-delete-a"]');
-    expect(deleteButton.exists()).toBe(true);
-    expect(deleteButton.classes()).toContain("is-delete");
+    await openWorkspaceMenu(wrapper, "a");
+    const deleteButton = menuAction("a", "delete");
+    expect(deleteButton).toBeTruthy();
+    expect(deleteButton.classList).toContain("is-delete");
     wrapper.unmount();
   });
 
@@ -134,7 +154,7 @@ describe("WorkspaceSwitcher", () => {
       attachTo: document.body,
     });
     await wrapper.find('[data-testid="workspace-trigger"]').trigger("click");
-    await wrapper.find('[data-testid="workspace-rename-b"]').trigger("click");
+    await clickMenuAction(wrapper, "b", "rename");
     const renameEvents = wrapper.emitted("rename");
     // workspace b carries board-title "副空间" and no slogan.
     expect(renameEvents?.[0]).toEqual(["b", "副空间", ""]);
@@ -163,10 +183,12 @@ describe("WorkspaceSwitcher 配对入口", () => {
   it("每个工作区提供配对手机按钮并 emit pairInbox", async () => {
     const wrapper = mount(WorkspaceSwitcher, {
       props: { workspaces, activeWorkspaceId: "a", theme: "light", language: "zh" },
+      attachTo: document.body,
     });
     await wrapper.find('[data-testid="workspace-trigger"]').trigger("click");
-    await wrapper.find('[data-testid="workspace-pair-a"]').trigger("click");
+    await clickMenuAction(wrapper, "a", "pair");
     expect(wrapper.emitted("pairInbox")).toHaveLength(1);
     expect(wrapper.emitted("pairInbox")?.[0]).toEqual(["a"]);
+    wrapper.unmount();
   });
 });
