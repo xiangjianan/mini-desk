@@ -433,6 +433,8 @@ async function confirmMobileInboxCode(): Promise<void> {
   } catch {
     status = null;
   }
+  // 卸载后不再写输码态与 URL（同 revokeInbox/registerInbox 守卫惯例）。
+  if (!appMounted) return;
   mobileInboxCodeChecking.value = false;
   if (status === "unknown") {
     mobileInboxCodeError.value = uiText.value.app.mobileInboxCodeUnknown;
@@ -894,7 +896,7 @@ function registerInbox(code: string, warn: boolean): void {
   inboxKeyHash(code)
     .then((hash) => registerInboxKey(hash))
     .then((ok) => {
-      if (ok === false && warn && appMounted) {
+      if (!ok && warn && appMounted) {
         showBubbleText(uiText.value.app.inboxRegisterFailed, undefined, { hideCompanionAfter: true });
       }
     })
