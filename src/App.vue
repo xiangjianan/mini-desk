@@ -291,7 +291,8 @@ const mobileMediaQuery = ref<MediaQueryList | null>(null);
 // URL 带 #inbox=<12位码> 时优先；否则回退手机壳本地记忆（主屏图标/微信入口丢 fragment 的场景）。
 const mobileInboxCode = ref<string | null>(parseInboxFragment(window.location.hash) ?? loadRememberedInboxCode());
 const mobileInboxDraftCode = ref("");
-const mobileInboxCodeError = ref(false);
+const mobileInboxCodeError = ref<string | null>(null);
+const mobileInboxCodeChecking = ref(false);
 // 手机速记草稿上提：换码卸载重挂（甚至跨会话内的多次换码）内容不丢。
 const mobileInboxDraftText = ref("");
 // 手机壳内任何来源（初始 URL 解析/hashchange/手动输码）的有效码都顺手记住，裸访问下次自动配对；
@@ -416,14 +417,33 @@ function handleHashChange(): void {
   if (code) mobileInboxCode.value = code;
 }
 
-function confirmMobileInboxCode(): void {
+/** 输码配对：格式校验 → 联网验证注册状态（unknown/revoked 拒绝；网络失败 fail-open 放行，发送时兜底）。 */
+async function confirmMobileInboxCode(): Promise<void> {
+  if (mobileInboxCodeChecking.value) return;
   const code = normalizeInboxCode(mobileInboxDraftCode.value);
   if (!isValidInboxCode(code)) {
     // 移动壳上 showBubbleText 被 shouldBlockBoardEffects 拦截，提示就近显示在输码区。
-    mobileInboxCodeError.value = true;
+    mobileInboxCodeError.value = uiText.value.app.mobileInboxCodeInvalid;
     return;
   }
-  mobileInboxCodeError.value = false;
+  mobileInboxCodeChecking.value = true;
+  let status: Awaited<ReturnType<typeof checkInboxKeyStatus>> = null;
+  try {
+    status = await checkInboxKeyStatus(await inboxKeyHash(code));
+  } catch {
+    status = null;
+  }
+  mobileInboxCodeChecking.value = false;
+  if (status === "unknown") {
+    mobileInboxCodeError.value = uiText.value.app.mobileInboxCodeUnknown;
+    return;
+  }
+  if (status === "revoked") {
+    mobileInboxCodeError.value = uiText.value.app.mobileInboxCodeRevoked;
+    return;
+  }
+  // active 或 null（网络失败 fail-open）：照常配对。
+  mobileInboxCodeError.value = null;
   mobileInboxCode.value = code;
   mobileInboxDraftCode.value = "";
   // 写回 fragment：刷新/再次打开仍停留在速记页。
@@ -435,7 +455,7 @@ function confirmMobileInboxCode(): void {
 function forgetMobileInboxCode(): void {
   clearRememberedInboxCode();
   mobileInboxCode.value = null;
-  mobileInboxCodeError.value = false;
+  mobileInboxCodeError.value = null;
   window.history.replaceState(null, "", `${window.location.pathname}${window.location.search}`);
 }
 
@@ -3405,16 +3425,17 @@ function moveItem<T extends { id: string }>(items: T[], dragId: string, targetId
                 :placeholder="uiText.app.mobileInboxCodePlaceholder"
                 :aria-invalid="mobileInboxCodeError ? 'true' : undefined"
                 :aria-describedby="mobileInboxCodeError ? 'mobile-inbox-code-error' : undefined"
-                @input="mobileInboxCodeError = false"
+                @input="mobileInboxCodeError = null"
                 @keydown.enter="confirmMobileInboxCode"
               />
               <NButton
                 size="small"
                 type="primary"
                 data-testid="mobile-inbox-code-confirm"
+                :loading="mobileInboxCodeChecking"
                 @click="confirmMobileInboxCode"
               >
-                {{ uiText.app.mobileInboxCodeConfirm }}
+                {{ mobileInboxCodeChecking ? uiText.app.mobileInboxChecking : uiText.app.mobileInboxCodeConfirm }}
               </NButton>
             </div>
             <p
@@ -3423,7 +3444,7 @@ function moveItem<T extends { id: string }>(items: T[], dragId: string, targetId
               class="mobile-inbox-code-error"
               data-testid="mobile-inbox-code-error"
             >
-              {{ uiText.app.mobileInboxCodeInvalid }}
+              {{ mobileInboxCodeError }}
             </p>
           </div>
         </div>

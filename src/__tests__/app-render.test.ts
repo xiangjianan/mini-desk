@@ -487,7 +487,8 @@ describe("App shell", () => {
 
       await wrapper.get('[data-testid="mobile-inbox-code-input"]').setValue("AB2CDE4FGHJK");
       await wrapper.get('[data-testid="mobile-inbox-code-confirm"]').trigger("click");
-      await wrapper.vm.$nextTick();
+      // 输码配对现为异步（哈希+联网验证）：nextTick 不再覆盖完整链路，需整链冲净。
+      await flushAsyncComponents();
       expect(wrapper.find('[data-testid="mobile-inbox-text"]').exists()).toBe(true);
       expect(wrapper.find('[data-testid="companion-bubble"]').exists()).toBe(false);
     } finally {
@@ -511,7 +512,8 @@ describe("App shell", () => {
       await wrapper.vm.$nextTick();
       await wrapper.get('[data-testid="mobile-inbox-code-input"]').setValue("AB2CDE4FGHJK");
       await wrapper.get('[data-testid="mobile-inbox-code-confirm"]').trigger("click");
-      await wrapper.vm.$nextTick();
+      // 输码配对现为异步（哈希+联网验证）：nextTick 不再覆盖完整链路，需整链冲净。
+      await flushAsyncComponents();
 
       const textarea = wrapper.get('[data-testid="mobile-inbox-text"]').element as HTMLTextAreaElement;
       expect(textarea.value).toBe("换码前的想法");
@@ -573,7 +575,8 @@ describe("App shell", () => {
 
       await wrapper.get('[data-testid="mobile-inbox-code-input"]').setValue("ab2c de4f ghjk");
       await wrapper.get('[data-testid="mobile-inbox-code-confirm"]').trigger("click");
-      await wrapper.vm.$nextTick();
+      // 输码配对现为异步（哈希+联网验证）：nextTick 不再覆盖完整链路，需整链冲净。
+      await flushAsyncComponents();
 
       expect(wrapper.find('[data-testid="mobile-inbox-text"]').exists()).toBe(true);
       expect(localStorage.getItem(REMEMBERED_INBOX_CODE_KEY)).toBe("AB2CDE4FGHJK");
@@ -718,7 +721,8 @@ describe("App shell", () => {
 
       await wrapper.get('[data-testid="mobile-inbox-code-input"]').setValue("ab2c de4f ghjk");
       await wrapper.get('[data-testid="mobile-inbox-code-confirm"]').trigger("click");
-      await wrapper.vm.$nextTick();
+      // 输码配对现为异步（哈希+联网验证）：nextTick 不再覆盖完整链路，需整链冲净。
+      await flushAsyncComponents();
 
       expect(wrapper.find('[data-testid="mobile-inbox-code-input"]').exists()).toBe(false);
       expect(wrapper.get(".mobile-inbox-heading").text()).toBe("手机速记");
@@ -727,6 +731,86 @@ describe("App shell", () => {
     } finally {
       wrapper?.unmount();
       window.location.hash = "";
+      vi.unstubAllGlobals();
+      vi.useRealTimers();
+    }
+  });
+
+  function mountMobileCodeEntry(): ReturnType<typeof mountApp> {
+    stubMatchMedia(true);
+    window.location.hash = "";
+    return mountApp();
+  }
+
+  async function submitCode(wrapper: ReturnType<typeof mountApp>, code: string): Promise<void> {
+    await wrapper.get('[data-testid="mobile-inbox-code-input"]').setValue(code);
+    await wrapper.get('[data-testid="mobile-inbox-code-confirm"]').trigger("click");
+    await flushAsyncComponents();
+  }
+
+  it("输码验证 active：配对成功进入速记页", async () => {
+    const wrapper = mountMobileCodeEntry();
+
+    try {
+      vi.mocked(checkInboxKeyStatus).mockClear();
+      await submitCode(wrapper, "AB2CDE4FGHJK");
+
+      expect(checkInboxKeyStatus).toHaveBeenCalledTimes(1);
+      expect(wrapper.find('[data-testid="mobile-inbox-text"]').exists()).toBe(true);
+      expect(wrapper.find('[data-testid="mobile-inbox-code-input"]').exists()).toBe(false);
+    } finally {
+      wrapper.unmount();
+      vi.unstubAllGlobals();
+    }
+  });
+
+  it("输码验证 unknown/revoked：留在输码表单并给出对应提示", async () => {
+    const wrapper = mountMobileCodeEntry();
+
+    try {
+      vi.mocked(checkInboxKeyStatus).mockResolvedValueOnce("unknown");
+      await submitCode(wrapper, "AB2CDE4FGHJK");
+      expect(wrapper.get('[data-testid="mobile-inbox-code-error"]').text()).toBe("配对码不存在，请到桌面端获取");
+      expect(wrapper.find('[data-testid="mobile-inbox-code-input"]').exists()).toBe(true);
+
+      vi.mocked(checkInboxKeyStatus).mockResolvedValueOnce("revoked");
+      await submitCode(wrapper, "AB2CDE4FGHJK");
+      expect(wrapper.get('[data-testid="mobile-inbox-code-error"]').text()).toBe("配对码已失效，请到桌面端获取新配对码");
+      expect(wrapper.find('[data-testid="mobile-inbox-code-input"]').exists()).toBe(true);
+    } finally {
+      wrapper.unmount();
+      vi.unstubAllGlobals();
+    }
+  });
+
+  it("输码验证网络失败 fail-open：直接配对", async () => {
+    const wrapper = mountMobileCodeEntry();
+
+    try {
+      vi.mocked(checkInboxKeyStatus).mockResolvedValueOnce(null);
+      await submitCode(wrapper, "AB2CDE4FGHJK");
+      expect(wrapper.find('[data-testid="mobile-inbox-text"]').exists()).toBe(true);
+    } finally {
+      wrapper.unmount();
+      vi.unstubAllGlobals();
+    }
+  });
+
+  it("fragment 自动配对不触发验证请求", async () => {
+    vi.useFakeTimers();
+    stubMatchMedia(true);
+    window.location.hash = "#inbox=AB2CDE4FGHJK";
+    let wrapper: ReturnType<typeof mountApp> | undefined;
+
+    try {
+      vi.mocked(checkInboxKeyStatus).mockClear();
+      wrapper = mountApp();
+      await vi.advanceTimersByTimeAsync(300);
+      expect(wrapper.find('[data-testid="mobile-inbox-text"]').exists()).toBe(true);
+      expect(checkInboxKeyStatus).not.toHaveBeenCalled();
+    } finally {
+      window.location.hash = "";
+      wrapper?.unmount();
       vi.unstubAllGlobals();
       vi.useRealTimers();
     }
