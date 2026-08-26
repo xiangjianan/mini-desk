@@ -71,7 +71,7 @@ import {
 } from "./sync/pairing";
 import { applyInboxItems, pullAllInboxes } from "./sync/pull";
 import { inboxKeyHash } from "./sync/crypto";
-import { revokeInboxKey } from "./sync/inboxClient";
+import { checkInboxKeyStatus, registerInboxKey, revokeInboxKey } from "./sync/inboxClient";
 import { copyTextWithBrowserCommand } from "./utils/clipboard";
 import { extractRetainedImageIds, useUndoHistory } from "./composables/useUndoHistory";
 import { useTodoNotifications } from "./composables/useTodoNotifications";
@@ -519,6 +519,10 @@ onMounted(async () => {
     void pullInboxes();
     startInboxPolling();
   }
+  // 注册制迁移与自愈：启动即幂等注册所有已配对码，失败静默等下次启动。
+  for (const workspace of state.workspaces) {
+    if (workspace.inbox) registerInbox(workspace.inbox.code, false);
+  }
   startVersionPolling();
   startNotificationFallbackInterval();
   refreshTodoNotifications();
@@ -851,6 +855,8 @@ function handleInboxUpdate(inbox: WorkspaceInbox | null): void {
   if (oldCode !== undefined && (inbox === null || inbox.code !== oldCode)) {
     void revokeInbox(oldCode);
   }
+  // 注册制：保存/轮换后当前码立即可配对（启动路径见 onMounted 的幂等注册）。
+  if (inbox) registerInbox(inbox.code, true);
 }
 
 /** 注销旧配对码：任何失败（网络/服务端/哈希异常）只提示，不抛出；卸载后不再弹气泡。 */
@@ -861,6 +867,22 @@ async function revokeInbox(oldCode: string): Promise<void> {
   } catch {
     if (appMounted) showBubbleText(uiText.value.app.inboxRevokeFailed, undefined, { hideCompanionAfter: true });
   }
+}
+
+/** 注册配对码：warn=true 时失败弹警告（保存/轮换路径）；启动路径静默等下次自愈。 */
+function registerInbox(code: string, warn: boolean): void {
+  inboxKeyHash(code)
+    .then((hash) => registerInboxKey(hash))
+    .then((ok) => {
+      if (ok === false && warn && appMounted) {
+        showBubbleText(uiText.value.app.inboxRegisterFailed, undefined, { hideCompanionAfter: true });
+      }
+    })
+    .catch(() => {
+      if (warn && appMounted) {
+        showBubbleText(uiText.value.app.inboxRegisterFailed, undefined, { hideCompanionAfter: true });
+      }
+    });
 }
 
 // 手机速记拉取（单向收件箱）：启动/窗口聚焦（节流）/定时/Ctrl+S 四个触发点共用 pullInboxes，

@@ -15,7 +15,7 @@ import { hydrateStoredImages, storeImagePayload } from "../state/images";
 import * as imageState from "../state/images";
 import { KAOMOJI_BY_MOOD } from "../state/messages";
 import { INBOX_FOCUS_THROTTLE_MS } from "../sync/config";
-import { revokeInboxKey } from "../sync/inboxClient";
+import { checkInboxKeyStatus, registerInboxKey, revokeInboxKey } from "../sync/inboxClient";
 import { REMEMBERED_INBOX_CODE_KEY } from "../sync/pairing";
 import { pullAllInboxes } from "../sync/pull";
 import type { InboxPullResult } from "../sync/pull";
@@ -54,10 +54,12 @@ vi.mock("../sync/pull", async (importOriginal) => ({
   pullAllInboxes: vi.fn(async (): Promise<InboxPullResult> => ({ patches: [], reports: [], changed: false })),
 }));
 
-// App 只消费 revokeInboxKey；postInboxItem/fetchInboxItems 保留真实现（经 mocked 的 pull.ts 隔离）。
+// App 只消费 revokeInboxKey/registerInboxKey/checkInboxKeyStatus；其余保留真实现（经 mocked 的 pull.ts 隔离）。
 vi.mock("../sync/inboxClient", async (importOriginal) => ({
   ...(await importOriginal<typeof import("../sync/inboxClient")>()),
   revokeInboxKey: vi.fn(async () => true),
+  registerInboxKey: vi.fn(async () => true),
+  checkInboxKeyStatus: vi.fn(async () => "active"),
 }));
 
 const dropdownStub = {
@@ -7868,6 +7870,76 @@ describe("App inbox revoke wiring", () => {
       await wrapper.vm.$nextTick();
 
       expect(wrapper.text()).toContain("云端清理失败，数据将在 30 天保留期内自动过期");
+    } finally {
+      wrapper.unmount();
+      vi.useRealTimers();
+    }
+  });
+});
+
+describe("App inbox register wiring", () => {
+  function seedPaired(): void {
+    localStorage.setItem(
+      STORAGE_KEY,
+      JSON.stringify({
+        ...defaultState(),
+        workspaces: [
+          {
+            ...defaultWorkspace(),
+            inbox: { code: "AB2CDE4FGHJK", todoListId: "morning", noteTarget: DEFAULT_SPACE_ID, lastSeenAt: 7 },
+          },
+        ],
+      }),
+    );
+  }
+
+  beforeEach(() => {
+    vi.mocked(registerInboxKey).mockClear();
+    vi.mocked(registerInboxKey).mockResolvedValue(true);
+  });
+
+  async function openInboxDialog(wrapper: ReturnType<typeof mountApp>): Promise<void> {
+    await wrapper.get('[data-testid="workspace-trigger"]').trigger("click");
+    await wrapper.get('[data-testid="workspace-pair-default"]').trigger("click");
+    await flushAsyncComponents();
+  }
+
+  it("启动时对所有已配对工作区的码各注册一次（存量迁移路径）", async () => {
+    seedPaired();
+    const wrapper = mountApp();
+
+    try {
+      await flushAsyncComponents();
+      expect(registerInboxKey).toHaveBeenCalledTimes(1);
+      const [keyHash] = vi.mocked(registerInboxKey).mock.calls[0];
+      expect(keyHash).toMatch(/^[0-9a-f]{64}$/);
+    } finally {
+      wrapper.unmount();
+    }
+  });
+
+  it("配对弹窗保存后注册当前码；注册失败弹警告", async () => {
+    seedPaired();
+    // 气泡文案有 200ms 入场延迟（POPOVER_DELAY_MS）：假时钟须在首条气泡出现前装好，推进 300ms 越过延迟再断言 DOM 文本。
+    vi.useFakeTimers();
+    const wrapper = mountApp();
+
+    try {
+      await openInboxDialog(wrapper);
+      await flushAsyncComponents();
+      const callsAfterStartup = vi.mocked(registerInboxKey).mock.calls.length;
+
+      await wrapper.get('[data-testid="inbox-save"]').trigger("click");
+      await flushAsyncComponents();
+      expect(vi.mocked(registerInboxKey).mock.calls.length).toBe(callsAfterStartup + 1);
+
+      vi.mocked(registerInboxKey).mockResolvedValueOnce(false);
+      await openInboxDialog(wrapper);
+      await wrapper.get('[data-testid="inbox-save"]').trigger("click");
+      await flushAsyncComponents();
+      await vi.advanceTimersByTimeAsync(300);
+      await wrapper.vm.$nextTick();
+      expect(wrapper.text()).toContain("配对码注册失败，手机暂时无法配对，下次启动会自动重试");
     } finally {
       wrapper.unmount();
       vi.useRealTimers();
