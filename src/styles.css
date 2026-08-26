@@ -4204,6 +4204,8 @@ body:has(.image-preview) .image-panel .n-scrollbar {
   border-top: 0;
   border-right: 0;
   border-bottom: 0;
+  /* 覆盖 Naive quaternary 自带的白/灰填充背景，让按钮与 Header 底色融合。 */
+  background: transparent !important;
 }
 
 .mobile-handoff-theme:focus,
@@ -7521,7 +7523,6 @@ button.mobile-inbox-paired-code {
 button.mobile-inbox-paired-code:hover,
 button.mobile-inbox-paired-code:focus-visible {
   color: var(--text);
-  text-decoration: underline;
 }
 
 button.mobile-inbox-paired-code:focus-visible {
