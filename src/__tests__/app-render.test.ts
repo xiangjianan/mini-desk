@@ -512,7 +512,7 @@ describe("App shell", () => {
       await wrapper.get('[data-testid="mobile-inbox-change-code"]').trigger("click");
       await wrapper.vm.$nextTick();
 
-      expect(wrapper.get('[data-testid="mobile-inbox-text"]').exists()).toBe(true);
+      expect(wrapper.find('[data-testid="mobile-inbox-text"]').exists()).toBe(true);
       expect(wrapper.find('[data-testid="mobile-inbox-code-input"]').exists()).toBe(false);
     } finally {
       window.location.hash = "";
