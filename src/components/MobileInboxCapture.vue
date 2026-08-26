@@ -172,7 +172,7 @@ onBeforeUnmount(clearSentResetTimer);
         data-testid="mobile-inbox-text"
         :placeholder="app.mobileInboxPlaceholder"
         :aria-label="app.mobileInboxPlaceholder"
-        rows="5"
+        rows="8"
       ></textarea>
       <!-- 多行输入会被按行拆成多条记录：≥2 行时给出实时提示，避免用户误以为整段只发一条。 -->
       <p v-if="showSplitHint" class="mobile-inbox-hint" data-testid="mobile-inbox-split-hint" aria-live="polite">

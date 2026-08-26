@@ -7431,8 +7431,8 @@ html[data-theme="dark"] .quick-search .quick-search-toggle:focus-visible {
 }
 
 .mobile-inbox-textarea {
-  min-height: 118px;
-  padding: 10px 12px;
+  min-height: 200px;
+  padding: 12px 14px;
   border: 1px solid var(--line-main);
   border-radius: var(--radius-control);
   background: var(--panel);
@@ -7579,54 +7579,31 @@ button.mobile-inbox-revoked-change {
   margin-top: 2px;
 }
 
-/* 配对码胶囊：可点可复制，用浅底描边把它从「纯文本」提升为「可交互对象」，
-   旁边放一个复制图标进一步暗示点按即可复制。 */
+/* 配对码：保持纯文本外观（无按钮底、无边框），仅用颜色区分；点击可复制，
+   聚焦时给出焦点环以兼顾键盘可达性。 */
 button.mobile-inbox-paired-code {
-  display: inline-flex;
-  align-items: center;
-  gap: 8px;
   margin: 0;
-  padding: 8px 14px;
-  border: 1px solid var(--line-subtle);
-  border-radius: 999px;
-  background: color-mix(in srgb, var(--panel) 64%, transparent);
+  padding: 2px 4px;
+  border: none;
+  background: none;
   font: inherit;
-  color: var(--text);
+  color: var(--muted);
   font-size: var(--app-font-size);
   letter-spacing: 0.04em;
   font-variant-numeric: tabular-nums;
   cursor: pointer;
   -webkit-tap-highlight-color: transparent;
-  transition: background var(--motion-fast) var(--motion-ease), border-color var(--motion-fast) var(--motion-ease), transform var(--motion-fast) var(--motion-ease);
 }
 
 button.mobile-inbox-paired-code:hover,
 button.mobile-inbox-paired-code:focus-visible {
-  border-color: var(--line-main);
-  background: color-mix(in srgb, var(--panel) 82%, transparent);
-}
-
-button.mobile-inbox-paired-code:active {
-  transform: scale(0.98);
+  color: var(--text);
 }
 
 button.mobile-inbox-paired-code:focus-visible {
   outline: 0;
+  border-radius: 4px;
   box-shadow: var(--focus-ring);
-}
-
-/* 胶囊里的复制图标：弱化为 muted，聚焦/悬停时随文字一并提亮。 */
-button.mobile-inbox-paired-code .mobile-inbox-copy-glyph {
-  color: var(--muted);
-  font-size: calc(var(--app-font-size) + 1px);
-  flex: none;
-}
-
-/* 代码胶囊与「更换配对码」之间的一条细分隔线，划清「可复制状态」与「可执行动作」。 */
-.mobile-inbox-paired-divider {
-  width: 44px;
-  height: 1px;
-  background: var(--line-subtle);
 }
 
 button.mobile-inbox-paired-change {
