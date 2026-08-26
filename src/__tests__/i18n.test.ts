@@ -154,4 +154,9 @@ describe("localized public copy", () => {
     expect(getUiText("zh").app.mobileInboxSentButton).toBe("已发送");
     expect(getUiText("en").app.mobileInboxSentButton).toBe("Sent");
   });
+
+  it("配对码注册制相关文案中英齐全", () => {
+    expect(getUiText("zh").app.mobileInboxErrorUnknown).toBe("配对码不存在，请到桌面端重新配对");
+    expect(getUiText("en").app.mobileInboxErrorUnknown).toBe("This pairing code doesn't exist; re-pair on the desktop");
+  });
 });

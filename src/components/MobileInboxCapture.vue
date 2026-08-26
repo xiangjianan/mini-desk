@@ -22,8 +22,8 @@ const kind = ref<InboxPlainItem["kind"]>("todo");
 const draft = defineModel<string>({ default: "" });
 const status = ref<CaptureStatus>("idle");
 const errorText = ref("");
-/** 仅 code_revoked 时为 true：错误区据此渲染「去更换配对码」入口。 */
-const codeRevoked = ref(false);
+/** code_revoked / unknown_code 时为 true：错误区据此渲染「去更换配对码」入口。 */
+const codeUnusable = ref(false);
 const sentCount = ref(0);
 const sentText = computed(() => app.value.mobileInboxSent.replace("{count}", () => String(sentCount.value)));
 const placeholder = computed(() => (kind.value === "todo" ? app.value.mobileInboxPlaceholderTodo : app.value.mobileInboxPlaceholderNote));
@@ -53,6 +53,8 @@ function errorTextFor(reason: InboxPostFailure): string {
       return app.value.mobileInboxErrorTooLarge;
     case "code_revoked":
       return app.value.mobileInboxErrorRevoked;
+    case "unknown_code":
+      return app.value.mobileInboxErrorUnknown;
     case "bad_request":
       return app.value.mobileInboxErrorBadRequest;
     case "server":
@@ -78,13 +80,13 @@ async function send(): Promise<void> {
     .filter((line) => line.length > 0);
   if (lines.length === 0 || status.value === "sending") return;
   status.value = "sending";
-  codeRevoked.value = false;
+  codeUnusable.value = false;
   clearSentResetTimer();
   /** 失败即停：未发送的行（含当前失败行）放回输入框，直接重试不会重复已成功的行。 */
   const failAt = (index: number, reason: InboxPostFailure): void => {
     status.value = "error";
     vibrate([40, 60, 40]);
-    codeRevoked.value = reason === "code_revoked";
+    codeUnusable.value = reason === "code_revoked" || reason === "unknown_code";
     errorText.value = errorTextFor(reason);
     draft.value = lines.slice(index).join("\n");
   };
@@ -188,7 +190,7 @@ onBeforeUnmount(clearSentResetTimer);
     </p>
 
     <button
-      v-if="status === 'error' && codeRevoked"
+      v-if="status === 'error' && codeUnusable"
       type="button"
       class="mobile-inbox-revoked-change"
       data-testid="mobile-inbox-revoked-change"

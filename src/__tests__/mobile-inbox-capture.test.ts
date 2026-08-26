@@ -303,6 +303,19 @@ describe("MobileInboxCapture", () => {
     expect(wrapper.find(".mobile-inbox-status").exists()).toBe(false);
   }, 10000);
 
+  it("发送遇 unknown_code：显示未注册文案且换码按钮可见", async () => {
+    postMock.mockResolvedValue({ ok: false, reason: "unknown_code" });
+    const wrapper = mountCapture();
+
+    await fillAndSend(wrapper, "未注册码内容");
+
+    await until(() =>
+      expect(wrapper.get('[data-testid="mobile-inbox-error"]').text()).toBe("配对码不存在，请到桌面端重新配对"),
+    );
+    expect(wrapper.find('[data-testid="mobile-inbox-revoked-change"]').exists()).toBe(true);
+    expect(draftValue(wrapper)).toBe("未注册码内容");
+  });
+
   it("发送失败：错误行带抖动标记并触发失败触觉", async () => {
     const vibrate = vi.fn();
     Object.defineProperty(navigator, "vibrate", { value: vibrate, configurable: true });

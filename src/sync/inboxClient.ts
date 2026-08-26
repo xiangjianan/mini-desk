@@ -6,7 +6,9 @@ export interface InboxStoredItem {
   createdAt: number;
 }
 
-export type InboxPostFailure = "rate_limited" | "queue_full" | "too_large" | "bad_request" | "code_revoked" | "server" | "network";
+export type InboxPostFailure = "rate_limited" | "queue_full" | "too_large" | "bad_request" | "code_revoked" | "unknown_code" | "server" | "network";
+
+export type InboxKeyStatus = "active" | "revoked" | "unknown";
 
 export type InboxPostResult = { ok: true } | { ok: false; reason: InboxPostFailure };
 
@@ -24,6 +26,7 @@ function postFailureForStatus(status: number): InboxPostFailure {
   if (status === 429) return "rate_limited";
   if (status === 409) return "queue_full";
   if (status === 410) return "code_revoked";
+  if (status === 404) return "unknown_code";
   if (status === 413) return "too_large";
   if (status === 400) return "bad_request";
   return "server";
@@ -70,5 +73,28 @@ export async function revokeInboxKey(keyHash: string): Promise<boolean> {
     return response.ok;
   } catch {
     return false;
+  }
+}
+
+/** 注册配对码（桌面端保存/轮换/启动时调用）：失败一律 false，不抛异常——调用方仅提示或静默重试。 */
+export async function registerInboxKey(keyHash: string): Promise<boolean> {
+  try {
+    const response = await fetchWithTimeout(`${inboxUrl(keyHash)}/register`, { method: "POST" });
+    return response.ok;
+  } catch {
+    return false;
+  }
+}
+
+/** 查询配对码状态（手机输码验证用）：网络/非 2xx/结构非法一律 null，调用方 fail-open。 */
+export async function checkInboxKeyStatus(keyHash: string): Promise<InboxKeyStatus | null> {
+  try {
+    const response = await fetchWithTimeout(`${inboxUrl(keyHash)}/status`);
+    if (!response.ok) return null;
+    const data: unknown = await response.json();
+    const status = typeof data === "object" && data !== null ? (data as { status?: unknown }).status : undefined;
+    return status === "active" || status === "revoked" || status === "unknown" ? status : null;
+  } catch {
+    return null;
   }
 }

@@ -1,5 +1,5 @@
 import { afterEach, describe, expect, it, vi } from "vitest";
-import { fetchInboxItems, postInboxItem, revokeInboxKey } from "../sync/inboxClient";
+import { checkInboxKeyStatus, fetchInboxItems, postInboxItem, registerInboxKey, revokeInboxKey } from "../sync/inboxClient";
 
 const KEY = "a".repeat(64);
 
@@ -93,5 +93,44 @@ describe("inboxClient", () => {
     expect(url.endsWith(`/inbox/${KEY}`)).toBe(true);
     expect(init.method).toBe("DELETE");
     expect(init.signal).toBeInstanceOf(AbortSignal);
+  });
+
+  it("404 映射为 unknown_code（配对码未注册）", async () => {
+    vi.stubGlobal("fetch", vi.fn(async () => new Response("{\"error\":\"unknown_code\"}", { status: 404 })));
+    expect(await postInboxItem(KEY, "i1", "AAA")).toEqual({ ok: false, reason: "unknown_code" });
+  });
+
+  it("registerInboxKey：POST /register 幂等注册，成功 true、非 2xx/网络异常 false", async () => {
+    vi.stubGlobal("fetch", vi.fn(async () => new Response("{\"ok\":true}", { status: 200 })));
+    expect(await registerInboxKey(KEY)).toBe(true);
+
+    vi.stubGlobal("fetch", vi.fn(async () => new Response("{}", { status: 500 })));
+    expect(await registerInboxKey(KEY)).toBe(false);
+
+    vi.stubGlobal("fetch", vi.fn(async () => { throw new TypeError("offline"); }));
+    expect(await registerInboxKey(KEY)).toBe(false);
+  });
+
+  it("registerInboxKey 请求形状：POST /inbox/:keyHash/register 且带 AbortSignal", async () => {
+    const fetchMock = vi.fn(async () => new Response("{\"ok\":true}", { status: 200 }));
+    vi.stubGlobal("fetch", fetchMock);
+    await registerInboxKey(KEY);
+    const [url, init] = fetchMock.mock.calls[0] as unknown as [string, RequestInit];
+    expect(url.endsWith(`/inbox/${KEY}/register`)).toBe(true);
+    expect(init.method).toBe("POST");
+    expect(init.signal).toBeInstanceOf(AbortSignal);
+  });
+
+  it("checkInboxKeyStatus：解析三态，网络/非 2xx/结构非法返回 null", async () => {
+    for (const status of ["active", "revoked", "unknown"] as const) {
+      vi.stubGlobal("fetch", vi.fn(async () => new Response(JSON.stringify({ status }), { status: 200, headers: { "Content-Type": "application/json" } })));
+      expect(await checkInboxKeyStatus(KEY)).toBe(status);
+    }
+    vi.stubGlobal("fetch", vi.fn(async () => new Response("nope", { status: 500 })));
+    expect(await checkInboxKeyStatus(KEY)).toBeNull();
+    vi.stubGlobal("fetch", vi.fn(async () => { throw new TypeError("offline"); }));
+    expect(await checkInboxKeyStatus(KEY)).toBeNull();
+    vi.stubGlobal("fetch", vi.fn(async () => new Response("{\"status\":\"weird\"}", { status: 200, headers: { "Content-Type": "application/json" } })));
+    expect(await checkInboxKeyStatus(KEY)).toBeNull();
   });
 });
