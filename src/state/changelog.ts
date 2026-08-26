@@ -29,16 +29,30 @@ export interface ChangelogEntry {
 
 export const CHANGELOG: ChangelogEntry[] = [
   {
+    version: "1.0.150",
+    date: "2026-08-26",
+    notes: {
+      zh: [
+        "新增：主题支持跟随系统明暗，默认自动切换",
+        "优化：手机速记页点击配对码即可复制，深色顶栏与聚焦样式更统一",
+      ],
+      en: [
+        "New: theme can follow your system's light/dark mode (now the default)",
+        "Improved: tap the pairing code to copy it; cleaner dark header and focus styles on mobile",
+      ],
+    },
+  },
+  {
     version: "1.0.149",
     date: "2026-08-26",
     notes: {
       zh: [
-        "改版：手机速记去掉「提醒事项/便签」切换，输入框下方直接提供「发送到提醒」「发送到便签」两个按钮，写完一步直发",
-        "优化：提醒时间选择后立即保存，移除确定按钮",
+        "改版：手机速记改为「发送到提醒」「发送到便签」双按钮直发",
+        "优化：提醒时间选择后立即保存",
       ],
       en: [
-        "Redesign: mobile quick capture drops the reminder/note toggle — the input now has two direct buttons, Send to reminders / Send to notes",
-        "Improved: reminder time is saved immediately on selection; the confirm button is gone",
+        "Redesign: quick capture now sends via direct Send-to-reminders / Send-to-notes buttons",
+        "Improved: reminder time saves immediately on selection",
       ],
     },
   },
