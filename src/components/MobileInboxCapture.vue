@@ -1,6 +1,6 @@
 <script setup lang="ts">
-import { computed, nextTick, onBeforeUnmount, onMounted, ref } from "vue";
-import { CreateOutline, NotificationsOutline } from "@vicons/ionicons5";
+import { computed, onBeforeUnmount, ref } from "vue";
+import { ClipboardOutline, CreateOutline, NotificationsOutline } from "@vicons/ionicons5";
 import { NIcon } from "naive-ui";
 import { getUiText } from "../state/i18n";
 import { createId } from "../state/storage";
@@ -22,7 +22,6 @@ type CaptureKind = InboxPlainItem["kind"];
 const app = computed(() => getUiText(props.language).app);
 // 草稿上提到父级（App.vue）：换码导致组件卸载重挂后内容不丢。
 const draft = defineModel<string>({ default: "" });
-const textareaRef = ref<HTMLTextAreaElement | null>(null);
 const status = ref<CaptureStatus>("idle");
 /** sending/sent 态修饰哪个按钮：发送中/成功反馈只落在实际使用的那个按钮上。 */
 const activeKind = ref<CaptureKind | null>(null);
@@ -51,8 +50,48 @@ function vibrate(pattern: number | number[]): void {
   navigator.vibrate?.(pattern);
 }
 
-function focusInput(): void {
-  void nextTick(() => textareaRef.value?.focus());
+/** 一键粘贴的短暂提示（与发送状态区相互独立，避免互相覆盖）。 */
+const pasteNotice = ref("");
+let pasteNoticeTimer: number | undefined;
+
+function clearPasteNotice(): void {
+  if (pasteNoticeTimer !== undefined) {
+    window.clearTimeout(pasteNoticeTimer);
+    pasteNoticeTimer = undefined;
+  }
+}
+
+function showPasteNotice(message: string): void {
+  clearPasteNotice();
+  pasteNotice.value = message;
+  pasteNoticeTimer = window.setTimeout(() => {
+    pasteNotice.value = "";
+    pasteNoticeTimer = undefined;
+  }, 2000);
+}
+
+/** 一键粘贴剪贴板内容：只写入草稿、不聚焦输入框，因此不会弹出键盘。
+ *  已有内容时用换行分隔追加；剪贴板为空或读取失败（权限/不支持）时给出针对性提示。
+ *  粘贴的多行文本仍会按行拆分成多条，页面上的「按行拆分」提示会随之实时更新。 */
+async function pasteFromClipboard(): Promise<void> {
+  if (status.value === "sending") return;
+  if (!navigator.clipboard || typeof navigator.clipboard.readText !== "function") {
+    showPasteNotice(app.value.mobileInboxPasteFailed);
+    return;
+  }
+  try {
+    const text = await navigator.clipboard.readText();
+    if (!text.trim()) {
+      showPasteNotice(app.value.mobileInboxPasteEmpty);
+      return;
+    }
+    const separator = draft.value.length > 0 && !draft.value.endsWith("\n") ? "\n" : "";
+    draft.value = draft.value + separator + text;
+    vibrate(20);
+    showPasteNotice(app.value.mobileInboxPasteDone);
+  } catch {
+    showPasteNotice(app.value.mobileInboxPasteFailed);
+  }
 }
 
 function clearSentResetTimer(): void {
@@ -135,8 +174,6 @@ async function send(kind: CaptureKind): Promise<void> {
   status.value = "sent";
   draft.value = "";
   vibrate(20);
-  // 发送成功后把焦点还给输入框，方便继续下一条速记（键盘不收起）。
-  focusInput();
   sentResetTimer = window.setTimeout(() => {
     // 仍在 sent 态才复位：期间用户再次发送会重置定时器。
     if (status.value === "sent") {
@@ -156,17 +193,31 @@ function buttonLabel(kind: CaptureKind): string {
   return kind === "todo" ? app.value.mobileInboxSendTodo : app.value.mobileInboxSendNote;
 }
 
-onMounted(focusInput);
-onBeforeUnmount(clearSentResetTimer);
+onBeforeUnmount(() => {
+  clearSentResetTimer();
+  clearPasteNotice();
+});
 </script>
 
 <template>
   <div class="mobile-inbox-wrap">
-    <h2 id="mobile-inbox-heading" class="mobile-inbox-heading">{{ app.mobileInboxHeading }}</h2>
+    <div class="mobile-inbox-head">
+      <h2 id="mobile-inbox-heading" class="mobile-inbox-heading">{{ app.mobileInboxHeading }}</h2>
+      <button
+        type="button"
+        class="mobile-inbox-paste"
+        data-testid="mobile-inbox-paste"
+        :title="app.mobileInboxPaste"
+        :aria-label="app.mobileInboxPaste"
+        :disabled="status === 'sending'"
+        @click="pasteFromClipboard"
+      >
+        <NIcon :component="ClipboardOutline" aria-hidden="true" /><span>{{ app.mobileInboxPaste }}</span>
+      </button>
+    </div>
 
     <form class="mobile-inbox-form" @submit.prevent>
       <textarea
-        ref="textareaRef"
         v-model="draft"
         class="mobile-inbox-textarea"
         data-testid="mobile-inbox-text"
@@ -226,5 +277,17 @@ onBeforeUnmount(clearSentResetTimer);
     >
       {{ app.mobileInboxRevokedChange }}
     </button>
+
+    <Transition name="mobile-inbox-toast">
+      <p
+        v-if="pasteNotice"
+        class="mobile-inbox-copy-toast"
+        role="status"
+        aria-live="polite"
+        data-testid="mobile-inbox-paste-toast"
+      >
+        {{ pasteNotice }}
+      </p>
+    </Transition>
   </div>
 </template>

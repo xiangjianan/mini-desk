@@ -162,6 +162,15 @@ describe("localized public copy", () => {
     expect(getUiText("en").app.mobileInboxSentButton).toBe("Sent");
   });
 
+  it("一键粘贴文案中英齐全", () => {
+    expect(getUiText("zh").app.mobileInboxPaste).toBe("粘贴");
+    expect(getUiText("en").app.mobileInboxPaste).toBe("Paste");
+    expect(getUiText("zh").app.mobileInboxPasteDone).toBe("已粘贴");
+    expect(getUiText("en").app.mobileInboxPasteDone).toBe("Pasted");
+    expect(getUiText("zh").app.mobileInboxPasteEmpty).toBe("剪贴板为空");
+    expect(getUiText("en").app.mobileInboxPasteEmpty).toBe("Clipboard is empty");
+  });
+
   it("配对码注册制相关文案中英齐全", () => {
     expect(getUiText("zh").app.mobileInboxErrorUnknown).toBe("配对码不存在，请到桌面端重新配对");
     expect(getUiText("en").app.mobileInboxErrorUnknown).toBe("This pairing code doesn't exist; re-pair on the desktop");

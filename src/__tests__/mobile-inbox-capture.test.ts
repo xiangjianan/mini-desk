@@ -44,6 +44,22 @@ function lastPayload(): string {
   return payload;
 }
 
+/** jsdom 默认无 navigator.clipboard；一键粘贴测试需注入 readText 模拟。 */
+function stubClipboardRead(result: string | Promise<string>, reject = false) {
+  const readText = vi.fn();
+  if (reject) readText.mockRejectedValue(new Error("read denied"));
+  else readText.mockResolvedValue(result);
+  const previous = Object.getOwnPropertyDescriptor(navigator, "clipboard");
+  Object.defineProperty(navigator, "clipboard", { value: { readText }, configurable: true });
+  return {
+    readText,
+    restore: () => {
+      if (previous) Object.defineProperty(navigator, "clipboard", previous);
+      else Reflect.deleteProperty(navigator, "clipboard");
+    },
+  };
+}
+
 describe("MobileInboxCapture", () => {
   it("渲染标题、双发送按钮与输入框（无类型切换）", () => {
     const wrapper = mountCapture();
@@ -335,5 +351,57 @@ describe("MobileInboxCapture", () => {
     const en = mount(MobileInboxCapture, { props: { code: CODE, language: "en" } });
     await en.find('[data-testid="mobile-inbox-text"]').setValue("a\nb\nc");
     expect(en.get('[data-testid="mobile-inbox-split-hint"]').text()).toBe("Will be split by line into 3 items");
+  });
+
+  it("一键粘贴：把剪贴板内容追加进输入框、提示已粘贴，且不聚焦输入框", async () => {
+    const { restore } = stubClipboardRead("粘贴的文本");
+    const wrapper = mountCapture();
+    const textarea = wrapper.get('[data-testid="mobile-inbox-text"]');
+    expect(draftValue(wrapper)).toBe("");
+
+    await wrapper.get('[data-testid="mobile-inbox-paste"]').trigger("click");
+
+    await until(() => expect(draftValue(wrapper)).toBe("粘贴的文本"));
+    expect(wrapper.get('[data-testid="mobile-inbox-paste-toast"]').text()).toBe("已粘贴");
+    // 粘贴不聚焦输入框：键盘不会因粘贴而弹出。
+    expect(document.activeElement).not.toBe(textarea.element);
+    restore();
+  });
+
+  it("已有内容时粘贴以换行分隔追加，且实时更新拆分提示", async () => {
+    const { restore } = stubClipboardRead("第二行\n第三行");
+    const wrapper = mountCapture();
+    await wrapper.find('[data-testid="mobile-inbox-text"]').setValue("第一行");
+
+    await wrapper.get('[data-testid="mobile-inbox-paste"]').trigger("click");
+
+    await until(() => expect(draftValue(wrapper)).toBe("第一行\n第二行\n第三行"));
+    // 粘贴三段 → 拆分提示实时显示 3 条。
+    await until(() => expect(wrapper.get('[data-testid="mobile-inbox-split-hint"]').text()).toBe("发送时将按行拆成 3 条"));
+    restore();
+  });
+
+  it("剪贴板为空时提示且不改动草稿", async () => {
+    const { restore } = stubClipboardRead("");
+    const wrapper = mountCapture();
+
+    await wrapper.get('[data-testid="mobile-inbox-paste"]').trigger("click");
+
+    await until(() => expect(wrapper.get('[data-testid="mobile-inbox-paste-toast"]').text()).toBe("剪贴板为空"));
+    expect(draftValue(wrapper)).toBe("");
+    restore();
+  });
+
+  it("剪贴板读取失败时提示手动粘贴且不改动草稿", async () => {
+    const { restore } = stubClipboardRead("", true);
+    const wrapper = mountCapture();
+
+    await wrapper.get('[data-testid="mobile-inbox-paste"]').trigger("click");
+
+    await until(() =>
+      expect(wrapper.get('[data-testid="mobile-inbox-paste-toast"]').text()).toBe("无法读取剪贴板，可长按输入框手动粘贴"),
+    );
+    expect(draftValue(wrapper)).toBe("");
+    restore();
   });
 });

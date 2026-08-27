@@ -7419,6 +7419,53 @@ html[data-theme="dark"] .quick-search .quick-search-toggle:focus-visible {
   letter-spacing: -0.01em;
 }
 
+/* 卡片头部：标题居左，「一键粘贴」小按钮居右。 */
+.mobile-inbox-head {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+}
+
+button.mobile-inbox-paste {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 5px;
+  min-height: 30px;
+  padding: 0 10px;
+  border: 1px solid var(--line-subtle);
+  border-radius: 999px;
+  background: color-mix(in srgb, var(--panel) 66%, transparent);
+  color: var(--accent-foreground);
+  font-size: calc(var(--app-font-size) - 1px);
+  font-weight: 600;
+  cursor: pointer;
+  -webkit-tap-highlight-color: transparent;
+  transition: background var(--motion-fast) var(--motion-ease), border-color var(--motion-fast) var(--motion-ease);
+}
+
+button.mobile-inbox-paste .n-icon {
+  font-size: calc(var(--app-font-size) + 2px);
+  flex: none;
+}
+
+button.mobile-inbox-paste:hover,
+button.mobile-inbox-paste:focus-visible {
+  border-color: var(--line-main);
+  background: color-mix(in srgb, var(--panel) 84%, transparent);
+}
+
+button.mobile-inbox-paste:focus-visible {
+  outline: 0;
+  box-shadow: var(--focus-ring);
+}
+
+button.mobile-inbox-paste:disabled {
+  opacity: 0.55;
+  cursor: default;
+}
+
 .mobile-inbox-actions {
   display: grid;
   grid-template-columns: 1fr 1fr;
