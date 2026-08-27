@@ -7419,30 +7419,29 @@ html[data-theme="dark"] .quick-search .quick-search-toggle:focus-visible {
   letter-spacing: -0.01em;
 }
 
-/* 卡片头部：标题居左，「一键粘贴」小按钮居右。 */
-.mobile-inbox-head {
-  display: flex;
-  align-items: center;
-  justify-content: space-between;
-  gap: 12px;
-}
-
+/* 粘贴按钮：位于卡片底部、整行宽，拇指可及。次级样式（描边 + 半透明底），
+   与上方两个主发送按钮区分，避免喧宾夺主。 */
 button.mobile-inbox-paste {
   display: inline-flex;
   align-items: center;
   justify-content: center;
-  gap: 5px;
-  min-height: 30px;
-  padding: 0 10px;
-  border: 1px solid var(--line-subtle);
-  border-radius: 999px;
+  gap: 6px;
+  width: 100%;
+  min-height: 42px;
+  padding: 0 14px;
+  border: 1px solid var(--line-main);
+  border-radius: var(--radius-control);
   background: color-mix(in srgb, var(--panel) 66%, transparent);
   color: var(--accent-foreground);
-  font-size: calc(var(--app-font-size) - 1px);
+  font-size: var(--app-font-size);
   font-weight: 600;
   cursor: pointer;
   -webkit-tap-highlight-color: transparent;
-  transition: background var(--motion-fast) var(--motion-ease), border-color var(--motion-fast) var(--motion-ease);
+  transition: background var(--motion-fast) var(--motion-ease), border-color var(--motion-fast) var(--motion-ease), transform var(--motion-fast) var(--motion-ease);
+}
+
+button.mobile-inbox-paste:active {
+  transform: scale(0.98);
 }
 
 button.mobile-inbox-paste .n-icon {
@@ -7452,7 +7451,7 @@ button.mobile-inbox-paste .n-icon {
 
 button.mobile-inbox-paste:hover,
 button.mobile-inbox-paste:focus-visible {
-  border-color: var(--line-main);
+  border-color: var(--line-control);
   background: color-mix(in srgb, var(--panel) 84%, transparent);
 }
 

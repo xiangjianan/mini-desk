@@ -201,20 +201,7 @@ onBeforeUnmount(() => {
 
 <template>
   <div class="mobile-inbox-wrap">
-    <div class="mobile-inbox-head">
-      <h2 id="mobile-inbox-heading" class="mobile-inbox-heading">{{ app.mobileInboxHeading }}</h2>
-      <button
-        type="button"
-        class="mobile-inbox-paste"
-        data-testid="mobile-inbox-paste"
-        :title="app.mobileInboxPaste"
-        :aria-label="app.mobileInboxPaste"
-        :disabled="status === 'sending'"
-        @click="pasteFromClipboard"
-      >
-        <NIcon :component="ClipboardOutline" aria-hidden="true" /><span>{{ app.mobileInboxPaste }}</span>
-      </button>
-    </div>
+    <h2 id="mobile-inbox-heading" class="mobile-inbox-heading">{{ app.mobileInboxHeading }}</h2>
 
     <form class="mobile-inbox-form" @submit.prevent>
       <textarea
@@ -276,6 +263,19 @@ onBeforeUnmount(() => {
       @click="emit('change-code')"
     >
       {{ app.mobileInboxRevokedChange }}
+    </button>
+
+    <!-- 粘贴入口放在卡片底部：拇指顺手可点，不干扰上方输入与主发送动作 -->
+    <button
+      type="button"
+      class="mobile-inbox-paste"
+      data-testid="mobile-inbox-paste"
+      :title="app.mobileInboxPaste"
+      :aria-label="app.mobileInboxPaste"
+      :disabled="status === 'sending'"
+      @click="pasteFromClipboard"
+    >
+      <NIcon :component="ClipboardOutline" aria-hidden="true" /><span>{{ app.mobileInboxPaste }}</span>
     </button>
 
     <Transition name="mobile-inbox-toast">
