@@ -576,6 +576,19 @@ html[data-theme="dark"] .n-modal-mask {
   border-radius: 50% !important;
 }
 
+/* 顶部小图标按钮（设置齿轮、主题切换等）用更快的颜色过渡：
+   Naive 默认 color/background 0.3s，在小图标上显得拖沓——尤其主题切换时
+   明显比周围文字（--motion-fast 160ms）慢半拍。缩短到 --motion-fast，
+   让主题切换与悬停反馈都更跟手。 */
+.n-button.icon-button,
+.icon-button.n-button {
+  transition:
+    color var(--motion-fast) var(--motion-ease),
+    background-color var(--motion-fast) var(--motion-ease),
+    border-color var(--motion-fast) var(--motion-ease),
+    opacity var(--motion-fast) var(--motion-ease);
+}
+
 .image-file-input {
   position: absolute;
   width: 1px;
