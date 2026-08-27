@@ -29,6 +29,20 @@ export interface ChangelogEntry {
 
 export const CHANGELOG: ChangelogEntry[] = [
   {
+    version: "1.0.154",
+    date: "2026-08-27",
+    notes: {
+      zh: [
+        "新增：手机速记页一键粘贴剪贴板，粘贴不弹键盘，多行内容自动按换行追加",
+        "调整：进入速记页不再自动弹出键盘，配合粘贴按钮的安静体验",
+      ],
+      en: [
+        "New: one-tap clipboard paste on the mobile capture page — no keyboard popup, multi-line content appends line by line",
+        "Changed: opening the capture page no longer auto-opens the keyboard, pairing with the quiet paste flow",
+      ],
+    },
+  },
+  {
     version: "1.0.153",
     date: "2026-08-27",
     notes: {
