@@ -7491,7 +7491,8 @@ button.mobile-inbox-paste:disabled {
 
 .mobile-inbox-textarea {
   min-height: 200px;
-  padding: 12px 14px;
+  /* 右侧留出清空按钮的空间，避免键入的文字钻到底角按钮下方。 */
+  padding: 12px 104px 12px 14px;
   border: 1px solid var(--line-main);
   border-radius: var(--radius-control);
   background: var(--panel);
@@ -7525,8 +7526,8 @@ button.mobile-inbox-paste:disabled {
 /* 清空按钮：悬浮在输入框右上角，小尺寸、次级描边，图标在左。有内容时才渲染（见 v-if）。 */
 button.mobile-inbox-clear {
   position: absolute;
-  top: 8px;
-  right: 8px;
+  top: 12px;
+  right: 12px;
   display: inline-flex;
   align-items: center;
   gap: 5px;
