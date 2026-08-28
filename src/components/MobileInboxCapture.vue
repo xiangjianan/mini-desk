@@ -211,16 +211,8 @@ onBeforeUnmount(() => {
     <h2 id="mobile-inbox-heading" class="mobile-inbox-heading">{{ app.mobileInboxHeading }}</h2>
 
     <form class="mobile-inbox-form" @submit.prevent>
-      <div class="mobile-inbox-input-wrap">
-        <textarea
-          v-model="draft"
-          class="mobile-inbox-textarea"
-          data-testid="mobile-inbox-text"
-          :placeholder="app.mobileInboxPlaceholder"
-          :aria-label="app.mobileInboxPlaceholder"
-          rows="8"
-        ></textarea>
-        <!-- 输入框右上角清空：有内容才出现，一键清空全部文本（图标在左）。 -->
+      <!-- 清空按钮：位于输入框上方、靠右，不盖住输入框。有内容才出现，避免空状态占位。 -->
+      <div class="mobile-inbox-clear-row">
         <button
           v-if="canClearDraft"
           type="button"
@@ -232,6 +224,14 @@ onBeforeUnmount(() => {
           <NIcon :component="CloseCircleOutline" aria-hidden="true" /><span>{{ app.mobileInboxClear }}</span>
         </button>
       </div>
+      <textarea
+        v-model="draft"
+        class="mobile-inbox-textarea"
+        data-testid="mobile-inbox-text"
+        :placeholder="app.mobileInboxPlaceholder"
+        :aria-label="app.mobileInboxPlaceholder"
+        rows="8"
+      ></textarea>
       <!-- 多行输入会被按行拆成多条记录：≥2 行时给出实时提示，避免用户误以为整段只发一条。 -->
       <p v-if="showSplitHint" class="mobile-inbox-hint" data-testid="mobile-inbox-split-hint" aria-live="polite">
         {{ splitHintText }}
