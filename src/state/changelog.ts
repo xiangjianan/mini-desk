@@ -29,6 +29,18 @@ export interface ChangelogEntry {
 
 export const CHANGELOG: ChangelogEntry[] = [
   {
+    version: "1.0.156",
+    date: "2026-08-29",
+    notes: {
+      zh: [
+        "修复：折叠提醒列表时释放其中的焦点，消除 Chrome「Blocked aria-hidden」无障碍警告",
+      ],
+      en: [
+        "Fixed: collapsing a reminder list now releases focus from its hidden content, clearing Chrome's \"Blocked aria-hidden\" accessibility warning",
+      ],
+    },
+  },
+  {
     version: "1.0.155",
     date: "2026-08-28",
     notes: {

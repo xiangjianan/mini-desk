@@ -1324,6 +1324,43 @@ describe("TodoPanel", () => {
     }
   });
 
+  it("releases focus from collapsed list content by pairing aria-hidden with inert", () => {
+    // 折叠列表内容用 opacity/max-height 隐藏（仍留在 DOM 中，焦点不会自动释放），
+    // 只加 aria-hidden 会让 Chrome 报「Blocked aria-hidden … descendant retained
+    // focus」；inert 与 aria-hidden 成对出现才能把焦点交还文档（与快捷标签折叠一致）。
+    const wrapper = mount(TodoPanel, {
+      props: {
+        todoLists: [
+          { id: "morning", title: "☀️ 早上", collapsed: true, compact: false },
+          { id: "noon", title: "🌤️ 中午", collapsed: false, compact: false },
+        ],
+        todos: { morning: [{ id: "a", text: "事项", done: false }], noon: [] },
+        titles: DEFAULT_TITLES,
+      },
+      global: {
+        stubs: {
+          Button: true,
+          Dropdown: dropdownStub,
+          NDropdown: dropdownStub,
+          NTooltip: tooltipStub,
+        },
+      },
+    });
+    try {
+      const collapsedShell = wrapper.find('.todo-section[data-period="morning"] .todo-list-shell');
+      expect(collapsedShell.attributes("aria-hidden")).toBe("true");
+      expect(collapsedShell.attributes()).toHaveProperty("inert");
+
+      const expandedShell = wrapper.find('.todo-section[data-period="noon"] .todo-list-shell');
+      expect(expandedShell.classes()).not.toContain("is-hidden");
+      expect(expandedShell.attributes("aria-hidden")).toBe("false");
+      // 展开态不设 inert：真实浏览器走 el.inert 属性路径会移除该属性，
+      // jsdom 没有 inert 属性、会留下字面量 "false"，因此这里不断言 inert。
+    } finally {
+      wrapper.unmount();
+    }
+  });
+
   it("sorts today's focus reminders by deadline before undated starred items", () => {
     const wrapper = mount(TodoPanel, {
       props: {

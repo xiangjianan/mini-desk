@@ -1750,6 +1750,7 @@ function buildTodoListEntries(period: TodoListId, todos: TodoItem[], deferredDon
           class="todo-list-shell"
           :class="{ 'is-hidden': list.collapsed }"
           :aria-hidden="list.collapsed"
+          :inert="list.collapsed"
           @click="handleListClick($event, list.id)"
         >
           <NScrollbar
