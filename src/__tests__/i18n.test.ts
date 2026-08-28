@@ -171,6 +171,11 @@ describe("localized public copy", () => {
     expect(getUiText("en").app.mobileInboxPasteEmpty).toBe("Clipboard is empty");
   });
 
+  it("清空按钮文案中英齐全", () => {
+    expect(getUiText("zh").app.mobileInboxClear).toBe("清空");
+    expect(getUiText("en").app.mobileInboxClear).toBe("Clear");
+  });
+
   it("配对码注册制相关文案中英齐全", () => {
     expect(getUiText("zh").app.mobileInboxErrorUnknown).toBe("配对码不存在，请到桌面端重新配对");
     expect(getUiText("en").app.mobileInboxErrorUnknown).toBe("This pairing code doesn't exist; re-pair on the desktop");

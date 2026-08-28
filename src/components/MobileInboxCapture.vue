@@ -1,6 +1,6 @@
 <script setup lang="ts">
 import { computed, onBeforeUnmount, ref } from "vue";
-import { ClipboardOutline, CreateOutline, NotificationsOutline } from "@vicons/ionicons5";
+import { ClipboardOutline, CloseCircleOutline, CreateOutline, NotificationsOutline } from "@vicons/ionicons5";
 import { NIcon } from "naive-ui";
 import { getUiText } from "../state/i18n";
 import { createId } from "../state/storage";
@@ -41,6 +41,13 @@ const splitCount = computed(() =>
 );
 const showSplitHint = computed(() => splitCount.value >= 2);
 const splitHintText = computed(() => app.value.mobileInboxSplitHint.replace("{count}", () => String(splitCount.value)));
+
+/** 输入框右上角「清空」按钮：仅在存在可清空内容时显示，空框时不出现以免干扰占位提示。 */
+const canClearDraft = computed(() => draft.value.trim().length > 0);
+
+function clearDraft(): void {
+  draft.value = "";
+}
 
 const SENT_RESET_MS = 2500;
 let sentResetTimer: number | undefined;
@@ -204,14 +211,27 @@ onBeforeUnmount(() => {
     <h2 id="mobile-inbox-heading" class="mobile-inbox-heading">{{ app.mobileInboxHeading }}</h2>
 
     <form class="mobile-inbox-form" @submit.prevent>
-      <textarea
-        v-model="draft"
-        class="mobile-inbox-textarea"
-        data-testid="mobile-inbox-text"
-        :placeholder="app.mobileInboxPlaceholder"
-        :aria-label="app.mobileInboxPlaceholder"
-        rows="8"
-      ></textarea>
+      <div class="mobile-inbox-input-wrap">
+        <textarea
+          v-model="draft"
+          class="mobile-inbox-textarea"
+          data-testid="mobile-inbox-text"
+          :placeholder="app.mobileInboxPlaceholder"
+          :aria-label="app.mobileInboxPlaceholder"
+          rows="8"
+        ></textarea>
+        <!-- 输入框右上角清空：有内容才出现，一键清空全部文本（图标在左）。 -->
+        <button
+          v-if="canClearDraft"
+          type="button"
+          class="mobile-inbox-clear"
+          data-testid="mobile-inbox-clear"
+          :disabled="status === 'sending'"
+          @click="clearDraft"
+        >
+          <NIcon :component="CloseCircleOutline" aria-hidden="true" /><span>{{ app.mobileInboxClear }}</span>
+        </button>
+      </div>
       <!-- 多行输入会被按行拆成多条记录：≥2 行时给出实时提示，避免用户误以为整段只发一条。 -->
       <p v-if="showSplitHint" class="mobile-inbox-hint" data-testid="mobile-inbox-split-hint" aria-live="polite">
         {{ splitHintText }}

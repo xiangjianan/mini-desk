@@ -7516,6 +7516,55 @@ button.mobile-inbox-paste:disabled {
   box-shadow: var(--focus-ring);
 }
 
+/* 输入框包裹层：用于让「清空」按钮定位到输入框右上角。 */
+.mobile-inbox-input-wrap {
+  position: relative;
+  min-width: 0;
+}
+
+/* 清空按钮：悬浮在输入框右上角，小尺寸、次级描边，图标在左。有内容时才渲染（见 v-if）。 */
+button.mobile-inbox-clear {
+  position: absolute;
+  top: 8px;
+  right: 8px;
+  display: inline-flex;
+  align-items: center;
+  gap: 5px;
+  min-height: 28px;
+  padding: 0 9px;
+  border: 1px solid var(--line-subtle);
+  border-radius: 999px;
+  background: color-mix(in srgb, var(--panel) 74%, transparent);
+  color: var(--muted);
+  font-size: calc(var(--app-font-size) - 1px);
+  font-weight: 600;
+  cursor: pointer;
+  -webkit-tap-highlight-color: transparent;
+  transition: background var(--motion-fast) var(--motion-ease), border-color var(--motion-fast) var(--motion-ease), color var(--motion-fast) var(--motion-ease);
+}
+
+button.mobile-inbox-clear .n-icon {
+  font-size: calc(var(--app-font-size) + 2px);
+  flex: none;
+}
+
+button.mobile-inbox-clear:hover,
+button.mobile-inbox-clear:focus-visible {
+  border-color: var(--line-control);
+  background: color-mix(in srgb, var(--panel) 88%, transparent);
+  color: var(--text);
+}
+
+button.mobile-inbox-clear:focus-visible {
+  outline: 0;
+  box-shadow: var(--focus-ring);
+}
+
+button.mobile-inbox-clear:disabled {
+  opacity: 0.55;
+  cursor: default;
+}
+
 button.mobile-inbox-send {
   display: inline-flex;
   align-items: center;

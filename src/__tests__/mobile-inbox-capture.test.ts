@@ -404,4 +404,19 @@ describe("MobileInboxCapture", () => {
     expect(draftValue(wrapper)).toBe("");
     restore();
   });
+
+  it("清空按钮：仅输入内容时出现，点击清空全部文本", async () => {
+    const wrapper = mountCapture();
+    expect(wrapper.find('[data-testid="mobile-inbox-clear"]').exists()).toBe(false);
+
+    await wrapper.find('[data-testid="mobile-inbox-text"]').setValue("这段要清空");
+    expect(wrapper.find('[data-testid="mobile-inbox-clear"]').exists()).toBe(true);
+    expect(wrapper.get('[data-testid="mobile-inbox-clear"]').text()).toBe("清空");
+
+    await wrapper.get('[data-testid="mobile-inbox-clear"]').trigger("click");
+    expect(draftValue(wrapper)).toBe("");
+    // 清空后无内容，清空按钮与拆分提示都不再出现。
+    expect(wrapper.find('[data-testid="mobile-inbox-clear"]').exists()).toBe(false);
+    expect(wrapper.find('[data-testid="mobile-inbox-split-hint"]').exists()).toBe(false);
+  });
 });
