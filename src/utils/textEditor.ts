@@ -86,7 +86,9 @@ interface LineSlice {
 }
 
 function getLineAt(value: string, caret: number): LineSlice {
-  const start = value.lastIndexOf("\n", caret - 1) + 1;
+  // lastIndexOf 的 fromIndex 为负时按 0 处理，会把 0 号位的前导换行误当作分界；
+  // 光标 0 永远属于首行行首。
+  const start = caret <= 0 ? 0 : value.lastIndexOf("\n", caret - 1) + 1;
   const nextBreak = value.indexOf("\n", caret);
   const end = nextBreak === -1 ? value.length : nextBreak;
   return { start, end, text: value.slice(start, end) };
@@ -288,6 +290,91 @@ function getLineTextStartOffset(line: string): number {
   const unordered = UNORDERED_LINE_PATTERN.exec(body);
   if (unordered) return indent.length + unordered[0].length;
   return 0;
+}
+
+/**
+ * Cmd/Ctrl+Up/Down 把光标所在行与相邻行交换。同类同级列表行（同为编号或同为
+ * 短横线、缩进层级一致）只交换条目文本：编号与短横线留在原位，编号因此保持
+ * 连续；其余情况整行交换，缩进与标记随行走。光标始终跟随被移动的文本。没有
+ * 相邻行可换时返回 undefined 且不改动。
+ */
+export function moveTextareaLine(textarea: HTMLTextAreaElement, direction: -1 | 1): string | undefined {
+  const { selectionStart, selectionEnd, value } = textarea;
+  const result = moveLineInText(value, Math.min(selectionStart, selectionEnd), direction);
+  if (!result) return undefined;
+  textarea.value = result.text;
+  textarea.setSelectionRange(result.caret, result.caret);
+  return result.text;
+}
+
+interface ListLineParts {
+  indent: string;
+  marker: string;
+  kind: ListMarkerKind;
+  depth: number;
+  content: string;
+}
+
+function splitListLine(line: string): ListLineParts {
+  const indent = line.match(/^[ \t]*/)?.[0] ?? "";
+  const body = line.slice(indent.length);
+  const ordered = ORDERED_LINE_PATTERN.exec(body);
+  const unordered = ordered ? null : UNORDERED_LINE_PATTERN.exec(body);
+  const marker = ordered ? ordered[1] + ordered[2] : unordered?.[0] ?? "";
+  return {
+    indent,
+    marker,
+    kind: ordered ? "numbered" : unordered ? "bullet" : "plain",
+    depth: getIndentInfo(line).depth,
+    content: body.slice(marker.length),
+  };
+}
+
+function moveLineInText(value: string, caret: number, direction: -1 | 1): { text: string; caret: number } | undefined {
+  const current = getLineAt(value, caret);
+  let neighborStart: number;
+  let neighborEnd: number;
+  if (direction === -1) {
+    if (current.start === 0) return undefined;
+    neighborEnd = current.start - 1;
+    neighborStart = value.lastIndexOf("\n", neighborEnd - 1) + 1;
+  } else {
+    if (current.end >= value.length) return undefined;
+    neighborStart = current.end + 1;
+    const nextBreak = value.indexOf("\n", neighborStart);
+    neighborEnd = nextBreak === -1 ? value.length : nextBreak;
+  }
+  const regionStart = Math.min(current.start, neighborStart);
+  const regionEnd = Math.max(current.end, neighborEnd);
+
+  const currentParts = splitListLine(current.text);
+  const neighborParts = splitListLine(value.slice(neighborStart, neighborEnd));
+  const swapContentOnly = currentParts.kind !== "plain"
+    && currentParts.kind === neighborParts.kind
+    && currentParts.depth === neighborParts.depth;
+
+  const movedLine = swapContentOnly
+    ? `${neighborParts.indent}${neighborParts.marker}${currentParts.content}`
+    : current.text;
+  const displacedLine = swapContentOnly
+    ? `${currentParts.indent}${currentParts.marker}${neighborParts.content}`
+    : value.slice(neighborStart, neighborEnd);
+  const swapped = direction === -1 ? `${movedLine}\n${displacedLine}` : `${displacedLine}\n${movedLine}`;
+  const text = `${value.slice(0, regionStart)}${swapped}${value.slice(regionEnd)}`;
+
+  // 上移时被移动的行落在交换区的第一个槽位；下移时落在第二个槽位
+  //（被挤下的相邻行之后）。
+  const movedLineStart = direction === -1 ? neighborStart : current.start + displacedLine.length + 1;
+  const caretInMovedText = swapContentOnly
+    ? Math.max(0, caret - current.start - currentParts.indent.length - currentParts.marker.length)
+    : Math.min(caret - current.start, current.text.length);
+  const movedTextStart = movedLineStart + (swapContentOnly
+    ? neighborParts.indent.length + neighborParts.marker.length
+    : 0);
+  return {
+    text,
+    caret: Math.min(movedTextStart + caretInMovedText, movedLineStart + movedLine.length),
+  };
 }
 
 export function outdentEmptyIndentedLine(textarea: HTMLTextAreaElement): string | undefined {

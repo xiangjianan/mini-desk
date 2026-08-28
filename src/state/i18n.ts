@@ -1441,6 +1441,7 @@ export const SHORTCUT_HELP: Record<AppLanguage, ShortcutHelpSection[]> = {
       { key: "Shift + Tab", desc: "减少缩进" },
       { key: "Enter", desc: "换行（延续缩进）" },
       { key: "Backspace", desc: "空缩进行减少缩进" },
+      { key: "Ctrl/⌘ + ↑/↓", desc: "上移 / 下移当前行（自动适应编号和短横线）" },
       { key: "右键", desc: "复制 / 粘贴" },
     ]},
     { area: "快捷动作", icon: "⚡", summary: "把常用链接和复制片段放在手边。", tips: [
@@ -1497,6 +1498,7 @@ export const SHORTCUT_HELP: Record<AppLanguage, ShortcutHelpSection[]> = {
       { key: "Shift + Tab", desc: "Decrease indent" },
       { key: "Enter", desc: "New line (keep indent)" },
       { key: "Backspace", desc: "Decrease indent on empty line" },
+      { key: "Ctrl/⌘ + ↑/↓", desc: "Move line up / down (numbering and dashes adapt)" },
       { key: "Right-click", desc: "Copy / Paste" },
     ]},
     { area: "Quick Actions", icon: "⚡", summary: "Keep frequent links and copy snippets close by.", tips: [

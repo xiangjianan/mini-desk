@@ -48,6 +48,7 @@ describe("ShortcutHelp", () => {
     expect(wrapper.text()).not.toContain("工具栏");
     expect(wrapper.text()).toContain("Ctrl + S");
     expect(wrapper.text()).toContain("Esc / Space");
+    expect(wrapper.text()).toContain("上移 / 下移当前行");
     expect(wrapper.findAll(".shortcut-section-icon").map((icon) => icon.text())).toEqual(["⌘", "🖼️", "⏱️", "📝", "⚡"]);
   });
 

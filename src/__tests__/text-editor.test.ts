@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { handleTextareaTab, moveCaretToLineBoundary, renumberOrderedListText } from "../utils/textEditor";
+import { handleTextareaTab, moveCaretToLineBoundary, moveTextareaLine, renumberOrderedListText } from "../utils/textEditor";
 
 function textareaWith(value: string, caret: number): HTMLTextAreaElement {
   const textarea = document.createElement("textarea");
@@ -308,5 +308,106 @@ describe("moveCaretToLineBoundary — Cmd/Ctrl+Arrow line start/end", () => {
     expect(next).toBe(6);
     expect(textarea.selectionStart).toBe(6);
     expect(textarea.selectionEnd).toBe(6);
+  });
+});
+
+describe("moveTextareaLine — Ctrl/Cmd+↑/↓ 移动当前行", () => {
+  function move(value: string, caret: number, direction: -1 | 1): { value: string; caret: number } {
+    const textarea = textareaWith(value, caret);
+    moveTextareaLine(textarea, direction);
+    return { value: textarea.value, caret: textarea.selectionStart };
+  }
+
+  it("上移普通行：整行交换，光标跟随移动后的行", () => {
+    // 光标在第二行行中（"第二" 的两个字之间）。
+    const result = move("第一\n第二", 4, -1);
+    expect(result.value).toBe("第二\n第一");
+    expect(result.caret).toBe(1);
+  });
+
+  it("下移普通行：整行交换，光标跟随移动后的行", () => {
+    const result = move("第一\n第二", 1, 1);
+    expect(result.value).toBe("第二\n第一");
+    expect(result.caret).toBe(4);
+  });
+
+  it("首行上移返回 undefined 且不改动内容", () => {
+    const textarea = textareaWith("第一\n第二", 0);
+    expect(moveTextareaLine(textarea, -1)).toBeUndefined();
+    expect(textarea.value).toBe("第一\n第二");
+  });
+
+  it("末行下移返回 undefined 且不改动内容", () => {
+    const textarea = textareaWith("第一\n第二", 5);
+    expect(moveTextareaLine(textarea, 1)).toBeUndefined();
+    expect(textarea.value).toBe("第一\n第二");
+  });
+
+  it("上移有序列表项：编号留在原位，仅交换条目文本", () => {
+    // 光标在 "2. b" 行尾；上移后该行文本占据 "1. " 槽位，编号依然连续。
+    const result = move("1. a\n2. b\n3. c", 9, -1);
+    expect(result.value).toBe("1. b\n2. a\n3. c");
+    expect(result.caret).toBe(4);
+    expect(renumbered(result.value)).toBe(result.value);
+  });
+
+  it("下移有序列表项同样保持编号连续", () => {
+    // 光标在 "1. a" 行尾；下移后 "a" 占据第二个槽位，光标落在 "2. a" 行尾。
+    const result = move("1. a\n2. b\n3. c", 4, 1);
+    expect(result.value).toBe("1. b\n2. a\n3. c");
+    expect(result.caret).toBe(9);
+  });
+
+  it("位数不同的编号（9. 与 10.）交换后光标仍落在文本末尾", () => {
+    // 光标在 "10. j" 行尾；上移后文本 "j" 落在 "9. " 之后。
+    const result = move("9. i\n10. j", 10, -1);
+    expect(result.value).toBe("9. j\n10. i");
+    expect(result.caret).toBe(4);
+  });
+
+  it("同级短横线行上移：短横线保留，文本交换", () => {
+    // 光标在 "- 乙" 行尾。
+    const result = move("- 甲\n- 乙", 7, -1);
+    expect(result.value).toBe("- 乙\n- 甲");
+    expect(result.caret).toBe(3);
+  });
+
+  it("短横线行与编号行互换：整行交换，各自保留标记", () => {
+    // 光标在 "- b" 行尾；整行上移后短横线仍是短横线、编号仍是编号。
+    const result = move("1. a\n- b", 8, -1);
+    expect(result.value).toBe("- b\n1. a");
+    expect(result.caret).toBe(3);
+  });
+
+  it("不同缩进层级的行整行交换，缩进随行走", () => {
+    // 光标在 "    - b" 行尾。
+    const result = move("- a\n    - b", 11, -1);
+    expect(result.value).toBe("    - b\n- a");
+    expect(result.caret).toBe(7);
+  });
+
+  it("空行下移与相邻行整行交换", () => {
+    const result = move("\na\nb", 0, 1);
+    expect(result.value).toBe("a\n\nb");
+    expect(result.caret).toBe(2);
+  });
+
+  it("连续下移把行一路移到末尾，光标跟随不来回振荡", () => {
+    const textarea = textareaWith("a\nb\nc", 1);
+    moveTextareaLine(textarea, 1);
+    expect(textarea.value).toBe("b\na\nc");
+    moveTextareaLine(textarea, 1);
+    expect(textarea.value).toBe("b\nc\na");
+    expect(textarea.selectionStart).toBe(5);
+  });
+
+  it("存在选区时折叠到选区起点所在行并移动", () => {
+    // 选中整行 "2. b"（5..9）；移动的是起点所在的第二行。
+    const textarea = textareaWith("1. a\n2. b", 5);
+    textarea.setSelectionRange(5, 9);
+    moveTextareaLine(textarea, -1);
+    expect(textarea.value).toBe("1. b\n2. a");
+    expect(textarea.selectionStart).toBe(3);
+    expect(textarea.selectionEnd).toBe(3);
   });
 });

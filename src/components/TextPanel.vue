@@ -14,6 +14,7 @@ import {
   insertIndentedLineBreak,
   insertPlainLineBreak,
   moveCaretToLineBoundary,
+  moveTextareaLine,
   renumberOrderedListText,
   textLinesToEditorText,
 } from "../utils/textEditor";
@@ -128,6 +129,15 @@ function handleKeydown(event: KeyboardEvent): void {
     event.preventDefault();
     const edge = event.key === "ArrowLeft" ? "start" : "end";
     lastCaret.value = moveCaretToLineBoundary(textarea, edge);
+    return;
+  }
+  if (!event.shiftKey && (event.metaKey || event.ctrlKey) && (event.key === "ArrowUp" || event.key === "ArrowDown")) {
+    event.preventDefault();
+    const moved = moveTextareaLine(textarea, event.key === "ArrowUp" ? -1 : 1);
+    if (moved !== undefined) {
+      applyEditorText(moved);
+      update();
+    }
     return;
   }
   if (event.key === "Tab") {

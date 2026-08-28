@@ -81,6 +81,57 @@ describe("TextPanel", () => {
     expect(textarea.value).toBe("    child\n    ");
   });
 
+  it("moves the current line up with Ctrl+ArrowUp, adapting list numbering", async () => {
+    const wrapper = mount(TextPanel, {
+      props: {
+        titleId: "workspace-title",
+        title: "工作空间",
+        lines: [
+          { text: "1. 第一", indent: 0 },
+          { text: "2. 第二", indent: 0 },
+        ],
+      },
+    });
+    const textarea = wrapper.get("textarea").element as HTMLTextAreaElement;
+
+    await wrapper.get("textarea").trigger("dblclick");
+    textarea.setSelectionRange(textarea.value.length, textarea.value.length);
+    await wrapper.get("textarea").trigger("keydown", { key: "ArrowUp", ctrlKey: true });
+
+    expect(textarea.value).toBe("1. 第二\n2. 第一");
+    expect(textarea.selectionStart).toBe(5);
+    expect(wrapper.emitted("update")?.at(-1)?.[0]).toEqual([
+      { text: "1. 第二", indent: 0 },
+      { text: "2. 第一", indent: 0 },
+    ]);
+  });
+
+  it("moves the current line down with Cmd+ArrowDown", async () => {
+    const wrapper = mount(TextPanel, {
+      props: {
+        titleId: "workspace-title",
+        title: "工作空间",
+        lines: [
+          { text: "第一", indent: 0 },
+          { text: "第二", indent: 0 },
+        ],
+      },
+    });
+    const textarea = wrapper.get("textarea").element as HTMLTextAreaElement;
+    const caret = "第一".length;
+
+    await wrapper.get("textarea").trigger("dblclick");
+    textarea.setSelectionRange(caret, caret);
+    await wrapper.get("textarea").trigger("keydown", { key: "ArrowDown", metaKey: true });
+
+    expect(textarea.value).toBe("第二\n第一");
+    expect(textarea.selectionStart).toBe(5);
+    expect(wrapper.emitted("update")?.at(-1)?.[0]).toEqual([
+      { text: "第二", indent: 0 },
+      { text: "第一", indent: 0 },
+    ]);
+  });
+
   it("does not insert a dash marker when pressing Enter on a root line", async () => {
     const wrapper = mount(TextPanel, {
       props: {

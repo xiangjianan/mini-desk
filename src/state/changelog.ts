@@ -29,6 +29,20 @@ export interface ChangelogEntry {
 
 export const CHANGELOG: ChangelogEntry[] = [
   {
+    version: "1.0.155",
+    date: "2026-08-28",
+    notes: {
+      zh: [
+        "新增：便签编辑中 Ctrl/Command + ↑/↓ 上下移动当前行，编号列表自动保持序号连续、短横线跟随保留",
+        "新增：手机速记页标题行右侧新增清空按钮，一键清空输入内容",
+      ],
+      en: [
+        "New: move the current line up/down with Ctrl/Cmd+↑/↓ while editing notes — ordered lists renumber automatically and dash markers are preserved",
+        "New: a clear button beside the Mobile Inbox title clears the draft in one tap",
+      ],
+    },
+  },
+  {
     version: "1.0.154",
     date: "2026-08-27",
     notes: {
