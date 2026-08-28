@@ -208,22 +208,22 @@ onBeforeUnmount(() => {
 
 <template>
   <div class="mobile-inbox-wrap">
-    <h2 id="mobile-inbox-heading" class="mobile-inbox-heading">{{ app.mobileInboxHeading }}</h2>
+    <div class="mobile-inbox-head">
+      <h2 id="mobile-inbox-heading" class="mobile-inbox-heading">{{ app.mobileInboxHeading }}</h2>
+      <!-- 清空按钮：与标题同一行、靠右浮动，不单独占一行，也不盖住输入框。 -->
+      <button
+        v-if="canClearDraft"
+        type="button"
+        class="mobile-inbox-clear"
+        data-testid="mobile-inbox-clear"
+        :disabled="status === 'sending'"
+        @click="clearDraft"
+      >
+        <NIcon :component="CloseCircleOutline" aria-hidden="true" /><span>{{ app.mobileInboxClear }}</span>
+      </button>
+    </div>
 
     <form class="mobile-inbox-form" @submit.prevent>
-      <!-- 清空按钮：位于输入框上方、靠右，不盖住输入框。有内容才出现，避免空状态占位。 -->
-      <div class="mobile-inbox-clear-row">
-        <button
-          v-if="canClearDraft"
-          type="button"
-          class="mobile-inbox-clear"
-          data-testid="mobile-inbox-clear"
-          :disabled="status === 'sending'"
-          @click="clearDraft"
-        >
-          <NIcon :component="CloseCircleOutline" aria-hidden="true" /><span>{{ app.mobileInboxClear }}</span>
-        </button>
-      </div>
       <textarea
         v-model="draft"
         class="mobile-inbox-textarea"

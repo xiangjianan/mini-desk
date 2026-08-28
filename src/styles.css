@@ -7432,6 +7432,14 @@ html[data-theme="dark"] .quick-search .quick-search-toggle:focus-visible {
   letter-spacing: -0.01em;
 }
 
+/* 标题行：标题居左，「清空」按钮靠右浮动，同一行、不错开。 */
+.mobile-inbox-head {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+}
+
 /* 粘贴按钮：位于卡片底部、整行宽，拇指可及。次级样式（描边 + 半透明底），
    与上方两个主发送按钮区分，避免喧宾夺主。 */
 button.mobile-inbox-paste {
@@ -7516,16 +7524,8 @@ button.mobile-inbox-paste:disabled {
   box-shadow: var(--focus-ring);
 }
 
-/* 清空按钮所在行：位于输入框上方、靠右对齐。常驻 min-height 保证按钮
-   出现/消失时不引起下方输入框的布局跳动。 */
-.mobile-inbox-clear-row {
-  display: flex;
-  align-items: center;
-  justify-content: flex-end;
-  min-height: 30px;
-}
-
-/* 清空按钮：小尺寸、次级描边，图标在左。有内容时才渲染（见 v-if）。 */
+/* 清空按钮：小尺寸、次级描边，图标在左，与标题同一行靠右（见 .mobile-inbox-head）。
+   有内容时才渲染（见 v-if）。 */
 button.mobile-inbox-clear {
   display: inline-flex;
   align-items: center;
