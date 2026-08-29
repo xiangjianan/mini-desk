@@ -1,33 +1,11 @@
 import { mount } from "@vue/test-utils";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import ImagePreview from "../components/ImagePreview.vue";
+import { menuDropdownStub } from "./helpers/menu-dropdown-stub";
+import { modalStub } from "./helpers/stubs";
 
 const buttonStub = {
   template: '<button v-bind="$attrs"><slot /></button>',
-};
-
-const dropdownStub = {
-  props: ["options"],
-  emits: ["select"],
-  template: `
-    <div>
-      <slot />
-      <button
-        v-for="option in options"
-        :key="option.key"
-        class="dropdown-option"
-        type="button"
-        @click="$emit('select', option.key)"
-      >
-        {{ option.label }}
-      </button>
-    </div>
-  `,
-};
-
-const modalStub = {
-  props: ["show"],
-  template: '<section v-if="show" class="n-modal"><slot /></section>',
 };
 
 let originalGetContext: typeof HTMLCanvasElement.prototype.getContext;
@@ -145,10 +123,10 @@ describe("ImagePreview", () => {
       global: {
         stubs: {
           Button: buttonStub,
-          Dropdown: dropdownStub,
+          Dropdown: menuDropdownStub,
           Modal: modalStub,
           NButton: buttonStub,
-          NDropdown: dropdownStub,
+          NDropdown: menuDropdownStub,
           NModal: modalStub,
         },
       },
@@ -185,10 +163,10 @@ describe("ImagePreview", () => {
       global: {
         stubs: {
           Button: buttonStub,
-          Dropdown: dropdownStub,
+          Dropdown: menuDropdownStub,
           Modal: modalStub,
           NButton: buttonStub,
-          NDropdown: dropdownStub,
+          NDropdown: menuDropdownStub,
           NModal: modalStub,
         },
       },
@@ -222,10 +200,10 @@ describe("ImagePreview", () => {
       global: {
         stubs: {
           Button: buttonStub,
-          Dropdown: dropdownStub,
+          Dropdown: menuDropdownStub,
           Modal: modalStub,
           NButton: buttonStub,
-          NDropdown: dropdownStub,
+          NDropdown: menuDropdownStub,
           NModal: modalStub,
         },
       },
@@ -256,10 +234,10 @@ describe("ImagePreview", () => {
       global: {
         stubs: {
           Button: buttonStub,
-          Dropdown: dropdownStub,
+          Dropdown: menuDropdownStub,
           Modal: modalStub,
           NButton: buttonStub,
-          NDropdown: dropdownStub,
+          NDropdown: menuDropdownStub,
           NModal: modalStub,
         },
       },
@@ -286,10 +264,10 @@ describe("ImagePreview", () => {
       global: {
         stubs: {
           Button: buttonStub,
-          Dropdown: dropdownStub,
+          Dropdown: menuDropdownStub,
           Modal: modalStub,
           NButton: buttonStub,
-          NDropdown: dropdownStub,
+          NDropdown: menuDropdownStub,
           NModal: modalStub,
         },
       },
@@ -319,10 +297,10 @@ describe("ImagePreview", () => {
       global: {
         stubs: {
           Button: buttonStub,
-          Dropdown: dropdownStub,
+          Dropdown: menuDropdownStub,
           Modal: modalStub,
           NButton: buttonStub,
-          NDropdown: dropdownStub,
+          NDropdown: menuDropdownStub,
           NModal: modalStub,
         },
       },
@@ -352,10 +330,10 @@ describe("ImagePreview", () => {
       global: {
         stubs: {
           Button: buttonStub,
-          Dropdown: dropdownStub,
+          Dropdown: menuDropdownStub,
           Modal: modalStub,
           NButton: buttonStub,
-          NDropdown: dropdownStub,
+          NDropdown: menuDropdownStub,
           NModal: modalStub,
         },
       },
@@ -385,10 +363,10 @@ describe("ImagePreview", () => {
       global: {
         stubs: {
           Button: buttonStub,
-          Dropdown: dropdownStub,
+          Dropdown: menuDropdownStub,
           Modal: modalStub,
           NButton: buttonStub,
-          NDropdown: dropdownStub,
+          NDropdown: menuDropdownStub,
           NModal: modalStub,
         },
       },
@@ -423,10 +401,10 @@ describe("ImagePreview", () => {
       global: {
         stubs: {
           Button: buttonStub,
-          Dropdown: dropdownStub,
+          Dropdown: menuDropdownStub,
           Modal: modalStub,
           NButton: buttonStub,
-          NDropdown: dropdownStub,
+          NDropdown: menuDropdownStub,
           NModal: modalStub,
         },
       },
@@ -459,10 +437,10 @@ describe("ImagePreview", () => {
       global: {
         stubs: {
           Button: buttonStub,
-          Dropdown: dropdownStub,
+          Dropdown: menuDropdownStub,
           Modal: modalStub,
           NButton: buttonStub,
-          NDropdown: dropdownStub,
+          NDropdown: menuDropdownStub,
           NModal: modalStub,
         },
       },
@@ -497,10 +475,10 @@ describe("ImagePreview", () => {
       global: {
         stubs: {
           Button: buttonStub,
-          Dropdown: dropdownStub,
+          Dropdown: menuDropdownStub,
           Modal: modalStub,
           NButton: buttonStub,
-          NDropdown: dropdownStub,
+          NDropdown: menuDropdownStub,
           NModal: modalStub,
         },
       },
@@ -530,10 +508,10 @@ describe("ImagePreview", () => {
       global: {
         stubs: {
           Button: buttonStub,
-          Dropdown: dropdownStub,
+          Dropdown: menuDropdownStub,
           Modal: modalStub,
           NButton: buttonStub,
-          NDropdown: dropdownStub,
+          NDropdown: menuDropdownStub,
           NModal: modalStub,
         },
       },
@@ -591,10 +569,10 @@ describe("ImagePreview", () => {
       global: {
         stubs: {
           Button: buttonStub,
-          Dropdown: dropdownStub,
+          Dropdown: menuDropdownStub,
           Modal: modalStub,
           NButton: buttonStub,
-          NDropdown: dropdownStub,
+          NDropdown: menuDropdownStub,
           NModal: modalStub,
         },
       },
@@ -633,10 +611,10 @@ describe("ImagePreview", () => {
       global: {
         stubs: {
           Button: buttonStub,
-          Dropdown: dropdownStub,
+          Dropdown: menuDropdownStub,
           Modal: modalStub,
           NButton: buttonStub,
-          NDropdown: dropdownStub,
+          NDropdown: menuDropdownStub,
           NModal: modalStub,
         },
       },
@@ -663,10 +641,10 @@ describe("ImagePreview", () => {
       global: {
         stubs: {
           Button: buttonStub,
-          Dropdown: dropdownStub,
+          Dropdown: menuDropdownStub,
           Modal: modalStub,
           NButton: buttonStub,
-          NDropdown: dropdownStub,
+          NDropdown: menuDropdownStub,
           NModal: modalStub,
         },
       },
@@ -693,10 +671,10 @@ describe("ImagePreview", () => {
       global: {
         stubs: {
           Button: buttonStub,
-          Dropdown: dropdownStub,
+          Dropdown: menuDropdownStub,
           Modal: modalStub,
           NButton: buttonStub,
-          NDropdown: dropdownStub,
+          NDropdown: menuDropdownStub,
           NModal: modalStub,
         },
       },
@@ -730,10 +708,10 @@ describe("ImagePreview", () => {
       global: {
         stubs: {
           Button: buttonStub,
-          Dropdown: dropdownStub,
+          Dropdown: menuDropdownStub,
           Modal: modalStub,
           NButton: buttonStub,
-          NDropdown: dropdownStub,
+          NDropdown: menuDropdownStub,
           NModal: modalStub,
         },
       },
@@ -771,10 +749,10 @@ describe("ImagePreview", () => {
       global: {
         stubs: {
           Button: buttonStub,
-          Dropdown: dropdownStub,
+          Dropdown: menuDropdownStub,
           Modal: modalStub,
           NButton: buttonStub,
-          NDropdown: dropdownStub,
+          NDropdown: menuDropdownStub,
           NModal: modalStub,
         },
       },
@@ -799,10 +777,10 @@ describe("ImagePreview", () => {
       global: {
         stubs: {
           Button: buttonStub,
-          Dropdown: dropdownStub,
+          Dropdown: menuDropdownStub,
           Modal: modalStub,
           NButton: buttonStub,
-          NDropdown: dropdownStub,
+          NDropdown: menuDropdownStub,
           NModal: modalStub,
         },
       },
@@ -841,10 +819,10 @@ describe("ImagePreview", () => {
       global: {
         stubs: {
           Button: buttonStub,
-          Dropdown: dropdownStub,
+          Dropdown: menuDropdownStub,
           Modal: modalStub,
           NButton: buttonStub,
-          NDropdown: dropdownStub,
+          NDropdown: menuDropdownStub,
           NModal: modalStub,
         },
       },
@@ -912,10 +890,10 @@ describe("ImagePreview", () => {
       global: {
         stubs: {
           Button: buttonStub,
-          Dropdown: dropdownStub,
+          Dropdown: menuDropdownStub,
           Modal: modalStub,
           NButton: buttonStub,
-          NDropdown: dropdownStub,
+          NDropdown: menuDropdownStub,
           NModal: modalStub,
         },
       },
@@ -986,10 +964,10 @@ describe("ImagePreview", () => {
       global: {
         stubs: {
           Button: buttonStub,
-          Dropdown: dropdownStub,
+          Dropdown: menuDropdownStub,
           Modal: modalStub,
           NButton: buttonStub,
-          NDropdown: dropdownStub,
+          NDropdown: menuDropdownStub,
           NModal: modalStub,
         },
       },
@@ -1023,10 +1001,10 @@ describe("ImagePreview", () => {
       global: {
         stubs: {
           Button: buttonStub,
-          Dropdown: dropdownStub,
+          Dropdown: menuDropdownStub,
           Modal: modalStub,
           NButton: buttonStub,
-          NDropdown: dropdownStub,
+          NDropdown: menuDropdownStub,
           NModal: modalStub,
         },
       },
@@ -1061,10 +1039,10 @@ describe("ImagePreview", () => {
       global: {
         stubs: {
           Button: buttonStub,
-          Dropdown: dropdownStub,
+          Dropdown: menuDropdownStub,
           Modal: modalStub,
           NButton: buttonStub,
-          NDropdown: dropdownStub,
+          NDropdown: menuDropdownStub,
           NModal: modalStub,
         },
       },
@@ -1104,10 +1082,10 @@ describe("ImagePreview", () => {
       global: {
         stubs: {
           Button: buttonStub,
-          Dropdown: dropdownStub,
+          Dropdown: menuDropdownStub,
           Modal: modalStub,
           NButton: buttonStub,
-          NDropdown: dropdownStub,
+          NDropdown: menuDropdownStub,
           NModal: modalStub,
         },
       },
@@ -1144,10 +1122,10 @@ describe("ImagePreview", () => {
       global: {
         stubs: {
           Button: buttonStub,
-          Dropdown: dropdownStub,
+          Dropdown: menuDropdownStub,
           Modal: modalStub,
           NButton: buttonStub,
-          NDropdown: dropdownStub,
+          NDropdown: menuDropdownStub,
           NModal: modalStub,
         },
       },
@@ -1196,10 +1174,10 @@ describe("ImagePreview", () => {
       global: {
         stubs: {
           Button: buttonStub,
-          Dropdown: dropdownStub,
+          Dropdown: menuDropdownStub,
           Modal: modalStub,
           NButton: buttonStub,
-          NDropdown: dropdownStub,
+          NDropdown: menuDropdownStub,
           NModal: modalStub,
         },
       },
@@ -1254,10 +1232,10 @@ describe("ImagePreview", () => {
       global: {
         stubs: {
           Button: buttonStub,
-          Dropdown: dropdownStub,
+          Dropdown: menuDropdownStub,
           Modal: modalStub,
           NButton: buttonStub,
-          NDropdown: dropdownStub,
+          NDropdown: menuDropdownStub,
           NModal: modalStub,
         },
       },
@@ -1296,10 +1274,10 @@ describe("ImagePreview", () => {
       global: {
         stubs: {
           Button: buttonStub,
-          Dropdown: dropdownStub,
+          Dropdown: menuDropdownStub,
           Modal: modalStub,
           NButton: buttonStub,
-          NDropdown: dropdownStub,
+          NDropdown: menuDropdownStub,
           NModal: modalStub,
         },
       },
@@ -1332,10 +1310,10 @@ describe("ImagePreview", () => {
       global: {
         stubs: {
           Button: buttonStub,
-          Dropdown: dropdownStub,
+          Dropdown: menuDropdownStub,
           Modal: modalStub,
           NButton: buttonStub,
-          NDropdown: dropdownStub,
+          NDropdown: menuDropdownStub,
           NModal: modalStub,
         },
       },
@@ -1364,10 +1342,10 @@ describe("ImagePreview", () => {
       global: {
         stubs: {
           Button: buttonStub,
-          Dropdown: dropdownStub,
+          Dropdown: menuDropdownStub,
           Modal: modalStub,
           NButton: buttonStub,
-          NDropdown: dropdownStub,
+          NDropdown: menuDropdownStub,
           NModal: modalStub,
         },
       },
@@ -1420,10 +1398,10 @@ describe("ImagePreview", () => {
       global: {
         stubs: {
           Button: buttonStub,
-          Dropdown: dropdownStub,
+          Dropdown: menuDropdownStub,
           Modal: modalStub,
           NButton: buttonStub,
-          NDropdown: dropdownStub,
+          NDropdown: menuDropdownStub,
           NModal: modalStub,
         },
       },
@@ -1457,10 +1435,10 @@ describe("ImagePreview", () => {
       global: {
         stubs: {
           Button: buttonStub,
-          Dropdown: dropdownStub,
+          Dropdown: menuDropdownStub,
           Modal: modalStub,
           NButton: buttonStub,
-          NDropdown: dropdownStub,
+          NDropdown: menuDropdownStub,
           NModal: modalStub,
         },
       },
@@ -1487,10 +1465,10 @@ describe("ImagePreview", () => {
       global: {
         stubs: {
           Button: buttonStub,
-          Dropdown: dropdownStub,
+          Dropdown: menuDropdownStub,
           Modal: modalStub,
           NButton: buttonStub,
-          NDropdown: dropdownStub,
+          NDropdown: menuDropdownStub,
           NModal: modalStub,
         },
       },
@@ -1529,10 +1507,10 @@ describe("ImagePreview", () => {
       global: {
         stubs: {
           Button: buttonStub,
-          Dropdown: dropdownStub,
+          Dropdown: menuDropdownStub,
           Modal: modalStub,
           NButton: buttonStub,
-          NDropdown: dropdownStub,
+          NDropdown: menuDropdownStub,
           NModal: modalStub,
         },
       },
@@ -1566,10 +1544,10 @@ describe("ImagePreview", () => {
       global: {
         stubs: {
           Button: buttonStub,
-          Dropdown: dropdownStub,
+          Dropdown: menuDropdownStub,
           Modal: modalStub,
           NButton: buttonStub,
-          NDropdown: dropdownStub,
+          NDropdown: menuDropdownStub,
           NModal: modalStub,
         },
       },
@@ -1594,10 +1572,10 @@ describe("ImagePreview", () => {
       global: {
         stubs: {
           Button: buttonStub,
-          Dropdown: dropdownStub,
+          Dropdown: menuDropdownStub,
           Modal: modalStub,
           NButton: buttonStub,
-          NDropdown: dropdownStub,
+          NDropdown: menuDropdownStub,
           NModal: modalStub,
         },
       },
@@ -1631,10 +1609,10 @@ describe("ImagePreview", () => {
       global: {
         stubs: {
           Button: buttonStub,
-          Dropdown: dropdownStub,
+          Dropdown: menuDropdownStub,
           Modal: modalStub,
           NButton: buttonStub,
-          NDropdown: dropdownStub,
+          NDropdown: menuDropdownStub,
           NModal: modalStub,
         },
       },
@@ -1663,10 +1641,10 @@ describe("ImagePreview", () => {
       global: {
         stubs: {
           Button: buttonStub,
-          Dropdown: dropdownStub,
+          Dropdown: menuDropdownStub,
           Modal: modalStub,
           NButton: buttonStub,
-          NDropdown: dropdownStub,
+          NDropdown: menuDropdownStub,
           NModal: modalStub,
         },
       },
@@ -1708,10 +1686,10 @@ describe("ImagePreview", () => {
       global: {
         stubs: {
           Button: buttonStub,
-          Dropdown: dropdownStub,
+          Dropdown: menuDropdownStub,
           Modal: modalStub,
           NButton: buttonStub,
-          NDropdown: dropdownStub,
+          NDropdown: menuDropdownStub,
           NModal: modalStub,
         },
       },

@@ -2,27 +2,9 @@ import { mount } from "@vue/test-utils";
 import { defineComponent, nextTick } from "vue";
 import { describe, expect, it } from "vitest";
 import EditableTitle from "../components/EditableTitle.vue";
+import { menuDropdownStub } from "./helpers/menu-dropdown-stub";
 
 describe("EditableTitle", () => {
-  const dropdownStub = {
-    props: ["options"],
-    emits: ["select"],
-    template: `
-      <div>
-        <slot />
-        <button
-          v-for="option in options"
-          :key="option.key"
-          class="dropdown-option"
-          type="button"
-          @click="$emit('select', option.key)"
-        >
-          {{ option.label }}
-        </button>
-      </div>
-    `,
-  };
-
   it("opens a right-click edit menu before entering title edit mode", async () => {
     const wrapper = mount(EditableTitle, {
       props: {
@@ -32,8 +14,8 @@ describe("EditableTitle", () => {
       },
       global: {
         stubs: {
-          Dropdown: dropdownStub,
-          NDropdown: dropdownStub,
+          Dropdown: menuDropdownStub,
+          NDropdown: menuDropdownStub,
         },
       },
     });
@@ -57,8 +39,8 @@ describe("EditableTitle", () => {
       },
       global: {
         stubs: {
-          Dropdown: dropdownStub,
-          NDropdown: dropdownStub,
+          Dropdown: menuDropdownStub,
+          NDropdown: menuDropdownStub,
         },
       },
     });
@@ -83,8 +65,8 @@ describe("EditableTitle", () => {
     const wrapper = mount(Host, {
       global: {
         stubs: {
-          Dropdown: dropdownStub,
-          NDropdown: dropdownStub,
+          Dropdown: menuDropdownStub,
+          NDropdown: menuDropdownStub,
         },
       },
     });

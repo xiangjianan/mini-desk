@@ -1,7 +1,7 @@
 import { nextTick } from "vue";
-import { flushPromises, mount } from "@vue/test-utils";
+import { flushPromises } from "@vue/test-utils";
 import { beforeEach, describe, expect, it, vi } from "vitest";
-import App from "../App.vue";
+import { mountApp } from "./helpers/mount-app";
 import CompanionBubble from "../components/CompanionBubble.vue";
 import ImagePanel from "../components/ImagePanel.vue";
 import QuickButtons from "../components/QuickButtons.vue";
@@ -22,29 +22,9 @@ import { pullAllInboxes } from "../sync/pull";
 import type { InboxPullResult } from "../sync/pull";
 import { FALLBACK_APP_VERSION } from "../state/version";
 
-vi.mock("naive-ui", async (importOriginal) => {
-  const actual = await importOriginal<typeof import("naive-ui")>();
-  return {
-    ...actual,
-    NDropdown: {
-      name: "NDropdown",
-      template: "<div><slot /></div>",
-    },
-    NPopover: {
-      name: "NPopover",
-      props: ["show"],
-      template: "<div v-bind=\"$attrs\"><slot name=\"trigger\" /><div v-if=\"show\" class=\"n-popover\"><slot /></div></div>",
-    },
-    NTooltip: {
-      name: "NTooltip",
-      template: "<span><slot name=\"trigger\" /><slot /></span>",
-    },
-    NModal: {
-      name: "NModal",
-      props: ["show", "title"],
-      template: "<section v-if=\"show\" class=\"n-modal\"><h2>{{ title }}</h2><slot /></section>",
-    },
-  };
+vi.mock("naive-ui", async () => {
+  const { createNaiveUiStubModule } = await import("./helpers/naive-ui-mock");
+  return createNaiveUiStubModule();
 });
 
 // 收件箱拉取是纯函数模块（无 import 副作用），且 pullAllInboxes 只有收件箱接线调用：
@@ -62,74 +42,6 @@ vi.mock("../sync/inboxClient", async (importOriginal) => ({
   registerInboxKey: vi.fn(async () => true),
   checkInboxKeyStatus: vi.fn(async () => "active"),
 }));
-
-const dropdownStub = {
-  props: ["options"],
-  emits: ["select"],
-  template: `
-    <div>
-      <slot />
-      <button
-        v-for="option in options"
-        :key="option.key"
-        class="dropdown-option"
-        :data-key="option.key"
-        :disabled="option.disabled"
-        type="button"
-        @click="!option.disabled && $emit('select', option.key)"
-      >
-        {{ option.label }}
-      </button>
-    </div>
-  `,
-};
-
-const popoverStub = {
-  props: ["show"],
-  template: '<div v-bind="$attrs"><slot name="trigger" /><div v-if="show" class="n-popover"><slot /></div></div>',
-};
-
-const persistentPopoverStub = {
-  props: ["show"],
-  template: '<div v-bind="$attrs"><slot name="trigger" /><div class="n-popover" :data-show="String(show)"><slot /></div></div>',
-};
-
-const tooltipStub = {
-  template: '<span><slot name="trigger" /><slot /></span>',
-};
-
-const modalStub = {
-  props: ["show", "title"],
-  template: '<section v-if="show" class="n-modal"><h2>{{ title }}</h2><slot /></section>',
-};
-
-function mountApp() {
-  return mount(App, {
-    attachTo: document.body,
-    global: {
-      stubs: {
-        NDropdown: dropdownStub,
-        NPopover: popoverStub,
-        NTooltip: tooltipStub,
-        NModal: modalStub,
-      },
-    },
-  });
-}
-
-function mountAppWithPersistentPopover() {
-  return mount(App, {
-    attachTo: document.body,
-    global: {
-      stubs: {
-        NDropdown: dropdownStub,
-        NPopover: persistentPopoverStub,
-        NTooltip: tooltipStub,
-        NModal: modalStub,
-      },
-    },
-  });
-}
 
 async function flushAsyncComponents() {
   await flushPromises();
@@ -6862,7 +6774,7 @@ describe("App shell", () => {
         activeSpaceId: "workspace",
       }),
     );
-    const wrapper = mountAppWithPersistentPopover();
+    const wrapper = mountApp({ popover: "persistent" });
 
     try {
       const imagePanel = wrapper.getComponent(ImagePanel);

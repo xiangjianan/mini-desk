@@ -3,24 +3,10 @@ import { readFileSync } from "node:fs";
 import { resolve } from "node:path";
 import { afterEach, describe, expect, it, vi } from "vitest";
 import CompanionBubble from "../components/CompanionBubble.vue";
+import { persistentPopoverStub, popoverStub } from "./helpers/stubs";
 
-const popoverStub = {
-  name: "NPopover",
-  props: ["show"],
-  template: '<div><slot name="trigger" /><div v-if="show" class="n-popover"><slot /></div></div>',
-};
-
-const persistentPopoverStub = {
-  name: "NPopover",
-  props: ["show"],
-  template: '<div v-bind="$attrs"><slot name="trigger" /><div class="n-popover" :data-show="String(show)"><slot /></div></div>',
-};
-
-const fadingShellPopoverStub = {
-  name: "NPopover",
-  props: ["show"],
-  template: '<div v-bind="$attrs"><slot name="trigger" /><div class="n-popover" :data-show="String(show)"><slot /></div></div>',
-};
+// 淡出壳用例与常驻桩同一形状；保留独立名字是为了让用例意图（测淡出类）可读。
+const fadingShellPopoverStub = persistentPopoverStub;
 
 const buttonStub = {
   template: '<button v-bind="$attrs"><slot /></button>',

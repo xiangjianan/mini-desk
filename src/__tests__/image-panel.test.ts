@@ -5,25 +5,7 @@ import { nextTick } from "vue";
 import { afterEach, describe, expect, it, vi } from "vitest";
 import ImagePanel from "../components/ImagePanel.vue";
 import type { StoredImage } from "../types";
-
-const dropdownStub = {
-  props: ["options"],
-  emits: ["select"],
-  template: `
-    <div>
-      <slot />
-      <button
-        v-for="option in options"
-        :key="option.key"
-        class="dropdown-option"
-        type="button"
-        @click="$emit('select', option.key)"
-      >
-        {{ option.label }}
-      </button>
-    </div>
-  `,
-};
+import { menuDropdownStub } from "./helpers/menu-dropdown-stub";
 
 function mountImagePanel(images: StoredImage[] = [], props = {}) {
   return mount(ImagePanel, {
@@ -34,8 +16,8 @@ function mountImagePanel(images: StoredImage[] = [], props = {}) {
     },
     global: {
       stubs: {
-        Dropdown: dropdownStub,
-        NDropdown: dropdownStub,
+        Dropdown: menuDropdownStub,
+        NDropdown: menuDropdownStub,
       },
     },
   });

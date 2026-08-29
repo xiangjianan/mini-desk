@@ -1,65 +1,12 @@
 import { nextTick } from "vue";
-import { mount } from "@vue/test-utils";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
-import App from "../App.vue";
 import { defaultState, defaultWorkspace, STORAGE_KEY } from "../state/defaults";
+import { mountApp } from "./helpers/mount-app";
 
-vi.mock("naive-ui", async (importOriginal) => {
-  const actual = await importOriginal<typeof import("naive-ui")>();
-  return {
-    ...actual,
-    NDropdown: { name: "NDropdown", template: "<div><slot /></div>" },
-    NPopover: {
-      name: "NPopover",
-      props: ["show"],
-      template: '<div v-bind="$attrs"><slot name="trigger" /><div v-if="show" class="n-popover"><slot /></div></div>',
-    },
-    NTooltip: { name: "NTooltip", template: '<span><slot name="trigger" /><slot /></span>' },
-    NModal: {
-      name: "NModal",
-      props: ["show", "title"],
-      template: '<section v-if="show" class="n-modal"><h2>{{ title }}</h2><slot /></section>',
-    },
-  };
+vi.mock("naive-ui", async () => {
+  const { createNaiveUiStubModule } = await import("./helpers/naive-ui-mock");
+  return createNaiveUiStubModule();
 });
-
-const dropdownStub = {
-  props: ["options"],
-  emits: ["select"],
-  template: `
-    <div>
-      <slot />
-      <button
-        v-for="option in options"
-        :key="option.key"
-        class="dropdown-option"
-        :data-key="option.key"
-        :disabled="option.disabled"
-        type="button"
-        @click="!option.disabled && $emit('select', option.key)"
-      >
-        {{ option.label }}
-      </button>
-    </div>
-  `,
-};
-
-function mountApp() {
-  return mount(App, {
-    attachTo: document.body,
-    global: {
-      stubs: {
-        NDropdown: dropdownStub,
-        NPopover: {
-          props: ["show"],
-          template: '<div v-bind="$attrs"><slot name="trigger" /><div v-if="show" class="n-popover"><slot /></div></div>',
-        },
-        NTooltip: { template: '<span><slot name="trigger" /><slot /></span>' },
-        NModal: { props: ["show", "title"], template: '<section v-if="show" class="n-modal"><h2>{{ title }}</h2><slot /></section>' },
-      },
-    },
-  });
-}
 
 function seedEmptyTodo() {
   localStorage.setItem(STORAGE_KEY, JSON.stringify({

@@ -3,30 +3,10 @@ import { describe, expect, it, vi } from "vitest";
 import { readFileSync } from "node:fs";
 import { resolve } from "node:path";
 import TextPanel from "../components/TextPanel.vue";
+import { menuDropdownStub } from "./helpers/menu-dropdown-stub";
 
 const tooltipStub = {
   template: '<span><slot name="trigger" /><slot /></span>',
-};
-
-const dropdownStub = {
-  props: ["options"],
-  emits: ["select"],
-  template: `
-    <div>
-      <slot />
-      <button
-        v-for="option in options"
-        :key="option.key"
-        class="dropdown-option"
-        :data-key="option.key"
-        :disabled="option.disabled"
-        type="button"
-        @click="!option.disabled && $emit('select', option.key)"
-      >
-        {{ option.label }}
-      </button>
-    </div>
-  `,
 };
 
 describe("TextPanel", () => {
@@ -669,8 +649,8 @@ describe("TextPanel", () => {
       },
       global: {
         stubs: {
-          Dropdown: dropdownStub,
-          NDropdown: dropdownStub,
+          Dropdown: menuDropdownStub,
+          NDropdown: menuDropdownStub,
         },
       },
     });
@@ -690,8 +670,8 @@ describe("TextPanel", () => {
       },
       global: {
         stubs: {
-          Dropdown: dropdownStub,
-          NDropdown: dropdownStub,
+          Dropdown: menuDropdownStub,
+          NDropdown: menuDropdownStub,
         },
       },
     });
@@ -716,8 +696,8 @@ describe("TextPanel", () => {
       },
       global: {
         stubs: {
-          Dropdown: dropdownStub,
-          NDropdown: dropdownStub,
+          Dropdown: menuDropdownStub,
+          NDropdown: menuDropdownStub,
         },
       },
     });
@@ -749,8 +729,8 @@ describe("TextPanel", () => {
       },
       global: {
         stubs: {
-          Dropdown: dropdownStub,
-          NDropdown: dropdownStub,
+          Dropdown: menuDropdownStub,
+          NDropdown: menuDropdownStub,
         },
       },
     });
@@ -781,8 +761,8 @@ describe("TextPanel", () => {
       },
       global: {
         stubs: {
-          Dropdown: dropdownStub,
-          NDropdown: dropdownStub,
+          Dropdown: menuDropdownStub,
+          NDropdown: menuDropdownStub,
         },
       },
     });
@@ -811,8 +791,8 @@ describe("TextPanel", () => {
       },
       global: {
         stubs: {
-          Dropdown: dropdownStub,
-          NDropdown: dropdownStub,
+          Dropdown: menuDropdownStub,
+          NDropdown: menuDropdownStub,
         },
       },
     });
@@ -855,8 +835,8 @@ describe("TextPanel", () => {
       },
       global: {
         stubs: {
-          Dropdown: dropdownStub,
-          NDropdown: dropdownStub,
+          Dropdown: menuDropdownStub,
+          NDropdown: menuDropdownStub,
         },
       },
     });
@@ -886,8 +866,8 @@ describe("TextPanel", () => {
       },
       global: {
         stubs: {
-          Dropdown: dropdownStub,
-          NDropdown: dropdownStub,
+          Dropdown: menuDropdownStub,
+          NDropdown: menuDropdownStub,
         },
       },
     });
@@ -915,8 +895,8 @@ describe("TextPanel", () => {
       },
       global: {
         stubs: {
-          Dropdown: dropdownStub,
-          NDropdown: dropdownStub,
+          Dropdown: menuDropdownStub,
+          NDropdown: menuDropdownStub,
         },
       },
     });
@@ -946,8 +926,8 @@ describe("TextPanel", () => {
       },
       global: {
         stubs: {
-          Dropdown: dropdownStub,
-          NDropdown: dropdownStub,
+          Dropdown: menuDropdownStub,
+          NDropdown: menuDropdownStub,
         },
       },
     });
@@ -981,8 +961,8 @@ describe("TextPanel", () => {
       },
       global: {
         stubs: {
-          Dropdown: dropdownStub,
-          NDropdown: dropdownStub,
+          Dropdown: menuDropdownStub,
+          NDropdown: menuDropdownStub,
         },
       },
     });
@@ -1009,8 +989,8 @@ describe("TextPanel", () => {
       },
       global: {
         stubs: {
-          Dropdown: dropdownStub,
-          NDropdown: dropdownStub,
+          Dropdown: menuDropdownStub,
+          NDropdown: menuDropdownStub,
         },
       },
     });
@@ -1041,8 +1021,8 @@ describe("TextPanel", () => {
       },
       global: {
         stubs: {
-          Dropdown: dropdownStub,
-          NDropdown: dropdownStub,
+          Dropdown: menuDropdownStub,
+          NDropdown: menuDropdownStub,
         },
       },
     });

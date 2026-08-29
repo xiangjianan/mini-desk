@@ -1,7 +1,6 @@
-import { mount } from "@vue/test-utils";
 import { beforeEach, describe, expect, it, vi } from "vitest";
-import App from "../App.vue";
 import ImagePanel from "../components/ImagePanel.vue";
+import { mountApp } from "./helpers/mount-app";
 import { IMAGE_DB_NAME, IMAGE_STORE_NAME, LEGACY_IMAGE_DB_NAME, STORAGE_KEY, defaultWorkspace } from "../state/defaults";
 import { deleteStoredImage, getStoredImagePayload, hydrateStoredImages, persistImagePayloads, storeImagePayload } from "../state/images";
 import * as imageState from "../state/images";
@@ -150,31 +149,6 @@ function installFakeIndexedDb(seed: Record<string, ImageRecord[]>): FakeIndexedD
       return fn?.mock?.calls.length ?? 0;
     },
   };
-}
-
-const dropdownStub = {
-  props: ["options"],
-  emits: ["select"],
-  template: "<div><slot /></div>",
-};
-
-const popoverStub = {
-  props: ["show"],
-  template: '<div v-bind="$attrs"><slot name="trigger" /><div v-if="show"><slot /></div></div>',
-};
-
-function mountApp() {
-  return mount(App, {
-    attachTo: document.body,
-    global: {
-      stubs: {
-        NDropdown: dropdownStub,
-        NPopover: popoverStub,
-        NTooltip: { template: "<span><slot name=\"trigger\" /><slot /></span>" },
-        NModal: { props: ["show", "title"], template: "<section v-if=\"show\"><slot /></section>" },
-      },
-    },
-  });
 }
 
 beforeEach(() => {
