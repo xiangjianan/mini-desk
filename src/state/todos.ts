@@ -1,5 +1,5 @@
 import type { TodoCompletedVisibility, TodoItem, TodoListConfig, TodoListId, TodoMap, TodoPeriod } from "../types";
-import { isValidDeadlineAt } from "./deadlines";
+import { isValidNotifyAt } from "./deadlines";
 
 /** 可见提醒条数超过该阈值时，点击/聚焦列表会弹瘦身提示（App.vue 与 TodoPanel 共用）。 */
 export const TODO_DENSITY_THRESHOLD = 20;
@@ -82,15 +82,11 @@ export function starTodo(
   period: TodoPeriod,
   id: string,
   starred: boolean,
-  legacyDeadlineAt?: number,
 ): TodoMap {
   const next = cloneTodoMap(todos);
   const todo = next[period]?.find((item) => item.id === id);
   if (!todo) return next;
   todo.starred = starred;
-  if (starred && isValidDeadlineAt(legacyDeadlineAt)) {
-    todo.notifyAt = legacyDeadlineAt;
-  }
   delete todo.deadlineAt;
   return next;
 }
@@ -104,7 +100,7 @@ export function setTodoNotifyAt(
   const next = cloneTodoMap(todos);
   const todo = next[period]?.find((item) => item.id === id);
   if (!todo) return next;
-  if (isValidDeadlineAt(notifyAt)) {
+  if (isValidNotifyAt(notifyAt)) {
     todo.notifyAt = notifyAt;
   } else {
     delete todo.notifyAt;

@@ -27,7 +27,7 @@ import {
   getDefaultNotifyDateTimeValue,
   getNotifyDisplay,
   getNotifyPresets,
-  isValidDeadlineAt,
+  isValidNotifyAt,
   withDefaultNotifyTime,
   type NotifyDisplay,
 } from "../state/deadlines";
@@ -208,7 +208,7 @@ const menuOptions = computed<DropdownOption[]>(() => {
       options.push({ label: uiText.value.common.paste, key: "paste", icon: renderIcon(ClipboardOutline) });
     }
     options.push({
-      label: isValidDeadlineAt(todo?.notifyAt) ? uiText.value.todo.editNotify : uiText.value.todo.setNotify,
+      label: isValidNotifyAt(todo?.notifyAt) ? uiText.value.todo.editNotify : uiText.value.todo.setNotify,
       key: "notify",
       icon: renderIcon(NotificationsOutline),
     });
@@ -1038,7 +1038,7 @@ function handleNotifyTimeColumnScroll(event: Event, valueCount: number): void {
 }
 
 function getNotifyPickerInitialValue(todo?: TodoItem): number {
-  if (isValidDeadlineAt(todo?.notifyAt)) return todo.notifyAt;
+  if (isValidNotifyAt(todo?.notifyAt)) return todo.notifyAt;
   // New todo: today defaults to the next whole hour, per the date-aware rule.
   return withDefaultNotifyTime(Date.now());
 }
@@ -1329,7 +1329,7 @@ function isListTitleNotificationFlashing(list: TodoListConfig): boolean {
 function listHasOverdue(listId: TodoListId): boolean {
   const now = deadlineNow.value;
   return (ordered.value[listId] ?? []).some(
-    (todo) => !todo.done && isValidDeadlineAt(todo.notifyAt) && todo.notifyAt < now,
+    (todo) => !todo.done && isValidNotifyAt(todo.notifyAt) && todo.notifyAt < now,
   );
 }
 
@@ -1357,8 +1357,8 @@ function compareTodayFocusEntries(left: TodayFocusEntry, right: TodayFocusEntry)
 
   const leftDeadline = left.todo.notifyAt;
   const rightDeadline = right.todo.notifyAt;
-  const leftHasDeadline = isValidDeadlineAt(leftDeadline);
-  const rightHasDeadline = isValidDeadlineAt(rightDeadline);
+  const leftHasDeadline = isValidNotifyAt(leftDeadline);
+  const rightHasDeadline = isValidNotifyAt(rightDeadline);
   if (leftHasDeadline && rightHasDeadline) {
     const deadlineDiff = leftDeadline - rightDeadline;
     if (deadlineDiff !== 0) return deadlineDiff;

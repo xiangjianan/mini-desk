@@ -1168,20 +1168,6 @@ describe("todo behavior", () => {
     });
   });
 
-  it("maps valid legacy star deadline arguments to notification time", () => {
-    const notifyAt = new Date(2026, 4, 25, 18).getTime();
-    const todos = {
-      morning: [{ id: "a", text: "task", done: false }],
-      noon: [],
-      evening: [],
-    };
-
-    expect(starTodo(todos, "morning", "a", true, notifyAt).morning[0]).toMatchObject({
-      starred: true,
-      notifyAt,
-    });
-  });
-
   it("does not clear existing notification time when starring without a legacy deadline", () => {
     const notifyAt = new Date(2026, 4, 25, 18).getTime();
     const todos = {

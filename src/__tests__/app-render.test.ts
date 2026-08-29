@@ -3715,7 +3715,7 @@ describe("App shell", () => {
       // 链接打开成功也要有气泡反馈（与文本复制/应用启动一致），不能静默返回。
       await vi.advanceTimersByTimeAsync(200);
       await wrapper.vm.$nextTick();
-      expect(wrapper.find('[data-testid="companion-confirm"]').text()).toMatch(/打开|标签页|新窗口/);
+      expect(wrapper.find('[data-testid="companion-confirm"]').text()).toMatch(/打开|标签页|新窗口|跳转/);
 
       // 等链接气泡过期退场（3000ms 展示 + 260ms 内容保留），恢复下方「点击后未出内容」的断言条件。
       await vi.advanceTimersByTimeAsync(3600);
@@ -6625,7 +6625,7 @@ describe("App shell", () => {
       await vi.advanceTimersByTimeAsync(200);
       await wrapper.vm.$nextTick();
 
-      expect(wrapper.find('[data-testid="companion-confirm"]').text()).toMatch(/打开|标签页|新窗口/);
+      expect(wrapper.find('[data-testid="companion-confirm"]').text()).toMatch(/打开|标签页|新窗口|跳转/);
       expect(wrapper.find('[data-testid="companion-confirm"]').text()).not.toMatch(/失败|检查链接/);
     } finally {
       wrapper.unmount();

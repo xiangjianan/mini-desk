@@ -1,5 +1,5 @@
 import { DEFAULT_SPACE_ID, DEFAULT_WORKSPACE_ID } from "../defaults";
-import { isValidDeadlineAt } from "../deadlines";
+import { isValidNotifyAt } from "../deadlines";
 import type {
   BoardState,
   CompanionCustomGif,
@@ -122,7 +122,7 @@ function cloneTodos(todos: TodoMap, todoLists: TodoListConfig[]): TodoMap {
 function cloneTodo(todo: TodoItem): TodoItem {
   const next: TodoItem = { ...todo };
   delete next.deadlineAt;
-  if (!isValidDeadlineAt(next.notifyAt)) delete next.notifyAt;
+  if (!isValidNotifyAt(next.notifyAt)) delete next.notifyAt;
   return next;
 }
 

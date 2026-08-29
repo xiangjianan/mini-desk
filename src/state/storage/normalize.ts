@@ -1,5 +1,5 @@
 import { DEFAULT_SPACE_ID, DEFAULT_SPACE_TITLE, DEFAULT_TODO_LISTS, DEFAULT_WORKSPACE_ID, defaultWorkspace } from "../defaults";
-import { isValidDeadlineAt } from "../deadlines";
+import { isValidNotifyAt } from "../deadlines";
 import { normalizeCompanionGifTheme } from "../companionGifThemes";
 import { getQuickTagColor, normalizeQuickTagColor } from "../quickButtons";
 import { isQuickAppScheme } from "../quickApps";
@@ -462,12 +462,12 @@ function normalizeTodo(item: unknown): TodoItem | null {
     done: Boolean(record.done),
     starred,
   };
-  const notifyAt = isValidDeadlineAt(record.notifyAt)
+  const notifyAt = isValidNotifyAt(record.notifyAt)
     ? record.notifyAt
-    : isValidDeadlineAt(record.deadlineAt)
+    : isValidNotifyAt(record.deadlineAt)
       ? record.deadlineAt
       : undefined;
-  if (isValidDeadlineAt(notifyAt)) {
+  if (isValidNotifyAt(notifyAt)) {
     todo.notifyAt = notifyAt;
   }
   return todo;

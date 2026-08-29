@@ -32,8 +32,6 @@ export const DEFAULT_ZONE_VISIBILITY: ZoneVisibility = {
 
 export const DEFAULT_TODO_LISTS: TodoListConfig[] = getDefaultTodoLists(DEFAULT_LANGUAGE);
 
-export const TODO_PERIODS: TodoListId[] = DEFAULT_TODO_LISTS.map((list) => list.id);
-
 export const DEFAULT_TITLES: Record<string, string> = DEFAULT_TITLES_ZH;
 
 export const EMPTY_HINTS = EMPTY_HINTS_BY_LANGUAGE.zh;

@@ -23,13 +23,6 @@ export function editorTextToLines(value = ""): LineItem[] {
   });
 }
 
-export function appendPlainTextToEditorText(current: string, dropped: string): string {
-  const normalizedDrop = dropped.replace(/\r\n?/g, "\n");
-  if (!normalizedDrop.trim()) return current;
-  if (!current) return normalizedDrop;
-  return `${current}\n${normalizedDrop}`;
-}
-
 export function splitDroppedTodoText(value: string): string[] {
   return value
     .replace(/\r\n?/g, "\n")
@@ -375,23 +368,6 @@ function moveLineInText(value: string, caret: number, direction: -1 | 1): { text
     text,
     caret: Math.min(movedTextStart + caretInMovedText, movedLineStart + movedLine.length),
   };
-}
-
-export function outdentEmptyIndentedLine(textarea: HTMLTextAreaElement): string | undefined {
-  const { selectionStart, selectionEnd, value } = textarea;
-  if (selectionStart !== selectionEnd) return undefined;
-  const lineStart = value.lastIndexOf("\n", selectionStart - 1) + 1;
-  const lineEndIndex = value.indexOf("\n", selectionStart);
-  const lineEnd = lineEndIndex === -1 ? value.length : lineEndIndex;
-  const line = value.slice(lineStart, lineEnd);
-  const indent = getIndentInfo(line);
-  if (indent.depth === 0) return undefined;
-  const content = line.slice(indent.contentStart);
-  if (content.trim().length > 0 && !isEmptyListContent(content)) return undefined;
-
-  const nextLine = formatEditorLine(indent.depth - 1, content);
-  textarea.setRangeText(nextLine, lineStart, lineEnd, "end");
-  return textarea.value;
 }
 
 function formatEditorLine(indent: number, text: string): string {

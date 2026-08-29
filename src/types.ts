@@ -49,8 +49,6 @@ export interface StoredImage {
   displayHeight?: number;
 }
 
-export type ImagePastePlacement = "append" | "before" | "after" | "replace";
-
 export type ImagePasteRequest =
   | { placement: "append"; anchor?: HTMLElement }
   | {
