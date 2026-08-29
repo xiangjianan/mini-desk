@@ -131,7 +131,6 @@ describe("WorkbenchShell", () => {
     });
 
     expect(wrapper.find('button[aria-label="搜索或执行命令"]').exists()).toBe(false);
-    expect(wrapper.find(".workbench-command-button").exists()).toBe(false);
     expect(wrapper.find('button[aria-label="设置"]').exists()).toBe(false);
     expect(wrapper.find(".workbench-rail").exists()).toBe(false);
     expect(wrapper.findAll(".workbench-command-actions button")).toHaveLength(2);

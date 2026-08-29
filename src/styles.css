@@ -605,11 +605,6 @@ html[data-theme="dark"] .n-modal-mask {
   padding-right: 4px;
 }
 
-.note-link-panel {
-  display: flex;
-  flex-direction: column;
-}
-
 .space-panel {
   min-width: 0;
   min-height: 0;
@@ -3248,23 +3243,12 @@ button.todo-section-menu-button {
   background: var(--danger);
 }
 
-.settings-version-action {
-  color: var(--danger);
-  font-size: var(--app-font-size);
-}
-
 .dropdown-anchor {
   position: fixed;
   width: 0;
   height: 0;
   overflow: hidden;
   pointer-events: none;
-}
-
-.settings-menu {
-  right: 0;
-  bottom: 34px;
-  left: auto;
 }
 
 .quick-type-options {
@@ -4109,20 +4093,6 @@ body:has(.image-preview) .workbench-command-bar {
   cursor: pointer;
 }
 
-.workbench-command-button {
-  height: 32px;
-  min-width: 220px;
-  border-radius: calc(var(--radius) + 6px);
-  border: 0;
-  background: var(--muted-surface);
-  color: var(--muted-foreground);
-  display: inline-flex;
-  align-items: center;
-  justify-content: space-between;
-  gap: 8px;
-  padding: 0 10px;
-}
-
 .workbench-header-hide-button,
 .workbench-theme-button {
   width: 32px;
@@ -4146,16 +4116,6 @@ body:has(.image-preview) .workbench-command-bar {
 .workbench-theme-button:focus-visible {
   background: var(--button-hover);
   cursor: pointer;
-}
-
-.workbench-command-button svg {
-  width: 14px;
-  height: 14px;
-}
-
-.workbench-command-button kbd {
-  color: var(--foreground);
-  font-size: 11px;
 }
 
 .workbench-grid {
@@ -4284,7 +4244,6 @@ button.workbench-resizer {
   gap: 16px;
 }
 
-.workbench-zone-notes > .note-panel,
 .workbench-zone-notes > .quick-block {
   flex: 1 1 0;
   min-height: 0;
@@ -4996,10 +4955,6 @@ button.space-add-button,
 
 .settings-version-item {
   color: var(--muted);
-}
-
-.settings-version-action {
-  color: var(--primary);
 }
 
 .image-list {
@@ -5764,10 +5719,6 @@ select {
 .n-dropdown-option.n-dropdown-option--pending .n-dropdown-option-body,
 .quick-button:hover {
   background-color: var(--button-hover) !important;
-}
-
-.settings-version-action {
-  color: var(--primary);
 }
 
 [data-key="clear-data"],
