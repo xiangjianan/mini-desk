@@ -3,6 +3,7 @@ import type { BoardState, StoredImage, WorkspaceData } from "../../types";
 import { normalizeSyncState, type ImagePlacementHint, type ImageReplacementHint, type SaveStateOptions, type SaveStateResult, type SaveScope, type SaveStateStatus } from "./shared";
 import { getSerializableState } from "./serialize";
 import { normalizeImportedState } from "./normalize";
+import { getImagePayloadId } from "../images";
 
 export function loadState(storage: Storage = localStorage): BoardState {
   try {
@@ -154,10 +155,6 @@ function canMergeImageReplacement(
       && getImagePayloadId(current) === replacement.expectedPayloadId
       && getImagePayloadId(local) === replacement.newPayloadId,
   );
-}
-
-function getImagePayloadId(image: StoredImage): string {
-  return image.payloadId ?? image.id;
 }
 
 export type { SaveScope, SaveStateStatus, SaveStateOptions, SaveStateResult, ImagePlacementHint, ImageReplacementHint };

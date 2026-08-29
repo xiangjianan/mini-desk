@@ -2101,7 +2101,7 @@ async function copyQuickText(id: string, anchor?: HTMLElement): Promise<void> {
 async function callQuickApi(button: QuickButton, anchor?: HTMLElement): Promise<void> {
   showBubbleText(getQuickApiInvokedMessage(button.title), anchor, { hideCompanionAfter: true }, 2200);
   try {
-    const response = await fetch(normalizeApiUrl(button.value), buildQuickApiRequest(button));
+    const response = await fetch(normalizeLink(button.value), buildQuickApiRequest(button));
     if (shouldBlockBoardEffects()) return;
     const responseBody = await readQuickApiResponseBody(response);
     if (shouldBlockBoardEffects()) return;
@@ -2138,12 +2138,6 @@ function applyQuickApiHeaders(headers: Headers, apiHeaders: QuickApiHeader[]): v
     if (!name) return;
     headers.set(name, header.value.trim());
   });
-}
-
-function normalizeApiUrl(value: string): string {
-  const trimmed = value.trim();
-  if (/^https?:\/\//i.test(trimmed)) return trimmed;
-  return `https://${trimmed}`;
 }
 
 function getQuickApiInvokedMessage(title: string): string {

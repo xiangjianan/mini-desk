@@ -288,12 +288,7 @@ function transactBatch(
 }
 
 async function getLegacyStoredPayload(id: string): Promise<string | undefined> {
-  try {
-    const records = await getStoredImagePayloadsFromDb(LEGACY_IMAGE_DB_NAME, [id]);
-    return records.get(id);
-  } catch {
-    return undefined;
-  }
+  return (await getLegacyStoredPayloads([id])).get(id);
 }
 
 async function getLegacyStoredPayloads(ids: string[]): Promise<Map<string, string>> {

@@ -22,6 +22,7 @@ import {
 import { NDatePicker, NDropdown, NIcon, NScrollbar } from "naive-ui";
 import type { DropdownOption } from "naive-ui";
 import { DEFAULT_TODO_LISTS, GUIDE_MENU_OPTION } from "../state/defaults";
+import { LEGACY_TODO_TITLE_IDS } from "../state/storage";
 import { getDisplayTodoListTitle, getUiText } from "../state/i18n";
 import {
   getDefaultNotifyDateTimeValue,
@@ -154,11 +155,6 @@ const notifyPickerAnchors = new Map<string, HTMLElement>();
 const uiText = computed(() => getUiText(props.language));
 const guideMenuOption = computed<DropdownOption>(() => ({ ...GUIDE_MENU_OPTION, label: uiText.value.common.tips }));
 const exclusiveMenu = createExclusiveContextMenu(closeMenu);
-const legacyTodoTitleIds: Record<TodoListId, string> = {
-  morning: "todo-morning-title",
-  noon: "todo-noon-title",
-  evening: "todo-evening-title",
-};
 const effectiveTodoLists = computed(() => {
   const lists = props.todoLists ?? DEFAULT_TODO_LISTS.map((list) => ({
     ...list,
@@ -914,7 +910,7 @@ function handleListTitleUpdate(listId: TodoListId, value: string): void {
   setListTitleEditing(listId, false);
   if (localEditListId.value === listId) localEditListId.value = null;
   if (!props.todoLists) {
-    const legacyTitleId = legacyTodoTitleIds[listId];
+    const legacyTitleId = LEGACY_TODO_TITLE_IDS[listId];
     if (legacyTitleId) {
       emit("titleUpdate", legacyTitleId, value);
       return;
@@ -1146,18 +1142,22 @@ function closeNotifyPicker(): void {
   notifyPicker.value = null;
 }
 
+/** 把浮层坐标夹取进视口，四周各留 DEADLINE_EDITOR_OFFSET 的边距。 */
+function clampToViewport(position: number, viewportSize: number, elementSize: number): number {
+  const maxPosition = Math.max(DEADLINE_EDITOR_OFFSET, viewportSize - elementSize - DEADLINE_EDITOR_OFFSET);
+  return Math.min(Math.max(DEADLINE_EDITOR_OFFSET, position), maxPosition);
+}
+
 function getNotifyPickerPosition(anchor: HTMLElement): { x: number; y: number } {
   const rect = anchor.getBoundingClientRect();
   const viewportWidth = window.innerWidth || document.documentElement.clientWidth || NOTIFY_PICKER_WIDTH;
   const viewportHeight = window.innerHeight || document.documentElement.clientHeight || NOTIFY_PICKER_HEIGHT;
-  const maxX = Math.max(DEADLINE_EDITOR_OFFSET, viewportWidth - NOTIFY_PICKER_WIDTH - DEADLINE_EDITOR_OFFSET);
-  const maxY = Math.max(DEADLINE_EDITOR_OFFSET, viewportHeight - NOTIFY_PICKER_HEIGHT - DEADLINE_EDITOR_OFFSET);
-  const preferredX = rect.left;
   const preferredY = rect.bottom + DEADLINE_EDITOR_OFFSET;
   const fallbackY = rect.top - NOTIFY_PICKER_HEIGHT - DEADLINE_EDITOR_OFFSET;
+  const maxY = Math.max(DEADLINE_EDITOR_OFFSET, viewportHeight - NOTIFY_PICKER_HEIGHT - DEADLINE_EDITOR_OFFSET);
   return {
-    x: Math.min(Math.max(DEADLINE_EDITOR_OFFSET, preferredX), maxX),
-    y: preferredY <= maxY ? preferredY : Math.max(DEADLINE_EDITOR_OFFSET, fallbackY),
+    x: clampToViewport(rect.left, viewportWidth, NOTIFY_PICKER_WIDTH),
+    y: preferredY <= maxY ? preferredY : clampToViewport(fallbackY, viewportHeight, NOTIFY_PICKER_HEIGHT),
   };
 }
 
@@ -1174,8 +1174,8 @@ function getListCreateDialogPosition(anchor?: HTMLElement, x?: number, y?: numbe
   const rawX = x ?? (anchorRect ? anchorRect.left + DEADLINE_EDITOR_OFFSET : DEADLINE_EDITOR_OFFSET);
   const rawY = y ?? (anchorRect ? anchorRect.top + DEADLINE_EDITOR_OFFSET : DEADLINE_EDITOR_OFFSET);
   return {
-    x: Math.min(Math.max(DEADLINE_EDITOR_OFFSET, rawX), Math.max(DEADLINE_EDITOR_OFFSET, viewportWidth - LIST_CREATE_DIALOG_WIDTH - DEADLINE_EDITOR_OFFSET)),
-    y: Math.min(Math.max(DEADLINE_EDITOR_OFFSET, rawY), Math.max(DEADLINE_EDITOR_OFFSET, viewportHeight - LIST_CREATE_DIALOG_HEIGHT - DEADLINE_EDITOR_OFFSET)),
+    x: clampToViewport(rawX, viewportWidth, LIST_CREATE_DIALOG_WIDTH),
+    y: clampToViewport(rawY, viewportHeight, LIST_CREATE_DIALOG_HEIGHT),
   };
 }
 
@@ -1299,7 +1299,7 @@ function getTodoSectionAnchor(period: TodoListId): HTMLElement | undefined {
 }
 
 function getFallbackListTitle(list: TodoListConfig): string {
-  const legacyTitleId = legacyTodoTitleIds[list.id];
+  const legacyTitleId = LEGACY_TODO_TITLE_IDS[list.id];
   return legacyTitleId ? props.titles[legacyTitleId] ?? list.title : list.title;
 }
 
