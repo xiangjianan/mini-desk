@@ -12,7 +12,7 @@ The app mounts from `src/main.ts` into `#app` and composes the board in `src/App
 
 ### Layout
 
-CSS Grid 5-column layout (`.board`): Image panel (10%) | Notes+Links (20%) | Todos (20%) | Workspace (25%) | Storage+Theme toggle (25%).
+CSS Grid 4-column layout (`.workbench-grid`, assembled by `src/components/WorkbenchShell.vue`, `0.15/0.2/0.35/0.3 fr`): Assets (images) | Notes (quick buttons) | Tasks (todos) | Workspace (notes + storage). Every zone is collapsible via a rail and resizable via separator handles.
 
 ### State Management
 
@@ -67,7 +67,7 @@ Light/dark mode toggled via `data-theme` attribute on `<html>`. CSS custom prope
 
 ### Focus Companion
 
-A GIF avatar (`static/video/kun.gif` by default) that appears near the focused editor or at the bottom-right corner on `Ctrl+S`. Positioned absolutely relative to the editor's bounding rect.
+A GIF avatar (`static/video/mini-desk-cat.gif` by default — themes: cat / ikun / custom / none) that appears near the focused editor or at the bottom-right corner on `Ctrl+S`. Positioned absolutely relative to the editor's bounding rect.
 
 ## Development
 

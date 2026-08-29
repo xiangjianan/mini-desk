@@ -19,8 +19,6 @@ Mini Desk 是一个本地优先的个人桌面工作台，基于 Vue 3 单页应
 - Vite
 - Vitest with jsdom
 - Naive UI, `@vicons/ionicons5`, `lucide-vue-next`
-- Tailwind CSS 4 via `@tailwindcss/vite`
-- `src/components/ui/` 下的轻量 shadcn 风格本地组件
 
 ## 常用命令
 

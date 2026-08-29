@@ -8,7 +8,7 @@ Do less, do it well.
 
 它把日常工作里的零碎东西收在一个本地优先的浏览器桌面里：截图可以先放下，想法可以先记住，提醒事项可以慢慢完成。桌面密度会变成轻盈、略满或过热的呼吸感提醒，动态头像也只在保存、完成、清理和内容变多时轻轻冒出来。
 
-Mini Desk 基于 Vue 3、TypeScript、Vite、Naive UI 和轻量 shadcn 风格组件构建，界面风格参考 Apple Human Interface Guidelines，强调紧凑、清晰、低干扰的日常使用体验。
+Mini Desk 基于 Vue 3、TypeScript、Vite 和 Naive UI 构建，界面风格参考 Apple Human Interface Guidelines，强调紧凑、清晰、低干扰的日常使用体验。
 
 Mini Desk 是一个 AI Coding 实践项目：产品构思、交互取舍与审美判断来自人类，从界面、状态管理到自建加密中转服务，代码实现 100% 由 AI（Claude Code）在对话中完成。
 
