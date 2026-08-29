@@ -2,11 +2,6 @@ import { describe, expect, it } from "vitest";
 import { readFileSync } from "node:fs";
 import { resolve } from "node:path";
 import {
-  EMPTY_HINTS,
-  AREA_HELP,
-  CONTROL_HELP,
-} from "../state/defaults";
-import {
   KAOMOJI_BY_MOOD,
   MESSAGE_CATALOG,
   getMessage,
@@ -30,10 +25,8 @@ const messageKeys = [
   "imageOverload",
   "imageEdited",
   "imageCopied",
-  "imageDataCopied",
   "imageDropIgnored",
   "imageDropEmpty",
-  "quickLinkCopied",
   "quickTextCopyFailed",
   "declutter",
   "quickDeclutter",
@@ -61,8 +54,6 @@ const messageKeys = [
   "confirmDeleteQuickTag",
   "confirmDeleteTodo",
   "confirmDeleteTodoList",
-  "confirmUnstarTodo",
-  "confirmUnstarTodoDeadline",
   "confirmDeleteSpace",
   "confirmDeleteWorkspace",
   "confirmClearCompleted",
@@ -154,34 +145,9 @@ describe("message catalog", () => {
       for (const variant of entry.variants) {
         const maxLength = key.startsWith("workspaceDensity")
           ? 28
-          : key === "confirmUnstarTodoDeadline" ? 24 : 15;
+          : 15;
         expect(variant.length, `${key}: ${variant}`).toBeLessThanOrEqual(maxLength);
       }
-    }
-
-    const inlineHints = [
-      EMPTY_HINTS.images,
-      EMPTY_HINTS.quickButtons,
-      ...Object.values(EMPTY_HINTS.todos),
-      ...Object.values(AREA_HELP),
-      ...Object.values(CONTROL_HELP),
-    ];
-    for (const hint of inlineHints) {
-      expect(hint.length, hint).toBeLessThanOrEqual(28);
-    }
-
-    expect(EMPTY_HINTS.images).toContain("Ctrl+V");
-    expect(AREA_HELP.todos).not.toMatch(/早|中|晚/);
-  });
-
-  it("has separate cancel-star confirmation copy for todos with and without deadlines", () => {
-    expect(MESSAGE_CATALOG.confirmUnstarTodo.variants).toHaveLength(10);
-    expect(MESSAGE_CATALOG.confirmUnstarTodoDeadline.variants).toHaveLength(10);
-    for (const variant of MESSAGE_CATALOG.confirmUnstarTodo.variants) {
-      expect(variant).not.toContain("截止时间");
-    }
-    for (const variant of MESSAGE_CATALOG.confirmUnstarTodoDeadline.variants) {
-      expect(variant).toContain("截止时间");
     }
   });
 

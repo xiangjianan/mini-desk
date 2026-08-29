@@ -19,10 +19,8 @@ export type MessageKey =
   | "imageOverload"
   | "imageEdited"
   | "imageCopied"
-  | "imageDataCopied"
   | "imageDropIgnored"
   | "imageDropEmpty"
-  | "quickLinkCopied"
   | "quickTextCopyFailed"
   | "declutter"
   | "quickDeclutter"
@@ -49,8 +47,6 @@ export type MessageKey =
   | "confirmDeleteQuickTag"
   | "confirmDeleteTodo"
   | "confirmDeleteTodoList"
-  | "confirmUnstarTodo"
-  | "confirmUnstarTodoDeadline"
   | "confirmDeleteSpace"
   | "confirmDeleteWorkspace"
   | "deleteWorkspace"
@@ -359,22 +355,6 @@ export const MESSAGE_CATALOG: Record<MessageKey, MessageEntry> = {
       "图片已带走",
     ],
   },
-  imageDataCopied: {
-    mood: "surprised",
-    surface: "companion",
-    variants: [
-      "已复制为 Data URL",
-      "图片按 Data URL 复制",
-      "改用 Data URL 复制",
-      "Data URL 已复制",
-      "已复制图片文本",
-      "图片文本已复制",
-      "改用文本复制",
-      "图片源码已复制",
-      "已复制图片源码",
-      "图片转文本复制",
-    ],
-  },
   imageDropIgnored: {
     mood: "warning",
     surface: "companion",
@@ -405,22 +385,6 @@ export const MESSAGE_CATALOG: Record<MessageKey, MessageEntry> = {
       "请换图片再试",
       "这些不是图片",
       "没有有效图片",
-    ],
-  },
-  quickLinkCopied: {
-    mood: "happy",
-    surface: "companion",
-    variants: [
-      "链接已复制",
-      "链接复制好了",
-      "链接放进剪贴板",
-      "链接可以粘贴啦",
-      "链接已备好",
-      "可以粘贴链接",
-      "链接已带走",
-      "剪贴板有链接",
-      "复制链接完成",
-      "链接收进剪贴板",
     ],
   },
   quickTextCopyFailed: {
@@ -839,38 +803,6 @@ export const MESSAGE_CATALOG: Record<MessageKey, MessageEntry> = {
       "删除列表和提醒？",
     ],
   },
-  confirmUnstarTodo: {
-    mood: "warning",
-    surface: "companion",
-    variants: [
-      "确定取消重点吗？",
-      "这个任务将不再置顶",
-      "确定不再重点关注？",
-      "取消后回到普通事项",
-      "这个重点要撤掉吗？",
-      "取消重点后普通显示",
-      "确认取消这个重点？",
-      "取消后不进今日重点",
-      "这条会变普通事项",
-      "确定撤下这个重点？",
-    ],
-  },
-  confirmUnstarTodoDeadline: {
-    mood: "warning",
-    surface: "companion",
-    variants: [
-      "取消重点后，截止时间也会一起清掉。",
-      "任务不再置顶，截止时间也会移除。",
-      "确定取消重点吗？截止时间会同步清除。",
-      "取消后回到普通事项，截止时间不保留。",
-      "这个重点要撤掉吗？截止时间也会撤掉。",
-      "取消重点会停用截止时间提醒。",
-      "确认取消重点？相关截止时间也会删除。",
-      "取消后不再按截止时间提醒这个任务。",
-      "任务会变回普通事项，截止时间会清掉。",
-      "确定不再重点关注？截止时间也会移除。",
-    ],
-  },
   confirmDeleteSpace: {
     mood: "warning",
     surface: "companion",
@@ -1077,10 +1009,8 @@ const EN_MESSAGE_VARIANTS = {
   ],
   imageEdited: ["Image saved", "Image edit saved", "Image updated"],
   imageCopied: ["Image copied", "Image is ready to paste", "Screenshot copied"],
-  imageDataCopied: ["Copied as a Data URL", "Image copied as text", "Data URL copied"],
   imageDropIgnored: ["Non-image files were skipped", "Only images were added", "Unsupported files were ignored"],
   imageDropEmpty: ["No valid images found", "Drop image files here", "Only image files are supported"],
-  quickLinkCopied: ["Link copied", "Link is ready to paste", "Shortcut link copied"],
   quickTextCopyFailed: ["Could not copy text", "Text copy failed", "Try copying again"],
   declutter: ["There is a lot here. Trim a few things.", "Keep the important items and remove the rest.", "A lighter list is easier to act on."],
   quickDeclutter: ["Too many quick actions. Keep the ones you use most.", "Trim a few quick links and API shortcuts.", "A lighter quick-action area is easier to scan."],
@@ -1107,8 +1037,6 @@ const EN_MESSAGE_VARIANTS = {
   confirmDeleteQuickTag: ["Delete this tag? Shortcuts will move to Other.", "Remove this tag? Shortcuts will stay untagged.", "This tag will be removed while entries are kept."],
   confirmDeleteTodo: ["Delete this reminder?", "Remove this reminder?", "This reminder will be removed."],
   confirmDeleteTodoList: ["Delete this list?", "Reminders in this list will be deleted.", "Remove this reminder list?"],
-  confirmUnstarTodo: ["Unpin this reminder?", "Remove it from pinned reminders?", "This reminder will return to the normal list."],
-  confirmUnstarTodoDeadline: ["Unpinning also clears the notification time.", "Unpin this reminder and clear its notification?", "This reminder will no longer use its notification time."],
   confirmDeleteSpace: ["Delete this space? This cannot be undone.", "Remove this space permanently?", "This space and its content will be deleted."],
   deleteWorkspace: ["Workspace deleted", "Workspace removed", "This workspace is gone"],
   confirmDeleteWorkspace: ["Delete this workspace? This cannot be undone.", "Remove this workspace permanently?", "This workspace and all its content will be deleted."],

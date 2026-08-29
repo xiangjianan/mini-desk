@@ -164,65 +164,6 @@ export const OLDER_LEGACY_DEFAULT_TITLES_BY_LANGUAGE: Record<AppLanguage, Record
 
 export const DEFAULT_TITLES_ZH = DEFAULT_TITLES_BY_LANGUAGE.zh;
 
-export const EMPTY_HINTS_BY_LANGUAGE = {
-  zh: {
-    images: "Ctrl+V 粘贴截图，可预览整理 (＾▽＾)",
-    quickButtons: "常用内容做成按钮，点一下就用 (｡•̀ᴗ-)✧",
-    todos: {
-      morning: "单击新增提醒 (๑•̀ㅂ•́)و✧",
-      noon: "单击新增提醒 (๑•̀ㅂ•́)و✧",
-      evening: "单击新增提醒 (๑•̀ㅂ•́)و✧",
-    },
-  },
-  en: {
-    images: "Press Ctrl+V to paste screenshots.",
-    quickButtons: "Turn common links or text into buttons.",
-    todos: {
-      morning: "Click to add a reminder.",
-      noon: "Click to add a reminder.",
-      evening: "Click to add a reminder.",
-    },
-  },
-};
-
-export const AREA_HELP_BY_LANGUAGE: Record<AppLanguage, Record<"images" | "note" | "quickButtons" | "todos" | "workspace" | "tools" | "storage", string>> = {
-  zh: {
-    images: "图片区：粘贴、预览和整理图片。",
-    note: "快捷动作：常用内容一键打开或复制。",
-    quickButtons: "快捷区：常用内容一键打开或复制。",
-    todos: "提醒区：标题可双击改名。",
-    workspace: "记事本：拆步骤，稳稳推进。",
-    tools: "快捷动作：按标签整理常用链接和复制片段。",
-    storage: "扩展区：放长期保留的内容。",
-  },
-  en: {
-    images: "Images: paste, preview, and organize images.",
-    note: "Quick Actions: open links or copy text.",
-    quickButtons: "Quick Actions: open links or copy text.",
-    todos: "Reminders: double-click titles to rename.",
-    workspace: "Sticky: break work into steps.",
-    tools: "Quick Actions: organize frequent links and snippets with tags.",
-    storage: "Storage: keep long-lived reference material.",
-  },
-};
-
-export const CONTROL_HELP_BY_LANGUAGE: Record<AppLanguage, Record<"clearCompleted" | "addQuick" | "toggleHiddenQuick" | "settings" | "theme", string>> = {
-  zh: {
-    clearCompleted: "清理当前完成项",
-    addQuick: "新增快捷内容",
-    toggleHiddenQuick: "显示或收起隐藏按钮",
-    settings: "打开设置菜单",
-    theme: "切换明暗主题",
-  },
-  en: {
-    clearCompleted: "Clear completed items",
-    addQuick: "Add a quick shortcut",
-    toggleHiddenQuick: "Show or hide hidden shortcuts",
-    settings: "Open settings",
-    theme: "Switch theme",
-  },
-};
-
 export const GUIDE_MESSAGES: Record<AppLanguage, Record<GuideKey, string[]>> = {
   zh: {
     images: [
@@ -580,9 +521,6 @@ export const UI_TEXT = {
       mobileInboxCodeCopied: "复制成功",
       mobileInboxCodeCopyFailed: "复制失败",
       mobileInboxCodeCopyHint: "点击复制配对码",
-      saved: "已保存",
-      saving: "保存中",
-      dirty: "有未保存内容",
       densityGood: "今日桌面：轻盈",
       densityWarning: "今日桌面：略满",
       densityCrowded: "今日桌面：过热",
@@ -623,7 +561,6 @@ export const UI_TEXT = {
     },
     settings: {
       button: "设置",
-      configure: "配置",
       data: "数据",
       createWorkspace: "新建空间",
       import: "导入空间",
@@ -633,7 +570,6 @@ export const UI_TEXT = {
       suggest: "提建议",
       shortcutHelp: "帮助与快捷键",
       about: "关于",
-      update: "更新",
       customGif: "自定义 GIF",
       lightGif: "浅色 GIF",
       darkGif: "深色 GIF",
@@ -644,7 +580,6 @@ export const UI_TEXT = {
       english: "English",
       exportCurrentWorkspace: "导出空间",
       support: "打赏作者",
-      changelog: "更新记录",
     },
     zoneVisibility: {
       title: "显示区域",
@@ -657,7 +592,6 @@ export const UI_TEXT = {
       title: "打赏作者",
       description: "如果 Mini Desk 帮到了你，欢迎请作者喝杯咖啡 ☕",
       chooseAmount: "选择打赏金额",
-      custom: "自定义",
       customPlaceholder: "其他金额",
       scanToPay: "扫码打赏",
       wechat: "微信",
@@ -684,7 +618,6 @@ export const UI_TEXT = {
       tagName: "标签名称",
       newTag: "新增标签",
       addTag: "新增标签",
-      saveTag: "保存",
       deleteTag: "删除标签",
       collapseTag: "收起标签",
       expandTag: "展开标签",
@@ -701,7 +634,6 @@ export const UI_TEXT = {
       appType: "打开应用",
       commonApp: "常用应用",
       appScheme: "应用协议",
-      appSchemePlaceholder: "如 wechat://",
       copyText: "复制文本",
       copyLink: "复制链接",
       requestMethod: "请求类型",
@@ -789,8 +721,6 @@ export const UI_TEXT = {
       next: "下一张图片",
       zoomOut: "缩小图片",
       zoomIn: "放大图片",
-      list: "预览图片列表",
-      thumbnailAlt: "预览缩略图",
       imageAlt: "图片预览",
       help: "上下按钮/WASD 切换图片 · Ctrl/Command+滚轮或双击缩放 · 拖动平移 · Enter 编辑 · Ctrl+C 复制 · Ctrl+V 粘贴 · Delete 删除 · Space/Esc 关闭",
     },
@@ -819,7 +749,6 @@ export const UI_TEXT = {
       cancelCrop: "取消裁切",
       applyCrop: "应用裁切",
       textInput: "图片文本",
-      textPlaceholder: "输入文本",
     },
     changelog: {
       title: "更新记录",
@@ -914,9 +843,6 @@ export const UI_TEXT = {
       mobileInboxCodeCopied: "Copied",
       mobileInboxCodeCopyFailed: "Copy failed",
       mobileInboxCodeCopyHint: "Tap to copy the pairing code",
-      saved: "Saved",
-      saving: "Saving",
-      dirty: "Unsaved changes",
       densityGood: "Today: airy desk",
       densityWarning: "Today: a full desk",
       densityCrowded: "Today: heated desk",
@@ -957,7 +883,6 @@ export const UI_TEXT = {
     },
     settings: {
       button: "Settings",
-      configure: "Configure",
       data: "Data",
       createWorkspace: "Create workspace",
       import: "Import workspace",
@@ -967,7 +892,6 @@ export const UI_TEXT = {
       suggest: "Feedback",
       shortcutHelp: "Help & Shortcuts",
       about: "About",
-      update: "Update",
       customGif: "Custom GIF",
       lightGif: "Light GIF",
       darkGif: "Dark GIF",
@@ -978,7 +902,6 @@ export const UI_TEXT = {
       english: "English",
       exportCurrentWorkspace: "Export workspace",
       support: "Support author",
-      changelog: "Release notes",
     },
     zoneVisibility: {
       title: "Visible areas",
@@ -991,7 +914,6 @@ export const UI_TEXT = {
       title: "Support the Author",
       description: "If Mini Desk helped you, consider buying the author a coffee ☕",
       chooseAmount: "Choose an amount",
-      custom: "Custom",
       customPlaceholder: "Other amount",
       scanToPay: "Scan to pay",
       wechat: "WeChat",
@@ -1018,7 +940,6 @@ export const UI_TEXT = {
       tagName: "Tag name",
       newTag: "New tag",
       addTag: "Add tag",
-      saveTag: "Save",
       deleteTag: "Delete tag",
       collapseTag: "Collapse tag",
       expandTag: "Expand tag",
@@ -1035,7 +956,6 @@ export const UI_TEXT = {
       appType: "Open app",
       commonApp: "Common apps",
       appScheme: "App scheme",
-      appSchemePlaceholder: "e.g. wechat://",
       copyText: "Copy text",
       copyLink: "Copy link",
       requestMethod: "Method",
@@ -1123,8 +1043,6 @@ export const UI_TEXT = {
       next: "Next image",
       zoomOut: "Zoom out image",
       zoomIn: "Zoom in image",
-      list: "Preview image list",
-      thumbnailAlt: "Preview thumbnail",
       imageAlt: "Image preview",
       help: "Stacked buttons/WASD switch images · Ctrl/Command+wheel or double-click zooms · Drag pans · Enter edits · Ctrl+C copies · Ctrl+V pastes · Delete removes · Space/Esc closes",
     },
@@ -1153,7 +1071,6 @@ export const UI_TEXT = {
       cancelCrop: "Cancel crop",
       applyCrop: "Apply crop",
       textInput: "Image text",
-      textPlaceholder: "Type text",
     },
     changelog: {
       title: "Release notes",
@@ -1213,18 +1130,6 @@ export function getStoredSpaceTitle(id: string, title: string): string {
 
 export function getUiText(language: AppLanguage) {
   return UI_TEXT[normalizeLanguage(language)];
-}
-
-export function getAreaHelp(language: AppLanguage) {
-  return AREA_HELP_BY_LANGUAGE[normalizeLanguage(language)];
-}
-
-export function getControlHelp(language: AppLanguage) {
-  return CONTROL_HELP_BY_LANGUAGE[normalizeLanguage(language)];
-}
-
-export function getEmptyHints(language: AppLanguage) {
-  return EMPTY_HINTS_BY_LANGUAGE[normalizeLanguage(language)];
 }
 
 export function getGuideMessages(language: AppLanguage): Record<GuideKey, string[]> {

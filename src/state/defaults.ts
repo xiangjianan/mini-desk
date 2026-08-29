@@ -1,12 +1,9 @@
 import type { BoardState, TodoListConfig, TodoListId, TodoMap, WorkspaceData, ZoneVisibility } from "../types";
 import { DEFAULT_COMPANION_GIF_THEME } from "./companionGifThemes";
 import {
-  AREA_HELP_BY_LANGUAGE,
-  CONTROL_HELP_BY_LANGUAGE,
   DEFAULT_LANGUAGE,
   DEFAULT_SPACE_TITLES,
   DEFAULT_TITLES_ZH,
-  EMPTY_HINTS_BY_LANGUAGE,
   getDefaultTodoLists,
 } from "./i18n";
 
@@ -34,13 +31,7 @@ export const DEFAULT_TODO_LISTS: TodoListConfig[] = getDefaultTodoLists(DEFAULT_
 
 export const DEFAULT_TITLES: Record<string, string> = DEFAULT_TITLES_ZH;
 
-export const EMPTY_HINTS = EMPTY_HINTS_BY_LANGUAGE.zh;
-
 export const GUIDE_MENU_OPTION = { label: "Tips", key: "guide" } as const;
-
-export const AREA_HELP = AREA_HELP_BY_LANGUAGE.zh;
-
-export const CONTROL_HELP = CONTROL_HELP_BY_LANGUAGE.zh;
 
 export function defaultWorkspace(id: string = DEFAULT_WORKSPACE_ID): WorkspaceData {
   return {
