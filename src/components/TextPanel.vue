@@ -21,6 +21,7 @@ import {
 import { CONTEXT_MENU_Z_INDEX, createExclusiveContextMenu } from "../utils/contextMenu";
 import { copySelection, getSelectionRange, hasSelection, pasteIntoField, hasAsyncClipboard as hasClipboardApi } from "../utils/clipboard";
 import { renderIcon } from "../utils/dropdownIcons";
+import { clampCaret, setStickySelection } from "../utils/caret";
 import { isImeComposing } from "../utils/ime";
 import EditableTitle from "./EditableTitle.vue";
 
@@ -558,11 +559,8 @@ function undoLastTextChange(textarea: HTMLTextAreaElement): void {
 }
 
 function collapseSelection(textarea: HTMLTextAreaElement, caret: number): void {
-  const position = Math.max(0, Math.min(caret, textarea.value.length));
-  textarea.setSelectionRange(position, position);
-  window.setTimeout(() => {
-    if (document.activeElement === textarea) textarea.setSelectionRange(position, position);
-  });
+  const position = clampCaret(caret, textarea.value.length);
+  setStickySelection(textarea, position, position);
 }
 
 function getRememberedSelection(textarea: HTMLTextAreaElement): { start: number; end: number } | null {
@@ -573,10 +571,7 @@ function getRememberedSelection(textarea: HTMLTextAreaElement): { start: number;
 }
 
 function restoreSelection(textarea: HTMLTextAreaElement, selection: { start: number; end: number }): void {
-  textarea.setSelectionRange(selection.start, selection.end);
-  window.setTimeout(() => {
-    if (document.activeElement === textarea) textarea.setSelectionRange(selection.start, selection.end);
-  });
+  setStickySelection(textarea, selection.start, selection.end);
 }
 </script>
 

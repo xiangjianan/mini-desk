@@ -46,6 +46,7 @@ import type {
   WorkspaceMoveTarget,
 } from "../types";
 import { TODO_DENSITY_THRESHOLD, getOrderedTodos, getTodoReorderTarget, todoKey } from "../state/todos";
+import { clampCaret } from "../utils/caret";
 import { splitDroppedTodoText } from "../utils/textEditor";
 import { copySelection, copyTextToClipboard, getSelectionRange, pasteIntoField, readClipboardText } from "../utils/clipboard";
 import { CONTEXT_MENU_Z_INDEX, createExclusiveContextMenu } from "../utils/contextMenu";
@@ -577,7 +578,7 @@ function handleTodoArrowKey(event: KeyboardEvent, period: TodoPeriod, todo: Todo
 
 function restoreTodoCaret(input: HTMLInputElement, caret: number): void {
   void nextTick(() => {
-    const position = Math.max(0, Math.min(caret, input.value.length));
+    const position = clampCaret(caret, input.value.length);
     input.setSelectionRange(position, position);
   });
 }
@@ -1476,7 +1477,7 @@ function setTodoSectionRef(period: TodoListId, element: Element | null): void {
 }
 
 function collapseSelection(input: HTMLInputElement, caret: number): void {
-  const position = Math.max(0, Math.min(caret, input.value.length));
+  const position = clampCaret(caret, input.value.length);
   input.setSelectionRange(position, position);
   window.setTimeout(() => {
     if (document.activeElement === input) input.setSelectionRange(position, position);

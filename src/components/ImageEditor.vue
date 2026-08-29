@@ -4,6 +4,7 @@ import type { Component } from "vue";
 import { ArrowUpRight, Check, Crop, Minus, MousePointer2, PenLine, RectangleHorizontal, Redo2, RotateCcw, Type, Undo2, X } from "lucide-vue-next";
 import { getUiText } from "../state/i18n";
 import type { AppLanguage, StoredImage } from "../types";
+import { clamp } from "../utils/math";
 
 type EditorTool = "crop" | "brush" | "rectangle" | "ellipse" | "arrow" | "marker" | "text";
 type EditorColor = "#ef4444" | "#22c55e" | "#3b82f6" | "#facc15" | "#111827" | "#ffffff";
@@ -609,10 +610,6 @@ function cancelCrop(): void {
 
 function getFullCropRect(): EditorRect {
   return { x: 0, y: 0, width: canvasWidth.value, height: canvasHeight.value };
-}
-
-function clamp(value: number, min: number, max: number): number {
-  return Math.min(max, Math.max(min, value));
 }
 
 function getCropHandle(point: EditorPoint): CropHandle {

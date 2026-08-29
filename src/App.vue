@@ -76,6 +76,7 @@ import { applyInboxItems, pullAllInboxes } from "./sync/pull";
 import { inboxKeyHash } from "./sync/crypto";
 import { checkInboxKeyStatus, registerInboxKey, revokeInboxKey } from "./sync/inboxClient";
 import { copyTextWithBrowserCommand } from "./utils/clipboard";
+import { binaryStringToBytes } from "./utils/base64";
 import { extractRetainedImageIds, useUndoHistory } from "./composables/useUndoHistory";
 import { useTodoNotifications } from "./composables/useTodoNotifications";
 import { useCompanionBubble } from "./composables/useCompanionBubble";
@@ -1822,11 +1823,7 @@ function getImageDataUrlBlob(src: string): Blob | undefined {
   if (!match) return undefined;
   const [, type, base64Flag, payload] = match;
   const binary = base64Flag ? atob(payload) : decodeURIComponent(payload);
-  const bytes = new Uint8Array(binary.length);
-  for (let index = 0; index < binary.length; index += 1) {
-    bytes[index] = binary.charCodeAt(index);
-  }
-  return new Blob([bytes], { type });
+  return new Blob([binaryStringToBytes(binary)], { type });
 }
 
 function imageSourceToPngBlob(src: string): Promise<Blob> {

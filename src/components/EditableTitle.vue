@@ -6,6 +6,7 @@ import type { DropdownOption } from "naive-ui";
 import { CreateOutline } from "@vicons/ionicons5";
 import { CONTEXT_MENU_Z_INDEX, createExclusiveContextMenu } from "../utils/contextMenu";
 import { renderIcon } from "../utils/dropdownIcons";
+import { setStickySelection } from "../utils/caret";
 import { isImeComposing } from "../utils/ime";
 
 const props = withDefaults(defineProps<{
@@ -61,10 +62,7 @@ async function enterEditing(): Promise<void> {
   if (!input) return;
   const caret = input.value.length;
   input.focus({ preventScroll: true });
-  input.setSelectionRange(caret, caret);
-  window.setTimeout(() => {
-    if (document.activeElement === input) input.setSelectionRange(caret, caret);
-  });
+  setStickySelection(input, caret, caret);
 }
 
 async function startEditing(event: MouseEvent): Promise<void> {

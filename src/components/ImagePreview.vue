@@ -7,6 +7,7 @@ import type { DropdownOption } from "naive-ui";
 import { getImageItemContextMenuItems } from "../state/imageContextMenu";
 import type { ImageContextMenuKey } from "../state/imageContextMenu";
 import { getUiText } from "../state/i18n";
+import { clamp } from "../utils/math";
 import type { AppLanguage, ImagePasteRequest, StoredImage } from "../types";
 import { CONTEXT_MENU_Z_INDEX, createExclusiveContextMenu } from "../utils/contextMenu";
 import { renderIcon } from "../utils/dropdownIcons";
@@ -166,7 +167,7 @@ function navigateFromToolbar(direction: number): void {
 }
 
 function clampScale(value: number): number {
-  return Number(Math.min(MAX_SCALE, Math.max(MIN_SCALE, value)).toFixed(2));
+  return Number(clamp(value, MIN_SCALE, MAX_SCALE).toFixed(2));
 }
 
 function adjustZoom(delta: number): void {

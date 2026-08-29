@@ -10,6 +10,7 @@ import { getBlankImageContextMenuItems, getImageItemContextMenuItems } from "../
 import type { ImageContextMenuKey } from "../state/imageContextMenu";
 import { getUiText } from "../state/i18n";
 import { CONTEXT_MENU_Z_INDEX, createExclusiveContextMenu } from "../utils/contextMenu";
+import { binaryStringToBytes } from "../utils/base64";
 import { renderIcon } from "../utils/dropdownIcons";
 import EditableTitle from "./EditableTitle.vue";
 
@@ -312,9 +313,7 @@ function dataUrlToFile(dataUrl: string, fileName: string): File | null {
   const isBase64 = Boolean(match[2]);
   const payload = match[3] || "";
   const binary = isBase64 ? atob(payload) : decodeURIComponent(payload);
-  const bytes = new Uint8Array(binary.length);
-  for (let i = 0; i < binary.length; i += 1) bytes[i] = binary.charCodeAt(i);
-  return new File([bytes], fileName, { type: mimeType });
+  return new File([binaryStringToBytes(binary)], fileName, { type: mimeType });
 }
 
 function handleImageNativeDragStart(event: DragEvent, image: StoredImage, index: number): void {
