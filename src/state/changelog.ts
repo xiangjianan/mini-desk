@@ -29,6 +29,26 @@ export interface ChangelogEntry {
 
 export const CHANGELOG: ChangelogEntry[] = [
   {
+    version: "1.0.157",
+    date: "2026-08-29",
+    notes: {
+      zh: [
+        "新增：主题可自动跟随系统明暗，手动切换后保留手动选择，系统再次切换时重新交还跟随",
+        "新增：普通消息气泡在场时点击 GIF 动图，逐条轮换当前区域的 Tips 提示（与右键菜单 Tips 同文案）",
+        "修复：图片预览弹层不再遮挡左上角空间切换菜单与右上角 header 折叠图标",
+        "修复：打开链接成功后不再误报「链接打开失败」",
+        "调优：瘦身提示阈值调高为图片 30 张、快捷动作 50 个、提醒事项 20 条，保存状态灯判定同步调整",
+      ],
+      en: [
+        "Added: theme can auto-follow the system light/dark mode; a manual choice wins until the system theme changes again",
+        "Added: clicking the companion GIF while a normal bubble is showing rotates that area's Tips (same copy as the right-click Tips)",
+        "Fixed: the image preview overlay no longer covers the workspace switcher menu or the header collapse icon",
+        "Fixed: opening a link no longer falsely reports a failure",
+        "Tuned: raised declutter thresholds to 30 images / 50 quick actions / 20 reminders; the save status lamp follows suit",
+      ],
+    },
+  },
+  {
     version: "1.0.156",
     date: "2026-08-29",
     notes: {

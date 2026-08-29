@@ -45,7 +45,7 @@ import type {
   TodoStarChange,
   WorkspaceMoveTarget,
 } from "../types";
-import { getOrderedTodos, getTodoReorderTarget, todoKey } from "../state/todos";
+import { TODO_DENSITY_THRESHOLD, getOrderedTodos, getTodoReorderTarget, todoKey } from "../state/todos";
 import { splitDroppedTodoText } from "../utils/textEditor";
 import { copySelection, copyTextToClipboard, getSelectionRange, pasteIntoField, readClipboardText } from "../utils/clipboard";
 import { CONTEXT_MENU_Z_INDEX, createExclusiveContextMenu } from "../utils/contextMenu";
@@ -775,7 +775,7 @@ function handleTodoHover(event: MouseEvent, enter: boolean): void {
 }
 
 function emitDeclutterPrompt(period: TodoPeriod, anchor: HTMLElement): void {
-  if ((visibleOrdered.value[period] ?? []).length < 7) return;
+  if ((visibleOrdered.value[period] ?? []).length < TODO_DENSITY_THRESHOLD) return;
   emit("declutter", anchor);
 }
 

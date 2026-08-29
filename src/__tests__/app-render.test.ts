@@ -12,6 +12,7 @@ import WorkspaceInboxDialog from "../components/WorkspaceInboxDialog.vue";
 import WorkspaceSwitcher from "../components/WorkspaceSwitcher.vue";
 import { DEFAULT_SPACE_ID, DEFAULT_WORKSPACE_ID, defaultState, defaultWorkspace, STORAGE_KEY } from "../state/defaults";
 import { hydrateStoredImages, storeImagePayload } from "../state/images";
+import { getGuideMessages } from "../state/i18n";
 import * as imageState from "../state/images";
 import { KAOMOJI_BY_MOOD } from "../state/messages";
 import { INBOX_FOCUS_THROTTLE_MS } from "../sync/config";
@@ -247,6 +248,38 @@ function stubMatchMedia(matches: boolean) {
 
   vi.stubGlobal("matchMedia", vi.fn().mockReturnValue(mediaQueryList));
   return mediaQueryList;
+}
+
+/** 按查询串区分的 matchMedia 桩：断点查询恒为桌面，`(prefers-color-scheme: dark)` 可用 setMatches 模拟系统切换。 */
+function stubSystemThemeMatchMedia(systemDark: boolean) {
+  const desktop = stubMatchMedia(false);
+  const listeners = new Set<(event: MediaQueryListEvent) => void>();
+  const scheme = {
+    matches: systemDark,
+    media: "(prefers-color-scheme: dark)",
+    onchange: null,
+    addEventListener: vi.fn((event: string, listener: (event: MediaQueryListEvent) => void) => {
+      if (event === "change") listeners.add(listener);
+    }),
+    removeEventListener: vi.fn((event: string, listener: (event: MediaQueryListEvent) => void) => {
+      if (event === "change") listeners.delete(listener);
+    }),
+    addListener: vi.fn((listener: (event: MediaQueryListEvent) => void) => listeners.add(listener)),
+    removeListener: vi.fn((listener: (event: MediaQueryListEvent) => void) => listeners.delete(listener)),
+    dispatchEvent: vi.fn((event: MediaQueryListEvent) => {
+      listeners.forEach((listener) => listener(event));
+      return true;
+    }),
+    setMatches(value: boolean) {
+      scheme.matches = value;
+      listeners.forEach((listener) => listener({ matches: value, media: "(prefers-color-scheme: dark)" } as MediaQueryListEvent));
+    },
+  };
+  vi.stubGlobal(
+    "matchMedia",
+    vi.fn((query: string) => (query.includes("prefers-color-scheme") ? scheme : desktop)),
+  );
+  return scheme as unknown as MediaQueryList & { setMatches: (value: boolean) => void };
 }
 
 function createDeferred<T>() {
@@ -1561,6 +1594,92 @@ describe("App shell", () => {
     }
   });
 
+  it("rotates the area tips each time the companion GIF is clicked during a normal bubble", async () => {
+    vi.useFakeTimers();
+    // 指南气泡的文案是从数组里随机挑的：固定随机数，让首个气泡可断言。
+    vi.spyOn(Math, "random").mockReturnValue(0);
+    const wrapper = mountApp();
+
+    try {
+      // 聚焦空文本编辑器 → 「工作空间」区域的普通指南气泡 + GIF。
+      await wrapper.get("textarea").trigger("focus");
+      await vi.advanceTimersByTimeAsync(200);
+      await wrapper.vm.$nextTick();
+      expect(wrapper.find('[data-testid="companion-confirm"]').text()).toMatch(/工作空间|空间标签|缩进|步骤/);
+
+      // GIF 点击的 Tips 与右键菜单「Tips」共用 GUIDE_MESSAGES 文案池。
+      const workspaceTips = getGuideMessages("zh").workspace;
+      expect(workspaceTips.length).toBeGreaterThan(1);
+
+      await wrapper.get('[data-testid="companion-gif"]').trigger("click");
+      await vi.advanceTimersByTimeAsync(200);
+      await wrapper.vm.$nextTick();
+      const firstTipBubble = wrapper.get('[data-testid="companion-confirm"]').text();
+      expect(firstTipBubble.startsWith(workspaceTips[0])).toBe(true);
+      // 与右键菜单的 Tips 项一致：句尾附带颜文字。
+      expect(firstTipBubble.length).toBeGreaterThan(workspaceTips[0].length);
+
+      await wrapper.get('[data-testid="companion-gif"]').trigger("click");
+      await vi.advanceTimersByTimeAsync(200);
+      await wrapper.vm.$nextTick();
+      const secondTipBubble = wrapper.get('[data-testid="companion-confirm"]').text();
+      expect(secondTipBubble.startsWith(workspaceTips[1])).toBe(true);
+      expect(secondTipBubble.length).toBeGreaterThan(workspaceTips[1].length);
+    } finally {
+      wrapper.unmount();
+      vi.useRealTimers();
+    }
+  });
+
+  it("keeps rotating the anchored toast's own area tips on repeated GIF clicks", async () => {
+    vi.useFakeTimers();
+    // 快捷文本复制气泡带 quick-block 锚点但没有 guideKey：区域只能靠锚点解析。
+    localStorage.setItem(
+      STORAGE_KEY,
+      JSON.stringify({
+        quickButtons: [{ id: "text-1", title: "片段", value: "复制内容", type: "text" }],
+      }),
+    );
+    Object.assign(navigator, {
+      clipboard: {
+        writeText: vi.fn().mockResolvedValue(undefined),
+      },
+    });
+    const wrapper = mountApp();
+
+    try {
+      await wrapper.get(".quick-button").trigger("click");
+      await Promise.resolve();
+      await wrapper.vm.$nextTick();
+      await vi.advanceTimersByTimeAsync(200);
+      await wrapper.vm.$nextTick();
+      expect(wrapper.find('[data-testid="companion-confirm"]').text()).toMatch(/文本|文字|复制|剪贴板|粘贴/);
+
+      // 快捷区气泡按锚点解析到 quickButtons 指南键，文案与右键「Tips」同池。
+      const quickTips = getGuideMessages("zh").quickButtons;
+      expect(quickTips.length).toBeGreaterThan(1);
+
+      await wrapper.get('[data-testid="companion-gif"]').trigger("click");
+      await vi.advanceTimersByTimeAsync(200);
+      await wrapper.vm.$nextTick();
+      const firstTipBubble = wrapper.get('[data-testid="companion-confirm"]').text();
+      expect(firstTipBubble.startsWith(quickTips[0])).toBe(true);
+      // 与右键菜单的 Tips 项一致：句尾附带颜文字。
+      expect(firstTipBubble.length).toBeGreaterThan(quickTips[0].length);
+
+      // 第二次点击仍在原区域逐条轮换，而不是锚点被清空后退回「工作台」。
+      await wrapper.get('[data-testid="companion-gif"]').trigger("click");
+      await vi.advanceTimersByTimeAsync(200);
+      await wrapper.vm.$nextTick();
+      const secondTipBubble = wrapper.get('[data-testid="companion-confirm"]').text();
+      expect(secondTipBubble.startsWith(quickTips[1])).toBe(true);
+      expect(secondTipBubble.length).toBeGreaterThan(quickTips[1].length);
+    } finally {
+      wrapper.unmount();
+      vi.useRealTimers();
+    }
+  });
+
   it("does not show the GIF when focusing a non-empty editor without a bubble", async () => {
     vi.useFakeTimers();
     localStorage.setItem(
@@ -1642,7 +1761,7 @@ describe("App shell", () => {
     localStorage.setItem(
       STORAGE_KEY,
       JSON.stringify({
-        images: buildStoredImages(21),
+        images: buildStoredImages(31),
       }),
     );
     const wrapper = mountApp();
@@ -1658,7 +1777,7 @@ describe("App shell", () => {
       const message = wrapper.getComponent(CompanionBubble).props("message") as string;
       expect(message).toContain("桌面");
       expect(message).toContain("图片");
-      expect(message).toContain("21");
+      expect(message).toContain("31");
       expect(KAOMOJI_BY_MOOD.warning.some((kaomoji) => message.endsWith(kaomoji))).toBe(true);
     } finally {
       wrapper.unmount();
@@ -1671,7 +1790,7 @@ describe("App shell", () => {
       STORAGE_KEY,
       JSON.stringify({
         todoLists: [{ id: "done-heavy", title: "已完成", collapsed: false, compact: false }],
-        todos: { "done-heavy": buildCompletedTodos(8) },
+        todos: { "done-heavy": buildCompletedTodos(21) },
       }),
     );
     const wrapper = mountApp();
@@ -1690,11 +1809,11 @@ describe("App shell", () => {
     localStorage.setItem(
       STORAGE_KEY,
       JSON.stringify({
-        images: buildStoredImages(21),
+        images: buildStoredImages(31),
         quickTags: [{ id: "tag-heavy", title: "工作" }],
-        quickButtons: buildQuickButtons(13),
+        quickButtons: buildQuickButtons(51),
         todoLists: [{ id: "heavy", title: "任务", collapsed: false, compact: false }],
-        todos: { heavy: buildTodos(8) },
+        todos: { heavy: buildTodos(21) },
       }),
     );
     const wrapper = mountApp();
@@ -1710,9 +1829,9 @@ describe("App shell", () => {
       const message = wrapper.getComponent(CompanionBubble).props("message") as string;
       expect(message).toContain("今日桌面");
       expect(message).toContain("过热");
-      expect(message).toContain("提醒事项 8");
-      expect(message).toContain("快捷动作 13");
-      expect(message).toContain("图片 21");
+      expect(message).toContain("提醒事项 21");
+      expect(message).toContain("快捷动作 51");
+      expect(message).toContain("图片 31");
       expect(KAOMOJI_BY_MOOD.warning.some((kaomoji) => message.endsWith(kaomoji))).toBe(true);
     } finally {
       wrapper.unmount();
@@ -1726,7 +1845,7 @@ describe("App shell", () => {
     localStorage.setItem(
       STORAGE_KEY,
       JSON.stringify({
-        quickButtons: buildQuickButtons(9, undefined),
+        quickButtons: buildQuickButtons(51, undefined),
       }),
     );
     const wrapper = mountApp();
@@ -1755,7 +1874,7 @@ describe("App shell", () => {
       STORAGE_KEY,
       JSON.stringify({
         todoLists: [{ id: "heavy", title: "任务", collapsed: false, compact: false }],
-        todos: { heavy: buildTodos(8) },
+        todos: { heavy: buildTodos(21) },
       }),
     );
     const wrapper = mountApp();
@@ -1777,11 +1896,11 @@ describe("App shell", () => {
     }
   });
 
-  it("keeps quick action density airy at exactly eight untagged buttons", () => {
+  it("keeps quick action density airy at exactly fifty untagged buttons", () => {
     localStorage.setItem(
       STORAGE_KEY,
       JSON.stringify({
-        quickButtons: buildQuickButtons(8, undefined),
+        quickButtons: buildQuickButtons(50, undefined),
       }),
     );
     const wrapper = mountApp();
@@ -1794,11 +1913,11 @@ describe("App shell", () => {
     }
   });
 
-  it("flags image density full once the list passes ten items", () => {
+  it("flags image density full once the list passes thirty items", () => {
     localStorage.setItem(
       STORAGE_KEY,
       JSON.stringify({
-        images: buildStoredImages(11),
+        images: buildStoredImages(31),
       }),
     );
     const wrapper = mountApp();
@@ -1811,11 +1930,11 @@ describe("App shell", () => {
     }
   });
 
-  it("keeps image density airy at exactly ten items", () => {
+  it("keeps image density airy at exactly thirty items", () => {
     localStorage.setItem(
       STORAGE_KEY,
       JSON.stringify({
-        images: buildStoredImages(10),
+        images: buildStoredImages(30),
       }),
     );
     const wrapper = mountApp();
@@ -2220,6 +2339,60 @@ describe("App shell", () => {
       expect(document.documentElement.dataset.theme).toBe("light");
     } finally {
       wrapper.unmount();
+    }
+  });
+
+  it("系统再次切换明暗时重新交还跟随，手动选择只保留到那一刻", async () => {
+    // 手动深色 + 系统浅色：加载时的初次同步不算「系统切换」，手动选择保持不变。
+    localStorage.setItem(STORAGE_KEY, JSON.stringify({ theme: "dark" }));
+    const previousMatchMedia = window.matchMedia;
+    const scheme = stubSystemThemeMatchMedia(false);
+    const wrapper = mountApp();
+
+    try {
+      expect(document.documentElement.dataset.theme).toBe("dark");
+      expect(JSON.parse(localStorage.getItem(STORAGE_KEY) || "{}").theme).toBe("dark");
+
+      // 系统切到深色：偏好交还跟随（auto），渲染随系统变深。
+      scheme.setMatches(true);
+      await wrapper.vm.$nextTick();
+      expect(JSON.parse(localStorage.getItem(STORAGE_KEY) || "{}").theme).toBe("auto");
+      expect(document.documentElement.dataset.theme).toBe("dark");
+
+      // 系统再切回浅色：仍是跟随模式，页面跟着变浅。
+      scheme.setMatches(false);
+      await wrapper.vm.$nextTick();
+      expect(JSON.parse(localStorage.getItem(STORAGE_KEY) || "{}").theme).toBe("auto");
+      expect(document.documentElement.dataset.theme).toBe("light");
+    } finally {
+      wrapper.unmount();
+      // 本测试的 matchMedia 桩按查询串路由，泄漏会污染后续测试：恢复到测试前的取值。
+      vi.stubGlobal("matchMedia", previousMatchMedia);
+    }
+  });
+
+  it("跟随系统中手动切换立即生效，直到系统再次切换才交还", async () => {
+    const previousMatchMedia = window.matchMedia;
+    const scheme = stubSystemThemeMatchMedia(false);
+    const wrapper = mountApp();
+
+    try {
+      expect(document.documentElement.dataset.theme).toBe("light");
+
+      // 手动切深色：脱离跟随，即使系统偏好仍是浅色。
+      await wrapper.get('[data-testid="workbench-theme"]').trigger("click");
+      await wrapper.vm.$nextTick();
+      expect(JSON.parse(localStorage.getItem(STORAGE_KEY) || "{}").theme).toBe("dark");
+      expect(document.documentElement.dataset.theme).toBe("dark");
+
+      // 系统随后切到深色：那一刻起重新跟随（渲染仍为深色，但偏好回到 auto）。
+      scheme.setMatches(true);
+      await wrapper.vm.$nextTick();
+      expect(JSON.parse(localStorage.getItem(STORAGE_KEY) || "{}").theme).toBe("auto");
+      expect(document.documentElement.dataset.theme).toBe("dark");
+    } finally {
+      wrapper.unmount();
+      vi.stubGlobal("matchMedia", previousMatchMedia);
     }
   });
 
@@ -3541,6 +3714,16 @@ describe("App shell", () => {
 
       expect(openSpy).toHaveBeenCalledWith("https://example.com", "_blank", "noopener,noreferrer");
 
+      // 链接打开成功也要有气泡反馈（与文本复制/应用启动一致），不能静默返回。
+      await vi.advanceTimersByTimeAsync(200);
+      await wrapper.vm.$nextTick();
+      expect(wrapper.find('[data-testid="companion-confirm"]').text()).toMatch(/打开|标签页|新窗口/);
+
+      // 等链接气泡过期退场（3000ms 展示 + 260ms 内容保留），恢复下方「点击后未出内容」的断言条件。
+      await vi.advanceTimersByTimeAsync(3600);
+      await wrapper.vm.$nextTick();
+      expect(wrapper.find('[data-testid="companion-confirm"]').exists()).toBe(false);
+
       await buttons[1].trigger("click");
       await Promise.resolve();
       await wrapper.vm.$nextTick();
@@ -4127,12 +4310,12 @@ describe("App shell", () => {
     }
   });
 
-  it("shows a declutter bubble when previewing images after the list passes ten items", async () => {
+  it("shows a declutter bubble when previewing images after the list passes thirty items", async () => {
     vi.spyOn(Math, "random").mockReturnValue(0);
     localStorage.setItem(
       STORAGE_KEY,
       JSON.stringify({
-        images: buildStoredImages(11),
+        images: buildStoredImages(31),
       }),
     );
     const wrapper = mountApp();
@@ -6424,7 +6607,7 @@ describe("App shell", () => {
     }
   });
 
-  it("shows a companion bubble when link opening is blocked", async () => {
+  it("still signals an opened link when window.open returns null (noopener spec behavior)", async () => {
     vi.useFakeTimers();
     vi.spyOn(Math, "random").mockReturnValue(0);
     localStorage.setItem(
@@ -6433,6 +6616,7 @@ describe("App shell", () => {
         quickButtons: [{ id: "link-1", title: "站点", value: "example.com", type: "link" }],
       }),
     );
+    // noopener 下 window.open 成功也返回 null（规范行为），返回值不是失败信号。
     vi.spyOn(window, "open").mockImplementation(() => null);
     const wrapper = mountApp();
 
@@ -6443,7 +6627,8 @@ describe("App shell", () => {
       await vi.advanceTimersByTimeAsync(200);
       await wrapper.vm.$nextTick();
 
-      expect(wrapper.find('[data-testid="companion-confirm"]').text()).toMatch(/链接打开失败|检查链接/);
+      expect(wrapper.find('[data-testid="companion-confirm"]').text()).toMatch(/打开|标签页|新窗口/);
+      expect(wrapper.find('[data-testid="companion-confirm"]').text()).not.toMatch(/失败|检查链接/);
     } finally {
       wrapper.unmount();
       vi.useRealTimers();
@@ -6864,7 +7049,7 @@ describe("App shell", () => {
     }
   });
 
-  it("shows a declutter companion bubble and GIF when focusing a reminder list with at least seven items", async () => {
+  it("shows a declutter companion bubble and GIF when focusing a reminder list with at least twenty items", async () => {
     vi.useFakeTimers();
     localStorage.setItem(
       STORAGE_KEY,
@@ -6873,7 +7058,7 @@ describe("App shell", () => {
         workspaces: [{
           ...defaultWorkspace(),
           todos: {
-            morning: Array.from({ length: 7 }, (_, index) => ({
+            morning: Array.from({ length: 20 }, (_, index) => ({
               id: `todo-${index}`,
               text: `提醒 ${index + 1}`,
               done: false,
@@ -6915,7 +7100,7 @@ describe("App shell", () => {
         workspaces: [{
           ...defaultWorkspace(),
           todos: {
-            morning: Array.from({ length: 7 }, (_, index) => ({
+            morning: Array.from({ length: 20 }, (_, index) => ({
               id: `todo-${index}`,
               text: `提醒 ${index + 1}`,
               done: false,
@@ -6934,7 +7119,7 @@ describe("App shell", () => {
       await wrapper.vm.$nextTick();
       await wrapper.vm.$nextTick();
 
-      expect(wrapper.findAll('[data-testid="todo-input-morning"]')).toHaveLength(8);
+      expect(wrapper.findAll('[data-testid="todo-input-morning"]')).toHaveLength(21);
       expect(wrapper.find(".focus-companion.is-visible img").exists()).toBe(true);
 
       await vi.advanceTimersByTimeAsync(200);
@@ -6949,7 +7134,7 @@ describe("App shell", () => {
     }
   });
 
-  it("shows a declutter companion bubble and GIF when a quick-action tag has more than eight visible buttons", async () => {
+  it("shows a declutter companion bubble and GIF when a quick-action tag has more than fifty visible buttons", async () => {
     vi.useFakeTimers();
     localStorage.setItem(
       STORAGE_KEY,
@@ -6958,7 +7143,7 @@ describe("App shell", () => {
         workspaces: [{
           ...defaultWorkspace(),
           quickTags: [{ id: "tag-work", title: "工作" }],
-          quickButtons: Array.from({ length: 9 }, (_, index) => ({
+          quickButtons: Array.from({ length: 51 }, (_, index) => ({
             id: `quick-${index}`,
             title: `按钮 ${index + 1}`,
             value: `https://example.com/${index}`,
@@ -7005,7 +7190,7 @@ describe("App shell", () => {
             { id: "tag-b", title: "标签 B" },
           ],
           quickButtons: [
-            ...Array.from({ length: 7 }, (_, index) => ({
+            ...Array.from({ length: 26 }, (_, index) => ({
               id: `a-${index}`,
               title: `A ${index + 1}`,
               value: `https://example.com/a/${index}`,
@@ -7013,7 +7198,7 @@ describe("App shell", () => {
               hidden: false,
               tagId: "tag-a",
             })),
-            ...Array.from({ length: 7 }, (_, index) => ({
+            ...Array.from({ length: 26 }, (_, index) => ({
               id: `b-${index}`,
               title: `B ${index + 1}`,
               value: `https://example.com/b/${index}`,

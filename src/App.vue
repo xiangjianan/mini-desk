@@ -38,6 +38,7 @@ import {
   normalizeLanguage,
 } from "./state/i18n";
 import {
+  TODO_DENSITY_THRESHOLD,
   addTodo as addTodoToMap,
   assignTodoListColumn,
   clearCompleted,
@@ -59,6 +60,7 @@ import { createWorkspaceData, ensureUniqueWorkspaceTitle, getWorkspaceBoardTitle
 import * as workspaceMover from "./state/workspaceMoves";
 import { QUICK_BUTTON_OTHER_GROUP_ID, QUICK_DENSITY_THRESHOLD, formatQuickCopiedPreview, getQuickTagColor } from "./state/quickButtons";
 import { isQuickAppScheme } from "./state/quickApps";
+import { advanceTipRotation, resolveTipGuideKey, type TipRotationState } from "./state/guideTips";
 import { INBOX_FOCUS_THROTTLE_MS, INBOX_PULL_INTERVAL_MS } from "./sync/config";
 import {
   clearRememberedInboxCode,
@@ -102,8 +104,7 @@ const WorkspaceInboxDialog = defineAsyncComponent(() => import("./components/Wor
 const MOBILE_BREAKPOINT_QUERY = "(max-width: 900px)";
 const IMAGE_DELETE_GRACE_MS = 5000;
 const IMAGE_PREVIEW_CLOSE_MS = 220;
-const IMAGE_DENSITY_THRESHOLD = 10;
-const TODO_DENSITY_THRESHOLD = 7;
+const IMAGE_DENSITY_THRESHOLD = 30;
 // Consecutive-delete confirmation: the first TODO_DELETE_CONFIRM_MAX deletes in
 // a streak each ask for confirmation; once the streak exceeds that (and stays
 // within TODO_DELETE_STREAK_RESET_MS between deletes) the rest delete directly.
@@ -230,6 +231,7 @@ const {
   bubbleVisible,
   companionFocused,
   companionPosition,
+  bubbleAnchor,
   pendingConfirm,
   bubbleClearSignal,
   showBubble,
@@ -340,6 +342,8 @@ const GITHUB_REPO_URL = "https://github.com/xiangjianan/mini-desk";
 const GITHUB_REPO_LABEL = "xiangjianan / mini-desk";
 const ABOUT_MESSAGE_DURATION_MS = 10000;
 const activeGuideKey = ref<GuideKey | null>(null);
+/** GIF 点击 Tips 的轮换状态：换指南区域从头开始，同区域逐条前进。 */
+const companionTipRotation = ref<TipRotationState | null>(null);
 
 /** 系统明暗偏好：默认 false（浅色），监听 prefers-color-scheme 变化。 */
 const systemDark = ref(false);
@@ -528,7 +532,7 @@ function teardownMobileBreakpoint(): void {
   mobileMediaQuery.value = null;
 }
 
-/** 系统明暗偏好监听：auto 模式下系统切主题即时生效。 */
+/** 系统明暗偏好监听：auto 模式下系统切主题即时生效；手动模式在系统再次切换的那一刻交还跟随。 */
 let systemThemeQuery: MediaQueryList | undefined;
 let systemThemeListener: ((event: MediaQueryListEvent) => void) | undefined;
 
@@ -539,6 +543,8 @@ function setupSystemThemeListener(): void {
   systemDark.value = query.matches;
   systemThemeListener = (event) => {
     systemDark.value = event.matches;
+    // 真实的系统切换才交还跟随：手动选择保留到这一刻，加载时的初次同步（上面那行赋值）不触发本分支。
+    if (state.theme !== "auto") state.theme = "auto";
   };
   if (query.addEventListener) {
     query.addEventListener("change", systemThemeListener);
@@ -2048,8 +2054,10 @@ async function handleQuickButton(id: string, anchor?: HTMLElement): Promise<void
   const button = activeWorkspace.value.quickButtons.find((item) => item.id === id);
   if (!button) return;
   if (button.type === "link") {
-    const opened = window.open(normalizeLink(button.value), "_blank", "noopener,noreferrer");
-    if (!opened) showBubble("linkOpenFailed", anchor, { hideCompanionAfter: true });
+    // noopener 下 window.open 成功也返回 null（规范行为），返回值判不出弹窗拦截；
+    // 与 openQuickApp 同一处理：用户手势触发的打开默认成功，只提示已发起。
+    window.open(normalizeLink(button.value), "_blank", "noopener,noreferrer");
+    showBubble("linkOpened", anchor, { hideCompanionAfter: true });
     return;
   }
   if (button.type === "app") {
@@ -3001,6 +3009,21 @@ function hideCompanion(): void {
   activeGuideKey.value = null;
 }
 
+/** GIF 点击弹出该区域的 Tips：普通气泡在场时逐条轮换；二次确认框保持原流程不响应。 */
+function handleCompanionGifClick(): void {
+  if (pendingConfirm.value || shouldBlockBoardEffects()) return;
+  // 锚点必须原样透传回去：showBubbleText 收到 undefined 会把 bubbleAnchor 清空，
+  // 没有 guideKey 的普通提示气泡（如快捷复制）第二次点击就解析不出区域了。
+  const anchor = bubbleAnchor.value ?? undefined;
+  // 文案池与右键菜单「Tips」（showGuideBubble）完全同源：GUIDE_MESSAGES + encouraging 颜文字 + 同一时长。
+  const guideKey = resolveTipGuideKey({ guideKey: activeGuideKey.value, anchor: anchor ?? null });
+  const tips = getGuideMessages(state.language)[guideKey];
+  if (tips.length === 0) return;
+  companionTipRotation.value = advanceTipRotation(companionTipRotation.value, guideKey, tips.length);
+  // 透传解析出的 guideKey 与锚点，Tips 冒泡不清指南区域/锚点，后续点击继续按该区域轮换。
+  showBubbleText(withKaomoji(tips[companionTipRotation.value.index], "encouraging"), anchor, { guideKey }, GUIDE_MESSAGE_DURATION_MS);
+}
+
 function showToast(messageKey: MessageKey): void {
   showBubble(messageKey, undefined, { hideCompanionAfter: true });
 }
@@ -3608,6 +3631,7 @@ function moveItem<T extends { id: string }>(items: T[], dragId: string, targetId
       @secondary="secondaryCompanionAction"
       @pause="pauseBubbleTimer"
       @resume="resumeBubbleTimer"
+      @gif-click="handleCompanionGifClick"
       @gif-theme-change="(theme: string) => updateCompanionGifTheme(theme as CompanionGifTheme)"
     />
     <input ref="importInput" type="file" accept="application/json,.json" hidden @change="importData" />

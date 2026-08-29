@@ -1,6 +1,9 @@
 import type { TodoCompletedVisibility, TodoItem, TodoListConfig, TodoListId, TodoMap, TodoPeriod } from "../types";
 import { isValidDeadlineAt } from "./deadlines";
 
+/** 可见提醒条数超过该阈值时，点击/聚焦列表会弹瘦身提示（App.vue 与 TodoPanel 共用）。 */
+export const TODO_DENSITY_THRESHOLD = 20;
+
 /** Stable identity key for a todo within its list (used by undo timers, menus, edit state). */
 export function todoKey(period: TodoPeriod, id: string): string {
   return `${period}:${id}`;

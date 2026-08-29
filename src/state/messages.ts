@@ -43,7 +43,7 @@ export type MessageKey =
   | "imageReadFailed"
   | "clipboardPermissionDenied"
   | "imageCopyFailed"
-  | "linkOpenFailed"
+  | "linkOpened"
   | "confirmDeleteImage"
   | "confirmDeleteQuick"
   | "confirmDeleteQuickTag"
@@ -743,20 +743,20 @@ export const MESSAGE_CATALOG: Record<MessageKey, MessageEntry> = {
       "请再复制一次",
     ],
   },
-  linkOpenFailed: {
-    mood: "warning",
+  linkOpened: {
+    mood: "happy",
     surface: "companion",
     variants: [
-      "链接打开失败",
-      "请检查链接",
-      "浏览器拦截链接",
-      "无法打开链接",
-      "链接未打开",
-      "请检查网址",
-      "打开链接受限",
-      "链接跳转失败",
-      "请稍后再打开",
-      "链接可能无效",
+      "链接已在新的标签页打开",
+      "新标签页已打开链接",
+      "链接打开啦",
+      "已为你打开链接",
+      "链接跳转完成",
+      "新窗口已备好链接",
+      "链接已打开",
+      "跳转已发起",
+      "链接就在新标签页",
+      "打开完成",
     ],
   },
   confirmDeleteImage: {
@@ -1101,7 +1101,7 @@ const EN_MESSAGE_VARIANTS = {
   imageReadFailed: ["Image read failed", "Could not read this image", "Try another image"],
   clipboardPermissionDenied: ["Clipboard permission was denied", "Allow clipboard access and try again", "Clipboard access is blocked"],
   imageCopyFailed: ["Image copy failed", "Could not copy this image", "Try copying again"],
-  linkOpenFailed: ["Could not open the link", "Check the URL", "The browser blocked this link"],
+  linkOpened: ["Link opened in a new tab", "Opened the link in a new tab", "Your link is ready in the new tab", "Link launched", "The link is now open"],
   confirmDeleteImage: ["Delete this image?", "Remove this image?", "This image will be removed."],
   confirmDeleteQuick: ["Delete this shortcut?", "Remove this quick entry?", "This shortcut will be removed."],
   confirmDeleteQuickTag: ["Delete this tag? Shortcuts will move to Other.", "Remove this tag? Shortcuts will stay untagged.", "This tag will be removed while entries are kept."],

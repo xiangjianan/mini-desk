@@ -5,6 +5,7 @@ import { ChevronDownOutline, AddOutline, CreateOutline, TrashOutline, DownloadOu
 import { getUiText } from "../state/i18n";
 import { DEFAULT_BOARD_TITLE } from "../state/defaults";
 import { getWorkspaceBoardTitle } from "../state/workspaces";
+import { CONTEXT_MENU_Z_INDEX } from "../utils/contextMenu";
 import type { AppLanguage, ThemeMode, WorkspaceData, ZoneKey } from "../types";
 import ZoneVisibilityPopover from "./ZoneVisibilityPopover.vue";
 import miniDeskLogo from "../../static/img/mini-desk-cat.png?url";
@@ -229,6 +230,7 @@ function onDrop(targetId: string): void {
               trigger="manual"
               placement="right-start"
               :show="menuOpenId === workspace.id"
+              :z-index="CONTEXT_MENU_Z_INDEX"
             >
               <template #trigger>
                 <button

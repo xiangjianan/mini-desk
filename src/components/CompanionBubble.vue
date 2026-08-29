@@ -47,6 +47,7 @@ const emit = defineEmits<{
   pause: [];
   resume: [];
   gifThemeChange: [theme: string];
+  gifClick: [];
 }>();
 
 const POPOVER_DELAY_MS = 200;
@@ -101,6 +102,12 @@ function openGifMenu(event: MouseEvent): void {
 function onSurfaceContextmenu(event: MouseEvent): void {
   if (!shouldRenderGif.value) return;
   openGifMenu(event);
+}
+
+/** 点击 GIF：普通消息气泡在场时轮换弹出该区域的 Tips；二次确认框保持原流程不响应。 */
+function handleGifClick(): void {
+  if (props.confirm) return;
+  emit("gifClick");
 }
 
 function handleGifMenuSelect(key: string): void {
@@ -422,7 +429,21 @@ function isPointInsideElement(x: number, y: number, element: HTMLElement | null)
     >
       <template #trigger>
         <Transition name="companion-gif-fade" mode="out-in" type="transition">
-          <img v-if="shouldRenderGif" :src="gifSrc" width="50" height="50" alt="" />
+          <img
+            v-if="shouldRenderGif"
+            :src="gifSrc"
+            class="focus-companion-gif"
+            data-testid="companion-gif"
+            width="50"
+            height="50"
+            alt=""
+            role="button"
+            tabindex="0"
+            :aria-label="uiText.app.gifTipsAction"
+            @click="handleGifClick"
+            @keydown.enter.prevent="handleGifClick"
+            @keydown.space.prevent="handleGifClick"
+          />
           <span v-else class="companion-popover-anchor" aria-hidden="true" />
         </Transition>
       </template>

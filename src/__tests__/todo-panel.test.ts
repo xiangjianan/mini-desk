@@ -205,12 +205,12 @@ describe("TodoPanel", () => {
     wrapper.unmount();
   });
 
-  it("emits a declutter prompt when a reminder list with at least seven items is focused", async () => {
+  it("emits a declutter prompt when a reminder list with at least twenty items is focused", async () => {
     const wrapper = mount(TodoPanel, {
       props: {
         todoLists: defaultTodoLists,
         todos: {
-          morning: Array.from({ length: 7 }, (_, index) => ({ id: `todo-${index}`, text: `事项 ${index + 1}`, done: false })),
+          morning: Array.from({ length: 20 }, (_, index) => ({ id: `todo-${index}`, text: `事项 ${index + 1}`, done: false })),
           noon: [],
           evening: [],
         },
@@ -290,12 +290,12 @@ describe("TodoPanel", () => {
     wrapper.unmount();
   });
 
-  it("does not emit a declutter prompt while a reminder list has fewer than seven items", async () => {
+  it("does not emit a declutter prompt while a reminder list has fewer than twenty items", async () => {
     const wrapper = mount(TodoPanel, {
       props: {
         todoLists: defaultTodoLists,
         todos: {
-          morning: Array.from({ length: 6 }, (_, index) => ({ id: `todo-${index}`, text: `事项 ${index + 1}`, done: false })),
+          morning: Array.from({ length: 19 }, (_, index) => ({ id: `todo-${index}`, text: `事项 ${index + 1}`, done: false })),
           noon: [],
           evening: [],
         },
@@ -323,7 +323,7 @@ describe("TodoPanel", () => {
         todoLists: defaultTodoLists,
         todos: {
           morning: [
-            ...Array.from({ length: 6 }, (_, index) => ({ id: `todo-${index}`, text: `事项 ${index + 1}`, done: false })),
+            ...Array.from({ length: 19 }, (_, index) => ({ id: `todo-${index}`, text: `事项 ${index + 1}`, done: false })),
             { id: "done", text: "已完成事项", done: true },
           ],
           noon: [],
@@ -344,7 +344,7 @@ describe("TodoPanel", () => {
 
     await wrapper.get('[data-testid="todo-input-morning"]').trigger("focus");
 
-    expect(wrapper.findAll('[data-testid="todo-input-morning"]')).toHaveLength(6);
+    expect(wrapper.findAll('[data-testid="todo-input-morning"]')).toHaveLength(19);
     expect(wrapper.emitted("declutter")).toBeUndefined();
   });
 

@@ -89,6 +89,30 @@ describe("CompanionBubble", () => {
     const gif = wrapper.get("img");
     expect(gif.attributes("width")).toBe("50");
     expect(gif.attributes("height")).toBe("50");
+    expect(gif.classes()).toContain("focus-companion-gif");
+
+    wrapper.unmount();
+  });
+
+  it("emits gifClick for normal messages but stays silent while a confirm is pending", async () => {
+    const wrapper = mount(CompanionBubble, {
+      props: {
+        visible: true,
+        message: "提示内容",
+      },
+      global: {
+        stubs: {
+          NPopover: popoverStub,
+        },
+      },
+    });
+
+    await wrapper.get("img").trigger("click");
+    expect(wrapper.emitted("gifClick")).toHaveLength(1);
+
+    await wrapper.setProps({ confirm: true, confirmText: "删除", cancelText: "取消" });
+    await wrapper.get("img").trigger("click");
+    expect(wrapper.emitted("gifClick")).toHaveLength(1);
 
     wrapper.unmount();
   });

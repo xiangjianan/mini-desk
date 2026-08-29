@@ -47,6 +47,8 @@ export function useCompanionBubble(deps: CompanionBubbleDeps) {
   const bubbleVisible = ref(false);
   const companionFocused = ref(false);
   const companionPosition = ref<{ right: string; bottom?: string; top?: string } | undefined>();
+  /** 当前气泡的锚点：GIF 点击 Tips 用它解析气泡归属的区域。 */
+  const bubbleAnchor = ref<HTMLElement | null>(null);
   const pendingConfirm = ref<PendingConfirm | null>(null);
   const bubbleTimer = ref<number | undefined>();
   const bubbleFadeTimer = ref<number | undefined>();
@@ -90,6 +92,7 @@ export function useCompanionBubble(deps: CompanionBubbleDeps) {
     bubbleSignature.value = options.signatureText ?? "";
     deps.setActiveGuideKey(options.guideKey ?? null);
     companionFocused.value = true;
+    bubbleAnchor.value = anchor ?? null;
     if (anchor) {
       companionPosition.value = getCompanionPosition(anchor);
     }
@@ -209,6 +212,7 @@ export function useCompanionBubble(deps: CompanionBubbleDeps) {
     bubbleMessage.value = getMessage(messageKey, Math.random, deps.state.language);
     bubbleLink.value = null;
     bubbleSignature.value = "";
+    bubbleAnchor.value = anchor ?? null;
     const labels = deps.confirmLabels();
     pendingConfirm.value = {
       onConfirm,
@@ -277,6 +281,7 @@ export function useCompanionBubble(deps: CompanionBubbleDeps) {
     bubbleVisible,
     companionFocused,
     companionPosition,
+    bubbleAnchor,
     pendingConfirm,
     bubbleClearSignal,
     showBubble,

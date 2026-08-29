@@ -13,7 +13,7 @@ export interface QuickButtonGroup {
 
 export const QUICK_BUTTON_EMPTY_GROUP_ID = "__empty";
 export const QUICK_BUTTON_OTHER_GROUP_ID = "__other";
-export const QUICK_DENSITY_THRESHOLD = 8;
+export const QUICK_DENSITY_THRESHOLD = 50;
 
 /**
  * Subtle hue per quick-tag group so buttons in different groups are easy to tell

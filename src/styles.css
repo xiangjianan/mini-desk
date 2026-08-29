@@ -3674,6 +3674,11 @@ button.todo-section-menu-button {
   object-position: center;
 }
 
+/* 点击 GIF 会轮换弹出当前区域的 Tips，悬浮用指针光标提示可点。 */
+.focus-companion-gif {
+  cursor: pointer;
+}
+
 .companion-gif-fade-enter-active,
 .companion-gif-fade-leave-active {
   transition: opacity 0.26s ease;
@@ -4742,6 +4747,16 @@ body:has(.image-preview) .image-panel .n-scrollbar {
    hovered/clicked, so the expand-header affordance vanishes under the preview.
    Lift it above the modal layer for as long as the preview is visible. */
 body:has(.image-preview) .workbench-header-reveal-zone {
+  z-index: 10100;
+}
+
+/* Same trap for the command bar itself: the workspace switcher popover renders
+   inline inside the bar (NPopover :to="false"), and the bar's z-index 4200 is a
+   stacking context — anything anchored in it (switcher menu, hide-header
+   button) that dips below the preview's top edge would paint under the frosted
+   preview layer (10000). Lift the whole bar while the preview is visible, the
+   same treatment the reveal zone gets above. */
+body:has(.image-preview) .workbench-command-bar {
   z-index: 10100;
 }
 

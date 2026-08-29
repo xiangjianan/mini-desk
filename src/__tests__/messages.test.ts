@@ -55,7 +55,7 @@ const messageKeys = [
   "imageReadFailed",
   "clipboardPermissionDenied",
   "imageCopyFailed",
-  "linkOpenFailed",
+  "linkOpened",
   "confirmDeleteImage",
   "confirmDeleteQuick",
   "confirmDeleteQuickTag",

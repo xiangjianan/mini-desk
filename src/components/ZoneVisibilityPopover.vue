@@ -3,6 +3,7 @@ import { computed } from "vue";
 import { NIcon, NPopover } from "naive-ui";
 import { CheckmarkOutline, GridOutline } from "@vicons/ionicons5";
 import { getUiText } from "../state/i18n";
+import { CONTEXT_MENU_Z_INDEX } from "../utils/contextMenu";
 import type { AppLanguage, ZoneKey, ZoneVisibility } from "../types";
 
 const props = withDefaults(defineProps<{
@@ -32,7 +33,7 @@ function toggle(zone: ZoneKey): void {
 </script>
 
 <template>
-  <NPopover trigger="click" placement="right-start">
+  <NPopover trigger="click" placement="right-start" :z-index="CONTEXT_MENU_Z_INDEX">
     <template #trigger>
       <button
         type="button"

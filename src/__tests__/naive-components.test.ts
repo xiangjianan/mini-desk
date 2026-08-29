@@ -442,6 +442,9 @@ describe("Naive UI component usage", () => {
       "src/components/ImagePanel.vue",
       "src/components/ImagePreview.vue",
       "src/components/SpacePanel.vue",
+      // 切换器内的 kebab 菜单与区域显隐气泡走传送门挂 body，同样要压过预览弹层。
+      "src/components/WorkspaceSwitcher.vue",
+      "src/components/ZoneVisibilityPopover.vue",
     ];
 
     expect(styles).toMatch(/\.n-dropdown-menu,[\s\S]*?\.shortcut-help-modal\.n-card\s*\{[^}]*border: 1px solid var\(--border\) !important/s);

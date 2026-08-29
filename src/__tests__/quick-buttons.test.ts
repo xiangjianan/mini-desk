@@ -698,10 +698,10 @@ describe("QuickButtons", () => {
     wrapper.unmount();
   });
 
-  it("emits a declutter prompt when one quick tag has more than eight visible buttons", async () => {
+  it("emits a declutter prompt when one quick tag has more than fifty visible buttons", async () => {
     const wrapper = mountQuickButtons({
       tags: [{ id: "tag-work", title: "工作" }],
-      buttons: Array.from({ length: 9 }, (_, index) => ({
+      buttons: Array.from({ length: 51 }, (_, index) => ({
         id: `quick-${index}`,
         title: `按钮 ${index + 1}`,
         value: `https://example.com/${index}`,
@@ -718,9 +718,9 @@ describe("QuickButtons", () => {
     wrapper.unmount();
   });
 
-  it("emits a declutter prompt when the other quick tag has more than eight visible buttons", async () => {
+  it("emits a declutter prompt when the other quick tag has more than fifty visible buttons", async () => {
     const wrapper = mountQuickButtons({
-      buttons: Array.from({ length: 9 }, (_, index) => ({
+      buttons: Array.from({ length: 51 }, (_, index) => ({
         id: `quick-${index}`,
         title: `按钮 ${index + 1}`,
         value: `https://example.com/${index}`,
@@ -736,14 +736,14 @@ describe("QuickButtons", () => {
     wrapper.unmount();
   });
 
-  it("does not show a declutter prompt when more than twelve visible quick buttons are split across tags", async () => {
+  it("does not show a declutter prompt when more than fifty visible quick buttons are split across tags", async () => {
     const wrapper = mountQuickButtons({
       tags: [
         { id: "tag-a", title: "标签 A" },
         { id: "tag-b", title: "标签 B" },
       ],
       buttons: [
-        ...Array.from({ length: 7 }, (_, index) => ({
+        ...Array.from({ length: 26 }, (_, index) => ({
           id: `a-${index}`,
           title: `A ${index + 1}`,
           value: `https://example.com/a/${index}`,
@@ -751,7 +751,7 @@ describe("QuickButtons", () => {
           hidden: false,
           tagId: "tag-a",
         })),
-        ...Array.from({ length: 7 }, (_, index) => ({
+        ...Array.from({ length: 26 }, (_, index) => ({
           id: `b-${index}`,
           title: `B ${index + 1}`,
           value: `https://example.com/b/${index}`,
@@ -773,7 +773,7 @@ describe("QuickButtons", () => {
   it("ignores hidden quick buttons when deciding whether to show the declutter prompt", async () => {
     const wrapper = mountQuickButtons({
       buttons: [
-        ...Array.from({ length: 8 }, (_, index) => ({
+        ...Array.from({ length: 50 }, (_, index) => ({
           id: `quick-${index}`,
           title: `按钮 ${index + 1}`,
           value: `https://example.com/${index}`,

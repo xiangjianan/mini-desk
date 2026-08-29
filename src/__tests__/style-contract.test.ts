@@ -4,7 +4,9 @@ import { describe, expect, it } from "vitest";
 
 function ruleBodies(styles: string, selector: string): string[] {
   const bodies: string[] = [];
-  for (const match of styles.matchAll(/([^{}]+)\{([^{}]*)\}/g)) {
+  // 先剥掉注释：规则上方的注释会粘进选择器捕获组，导致带注释的规则查不到。
+  const commentFree = styles.replace(/\/\*[\s\S]*?\*\//g, "");
+  for (const match of commentFree.matchAll(/([^{}]+)\{([^{}]*)\}/g)) {
     const selectors = match[1].split(",").map((item) => item.trim());
     if (selectors.includes(selector)) bodies.push(match[2]);
   }
@@ -101,6 +103,21 @@ describe("workbench style contract", () => {
     expectSelectorBody(styles, ".focus-companion img", "height: 50px");
     expect(ruleBodies(styles, ".focus-companion img").join("\n")).not.toContain("width: auto");
     expect(ruleBodies(styles, ".focus-companion img").join("\n")).not.toContain("height: auto");
+  });
+
+  it("shows a pointer cursor over the companion GIF (it opens area tips on click)", () => {
+    const styles = readFileSync(resolve(__dirname, "../styles.css"), "utf8");
+
+    expectSelectorBody(styles, ".focus-companion-gif", "cursor: pointer");
+  });
+
+  it("lifts the command bar above the preview modal layer while the image preview is open", () => {
+    const styles = readFileSync(resolve(__dirname, "../styles.css"), "utf8");
+
+    // 预览所在的 .n-modal-container 全局抬到 z-index 10000；空间切换等内联弹层
+    // 渲染在命令栏（z-index 4200，自成层叠上下文）里，不整体抬升就会被磨砂
+    // 预览盖住 —— 与 reveal-zone / settings-dropdown 的既有 10100 修复同一模式。
+    expectSelectorBody(styles, "body:has(.image-preview) .workbench-command-bar", "z-index: 10100");
   });
 
   it("normalizes retained Naive UI and panel internals through shared tokens", () => {
