@@ -5,12 +5,10 @@
   "type": "module",
   "scripts": {
     "dev": "vite --host 127.0.0.1",
-    "build": "vue-tsc --noEmit && npm run typecheck:worker && vite build",
-    "typecheck:worker": "tsc -p worker/tsconfig.json",
+    "build": "vue-tsc --noEmit && vite build",
     "preview": "npm run build && vite preview",
     "preview:lan": "npm run build && MINI_DESK_LAN=1 vite preview --host",
     "deploy:cloudflare": "npm run build && npx wrangler pages deploy dist --project-name=todolist",
-    "deploy:worker": "npx wrangler deploy --config worker/wrangler.toml",
     "test": "vitest run",
     "test:watch": "vitest"
   },

@@ -166,13 +166,11 @@ mini-desk-images-v1
 npm run deploy:cloudflare
 ```
 
-手机速记中转是自建服务（`server/`，Flask + MySQL，协议与早期 Cloudflare Worker 兼容），部署在阿里云 `/opt/minidesk-inbox`，经 nginx 暴露在 <https://relay.minidesk.online:8443>：
+手机速记中转是自建服务（`server/`，Flask + MySQL），部署在阿里云 `/opt/minidesk-inbox`，经 nginx 暴露在 <https://relay.minidesk.online:8443>：
 
 ```bash
 cd server && ./deploy.sh
 ```
-
-`worker/` 目录是早期 Cloudflare Worker + KV 中转的遗留实现，运行时不再使用，仅保留作协议参考。
 
 构建相关的环境变量：`VITE_BASE`（部署子路径）、`VITE_INBOX_WORKER_URL`（覆盖中转地址，本地联调用）、`MINI_DESK_LAN`（真机预览时启用自签名 HTTPS）。
 
@@ -194,7 +192,6 @@ zip -qr ../dist-<version>.zip .
 - `src/utils/`：文本编辑（缩进、列表标记、行移动）等工具。
 - `src/__tests__/`：组件渲染、状态兼容、交互契约、部署配置和消息文案测试。
 - `server/`：手机速记中转（Flask + MySQL，生产环境）。
-- `worker/`：早期 Cloudflare Worker 中转（遗留）。
 - `static/`：陪伴 GIF 与图片素材；`public/`：Service Worker、manifest 与图标；`samples/`：示例导入数据。
 
 ## 关于 AI Coding

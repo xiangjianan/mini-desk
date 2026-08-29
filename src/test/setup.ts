@@ -10,7 +10,7 @@ if (!globalThis.crypto?.subtle) {
   });
 }
 
-// DOM 相关 mock 仅在 jsdom 环境生效；node 环境的测试（如 worker/）跳过。
+// DOM 相关 mock 仅在 jsdom 环境生效；node 环境的测试跳过。
 if (typeof window !== "undefined") {
   Object.defineProperty(window, "matchMedia", {
     writable: true,

@@ -1,4 +1,5 @@
-"""手机速记中继：只存 AES-GCM 密文队列（协议与原 Cloudflare Worker 完全一致）。
+"""手机速记中继：只存 AES-GCM 密文队列（沿用了早期 Cloudflare Worker 的协议，
+客户端兼容性见 src/sync/ 与 CLAUDE.md「手机速记」一节）。
 
 路由键是 SHA-256(配对码) 的 hex；条目保留 30 天，无账号、无按条删除（回收交给保留期清理）。
 注册制：pairing_keys 三态（unknown/active/revoked），桌面端保存/轮换/启动时注册，
