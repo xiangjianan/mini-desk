@@ -12,7 +12,6 @@ const ANCHOR_SELECTOR_TO_GUIDE: ReadonlyArray<{ selector: string; guideKey: Guid
   { selector: ".quick-block", guideKey: "quickButtons" },
   // TextPanel 只在 SpacePanel 内部使用，需先认外层空间容器，否则空间里的文本会被误判成便签。
   { selector: ".space-panel", guideKey: "workspace" },
-  { selector: ".tool-panel", guideKey: "tools" },
   { selector: ".text-panel, .split-block, .panel", guideKey: "workspace" },
 ];
 

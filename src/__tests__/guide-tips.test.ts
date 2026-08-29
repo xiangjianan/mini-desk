@@ -20,7 +20,6 @@ describe("resolveTipGuideKey", () => {
     expect(resolveTipGuideKey({ anchor: panel("todo-panel") })).toBe("todos");
     expect(resolveTipGuideKey({ anchor: panel("quick-block") })).toBe("quickButtons");
     expect(resolveTipGuideKey({ anchor: panel("space-panel") })).toBe("workspace");
-    expect(resolveTipGuideKey({ anchor: panel("tool-panel") })).toBe("tools");
   });
 
   it("resolves nested space text panels to workspace, not the generic text fallback", () => {

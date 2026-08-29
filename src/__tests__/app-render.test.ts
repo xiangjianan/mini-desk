@@ -355,7 +355,6 @@ describe("App shell", () => {
     expect(wrapper.text()).toContain("快捷动作");
     expect(wrapper.text()).toContain("✅ 提醒事项");
     expect(wrapper.text()).toContain("📝 便签");
-    expect(wrapper.find(".tool-panel").exists()).toBe(false);
     expect(wrapper.findComponent({ name: "ImagePreview" }).exists()).toBe(false);
     expect(wrapper.find(".workbench-zone-notes > .quick-block").exists()).toBe(true);
     expect(wrapper.findAll(".space-tab").map((tab) => tab.text())).toEqual(["📝 便签"]);
@@ -392,7 +391,6 @@ describe("App shell", () => {
       expect(wrapper.text()).not.toContain("💻 Work");
       expect(wrapper.text()).not.toContain("📚 Study");
       expect(wrapper.findAll(".space-tab").map((tab) => tab.text())).toEqual(["📝 Sticky"]);
-      expect(wrapper.find(".tool-panel").exists()).toBe(false);
       expect(wrapper.text()).not.toContain("快捷动作");
       expect(JSON.parse(localStorage.getItem(STORAGE_KEY) || "{}").language).toBe("en");
     } finally {

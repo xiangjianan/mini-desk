@@ -773,23 +773,6 @@ describe("Naive UI component usage", () => {
     expect(styles).toMatch(/\.companion-popover-arrow\s*\{[^}]*background: var\(--popover\) !important/s);
   });
 
-  it("animates the tool configuration popover and keeps its close button circular", () => {
-    const tool = read("src/components/ToolPanel.vue");
-    const styles = read("src/styles.css");
-
-    expect(tool).toContain('name="tool-config-pop"');
-    expect(tool).toContain(':duration="240"');
-    expect(styles).toMatch(/\.tool-config-panel\s*\{[^}]*border: 1px solid var\(--border\)/s);
-    expect(styles).toMatch(/\.tool-config-panel\s*\{[^}]*background: var\(--popover\)/s);
-    expect(styles).toMatch(/\.tool-config-panel\s*\{[^}]*box-shadow: 0 6px 14px rgba\(15, 23, 42, 0\.045\)/s);
-    expect(styles).toMatch(/\.tool-config-pop-enter-active,[\s\S]*?\.tool-config-pop-leave-active\s*\{[^}]*transform var\(--motion-medium\)/s);
-    expect(styles).toMatch(/\.tool-config-pop-enter-from,[\s\S]*?\.tool-config-pop-leave-to\s*\{[^}]*opacity: 0/s);
-    expect(styles).toMatch(/\.tool-config-close\s*\{[^}]*width: 30px/s);
-    expect(styles).toMatch(/\.tool-config-close\s*\{[^}]*height: 30px/s);
-    expect(styles).toMatch(/\.tool-config-close\s*\{[^}]*border-radius: 50%/s);
-    expect(styles).toMatch(/button\.tool-config-close:hover,[\s\S]*?button\.tool-config-close:focus-visible\s*\{[^}]*background: var\(--button-hover\)/s);
-  });
-
   it("animates reminder reveal and workspace tab switches", () => {
     const space = read("src/components/SpacePanel.vue");
     const todo = read("src/components/TodoPanel.vue");

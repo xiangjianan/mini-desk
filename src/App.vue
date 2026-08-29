@@ -3161,7 +3161,6 @@ function isGuideAreaEmpty(key: GuideKey, anchor?: HTMLElement): boolean {
     const active = activeWorkspace.value.spaces.find((space) => space.id === activeWorkspace.value.activeSpaceId) ?? activeWorkspace.value.spaces[0];
     return !active || !hasLineContent(active.lines);
   }
-  if (key === "tools") return false;
   if (key === "storage") return !hasLineContent(activeWorkspace.value.storageLines);
   if (key === "todos") {
     const period = getTodoPeriodFromAnchor(anchor);
