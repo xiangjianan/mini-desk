@@ -4,7 +4,8 @@
   "type": "module",
   "scripts": {
     "record": "node record.mjs",
-    "assemble": "node assemble.mjs"
+    "assemble:wide": "node assemble-wide.mjs",
+    "assemble:vertical": "node assemble-vertical.mjs"
   },
   "dependencies": {
     "playwright-core": "^1.55.0"
