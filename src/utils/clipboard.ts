@@ -24,8 +24,10 @@ export function getSelectionRange(
   return { start: caret, end: caret };
 }
 
-/** Copy text via the async Clipboard API, falling back to a hidden textarea. */
-export async function copyTextToClipboard(text: string): Promise<boolean> {
+/** Copy text via the async Clipboard API, falling back to a hidden textarea.
+ *  `shouldAbort` runs after a failed async write: returning true skips the
+ *  execCommand fallback (e.g. the caller's UI state changed meanwhile). */
+export async function copyTextToClipboard(text: string, shouldAbort: () => boolean = () => false): Promise<boolean> {
   if (navigator.clipboard?.writeText) {
     try {
       await navigator.clipboard.writeText(text);
@@ -34,6 +36,7 @@ export async function copyTextToClipboard(text: string): Promise<boolean> {
       // Fall back below when async clipboard access is denied.
     }
   }
+  if (shouldAbort()) return false;
   return copyTextWithBrowserCommand(text);
 }
 

@@ -1,10 +1,10 @@
 <script setup lang="ts">
 import { computed } from "vue";
-import { splitHighlightSegments } from "../utils/searchHighlight";
+import { normalizeSearchQuery, splitHighlightSegments } from "../utils/searchHighlight";
 
 const props = defineProps<{ text: string; query: string }>();
 
-const normalized = computed(() => props.query.trim().toLowerCase());
+const normalized = computed(() => normalizeSearchQuery(props.query));
 const segments = computed(() => splitHighlightSegments(props.text, normalized.value));
 </script>
 

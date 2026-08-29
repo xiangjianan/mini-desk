@@ -11,6 +11,7 @@ import type { ImageContextMenuKey } from "../state/imageContextMenu";
 import { getUiText } from "../state/i18n";
 import { CONTEXT_MENU_Z_INDEX, createExclusiveContextMenu } from "../utils/contextMenu";
 import { binaryStringToBytes } from "../utils/base64";
+import { createDragAutoScroll } from "../utils/dragScroll";
 import { renderIcon } from "../utils/dropdownIcons";
 import EditableTitle from "./EditableTitle.vue";
 
@@ -96,11 +97,14 @@ const IMAGE_CLICK_SUPPRESS_MS = 350;
 const IMAGE_DRAG_SORT_MIME = "application/x-mini-desk-image";
 let imagePointerDrag: ImagePointerDrag | null = null;
 let suppressImageClickUntil = 0;
-let dragScrollFrame: number | undefined;
-let dragScrollContainer: HTMLElement | null = null;
-let dragScrollDirection: -1 | 0 | 1 = 0;
-let dragWheelPauseTimer: number | undefined;
 let pasteHighlightTimer: number | undefined;
+// 拖拽图片时靠近列表上下边缘自动滚动；滚轮事件会暂停一小段时间让手动滚动优先。
+const dragAutoScroll = createDragAutoScroll({
+  edgeThreshold: DRAG_EDGE_SCROLL_THRESHOLD,
+  step: DRAG_EDGE_SCROLL_STEP,
+  wheelPauseMs: DRAG_WHEEL_AUTO_SCROLL_PAUSE_MS,
+  shouldContinue: () => Boolean(draggingId.value),
+});
 const PASTE_HIGHLIGHT_MS = 700;
 
 
@@ -124,7 +128,7 @@ onUnmounted(() => {
   exclusiveMenu.unmount();
   window.removeEventListener("wheel", handleImageDragWheel, { capture: true });
   cleanupImagePointerDrag();
-  resetImageDragAutoScroll();
+  dragAutoScroll.reset();
   cleanupPickerInput();
   if (pasteHighlightTimer !== undefined) window.clearTimeout(pasteHighlightTimer);
 });
@@ -281,7 +285,7 @@ function handleGuideClick(event: MouseEvent): void {
 function handleExternalDrop(event: DragEvent): void {
   isDragHover.value = false;
   externalDropTargetId.value = null;
-  resetImageDragAutoScroll();
+  dragAutoScroll.reset();
   if (hasImageSortDrag(event)) return;
   const files = Array.from(event.dataTransfer?.files ?? []);
   if (files.length === 0) return;
@@ -347,7 +351,7 @@ function handleImageDragEnter(event: DragEvent): void {
 function handleImageDragLeave(): void {
   isDragHover.value = false;
   externalDropTargetId.value = null;
-  resetImageDragAutoScroll();
+  dragAutoScroll.reset();
 }
 
 function getImageListScrollContainer(target: EventTarget | null): HTMLElement | null {
@@ -358,74 +362,6 @@ function getImageListScrollContainer(target: EventTarget | null): HTMLElement | 
 
 function getCurrentImageListScrollContainer(): HTMLElement | null {
   return panelRef.value?.querySelector<HTMLElement>(".image-list-scrollbar .n-scrollbar-container") ?? null;
-}
-
-function stopImageDragAutoScroll(): void {
-  if (dragScrollFrame !== undefined) window.cancelAnimationFrame(dragScrollFrame);
-  dragScrollFrame = undefined;
-  dragScrollContainer = null;
-  dragScrollDirection = 0;
-}
-
-function resetImageDragAutoScroll(): void {
-  stopImageDragAutoScroll();
-  if (dragWheelPauseTimer !== undefined) window.clearTimeout(dragWheelPauseTimer);
-  dragWheelPauseTimer = undefined;
-}
-
-function pauseImageDragAutoScrollForWheel(): void {
-  stopImageDragAutoScroll();
-  if (dragWheelPauseTimer !== undefined) window.clearTimeout(dragWheelPauseTimer);
-  dragWheelPauseTimer = window.setTimeout(() => {
-    dragWheelPauseTimer = undefined;
-  }, DRAG_WHEEL_AUTO_SCROLL_PAUSE_MS);
-}
-
-function runImageDragAutoScroll(): void {
-  const container = dragScrollContainer;
-  if (!container || !draggingId.value || dragScrollDirection === 0) {
-    stopImageDragAutoScroll();
-    return;
-  }
-
-  const maxScrollTop = Math.max(0, container.scrollHeight - container.clientHeight);
-  const nextScrollTop =
-    dragScrollDirection < 0
-      ? Math.max(0, container.scrollTop - DRAG_EDGE_SCROLL_STEP)
-      : Math.min(maxScrollTop, container.scrollTop + DRAG_EDGE_SCROLL_STEP);
-  container.scrollTop = nextScrollTop;
-
-  if ((dragScrollDirection < 0 && nextScrollTop === 0) || (dragScrollDirection > 0 && nextScrollTop === maxScrollTop)) {
-    stopImageDragAutoScroll();
-    return;
-  }
-
-  dragScrollFrame = window.requestAnimationFrame(runImageDragAutoScroll);
-}
-
-function startImageDragAutoScroll(container: HTMLElement, direction: -1 | 1): void {
-  dragScrollContainer = container;
-  dragScrollDirection = direction;
-  if (dragScrollFrame === undefined) dragScrollFrame = window.requestAnimationFrame(runImageDragAutoScroll);
-}
-
-function scrollImageListNearDragEdge(container: HTMLElement | null, clientY: number): void {
-  if (!draggingId.value) return;
-  if (dragWheelPauseTimer !== undefined) return;
-  if (!container) return;
-
-  const rect = container.getBoundingClientRect();
-  if (clientY <= rect.top + DRAG_EDGE_SCROLL_THRESHOLD) {
-    startImageDragAutoScroll(container, -1);
-    return;
-  }
-
-  if (clientY >= rect.bottom - DRAG_EDGE_SCROLL_THRESHOLD) {
-    startImageDragAutoScroll(container, 1);
-    return;
-  }
-
-  stopImageDragAutoScroll();
 }
 
 function getPointerId(event: PointerEvent): number {
@@ -452,7 +388,7 @@ function startImagePointerDrag(state: ImagePointerDrag, event: PointerEvent): vo
   draggingId.value = state.id;
   closeMenu();
   updateImageDragPreview(state, event);
-  scrollImageListNearDragEdge(state.scrollContainer ?? getCurrentImageListScrollContainer(), event.clientY);
+  dragAutoScroll.update(state.scrollContainer ?? getCurrentImageListScrollContainer(), event.clientY);
 }
 
 function getImageDropTargetId(clientY: number): string | null {
@@ -529,7 +465,7 @@ function cleanupImagePointerDrag(): void {
   imagePointerDrag = null;
   imageDragPreview.value = null;
   draggingId.value = null;
-  resetImageDragAutoScroll();
+  dragAutoScroll.reset();
 }
 
 function finishImagePointerDrag(event?: PointerEvent, canceled = false): void {
@@ -547,7 +483,7 @@ function finishImagePointerDrag(event?: PointerEvent, canceled = false): void {
   imagePointerDrag = null;
   imageDragPreview.value = null;
   draggingId.value = null;
-  resetImageDragAutoScroll();
+  dragAutoScroll.reset();
 }
 
 function handleImagePointerDown(event: PointerEvent, image: StoredImage): void {
@@ -587,7 +523,7 @@ function handleImagePointerMove(event: PointerEvent): void {
 
   event.preventDefault();
   updateImageDragPreview(state, event);
-  scrollImageListNearDragEdge(state.scrollContainer ?? getCurrentImageListScrollContainer(), event.clientY);
+  dragAutoScroll.update(state.scrollContainer ?? getCurrentImageListScrollContainer(), event.clientY);
 }
 
 function handleImagePointerUp(event: PointerEvent): void {
@@ -628,7 +564,7 @@ function handleImageDragWheel(event: WheelEvent): void {
 
   event.preventDefault();
   event.stopPropagation();
-  pauseImageDragAutoScrollForWheel();
+  dragAutoScroll.pauseForWheel();
   scrollImageListByWheel(container, event);
 }
 </script>

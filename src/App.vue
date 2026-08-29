@@ -75,7 +75,7 @@ import {
 import { applyInboxItems, pullAllInboxes } from "./sync/pull";
 import { inboxKeyHash } from "./sync/crypto";
 import { checkInboxKeyStatus, registerInboxKey, revokeInboxKey } from "./sync/inboxClient";
-import { copyTextWithBrowserCommand } from "./utils/clipboard";
+import { copyTextToClipboard } from "./utils/clipboard";
 import { binaryStringToBytes } from "./utils/base64";
 import { extractRetainedImageIds, useUndoHistory } from "./composables/useUndoHistory";
 import { useTodoNotifications } from "./composables/useTodoNotifications";
@@ -501,7 +501,7 @@ function clearMobileCopyToast(): void {
 async function copyMobileInboxCode(): Promise<void> {
   const code = mobileInboxCode.value;
   if (!code) return;
-  const copied = await copyText(formatInboxCode(code));
+  const copied = await copyTextToClipboard(formatInboxCode(code));
   clearMobileCopyToast();
   mobileCopyToast.value = copied ? uiText.value.app.mobileInboxCodeCopied : uiText.value.app.mobileInboxCodeCopyFailed;
   mobileCopyToastTimer = window.setTimeout(() => {
@@ -2065,7 +2065,7 @@ async function handleQuickButton(id: string, anchor?: HTMLElement): Promise<void
     await callQuickApi(button, anchor);
     return;
   }
-  const copied = await copyText(button.value, shouldBlockBoardEffects);
+  const copied = await copyTextToClipboard(button.value, shouldBlockBoardEffects);
   if (shouldBlockBoardEffects()) return;
   if (copied) {
     showBubbleText(getQuickTextCopiedMessage(button.value), anchor, { hideCompanionAfter: true }, 4000);
@@ -2077,7 +2077,7 @@ async function handleQuickButton(id: string, anchor?: HTMLElement): Promise<void
 async function copyQuickLink(id: string, anchor?: HTMLElement): Promise<void> {
   const button = activeWorkspace.value.quickButtons.find((item) => item.id === id);
   if (!button) return;
-  const copied = await copyText(button.value, shouldBlockBoardEffects);
+  const copied = await copyTextToClipboard(button.value, shouldBlockBoardEffects);
   if (shouldBlockBoardEffects()) return;
   if (copied) {
     showBubbleText(getQuickTextCopiedMessage(button.value), anchor, { hideCompanionAfter: true }, 4000);
@@ -2089,7 +2089,7 @@ async function copyQuickLink(id: string, anchor?: HTMLElement): Promise<void> {
 async function copyQuickText(id: string, anchor?: HTMLElement): Promise<void> {
   const button = activeWorkspace.value.quickButtons.find((item) => item.id === id);
   if (!button) return;
-  const copied = await copyText(button.title, shouldBlockBoardEffects);
+  const copied = await copyTextToClipboard(button.title, shouldBlockBoardEffects);
   if (shouldBlockBoardEffects()) return;
   if (copied) {
     showBubbleText(getQuickTextCopiedMessage(button.title), anchor, { hideCompanionAfter: true }, 4000);
@@ -2188,16 +2188,6 @@ function getQuickApiStatusMessage(status: number, responseBody?: string): string
 function formatQuickApiResponseBody(value: string): string {
   const maxLength = 500;
   return value.length > maxLength ? `${value.slice(0, maxLength)}...` : value;
-}
-
-async function copyText(text: string, shouldAbort: () => boolean = () => false): Promise<boolean> {
-  try {
-    await navigator.clipboard.writeText(text);
-    return true;
-  } catch {
-    if (shouldAbort()) return false;
-    return copyTextWithBrowserCommand(text);
-  }
 }
 
 function createTodoList(anchor?: HTMLElement, title?: string): void {

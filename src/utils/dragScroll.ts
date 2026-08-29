@@ -13,6 +13,10 @@ export interface DragAutoScrollOptions {
   edgeThreshold?: number;
   /** Pixels scrolled per animation frame. */
   step?: number;
+  /** Wheel-pause window: `pauseForWheel()` silences updates for this long (0 = stop only). */
+  wheelPauseMs?: number;
+  /** Per-frame gate (e.g. internal pointer-drag still active); the loop stops when it turns false. */
+  shouldContinue?: () => boolean;
 }
 
 export interface DragAutoScrollController {
@@ -20,6 +24,10 @@ export interface DragAutoScrollController {
   update: (container: HTMLElement | null, clientY: number) => void;
   /** Cancel any in-flight scrolling. */
   stop: () => void;
+  /** Stop scrolling and clear the wheel-pause window (drag end / leave cleanup). */
+  reset: () => void;
+  /** Stop scrolling and pause updates for `wheelPauseMs`, letting user wheel input take over. */
+  pauseForWheel: () => void;
 }
 
 const DEFAULT_EDGE_THRESHOLD = 56;
@@ -28,10 +36,13 @@ const DEFAULT_STEP = 14;
 export function createDragAutoScroll(options: DragAutoScrollOptions = {}): DragAutoScrollController {
   const edgeThreshold = options.edgeThreshold ?? DEFAULT_EDGE_THRESHOLD;
   const step = options.step ?? DEFAULT_STEP;
+  const wheelPauseMs = options.wheelPauseMs ?? 0;
+  const shouldContinue = options.shouldContinue;
 
   let container: HTMLElement | null = null;
   let direction = 0;
   let frame: number | undefined;
+  let wheelPauseTimer: number | undefined;
 
   function stop(): void {
     if (frame !== undefined) window.cancelAnimationFrame(frame);
@@ -40,8 +51,24 @@ export function createDragAutoScroll(options: DragAutoScrollOptions = {}): DragA
     direction = 0;
   }
 
+  function reset(): void {
+    stop();
+    if (wheelPauseTimer !== undefined) window.clearTimeout(wheelPauseTimer);
+    wheelPauseTimer = undefined;
+  }
+
+  function pauseForWheel(): void {
+    stop();
+    if (wheelPauseTimer !== undefined) window.clearTimeout(wheelPauseTimer);
+    wheelPauseTimer = undefined;
+    if (!wheelPauseMs) return;
+    wheelPauseTimer = window.setTimeout(() => {
+      wheelPauseTimer = undefined;
+    }, wheelPauseMs);
+  }
+
   function run(): void {
-    if (!container || direction === 0) {
+    if (!container || direction === 0 || (shouldContinue && !shouldContinue())) {
       stop();
       return;
     }
@@ -62,6 +89,7 @@ export function createDragAutoScroll(options: DragAutoScrollOptions = {}): DragA
   }
 
   function update(nextContainer: HTMLElement | null, clientY: number): void {
+    if (wheelPauseTimer !== undefined) return;
     if (!nextContainer || nextContainer.scrollHeight <= nextContainer.clientHeight) {
       stop();
       return;
@@ -84,7 +112,7 @@ export function createDragAutoScroll(options: DragAutoScrollOptions = {}): DragA
     }
   }
 
-  return { update, stop };
+  return { update, stop, reset, pauseForWheel };
 }
 
 /**

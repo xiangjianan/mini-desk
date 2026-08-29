@@ -12,6 +12,7 @@ import { findQuickAppPresetByScheme, getQuickAppPresetHint, getQuickAppPresetTit
 import { findQuickApiTemplate, QUICK_API_TEMPLATES } from "../state/quickApiTemplates";
 import { clearGlobalSearch, globalSearchNormalized, globalSearchQuery, setGlobalSearch } from "../state/globalSearch";
 import { CONTEXT_MENU_Z_INDEX, createExclusiveContextMenu } from "../utils/contextMenu";
+import { readClipboardText } from "../utils/clipboard";
 import { renderIcon } from "../utils/dropdownIcons";
 import { createDragAutoScroll, findDragScrollContainer } from "../utils/dragScroll";
 import EditableTitle from "./EditableTitle.vue";
@@ -565,15 +566,8 @@ function buildQuickDropPayload(rawText: string, groupId?: string): { title: stri
 }
 
 async function pasteQuick(tagTitle?: string): Promise<void> {
-  if (!navigator.clipboard?.readText) return;
-  let text: string;
-  try {
-    text = await navigator.clipboard.readText();
-  } catch {
-    // Clipboard read can be blocked (permission denied, insecure context); nothing to paste then.
-    return;
-  }
-  const trimmed = text.trim();
+  const text = await readClipboardText();
+  const trimmed = text?.trim();
   if (!trimmed) return;
   emit("save", { ...classifyQuickText(trimmed), tagTitle });
 }

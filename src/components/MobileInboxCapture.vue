@@ -4,6 +4,7 @@ import { ClipboardOutline, CloseCircleOutline, CreateOutline, NotificationsOutli
 import { NIcon } from "naive-ui";
 import { getUiText } from "../state/i18n";
 import { createId } from "../state/storage";
+import { readClipboardText } from "../utils/clipboard";
 import { INBOX_PLAINTEXT_MAX_CHARS } from "../sync/config";
 import { encryptInboxPayload, inboxKeyHash, type InboxPlainItem } from "../sync/crypto";
 import { postInboxItem, type InboxPostFailure } from "../sync/inboxClient";
@@ -82,23 +83,19 @@ function showPasteNotice(message: string): void {
  *  粘贴的多行文本仍会按行拆分成多条，页面上的「按行拆分」提示会随之实时更新。 */
 async function pasteFromClipboard(): Promise<void> {
   if (status.value === "sending") return;
-  if (!navigator.clipboard || typeof navigator.clipboard.readText !== "function") {
+  const text = await readClipboardText();
+  if (typeof text !== "string") {
     showPasteNotice(app.value.mobileInboxPasteFailed);
     return;
   }
-  try {
-    const text = await navigator.clipboard.readText();
-    if (!text.trim()) {
-      showPasteNotice(app.value.mobileInboxPasteEmpty);
-      return;
-    }
-    const separator = draft.value.length > 0 && !draft.value.endsWith("\n") ? "\n" : "";
-    draft.value = draft.value + separator + text;
-    vibrate(20);
-    showPasteNotice(app.value.mobileInboxPasteDone);
-  } catch {
-    showPasteNotice(app.value.mobileInboxPasteFailed);
+  if (!text.trim()) {
+    showPasteNotice(app.value.mobileInboxPasteEmpty);
+    return;
   }
+  const separator = draft.value.length > 0 && !draft.value.endsWith("\n") ? "\n" : "";
+  draft.value = draft.value + separator + text;
+  vibrate(20);
+  showPasteNotice(app.value.mobileInboxPasteDone);
 }
 
 function clearSentResetTimer(): void {
