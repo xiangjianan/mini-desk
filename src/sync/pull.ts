@@ -27,7 +27,7 @@ export interface InboxPullResult {
 /** 纯合并：todo 追加为未完成条目（落点清单失效则回退第一个清单），note 按 noteTarget 追加一行
  *  indent 0 到目标空间 Tab（落点空间失效则回退第一个空间），并按共享助手 projectLegacySpaceLines
  *  刷新投影字段（workspaceLines/storageLines = 前两个空间的浅拷贝）。
- *  不做任何拉取/解密，输入对象不被修改，水位线直接取调用方计算好的 lastSeenAt。 */
+ *  不做任何拉取/解码，输入对象不被修改，水位线直接取调用方计算好的 lastSeenAt。 */
 export function applyInboxItems(workspace: WorkspaceData, plains: InboxPlainItem[], lastSeenAt: number): WorkspaceData {
   const inbox = workspace.inbox;
   if (!inbox) return workspace;
@@ -94,7 +94,7 @@ export async function pullAllInboxes(workspaces: WorkspaceData[]): Promise<Inbox
         if (entry.createdAt <= inbox.lastSeenAt) continue;
         const plain = await decodeInboxPayload(inbox.code, entry.payload);
         if (plain) plains.push(plain);
-        else console.warn("[inbox] 跳过无法解密的条目", { workspaceId: workspace.id, itemId: entry.id });
+        else console.warn("[inbox] 跳过无法解码的条目", { workspaceId: workspace.id, itemId: entry.id });
       }
       // 无导入且水位线未动时不产补丁：避免调用方每个轮询周期都空转持久化/跨标签页广播/回滚编辑中内容。
       const dirty = plains.length > 0 || maxSeenAt !== inbox.lastSeenAt;

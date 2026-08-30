@@ -19,7 +19,7 @@ import { applyInboxItems, pullAllInboxes } from "../sync/pull";
 import { decodeInboxPayload, type InboxPlainItem } from "../sync/crypto";
 
 const fetchMock = vi.mocked(fetchInboxItems);
-const decryptMock = vi.mocked(decodeInboxPayload);
+const decodeMock = vi.mocked(decodeInboxPayload);
 
 const THREE_SPACES: WorkspaceSpace[] = [
   { id: "workspace", title: "便签", lines: [{ text: "w1", indent: 0 }] },
@@ -137,7 +137,7 @@ describe("pullAllInboxes", () => {
     expect(paired.inbox?.lastSeenAt).toBe(0);
   });
 
-  it("水位线跳过已消费条目；解密失败条目跳过但水位线照常推进", async () => {
+  it("水位线跳过已消费条目；解码失败条目跳过但水位线照常推进", async () => {
     const paired = workspace("paired", inbox({ lastSeenAt: 10 }));
     fetchMock.mockResolvedValue([item("i1", 5), item("edge", 10), item("bad", 15, "BAD"), item("i3", 20)]);
     const { patches, reports } = await pullAllInboxes([paired]);
@@ -166,10 +166,10 @@ describe("pullAllInboxes", () => {
     expect(failed.reports).toEqual([]);
   });
 
-  it("环境级解密异常时无补丁且无报告", async () => {
+  it("环境级解码异常时无补丁且无报告", async () => {
     const paired = workspace("paired", inbox({ lastSeenAt: 10 }));
     fetchMock.mockResolvedValue([item("i1", 20)]);
-    decryptMock.mockRejectedValueOnce(new Error("Web Crypto is unavailable"));
+    decodeMock.mockRejectedValueOnce(new Error("Web Crypto is unavailable"));
     const { patches, changed, reports } = await pullAllInboxes([paired]);
     expect(patches).toEqual([]);
     expect(changed).toBe(false);
