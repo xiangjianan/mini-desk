@@ -29,6 +29,20 @@ export interface ChangelogEntry {
 
 export const CHANGELOG: ChangelogEntry[] = [
   {
+    version: "1.0.159",
+    date: "2026-08-30",
+    notes: {
+      zh: [
+        "新增：手机速记服务端 AI 润色——「提醒事项」自动拆分成一条条独立待办，「便签」自动总结润色为编号要点",
+        "调整：速记改经自建服务器明文中转以支持服务端处理（取消端到端加密）；润色失败时原文直存，消息永不丢失",
+      ],
+      en: [
+        "New: server-side AI polish for quick capture — reminders are auto-split into separate items, notes are summarized into numbered points",
+        "Changed: captures now relay as plaintext via the self-hosted server to enable server-side processing (E2E encryption dropped); any polish failure stores the raw text, so messages are never lost",
+      ],
+    },
+  },
+  {
     version: "1.0.158",
     date: "2026-08-29",
     notes: {
