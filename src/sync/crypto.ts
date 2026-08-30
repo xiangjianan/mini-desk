@@ -60,6 +60,18 @@ export async function encryptInboxPayload(code: string, plain: InboxPlainItem): 
   return toBase64(packed);
 }
 
+/** 校验已解析的明文并收敛为 InboxPlainItem：kind ∈ todo/note、text 为字符串（不要求非空）、createdAt 非数字记 0；结构非法返回 null。 */
+function coercePlainItem(parsed: unknown): InboxPlainItem | null {
+  if (typeof parsed !== "object" || parsed === null) return null;
+  const typed = parsed as Record<string, unknown>;
+  if ((typed.kind !== "todo" && typed.kind !== "note") || typeof typed.text !== "string") return null;
+  return {
+    kind: typed.kind,
+    text: typed.text,
+    createdAt: typeof typed.createdAt === "number" ? typed.createdAt : 0,
+  };
+}
+
 /** 解密并校验明文结构；条目级失败（错码/损坏/结构非法）返回 null，不抛异常。
  *  环境级失败（Web Crypto 缺失）在 try 外抛出，让拉取层中止整批而非当作坏条目推进水位线。 */
 export async function decryptInboxPayload(code: string, payload: string): Promise<InboxPlainItem | null> {
@@ -72,32 +84,16 @@ export async function decryptInboxPayload(code: string, payload: string): Promis
     const cipher = packed.subarray(SALT_BYTES + NONCE_BYTES);
     const key = await deriveAesKey(code, salt);
     const plain = await subtle().decrypt({ name: "AES-GCM", iv: nonce }, key, cipher);
-    const parsed: unknown = JSON.parse(decoder.decode(plain));
-    if (typeof parsed !== "object" || parsed === null) return null;
-    const typed = parsed as Record<string, unknown>;
-    if ((typed.kind !== "todo" && typed.kind !== "note") || typeof typed.text !== "string") return null;
-    return {
-      kind: typed.kind,
-      text: typed.text,
-      createdAt: typeof typed.createdAt === "number" ? typed.createdAt : 0,
-    };
+    return coercePlainItem(JSON.parse(decoder.decode(plain)));
   } catch {
     return null;
   }
 }
 
-/** 明文行（服务端润色后的新格式）：JSON 文本，结构同 InboxPlainItem。结构非法返回 null。 */
+/** 明文行（服务端润色后的新格式）：JSON 文本，结构同 InboxPlainItem。非 JSON 或结构非法返回 null。 */
 function parsePlainPayload(payload: string): InboxPlainItem | null {
   try {
-    const parsed: unknown = JSON.parse(payload);
-    if (typeof parsed !== "object" || parsed === null) return null;
-    const typed = parsed as Record<string, unknown>;
-    if ((typed.kind !== "todo" && typed.kind !== "note") || typeof typed.text !== "string") return null;
-    return {
-      kind: typed.kind,
-      text: typed.text,
-      createdAt: typeof typed.createdAt === "number" ? typed.createdAt : 0,
-    };
+    return coercePlainItem(JSON.parse(payload));
   } catch {
     return null;
   }

@@ -78,6 +78,7 @@ describe("decodeInboxPayload（明文行优先，密文兜底）", () => {
   it("明文 JSON 结构非法回退解密路径后返回 null", async () => {
     expect(await decodeInboxPayload(CODE, '{"kind":"other","text":"x"}')).toBeNull();
     expect(await decodeInboxPayload(CODE, "123")).toBeNull();
+    expect(await decodeInboxPayload(CODE, "null")).toBeNull();
   });
 
   it("非 JSON payload 回退解密：存量密文行可用配对码解出", async () => {
