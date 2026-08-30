@@ -1,4 +1,4 @@
-import { mount } from "@vue/test-utils";
+import { flushPromises, mount } from "@vue/test-utils";
 import { describe, expect, it, vi } from "vitest";
 import { readFileSync } from "node:fs";
 import { resolve } from "node:path";
@@ -477,6 +477,34 @@ describe("SpacePanel", () => {
     const hoverRule = styles.match(/\.space-tab:hover \{([\s\S]*?)\}/)?.[1] ?? "";
 
     expect(hoverRule).toContain("border-right-color: transparent");
+  });
+
+  it("forwards the smart paste polish handler and status events to the text panel", async () => {
+    Object.assign(navigator, { clipboard: { readText: vi.fn().mockResolvedValue("杂乱文本"), writeText: vi.fn() } });
+    const polish = vi.fn(async () => ({ items: ["1、要点"] }) as import("../sync/polishClient").PolishResult);
+    const wrapper = mount(SpacePanel, {
+      attachTo: document.body,
+      props: {
+        spaces: [{ id: "workspace", title: "工作空间", lines: [] }],
+        activeSpaceId: "workspace",
+        polish,
+      },
+      global: {
+        stubs: {
+          Dropdown: dropdownStub,
+          NDropdown: dropdownStub,
+        },
+      },
+    });
+    const textarea = wrapper.get("textarea").element as HTMLTextAreaElement;
+    textarea.setSelectionRange(0, 0);
+    await wrapper.get("textarea").trigger("contextmenu");
+    await wrapper.get('[data-key="smart-paste"]').trigger("click");
+    await flushPromises();
+
+    expect(polish).toHaveBeenCalledWith("note", "杂乱文本");
+    expect((wrapper.emitted("polishMessage") ?? []).map((call) => call[0])).toEqual(["working", "done"]);
+    wrapper.unmount();
   });
 });
 

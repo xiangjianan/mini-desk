@@ -9,6 +9,8 @@ import { getUiText } from "../state/i18n";
 import { CONTEXT_MENU_Z_INDEX, createExclusiveContextMenu } from "../utils/contextMenu";
 import { renderIcon } from "../utils/dropdownIcons";
 import { isImeComposing } from "../utils/ime";
+import type { PolishKind, PolishResult } from "../sync/polishClient";
+import type { SmartPastePhase } from "../utils/smartPaste";
 import TextPanel from "./TextPanel.vue";
 
 const props = withDefaults(defineProps<{
@@ -17,6 +19,7 @@ const props = withDefaults(defineProps<{
   editSpaceId?: string | null;
   language?: AppLanguage;
   moveTargets?: WorkspaceMoveTarget[];
+  polish?: (kind: PolishKind, text: string) => Promise<PolishResult>;
 }>(), {
   language: "zh",
   moveTargets: () => [],
@@ -34,6 +37,7 @@ const emit = defineEmits<{
   blur: [];
   guide: [key: GuideKey, anchor: HTMLElement, immediate?: boolean];
   moveSpaceToWorkspace: [spaceId: string, workspaceId: string];
+  polishMessage: [phase: SmartPastePhase, message: string, anchor: HTMLElement | undefined];
 }>();
 
 const editingSpaceId = ref<string | null>(null);
@@ -318,6 +322,8 @@ function handleTabsWheel(event: WheelEvent): void {
           @update="handleUpdate"
           @focus="emit('focus', 'workspace', $event)"
           @guide="(anchor, immediate) => emit('guide', 'workspace', anchor, immediate)"
+          :polish="props.polish"
+          @polish-message="(phase, message, anchor) => emit('polishMessage', phase, message, anchor)"
           @blur="emit('blur')"
         />
       </Transition>
