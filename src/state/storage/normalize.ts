@@ -43,6 +43,7 @@ export function normalizeImportedState(payload: unknown): BoardState {
   // existing layout on load.
   const legacyGlobalVisibility = normalizeZoneVisibility(typed.zoneVisibility);
 
+  const polishCode = normalizePolishCode(typed.polishCode);
   const shared = {
     sync: normalizeSyncState(typed.sync),
     language,
@@ -50,6 +51,7 @@ export function normalizeImportedState(payload: unknown): BoardState {
     companionGifTheme: normalizeCompanionGifTheme(typed.companionGifTheme),
     customCompanionGif: normalizeCustomCompanionGif(typed.customCompanionGif),
     customCompanionGifStored: normalizeCustomCompanionGifStored(typed.customCompanionGifStored, typed.customCompanionGif),
+    ...(polishCode ? { polishCode } : {}),
   };
 
   if (Array.isArray(typed.workspaces)) {
@@ -122,6 +124,11 @@ export function normalizeWorkspaceInbox(value: unknown, todoLists: TodoListConfi
       ? Math.max(0, Math.floor(typed.lastSeenAt))
       : 0;
   return { code: typed.code, todoListId, noteTarget, lastSeenAt };
+}
+
+/** 智能粘贴配对码：合法 12 位码原样保留，其余（含空串/异型）丢弃——下次使用时重新生成。 */
+export function normalizePolishCode(value: unknown): string | undefined {
+  return typeof value === "string" && INBOX_CODE_PATTERN.test(value) ? value : undefined;
 }
 
 function normalizeWorkspaceList(value: unknown, language: AppLanguage, fallbackVisibility?: ZoneVisibility): WorkspaceData[] {

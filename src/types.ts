@@ -183,6 +183,8 @@ export interface BoardState {
   companionGifTheme: CompanionGifTheme;
   customCompanionGif: CompanionCustomGif;
   customCompanionGifStored: CompanionCustomGifStored;
+  /** 智能粘贴专用配对码（全局唯一，12 位 Crockford base32）：首次智能粘贴时生成并注册到中继。 */
+  polishCode?: string;
   workspaces: WorkspaceData[];
   activeWorkspaceId: string;
 }
