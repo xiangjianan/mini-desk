@@ -30,6 +30,7 @@ state = {
   language: "zh" | "en",
   companionGifTheme, customCompanionGif, customCompanionGifStored,
   sync: { revision, updatedAt, clientId },
+  polishCode,  // 智能粘贴配对码（首次使用生成并注册，清空数据时注销）
   workspaces: [WorkspaceData],   // each workspace is a fully independent board
   activeWorkspaceId: string,
 }
