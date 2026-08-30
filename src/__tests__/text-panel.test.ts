@@ -1575,4 +1575,79 @@ describe("TextPanel", () => {
     expect(statuses[1][1]).toBe("AI 整理暂不可用，已保留原文");
     wrapper.unmount();
   });
+
+  it("skips the late smart paste result when the text changed during the flight", async () => {
+    Object.assign(navigator, { clipboard: { readText: vi.fn().mockResolvedValue("杂乱文本"), writeText: vi.fn() } });
+    let resolvePolish: ((result: PolishResult) => void) | undefined;
+    const polish = vi.fn((): Promise<PolishResult> => new Promise<PolishResult>((resolve) => {
+      resolvePolish = resolve;
+    }));
+    const wrapper = mount(TextPanel, {
+      props: {
+        titleId: "workspace-title",
+        title: "工作空间",
+        lines: [{ text: "root", indent: 0 }],
+        polish,
+      },
+      global: {
+        stubs: {
+          Dropdown: menuDropdownStub,
+          NDropdown: menuDropdownStub,
+        },
+      },
+    });
+    const textarea = wrapper.get("textarea").element as HTMLTextAreaElement;
+
+    await wrapper.get("textarea").trigger("dblclick");
+    textarea.setSelectionRange(textarea.value.length, textarea.value.length);
+    await wrapper.get("textarea").trigger("contextmenu");
+    await wrapper.get('[data-key="smart-paste"]').trigger("click");
+    await flushPromises();
+
+    await wrapper.get("textarea").setValue("root 手动编辑");
+    resolvePolish?.({ items: ["1、要点A", "2、要点B"] });
+    await flushPromises();
+
+    expect(textarea.value).toBe("root 手动编辑");
+    const updates = wrapper.emitted("update") ?? [];
+    expect(updates).toHaveLength(1);
+    expect(updates[0][0]).toEqual([{ text: "root 手动编辑", indent: 0 }]);
+    wrapper.unmount();
+  });
+
+  it("drops the smart paste result when the panel unmounts mid-flight", async () => {
+    Object.assign(navigator, { clipboard: { readText: vi.fn().mockResolvedValue("杂乱文本"), writeText: vi.fn() } });
+    let resolvePolish: ((result: PolishResult) => void) | undefined;
+    const polish = vi.fn((): Promise<PolishResult> => new Promise<PolishResult>((resolve) => {
+      resolvePolish = resolve;
+    }));
+    const wrapper = mount(TextPanel, {
+      props: {
+        titleId: "workspace-title",
+        title: "工作空间",
+        lines: [{ text: "root", indent: 0 }],
+        polish,
+      },
+      global: {
+        stubs: {
+          Dropdown: menuDropdownStub,
+          NDropdown: menuDropdownStub,
+        },
+      },
+    });
+    const textarea = wrapper.get("textarea").element as HTMLTextAreaElement;
+
+    await wrapper.get("textarea").trigger("dblclick");
+    textarea.setSelectionRange(textarea.value.length, textarea.value.length);
+    await wrapper.get("textarea").trigger("contextmenu");
+    await wrapper.get('[data-key="smart-paste"]').trigger("click");
+    await flushPromises();
+
+    wrapper.unmount();
+    resolvePolish?.({ items: ["1、要点A", "2、要点B"] });
+    await flushPromises();
+
+    expect(textarea.value).toBe("root");
+    expect(wrapper.emitted("update")).toBeUndefined();
+  });
 });

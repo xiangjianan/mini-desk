@@ -80,8 +80,13 @@ const canDragSelectedText = computed(() => {
   return Boolean(selection && selection.start !== selection.end);
 });
 
+let isUnmounted = false;
+
 onMounted(exclusiveMenu.mount);
-onUnmounted(exclusiveMenu.unmount);
+onUnmounted(() => {
+  isUnmounted = true;
+  exclusiveMenu.unmount();
+});
 
 
 const menuOptions = computed<DropdownOption[]>(() => {
@@ -508,12 +513,13 @@ async function pasteTextFromClipboard(target: HTMLTextAreaElement): Promise<void
 /** 智能粘贴（便签区）：剪贴板全文交服务端排版润色，失败退化为原文粘贴。 */
 async function smartPasteFromClipboard(target: HTMLTextAreaElement): Promise<void> {
   if (!props.polish) return;
+  const landing: PolishLanding = { range: getTextSelectionRange(target), baseline: text.value };
   await runSmartPaste({
     kind: "note",
     polish: props.polish,
     messages: smartPasteMessages(uiText.value, "note"),
     anchor: target.closest<HTMLElement>(".text-panel") ?? undefined,
-    insert: (texts) => insertTextsAtSelection(target, texts),
+    insert: (texts) => insertTextsAtSelection(target, texts, landing),
     fallbackTexts: (raw) => [raw],
     notify: (phase, message, anchor) => emit("polishMessage", phase, message, anchor),
   });
@@ -522,24 +528,33 @@ async function smartPasteFromClipboard(target: HTMLTextAreaElement): Promise<voi
 /** 智能润色（便签区选中文本）：选中内容交服务端排版润色并替换选区，失败/超长保留原文。 */
 async function polishSelection(target: HTMLTextAreaElement, selectionText: string): Promise<void> {
   if (!props.polish) return;
+  const landing: PolishLanding = { range: getTextSelectionRange(target), baseline: text.value };
   await runSelectionPolish({
     text: selectionText,
     kind: "note",
     polish: props.polish,
     messages: selectionPolishMessages(uiText.value),
     anchor: target.closest<HTMLElement>(".text-panel") ?? undefined,
-    apply: (texts) => insertTextsAtSelection(target, texts),
+    apply: (texts) => insertTextsAtSelection(target, texts, landing),
     notify: (phase, message, anchor) => emit("polishMessage", phase, message, anchor),
   });
 }
 
-/** 整理结果按行拼接待入光标选区：进入编辑态、行边界断行、编号归一化、上报 update，与普通粘贴同语义。 */
-function insertTextsAtSelection(target: HTMLTextAreaElement, texts: string[]): void {
+/** 进入流程时捕获的落位上下文：选区与基线文本，迟到结果应用前据此做过期判断。 */
+interface PolishLanding {
+  range: { start: number; end: number };
+  baseline: string;
+}
+
+/** 整理结果按行拼接待入捕获选区：进入编辑态、行边界断行、编号归一化、上报 update，与普通粘贴同语义。
+ *  流程途中组件被卸载或文本已被改动（用户编辑/并发的另一条流程先落位）时丢弃结果，避免旧内容写进新现场。 */
+function insertTextsAtSelection(target: HTMLTextAreaElement, texts: string[], landing: PolishLanding): void {
   if (texts.length === 0) return;
-  const range = getTextSelectionRange(target);
+  if (isUnmounted || text.value !== landing.baseline) return;
+  const { range } = landing;
   if (!editing.value || target.readOnly) startEditingFromTextarea(target);
   target.setSelectionRange(range.start, range.end);
-  target.setRangeText(textBlockForRange(target.value, range, texts.join("\n")), range.start, range.end, "end");
+  target.setRangeText(textBlockForRange(landing.baseline, range, texts.join("\n")), range.start, range.end, "end");
   normalizeTextareaText(target);
   emit("update", editorTextToLines(text.value));
 }
