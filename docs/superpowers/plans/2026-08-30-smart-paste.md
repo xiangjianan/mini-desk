@@ -4,6 +4,8 @@
 
 **Goal:** 在提醒事项区与便签区右键菜单的「粘贴」下方新增「智能粘贴」：剪贴板全文一次发给自建中继的 DeepSeek 润色（提醒区拆条 / 便签区排版），结果直接插入，任何失败退化为普通粘贴。
 
+**执行中追加（用户 2026-08-30 反馈）：** 便签区选中文本后，右键菜单提供「智能润色」——对**选中文本**走同一润色流程（kind=note）并**替换选区**，失败/超长**保留原文**仅气泡提示（Task 4/5/6 覆盖）。另确认：提醒区「智能粘贴」与「粘贴」同为**新建提醒事项**（`createFromText`），非追加到已有事项——计划本就如此，无需改动。
+
 **Architecture:** 服务端在 relay 新增无状态同步端点 `POST /polish/<key_hash>`（鉴权复用 pairing_keys 注册制，直接调 `llm.polish_capture`，LLM 失败以 `200 {items:null,fallback:true}` 降级）。前端新增 `src/sync/polishClient.ts`（网络层）与 `src/utils/smartPaste.ts`（读剪贴板→限长→气泡→请求→落位/降级 的编排器）；两面板（TextPanel/TodoPanel）接菜单项并把气泡经 `polishMessage` 事件上浮给 App.vue 的 `showBubbleText`；配对码为全局可选字段 `state.polishCode`，首次使用生成并注册，清空数据时注销。
 
 **Tech Stack:** Flask + pymysql（服务端，Python 3.9 兼容）；Vue 3 + TS + vitest/jsdom（前端）；pytest（服务端测试，需本地 MySQL 127.0.0.1:3306 root 免密）。
@@ -518,7 +520,7 @@ git commit -m "feat: state 新增全局 polishCode 配对码字段"
 
 ```typescript
 import { afterEach, describe, expect, it, vi } from "vitest";
-import { runSmartPaste, smartPasteMessages } from "../utils/smartPaste";
+import { runSelectionPolish, runSmartPaste, selectionPolishMessages, smartPasteMessages } from "../utils/smartPaste";
 import type { PolishResult } from "../sync/polishClient";
 
 const MESSAGES = smartPasteMessages(
@@ -557,6 +559,34 @@ function setup(clipboard: string | undefined, result: PolishResult) {
 afterEach(() => {
   Object.assign(navigator, { clipboard: undefined });
 });
+
+const SELECTION_MESSAGES = selectionPolishMessages({
+  app: {
+    polishWorking: "整理中",
+    polishNoteDone: "已排版为 {count} 行",
+    polishKeepFallback: "保留原文",
+    polishKeepTooLarge: "过长保留",
+  },
+});
+
+function setupSelection(text: string, result: PolishResult) {
+  const notify = vi.fn();
+  const apply = vi.fn();
+  return {
+    notify,
+    apply,
+    run: () =>
+      runSelectionPolish({
+        text,
+        kind: "note",
+        polish: vi.fn(async () => result),
+        messages: SELECTION_MESSAGES,
+        apply,
+        anchor: undefined,
+        notify,
+      }),
+  };
+}
 
 describe("runSmartPaste", () => {
   it("剪贴板为空/不可读时静默返回", async () => {
@@ -598,6 +628,44 @@ describe("runSmartPaste", () => {
   });
 });
 
+describe("runSelectionPolish", () => {
+  it("空白文本静默返回", async () => {
+    const { notify, apply, run } = setupSelection("   ", { items: ["A"] });
+    await run();
+    expect(notify).not.toHaveBeenCalled();
+    expect(apply).not.toHaveBeenCalled();
+  });
+
+  it("成功：apply 收到整理条目并按行计数提示", async () => {
+    const { notify, apply, run } = setupSelection("杂乱段落", { items: ["1、要点A", "2、要点B"] });
+    await run();
+
+    expect(apply).toHaveBeenCalledWith(["1、要点A", "2、要点B"]);
+    expect(notify.mock.calls.map((call) => call[0])).toEqual(["working", "done"]);
+    expect(notify.mock.calls[1][1]).toBe("已排版为 2 行");
+  });
+
+  it("失败：不改动原文，仅提示保留原文（LLM 降级与网络失败同口径）", async () => {
+    for (const result of [{ fallback: true } as PolishResult, null]) {
+      const { notify, apply, run } = setupSelection("杂乱段落", result);
+      await run();
+
+      expect(apply).not.toHaveBeenCalled();
+      expect(notify.mock.calls.map((call) => call[0])).toEqual(["working", "fallback"]);
+      expect(notify.mock.calls[1][1]).toBe("保留原文");
+    }
+  });
+
+  it("超长：不调服务端不改动，提示保留原文", async () => {
+    const { notify, apply, run } = setupSelection("长".repeat(2001), { items: ["不该出现"] });
+    await run();
+
+    expect(apply).not.toHaveBeenCalled();
+    expect(notify).toHaveBeenCalledTimes(1);
+    expect(notify.mock.calls[0]).toEqual(["fallback", "过长保留", undefined]);
+  });
+});
+
 describe("smartPasteMessages", () => {
   it("按 kind 选择 done 模板并替换 {count}", () => {
     const todo = smartPasteMessages(
@@ -610,6 +678,13 @@ describe("smartPasteMessages", () => {
     );
     expect(todo.done(3)).toBe("3 条提醒");
     expect(note.done(5)).toBe("5 行");
+  });
+
+  it("selectionPolishMessages 用保留原文口径", () => {
+    const messages = selectionPolishMessages({ app: { polishWorking: "w", polishNoteDone: "{count} 行", polishKeepFallback: "保留原文", polishKeepTooLarge: "过长保留" } });
+    expect(messages.done(5)).toBe("5 行");
+    expect(messages.fallback).toBe("保留原文");
+    expect(messages.tooLarge).toBe("过长保留");
   });
 });
 ```
@@ -630,7 +705,7 @@ Expected: FAIL（模块 `../utils/smartPaste` 不存在）。
 import { readClipboardText } from "./clipboard";
 import { POLISH_MAX_CHARS, type PolishKind, type PolishResult } from "../sync/polishClient";
 
-/** 气泡阶段：working=整理中（长驻，等结果替换），done=成功，fallback=降级为原文粘贴。 */
+/** 气泡阶段：working=整理中（长驻，等结果替换），done=成功，fallback=降级（粘贴=插原文，润色=保留原文）。 */
 export type SmartPastePhase = "working" | "done" | "fallback";
 
 export interface SmartPasteMessages {
@@ -640,40 +715,62 @@ export interface SmartPasteMessages {
   tooLarge: string;
 }
 
-export interface SmartPasteOptions {
+/** 两条润色流程（智能粘贴/智能润色）共享的选项基座。 */
+interface PolishFlowBase {
   kind: PolishKind;
   /** 宿主注入的润色调用（内部完成配对码管理）；未注入时面板不渲染智能粘贴入口。 */
   polish: (kind: PolishKind, text: string) => Promise<PolishResult>;
   messages: SmartPasteMessages;
-  /** 结果落位：成功=整理后的条目；失败/超长=原文的兜底拆分。 */
-  insert: (texts: string[]) => void;
-  /** 失败兜底时的原文拆分（便签=[原文整体]，提醒=按行拆条）。 */
-  fallbackTexts: (raw: string) => string[];
   /** 气泡锚点：进入流程时解析一次，贯穿 working→done/fallback。 */
   anchor?: HTMLElement;
   notify: (phase: SmartPastePhase, message: string, anchor: HTMLElement | undefined) => void;
 }
 
-/** 智能粘贴编排：读剪贴板 → 限长预检 → 气泡「整理中」→ 服务端整理 → 落位/降级。
- *  最坏情况等于普通粘贴：任何失败都插入原文并提示。 */
-export async function runSmartPaste(options: SmartPasteOptions): Promise<void> {
-  const clipboardText = await readClipboardText();
-  if (typeof clipboardText !== "string" || !clipboardText.trim()) return;
-  const { anchor, notify, messages } = options;
-  if (clipboardText.length > POLISH_MAX_CHARS) {
-    options.insert(options.fallbackTexts(clipboardText));
+export interface SmartPasteOptions extends PolishFlowBase {
+  /** 结果落位：成功=整理后的条目；失败/超长=原文的兜底拆分。 */
+  insert: (texts: string[]) => void;
+  /** 失败兜底时的原文拆分（便签=[原文整体]，提醒=按行拆条）。 */
+  fallbackTexts: (raw: string) => string[];
+}
+
+/** 智能粘贴/智能润色共用主干：空白预检 → 限长预检 → 气泡「整理中」→ 服务端整理 → 应用/降级。 */
+async function polishText(raw: string, base: PolishFlowBase, apply: (texts: string[]) => void, onFallback: () => void): Promise<void> {
+  if (!raw.trim()) return;
+  const { anchor, notify, messages } = base;
+  if (raw.length > POLISH_MAX_CHARS) {
+    onFallback();
     notify("fallback", messages.tooLarge, anchor);
     return;
   }
   notify("working", messages.working, anchor);
-  const result = await options.polish(options.kind, clipboardText);
+  const result = await base.polish(base.kind, raw);
   if (result !== null && "items" in result && result.items.length > 0) {
-    options.insert(result.items);
+    apply(result.items);
     notify("done", messages.done(result.items.length), anchor);
     return;
   }
-  options.insert(options.fallbackTexts(clipboardText));
+  onFallback();
   notify("fallback", messages.fallback, anchor);
+}
+
+/** 智能粘贴编排：读剪贴板 → 共用主干 → 落位/降级。
+ *  最坏情况等于普通粘贴：任何失败都插入原文并提示。 */
+export async function runSmartPaste(options: SmartPasteOptions): Promise<void> {
+  const clipboardText = await readClipboardText();
+  if (typeof clipboardText !== "string" || !clipboardText.trim()) return;
+  await polishText(clipboardText, options, options.insert, () => options.insert(options.fallbackTexts(clipboardText)));
+}
+
+export interface SelectionPolishOptions extends PolishFlowBase {
+  /** 待润色的选中文本（调用方从编辑器选区取）。 */
+  text: string;
+  /** 成功时用整理结果替换选区。 */
+  apply: (texts: string[]) => void;
+}
+
+/** 智能润色编排（选中文本）：与智能粘贴同主干；失败/超长保留原文，只提示。 */
+export async function runSelectionPolish(options: SelectionPolishOptions): Promise<void> {
+  await polishText(options.text, options, options.apply, () => undefined);
 }
 
 /** 从 uiText 组装两区域各自的文案（done 模板按 kind 区分，{count} 占位替换）。 */
@@ -687,6 +784,18 @@ export function smartPasteMessages(
     done: (count) => template.replace("{count}", () => String(count)),
     fallback: ui.app.polishFallback,
     tooLarge: ui.app.polishTooLarge,
+  };
+}
+
+/** 选中文本润色的文案：done 沿用便签排版口径，失败/超长改为「保留原文」口径。 */
+export function selectionPolishMessages(
+  ui: { app: { polishWorking: string; polishNoteDone: string; polishKeepFallback: string; polishKeepTooLarge: string } },
+): SmartPasteMessages {
+  return {
+    working: ui.app.polishWorking,
+    done: (count) => ui.app.polishNoteDone.replace("{count}", () => String(count)),
+    fallback: ui.app.polishKeepFallback,
+    tooLarge: ui.app.polishKeepTooLarge,
   };
 }
 ```
@@ -728,7 +837,18 @@ git commit -m "feat: 智能粘贴编排器 runSmartPaste"
       expect(locale.app.polishNoteDone).toContain("{count}");
       expect(locale.app.polishFallback).toBeTruthy();
       expect(locale.app.polishTooLarge).toBeTruthy();
+      expect(locale.app.polishKeepFallback).toBeTruthy();
+      expect(locale.app.polishKeepTooLarge).toBeTruthy();
     }
+  });
+
+  it("智能润色（选中文本）文案中英齐全", () => {
+    expect(UI_TEXT.zh.common.smartPolish).toBe("智能润色");
+    expect(UI_TEXT.en.common.smartPolish).toBe("Smart polish");
+    expect(UI_TEXT.zh.app.polishKeepFallback).toContain("保留原文");
+    expect(UI_TEXT.en.app.polishKeepFallback).toBeTruthy();
+    expect(UI_TEXT.zh.app.polishKeepTooLarge).toContain("保留原文");
+    expect(UI_TEXT.en.app.polishKeepTooLarge).toBeTruthy();
   });
 ```
 
@@ -748,6 +868,7 @@ Expected: FAIL（`smartPaste` 等键不存在）。
 
 ```typescript
       smartPaste: "智能粘贴",
+      smartPolish: "智能润色",
 ```
 
 (b) zh `app`（`inboxImportNotice:` 一行之后）：
@@ -758,12 +879,15 @@ Expected: FAIL（`smartPaste` 等键不存在）。
       polishNoteDone: "已排版为 {count} 行",
       polishFallback: "AI 整理暂不可用，已粘贴原文",
       polishTooLarge: "内容超过 2000 字，已直接粘贴原文",
+      polishKeepFallback: "AI 整理暂不可用，已保留原文",
+      polishKeepTooLarge: "内容超过 2000 字，已保留原文",
 ```
 
 (c) en `common`（`paste: "Paste",` 之后）：
 
 ```typescript
       smartPaste: "Smart paste",
+      smartPolish: "Smart polish",
 ```
 
 (d) en `app`（`inboxImportNotice:` 一行之后）：
@@ -774,6 +898,8 @@ Expected: FAIL（`smartPaste` 等键不存在）。
       polishNoteDone: "Formatted into {count} lines",
       polishFallback: "AI polish is unavailable — pasted the original text",
       polishTooLarge: "Over 2,000 characters — pasted the original text",
+      polishKeepFallback: "AI polish is unavailable — the original text was kept",
+      polishKeepTooLarge: "Over 2,000 characters — the original text was kept",
 ```
 
 - [ ] **Step 4: 跑测试确认通过**
@@ -815,7 +941,7 @@ import { flushPromises, mount } from "@vue/test-utils";
 import type { PolishResult } from "../sync/polishClient";
 ```
 
-(b) `describe("TextPanel", ...)` 内追加四个用例：
+(b) `describe("TextPanel", ...)` 内追加七个用例（前四个：智能粘贴；后三个：选中文本智能润色）：
 
 ```typescript
   it("shows the smart paste action below paste when polish is available", async () => {
@@ -934,6 +1060,100 @@ import type { PolishResult } from "../sync/polishClient";
     expect(statuses[1][1]).toBe("AI 整理暂不可用，已粘贴原文");
     wrapper.unmount();
   });
+
+  it("shows the smart polish action when text is selected", async () => {
+    Object.assign(navigator, { clipboard: { readText: vi.fn().mockResolvedValue("文本"), writeText: vi.fn() } });
+    const wrapper = mount(TextPanel, {
+      props: {
+        titleId: "workspace-title",
+        title: "工作空间",
+        lines: [{ text: "杂乱内容", indent: 0 }],
+        polish: vi.fn(),
+      },
+      global: {
+        stubs: {
+          Dropdown: menuDropdownStub,
+          NDropdown: menuDropdownStub,
+        },
+      },
+    });
+    const textarea = wrapper.get("textarea").element as HTMLTextAreaElement;
+    textarea.setSelectionRange(0, textarea.value.length);
+    await wrapper.get("textarea").trigger("contextmenu");
+
+    expect(wrapper.findAll(".dropdown-option").map((option) => option.text())).toEqual(["复制", "粘贴", "智能粘贴", "智能润色", "Tips"]);
+    wrapper.unmount();
+  });
+
+  it("smart polish replaces the selection with polished lines", async () => {
+    Object.assign(navigator, { clipboard: { readText: vi.fn().mockResolvedValue("剪贴板内容"), writeText: vi.fn() } });
+    const polish = vi.fn(async (): Promise<PolishResult> => ({ items: ["1、要点A", "2、要点B"] }));
+    const wrapper = mount(TextPanel, {
+      props: {
+        titleId: "workspace-title",
+        title: "工作空间",
+        lines: [{ text: "杂乱内容", indent: 0 }],
+        polish,
+      },
+      global: {
+        stubs: {
+          Dropdown: menuDropdownStub,
+          NDropdown: menuDropdownStub,
+        },
+      },
+    });
+    const textarea = wrapper.get("textarea").element as HTMLTextAreaElement;
+
+    await wrapper.get("textarea").trigger("dblclick");
+    textarea.setSelectionRange(0, textarea.value.length);
+    await wrapper.get("textarea").trigger("contextmenu");
+    await wrapper.get('[data-key="smart-polish"]').trigger("click");
+    await flushPromises();
+
+    expect(polish).toHaveBeenCalledWith("note", "杂乱内容");
+    expect(textarea.value).toBe("1、要点A\n2、要点B");
+    expect(wrapper.emitted("update")?.at(-1)?.[0]).toEqual([
+      { text: "1、要点A", indent: 0 },
+      { text: "2、要点B", indent: 0 },
+    ]);
+    const statuses = wrapper.emitted("polishMessage") ?? [];
+    expect(statuses.map((call) => call[0])).toEqual(["working", "done"]);
+    expect(statuses[1][1]).toBe("已排版为 2 行");
+    wrapper.unmount();
+  });
+
+  it("smart polish keeps the original text when polish fails", async () => {
+    Object.assign(navigator, { clipboard: { readText: vi.fn().mockResolvedValue("剪贴板内容"), writeText: vi.fn() } });
+    const polish = vi.fn(async (): Promise<PolishResult> => null);
+    const wrapper = mount(TextPanel, {
+      props: {
+        titleId: "workspace-title",
+        title: "工作空间",
+        lines: [{ text: "杂乱内容", indent: 0 }],
+        polish,
+      },
+      global: {
+        stubs: {
+          Dropdown: menuDropdownStub,
+          NDropdown: menuDropdownStub,
+        },
+      },
+    });
+    const textarea = wrapper.get("textarea").element as HTMLTextAreaElement;
+
+    await wrapper.get("textarea").trigger("dblclick");
+    textarea.setSelectionRange(0, textarea.value.length);
+    await wrapper.get("textarea").trigger("contextmenu");
+    await wrapper.get('[data-key="smart-polish"]').trigger("click");
+    await flushPromises();
+
+    expect(textarea.value).toBe("杂乱内容");
+    expect(wrapper.emitted("update")).toBeUndefined();
+    const statuses = wrapper.emitted("polishMessage") ?? [];
+    expect(statuses.map((call) => call[0])).toEqual(["working", "fallback"]);
+    expect(statuses[1][1]).toBe("AI 整理暂不可用，已保留原文");
+    wrapper.unmount();
+  });
 ```
 
 - [ ] **Step 2: 跑测试确认失败**
@@ -958,7 +1178,7 @@ import { ClipboardOutline, ColorWandOutline, CopyOutline, HelpCircleOutline } fr
 
 ```typescript
 import type { PolishKind, PolishResult } from "../sync/polishClient";
-import { runSmartPaste, smartPasteMessages } from "../utils/smartPaste";
+import { runSelectionPolish, runSmartPaste, selectionPolishMessages, smartPasteMessages } from "../utils/smartPaste";
 import type { SmartPastePhase } from "../utils/smartPaste";
 ```
 
@@ -974,16 +1194,25 @@ import type { SmartPastePhase } from "../utils/smartPaste";
   polishMessage: [phase: SmartPastePhase, message: string, anchor: HTMLElement | undefined];
 ```
 
-(e) `menuOptions` 中「粘贴」行之后条件插入智能粘贴项：
+(e) `menuOptions` 中「粘贴」行之后条件插入智能粘贴项与智能润色项（后者仅当右键目标存在非空选中文本时出现）：
 
 ```typescript
     options.push({ label: uiText.value.common.paste, key: "paste", disabled: !menu.value?.canPaste, icon: renderIcon(ClipboardOutline) });
     if (props.polish) {
       options.push({ label: uiText.value.common.smartPaste, key: "smart-paste", disabled: !menu.value?.canPaste, icon: renderIcon(ColorWandOutline) });
     }
+    if (props.polish && menu.value?.selectionText) {
+      options.push({ label: uiText.value.common.smartPolish, key: "smart-polish", icon: renderIcon(ColorWandOutline) });
+    }
 ```
 
-(f) `handleMenuSelect` 中 `if (key === "paste" && target) {...}` 块之后加：
+配套：`menu` 状态的类型（`canPaste?: boolean;` 所在的接口/类型字面量）加 `selectionText?: string;`；`openTextMenu` 组装 menu 对象处（`canPaste: target ? canPasteText(target) : false,` 一行旁）加：
+
+```typescript
+    selectionText: target ? selectedTextareaText(target) : "",
+```
+
+(f) `handleMenuSelect` 中 `if (key === "paste" && target) {...}` 块之后加两个分支：
 
 ```typescript
   if (key === "smart-paste" && target) {
@@ -991,9 +1220,15 @@ import type { SmartPastePhase } from "../utils/smartPaste";
     await smartPasteFromClipboard(target);
     return;
   }
+  if (key === "smart-polish" && target) {
+    const selectionText = selectedTextareaText(target);
+    if (!selectionText.trim()) return;
+    await polishSelection(target, selectionText);
+    return;
+  }
 ```
 
-(g) `pasteTextFromClipboard` 函数之后加两个函数：
+(g) `pasteTextFromClipboard` 函数之后加四个函数：
 
 ```typescript
 /** 智能粘贴（便签区）：剪贴板全文交服务端排版润色，失败退化为原文粘贴。 */
@@ -1010,6 +1245,20 @@ async function smartPasteFromClipboard(target: HTMLTextAreaElement): Promise<voi
   });
 }
 
+/** 智能润色（便签区选中文本）：选中内容交服务端排版润色并替换选区，失败/超长保留原文。 */
+async function polishSelection(target: HTMLTextAreaElement, selectionText: string): Promise<void> {
+  if (!props.polish) return;
+  await runSelectionPolish({
+    text: selectionText,
+    kind: "note",
+    polish: props.polish,
+    messages: selectionPolishMessages(uiText.value),
+    anchor: target.closest<HTMLElement>(".text-panel") ?? undefined,
+    apply: (texts) => insertTextsAtSelection(target, texts),
+    notify: (phase, message, anchor) => emit("polishMessage", phase, message, anchor),
+  });
+}
+
 /** 整理结果按行拼接待入光标选区：与普通粘贴同语义（进入编辑态、编号归一化、上报 update）。 */
 function insertTextsAtSelection(target: HTMLTextAreaElement, texts: string[]): void {
   if (texts.length === 0) return;
@@ -1019,6 +1268,12 @@ function insertTextsAtSelection(target: HTMLTextAreaElement, texts: string[]): v
   target.setRangeText(texts.join("\n"), range.start, range.end, "end");
   normalizeTextareaText(target);
   emit("update", editorTextToLines(text.value));
+}
+
+/** 右键时刻目标编辑器里的选中文本（无选区返回空串）。 */
+function selectedTextareaText(target: HTMLTextAreaElement): string {
+  const range = getTextSelectionRange(target);
+  return range.start === range.end ? "" : target.value.slice(range.start, range.end);
 }
 ```
 
@@ -1412,7 +1667,7 @@ Development 一节 relay 描述句（`POST /inbox/<key_hash>/register` … 那�
 该段之后新增一段：
 
 ```
-桌面端智能粘贴：提醒事项/便签右键菜单「智能粘贴」把剪贴板全文发到 `/polish`（提醒区拆条成待办、便签区排版润色），结果直接插入、任何失败退化为原文粘贴并气泡提示。配对码为全局 `state.polishCode`（首次使用生成并注册，清空数据时注销）；编排器在 `src/utils/smartPaste.ts`，网络层在 `src/sync/polishClient.ts`，气泡经各面板 `polishMessage` 事件上浮到 App.vue 的 `showBubbleText`。
+桌面端智能粘贴：提醒事项/便签右键菜单「智能粘贴」把剪贴板全文发到 `/polish`（提醒区拆条成待办、便签区排版润色），结果直接插入、任何失败退化为原文粘贴并气泡提示；便签区选中文本后右键另有「智能润色」——对选中文本走同一润色流程并替换选区，失败/超长保留原文。配对码为全局 `state.polishCode`（首次使用生成并注册，清空数据时注销）；编排器在 `src/utils/smartPaste.ts`，网络层在 `src/sync/polishClient.ts`，气泡经各面板 `polishMessage` 事件上浮到 App.vue 的 `showBubbleText`。
 ```
 
 - [ ] **Step 3: 验证**
@@ -1473,4 +1728,5 @@ Expected: 成功。
 
 - **Spec coverage**：设计文档逐条对照——入口两区域菜单（Task 6/8）、✦ 图标 ColorWandOutline（6/8）、直接插入（6/8）、全文一次调用（Task 4 编排单次 polish）、区域决定 kind（6=note/8=todo）、GIF 气泡提示（Task 9 handlePolishStatus 两档时长）、失败退化普通粘贴（Task 4 兜底分支）、>2000 字符不请求（Task 4 限长预检 + Task 1 服务端 413 双保险）、服务端鉴权 404/410（Task 1）、fallback 标记非 5xx（Task 1）、无状态/CORS 零改动（Task 1 TestCors）、polishCode 全局生成/注册/清空注销（Task 3/9）、i18n 双语（Task 5）、测试矩阵（1–8 各任务）。未覆盖项：无。
 - **Placeholder scan**：无 TBD/TODO/「类似 Task N」；所有代码步骤含完整代码。
-- **Type consistency**：`PolishKind`/`PolishResult`（polishClient 定义，2/4/6/7/8/9 使用一致）；`POLISH_MAX_CHARS`（2 定义、4 使用）；`SmartPastePhase`/`SmartPasteMessages`/`SmartPasteOptions`（4 定义，6/7/8/9 使用一致）；i18n 键名与 `smartPasteMessages` 结构参数一一对应；事件名 `polishMessage`（emit 声明）/`@polish-message`（模板）配对正确。
+- **Type consistency**：`PolishKind`/`PolishResult`（polishClient 定义，2/4/6/7/8/9 使用一致）；`POLISH_MAX_CHARS`（2 定义、4 使用）；`SmartPastePhase`/`SmartPasteMessages`/`PolishFlowBase`/`SmartPasteOptions`/`SelectionPolishOptions`（4 定义，6/7/8/9 使用一致）；i18n 键名与 `smartPasteMessages`/`selectionPolishMessages` 结构参数一一对应；事件名 `polishMessage`（emit 声明）/`@polish-message`（模板）配对正确。
+- **执行中追加项复核（2026-08-30 用户反馈）**：便签区选中文本「智能润色」——Task 4（`runSelectionPolish` + `selectionPolishMessages`，失败/超长 `onFallback` 为 no-op 即保留原文）、Task 5（`common.smartPolish` + `app.polishKeepFallback`/`polishKeepTooLarge` 双语）、Task 6（菜单项仅在 `selectionText` 非空时渲染；替换选区复用 `insertTextsAtSelection`；3 个新用例）均已落位。提醒区新建语义经确认与计划一致，无改动。
