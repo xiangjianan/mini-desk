@@ -18,14 +18,6 @@ function subtle(): SubtleCrypto {
   return scope.subtle;
 }
 
-function toBase64(bytes: Uint8Array): string {
-  let binary = "";
-  for (let i = 0; i < bytes.length; i += 0x8000) {
-    binary += String.fromCharCode(...bytes.subarray(i, i + 0x8000));
-  }
-  return btoa(binary);
-}
-
 function fromBase64(value: string): Uint8Array<ArrayBuffer> {
   return binaryStringToBytes(atob(value));
 }
@@ -39,25 +31,6 @@ async function deriveAesKey(code: string, salt: Uint8Array<ArrayBuffer>): Promis
     false,
     ["encrypt", "decrypt"],
   );
-}
-
-/** 密文格式：base64(salt[16] || nonce[12] || AES-GCM ciphertext)。 */
-export async function encryptInboxPayload(code: string, plain: InboxPlainItem): Promise<string> {
-  // 缺 Web Crypto 时先给出模块自己的明确错误，而非 getRandomValues 的裸 TypeError。
-  void subtle();
-  const salt = crypto.getRandomValues(new Uint8Array(SALT_BYTES));
-  const nonce = crypto.getRandomValues(new Uint8Array(NONCE_BYTES));
-  const key = await deriveAesKey(code, salt);
-  const cipher = await subtle().encrypt(
-    { name: "AES-GCM", iv: nonce },
-    key,
-    encoder.encode(JSON.stringify(plain)),
-  );
-  const packed = new Uint8Array(SALT_BYTES + NONCE_BYTES + cipher.byteLength);
-  packed.set(salt, 0);
-  packed.set(nonce, SALT_BYTES);
-  packed.set(new Uint8Array(cipher), SALT_BYTES + NONCE_BYTES);
-  return toBase64(packed);
 }
 
 /** 校验已解析的明文并收敛为 InboxPlainItem：kind ∈ todo/note、text 为字符串（不要求非空）、createdAt 非数字记 0；结构非法返回 null。 */
