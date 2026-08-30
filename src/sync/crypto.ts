@@ -80,7 +80,7 @@ export async function decodeInboxPayload(code: string, payload: string): Promise
   return decryptInboxPayload(code, payload);
 }
 
-/** 服务端路由键：SHA-256(码) 的 hex。服务器持它也无法解密内容。 */
+/** 服务端路由键：SHA-256(码) 的 hex。仅用于路由与配对码有效性校验，不再提供保密性。 */
 export async function inboxKeyHash(code: string): Promise<string> {
   const digest = await subtle().digest("SHA-256", encoder.encode(code));
   return Array.from(new Uint8Array(digest)).map((byte) => byte.toString(16).padStart(2, "0")).join("");
