@@ -6,6 +6,7 @@
 明文路径（新手机页）：POST 校验后立刻 ack，后台线程调 DeepSeek 润色（llm.polish_capture），
 拆行入库；LLM 任何失败兜底存原文。密文路径（SW 缓存的旧手机页）：与原 Worker 协议一致，原样直存。
 自建服务器无次数限制：只做输入校验，不做限流/配额。
+智能粘贴：POST /polish/<key_hash> 同步调 LLM 整理剪贴板文本（无状态不入库，鉴权同注册制）。
 """
 import json
 import os
@@ -23,6 +24,7 @@ import llm
 MAX_CIPHER_BYTES = 4096
 MAX_PLAINTEXT_BYTES = 2048
 MAX_ID_LENGTH = 64
+MAX_POLISH_CHARS = 2000
 RETENTION_MS = 30 * 24 * 60 * 60 * 1000
 HEX_DIGITS = set("0123456789abcdef")
 NOT_JSON = object()  # payload 不是 JSON 的哨兵（区别于「是 JSON 但结构非法」）
@@ -179,6 +181,38 @@ def create_app() -> Flask:
         else:
             status = "active"
         return jsonify({"status": status})
+
+    @app.route("/polish/<key_hash>", methods=["POST", "OPTIONS"])
+    def polish_text(key_hash: str):
+        """智能粘贴：同步调 LLM 整理剪贴板文本，无状态、不入库。
+        鉴权同 inbox（unknown 404 / revoked 410）；LLM 失败以 200 + fallback 标记降级，不用 5xx 表达业务降级。"""
+        if request.method == "OPTIONS":
+            return Response(status=204)
+        if not is_valid_key_hash(key_hash):
+            return error_response(404, "not_found")
+        body = request.get_json(silent=True)
+        if not isinstance(body, dict):
+            return error_response(400, "bad_request")
+        kind = body.get("kind")
+        text = body.get("text")
+        if kind not in ("todo", "note") or not isinstance(text, str) or not text.strip():
+            return error_response(400, "bad_request")
+        if len(text) > MAX_POLISH_CHARS:
+            return error_response(413, "too_large")
+        with pymysql.connect(**database_kwargs()) as conn, conn.cursor() as cursor:
+            cursor.execute("SELECT revoked_at FROM pairing_keys WHERE key_hash = %s", (key_hash,))
+            key_row = cursor.fetchone()
+        if key_row is None:
+            return error_response(404, "unknown_code")
+        if key_row["revoked_at"] is not None:
+            return error_response(410, "revoked")
+        try:
+            items = llm.polish_capture(kind, text)
+        except Exception:
+            items = None  # polish_capture 自身不应抛出，双保险与 store_plain_items 同口径。
+        if not items:
+            return jsonify({"items": None, "fallback": True})
+        return jsonify({"items": items})
 
     def store_cipher_item(key_hash: str, item_id: str, payload: str) -> tuple:
         """旧密文路径：与改造前完全一致——状态检查 + 幂等插入 + 保留期清扫，同步完成。"""
