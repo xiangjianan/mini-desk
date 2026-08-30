@@ -1,6 +1,11 @@
 import { readClipboardText } from "./clipboard";
 import { POLISH_MAX_CHARS, type PolishKind, type PolishResult } from "../sync/polishClient";
 
+/**
+ * 本模块承载两条润色流程：智能粘贴（剪贴板全文）与智能润色（编辑器选中文本），共用 polishText 主干。
+ * 流程可重入；宿主负责过期判断（如中途切换工作区），insert/apply 闭包应捕获进入流程时的落位上下文。
+ */
+
 /** 气泡阶段：working=整理中（长驻，等结果替换），done=成功，fallback=降级（粘贴=插原文，润色=保留原文）。 */
 export type SmartPastePhase = "working" | "done" | "fallback";
 
@@ -14,7 +19,7 @@ export interface SmartPasteMessages {
 /** 两条润色流程（智能粘贴/智能润色）共享的选项基座。 */
 interface PolishFlowBase {
   kind: PolishKind;
-  /** 宿主注入的润色调用（内部完成配对码管理）；未注入时面板不渲染智能粘贴入口。 */
+  /** 宿主注入的润色调用（内部完成配对码管理）；必须不抛异常——任何失败返回 null 或 {fallback:true}。未注入时面板不渲染智能粘贴入口。 */
   polish: (kind: PolishKind, text: string) => Promise<PolishResult>;
   messages: SmartPasteMessages;
   /** 气泡锚点：进入流程时解析一次，贯穿 working→done/fallback。 */
@@ -33,13 +38,19 @@ export interface SmartPasteOptions extends PolishFlowBase {
 async function polishText(raw: string, base: PolishFlowBase, apply: (texts: string[]) => void, onFallback: () => void): Promise<void> {
   if (!raw.trim()) return;
   const { anchor, notify, messages } = base;
+  // raw.length 按 UTF-16 计，服务端按码点计：客户端略严，方向安全。
   if (raw.length > POLISH_MAX_CHARS) {
     onFallback();
     notify("fallback", messages.tooLarge, anchor);
     return;
   }
   notify("working", messages.working, anchor);
-  const result = await base.polish(base.kind, raw);
+  let result: PolishResult = null;
+  try {
+    result = await base.polish(base.kind, raw);
+  } catch {
+    result = null; // 宿主包装异常视同网络失败：任何异常都不击穿「最坏=普通粘贴」承诺。
+  }
   if (result !== null && "items" in result && result.items.length > 0) {
     apply(result.items);
     notify("done", messages.done(result.items.length), anchor);

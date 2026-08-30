@@ -18,14 +18,16 @@ const MESSAGES = smartPasteMessages(
 function setup(clipboard: string | undefined, result: PolishResult) {
   const notify = vi.fn();
   const insert = vi.fn();
+  const polish = vi.fn(async () => result);
   Object.assign(navigator, { clipboard: { readText: vi.fn(async () => clipboard) } });
   return {
     notify,
     insert,
+    polish,
     run: () =>
       runSmartPaste({
         kind: "todo",
-        polish: vi.fn(async () => result),
+        polish,
         messages: MESSAGES,
         insert,
         fallbackTexts: (raw) => raw.split("\n"),
@@ -47,14 +49,16 @@ const SELECTION_MESSAGES = selectionPolishMessages({
 function setupSelection(text: string, result: PolishResult) {
   const notify = vi.fn();
   const apply = vi.fn();
+  const polish = vi.fn(async () => result);
   return {
     notify,
     apply,
+    polish,
     run: () =>
       runSelectionPolish({
         text,
         kind: "note",
-        polish: vi.fn(async () => result),
+        polish,
         messages: SELECTION_MESSAGES,
         apply,
         anchor: undefined,
@@ -78,12 +82,24 @@ describe("runSmartPaste", () => {
   });
 
   it("成功：先 working 后 done，插入整理条目并带条数文案", async () => {
-    const { notify, insert, run } = setup("买牛奶、交电费", { items: ["买牛奶", "交电费"] });
+    const { notify, insert, polish, run } = setup("买牛奶、交电费", { items: ["买牛奶", "交电费"] });
     await run();
 
+    expect(polish).toHaveBeenCalledWith("todo", "买牛奶、交电费");
     expect(insert).toHaveBeenCalledWith(["买牛奶", "交电费"]);
     expect(notify.mock.calls.map((call) => call[0])).toEqual(["working", "done"]);
     expect(notify.mock.calls[1][1]).toBe("已整理为 2 条提醒");
+  });
+
+  it("恰好 2000 字符（限长边界）走服务端并成功落位", async () => {
+    const raw = "长".repeat(2000);
+    const { notify, insert, polish, run } = setup(raw, { items: ["整理结果"] });
+    await run();
+
+    expect(polish).toHaveBeenCalledTimes(1);
+    expect(polish).toHaveBeenCalledWith("todo", raw);
+    expect(insert).toHaveBeenCalledWith(["整理结果"]);
+    expect(notify.mock.calls.map((call) => call[0])).toEqual(["working", "done"]);
   });
 
   it("降级：LLM 失败与网络失败都插入原文拆分并提示", async () => {
@@ -98,9 +114,10 @@ describe("runSmartPaste", () => {
   });
 
   it("超长：不调服务端，直接原文落位 + 限长提示", async () => {
-    const { notify, insert, run } = setup("长".repeat(2001), { items: ["不该出现"] });
+    const { notify, insert, polish, run } = setup("长".repeat(2001), { items: ["不该出现"] });
     await run();
 
+    expect(polish).not.toHaveBeenCalled();
     expect(insert).toHaveBeenCalledWith(["长".repeat(2001)]);
     expect(notify).toHaveBeenCalledTimes(1);
     expect(notify.mock.calls[0]).toEqual(["fallback", "过长", undefined]);
@@ -116,9 +133,10 @@ describe("runSelectionPolish", () => {
   });
 
   it("成功：apply 收到整理条目并按行计数提示", async () => {
-    const { notify, apply, run } = setupSelection("杂乱段落", { items: ["1、要点A", "2、要点B"] });
+    const { notify, apply, polish, run } = setupSelection("杂乱段落", { items: ["1、要点A", "2、要点B"] });
     await run();
 
+    expect(polish).toHaveBeenCalledWith("note", "杂乱段落");
     expect(apply).toHaveBeenCalledWith(["1、要点A", "2、要点B"]);
     expect(notify.mock.calls.map((call) => call[0])).toEqual(["working", "done"]);
     expect(notify.mock.calls[1][1]).toBe("已排版为 2 行");
@@ -136,9 +154,10 @@ describe("runSelectionPolish", () => {
   });
 
   it("超长：不调服务端不改动，提示保留原文", async () => {
-    const { notify, apply, run } = setupSelection("长".repeat(2001), { items: ["不该出现"] });
+    const { notify, apply, polish, run } = setupSelection("长".repeat(2001), { items: ["不该出现"] });
     await run();
 
+    expect(polish).not.toHaveBeenCalled();
     expect(apply).not.toHaveBeenCalled();
     expect(notify).toHaveBeenCalledTimes(1);
     expect(notify.mock.calls[0]).toEqual(["fallback", "过长保留", undefined]);
