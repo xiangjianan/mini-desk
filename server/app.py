@@ -54,7 +54,7 @@ def load_payload_json(payload: str) -> object:
     """解析 payload 为 JSON 值；解析失败返回 NOT_JSON 哨兵。"""
     try:
         return json.loads(payload)
-    except (ValueError, TypeError):
+    except (ValueError, TypeError, RecursionError):
         return NOT_JSON
 
 
@@ -71,14 +71,14 @@ def encode_payload(kind: str, text: str, created_at: int) -> str:
 
 
 def store_plain_items(key_hash: str, item_id: str, kind: str, text: str) -> None:
-    """后台润色入库：LLM 失败兜底存原文一行（原 id）；成功则每条一行（id 加 #序号）。
+    """后台润色入库：LLM 失败或空结果兜底存原文一行（原 id）；非空则每条一行（id 加 #序号）。
     同基名旧行先清——手机端同 id 重试时以最后一次结果为准，避免兜底行与润色行并存。"""
     try:
         items = llm.polish_capture(kind, text)
     except Exception:
         items = None  # polish_capture 自身不应抛出，双保险：任何异常都走原文兜底。
     now = int(time.time() * 1000)
-    if items is None:
+    if not items:
         rows_to_insert = [(key_hash, item_id, encode_payload(kind, text, now), now)]
     else:
         rows_to_insert = [
@@ -208,13 +208,18 @@ def create_app() -> Flask:
             return error_response(400, "bad_request")
         if not isinstance(payload, str) or not payload:
             return error_response(400, "bad_request")
+        # 大小预检先于 JSON 解析（沿用旧密文公式，base64 每 4 字符约 3 字节）：
+        # 超大输入不付解析成本，深嵌套构造也不会把递归撑爆。
+        if len(payload) * 0.75 > MAX_CIPHER_BYTES:
+            return error_response(413, "payload_too_large")
         parsed = load_payload_json(payload)
         if parsed is NOT_JSON:
             # 旧密文直存（SW 缓存的旧手机页仍在发 base64 密文）：不润色，按原协议入队。
-            if len(payload) * 0.75 > MAX_CIPHER_BYTES:
-                return error_response(413, "payload_too_large")
             return store_cipher_item(key_hash, item_id, payload)
         if not is_plain_item(parsed):
+            return error_response(400, "bad_request")
+        if len(item_id) > MAX_ID_LENGTH - 3:
+            # 明文路径 id 会追加 #N 后缀（最多 3 字符），预留空间避免超出 VARCHAR(64) 落库失败静默丢条。
             return error_response(400, "bad_request")
         if len(payload) > MAX_PLAINTEXT_BYTES:
             return error_response(413, "payload_too_large")

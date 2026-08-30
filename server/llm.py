@@ -6,6 +6,7 @@
 """
 import json
 import os
+import re
 import sys
 from urllib.request import Request, urlopen
 
@@ -65,7 +66,7 @@ def _extract_items(data: object) -> list[str] | None:
         return None
     if not isinstance(items, list):
         return None
-    cleaned = [item.strip().replace("\n", " ").replace("\r", " ")[:MAX_ITEM_CHARS] for item in items if isinstance(item, str) and item.strip()]
+    cleaned = [re.sub(r"\s+", " ", item).strip()[:MAX_ITEM_CHARS] for item in items if isinstance(item, str) and item.strip()]
     if not cleaned:
         return None
     return cleaned[:MAX_ITEMS]

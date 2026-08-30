@@ -1,6 +1,7 @@
 """明文速记流水线：POST 秒回 + 后台润色拆行入库 + 兜底存原文 + 同 id 幂等 + 旧密文直存兼容。"""
 
 import json
+import threading
 import time
 
 import pytest
@@ -66,6 +67,28 @@ class TestPolishedStore:
         post_plain(client, "n1", "note", "一段想法")
         assert [json.loads(i["payload"])["text"] for i in rows(client)] == ["1、要点A", "2、要点B"]
 
+    def test_real_thread_path_delivers_after_polish(self, client, polish, monkeypatch):
+        # 还原为真实后台线程语义：ack 先行，润色完成后条目才可见。
+        monkeypatch.setattr(app_module, "spawn_worker", lambda target: threading.Thread(target=target, daemon=True).start())
+        monkeypatch.setattr(
+            llm_module,
+            "polish_capture",
+            lambda kind, text: (time.sleep(0.3), ["慢润色结果"])[1],
+        )
+
+        assert post_plain(client, "slow", "todo", "慢条目").status_code == 200
+        assert rows(client) == []  # 润色完成前拉取为空
+
+        deadline = time.time() + 5
+        while time.time() < deadline:
+            items = rows(client)
+            if items:
+                assert [item["id"] for item in items] == ["slow#0"]
+                assert json.loads(items[0]["payload"])["text"] == "慢润色结果"
+                return
+            time.sleep(0.05)
+        pytest.fail("后台线程未在 5s 内完成入库")
+
     def test_read_once_still_applies(self, client, polish):
         post_plain(client, "i1", "todo", "x")
         assert len(rows(client)) == 2
@@ -80,6 +103,14 @@ class TestFallback:
         items = rows(client)
         assert [item["id"] for item in items] == ["i1"]
         assert json.loads(items[0]["payload"])["text"] == "原文内容"
+
+    def test_empty_polish_result_stores_raw_text(self, client, polish):
+        polish.result = []
+        post_plain(client, "i1", "todo", "原文")
+
+        items = rows(client)
+        assert [item["id"] for item in items] == ["i1"]
+        assert json.loads(items[0]["payload"])["text"] == "原文"
 
 
 class TestIdempotency:
@@ -99,11 +130,34 @@ class TestSyncValidation:
             assert response.status_code == 400, payload
         assert polish.calls == []
 
+    def test_plain_id_longer_than_61_rejected_400(self, client, polish):
+        payload = json.dumps({"kind": "todo", "text": "x"}, ensure_ascii=False)
+        response = client.post(
+            f"/inbox/{KEY}", json={"id": "i" * 62, "payload": payload}, headers={"Origin": ORIGIN}
+        )
+        assert response.status_code == 400
+        assert polish.calls == []
+
     def test_plain_payload_too_large_413(self, client, polish):
         payload = json.dumps({"kind": "todo", "text": "长" * 2100}, ensure_ascii=False)
         response = client.post(f"/inbox/{KEY}", json={"id": "i1", "payload": payload}, headers={"Origin": ORIGIN})
         assert response.status_code == 413
         assert polish.calls == []
+
+    def test_oversized_payload_413_before_parse(self, client, polish):
+        response = client.post(
+            f"/inbox/{KEY}", json={"id": "i1", "payload": "[" * 200000}, headers={"Origin": ORIGIN}
+        )
+        assert response.status_code == 413
+
+    def test_deeply_nested_short_payload_stored_as_legacy(self, client, polish):
+        # 深嵌套短串：解析抛 RecursionError → 按非 JSON 走旧密文直存，不 500。
+        response = client.post(
+            f"/inbox/{KEY}", json={"id": "i1", "payload": "[" * 1100}, headers={"Origin": ORIGIN}
+        )
+        assert response.status_code == 200
+        assert polish.calls == []
+        assert rows(client)[0]["payload"] == "[" * 1100
 
     def test_unknown_code_404(self, client, polish):
         fresh = "c" * 64
