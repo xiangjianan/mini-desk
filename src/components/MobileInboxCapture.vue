@@ -165,7 +165,7 @@ async function send(kind: CaptureKind): Promise<void> {
           return;
         }
       } catch {
-        // 哈希异常与网络异常同等对待。
+        // postInboxItem 约定不抛异常；此处兜底意外抛出，按当前行失败，避免外层 failAt(0) 把已发送行放回重发。
         failAt(index, "network");
         return;
       }

@@ -1,6 +1,7 @@
 import { beforeEach, describe, expect, it, vi } from "vitest";
 import { mount } from "@vue/test-utils";
 import MobileInboxCapture from "../components/MobileInboxCapture.vue";
+import type { InboxPlainItem } from "../sync/crypto";
 import type { InboxPostResult } from "../sync/inboxClient";
 
 const CODE = "AB2CDE4FGHJK";
@@ -30,7 +31,7 @@ function draftValue(wrapper: ReturnType<typeof mountCapture>): string {
   return (wrapper.get('[data-testid="mobile-inbox-text"]').element as HTMLTextAreaElement).value;
 }
 
-/** 发送链路含真实 PBKDF2（百毫秒级），轮询断言而非一次性 await。 */
+/** 发送为异步链路（keyHash + 逐条 post），状态在后续微任务落地：轮询断言而非一次性 await。 */
 async function until(assertion: () => void, timeout = 4000): Promise<void> {
   await vi.waitFor(assertion, { timeout, interval: 20 });
 }
@@ -44,8 +45,8 @@ function lastPayload(): string {
 }
 
 /** 明文 payload 回验：服务端润色前的新格式行。 */
-function plainPayload(payload: string): { kind: string; text: string; createdAt: number } {
-  return JSON.parse(payload) as { kind: string; text: string; createdAt: number };
+function plainPayload(payload: string): InboxPlainItem {
+  return JSON.parse(payload) as InboxPlainItem;
 }
 
 /** jsdom 默认无 navigator.clipboard；一键粘贴测试需注入 readText 模拟。 */
@@ -155,7 +156,7 @@ describe("MobileInboxCapture", () => {
 
     await until(() => expect(postMock).toHaveBeenCalledTimes(1));
     const plain = plainPayload(lastPayload());
-    expect(plain?.text.length).toBe(500);
+    expect(plain.text.length).toBe(500);
   });
 
   it("发送中不重复提交", async () => {
@@ -178,8 +179,8 @@ describe("MobileInboxCapture", () => {
 
     await until(() => expect(postMock).toHaveBeenCalledTimes(3));
     const plains = postMock.mock.calls.map(([, , payload]) => plainPayload(payload));
-    expect(plains.map((plain) => plain?.text)).toEqual(["买牛奶", "买鸡蛋", "取快递"]);
-    expect(plains.every((plain) => plain?.kind === "todo")).toBe(true);
+    expect(plains.map((plain) => plain.text)).toEqual(["买牛奶", "买鸡蛋", "取快递"]);
+    expect(plains.every((plain) => plain.kind === "todo")).toBe(true);
     await until(() => expect(wrapper.get(".mobile-inbox-status").text()).toContain("已发送 3 条"));
     expect(draftValue(wrapper)).toBe("");
   });
@@ -214,8 +215,8 @@ describe("MobileInboxCapture", () => {
 
     await until(() => expect(postMock).toHaveBeenCalledTimes(2));
     const plains = postMock.mock.calls.map(([, , payload]) => plainPayload(payload));
-    expect(plains.map((plain) => plain?.text)).toEqual(["想法一", "想法二"]);
-    expect(plains.every((plain) => plain?.kind === "note")).toBe(true);
+    expect(plains.map((plain) => plain.text)).toEqual(["想法一", "想法二"]);
+    expect(plains.every((plain) => plain.kind === "note")).toBe(true);
   });
 
   it("失败原因映射：code_revoked 提示配对码已失效", async () => {
