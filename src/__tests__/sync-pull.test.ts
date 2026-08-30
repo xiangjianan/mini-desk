@@ -7,7 +7,7 @@ vi.mock("../sync/inboxClient", () => ({
 }));
 vi.mock("../sync/crypto", () => ({
   inboxKeyHash: vi.fn(async (code: string) => `hash-of-${code}`),
-  decryptInboxPayload: vi.fn(async (code: string, payload: string) => {
+  decodeInboxPayload: vi.fn(async (code: string, payload: string) => {
     if (payload === "BAD") return null;
     const [kind, text, createdAt] = payload.split("|");
     return { kind, text, createdAt: Number(createdAt) };
@@ -16,10 +16,10 @@ vi.mock("../sync/crypto", () => ({
 
 import { fetchInboxItems } from "../sync/inboxClient";
 import { applyInboxItems, pullAllInboxes } from "../sync/pull";
-import { decryptInboxPayload, type InboxPlainItem } from "../sync/crypto";
+import { decodeInboxPayload, type InboxPlainItem } from "../sync/crypto";
 
 const fetchMock = vi.mocked(fetchInboxItems);
-const decryptMock = vi.mocked(decryptInboxPayload);
+const decryptMock = vi.mocked(decodeInboxPayload);
 
 const THREE_SPACES: WorkspaceSpace[] = [
   { id: "workspace", title: "便签", lines: [{ text: "w1", indent: 0 }] },

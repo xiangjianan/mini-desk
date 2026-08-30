@@ -2,7 +2,7 @@ import { createId } from "../state/storage/shared";
 import { projectLegacySpaceLines } from "../state/workspaces";
 import type { LineItem, TodoListId, WorkspaceData } from "../types";
 import { INBOX_PLAINTEXT_MAX_CHARS } from "./config";
-import { decryptInboxPayload, inboxKeyHash, type InboxPlainItem } from "./crypto";
+import { decodeInboxPayload, inboxKeyHash, type InboxPlainItem } from "./crypto";
 import { fetchInboxItems } from "./inboxClient";
 
 export interface InboxPullReport {
@@ -10,7 +10,7 @@ export interface InboxPullReport {
   imported: number;
 }
 
-/** 待重放补丁：plains 为解密过滤后的新条目，lastSeenAt 为推进后的水位线（纯前进可为空 plains）。 */
+/** 待重放补丁：plains 为解码过滤后的新条目，lastSeenAt 为推进后的水位线（纯前进可为空 plains）。 */
 export interface InboxPullPatch {
   workspaceId: string;
   plains: InboxPlainItem[];
@@ -70,15 +70,15 @@ function resolveTodoListId(workspace: WorkspaceData, preferred: TodoListId): Tod
   return workspace.todoLists.some((list) => list.id === preferred) ? preferred : workspace.todoLists[0]?.id ?? preferred;
 }
 
-/** 遍历所有配置了 inbox 的工作区：拉取 → 解密 → 水位线过滤 → 产出待重放补丁。失败静默，不抛异常。
+/** 遍历所有配置了 inbox 的工作区：拉取 → 解码 → 水位线过滤 → 产出待重放补丁。失败静默，不抛异常。
  *  环境级异常（Web Crypto 缺失导致 crypto 抛出）会让该工作区的 promise 被拒，
  *  allSettled 将其视为未变更——水位线不推进，队列留待环境恢复，避免静默丢条目。
  *  非单飞：四个触发点（启动/聚焦/定时/Ctrl+S）可能并发调用，调用方必须用 in-flight 守卫串行化，
  *  否则并发批次会以新 ID 重复导入同一条目。
- *  契约：本函数不做合并（解密仍在内部串行），返回的补丁由调用方在 await 后的同一同步块内
+ *  契约：本函数不做合并（解码仍在内部串行），返回的补丁由调用方在 await 后的同一同步块内
  *  对当前活对象重放（applyInboxItems）——读-合-写之间零宏任务间隙，用户编辑无法插入。 */
 export async function pullAllInboxes(workspaces: WorkspaceData[]): Promise<InboxPullResult> {
-  // 单工作区内条目解密保持串行：每次解密是一次 600k 迭代的 PBKDF2（约 60-80ms），并行会放大 CPU 峰值。
+  // 单工作区内条目解码保持串行：每次解密是一次 600k 迭代的 PBKDF2（约 60-80ms），并行会放大 CPU 峰值。
   // 工作区之间互相独立，用 allSettled 并发互不拖累。
   const results = await Promise.allSettled(
     workspaces.map(async (workspace): Promise<InboxPullPatch | null> => {
@@ -92,7 +92,7 @@ export async function pullAllInboxes(workspaces: WorkspaceData[]): Promise<Inbox
       const plains: InboxPlainItem[] = [];
       for (const entry of stored) {
         if (entry.createdAt <= inbox.lastSeenAt) continue;
-        const plain = await decryptInboxPayload(inbox.code, entry.payload);
+        const plain = await decodeInboxPayload(inbox.code, entry.payload);
         if (plain) plains.push(plain);
         else console.warn("[inbox] 跳过无法解密的条目", { workspaceId: workspace.id, itemId: entry.id });
       }
