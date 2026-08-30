@@ -3,7 +3,7 @@ import { computed, h, nextTick, onMounted, onUnmounted, ref, watch } from "vue";
 import type { Component, VNode } from "vue";
 import { NDropdown, NIcon, NScrollbar } from "naive-ui";
 import type { DropdownOption } from "naive-ui";
-import { ClipboardOutline, CopyOutline, HelpCircleOutline } from "@vicons/ionicons5";
+import { ClipboardOutline, ColorWandOutline, CopyOutline, HelpCircleOutline } from "@vicons/ionicons5";
 import type { LineItem } from "../types";
 import { GUIDE_MENU_OPTION } from "../state/defaults";
 import { getUiText } from "../state/i18n";
@@ -23,6 +23,9 @@ import { copySelection, getSelectionRange, hasSelection, pasteIntoField, hasAsyn
 import { renderIcon } from "../utils/dropdownIcons";
 import { clampCaret, setStickySelection } from "../utils/caret";
 import { isImeComposing } from "../utils/ime";
+import type { PolishKind, PolishResult } from "../sync/polishClient";
+import { runSelectionPolish, runSmartPaste, selectionPolishMessages, smartPasteMessages } from "../utils/smartPaste";
+import type { SmartPastePhase } from "../utils/smartPaste";
 import EditableTitle from "./EditableTitle.vue";
 
 const props = withDefaults(defineProps<{
@@ -33,6 +36,7 @@ const props = withDefaults(defineProps<{
   split?: boolean;
   hideHeader?: boolean;
   language?: AppLanguage;
+  polish?: (kind: PolishKind, text: string) => Promise<PolishResult>;
 }>(), {
   language: "zh",
 });
@@ -43,6 +47,7 @@ const emit = defineEmits<{
   focus: [element: HTMLElement];
   blur: [element: HTMLElement];
   guide: [element: HTMLElement, immediate?: boolean];
+  polishMessage: [phase: SmartPastePhase, message: string, anchor: HTMLElement | undefined];
 }>();
 
 const isDragHover = ref(false);
@@ -62,6 +67,7 @@ const menu = ref<{
   anchor: HTMLElement;
   target?: HTMLTextAreaElement;
   canPaste?: boolean;
+  selectionText?: string;
 } | null>(null);
 const uiText = computed(() => getUiText(props.language));
 const guideMenuOption = computed<DropdownOption>(() => ({
@@ -84,6 +90,12 @@ const menuOptions = computed<DropdownOption[]>(() => {
   if (target) {
     options.push({ label: uiText.value.common.copy, key: "copy", disabled: !canCopyTextSelection(target), icon: renderIcon(CopyOutline) });
     options.push({ label: uiText.value.common.paste, key: "paste", disabled: !menu.value?.canPaste, icon: renderIcon(ClipboardOutline) });
+    if (props.polish) {
+      options.push({ label: uiText.value.common.smartPaste, key: "smart-paste", disabled: !menu.value?.canPaste, icon: renderIcon(ColorWandOutline) });
+    }
+    if (props.polish && menu.value?.selectionText) {
+      options.push({ label: uiText.value.common.smartPolish, key: "smart-polish", icon: renderIcon(ColorWandOutline) });
+    }
   }
   options.push({ ...guideMenuOption.value, icon: renderIcon(HelpCircleOutline) });
   return options;
@@ -404,6 +416,7 @@ function openTextMenu(event: MouseEvent): void {
     anchor: event.currentTarget as HTMLElement,
     target,
     canPaste: target ? canPasteText(target) : false,
+    selectionText: target ? selectedTextareaText(target) : "",
   };
 }
 
@@ -438,6 +451,17 @@ async function handleMenuSelect(key: string): Promise<void> {
   if (key === "paste" && target) {
     if (!canPaste) return;
     await pasteTextFromClipboard(target);
+    return;
+  }
+  if (key === "smart-paste" && target) {
+    if (!canPaste) return;
+    await smartPasteFromClipboard(target);
+    return;
+  }
+  if (key === "smart-polish" && target) {
+    const selectionText = selectedTextareaText(target);
+    if (!selectionText.trim()) return;
+    await polishSelection(target, selectionText);
     return;
   }
   if (key === "guide" && anchor) emit("guide", anchor, true);
@@ -479,6 +503,60 @@ async function pasteTextFromClipboard(target: HTMLTextAreaElement): Promise<void
   if (!pasted) return;
   normalizeTextareaText(target);
   emit("update", editorTextToLines(text.value));
+}
+
+/** 智能粘贴（便签区）：剪贴板全文交服务端排版润色，失败退化为原文粘贴。 */
+async function smartPasteFromClipboard(target: HTMLTextAreaElement): Promise<void> {
+  if (!props.polish) return;
+  await runSmartPaste({
+    kind: "note",
+    polish: props.polish,
+    messages: smartPasteMessages(uiText.value, "note"),
+    anchor: target.closest<HTMLElement>(".text-panel") ?? undefined,
+    insert: (texts) => insertTextsAtSelection(target, texts),
+    fallbackTexts: (raw) => [raw],
+    notify: (phase, message, anchor) => emit("polishMessage", phase, message, anchor),
+  });
+}
+
+/** 智能润色（便签区选中文本）：选中内容交服务端排版润色并替换选区，失败/超长保留原文。 */
+async function polishSelection(target: HTMLTextAreaElement, selectionText: string): Promise<void> {
+  if (!props.polish) return;
+  await runSelectionPolish({
+    text: selectionText,
+    kind: "note",
+    polish: props.polish,
+    messages: selectionPolishMessages(uiText.value),
+    anchor: target.closest<HTMLElement>(".text-panel") ?? undefined,
+    apply: (texts) => insertTextsAtSelection(target, texts),
+    notify: (phase, message, anchor) => emit("polishMessage", phase, message, anchor),
+  });
+}
+
+/** 整理结果按行拼接待入光标选区：进入编辑态、行边界断行、编号归一化、上报 update，与普通粘贴同语义。 */
+function insertTextsAtSelection(target: HTMLTextAreaElement, texts: string[]): void {
+  if (texts.length === 0) return;
+  const range = getTextSelectionRange(target);
+  if (!editing.value || target.readOnly) startEditingFromTextarea(target);
+  target.setSelectionRange(range.start, range.end);
+  target.setRangeText(textBlockForRange(target.value, range, texts.join("\n")), range.start, range.end, "end");
+  normalizeTextareaText(target);
+  emit("update", editorTextToLines(text.value));
+}
+
+/** 整理结果是整行条目：插入点落在既有行中间时在块前后补换行，避免把整理结果拼进行内。 */
+function textBlockForRange(value: string, range: { start: number; end: number }, block: string): string {
+  const before = value.slice(0, range.start);
+  const after = value.slice(range.end);
+  const leadBreak = before.length > 0 && !before.endsWith("\n") ? "\n" : "";
+  const tailBreak = after.length > 0 && !after.startsWith("\n") ? "\n" : "";
+  return `${leadBreak}${block}${tailBreak}`;
+}
+
+/** 右键时刻目标编辑器里的选中文本（无选区返回空串）。 */
+function selectedTextareaText(target: HTMLTextAreaElement): string {
+  const range = getTextSelectionRange(target);
+  return range.start === range.end ? "" : target.value.slice(range.start, range.end);
 }
 
 function hasAsyncClipboard(): boolean {

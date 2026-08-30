@@ -1,8 +1,9 @@
-import { mount } from "@vue/test-utils";
+import { flushPromises, mount } from "@vue/test-utils";
 import { describe, expect, it, vi } from "vitest";
 import { readFileSync } from "node:fs";
 import { resolve } from "node:path";
 import TextPanel from "../components/TextPanel.vue";
+import type { PolishResult } from "../sync/polishClient";
 import { menuDropdownStub } from "./helpers/menu-dropdown-stub";
 
 const tooltipStub = {
@@ -1362,5 +1363,216 @@ describe("TextPanel", () => {
     await wrapper.get(".text-editor-frame").element.dispatchEvent(event);
 
     expect(wrapper.emitted("update")).toBeUndefined();
+  });
+
+  it("shows the smart paste action below paste when polish is available", async () => {
+    Object.assign(navigator, { clipboard: { readText: vi.fn().mockResolvedValue("文本"), writeText: vi.fn() } });
+    const wrapper = mount(TextPanel, {
+      props: {
+        titleId: "workspace-title",
+        title: "工作空间",
+        lines: [{ text: "root", indent: 0 }],
+        polish: vi.fn(),
+      },
+      global: {
+        stubs: {
+          Dropdown: menuDropdownStub,
+          NDropdown: menuDropdownStub,
+        },
+      },
+    });
+    const textarea = wrapper.get("textarea").element as HTMLTextAreaElement;
+    textarea.setSelectionRange(0, 0);
+    await wrapper.get("textarea").trigger("contextmenu");
+
+    expect(wrapper.findAll(".dropdown-option").map((option) => option.text())).toEqual(["复制", "粘贴", "智能粘贴", "Tips"]);
+    wrapper.unmount();
+  });
+
+  it("hides the smart paste action without a polish handler", async () => {
+    Object.assign(navigator, { clipboard: { readText: vi.fn().mockResolvedValue("文本"), writeText: vi.fn() } });
+    const wrapper = mount(TextPanel, {
+      props: {
+        titleId: "workspace-title",
+        title: "工作空间",
+        lines: [{ text: "root", indent: 0 }],
+      },
+      global: {
+        stubs: {
+          Dropdown: menuDropdownStub,
+          NDropdown: menuDropdownStub,
+        },
+      },
+    });
+    const textarea = wrapper.get("textarea").element as HTMLTextAreaElement;
+    textarea.setSelectionRange(0, 0);
+    await wrapper.get("textarea").trigger("contextmenu");
+
+    expect(wrapper.findAll(".dropdown-option").map((option) => option.text())).toEqual(["复制", "粘贴", "Tips"]);
+    wrapper.unmount();
+  });
+
+  it("smart paste inserts polished lines at the caret and bubbles working then done", async () => {
+    Object.assign(navigator, { clipboard: { readText: vi.fn().mockResolvedValue("杂乱文本"), writeText: vi.fn() } });
+    const polish = vi.fn(async (): Promise<PolishResult> => ({ items: ["1、要点A", "2、要点B"] }));
+    const wrapper = mount(TextPanel, {
+      props: {
+        titleId: "workspace-title",
+        title: "工作空间",
+        lines: [{ text: "root", indent: 0 }],
+        polish,
+      },
+      global: {
+        stubs: {
+          Dropdown: menuDropdownStub,
+          NDropdown: menuDropdownStub,
+        },
+      },
+    });
+    const textarea = wrapper.get("textarea").element as HTMLTextAreaElement;
+
+    await wrapper.get("textarea").trigger("dblclick");
+    textarea.setSelectionRange(textarea.value.length, textarea.value.length);
+    await wrapper.get("textarea").trigger("contextmenu");
+    await wrapper.get('[data-key="smart-paste"]').trigger("click");
+    await flushPromises();
+
+    expect(polish).toHaveBeenCalledWith("note", "杂乱文本");
+    expect(textarea.value).toBe("root\n1、要点A\n2、要点B");
+    expect(wrapper.emitted("update")?.at(-1)?.[0]).toEqual([
+      { text: "root", indent: 0 },
+      { text: "1、要点A", indent: 0 },
+      { text: "2、要点B", indent: 0 },
+    ]);
+    const statuses = wrapper.emitted("polishMessage") ?? [];
+    expect(statuses.map((call) => call[0])).toEqual(["working", "done"]);
+    expect(statuses[1][1]).toBe("已排版为 2 行");
+    wrapper.unmount();
+  });
+
+  it("smart paste falls back to raw text when polish fails", async () => {
+    Object.assign(navigator, { clipboard: { readText: vi.fn().mockResolvedValue("原文内容"), writeText: vi.fn() } });
+    const polish = vi.fn(async (): Promise<PolishResult> => null);
+    const wrapper = mount(TextPanel, {
+      props: {
+        titleId: "workspace-title",
+        title: "工作空间",
+        lines: [{ text: "root", indent: 0 }],
+        polish,
+      },
+      global: {
+        stubs: {
+          Dropdown: menuDropdownStub,
+          NDropdown: menuDropdownStub,
+        },
+      },
+    });
+    const textarea = wrapper.get("textarea").element as HTMLTextAreaElement;
+
+    await wrapper.get("textarea").trigger("dblclick");
+    textarea.setSelectionRange(textarea.value.length, textarea.value.length);
+    await wrapper.get("textarea").trigger("contextmenu");
+    await wrapper.get('[data-key="smart-paste"]').trigger("click");
+    await flushPromises();
+
+    expect(textarea.value).toBe("root\n原文内容");
+    const statuses = wrapper.emitted("polishMessage") ?? [];
+    expect(statuses.map((call) => call[0])).toEqual(["working", "fallback"]);
+    expect(statuses[1][1]).toBe("AI 整理暂不可用，已粘贴原文");
+    wrapper.unmount();
+  });
+
+  it("shows the smart polish action when text is selected", async () => {
+    Object.assign(navigator, { clipboard: { readText: vi.fn().mockResolvedValue("文本"), writeText: vi.fn() } });
+    const wrapper = mount(TextPanel, {
+      props: {
+        titleId: "workspace-title",
+        title: "工作空间",
+        lines: [{ text: "杂乱内容", indent: 0 }],
+        polish: vi.fn(),
+      },
+      global: {
+        stubs: {
+          Dropdown: menuDropdownStub,
+          NDropdown: menuDropdownStub,
+        },
+      },
+    });
+    const textarea = wrapper.get("textarea").element as HTMLTextAreaElement;
+    textarea.setSelectionRange(0, textarea.value.length);
+    await wrapper.get("textarea").trigger("contextmenu");
+
+    expect(wrapper.findAll(".dropdown-option").map((option) => option.text())).toEqual(["复制", "粘贴", "智能粘贴", "智能润色", "Tips"]);
+    wrapper.unmount();
+  });
+
+  it("smart polish replaces the selection with polished lines", async () => {
+    Object.assign(navigator, { clipboard: { readText: vi.fn().mockResolvedValue("剪贴板内容"), writeText: vi.fn() } });
+    const polish = vi.fn(async (): Promise<PolishResult> => ({ items: ["1、要点A", "2、要点B"] }));
+    const wrapper = mount(TextPanel, {
+      props: {
+        titleId: "workspace-title",
+        title: "工作空间",
+        lines: [{ text: "杂乱内容", indent: 0 }],
+        polish,
+      },
+      global: {
+        stubs: {
+          Dropdown: menuDropdownStub,
+          NDropdown: menuDropdownStub,
+        },
+      },
+    });
+    const textarea = wrapper.get("textarea").element as HTMLTextAreaElement;
+
+    await wrapper.get("textarea").trigger("dblclick");
+    textarea.setSelectionRange(0, textarea.value.length);
+    await wrapper.get("textarea").trigger("contextmenu");
+    await wrapper.get('[data-key="smart-polish"]').trigger("click");
+    await flushPromises();
+
+    expect(polish).toHaveBeenCalledWith("note", "杂乱内容");
+    expect(textarea.value).toBe("1、要点A\n2、要点B");
+    expect(wrapper.emitted("update")?.at(-1)?.[0]).toEqual([
+      { text: "1、要点A", indent: 0 },
+      { text: "2、要点B", indent: 0 },
+    ]);
+    const statuses = wrapper.emitted("polishMessage") ?? [];
+    expect(statuses.map((call) => call[0])).toEqual(["working", "done"]);
+    expect(statuses[1][1]).toBe("已排版为 2 行");
+    wrapper.unmount();
+  });
+
+  it("smart polish keeps the original text when polish fails", async () => {
+    Object.assign(navigator, { clipboard: { readText: vi.fn().mockResolvedValue("剪贴板内容"), writeText: vi.fn() } });
+    const polish = vi.fn(async (): Promise<PolishResult> => null);
+    const wrapper = mount(TextPanel, {
+      props: {
+        titleId: "workspace-title",
+        title: "工作空间",
+        lines: [{ text: "杂乱内容", indent: 0 }],
+        polish,
+      },
+      global: {
+        stubs: {
+          Dropdown: menuDropdownStub,
+          NDropdown: menuDropdownStub,
+        },
+      },
+    });
+    const textarea = wrapper.get("textarea").element as HTMLTextAreaElement;
+
+    await wrapper.get("textarea").trigger("dblclick");
+    textarea.setSelectionRange(0, textarea.value.length);
+    await wrapper.get("textarea").trigger("contextmenu");
+    await wrapper.get('[data-key="smart-polish"]').trigger("click");
+    await flushPromises();
+
+    expect(textarea.value).toBe("杂乱内容");
+    expect(wrapper.emitted("update")).toBeUndefined();
+    const statuses = wrapper.emitted("polishMessage") ?? [];
+    expect(statuses.map((call) => call[0])).toEqual(["working", "fallback"]);
+    expect(statuses[1][1]).toBe("AI 整理暂不可用，已保留原文");
+    wrapper.unmount();
   });
 });
