@@ -1253,12 +1253,19 @@ async function handleMenuSelect(key: string): Promise<void> {
   if (key === "smart-paste" && !id) {
     closeMenu();
     if (!props.polish) return;
+    // 中途切换工作区（或列表数组被结构性替换）：丢弃迟到结果，避免写入其他空间的同名默认列表。
+    // 捕获 props.todoLists（即 App 的 displayTodoLists）：todo 编辑只动 todos 子树，引用不变；
+    // 切换空间/增删列表会换新数组。同空间并发 todo 追加是次序无关的，刻意不做文本基线校验。
+    const landingLists = props.todoLists;
     await runSmartPaste({
       kind: "todo",
       polish: props.polish,
       messages: smartPasteMessages(uiText.value, "todo"),
       anchor: getTodoSectionAnchor(period),
-      insert: (texts) => emit("createFromText", period, texts),
+      insert: (texts) => {
+        if (props.todoLists !== landingLists) return;
+        emit("createFromText", period, texts);
+      },
       fallbackTexts: splitDroppedTodoText,
       notify: (phase, message, anchor) => emit("polishMessage", phase, message, anchor),
     });

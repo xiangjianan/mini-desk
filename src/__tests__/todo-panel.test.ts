@@ -4320,6 +4320,48 @@ describe("TodoPanel 编辑快捷键", () => {
     expect(statuses.map((call) => call[0])).toEqual(["working", "fallback"]);
     wrapper.unmount();
   });
+
+  it("智能粘贴途中切换工作区：丢弃迟到结果，不落入新空间的同名列表", async () => {
+    Object.assign(navigator, { clipboard: { readText: vi.fn().mockResolvedValue("买牛奶、交电费"), writeText: vi.fn() } });
+    let resolvePolish: (result: PolishResult) => void = () => {};
+    const polish = vi.fn(
+      () =>
+        new Promise<PolishResult>((resolve) => {
+          resolvePolish = resolve;
+        }),
+    );
+    const wrapper = mount(TodoPanel, {
+      props: {
+        todoLists: defaultTodoLists,
+        todos: { morning: [], noon: [], evening: [] },
+        titles: DEFAULT_TITLES,
+        polish,
+      },
+      global: {
+        stubs: {
+          Dropdown: dropdownStub,
+          NDatePicker: datePickerStub,
+          NDropdown: dropdownStub,
+          NTooltip: tooltipStub,
+        },
+      },
+    });
+
+    await wrapper.get('.todo-section[data-list-id="morning"] .todo-heading').trigger("contextmenu");
+    await wrapper.get('[data-key="smart-paste"]').trigger("click");
+    await flushPromises();
+    expect(polish).toHaveBeenCalledWith("todo", "买牛奶、交电费");
+
+    // 中途切换工作空间：App 的 displayTodoLists 计算属性随 activeWorkspaceId 变化产出全新数组。
+    await wrapper.setProps({
+      todoLists: defaultTodoLists.map((list) => ({ ...list })),
+    });
+    resolvePolish({ items: ["买牛奶", "交电费"] });
+    await flushPromises();
+
+    expect(wrapper.emitted("createFromText")).toBeUndefined();
+    wrapper.unmount();
+  });
 });
 
 describe("TodoPanel 跨空间移动菜单", () => {
