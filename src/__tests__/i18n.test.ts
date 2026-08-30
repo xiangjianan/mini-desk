@@ -2,6 +2,7 @@ import { describe, expect, it } from "vitest";
 import {
   GUIDE_MESSAGES,
   SHORTCUT_HELP,
+  UI_TEXT,
   getDefaultTitles,
   getDisplaySpaceTitle,
   getDisplayTodoListTitle,
@@ -195,5 +196,28 @@ describe("localized public copy", () => {
     expect(getUiText("zh").app.themeToLight).toBe("切换到浅色");
     expect(getUiText("en").app.themeToDark).toBe("Switch to dark");
     expect(getUiText("en").app.themeToLight).toBe("Switch to light");
+  });
+
+  it("智能粘贴文案中英齐全", () => {
+    expect(UI_TEXT.zh.common.smartPaste).toBe("智能粘贴");
+    expect(UI_TEXT.en.common.smartPaste).toBe("Smart paste");
+    for (const locale of [UI_TEXT.zh, UI_TEXT.en]) {
+      expect(locale.app.polishWorking).toContain("✦");
+      expect(locale.app.polishTodoDone).toContain("{count}");
+      expect(locale.app.polishNoteDone).toContain("{count}");
+      expect(locale.app.polishFallback).toBeTruthy();
+      expect(locale.app.polishTooLarge).toBeTruthy();
+      expect(locale.app.polishKeepFallback).toBeTruthy();
+      expect(locale.app.polishKeepTooLarge).toBeTruthy();
+    }
+  });
+
+  it("智能润色（选中文本）文案中英齐全", () => {
+    expect(UI_TEXT.zh.common.smartPolish).toBe("智能润色");
+    expect(UI_TEXT.en.common.smartPolish).toBe("Smart polish");
+    expect(UI_TEXT.zh.app.polishKeepFallback).toContain("保留原文");
+    expect(UI_TEXT.en.app.polishKeepFallback).toBeTruthy();
+    expect(UI_TEXT.zh.app.polishKeepTooLarge).toContain("保留原文");
+    expect(UI_TEXT.en.app.polishKeepTooLarge).toBeTruthy();
   });
 });
