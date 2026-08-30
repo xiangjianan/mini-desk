@@ -8,6 +8,7 @@ import { resolve } from "node:path";
 import TodoPanel from "../components/TodoPanel.vue";
 import { DEFAULT_TITLES } from "../state/defaults";
 import { completeTodo } from "../state/todos";
+import type { PolishResult } from "../sync/polishClient";
 import type { TodoMap, TodoPeriod } from "../types";
 import { menuDropdownStub } from "./helpers/menu-dropdown-stub";
 
@@ -4221,6 +4222,102 @@ describe("TodoPanel 编辑快捷键", () => {
     const input = wrapper.get('[data-testid="todo-input-morning"]');
     await input.trigger("keydown", { key: "ArrowDown", ctrlKey: true });
     expect(wrapper.emitted("move")).toBeUndefined();
+    wrapper.unmount();
+  });
+
+  it("section 菜单在粘贴下方显示智能粘贴（有 polish 时）", async () => {
+    Object.assign(navigator, { clipboard: { readText: vi.fn().mockResolvedValue("文本"), writeText: vi.fn() } });
+    const wrapper = mount(TodoPanel, {
+      props: {
+        todoLists: defaultTodoLists,
+        todos: { morning: [], noon: [], evening: [] },
+        titles: DEFAULT_TITLES,
+        polish: vi.fn(),
+      },
+      global: {
+        stubs: {
+          Dropdown: dropdownStub,
+          NDatePicker: datePickerStub,
+          NDropdown: dropdownStub,
+          NTooltip: tooltipStub,
+        },
+      },
+    });
+
+    await wrapper.get('.todo-section[data-list-id="morning"] .todo-heading').trigger("contextmenu");
+
+    expect(wrapper.findAll(".dropdown-option").map((option) => option.text())).toEqual([
+      "清理已完成",
+      "隐藏已完成",
+      "粘贴",
+      "智能粘贴",
+      "新建列表",
+      "编辑列表",
+      "删除列表",
+      "Tips",
+    ]);
+    wrapper.unmount();
+  });
+
+  it("智能粘贴成功：拆条落到右键所在列表并气泡提示", async () => {
+    Object.assign(navigator, { clipboard: { readText: vi.fn().mockResolvedValue("买牛奶、交电费"), writeText: vi.fn() } });
+    const polish = vi.fn(async (): Promise<PolishResult> => ({ items: ["买牛奶", "交电费"] }));
+    const wrapper = mount(TodoPanel, {
+      props: {
+        todoLists: defaultTodoLists,
+        todos: { morning: [], noon: [], evening: [] },
+        titles: DEFAULT_TITLES,
+        polish,
+      },
+      global: {
+        stubs: {
+          Dropdown: dropdownStub,
+          NDatePicker: datePickerStub,
+          NDropdown: dropdownStub,
+          NTooltip: tooltipStub,
+        },
+      },
+    });
+
+    await wrapper.get('.todo-section[data-list-id="morning"] .todo-heading').trigger("contextmenu");
+    await wrapper.get('[data-key="smart-paste"]').trigger("click");
+    await flushPromises();
+
+    expect(polish).toHaveBeenCalledWith("todo", "买牛奶、交电费");
+    expect(wrapper.emitted("createFromText")?.at(-1)).toEqual(["morning", ["买牛奶", "交电费"]]);
+    const statuses = wrapper.emitted("polishMessage") ?? [];
+    expect(statuses.map((call) => call[0])).toEqual(["working", "done"]);
+    expect(statuses[1][1]).toBe("已整理为 2 条提醒");
+    wrapper.unmount();
+  });
+
+  it("智能粘贴失败：按普通粘贴语义拆行落原文并提示", async () => {
+    Object.assign(navigator, { clipboard: { readText: vi.fn().mockResolvedValue("行A\n行B"), writeText: vi.fn() } });
+    const polish = vi.fn(async (): Promise<PolishResult> => null);
+    const wrapper = mount(TodoPanel, {
+      props: {
+        todoLists: defaultTodoLists,
+        todos: { morning: [], noon: [], evening: [] },
+        titles: DEFAULT_TITLES,
+        polish,
+      },
+      global: {
+        stubs: {
+          Dropdown: dropdownStub,
+          NDatePicker: datePickerStub,
+          NDropdown: dropdownStub,
+          NTooltip: tooltipStub,
+        },
+      },
+    });
+
+    await wrapper.get('.todo-section[data-list-id="morning"] .todo-heading').trigger("contextmenu");
+    await wrapper.get('[data-key="smart-paste"]').trigger("click");
+    await flushPromises();
+
+    expect(wrapper.emitted("createFromText")?.at(-1)).toEqual(["morning", ["行A", "行B"]]);
+    const statuses = wrapper.emitted("polishMessage") ?? [];
+    expect(statuses.map((call) => call[0])).toEqual(["working", "fallback"]);
     wrapper.unmount();
   });
 });

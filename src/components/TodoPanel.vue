@@ -7,6 +7,7 @@ import {
   CheckmarkDoneOutline,
   ChevronDownOutline,
   ClipboardOutline,
+  ColorWandOutline,
   CopyOutline,
   CreateOutline,
   EyeOffOutline,
@@ -53,6 +54,9 @@ import { copySelection, copyTextToClipboard, getSelectionRange, pasteIntoField, 
 import { CONTEXT_MENU_Z_INDEX, createExclusiveContextMenu } from "../utils/contextMenu";
 import { renderIcon } from "../utils/dropdownIcons";
 import { isImeComposing } from "../utils/ime";
+import type { PolishKind, PolishResult } from "../sync/polishClient";
+import { runSmartPaste, smartPasteMessages } from "../utils/smartPaste";
+import type { SmartPastePhase } from "../utils/smartPaste";
 import EditableTitle from "./EditableTitle.vue";
 
 const props = withDefaults(defineProps<{
@@ -64,6 +68,7 @@ const props = withDefaults(defineProps<{
   notificationFlashKeys?: string[];
   language?: AppLanguage;
   moveTargets?: WorkspaceMoveTarget[];
+  polish?: (kind: PolishKind, text: string) => Promise<PolishResult>;
 }>(), {
   notificationFlashKeys: () => [],
   language: "zh",
@@ -97,6 +102,7 @@ const emit = defineEmits<{
   declutter: [anchor: HTMLElement];
   moveListToWorkspace: [listId: TodoListId, workspaceId: string];
   moveTodoToWorkspace: [period: TodoPeriod, todoId: string, workspaceId: string, listId: TodoListId];
+  polishMessage: [phase: SmartPastePhase, message: string, anchor: HTMLElement | undefined];
 }>();
 
 const focusedListId = ref<TodoListId | null>(null);
@@ -187,6 +193,9 @@ const menuOptions = computed<DropdownOption[]>(() => {
       { label: uiText.value.todo.clearCompleted, key: "clear-completed", icon: renderIcon(CheckmarkDoneOutline) },
       { label: isCompletedVisible(list.id) ? uiText.value.todo.hideCompleted : uiText.value.todo.showCompleted, key: "toggle-completed", icon: renderIcon(isCompletedVisible(list.id) ? EyeOffOutline : EyeOutline) },
       { label: uiText.value.common.paste, key: "paste", icon: renderIcon(ClipboardOutline) },
+      ...(props.polish
+        ? [{ label: uiText.value.common.smartPaste, key: "smart-paste", icon: renderIcon(ColorWandOutline) }]
+        : []),
       { label: uiText.value.todo.newList, key: "create-list", icon: renderIcon(AddOutline) },
       { label: uiText.value.todo.editList, key: "edit-list", icon: renderIcon(CreateOutline) },
       ...buildListMoveOptions(),
@@ -1239,6 +1248,20 @@ async function handleMenuSelect(key: string): Promise<void> {
   if (key === "paste" && !id) {
     await pasteTodosFromClipboard(period);
     closeMenu();
+    return;
+  }
+  if (key === "smart-paste" && !id) {
+    closeMenu();
+    if (!props.polish) return;
+    await runSmartPaste({
+      kind: "todo",
+      polish: props.polish,
+      messages: smartPasteMessages(uiText.value, "todo"),
+      anchor: getTodoSectionAnchor(period),
+      insert: (texts) => emit("createFromText", period, texts),
+      fallbackTexts: splitDroppedTodoText,
+      notify: (phase, message, anchor) => emit("polishMessage", phase, message, anchor),
+    });
     return;
   }
   if (key === "copy" && id) {
