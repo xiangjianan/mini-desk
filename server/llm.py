@@ -4,6 +4,9 @@
 任何失败（缺 key、网络、超时、非 200、JSON/结构非法、结果为空）一律返回 None，
 由调用方走「原文直接入库」兜底——本模块永不抛异常、永不返回空列表。
 """
+# 服务器 venv 是 Python 3.9：延迟注解求值，使 list[str] | None 写法可用。
+from __future__ import annotations
+
 import json
 import os
 import re
