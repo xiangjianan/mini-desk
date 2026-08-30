@@ -4362,6 +4362,48 @@ describe("TodoPanel 编辑快捷键", () => {
     expect(wrapper.emitted("createFromText")).toBeUndefined();
     wrapper.unmount();
   });
+
+  it("智能粘贴途中卸载面板：丢弃迟到结果", async () => {
+    Object.assign(navigator, { clipboard: { readText: vi.fn().mockResolvedValue("买牛奶、交电费"), writeText: vi.fn() } });
+    let resolvePolish: (result: PolishResult) => void = () => {};
+    const polish = vi.fn(
+      () =>
+        new Promise<PolishResult>((resolve) => {
+          resolvePolish = resolve;
+        }),
+    );
+    const wrapper = mount(TodoPanel, {
+      props: {
+        todoLists: defaultTodoLists,
+        todos: { morning: [], noon: [], evening: [] },
+        titles: DEFAULT_TITLES,
+        polish,
+      },
+      global: {
+        stubs: {
+          Dropdown: dropdownStub,
+          NDatePicker: datePickerStub,
+          NDropdown: dropdownStub,
+          NTooltip: tooltipStub,
+        },
+      },
+    });
+
+    await wrapper.get('.todo-section[data-list-id="morning"] .todo-heading').trigger("contextmenu");
+    await wrapper.get('[data-key="smart-paste"]').trigger("click");
+    await flushPromises();
+    expect(polish).toHaveBeenCalledWith("todo", "买牛奶、交电费");
+
+    // 清空数据（clearData）bump boardEpoch 触发整树 remount：旧实例带着冻结的 props 卸载，
+    // 列表身份守卫失效（引用比较仍相等）。本用例钉住端到端不变量「卸载后迟到结果不得落地」：
+    // 目前由 Vue 对已卸载实例的 emit no-op（runtime-core emit 首行 isUnmounted 早退）与
+    // 组件内卸载守卫共同保证——若日后 emit 通道改为回调属性等直调形式，这里会先变红。
+    wrapper.unmount();
+    resolvePolish({ items: ["买牛奶", "交电费"] });
+    await flushPromises();
+
+    expect(wrapper.emitted("createFromText")).toBeUndefined();
+  });
 });
 
 describe("TodoPanel 跨空间移动菜单", () => {

@@ -383,6 +383,8 @@ function computeColumnCount(width: number, listCount: number): number {
   return Math.max(1, Math.min(computed, listCount));
 }
 
+let isUnmounted = false;
+
 onMounted(() => {
   exclusiveMenu.mount();
   refreshNotifyNow();
@@ -401,6 +403,7 @@ onMounted(() => {
 });
 
 onUnmounted(() => {
+  isUnmounted = true;
   exclusiveMenu.unmount();
   reorderTimers.forEach((timer) => window.clearTimeout(timer));
   document.removeEventListener("pointerdown", handleFloatingEditorOutsidePointerDown, true);
@@ -1256,6 +1259,8 @@ async function handleMenuSelect(key: string): Promise<void> {
     // 中途切换工作区（或列表数组被结构性替换）：丢弃迟到结果，避免写入其他空间的同名默认列表。
     // 捕获 props.todoLists（即 App 的 displayTodoLists）：todo 编辑只动 todos 子树，引用不变；
     // 切换空间/增删列表会换新数组。同空间并发 todo 追加是次序无关的，刻意不做文本基线校验。
+    // 卸载守卫：清空数据 bump boardEpoch 整树 remount，旧实例 props 已冻结、引用比较不再变化，
+    // 必须单独拦截（当前 Vue 对已卸载实例的 emit 也是 no-op，此处让组件不依赖该运行时内部行为）。
     const landingLists = props.todoLists;
     await runSmartPaste({
       kind: "todo",
@@ -1263,7 +1268,7 @@ async function handleMenuSelect(key: string): Promise<void> {
       messages: smartPasteMessages(uiText.value, "todo"),
       anchor: getTodoSectionAnchor(period),
       insert: (texts) => {
-        if (props.todoLists !== landingLists) return;
+        if (isUnmounted || props.todoLists !== landingLists) return;
         emit("createFromText", period, texts);
       },
       fallbackTexts: splitDroppedTodoText,
