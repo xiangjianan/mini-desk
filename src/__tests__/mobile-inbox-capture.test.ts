@@ -1,14 +1,13 @@
 import { beforeEach, describe, expect, it, vi } from "vitest";
 import { mount } from "@vue/test-utils";
 import MobileInboxCapture from "../components/MobileInboxCapture.vue";
-import { decryptInboxPayload } from "../sync/crypto";
 import type { InboxPostResult } from "../sync/inboxClient";
 
 const CODE = "AB2CDE4FGHJK";
 
 const postMock = vi.fn(async (_keyHash: string, _id: string, _payload: string): Promise<InboxPostResult> => ({ ok: true }));
 
-// 组件只依赖 postInboxItem；加密/哈希走真实 WebCrypto，便于解密回验。
+// 组件只依赖 postInboxItem；keyHash 走真实 WebCrypto，payload 为明文 JSON 便于直接回验。
 vi.mock("../sync/inboxClient", () => ({
   postInboxItem: (keyHash: string, id: string, payload: string) => postMock(keyHash, id, payload),
 }));
@@ -44,6 +43,11 @@ function lastPayload(): string {
   return payload;
 }
 
+/** 明文 payload 回验：服务端润色前的新格式行。 */
+function plainPayload(payload: string): { kind: string; text: string; createdAt: number } {
+  return JSON.parse(payload) as { kind: string; text: string; createdAt: number };
+}
+
 /** jsdom 默认无 navigator.clipboard；一键粘贴测试需注入 readText 模拟。 */
 function stubClipboardRead(result: string | Promise<string>, reject = false) {
   const readText = vi.fn();
@@ -72,7 +76,7 @@ describe("MobileInboxCapture", () => {
     expect(wrapper.get('[data-testid="mobile-inbox-text"]').attributes("placeholder")).toBe("想到什么就记下来，可多行…");
   });
 
-  it("提交成功：keyHash 为 64 位 hex、payload 可解密、显示已发送并清空输入", async () => {
+  it("提交成功：keyHash 为 64 位 hex、payload 为明文 JSON、显示已发送并清空输入", async () => {
     const wrapper = mountCapture();
 
     await fillAndSend(wrapper, "买牛奶");
@@ -84,7 +88,7 @@ describe("MobileInboxCapture", () => {
     expect(id.length).toBeGreaterThan(0);
     expect(typeof payload).toBe("string");
     expect(payload.length).toBeGreaterThan(40);
-    expect(await decryptInboxPayload(CODE, payload)).toMatchObject({ kind: "todo", text: "买牛奶" });
+    expect(plainPayload(payload)).toMatchObject({ kind: "todo", text: "买牛奶" });
     await until(() => expect(wrapper.get(".mobile-inbox-status").text()).toContain("已发送"));
     expect(wrapper.get(".mobile-inbox-status").attributes("role")).toBe("status");
     expect(wrapper.get(".mobile-inbox-status").attributes("aria-live")).toBe("polite");
@@ -135,13 +139,13 @@ describe("MobileInboxCapture", () => {
     }
   });
 
-  it("点「发送到便签」kind 为 note（解密回验）", async () => {
+  it("点「发送到便签」kind 为 note（明文回验）", async () => {
     const wrapper = mountCapture();
 
     await fillAndSend(wrapper, "一个想法", "note");
 
     await until(() => expect(postMock).toHaveBeenCalledTimes(1));
-    expect(await decryptInboxPayload(CODE, lastPayload())).toMatchObject({ kind: "note", text: "一个想法" });
+    expect(plainPayload(lastPayload())).toMatchObject({ kind: "note", text: "一个想法" });
   });
 
   it("超长文本截断为 500 字后提交", async () => {
@@ -150,7 +154,7 @@ describe("MobileInboxCapture", () => {
     await fillAndSend(wrapper, "长".repeat(520));
 
     await until(() => expect(postMock).toHaveBeenCalledTimes(1));
-    const plain = await decryptInboxPayload(CODE, lastPayload());
+    const plain = plainPayload(lastPayload());
     expect(plain?.text.length).toBe(500);
   });
 
@@ -173,9 +177,7 @@ describe("MobileInboxCapture", () => {
     await fillAndSend(wrapper, "买牛奶\n\n  买鸡蛋  \n取快递");
 
     await until(() => expect(postMock).toHaveBeenCalledTimes(3));
-    const plains = await Promise.all(
-      postMock.mock.calls.map(async ([, , payload]) => await decryptInboxPayload(CODE, payload)),
-    );
+    const plains = postMock.mock.calls.map(([, , payload]) => plainPayload(payload));
     expect(plains.map((plain) => plain?.text)).toEqual(["买牛奶", "买鸡蛋", "取快递"]);
     expect(plains.every((plain) => plain?.kind === "todo")).toBe(true);
     await until(() => expect(wrapper.get(".mobile-inbox-status").text()).toContain("已发送 3 条"));
@@ -199,7 +201,7 @@ describe("MobileInboxCapture", () => {
 
     await fillAndSend(wrapper, Array.from({ length: 21 }, (_, i) => `第${i + 1}行`).join("\n"));
 
-    // 21 次串行 PBKDF2 在整包并发下可能超过默认 4s 轮询窗口，放宽到 15s 消除偶发失败
+    // 保留宽松轮询窗口，消除整包并发下的偶发超时
     await until(() => expect(postMock).toHaveBeenCalledTimes(21), 15000);
     await until(() => expect(wrapper.get(".mobile-inbox-status").text()).toContain("已发送 21 条"));
     expect(draftValue(wrapper)).toBe("");
@@ -211,9 +213,7 @@ describe("MobileInboxCapture", () => {
     await fillAndSend(wrapper, "想法一\n想法二", "note");
 
     await until(() => expect(postMock).toHaveBeenCalledTimes(2));
-    const plains = await Promise.all(
-      postMock.mock.calls.map(async ([, , payload]) => await decryptInboxPayload(CODE, payload)),
-    );
+    const plains = postMock.mock.calls.map(([, , payload]) => plainPayload(payload));
     expect(plains.map((plain) => plain?.text)).toEqual(["想法一", "想法二"]);
     expect(plains.every((plain) => plain?.kind === "note")).toBe(true);
   });

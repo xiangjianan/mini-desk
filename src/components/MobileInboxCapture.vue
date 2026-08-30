@@ -6,7 +6,7 @@ import { getUiText } from "../state/i18n";
 import { createId } from "../state/storage";
 import { readClipboardText } from "../utils/clipboard";
 import { INBOX_PLAINTEXT_MAX_CHARS } from "../sync/config";
-import { encryptInboxPayload, inboxKeyHash, type InboxPlainItem } from "../sync/crypto";
+import { inboxKeyHash, type InboxPlainItem } from "../sync/crypto";
 import { postInboxItem, type InboxPostFailure } from "../sync/inboxClient";
 import type { AppLanguage } from "../types";
 
@@ -134,7 +134,7 @@ function errorTextFor(reason: InboxPostFailure): string {
 
 /** 发送中再次触发直接忽略（同步判定，先于任何 await 生效）。
  *  多行输入按行拆分：待办每行一条、便签每行落一行（与桌面行编辑器模型一致）；
- *  逐条加密串行发送，中途失败把未发送的行放回输入框供直接重试。 */
+ *  逐条以明文 JSON 串行发送（服务端负责润色），中途失败把未发送的行放回输入框供直接重试。 */
 async function send(kind: CaptureKind): Promise<void> {
   const lines = draft.value
     .split(/\r?\n/)
@@ -158,14 +158,14 @@ async function send(kind: CaptureKind): Promise<void> {
     const keyHash = await inboxKeyHash(props.code);
     for (let index = 0; index < lines.length; index += 1) {
       try {
-        const payload = await encryptInboxPayload(props.code, { kind, text: lines[index], createdAt: Date.now() });
+        const payload = JSON.stringify({ kind, text: lines[index], createdAt: Date.now() });
         const result = await postInboxItem(keyHash, createId(), payload);
         if (!result.ok) {
           failAt(index, result.reason);
           return;
         }
       } catch {
-        // 加密/哈希异常与网络异常同等对待。
+        // 哈希异常与网络异常同等对待。
         failAt(index, "network");
         return;
       }
