@@ -65,6 +65,7 @@ import { INBOX_FOCUS_THROTTLE_MS, INBOX_PULL_INTERVAL_MS } from "./sync/config";
 import {
   clearRememberedInboxCode,
   formatInboxCode,
+  generateInboxCode,
   importedPayloadHasInbox,
   isValidInboxCode,
   loadRememberedInboxCode,
@@ -75,6 +76,9 @@ import {
 import { applyInboxItems, pullAllInboxes } from "./sync/pull";
 import { inboxKeyHash } from "./sync/crypto";
 import { checkInboxKeyStatus, registerInboxKey, revokeInboxKey } from "./sync/inboxClient";
+import { polishClipboardText } from "./sync/polishClient";
+import type { PolishKind, PolishResult } from "./sync/polishClient";
+import type { SmartPastePhase } from "./utils/smartPaste";
 import { copyTextToClipboard } from "./utils/clipboard";
 import { binaryStringToBytes } from "./utils/base64";
 import { extractRetainedImageIds, useUndoHistory } from "./composables/useUndoHistory";
@@ -624,6 +628,8 @@ onMounted(async () => {
   for (const workspace of state.workspaces) {
     if (workspace.inbox) registerInbox(workspace.inbox.code, false);
   }
+  // 智能粘贴配对码同样启动自愈注册（INSERT IGNORE 幂等；首次使用时仍会串行复核）。
+  if (state.polishCode && isValidInboxCode(state.polishCode)) registerInbox(state.polishCode, false);
   startVersionPolling();
   startNotificationFallbackInterval();
   refreshTodoNotifications();
@@ -997,6 +1003,40 @@ function registerInbox(code: string, warn: boolean): void {
         showBubbleText(uiText.value.app.inboxRegisterFailed, undefined, { hideCompanionAfter: true });
       }
     });
+}
+
+/** 智能粘贴气泡时长：整理中长驻（服务端 LLM 硬超时 30s + 余量，结果到达即替换），结果常规停留。 */
+const POLISH_WORKING_BUBBLE_MS = 60_000;
+const POLISH_RESULT_BUBBLE_MS = 4000;
+
+// 智能粘贴配对码：全局唯一（鉴权只要求「已注册」）。会话内注册成功一次即缓存；
+// 清空数据后 state.polishCode 消失，下次使用生成新码并重新注册。
+let polishRegisteredCode: string | null = null;
+
+/** 面板注入的智能粘贴调用：确保配对码存在且已注册后请求服务端润色；注册失败按网络失败（null）降级。 */
+async function polishClipboard(kind: PolishKind, text: string): Promise<PolishResult> {
+  let code = state.polishCode;
+  if (!code || !isValidInboxCode(code)) {
+    code = generateInboxCode();
+    state.polishCode = code;
+    persistNow();
+  }
+  if (polishRegisteredCode !== code) {
+    // 注册与润色串行：未注册码的 /polish 会 404，首次使用必须先等注册完成。
+    const registered = await registerInboxKey(await inboxKeyHash(code));
+    if (!registered) return null;
+    polishRegisteredCode = code;
+  }
+  return polishClipboardText(kind, text, code);
+}
+
+/** 面板上浮的智能粘贴气泡：working 长驻等结果替换，done/fallback 常规停留。 */
+function handlePolishStatus(phase: SmartPastePhase, message: string, anchor?: HTMLElement): void {
+  if (phase === "working") {
+    showBubbleText(message, anchor, {}, POLISH_WORKING_BUBBLE_MS);
+    return;
+  }
+  showBubbleText(message, anchor, { hideCompanionAfter: true }, POLISH_RESULT_BUBBLE_MS);
 }
 
 // 手机速记拉取（单向收件箱）：启动/窗口聚焦（节流）/定时/Ctrl+S 四个触发点共用 pullInboxes，
@@ -2540,6 +2580,7 @@ function clearData(anchor?: HTMLElement): void {
       // 清空数据 = 全部配对一起消失：先留底所有配对码，本地抹掉后逐个注销云端队列，
       // 否则手机会继续发进无人拉取的死队列（同删除工作区的连坐规则）。
       const doomedInboxCodes = state.workspaces.flatMap((workspace) => (workspace.inbox ? [workspace.inbox.code] : []));
+      const doomedPolishCode = state.polishCode;
       window.clearTimeout(textSaveTimer.value);
       textSaveTimer.value = undefined;
       emptyTodoRemovalTimers.forEach((timer) => window.clearTimeout(timer));
@@ -2550,7 +2591,11 @@ function clearData(anchor?: HTMLElement): void {
       pendingEditTodoListId.value = null;
       resetUndoHistory();
       Object.assign(state, defaultState());
+      // defaultState() 不含可选键 polishCode，需显式删掉，否则清空后本次会话仍带着已注销的旧码。
+      delete state.polishCode;
       doomedInboxCodes.forEach((code) => void revokeInbox(code));
+      if (doomedPolishCode) void revokeInbox(doomedPolishCode);
+      polishRegisteredCode = null;
       resetTextGenerationBaseline();
       // Flush reactive watchers (the theme watcher persists on change) before wiping, so
       // their writes land first and the clear below leaves localStorage truly empty.
@@ -3410,6 +3455,7 @@ function moveItem<T extends { id: string }>(items: T[], dragId: string, targetId
           :show-completed="activeWorkspace.showCompletedTodos"
           :language="state.language"
           :move-targets="workspaceMoveTargets"
+          :polish="polishClipboard"
           @title-update="updateTitle"
           @create-list="createTodoList"
           @update-list-title="updateTodoListTitle"
@@ -3436,6 +3482,7 @@ function moveItem<T extends { id: string }>(items: T[], dragId: string, targetId
           @focus="handleGuideFocus('todos', $event)"
           @guide="handleGuideClick"
           @declutter="showDeclutterBubble"
+          @polish-message="handlePolishStatus"
         />
       </template>
 
@@ -3447,6 +3494,7 @@ function moveItem<T extends { id: string }>(items: T[], dragId: string, targetId
           :edit-space-id="pendingEditSpaceId"
           :language="state.language"
           :move-targets="workspaceMoveTargets"
+          :polish="polishClipboard"
           @activate="activateSpace"
           @create="createSpace"
           @rename="renameSpace"
@@ -3458,6 +3506,7 @@ function moveItem<T extends { id: string }>(items: T[], dragId: string, targetId
           @focus="(_, element) => handleGuideFocus('workspace', element)"
           @guide="(_, anchor, immediate) => handleGuideClick('workspace', anchor, immediate)"
           @blur="handleEditorBlur"
+          @polish-message="handlePolishStatus"
         />
       </template>
     </WorkbenchShell>
