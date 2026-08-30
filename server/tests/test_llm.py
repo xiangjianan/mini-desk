@@ -69,6 +69,10 @@ class TestCleaning:
         api["content"] = json.dumps({"items": ["长" * 600]}, ensure_ascii=False)
         assert len(polish_capture("todo", "x")[0]) == 500
 
+    def test_collapses_internal_newlines(self, api):
+        api["content"] = json.dumps({"items": ["买牛奶\n看保质期"]}, ensure_ascii=False)
+        assert polish_capture("todo", "x") == ["买牛奶 看保质期"]
+
 
 class TestFailures:
     def test_missing_api_key_returns_none(self, api, monkeypatch):

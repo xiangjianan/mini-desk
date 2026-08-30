@@ -6,6 +6,7 @@
 """
 import json
 import os
+import sys
 from urllib.request import Request, urlopen
 
 DEEPSEEK_API_URL = "https://api.deepseek.com/chat/completions"
@@ -27,6 +28,7 @@ SYSTEM_PROMPT = """你是手机速记的整理助手。用户输入是待处理�
 def polish_capture(kind: str, text: str) -> list[str] | None:
     api_key = os.environ.get("DEEPSEEK_API_KEY", "").strip()
     if not api_key:
+        print("[llm] DEEPSEEK_API_KEY 未配置，跳过润色", file=sys.stderr)
         return None
     body = json.dumps(
         {
@@ -48,8 +50,9 @@ def polish_capture(kind: str, text: str) -> list[str] | None:
     try:
         with urlopen(request, timeout=LLM_TIMEOUT_SECONDS) as response:
             data = json.loads(response.read().decode("utf-8"))
-    except Exception:
-        # 网络/超时/非 200（含 402 额度不足、429 限流、401 key 无效）/响应体非法：统一兜底。
+    except Exception as exc:
+        # 网络/超时/非 200（含 402 额度不足、429 限流、401 key 无效）/响应体非法：统一兜底，stderr 留痕。
+        print(f"[llm] polish failed: {exc!r}", file=sys.stderr)
         return None
     return _extract_items(data)
 
@@ -62,7 +65,7 @@ def _extract_items(data: object) -> list[str] | None:
         return None
     if not isinstance(items, list):
         return None
-    cleaned = [item.strip()[:MAX_ITEM_CHARS] for item in items if isinstance(item, str) and item.strip()]
+    cleaned = [item.strip().replace("\n", " ").replace("\r", " ")[:MAX_ITEM_CHARS] for item in items if isinstance(item, str) and item.strip()]
     if not cleaned:
         return None
     return cleaned[:MAX_ITEMS]
