@@ -86,6 +86,31 @@ export async function decryptInboxPayload(code: string, payload: string): Promis
   }
 }
 
+/** 明文行（服务端润色后的新格式）：JSON 文本，结构同 InboxPlainItem。结构非法返回 null。 */
+function parsePlainPayload(payload: string): InboxPlainItem | null {
+  try {
+    const parsed: unknown = JSON.parse(payload);
+    if (typeof parsed !== "object" || parsed === null) return null;
+    const typed = parsed as Record<string, unknown>;
+    if ((typed.kind !== "todo" && typed.kind !== "note") || typeof typed.text !== "string") return null;
+    return {
+      kind: typed.kind,
+      text: typed.text,
+      createdAt: typeof typed.createdAt === "number" ? typed.createdAt : 0,
+    };
+  } catch {
+    return null;
+  }
+}
+
+/** 解码入库行：优先按明文 JSON（服务端润色后的新格式）解析，失败回退 AES-GCM 解密（存量密文行）。
+ *  环境级失败（Web Crypto 缺失）与 decryptInboxPayload 同语义：仅在回退路径抛出。 */
+export async function decodeInboxPayload(code: string, payload: string): Promise<InboxPlainItem | null> {
+  const plain = parsePlainPayload(payload);
+  if (plain) return plain;
+  return decryptInboxPayload(code, payload);
+}
+
 /** 服务端路由键：SHA-256(码) 的 hex。服务器持它也无法解密内容。 */
 export async function inboxKeyHash(code: string): Promise<string> {
   const digest = await subtle().digest("SHA-256", encoder.encode(code));
