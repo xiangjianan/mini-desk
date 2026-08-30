@@ -9,3 +9,6 @@ export const INBOX_FOCUS_THROTTLE_MS = 60 * 1000;
 
 /** 单次收件箱请求的超时（毫秒）：挂起的连接按失败处理，避免卡死拉取周期与手机提交。 */
 export const INBOX_FETCH_TIMEOUT_MS = 15_000;
+
+/** 智能粘贴单次请求超时：服务端 LLM 硬超时 30s，客户端必须更长，避免中途 abort 把将成的结果误判为失败。 */
+export const POLISH_FETCH_TIMEOUT_MS = 35_000;
