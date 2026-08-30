@@ -158,8 +158,8 @@ export interface WorkspaceData {
 
 /**
  * 手机速记（单向收件箱）配对配置。字段存在即启用该工作区的拉取同步。
- * `code` 为配对路由码（12 位 Crockford base32），仅存量密文行回退解密
- * 仍兼作加密密钥；`lastSeenAt` 是服务端时间戳水位线，随工作区导出迁移，
+ * `code` 为配对路由码（12 位 Crockford base32），仅解密存量密文行时仍
+ * 兼作解密密钥；`lastSeenAt` 是服务端时间戳水位线，随工作区导出迁移，
  * 防止新机器导入后重灌历史条目。
  */
 export interface WorkspaceInbox {

@@ -29,7 +29,7 @@ async function deriveAesKey(code: string, salt: Uint8Array<ArrayBuffer>): Promis
     material,
     { name: "AES-GCM", length: 256 },
     false,
-    ["encrypt", "decrypt"],
+    ["decrypt"],
   );
 }
 
@@ -45,8 +45,9 @@ function coercePlainItem(parsed: unknown): InboxPlainItem | null {
   };
 }
 
-/** 解密并校验明文结构；条目级失败（错码/损坏/结构非法）返回 null，不抛异常。
- *  环境级失败（Web Crypto 缺失）在 try 外抛出，让拉取层中止整批而非当作坏条目推进水位线。 */
+/** 仅供存量密文行回退解密（常规解码走 decodeInboxPayload）；密文格式 base64(salt[16]‖nonce[12]‖AES-GCM 密文)。
+ *  条目级失败（错码/损坏/结构非法）返回 null，不抛异常；环境级失败（Web Crypto 缺失）在 try 外抛出，
+ *  让拉取层中止整批而非当作坏条目推进水位线。 */
 export async function decryptInboxPayload(code: string, payload: string): Promise<InboxPlainItem | null> {
   void subtle();
   try {
