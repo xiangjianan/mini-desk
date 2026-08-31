@@ -1646,7 +1646,7 @@ describe("TodoPanel", () => {
     expect(getTeleportedDatePickerText()).toContain("清除");
     expect(document.body.querySelector(".notify-panel-action.is-danger")?.textContent).toContain("清除");
     expect(getTeleportedDatePickerText()).toContain("今天");
-    expect(getTeleportedDatePickerText()).toContain("确定");
+    expect(getTeleportedDatePickerText()).toContain("保存");
 
     // 今天 saves the default next-whole-hour time immediately and keeps the picker open.
     clickTeleportedNotifyAction("今天");
@@ -3518,7 +3518,7 @@ describe("TodoPanel", () => {
     expect(picker.props("panel")).toBe(true);
     expect(getTeleportedDatePickerText()).toContain("清除");
     expect(getTeleportedDatePickerText()).toContain("今天");
-    expect(getTeleportedDatePickerText()).toContain("确定");
+    expect(getTeleportedDatePickerText()).toContain("保存");
   });
 
   it("emits notify updates without changing star state", async () => {

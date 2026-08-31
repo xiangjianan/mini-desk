@@ -2311,14 +2311,14 @@ button.notify-panel-preset {
   background: rgba(180, 35, 24, 0.08);
 }
 
-.notify-panel-action.is-confirm {
-  color: var(--primary-foreground);
-  background: var(--primary);
-  border-color: var(--primary);
+.notify-panel-action.is-save {
+  color: #18a058;
+  border-color: var(--line-control);
+  background: var(--button);
 }
 
-.notify-panel-action.is-confirm:hover:not(:disabled) {
-  background: color-mix(in srgb, var(--primary) 88%, #000);
+.notify-panel-action.is-save:hover:not(:disabled) {
+  background: rgba(24, 160, 88, 0.1);
 }
 
 /* Every delete/trash affordance reads as destructive: the trash icon buttons

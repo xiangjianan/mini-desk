@@ -545,7 +545,7 @@ describe("Naive UI component usage", () => {
     expect(i18n).toContain('clear: "清除"');
     expect(i18n).toContain('today: "今天"');
     expect(todo).not.toContain('此刻');
-    expect(todo).toContain("uiText.common.confirm");
+    expect(todo).toContain("uiText.common.save");
     expect(todo).not.toContain("confirmCurrentNotifyPicker");
     expect(todo).not.toContain("notify-panel-action is-confirm");
     expect(todo).not.toContain('class="deadline-editor notify-editor"');

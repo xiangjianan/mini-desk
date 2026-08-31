@@ -2040,7 +2040,7 @@ function buildTodoListEntries(period: TodoListId, todos: TodoItem[], deferredDon
           <div class="notify-panel-actions">
             <button class="notify-panel-action is-danger" type="button" @click="clearNotifyPicker">{{ uiText.todo.clear }}</button>
             <button class="notify-panel-action" type="button" @click="applyNotifyPickerToday">{{ uiText.todo.today }}</button>
-            <button class="notify-panel-action is-confirm" type="button" @click="confirmNotifyPicker(getNotifyPickerValue())">{{ uiText.common.confirm }}</button>
+            <button class="notify-panel-action is-save" type="button" @click="confirmNotifyPicker(getNotifyPickerValue())">{{ uiText.common.save }}</button>
           </div>
         </div>
       </Transition>
