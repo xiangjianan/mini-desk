@@ -29,6 +29,20 @@ export interface ChangelogEntry {
 
 export const CHANGELOG: ChangelogEntry[] = [
   {
+    version: "1.0.163",
+    date: "2026-08-31",
+    notes: {
+      zh: [
+        "新增：右键某条提醒的「粘贴/智能粘贴」改为把内容拆成新提醒插到该条下方；通知时间选择器底部新增「保存」按钮",
+        "优化：「智能粘贴/智能润色」及手机速记润色支持英文——输出语言跟随输入文本，英文为主时输出英文，中文为主时保持简体中文",
+      ],
+      en: [
+        "New: right-click \"Paste / Smart paste\" on a reminder now splits the content into new reminders inserted right below it; the notification time picker gained a \"Save\" button",
+        "Improved: \"Smart paste / Smart polish\" (and mobile capture polishing) now supports English — output language follows the input: English-heavy text is polished into English, Chinese stays Chinese",
+      ],
+    },
+  },
+  {
     version: "1.0.162",
     date: "2026-08-31",
     notes: {
