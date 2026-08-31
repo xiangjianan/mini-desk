@@ -29,8 +29,8 @@ const dark = {
 };
 
 const GIF_FRAME_COUNT = 12;
-const CAT_OFFSET_X = -2;
-const CAT_OFFSET_Y = -1;
+const CAT_OFFSET_X = -1;
+const CAT_OFFSET_Y = -2;
 
 function rect(x, y, w, h, fill, extra = "") {
   return `<rect x="${x}" y="${y}" width="${w}" height="${h}" fill="${fill}"${extra}/>`;

@@ -29,6 +29,22 @@ export interface ChangelogEntry {
 
 export const CHANGELOG: ChangelogEntry[] = [
   {
+    version: "1.0.162",
+    date: "2026-08-31",
+    notes: {
+      zh: [
+        "优化：「智能粘贴/智能润色」菜单项文字渐变流动高亮；修复星标/重点提醒悬浮滚动时文字动画卡住不动的问题",
+        "调整：AI 润色便签的编号格式由「1、2、」改为「1. 2. 」，与编辑器编号列表识别保持一致",
+        "更新：应用图标与桌面猫伴随素材微调",
+      ],
+      en: [
+        "Polish: gradient flowing text on the \"Smart paste / Smart polish\" menu labels; fixed starred reminders freezing their text-flow animation while hovering to scroll",
+        "Change: AI note-polish numbering switches from \"1、2、\" to \"1. 2. \" to match the editor's numbered-list detection",
+        "Updated app icons and companion cat assets",
+      ],
+    },
+  },
+  {
     version: "1.0.161",
     date: "2026-08-31",
     notes: {
