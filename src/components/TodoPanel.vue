@@ -50,7 +50,7 @@ import type {
 import { TODO_DENSITY_THRESHOLD, getOrderedTodos, getTodoReorderTarget, todoKey } from "../state/todos";
 import { clampCaret } from "../utils/caret";
 import { splitDroppedTodoText } from "../utils/textEditor";
-import { copySelection, copyTextToClipboard, getSelectionRange, pasteIntoField, readClipboardText } from "../utils/clipboard";
+import { copySelection, copyTextToClipboard, getSelectionRange, readClipboardText } from "../utils/clipboard";
 import { CONTEXT_MENU_Z_INDEX, createExclusiveContextMenu, renderPolishMenuLabel } from "../utils/contextMenu";
 import { renderIcon } from "../utils/dropdownIcons";
 import { isImeComposing } from "../utils/ime";
@@ -96,7 +96,7 @@ const emit = defineEmits<{
   blurEmpty: [period: TodoPeriod, id: string];
   blur: [];
   move: [dragged: DraggedTodo, destinationPeriod: TodoPeriod, targetId?: string];
-  createFromText: [period: TodoPeriod, texts: string[]];
+  createFromText: [period: TodoPeriod, texts: string[], afterId?: string];
   focus: [element: HTMLElement];
   guide: [key: GuideKey, anchor: HTMLElement, immediate?: boolean];
   declutter: [anchor: HTMLElement];
@@ -210,8 +210,12 @@ const menuOptions = computed<DropdownOption[]>(() => {
   }
   if (menu.value?.id) {
     options.push({ label: uiText.value.common.copy, key: "copy", icon: renderIcon(CopyOutline) });
-    if (menu.value.target && canPasteTodoText(menu.value.period, menu.value.id, menu.value.target)) {
+    if (canPasteTodoText(menu.value.period)) {
+      // 右键提醒事项时，「粘贴/智能粘贴」把剪贴板内容拆成新增提醒，插到该条提醒下方。
       options.push({ label: uiText.value.common.paste, key: "paste", icon: renderIcon(ClipboardOutline) });
+      if (props.polish) {
+        options.push({ label: uiText.value.common.smartPaste, key: "smart-paste", icon: renderIcon(ColorWandOutline) });
+      }
     }
     options.push({
       label: isValidNotifyAt(todo?.notifyAt) ? uiText.value.todo.editNotify : uiText.value.todo.setNotify,
@@ -1285,9 +1289,28 @@ async function handleMenuSelect(key: string): Promise<void> {
     closeMenu();
     return;
   }
-  if (key === "paste" && id && target) {
-    await pasteTextFromClipboard(period, id, target);
+  if (key === "paste" && id) {
+    await pasteTodosAfter(period, id);
     closeMenu();
+    return;
+  }
+  if (key === "smart-paste" && id) {
+    closeMenu();
+    if (!props.polish) return;
+    // 中途切换工作区（或列表数组被结构性替换）会换新数组：丢弃迟到结果，避免写入其他空间。
+    const landingLists = props.todoLists;
+    await runSmartPaste({
+      kind: "todo",
+      polish: props.polish,
+      messages: smartPasteMessages(uiText.value, "todo"),
+      anchor,
+      insert: (texts) => {
+        if (isUnmounted || props.todoLists !== landingLists) return;
+        emit("createFromText", period, texts, id);
+      },
+      fallbackTexts: splitDroppedTodoText,
+      notify: (phase, message, anchor) => emit("polishMessage", phase, message, anchor),
+    });
     return;
   }
   if (key === "notify" && id && anchor) {
@@ -1424,8 +1447,8 @@ function canCopyTextSelection(period: TodoPeriod, id: string, target: HTMLInputE
   return range.start !== range.end;
 }
 
-function canPasteTodoText(period: TodoPeriod, id: string, target: HTMLInputElement): boolean {
-  const todo = getTodoById(period, id);
+function canPasteTodoText(period: TodoPeriod): boolean {
+  const todo = menu.value?.id ? getTodoById(period, menu.value.id) : undefined;
   return todo?.done !== true && typeof navigator.clipboard?.readText === "function";
 }
 
@@ -1443,18 +1466,19 @@ async function copyTodoText(period: TodoPeriod, id: string): Promise<void> {
   await copyTextToClipboard(text);
 }
 
-async function pasteTextFromClipboard(period: TodoPeriod, id: string, target: HTMLInputElement): Promise<void> {
-  const start = target.selectionStart ?? target.value.length;
-  const end = target.selectionEnd ?? start;
-  const pasted = await pasteIntoField(target, { start, end });
-  if (pasted) emit("update", period, id, target.value);
-}
-
 async function pasteTodosFromClipboard(period: TodoPeriod): Promise<void> {
   const text = await readClipboardText();
   const texts = splitDroppedTodoText(text ?? "");
   if (texts.length === 0) return;
   emit("createFromText", period, texts);
+}
+
+/** 右键某条提醒时的「粘贴」：把剪贴板全文拆成多条新提醒，插到该条（afterId）下方。 */
+async function pasteTodosAfter(period: TodoPeriod, afterId: string): Promise<void> {
+  const text = await readClipboardText();
+  const texts = splitDroppedTodoText(text ?? "");
+  if (texts.length === 0) return;
+  emit("createFromText", period, texts, afterId);
 }
 
 async function startTodoEdit(event: MouseEvent, period: TodoPeriod, id: string): Promise<void> {
@@ -2016,6 +2040,7 @@ function buildTodoListEntries(period: TodoListId, todos: TodoItem[], deferredDon
           <div class="notify-panel-actions">
             <button class="notify-panel-action is-danger" type="button" @click="clearNotifyPicker">{{ uiText.todo.clear }}</button>
             <button class="notify-panel-action" type="button" @click="applyNotifyPickerToday">{{ uiText.todo.today }}</button>
+            <button class="notify-panel-action is-confirm" type="button" @click="confirmNotifyPicker(getNotifyPickerValue())">{{ uiText.common.confirm }}</button>
           </div>
         </div>
       </Transition>

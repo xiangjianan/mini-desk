@@ -1646,7 +1646,7 @@ describe("TodoPanel", () => {
     expect(getTeleportedDatePickerText()).toContain("清除");
     expect(document.body.querySelector(".notify-panel-action.is-danger")?.textContent).toContain("清除");
     expect(getTeleportedDatePickerText()).toContain("今天");
-    expect(getTeleportedDatePickerText()).not.toContain("确定");
+    expect(getTeleportedDatePickerText()).toContain("确定");
 
     // 今天 saves the default next-whole-hour time immediately and keeps the picker open.
     clickTeleportedNotifyAction("今天");
@@ -3376,7 +3376,9 @@ describe("TodoPanel", () => {
     await Promise.resolve();
 
     expect(readText).toHaveBeenCalled();
-    expect(wrapper.emitted("update")?.at(-1)).toEqual(["morning", "a", "第一项粘贴内容"]);
+    // 右键提醒事项的「粘贴」现在把剪贴板内容新增成提醒，插到被右键的这条（id "a"）下方。
+    expect(wrapper.emitted("createFromText")?.[0]).toEqual(["morning", ["粘贴内容"], "a"]);
+    expect(wrapper.emitted("update")).toBeUndefined();
     wrapper.unmount();
   });
 
@@ -3516,7 +3518,7 @@ describe("TodoPanel", () => {
     expect(picker.props("panel")).toBe(true);
     expect(getTeleportedDatePickerText()).toContain("清除");
     expect(getTeleportedDatePickerText()).toContain("今天");
-    expect(getTeleportedDatePickerText()).not.toContain("确定");
+    expect(getTeleportedDatePickerText()).toContain("确定");
   });
 
   it("emits notify updates without changing star state", async () => {

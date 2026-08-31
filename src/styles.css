@@ -2311,6 +2311,16 @@ button.notify-panel-preset {
   background: rgba(180, 35, 24, 0.08);
 }
 
+.notify-panel-action.is-confirm {
+  color: var(--primary-foreground);
+  background: var(--primary);
+  border-color: var(--primary);
+}
+
+.notify-panel-action.is-confirm:hover:not(:disabled) {
+  background: color-mix(in srgb, var(--primary) 88%, #000);
+}
+
 /* Every delete/trash affordance reads as destructive: the trash icon buttons
    (screenshot delete, quick tag/header delete) and the workspace overflow-menu
    delete item paint in the danger color so they stand out from ordinary actions.

@@ -2347,14 +2347,22 @@ function createTodo(period: TodoPeriod, afterId?: string): void {
   nextTick(() => focusTodoInput(period, id));
 }
 
-function createTodosFromText(period: TodoPeriod, texts: string[]): void {
+function createTodosFromText(period: TodoPeriod, texts: string[], afterId?: string): void {
   if (!isConfiguredTodoListId(period)) return;
+  let insertAfter: string | undefined = afterId;
   texts.forEach((text) => {
-    activeWorkspace.value.todos = addTodoToMap(activeWorkspace.value.todos, period, {
-      id: createId(),
-      text,
-      done: false,
-    });
+    const id = createId();
+    activeWorkspace.value.todos = addTodoToMap(
+      activeWorkspace.value.todos,
+      period,
+      {
+        id,
+        text,
+        done: false,
+      },
+      insertAfter,
+    );
+    insertAfter = id;
   });
   persistNow();
 }
