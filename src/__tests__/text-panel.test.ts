@@ -1583,7 +1583,7 @@ describe("TextPanel", () => {
       props: {
         titleId: "workspace-title",
         title: "工作空间",
-        lines: [{ text: "前缀" }, { text: "杂乱内容" }, { text: "后缀" }],
+        lines: [{ text: "前缀", indent: 0 }, { text: "杂乱内容", indent: 0 }, { text: "后缀", indent: 0 }],
         polish,
       },
       global: {
