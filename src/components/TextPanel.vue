@@ -547,7 +547,9 @@ interface PolishLanding {
 }
 
 /** 整理结果按行拼接待入捕获选区：进入编辑态、行边界断行、编号归一化、上报 update，与普通粘贴同语义。
- *  流程途中组件被卸载或文本已被改动（用户编辑/并发的另一条流程先落位）时丢弃结果，避免旧内容写进新现场。 */
+ *  流程途中组件被卸载或文本已被改动（用户编辑/并发的另一条流程先落位）时丢弃结果，避免旧内容写进新现场。
+ *  落位后取消选区：光标塌缩到插入块末尾，并清除记忆选区——旧偏移在结果文本上已错位，保留会被
+ *  getSelectionRange 复活，让下次右键/粘贴作用于错误的文本。 */
 function insertTextsAtSelection(target: HTMLTextAreaElement, texts: string[], landing: PolishLanding): void {
   if (texts.length === 0) return;
   if (isUnmounted || text.value !== landing.baseline) return;
@@ -556,6 +558,8 @@ function insertTextsAtSelection(target: HTMLTextAreaElement, texts: string[], la
   target.setSelectionRange(range.start, range.end);
   target.setRangeText(textBlockForRange(landing.baseline, range, texts.join("\n")), range.start, range.end, "end");
   normalizeTextareaText(target);
+  lastTextSelection.value = null;
+  collapseSelection(target, target.selectionEnd ?? target.selectionStart ?? 0);
   emit("update", editorTextToLines(text.value));
 }
 

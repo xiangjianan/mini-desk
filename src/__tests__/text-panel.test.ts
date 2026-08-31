@@ -1576,6 +1576,41 @@ describe("TextPanel", () => {
     wrapper.unmount();
   });
 
+  it("smart polish cancels the selection after applying the result", async () => {
+    Object.assign(navigator, { clipboard: { readText: vi.fn().mockResolvedValue("剪贴板内容"), writeText: vi.fn() } });
+    const polish = vi.fn(async (): Promise<PolishResult> => ({ items: ["1、要点A", "2、要点B"] }));
+    const wrapper = mount(TextPanel, {
+      props: {
+        titleId: "workspace-title",
+        title: "工作空间",
+        lines: [{ text: "前缀" }, { text: "杂乱内容" }, { text: "后缀" }],
+        polish,
+      },
+      global: {
+        stubs: {
+          Dropdown: menuDropdownStub,
+          NDropdown: menuDropdownStub,
+        },
+      },
+    });
+    const textarea = wrapper.get("textarea").element as HTMLTextAreaElement;
+
+    await wrapper.get("textarea").trigger("dblclick");
+    textarea.setSelectionRange(3, 7); // 选中中间一行的「杂乱内容」
+    await wrapper.get("textarea").trigger("contextmenu");
+    await wrapper.get('[data-key="smart-polish"]').trigger("click");
+    await flushPromises();
+
+    expect(textarea.value).toBe("前缀\n1、要点A\n2、要点B\n后缀");
+    // 结果落位后取消选区：光标塌缩，不再保留高亮
+    expect(textarea.selectionStart).toBe(textarea.selectionEnd);
+    // 记忆选区一并清除：旧偏移落在润色后的新文本上已错位，复活会作用于错误文本
+    await wrapper.get("textarea").trigger("contextmenu");
+    expect(wrapper.findAll(".dropdown-option").map((option) => option.text()))
+      .toEqual(["复制", "粘贴", "智能粘贴", "Tips"]);
+    wrapper.unmount();
+  });
+
   it("skips the late smart paste result when the text changed during the flight", async () => {
     Object.assign(navigator, { clipboard: { readText: vi.fn().mockResolvedValue("杂乱文本"), writeText: vi.fn() } });
     let resolvePolish: ((result: PolishResult) => void) | undefined;
