@@ -2688,14 +2688,18 @@ button.todo-star-button {
   animation: starred-text-flow 4.8s linear infinite;
 }
 
-/* 悬浮滚动（hover marquee）期间，暂停星标/重点(渐变)提醒的背景流动动画：
-   持续的 background-position 动画会让 background-clip:text 的排版层反复重绘，
-   在部分引擎上反而压制住 <input> 原生的文字滚动重绘，导致星标项悬浮时文字
-   不滚动。暂停后原生滚动即可正常重绘文字；鼠标移出（移除 is-marquee）即恢复流动。 */
+/* 悬浮滚动（hover marquee）期间，星标/重点(渐变)文字临时切换为实色文本：
+   background-clip:text 的渐变排版层在部分引擎上不会随 <input> 的原生滚动重绘，
+   于是 scrollLeft 虽在推进、文字却停在原地，溢出部分永远显示不出来。
+   临时去掉渐变（背景置透明 + 实色文字）后，原生滚动即可正常重绘并显示溢出文本；
+   鼠标移出（移除 is-marquee）即恢复彩色流动渐变。 */
 .todo-item.is-starred .todo-input.is-marquee,
 .today-focus-item .today-focus-input.is-marquee,
 .todo-item.is-starred.is-done .todo-input.is-marquee,
 .today-focus-item.is-done .today-focus-input.is-marquee {
+  color: var(--text);
+  -webkit-text-fill-color: var(--text);
+  background: transparent;
   animation: none;
 }
 
