@@ -51,7 +51,7 @@ import { TODO_DENSITY_THRESHOLD, getOrderedTodos, getTodoReorderTarget, todoKey 
 import { clampCaret } from "../utils/caret";
 import { splitDroppedTodoText } from "../utils/textEditor";
 import { copySelection, copyTextToClipboard, getSelectionRange, pasteIntoField, readClipboardText } from "../utils/clipboard";
-import { CONTEXT_MENU_Z_INDEX, createExclusiveContextMenu } from "../utils/contextMenu";
+import { CONTEXT_MENU_Z_INDEX, createExclusiveContextMenu, renderPolishMenuLabel } from "../utils/contextMenu";
 import { renderIcon } from "../utils/dropdownIcons";
 import { isImeComposing } from "../utils/ime";
 import type { PolishKind, PolishResult } from "../sync/polishClient";
@@ -2057,6 +2057,7 @@ function buildTodoListEntries(period: TodoListId, todos: TodoItem[], deferredDon
       :y="menu.y"
       :z-index="CONTEXT_MENU_Z_INDEX"
       :options="menuOptions"
+      :render-label="renderPolishMenuLabel"
       @select="handleMenuSelect"
       @clickoutside="exclusiveMenu.handleClickOutside"
     >

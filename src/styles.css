@@ -2675,6 +2675,30 @@ button.todo-star-button {
   }
 }
 
+/* 右键菜单「智能粘贴/智能润色」的彩色流动文字：克隆星标重点提醒的渐变流动，
+   让两条 AI 润色入口在菜单里一眼可辨。 */
+.polish-menu-flow {
+  color: transparent;
+  -webkit-text-fill-color: transparent;
+  background: linear-gradient(90deg, #d946ef 0%, #2563eb 10%, #0f9f6e 20%, #f59e0b 30%, #ef4444 40%, #d946ef 50%, #2563eb 60%, #0f9f6e 70%, #f59e0b 80%, #ef4444 90%, #d946ef 100%);
+  background-size: 200% 100%;
+  background-repeat: repeat-x;
+  -webkit-background-clip: text;
+  background-clip: text;
+  animation: starred-text-flow 4.8s linear infinite;
+}
+
+/* 悬浮滚动（hover marquee）期间，暂停星标/重点(渐变)提醒的背景流动动画：
+   持续的 background-position 动画会让 background-clip:text 的排版层反复重绘，
+   在部分引擎上反而压制住 <input> 原生的文字滚动重绘，导致星标项悬浮时文字
+   不滚动。暂停后原生滚动即可正常重绘文字；鼠标移出（移除 is-marquee）即恢复流动。 */
+.todo-item.is-starred .todo-input.is-marquee,
+.today-focus-item .today-focus-input.is-marquee,
+.todo-item.is-starred.is-done .todo-input.is-marquee,
+.today-focus-item.is-done .today-focus-input.is-marquee {
+  animation: none;
+}
+
 .todo-completed-divider {
   display: flex;
   align-items: center;

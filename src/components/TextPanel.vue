@@ -18,7 +18,7 @@ import {
   renumberOrderedListText,
   textLinesToEditorText,
 } from "../utils/textEditor";
-import { CONTEXT_MENU_Z_INDEX, createExclusiveContextMenu } from "../utils/contextMenu";
+import { CONTEXT_MENU_Z_INDEX, createExclusiveContextMenu, renderPolishMenuLabel } from "../utils/contextMenu";
 import { copySelection, getSelectionRange, hasSelection, pasteIntoField, hasAsyncClipboard as hasClipboardApi } from "../utils/clipboard";
 import { renderIcon } from "../utils/dropdownIcons";
 import { clampCaret, setStickySelection } from "../utils/caret";
@@ -723,6 +723,7 @@ function restoreSelection(textarea: HTMLTextAreaElement, selection: { start: num
       :y="menu.y"
       :z-index="CONTEXT_MENU_Z_INDEX"
       :options="menuOptions"
+      :render-label="renderPolishMenuLabel"
       @select="handleMenuSelect"
       @clickoutside="exclusiveMenu.handleClickOutside"
     >
