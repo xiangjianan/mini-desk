@@ -29,6 +29,20 @@ export interface ChangelogEntry {
 
 export const CHANGELOG: ChangelogEntry[] = [
   {
+    version: "1.0.160",
+    date: "2026-08-31",
+    notes: {
+      zh: [
+        "新增：提醒事项/便签右键菜单「智能粘贴」——剪贴板杂乱文本经 AI 整理后直接插入（提醒区拆成独立待办、便签区排版成编号要点），失败自动退化为普通粘贴",
+        "新增：便签区选中文本后右键「智能润色」，选区经同一 AI 流程整理替换，失败或超长保留原文",
+      ],
+      en: [
+        "New: \"Smart paste\" in the reminders/notes right-click menu — messy clipboard text is AI-organized and inserted directly (split into separate reminders, or polished into numbered note lines); any failure falls back to plain paste",
+        "New: \"Smart polish\" on selected note text — the selection runs through the same AI flow and is replaced in place; the original is kept on failure or over-length",
+      ],
+    },
+  },
+  {
     version: "1.0.159",
     date: "2026-08-30",
     notes: {
