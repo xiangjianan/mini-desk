@@ -29,6 +29,18 @@ export interface ChangelogEntry {
 
 export const CHANGELOG: ChangelogEntry[] = [
   {
+    version: "1.0.164",
+    date: "2026-09-04",
+    notes: {
+      zh: [
+        "新增：手机速记页标题行右侧「AI 润色」开关（默认关闭）——关闭时发送内容原文直存、不调用大模型，开启后恢复 AI 润色再同步；开关状态记忆在手机本地",
+      ],
+      en: [
+        "New: \"AI polish\" toggle at the right of the mobile capture page's title row (off by default) — off sends raw text straight to storage without calling the LLM, on restores AI polishing before syncing; the choice is remembered on the phone",
+      ],
+    },
+  },
+  {
     version: "1.0.163",
     date: "2026-08-31",
     notes: {

@@ -1,6 +1,7 @@
 import { beforeEach, describe, expect, it, vi } from "vitest";
 import { mount } from "@vue/test-utils";
 import MobileInboxCapture from "../components/MobileInboxCapture.vue";
+import { INBOX_POLISH_PREF_KEY } from "../sync/capturePrefs";
 import type { InboxPlainItem } from "../sync/crypto";
 import type { InboxPostResult } from "../sync/inboxClient";
 
@@ -16,6 +17,8 @@ vi.mock("../sync/inboxClient", () => ({
 beforeEach(() => {
   postMock.mockReset();
   postMock.mockResolvedValue({ ok: true });
+  // 润色开关持久化在 localStorage：隔离各用例，默认从未开启过。
+  localStorage.removeItem(INBOX_POLISH_PREF_KEY);
 });
 
 function mountCapture() {
@@ -49,6 +52,11 @@ function plainPayload(payload: string): InboxPlainItem {
   return JSON.parse(payload) as InboxPlainItem;
 }
 
+/** 润色开关内的真实 checkbox（视觉隐藏但保留可达性）。 */
+function polishInput(wrapper: ReturnType<typeof mountCapture>) {
+  return wrapper.get('[data-testid="mobile-inbox-polish"] input');
+}
+
 /** jsdom 默认无 navigator.clipboard；一键粘贴测试需注入 readText 模拟。 */
 function stubClipboardRead(result: string | Promise<string>, reject = false) {
   const readText = vi.fn();
@@ -75,6 +83,56 @@ describe("MobileInboxCapture", () => {
     expect(wrapper.get('[data-testid="mobile-inbox-send-todo"]').text()).toBe("发送到提醒");
     expect(wrapper.get('[data-testid="mobile-inbox-send-note"]').text()).toBe("发送到便签");
     expect(wrapper.get('[data-testid="mobile-inbox-text"]').attributes("placeholder")).toBe("想到什么就记下来，可多行…");
+  });
+
+  it("AI 润色开关：默认关闭、位于标题行最右，payload 携带 polish=false（原文直存）", async () => {
+    const wrapper = mountCapture();
+
+    expect(wrapper.get('[data-testid="mobile-inbox-polish"]').text()).toBe("AI 润色");
+    // 开关在标题行内、工具组之后（清空按钮存在时仍居最右）。
+    expect(wrapper.get('[data-testid="mobile-inbox-polish"]').classes()).toContain("mobile-inbox-polish");
+    expect((polishInput(wrapper).element as HTMLInputElement).checked).toBe(false);
+
+    await fillAndSend(wrapper, "原文直存");
+    await until(() => expect(postMock).toHaveBeenCalledTimes(1));
+    expect(plainPayload(lastPayload())).toMatchObject({ kind: "todo", text: "原文直存", polish: false });
+  });
+
+  it("打开润色开关：payload 携带 polish=true、持久化到 localStorage，重挂后保持开启", async () => {
+    const wrapper = mountCapture();
+
+    await polishInput(wrapper).setValue(true);
+    expect(localStorage.getItem(INBOX_POLISH_PREF_KEY)).toBe("1");
+
+    await fillAndSend(wrapper, "润色一条");
+    await until(() => expect(postMock).toHaveBeenCalledTimes(1));
+    expect(plainPayload(lastPayload())).toMatchObject({ polish: true });
+
+    // 换码/重开页面场景：组件卸载重挂后开关仍读取持久化状态。
+    wrapper.unmount();
+    const reborn = mountCapture();
+    expect((polishInput(reborn).element as HTMLInputElement).checked).toBe(true);
+  });
+
+  it("关闭已开启的润色开关：持久化为 0 并回退原文直存", async () => {
+    localStorage.setItem(INBOX_POLISH_PREF_KEY, "1");
+    const wrapper = mountCapture();
+    expect((polishInput(wrapper).element as HTMLInputElement).checked).toBe(true);
+
+    await polishInput(wrapper).setValue(false);
+    expect(localStorage.getItem(INBOX_POLISH_PREF_KEY)).toBe("0");
+
+    await fillAndSend(wrapper, "回到原文", "note");
+    await until(() => expect(postMock).toHaveBeenCalledTimes(1));
+    expect(plainPayload(lastPayload())).toMatchObject({ kind: "note", polish: false });
+  });
+
+  it("润色开关文案中英齐全", () => {
+    const zh = mountCapture();
+    expect(zh.get('[data-testid="mobile-inbox-polish"]').text()).toBe("AI 润色");
+
+    const en = mount(MobileInboxCapture, { props: { code: CODE, language: "en" } });
+    expect(en.get('[data-testid="mobile-inbox-polish"]').text()).toBe("AI polish");
   });
 
   it("提交成功：keyHash 为 64 位 hex、payload 为明文 JSON、显示已发送并清空输入", async () => {

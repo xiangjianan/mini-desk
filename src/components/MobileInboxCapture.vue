@@ -6,6 +6,7 @@ import { getUiText } from "../state/i18n";
 import { createId } from "../state/storage";
 import { readClipboardText } from "../utils/clipboard";
 import { INBOX_PLAINTEXT_MAX_CHARS } from "../sync/config";
+import { loadInboxPolishPref, saveInboxPolishPref } from "../sync/capturePrefs";
 import { inboxKeyHash, type InboxPlainItem } from "../sync/crypto";
 import { postInboxItem, type InboxPostFailure } from "../sync/inboxClient";
 import type { AppLanguage } from "../types";
@@ -45,6 +46,14 @@ const splitHintText = computed(() => app.value.mobileInboxSplitHint.replace("{co
 
 /** 输入框右上角「清空」按钮：仅在存在可清空内容时显示，空框时不出现以免干扰占位提示。 */
 const canClearDraft = computed(() => draft.value.trim().length > 0);
+
+/** AI 润色开关：默认关闭（原文直存，不调大模型），开启后服务端润色再同步；状态持久化在手机浏览器本地。 */
+const polishEnabled = ref(loadInboxPolishPref());
+
+function togglePolish(event: Event): void {
+  polishEnabled.value = (event.target as HTMLInputElement).checked;
+  saveInboxPolishPref(polishEnabled.value);
+}
 
 function clearDraft(): void {
   draft.value = "";
@@ -158,7 +167,7 @@ async function send(kind: CaptureKind): Promise<void> {
     const keyHash = await inboxKeyHash(props.code);
     for (let index = 0; index < lines.length; index += 1) {
       try {
-        const payload = JSON.stringify({ kind, text: lines[index], createdAt: Date.now() });
+        const payload = JSON.stringify({ kind, text: lines[index], createdAt: Date.now(), polish: polishEnabled.value });
         const result = await postInboxItem(keyHash, createId(), payload);
         if (!result.ok) {
           failAt(index, result.reason);
@@ -207,17 +216,36 @@ onBeforeUnmount(() => {
   <div class="mobile-inbox-wrap">
     <div class="mobile-inbox-head">
       <h2 id="mobile-inbox-heading" class="mobile-inbox-heading">{{ app.mobileInboxHeading }}</h2>
-      <!-- 清空按钮：与标题同一行、靠右浮动，不单独占一行，也不盖住输入框。 -->
-      <button
-        v-if="canClearDraft"
-        type="button"
-        class="mobile-inbox-clear"
-        data-testid="mobile-inbox-clear"
-        :disabled="status === 'sending'"
-        @click="clearDraft"
-      >
-        <NIcon :component="CloseCircleOutline" aria-hidden="true" /><span>{{ app.mobileInboxClear }}</span>
-      </button>
+      <div class="mobile-inbox-head-tools">
+        <!-- 清空按钮：与标题同一行、润色开关左侧，有内容时才出现。 -->
+        <button
+          v-if="canClearDraft"
+          type="button"
+          class="mobile-inbox-clear"
+          data-testid="mobile-inbox-clear"
+          :disabled="status === 'sending'"
+          @click="clearDraft"
+        >
+          <NIcon :component="CloseCircleOutline" aria-hidden="true" /><span>{{ app.mobileInboxClear }}</span>
+        </button>
+        <!-- AI 润色开关（最右）：关闭=原文直存，开启=服务端润色后同步；状态存 localStorage，默认关闭。 -->
+        <label
+          class="mobile-inbox-polish"
+          data-testid="mobile-inbox-polish"
+          :title="app.mobileInboxPolishHint"
+          :aria-label="app.mobileInboxPolishHint"
+        >
+          <input
+            type="checkbox"
+            class="mobile-inbox-polish-input"
+            role="switch"
+            :checked="polishEnabled"
+            @change="togglePolish"
+          />
+          <span class="mobile-inbox-polish-label">{{ app.mobileInboxPolish }}</span>
+          <span class="mobile-inbox-polish-track" aria-hidden="true"></span>
+        </label>
+      </div>
     </div>
 
     <form class="mobile-inbox-form" @submit.prevent>

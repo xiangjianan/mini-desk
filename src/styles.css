@@ -6312,12 +6312,83 @@ html[data-theme="dark"] .quick-search .quick-search-toggle:focus-visible {
   letter-spacing: -0.01em;
 }
 
-/* 标题行：标题居左，「清空」按钮靠右浮动，同一行、不错开。 */
+/* 标题行：标题居左，工具组（清空按钮 + AI 润色开关）靠右，同一行、不错开。 */
 .mobile-inbox-head {
   display: flex;
   align-items: center;
   justify-content: space-between;
   gap: 12px;
+}
+
+/* 标题行右侧工具组：清空按钮在左（有内容时才出现），润色开关固定在最右。 */
+.mobile-inbox-head-tools {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  margin-left: auto;
+}
+
+/* AI 润色开关：文字 + iOS 风格小滑块，控制发送内容是否经大模型润色（默认关闭、状态存 localStorage）。
+   真实 checkbox 视觉隐藏但保留键盘/读屏可达，轨道与圆点用兄弟选择器跟随 :checked。 */
+.mobile-inbox-polish {
+  display: inline-flex;
+  align-items: center;
+  gap: 7px;
+  color: var(--muted);
+  font-size: calc(var(--app-font-size) - 1px);
+  font-weight: 600;
+  cursor: pointer;
+  user-select: none;
+  -webkit-tap-highlight-color: transparent;
+}
+
+.mobile-inbox-polish-input {
+  position: absolute;
+  width: 1px;
+  height: 1px;
+  margin: 0;
+  opacity: 0;
+}
+
+.mobile-inbox-polish-track {
+  position: relative;
+  width: 34px;
+  height: 20px;
+  border: 1px solid var(--line-subtle);
+  border-radius: 999px;
+  background: color-mix(in srgb, var(--panel) 74%, transparent);
+  transition: background var(--motion-fast) var(--motion-ease), border-color var(--motion-fast) var(--motion-ease);
+}
+
+.mobile-inbox-polish-track::after {
+  content: "";
+  position: absolute;
+  top: 2px;
+  left: 2px;
+  width: 14px;
+  height: 14px;
+  border-radius: 50%;
+  background: var(--muted);
+  transition: transform var(--motion-fast) var(--motion-ease), background var(--motion-fast) var(--motion-ease);
+}
+
+.mobile-inbox-polish-input:checked ~ .mobile-inbox-polish-track {
+  border-color: transparent;
+  background: var(--accent);
+}
+
+.mobile-inbox-polish-input:checked ~ .mobile-inbox-polish-track::after {
+  transform: translateX(14px);
+  background: var(--accent-foreground);
+}
+
+/* 开启后文字点亮，与滑块状态互相印证。 */
+.mobile-inbox-polish-input:checked ~ .mobile-inbox-polish-label {
+  color: var(--text);
+}
+
+.mobile-inbox-polish-input:focus-visible ~ .mobile-inbox-polish-track {
+  box-shadow: var(--focus-ring);
 }
 
 /* 粘贴按钮：位于卡片底部、整行宽，拇指可及。次级样式（描边 + 半透明底），
@@ -6404,7 +6475,7 @@ button.mobile-inbox-paste:disabled {
   box-shadow: var(--focus-ring);
 }
 
-/* 清空按钮：小尺寸、次级描边，图标在左，与标题同一行靠右（见 .mobile-inbox-head）。
+/* 清空按钮：小尺寸、次级描边，图标在左，标题行工具组内、润色开关左侧（见 .mobile-inbox-head-tools）。
    有内容时才渲染（见 v-if）。 */
 button.mobile-inbox-clear {
   display: inline-flex;

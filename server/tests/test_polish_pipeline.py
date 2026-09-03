@@ -1,4 +1,4 @@
-"""明文速记流水线：POST 秒回 + 后台润色拆行入库 + 兜底存原文 + 同 id 幂等 + 旧密文直存兼容。"""
+"""明文速记流水线：POST 秒回 + 后台润色拆行入库 + 兜底存原文 + 同 id 幂等 + 润色开关 + 旧密文直存兼容。"""
 
 import json
 import threading
@@ -13,8 +13,12 @@ ORIGIN = "https://todolist.pages.dev"
 KEY = "a" * 64
 
 
-def post_plain(client, item_id, kind, text):
-    payload = json.dumps({"kind": kind, "text": text, "createdAt": 1}, ensure_ascii=False)
+def post_plain(client, item_id, kind, text, polish=None):
+    """polish=None 不带标志（旧手机页语义）；True/False 显式携带开关。"""
+    item = {"kind": kind, "text": text, "createdAt": 1}
+    if polish is not None:
+        item["polish"] = polish
+    payload = json.dumps(item, ensure_ascii=False)
     return client.post(f"/inbox/{KEY}", json={"id": item_id, "payload": payload}, headers={"Origin": ORIGIN})
 
 
@@ -93,6 +97,41 @@ class TestPolishedStore:
         post_plain(client, "i1", "todo", "x")
         assert len(rows(client)) == 2
         assert rows(client) == []
+
+
+class TestPolishToggle:
+    def test_polish_false_stores_raw_without_llm(self, client, polish):
+        response = post_plain(client, "i1", "todo", "原文直存", polish=False)
+
+        assert response.status_code == 200
+        assert polish.calls == []
+        items = rows(client)
+        assert [item["id"] for item in items] == ["i1"]
+        assert json.loads(items[0]["payload"])["text"] == "原文直存"
+
+    def test_polish_false_note_kind_stores_raw_row(self, client, polish):
+        post_plain(client, "n1", "note", "一条便签", polish=False)
+        assert polish.calls == []
+        items = rows(client)
+        assert json.loads(items[0]["payload"]) == {"kind": "note", "text": "一条便签", "createdAt": items[0]["createdAt"]}
+
+    def test_polish_true_still_polishes(self, client, polish):
+        post_plain(client, "i1", "todo", "拆两条", polish=True)
+        assert polish.calls == [("todo", "拆两条")]
+        assert [item["id"] for item in rows(client)] == ["i1#0", "i1#1"]
+
+    def test_missing_flag_defaults_to_polish(self, client, polish):
+        # 旧手机页（SW 缓存）不带 polish 标志：保持存量行为，默认润色。
+        post_plain(client, "i1", "todo", "无标志")
+        assert polish.calls == [("todo", "无标志")]
+        assert [item["id"] for item in rows(client)] == ["i1#0", "i1#1"]
+
+    def test_non_bool_flag_ignored_as_legacy(self, client, polish):
+        payload = json.dumps({"kind": "todo", "text": "假开关", "createdAt": 1, "polish": "no"}, ensure_ascii=False)
+        response = client.post(f"/inbox/{KEY}", json={"id": "i1", "payload": payload}, headers={"Origin": ORIGIN})
+
+        assert response.status_code == 200
+        assert polish.calls == [("todo", "假开关")]
 
 
 class TestFallback:

@@ -4,7 +4,8 @@
 注册制：pairing_keys 三态（unknown/active/revoked），桌面端保存/轮换/启动时注册，
 未注册码 POST 404、已注销码 POST 410（注销即永久，注册不复活）。幂等：同 id 覆盖。
 明文路径（新手机页）：POST 校验后立刻 ack，后台线程调 DeepSeek 润色（llm.polish_capture），
-拆行入库；LLM 任何失败兜底存原文。密文路径（SW 缓存的旧手机页）：与原 Worker 协议一致，原样直存。
+拆行入库；LLM 任何失败兜底存原文。payload 可选布尔 polish=False 时跳过润色原文直存
+（手机页 AI 润色开关，缺省/非布尔按旧协议默认润色）。密文路径（SW 缓存的旧手机页）：与原 Worker 协议一致，原样直存。
 自建服务器无次数限制：只做输入校验，不做限流/配额。
 智能粘贴：POST /polish/<key_hash> 同步调 LLM 整理剪贴板文本（无状态不入库，鉴权同注册制）。
 """
@@ -67,16 +68,23 @@ def is_plain_item(value: object) -> bool:
     return value.get("kind") in ("todo", "note") and isinstance(value.get("text"), str) and bool(value["text"].strip())
 
 
+def plain_item_polish_enabled(value: dict) -> bool:
+    """手机页 AI 润色开关（payload 可选布尔 polish）：显式 False 才关闭润色；
+    缺省（旧手机页）或非布尔按旧协议默认开启，避免类型渗透改变存量行为。"""
+    polish = value.get("polish", True)
+    return polish if isinstance(polish, bool) else True
+
+
 def encode_payload(kind: str, text: str, created_at: int) -> str:
     """明文入库行：与桌面端 InboxPlainItem 同构的紧凑 JSON。"""
     return json.dumps({"kind": kind, "text": text, "createdAt": created_at}, ensure_ascii=False, separators=(",", ":"))
 
 
-def store_plain_items(key_hash: str, item_id: str, kind: str, text: str) -> None:
-    """后台润色入库：LLM 失败或空结果兜底存原文一行（原 id）；非空则每条一行（id 加 #序号）。
-    同基名旧行先清——手机端同 id 重试时以最后一次结果为准，避免兜底行与润色行并存。"""
+def store_plain_items(key_hash: str, item_id: str, kind: str, text: str, polish: bool = True) -> None:
+    """后台润色入库：polish=False 跳过 LLM 直接存原文一行（原 id）；LLM 失败或空结果同样兜底存原文一行；
+    非空则每条一行（id 加 #序号）。同基名旧行先清——手机端同 id 重试时以最后一次结果为准，避免兜底行与润色行并存。"""
     try:
-        items = llm.polish_capture(kind, text)
+        items = llm.polish_capture(kind, text) if polish else None
     except Exception:
         items = None  # polish_capture 自身不应抛出，双保险：任何异常都走原文兜底。
     now = int(time.time() * 1000)
@@ -266,8 +274,9 @@ def create_app() -> Flask:
             return error_response(410, "revoked")
         kind = parsed["kind"]
         text = parsed["text"]
+        polish = plain_item_polish_enabled(parsed)
         # 秒回 + 后台润色：入库前 GET 拉不到本条；润色失败由 store_plain_items 兜底存原文。
-        spawn_worker(lambda: store_plain_items(key_hash, item_id, kind, text))
+        spawn_worker(lambda: store_plain_items(key_hash, item_id, kind, text, polish))
         return jsonify({"ok": True})
 
     def handle_delete(key_hash: str) -> tuple:
