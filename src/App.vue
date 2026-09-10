@@ -249,7 +249,7 @@ const {
   secondaryCompanionAction,
   cancelCompanionAction,
   clearPendingConfirm,
-  getCompanionPosition,
+  getToastPosition,
   setBubbleExpiredHandler,
   setHostHideCompanion,
   clearTimers: clearBubbleTimers,
@@ -1171,9 +1171,9 @@ function syncLegacySpaceLines(): void {
 // (and vice versa).
 
 
-function showCompanion(anchor?: HTMLElement, guideKey?: GuideKey): void {
+function showCompanion(guideKey?: GuideKey): void {
   hideBubbleMessage({ clearRetainedContent: true });
-  companionPosition.value = getCompanionPosition(anchor);
+  companionPosition.value = getToastPosition();
   activeGuideKey.value = guideKey ?? null;
 }
 
@@ -1192,14 +1192,14 @@ function handleGuideClick(key: GuideKey, anchor?: HTMLElement, immediate = false
 
 function showAreaGuide(key: GuideKey, anchor?: HTMLElement): void {
   if (activeGuideKey.value === key && bubbleVisible.value && Boolean(bubbleMessage.value)) {
-    if (anchor) companionPosition.value = getCompanionPosition(anchor);
+    companionPosition.value = getToastPosition();
     return;
   }
   if (isGuideAreaEmpty(key, anchor)) {
     showGuideBubble(key, anchor, false);
     return;
   }
-  showCompanion(anchor, key);
+  showCompanion(key);
 }
 
 function handleEditorBlur(): void {
@@ -2618,7 +2618,8 @@ function clearData(anchor?: HTMLElement): void {
       showBubble("dataCleared", anchor, { hideCompanionAfter: true });
     },
     undefined,
-    { confirmText: uiText.value.settings.clearData, cancelText: uiText.value.common.cancel, danger: true, confirmHint: uiText.value.settings.clearDataHint },
+    // 清空数据删的是整块看板，锚点只是触发入口，高亮它反而误导 —— 跳过高亮。
+    { confirmText: uiText.value.settings.clearData, cancelText: uiText.value.common.cancel, danger: true, confirmHint: uiText.value.settings.clearDataHint, highlightTarget: null },
   );
 }
 
@@ -2751,6 +2752,8 @@ async function importData(event: Event): Promise<void> {
           confirmHint: importedTitle,
           secondaryText: uiText.value.common.add,
           onSecondary: addAsNewWorkspace,
+          // 导入确认针对的是外部文件内容，锚点（导入入口）不代表被覆盖对象 —— 跳过高亮。
+          highlightTarget: null,
         },
       );
       return;
@@ -2761,7 +2764,7 @@ async function importData(event: Event): Promise<void> {
       importFeedbackAnchor.value,
       addAsNewWorkspace,
       cancelImport,
-      { confirmText: uiText.value.common.add, cancelText: uiText.value.common.cancel },
+      { confirmText: uiText.value.common.add, cancelText: uiText.value.common.cancel, highlightTarget: null },
     );
     return;
   }
@@ -3166,7 +3169,7 @@ function clearEmptyTodoRemovalTimersForList(listId: TodoListId): void {
 async function showGuideBubble(key: GuideKey, anchor?: HTMLElement, hideCompanionAfter = true, force = false): Promise<void> {
   if (pendingConfirm.value) return;
   if (!force && isRepeatLockedGuide(key)) {
-    if (anchor) companionPosition.value = getCompanionPosition(anchor);
+    companionPosition.value = getToastPosition();
     return;
   }
   if (force) {

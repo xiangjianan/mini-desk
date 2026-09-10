@@ -1857,7 +1857,7 @@ describe("App shell", () => {
     }
   });
 
-  it("keeps the companion bubble on screen when the reminder list is taller than the viewport", async () => {
+  it("sends Tips bubbles to the screen corner even when the reminder list is taller than the viewport", async () => {
     vi.useFakeTimers();
     vi.spyOn(Math, "random").mockReturnValue(0);
     const viewportHeight = window.innerHeight;
@@ -1883,10 +1883,9 @@ describe("App shell", () => {
       await vi.advanceTimersByTimeAsync(200);
       await wrapper.vm.$nextTick();
 
+      // 超长清单不再参与定位：Tips 统一落屏幕右下角（CSS 默认值承接）。
       const position = wrapper.getComponent(CompanionBubble).props("position") as { bottom?: string } | undefined;
-      expect(position?.bottom).toBeTruthy();
-      expect(position?.bottom).toContain(`${viewportHeight}`);
-      expect(position?.bottom).not.toContain(`${tallBottom}`);
+      expect(position).toBeUndefined();
     } finally {
       rectSpy.mockRestore();
       wrapper.unmount();
@@ -1931,7 +1930,7 @@ describe("App shell", () => {
     }
   });
 
-  it("anchors the todo Tips bubble to the list section corner, not the last item", async () => {
+  it("sends the todo Tips bubble to the screen corner, not the list section", async () => {
     vi.useFakeTimers();
     vi.spyOn(Math, "random").mockReturnValue(0);
     const viewportHeight = window.innerHeight;
@@ -1962,10 +1961,46 @@ describe("App shell", () => {
       await wrapper.vm.$nextTick();
 
       const position = wrapper.getComponent(CompanionBubble).props("position") as { bottom?: string } | undefined;
-      expect(position?.bottom).toContain(`${sectionBottom}`);
-      expect(position?.bottom).not.toContain(`${listBottom}`);
+      // Tips 不再锚定清单区域（无论区块还是条目），统一落屏幕右下角。
+      expect(position).toBeUndefined();
     } finally {
       rectSpy.mockRestore();
+      wrapper.unmount();
+      vi.useRealTimers();
+    }
+  });
+
+  it("highlights the todo row pending deletion and clears the highlight on cancel", async () => {
+    vi.useFakeTimers();
+    vi.spyOn(Math, "random").mockReturnValue(0);
+    localStorage.setItem(
+      STORAGE_KEY,
+      JSON.stringify({
+        todoLists: [{ id: "morning", title: "任务", collapsed: false, compact: false }],
+        todos: { morning: buildTodos(3) },
+      }),
+    );
+    const wrapper = mountApp();
+
+    try {
+      const rows = wrapper.findAll(".todo-item");
+      await rows[0].trigger("contextmenu");
+      await wrapper.findAll(".dropdown-option").find((option) => option.text() === "删除")?.trigger("click");
+      await wrapper.vm.$nextTick();
+
+      // 确认框在场时：被删的那一行高亮，其余行不高亮。
+      expect(rows[0].attributes("data-confirm-target")).toBeDefined();
+      expect(rows[1].attributes("data-confirm-target")).toBeUndefined();
+      expect(rows[2].attributes("data-confirm-target")).toBeUndefined();
+
+      await vi.advanceTimersByTimeAsync(200); // 确认框 200ms 入场延迟
+      await wrapper.vm.$nextTick();
+      await wrapper.get('[data-testid="companion-no"]').trigger("click");
+      await wrapper.vm.$nextTick();
+
+      expect(rows[0].attributes("data-confirm-target")).toBeUndefined();
+      expect(wrapper.find('[data-testid="companion-confirm"]').exists()).toBe(false);
+    } finally {
       wrapper.unmount();
       vi.useRealTimers();
     }
@@ -3023,7 +3058,7 @@ describe("App shell", () => {
     }
   });
 
-  it("anchors the clear notification feedback to the todo section instead of the todo row", async () => {
+  it("places the clear notification feedback at the screen corner instead of the todo row", async () => {
     vi.useFakeTimers();
     localStorage.setItem(
       STORAGE_KEY,
@@ -3036,28 +3071,14 @@ describe("App shell", () => {
     const wrapper = mountApp();
 
     try {
-      vi.spyOn(wrapper.get(".todo-item").element, "getBoundingClientRect").mockReturnValue({
-        x: 400,
-        y: 40,
-        width: 200,
-        height: 24,
-        top: 40,
-        left: 400,
-        right: 600,
-        bottom: 64,
-        toJSON: () => ({}),
-      });
-      vi.spyOn(wrapper.get('.todo-section[data-period="morning"]').element, "getBoundingClientRect").mockReturnValue({
-        x: 384,
-        y: 0,
-        width: 255,
-        height: 240,
-        top: 0,
-        left: 384,
-        right: 639,
-        bottom: 240,
-        toJSON: () => ({}),
-      });
+      wrapper.getComponent(TodoPanel).vm.$emit(
+        "notify",
+        "morning",
+        "todo-1",
+        undefined,
+        wrapper.get('.todo-section[data-period="morning"]').element as HTMLElement,
+      );
+      await wrapper.vm.$nextTick();
 
       wrapper.getComponent(TodoPanel).vm.$emit(
         "notify",
@@ -3068,9 +3089,9 @@ describe("App shell", () => {
       );
       await wrapper.vm.$nextTick();
 
+      // 提示消息固定屏幕右下角（CSS 默认定位），不再锚定提醒区域。
       const style = wrapper.get('[data-testid="companion-bubble"]').attributes("style");
-      expect(style).toContain("right: calc(10px + 100vw - 639px)");
-      expect(style).toContain("bottom: calc(10px + 100vh - 240px)");
+      expect(style).toBeUndefined();
       await vi.advanceTimersByTimeAsync(200);
       await wrapper.vm.$nextTick();
       expect(wrapper.find('[data-testid="companion-confirm"]').text()).toContain("已取消通知时间");
@@ -3378,7 +3399,7 @@ describe("App shell", () => {
     }
   });
 
-  it("anchors image deletion feedback to the screenshot panel after deleting an image card", async () => {
+  it("places image deletion feedback at the screen corner after deleting an image card", async () => {
     vi.useFakeTimers();
     vi.spyOn(Math, "random").mockReturnValue(0);
     localStorage.setItem(
@@ -3414,15 +3435,16 @@ describe("App shell", () => {
       await vi.advanceTimersByTimeAsync(200);
       await wrapper.vm.$nextTick();
 
+      // 确认后的删除成功提示也是普通气泡：落屏幕右下角（CSS 默认定位，无内联样式）。
       const style = wrapper.get('[data-testid="companion-bubble"]').attributes("style");
-      expect(style).toContain("100vw - 260px");
+      expect(style).toBeUndefined();
     } finally {
       wrapper.unmount();
       vi.useRealTimers();
     }
   });
 
-  it("keeps repeated image deletion confirmations inside the left screen edge while the previous bubble fades", async () => {
+  it("keeps repeated image deletion confirmations anchored to the pointer while the previous bubble fades", async () => {
     vi.useFakeTimers();
     vi.spyOn(Math, "random").mockReturnValue(0);
     localStorage.setItem(
@@ -3461,14 +3483,17 @@ describe("App shell", () => {
       await vi.advanceTimersByTimeAsync(3200);
       await wrapper.vm.$nextTick();
 
+      // 第二次删除发生在鼠标 (200, 300)：确认框应跟随指针而不是区域锚点。
+      window.dispatchEvent(new MouseEvent("mousemove", { clientX: 200, clientY: 300 }));
       imagePanel.vm.$emit("delete", "img-2", wrapper.findAll(".image-card")[0].element as HTMLElement);
       await wrapper.vm.$nextTick();
       await vi.advanceTimersByTimeAsync(200);
       await wrapper.vm.$nextTick();
 
       const style = wrapper.get('[data-testid="companion-bubble"]').attributes("style");
-      expect(style).toContain("100vw - 260px");
-      expect(style).not.toContain("100vw - 128px");
+      // GIF 右缘 = 200+52+50 = 302；GIF 垂直中心对齐鼠标 y=300 → top = 275。
+      expect(style).toContain("100vw - 302px");
+      expect(style).toContain("top: 275px");
       expect(wrapper.get('[data-testid="companion-yes"]').text()).toBe("删除");
     } finally {
       wrapper.unmount();
@@ -3528,9 +3553,9 @@ describe("App shell", () => {
       await vi.advanceTimersByTimeAsync(200);
       await wrapper.vm.$nextTick();
 
+      // 删除反馈是普通提示消息：固定屏幕右下角，不再锚定截图列表区域。
       const style = wrapper.get('[data-testid="companion-bubble"]').attributes("style");
-      expect(style).toContain("100vw - 260px");
-      expect(style).not.toContain("100vw - 1024px");
+      expect(style).toBeUndefined();
     } finally {
       wrapper.unmount();
       vi.useRealTimers();
@@ -6545,7 +6570,7 @@ describe("App shell", () => {
     }
   });
 
-  it("reanchors the companion to the todo section when clearing completed todos after quick copy", async () => {
+  it("anchors the clear-completed confirm at the pointer after quick copy feedback", async () => {
     vi.useFakeTimers();
     localStorage.setItem(
       STORAGE_KEY,
@@ -6595,6 +6620,9 @@ describe("App shell", () => {
       await vi.advanceTimersByTimeAsync(3000);
       await wrapper.vm.$nextTick();
 
+      // 复制提示先落在屏幕右下角；随后鼠标移到 (200, 300) 触发清理确认，
+      // 确认框应跟随指针，而不是继承快捷区/提醒区的区域锚点。
+      window.dispatchEvent(new MouseEvent("mousemove", { clientX: 200, clientY: 300 }));
       wrapper.getComponent(TodoPanel).vm.$emit(
         "clearCompleted",
         "morning",
@@ -6603,8 +6631,9 @@ describe("App shell", () => {
       await wrapper.vm.$nextTick();
 
       const style = wrapper.get('[data-testid="companion-bubble"]').attributes("style");
-      expect(style).toContain("100vw - 639px");
-      expect(style).toContain("100vh - 240px");
+      expect(style).toContain("100vw - 302px");
+      expect(style).toContain("top: 275px");
+      expect(style).not.toContain("100vw - 639px");
       expect(style).not.toContain("100vw - 383px");
 
       await vi.advanceTimersByTimeAsync(200);
@@ -6617,7 +6646,7 @@ describe("App shell", () => {
     }
   });
 
-  it("anchors completion feedback to the checked todo section when the section was not focused", async () => {
+  it("places completion feedback at the screen corner when the section was not focused", async () => {
     vi.useFakeTimers();
     localStorage.setItem(
       STORAGE_KEY,
@@ -6631,23 +6660,12 @@ describe("App shell", () => {
 
     try {
       const todoSection = wrapper.get('.todo-section[data-period="morning"]');
-      vi.spyOn(todoSection.element, "getBoundingClientRect").mockReturnValue({
-        x: 384,
-        y: 0,
-        width: 255,
-        height: 240,
-        top: 0,
-        left: 384,
-        right: 639,
-        bottom: 240,
-        toJSON: () => ({}),
-      });
       wrapper.getComponent(TodoPanel).vm.$emit("complete", "morning", "open-1", true, todoSection.element as HTMLElement);
       await wrapper.vm.$nextTick();
 
+      // 完成反馈是普通提示消息：固定屏幕右下角（CSS 默认定位，无内联样式）。
       const style = wrapper.get('[data-testid="companion-bubble"]').attributes("style");
-      expect(style).toContain("100vw - 639px");
-      expect(style).toContain("100vh - 240px");
+      expect(style).toBeUndefined();
 
       await vi.advanceTimersByTimeAsync(200);
       await wrapper.vm.$nextTick();
@@ -7135,7 +7153,7 @@ describe("App shell", () => {
     }
   });
 
-  it("anchors the companion near the focused todo section", async () => {
+  it("moves the companion to the screen corner when the todo section is focused", async () => {
     const wrapper = mountApp();
     const todoList = wrapper.get('[data-testid="todo-list-morning"]');
 
@@ -7166,9 +7184,9 @@ describe("App shell", () => {
     });
     await wrapper.get('[data-testid="todo-input-morning"]').trigger("focus");
 
+    // 聚焦不再把伴宠锚到提醒区右下角：统一回屏幕右下角（CSS 默认值承接）。
     const todoStyle = wrapper.get('[data-testid="companion-bubble"]').attributes("style");
-    expect(todoStyle).toContain("right: calc(10px + 100vw - 740px)");
-    expect(todoStyle).toContain("bottom: calc(10px + 100vh - 394px)");
+    expect(todoStyle).toBeUndefined();
 
     wrapper.unmount();
   });
@@ -7223,7 +7241,8 @@ describe("App shell", () => {
       await wrapper.vm.$nextTick();
 
       expect(wrapper.find('[data-testid="companion-confirm"]').exists()).toBe(false);
-      expect(wrapper.get('[data-testid="companion-bubble"]').attributes("style")).toContain("100vw - 1080px");
+      // 焦点切走后伴宠不再锚到新区域右下角，统一回屏幕右下角（无内联定位）。
+      expect(wrapper.get('[data-testid="companion-bubble"]').attributes("style")).toBeUndefined();
       expect(wrapper.find(".focus-companion.is-visible").exists()).toBe(true);
 
       await vi.advanceTimersByTimeAsync(260);

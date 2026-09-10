@@ -5,7 +5,7 @@ export interface TipRotationState {
   index: number;
 }
 
-/** 气泡 anchor 的容器选择器 → 右键「Tips」所用的指南键（涵盖 getCompanionPosition 认的锚点容器，并按各面板容器扩展）。 */
+/** 气泡 anchor 的容器选择器 → 右键「Tips」/GIF 点击轮换所用的指南键（按各面板容器匹配）。 */
 const ANCHOR_SELECTOR_TO_GUIDE: ReadonlyArray<{ selector: string; guideKey: GuideKey }> = [
   { selector: ".image-preview, .preview-main, .preview-stage, .image-panel", guideKey: "images" },
   { selector: ".todo-section, .todo-panel", guideKey: "todos" },
