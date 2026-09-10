@@ -1325,7 +1325,7 @@ async function handleMenuSelect(key: string): Promise<void> {
     const todo = getTodoById(period, id);
     emit("star", { period, id, starred: !todo?.starred, anchor });
   }
-  if (key === "delete") emit("remove", period, id, getTodoSectionAnchor(period));
+  if (key === "delete") emit("remove", period, id, anchor ?? getTodoSectionAnchor(period));
 }
 
 

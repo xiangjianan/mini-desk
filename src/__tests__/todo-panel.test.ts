@@ -2226,7 +2226,8 @@ describe("TodoPanel", () => {
 
     const removeEmitted = wrapper.emitted("remove")?.[0];
     expect(removeEmitted?.slice(0, 2)).toEqual(["morning", "a"]);
-    expect((removeEmitted?.[2] as HTMLElement).classList.contains("todo-section")).toBe(true);
+    // 删除确认的高亮锚点现在是待办行本身（今日聚焦行），不再是清单区域。
+    expect((removeEmitted?.[2] as HTMLElement).classList.contains("today-focus-item")).toBe(true);
     wrapper.unmount();
   });
 

@@ -1,9 +1,23 @@
 import { ref } from "vue";
 import { getMessage, type MessageKey } from "../state/messages";
 import type { BoardState, GuideKey } from "../types";
+import { getLastPointerPosition, startPointerTracking } from "../utils/pointerPosition";
 
 const COMPANION_FADE_MS = 2000;
-const MIN_COMPANION_POPOVER_RIGHT_EDGE = 260;
+/** 确认弹框的 GIF 尺寸（与 .focus-companion img 一致）。 */
+const CONFIRM_GIF_SIZE = 50;
+/** 确认弹框的 GIF 与鼠标的水平间距：鼠标在 GIF 左侧、大致落在删除按钮正下方。 */
+const CONFIRM_POINTER_GAP = 52;
+/** 确认弹框的 GIF 距视口右缘的最小留白。 */
+const CONFIRM_VIEWPORT_MARGIN = 8;
+/** 确认弹框上方为弹框本体预留的高度：鼠标贴近顶部时 GIF 下压到此线，
+ * 避免 NPopover 上方空间不足翻转到 GIF 下方（那会让按钮跑到鼠标下面）。 */
+const CONFIRM_TOP_RESERVE = 150;
+/** 移动端伴宠的固定落点（无鼠标可依）。 */
+const MOBILE_COMPANION_POSITION = { right: "12px", top: "118px" } as const;
+/** 二次确认在场时标记在被删元素上的属性（样式见 styles.css）。用 data- 属性而非
+ *  class：Vue 重渲染会整体重写 class 绑定，手工加的类会被抹掉，属性则不受影响。 */
+const CONFIRM_TARGET_MARK = "data-confirm-target";
 
 export interface BubbleOptions {
   hideCompanionAfter?: boolean;
@@ -41,6 +55,7 @@ export interface CompanionBubbleDeps {
  * post-dismiss companion fade, and pending-confirm orchestration.
  */
 export function useCompanionBubble(deps: CompanionBubbleDeps) {
+  startPointerTracking();
   const bubbleMessage = ref("");
   const bubbleLink = ref<{ text: string; href: string } | null>(null);
   const bubbleSignature = ref("");
@@ -58,23 +73,46 @@ export function useCompanionBubble(deps: CompanionBubbleDeps) {
   const companionFadeStartedAt = ref(0);
   const bubbleTimerOptions = ref<BubbleOptions>({});
   const bubbleClearSignal = ref(0);
+  /** 当前被二次确认高亮的元素：确认框在场时给被删元素加 is-confirm-target。 */
+  let confirmHighlightTarget: HTMLElement | null = null;
 
-  function getCompanionPosition(anchor?: HTMLElement): { right: string; bottom?: string; top?: string } | undefined {
+  /** 高亮即将被删除/清理的元素；传 null 仅清除（如清空数据/导入这类无具体目标的确认）。 */
+  function setConfirmHighlight(element: HTMLElement | null): void {
+    confirmHighlightTarget?.removeAttribute(CONFIRM_TARGET_MARK);
+    confirmHighlightTarget = element;
+    confirmHighlightTarget?.setAttribute(CONFIRM_TARGET_MARK, "");
+  }
+
+  /** 所有提示消息气泡的统一落点：屏幕右下角（桌面交给 CSS 默认值，移动端沿用固定提示位）。 */
+  function getToastPosition(): { right: string; bottom?: string; top?: string } | undefined {
     if (deps.isMobileLayout()) {
-      return {
-        right: "12px",
-        top: "118px",
-      };
+      return { ...MOBILE_COMPANION_POSITION };
     }
-    const target = anchor?.closest(".image-preview, .preview-main, .preview-stage, .todo-section, .quick-block, .text-panel, .split-block, .panel") as HTMLElement | null;
-    if (!target) return undefined;
-    const rect = target.getBoundingClientRect();
-    if (!rect.width && !rect.height) return undefined;
-    const safeRight = Math.max(Math.round(rect.right), MIN_COMPANION_POPOVER_RIGHT_EDGE);
-    const safeBottom = Math.min(Math.round(rect.bottom), window.innerHeight);
+    return undefined;
+  }
+
+  /**
+   * 二次确认弹框的落点：鼠标右上方 —— GIF 在鼠标右侧（水平间距 40px，鼠标大致
+   * 落在弹框删除按钮的正下方），GIF 垂直中心对齐鼠标；弹框本体由 NPopover 的
+   * top-end 布局弹在 GIF 上方，按钮始终在鼠标上方。鼠标贴近视口顶缘时 GIF 下压
+   * 到预留线，保证弹框不必翻转；贴近视口右缘时钳制在边缘内。没有指针记录时
+   * （纯键盘触发的新页面等）回退到屏幕右下角。
+   */
+  function getConfirmPosition(): { right: string; bottom?: string; top?: string } | undefined {
+    if (deps.isMobileLayout()) {
+      return { ...MOBILE_COMPANION_POSITION };
+    }
+    const pointer = getLastPointerPosition();
+    if (!pointer) return getToastPosition();
+    const top = Math.max(pointer.y - CONFIRM_GIF_SIZE / 2, CONFIRM_TOP_RESERVE);
+    const gifRightEdge = Math.min(
+      pointer.x + CONFIRM_POINTER_GAP + CONFIRM_GIF_SIZE,
+      window.innerWidth - CONFIRM_VIEWPORT_MARGIN,
+    );
     return {
-      right: `calc(100vw - ${safeRight}px + 10px)`,
-      bottom: `calc(100vh - ${safeBottom}px + 10px)`,
+      right: `calc(100vw - ${Math.round(gifRightEdge)}px)`,
+      bottom: "auto",
+      top: `${Math.round(top)}px`,
     };
   }
 
@@ -93,9 +131,9 @@ export function useCompanionBubble(deps: CompanionBubbleDeps) {
     deps.setActiveGuideKey(options.guideKey ?? null);
     companionFocused.value = true;
     bubbleAnchor.value = anchor ?? null;
-    if (anchor) {
-      companionPosition.value = getCompanionPosition(anchor);
-    }
+    // 所有提示消息气泡 —— 普通 toast、整理提醒、右键「Tips」、确认后的成功提示 ——
+    // 统一落到屏幕右下角；只有二次确认弹框例外，贴近鼠标。
+    companionPosition.value = getToastPosition();
     bubbleVisible.value = true;
     bubbleTimerOptions.value = options;
     startBubbleTimer(duration);
@@ -195,7 +233,7 @@ export function useCompanionBubble(deps: CompanionBubbleDeps) {
     anchor: HTMLElement | undefined,
     onConfirm: () => void | Promise<void>,
     onCancel?: () => void,
-    options: { confirmText?: string; cancelText?: string; danger?: boolean; confirmHint?: string; secondaryText?: string; onSecondary?: () => void | Promise<void> } = {},
+    options: { confirmText?: string; cancelText?: string; danger?: boolean; confirmHint?: string; secondaryText?: string; onSecondary?: () => void | Promise<void>; highlightTarget?: HTMLElement | null } = {},
   ): void {
     if (deps.isBoardBlocked()) return;
     window.clearTimeout(bubbleTimer.value);
@@ -226,12 +264,16 @@ export function useCompanionBubble(deps: CompanionBubbleDeps) {
     };
     bubbleVisible.value = true;
     companionFocused.value = true;
-    companionPosition.value = getCompanionPosition(anchor);
+    companionPosition.value = getConfirmPosition();
+    setConfirmHighlight(options.highlightTarget === null ? null : options.highlightTarget ?? anchor ?? null);
   }
 
   async function confirmCompanionAction(): Promise<void> {
     const action = pendingConfirm.value;
     if (!action) return;
+    // 确认即落定：先清掉待确认状态与目标高亮（宿主钩子仍负责收起气泡 UI），
+    // 不依赖宿主注册与否。
+    clearPendingConfirm();
     hideHostCompanion();
     (document.activeElement as HTMLElement | null)?.blur();
     await action.onConfirm();
@@ -243,6 +285,7 @@ export function useCompanionBubble(deps: CompanionBubbleDeps) {
     hideHostCompanion();
     (document.activeElement as HTMLElement | null)?.blur();
     pendingConfirm.value = null;
+    setConfirmHighlight(null);
     await action.onSecondary();
   }
 
@@ -264,6 +307,7 @@ export function useCompanionBubble(deps: CompanionBubbleDeps) {
   function clearPendingConfirm(runCancel = false): void {
     const action = pendingConfirm.value;
     pendingConfirm.value = null;
+    setConfirmHighlight(null);
     if (runCancel) action?.onCancel?.();
   }
 
@@ -294,7 +338,7 @@ export function useCompanionBubble(deps: CompanionBubbleDeps) {
     secondaryCompanionAction,
     cancelCompanionAction,
     clearPendingConfirm,
-    getCompanionPosition,
+    getToastPosition,
     setBubbleExpiredHandler,
     setHostHideCompanion,
     clearTimers,

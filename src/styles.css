@@ -2576,6 +2576,18 @@ button.todo-star-button {
   z-index: 3;
 }
 
+/* 二次确认在场时高亮即将被删除/清理的元素：危险色描边 + 轻微着色。
+   outline 画在内侧不占布局；background-image 叠加不覆盖元素自身底色；
+   用 data- 属性标记，避免 Vue class 绑定重写时被抹掉。 */
+[data-confirm-target] {
+  outline: 2px solid var(--danger);
+  outline-offset: -1px;
+  background-image: linear-gradient(
+    color-mix(in srgb, var(--danger) 10%, transparent),
+    color-mix(in srgb, var(--danger) 10%, transparent)
+  );
+}
+
 .todo-item.is-done .todo-input {
   color: var(--muted);
   text-decoration: line-through;
@@ -2923,8 +2935,8 @@ button.todo-section-menu-button {
 
 .focus-companion {
   position: fixed;
-  right: 54px;
-  bottom: 16px;
+  right: 42px;
+  bottom: 28px;
   z-index: 10050;
   display: grid;
   justify-items: end;
