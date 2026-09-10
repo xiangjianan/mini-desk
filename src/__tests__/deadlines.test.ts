@@ -121,13 +121,13 @@ describe("notification time helpers", () => {
   });
 
   it("builds quick presets in relative and time-of-day groups", () => {
-    // 2024-01-15 10:30 — 10:00 has passed, 14:00/19:00 still upcoming today.
+    // 2024-01-15 10:30 — 10:00 has passed, 14:00/17:00/19:00 still upcoming today.
     const now = new Date(2024, 0, 15, 10, 30, 0, 0);
     const presets = getNotifyPresets(now);
 
     expect(presets.map((preset) => preset.key)).toEqual([
       "in15m", "in30m", "in1h", "in3h", "in6h", // relative group
-      "at10", "at14", "at19", "tomorrow9", "dayAfter9", // time-of-day group
+      "at10", "at14", "at17", "at19", "tomorrow10", // time-of-day group
     ]);
     expect(presets.map((preset) => preset.group)).toEqual([
       "relative", "relative", "relative", "relative", "relative",
@@ -141,23 +141,24 @@ describe("notification time helpers", () => {
     expect(presets[3].at).toBe(new Date(2024, 0, 15, 13, 30, 0, 0).getTime()); // +3h → 13:30
     expect(presets[4].at).toBe(new Date(2024, 0, 15, 16, 30, 0, 0).getTime()); // +6h → 16:30
 
-    // Time-of-day: 10:00/14:00/19:00 always land on today (even 10:00, which
-    // has already passed); tomorrow9 / dayAfter9 are fixed +1 / +2 day offsets.
+    // Time-of-day: 10:00/14:00/17:00/19:00 always land on today (even 10:00,
+    // which has already passed); tomorrow10 is a fixed +1 day offset.
     expect(presets[5].at).toBe(new Date(2024, 0, 15, 10, 0, 0, 0).getTime()); // 10:00 today
     expect(presets[6].at).toBe(new Date(2024, 0, 15, 14, 0, 0, 0).getTime()); // 14:00 today
-    expect(presets[7].at).toBe(new Date(2024, 0, 15, 19, 0, 0, 0).getTime()); // 19:00 today
-    expect(presets[8].at).toBe(new Date(2024, 0, 16, 9, 0, 0, 0).getTime()); // tomorrow 09:00
-    expect(presets[9].at).toBe(new Date(2024, 0, 17, 9, 0, 0, 0).getTime()); // day after tomorrow 09:00
+    expect(presets[7].at).toBe(new Date(2024, 0, 15, 17, 0, 0, 0).getTime()); // 17:00 today
+    expect(presets[8].at).toBe(new Date(2024, 0, 15, 19, 0, 0, 0).getTime()); // 19:00 today
+    expect(presets[9].at).toBe(new Date(2024, 0, 16, 10, 0, 0, 0).getTime()); // tomorrow 10:00
   });
 
   it("keeps time-of-day presets on today even when late in the day", () => {
-    // 20:00 — 10:00/14:00/19:00 have all passed today, but still land on today.
+    // 20:00 — 10:00/14:00/17:00/19:00 have all passed today, but still land on today.
     const now = new Date(2024, 0, 15, 20, 0, 0, 0);
     const presets = getNotifyPresets(now);
 
     expect(presets[5].at).toBe(new Date(2024, 0, 15, 10, 0, 0, 0).getTime()); // 10:00 today
     expect(presets[6].at).toBe(new Date(2024, 0, 15, 14, 0, 0, 0).getTime()); // 14:00 today
-    expect(presets[7].at).toBe(new Date(2024, 0, 15, 19, 0, 0, 0).getTime()); // 19:00 today
-    expect(presets[9].at).toBe(new Date(2024, 0, 17, 9, 0, 0, 0).getTime()); // day after tomorrow 09:00
+    expect(presets[7].at).toBe(new Date(2024, 0, 15, 17, 0, 0, 0).getTime()); // 17:00 today
+    expect(presets[8].at).toBe(new Date(2024, 0, 15, 19, 0, 0, 0).getTime()); // 19:00 today
+    expect(presets[9].at).toBe(new Date(2024, 0, 16, 10, 0, 0, 0).getTime()); // tomorrow 10:00
   });
 });
