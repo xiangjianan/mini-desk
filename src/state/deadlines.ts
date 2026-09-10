@@ -41,7 +41,7 @@ export type NotifyPresetGroup = "relative" | "time";
 
 export type NotifyPresetKey =
   | "in15m" | "in30m" | "in1h" | "in3h" | "in6h"
-  | "at10" | "at14" | "at19" | "tomorrow9" | "dayAfter9";
+  | "at10" | "at14" | "at17" | "at19" | "tomorrow10";
 
 export interface NotifyPreset {
   key: NotifyPresetKey;
@@ -52,8 +52,8 @@ export interface NotifyPreset {
 /**
  * Quick deadline presets for the notify picker, in two groups: relative
  * durations and time-of-day slots. Durations add to `now` (seconds cleared).
- * The 上午 10 点 / 下午 2 点 / 晚上 7 点 slots always land on today (the picker's
- * default date); 明天 9 点 / 后天 9 点 are explicit +1 / +2 day offsets. Picked
+ * The 上午 10 点 / 下午 2 点 / 下午 5 点 / 晚上 7 点 slots always land on today
+ * (the picker's default date); 明天 10 点 is an explicit +1 day offset. Picked
  * presets commit immediately; the user can still shift the date via the picker.
  */
 export function getNotifyPresets(now = new Date()): NotifyPreset[] {
@@ -69,9 +69,6 @@ export function getNotifyPresets(now = new Date()): NotifyPreset[] {
   const tomorrowAt = (hour: number): number =>
     new Date(now.getFullYear(), now.getMonth(), now.getDate() + 1, hour, 0, 0, 0).getTime();
 
-  const dayAfterAt = (hour: number): number =>
-    new Date(now.getFullYear(), now.getMonth(), now.getDate() + 2, hour, 0, 0, 0).getTime();
-
   return [
     { key: "in15m", group: "relative", at: inMinutes(15) },
     { key: "in30m", group: "relative", at: inMinutes(30) },
@@ -80,9 +77,9 @@ export function getNotifyPresets(now = new Date()): NotifyPreset[] {
     { key: "in6h", group: "relative", at: inMinutes(360) },
     { key: "at10", group: "time", at: todayAt(10) },
     { key: "at14", group: "time", at: todayAt(14) },
+    { key: "at17", group: "time", at: todayAt(17) },
     { key: "at19", group: "time", at: todayAt(19) },
-    { key: "tomorrow9", group: "time", at: tomorrowAt(9) },
-    { key: "dayAfter9", group: "time", at: dayAfterAt(9) },
+    { key: "tomorrow10", group: "time", at: tomorrowAt(10) },
   ];
 }
 

@@ -721,9 +721,9 @@ export const UI_TEXT = {
         in6h: "6 小时",
         at10: "上午 10 点",
         at14: "下午 2 点",
+        at17: "下午 5 点",
         at19: "晚上 7 点",
-        tomorrow9: "明天 9 点",
-        dayAfter9: "后天 9 点",
+        tomorrow10: "明天 10 点",
       },
     },
     preview: {
@@ -1054,9 +1054,9 @@ export const UI_TEXT = {
         in6h: "6 hours",
         at10: "10 AM",
         at14: "2 PM",
+        at17: "5 PM",
         at19: "7 PM",
-        tomorrow9: "Tomorrow 9 AM",
-        dayAfter9: "Day after 9 AM",
+        tomorrow10: "Tomorrow 10 AM",
       },
     },
     preview: {
