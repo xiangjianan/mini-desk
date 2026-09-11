@@ -17,7 +17,7 @@ try {
       // 取值与 src/state/theme-color.ts 的映射保持一致（有测试守护）。
       var themeColorMeta = document.querySelector('meta[name="theme-color"]');
       if (themeColorMeta) {
-        themeColorMeta.setAttribute("content", resolved === "dark" ? "#1c1c1e" : "#f5f5f7");
+        themeColorMeta.setAttribute("content", resolved === "dark" ? "#242426" : "#fbfbfd");
       }
     }
   }

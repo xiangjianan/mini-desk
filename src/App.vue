@@ -2539,7 +2539,7 @@ async function updateCustomCompanionGif(files: { light?: File; dark?: File }, an
 function applyTheme(): void {
   // auto 模式由 effectiveTheme 解析系统偏好后落到 data-theme 与标题栏色。
   document.documentElement.dataset.theme = effectiveTheme.value;
-  // standalone 标题栏颜色随应用主题联动（浅色 #f5f5f7 / 深色 #1c1c1e）。
+  // standalone 标题栏颜色随应用主题联动（浅色 #fbfbfd / 深色 #242426）。
   applyThemeColor(effectiveTheme.value);
 }
 

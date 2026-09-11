@@ -4,8 +4,8 @@
  * 无法共享本模块（有测试守护两处一致性）。
  */
 export const THEME_COLOR_META = {
-  light: "#f5f5f7",
-  dark: "#1c1c1e",
+  light: "#fbfbfd",
+  dark: "#242426",
 } as const;
 
 export type ThemeName = keyof typeof THEME_COLOR_META;
