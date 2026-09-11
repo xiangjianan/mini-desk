@@ -29,6 +29,20 @@ export interface ChangelogEntry {
 
 export const CHANGELOG: ChangelogEntry[] = [
   {
+    version: "1.0.165",
+    date: "2026-09-11",
+    notes: {
+      zh: [
+        "全新：手机打开的首页重构为「桌面优先」引导页——像素猫 logo 随主题换色、四栏工作台微缩示意、三步配对引导与 3 组 × 4 位分组输码（自动跳组、整段粘贴自动分发），界面与文案全面精简",
+        "优化：移动端不再弹出右下角消息气泡，引导集中在首页；已配对视图为状态卡片——配对码点击复制，「更换配对码」改为底部弹层二次确认",
+      ],
+      en: [
+        "New: the page you get on a phone is rebuilt as a desktop-first guide — theme-aware pixel-cat logo, a miniature of the four-column workbench, three-step pairing with 3×4 grouped code entry (auto-advance and full-code paste distribution), all with much leaner copy",
+        "Improved: mobile no longer pops the bottom-right companion bubble — guidance lives in the page itself; the paired view is a status card with tap-to-copy pairing code and a bottom-sheet confirm for changing the code",
+      ],
+    },
+  },
+  {
     version: "1.0.164",
     date: "2026-09-04",
     notes: {
