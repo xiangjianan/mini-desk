@@ -7074,9 +7074,21 @@ html[data-theme="dark"] .quick-search .quick-search-toggle:focus-visible {
   transform: translateX(18px);
 }
 
-/* 开启后文字点亮，与滑块状态互相印证。 */
+/* 「AI 润色」标签：仅开关开启时显示彩色渐变流动文字（background-clip: text 裁字 + 背景位移
+   动画，渐变首尾同色保证循环无缝，明暗主题下都取高饱和色保证可读）；关闭时为默认文字色。 */
 .mobile-inbox-polish-input:checked ~ .mobile-inbox-polish-label {
-  color: var(--text);
+  background: linear-gradient(90deg, #22d3ee, #818cf8, #e879f9, #fbbf24, #22d3ee);
+  background-size: 200% 100%;
+  -webkit-background-clip: text;
+  background-clip: text;
+  color: transparent;
+  animation: mobile-inbox-polish-flow 6s linear infinite;
+}
+
+@keyframes mobile-inbox-polish-flow {
+  to {
+    background-position: -200% 0;
+  }
 }
 
 .mobile-inbox-polish-input:focus-visible ~ .mobile-inbox-polish-track {
@@ -7286,6 +7298,7 @@ button.mobile-inbox-send:disabled {
   .mobile-home-link-dot,
   .mobile-home-sync-dots i,
   .mobile-home-spinner,
+  .mobile-inbox-polish-input:checked ~ .mobile-inbox-polish-label,
   .mobile-inbox-spinner {
     animation: none;
   }
