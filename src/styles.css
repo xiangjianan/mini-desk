@@ -50,6 +50,9 @@
   --shadow-lift: 0 1px 2px rgba(15, 23, 42, 0.05), 0 10px 24px rgba(15, 23, 42, 0.1);
   --shadow-quick-hover: 0 1px 2px rgba(15, 23, 42, 0.05), 0 2px 5px rgba(15, 23, 42, 0.07);
   --shadow-glow-primary: 0 0 0 1px color-mix(in srgb, var(--primary) 24%, transparent), 0 6px 18px color-mix(in srgb, var(--primary) 22%, transparent);
+  /* 悬浮层投影：消息气泡与陪伴 GIF「飘在页面上方」的层次感，刻意多层柔和不发黑。 */
+  --shadow-float: 0 1px 2px rgba(15, 23, 42, 0.05), 0 8px 20px rgba(15, 23, 42, 0.08), 0 24px 48px rgba(15, 23, 42, 0.06);
+  --companion-gif-shadow: drop-shadow(0 3px 5px rgba(15, 23, 42, 0.18)) drop-shadow(0 10px 22px rgba(15, 23, 42, 0.1));
   /* 手机端首页（OpenDesign 原型）补充 token：实心动作蓝（加深保证白字对比）、小号蓝字、成功/实心危险与大圆角卡。 */
   --action: #0066cc;
   --link: #0057d9;
@@ -101,6 +104,8 @@ html[data-theme="dark"] {
   --shadow-lift: 0 1px 2px rgba(0, 0, 0, 0.2), 0 14px 30px rgba(0, 0, 0, 0.32);
   --shadow-quick-hover: 0 1px 2px rgba(0, 0, 0, 0.18), 0 2px 6px rgba(0, 0, 0, 0.24);
   --shadow-glow-primary: 0 0 0 1px color-mix(in srgb, var(--primary) 32%, transparent), 0 8px 22px color-mix(in srgb, var(--primary) 30%, transparent);
+  --shadow-float: 0 1px 2px rgba(0, 0, 0, 0.3), 0 10px 24px rgba(0, 0, 0, 0.36), 0 28px 56px rgba(0, 0, 0, 0.28);
+  --companion-gif-shadow: drop-shadow(0 3px 5px rgba(0, 0, 0, 0.5)) drop-shadow(0 10px 22px rgba(0, 0, 0, 0.36));
   --action: #0070e8;
   --link: #409cff;
   --ok: #30d158;
@@ -2980,6 +2985,8 @@ button.todo-section-menu-button {
   border: 0;
   object-fit: contain;
   object-position: center;
+  /* 悬浮感：投影跟随 GIF 剪影（不位移，仅静态层次感）。 */
+  filter: var(--companion-gif-shadow);
 }
 
 /* 点击 GIF 会轮换弹出当前区域的 Tips，悬浮用指针光标提示可点。 */
@@ -3057,7 +3064,9 @@ button.todo-section-menu-button {
   border: 1px solid var(--border) !important;
   background: var(--popover) !important;
   color: var(--popover-foreground) !important;
-  box-shadow: none !important;
+  /* 多层柔和悬浮投影让气泡像浮在页面上方（浅色主题下刻意很淡，不发黑）；
+     不位移，层次感只靠投影。 */
+  box-shadow: var(--shadow-float) !important;
   transform-origin: right bottom;
   transition: opacity 0.26s ease, transform 0.26s ease;
 }
