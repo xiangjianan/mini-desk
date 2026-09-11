@@ -244,8 +244,10 @@ describe("Naive UI component usage", () => {
     expect(quick).toContain("quick-button-icon");
     expect(app).toContain("WorkbenchShell");
     expect(app).toContain('data-testid="save-status"');
-    expect(app).toContain("SunnyOutline");
-    expect(app).toContain("MoonOutline");
+    // 移动端首页壳承载明暗主题按钮（Sunny/Moon 图标随壳渲染），App.vue 只回抛切换事件。
+    expect(app).toContain("@theme=\"handleThemeClick\"");
+    expect(read("src/components/MobileHome.vue")).toContain("SunnyOutline");
+    expect(read("src/components/MobileHome.vue")).toContain("MoonOutline");
     expect(todo).toContain("todo-section-menu-button");
     expect(todo).toContain("uiText.todo.menu");
     expect(todo).toContain("uiText.value.todo.clearCompleted");
@@ -998,12 +1000,16 @@ describe("Naive UI component usage", () => {
 
     expect(app).toContain('class="workspace-panel"');
     expect(app).toContain("MOBILE_BREAKPOINT_QUERY");
-    expect(app).toContain("mobileMessage");
-    expect(app).toContain('class="mobile-handoff"');
-    expect(app).toContain('class="mobile-handoff-title"');
-    expect(app).toContain('class="mobile-handoff-theme"');
+    const home = read("src/components/MobileHome.vue");
+    expect(home).toContain('class="mobile-handoff"');
+    expect(home).toContain('class="mobile-home-brand mobile-handoff-title"');
+    expect(home).toContain('class="mobile-home-theme"');
+    // 桌面引导文案由首页壳的桌面示意图 caption 承担（App.vue 不再引用）。
+    expect(home).toContain("app.mobileMessage");
     expect(app).toContain('v-if="!isMobileBlocked"');
-    expect(app).toContain("(isMobileBlocked.value && mobileInboxCode.value === null) || companionVisible.value");
+    // 移动端完全不渲染右下角消息气泡，桌面端气泡逻辑保持原样。
+    expect(app).toMatch(/<CompanionBubble\s+v-if="!isMobileBlocked"/);
+    expect(app).toContain(':visible="companionVisible"');
     expect(i18n).toContain("建议在电脑浏览器打开，以获得完整体验");
     expect(app).not.toContain('class="mobile-nav"');
     expect(app).not.toContain('class="mobile-drawer-trigger"');
@@ -1013,10 +1019,10 @@ describe("Naive UI component usage", () => {
     expect(app).not.toContain("data-mobile-active");
     expect(app).not.toContain("mobileActiveArea");
     expect(app).not.toContain("mobileNavOpen");
-    expect(styles).toMatch(/\.mobile-handoff\s*\{[^}]*display: grid/s);
     expect(styles).toMatch(/\.mobile-handoff\s*\{[^}]*height: 100dvh/s);
-    expect(styles).toMatch(/\.mobile-handoff-body\s*\{[^}]*display: grid/s);
-    expect(styles).toMatch(/\.mobile-handoff-message\s*\{[^}]*border: 1px solid var\(--line-main\)/s);
+    expect(styles).toMatch(/\.mobile-handoff\s*\{[^}]*overflow-y: auto/s);
+    expect(styles).toMatch(/\.mobile-home-page\s*\{[^}]*max-width: 430px/s);
+    expect(styles).toMatch(/\.mobile-home-code-groups\s*\{/s);
     expect(styles).toMatch(/@media \(max-width: 900px\)[\s\S]*--app-font-size: 14px/s);
     expect(styles).toMatch(/@media \(max-width: 900px\)[\s\S]*\.focus-companion\s*\{[^}]*bottom: 28px/s);
     expect(styles).toMatch(/@media \(max-width: 900px\)[\s\S]*\.focus-companion img\s*\{[^}]*max-width: 50px/s);

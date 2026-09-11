@@ -122,7 +122,9 @@ describe("localized public copy", () => {
     expect(getUiText("zh").app.aboutSignature).toBe("(100% AI BUILT)");
     expect(getUiText("en").app.boardLabel).toBe("Mini Desk");
     expect(getUiText("en").app.mobileTitle).toBe("Mini Desk");
-    expect(getUiText("en").app.mobileDescription).toBe("This board is designed for desktop workflows to organize screenshots, notes, reminders, quick actions, and sticky notes.");
+    expect(getUiText("en").app.mobileHeroLede).toBe(
+      "Built for the desktop — on your phone, it's the quick-capture entry.",
+    );
     expect(getUiText("en").app.aboutTitle).toBe("Mini Desk");
     expect(getUiText("en").app.aboutDescription).toBe(
       "A local-first lightweight desk for organizing screenshots, reminders, quick actions, and sticky notes.\nEverything happens in your local browser. None of your data is ever uploaded.",

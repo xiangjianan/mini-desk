@@ -1,6 +1,13 @@
 <script setup lang="ts">
 import { computed, onBeforeUnmount, ref } from "vue";
-import { ClipboardOutline, CloseCircleOutline, CreateOutline, NotificationsOutline } from "@vicons/ionicons5";
+import {
+  AlertCircleOutline,
+  CheckmarkCircleOutline,
+  ClipboardOutline,
+  CloseCircleOutline,
+  CreateOutline,
+  NotificationsOutline,
+} from "@vicons/ionicons5";
 import { NIcon } from "naive-ui";
 import { getUiText } from "../state/i18n";
 import { createId } from "../state/storage";
@@ -247,6 +254,8 @@ onBeforeUnmount(() => {
         </label>
       </div>
     </div>
+    <!-- 润色开关说明行：常驻在标题行下方，让「关闭=原文直存」无需悬停也能被读到。 -->
+    <p class="mobile-inbox-polish-hint">{{ app.mobileInboxPolishHint }}</p>
 
     <form class="mobile-inbox-form" @submit.prevent>
       <textarea
@@ -255,7 +264,7 @@ onBeforeUnmount(() => {
         data-testid="mobile-inbox-text"
         :placeholder="app.mobileInboxPlaceholder"
         :aria-label="app.mobileInboxPlaceholder"
-        rows="8"
+        rows="5"
       ></textarea>
       <!-- 多行输入会被按行拆成多条记录：≥2 行时给出实时提示，避免用户误以为整段只发一条。 -->
       <p v-if="showSplitHint" class="mobile-inbox-hint" data-testid="mobile-inbox-split-hint" aria-live="polite">
@@ -266,28 +275,31 @@ onBeforeUnmount(() => {
         <button
           type="button"
           class="mobile-inbox-send"
-          :class="{ 'is-sent': status === 'sent' && activeKind === 'todo' }"
+          :class="{ 'is-sent': status === 'sent' && activeKind === 'todo', 'is-loading': status === 'sending' && activeKind === 'todo' }"
           data-testid="mobile-inbox-send-todo"
           :disabled="status === 'sending'"
           @click="send('todo')"
         >
+          <span class="mobile-inbox-spinner" aria-hidden="true"></span>
           <NIcon :component="NotificationsOutline" aria-hidden="true" /><span>{{ buttonLabel("todo") }}</span>
         </button>
         <button
           type="button"
           class="mobile-inbox-send"
-          :class="{ 'is-sent': status === 'sent' && activeKind === 'note' }"
+          :class="{ 'is-sent': status === 'sent' && activeKind === 'note', 'is-loading': status === 'sending' && activeKind === 'note' }"
           data-testid="mobile-inbox-send-note"
           :disabled="status === 'sending'"
           @click="send('note')"
         >
+          <span class="mobile-inbox-spinner" aria-hidden="true"></span>
           <NIcon :component="CreateOutline" aria-hidden="true" /><span>{{ buttonLabel("note") }}</span>
         </button>
       </div>
     </form>
 
     <p v-if="status === 'sent'" class="mobile-inbox-status is-slide-in" role="status" aria-live="polite" data-status="sent">
-      {{ sentText }}
+      <NIcon :component="CheckmarkCircleOutline" aria-hidden="true" />
+      <span>{{ sentText }}</span>
     </p>
     <p
       v-else-if="status === 'error'"
@@ -297,7 +309,8 @@ onBeforeUnmount(() => {
       data-status="error"
       data-testid="mobile-inbox-error"
     >
-      {{ errorText }}
+      <NIcon :component="AlertCircleOutline" aria-hidden="true" />
+      <span>{{ errorText }}</span>
     </p>
 
     <button

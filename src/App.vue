@@ -1,9 +1,9 @@
 <script setup lang="ts">
 import { computed, defineAsyncComponent, nextTick, onMounted, onUnmounted, reactive, ref, watch } from "vue";
-import { MoonOutline, SunnyOutline } from "@vicons/ionicons5";
-import { darkTheme, dateEnUS, dateZhCN, enUS, NButton, NConfigProvider, NGlobalStyle, NIcon, NInput, NModal, zhCN } from "naive-ui";
+import { darkTheme, dateEnUS, dateZhCN, enUS, NButton, NConfigProvider, NGlobalStyle, NInput, NModal, zhCN } from "naive-ui";
 import CompanionBubble from "./components/CompanionBubble.vue";
 import ImagePanel from "./components/ImagePanel.vue";
+import MobileHome from "./components/MobileHome.vue";
 import MobileInboxCapture from "./components/MobileInboxCapture.vue";
 import QuickButtons from "./components/QuickButtons.vue";
 import SettingsMenu from "./components/SettingsMenu.vue";
@@ -11,8 +11,6 @@ import SpacePanel from "./components/SpacePanel.vue";
 import TodoPanel from "./components/TodoPanel.vue";
 import WorkbenchShell from "./components/WorkbenchShell.vue";
 import WorkspaceSwitcher from "./components/WorkspaceSwitcher.vue";
-import miniDeskLogo from "../static/img/mini-desk-cat.png?url";
-import miniDeskDarkLogo from "../static/img/mini-desk-cat-dark.png?url";
 import { getCompanionGifSrc, getCompanionNotificationIconSrc } from "./state/companionGifThemes";
 import { nextManualTheme, resolveTheme, type ResolvedTheme } from "./state/theme";
 import {
@@ -117,7 +115,6 @@ const TODO_DELETE_CONFIRM_MAX = 2;
 const TODO_DELETE_STREAK_RESET_MS = 30_000;
 const WORKSPACE_DENSITY_GROUP_TIP_CHANCE = 0.5;
 const STATE_SYNC_CHANNEL = "mini-desk-state-sync";
-const mobileCompanionPosition: { right: string; bottom: string } = { right: "18px", bottom: "28px" };
 
 function getInitialMobileBlocked(): boolean {
   return typeof window !== "undefined" && typeof window.matchMedia === "function" && window.matchMedia(MOBILE_BREAKPOINT_QUERY).matches;
@@ -298,7 +295,6 @@ const isMobileBlocked = ref(getInitialMobileBlocked());
 const mobileMediaQuery = ref<MediaQueryList | null>(null);
 // URL 带 #inbox=<12位码> 时优先；否则回退手机壳本地记忆（主屏图标/微信入口丢 fragment 的场景）。
 const mobileInboxCode = ref<string | null>(parseInboxFragment(window.location.hash) ?? loadRememberedInboxCode());
-const mobileInboxDraftCode = ref("");
 const mobileInboxCodeError = ref<string | null>(null);
 const mobileInboxCodeChecking = ref(false);
 // 手机速记草稿上提：换码卸载重挂（甚至跨会话内的多次换码）内容不丢。
@@ -355,17 +351,10 @@ const systemDark = ref(false);
 /** 解析后的实际渲染主题：auto 时跟随 systemDark。 */
 const effectiveTheme = computed<ResolvedTheme>(() => resolveTheme(state.theme, systemDark.value));
 const naiveTheme = computed(() => (effectiveTheme.value === "dark" ? darkTheme : null));
-/** 主题按钮图标/文案随模式变化：浅→深、深→自动、自动→浅。 */
-/** 图标/提示词基于实际生效主题（auto 时按系统解析结果）：手动切换只有明/暗两态。 */
-const themeSwitchIcon = computed(() => (effectiveTheme.value === "dark" ? SunnyOutline : MoonOutline));
-const themeSwitchLabel = computed(() => (effectiveTheme.value === "dark" ? uiText.value.app.themeToLight : uiText.value.app.themeToDark));
 const naiveLocale = computed(() => (state.language === "en" ? enUS : zhCN));
 const naiveDateLocale = computed(() => (state.language === "en" ? dateEnUS : dateZhCN));
 const uiText = computed(() => getUiText(state.language));
 const companionVisible = computed(() => companionFocused.value || bubbleVisible.value);
-const activeCompanionVisible = computed(() => (isMobileBlocked.value && mobileInboxCode.value === null) || companionVisible.value);
-const activeCompanionMessage = computed(() => (isMobileBlocked.value ? uiText.value.app.mobileMessage : bubbleMessage.value));
-const activeCompanionPosition = computed(() => (isMobileBlocked.value ? mobileCompanionPosition : companionPosition.value));
 const displayedPreviewId = computed(() => activePreviewId.value ?? closingPreviewId.value);
 const imagePreviewClosing = computed(() => Boolean(closingPreviewId.value) && !activePreviewId.value);
 const settingsAppVersion = computed(() => (versionPromptVisible.value ? availableAppVersion.value : appVersion.value));
@@ -435,11 +424,11 @@ function handleHashChange(): void {
   if (code) mobileInboxCode.value = code;
 }
 
-/** 输码配对：格式校验 → 联网验证注册状态（unknown/revoked 拒绝；网络失败 fail-open 放行，发送时兜底）。 */
-async function confirmMobileInboxCode(): Promise<void> {
+/** 输码配对（码由 MobileHome 分组输码拼出后回抛）：格式校验 → 联网验证注册状态（unknown/revoked 拒绝；网络失败 fail-open 放行，发送时兜底）。 */
+async function confirmMobileInboxCode(code: string): Promise<void> {
   if (mobileInboxCodeChecking.value) return;
-  const code = normalizeInboxCode(mobileInboxDraftCode.value);
-  if (!isValidInboxCode(code)) {
+  const normalized = normalizeInboxCode(code);
+  if (!isValidInboxCode(normalized)) {
     // 移动壳上 showBubbleText 被 shouldBlockBoardEffects 拦截，提示就近显示在输码区。
     mobileInboxCodeError.value = uiText.value.app.mobileInboxCodeInvalid;
     return;
@@ -447,7 +436,7 @@ async function confirmMobileInboxCode(): Promise<void> {
   mobileInboxCodeChecking.value = true;
   let status: Awaited<ReturnType<typeof checkInboxKeyStatus>> = null;
   try {
-    status = await checkInboxKeyStatus(await inboxKeyHash(code));
+    status = await checkInboxKeyStatus(await inboxKeyHash(normalized));
   } catch {
     status = null;
   }
@@ -464,32 +453,19 @@ async function confirmMobileInboxCode(): Promise<void> {
   }
   // active 或 null（网络失败 fail-open）：照常配对。
   mobileInboxCodeError.value = null;
-  mobileInboxCode.value = code;
-  mobileInboxDraftCode.value = "";
+  mobileInboxCode.value = normalized;
   // 写回 fragment：刷新/再次打开仍停留在速记页。
-  window.location.hash = `#inbox=${code}`;
+  window.location.hash = `#inbox=${normalized}`;
 }
 
 /** 清码回到输码表单：清本地记忆与 URL 残留 fragment（replaceState 不触发 hashchange，也不留历史记录）并重置错误态。
- *  页脚入口经 confirmForgetMobileInboxCode 二次确认；失效提示的 change-code 事件直接调用（报错后的主动动作）。 */
+ *  页脚入口的二次确认已移入 MobileHome 的底部 sheet（confirm 后才回抛 change-code）；失效提示的 change-code 事件直接调用（报错后的主动动作）。 */
 function forgetMobileInboxCode(): void {
   clearRememberedInboxCode();
   mobileInboxCode.value = null;
   mobileInboxCodeError.value = null;
   window.history.replaceState(null, "", `${window.location.pathname}${window.location.search}`);
 }
-
-/** 更换配对码（页脚入口）：二次确认防误触——确认前不动已配对状态。 */
-function confirmForgetMobileInboxCode(): void {
-  if (!window.confirm(uiText.value.app.mobileInboxChangeCodeConfirm)) return;
-  forgetMobileInboxCode();
-}
-
-/** 页脚分组码：模板内 vue-tsc 不跨元素收窄 string|null，挪进 computed（同 MobileInboxCapture.sentText 模式）。 */
-const mobileInboxCodeLabel = computed(() => {
-  const code = mobileInboxCode.value;
-  return code === null ? "" : uiText.value.app.mobileInboxPairedAs.replace("{code}", () => formatInboxCode(code));
-});
 
 /** 速记页复制反馈：点击配对码 → 复制分组码文本 → 短暂弹「复制成功/失败」提示。 */
 const mobileCopyToast = ref("");
@@ -3522,101 +3498,31 @@ function moveItem<T extends { id: string }>(items: T[], dragId: string, targetId
       </template>
     </WorkbenchShell>
 
-    <main v-else class="mobile-handoff" :aria-label="uiText.app.mobileLabel">
-      <header class="mobile-handoff-header">
-        <div class="mobile-handoff-brand">
-          <img
-            class="mobile-handoff-logo"
-            :src="effectiveTheme === 'dark' ? miniDeskDarkLogo : miniDeskLogo"
-            alt=""
-            aria-hidden="true"
-            width="20"
-            height="20"
-          />
-          <h1 class="mobile-handoff-title">{{ uiText.app.mobileTitle }}</h1>
-        </div>
-        <NButton quaternary size="small" class="mobile-handoff-theme" :aria-label="uiText.app.theme" :title="themeSwitchLabel" @click="handleThemeClick">
-          <NIcon :component="themeSwitchIcon" />
-        </NButton>
-      </header>
+    <!-- 手机端首页（OpenDesign 原型实现）：未配对=桌面叙事+分组输码；已配对=状态卡+速记卡+同步提示。
+         配对校验/换码/复制留在 App.vue，输码分组与 sheet 二次确认在 MobileHome 内部。 -->
+    <MobileHome
+      v-else
+      :code="mobileInboxCode"
+      :checking="mobileInboxCodeChecking"
+      :error="mobileInboxCodeError"
+      :language="state.language"
+      :theme="effectiveTheme"
+      @submit="confirmMobileInboxCode"
+      @clear-error="mobileInboxCodeError = null"
+      @change-code="forgetMobileInboxCode"
+      @copy-code="copyMobileInboxCode"
+      @theme="handleThemeClick"
+    >
+      <template v-if="mobileInboxCode">
+        <MobileInboxCapture v-model="mobileInboxDraftText" :code="mobileInboxCode" :language="state.language" @change-code="forgetMobileInboxCode" />
+      </template>
+    </MobileHome>
 
-      <section
-        class="mobile-handoff-body"
-        :aria-labelledby="mobileInboxCode ? 'mobile-inbox-heading' : 'mobile-handoff-title'"
-      >
-        <template v-if="mobileInboxCode">
-          <MobileInboxCapture v-model="mobileInboxDraftText" :code="mobileInboxCode" :language="state.language" @change-code="forgetMobileInboxCode" />
-          <div class="mobile-inbox-paired">
-            <button
-              type="button"
-              class="mobile-inbox-paired-code"
-              data-testid="mobile-inbox-paired-code"
-              :title="uiText.app.mobileInboxCodeCopyHint"
-              @click="copyMobileInboxCode"
-            >
-              {{ mobileInboxCodeLabel }}
-            </button>
-            <button
-              type="button"
-              class="mobile-inbox-paired-change"
-              data-testid="mobile-inbox-change-code"
-              @click="confirmForgetMobileInboxCode"
-            >
-              {{ uiText.app.mobileInboxChangeCode }}
-            </button>
-          </div>
-        </template>
-        <div v-else class="mobile-handoff-message">
-          <h2 id="mobile-handoff-title">{{ uiText.app.mobileHeading }}</h2>
-          <p>{{ uiText.app.mobileDescription }}</p>
-          <p>{{ uiText.app.mobileMessage }}</p>
-          <div class="mobile-inbox-code-entry">
-            <label class="mobile-inbox-code-label" for="mobile-inbox-code-input">{{ uiText.app.mobileInboxEnterCode }}</label>
-            <div class="mobile-inbox-code-row">
-              <input
-                id="mobile-inbox-code-input"
-                v-model="mobileInboxDraftCode"
-                class="mobile-inbox-code-input"
-                type="text"
-                maxlength="16"
-                autocomplete="off"
-                autocapitalize="characters"
-                spellcheck="false"
-                data-testid="mobile-inbox-code-input"
-                :placeholder="uiText.app.mobileInboxCodePlaceholder"
-                :aria-invalid="mobileInboxCodeError ? 'true' : undefined"
-                :aria-describedby="mobileInboxCodeError ? 'mobile-inbox-code-error' : undefined"
-                @input="mobileInboxCodeError = null"
-                @keydown.enter="confirmMobileInboxCode"
-              />
-              <NButton
-                size="small"
-                type="primary"
-                data-testid="mobile-inbox-code-confirm"
-                :loading="mobileInboxCodeChecking"
-                @click="confirmMobileInboxCode"
-              >
-                {{ mobileInboxCodeChecking ? uiText.app.mobileInboxChecking : uiText.app.mobileInboxCodeConfirm }}
-              </NButton>
-            </div>
-            <p
-              v-if="mobileInboxCodeError"
-              id="mobile-inbox-code-error"
-              class="mobile-inbox-code-error"
-              data-testid="mobile-inbox-code-error"
-            >
-              {{ mobileInboxCodeError }}
-            </p>
-          </div>
-        </div>
-      </section>
-
-      <Transition name="mobile-inbox-toast">
-        <p v-if="mobileCopyToast" class="mobile-inbox-copy-toast" role="status" aria-live="polite" data-testid="mobile-inbox-copy-toast">
-          {{ mobileCopyToast }}
-        </p>
-      </Transition>
-    </main>
+    <Transition name="mobile-inbox-toast">
+      <p v-if="mobileCopyToast" class="mobile-inbox-copy-toast" role="status" aria-live="polite" data-testid="mobile-inbox-copy-toast">
+        {{ mobileCopyToast }}
+      </p>
+    </Transition>
 
     <WorkspaceInboxDialog
       v-if="inboxPairTarget"
@@ -3646,21 +3552,22 @@ function moveItem<T extends { id: string }>(items: T[], dragId: string, targetId
       @save-edit="saveEditedImage"
     />
 
+    <!-- 桌面端专属：移动端壳（MobileHome）自带完整引导，不再弹右下角消息气泡。 -->
     <CompanionBubble
-      :visible="activeCompanionVisible"
-      :message="activeCompanionMessage"
-      :link-text="isMobileBlocked ? undefined : bubbleLink?.text"
-      :link-href="isMobileBlocked ? undefined : bubbleLink?.href"
-      :signature-text="isMobileBlocked ? undefined : bubbleSignature"
-      :confirm="!isMobileBlocked && Boolean(pendingConfirm)"
-      :confirm-danger="!isMobileBlocked && Boolean(pendingConfirm?.danger)"
-      :confirm-text="isMobileBlocked ? undefined : pendingConfirm?.confirmText"
-      :cancel-text="isMobileBlocked ? undefined : pendingConfirm?.cancelText"
-      :confirm-hint="isMobileBlocked ? undefined : pendingConfirm?.confirmHint"
-      :secondary-text="isMobileBlocked ? undefined : pendingConfirm?.secondaryText"
+      v-if="!isMobileBlocked"
+      :visible="companionVisible"
+      :message="bubbleMessage"
+      :link-text="bubbleLink?.text"
+      :link-href="bubbleLink?.href"
+      :signature-text="bubbleSignature"
+      :confirm="Boolean(pendingConfirm)"
+      :confirm-danger="Boolean(pendingConfirm?.danger)"
+      :confirm-text="pendingConfirm?.confirmText"
+      :cancel-text="pendingConfirm?.cancelText"
+      :confirm-hint="pendingConfirm?.confirmHint"
+      :secondary-text="pendingConfirm?.secondaryText"
       :clear-signal="bubbleClearSignal"
-      :persistent="isMobileBlocked"
-      :position="activeCompanionPosition"
+      :position="companionPosition"
       :theme="effectiveTheme"
       :language="state.language"
       :gif-theme="state.companionGifTheme"
