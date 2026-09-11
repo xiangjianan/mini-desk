@@ -1012,8 +1012,10 @@ describe("Naive UI component usage", () => {
     // 桌面引导文案由首页壳的桌面示意图 caption 承担（App.vue 不再引用）。
     expect(home).toContain("app.mobileMessage");
     expect(app).toContain('v-if="!isMobileBlocked"');
-    // 移动端完全不渲染右下角消息气泡，桌面端气泡逻辑保持原样。
-    expect(app).toMatch(/<CompanionBubble\s+v-if="!isMobileBlocked"/);
+    // 伴宠气泡常挂载（无 v-if 门控）：移动端仅速记发送成功经 handleMobileInboxSent 强制弹出，
+    // 其余桌面板效仍被 isBoardBlocked 屏蔽。
+    expect(app).not.toMatch(/<CompanionBubble\s+v-if=/);
+    expect(app).toContain('@sent="handleMobileInboxSent"');
     expect(app).toContain(':visible="companionVisible"');
     expect(i18n).toContain("建议在电脑浏览器打开，以获得完整体验");
     expect(app).not.toContain('class="mobile-nav"');
