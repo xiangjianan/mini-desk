@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { mount, type VueWrapper } from "@vue/test-utils";
+import { mount } from "@vue/test-utils";
 import { nextTick } from "vue";
 import WorkspaceSwitcher from "../components/WorkspaceSwitcher.vue";
 import { defaultWorkspace } from "../state/defaults";
@@ -9,25 +9,6 @@ const workspaces: WorkspaceData[] = [
   { ...defaultWorkspace("a"), customTitles: { "board-title": "主空间", "board-slogan": "S1" } },
   { ...defaultWorkspace("b"), customTitles: { "board-title": "副空间" } },
 ];
-
-// The kebab ("⋯") menu teleports to <body> via NPopover, so menu items must be
-// found through the document rather than the component subtree.
-function menuAction(id: string, action: "export" | "pair" | "rename" | "delete"): HTMLElement {
-  const item = document.body.querySelector<HTMLElement>(`[data-testid="workspace-${action}-${id}"]`);
-  if (!item) throw new Error(`Menu action not found: workspace-${action}-${id}`);
-  return item;
-}
-
-async function openWorkspaceMenu(wrapper: VueWrapper, id: string): Promise<void> {
-  await wrapper.find(`[data-testid="workspace-menu-${id}"]`).trigger("click");
-  await nextTick();
-}
-
-async function clickMenuAction(wrapper: VueWrapper, id: string, action: "export" | "pair" | "rename" | "delete"): Promise<void> {
-  await openWorkspaceMenu(wrapper, id);
-  menuAction(id, action).click();
-  await nextTick();
-}
 
 describe("WorkspaceSwitcher", () => {
   it("渲染当前工作空间标题作为触发按钮", () => {
@@ -126,13 +107,13 @@ describe("WorkspaceSwitcher", () => {
       attachTo: document.body,
     });
     await wrapper.find('[data-testid="workspace-trigger"]').trigger("click");
-    await clickMenuAction(wrapper, "b", "delete");
+    await wrapper.get('[data-testid="workspace-delete-b"]').trigger("click");
     const deleteEvents = wrapper.emitted("delete");
     expect(deleteEvents?.[0]?.[0]).toBe("b");
     wrapper.unmount();
   });
 
-  it("仅有一个工作空间时仍渲染红色删除按钮（三按钮齐全）", async () => {
+  it("行内平铺四个操作按钮，删除为红色", async () => {
     const single: WorkspaceData[] = [
       { ...defaultWorkspace("a"), customTitles: { "board-title": "主空间", "board-slogan": "S1" } },
     ];
@@ -141,10 +122,23 @@ describe("WorkspaceSwitcher", () => {
       attachTo: document.body,
     });
     await wrapper.find('[data-testid="workspace-trigger"]').trigger("click");
-    await openWorkspaceMenu(wrapper, "a");
-    const deleteButton = menuAction("a", "delete");
-    expect(deleteButton).toBeTruthy();
-    expect(deleteButton.classList).toContain("is-delete");
+    for (const action of ["export", "pair", "rename", "delete"] as const) {
+      expect(wrapper.find(`[data-testid="workspace-${action}-a"]`).exists()).toBe(true);
+    }
+    expect(wrapper.get('[data-testid="workspace-delete-a"]').classes()).toContain("is-delete");
+    wrapper.unmount();
+  });
+
+  it("点击导出 emit exportWorkspace（带 anchor）", async () => {
+    const wrapper = mount(WorkspaceSwitcher, {
+      props: { workspaces, activeWorkspaceId: "a", theme: "light", language: "zh" },
+      attachTo: document.body,
+    });
+    await wrapper.find('[data-testid="workspace-trigger"]').trigger("click");
+    await wrapper.get('[data-testid="workspace-export-b"]').trigger("click");
+    const exportEvents = wrapper.emitted("exportWorkspace");
+    expect(exportEvents?.[0]?.[0]).toBe("b");
+    expect(exportEvents?.[0]?.[1]).toBeInstanceOf(HTMLElement);
     wrapper.unmount();
   });
 
@@ -154,7 +148,7 @@ describe("WorkspaceSwitcher", () => {
       attachTo: document.body,
     });
     await wrapper.find('[data-testid="workspace-trigger"]').trigger("click");
-    await clickMenuAction(wrapper, "b", "rename");
+    await wrapper.get('[data-testid="workspace-rename-b"]').trigger("click");
     const renameEvents = wrapper.emitted("rename");
     // workspace b carries board-title "副空间" and no slogan.
     expect(renameEvents?.[0]).toEqual(["b", "副空间", ""]);
@@ -186,7 +180,7 @@ describe("WorkspaceSwitcher 配对入口", () => {
       attachTo: document.body,
     });
     await wrapper.find('[data-testid="workspace-trigger"]').trigger("click");
-    await clickMenuAction(wrapper, "a", "pair");
+    await wrapper.get('[data-testid="workspace-pair-a"]').trigger("click");
     expect(wrapper.emitted("pairInbox")).toHaveLength(1);
     expect(wrapper.emitted("pairInbox")?.[0]).toEqual(["a"]);
     wrapper.unmount();

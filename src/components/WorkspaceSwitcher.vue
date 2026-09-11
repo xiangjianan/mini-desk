@@ -1,13 +1,11 @@
 <script setup lang="ts">
 import { computed, nextTick, onUnmounted, ref, watch } from "vue";
 import { NPopover, NIcon } from "naive-ui";
-import { ChevronDownOutline, AddOutline, CreateOutline, TrashOutline, DownloadOutline, CloudUploadOutline, CheckmarkOutline, PhonePortraitOutline, EllipsisHorizontalOutline } from "@vicons/ionicons5";
+import { ChevronDownOutline, AddOutline, CreateOutline, TrashOutline, DownloadOutline, CloudUploadOutline, CheckmarkOutline, PhonePortraitOutline } from "@vicons/ionicons5";
 import { getUiText } from "../state/i18n";
 import { DEFAULT_BOARD_TITLE } from "../state/defaults";
 import { getWorkspaceBoardTitle } from "../state/workspaces";
-import { CONTEXT_MENU_Z_INDEX } from "../utils/contextMenu";
-import type { AppLanguage, ThemeMode, WorkspaceData, ZoneKey } from "../types";
-import ZoneVisibilityPopover from "./ZoneVisibilityPopover.vue";
+import type { AppLanguage, ThemeMode, WorkspaceData } from "../types";
 import miniDeskLogo from "../../static/img/mini-desk-cat.png?url";
 import miniDeskDarkLogo from "../../static/img/mini-desk-cat-dark.png?url";
 
@@ -27,12 +25,10 @@ const emit = defineEmits<{
   exportWorkspace: [id: string, anchor: HTMLElement];
   import: [anchor: HTMLElement];
   pairInbox: [id: string];
-  toggleZone: [workspaceId: string, zone: ZoneKey];
 }>();
 
 const text = computed(() => getUiText(props.language));
 const open = ref(false);
-const menuOpenId = ref<string | null>(null);
 const dragId = ref<string | null>(null);
 let outsideClickGuard: ((event: MouseEvent) => void) | null = null;
 
@@ -52,11 +48,6 @@ function toggleOpen(): void {
 
 function close(): void {
   open.value = false;
-  menuOpenId.value = null;
-}
-
-function toggleMenu(id: string): void {
-  menuOpenId.value = menuOpenId.value === id ? null : id;
 }
 
 // Outside-click handling that survives event propagation being stopped. Many
@@ -73,21 +64,7 @@ function attachOutsideClickGuard(): void {
     const target = event.target as HTMLElement | null;
     if (!target) return;
     if (target.closest('[data-testid="workspace-trigger"]')) return;
-    if (target.closest(".workspace-switcher")) {
-      // Inside the switcher: an open overflow ("⋯") menu closes when the click
-      // lands elsewhere in the list, but stays open when clicking its own trigger
-      // or the (teleported) menu itself.
-      if (menuOpenId.value && !target.closest(".workspace-switcher-menu") && !target.closest(".workspace-switcher-kebab")) {
-        menuOpenId.value = null;
-      }
-      return;
-    }
-    // The per-workspace zone-visibility popover teleports to <body>, so it lives
-    // outside .workspace-switcher; keep the switcher open while interacting with it.
-    if (target.closest(".zone-visibility-popover")) return;
-    // Likewise the per-workspace overflow ("⋯") menu teleports to <body>; keeping
-    // the switcher open lets the user pick an action without the dropdown closing.
-    if (target.closest(".workspace-switcher-menu")) return;
+    if (target.closest(".workspace-switcher")) return;
     close();
   };
   document.addEventListener("click", outsideClickGuard, true);
@@ -220,73 +197,48 @@ function onDrop(targetId: string): void {
           <span class="workspace-switcher-name">
             {{ getWorkspaceBoardTitle(workspace) }}
           </span>
+          <!-- 每个空间的操作直接平铺在行内（不再经「⋯」二级菜单）：导出/配对/重命名/删除。 -->
           <span class="workspace-switcher-actions">
-            <ZoneVisibilityPopover
-              :visibility="workspace.zoneVisibility"
-              :language="language"
-              @toggle="emit('toggleZone', workspace.id, $event)"
-            />
-            <NPopover
-              trigger="manual"
-              placement="right-start"
-              :show="menuOpenId === workspace.id"
-              :z-index="CONTEXT_MENU_Z_INDEX"
+            <button
+              type="button"
+              class="workspace-switcher-action"
+              :data-testid="`workspace-export-${workspace.id}`"
+              :aria-label="text.app.workspaceExportSingle"
+              :title="text.app.workspaceExportSingle"
+              @click.stop="handleExport($event, workspace.id)"
             >
-              <template #trigger>
-                <button
-                  type="button"
-                  class="workspace-switcher-action workspace-switcher-kebab"
-                  :data-testid="`workspace-menu-${workspace.id}`"
-                  :aria-label="text.app.workspaceMenuActions"
-                  :aria-expanded="menuOpenId === workspace.id"
-                  @click.stop="toggleMenu(workspace.id)"
-                >
-                  <NIcon :component="EllipsisHorizontalOutline" size="14" />
-                </button>
-              </template>
-              <div class="workspace-switcher-menu" role="menu" :aria-label="text.app.workspaceMenuActions">
-                <button
-                  type="button"
-                  class="workspace-switcher-menu-item"
-                  role="menuitem"
-                  :data-testid="`workspace-export-${workspace.id}`"
-                  @click="handleExport($event, workspace.id)"
-                >
-                  <NIcon :component="DownloadOutline" size="14" />
-                  <span>{{ text.app.workspaceExportSingle }}</span>
-                </button>
-                <button
-                  type="button"
-                  class="workspace-switcher-menu-item"
-                  role="menuitem"
-                  :data-testid="`workspace-pair-${workspace.id}`"
-                  @click="handlePair($event, workspace.id)"
-                >
-                  <NIcon :component="PhonePortraitOutline" size="14" />
-                  <span>{{ text.app.inboxPair }}</span>
-                </button>
-                <button
-                  type="button"
-                  class="workspace-switcher-menu-item"
-                  role="menuitem"
-                  :data-testid="`workspace-rename-${workspace.id}`"
-                  @click="handleRename($event, workspace.id)"
-                >
-                  <NIcon :component="CreateOutline" size="14" />
-                  <span>{{ text.common.rename }}</span>
-                </button>
-                <button
-                  type="button"
-                  class="workspace-switcher-menu-item is-delete"
-                  role="menuitem"
-                  :data-testid="`workspace-delete-${workspace.id}`"
-                  @click="handleDelete($event, workspace.id)"
-                >
-                  <NIcon :component="TrashOutline" size="14" />
-                  <span>{{ text.common.delete }}</span>
-                </button>
-              </div>
-            </NPopover>
+              <NIcon :component="DownloadOutline" size="14" />
+            </button>
+            <button
+              type="button"
+              class="workspace-switcher-action"
+              :data-testid="`workspace-pair-${workspace.id}`"
+              :aria-label="text.app.inboxPair"
+              :title="text.app.inboxPair"
+              @click.stop="handlePair($event, workspace.id)"
+            >
+              <NIcon :component="PhonePortraitOutline" size="14" />
+            </button>
+            <button
+              type="button"
+              class="workspace-switcher-action"
+              :data-testid="`workspace-rename-${workspace.id}`"
+              :aria-label="text.common.rename"
+              :title="text.common.rename"
+              @click.stop="handleRename($event, workspace.id)"
+            >
+              <NIcon :component="CreateOutline" size="14" />
+            </button>
+            <button
+              type="button"
+              class="workspace-switcher-action is-delete"
+              :data-testid="`workspace-delete-${workspace.id}`"
+              :aria-label="text.common.delete"
+              :title="text.common.delete"
+              @click.stop="handleDelete($event, workspace.id)"
+            >
+              <NIcon :component="TrashOutline" size="14" />
+            </button>
           </span>
         </li>
       </ul>

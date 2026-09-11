@@ -707,6 +707,11 @@ function toggleWorkspaceZone(workspaceId: string, zone: ZoneKey): void {
   persistNow();
 }
 
+// 顶栏「显示区域」按钮只作用于当前激活的工作空间。
+function toggleActiveWorkspaceZone(zone: ZoneKey): void {
+  toggleWorkspaceZone(state.activeWorkspaceId, zone);
+}
+
 function updateLines(key: "noteLines" | "workspaceLines" | "storageLines", lines: LineItem[]): void {
   activeWorkspace.value[key] = lines;
   bumpTextGeneration();
@@ -3304,6 +3309,7 @@ function moveItem<T extends { id: string }>(items: T[], dragId: string, targetId
       :image-preview-open="Boolean(displayedPreviewId)"
       :zone-visibility="activeWorkspace.zoneVisibility"
       @theme="handleThemeClick"
+      @toggle-zone="toggleActiveWorkspaceZone"
       @dragover.prevent
       @drop.prevent="handleBoardDrop"
     >
@@ -3321,7 +3327,6 @@ function moveItem<T extends { id: string }>(items: T[], dragId: string, targetId
           @export-workspace="exportWorkspaceById"
           @import="requestImport"
           @pair-inbox="(id: string) => { inboxPairingWorkspaceId = id; }"
-          @toggle-zone="toggleWorkspaceZone"
         />
       </template>
 
@@ -3354,6 +3359,7 @@ function moveItem<T extends { id: string }>(items: T[], dragId: string, targetId
           @create-workspace="openCreateWorkspace"
           @export-workspace="exportCurrentWorkspace"
           @import="requestImport"
+          @pair-inbox="inboxPairingWorkspaceId = state.activeWorkspaceId"
           @clear-data="clearData"
           @about="about"
           @suggest="suggestIssue"

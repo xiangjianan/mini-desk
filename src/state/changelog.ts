@@ -29,6 +29,22 @@ export interface ChangelogEntry {
 
 export const CHANGELOG: ChangelogEntry[] = [
   {
+    version: "1.0.168",
+    date: "2026-09-12",
+    notes: {
+      zh: [
+        "新增：页面右上角顶栏新增「显示区域」按钮，与收起 header 栏、主题切换按钮并列，可快速控制各区域显隐",
+        "优化：工作空间列表每行直接平铺导出、配对、重命名、删除操作，不再需要点开三个点子菜单",
+        "新增：「配对手机」入口加入右上角设置菜单的「数据」分组",
+      ],
+      en: [
+        "New: a \"Visible areas\" button joins the top-right header next to the hide-header and theme buttons for quick zone toggles",
+        "Improved: workspace rows now show export/pair/rename/delete actions inline, no more three-dot submenu",
+        "New: \"Pair phone\" entry added to the Data group of the top-right settings menu",
+      ],
+    },
+  },
+  {
     version: "1.0.167",
     date: "2026-09-11",
     notes: {

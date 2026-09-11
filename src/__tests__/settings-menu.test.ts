@@ -114,6 +114,34 @@ describe("SettingsMenu", () => {
     expect(source).toMatch(/key:\s*"clear-data"[\s\S]*?icon:\s*renderIcon\(TrashOutline,\s*true\)/);
   });
 
+  it("pairs a phone from the settings menu for the active workspace", async () => {
+    const wrapper = mount(SettingsMenu, {
+      props: {
+        appVersion: "1.0.38",
+        updateAvailable: false,
+        companionGifTheme: "hermes",
+        language: "zh",
+      },
+      global: {
+        stubs: {
+          Dropdown: dropdownStub,
+          NDropdown: dropdownStub,
+          NBadge: { template: "<span><slot /></span>" },
+          NButton: { template: "<button><slot /></button>" },
+          NIcon: { template: "<span />" },
+        },
+      },
+    });
+
+    // Sits in the data group next to export workspace, before the destructive clear-data.
+    expect(wrapper.find('[data-key="pair-inbox"]').text()).toBe("配对手机");
+    expect(wrapper.find('[data-key="pair-inbox"]').classes()).toContain("dropdown-child-option");
+
+    await wrapper.find('[data-key="pair-inbox"]').trigger("click");
+
+    expect(wrapper.emitted("pairInbox")?.[0]).toEqual([expect.any(HTMLElement)]);
+  });
+
   it("adds a suggestion action that emits from the settings menu", async () => {
     const wrapper = mount(SettingsMenu, {
       props: {

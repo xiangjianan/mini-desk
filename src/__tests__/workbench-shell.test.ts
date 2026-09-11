@@ -133,7 +133,9 @@ describe("WorkbenchShell", () => {
     expect(wrapper.find('button[aria-label="搜索或执行命令"]').exists()).toBe(false);
     expect(wrapper.find('button[aria-label="设置"]').exists()).toBe(false);
     expect(wrapper.find(".workbench-rail").exists()).toBe(false);
-    expect(wrapper.findAll(".workbench-command-actions button")).toHaveLength(2);
+    // Header actions: zone visibility + hide header + theme (settings comes via the actions slot).
+    expect(wrapper.findAll(".workbench-command-actions button")).toHaveLength(3);
+    expect(wrapper.get('[data-testid="zone-visibility-trigger"]').attributes("aria-label")).toBe("显示区域");
     expect(wrapper.get('[data-testid="workbench-header-hide"]').attributes("aria-label")).toBe("隐藏顶部菜单");
     expect(wrapper.get('[data-testid="workbench-theme"]').attributes("aria-label")).toBe("切换到深色");
   });

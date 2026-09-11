@@ -3,7 +3,8 @@ import { computed, nextTick, onMounted, onUnmounted, ref, watch } from "vue";
 import { SunnyOutline } from "@vicons/ionicons5";
 import { NIcon } from "naive-ui";
 import { Moon as LucideMoon, PanelTopClose, PanelTopOpen } from "lucide-vue-next";
-import type { AppLanguage, ZoneVisibility } from "../types";
+import ZoneVisibilityPopover from "./ZoneVisibilityPopover.vue";
+import type { AppLanguage, ZoneKey, ZoneVisibility } from "../types";
 import type { ResolvedTheme } from "../state/theme";
 import {
   DEFAULT_LANGUAGE,
@@ -48,6 +49,7 @@ const expandHint = computed(() => (props.language === "en" ? "Click to expand" :
 
 const emit = defineEmits<{
   theme: [];
+  toggleZone: [zone: ZoneKey];
 }>();
 
 defineSlots<{
@@ -662,6 +664,11 @@ onUnmounted(() => {
             <p v-if="slogan" class="workbench-slogan">{{ slogan }}</p>
           </div>
           <div class="workbench-command-actions">
+            <ZoneVisibilityPopover
+              :visibility="zoneVisibility"
+              :language="language"
+              @toggle="emit('toggleZone', $event)"
+            />
             <button
               type="button"
               class="icon-button workbench-header-hide-button"

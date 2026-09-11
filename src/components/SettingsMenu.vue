@@ -11,6 +11,7 @@ import {
   ImagesOutline,
   InformationCircleOutline,
   KeyOutline,
+  PhonePortraitOutline,
   ServerOutline,
   SettingsOutline,
   TrashOutline,
@@ -41,6 +42,7 @@ const emit = defineEmits<{
   createWorkspace: [];
   exportWorkspace: [anchor?: HTMLElement];
   import: [anchor?: HTMLElement];
+  pairInbox: [anchor?: HTMLElement];
   clearData: [anchor?: HTMLElement];
   about: [anchor?: HTMLElement];
   suggest: [anchor?: HTMLElement];
@@ -75,6 +77,7 @@ const options = computed(() => [
       { label: text.value.settings.createWorkspace, key: "create-workspace", icon: renderIcon(AddOutline) },
       { label: text.value.settings.import, key: "import", icon: renderIcon(CloudUploadOutline) },
       { label: text.value.settings.exportCurrentWorkspace, key: "export-workspace", icon: renderIcon(CloudDownloadOutline) },
+      { label: text.value.app.inboxPair, key: "pair-inbox", icon: renderIcon(PhonePortraitOutline) },
       { label: text.value.settings.clearData, key: "clear-data", icon: renderIcon(TrashOutline, true) },
     ],
   },
@@ -126,6 +129,7 @@ function handleSelect(key: string): void {
   if (key === "create-workspace") emit("createWorkspace");
   if (key === "export-workspace") emit("exportWorkspace", triggerRef.value ?? undefined);
   if (key === "import") emit("import", triggerRef.value ?? undefined);
+  if (key === "pair-inbox") emit("pairInbox", triggerRef.value ?? undefined);
   if (key === "clear-data") emit("clearData", triggerRef.value ?? undefined);
   if (key === "suggest") emit("suggest", triggerRef.value ?? undefined);
   if (key === "support") emit("support", triggerRef.value ?? undefined);

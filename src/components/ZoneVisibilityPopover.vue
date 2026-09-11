@@ -33,16 +33,16 @@ function toggle(zone: ZoneKey): void {
 </script>
 
 <template>
-  <NPopover trigger="click" placement="right-start" :z-index="CONTEXT_MENU_Z_INDEX">
+  <NPopover trigger="click" placement="bottom-end" :z-index="CONTEXT_MENU_Z_INDEX">
     <template #trigger>
       <button
         type="button"
-        class="workspace-switcher-action zone-visibility-trigger"
+        class="icon-button workbench-zone-button"
         data-testid="zone-visibility-trigger"
         :aria-label="text.zoneVisibility.title"
-        @click.stop
+        :title="text.zoneVisibility.title"
       >
-        <NIcon :component="GridOutline" size="12" />
+        <NIcon :component="GridOutline" :size="16" />
       </button>
     </template>
     <div class="zone-visibility-popover" role="group" :aria-label="text.zoneVisibility.title">
