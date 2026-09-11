@@ -2,7 +2,6 @@
 import { computed, onBeforeUnmount, ref } from "vue";
 import {
   AlertCircleOutline,
-  CheckmarkCircleOutline,
   ClipboardOutline,
   CloseCircleOutline,
   CreateOutline,
@@ -23,22 +22,20 @@ const props = defineProps<{
   language: AppLanguage;
 }>();
 
-const emit = defineEmits<{ "change-code": [] }>();
+const emit = defineEmits<{ "change-code": []; sent: [count: number] }>();
 
-type CaptureStatus = "idle" | "sending" | "sent" | "error";
+type CaptureStatus = "idle" | "sending" | "error";
 type CaptureKind = InboxPlainItem["kind"];
 
 const app = computed(() => getUiText(props.language).app);
 // 草稿上提到父级（App.vue）：换码导致组件卸载重挂后内容不丢。
 const draft = defineModel<string>({ default: "" });
 const status = ref<CaptureStatus>("idle");
-/** sending/sent 态修饰哪个按钮：发送中/成功反馈只落在实际使用的那个按钮上。 */
+/** sending 态修饰哪个按钮：发送中反馈只落在实际使用的那个按钮上。 */
 const activeKind = ref<CaptureKind | null>(null);
 const errorText = ref("");
 /** code_revoked / unknown_code 时为 true：错误区据此渲染「去更换配对码」入口。 */
 const codeUnusable = ref(false);
-const sentCount = ref(0);
-const sentText = computed(() => app.value.mobileInboxSent.replace("{count}", () => String(sentCount.value)));
 
 /** 输入中实时预览「按行拆分」的条数：发送到提醒/便签都会把每一行当作一条记录逐条发送。
  *  只有 ≥2 行时才提示（单行即单条，无需解释），帮助用户建立多行=多条的心智模型。 */
@@ -65,9 +62,6 @@ function togglePolish(event: Event): void {
 function clearDraft(): void {
   draft.value = "";
 }
-
-const SENT_RESET_MS = 2500;
-let sentResetTimer: number | undefined;
 
 /** 触觉反馈：不支持的机型（iOS Safari）静默忽略。 */
 function vibrate(pattern: number | number[]): void {
@@ -114,13 +108,6 @@ async function pasteFromClipboard(): Promise<void> {
   showPasteNotice(app.value.mobileInboxPasteDone);
 }
 
-function clearSentResetTimer(): void {
-  if (sentResetTimer !== undefined) {
-    window.clearTimeout(sentResetTimer);
-    sentResetTimer = undefined;
-  }
-}
-
 function errorTextFor(reason: InboxPostFailure): string {
   switch (reason) {
     case "rate_limited":
@@ -160,7 +147,6 @@ async function send(kind: CaptureKind): Promise<void> {
   status.value = "sending";
   activeKind.value = kind;
   codeUnusable.value = false;
-  clearSentResetTimer();
   /** 失败即停：未发送的行（含当前失败行）放回输入框，直接重试不会重复已成功的行。 */
   const failAt = (index: number, reason: InboxPostFailure): void => {
     status.value = "error";
@@ -190,31 +176,21 @@ async function send(kind: CaptureKind): Promise<void> {
     failAt(0, "network");
     return;
   }
-  sentCount.value = lines.length;
-  status.value = "sent";
+  status.value = "idle";
+  activeKind.value = null;
   draft.value = "";
   vibrate(20);
-  sentResetTimer = window.setTimeout(() => {
-    // 仍在 sent 态才复位：期间用户再次发送会重置定时器。
-    if (status.value === "sent") {
-      status.value = "idle";
-      activeKind.value = null;
-      sentCount.value = 0;
-    }
-  }, SENT_RESET_MS);
+  // 成功反馈上抛 App.vue：复用右下角伴宠气泡（GIF + 消息）弹出「已发送 N 条」。
+  emit("sent", lines.length);
 }
 
-/** 发送中/成功反馈只修饰本次使用的按钮，另一个按钮保持自身文案。 */
+/** 发送中反馈只修饰本次使用的按钮，另一个按钮保持自身文案。 */
 function buttonLabel(kind: CaptureKind): string {
-  if (activeKind.value === kind) {
-    if (status.value === "sending") return app.value.mobileInboxSending;
-    if (status.value === "sent") return `✓ ${app.value.mobileInboxSentButton}`;
-  }
+  if (activeKind.value === kind && status.value === "sending") return app.value.mobileInboxSending;
   return kind === "todo" ? app.value.mobileInboxSendTodo : app.value.mobileInboxSendNote;
 }
 
 onBeforeUnmount(() => {
-  clearSentResetTimer();
   clearPasteNotice();
 });
 </script>
@@ -254,8 +230,6 @@ onBeforeUnmount(() => {
         </label>
       </div>
     </div>
-    <!-- 润色开关说明行：常驻在标题行下方，让「关闭=原文直存」无需悬停也能被读到。 -->
-    <p class="mobile-inbox-polish-hint">{{ app.mobileInboxPolishHint }}</p>
 
     <form class="mobile-inbox-form" @submit.prevent>
       <textarea
@@ -275,7 +249,7 @@ onBeforeUnmount(() => {
         <button
           type="button"
           class="mobile-inbox-send"
-          :class="{ 'is-sent': status === 'sent' && activeKind === 'todo', 'is-loading': status === 'sending' && activeKind === 'todo' }"
+          :class="{ 'is-loading': status === 'sending' && activeKind === 'todo' }"
           data-testid="mobile-inbox-send-todo"
           :disabled="status === 'sending'"
           @click="send('todo')"
@@ -286,7 +260,7 @@ onBeforeUnmount(() => {
         <button
           type="button"
           class="mobile-inbox-send"
-          :class="{ 'is-sent': status === 'sent' && activeKind === 'note', 'is-loading': status === 'sending' && activeKind === 'note' }"
+          :class="{ 'is-loading': status === 'sending' && activeKind === 'note' }"
           data-testid="mobile-inbox-send-note"
           :disabled="status === 'sending'"
           @click="send('note')"
@@ -297,12 +271,9 @@ onBeforeUnmount(() => {
       </div>
     </form>
 
-    <p v-if="status === 'sent'" class="mobile-inbox-status is-slide-in" role="status" aria-live="polite" data-status="sent">
-      <NIcon :component="CheckmarkCircleOutline" aria-hidden="true" />
-      <span>{{ sentText }}</span>
-    </p>
+    <!-- 发送成功反馈由 App.vue 弹出（右下角伴宠气泡）；失败仍走卡内错误行。 -->
     <p
-      v-else-if="status === 'error'"
+      v-if="status === 'error'"
       class="mobile-inbox-status is-shake"
       role="status"
       aria-live="polite"

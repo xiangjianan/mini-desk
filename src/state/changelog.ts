@@ -29,6 +29,20 @@ export interface ChangelogEntry {
 
 export const CHANGELOG: ChangelogEntry[] = [
   {
+    version: "1.0.166",
+    date: "2026-09-11",
+    notes: {
+      zh: [
+        "优化：手机速记发送成功改为右下角伴宠 GIF 消息气泡弹出「已发送 N 条」，与桌面端保存反馈同款；发送按钮不再变绿，卡内也不再显示结果行",
+        "优化：手机端文案再精简——标题改为「在手机随手速记」，移除副句、输码帮助行、已配对小字与润色说明行",
+      ],
+      en: [
+        "Improved: a successful mobile capture now pops the companion GIF bubble with \"Sent N\" at the bottom-right — the same feedback as saving on desktop; the send button no longer turns green and the inline result row is gone",
+        "Improved: leaner mobile copy — the hero title now reads \"Capture on your phone\", and the lede, code help line, paired-status small print, and polish hint line were removed",
+      ],
+    },
+  },
+  {
     version: "1.0.165",
     date: "2026-09-11",
     notes: {

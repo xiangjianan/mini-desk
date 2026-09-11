@@ -462,6 +462,13 @@ function forgetMobileInboxCode(): void {
   window.history.replaceState(null, "", `${window.location.pathname}${window.location.search}`);
 }
 
+/** 手机速记发送成功：复用伴宠气泡（GIF + 消息）在屏幕右下角弹出「已发送 N 条」。
+ *  force 绕过移动端板效屏蔽；落点改为安全区感知的右下角（速记页无桌面编辑器可锚定）。 */
+function handleMobileInboxSent(count: number): void {
+  showBubbleText(uiText.value.app.mobileInboxSent.replace("{count}", () => String(count)), undefined, { force: true });
+  companionPosition.value = { right: "16px", bottom: "calc(var(--safe-bottom) + 20px)" };
+}
+
 /** 速记页复制反馈：点击配对码 → 复制分组码文本 → 短暂弹「复制成功/失败」提示。 */
 const mobileCopyToast = ref("");
 let mobileCopyToastTimer: number | undefined;
@@ -3494,7 +3501,13 @@ function moveItem<T extends { id: string }>(items: T[], dragId: string, targetId
       @theme="handleThemeClick"
     >
       <template v-if="mobileInboxCode">
-        <MobileInboxCapture v-model="mobileInboxDraftText" :code="mobileInboxCode" :language="state.language" @change-code="forgetMobileInboxCode" />
+        <MobileInboxCapture
+          v-model="mobileInboxDraftText"
+          :code="mobileInboxCode"
+          :language="state.language"
+          @change-code="forgetMobileInboxCode"
+          @sent="handleMobileInboxSent"
+        />
       </template>
     </MobileHome>
 
@@ -3532,9 +3545,9 @@ function moveItem<T extends { id: string }>(items: T[], dragId: string, targetId
       @save-edit="saveEditedImage"
     />
 
-    <!-- 桌面端专属：移动端壳（MobileHome）自带完整引导，不再弹右下角消息气泡。 -->
+    <!-- 伴宠气泡（GIF + 消息）：常挂载，桌面端随编辑/保存触发；移动端速记发送成功时
+         经 handleMobileInboxSent 强制在右下角弹出，其余板效仍被 isBoardBlocked 屏蔽。 -->
     <CompanionBubble
-      v-if="!isMobileBlocked"
       :visible="companionVisible"
       :message="bubbleMessage"
       :link-text="bubbleLink?.text"

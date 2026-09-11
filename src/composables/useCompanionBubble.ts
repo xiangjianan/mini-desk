@@ -25,6 +25,8 @@ export interface BubbleOptions {
   linkText?: string;
   linkHref?: string;
   signatureText?: string;
+  /** 绕过 isBoardBlocked 强制显示：手机速记壳的发送成功反馈复用伴宠气泡。 */
+  force?: boolean;
 }
 
 export interface PendingConfirm {
@@ -121,7 +123,7 @@ export function useCompanionBubble(deps: CompanionBubbleDeps) {
   }
 
   function showBubbleText(message: string, anchor?: HTMLElement, options: BubbleOptions = {}, duration = 3000): void {
-    if (deps.isBoardBlocked()) return;
+    if (deps.isBoardBlocked() && !options.force) return;
     window.clearTimeout(bubbleTimer.value);
     window.clearTimeout(bubbleFadeTimer.value);
     clearPendingConfirm();

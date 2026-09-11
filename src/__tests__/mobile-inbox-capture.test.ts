@@ -148,9 +148,9 @@ describe("MobileInboxCapture", () => {
     expect(typeof payload).toBe("string");
     expect(payload.length).toBeGreaterThan(40);
     expect(plainPayload(payload)).toMatchObject({ kind: "todo", text: "买牛奶" });
-    await until(() => expect(wrapper.get(".mobile-inbox-status").text()).toContain("已发送"));
-    expect(wrapper.get(".mobile-inbox-status").attributes("role")).toBe("status");
-    expect(wrapper.get(".mobile-inbox-status").attributes("aria-live")).toBe("polite");
+    // 成功反馈上抛 sent（App.vue 复用右下角伴宠气泡弹出），组件内不再渲染结果。
+    await until(() => expect(wrapper.emitted("sent")).toBeTruthy());
+    expect(wrapper.emitted("sent")).toEqual([[1]]);
     expect(draftValue(wrapper)).toBe("");
   });
 
@@ -227,7 +227,7 @@ describe("MobileInboxCapture", () => {
     await until(() => expect(postMock).toHaveBeenCalledTimes(1));
 
     expect(postMock).toHaveBeenCalledTimes(1);
-    await until(() => expect(wrapper.get(".mobile-inbox-status").text()).toContain("已发送"));
+    await until(() => expect(wrapper.emitted("sent")).toBeTruthy());
   });
 
   it("多行待办按行拆分逐条发送：空行跳过、提示已发送 N 条、清空输入", async () => {
@@ -239,7 +239,7 @@ describe("MobileInboxCapture", () => {
     const plains = postMock.mock.calls.map(([, , payload]) => plainPayload(payload));
     expect(plains.map((plain) => plain.text)).toEqual(["买牛奶", "买鸡蛋", "取快递"]);
     expect(plains.every((plain) => plain.kind === "todo")).toBe(true);
-    await until(() => expect(wrapper.get(".mobile-inbox-status").text()).toContain("已发送 3 条"));
+    await until(() => expect(wrapper.emitted("sent")?.at(-1)).toEqual([3]));
     expect(draftValue(wrapper)).toBe("");
   });
 
@@ -262,7 +262,7 @@ describe("MobileInboxCapture", () => {
 
     // 保留宽松轮询窗口，消除整包并发下的偶发超时
     await until(() => expect(postMock).toHaveBeenCalledTimes(21), 15000);
-    await until(() => expect(wrapper.get(".mobile-inbox-status").text()).toContain("已发送 21 条"));
+    await until(() => expect(wrapper.emitted("sent")?.at(-1)).toEqual([21]));
     expect(draftValue(wrapper)).toBe("");
   }, 20000);
 
@@ -343,23 +343,21 @@ describe("MobileInboxCapture", () => {
     expect(wrapper.find('[data-testid="mobile-inbox-revoked-change"]').exists()).toBe(false);
   });
 
-  it("发送成功：所用按钮进入 ✓已发送 态并自动复位，另一按钮不受影响", async () => {
+  it("发送成功：上抛 sent 事件携带条数，按钮文案保持不变", async () => {
     const vibrate = vi.fn();
     Object.defineProperty(navigator, "vibrate", { value: vibrate, configurable: true });
     const wrapper = mountCapture();
 
-    await fillAndSend(wrapper, "动画内容", "note");
+    await fillAndSend(wrapper, "气泡内容", "note");
 
-    await until(() => expect(wrapper.get('[data-testid="mobile-inbox-send-note"]').text()).toContain("已发送"));
-    expect(wrapper.get('[data-testid="mobile-inbox-send-note"]').classes()).toContain("is-sent");
+    await until(() => expect(wrapper.emitted("sent")).toBeTruthy());
+    expect(wrapper.emitted("sent")).toEqual([[1]]);
+    // 按钮不再进入绿态：两键文案保持原样。
+    expect(wrapper.get('[data-testid="mobile-inbox-send-note"]').text()).toBe("发送到便签");
+    expect(wrapper.get('[data-testid="mobile-inbox-send-note"]').classes()).not.toContain("is-sent");
     expect(wrapper.get('[data-testid="mobile-inbox-send-todo"]').text()).toBe("发送到提醒");
     expect(vibrate).toHaveBeenCalledWith(20);
-
-    // 真实定时器等待自动复位（≈2.5s）。
-    await new Promise((resolve) => setTimeout(resolve, 3000));
-    expect(wrapper.get('[data-testid="mobile-inbox-send-note"]').text()).toBe("发送到便签");
-    expect(wrapper.find(".mobile-inbox-status").exists()).toBe(false);
-  }, 10000);
+  });
 
   it("发送遇 unknown_code：显示未注册文案且换码按钮可见", async () => {
     postMock.mockResolvedValue({ ok: false, reason: "unknown_code" });

@@ -122,9 +122,6 @@ describe("localized public copy", () => {
     expect(getUiText("zh").app.aboutSignature).toBe("(100% AI BUILT)");
     expect(getUiText("en").app.boardLabel).toBe("Mini Desk");
     expect(getUiText("en").app.mobileTitle).toBe("Mini Desk");
-    expect(getUiText("en").app.mobileHeroLede).toBe(
-      "Built for the desktop — on your phone, it's the quick-capture entry.",
-    );
     expect(getUiText("en").app.aboutTitle).toBe("Mini Desk");
     expect(getUiText("en").app.aboutDescription).toBe(
       "A local-first lightweight desk for organizing screenshots, reminders, quick actions, and sticky notes.\nEverything happens in your local browser. None of your data is ever uploaded.",
@@ -160,9 +157,9 @@ describe("localized public copy", () => {
     expect(getUiText("en").app.mobileInboxRevokedChange).toBe("Change pairing code");
   });
 
-  it("发送按钮成功态文案中英齐全", () => {
-    expect(getUiText("zh").app.mobileInboxSentButton).toBe("已发送");
-    expect(getUiText("en").app.mobileInboxSentButton).toBe("Sent");
+  it("发送成功气泡文案中英齐全", () => {
+    expect(getUiText("zh").app.mobileInboxSent).toBe("已发送 {count} 条，回到电脑端就能看到 (｡•̀ᴗ-)✧");
+    expect(getUiText("en").app.mobileInboxSent).toBe("Sent {count}! Check your desktop board (｡•̀ᴗ-)✧");
   });
 
   it("一键粘贴文案中英齐全", () => {

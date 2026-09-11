@@ -3613,13 +3613,6 @@ button.mobile-home-theme:focus-visible {
   letter-spacing: -0.01em;
 }
 
-.mobile-home-lede {
-  margin: 0;
-  font-size: 16px;
-  line-height: 1.7;
-  color: var(--muted);
-}
-
 /* 桌面四栏工作台微缩示意（纯 CSS，列宽对应 .workbench-grid 的真实分区比例）。 */
 .mobile-home-desk {
   margin: 0;
@@ -3924,13 +3917,6 @@ input.mobile-home-code-input:focus {
   flex: none;
 }
 
-.mobile-home-field-help {
-  margin: 0;
-  font-size: 13px;
-  line-height: 1.6;
-  color: var(--muted);
-}
-
 /* ---- 主 CTA（配对并开始速记） ---- */
 button.mobile-home-primary {
   position: relative;
@@ -4056,13 +4042,6 @@ button.mobile-home-ps-code:focus-visible {
   outline: 0;
   border-radius: 4px;
   box-shadow: var(--focus-ring);
-}
-
-.mobile-home-ps-note {
-  margin: 6px 0 0;
-  padding-left: 2px;
-  font-size: 12px;
-  color: var(--muted);
 }
 
 /* ---- 次级按钮（更换配对码 / sheet 取消 / 粘贴 / 去更换配对码） ---- */
@@ -7064,14 +7043,6 @@ html[data-theme="dark"] .quick-search .quick-search-toggle:focus-visible {
   opacity: 0;
 }
 
-/* 润色开关说明行：常驻标题行下方（浅色 12px 辅助文字），负 margin 抵消卡片 12px 行距。 */
-.mobile-inbox-polish-hint {
-  margin: -6px 0 0;
-  color: var(--muted);
-  font-size: 12px;
-  line-height: 1.55;
-}
-
 .mobile-inbox-polish-track {
   position: relative;
   width: 44px;
@@ -7287,39 +7258,17 @@ button.mobile-inbox-send:disabled {
   cursor: default;
 }
 
-button.mobile-inbox-send.is-sent {
-  background: var(--action);
-  border-color: var(--action);
-  color: #fff;
-  animation: mobile-inbox-pop 320ms var(--motion-ease, ease-out);
-}
-
 button.mobile-inbox-send:disabled {
   animation: mobile-inbox-pulse 1.2s ease-in-out infinite;
-}
-
-.mobile-inbox-status.is-slide-in {
-  animation: mobile-inbox-slide-in 240ms ease-out;
 }
 
 .mobile-inbox-status.is-shake {
   animation: mobile-inbox-shake 360ms ease-in-out;
 }
 
-@keyframes mobile-inbox-pop {
-  0% { transform: scale(0.92); }
-  55% { transform: scale(1.04); }
-  100% { transform: scale(1); }
-}
-
 @keyframes mobile-inbox-pulse {
   0%, 100% { opacity: 0.6; }
   50% { opacity: 1; }
-}
-
-@keyframes mobile-inbox-slide-in {
-  from { opacity: 0; transform: translateY(4px); }
-  to { opacity: 1; transform: none; }
 }
 
 @keyframes mobile-inbox-shake {
@@ -7330,9 +7279,7 @@ button.mobile-inbox-send:disabled {
 }
 
 @media (prefers-reduced-motion: reduce) {
-  button.mobile-inbox-send.is-sent,
   button.mobile-inbox-send:disabled,
-  .mobile-inbox-status.is-slide-in,
   .mobile-inbox-status.is-shake,
   .mobile-home-view > *,
   .mobile-home-link-badge,
@@ -7344,7 +7291,7 @@ button.mobile-inbox-send:disabled {
   }
 }
 
-/* 发送结果卡：成功=绿底 + 对勾图标；失败=红底 + 警示图标（原型 .cap-status）。 */
+/* 发送失败结果卡：红底 + 警示图标（成功反馈由 App.vue 弹右下角伴宠气泡，原型 .cap-status 的失败半边）。 */
 .mobile-inbox-status {
   display: flex;
   align-items: flex-start;

@@ -36,11 +36,13 @@ vi.mock("../sync/pull", async (importOriginal) => ({
 }));
 
 // App 只消费 revokeInboxKey/registerInboxKey/checkInboxKeyStatus；其余保留真实现（经 mocked 的 pull.ts 隔离）。
+// postInboxItem 一并固定为成功：手机速记发送链路（移动壳内）需要可控的成功返回。
 vi.mock("../sync/inboxClient", async (importOriginal) => ({
   ...(await importOriginal<typeof import("../sync/inboxClient")>()),
   revokeInboxKey: vi.fn(async () => true),
   registerInboxKey: vi.fn(async () => true),
   checkInboxKeyStatus: vi.fn(async () => "active"),
+  postInboxItem: vi.fn(async () => ({ ok: true }) as const),
 }));
 
 async function flushAsyncComponents() {
@@ -409,6 +411,42 @@ describe("App shell", () => {
       expect(wrapper.find('[data-testid="mobile-inbox-text"]').exists()).toBe(true);
       expect(wrapper.find('[data-testid="mobile-inbox-code-input"]').exists()).toBe(false);
       // 已配对进入速记态：右下角「建议在浏览器打开」伙伴气泡整体隐藏。
+      expect(wrapper.find('[data-testid="companion-bubble"]').exists()).toBe(false);
+    } finally {
+      wrapper?.unmount();
+      window.location.hash = "";
+      vi.unstubAllGlobals();
+      vi.useRealTimers();
+    }
+  });
+
+  it("手机端发送成功：右下角伴宠 GIF 气泡弹出已发送提示并自动收起", async () => {
+    vi.useFakeTimers();
+    stubMatchMedia(true);
+    window.location.hash = "#inbox=AB2CDE4FGHJK";
+    let wrapper: ReturnType<typeof mountApp> | undefined;
+
+    try {
+      wrapper = mountApp();
+
+      await wrapper.get('[data-testid="mobile-inbox-text"]').setValue("买牛奶");
+      await wrapper.get('[data-testid="mobile-inbox-send-todo"]').trigger("click");
+      // 发送链路（keyHash + post）完成后上抛 sent → App 强制弹伴宠气泡；含 200ms 气泡入场延迟。
+      await vi.advanceTimersByTimeAsync(400);
+      await wrapper.vm.$nextTick();
+
+      expect(wrapper.find('[data-testid="companion-bubble"]').exists()).toBe(true);
+      expect(wrapper.find('[data-testid="companion-gif"]').exists()).toBe(true);
+      expect(wrapper.get('[data-testid="companion-confirm"]').attributes("role")).toBe("status");
+      expect(wrapper.get('[data-testid="companion-confirm"]').text()).toContain("已发送 1 条");
+      // 落点为安全区感知的屏幕右下角。
+      expect(wrapper.get('[data-testid="companion-bubble"]').attributes("style")).toContain("calc(var(--safe-bottom) + 20px)");
+      // 草稿已被清空。
+      expect((wrapper.get('[data-testid="mobile-inbox-text"]').element as HTMLTextAreaElement).value).toBe("");
+
+      // 3s 消息超时 + 2s 伴宠淡出后整体消失。
+      await vi.advanceTimersByTimeAsync(3000 + 2100);
+      await wrapper.vm.$nextTick();
       expect(wrapper.find('[data-testid="companion-bubble"]').exists()).toBe(false);
     } finally {
       wrapper?.unmount();

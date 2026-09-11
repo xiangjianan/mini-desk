@@ -184,7 +184,6 @@ onBeforeUnmount(() => window.removeEventListener("keydown", onKeydown));
                 {{ app.mobileInboxChangeCode }}
               </button>
             </div>
-            <p class="mobile-home-ps-note">{{ app.mobilePairedNote }}</p>
           </div>
 
           <!-- 速记卡由 App.vue 经默认 slot 注入（MobileInboxCapture，携带真实发送链路）。 -->
@@ -205,7 +204,6 @@ onBeforeUnmount(() => window.removeEventListener("keydown", onKeydown));
           <div class="mobile-home-hero">
             <p class="mobile-home-eyebrow">{{ app.mobileHeroEyebrow }}</p>
             <h1 id="mobile-home-hero-title" class="mobile-home-hero-title">{{ app.mobileHeroTitle }}</h1>
-            <p class="mobile-home-lede">{{ app.mobileHeroLede }}</p>
             <!-- 桌面四栏工作台微缩示意（纯 CSS，对应 workbench-grid 的真实分区） -->
             <figure class="mobile-home-desk" aria-hidden="true">
               <div class="mobile-home-desk-chrome">
@@ -302,7 +300,6 @@ onBeforeUnmount(() => window.removeEventListener("keydown", onKeydown));
                 <span class="mobile-home-spinner" aria-hidden="true"></span>
                 <span>{{ checking ? app.mobileInboxChecking : app.mobileInboxCodeConfirm }}</span>
               </button>
-              <p class="mobile-home-field-help">{{ app.mobileInboxCodeHelp }}</p>
             </form>
           </section>
         </section>
