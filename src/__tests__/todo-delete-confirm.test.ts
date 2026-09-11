@@ -55,7 +55,7 @@ async function clickConfirm(wrapper: ReturnType<typeof mountApp>, testid: "compa
   await nextTick();
 }
 
-describe("todo delete confirmation streak", () => {
+describe("todo delete confirmation", () => {
   beforeEach(() => {
     localStorage.clear();
     seedTodos();
@@ -67,85 +67,53 @@ describe("todo delete confirmation streak", () => {
     localStorage.clear();
   });
 
-  it("asks for confirmation on the first and second delete", async () => {
+  it("prompts on every consecutive delete, including the third and fourth", async () => {
     const wrapper = mountApp();
     try {
-      await deleteViaMenu(wrapper);
-      expect(confirmButtonsVisible(wrapper)).toBe(true);
-      await clickConfirm(wrapper, "companion-yes");
-      expect(remainingTodos(wrapper)).toBe(3);
-      expect(bubbleText(wrapper)).toMatch(/已删|已移除|已清|删除完成/);
-
-      // Regression: the second consecutive delete must also show the confirm
+      // Regression 1: the second consecutive delete must also show the confirm
       // bubble (it used to appear missing while the previous toast was up).
-      await deleteViaMenu(wrapper);
-      expect(confirmButtonsVisible(wrapper)).toBe(true);
-      await clickConfirm(wrapper, "companion-yes");
-      expect(remainingTodos(wrapper)).toBe(2);
+      // Regression 2: a former streak bypass deleted directly from the third
+      // delete on — every delete must prompt, with no time-window exemption.
+      for (let nth = 1; nth <= 4; nth += 1) {
+        await deleteViaMenu(wrapper);
+        expect(confirmButtonsVisible(wrapper), `第 ${nth} 次删除必须弹出确认`).toBe(true);
+        await clickConfirm(wrapper, "companion-yes");
+        expect(remainingTodos(wrapper)).toBe(4 - nth);
+        expect(bubbleText(wrapper)).toMatch(/已删|已移除|已清|删除完成/);
+      }
     } finally {
       wrapper.unmount();
     }
   });
 
-  it("deletes directly (no bubble prompt) from the third consecutive delete on", async () => {
+  it("cancelling keeps the todo and the next delete still prompts", async () => {
     const wrapper = mountApp();
     try {
-      await deleteViaMenu(wrapper);
-      await clickConfirm(wrapper, "companion-yes");
-      await deleteViaMenu(wrapper);
-      await clickConfirm(wrapper, "companion-yes");
-      expect(remainingTodos(wrapper)).toBe(2);
-
-      // Third consecutive delete: streak exceeds the limit, no prompt.
-      await deleteViaMenu(wrapper);
-      expect(confirmButtonsVisible(wrapper)).toBe(false);
-      expect(remainingTodos(wrapper)).toBe(1);
-      expect(bubbleText(wrapper)).toMatch(/已删|已移除|已清|删除完成/);
-
-      // Fourth delete: still inside the active streak, still no prompt.
-      await deleteViaMenu(wrapper);
-      expect(confirmButtonsVisible(wrapper)).toBe(false);
-      expect(remainingTodos(wrapper)).toBe(0);
-    } finally {
-      wrapper.unmount();
-    }
-  });
-
-  it("asks again after the streak expires", async () => {
-    const wrapper = mountApp();
-    try {
-      await deleteViaMenu(wrapper);
-      await clickConfirm(wrapper, "companion-yes");
-      await deleteViaMenu(wrapper);
-      await clickConfirm(wrapper, "companion-yes");
-      await deleteViaMenu(wrapper);
-      expect(remainingTodos(wrapper)).toBe(1);
-
-      // Beyond the streak reset window the confirm bubble returns.
-      await vi.advanceTimersByTimeAsync(31_000);
-      await deleteViaMenu(wrapper);
-      expect(confirmButtonsVisible(wrapper)).toBe(true);
-      await clickConfirm(wrapper, "companion-yes");
-      expect(remainingTodos(wrapper)).toBe(0);
-    } finally {
-      wrapper.unmount();
-    }
-  });
-
-  it("cancelling a confirm restarts the streak", async () => {
-    const wrapper = mountApp();
-    try {
-      await deleteViaMenu(wrapper);
-      await clickConfirm(wrapper, "companion-yes");
-      expect(remainingTodos(wrapper)).toBe(3);
-
-      // Cancel the second delete: nothing is removed and the streak resets.
       await deleteViaMenu(wrapper);
       expect(confirmButtonsVisible(wrapper)).toBe(true);
       await clickConfirm(wrapper, "companion-no");
+      expect(remainingTodos(wrapper)).toBe(4);
+
+      // The next delete is not remembered as part of any streak — it prompts again.
+      await deleteViaMenu(wrapper);
+      expect(confirmButtonsVisible(wrapper)).toBe(true);
+      await clickConfirm(wrapper, "companion-yes");
+      expect(remainingTodos(wrapper)).toBe(3);
+    } finally {
+      wrapper.unmount();
+    }
+  });
+
+  it("still prompts after a long gap since the last delete", async () => {
+    const wrapper = mountApp();
+    try {
+      await deleteViaMenu(wrapper);
+      await clickConfirm(wrapper, "companion-yes");
       expect(remainingTodos(wrapper)).toBe(3);
 
-      // Because the streak restarted, the next delete still prompts.
+      // A former streak expired here; now there is no streak at all, so the
+      // prompt must appear regardless of elapsed time.
+      await vi.advanceTimersByTimeAsync(60_000);
       await deleteViaMenu(wrapper);
       expect(confirmButtonsVisible(wrapper)).toBe(true);
       await clickConfirm(wrapper, "companion-yes");
