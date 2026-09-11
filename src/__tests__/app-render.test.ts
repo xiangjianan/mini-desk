@@ -17,7 +17,7 @@ import * as imageState from "../state/images";
 import { KAOMOJI_BY_MOOD } from "../state/messages";
 import { INBOX_FOCUS_THROTTLE_MS } from "../sync/config";
 import { checkInboxKeyStatus, registerInboxKey, revokeInboxKey } from "../sync/inboxClient";
-import { REMEMBERED_INBOX_CODE_KEY } from "../sync/pairing";
+import { normalizeInboxCode, REMEMBERED_INBOX_CODE_KEY } from "../sync/pairing";
 import { pullAllInboxes } from "../sync/pull";
 import type { InboxPullResult } from "../sync/pull";
 import { FALLBACK_APP_VERSION } from "../state/version";
@@ -366,7 +366,8 @@ describe("App shell", () => {
       await vi.advanceTimersByTimeAsync(200);
       await wrapper.vm.$nextTick();
 
-      expect(wrapper.find('[data-testid="companion-confirm"]').text()).toContain("建议在电脑浏览器打开");
+      // 移动端不弹右下角消息气泡：引导文案由首页壳（hero + 桌面示意）承担。
+      expect(wrapper.find('[data-testid="companion-bubble"]').exists()).toBe(false);
     } finally {
       wrapper?.unmount();
       vi.unstubAllGlobals();
@@ -374,7 +375,7 @@ describe("App shell", () => {
     }
   });
 
-  it("keeps the mobile handoff companion visible after the desktop bubble timeout", async () => {
+  it("移动端不渲染右下角消息气泡（桌面端气泡超时逻辑不再影响手机壳）", async () => {
     vi.useFakeTimers();
     stubMatchMedia(true);
     let wrapper: ReturnType<typeof mountApp> | undefined;
@@ -385,8 +386,8 @@ describe("App shell", () => {
       await vi.advanceTimersByTimeAsync(10500);
       await wrapper.vm.$nextTick();
 
-      expect(wrapper.find('[data-testid="companion-bubble"]').exists()).toBe(true);
-      expect(wrapper.find('[data-testid="companion-confirm"]').text()).toContain("建议在电脑浏览器打开");
+      expect(wrapper.find('[data-testid="companion-bubble"]').exists()).toBe(false);
+      expect(wrapper.find('[data-testid="companion-confirm"]').exists()).toBe(false);
     } finally {
       wrapper?.unmount();
       vi.unstubAllGlobals();
@@ -417,10 +418,9 @@ describe("App shell", () => {
     }
   });
 
-  it("keeps the mobile companion hidden while paired and restores it after changing code", async () => {
+  it("never shows the companion bubble on mobile across unpairing and re-pairing", async () => {
     vi.useFakeTimers();
     stubMatchMedia(true);
-    vi.spyOn(window, "confirm").mockReturnValue(true);
     window.location.hash = "#inbox=AB2CDE4FGHJK";
     let wrapper: ReturnType<typeof mountApp> | undefined;
 
@@ -431,16 +431,15 @@ describe("App shell", () => {
       await wrapper.vm.$nextTick();
       expect(wrapper.find('[data-testid="companion-bubble"]').exists()).toBe(false);
 
-      // 点「更换配对码」：回到输码表单，伙伴气泡恢复、草稿保留。
+      // 点「更换配对码」→ 底部 sheet 确认：回到输码表单（气泡始终不出现）、草稿保留。
       await wrapper.get('[data-testid="mobile-inbox-change-code"]').trigger("click");
       await wrapper.vm.$nextTick();
+      await wrapper.get('[data-testid="mobile-home-sheet-confirm"]').trigger("click");
+      await wrapper.vm.$nextTick();
       expect(wrapper.find('[data-testid="mobile-inbox-code-input"]').exists()).toBe(true);
-      expect(wrapper.find('[data-testid="companion-bubble"]').exists()).toBe(true);
+      expect(wrapper.find('[data-testid="companion-bubble"]').exists()).toBe(false);
 
-      await wrapper.get('[data-testid="mobile-inbox-code-input"]').setValue("AB2CDE4FGHJK");
-      await wrapper.get('[data-testid="mobile-inbox-code-confirm"]').trigger("click");
-      // 输码配对现为异步（哈希+联网验证）：nextTick 不再覆盖完整链路，需整链冲净。
-      await flushAsyncComponents();
+      await submitCode(wrapper, "AB2CDE4FGHJK");
       expect(wrapper.find('[data-testid="mobile-inbox-text"]').exists()).toBe(true);
       expect(wrapper.find('[data-testid="companion-bubble"]').exists()).toBe(false);
     } finally {
@@ -458,9 +457,13 @@ describe("App shell", () => {
 
     try {
       wrapper = mountApp();
-      vi.spyOn(window, "confirm").mockReturnValue(false);
 
+      // 打开底部 sheet 后点「取消」：不换码，速记页保持不变。
       await wrapper.get('[data-testid="mobile-inbox-change-code"]').trigger("click");
+      await wrapper.vm.$nextTick();
+      expect(wrapper.find('[data-testid="mobile-home-sheet-cancel"]').exists()).toBe(true);
+
+      await wrapper.get('[data-testid="mobile-home-sheet-cancel"]').trigger("click");
       await wrapper.vm.$nextTick();
 
       expect(wrapper.find('[data-testid="mobile-inbox-text"]').exists()).toBe(true);
@@ -474,7 +477,6 @@ describe("App shell", () => {
 
   it("preserves the capture draft across a code change and re-pairing", async () => {
     stubMatchMedia(true);
-    vi.spyOn(window, "confirm").mockReturnValue(true);
     window.location.hash = "#inbox=AB2CDE4FGHJK";
     let wrapper: ReturnType<typeof mountApp> | undefined;
 
@@ -484,10 +486,9 @@ describe("App shell", () => {
       await wrapper.get('[data-testid="mobile-inbox-text"]').setValue("换码前的想法");
       await wrapper.get('[data-testid="mobile-inbox-change-code"]').trigger("click");
       await wrapper.vm.$nextTick();
-      await wrapper.get('[data-testid="mobile-inbox-code-input"]').setValue("AB2CDE4FGHJK");
-      await wrapper.get('[data-testid="mobile-inbox-code-confirm"]').trigger("click");
-      // 输码配对现为异步（哈希+联网验证）：nextTick 不再覆盖完整链路，需整链冲净。
-      await flushAsyncComponents();
+      await wrapper.get('[data-testid="mobile-home-sheet-confirm"]').trigger("click");
+      await wrapper.vm.$nextTick();
+      await submitCode(wrapper, "AB2CDE4FGHJK");
 
       const textarea = wrapper.get('[data-testid="mobile-inbox-text"]').element as HTMLTextAreaElement;
       expect(textarea.value).toBe("换码前的想法");
@@ -547,10 +548,7 @@ describe("App shell", () => {
     try {
       wrapper = mountApp();
 
-      await wrapper.get('[data-testid="mobile-inbox-code-input"]').setValue("ab2c de4f ghjk");
-      await wrapper.get('[data-testid="mobile-inbox-code-confirm"]').trigger("click");
-      // 输码配对现为异步（哈希+联网验证）：nextTick 不再覆盖完整链路，需整链冲净。
-      await flushAsyncComponents();
+      await submitCode(wrapper, "ab2c de4f ghjk");
 
       expect(wrapper.find('[data-testid="mobile-inbox-text"]').exists()).toBe(true);
       expect(localStorage.getItem(REMEMBERED_INBOX_CODE_KEY)).toBe("AB2CDE4FGHJK");
@@ -581,19 +579,20 @@ describe("App shell", () => {
     }
   });
 
-  it("shows the paired code in the footer and switches pairing via the change button", async () => {
+  it("shows the paired code in the status card and switches pairing via the change button", async () => {
     vi.useFakeTimers();
     stubMatchMedia(true);
-    vi.spyOn(window, "confirm").mockReturnValue(true);
     window.location.hash = "#inbox=AB2CDE4FGHJK";
     let wrapper: ReturnType<typeof mountApp> | undefined;
 
     try {
       wrapper = mountApp();
 
-      expect(wrapper.get('[data-testid="mobile-inbox-paired-code"]').text()).toBe("已配对：AB2C DE4F GHJK");
+      expect(wrapper.get('[data-testid="mobile-inbox-paired-code"]').text()).toBe("AB2C DE4F GHJK");
 
       await wrapper.get('[data-testid="mobile-inbox-change-code"]').trigger("click");
+      await wrapper.vm.$nextTick();
+      await wrapper.get('[data-testid="mobile-home-sheet-confirm"]').trigger("click");
       await wrapper.vm.$nextTick();
 
       expect(wrapper.find('[data-testid="mobile-inbox-text"]').exists()).toBe(false);
@@ -656,7 +655,7 @@ describe("App shell", () => {
 
       expect(wrapper.find('[data-testid="mobile-inbox-text"]').exists()).toBe(true);
       expect(localStorage.getItem(REMEMBERED_INBOX_CODE_KEY)).toBe("ZZZ0ZZZ0ZZZ0");
-      expect(wrapper.get('[data-testid="mobile-inbox-paired-code"]').text()).toBe("已配对：ZZZ0 ZZZ0 ZZZ0");
+      expect(wrapper.get('[data-testid="mobile-inbox-paired-code"]').text()).toBe("ZZZ0 ZZZ0 ZZZ0");
     } finally {
       wrapper?.unmount();
       window.location.hash = "";
@@ -701,7 +700,12 @@ describe("App shell", () => {
       expect(wrapper.find('[data-testid="mobile-inbox-code-input"]').exists()).toBe(true);
       expect(wrapper.find('[data-testid="mobile-inbox-code-error"]').exists()).toBe(false);
 
-      await wrapper.get('[data-testid="mobile-inbox-code-input"]').setValue("abc");
+      // 未填满 12 位：提交按钮保持禁用，不触发校验。
+      await wrapper.get('[data-testid="mobile-inbox-code-input"]').setValue("AB2CDE4F");
+      expect((wrapper.get('[data-testid="mobile-inbox-code-confirm"]').element as HTMLButtonElement).disabled).toBe(true);
+
+      // 填满 12 位但含非法字符（U 不在 Crockford 字母表）：提交后给出内联错误与 aria 关联。
+      await fillCodeInputs(wrapper, "AB2CDE4FUVHJ");
       await wrapper.get('[data-testid="mobile-inbox-code-confirm"]').trigger("click");
       await wrapper.vm.$nextTick();
 
@@ -727,10 +731,7 @@ describe("App shell", () => {
     try {
       wrapper = mountApp();
 
-      await wrapper.get('[data-testid="mobile-inbox-code-input"]').setValue("ab2c de4f ghjk");
-      await wrapper.get('[data-testid="mobile-inbox-code-confirm"]').trigger("click");
-      // 输码配对现为异步（哈希+联网验证）：nextTick 不再覆盖完整链路，需整链冲净。
-      await flushAsyncComponents();
+      await submitCode(wrapper, "ab2c de4f ghjk");
 
       expect(wrapper.find('[data-testid="mobile-inbox-code-input"]').exists()).toBe(false);
       expect(wrapper.get(".mobile-inbox-heading").text()).toBe("手机速记");
@@ -750,8 +751,18 @@ describe("App shell", () => {
     return mountApp();
   }
 
+  /** 分组输码（3 组 × 4 位）：归一化后按 4 位分发到三个输入框，模拟逐组输入。 */
+  async function fillCodeInputs(wrapper: ReturnType<typeof mountApp>, code: string): Promise<void> {
+    const normalized = normalizeInboxCode(code);
+    const inputs = wrapper.findAll('[data-testid="mobile-inbox-code-input"]');
+    expect(inputs).toHaveLength(3);
+    for (let index = 0; index < inputs.length; index += 1) {
+      await inputs[index].setValue(normalized.slice(index * 4, index * 4 + 4));
+    }
+  }
+
   async function submitCode(wrapper: ReturnType<typeof mountApp>, code: string): Promise<void> {
-    await wrapper.get('[data-testid="mobile-inbox-code-input"]').setValue(code);
+    await fillCodeInputs(wrapper, code);
     await wrapper.get('[data-testid="mobile-inbox-code-confirm"]').trigger("click");
     await flushAsyncComponents();
   }
@@ -2051,7 +2062,7 @@ describe("App shell", () => {
 
       expect(wrapper.find('[data-testid="save-status"]').exists()).toBe(false);
       expect(wrapper.text()).not.toContain("保存中");
-      expect(wrapper.find('[data-testid="companion-confirm"]').text()).toContain("建议在电脑浏览器打开");
+      expect(wrapper.find('[data-testid="companion-bubble"]').exists()).toBe(false);
       expect(wrapper.findComponent(ImagePanel).exists()).toBe(false);
     } finally {
       wrapper?.unmount();
@@ -6068,7 +6079,7 @@ describe("App shell", () => {
 
       expect(input.value).toBe("");
       expect(wrapper.find(".mobile-handoff").exists()).toBe(true);
-      expect(wrapper.find('[data-testid="companion-confirm"]').text()).toContain("建议在电脑浏览器打开");
+      expect(wrapper.find('[data-testid="companion-bubble"]').exists()).toBe(false);
       expect(wrapper.find('[data-testid="companion-yes"]').exists()).toBe(false);
 
       mediaQuery.dispatchEvent({ matches: false } as MediaQueryListEvent);

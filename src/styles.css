@@ -50,6 +50,14 @@
   --shadow-lift: 0 1px 2px rgba(15, 23, 42, 0.05), 0 10px 24px rgba(15, 23, 42, 0.1);
   --shadow-quick-hover: 0 1px 2px rgba(15, 23, 42, 0.05), 0 2px 5px rgba(15, 23, 42, 0.07);
   --shadow-glow-primary: 0 0 0 1px color-mix(in srgb, var(--primary) 24%, transparent), 0 6px 18px color-mix(in srgb, var(--primary) 22%, transparent);
+  /* 手机端首页（OpenDesign 原型）补充 token：实心动作蓝（加深保证白字对比）、小号蓝字、成功/实心危险与大圆角卡。 */
+  --action: #0066cc;
+  --link: #0057d9;
+  --ok: #1e7f36;
+  --danger-fill: #b42318;
+  --radius-card: 18px;
+  --safe-top: env(safe-area-inset-top, 0px);
+  --safe-bottom: env(safe-area-inset-bottom, 0px);
 }
 
 html[data-theme="dark"] {
@@ -93,6 +101,10 @@ html[data-theme="dark"] {
   --shadow-lift: 0 1px 2px rgba(0, 0, 0, 0.2), 0 14px 30px rgba(0, 0, 0, 0.32);
   --shadow-quick-hover: 0 1px 2px rgba(0, 0, 0, 0.18), 0 2px 6px rgba(0, 0, 0, 0.24);
   --shadow-glow-primary: 0 0 0 1px color-mix(in srgb, var(--primary) 32%, transparent), 0 8px 22px color-mix(in srgb, var(--primary) 30%, transparent);
+  --action: #0070e8;
+  --link: #409cff;
+  --ok: #30d158;
+  --danger-fill: #b42318;
 }
 
 * {
@@ -3457,99 +3469,798 @@ body:has(.image-preview) .image-panel .n-scrollbar {
   color: var(--muted);
 }
 
+/* ---- 手机端首页（OpenDesign 原型实现）：430px 单列长页，整页在 .mobile-handoff 内滚动 ---- */
 .mobile-handoff {
-  display: grid;
-  grid-template-rows: auto minmax(0, 1fr);
   width: 100vw;
   height: 100dvh;
   min-height: 0;
-  overflow: hidden;
-  background: var(--bg);
+  overflow-y: auto;
+  overscroll-behavior: contain;
+  /* 环境底：单层主色氛围光（与原型 body 一致）。 */
+  background:
+    radial-gradient(92% 64% at 50% -14%, color-mix(in srgb, var(--primary) 17%, transparent) 0%, transparent 70%),
+    radial-gradient(72% 42% at 84% 110%, color-mix(in srgb, var(--primary) 8%, transparent) 0%, transparent 66%),
+    var(--bg);
   color: var(--text);
+  /* 手机页独立于桌面 --app-font-size，按触控基线用 16px。 */
+  font-size: 16px;
+  line-height: 1.6;
   /* 移动壳整体禁用长按选中，仅 input/textarea 例外（见下方 user-select: text）。 */
   -webkit-user-select: none;
   user-select: none;
+  -webkit-tap-highlight-color: transparent;
 }
 
-.mobile-handoff-header {
+.mobile-home-page {
+  max-width: 430px;
+  margin: 0 auto;
+  padding: calc(var(--safe-top) + 4px) 16px calc(var(--safe-bottom) + 20px);
+  display: flex;
+  flex-direction: column;
+  gap: 20px;
+  min-height: 100%;
+}
+
+.mobile-home-main {
+  display: flex;
+  flex-direction: column;
+  gap: 24px;
+}
+
+/* 进场：视图内块级子元素依次上浮（对应原型 .view > * 的 rise 动画）。 */
+.mobile-home-view {
+  display: flex;
+  flex-direction: column;
+  gap: 24px;
+}
+
+.mobile-home-view > * {
+  animation: mobile-home-rise var(--motion-slow) var(--motion-ease) both;
+}
+
+.mobile-home-view > *:nth-child(2) { animation-delay: 40ms; }
+.mobile-home-view > *:nth-child(3) { animation-delay: 80ms; }
+.mobile-home-view > *:nth-child(4) { animation-delay: 120ms; }
+
+/* 未配对视图额外留出右下角伙伴气泡（fixed right 18 / bottom 28）的高度，避免遮挡输码卡与页脚。 */
+/* 右下角消息气泡已从移动端移除，不再为它预留底部空隙。 */
+.mobile-home-view-unpaired { padding-bottom: 8px; }
+
+/* ---- 顶栏 ---- */
+.mobile-home-topbar {
   display: flex;
   align-items: stretch;
-  justify-content: space-between;
-  min-height: 47px;
-  border-bottom: 1px solid var(--line-main);
-  /* 与页面主体同底色：深色模式下顶栏（含系统状态栏色带）不再与正文背景出现断层。 */
-  background: var(--bg);
+  gap: 8px;
+  min-height: 52px;
+  margin: 0 -16px;
+  padding-left: 16px;
+  border-bottom: 1px solid var(--line-subtle);
 }
 
-.mobile-handoff-brand {
-  display: flex;
-  align-items: center;
-  gap: 8px;
-  min-width: 0;
-  padding: 0 12px;
+/* 品牌像素猫（通知图标素材）：随主题换配色，pixelated 保住像素颗粒感。 */
+.mobile-home-logo {
+  align-self: center;
+  width: 26px;
+  height: 26px;
+  flex: none;
+  image-rendering: pixelated;
 }
 
 .mobile-handoff-title {
-  font-size: var(--app-font-size);
-  font-weight: 400;
+  align-self: center;
+  font-size: 16px;
+  font-weight: 650;
+  letter-spacing: -0.01em;
 }
 
-.mobile-handoff-logo {
-  flex-shrink: 0;
-}
-
-.mobile-handoff-theme {
+button.mobile-home-theme {
   align-self: stretch;
-  width: 47px;
-  min-width: 47px;
-  height: auto;
-  min-height: 47px;
-  border-top: 0;
-  border-right: 0;
-  border-bottom: 0;
-  /* 覆盖 Naive quaternary 自带的白/灰填充背景，让按钮与 Header 底色融合。 */
-  background: transparent !important;
-}
-
-.mobile-handoff-theme:focus,
-.mobile-handoff-theme:focus-visible,
-.mobile-handoff-theme:active {
-  background: transparent !important;
-  box-shadow: none !important;
-}
-
-.mobile-handoff-body {
+  width: 52px;
+  min-height: 48px;
+  margin-left: auto;
+  padding: 0;
+  border: 0;
+  border-radius: 0;
+  background: transparent;
   display: grid;
   place-items: center;
-  min-width: 0;
-  min-height: 0;
-  padding: 24px 16px 112px;
-  /* 横屏短视口（如 375px 高）下内容超出时允许滚动，避免发送按钮落入裁剪区。 */
-  overflow-y: auto;
-  /* safe 对齐：内容高于容器时退回起点对齐，保证顶部（标题）不会被居中裁剪到不可滚动区；不支持的浏览器忽略本行。 */
-  align-content: safe center;
+  color: var(--muted);
+  cursor: pointer;
 }
 
-.mobile-handoff-message {
-  width: min(100%, 360px);
+button.mobile-home-theme .n-icon { font-size: 20px; }
+
+@media (hover: hover) {
+  button.mobile-home-theme:hover { color: var(--text); background: var(--accent); }
+}
+
+button.mobile-home-theme:active { color: var(--text); }
+
+button.mobile-home-theme:focus-visible {
+  outline: none;
+  box-shadow: var(--focus-ring);
+}
+
+/* ---- Hero：桌面优先叙事 ---- */
+.mobile-home-hero {
+  display: flex;
+  flex-direction: column;
+  gap: 14px;
+}
+
+.mobile-home-eyebrow {
+  margin: 0;
+  font-size: 12px;
+  font-weight: 650;
+  letter-spacing: 0.09em;
+  color: var(--muted);
+}
+
+.mobile-home-hero-title {
+  margin: 0;
+  font-size: 24px;
+  line-height: 1.4;
+  font-weight: 700;
+  letter-spacing: -0.01em;
+}
+
+.mobile-home-lede {
+  margin: 0;
+  font-size: 16px;
+  line-height: 1.7;
+  color: var(--muted);
+}
+
+/* 桌面四栏工作台微缩示意（纯 CSS，列宽对应 .workbench-grid 的真实分区比例）。 */
+.mobile-home-desk {
+  margin: 0;
+  padding: 12px;
+  border: 1px solid var(--line-section);
+  border-radius: 14px;
+  background: var(--panel);
+  box-shadow: var(--shadow-lift);
+}
+
+.mobile-home-desk-chrome {
+  display: flex;
+  align-items: center;
+  gap: 4px;
+  padding-bottom: 9px;
+}
+
+.mobile-home-wdot {
+  width: 6px;
+  height: 6px;
+  border-radius: 50%;
+  background: var(--line-control);
+  flex: none;
+}
+
+.mobile-home-desk-pill {
+  flex: 1;
+  height: 12px;
+  margin-left: 4px;
+  border-radius: 6px;
+  background: var(--bg);
+  border: 1px solid var(--line-subtle);
+}
+
+.mobile-home-desk-grid {
   display: grid;
+  grid-template-columns: 0.8fr 1fr 1.1fr 1fr;
+  gap: 6px;
+}
+
+.mobile-home-desk-col {
+  min-height: 122px;
+  padding: 7px 6px;
+  border-radius: 9px;
+  border: 1px solid var(--line-subtle);
+  background: var(--bg);
+  display: flex;
+  flex-direction: column;
+  align-items: stretch;
+  gap: 6px;
+  min-width: 0;
+}
+
+.mobile-home-zone-label {
+  display: flex;
+  align-items: center;
+  gap: 3px;
+  font-size: 10px;
+  font-weight: 650;
+  letter-spacing: 0.02em;
+  color: var(--muted);
+}
+
+.mobile-home-zone {
+  width: 4px;
+  height: 4px;
+  border-radius: 2px;
+  background: var(--zone, var(--primary));
+  flex: none;
+}
+
+.mobile-home-sk {
+  height: 4px;
+  border-radius: 2px;
+  background: var(--line-section);
+  display: block;
+}
+
+.mobile-home-tile {
+  aspect-ratio: 4 / 3;
+  border-radius: 5px;
+  background: color-mix(in srgb, var(--primary) 9%, var(--panel));
+  display: block;
+}
+
+.mobile-home-qchip {
+  height: 9px;
+  border-radius: 5px;
+  background: var(--accent);
+  display: block;
+}
+
+.mobile-home-tab {
+  height: 9px;
+  width: 62%;
+  border-radius: 5px;
+  background: var(--accent);
+  display: block;
+}
+
+.mobile-home-cardline {
+  height: 15px;
+  border-radius: 4px;
+  border: 1px solid var(--line-subtle);
+  background: var(--panel);
+  display: block;
+}
+
+.mobile-home-cb-row { display: flex; align-items: center; gap: 4px; }
+
+.mobile-home-cb {
+  width: 6px;
+  height: 6px;
+  border-radius: 2px;
+  border: 1px solid var(--line-control);
+  flex: none;
+}
+
+.mobile-home-cb.is-on { background: var(--line-control); }
+
+.mobile-home-cb-row.is-done .mobile-home-sk { opacity: 0.55; }
+
+/* 骨架条宽度变体（与原型内联宽度一致的具名类）。 */
+.mobile-home-w46 { width: 46%; }
+.mobile-home-w58 { width: 58%; }
+.mobile-home-w66 { width: 66%; }
+.mobile-home-w70 { width: 70%; }
+.mobile-home-w88 { width: 88%; }
+.mobile-home-w90 { width: 90%; }
+
+.mobile-home-desk-caption {
+  display: flex;
+  align-items: flex-start;
+  gap: 7px;
+  margin-top: 11px;
+  font-size: 13px;
+  line-height: 1.55;
+  color: var(--muted);
+}
+
+.mobile-home-desk-caption .n-icon {
+  font-size: 15px;
+  margin-top: 2px;
+  color: var(--muted);
+  flex: none;
+}
+
+/* ---- 快速配对 ---- */
+.mobile-home-pair {
+  display: flex;
+  flex-direction: column;
+  gap: 14px;
+}
+
+.mobile-home-pair-title {
+  margin: 0;
+  font-size: 17px;
+  font-weight: 650;
+  letter-spacing: -0.01em;
+}
+
+.mobile-home-steps {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+  display: flex;
+  flex-direction: column;
+}
+
+.mobile-home-step {
+  position: relative;
+  display: flex;
+  align-items: flex-start;
   gap: 12px;
+  padding-bottom: 16px;
+}
+
+.mobile-home-step:last-child { padding-bottom: 0; }
+
+.mobile-home-step::before {
+  content: "";
+  position: absolute;
+  left: 11px;
+  top: 27px;
+  bottom: 3px;
+  width: 2px;
+  border-radius: 1px;
+  background: var(--line-subtle);
+}
+
+.mobile-home-step:last-child::before { display: none; }
+
+.mobile-home-step-no {
+  flex: none;
+  width: 24px;
+  height: 24px;
+  border-radius: 50%;
+  display: grid;
+  place-items: center;
+  background: var(--accent);
+  color: var(--link);
+  font-size: 13px;
+  font-weight: 700;
+  font-variant-numeric: tabular-nums;
+}
+
+/* 步骤一行一条：序号 + 单行说明，去掉标题/正文两级层级。 */
+.mobile-home-step-body {
+  align-self: center;
+  min-width: 0;
+  flex: 1;
+  font-size: 14px;
+  line-height: 1.5;
+}
+
+/* ---- 浮层卡片（输码卡 / 速记卡共用材质） ---- */
+.mobile-home-card {
   padding: 16px;
-  border: 1px solid var(--line-main);
+  border: 1px solid var(--line-section);
+  border-radius: var(--radius-card);
+  background: var(--material-elevated);
+  box-shadow: var(--shadow-soft);
+  -webkit-backdrop-filter: blur(24px) saturate(1.6);
+  backdrop-filter: blur(24px) saturate(1.6);
+}
+
+.mobile-home-code-card {
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+}
+
+.mobile-home-field-label {
+  font-size: 13px;
+  font-weight: 650;
+  color: var(--muted);
+}
+
+/* 12 位配对码：3 组 × 4 位等宽输入，组间短分隔线。 */
+.mobile-home-code-groups {
+  display: flex;
+  align-items: center;
+  gap: 7px;
+}
+
+input.mobile-home-code-input {
+  width: 100%;
+  min-width: 0;
+  flex: 1;
+  height: 52px;
+  margin: 0;
+  padding: 0;
+  border: 1px solid var(--line-control);
+  border-radius: var(--radius-control);
+  background: var(--input);
+  color: var(--text);
+  font-family: ui-monospace, SFMono-Regular, Menlo, monospace;
+  font-size: 19px;
+  font-weight: 600;
+  letter-spacing: 0.32em;
+  text-indent: 0.32em;
+  text-align: center;
+  text-transform: uppercase;
+  caret-color: var(--primary);
+  -webkit-user-select: text;
+  user-select: text;
+}
+
+@media (hover: hover) {
+  input.mobile-home-code-input:hover { border-color: var(--muted); }
+}
+
+input.mobile-home-code-input:focus {
+  outline: none;
+  border-color: var(--primary);
+  box-shadow: var(--focus-ring);
+}
+
+.mobile-home-cg-sep {
+  width: 6px;
+  height: 2px;
+  border-radius: 1px;
+  background: var(--line-control);
+  flex: none;
+}
+
+.mobile-home-code-groups.is-error input.mobile-home-code-input { border-color: var(--destructive); }
+
+.mobile-home-field-error {
+  display: flex;
+  align-items: flex-start;
+  gap: 6px;
+  margin: 0;
+  font-size: 13px;
+  line-height: 1.5;
+  color: var(--destructive);
+}
+
+.mobile-home-field-error .n-icon {
+  font-size: 14px;
+  margin-top: 2px;
+  flex: none;
+}
+
+.mobile-home-field-help {
+  margin: 0;
+  font-size: 13px;
+  line-height: 1.6;
+  color: var(--muted);
+}
+
+/* ---- 主 CTA（配对并开始速记） ---- */
+button.mobile-home-primary {
+  position: relative;
+  width: 100%;
+  min-height: 48px;
+  margin: 0;
+  padding: 0 14px;
+  border: 0;
+  border-radius: var(--radius-control);
+  background: var(--action);
+  color: #fff;
+  font-size: 16px;
+  font-weight: 650;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 8px;
+  cursor: pointer;
+  transition: transform var(--motion-fast) var(--motion-ease), background var(--motion-fast) var(--motion-ease);
+}
+
+@media (hover: hover) {
+  button.mobile-home-primary:hover:not(:disabled) { background: color-mix(in srgb, var(--action) 88%, #000 12%); }
+}
+
+button.mobile-home-primary:active:not(:disabled) { transform: scale(0.985); }
+
+button.mobile-home-primary:disabled { opacity: 0.45; cursor: default; }
+
+button.mobile-home-primary:focus-visible {
+  outline: none;
+  box-shadow: var(--focus-ring);
+}
+
+/* 旋转指示（主 CTA 与发送按钮共用；默认隐藏，父级 is-loading 时显示）。 */
+.mobile-home-spinner,
+.mobile-inbox-spinner {
+  width: 16px;
+  height: 16px;
+  border-radius: 50%;
+  border: 1px solid rgba(255, 255, 255, 0.35);
+  border-top-color: #fff;
+  animation: mobile-home-spin 0.7s linear infinite;
+  flex: none;
+  display: none;
+}
+
+.is-loading > .mobile-home-spinner,
+.is-loading > .mobile-inbox-spinner { display: block; }
+
+/* ---- 已配对状态卡 ---- */
+.mobile-home-paired-status {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  padding: 12px 14px;
+  border: 1px solid color-mix(in srgb, var(--primary) 26%, transparent);
+  border-radius: 14px;
+  background: color-mix(in srgb, var(--primary) 7%, var(--panel));
+}
+
+.mobile-home-link-badge {
+  position: relative;
+  width: 36px;
+  height: 36px;
+  border-radius: 50%;
+  background: var(--accent);
+  color: var(--link);
+  display: grid;
+  place-items: center;
+  flex: none;
+  animation: mobile-home-pop var(--motion-slow) var(--motion-spring) both;
+}
+
+.mobile-home-link-badge .n-icon { font-size: 18px; }
+
+.mobile-home-link-dot {
+  position: absolute;
+  top: -2px;
+  right: -2px;
+  width: 10px;
+  height: 10px;
+  border-radius: 50%;
+  background: var(--ok);
+  border: 1px solid var(--panel);
+  animation: mobile-home-dot-pulse 2.2s ease-in-out infinite;
+}
+
+.mobile-home-ps-field {
+  display: grid;
+  gap: 2px;
+  min-width: 0;
+  flex: 1;
+}
+
+.mobile-home-ps-title {
+  font-size: 15px;
+  font-weight: 650;
+  line-height: 1.4;
+}
+
+/* 配对码行：纯文本外观、点击复制，等宽字体 + 分组空格。 */
+button.mobile-home-ps-code {
+  margin: 0;
+  padding: 0;
+  border: none;
+  background: none;
+  font-family: ui-monospace, SFMono-Regular, Menlo, monospace;
+  font-size: 13px;
+  letter-spacing: 0.08em;
+  color: var(--muted);
+  line-height: 1.5;
+  white-space: nowrap;
+  cursor: pointer;
+  justify-self: start;
+  -webkit-tap-highlight-color: transparent;
+}
+
+button.mobile-home-ps-code:hover,
+button.mobile-home-ps-code:focus-visible { color: var(--text); }
+
+button.mobile-home-ps-code:focus-visible {
+  outline: 0;
+  border-radius: 4px;
+  box-shadow: var(--focus-ring);
+}
+
+.mobile-home-ps-note {
+  margin: 6px 0 0;
+  padding-left: 2px;
+  font-size: 12px;
+  color: var(--muted);
+}
+
+/* ---- 次级按钮（更换配对码 / sheet 取消 / 粘贴 / 去更换配对码） ---- */
+button.mobile-home-btn-quiet {
+  min-height: 44px;
+  padding: 0 14px;
+  margin: 0;
+  border: 1px solid var(--line-control);
+  border-radius: var(--radius-control);
   background: var(--panel);
   color: var(--text);
+  font-size: 14px;
+  font-weight: 600;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 6px;
+  cursor: pointer;
+  transition: background var(--motion-fast) var(--motion-ease), transform var(--motion-fast) var(--motion-ease);
 }
 
-.mobile-handoff-message h2 {
-  font-size: 16px;
-  font-weight: 400;
-  line-height: 1.45;
+@media (hover: hover) {
+  button.mobile-home-btn-quiet:hover:not(:disabled) { background: var(--accent); }
 }
 
-.mobile-handoff-message p {
+button.mobile-home-btn-quiet:active:not(:disabled) { transform: scale(0.97); }
+
+button.mobile-home-btn-quiet:focus-visible {
+  outline: none;
+  box-shadow: var(--focus-ring);
+}
+
+.mobile-home-btn-sm {
+  min-height: 34px;
+  padding: 0 10px;
+  font-size: 13px;
+  border-radius: 8px;
+}
+
+/* ---- 同步提示卡 ---- */
+.mobile-home-sync {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  padding: 13px 14px;
+  border: 1px solid var(--line-section);
+  border-radius: 14px;
+  background: var(--panel);
+}
+
+.mobile-home-sync-icons {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 10px;
   color: var(--muted);
-  font-size: var(--app-font-size);
+}
+
+.mobile-home-sync-icons .n-icon {
+  font-size: 18px;
+  color: var(--link);
+}
+
+.mobile-home-sync-dots { display: flex; gap: 5px; }
+
+.mobile-home-sync-dots i {
+  width: 4px;
+  height: 4px;
+  border-radius: 2px;
+  background: var(--primary);
+  animation: mobile-home-flow 1.5s ease-in-out infinite;
+}
+
+.mobile-home-sync-dots i:nth-child(2) { animation-delay: 0.25s; }
+.mobile-home-sync-dots i:nth-child(3) { animation-delay: 0.5s; }
+
+.mobile-home-sync p {
+  margin: 0;
+  font-size: 13px;
+  line-height: 1.55;
+  color: var(--muted);
+  text-align: center;
+}
+
+/* ---- 页脚 ---- */
+.mobile-home-foot {
+  margin: 0;
+  text-align: center;
+  font-size: 12px;
+  color: var(--muted);
+  padding-top: 4px;
+}
+
+/* ---- 更换配对码：scrim + 底部 sheet ---- */
+.mobile-home-sheet-scrim {
+  position: fixed;
+  inset: 0;
+  background: rgba(0, 0, 0, 0.42);
+  opacity: 0;
+  pointer-events: none;
+  transition: opacity var(--motion-medium) var(--motion-ease);
+  z-index: 70;
+}
+
+.mobile-home-sheet-scrim.open {
+  opacity: 1;
+  pointer-events: auto;
+}
+
+.mobile-home-sheet {
+  position: fixed;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  margin: 0 auto;
+  max-width: 430px;
+  padding: 10px 16px calc(var(--safe-bottom) + 14px);
+  border-radius: 20px 20px 0 0;
+  background: var(--panel);
+  box-shadow: var(--shadow-lift);
+  transform: translateY(100%);
+  visibility: hidden;
+  transition: transform var(--motion-slow) var(--motion-ease), visibility 0s linear var(--motion-slow);
+  z-index: 71;
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+}
+
+.mobile-home-sheet.open {
+  transform: none;
+  visibility: visible;
+  transition: transform var(--motion-slow) var(--motion-ease);
+}
+
+.mobile-home-sheet-grab {
+  width: 36px;
+  height: 4px;
+  border-radius: 2px;
+  background: var(--line-control);
+  margin: 2px auto 4px;
+}
+
+.mobile-home-sheet h3 {
+  margin: 0;
+  font-size: 16px;
+  font-weight: 650;
+}
+
+.mobile-home-sheet p {
+  margin: 0;
+  font-size: 14px;
   line-height: 1.6;
+  color: var(--muted);
+}
+
+.mobile-home-sheet-actions {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 12px;
+  padding-top: 4px;
+}
+
+button.mobile-home-btn-danger {
+  min-height: 44px;
+  margin: 0;
+  padding: 0 14px;
+  border: 0;
+  border-radius: var(--radius-control);
+  background: var(--danger-fill);
+  color: #fff;
+  font-size: 15px;
+  font-weight: 650;
+  cursor: pointer;
+  transition: transform var(--motion-fast) var(--motion-ease);
+}
+
+button.mobile-home-btn-danger:active { transform: scale(0.97); }
+
+button.mobile-home-btn-danger:focus-visible {
+  outline: none;
+  box-shadow: var(--focus-ring);
+}
+
+/* ---- 手机端首页动效 ---- */
+@keyframes mobile-home-rise {
+  from { opacity: 0; transform: translateY(14px); }
+  to { opacity: 1; transform: none; }
+}
+
+@keyframes mobile-home-pop {
+  from { transform: scale(0.55); opacity: 0; }
+  to { transform: scale(1); opacity: 1; }
+}
+
+@keyframes mobile-home-dot-pulse {
+  0%, 100% { box-shadow: 0 0 0 0 color-mix(in srgb, var(--ok) 45%, transparent); }
+  55% { box-shadow: 0 0 0 6px color-mix(in srgb, var(--ok) 0%, transparent); }
+}
+
+@keyframes mobile-home-flow {
+  0%, 100% { opacity: 0.25; }
+  50% { opacity: 1; }
+}
+
+@keyframes mobile-home-spin {
+  to { transform: rotate(360deg); }
 }
 
 /* Drag text highlight */
@@ -6028,27 +6739,7 @@ body,
 
 /* The companion avatar holds still once visible (no idle float). */
 
-/* Mobile handoff: ambient backdrop and a floating glass card. */
-.mobile-handoff {
-  background:
-    radial-gradient(92% 64% at 50% -14%, color-mix(in srgb, var(--primary) 17%, transparent) 0%, transparent 70%),
-    radial-gradient(72% 42% at 84% 110%, color-mix(in srgb, var(--primary) 8%, transparent) 0%, transparent 66%),
-    var(--bg);
-}
-
-.mobile-handoff-message {
-  border: 1px solid color-mix(in srgb, var(--border) 60%, transparent);
-  border-radius: calc(var(--radius) + 6px);
-  background: var(--material-elevated);
-  box-shadow: var(--shadow-soft);
-  -webkit-backdrop-filter: blur(24px) saturate(1.6);
-  backdrop-filter: blur(24px) saturate(1.6);
-}
-
-.mobile-handoff-message h2 {
-  font-weight: 650;
-  letter-spacing: -0.01em;
-}
+/* Mobile handoff: ambient backdrop now lives on .mobile-handoff itself (see the mobile-home section). */
 
 .quick-search {
   display: inline-flex;
@@ -6293,14 +6984,14 @@ html[data-theme="dark"] .quick-search .quick-search-toggle:focus-visible {
 .workspace-inbox-empty { display: flex; justify-content: center; padding: 12px 0; }
 .workspace-inbox-footer { display: flex; justify-content: flex-end; gap: 8px; }
 
-/* ---- 手机端速记页（移动壳 + #inbox=<配对码>） ---- */
+/* ---- 手机端速记卡（已配对视图，材质同 .mobile-home-card） ---- */
 .mobile-inbox-wrap {
-  width: min(100%, 360px);
+  width: 100%;
   display: grid;
-  gap: 16px;
-  padding: 20px 18px;
-  border: 1px solid color-mix(in srgb, var(--border) 60%, transparent);
-  border-radius: calc(var(--radius) + 6px);
+  gap: 12px;
+  padding: 16px;
+  border: 1px solid var(--line-section);
+  border-radius: var(--radius-card);
   background: var(--material-elevated);
   box-shadow: var(--shadow-soft);
   -webkit-backdrop-filter: blur(24px) saturate(1.6);
@@ -6313,13 +7004,13 @@ html[data-theme="dark"] .quick-search .quick-search-toggle:focus-visible {
 .mobile-inbox-hint {
   margin: -4px 0 0;
   color: var(--muted);
-  font-size: calc(var(--app-font-size) - 1px);
+  font-size: 13px;
   line-height: 1.5;
 }
 
 .mobile-inbox-heading {
   margin: 0;
-  font-size: 16px;
+  font-size: 17px;
   font-weight: 650;
   letter-spacing: -0.01em;
 }
@@ -6340,14 +7031,16 @@ html[data-theme="dark"] .quick-search .quick-search-toggle:focus-visible {
   margin-left: auto;
 }
 
-/* AI 润色开关：文字 + iOS 风格小滑块，控制发送内容是否经大模型润色（默认关闭、状态存 localStorage）。
+/* AI 润色开关：文字 + iOS 风格滑块（44×26 轨道、20px 圆点），控制发送内容是否经大模型润色（默认关闭、状态存 localStorage）。
    真实 checkbox 视觉隐藏但保留键盘/读屏可达，轨道与圆点用兄弟选择器跟随 :checked。 */
 .mobile-inbox-polish {
   display: inline-flex;
   align-items: center;
-  gap: 7px;
-  color: var(--muted);
-  font-size: calc(var(--app-font-size) - 1px);
+  gap: 8px;
+  min-height: 44px;
+  padding-right: 2px;
+  color: var(--text);
+  font-size: 14px;
   font-weight: 600;
   cursor: pointer;
   user-select: none;
@@ -6362,36 +7055,43 @@ html[data-theme="dark"] .quick-search .quick-search-toggle:focus-visible {
   opacity: 0;
 }
 
+/* 润色开关说明行：常驻标题行下方（浅色 12px 辅助文字），负 margin 抵消卡片 12px 行距。 */
+.mobile-inbox-polish-hint {
+  margin: -6px 0 0;
+  color: var(--muted);
+  font-size: 12px;
+  line-height: 1.55;
+}
+
 .mobile-inbox-polish-track {
   position: relative;
-  width: 34px;
-  height: 20px;
-  border: 1px solid var(--line-subtle);
-  border-radius: 999px;
-  background: color-mix(in srgb, var(--panel) 74%, transparent);
-  transition: background var(--motion-fast) var(--motion-ease), border-color var(--motion-fast) var(--motion-ease);
+  width: 44px;
+  height: 26px;
+  border-radius: 13px;
+  background: var(--line-control);
+  transition: background var(--motion-medium) var(--motion-ease);
+  flex: none;
 }
 
 .mobile-inbox-polish-track::after {
   content: "";
   position: absolute;
-  top: 2px;
-  left: 2px;
-  width: 14px;
-  height: 14px;
+  top: 3px;
+  left: 3px;
+  width: 20px;
+  height: 20px;
   border-radius: 50%;
-  background: var(--muted);
-  transition: transform var(--motion-fast) var(--motion-ease), background var(--motion-fast) var(--motion-ease);
+  background: #fff;
+  box-shadow: 0 1px 2px rgba(0, 0, 0, 0.25);
+  transition: transform var(--motion-medium) var(--motion-ease);
 }
 
 .mobile-inbox-polish-input:checked ~ .mobile-inbox-polish-track {
-  border-color: transparent;
-  background: var(--accent);
+  background: var(--action);
 }
 
 .mobile-inbox-polish-input:checked ~ .mobile-inbox-polish-track::after {
-  transform: translateX(14px);
-  background: var(--accent-foreground);
+  transform: translateX(18px);
 }
 
 /* 开启后文字点亮，与滑块状态互相印证。 */
@@ -6403,7 +7103,7 @@ html[data-theme="dark"] .quick-search .quick-search-toggle:focus-visible {
   box-shadow: var(--focus-ring);
 }
 
-/* 粘贴按钮：位于卡片底部、整行宽，拇指可及。次级样式（描边 + 半透明底），
+/* 粘贴按钮：位于卡片底部、整行宽，拇指可及。quiet 按钮族样式（描边 + 面板底），
    与上方两个主发送按钮区分，避免喧宾夺主。 */
 button.mobile-inbox-paste {
   display: inline-flex;
@@ -6411,13 +7111,13 @@ button.mobile-inbox-paste {
   justify-content: center;
   gap: 6px;
   width: 100%;
-  min-height: 42px;
+  min-height: 44px;
   padding: 0 14px;
-  border: 1px solid var(--line-main);
+  border: 1px solid var(--line-control);
   border-radius: var(--radius-control);
-  background: color-mix(in srgb, var(--panel) 66%, transparent);
-  color: var(--accent-foreground);
-  font-size: var(--app-font-size);
+  background: var(--panel);
+  color: var(--text);
+  font-size: 14px;
   font-weight: 600;
   cursor: pointer;
   -webkit-tap-highlight-color: transparent;
@@ -6429,14 +7129,14 @@ button.mobile-inbox-paste:active {
 }
 
 button.mobile-inbox-paste .n-icon {
-  font-size: calc(var(--app-font-size) + 2px);
+  font-size: 15px;
   flex: none;
 }
 
-button.mobile-inbox-paste:hover,
-button.mobile-inbox-paste:focus-visible {
-  border-color: var(--line-control);
-  background: color-mix(in srgb, var(--panel) 84%, transparent);
+@media (hover: hover) {
+  button.mobile-inbox-paste:hover:not(:disabled) {
+    background: var(--accent);
+  }
 }
 
 button.mobile-inbox-paste:focus-visible {
@@ -6461,19 +7161,24 @@ button.mobile-inbox-paste:disabled {
 }
 
 .mobile-inbox-textarea {
-  min-height: 200px;
-  padding: 12px 14px;
-  border: 1px solid var(--line-main);
-  border-radius: var(--radius-control);
-  background: var(--panel);
+  min-height: 128px;
+  padding: 12px;
+  border: 1px solid var(--line-control);
+  border-radius: var(--radius);
+  background: var(--input);
   color: var(--text);
   /* iOS 聚焦字号 <16px 的输入框会自动放大页面，固定 16px 抑制缩放（仅手机页渲染，不影响桌面） */
+  font-family: inherit;
   font-size: 16px;
   line-height: 1.6;
   resize: vertical;
   /* 唯一的可选中区域：输入内容支持长按选中。 */
   -webkit-user-select: text;
   user-select: text;
+}
+
+@media (hover: hover) {
+  .mobile-inbox-textarea:hover { border-color: var(--muted); }
 }
 
 .mobile-inbox-textarea::placeholder {
@@ -6483,23 +7188,23 @@ button.mobile-inbox-paste:disabled {
 .mobile-inbox-textarea:focus-visible {
   /* 与主页输入框聚焦一致：细蓝描边 + 柔和焦点环，深色下不再刺眼、浅色下不再深蓝偏色。 */
   outline: 0;
-  border-color: var(--line-focus);
+  border-color: var(--primary);
   box-shadow: var(--focus-ring);
 }
 
-/* 清空按钮：小尺寸、次级描边，图标在左，标题行工具组内、润色开关左侧（见 .mobile-inbox-head-tools）。
+/* 清空按钮：小尺寸次级描边（同 sheet/页脚的 quiet 按钮族），标题行工具组内、润色开关左侧（见 .mobile-inbox-head-tools）。
    有内容时才渲染（见 v-if）。 */
 button.mobile-inbox-clear {
   display: inline-flex;
   align-items: center;
   gap: 5px;
-  min-height: 28px;
-  padding: 0 9px;
-  border: 1px solid var(--line-subtle);
-  border-radius: 999px;
-  background: color-mix(in srgb, var(--panel) 74%, transparent);
-  color: var(--muted);
-  font-size: calc(var(--app-font-size) - 1px);
+  min-height: 34px;
+  padding: 0 10px;
+  border: 1px solid var(--line-control);
+  border-radius: 8px;
+  background: var(--panel);
+  color: var(--text);
+  font-size: 13px;
   font-weight: 600;
   cursor: pointer;
   -webkit-tap-highlight-color: transparent;
@@ -6507,15 +7212,14 @@ button.mobile-inbox-clear {
 }
 
 button.mobile-inbox-clear .n-icon {
-  font-size: calc(var(--app-font-size) + 2px);
+  font-size: 15px;
   flex: none;
 }
 
-button.mobile-inbox-clear:hover,
-button.mobile-inbox-clear:focus-visible {
-  border-color: var(--line-control);
-  background: color-mix(in srgb, var(--panel) 88%, transparent);
-  color: var(--text);
+@media (hover: hover) {
+  button.mobile-inbox-clear:hover:not(:disabled) {
+    background: var(--accent);
+  }
 }
 
 button.mobile-inbox-clear:focus-visible {
@@ -6528,33 +7232,40 @@ button.mobile-inbox-clear:disabled {
   cursor: default;
 }
 
+/* 发送按钮：蓝描边 + 面板底 + 品牌蓝文字（原型 .btn-send），发送成功整体填充为动作蓝。 */
 button.mobile-inbox-send {
   display: inline-flex;
   align-items: center;
   justify-content: center;
-  gap: 6px;
-  min-height: 44px;
+  gap: 7px;
+  min-height: 48px;
   padding: 0 12px;
-  border: 1px solid transparent;
-  border-radius: var(--radius-control);
-  background: var(--accent);
-  color: var(--accent-foreground);
-  font-size: var(--app-font-size);
-  font-weight: 600;
+  border: 1px solid color-mix(in srgb, var(--primary) 32%, transparent);
+  border-radius: var(--radius);
+  background: var(--panel);
+  color: var(--link);
+  font-size: 16px;
+  font-weight: 650;
   cursor: pointer;
   -webkit-tap-highlight-color: transparent;
-  transition: background var(--motion-fast) var(--motion-ease), transform var(--motion-fast) var(--motion-ease);
+  transition: background var(--motion-fast) var(--motion-ease), border-color var(--motion-fast) var(--motion-ease), color var(--motion-fast) var(--motion-ease), transform var(--motion-fast) var(--motion-ease);
 }
 
 /* 图标字量与按钮文字同色、同基线；加粗按钮内的铃铛/便签图标略小一号以免抢戏。 */
 button.mobile-inbox-send .n-icon {
-  font-size: calc(var(--app-font-size) + 2px);
+  font-size: 15px;
   flex: none;
 }
 
 /* 轻量按压反馈：触摸即缩小一点点，松手回弹；触屏设备最自然的一档。 */
-button.mobile-inbox-send:active {
+button.mobile-inbox-send:active:not(:disabled) {
   transform: scale(0.97);
+}
+
+@media (hover: hover) {
+  button.mobile-inbox-send:hover:not(:disabled) {
+    background: var(--accent);
+  }
 }
 
 button.mobile-inbox-send:focus-visible {
@@ -6563,13 +7274,14 @@ button.mobile-inbox-send:focus-visible {
 }
 
 button.mobile-inbox-send:disabled {
-  opacity: 0.6;
+  opacity: 0.55;
   cursor: default;
 }
 
 button.mobile-inbox-send.is-sent {
-  background: var(--primary);
-  color: var(--primary-foreground);
+  background: var(--action);
+  border-color: var(--action);
+  color: #fff;
   animation: mobile-inbox-pop 320ms var(--motion-ease, ease-out);
 }
 
@@ -6612,177 +7324,87 @@ button.mobile-inbox-send:disabled {
   button.mobile-inbox-send.is-sent,
   button.mobile-inbox-send:disabled,
   .mobile-inbox-status.is-slide-in,
-  .mobile-inbox-status.is-shake {
+  .mobile-inbox-status.is-shake,
+  .mobile-home-view > *,
+  .mobile-home-link-badge,
+  .mobile-home-link-dot,
+  .mobile-home-sync-dots i,
+  .mobile-home-spinner,
+  .mobile-inbox-spinner {
     animation: none;
   }
 }
 
+/* 发送结果卡：成功=绿底 + 对勾图标；失败=红底 + 警示图标（原型 .cap-status）。 */
 .mobile-inbox-status {
+  display: flex;
+  align-items: flex-start;
+  gap: 8px;
   margin: 0;
-  color: var(--muted);
-  font-size: var(--app-font-size);
-  line-height: 1.6;
+  padding: 10px 12px;
+  border-radius: var(--radius);
+  background: color-mix(in srgb, var(--ok) 10%, var(--panel));
+  color: var(--text);
+  font-size: 14px;
+  line-height: 1.55;
+}
+
+.mobile-inbox-status .n-icon {
+  font-size: 17px;
+  margin-top: 2px;
+  color: var(--ok);
+  flex: none;
 }
 
 .mobile-inbox-status[data-status="error"] {
+  background: color-mix(in srgb, var(--destructive) 9%, var(--panel));
+}
+
+.mobile-inbox-status[data-status="error"] .n-icon {
   color: var(--destructive);
 }
 
 button.mobile-inbox-revoked-change {
   justify-self: start;
   min-height: 34px;
-  padding: 0 14px;
-  border: 1px solid var(--line-main);
-  border-radius: var(--radius-control);
+  padding: 0 10px;
+  border: 1px solid var(--line-control);
+  border-radius: 8px;
   background: var(--panel);
-  color: var(--accent-foreground);
-  font-size: var(--app-font-size);
+  color: var(--text);
+  font-size: 13px;
   font-weight: 600;
   cursor: pointer;
-}
-
-/* 速记页脚：当前配对码（点击复制）与更换入口 */
-.mobile-inbox-paired {
-  display: flex;
-  flex-direction: column;
-  align-items: center;
-  gap: 8px;
-  margin-top: 2px;
-}
-
-/* 配对码：保持纯文本外观（无按钮底、无边框），仅用颜色区分；点击可复制，
-   聚焦时给出焦点环以兼顾键盘可达性。 */
-button.mobile-inbox-paired-code {
-  margin: 0;
-  padding: 2px 4px;
-  border: none;
-  background: none;
-  font: inherit;
-  color: var(--muted);
-  font-size: var(--app-font-size);
-  letter-spacing: 0.04em;
-  font-variant-numeric: tabular-nums;
-  cursor: pointer;
   -webkit-tap-highlight-color: transparent;
 }
 
-button.mobile-inbox-paired-code:hover,
-button.mobile-inbox-paired-code:focus-visible {
-  color: var(--text);
-}
-
-button.mobile-inbox-paired-code:focus-visible {
-  outline: 0;
-  border-radius: 4px;
-  box-shadow: var(--focus-ring);
-}
-
-button.mobile-inbox-paired-change {
-  padding: 2px 4px;
-  border: none;
-  background: none;
-  color: var(--muted);
-  font-size: calc(var(--app-font-size) - 1px);
-  text-decoration: underline;
-  text-underline-offset: 3px;
-  cursor: pointer;
-  -webkit-tap-highlight-color: transparent;
-}
-
-button.mobile-inbox-paired-change:hover,
-button.mobile-inbox-paired-change:focus-visible {
-  color: var(--text);
-}
-
-button.mobile-inbox-paired-change:focus-visible {
-  outline: 0;
-  border-radius: 6px;
-  box-shadow: var(--focus-ring);
-}
-
-/* 点击配对码后的「复制成功/失败」浮动提示（iOS 风格居中吐司） */
+/* 点击配对码后的「复制成功/失败」浮动提示（iOS 风格居中胶囊吐司，避开底部安全区）。 */
 .mobile-inbox-copy-toast {
   position: fixed;
   left: 50%;
-  bottom: 56px;
+  bottom: calc(var(--safe-bottom) + 22px);
   transform: translateX(-50%);
-  max-width: calc(100vw - 32px);
+  max-width: calc(100vw - 48px);
   margin: 0;
-  padding: 8px 16px;
+  padding: 9px 18px;
   border-radius: 999px;
-  background: color-mix(in srgb, var(--text) 92%, transparent);
+  background: var(--text);
   color: var(--bg);
-  font-size: var(--app-font-size);
+  font-size: 14px;
   font-weight: 600;
   text-align: center;
   box-shadow: var(--shadow-lift);
   pointer-events: none;
-  z-index: 50;
+  z-index: 60;
 }
 
 .mobile-inbox-toast-enter-active,
 .mobile-inbox-toast-leave-active {
-  transition: opacity 200ms var(--motion-ease), transform 200ms var(--motion-ease);
+  transition: opacity var(--motion-medium) var(--motion-ease), transform var(--motion-medium) var(--motion-ease);
 }
 
 .mobile-inbox-toast-enter-from,
 .mobile-inbox-toast-leave-to {
   opacity: 0;
-  transform: translateX(-50%) translateY(6px);
-}
-
-/* 引导页底部的手动输码区 */
-.mobile-inbox-code-entry {
-  display: grid;
-  gap: 8px;
-  padding-top: 12px;
-  border-top: 1px solid var(--line-subtle);
-  text-align: left;
-}
-
-.mobile-inbox-code-label {
-  color: var(--muted);
-  font-size: var(--app-font-size);
-}
-
-.mobile-inbox-code-row {
-  display: flex;
-  align-items: stretch;
-  gap: 8px;
-}
-
-.mobile-inbox-code-input {
-  flex: 1;
-  min-width: 0;
-  min-height: 34px;
-  padding: 0 10px;
-  border: 1px solid var(--line-main);
-  border-radius: var(--radius-control);
-  background: var(--panel);
-  color: var(--text);
-  font-family: ui-monospace, SFMono-Regular, Menlo, monospace;
-  /* 同 .mobile-inbox-textarea：≥16px 抑制 iOS 聚焦自动缩放 */
-  font-size: 16px;
-  letter-spacing: 0.08em;
-  text-transform: uppercase;
-  /* 输码框内容同样支持长按选中/光标操作。 */
-  -webkit-user-select: text;
-  user-select: text;
-}
-
-.mobile-inbox-code-input[aria-invalid="true"] {
-  border-color: var(--destructive);
-}
-
-.mobile-inbox-code-input:focus-visible {
-  outline: 0;
-  border-color: var(--line-focus);
-  box-shadow: var(--focus-ring);
-}
-
-.mobile-inbox-code-error {
-  margin: 0;
-  color: var(--destructive);
-  font-size: var(--app-font-size);
-  line-height: 1.6;
+  transform: translateX(-50%) translateY(8px);
 }
