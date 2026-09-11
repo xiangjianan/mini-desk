@@ -26,7 +26,7 @@ describe("theme-boot.js (pre-first-frame theming)", () => {
   beforeEach(() => {
     localStorage.clear();
     document.documentElement.removeAttribute("data-theme");
-    themeColorMeta().setAttribute("content", "#fbfbfd");
+    themeColorMeta().setAttribute("content", "#fcfcfe");
   });
 
   it("applies the persisted dark theme and its title bar color before first paint", () => {
@@ -35,7 +35,7 @@ describe("theme-boot.js (pre-first-frame theming)", () => {
     runThemeBoot();
 
     expect(document.documentElement.dataset.theme).toBe("dark");
-    expect(themeColorMeta().content).toBe("#242426");
+    expect(themeColorMeta().content).toBe("#262628");
   });
 
   it("applies the persisted light theme and its title bar color before first paint", () => {
@@ -44,14 +44,14 @@ describe("theme-boot.js (pre-first-frame theming)", () => {
     runThemeBoot();
 
     expect(document.documentElement.dataset.theme).toBe("light");
-    expect(themeColorMeta().content).toBe("#fbfbfd");
+    expect(themeColorMeta().content).toBe("#fcfcfe");
   });
 
   it("leaves the defaults untouched when no state has been persisted", () => {
     runThemeBoot();
 
     expect(document.documentElement.dataset.theme).toBeUndefined();
-    expect(themeColorMeta().content).toBe("#fbfbfd");
+    expect(themeColorMeta().content).toBe("#fcfcfe");
   });
 
   it("does not throw on malformed persisted state", () => {

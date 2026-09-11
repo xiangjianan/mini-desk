@@ -29,6 +29,20 @@ export interface ChangelogEntry {
 
 export const CHANGELOG: ChangelogEntry[] = [
   {
+    version: "1.0.167",
+    date: "2026-09-11",
+    notes: {
+      zh: [
+        "新增：手机速记「AI 润色」开关开启时，标签四字显示彩色渐变流动效果；关闭时恢复默认文字色",
+        "优化：明暗主题下工作台底色与面板的对比度调低，区域分割更柔和（状态栏、启动画面与清单颜色同步更新）",
+      ],
+      en: [
+        "New: when the mobile \"AI polish\" toggle is on, its label shows a flowing rainbow gradient; off restores the default text color",
+        "Improved: softer contrast between the workbench backdrop and panels in both light and dark themes (status-bar, splash, and manifest colors updated to match)",
+      ],
+    },
+  },
+  {
     version: "1.0.166",
     date: "2026-09-11",
     notes: {

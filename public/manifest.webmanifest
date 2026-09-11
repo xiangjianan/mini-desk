@@ -5,8 +5,8 @@
   "scope": "/",
   "id": "/",
   "display": "standalone",
-  "background_color": "#fbfbfd",
-  "theme_color": "#fbfbfd",
+  "background_color": "#fcfcfe",
+  "theme_color": "#fcfcfe",
   "lang": "zh-CN",
   "description": "本地优先的个人桌面工作台",
   "icons": [

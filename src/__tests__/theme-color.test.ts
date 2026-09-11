@@ -15,14 +15,14 @@ describe("theme-color meta (src/state/theme-color.ts)", () => {
     applyThemeColor("light");
 
     expect(themeColorMeta()?.content).toBe(THEME_COLOR_META.light);
-    expect(themeColorMeta()?.content).toBe("#fbfbfd");
+    expect(themeColorMeta()?.content).toBe("#fcfcfe");
   });
 
   it("maps the dark theme to the app's dark canvas color", () => {
     applyThemeColor("dark");
 
     expect(themeColorMeta()?.content).toBe(THEME_COLOR_META.dark);
-    expect(themeColorMeta()?.content).toBe("#242426");
+    expect(themeColorMeta()?.content).toBe("#262628");
   });
 
   it("creates the meta tag when the document does not have one yet", () => {
@@ -31,7 +31,7 @@ describe("theme-color meta (src/state/theme-color.ts)", () => {
     applyThemeColor("dark");
 
     expect(themeColorMeta()).not.toBeNull();
-    expect(themeColorMeta()?.content).toBe("#242426");
+    expect(themeColorMeta()?.content).toBe("#262628");
   });
 
   it("keeps the standalone title bar in sync from applyTheme in App.vue", () => {
@@ -46,8 +46,8 @@ describe("theme-color meta (src/state/theme-color.ts)", () => {
     const boot = readFileSync("public/theme-boot.js", "utf8");
 
     // 静态回退色 = 浅色默认值；theme-boot 无法共享模块，值必须与运行时映射一致。
-    expect(index).toContain('<meta name="theme-color" content="#fbfbfd"');
-    expect(manifest).toContain('"theme_color": "#fbfbfd"');
+    expect(index).toContain('<meta name="theme-color" content="#fcfcfe"');
+    expect(manifest).toContain('"theme_color": "#fcfcfe"');
     expect(boot).toContain(THEME_COLOR_META.dark);
     expect(boot).toContain(THEME_COLOR_META.light);
   });
