@@ -50,9 +50,8 @@
   --shadow-lift: 0 1px 2px rgba(15, 23, 42, 0.05), 0 10px 24px rgba(15, 23, 42, 0.1);
   --shadow-quick-hover: 0 1px 2px rgba(15, 23, 42, 0.05), 0 2px 5px rgba(15, 23, 42, 0.07);
   --shadow-glow-primary: 0 0 0 1px color-mix(in srgb, var(--primary) 24%, transparent), 0 6px 18px color-mix(in srgb, var(--primary) 22%, transparent);
-  /* 悬浮层投影：消息气泡与陪伴 GIF「飘在页面上方」的层次感，刻意多层柔和不发黑。 */
+  /* 悬浮层投影：消息气泡「飘在页面上方」的层次感，刻意多层柔和不发黑（GIF 本体不带投影）。 */
   --shadow-float: 0 1px 2px rgba(15, 23, 42, 0.05), 0 8px 20px rgba(15, 23, 42, 0.08), 0 24px 48px rgba(15, 23, 42, 0.06);
-  --companion-gif-shadow: drop-shadow(0 3px 5px rgba(15, 23, 42, 0.18)) drop-shadow(0 10px 22px rgba(15, 23, 42, 0.1));
   /* 手机端首页（OpenDesign 原型）补充 token：实心动作蓝（加深保证白字对比）、小号蓝字、成功/实心危险与大圆角卡。 */
   --action: #0066cc;
   --link: #0057d9;
@@ -105,7 +104,6 @@ html[data-theme="dark"] {
   --shadow-quick-hover: 0 1px 2px rgba(0, 0, 0, 0.18), 0 2px 6px rgba(0, 0, 0, 0.24);
   --shadow-glow-primary: 0 0 0 1px color-mix(in srgb, var(--primary) 32%, transparent), 0 8px 22px color-mix(in srgb, var(--primary) 30%, transparent);
   --shadow-float: 0 1px 2px rgba(0, 0, 0, 0.3), 0 10px 24px rgba(0, 0, 0, 0.36), 0 28px 56px rgba(0, 0, 0, 0.28);
-  --companion-gif-shadow: drop-shadow(0 3px 5px rgba(0, 0, 0, 0.5)) drop-shadow(0 10px 22px rgba(0, 0, 0, 0.36));
   --action: #0070e8;
   --link: #409cff;
   --ok: #30d158;
@@ -2339,13 +2337,13 @@ button.notify-panel-preset {
 }
 
 /* Every delete/trash affordance reads as destructive: the trash icon buttons
-   (screenshot delete, quick tag/header delete) and the workspace row's inline
-   delete action paint in the danger color so they stand out from ordinary
-   actions. The workspace selector is scoped under .workspace-switcher-actions
-   so its specificity (0,3,0) beats the `color: inherit` on the base action
-   rule below. */
+   (screenshot delete, quick tag/header delete) and the workspace overflow-menu
+   delete item paint in the danger color so they stand out from ordinary actions.
+   The workspace selector is scoped under .workspace-switcher-menu so its
+   specificity (0,3,0) beats the equal-or-higher `color: inherit` on the base
+   menu-item rule below. */
 .icon-button.is-delete,
-.workspace-switcher-actions .workspace-switcher-action.is-delete,
+.workspace-switcher-menu .workspace-switcher-menu-item.is-delete,
 .preview-toolbar-button.is-delete {
   color: var(--danger);
 }
@@ -2985,8 +2983,7 @@ button.todo-section-menu-button {
   border: 0;
   object-fit: contain;
   object-position: center;
-  /* 悬浮感：投影跟随 GIF 剪影（不位移，仅静态层次感）。 */
-  filter: var(--companion-gif-shadow);
+  /* GIF 本体不加投影：层次感只由消息气泡自身的多层投影承担。 */
 }
 
 /* 点击 GIF 会轮换弹出当前区域的 Tips，悬浮用指针光标提示可点。 */
@@ -6924,7 +6921,23 @@ html[data-theme="dark"] .quick-search .quick-search-toggle:focus-visible {
 .zone-visibility-check { display: inline-flex; align-items: center; justify-content: center; width: 16px; height: 16px; flex: none; }
 .zone-visibility-label { line-height: 1; }
 
+/* Per-workspace overflow ("⋯") menu: gathers the lower-frequency actions so the
+   list row only shows a single kebab trigger (the zone grid now lives in the
+   header's top-right button cluster). */
+.workspace-switcher-menu { min-width: 178px; padding: 2px 0; }
+.workspace-switcher-menu .workspace-switcher-menu-item {
+  display: inline-flex; align-items: center; gap: 8px; width: 100%;
+  background: transparent; border: none; cursor: pointer; padding: 5px 10px; border-radius: 8px; color: inherit;
+  font-size: 13px; line-height: 1; min-height: 0;
+}
+.workspace-switcher-menu .workspace-switcher-menu-item:hover { background: var(--color-hover, rgba(0,0,0,0.06)); }
+.workspace-switcher-menu .workspace-switcher-menu-item .n-icon { flex: none; }
+
 /* ---- 手机速记配对弹窗 ---- */
+/* 弹窗顶部的配对空间行：标签弱化、空间名加粗且超长省略。 */
+.workspace-inbox-workspace { display: flex; align-items: baseline; gap: 6px; margin: 0 0 8px; font-size: 12px; line-height: 1.6; min-width: 0; }
+.workspace-inbox-workspace-label { flex: none; color: var(--muted); }
+.workspace-inbox-workspace-name { font-weight: 600; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
 .workspace-inbox-intro { margin: 0 0 6px; color: var(--muted); font-size: 12px; line-height: 1.6; }
 .workspace-inbox-hint { margin: 0 0 10px; color: var(--muted); font-size: 11px; line-height: 1.6; opacity: 0.85; }
 .workspace-inbox-field { display: grid; grid-template-columns: 64px 1fr; align-items: center; gap: 8px; margin: 8px 0; }

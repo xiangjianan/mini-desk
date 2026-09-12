@@ -29,6 +29,20 @@ export interface ChangelogEntry {
 
 export const CHANGELOG: ChangelogEntry[] = [
   {
+    version: "1.0.169",
+    date: "2026-09-12",
+    notes: {
+      zh: [
+        "新增：手机配对弹窗顶部标明当前配对的工作空间名称，避免误配到其他空间",
+        "调整：工作空间列表的操作（导出/配对/重命名/删除）收回「⋯」子菜单，行内恢复简洁",
+      ],
+      en: [
+        "New: the phone pairing dialog now names the workspace being paired at the top, preventing mismatches",
+        "Adjusted: workspace row actions (export/pair/rename/delete) move back into the \"⋯\" submenu for a cleaner list",
+      ],
+    },
+  },
+  {
     version: "1.0.168",
     date: "2026-09-12",
     notes: {

@@ -444,7 +444,8 @@ describe("Naive UI component usage", () => {
       "src/components/ImagePanel.vue",
       "src/components/ImagePreview.vue",
       "src/components/SpacePanel.vue",
-      // 顶栏区域显隐气泡走传送门挂 body，同样要压过预览弹层。
+      // 切换器内的 kebab 菜单与顶栏区域显隐气泡走传送门挂 body，同样要压过预览弹层。
+      "src/components/WorkspaceSwitcher.vue",
       "src/components/ZoneVisibilityPopover.vue",
     ];
 
@@ -509,7 +510,7 @@ describe("Naive UI component usage", () => {
     // must use the --danger color so they read as destructive at a glance.
     const styles = read("src/styles.css");
 
-    expect(styles).toMatch(/\.icon-button\.is-delete[\s\S]*?\.workspace-switcher-actions \.workspace-switcher-action\.is-delete[\s\S]*?\.preview-toolbar-button\.is-delete\s*\{[^}]*color:\s*var\(--danger\)/s);
+    expect(styles).toMatch(/\.icon-button\.is-delete[\s\S]*?\.workspace-switcher-menu \.workspace-switcher-menu-item\.is-delete[\s\S]*?\.preview-toolbar-button\.is-delete\s*\{[^}]*color:\s*var\(--danger\)/s);
   });
 
   it("uses row Naive date pickers for notification time editing", () => {
@@ -766,9 +767,11 @@ describe("Naive UI component usage", () => {
     expect(styles).toContain("@keyframes companion-pop");
     expect(styles).toMatch(/\.companion-popover\s*\{[^}]*animation: companion-pop/s);
     expect(styles).toMatch(/\.companion-popover\s*\{[^}]*transform-origin: right bottom/s);
-    // 悬浮层次感只靠静态柔和多层投影：气泡与 GIF 都不再上下位移（无轻浮动画）。
+    // 悬浮层次感只靠气泡自身的静态柔和多层投影：GIF 本体不带任何投影，
+    // 气泡与 GIF 也都不再上下位移（无轻浮动画）。
     expect(styles).toMatch(/\.companion-popover-shell\.n-popover\s*\{[^}]*box-shadow: var\(--shadow-float\) !important/s);
-    expect(styles).toMatch(/\.focus-companion img\s*\{[^}]*filter: var\(--companion-gif-shadow\)/s);
+    expect(styles).not.toContain("--companion-gif-shadow");
+    expect(styles).not.toMatch(/\.focus-companion img\s*\{[^}]*filter/s);
     expect(styles).not.toContain("@keyframes companion-float");
     expect(styles).not.toMatch(/\.companion-popover-shell\.n-popover\s*\{[^}]*animation: companion-float/s);
     expect(styles).not.toMatch(/\.focus-companion img\s*\{[^}]*animation: companion-float/s);

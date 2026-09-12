@@ -51,6 +51,14 @@ async function flushAsyncComponents() {
   await nextTick();
 }
 
+// The workspace row's overflow menu (NPopover under the shared stub) opens once
+// its controlled `:show` flips, after which the menu items render inline in the
+// component subtree and are reachable via wrapper.get.
+async function openWorkspaceMenu(wrapper: ReturnType<typeof mountApp>, id = DEFAULT_WORKSPACE_ID): Promise<void> {
+  await wrapper.get(`[data-testid="workspace-menu-${id}"]`).trigger("click");
+  await nextTick();
+}
+
 function getImagePreview(wrapper: ReturnType<typeof mountApp>) {
   return wrapper.getComponent({ name: "ImagePreview" });
 }
@@ -2557,6 +2565,7 @@ describe("App shell", () => {
 
       // Open the switcher and rename the active ("default") workspace via the dialog.
       await wrapper.get('[data-testid="workspace-trigger"]').trigger("click");
+      await openWorkspaceMenu(wrapper);
       await wrapper.get('[data-testid="workspace-rename-default"]').trigger("click");
       await nextTick();
       expect(wrapper.find(".n-modal").exists()).toBe(true);
@@ -2586,6 +2595,7 @@ describe("App shell", () => {
     try {
       await nextTick();
       await wrapper.get('[data-testid="workspace-trigger"]').trigger("click");
+      await openWorkspaceMenu(wrapper);
       await wrapper.get('[data-testid="workspace-rename-default"]').trigger("click");
       await nextTick();
 
@@ -2611,6 +2621,7 @@ describe("App shell", () => {
     try {
       await nextTick();
       await wrapper.get('[data-testid="workspace-trigger"]').trigger("click");
+      await openWorkspaceMenu(wrapper);
       await wrapper.get('[data-testid="workspace-rename-default"]').trigger("click");
       await nextTick();
 
@@ -7691,6 +7702,7 @@ describe("App shell", () => {
 
     try {
       await wrapper.get('[data-testid="workspace-trigger"]').trigger("click");
+      await openWorkspaceMenu(wrapper);
       await wrapper.get('[data-testid="workspace-pair-default"]').trigger("click");
       // 配对弹窗按需异步加载（qrcode 不进主包）：先等动态 import 落定再断言与交互。
       await flushAsyncComponents();
@@ -7927,6 +7939,7 @@ describe("App inbox pull wiring", () => {
 
       // 在途期间删除配对工作区：state.workspaces 整组替换且不再含 default。
       await wrapper.get('[data-testid="workspace-trigger"]').trigger("click");
+      await openWorkspaceMenu(wrapper);
       await wrapper.get(`[data-testid="workspace-delete-${DEFAULT_WORKSPACE_ID}"]`).trigger("click");
       await vi.advanceTimersByTimeAsync(200);
       await nextTick();
@@ -7980,6 +7993,7 @@ describe("App inbox pull wiring", () => {
 
       // 在途期间从配对弹窗清除配对：工作区对象被替换且不再含 inbox 字段。
       await wrapper.get('[data-testid="workspace-trigger"]').trigger("click");
+      await openWorkspaceMenu(wrapper);
       await wrapper.get('[data-testid="workspace-pair-default"]').trigger("click");
       await flushAsyncComponents();
       await wrapper.get('[data-testid="inbox-clear"]').trigger("click");
@@ -8140,6 +8154,7 @@ describe("App inbox revoke wiring", () => {
 
   async function openInboxDialog(wrapper: ReturnType<typeof mountApp>): Promise<void> {
     await wrapper.get('[data-testid="workspace-trigger"]').trigger("click");
+    await openWorkspaceMenu(wrapper);
     await wrapper.get('[data-testid="workspace-pair-default"]').trigger("click");
     await flushAsyncComponents();
   }
@@ -8296,6 +8311,7 @@ describe("App inbox revoke wiring", () => {
 
     try {
       await wrapper.get('[data-testid="workspace-trigger"]').trigger("click");
+      await openWorkspaceMenu(wrapper);
       await wrapper.get(`[data-testid="workspace-delete-${DEFAULT_WORKSPACE_ID}"]`).trigger("click");
       await nextTick();
       const event = new KeyboardEvent("keydown", { key: "Enter", bubbles: true, cancelable: true });
@@ -8320,6 +8336,7 @@ describe("App inbox revoke wiring", () => {
 
     try {
       await wrapper.get('[data-testid="workspace-trigger"]').trigger("click");
+      await openWorkspaceMenu(wrapper, "backup");
       await wrapper.get('[data-testid="workspace-delete-backup"]').trigger("click");
       await nextTick();
       const event = new KeyboardEvent("keydown", { key: "Enter", bubbles: true, cancelable: true });
@@ -8397,6 +8414,7 @@ describe("App inbox register wiring", () => {
 
   async function openInboxDialog(wrapper: ReturnType<typeof mountApp>): Promise<void> {
     await wrapper.get('[data-testid="workspace-trigger"]').trigger("click");
+    await openWorkspaceMenu(wrapper);
     await wrapper.get('[data-testid="workspace-pair-default"]').trigger("click");
     await flushAsyncComponents();
   }

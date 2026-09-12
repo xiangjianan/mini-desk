@@ -76,6 +76,22 @@ describe("WorkspaceInboxDialog", () => {
     expect(wrapper.find('[data-testid="inbox-code"]').text()).toMatch(/^[0-9A-HJKMNP-TV-Z]{12}$/);
   });
 
+  it("弹窗顶部标明当前配对的工作空间", () => {
+    const workspace: WorkspaceData = {
+      ...defaultWorkspace("a"),
+      customTitles: { "board-title": "我的日常" },
+    };
+    const wrapper = mountDialog(INBOX, workspace);
+    expect(wrapper.get('[data-testid="inbox-workspace"]').text()).toContain("配对空间");
+    expect(wrapper.get(".workspace-inbox-workspace-name").text()).toBe("我的日常");
+    wrapper.unmount();
+
+    // 未自定义标题的工作空间回退默认看板标题。
+    const fallback = mountDialog(INBOX);
+    expect(fallback.get(".workspace-inbox-workspace-name").text()).toBe("Mini Desk");
+    fallback.unmount();
+  });
+
   it("已配对时展示码与含 #inbox= 的地址", () => {
     const wrapper = mountDialog(INBOX);
     expect(wrapper.find('[data-testid="inbox-code"]').text()).toBe("AB2CDE4FGHJK");

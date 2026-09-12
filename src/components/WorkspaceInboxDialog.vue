@@ -5,6 +5,7 @@ import { CheckmarkOutline, CloseCircleOutline, CopyOutline } from "@vicons/ionic
 import QRCode from "qrcode";
 import { buildInboxAddress, generateInboxCode, isValidInboxCode } from "../sync/pairing";
 import { getDisplaySpaceTitle, getDisplayTodoListTitle, getUiText } from "../state/i18n";
+import { getWorkspaceBoardTitle } from "../state/workspaces";
 import { copyTextToClipboard } from "../utils/clipboard";
 import type { AppLanguage, WorkspaceData, WorkspaceInbox } from "../types";
 
@@ -22,6 +23,8 @@ const emit = defineEmits<{
 
 const text = computed(() => getUiText(props.language));
 const show = ref(true);
+// 弹窗可从任意工作空间的「⋯」菜单或设置菜单打开：标明手机将同步到哪个空间。
+const workspaceTitle = computed(() => getWorkspaceBoardTitle(props.workspace));
 const canvasRef = ref<HTMLCanvasElement | null>(null);
 // 编辑草稿以 props 里的既有配对为初值；保存/清除时一次性 emit，取消则原样丢弃。
 // 轮换例外：confirm 已承诺「旧地址立即失效」，确认后立即 emit 生效，弹窗保持打开供抄录/扫码。
@@ -134,6 +137,10 @@ function save(): void {
     :mask-closable="false"
     @update:show="emit('close')"
   >
+    <p class="workspace-inbox-workspace" data-testid="inbox-workspace">
+      <span class="workspace-inbox-workspace-label">{{ text.app.inboxWorkspaceLabel }}</span>
+      <span class="workspace-inbox-workspace-name">{{ workspaceTitle }}</span>
+    </p>
     <p class="workspace-inbox-intro">{{ text.app.inboxDialogIntro }}</p>
     <p class="workspace-inbox-hint">{{ text.app.inboxSyncHint }}</p>
 
