@@ -11,7 +11,7 @@ import {
 import { NIcon } from "naive-ui";
 import { getUiText } from "../state/i18n";
 import { getCompanionNotificationIconSrc } from "../state/companionGifThemes";
-import { formatInboxCode, normalizeInboxCode } from "../sync/pairing";
+import { maskInboxCode, normalizeInboxCode } from "../sync/pairing";
 import type { AppLanguage } from "../types";
 
 /**
@@ -52,7 +52,8 @@ function setGroupInput(index: number, el: unknown): void {
 const rawCode = computed(() => groups.value.join(""));
 const isComplete = computed(() => rawCode.value.length === CODE_GROUPS * 4);
 
-const pairedCodeText = computed(() => (props.code ? formatInboxCode(props.code) : ""));
+/** 已配对态码展示：中间四位打码（防旁人窥屏），点按仍复制完整码（App.vue 侧 formatInboxCode）。 */
+const pairedCodeText = computed(() => (props.code ? maskInboxCode(props.code) : ""));
 
 /** 左上角品牌 logo：Mini Desk 像素猫（通知图标素材），随明暗主题切换配色。 */
 const logoSrc = computed(() => getCompanionNotificationIconSrc("cat", props.theme));

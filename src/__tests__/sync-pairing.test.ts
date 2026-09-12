@@ -7,6 +7,7 @@ import {
   importedPayloadHasInbox,
   isValidInboxCode,
   loadRememberedInboxCode,
+  maskInboxCode,
   normalizeInboxCode,
   parseInboxFragment,
   REMEMBERED_INBOX_CODE_KEY,
@@ -169,5 +170,15 @@ describe("手机壳配对码记忆", () => {
 describe("formatInboxCode", () => {
   it("12 位码按 4 位分组展示", () => {
     expect(formatInboxCode("AB2CDE4FGHJK")).toBe("AB2C DE4F GHJK");
+  });
+});
+
+describe("maskInboxCode", () => {
+  it("已配对态展示：保留首尾两组，中间四位打码", () => {
+    expect(maskInboxCode("AB2CDE4FGHJK")).toBe("AB2C **** GHJK");
+  });
+
+  it("非 12 位输入退化为分组展示（不截断不误码）", () => {
+    expect(maskInboxCode("AB2CDE")).toBe("AB2C DE");
   });
 });

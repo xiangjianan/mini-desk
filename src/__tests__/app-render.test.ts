@@ -626,7 +626,7 @@ describe("App shell", () => {
     try {
       wrapper = mountApp();
 
-      expect(wrapper.get('[data-testid="mobile-inbox-paired-code"]').text()).toBe("AB2C DE4F GHJK");
+      expect(wrapper.get('[data-testid="mobile-inbox-paired-code"]').text()).toBe("AB2C **** GHJK");
 
       await wrapper.get('[data-testid="mobile-inbox-change-code"]').trigger("click");
       await wrapper.vm.$nextTick();
@@ -693,7 +693,7 @@ describe("App shell", () => {
 
       expect(wrapper.find('[data-testid="mobile-inbox-text"]').exists()).toBe(true);
       expect(localStorage.getItem(REMEMBERED_INBOX_CODE_KEY)).toBe("ZZZ0ZZZ0ZZZ0");
-      expect(wrapper.get('[data-testid="mobile-inbox-paired-code"]').text()).toBe("ZZZ0 ZZZ0 ZZZ0");
+      expect(wrapper.get('[data-testid="mobile-inbox-paired-code"]').text()).toBe("ZZZ0 **** ZZZ0");
     } finally {
       wrapper?.unmount();
       window.location.hash = "";

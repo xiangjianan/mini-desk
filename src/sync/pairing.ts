@@ -51,6 +51,12 @@ export function formatInboxCode(code: string): string {
   return code.replace(/(.{4})(?=.)/g, "$1 ");
 }
 
+/** 已配对态展示：中间四位打码防旁人窥屏（点按仍复制完整码）；非 12 位退化为分组展示。 */
+export function maskInboxCode(code: string): string {
+  if (code.length !== INBOX_CODE_LENGTH) return formatInboxCode(code);
+  return `${code.slice(0, 4)} **** ${code.slice(8)}`;
+}
+
 /** 导入载荷（单工作区 `workspace` 或全量 `workspaces[]`）是否携带配对码——用于导入后的轮换提醒。 */
 export function importedPayloadHasInbox(parsed: unknown): boolean {
   if (typeof parsed !== "object" || parsed === null) return false;
