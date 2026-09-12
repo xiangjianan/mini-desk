@@ -1,164 +1,168 @@
 # Mini Desk
 
-Mini Desk 是一张安静的小桌面。
+**English** | [简体中文](README.zh-CN.md)
 
-截图、便签、提醒和快捷动作都在这里，但它不会催你成为机器。
+Mini Desk is a quiet little desk.
+
+Screenshots, notes, reminders, and quick actions all live here — but it won't push you to become a machine.
 
 Do less, do it well.
 
-它把日常工作里的零碎东西收在一个本地优先的浏览器桌面里：截图可以先放下，想法可以先记住，提醒事项可以慢慢完成。桌面密度会变成轻盈、略满或过热的呼吸感提醒，动态头像也只在保存、完成、清理和内容变多时轻轻冒出来。
+It gathers the loose bits of daily work into a local-first browser desktop: screenshots can wait, ideas can be parked, reminders can be finished slowly. Desktop density becomes a breathing reminder — light, fairly full, or overheated — and the animated companion only pops up gently on save, completion, cleanup, and when content grows.
 
-Mini Desk 基于 Vue 3、TypeScript、Vite 和 Naive UI 构建，界面风格参考 Apple Human Interface Guidelines，强调紧凑、清晰、低干扰的日常使用体验。
+Mini Desk is built with Vue 3, TypeScript, Vite, and Naive UI. The interface takes cues from Apple's Human Interface Guidelines, aiming for a compact, clear, low-distraction daily experience.
 
-Mini Desk 是一个 AI Coding 实践项目：产品构思、交互取舍与审美判断来自人类，从界面、状态管理到自建加密中转服务，代码实现 100% 由 AI（Claude Code）在对话中完成。
+Mini Desk is also an AI coding experiment: the product thinking, interaction trade-offs, and aesthetic judgment come from a human, while 100% of the code — from the UI and state management to the self-hosted relay service — was written by AI (Claude Code) in conversation.
 
-页面状态保存在浏览器 `localStorage`，图片原文和自定义 GIF 资源保存在同站点 IndexedDB。除手机速记的加密中转外不依赖任何后端服务，适合作为个人浏览器工作台使用。
+Page state lives in the browser's `localStorage`; image originals and custom GIF assets live in same-site IndexedDB. Apart from the self-hosted mobile-inbox relay, it depends on no backend service, making it a good fit as a personal browser workbench.
 
-## 在线地址
+## Live site
 
 - <https://minidesk.online>
 
-## 快速开始
+## Quick start
 
 ```bash
-npm install     # 安装依赖
-npm run dev     # 启动本地开发服务
-npm test        # 运行测试
-npm run build   # 构建生产产物
+npm install     # install dependencies
+npm run dev     # start the local dev server
+npm test        # run tests
+npm run build   # build the production bundle
 ```
 
-`npm run preview` 构建并以生产模式预览，是验证离线能力的唯一方式（开发模式不会注册 Service Worker）。局域网真机调试使用 `npm run preview:lan`（自签名 HTTPS，手机速记的加密 API 需要安全上下文，设备需接受一次证书提示）。
+`npm run preview` builds and serves the production bundle — the only way to verify offline behavior (dev mode never registers the Service Worker). For real-device LAN debugging use `npm run preview:lan` (self-signed HTTPS; the mobile-inbox API requires a secure context, and devices must accept the certificate warning once).
 
-## 功能概览
+## Feature overview
 
-### 工作台体验
+### Workbench
 
-- 四区域桌面工作台：图片、快捷动作、提醒事项、便签；拖动分隔线可调整区域宽度，配置自动保存。
-- 区域收窄到最小值以下会折叠为竖排标题栏，点击标题即可重新展开。
-- 每个工作区可单独配置显示哪些区域（工作区切换器条目旁的网格图标）。
-- 顶部命令栏：工作区切换器、保存/密度状态徽章与标语居左；收起 Header、明暗主题切换和设置菜单居右，Header 可整体收起。
-- 明暗主题手动切换；未手动选择时初始跟随系统。
-- 区域标题支持双击改名；主要浮层统一低对比边框与柔和背景，避免混用多套视觉语言。
+- Four-zone desktop workbench: images, quick actions, reminders, notes; drag the separators to resize zones, with the layout saved automatically.
+- Zones shrunk below their minimum width collapse into vertical title rails; click a rail to expand the zone again.
+- Each workspace can configure which zones are visible (the grid icon on each workspace-switcher entry).
+- Top command bar: workspace switcher, save/density status badge, and slogan on the left; collapse-header, theme toggle, and settings menu on the right; the whole header can be collapsed.
+- Manual light/dark theme switching; follows the system until you pick one.
+- Zone titles support double-click renaming; major overlays share low-contrast borders and soft backgrounds instead of mixing visual languages.
 
-### 多工作区
+### Multi-workspace
 
-- 支持创建、切换、重命名、删除和拖动排序多个工作区，系统至少保留一个。
-- 每个工作区拥有独立的看板内容、区域显示配置和手机速记配对；主题、语言、GIF 等全局偏好跨工作区共享。
-- 工作区切换器为 ClickUp 风格列表，导出、配对、改名、删除收纳在每项的「⋯」菜单。
-- 导入支持全量或单空间，同名空间可选择覆盖或自动编号新增；可单独导出当前工作区。
+- Create, switch, rename, delete, and drag-reorder workspaces; the system always keeps at least one.
+- Each workspace has independent board content, zone visibility, and mobile-inbox pairing; global preferences such as theme, language, and GIF are shared across workspaces.
+- The workspace switcher is a ClickUp-style list; export, pairing, rename, and delete live in each entry's "⋯" menu.
+- Import supports full or single-workspace payloads; same-named spaces can be overwritten or auto-numbered as new; the current workspace can be exported alone.
 
-### 图床
+### Image shelf
 
-- 三种录入方式：`Ctrl+V` 粘贴截图、拖入图片文件、标题栏「+」选择本地文件；卡片可直接拖出到桌面导出。
-- 粘贴支持按上下文插入：右键某张图选择「粘贴图片」插到它之后，预览中 `Ctrl+V` 同理，也可替换目标图。
-- 内置截图编辑器：裁剪、画笔、矩形、椭圆、箭头、序号标记和文本标注，支持撤销/重做，导出 PNG。
-- 缩略图支持拖拽排序、右键置顶/置底、删除和复制；单击预览、双击复制、`Enter` 编辑。
-- 预览支持 `Ctrl+滚轮` 锚点缩放、双击 2x、拖拽平移和工具栏操作。
-- 预览快捷键：`Enter` 编辑、`5` / `Ctrl+C` 复制、`Delete` / `Backspace` 删除、`Space` / `Esc` 关闭、方向键或 `W/A/S/D` 切换图片。
-- 仅显示图片区域时进入 solo 大图模式，可继续拖宽。
+- Three ways to add: `Ctrl+V` paste a screenshot, drop an image file, or pick a local file through the "+" in the title bar; cards can be dragged out to the desktop to export.
+- Pasting is context-aware: right-click an image and choose "Paste image" to insert after it; `Ctrl+V` inside the preview works the same way, and can replace the target image.
+- Built-in screenshot editor: crop, brush, rectangle, ellipse, arrow, numbered badge, and text annotations, with undo/redo, exporting PNG.
+- Thumbnails support drag-reorder, right-click pin-to-top/bottom, delete, and copy; single-click previews, double-click copies, `Enter` edits.
+- The preview supports `Ctrl+wheel` anchor zoom, double-click 2x, drag-to-pan, and toolbar actions.
+- Preview shortcuts: `Enter` edit, `5` / `Ctrl+C` copy, `Delete` / `Backspace` delete, `Space` / `Esc` close, arrow keys or `W/A/S/D` switch images.
+- With only the image zone visible, the board enters solo large-image mode, still draggable wider.
 
-### 便签与空间
+### Notes & spaces
 
-- 便签区域由「空间」Tab 组成：默认自带「📝 便签」，可新增、双击重命名、右键删除、拖动排序。
-- 点进去即可输入（默认只读防误触），支持换行、`Tab` 缩进、`Shift+Tab` 取消缩进；缩进会继承同层兄弟的列表标记，未标记的行按 `Tab` 自动补 `-`。
-- 有序列表自动重编号；`Enter` 延续缩进与标记，`Shift+Enter` 纯换行。
-- `Ctrl+Z` 撤销（编辑器内独立 50 步撤销栈）；`Ctrl/⌘ + ←/→` 跳到行首/行尾；`Ctrl/⌘ + ↑/↓` 上下移动当前行，编号与短横线自动适应。
-- 支持把外部文本拖放到光标处插入；选中文本可拖出复制，右键提供复制/粘贴。
-- 空间 Tab 支持右键「移动到空间」；删除空间前会二次确认。
+- The notes zone is made of space tabs: it ships with "📝 Notes"; spaces can be added, double-click renamed, right-click deleted, and drag-reordered.
+- Click in and start typing (read-only by default to prevent accidents), with line breaks, `Tab` indent, `Shift+Tab` outdent; indents inherit the sibling list markers, and unmarked lines get a `-` added automatically on `Tab`.
+- Ordered lists renumber automatically; `Enter` continues the indent and marker, `Shift+Enter` is a plain line break.
+- `Ctrl+Z` undo (an independent 50-step undo stack inside the editor); `Ctrl/⌘ + ←/→` jump to line start/end; `Ctrl/⌘ + ↑/↓` move the current line, with numbering and dashes adapting.
+- Drop external text at the cursor to insert it; selected text can be dragged out to copy; the right-click menu offers copy/paste.
+- Space tabs support right-click "Move to space"; deleting a space asks for confirmation first.
 
-### 提醒事项
+### Reminders
 
-- 自定义列表模型：右键空白处新建列表，列表可重命名、删除、折叠；旧版「早上/中午/晚上」数据自动迁移。
-- 面板足够宽时列表自动分多列，也可把列表拖到指定列。
-- 每条提醒可设置通知时间：快捷预设（15/30 分钟后、今天 10/14/19 点、明天 9 点等）或精确选择；到期触发浏览器原生通知、行内闪烁和标签页标题闪烁。
-- 逾期提醒在列表标题显示红点，时间标签按临近程度配色。
-- 星标条目在列表内置顶，并汇总到顶部「重点事项」聚焦区，按截止时间排序、未完成在前。
-- 支持完成、删除、复制、跨列表拖拽；`Ctrl/⌘ + ↑/↓` 组内换序、`Ctrl/⌘ + ←/→` 跳行首尾。
-- 已完成条目移到底部弱化展示，可按列表显示/隐藏或一键清除。
-- 粘贴或拖入多行文本可批量创建条目；条目中的 URL 自动生成链接按钮；右键条目可「移动到空间」。
+- Custom list model: right-click empty space to create a list; lists can be renamed, deleted, and collapsed; legacy "morning/noon/evening" data migrates automatically.
+- When the panel is wide enough, lists flow into multiple columns; a list can also be dragged to a specific column.
+- Each reminder can carry a notification time: quick presets (in 15/30 minutes, today at 10/14/19, tomorrow at 9, and so on) or an exact pick; due items trigger native browser notifications, inline blinking, and tab-title flashing.
+- Overdue reminders show a red dot on the list title; time labels are colored by proximity.
+- Starred items pin to the top of their list and aggregate into a "Focus" area at the top, sorted by due time with unfinished first.
+- Complete, delete, duplicate, and drag across lists; `Ctrl/⌘ + ↑/↓` reorder within a group, `Ctrl/⌘ + ←/→` jump to line start/end.
+- Completed items sink to the bottom, dimmed; they can be shown/hidden per list or cleared in one go.
+- Pasting or dropping multi-line text bulk-creates items; URLs inside items become link buttons; right-click an item to "Move to space".
 
-### 快捷动作
+### Quick actions
 
-- 四种按钮类型：链接、复制文本、API 请求、打开应用（内置 WeLink、微信、钉钉、飞书、VS Code 等 15 个预设，危险协议自动拦截）。
-- API 按钮支持请求方法、Header、Body 和响应复制策略，内置 getJson / postJson / postForm 模板。
-- 按标签分组：标签可配色、折叠、双击重命名、拖动排序；按钮跨组拖拽即换标签。
-- 右键空白处粘贴即可创建按钮，URL / 应用协议 / 文本自动分类；拖入文本同理。
-- 支持隐藏按钮、「显示隐藏项」开关和拖拽排序。
-- 标题栏搜索图标展开过滤输入，按标题与内容过滤分组并高亮命中。
+- Four button types: link, copy-text, API request, open app — 15 built-in presets including WeLink, WeChat, DingTalk, Feishu, and VS Code, with risky protocols blocked automatically.
+- API buttons support method, headers, body, and response-copy strategies, with getJson / postJson / postForm templates built in.
+- Grouped by tag: tags can be colored, collapsed, double-click renamed, and drag-reordered; dragging a button across groups changes its tag.
+- Right-click empty space and paste to create a button; URL / app-protocol / text content is classified automatically; dropping text works the same way.
+- Buttons can be hidden, with a "show hidden items" toggle and drag-reorder.
+- The search icon in the title bar expands a filter input that filters groups by title and content, with hits highlighted.
 
-### 手机速记
+### Mobile inbox
 
-- 桌面端在工作区「⋯」菜单中配对：生成 12 位配对码、二维码和完整配对地址，可一键复制或换码（旧地址立即失效）。
-- 可选择提醒目标列表与便签目标空间；删除工作区或清空数据时自动注销配对码。
-- 手机打开配对地址（或输入配对码）进入速记页：多行输入按行拆分，「发送到提醒」「发送到便签」双按钮直发。
-- 一键粘贴剪贴板（不弹键盘）、一键清空草稿；配对码记住后重开免输码，输码时在线校验并明确提示失效。
-- 内容端到端加密中转：配对码即密钥（PBKDF2 派生 AES-GCM-256），服务器只见配对码哈希与密文，读后即从队列移除，30 天过期。
-- 桌面端在启动、窗口聚焦、每 5 分钟和 `Ctrl+S` 时拉取；切换到已配对工作区立即拉取。
+- Pair from the workspace "⋯" menu on desktop: get a 12-character code, a QR code, and the full pairing address, copyable in one tap or rotatable (old addresses expire immediately).
+- Pick the reminder target list and the notes target space; pairing is revoked automatically when the workspace is deleted or data is cleared.
+- Open the pairing address on a phone (or type the code) to reach the capture page: multi-line input splits per line, with direct "Send to reminders" / "Send to notes" buttons.
+- One-tap clipboard paste (without popping the keyboard), one-tap draft clearing; once a code is remembered, reopening skips re-entry, and typed codes are verified online with clear expiry messaging.
+- After pairing, the code shows with the middle four characters masked; tapping it still copies the full code.
+- Captures travel as plaintext JSON over HTTPS to a self-hosted relay, authenticated by the pairing-code hash; an optional per-send "AI polish" has the server tidy todos and notes before storing (any failure falls back to raw text).
+- Items are removed from the queue once delivered to the desktop, and expire after 30 days.
+- The desktop pulls on startup, window focus, every 5 minutes, and `Ctrl+S`; switching to a paired workspace pulls immediately.
 
-### 离线与安装
+### Offline & install
 
-- 首次访问后断网也能完整打开（Service Worker 缓存应用外壳与静态资源）。
-- 可从浏览器菜单安装为桌面应用，不主动弹安装横幅。
+- After the first visit, the app opens fully offline (the Service Worker caches the app shell and static assets).
+- It can be installed as a desktop app from the browser menu; no install banner is pushed.
 
-### 设置与反馈
+### Settings & feedback
 
-- 设置菜单：数据（新建工作区 / 导入 / 导出当前工作区 / 清空数据）、语言（中文 / English）、GIF 主题（含自定义浅色/深色 GIF）、提建议、帮助与快捷键、关于。
-- 底部版本号点击打开「更新记录」，有新版本时带红点提示，更新记录内可一键更新。
-- 顶部保存状态徽章显示：已保存、保存中、有未保存内容。
+- Settings menu: data (new workspace / import / export current workspace / clear data), language (中文 / English), GIF theme (including custom light/dark GIFs), feedback, help & shortcuts, about.
+- The version number at the bottom opens "Release notes"; a red dot appears when a new version is available, and updates install in one click from inside.
+- The save status badge at the top shows: saved, saving, or unsaved changes.
 
-### 快捷键
+### Keyboard shortcuts
 
-- `Ctrl+S`：立即保存并拉取手机速记。
-- `Ctrl+Z`：看板撤销（文本与图片编辑器内有各自的撤销栈）。
-- 文本区域：`Tab` / `Shift+Tab` 缩进，`Ctrl/⌘ + ←/→` 跳行首尾，`Ctrl/⌘ + ↑/↓` 移动当前行。
-- 提醒事项：`Ctrl/⌘ + ↑/↓` 组内换序，`Ctrl/⌘ + ←/→` 跳行首尾。
-- 图片预览：见上文图床一节。
-- 完整键位图与手势说明见设置菜单「帮助与快捷键」。
+- `Ctrl+S`: save immediately and pull the mobile inbox.
+- `Ctrl+Z`: board undo (text and image editors keep their own undo stacks).
+- Text zones: `Tab` / `Shift+Tab` indent, `Ctrl/⌘ + ←/→` jump to line start/end, `Ctrl/⌘ + ↑/↓` move the current line.
+- Reminders: `Ctrl/⌘ + ↑/↓` reorder within the group, `Ctrl/⌘ + ←/→` jump to line start/end.
+- Image preview: see the image shelf section above.
+- The full keymap and gesture guide live in "Help & shortcuts" in the settings menu.
 
-## 消息气泡与 Tips
+## Toasts & tips
 
-- 保存、删除确认、导入导出、复制反馈、区域 Tips 都通过统一的消息气泡展示。
-- 气泡出现和消失有过渡动画。
-- 鼠标悬浮在消息气泡上时，会暂停自动消失计时；鼠标移开后继续计时。
-- 图床、快捷动作和提醒事项空白区域的 Tips 在显示期间不会因重复点击而快速切换。
-- 切换到其他区域会取消当前 Tips，新区域可以显示自己的 Tips。
-- 动态头像最多显示 10 秒，超过后会渐隐。
+- Saves, delete confirmations, import/export, copy feedback, and zone tips all surface through one shared toast bubble.
+- Bubbles animate in and out.
+- Hovering a bubble pauses its auto-dismiss timer; moving away resumes the countdown.
+- Tips in the empty zones of the image shelf, quick actions, and reminders don't flip-flop on repeated clicks while showing.
+- Switching to another zone cancels that zone's current tip; the new zone can show its own.
+- The animated companion shows for at most 10 seconds, then fades out.
 
-## 保存逻辑
+## Saving
 
-- `Ctrl+S` 立即保存并显示保存气泡，同时拉取手机速记。
-- 文本输入停止 3 秒后自动保存，失焦立即保存；提醒输入按 1 秒防抖保存。
-- 新增、完成、拖拽等结构性操作即时保存。
-- 多标签页同时打开时通过版本号冲突检测互不覆盖。
-- 导入、删除、清空数据等高风险操作都会先确认。
+- `Ctrl+S` saves immediately with a toast, and pulls the mobile inbox at the same time.
+- Text input auto-saves 3 seconds after typing stops, and immediately on blur; reminder input debounces at 1 second.
+- Structural operations (add, complete, drag, …) save instantly.
+- Multiple tabs open at once detect version conflicts and never overwrite each other.
+- Import, delete, and clear-data all ask for confirmation first.
 
-## 数据位置
+## Where data lives
 
-看板状态保存在浏览器 `localStorage`：
+Board state is kept in the browser's `localStorage`:
 
 ```text
 mini-desk-state-v1
 ```
 
-图片原文保存在同站点 IndexedDB：
+Image originals are kept in same-site IndexedDB:
 
 ```text
 mini-desk-images-v1
 ```
 
-手机端记住的配对码保存在 `mini-desk-inbox-code`。历史版本的 `todo-board-state-v1` 和 `todo-board-images-v1` 会在读取时自动兼容迁移。清空浏览器站点数据会清除看板内容、图片和自定义 GIF；只删除 `localStorage` 键会清除看板状态，但 IndexedDB 中可能仍保留图片原文。
+The phone's remembered pairing code is kept in `mini-desk-inbox-code`. Legacy `todo-board-state-v1` and `todo-board-images-v1` keys migrate automatically on read. Clearing site data wipes board content, images, and custom GIFs; deleting only the `localStorage` keys clears board state, but IndexedDB may still hold image originals.
 
-手机速记的中转只存储端到端加密后的密文（配对码即密钥，服务器只见配对码哈希），条目送达桌面端或 30 天过期后即不可再读，读取后即从队列移除。中转不保存看板数据、图片或任何账号信息。
+The mobile-inbox relay stores only the capture items themselves (self-hosted, authenticated by pairing-code hash); items become unreadable once delivered to the desktop or after 30 days, and are removed from the queue on read. The relay keeps no board data, images, or account information.
 
-## 移动端说明
+## Mobile notes
 
-看板为桌面端工作流设计：视口宽度不超过 900px 时显示引导页，提示在电脑浏览器打开。已配对手机速记的工作区，手机可通过配对地址进入速记页录入提醒事项与便签，内容经加密中转同步到桌面端。
+The board is designed for desktop workflows: viewports 900px wide or narrower get a guide page pointing to a desktop browser. On workspaces with mobile inbox paired, phones can open the pairing address to capture reminders and notes, which sync to the desktop through the self-hosted relay.
 
-本地真机调试使用 `npm run preview:lan`；手机速记的加密 API 需要安全上下文，设备需接受一次自签名证书提示。
+For local real-device debugging use `npm run preview:lan`; the mobile-inbox API needs a secure context, and devices must accept the self-signed certificate warning once.
 
-## 部署
+## Deployment
 
-线上站点部署在 Cloudflare Pages（项目名 `todolist`）：
+The live site runs on Cloudflare Pages (project `todolist`):
 
 - <https://minidesk.online>
 
@@ -166,15 +170,15 @@ mini-desk-images-v1
 npm run deploy:cloudflare
 ```
 
-手机速记中转是自建服务（`server/`，Flask + MySQL），部署在阿里云 `/opt/minidesk-inbox`，经 nginx 暴露在 <https://relay.minidesk.online:8443>：
+The mobile-inbox relay is a self-hosted service (`server/`, Flask + MySQL) deployed on Aliyun at `/opt/minidesk-inbox`, exposed via nginx at <https://relay.minidesk.online:8443>:
 
 ```bash
 cd server && ./deploy.sh
 ```
 
-构建相关的环境变量：`VITE_BASE`（部署子路径）、`VITE_INBOX_WORKER_URL`（覆盖中转地址，本地联调用）、`MINI_DESK_LAN`（真机预览时启用自签名 HTTPS）。
+Build-related environment variables: `VITE_BASE` (deployment subpath), `VITE_INBOX_WORKER_URL` (override the relay URL, for local debugging), `MINI_DESK_LAN` (enable self-signed HTTPS for real-device preview).
 
-发布版本时，先构建 `dist`，再将编译产物压缩为 release asset：
+To publish a release, build `dist` first, then zip the bundle as a release asset:
 
 ```bash
 npm run build
@@ -182,29 +186,29 @@ cd dist
 zip -qr ../dist-<version>.zip .
 ```
 
-## 项目结构
+## Project structure
 
-- `src/App.vue`：看板主入口，负责跨组件状态编排、保存与冲突检测、导入导出、消息气泡和全局快捷键。
-- `src/components/`：工作台外壳、工作区切换器、图床/截图编辑器/预览、提醒事项、快捷动作、便签空间、手机速记、设置和帮助等组件。
-- `src/state/`：默认状态、消息文案、i18n、主题、GIF 主题、版本与更新记录、localStorage/IndexedDB 存取、导入导出归一化和提醒领域逻辑。
-- `src/sync/`：手机速记的配对码、端到端加密与中转客户端。
-- `src/composables/`：提醒通知等组合式逻辑。
-- `src/utils/`：文本编辑（缩进、列表标记、行移动）等工具。
-- `src/__tests__/`：组件渲染、状态兼容、交互契约、部署配置和消息文案测试。
-- `server/`：手机速记中转（Flask + MySQL，生产环境）。
-- `static/`：陪伴 GIF 与图片素材；`public/`：Service Worker、manifest 与图标；`samples/`：示例导入数据。
+- `src/App.vue`: the board entry point — cross-component state orchestration, saving and conflict detection, import/export, toast bubbles, and global shortcuts.
+- `src/components/`: workbench shell, workspace switcher, image shelf / screenshot editor / preview, reminders, quick actions, note spaces, mobile inbox, settings, and help components.
+- `src/state/`: default state, message copy, i18n, theme, GIF themes, version & changelog, localStorage/IndexedDB access, import/export normalization, and reminder domain logic.
+- `src/sync/`: mobile-inbox pairing codes, legacy payload decoding, and relay clients.
+- `src/composables/`: composable logic such as reminder notifications.
+- `src/utils/`: text-editing utilities (indent, list markers, line moves) and friends.
+- `src/__tests__/`: component rendering, state compatibility, interaction contracts, deployment config, and message copy tests.
+- `server/`: the mobile-inbox relay (Flask + MySQL, production).
+- `static/`: companion GIFs and image assets; `public/`: Service Worker, manifest, and icons; `samples/`: sample import data.
 
-## 关于 AI Coding
+## On AI coding
 
-Mini Desk 的开发方式本身就是这个项目最特别的实验：人类只负责想清楚「要什么」，剩下的全部交给 AI。
+How Mini Desk gets built is the project's most interesting experiment: the human only decides "what", and hands everything else to AI.
 
-- 全程对话式开发：886 次提交、迭代至 v1.0.155，约 2.3 万行 TypeScript / Vue / Python 代码由 AI 编写，人类没有手写过一行实现。
-- 1230 个自动化测试同样由 AI 以测试先行（TDD）的方式编写并始终保持通过；每次改动后 AI 会先看测试失败，再写实现。
-- 发布是自动化的：仓库内的自定义发布流程（`.claude/skills/`）驱动 AI 完成构建、全量测试、Cloudflare 部署、GitHub Release 与更新记录整理，一个人维护着 100 个发布版本。
-- 仓库本身是人类与 AI 协作的工件：`CLAUDE.md` 是写给 AI 的项目说明书，`src/state/changelog.ts` 里每个版本的更新记录都由 AI 在发布时归纳。
+- Entirely conversational development: 886 commits up to v1.0.155 — roughly 23,000 lines of TypeScript / Vue / Python written by AI, without the human hand-writing a single line of implementation.
+- 1,230 automated tests were likewise written by AI test-first (TDD) and kept green throughout; after each change the AI reads the failing tests first, then writes the implementation.
+- Releases are automated: a custom release workflow in the repo (`.claude/skills/`) drives the AI through build, full test runs, Cloudflare deployment, GitHub Releases, and changelog upkeep — one person maintaining 100 releases.
+- The repo itself is a human-AI collaboration artifact: `CLAUDE.md` is the project manual written for the AI, and every changelog entry in `src/state/changelog.ts` was summarized by the AI at release time.
 
-换句话说，这里描述的所有功能——从四区域工作台到端到端加密的手机速记——都是「说清楚需求 → AI 实现 → AI 自查 → AI 发布」这个循环的产物。
+Put differently: everything described here — from the four-zone workbench to the mobile inbox — is the product of the loop "state the requirement → AI implements → AI self-reviews → AI releases".
 
-## 致谢
+## Acknowledgements
 
-感谢我的女朋友一直以来对我的支持，以及在产品细节上给我的许多宝贵建议。
+Thanks to my girlfriend for her constant support, and for the many valuable suggestions on product details.
