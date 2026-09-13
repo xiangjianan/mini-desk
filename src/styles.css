@@ -4168,19 +4168,24 @@ button.mobile-home-btn-quiet:focus-visible {
 }
 
 /* ---- 更换配对码：scrim + 底部 sheet ---- */
+/* scrim 仅在打开时挂载（MobileHome.vue v-if + Transition 淡出后卸载）：
+   iOS standalone 取状态栏底色时会采样顶部 fixed 元素的背景、无视 opacity，
+   若常驻 DOM（仅 opacity:0 隐藏），关闭 sheet 后状态栏会一直保持遮罩的灰色。 */
 .mobile-home-sheet-scrim {
   position: fixed;
   inset: 0;
   background: rgba(0, 0, 0, 0.42);
-  opacity: 0;
-  pointer-events: none;
-  transition: opacity var(--motion-medium) var(--motion-ease);
   z-index: 70;
 }
 
-.mobile-home-sheet-scrim.open {
-  opacity: 1;
-  pointer-events: auto;
+.mobile-home-scrim-enter-active,
+.mobile-home-scrim-leave-active {
+  transition: opacity var(--motion-medium) var(--motion-ease);
+}
+
+.mobile-home-scrim-enter-from,
+.mobile-home-scrim-leave-to {
+  opacity: 0;
 }
 
 .mobile-home-sheet {
@@ -4690,7 +4695,9 @@ button.mobile-home-btn-danger:focus-visible {
   grid-template-columns: minmax(0, 1fr);
   width: 100vw;
   height: 100vh;
-  padding: 0;
+  /* viewport-fit=cover 下（index.html）iPhone 横屏/iPad 等宽屏走桌面布局时，
+     用安全区内边距避免内容钻进刘海/圆角；无刘海设备 inset 为 0，等效原状。 */
+  padding: env(safe-area-inset-top, 0px) env(safe-area-inset-right, 0px) var(--safe-bottom) env(safe-area-inset-left, 0px);
   background: color-mix(in srgb, var(--background) 82%, var(--muted-surface));
   color: var(--foreground);
 }

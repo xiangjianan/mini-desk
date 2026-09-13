@@ -23,7 +23,8 @@ describe("workbench style contract", () => {
     const styles = readFileSync(resolve(__dirname, "../styles.css"), "utf8");
 
     expect(ruleBodies(styles, ".workbench-shell").join("\n")).not.toContain("grid-template-columns: 56px");
-    expectSelectorBody(styles, ".workbench-shell", "padding: 0");
+    // viewport-fit=cover（index.html）下用安全区内边距防刘海遮挡；无刘海设备 inset 为 0 等效 padding: 0。
+    expectSelectorBody(styles, ".workbench-shell", "padding: env(safe-area-inset-top, 0px)");
     expectSelectorBody(styles, ".workbench-main", "border-radius: 0");
     expectSelectorBody(styles, ".workbench-main", "grid-template-rows: 52px minmax(0, 1fr)");
     expectSelectorBody(styles, ".workbench-main", "transition: grid-template-rows 200ms var(--motion-ease)");

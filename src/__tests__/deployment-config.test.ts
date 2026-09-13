@@ -33,6 +33,16 @@ describe("pwa configuration", () => {
     expect(read("src/main.ts")).toContain("registerServiceWorker");
   });
 
+  it("makes the iOS standalone status bar transparent so the page paints the notch area", () => {
+    const index = read("index.html");
+
+    // viewport-fit=cover + black-translucent（缺一不可）：前者让内容顶进刘海区，
+    // 后者让 standalone 状态栏透明；两者齐备时页面自己的渐变涂满状态栏区域。
+    expect(index).toContain("viewport-fit=cover");
+    expect(index).toContain('name="apple-mobile-web-app-capable" content="yes"');
+    expect(index).toContain('name="apple-mobile-web-app-status-bar-style" content="black-translucent"');
+  });
+
   it("serves sw.js and the manifest with no-cache headers", () => {
     const headers = read("public/_headers");
 

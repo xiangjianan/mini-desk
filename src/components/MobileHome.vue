@@ -311,7 +311,11 @@ onBeforeUnmount(() => window.removeEventListener("keydown", onKeydown));
     </div>
 
     <!-- 更换配对码：底部 sheet 二次确认（确认动作回抛 App.vue 执行换码） -->
-    <div class="mobile-home-sheet-scrim" :class="{ open: sheetOpen }" aria-hidden="true" @click="closeSheet"></div>
+    <!-- scrim 关闭淡出后即卸载（v-if）：iOS standalone 会采样顶部 fixed 元素的背景色涂状态栏且无视
+         opacity，常驻 DOM 的半透明遮罩会让状态栏在关闭 sheet 后一直发灰。 -->
+    <Transition name="mobile-home-scrim">
+      <div v-if="sheetOpen" class="mobile-home-sheet-scrim" aria-hidden="true" @click="closeSheet"></div>
+    </Transition>
     <div class="mobile-home-sheet" :class="{ open: sheetOpen }" role="dialog" aria-modal="true" aria-labelledby="mobile-home-sheet-title">
       <span class="mobile-home-sheet-grab" aria-hidden="true"></span>
       <h3 id="mobile-home-sheet-title">{{ app.mobileInboxChangeCode }}</h3>

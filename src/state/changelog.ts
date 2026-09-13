@@ -29,6 +29,20 @@ export interface ChangelogEntry {
 
 export const CHANGELOG: ChangelogEntry[] = [
   {
+    version: "1.0.172",
+    date: "2026-09-13",
+    notes: {
+      zh: [
+        "修复：iOS 安装态下「更换配对码」取消后，手机状态栏（刘海区）持续发灰的问题",
+        "优化：状态栏/刘海区改为透明并由页面渐变铺满，与 Header 融为一体；深色主题下状态栏符号清晰可读",
+      ],
+      en: [
+        "Fixed: on installed iOS PWAs the status bar (notch area) stayed gray after canceling the change-pairing-code sheet",
+        "Improved: the status bar/notch area is now transparent and painted with the page gradient, blending into the header; status bar symbols stay legible in dark theme",
+      ],
+    },
+  },
+  {
     version: "1.0.171",
     date: "2026-09-13",
     notes: {

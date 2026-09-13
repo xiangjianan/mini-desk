@@ -104,7 +104,9 @@ const VersionHistory = defineAsyncComponent(() => import("./components/VersionHi
 // 配对弹窗含 qrcode 依赖，异步加载避免二维码库进主包；v-if + :key 用法与同步组件一致。
 const WorkspaceInboxDialog = defineAsyncComponent(() => import("./components/WorkspaceInboxDialog.vue"));
 
-const MOBILE_BREAKPOINT_QUERY = "(max-width: 900px)";
+// 940 而非 900：viewport-fit=cover（index.html）下 iPhone Pro Max 横屏布局宽度为完整 932pt
+// （cover 前是去刘海的 ~814pt），不抬高断点会让横屏从速记壳翻成桌面看板。
+const MOBILE_BREAKPOINT_QUERY = "(max-width: 940px)";
 const IMAGE_DELETE_GRACE_MS = 5000;
 const IMAGE_PREVIEW_CLOSE_MS = 220;
 const IMAGE_DENSITY_THRESHOLD = 30;
@@ -466,7 +468,7 @@ function forgetMobileInboxCode(): void {
  *  force 绕过移动端板效屏蔽；落点改为安全区感知的右下角（速记页无桌面编辑器可锚定）。 */
 function handleMobileInboxSent(count: number): void {
   showBubbleText(uiText.value.app.mobileInboxSent.replace("{count}", () => String(count)), undefined, { force: true });
-  companionPosition.value = { right: "16px", bottom: "calc(var(--safe-bottom) + 20px)" };
+  companionPosition.value = { right: "max(16px, env(safe-area-inset-right, 0px))", bottom: "calc(var(--safe-bottom) + 20px)" };
 }
 
 /** 速记页复制反馈：点击配对码 → 复制分组码文本 → 短暂弹「复制成功/失败」提示。 */
@@ -3234,7 +3236,7 @@ function getSpacePanelAnchor(): HTMLElement | undefined {
 }
 
 function isMobileLayout(): boolean {
-  return window.matchMedia?.(MOBILE_BREAKPOINT_QUERY).matches ?? window.innerWidth <= 900;
+  return window.matchMedia?.(MOBILE_BREAKPOINT_QUERY).matches ?? window.innerWidth <= 940;
 }
 
 function normalizeLink(value: string): string {

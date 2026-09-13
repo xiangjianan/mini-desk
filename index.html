@@ -2,7 +2,15 @@
 <html lang="zh-CN">
   <head>
     <meta charset="UTF-8" />
-    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <!-- viewport-fit=cover：内容延伸到刘海/状态栏下，由页面自己涂满该区域
+         （mobile-home 顶部即 Header 的浅蓝渐变；桌面壳用 safe-area padding 防遮挡）。
+         也规避 iOS standalone 采样 fixed 元素/ body 背景涂状态栏导致的灰条问题。 -->
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover" />
+    <!-- black-translucent 让 standalone 状态栏透明（与 cover 配合缺一不可，参考 time-traveler）：
+         页面渐变直接铺到刘海下。代价：iOS 状态栏时间/电池符号固定白色，
+         浅色主题下对比度低是已知取舍（刻意保持极浅渐变，不为此加深顶部）。 -->
+    <meta name="apple-mobile-web-app-capable" content="yes" />
+    <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent" />
     <meta name="app-version" content="1.0.171" />
     <meta name="theme-color" content="#fcfcfe" />
     <link rel="manifest" href="/manifest.webmanifest" />

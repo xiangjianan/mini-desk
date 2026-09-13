@@ -506,6 +506,11 @@ describe("App shell", () => {
 
       expect(wrapper.find('[data-testid="mobile-inbox-text"]').exists()).toBe(true);
       expect(wrapper.find('[data-testid="mobile-inbox-code-input"]').exists()).toBe(false);
+
+      // 取消后 scrim 必须真正移出 DOM：iOS standalone 会采样顶部 fixed 元素的背景色涂状态栏
+      // （无视 opacity），残留的 rgba 遮罩会让状态栏一直发灰（v-if + Transition 淡出后卸载）。
+      await new Promise((resolve) => setTimeout(resolve, 400));
+      expect(wrapper.find(".mobile-home-sheet-scrim").exists()).toBe(false);
     } finally {
       window.location.hash = "";
       wrapper?.unmount();
