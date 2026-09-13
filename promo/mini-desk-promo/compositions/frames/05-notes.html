@@ -1,0 +1,326 @@
+<template>
+  <div data-hf-id="hf-xl5g" id="root" data-composition-id="05-notes" data-width="1920" data-height="1080" data-start="0" data-duration="4.55">
+    <style>
+    /* PingFang SC is the frame.md display/body family; it is an OS font on the render
+       machine (macOS), declared locally — no project font files exist to point at. */
+    @font-face {
+      font-family: "PingFang SC";
+      src: local("PingFang SC");
+      font-weight: 100 900;
+      font-style: normal;
+    }
+
+      #root {
+        position: relative;
+        width: 1920px;
+        height: 1080px;
+        overflow: hidden;
+        font-family: "PingFang SC", sans-serif;
+        color: #eef2f8;
+      }
+      #root * {
+        margin: 0;
+        padding: 0;
+        box-sizing: border-box;
+      }
+
+      /* ── ground (full-bleed on its own clip, never on #root) ── */
+      .n5-bg-base {
+        position: absolute;
+        inset: 0;
+        background: #07090f;
+      }
+      .n5-wash {
+        position: absolute;
+        pointer-events: none;
+      }
+      .n5-wash-mint {
+        left: 170px;
+        top: 70px;
+        width: 900px;
+        height: 880px;
+        background: radial-gradient(closest-side, rgba(94, 234, 190, 0.06), rgba(94, 234, 190, 0) 72%);
+      }
+      .n5-wash-violet {
+        right: 40px;
+        top: -160px;
+        width: 820px;
+        height: 760px;
+        background: radial-gradient(closest-side, rgba(139, 92, 246, 0.055), rgba(139, 92, 246, 0) 72%);
+      }
+
+      /* ── browser mock (left hero, mirrored vs F02/F04) ── */
+      .n5-stage {
+        position: absolute;
+        inset: 0;
+      }
+      .n5-mock {
+        position: absolute;
+        left: 100px;
+        top: 160px;
+        width: 1060px;
+        height: 715px;
+        background: rgba(255, 255, 255, 0.045);
+        border: 1.5px solid rgba(255, 255, 255, 0.09);
+        border-radius: 20px;
+      }
+      .n5-mock-bar {
+        height: 48px;
+        display: flex;
+        align-items: center;
+        gap: 10px;
+        padding: 0 22px;
+        border-bottom: 1px solid rgba(255, 255, 255, 0.07);
+      }
+      .n5-dot {
+        width: 14px;
+        height: 14px;
+        border-radius: 50%;
+        background: rgba(255, 255, 255, 0.15);
+      }
+      .n5-screen {
+        position: absolute;
+        left: 22px;
+        right: 22px;
+        top: 70px;
+        bottom: 22px;
+        background: #0a0e16;
+        border: 1px solid rgba(255, 255, 255, 0.06);
+        border-radius: 12px;
+      }
+
+      /* ── right column ── */
+      .n5-copy {
+        position: absolute;
+        inset: 0;
+      }
+      .n5-col {
+        position: absolute;
+        right: 110px;
+        top: 300px;
+        width: 560px;
+      }
+      .n5-eyebrow {
+        font-size: 28px;
+        font-weight: 600;
+        letter-spacing: 4px;
+        color: #5eeabe;
+      }
+      .n5-display {
+        margin-top: 16px;
+        font-size: 66px;
+        font-weight: 700;
+        line-height: 1.25;
+        letter-spacing: -0.02em;
+        color: #eef2f8;
+      }
+      .n5-rail {
+        display: flex;
+        gap: 12px;
+        margin-top: 36px;
+      }
+      .n5-pill {
+        display: inline-block;
+        padding: 10px 22px;
+        font-size: 24px;
+        font-weight: 500;
+        border: 1.5px solid rgba(255, 255, 255, 0.12);
+        border-radius: 999px;
+        background: rgba(255, 255, 255, 0.03);
+      }
+      .n5-pill-label {
+        display: inline-block; /* required for transform on <span> */
+        transform-origin: 50% 50%;
+        color: rgb(120, 128, 148);
+        text-shadow: 0 0 0 rgba(94, 234, 190, 0);
+      }
+      .n5-sub {
+        margin-top: 22px;
+        font-size: 26px;
+        line-height: 1.6;
+        color: #a6b1c6;
+      }
+    </style>
+
+    <!-- ground clip -->
+    <div data-hf-id="hf-8q8m" class="clip" data-start="0" data-duration="4.55" data-track-index="0">
+      <div data-hf-id="hf-yvp9" class="n5-bg-base"></div>
+      <div data-hf-id="hf-wrjl" class="n5-wash n5-wash-mint"></div>
+      <div data-hf-id="hf-uwww" class="n5-wash n5-wash-violet"></div>
+    </div>
+
+    <!-- browser mock clip -->
+    <div data-hf-id="hf-pr0x" class="clip n5-stage" data-start="0" data-duration="4.55" data-track-index="1">
+      <div data-hf-id="hf-6v5e" class="n5-mock">
+        <div data-hf-id="hf-q0gx" class="n5-drift">
+          <div data-hf-id="hf-l6wy" class="n5-mock-bar">
+            <span data-hf-id="hf-0fjs" class="n5-dot"></span>
+            <span data-hf-id="hf-qmq8" class="n5-dot"></span>
+            <span data-hf-id="hf-pft5" class="n5-dot"></span>
+          </div>
+          <div data-hf-id="hf-jsik" class="n5-screen"></div>
+        </div>
+      </div>
+    </div>
+
+    <!-- 便签行编辑录屏 — hoisted to the host root by assemble-index.
+         Boots just after the mock settles (clip-gated "screen turns on"),
+         then plays through the frame; geometry matches .n5-screen. -->
+    <!-- approved frame video hoisted by assemble-index -->
+
+    <!-- right column clip -->
+    <div data-hf-id="hf-smo2" class="clip n5-copy" data-start="0" data-duration="4.55" data-track-index="3">
+      <div data-hf-id="hf-p00m" class="n5-col">
+        <div data-hf-id="hf-zmq1" class="n5-eyebrow">便签多页签</div>
+        <div data-hf-id="hf-0b4a" class="n5-display">
+          <div data-hf-id="hf-ojdm" class="n5-l1">点进去</div>
+          <div data-hf-id="hf-qqks" class="n5-l2">就写</div>
+        </div>
+        <div data-hf-id="hf-eu0w" class="n5-rail">
+          <span data-hf-id="hf-qcge" class="n5-pill"><span data-hf-id="hf-nw6r" class="n5-pill-label">页签 A</span></span>
+          <span data-hf-id="hf-yjyq" class="n5-pill"><span data-hf-id="hf-nhvq" class="n5-pill-label">页签 B</span></span>
+          <span data-hf-id="hf-yy9r" class="n5-pill"><span data-hf-id="hf-n3kp" class="n5-pill-label">页签 C</span></span>
+        </div>
+        <div data-hf-id="hf-vz4y" class="n5-sub">Tab 缩进 · 一个页签一个主题</div>
+      </div>
+    </div>
+
+    <script src="https://cdn.jsdelivr.net/npm/gsap@3.14.2/dist/gsap.min.js"></script>
+    <script>
+      (function () {
+        var DUR = 4.05;
+        window.__timelines = window.__timelines || {};
+        var tl = gsap.timeline({ paused: true });
+        window.__timelines["05-notes"] = tl;
+
+        var drift = document.querySelector(".n5-drift");
+        var pills = document.querySelectorAll(".n5-pill");
+        var labels = document.querySelectorAll(".n5-pill-label");
+
+        /* ── Scene 1 (0.0–1.0) — surface establishes: mock slides in from the
+              left and settles; the recording boots on its screen at 0.52
+              (host-hoisted video, clip-gated); eyebrow lands with it. ── */
+        tl.fromTo(
+          ".n5-mock",
+          { x: -120, opacity: 0 },
+          { x: 0, opacity: 1, duration: 0.55, ease: "power3.out" },
+          0.02
+        );
+        tl.fromTo(
+          ".n5-eyebrow",
+          { y: 16, opacity: 0 },
+          { y: 0, opacity: 1, duration: 0.4, ease: "power2.out" },
+          0.5
+        );
+
+        /* ── Scene 2 (0.6–1.6) — 「点进去 就写」per-word reveal on the VO;
+              tab rail fades in but stays grey. ── */
+        tl.fromTo(
+          ".n5-l1",
+          { y: 34, opacity: 0, filter: "blur(10px)" },
+          { y: 0, opacity: 1, filter: "blur(0px)", duration: 0.5, ease: "expo.out" },
+          0.60
+        );
+        tl.fromTo(
+          ".n5-l2",
+          { y: 34, opacity: 0, filter: "blur(10px)" },
+          { y: 0, opacity: 1, filter: "blur(0px)", duration: 0.5, ease: "expo.out" },
+          0.95
+        );
+        tl.fromTo(
+          ".n5-pill",
+          { y: 14, opacity: 0 },
+          { y: 0, opacity: 1, duration: 0.35, ease: "power2.out", stagger: 0.07 },
+          1.25
+        );
+        tl.fromTo(
+          ".n5-sub",
+          { y: 14, opacity: 0 },
+          { y: 0, opacity: 1, duration: 0.4, ease: "power2.out" },
+          1.60
+        );
+
+        /* ── Scenes 3–4 — one linear driver (ease none) sweeping scene time:
+              · discrete state step — a pill flips to its primary outline the
+                beat its tab is named (A 2.70 / B 3.05 / C 3.40, litness persists);
+              · asr-keyword-glow — attack/sustain/release envelope drives the
+                glyph text-shadow + scale, decaying to a rest breadcrumb, with a
+                slow sine breathe after release;
+              · sine idle float on the mock window (static-tour camera floor). ── */
+        var TAB_STARTS = [2.70, 3.05, 3.4];
+        var ATTACK = 0.12,
+          SUSTAIN = 0.3,
+          RELEASE = 0.25,
+          REST = 0.16,
+          MAX_BLUR = 30,
+          MAX_BOOST = 0.07;
+
+        function envAt(t, s) {
+          if (t < s) return 0;
+          if (t < s + ATTACK) return (t - s) / ATTACK;
+          if (t < s + ATTACK + SUSTAIN) return 1;
+          var rel = (t - s - ATTACK - SUSTAIN) / RELEASE;
+          return rel >= 1 ? REST : 1 - rel * (1 - REST);
+        }
+        function lerp(a, b, k) {
+          return Math.round(a + (b - a) * k);
+        }
+
+        var tabs = [];
+        for (var i = 0; i < TAB_STARTS.length; i++) {
+          tabs.push({ pill: pills[i], label: labels[i], start: TAB_STARTS[i] });
+        }
+
+        var drive = { t: 0 };
+        tl.to(
+          drive,
+          {
+            t: DUR,
+            duration: DUR,
+            ease: "none", /* linear — t maps 1:1 to scene time */
+            onUpdate: function () {
+              var t = drive.t;
+              drift.style.transform =
+                "translate(" +
+                (Math.sin(t * 0.9) * 4).toFixed(2) +
+                "px," +
+                (Math.sin(t * 0.6 + 1.3) * 5).toFixed(2) +
+                "px)";
+              for (var j = 0; j < tabs.length; j++) {
+                var tb = tabs[j];
+                var e0 = envAt(t, tb.start);
+                var lit = t >= tb.start;
+                var breathe =
+                  t > tb.start + ATTACK + SUSTAIN ? 1 + Math.sin(t * 4.5) * 0.1 : 1;
+                var e = e0 * breathe;
+                tb.pill.style.borderColor = lit
+                  ? "rgba(94,234,190,0.5)"
+                  : "rgba(255,255,255,0.12)";
+                tb.pill.style.backgroundColor = lit
+                  ? "rgba(94,234,190,0.07)"
+                  : "rgba(255,255,255,0.03)";
+                var k = Math.max(e, lit ? 1 : 0);
+                tb.label.style.color =
+                  "rgb(" +
+                  lerp(120, 94, k) +
+                  "," +
+                  lerp(128, 234, k) +
+                  "," +
+                  lerp(148, 190, k) +
+                  ")";
+                tb.label.style.textShadow =
+                  "0 0 " +
+                  (MAX_BLUR * e).toFixed(1) +
+                  "px rgba(94,234,190," +
+                  (0.5 * e).toFixed(3) +
+                  ")";
+                tb.label.style.transform = "scale(" + (1 + MAX_BOOST * e).toFixed(4) + ")";
+              }
+            },
+          },
+          0
+        );
+      })();
+    </script>
+  </div>
+</template>

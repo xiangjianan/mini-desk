@@ -1,0 +1,254 @@
+<template>
+  <style>
+    /* Frame 09 — 本地优先 · titlecard-reveal (Reproduce)
+       全片唯一呼吸拍：一次克制的 reveal + 静置（提速版：标签跟 VO 前置）。
+       Scene 1 (0.0–0.2s)  最暗 aurora 静场，空构图
+       Scene 2 (0.1–2.9s)  锁形 stroke draw-on；无账号/无后端标签随 VO 早落
+       Scene 3 (1.9–3.4s)  主句 fade-in 95%→100% settle + 点睛 + 第三枚标签
+       Scene 4 (3.4–3.89s) 全静置 hold（无呼吸、无漂移、无 exit）
+       注：id/class 前缀用 f09- 而非裸 frame_id（09- 数字开头不能做 CSS 选择器）。 */
+
+    /* OS-bundled CJK family, no shipped woff2 in this project — local() is the
+       lint-sanctioned declaration for installed system fonts (render host is macOS). */
+    @font-face {
+      font-family: "PingFang SC";
+      src: local("PingFang SC"), local("PingFangSC-Regular");
+      font-weight: 400;
+      font-style: normal;
+    }
+    @font-face {
+      font-family: "PingFang SC";
+      src: local("PingFang SC Semibold"), local("PingFangSC-Semibold");
+      font-weight: 600;
+      font-style: normal;
+    }
+
+    #root {
+      position: absolute;
+      inset: 0;
+      width: 1920px;
+      height: 1080px;
+      overflow: hidden;
+      font-family: "PingFang SC", system-ui, sans-serif;
+      color: #eef2f8;
+    }
+
+    /* ── ground：最暗 aurora（full-bleed 画在 clip 层，非 #root）── */
+    .f09-bg {
+      position: absolute;
+      inset: 0;
+      background: #07090f;
+    }
+    .f09-aurora {
+      position: absolute;
+      inset: 0;
+      opacity: 0;
+      background-image:
+        radial-gradient(860px 600px at 50% 30%, rgba(94, 234, 190, 0.09), rgba(94, 234, 190, 0) 68%),
+        radial-gradient(1000px 700px at 16% 82%, rgba(34, 211, 238, 0.06), rgba(34, 211, 238, 0) 70%),
+        radial-gradient(920px 640px at 86% 16%, rgba(139, 92, 246, 0.065), rgba(139, 92, 246, 0) 72%);
+    }
+    .f09-vignette {
+      position: absolute;
+      inset: 0;
+      background: radial-gradient(125% 95% at 50% 42%, rgba(0, 0, 0, 0) 55%, rgba(0, 0, 0, 0.45) 100%);
+    }
+
+    /* ── content ── */
+    .f09-stage {
+      position: absolute;
+      inset: 0;
+    }
+    .f09-col {
+      position: absolute;
+      left: 0;
+      right: 0;
+      top: 240px;
+      text-align: center;
+    }
+
+    .f09-icon-card {
+      display: inline-flex;
+      align-items: center;
+      justify-content: center;
+      width: 120px;
+      height: 120px;
+      border-radius: 28px;
+      background: rgba(94, 234, 190, 0.07);
+      border: 1.5px solid rgba(94, 234, 190, 0.15);
+      opacity: 0;
+    }
+    .f09-lock {
+      display: block;
+      width: 72px;
+      height: 72px;
+    }
+    .f09-stroke {
+      fill: none;
+      stroke: #5eeabe;
+      stroke-width: 8;
+      stroke-linecap: round;
+      stroke-linejoin: round;
+    }
+    .f09-stroke-thin {
+      stroke-width: 6;
+    }
+
+    .f09-headline {
+      margin-top: 46px;
+      font-size: 84px;
+      line-height: 1.15;
+      font-weight: 600;
+      letter-spacing: -0.01em;
+      color: #eef2f8;
+      opacity: 0;
+    }
+    .f09-accent {
+      color: #5eeabe;
+      opacity: 0;
+    }
+
+    .f09-tags {
+      position: absolute;
+      left: 0;
+      right: 0;
+      bottom: 260px;
+      display: flex;
+      justify-content: center;
+      gap: 22px;
+    }
+    .f09-pill {
+      display: inline-flex;
+      align-items: center;
+      gap: 14px;
+      padding: 14px 32px;
+      font-size: 28px;
+      line-height: 1.2;
+      font-weight: 400;
+      color: #eef2f8;
+      background: rgba(255, 255, 255, 0.045);
+      border: 1.5px solid rgba(255, 255, 255, 0.09);
+      border-radius: 999px;
+      opacity: 0;
+    }
+    .f09-dot {
+      width: 8px;
+      height: 8px;
+      border-radius: 50%;
+      background: #5eeabe;
+    }
+  </style>
+
+  <div data-hf-id="hf-mrtz" id="root" data-composition-id="09-privacy" data-start="0" data-duration="4.39" data-width="1920" data-height="1080">
+    <!-- Scene 1：最暗 aurora 静场 -->
+    <div data-hf-id="hf-mssr" class="clip f09-bg" data-start="0" data-duration="4.39" data-track-index="0">
+      <div data-hf-id="hf-yp9y" class="f09-aurora" id="f09-aurora"></div>
+      <div data-hf-id="hf-hk3y" class="f09-vignette"></div>
+    </div>
+
+    <div data-hf-id="hf-72vh" class="clip f09-stage" data-start="0" data-duration="4.39" data-track-index="1">
+      <div data-hf-id="hf-ibli" class="f09-col">
+        <!-- Scene 2：锁形图标 stroke draw-on -->
+        <div data-hf-id="hf-81sq" class="f09-icon-card" id="f09-icon-card">
+          <svg data-hf-id="hf-08tq" class="f09-lock" viewBox="0 0 120 120" xmlns="http://www.w3.org/2000/svg" aria-hidden="true">
+            <path data-hf-id="hf-q1eb" id="f09-lock-shackle" class="f09-stroke" d="M 44 58 L 44 42 A 16 16 0 0 1 76 42 L 76 58" />
+            <rect data-hf-id="hf-wylr" id="f09-lock-body" class="f09-stroke" x="32" y="58" width="56" height="38" rx="10" />
+            <circle data-hf-id="hf-lb40" id="f09-lock-hole" class="f09-stroke f09-stroke-thin" cx="60" cy="73" r="5" />
+            <path data-hf-id="hf-i8wq" id="f09-lock-stem" class="f09-stroke f09-stroke-thin" d="M 60 78 L 60 86" />
+          </svg>
+        </div>
+        <!-- 主句：fade-in + 95%→100% settle -->
+        <div data-hf-id="hf-8324" class="f09-headline" id="f09-headline">你的数据，<span data-hf-id="hf-yn9a" class="f09-accent" id="f09-accent">只在你的浏览器</span></div>
+      </div>
+
+      <!-- Scene 3：三枚小标签，一拍一枚 -->
+      <div data-hf-id="hf-phwr" class="f09-tags">
+        <span data-hf-id="hf-hm7k" class="f09-pill" id="f09-pill-1"><span data-hf-id="hf-8dge" class="f09-dot"></span>无账号</span>
+        <span data-hf-id="hf-6pxp" class="f09-pill" id="f09-pill-2"><span data-hf-id="hf-wf0i" class="f09-dot"></span>无后端</span>
+        <span data-hf-id="hf-6wrg" class="f09-pill" id="f09-pill-3"><span data-hf-id="hf-wtbj" class="f09-dot"></span>随时完整导出</span>
+      </div>
+    </div>
+  </div>
+
+  <script>
+    (function () {
+      // svg-path-draw setup — 实测路径长度，绝不猜数
+      var strokeIds = [
+        "f09-lock-shackle",
+        "f09-lock-body",
+        "f09-lock-hole",
+        "f09-lock-stem"
+      ];
+      for (var i = 0; i < strokeIds.length; i++) {
+        var el = document.getElementById(strokeIds[i]);
+        if (!el) continue;
+        var len = el.getTotalLength() * 1.02; // 略高估，宁隐勿裁
+        el.style.strokeDasharray = String(len);
+        el.style.strokeDashoffset = String(len);
+      }
+
+      window.__timelines = window.__timelines || {};
+      var tl = gsap.timeline({ paused: true });
+
+      // Scene 1 (0.0–0.4s)：色场自近纯深底轻轻落定（唯一的地面运动）
+      tl.fromTo(
+        "#f09-aurora",
+        { opacity: 0 },
+        { opacity: 1, duration: 0.9, ease: "power2.out" },
+        0
+      );
+
+      // Scene 2 (0.1–2.9s)：锁形 draw-on（分段 70–75% 交叠，笔画 ease 一律 power2.out）
+      tl.fromTo(
+        "#f09-icon-card",
+        { opacity: 0 },
+        { opacity: 1, duration: 0.3, ease: "power1.out" },
+        0.12
+      );
+      tl.to("#f09-lock-shackle", { strokeDashoffset: 0, duration: 0.45, ease: "power2.out" }, 0.2);
+      tl.to("#f09-lock-body", { strokeDashoffset: 0, duration: 0.42, ease: "power2.out" }, 0.52);
+      tl.to("#f09-lock-hole", { strokeDashoffset: 0, duration: 0.24, ease: "power2.out" }, 0.83);
+      tl.to("#f09-lock-stem", { strokeDashoffset: 0, duration: 0.17, ease: "power2.out" }, 0.99);
+
+      // 无账号/无后端两枚标签随 VO 词前置落定（0.199 / 1.079），一拍一枚
+      tl.fromTo(
+        "#f09-pill-1",
+        { opacity: 0, y: 16 },
+        { opacity: 1, y: 0, duration: 0.42, ease: "power2.out" },
+        0.24
+      );
+      tl.fromTo(
+        "#f09-pill-2",
+        { opacity: 0, y: 16 },
+        { opacity: 1, y: 0, duration: 0.42, ease: "power2.out" },
+        1.1
+      );
+
+      // Scene 3 (1.9–3.4s)：主句落定（scale-swap 克制档：fade + 95%→100%，smooth ease-out）
+      tl.fromTo(
+        "#f09-headline",
+        { opacity: 0, scale: 0.95 },
+        { opacity: 1, scale: 1, duration: 0.7, ease: "power3.out" },
+        1.92
+      );
+      // 点睛 span 在主句将定未定之际接住（delayed inner reveal）
+      tl.fromTo(
+        "#f09-accent",
+        { opacity: 0 },
+        { opacity: 1, duration: 0.5, ease: "power1.out" },
+        2.4
+      );
+      // 第三枚标签（随时完整导出）收尾，无对应 VO 词，作补拍
+      tl.fromTo(
+        "#f09-pill-3",
+        { opacity: 0, y: 16 },
+        { opacity: 1, y: 0, duration: 0.42, ease: "power2.out" },
+        2.95
+      );
+
+      // Scene 4 (3.4–3.89s)：全静置 hold——无呼吸动画、无漂移、无 exit。
+
+      window.__timelines["09-privacy"] = tl;
+    })();
+  </script>
+</template>

@@ -1,0 +1,326 @@
+<template>
+  <script src="https://cdn.jsdelivr.net/npm/gsap@3.14.2/dist/gsap.min.js"></script>
+  <style>
+    /* 10-outro — Do less, do it well. Brand lockup closer (dark aurora ground) */
+    #root {
+      position: relative;
+      width: 1920px;
+      height: 1080px;
+      overflow: hidden;
+      font-family: sans-serif;
+      color: #eef2f8;
+    }
+
+    .f10-outro-ground,
+    .f10-outro-content {
+      position: absolute;
+      inset: 0;
+    }
+
+    /* ── ground: deep-space base + three-color aurora converging mid ── */
+    .f10-outro-base {
+      position: absolute;
+      inset: 0;
+      background: linear-gradient(180deg, #07090f 0%, #0a1018 52%, #07090f 100%);
+    }
+    .f10-outro-blob {
+      position: absolute;
+      border-radius: 50%;
+      will-change: transform, opacity;
+    }
+    .f10-outro-blob-mint {
+      width: 1500px;
+      height: 1100px;
+      left: -50px;
+      top: -130px;
+      background: radial-gradient(
+        50% 50% at 50% 50%,
+        rgba(94, 234, 190, 0.5) 0%,
+        rgba(94, 234, 190, 0.16) 34%,
+        rgba(94, 234, 190, 0) 68%
+      );
+    }
+    .f10-outro-blob-cyan {
+      width: 1600px;
+      height: 1150px;
+      left: 430px;
+      top: -115px;
+      background: radial-gradient(
+        50% 50% at 50% 50%,
+        rgba(34, 211, 238, 0.46) 0%,
+        rgba(34, 211, 238, 0.14) 34%,
+        rgba(34, 211, 238, 0) 68%
+      );
+    }
+    .f10-outro-blob-violet {
+      width: 1700px;
+      height: 1200px;
+      left: 110px;
+      top: 90px;
+      background: radial-gradient(
+        50% 50% at 50% 50%,
+        rgba(167, 139, 250, 0.42) 0%,
+        rgba(167, 139, 250, 0.13) 34%,
+        rgba(167, 139, 250, 0) 68%
+      );
+    }
+
+    /* faint closing rings behind the lockup (closing-frame atmosphere) */
+    .f10-outro-ring {
+      position: absolute;
+      border-radius: 50%;
+      will-change: transform, opacity;
+    }
+    .f10-outro-ring-a {
+      width: 560px;
+      height: 560px;
+      left: 680px;
+      top: 190px;
+      border: 1px solid rgba(94, 234, 190, 0.1);
+    }
+    .f10-outro-ring-b {
+      width: 800px;
+      height: 800px;
+      left: 560px;
+      top: 70px;
+      border: 1px solid rgba(94, 234, 190, 0.06);
+    }
+
+    /* ambient-glow-bloom hero halo (behind the lockup) + pill halo */
+    .f10-outro-glow {
+      position: absolute;
+      will-change: transform, opacity;
+      transform-origin: 50% 50%;
+    }
+    .f10-outro-glow-lockup {
+      width: 1500px;
+      height: 980px;
+      left: 210px;
+      top: -20px;
+      background: radial-gradient(
+        50% 50% at 50% 50%,
+        rgba(94, 234, 190, 0.34) 0%,
+        rgba(94, 234, 190, 0.1) 36%,
+        rgba(94, 234, 190, 0) 62%
+      );
+    }
+    .f10-outro-glow-pill {
+      width: 720px;
+      height: 200px;
+      left: 600px;
+      top: 750px;
+      background: radial-gradient(
+        50% 50% at 50% 50%,
+        rgba(94, 234, 190, 0.4) 0%,
+        rgba(94, 234, 190, 0) 60%
+      );
+    }
+
+    /* ── content: centered lockup stack (approved sketch geometry) ── */
+    .f10-outro-stack {
+      position: absolute;
+      left: 0;
+      right: 0;
+      top: 330px;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+    }
+    .f10-outro-logo {
+      position: relative;
+      z-index: 5; /* logo presses over the sliding wordmark */
+      width: 150px;
+      height: 150px;
+      border-radius: 32px;
+      overflow: hidden;
+      background: #ffffff;
+      transform-origin: 50% 50%;
+      will-change: transform;
+    }
+    .f10-outro-logo img {
+      display: block;
+      width: 100%;
+      height: 100%;
+    }
+    .f10-outro-wordmask {
+      position: relative;
+      z-index: 3;
+      width: 680px;
+      margin-top: 44px;
+      overflow: hidden; /* clip mask for the slide-out-from-behind */
+    }
+    .f10-outro-wordmark {
+      font-size: 96px;
+      font-weight: 800;
+      letter-spacing: 2px;
+      line-height: 1.16;
+      text-align: center;
+      white-space: nowrap;
+      color: #eef2f8;
+      will-change: transform;
+    }
+    .f10-outro-slogan {
+      margin-top: 26px;
+      font-size: 36px;
+      font-weight: 400;
+      letter-spacing: 3px;
+      color: #a6b1c6;
+    }
+    .f10-outro-w {
+      display: inline-block;
+      will-change: transform;
+    }
+
+    /* URL pill — sits above the caption keep-out (bottom edge y = 890) */
+    .f10-outro-pill {
+      position: absolute;
+      left: 0;
+      right: 0;
+      bottom: 190px;
+      width: fit-content;
+      margin: 0 auto;
+      padding: 16px 44px;
+      font-size: 30px;
+      line-height: 1;
+      font-weight: 600;
+      letter-spacing: 1.5px;
+      color: #5eeabe;
+      border: 2px solid rgba(94, 234, 190, 0.28);
+      border-radius: 999px;
+      background: rgba(94, 234, 190, 0.05);
+      transform-origin: 50% 50%;
+      will-change: transform;
+    }
+  </style>
+
+  <div data-hf-id="hf-bjj2" id="root" data-composition-id="10-outro" data-start="0" data-duration="5" data-width="1920" data-height="1080">
+    <!-- ground track: aurora rises to its brightest, converging mid -->
+    <div data-hf-id="hf-af41" class="clip f10-outro-ground" data-start="0" data-duration="5" data-track-index="0">
+      <div data-hf-id="hf-wf6z" class="f10-outro-base"></div>
+      <div data-hf-id="hf-bbxx" class="f10-outro-blob f10-outro-blob-mint" id="f10-outro-blob-mint"></div>
+      <div data-hf-id="hf-ex4b" class="f10-outro-blob f10-outro-blob-cyan" id="f10-outro-blob-cyan"></div>
+      <div data-hf-id="hf-iqbz" class="f10-outro-blob f10-outro-blob-violet" id="f10-outro-blob-violet"></div>
+      <div data-hf-id="hf-l3d4" class="f10-outro-ring f10-outro-ring-a" id="f10-outro-ring-a"></div>
+      <div data-hf-id="hf-qegs" class="f10-outro-ring f10-outro-ring-b" id="f10-outro-ring-b"></div>
+      <div data-hf-id="hf-ibwb" class="f10-outro-glow f10-outro-glow-lockup" id="f10-outro-glow-lockup"></div>
+      <div data-hf-id="hf-57fh" class="f10-outro-glow f10-outro-glow-pill" id="f10-outro-glow-pill"></div>
+    </div>
+
+    <!-- content track: logo → wordmark → slogan → URL pill -->
+    <div data-hf-id="hf-h9p6" class="clip f10-outro-content" data-start="0" data-duration="5" data-track-index="1">
+      <div data-hf-id="hf-a09o" class="f10-outro-stack">
+        <div data-hf-id="hf-8pmq" class="f10-outro-logo" id="f10-outro-logo">
+          <img data-hf-id="hf-8teo" src="assets/logo.png" alt="Mini Desk">
+        </div>
+        <div data-hf-id="hf-f2i4" class="f10-outro-wordmask">
+          <div data-hf-id="hf-r392" class="f10-outro-wordmark" id="f10-outro-wordmark">Mini Desk</div>
+        </div>
+        <div data-hf-id="hf-eu0q" class="f10-outro-slogan" id="f10-outro-slogan"><span data-hf-id="hf-gzmh" class="f10-outro-w">Do</span> <span data-hf-id="hf-sz27" class="f10-outro-w">less,</span> <span data-hf-id="hf-iq0p" class="f10-outro-w">do</span> <span data-hf-id="hf-pyul" class="f10-outro-w">it</span> <span data-hf-id="hf-02fm" class="f10-outro-w">well.</span></div>
+      </div>
+      <div data-hf-id="hf-5kcd" class="f10-outro-pill" id="f10-outro-pill">minidesk.online</div>
+    </div>
+  </div>
+
+  <script>
+    (function () {
+      window.__timelines = window.__timelines || {};
+      var tl = gsap.timeline({ paused: true });
+
+      /* Scene 1 (0.0–0.2s) — brief stage beat; aurora preheats toward full
+         brightness, the three glows converging on mid-frame (VO "Do" at 0.159
+         in the faster cut leaves almost no empty beat). */
+      tl.fromTo(
+        "#f10-outro-blob-mint",
+        { opacity: 0, scale: 1.18, x: -140, y: -90 },
+        { opacity: 0.42, scale: 1, x: 0, y: 0, duration: 1.4, ease: "power2.out" },
+        0.05
+      );
+      tl.fromTo(
+        "#f10-outro-blob-cyan",
+        { opacity: 0, scale: 1.18, x: 170, y: -60 },
+        { opacity: 0.36, scale: 1, x: 0, y: 0, duration: 1.3, ease: "power2.out" },
+        0.16
+      );
+      tl.fromTo(
+        "#f10-outro-blob-violet",
+        { opacity: 0, scale: 1.15, x: -40, y: 130 },
+        { opacity: 0.32, scale: 1, x: 0, y: 0, duration: 1.3, ease: "power2.out" },
+        0.28
+      );
+      tl.fromTo(
+        "#f10-outro-ring-a",
+        { opacity: 0, scale: 0.94 },
+        { opacity: 0.55, scale: 1, duration: 1.0, ease: "power2.out" },
+        0.3
+      );
+      tl.fromTo(
+        "#f10-outro-ring-b",
+        { opacity: 0, scale: 0.94 },
+        { opacity: 0.5, scale: 1, duration: 1.15, ease: "power2.out" },
+        0.42
+      );
+
+      /* Scene 2 (0.1–1.6s) — VO "Do less, do it well" (0.159–1.179): logo
+         spring-blooms from zero on 「Do」 (packet-granted elastic exemption:
+         back.out + slight rotation-in), then the wordmark pulls out from the
+         right under its clip mask, logo pressing over it in z-order. */
+      tl.fromTo(
+        "#f10-outro-logo",
+        { scale: 0, opacity: 0, rotation: -9 },
+        { scale: 1, opacity: 1, rotation: 0, duration: 0.75, ease: "back.out(1.6)" },
+        0.12
+      );
+      /* ambient-glow-bloom: hero halo lands on the logo's settle as one beat */
+      tl.fromTo(
+        "#f10-outro-glow-lockup",
+        { opacity: 0, scale: 0.84 },
+        { opacity: 0.26, scale: 1, duration: 0.4, ease: "power2.out" },
+        0.55
+      );
+      tl.fromTo(
+        "#f10-outro-wordmark",
+        { x: 700 },
+        { x: 0, duration: 0.85, ease: "power4.out" },
+        0.7
+      );
+
+      /* Scene 3 (1.15–3.25s) — slogan lands word-by-word via left→right
+         clip-path wipe (echoing the already-spoken English line); then the URL
+         pill pops in on the 「minidesk.online」VO cue (2.599), primary border +
+         halo blooming one beat late. */
+      var words = document.querySelectorAll(".f10-outro-w");
+      var W_STARTS = [1.15, 1.24, 1.33, 1.42, 1.51];
+      words.forEach(function (w, i) {
+        tl.fromTo(
+          w,
+          { clipPath: "inset(0% 100% 0% 0%)", x: 20 },
+          { clipPath: "inset(0% 0% 0% 0%)", x: 0, duration: 0.42, ease: "power3.out" },
+          W_STARTS[i]
+        );
+      });
+      tl.fromTo(
+        "#f10-outro-pill",
+        { scale: 0, opacity: 0, y: 14 },
+        { scale: 1, opacity: 1, y: 0, duration: 0.55, ease: "power3.out" },
+        2.55
+      );
+      tl.fromTo(
+        "#f10-outro-pill",
+        { borderColor: "rgba(94,234,190,0.28)", backgroundColor: "rgba(94,234,190,0.05)" },
+        { borderColor: "rgba(94,234,190,0.8)", backgroundColor: "rgba(94,234,190,0.11)", duration: 0.35, ease: "power2.out" },
+        2.9
+      );
+      tl.fromTo(
+        "#f10-outro-glow-pill",
+        { opacity: 0, scale: 0.8 },
+        { opacity: 0.28, scale: 1, duration: 0.35, ease: "power2.out" },
+        2.9
+      );
+
+      /* Scene 4 (3.25–5.0s) — dead-still hold: the lockup is the endpoint,
+         nothing moves through the final frame (35% of the duration). */
+
+      window.__timelines["10-outro"] = tl;
+    })();
+  </script>
+</template>

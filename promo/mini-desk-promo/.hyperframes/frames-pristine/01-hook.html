@@ -1,0 +1,388 @@
+<template>
+  <style>
+    /* Named family resolves from the render host via local() — no network, no invented file.
+       Fallbacks are generic keywords only. */
+    @font-face {
+      font-family: "PingFang SC";
+      src: local("PingFangSC-Medium"), local("PingFang SC Medium"), local("PingFang SC");
+      font-weight: 500;
+      font-style: normal;
+    }
+    @font-face {
+      font-family: "PingFang SC";
+      src: local("PingFangSC-Semibold"), local("PingFang SC Semibold"), local("PingFang SC");
+      font-weight: 600;
+      font-style: normal;
+    }
+    @font-face {
+      font-family: "PingFang SC";
+      src: local("PingFangSC-Semibold"), local("PingFang SC Semibold"), local("PingFang SC");
+      font-weight: 700;
+      font-style: normal;
+    }
+
+    #root {
+      position: absolute;
+      inset: 0;
+      width: 1920px;
+      height: 1080px;
+      overflow: hidden;
+      container-type: size;
+      font-family: "PingFang SC", system-ui, sans-serif;
+      -webkit-font-smoothing: antialiased;
+      color: #eef2f8;
+    }
+
+    /* — aurora ground (the full-bleed base lives on this clip, never on #root) — */
+    #root [data-01-hook="blob"] {
+      position: absolute;
+      will-change: transform;
+      transform-origin: 50% 50%;
+      pointer-events: none;
+    }
+    #root [data-01-hook="vignette"] {
+      position: absolute;
+      inset: 0;
+      pointer-events: none;
+    }
+
+    /* — scattered word cards (approved sketch: four corners, small, gray-white) — */
+    #root [data-01-hook="card"] {
+      position: absolute;
+      padding: 14px 34px;
+      font-size: 1.77cqw;
+      font-weight: 500;
+      line-height: 1.2;
+      white-space: nowrap;
+      color: #a6b1c6;
+      background: rgba(255, 255, 255, 0.045);
+      border: 1.5px solid rgba(255, 255, 255, 0.09);
+      border-radius: 14px;
+      will-change: transform, filter;
+      transform-origin: 50% 50%;
+    }
+
+    /* — fusion bloom + drifting motes — */
+    #root [data-01-hook="bloom"],
+    #root [data-01-hook="glow"] {
+      position: absolute;
+      border-radius: 50%;
+      pointer-events: none;
+      will-change: transform, opacity;
+      transform-origin: 50% 50%;
+    }
+    #root [data-01-hook="mote"] {
+      position: absolute;
+      width: 6px;
+      height: 6px;
+      border-radius: 50%;
+      background: #5eeabe;
+      opacity: 0;
+      pointer-events: none;
+      will-change: transform, opacity;
+    }
+
+    /* — centered statement (approved copy + hierarchy) — */
+    #root [data-01-hook="statement"] {
+      position: absolute;
+      left: 0;
+      right: 0;
+      top: 464px;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      pointer-events: none;
+    }
+    #root [data-01-hook="accent-line"] {
+      width: 60px;
+      height: 4px;
+      border-radius: 2px;
+      background: #5eeabe;
+      margin-bottom: 16px;
+      will-change: transform;
+      transform-origin: 50% 50%;
+    }
+    #root [data-01-hook="eyebrow"] {
+      font-size: 1.56cqw;
+      font-weight: 600;
+      letter-spacing: 5px;
+      color: #5eeabe;
+      margin-bottom: 18px;
+      will-change: transform, opacity;
+    }
+    #root [data-01-hook="headline"] {
+      font-size: 4.58cqw;
+      font-weight: 700;
+      line-height: 1.15;
+      letter-spacing: -1px;
+      white-space: nowrap;
+      color: #eef2f8;
+    }
+    #root [data-01-hook="char"],
+    #root [data-01-hook="char-acc"] {
+      display: inline-block;
+      will-change: transform, opacity;
+    }
+    #root [data-01-hook="char-acc"] {
+      color: #5eeabe;
+    }
+
+    /* — logo lockup (spring-pop finale) — */
+    #root [data-01-hook="ring"] {
+      position: absolute;
+      width: 140px;
+      height: 140px;
+      border-radius: 50%;
+      border: 2px solid rgba(94, 234, 190, 0.45);
+      pointer-events: none;
+      will-change: transform, opacity;
+      transform-origin: 50% 50%;
+    }
+    #root [data-01-hook="lockup"] {
+      display: inline-flex;
+      align-items: center;
+      gap: 16px;
+      padding: 12px 28px;
+      background: rgba(255, 255, 255, 0.045);
+      border: 1.5px solid rgba(255, 255, 255, 0.09);
+      border-radius: 999px;
+      will-change: transform, opacity;
+      transform-origin: 50% 50%;
+    }
+    #root [data-01-hook="logo"] {
+      display: block;
+      width: 64px;
+      height: 64px;
+      image-rendering: pixelated; /* 512 → 64 is an exact 8:1 integer step: crisp pixel art */
+    }
+    #root [data-01-hook="wordmark"] {
+      font-size: 1.67cqw;
+      font-weight: 600;
+      letter-spacing: 0.5px;
+      color: #eef2f8;
+    }
+  </style>
+
+  <div
+    id="root"
+    data-composition-id="01-hook"
+    data-start="0"
+    data-duration="8.986"
+    data-width="1920"
+    data-height="1080"
+  >
+    <!-- track 0 · aurora ground -->
+    <div
+      class="clip"
+      data-start="0"
+      data-duration="8.986"
+      data-track-index="0"
+      style="position: absolute; inset: 0; overflow: hidden; background: #07090f;"
+    >
+      <div
+        id="01-hook-blob-a"
+        data-01-hook="blob"
+        style="left: -500px; top: -560px; width: 1600px; height: 1600px; background: radial-gradient(circle, rgba(94, 234, 190, 0.1) 0%, transparent 62%);"
+      ></div>
+      <div
+        id="01-hook-blob-b"
+        data-01-hook="blob"
+        style="left: 880px; top: -280px; width: 1500px; height: 1500px; background: radial-gradient(circle, rgba(34, 211, 238, 0.08) 0%, transparent 60%);"
+      ></div>
+      <div
+        id="01-hook-blob-c"
+        data-01-hook="blob"
+        style="left: 60px; top: 160px; width: 1800px; height: 1800px; background: radial-gradient(circle, rgba(139, 92, 246, 0.1) 0%, transparent 64%);"
+      ></div>
+      <div
+        id="01-hook-glow"
+        data-01-hook="glow"
+        style="left: 410px; top: 210px; width: 1100px; height: 700px; opacity: 0; background: radial-gradient(ellipse, rgba(94, 234, 190, 0.06) 0%, transparent 65%);"
+      ></div>
+      <div
+        data-01-hook="vignette"
+        style="background: radial-gradient(ellipse 75% 65% at 50% 46%, transparent 55%, rgba(3, 5, 10, 0.5) 100%);"
+      ></div>
+    </div>
+
+    <!-- track 1 · scattered fragments → convergence → fusion -->
+    <div
+      class="clip"
+      data-start="0"
+      data-duration="8.986"
+      data-track-index="1"
+      style="position: absolute; inset: 0; overflow: hidden;"
+    >
+      <div id="01-hook-card-1" data-01-hook="card" style="left: 220px; top: 200px;">截图</div>
+      <div id="01-hook-card-2" data-01-hook="card" style="right: 260px; top: 180px;">便签</div>
+      <div id="01-hook-card-3" data-01-hook="card" style="left: 320px; bottom: 240px;">提醒</div>
+      <div id="01-hook-card-4" data-01-hook="card" style="right: 300px; bottom: 260px;">快捷动作</div>
+
+      <div
+        id="01-hook-bloom"
+        data-01-hook="bloom"
+        style="left: 900px; top: 500px; width: 120px; height: 120px; opacity: 0; background: radial-gradient(circle, rgba(94, 234, 190, 0.5) 0%, transparent 70%);"
+      ></div>
+
+      <div id="01-hook-mote-1" data-01-hook="mote" style="left: 600px; top: 720px;"></div>
+      <div id="01-hook-mote-2" data-01-hook="mote" style="left: 1330px; top: 745px;"></div>
+      <div id="01-hook-mote-3" data-01-hook="mote" style="left: 1130px; top: 690px;"></div>
+    </div>
+
+    <!-- track 2 · the aggregated statement -->
+    <div
+      class="clip"
+      data-start="0"
+      data-duration="8.986"
+      data-track-index="2"
+      style="position: absolute; inset: 0; overflow: hidden;"
+    >
+      <div data-01-hook="statement">
+        <div id="01-hook-accent-line" data-01-hook="accent-line"></div>
+        <div id="01-hook-eyebrow" data-01-hook="eyebrow">把零碎的一天</div>
+        <div data-01-hook="headline">
+          <span id="01-hook-c1" data-01-hook="char">收</span><span id="01-hook-c2" data-01-hook="char">进</span><span id="01-hook-c3" data-01-hook="char">一</span><span id="01-hook-c4" data-01-hook="char">张</span><span id="01-hook-c5" data-01-hook="char-acc">安</span><span id="01-hook-c6" data-01-hook="char-acc">静</span><span id="01-hook-c7" data-01-hook="char-acc">的</span><span id="01-hook-c8" data-01-hook="char-acc">小</span><span id="01-hook-c9" data-01-hook="char-acc">桌</span><span id="01-hook-c10" data-01-hook="char-acc">面</span>
+        </div>
+      </div>
+    </div>
+
+    <!-- track 3 · logo lockup finale -->
+    <div
+      class="clip"
+      data-start="0"
+      data-duration="8.986"
+      data-track-index="3"
+      style="position: absolute; inset: 0; overflow: hidden;"
+    >
+      <div id="01-hook-ring" data-01-hook="ring" style="left: 890px; top: 750px;"></div>
+      <div
+        style="position: absolute; left: 0; right: 0; bottom: 215px; display: flex; justify-content: center;"
+      >
+        <div id="01-hook-lockup" data-01-hook="lockup">
+          <img id="01-hook-logo" data-01-hook="logo" src="assets/logo.png" alt="Mini Desk" />
+          <span data-01-hook="wordmark">Mini Desk</span>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <script src="https://cdn.jsdelivr.net/npm/gsap@3.14.2/dist/gsap.min.js"></script>
+  <script>
+    (function () {
+      var D = 8.986;
+      var el = function (id) {
+        return document.getElementById(id);
+      };
+
+      var tl = gsap.timeline({ paused: true });
+      /* full-span anchor so the sub-composition timeline spans the whole scene */
+      tl.to({}, { duration: D }, 0);
+
+      /* — aurora: one finite slow pass across the whole shot (seek-safe, no repeat) — */
+      tl.to(el("01-hook-blob-a"), { x: 90, y: -50, rotation: 8, duration: D, ease: "sine.inOut" }, 0);
+      tl.to(el("01-hook-blob-b"), { x: -80, y: 44, duration: D, ease: "sine.inOut" }, 0);
+      tl.to(el("01-hook-blob-c"), { x: -46, scale: 1.12, duration: D, ease: "sine.inOut" }, 0);
+
+      /* Scene 1 (0–0.44s): aurora only — the deliberate empty half-beat before the VO. */
+
+      /* Scene 2: four word cards, motion-blur fly-in, each on its spoken word
+         (VO: 截图 0.44 / 便签 1.56 / 提醒 2.44 / 快捷动作 3.88), then a quiet drift. */
+      var CARDS = [
+        { id: "01-hook-card-1", fx: -440, fy: -240, rot: -2.5, at: 0.44, cx: 400, cy: 294 },
+        { id: "01-hook-card-2", fx: 440, fy: -240, rot: 2.0, at: 1.56, cx: -722, cy: 341 },
+        { id: "01-hook-card-3", fx: -440, fy: 240, rot: -1.5, at: 2.44, cx: 662, cy: -257 },
+        { id: "01-hook-card-4", fx: 440, fy: 240, rot: 2.5, at: 3.88, cx: -288, cy: -330 }
+      ];
+      CARDS.forEach(function (c, i) {
+        var t = el(c.id);
+        var skew = c.fx < 0 ? 9 : -9;
+        /* motion-blur fly-in: fast diagonal streak resolving sharp at its corner slot */
+        tl.fromTo(
+          t,
+          { x: c.fx, y: c.fy, opacity: 0, rotation: c.rot, skewX: skew, filter: "blur(18px)" },
+          { x: 0, y: 0, opacity: 1, rotation: c.rot, skewX: 0, filter: "blur(0px)", duration: 0.4, ease: "power2.out" },
+          c.at
+        );
+        /* gentle held breathing until the convergence cue */
+        tl.to(t, { y: 6, duration: 4.8 - (c.at + 0.4), ease: "sine.inOut" }, c.at + 0.4);
+        /* Scene 3 (VO 把零碎的一天 4.86–6.04): converge inward, power3 long tail,
+           color shifting to primary mid-flight */
+        tl.fromTo(
+          t,
+          { x: 0, y: 6, rotation: c.rot, scale: 1 },
+          {
+            x: c.cx,
+            y: c.cy,
+            rotation: 0,
+            scale: 0.8,
+            color: "#5eeabe",
+            borderColor: "rgba(94,234,190,0.34)",
+            backgroundColor: "rgba(94,234,190,0.07)",
+            duration: 0.92,
+            ease: "power3.inOut",
+            immediateRender: false
+          },
+          4.86 + i * 0.04
+        );
+        /* fragments dissolve into the line (mid-shot swap, not a frame exit) */
+        tl.to(t, { opacity: 0, scale: 0.55, filter: "blur(10px)", duration: 0.38, ease: "power2.in" }, 5.94 + i * 0.03);
+      });
+
+      /* fusion spark at the moment the fragments become the phrase */
+      tl.fromTo(
+        el("01-hook-bloom"),
+        { scale: 0.2, opacity: 0 },
+        { scale: 1.8, opacity: 0.38, duration: 0.28, ease: "power2.out" },
+        5.9
+      );
+      tl.to(el("01-hook-bloom"), { scale: 2.6, opacity: 0, duration: 0.5, ease: "power1.out" }, 6.18);
+
+      /* Scene 4: the aggregated statement lands (VO breath 6.04–6.72, then the line 6.72–8.72) */
+      tl.fromTo(el("01-hook-accent-line"), { scaleX: 0 }, { scaleX: 1, duration: 0.45, ease: "power3.out" }, 5.72);
+      tl.fromTo(
+        el("01-hook-eyebrow"),
+        { opacity: 0, y: 12, letterSpacing: "9px" },
+        { opacity: 1, y: 0, letterSpacing: "5px", duration: 0.5, ease: "power3.out" },
+        5.92
+      );
+      tl.fromTo(el("01-hook-glow"), { opacity: 0 }, { opacity: 1, duration: 1.4, ease: "power2.out" }, 6.5);
+
+      /* headline chars, each on its spoken syllable */
+      var CHAR_AT = [6.72, 6.96, 7.08, 7.28, 7.66, 7.8, 7.94, 8.18, 8.42, 8.66];
+      CHAR_AT.forEach(function (at, i) {
+        tl.fromTo(
+          el("01-hook-c" + (i + 1)),
+          { opacity: 0, y: 30 },
+          { opacity: 1, y: 0, duration: 0.32, ease: "power3.out" },
+          at
+        );
+      });
+
+      /* logo spring-pop — packet-granted playful exemption: back.out(1.7) ≤ 2 */
+      tl.fromTo(
+        el("01-hook-lockup"),
+        { scale: 0, opacity: 0, rotation: -3 },
+        { scale: 1, opacity: 1, rotation: 0, duration: 0.55, ease: "back.out(1.7)" },
+        7.62
+      );
+      /* one-shot glow-ring pulse behind the pop */
+      tl.fromTo(
+        el("01-hook-ring"),
+        { scale: 0.5, opacity: 0 },
+        { scale: 1.5, opacity: 0.32, duration: 0.3, ease: "power2.out" },
+        7.62
+      );
+      tl.to(el("01-hook-ring"), { scale: 2.1, opacity: 0, duration: 0.45, ease: "power1.out" }, 7.92);
+
+      /* closing beat stays alive: soft motes drift up through the held lockup */
+      [6.3, 6.75, 7.2].forEach(function (at, i) {
+        var m = el("01-hook-mote-" + (i + 1));
+        tl.fromTo(m, { opacity: 0, y: 0 }, { opacity: 0.28, y: -46, duration: 1.1, ease: "power1.out" }, at);
+        tl.to(m, { opacity: 0, y: -100, duration: 1.3, ease: "power1.in" }, at + 1.1);
+      });
+
+      window.__timelines = window.__timelines || {};
+      window.__timelines["01-hook"] = tl;
+    })();
+  </script>
+</template>

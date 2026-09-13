@@ -1,0 +1,209 @@
+<template id="captions-template" data-composition-id="captions" data-width="1920" data-height="1080">
+<script src="https://cdn.jsdelivr.net/npm/gsap@3.14.2/dist/gsap.min.js"></script>
+
+
+<style data-brand-tokens="">
+      :root {
+      --bg: #07090f;
+      --primary: #5eeabe;
+      --text: #eef2f8;
+      --text-muted: #a6b1c6;
+      --text-light: #6d7890;
+      --accent-light: rgba(94, 234, 190, 0.07);
+      --accent-medium: rgba(94, 234, 190, 0.15);
+      --border: rgba(255, 255, 255, 0.09);
+      --card-bg: rgba(255, 255, 255, 0.045);
+      --positive: #059669;
+      --negative: #dc2626;
+      --grad-1: #5eeabe;
+      --grad-2: #22d3ee;
+      --grad-3: #a78bfa;
+      --violet: #8b5cf6;
+      --cap-ink: #eef2f8;
+      --cap-canvas: #07090f;
+      --cap-accent: #22d3ee;
+      --cap-accent-2: #8b5cf6;
+      --font-display: "PingFang SC", system-ui, serif;
+      --font-body: "PingFang SC", system-ui, sans-serif;
+      --cap-band-top: 900px;
+      --cap-band-height: 180px;
+      }
+    </style>
+
+
+<style>
+  @font-face {
+    font-family: "PingFang SC";
+    src: local("PingFang SC"), local("PingFangSC-Regular");
+    font-weight: 100 900;
+    font-style: normal;
+  }
+</style>
+
+<style>
+  #captions-root {
+    position: absolute;
+    inset: 0;
+    pointer-events: none;
+  }
+  .caption-layer {
+    position: absolute;
+    inset: 0;
+    z-index: 20;
+    pointer-events: none;
+  }
+  /* the keep-out band, from captionBand(H) — frame content stays above it */
+  .caption-stage {
+    position: absolute;
+    left: 0;
+    right: 0;
+    top: var(--cap-band-top, 900px);
+    height: var(--cap-band-height, 180px);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+  }
+  .caption-group {
+    /* every group is absolutely stacked over the SAME band — exactly one shown at a
+       time via opacity. Must be absolute: in-flow groups would lay out side-by-side. */
+    position: absolute;
+    inset: 0;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    opacity: 0;
+  }
+
+  /* THE tinted card — 4% cobalt fill, 1.5px 20%-cobalt border, soft 14px corners,
+     NO shadow (the tinted card does the lift; cast depth is forbidden) */
+  .caption-pill {
+    max-width: 78%;
+    padding: 20px 44px 24px;
+    background: color-mix(in srgb, var(--cap-accent, #1e2bfa) 4%, var(--cap-canvas, #fdfae7));
+    border: 1.5px solid color-mix(in srgb, var(--cap-accent, #1e2bfa) 20%, transparent);
+    border-radius: 14px;
+  }
+  .caption-line {
+    display: flex;
+    flex-wrap: wrap;
+    justify-content: center;
+    gap: 0.1em 0.34em;
+    font-family: "PingFang SC", system-ui, sans-serif;
+    font-weight: 600;
+    font-size: clamp(40px, 4.4vw, 58px);
+    line-height: 1.16;
+    letter-spacing: -0.02em;
+  }
+
+  /* upcoming — muted gray, no chip */
+  .caption-word {
+    display: inline-block;
+    padding: 0 0.18em;
+    border-radius: 0.32em;
+    color: color-mix(in srgb, var(--cap-ink, #111111) 52%, var(--cap-canvas, #fdfae7));
+  }
+  /* current word — THE solid cobalt chip (the single-accent gesture; pill-rounded
+     fill, NO shadow), cream reading on top */
+  .caption-word.is-active {
+    color: var(--cap-canvas, #fdfae7);
+    background: var(--cap-accent, #1e2bfa);
+    box-shadow: none;
+  }
+  /* already spoken — solid near-black ink, chip cleared */
+  .caption-word.is-spoken {
+    color: var(--cap-ink, #111111);
+    background: transparent;
+    box-shadow: none;
+  }
+
+  /* optional per-word accents (dormant until a word-classer tags them) */
+  /* brand / key term — cobalt, the system's one accent on a key word */
+  .caption-word.cap-brand {
+    color: var(--cap-accent, #1e2bfa);
+  }
+  /* numerals / data — cobalt 700, the figure voice */
+  .caption-word.cap-num {
+    font-family: "PingFang SC", system-ui, sans-serif;
+    font-weight: 700;
+    color: var(--cap-accent, #1e2bfa);
+  }
+  /* emphasis — a directional-red hairline underline (inline only, never a fill) */
+  .caption-word.cap-cta {
+    text-decoration: underline;
+    text-decoration-thickness: 2px;
+    text-decoration-color: var(--cap-accent-2, #dc2626);
+    text-underline-offset: 0.1em;
+  }
+
+  @media (max-aspect-ratio: 9/16) {
+    .caption-pill {
+      max-width: 92%;
+    }
+    .caption-line {
+      font-size: clamp(34px, 5.4vw, 48px);
+    }
+  }
+</style>
+
+<div data-hf-id="hf-ycai" id="captions-root" data-composition-id="captions" data-timeline-locked="" data-start="0" data-duration="44.888" data-fps="30" data-width="1920" data-height="1080">
+  <div data-hf-id="hf-9flp" class="caption-layer" aria-hidden="true">
+    <div data-hf-id="hf-ajrg" id="caption-stage" class="caption-stage"></div>
+  </div>
+</div>
+
+<script>
+  // captions.mjs injects the engine's scene-aware groups + real duration here.
+  var GROUPS = [{"id":"caption-group-0","frame":1,"start":0.299,"end":2.749,"text":"截图、便签、提醒、快捷动作。"},{"id":"caption-group-1","frame":1,"start":2.799,"end":5.665,"text":"把零碎的一天，收进一张安静的小桌面。"},{"id":"caption-group-2","frame":2,"start":5.835,"end":8.194,"text":"导入一个主题空间，十秒上手，"},{"id":"caption-group-3","frame":2,"start":8.214,"end":9.427,"text":"看板即刻成形。"},{"id":"caption-group-4","frame":3,"start":9.756,"end":11.907,"text":"常去的地方，一键打开；"},{"id":"caption-group-5","frame":3,"start":12.036,"end":13.946,"text":"常用的模板，一键复制。"},{"id":"caption-group-6","frame":4,"start":14.195,"end":16.325,"text":"提醒事项，轻重自分。"},{"id":"caption-group-7","frame":4,"start":16.436,"end":20.372,"text":"星标置顶，截止清晰，今日重点一眼看清。"},{"id":"caption-group-8","frame":5,"start":20.641,"end":21.882,"text":"便签点进去就写。"},{"id":"caption-group-9","frame":5,"start":21.902,"end":24.447,"text":"Tab缩进，一个页签一个主题。"},{"id":"caption-group-10","frame":6,"start":24.596,"end":27.32,"text":"Ctrl+V，截图先进图床，原图躺在本地。"},{"id":"caption-group-11","frame":7,"start":27.49,"end":30.439,"text":"工作、学习、旅行，各就各位。"},{"id":"caption-group-12","frame":7,"start":30.549,"end":32.649,"text":"深色浅色，随手切换。"},{"id":"caption-group-13","frame":8,"start":32.959,"end":35.94,"text":"七套主题空间，导入即用，改改成你的。"},{"id":"caption-group-14","frame":9,"start":36.169,"end":37.869,"text":"没有账号，没有后端。"},{"id":"caption-group-15","frame":9,"start":37.889,"end":39.858,"text":"你的数据，只在你的浏览器。"},{"id":"caption-group-16","frame":10,"start":40.047,"end":41.517,"text":"Do less, do it well."},{"id":"caption-group-17","frame":10,"start":41.647,"end":43.881,"text":"现在就打开 minidesk.online。"}];
+  var DURATION = 44.888;
+
+  (function () {
+    var stage = document.getElementById("caption-stage");
+
+    /* full-clause mode: ONE text node per pill — no per-word spans, no karaoke */
+    GROUPS.forEach(function (group, g) {
+      var groupEl = document.createElement("div");
+      groupEl.className = "caption-group";
+      groupEl.id = "caption-group-" + g;
+      var pill = document.createElement("div");
+      pill.className = "caption-pill";
+      var line = document.createElement("div");
+      line.className = "caption-line";
+      line.textContent = group.text;
+      pill.appendChild(line);
+      groupEl.appendChild(pill);
+      stage.appendChild(groupEl);
+    });
+
+    window.__timelines = window.__timelines || {};
+    var tl = gsap.timeline({ paused: true });
+
+    /* whole-pill fade in/out — deterministic tweens only (seek-safe both ways) */
+    GROUPS.forEach(function (group, g) {
+      var groupEl = document.getElementById("caption-group-" + g);
+      var span = Math.max(0.05, group.end - group.start);
+      var fadeIn = Math.min(0.12, span * 0.5);
+      var outStart = Math.max(group.start + fadeIn, group.end - 0.15);
+      tl.fromTo(groupEl, { opacity: 0 }, { opacity: 1, duration: fadeIn, ease: "power1.out" }, group.start);
+      tl.to(groupEl, { opacity: 0, duration: Math.max(0.05, group.end - outStart), ease: "power1.in" }, outStart);
+      // deterministic kill — exit tween must win even under seek races
+      tl.set(groupEl, { opacity: 0, visibility: "hidden" }, group.end);
+    });
+
+    // full-span anchor so the sub-comp timeline spans the whole video
+    tl.to({}, { duration: DURATION }, 0);
+    window.__timelines["captions"] = tl;
+  })();
+</script>
+
+<style>
+  .caption-line { line-height: 1.1 !important; }
+</style>
+<style>
+  /* full-clause mode overrides: single text node, uniform ink (word rules inert) */
+  .caption-line { color: var(--cap-ink, #111111); }
+</style>
+<style>
+  /* full-clause mode overrides: single text node, uniform ink (word rules inert) */
+  .caption-line { color: var(--cap-ink, #111111); }
+</style>
+</template>

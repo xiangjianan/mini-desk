@@ -1,0 +1,288 @@
+<template>
+  <style>
+    /* PingFang SC is the frame.md display/body family; it is an OS font on the render
+       machine (macOS), declared locally — no project font files exist to point at. */
+    @font-face {
+      font-family: "PingFang SC";
+      src: local("PingFang SC");
+      font-weight: 100 900;
+      font-style: normal;
+    }
+
+    /* frame.md — Mini Desk dark-aurora tokens: bg #07090f · primary #5eeabe · text #eef2f8
+       muted #a6b1c6 · border rgba(255,255,255,.09) · card-bg rgba(255,255,255,.045) */
+    #root {
+      position: relative;
+      width: 1920px;
+      height: 1080px;
+      overflow: hidden;
+      font-family: "PingFang SC", "SF Pro Display", sans-serif;
+      color: #eef2f8;
+    }
+
+    /* ---- track 0 · full-bleed ground (never on #root) ---- */
+    .f04-ground {
+      position: absolute;
+      inset: 0;
+      background:
+        radial-gradient(640px 520px at 1290px 500px, rgba(94, 234, 190, 0.09), transparent 70%),
+        radial-gradient(760px 560px at 130px 980px, rgba(139, 92, 246, 0.055), transparent 72%),
+        #07090f;
+    }
+
+    /* ---- track 1 · content ---- */
+
+    /* left column — approved sketch anchor: left 110 / top 300 / width 540 */
+    .f04-col {
+      position: absolute;
+      left: 110px;
+      top: 300px;
+      width: 540px;
+    }
+
+    .f04-eyebrow-line {
+      width: 44px;
+      height: 4px;
+      border-radius: 2px;
+      background: #5eeabe;
+      margin-bottom: 14px;
+      transform-origin: 0% 50%;
+    }
+    .f04-eyebrow {
+      font-size: 28px;
+      font-weight: 600;
+      letter-spacing: 4px;
+      color: #5eeabe;
+    }
+
+    .f04-headline {
+      margin-top: 16px;
+      font-size: 76px;
+      font-weight: 700;
+      line-height: 1.12;
+      letter-spacing: -0.02em;
+      color: #eef2f8;
+    }
+    .f04-w {
+      display: inline-block;
+      will-change: transform;
+    }
+    .f04-w-accent {
+      position: relative;
+      color: #5eeabe;
+    }
+    .f04-underline {
+      position: absolute;
+      left: 2px;
+      right: 2px;
+      bottom: -12px;
+      height: 4px;
+      border-radius: 2px;
+      background: #5eeabe;
+      transform-origin: 0% 50%;
+    }
+
+    .f04-chips {
+      display: flex;
+      flex-direction: column;
+      gap: 14px;
+      margin-top: 34px;
+    }
+    .f04-chip {
+      display: flex;
+      align-items: center;
+      gap: 14px;
+      width: fit-content;
+      padding: 12px 26px;
+      font-size: 26px;
+      letter-spacing: 0.02em;
+      color: #e6ecf7;
+      background: rgba(255, 255, 255, 0.045);
+      border: 1.5px solid rgba(255, 255, 255, 0.09);
+      border-radius: 12px;
+      transform-origin: 0% 50%;
+      will-change: transform;
+    }
+    .f04-chip svg {
+      display: block;
+      flex: 0 0 auto;
+    }
+
+    /* right browser mock — approved sketch anchor: right 100 / top 160 / width 1060 */
+    .f04-mock {
+      position: absolute;
+      left: 760px;
+      top: 160px;
+      width: 1060px;
+      height: 710px;
+      border-radius: 20px;
+      background: #0c101a;
+      border: 1.5px solid rgba(255, 255, 255, 0.09);
+      overflow: hidden;
+      will-change: transform;
+    }
+    .f04-bar {
+      display: flex;
+      align-items: center;
+      gap: 10px;
+      height: 48px;
+      padding: 0 20px;
+      background: rgba(255, 255, 255, 0.03);
+      border-bottom: 1px solid rgba(255, 255, 255, 0.07);
+    }
+    .f04-dot {
+      width: 13px;
+      height: 13px;
+      border-radius: 50%;
+      background: rgba(255, 255, 255, 0.22);
+    }
+    .f04-url {
+      margin-left: 16px;
+      padding: 6px 22px;
+      border-radius: 999px;
+      background: rgba(255, 255, 255, 0.055);
+      font-size: 20px;
+      letter-spacing: 0.03em;
+      color: #a6b1c6;
+    }
+    /* idle viewport under the hoisted recording — dark until the capture powers on */
+    .f04-screen {
+      width: 100%;
+      height: 662px;
+      background: #0b0f19;
+    }
+  </style>
+
+  <div data-hf-id="hf-9b4p" id="root" data-composition-id="04-todos" data-start="0" data-duration="6.99" data-width="1920" data-height="1080">
+    <!-- track 0 · ground -->
+    <div data-hf-id="hf-b49q" class="clip" data-start="0" data-duration="6.99" data-track-index="0">
+      <div data-hf-id="hf-b4wm" class="f04-ground"></div>
+    </div>
+
+    <!-- track 1 · content -->
+    <div data-hf-id="hf-f2dr" class="clip" data-start="0" data-duration="6.99" data-track-index="1">
+      <!-- left text column -->
+      <div data-hf-id="hf-w6iv" class="f04-col">
+        <div data-hf-id="hf-t1oa" class="f04-eyebrow-line" id="f04-eyebrow-line"></div>
+        <div data-hf-id="hf-8hmg" class="f04-eyebrow" id="f04-eyebrow">提醒事项</div>
+
+        <div data-hf-id="hf-wt3z" class="f04-headline">
+          <span data-hf-id="hf-zwfg" class="f04-w" id="f04-w1">轻重</span><span data-hf-id="hf-yylw" class="f04-w f04-w-accent" id="f04-w2">自分<span data-hf-id="hf-m12l" class="f04-underline" id="f04-underline"></span></span>
+        </div>
+
+        <div data-hf-id="hf-6gyw" class="f04-chips">
+          <div data-hf-id="hf-aq1c" class="f04-chip" id="f04-chip-1">
+            <svg data-hf-id="hf-0h35" width="22" height="22" viewBox="0 0 20 20" aria-hidden="true">
+              <path data-hf-id="hf-d74x" d="M10 1.8l2.6 5.3 5.8.8-4.2 4.1 1 5.8-5.2-2.7-5.2 2.7 1-5.8L1.6 7.9l5.8-.8z" fill="#5eeabe" />
+            </svg>
+            <span data-hf-id="hf-esrr">星标置顶</span>
+          </div>
+          <div data-hf-id="hf-jdx7" class="f04-chip" id="f04-chip-2">
+            <svg data-hf-id="hf-bhcl" width="22" height="22" viewBox="0 0 20 20" aria-hidden="true">
+              <circle data-hf-id="hf-0h7o" cx="10" cy="10" r="8" fill="none" stroke="#5eeabe" stroke-width="1.8" />
+              <path data-hf-id="hf-ydc5" d="M10 5.6V10l3.1 2.1" fill="none" stroke="#5eeabe" stroke-width="1.8" stroke-linecap="round" />
+            </svg>
+            <span data-hf-id="hf-fgzg">截止清晰</span>
+          </div>
+          <div data-hf-id="hf-fft6" class="f04-chip" id="f04-chip-3">
+            <svg data-hf-id="hf-co9o" width="22" height="22" viewBox="0 0 20 20" aria-hidden="true">
+              <circle data-hf-id="hf-24m4" cx="10" cy="10" r="8" fill="none" stroke="#5eeabe" stroke-width="1.8" />
+              <circle data-hf-id="hf-ddwx" cx="10" cy="10" r="3" fill="#5eeabe" />
+            </svg>
+            <span data-hf-id="hf-zqfe">今日重点一眼看清</span>
+          </div>
+        </div>
+      </div>
+
+      <!-- right browser mock (brand chrome, same family as F02) -->
+      <div data-hf-id="hf-i0w2" class="f04-mock" id="f04-mock">
+        <div data-hf-id="hf-syrm" class="f04-bar">
+          <span data-hf-id="hf-o793" class="f04-dot"></span>
+          <span data-hf-id="hf-ctdj" class="f04-dot"></span>
+          <span data-hf-id="hf-cf2i" class="f04-dot"></span>
+          <span data-hf-id="hf-b514" class="f04-url">minidesk.online</span>
+        </div>
+        <div data-hf-id="hf-fv0n" class="f04-screen"></div>
+      </div>
+    </div>
+
+    <!-- approved recording — hoisted to the host root at assembly; host geometry = the
+         mock's viewport rect (760,208 → 1060×662, 1.6 aspect = native 1280×800, no crop) -->
+    <!-- approved frame video hoisted by assemble-index -->
+
+    <script src="https://cdn.jsdelivr.net/npm/gsap@3.14.2/dist/gsap.min.js"></script>
+    <script>
+      (function () {
+        var tl = gsap.timeline({ paused: true });
+
+        /* Scene 1 (0.0–1.2s): browser mock slides in and docks; the recording powers on
+           exactly at landing (video window opens at 0.5s, host-side). Camera stays locked. */
+        tl.fromTo(
+          "#f04-mock",
+          { x: 150, opacity: 0 },
+          { x: 0, opacity: 1, duration: 0.5, ease: "power3.out" },
+          0.02
+        );
+
+        /* Scene 2 (0.8–1.9s): VO 「提醒事项，轻重自分」 — eyebrow fades in, then the
+           display line lands per-word (「自分」 primary), mint underline sweeps on the beat. */
+        tl.fromTo(
+          "#f04-eyebrow-line",
+          { scaleX: 0 },
+          { scaleX: 1, duration: 0.32, ease: "power2.out" },
+          0.80
+        );
+        tl.fromTo(
+          "#f04-eyebrow",
+          { x: -24, opacity: 0 },
+          { x: 0, opacity: 1, duration: 0.45, ease: "power3.out" },
+          0.85
+        );
+        tl.fromTo(
+          "#f04-w1",
+          { x: -52, opacity: 0 },
+          { x: 0, opacity: 1, duration: 0.6, ease: "power3.out" },
+          1.00
+        );
+        tl.fromTo(
+          "#f04-w2",
+          { x: -52, y: 14, opacity: 0 },
+          { x: 0, y: 0, opacity: 1, duration: 0.6, ease: "power3.out" },
+          1.30
+        );
+        tl.fromTo(
+          "#f04-underline",
+          { scaleX: 0 },
+          { scaleX: 1, duration: 0.42, ease: "power2.out" },
+          1.85
+        );
+
+        /* Scene 3 (2.5–5.2s): three chips pop one per VO beat (spring-pop-entrance:
+           scale 0 → 1, small y rise, power3.out, origin-anchored at the column edge). */
+        tl.fromTo(
+          "#f04-chip-1",
+          { scale: 0, opacity: 0, y: 12 },
+          { scale: 1, opacity: 1, y: 0, duration: 0.5, ease: "power3.out" },
+          2.50
+        );
+        tl.fromTo(
+          "#f04-chip-2",
+          { scale: 0, opacity: 0, y: 12 },
+          { scale: 1, opacity: 1, y: 0, duration: 0.5, ease: "power3.out" },
+          3.70
+        );
+        tl.fromTo(
+          "#f04-chip-3",
+          { scale: 0, opacity: 0, y: 12 },
+          { scale: 1, opacity: 1, y: 0, duration: 0.55, ease: "power3.out" },
+          4.80
+        );
+
+        /* Scene 4 (5.4s → end): full hold. No exits. */
+
+        window.__timelines = window.__timelines || {};
+        window.__timelines["04-todos"] = tl;
+      })();
+    </script>
+  </div>
+</template>

@@ -1,0 +1,336 @@
+<template>
+  <div data-hf-id="hf-538u" id="root" data-composition-id="03-quick" data-start="0" data-duration="5.05" data-width="1920" data-height="1080">
+    <style>
+    /* PingFang SC is the frame.md display/body family; it is an OS font on the render
+       machine (macOS), declared locally — no project font files exist to point at. */
+    @font-face {
+      font-family: "PingFang SC";
+      src: local("PingFang SC");
+      font-weight: 100 900;
+      font-style: normal;
+    }
+
+      #root {
+        position: absolute;
+        inset: 0;
+        width: 1920px;
+        height: 1080px;
+        overflow: hidden;
+        font-family: "PingFang SC", "SF Pro Display", sans-serif;
+        color: #eef2f8;
+      }
+      #root * {
+        margin: 0;
+        padding: 0;
+        box-sizing: border-box;
+      }
+
+      /* ── ground: dark-aurora field with quiet static washes (frame.md palette) ── */
+      .quick-bg {
+        position: absolute;
+        inset: 0;
+        background: #07090f;
+      }
+      .quick-bg-wash {
+        position: absolute;
+        width: 1500px;
+        height: 1500px;
+        border-radius: 50%;
+        pointer-events: none;
+      }
+      .quick-wash-mint {
+        left: 210px;
+        top: -510px;
+        background: radial-gradient(circle, rgba(94, 234, 190, 0.05) 0%, rgba(94, 234, 190, 0) 62%);
+      }
+      .quick-wash-cyan {
+        left: 950px;
+        top: -630px;
+        background: radial-gradient(circle, rgba(34, 211, 238, 0.04) 0%, rgba(34, 211, 238, 0) 62%);
+      }
+      .quick-wash-violet {
+        left: -450px;
+        top: 200px;
+        background: radial-gradient(circle, rgba(139, 92, 246, 0.05) 0%, rgba(139, 92, 246, 0) 62%);
+      }
+
+      /* ── right column (approved sketch geometry: right 120 / top 250 zone / w 560) ── */
+      .quick-content {
+        position: absolute;
+        inset: 0;
+      }
+      .quick-column {
+        position: absolute;
+        left: 1240px;
+        top: 280px;
+        width: 560px;
+      }
+      .quick-accent-line {
+        width: 60px;
+        height: 4px;
+        border-radius: 2px;
+        background: #5eeabe;
+      }
+      .quick-eyebrow {
+        margin-top: 16px;
+        font-size: 26px;
+        font-weight: 600;
+        letter-spacing: 6px;
+        line-height: 36px;
+        color: #5eeabe;
+      }
+
+      /* value cards — tinted glass per frame.md card-tinted, NO shadow */
+      .quick-card {
+        position: relative;
+        background: rgba(255, 255, 255, 0.045);
+        border: 1.5px solid rgba(255, 255, 255, 0.09);
+        border-radius: 20px;
+        padding: 30px 34px;
+      }
+      .quick-card-1 {
+        margin-top: 26px;
+      }
+      .quick-card-2 {
+        margin-top: 20px;
+      }
+
+      /* type: 62px display lines, fixed 82px line boxes (reserved space, no reflow) */
+      .quick-card-line {
+        font-size: 62px;
+        font-weight: 700;
+        line-height: 82px;
+        letter-spacing: -0.02em;
+        color: #eef2f8;
+        white-space: nowrap;
+        height: 82px;
+      }
+      .quick-card-body {
+        position: relative;
+        z-index: 2;
+      }
+      .quick-primary {
+        color: #5eeabe;
+      }
+
+      /* 3D-depth stack — front layer relative (defines size), back layers absolute */
+      .quick-depth {
+        position: relative;
+        z-index: 2;
+      }
+      .quick-depth-layer {
+        font-size: 62px;
+        font-weight: 700;
+        line-height: 82px;
+        letter-spacing: -0.02em;
+        color: #eef2f8;
+        white-space: nowrap;
+      }
+      .quick-depth-back {
+        position: absolute;
+        top: 0;
+        left: 0;
+        pointer-events: none;
+      }
+      .quick-depth-front {
+        position: relative;
+        z-index: 10;
+      }
+
+      /* glow halo — positioned layer BEHIND the card text (z 1 < body z 2) */
+      .quick-glow {
+        position: absolute;
+        z-index: 1;
+        left: -40px;
+        top: -70px;
+        width: 640px;
+        height: 340px;
+        border-radius: 50%;
+        pointer-events: none;
+        background: radial-gradient(ellipse, rgba(94, 234, 190, 0.32) 0%, rgba(94, 234, 190, 0) 65%);
+      }
+
+      /* pill seal — stroked capsule around the tail phrase (一键打开 / 一键复制);
+         scaleX-animated mark, text untouched. Line 2 box: y 112–196, x 34–282 in card coords. */
+      .quick-pill {
+        position: absolute;
+        z-index: 3;
+        left: 22px;
+        top: 106px;
+        width: 272px;
+        height: 94px;
+        border: 3px solid #5eeabe;
+        border-radius: 999px;
+        pointer-events: none;
+        transform-origin: 0% 50%;
+      }
+
+      /* ── approved focal video (hoisted to index root by assemble-index;
+             inline geometry mirrors data-frame-video-* for direct inspection) ── */
+      #quick-video {
+        position: absolute;
+        left: 110px;
+        top: 220px;
+        width: 1060px;
+        height: 640px;
+        object-fit: cover;
+      }
+    </style>
+
+    <!-- ground clip (full-bleed background never on #root) -->
+    <div data-hf-id="hf-jzs3" class="clip quick-bg" data-start="0" data-duration="5.05" data-track-index="0">
+      <div data-hf-id="hf-20t1" class="quick-bg-wash quick-wash-mint"></div>
+      <div data-hf-id="hf-ozx8" class="quick-bg-wash quick-wash-cyan"></div>
+      <div data-hf-id="hf-gx8k" class="quick-bg-wash quick-wash-violet"></div>
+    </div>
+
+    <!-- approved capture: features-quick.mp4 — hoisted, then driven by id -->
+    <!-- approved frame video hoisted by assemble-index -->
+
+    <!-- right column content clip -->
+    <div data-hf-id="hf-48cn" class="clip quick-content" data-start="0" data-duration="5.05" data-track-index="2">
+      <div data-hf-id="hf-quos" class="quick-column">
+        <div data-hf-id="hf-ybog" class="quick-accent-line" id="quick-accent-line"></div>
+        <div data-hf-id="hf-rol2" class="quick-eyebrow" id="quick-eyebrow">快捷动作</div>
+
+        <!-- S2: 「常去的地方，<br>一键打开」 — 3D-depth pop (static depth) -->
+        <div data-hf-id="hf-95mm" class="quick-card quick-card-1" id="quick-card-1">
+          <div data-hf-id="hf-axv8" class="quick-glow" id="quick-glow-1"></div>
+          <div data-hf-id="hf-sa58" class="quick-pill" id="quick-pill-1"></div>
+          <div data-hf-id="hf-npky" class="quick-depth" id="quick-depth-1">
+            <!-- back layers injected by script at final offsets; front layer authored -->
+            <div data-hf-id="hf-xp6t" class="quick-depth-layer quick-depth-front" id="quick-front-1">常去的地方，<br data-hf-id="hf-x5px"><span data-hf-id="hf-gmja" class="quick-primary">一键打开</span></div>
+          </div>
+        </div>
+
+        <!-- S3: 「常用的模板，<br>一键复制」 — discrete whole-sentence swap -->
+        <div data-hf-id="hf-958i" class="quick-card quick-card-2" id="quick-card-2">
+          <div data-hf-id="hf-jlr3" class="quick-glow" id="quick-glow-2"></div>
+          <div data-hf-id="hf-35mv" class="quick-pill" id="quick-pill-2"></div>
+          <div data-hf-id="hf-cqop" class="quick-card-body">
+            <div data-hf-id="hf-ebin" class="quick-card-line" id="quick-line-a"></div>
+            <div data-hf-id="hf-3g10" class="quick-card-line" id="quick-line-b"><span data-hf-id="hf-ehh6" class="quick-primary">一键复制</span></div>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <script src="https://cdn.jsdelivr.net/npm/gsap@3.14.2/dist/gsap.min.js"></script>
+    <script>
+      (function () {
+        var DUR = 4.55;
+        var tl = gsap.timeline({ paused: true });
+        window.__timelines = window.__timelines || {};
+        window.__timelines["03-quick"] = tl;
+
+        var video = document.getElementById("quick-video");
+        var accentLine = document.getElementById("quick-accent-line");
+        var eyebrow = document.getElementById("quick-eyebrow");
+        var card1 = document.getElementById("quick-card-1");
+        var card2 = document.getElementById("quick-card-2");
+        var glow1 = document.getElementById("quick-glow-1");
+        var glow2 = document.getElementById("quick-glow-2");
+        var pill1 = document.getElementById("quick-pill-1");
+        var pill2 = document.getElementById("quick-pill-2");
+        var lineA = document.getElementById("quick-line-a");
+        var lineB = document.getElementById("quick-line-b");
+
+        /* ═══ Scene 1 (0.0–1.0) — video scale-up lands center-right + low-amp breath ═══
+           Big state: center (1440,470), scale 1.35 → box 725..2156 × 28..892
+           (claims center-right, bleeds off-canvas right, bottom stays above the 896 keep-out) */
+        tl.set(video, { x: 800, y: -70 }, 0);
+        tl.fromTo(
+          video,
+          { x: 800, scale: 1.04, opacity: 0 },
+          { x: 800, scale: 1.35, opacity: 1, duration: 0.55, ease: "power2.out" },
+          0
+        );
+        // sine-wave-loop: low amp, gated to this window only; y alone composes with the y=-70 base
+        tl.to(video, { y: "-=6", duration: 0.23, ease: "sine.inOut", yoyo: true, repeat: 1 }, 0.58);
+
+        /* ═══ Scene 2 (0.85–2.1) — signature: weight-transfer 滑移让位 + 同锚点交棒 ═══
+           Video slides left + scales down to the landed sketch box (110,220,1060×640);
+           its right edge sweeps past x=1240 mid-slide, so chrome + card1 rise from the
+           vacated space as it clears — one handoff event, not two. */
+        tl.to(video, { x: 0, y: 0, scale: 1, duration: 0.75, ease: "power3.inOut" }, 0.85);
+        tl.fromTo(accentLine, { x: -16, opacity: 0 }, { x: 0, opacity: 1, duration: 0.4, ease: "power2.out" }, 1.30);
+        tl.fromTo(eyebrow, { x: -16, opacity: 0 }, { x: 0, opacity: 1, duration: 0.4, ease: "power2.out" }, 1.36);
+        // 3D-depth type (static-depth variation): back layers built at final offsets
+        var stack1 = document.getElementById("quick-depth-1");
+        var front1 = document.getElementById("quick-front-1");
+        var BACKS = [
+          { alpha: 0.2, i: 1 },
+          { alpha: 0.12, i: 2 },
+          { alpha: 0.06, i: 3 },
+        ];
+        for (var b = BACKS.length - 1; b >= 0; b--) {
+          var layerEl = document.createElement("div");
+          layerEl.className = "quick-depth-layer quick-depth-back";
+          layerEl.style.color = "rgba(94, 234, 190, " + BACKS[b].alpha + ")";
+          layerEl.style.transform = "translate(" + BACKS[b].i * 2 + "px, " + BACKS[b].i * 2 + "px)";
+          layerEl.innerHTML = "常去的地方，<br>一键打开";
+          stack1.insertBefore(layerEl, front1);
+        }
+        tl.fromTo(
+          card1,
+          { opacity: 0, scale: 0.92, y: 26 },
+          { opacity: 1, scale: 1, y: 0, duration: 0.5, ease: "back.out(1.6)" },
+          1.45
+        );
+        // first 「一键」 beat: pill 1 seals the first sentence tail, glow trails a beat
+        tl.fromTo(pill1, { scaleX: 0 }, { scaleX: 1, duration: 0.34, ease: "power3.out" }, 1.80);
+        tl.fromTo(
+          glow1,
+          { opacity: 0, scale: 0.93 },
+          { opacity: 0.26, scale: 1, duration: 0.6, ease: "power2.out" },
+          2.10
+        );
+
+        /* ═══ Scene 3 (2.6–3.7) — 原地整句换装 (discrete-text-sequence) ═══ */
+        tl.fromTo(card2, { opacity: 0, y: 18 }, { opacity: 1, y: 0, duration: 0.35, ease: "power2.out" }, 2.60);
+        // Sparse {t,state} schedule; reverse-search each frame; instant jumps, no smearing.
+        // Line A is a genuine textContent state swap; line B keeps its colored span, so its
+        // state is an instant visibility jump driven by the same threshold mechanic.
+        var SEQ_A = [
+          { t: 2.6, text: "" },
+          { t: 2.85, text: "常用的模板，" },
+        ];
+        var SEQ_B = [
+          { t: 2.6, visible: false },
+          { t: 3.72, visible: true },
+        ];
+        function stateAt(seq, time) {
+          for (var i = seq.length - 1; i >= 0; i--) if (time >= seq[i].t) return seq[i];
+          return seq[0];
+        }
+        var driver = { t: 0 };
+        tl.to(
+          driver,
+          {
+            t: DUR,
+            duration: DUR,
+            ease: "none",
+            onUpdate: function () {
+              lineA.textContent = stateAt(SEQ_A, driver.t).text;
+              lineB.style.visibility = stateAt(SEQ_B, driver.t).visible ? "visible" : "hidden";
+            },
+          },
+          0
+        );
+        // state pulse on each landing beat — scale 1.03 yoyo, one bounded beat each
+        tl.to(card2, { scale: 1.03, duration: 0.16, ease: "power1.inOut", yoyo: true, repeat: 1 }, 2.85);
+        tl.to(card2, { scale: 1.03, duration: 0.16, ease: "power1.inOut", yoyo: true, repeat: 1 }, 3.72);
+
+        /* ═══ Scene 4 (4.25–4.55) — pill scaleX 扣合 + trailing glow halo; quiet hold ═══ */
+        tl.fromTo(pill2, { scaleX: 0 }, { scaleX: 1, duration: 0.34, ease: "power3.out" }, 4.25);
+        tl.fromTo(
+          glow2,
+          { opacity: 0, scale: 0.93 },
+          { opacity: 0.26, scale: 1, duration: 0.6, ease: "power2.out" },
+          4.40
+        );
+        // 4.4+0.6 = 5.0 — static hold to 4.55; no exit (non-final frame)
+      })();
+    </script>
+  </div>
+</template>

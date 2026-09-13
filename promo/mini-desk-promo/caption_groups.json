@@ -1,0 +1,1891 @@
+{
+  "total_duration_s": 62.668,
+  "width": 1920,
+  "height": 1080,
+  "groups": [
+    {
+      "id": "caption-group-0",
+      "frame": 1,
+      "start": 0.439,
+      "end": 0.86,
+      "text": "截 图",
+      "words": [
+        {
+          "id": "caption-word-0-0",
+          "text": "截",
+          "start": 0.439,
+          "end": 0.62
+        },
+        {
+          "id": "caption-word-0-1",
+          "text": "图",
+          "start": 0.62,
+          "end": 0.74
+        }
+      ]
+    },
+    {
+      "id": "caption-group-1",
+      "frame": 1,
+      "start": 1.559,
+      "end": 1.98,
+      "text": "便 签",
+      "words": [
+        {
+          "id": "caption-word-1-0",
+          "text": "便",
+          "start": 1.559,
+          "end": 1.759
+        },
+        {
+          "id": "caption-word-1-1",
+          "text": "签",
+          "start": 1.759,
+          "end": 1.86
+        }
+      ]
+    },
+    {
+      "id": "caption-group-2",
+      "frame": 1,
+      "start": 2.44,
+      "end": 3.019,
+      "text": "提 醒",
+      "words": [
+        {
+          "id": "caption-word-2-0",
+          "text": "提",
+          "start": 2.44,
+          "end": 2.799
+        },
+        {
+          "id": "caption-word-2-1",
+          "text": "醒",
+          "start": 2.799,
+          "end": 2.899
+        }
+      ]
+    },
+    {
+      "id": "caption-group-3",
+      "frame": 1,
+      "start": 3.879,
+      "end": 4.279,
+      "text": "快 捷",
+      "words": [
+        {
+          "id": "caption-word-3-0",
+          "text": "快",
+          "start": 3.879,
+          "end": 4.099
+        },
+        {
+          "id": "caption-word-3-1",
+          "text": "捷",
+          "start": 4.099,
+          "end": 4.279
+        }
+      ]
+    },
+    {
+      "id": "caption-group-4",
+      "frame": 1,
+      "start": 4.279,
+      "end": 4.859,
+      "text": "动 作",
+      "words": [
+        {
+          "id": "caption-word-4-0",
+          "text": "动",
+          "start": 4.279,
+          "end": 4.579
+        },
+        {
+          "id": "caption-word-4-1",
+          "text": "作",
+          "start": 4.579,
+          "end": 4.759
+        }
+      ]
+    },
+    {
+      "id": "caption-group-5",
+      "frame": 1,
+      "start": 4.859,
+      "end": 5.359,
+      "text": "把 零",
+      "words": [
+        {
+          "id": "caption-word-5-0",
+          "text": "把",
+          "start": 4.859,
+          "end": 5.119
+        },
+        {
+          "id": "caption-word-5-1",
+          "text": "零",
+          "start": 5.119,
+          "end": 5.359
+        }
+      ]
+    },
+    {
+      "id": "caption-group-6",
+      "frame": 1,
+      "start": 5.359,
+      "end": 5.659,
+      "text": "碎 的",
+      "words": [
+        {
+          "id": "caption-word-6-0",
+          "text": "碎",
+          "start": 5.359,
+          "end": 5.499
+        },
+        {
+          "id": "caption-word-6-1",
+          "text": "的",
+          "start": 5.5,
+          "end": 5.659
+        }
+      ]
+    },
+    {
+      "id": "caption-group-7",
+      "frame": 1,
+      "start": 5.659,
+      "end": 6.159,
+      "text": "一 天",
+      "words": [
+        {
+          "id": "caption-word-7-0",
+          "text": "一",
+          "start": 5.659,
+          "end": 5.92
+        },
+        {
+          "id": "caption-word-7-1",
+          "text": "天",
+          "start": 5.92,
+          "end": 6.039
+        }
+      ]
+    },
+    {
+      "id": "caption-group-8",
+      "frame": 1,
+      "start": 6.719,
+      "end": 7.079,
+      "text": "收 进",
+      "words": [
+        {
+          "id": "caption-word-8-0",
+          "text": "收",
+          "start": 6.719,
+          "end": 6.959
+        },
+        {
+          "id": "caption-word-8-1",
+          "text": "进",
+          "start": 6.96,
+          "end": 7.079
+        }
+      ]
+    },
+    {
+      "id": "caption-group-9",
+      "frame": 1,
+      "start": 7.079,
+      "end": 7.659,
+      "text": "一 张",
+      "words": [
+        {
+          "id": "caption-word-9-0",
+          "text": "一",
+          "start": 7.079,
+          "end": 7.279
+        },
+        {
+          "id": "caption-word-9-1",
+          "text": "张",
+          "start": 7.279,
+          "end": 7.659
+        }
+      ]
+    },
+    {
+      "id": "caption-group-10",
+      "frame": 1,
+      "start": 7.659,
+      "end": 7.94,
+      "text": "安 静",
+      "words": [
+        {
+          "id": "caption-word-10-0",
+          "text": "安",
+          "start": 7.659,
+          "end": 7.799
+        },
+        {
+          "id": "caption-word-10-1",
+          "text": "静",
+          "start": 7.799,
+          "end": 7.939
+        }
+      ]
+    },
+    {
+      "id": "caption-group-11",
+      "frame": 1,
+      "start": 7.94,
+      "end": 8.42,
+      "text": "的 小",
+      "words": [
+        {
+          "id": "caption-word-11-0",
+          "text": "的",
+          "start": 7.94,
+          "end": 8.179
+        },
+        {
+          "id": "caption-word-11-1",
+          "text": "小",
+          "start": 8.179,
+          "end": 8.419
+        }
+      ]
+    },
+    {
+      "id": "caption-group-12",
+      "frame": 1,
+      "start": 8.42,
+      "end": 8.84,
+      "text": "桌 面",
+      "words": [
+        {
+          "id": "caption-word-12-0",
+          "text": "桌",
+          "start": 8.42,
+          "end": 8.659
+        },
+        {
+          "id": "caption-word-12-1",
+          "text": "面",
+          "start": 8.659,
+          "end": 8.72
+        }
+      ]
+    },
+    {
+      "id": "caption-group-13",
+      "frame": 2,
+      "start": 9.185,
+      "end": 9.666,
+      "text": "导 入",
+      "words": [
+        {
+          "id": "caption-word-13-0",
+          "text": "导",
+          "start": 9.185,
+          "end": 9.465
+        },
+        {
+          "id": "caption-word-13-1",
+          "text": "入",
+          "start": 9.465,
+          "end": 9.666
+        }
+      ]
+    },
+    {
+      "id": "caption-group-14",
+      "frame": 2,
+      "start": 9.666,
+      "end": 10.245,
+      "text": "一 个",
+      "words": [
+        {
+          "id": "caption-word-14-0",
+          "text": "一",
+          "start": 9.666,
+          "end": 9.986
+        },
+        {
+          "id": "caption-word-14-1",
+          "text": "个",
+          "start": 9.986,
+          "end": 10.245
+        }
+      ]
+    },
+    {
+      "id": "caption-group-15",
+      "frame": 2,
+      "start": 10.245,
+      "end": 10.726,
+      "text": "主 题",
+      "words": [
+        {
+          "id": "caption-word-15-0",
+          "text": "主",
+          "start": 10.245,
+          "end": 10.545
+        },
+        {
+          "id": "caption-word-15-1",
+          "text": "题",
+          "start": 10.545,
+          "end": 10.726
+        }
+      ]
+    },
+    {
+      "id": "caption-group-16",
+      "frame": 2,
+      "start": 10.726,
+      "end": 11.385,
+      "text": "空 间",
+      "words": [
+        {
+          "id": "caption-word-16-0",
+          "text": "空",
+          "start": 10.726,
+          "end": 11.145
+        },
+        {
+          "id": "caption-word-16-1",
+          "text": "间",
+          "start": 11.145,
+          "end": 11.265
+        }
+      ]
+    },
+    {
+      "id": "caption-group-17",
+      "frame": 2,
+      "start": 11.486,
+      "end": 11.986,
+      "text": "十 秒",
+      "words": [
+        {
+          "id": "caption-word-17-0",
+          "text": "十",
+          "start": 11.486,
+          "end": 11.706
+        },
+        {
+          "id": "caption-word-17-1",
+          "text": "秒",
+          "start": 11.706,
+          "end": 11.986
+        }
+      ]
+    },
+    {
+      "id": "caption-group-18",
+      "frame": 2,
+      "start": 11.986,
+      "end": 12.485,
+      "text": "上 手",
+      "words": [
+        {
+          "id": "caption-word-18-0",
+          "text": "上",
+          "start": 11.986,
+          "end": 12.145
+        },
+        {
+          "id": "caption-word-18-1",
+          "text": "手",
+          "start": 12.145,
+          "end": 12.365
+        }
+      ]
+    },
+    {
+      "id": "caption-group-19",
+      "frame": 2,
+      "start": 12.845,
+      "end": 13.386,
+      "text": "看 板",
+      "words": [
+        {
+          "id": "caption-word-19-0",
+          "text": "看",
+          "start": 12.845,
+          "end": 13.125
+        },
+        {
+          "id": "caption-word-19-1",
+          "text": "板",
+          "start": 13.125,
+          "end": 13.385
+        }
+      ]
+    },
+    {
+      "id": "caption-group-20",
+      "frame": 2,
+      "start": 13.386,
+      "end": 13.986,
+      "text": "即 刻",
+      "words": [
+        {
+          "id": "caption-word-20-0",
+          "text": "即",
+          "start": 13.386,
+          "end": 13.705
+        },
+        {
+          "id": "caption-word-20-1",
+          "text": "刻",
+          "start": 13.705,
+          "end": 13.986
+        }
+      ]
+    },
+    {
+      "id": "caption-group-21",
+      "frame": 2,
+      "start": 13.986,
+      "end": 14.506,
+      "text": "成 形",
+      "words": [
+        {
+          "id": "caption-word-21-0",
+          "text": "成",
+          "start": 13.986,
+          "end": 14.245
+        },
+        {
+          "id": "caption-word-21-1",
+          "text": "形",
+          "start": 14.245,
+          "end": 14.386
+        }
+      ]
+    },
+    {
+      "id": "caption-group-22",
+      "frame": 3,
+      "start": 15.1,
+      "end": 15.32,
+      "text": "常 去",
+      "words": [
+        {
+          "id": "caption-word-22-0",
+          "text": "常",
+          "start": 15.1,
+          "end": 15.16
+        },
+        {
+          "id": "caption-word-22-1",
+          "text": "去",
+          "start": 15.16,
+          "end": 15.32
+        }
+      ]
+    },
+    {
+      "id": "caption-group-23",
+      "frame": 3,
+      "start": 15.32,
+      "end": 15.76,
+      "text": "的 地",
+      "words": [
+        {
+          "id": "caption-word-23-0",
+          "text": "的",
+          "start": 15.32,
+          "end": 15.56
+        },
+        {
+          "id": "caption-word-23-1",
+          "text": "地",
+          "start": 15.56,
+          "end": 15.76
+        }
+      ]
+    },
+    {
+      "id": "caption-group-24",
+      "frame": 3,
+      "start": 15.76,
+      "end": 16.041,
+      "text": "方",
+      "words": [
+        {
+          "id": "caption-word-24-0",
+          "text": "方",
+          "start": 15.76,
+          "end": 15.921
+        }
+      ]
+    },
+    {
+      "id": "caption-group-25",
+      "frame": 3,
+      "start": 16.301,
+      "end": 16.56,
+      "text": "一 键",
+      "words": [
+        {
+          "id": "caption-word-25-0",
+          "text": "一",
+          "start": 16.301,
+          "end": 16.46
+        },
+        {
+          "id": "caption-word-25-1",
+          "text": "键",
+          "start": 16.46,
+          "end": 16.56
+        }
+      ]
+    },
+    {
+      "id": "caption-group-26",
+      "frame": 3,
+      "start": 16.56,
+      "end": 17.16,
+      "text": "打 开",
+      "words": [
+        {
+          "id": "caption-word-26-0",
+          "text": "打",
+          "start": 16.56,
+          "end": 16.8
+        },
+        {
+          "id": "caption-word-26-1",
+          "text": "开",
+          "start": 16.8,
+          "end": 17.04
+        }
+      ]
+    },
+    {
+      "id": "caption-group-27",
+      "frame": 3,
+      "start": 17.62,
+      "end": 17.96,
+      "text": "常 用",
+      "words": [
+        {
+          "id": "caption-word-27-0",
+          "text": "常",
+          "start": 17.62,
+          "end": 17.8
+        },
+        {
+          "id": "caption-word-27-1",
+          "text": "用",
+          "start": 17.8,
+          "end": 17.96
+        }
+      ]
+    },
+    {
+      "id": "caption-group-28",
+      "frame": 3,
+      "start": 17.96,
+      "end": 18.3,
+      "text": "的 模",
+      "words": [
+        {
+          "id": "caption-word-28-0",
+          "text": "的",
+          "start": 17.96,
+          "end": 18.161
+        },
+        {
+          "id": "caption-word-28-1",
+          "text": "模",
+          "start": 18.161,
+          "end": 18.3
+        }
+      ]
+    },
+    {
+      "id": "caption-group-29",
+      "frame": 3,
+      "start": 18.3,
+      "end": 18.68,
+      "text": "板",
+      "words": [
+        {
+          "id": "caption-word-29-0",
+          "text": "板",
+          "start": 18.3,
+          "end": 18.56
+        }
+      ]
+    },
+    {
+      "id": "caption-group-30",
+      "frame": 3,
+      "start": 18.94,
+      "end": 19.34,
+      "text": "一 键",
+      "words": [
+        {
+          "id": "caption-word-30-0",
+          "text": "一",
+          "start": 18.94,
+          "end": 19.22
+        },
+        {
+          "id": "caption-word-30-1",
+          "text": "键",
+          "start": 19.22,
+          "end": 19.34
+        }
+      ]
+    },
+    {
+      "id": "caption-group-31",
+      "frame": 3,
+      "start": 19.34,
+      "end": 19.84,
+      "text": "复 制",
+      "words": [
+        {
+          "id": "caption-word-31-0",
+          "text": "复",
+          "start": 19.34,
+          "end": 19.601
+        },
+        {
+          "id": "caption-word-31-1",
+          "text": "制",
+          "start": 19.601,
+          "end": 19.72
+        }
+      ]
+    },
+    {
+      "id": "caption-group-32",
+      "frame": 4,
+      "start": 20.238,
+      "end": 20.797,
+      "text": "提 醒",
+      "words": [
+        {
+          "id": "caption-word-32-0",
+          "text": "提",
+          "start": 20.238,
+          "end": 20.477
+        },
+        {
+          "id": "caption-word-32-1",
+          "text": "醒",
+          "start": 20.477,
+          "end": 20.797
+        }
+      ]
+    },
+    {
+      "id": "caption-group-33",
+      "frame": 4,
+      "start": 20.797,
+      "end": 21.198,
+      "text": "事 项",
+      "words": [
+        {
+          "id": "caption-word-33-0",
+          "text": "事",
+          "start": 20.797,
+          "end": 20.958
+        },
+        {
+          "id": "caption-word-33-1",
+          "text": "项",
+          "start": 20.958,
+          "end": 21.078
+        }
+      ]
+    },
+    {
+      "id": "caption-group-34",
+      "frame": 4,
+      "start": 21.917,
+      "end": 22.577,
+      "text": "轻 重",
+      "words": [
+        {
+          "id": "caption-word-34-0",
+          "text": "轻",
+          "start": 21.917,
+          "end": 22.177
+        },
+        {
+          "id": "caption-word-34-1",
+          "text": "重",
+          "start": 22.178,
+          "end": 22.577
+        }
+      ]
+    },
+    {
+      "id": "caption-group-35",
+      "frame": 4,
+      "start": 22.577,
+      "end": 22.997,
+      "text": "自 分",
+      "words": [
+        {
+          "id": "caption-word-35-0",
+          "text": "自",
+          "start": 22.577,
+          "end": 22.757
+        },
+        {
+          "id": "caption-word-35-1",
+          "text": "分",
+          "start": 22.757,
+          "end": 22.897
+        }
+      ]
+    },
+    {
+      "id": "caption-group-36",
+      "frame": 4,
+      "start": 22.997,
+      "end": 23.477,
+      "text": "星 标",
+      "words": [
+        {
+          "id": "caption-word-36-0",
+          "text": "星",
+          "start": 22.997,
+          "end": 23.237
+        },
+        {
+          "id": "caption-word-36-1",
+          "text": "标",
+          "start": 23.237,
+          "end": 23.477
+        }
+      ]
+    },
+    {
+      "id": "caption-group-37",
+      "frame": 4,
+      "start": 23.477,
+      "end": 23.917,
+      "text": "置 顶",
+      "words": [
+        {
+          "id": "caption-word-37-0",
+          "text": "置",
+          "start": 23.477,
+          "end": 23.678
+        },
+        {
+          "id": "caption-word-37-1",
+          "text": "顶",
+          "start": 23.678,
+          "end": 23.797
+        }
+      ]
+    },
+    {
+      "id": "caption-group-38",
+      "frame": 4,
+      "start": 24.557,
+      "end": 25.137,
+      "text": "截 止",
+      "words": [
+        {
+          "id": "caption-word-38-0",
+          "text": "截",
+          "start": 24.557,
+          "end": 24.858
+        },
+        {
+          "id": "caption-word-38-1",
+          "text": "止",
+          "start": 24.858,
+          "end": 25.137
+        }
+      ]
+    },
+    {
+      "id": "caption-group-39",
+      "frame": 4,
+      "start": 25.137,
+      "end": 25.498,
+      "text": "清 晰",
+      "words": [
+        {
+          "id": "caption-word-39-0",
+          "text": "清",
+          "start": 25.137,
+          "end": 25.337
+        },
+        {
+          "id": "caption-word-39-1",
+          "text": "晰",
+          "start": 25.338,
+          "end": 25.378
+        }
+      ]
+    },
+    {
+      "id": "caption-group-40",
+      "frame": 4,
+      "start": 26.097,
+      "end": 26.458,
+      "text": "今 日",
+      "words": [
+        {
+          "id": "caption-word-40-0",
+          "text": "今",
+          "start": 26.097,
+          "end": 26.277
+        },
+        {
+          "id": "caption-word-40-1",
+          "text": "日",
+          "start": 26.277,
+          "end": 26.457
+        }
+      ]
+    },
+    {
+      "id": "caption-group-41",
+      "frame": 4,
+      "start": 26.458,
+      "end": 27.097,
+      "text": "重 点",
+      "words": [
+        {
+          "id": "caption-word-41-0",
+          "text": "重",
+          "start": 26.458,
+          "end": 26.697
+        },
+        {
+          "id": "caption-word-41-1",
+          "text": "点",
+          "start": 26.697,
+          "end": 27.097
+        }
+      ]
+    },
+    {
+      "id": "caption-group-42",
+      "frame": 4,
+      "start": 27.097,
+      "end": 27.657,
+      "text": "一 眼",
+      "words": [
+        {
+          "id": "caption-word-42-0",
+          "text": "一",
+          "start": 27.097,
+          "end": 27.237
+        },
+        {
+          "id": "caption-word-42-1",
+          "text": "眼",
+          "start": 27.237,
+          "end": 27.657
+        }
+      ]
+    },
+    {
+      "id": "caption-group-43",
+      "frame": 4,
+      "start": 27.657,
+      "end": 28.097,
+      "text": "看 清",
+      "words": [
+        {
+          "id": "caption-word-43-0",
+          "text": "看",
+          "start": 27.657,
+          "end": 27.817
+        },
+        {
+          "id": "caption-word-43-1",
+          "text": "清",
+          "start": 27.817,
+          "end": 27.977
+        }
+      ]
+    },
+    {
+      "id": "caption-group-44",
+      "frame": 5,
+      "start": 28.73,
+      "end": 28.99,
+      "text": "便 签",
+      "words": [
+        {
+          "id": "caption-word-44-0",
+          "text": "便",
+          "start": 28.73,
+          "end": 28.75
+        },
+        {
+          "id": "caption-word-44-1",
+          "text": "签",
+          "start": 28.75,
+          "end": 28.99
+        }
+      ]
+    },
+    {
+      "id": "caption-group-45",
+      "frame": 5,
+      "start": 28.99,
+      "end": 29.61,
+      "text": "点 进",
+      "words": [
+        {
+          "id": "caption-word-45-0",
+          "text": "点",
+          "start": 28.99,
+          "end": 29.23
+        },
+        {
+          "id": "caption-word-45-1",
+          "text": "进",
+          "start": 29.23,
+          "end": 29.61
+        }
+      ]
+    },
+    {
+      "id": "caption-group-46",
+      "frame": 5,
+      "start": 29.61,
+      "end": 30.411,
+      "text": "去 就 写",
+      "words": [
+        {
+          "id": "caption-word-46-0",
+          "text": "去",
+          "start": 29.61,
+          "end": 29.85
+        },
+        {
+          "id": "caption-word-46-1",
+          "text": "就",
+          "start": 29.85,
+          "end": 30.05
+        },
+        {
+          "id": "caption-word-46-2",
+          "text": "写",
+          "start": 30.05,
+          "end": 30.291
+        }
+      ]
+    },
+    {
+      "id": "caption-group-47",
+      "frame": 5,
+      "start": 30.791,
+      "end": 31.05,
+      "text": "T a",
+      "words": [
+        {
+          "id": "caption-word-47-0",
+          "text": "T",
+          "start": 30.791,
+          "end": 30.89
+        },
+        {
+          "id": "caption-word-47-1",
+          "text": "a",
+          "start": 30.89,
+          "end": 31.05
+        }
+      ]
+    },
+    {
+      "id": "caption-group-48",
+      "frame": 5,
+      "start": 31.05,
+      "end": 32.19,
+      "text": "b 缩 进",
+      "words": [
+        {
+          "id": "caption-word-48-0",
+          "text": "b",
+          "start": 31.05,
+          "end": 31.45
+        },
+        {
+          "id": "caption-word-48-1",
+          "text": "缩",
+          "start": 31.45,
+          "end": 31.75
+        },
+        {
+          "id": "caption-word-48-2",
+          "text": "进",
+          "start": 31.751,
+          "end": 32.11
+        }
+      ]
+    },
+    {
+      "id": "caption-group-49",
+      "frame": 5,
+      "start": 32.19,
+      "end": 32.51,
+      "text": "一 个",
+      "words": [
+        {
+          "id": "caption-word-49-0",
+          "text": "一",
+          "start": 32.19,
+          "end": 32.37
+        },
+        {
+          "id": "caption-word-49-1",
+          "text": "个",
+          "start": 32.37,
+          "end": 32.51
+        }
+      ]
+    },
+    {
+      "id": "caption-group-50",
+      "frame": 5,
+      "start": 32.51,
+      "end": 33.03,
+      "text": "页 签",
+      "words": [
+        {
+          "id": "caption-word-50-0",
+          "text": "页",
+          "start": 32.51,
+          "end": 32.81
+        },
+        {
+          "id": "caption-word-50-1",
+          "text": "签",
+          "start": 32.81,
+          "end": 33.03
+        }
+      ]
+    },
+    {
+      "id": "caption-group-51",
+      "frame": 5,
+      "start": 33.03,
+      "end": 33.33,
+      "text": "一 个",
+      "words": [
+        {
+          "id": "caption-word-51-0",
+          "text": "一",
+          "start": 33.03,
+          "end": 33.13
+        },
+        {
+          "id": "caption-word-51-1",
+          "text": "个",
+          "start": 33.13,
+          "end": 33.33
+        }
+      ]
+    },
+    {
+      "id": "caption-group-52",
+      "frame": 5,
+      "start": 33.33,
+      "end": 33.831,
+      "text": "主 题",
+      "words": [
+        {
+          "id": "caption-word-52-0",
+          "text": "主",
+          "start": 33.33,
+          "end": 33.65
+        },
+        {
+          "id": "caption-word-52-1",
+          "text": "题",
+          "start": 33.65,
+          "end": 33.711
+        }
+      ]
+    },
+    {
+      "id": "caption-group-53",
+      "frame": 6,
+      "start": 34.263,
+      "end": 34.463,
+      "text": "C t",
+      "words": [
+        {
+          "id": "caption-word-53-0",
+          "text": "C",
+          "start": 34.263,
+          "end": 34.423
+        },
+        {
+          "id": "caption-word-53-1",
+          "text": "t",
+          "start": 34.423,
+          "end": 34.463
+        }
+      ]
+    },
+    {
+      "id": "caption-group-54",
+      "frame": 6,
+      "start": 34.463,
+      "end": 34.823,
+      "text": "r l",
+      "words": [
+        {
+          "id": "caption-word-54-0",
+          "text": "r",
+          "start": 34.463,
+          "end": 34.483
+        },
+        {
+          "id": "caption-word-54-1",
+          "text": "l",
+          "start": 34.483,
+          "end": 34.823
+        }
+      ]
+    },
+    {
+      "id": "caption-group-55",
+      "frame": 6,
+      "start": 34.823,
+      "end": 34.943,
+      "text": "+",
+      "words": [
+        {
+          "id": "caption-word-55-0",
+          "text": "+",
+          "start": 34.823,
+          "end": 34.823
+        }
+      ]
+    },
+    {
+      "id": "caption-group-56",
+      "frame": 6,
+      "start": 35.143,
+      "end": 35.743,
+      "text": "V",
+      "words": [
+        {
+          "id": "caption-word-56-0",
+          "text": "V",
+          "start": 35.143,
+          "end": 35.623
+        }
+      ]
+    },
+    {
+      "id": "caption-group-57",
+      "frame": 6,
+      "start": 35.883,
+      "end": 36.883,
+      "text": "截 图 先",
+      "words": [
+        {
+          "id": "caption-word-57-0",
+          "text": "截",
+          "start": 35.883,
+          "end": 36.103
+        },
+        {
+          "id": "caption-word-57-1",
+          "text": "图",
+          "start": 36.103,
+          "end": 36.723
+        },
+        {
+          "id": "caption-word-57-2",
+          "text": "先",
+          "start": 36.723,
+          "end": 36.883
+        }
+      ]
+    },
+    {
+      "id": "caption-group-58",
+      "frame": 6,
+      "start": 36.883,
+      "end": 37.743,
+      "text": "进 图 床",
+      "words": [
+        {
+          "id": "caption-word-58-0",
+          "text": "进",
+          "start": 36.883,
+          "end": 37.163
+        },
+        {
+          "id": "caption-word-58-1",
+          "text": "图",
+          "start": 37.163,
+          "end": 37.503
+        },
+        {
+          "id": "caption-word-58-2",
+          "text": "床",
+          "start": 37.503,
+          "end": 37.623
+        }
+      ]
+    },
+    {
+      "id": "caption-group-59",
+      "frame": 6,
+      "start": 38.064,
+      "end": 38.743,
+      "text": "原 图",
+      "words": [
+        {
+          "id": "caption-word-59-0",
+          "text": "原",
+          "start": 38.064,
+          "end": 38.383
+        },
+        {
+          "id": "caption-word-59-1",
+          "text": "图",
+          "start": 38.383,
+          "end": 38.743
+        }
+      ]
+    },
+    {
+      "id": "caption-group-60",
+      "frame": 6,
+      "start": 38.743,
+      "end": 39.243,
+      "text": "躺 在",
+      "words": [
+        {
+          "id": "caption-word-60-0",
+          "text": "躺",
+          "start": 38.743,
+          "end": 38.883
+        },
+        {
+          "id": "caption-word-60-1",
+          "text": "在",
+          "start": 38.883,
+          "end": 39.243
+        }
+      ]
+    },
+    {
+      "id": "caption-group-61",
+      "frame": 6,
+      "start": 39.243,
+      "end": 39.664,
+      "text": "本 地",
+      "words": [
+        {
+          "id": "caption-word-61-0",
+          "text": "本",
+          "start": 39.243,
+          "end": 39.503
+        },
+        {
+          "id": "caption-word-61-1",
+          "text": "地",
+          "start": 39.504,
+          "end": 39.544
+        }
+      ]
+    },
+    {
+      "id": "caption-group-62",
+      "frame": 7,
+      "start": 40.065,
+      "end": 41.464,
+      "text": "工 作 学",
+      "words": [
+        {
+          "id": "caption-word-62-0",
+          "text": "工",
+          "start": 40.065,
+          "end": 40.525
+        },
+        {
+          "id": "caption-word-62-1",
+          "text": "作",
+          "start": 40.525,
+          "end": 40.844
+        },
+        {
+          "id": "caption-word-62-2",
+          "text": "学",
+          "start": 40.905,
+          "end": 41.464
+        }
+      ]
+    },
+    {
+      "id": "caption-group-63",
+      "frame": 7,
+      "start": 41.464,
+      "end": 42.385,
+      "text": "习 旅 行",
+      "words": [
+        {
+          "id": "caption-word-63-0",
+          "text": "习",
+          "start": 41.464,
+          "end": 41.724
+        },
+        {
+          "id": "caption-word-63-1",
+          "text": "旅",
+          "start": 41.764,
+          "end": 42.204
+        },
+        {
+          "id": "caption-word-63-2",
+          "text": "行",
+          "start": 42.204,
+          "end": 42.265
+        }
+      ]
+    },
+    {
+      "id": "caption-group-64",
+      "frame": 7,
+      "start": 42.505,
+      "end": 42.844,
+      "text": "各 就",
+      "words": [
+        {
+          "id": "caption-word-64-0",
+          "text": "各",
+          "start": 42.505,
+          "end": 42.664
+        },
+        {
+          "id": "caption-word-64-1",
+          "text": "就",
+          "start": 42.664,
+          "end": 42.844
+        }
+      ]
+    },
+    {
+      "id": "caption-group-65",
+      "frame": 7,
+      "start": 42.844,
+      "end": 43.264,
+      "text": "各 位",
+      "words": [
+        {
+          "id": "caption-word-65-0",
+          "text": "各",
+          "start": 42.844,
+          "end": 43.064
+        },
+        {
+          "id": "caption-word-65-1",
+          "text": "位",
+          "start": 43.064,
+          "end": 43.144
+        }
+      ]
+    },
+    {
+      "id": "caption-group-66",
+      "frame": 7,
+      "start": 44.424,
+      "end": 46.124,
+      "text": "深 色 浅 色",
+      "words": [
+        {
+          "id": "caption-word-66-0",
+          "text": "深",
+          "start": 44.424,
+          "end": 44.844
+        },
+        {
+          "id": "caption-word-66-1",
+          "text": "色",
+          "start": 44.844,
+          "end": 45.444
+        },
+        {
+          "id": "caption-word-66-2",
+          "text": "浅",
+          "start": 45.444,
+          "end": 45.664
+        },
+        {
+          "id": "caption-word-66-3",
+          "text": "色",
+          "start": 45.664,
+          "end": 46.004
+        }
+      ]
+    },
+    {
+      "id": "caption-group-67",
+      "frame": 7,
+      "start": 46.184,
+      "end": 46.705,
+      "text": "随 手",
+      "words": [
+        {
+          "id": "caption-word-67-0",
+          "text": "随",
+          "start": 46.184,
+          "end": 46.404
+        },
+        {
+          "id": "caption-word-67-1",
+          "text": "手",
+          "start": 46.404,
+          "end": 46.705
+        }
+      ]
+    },
+    {
+      "id": "caption-group-68",
+      "frame": 7,
+      "start": 46.705,
+      "end": 47.204,
+      "text": "切 换",
+      "words": [
+        {
+          "id": "caption-word-68-0",
+          "text": "切",
+          "start": 46.705,
+          "end": 46.984
+        },
+        {
+          "id": "caption-word-68-1",
+          "text": "换",
+          "start": 46.984,
+          "end": 47.084
+        }
+      ]
+    },
+    {
+      "id": "caption-group-69",
+      "frame": 8,
+      "start": 47.648,
+      "end": 48.107,
+      "text": "七 套",
+      "words": [
+        {
+          "id": "caption-word-69-0",
+          "text": "七",
+          "start": 47.648,
+          "end": 47.847
+        },
+        {
+          "id": "caption-word-69-1",
+          "text": "套",
+          "start": 47.847,
+          "end": 48.107
+        }
+      ]
+    },
+    {
+      "id": "caption-group-70",
+      "frame": 8,
+      "start": 48.107,
+      "end": 48.347,
+      "text": "主 题",
+      "words": [
+        {
+          "id": "caption-word-70-0",
+          "text": "主",
+          "start": 48.107,
+          "end": 48.227
+        },
+        {
+          "id": "caption-word-70-1",
+          "text": "题",
+          "start": 48.227,
+          "end": 48.347
+        }
+      ]
+    },
+    {
+      "id": "caption-group-71",
+      "frame": 8,
+      "start": 48.347,
+      "end": 48.967,
+      "text": "空 间",
+      "words": [
+        {
+          "id": "caption-word-71-0",
+          "text": "空",
+          "start": 48.347,
+          "end": 48.727
+        },
+        {
+          "id": "caption-word-71-1",
+          "text": "间",
+          "start": 48.727,
+          "end": 48.847
+        }
+      ]
+    },
+    {
+      "id": "caption-group-72",
+      "frame": 8,
+      "start": 49.287,
+      "end": 49.727,
+      "text": "导 入",
+      "words": [
+        {
+          "id": "caption-word-72-0",
+          "text": "导",
+          "start": 49.287,
+          "end": 49.567
+        },
+        {
+          "id": "caption-word-72-1",
+          "text": "入",
+          "start": 49.567,
+          "end": 49.727
+        }
+      ]
+    },
+    {
+      "id": "caption-group-73",
+      "frame": 8,
+      "start": 49.727,
+      "end": 50.128,
+      "text": "即 用",
+      "words": [
+        {
+          "id": "caption-word-73-0",
+          "text": "即",
+          "start": 49.727,
+          "end": 49.927
+        },
+        {
+          "id": "caption-word-73-1",
+          "text": "用",
+          "start": 49.927,
+          "end": 50.008
+        }
+      ]
+    },
+    {
+      "id": "caption-group-74",
+      "frame": 8,
+      "start": 50.268,
+      "end": 50.627,
+      "text": "改 改",
+      "words": [
+        {
+          "id": "caption-word-74-0",
+          "text": "改",
+          "start": 50.268,
+          "end": 50.587
+        },
+        {
+          "id": "caption-word-74-1",
+          "text": "改",
+          "start": 50.587,
+          "end": 50.627
+        }
+      ]
+    },
+    {
+      "id": "caption-group-75",
+      "frame": 8,
+      "start": 50.627,
+      "end": 51.307,
+      "text": "成 你 的",
+      "words": [
+        {
+          "id": "caption-word-75-0",
+          "text": "成",
+          "start": 50.627,
+          "end": 50.827
+        },
+        {
+          "id": "caption-word-75-1",
+          "text": "你",
+          "start": 50.827,
+          "end": 51.067
+        },
+        {
+          "id": "caption-word-75-2",
+          "text": "的",
+          "start": 51.067,
+          "end": 51.187
+        }
+      ]
+    },
+    {
+      "id": "caption-group-76",
+      "frame": 9,
+      "start": 51.72,
+      "end": 52.081,
+      "text": "没 有",
+      "words": [
+        {
+          "id": "caption-word-76-0",
+          "text": "没",
+          "start": 51.72,
+          "end": 52.04
+        },
+        {
+          "id": "caption-word-76-1",
+          "text": "有",
+          "start": 52.04,
+          "end": 52.081
+        }
+      ]
+    },
+    {
+      "id": "caption-group-77",
+      "frame": 9,
+      "start": 52.081,
+      "end": 52.76,
+      "text": "账 号",
+      "words": [
+        {
+          "id": "caption-word-77-0",
+          "text": "账",
+          "start": 52.081,
+          "end": 52.52
+        },
+        {
+          "id": "caption-word-77-1",
+          "text": "号",
+          "start": 52.52,
+          "end": 52.701
+        }
+      ]
+    },
+    {
+      "id": "caption-group-78",
+      "frame": 9,
+      "start": 52.76,
+      "end": 53.12,
+      "text": "没 有",
+      "words": [
+        {
+          "id": "caption-word-78-0",
+          "text": "没",
+          "start": 52.76,
+          "end": 52.88
+        },
+        {
+          "id": "caption-word-78-1",
+          "text": "有",
+          "start": 52.88,
+          "end": 53.12
+        }
+      ]
+    },
+    {
+      "id": "caption-group-79",
+      "frame": 9,
+      "start": 53.12,
+      "end": 53.74,
+      "text": "后 端",
+      "words": [
+        {
+          "id": "caption-word-79-0",
+          "text": "后",
+          "start": 53.12,
+          "end": 53.54
+        },
+        {
+          "id": "caption-word-79-1",
+          "text": "端",
+          "start": 53.54,
+          "end": 53.62
+        }
+      ]
+    },
+    {
+      "id": "caption-group-80",
+      "frame": 9,
+      "start": 53.8,
+      "end": 54.12,
+      "text": "你 的",
+      "words": [
+        {
+          "id": "caption-word-80-0",
+          "text": "你",
+          "start": 53.8,
+          "end": 53.921
+        },
+        {
+          "id": "caption-word-80-1",
+          "text": "的",
+          "start": 53.921,
+          "end": 54.12
+        }
+      ]
+    },
+    {
+      "id": "caption-group-81",
+      "frame": 9,
+      "start": 54.12,
+      "end": 54.76,
+      "text": "数 据",
+      "words": [
+        {
+          "id": "caption-word-81-0",
+          "text": "数",
+          "start": 54.12,
+          "end": 54.56
+        },
+        {
+          "id": "caption-word-81-1",
+          "text": "据",
+          "start": 54.56,
+          "end": 54.64
+        }
+      ]
+    },
+    {
+      "id": "caption-group-82",
+      "frame": 9,
+      "start": 55.22,
+      "end": 55.56,
+      "text": "只 在",
+      "words": [
+        {
+          "id": "caption-word-82-0",
+          "text": "只",
+          "start": 55.22,
+          "end": 55.38
+        },
+        {
+          "id": "caption-word-82-1",
+          "text": "在",
+          "start": 55.38,
+          "end": 55.56
+        }
+      ]
+    },
+    {
+      "id": "caption-group-83",
+      "frame": 9,
+      "start": 55.56,
+      "end": 55.821,
+      "text": "你 的",
+      "words": [
+        {
+          "id": "caption-word-83-0",
+          "text": "你",
+          "start": 55.56,
+          "end": 55.8
+        },
+        {
+          "id": "caption-word-83-1",
+          "text": "的",
+          "start": 55.8,
+          "end": 55.821
+        }
+      ]
+    },
+    {
+      "id": "caption-group-84",
+      "frame": 9,
+      "start": 55.821,
+      "end": 56.62,
+      "text": "浏 览 器",
+      "words": [
+        {
+          "id": "caption-word-84-0",
+          "text": "浏",
+          "start": 55.821,
+          "end": 56.1
+        },
+        {
+          "id": "caption-word-84-1",
+          "text": "览",
+          "start": 56.1,
+          "end": 56.421
+        },
+        {
+          "id": "caption-word-84-2",
+          "text": "器",
+          "start": 56.421,
+          "end": 56.5
+        }
+      ]
+    },
+    {
+      "id": "caption-group-85",
+      "frame": 10,
+      "start": 56.943,
+      "end": 57.663,
+      "text": "Do less,",
+      "words": [
+        {
+          "id": "caption-word-85-0",
+          "text": "Do",
+          "start": 56.943,
+          "end": 57.083
+        },
+        {
+          "id": "caption-word-85-1",
+          "text": "less,",
+          "start": 57.203,
+          "end": 57.543
+        }
+      ]
+    },
+    {
+      "id": "caption-group-86",
+      "frame": 10,
+      "start": 57.864,
+      "end": 59.943,
+      "text": "do it well——现在就打开",
+      "words": [
+        {
+          "id": "caption-word-86-0",
+          "text": "do",
+          "start": 57.864,
+          "end": 57.963
+        },
+        {
+          "id": "caption-word-86-1",
+          "text": "it",
+          "start": 58.004,
+          "end": 58.163
+        },
+        {
+          "id": "caption-word-86-2",
+          "text": "well——现在就打开",
+          "start": 58.203,
+          "end": 59.823
+        }
+      ]
+    },
+    {
+      "id": "caption-group-87",
+      "frame": 10,
+      "start": 60.303,
+      "end": 62.663,
+      "text": "minidesk.online。",
+      "words": [
+        {
+          "id": "caption-word-87-0",
+          "text": "minidesk.online。",
+          "start": 60.303,
+          "end": 62.543
+        }
+      ]
+    }
+  ]
+}

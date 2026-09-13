@@ -1,0 +1,621 @@
+<template>
+  <style>
+    /* Frame 07-switcher — fixed-anchor-cycle (blueprint) + discrete-text-sequence (space cycle)
+       + theme-crossfade-morph (board reskin). Approved wireframe geometry preserved:
+       eyebrow top-center, 600x500 board mock centered at (660,280), orbit chips 工作/学习/旅行/生活…,
+       bottom 深色/浅色 row nudged above the caption keep-out (bottom edge <= y880 < y896). */
+    #root {
+      position: relative;
+      width: 1920px;
+      height: 1080px;
+      /* No font files ship with this project, so no family is named (a named family
+         without a matching @font-face fails lint). Generic sans-serif lets the render
+         host resolve CJK glyphs through system fallback (PingFang SC on the macOS host),
+         matching the approved sketch's rendering. */
+      font-family: sans-serif;
+      color: #eef2f8;
+    }
+
+    /* ---------- ground (full-bleed on a dedicated clip, never on #root) ---------- */
+    .f07-bg {
+      position: absolute;
+      inset: 0;
+      background: #07090f;
+      overflow: hidden;
+    }
+    .f07-aur {
+      position: absolute;
+      border-radius: 50%;
+    }
+    #f07-aur-a {
+      left: -220px;
+      top: -120px;
+      width: 1320px;
+      height: 1040px;
+      background: radial-gradient(
+        closest-side,
+        rgba(94, 234, 190, 0.07),
+        rgba(94, 234, 190, 0.02) 55%,
+        transparent 72%
+      );
+    }
+    #f07-aur-b {
+      right: -260px;
+      bottom: -180px;
+      width: 1500px;
+      height: 1150px;
+      background: radial-gradient(
+        closest-side,
+        rgba(139, 92, 246, 0.07),
+        rgba(34, 211, 238, 0.02) 50%,
+        transparent 70%
+      );
+    }
+    /* theme-flip bloom behind the pinned board (glow only — violet/mint sanctioned for wash) */
+    .f07-bloom {
+      position: absolute;
+      left: 460px;
+      top: 150px;
+      width: 1000px;
+      height: 760px;
+      border-radius: 50%;
+      background: radial-gradient(
+        closest-side,
+        rgba(94, 234, 190, 0.3),
+        rgba(34, 211, 238, 0.1) 48%,
+        transparent 70%
+      );
+      opacity: 0;
+    }
+    .f07-vig {
+      position: absolute;
+      inset: 0;
+      background: radial-gradient(
+        115% 85% at 50% 44%,
+        transparent 58%,
+        rgba(3, 5, 9, 0.42) 100%
+      );
+    }
+
+    /* ---------- stage ---------- */
+    .f07-stage {
+      position: absolute;
+      inset: 0;
+    }
+    .f07-eyebrow {
+      position: absolute;
+      left: 0;
+      right: 0;
+      top: 120px;
+      text-align: center;
+      font-size: 30px;
+      font-weight: 600;
+      letter-spacing: 6px;
+      color: #5eeabe;
+    }
+
+    /* ---------- the pinned board (anchor) — enters once, geometry never moves again ---------- */
+    .f07-board {
+      position: absolute;
+      left: 660px;
+      top: 280px;
+      width: 600px;
+      height: 500px;
+    }
+    .f07-depth {
+      position: absolute;
+      border-radius: 20px;
+      border: 1px solid;
+    }
+    #f07-depth-b {
+      left: -28px;
+      top: -24px;
+      width: 656px;
+      height: 548px;
+      border-color: rgba(255, 255, 255, 0.05);
+      background: rgba(255, 255, 255, 0.012);
+    }
+    #f07-depth-a {
+      left: -14px;
+      top: -12px;
+      width: 628px;
+      height: 524px;
+      border-color: rgba(255, 255, 255, 0.1);
+      background: rgba(255, 255, 255, 0.025);
+    }
+    /* one complete skin per theme, pixel-identical shared geometry, opacity crossfade only */
+    .f07-skin {
+      position: absolute;
+      inset: 0;
+      border-radius: 20px;
+    }
+    #f07-skin-dark {
+      background: rgba(255, 255, 255, 0.045);
+      border: 1.5px solid rgba(255, 255, 255, 0.12);
+    }
+    #f07-skin-light {
+      background: #f3f0e9;
+      border: 1.5px solid rgba(30, 38, 54, 0.18);
+      opacity: 0;
+    }
+    .f07-titlebar {
+      position: absolute;
+      left: 0;
+      right: 0;
+      top: 0;
+      height: 76px;
+      display: flex;
+      align-items: center;
+      padding: 0 60px 0 22px;
+      gap: 16px;
+      border-bottom: 1px solid;
+    }
+    #f07-skin-dark .f07-titlebar {
+      background: rgba(255, 255, 255, 0.025);
+      border-bottom-color: rgba(255, 255, 255, 0.08);
+    }
+    #f07-skin-light .f07-titlebar {
+      background: rgba(30, 38, 54, 0.03);
+      border-bottom-color: rgba(30, 38, 54, 0.1);
+    }
+    .f07-lights {
+      display: flex;
+      gap: 8px;
+    }
+    .f07-lights i {
+      width: 12px;
+      height: 12px;
+      border-radius: 50%;
+      display: block;
+    }
+    #f07-skin-dark .f07-lights i:nth-child(1) { background: rgba(255, 255, 255, 0.18); }
+    #f07-skin-dark .f07-lights i:nth-child(2) { background: rgba(255, 255, 255, 0.13); }
+    #f07-skin-dark .f07-lights i:nth-child(3) { background: rgba(255, 255, 255, 0.09); }
+    #f07-skin-light .f07-lights i:nth-child(1) { background: rgba(30, 38, 54, 0.25); }
+    #f07-skin-light .f07-lights i:nth-child(2) { background: rgba(30, 38, 54, 0.18); }
+    #f07-skin-light .f07-lights i:nth-child(3) { background: rgba(30, 38, 54, 0.12); }
+    .f07-spacepill {
+      display: flex;
+      align-items: center;
+      gap: 10px;
+      padding: 8px 18px;
+      border-radius: 999px;
+      border: 1px solid;
+      margin-left: 6px;
+    }
+    #f07-skin-dark .f07-spacepill {
+      background: rgba(255, 255, 255, 0.05);
+      border-color: rgba(255, 255, 255, 0.1);
+    }
+    #f07-skin-light .f07-spacepill {
+      background: rgba(30, 38, 54, 0.05);
+      border-color: rgba(30, 38, 54, 0.14);
+    }
+    .f07-space-dot {
+      width: 10px;
+      height: 10px;
+      border-radius: 50%;
+      background: #6d7890;
+    }
+    .f07-space-name {
+      font-size: 22px;
+      font-weight: 600;
+      line-height: 1;
+      min-width: 46px; /* >= widest state — no pill jitter on hard swaps */
+      white-space: nowrap;
+    }
+    #f07-skin-dark .f07-space-name { color: #eef2f8; }
+    #f07-skin-light .f07-space-name { color: #232a3a; }
+    .f07-chev {
+      width: 0;
+      height: 0;
+      border-left: 6px solid transparent;
+      border-right: 6px solid transparent;
+      border-top: 7px solid rgba(166, 177, 198, 0.7);
+      margin-left: 2px;
+    }
+    .f07-toggle {
+      position: absolute;
+      right: 22px;
+      top: 24px;
+      width: 28px;
+      height: 28px;
+      border-radius: 50%;
+      border: 1.5px solid;
+    }
+    #f07-skin-dark .f07-toggle {
+      border-color: rgba(255, 255, 255, 0.22);
+      background: linear-gradient(
+        90deg,
+        rgba(94, 234, 190, 0.75) 0 32%,
+        rgba(255, 255, 255, 0.06) 32% 100%
+      );
+    }
+    #f07-skin-light .f07-toggle {
+      border-color: rgba(30, 38, 54, 0.3);
+      background: linear-gradient(
+        90deg,
+        rgba(12, 140, 102, 0.9) 0 68%,
+        rgba(30, 38, 54, 0.08) 68% 100%
+      );
+    }
+    /* the screening well — the hoisted videos render exactly at (672,368,576,360) */
+    .f07-well {
+      position: absolute;
+      left: 10px;
+      top: 86px;
+      width: 580px;
+      height: 364px;
+      border-radius: 10px;
+      border: 1px solid;
+    }
+    #f07-skin-dark .f07-well {
+      background: #0d1119;
+      border-color: rgba(255, 255, 255, 0.07);
+    }
+    #f07-skin-light .f07-well {
+      background: #efece3;
+      border-color: rgba(30, 38, 54, 0.1);
+    }
+    .f07-foot {
+      position: absolute;
+      left: 22px;
+      right: 22px;
+      bottom: 12px;
+      height: 28px;
+      display: flex;
+      align-items: center;
+      gap: 10px;
+    }
+    .f07-skel {
+      height: 6px;
+      border-radius: 3px;
+    }
+    .f07-skel-1 { width: 64px; }
+    .f07-skel-2 { width: 96px; }
+    .f07-skel-3 { width: 44px; }
+    #f07-skin-dark .f07-skel { background: rgba(255, 255, 255, 0.1); }
+    #f07-skin-light .f07-skel { background: rgba(30, 38, 54, 0.14); }
+    .f07-footdot {
+      margin-left: auto;
+      width: 8px;
+      height: 8px;
+      border-radius: 50%;
+    }
+    #f07-skin-dark .f07-footdot { background: rgba(94, 234, 190, 0.8); }
+    #f07-skin-light .f07-footdot { background: rgba(12, 140, 102, 0.85); }
+
+    /* ---------- orbit chips (approved copy + wireframe positions) ---------- */
+    .f07-chip {
+      position: absolute;
+      display: flex;
+      align-items: center;
+      gap: 14px;
+      padding: 15px 32px;
+      border-radius: 999px;
+      background: rgba(255, 255, 255, 0.045);
+      border: 1.5px solid rgba(255, 255, 255, 0.12);
+      font-size: 34px;
+      font-weight: 600;
+      line-height: 1.1;
+      color: #eef2f8;
+      white-space: nowrap;
+    }
+    .f07-chip b {
+      width: 14px;
+      height: 14px;
+      border-radius: 50%;
+      display: block;
+    }
+    #f07-chip-work { left: 330px; top: 350px; }
+    #f07-chip-work b { background: #5eeabe; }
+    #f07-chip-study { left: 400px; bottom: 260px; }
+    #f07-chip-study b { background: #22d3ee; }
+    #f07-chip-travel { right: 330px; top: 350px; }
+    #f07-chip-travel b { background: #a78bfa; }
+    #f07-chip-life { right: 400px; bottom: 260px; }
+    #f07-chip-life b { background: #6d7890; }
+
+    /* ---------- bottom theme row (sketch position lifted above the caption keep-out) ---------- */
+    .f07-row {
+      position: absolute;
+      left: 0;
+      right: 0;
+      top: 826px;
+      display: flex;
+      justify-content: center;
+      align-items: center;
+      gap: 18px;
+    }
+    .f07-tchip {
+      padding: 11px 28px;
+      border-radius: 999px;
+      font-size: 26px;
+      font-weight: 500;
+      line-height: 1.1;
+      border: 1.5px solid;
+    }
+    #f07-chip-dark {
+      color: #5eeabe;
+      border-color: rgba(94, 234, 190, 0.55);
+      background: rgba(94, 234, 190, 0.07);
+    }
+    #f07-chip-light {
+      color: #a6b1c6;
+      border-color: rgba(255, 255, 255, 0.12);
+      background: rgba(255, 255, 255, 0.03);
+    }
+    .f07-rownote {
+      font-size: 24px;
+      color: #6d7890;
+      margin-left: 10px;
+    }
+  </style>
+
+  <div
+    id="root"
+    data-composition-id="07-switcher"
+    data-width="1920"
+    data-height="1080"
+    data-start="0"
+    data-duration="7.523"
+  >
+    <!-- approved frame videos — hoisted to the host root by assemble-index; geometry = the
+         board's screening well, exact 16:10 so cover == no crop. The theme source enters at
+         media offset 1.07s so its two recorded theme flips land at ~5.23s and ~7.43s,
+         inside the chrome crossfade windows. -->
+    <video
+      id="f07-v-switcher"
+      data-frame-video="approved"
+      data-start="0"
+      data-duration="5"
+      data-track-index="2"
+      data-frame-video-x="672"
+      data-frame-video-y="368"
+      data-frame-video-width="576"
+      data-frame-video-height="360"
+      data-frame-video-fit="cover"
+      src="assets/features-switcher.mp4"
+      muted
+      playsinline
+    ></video>
+    <video
+      id="f07-v-theme"
+      data-frame-video="approved"
+      data-start="5"
+      data-duration="2.523"
+      data-track-index="3"
+      data-frame-video-x="672"
+      data-frame-video-y="368"
+      data-frame-video-width="576"
+      data-frame-video-height="360"
+      data-frame-video-fit="cover"
+      data-media-start="1.07"
+      src="assets/features-theme.mp4"
+      muted
+      playsinline
+    ></video>
+
+    <!-- ground -->
+    <div class="clip f07-bg" data-start="0" data-duration="7.523" data-track-index="0">
+      <div class="f07-aur" id="f07-aur-a"></div>
+      <div class="f07-aur" id="f07-aur-b"></div>
+      <div class="f07-bloom" id="f07-bloom"></div>
+      <div class="f07-vig"></div>
+    </div>
+
+    <!-- stage -->
+    <div class="clip f07-stage" data-start="0" data-duration="7.523" data-track-index="1">
+      <div class="f07-eyebrow" id="f07-eyebrow">多工作空间 · 深浅随行</div>
+
+      <div class="f07-board" id="f07-board">
+        <div class="f07-depth" id="f07-depth-b"></div>
+        <div class="f07-depth" id="f07-depth-a"></div>
+
+        <div class="f07-skin" id="f07-skin-dark">
+          <div class="f07-titlebar">
+            <div class="f07-lights"><i></i><i></i><i></i></div>
+            <div class="f07-spacepill">
+              <span class="f07-space-dot"></span>
+              <span class="f07-space-name"></span>
+              <span class="f07-chev"></span>
+            </div>
+            <div class="f07-toggle"></div>
+          </div>
+          <div class="f07-well"></div>
+          <div class="f07-foot">
+            <div class="f07-skel f07-skel-1"></div>
+            <div class="f07-skel f07-skel-2"></div>
+            <div class="f07-skel f07-skel-3"></div>
+            <div class="f07-footdot"></div>
+          </div>
+        </div>
+
+        <div class="f07-skin" id="f07-skin-light">
+          <div class="f07-titlebar">
+            <div class="f07-lights"><i></i><i></i><i></i></div>
+            <div class="f07-spacepill">
+              <span class="f07-space-dot"></span>
+              <span class="f07-space-name"></span>
+              <span class="f07-chev"></span>
+            </div>
+            <div class="f07-toggle"></div>
+          </div>
+          <div class="f07-well"></div>
+          <div class="f07-foot">
+            <div class="f07-skel f07-skel-1"></div>
+            <div class="f07-skel f07-skel-2"></div>
+            <div class="f07-skel f07-skel-3"></div>
+            <div class="f07-footdot"></div>
+          </div>
+        </div>
+      </div>
+
+      <div class="f07-chip" id="f07-chip-work"><b></b><span>工作</span></div>
+      <div class="f07-chip" id="f07-chip-study"><b></b><span>学习</span></div>
+      <div class="f07-chip" id="f07-chip-travel"><b></b><span>旅行</span></div>
+      <div class="f07-chip" id="f07-chip-life"><b></b><span>生活…</span></div>
+
+      <div class="f07-row" id="f07-row">
+        <span class="f07-tchip" id="f07-chip-dark">深色</span>
+        <span class="f07-tchip" id="f07-chip-light">浅色</span>
+        <span class="f07-rownote">随手切换</span>
+      </div>
+    </div>
+  </div>
+
+  <script src="https://cdn.jsdelivr.net/npm/gsap@3.14.2/dist/gsap.min.js"></script>
+  <script>
+    window.__timelines = window.__timelines || {};
+    const tl = gsap.timeline({ paused: true });
+    window.__timelines["07-switcher"] = tl;
+
+    const one = (id) => document.getElementById(id);
+    const DUR = 7.523;
+
+    /* ---- Scene 1 (0.0-1.6): the anchor lands once and PINS — opacity only, zero
+       geometry motion ever again. The pinned board's screening source fades with it. */
+    tl.fromTo("#f07-board", { opacity: 0 }, { opacity: 1, duration: 0.44, ease: "power2.out" }, 0.06);
+    tl.fromTo(
+      ["#f07-depth-a", "#f07-depth-b"],
+      { y: 18, opacity: 0 },
+      { y: 0, opacity: 1, duration: 0.55, ease: "power2.out", stagger: 0.12 },
+      0.1
+    );
+    tl.fromTo(
+      "#f07-eyebrow",
+      { opacity: 0, letterSpacing: "14px" },
+      { opacity: 1, letterSpacing: "6px", duration: 0.5, ease: "power2.out" },
+      0.15
+    );
+    const vSwitcher = one("f07-v-switcher"); // hoisted to the host root at assembly
+    if (vSwitcher) {
+      tl.fromTo(vSwitcher, { opacity: 0 }, { opacity: 1, duration: 0.36, ease: "power1.out" }, 0.1);
+    }
+
+    /* ---- Scene 2 (1.6-3.6): discrete hard-cut cycle 工作 -> 学习 -> 旅行, one chip
+       on screen per beat at its own orbit position; the board title label swaps in
+       the same instants (discrete-text-sequence: state array + reverse search, jumps
+       are instant, min-width on the label kills jitter). ---- */
+    const STATES = [
+      { t: 0.0, chip: null },
+      { t: 1.7, chip: "work" },
+      { t: 2.35, chip: "study" },
+      { t: 3.0, chip: "travel" },
+      { t: 3.75, chip: "all" }, // Scene 3 (3.6-5.0): 三 chip 并存定格 — emphasis beat
+    ];
+    const SPACES = {
+      work: { name: "工作", dot: "#5eeabe" },
+      study: { name: "学习", dot: "#22d3ee" },
+      travel: { name: "旅行", dot: "#a78bfa" },
+    };
+    const chipEls = {
+      work: one("f07-chip-work"),
+      study: one("f07-chip-study"),
+      travel: one("f07-chip-travel"),
+    };
+    const nameEls = Array.from(document.querySelectorAll("#root .f07-space-name"));
+    const dotEls = Array.from(document.querySelectorAll("#root .f07-space-dot"));
+    let lastLabel = "";
+
+    const cyc = { t: 0 };
+    tl.to(
+      cyc,
+      {
+        t: DUR,
+        duration: DUR,
+        ease: "none",
+        onUpdate: () => {
+          let s = STATES[0];
+          for (let i = STATES.length - 1; i >= 0; i--) {
+            if (cyc.t >= STATES[i].t) { s = STATES[i]; break; }
+          }
+          const cur = s.chip;
+          for (const k in chipEls) {
+            chipEls[k].style.opacity = cur === k || cur === "all" ? "1" : "0";
+          }
+          if (cur && cur !== "all" && cur !== lastLabel) {
+            lastLabel = cur;
+            nameEls.forEach((el) => { el.textContent = SPACES[cur].name; });
+            dotEls.forEach((el) => { el.style.backgroundColor = SPACES[cur].dot; });
+          }
+        },
+      },
+      0
+    );
+
+    /* Scene 3 emphasis: primary 描边收束 + a restrained completion pulse. */
+    const three = ["#f07-chip-work", "#f07-chip-study", "#f07-chip-travel"];
+    tl.to(
+      three,
+      {
+        borderColor: "rgba(94,234,190,0.55)",
+        color: "#5eeabe",
+        backgroundColor: "rgba(94,234,190,0.07)",
+        duration: 0.18,
+        ease: "power2.out",
+      },
+      3.75
+    );
+    tl.to(three, { scale: 1.05, duration: 0.1, ease: "power1.out" }, 3.75);
+    tl.to(three, { scale: 1, duration: 0.1, ease: "power1.in" }, 3.85);
+
+    /* ---- Scene 4 (5.0-end): 深色浅色随手切换 — the board reskins IN PLACE. ---- */
+    tl.fromTo("#f07-row", { opacity: 0, y: 16 }, { opacity: 1, y: 0, duration: 0.4, ease: "power2.out" }, 4.75);
+
+    /* flip 1: 深 -> 浅 (theme-crossfade-morph: complete pre-styled skins, simultaneous
+       opposing opacity tweens, shared pixel-identical geometry, nothing else tweens) */
+    tl.to("#f07-skin-dark", { opacity: 0, duration: 0.4, ease: "power2.inOut" }, 5.08);
+    tl.fromTo("#f07-skin-light", { opacity: 0 }, { opacity: 1, duration: 0.4, ease: "power2.inOut" }, 5.08);
+    tl.to("#f07-bloom", { opacity: 0.5, duration: 0.4, ease: "power2.inOut" }, 5.08);
+    tl.to(
+      "#f07-chip-light",
+      { borderColor: "rgba(94,234,190,0.55)", color: "#5eeabe", backgroundColor: "rgba(94,234,190,0.07)", duration: 0.18, ease: "power2.out" },
+      5.24
+    );
+    tl.to(
+      "#f07-chip-dark",
+      { borderColor: "rgba(255,255,255,0.12)", color: "#a6b1c6", backgroundColor: "rgba(255,255,255,0.03)", duration: 0.18, ease: "power2.out" },
+      5.24
+    );
+
+    /* lockup completion: the final element quietly joins the still-unmoved anchor */
+    tl.fromTo(
+      "#f07-chip-life",
+      { opacity: 0, scale: 0.86 },
+      { opacity: 1, scale: 1, duration: 0.34, ease: "back.out(1.6)" },
+      5.65
+    );
+
+    /* flip 2: 浅 -> 深, resolved before the frame edge; long settled hold to the end */
+    tl.to("#f07-skin-light", { opacity: 0, duration: 0.29, ease: "power2.inOut" }, 7.18);
+    tl.to("#f07-skin-dark", { opacity: 1, duration: 0.29, ease: "power2.inOut" }, 7.18);
+    tl.to("#f07-bloom", { opacity: 0, duration: 0.29, ease: "power2.inOut" }, 7.18);
+    tl.to(
+      "#f07-chip-dark",
+      { borderColor: "rgba(94,234,190,0.55)", color: "#5eeabe", backgroundColor: "rgba(94,234,190,0.07)", duration: 0.15, ease: "power2.out" },
+      7.3
+    );
+    tl.to(
+      "#f07-chip-light",
+      { borderColor: "rgba(255,255,255,0.12)", color: "#a6b1c6", backgroundColor: "rgba(255,255,255,0.03)", duration: 0.15, ease: "power2.out" },
+      7.3
+    );
+
+    /* bounded aurora drift beneath the cycle — the anchor itself gets none */
+    const drift = { p: 0 };
+    tl.to(
+      drift,
+      {
+        p: Math.PI * 2,
+        duration: DUR,
+        ease: "none",
+        onUpdate: () => {
+          gsap.set("#f07-aur-a", { x: Math.sin(drift.p) * 24, y: Math.cos(drift.p * 0.9) * 14 });
+          gsap.set("#f07-aur-b", { x: Math.cos(drift.p) * -20, y: Math.sin(drift.p * 0.8) * -12 });
+        },
+      },
+      0
+    );
+  </script>
+</template>

@@ -1,0 +1,308 @@
+<template>
+  <style>
+    /* frame.md — Mini Desk dark-aurora tokens: bg #07090f · primary #5eeabe · text #eef2f8
+       muted #a6b1c6 · border rgba(255,255,255,.09) · card-bg rgba(255,255,255,.045) */
+    #root {
+      position: relative;
+      width: 1920px;
+      height: 1080px;
+      overflow: hidden;
+      font-family: "PingFang SC", "SF Pro Display", sans-serif;
+      color: #eef2f8;
+    }
+
+    /* ---- track 0 · full-bleed ground (never on #root) ---- */
+    .f04-ground {
+      position: absolute;
+      inset: 0;
+      background:
+        radial-gradient(640px 520px at 1290px 500px, rgba(94, 234, 190, 0.09), transparent 70%),
+        radial-gradient(760px 560px at 130px 980px, rgba(139, 92, 246, 0.055), transparent 72%),
+        #07090f;
+    }
+
+    /* ---- track 1 · content ---- */
+
+    /* left column — approved sketch anchor: left 110 / top 300 / width 540 */
+    .f04-col {
+      position: absolute;
+      left: 110px;
+      top: 300px;
+      width: 540px;
+    }
+
+    .f04-eyebrow-line {
+      width: 44px;
+      height: 4px;
+      border-radius: 2px;
+      background: #5eeabe;
+      margin-bottom: 14px;
+      transform-origin: 0% 50%;
+    }
+    .f04-eyebrow {
+      font-size: 28px;
+      font-weight: 600;
+      letter-spacing: 4px;
+      color: #5eeabe;
+    }
+
+    .f04-headline {
+      margin-top: 16px;
+      font-size: 76px;
+      font-weight: 700;
+      line-height: 1.12;
+      letter-spacing: -0.02em;
+      color: #eef2f8;
+    }
+    .f04-w {
+      display: inline-block;
+      will-change: transform;
+    }
+    .f04-w-accent {
+      position: relative;
+      color: #5eeabe;
+    }
+    .f04-underline {
+      position: absolute;
+      left: 2px;
+      right: 2px;
+      bottom: -12px;
+      height: 4px;
+      border-radius: 2px;
+      background: #5eeabe;
+      transform-origin: 0% 50%;
+    }
+
+    .f04-chips {
+      display: flex;
+      flex-direction: column;
+      gap: 14px;
+      margin-top: 34px;
+    }
+    .f04-chip {
+      display: flex;
+      align-items: center;
+      gap: 14px;
+      width: fit-content;
+      padding: 12px 26px;
+      font-size: 26px;
+      letter-spacing: 0.02em;
+      color: #e6ecf7;
+      background: rgba(255, 255, 255, 0.045);
+      border: 1.5px solid rgba(255, 255, 255, 0.09);
+      border-radius: 12px;
+      transform-origin: 0% 50%;
+      will-change: transform;
+    }
+    .f04-chip svg {
+      display: block;
+      flex: 0 0 auto;
+    }
+
+    /* right browser mock — approved sketch anchor: right 100 / top 160 / width 1060 */
+    .f04-mock {
+      position: absolute;
+      left: 760px;
+      top: 160px;
+      width: 1060px;
+      height: 710px;
+      border-radius: 20px;
+      background: #0c101a;
+      border: 1.5px solid rgba(255, 255, 255, 0.09);
+      overflow: hidden;
+      will-change: transform;
+    }
+    .f04-bar {
+      display: flex;
+      align-items: center;
+      gap: 10px;
+      height: 48px;
+      padding: 0 20px;
+      background: rgba(255, 255, 255, 0.03);
+      border-bottom: 1px solid rgba(255, 255, 255, 0.07);
+    }
+    .f04-dot {
+      width: 13px;
+      height: 13px;
+      border-radius: 50%;
+      background: rgba(255, 255, 255, 0.22);
+    }
+    .f04-url {
+      margin-left: 16px;
+      padding: 6px 22px;
+      border-radius: 999px;
+      background: rgba(255, 255, 255, 0.055);
+      font-size: 20px;
+      letter-spacing: 0.03em;
+      color: #a6b1c6;
+    }
+    /* idle viewport under the hoisted recording — dark until the capture powers on */
+    .f04-screen {
+      width: 100%;
+      height: 662px;
+      background: #0b0f19;
+    }
+  </style>
+
+  <div
+    id="root"
+    data-composition-id="04-todos"
+    data-start="0"
+    data-duration="8.333"
+    data-width="1920"
+    data-height="1080"
+  >
+    <!-- track 0 · ground -->
+    <div class="clip" data-start="0" data-duration="8.333" data-track-index="0">
+      <div class="f04-ground"></div>
+    </div>
+
+    <!-- track 1 · content -->
+    <div class="clip" data-start="0" data-duration="8.333" data-track-index="1">
+      <!-- left text column -->
+      <div class="f04-col">
+        <div class="f04-eyebrow-line" id="f04-eyebrow-line"></div>
+        <div class="f04-eyebrow" id="f04-eyebrow">提醒事项</div>
+
+        <div class="f04-headline">
+          <span class="f04-w" id="f04-w1">轻重</span><span class="f04-w f04-w-accent" id="f04-w2"
+            >自分<span class="f04-underline" id="f04-underline"></span></span
+          >
+        </div>
+
+        <div class="f04-chips">
+          <div class="f04-chip" id="f04-chip-1">
+            <svg width="22" height="22" viewBox="0 0 20 20" aria-hidden="true">
+              <path
+                d="M10 1.8l2.6 5.3 5.8.8-4.2 4.1 1 5.8-5.2-2.7-5.2 2.7 1-5.8L1.6 7.9l5.8-.8z"
+                fill="#5eeabe"
+              />
+            </svg>
+            <span>星标置顶</span>
+          </div>
+          <div class="f04-chip" id="f04-chip-2">
+            <svg width="22" height="22" viewBox="0 0 20 20" aria-hidden="true">
+              <circle cx="10" cy="10" r="8" fill="none" stroke="#5eeabe" stroke-width="1.8" />
+              <path d="M10 5.6V10l3.1 2.1" fill="none" stroke="#5eeabe" stroke-width="1.8" stroke-linecap="round" />
+            </svg>
+            <span>截止清晰</span>
+          </div>
+          <div class="f04-chip" id="f04-chip-3">
+            <svg width="22" height="22" viewBox="0 0 20 20" aria-hidden="true">
+              <circle cx="10" cy="10" r="8" fill="none" stroke="#5eeabe" stroke-width="1.8" />
+              <circle cx="10" cy="10" r="3" fill="#5eeabe" />
+            </svg>
+            <span>今日重点一眼看清</span>
+          </div>
+        </div>
+      </div>
+
+      <!-- right browser mock (brand chrome, same family as F02) -->
+      <div class="f04-mock" id="f04-mock">
+        <div class="f04-bar">
+          <span class="f04-dot"></span>
+          <span class="f04-dot"></span>
+          <span class="f04-dot"></span>
+          <span class="f04-url">minidesk.online</span>
+        </div>
+        <div class="f04-screen"></div>
+      </div>
+    </div>
+
+    <!-- approved recording — hoisted to the host root at assembly; host geometry = the
+         mock's viewport rect (760,208 → 1060×662, 1.6 aspect = native 1280×800, no crop) -->
+    <video
+      data-frame-video="approved"
+      data-frame-video-x="760"
+      data-frame-video-y="208"
+      data-frame-video-width="1060"
+      data-frame-video-height="662"
+      data-frame-video-fit="contain"
+      src="assets/features-todos.mp4"
+      muted
+      playsinline
+      preload="auto"
+      aria-label="提醒事项功能录屏"
+      data-start="0.5"
+      data-duration="7.833"
+      data-track-index="2"
+      style="position: absolute; left: 760px; top: 208px; width: 1060px; height: 662px; object-fit: contain; background: #0b0f19"
+    ></video>
+
+    <script src="https://cdn.jsdelivr.net/npm/gsap@3.14.2/dist/gsap.min.js"></script>
+    <script>
+      (function () {
+        var tl = gsap.timeline({ paused: true });
+
+        /* Scene 1 (0.0–1.2s): browser mock slides in and docks; the recording powers on
+           exactly at landing (video window opens at 0.5s, host-side). Camera stays locked. */
+        tl.fromTo(
+          "#f04-mock",
+          { x: 150, opacity: 0 },
+          { x: 0, opacity: 1, duration: 0.5, ease: "power3.out" },
+          0.02
+        );
+
+        /* Scene 2 (1.2–2.8s): VO 「提醒事项，轻重自分」 — eyebrow fades in, then the
+           display line lands per-word (「自分」 primary), mint underline sweeps on the beat. */
+        tl.fromTo(
+          "#f04-eyebrow-line",
+          { scaleX: 0 },
+          { scaleX: 1, duration: 0.32, ease: "power2.out" },
+          1.25
+        );
+        tl.fromTo(
+          "#f04-eyebrow",
+          { x: -24, opacity: 0 },
+          { x: 0, opacity: 1, duration: 0.45, ease: "power3.out" },
+          1.3
+        );
+        tl.fromTo(
+          "#f04-w1",
+          { x: -52, opacity: 0 },
+          { x: 0, opacity: 1, duration: 0.6, ease: "power3.out" },
+          1.5
+        );
+        tl.fromTo(
+          "#f04-w2",
+          { x: -52, y: 14, opacity: 0 },
+          { x: 0, y: 0, opacity: 1, duration: 0.6, ease: "power3.out" },
+          1.66
+        );
+        tl.fromTo(
+          "#f04-underline",
+          { scaleX: 0 },
+          { scaleX: 1, duration: 0.42, ease: "power2.out" },
+          2.3
+        );
+
+        /* Scene 3 (2.8–5.2s): three chips pop one per VO beat (spring-pop-entrance:
+           scale 0 → 1, small y rise, power3.out, origin-anchored at the column edge). */
+        tl.fromTo(
+          "#f04-chip-1",
+          { scale: 0, opacity: 0, y: 12 },
+          { scale: 1, opacity: 1, y: 0, duration: 0.5, ease: "power3.out" },
+          2.85
+        );
+        tl.fromTo(
+          "#f04-chip-2",
+          { scale: 0, opacity: 0, y: 12 },
+          { scale: 1, opacity: 1, y: 0, duration: 0.5, ease: "power3.out" },
+          3.8
+        );
+        tl.fromTo(
+          "#f04-chip-3",
+          { scale: 0, opacity: 0, y: 12 },
+          { scale: 1, opacity: 1, y: 0, duration: 0.55, ease: "power3.out" },
+          4.8
+        );
+
+        /* Scene 4 (5.2s → end): full hold — the recording's own final check closes the
+           shot (video runs to ~8.08s and freezes on its last frame). No exits. */
+
+        window.__timelines = window.__timelines || {};
+        window.__timelines["04-todos"] = tl;
+      })();
+    </script>
+  </div>
+</template>

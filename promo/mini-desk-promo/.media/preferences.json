@@ -1,0 +1,55 @@
+{
+  "version": 1,
+  "preferences": {
+    "destination": {
+      "value": "website-embed",
+      "confirmed_in": [
+        "mini-desk-promo"
+      ],
+      "updated_at": "2026-09-12T15:09:27.857Z"
+    },
+    "aspect": {
+      "value": "1920x1080",
+      "confirmed_in": [
+        "mini-desk-promo"
+      ],
+      "updated_at": "2026-09-12T15:09:27.886Z"
+    },
+    "language": {
+      "value": "zh",
+      "confirmed_in": [
+        "mini-desk-promo"
+      ],
+      "updated_at": "2026-09-12T15:09:27.914Z"
+    },
+    "flow": {
+      "value": "automation",
+      "confirmed_in": [
+        "mini-desk-promo"
+      ],
+      "updated_at": "2026-09-12T15:09:27.943Z"
+    },
+    "storyboard": {
+      "value": "yes",
+      "confirmed_in": [
+        "mini-desk-promo"
+      ],
+      "updated_at": "2026-09-12T15:09:27.974Z"
+    },
+    "style_preset.product-launch-video": {
+      "value": "blue-professional",
+      "confirmed_in": [
+        "mini-desk-promo"
+      ],
+      "updated_at": "2026-09-12T15:51:59.039Z"
+    },
+    "voice": {
+      "value": "1c651b8254304a298f6f35585f2e1d04",
+      "confirmed_in": [
+        "mini-desk-promo"
+      ],
+      "updated_at": "2026-09-12T16:30:32.748Z"
+    }
+  },
+  "sightings": {}
+}

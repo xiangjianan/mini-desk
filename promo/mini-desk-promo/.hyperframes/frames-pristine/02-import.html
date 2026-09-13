@@ -1,0 +1,376 @@
+<template>
+  <div id="root" data-composition-id="02-import" data-start="0" data-duration="5.695" data-width="1920" data-height="1080">
+    <!-- 02-import · 导入即成形 — device-surface-showcase (static-tour adapt): mock 为英雄，相机锁死，全部 element-level -->
+
+    <!-- 深度 1/3 · 地床（全时长背景 clip） -->
+    <div class="clip f02-import-ground" data-start="0" data-duration="5.695" data-track-index="0">
+      <div class="f02-import-wash f02-import-wash-a"></div>
+      <div class="f02-import-wash f02-import-wash-b"></div>
+    </div>
+
+    <!-- 深度 2/3 · 浏览器 mock（红绿灯 + 地址药丸 + 屏内录屏） -->
+    <div class="clip f02-import-mock-clip" data-start="0" data-duration="5.695" data-track-index="1">
+      <div class="f02-import-mock" id="f02-import-mock">
+        <div class="f02-import-chrome">
+          <span class="f02-import-dot f02-import-dot-1"></span>
+          <span class="f02-import-dot f02-import-dot-2"></span>
+          <span class="f02-import-dot f02-import-dot-3"></span>
+          <span class="f02-import-url">minidesk.online</span>
+        </div>
+        <div class="f02-import-screen">
+          <!-- 录屏真实素材：起播前为近白占位（与录屏均色一致，起播瞬间无跳变） -->
+          <video
+            class="f02-import-video"
+            data-frame-video="approved"
+            src="assets/features-import.mp4"
+            muted
+            playsinline
+            preload="auto"
+            data-start="0.8"
+            data-duration="4.895"
+            data-track-index="2"
+            data-frame-video-x="812"
+            data-frame-video-y="242"
+            data-frame-video-width="976"
+            data-frame-video-height="556"
+            data-frame-video-fit="cover"
+            aria-label="Mini Desk 导入流程录屏"
+          ></video>
+        </div>
+      </div>
+    </div>
+
+    <!-- 深度 3/3 · 左栏文字（eyebrow + display 标题 + 副行，左上三分位） -->
+    <div class="clip f02-import-textcol" data-start="0" data-duration="5.695" data-track-index="3">
+      <div class="f02-import-accentline" id="f02-import-accentline"></div>
+      <div class="f02-import-eyebrow" id="f02-import-eyebrow">十秒上手</div>
+      <div class="f02-import-title">
+        <span class="f02-import-word">导</span><span class="f02-import-word">入</span><span class="f02-import-word">即</span><span class="f02-import-word">成</span><span class="f02-import-word">形</span>
+      </div>
+      <div class="f02-import-sub" id="f02-import-sub">一个 JSON，看板即刻成形</div>
+    </div>
+
+    <!-- mock 下方步骤链：选 JSON → 导入 → 成形（按 VO 逐节落拍） -->
+    <div class="clip f02-import-chain" data-start="0" data-duration="5.695" data-track-index="4">
+      <span class="f02-import-node" id="f02-import-node-1">选 JSON</span>
+      <span class="f02-import-arrow" id="f02-import-arrow-1">→</span>
+      <span class="f02-import-node" id="f02-import-node-2">导入</span>
+      <span class="f02-import-arrow" id="f02-import-arrow-2">→</span>
+      <span class="f02-import-node f02-import-node-accent" id="f02-import-node-3"><span class="f02-import-glow-word" id="f02-import-glow-word">成形</span></span>
+    </div>
+  </div>
+
+  <style>
+    #root {
+      position: relative;
+      width: 1920px;
+      height: 1080px;
+      overflow: hidden;
+      font-family: "PingFang SC", sans-serif;
+      color: #eef2f8;
+    }
+
+    /* ———— 地床：深空底 + 极淡 aurora 双 wash（仅漂移，不抢戏） ———— */
+    .f02-import-ground {
+      position: absolute;
+      inset: 0;
+      background: #07090f;
+    }
+    .f02-import-wash {
+      position: absolute;
+      width: 1500px;
+      height: 1500px;
+      border-radius: 50%;
+      pointer-events: none;
+    }
+    .f02-import-wash-a {
+      left: -560px;
+      top: -640px;
+      background: radial-gradient(circle at 50% 50%, rgba(94, 234, 190, 0.1), rgba(94, 234, 190, 0.035) 42%, rgba(94, 234, 190, 0) 68%);
+    }
+    .f02-import-wash-b {
+      right: -640px;
+      bottom: -700px;
+      background: radial-gradient(circle at 50% 50%, rgba(139, 92, 246, 0.13), rgba(34, 211, 238, 0.05) 45%, rgba(34, 211, 238, 0) 70%);
+    }
+
+    /* ———— 浏览器 mock：tinted 卡片语言，无投影 ———— */
+    .f02-import-mock-clip {
+      position: absolute;
+      inset: 0;
+    }
+    .f02-import-mock {
+      position: absolute;
+      left: 790px;
+      top: 170px;
+      width: 1020px;
+      height: 650px;
+      background: rgba(255, 255, 255, 0.045);
+      border: 1.5px solid rgba(255, 255, 255, 0.1);
+      border-radius: 20px;
+    }
+    .f02-import-chrome {
+      position: relative;
+      height: 50px;
+      display: flex;
+      align-items: center;
+      gap: 10px;
+      padding: 0 22px;
+      background: rgba(255, 255, 255, 0.025);
+      border-bottom: 1px solid rgba(255, 255, 255, 0.07);
+      border-radius: 20px 20px 0 0;
+    }
+    .f02-import-dot {
+      width: 14px;
+      height: 14px;
+      border-radius: 50%;
+    }
+    .f02-import-dot-1 { background: rgba(255, 255, 255, 0.2); }
+    .f02-import-dot-2 { background: rgba(255, 255, 255, 0.15); }
+    .f02-import-dot-3 { background: rgba(255, 255, 255, 0.11); }
+    .f02-import-url {
+      margin-left: 18px;
+      padding: 6px 24px;
+      border-radius: 999px;
+      background: rgba(255, 255, 255, 0.05);
+      border: 1px solid rgba(255, 255, 255, 0.07);
+      font-size: 20px;
+      color: #6d7890;
+      letter-spacing: 0.02em;
+    }
+    .f02-import-screen {
+      position: absolute;
+      left: 22px;
+      top: 72px;
+      width: 976px;
+      height: 556px;
+      background: #f9f9fa; /* 录屏均色：起播前后无缝 */
+      border-radius: 12px;
+      overflow: hidden;
+    }
+    .f02-import-video {
+      position: absolute;
+      left: 0;
+      top: 0;
+      width: 100%;
+      height: 100%;
+      object-fit: cover;
+      border-radius: 12px;
+      display: block;
+    }
+
+    /* ———— 左栏文字 ———— */
+    .f02-import-textcol {
+      position: absolute;
+      left: 110px;
+      top: 330px;
+      width: 560px;
+    }
+    .f02-import-accentline {
+      width: 60px;
+      height: 4px;
+      border-radius: 2px;
+      background: #5eeabe;
+      transform-origin: 0% 50%;
+    }
+    .f02-import-eyebrow {
+      margin-top: 20px;
+      font-size: 28px;
+      font-weight: 600;
+      letter-spacing: 5px;
+      color: #5eeabe;
+    }
+    .f02-import-title {
+      margin-top: 14px;
+      font-size: 72px;
+      font-weight: 700;
+      line-height: 1.15;
+      letter-spacing: -0.02em;
+      color: #eef2f8;
+    }
+    .f02-import-word {
+      display: inline-block;
+      transform-origin: 50% 100%;
+    }
+    .f02-import-sub {
+      margin-top: 22px;
+      font-size: 30px;
+      line-height: 1.6;
+      color: #a6b1c6;
+    }
+
+    /* ———— 步骤链（pill chrome） ———— */
+    .f02-import-chain {
+      position: absolute;
+      left: 110px;
+      bottom: 200px;
+      display: flex;
+      align-items: center;
+      gap: 18px;
+    }
+    .f02-import-node {
+      padding: 10px 26px;
+      border-radius: 999px;
+      font-size: 24px;
+      font-weight: 600;
+      white-space: nowrap;
+      color: #eef2f8;
+      background: rgba(255, 255, 255, 0.055);
+      border: 1.5px solid rgba(255, 255, 255, 0.14);
+      transform-origin: 50% 50%;
+    }
+    .f02-import-node-accent {
+      color: #5eeabe;
+      font-weight: 700;
+      background: rgba(94, 234, 190, 0.1);
+      border-color: rgba(94, 234, 190, 0.8);
+    }
+    .f02-import-arrow {
+      font-size: 24px;
+      color: #6d7890;
+    }
+    .f02-import-glow-word {
+      display: inline-block;
+      transform-origin: 50% 50%;
+    }
+  </style>
+
+  <script src="https://cdn.jsdelivr.net/npm/gsap@3.14.2/dist/gsap.min.js"></script>
+  <script>
+    window.__timelines = window.__timelines || {};
+    (function () {
+      var DUR = 5.695;
+      var q = function (s) { return document.querySelector(s); };
+
+      var tl = gsap.timeline({ paused: true });
+
+      /* ———— Scene 1 (0.0–1.2s)：mock 自右 edge slide-in，power3 长尾定格（相机锁死） ———— */
+      tl.fromTo(
+        "#f02-import-mock",
+        { x: 1230 },
+        { x: 0, duration: 0.95, ease: "power3.out" },
+        0
+      );
+
+      /* ———— 地床 aurora 低幅漂移（sine-wave-loop，t 的确定函数，seek 安全） ———— */
+      var washA = q(".f02-import-wash-a");
+      var washB = q(".f02-import-wash-b");
+      var drift = { t: 0 };
+      tl.to(
+        drift,
+        {
+          t: DUR,
+          duration: DUR,
+          ease: "none",
+          onUpdate: function () {
+            washA.style.transform =
+              "translate(" + (Math.sin(drift.t * 0.55) * 22) + "px," + (Math.cos(drift.t * 0.42) * 14) + "px)";
+            washB.style.transform =
+              "translate(" + (Math.cos(drift.t * 0.48) * 26) + "px," + (Math.sin(drift.t * 0.5) * 18) + "px)";
+          },
+        },
+        0
+      );
+
+      /* ———— Scene 2 (1.2–3.2s)：accent line → eyebrow → 标题逐字落定 ———— */
+      tl.fromTo(
+        "#f02-import-accentline",
+        { scaleX: 0 },
+        { scaleX: 1, duration: 0.45, ease: "power3.out" },
+        1.15
+      );
+      tl.fromTo(
+        "#f02-import-eyebrow",
+        { opacity: 0, y: 18 },
+        { opacity: 1, y: 0, duration: 0.5, ease: "power3.out" },
+        1.25
+      );
+
+      /* dynamic-content-sequencing：每字窗口由内容长度计算，reduce 成绝对时间，不逐个手写偏移 */
+      var TITLE_CHARS = ["导", "入", "即", "成", "形"];
+      var TITLE_START = 1.35;
+      var BASE_DURATION = 0.2;
+      var SEC_PER_CHAR = 0.06;
+      var words = document.querySelectorAll(".f02-import-word");
+      var cumulative = 0;
+      var TIMELINE = [];
+      for (var ci = 0; ci < TITLE_CHARS.length; ci++) {
+        var entryDur = BASE_DURATION + TITLE_CHARS[ci].length * SEC_PER_CHAR;
+        TIMELINE.push({ start: TITLE_START + cumulative, end: TITLE_START + cumulative + entryDur });
+        cumulative += entryDur;
+      }
+      TIMELINE.forEach(function (entry, i) {
+        tl.fromTo(
+          words[i],
+          { opacity: 0, y: 34, scale: 0.92 },
+          { opacity: 1, y: 0, scale: 1, duration: 0.52, ease: "power3.out" },
+          entry.start
+        );
+      });
+
+      tl.fromTo(
+        "#f02-import-sub",
+        { opacity: 0, y: 16 },
+        { opacity: 1, y: 0, duration: 0.55, ease: "power3.out" },
+        2.55
+      );
+
+      /* ———— Scene 3 (3.2–4.8s)：步骤链前两节依序 pop（低过冲） ———— */
+      function nodePop(id, at) {
+        tl.fromTo(
+          id,
+          { scale: 0, opacity: 0 },
+          { scale: 1, opacity: 1, duration: 0.45, ease: "back.out(1.2)" },
+          at
+        );
+      }
+      function arrowIn(id, at) {
+        tl.fromTo(
+          id,
+          { opacity: 0, x: -10 },
+          { opacity: 0.55, x: 0, duration: 0.3, ease: "power2.out" },
+          at
+        );
+      }
+      nodePop("#f02-import-node-1", 3.3);
+      arrowIn("#f02-import-arrow-1", 3.72);
+      nodePop("#f02-import-node-2", 4.05);
+      arrowIn("#f02-import-arrow-2", 4.48);
+
+      /* ———— Scene 4 (4.8–5.695s)：第三节「成形」落拍 + asr-keyword-glow ———— */
+      nodePop("#f02-import-node-3", 4.85);
+
+      var glowEl = q("#f02-import-glow-word");
+      var GLOW_TIMING = { start: 4.85, end: 5.18 };
+      var ATTACK_DUR = 0.12;
+      var RELEASE = 0.5;
+      var REST_LEVEL = 0.14;
+      var MAX_BLUR = 34;
+      var MAX_SCALE_BOOST = 0.1;
+      function glowEnvelope(time, start, end) {
+        if (time < start) return 0;
+        if (time < end) return Math.min((time - start) / ATTACK_DUR, 1);
+        var releaseEnd = end + RELEASE;
+        if (time < releaseEnd) return 1 - ((time - end) / RELEASE) * (1 - REST_LEVEL);
+        return REST_LEVEL;
+      }
+      var glowDriver = { t: 0 };
+      tl.to(
+        glowDriver,
+        {
+          t: DUR,
+          duration: DUR,
+          ease: "none",
+          onUpdate: function () {
+            var env = glowEnvelope(glowDriver.t, GLOW_TIMING.start, GLOW_TIMING.end);
+            glowEl.style.textShadow = "0 0 " + MAX_BLUR * env + "px rgba(94, 234, 190, " + 0.85 * env + ")";
+            glowEl.style.transform = "scale(" + (1 + MAX_SCALE_BOOST * env) + ")";
+          },
+        },
+        0
+      );
+
+      window.__timelines["02-import"] = tl;
+    })();
+  </script>
+</template>

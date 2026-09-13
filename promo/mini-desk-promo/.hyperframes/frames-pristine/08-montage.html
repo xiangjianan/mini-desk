@@ -1,0 +1,453 @@
+<template>
+  <style>
+    /* PingFang SC is the frame.md display/body family; it is an OS font on the render
+       machine (macOS), declared locally — no project font files exist to point at. */
+    @font-face {
+      font-family: "PingFang SC";
+      src: local("PingFang SC");
+      font-weight: 100 900;
+      font-style: normal;
+    }
+
+    #root {
+      position: relative;
+      width: 1920px;
+      height: 1080px;
+      overflow: hidden;
+      background: transparent; /* full-bleed ground lives on the .f08-bg clip below */
+      font-family: "PingFang SC", sans-serif;
+      color: #eef2f8;
+    }
+
+    /* ---- track 0: full-bleed ground (dark-aurora base, ultra-subtle washes) ---- */
+    .f08-bg {
+      position: absolute;
+      inset: 0;
+      background: #07090f;
+    }
+    .f08-glow {
+      position: absolute;
+      width: 940px;
+      height: 940px;
+      border-radius: 50%;
+    }
+    .f08-glow-a {
+      left: -280px;
+      top: -360px;
+      background: radial-gradient(circle, rgba(94, 234, 190, 0.1) 0%, rgba(94, 234, 190, 0) 65%);
+    }
+    .f08-glow-b {
+      right: -320px;
+      bottom: -420px;
+      background: radial-gradient(
+        circle,
+        rgba(34, 211, 238, 0.07) 0%,
+        rgba(167, 139, 250, 0.05) 45%,
+        rgba(167, 139, 250, 0) 70%
+      );
+    }
+
+    /* ---- track 1: stage (the .scene — overflow hidden gates the oversized world) ---- */
+    .f08-stage {
+      position: absolute;
+      inset: 0;
+      overflow: hidden;
+    }
+
+    /* Virtual camera subject: one oversized canvas, all stations pre-placed in world
+       space. Pure PAN (scale stays 1), so the counter-shift is T = -offset (720px-ish
+       per stop). One writer (applyCam) owns .f08-world's transform. */
+    .f08-world {
+      position: absolute;
+      top: 0;
+      left: 0;
+      width: 2928px;
+      height: 1080px;
+      will-change: transform;
+    }
+    .f08-rail {
+      position: absolute;
+      left: -160px;
+      top: 507px;
+      width: 3248px;
+      height: 2px;
+      background: rgba(255, 255, 255, 0.05);
+    }
+    .f08-tick {
+      position: absolute;
+      top: -3px;
+      width: 8px;
+      height: 8px;
+      border-radius: 50%;
+      background: rgba(94, 234, 190, 0.2);
+    }
+    .f08-strip {
+      position: absolute;
+      left: 0;
+      top: 384px;
+      display: flex;
+      gap: 40px;
+    }
+
+    /* Station card. Media window = 360x225 at card-local (12,12) → screen (780,396)
+       whenever its card is the dwell target — exactly the hoisted video rect. */
+    .f08-card {
+      position: relative;
+      flex: none;
+      width: 384px;
+      height: 321px;
+      padding: 10px;
+      border: 2px solid rgba(255, 255, 255, 0.1);
+      border-radius: 16px;
+      background: rgba(255, 255, 255, 0.045);
+      --dof: 0px;
+      filter: blur(var(--dof));
+      will-change: filter, transform;
+    }
+    .f08-media {
+      width: 360px;
+      height: 225px;
+      border-radius: 10px;
+      overflow: hidden;
+      background: linear-gradient(160deg, #0c1322 0%, #070a13 100%);
+      display: flex;
+      align-items: center;
+      justify-content: center;
+    }
+    .f08-ghost {
+      font-size: 64px;
+      font-weight: 700;
+      letter-spacing: 2px;
+      color: rgba(94, 234, 190, 0.14);
+    }
+    .f08-name {
+      margin-top: 14px;
+      height: 34px;
+      font-size: 30px;
+      font-weight: 600;
+      letter-spacing: 1px;
+      color: #eef2f8;
+      white-space: nowrap;
+    }
+    .f08-slogan {
+      margin-top: 4px;
+      height: 20px;
+      font-size: 17px;
+      color: #6d7890;
+      white-space: nowrap;
+    }
+
+    /* Fixed overlays (never pan) */
+    .f08-title {
+      position: absolute;
+      left: 110px;
+      top: 128px;
+      display: flex;
+      align-items: baseline;
+      gap: 26px;
+    }
+    .f08-eyebrow {
+      font-size: 27px;
+      font-weight: 600;
+      letter-spacing: 6px;
+      color: #5eeabe;
+    }
+    .f08-h1 {
+      font-size: 60px;
+      font-weight: 700;
+      letter-spacing: -1px;
+      color: #eef2f8;
+    }
+    .f08-pill {
+      position: absolute;
+      right: 110px;
+      top: 146px;
+      padding: 9px 24px;
+      border-radius: 999px;
+      background: rgba(94, 234, 190, 0.07);
+      color: #5eeabe;
+      font-size: 20px;
+      font-weight: 500;
+      letter-spacing: 2px;
+    }
+    .f08-readout {
+      position: absolute;
+      left: 110px;
+      top: 752px;
+    }
+    .f08-dots {
+      display: flex;
+      gap: 12px;
+      align-items: center;
+      height: 11px;
+    }
+    .f08-dot {
+      width: 9px;
+      height: 9px;
+      border-radius: 50%;
+      background: rgba(255, 255, 255, 0.14);
+    }
+    .f08-dot-past {
+      background: rgba(94, 234, 190, 0.45);
+    }
+    .f08-dot-on {
+      background: #5eeabe;
+      transform: scale(1.35);
+    }
+    .f08-ro-line {
+      margin-top: 14px;
+      display: flex;
+      align-items: baseline;
+      gap: 12px;
+    }
+    .f08-ro-idx {
+      font-size: 34px;
+      font-weight: 700;
+      letter-spacing: 1px;
+      color: #5eeabe;
+    }
+    .f08-ro-total {
+      font-size: 16px;
+      font-weight: 500;
+      letter-spacing: 2px;
+      color: #6d7890;
+    }
+    .f08-ro-name {
+      font-size: 30px;
+      font-weight: 600;
+      color: #eef2f8;
+      min-width: 156px;
+      white-space: nowrap;
+    }
+    .f08-ro-slogan {
+      margin-top: 6px;
+      height: 22px;
+      font-size: 17px;
+      color: #6d7890;
+      min-width: 176px;
+      white-space: nowrap;
+    }
+    .f08-callout {
+      position: absolute;
+      right: 110px;
+      top: 766px;
+      padding: 17px 36px;
+      border-radius: 999px;
+      background: #5eeabe;
+      color: #07090f;
+      font-size: 26px;
+      font-weight: 600;
+      letter-spacing: 1px;
+      white-space: nowrap;
+    }
+  </style>
+
+  <div id="root" data-composition-id="08-montage" data-start="0" data-duration="4.153" data-width="1920" data-height="1080">
+    <!-- track 0 · full-duration ground -->
+    <div class="clip f08-bg" data-start="0" data-duration="4.153" data-track-index="0">
+      <div class="f08-glow f08-glow-a" id="f08-glow-a"></div>
+      <div class="f08-glow f08-glow-b" id="f08-glow-b"></div>
+    </div>
+
+    <!-- track 1 · stage: panning world + fixed overlays -->
+    <div class="clip f08-stage" data-start="0" data-duration="4.153" data-track-index="1">
+      <div class="f08-world" id="f08-world">
+        <div class="f08-rail">
+          <span class="f08-tick" style="left: 188px"></span>
+          <span class="f08-tick" style="left: 612px"></span>
+          <span class="f08-tick" style="left: 1036px"></span>
+          <span class="f08-tick" style="left: 1460px"></span>
+          <span class="f08-tick" style="left: 1884px"></span>
+          <span class="f08-tick" style="left: 2308px"></span>
+          <span class="f08-tick" style="left: 2732px"></span>
+        </div>
+        <div class="f08-strip">
+          <div class="f08-card">
+            <div class="f08-media"><span class="f08-ghost">01</span></div>
+            <div class="f08-name">人生清单</div>
+            <div class="f08-slogan">把想做的事一一勾掉</div>
+          </div>
+          <div class="f08-card">
+            <div class="f08-media"><span class="f08-ghost">02</span></div>
+            <div class="f08-name">前端进阶</div>
+            <div class="f08-slogan">学习路线与每日打卡</div>
+          </div>
+          <div class="f08-card">
+            <div class="f08-media"><span class="f08-ghost">03</span></div>
+            <div class="f08-name">我的工作台</div>
+            <div class="f08-slogan">任务与笔记一站搞定</div>
+          </div>
+          <div class="f08-card">
+            <div class="f08-media"><span class="f08-ghost">04</span></div>
+            <div class="f08-name">健身训练</div>
+            <div class="f08-slogan">课表与身体数据追踪</div>
+          </div>
+          <div class="f08-card">
+            <div class="f08-media"><span class="f08-ghost">05</span></div>
+            <div class="f08-name">旅行手账</div>
+            <div class="f08-slogan">行程与回忆收进一处</div>
+          </div>
+          <div class="f08-card">
+            <div class="f08-media"><span class="f08-ghost">06</span></div>
+            <div class="f08-name">内容创作</div>
+            <div class="f08-slogan">选题库与更新排期表</div>
+          </div>
+          <div class="f08-card">
+            <div class="f08-media"><span class="f08-ghost">07</span></div>
+            <div class="f08-name">家庭账本</div>
+            <div class="f08-slogan">收支流水一目了然</div>
+          </div>
+        </div>
+      </div>
+
+      <div class="f08-title" id="f08-title">
+        <span class="f08-eyebrow">七套主题空间</span>
+        <span class="f08-h1">总有一款适合你</span>
+      </div>
+      <div class="f08-pill" id="f08-pill">生活 · 工作 · 学习 · 创作</div>
+
+      <div class="f08-readout" id="f08-readout">
+        <div class="f08-dots">
+          <span class="f08-dot"></span>
+          <span class="f08-dot"></span>
+          <span class="f08-dot"></span>
+          <span class="f08-dot"></span>
+          <span class="f08-dot"></span>
+          <span class="f08-dot"></span>
+          <span class="f08-dot"></span>
+        </div>
+        <div class="f08-ro-line">
+          <span class="f08-ro-idx" id="f08-ro-idx">01</span>
+          <span class="f08-ro-total">/ 07</span>
+          <span class="f08-ro-name" id="f08-ro-name">人生清单</span>
+        </div>
+        <div class="f08-ro-slogan" id="f08-ro-slogan">把想做的事一一勾掉</div>
+      </div>
+
+      <div class="f08-callout" id="f08-callout">导入即用，改改成你的 →</div>
+    </div>
+  </div>
+
+  <!-- Approved frame videos, hoisted by assemble-index to the host root (they paint
+       above this frame's DOM). All seven share the active station's media-window rect
+       (780,396,360,225 — 1.6 aspect = the 1280x800 source, so cover crops nothing);
+       the DOM camera centers each card there during its dwell, and each video's window
+       equals that dwell. Station 1 starts after the 0.4s incoming zoom-through settles;
+       station 7 ends at 4.05 (before the 4.153 boundary) so the outgoing-transition
+       extender does NOT hold a static video above the zooming wrapper. -->
+  <video data-frame-video="approved" id="f08-vid-0" src="assets/themes-bucket.mp4" muted playsinline aria-label="人生清单看板录屏" data-media-start="1.5" data-start="0.45" data-duration="0.41" data-track-index="0" data-frame-video-x="780" data-frame-video-y="396" data-frame-video-width="360" data-frame-video-height="225" data-frame-video-fit="cover"></video>
+  <video data-frame-video="approved" id="f08-vid-1" src="assets/themes-study.mp4" muted playsinline aria-label="前端进阶看板录屏" data-media-start="2.4" data-start="1.04" data-duration="0.30" data-track-index="1" data-frame-video-x="780" data-frame-video-y="396" data-frame-video-width="360" data-frame-video-height="225" data-frame-video-fit="cover"></video>
+  <video data-frame-video="approved" id="f08-vid-2" src="assets/themes-work.mp4" muted playsinline aria-label="我的工作台看板录屏" data-media-start="3.3" data-start="1.52" data-duration="0.30" data-track-index="2" data-frame-video-x="780" data-frame-video-y="396" data-frame-video-width="360" data-frame-video-height="225" data-frame-video-fit="cover"></video>
+  <video data-frame-video="approved" id="f08-vid-3" src="assets/themes-fitness.mp4" muted playsinline aria-label="健身训练看板录屏" data-media-start="4.2" data-start="2.00" data-duration="0.30" data-track-index="3" data-frame-video-x="780" data-frame-video-y="396" data-frame-video-width="360" data-frame-video-height="225" data-frame-video-fit="cover"></video>
+  <video data-frame-video="approved" id="f08-vid-4" src="assets/themes-travel.mp4" muted playsinline aria-label="旅行手账看板录屏" data-media-start="5.1" data-start="2.48" data-duration="0.30" data-track-index="4" data-frame-video-x="780" data-frame-video-y="396" data-frame-video-width="360" data-frame-video-height="225" data-frame-video-fit="cover"></video>
+  <video data-frame-video="approved" id="f08-vid-5" src="assets/themes-creator.mp4" muted playsinline aria-label="内容创作看板录屏" data-media-start="6.0" data-start="2.96" data-duration="0.30" data-track-index="5" data-frame-video-x="780" data-frame-video-y="396" data-frame-video-width="360" data-frame-video-height="225" data-frame-video-fit="cover"></video>
+  <video data-frame-video="approved" id="f08-vid-6" src="assets/themes-finance.mp4" muted playsinline aria-label="家庭账本看板录屏" data-media-start="6.9" data-start="3.44" data-duration="0.61" data-track-index="6" data-frame-video-x="780" data-frame-video-y="396" data-frame-video-width="360" data-frame-video-height="225" data-frame-video-fit="cover"></video>
+
+  <script src="https://cdn.jsdelivr.net/npm/gsap@3.14.2/dist/gsap.min.js"></script>
+  <script>
+    window.__timelines = window.__timelines || {};
+    (function () {
+      var FRAME_ID = "08-montage";
+      var D = 4.153;
+
+      /* Spatial plan (px). Equal-width row → exact station centers, no measurement
+         needed: card 384 + gap 40 = STEP 424; the active card sits at screen
+         768–1152, so its media window lands at (780,396,360,225) = the hoisted
+         video rect. Camera = pure pan: world translateX = ANCHOR - STEP * k. */
+      var STEP = 424;
+      var ANCHOR = 768;
+      var ARRIVALS = [0, 1.04, 1.52, 2.0, 2.48, 2.96, 3.44]; // dwell starts (station centered)
+      var PANS = [0.86, 1.34, 1.82, 2.3, 2.78, 3.26]; // whip-pan starts, one per whoosh
+      var PAN_DUR = 0.18;
+      var CALLOUT_AT = 3.62;
+
+      var STATIONS = [
+        { idx: "01", name: "人生清单", slogan: "把想做的事一一勾掉" },
+        { idx: "02", name: "前端进阶", slogan: "学习路线与每日打卡" },
+        { idx: "03", name: "我的工作台", slogan: "任务与笔记一站搞定" },
+        { idx: "04", name: "健身训练", slogan: "课表与身体数据追踪" },
+        { idx: "05", name: "旅行手账", slogan: "行程与回忆收进一处" },
+        { idx: "06", name: "内容创作", slogan: "选题库与更新排期表" },
+        { idx: "07", name: "家庭账本", slogan: "收支流水一目了然" },
+      ];
+
+      var $all = function (sel) { return Array.prototype.slice.call(document.querySelectorAll(sel)); };
+      var world = document.querySelectorAll("#f08-world")[0];
+      var cards = $all(".f08-card");
+      var names = $all(".f08-name");
+      var slogans = $all(".f08-slogan");
+      var dots = $all(".f08-dot");
+      var roIdx = document.querySelectorAll("#f08-ro-idx")[0];
+      var roName = document.querySelectorAll("#f08-ro-name")[0];
+      var roSlogan = document.querySelectorAll("#f08-ro-slogan")[0];
+
+      /* Virtual camera (viewport-change, PAN mode) — single source of truth + one writer.
+         No drift: the world must sit exactly still during each dwell so the DOM card
+         frame stays aligned with the hoisted video's fixed host rect. */
+      var cam = { x: ANCHOR - STEP * 0 };
+      function applyCam() {
+        world.style.transform = "translateX(" + cam.x + "px)";
+      }
+      applyCam(); // seed frame 0
+
+      var tl = gsap.timeline({ paused: true });
+
+      /* Scene 1 — open on station 1: title reads through the incoming zoom-through,
+         station name spring-pops, video 1 cuts in once the wrapper settles. */
+      tl.fromTo("#f08-title", { opacity: 0, y: 16 }, { opacity: 1, y: 0, duration: 0.4, ease: "power2.out" }, 0.05);
+      tl.fromTo("#f08-pill", { opacity: 0, y: -10 }, { opacity: 1, y: 0, duration: 0.35, ease: "power2.out" }, 0.18);
+      tl.fromTo(names[0], { opacity: 0, scale: 0.6 }, { opacity: 1, scale: 1, duration: 0.35, ease: "back.out(1.8)" }, 0.3);
+      tl.fromTo(slogans[0], { opacity: 0, y: 8 }, { opacity: 1, y: 0, duration: 0.3, ease: "power2.out" }, 0.36);
+      tl.fromTo("#f08-readout", { opacity: 0, y: 12 }, { opacity: 1, y: 0, duration: 0.3, ease: "power2.out" }, 0.42);
+      tl.fromTo("#f08-glow-a", { opacity: 0.55 }, { opacity: 1, duration: 1.8, ease: "sine.inOut" }, 0.2);
+      tl.fromTo("#f08-glow-b", { opacity: 0.4 }, { opacity: 1, duration: 2.2, ease: "sine.inOut" }, 0.6);
+
+      /* Scenes 2–7 — station march: per beat one ease-in-out whip pan, a DoF rack
+         (departing card defocuses to 6px + dims, arriving card resolves to 0px sharp
+         exactly when its hoisted video cuts in), and the station name spring-pops. */
+      gsap.set(cards.slice(1), { "--dof": "6px", opacity: 0.55, scale: 0.94 });
+      gsap.set(cards[0], { borderColor: "#5eeabe" });
+
+      for (var j = 0; j < PANS.length; j++) {
+        var at = PANS[j];
+        var target = j + 1;
+        tl.to(cam, { x: ANCHOR - STEP * target, duration: PAN_DUR, ease: "power3.inOut", onUpdate: applyCam }, at);
+        tl.to(cards[j], { "--dof": "6px", opacity: 0.55, scale: 0.94, borderColor: "rgba(255,255,255,0.1)", duration: PAN_DUR, ease: "power2.inOut" }, at);
+        tl.to(cards[target], { "--dof": "0px", opacity: 1, scale: 1, borderColor: "#5eeabe", duration: PAN_DUR, ease: "power2.inOut" }, at);
+        tl.fromTo(names[target], { opacity: 0, scale: 0.7 }, { opacity: 1, scale: 1, duration: 0.3, ease: "back.out(2)" }, ARRIVALS[target]);
+        tl.fromTo(slogans[target], { opacity: 0, y: 8 }, { opacity: 1, y: 0, duration: 0.26, ease: "power2.out" }, ARRIVALS[target] + 0.05);
+      }
+
+      /* Scene 8 — final station dwell: primary callout pops on the closing words,
+         then the camera holds dead-still to the end. No exit (root owns it). */
+      tl.fromTo("#f08-callout", { opacity: 0, scale: 0.55 }, { opacity: 1, scale: 1, duration: 0.45, ease: "back.out(1.6)" }, CALLOUT_AT);
+
+      /* Station readout — discrete state swap at dwell thresholds (reverse search,
+         pure function of timeline time; swaps are instant per the rule). */
+      var ro = { t: 0 };
+      var lastIdx = -1;
+      tl.to(ro, {
+        t: D,
+        duration: D,
+        ease: "none",
+        onUpdate: function () {
+          var idx = 0;
+          for (var i = ARRIVALS.length - 1; i >= 0; i--) {
+            if (ro.t >= ARRIVALS[i] - 1e-6) { idx = i; break; }
+          }
+          if (idx === lastIdx) return;
+          lastIdx = idx;
+          roIdx.textContent = STATIONS[idx].idx;
+          roName.textContent = STATIONS[idx].name;
+          roSlogan.textContent = STATIONS[idx].slogan;
+          for (var d = 0; d < dots.length; d++) {
+            dots[d].classList.toggle("f08-dot-on", d === idx);
+            dots[d].classList.toggle("f08-dot-past", d < idx);
+          }
+        },
+      }, 0);
+
+      window.__timelines[FRAME_ID] = tl;
+    })();
+  </script>
+</template>

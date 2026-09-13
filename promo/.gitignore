@@ -16,3 +16,9 @@ out/
 landing/smoke*.png
 
 # local tooling caches
+# hyperframes project: regenerable render output / review snapshots / voice auditions
+mini-desk-promo/renders/
+mini-desk-promo/snapshots/
+mini-desk-promo/audition/
+mini-desk-promo/.thumbnails/
+landing/*.zip
