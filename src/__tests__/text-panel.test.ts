@@ -742,7 +742,7 @@ describe("TextPanel", () => {
     await wrapper.get("textarea").trigger("select");
     await wrapper.get("textarea").trigger("contextmenu");
 
-    expect(wrapper.findAll(".dropdown-option").map((option) => option.text())).toEqual(["复制", "粘贴", "Tips"]);
+    expect(wrapper.findAll(".dropdown-option").map((option) => option.text())).toEqual(["复制", "粘贴", "删除", "Tips"]);
 
     textarea.setSelectionRange(4, 4);
     await wrapper.findAll(".dropdown-option").find((option) => option.text() === "复制")?.trigger("click");
@@ -1502,7 +1502,7 @@ describe("TextPanel", () => {
     textarea.setSelectionRange(0, textarea.value.length);
     await wrapper.get("textarea").trigger("contextmenu");
 
-    expect(wrapper.findAll(".dropdown-option").map((option) => option.text())).toEqual(["复制", "粘贴", "智能粘贴", "智能润色", "Tips"]);
+    expect(wrapper.findAll(".dropdown-option").map((option) => option.text())).toEqual(["复制", "粘贴", "智能粘贴", "智能润色", "删除", "Tips"]);
     wrapper.unmount();
   });
 
@@ -1608,6 +1608,117 @@ describe("TextPanel", () => {
     await wrapper.get("textarea").trigger("contextmenu");
     expect(wrapper.findAll(".dropdown-option").map((option) => option.text()))
       .toEqual(["复制", "粘贴", "智能粘贴", "Tips"]);
+    wrapper.unmount();
+  });
+
+  it("shows the delete action when text is selected", async () => {
+    Object.assign(navigator, { clipboard: { readText: vi.fn().mockResolvedValue("文本"), writeText: vi.fn() } });
+    const wrapper = mount(TextPanel, {
+      props: {
+        titleId: "workspace-title",
+        title: "工作空间",
+        lines: [{ text: "杂乱内容", indent: 0 }],
+        polish: vi.fn(),
+      },
+      global: {
+        stubs: {
+          Dropdown: menuDropdownStub,
+          NDropdown: menuDropdownStub,
+        },
+      },
+    });
+    const textarea = wrapper.get("textarea").element as HTMLTextAreaElement;
+    textarea.setSelectionRange(0, textarea.value.length);
+    await wrapper.get("textarea").trigger("contextmenu");
+
+    expect(wrapper.findAll(".dropdown-option").map((option) => option.text()))
+      .toEqual(["复制", "粘贴", "智能粘贴", "智能润色", "删除", "Tips"]);
+    wrapper.unmount();
+  });
+
+  it("shows the delete action without a polish handler", async () => {
+    // 删除是基础编辑能力，与 AI 润色入口不同：无 polish 处理器也要出现
+    Object.assign(navigator, { clipboard: { readText: vi.fn().mockResolvedValue("文本"), writeText: vi.fn() } });
+    const wrapper = mount(TextPanel, {
+      props: {
+        titleId: "workspace-title",
+        title: "工作空间",
+        lines: [{ text: "杂乱内容", indent: 0 }],
+      },
+      global: {
+        stubs: {
+          Dropdown: menuDropdownStub,
+          NDropdown: menuDropdownStub,
+        },
+      },
+    });
+    const textarea = wrapper.get("textarea").element as HTMLTextAreaElement;
+    textarea.setSelectionRange(0, textarea.value.length);
+    await wrapper.get("textarea").trigger("contextmenu");
+
+    expect(wrapper.findAll(".dropdown-option").map((option) => option.text()))
+      .toEqual(["复制", "粘贴", "删除", "Tips"]);
+    wrapper.unmount();
+  });
+
+  it("deletes the selected text from the context menu and clears the selection", async () => {
+    Object.assign(navigator, { clipboard: { readText: vi.fn().mockResolvedValue("文本"), writeText: vi.fn() } });
+    const wrapper = mount(TextPanel, {
+      props: {
+        titleId: "workspace-title",
+        title: "工作空间",
+        lines: [{ text: "root text", indent: 0 }],
+      },
+      global: {
+        stubs: {
+          Dropdown: menuDropdownStub,
+          NDropdown: menuDropdownStub,
+        },
+      },
+    });
+    const textarea = wrapper.get("textarea").element as HTMLTextAreaElement;
+
+    await wrapper.get("textarea").trigger("dblclick");
+    textarea.setSelectionRange(0, 4); // 选中「root」
+    await wrapper.get("textarea").trigger("contextmenu");
+    await wrapper.get('[data-key="delete"]').trigger("click");
+    await Promise.resolve();
+
+    expect(textarea.value).toBe(" text");
+    expect(wrapper.emitted("update")?.at(-1)?.[0]).toEqual([{ text: " text", indent: 0 }]);
+    // 删除后光标塌缩、记忆选区清除：旧偏移已错位，再次右键不应出现删除项
+    expect(textarea.selectionStart).toBe(textarea.selectionEnd);
+    await wrapper.get("textarea").trigger("contextmenu");
+    expect(wrapper.findAll(".dropdown-option").map((option) => option.text())).toEqual(["复制", "粘贴", "Tips"]);
+    wrapper.unmount();
+  });
+
+  it("deletes a readonly selection from the context menu after editing starts", async () => {
+    Object.assign(navigator, { clipboard: { readText: vi.fn().mockResolvedValue("文本"), writeText: vi.fn() } });
+    const wrapper = mount(TextPanel, {
+      props: {
+        titleId: "workspace-title",
+        title: "工作空间",
+        lines: [{ text: "root text", indent: 0 }],
+      },
+      global: {
+        stubs: {
+          Dropdown: menuDropdownStub,
+          NDropdown: menuDropdownStub,
+        },
+      },
+    });
+    const textarea = wrapper.get("textarea").element as HTMLTextAreaElement;
+
+    textarea.setSelectionRange(0, 4);
+    await wrapper.get("textarea").trigger("select");
+    await wrapper.get("textarea").trigger("contextmenu");
+    await wrapper.get('[data-key="delete"]').trigger("click");
+    await Promise.resolve();
+
+    expect(textarea.readOnly).toBe(false);
+    expect(textarea.value).toBe(" text");
+    expect(wrapper.emitted("update")?.at(-1)?.[0]).toEqual([{ text: " text", indent: 0 }]);
     wrapper.unmount();
   });
 

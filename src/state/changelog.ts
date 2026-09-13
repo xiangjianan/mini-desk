@@ -29,6 +29,20 @@ export interface ChangelogEntry {
 
 export const CHANGELOG: ChangelogEntry[] = [
   {
+    version: "1.0.171",
+    date: "2026-09-13",
+    notes: {
+      zh: [
+        "新增：便签/工作空间选中文本后，右键菜单新增「删除」，一键删除选中内容，有序列表自动重编号",
+        "优化：手机端已配对页面恰好一屏铺满不滚动，速记输入框弹性撑满剩余屏幕高度，小屏自动压缩并保留滚动兜底",
+      ],
+      en: [
+        "Added: a \"Delete\" action in the notes/workspace context menu for selected text — removes the selection in one click and renumbers ordered lists",
+        "Improved: the mobile paired home now fits exactly one screen without scrolling; the capture textarea stretches to fill the remaining height and compresses gracefully on smaller screens",
+      ],
+    },
+  },
+  {
     version: "1.0.170",
     date: "2026-09-13",
     notes: {

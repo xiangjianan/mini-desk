@@ -3,7 +3,7 @@ import { computed, h, nextTick, onMounted, onUnmounted, ref, watch } from "vue";
 import type { Component, VNode } from "vue";
 import { NDropdown, NIcon, NScrollbar } from "naive-ui";
 import type { DropdownOption } from "naive-ui";
-import { ClipboardOutline, ColorWandOutline, CopyOutline, HelpCircleOutline } from "@vicons/ionicons5";
+import { ClipboardOutline, ColorWandOutline, CopyOutline, HelpCircleOutline, TrashOutline } from "@vicons/ionicons5";
 import type { LineItem } from "../types";
 import { GUIDE_MENU_OPTION } from "../state/defaults";
 import { getUiText } from "../state/i18n";
@@ -100,6 +100,9 @@ const menuOptions = computed<DropdownOption[]>(() => {
     }
     if (props.polish && menu.value?.selectionText) {
       options.push({ label: uiText.value.common.smartPolish, key: "smart-polish", icon: renderIcon(ColorWandOutline) });
+    }
+    if (menu.value?.selectionText) {
+      options.push({ label: uiText.value.common.delete, key: "delete", icon: renderIcon(TrashOutline, true) });
     }
   }
   options.push({ ...guideMenuOption.value, icon: renderIcon(HelpCircleOutline) });
@@ -469,6 +472,10 @@ async function handleMenuSelect(key: string): Promise<void> {
     await polishSelection(target, selectionText);
     return;
   }
+  if (key === "delete" && target) {
+    deleteTextSelection(target);
+    return;
+  }
   if (key === "guide" && anchor) emit("guide", anchor, true);
 }
 
@@ -498,6 +505,19 @@ async function copyTextSelection(target: HTMLTextAreaElement | HTMLInputElement)
     ? getTextSelectionRange(target)
     : { start: target.selectionStart ?? 0, end: target.selectionEnd ?? target.selectionStart ?? 0 };
   await copySelection(target, range);
+}
+
+/** 删除（便签区选中文本）：清除记忆选区并把光标塌缩到删除点，与智能润色落位后的清理同语义。 */
+function deleteTextSelection(target: HTMLTextAreaElement): void {
+  const range = getTextSelectionRange(target);
+  if (range.start === range.end) return;
+  if (!editing.value || target.readOnly) startEditingFromTextarea(target);
+  target.setSelectionRange(range.start, range.end);
+  target.setRangeText("", range.start, range.end, "end");
+  normalizeTextareaText(target);
+  lastTextSelection.value = null;
+  collapseSelection(target, target.selectionStart ?? 0);
+  emit("update", editorTextToLines(text.value));
 }
 
 async function pasteTextFromClipboard(target: HTMLTextAreaElement): Promise<void> {

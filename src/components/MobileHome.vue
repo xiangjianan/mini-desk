@@ -145,7 +145,8 @@ onBeforeUnmount(() => window.removeEventListener("keydown", onKeydown));
 
 <template>
   <main class="mobile-handoff" :aria-label="app.mobileLabel">
-    <div class="mobile-home-page">
+    <!-- 已配对态挂 is-fill：整页恰好一屏不滚动，速记 textarea 弹性撑满剩余高度（见 styles.css）。 -->
+    <div class="mobile-home-page" :class="{ 'is-fill': Boolean(code) }">
       <header class="mobile-home-topbar">
         <img class="mobile-home-logo" :src="logoSrc" alt="" aria-hidden="true" />
         <span class="mobile-home-brand mobile-handoff-title">{{ app.mobileTitle }}</span>

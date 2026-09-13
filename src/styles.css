@@ -3475,7 +3475,7 @@ body:has(.image-preview) .image-panel .n-scrollbar {
   color: var(--muted);
 }
 
-/* ---- 手机端首页（OpenDesign 原型实现）：430px 单列长页，整页在 .mobile-handoff 内滚动 ---- */
+/* ---- 手机端首页（OpenDesign 原型实现）：430px 单列；未配对为长页滚动，已配对恰好一屏（is-fill） ---- */
 .mobile-handoff {
   width: 100vw;
   height: 100dvh;
@@ -3531,6 +3531,41 @@ body:has(.image-preview) .image-panel .n-scrollbar {
 /* 未配对视图额外留出右下角伙伴气泡（fixed right 18 / bottom 28）的高度，避免遮挡输码卡与页脚。 */
 /* 右下角消息气泡已从移动端移除，不再为它预留底部空隙。 */
 .mobile-home-view-unpaired { padding-bottom: 8px; }
+
+/* ---- 已配对态（is-fill）：整页恰好一屏，速记输入框弹性撑满剩余高度 ---- */
+/* 高度链：handoff(100dvh) → page(height:100%) → main/view(flex:1 + min-height:0) →
+   inbox-wrap/form(flex:1 + min-height:0，grid 改 flex 列) → textarea(flex:1)。
+   内容意外超高（错误行 + 换码入口同时出现等）仍由 .mobile-handoff 的 overflow-y:auto 滚动兜底。 */
+.mobile-home-page.is-fill {
+  height: 100%;
+  min-height: 0; /* 覆盖基类的 min-height:100%，把收缩权交给 flex 链路 */
+}
+
+.mobile-home-page.is-fill .mobile-home-main,
+.mobile-home-page.is-fill .mobile-home-view {
+  flex: 1;
+  min-height: 0;
+}
+
+.mobile-home-page.is-fill .mobile-inbox-wrap {
+  flex: 1;
+  min-height: 0;
+  display: flex; /* 覆盖基类 grid：form 弹性伸展，标题/错误/粘贴行保持自然高度 */
+  flex-direction: column;
+}
+
+.mobile-home-page.is-fill .mobile-inbox-form {
+  flex: 1;
+  min-height: 0;
+  display: flex; /* 覆盖基类 grid：textarea 撑满剩余，行数提示与按钮行自然高度 */
+  flex-direction: column;
+}
+
+.mobile-home-page.is-fill .mobile-inbox-textarea {
+  flex: 1;
+  min-height: 72px; /* 极矮视口保底，仍装不下时由外层滚动兜底 */
+  resize: none; /* 手动拖高会破坏铺满布局，高度改由屏幕决定 */
+}
 
 /* ---- 顶栏 ---- */
 .mobile-home-topbar {

@@ -1031,6 +1031,14 @@ describe("Naive UI component usage", () => {
     expect(styles).toMatch(/\.mobile-handoff\s*\{[^}]*height: 100dvh/s);
     expect(styles).toMatch(/\.mobile-handoff\s*\{[^}]*overflow-y: auto/s);
     expect(styles).toMatch(/\.mobile-home-page\s*\{[^}]*max-width: 430px/s);
+    // 已配对态整页恰好一屏（不滚动）：page 定高、flex 链路贯通到速记 textarea 弹性撑满剩余高度。
+    expect(home).toContain(':class="{ \'is-fill\': Boolean(code) }"');
+    expect(styles).toMatch(/\.mobile-home-page\.is-fill\s*\{[^}]*height: 100%/s);
+    expect(styles).toMatch(/\.mobile-home-page\.is-fill \.mobile-home-main[^{]*\{[^}]*min-height: 0/s);
+    expect(styles).toMatch(/\.mobile-home-page\.is-fill \.mobile-inbox-wrap\s*\{[^}]*flex-direction: column/s);
+    expect(styles).toMatch(/\.mobile-home-page\.is-fill \.mobile-inbox-form\s*\{[^}]*min-height: 0/s);
+    expect(styles).toMatch(/\.mobile-home-page\.is-fill \.mobile-inbox-textarea\s*\{[^}]*flex: 1/s);
+    expect(styles).toMatch(/\.mobile-home-page\.is-fill \.mobile-inbox-textarea\s*\{[^}]*resize: none/s);
     expect(styles).toMatch(/\.mobile-home-code-groups\s*\{/s);
     expect(styles).toMatch(/@media \(max-width: 900px\)[\s\S]*--app-font-size: 14px/s);
     expect(styles).toMatch(/@media \(max-width: 900px\)[\s\S]*\.focus-companion\s*\{[^}]*bottom: 28px/s);
