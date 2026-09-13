@@ -1,12 +1,13 @@
 // Mini Desk Service Worker：离线缓存 + PWA 基础。
 // 策略详见 docs/superpowers/specs/2026-08-21-pwa-offline-design.md §4：
-//   导航请求      → 网络优先（3s 超时竞赛），失败/超时回退缓存的 index.html；成功时先响应、后台写缓存
+//   导航请求      → SWR（命中缓存零网络等待立即返回——弱网/离线打开不再白屏；后台拉新 index.html
+//                   并预取其引用的新哈希资产，下次打开即新版；未命中走网络并写缓存）
 //   /assets/*    → 缓存优先（Vite 内容哈希文件名，内容变则文件名变，永不陈旧）
 //   固定名小文件  → SWR（命中缓存立即返回，后台保鲜交给 waitUntil 保住 SW 生命周期）
 //   其余请求      → 不拦截（含每日版本检查 fetch 与外部 API 快捷按钮请求）
 // 假设部署在根路径（与 Cloudflare Pages 部署一致）。
-// CACHE_VERSION 仅在缓存策略结构性变化时手动 bump；普通发版不需要动本文件。
-const CACHE_VERSION = "mini-desk-v1";
+// CACHE_VERSION 仅在缓存策略结构性变化时手动 bump（v2：导航由网络优先改为 SWR）；普通发版不需要动本文件。
+const CACHE_VERSION = "mini-desk-v2";
 const APP_SHELL_URLS = [
   "/",
   "/theme-boot.js",
@@ -19,7 +20,6 @@ const APP_SHELL_URLS = [
 // SWR 用精确匹配，避免 startsWith 过度命中（如 /theme-boot.js.map）；图标目录保持前缀匹配。
 const SWR_EXACT_URLS = ["/theme-boot.js", "/manifest.webmanifest"];
 const SWR_URL_PREFIXES = ["/icons/"];
-const NAVIGATION_TIMEOUT_MS = 3000;
 
 self.addEventListener("install", (event) => {
   event.waitUntil(
@@ -74,24 +74,47 @@ self.addEventListener("fetch", (event) => {
   // 其余请求不拦截（含每日版本检查：非导航、no-store、时间戳参数）。
 });
 
+// 导航 SWR：命中缓存零网络等待立即返回（消灭弱网打开 PWA 的白屏等待），
+// 后台保鲜交给 waitUntil；未命中（首访/清缓存后）只剩网络一条路，成功即写缓存供下次秒开。
 async function handleNavigation(event, request) {
-  try {
-    const response = await withTimeout(fetch(request), NAVIGATION_TIMEOUT_MS);
-    if (response && response.ok) {
-      // 先把响应交还页面，缓存写入放后台并靠 waitUntil 保住 SW 生命周期；
-      // clone 必须在返回前同步完成，避免 body 被页面消费后无法克隆。
-      const cloned = response.clone();
-      event.waitUntil(
-        caches.open(CACHE_VERSION).then((cache) => cache.put(new URL("/", self.location.origin).href, cloned)).catch(() => null),
-      );
-      return response;
-    }
-  } catch {
-    // 网络失败或超时 → 回退缓存。
-  }
   const cached = (await caches.match(request)) || (await caches.match("/"));
-  if (cached) return cached;
-  throw new Error("offline-no-cache");
+  if (cached) {
+    // .catch(() => null) 避免页面控制台出现 unhandled rejection。
+    event.waitUntil(revalidateShell().catch(() => null));
+    return cached;
+  }
+  const response = await fetch(request);
+  if (response && response.ok) {
+    // 先把响应交还页面，缓存写入放后台并靠 waitUntil 保住 SW 生命周期；
+    // clone 必须在返回前同步完成，避免 body 被页面消费后无法克隆。
+    const cloned = response.clone();
+    event.waitUntil(
+      caches.open(CACHE_VERSION).then((cache) => cache.put(new URL("/", self.location.origin).href, cloned)).catch(() => null),
+    );
+  }
+  return response;
+}
+
+// 后台保鲜：绕过 HTTP 缓存拉最新 shell 写入缓存，并预取其中引用的 /assets/*。
+// 预取保证「新 HTML 已入缓存 → 下次离线打开哈希资产也齐」（spec §5 离线行为）；
+// SPA 所有导航共用同一份 index.html，缓存键固定归一化为 "/"。
+async function revalidateShell() {
+  const shellUrl = new URL("/", self.location.origin).href;
+  const response = await fetch(shellUrl, { cache: "reload" });
+  if (!response || !response.ok) return;
+  const html = await response.clone().text();
+  const cache = await caches.open(CACHE_VERSION);
+  await cache.put(shellUrl, response);
+  await Promise.all(
+    extractAssetUrls(html).map(async (url) => {
+      try {
+        const assetResponse = await fetch(url, { cache: "reload" });
+        if (assetResponse && assetResponse.ok) await cache.put(url, assetResponse);
+      } catch {
+        // 预热尽力而为：单个失败不影响其余，下次访问按需补齐（spec §7）。
+      }
+    }),
+  );
 }
 
 async function warmClientAssets() {
@@ -121,14 +144,6 @@ function extractAssetUrls(html) {
     urls.add(new URL(match[1], self.location.origin).href);
   }
   return [...urls];
-}
-
-function withTimeout(promise, ms) {  return Promise.race([
-    promise,
-    new Promise((_, reject) => {
-      setTimeout(() => reject(new Error("navigation-timeout")), ms);
-    }),
-  ]);
 }
 
 async function cacheFirst(request) {

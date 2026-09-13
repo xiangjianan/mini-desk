@@ -198,59 +198,98 @@ describe("service worker install", () => {
   });
 });
 
-describe("service worker fetch strategies", () => {
-  it("serves navigation from network first and refreshes the cached shell", async () => {
+describe("service worker navigation (stale-while-revalidate)", () => {
+  // 种下缓存 shell：install 会预缓存 / 与 app shell 其余文件。
+  const seedShell = async (sw: SwHarness): Promise<void> => {
+    sw.fetchMock.mockImplementation(async (request: Request) => new Response(`body:${request.url}`));
+    await runLifecycle(sw, "install");
+  };
+
+  it("serves the cached shell immediately while the network hangs (no white screen)", async () => {
+    const sw = await loadSw();
+    await seedShell(sw);
+    sw.fetchMock.mockImplementation(() => new Promise<Response>(() => {}));
+
+    const driven = driveFetchWithEvent(sw, navigateRequest(`${ORIGIN}/`));
+    // 阻塞在网络上的实现（旧的网络优先策略）会在这里失败。
+    const settled = await Promise.race([
+      driven.then(() => true),
+      new Promise<boolean>((resolve) => { setTimeout(() => resolve(false), 0); }),
+    ]);
+    expect(settled).toBe(true);
+    const { response } = await driven;
+    expect(await response?.text()).toBe(`body:${ORIGIN}/`);
+  });
+
+  it("serves the cached shell for query-string navigations via the / fallback", async () => {
+    const sw = await loadSw();
+    await seedShell(sw);
+    sw.fetchMock.mockImplementation(() => new Promise<Response>(() => {}));
+
+    const response = await driveFetch(sw, navigateRequest(`${ORIGIN}/?code=abcd`));
+
+    expect(await response?.text()).toBe(`body:${ORIGIN}/`);
+  });
+
+  it("refreshes the cached shell and pre-warms its assets in the background", async () => {
+    const sw = await loadSw();
+    await seedShell(sw);
+    sw.fetchMock.mockImplementation(async (input: RequestInfo | URL) => {
+      const href = typeof input === "string" ? input : input instanceof URL ? input.href : input.url;
+      if (href === `${ORIGIN}/`) {
+        return new Response(`<script type="module" src="/assets/index-new.js"></script>`);
+      }
+      return new Response(`body:${href}`);
+    });
+
+    const driven = await driveFetchWithEvent(sw, navigateRequest(`${ORIGIN}/`));
+
+    // 本次打开先拿旧 shell（缓存优先），新版在后台落地供下次打开使用。
+    expect(await driven.response?.text()).toBe(`body:${ORIGIN}/`);
+    expect(driven.waitUntil).toHaveBeenCalled();
+    await awaitBackgroundWork(driven);
+    expect(await (await sw.caches.match("/"))?.text()).toContain("/assets/index-new.js");
+    expect(await sw.caches.match(`${ORIGIN}/assets/index-new.js`)).toBeTruthy();
+  });
+
+  it("keeps the cached shell when background revalidation fails", async () => {
+    const sw = await loadSw();
+    await seedShell(sw);
+    sw.fetchMock.mockRejectedValue(new Error("offline"));
+
+    const driven = await driveFetchWithEvent(sw, navigateRequest(`${ORIGIN}/`));
+
+    expect(await driven.response?.text()).toBe(`body:${ORIGIN}/`);
+    await awaitBackgroundWork(driven);
+    expect(await (await sw.caches.match("/"))?.text()).toBe(`body:${ORIGIN}/`);
+  });
+
+  it("keeps the cached shell when revalidation returns a server error", async () => {
+    const sw = await loadSw();
+    await seedShell(sw);
+    sw.fetchMock.mockResolvedValue(new Response("boom", { status: 500 }));
+
+    const driven = await driveFetchWithEvent(sw, navigateRequest(`${ORIGIN}/`));
+
+    expect(await driven.response?.text()).toBe(`body:${ORIGIN}/`);
+    await awaitBackgroundWork(driven);
+    expect(await (await sw.caches.match("/"))?.text()).toBe(`body:${ORIGIN}/`);
+  });
+
+  it("serves the network response and caches it when no shell is cached yet", async () => {
     const sw = await loadSw();
     sw.fetchMock.mockResolvedValue(new Response("fresh index"));
 
     const driven = await driveFetchWithEvent(sw, navigateRequest(`${ORIGIN}/`));
 
     expect(await driven.response?.text()).toBe("fresh index");
-    expect(sw.fetchMock).toHaveBeenCalledTimes(1);
-    // 先响应后写缓存：等待 waitUntil 里的后台写入完成后再断言缓存内容。
     expect(driven.waitUntil).toHaveBeenCalled();
     await awaitBackgroundWork(driven);
-    const cached = await sw.caches.match("/");
-    expect(await cached?.text()).toBe("fresh index");
+    expect(await (await sw.caches.match("/"))?.text()).toBe("fresh index");
   });
+});
 
-  it("falls back to the cached shell when navigation gets a server error", async () => {
-    const sw = await loadSw();
-    sw.fetchMock.mockImplementation(async (request: Request) => new Response(`body:${request.url}`));
-    await runLifecycle(sw, "install");
-    sw.fetchMock.mockResolvedValue(new Response("boom", { status: 500 }));
-
-    const { response } = await driveFetchWithEvent(sw, navigateRequest(`${ORIGIN}/`));
-
-    expect(await response?.text()).toBe(`body:${ORIGIN}/`);
-  });
-
-  it("falls back to the cached shell when the network is down", async () => {
-    const sw = await loadSw();
-    sw.fetchMock.mockImplementation(async (request: Request) => new Response(`body:${request.url}`));
-    await runLifecycle(sw, "install");
-    sw.fetchMock.mockRejectedValue(new Error("offline"));
-
-    const response = await driveFetch(sw, navigateRequest(`${ORIGIN}/`));
-
-    expect(response).toBeTruthy();
-    expect(await response?.text()).toBe(`body:${ORIGIN}/`);
-  });
-
-  it("falls back to the cached shell when the network hangs past the timeout", async () => {
-    vi.useFakeTimers();
-    const loadWithFakeTimers = makeLoadSw();
-    const sw = await loadWithFakeTimers();
-    sw.fetchMock.mockImplementation(async (request: Request) => new Response(`body:${request.url}`));
-    await runLifecycle(sw, "install");
-    sw.fetchMock.mockImplementation(() => new Promise<Response>(() => {}));
-
-    const pending = driveFetch(sw, navigateRequest(`${ORIGIN}/`));
-    await vi.advanceTimersByTimeAsync(3001);
-    const response = await pending;
-
-    expect(await response?.text()).toBe(`body:${ORIGIN}/`);
-  });
+describe("service worker fetch strategies", () => {
 
   it("serves /assets/* cache-first without touching the network on later hits", async () => {
     const sw = await loadSw();
@@ -376,12 +415,12 @@ describe("service worker fetch strategies", () => {
 describe("service worker activate and message", () => {
   it("deletes stale cache versions and claims clients", async () => {
     const sw = await loadSw();
-    await sw.caches.open("mini-desk-v0");
     await sw.caches.open("mini-desk-v1");
+    await sw.caches.open("mini-desk-v2");
 
     await runLifecycle(sw, "activate");
 
-    expect(await sw.caches.keys()).toEqual(["mini-desk-v1"]);
+    expect(await sw.caches.keys()).toEqual(["mini-desk-v2"]);
     expect(sw.claim).toHaveBeenCalled();
   });
 

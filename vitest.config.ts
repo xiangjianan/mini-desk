@@ -11,7 +11,8 @@ export default defineConfig({
   },
   test: {
     environment: "jsdom",
-    exclude: [...configDefaults.exclude, "**/.worktrees/**"],
+    // .agents/** 与 .claude/** 下的 skill 自带 node:test 测试与本项目无关，vitest 无法打包须排除。
+    exclude: [...configDefaults.exclude, "**/.worktrees/**", "**/.agents/**", "**/.claude/**"],
     globals: true,
     setupFiles: ["src/test/setup.ts"],
   },

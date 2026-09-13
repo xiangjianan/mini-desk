@@ -29,6 +29,20 @@ export interface ChangelogEntry {
 
 export const CHANGELOG: ChangelogEntry[] = [
   {
+    version: "1.0.170",
+    date: "2026-09-13",
+    notes: {
+      zh: [
+        "优化：PWA/网页打开改为缓存优先，弱网下不再白屏等待，秒开本地页面",
+        "优化：新版在后台静默预载，下次打开即更新；离线可用性与版本红点提醒不受影响",
+      ],
+      en: [
+        "Improved: app shell now serves from cache first — no more blank white loading on slow networks",
+        "Improved: new versions download silently in the background and arrive on next launch; offline support and the update badge are unchanged",
+      ],
+    },
+  },
+  {
     version: "1.0.169",
     date: "2026-09-12",
     notes: {
