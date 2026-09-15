@@ -48,8 +48,34 @@ class TestSuccess:
         assert body["model"] == "deepseek-chat"
         assert body["response_format"] == {"type": "json_object"}
         assert body["messages"][0]["role"] == "system"
+        assert body["messages"][0]["content"] == llm.SYSTEM_PROMPT
         assert json.loads(body["messages"][1]["content"]) == {"kind": "note", "text": "一个想法"}
         assert api["timeout"] == llm.LLM_TIMEOUT_SECONDS
+
+
+class TestStyle:
+    def test_style_appends_hint_to_system_prompt(self, api):
+        polish_capture("note", "一段想法", "tech")
+        messages = json.loads(api["request"].data)["messages"]
+        assert messages[0]["content"].startswith(llm.SYSTEM_PROMPT)
+        assert "语言风格要求" in messages[0]["content"]
+        assert llm.STYLE_HINTS["tech"] in messages[0]["content"]
+        # 用户消息仍是纯数据载荷：风格只进 system prompt，不与用户文本混合
+        assert json.loads(messages[1]["content"]) == {"kind": "note", "text": "一段想法"}
+
+    def test_each_style_has_hint(self):
+        for style in ("tech", "concise", "casual"):
+            assert llm.STYLE_HINTS[style].strip()
+
+    def test_unknown_style_keeps_base_prompt(self, api):
+        polish_capture("note", "一段想法", "formal")
+        messages = json.loads(api["request"].data)["messages"]
+        assert messages[0]["content"] == llm.SYSTEM_PROMPT
+
+    def test_no_style_keeps_base_prompt(self, api):
+        polish_capture("note", "一段想法", None)
+        messages = json.loads(api["request"].data)["messages"]
+        assert messages[0]["content"] == llm.SYSTEM_PROMPT
 
 
 class TestCleaning:

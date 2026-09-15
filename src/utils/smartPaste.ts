@@ -1,8 +1,8 @@
 import { readClipboardText } from "./clipboard";
-import { POLISH_MAX_CHARS, type PolishKind, type PolishResult } from "../sync/polishClient";
+import { POLISH_MAX_CHARS, type PolishKind, type PolishResult, type PolishStyle } from "../sync/polishClient";
 
 /**
- * 本模块承载两条润色流程：智能粘贴（剪贴板全文）与智能润色（编辑器选中文本），共用 polishText 主干。
+ * 本模块承载两条润色流程：智能粘贴（剪贴板全文）与AI润色（编辑器选中文本），共用 polishText 主干。
  * 流程可重入；宿主负责过期判断（如中途切换工作区），insert/apply 闭包应捕获进入流程时的落位上下文。
  */
 
@@ -16,11 +16,13 @@ export interface SmartPasteMessages {
   tooLarge: string;
 }
 
-/** 两条润色流程（智能粘贴/智能润色）共享的选项基座。 */
+/** 两条润色流程（智能粘贴/AI润色）共享的选项基座。 */
 interface PolishFlowBase {
   kind: PolishKind;
   /** 宿主注入的润色调用（内部完成配对码管理）；必须不抛异常——任何失败返回 null 或 {fallback:true}。未注入时面板不渲染智能粘贴入口。 */
-  polish: (kind: PolishKind, text: string) => Promise<PolishResult>;
+  polish: (kind: PolishKind, text: string, style?: PolishStyle) => Promise<PolishResult>;
+  /** 润色风格（AI 润色子菜单选择）：透传到服务端注入 prompt；缺省=服务端默认润色口径。 */
+  style?: PolishStyle;
   messages: SmartPasteMessages;
   /** 气泡锚点：进入流程时解析一次，贯穿 working→done/fallback。 */
   anchor?: HTMLElement;
@@ -34,7 +36,7 @@ export interface SmartPasteOptions extends PolishFlowBase {
   fallbackTexts: (raw: string) => string[];
 }
 
-/** 智能粘贴/智能润色共用主干：空白预检 → 限长预检 → 气泡「整理中」→ 服务端整理 → 应用/降级。 */
+/** 智能粘贴/AI润色共用主干：空白预检 → 限长预检 → 气泡「整理中」→ 服务端整理 → 应用/降级。 */
 async function polishText(raw: string, base: PolishFlowBase, apply: (texts: string[]) => void, onFallback: () => void): Promise<void> {
   if (!raw.trim()) return;
   const { anchor, notify, messages } = base;
@@ -47,7 +49,7 @@ async function polishText(raw: string, base: PolishFlowBase, apply: (texts: stri
   notify("working", messages.working, anchor);
   let result: PolishResult = null;
   try {
-    result = await base.polish(base.kind, raw);
+    result = await base.polish(base.kind, raw, base.style);
   } catch {
     result = null; // 宿主包装异常视同网络失败：任何异常都不击穿「最坏=普通粘贴」承诺。
   }
@@ -75,7 +77,7 @@ export interface SelectionPolishOptions extends PolishFlowBase {
   apply: (texts: string[]) => void;
 }
 
-/** 智能润色编排（选中文本）：与智能粘贴同主干；失败/超长保留原文，只提示。 */
+/** AI润色编排（选中文本）：与智能粘贴同主干；失败/超长保留原文，只提示。 */
 export async function runSelectionPolish(options: SelectionPolishOptions): Promise<void> {
   await polishText(options.text, options, options.apply, () => undefined);
 }

@@ -1437,7 +1437,7 @@ describe("TextPanel", () => {
     await wrapper.get('[data-key="smart-paste"]').trigger("click");
     await flushPromises();
 
-    expect(polish).toHaveBeenCalledWith("note", "杂乱文本");
+    expect(polish).toHaveBeenCalledWith("note", "杂乱文本", undefined);
     expect(textarea.value).toBe("root\n1、要点A\n2、要点B");
     expect(wrapper.emitted("update")?.at(-1)?.[0]).toEqual([
       { text: "root", indent: 0 },
@@ -1482,7 +1482,7 @@ describe("TextPanel", () => {
     wrapper.unmount();
   });
 
-  it("shows the smart polish action when text is selected", async () => {
+  it("shows the AI polish submenu with three styles when text is selected", async () => {
     Object.assign(navigator, { clipboard: { readText: vi.fn().mockResolvedValue("文本"), writeText: vi.fn() } });
     const wrapper = mount(TextPanel, {
       props: {
@@ -1502,7 +1502,8 @@ describe("TextPanel", () => {
     textarea.setSelectionRange(0, textarea.value.length);
     await wrapper.get("textarea").trigger("contextmenu");
 
-    expect(wrapper.findAll(".dropdown-option").map((option) => option.text())).toEqual(["复制", "粘贴", "智能粘贴", "智能润色", "删除", "Tips"]);
+    expect(wrapper.findAll(".dropdown-option").map((option) => option.text()))
+      .toEqual(["复制", "粘贴", "智能粘贴", "AI润色", "技术风格", "简洁风格", "口语风格", "删除", "Tips"]);
     wrapper.unmount();
   });
 
@@ -1528,10 +1529,10 @@ describe("TextPanel", () => {
     await wrapper.get("textarea").trigger("dblclick");
     textarea.setSelectionRange(0, textarea.value.length);
     await wrapper.get("textarea").trigger("contextmenu");
-    await wrapper.get('[data-key="smart-polish"]').trigger("click");
+    await wrapper.get('[data-key="smart-polish-tech"]').trigger("click");
     await flushPromises();
 
-    expect(polish).toHaveBeenCalledWith("note", "杂乱内容");
+    expect(polish).toHaveBeenCalledWith("note", "杂乱内容", "tech");
     expect(textarea.value).toBe("1、要点A\n2、要点B");
     expect(wrapper.emitted("update")?.at(-1)?.[0]).toEqual([
       { text: "1、要点A", indent: 0 },
@@ -1565,9 +1566,10 @@ describe("TextPanel", () => {
     await wrapper.get("textarea").trigger("dblclick");
     textarea.setSelectionRange(0, textarea.value.length);
     await wrapper.get("textarea").trigger("contextmenu");
-    await wrapper.get('[data-key="smart-polish"]').trigger("click");
+    await wrapper.get('[data-key="smart-polish-casual"]').trigger("click");
     await flushPromises();
 
+    expect(polish).toHaveBeenCalledWith("note", "杂乱内容", "casual");
     expect(textarea.value).toBe("杂乱内容");
     expect(wrapper.emitted("update")).toBeUndefined();
     const statuses = wrapper.emitted("polishMessage") ?? [];
@@ -1598,7 +1600,7 @@ describe("TextPanel", () => {
     await wrapper.get("textarea").trigger("dblclick");
     textarea.setSelectionRange(3, 7); // 选中中间一行的「杂乱内容」
     await wrapper.get("textarea").trigger("contextmenu");
-    await wrapper.get('[data-key="smart-polish"]').trigger("click");
+    await wrapper.get('[data-key="smart-polish-concise"]').trigger("click");
     await flushPromises();
 
     expect(textarea.value).toBe("前缀\n1、要点A\n2、要点B\n后缀");
@@ -1632,7 +1634,7 @@ describe("TextPanel", () => {
     await wrapper.get("textarea").trigger("contextmenu");
 
     expect(wrapper.findAll(".dropdown-option").map((option) => option.text()))
-      .toEqual(["复制", "粘贴", "智能粘贴", "智能润色", "删除", "Tips"]);
+      .toEqual(["复制", "粘贴", "智能粘贴", "AI润色", "技术风格", "简洁风格", "口语风格", "删除", "Tips"]);
     wrapper.unmount();
   });
 

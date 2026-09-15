@@ -54,7 +54,7 @@ import { copySelection, copyTextToClipboard, getSelectionRange, readClipboardTex
 import { CONTEXT_MENU_Z_INDEX, createExclusiveContextMenu, renderPolishMenuLabel } from "../utils/contextMenu";
 import { renderIcon } from "../utils/dropdownIcons";
 import { isImeComposing } from "../utils/ime";
-import type { PolishKind, PolishResult } from "../sync/polishClient";
+import type { PolishKind, PolishResult, PolishStyle } from "../sync/polishClient";
 import { runSmartPaste, smartPasteMessages } from "../utils/smartPaste";
 import type { SmartPastePhase } from "../utils/smartPaste";
 import EditableTitle from "./EditableTitle.vue";
@@ -68,7 +68,7 @@ const props = withDefaults(defineProps<{
   notificationFlashKeys?: string[];
   language?: AppLanguage;
   moveTargets?: WorkspaceMoveTarget[];
-  polish?: (kind: PolishKind, text: string) => Promise<PolishResult>;
+  polish?: (kind: PolishKind, text: string, style?: PolishStyle) => Promise<PolishResult>;
 }>(), {
   notificationFlashKeys: () => [],
   language: "zh",

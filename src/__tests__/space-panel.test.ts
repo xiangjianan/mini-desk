@@ -502,7 +502,7 @@ describe("SpacePanel", () => {
     await wrapper.get('[data-key="smart-paste"]').trigger("click");
     await flushPromises();
 
-    expect(polish).toHaveBeenCalledWith("note", "杂乱文本");
+    expect(polish).toHaveBeenCalledWith("note", "杂乱文本", undefined);
     expect((wrapper.emitted("polishMessage") ?? []).map((call) => call[0])).toEqual(["working", "done"]);
     wrapper.unmount();
   });

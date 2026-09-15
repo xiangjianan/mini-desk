@@ -9,7 +9,7 @@ import { getUiText } from "../state/i18n";
 import { CONTEXT_MENU_Z_INDEX, createExclusiveContextMenu } from "../utils/contextMenu";
 import { renderIcon } from "../utils/dropdownIcons";
 import { isImeComposing } from "../utils/ime";
-import type { PolishKind, PolishResult } from "../sync/polishClient";
+import type { PolishKind, PolishResult, PolishStyle } from "../sync/polishClient";
 import type { SmartPastePhase } from "../utils/smartPaste";
 import TextPanel from "./TextPanel.vue";
 
@@ -19,7 +19,7 @@ const props = withDefaults(defineProps<{
   editSpaceId?: string | null;
   language?: AppLanguage;
   moveTargets?: WorkspaceMoveTarget[];
-  polish?: (kind: PolishKind, text: string) => Promise<PolishResult>;
+  polish?: (kind: PolishKind, text: string, style?: PolishStyle) => Promise<PolishResult>;
 }>(), {
   language: "zh",
   moveTargets: () => [],

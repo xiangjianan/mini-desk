@@ -46,7 +46,7 @@ const SELECTION_MESSAGES = selectionPolishMessages({
   },
 });
 
-function setupSelection(text: string, result: PolishResult) {
+function setupSelection(text: string, result: PolishResult, style?: "tech" | "concise" | "casual") {
   const notify = vi.fn();
   const apply = vi.fn();
   const polish = vi.fn(async () => result);
@@ -58,6 +58,7 @@ function setupSelection(text: string, result: PolishResult) {
       runSelectionPolish({
         text,
         kind: "note",
+        ...(style ? { style } : {}),
         polish,
         messages: SELECTION_MESSAGES,
         apply,
@@ -85,7 +86,7 @@ describe("runSmartPaste", () => {
     const { notify, insert, polish, run } = setup("买牛奶、交电费", { items: ["买牛奶", "交电费"] });
     await run();
 
-    expect(polish).toHaveBeenCalledWith("todo", "买牛奶、交电费");
+    expect(polish).toHaveBeenCalledWith("todo", "买牛奶、交电费", undefined);
     expect(insert).toHaveBeenCalledWith(["买牛奶", "交电费"]);
     expect(notify.mock.calls.map((call) => call[0])).toEqual(["working", "done"]);
     expect(notify.mock.calls[1][1]).toBe("已整理为 2 条提醒");
@@ -97,7 +98,7 @@ describe("runSmartPaste", () => {
     await run();
 
     expect(polish).toHaveBeenCalledTimes(1);
-    expect(polish).toHaveBeenCalledWith("todo", raw);
+    expect(polish).toHaveBeenCalledWith("todo", raw, undefined);
     expect(insert).toHaveBeenCalledWith(["整理结果"]);
     expect(notify.mock.calls.map((call) => call[0])).toEqual(["working", "done"]);
   });
@@ -136,10 +137,21 @@ describe("runSelectionPolish", () => {
     const { notify, apply, polish, run } = setupSelection("杂乱段落", { items: ["1、要点A", "2、要点B"] });
     await run();
 
-    expect(polish).toHaveBeenCalledWith("note", "杂乱段落");
+    expect(polish).toHaveBeenCalledWith("note", "杂乱段落", undefined);
     expect(apply).toHaveBeenCalledWith(["1、要点A", "2、要点B"]);
     expect(notify.mock.calls.map((call) => call[0])).toEqual(["working", "done"]);
     expect(notify.mock.calls[1][1]).toBe("已排版为 2 行");
+  });
+
+  it("风格：style 透传给宿主润色调用（智能粘贴不带风格仍是 undefined）", async () => {
+    const { polish, run } = setupSelection("杂乱段落", { items: ["1、要点"] }, "concise");
+    await run();
+
+    expect(polish).toHaveBeenCalledWith("note", "杂乱段落", "concise");
+
+    const paste = setup("买牛奶", { items: ["买牛奶"] });
+    await paste.run();
+    expect(paste.polish).toHaveBeenCalledWith("todo", "买牛奶", undefined);
   });
 
   it("失败：不改动原文，仅提示保留原文（LLM 降级与网络失败同口径）", async () => {

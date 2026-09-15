@@ -29,6 +29,19 @@ describe("polishClient", () => {
     expect(JSON.parse((fetchMock.mock.calls[0] as unknown as [string, RequestInit])[1].body as string)).toEqual({ kind: "note", text: "文本" });
   });
 
+  it("指定风格时 body 附带 style，缺省不带 style 字段（老口径不变）", async () => {
+    const fetchMock = vi.fn(async () => new Response(JSON.stringify({ items: ["1、要点"] }), { status: 200 }));
+    vi.stubGlobal("fetch", fetchMock);
+
+    expect(await polishClipboardText("note", "文本", CODE, "casual")).toEqual({ items: ["1、要点"] });
+    expect(JSON.parse(((fetchMock.mock.calls[0] as unknown as [string, RequestInit])[1]).body as string))
+      .toEqual({ kind: "note", text: "文本", style: "casual" });
+
+    expect(await polishClipboardText("note", "文本", CODE)).toEqual({ items: ["1、要点"] });
+    const plainBody = JSON.parse(((fetchMock.mock.calls[1] as unknown as [string, RequestInit])[1]).body as string);
+    expect("style" in plainBody).toBe(false);
+  });
+
   it("LLM 降级标记映射为 fallback:true", async () => {
     vi.stubGlobal("fetch", vi.fn(async () => new Response(JSON.stringify({ items: null, fallback: true }), { status: 200 })));
     expect(await polishClipboardText("note", "文本", CODE)).toEqual({ fallback: true });

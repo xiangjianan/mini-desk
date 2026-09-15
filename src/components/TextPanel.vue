@@ -4,6 +4,7 @@ import type { Component, VNode } from "vue";
 import { NDropdown, NIcon, NScrollbar } from "naive-ui";
 import type { DropdownOption } from "naive-ui";
 import { ClipboardOutline, ColorWandOutline, CopyOutline, HelpCircleOutline, TrashOutline } from "@vicons/ionicons5";
+import SparklesOutlineIcon from "./SparklesOutlineIcon.vue";
 import type { LineItem } from "../types";
 import { GUIDE_MENU_OPTION } from "../state/defaults";
 import { getUiText } from "../state/i18n";
@@ -23,7 +24,7 @@ import { copySelection, getSelectionRange, hasSelection, pasteIntoField, hasAsyn
 import { renderIcon } from "../utils/dropdownIcons";
 import { clampCaret, setStickySelection } from "../utils/caret";
 import { isImeComposing } from "../utils/ime";
-import type { PolishKind, PolishResult } from "../sync/polishClient";
+import type { PolishKind, PolishResult, PolishStyle } from "../sync/polishClient";
 import { runSelectionPolish, runSmartPaste, selectionPolishMessages, smartPasteMessages } from "../utils/smartPaste";
 import type { SmartPastePhase } from "../utils/smartPaste";
 import EditableTitle from "./EditableTitle.vue";
@@ -36,7 +37,7 @@ const props = withDefaults(defineProps<{
   split?: boolean;
   hideHeader?: boolean;
   language?: AppLanguage;
-  polish?: (kind: PolishKind, text: string) => Promise<PolishResult>;
+  polish?: (kind: PolishKind, text: string, style?: PolishStyle) => Promise<PolishResult>;
 }>(), {
   language: "zh",
 });
@@ -80,6 +81,13 @@ const canDragSelectedText = computed(() => {
   return Boolean(selection && selection.start !== selection.end);
 });
 
+/** AI 润色子菜单的风格项：key 同时用于菜单项与 select 反查 style，保持单一来源。 */
+const POLISH_STYLE_ENTRIES: { key: string; style: PolishStyle; labelKey: "polishStyleTech" | "polishStyleConcise" | "polishStyleCasual" }[] = [
+  { key: "smart-polish-tech", style: "tech", labelKey: "polishStyleTech" },
+  { key: "smart-polish-concise", style: "concise", labelKey: "polishStyleConcise" },
+  { key: "smart-polish-casual", style: "casual", labelKey: "polishStyleCasual" },
+];
+
 let isUnmounted = false;
 
 onMounted(exclusiveMenu.mount);
@@ -99,7 +107,12 @@ const menuOptions = computed<DropdownOption[]>(() => {
       options.push({ label: uiText.value.common.smartPaste, key: "smart-paste", disabled: !menu.value?.canPaste, icon: renderIcon(ColorWandOutline) });
     }
     if (props.polish && menu.value?.selectionText) {
-      options.push({ label: uiText.value.common.smartPolish, key: "smart-polish", icon: renderIcon(ColorWandOutline) });
+      options.push({
+        label: uiText.value.common.smartPolish,
+        key: "smart-polish",
+        icon: renderIcon(SparklesOutlineIcon, false, 14),
+        children: POLISH_STYLE_ENTRIES.map(({ key, labelKey }) => ({ label: uiText.value.common[labelKey], key })),
+      });
     }
     if (menu.value?.selectionText) {
       options.push({ label: uiText.value.common.delete, key: "delete", icon: renderIcon(TrashOutline, true) });
@@ -466,10 +479,11 @@ async function handleMenuSelect(key: string): Promise<void> {
     await smartPasteFromClipboard(target);
     return;
   }
-  if (key === "smart-polish" && target) {
+  const polishStyle = POLISH_STYLE_ENTRIES.find((entry) => entry.key === key)?.style;
+  if (polishStyle && target) {
     const selectionText = selectedTextareaText(target);
     if (!selectionText.trim()) return;
-    await polishSelection(target, selectionText);
+    await polishSelection(target, selectionText, polishStyle);
     return;
   }
   if (key === "delete" && target) {
@@ -507,7 +521,7 @@ async function copyTextSelection(target: HTMLTextAreaElement | HTMLInputElement)
   await copySelection(target, range);
 }
 
-/** 删除（便签区选中文本）：清除记忆选区并把光标塌缩到删除点，与智能润色落位后的清理同语义。 */
+/** 删除（便签区选中文本）：清除记忆选区并把光标塌缩到删除点，与AI润色落位后的清理同语义。 */
 function deleteTextSelection(target: HTMLTextAreaElement): void {
   const range = getTextSelectionRange(target);
   if (range.start === range.end) return;
@@ -545,13 +559,14 @@ async function smartPasteFromClipboard(target: HTMLTextAreaElement): Promise<voi
   });
 }
 
-/** 智能润色（便签区选中文本）：选中内容交服务端排版润色并替换选区，失败/超长保留原文。 */
-async function polishSelection(target: HTMLTextAreaElement, selectionText: string): Promise<void> {
+/** AI 润色（便签区选中文本）：选中内容按所选风格交服务端排版润色并替换选区，失败/超长保留原文。 */
+async function polishSelection(target: HTMLTextAreaElement, selectionText: string, style: PolishStyle): Promise<void> {
   if (!props.polish) return;
   const landing: PolishLanding = { range: getTextSelectionRange(target), baseline: text.value };
   await runSelectionPolish({
     text: selectionText,
     kind: "note",
+    style,
     polish: props.polish,
     messages: selectionPolishMessages(uiText.value),
     anchor: target.closest<HTMLElement>(".text-panel") ?? undefined,

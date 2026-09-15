@@ -20,16 +20,19 @@ def polish(monkeypatch):
     stub.result = ["明天买牛奶", "交电费"]
     stub.calls = []
 
-    def fake(kind, text):
-        stub.calls.append((kind, text))
+    def fake(kind, text, style=None):
+        stub.calls.append((kind, text, style))
         return stub.result
 
     monkeypatch.setattr(llm_module, "polish_capture", fake)
     return stub
 
 
-def post_polish(client, kind, text, key=KEY):
-    return client.post(f"/polish/{key}", json={"kind": kind, "text": text}, headers={"Origin": ORIGIN})
+def post_polish(client, kind, text, key=KEY, style=None):
+    payload = {"kind": kind, "text": text}
+    if style is not None:
+        payload["style"] = style
+    return client.post(f"/polish/{key}", json=payload, headers={"Origin": ORIGIN})
 
 
 class TestSuccess:
@@ -38,13 +41,19 @@ class TestSuccess:
 
         assert response.status_code == 200
         assert response.get_json() == {"items": ["明天买牛奶", "交电费"]}
-        assert polish.calls == [("todo", "买牛奶、交电费")]
+        assert polish.calls == [("todo", "买牛奶、交电费", None)]
 
     def test_note_kind_branch(self, client, polish):
         polish.result = ["1、要点A"]
         response = post_polish(client, "note", "一段想法")
         assert response.get_json() == {"items": ["1、要点A"]}
-        assert polish.calls == [("note", "一段想法")]
+        assert polish.calls == [("note", "一段想法", None)]
+
+    def test_style_passes_through_to_llm(self, client, polish):
+        response = post_polish(client, "note", "一段想法", style="concise")
+
+        assert response.status_code == 200
+        assert polish.calls == [("note", "一段想法", "concise")]
 
 
 class TestFallback:
@@ -80,6 +89,13 @@ class TestValidation:
         for kind in ["memo", 1, None]:
             response = client.post(f"/polish/{KEY}", json={"kind": kind, "text": "x"}, headers={"Origin": ORIGIN})
             assert response.status_code == 400
+        assert polish.calls == []
+
+    def test_invalid_style_400_without_llm(self, client, polish):
+        for style in ["formal", 1, True, {}]:
+            response = post_polish(client, "note", "x", style=style)
+            assert response.status_code == 400
+            assert response.get_json() == {"error": "bad_request"}
         assert polish.calls == []
 
     def test_blank_or_non_string_text_400(self, client, polish):

@@ -28,17 +28,26 @@ SYSTEM_PROMPT = """你是手机速记的整理助手。用户输入是待处理�
 
 条目语言跟随输入文本的主要语言：纯英文或英文为主时输出英文，中文为主时输出简体中文；不主动翻译成另一种语言，专有名词、代码、命令等保留原文。每条保持简洁（中文不超过 50 字，英文不超过 40 个单词），条数尽量少而精。"""
 
+# 桌面端「AI润色」子菜单的风格要求：style 来自端点枚举校验（非用户原文），拼进 system prompt 安全。
+STYLE_HINTS = {
+    "tech": "技术风格：用词准确、术语规范，优先使用行业通用术语，必要的英文术语保留英文；表达客观、偏结构化，避免口语化和情绪化用词。",
+    "concise": "简洁风格：最大限度精简，只保留核心信息，删掉可有可无的修饰词，每条尽量短。",
+    "casual": "口语风格：像日常聊天一样自然随意，多用短句和常见口头表达，避免书面腔和生硬措辞。",
+}
 
-def polish_capture(kind: str, text: str) -> list[str] | None:
+
+def polish_capture(kind: str, text: str, style: str | None = None) -> list[str] | None:
     api_key = os.environ.get("DEEPSEEK_API_KEY", "").strip()
     if not api_key:
         print("[llm] DEEPSEEK_API_KEY 未配置，跳过润色", file=sys.stderr)
         return None
+    hint = STYLE_HINTS.get(style) if style else None
+    system_prompt = f"{SYSTEM_PROMPT}\n\n本次输出的语言风格要求：{hint}" if hint else SYSTEM_PROMPT
     body = json.dumps(
         {
             "model": DEEPSEEK_MODEL,
             "messages": [
-                {"role": "system", "content": SYSTEM_PROMPT},
+                {"role": "system", "content": system_prompt},
                 {"role": "user", "content": json.dumps({"kind": kind, "text": text}, ensure_ascii=False)},
             ],
             "response_format": {"type": "json_object"},

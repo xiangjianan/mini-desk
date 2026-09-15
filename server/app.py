@@ -203,6 +203,10 @@ def create_app() -> Flask:
             return error_response(400, "bad_request")
         kind = body.get("kind")
         text = body.get("text")
+        # style 可选（桌面端「AI润色」子菜单）：缺省=默认润色口径，给了就必须是合法枚举。
+        style = body.get("style")
+        if style is not None and style not in ("tech", "concise", "casual"):
+            return error_response(400, "bad_request")
         if kind not in ("todo", "note") or not isinstance(text, str) or not text.strip():
             return error_response(400, "bad_request")
         if len(text) > MAX_POLISH_CHARS:
@@ -215,7 +219,7 @@ def create_app() -> Flask:
         if key_row["revoked_at"] is not None:
             return error_response(410, "revoked")
         try:
-            items = llm.polish_capture(kind, text)
+            items = llm.polish_capture(kind, text, style)
         except Exception:
             items = None  # polish_capture 自身不应抛出，双保险与 store_plain_items 同口径。
         if not items:

@@ -5,7 +5,7 @@ const CONTEXT_MENU_OPENED = "mini-desk-context-menu-opened";
 
 /**
  * 右键菜单里需要加「彩色流动」效果的智能项：克隆星标重点提醒的渐变流动。
- * 智能粘贴/智能润色是两条 AI 润色主入口，用同样流动渐变突出，方便用户一眼识别。
+ * 智能粘贴/AI润色（子菜单风格项不算主入口）是两条 AI 润色主入口，用同样流动渐变突出，方便用户一眼识别。
  */
 const POLISH_MENU_KEYS = new Set(["smart-paste", "smart-polish"]);
 
@@ -16,7 +16,7 @@ function resolveOptionLabel(label: DropdownOption["label"]): string {
 }
 
 /**
- * NDropdown 的 `render-label` 注入：命中智能粘贴/智能润色时，把标签文字包进
+ * NDropdown 的 `render-label` 注入：命中智能粘贴/AI润色时，把标签文字包进
  * `.polish-menu-flow`（渐变 + 循环流动，与星标提醒一致）；其余菜单项原样渲染。
  * 供提示区与提醒区两个右键菜单共用，避免把渐变逻辑散落到各面板。
  */

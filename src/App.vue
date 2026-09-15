@@ -75,7 +75,7 @@ import { applyInboxItems, pullAllInboxes } from "./sync/pull";
 import { inboxKeyHash } from "./sync/crypto";
 import { checkInboxKeyStatus, registerInboxKey, revokeInboxKey } from "./sync/inboxClient";
 import { polishClipboardText } from "./sync/polishClient";
-import type { PolishKind, PolishResult } from "./sync/polishClient";
+import type { PolishKind, PolishResult, PolishStyle } from "./sync/polishClient";
 import type { SmartPastePhase } from "./utils/smartPaste";
 import { copyTextToClipboard } from "./utils/clipboard";
 import { binaryStringToBytes } from "./utils/base64";
@@ -998,8 +998,8 @@ const POLISH_RESULT_BUBBLE_MS = 4000;
 // 清空数据后 state.polishCode 消失，下次使用生成新码并重新注册。
 let polishRegisteredCode: string | null = null;
 
-/** 面板注入的智能粘贴调用：确保配对码存在且已注册后请求服务端润色；注册失败按网络失败（null）降级。 */
-async function polishClipboard(kind: PolishKind, text: string): Promise<PolishResult> {
+/** 面板注入的智能粘贴/AI 润色调用：确保配对码存在且已注册后请求服务端润色（style 为可选风格）；注册失败按网络失败（null）降级。 */
+async function polishClipboard(kind: PolishKind, text: string, style?: PolishStyle): Promise<PolishResult> {
   let code = state.polishCode;
   if (!code || !isValidInboxCode(code)) {
     code = generateInboxCode();
@@ -1012,7 +1012,7 @@ async function polishClipboard(kind: PolishKind, text: string): Promise<PolishRe
     if (!registered) return null;
     polishRegisteredCode = code;
   }
-  return polishClipboardText(kind, text, code);
+  return polishClipboardText(kind, text, code, style);
 }
 
 /** 面板上浮的智能粘贴气泡：working 长驻等结果替换，done/fallback 常规停留。 */

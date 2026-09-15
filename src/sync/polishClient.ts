@@ -3,6 +3,9 @@ import { INBOX_WORKER_URL, POLISH_FETCH_TIMEOUT_MS } from "./config";
 
 export type PolishKind = "todo" | "note";
 
+/** AI 润色风格（便签选中文本子菜单）：tech=技术 / concise=简洁 / casual=口语；缺省=服务端默认润色口径。 */
+export type PolishStyle = "tech" | "concise" | "casual";
+
 /** 成功：整理后的条目（服务端保证非空）；降级：LLM 失败（200 + fallback 标记）；null：网络/HTTP/结构非法。 */
 export type PolishResult = { items: string[] } | { fallback: true } | null;
 
@@ -24,8 +27,8 @@ function coercePolishResponse(data: unknown): PolishResult {
   return null;
 }
 
-/** 智能粘贴请求：任何失败返回 null 不抛异常——调用方一律走「原文粘贴」兜底。 */
-export async function polishClipboardText(kind: PolishKind, text: string, code: string): Promise<PolishResult> {
+/** 智能粘贴/AI 润色请求：任何失败返回 null 不抛异常——调用方一律走「原文」兜底。style 仅在指定时随请求体下发。 */
+export async function polishClipboardText(kind: PolishKind, text: string, code: string, style?: PolishStyle): Promise<PolishResult> {
   try {
     const keyHash = await inboxKeyHash(code);
     const controller = new AbortController();
@@ -33,7 +36,7 @@ export async function polishClipboardText(kind: PolishKind, text: string, code: 
     const response = await fetch(polishUrl(keyHash), {
       method: "POST",
       headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ kind, text }),
+      body: JSON.stringify({ kind, text, ...(style ? { style } : {}) }),
       signal: controller.signal,
     }).finally(() => clearTimeout(timer));
     if (!response.ok) return null;

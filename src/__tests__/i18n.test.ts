@@ -211,9 +211,15 @@ describe("localized public copy", () => {
     }
   });
 
-  it("智能润色（选中文本）文案中英齐全", () => {
-    expect(UI_TEXT.zh.common.smartPolish).toBe("智能润色");
-    expect(UI_TEXT.en.common.smartPolish).toBe("Smart polish");
+  it("AI 润色（选中文本）文案中英齐全，风格子菜单三档", () => {
+    expect(UI_TEXT.zh.common.smartPolish).toBe("AI润色");
+    expect(UI_TEXT.en.common.smartPolish).toBe("AI polish");
+    expect(UI_TEXT.zh.common.polishStyleTech).toBe("技术风格");
+    expect(UI_TEXT.zh.common.polishStyleConcise).toBe("简洁风格");
+    expect(UI_TEXT.zh.common.polishStyleCasual).toBe("口语风格");
+    expect(UI_TEXT.en.common.polishStyleTech).toBe("Technical");
+    expect(UI_TEXT.en.common.polishStyleConcise).toBe("Concise");
+    expect(UI_TEXT.en.common.polishStyleCasual).toBe("Casual");
     expect(UI_TEXT.zh.app.polishKeepFallback).toContain("保留原文");
     expect(UI_TEXT.en.app.polishKeepFallback).toBeTruthy();
     expect(UI_TEXT.zh.app.polishKeepTooLarge).toContain("保留原文");

@@ -4286,7 +4286,7 @@ describe("TodoPanel 编辑快捷键", () => {
     await wrapper.get('[data-key="smart-paste"]').trigger("click");
     await flushPromises();
 
-    expect(polish).toHaveBeenCalledWith("todo", "买牛奶、交电费");
+    expect(polish).toHaveBeenCalledWith("todo", "买牛奶、交电费", undefined);
     expect(wrapper.emitted("createFromText")?.at(-1)).toEqual(["morning", ["买牛奶", "交电费"]]);
     const statuses = wrapper.emitted("polishMessage") ?? [];
     expect(statuses.map((call) => call[0])).toEqual(["working", "done"]);
@@ -4353,7 +4353,7 @@ describe("TodoPanel 编辑快捷键", () => {
     await wrapper.get('.todo-section[data-list-id="morning"] .todo-heading').trigger("contextmenu");
     await wrapper.get('[data-key="smart-paste"]').trigger("click");
     await flushPromises();
-    expect(polish).toHaveBeenCalledWith("todo", "买牛奶、交电费");
+    expect(polish).toHaveBeenCalledWith("todo", "买牛奶、交电费", undefined);
 
     // 中途切换工作空间：App 的 displayTodoLists 计算属性随 activeWorkspaceId 变化产出全新数组。
     await wrapper.setProps({
@@ -4395,7 +4395,7 @@ describe("TodoPanel 编辑快捷键", () => {
     await wrapper.get('.todo-section[data-list-id="morning"] .todo-heading').trigger("contextmenu");
     await wrapper.get('[data-key="smart-paste"]').trigger("click");
     await flushPromises();
-    expect(polish).toHaveBeenCalledWith("todo", "买牛奶、交电费");
+    expect(polish).toHaveBeenCalledWith("todo", "买牛奶、交电费", undefined);
 
     // 清空数据（clearData）bump boardEpoch 触发整树 remount：旧实例带着冻结的 props 卸载，
     // 列表身份守卫失效（引用比较仍相等）。本用例钉住端到端不变量「卸载后迟到结果不得落地」：

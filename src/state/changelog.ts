@@ -29,6 +29,18 @@ export interface ChangelogEntry {
 
 export const CHANGELOG: ChangelogEntry[] = [
   {
+    version: "1.0.173",
+    date: "2026-09-15",
+    notes: {
+      zh: [
+        "新增：便签选中文本的右键「智能润色」升级为「AI润色」并换用空心星星图标，子菜单可选润色风格：技术风格 / 简洁风格 / 口语风格",
+      ],
+      en: [
+        "Added: the notes “Smart polish” action is now “AI polish” with a hollow sparkle icon and a submenu of polish styles: technical / concise / casual",
+      ],
+    },
+  },
+  {
     version: "1.0.172",
     date: "2026-09-13",
     notes: {
