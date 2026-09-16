@@ -2949,7 +2949,7 @@ function getDensityAreaLabel(type: DensityAreaType): string {
   }
   if (type === "todos") return "提醒事项";
   if (type === "quickButtons") return "快捷动作";
-  return "图片";
+  return "贴图";
 }
 
 function getLargestTodoListCount(): number {

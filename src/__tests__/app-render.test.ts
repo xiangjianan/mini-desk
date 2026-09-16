@@ -1795,7 +1795,7 @@ describe("App shell", () => {
       expect(message).toContain("过热");
       expect(message).toContain("提醒事项 21");
       expect(message).toContain("快捷动作 51");
-      expect(message).toContain("图片 31");
+      expect(message).toContain("贴图 31");
       expect(KAOMOJI_BY_MOOD.warning.some((kaomoji) => message.endsWith(kaomoji))).toBe(true);
     } finally {
       wrapper.unmount();
