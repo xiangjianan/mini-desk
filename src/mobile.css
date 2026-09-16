@@ -166,17 +166,14 @@ html[data-theme="dark"] .mobile-handoff {
 .mobile-sync-computer { position: relative; width: 25px; height: 17px; margin-bottom: 4px; border: 1.5px solid currentColor; border-radius: 3px; }
 .mobile-sync-computer::before { content: ""; position: absolute; width: 2px; height: 4px; background: currentColor; bottom: -5px; left: 10px; }
 .mobile-sync-computer::after { content: ""; position: absolute; width: 13px; height: 1.5px; background: currentColor; bottom: -6px; left: 4.5px; }
-.mobile-sync-route { position: relative; width: 56px; height: 12px; overflow: hidden; }
-.mobile-sync-route i { position: absolute; top: 4px; left: 0; width: 5px; height: 5px; border-radius: 50%; background: var(--primary); opacity: 0; animation: mobile-sync-transfer 3s ease-in-out infinite; }
+.mobile-sync-route { display: flex; align-items: center; justify-content: center; gap: 7px; width: 56px; height: 12px; }
+.mobile-sync-route i { flex: none; width: 5px; height: 5px; border-radius: 50%; background: var(--primary); opacity: 0.2; animation: mobile-sync-transfer 2.4s ease-in-out infinite; }
 .mobile-sync-route i:nth-child(2) { animation-delay: 0.3s; }
 .mobile-sync-route i:nth-child(3) { animation-delay: 0.6s; }
 @keyframes mobile-sync-transfer {
-  0% { transform: translateX(0); opacity: 0; }
-  15% { opacity: 0.75; }
-  65% { transform: translateX(50px); opacity: 0; }
-  100% { transform: translateX(50px); opacity: 0; }
+  0%, 60%, 100% { opacity: 0.2; }
+  25% { opacity: 0.85; }
 }
 @media (prefers-reduced-motion: reduce) {
-  .mobile-sync-route { display: flex; align-items: center; justify-content: center; gap: 7px; }
-  .mobile-sync-route i { position: static; animation: none; opacity: 0.5; }
+  .mobile-sync-route i { animation: none; opacity: 0.5; }
 }
