@@ -56,3 +56,39 @@ The notes toolbar now directly invokes smart paste at the end of the active note
 - Focused regression run: 331 tests passed across six component/state files, with exit code 0.
 
 This follow-up supersedes the earlier narrow-heading sizing and toolbar AI-menu behavior described above.
+
+
+## Mobile option 1 — 2026-09-17
+
+final result: passed
+
+### Reference and evidence
+
+- Selected source: `/Users/xiangjianan/.codex/generated_images/01a0aa9d-cde1-73c0-b5b2-d44a75aa28e2/exec-4259832e-cb9c-4bd2-af3e-50ea28e78bcf.png` (853 × 1844). Reviewed with the actual paired capture in the same comparison input; visually normalize the source to 390px wide (approximately 843px high).
+- Implementation: `/Users/xiangjianan/.codex/visualizations/2026/09/16/01a0aa9d-cde1-73c0-b5b2-d44a75aa28e2/desk-qa/mobile-paired.png`, 390 × 844 pixels/CSS viewport, 1x capture.
+- Additional evidence: `mobile-pairing.png` (390 × 844, real app unpaired route) and `mobile-narrow-dark.png` (320 × 568, English, dark) in the same directory.
+- Paired screenshots use the actual MobileHome and MobileInboxCapture components in a temporary, isolated fixture with two sample draft lines and a dummy pairing code. No test content was sent to the relay or saved to user workspaces. The fixture was removed after review.
+
+### Findings and fidelity surfaces
+
+- Typography: existing system sans-serif; 30px primary heading, 17px editing text, 14px action text. Small connection and helper labels retain a secondary hierarchy. English buttons wrap cleanly on 320px screens.
+- Layout: compact app bar and connection row, open writing surface, paste/AI controls above side-by-side send buttons. No nested cards or decorative desktop miniature. Existing clear action stays in the heading; setup steps are a native disclosure below the pairing form.
+- Colors: white/dark theme surfaces, restrained blue primary action, quiet outlined secondary action. Initial dark review found weak blue contrast; the mobile palette now uses a lighter blue in dark mode and a darker blue on white. Theme changes use existing tokens and logo assets.
+- Assets: real existing pixel-cat logo and Ionicons; no new raster assets required. The generated source's generic airplane/document symbols are replaced by the product's reminder/notes icons.
+- Copy: Chinese and English labels kept in i18n. Actual five-minute collection behavior remains explicit rather than implying instant delivery. Existing code masking is preserved. Paste is labeled concisely; no new device or account behavior was introduced.
+- Full-frame comparison is legible at the intended viewport; no additional crops needed. No actionable P0/P1/P2 findings remain. P3: reference typography and icon choices differ slightly to retain native product assets, narrow-screen legibility and existing actions.
+
+### Verification
+
+- Browser: expanded pairing help; entered/pasted a complete sample code, confirmed the submit button enables, and checked backspace disables it again. Did not submit dummy pairing credentials.
+- Browser: edited a sample draft, switched theme, opened and cancelled the change-connection sheet. No browser console errors captured.
+- Responsive: 390 × 844 main capture; 320 × 568 English; 390 × 420 short viewport retains an approximately 108px editor and a scrollable 530px page with no horizontal overflow. Actual iOS/Android software keyboards and hardware were not available; short-viewport verification is a layout approximation.
+- Automated: 98 capture/i18n/UI-contract tests and 17 mobile app integration tests passed. Added checks for disabled empty sends and readonly draft/disabled polish while sending, with draft recovery on failure. Sending, fallback, pairing and clipboard behavior use existing mocked tests; no live relay/AI request was made.
+- Build: TypeScript and production bundling passed. Existing chunk-size/deprecation warnings remain.
+
+### Implementation checklist
+
+- [x] Open notebook layout and compact paired state.
+- [x] Simplified pairing, theme parity and touch targets.
+- [x] Empty/pending/error interaction coverage.
+- [x] Source comparison and responsive verification.

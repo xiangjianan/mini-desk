@@ -77,19 +77,19 @@ describe("MobileInboxCapture", () => {
   it("渲染标题、双发送按钮与输入框（无类型切换）", () => {
     const wrapper = mountCapture();
 
-    expect(wrapper.get(".mobile-inbox-heading").text()).toBe("手机速记");
+    expect(wrapper.get(".mobile-inbox-heading").text()).toBe("随手记");
     expect(wrapper.find(".mobile-inbox-toggle").exists()).toBe(false);
     expect(wrapper.find(".mobile-inbox-tab").exists()).toBe(false);
     expect(wrapper.get('[data-testid="mobile-inbox-send-todo"]').text()).toBe("发送到提醒");
-    expect(wrapper.get('[data-testid="mobile-inbox-send-note"]').text()).toBe("发送到便签");
+    expect(wrapper.get('[data-testid="mobile-inbox-send-note"]').text()).toBe("发送到记事本");
     expect(wrapper.get('[data-testid="mobile-inbox-text"]').attributes("placeholder")).toBe("想到什么就记下来，可多行…");
   });
 
-  it("AI 润色开关：默认关闭、位于标题行最右，payload 携带 polish=false（原文直存）", async () => {
+  it("AI 润色开关：默认关闭、位于编辑区下方，payload 携带 polish=false（原文直存）", async () => {
     const wrapper = mountCapture();
 
     expect(wrapper.get('[data-testid="mobile-inbox-polish"]').text()).toBe("AI 润色");
-    // 开关在标题行内、工具组之后（清空按钮存在时仍居最右）。
+    // 润色开关使用原生 switch，独立于发送动作。
     expect(wrapper.get('[data-testid="mobile-inbox-polish"]').classes()).toContain("mobile-inbox-polish");
     expect((polishInput(wrapper).element as HTMLInputElement).checked).toBe(false);
 
@@ -230,6 +230,26 @@ describe("MobileInboxCapture", () => {
     await until(() => expect(wrapper.emitted("sent")).toBeTruthy());
   });
 
+  it("empty drafts disable sending and pending sends lock the captured draft and polish option", async () => {
+    let finish!: (result: InboxPostResult) => void;
+    postMock.mockImplementationOnce(() => new Promise((resolve) => { finish = resolve; }));
+    const wrapper = mountCapture();
+    const send = wrapper.get('[data-testid="mobile-inbox-send-todo"]');
+    expect(send.attributes("disabled")).toBeDefined();
+    expect(wrapper.get('[data-testid="mobile-inbox-send-note"]').attributes("disabled")).toBeDefined();
+    await wrapper.get('[data-testid="mobile-inbox-text"]').setValue("保存这条想法");
+    expect(send.attributes("disabled")).toBeUndefined();
+    await send.trigger("click");
+    await until(() => expect(postMock).toHaveBeenCalledTimes(1));
+    expect(wrapper.get('[data-testid="mobile-inbox-text"]').attributes("readonly")).toBeDefined();
+    expect(polishInput(wrapper).attributes("disabled")).toBeDefined();
+    finish({ ok: false, reason: "network" });
+    await until(() => expect(wrapper.get('[data-testid="mobile-inbox-text"]').attributes("readonly")).toBeUndefined());
+    expect(draftValue(wrapper)).toBe("保存这条想法");
+    expect(polishInput(wrapper).attributes("disabled")).toBeUndefined();
+    wrapper.unmount();
+  });
+
   it("多行待办按行拆分逐条发送：空行跳过、提示已发送 N 条、清空输入", async () => {
     const wrapper = mountCapture();
 
@@ -353,7 +373,7 @@ describe("MobileInboxCapture", () => {
     await until(() => expect(wrapper.emitted("sent")).toBeTruthy());
     expect(wrapper.emitted("sent")).toEqual([[1]]);
     // 按钮不再进入绿态：两键文案保持原样。
-    expect(wrapper.get('[data-testid="mobile-inbox-send-note"]').text()).toBe("发送到便签");
+    expect(wrapper.get('[data-testid="mobile-inbox-send-note"]').text()).toBe("发送到记事本");
     expect(wrapper.get('[data-testid="mobile-inbox-send-note"]').classes()).not.toContain("is-sent");
     expect(wrapper.get('[data-testid="mobile-inbox-send-todo"]').text()).toBe("发送到提醒");
     expect(vibrate).toHaveBeenCalledWith(20);

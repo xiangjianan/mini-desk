@@ -158,7 +158,7 @@ describe("localized public copy", () => {
     expect(getUiText("zh").app.mobileInboxPlaceholder).toBe("想到什么就记下来，可多行…");
     expect(getUiText("en").app.mobileInboxPlaceholder).toBe("Capture a thought — multiple lines are fine…");
     expect(getUiText("zh").app.mobileInboxSendTodo).toBe("发送到提醒");
-    expect(getUiText("zh").app.mobileInboxSendNote).toBe("发送到便签");
+    expect(getUiText("zh").app.mobileInboxSendNote).toBe("发送到记事本");
     expect(getUiText("en").app.mobileInboxSendTodo).toBe("Send to reminders");
     expect(getUiText("en").app.mobileInboxSendNote).toBe("Send to notes");
   });

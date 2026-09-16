@@ -352,7 +352,7 @@ describe("App shell", () => {
 
       expect(wrapper.find(".mobile-handoff").exists()).toBe(true);
       expect(wrapper.get(".mobile-handoff-title").text()).toBe("Mini Desk");
-      expect(wrapper.text()).toContain("建议在电脑浏览器打开，以获得完整体验");
+      expect(wrapper.text()).toContain("完整工作台，请在电脑端打开");
       expect(wrapper.find(".mobile-drawer-trigger").exists()).toBe(false);
       expect(wrapper.find(".mobile-drawer-menu").exists()).toBe(false);
       expect(wrapper.find('[aria-label="Mini Desk"]').exists()).toBe(false);
@@ -407,7 +407,7 @@ describe("App shell", () => {
       wrapper = mountApp();
 
       expect(wrapper.find(".mobile-handoff").exists()).toBe(true);
-      expect(wrapper.get(".mobile-inbox-heading").text()).toBe("手机速记");
+      expect(wrapper.get(".mobile-inbox-heading").text()).toBe("随手记");
       expect(wrapper.find('[data-testid="mobile-inbox-text"]').exists()).toBe(true);
       expect(wrapper.find('[data-testid="mobile-inbox-code-input"]').exists()).toBe(false);
       // 已配对进入速记态：右下角「建议在浏览器打开」伙伴气泡整体隐藏。
@@ -777,7 +777,7 @@ describe("App shell", () => {
       await submitCode(wrapper, "ab2c de4f ghjk");
 
       expect(wrapper.find('[data-testid="mobile-inbox-code-input"]').exists()).toBe(false);
-      expect(wrapper.get(".mobile-inbox-heading").text()).toBe("手机速记");
+      expect(wrapper.get(".mobile-inbox-heading").text()).toBe("随手记");
       expect(wrapper.find('[data-testid="mobile-inbox-text"]').exists()).toBe(true);
       expect(window.location.hash).toContain("#inbox=AB2CDE4FGHJK");
     } finally {

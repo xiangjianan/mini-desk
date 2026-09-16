@@ -3,9 +3,7 @@ import { computed, nextTick, onBeforeUnmount, onMounted, ref, watch } from "vue"
 import {
   AlertCircleOutline,
   DesktopOutline,
-  LinkOutline,
   MoonOutline,
-  PhonePortraitOutline,
   SunnyOutline,
 } from "@vicons/ionicons5";
 import { NIcon } from "naive-ui";
@@ -14,12 +12,7 @@ import { getCompanionNotificationIconSrc } from "../state/companionGifThemes";
 import { maskInboxCode, normalizeInboxCode } from "../sync/pairing";
 import type { AppLanguage } from "../types";
 
-/**
- * 手机端首页壳（OpenDesign 移动端首页原型的 Vue 实现，文案已按「尽量简洁」精简）：
- * 未配对 = 桌面优先叙事 Hero + 三步引导 + 12 位分组输码卡；
- * 已配对 = 连接状态卡 + 速记卡（slot 注入 MobileInboxCapture）+ 同步提示卡。
- * 配对校验/换码/复制等逻辑留在 App.vue，本组件只做交互壳（输码分组、sheet 二次确认）。
- */
+/** Mobile companion: a compact connection row and a full-height writing surface. */
 const props = defineProps<{
   code: string | null;
   checking: boolean;
@@ -160,10 +153,7 @@ onBeforeUnmount(() => window.removeEventListener("keydown", onKeydown));
         <section v-if="code" class="mobile-home-view" aria-labelledby="mobile-inbox-heading">
           <div class="mobile-home-paired-block">
             <div class="mobile-home-paired-status">
-              <span class="mobile-home-link-badge">
-                <NIcon :component="LinkOutline" aria-hidden="true" />
-                <i class="mobile-home-link-dot" aria-hidden="true"></i>
-              </span>
+              <span class="mobile-home-connection-dot" aria-hidden="true"></span>
               <span class="mobile-home-ps-field">
                 <span class="mobile-home-ps-title">{{ app.mobilePairedTitle }}</span>
                 <button
@@ -192,69 +182,20 @@ onBeforeUnmount(() => window.removeEventListener("keydown", onKeydown));
           <slot></slot>
 
           <div class="mobile-home-sync">
-            <div class="mobile-home-sync-icons" aria-hidden="true">
-              <NIcon :component="PhonePortraitOutline" />
-              <span class="mobile-home-sync-dots"><i></i><i></i><i></i></span>
-              <NIcon :component="DesktopOutline" />
-            </div>
             <p>{{ app.mobileSyncNote }}</p>
           </div>
         </section>
 
-        <!-- ============ 未配对：桌面优先叙事 + 快速配对 ============ -->
+        <!-- 未配对：先输码，按需展开帮助。 -->
         <section v-else class="mobile-home-view mobile-home-view-unpaired" aria-labelledby="mobile-home-hero-title">
           <div class="mobile-home-hero">
             <p class="mobile-home-eyebrow">{{ app.mobileHeroEyebrow }}</p>
             <h1 id="mobile-home-hero-title" class="mobile-home-hero-title">{{ app.mobileHeroTitle }}</h1>
-            <!-- 桌面四栏工作台微缩示意（纯 CSS，对应 workbench-grid 的真实分区） -->
-            <figure class="mobile-home-desk" aria-hidden="true">
-              <div class="mobile-home-desk-chrome">
-                <i class="mobile-home-wdot"></i><i class="mobile-home-wdot"></i><i class="mobile-home-wdot"></i>
-                <span class="mobile-home-desk-pill"></span>
-              </div>
-              <div class="mobile-home-desk-grid">
-                <div class="mobile-home-desk-col">
-                  <span class="mobile-home-zone-label"><i class="mobile-home-zone" style="--zone: #007aff"></i>{{ app.mobileDeskZoneAssets }}</span>
-                  <span class="mobile-home-tile"></span>
-                  <span class="mobile-home-tile"></span>
-                </div>
-                <div class="mobile-home-desk-col">
-                  <span class="mobile-home-zone-label"><i class="mobile-home-zone" style="--zone: #30c46a"></i>{{ app.mobileDeskZoneNotes }}</span>
-                  <span class="mobile-home-qchip"></span>
-                  <span class="mobile-home-qchip mobile-home-w70"></span>
-                  <span class="mobile-home-sk mobile-home-w90"></span>
-                  <span class="mobile-home-sk mobile-home-w58"></span>
-                </div>
-                <div class="mobile-home-desk-col">
-                  <span class="mobile-home-zone-label"><i class="mobile-home-zone" style="--zone: #ff9f0a"></i>{{ app.mobileDeskZoneTasks }}</span>
-                  <span class="mobile-home-cb-row"><i class="mobile-home-cb"></i><i class="mobile-home-sk mobile-home-w66"></i></span>
-                  <span class="mobile-home-cb-row"><i class="mobile-home-cb"></i><i class="mobile-home-sk mobile-home-w46"></i></span>
-                  <span class="mobile-home-cb-row is-done"><i class="mobile-home-cb is-on"></i><i class="mobile-home-sk mobile-home-w58"></i></span>
-                </div>
-                <div class="mobile-home-desk-col">
-                  <span class="mobile-home-zone-label"><i class="mobile-home-zone" style="--zone: #af52de"></i>{{ app.mobileDeskZoneSpaces }}</span>
-                  <span class="mobile-home-tab"></span>
-                  <span class="mobile-home-sk mobile-home-w88"></span>
-                  <span class="mobile-home-sk mobile-home-w70"></span>
-                  <span class="mobile-home-cardline"></span>
-                </div>
-              </div>
-              <figcaption class="mobile-home-desk-caption">
-                <NIcon :component="DesktopOutline" aria-hidden="true" />
-                <span>{{ app.mobileMessage }}</span>
-              </figcaption>
-            </figure>
+            <p class="mobile-home-intro">{{ app.mobileCaptureSubtitle }}</p>
           </div>
 
           <section class="mobile-home-pair" aria-labelledby="mobile-home-pair-title">
             <h2 id="mobile-home-pair-title" class="mobile-home-pair-title">{{ app.mobilePairTitle }}</h2>
-            <ol class="mobile-home-steps">
-              <li v-for="(step, index) in pairSteps" :key="index" class="mobile-home-step">
-                <span class="mobile-home-step-no" aria-hidden="true">{{ index + 1 }}</span>
-                <span class="mobile-home-step-body">{{ step }}</span>
-              </li>
-            </ol>
-
             <form class="mobile-home-card mobile-home-code-card" novalidate @submit.prevent="submitCode">
               <label class="mobile-home-field-label" for="mobile-inbox-code-g0">{{ app.mobileInboxEnterCode }}</label>
               <div class="mobile-home-code-groups" :class="{ 'is-error': Boolean(error) }">
@@ -303,11 +244,21 @@ onBeforeUnmount(() => window.removeEventListener("keydown", onKeydown));
                 <span>{{ checking ? app.mobileInboxChecking : app.mobileInboxCodeConfirm }}</span>
               </button>
             </form>
+            <details class="mobile-home-help">
+              <summary>{{ app.mobilePairHelp }}</summary>
+              <ol class="mobile-home-steps">
+                <li v-for="(step, index) in pairSteps" :key="index" class="mobile-home-step">
+                  <span class="mobile-home-step-no" aria-hidden="true">{{ index + 1 }}</span>
+                  <span class="mobile-home-step-body">{{ step }}</span>
+                </li>
+              </ol>
+            </details>
+            <p class="mobile-home-desktop-note"><NIcon :component="DesktopOutline" aria-hidden="true" />{{ app.mobileMessage }}</p>
           </section>
         </section>
       </div>
 
-      <footer class="mobile-home-foot">{{ app.mobileFoot }}</footer>
+      <footer v-if="!code" class="mobile-home-foot">{{ app.mobileFoot }}</footer>
     </div>
 
     <!-- 更换配对码：底部 sheet 二次确认（确认动作回抛 App.vue 执行换码） -->
@@ -316,7 +267,7 @@ onBeforeUnmount(() => window.removeEventListener("keydown", onKeydown));
     <Transition name="mobile-home-scrim">
       <div v-if="sheetOpen" class="mobile-home-sheet-scrim" aria-hidden="true" @click="closeSheet"></div>
     </Transition>
-    <div class="mobile-home-sheet" :class="{ open: sheetOpen }" role="dialog" aria-modal="true" aria-labelledby="mobile-home-sheet-title">
+    <div class="mobile-home-sheet" :class="{ open: sheetOpen }" role="dialog" :inert="!sheetOpen" :aria-hidden="!sheetOpen" aria-modal="true" aria-labelledby="mobile-home-sheet-title">
       <span class="mobile-home-sheet-grab" aria-hidden="true"></span>
       <h3 id="mobile-home-sheet-title">{{ app.mobileInboxChangeCode }}</h3>
       <p>{{ app.mobileInboxChangeCodeConfirm }}</p>

@@ -1019,7 +1019,7 @@ describe("Naive UI component usage", () => {
     expect(app).not.toMatch(/<CompanionBubble\s+v-if=/);
     expect(app).toContain('@sent="handleMobileInboxSent"');
     expect(app).toContain(':visible="companionVisible"');
-    expect(i18n).toContain("建议在电脑浏览器打开，以获得完整体验");
+    expect(i18n).toContain("完整工作台，请在电脑端打开");
     expect(app).not.toContain('class="mobile-nav"');
     expect(app).not.toContain('class="mobile-drawer-trigger"');
     expect(app).not.toContain('class="mobile-drawer-menu"');

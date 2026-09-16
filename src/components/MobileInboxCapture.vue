@@ -200,7 +200,7 @@ onBeforeUnmount(() => {
     <div class="mobile-inbox-head">
       <h2 id="mobile-inbox-heading" class="mobile-inbox-heading">{{ app.mobileInboxHeading }}</h2>
       <div class="mobile-inbox-head-tools">
-        <!-- 清空按钮：与标题同一行、润色开关左侧，有内容时才出现。 -->
+        <!-- 清空按钮保留在标题行，有内容时才出现。 -->
         <button
           v-if="canClearDraft"
           type="button"
@@ -211,25 +211,10 @@ onBeforeUnmount(() => {
         >
           <NIcon :component="CloseCircleOutline" aria-hidden="true" /><span>{{ app.mobileInboxClear }}</span>
         </button>
-        <!-- AI 润色开关（最右）：关闭=原文直存，开启=服务端润色后同步；状态存 localStorage，默认关闭。 -->
-        <label
-          class="mobile-inbox-polish"
-          data-testid="mobile-inbox-polish"
-          :title="app.mobileInboxPolishHint"
-          :aria-label="app.mobileInboxPolishHint"
-        >
-          <input
-            type="checkbox"
-            class="mobile-inbox-polish-input"
-            role="switch"
-            :checked="polishEnabled"
-            @change="togglePolish"
-          />
-          <span class="mobile-inbox-polish-label">{{ app.mobileInboxPolish }}</span>
-          <span class="mobile-inbox-polish-track" aria-hidden="true"></span>
-        </label>
       </div>
     </div>
+
+    <p class="mobile-inbox-subtitle">{{ app.mobileCaptureSubtitle }}</p>
 
     <form class="mobile-inbox-form" @submit.prevent>
       <textarea
@@ -238,20 +223,58 @@ onBeforeUnmount(() => {
         data-testid="mobile-inbox-text"
         :placeholder="app.mobileInboxPlaceholder"
         :aria-label="app.mobileInboxPlaceholder"
+        :readonly="status === 'sending'"
         rows="5"
       ></textarea>
+      <div class="mobile-inbox-editor-tools">
+        <!-- 粘贴和润色位于编辑区下方，便于拇指操作。 -->
+        <button
+          type="button"
+          class="mobile-inbox-paste"
+          data-testid="mobile-inbox-paste"
+          :title="app.mobileInboxPaste"
+          :aria-label="app.mobileInboxPaste"
+          :disabled="status === 'sending'"
+          @click="pasteFromClipboard"
+        >
+          <NIcon :component="ClipboardOutline" aria-hidden="true" /><span>{{ app.mobileInboxPaste }}</span>
+        </button>
+
+        <div class="mobile-inbox-polish-setting">
+          <!-- AI 润色开关（最右）：关闭=原文直存，开启=服务端润色后同步；状态存 localStorage，默认关闭。 -->
+          <label
+            class="mobile-inbox-polish"
+            data-testid="mobile-inbox-polish"
+            :title="app.mobileInboxPolishHint"
+            :aria-label="app.mobileInboxPolishHint"
+          >
+            <input
+              type="checkbox"
+              class="mobile-inbox-polish-input"
+              role="switch"
+              :checked="polishEnabled"
+              :disabled="status === 'sending'"
+              :aria-label="app.mobileInboxPolish"
+              @change="togglePolish"
+            />
+            <span class="mobile-inbox-polish-label">{{ app.mobileInboxPolish }}</span>
+            <span class="mobile-inbox-polish-track" aria-hidden="true"></span>
+          </label>
+          <span class="mobile-inbox-polish-help">{{ app.mobilePolishCaption }}</span>
+        </div>
+      </div>
       <!-- 多行输入会被按行拆成多条记录：≥2 行时给出实时提示，避免用户误以为整段只发一条。 -->
       <p v-if="showSplitHint" class="mobile-inbox-hint" data-testid="mobile-inbox-split-hint" aria-live="polite">
         {{ splitHintText }}
       </p>
-      <!-- 目标类型由按钮直接携带：点「发送到提醒」或「发送到便签」；textarea 内 Enter 是换行，两个按钮均为 type="button"，@submit.prevent 仅兜底防止未来误触发整页刷新。 -->
+      <!-- 目标类型由按钮直接携带：点「发送到提醒」或「发送到记事本」；textarea 内 Enter 是换行，两个按钮均为 type="button"，@submit.prevent 仅兜底防止未来误触发整页刷新。 -->
       <div class="mobile-inbox-actions">
         <button
           type="button"
           class="mobile-inbox-send"
           :class="{ 'is-loading': status === 'sending' && activeKind === 'todo' }"
           data-testid="mobile-inbox-send-todo"
-          :disabled="status === 'sending'"
+          :disabled="status === 'sending' || !canClearDraft"
           @click="send('todo')"
         >
           <span class="mobile-inbox-spinner" aria-hidden="true"></span>
@@ -262,7 +285,7 @@ onBeforeUnmount(() => {
           class="mobile-inbox-send"
           :class="{ 'is-loading': status === 'sending' && activeKind === 'note' }"
           data-testid="mobile-inbox-send-note"
-          :disabled="status === 'sending'"
+          :disabled="status === 'sending' || !canClearDraft"
           @click="send('note')"
         >
           <span class="mobile-inbox-spinner" aria-hidden="true"></span>
@@ -292,19 +315,6 @@ onBeforeUnmount(() => {
       @click="emit('change-code')"
     >
       {{ app.mobileInboxRevokedChange }}
-    </button>
-
-    <!-- 粘贴入口放在卡片底部：拇指顺手可点，不干扰上方输入与主发送动作 -->
-    <button
-      type="button"
-      class="mobile-inbox-paste"
-      data-testid="mobile-inbox-paste"
-      :title="app.mobileInboxPaste"
-      :aria-label="app.mobileInboxPaste"
-      :disabled="status === 'sending'"
-      @click="pasteFromClipboard"
-    >
-      <NIcon :component="ClipboardOutline" aria-hidden="true" /><span>{{ app.mobileInboxPaste }}</span>
     </button>
 
     <Transition name="mobile-inbox-toast">
