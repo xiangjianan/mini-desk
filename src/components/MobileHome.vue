@@ -182,6 +182,11 @@ onBeforeUnmount(() => window.removeEventListener("keydown", onKeydown));
           <slot></slot>
 
           <div class="mobile-home-sync">
+            <div class="mobile-sync-animation" aria-hidden="true">
+              <span class="mobile-sync-phone"></span>
+              <span class="mobile-sync-route"><i></i><i></i><i></i></span>
+              <span class="mobile-sync-computer"></span>
+            </div>
             <p>{{ app.mobileSyncNote }}</p>
           </div>
         </section>

@@ -420,7 +420,7 @@ describe("App shell", () => {
     }
   });
 
-  it("手机端发送成功：右下角伴宠 GIF 气泡弹出已发送提示并自动收起", async () => {
+  it("手机端发送成功：伴宠 GIF 气泡定位到输入框右下角并自动收起", async () => {
     vi.useFakeTimers();
     stubMatchMedia(true);
     window.location.hash = "#inbox=AB2CDE4FGHJK";
@@ -429,6 +429,8 @@ describe("App shell", () => {
     try {
       wrapper = mountApp();
 
+      const editor = wrapper.get('[data-testid="mobile-inbox-text"]').element;
+      vi.spyOn(editor, "getBoundingClientRect").mockReturnValue({ right: 360, bottom: 620 } as DOMRect);
       await wrapper.get('[data-testid="mobile-inbox-text"]').setValue("买牛奶");
       await wrapper.get('[data-testid="mobile-inbox-send-todo"]').trigger("click");
       // 发送链路（keyHash + post）完成后上抛 sent → App 强制弹伴宠气泡；含 200ms 气泡入场延迟。
@@ -439,8 +441,13 @@ describe("App shell", () => {
       expect(wrapper.find('[data-testid="companion-gif"]').exists()).toBe(true);
       expect(wrapper.get('[data-testid="companion-confirm"]').attributes("role")).toBe("status");
       expect(wrapper.get('[data-testid="companion-confirm"]').text()).toContain("已发送 1 条");
-      // 落点为安全区感知的屏幕右下角。
-      expect(wrapper.get('[data-testid="companion-bubble"]').attributes("style")).toContain("calc(var(--safe-bottom) + 20px)");
+      const bubbleStyle = wrapper.get('[data-testid="companion-bubble"]').attributes("style");
+      expect(bubbleStyle).toContain(`right: ${window.innerWidth - 360 + 12}px`);
+      expect(bubbleStyle).toContain(`bottom: ${window.innerHeight - 620 + 12}px`);
+      vi.mocked(editor.getBoundingClientRect).mockReturnValue({ right: 340, bottom: 540 } as DOMRect);
+      document.dispatchEvent(new Event("scroll"));
+      await wrapper.vm.$nextTick();
+      expect(wrapper.get('[data-testid="companion-bubble"]').attributes("style")).toContain(`bottom: ${window.innerHeight - 540 + 12}px`);
       // 草稿已被清空。
       expect((wrapper.get('[data-testid="mobile-inbox-text"]').element as HTMLTextAreaElement).value).toBe("");
 

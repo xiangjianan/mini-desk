@@ -27,6 +27,9 @@ const emit = defineEmits<{ "change-code": []; sent: [count: number] }>();
 type CaptureStatus = "idle" | "sending" | "error";
 type CaptureKind = InboxPlainItem["kind"];
 
+const editorElement = ref<HTMLTextAreaElement | null>(null);
+defineExpose({ getEditorElement: () => editorElement.value });
+
 const app = computed(() => getUiText(props.language).app);
 // 草稿上提到父级（App.vue）：换码导致组件卸载重挂后内容不丢。
 const draft = defineModel<string>({ default: "" });
@@ -241,6 +244,7 @@ onBeforeUnmount(() => {
 
     <form class="mobile-inbox-form" @submit.prevent>
       <textarea
+        ref="editorElement"
         v-model="draft"
         class="mobile-inbox-textarea"
         data-testid="mobile-inbox-text"
