@@ -2,11 +2,11 @@
 import { computed, h, nextTick, onMounted, onUnmounted, reactive, ref, watch } from "vue";
 import type { Component, ComponentPublicInstance, VNode } from "vue";
 import { NButton, NCheckbox, NDropdown, NIcon, NInput, NModal, NScrollbar, NSelect } from "naive-ui";
-import { AddOutline, AppsOutline, ChevronDownOutline, ClipboardOutline, CloudUploadOutline, CopyOutline, CreateOutline, DocumentTextOutline, EyeOffOutline, EyeOutline, HelpCircleOutline, LinkOutline, PricetagsOutline, SearchOutline, SwapHorizontalOutline, TrashOutline } from "@vicons/ionicons5";
+import { AddOutline, AppsOutline, ChevronDownOutline, ClipboardOutline, CloudUploadOutline, CopyOutline, CreateOutline, DocumentTextOutline, EyeOffOutline, EyeOutline, FlashOutline, HelpCircleOutline, LinkOutline, PricetagsOutline, SearchOutline, SwapHorizontalOutline, TrashOutline } from "@vicons/ionicons5";
 import type { DropdownOption } from "naive-ui";
 import type { AppLanguage, GuideKey, QuickApiBodyType, QuickApiHeader, QuickApiMethod, QuickButton, QuickButtonType, QuickTag, WorkspaceMoveTarget } from "../types";
 import { GUIDE_MENU_OPTION } from "../state/defaults";
-import { getUiText } from "../state/i18n";
+import { getIconHeadingText, getUiText } from "../state/i18n";
 import { buildVisibleQuickButtonGroups, filterVisibleQuickButtonGroups, getQuickTagColor, hasOverloadedVisibleQuickButtonGroup, normalizeQuickTagColor, QUICK_BUTTON_EMPTY_GROUP_ID, QUICK_DENSITY_THRESHOLD, QUICK_TAG_COLORS, QUICK_TAG_DEFAULT_COLOR } from "../state/quickButtons";
 import { findQuickAppPresetByScheme, getQuickAppPresetHint, getQuickAppPresetTitle, QUICK_APP_PRESETS } from "../state/quickApps";
 import { findQuickApiTemplate, QUICK_API_TEMPLATES } from "../state/quickApiTemplates";
@@ -722,12 +722,14 @@ function handleQuickGroupDrop(event: DragEvent, groupId: string): void {
     @drop="handleQuickDrop"
     @dragend="handleQuickDragEnd"
   >
-    <div class="panel-header" @contextmenu="openTitleMenu">
+    <div class="panel-header desk-zone-heading" @contextmenu="openTitleMenu">
       <h2 id="quick-title">
+        <NIcon :component="FlashOutline" />
         <EditableTitle
           ref="titleRef"
           id="quick-title"
           :value="title"
+          :display-value="getIconHeadingText(title, 'quick')"
           :edit-label="uiText.common.rename"
           @update="(id, value) => emit('titleUpdate', id, value)"
         />
@@ -795,18 +797,6 @@ function handleQuickGroupDrop(event: DragEvent, groupId: string): void {
             @drop.stop.prevent="onTagDrop($event, group.id)"
             @dragend="draggingTagId = null"
           >
-            <button
-              v-if="group.id !== QUICK_BUTTON_EMPTY_GROUP_ID && editingTagId !== group.id"
-              type="button"
-              class="quick-tag-collapse-button"
-              :class="{ 'is-collapsed': group.collapsed }"
-              :aria-label="group.collapsed ? uiText.quick.expandTag : uiText.quick.collapseTag"
-              :aria-expanded="!group.collapsed"
-              @click.stop="emit('toggleTagCollapsed', group.id)"
-              @dblclick.stop
-            >
-              <NIcon :component="ChevronDownOutline" />
-            </button>
             <input
               v-if="editingTagId === group.id"
               :ref="setInlineRenameInput"
@@ -819,6 +809,18 @@ function handleQuickGroupDrop(event: DragEvent, groupId: string): void {
               @blur="commitInlineTagRename"
             />
             <span v-else class="quick-tag-title">{{ group.title }}</span>
+            <button
+              v-if="group.id !== QUICK_BUTTON_EMPTY_GROUP_ID && editingTagId !== group.id"
+              type="button"
+              class="quick-tag-collapse-button"
+              :class="{ 'is-collapsed': group.collapsed }"
+              :aria-label="group.collapsed ? uiText.quick.expandTag : uiText.quick.collapseTag"
+              :aria-expanded="!group.collapsed"
+              @click.stop="emit('toggleTagCollapsed', group.id)"
+              @dblclick.stop
+            >
+              <NIcon :component="ChevronDownOutline" />
+            </button>
             <span v-if="editingTagId !== group.id" class="quick-tag-count">{{ group.buttons.length }}</span>
           </div>
           <div

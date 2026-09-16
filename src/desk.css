@@ -63,7 +63,7 @@ html[data-theme="dark"] .workbench-shell,
 .workbench-zone .panel-header h1,
 .workbench-zone .panel-header h2 {
   gap: 8px;
-  font-size: 16px;
+  font-size: 17px;
   font-weight: 600;
   line-height: 1.4;
   overflow: hidden;
@@ -75,6 +75,7 @@ html[data-theme="dark"] .workbench-shell,
   white-space: nowrap;
 }
 
+.desk-zone-heading h1 > .n-icon,
 .desk-zone-heading h2 > .n-icon { flex: 0 0 auto; font-size: 20px; }
 .workbench-shell .header-actions { flex-shrink: 0; gap: 2px; }
 .workbench-shell .icon-button { box-shadow: none; background: transparent; border-radius: 6px; }
@@ -161,8 +162,6 @@ html[data-theme="dark"] .workbench-shell,
 /* Keep controls usable after a user resizes a column below its default. */
 @container (max-width: 235px) {
   .workbench-zone .panel-header { flex-wrap: wrap; gap: 2px; }
-  .workbench-zone .panel-header h1,
-  .workbench-zone .panel-header h2 { font-size: 14px; }
   .workbench-zone .panel-header .header-actions { margin-inline-start: auto; }
   .workbench-zone .todo-heading { flex-wrap: wrap; }
   .workbench-zone .todo-heading-actions { margin-inline-start: auto; }
@@ -187,7 +186,59 @@ html[data-theme="dark"] .workbench-shell,
 .workbench-shell .workspace-trigger-title { font-size: 18px; font-weight: 600; letter-spacing: -0.3px; }
 .workbench-zone .panel-header h1,
 .workbench-zone .panel-header h2 { font-size: 17px; }
-@container (max-width: 235px) {
-  .workbench-zone .panel-header h1,
-  .workbench-zone .panel-header h2 { font-size: 14px; }
+
+/* Shared title sizing, including the narrower image column. */
+.workbench-zone .panel-header h1,
+.workbench-zone .panel-header h2 { flex-shrink: 1; }
+
+/* Match reminder headers: label left, disclosure centered, count right. */
+.workbench-shell .quick-tag-heading {
+  position: relative;
+  min-height: 40px;
+  padding: 4px 0;
+}
+.workbench-shell .quick-tag-title {
+  flex: 0 1 calc(50% - 20px);
+  max-width: calc(50% - 20px);
+}
+.workbench-shell .quick-tag-count { margin-left: auto; }
+.workbench-shell button.quick-tag-collapse-button {
+  position: absolute;
+  left: 50%;
+  top: 50%;
+  width: 26px;
+  min-width: 26px;
+  height: 26px;
+  min-height: 26px;
+  margin: 0;
+  padding: 0;
+  transform: translate(-50%, -50%);
+}
+.workbench-shell .quick-tag-collapse-button.is-collapsed .n-icon { transform: rotate(180deg); }
+.workbench-shell .quick-tag-collapse-button:hover,
+.workbench-shell .quick-tag-collapse-button:focus-visible { color: var(--primary); }
+
+/* The 46px header must fit inside the collapsed row, plus breathing space. */
+.workbench-shell .todo-section.is-compact.is-collapsed {
+  flex: 0 0 54px;
+  min-height: 54px;
+  padding-bottom: 8px;
+}
+.workbench-shell .today-focus-heading { display: flex; align-items: center; gap: 8px; }
+.workbench-shell .today-focus-title-icon { flex: 0 0 auto; font-size: 16px; }
+
+/* Pair the clipboard icon's color cycle with the existing AI text treatment. */
+.smart-paste-icon-flow { animation: smart-paste-icon-flow 4.8s linear infinite; }
+@keyframes smart-paste-icon-flow {
+  0%, 100% { color: #d946ef; }
+  20% { color: #2563eb; }
+  40% { color: #0f9f6e; }
+  60% { color: #f59e0b; }
+  80% { color: #ef4444; }
+}
+.workbench-shell .desk-smart-paste:disabled { cursor: wait; opacity: 0.6; }
+@media (prefers-reduced-motion: reduce) {
+  .desk-smart-paste .smart-paste-icon-flow,
+  .desk-smart-paste .polish-menu-flow { animation: none; }
+  .desk-smart-paste .smart-paste-icon-flow { color: var(--primary); }
 }

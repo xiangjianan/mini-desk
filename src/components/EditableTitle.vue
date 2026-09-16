@@ -12,6 +12,7 @@ import { isImeComposing } from "../utils/ime";
 const props = withDefaults(defineProps<{
   id: string;
   value: string;
+  displayValue?: string;
   autoEdit?: boolean;
   editLabel?: string;
   menuEnabled?: boolean;
@@ -131,7 +132,7 @@ defineExpose({ openMenuAt });
     @keydown.esc.prevent="cancel"
     @blur="commit"
   />
-  <span v-else class="editable-title" @dblclick="startEditing" @contextmenu="openMenu">{{ value }}</span>
+  <span v-else class="editable-title" @dblclick="startEditing" @contextmenu="openMenu">{{ displayValue ?? value }}</span>
   <NDropdown
     v-if="menu"
     placement="bottom-start"

@@ -1,14 +1,30 @@
-import { mount } from "@vue/test-utils";
+import { flushPromises, mount } from "@vue/test-utils";
 import { afterEach, describe, expect, it, vi } from "vitest";
-import { NDropdown, NModal } from "naive-ui";
+import { NModal } from "naive-ui";
 import SpacePanel from "../components/SpacePanel.vue";
-import TextPanel from "../components/TextPanel.vue";
 import TodoPanel from "../components/TodoPanel.vue";
 import QuickButtons from "../components/QuickButtons.vue";
 import { DEFAULT_TITLES } from "../state/defaults";
+import type { PolishResult } from "../sync/polishClient";
 
 const wrappers: ReturnType<typeof mount>[] = [];
-afterEach(() => { wrappers.splice(0).forEach((wrapper) => wrapper.unmount()); });
+const originalClipboard = Object.getOwnPropertyDescriptor(navigator, "clipboard");
+afterEach(() => {
+  wrappers.splice(0).forEach((wrapper) => wrapper.unmount());
+  if (originalClipboard) Object.defineProperty(navigator, "clipboard", originalClipboard);
+  else Reflect.deleteProperty(navigator, "clipboard");
+});
+
+function mountPastePanel(polish: (kind: "todo" | "note", text: string) => Promise<PolishResult>, raw = "clipboard draft") {
+  const readText = vi.fn().mockResolvedValue(raw);
+  Object.defineProperty(navigator, "clipboard", { configurable: true, value: { readText } });
+  const wrapper = mount(SpacePanel, { props: {
+    spaces: [{ id: "notes", title: "Notes", lines: [{ text: "Keep the first line", indent: 0 }, { text: "Last line", indent: 0 }] }],
+    activeSpaceId: "notes", polish,
+  }, attachTo: document.body });
+  wrappers.push(wrapper);
+  return { wrapper, readText };
+}
 
 describe("visible workbench actions", () => {
   it("adds to the selected reminder list without opening a context menu", async () => {
@@ -32,36 +48,71 @@ describe("visible workbench actions", () => {
     expect(wrapper.emitted("save")).toBeUndefined();
   });
 
-  it("preserves a note selection when the AI toolbar opens and does not send content", async () => {
-    const polish = vi.fn();
-    const wrapper = mount(SpacePanel, { props: {
-      spaces: [{ id: "notes", title: "Notes", lines: [{ text: "Rewrite only this part", indent: 0 }] }],
-      activeSpaceId: "notes", language: "en", polish,
-    }, attachTo: document.body });
-    wrappers.push(wrapper);
+  it("smart paste appends below the last line instead of replacing the selection", async () => {
+    const polish = vi.fn(async (): Promise<PolishResult> => ({ items: ["Organized line"] }));
+    const { wrapper } = mountPastePanel(polish);
     const textarea = wrapper.get("textarea");
     textarea.element.setSelectionRange(0, 7);
     await textarea.trigger("select");
-    await wrapper.get('[aria-label="AI assistant"]').trigger("mousedown");
-    await wrapper.get('[aria-label="AI assistant"]').trigger("click");
-    const menu = wrapper.findComponent(TextPanel).findComponent(NDropdown);
-    const options = menu.props("options") as { key: string; disabled?: boolean }[];
-    expect(options.map((option) => option.key)).toEqual(["smart-paste", "smart-polish"]);
-    expect(options.find((option) => option.key === "smart-polish")?.disabled).toBe(false);
-    expect(textarea.element.selectionStart).toBe(0);
-    expect(textarea.element.selectionEnd).toBe(7);
-    expect(polish).not.toHaveBeenCalled();
+    await wrapper.get('[aria-label="智能粘贴"]').trigger("click");
+    await flushPromises();
+    expect(polish).toHaveBeenCalledWith("note", "clipboard draft", undefined);
+    expect(textarea.element.value).toBe("Keep the first line\nLast line\nOrganized line");
+    expect(wrapper.emitted("update")?.at(-1)?.[0]).toBe("notes");
+  });
+
+  it("appends raw clipboard text on service failure without losing notes", async () => {
+    const { wrapper } = mountPastePanel(vi.fn(async () => null));
+    await wrapper.get('[aria-label="智能粘贴"]').trigger("click");
+    await flushPromises();
+    expect(wrapper.get("textarea").element.value).toBe("Keep the first line\nLast line\nclipboard draft");
+  });
+
+  it("does not duplicate requests while a paste is pending", async () => {
+    let finish!: (result: PolishResult) => void;
+    const polish = vi.fn(() => new Promise<PolishResult>((resolve) => { finish = resolve; }));
+    const { wrapper, readText } = mountPastePanel(polish);
+    const button = wrapper.get('[aria-label="智能粘贴"]');
+    await button.trigger("click");
+    await flushPromises();
+    expect(button.attributes("disabled")).toBeDefined();
+    await button.trigger("click");
+    expect(readText).toHaveBeenCalledTimes(1);
+    finish({ items: ["Done"] });
+    await flushPromises();
+    expect(button.attributes("disabled")).toBeUndefined();
+  });
+
+  it("discards a result after switching to another note space", async () => {
+    let finish!: (result: PolishResult) => void;
+    const { wrapper } = mountPastePanel(() => new Promise<PolishResult>((resolve) => { finish = resolve; }));
+    await wrapper.get('[aria-label="智能粘贴"]').trigger("click");
+    await flushPromises();
+    await wrapper.setProps({ spaces: [{ id: "other", title: "Other", lines: [{ text: "Do not touch", indent: 0 }] }], activeSpaceId: "other" });
+    finish({ items: ["Late result"] });
+    await flushPromises();
+    expect(wrapper.get("textarea").element.value).toBe("Do not touch");
     expect(wrapper.emitted("update")).toBeUndefined();
   });
 
-  it("disables selection polishing when no text is selected", async () => {
-    const wrapper = mount(SpacePanel, { props: {
-      spaces: [{ id: "notes", title: "Notes", lines: [] }],
-      activeSpaceId: "notes", polish: vi.fn(),
-    }});
-    wrappers.push(wrapper);
-    await wrapper.get('[aria-label="AI 助手"]').trigger("click");
-    const options = wrapper.findComponent(TextPanel).findComponent(NDropdown).props("options") as { key: string; disabled?: boolean }[];
-    expect(options.find((option) => option.key === "smart-polish")?.disabled).toBe(true);
+  it("does not overwrite edits made while polishing is pending", async () => {
+    let finish!: (result: PolishResult) => void;
+    const { wrapper } = mountPastePanel(() => new Promise<PolishResult>((resolve) => { finish = resolve; }));
+    await wrapper.get('[aria-label="智能粘贴"]').trigger("click");
+    await flushPromises();
+    await wrapper.get("textarea").setValue("Changed while waiting");
+    finish({ items: ["Late result"] });
+    await flushPromises();
+    expect(wrapper.get("textarea").element.value).toBe("Changed while waiting");
+  });
+
+  it("leaves notes untouched for an empty clipboard", async () => {
+    const polish = vi.fn(async () => null);
+    const { wrapper } = mountPastePanel(polish, "  ");
+    await wrapper.get('[aria-label="智能粘贴"]').trigger("click");
+    await flushPromises();
+    expect(polish).not.toHaveBeenCalled();
+    expect(wrapper.emitted("update")).toBeUndefined();
+    expect(wrapper.get('[aria-label="智能粘贴"]').attributes("disabled")).toBeUndefined();
   });
 });

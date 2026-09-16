@@ -2,7 +2,7 @@
 import { computed, h, nextTick, onMounted, onUnmounted, ref, watch } from "vue";
 import type { Component, VNode } from "vue";
 import { NDropdown, NIcon, NScrollbar } from "naive-ui";
-import { DocumentTextOutline, SparklesOutline, CreateOutline, SwapHorizontalOutline, TrashOutline } from "@vicons/ionicons5";
+import { DocumentTextOutline, ClipboardOutline, CreateOutline, SwapHorizontalOutline, TrashOutline } from "@vicons/ionicons5";
 import type { DropdownOption } from "naive-ui";
 import type { AppLanguage, GuideKey, LineItem, WorkspaceMoveTarget, WorkspaceSpace } from "../types";
 import { getUiText } from "../state/i18n";
@@ -48,7 +48,17 @@ const titleComposing = ref(false);
 const draggedSpaceId = ref<string | null>(null);
 const suppressTabCommitTransition = ref(false);
 const menu = ref<{ x: number; y: number; spaceId: string } | null>(null);
-const textPanelRef = ref<{ focusEditor: () => void; openAiActions: (event: MouseEvent) => void } | null>(null);
+const textPanelRef = ref<{ focusEditor: () => void; appendSmartPaste: () => Promise<void> } | null>(null);
+const smartPastePending = ref(false);
+async function appendSmartPaste(): Promise<void> {
+  if (smartPastePending.value) return;
+  smartPastePending.value = true;
+  try {
+    await textPanelRef.value?.appendSmartPaste();
+  } finally {
+    smartPastePending.value = false;
+  }
+}
 const uiText = computed(() => getUiText(props.language));
 const exclusiveMenu = createExclusiveContextMenu(closeMenu);
 let tabCommitTransitionTimer: number | undefined;
@@ -246,10 +256,10 @@ function handleTabsWheel(event: WheelEvent): void {
     <div class="panel-header desk-zone-heading">
       <h2><NIcon :component="DocumentTextOutline" /><span>{{ uiText.desk.notes }}</span></h2>
       <div class="header-actions">
-        <button v-if="props.polish && activeSpace" class="desk-ai-action" type="button"
-          :aria-label="uiText.desk.aiActions" @mousedown.prevent
-          @click.stop="textPanelRef?.openAiActions($event)">
-          <NIcon :component="SparklesOutline" /><span>{{ uiText.desk.aiActions }}</span>
+        <button v-if="props.polish && activeSpace" class="desk-ai-action desk-smart-paste" type="button"
+          :aria-label="uiText.common.smartPaste" :disabled="smartPastePending" :aria-busy="smartPastePending" @mousedown.prevent
+          @click.stop="appendSmartPaste">
+          <NIcon class="smart-paste-icon-flow" :component="ClipboardOutline" /><span class="polish-menu-flow">{{ uiText.common.smartPaste }}</span>
         </button>
       </div>
     </div>

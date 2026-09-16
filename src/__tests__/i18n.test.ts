@@ -4,6 +4,7 @@ import {
   SHORTCUT_HELP,
   UI_TEXT,
   getDefaultTitles,
+  getIconHeadingText,
   getDisplaySpaceTitle,
   getDisplayTodoListTitle,
   getUiText,
@@ -26,10 +27,27 @@ describe("localized public copy", () => {
       "tools-title": "🔧 Tools",
     });
 
-    expect(getDisplayTodoListTitle({ id: "morning", title: "✅ 待办", collapsed: false, compact: false }, "en")).toBe("✅ Reminders");
+    expect(getDisplayTodoListTitle({ id: "morning", title: "✅ 待办", collapsed: false, compact: false }, "en")).toBe("Reminders");
     expect(getDisplayTodoListTitle({ id: "morning", title: "客户跟进", collapsed: false, compact: false }, "en")).toBe("客户跟进");
-    expect(getDisplaySpaceTitle({ id: "workspace", title: "备忘录", lines: [] }, "en")).toBe("📝 Sticky");
+    expect(getDisplaySpaceTitle({ id: "workspace", title: "备忘录", lines: [] }, "en")).toBe("Notes");
     expect(getDisplaySpaceTitle({ id: "workspace", title: "个人计划", lines: [] }, "en")).toBe("个人计划");
+  });
+
+  it("recognizes previous emoji defaults without changing custom names", () => {
+    expect(getDisplayTodoListTitle({ id: "morning", title: "✅ 提醒事项", collapsed: false, compact: false }, "zh")).toBe("提醒事项");
+    expect(getDisplayTodoListTitle({ id: "morning", title: "✅ Reminders", collapsed: false, compact: false }, "en")).toBe("Reminders");
+    expect(getDisplaySpaceTitle({ id: "workspace", title: "📝 便签", lines: [] }, "zh")).toBe("便签");
+    expect(getDisplaySpaceTitle({ id: "workspace", title: "📝 Sticky", lines: [] }, "en")).toBe("Notes");
+    expect(getDisplaySpaceTitle({ id: "workspace", title: "📝 我的笔记", lines: [] }, "zh")).toBe("📝 我的笔记");
+    expect(getDisplayTodoListTitle({ id: "custom", title: "✅ 提醒事项", collapsed: false, compact: false }, "zh")).toBe("✅ 提醒事项");
+  });
+
+  it("only replaces the matching legacy heading prefix", () => {
+    expect(getIconHeadingText("🎨 图片", "image")).toBe("图片");
+    expect(getIconHeadingText("⚡ Quick Actions", "quick")).toBe("Quick Actions");
+    expect(getIconHeadingText("‼️ 重点事项", "focus")).toBe("重点事项");
+    expect(getIconHeadingText("客户 ⚡ 资料", "quick")).toBe("客户 ⚡ 资料");
+    expect(getIconHeadingText("📥 收件箱", "focus")).toBe("📥 收件箱");
   });
 
   it("includes the expanded Chinese Tips and English counterparts", () => {
@@ -129,11 +147,11 @@ describe("localized public copy", () => {
     expect(getUiText("en").app.aboutSignature).toBe("(100% AI BUILT)");
   });
 
-  it("uses the memo emoji in default sticky names", () => {
-    expect(getDisplaySpaceTitle({ id: "workspace", title: "备忘录", lines: [] }, "zh")).toBe("📝 便签");
-    expect(getDisplaySpaceTitle({ id: "workspace", title: "📕 备忘录", lines: [] }, "zh")).toBe("📝 便签");
-    expect(getDisplaySpaceTitle({ id: "workspace", title: "备忘录", lines: [] }, "en")).toBe("📝 Sticky");
-    expect(getDisplaySpaceTitle({ id: "workspace", title: "Workspace", lines: [] }, "en")).toBe("📝 Sticky");
+  it("uses plain default note names while recognizing older names", () => {
+    expect(getDisplaySpaceTitle({ id: "workspace", title: "备忘录", lines: [] }, "zh")).toBe("便签");
+    expect(getDisplaySpaceTitle({ id: "workspace", title: "📕 备忘录", lines: [] }, "zh")).toBe("便签");
+    expect(getDisplaySpaceTitle({ id: "workspace", title: "备忘录", lines: [] }, "en")).toBe("Notes");
+    expect(getDisplaySpaceTitle({ id: "workspace", title: "Workspace", lines: [] }, "en")).toBe("Notes");
   });
 
   it("手机速记占位词与双发送按钮文案中英齐全", () => {

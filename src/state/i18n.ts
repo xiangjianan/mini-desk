@@ -4,12 +4,12 @@ export const DEFAULT_LANGUAGE: AppLanguage = "zh";
 
 const DEFAULT_TODO_TITLES: Record<AppLanguage, Record<string, string>> = {
   zh: {
-    morning: "✅ 提醒事项",
+    morning: "提醒事项",
     noon: "💻 工作",
     evening: "📚 学习",
   },
   en: {
-    morning: "✅ Reminders",
+    morning: "Reminders",
     noon: "💻 Work",
     evening: "📚 Study",
   },
@@ -30,11 +30,11 @@ const LEGACY_DEFAULT_TODO_TITLES: Record<AppLanguage, Record<string, string>> = 
 
 export const DEFAULT_SPACE_TITLES: Record<AppLanguage, Record<string, string>> = {
   zh: {
-    workspace: "📝 便签",
+    workspace: "便签",
     storage: "工程文件",
   },
   en: {
-    workspace: "📝 Sticky",
+    workspace: "Notes",
     storage: "Project Files",
   },
 };
@@ -1206,12 +1206,14 @@ export function getGuideMessages(language: AppLanguage): Record<GuideKey, string
 }
 
 function isDefaultTodoListTitle(id: string, title: string): boolean {
-  return [...Object.values(DEFAULT_TODO_TITLES), ...Object.values(LEGACY_DEFAULT_TODO_TITLES)].some((titles) => titles[id] === title);
+  return [...Object.values(DEFAULT_TODO_TITLES), ...Object.values(LEGACY_DEFAULT_TODO_TITLES), { morning: "✅ 提醒事项" }, { morning: "✅ Reminders" }].some((titles) => titles[id] === title);
 }
 
 function isDefaultSpaceTitle(id: string, title: string): boolean {
   return [
     ...Object.values(DEFAULT_SPACE_TITLES),
+    { workspace: "📝 便签" },
+    { workspace: "📝 Sticky" },
     ...Object.values(LEGACY_DEFAULT_SPACE_TITLES),
     ...Object.values(OLDER_LEGACY_DEFAULT_SPACE_TITLES),
     ...Object.values(OLDEST_LEGACY_DEFAULT_SPACE_TITLES),
@@ -1342,3 +1344,9 @@ export const SHORTCUT_HELP: Record<AppLanguage, ShortcutHelpSection[]> = {
     ]},
   ],
 };
+
+/** The corresponding heading supplies a real icon; remove only its old prefix. */
+export function getIconHeadingText(title: string, kind: "image" | "quick" | "focus"): string {
+  const prefix = { image: /^🎨\s*/, quick: /^⚡\s*/, focus: /^‼️?\s*/ }[kind];
+  return title.replace(prefix, "");
+}

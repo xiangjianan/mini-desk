@@ -1027,7 +1027,8 @@ describe("TodoPanel", () => {
       },
     });
 
-    expect(wrapper.get(".today-focus-section").text()).toContain("‼️ 重点事项");
+    expect(wrapper.get(".today-focus-section").text()).toContain("重点事项");
+    expect(wrapper.find(".today-focus-title-icon svg").exists()).toBe(true);
     expect(wrapper.findAll(".today-focus-input").map((item) => (item.element as HTMLInputElement).value)).toEqual([
       "重点未完成",
       "重点已完成",

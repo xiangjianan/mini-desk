@@ -2,6 +2,7 @@
 import { computed, h, nextTick, onMounted, onUnmounted, ref, watch } from "vue";
 import type { Component, VNode } from "vue";
 import {
+  AlertCircleOutline,
   AddOutline,
   AlarmOutline,
   CheckmarkDoneOutline,
@@ -25,7 +26,7 @@ import { NDatePicker, NDropdown, NIcon, NScrollbar } from "naive-ui";
 import type { DropdownOption } from "naive-ui";
 import { DEFAULT_TODO_LISTS, GUIDE_MENU_OPTION } from "../state/defaults";
 import { LEGACY_TODO_TITLE_IDS } from "../state/storage";
-import { getDisplayTodoListTitle, getUiText } from "../state/i18n";
+import { getDisplayTodoListTitle, getIconHeadingText, getUiText } from "../state/i18n";
 import {
   getDefaultNotifyDateTimeValue,
   getNotifyDisplay,
@@ -1642,10 +1643,12 @@ function buildTodoListEntries(period: TodoListId, todos: TodoItem[], deferredDon
     <Transition name="section-reveal" :duration="240">
       <section v-if="todayFocus.length" class="today-focus-section" :aria-label="uiText.todo.todayFocus">
         <div class="today-focus-heading" @contextmenu="openTodayFocusTitleMenu">
+          <NIcon class="today-focus-title-icon" :component="AlertCircleOutline" />
           <EditableTitle
             ref="todayFocusTitleRef"
             :id="todayFocusTitleId"
             :value="titles[todayFocusTitleId]"
+            :display-value="getIconHeadingText(titles[todayFocusTitleId], 'focus')"
             :edit-label="uiText.common.rename"
             @update="(id, value) => emit('titleUpdate', id, value)"
           />
@@ -1805,7 +1808,7 @@ function buildTodoListEntries(period: TodoListId, todos: TodoItem[], deferredDon
             <span class="todo-count">{{ periodStats[list.id] }}</span>
             <button v-if="props.polish" type="button" class="icon-button desk-ai-button"
               :aria-label="uiText.common.smartPaste" :title="uiText.common.smartPaste"
-              @click.stop="openSectionActions($event, list.id); handleMenuSelect('smart-paste')"><NIcon :component="ColorWandOutline" /></button>
+              @click.stop="openSectionActions($event, list.id); handleMenuSelect('smart-paste')"><NIcon :component="ClipboardOutline" /></button>
             <button type="button" class="icon-button" :aria-label="uiText.desk.addReminder" :title="uiText.desk.addReminder"
               @click.stop="emit('create', list.id)"><NIcon :component="AddOutline" /></button>
             <button

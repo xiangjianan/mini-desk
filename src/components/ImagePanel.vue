@@ -2,13 +2,13 @@
 import { computed, h, nextTick, onMounted, onUnmounted, ref, watch } from "vue";
 import type { Component, ComponentPublicInstance, VNode } from "vue";
 import { NDropdown, NIcon, NScrollbar } from "naive-ui";
-import { AddOutline, ArrowDownOutline, ArrowUpOutline, ClipboardOutline, CloseOutline, CopyOutline, CreateOutline, EyeOutline, HelpCircleOutline, TrashOutline } from "@vicons/ionicons5";
+import { AddOutline, ArrowDownOutline, ArrowUpOutline, ClipboardOutline, CloseOutline, CopyOutline, CreateOutline, EyeOutline, HelpCircleOutline, ImageOutline, TrashOutline } from "@vicons/ionicons5";
 import type { DropdownOption } from "naive-ui";
 import type { AppLanguage, GuideKey, ImagePasteFeedback, ImagePasteRequest, StoredImage } from "../types";
 import { GUIDE_MENU_OPTION } from "../state/defaults";
 import { getBlankImageContextMenuItems, getImageItemContextMenuItems } from "../state/imageContextMenu";
 import type { ImageContextMenuKey } from "../state/imageContextMenu";
-import { getUiText } from "../state/i18n";
+import { getIconHeadingText, getUiText } from "../state/i18n";
 import { CONTEXT_MENU_Z_INDEX, createExclusiveContextMenu } from "../utils/contextMenu";
 import { binaryStringToBytes } from "../utils/base64";
 import { createDragAutoScroll } from "../utils/dragScroll";
@@ -584,12 +584,14 @@ function handleImageDragWheel(event: WheelEvent): void {
     @dragend="handleImageDragLeave"
     @contextmenu="openMenu($event)"
   >
-    <div class="panel-header" @contextmenu="openTitleMenu">
+    <div class="panel-header desk-zone-heading" @contextmenu="openTitleMenu">
       <h1 id="image-title">
+        <NIcon :component="ImageOutline" />
         <EditableTitle
           ref="titleRef"
           id="image-title"
           :value="title"
+          :display-value="getIconHeadingText(title, 'image')"
           :edit-label="uiText.common.rename"
           @update="(id, value) => emit('titleUpdate', id, value)"
         />

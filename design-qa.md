@@ -42,3 +42,17 @@ No remaining actionable P0/P1/P2 visual findings within the authorized UI-only s
 
 - P3: Mock sample content, generic versus branded action icons, and user-defined titles differ intentionally from the live workspace.
 - P3: Stored column widths and the existing collapsible top bar remain user preferences.
+
+## Browser annotations follow-up — 2026-09-17
+
+Implemented all nine annotations. Image, quick-action and focus headings now use library icons. All four zone headings remain 17px, including narrow image columns. Quick-group disclosure buttons sit at the exact horizontal center; collapsed reminder rows have 8px of bottom spacing. Default reminder and note names are plain text in Chinese and English, with recognition of previous default names and preservation of custom titles.
+
+The notes toolbar now directly invokes smart paste at the end of the active note, with a clipboard icon and animated colored icon/text. Reminder smart paste also uses a clipboard icon. Existing right-click polishing remains available. Pending paste disables repeat clicks; stale responses are discarded after note switching or editing. Existing raw-text fallback is retained.
+
+- Screenshot: `/Users/xiangjianan/.codex/visualizations/2026/09/16/01a0aa9d-cde1-73c0-b5b2-d44a75aa28e2/desk-qa/annotations-final.png` at 1354 × 984.
+- Browser measurements: four headings at 17px; first three quick disclosure center offsets exactly 0px; collapsed reminder row 54px high with 8px bottom padding; both smart-paste icon and text have active color animations.
+- Production build passed. Full test run: 62 files and 1290 tests passed, but the process still exits nonzero for the previously reproduced IndexedDB deleteDatabase mock rejection. Existing ResizeObserver teardown diagnostics also remain.
+- New interaction tests cover append despite selected text, fallback, duplicate-click prevention, space switching, concurrent edits and empty clipboard. No live AI call or clipboard paste was performed against user notes.
+- Focused regression run: 331 tests passed across six component/state files, with exit code 0.
+
+This follow-up supersedes the earlier narrow-heading sizing and toolbar AI-menu behavior described above.

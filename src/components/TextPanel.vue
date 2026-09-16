@@ -69,7 +69,6 @@ const menu = ref<{
   target?: HTMLTextAreaElement;
   canPaste?: boolean;
   selectionText?: string;
-  aiOnly?: boolean;
 } | null>(null);
 const uiText = computed(() => getUiText(props.language));
 const guideMenuOption = computed<DropdownOption>(() => ({
@@ -107,11 +106,10 @@ const menuOptions = computed<DropdownOption[]>(() => {
     if (props.polish) {
       options.push({ label: uiText.value.common.smartPaste, key: "smart-paste", disabled: !menu.value?.canPaste, icon: renderIcon(ColorWandOutline) });
     }
-    if (props.polish && (menu.value?.selectionText || menu.value?.aiOnly)) {
+    if (props.polish && menu.value?.selectionText) {
       options.push({
-        label: menu.value?.aiOnly && !menu.value?.selectionText ? uiText.value.desk.selectToPolish : uiText.value.common.smartPolish,
+        label: uiText.value.common.smartPolish,
         key: "smart-polish",
-        disabled: !menu.value?.selectionText,
         icon: renderIcon(SparklesOutlineIcon, false, 14),
         children: POLISH_STYLE_ENTRIES.map(({ key, labelKey }) => ({ label: uiText.value.common[labelKey], key })),
       });
@@ -121,7 +119,7 @@ const menuOptions = computed<DropdownOption[]>(() => {
     }
   }
   options.push({ ...guideMenuOption.value, icon: renderIcon(HelpCircleOutline) });
-  return menu.value?.aiOnly ? options.filter((option) => String(option.key).startsWith("smart-")) : options;
+  return options;
 });
 
 watch(
@@ -375,25 +373,17 @@ function focusEditor(): void {
   startEditingFromTextarea(textarea, true);
 }
 
-// Reuse the editor menu and remembered selection for the visible AI entry.
-// Opening this menu never sends content; the user chooses an existing action.
-function openAiActions(event: MouseEvent): void {
+/** Header paste always appends to this editor, independently of its selection. */
+async function appendSmartPaste(): Promise<void> {
   const target = textareaRef.value;
   if (!target || !props.polish) return;
-  const selection = getRememberedSelection(target);
-  if (selection) restoreSelection(target, selection);
-  const anchor = event.currentTarget as HTMLElement;
-  const rect = anchor.getBoundingClientRect();
-  exclusiveMenu.notifyOpen(event, { replacingExistingMenu: Boolean(menu.value) });
-  menu.value = {
-    x: rect.left, y: rect.bottom + 6, anchor, target, aiOnly: true,
-    canPaste: canPasteText(target),
-    selectionText: selectedTextareaText(target),
-  };
+  const end = text.value.length;
+  await smartPasteFromClipboard(target, { range: { start: end, end }, baseline: text.value });
+  if (!isUnmounted) target.scrollTop = target.scrollHeight;
 }
 
 defineExpose({
-  openAiActions,
+  appendSmartPaste,
   focusEditor,
 });
 
@@ -565,9 +555,11 @@ async function pasteTextFromClipboard(target: HTMLTextAreaElement): Promise<void
 }
 
 /** 智能粘贴（便签区）：剪贴板全文交服务端排版润色，失败退化为原文粘贴。 */
-async function smartPasteFromClipboard(target: HTMLTextAreaElement): Promise<void> {
+async function smartPasteFromClipboard(
+  target: HTMLTextAreaElement,
+  landing: PolishLanding = { range: getTextSelectionRange(target), baseline: text.value },
+): Promise<void> {
   if (!props.polish) return;
-  const landing: PolishLanding = { range: getTextSelectionRange(target), baseline: text.value };
   await runSmartPaste({
     kind: "note",
     polish: props.polish,
