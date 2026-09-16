@@ -268,10 +268,10 @@ describe("App shell", () => {
     expect(wrapper.text()).toContain("图片");
     expect(wrapper.text()).toContain("快捷动作");
     expect(wrapper.text()).toContain("提醒事项");
-    expect(wrapper.text()).toContain("便签");
+    expect(wrapper.text()).toContain("记事本");
     expect(wrapper.findComponent({ name: "ImagePreview" }).exists()).toBe(false);
     expect(wrapper.find(".workbench-zone-notes > .quick-block").exists()).toBe(true);
-    expect(wrapper.findAll(".space-tab").map((tab) => tab.text())).toEqual(["便签"]);
+    expect(wrapper.findAll(".space-tab").map((tab) => tab.text())).toEqual(["随手机"]);
     expect(wrapper.find('[data-testid="workbench-theme"]').exists()).toBe(true);
     expect(wrapper.find('[aria-label="快捷动作菜单"]').exists()).toBe(true);
     expect(wrapper.find('[aria-label="设置"]').exists()).toBe(true);
@@ -304,7 +304,7 @@ describe("App shell", () => {
       expect(wrapper.text()).toContain("Reminders");
       expect(wrapper.text()).not.toContain("💻 Work");
       expect(wrapper.text()).not.toContain("📚 Study");
-      expect(wrapper.findAll(".space-tab").map((tab) => tab.text())).toEqual(["Notes"]);
+      expect(wrapper.findAll(".space-tab").map((tab) => tab.text())).toEqual(["Quick Notes"]);
       expect(wrapper.text()).not.toContain("快捷动作");
       expect(JSON.parse(localStorage.getItem(STORAGE_KEY) || "{}").language).toBe("en");
     } finally {
@@ -2541,7 +2541,7 @@ describe("App shell", () => {
 
       expect(NotificationStub.requestPermission).toHaveBeenCalledTimes(1);
       expect(notificationSpy).toHaveBeenCalledTimes(1);
-      expect(notificationSpy).toHaveBeenCalledWith("【提醒事项】", {
+      expect(notificationSpy).toHaveBeenCalledWith("【今天】", {
         body: "喝水",
         tag: `todo-1:${notifyAt}`,
         icon: expect.stringMatching(/^https?:\/\/.*(?:mini-desk-cat\.png|kun|yunxia)/),
@@ -2913,7 +2913,7 @@ describe("App shell", () => {
 
       await vi.advanceTimersByTimeAsync(1);
       expect(notificationSpy).toHaveBeenCalledTimes(1);
-      expect(notificationSpy).toHaveBeenCalledWith("【提醒事项】", {
+      expect(notificationSpy).toHaveBeenCalledWith("【今天】", {
         body: "喝水",
         tag: `todo-1:${notifyAt}`,
         icon: expect.stringMatching(/^https?:\/\/.*(?:mini-desk-cat\.png|kun|yunxia)/),
@@ -2964,7 +2964,7 @@ describe("App shell", () => {
       await vi.advanceTimersByTimeAsync(20_000);
       expect(constructorCalls).toBe(2);
       expect(notificationSpy).toHaveBeenCalledTimes(1);
-      expect(notificationSpy).toHaveBeenCalledWith("【提醒事项】", {
+      expect(notificationSpy).toHaveBeenCalledWith("【今天】", {
         body: "喝水",
         tag: `todo-1:${notifyAt}`,
         icon: expect.stringMatching(/^https?:\/\/.*(?:mini-desk-cat\.png|kun|yunxia)/),
@@ -3069,7 +3069,7 @@ describe("App shell", () => {
       wrapper.getComponent(TodoPanel).vm.$emit("notify", "morning", "todo-1", notifyAt);
       await vi.advanceTimersByTimeAsync(30_000);
 
-      expect(notificationSpy).toHaveBeenCalledWith("【提醒事项】", {
+      expect(notificationSpy).toHaveBeenCalledWith("【今天】", {
         body: "喝水",
         tag: `todo-1:${notifyAt}`,
       });

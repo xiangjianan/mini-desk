@@ -4,12 +4,12 @@ export const DEFAULT_LANGUAGE: AppLanguage = "zh";
 
 const DEFAULT_TODO_TITLES: Record<AppLanguage, Record<string, string>> = {
   zh: {
-    morning: "提醒事项",
+    morning: "今天",
     noon: "💻 工作",
     evening: "📚 学习",
   },
   en: {
-    morning: "Reminders",
+    morning: "Today",
     noon: "💻 Work",
     evening: "📚 Study",
   },
@@ -30,11 +30,11 @@ const LEGACY_DEFAULT_TODO_TITLES: Record<AppLanguage, Record<string, string>> = 
 
 export const DEFAULT_SPACE_TITLES: Record<AppLanguage, Record<string, string>> = {
   zh: {
-    workspace: "便签",
+    workspace: "随手机",
     storage: "工程文件",
   },
   en: {
-    workspace: "Notes",
+    workspace: "Quick Notes",
     storage: "Project Files",
   },
 };
@@ -629,7 +629,7 @@ export const UI_TEXT = {
     },
     desk: {
       reminders: "提醒事项",
-      notes: "便签",
+      notes: "记事本",
       aiActions: "AI 助手",
       selectToPolish: "选中文字后润色",
       addReminder: "添加提醒",
@@ -985,7 +985,7 @@ export const UI_TEXT = {
     },
     desk: {
       reminders: "Reminders",
-      notes: "Notes",
+      notes: "Notepad",
       aiActions: "AI assistant",
       selectToPolish: "Select text to polish",
       addReminder: "Add reminder",
@@ -1206,7 +1206,7 @@ export function getGuideMessages(language: AppLanguage): Record<GuideKey, string
 }
 
 function isDefaultTodoListTitle(id: string, title: string): boolean {
-  return [...Object.values(DEFAULT_TODO_TITLES), ...Object.values(LEGACY_DEFAULT_TODO_TITLES), { morning: "✅ 提醒事项" }, { morning: "✅ Reminders" }].some((titles) => titles[id] === title);
+  return [...Object.values(DEFAULT_TODO_TITLES), ...Object.values(LEGACY_DEFAULT_TODO_TITLES), { morning: "✅ 提醒事项" }, { morning: "✅ Reminders" }, { morning: "提醒事项" }, { morning: "Reminders" }].some((titles) => titles[id] === title);
 }
 
 function isDefaultSpaceTitle(id: string, title: string): boolean {
@@ -1214,6 +1214,8 @@ function isDefaultSpaceTitle(id: string, title: string): boolean {
     ...Object.values(DEFAULT_SPACE_TITLES),
     { workspace: "📝 便签" },
     { workspace: "📝 Sticky" },
+    { workspace: "便签" },
+    { workspace: "Notes" },
     ...Object.values(LEGACY_DEFAULT_SPACE_TITLES),
     ...Object.values(OLDER_LEGACY_DEFAULT_SPACE_TITLES),
     ...Object.values(OLDEST_LEGACY_DEFAULT_SPACE_TITLES),

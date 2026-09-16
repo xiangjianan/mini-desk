@@ -43,7 +43,7 @@ describe("state compatibility", () => {
     expect(ws().spaces).toEqual([
       {
         id: "workspace",
-        title: "便签",
+        title: "随手机",
         lines: [
           { text: "alpha", indent: 0 },
           { text: "beta", indent: 1 },
@@ -63,7 +63,7 @@ describe("state compatibility", () => {
     const ws = () => state.workspaces[0];
 
     expect(state.language).toBe("zh");
-    expect(ws().spaces).toEqual([{ id: "workspace", title: "便签", lines: [] }]);
+    expect(ws().spaces).toEqual([{ id: "workspace", title: "随手机", lines: [] }]);
     expect(ws().activeSpaceId).toBe("workspace");
     expect(ws().showCompletedTodos).toEqual({ morning: false });
     expect(ws().quickOtherCollapsed).toBe(false);
@@ -135,8 +135,8 @@ describe("state compatibility", () => {
     const ws = () => state.workspaces[0];
 
     expect(ws().customTitles).toEqual({ "note-title": "我的便签" });
-    expect(ws().todoLists[0].title).toBe("提醒事项");
-    expect(ws().spaces[0].title).toBe("便签");
+    expect(ws().todoLists[0].title).toBe("今天");
+    expect(ws().spaces[0].title).toBe("随手机");
   });
 
   it("creates default configurable todo lists for new users", () => {
@@ -144,7 +144,7 @@ describe("state compatibility", () => {
     const ws = () => state.workspaces[0];
 
     expect(ws().todoLists.map((list) => ({ id: list.id, title: list.title }))).toEqual([
-      { id: "morning", title: "提醒事项" },
+      { id: "morning", title: "今天" },
     ]);
     expect(Object.keys(ws().todos)).toEqual(["morning"]);
     expect(ws().showCompletedTodos).toEqual({ morning: false });
@@ -231,7 +231,7 @@ describe("state compatibility", () => {
     const invalidWs = () => invalidState.workspaces[0];
 
     const expected = [
-      { id: "morning", title: "提醒事项" },
+      { id: "morning", title: "今天" },
     ];
 
     expect(emptyWs().todoLists.map((list) => ({ id: list.id, title: list.title }))).toEqual(expected);
@@ -834,7 +834,7 @@ describe("state compatibility", () => {
 
     expect(state.workspaces).toHaveLength(1);
     expect(state.activeWorkspaceId).toBe(state.workspaces[0].id);
-    expect(state.workspaces[0].spaces).toEqual([{ id: "workspace", title: "便签", lines: [] }]);
+    expect(state.workspaces[0].spaces).toEqual([{ id: "workspace", title: "随手机", lines: [] }]);
     expect(state.workspaces[0].todoLists.map((list) => list.id)).toEqual(["morning"]);
   });
 

@@ -149,7 +149,7 @@ html[data-theme="dark"] .workbench-shell,
 .workbench-shell .desk-ai-action {
   display: inline-flex; align-items: center; gap: 6px;
   border-radius: 6px; min-height: 30px; padding: 0 8px;
-  color: var(--accent-foreground); background: var(--accent);
+  color: var(--accent-foreground); background: transparent;
   white-space: nowrap; font-size: 12px;
 }
 .workbench-shell .desk-ai-action:hover { background: var(--secondary); }

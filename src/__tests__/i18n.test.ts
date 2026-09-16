@@ -27,17 +27,17 @@ describe("localized public copy", () => {
       "tools-title": "🔧 Tools",
     });
 
-    expect(getDisplayTodoListTitle({ id: "morning", title: "✅ 待办", collapsed: false, compact: false }, "en")).toBe("Reminders");
+    expect(getDisplayTodoListTitle({ id: "morning", title: "✅ 待办", collapsed: false, compact: false }, "en")).toBe("Today");
     expect(getDisplayTodoListTitle({ id: "morning", title: "客户跟进", collapsed: false, compact: false }, "en")).toBe("客户跟进");
-    expect(getDisplaySpaceTitle({ id: "workspace", title: "备忘录", lines: [] }, "en")).toBe("Notes");
+    expect(getDisplaySpaceTitle({ id: "workspace", title: "备忘录", lines: [] }, "en")).toBe("Quick Notes");
     expect(getDisplaySpaceTitle({ id: "workspace", title: "个人计划", lines: [] }, "en")).toBe("个人计划");
   });
 
   it("recognizes previous emoji defaults without changing custom names", () => {
-    expect(getDisplayTodoListTitle({ id: "morning", title: "✅ 提醒事项", collapsed: false, compact: false }, "zh")).toBe("提醒事项");
-    expect(getDisplayTodoListTitle({ id: "morning", title: "✅ Reminders", collapsed: false, compact: false }, "en")).toBe("Reminders");
-    expect(getDisplaySpaceTitle({ id: "workspace", title: "📝 便签", lines: [] }, "zh")).toBe("便签");
-    expect(getDisplaySpaceTitle({ id: "workspace", title: "📝 Sticky", lines: [] }, "en")).toBe("Notes");
+    expect(getDisplayTodoListTitle({ id: "morning", title: "✅ 提醒事项", collapsed: false, compact: false }, "zh")).toBe("今天");
+    expect(getDisplayTodoListTitle({ id: "morning", title: "✅ Reminders", collapsed: false, compact: false }, "en")).toBe("Today");
+    expect(getDisplaySpaceTitle({ id: "workspace", title: "📝 便签", lines: [] }, "zh")).toBe("随手机");
+    expect(getDisplaySpaceTitle({ id: "workspace", title: "📝 Sticky", lines: [] }, "en")).toBe("Quick Notes");
     expect(getDisplaySpaceTitle({ id: "workspace", title: "📝 我的笔记", lines: [] }, "zh")).toBe("📝 我的笔记");
     expect(getDisplayTodoListTitle({ id: "custom", title: "✅ 提醒事项", collapsed: false, compact: false }, "zh")).toBe("✅ 提醒事项");
   });
@@ -148,10 +148,10 @@ describe("localized public copy", () => {
   });
 
   it("uses plain default note names while recognizing older names", () => {
-    expect(getDisplaySpaceTitle({ id: "workspace", title: "备忘录", lines: [] }, "zh")).toBe("便签");
-    expect(getDisplaySpaceTitle({ id: "workspace", title: "📕 备忘录", lines: [] }, "zh")).toBe("便签");
-    expect(getDisplaySpaceTitle({ id: "workspace", title: "备忘录", lines: [] }, "en")).toBe("Notes");
-    expect(getDisplaySpaceTitle({ id: "workspace", title: "Workspace", lines: [] }, "en")).toBe("Notes");
+    expect(getDisplaySpaceTitle({ id: "workspace", title: "备忘录", lines: [] }, "zh")).toBe("随手机");
+    expect(getDisplaySpaceTitle({ id: "workspace", title: "📕 备忘录", lines: [] }, "zh")).toBe("随手机");
+    expect(getDisplaySpaceTitle({ id: "workspace", title: "备忘录", lines: [] }, "en")).toBe("Quick Notes");
+    expect(getDisplaySpaceTitle({ id: "workspace", title: "Workspace", lines: [] }, "en")).toBe("Quick Notes");
   });
 
   it("手机速记占位词与双发送按钮文案中英齐全", () => {
