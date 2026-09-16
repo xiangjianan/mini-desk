@@ -228,20 +228,8 @@ onBeforeUnmount(() => {
       ></textarea>
       <div class="mobile-inbox-editor-tools">
         <!-- 粘贴和润色位于编辑区下方，便于拇指操作。 -->
-        <button
-          type="button"
-          class="mobile-inbox-paste"
-          data-testid="mobile-inbox-paste"
-          :title="app.mobileInboxPaste"
-          :aria-label="app.mobileInboxPaste"
-          :disabled="status === 'sending'"
-          @click="pasteFromClipboard"
-        >
-          <NIcon :component="ClipboardOutline" aria-hidden="true" /><span>{{ app.mobileInboxPaste }}</span>
-        </button>
-
         <div class="mobile-inbox-polish-setting">
-          <!-- AI 润色开关（最右）：关闭=原文直存，开启=服务端润色后同步；状态存 localStorage，默认关闭。 -->
+          <!-- AI 润色开关（左侧）：关闭=原文直存，开启=服务端润色后同步；状态存 localStorage，默认关闭。 -->
           <label
             class="mobile-inbox-polish"
             data-testid="mobile-inbox-polish"
@@ -262,6 +250,17 @@ onBeforeUnmount(() => {
           </label>
           <span class="mobile-inbox-polish-help">{{ app.mobilePolishCaption }}</span>
         </div>
+        <button
+          type="button"
+          class="mobile-inbox-paste"
+          data-testid="mobile-inbox-paste"
+          :title="app.mobileInboxPaste"
+          :aria-label="app.mobileInboxPaste"
+          :disabled="status === 'sending'"
+          @click="pasteFromClipboard"
+        >
+          <NIcon :component="ClipboardOutline" aria-hidden="true" /><span>{{ app.mobileInboxPaste }}</span>
+        </button>
       </div>
       <!-- 多行输入会被按行拆成多条记录：≥2 行时给出实时提示，避免用户误以为整段只发一条。 -->
       <p v-if="showSplitHint" class="mobile-inbox-hint" data-testid="mobile-inbox-split-hint" aria-live="polite">

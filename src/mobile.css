@@ -87,8 +87,9 @@ html[data-theme="dark"] .mobile-handoff {
 .mobile-handoff button.mobile-inbox-paste {
   flex: none;
   width: auto;
-  min-height: 44px;
-  padding-inline: 12px;
+  min-width: 96px;
+  min-height: 48px;
+  padding-inline: 18px;
   border: 0;
   border-radius: 10px;
   background: var(--accent);
@@ -96,7 +97,7 @@ html[data-theme="dark"] .mobile-handoff {
   font-size: 14px;
   box-shadow: none;
 }
-.mobile-inbox-polish-setting { min-width: 0; text-align: end; }
+.mobile-inbox-polish-setting { min-width: 0; text-align: start; }
 .mobile-handoff .mobile-inbox-polish { font-size: 14px; padding: 0; font-weight: 500; }
 .mobile-inbox-polish-help { display: block; color: var(--muted); font-size: 11px; line-height: 1.5; }
 .mobile-handoff button.mobile-inbox-clear { min-height: 44px; padding: 0 8px; background: transparent; border: 0; font-weight: 400; color: var(--muted); }
