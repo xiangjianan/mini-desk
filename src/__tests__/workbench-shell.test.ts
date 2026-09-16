@@ -46,7 +46,7 @@ describe("WorkbenchShell", () => {
     expect(wrapper.get('[data-testid="workbench-command-bar"]').text()).not.toContain("搜索或执行命令");
     expect(wrapper.get('[data-testid="workbench-command-bar"]').text()).not.toContain("⌘K");
     expect(wrapper.get('[data-testid="workbench-save-status"]').text()).toBe("已保存");
-    expect(wrapper.get(".workbench-zone-assets").attributes("aria-label")).toBe("🎨 图片");
+    expect(wrapper.get(".workbench-zone-assets").attributes("aria-label")).toBe("🎨 贴图");
     expect(wrapper.get(".workbench-zone-notes").attributes("aria-label")).toBe("⚡ 快捷动作");
     expect(wrapper.get(".workbench-zone-tasks").attributes("aria-label")).toBe("✅ 提醒事项");
     expect(wrapper.get(".workbench-zone-workspace").attributes("aria-label")).toBe("📝 便签");
@@ -80,7 +80,7 @@ describe("WorkbenchShell", () => {
       props: defaultProps,
     });
 
-    expect(wrapper.get(".workbench-zone-assets .workbench-zone-rail").text()).toBe("🎨 图片");
+    expect(wrapper.get(".workbench-zone-assets .workbench-zone-rail").text()).toBe("🎨 贴图");
     expect(wrapper.get(".workbench-zone-notes .workbench-zone-rail").text()).toBe("⚡ 快捷动作");
   });
 

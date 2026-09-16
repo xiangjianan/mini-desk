@@ -118,7 +118,7 @@ html[data-theme="dark"] .workbench-shell,
 .quick-button-kind { color: var(--muted); font-size: 12px; line-height: 1.4; }
 
 .workbench-shell .todo-heading {
-  min-height: 46px;
+  min-height: 53px;
   padding: 4px 0;
   background: transparent;
   backdrop-filter: none;
@@ -235,7 +235,6 @@ html[data-theme="dark"] .workbench-shell,
   min-height: 54px;
   padding-block: 0;
 }
-.workbench-shell .todo-section.is-collapsed > .todo-heading { min-height: 53px; }
 .workbench-shell .quick-tag-group:has(.quick-tag-content.is-collapsed) { margin-bottom: -10px; }
 .workbench-shell .today-focus-heading { display: flex; align-items: center; gap: 8px; }
 .workbench-shell .today-focus-title-icon { flex: 0 0 auto; font-size: 16px; }

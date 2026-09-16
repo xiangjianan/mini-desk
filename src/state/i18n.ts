@@ -74,7 +74,7 @@ const OLDEST_LEGACY_DEFAULT_SPACE_TITLES: Record<AppLanguage, Record<string, str
 
 export const DEFAULT_TITLES_BY_LANGUAGE: Record<AppLanguage, Record<string, string>> = {
   zh: {
-    "image-title": "🎨 图片",
+    "image-title": "🎨 贴图",
     "note-title": "🔧 工具",
     "quick-title": "⚡ 快捷动作",
     "today-focus-title": "‼️ 重点事项",

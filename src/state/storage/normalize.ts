@@ -533,6 +533,7 @@ export function normalizeCustomTitles(value: unknown): Record<string, string> {
 function isDefaultBoardTitle(id: string, title: string): boolean {
   return [
     ...Object.values(DEFAULT_TITLES_BY_LANGUAGE),
+    { "image-title": "🎨 图片" },
     ...Object.values(LEGACY_DEFAULT_TITLES_BY_LANGUAGE),
     ...Object.values(OLDER_LEGACY_DEFAULT_TITLES_BY_LANGUAGE),
   ].some((titles) => titles[id] === title);

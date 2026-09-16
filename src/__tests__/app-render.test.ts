@@ -260,12 +260,12 @@ describe("App shell", () => {
     expect(wrapper.find('[data-testid="workbench-command-bar"]').text()).toContain("Mini Desk");
     expect(wrapper.find('[data-testid="workbench-command-bar"]').text()).not.toContain("搜索或执行命令");
     expect(wrapper.find('[data-testid="workbench-command-bar"]').text()).not.toContain("⌘K");
-    expect(wrapper.get(".workbench-zone-assets").attributes("aria-label")).toBe("🎨 图片");
+    expect(wrapper.get(".workbench-zone-assets").attributes("aria-label")).toBe("🎨 贴图");
     expect(wrapper.get(".workbench-zone-notes").attributes("aria-label")).toBe("⚡ 快捷动作");
     expect(wrapper.get(".workbench-zone-tasks").attributes("aria-label")).toBe("✅ 提醒事项");
     expect(wrapper.get(".workbench-zone-workspace").attributes("aria-label")).toBe("📝 便签");
     expect(wrapper.find('[aria-label="Mini Desk"]').exists()).toBe(false);
-    expect(wrapper.text()).toContain("图片");
+    expect(wrapper.text()).toContain("贴图");
     expect(wrapper.text()).toContain("快捷动作");
     expect(wrapper.text()).toContain("提醒事项");
     expect(wrapper.text()).toContain("记事本");
@@ -1740,7 +1740,7 @@ describe("App shell", () => {
 
       const message = wrapper.getComponent(CompanionBubble).props("message") as string;
       expect(message).toContain("桌面");
-      expect(message).toContain("图片");
+      expect(message).toContain("贴图");
       expect(message).toContain("31");
       expect(KAOMOJI_BY_MOOD.warning.some((kaomoji) => message.endsWith(kaomoji))).toBe(true);
     } finally {
