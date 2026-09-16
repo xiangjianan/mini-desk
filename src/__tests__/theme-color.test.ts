@@ -1,5 +1,5 @@
 import { readFileSync } from "node:fs";
-import { beforeEach, describe, expect, it } from "vitest";
+import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import { applyThemeColor, THEME_COLOR_META } from "../state/theme-color";
 
 function themeColorMeta(): HTMLMetaElement | null {
@@ -7,6 +7,16 @@ function themeColorMeta(): HTMLMetaElement | null {
 }
 
 describe("theme-color meta (src/state/theme-color.ts)", () => {
+  afterEach(() => vi.unstubAllGlobals());
+
+  it("matches the mobile canvas when switching themes", () => {
+    vi.stubGlobal("matchMedia", () => ({ matches: true }));
+    applyThemeColor("dark");
+    expect(themeColorMeta()?.content).toBe("#2c2c2e");
+    applyThemeColor("light");
+    expect(themeColorMeta()?.content).toBe("#ffffff");
+  });
+
   beforeEach(() => {
     themeColorMeta()?.remove();
   });

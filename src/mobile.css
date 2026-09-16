@@ -177,3 +177,20 @@ html[data-theme="dark"] .mobile-handoff {
 @media (prefers-reduced-motion: reduce) {
   .mobile-sync-route i { animation: none; opacity: 0.5; }
 }
+
+/* Paint the iOS translucent status bar and overscroll canvas like the mobile page. */
+@media (max-width: 940px) {
+  html, body, #app { background: var(--card); }
+}
+.mobile-handoff .mobile-home-page::after {
+  content: "";
+  display: block;
+  flex: none;
+  align-self: center;
+  width: 36px;
+  height: 3px;
+  margin-top: 12px;
+  border-radius: 99px;
+  background: var(--muted);
+  opacity: 0.25;
+}

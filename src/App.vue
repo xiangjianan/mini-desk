@@ -409,6 +409,7 @@ function updateMobileBlocked(source?: MediaQueryList | MediaQueryListEvent): voi
     activeGuideKey.value = null;
   }
   isMobileBlocked.value = matches;
+  applyThemeColor(effectiveTheme.value);
 }
 
 function shouldBlockBoardEffects(): boolean {
@@ -2563,7 +2564,7 @@ async function updateCustomCompanionGif(files: { light?: File; dark?: File }, an
 function applyTheme(): void {
   // auto 模式由 effectiveTheme 解析系统偏好后落到 data-theme 与标题栏色。
   document.documentElement.dataset.theme = effectiveTheme.value;
-  // standalone 标题栏颜色随应用主题联动（浅色 #fcfcfe / 深色 #262628）。
+  // 状态栏随主题与移动端/桌面画布取色。
   applyThemeColor(effectiveTheme.value);
 }
 
