@@ -187,10 +187,9 @@ html[data-theme="dark"] .mobile-handoff {
   display: block;
   flex: none;
   align-self: center;
-  width: 36px;
-  height: 3px;
+  width: 100%;
+  height: 1px;
   margin-top: 12px;
-  border-radius: 99px;
   background: var(--muted);
-  opacity: 0.25;
+  opacity: 0.16;
 }
