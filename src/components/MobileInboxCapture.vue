@@ -220,7 +220,6 @@ onBeforeUnmount(() => {
             <span class="mobile-inbox-polish-label">{{ app.mobileInboxPolish }}</span>
             <span class="mobile-inbox-polish-track" aria-hidden="true"></span>
           </label>
-          <span class="mobile-inbox-polish-help">{{ app.mobilePolishCaption }}</span>
         </div>
       </div>
     </div>
