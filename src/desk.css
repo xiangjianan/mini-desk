@@ -1,0 +1,193 @@
+/* Four independent surfaces. Keep this layer scoped to the desktop workbench;
+   editors, dialogs, the mobile guide and stored layout retain their contracts. */
+.workbench-shell {
+  --app-font-size: 14px;
+  --scrollbar-size: 4px;
+  font-size: var(--app-font-size);
+}
+
+.workbench-shell,
+html[data-theme="dark"] .workbench-shell,
+.workbench-main,
+.workbench-grid {
+  background: var(--card);
+}
+
+.workbench-command-bar {
+  padding-inline: 24px;
+  background: var(--card);
+  backdrop-filter: none;
+  border-bottom: 1px solid var(--line-subtle);
+}
+
+.workbench-grid {
+  padding: 0;
+  gap: 0;
+}
+
+.workbench-zone {
+  padding: 16px 18px;
+  border-radius: 0;
+  border-inline-end: 1px solid var(--line-subtle);
+  box-shadow: none;
+  background: var(--card);
+  backdrop-filter: none;
+  animation: none;
+  container-type: inline-size;
+}
+
+.workbench-zone:last-of-type { border-inline-end: 0; }
+.workbench-zone.workbench-zone-collapsed { padding: 12px 4px; }
+
+.workbench-zone > .panel,
+.workbench-zone > .space-panel,
+.workbench-zone > .todo-panel,
+.workbench-zone > .text-panel,
+.workbench-zone-notes > .quick-block {
+  border-radius: 0 !important;
+  background: transparent;
+  box-shadow: none;
+}
+
+.workbench-zone .panel-header {
+  min-height: 48px;
+  padding: 0 0 12px;
+  gap: 8px;
+  align-items: center;
+  border-radius: 0;
+  background: transparent;
+  backdrop-filter: none;
+  box-shadow: inset 0 -1px var(--line-subtle);
+}
+
+.workbench-zone .panel-header h1,
+.workbench-zone .panel-header h2 {
+  gap: 8px;
+  font-size: 16px;
+  font-weight: 600;
+  line-height: 1.4;
+  overflow: hidden;
+}
+
+.workbench-zone .panel-header .editable-title {
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.desk-zone-heading h2 > .n-icon { flex: 0 0 auto; font-size: 20px; }
+.workbench-shell .header-actions { flex-shrink: 0; gap: 2px; }
+.workbench-shell .icon-button { box-shadow: none; background: transparent; border-radius: 6px; }
+.workbench-shell .icon-button:hover { background: var(--secondary); }
+.workbench-shell button:focus-visible { outline: 2px solid var(--ring); outline-offset: 2px; }
+
+.workbench-shell .image-list { padding: 18px 0; gap: 14px; }
+.workbench-shell .image-card { border-radius: 8px; box-shadow: none; }
+
+.workbench-shell .quick-tag-groups { gap: 20px; padding: 16px 0; }
+.workbench-shell .quick-tag-heading { min-height: 32px; padding: 0 0 8px; }
+.workbench-shell .quick-tag-title { font-weight: 600; }
+.workbench-shell .quick-tag-count { background: transparent; font-size: 12px; }
+.workbench-shell .quick-buttons { display: grid; grid-template-columns: minmax(0, 1fr); gap: 8px; padding: 0; }
+.workbench-shell button.quick-button {
+  display: flex;
+  width: 100%;
+  height: auto;
+  min-height: 60px;
+  padding: 10px 12px;
+  gap: 12px;
+  justify-content: flex-start;
+  text-align: start;
+  border: 1px solid var(--line-subtle);
+  border-radius: 8px;
+  background: transparent;
+  box-shadow: none;
+  transform: none;
+}
+.workbench-shell button.quick-button:hover {
+  border-color: var(--line-control);
+  background: var(--secondary);
+  box-shadow: none;
+  transform: none;
+}
+.workbench-shell .quick-button-icon { font-size: 20px; color: var(--primary); }
+.quick-button-content { display: flex; flex-direction: column; min-width: 0; gap: 3px; }
+.workbench-shell .quick-button-label { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.quick-button-kind { color: var(--muted); font-size: 12px; line-height: 1.4; }
+
+.workbench-shell .todo-heading {
+  min-height: 46px;
+  padding: 4px 0;
+  background: transparent;
+  backdrop-filter: none;
+  box-shadow: none;
+  border-radius: 0;
+}
+.workbench-shell .todo-heading h3 { font-size: 14px; }
+.workbench-shell .todo-heading-actions { gap: 0; }
+.workbench-shell .todo-count { font-size: 12px; padding-inline: 4px; }
+.workbench-shell .todo-section.is-compact .todo-item,
+.workbench-shell .todo-section.is-compact .todo-input,
+.workbench-shell .todo-section.is-compact .todo-deadline-slot,
+.workbench-shell .todo-section.is-compact .todo-drag-handle { height: 42px; min-height: 42px; }
+.workbench-shell .todo-section.is-compact .todo-input { line-height: 42px; }
+.workbench-shell .todo-item { border-radius: 4px; }
+.workbench-shell .todo-item::after { left: 0; right: 0; border-color: var(--line-subtle); }
+.workbench-shell .todo-item.deadline-overdue { color: var(--text); }
+.workbench-shell .todo-item.deadline-overdue .todo-notify-button { color: var(--danger); }
+.workbench-shell .todo-input { font-size: 14px; }
+.workbench-shell .todo-section.is-collapsed { flex-shrink: 0; }
+
+.workbench-shell .space-tabs-scrollbar,
+.workbench-shell .space-tabs-scrollbar-inner,
+.workbench-shell .space-tabs { height: 42px; min-height: 42px; }
+.workbench-shell .space-tabs-scrollbar { flex-basis: 42px; border-color: var(--line-subtle); }
+.workbench-shell button.space-tab { border-radius: 0; background: transparent; box-shadow: none; padding-inline: 12px; }
+.workbench-shell .space-tab.is-active { color: var(--primary); background: transparent; box-shadow: inset 0 -2px var(--primary); }
+.workbench-shell .text-editor-textarea { font-size: 14px; line-height: 1.85; padding: 18px 4px; }
+.workbench-shell .desk-ai-action {
+  display: inline-flex; align-items: center; gap: 6px;
+  border-radius: 6px; min-height: 30px; padding: 0 8px;
+  color: var(--accent-foreground); background: var(--accent);
+  white-space: nowrap; font-size: 12px;
+}
+.workbench-shell .desk-ai-action:hover { background: var(--secondary); }
+.workbench-shell .desk-ai-button { color: var(--primary); }
+
+.workbench-shell .workbench-resizer::before { top: 0; bottom: 0; width: 2px; }
+.workbench-shell .workbench-resizer:hover::before,
+.workbench-shell .workbench-resizer:focus-visible::before { background: var(--primary); }
+
+/* Keep controls usable after a user resizes a column below its default. */
+@container (max-width: 235px) {
+  .workbench-zone .panel-header { flex-wrap: wrap; gap: 2px; }
+  .workbench-zone .panel-header h1,
+  .workbench-zone .panel-header h2 { font-size: 14px; }
+  .workbench-zone .panel-header .header-actions { margin-inline-start: auto; }
+  .workbench-zone .todo-heading { flex-wrap: wrap; }
+  .workbench-zone .todo-heading-actions { margin-inline-start: auto; }
+  .workbench-zone .quick-button-kind { display: none; }
+  .workbench-zone button.quick-button { min-height: 42px; padding: 8px; gap: 8px; }
+}
+
+@media (min-width: 901px) and (max-width: 1180px) {
+  .workbench-zone { padding: 10px 16px; border-bottom: 1px solid var(--line-subtle); }
+  .workbench-shell .quick-buttons { grid-template-columns: repeat(auto-fit, minmax(135px, 1fr)); }
+  .workbench-shell button.quick-button { min-height: 48px; }
+  .workbench-shell .quick-tag-groups { gap: 12px; }
+}
+
+/* Keep the date as the overdue signal without painting the whole list red. */
+.workbench-shell .todo-item.deadline-overdue:not(.is-done) .todo-input,
+.workbench-shell .today-focus-item.deadline-overdue:not(.is-done) .today-focus-input {
+  color: var(--text);
+  -webkit-text-fill-color: var(--text);
+}
+
+.workbench-shell .workspace-trigger-title { font-size: 18px; font-weight: 600; letter-spacing: -0.3px; }
+.workbench-zone .panel-header h1,
+.workbench-zone .panel-header h2 { font-size: 17px; }
+@container (max-width: 235px) {
+  .workbench-zone .panel-header h1,
+  .workbench-zone .panel-header h2 { font-size: 14px; }
+}

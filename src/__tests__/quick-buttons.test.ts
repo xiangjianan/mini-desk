@@ -293,7 +293,7 @@ describe("QuickButtons", () => {
     });
 
     expect(wrapper.findAll(".quick-tag-title").map((item) => item.text())).toEqual(["标签 A", "标签 B", "其他"]);
-    expect(wrapper.findAll(".quick-tag-group").map((group) => group.findAll(".quick-button").map((button) => button.text()))).toEqual([
+    expect(wrapper.findAll(".quick-tag-group").map((group) => group.findAll(".quick-button-label").map((button) => button.text()))).toEqual([
       ["A1"],
       ["B1"],
       ["未分类"],

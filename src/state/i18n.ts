@@ -627,6 +627,13 @@ export const UI_TEXT = {
       thankYou: "感谢你的支持 (｡•̀ᴗ-)✧",
       thanksWithAmount: "感谢你 ¥{amount} 的支持 ❤️",
     },
+    desk: {
+      reminders: "提醒事项",
+      notes: "便签",
+      aiActions: "AI 助手",
+      selectToPolish: "选中文字后润色",
+      addReminder: "添加提醒",
+    },
     quick: {
       menu: "快捷动作菜单",
       searchPlaceholder: "搜索快捷动作",
@@ -975,6 +982,13 @@ export const UI_TEXT = {
       alipay: "Alipay",
       thankYou: "Thank you for your support (｡•̀ᴗ-)✧",
       thanksWithAmount: "Thanks for ¥{amount} ❤️",
+    },
+    desk: {
+      reminders: "Reminders",
+      notes: "Notes",
+      aiActions: "AI assistant",
+      selectToPolish: "Select text to polish",
+      addReminder: "Add reminder",
     },
     quick: {
       menu: "Quick actions menu",

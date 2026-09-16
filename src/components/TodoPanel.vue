@@ -5,6 +5,7 @@ import {
   AddOutline,
   AlarmOutline,
   CheckmarkDoneOutline,
+  CheckboxOutline,
   ChevronDownOutline,
   ClipboardOutline,
   ColorWandOutline,
@@ -1631,6 +1632,13 @@ function buildTodoListEntries(period: TodoListId, todos: TodoItem[], deferredDon
 
 <template>
   <section ref="panelRef" class="panel todo-panel" aria-labelledby="todo-title" @contextmenu="openPanelMenu" @dragleave="handleTodoDragLeave" @drop="handleTodoDragLeave" @dragend="handleTodoDragEnd">
+    <div class="panel-header desk-zone-heading">
+      <h2 id="todo-title"><NIcon :component="CheckboxOutline" /><span>{{ uiText.desk.reminders }}</span></h2>
+      <div class="header-actions">
+        <button type="button" class="icon-button" :aria-label="uiText.todo.newList" :title="uiText.todo.newList"
+          @click.stop="openCreateListDialog($event.currentTarget as HTMLElement)"><NIcon :component="AddOutline" /></button>
+      </div>
+    </div>
     <Transition name="section-reveal" :duration="240">
       <section v-if="todayFocus.length" class="today-focus-section" :aria-label="uiText.todo.todayFocus">
         <div class="today-focus-heading" @contextmenu="openTodayFocusTitleMenu">
@@ -1795,6 +1803,11 @@ function buildTodoListEntries(period: TodoListId, todos: TodoItem[], deferredDon
           </button>
           <div class="todo-heading-actions">
             <span class="todo-count">{{ periodStats[list.id] }}</span>
+            <button v-if="props.polish" type="button" class="icon-button desk-ai-button"
+              :aria-label="uiText.common.smartPaste" :title="uiText.common.smartPaste"
+              @click.stop="openSectionActions($event, list.id); handleMenuSelect('smart-paste')"><NIcon :component="ColorWandOutline" /></button>
+            <button type="button" class="icon-button" :aria-label="uiText.desk.addReminder" :title="uiText.desk.addReminder"
+              @click.stop="emit('create', list.id)"><NIcon :component="AddOutline" /></button>
             <button
               type="button"
               class="todo-section-menu-button icon-button"

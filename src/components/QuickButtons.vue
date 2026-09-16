@@ -2,7 +2,7 @@
 import { computed, h, nextTick, onMounted, onUnmounted, reactive, ref, watch } from "vue";
 import type { Component, ComponentPublicInstance, VNode } from "vue";
 import { NButton, NCheckbox, NDropdown, NIcon, NInput, NModal, NScrollbar, NSelect } from "naive-ui";
-import { AddOutline, AppsOutline, ChevronDownOutline, ClipboardOutline, CloudUploadOutline, CopyOutline, CreateOutline, DocumentTextOutline, EyeOffOutline, EyeOutline, HelpCircleOutline, PricetagsOutline, SearchOutline, SwapHorizontalOutline, TrashOutline } from "@vicons/ionicons5";
+import { AddOutline, AppsOutline, ChevronDownOutline, ClipboardOutline, CloudUploadOutline, CopyOutline, CreateOutline, DocumentTextOutline, EyeOffOutline, EyeOutline, HelpCircleOutline, LinkOutline, PricetagsOutline, SearchOutline, SwapHorizontalOutline, TrashOutline } from "@vicons/ionicons5";
 import type { DropdownOption } from "naive-ui";
 import type { AppLanguage, GuideKey, QuickApiBodyType, QuickApiHeader, QuickApiMethod, QuickButton, QuickButtonType, QuickTag, WorkspaceMoveTarget } from "../types";
 import { GUIDE_MENU_OPTION } from "../state/defaults";
@@ -756,6 +756,11 @@ function handleQuickGroupDrop(event: DragEvent, groupId: string): void {
             />
           </div>
         </div>
+        <button type="button" class="quick-add-button icon-button"
+          :aria-label="uiText.quick.dialogAdd" :title="uiText.quick.dialogAdd"
+          @click.stop="openAdd($event.currentTarget as HTMLElement)">
+          <NIcon :component="AddOutline" />
+        </button>
         <button
           type="button"
           class="quick-menu-button icon-button"
@@ -855,7 +860,11 @@ function handleQuickGroupDrop(event: DragEvent, groupId: string): void {
                 <NIcon v-if="button.type === 'text'" class="quick-button-icon" :component="CopyOutline" />
                 <NIcon v-else-if="button.type === 'api'" class="quick-button-icon" :component="CloudUploadOutline" />
                 <NIcon v-else-if="button.type === 'app'" class="quick-button-icon" :component="AppsOutline" />
-                <HighlightText class="quick-button-label" :text="button.title" :query="globalSearchQuery" />
+                <NIcon v-else class="quick-button-icon" :component="LinkOutline" />
+                <span class="quick-button-content">
+                  <HighlightText class="quick-button-label" :text="button.title" :query="globalSearchQuery" />
+                  <span class="quick-button-kind" aria-hidden="true">{{ uiText.quick[button.type === 'text' ? 'textType' : button.type === 'api' ? 'apiType' : button.type === 'app' ? 'appType' : 'linkType'] }}</span>
+                </span>
               </button>
             </TransitionGroup>
           </div>

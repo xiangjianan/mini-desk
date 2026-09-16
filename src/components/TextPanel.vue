@@ -69,6 +69,7 @@ const menu = ref<{
   target?: HTMLTextAreaElement;
   canPaste?: boolean;
   selectionText?: string;
+  aiOnly?: boolean;
 } | null>(null);
 const uiText = computed(() => getUiText(props.language));
 const guideMenuOption = computed<DropdownOption>(() => ({
@@ -106,10 +107,11 @@ const menuOptions = computed<DropdownOption[]>(() => {
     if (props.polish) {
       options.push({ label: uiText.value.common.smartPaste, key: "smart-paste", disabled: !menu.value?.canPaste, icon: renderIcon(ColorWandOutline) });
     }
-    if (props.polish && menu.value?.selectionText) {
+    if (props.polish && (menu.value?.selectionText || menu.value?.aiOnly)) {
       options.push({
-        label: uiText.value.common.smartPolish,
+        label: menu.value?.aiOnly && !menu.value?.selectionText ? uiText.value.desk.selectToPolish : uiText.value.common.smartPolish,
         key: "smart-polish",
+        disabled: !menu.value?.selectionText,
         icon: renderIcon(SparklesOutlineIcon, false, 14),
         children: POLISH_STYLE_ENTRIES.map(({ key, labelKey }) => ({ label: uiText.value.common[labelKey], key })),
       });
@@ -119,7 +121,7 @@ const menuOptions = computed<DropdownOption[]>(() => {
     }
   }
   options.push({ ...guideMenuOption.value, icon: renderIcon(HelpCircleOutline) });
-  return options;
+  return menu.value?.aiOnly ? options.filter((option) => String(option.key).startsWith("smart-")) : options;
 });
 
 watch(
@@ -373,7 +375,25 @@ function focusEditor(): void {
   startEditingFromTextarea(textarea, true);
 }
 
+// Reuse the editor menu and remembered selection for the visible AI entry.
+// Opening this menu never sends content; the user chooses an existing action.
+function openAiActions(event: MouseEvent): void {
+  const target = textareaRef.value;
+  if (!target || !props.polish) return;
+  const selection = getRememberedSelection(target);
+  if (selection) restoreSelection(target, selection);
+  const anchor = event.currentTarget as HTMLElement;
+  const rect = anchor.getBoundingClientRect();
+  exclusiveMenu.notifyOpen(event, { replacingExistingMenu: Boolean(menu.value) });
+  menu.value = {
+    x: rect.left, y: rect.bottom + 6, anchor, target, aiOnly: true,
+    canPaste: canPasteText(target),
+    selectionText: selectedTextareaText(target),
+  };
+}
+
 defineExpose({
+  openAiActions,
   focusEditor,
 });
 

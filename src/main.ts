@@ -1,5 +1,6 @@
 import { createApp } from "vue";
 import "./styles.css";
+import "./desk.css";
 import App from "./App.vue";
 import { registerServiceWorker } from "./pwa";
 
