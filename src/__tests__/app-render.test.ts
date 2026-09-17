@@ -2348,6 +2348,28 @@ describe("App shell", () => {
     }
   });
 
+  it("主题明暗切换时开启短暂的全页颜色过渡窗口", async () => {
+    vi.useFakeTimers();
+    // 显式钉住起点：dataset 跨用例共享，首帧挂主题（无变化）不应开过渡窗口。
+    document.documentElement.dataset.theme = "light";
+    const wrapper = mountApp();
+
+    try {
+      expect(document.documentElement.classList.contains("theme-switching")).toBe(false);
+
+      await wrapper.get('[data-testid="workbench-theme"]').trigger("click");
+      await nextTick();
+      expect(document.documentElement.dataset.theme).toBe("dark");
+      expect(document.documentElement.classList.contains("theme-switching")).toBe(true);
+
+      await vi.advanceTimersByTimeAsync(240);
+      expect(document.documentElement.classList.contains("theme-switching")).toBe(false);
+    } finally {
+      wrapper.unmount();
+      vi.useRealTimers();
+    }
+  });
+
   it("系统再次切换明暗时重新交还跟随，手动选择只保留到那一刻", async () => {
     // 手动深色 + 系统浅色：加载时的初次同步不算「系统切换」，手动选择保持不变。
     localStorage.setItem(STORAGE_KEY, JSON.stringify({ theme: "dark" }));
@@ -8402,6 +8424,48 @@ describe("App inbox revoke wiring", () => {
       expect(revokeInboxKey).not.toHaveBeenCalled();
     } finally {
       wrapper.unmount();
+    }
+  });
+
+  it("删除工作区时清理其区域宽度键并延迟回收 IndexedDB 图片负载", async () => {
+    vi.useFakeTimers();
+    localStorage.setItem(
+      STORAGE_KEY,
+      JSON.stringify({
+        ...defaultState(),
+        workspaces: [
+          { ...defaultWorkspace(), images: [{ id: "img-a", src: "data:image/png;base64,AAA", createdAt: 1 }] },
+          { ...defaultWorkspace("backup") },
+        ],
+      }),
+    );
+    localStorage.setItem("mini-desk-workbench-widths:default", JSON.stringify([100, 200, 300, 400]));
+    localStorage.setItem("mini-desk-workbench-widths", JSON.stringify([111, 222, 333, 444]));
+    const deleteSpy = vi.spyOn(imageState, "deleteStoredImage").mockResolvedValue(undefined);
+    const wrapper = mountApp();
+
+    try {
+      wrapper.getComponent(WorkspaceSwitcher).vm.$emit("delete", DEFAULT_WORKSPACE_ID, wrapper.element);
+      await nextTick();
+      await flushAsyncComponents();
+      const event = new KeyboardEvent("keydown", { key: "Enter", bubbles: true, cancelable: true });
+      window.dispatchEvent(event);
+      await nextTick();
+      await flushAsyncComponents();
+      expect(event.defaultPrevented).toBe(true);
+
+      // 宽度键：被删工作区独占的键即刻清理，旧共享键保留（其余空间的初始种子）。
+      expect(localStorage.getItem("mini-desk-workbench-widths:default")).toBeNull();
+      expect(localStorage.getItem("mini-desk-workbench-widths")).toBe(JSON.stringify([111, 222, 333, 444]));
+
+      // 图片负载：沿用单图删除的 5 秒宽限，到期未被引用即从 IndexedDB 回收。
+      await vi.advanceTimersByTimeAsync(4000);
+      expect(deleteSpy).not.toHaveBeenCalled();
+      await vi.advanceTimersByTimeAsync(1500);
+      expect(deleteSpy).toHaveBeenCalledWith("img-a");
+    } finally {
+      wrapper.unmount();
+      vi.useRealTimers();
     }
   });
 

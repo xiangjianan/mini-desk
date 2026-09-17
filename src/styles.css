@@ -148,6 +148,34 @@ html[data-theme="dark"] {
   background: var(--scrollbar-thumb-hover) !important;
 }
 
+/* 主题切换的整页颜色过渡窗口：applyTheme 在 data-theme 实际变化前给 <html>
+   挂上 .theme-switching（240ms 后自动移除），期间所有元素的颜色/边框/阴影
+   统一按 motion-medium 过渡——明暗切换时（空间标签页的下划线、分隔线、
+   文本等）不再整体瞬变闪烁。窗口外不生效，避免常驻全局 transition 拖滞
+   交互；刻意不含 background 简写，渐变/贴图不做插值。 */
+html.theme-switching,
+html.theme-switching *,
+html.theme-switching *::before,
+html.theme-switching *::after {
+  transition:
+    background-color var(--motion-medium) var(--motion-ease),
+    color var(--motion-medium) var(--motion-ease),
+    border-color var(--motion-medium) var(--motion-ease),
+    box-shadow var(--motion-medium) var(--motion-ease),
+    outline-color var(--motion-medium) var(--motion-ease),
+    fill var(--motion-medium) var(--motion-ease),
+    stroke var(--motion-medium) var(--motion-ease) !important;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  html.theme-switching,
+  html.theme-switching *,
+  html.theme-switching *::before,
+  html.theme-switching *::after {
+    transition: none !important;
+  }
+}
+
 html,
 body,
 #app {
@@ -699,6 +727,7 @@ html[data-theme="dark"] .n-modal-mask {
     background-color var(--motion-fast) ease,
     border-color var(--motion-fast) ease,
     color var(--motion-fast) ease,
+    box-shadow var(--motion-fast) ease,
     opacity var(--motion-fast) ease,
     transform var(--motion-medium) var(--motion-ease);
 }
@@ -4976,7 +5005,7 @@ body:has(.image-preview) .workbench-command-bar {
   min-width: 0;
   min-height: 0;
   display: grid;
-  grid-template-columns: minmax(100px, 0.15fr) minmax(100px, 0.2fr) minmax(100px, 0.35fr) minmax(100px, 0.3fr);
+  grid-template-columns: minmax(100px, 0.1fr) minmax(100px, 0.3fr) minmax(100px, 0.3fr) minmax(100px, 0.3fr);
   gap: 14px;
   padding: 14px;
   background: color-mix(in srgb, var(--background) 82%, var(--muted-surface));

@@ -344,7 +344,7 @@ describe("WorkbenchShell", () => {
     await nextTick();
 
     const grid = wrapper.get(".workbench-grid");
-    expect(grid.attributes("style")).toContain("grid-template-columns: 176px 290px 365px 327px");
+    expect(grid.attributes("style")).toContain("grid-template-columns: 176px 327px 327px 327px");
 
     wrapper.unmount();
   });
@@ -421,20 +421,20 @@ describe("WorkbenchShell", () => {
     await nextTick();
     await nextTick();
 
-    expect(wrapper.get(".workbench-grid").attributes("style")).toContain("grid-template-columns: 176px 290px 365px 327px");
+    expect(wrapper.get(".workbench-grid").attributes("style")).toContain("grid-template-columns: 176px 327px 327px 327px");
     expect(wrapper.get(".workbench-zone-tasks").classes()).not.toContain("workbench-zone-collapsed");
 
     const pointerDown = new MouseEvent("pointerdown", { bubbles: true, cancelable: true });
     Object.defineProperty(pointerDown, "clientX", { value: 900 });
     wrapper.findAll(".workbench-resizer")[2].element.dispatchEvent(pointerDown);
-    window.dispatchEvent(new MouseEvent("pointermove", { clientX: 600 }));
+    window.dispatchEvent(new MouseEvent("pointermove", { clientX: 640 }));
     window.dispatchEvent(new MouseEvent("pointerup"));
     await nextTick();
 
-    // The task zone shrinks below its 100px minimum (down to ~65px) instead of
+    // The task zone shrinks below its 100px minimum (down to ~67px) instead of
     // clamping, collapses to the title rail, and the freed space flows to the
     // neighboring workspace zone.
-    expect(wrapper.get(".workbench-grid").attributes("style")).toContain("grid-template-columns: 176px 290px 65px 627px");
+    expect(wrapper.get(".workbench-grid").attributes("style")).toContain("grid-template-columns: 176px 327px 67px 587px");
     expect(wrapper.get(".workbench-zone-tasks").classes()).toContain("workbench-zone-collapsed");
     expect(wrapper.get(".workbench-zone-tasks .workbench-zone-rail").text()).toBe("✅ 提醒事项");
     expect(wrapper.findAll(".workbench-zone-notes .workbench-zone-rail")).toHaveLength(1);
@@ -471,7 +471,7 @@ describe("WorkbenchShell", () => {
     const collapseDown = new MouseEvent("pointerdown", { bubbles: true, cancelable: true });
     Object.defineProperty(collapseDown, "clientX", { value: 200 });
     wrapper.findAll(".workbench-resizer")[0].element.dispatchEvent(collapseDown);
-    window.dispatchEvent(new MouseEvent("pointermove", { clientX: 400 }));
+    window.dispatchEvent(new MouseEvent("pointermove", { clientX: 480 }));
     window.dispatchEvent(new MouseEvent("pointerup"));
     await nextTick();
     expect(wrapper.get(".workbench-zone-notes").classes()).toContain("workbench-zone-collapsed");
@@ -519,18 +519,18 @@ describe("WorkbenchShell", () => {
     const collapseDown = new MouseEvent("pointerdown", { bubbles: true, cancelable: true });
     Object.defineProperty(collapseDown, "clientX", { value: 900 });
     wrapper.findAll(".workbench-resizer")[2].element.dispatchEvent(collapseDown);
-    window.dispatchEvent(new MouseEvent("pointermove", { clientX: 600 }));
+    window.dispatchEvent(new MouseEvent("pointermove", { clientX: 640 }));
     window.dispatchEvent(new MouseEvent("pointerup"));
     await nextTick();
     expect(wrapper.get(".workbench-zone-tasks").classes()).toContain("workbench-zone-collapsed");
 
-    // Click the collapsed rail: tasks returns to its default width (~365px) and
+    // Click the collapsed rail: tasks returns to its default width (~327px) and
     // content reappears, funded by shrinking the expanded neighbors.
     await wrapper.get(".workbench-zone-tasks .workbench-zone-rail").trigger("click");
     await nextTick();
 
     expect(wrapper.get(".workbench-zone-tasks").classes()).not.toContain("workbench-zone-collapsed");
-    expect(wrapper.get(".workbench-grid").attributes("style")).toContain("365px");
+    expect(wrapper.get(".workbench-grid").attributes("style")).toContain("327px");
     expect(localStorage.getItem(WORKBENCH_WIDTH_STORAGE_KEY)).not.toBeNull();
 
     wrapper.unmount();
@@ -567,7 +567,7 @@ describe("WorkbenchShell", () => {
     const pointerDown = new MouseEvent("pointerdown", { bubbles: true, cancelable: true });
     Object.defineProperty(pointerDown, "clientX", { value: 200 });
     wrapper.findAll(".workbench-resizer")[0].element.dispatchEvent(pointerDown);
-    window.dispatchEvent(new MouseEvent("pointermove", { clientX: 400 }));
+    window.dispatchEvent(new MouseEvent("pointermove", { clientX: 480 }));
     window.dispatchEvent(new MouseEvent("pointerup"));
     await nextTick();
 

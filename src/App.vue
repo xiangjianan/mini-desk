@@ -54,6 +54,7 @@ import {
 } from "./state/todos";
 import { DEFAULT_BOARD_TITLE, defaultState, STORAGE_KEY } from "./state/defaults";
 import { applyThemeColor } from "./state/theme-color";
+import { removeWorkbenchWidths } from "./state/layoutPrefs";
 import { createWorkspaceData, ensureUniqueWorkspaceTitle, getWorkspaceBoardTitle, projectLegacySpaceLines, removeWorkspace, reorderWorkspaces } from "./state/workspaces";
 import * as workspaceMover from "./state/workspaceMoves";
 import { QUICK_BUTTON_OTHER_GROUP_ID, QUICK_DENSITY_THRESHOLD, assignQuickTagColumn, distributeQuickTagColumns, formatQuickCopiedPreview, getQuickTagColor } from "./state/quickButtons";
@@ -1152,7 +1153,9 @@ function deleteWorkspace(id: string, anchor?: HTMLElement): void {
     anchor,
     () => {
       // 整区删除连坐配对：被删工作区的配对码随区消失，云端队列同步注销（失败仅气泡警告）。
-      const doomedInboxCode = state.workspaces.find((workspace) => workspace.id === id)?.inbox?.code;
+      const doomedWorkspace = state.workspaces.find((workspace) => workspace.id === id);
+      const doomedInboxCode = doomedWorkspace?.inbox?.code;
+      const doomedPayloadIds = new Set(doomedWorkspace?.images.map((image) => getImagePayloadId(image)) ?? []);
       const result = removeWorkspace(state.workspaces, state.activeWorkspaceId, id);
       if (result.workspaces === state.workspaces) return;
       state.workspaces = result.workspaces;
@@ -1162,6 +1165,11 @@ function deleteWorkspace(id: string, anchor?: HTMLElement): void {
       clearImagePreview();
       persistNow();
       if (doomedInboxCode !== undefined) void revokeInbox(doomedInboxCode);
+      // 整区删除连坐本地存储：该工作区独占的四区宽度键即刻清理；图片负载
+      // 沿用单图删除的 5 秒宽限（期间可被撤销/重导入保住），到期未被任何
+      // 工作区引用即从 IndexedDB 清除，不占配额。
+      removeWorkbenchWidths(id);
+      doomedPayloadIds.forEach((payloadId) => scheduleImagePayloadDeletion(payloadId));
       showBubble("deleteWorkspace", anchor, { hideCompanionAfter: true });
     },
     undefined,
@@ -2611,11 +2619,29 @@ async function updateCustomCompanionGif(files: { light?: File; dark?: File }, an
   showBubbleText(uiText.value.app.customGifSet, anchor);
 }
 
+// 主题切换过渡窗口时长，与 styles.css 里 .theme-switching 的 motion-medium 对齐。
+const THEME_SWITCH_TRANSITION_MS = 240;
+let themeSwitchTransitionTimer: number | undefined;
+
 function applyTheme(): void {
+  const root = document.documentElement;
+  const next = effectiveTheme.value;
+  const previous = root.dataset.theme;
+  // 仅在明暗实际翻转时开启全页颜色过渡窗口（首帧挂主题不触发）；必须在
+  // 改 data-theme 之前挂类，新颜色计算时过渡规则才已生效（见 styles.css
+  // html.theme-switching）。auto 模式跟随系统切换走同一路径。
+  if (previous && previous !== next) {
+    root.classList.add("theme-switching");
+    window.clearTimeout(themeSwitchTransitionTimer);
+    themeSwitchTransitionTimer = window.setTimeout(() => {
+      themeSwitchTransitionTimer = undefined;
+      root.classList.remove("theme-switching");
+    }, THEME_SWITCH_TRANSITION_MS);
+  }
   // auto 模式由 effectiveTheme 解析系统偏好后落到 data-theme 与标题栏色。
-  document.documentElement.dataset.theme = effectiveTheme.value;
+  root.dataset.theme = next;
   // 状态栏随主题与移动端/桌面画布取色。
-  applyThemeColor(effectiveTheme.value);
+  applyThemeColor(next);
 }
 
 function clearData(anchor?: HTMLElement): void {
@@ -3139,6 +3165,9 @@ function isSingleWorkspaceExport(payload: Record<string, unknown>): boolean {
 function clearTimers(): void {
   clearPersistenceTimers();
   clearBubbleTimers();
+  window.clearTimeout(themeSwitchTransitionTimer);
+  themeSwitchTransitionTimer = undefined;
+  document.documentElement.classList.remove("theme-switching");
   window.clearTimeout(imagePayloadPruneTimer.value);
   clearVersionTimers();
   window.clearTimeout(previewCloseTimer.value);

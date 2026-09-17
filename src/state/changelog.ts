@@ -29,6 +29,22 @@ export interface ChangelogEntry {
 
 export const CHANGELOG: ChangelogEntry[] = [
   {
+    version: "1.0.179",
+    date: "2026-09-18",
+    notes: {
+      zh: [
+        "优化：明暗主题切换时全页颜色平滑过渡（240ms 交叉淡入淡出），空间标签页等不再闪变",
+        "优化：删除工作区时同步清理其区域宽度记录与 IndexedDB 里的图片数据（图片保留 5 秒撤销宽限）",
+        "调整：四区默认宽度比例调整为 10% / 30% / 30% / 30%，已自定义过的工作区不受影响",
+      ],
+      en: [
+        "Light/dark theme switches now cross-fade across the whole page over 240ms instead of flashing",
+        "Deleting a workspace now also clears its zone-width record and IndexedDB image payloads (images keep the 5s undo grace)",
+        "Default zone width ratio adjusted to 10% / 30% / 30% / 30%; customized workspaces are unaffected",
+      ],
+    },
+  },
+  {
     version: "1.0.178",
     date: "2026-09-17",
     notes: {

@@ -11,6 +11,11 @@ import {
   WORKBENCH_COLLAPSED_FIXED_LABELS_BY_LANGUAGE,
   getDefaultTitles,
 } from "../state/i18n";
+import {
+  LEGACY_WORKBENCH_WIDTH_STORAGE_KEY,
+  WORKBENCH_WIDTH_STORAGE_KEY,
+  workbenchWidthStorageKey,
+} from "../state/layoutPrefs";
 
 const props = withDefaults(defineProps<{
   title: string;
@@ -66,11 +71,9 @@ defineSlots<{
 }>();
 
 const DESKTOP_RESIZE_BREAKPOINT = 1180;
-const WORKBENCH_WIDTH_STORAGE_KEY = "mini-desk-workbench-widths";
-const LEGACY_WORKBENCH_WIDTH_STORAGE_KEY = "todo-board-workbench-widths";
 const WORKBENCH_HEADER_STORAGE_KEY = "mini-desk-workbench-header-hidden";
 const LEGACY_WORKBENCH_HEADER_STORAGE_KEY = "todo-board-workbench-header-hidden";
-const DEFAULT_COLUMN_WEIGHTS = [0.1, 0.25, 0.35, 0.3] as const;
+const DEFAULT_COLUMN_WEIGHTS = [0.1, 0.3, 0.3, 0.3] as const;
 const MIN_COLUMN_WIDTHS = [100, 100, 100, 100] as const;
 // Canonical zone order matches DEFAULT_COLUMN_WEIGHTS / MIN_COLUMN_WIDTHS indices.
 const ZONE_INDEX = { assets: 0, notes: 1, tasks: 2, workspace: 3 } as const;
@@ -203,9 +206,9 @@ function readPixel(value: string, fallback: number): number {
   return Number.isFinite(parsed) ? parsed : fallback;
 }
 
-/** 区域尺寸的存储键按工作区隔离：mini-desk-workbench-widths:<workspaceId>。 */
+/** 区域尺寸的存储键按工作区隔离（见 state/layoutPrefs.ts）。 */
 function widthStorageKey(): string {
-  return props.workspaceId ? `${WORKBENCH_WIDTH_STORAGE_KEY}:${props.workspaceId}` : WORKBENCH_WIDTH_STORAGE_KEY;
+  return workbenchWidthStorageKey(props.workspaceId);
 }
 
 function readStoredColumnWidths(expectedLength: number = MIN_COLUMN_WIDTHS.length): number[] | undefined {
