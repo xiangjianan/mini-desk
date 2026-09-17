@@ -36,7 +36,7 @@ describe("localized public copy", () => {
   it("recognizes previous emoji defaults without changing custom names", () => {
     expect(getDisplayTodoListTitle({ id: "morning", title: "✅ 提醒事项", collapsed: false, compact: false }, "zh")).toBe("今天");
     expect(getDisplayTodoListTitle({ id: "morning", title: "✅ Reminders", collapsed: false, compact: false }, "en")).toBe("Today");
-    expect(getDisplaySpaceTitle({ id: "workspace", title: "📝 便签", lines: [] }, "zh")).toBe("随手机");
+    expect(getDisplaySpaceTitle({ id: "workspace", title: "📝 便签", lines: [] }, "zh")).toBe("随手记");
     expect(getDisplaySpaceTitle({ id: "workspace", title: "📝 Sticky", lines: [] }, "en")).toBe("Quick Notes");
     expect(getDisplaySpaceTitle({ id: "workspace", title: "📝 我的笔记", lines: [] }, "zh")).toBe("📝 我的笔记");
     expect(getDisplayTodoListTitle({ id: "custom", title: "✅ 提醒事项", collapsed: false, compact: false }, "zh")).toBe("✅ 提醒事项");
@@ -148,8 +148,8 @@ describe("localized public copy", () => {
   });
 
   it("uses plain default note names while recognizing older names", () => {
-    expect(getDisplaySpaceTitle({ id: "workspace", title: "备忘录", lines: [] }, "zh")).toBe("随手机");
-    expect(getDisplaySpaceTitle({ id: "workspace", title: "📕 备忘录", lines: [] }, "zh")).toBe("随手机");
+    expect(getDisplaySpaceTitle({ id: "workspace", title: "备忘录", lines: [] }, "zh")).toBe("随手记");
+    expect(getDisplaySpaceTitle({ id: "workspace", title: "📕 备忘录", lines: [] }, "zh")).toBe("随手记");
     expect(getDisplaySpaceTitle({ id: "workspace", title: "备忘录", lines: [] }, "en")).toBe("Quick Notes");
     expect(getDisplaySpaceTitle({ id: "workspace", title: "Workspace", lines: [] }, "en")).toBe("Quick Notes");
   });

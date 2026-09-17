@@ -1762,6 +1762,13 @@ function openImagePreview(id: string): void {
   hideCompanion();
   activeEditorId.value = undefined;
   activePreviewId.value = id;
+  // Windows/Linux Chromium 点击按钮会转移焦点：预览打开期间焦点仍挂在左列
+  // 的图片卡片按钮上，空格关闭的 keydown 会把它翻成 :focus-visible，预览
+  // 消失后露出蓝色焦点环（macOS 点击不聚焦按钮，无此问题）。预览是模态
+  // 浮层，打开时把焦点还给 <body>；预览快捷键走 window 级监听与预览组件
+  // 自身，不依赖被 blur 的背景元素。
+  const active = document.activeElement;
+  if (active instanceof HTMLElement && active !== document.body) active.blur();
   if (activeWorkspace.value.images.length > IMAGE_DENSITY_THRESHOLD) {
     showBubble("imageOverload", document.querySelector<HTMLElement>(".image-panel") ?? undefined, { hideCompanionAfter: true });
   }
@@ -3371,6 +3378,7 @@ function moveItem<T extends { id: string }>(items: T[], dragId: string, targetId
       :notes-title="titles['quick-title']"
       :image-preview-open="Boolean(displayedPreviewId)"
       :zone-visibility="activeWorkspace.zoneVisibility"
+      :workspace-id="state.activeWorkspaceId"
       @theme="handleThemeClick"
       @toggle-zone="toggleActiveWorkspaceZone"
       @dragover.prevent

@@ -629,6 +629,69 @@ describe("WorkbenchShell", () => {
     wrapper.unmount();
   });
 
+  it("stores workbench widths per workspace and switches layouts independently", async () => {
+    vi.spyOn(window, "innerWidth", "get").mockReturnValue(1600);
+    HTMLElement.prototype.getBoundingClientRect = function getMockRect() {
+      if (this instanceof HTMLElement && this.classList.contains("workbench-grid")) {
+        return {
+          x: 0,
+          y: 52,
+          left: 0,
+          top: 52,
+          right: 1200,
+          bottom: 800,
+          width: 1200,
+          height: 748,
+          toJSON: () => undefined,
+        };
+      }
+      return originalGetBoundingClientRect.call(this);
+    };
+
+    const wrapper = mount(WorkbenchShell, {
+      attachTo: document.body,
+      props: { ...defaultProps, workspaceId: "ws-a" },
+    });
+    await nextTick();
+    await nextTick();
+
+    const pointerDown = new MouseEvent("pointerdown", { bubbles: true, cancelable: true });
+    Object.defineProperty(pointerDown, "clientX", { value: 200 });
+    wrapper.findAll(".workbench-resizer")[0].element.dispatchEvent(pointerDown);
+    window.dispatchEvent(new MouseEvent("pointermove", { clientX: 400 }));
+    window.dispatchEvent(new MouseEvent("pointerup"));
+    await nextTick();
+
+    // 拖动结果落在工作区自己的键上，旧的共享键不被写入。
+    const storedA = localStorage.getItem(`${WORKBENCH_WIDTH_STORAGE_KEY}:ws-a`);
+    expect(storedA).toBeTruthy();
+    expect(JSON.parse(storedA ?? "[]")).toHaveLength(4);
+    expect(localStorage.getItem(WORKBENCH_WIDTH_STORAGE_KEY)).toBeNull();
+    wrapper.unmount();
+
+    // 工作区 B 有自己独立的尺寸：挂载后应用 B 的布局，也不会碰 A 的键。
+    localStorage.setItem(`${WORKBENCH_WIDTH_STORAGE_KEY}:ws-b`, JSON.stringify([180, 360, 340, 380]));
+    const workspaceB = mount(WorkbenchShell, {
+      attachTo: document.body,
+      props: { ...defaultProps, workspaceId: "ws-b" },
+    });
+    await nextTick();
+    await nextTick();
+
+    // 与「旧共享键种子」用例相同的数值 → 相同的等比拟合结果，证明读取的是 B 自己的键。
+    expect(workspaceB.get(".workbench-grid").attributes("style")).toContain("grid-template-columns: 171px 329px 312px 347px");
+    expect(localStorage.getItem(`${WORKBENCH_WIDTH_STORAGE_KEY}:ws-a`)).toBe(storedA);
+
+    // 在已挂载的壳上切换工作区 id：watcher 丢弃当前列宽并按 A 的存储尺寸重排。
+    await workspaceB.setProps({ workspaceId: "ws-a" });
+    await nextTick();
+    await nextTick();
+    const switchedColumns = workspaceB.get(".workbench-grid").attributes("style") ?? "";
+    expect(switchedColumns).toContain("grid-template-columns:");
+    expect(switchedColumns).not.toContain("171px 329px 312px 347px");
+    workspaceB.unmount();
+  });
+
   const mockWideGridMetrics = () => {
     vi.spyOn(window, "innerWidth", "get").mockReturnValue(1600);
     HTMLElement.prototype.getBoundingClientRect = function getMockRect() {

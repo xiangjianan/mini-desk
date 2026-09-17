@@ -22,6 +22,8 @@ const props = withDefaults(defineProps<{
   slogan?: string;
   imagePreviewOpen?: boolean;
   zoneVisibility?: ZoneVisibility;
+  /** 区域尺寸按工作区独立存储；缺省回落到旧的共享键（兼容无工作区上下文的挂载）。 */
+  workspaceId?: string;
 }>(), {
   language: DEFAULT_LANGUAGE,
   assetsTitle: "",
@@ -29,6 +31,7 @@ const props = withDefaults(defineProps<{
   slogan: "",
   imagePreviewOpen: false,
   zoneVisibility: () => ({ assets: true, notes: true, tasks: true, workspace: true }),
+  workspaceId: "",
 });
 
 // Collapsed-rail labels per zone. Assets and notes follow their editable area
@@ -200,10 +203,19 @@ function readPixel(value: string, fallback: number): number {
   return Number.isFinite(parsed) ? parsed : fallback;
 }
 
+/** 区域尺寸的存储键按工作区隔离：mini-desk-workbench-widths:<workspaceId>。 */
+function widthStorageKey(): string {
+  return props.workspaceId ? `${WORKBENCH_WIDTH_STORAGE_KEY}:${props.workspaceId}` : WORKBENCH_WIDTH_STORAGE_KEY;
+}
+
 function readStoredColumnWidths(expectedLength: number = MIN_COLUMN_WIDTHS.length): number[] | undefined {
   if (typeof localStorage === "undefined") return undefined;
   try {
-    const raw = localStorage.getItem(WORKBENCH_WIDTH_STORAGE_KEY) ?? localStorage.getItem(LEGACY_WORKBENCH_WIDTH_STORAGE_KEY);
+    // 本工作区自己的尺寸优先；没有时回落到旧共享键作为初始种子（旧数据
+    // 只读不写：该空间一旦拖过分隔条就分道扬镳，其余空间不受影响）。
+    const raw = localStorage.getItem(widthStorageKey())
+      ?? localStorage.getItem(WORKBENCH_WIDTH_STORAGE_KEY)
+      ?? localStorage.getItem(LEGACY_WORKBENCH_WIDTH_STORAGE_KEY);
     const parsed = JSON.parse(raw ?? "null");
     if (!Array.isArray(parsed) || parsed.length !== expectedLength) return undefined;
     const widths = parsed.map((value) => Number(value));
@@ -216,7 +228,7 @@ function readStoredColumnWidths(expectedLength: number = MIN_COLUMN_WIDTHS.lengt
 function persistColumnWidths(widths: number[]): void {
   if (typeof localStorage === "undefined") return;
   try {
-    localStorage.setItem(WORKBENCH_WIDTH_STORAGE_KEY, JSON.stringify(widths.map((width) => Math.round(width))));
+    localStorage.setItem(widthStorageKey(), JSON.stringify(widths.map((width) => Math.round(width))));
   } catch {
     // Layout persistence is optional; storage may be unavailable in restricted contexts.
   }
@@ -627,6 +639,17 @@ watch(
     void nextTick(refreshWorkbenchLayout);
   },
   { deep: true },
+);
+
+// 切换工作区时区域尺寸跟着换：丢弃当前列宽，让布局按新工作区的存储宽度
+// （或默认权重）重新拟合——每个空间的四区尺寸互不影响。
+watch(
+  () => props.workspaceId,
+  () => {
+    columnWidths.value = [];
+    soloAssetsEngaged.value = false;
+    void nextTick(refreshWorkbenchLayout);
+  },
 );
 
 onMounted(() => {

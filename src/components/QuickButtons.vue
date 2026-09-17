@@ -240,7 +240,6 @@ const menuOptions = computed<DropdownOption[]>(() => {
   }
   return [
     { label: uiText.value.common.edit, key: "edit", icon: renderIcon(CreateOutline) },
-    { label: props.compact ? uiText.value.quick.largeButtons : uiText.value.quick.compactButtons, key: "toggle-compact", icon: renderIcon(ResizeOutline) },
     { label: button?.hidden ? uiText.value.quick.show : uiText.value.quick.hide, key: "toggle-hidden", icon: renderIcon(button?.hidden ? EyeOutline : EyeOffOutline) },
     ...(button?.type === "link"
       ? [
@@ -256,6 +255,7 @@ const menuOptions = computed<DropdownOption[]>(() => {
           children: moveMenuChildren.value,
         }]
       : []),
+    { label: props.compact ? uiText.value.quick.largeButtons : uiText.value.quick.compactButtons, key: "toggle-compact", icon: renderIcon(ResizeOutline) },
     { label: uiText.value.common.delete, key: "delete", icon: renderIcon(TrashOutline, true) },
     { ...guideMenuOption.value, icon: renderIcon(HelpCircleOutline) },
   ];

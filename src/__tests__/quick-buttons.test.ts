@@ -1231,8 +1231,8 @@ describe("QuickButtons", () => {
 
     expect(wrapper.findAll(".dropdown-option").map((option) => option.text())).toEqual([
       "编辑",
-      "切换为紧凑按钮",
       "隐藏",
+      "切换为紧凑按钮",
       "删除",
       "Tips",
     ]);
@@ -1251,10 +1251,10 @@ describe("QuickButtons", () => {
 
     expect(wrapper.findAll(".dropdown-option").map((option) => option.text())).toEqual([
       "编辑",
-      "切换为紧凑按钮",
       "隐藏",
       "复制文本",
       "复制链接",
+      "切换为紧凑按钮",
       "删除",
       "Tips",
     ]);

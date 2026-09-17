@@ -30,7 +30,7 @@ const LEGACY_DEFAULT_TODO_TITLES: Record<AppLanguage, Record<string, string>> = 
 
 export const DEFAULT_SPACE_TITLES: Record<AppLanguage, Record<string, string>> = {
   zh: {
-    workspace: "随手机",
+    workspace: "随手记",
     storage: "工程文件",
   },
   en: {
@@ -1224,6 +1224,7 @@ function isDefaultTodoListTitle(id: string, title: string): boolean {
 function isDefaultSpaceTitle(id: string, title: string): boolean {
   return [
     ...Object.values(DEFAULT_SPACE_TITLES),
+    { workspace: "随手机" },
     { workspace: "📝 便签" },
     { workspace: "📝 Sticky" },
     { workspace: "便签" },

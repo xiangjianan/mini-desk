@@ -271,7 +271,7 @@ describe("App shell", () => {
     expect(wrapper.text()).toContain("记事本");
     expect(wrapper.findComponent({ name: "ImagePreview" }).exists()).toBe(false);
     expect(wrapper.find(".workbench-zone-notes > .quick-block").exists()).toBe(true);
-    expect(wrapper.findAll(".space-tab").map((tab) => tab.text())).toEqual(["随手机"]);
+    expect(wrapper.findAll(".space-tab").map((tab) => tab.text())).toEqual(["随手记"]);
     expect(wrapper.find('[data-testid="workbench-theme"]').exists()).toBe(true);
     expect(wrapper.find('[aria-label="快捷动作菜单"]').exists()).toBe(true);
     expect(wrapper.find('[aria-label="设置"]').exists()).toBe(true);
@@ -4165,6 +4165,43 @@ describe("App shell", () => {
     expect(wrapper.get(".image-panel .image-card.is-active .image-index").text()).toBe("2");
 
     wrapper.unmount();
+  });
+
+  it("releases focus from the triggering image card when the preview opens", async () => {
+    vi.useFakeTimers();
+    localStorage.setItem(
+      STORAGE_KEY,
+      JSON.stringify({
+        images: [{ id: "img-1", src: "data:image/png;base64,one", createdAt: 1 }],
+      }),
+    );
+    const wrapper = mountApp();
+
+    try {
+      // 模拟 Windows Chromium「点击按钮即聚焦」：手动把焦点放到卡片上再点击。
+      // 预览打开后焦点必须被释放——否则空格关闭的 keydown 会把背景卡片翻成
+      // :focus-visible，预览消失后露出蓝色焦点环。
+      const card = wrapper.get(".image-card");
+      (card.element as HTMLButtonElement).focus();
+      expect(document.activeElement).toBe(card.element);
+
+      await card.trigger("click");
+      await wrapper.vm.$nextTick();
+      await flushAsyncComponents();
+
+      expect(wrapper.find(".image-preview").exists()).toBe(true);
+      expect(document.activeElement).not.toBe(card.element);
+
+      // 空格关闭后卡片不持焦点，自然不会进入 :focus-visible 态。
+      window.dispatchEvent(new KeyboardEvent("keydown", { key: " " }));
+      await wrapper.vm.$nextTick();
+      await vi.advanceTimersByTimeAsync(220);
+      expect(wrapper.find(".image-preview").exists()).toBe(false);
+      expect(document.activeElement).not.toBe(card.element);
+    } finally {
+      wrapper.unmount();
+      vi.useRealTimers();
+    }
   });
 
   it("closes image preview from the shared image list close event", async () => {

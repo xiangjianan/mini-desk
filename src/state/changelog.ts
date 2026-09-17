@@ -29,6 +29,24 @@ export interface ChangelogEntry {
 
 export const CHANGELOG: ChangelogEntry[] = [
   {
+    version: "1.0.178",
+    date: "2026-09-17",
+    notes: {
+      zh: [
+        "新增：四个区域的宽度尺寸按工作区独立记忆，空间之间互不影响，旧尺寸自动作为各空间的初始值",
+        "优化：快捷动作按钮一行最多显示两个，区域较窄时自动回落为整行一个",
+        "优化：默认空间更名为「随手记」，已有的「随手机」空间自动迁移显示",
+        "修复：快捷标签多列布局下空白列无法接收标签拖入；Windows 空格关闭图片预览后左侧图片卡片出现蓝色焦点边框",
+      ],
+      en: [
+        "Zone widths are now remembered per workspace so layouts no longer leak across workspaces; existing sizes seed every workspace initially",
+        "Quick action buttons now fit up to two per row, falling back to one full-width row when the panel is narrow",
+        "The default space is renamed to 随手记 (Quick Notes); existing 随手机 spaces migrate automatically",
+        "Fixed tags not landing in empty columns of the multi-column quick layout, and a Windows-only blue focus ring on the image card after closing the preview with Space",
+      ],
+    },
+  },
+  {
     version: "1.0.177",
     date: "2026-09-17",
     notes: {

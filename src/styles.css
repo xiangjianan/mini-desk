@@ -1055,11 +1055,12 @@ button.image-card {
 
 /* 快捷标签显式分列（与 .todo-sections 同一套方案）：列数由 JS 按面板宽度
    测量后以内联 grid-template-columns 写入；每列是独立 flex 列，各标签组按
-   自身内容撑开高度。单列时沿用上面的 flex column 布局。 */
+   自身内容撑开高度。单列时沿用上面的 flex column 布局。
+   刻意保持 grid 默认 stretch：空列/短列也撑满行高，列内空白与空列
+   因此仍是有效的拖放落点（align-items:start 会把空列压成 0 高）。 */
 .quick-tag-groups.is-multi-column {
   display: grid;
   column-gap: 14px;
-  align-items: start;
 }
 
 .quick-tag-column {
