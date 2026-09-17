@@ -1053,6 +1053,22 @@ button.image-card {
   padding: 8px 0 12px;
 }
 
+/* 快捷标签显式分列（与 .todo-sections 同一套方案）：列数由 JS 按面板宽度
+   测量后以内联 grid-template-columns 写入；每列是独立 flex 列，各标签组按
+   自身内容撑开高度。单列时沿用上面的 flex column 布局。 */
+.quick-tag-groups.is-multi-column {
+  display: grid;
+  column-gap: 14px;
+  align-items: start;
+}
+
+.quick-tag-column {
+  display: flex;
+  flex-direction: column;
+  min-width: 0;
+  gap: 3px;
+}
+
 .quick-tag-group {
   display: flex;
   flex-direction: column;
@@ -1161,6 +1177,40 @@ button.image-card {
 
 .quick-tag-collapse-button.is-collapsed .n-icon {
   transform: rotate(-90deg);
+}
+
+/* 标签头右侧的「新增到此标签」按钮：点击直接弹出新增对话框并预选该标签。 */
+.quick-tag-add-button {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  flex: 0 0 20px;
+  width: 20px;
+  height: 20px;
+  margin: 0 0 0 2px;
+  padding: 0;
+  border: 0;
+  color: var(--muted);
+  background: transparent;
+  cursor: pointer;
+}
+
+.quick-tag-add-button .n-icon {
+  font-size: 14px;
+}
+
+.quick-tag-add-button:hover,
+.quick-tag-add-button:focus-visible {
+  color: var(--primary);
+}
+
+/* 紧凑模式：隐藏类型副标题，按钮回落为单行小尺寸。 */
+.quick-block.is-compact .quick-button-kind {
+  display: none;
+}
+
+.quick-block.is-compact .quick-button-content {
+  gap: 0;
 }
 
 .quick-tag-heading.is-editing {
@@ -3417,6 +3467,15 @@ body:has(.image-preview) .shortcut-help-modal .n-scrollbar {
 
 .image-preview {
   pointer-events: auto;
+}
+
+/* Windows Chromium 在按键（如空格关闭预览）时会让已聚焦元素匹配 :focus-visible，
+   全局焦点环因此画满整个预览面（Mac Safari/Chrome 无此启发式）。预览面是
+   tabindex=0 的鼠标驱动浮层，键盘可达性由工具栏按钮各自的焦点环承担。 */
+.image-preview:focus,
+.image-preview:focus-visible {
+  outline: none;
+  box-shadow: none;
 }
 
 body:has(.image-preview) .image-panel .n-scrollbar-container,

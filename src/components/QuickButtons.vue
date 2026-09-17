@@ -2,12 +2,13 @@
 import { computed, h, nextTick, onMounted, onUnmounted, reactive, ref, watch } from "vue";
 import type { Component, ComponentPublicInstance, VNode } from "vue";
 import { NButton, NCheckbox, NDropdown, NIcon, NInput, NModal, NScrollbar, NSelect } from "naive-ui";
-import { AddOutline, AppsOutline, ChevronDownOutline, ClipboardOutline, CloudUploadOutline, CopyOutline, CreateOutline, DocumentTextOutline, EyeOffOutline, EyeOutline, FlashOutline, HelpCircleOutline, LinkOutline, PricetagsOutline, SearchOutline, SwapHorizontalOutline, TrashOutline } from "@vicons/ionicons5";
+import { AddOutline, AppsOutline, ChevronDownOutline, ClipboardOutline, CloudUploadOutline, CopyOutline, CreateOutline, DocumentTextOutline, EyeOffOutline, EyeOutline, FlashOutline, HelpCircleOutline, LinkOutline, PricetagsOutline, ResizeOutline, SearchOutline, SwapHorizontalOutline, TrashOutline } from "@vicons/ionicons5";
 import type { DropdownOption } from "naive-ui";
 import type { AppLanguage, GuideKey, QuickApiBodyType, QuickApiHeader, QuickApiMethod, QuickButton, QuickButtonType, QuickTag, WorkspaceMoveTarget } from "../types";
 import { GUIDE_MENU_OPTION } from "../state/defaults";
 import { getIconHeadingText, getUiText } from "../state/i18n";
-import { buildVisibleQuickButtonGroups, filterVisibleQuickButtonGroups, getQuickTagColor, hasOverloadedVisibleQuickButtonGroup, normalizeQuickTagColor, QUICK_BUTTON_EMPTY_GROUP_ID, QUICK_DENSITY_THRESHOLD, QUICK_TAG_COLORS, QUICK_TAG_DEFAULT_COLOR } from "../state/quickButtons";
+import type { QuickButtonGroup } from "../state/quickButtons";
+import { buildVisibleQuickButtonGroups, computeQuickColumnCount, filterVisibleQuickButtonGroups, getQuickTagColor, groupQuickButtonsByColumn, hasOverloadedVisibleQuickButtonGroup, normalizeQuickTagColor, QUICK_BUTTON_EMPTY_GROUP_ID, QUICK_DENSITY_THRESHOLD, QUICK_TAG_COLORS, QUICK_TAG_DEFAULT_COLOR } from "../state/quickButtons";
 import { findQuickAppPresetByScheme, getQuickAppPresetHint, getQuickAppPresetTitle, QUICK_APP_PRESETS } from "../state/quickApps";
 import { findQuickApiTemplate, QUICK_API_TEMPLATES } from "../state/quickApiTemplates";
 import { clearGlobalSearch, globalSearchNormalized, globalSearchQuery, setGlobalSearch } from "../state/globalSearch";
@@ -24,11 +25,14 @@ const props = withDefaults(defineProps<{
   tags?: QuickTag[];
   showHidden: boolean;
   otherCollapsed?: boolean;
+  /** true = 紧凑按钮（隐藏类型副标题、压低高度）。 */
+  compact?: boolean;
   language?: AppLanguage;
   moveTargets?: WorkspaceMoveTarget[];
 }>(), {
   tags: () => [],
   otherCollapsed: false,
+  compact: false,
   language: "zh",
   moveTargets: () => [],
 });
@@ -42,8 +46,8 @@ const emit = defineEmits<{
   copyLink: [id: string, anchor?: HTMLElement];
   toggleHidden: [id: string];
   toggleShowHidden: [];
+  toggleCompact: [];
   reorder: [dragId: string, targetId: string];
-  reorderTag: [dragId: string, targetId: string];
   moveToTag: [buttonId: string, tagId?: string, targetId?: string];
   saveTag: [payload: { id?: string; title: string; color?: string }];
   toggleTagCollapsed: [id: string];
@@ -52,6 +56,8 @@ const emit = defineEmits<{
   declutter: [anchor: HTMLElement];
   moveButtonToWorkspace: [buttonId: string, workspaceId: string];
   moveTagToWorkspace: [tagId: string, workspaceId: string];
+  columnCountChange: [count: number];
+  assignTagColumn: [draggedId: string, targetColumn: number, anchorId: string | null, insertBefore: boolean];
 }>();
 
 const dialogOpen = ref(false);
@@ -134,6 +140,31 @@ const groupedButtons = computed(() => {
   const base = buildVisibleQuickButtonGroups(props.buttons, props.tags, props.showHidden, uiText.value.quick.otherTag, props.otherCollapsed);
   return filterVisibleQuickButtonGroups(base, globalSearchNormalized.value);
 });
+
+// Measured content width of the quick panel, kept in sync via ResizeObserver so
+// the column count reacts to window resize, workbench resizer drags, and zone
+// show/hide (none of which fire window resize).
+const panelRef = ref<HTMLElement | null>(null);
+const measuredPanelWidth = ref(0);
+let columnResizeObserver: ResizeObserver | undefined;
+// Number of masonry columns: derived from the measured panel width and clamped
+// to the visible group count so a few groups never leave empty columns. 1 = single column.
+const columnCount = computed(() => computeQuickColumnCount(measuredPanelWidth.value, groupedButtons.value.length));
+watch(columnCount, (next) => emit("columnCountChange", next));
+// Group visible groups into explicit column buckets by their pinned `column`.
+// Array order within a bucket = vertical order; 其他/空态 groups land last.
+const groupsByColumn = computed<QuickButtonGroup[][]>(() => groupQuickButtonsByColumn(groupedButtons.value, columnCount.value));
+
+function clampColumn(column: number): number {
+  return Math.max(0, Math.min(column, columnCount.value - 1));
+}
+
+/** 显示列：真实标签读自身 column；其他/空态组固定最后一列。 */
+function getGroupColumn(groupId: string): number {
+  const group = groupedButtons.value.find((item) => item.id === groupId);
+  if (!group) return 0;
+  return group.column === undefined ? columnCount.value - 1 : clampColumn(group.column);
+}
 const searchOpen = ref(false);
 const searchInputRef = ref<{ focus?: () => void } | null>(null);
 
@@ -165,9 +196,17 @@ function handleSearchClickOutside(event: MouseEvent): void {
 
 onMounted(() => {
   document.addEventListener("click", handleSearchClickOutside);
+  if (panelRef.value && typeof ResizeObserver !== "undefined") {
+    columnResizeObserver = new ResizeObserver((entries) => {
+      measuredPanelWidth.value = entries[0]?.contentRect.width ?? 0;
+    });
+    columnResizeObserver.observe(panelRef.value);
+  }
 });
 onUnmounted(() => {
   document.removeEventListener("click", handleSearchClickOutside);
+  columnResizeObserver?.disconnect();
+  columnResizeObserver = undefined;
 });
 const canSubmit = computed(() => {
   if (form.title.trim().length === 0 || form.value.trim().length === 0) return false;
@@ -195,11 +234,13 @@ const menuOptions = computed<DropdownOption[]>(() => {
       { label: uiText.value.common.paste, key: "paste", icon: renderIcon(ClipboardOutline) },
       { label: props.showHidden ? uiText.value.quick.hideHidden : uiText.value.quick.showHidden, key: "toggle-show-hidden", icon: renderIcon(props.showHidden ? EyeOffOutline : EyeOutline) },
       { label: uiText.value.quick.tagManage, key: "manage-tags", icon: renderIcon(PricetagsOutline) },
+      { label: props.compact ? uiText.value.quick.largeButtons : uiText.value.quick.compactButtons, key: "toggle-compact", icon: renderIcon(ResizeOutline) },
       { ...guideMenuOption.value, icon: renderIcon(HelpCircleOutline) },
     ];
   }
   return [
     { label: uiText.value.common.edit, key: "edit", icon: renderIcon(CreateOutline) },
+    { label: props.compact ? uiText.value.quick.largeButtons : uiText.value.quick.compactButtons, key: "toggle-compact", icon: renderIcon(ResizeOutline) },
     { label: button?.hidden ? uiText.value.quick.show : uiText.value.quick.hide, key: "toggle-hidden", icon: renderIcon(button?.hidden ? EyeOutline : EyeOffOutline) },
     ...(button?.type === "link"
       ? [
@@ -468,6 +509,10 @@ function handleMenuSelect(key: string): void {
     handleToggleShowHidden(anchor);
     return;
   }
+  if (key === "toggle-compact") {
+    emit("toggleCompact");
+    return;
+  }
   if (key === "manage-tags") {
     openTagManager(anchor);
     return;
@@ -653,7 +698,25 @@ function onTagDrop(event: DragEvent, groupId: string): void {
   }
   if (handleExternalQuickDrop(event, groupId)) return;
   if (!draggingTagId.value || draggingTagId.value === groupId || !isRealTagGroup(groupId)) return;
-  emit("reorderTag", draggingTagId.value, groupId);
+  // 标签落位走显式列分配（与提醒列表一致）：换列 + 列内插到目标标签前。
+  emit("assignTagColumn", draggingTagId.value, getGroupColumn(groupId), groupId, true);
+}
+
+/**
+ * 列空白区（不属于任何标签组的区域）承接标签拖放：加入该列并追加到列尾。
+ * 仅在拖标签时放行 dragover——否则外部文本/按钮拖拽会被标记成可放置，
+ * drop 又不处理，浏览器会执行默认动作（如跳转拖入的 URL）。
+ */
+function handleColumnDragOver(event: DragEvent): void {
+  if (!draggingTagId.value) return;
+  event.preventDefault();
+}
+
+function handleColumnDrop(event: DragEvent, columnIndex: number): void {
+  if (!draggingTagId.value) return;
+  event.preventDefault();
+  event.stopPropagation();
+  emit("assignTagColumn", draggingTagId.value, clampColumn(columnIndex), null, false);
 }
 
 function handleTagDragOver(event: DragEvent, groupId: string): void {
@@ -689,6 +752,14 @@ function getGroupTagId(groupId: string): string | undefined {
 
 function handleQuickButtonDrop(targetButtonId: string, targetGroupId: string): void {
   isDragHover.value = false;
+  // 标签拖到某个按钮上松手：与提醒列表一致回落为该组的列落位（按钮自身的
+  // drop 带 .stop，不回落会被直接吞掉）。
+  if (!draggingId.value && draggingTagId.value) {
+    if (draggingTagId.value !== targetGroupId && isRealTagGroup(targetGroupId)) {
+      emit("assignTagColumn", draggingTagId.value, getGroupColumn(targetGroupId), targetGroupId, true);
+    }
+    return;
+  }
   if (!draggingId.value || draggingId.value === targetButtonId) return;
   if (isQuickButtonTargetGroup(targetGroupId)) {
     const targetTagId = getGroupTagId(targetGroupId);
@@ -713,8 +784,9 @@ function handleQuickGroupDrop(event: DragEvent, groupId: string): void {
 
 <template>
   <section
+    ref="panelRef"
     class="split-block quick-block"
-    :class="{ 'drag-hover': isDragHover }"
+    :class="{ 'drag-hover': isDragHover, 'is-compact': compact }"
     @click="handleAreaClick"
     @contextmenu="openAreaMenu"
     @dragover="handleQuickDragOver"
@@ -775,9 +847,22 @@ function handleQuickGroupDrop(event: DragEvent, groupId: string): void {
     </div>
 
     <NScrollbar class="quick-buttons-scrollbar" :aria-label="uiText.quick.list" @click="closeMenu" @contextmenu="openAreaMenu">
-      <TransitionGroup tag="div" class="quick-tag-groups" name="quick-tag-group">
+      <div
+        class="quick-tag-groups"
+        :class="{ 'is-multi-column': columnCount > 1 }"
+        :style="columnCount > 1 ? { gridTemplateColumns: `repeat(${columnCount}, minmax(0, 1fr))` } : undefined"
+      >
+        <TransitionGroup
+          v-for="(bucket, columnIndex) in groupsByColumn"
+          :key="columnIndex"
+          tag="div"
+          class="quick-tag-column"
+          name="quick-tag-group"
+          @dragover="handleColumnDragOver"
+          @drop="handleColumnDrop($event, columnIndex)"
+        >
         <section
-          v-for="group in groupedButtons"
+          v-for="group in bucket"
           :key="group.id"
           :class="['quick-tag-group', { 'has-tag-color': Boolean(group.color) }]"
           :data-tag-id="group.id"
@@ -822,6 +907,17 @@ function handleQuickGroupDrop(event: DragEvent, groupId: string): void {
               <NIcon :component="ChevronDownOutline" />
             </button>
             <span v-if="editingTagId !== group.id" class="quick-tag-count">{{ group.buttons.length }}</span>
+            <button
+              v-if="group.title && editingTagId !== group.id"
+              type="button"
+              class="quick-tag-add-button"
+              :aria-label="uiText.quick.addInTag"
+              :title="uiText.quick.addInTag"
+              @click.stop="openAdd($event.currentTarget as HTMLElement, isRealTagGroup(group.id) ? group.title : '')"
+              @dblclick.stop
+            >
+              <NIcon :component="AddOutline" />
+            </button>
           </div>
           <div
             class="quick-tag-content"
@@ -871,7 +967,8 @@ function handleQuickGroupDrop(event: DragEvent, groupId: string): void {
             </TransitionGroup>
           </div>
         </section>
-      </TransitionGroup>
+        </TransitionGroup>
+      </div>
     </NScrollbar>
 
     <NDropdown

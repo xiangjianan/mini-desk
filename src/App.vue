@@ -56,7 +56,7 @@ import { DEFAULT_BOARD_TITLE, defaultState, STORAGE_KEY } from "./state/defaults
 import { applyThemeColor } from "./state/theme-color";
 import { createWorkspaceData, ensureUniqueWorkspaceTitle, getWorkspaceBoardTitle, projectLegacySpaceLines, removeWorkspace, reorderWorkspaces } from "./state/workspaces";
 import * as workspaceMover from "./state/workspaceMoves";
-import { QUICK_BUTTON_OTHER_GROUP_ID, QUICK_DENSITY_THRESHOLD, formatQuickCopiedPreview, getQuickTagColor } from "./state/quickButtons";
+import { QUICK_BUTTON_OTHER_GROUP_ID, QUICK_DENSITY_THRESHOLD, assignQuickTagColumn, distributeQuickTagColumns, formatQuickCopiedPreview, getQuickTagColor } from "./state/quickButtons";
 import { isQuickAppScheme } from "./state/quickApps";
 import { advanceTipRotation, resolveTipGuideKey, type TipRotationState } from "./state/guideTips";
 import { INBOX_FOCUS_THROTTLE_MS, INBOX_PULL_INTERVAL_MS } from "./sync/config";
@@ -699,6 +699,27 @@ watch(
     activeWorkspace.value.todoLists = distributeTodoListColumns(
       activeWorkspace.value.todoLists,
       todoColumnCount.value,
+    );
+    persistNow();
+  },
+);
+
+// 快捷标签列布局与提醒列表同一套规则：未手动拖过时按列数自动分配，
+// 一旦手动拖拽（assignQuickTagSections）即冻结，之后只跟随显式操作。
+const quickTagColumnCount = ref(1);
+const quickDistributionKey = ref("");
+
+watch(
+  () => [state.activeWorkspaceId, quickTagColumnCount.value, activeWorkspace.value.quickTags.length],
+  () => {
+    if (activeWorkspace.value.quickLayoutManual) return;
+    if (quickTagColumnCount.value <= 1) return;
+    const key = `${state.activeWorkspaceId}:${quickTagColumnCount.value}:${activeWorkspace.value.quickTags.length}`;
+    if (key === quickDistributionKey.value) return;
+    quickDistributionKey.value = key;
+    activeWorkspace.value.quickTags = distributeQuickTagColumns(
+      activeWorkspace.value.quickTags,
+      quickTagColumnCount.value,
     );
     persistNow();
   },
@@ -2042,8 +2063,8 @@ function reorderQuickButtons(dragId: string, targetId: string): void {
   persistNow();
 }
 
-function reorderQuickTags(dragId: string, targetId: string): void {
-  moveItem(activeWorkspace.value.quickTags, dragId, targetId);
+function toggleQuickCompact(): void {
+  activeWorkspace.value.quickCompact = !activeWorkspace.value.quickCompact;
   persistNow();
 }
 
@@ -2299,6 +2320,28 @@ function removeTodoList(listId: TodoListId, anchor?: HTMLElement): void {
 
 function onTodoColumnCountChange(count: number): void {
   todoColumnCount.value = count;
+}
+
+function onQuickColumnCountChange(count: number): void {
+  quickTagColumnCount.value = count;
+}
+
+function assignQuickTagSections(
+  draggedId: string,
+  targetColumn: number,
+  anchorId: string | null,
+  insertBefore: boolean,
+): void {
+  // Any manual drag freezes auto-distribution permanently for this workspace.
+  activeWorkspace.value.quickLayoutManual = true;
+  activeWorkspace.value.quickTags = assignQuickTagColumn(
+    activeWorkspace.value.quickTags,
+    draggedId,
+    targetColumn,
+    anchorId,
+    insertBefore,
+  );
+  persistNow();
 }
 
 function assignTodoListSections(
@@ -3422,6 +3465,7 @@ function moveItem<T extends { id: string }>(items: T[], dragId: string, targetId
           :buttons="activeWorkspace.quickButtons"
           :other-collapsed="activeWorkspace.quickOtherCollapsed"
           :show-hidden="activeWorkspace.showHiddenQuickButtons"
+          :compact="activeWorkspace.quickCompact"
           :language="state.language"
           :move-targets="workspaceMoveTargets"
           @title-update="updateTitle"
@@ -3432,8 +3476,10 @@ function moveItem<T extends { id: string }>(items: T[], dragId: string, targetId
           @copy-text="copyQuickText"
           @toggle-hidden="toggleQuickHidden"
           @toggle-show-hidden="activeWorkspace.showHiddenQuickButtons = !activeWorkspace.showHiddenQuickButtons; persistNow()"
+          @toggle-compact="toggleQuickCompact"
           @reorder="reorderQuickButtons"
-          @reorder-tag="reorderQuickTags"
+          @column-count-change="onQuickColumnCountChange"
+          @assign-tag-column="assignQuickTagSections"
           @move-to-tag="moveQuickButtonToTag"
           @move-button-to-workspace="moveQuickButtonAcrossWorkspaces"
           @move-tag-to-workspace="moveQuickTagAcrossWorkspaces"

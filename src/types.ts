@@ -19,6 +19,14 @@ export interface QuickTag {
   collapsed?: boolean;
   /** One of QUICK_TAG_COLORS. Persisted so a tag keeps its color for its lifetime. */
   color?: string;
+  /**
+   * Which masonry column (0-indexed) this tag group is pinned to, mirroring
+   * `TodoListConfig.column`. Auto-distributed while `quickLayoutManual` is
+   * false; frozen once the user manually drags a tag across columns. Displayed
+   * value is clamped to the current column count. Optional only so test
+   * fixtures can omit it (treated as column 0).
+   */
+  column?: number;
 }
 export type TodoListId = string;
 export type TodoPeriod = TodoListId;
@@ -144,6 +152,13 @@ export interface WorkspaceData {
   quickButtons: QuickButton[];
   quickOtherCollapsed: boolean;
   showHiddenQuickButtons: boolean;
+  /** true = 紧凑快捷按钮（隐藏类型副标题、压低高度）；默认大按钮。 */
+  quickCompact: boolean;
+  /**
+   * Once true, quick tags stop auto-distributing across columns on width/tag
+   * changes — each tag's `column` is only changed by explicit drag reordering.
+   */
+  quickLayoutManual: boolean;
   /**
    * Once true, todo lists stop auto-distributing across columns on width/list
    * changes — each list's `column` is only changed by explicit drag reordering.

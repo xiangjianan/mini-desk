@@ -3796,12 +3796,14 @@ describe("App shell", () => {
     const wrapper = mountApp();
 
     try {
-      wrapper.getComponent(QuickButtons).vm.$emit("reorderTag", "tag-a", "tag-b");
+      wrapper.getComponent(QuickButtons).vm.$emit("assignTagColumn", "tag-b", 0, "tag-a", true);
       await wrapper.vm.$nextTick();
 
       const stored = JSON.parse(localStorage.getItem(STORAGE_KEY) || "{}");
       const workspace = stored.workspaces[0];
       expect(workspace.quickTags.map((tag: { id: string }) => tag.id)).toEqual(["tag-b", "tag-a"]);
+      // 手动拖拽后冻结列的自动分配。
+      expect(workspace.quickLayoutManual).toBe(true);
     } finally {
       wrapper.unmount();
     }
@@ -3827,7 +3829,7 @@ describe("App shell", () => {
 
       const stored = JSON.parse(localStorage.getItem(STORAGE_KEY) || "{}");
       const workspace = stored.workspaces[0];
-      expect(workspace.quickTags).toEqual([{ id: "tag-a", title: "标签 A", color: expect.any(String), collapsed: true }]);
+      expect(workspace.quickTags).toEqual([{ id: "tag-a", title: "标签 A", color: expect.any(String), collapsed: true, column: 0 }]);
     } finally {
       wrapper.unmount();
     }

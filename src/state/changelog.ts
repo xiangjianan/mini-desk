@@ -29,6 +29,26 @@ export interface ChangelogEntry {
 
 export const CHANGELOG: ChangelogEntry[] = [
   {
+    version: "1.0.177",
+    date: "2026-09-17",
+    notes: {
+      zh: [
+        "新增：快捷动作区标签支持多列布局 —— 区域拉宽时自动分列，列序与拖拽换列和提醒事项区完全一致",
+        "新增：快捷按钮右键菜单可切换「紧凑/大按钮」，紧凑模式隐藏类型说明并压低按钮高度",
+        "新增：标签标题右侧的加号按钮，直接在该标签内新增快捷动作",
+        "优化：提醒事项过期未完成时整行文本标红，一眼识别逾期项",
+        "修复：Windows 下预览图片按空格关闭时图片周围出现焦点边框；快捷区滚动条不再遮挡按钮",
+      ],
+      en: [
+        "Quick action tags now flow into multiple columns as the panel widens; column order and drag behavior match the reminders panel",
+        "Right-click a quick button to switch between compact and large sizes; compact mode hides the type caption and shrinks the height",
+        "A plus button next to each tag heading adds a new quick action directly inside that tag",
+        "Overdue unfinished reminders now render their whole line in red so expired items stand out",
+        "Fixed a Windows-only focus ring around the image preview when closing with Space; the quick panel scrollbar no longer covers buttons",
+      ],
+    },
+  },
+  {
     version: "1.0.176",
     date: "2026-09-17",
     notes: {

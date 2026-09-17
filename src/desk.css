@@ -86,11 +86,21 @@ html[data-theme="dark"] .workbench-shell,
 .workbench-shell .image-list { padding: 18px 0; gap: 14px; }
 .workbench-shell .image-card { border-radius: 8px; box-shadow: none; }
 
-.workbench-shell .quick-tag-groups { gap: 20px; padding: 16px 0; }
+/* 右侧 12px 让位给悬浮滚动条（NScrollbar 轨道压在内容上缘，滚动时不再盖住按钮/计数）。 */
+.workbench-shell .quick-tag-groups { gap: 20px; padding: 16px 12px 16px 0; }
+.workbench-shell .quick-tag-column { gap: 20px; }
 .workbench-shell .quick-tag-heading { min-height: 32px; padding: 0 0 8px; }
 .workbench-shell .quick-tag-title { font-weight: 600; }
 .workbench-shell .quick-tag-count { background: transparent; font-size: 12px; }
 .workbench-shell .quick-buttons { display: grid; grid-template-columns: minmax(0, 1fr); gap: 8px; padding: 0; }
+.workbench-shell .quick-tag-add-button { color: var(--muted); }
+.workbench-shell .quick-tag-add-button:hover,
+.workbench-shell .quick-tag-add-button:focus-visible { color: var(--primary); background: transparent; }
+
+/* 紧凑按钮：单行、隐藏类型副标题，高度对齐提醒列表的紧凑行（42px）。 */
+.workbench-shell .quick-block.is-compact button.quick-button { min-height: 42px; padding: 8px 12px; }
+.workbench-shell .quick-block.is-compact .quick-button-content { gap: 0; }
+.workbench-shell .quick-block.is-compact .quick-button-kind { display: none; }
 .workbench-shell button.quick-button {
   display: flex;
   width: 100%;
@@ -185,14 +195,10 @@ html[data-theme="dark"] .workbench-shell,
   .workbench-shell .quick-buttons { grid-template-columns: repeat(auto-fit, minmax(135px, 1fr)); }
   .workbench-shell button.quick-button { min-height: 48px; }
   .workbench-shell .quick-tag-groups { gap: 12px; }
+  .workbench-shell .quick-tag-column { gap: 12px; }
 }
 
-/* Keep the date as the overdue signal without painting the whole list red. */
-.workbench-shell .todo-item.deadline-overdue:not(.is-done) .todo-input,
-.workbench-shell .today-focus-item.deadline-overdue:not(.is-done) .today-focus-input {
-  color: var(--text);
-  -webkit-text-fill-color: var(--text);
-}
+/* 过期提醒整行文本染红：styles.css 的 var(--danger) 规则在此不再被覆盖。 */
 
 .workbench-shell .workspace-trigger-title { font-size: 18px; font-weight: 600; letter-spacing: -0.3px; }
 .workbench-zone .panel-header h1,

@@ -50,6 +50,8 @@ export function getSerializableWorkspace(
     quickButtons: workspace.quickButtons.map((button) => ({ ...button })),
     quickOtherCollapsed: workspace.quickOtherCollapsed,
     showHiddenQuickButtons: workspace.showHiddenQuickButtons,
+    quickCompact: workspace.quickCompact,
+    quickLayoutManual: workspace.quickLayoutManual,
     todoLayoutManual: workspace.todoLayoutManual,
     zoneVisibility: normalizeZoneVisibility(workspace.zoneVisibility),
     ...(workspace.inbox ? { inbox: { ...workspace.inbox } } : {}),

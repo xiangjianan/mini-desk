@@ -4,11 +4,16 @@ import { resolve } from "node:path";
 import { afterEach, describe, expect, it, vi } from "vitest";
 import QuickButtons from "../components/QuickButtons.vue";
 import {
+  assignQuickTagColumn,
   buildVisibleQuickButtonGroups,
+  computeQuickColumnCount,
+  distributeQuickTagColumns,
   filterVisibleQuickButtonGroups,
   formatQuickCopiedPreview,
   getQuickTagColor,
+  groupQuickButtonsByColumn,
   hasOverloadedVisibleQuickButtonGroup,
+  QUICK_BUTTON_OTHER_GROUP_ID,
 } from "../state/quickButtons";
 import { globalSearchQuery, resetGlobalSearch, setGlobalSearch } from "../state/globalSearch";
 import { menuDropdownStub } from "./helpers/menu-dropdown-stub";
@@ -279,6 +284,56 @@ describe("QuickButtons", () => {
     expect(hasOverloadedVisibleQuickButtonGroup([...visibleButtons.slice(0, 12), ...hiddenButtons], tags, 12)).toBe(false);
   });
 
+  it("maps the measured quick panel width to a clamped column count", () => {
+    expect(computeQuickColumnCount(0, 5)).toBe(1);
+    expect(computeQuickColumnCount(639, 5)).toBe(1);
+    expect(computeQuickColumnCount(640, 5)).toBe(2);
+    expect(computeQuickColumnCount(960, 5)).toBe(3);
+    // 列数永远不超过可见分组数。
+    expect(computeQuickColumnCount(2000, 3)).toBe(3);
+    expect(computeQuickColumnCount(2000, 1)).toBe(1);
+  });
+
+  it("buckets quick tag groups by pinned column and keeps the other group last", () => {
+    const groups = [
+      { id: "tag-a", title: "A", buttons: [], reorderable: true, collapsed: false, column: 0 },
+      { id: "tag-b", title: "B", buttons: [], reorderable: true, collapsed: false, column: 1 },
+      { id: "tag-c", title: "C", buttons: [], reorderable: true, collapsed: false, column: 0 },
+      { id: QUICK_BUTTON_OTHER_GROUP_ID, title: "其他", buttons: [], reorderable: false, collapsed: false },
+    ];
+
+    const buckets = groupQuickButtonsByColumn(groups, 2);
+    expect(buckets.map((bucket) => bucket.map((group) => group.id))).toEqual([
+      ["tag-a", "tag-c"],
+      ["tag-b", QUICK_BUTTON_OTHER_GROUP_ID],
+    ]);
+
+    // 超出当前列数的 column 被夹取回最后一列。
+    expect(groupQuickButtonsByColumn([{ ...groups[1], column: 9 }], 2).map((bucket) => bucket.map((group) => group.id)))
+      .toEqual([[], ["tag-b"]]);
+  });
+
+  it("distributes quick tags across columns and assigns dragged tags explicitly", () => {
+    const tags = [
+      { id: "tag-a", title: "A", column: 0 },
+      { id: "tag-b", title: "B", column: 0 },
+      { id: "tag-c", title: "C", column: 0 },
+      { id: "tag-d", title: "D", column: 0 },
+    ];
+
+    const distributed = distributeQuickTagColumns(tags, 2);
+    expect(distributed.map((tag) => tag.column)).toEqual([0, 0, 1, 1]);
+
+    // 把 tag-a 拖到第 1 列的空白区：追加到该列末尾，其他标签不动。
+    const assigned = assignQuickTagColumn(distributed, "tag-a", 1, null, false);
+    expect(assigned.map((tag) => `${tag.id}:${tag.column}`)).toEqual([
+      "tag-b:0",
+      "tag-c:1",
+      "tag-d:1",
+      "tag-a:1",
+    ]);
+  });
+
   it("groups visible quick buttons by tag order and keeps untagged buttons under other", () => {
     const wrapper = mountQuickButtons({
       tags: [
@@ -313,6 +368,41 @@ describe("QuickButtons", () => {
 
     const choices = wrapper.findAll(".quick-tag-choice");
     expect(choices.find((choice) => choice.text() === "工作")?.attributes("aria-pressed")).toBe("true");
+    wrapper.unmount();
+  });
+
+  it("preselects the tag when adding from the heading plus button", async () => {
+    const wrapper = mountQuickButtons({
+      tags: [{ id: "tag-work", title: "工作" }],
+      buttons: [
+        { id: "b1", title: "Btn", value: "v", type: "link", tagId: "tag-work", hidden: false },
+        { id: "other", title: "未分类", value: "o", type: "link", hidden: false },
+      ],
+    });
+
+    await wrapper.findAll(".quick-tag-add-button")[0].trigger("click");
+    expect(wrapper.find(".quick-dialog").exists()).toBe(true);
+    expect(wrapper.findAll(".quick-tag-choice").find((choice) => choice.text() === "工作")?.attributes("aria-pressed")).toBe("true");
+
+    // 其他组的加号：无标签预选，落进其他分组而不是新建同名标签。
+    await wrapper.findAll(".quick-tag-add-button")[1].trigger("click");
+    expect(wrapper.findAll(".quick-tag-choice").find((choice) => choice.text() === "无标签")?.attributes("aria-pressed")).toBe("true");
+    wrapper.unmount();
+  });
+
+  it("marks the quick block compact and flips the size toggle menu label", async () => {
+    const wrapper = mountQuickButtons({
+      buttons: [{ id: "a", title: "A", value: "v", type: "link", hidden: false }],
+      compact: true,
+    });
+
+    expect(wrapper.get(".quick-block").classes()).toContain("is-compact");
+
+    await wrapper.get(".quick-button").trigger("contextmenu");
+    expect(wrapper.findAll(".dropdown-option").map((option) => option.text())).toContain("切换为大按钮");
+
+    await wrapper.findAll(".dropdown-option").find((option) => option.text() === "切换为大按钮")?.trigger("click");
+    expect(wrapper.emitted("toggleCompact")).toHaveLength(1);
     wrapper.unmount();
   });
 
@@ -446,7 +536,7 @@ describe("QuickButtons", () => {
     expect(styles).toMatch(/\.quick-tag-add-row\s*\{[^}]*padding: 3px/s);
   });
 
-  it("emits tag reorder when a quick tag heading is dropped on another tag", async () => {
+  it("emits a tag column assignment when a quick tag heading is dropped on another tag", async () => {
     const wrapper = mountQuickButtons({
       tags: [
         { id: "tag-a", title: "标签 A" },
@@ -461,7 +551,7 @@ describe("QuickButtons", () => {
     await wrapper.findAll(".quick-tag-heading")[0].trigger("dragstart");
     await wrapper.findAll(".quick-tag-heading")[1].trigger("drop");
 
-    expect(wrapper.emitted("reorderTag")?.[0]).toEqual(["tag-a", "tag-b"]);
+    expect(wrapper.emitted("assignTagColumn")?.[0]).toEqual(["tag-a", 0, "tag-b", true]);
 
     wrapper.unmount();
   });
@@ -1107,11 +1197,16 @@ describe("QuickButtons", () => {
       "粘贴",
       "显示隐藏项",
       "标签管理",
+      "切换为紧凑按钮",
       "Tips",
     ]);
 
     await wrapper.findAll(".dropdown-option").find((option) => option.text() === "显示隐藏项")?.trigger("click");
     expect(wrapper.emitted("toggleShowHidden")).toHaveLength(1);
+
+    await wrapper.get(".quick-menu-button").trigger("click");
+    await wrapper.findAll(".dropdown-option").find((option) => option.text() === "切换为紧凑按钮")?.trigger("click");
+    expect(wrapper.emitted("toggleCompact")).toHaveLength(1);
 
     await wrapper.setProps({ showHidden: true });
     await wrapper.get(".quick-menu-button").trigger("click");
@@ -1120,6 +1215,7 @@ describe("QuickButtons", () => {
       "粘贴",
       "收起隐藏项",
       "标签管理",
+      "切换为紧凑按钮",
       "Tips",
     ]);
 
@@ -1135,6 +1231,7 @@ describe("QuickButtons", () => {
 
     expect(wrapper.findAll(".dropdown-option").map((option) => option.text())).toEqual([
       "编辑",
+      "切换为紧凑按钮",
       "隐藏",
       "删除",
       "Tips",
@@ -1154,6 +1251,7 @@ describe("QuickButtons", () => {
 
     expect(wrapper.findAll(".dropdown-option").map((option) => option.text())).toEqual([
       "编辑",
+      "切换为紧凑按钮",
       "隐藏",
       "复制文本",
       "复制链接",

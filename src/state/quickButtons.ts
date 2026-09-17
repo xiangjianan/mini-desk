@@ -1,5 +1,6 @@
 import type { QuickButton, QuickTag } from "../types";
 import { matchesSearch } from "../utils/searchHighlight";
+import { assignColumn, distributeColumns } from "./columns";
 
 export interface QuickButtonGroup {
   id: string;
@@ -9,6 +10,8 @@ export interface QuickButtonGroup {
   collapsed: boolean;
   /** Resolved palette color; undefined for the untagged/empty groups (no tint). */
   color?: string;
+  /** Pinned masonry column (from the tag); undefined for the 其他/empty groups. */
+  column?: number;
 }
 
 export const QUICK_BUTTON_EMPTY_GROUP_ID = "__empty";
@@ -73,6 +76,7 @@ export function buildVisibleQuickButtonGroups(
       reorderable: true,
       collapsed: Boolean(tag.collapsed),
       color: resolvedColor === QUICK_TAG_DEFAULT_COLOR ? undefined : resolvedColor,
+      column: tag.column ?? 0,
     }];
   });
 
@@ -108,6 +112,54 @@ export function hasOverloadedVisibleQuickButtonGroup(
   }
 
   return false;
+}
+
+/** Width below which the quick panel stays single-column (= 2 × the target column width). */
+export const QUICK_MULTI_COLUMN_THRESHOLD = 640;
+export const QUICK_COLUMN_TARGET_WIDTH = 320;
+
+/**
+ * Map a measured quick-panel content width to a column count: 1 below the
+ * threshold, then +1 column per additional QUICK_COLUMN_TARGET_WIDTH, clamped
+ * to the visible group count (so few groups never leave empty columns).
+ */
+export function computeQuickColumnCount(width: number, groupCount: number): number {
+  if (width < QUICK_MULTI_COLUMN_THRESHOLD || groupCount <= 1) return 1;
+  const computed = 2 + Math.floor((width - QUICK_MULTI_COLUMN_THRESHOLD) / QUICK_COLUMN_TARGET_WIDTH);
+  return Math.max(1, Math.min(computed, groupCount));
+}
+
+/**
+ * Group visible quick-button groups into explicit column buckets by their
+ * pinned `column`, clamped to `columnCount`. Array order within a bucket =
+ * vertical order. Non-tag groups (其他/空态) carry no `column` and always land
+ * at the end of the LAST bucket — the 其他 group is not reorderable and stays
+ * after every tag, mirroring its single-column position.
+ */
+export function groupQuickButtonsByColumn(groups: QuickButtonGroup[], columnCount: number): QuickButtonGroup[][] {
+  const columns = Math.max(1, columnCount);
+  const buckets: QuickButtonGroup[][] = Array.from({ length: columns }, () => []);
+  const clamp = (column: number): number => Math.max(0, Math.min(column, columns - 1));
+  groups.forEach((group) => {
+    buckets[group.column === undefined ? columns - 1 : clamp(group.column)].push(group);
+  });
+  return buckets;
+}
+
+/** Auto-distribute quick tags across columns (see [columns.ts](./columns.ts)). */
+export function distributeQuickTagColumns(tags: QuickTag[], columnCount: number): QuickTag[] {
+  return distributeColumns(tags, columnCount);
+}
+
+/** Move a dragged quick tag into a column relative to an anchor tag (see [columns.ts](./columns.ts)). */
+export function assignQuickTagColumn(
+  tags: QuickTag[],
+  draggedId: string,
+  targetColumn: number,
+  anchorId: string | null,
+  insertBefore: boolean,
+): QuickTag[] {
+  return assignColumn(tags, draggedId, targetColumn, anchorId, insertBefore);
 }
 
 const QUICK_COPY_PREVIEW_MAX_LENGTH = 120;

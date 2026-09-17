@@ -96,6 +96,8 @@ export function normalizeWorkspaceData(item: unknown, language: AppLanguage = DE
     quickButtons: normalizeQuickButtons(typed.quickButtons, language, quickTags),
     quickOtherCollapsed: Boolean(typed.quickOtherCollapsed),
     showHiddenQuickButtons: Boolean(typed.showHiddenQuickButtons),
+    quickCompact: Boolean(typed.quickCompact),
+    quickLayoutManual: Boolean(typed.quickLayoutManual),
     todoLayoutManual: Boolean(typed.todoLayoutManual),
     todoLists,
     showCompletedTodos: normalizeCompletedVisibility(typed.showCompletedTodos, todoLists),
@@ -354,7 +356,9 @@ export function normalizeQuickTags(tags: unknown): QuickTag[] {
       if (!id || !title || seen.has(id)) return null;
       seen.add(id);
       const color = normalizeQuickTagColor(record.color, getQuickTagColor(index));
-      return { id, title, color, ...(record.collapsed === true ? { collapsed: true } : {}) };
+      // Numeric guard (not Boolean()): column 0 is valid and falsy.
+      const column = typeof record.column === "number" && Number.isFinite(record.column) ? Math.max(0, Math.floor(record.column)) : 0;
+      return { id, title, color, column, ...(record.collapsed === true ? { collapsed: true } : {}) };
     })
     .filter((item): item is QuickTag => item !== null);
 }

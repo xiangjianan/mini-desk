@@ -1,5 +1,6 @@
 import type { TodoCompletedVisibility, TodoItem, TodoListConfig, TodoListId, TodoMap, TodoPeriod } from "../types";
 import { isValidNotifyAt } from "./deadlines";
+import { assignColumn, distributeColumns } from "./columns";
 
 /** 可见提醒条数超过该阈值时，点击/聚焦列表会弹瘦身提示（App.vue 与 TodoPanel 共用）。 */
 export const TODO_DENSITY_THRESHOLD = 20;
@@ -165,48 +166,20 @@ export function removeTodoListData(
 }
 
 /**
- * Auto-distribute lists across `columnCount` columns, column-major (fills
- * column 0 top-to-bottom, then column 1, …) with a left-biased balance: every
- * column gets `floor(N / C)` lists, and the first `N mod C` columns get one
- * extra. This guarantees a column is never shorter than the one to its right
- * (the left column always stays "ahead") and never leaves a trailing column
- * empty. Runs only while the layout is not yet manual. Each list's `column` is
- * overwritten; array order is preserved.
+ * Auto-distribute lists across `columnCount` columns (see [columns.ts](./columns.ts)
+ * for the algorithm). Runs only while the layout is not yet manual.
  */
 export function distributeTodoListColumns(
   lists: TodoListConfig[],
   columnCount: number,
 ): TodoListConfig[] {
-  const columns = Math.max(1, Math.floor(columnCount));
-  if (columns === 1) {
-    return lists.map((list) => (list.column === 0 ? list : { ...list, column: 0 }));
-  }
-  const base = Math.floor(lists.length / columns);
-  const remainder = lists.length % columns;
-  // Map each list index to its column by walking the per-column sizes left to
-  // right. Column c holds `base + 1` lists while c < remainder, else `base`.
-  const columnOfIndex = new Array<number>(lists.length);
-  let cursor = 0;
-  for (let column = 0; column < columns; column += 1) {
-    const size = base + (column < remainder ? 1 : 0);
-    for (let offset = 0; offset < size; offset += 1) {
-      columnOfIndex[cursor] = column;
-      cursor += 1;
-    }
-  }
-  return lists.map((list, index) => {
-    const column = columnOfIndex[index] ?? columns - 1;
-    return list.column === column ? list : { ...list, column };
-  });
+  return distributeColumns(lists, columnCount);
 }
 
 /**
  * Move the dragged list into `targetColumn`, positioned relative to an anchor
- * list (which must already be in that column). Used for both dropping onto a
- * list (`insertBefore` controls before/after the anchor) and dropping into a
- * column's blank space (`anchorId === null` → appended after the last list
- * currently in `targetColumn`). Always updates the dragged list's `column`.
- * No-op when the dragged list is missing or the target column is negative.
+ * list (`anchorId === null` → appended after the last list currently in
+ * `targetColumn`). See [columns.ts](./columns.ts).
  */
 export function assignTodoListColumn(
   lists: TodoListConfig[],
@@ -215,26 +188,7 @@ export function assignTodoListColumn(
   anchorId: TodoListId | null,
   insertBefore: boolean,
 ): TodoListConfig[] {
-  const sourceIndex = lists.findIndex((list) => list.id === draggedId);
-  if (sourceIndex < 0 || targetColumn < 0) return lists;
-  const column = Math.floor(targetColumn);
-  const next = lists.map((list) => ({ ...list }));
-  const [dragged] = next.splice(sourceIndex, 1);
-  const moved = dragged.column === column ? dragged : { ...dragged, column };
-  let insertIndex: number;
-  if (anchorId !== null && anchorId !== draggedId) {
-    const anchorIndex = next.findIndex((list) => list.id === anchorId);
-    insertIndex = anchorIndex >= 0 ? (insertBefore ? anchorIndex : anchorIndex + 1) : next.length;
-  } else {
-    // Blank space: land at the end of targetColumn's current lists.
-    let lastInColumn = -1;
-    next.forEach((list, index) => {
-      if (list.column === column) lastInColumn = index;
-    });
-    insertIndex = lastInColumn + 1;
-  }
-  next.splice(insertIndex, 0, moved);
-  return next;
+  return assignColumn(lists, draggedId, targetColumn, anchorId, insertBefore);
 }
 
 export function cloneTodoMap(todos: TodoMap): TodoMap {
