@@ -409,6 +409,7 @@ function updateMobileBlocked(source?: MediaQueryList | MediaQueryListEvent): voi
     activeGuideKey.value = null;
   }
   isMobileBlocked.value = matches;
+  applyThemeColor(effectiveTheme.value);
 }
 
 function shouldBlockBoardEffects(): boolean {
@@ -466,9 +467,22 @@ function forgetMobileInboxCode(): void {
 
 /** 手机速记发送成功：复用伴宠气泡（GIF + 消息）在屏幕右下角弹出「已发送 N 条」。
  *  force 绕过移动端板效屏蔽；落点改为安全区感知的右下角（速记页无桌面编辑器可锚定）。 */
+const mobileCaptureRef = ref<{ getEditorElement: () => HTMLTextAreaElement | null } | null>(null);
+
+function positionMobileSuccessBubble(): void {
+  if (!isMobileBlocked.value || !companionVisible.value) return;
+  const editor = mobileCaptureRef.value?.getEditorElement();
+  if (!editor) return;
+  const rect = editor.getBoundingClientRect();
+  companionPosition.value = {
+    right: `${Math.max(12, window.innerWidth - rect.right + 12)}px`,
+    bottom: `${Math.max(12, window.innerHeight - rect.bottom + 12)}px`,
+  };
+}
+
 function handleMobileInboxSent(count: number): void {
   showBubbleText(uiText.value.app.mobileInboxSent.replace("{count}", () => String(count)), undefined, { force: true });
-  companionPosition.value = { right: "max(16px, env(safe-area-inset-right, 0px))", bottom: "calc(var(--safe-bottom) + 20px)" };
+  void nextTick(positionMobileSuccessBubble);
 }
 
 /** 速记页复制反馈：点击配对码 → 复制分组码文本 → 短暂弹「复制成功/失败」提示。 */
@@ -591,6 +605,8 @@ onMounted(async () => {
   checkAppVersion();
   void checkLatestAppVersion();
   window.addEventListener("keydown", handleGlobalKeydown);
+  window.addEventListener("resize", positionMobileSuccessBubble);
+  document.addEventListener("scroll", positionMobileSuccessBubble, true);
   window.addEventListener("focus", handleNotificationReturn);
   window.addEventListener("storage", handleStorageEvent);
   window.addEventListener("beforeunload", handleBeforeUnload);
@@ -618,6 +634,8 @@ onMounted(async () => {
 onUnmounted(() => {
   appMounted = false;
   window.removeEventListener("keydown", handleGlobalKeydown);
+  window.removeEventListener("resize", positionMobileSuccessBubble);
+  document.removeEventListener("scroll", positionMobileSuccessBubble, true);
   window.removeEventListener("focus", handleNotificationReturn);
   window.removeEventListener("storage", handleStorageEvent);
   window.removeEventListener("beforeunload", handleBeforeUnload);
@@ -2546,7 +2564,7 @@ async function updateCustomCompanionGif(files: { light?: File; dark?: File }, an
 function applyTheme(): void {
   // auto 模式由 effectiveTheme 解析系统偏好后落到 data-theme 与标题栏色。
   document.documentElement.dataset.theme = effectiveTheme.value;
-  // standalone 标题栏颜色随应用主题联动（浅色 #fcfcfe / 深色 #262628）。
+  // 状态栏随主题与移动端/桌面画布取色。
   applyThemeColor(effectiveTheme.value);
 }
 
@@ -2949,7 +2967,7 @@ function getDensityAreaLabel(type: DensityAreaType): string {
   }
   if (type === "todos") return "提醒事项";
   if (type === "quickButtons") return "快捷动作";
-  return "图片";
+  return "贴图";
 }
 
 function getLargestTodoListCount(): number {
@@ -3510,6 +3528,7 @@ function moveItem<T extends { id: string }>(items: T[], dragId: string, targetId
     >
       <template v-if="mobileInboxCode">
         <MobileInboxCapture
+          ref="mobileCaptureRef"
           v-model="mobileInboxDraftText"
           :code="mobileInboxCode"
           :language="state.language"

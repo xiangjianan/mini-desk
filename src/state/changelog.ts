@@ -29,6 +29,28 @@ export interface ChangelogEntry {
 
 export const CHANGELOG: ChangelogEntry[] = [
   {
+    version: "1.0.176",
+    date: "2026-09-17",
+    notes: {
+      zh: [
+        "改版：桌面四区全新视觉 —— 无边框白色工作台、细分隔线、带图标的区域标题与清晰的标题层级",
+        "新增：便签工具栏「智能粘贴」按钮，一键把剪贴板内容智能整理后追加到当前便签末尾（防重复点击、切换便签自动丢弃过期结果）",
+        "优化：快捷按钮显示类型说明并更新悬停样式，分组展开按钮居中对齐；折叠的提醒事项行距更舒适",
+        "优化：默认区域命名更新为「提醒事项 / 记事本 / 贴图 / 随手机」，旧默认名自动迁移，自定义标题保持不变",
+        "改版：手机速记页重做为「打开的记事本」布局 —— 紧凑连接条、大写作区、拇指可达的粘贴/AI 控件与并排发送按钮",
+        "优化：手机配对页简化，三步引导折叠为可展开面板；深色模式下蓝色按钮对比度提升",
+      ],
+      en: [
+        "Redesign: refreshed desktop four-zone visuals — borderless white workbench, thin dividers, icon-headed zones and a clearer title hierarchy",
+        "Added: a \"Smart paste\" button in the notes toolbar that polishes the clipboard and appends it to the active note (no double-clicks; stale results are discarded after switching notes)",
+        "Improved: quick buttons now show type captions with new hover styling, group disclosure buttons are centered, and collapsed reminder rows get comfier spacing",
+        "Improved: default zone names updated to Reminders / Notepad / Stickers / Quick Notes; old default names migrate automatically and custom titles are preserved",
+        "Redesign: the mobile capture page is now an open-notebook layout — compact connection row, a large writing surface, thumb-reachable paste/AI controls and side-by-side send buttons",
+        "Improved: simplified mobile pairing with setup steps folded into an expandable panel, plus better blue-button contrast in dark mode",
+      ],
+    },
+  },
+  {
     version: "1.0.173",
     date: "2026-09-15",
     notes: {

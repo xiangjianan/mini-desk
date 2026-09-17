@@ -8,6 +8,8 @@ export const THEME_COLOR_META = {
   dark: "#262628",
 } as const;
 
+export const MOBILE_THEME_COLOR_META = { light: "#ffffff", dark: "#2c2c2e" } as const;
+
 export type ThemeName = keyof typeof THEME_COLOR_META;
 
 export function applyThemeColor(theme: ThemeName): void {
@@ -17,5 +19,6 @@ export function applyThemeColor(theme: ThemeName): void {
     meta.name = "theme-color";
     document.head.appendChild(meta);
   }
-  meta.content = THEME_COLOR_META[theme];
+  const mobile = window.matchMedia?.("(max-width: 940px)").matches ?? false;
+  meta.content = (mobile ? MOBILE_THEME_COLOR_META : THEME_COLOR_META)[theme];
 }
