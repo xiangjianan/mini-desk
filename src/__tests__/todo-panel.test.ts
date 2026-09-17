@@ -1363,6 +1363,37 @@ describe("TodoPanel", () => {
     }
   });
 
+  it("expands a collapsed list before creating a reminder from the heading add button", async () => {
+    // 收起时点加号：必须先展开再新增，否则空提醒被塞进 inert 隐藏的列表里，
+    // createTodo 的 nextTick 聚焦也会对 inert 输入框静默失败。
+    const wrapper = mount(TodoPanel, {
+      props: {
+        todoLists: [{ id: "morning", title: "☀️ 早上", collapsed: true, compact: false }],
+        todos: { morning: [{ id: "a", text: "事项", done: false }] },
+        titles: DEFAULT_TITLES,
+      },
+      global: {
+        stubs: {
+          Button: true,
+          Dropdown: dropdownStub,
+          NDropdown: dropdownStub,
+          NTooltip: tooltipStub,
+        },
+      },
+    });
+
+    try {
+      await wrapper.get('button[aria-label="添加提醒"]').trigger("click");
+
+      const emittedNames = Object.keys(wrapper.emitted() ?? {});
+      expect(emittedNames.indexOf("toggleListCollapsed")).toBeLessThan(emittedNames.indexOf("create"));
+      expect(wrapper.emitted("toggleListCollapsed")?.[0]).toEqual(["morning", false]);
+      expect(wrapper.emitted("create")?.[0]).toEqual(["morning"]);
+    } finally {
+      wrapper.unmount();
+    }
+  });
+
   it("sorts today's focus reminders by deadline before undated starred items", () => {
     const wrapper = mount(TodoPanel, {
       props: {

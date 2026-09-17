@@ -438,6 +438,16 @@ function handleListClick(event: MouseEvent, period: TodoPeriod): void {
   emit("create", period);
 }
 
+/**
+ * 标题右侧加号：列表收起时先展开再新增。收起的内容仍在 DOM 但被
+ * aria-hidden + inert 隐藏——直接新增会把空提醒塞进看不见的列表里，
+ * 且 createTodo 的 nextTick 聚焦对 inert 输入框静默失败。
+ */
+function handleHeadingAddClick(list: TodoListConfig): void {
+  if (list.collapsed) emit("toggleListCollapsed", list.id, false);
+  emit("create", list.id);
+}
+
 function handleTodoTextDrop(event: DragEvent, period: TodoPeriod): void {
   dragHoverListId.value = null;
   if (draggedListId.value) {
@@ -1810,7 +1820,7 @@ function buildTodoListEntries(period: TodoListId, todos: TodoItem[], deferredDon
               :aria-label="uiText.common.smartPaste" :title="uiText.common.smartPaste"
               @click.stop="openSectionActions($event, list.id); handleMenuSelect('smart-paste')"><NIcon :component="ClipboardOutline" /></button>
             <button type="button" class="icon-button" :aria-label="uiText.desk.addReminder" :title="uiText.desk.addReminder"
-              @click.stop="emit('create', list.id)"><NIcon :component="AddOutline" /></button>
+              @click.stop="handleHeadingAddClick(list)"><NIcon :component="AddOutline" /></button>
             <button
               type="button"
               class="todo-section-menu-button icon-button"
