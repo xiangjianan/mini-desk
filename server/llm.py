@@ -128,10 +128,12 @@ def generate_quick_button(text: str) -> dict | None:
         title = decision["title"]
         button_type = decision["type"]
     except Exception:
+        # LLM 200 但决策 JSON 畸形（content 非 JSON/缺字段）——调 prompt 时最需要看的失败，留痕。
+        print(f"[llm] quick button decision rejected: {data!r}"[:200], file=sys.stderr)
         return None
     if not isinstance(title, str) or button_type not in ("link", "text"):
         return None
-    title = re.sub(r"\s+", " ", title).strip()[:QUICK_TITLE_MAX_CHARS]
+    title = re.sub(r"\s+", " ", title).strip()[:QUICK_TITLE_MAX_CHARS].strip()
     if not title:
         return None
     if button_type == "link" and not url:

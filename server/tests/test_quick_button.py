@@ -26,10 +26,19 @@ class TestSuccess:
         result = llm.generate_quick_button("  https://github.com/x?y=1 代码托管  ")
         assert result == {"title": "GitHub 主页", "type": "link", "value": "https://github.com/x?y=1"}
 
+    def test_link_value_strips_trailing_punctuation_from_input(self, api):
+        result = llm.generate_quick_button("看这个 https://example.com/a。")
+        assert result["value"] == "https://example.com/a"
+
     def test_text_button_value_is_raw_text_trimmed(self, api):
         api["content"] = json.dumps({"title": "部署命令", "type": "text"}, ensure_ascii=False)
         result = llm.generate_quick_button("  npm run deploy\n# 一键部署  ")
         assert result == {"title": "部署命令", "type": "text", "value": "npm run deploy\n# 一键部署"}
+
+    def test_text_button_with_url_in_text_keeps_full_raw_value(self, api):
+        api["content"] = json.dumps({"title": "部署文档", "type": "text"}, ensure_ascii=False)
+        result = llm.generate_quick_button("curl https://example.com/api 部署接口文档")
+        assert result == {"title": "部署文档", "type": "text", "value": "curl https://example.com/api 部署接口文档"}
 
     def test_url_and_page_passed_as_context(self, api, monkeypatch):
         monkeypatch.setattr(llm, "fetch_link_context", lambda url: "Example 站点 | 一个示例")
@@ -50,6 +59,11 @@ class TestGuardrails:
         api["content"] = json.dumps({"title": "一二三四五六七八九十一二三四五六", "type": "text"}, ensure_ascii=False)
         result = llm.generate_quick_button("文本")
         assert len(result["title"]) == llm.QUICK_TITLE_MAX_CHARS == 15
+
+    def test_title_truncation_strips_trailing_space(self, api):
+        api["content"] = json.dumps({"title": "一二三四五六七八九十一二三四 五", "type": "text"}, ensure_ascii=False)
+        result = llm.generate_quick_button("文本")
+        assert result["title"] == "一二三四五六七八九十一二三四"
 
     def test_link_without_url_falls_back_to_text(self, api):
         api["content"] = json.dumps({"title": "笔记", "type": "link"}, ensure_ascii=False)
