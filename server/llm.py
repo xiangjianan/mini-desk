@@ -7,10 +7,16 @@
 # 服务器 venv 是 Python 3.9：延迟注解求值，使 list[str] | None 写法可用。
 from __future__ import annotations
 
+import html as html_module
+import ipaddress
 import json
 import os
 import re
+import socket
 import sys
+import urllib.parse
+import urllib.request
+from urllib.parse import urljoin
 from urllib.request import Request, urlopen
 
 DEEPSEEK_API_URL = "https://api.deepseek.com/chat/completions"
@@ -34,6 +40,17 @@ STYLE_HINTS = {
     "concise": "简洁风格：最大限度精简，只保留核心信息，删掉可有可无的修饰词，每条尽量短。",
     "casual": "口语风格：像日常聊天一样自然随意，多用短句和常见口头表达，避免书面腔和生硬措辞。",
 }
+
+# 快捷动作智能粘贴：标题上限/链接抓取上限（8s 超时、256KB 截断、最多 3 跳、上下文 800 字）。
+QUICK_TITLE_MAX_CHARS = 15
+QUICK_FETCH_TIMEOUT_SECONDS = 8
+QUICK_FETCH_MAX_BYTES = 256 * 1024
+QUICK_FETCH_MAX_REDIRECTS = 3
+QUICK_CONTEXT_MAX_CHARS = 800
+FETCH_USER_AGENT = "Mozilla/5.0 (compatible; MiniDeskRelay/1.0)"
+
+_URL_RE = re.compile(r"https?://[^\s<>\"']+")
+_URL_TRAILING_PUNCTUATION = ".,;:!?，。；：）)】>」\"'"
 
 
 def _post_chat(system_prompt: str, user_content: str) -> object | None:
@@ -89,3 +106,95 @@ def _extract_items(data: object) -> list[str] | None:
     if not cleaned:
         return None
     return cleaned[:MAX_ITEMS]
+
+
+def extract_first_url(text: str) -> str | None:
+    """从原文逐字提取第一个 http(s) URL（剥掉常见尾部标点）；没有则 None。
+    快捷链接按钮的 value 一律来自这里，不经 LLM 生成，杜绝虚构链接。"""
+    for match in _URL_RE.finditer(text):
+        url = match.group(0).rstrip(_URL_TRAILING_PUNCTUATION)
+        if len(url) > len("https://"):
+            return url
+    return None
+
+
+def _resolve_hostname(hostname: str) -> list[str]:
+    try:
+        infos = socket.getaddrinfo(hostname, None)
+    except OSError:
+        return []
+    return [info[4][0] for info in infos]
+
+
+def is_safe_fetch_url(url: str) -> bool:
+    """SSRF 防护：仅 http(s)，主机名必须可解析且全部解析结果为公网地址。
+    私网/回环/链路本地（含 169.254.169.254 元数据端点）一律拒绝。"""
+    try:
+        parsed = urllib.parse.urlsplit(url)
+    except ValueError:
+        return False
+    if parsed.scheme not in ("http", "https") or not parsed.hostname:
+        return False
+    addresses = _resolve_hostname(parsed.hostname)
+    if not addresses:
+        return False
+    for address in addresses:
+        try:
+            if not ipaddress.ip_address(address).is_global:
+                return False
+        except ValueError:
+            return False
+    return True
+
+
+class _NoRedirectHandler(urllib.request.HTTPRedirectHandler):
+    def redirect_request(self, req, fp, code, msg, headers, newurl):
+        return None  # 不自动跟跳：每一跳回到 fetch_link_context 里复检安全后再取。
+
+
+def _open_no_redirect(request: urllib.request.Request):
+    return urllib.request.build_opener(_NoRedirectHandler).open(request, timeout=QUICK_FETCH_TIMEOUT_SECONDS)
+
+
+def fetch_link_context(url: str) -> str | None:
+    """抓链接页面的 <title>/meta 上下文（≤QUICK_CONTEXT_MAX_CHARS）；任何失败返回 None。
+    最多跟 QUICK_FETCH_MAX_REDIRECTS 跳、每跳过 SSRF 复检、只接受 text/html。不抛异常。"""
+    current = url
+    for _ in range(QUICK_FETCH_MAX_REDIRECTS + 1):
+        if not is_safe_fetch_url(current):
+            return None
+        request = urllib.request.Request(current, headers={"User-Agent": FETCH_USER_AGENT, "Accept": "text/html"})
+        try:
+            with _open_no_redirect(request) as response:
+                if "text/html" not in (response.headers.get("Content-Type") or "").lower():
+                    return None
+                body = response.read(QUICK_FETCH_MAX_BYTES).decode("utf-8", "ignore")
+                location = response.headers.get("Location")
+        except Exception as exc:
+            print(f"[llm] fetch link context failed: {exc!r}", file=sys.stderr)
+            return None
+        if location:
+            current = urljoin(current, location)
+            continue
+        return _extract_html_meta(body)
+    return None
+
+
+def _extract_html_meta(page_html: str) -> str | None:
+    """提取 <title>/description/keywords/og:title/og:description 压成一段上下文。"""
+
+    def grab(pattern: str) -> str:
+        match = re.search(pattern, page_html, re.IGNORECASE | re.DOTALL)
+        return re.sub(r"\s+", " ", html_module.unescape(match.group(1))).strip() if match else ""
+
+    parts = [
+        grab(r"<title[^>]*>(.*?)</title>"),
+        grab(r"<meta[^>]+name=[\"']description[\"'][^>]*content=[\"'](.*?)[\"']"),
+        grab(r"<meta[^>]+content=[\"'](.*?)[\"'][^>]*name=[\"']description[\"']"),
+        grab(r"<meta[^>]+name=[\"']keywords[\"'][^>]*content=[\"'](.*?)[\"']"),
+        grab(r"<meta[^>]+content=[\"'](.*?)[\"'][^>]*name=[\"']keywords[\"']"),
+        grab(r"<meta[^>]+property=[\"']og:title[\"'][^>]*content=[\"'](.*?)[\"']"),
+        grab(r"<meta[^>]+property=[\"']og:description[\"'][^>]*content=[\"'](.*?)[\"']"),
+    ]
+    context = " | ".join(part for part in parts if part)
+    return context[:QUICK_CONTEXT_MAX_CHARS] if context else None
