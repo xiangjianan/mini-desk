@@ -5,7 +5,7 @@ import SpacePanel from "../components/SpacePanel.vue";
 import TodoPanel from "../components/TodoPanel.vue";
 import QuickButtons from "../components/QuickButtons.vue";
 import { DEFAULT_TITLES } from "../state/defaults";
-import type { PolishResult } from "../sync/polishClient";
+import type { PolishKind, PolishResult } from "../sync/polishClient";
 
 const wrappers: ReturnType<typeof mount>[] = [];
 const originalClipboard = Object.getOwnPropertyDescriptor(navigator, "clipboard");
@@ -15,7 +15,7 @@ afterEach(() => {
   else Reflect.deleteProperty(navigator, "clipboard");
 });
 
-function mountPastePanel(polish: (kind: "todo" | "note", text: string) => Promise<PolishResult>, raw = "clipboard draft") {
+function mountPastePanel(polish: (kind: PolishKind, text: string) => Promise<PolishResult>, raw = "clipboard draft") {
   const readText = vi.fn().mockResolvedValue(raw);
   Object.defineProperty(navigator, "clipboard", { configurable: true, value: { readText } });
   const wrapper = mount(SpacePanel, { props: {
