@@ -1,5 +1,6 @@
 import { readClipboardText } from "./clipboard";
 import { POLISH_MAX_CHARS, type PolishKind, type PolishResult, type PolishStyle } from "../sync/polishClient";
+import type { QuickButtonType } from "../types";
 
 /**
  * 本模块承载两条润色流程：智能粘贴（剪贴板全文）与AI润色（编辑器选中文本），共用 polishText 主干。
@@ -34,6 +35,50 @@ export interface SmartPasteOptions extends PolishFlowBase {
   insert: (texts: string[]) => void;
   /** 失败兜底时的原文拆分（便签=[原文整体]，提醒=按行拆条）。 */
   fallbackTexts: (raw: string) => string[];
+}
+
+/** 快捷动作智能粘贴的按钮产物：服务端只回 link/text，客户端兜底分类还可能给 app。 */
+export interface QuickSmartPasteButton {
+  title: string;
+  value: string;
+  type: QuickButtonType;
+}
+
+export interface QuickSmartPasteOptions extends PolishFlowBase {
+  /** 结果落位：成功=服务端生成的按钮；失败/超长=宿主普通粘贴语义的兜底按钮。 */
+  insert: (button: QuickSmartPasteButton) => void;
+  /** 失败兜底：宿主用现有普通粘贴分类（QuickButtons 的 classifyQuickText）生成按钮。 */
+  fallbackButton: (raw: string) => QuickSmartPasteButton;
+}
+
+/** 快捷动作智能粘贴编排：读剪贴板 → 服务端生成按钮 → 落位/降级。
+ *  与 polishText 同口径（空白/限长预检、working→done/fallback 气泡），仅结果形状是单个按钮对象。
+ *  最坏情况等于普通粘贴：任何失败都按原文生成按钮并提示。 */
+export async function runQuickSmartPaste(options: QuickSmartPasteOptions): Promise<void> {
+  const clipboardText = await readClipboardText();
+  if (typeof clipboardText !== "string" || !clipboardText.trim()) return;
+  const { anchor, notify, messages } = options;
+  const insertFallback = (): void => options.insert(options.fallbackButton(clipboardText));
+  // raw.length 按 UTF-16 计，服务端按码点计：客户端略严，方向安全。
+  if (clipboardText.length > POLISH_MAX_CHARS) {
+    insertFallback();
+    notify("fallback", messages.tooLarge, anchor);
+    return;
+  }
+  notify("working", messages.working, anchor);
+  let result: PolishResult = null;
+  try {
+    result = await options.polish("quick", clipboardText, options.style);
+  } catch {
+    result = null; // 宿主包装异常视同网络失败：任何异常都不击穿「最坏=普通粘贴」承诺。
+  }
+  if (result !== null && "button" in result && result.button) {
+    options.insert(result.button);
+    notify("done", messages.done(1), anchor);
+    return;
+  }
+  insertFallback();
+  notify("fallback", messages.fallback, anchor);
 }
 
 /** 智能粘贴/AI润色共用主干：空白预检 → 限长预检 → 气泡「整理中」→ 服务端整理 → 应用/降级。 */
@@ -82,10 +127,10 @@ export async function runSelectionPolish(options: SelectionPolishOptions): Promi
   await polishText(options.text, options, options.apply, () => undefined);
 }
 
-/** 从 uiText 组装两区域各自的文案（done 模板按 kind 区分，{count} 占位替换）。 */
+/** 从 uiText 组装两区域各自的文案（done 模板按 kind 区分，{count} 占位替换；quick 走 quickSmartPasteMessages）。 */
 export function smartPasteMessages(
   ui: { app: { polishWorking: string; polishTodoDone: string; polishNoteDone: string; polishFallback: string; polishTooLarge: string } },
-  kind: PolishKind,
+  kind: "todo" | "note",
 ): SmartPasteMessages {
   const template = kind === "todo" ? ui.app.polishTodoDone : ui.app.polishNoteDone;
   return {
@@ -105,5 +150,17 @@ export function selectionPolishMessages(
     done: (count) => ui.app.polishNoteDone.replace("{count}", () => String(count)),
     fallback: ui.app.polishKeepFallback,
     tooLarge: ui.app.polishKeepTooLarge,
+  };
+}
+
+/** 快捷动作智能粘贴文案：done 无条数占位，fallback/tooLarge 用「按原文生成」口径。 */
+export function quickSmartPasteMessages(
+  ui: { app: { polishWorking: string; polishQuickDone: string; polishQuickFallback: string; polishQuickTooLarge: string } },
+): SmartPasteMessages {
+  return {
+    working: ui.app.polishWorking,
+    done: () => ui.app.polishQuickDone,
+    fallback: ui.app.polishQuickFallback,
+    tooLarge: ui.app.polishQuickTooLarge,
   };
 }

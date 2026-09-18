@@ -15,7 +15,7 @@ export type PolishResult = { items: string[] } | { button: QuickPolishButton } |
 /** 与服务端 MAX_POLISH_CHARS 对齐：超长不请求，直接走原文粘贴。 */
 export const POLISH_MAX_CHARS = 2000;
 
-/** quick 单独放宽：服务端最坏 8s 链接抓取（跨跳总预算 10s）+ 30s LLM，35s 会把将成的结果误 abort。 */
+/** quick 单独放宽：服务端跨跳预算 10s（在途一跳最多再溢出 8s）+ 30s LLM，35s 会把将成的结果误 abort。 */
 export const POLISH_QUICK_FETCH_TIMEOUT_MS = 45_000;
 
 function polishUrl(keyHash: string): string {

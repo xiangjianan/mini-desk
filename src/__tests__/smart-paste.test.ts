@@ -1,5 +1,5 @@
 import { afterEach, describe, expect, it, vi } from "vitest";
-import { runSelectionPolish, runSmartPaste, selectionPolishMessages, smartPasteMessages } from "../utils/smartPaste";
+import { quickSmartPasteMessages, runQuickSmartPaste, runSelectionPolish, runSmartPaste, selectionPolishMessages, smartPasteMessages } from "../utils/smartPaste";
 import type { PolishResult } from "../sync/polishClient";
 
 const MESSAGES = smartPasteMessages(
@@ -45,6 +45,32 @@ const SELECTION_MESSAGES = selectionPolishMessages({
     polishKeepTooLarge: "过长保留",
   },
 });
+
+const QUICK_MESSAGES = quickSmartPasteMessages({
+  app: { polishWorking: "整理中", polishQuickDone: "已生成快捷按钮", polishQuickFallback: "按原文生成", polishQuickTooLarge: "过长" },
+});
+
+function setupQuick(clipboard: string | undefined, result: PolishResult) {
+  const notify = vi.fn();
+  const insert = vi.fn();
+  const polish = vi.fn(async () => result);
+  Object.assign(navigator, { clipboard: { readText: vi.fn(async () => clipboard) } });
+  return {
+    notify,
+    insert,
+    polish,
+    run: () =>
+      runQuickSmartPaste({
+        kind: "quick",
+        polish,
+        messages: QUICK_MESSAGES,
+        insert,
+        fallbackButton: (raw) => ({ title: `兜底:${raw.slice(0, 3)}`, value: raw, type: "text" as const }),
+        anchor: undefined,
+        notify,
+      }),
+  };
+}
 
 function setupSelection(text: string, result: PolishResult, style?: "tech" | "concise" | "casual") {
   const notify = vi.fn();
@@ -195,5 +221,58 @@ describe("smartPasteMessages", () => {
     expect(messages.done(5)).toBe("5 行");
     expect(messages.fallback).toBe("保留原文");
     expect(messages.tooLarge).toBe("过长保留");
+  });
+});
+
+describe("runQuickSmartPaste", () => {
+  it("剪贴板为空/不可读时静默返回", async () => {
+    for (const clipboard of [undefined, "", "   "]) {
+      const { notify, insert, run } = setupQuick(clipboard, { button: { title: "A", value: "a", type: "link" } });
+      await run();
+      expect(notify).not.toHaveBeenCalled();
+      expect(insert).not.toHaveBeenCalled();
+    }
+  });
+
+  it("成功：以 quick kind 调润色，落位服务端按钮并提示", async () => {
+    const button = { title: "GitHub 主页", value: "https://github.com", type: "link" as const };
+    const { notify, insert, polish, run } = setupQuick("https://github.com", { button });
+    await run();
+
+    expect(polish).toHaveBeenCalledWith("quick", "https://github.com", undefined);
+    expect(insert).toHaveBeenCalledWith(button);
+    expect(notify.mock.calls.map((call) => call[0])).toEqual(["working", "done"]);
+    expect(notify.mock.calls[1][1]).toBe("已生成快捷按钮");
+  });
+
+  it("降级：LLM 失败与网络失败都用宿主普通粘贴语义生成并提示", async () => {
+    for (const result of [{ fallback: true } as PolishResult, null]) {
+      const { notify, insert, run } = setupQuick("https://github.com", result);
+      await run();
+
+      expect(insert).toHaveBeenCalledWith({ title: "兜底:htt", value: "https://github.com", type: "text" });
+      expect(notify.mock.calls.map((call) => call[0])).toEqual(["working", "fallback"]);
+      expect(notify.mock.calls[1][1]).toBe("按原文生成");
+    }
+  });
+
+  it("超长：不调服务端，直接按原文生成 + 限长提示", async () => {
+    const { notify, insert, polish, run } = setupQuick("长".repeat(2001), { button: { title: "T", value: "V", type: "text" } });
+    await run();
+
+    expect(polish).not.toHaveBeenCalled();
+    expect(insert).toHaveBeenCalledTimes(1);
+    expect(insert.mock.calls[0][0].value).toBe("长".repeat(2001));
+    expect(notify.mock.calls[0]).toEqual(["fallback", "过长", undefined]);
+  });
+});
+
+describe("quickSmartPasteMessages", () => {
+  it("done 无条数占位，fallback/tooLarge 用快捷口径", () => {
+    const messages = quickSmartPasteMessages({ app: { polishWorking: "w", polishQuickDone: "已生成快捷按钮", polishQuickFallback: "按原文生成", polishQuickTooLarge: "过长" } });
+    expect(messages.working).toBe("w");
+    expect(messages.done(3)).toBe("已生成快捷按钮");
+    expect(messages.fallback).toBe("按原文生成");
+    expect(messages.tooLarge).toBe("过长");
   });
 });
