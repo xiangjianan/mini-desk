@@ -14,6 +14,7 @@ import os
 import re
 import socket
 import sys
+import time
 import urllib.error
 import urllib.parse
 import urllib.request
@@ -47,6 +48,8 @@ QUICK_TITLE_MAX_CHARS = 15
 QUICK_FETCH_TIMEOUT_SECONDS = 8
 QUICK_FETCH_MAX_BYTES = 256 * 1024
 QUICK_FETCH_MAX_REDIRECTS = 3
+# 跨跳共享总预算：每跳 8s × 4 跳会顶穿客户端 45s 超时并占死 2 个同步 worker。
+QUICK_FETCH_TOTAL_BUDGET_SECONDS = 10
 QUICK_CONTEXT_MAX_CHARS = 800
 FETCH_USER_AGENT = "Mozilla/5.0 (compatible; MiniDeskRelay/1.0)"
 
@@ -161,13 +164,17 @@ class _NoRedirectHandler(urllib.request.HTTPRedirectHandler):
 
 
 def _open_no_redirect(request: urllib.request.Request):
-    return urllib.request.build_opener(_NoRedirectHandler).open(request, timeout=QUICK_FETCH_TIMEOUT_SECONDS)
+    # 显式禁用环境代理（ProxyHandler({})）：代理目标不经过 is_safe_fetch_url 复检。
+    return urllib.request.build_opener(urllib.request.ProxyHandler({}), _NoRedirectHandler).open(request, timeout=QUICK_FETCH_TIMEOUT_SECONDS)
 
 
 def fetch_link_context(url: str) -> str | None:
     """抓链接页面的 <title>/meta 上下文（≤QUICK_CONTEXT_MAX_CHARS）；任何失败返回 None。
-    最多跟 QUICK_FETCH_MAX_REDIRECTS 跳、每跳过 SSRF 复检、只接受 text/html。不抛异常。
-    禁跟跳的 opener 把 3xx 抛成 HTTPError（携带原响应头），在 except 分支里按重定向处理。"""
+    最多跟 QUICK_FETCH_MAX_REDIRECTS 跳、每跳过 SSRF 复检、只接受 text/html；跨跳共享
+    QUICK_FETCH_TOTAL_BUDGET_SECONDS 总预算（耗尽即放弃，保护客户端 45s 超时与同步 worker）。
+    禁跟跳的 opener 把 3xx 抛成 HTTPError（携带原响应头），在 except 分支里按重定向处理；
+    成功路径见到的 Location 只可能是 2xx 附带，一律忽略直接取页面 meta。"""
+    deadline = time.monotonic() + QUICK_FETCH_TOTAL_BUDGET_SECONDS
     current = url
     for _ in range(QUICK_FETCH_MAX_REDIRECTS + 1):
         if not is_safe_fetch_url(current):
@@ -178,20 +185,25 @@ def fetch_link_context(url: str) -> str | None:
                 if "text/html" not in (response.headers.get("Content-Type") or "").lower():
                     return None
                 body = response.read(QUICK_FETCH_MAX_BYTES).decode("utf-8", "ignore")
-                location = response.headers.get("Location")
+                return _extract_html_meta(body)
         except urllib.error.HTTPError as exc:
-            if exc.code not in _REDIRECT_CODES:
-                print(f"[llm] fetch link context failed: {exc!r}", file=sys.stderr)
+            try:
+                if exc.code not in _REDIRECT_CODES:
+                    print(f"[llm] fetch link context failed: {exc!r}", file=sys.stderr)
+                    return None
+                location = exc.headers.get("Location") if exc.headers else None
+            finally:
+                close = getattr(exc, "close", None)
+                if callable(close):
+                    close()  # HTTPError 包着打开的响应：无论跟跳还是放弃都先释放连接。
+            if not location or time.monotonic() >= deadline:
+                print("[llm] fetch link context stopped: no location or budget exhausted", file=sys.stderr)
                 return None
-            location = exc.headers.get("Location") if exc.headers else None
-            body = None
+            current = urljoin(current, location)
+            continue
         except Exception as exc:
             print(f"[llm] fetch link context failed: {exc!r}", file=sys.stderr)
             return None
-        if location:
-            current = urljoin(current, location)
-            continue
-        return _extract_html_meta(body) if body is not None else None
     return None
 
 

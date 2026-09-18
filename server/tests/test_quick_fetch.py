@@ -124,18 +124,50 @@ class TestFetchLinkContext:
         assert calls == []
 
     def test_follows_safe_redirect_resolving_relative_location(self, monkeypatch, offline_dns):
-        calls = patch_fetch(monkeypatch, [FakeFetchResponse(location="/home"), FakeFetchResponse("<title>Home</title>")])
+        def error_open(request):
+            if request.full_url == "https://example.com/a":
+                raise urllib.error.HTTPError(request.full_url, 302, "Found", {"Location": "/home"}, io.BytesIO(b""))
+            return FakeFetchResponse("<title>Home</title>")
+
+        monkeypatch.setattr(llm, "_open_no_redirect", error_open)
         assert llm.fetch_link_context("https://example.com/a") == "Home"
-        assert calls[1].full_url == "https://example.com/home"
 
     def test_redirect_into_private_target_returns_none(self, monkeypatch, offline_dns):
-        patch_fetch(monkeypatch, [FakeFetchResponse(location="http://169.254.169.254/latest/meta-data")])
+        def error_open(request):
+            raise urllib.error.HTTPError(request.full_url, 302, "Found",
+                                         {"Location": "http://169.254.169.254/latest/meta-data"}, io.BytesIO(b""))
+
+        monkeypatch.setattr(llm, "_open_no_redirect", error_open)
         assert llm.fetch_link_context("https://example.com/") is None
 
     def test_redirect_hop_cap_returns_none(self, monkeypatch, offline_dns):
-        responses = [FakeFetchResponse(location=f"/hop{i}") for i in range(llm.QUICK_FETCH_MAX_REDIRECTS + 2)]
-        patch_fetch(monkeypatch, responses)
+        state = {"count": 0}
+
+        def error_open(request):
+            state["count"] += 1
+            raise urllib.error.HTTPError(request.full_url, 302, "Found", {"Location": f"/hop{state['count']}"}, io.BytesIO(b""))
+
+        monkeypatch.setattr(llm, "_open_no_redirect", error_open)
         assert llm.fetch_link_context("https://example.com/") is None
+        assert state["count"] == llm.QUICK_FETCH_MAX_REDIRECTS + 1
+
+    def test_2xx_with_location_returns_page_meta_not_following(self, monkeypatch, offline_dns):
+        calls = patch_fetch(monkeypatch, [FakeFetchResponse("<title>Page</title>", location="/next")])
+        assert llm.fetch_link_context("https://example.com/") == "Page"
+        assert len(calls) == 1
+
+    def test_total_budget_exhaustion_stops_following(self, monkeypatch, offline_dns):
+        clock = iter([0.0, 100.0])
+        monkeypatch.setattr(llm.time, "monotonic", lambda: next(clock))
+        state = {"count": 0}
+
+        def error_open(request):
+            state["count"] += 1
+            raise urllib.error.HTTPError(request.full_url, 302, "Found", {"Location": "/hop"}, io.BytesIO(b""))
+
+        monkeypatch.setattr(llm, "_open_no_redirect", error_open)
+        assert llm.fetch_link_context("https://example.com/") is None
+        assert state["count"] == 1
 
 
 class TestFetchLinkContextHttpErrorRedirects:
