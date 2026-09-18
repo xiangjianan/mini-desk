@@ -398,6 +398,35 @@ function getContinuationPrefix(lineBeforeCaret: string): string {
   return indent;
 }
 
+/**
+ * 外部文本（拖拽粘贴等）追加到行列表末尾：最后一行是编号/短横线列表时延续
+ * 该格式（编号续下一个号、短横线/星号沿用同一标记、继承缩进层级）。最后一行
+ * 恰为按 Enter 留下的空续写行（如「2. 」）时直接填入该行，不在拖入文本上方
+ * 留空档；普通行（或便签为空）按普通行追加。
+ */
+export function appendContinuingListFormat(lines: LineItem[], text: string): LineItem[] {
+  const last = lines.at(-1);
+  if (last) {
+    const lastLineText = formatEditorLine(last.indent, last.text);
+    const indent = lastLineText.match(/^[ \t]*/)?.[0] ?? "";
+    const markerOnly = /^(\d+\.|[-*])\s*$/.exec(lastLineText.slice(indent.length));
+    if (markerOnly) {
+      return [...lines.slice(0, -1), { indent: last.indent, text: `${markerOnly[1]} ${text}` }];
+    }
+  }
+  return [...lines, continueListFormatFromLines(lines, text)];
+}
+
+function continueListFormatFromLines(lines: LineItem[], text: string): LineItem {
+  const last = lines.at(-1);
+  const prefix = getContinuationPrefix(last ? formatEditorLine(last.indent, last.text) : "");
+  const indentInfo = getIndentInfo(prefix);
+  return {
+    text: `${prefix.slice(indentInfo.contentStart)}${text}`,
+    indent: indentInfo.depth,
+  };
+}
+
 function getSelectedLineRange(value: string, start: number, end: number): { start: number; end: number } {
   const lineStart = value.lastIndexOf("\n", start - 1) + 1;
   const nextBreak = value.indexOf("\n", end);

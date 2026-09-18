@@ -263,6 +263,55 @@ describe("SpacePanel", () => {
     expect(wrapper.find(".space-add-button").exists()).toBe(true);
   });
 
+  it("accepts a todo dragged from the reminder zone and forwards the drop for pasting", async () => {
+    const wrapper = mountSpacePanel([
+      { id: "workspace", title: "工作空间", lines: [{ text: "已有", indent: 0 }] },
+    ]);
+    const todoDrag = {
+      types: ["application/x-todo-id"],
+      getData: (mime: string) => (mime === "application/x-todo-id" ? "work:t1" : ""),
+    };
+
+    await wrapper.get(".space-panel").trigger("dragover", { dataTransfer: todoDrag });
+    expect(wrapper.get(".space-panel").classes()).toContain("drag-hover");
+
+    await wrapper.get(".space-panel").trigger("drop", { dataTransfer: todoDrag });
+    expect(wrapper.emitted("dropTodo")?.[0]).toEqual(["work:t1"]);
+    expect(wrapper.get(".space-panel").classes()).not.toContain("drag-hover");
+    wrapper.unmount();
+  });
+
+  it("ignores non-todo drags hovering the note panel", async () => {
+    const wrapper = mountSpacePanel([{ id: "workspace", title: "工作空间", lines: [] }]);
+    const textDrag = { types: ["text/plain"], getData: (mime: string) => (mime === "text/plain" ? "hi" : "") };
+
+    await wrapper.get(".space-panel").trigger("dragover", { dataTransfer: textDrag });
+    await wrapper.get(".space-panel").trigger("dragleave", { dataTransfer: textDrag });
+    await wrapper.get(".space-panel").trigger("drop", { dataTransfer: textDrag });
+
+    expect(wrapper.get(".space-panel").classes()).not.toContain("drag-hover");
+    expect(wrapper.emitted("dropTodo")).toBeUndefined();
+    wrapper.unmount();
+  });
+
+  it("lets a todo dropped on a space tab reach the panel-level paste handler", async () => {
+    const wrapper = mountSpacePanel([
+      { id: "workspace", title: "工作空间", lines: [] },
+      { id: "project", title: "项目", lines: [] },
+    ]);
+    const todoDrag = {
+      types: ["application/x-todo-id"],
+      getData: (mime: string) => (mime === "application/x-todo-id" ? "work:t1" : ""),
+    };
+
+    await wrapper.findAll(".space-tab")[1].trigger("dragover", { dataTransfer: todoDrag });
+    await wrapper.findAll(".space-tab")[1].trigger("drop", { dataTransfer: todoDrag });
+
+    expect(wrapper.emitted("dropTodo")?.[0]).toEqual(["work:t1"]);
+    expect(wrapper.emitted("reorder")).toBeUndefined();
+    wrapper.unmount();
+  });
+
   it("animates workspace tab position changes while drag sorting", async () => {
     const wrapper = mountSpacePanel([
       { id: "workspace", title: "工作空间", lines: [] },

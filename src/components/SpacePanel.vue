@@ -38,6 +38,7 @@ const emit = defineEmits<{
   guide: [key: GuideKey, anchor: HTMLElement, immediate?: boolean];
   moveSpaceToWorkspace: [spaceId: string, workspaceId: string];
   polishMessage: [phase: SmartPastePhase, message: string, anchor: HTMLElement | undefined];
+  dropTodo: [payload: string];
 }>();
 
 const editingSpaceId = ref<string | null>(null);
@@ -46,9 +47,11 @@ const editingMeasureTitle = ref("");
 const editingTabWidth = ref<number | null>(null);
 const titleComposing = ref(false);
 const draggedSpaceId = ref<string | null>(null);
+// 提醒事项拖到笔记本上时高亮整个面板；只在待办拖拽（application/x-todo-id）时生效。
+const todoDropHover = ref(false);
 const suppressTabCommitTransition = ref(false);
 const menu = ref<{ x: number; y: number; spaceId: string } | null>(null);
-const textPanelRef = ref<{ focusEditor: () => void; appendSmartPaste: () => Promise<void> } | null>(null);
+const textPanelRef = ref<{ focusEditor: () => void; appendSmartPaste: () => Promise<void>; scrollToEnd: () => void } | null>(null);
 const smartPastePending = ref(false);
 async function appendSmartPaste(): Promise<void> {
   if (smartPastePending.value) return;
@@ -226,10 +229,40 @@ function handleDragStart(event: DragEvent, id: string): void {
   event.dataTransfer.setDragImage?.(event.currentTarget as Element, 0, 0);
 }
 
-function handleDrop(id: string): void {
+function handleDrop(event: DragEvent, id: string): void {
   const dragId = draggedSpaceId.value;
+  // 非空间排序的落点（如提醒事项拖入）不拦截，交给面板级的 drop 处理。
   if (!dragId || dragId === id) return;
+  event.preventDefault();
+  event.stopPropagation();
   emit("reorder", dragId, id);
+}
+
+/** 提醒事项拖到笔记本上：preventDefault 才允许落点，同时点亮整块面板提示可放。 */
+function handleTodoDragOver(event: DragEvent): void {
+  const types = Array.from(event.dataTransfer?.types ?? []);
+  if (!types.includes("application/x-todo-id")) return;
+  event.preventDefault();
+  if (event.dataTransfer) event.dataTransfer.dropEffect = "move";
+  todoDropHover.value = true;
+}
+
+function handleTodoDragLeave(event: DragEvent): void {
+  const next = event.relatedTarget;
+  const scope = event.currentTarget;
+  if (next instanceof Node && scope instanceof Node && scope.contains(next)) return;
+  todoDropHover.value = false;
+}
+
+/** 松手后把 `${listId}:${todoId}` 原样上抛，由 App 反查待办文本并追加为最后一行。 */
+function handleTodoDrop(event: DragEvent): void {
+  todoDropHover.value = false;
+  const payload = event.dataTransfer?.getData("application/x-todo-id");
+  if (!payload) return;
+  event.preventDefault();
+  event.stopPropagation();
+  emit("dropTodo", payload);
+  void nextTick(() => textPanelRef.value?.scrollToEnd());
 }
 
 function handleTabsWheel(event: WheelEvent): void {
@@ -252,7 +285,14 @@ function handleTabsWheel(event: WheelEvent): void {
 </script>
 
 <template>
-  <section class="panel space-panel" :aria-label="uiText.space.panel">
+  <section
+    class="panel space-panel"
+    :class="{ 'drag-hover': todoDropHover }"
+    :aria-label="uiText.space.panel"
+    @dragover="handleTodoDragOver"
+    @dragleave="handleTodoDragLeave"
+    @drop="handleTodoDrop"
+  >
     <div class="panel-header desk-zone-heading">
       <h2><NIcon :component="DocumentTextOutline" /><span>{{ uiText.desk.notes }}</span></h2>
       <div class="header-actions">
@@ -290,7 +330,7 @@ function handleTabsWheel(event: WheelEvent): void {
               @dragstart="handleDragStart($event, space.id)"
               @dragend="draggedSpaceId = null"
               @dragover.prevent
-              @drop.stop.prevent="handleDrop(space.id)"
+              @drop="handleDrop($event, space.id)"
             >
               {{ space.title }}
             </button>

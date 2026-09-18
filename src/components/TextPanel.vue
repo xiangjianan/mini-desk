@@ -382,9 +382,16 @@ async function appendSmartPaste(): Promise<void> {
   if (!isUnmounted) target.scrollTop = target.scrollHeight;
 }
 
+/** 外部（拖拽粘贴）追加行后滚到编辑器末尾，让新行可见。 */
+function scrollToEnd(): void {
+  const target = textareaRef.value;
+  if (target) target.scrollTop = target.scrollHeight;
+}
+
 defineExpose({
   appendSmartPaste,
   focusEditor,
+  scrollToEnd,
 });
 
 function unlockTextareaBeforeNativeFocus(textarea: HTMLTextAreaElement): void {

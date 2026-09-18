@@ -96,6 +96,7 @@ import {
   saveStateWithConflictCheck,
 } from "./state/storage";
 import type { ImagePlacementHint, ImageReplacementHint, SaveScope } from "./state/storage";
+import { appendContinuingListFormat } from "./utils/textEditor";
 import type { AppLanguage, BoardState, CompanionGifTheme, DraggedTodo, GuideKey, ImagePasteFeedback, ImagePasteRequest, LineItem, QuickApiBodyType, QuickApiHeader, QuickApiMethod, QuickButton, QuickButtonType, StoredImage, TodoItem, TodoListConfig, TodoListId, TodoPeriod, TodoStarChange, WorkspaceData, WorkspaceInbox, WorkspaceMoveTarget, WorkspaceSpace, ZoneKey } from "./types";
 
 const ImagePreview = defineAsyncComponent(() => import("./components/ImagePreview.vue"));
@@ -769,6 +770,26 @@ function updateSpaceLines(id: string, lines: LineItem[]): void {
   syncLegacySpaceLines();
   markDirty();
   scheduleTextSave();
+}
+
+/**
+ * 提醒事项拖到笔记本区域：把待办文本追加为当前便签的最后一行（SpacePanel 的
+ * drop 上抛 `${listId}:${todoId}`）。最后一行是编号/短横线列表时延续该格式；
+ * 粘贴语义 —— 原待办保留不动。
+ */
+function appendDroppedTodoToNote(payload: string): void {
+  const separatorIndex = payload.indexOf(":");
+  if (separatorIndex <= 0) return;
+  const listId = payload.slice(0, separatorIndex) as TodoListId;
+  const todoId = payload.slice(separatorIndex + 1);
+  const todo = activeWorkspace.value.todos[listId]?.find((item) => item.id === todoId);
+  const text = todo?.text.trim();
+  if (!text) return;
+  const space = activeWorkspace.value.spaces.find((item) => item.id === activeWorkspace.value.activeSpaceId)
+    ?? activeWorkspace.value.spaces[0];
+  if (!space) return;
+  updateSpaceLines(space.id, appendContinuingListFormat(space.lines, text));
+  showBubbleText(uiText.value.app.todoPastedToSpace);
 }
 
 function activateSpace(id: string): void {
@@ -3596,6 +3617,7 @@ function moveItem<T extends { id: string }>(items: T[], dragId: string, targetId
           @delete="deleteSpace"
           @reorder="reorderSpaces"
           @move-space-to-workspace="moveSpaceAcrossWorkspaces"
+          @drop-todo="appendDroppedTodoToNote"
           @focus="(_, element) => handleGuideFocus('workspace', element)"
           @guide="(_, anchor, immediate) => handleGuideClick('workspace', anchor, immediate)"
           @blur="handleEditorBlur"

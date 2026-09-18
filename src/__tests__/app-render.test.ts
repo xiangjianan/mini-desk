@@ -4826,6 +4826,36 @@ describe("App shell", () => {
     wrapper.unmount();
   });
 
+  it("appends a todo dropped on the note panel as the last line of the active space", async () => {
+    localStorage.setItem(STORAGE_KEY, JSON.stringify({
+      ...defaultState(),
+      workspaces: [{
+        ...defaultWorkspace(),
+        todoLists: [{ id: "work", title: "工作", collapsed: false, compact: false }],
+        todos: { work: [{ id: "t1", text: "买牛奶", done: false }] },
+        showCompletedTodos: { work: false },
+        spaces: [{ id: DEFAULT_SPACE_ID, title: "随手记", lines: [{ text: "1. 已有", indent: 0 }] }],
+      }],
+    }));
+    const wrapper = mountApp();
+    const todoDrag = {
+      types: ["application/x-todo-id"],
+      getData: (mime: string) => (mime === "application/x-todo-id" ? "work:t1" : ""),
+    };
+
+    await wrapper.get(".space-panel").trigger("dragover", { dataTransfer: todoDrag });
+    await wrapper.get(".space-panel").trigger("drop", { dataTransfer: todoDrag });
+
+    const spaces = wrapper.getComponent(SpacePanel).props("spaces") as Array<{ id: string; lines: Array<{ text: string; indent: number }> }>;
+    // 最后一行是数字编号 → 拖入行延续编号。
+    expect(spaces[0].lines.at(-1)).toEqual({ text: "2. 买牛奶", indent: 0 });
+    // 粘贴语义：原待办保留不动。
+    const todos = wrapper.getComponent(TodoPanel).props("todos") as Record<string, Array<{ id: string }>>;
+    expect(todos.work.map((todo) => todo.id)).toEqual(["t1"]);
+
+    wrapper.unmount();
+  });
+
   it("shows missing clipboard images and added images through the companion bubble", async () => {
     vi.useFakeTimers();
     const imageBlob = new Blob(["img"], { type: "image/png" });

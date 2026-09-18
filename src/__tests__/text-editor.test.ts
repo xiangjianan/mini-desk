@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { handleTextareaTab, moveCaretToLineBoundary, moveTextareaLine, renumberOrderedListText } from "../utils/textEditor";
+import { appendContinuingListFormat, handleTextareaTab, moveCaretToLineBoundary, moveTextareaLine, renumberOrderedListText } from "../utils/textEditor";
 
 function textareaWith(value: string, caret: number): HTMLTextAreaElement {
   const textarea = document.createElement("textarea");
@@ -18,6 +18,47 @@ function apply(value: string, caret: number, shift = false): { value: string; ca
 // (run by the panel). renumbered() applies that pass so tests can assert the
 // final, user-visible result for the numbered-conversion cases.
 const renumbered = renumberOrderedListText;
+
+describe("appendContinuingListFormat — 拖入行延续最后一行的列表格式", () => {
+  it("continues a numbered list with the next marker", () => {
+    const lines = appendContinuingListFormat([{ text: "1. 买菜", indent: 0 }, { text: "2. 洗碗", indent: 0 }], "买牛奶");
+    expect(lines.at(-1)).toEqual({ text: "3. 买牛奶", indent: 0 });
+    expect(lines).toHaveLength(3);
+  });
+
+  it("fills the dangling empty continuation line instead of appending below it", () => {
+    const lines = appendContinuingListFormat([{ text: "1. 买菜", indent: 0 }, { text: "2. ", indent: 0 }], "买牛奶");
+    expect(lines).toEqual([{ text: "1. 买菜", indent: 0 }, { text: "2. 买牛奶", indent: 0 }]);
+  });
+
+  it("fills a dangling empty dash continuation line the same way", () => {
+    const lines = appendContinuingListFormat([{ text: "- 买菜", indent: 0 }, { text: "-", indent: 0 }], "买牛奶");
+    expect(lines).toEqual([{ text: "- 买菜", indent: 0 }, { text: "- 买牛奶", indent: 0 }]);
+  });
+
+  it("continues a dash bullet with the same marker", () => {
+    const lines = appendContinuingListFormat([{ text: "- 买菜", indent: 0 }], "买牛奶");
+    expect(lines.at(-1)).toEqual({ text: "- 买牛奶", indent: 0 });
+  });
+
+  it("keeps the star marker when the list uses stars", () => {
+    const lines = appendContinuingListFormat([{ text: "* 买菜", indent: 0 }], "买牛奶");
+    expect(lines.at(-1)).toEqual({ text: "* 买牛奶", indent: 0 });
+  });
+
+  it("inherits the last line's indent when continuing a nested list", () => {
+    const lines = appendContinuingListFormat([
+      { text: "- 采购", indent: 0 },
+      { text: "- 牛奶", indent: 1 },
+    ], "面包");
+    expect(lines.at(-1)).toEqual({ text: "- 面包", indent: 1 });
+  });
+
+  it("appends a plain line after a plain last line or an empty note", () => {
+    expect(appendContinuingListFormat([{ text: "随便写点", indent: 0 }], "买牛奶").at(-1)).toEqual({ text: "买牛奶", indent: 0 });
+    expect(appendContinuingListFormat([], "买牛奶")).toEqual([{ text: "买牛奶", indent: 0 }]);
+  });
+});
 
 describe("handleTextareaTab — Tab turns a line into an indented bullet", () => {
   it("indents and bulletizes a plain root-level line at the line head", () => {
