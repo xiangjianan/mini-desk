@@ -196,10 +196,17 @@ def fetch_link_context(url: str) -> str | None:
                 close = getattr(exc, "close", None)
                 if callable(close):
                     close()  # HTTPError 包着打开的响应：无论跟跳还是放弃都先释放连接。
-            if not location or time.monotonic() >= deadline:
-                print("[llm] fetch link context stopped: no location or budget exhausted", file=sys.stderr)
+            if not location:
+                print("[llm] fetch link context stopped: redirect without location", file=sys.stderr)
                 return None
-            current = urljoin(current, location)
+            if time.monotonic() >= deadline:
+                print("[llm] fetch link context stopped: budget exhausted", file=sys.stderr)
+                return None
+            try:
+                current = urljoin(current, location)
+            except ValueError:
+                print(f"[llm] fetch link context failed: invalid redirect target {location!r}", file=sys.stderr)
+                return None
             continue
         except Exception as exc:
             print(f"[llm] fetch link context failed: {exc!r}", file=sys.stderr)

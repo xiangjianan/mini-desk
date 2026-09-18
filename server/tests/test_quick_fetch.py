@@ -124,13 +124,17 @@ class TestFetchLinkContext:
         assert calls == []
 
     def test_follows_safe_redirect_resolving_relative_location(self, monkeypatch, offline_dns):
+        calls = []
+
         def error_open(request):
+            calls.append(request)
             if request.full_url == "https://example.com/a":
                 raise urllib.error.HTTPError(request.full_url, 302, "Found", {"Location": "/home"}, io.BytesIO(b""))
             return FakeFetchResponse("<title>Home</title>")
 
         monkeypatch.setattr(llm, "_open_no_redirect", error_open)
         assert llm.fetch_link_context("https://example.com/a") == "Home"
+        assert calls[1].full_url == "https://example.com/home"
 
     def test_redirect_into_private_target_returns_none(self, monkeypatch, offline_dns):
         def error_open(request):
@@ -206,4 +210,13 @@ class TestFetchLinkContextHttpErrorRedirects:
             raise urllib.error.HTTPError(request.full_url, 302, "Found", {}, io.BytesIO(b""))
 
         self._patch_error_open(monkeypatch, error_open)
+        assert llm.fetch_link_context("https://example.com/") is None
+
+    def test_308_with_malformed_location_returns_none(self, monkeypatch, offline_dns):
+        # 服务器 Python 3.9.6 没有 http_error_308：真实 308 走 http_error_default，
+        # 其 Location 未经 urllib 内部 urlparse，urljoin 是第一个解析者——必须自兜 ValueError。
+        def error_open(request):
+            raise urllib.error.HTTPError(request.full_url, 308, "Permanent Redirect", {"Location": "http://[::1"}, None)
+
+        monkeypatch.setattr(llm, "_open_no_redirect", error_open)
         assert llm.fetch_link_context("https://example.com/") is None
