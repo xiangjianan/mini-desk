@@ -1,8 +1,8 @@
 :root {
   --app-font-size: 12px;
   --scrollbar-size: 2px;
-  --scrollbar-thumb: color-mix(in srgb, var(--line-control) 44%, transparent);
-  --scrollbar-thumb-hover: color-mix(in srgb, var(--line-control) 58%, transparent);
+  --scrollbar-thumb: color-mix(in srgb, var(--line-control) 30%, transparent);
+  --scrollbar-thumb-hover: color-mix(in srgb, var(--line-control) 46%, transparent);
   --background: #fcfcfe;
   --foreground: #111827;
   --card: #ffffff;
@@ -112,8 +112,18 @@ html[data-theme="dark"] {
 
 * {
   box-sizing: border-box;
-  scrollbar-color: var(--scrollbar-thumb) transparent;
-  scrollbar-width: thin;
+}
+
+/* Chrome 121+ 里 scrollbar-width/scrollbar-color 任一非 auto 都会让
+   ::-webkit-scrollbar 伪元素失效，原生滚动条退化成系统 thin 条（约 8px），
+   比 NScrollbar 轨道（--scrollbar-size）粗一倍——记事本 textarea、提醒多列
+   容器等原生滚动条会跟快捷动作/贴图区的轨道粗细打架。因此标准属性只留给
+   Firefox（无 webkit 伪元素）回退，WebKit/Blink 一律走下面的伪元素画条。 */
+@supports not selector(::-webkit-scrollbar) {
+  * {
+    scrollbar-color: var(--scrollbar-thumb) transparent;
+    scrollbar-width: thin;
+  }
 }
 
 *::-webkit-scrollbar {
@@ -686,7 +696,9 @@ html[data-theme="dark"] .n-modal-mask {
 }
 
 .space-tabs:hover {
-  scrollbar-width: thin;
+  /* auto 而非 thin：thin 会禁用上面的 :hover::-webkit-scrollbar 高度定制，
+     退化成系统 thin 横条，与全页 --scrollbar-size 粗细不一致。 */
+  scrollbar-width: auto;
 }
 
 .space-tabs::-webkit-scrollbar {

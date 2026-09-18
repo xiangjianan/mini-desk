@@ -991,7 +991,7 @@ describe("Naive UI component usage", () => {
     expect(styles).toMatch(/\.space-add-button\.icon-button:hover,[\s\S]*?\.space-add-button\.icon-button:focus-visible\s*\{[^}]*color: var\(--primary\)/s);
     expect(styles).toMatch(/\.space-add-button\.icon-button:hover,[\s\S]*?\.space-add-button\.icon-button:focus-visible\s*\{[^}]*box-shadow: none/s);
     expect(styles).toMatch(/\.space-tabs\s*\{[^}]*scrollbar-width: none/s);
-    expect(styles).toMatch(/\.space-tabs:hover\s*\{[^}]*scrollbar-width: thin/s);
+    expect(styles).toMatch(/\.space-tabs:hover\s*\{[^}]*scrollbar-width: auto/s);
     expect(styles).toMatch(/\.space-tabs::-webkit-scrollbar\s*\{[^}]*height: 0/s);
     expect(styles).toMatch(/\.space-tabs:hover::-webkit-scrollbar\s*\{[^}]*height: var\(--scrollbar-size\)/s);
     expect(styles).not.toMatch(/\.workspace-panel \.space-tabs\s*\{[^}]*overflow-x: scroll/s);

@@ -352,9 +352,17 @@ describe("workbench style contract", () => {
     expectSelectorBody(styles, "button.todo-star-button", "border-radius: 50%");
 
     expectSelectorBody(styles, ":root", "--scrollbar-size: 2px");
-    expectSelectorBody(styles, ":root", "--scrollbar-thumb: color-mix(in srgb, var(--line-control) 44%, transparent)");
-    expectSelectorBody(styles, ":root", "--scrollbar-thumb-hover: color-mix(in srgb, var(--line-control) 58%, transparent)");
-    expectSelectorBody(styles, "*", "scrollbar-color: var(--scrollbar-thumb) transparent");
+    expectSelectorBody(styles, ":root", "--scrollbar-thumb: color-mix(in srgb, var(--line-control) 30%, transparent)");
+    expectSelectorBody(styles, ":root", "--scrollbar-thumb-hover: color-mix(in srgb, var(--line-control) 46%, transparent)");
+    // Chrome 121+ 里非 auto 的 scrollbar-width/color 会让 ::-webkit-scrollbar 失效，
+    // 原生条退化成系统 thin 条（约 8px，比 NScrollbar 轨道粗一倍）——记事本 textarea、
+    // 提醒多列容器等原生滚动条全部中招。全局只留 webkit 伪元素画条，标准属性退到
+    // @supports 回退块给 Firefox；* 规则不得再声明任何 scrollbar 标准属性。
+    expect(ruleBodies(styles, "*")[0]).not.toContain("scrollbar");
+    expect(styles).toContain("@supports not selector(::-webkit-scrollbar)");
+    expect(styles).toContain("scrollbar-width: thin");
+    expect(styles).toContain("scrollbar-color: var(--scrollbar-thumb) transparent");
+    expectSelectorBody(styles, ".space-tabs:hover", "scrollbar-width: auto");
     expectSelectorBody(styles, ".n-scrollbar", "--n-scrollbar-width: var(--scrollbar-size) !important");
     expectSelectorBody(styles, ".n-scrollbar", "--n-scrollbar-height: var(--scrollbar-size) !important");
     expectSelectorBody(styles, ".n-scrollbar-rail__scrollbar", "background: var(--scrollbar-thumb) !important");
