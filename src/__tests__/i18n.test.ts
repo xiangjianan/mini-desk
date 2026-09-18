@@ -226,6 +226,9 @@ describe("localized public copy", () => {
       expect(locale.app.polishTooLarge).toBeTruthy();
       expect(locale.app.polishKeepFallback).toBeTruthy();
       expect(locale.app.polishKeepTooLarge).toBeTruthy();
+      expect(locale.app.polishQuickDone).toBeTruthy();
+      expect(locale.app.polishQuickFallback).toBeTruthy();
+      expect(locale.app.polishQuickTooLarge).toBeTruthy();
     }
   });
 
