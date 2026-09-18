@@ -2442,6 +2442,11 @@ function focusTodoInput(period: TodoPeriod, id: string): void {
   const caret = input.value.length;
   input.focus({ preventScroll: true });
   input.setSelectionRange(caret, caret);
+  // preventScroll 挡掉了浏览器聚焦时的默认滚动，这里手动补上：新增的空提醒
+  // 落在列表底部（尤其收起列表经标题加号展开后），不滚过去焦点就在视口外。
+  // nearest 仅在不可见时滚动；即时滚动（默认 auto）避免与展开的 max-height
+  // 过渡互相追赶，浏览器在容器增高时钳制 scrollTop 会把底部锚在原处。
+  input.scrollIntoView({ block: "nearest", inline: "nearest" });
 }
 
 function getTodoInputs(period: TodoPeriod): HTMLInputElement[] {

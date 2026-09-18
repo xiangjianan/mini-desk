@@ -29,6 +29,20 @@ export interface ChangelogEntry {
 
 export const CHANGELOG: ChangelogEntry[] = [
   {
+    version: "1.0.181",
+    date: "2026-09-18",
+    notes: {
+      zh: [
+        "调整：工作台默认宽度引入黄金比例（φ）——图片区保持 10% 窄轨，其余三区按 便签:提醒:工作区 = 1:1:φ 分摊（≈ 10% / 24.9% / 24.9% / 40.2%），已自定义过的工作区不受影响",
+        "修复：收起列表点加号新增提醒后自动滚动到聚焦的提醒行，不再需要手动翻找",
+      ],
+      en: [
+        "Default zone widths now follow the golden ratio (φ): the image rail stays at 10% while the other three zones split 1:1:φ (≈ 10% / 24.9% / 24.9% / 40.2%) with the workspace as the golden emphasis; customized workspaces are unaffected",
+        "Fix: adding a reminder via a collapsed list's heading add button now scrolls the focused input row into view",
+      ],
+    },
+  },
+  {
     version: "1.0.180",
     date: "2026-09-18",
     notes: {

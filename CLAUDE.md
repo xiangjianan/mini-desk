@@ -12,7 +12,7 @@ The app mounts from `src/main.ts` into `#app` and composes the board in `src/App
 
 ### Layout
 
-CSS Grid 4-column layout (`.workbench-grid`, assembled by `src/components/WorkbenchShell.vue`, `0.1/0.3/0.3/0.3 fr`): Assets (images) | Notes (quick buttons) | Tasks (todos) | Workspace (notes + storage). Every zone is collapsible via a rail and resizable via separator handles.
+CSS Grid 4-column layout (`.workbench-grid`, assembled by `src/components/WorkbenchShell.vue`): Assets (images) keeps a fixed 10% rail; the other three zones split the remaining width by the golden ratio (便签:提醒:工作区 = 1:1:φ, i.e. `PHI`-derived `DEFAULT_COLUMN_WEIGHTS` ≈ 0.1/0.249/0.249/0.402) — Workspace (notes + storage) is the golden emphasis. Every zone is collapsible via a rail and resizable via separator handles.
 
 ### State Management
 

@@ -943,6 +943,38 @@ describe("App shell", () => {
     }
   });
 
+  it("scrolls the focused new reminder into view when the heading add button expands a collapsed list", async () => {
+    const scrolled: { element: HTMLElement; options?: unknown }[] = [];
+    vi.spyOn(HTMLElement.prototype, "scrollIntoView").mockImplementation(function (this: HTMLElement, options?: boolean | ScrollIntoViewOptions) {
+      scrolled.push({ element: this, options });
+    });
+    localStorage.setItem(STORAGE_KEY, JSON.stringify({
+      todoLists: [{ id: "work", title: "工作", collapsed: true, compact: false }],
+      todos: { work: ["需求", "开发", "测试", "发布"].map((text, index) => ({ id: `t${index}`, text, done: false })) },
+    }));
+
+    const wrapper = mountApp();
+
+    try {
+      await wrapper.get('.todo-section[data-list-id="work"] button[aria-label="添加提醒"]').trigger("click");
+      await flushPromises();
+      await wrapper.vm.$nextTick();
+
+      // 先展开再新增：新空提醒落在列表底部并获得焦点，随后必须滚入视野。
+      expect(wrapper.get('.todo-section[data-list-id="work"] .todo-list-shell').classes()).not.toContain("is-hidden");
+      const inputs = wrapper.findAll('[data-testid="todo-input-work"]');
+      expect(inputs).toHaveLength(5);
+      const newInput = inputs.at(-1)!.element as HTMLInputElement;
+      expect(newInput.value).toBe("");
+      expect(document.activeElement).toBe(newInput);
+
+      const newInputScroll = scrolled.find((entry) => entry.element === newInput);
+      expect(newInputScroll?.options).toEqual({ block: "nearest", inline: "nearest" });
+    } finally {
+      wrapper.unmount();
+    }
+  });
+
   it("undoes the latest board-level change with global Ctrl+Z", async () => {
     const wrapper = mountApp();
 

@@ -73,7 +73,10 @@ defineSlots<{
 const DESKTOP_RESIZE_BREAKPOINT = 1180;
 const WORKBENCH_HEADER_STORAGE_KEY = "mini-desk-workbench-header-hidden";
 const LEGACY_WORKBENCH_HEADER_STORAGE_KEY = "todo-board-workbench-header-hidden";
-const DEFAULT_COLUMN_WEIGHTS = [0.1, 0.3, 0.3, 0.3] as const;
+// 黄金比例 φ ≈ 1.618：图片区保持 10% 窄轨，其余三区按 便签:提醒:工作区 = 1:1:φ
+// 分摊（≈ 24.9% / 24.9% / 40.2%）——工作区（笔记+存储双面板）为黄金重心。
+const PHI = (1 + Math.sqrt(5)) / 2;
+const DEFAULT_COLUMN_WEIGHTS = [0.1, 0.9 / (2 + PHI), 0.9 / (2 + PHI), (0.9 * PHI) / (2 + PHI)] as const;
 const MIN_COLUMN_WIDTHS = [100, 100, 100, 100] as const;
 // Canonical zone order matches DEFAULT_COLUMN_WEIGHTS / MIN_COLUMN_WIDTHS indices.
 const ZONE_INDEX = { assets: 0, notes: 1, tasks: 2, workspace: 3 } as const;

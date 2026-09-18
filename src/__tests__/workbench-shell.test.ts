@@ -318,7 +318,7 @@ describe("WorkbenchShell", () => {
     vi.useRealTimers();
   });
 
-  it("uses the compact initial desktop workbench column widths with a 100px minimum per zone", async () => {
+  it("seeds golden-ratio default workbench column widths with a 100px minimum per zone", async () => {
     vi.spyOn(window, "innerWidth", "get").mockReturnValue(1600);
     HTMLElement.prototype.getBoundingClientRect = function getMockRect() {
       if (this instanceof HTMLElement && this.classList.contains("workbench-grid")) {
@@ -343,8 +343,19 @@ describe("WorkbenchShell", () => {
     await nextTick();
     await nextTick();
 
-    const grid = wrapper.get(".workbench-grid");
-    expect(grid.attributes("style")).toContain("grid-template-columns: 176px 327px 327px 327px");
+    const template = wrapper.get(".workbench-grid").attributes("style") ?? "";
+    const columns = (template.match(/grid-template-columns:\s*([^;]+)/)?.[1] ?? "")
+      .trim()
+      .split(/\s+/)
+      .map((value) => Number.parseFloat(value));
+
+    // 黄金比例 φ：图片区固定 10% 窄轨，其余三区按 便签:提醒:工作区 = 1:1:φ
+    // 分摊（份额 = 列宽 − 100px 最小列宽），总宽 1200px 时即 176/289/289/405。
+    expect(columns).toEqual([176, 289, 289, 405]);
+    const phi = (1 + Math.sqrt(5)) / 2;
+    expect(columns[1]).toBe(columns[2]);
+    expect((columns[3] - 100) / (columns[1] - 100)).toBeCloseTo(phi, 1);
+    expect((columns[1] - 100) / (columns[0] - 100)).toBeCloseTo(0.9 / (0.1 * (2 + phi)), 1);
 
     wrapper.unmount();
   });
@@ -421,7 +432,7 @@ describe("WorkbenchShell", () => {
     await nextTick();
     await nextTick();
 
-    expect(wrapper.get(".workbench-grid").attributes("style")).toContain("grid-template-columns: 176px 327px 327px 327px");
+    expect(wrapper.get(".workbench-grid").attributes("style")).toContain("grid-template-columns: 176px 289px 289px 405px");
     expect(wrapper.get(".workbench-zone-tasks").classes()).not.toContain("workbench-zone-collapsed");
 
     const pointerDown = new MouseEvent("pointerdown", { bubbles: true, cancelable: true });
@@ -431,10 +442,11 @@ describe("WorkbenchShell", () => {
     window.dispatchEvent(new MouseEvent("pointerup"));
     await nextTick();
 
-    // The task zone shrinks below its 100px minimum (down to ~67px) instead of
-    // clamping, collapses to the title rail, and the freed space flows to the
-    // neighboring workspace zone.
-    expect(wrapper.get(".workbench-grid").attributes("style")).toContain("grid-template-columns: 176px 327px 67px 587px");
+    // The task zone shrinks below its 100px minimum instead of clamping and
+    // collapses to the 44px title rail — its golden default (289px) is narrower
+    // than the 260px drag, so the leftover shrink spills into notes, and the
+    // freed space flows to the neighboring workspace zone.
+    expect(wrapper.get(".workbench-grid").attributes("style")).toContain("grid-template-columns: 176px 273px 44px 665px");
     expect(wrapper.get(".workbench-zone-tasks").classes()).toContain("workbench-zone-collapsed");
     expect(wrapper.get(".workbench-zone-tasks .workbench-zone-rail").text()).toBe("✅ 提醒事项");
     expect(wrapper.findAll(".workbench-zone-notes .workbench-zone-rail")).toHaveLength(1);
@@ -524,13 +536,13 @@ describe("WorkbenchShell", () => {
     await nextTick();
     expect(wrapper.get(".workbench-zone-tasks").classes()).toContain("workbench-zone-collapsed");
 
-    // Click the collapsed rail: tasks returns to its default width (~327px) and
+    // Click the collapsed rail: tasks returns to its default width (~289px) and
     // content reappears, funded by shrinking the expanded neighbors.
     await wrapper.get(".workbench-zone-tasks .workbench-zone-rail").trigger("click");
     await nextTick();
 
     expect(wrapper.get(".workbench-zone-tasks").classes()).not.toContain("workbench-zone-collapsed");
-    expect(wrapper.get(".workbench-grid").attributes("style")).toContain("327px");
+    expect(wrapper.get(".workbench-grid").attributes("style")).toContain("289px");
     expect(localStorage.getItem(WORKBENCH_WIDTH_STORAGE_KEY)).not.toBeNull();
 
     wrapper.unmount();
