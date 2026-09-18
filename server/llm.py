@@ -36,19 +36,18 @@ STYLE_HINTS = {
 }
 
 
-def polish_capture(kind: str, text: str, style: str | None = None) -> list[str] | None:
+def _post_chat(system_prompt: str, user_content: str) -> object | None:
+    """DeepSeek chat 调用共享主干：缺 key、网络、超时、非 200、响应体非法一律返回 None，不抛异常。"""
     api_key = os.environ.get("DEEPSEEK_API_KEY", "").strip()
     if not api_key:
         print("[llm] DEEPSEEK_API_KEY 未配置，跳过润色", file=sys.stderr)
         return None
-    hint = STYLE_HINTS.get(style) if style else None
-    system_prompt = f"{SYSTEM_PROMPT}\n\n本次输出的语言风格要求：{hint}" if hint else SYSTEM_PROMPT
     body = json.dumps(
         {
             "model": DEEPSEEK_MODEL,
             "messages": [
                 {"role": "system", "content": system_prompt},
-                {"role": "user", "content": json.dumps({"kind": kind, "text": text}, ensure_ascii=False)},
+                {"role": "user", "content": user_content},
             ],
             "response_format": {"type": "json_object"},
             "temperature": 0.2,
@@ -62,10 +61,18 @@ def polish_capture(kind: str, text: str, style: str | None = None) -> list[str] 
     )
     try:
         with urlopen(request, timeout=LLM_TIMEOUT_SECONDS) as response:
-            data = json.loads(response.read().decode("utf-8"))
+            return json.loads(response.read().decode("utf-8"))
     except Exception as exc:
         # 网络/超时/非 200（含 402 额度不足、429 限流、401 key 无效）/响应体非法：统一兜底，stderr 留痕。
         print(f"[llm] polish failed: {exc!r}", file=sys.stderr)
+        return None
+
+
+def polish_capture(kind: str, text: str, style: str | None = None) -> list[str] | None:
+    hint = STYLE_HINTS.get(style) if style else None
+    system_prompt = f"{SYSTEM_PROMPT}\n\n本次输出的语言风格要求：{hint}" if hint else SYSTEM_PROMPT
+    data = _post_chat(system_prompt, json.dumps({"kind": kind, "text": text}, ensure_ascii=False))
+    if data is None:
         return None
     return _extract_items(data)
 
