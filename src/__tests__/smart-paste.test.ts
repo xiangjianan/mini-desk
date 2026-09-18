@@ -246,7 +246,7 @@ describe("runQuickSmartPaste", () => {
   });
 
   it("降级：LLM 失败与网络失败都用宿主普通粘贴语义生成并提示", async () => {
-    for (const result of [{ fallback: true } as PolishResult, null]) {
+    for (const result of [{ fallback: true } as PolishResult, { items: ["x"] } as PolishResult, null]) {
       const { notify, insert, run } = setupQuick("https://github.com", result);
       await run();
 

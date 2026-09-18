@@ -3,8 +3,9 @@ import { POLISH_MAX_CHARS, type PolishKind, type PolishResult, type PolishStyle 
 import type { QuickButtonType } from "../types";
 
 /**
- * 本模块承载两条润色流程：智能粘贴（剪贴板全文）与AI润色（编辑器选中文本），共用 polishText 主干。
- * 流程可重入；宿主负责过期判断（如中途切换工作区），insert/apply 闭包应捕获进入流程时的落位上下文。
+ * 本模块承载三条润色流程：智能粘贴（剪贴板全文）与AI润色（编辑器选中文本）共用 polishText 主干，
+ * 快捷动作智能粘贴（单按钮产物，独立主干）。流程可重入；宿主负责过期判断（如中途切换工作区），
+ * insert/apply 闭包应捕获进入流程时的落位上下文。
  */
 
 /** 气泡阶段：working=整理中（长驻，等结果替换），done=成功，fallback=降级（粘贴=插原文，润色=保留原文）。 */
@@ -44,7 +45,9 @@ export interface QuickSmartPasteButton {
   type: QuickButtonType;
 }
 
-export interface QuickSmartPasteOptions extends PolishFlowBase {
+export interface QuickSmartPasteOptions extends Omit<PolishFlowBase, "kind"> {
+  /** 固定 quick：本流程的编排即快捷动作，字段保留是为与宿主调用形状一致。 */
+  kind: "quick";
   /** 结果落位：成功=服务端生成的按钮；失败/超长=宿主普通粘贴语义的兜底按钮。 */
   insert: (button: QuickSmartPasteButton) => void;
   /** 失败兜底：宿主用现有普通粘贴分类（QuickButtons 的 classifyQuickText）生成按钮。 */

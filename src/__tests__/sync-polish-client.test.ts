@@ -92,7 +92,7 @@ describe("polishClient", () => {
     }
   });
 
-  it("quick 请求超时放宽到 45s：40s 时仍未 abort 并成功返回", async () => {
+  it("quick 请求超时放宽到 50s：40s 时仍未 abort 并成功返回", async () => {
     vi.useFakeTimers();
     try {
       const fetchMock = vi.fn((_url: string, init: RequestInit) => new Promise<Response>((resolve, reject) => {
@@ -112,8 +112,8 @@ describe("polishClient", () => {
     }
   });
 
-  it("quick 超时常量为 45s（todo/note 维持 config 的 35s）", () => {
-    expect(POLISH_QUICK_FETCH_TIMEOUT_MS).toBe(45_000);
+  it("quick 超时常量为 50s（todo/note 维持 config 的 35s）", () => {
+    expect(POLISH_QUICK_FETCH_TIMEOUT_MS).toBe(50_000);
   });
 
   it("限长常量与服务端 MAX_POLISH_CHARS 对齐", () => {
