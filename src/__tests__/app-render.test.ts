@@ -7771,7 +7771,7 @@ describe("App shell", () => {
     }
   });
 
-  it("shows guide bubble content without a GIF when GIF theme is none", async () => {
+  it("hides guide bubble content along with the GIF when GIF theme is none", async () => {
     vi.useFakeTimers();
     localStorage.setItem(STORAGE_KEY, JSON.stringify({ companionGifTheme: "none" }));
     const wrapper = mountApp();
@@ -7782,7 +7782,7 @@ describe("App shell", () => {
       await wrapper.vm.$nextTick();
 
       expect(wrapper.find(".focus-companion img").exists()).toBe(false);
-      expect(wrapper.find('[data-testid="companion-confirm"]').exists()).toBe(true);
+      expect(wrapper.find('[data-testid="companion-confirm"]').exists()).toBe(false);
     } finally {
       wrapper.unmount();
       vi.useRealTimers();
