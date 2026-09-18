@@ -1,6 +1,8 @@
 """快捷动作链接上下文：URL 提取 + SSRF 防护 + fetch_link_context。mock DNS 与 HTTP，不发真实请求。"""
 
+import io
 import ipaddress
+import urllib.error
 
 import llm
 import pytest
@@ -133,4 +135,43 @@ class TestFetchLinkContext:
     def test_redirect_hop_cap_returns_none(self, monkeypatch, offline_dns):
         responses = [FakeFetchResponse(location=f"/hop{i}") for i in range(llm.QUICK_FETCH_MAX_REDIRECTS + 2)]
         patch_fetch(monkeypatch, responses)
+        assert llm.fetch_link_context("https://example.com/") is None
+
+
+class TestFetchLinkContextHttpErrorRedirects:
+    """真实 urllib 在禁跟跳 opener 下把 3xx 抛成 HTTPError（带原响应头）：这条路径必须同样跟跳/拒绝。"""
+
+    def _patch_error_open(self, monkeypatch, handler):
+        monkeypatch.setattr(llm, "_open_no_redirect", handler)
+
+    def test_3xx_httperror_with_location_follows_to_next_hop(self, monkeypatch, offline_dns):
+        def error_open(request):
+            if request.full_url == "https://example.com/a":
+                raise urllib.error.HTTPError(request.full_url, 301, "Moved Permanently",
+                                             {"Location": "https://example.com/b"}, io.BytesIO(b""))
+            return FakeFetchResponse("<title>B</title>")
+
+        self._patch_error_open(monkeypatch, error_open)
+        assert llm.fetch_link_context("https://example.com/a") == "B"
+
+    def test_3xx_httperror_into_private_target_returns_none(self, monkeypatch, offline_dns):
+        def error_open(request):
+            raise urllib.error.HTTPError(request.full_url, 302, "Found",
+                                         {"Location": "http://169.254.169.254/x"}, io.BytesIO(b""))
+
+        self._patch_error_open(monkeypatch, error_open)
+        assert llm.fetch_link_context("https://example.com/") is None
+
+    def test_non_redirect_httperror_returns_none(self, monkeypatch, offline_dns):
+        def error_open(request):
+            raise urllib.error.HTTPError(request.full_url, 404, "Not Found", {}, io.BytesIO(b"gone"))
+
+        self._patch_error_open(monkeypatch, error_open)
+        assert llm.fetch_link_context("https://example.com/") is None
+
+    def test_3xx_httperror_without_location_returns_none(self, monkeypatch, offline_dns):
+        def error_open(request):
+            raise urllib.error.HTTPError(request.full_url, 302, "Found", {}, io.BytesIO(b""))
+
+        self._patch_error_open(monkeypatch, error_open)
         assert llm.fetch_link_context("https://example.com/") is None

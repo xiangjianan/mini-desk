@@ -14,6 +14,7 @@ import os
 import re
 import socket
 import sys
+import urllib.error
 import urllib.parse
 import urllib.request
 from urllib.parse import urljoin
@@ -51,6 +52,9 @@ FETCH_USER_AGENT = "Mozilla/5.0 (compatible; MiniDeskRelay/1.0)"
 
 _URL_RE = re.compile(r"https?://[^\s<>\"']+")
 _URL_TRAILING_PUNCTUATION = ".,;:!?，。；：）)】>」\"'"
+
+# CVE-2024-4032 前的 Python（服务器 3.9.6）会把 100.64.0.0/10 判为 global：显式拒绝。
+_CGNAT_NETWORK = ipaddress.ip_network("100.64.0.0/10")
 
 
 def _post_chat(system_prompt: str, user_content: str) -> object | None:
@@ -140,11 +144,15 @@ def is_safe_fetch_url(url: str) -> bool:
         return False
     for address in addresses:
         try:
-            if not ipaddress.ip_address(address).is_global:
+            addr = ipaddress.ip_address(address)
+            if addr in _CGNAT_NETWORK or not addr.is_global:
                 return False
         except ValueError:
             return False
     return True
+
+
+_REDIRECT_CODES = frozenset((301, 302, 303, 307, 308))
 
 
 class _NoRedirectHandler(urllib.request.HTTPRedirectHandler):
@@ -158,7 +166,8 @@ def _open_no_redirect(request: urllib.request.Request):
 
 def fetch_link_context(url: str) -> str | None:
     """抓链接页面的 <title>/meta 上下文（≤QUICK_CONTEXT_MAX_CHARS）；任何失败返回 None。
-    最多跟 QUICK_FETCH_MAX_REDIRECTS 跳、每跳过 SSRF 复检、只接受 text/html。不抛异常。"""
+    最多跟 QUICK_FETCH_MAX_REDIRECTS 跳、每跳过 SSRF 复检、只接受 text/html。不抛异常。
+    禁跟跳的 opener 把 3xx 抛成 HTTPError（携带原响应头），在 except 分支里按重定向处理。"""
     current = url
     for _ in range(QUICK_FETCH_MAX_REDIRECTS + 1):
         if not is_safe_fetch_url(current):
@@ -170,13 +179,19 @@ def fetch_link_context(url: str) -> str | None:
                     return None
                 body = response.read(QUICK_FETCH_MAX_BYTES).decode("utf-8", "ignore")
                 location = response.headers.get("Location")
+        except urllib.error.HTTPError as exc:
+            if exc.code not in _REDIRECT_CODES:
+                print(f"[llm] fetch link context failed: {exc!r}", file=sys.stderr)
+                return None
+            location = exc.headers.get("Location") if exc.headers else None
+            body = None
         except Exception as exc:
             print(f"[llm] fetch link context failed: {exc!r}", file=sys.stderr)
             return None
         if location:
             current = urljoin(current, location)
             continue
-        return _extract_html_meta(body)
+        return _extract_html_meta(body) if body is not None else None
     return None
 
 
