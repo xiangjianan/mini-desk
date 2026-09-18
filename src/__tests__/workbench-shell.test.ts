@@ -272,6 +272,22 @@ describe("WorkbenchShell", () => {
     vi.useRealTimers();
   });
 
+  it("keeps the command header out of the very first render when it was hidden", () => {
+    localStorage.setItem(WORKBENCH_HEADER_STORAGE_KEY, "true");
+
+    const wrapper = mount(WorkbenchShell, {
+      props: defaultProps,
+    });
+
+    // 首帧（mounted 钩子未跑、未等 nextTick）就不能渲染 header：此前先渲染再在
+    // onMounted 里隐藏，200ms 离场过渡会在刷新时把导航栏画出来（闪现）。
+    expect(wrapper.find('[data-testid="workbench-command-bar"]').exists()).toBe(false);
+    expect(wrapper.find('[data-testid="workbench-theme"]').exists()).toBe(false);
+    expect(wrapper.get(".workbench-main").classes()).toContain("is-header-hidden");
+
+    wrapper.unmount();
+  });
+
   it("restores the persisted command header hidden state after remounting", async () => {
     vi.useFakeTimers();
     localStorage.setItem(WORKBENCH_HEADER_STORAGE_KEY, "true");

@@ -99,7 +99,10 @@ const HEADER_REVEAL_POINTER_LEAVE_HIDE_MS = 150;
 
 const gridRef = ref<HTMLElement | null>(null);
 const headerRevealZoneRef = ref<HTMLElement | null>(null);
-const headerHidden = ref(false);
+// 隐藏态必须在首帧渲染前就位：若先按 false 渲染、再在 onMounted 里隐藏，
+// header 的 200ms 离场过渡会把导航栏画在屏幕上（刷新闪现）。
+// readStoredHeaderHidden 是函数声明，提升后可在此直接调用。
+const headerHidden = ref(readStoredHeaderHidden());
 const headerRevealVisible = ref(false);
 const columnWidths = ref<number[]>([]);
 const gridGap = ref(DEFAULT_GRID_GAP);
@@ -659,8 +662,7 @@ watch(
 );
 
 onMounted(() => {
-  if (readStoredHeaderHidden()) {
-    headerHidden.value = true;
+  if (headerHidden.value) {
     headerRevealVisible.value = true;
     scheduleHeaderRevealHide();
   }
