@@ -218,6 +218,7 @@ def create_app() -> Flask:
             return error_response(404, "unknown_code")
         if key_row["revoked_at"] is not None:
             return error_response(410, "revoked")
+        # style 属便签 AI 润色口径，quick 只共享校验不使用。
         if kind == "quick":
             try:
                 button = llm.generate_quick_button(text)

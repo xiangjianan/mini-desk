@@ -168,4 +168,5 @@ class TestQuickKind:
 
         monkeypatch.setattr(llm_module, "generate_quick_button", boom)
         response = post_polish(client, "quick", "文本")
+        assert response.status_code == 200
         assert response.get_json() == {"button": None, "fallback": True}
