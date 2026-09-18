@@ -98,6 +98,12 @@ const form = reactive<{ title: string; value: string; tagTitle: string; customTa
 });
 const menu = ref<{ x: number; y: number; id?: string; anchor?: HTMLElement; tagTitle?: string; tagId?: string } | null>(null);
 const smartPastePending = ref(false);
+// 卸载守卫：清空数据 bump boardEpoch 整树 remount 后旧实例 props 已冻结，引用比较不再变化，
+// 必须单独拦截（与 TodoPanel 的 landingLists 守卫同口径）。
+let isUnmounted = false;
+onUnmounted(() => {
+  isUnmounted = true;
+});
 const tagDrafts = ref<QuickTagDraft[]>([]);
 const newTagTitle = ref("");
 const tagManagerAnchor = ref<HTMLElement | undefined>();
@@ -644,7 +650,7 @@ async function runQuickSmartPasteFlow(tagTitle: string | undefined, anchor?: HTM
       messages: quickSmartPasteMessages(uiText.value),
       anchor,
       insert: (button) => {
-        if (props.buttons !== landingButtons) return;
+        if (isUnmounted || props.buttons !== landingButtons) return;
         emit("save", { ...button, tagTitle });
       },
       fallbackButton: classifyQuickText,

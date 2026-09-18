@@ -1455,6 +1455,31 @@ describe("QuickButtons", () => {
     await smart.trigger("click");
     expect(polish).toHaveBeenCalledTimes(1);
   });
+
+  it("流程中按钮数组被结构性替换（切工作区/清空）时丢弃迟到结果", async () => {
+    type QuickButtonPolishSuccess = { button: { title: string; value: string; type: "link" } };
+    let resolvePolish: (value: QuickButtonPolishSuccess) => void = () => undefined;
+    const polish = vi.fn(() => new Promise<QuickButtonPolishSuccess>((resolve) => { resolvePolish = resolve; }));
+    const wrapper = mountQuickButtons({
+      tags: [{ id: "tag-a", title: "工作" }],
+      buttons: [{ id: "a1", title: "GitHub", value: "https://github.com", type: "link", hidden: false, tagId: "tag-a" }],
+      polish,
+    });
+    await wrapper.vm.$nextTick();
+
+    Object.assign(navigator, { clipboard: { readText: vi.fn(async () => "https://github.com") } });
+    await wrapper.get(".quick-tag-heading .desk-ai-button").trigger("click");
+    await wrapper.vm.$nextTick();
+
+    // 模拟切工作区：buttons 换新数组引用
+    await wrapper.setProps({ buttons: [{ id: "b1", title: "别的", value: "x", type: "text", hidden: false }] });
+    resolvePolish({ button: { title: "迟到按钮", value: "https://github.com", type: "link" } });
+    await flushPromises();
+
+    expect(wrapper.emitted("save")).toBeUndefined();
+    // 气泡仍走完 done（与提醒/便签面板口径一致：结果丢弃但流程提示完成）
+    expect(wrapper.emitted("polishMessage")?.map((call) => call[0])).toEqual(["working", "done"]);
+  });
 });
 
 describe("formatQuickCopiedPreview", () => {
