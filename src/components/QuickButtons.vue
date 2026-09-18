@@ -12,7 +12,10 @@ import { buildVisibleQuickButtonGroups, computeQuickColumnCount, filterVisibleQu
 import { findQuickAppPresetByScheme, getQuickAppPresetHint, getQuickAppPresetTitle, QUICK_APP_PRESETS } from "../state/quickApps";
 import { findQuickApiTemplate, QUICK_API_TEMPLATES } from "../state/quickApiTemplates";
 import { clearGlobalSearch, globalSearchNormalized, globalSearchQuery, setGlobalSearch } from "../state/globalSearch";
-import { CONTEXT_MENU_Z_INDEX, createExclusiveContextMenu } from "../utils/contextMenu";
+import { CONTEXT_MENU_Z_INDEX, createExclusiveContextMenu, renderPolishMenuLabel } from "../utils/contextMenu";
+import type { PolishKind, PolishResult, PolishStyle } from "../sync/polishClient";
+import { quickSmartPasteMessages, runQuickSmartPaste } from "../utils/smartPaste";
+import type { SmartPastePhase } from "../utils/smartPaste";
 import { readClipboardText } from "../utils/clipboard";
 import { renderIcon } from "../utils/dropdownIcons";
 import { createDragAutoScroll, findDragScrollContainer } from "../utils/dragScroll";
@@ -28,6 +31,8 @@ const props = withDefaults(defineProps<{
   /** true = 紧凑按钮（隐藏类型副标题、压低高度）。 */
   compact?: boolean;
   language?: AppLanguage;
+  /** 智能粘贴调用（内部完成配对码管理）；未注入时不渲染智能粘贴入口。 */
+  polish?: (kind: PolishKind, text: string, style?: PolishStyle) => Promise<PolishResult>;
   moveTargets?: WorkspaceMoveTarget[];
 }>(), {
   tags: () => [],
@@ -58,6 +63,7 @@ const emit = defineEmits<{
   moveTagToWorkspace: [tagId: string, workspaceId: string];
   columnCountChange: [count: number];
   assignTagColumn: [draggedId: string, targetColumn: number, anchorId: string | null, insertBefore: boolean];
+  polishMessage: [phase: SmartPastePhase, message: string, anchor: HTMLElement | undefined];
 }>();
 
 const dialogOpen = ref(false);
@@ -91,6 +97,7 @@ const form = reactive<{ title: string; value: string; tagTitle: string; customTa
   apiBody: "",
 });
 const menu = ref<{ x: number; y: number; id?: string; anchor?: HTMLElement; tagTitle?: string; tagId?: string } | null>(null);
+const smartPastePending = ref(false);
 const tagDrafts = ref<QuickTagDraft[]>([]);
 const newTagTitle = ref("");
 const tagManagerAnchor = ref<HTMLElement | undefined>();
@@ -232,6 +239,9 @@ const menuOptions = computed<DropdownOption[]>(() => {
     return [
       { label: uiText.value.quick.add, key: "add", icon: renderIcon(AddOutline) },
       { label: uiText.value.common.paste, key: "paste", icon: renderIcon(ClipboardOutline) },
+      ...(props.polish
+        ? [{ label: uiText.value.common.smartPaste, key: "smart-paste", icon: renderIcon(ClipboardOutline) }]
+        : []),
       { label: props.showHidden ? uiText.value.quick.hideHidden : uiText.value.quick.showHidden, key: "toggle-show-hidden", icon: renderIcon(props.showHidden ? EyeOffOutline : EyeOutline) },
       { label: uiText.value.quick.tagManage, key: "manage-tags", icon: renderIcon(PricetagsOutline) },
       { label: props.compact ? uiText.value.quick.largeButtons : uiText.value.quick.compactButtons, key: "toggle-compact", icon: renderIcon(ResizeOutline) },
@@ -521,6 +531,10 @@ function handleMenuSelect(key: string): void {
     void pasteQuick(tagTitle);
     return;
   }
+  if (key === "smart-paste") {
+    void runQuickSmartPasteFlow(tagTitle, anchor);
+    return;
+  }
   if (key === "guide" && anchor) emit("guide", "quickButtons", anchor, true);
   if (!id) return;
   if (key === "copy-text") emit("copyText", id, anchor);
@@ -615,6 +629,30 @@ async function pasteQuick(tagTitle?: string): Promise<void> {
   const trimmed = text?.trim();
   if (!trimmed) return;
   emit("save", { ...classifyQuickText(trimmed), tagTitle });
+}
+
+/** 快捷动作智能粘贴：剪贴板 → 服务端生成按钮 → 落位；失败退化为普通粘贴语义（classifyQuickText）。
+ *  落位前比对 buttons 引用丢弃迟到结果（切工作区/结构性替换），与提醒区 landingLists 守卫同口径。 */
+async function runQuickSmartPasteFlow(tagTitle: string | undefined, anchor?: HTMLElement): Promise<void> {
+  if (!props.polish || smartPastePending.value) return;
+  smartPastePending.value = true;
+  const landingButtons = props.buttons;
+  try {
+    await runQuickSmartPaste({
+      kind: "quick",
+      polish: props.polish,
+      messages: quickSmartPasteMessages(uiText.value),
+      anchor,
+      insert: (button) => {
+        if (props.buttons !== landingButtons) return;
+        emit("save", { ...button, tagTitle });
+      },
+      fallbackButton: classifyQuickText,
+      notify: (phase, message, anchor) => emit("polishMessage", phase, message, anchor),
+    });
+  } finally {
+    smartPastePending.value = false;
+  }
 }
 
 function handleExternalQuickDrop(event: DragEvent, groupId: string): boolean {
@@ -908,6 +946,19 @@ function handleQuickGroupDrop(event: DragEvent, groupId: string): void {
             </button>
             <span v-if="editingTagId !== group.id" class="quick-tag-count">{{ group.buttons.length }}</span>
             <button
+              v-if="group.title && editingTagId !== group.id && props.polish"
+              type="button"
+              class="icon-button desk-ai-button"
+              :aria-label="uiText.common.smartPaste"
+              :title="uiText.common.smartPaste"
+              :disabled="smartPastePending"
+              :aria-busy="smartPastePending"
+              @click.stop="runQuickSmartPasteFlow(isRealTagGroup(group.id) ? group.title : '', $event.currentTarget as HTMLElement)"
+              @dblclick.stop
+            >
+              <NIcon :component="ClipboardOutline" />
+            </button>
+            <button
               v-if="group.title && editingTagId !== group.id"
               type="button"
               class="quick-tag-add-button"
@@ -980,6 +1031,7 @@ function handleQuickGroupDrop(event: DragEvent, groupId: string): void {
       :y="menu.y"
       :z-index="CONTEXT_MENU_Z_INDEX"
       :options="menuOptions"
+      :render-label="renderPolishMenuLabel"
       @select="handleMenuSelect"
       @clickoutside="exclusiveMenu.handleClickOutside"
     >
