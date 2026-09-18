@@ -100,7 +100,8 @@ function openGifMenu(event: MouseEvent): void {
 }
 
 function onSurfaceContextmenu(event: MouseEvent): void {
-  if (!shouldRenderGif.value) return;
+  // 确认在场时禁用右键菜单：此刻选「不显示」会把待处理的二次确认一并杀掉。
+  if (!shouldRenderGif.value || props.confirm) return;
   openGifMenu(event);
 }
 
@@ -127,12 +128,15 @@ const placementStyle = computed(() => {
 });
 
 const activeGifTheme = computed(() => props.gifTheme ?? DEFAULT_COMPANION_GIF_THEME);
-const gifSrc = computed(() =>
-  getCompanionGifSrc(activeGifTheme.value, props.theme ?? "light", {
+const gifSrc = computed(() => {
+  const src = getCompanionGifSrc(activeGifTheme.value, props.theme ?? "light", {
     light: props.customGifLightSrc,
     dark: props.customGifDarkSrc,
-  }),
-);
+  });
+  if (src) return src;
+  // 「不显示」的安静模式下唯一例外：二次确认框带默认 GIF 弹出（贴鼠标锚定），答完即随确认一并收起。
+  return props.confirm ? getCompanionGifSrc(DEFAULT_COMPANION_GIF_THEME, props.theme ?? "light") : "";
+});
 const shouldRenderGif = computed(() => Boolean(gifSrc.value));
 const hasPopoverPayload = computed(() => Boolean(props.message || props.confirm || props.linkText || props.signatureText));
 const surfaceVisible = computed(() => {

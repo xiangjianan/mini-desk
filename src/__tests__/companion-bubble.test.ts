@@ -926,4 +926,56 @@ describe("CompanionBubble", () => {
 
     wrapper.unmount();
   });
+
+  it("falls back to the default GIF for confirm dialogs when the theme is none", async () => {
+    vi.useFakeTimers();
+    const wrapper = mount(CompanionBubble, {
+      attachTo: document.body,
+      props: {
+        visible: true,
+        message: "确认删除这条待办吗？",
+        confirm: true,
+        gifTheme: "none",
+      },
+      global: {
+        stubs: {
+          NButton: buttonStub,
+          NPopover: popoverStub,
+        },
+      },
+    });
+
+    try {
+      await wrapper.vm.$nextTick();
+      // 安静模式唯一例外：二次确认框带默认 GIF（像素猫）弹出。
+      expect(wrapper.find(".focus-companion.is-visible img").exists()).toBe(true);
+    } finally {
+      wrapper.unmount();
+    }
+  });
+
+  it("keeps the GIF hidden for ordinary messages when the theme is none", async () => {
+    vi.useFakeTimers();
+    const wrapper = mount(CompanionBubble, {
+      attachTo: document.body,
+      props: {
+        visible: true,
+        message: "提示内容",
+        gifTheme: "none",
+      },
+      global: {
+        stubs: {
+          NButton: buttonStub,
+          NPopover: popoverStub,
+        },
+      },
+    });
+
+    try {
+      await wrapper.vm.$nextTick();
+      expect(wrapper.find(".focus-companion img").exists()).toBe(false);
+    } finally {
+      wrapper.unmount();
+    }
+  });
 });

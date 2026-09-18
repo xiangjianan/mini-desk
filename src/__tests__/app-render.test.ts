@@ -7789,6 +7789,30 @@ describe("App shell", () => {
     }
   });
 
+  it("clears the in-flight bubble immediately when the gif theme switches to none", async () => {
+    vi.useFakeTimers();
+    const wrapper = mountApp();
+
+    try {
+      await wrapper.get(".image-panel").trigger("click");
+      await vi.advanceTimersByTimeAsync(200);
+      await wrapper.vm.$nextTick();
+      expect(wrapper.find('[data-testid="companion-confirm"]').exists()).toBe(true);
+
+      wrapper.getComponent(SettingsMenu).vm.$emit("gifTheme", "none", wrapper.getComponent(SettingsMenu).element as HTMLElement);
+      await vi.advanceTimersByTimeAsync(260);
+      await wrapper.vm.$nextTick();
+
+      // 切到「不显示」当场清场：不等原气泡的 3s 定时器，260ms 仅为保留内容的淡出窗口。
+      expect(wrapper.find('[data-testid="companion-bubble"]').exists()).toBe(false);
+      expect(wrapper.find(".focus-companion img").exists()).toBe(false);
+      expect(wrapper.find('[data-testid="companion-confirm"]').exists()).toBe(false);
+    } finally {
+      wrapper.unmount();
+      vi.useRealTimers();
+    }
+  });
+
   it("clears workspace pairing from the inbox dialog and persists immediately", async () => {
     localStorage.setItem(
       STORAGE_KEY,

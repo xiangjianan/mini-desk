@@ -2595,7 +2595,12 @@ function handleThemeClick(): void {
 function updateCompanionGifTheme(theme: CompanionGifTheme, anchor?: HTMLElement): void {
   state.companionGifTheme = theme;
   persistNow();
-  showBubbleText(theme === "none" ? uiText.value.app.gifDisabled : uiText.value.app.gifThemeChanged, anchor);
+  // 切到「不显示」即安静模式：当场清掉在屏气泡（含 GIF），确认类提示本身也被静音门拦下。
+  if (theme === "none") {
+    hideCompanion();
+    return;
+  }
+  showBubbleText(uiText.value.app.gifThemeChanged, anchor);
 }
 
 async function updateCustomCompanionGif(files: { light?: File; dark?: File }, anchor?: HTMLElement): Promise<void> {
