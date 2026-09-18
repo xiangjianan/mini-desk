@@ -58,7 +58,7 @@ QUICK_TITLE_MAX_CHARS = 15
 QUICK_FETCH_TIMEOUT_SECONDS = 8
 QUICK_FETCH_MAX_BYTES = 256 * 1024
 QUICK_FETCH_MAX_REDIRECTS = 3
-# 跨跳共享总预算：每跳 8s × 4 跳会顶穿客户端 45s 超时并占死 2 个同步 worker。
+# 跨跳共享总预算：每跳 8s × 4 跳会顶穿客户端 50s 超时并占死 2 个同步 worker。
 QUICK_FETCH_TOTAL_BUDGET_SECONDS = 10
 QUICK_CONTEXT_MAX_CHARS = 800
 FETCH_USER_AGENT = "Mozilla/5.0 (compatible; MiniDeskRelay/1.0)"
@@ -212,7 +212,7 @@ def _open_no_redirect(request: urllib.request.Request):
 def fetch_link_context(url: str) -> str | None:
     """抓链接页面的 <title>/meta 上下文（≤QUICK_CONTEXT_MAX_CHARS）；任何失败返回 None。
     最多跟 QUICK_FETCH_MAX_REDIRECTS 跳、每跳过 SSRF 复检、只接受 text/html；跨跳共享
-    QUICK_FETCH_TOTAL_BUDGET_SECONDS 总预算（耗尽即放弃，保护客户端 45s 超时与同步 worker）。
+    QUICK_FETCH_TOTAL_BUDGET_SECONDS 总预算（耗尽即放弃，保护客户端 50s 超时与同步 worker）。
     禁跟跳的 opener 把 3xx 抛成 HTTPError（携带原响应头），在 except 分支里按重定向处理；
     成功路径见到的 Location 只可能是 2xx 附带，一律忽略直接取页面 meta。"""
     deadline = time.monotonic() + QUICK_FETCH_TOTAL_BUDGET_SECONDS

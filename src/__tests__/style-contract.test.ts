@@ -417,5 +417,14 @@ describe("workbench style contract", () => {
     expect(text).not.toContain("ColorWandOutline");
     // 菜单标签的渐变流动文字仍由 contextMenu.ts 渲染，样式类保留。
     expect(readFileSync(resolve(__dirname, "../utils/contextMenu.ts"), "utf8")).toContain("polish-menu-flow");
+    const quick = readFileSync(resolve(__dirname, "../components/QuickButtons.vue"), "utf8");
+    // 快捷区标签头智能粘贴按钮：与提醒列表入口同款 desk-ai-button 主色蓝（markup 不带 flow 类）。
+    expect(quick).toContain('class="icon-button desk-ai-button"');
+    expect(quick).not.toContain("ColorWandOutline");
+    // 右键菜单「智能粘贴」条目与「粘贴」共用剪贴板图标，文字渐变流动走共享 render-label。
+    expect(quick).toContain('key: "smart-paste", icon: renderIcon(ClipboardOutline)');
+    expect(quick).toContain(':render-label="renderPolishMenuLabel"');
+    // 防重态：进行中 cursor:wait + 降透明度（与便签入口同款）。
+    expectSelectorBody(desk, ".workbench-shell .desk-ai-button:disabled", "cursor: wait");
   });
 });

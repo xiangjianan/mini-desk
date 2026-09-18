@@ -3536,6 +3536,7 @@ function moveItem<T extends { id: string }>(items: T[], dragId: string, targetId
           :compact="activeWorkspace.quickCompact"
           :language="state.language"
           :move-targets="workspaceMoveTargets"
+          :polish="polishClipboard"
           @title-update="updateTitle"
           @save="saveQuick"
           @delete="deleteQuick"
@@ -3556,6 +3557,7 @@ function moveItem<T extends { id: string }>(items: T[], dragId: string, targetId
           @delete-tag="deleteQuickTag"
           @guide="handleGuideClick"
           @declutter="showQuickDeclutterBubble"
+          @polish-message="handlePolishStatus"
         />
       </template>
 
