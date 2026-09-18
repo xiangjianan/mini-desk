@@ -9,7 +9,6 @@ import {
   CheckboxOutline,
   ChevronDownOutline,
   ClipboardOutline,
-  ColorWandOutline,
   CopyOutline,
   CreateOutline,
   EyeOffOutline,
@@ -196,7 +195,7 @@ const menuOptions = computed<DropdownOption[]>(() => {
       { label: isCompletedVisible(list.id) ? uiText.value.todo.hideCompleted : uiText.value.todo.showCompleted, key: "toggle-completed", icon: renderIcon(isCompletedVisible(list.id) ? EyeOffOutline : EyeOutline) },
       { label: uiText.value.common.paste, key: "paste", icon: renderIcon(ClipboardOutline) },
       ...(props.polish
-        ? [{ label: uiText.value.common.smartPaste, key: "smart-paste", icon: renderIcon(ColorWandOutline) }]
+        ? [{ label: uiText.value.common.smartPaste, key: "smart-paste", icon: renderIcon(ClipboardOutline) }]
         : []),
       { label: uiText.value.todo.newList, key: "create-list", icon: renderIcon(AddOutline) },
       { label: uiText.value.todo.editList, key: "edit-list", icon: renderIcon(CreateOutline) },
@@ -216,7 +215,7 @@ const menuOptions = computed<DropdownOption[]>(() => {
       // 右键提醒事项时，「粘贴/智能粘贴」把剪贴板内容拆成新增提醒，插到该条提醒下方。
       options.push({ label: uiText.value.common.paste, key: "paste", icon: renderIcon(ClipboardOutline) });
       if (props.polish) {
-        options.push({ label: uiText.value.common.smartPaste, key: "smart-paste", icon: renderIcon(ColorWandOutline) });
+        options.push({ label: uiText.value.common.smartPaste, key: "smart-paste", icon: renderIcon(ClipboardOutline) });
       }
     }
     options.push({

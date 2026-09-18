@@ -252,8 +252,9 @@ html[data-theme="dark"] .workbench-shell,
 .workbench-shell .today-focus-heading { display: flex; align-items: center; gap: 8px; }
 .workbench-shell .today-focus-title-icon { flex: 0 0 auto; font-size: 16px; }
 
-/* Pair the clipboard icon's color cycle with the existing AI text treatment. */
-.smart-paste-icon-flow { animation: smart-paste-icon-flow 4.8s linear infinite; }
+/* 智能粘贴入口（提醒列表粘贴按钮 + 便签头部「智能粘贴」按钮，共用 desk-ai-button）：
+   平时主色蓝，悬浮时才回归彩色流动强调——图标循环变色、文字渐变滚动；
+   渐变文字常驻版仍保留在右键菜单标签上（contextMenu.ts 的 polish-menu-flow）。 */
 @keyframes smart-paste-icon-flow {
   0%, 100% { color: #d946ef; }
   20% { color: #2563eb; }
@@ -261,9 +262,19 @@ html[data-theme="dark"] .workbench-shell,
   60% { color: #f59e0b; }
   80% { color: #ef4444; }
 }
+.workbench-shell .desk-ai-button:hover .n-icon { animation: smart-paste-icon-flow 4.8s linear infinite; }
+.workbench-shell .desk-smart-paste:hover > span {
+  color: transparent;
+  -webkit-text-fill-color: transparent;
+  background: linear-gradient(90deg, #d946ef 0%, #2563eb 10%, #0f9f6e 20%, #f59e0b 30%, #ef4444 40%, #d946ef 50%, #2563eb 60%, #0f9f6e 70%, #f59e0b 80%, #ef4444 90%, #d946ef 100%);
+  background-size: 200% 100%;
+  background-repeat: repeat-x;
+  -webkit-background-clip: text;
+  background-clip: text;
+  animation: starred-text-flow 4.8s linear infinite;
+}
 .workbench-shell .desk-smart-paste:disabled { cursor: wait; opacity: 0.6; }
 @media (prefers-reduced-motion: reduce) {
-  .desk-smart-paste .smart-paste-icon-flow,
-  .desk-smart-paste .polish-menu-flow { animation: none; }
-  .desk-smart-paste .smart-paste-icon-flow { color: var(--primary); }
+  .workbench-shell .desk-ai-button:hover .n-icon,
+  .workbench-shell .desk-smart-paste:hover > span { animation: none; }
 }

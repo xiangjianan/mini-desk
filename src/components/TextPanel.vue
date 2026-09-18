@@ -3,7 +3,7 @@ import { computed, h, nextTick, onMounted, onUnmounted, ref, watch } from "vue";
 import type { Component, VNode } from "vue";
 import { NDropdown, NIcon, NScrollbar } from "naive-ui";
 import type { DropdownOption } from "naive-ui";
-import { ClipboardOutline, ColorWandOutline, CopyOutline, HelpCircleOutline, TrashOutline } from "@vicons/ionicons5";
+import { ClipboardOutline, CopyOutline, HelpCircleOutline, TrashOutline } from "@vicons/ionicons5";
 import SparklesOutlineIcon from "./SparklesOutlineIcon.vue";
 import type { LineItem } from "../types";
 import { GUIDE_MENU_OPTION } from "../state/defaults";
@@ -104,7 +104,7 @@ const menuOptions = computed<DropdownOption[]>(() => {
     options.push({ label: uiText.value.common.copy, key: "copy", disabled: !canCopyTextSelection(target), icon: renderIcon(CopyOutline) });
     options.push({ label: uiText.value.common.paste, key: "paste", disabled: !menu.value?.canPaste, icon: renderIcon(ClipboardOutline) });
     if (props.polish) {
-      options.push({ label: uiText.value.common.smartPaste, key: "smart-paste", disabled: !menu.value?.canPaste, icon: renderIcon(ColorWandOutline) });
+      options.push({ label: uiText.value.common.smartPaste, key: "smart-paste", disabled: !menu.value?.canPaste, icon: renderIcon(ClipboardOutline) });
     }
     if (props.polish && menu.value?.selectionText) {
       options.push({

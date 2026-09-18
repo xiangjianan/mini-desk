@@ -256,10 +256,10 @@ function handleTabsWheel(event: WheelEvent): void {
     <div class="panel-header desk-zone-heading">
       <h2><NIcon :component="DocumentTextOutline" /><span>{{ uiText.desk.notes }}</span></h2>
       <div class="header-actions">
-        <button v-if="props.polish && activeSpace" class="desk-ai-action desk-smart-paste" type="button"
+        <button v-if="props.polish && activeSpace" class="desk-ai-action desk-ai-button desk-smart-paste" type="button"
           :aria-label="uiText.common.smartPaste" :disabled="smartPastePending" :aria-busy="smartPastePending" @mousedown.prevent
           @click.stop="appendSmartPaste">
-          <NIcon class="smart-paste-icon-flow" :component="ClipboardOutline" /><span class="polish-menu-flow">{{ uiText.common.smartPaste }}</span>
+          <NIcon :component="ClipboardOutline" /><span>{{ uiText.common.smartPaste }}</span>
         </button>
       </div>
     </div>
