@@ -24,7 +24,7 @@ class FakeResponse:
 @pytest.fixture
 def api(monkeypatch):
     """注入 key 并捕获请求；测试可改 captured["content"] 控制模型返回内容。"""
-    monkeypatch.setenv("DEEPSEEK_API_KEY", "test-key")
+    monkeypatch.setenv("DASHSCOPE_API_KEY", "test-key")
     captured: dict = {"content": json.dumps({"items": ["明天买牛奶", "交电费"]}, ensure_ascii=False)}
 
     def fake_urlopen(request, timeout=None):
@@ -43,10 +43,13 @@ class TestSuccess:
     def test_request_shape(self, api):
         polish_capture("note", "一个想法")
         request = api["request"]
+        assert request.full_url == "https://dashscope.aliyuncs.com/compatible-mode/v1/chat/completions"
         assert request.get_header("Authorization") == "Bearer test-key"
         body = json.loads(request.data)
-        assert body["model"] == "deepseek-chat"
+        assert body["model"] == "qwen3.8-flash"
         assert body["response_format"] == {"type": "json_object"}
+        # 桌面端 /polish 同步等待：关闭思考模式换低延迟（千问兼容端点扩展参数）
+        assert body["enable_thinking"] is False
         assert body["messages"][0]["role"] == "system"
         assert body["messages"][0]["content"] == llm.SYSTEM_PROMPT
         assert json.loads(body["messages"][1]["content"]) == {"kind": "note", "text": "一个想法"}
@@ -102,7 +105,7 @@ class TestCleaning:
 
 class TestFailures:
     def test_missing_api_key_returns_none(self, api, monkeypatch):
-        monkeypatch.delenv("DEEPSEEK_API_KEY")
+        monkeypatch.delenv("DASHSCOPE_API_KEY")
         assert polish_capture("todo", "x") is None
 
     def test_urlopen_error_returns_none(self, api, monkeypatch):

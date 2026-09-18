@@ -3,7 +3,7 @@
 路由键是 SHA-256(配对码) 的 hex；条目保留 30 天，无账号、无按条删除（回收交给保留期清理）。
 注册制：pairing_keys 三态（unknown/active/revoked），桌面端保存/轮换/启动时注册，
 未注册码 POST 404、已注销码 POST 410（注销即永久，注册不复活）。幂等：同 id 覆盖。
-明文路径（新手机页）：POST 校验后立刻 ack，后台线程调 DeepSeek 润色（llm.polish_capture），
+明文路径（新手机页）：POST 校验后立刻 ack，后台线程调千问大模型润色（llm.polish_capture），
 拆行入库；LLM 任何失败兜底存原文。payload 可选布尔 polish=False 时跳过润色原文直存
 （手机页 AI 润色开关，缺省/非布尔按旧协议默认润色）。密文路径（SW 缓存的旧手机页）：与原 Worker 协议一致，原样直存。
 自建服务器无次数限制：只做输入校验，不做限流/配额。

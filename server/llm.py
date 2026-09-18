@@ -1,4 +1,4 @@
-"""手机速记润色：调 DeepSeek 把一条速记整理成最终入库内容。
+"""手机速记润色：调千问（DashScope OpenAI 兼容端点，qwen3.8-flash）把一条速记整理成最终入库内容。
 
 统一输出契约 {"items": ["...", ...]}：todo 拆成一条条独立提醒；note 总结提炼成编号格式文本。
 任何失败（缺 key、网络、超时、非 200、JSON/结构非法、结果为空）一律返回 None，
@@ -13,8 +13,8 @@ import re
 import sys
 from urllib.request import Request, urlopen
 
-DEEPSEEK_API_URL = "https://api.deepseek.com/chat/completions"
-DEEPSEEK_MODEL = "deepseek-chat"
+LLM_API_URL = "https://dashscope.aliyuncs.com/compatible-mode/v1/chat/completions"
+LLM_MODEL = "qwen3.8-flash"
 LLM_TIMEOUT_SECONDS = 30
 MAX_ITEMS = 20
 MAX_ITEM_CHARS = 500
@@ -37,25 +37,27 @@ STYLE_HINTS = {
 
 
 def polish_capture(kind: str, text: str, style: str | None = None) -> list[str] | None:
-    api_key = os.environ.get("DEEPSEEK_API_KEY", "").strip()
+    api_key = os.environ.get("DASHSCOPE_API_KEY", "").strip()
     if not api_key:
-        print("[llm] DEEPSEEK_API_KEY 未配置，跳过润色", file=sys.stderr)
+        print("[llm] DASHSCOPE_API_KEY 未配置，跳过润色", file=sys.stderr)
         return None
     hint = STYLE_HINTS.get(style) if style else None
     system_prompt = f"{SYSTEM_PROMPT}\n\n本次输出的语言风格要求：{hint}" if hint else SYSTEM_PROMPT
     body = json.dumps(
         {
-            "model": DEEPSEEK_MODEL,
+            "model": LLM_MODEL,
             "messages": [
                 {"role": "system", "content": system_prompt},
                 {"role": "user", "content": json.dumps({"kind": kind, "text": text}, ensure_ascii=False)},
             ],
             "response_format": {"type": "json_object"},
+            # 千问默认开思考模式：桌面端 /polish 同步等待，关掉换低延迟。
+            "enable_thinking": False,
             "temperature": 0.2,
         }
     ).encode("utf-8")
     request = Request(
-        DEEPSEEK_API_URL,
+        LLM_API_URL,
         data=body,
         headers={"Content-Type": "application/json", "Authorization": f"Bearer {api_key}"},
         method="POST",
@@ -64,7 +66,7 @@ def polish_capture(kind: str, text: str, style: str | None = None) -> list[str] 
         with urlopen(request, timeout=LLM_TIMEOUT_SECONDS) as response:
             data = json.loads(response.read().decode("utf-8"))
     except Exception as exc:
-        # 网络/超时/非 200（含 402 额度不足、429 限流、401 key 无效）/响应体非法：统一兜底，stderr 留痕。
+        # 网络/超时/非 200（含 401 key 无效、429 限流、额度不足）/响应体非法：统一兜底，stderr 留痕。
         print(f"[llm] polish failed: {exc!r}", file=sys.stderr)
         return None
     return _extract_items(data)
