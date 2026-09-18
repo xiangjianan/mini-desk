@@ -28,6 +28,21 @@ def polish(monkeypatch):
     return stub
 
 
+@pytest.fixture
+def quick(monkeypatch):
+    """快捷动作按钮桩：默认 link 结果；改 result 控制成败，calls 记录调用。"""
+    stub = lambda: None  # noqa: E731
+    stub.result = {"title": "GitHub 主页", "type": "link", "value": "https://github.com"}
+    stub.calls = []
+
+    def fake(text):
+        stub.calls.append(text)
+        return stub.result
+
+    monkeypatch.setattr(llm_module, "generate_quick_button", fake)
+    return stub
+
+
 def post_polish(client, kind, text, key=KEY, style=None):
     payload = {"kind": kind, "text": text}
     if style is not None:
@@ -130,3 +145,27 @@ class TestCors:
     def test_options_preflight_204(self, client):
         response = client.options(f"/polish/{KEY}", headers={"Origin": ORIGIN, "Access-Control-Request-Method": "POST"})
         assert response.status_code == 204
+
+
+class TestQuickKind:
+    def test_quick_returns_button_and_passes_text(self, client, quick, polish):
+        response = post_polish(client, "quick", "https://github.com 代码托管")
+
+        assert response.status_code == 200
+        assert response.get_json() == {"button": {"title": "GitHub 主页", "type": "link", "value": "https://github.com"}}
+        assert quick.calls == ["https://github.com 代码托管"]
+        assert polish.calls == []  # quick 不走 polish_capture。
+
+    def test_quick_llm_failure_returns_fallback_marker(self, client, quick):
+        quick.result = None
+        response = post_polish(client, "quick", "文本")
+        assert response.status_code == 200
+        assert response.get_json() == {"button": None, "fallback": True}
+
+    def test_quick_raising_llm_also_falls_back(self, client, monkeypatch):
+        def boom(text):
+            raise RuntimeError("should not surface")
+
+        monkeypatch.setattr(llm_module, "generate_quick_button", boom)
+        response = post_polish(client, "quick", "文本")
+        assert response.get_json() == {"button": None, "fallback": True}

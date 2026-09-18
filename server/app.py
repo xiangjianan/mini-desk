@@ -7,7 +7,7 @@
 拆行入库；LLM 任何失败兜底存原文。payload 可选布尔 polish=False 时跳过润色原文直存
 （手机页 AI 润色开关，缺省/非布尔按旧协议默认润色）。密文路径（SW 缓存的旧手机页）：与原 Worker 协议一致，原样直存。
 自建服务器无次数限制：只做输入校验，不做限流/配额。
-智能粘贴：POST /polish/<key_hash> 同步调 LLM 整理剪贴板文本（无状态不入库，鉴权同注册制）。
+智能粘贴：POST /polish/<key_hash> 同步调 LLM 整理剪贴板文本（todo/note 拆条排版、quick 生成快捷按钮；无状态不入库，鉴权同注册制）。
 """
 import json
 import os
@@ -207,7 +207,7 @@ def create_app() -> Flask:
         style = body.get("style")
         if style is not None and style not in ("tech", "concise", "casual"):
             return error_response(400, "bad_request")
-        if kind not in ("todo", "note") or not isinstance(text, str) or not text.strip():
+        if kind not in ("todo", "note", "quick") or not isinstance(text, str) or not text.strip():
             return error_response(400, "bad_request")
         if len(text) > MAX_POLISH_CHARS:
             return error_response(413, "too_large")
@@ -218,6 +218,14 @@ def create_app() -> Flask:
             return error_response(404, "unknown_code")
         if key_row["revoked_at"] is not None:
             return error_response(410, "revoked")
+        if kind == "quick":
+            try:
+                button = llm.generate_quick_button(text)
+            except Exception:
+                button = None  # generate_quick_button 不应抛出，双保险与 polish_capture 同口径。
+            if not button:
+                return jsonify({"button": None, "fallback": True})
+            return jsonify({"button": button})
         try:
             items = llm.polish_capture(kind, text, style)
         except Exception:
