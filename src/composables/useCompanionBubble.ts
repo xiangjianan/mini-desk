@@ -75,14 +75,15 @@ export function useCompanionBubble(deps: CompanionBubbleDeps) {
   const companionFadeStartedAt = ref(0);
   const bubbleTimerOptions = ref<BubbleOptions>({});
   const bubbleClearSignal = ref(0);
-  /** 当前被二次确认高亮的元素：确认框在场时给被删元素加 is-confirm-target。 */
-  let confirmHighlightTarget: HTMLElement | null = null;
+  /** 当前被二次确认高亮的元素（组删除时为多个，如整个标签/列表）：确认框在场时逐个标记。 */
+  let confirmHighlightTargets: HTMLElement[] = [];
 
-  /** 高亮即将被删除/清理的元素；传 null 仅清除（如清空数据/导入这类无具体目标的确认）。 */
-  function setConfirmHighlight(element: HTMLElement | null): void {
-    confirmHighlightTarget?.removeAttribute(CONFIRM_TARGET_MARK);
-    confirmHighlightTarget = element;
-    confirmHighlightTarget?.setAttribute(CONFIRM_TARGET_MARK, "");
+  /** 高亮即将被删除/清理的元素；组删除可传数组逐个标记；传 null 仅清除
+   *  （如清空数据/导入这类无具体目标的确认）。 */
+  function setConfirmHighlight(targets: HTMLElement | HTMLElement[] | null): void {
+    confirmHighlightTargets.forEach((element) => element.removeAttribute(CONFIRM_TARGET_MARK));
+    confirmHighlightTargets = targets ? (Array.isArray(targets) ? targets : [targets]) : [];
+    confirmHighlightTargets.forEach((element) => element.setAttribute(CONFIRM_TARGET_MARK, ""));
   }
 
   /** 所有提示消息气泡的统一落点：屏幕右下角（桌面交给 CSS 默认值，移动端沿用固定提示位）。 */
@@ -237,7 +238,7 @@ export function useCompanionBubble(deps: CompanionBubbleDeps) {
     anchor: HTMLElement | undefined,
     onConfirm: () => void | Promise<void>,
     onCancel?: () => void,
-    options: { confirmText?: string; cancelText?: string; danger?: boolean; confirmHint?: string; secondaryText?: string; onSecondary?: () => void | Promise<void>; highlightTarget?: HTMLElement | null } = {},
+    options: { confirmText?: string; cancelText?: string; danger?: boolean; confirmHint?: string; secondaryText?: string; onSecondary?: () => void | Promise<void>; highlightTarget?: HTMLElement | HTMLElement[] | null } = {},
   ): void {
     if (deps.isBoardBlocked()) return;
     window.clearTimeout(bubbleTimer.value);

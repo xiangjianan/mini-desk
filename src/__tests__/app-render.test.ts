@@ -2099,6 +2099,122 @@ describe("App shell", () => {
     }
   });
 
+  it("highlights the tag heading and all its quick buttons pending tag deletion", async () => {
+    vi.useFakeTimers();
+    vi.spyOn(Math, "random").mockReturnValue(0);
+    localStorage.setItem(
+      STORAGE_KEY,
+      JSON.stringify({
+        quickTags: [
+          { id: "tag-a", title: "分组甲" },
+          { id: "tag-b", title: "分组乙" },
+        ],
+        quickButtons: [
+          { id: "q1", title: "甲一", type: "text", value: "a", tagId: "tag-a" },
+          { id: "q2", title: "甲二", type: "text", value: "b", tagId: "tag-a" },
+          { id: "q3", title: "乙一", type: "text", value: "c", tagId: "tag-b" },
+        ],
+      }),
+    );
+    const wrapper = mountApp();
+
+    try {
+      const groups = wrapper.findAll(".quick-tag-group");
+      expect(groups).toHaveLength(2);
+
+      await groups[0].get(".quick-tag-heading").trigger("contextmenu");
+      await wrapper.get('[data-key="delete-tag"]').trigger("click");
+      await wrapper.vm.$nextTick();
+
+      // 被删标签：标题行 + 组内全部按钮一起高亮；另一组完全不受影响。
+      expect(groups[0].get(".quick-tag-heading").attributes("data-confirm-target")).toBeDefined();
+      const groupAButtons = groups[0].findAll(".quick-button");
+      expect(groupAButtons).toHaveLength(2);
+      groupAButtons.forEach((button) => expect(button.attributes("data-confirm-target")).toBeDefined());
+      expect(groups[1].get(".quick-tag-heading").attributes("data-confirm-target")).toBeUndefined();
+      groups[1].findAll(".quick-button").forEach((button) => expect(button.attributes("data-confirm-target")).toBeUndefined());
+    } finally {
+      wrapper.unmount();
+      vi.useRealTimers();
+    }
+  });
+
+  it("highlights the list heading and all its todos pending list deletion", async () => {
+    vi.useFakeTimers();
+    vi.spyOn(Math, "random").mockReturnValue(0);
+    localStorage.setItem(
+      STORAGE_KEY,
+      JSON.stringify({
+        todoLists: [
+          { id: "morning", title: "上午", collapsed: false, compact: false },
+          { id: "noon", title: "中午", collapsed: false, compact: false },
+        ],
+        todos: { morning: buildTodos(2), noon: buildTodos(1) },
+      }),
+    );
+    const wrapper = mountApp();
+
+    try {
+      const sections = wrapper.findAll(".todo-section");
+      expect(sections).toHaveLength(2);
+
+      await sections[0].get(".todo-section-menu-button").trigger("click");
+      await wrapper.get('[data-key="delete-list"]').trigger("click");
+      await wrapper.vm.$nextTick();
+
+      // 被删列表：标题行 + 组内全部提醒事项一起高亮；另一列表不受影响。
+      expect(sections[0].get(".todo-heading").attributes("data-confirm-target")).toBeDefined();
+      sections[0].findAll(".todo-item").forEach((row) => expect(row.attributes("data-confirm-target")).toBeDefined());
+      expect(sections[1].get(".todo-heading").attributes("data-confirm-target")).toBeUndefined();
+      sections[1].findAll(".todo-item").forEach((row) => expect(row.attributes("data-confirm-target")).toBeUndefined());
+    } finally {
+      wrapper.unmount();
+      vi.useRealTimers();
+    }
+  });
+
+  it("highlights the space tab and its lines but not the panel header pending space deletion", async () => {
+    vi.useFakeTimers();
+    vi.spyOn(Math, "random").mockReturnValue(0);
+    localStorage.setItem(
+      STORAGE_KEY,
+      JSON.stringify({
+        spaces: [
+          { id: "workspace", title: "工作空间", lines: [{ text: "行一", indent: 0 }, { text: "行二", indent: 0 }] },
+          { id: "project", title: "项目", lines: [{ text: "其他", indent: 0 }] },
+        ],
+        activeSpaceId: "workspace",
+      }),
+    );
+    const wrapper = mountApp();
+
+    try {
+      await wrapper.get('[data-space-tab-id="workspace"]').trigger("contextmenu");
+      await wrapper.get(".space-panel").findAll(".dropdown-option").find((option) => option.text() === "删除")?.trigger("click");
+      await wrapper.vm.$nextTick();
+
+      // 被删空间标签 + 其下文本编辑区高亮；「记事本」标题行保持干净。
+      expect(wrapper.get('[data-space-tab-id="workspace"]').attributes("data-confirm-target")).toBeDefined();
+      const editor = wrapper.get(".space-panel .text-editor-textarea");
+      expect(editor.attributes("data-confirm-target")).toBeDefined();
+      expect(wrapper.get(".space-panel .desk-zone-heading").attributes("data-confirm-target")).toBeUndefined();
+      // 非活跃标签只高亮标签本身：其文本行不在 DOM，也不误伤当前展示行。
+      await vi.advanceTimersByTimeAsync(200); // 确认框 200ms 入场延迟
+      await wrapper.vm.$nextTick();
+      await wrapper.get('[data-testid="companion-no"]').trigger("click");
+      await wrapper.vm.$nextTick();
+      await wrapper.get('[data-space-tab-id="project"]').trigger("contextmenu");
+      await wrapper.get(".space-panel").findAll(".dropdown-option").find((option) => option.text() === "删除")?.trigger("click");
+      await wrapper.vm.$nextTick();
+
+      expect(wrapper.get('[data-space-tab-id="project"]').attributes("data-confirm-target")).toBeDefined();
+      expect(wrapper.get(".space-panel .text-editor-textarea").attributes("data-confirm-target")).toBeUndefined();
+    } finally {
+      wrapper.unmount();
+      vi.useRealTimers();
+    }
+  });
+
   it("creates reminder lists with completed reminders hidden by default", async () => {
     const wrapper = mountApp();
 

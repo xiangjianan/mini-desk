@@ -161,6 +161,37 @@ describe("companion bubble placement", () => {
     expect(second.hasAttribute("data-confirm-target")).toBe(true);
   });
 
+  it("highlights every element of a group delete and clears them together", () => {
+    const { requestConfirmation, cancelCompanionAction } = useCompanionBubble(createDeps());
+    movePointerTo(300, 200);
+    const heading = createZoneAnchor();
+    const rowA = createZoneAnchor();
+    const rowB = createZoneAnchor();
+    const untouched = createZoneAnchor();
+
+    requestConfirmation("confirmDeleteQuickTagWithButtons", heading, vi.fn(), undefined, {
+      highlightTarget: [heading, rowA, rowB],
+    });
+    expect(heading.hasAttribute("data-confirm-target")).toBe(true);
+    expect(rowA.hasAttribute("data-confirm-target")).toBe(true);
+    expect(rowB.hasAttribute("data-confirm-target")).toBe(true);
+    expect(untouched.hasAttribute("data-confirm-target")).toBe(false);
+
+    cancelCompanionAction();
+    expect(heading.hasAttribute("data-confirm-target")).toBe(false);
+    expect(rowA.hasAttribute("data-confirm-target")).toBe(false);
+    expect(rowB.hasAttribute("data-confirm-target")).toBe(false);
+
+    // 组高亮被新的单目标确认整体替换，不残留。
+    requestConfirmation("confirmDeleteQuickTagWithButtons", heading, vi.fn(), undefined, {
+      highlightTarget: [heading, rowA],
+    });
+    requestConfirmation("confirmDeleteTodo", untouched, vi.fn());
+    expect(heading.hasAttribute("data-confirm-target")).toBe(false);
+    expect(rowA.hasAttribute("data-confirm-target")).toBe(false);
+    expect(untouched.hasAttribute("data-confirm-target")).toBe(true);
+  });
+
   it("supports an explicit highlightTarget override and a null opt-out", () => {
     const { requestConfirmation } = useCompanionBubble(createDeps());
     movePointerTo(300, 200);
