@@ -2683,16 +2683,15 @@ button.todo-star-button {
   z-index: 3;
 }
 
-/* 二次确认在场时高亮即将被删除/清理的元素：危险色描边 + 轻微着色。
-   outline 画在内侧不占布局；background-image 叠加不覆盖元素自身底色；
+/* 二次确认在场时高亮即将被删除/清理的元素：整块淡淡的浅红底色（无描边）。
+   background-image 叠加不覆盖元素自身底色；加 !important 是因为标记可能落在
+   后文的 .todo-input 这类 background 简写元素上，同特异性晚声明会把它重置掉；
    用 data- 属性标记，避免 Vue class 绑定重写时被抹掉。 */
 [data-confirm-target] {
-  outline: 2px solid var(--danger);
-  outline-offset: -1px;
   background-image: linear-gradient(
-    color-mix(in srgb, var(--danger) 10%, transparent),
-    color-mix(in srgb, var(--danger) 10%, transparent)
-  );
+    color-mix(in srgb, var(--danger) 14%, transparent),
+    color-mix(in srgb, var(--danger) 14%, transparent)
+  ) !important;
 }
 
 .todo-item.is-done .todo-input {
@@ -3171,6 +3170,13 @@ button.todo-section-menu-button {
   border: 1px solid var(--border) !important;
   background: var(--popover) !important;
   box-shadow: none !important;
+}
+
+/* 危险二次确认（删除/清理）：气泡与箭头同染浅红，和被删目标的浅红底色一致；
+   色相同步 [data-confirm-target]（danger 14%），基色换成不透明的 --popover。 */
+.companion-popover-shell.n-popover.is-confirm-danger,
+.companion-popover-shell.n-popover.is-confirm-danger .companion-popover-arrow {
+  background: color-mix(in srgb, var(--danger) 14%, var(--popover)) !important;
 }
 
 .companion-actions {

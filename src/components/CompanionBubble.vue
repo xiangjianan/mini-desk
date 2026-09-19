@@ -427,7 +427,7 @@ function isPointInsideElement(x: number, y: number, element: HTMLElement | null)
       :arrow-point-to-center="true"
       :animated="false"
       :z-index="CONTEXT_MENU_Z_INDEX"
-      :class="['companion-popover-shell', { 'is-popover-fading': retainingPopoverContent }]"
+      :class="['companion-popover-shell', { 'is-popover-fading': retainingPopoverContent, 'is-confirm-danger': renderedConfirm && renderedConfirmDanger }]"
       arrow-class="companion-popover-arrow"
       :style="{ maxWidth: '240px', '--n-box-shadow': 'none' }"
     >

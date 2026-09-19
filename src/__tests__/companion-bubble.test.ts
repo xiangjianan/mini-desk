@@ -870,6 +870,38 @@ describe("CompanionBubble", () => {
     vi.useRealTimers();
   });
 
+  it("tints the danger confirm shell light red, plain confirms stay neutral", async () => {
+    vi.useFakeTimers();
+    const wrapper = mount(CompanionBubble, {
+      attachTo: document.body,
+      props: {
+        visible: true,
+        message: "确认删除？",
+        confirm: true,
+        confirmDanger: true,
+        gifTheme: "none",
+      },
+      global: {
+        stubs: {
+          NButton: buttonStub,
+          NPopover: popoverStub,
+        },
+      },
+    });
+
+    await vi.advanceTimersByTimeAsync(200);
+    await wrapper.vm.$nextTick();
+
+    expect(document.body.querySelector(".companion-popover-shell")?.classList.contains("is-confirm-danger")).toBe(true);
+
+    await wrapper.setProps({ confirmDanger: false });
+    await wrapper.vm.$nextTick();
+
+    expect(document.body.querySelector(".companion-popover-shell")?.classList.contains("is-confirm-danger")).toBe(false);
+    wrapper.unmount();
+    vi.useRealTimers();
+  });
+
   it("keeps gif-free bubble content during the hide animation", async () => {
     vi.useFakeTimers();
     const wrapper = mount(CompanionBubble, {
