@@ -214,7 +214,7 @@ describe("SpacePanel", () => {
     expect(wrapper.emitted("rename")?.[0]).toEqual(["workspace", "ziliao"]);
   });
 
-  it("opens tab context actions for editing and deleting", async () => {
+  it("opens tab context actions for creating, editing and deleting", async () => {
     const wrapper = mountSpacePanel([
       { id: "workspace", title: "工作空间", lines: [] },
       { id: "project", title: "项目", lines: [] },
@@ -222,8 +222,20 @@ describe("SpacePanel", () => {
 
     await wrapper.findAll(".space-tab")[1].trigger("contextmenu");
 
-    expect(wrapper.findAll(".dropdown-option").map((option) => option.text())).toEqual(["重命名", "删除"]);
+    expect(wrapper.findAll(".dropdown-option").map((option) => option.text())).toEqual(["新建", "编辑", "删除"]);
 
+    await wrapper.findAll(".dropdown-option").find((option) => option.text() === "新建")?.trigger("click");
+
+    expect(wrapper.emitted("create")?.[0]).toEqual([]);
+
+    // 「编辑」沿用原「重命名」的内联改名流程。
+    await wrapper.findAll(".space-tab")[1].trigger("contextmenu");
+    await wrapper.findAll(".dropdown-option").find((option) => option.text() === "编辑")?.trigger("click");
+
+    expect(wrapper.find(".space-tab-edit-input").exists()).toBe(true);
+
+    await wrapper.get(".space-tab-edit-input").trigger("keydown.esc"); // 退出编辑态恢复 tab 元素
+    await wrapper.findAll(".space-tab")[1].trigger("contextmenu");
     await wrapper.findAll(".dropdown-option").find((option) => option.text() === "删除")?.trigger("click");
 
     expect(wrapper.emitted("delete")?.[0]).toEqual(["project"]);

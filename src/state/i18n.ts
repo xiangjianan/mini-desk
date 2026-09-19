@@ -713,6 +713,7 @@ export const UI_TEXT = {
       list: "空间列表",
       editName: "编辑空间名称",
       add: "新增空间",
+      create: "新建",
     },
     todo: {
       todayFocus: "今日重点",
@@ -1078,6 +1079,7 @@ export const UI_TEXT = {
       list: "Space list",
       editName: "Edit space name",
       add: "Add space",
+      create: "New",
     },
     todo: {
       todayFocus: "Pinned reminders",

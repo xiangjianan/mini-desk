@@ -2,7 +2,7 @@
 import { computed, h, nextTick, onMounted, onUnmounted, ref, watch } from "vue";
 import type { Component, VNode } from "vue";
 import { NDropdown, NIcon, NScrollbar } from "naive-ui";
-import { DocumentTextOutline, ClipboardOutline, CreateOutline, SwapHorizontalOutline, TrashOutline } from "@vicons/ionicons5";
+import { AddOutline, DocumentTextOutline, ClipboardOutline, CreateOutline, SwapHorizontalOutline, TrashOutline } from "@vicons/ionicons5";
 import type { DropdownOption } from "naive-ui";
 import type { AppLanguage, GuideKey, LineItem, WorkspaceMoveTarget, WorkspaceSpace } from "../types";
 import { getUiText } from "../state/i18n";
@@ -91,7 +91,8 @@ function buildSpaceMoveOptions(): DropdownOption[] {
 }
 
 const menuOptions = computed<DropdownOption[]>(() => [
-  { label: uiText.value.common.rename, key: "edit", icon: renderIcon(CreateOutline) },
+  { label: uiText.value.space.create, key: "create", icon: renderIcon(AddOutline) },
+  { label: uiText.value.common.edit, key: "edit", icon: renderIcon(CreateOutline) },
   ...buildSpaceMoveOptions(),
   { label: uiText.value.common.delete, key: "delete", disabled: !canDeleteSpaces.value, icon: renderIcon(TrashOutline, true) },
 ]);
@@ -210,6 +211,10 @@ function handleMenuSelect(key: string): void {
   const current = menu.value;
   if (!current) return;
   closeMenu();
+  if (key === "create") {
+    emit("create");
+    return;
+  }
   if (key === "edit") {
     startTabEdit(current.spaceId);
     return;
