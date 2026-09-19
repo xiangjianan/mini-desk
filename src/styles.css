@@ -2980,6 +2980,7 @@ button.todo-star-button {
 
 .quick-menu-button,
 .image-add-button,
+.image-paste-button,
 .todo-section-menu-button {
   flex: 0 0 34px;
   width: 34px;
@@ -2993,6 +2994,7 @@ button.todo-star-button {
 
 button.quick-menu-button,
 button.image-add-button,
+button.image-paste-button,
 button.todo-section-menu-button {
   border: 0;
   border-radius: 50%;
@@ -5729,6 +5731,8 @@ button.workbench-resizer:active {
 .quick-menu-button:focus-visible,
 .image-add-button:hover,
 .image-add-button:focus-visible,
+.image-paste-button:hover,
+.image-paste-button:focus-visible,
 .todo-section-menu-button:hover,
 .todo-section-menu-button:focus-visible {
   color: var(--foreground);
@@ -5738,6 +5742,7 @@ button.workbench-resizer:active {
 
 .quick-menu-button,
 .image-add-button,
+.image-paste-button,
 .todo-section-menu-button {
   display: inline-flex;
   align-items: center;
@@ -5753,15 +5758,18 @@ button.workbench-resizer:active {
 
 .quick-menu-button .n-icon,
 .image-add-button .n-icon,
+.image-paste-button .n-icon,
 .todo-section-menu-button .n-icon,
 .quick-menu-button svg,
 .image-add-button svg,
+.image-paste-button svg,
 .todo-section-menu-button svg {
   display: block;
 }
 
 .quick-menu-button:active,
 .image-add-button:active,
+.image-paste-button:active,
 .todo-section-menu-button:active {
   background: transparent;
 }

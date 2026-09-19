@@ -75,6 +75,7 @@ const imageDragPreview = ref<ImageDragPreview | null>(null);
 const pasteHighlightedId = ref<string | null>(null);
 const externalDropTargetId = ref<string | null>(null);
 const addButtonRef = ref<HTMLElement | null>(null);
+const pasteButtonRef = ref<HTMLElement | null>(null);
 let pickerInput: HTMLInputElement | null = null;
 const uiText = computed(() => getUiText(props.language));
 const guideMenuOption = computed<DropdownOption>(() => ({ ...GUIDE_MENU_OPTION, label: uiText.value.common.tips }));
@@ -198,6 +199,10 @@ function openTitleMenu(event: MouseEvent): void {
 
 function closeMenu(): void {
   menu.value = null;
+}
+
+function pasteFromHeader(): void {
+  emit("paste", { placement: "append", anchor: pasteButtonRef.value ?? undefined });
 }
 
 function openImagePicker(event: MouseEvent): void {
@@ -598,6 +603,16 @@ function handleImageDragWheel(event: WheelEvent): void {
       </h1>
       <div class="header-actions">
         <span class="count">{{ images.length }}</span>
+        <button
+          ref="pasteButtonRef"
+          class="image-paste-button icon-button"
+          type="button"
+          :aria-label="uiText.images.pasteImage"
+          :title="uiText.images.pasteImage"
+          @click="pasteFromHeader"
+        >
+          <NIcon :component="ClipboardOutline" />
+        </button>
         <button
           ref="addButtonRef"
           class="image-add-button icon-button"

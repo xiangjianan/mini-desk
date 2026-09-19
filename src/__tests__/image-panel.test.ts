@@ -555,6 +555,24 @@ describe("ImagePanel", () => {
     wrapper.unmount();
   });
 
+  it("renders a header paste button that appends the clipboard image", async () => {
+    const wrapper = mountImagePanel();
+
+    const button = wrapper.get(".image-paste-button");
+    expect(button.attributes("aria-label")).toBe("粘贴图片");
+    expect(button.attributes("title")).toBe("粘贴图片");
+    expect(button.classes()).toContain("icon-button");
+    expect(button.find(".n-icon").exists()).toBe(true);
+
+    await button.trigger("click");
+
+    expect(wrapper.emitted("paste")?.[0]).toEqual([{
+      placement: "append",
+      anchor: button.element,
+    }]);
+    wrapper.unmount();
+  });
+
   it("places the count immediately left of the add button on the header row", () => {
     const wrapper = mountImagePanel([
       { id: "a", src: "data:image/png;base64,a", createdAt: 1 },
@@ -564,7 +582,8 @@ describe("ImagePanel", () => {
     const children = actions.element.children;
 
     expect(children[0]).toBe(wrapper.get(".count").element);
-    expect(children[1]).toBe(wrapper.get(".image-add-button").element);
+    expect(children[1]).toBe(wrapper.get(".image-paste-button").element);
+    expect(children[2]).toBe(wrapper.get(".image-add-button").element);
     expect(wrapper.get(".count").text()).toBe("2");
     wrapper.unmount();
   });
