@@ -29,6 +29,32 @@ export interface ChangelogEntry {
 
 export const CHANGELOG: ChangelogEntry[] = [
   {
+    version: "1.0.182",
+    date: "2026-09-19",
+    notes: {
+      zh: [
+        "新增：快捷动作区智能粘贴——标签头加号左侧按钮或空白区右键「智能粘贴」，把剪贴板内容交给 AI 生成快捷按钮（网址型自动抓取页面标题命名；任何失败退化为普通粘贴语义）",
+        "新增：贴图区标题栏「粘贴」按钮，一键追加剪贴板图片",
+        "新增：快捷区标签头右键「删除」，连同标签下全部快捷动作一起删除（标签管理器删除仍保留按钮、归入未分组）",
+        "新增：提醒事项可拖到便签区粘贴为最后一行，延续末行编号 / 短横线格式",
+        "调整：伴宠主题「不显示」时静音普通消息气泡，仅保留需要确认的弹框",
+        "调整：智能粘贴入口改主色蓝并换剪贴板图标，悬浮恢复彩色流动",
+        "调整：润色模型切回 DeepSeek；关于弹窗与 README 的数据理念改为「无需任何登录，所有数据全部保存在浏览器本地」",
+        "修复：隐藏导航栏后刷新不再闪现",
+      ],
+      en: [
+        "Quick actions smart paste: a button beside each tag heading's plus, or the blank-area context menu, turns clipboard content into a quick button via AI (link-type buttons are named from the page title; any failure falls back to plain paste)",
+        "New paste button in the image zone title bar — append a clipboard image in one click",
+        "Tag heading context menu gains Delete, removing the tag together with all its quick buttons (tag manager delete still keeps buttons, moved to untagged)",
+        "Reminders can be dragged into the sticky-notes zone and pasted as the last line, continuing the trailing numbering / dash format",
+        "With the companion theme set to none, ordinary message bubbles are muted; only confirmation prompts remain",
+        "Smart paste entries switch to the primary blue with a clipboard icon; the gradient flow returns on hover",
+        "Polish model switched back to DeepSeek; the About dialog and README now read \"no sign-in required — all your data stays in your browser\"",
+        "Fix: no more flash of the hidden nav rail after a page refresh",
+      ],
+    },
+  },
+  {
     version: "1.0.181",
     date: "2026-09-18",
     notes: {
