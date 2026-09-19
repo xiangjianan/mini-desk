@@ -956,7 +956,7 @@ export const MESSAGE_CATALOG: Record<MessageKey, MessageEntry> = {
       [
         "Mini Desk",
         "一个本地优先的轻量工作台，把截图、提醒事项、快捷动作和便签缝合得恰到好处。",
-        "所有操作均在本地浏览器完成，绝不上传您的任何数据。",
+        "无需任何登录，所有数据全部保存在浏览器本地。",
       ].join("\n"),
     ],
   },
@@ -1084,7 +1084,7 @@ const EN_MESSAGE_VARIANTS = {
     [
       "Mini Desk",
       "A local-first lightweight desk for organizing screenshots, reminders, quick links, and sticky notes.",
-      "Everything happens in your local browser. None of your data is ever uploaded.",
+      "No sign-in required — all your data stays in your browser.",
     ].join("\n"),
   ],
 } satisfies Record<MessageKey, string[]>;

@@ -135,14 +135,14 @@ describe("localized public copy", () => {
     expect(getUiText("zh").app.mobileTitle).toBe("Mini Desk");
     expect(getUiText("zh").app.aboutTitle).toBe("Mini Desk");
     expect(getUiText("zh").app.aboutDescription).toBe(
-      "一个本地优先的轻量工作台，把截图、提醒事项、快捷动作和便签缝合得恰到好处。\n所有操作均在本地浏览器完成，绝不上传您的任何数据。",
+      "一个本地优先的轻量工作台，把截图、提醒事项、快捷动作和便签缝合得恰到好处。\n无需任何登录，所有数据全部保存在浏览器本地。",
     );
     expect(getUiText("zh").app.aboutSignature).toBe("(100% AI BUILT)");
     expect(getUiText("en").app.boardLabel).toBe("Mini Desk");
     expect(getUiText("en").app.mobileTitle).toBe("Mini Desk");
     expect(getUiText("en").app.aboutTitle).toBe("Mini Desk");
     expect(getUiText("en").app.aboutDescription).toBe(
-      "A local-first lightweight desk for organizing screenshots, reminders, quick actions, and sticky notes.\nEverything happens in your local browser. None of your data is ever uploaded.",
+      "A local-first lightweight desk for organizing screenshots, reminders, quick actions, and sticky notes.\nNo sign-in required — all your data stays in your browser.",
     );
     expect(getUiText("en").app.aboutSignature).toBe("(100% AI BUILT)");
   });

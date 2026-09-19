@@ -14,7 +14,7 @@ Mini Desk is built with Vue 3, TypeScript, Vite, and Naive UI. The interface tak
 
 Mini Desk is also an AI coding experiment: the product thinking, interaction trade-offs, and aesthetic judgment come from a human, while 100% of the code — from the UI and state management to the self-hosted relay service — was written by AI (Claude Code) in conversation.
 
-Page state lives in the browser's `localStorage`; image originals and custom GIF assets live in same-site IndexedDB. Apart from the self-hosted mobile-inbox relay, it depends on no backend service, making it a good fit as a personal browser workbench.
+No account or sign-in required — all your data lives in the browser: page state in `localStorage`, image originals and custom GIF assets in same-site IndexedDB. Apart from the self-hosted relay shared by mobile capture and smart paste, it depends on no backend service, making it a good fit as a personal browser workbench.
 
 ## Live site
 
