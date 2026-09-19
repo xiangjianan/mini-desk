@@ -880,6 +880,18 @@ function handleQuickGroupDrop(event: DragEvent, groupId: string): void {
             />
           </div>
         </div>
+        <button
+          v-if="props.polish"
+          type="button"
+          class="icon-button desk-ai-button quick-smart-paste-button"
+          :aria-label="uiText.common.smartPaste"
+          :title="uiText.common.smartPaste"
+          :disabled="smartPastePending"
+          :aria-busy="smartPastePending"
+          @click.stop="runQuickSmartPasteFlow('', $event.currentTarget as HTMLElement)"
+        >
+          <NIcon :component="ClipboardOutline" />
+        </button>
         <button type="button" class="quick-add-button icon-button"
           :aria-label="uiText.quick.dialogAdd" :title="uiText.quick.dialogAdd"
           @click.stop="openAdd($event.currentTarget as HTMLElement)">

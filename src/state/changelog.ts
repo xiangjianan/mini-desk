@@ -29,6 +29,24 @@ export interface ChangelogEntry {
 
 export const CHANGELOG: ChangelogEntry[] = [
   {
+    version: "1.0.183",
+    date: "2026-09-19",
+    notes: {
+      zh: [
+        "新增：快捷动作面板头部加号左侧「智能粘贴」按钮，生成的快捷按钮直接落「其他」无标签分组",
+        "新增：记事本标签右键菜单「重命名」改为「编辑」，顶部新增「新建」标签入口",
+        "调整：删除确认视觉重做——待删区去掉红框改为整块淡红背景，删除标签/列表/空间标签时高亮覆盖整组（连按钮、条目、文本区），危险确认气泡同染浅红",
+        "修复：记事本标签编辑中右键相邻标签不再命中错签",
+      ],
+      en: [
+        "New smart paste button to the left of the quick actions header's plus — generated quick buttons land directly in the untagged \"Other\" group",
+        "Notebook tag context menu: Rename becomes Edit, with a New entry added at the top",
+        "Delete-confirm visuals reworked — the red outline gives way to a soft red wash over the whole pending area; deleting a tag, list, or space tag highlights the entire group (buttons, entries, text area), and the danger bubble shares the same red tint",
+        "Fix: right-clicking an adjacent tag while a notebook tag is being edited no longer hits the wrong tag",
+      ],
+    },
+  },
+  {
     version: "1.0.182",
     date: "2026-09-19",
     notes: {

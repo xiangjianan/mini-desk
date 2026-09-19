@@ -1402,13 +1402,36 @@ describe("QuickButtons", () => {
     expect(wrapper.emitted("polishMessage")?.map((call) => call[0])).toEqual(["working", "done"]);
   });
 
-  it("未注入 polish 时标签头与右键菜单都不出现智能粘贴入口", async () => {
+  it("顶部加号左侧的智能粘贴按钮：产物直接落到「其他」（无标签）分组", async () => {
+    const polish = vi.fn(async () => ({ button: { title: "GitHub 主页", value: "https://github.com", type: "link" as const } }));
+    const wrapper = mountQuickButtons({
+      tags: [{ id: "tag-a", title: "工作" }],
+      buttons: [{ id: "a1", title: "GitHub", value: "https://github.com", type: "link", hidden: false, tagId: "tag-a" }],
+      polish,
+    });
+    await wrapper.vm.$nextTick();
+
+    const smart = wrapper.get(".header-actions .desk-ai-button");
+    expect(smart.attributes("aria-label")).toBe("智能粘贴");
+    expect(smart.element.nextElementSibling?.classList.contains("quick-add-button")).toBe(true);
+
+    Object.assign(navigator, { clipboard: { readText: vi.fn(async () => "https://github.com") } });
+    await smart.trigger("click");
+    await flushPromises();
+
+    expect(polish).toHaveBeenCalledWith("quick", "https://github.com", undefined);
+    expect(wrapper.emitted("save")?.[0]?.[0]).toEqual({ title: "GitHub 主页", value: "https://github.com", type: "link", tagTitle: "" });
+    expect(wrapper.emitted("polishMessage")?.map((call) => call[0])).toEqual(["working", "done"]);
+  });
+
+  it("未注入 polish 时标签头、顶部与右键菜单都不出现智能粘贴入口", async () => {
     const wrapper = mountQuickButtons({
       tags: [{ id: "tag-a", title: "工作" }],
       buttons: [{ id: "a1", title: "GitHub", value: "https://github.com", type: "link", hidden: false, tagId: "tag-a" }],
     });
     await wrapper.vm.$nextTick();
     expect(wrapper.find(".quick-tag-heading .desk-ai-button").exists()).toBe(false);
+    expect(wrapper.find(".header-actions .desk-ai-button").exists()).toBe(false);
 
     await wrapper.get(".quick-tag-content").trigger("contextmenu");
     expect(wrapper.find('.dropdown-option[data-key="smart-paste"]').exists()).toBe(false);
