@@ -2038,6 +2038,19 @@ function deleteQuickTag(id: string, anchor?: HTMLElement): void {
   }, undefined, { confirmText: uiText.value.common.delete, cancelText: uiText.value.common.cancel });
 }
 
+/** 标签头右键「删除标签及动作」：与标签管理器的删除（只删标签、按钮归入未分组）不同，
+ *  这里连标签下的全部快捷按钮一并删除。 */
+function deleteQuickTagWithButtons(id: string, anchor?: HTMLElement): void {
+  const tag = activeWorkspace.value.quickTags.find((item) => item.id === id);
+  if (!tag) return;
+  requestConfirmation("confirmDeleteQuickTagWithButtons", anchor, () => {
+    activeWorkspace.value.quickTags = activeWorkspace.value.quickTags.filter((item) => item.id !== id);
+    activeWorkspace.value.quickButtons = activeWorkspace.value.quickButtons.filter((button) => button.tagId !== id);
+    persistNow();
+    showBubble("deleteQuickTagWithButtons", anchor, { hideCompanionAfter: true });
+  }, undefined, { confirmText: uiText.value.common.delete, cancelText: uiText.value.common.cancel });
+}
+
 function moveQuickButtonsToTag(fromTagId: string, toTagId: string | undefined): void {
   activeWorkspace.value.quickButtons.forEach((button) => {
     if (button.tagId !== fromTagId) return;
@@ -3555,6 +3568,7 @@ function moveItem<T extends { id: string }>(items: T[], dragId: string, targetId
           @save-tag="saveQuickTag"
           @toggle-tag-collapsed="toggleQuickTagCollapsed"
           @delete-tag="deleteQuickTag"
+          @delete-tag-with-buttons="deleteQuickTagWithButtons"
           @guide="handleGuideClick"
           @declutter="showQuickDeclutterBubble"
           @polish-message="handlePolishStatus"

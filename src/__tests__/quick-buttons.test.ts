@@ -437,6 +437,26 @@ describe("QuickButtons", () => {
     wrapper.unmount();
   });
 
+  it("appends a destructive delete action after move-to-workspace in the tag heading menu", async () => {
+    const wrapper = mountQuickButtons({
+      tags: [{ id: "tag-work", title: "工作" }],
+      buttons: [{ id: "b1", title: "Btn", value: "v", type: "link", tagId: "tag-work", hidden: false }],
+      moveTargets: [{ id: "ws-2", title: "生活", lists: [] }],
+    });
+
+    await wrapper.get(".quick-tag-heading").trigger("contextmenu");
+
+    expect(wrapper.findAll(".dropdown-option").map((option) => option.text())).toEqual([
+      "移动到空间",
+      "生活",
+      "删除标签及动作",
+    ]);
+
+    await wrapper.findAll(".dropdown-option").find((option) => option.text() === "删除标签及动作")?.trigger("click");
+    expect(wrapper.emitted("deleteTagWithButtons")?.[0]).toEqual(["tag-work", expect.any(HTMLElement)]);
+    wrapper.unmount();
+  });
+
   it("does not start tag renaming when the collapse icon is double-clicked", async () => {
     const wrapper = mountQuickButtons({
       tags: [{ id: "tag-work", title: "工作" }],
@@ -1574,7 +1594,7 @@ describe("QuickButtons 跨空间移动", () => {
     wrapper.unmount();
   });
 
-  it("没有其他空间时标签头右键回落区域菜单", async () => {
+  it("没有其他空间时标签头菜单仍打开且只含删除项", async () => {
     const wrapper = mountQuickButtons({
       buttons: [{ id: "btn-1", title: "搜索", value: "https://example.com", type: "link", tagId: "tag-1", hidden: false }],
       tags: [{ id: "tag-1", title: "常用" }],
@@ -1582,7 +1602,8 @@ describe("QuickButtons 跨空间移动", () => {
     await wrapper.get(".quick-tag-title").trigger("contextmenu");
     expect(wrapper.findAll('[data-key^="move-ws:"]')).toHaveLength(0);
     expect(wrapper.find('[data-key="move-tag"]').exists()).toBe(false);
-    expect(wrapper.find('[data-key="add"]').exists()).toBe(true);
+    expect(wrapper.find('[data-key="add"]').exists()).toBe(false);
+    expect(wrapper.get('[data-key="delete-tag"]').text()).toBe("删除标签及动作");
     wrapper.unmount();
   });
 

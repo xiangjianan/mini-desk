@@ -31,6 +31,7 @@ export type MessageKey =
   | "deleteImage"
   | "deleteQuick"
   | "deleteQuickTag"
+  | "deleteQuickTagWithButtons"
   | "deleteTodo"
   | "deleteSpace"
   | "clearCompleted"
@@ -45,6 +46,7 @@ export type MessageKey =
   | "confirmDeleteImage"
   | "confirmDeleteQuick"
   | "confirmDeleteQuickTag"
+  | "confirmDeleteQuickTagWithButtons"
   | "confirmDeleteTodo"
   | "confirmDeleteTodoList"
   | "confirmDeleteSpace"
@@ -771,6 +773,38 @@ export const MESSAGE_CATALOG: Record<MessageKey, MessageEntry> = {
       "归到其他分类？",
     ],
   },
+  confirmDeleteQuickTagWithButtons: {
+    mood: "warning",
+    surface: "companion",
+    variants: [
+      "删除标签及全部动作？",
+      "标签和动作都会删除",
+      "连标签带动作一起删？",
+      "里面的动作也会删除",
+      "删除后不可恢复",
+      "清空整个标签分组？",
+      "确认删除整个分组？",
+      "标签下动作将全部删除",
+      "一并删除所有快捷动作？",
+      "动作会随标签一起删除",
+    ],
+  },
+  deleteQuickTagWithButtons: {
+    mood: "calm",
+    surface: "companion",
+    variants: [
+      "标签及动作已删除",
+      "分组已整个清空",
+      "标签连同动作已移除",
+      "已删除整个标签",
+      "动作也一并清掉了",
+      "该分组已清空",
+      "标签删除完成",
+      "相关动作已删除",
+      "整组已移除",
+      "已连同动作删除",
+    ],
+  },
   confirmDeleteTodo: {
     mood: "warning",
     surface: "companion",
@@ -1021,6 +1055,8 @@ const EN_MESSAGE_VARIANTS = {
   deleteImage: ["Image deleted", "Screenshot removed", "Image removed from the list"],
   deleteQuick: ["Shortcut deleted", "Quick entry removed", "Shortcut removed"],
   deleteQuickTag: ["Tag deleted. Shortcuts moved to Other.", "Tag removed. Shortcuts are now untagged.", "Quick tag deleted and entries kept."],
+  deleteQuickTagWithButtons: ["Tag and shortcuts deleted", "Group cleared with all its shortcuts", "The tag and its entries are gone"],
+  confirmDeleteQuickTagWithButtons: ["Delete this tag and all its shortcuts?", "The tag and its shortcuts will be removed.", "Everything under this tag will be deleted."],
   deleteTodo: ["Reminder deleted", "Reminder removed", "Item deleted"],
   deleteSpace: ["Space deleted", "Memo removed", "Space removed"],
   clearCompleted: ["Completed reminders cleared", "Completed items removed", "Done items cleared"],

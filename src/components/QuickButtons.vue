@@ -57,6 +57,7 @@ const emit = defineEmits<{
   saveTag: [payload: { id?: string; title: string; color?: string }];
   toggleTagCollapsed: [id: string];
   deleteTag: [id: string, anchor?: HTMLElement];
+  deleteTagWithButtons: [tagId: string, anchor?: HTMLElement];
   guide: [key: GuideKey, anchor: HTMLElement, immediate?: boolean];
   declutter: [anchor: HTMLElement];
   moveButtonToWorkspace: [buttonId: string, workspaceId: string];
@@ -231,14 +232,17 @@ const moveMenuChildren = computed<DropdownOption[]>(() =>
 );
 const menuOptions = computed<DropdownOption[]>(() => {
   if (menu.value?.tagId) {
-    return moveMenuChildren.value.length > 0
-      ? [{
-          label: uiText.value.common.moveToWorkspace,
-          key: "move-tag",
-          icon: renderIcon(SwapHorizontalOutline),
-          children: moveMenuChildren.value,
-        }]
-      : [];
+    return [
+      ...(moveMenuChildren.value.length > 0
+        ? [{
+            label: uiText.value.common.moveToWorkspace,
+            key: "move-tag",
+            icon: renderIcon(SwapHorizontalOutline),
+            children: moveMenuChildren.value,
+          }]
+        : []),
+      { label: uiText.value.quick.deleteTagWithButtons, key: "delete-tag", icon: renderIcon(TrashOutline, true) },
+    ];
   }
   const button = props.buttons.find((item) => item.id === menu.value?.id);
   if (!menu.value?.id) {
@@ -475,17 +479,15 @@ function openAreaMenu(event: MouseEvent): void {
   menu.value = { x: event.clientX, y: event.clientY, anchor: event.currentTarget as HTMLElement, tagTitle };
 }
 
-/** 标签头右键：仅真实标签提供「移动到空间」；其他目标回落到区域菜单。 */
+/** 标签头右键：仅真实标签提供「移动到空间 + 删除标签及动作」；其他目标回落到区域菜单。 */
 function openTagMenu(event: MouseEvent, tagId: string): void {
   const target = event.target as HTMLElement;
   if (target.closest("button, input, textarea")) return;
   if (!isRealTagGroup(tagId)) return;
-  if (moveMenuChildren.value.length === 0) return;
   event.preventDefault();
   event.stopPropagation();
   exclusiveMenu.notifyOpen(event, { replacingExistingMenu: Boolean(menu.value) });
-  // 标签菜单当前只有移动项，无需 anchor 定位气泡/指南；将来加删除/指南类项时需补 anchor。
-  menu.value = { x: event.clientX, y: event.clientY, tagId };
+  menu.value = { x: event.clientX, y: event.clientY, anchor: event.currentTarget as HTMLElement, tagId };
 }
 
 function openHeaderMenu(event: MouseEvent): void {
@@ -515,6 +517,10 @@ function handleMenuSelect(key: string): void {
     const workspaceId = key.slice("move-ws:".length);
     if (tagId) emit("moveTagToWorkspace", tagId, workspaceId);
     else if (id) emit("moveButtonToWorkspace", id, workspaceId);
+    return;
+  }
+  if (key === "delete-tag") {
+    if (tagId) emit("deleteTagWithButtons", tagId, anchor);
     return;
   }
   if (key === "add") {
