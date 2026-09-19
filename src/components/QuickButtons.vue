@@ -241,7 +241,7 @@ const menuOptions = computed<DropdownOption[]>(() => {
             children: moveMenuChildren.value,
           }]
         : []),
-      { label: uiText.value.quick.deleteTagWithButtons, key: "delete-tag", icon: renderIcon(TrashOutline, true) },
+      { label: uiText.value.common.delete, key: "delete-tag", icon: renderIcon(TrashOutline, true) },
     ];
   }
   const button = props.buttons.find((item) => item.id === menu.value?.id);

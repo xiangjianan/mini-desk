@@ -449,10 +449,10 @@ describe("QuickButtons", () => {
     expect(wrapper.findAll(".dropdown-option").map((option) => option.text())).toEqual([
       "移动到空间",
       "生活",
-      "删除标签及动作",
+      "删除",
     ]);
 
-    await wrapper.findAll(".dropdown-option").find((option) => option.text() === "删除标签及动作")?.trigger("click");
+    await wrapper.findAll(".dropdown-option").find((option) => option.text() === "删除")?.trigger("click");
     expect(wrapper.emitted("deleteTagWithButtons")?.[0]).toEqual(["tag-work", expect.any(HTMLElement)]);
     wrapper.unmount();
   });
@@ -1603,7 +1603,7 @@ describe("QuickButtons 跨空间移动", () => {
     expect(wrapper.findAll('[data-key^="move-ws:"]')).toHaveLength(0);
     expect(wrapper.find('[data-key="move-tag"]').exists()).toBe(false);
     expect(wrapper.find('[data-key="add"]').exists()).toBe(false);
-    expect(wrapper.get('[data-key="delete-tag"]').text()).toBe("删除标签及动作");
+    expect(wrapper.get('[data-key="delete-tag"]').text()).toBe("删除");
     wrapper.unmount();
   });
 
