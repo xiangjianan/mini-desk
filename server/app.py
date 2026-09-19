@@ -7,6 +7,7 @@
 拆行入库；LLM 任何失败兜底存原文。payload 可选布尔 polish=False 时跳过润色原文直存
 （手机页 AI 润色开关，缺省/非布尔按旧协议默认润色）。密文路径（SW 缓存的旧手机页）：与原 Worker 协议一致，原样直存。
 自建服务器无次数限制：只做输入校验，不做限流/配额。
+Origin 闸门：带 Origin 且不在 ALLOWED_ORIGINS 白名单的请求 403（预检在内；无 Origin 的非浏览器请求放行，白名单缺省 fail-closed）。
 智能粘贴：POST /polish/<key_hash> 同步调 LLM 整理剪贴板文本（todo/note 拆条排版、quick 生成快捷按钮；无状态不入库，鉴权同注册制）。
 """
 import json
@@ -14,7 +15,7 @@ import os
 import threading
 import time
 import traceback
-from typing import Callable
+from typing import Callable, Optional
 
 import pymysql
 from flask import Flask, Response, jsonify, request
@@ -132,6 +133,18 @@ def create_app() -> Flask:
 
     def error_response(status: int, code: str, headers: dict = None) -> tuple:
         return jsonify({"error": code}), status, headers or {}
+
+    @app.before_request
+    def enforce_origin() -> Optional[tuple]:
+        """Origin 闸门：浏览器跨域请求必带 Origin，带陌生 Origin 一律 403（预检也在内，跨站 JSON POST 连预检都过不去）。
+        无 Origin（curl/监控探活）与 healthz 放行。白名单未配置时按空表 fail-closed。
+        非浏览器客户端可伪造 Origin——真正的门槛仍是不可猜的 key_hash，闸门挡的是别人网页里的跨站调用。"""
+        if request.path == "/healthz":
+            return None
+        origin = request.headers.get("Origin")
+        if origin is not None and origin not in allowed_origins:
+            return error_response(403, "origin_not_allowed")
+        return None
 
     @app.errorhandler(HTTPException)
     def http_error(err: HTTPException) -> tuple:

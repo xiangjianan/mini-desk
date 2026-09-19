@@ -51,15 +51,15 @@ def db(_schema):
     conn.close()
 
 
-@pytest.fixture
-def client(db, monkeypatch):
+def make_client(monkeypatch, allowed_origins: str):
+    """按给定 ALLOWED_ORIGINS 构造测试客户端（空串=白名单为空的 fail-closed 场景）。"""
     for key, value in {
         "MYSQL_HOST": os.environ.get("MINIDESK_TEST_MYSQL_HOST", "127.0.0.1"),
         "MYSQL_PORT": os.environ.get("MINIDESK_TEST_MYSQL_PORT", "3306"),
         "MYSQL_USER": os.environ.get("MINIDESK_TEST_MYSQL_USER", "root"),
         "MYSQL_PASSWORD": os.environ.get("MINIDESK_TEST_MYSQL_PASSWORD", ""),
         "MYSQL_DB": TEST_DB,
-        "ALLOWED_ORIGINS": f"{ORIGIN},http://localhost:5173",
+        "ALLOWED_ORIGINS": allowed_origins,
     }.items():
         monkeypatch.setenv(key, value)
     from app import create_app
@@ -67,3 +67,8 @@ def client(db, monkeypatch):
     application = create_app()
     application.config["TESTING"] = True
     return application.test_client()
+
+
+@pytest.fixture
+def client(db, monkeypatch):
+    return make_client(monkeypatch, f"{ORIGIN},http://localhost:5173")
