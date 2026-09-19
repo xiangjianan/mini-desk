@@ -775,6 +775,15 @@ button.space-tab {
   opacity: 0;
 }
 
+/* 离场克隆立即退出文档流（Vue TransitionGroup 标准做法）：编辑态标签在右键
+ * 提交（blur）的同一帧内，离场的编辑壳克隆若仍在流内占位，会把恢复的标签
+ * 挤到右侧邻居的位置上，随后而来的 contextmenu 就会命中错误的标签。
+ * 用 .space-tabs 后代选择器抬高特异性——后文 .space-tab-edit-shell 的
+ * position: relative 同特异性且更晚，会把这个规则压掉。 */
+.space-tabs .space-reorder-leave-active {
+  position: absolute;
+}
+
 .space-tabs.is-committing-tab > .space-reorder-move,
 .space-tabs.is-committing-tab > .space-reorder-enter-active,
 .space-tabs.is-committing-tab > .space-reorder-leave-active {

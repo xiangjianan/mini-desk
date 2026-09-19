@@ -375,6 +375,15 @@ describe("SpacePanel", () => {
     expect(styles).toMatch(/\.space-tabs\.is-committing-tab > \.space-reorder-move,[\s\S]*?transition: none/s);
   });
 
+  it("drops the leaving tab clone out of flow so a same-frame contextmenu hits the right tab", () => {
+    // 编辑态提交（右键他签触发 blur）的同一帧内，TransitionGroup 的离场克隆仍在
+    // 文档流里占位，会把恢复的标签挤到右侧邻居的位置上，右键命中错误的标签。
+    // 离场克隆必须立即 position: absolute 退出文档流（Vue TransitionGroup 标准做法）。
+    const styles = readFileSync(resolve(__dirname, "../styles.css"), "utf8");
+
+    expect(styles).toMatch(/\.space-tabs \.space-reorder-leave-active\s*\{\s*position: absolute;/);
+  });
+
   it("keeps the tab edit control sized from the original title while typing", async () => {
     const wrapper = mountSpacePanel([{ id: "workspace", title: "一个很长的工作空间标签", lines: [] }]);
 
