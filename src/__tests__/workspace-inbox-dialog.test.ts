@@ -1,5 +1,6 @@
 import { afterEach, describe, expect, it, vi } from "vitest";
 import { mount } from "@vue/test-utils";
+import { defineComponent } from "vue";
 import WorkspaceInboxDialog from "../components/WorkspaceInboxDialog.vue";
 import { defaultWorkspace } from "../state/defaults";
 import type { WorkspaceData, WorkspaceInbox, WorkspaceSpace } from "../types";
@@ -8,11 +9,19 @@ const INBOX: WorkspaceInbox = { code: "AB2CDE4FGHJK", todoListId: "morning", not
 
 // NModal teleports to <body>, which VTU's wrapper.find cannot traverse, so the
 // repo convention (version-history / quick-buttons tests) stubs Naive wrappers.
-const modalStub = {
+// 桩模拟真实 NModal 的两段式关闭：show 撤下（离场过渡开始）后发 after-leave
+// （真实组件在 200ms 过渡结束时发；桩同步发，测试免等）。
+const modalStub = defineComponent({
   name: "NModal",
-  props: ["show", "title"],
+  props: ["show", "title", "internalAppear"],
+  emits: ["update:show", "after-leave"],
   template: '<section v-if="show" class="workspace-inbox-dialog"><h2>{{ title }}</h2><slot /></section>',
-};
+  watch: {
+    show(value: boolean) {
+      if (!value) this.$emit("after-leave");
+    },
+  },
+});
 
 const buttonStub = {
   template: '<button v-bind="$attrs"><slot /></button>',
@@ -244,5 +253,45 @@ describe("WorkspaceInboxDialog", () => {
     const wrapper = mountDialog(INBOX);
     await wrapper.find('[data-testid="inbox-clear"]').trigger("click");
     expect(wrapper.emitted("update")).toBeUndefined();
+  });
+
+  it("挂载即播放入场动画：NModal 带 internal-appear", () => {
+    const wrapper = mountDialog(INBOX);
+    // naive 的 internalAppear 是模态服务同款机制：show=true 挂载时播放遮罩淡入 + 卡片缩放入场。
+    expect(wrapper.findComponent({ name: "NModal" }).props("internalAppear")).toBe(true);
+  });
+
+  it("关闭两段式：先撤下 show，after-leave 后才 emit close 且只一次", async () => {
+    const wrapper = mountDialog(INBOX);
+    await wrapper.get('[data-testid="inbox-close"]').trigger("click");
+
+    expect(wrapper.findComponent({ name: "NModal" }).props("show")).toBe(false);
+    expect(wrapper.emitted("close")).toHaveLength(1);
+  });
+
+  it("离场过渡未结束（无 after-leave）时不 emit close，等待动画收尾", async () => {
+    // 不发 after-leave 的桩 = 离场过渡一直没播完。
+    const quietModalStub = defineComponent({
+      name: "NModal",
+      props: ["show", "title"],
+      template: '<section v-if="show" class="workspace-inbox-dialog"><h2>{{ title }}</h2><slot /></section>',
+    });
+    const wrapper = mount(WorkspaceInboxDialog, {
+      props: { workspace: { ...defaultWorkspace("a"), inbox: INBOX }, language: "zh" },
+      global: {
+        stubs: {
+          Modal: quietModalStub,
+          NModal: quietModalStub,
+          Button: buttonStub,
+          NButton: buttonStub,
+          Select: selectStub,
+          NSelect: selectStub,
+        },
+      },
+    });
+    await wrapper.get('[data-testid="inbox-close"]').trigger("click");
+
+    expect(wrapper.findComponent({ name: "NModal" }).props("show")).toBe(false);
+    expect(wrapper.emitted("close")).toBeUndefined();
   });
 });

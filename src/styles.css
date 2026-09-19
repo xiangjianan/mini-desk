@@ -1255,9 +1255,12 @@ button.image-card {
   color: var(--primary);
 }
 
-/* 紧凑模式：隐藏类型副标题，按钮回落为单行小尺寸。 */
+/* 紧凑模式：类型副标题高度塌缩（可随 min-height 一起过渡，见 desk.css 基座），
+   按钮回落为单行小尺寸。 */
 .quick-block.is-compact .quick-button-kind {
-  display: none;
+  max-height: 0;
+  opacity: 0;
+  overflow: hidden;
 }
 
 .quick-block.is-compact .quick-button-content {

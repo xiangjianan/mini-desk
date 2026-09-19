@@ -427,4 +427,24 @@ describe("workbench style contract", () => {
     // 防重态：进行中 cursor:wait + 降透明度（与便签入口同款）。
     expectSelectorBody(desk, ".workbench-shell .desk-ai-button:disabled", "cursor: wait");
   });
+
+  it("animates the quick buttons compact toggle instead of snapping", () => {
+    const styles = readFileSync(resolve(__dirname, "../styles.css"), "utf8");
+    const desk = readFileSync(resolve(__dirname, "../desk.css"), "utf8");
+
+    // 大↔紧凑切换的尺寸来源全部走 motion-medium 过渡：按钮盒（min-height/padding）
+    // + 文本列 gap + 类型副标题的 max-height 塌缩。注意按钮盒过渡必须放在
+    // .workbench-shell button.quick-button（0,2,1）——全局 button:not(.icon-button)
+    // 的 transition（0,1,1）会压过 .quick-button 基座（0,1,0）。
+    expectSelectorBody(desk, ".workbench-shell button.quick-button", "min-height var(--motion-medium) var(--motion-ease)");
+    expectSelectorBody(desk, ".workbench-shell button.quick-button", "padding var(--motion-medium) var(--motion-ease)");
+    expectSelectorBody(desk, ".quick-button-content", "transition: gap var(--motion-medium) var(--motion-ease)");
+    expectSelectorBody(desk, ".quick-button-kind", "transition: max-height var(--motion-medium) var(--motion-ease), opacity var(--motion-fast) ease");
+    expectSelectorBody(desk, ".quick-button-kind", "max-height: 20px");
+    // 紧凑态副标题用高度塌缩（可过渡）而非 display:none（瞬变）；两份样式表保持同口径。
+    expectSelectorBody(desk, ".workbench-shell .quick-block.is-compact .quick-button-kind", "max-height: 0");
+    expectSelectorBody(styles, ".quick-block.is-compact .quick-button-kind", "max-height: 0");
+    expect(ruleBodies(desk, ".workbench-shell .quick-block.is-compact .quick-button-kind").join("\n")).not.toContain("display: none");
+    expect(ruleBodies(styles, ".quick-block.is-compact .quick-button-kind").join("\n")).not.toContain("display: none");
+  });
 });

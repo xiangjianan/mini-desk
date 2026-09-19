@@ -23,6 +23,15 @@ const emit = defineEmits<{
 
 const text = computed(() => getUiText(props.language));
 const show = ref(true);
+// 关闭统一两段式：先撤下 show 播放 NModal 内置离场过渡（遮罩淡出 + 卡片缩放，
+// ~200ms），after-leave 后才 emit close 让父级 v-if 真正卸载；closing 防重复请求。
+const closing = ref(false);
+
+function requestClose(): void {
+  if (closing.value) return;
+  closing.value = true;
+  show.value = false;
+}
 // 弹窗可从任意工作空间的「⋯」菜单或设置菜单打开：标明手机将同步到哪个空间。
 const workspaceTitle = computed(() => getWorkspaceBoardTitle(props.workspace));
 const canvasRef = ref<HTMLCanvasElement | null>(null);
@@ -117,14 +126,14 @@ async function copyCode(): Promise<void> {
 function clear(): void {
   if (!window.confirm(text.value.app.inboxClearConfirm)) return;
   emit("update", null);
-  emit("close");
+  requestClose();
 }
 
 function save(): void {
   if (!hasCode.value) return;
   emit("update", buildInbox());
-  // 保存即完成：紧随关闭弹窗。
-  emit("close");
+  // 保存即完成：紧随关闭弹窗（先播离场动画）。
+  requestClose();
 }
 </script>
 
@@ -135,7 +144,9 @@ function save(): void {
     :title="text.app.inboxDialogTitle"
     style="max-width: min(360px, 92vw)"
     :mask-closable="false"
-    @update:show="emit('close')"
+    :internal-appear="true"
+    @update:show="requestClose"
+    @after-leave="emit('close')"
   >
     <p class="workspace-inbox-workspace" data-testid="inbox-workspace">
       <span class="workspace-inbox-workspace-label">{{ text.app.inboxWorkspaceLabel }}</span>
@@ -229,7 +240,7 @@ function save(): void {
       <NButton v-if="hasCode" quaternary type="error" data-testid="inbox-clear" @click="clear">
         {{ text.app.inboxClear }}
       </NButton>
-      <NButton quaternary data-testid="inbox-close" @click="emit('close')">{{ text.app.inboxCancel }}</NButton>
+      <NButton quaternary data-testid="inbox-close" @click="requestClose">{{ text.app.inboxCancel }}</NButton>
       <NButton type="primary" data-testid="inbox-save" :disabled="!hasCode" @click="save">
         {{ text.app.inboxSave }}
       </NButton>

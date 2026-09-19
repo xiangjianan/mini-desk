@@ -29,6 +29,20 @@ export interface ChangelogEntry {
 
 export const CHANGELOG: ChangelogEntry[] = [
   {
+    version: "1.0.184",
+    date: "2026-09-19",
+    notes: {
+      zh: [
+        "调整：快捷动作区「大按钮 / 紧凑按钮」切换增加平滑过渡动画——按钮高度、内边距与类型副标题渐进缩放，不再瞬变",
+        "调整：「配对手机」弹窗打开与关闭增加过渡动画（遮罩淡入淡出 + 卡片缩放浮现/收起），ESC、取消、保存、清除配对四种关闭路径一致",
+      ],
+      en: [
+        "Quick actions now animate smoothly when toggling between large and compact buttons — height, padding, and the type subtitle scale gradually instead of snapping",
+        "The pair-phone dialog now animates open and close (mask fade + card scale); ESC, cancel, save, and clear all share the same animated exit",
+      ],
+    },
+  },
+  {
     version: "1.0.183",
     date: "2026-09-19",
     notes: {

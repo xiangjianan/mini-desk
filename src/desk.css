@@ -97,10 +97,11 @@ html[data-theme="dark"] .workbench-shell,
 .workbench-shell .quick-tag-add-button:hover,
 .workbench-shell .quick-tag-add-button:focus-visible { color: var(--primary); background: transparent; }
 
-/* 紧凑按钮：单行、隐藏类型副标题，高度对齐提醒列表的紧凑行（42px）。 */
+/* 紧凑按钮：单行、类型副标题塌缩，高度对齐提醒列表的紧凑行（42px）。
+   副标题用 max-height/opacity 过渡而非 display:none，大↔紧凑切换整体有动画。 */
 .workbench-shell .quick-block.is-compact button.quick-button { min-height: 42px; padding: 8px 12px; }
 .workbench-shell .quick-block.is-compact .quick-button-content { gap: 0; }
-.workbench-shell .quick-block.is-compact .quick-button-kind { display: none; }
+.workbench-shell .quick-block.is-compact .quick-button-kind { max-height: 0; opacity: 0; overflow: hidden; }
 .workbench-shell button.quick-button {
   display: flex;
   width: 100%;
@@ -115,6 +116,16 @@ html[data-theme="dark"] .workbench-shell,
   background: transparent;
   box-shadow: none;
   transform: none;
+  /* 必须在此声明（0,2,1）而非 .quick-button 基座：全局 button:not(.icon-button)
+     的 transition（0,1,1）会压过基座；min-height/padding 让大↔紧凑切换平滑缩放。 */
+  transition:
+    background-color var(--motion-fast) ease,
+    border-color var(--motion-fast) ease,
+    color var(--motion-fast) ease,
+    opacity var(--motion-fast) ease,
+    transform var(--motion-medium) var(--motion-ease),
+    min-height var(--motion-medium) var(--motion-ease),
+    padding var(--motion-medium) var(--motion-ease);
 }
 .workbench-shell button.quick-button:hover {
   border-color: var(--line-control);
@@ -123,9 +134,9 @@ html[data-theme="dark"] .workbench-shell,
   transform: none;
 }
 .workbench-shell .quick-button-icon { font-size: 20px; color: var(--primary); }
-.quick-button-content { display: flex; flex-direction: column; min-width: 0; gap: 3px; }
+.quick-button-content { display: flex; flex-direction: column; min-width: 0; gap: 3px; transition: gap var(--motion-medium) var(--motion-ease); }
 .workbench-shell .quick-button-label { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
-.quick-button-kind { color: var(--muted); font-size: 12px; line-height: 1.4; }
+.quick-button-kind { color: var(--muted); font-size: 12px; line-height: 1.4; max-height: 20px; transition: max-height var(--motion-medium) var(--motion-ease), opacity var(--motion-fast) ease; }
 
 .workbench-shell .todo-heading {
   min-height: 53px;
