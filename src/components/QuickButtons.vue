@@ -108,6 +108,8 @@ onUnmounted(() => {
 const tagDrafts = ref<QuickTagDraft[]>([]);
 const newTagTitle = ref("");
 const tagManagerAnchor = ref<HTMLElement | undefined>();
+const tagManagerFocusId = ref<string | undefined>();
+let tagManagerFocusInput: { focus?: () => void } | null = null;
 const draggingId = ref<string | null>(null);
 const draggingTagId = ref<string | null>(null);
 const dragScroll = createDragAutoScroll();
@@ -233,6 +235,7 @@ const moveMenuChildren = computed<DropdownOption[]>(() =>
 const menuOptions = computed<DropdownOption[]>(() => {
   if (menu.value?.tagId) {
     return [
+      { label: uiText.value.quick.tagManage, key: "manage-tags", icon: renderIcon(PricetagsOutline) },
       ...(moveMenuChildren.value.length > 0
         ? [{
             label: uiText.value.common.moveToWorkspace,
@@ -321,11 +324,24 @@ function refreshTagDrafts(): void {
   }));
 }
 
-function openTagManager(anchor?: HTMLElement): void {
+function openTagManager(anchor?: HTMLElement, focusTagId?: string): void {
   refreshTagDrafts();
   newTagTitle.value = "";
   tagManagerAnchor.value = anchor;
+  tagManagerFocusId.value = focusTagId;
   tagManagerOpen.value = true;
+  void nextTick(() => {
+    tagManagerFocusInput?.focus?.();
+    tagManagerFocusInput = null;
+    tagManagerFocusId.value = undefined;
+  });
+}
+
+/** 标签管理器行输入 ref：只捕获待聚焦标签那一行（NInput 暴露 focus()，测试 stub 根元素即 input）。 */
+function setTagManagerNameInput(el: Element | ComponentPublicInstance | null, id: string): void {
+  if (!el || id !== tagManagerFocusId.value) return;
+  const instance = el as ComponentPublicInstance & { focus?: () => void };
+  tagManagerFocusInput = typeof instance.focus === "function" ? instance : instance.$el ?? null;
 }
 
 function setInlineRenameInput(el: Element | ComponentPublicInstance | null): void {
@@ -479,7 +495,7 @@ function openAreaMenu(event: MouseEvent): void {
   menu.value = { x: event.clientX, y: event.clientY, anchor: event.currentTarget as HTMLElement, tagTitle };
 }
 
-/** 标签头右键：仅真实标签提供「移动到空间 + 删除标签及动作」；其他目标回落到区域菜单。 */
+/** 标签头右键：仅真实标签提供「标签管理 + 移动到空间 + 删除标签及动作」；其他目标回落到区域菜单。 */
 function openTagMenu(event: MouseEvent, tagId: string): void {
   const target = event.target as HTMLElement;
   if (target.closest("button, input, textarea")) return;
@@ -536,7 +552,7 @@ function handleMenuSelect(key: string): void {
     return;
   }
   if (key === "manage-tags") {
-    openTagManager(anchor);
+    openTagManager(anchor, tagId);
     return;
   }
   if (key === "paste") {
@@ -1218,6 +1234,7 @@ function handleQuickGroupDrop(event: DragEvent, groupId: string): void {
             class="quick-tag-manager-row"
           >
             <NInput
+              :ref="(el) => setTagManagerNameInput(el, tag.id)"
               v-model:value="tag.titleDraft"
               class="quick-tag-name-input"
               :placeholder="uiText.quick.tagName"

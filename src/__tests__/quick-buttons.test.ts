@@ -437,7 +437,7 @@ describe("QuickButtons", () => {
     wrapper.unmount();
   });
 
-  it("appends a destructive delete action after move-to-workspace in the tag heading menu", async () => {
+  it("offers tag management at the top of the tag heading menu", async () => {
     const wrapper = mountQuickButtons({
       tags: [{ id: "tag-work", title: "工作" }],
       buttons: [{ id: "b1", title: "Btn", value: "v", type: "link", tagId: "tag-work", hidden: false }],
@@ -447,13 +447,59 @@ describe("QuickButtons", () => {
     await wrapper.get(".quick-tag-heading").trigger("contextmenu");
 
     expect(wrapper.findAll(".dropdown-option").map((option) => option.text())).toEqual([
+      "标签管理",
       "移动到空间",
       "生活",
       "删除",
     ]);
 
+    await wrapper.findAll(".dropdown-option").find((option) => option.text() === "标签管理")?.trigger("click");
+    expect(wrapper.get(".quick-tag-manager").text()).toContain("标签管理");
+    wrapper.unmount();
+  });
+
+  it("emits deleteTagWithButtons from the tag heading menu", async () => {
+    const wrapper = mountQuickButtons({
+      tags: [{ id: "tag-work", title: "工作" }],
+      buttons: [{ id: "b1", title: "Btn", value: "v", type: "link", tagId: "tag-work", hidden: false }],
+      moveTargets: [{ id: "ws-2", title: "生活", lists: [] }],
+    });
+
+    await wrapper.get(".quick-tag-heading").trigger("contextmenu");
+
     await wrapper.findAll(".dropdown-option").find((option) => option.text() === "删除")?.trigger("click");
     expect(wrapper.emitted("deleteTagWithButtons")?.[0]).toEqual(["tag-work", expect.any(HTMLElement)]);
+    wrapper.unmount();
+  });
+
+  it("focuses the heading tag's rename input when tag management opens from its menu", async () => {
+    const wrapper = mountQuickButtons({
+      tags: [{ id: "tag-a", title: "甲" }, { id: "tag-b", title: "乙" }],
+      buttons: [{ id: "b1", title: "Btn", value: "v", type: "link", tagId: "tag-b", hidden: false }],
+    });
+
+    const headingB = wrapper.findAll(".quick-tag-heading").find((heading) => heading.get(".quick-tag-title").text() === "乙");
+    await headingB?.trigger("contextmenu");
+    await wrapper.findAll(".dropdown-option").find((option) => option.text() === "标签管理")?.trigger("click");
+    await wrapper.vm.$nextTick();
+
+    const rowInputs = wrapper.findAll(".quick-tag-manager-row .quick-tag-name-input");
+    expect(rowInputs).toHaveLength(2);
+    expect(document.activeElement).toBe(rowInputs[1].element);
+    wrapper.unmount();
+  });
+
+  it("does not focus any rename input when tag management opens from the panel menu", async () => {
+    const wrapper = mountQuickButtons({
+      tags: [{ id: "tag-a", title: "甲" }, { id: "tag-b", title: "乙" }],
+    });
+
+    await wrapper.get(".quick-menu-button").trigger("click");
+    await wrapper.findAll(".dropdown-option").find((option) => option.text() === "标签管理")?.trigger("click");
+    await wrapper.vm.$nextTick();
+
+    const rowInputs = wrapper.findAll(".quick-tag-manager-row .quick-tag-name-input");
+    expect(rowInputs.map((input) => input.element)).not.toContain(document.activeElement);
     wrapper.unmount();
   });
 
@@ -1617,7 +1663,7 @@ describe("QuickButtons 跨空间移动", () => {
     wrapper.unmount();
   });
 
-  it("没有其他空间时标签头菜单仍打开且只含删除项", async () => {
+  it("没有其他空间时标签头菜单仍打开且不含移动项", async () => {
     const wrapper = mountQuickButtons({
       buttons: [{ id: "btn-1", title: "搜索", value: "https://example.com", type: "link", tagId: "tag-1", hidden: false }],
       tags: [{ id: "tag-1", title: "常用" }],
@@ -1626,6 +1672,7 @@ describe("QuickButtons 跨空间移动", () => {
     expect(wrapper.findAll('[data-key^="move-ws:"]')).toHaveLength(0);
     expect(wrapper.find('[data-key="move-tag"]').exists()).toBe(false);
     expect(wrapper.find('[data-key="add"]').exists()).toBe(false);
+    expect(wrapper.get('[data-key="manage-tags"]').text()).toBe("标签管理");
     expect(wrapper.get('[data-key="delete-tag"]').text()).toBe("删除");
     wrapper.unmount();
   });
