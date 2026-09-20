@@ -275,7 +275,7 @@ export function moveCaretToLineBoundary(textarea: HTMLTextAreaElement, edge: "st
 }
 
 /** Offset of the item text within a line: leading indent + list marker, else 0. */
-function getLineTextStartOffset(line: string): number {
+export function getLineTextStartOffset(line: string): number {
   const indent = line.match(/^[ \t]*/)?.[0] ?? "";
   const body = line.slice(indent.length);
   const ordered = body.match(/^\d+\.\s+/);

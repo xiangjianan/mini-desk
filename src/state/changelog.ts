@@ -29,6 +29,20 @@ export interface ChangelogEntry {
 
 export const CHANGELOG: ChangelogEntry[] = [
   {
+    version: "1.0.185",
+    date: "2026-09-20",
+    notes: {
+      zh: [
+        "新增：快捷区标签头右键菜单顶部新增「标签管理」——一键打开标签管理器，并自动聚焦到该标签的改名输入框",
+        "修复：便签里短横线条目按 Shift+Tab 取消缩进后，光标被级联重编号甩到最后一条编号行的问题——现在统一保留在当行",
+      ],
+      en: [
+        "Tag headings now offer \"Manage tags\" at the top of their right-click menu — it opens the tag manager with that tag's rename input auto-focused",
+        "Fixed the caret jumping to the last numbered line after Shift+Tab outdenting a dash item in notes — renumber cascades now keep it on the current line",
+      ],
+    },
+  },
+  {
     version: "1.0.184",
     date: "2026-09-19",
     notes: {

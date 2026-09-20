@@ -11,6 +11,7 @@ import { getUiText } from "../state/i18n";
 import type { AppLanguage } from "../types";
 import {
   editorTextToLines,
+  getLineTextStartOffset,
   handleTextareaTab,
   insertIndentedLineBreak,
   insertPlainLineBreak,
@@ -661,29 +662,41 @@ function normalizeTextareaText(textarea: HTMLTextAreaElement): void {
   textarea.setSelectionRange(nextSelectionStart, nextSelectionEnd);
 }
 
+/** 重编号后的光标平移。重编号是逐行等量映射（行数不变、只改写行内标记），因此按
+ *  「行号 + 行内偏移」定位：行未变则原位；行内标记被改写（如 1.→3.）则标记后的
+ *  偏移随新标记平移、标记内的偏移吸附到新标记末尾。旧实现按公共前后缀圈出变化
+ *  区域，光标落在区域内时直接丢到区域末尾——级联重编号时区域会跨到最后一行，
+ *  把 Shift+Tab 反缩进的光标甩到最后一条编号行上。 */
 function getAdjustedSelectionOffset(raw: string, normalized: string, offset: number): number {
   const prefixLength = getCommonPrefixLength(raw, normalized);
   if (prefixLength >= offset) return offset;
-  const suffixLength = getCommonSuffixLength(raw, normalized, prefixLength);
-  const rawChangedEnd = raw.length - suffixLength;
-  const normalizedChangedEnd = normalized.length - suffixLength;
-  if (offset >= rawChangedEnd) {
-    return clampSelectionOffset(offset + normalized.length - raw.length, normalized.length);
+  const rawLines = raw.split("\n");
+  const normalizedLines = normalized.split("\n");
+  let rawStart = 0;
+  let normalizedStart = 0;
+  for (let index = 0; index < rawLines.length; index += 1) {
+    const rawLine = rawLines[index] ?? "";
+    const normalizedLine = normalizedLines[index] ?? rawLine;
+    if (offset <= rawStart + rawLine.length) {
+      const position = offset - rawStart;
+      if (rawLine === normalizedLine) return normalizedStart + position;
+      const rawTextStart = getLineTextStartOffset(rawLine);
+      const normalizedTextStart = normalizedStart + getLineTextStartOffset(normalizedLine);
+      return clampSelectionOffset(
+        position <= rawTextStart ? normalizedTextStart : normalizedTextStart + (position - rawTextStart),
+        normalized.length,
+      );
+    }
+    rawStart += rawLine.length + 1;
+    normalizedStart += normalizedLine.length + 1;
   }
-  return clampSelectionOffset(normalizedChangedEnd, normalized.length);
+  return clampSelectionOffset(normalized.length, normalized.length);
 }
 
 function getCommonPrefixLength(left: string, right: string): number {
   const maxLength = Math.min(left.length, right.length);
   let index = 0;
   while (index < maxLength && left[index] === right[index]) index += 1;
-  return index;
-}
-
-function getCommonSuffixLength(left: string, right: string, prefixLength: number): number {
-  const maxLength = Math.min(left.length, right.length) - prefixLength;
-  let index = 0;
-  while (index < maxLength && left[left.length - 1 - index] === right[right.length - 1 - index]) index += 1;
   return index;
 }
 

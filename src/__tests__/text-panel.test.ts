@@ -130,6 +130,35 @@ describe("TextPanel", () => {
     expect(textarea.value).toBe("root\n");
   });
 
+  it("keeps the caret on the outdented dash line when Shift+Tab rejoins the numbered list", async () => {
+    const wrapper = mount(TextPanel, {
+      props: {
+        titleId: "workspace-title",
+        title: "工作空间",
+        lines: [
+          { text: "1. 一", indent: 0 },
+          { text: "2. 二", indent: 0 },
+          { text: "- a", indent: 1 },
+          { text: "- b", indent: 1 },
+          { text: "3. 三", indent: 0 },
+          { text: "4. 四", indent: 0 },
+          { text: "5. 五", indent: 0 },
+        ],
+      },
+    });
+    const textarea = wrapper.get("textarea").element as HTMLTextAreaElement;
+    const caret = "1. 一\n2. 二\n    - a\n    - b".length;
+
+    await wrapper.get("textarea").trigger("dblclick");
+    textarea.setSelectionRange(caret, caret);
+    await wrapper.get("textarea").trigger("keydown", { key: "Tab", shiftKey: true });
+
+    expect(textarea.value).toBe("1. 一\n2. 二\n    - a\n3. b\n4. 三\n5. 四\n6. 五");
+    expect(textarea.selectionStart).toBe("1. 一\n2. 二\n    - a\n3. b".length);
+    expect(textarea.selectionEnd).toBe("1. 一\n2. 二\n    - a\n3. b".length);
+    wrapper.unmount();
+  });
+
   it("continues an indented dash line after the current line when pressing Shift+Enter", async () => {
     const wrapper = mount(TextPanel, {
       props: {
