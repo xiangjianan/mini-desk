@@ -73,10 +73,12 @@ defineSlots<{
 const DESKTOP_RESIZE_BREAKPOINT = 1180;
 const WORKBENCH_HEADER_STORAGE_KEY = "mini-desk-workbench-header-hidden";
 const LEGACY_WORKBENCH_HEADER_STORAGE_KEY = "todo-board-workbench-header-hidden";
-// 黄金比例 φ ≈ 1.618：图片区保持 10% 窄轨，其余三区按 便签:提醒:工作区 = 1:1:φ
-// 分摊（≈ 24.9% / 24.9% / 40.2%）——工作区（笔记+存储双面板）为黄金重心。
+// 黄金比例 φ ≈ 1.618：四区从左到右按 (1−0.618):0.618:0.618:1（= φ⁻²:φ⁻¹:φ⁻¹:1，
+// 归一化 ≈ 14.6%/23.6%/23.6%/38.2%）分摊——工作区（笔记+存储双面板）为黄金重心。
+// 权重即竖线到竖线的整段可见跨度占比：zone 紧贴页面左右两侧、无内边距偏移，
+// 分隔线落在列边界上。
 const PHI = (1 + Math.sqrt(5)) / 2;
-const DEFAULT_COLUMN_WEIGHTS = [0.1, 0.9 / (2 + PHI), 0.9 / (2 + PHI), (0.9 * PHI) / (2 + PHI)] as const;
+const DEFAULT_COLUMN_WEIGHTS = [1 - 1 / PHI, 1 / PHI, 1 / PHI, 1] as const;
 const MIN_COLUMN_WIDTHS = [100, 100, 100, 100] as const;
 // Canonical zone order matches DEFAULT_COLUMN_WEIGHTS / MIN_COLUMN_WIDTHS indices.
 const ZONE_INDEX = { assets: 0, notes: 1, tasks: 2, workspace: 3 } as const;
@@ -284,6 +286,39 @@ function readGridMetrics(): { rect: DOMRect; contentWidth: number } | undefined 
   };
 }
 
+// Splits `width` across columns in proportion to `weights`, flooring any column
+// that would land below its minimum at that minimum and re-splitting the rest
+// among the remaining columns (water-filling). The weights describe the FULL
+// on-screen column width — divider line to divider line — so the golden-ratio
+// defaults and user-dragged ratios both hold at any window size. With the
+// 1180px desktop breakpoint and the 100px minimums the floor never fires in
+// practice; it only keeps the min-width contract intact for narrower mounts.
+function splitWidthByWeights(
+  width: number,
+  weights: readonly number[],
+  mins: readonly number[],
+): number[] {
+  const widths = weights.map(() => 0);
+  let pending = weights.map((_, index) => index);
+  let budget = width;
+  while (pending.length > 0) {
+    const weightSum = pending.reduce((sum, index) => sum + weights[index], 0);
+    const shares = pending.map((index) => (budget * weights[index]) / weightSum);
+    const floored = pending.findIndex((index, position) => shares[position] < mins[index]);
+    if (floored < 0) {
+      pending.forEach((index, position) => {
+        widths[index] = shares[position];
+      });
+      break;
+    }
+    const pinned = pending[floored];
+    widths[pinned] = mins[pinned];
+    budget -= mins[pinned];
+    pending = pending.filter((index) => index !== pinned);
+  }
+  return widths;
+}
+
 function fitColumnsToWidth(
   width: number,
   currentWidths?: readonly number[],
@@ -302,20 +337,13 @@ function fitColumnsToWidth(
     if (width <= minTotal) {
       return [...mins];
     }
-
-    const source = hasCurrent ? currentWidths! : weights;
-    const sourceWeights = source.map((value, index) => currentWidths?.length === mins.length ? Math.max(0, value - mins[index]) : value);
-    const effectiveWeights = sourceWeights.reduce((sum, value) => sum + value, 0) > 0 ? sourceWeights : [...weights];
-    const sourceTotal = effectiveWeights.reduce((sum, value) => sum + value, 0);
-    const remainingDelta = width - minTotal;
-    return mins.map((minWidth, index) => {
-      const weight = effectiveWeights[index];
-      return minWidth + (remainingDelta * weight) / sourceTotal;
-    });
+    // Existing widths act as the weights on a resize so the current on-screen
+    // ratios survive; the golden defaults seed a fresh layout directly.
+    return splitWidthByWeights(width, hasCurrent ? currentWidths! : weights, mins);
   }
 
   // Some zones are intentionally collapsed (below their minimum): pin them to the
-  // rail width and distribute the freed space across the expanded zones.
+  // rail width and split the freed space across the expanded zones by their widths.
   const collapsedCount = collapsedFlags.filter(Boolean).length;
   const collapsedTotal = COLLAPSED_COLUMN_WIDTH * collapsedCount;
   const visibleMinTotal = mins.reduce((sum, min, index) =>
@@ -323,19 +351,16 @@ function fitColumnsToWidth(
   if (width <= collapsedTotal + visibleMinTotal) {
     return mins.map((min, index) => (collapsedFlags[index] ? COLLAPSED_COLUMN_WIDTH : min));
   }
-  const excessWeights = mins.map((min, index) =>
-    collapsedFlags[index] ? 0 : Math.max(0, currentWidths![index] - min),
+  const expandedIndices = mins.map((_, index) => index).filter((index) => !collapsedFlags[index]);
+  const expandedWidths = splitWidthByWeights(
+    width - collapsedTotal,
+    expandedIndices.map((index) => currentWidths![index]),
+    expandedIndices.map((index) => mins[index]),
   );
-  const excessTotal = excessWeights.reduce((sum, value) => sum + value, 0);
-  const effectiveWeights = excessTotal > 0
-    ? excessWeights
-    : mins.map((_, index) => (collapsedFlags[index] ? 0 : weights[index]));
-  const sourceTotal = effectiveWeights.reduce((sum, value) => sum + value, 0);
-  const remainingDelta = width - collapsedTotal - visibleMinTotal;
   return mins.map((min, index) =>
     collapsedFlags[index]
       ? COLLAPSED_COLUMN_WIDTH
-      : min + (remainingDelta * effectiveWeights[index]) / sourceTotal,
+      : expandedWidths[expandedIndices.indexOf(index)],
   );
 }
 

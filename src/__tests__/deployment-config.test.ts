@@ -40,6 +40,8 @@ describe("pwa configuration", () => {
     // 后者让 standalone 状态栏透明；两者齐备时页面自己的渐变涂满状态栏区域。
     expect(index).toContain("viewport-fit=cover");
     expect(index).toContain('name="apple-mobile-web-app-capable" content="yes"');
+    // 无前缀版给 Chrome（仅 apple- 版会触发其弃用警告），apple- 版给 iOS Safari。
+    expect(index).toContain('name="mobile-web-app-capable" content="yes"');
     expect(index).toContain('name="apple-mobile-web-app-status-bar-style" content="black-translucent"');
   });
 

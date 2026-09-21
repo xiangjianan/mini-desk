@@ -10,6 +10,9 @@
          页面渐变直接铺到刘海下。代价：iOS 状态栏时间/电池符号固定白色，
          浅色主题下对比度低是已知取舍（刻意保持极浅渐变，不为此加深顶部）。 -->
     <meta name="apple-mobile-web-app-capable" content="yes" />
+    <!-- 无前缀标准版：Chrome 只认这个并会对仅有 apple- 版打弃用警告；iOS Safari
+         则只认 apple- 版，两者共存缺一不可（manifest 的 standalone 声明亦已就位）。 -->
+    <meta name="mobile-web-app-capable" content="yes" />
     <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent" />
     <meta name="app-version" content="1.0.185" />
     <meta name="theme-color" content="#fcfcfe" />

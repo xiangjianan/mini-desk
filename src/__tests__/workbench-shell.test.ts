@@ -122,7 +122,7 @@ describe("WorkbenchShell", () => {
 
     expect(source).toContain("const MIN_COLUMN_WIDTHS = [100, 100, 100, 100] as const");
     expect(source).toContain("fitColumnsToWidth");
-    expect(source).toContain("remainingDelta");
+    expect(source).toContain("splitWidthByWeights");
   });
 
   it("does not render dead shell controls by default", () => {
@@ -334,7 +334,7 @@ describe("WorkbenchShell", () => {
     vi.useRealTimers();
   });
 
-  it("seeds golden-ratio default workbench column widths with a 100px minimum per zone", async () => {
+  it("seeds golden-ratio default workbench column widths that match the on-screen zone split", async () => {
     vi.spyOn(window, "innerWidth", "get").mockReturnValue(1600);
     HTMLElement.prototype.getBoundingClientRect = function getMockRect() {
       if (this instanceof HTMLElement && this.classList.contains("workbench-grid")) {
@@ -365,13 +365,17 @@ describe("WorkbenchShell", () => {
       .split(/\s+/)
       .map((value) => Number.parseFloat(value));
 
-    // 黄金比例 φ：图片区固定 10% 窄轨，其余三区按 便签:提醒:工作区 = 1:1:φ
-    // 分摊（份额 = 列宽 − 100px 最小列宽），总宽 1200px 时即 176/289/289/405。
-    expect(columns).toEqual([176, 289, 289, 405]);
+    // 黄金比例 φ：四区从左到右按 (1−0.618):0.618:0.618:1（= φ⁻²:φ⁻¹:φ⁻¹:1）分摊，
+    // 归一化 ≈ 14.6%/23.6%/23.6%/38.2%。权重划分的是竖线到竖线的整段可见跨度
+    // （1200px 网格 − jsdom 下 padding 0 + 3×14px gap 回退 = 内容宽 1158px）。
+    expect(columns).toEqual([169, 273, 273, 442]);
     const phi = (1 + Math.sqrt(5)) / 2;
     expect(columns[1]).toBe(columns[2]);
-    expect((columns[3] - 100) / (columns[1] - 100)).toBeCloseTo(phi, 1);
-    expect((columns[1] - 100) / (columns[0] - 100)).toBeCloseTo(0.9 / (0.1 * (2 + phi)), 1);
+    expect(columns[0] / 1158).toBeCloseTo((1 - 1 / phi) / (phi * phi), 2);
+    expect(columns[1] / 1158).toBeCloseTo((1 / phi) / (phi * phi), 2);
+    expect(columns[3] / 1158).toBeCloseTo(1 / (phi * phi), 2);
+    expect(columns[1] / columns[0]).toBeCloseTo(phi, 1);
+    expect(columns[3] / columns[1]).toBeCloseTo(phi, 1);
 
     wrapper.unmount();
   });
@@ -448,7 +452,7 @@ describe("WorkbenchShell", () => {
     await nextTick();
     await nextTick();
 
-    expect(wrapper.get(".workbench-grid").attributes("style")).toContain("grid-template-columns: 176px 289px 289px 405px");
+    expect(wrapper.get(".workbench-grid").attributes("style")).toContain("grid-template-columns: 169px 273px 273px 442px");
     expect(wrapper.get(".workbench-zone-tasks").classes()).not.toContain("workbench-zone-collapsed");
 
     const pointerDown = new MouseEvent("pointerdown", { bubbles: true, cancelable: true });
@@ -459,10 +463,10 @@ describe("WorkbenchShell", () => {
     await nextTick();
 
     // The task zone shrinks below its 100px minimum instead of clamping and
-    // collapses to the 44px title rail — its golden default (289px) is narrower
+    // collapses to the 44px title rail — its golden default (273px) is narrower
     // than the 260px drag, so the leftover shrink spills into notes, and the
     // freed space flows to the neighboring workspace zone.
-    expect(wrapper.get(".workbench-grid").attributes("style")).toContain("grid-template-columns: 176px 273px 44px 665px");
+    expect(wrapper.get(".workbench-grid").attributes("style")).toContain("grid-template-columns: 169px 243px 44px 702px");
     expect(wrapper.get(".workbench-zone-tasks").classes()).toContain("workbench-zone-collapsed");
     expect(wrapper.get(".workbench-zone-tasks .workbench-zone-rail").text()).toBe("✅ 提醒事项");
     expect(wrapper.findAll(".workbench-zone-notes .workbench-zone-rail")).toHaveLength(1);
@@ -552,13 +556,13 @@ describe("WorkbenchShell", () => {
     await nextTick();
     expect(wrapper.get(".workbench-zone-tasks").classes()).toContain("workbench-zone-collapsed");
 
-    // Click the collapsed rail: tasks returns to its default width (~289px) and
+    // Click the collapsed rail: tasks returns to its default width (~273px) and
     // content reappears, funded by shrinking the expanded neighbors.
     await wrapper.get(".workbench-zone-tasks .workbench-zone-rail").trigger("click");
     await nextTick();
 
     expect(wrapper.get(".workbench-zone-tasks").classes()).not.toContain("workbench-zone-collapsed");
-    expect(wrapper.get(".workbench-grid").attributes("style")).toContain("289px");
+    expect(wrapper.get(".workbench-grid").attributes("style")).toContain("273px");
     expect(localStorage.getItem(WORKBENCH_WIDTH_STORAGE_KEY)).not.toBeNull();
 
     wrapper.unmount();
@@ -650,7 +654,9 @@ describe("WorkbenchShell", () => {
     await nextTick();
     await nextTick();
 
-    expect(wrapper.get(".workbench-grid").attributes("style")).toContain("grid-template-columns: 171px 329px 312px 347px");
+    // 自定义宽度按「可见宽度的比例」等比拟合：180/360/340/380（和 1260）缩放到
+    // 内容宽 1158 → 165/331/312/349，竖线到竖线的相对比例与保存时一致。
+    expect(wrapper.get(".workbench-grid").attributes("style")).toContain("grid-template-columns: 165px 331px 312px 349px");
     // No zone is collapsed because the legacy widths are all at/above their minima.
     expect(wrapper.find(".workbench-zone-collapsed").exists()).toBe(false);
 
@@ -707,7 +713,7 @@ describe("WorkbenchShell", () => {
     await nextTick();
 
     // 与「旧共享键种子」用例相同的数值 → 相同的等比拟合结果，证明读取的是 B 自己的键。
-    expect(workspaceB.get(".workbench-grid").attributes("style")).toContain("grid-template-columns: 171px 329px 312px 347px");
+    expect(workspaceB.get(".workbench-grid").attributes("style")).toContain("grid-template-columns: 165px 331px 312px 349px");
     expect(localStorage.getItem(`${WORKBENCH_WIDTH_STORAGE_KEY}:ws-a`)).toBe(storedA);
 
     // 在已挂载的壳上切换工作区 id：watcher 丢弃当前列宽并按 A 的存储尺寸重排。
@@ -716,7 +722,7 @@ describe("WorkbenchShell", () => {
     await nextTick();
     const switchedColumns = workspaceB.get(".workbench-grid").attributes("style") ?? "";
     expect(switchedColumns).toContain("grid-template-columns:");
-    expect(switchedColumns).not.toContain("171px 329px 312px 347px");
+    expect(switchedColumns).not.toContain("165px 331px 312px 349px");
     workspaceB.unmount();
   });
 

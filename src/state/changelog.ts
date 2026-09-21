@@ -29,6 +29,18 @@ export interface ChangelogEntry {
 
 export const CHANGELOG: ChangelogEntry[] = [
   {
+    version: "1.0.186",
+    date: "2026-09-21",
+    notes: {
+      zh: [
+        "调整：四区宽度比例改为从左到右 (1−0.618):0.618:0.618:1 的黄金分割，并修复比例此前未按分隔线之间的实际跨度精确生效的问题——现在任意窗口尺寸下都严格保持，改变窗口大小也不再偏移",
+      ],
+      en: [
+        "Zone widths now split left-to-right in the golden ratio (1−0.618):0.618:0.618:1, and the ratio now applies exactly to the divider-to-divider span — it holds at any window size and no longer drifts on resize",
+      ],
+    },
+  },
+  {
     version: "1.0.185",
     date: "2026-09-20",
     notes: {
