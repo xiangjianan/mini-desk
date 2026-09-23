@@ -195,7 +195,11 @@ function isRangeFullyMarked(
     covered = mark.end;
     if (covered >= range.end) return true;
   }
-  return false;
+  // 尾部余量若全是换行（选区选到文本末尾含尾随换行的场景），同样视为已覆盖。
+  for (let index = covered; index < range.end; index += 1) {
+    if (text[index] !== "\n") return false;
+  }
+  return true;
 }
 
 /** 清除选区内指定 type（不传 color = 该 type 全部颜色）的 marks，边界外保留。 */

@@ -125,6 +125,11 @@ describe("toggleMarkInRange — toggle 语义", () => {
     ];
     expect(toggleMarkInRange("ab\ncd", marks, { start: 1, end: 4 }, "strike")).toEqual([]);
   });
+
+  it("选区含尾随换行且其余已全覆盖：可一次取消（尾部换行豁免）", () => {
+    const marks: TextMark[] = [{ type: "strike", start: 0, end: 2 }];
+    expect(toggleMarkInRange("ab\n", marks, { start: 0, end: 3 }, "strike")).toEqual([]);
+  });
 });
 
 describe("clearMarksInRange — 清除", () => {
