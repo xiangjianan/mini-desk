@@ -69,7 +69,7 @@ interface EditorSnapshot {
 }
 
 const undoStack = ref<EditorSnapshot[]>([]);
-const lastUndoState = ref<EditorSnapshot>({ text: initialEditorState.text, marks: initialEditorState.marks });
+const lastUndoState = ref<EditorSnapshot>({ text: initialEditorState.text, marks: [...initialEditorState.marks] });
 const lastCaret = ref<number | null>(null);
 const lastTextSelection = ref<{ start: number; end: number } | null>(null);
 const menu = ref<{
@@ -146,6 +146,7 @@ watch(
   { deep: true },
 );
 
+// marks 恒按 start 有序（normalizeMarkList/mergeMarkList 排序，translate/双向转换保序），故逐位比较即集合比较。
 function isSameMarks(left: TextMark[], right: TextMark[]): boolean {
   if (left.length !== right.length) return false;
   return left.every((mark, index) => {

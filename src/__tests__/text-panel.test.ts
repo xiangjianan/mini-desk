@@ -1879,4 +1879,30 @@ describe("TextPanel", () => {
     const update = wrapper.emitted("update")?.at(-1)?.[0] as LineItem[];
     expect(update[0].marks).toEqual([{ type: "highlight", start: 0, end: 2, color: "rose" }]);
   });
+
+  it("父层回声不清空撤销栈：连续编辑两步可连续撤销两步（含 marks）", async () => {
+    const wrapper = mount(TextPanel, {
+      props: {
+        titleId: "workspace-title",
+        title: "工作空间",
+        lines: [{ text: "hello world", indent: 0, marks: [{ type: "highlight", start: 6, end: 11, color: "amber" }] }],
+      },
+    });
+    await wrapper.get("textarea").trigger("dblclick");
+    // 第一步：追加一行（模拟真实编辑），emit 后把 lines 回绑（生产上 SpacePanel 即如此）
+    await wrapper.get("textarea").setValue("hello world\nnew line");
+    let emitted = wrapper.emitted("update")?.at(-1)?.[0];
+    await wrapper.setProps({ lines: emitted as never });
+    // 第二步：再改文本，同样回声
+    await wrapper.get("textarea").setValue("hello world\nnew line two");
+    emitted = wrapper.emitted("update")?.at(-1)?.[0];
+    await wrapper.setProps({ lines: emitted as never });
+    // 连续撤销两步：第一步回到一行版本，第二步回到初始
+    await wrapper.get("textarea").trigger("keydown", { key: "z", ctrlKey: true });
+    expect(wrapper.get("textarea").element.value).toBe("hello world\nnew line");
+    await wrapper.get("textarea").trigger("keydown", { key: "z", ctrlKey: true });
+    expect(wrapper.get("textarea").element.value).toBe("hello world");
+    const update = wrapper.emitted("update")?.at(-1)?.[0] as LineItem[];
+    expect(update[0].marks).toEqual([{ type: "highlight", start: 6, end: 11, color: "amber" }]);
+  });
 });
