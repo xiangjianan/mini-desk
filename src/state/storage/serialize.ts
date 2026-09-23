@@ -147,7 +147,9 @@ function getCustomCompanionGifStoredState(
 }
 
 export function cloneLines(lines: LineItem[]): LineItem[] {
-  return lines.map((line) => ({ ...line }));
+  return lines.map((line) => (line.marks?.length
+    ? { ...line, marks: line.marks.map((mark) => ({ ...mark })) }
+    : { ...line }));
 }
 
 function cloneSpaces(spaces: WorkspaceSpace[]): WorkspaceSpace[] {
