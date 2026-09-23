@@ -10,6 +10,7 @@ const MESSAGES = smartPasteMessages(
       polishNoteDone: "已排版为 {count} 行",
       polishFallback: "暂不可用",
       polishTooLarge: "过长",
+      polishEmptyClipboard: "剪贴板空",
     },
   },
   "todo",
@@ -43,11 +44,12 @@ const SELECTION_MESSAGES = selectionPolishMessages({
     polishNoteDone: "已排版为 {count} 行",
     polishKeepFallback: "保留原文",
     polishKeepTooLarge: "过长保留",
+    polishEmptyClipboard: "剪贴板空",
   },
 });
 
 const QUICK_MESSAGES = quickSmartPasteMessages({
-  app: { polishWorking: "整理中", polishQuickDone: "已生成快捷按钮", polishQuickFallback: "按原文生成", polishQuickTooLarge: "过长" },
+  app: { polishWorking: "整理中", polishQuickDone: "已生成快捷按钮", polishQuickFallback: "按原文生成", polishQuickTooLarge: "过长", polishEmptyClipboard: "剪贴板空" },
 });
 
 function setupQuick(clipboard: string | undefined, result: PolishResult) {
@@ -99,12 +101,14 @@ afterEach(() => {
 });
 
 describe("runSmartPaste", () => {
-  it("剪贴板为空/不可读时静默返回", async () => {
+  it("剪贴板为空/非文本时提示后返回：不插入、不调服务端", async () => {
     for (const clipboard of [undefined, "", "   "]) {
-      const { notify, insert, run } = setup(clipboard, { items: ["A"] });
+      const { notify, insert, polish, run } = setup(clipboard, { items: ["A"] });
       await run();
-      expect(notify).not.toHaveBeenCalled();
+      expect(polish).not.toHaveBeenCalled();
       expect(insert).not.toHaveBeenCalled();
+      expect(notify).toHaveBeenCalledTimes(1);
+      expect(notify.mock.calls[0]).toEqual(["fallback", "剪贴板空", undefined]);
     }
   });
 
@@ -205,19 +209,20 @@ describe("runSelectionPolish", () => {
 describe("smartPasteMessages", () => {
   it("按 kind 选择 done 模板并替换 {count}", () => {
     const todo = smartPasteMessages(
-      { app: { polishWorking: "w", polishTodoDone: "{count} 条提醒", polishNoteDone: "{count} 行", polishFallback: "f", polishTooLarge: "t" } },
+      { app: { polishWorking: "w", polishTodoDone: "{count} 条提醒", polishNoteDone: "{count} 行", polishFallback: "f", polishTooLarge: "t", polishEmptyClipboard: "e" } },
       "todo",
     );
     const note = smartPasteMessages(
-      { app: { polishWorking: "w", polishTodoDone: "{count} 条提醒", polishNoteDone: "{count} 行", polishFallback: "f", polishTooLarge: "t" } },
+      { app: { polishWorking: "w", polishTodoDone: "{count} 条提醒", polishNoteDone: "{count} 行", polishFallback: "f", polishTooLarge: "t", polishEmptyClipboard: "e" } },
       "note",
     );
     expect(todo.done(3)).toBe("3 条提醒");
     expect(note.done(5)).toBe("5 行");
+    expect(todo.empty).toBe("e");
   });
 
   it("selectionPolishMessages 用保留原文口径", () => {
-    const messages = selectionPolishMessages({ app: { polishWorking: "w", polishNoteDone: "{count} 行", polishKeepFallback: "保留原文", polishKeepTooLarge: "过长保留" } });
+    const messages = selectionPolishMessages({ app: { polishWorking: "w", polishNoteDone: "{count} 行", polishKeepFallback: "保留原文", polishKeepTooLarge: "过长保留", polishEmptyClipboard: "e" } });
     expect(messages.done(5)).toBe("5 行");
     expect(messages.fallback).toBe("保留原文");
     expect(messages.tooLarge).toBe("过长保留");
@@ -225,12 +230,14 @@ describe("smartPasteMessages", () => {
 });
 
 describe("runQuickSmartPaste", () => {
-  it("剪贴板为空/不可读时静默返回", async () => {
+  it("剪贴板为空/非文本时提示后返回：不插入、不调服务端", async () => {
     for (const clipboard of [undefined, "", "   "]) {
-      const { notify, insert, run } = setupQuick(clipboard, { button: { title: "A", value: "a", type: "link" } });
+      const { notify, insert, polish, run } = setupQuick(clipboard, { button: { title: "A", value: "a", type: "link" } });
       await run();
-      expect(notify).not.toHaveBeenCalled();
+      expect(polish).not.toHaveBeenCalled();
       expect(insert).not.toHaveBeenCalled();
+      expect(notify).toHaveBeenCalledTimes(1);
+      expect(notify.mock.calls[0]).toEqual(["fallback", "剪贴板空", undefined]);
     }
   });
 
@@ -269,10 +276,11 @@ describe("runQuickSmartPaste", () => {
 
 describe("quickSmartPasteMessages", () => {
   it("done 无条数占位，fallback/tooLarge 用快捷口径", () => {
-    const messages = quickSmartPasteMessages({ app: { polishWorking: "w", polishQuickDone: "已生成快捷按钮", polishQuickFallback: "按原文生成", polishQuickTooLarge: "过长" } });
+    const messages = quickSmartPasteMessages({ app: { polishWorking: "w", polishQuickDone: "已生成快捷按钮", polishQuickFallback: "按原文生成", polishQuickTooLarge: "过长", polishEmptyClipboard: "e" } });
     expect(messages.working).toBe("w");
     expect(messages.done(3)).toBe("已生成快捷按钮");
     expect(messages.fallback).toBe("按原文生成");
     expect(messages.tooLarge).toBe("过长");
+    expect(messages.empty).toBe("e");
   });
 });

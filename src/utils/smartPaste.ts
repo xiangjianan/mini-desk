@@ -16,6 +16,8 @@ export interface SmartPasteMessages {
   done: (count: number) => string;
   fallback: string;
   tooLarge: string;
+  /** 剪贴板为空/非文本（读不到文本）时的提示；选中文本润色流程不读剪贴板，字段仅为满足共用接口。 */
+  empty: string;
 }
 
 /** 两条润色流程（智能粘贴/AI润色）共享的选项基座。 */
@@ -55,11 +57,15 @@ export interface QuickSmartPasteOptions extends Omit<PolishFlowBase, "kind"> {
 }
 
 /** 快捷动作智能粘贴编排：读剪贴板 → 服务端生成按钮 → 落位/降级。
- *  与 polishText 同口径（空白/限长预检、working→done/fallback 气泡），仅结果形状是单个按钮对象。
+ *  与 polishText 同口径（空白/限长预检、working→done/fallback 气泡），仅结果形状是单个按钮对象；
+ *  剪贴板为空/非文本时无原文可兜底，只提示。
  *  最坏情况等于普通粘贴：任何失败都按原文生成按钮并提示。 */
 export async function runQuickSmartPaste(options: QuickSmartPasteOptions): Promise<void> {
   const clipboardText = await readClipboardText();
-  if (typeof clipboardText !== "string" || !clipboardText.trim()) return;
+  if (typeof clipboardText !== "string" || !clipboardText.trim()) {
+    options.notify("fallback", options.messages.empty, options.anchor);
+    return;
+  }
   const { anchor, notify, messages } = options;
   const insertFallback = (): void => options.insert(options.fallbackButton(clipboardText));
   // raw.length 按 UTF-16 计，服务端按码点计：客户端略严，方向安全。
@@ -110,11 +116,14 @@ async function polishText(raw: string, base: PolishFlowBase, apply: (texts: stri
   notify("fallback", messages.fallback, anchor);
 }
 
-/** 智能粘贴编排：读剪贴板 → 共用主干 → 落位/降级。
+/** 智能粘贴编排：读剪贴板 → 共用主干 → 落位/降级；剪贴板为空/非文本时无原文可兜底，只提示。
  *  最坏情况等于普通粘贴：任何失败都插入原文并提示。 */
 export async function runSmartPaste(options: SmartPasteOptions): Promise<void> {
   const clipboardText = await readClipboardText();
-  if (typeof clipboardText !== "string" || !clipboardText.trim()) return;
+  if (typeof clipboardText !== "string" || !clipboardText.trim()) {
+    options.notify("fallback", options.messages.empty, options.anchor);
+    return;
+  }
   await polishText(clipboardText, options, options.insert, () => options.insert(options.fallbackTexts(clipboardText)));
 }
 
@@ -132,7 +141,7 @@ export async function runSelectionPolish(options: SelectionPolishOptions): Promi
 
 /** 从 uiText 组装两区域各自的文案（done 模板按 kind 区分，{count} 占位替换；quick 走 quickSmartPasteMessages）。 */
 export function smartPasteMessages(
-  ui: { app: { polishWorking: string; polishTodoDone: string; polishNoteDone: string; polishFallback: string; polishTooLarge: string } },
+  ui: { app: { polishWorking: string; polishTodoDone: string; polishNoteDone: string; polishFallback: string; polishTooLarge: string; polishEmptyClipboard: string } },
   kind: "todo" | "note",
 ): SmartPasteMessages {
   const template = kind === "todo" ? ui.app.polishTodoDone : ui.app.polishNoteDone;
@@ -141,29 +150,32 @@ export function smartPasteMessages(
     done: (count) => template.replace("{count}", () => String(count)),
     fallback: ui.app.polishFallback,
     tooLarge: ui.app.polishTooLarge,
+    empty: ui.app.polishEmptyClipboard,
   };
 }
 
 /** 选中文本润色的文案：done 沿用便签排版口径，失败/超长改为「保留原文」口径。 */
 export function selectionPolishMessages(
-  ui: { app: { polishWorking: string; polishNoteDone: string; polishKeepFallback: string; polishKeepTooLarge: string } },
+  ui: { app: { polishWorking: string; polishNoteDone: string; polishKeepFallback: string; polishKeepTooLarge: string; polishEmptyClipboard: string } },
 ): SmartPasteMessages {
   return {
     working: ui.app.polishWorking,
     done: (count) => ui.app.polishNoteDone.replace("{count}", () => String(count)),
     fallback: ui.app.polishKeepFallback,
     tooLarge: ui.app.polishKeepTooLarge,
+    empty: ui.app.polishEmptyClipboard,
   };
 }
 
 /** 快捷动作智能粘贴文案：done 无条数占位，fallback/tooLarge 用「按原文生成」口径。 */
 export function quickSmartPasteMessages(
-  ui: { app: { polishWorking: string; polishQuickDone: string; polishQuickFallback: string; polishQuickTooLarge: string } },
+  ui: { app: { polishWorking: string; polishQuickDone: string; polishQuickFallback: string; polishQuickTooLarge: string; polishEmptyClipboard: string } },
 ): SmartPasteMessages {
   return {
     working: ui.app.polishWorking,
     done: () => ui.app.polishQuickDone,
     fallback: ui.app.polishQuickFallback,
     tooLarge: ui.app.polishQuickTooLarge,
+    empty: ui.app.polishEmptyClipboard,
   };
 }

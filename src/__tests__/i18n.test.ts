@@ -229,7 +229,9 @@ describe("localized public copy", () => {
       expect(locale.app.polishQuickDone).toBeTruthy();
       expect(locale.app.polishQuickFallback).toBeTruthy();
       expect(locale.app.polishQuickTooLarge).toBeTruthy();
+      expect(locale.app.polishEmptyClipboard).toBeTruthy();
     }
+    expect(UI_TEXT.zh.app.polishEmptyClipboard).toContain("剪贴板");
   });
 
   it("AI 润色（选中文本）文案中英齐全，风格子菜单三档", () => {
