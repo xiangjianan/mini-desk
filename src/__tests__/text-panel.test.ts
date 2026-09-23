@@ -2084,4 +2084,15 @@ describe("TextPanel", () => {
     await wrapper.get("textarea").trigger("keydown", { key: "h", ctrlKey: true, shiftKey: true });
     expect(wrapper.emitted("update")).toBeUndefined();
   });
+
+  it("按住不放的系统重复击键不触发格式快捷键", async () => {
+    const wrapper = mount(TextPanel, {
+      props: { titleId: "workspace-title", title: "工作空间", lines: [{ text: "hello", indent: 0 }] },
+    });
+    const textarea = wrapper.get("textarea").element;
+    await wrapper.get("textarea").trigger("dblclick");
+    textarea.setSelectionRange(0, 5);
+    await wrapper.get("textarea").trigger("keydown", { key: "h", ctrlKey: true, shiftKey: true, repeat: true });
+    expect(wrapper.emitted("update")).toBeUndefined();
+  });
 });

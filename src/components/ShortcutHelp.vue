@@ -30,9 +30,12 @@ type ShortcutKeyboardRow = {
   keys: ShortcutKeycap[];
 };
 
+// Gesture groups keep their matched (partial) keys so the shared diagram can
+// still light them — e.g. "Ctrl/⌘ + Shift + H" has no ⌘ keycap and renders as a
+// gesture pill, yet its H/X/U letters should light up like Ctrl and Shift do.
 type ShortcutDisplayGroup =
   | { kind: "keyboard"; label: string; rows: ShortcutKeyboardRow[] }
-  | { kind: "gesture"; label: string };
+  | { kind: "gesture"; label: string; keys: ShortcutKeycap[] };
 
 const KEYBOARD_ROW_ORDER: KeyboardRowId[] = ["system", "numbers", "letters-top", "letters-home", "letters-bottom", "controls", "arrows"];
 
@@ -41,9 +44,12 @@ const KEYBOARD_KEYS: Record<string, ShortcutKeycap> = {
   shift: { id: "shift", label: "Shift", row: "letters-bottom", slot: 1, span: 2 },
   tab: { id: "tab", label: "Tab", row: "letters-top", slot: 1, span: 2 },
   w: { id: "w", label: "W", row: "letters-top", slot: 4 },
+  u: { id: "u", label: "U", row: "letters-top", slot: 9 },
   a: { id: "a", label: "A", row: "letters-home", slot: 3 },
   s: { id: "s", label: "S", row: "letters-home", slot: 4 },
   d: { id: "d", label: "D", row: "letters-home", slot: 5 },
+  h: { id: "h", label: "H", row: "letters-home", slot: 8 },
+  x: { id: "x", label: "X", row: "letters-bottom", slot: 4 },
   v: { id: "v", label: "V", row: "letters-bottom", slot: 6 },
   "5": { id: "5", label: "5", row: "numbers", slot: 5 },
   enter: { id: "enter", label: "Enter", row: "letters-home", slot: 12, span: 2 },
@@ -83,7 +89,7 @@ const KEYBOARD_LAYOUT_ROWS: ShortcutKeyboardRow[] = [
     { id: "r", label: "R", row: "letters-top", slot: 6 },
     { id: "t", label: "T", row: "letters-top", slot: 7 },
     { id: "y", label: "Y", row: "letters-top", slot: 8 },
-    { id: "u", label: "U", row: "letters-top", slot: 9 },
+    KEYBOARD_KEYS.u,
     { id: "i", label: "I", row: "letters-top", slot: 10 },
     { id: "o", label: "O", row: "letters-top", slot: 11 },
     { id: "p", label: "P", row: "letters-top", slot: 12 },
@@ -94,7 +100,7 @@ const KEYBOARD_LAYOUT_ROWS: ShortcutKeyboardRow[] = [
     KEYBOARD_KEYS.d,
     { id: "f", label: "F", row: "letters-home", slot: 6 },
     { id: "g", label: "G", row: "letters-home", slot: 7 },
-    { id: "h", label: "H", row: "letters-home", slot: 8 },
+    KEYBOARD_KEYS.h,
     { id: "j", label: "J", row: "letters-home", slot: 9 },
     { id: "k", label: "K", row: "letters-home", slot: 10 },
     { id: "l", label: "L", row: "letters-home", slot: 11 },
@@ -103,7 +109,7 @@ const KEYBOARD_LAYOUT_ROWS: ShortcutKeyboardRow[] = [
   createKeyboardLayoutRow("letters-bottom", [
     KEYBOARD_KEYS.shift,
     { id: "z", label: "Z", row: "letters-bottom", slot: 3 },
-    { id: "x", label: "X", row: "letters-bottom", slot: 4 },
+    KEYBOARD_KEYS.x,
     { id: "c", label: "C", row: "letters-bottom", slot: 5 },
     KEYBOARD_KEYS.v,
     { id: "b", label: "B", row: "letters-bottom", slot: 7 },
@@ -125,9 +131,7 @@ const KEYBOARD_LAYOUT_ROWS: ShortcutKeyboardRow[] = [
 const activeKeyboardKeyIds = computed(() => new Set(
   sections.value.flatMap((section) => section.shortcuts)
     .flatMap((shortcut) => getShortcutDisplayGroups(shortcut.key))
-    .filter((group): group is Extract<ShortcutDisplayGroup, { kind: "keyboard" }> => group.kind === "keyboard")
-    .flatMap((group) => group.rows)
-    .flatMap((row) => row.keys)
+    .flatMap((group) => (group.kind === "keyboard" ? group.rows.flatMap((row) => row.keys) : group.keys))
     .map((key) => key.id),
 ));
 
@@ -151,7 +155,7 @@ function createShortcutDisplayGroup(part: string): ShortcutDisplayGroup {
     };
   }
 
-  return { kind: "gesture", label: part };
+  return { kind: "gesture", label: part, keys };
 }
 
 function normalizeKeyToken(token: string): string {

@@ -203,6 +203,7 @@ interface FormatShortcut {
 }
 
 function getFormatShortcut(event: KeyboardEvent): FormatShortcut | null {
+  if (event.repeat) return null;
   if (!event.shiftKey || !(event.ctrlKey || event.metaKey) || event.altKey) return null;
   const key = event.key.toLowerCase();
   if (key === "h") return { type: "highlight", color: "amber" };

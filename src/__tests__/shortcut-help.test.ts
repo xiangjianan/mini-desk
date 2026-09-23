@@ -85,6 +85,14 @@ describe("ShortcutHelp", () => {
     expect(wrapper.find(".shortcut-keycap--arrow-left").text()).toBe("←");
     expect(wrapper.find(".shortcut-keycap--arrow-left").classes()).toContain("shortcut-keycap--active");
 
+    // 「Ctrl/⌘ + Shift + H」因 ⌘ 无键帽渲染为手势 pill，但字母键帽仍要点亮（消除半亮态）。
+    const highlightRow = wrapper.findAll(".shortcut-row").find((row) => row.text().includes("Ctrl/⌘ + Shift + H"));
+    expect(highlightRow?.find(".shortcut-gesture-pill").text()).toBe("Ctrl/⌘ + Shift + H");
+    expect(highlightRow?.find(".shortcut-key-pill").exists()).toBe(false);
+    expect(wrapper.find(".shortcut-keycap--h").classes()).toContain("shortcut-keycap--active");
+    expect(wrapper.find(".shortcut-keycap--x").classes()).toContain("shortcut-keycap--active");
+    expect(wrapper.find(".shortcut-keycap--u").classes()).toContain("shortcut-keycap--active");
+
     const dragRow = wrapper.findAll(".shortcut-row").find((row) => row.text().includes("从外部创建提醒"));
     expect(dragRow?.find(".shortcut-gesture-pill").text()).toBe("拖入文本");
     expect(dragRow?.find(".shortcut-keyboard-diagram").exists()).toBe(false);
