@@ -177,7 +177,12 @@ html[data-theme="dark"] .workbench-shell,
 .workbench-shell .space-tabs-scrollbar { flex-basis: 42px; border-color: var(--line-subtle); }
 .workbench-shell button.space-tab { border-radius: 0; background: transparent; box-shadow: none; padding-inline: 12px; }
 .workbench-shell .space-tab.is-active { color: var(--primary); background: transparent; box-shadow: inset 0 -2px var(--primary); }
-.workbench-shell .text-editor-textarea { font-size: 14px; line-height: 1.85; padding: 18px 4px; }
+.workbench-shell .text-editor-textarea,
+.workbench-shell .text-mirror {
+  font-size: 14px;
+  line-height: 1.85;
+  padding: 18px 4px;
+}
 .workbench-shell .desk-ai-action {
   display: inline-flex; align-items: center; gap: 6px;
   border-radius: 6px; min-height: 30px; padding: 0 8px;

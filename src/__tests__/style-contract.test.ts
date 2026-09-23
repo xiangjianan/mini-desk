@@ -449,7 +449,10 @@ describe("workbench style contract", () => {
   });
 
   it("keeps mirror typography paired with the transparent textarea (no drift)", () => {
-    const styles = readFileSync(resolve(__dirname, "../styles.css"), "utf8");
+    const styles = [
+      readFileSync(resolve(__dirname, "../styles.css"), "utf8"),
+      readFileSync(resolve(__dirname, "../desk.css"), "utf8"),
+    ].join("\n");
     const textareaBodies = ruleBodies(styles, ".text-editor-textarea");
     const mirrorBodies = ruleBodies(styles, ".text-mirror");
     for (const body of textareaBodies) {
