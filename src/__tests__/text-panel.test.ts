@@ -2044,4 +2044,44 @@ describe("TextPanel", () => {
       expect(update[0].marks).toBeUndefined();
     });
   });
+
+  it("Ctrl+Shift+H 给选中文字上默认琥珀高亮，重复按取消", async () => {
+    const wrapper = mount(TextPanel, {
+      props: { titleId: "workspace-title", title: "工作空间", lines: [{ text: "hello world", indent: 0 }] },
+    });
+    const textarea = wrapper.get("textarea").element;
+    await wrapper.get("textarea").trigger("dblclick");
+    textarea.setSelectionRange(0, 5);
+    await wrapper.get("textarea").trigger("keydown", { key: "h", ctrlKey: true, shiftKey: true });
+    let update = wrapper.emitted("update")?.at(-1)?.[0] as LineItem[];
+    expect(update[0].marks).toEqual([{ type: "highlight", start: 0, end: 5, color: "amber" }]);
+    textarea.setSelectionRange(0, 5);
+    await wrapper.get("textarea").trigger("keydown", { key: "h", ctrlKey: true, shiftKey: true });
+    update = wrapper.emitted("update")?.at(-1)?.[0] as LineItem[];
+    expect(update[0].marks).toBeUndefined();
+  });
+
+  it("Ctrl+Shift+X 中划线；IME 拼字期间不触发", async () => {
+    const wrapper = mount(TextPanel, {
+      props: { titleId: "workspace-title", title: "工作空间", lines: [{ text: "hello", indent: 0 }] },
+    });
+    const textarea = wrapper.get("textarea").element;
+    await wrapper.get("textarea").trigger("dblclick");
+    textarea.setSelectionRange(0, 5);
+    await wrapper.get("textarea").trigger("keydown", { key: "x", ctrlKey: true, shiftKey: true });
+    const update = wrapper.emitted("update")?.at(-1)?.[0] as LineItem[];
+    expect(update[0].marks).toEqual([{ type: "strike", start: 0, end: 5 }]);
+    textarea.setSelectionRange(0, 5);
+    await wrapper.get("textarea").trigger("keydown", { key: "h", ctrlKey: true, shiftKey: true, isComposing: true });
+    expect(wrapper.emitted("update")?.length).toBe(1);
+  });
+
+  it("无选区时快捷键静默不动作", async () => {
+    const wrapper = mount(TextPanel, {
+      props: { titleId: "workspace-title", title: "工作空间", lines: [{ text: "hello", indent: 0 }] },
+    });
+    await wrapper.get("textarea").trigger("dblclick");
+    await wrapper.get("textarea").trigger("keydown", { key: "h", ctrlKey: true, shiftKey: true });
+    expect(wrapper.emitted("update")).toBeUndefined();
+  });
 });

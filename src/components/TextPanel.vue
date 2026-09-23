@@ -197,6 +197,27 @@ function applyFormatFromMenu(key: string, target: HTMLTextAreaElement): void {
   }
 }
 
+interface FormatShortcut {
+  type: TextMark["type"];
+  color?: MarkColor;
+}
+
+function getFormatShortcut(event: KeyboardEvent): FormatShortcut | null {
+  if (!event.shiftKey || !(event.ctrlKey || event.metaKey) || event.altKey) return null;
+  const key = event.key.toLowerCase();
+  if (key === "h") return { type: "highlight", color: "amber" };
+  if (key === "x") return { type: "strike" };
+  if (key === "u") return { type: "underline" };
+  return null;
+}
+
+/** 快捷键格式化：要求非空选区，无选区静默不动作（与菜单口径一致）。 */
+function applyFormatShortcut(textarea: HTMLTextAreaElement, shortcut: FormatShortcut): void {
+  const range = getTextSelectionRange(textarea);
+  if (range.start === range.end) return;
+  applyMarkChange(toggleMarkInRange(text.value, editorMarks.value, range, shortcut.type, shortcut.color));
+}
+
 const menuOptions = computed<DropdownOption[]>(() => {
   const options: DropdownOption[] = [];
   const target = menu.value?.target;
@@ -289,6 +310,12 @@ function handleKeydown(event: KeyboardEvent): void {
   if (!textarea) return;
   if (!editing.value) return;
   if (isImeComposing(event)) return;
+  const formatShortcut = getFormatShortcut(event);
+  if (formatShortcut) {
+    event.preventDefault();
+    applyFormatShortcut(textarea, formatShortcut);
+    return;
+  }
   if ((event.ctrlKey || event.metaKey) && event.key.toLowerCase() === "z") {
     event.preventDefault();
     undoLastTextChange(textarea);

@@ -1319,12 +1319,16 @@ export const SHORTCUT_HELP: Record<AppLanguage, ShortcutHelpSection[]> = {
       "空间 Tab 可以双击重命名，也能拖动调整顺序。",
       "删除空间前会确认；系统会至少保留一个空间。",
       "空缩进行继续按 Backspace，会先取消缩进再合并内容。",
+      "选中文字后右键「格式」可以加高亮、文字颜色、中划线等标注。",
     ], shortcuts: [
       { key: "Tab", desc: "缩进；未标记的行自动补 -" },
       { key: "Shift + Tab", desc: "减少缩进" },
       { key: "Enter", desc: "换行（延续缩进）" },
       { key: "Backspace", desc: "空缩进行减少缩进" },
       { key: "Ctrl/⌘ + ↑/↓", desc: "上移 / 下移当前行（自动适应编号和短横线）" },
+      { key: "Ctrl/⌘ + Shift + H", desc: "高亮选中文字（重复按取消）" },
+      { key: "Ctrl/⌘ + Shift + X", desc: "给选中文字加中划线" },
+      { key: "Ctrl/⌘ + Shift + U", desc: "给选中文字加下划线" },
       { key: "右键", desc: "复制 / 粘贴" },
     ]},
     { area: "快捷动作", icon: "⚡", summary: "把常用链接和复制片段放在手边。", tips: [
@@ -1376,12 +1380,16 @@ export const SHORTCUT_HELP: Record<AppLanguage, ShortcutHelpSection[]> = {
       "Double-click a space tab to rename it; drag tabs to reorder spaces.",
       "Deleting a space asks for confirmation; at least one space is always kept.",
       "Backspace on an empty indented line reduces indent before merging text.",
+      "Select text and right-click \"Format\" to add highlight, text color, or strikethrough.",
     ], shortcuts: [
       { key: "Tab", desc: "Indent; unmarked lines get a dash" },
       { key: "Shift + Tab", desc: "Decrease indent" },
       { key: "Enter", desc: "New line (keep indent)" },
       { key: "Backspace", desc: "Decrease indent on empty line" },
       { key: "Ctrl/⌘ + ↑/↓", desc: "Move line up / down (numbering and dashes adapt)" },
+      { key: "Ctrl/⌘ + Shift + H", desc: "Highlight the selection (press again to clear)" },
+      { key: "Ctrl/⌘ + Shift + X", desc: "Strikethrough the selection" },
+      { key: "Ctrl/⌘ + Shift + U", desc: "Underline the selection" },
       { key: "Right-click", desc: "Copy / Paste" },
     ]},
     { area: "Quick Actions", icon: "⚡", summary: "Keep frequent links and copy snippets close by.", tips: [
