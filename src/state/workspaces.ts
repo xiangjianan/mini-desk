@@ -1,5 +1,6 @@
 import { DEFAULT_BOARD_TITLE, defaultWorkspace } from "./defaults";
 import { createId } from "./storage";
+import { cloneLines } from "./storage/serialize";
 import type { LineItem, WorkspaceData, WorkspaceSpace } from "../types";
 
 /** 工作空间看板标题：自定义标题去空白后为空时回退默认看板标题（DEFAULT_BOARD_TITLE）。 */
@@ -73,10 +74,10 @@ export function reorderWorkspaces(workspaces: WorkspaceData[], dragId: string, t
   return next;
 }
 
-/** 兼容投影：workspaceLines/storageLines 恒等于 spaces[0]/spaces[1] 的逐行浅拷贝（App.vue 与 sync/pull.ts 共用此不变量）。 */
+/** 兼容投影：workspaceLines/storageLines 恒等于 spaces[0]/spaces[1] 的逐行拷贝（cloneLines，marks 深拷贝；App.vue 与 sync/pull.ts 共用此不变量）。 */
 export function projectLegacySpaceLines(spaces: WorkspaceSpace[]): { workspaceLines: LineItem[]; storageLines: LineItem[] } {
   return {
-    workspaceLines: spaces[0]?.lines.map((line) => ({ ...line })) ?? [],
-    storageLines: spaces[1]?.lines.map((line) => ({ ...line })) ?? [],
+    workspaceLines: cloneLines(spaces[0]?.lines ?? []),
+    storageLines: cloneLines(spaces[1]?.lines ?? []),
   };
 }
