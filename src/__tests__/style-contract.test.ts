@@ -447,4 +447,19 @@ describe("workbench style contract", () => {
     expect(ruleBodies(desk, ".workbench-shell .quick-block.is-compact .quick-button-kind").join("\n")).not.toContain("display: none");
     expect(ruleBodies(styles, ".quick-block.is-compact .quick-button-kind").join("\n")).not.toContain("display: none");
   });
+
+  it("keeps mirror typography paired with the transparent textarea (no drift)", () => {
+    const styles = readFileSync(resolve(__dirname, "../styles.css"), "utf8");
+    const textareaBodies = ruleBodies(styles, ".text-editor-textarea");
+    const mirrorBodies = ruleBodies(styles, ".text-mirror");
+    for (const body of textareaBodies) {
+      if (/padding|line-height|font|letter-spacing|tab-size|white-space|overflow-wrap/.test(body)) {
+        expect(mirrorBodies).toContain(body);
+      }
+    }
+    expectSelectorBody(styles, ".text-editor-textarea", "color: transparent");
+    expectSelectorBody(styles, ".text-editor-textarea", "caret-color: var(--text)");
+    expectSelectorBody(styles, ".text-mirror", "position: absolute");
+    expectSelectorBody(styles, ".text-mirror", "pointer-events: none");
+  });
 });

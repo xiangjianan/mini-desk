@@ -60,6 +60,16 @@
   --radius-card: 18px;
   --safe-top: env(safe-area-inset-top, 0px);
   --safe-bottom: env(safe-area-inset-bottom, 0px);
+  --mark-highlight-amber: rgba(255, 193, 7, 0.42);
+  --mark-highlight-rose: rgba(244, 67, 54, 0.24);
+  --mark-highlight-green: rgba(76, 175, 80, 0.30);
+  --mark-highlight-blue: rgba(33, 150, 243, 0.24);
+  --mark-highlight-violet: rgba(156, 39, 176, 0.22);
+  --mark-text-amber: #b45309;
+  --mark-text-rose: #dc2626;
+  --mark-text-green: #15803d;
+  --mark-text-blue: #1d4ed8;
+  --mark-text-violet: #7c3aed;
 }
 
 html[data-theme="dark"] {
@@ -108,6 +118,16 @@ html[data-theme="dark"] {
   --link: #409cff;
   --ok: #30d158;
   --danger-fill: #b42318;
+  --mark-highlight-amber: rgba(255, 193, 7, 0.30);
+  --mark-highlight-rose: rgba(244, 67, 54, 0.26);
+  --mark-highlight-green: rgba(76, 175, 80, 0.24);
+  --mark-highlight-blue: rgba(33, 150, 243, 0.26);
+  --mark-highlight-violet: rgba(186, 104, 200, 0.26);
+  --mark-text-amber: #fbbf24;
+  --mark-text-rose: #f87171;
+  --mark-text-green: #4ade80;
+  --mark-text-blue: #60a5fa;
+  --mark-text-violet: #c084fc;
 }
 
 * {
@@ -923,20 +943,31 @@ button.space-tab {
   height: 100%;
 }
 
+.text-mirror,
 .text-editor-textarea {
   width: 100%;
   height: 100%;
   resize: none;
   border: 0;
   padding: 10px 12px;
+  font-family: inherit;
   font-size: var(--app-font-size);
   line-height: 1.68;
   letter-spacing: 0.01em;
-  color: var(--text);
-  background: transparent;
   tab-size: 4;
+  white-space: pre-wrap;
+  overflow-wrap: break-word;
 }
 
+.text-editor-textarea {
+  color: transparent;
+  caret-color: var(--text);
+  background: transparent;
+  position: relative;
+  z-index: 1;
+}
+
+.workspace-panel .text-mirror,
 .workspace-panel .text-editor-textarea {
   padding: 14px 16px;
   line-height: 1.82;
@@ -5472,7 +5503,8 @@ html[data-theme="dark"] .workbench-shell {
   backdrop-filter: blur(28px) saturate(1.7);
 }
 
-.text-editor-textarea {
+.text-editor-textarea,
+.text-mirror {
   padding: 12px 14px;
   line-height: 1.72;
 }
@@ -7547,3 +7579,53 @@ button.mobile-inbox-revoked-change {
   opacity: 0;
   transform: translateX(-50%) translateY(8px);
 }
+
+/* ── 记事本富文本镜像层 ─────────────────────────────
+   排版声明必须与 .text-editor-textarea 成对出现在同一条规则里
+   （有 style-contract 测试守护），否则两层错位。 */
+
+.text-mirror {
+  position: absolute;
+  inset: 0;
+  overflow: hidden;
+  pointer-events: none;
+  color: var(--text);
+  z-index: 0;
+}
+
+.text-mirror .mark-strike {
+  text-decoration: line-through;
+}
+
+.text-mirror .mark-underline {
+  text-decoration: underline;
+}
+
+.text-mirror .mark-highlight-amber { background: var(--mark-highlight-amber); border-radius: 2px; }
+.text-mirror .mark-highlight-rose { background: var(--mark-highlight-rose); border-radius: 2px; }
+.text-mirror .mark-highlight-green { background: var(--mark-highlight-green); border-radius: 2px; }
+.text-mirror .mark-highlight-blue { background: var(--mark-highlight-blue); border-radius: 2px; }
+.text-mirror .mark-highlight-violet { background: var(--mark-highlight-violet); border-radius: 2px; }
+
+.text-mirror .mark-text-amber { color: var(--mark-text-amber); }
+.text-mirror .mark-text-rose { color: var(--mark-text-rose); }
+.text-mirror .mark-text-green { color: var(--mark-text-green); }
+.text-mirror .mark-text-blue { color: var(--mark-text-blue); }
+.text-mirror .mark-text-violet { color: var(--mark-text-violet); }
+
+/* 右键菜单色点 */
+.mark-swatch {
+  display: inline-block;
+  width: 12px;
+  height: 12px;
+  border-radius: 3px;
+  margin-right: 6px;
+  vertical-align: -1px;
+  border: 1px solid color-mix(in srgb, var(--text) 18%, transparent);
+}
+
+.mark-swatch-amber { background: var(--mark-highlight-amber); }
+.mark-swatch-rose { background: var(--mark-highlight-rose); }
+.mark-swatch-green { background: var(--mark-highlight-green); }
+.mark-swatch-blue { background: var(--mark-highlight-blue); }
+.mark-swatch-violet { background: var(--mark-highlight-violet); }

@@ -1905,4 +1905,30 @@ describe("TextPanel", () => {
     const update = wrapper.emitted("update")?.at(-1)?.[0] as LineItem[];
     expect(update[0].marks).toEqual([{ type: "highlight", start: 6, end: 11, color: "amber" }]);
   });
+
+  it("镜像层按 marks 渲染带样式的 span（只读态同样可见）", () => {
+    const wrapper = mount(TextPanel, {
+      props: {
+        titleId: "workspace-title",
+        title: "工作空间",
+        lines: [{ text: "重点内容普通", indent: 0, marks: [
+          { type: "highlight", start: 0, end: 2, color: "amber" },
+          { type: "strike", start: 4, end: 6 },
+        ] }],
+      },
+    });
+    expect(wrapper.get(".text-mirror").text()).toBe("重点内容普通");
+    expect(wrapper.get(".text-mirror .mark-highlight-amber").text()).toBe("重点");
+    expect(wrapper.get(".text-mirror .mark-strike").text()).toBe("普通");
+  });
+
+  it("textarea 滚动时镜像层同步 scrollTop", async () => {
+    const wrapper = mount(TextPanel, {
+      props: { titleId: "workspace-title", title: "工作空间", lines: [{ text: "a", indent: 0 }] },
+    });
+    const textarea = wrapper.get("textarea").element;
+    textarea.scrollTop = 40;
+    await wrapper.get("textarea").trigger("scroll");
+    expect(wrapper.get(".text-mirror").element.scrollTop).toBe(40);
+  });
 });

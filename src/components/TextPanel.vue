@@ -20,7 +20,8 @@ import {
   moveTextareaLine,
   renumberOrderedListText,
 } from "../utils/textEditor";
-import { translateMarksForEdit } from "../utils/textMarks";
+import { buildMirrorSegments, translateMarksForEdit } from "../utils/textMarks";
+import type { MirrorSegment } from "../utils/textMarks";
 import { CONTEXT_MENU_Z_INDEX, createExclusiveContextMenu, renderPolishMenuLabel } from "../utils/contextMenu";
 import { copySelection, getSelectionRange, hasSelection, pasteIntoField, hasAsyncClipboard as hasClipboardApi } from "../utils/clipboard";
 import { renderIcon } from "../utils/dropdownIcons";
@@ -60,6 +61,8 @@ const initialEditorState = editorStateFromLines(props.lines);
 const text = ref(initialEditorState.text);
 const editorMarks = ref<TextMark[]>(initialEditorState.marks);
 const committedText = ref(initialEditorState.text);
+const mirrorRef = ref<HTMLElement | null>(null);
+const mirrorSegments = computed(() => buildMirrorSegments(text.value, editorMarks.value));
 const focused = ref(false);
 const editing = ref(false);
 const titleRef = ref<{ openMenuAt: (x: number, y: number, event?: Event) => void } | null>(null);
@@ -90,6 +93,20 @@ const canDragSelectedText = computed(() => {
   const selection = lastTextSelection.value;
   return Boolean(selection && selection.start !== selection.end);
 });
+
+function mirrorSegmentClasses(segment: MirrorSegment): string[] {
+  const classes: string[] = [];
+  if (segment.highlight) classes.push(`mark-highlight-${segment.highlight}`);
+  if (segment.color) classes.push(`mark-text-${segment.color}`);
+  if (segment.strike) classes.push("mark-strike");
+  if (segment.underline) classes.push("mark-underline");
+  return classes;
+}
+
+function syncMirrorScroll(event: Event): void {
+  const textarea = event.currentTarget as HTMLTextAreaElement;
+  if (mirrorRef.value) mirrorRef.value.scrollTop = textarea.scrollTop;
+}
 
 /** AI 润色子菜单的风格项：key 同时用于菜单项与 select 反查 style，保持单一来源。 */
 const POLISH_STYLE_ENTRIES: { key: string; style: PolishStyle; labelKey: "polishStyleTech" | "polishStyleConcise" | "polishStyleCasual" }[] = [
@@ -778,6 +795,11 @@ function restoreSelection(textarea: HTMLTextAreaElement, selection: { start: num
       <slot name="actions" />
     </div>
     <div class="text-editor-frame" @contextmenu="openTextMenu" @dragover="handleDragOver" @drop="handleExternalTextDrop">
+      <div ref="mirrorRef" class="text-mirror" aria-hidden="true"><span
+        v-for="(segment, index) in mirrorSegments"
+        :key="index"
+        :class="mirrorSegmentClasses(segment)"
+      >{{ segment.chunk }}</span></div>
       <NScrollbar class="text-editor-scrollbar">
       <textarea
         ref="textareaRef"
@@ -797,6 +819,7 @@ function restoreSelection(textarea: HTMLTextAreaElement, selection: { start: num
         @dragover="handleTextareaDragOver"
         @drop="handleTextareaDrop"
         @wheel="handleTextareaWheel"
+        @scroll="syncMirrorScroll"
         @select="rememberSelection"
         @click="startEditing"
         @dblclick="startEditing"
