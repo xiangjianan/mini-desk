@@ -1,5 +1,12 @@
 import { describe, expect, it } from "vitest";
-import { mergeMarkList, normalizeMarkList, translateMarksForEdit } from "../utils/textMarks";
+import {
+  buildMirrorSegments,
+  clearMarksInRange,
+  mergeMarkList,
+  normalizeMarkList,
+  toggleMarkInRange,
+  translateMarksForEdit,
+} from "../utils/textMarks";
 import type { TextMark } from "../types";
 
 const hl = (start: number, end: number, color: TextMark["color"] = "amber"): TextMark =>
@@ -81,5 +88,86 @@ describe("translateMarksForEdit — 文本变更平移", () => {
 
   it("整块行删除：区间内 marks 消失，其后 marks 平移", () => {
     expect(translateMarksForEdit([hl(0, 2), hl(4, 5)], "ab\ncd\nef", "ab\nef")).toEqual([hl(0, 2)]);
+  });
+
+  it("替换紧贴 mark 末尾的字符：新字符延续高亮（粘性末端，锁定既有语义）", () => {
+    expect(translateMarksForEdit([hl(0, 2)], "ABC", "ABD")).toEqual([hl(0, 3)]);
+  });
+});
+
+describe("toggleMarkInRange — toggle 语义", () => {
+  it("未覆盖 → 施加；再施加同款 → 整段移除", () => {
+    const once = toggleMarkInRange("hello world", [], { start: 6, end: 11 }, "highlight", "amber");
+    expect(once).toEqual([hl(6, 11)]);
+    expect(toggleMarkInRange("hello world", once, { start: 6, end: 11 }, "highlight", "amber")).toEqual([]);
+  });
+
+  it("高亮换色：先清同 type 全色，再上新色", () => {
+    const rose = toggleMarkInRange("hello", [], { start: 0, end: 5 }, "highlight", "rose");
+    expect(toggleMarkInRange("hello", rose, { start: 0, end: 5 }, "highlight", "amber")).toEqual([hl(0, 5, "amber")]);
+  });
+
+  it("部分覆盖时补满整段（strike 无色款）", () => {
+    const partial: TextMark[] = [{ type: "strike", start: 0, end: 2 }];
+    expect(toggleMarkInRange("hello", partial, { start: 0, end: 5 }, "strike"))
+      .toEqual([{ type: "strike", start: 0, end: 5 }]);
+  });
+
+  it("跨行选区：按行拆段，换行符本身不带 mark", () => {
+    expect(toggleMarkInRange("ab\ncd", [], { start: 1, end: 4 }, "strike"))
+      .toEqual([{ type: "strike", start: 1, end: 2 }, { type: "strike", start: 3, end: 4 }]);
+  });
+
+  it("跨行已全覆盖 → 一次取消（换行符豁免判定）", () => {
+    const marks: TextMark[] = [
+      { type: "strike", start: 1, end: 2 },
+      { type: "strike", start: 3, end: 4 },
+    ];
+    expect(toggleMarkInRange("ab\ncd", marks, { start: 1, end: 4 }, "strike")).toEqual([]);
+  });
+});
+
+describe("clearMarksInRange — 清除", () => {
+  it("清除指定 type（跨全部颜色），保留其余", () => {
+    const marks: TextMark[] = [hl(0, 4, "rose"), hl(0, 4, "amber"), { type: "strike", start: 0, end: 4 }];
+    expect(clearMarksInRange(marks, { start: 0, end: 4 }, "highlight"))
+      .toEqual([{ type: "strike", start: 0, end: 4 }]);
+  });
+
+  it("清除选区外的部分保留（裁剪到边界）", () => {
+    const marks: TextMark[] = [hl(0, 5)];
+    expect(clearMarksInRange(marks, { start: 2, end: 4 })).toEqual([hl(0, 2), hl(4, 5)]);
+  });
+
+  it("不传 type 清除一切格式", () => {
+    const marks: TextMark[] = [hl(0, 2), { type: "underline", start: 1, end: 3 }];
+    expect(clearMarksInRange(marks, { start: 0, end: 3 })).toEqual([]);
+  });
+});
+
+describe("buildMirrorSegments — 镜像分段", () => {
+  it("无 marks 时整段一次输出", () => {
+    expect(buildMirrorSegments("hello", [])).toEqual([{ chunk: "hello" }]);
+  });
+
+  it("按 mark 边界切段，行内样式聚合", () => {
+    const segments = buildMirrorSegments("abcdef", [hl(2, 5), { type: "strike", start: 4, end: 6 }]);
+    expect(segments).toEqual([
+      { chunk: "ab" },
+      { chunk: "cd", highlight: "amber" },
+      { chunk: "e", highlight: "amber", strike: true },
+      { chunk: "f", strike: true },
+    ]);
+  });
+
+  it("文字颜色与高亮可叠加；越界 mark 被夹回文本长度", () => {
+    const segments = buildMirrorSegments("abc", [
+      { type: "color", start: 1, end: 3, color: "rose" },
+      hl(0, 99),
+    ]);
+    expect(segments).toEqual([
+      { chunk: "a", highlight: "amber" },
+      { chunk: "bc", highlight: "amber", color: "rose" },
+    ]);
   });
 });

@@ -167,3 +167,134 @@ export function translateMarksForEdit(marks: TextMark[], previous: string, next:
   }
   return result;
 }
+
+/** 选区（跨行时换行符本身豁免）是否每一段都被同款 mark 完整覆盖。 */
+function isRangeFullyMarked(
+  text: string,
+  marks: TextMark[],
+  range: { start: number; end: number },
+  type: MarkType,
+  color?: MarkColor,
+): boolean {
+  const matching = marks
+    .filter((mark) => sameMarkKind(mark, type, color))
+    .sort((a, b) => a.start - b.start);
+  let covered = range.start;
+  for (const mark of matching) {
+    if (mark.end <= covered) continue;
+    if (mark.start > covered) {
+      let gapsAreNewlines = true;
+      for (let index = covered; index < mark.start; index += 1) {
+        if (text[index] !== "\n") {
+          gapsAreNewlines = false;
+          break;
+        }
+      }
+      if (!gapsAreNewlines) return false;
+    }
+    covered = mark.end;
+    if (covered >= range.end) return true;
+  }
+  return false;
+}
+
+/** 清除选区内指定 type（不传 color = 该 type 全部颜色）的 marks，边界外保留。 */
+export function clearMarksInRange(
+  marks: TextMark[],
+  range: { start: number; end: number },
+  type?: MarkType,
+  color?: MarkColor,
+): TextMark[] {
+  const result: TextMark[] = [];
+  for (const mark of marks) {
+    const hits = mark.end > range.start && mark.start < range.end && sameMarkKind(mark, type, color);
+    if (!hits) {
+      result.push(mark);
+      continue;
+    }
+    if (mark.start < range.start) result.push({ ...mark, end: range.start });
+    if (mark.end > range.end) result.push({ ...mark, start: range.end });
+  }
+  return mergeMarkList(result);
+}
+
+/** 选区按行拆段生成新 marks（换行符本身不带 mark）。 */
+function buildRangeMarks(
+  text: string,
+  range: { start: number; end: number },
+  type: MarkType,
+  color?: MarkColor,
+): TextMark[] {
+  const marks: TextMark[] = [];
+  let segmentStart: number | null = null;
+  for (let index = range.start; index <= range.end; index += 1) {
+    const isContent = index < range.end && text[index] !== "\n";
+    if (isContent && segmentStart === null) segmentStart = index;
+    if (!isContent && segmentStart !== null) {
+      marks.push(color ? { type, start: segmentStart, end: index, color } : { type, start: segmentStart, end: index });
+      segmentStart = null;
+    }
+  }
+  return marks;
+}
+
+/** toggle：选区已带该款 → 整段移除；否则清同 type 冲突后按行补满选区。 */
+export function toggleMarkInRange(
+  text: string,
+  marks: TextMark[],
+  range: { start: number; end: number },
+  type: MarkType,
+  color?: MarkColor,
+): TextMark[] {
+  if (isRangeFullyMarked(text, marks, range, type, color)) {
+    return clearMarksInRange(marks, range, type, color);
+  }
+  const cleared = clearMarksInRange(marks, range, type);
+  return mergeMarkList([...cleared, ...buildRangeMarks(text, range, type, color)]);
+}
+
+export interface MirrorSegment {
+  chunk: string;
+  highlight?: MarkColor;
+  strike?: boolean;
+  underline?: boolean;
+  color?: MarkColor;
+}
+
+/** 镜像层分段：按全部 mark 边界切文本，聚合每段的行内样式（重叠颜色取 start 更晚者）。 */
+export function buildMirrorSegments(text: string, marks: TextMark[]): MirrorSegment[] {
+  if (text.length === 0) return [];
+  const sanitized = marks
+    .map((mark) => ({ ...mark, end: Math.min(mark.end, text.length) }))
+    .filter((mark) => mark.start < mark.end && mark.start < text.length);
+  if (sanitized.length === 0) return [{ chunk: text }];
+  const boundaries = new Set<number>([0, text.length]);
+  for (const mark of sanitized) {
+    boundaries.add(mark.start);
+    boundaries.add(mark.end);
+  }
+  const points = [...boundaries].sort((a, b) => a - b);
+  const segments: MirrorSegment[] = [];
+  for (let index = 0; index < points.length - 1; index += 1) {
+    const start = points[index];
+    const end = points[index + 1];
+    const segment: MirrorSegment = { chunk: text.slice(start, end) };
+    let latestHighlightStart = -1;
+    let latestColorStart = -1;
+    for (const mark of sanitized) {
+      if (mark.start >= end || mark.end <= start) continue;
+      if (mark.type === "highlight" && mark.start > latestHighlightStart) {
+        latestHighlightStart = mark.start;
+        segment.highlight = mark.color;
+      }
+      if (mark.type === "color" && mark.start > latestColorStart) {
+        latestColorStart = mark.start;
+        segment.color = mark.color;
+      }
+      if (mark.type === "strike") segment.strike = true;
+      if (mark.type === "underline") segment.underline = true;
+    }
+    segments.push(segment);
+  }
+  return segments;
+}
