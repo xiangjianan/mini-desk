@@ -7587,7 +7587,8 @@ button.mobile-inbox-revoked-change {
 .text-mirror {
   position: absolute;
   inset: 0;
-  overflow: hidden;
+  overflow-x: hidden;
+  overflow-y: auto;
   pointer-events: none;
   color: var(--text);
   z-index: 0;

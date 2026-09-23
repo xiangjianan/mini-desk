@@ -460,6 +460,19 @@ describe("workbench style contract", () => {
         expect(mirrorBodies).toContain(body);
       }
     }
+    // 规则级对称配对：任何一侧带排版声明的规则，选择器列表必须同时出现另一侧，
+    // 否则某个布局变体（.workspace-panel / .workbench-shell 前缀规则）下两层错位。
+    const typography = /padding|line-height|font|letter-spacing|tab-size|white-space|overflow-wrap|word-break|word-spacing|text-indent|direction/;
+    const commentFree = styles.replace(/\/\*[\s\S]*?\*\//g, "");
+    const unpaired: string[] = [];
+    for (const match of commentFree.matchAll(/([^{}]+)\{([^{}]*)\}/g)) {
+      if (!typography.test(match[2])) continue;
+      const selectors = match[1].split(",").map((item) => item.trim());
+      const hasTextarea = selectors.some((selector) => selector.includes(".text-editor-textarea"));
+      const hasMirror = selectors.some((selector) => selector.includes(".text-mirror"));
+      if (hasTextarea !== hasMirror) unpaired.push(selectors.join(", "));
+    }
+    expect(unpaired).toEqual([]);
     expectSelectorBody(styles, ".text-editor-textarea", "color: transparent");
     expectSelectorBody(styles, ".text-editor-textarea", "caret-color: var(--text)");
     expectSelectorBody(styles, ".text-mirror", "position: absolute");

@@ -20,8 +20,7 @@ import {
   moveTextareaLine,
   renumberOrderedListText,
 } from "../utils/textEditor";
-import { buildMirrorSegments, translateMarksForEdit } from "../utils/textMarks";
-import type { MirrorSegment } from "../utils/textMarks";
+import { buildMirrorSegments, translateMarksForEdit, type MirrorSegment } from "../utils/textMarks";
 import { CONTEXT_MENU_Z_INDEX, createExclusiveContextMenu, renderPolishMenuLabel } from "../utils/contextMenu";
 import { copySelection, getSelectionRange, hasSelection, pasteIntoField, hasAsyncClipboard as hasClipboardApi } from "../utils/clipboard";
 import { renderIcon } from "../utils/dropdownIcons";
@@ -686,6 +685,7 @@ function normalizeTextareaText(textarea: HTMLTextAreaElement): void {
     const nextSelectionStart = getAdjustedSelectionOffset(raw, normalized, selectionStart);
     const nextSelectionEnd = getAdjustedSelectionOffset(raw, normalized, selectionEnd);
     textarea.value = normalized;
+    if (mirrorRef.value) mirrorRef.value.scrollTop = textarea.scrollTop;
     textarea.setSelectionRange(nextSelectionStart, nextSelectionEnd);
   }
   commitEditorText(normalized);
@@ -757,6 +757,7 @@ function undoLastTextChange(textarea: HTMLTextAreaElement): void {
   committedText.value = previous.text;
   text.value = previous.text;
   textarea.value = previous.text;
+  if (mirrorRef.value) mirrorRef.value.scrollTop = textarea.scrollTop;
   lastUndoState.value = { text: previous.text, marks: [...previous.marks] };
   const caret = Math.min(previous.text.length, textarea.selectionStart ?? previous.text.length);
   textarea.setSelectionRange(caret, caret);
