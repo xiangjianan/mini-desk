@@ -11,7 +11,29 @@ const tooltipStub = {
   template: '<span><slot name="trigger" /><slot /></span>',
 };
 
+/** 右键菜单「格式」组在 menuDropdownStub 里被拍平后的文案序列（子级 + 孙级按渲染顺序，分隔项渲染为空文案）。 */
+const FORMAT_GROUP_LABELS = [
+  "格式",
+  "高亮", "琥珀", "玫红", "翠绿", "天蓝", "紫罗兰", "", "清除高亮",
+  "文字颜色", "琥珀", "玫红", "翠绿", "天蓝", "紫罗兰", "", "恢复默认",
+  "中划线", "下划线", "", "清除全部格式",
+];
+
 describe("TextPanel", () => {
+  /** 注入 navigator.clipboard mock 并在结束后恢复——泄漏会破坏同文件里
+   *  「无 async clipboard 时保留原生菜单」的既有用例。 */
+  async function withClipboard(test: () => Promise<void> | void): Promise<void> {
+    Object.defineProperty(navigator, "clipboard", {
+      configurable: true,
+      value: { readText: vi.fn().mockResolvedValue(""), writeText: vi.fn() },
+    });
+    try {
+      await test();
+    } finally {
+      Reflect.deleteProperty(navigator, "clipboard");
+    }
+  }
+
   it("renders four-space indentation without injected dash markers", () => {
     const wrapper = mount(TextPanel, {
       props: {
@@ -772,7 +794,7 @@ describe("TextPanel", () => {
     await wrapper.get("textarea").trigger("select");
     await wrapper.get("textarea").trigger("contextmenu");
 
-    expect(wrapper.findAll(".dropdown-option").map((option) => option.text())).toEqual(["复制", "粘贴", "删除", "Tips"]);
+    expect(wrapper.findAll(".dropdown-option").map((option) => option.text())).toEqual(["复制", "粘贴", ...FORMAT_GROUP_LABELS, "删除", "Tips"]);
 
     textarea.setSelectionRange(4, 4);
     await wrapper.findAll(".dropdown-option").find((option) => option.text() === "复制")?.trigger("click");
@@ -1533,7 +1555,7 @@ describe("TextPanel", () => {
     await wrapper.get("textarea").trigger("contextmenu");
 
     expect(wrapper.findAll(".dropdown-option").map((option) => option.text()))
-      .toEqual(["复制", "粘贴", "智能粘贴", "AI润色", "技术风格", "简洁风格", "口语风格", "删除", "Tips"]);
+      .toEqual(["复制", "粘贴", "智能粘贴", "AI润色", "技术风格", "简洁风格", "口语风格", ...FORMAT_GROUP_LABELS, "删除", "Tips"]);
     wrapper.unmount();
   });
 
@@ -1664,7 +1686,7 @@ describe("TextPanel", () => {
     await wrapper.get("textarea").trigger("contextmenu");
 
     expect(wrapper.findAll(".dropdown-option").map((option) => option.text()))
-      .toEqual(["复制", "粘贴", "智能粘贴", "AI润色", "技术风格", "简洁风格", "口语风格", "删除", "Tips"]);
+      .toEqual(["复制", "粘贴", "智能粘贴", "AI润色", "技术风格", "简洁风格", "口语风格", ...FORMAT_GROUP_LABELS, "删除", "Tips"]);
     wrapper.unmount();
   });
 
@@ -1689,7 +1711,7 @@ describe("TextPanel", () => {
     await wrapper.get("textarea").trigger("contextmenu");
 
     expect(wrapper.findAll(".dropdown-option").map((option) => option.text()))
-      .toEqual(["复制", "粘贴", "删除", "Tips"]);
+      .toEqual(["复制", "粘贴", ...FORMAT_GROUP_LABELS, "删除", "Tips"]);
     wrapper.unmount();
   });
 
@@ -1930,5 +1952,60 @@ describe("TextPanel", () => {
     textarea.scrollTop = 40;
     await wrapper.get("textarea").trigger("scroll");
     expect(wrapper.get(".text-mirror").element.scrollTop).toBe(40);
+  });
+
+  it("选中文本后右键出现「格式」组，点高亮色即施加", async () => {
+    await withClipboard(async () => {
+      const wrapper = mount(TextPanel, {
+        props: { titleId: "workspace-title", title: "工作空间", lines: [{ text: "hello world", indent: 0 }] },
+        global: { stubs: { Dropdown: menuDropdownStub, NDropdown: menuDropdownStub, NTooltip: tooltipStub } },
+      });
+      const textarea = wrapper.get("textarea").element;
+      textarea.setSelectionRange(6, 11);
+      await wrapper.get("textarea").trigger("contextmenu");
+      expect(wrapper.find('[data-key="format"]').exists()).toBe(true);
+      await wrapper.get('[data-key="format-highlight-amber"]').trigger("click");
+      const update = wrapper.emitted("update")?.at(-1)?.[0] as LineItem[];
+      expect(update[0].marks).toEqual([{ type: "highlight", start: 6, end: 11, color: "amber" }]);
+      // 再点同色 → toggle 取消
+      textarea.setSelectionRange(6, 11);
+      await wrapper.get("textarea").trigger("contextmenu");
+      await wrapper.get('[data-key="format-highlight-amber"]').trigger("click");
+      const toggled = wrapper.emitted("update")?.at(-1)?.[0] as LineItem[];
+      expect(toggled[0].marks).toBeUndefined();
+    });
+  });
+
+  it("无选区时不出现「格式」组", async () => {
+    await withClipboard(async () => {
+      const wrapper = mount(TextPanel, {
+        props: { titleId: "workspace-title", title: "工作空间", lines: [{ text: "hello", indent: 0 }] },
+        global: { stubs: { Dropdown: menuDropdownStub, NDropdown: menuDropdownStub, NTooltip: tooltipStub } },
+      });
+      await wrapper.get("textarea").trigger("contextmenu");
+      expect(wrapper.find('[data-key="format"]').exists()).toBe(false);
+    });
+  });
+
+  it("跨行选区中划线按行拆段，清除全部格式可一键移除", async () => {
+    await withClipboard(async () => {
+      const wrapper = mount(TextPanel, {
+        props: { titleId: "workspace-title", title: "工作空间", lines: [{ text: "ab", indent: 0 }, { text: "cd", indent: 0 }] },
+        global: { stubs: { Dropdown: menuDropdownStub, NDropdown: menuDropdownStub, NTooltip: tooltipStub } },
+      });
+      const textarea = wrapper.get("textarea").element;
+      textarea.setSelectionRange(1, 5);
+      await wrapper.get("textarea").trigger("contextmenu");
+      await wrapper.get('[data-key="format-strike"]').trigger("click");
+      const update = wrapper.emitted("update")?.at(-1)?.[0] as LineItem[];
+      expect(update[0].marks).toEqual([{ type: "strike", start: 1, end: 2 }]);
+      expect(update[1].marks).toEqual([{ type: "strike", start: 0, end: 2 }]);
+      textarea.setSelectionRange(0, 5);
+      await wrapper.get("textarea").trigger("contextmenu");
+      await wrapper.get('[data-key="format-clear-all"]').trigger("click");
+      const cleared = wrapper.emitted("update")?.at(-1)?.[0] as LineItem[];
+      expect(cleared[0].marks).toBeUndefined();
+      expect(cleared[1].marks).toBeUndefined();
+    });
   });
 });

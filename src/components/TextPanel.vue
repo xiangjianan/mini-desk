@@ -4,8 +4,9 @@ import type { Component, VNode } from "vue";
 import { NDropdown, NIcon, NScrollbar } from "naive-ui";
 import type { DropdownOption } from "naive-ui";
 import { ClipboardOutline, CopyOutline, HelpCircleOutline, TrashOutline } from "@vicons/ionicons5";
+import { Highlighter, Paintbrush, Palette, RemoveFormatting, Strikethrough, Underline } from "lucide-vue-next";
 import SparklesOutlineIcon from "./SparklesOutlineIcon.vue";
-import type { LineItem, TextMark } from "../types";
+import type { LineItem, MarkColor, TextMark } from "../types";
 import { GUIDE_MENU_OPTION } from "../state/defaults";
 import { getUiText } from "../state/i18n";
 import type { AppLanguage } from "../types";
@@ -20,7 +21,7 @@ import {
   moveTextareaLine,
   renumberOrderedListText,
 } from "../utils/textEditor";
-import { buildMirrorSegments, translateMarksForEdit, type MirrorSegment } from "../utils/textMarks";
+import { clearMarksInRange, MARK_COLORS, toggleMarkInRange, buildMirrorSegments, translateMarksForEdit, type MirrorSegment } from "../utils/textMarks";
 import { CONTEXT_MENU_Z_INDEX, createExclusiveContextMenu, renderPolishMenuLabel } from "../utils/contextMenu";
 import { copySelection, getSelectionRange, hasSelection, pasteIntoField, hasAsyncClipboard as hasClipboardApi } from "../utils/clipboard";
 import { renderIcon } from "../utils/dropdownIcons";
@@ -123,6 +124,80 @@ onUnmounted(() => {
 });
 
 
+const MARK_COLOR_LABEL_KEYS = {
+  amber: "markColorAmber",
+  rose: "markColorRose",
+  green: "markColorGreen",
+  blue: "markColorBlue",
+  violet: "markColorViolet",
+} as const;
+
+/** 「高亮 / 文字颜色」共用的色板子菜单：5 色 + 清除项。色点用 icon 槽渲染，label 保持纯字符串。 */
+function buildColorSubmenu(type: "highlight" | "color"): DropdownOption[] {
+  return [
+    ...MARK_COLORS.map((color) => ({
+      label: uiText.value.common[MARK_COLOR_LABEL_KEYS[color]],
+      key: `format-${type}-${color}`,
+      icon: () => h("span", { class: `mark-swatch mark-swatch-${color}` }),
+    })),
+    { type: "divider", key: `format-${type}-divider` },
+    {
+      label: type === "highlight" ? uiText.value.common.clearHighlight : uiText.value.common.defaultColor,
+      key: `format-${type}-clear`,
+    },
+  ];
+}
+
+function parseMarkColor(value: string): MarkColor | null {
+  return (MARK_COLORS as readonly string[]).includes(value) ? (value as MarkColor) : null;
+}
+
+/** 格式变更的统一落点：入撤销栈 → 换 marks → 上报。文本不动。 */
+function applyMarkChange(next: TextMark[]): void {
+  undoStack.value = [...undoStack.value.slice(-49), lastUndoState.value];
+  editorMarks.value = next;
+  lastUndoState.value = { text: committedText.value, marks: [...next] };
+  emit("update", linesFromEditorState(text.value, next));
+}
+
+/** 右键「格式」组：toggle 施加/取消选区格式；父级 key（自身带子菜单）忽略。 */
+function applyFormatFromMenu(key: string, target: HTMLTextAreaElement): void {
+  if (key === "format" || key === "format-highlight" || key === "format-color") return;
+  const range = getTextSelectionRange(target);
+  if (range.start === range.end) return;
+  if (!editing.value || target.readOnly) startEditingFromTextarea(target);
+  const textValue = text.value;
+  if (key === "format-clear-all") {
+    applyMarkChange(clearMarksInRange(editorMarks.value, range));
+    return;
+  }
+  if (key === "format-highlight-clear") {
+    applyMarkChange(clearMarksInRange(editorMarks.value, range, "highlight"));
+    return;
+  }
+  if (key === "format-color-clear") {
+    applyMarkChange(clearMarksInRange(editorMarks.value, range, "color"));
+    return;
+  }
+  if (key === "format-strike") {
+    applyMarkChange(toggleMarkInRange(textValue, editorMarks.value, range, "strike"));
+    return;
+  }
+  if (key === "format-underline") {
+    applyMarkChange(toggleMarkInRange(textValue, editorMarks.value, range, "underline"));
+    return;
+  }
+  const highlightColor = key.startsWith("format-highlight-") ? parseMarkColor(key.slice("format-highlight-".length)) : null;
+  if (highlightColor) {
+    applyMarkChange(toggleMarkInRange(textValue, editorMarks.value, range, "highlight", highlightColor));
+    return;
+  }
+  const textColor = key.startsWith("format-color-") ? parseMarkColor(key.slice("format-color-".length)) : null;
+  if (textColor) {
+    applyMarkChange(toggleMarkInRange(textValue, editorMarks.value, range, "color", textColor));
+  }
+}
+
 const menuOptions = computed<DropdownOption[]>(() => {
   const options: DropdownOption[] = [];
   const target = menu.value?.target;
@@ -138,6 +213,31 @@ const menuOptions = computed<DropdownOption[]>(() => {
         key: "smart-polish",
         icon: renderIcon(SparklesOutlineIcon, false, 14),
         children: POLISH_STYLE_ENTRIES.map(({ key, labelKey }) => ({ label: uiText.value.common[labelKey], key })),
+      });
+    }
+    if (menu.value?.selectionText) {
+      options.push({
+        label: uiText.value.common.format,
+        key: "format",
+        icon: renderIcon(Paintbrush),
+        children: [
+          {
+            label: uiText.value.common.highlight,
+            key: "format-highlight",
+            icon: renderIcon(Highlighter),
+            children: buildColorSubmenu("highlight"),
+          },
+          {
+            label: uiText.value.common.textColor,
+            key: "format-color",
+            icon: renderIcon(Palette),
+            children: buildColorSubmenu("color"),
+          },
+          { label: uiText.value.common.strike, key: "format-strike", icon: renderIcon(Strikethrough) },
+          { label: uiText.value.common.underline, key: "format-underline", icon: renderIcon(Underline) },
+          { type: "divider", key: "format-divider" },
+          { label: uiText.value.common.clearAllMarks, key: "format-clear-all", icon: renderIcon(RemoveFormatting) },
+        ],
       });
     }
     if (menu.value?.selectionText) {
@@ -537,6 +637,10 @@ async function handleMenuSelect(key: string): Promise<void> {
     const selectionText = selectedTextareaText(target);
     if (!selectionText.trim()) return;
     await polishSelection(target, selectionText, polishStyle);
+    return;
+  }
+  if (key.startsWith("format-") && target) {
+    applyFormatFromMenu(key, target);
     return;
   }
   if (key === "delete" && target) {
