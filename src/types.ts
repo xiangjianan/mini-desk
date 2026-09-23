@@ -43,9 +43,22 @@ export type GuideKey =
   | "settings"
   | "theme";
 
+/** 记事本行内标注格式：全部为不改变字形宽度的格式（镜像渲染层的前提）。 */
+export type MarkType = "highlight" | "strike" | "underline" | "color";
+/** 语义色名：明暗主题由 CSS 变量各自映射，不存裸 CSS 值。 */
+export type MarkColor = "amber" | "rose" | "green" | "blue" | "violet";
+/** [start, end) 相对 line.text（不含 4 空格缩进）。strike/underline 无 color；highlight/color 必带。 */
+export interface TextMark {
+  type: MarkType;
+  start: number;
+  end: number;
+  color?: MarkColor;
+}
+
 export interface LineItem {
   text: string;
   indent: number;
+  marks?: TextMark[];
 }
 
 export interface StoredImage {
