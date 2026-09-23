@@ -508,4 +508,14 @@ describe("editorStateFromLines / linesFromEditorState — marks 双向携带", (
       { text: "cd", indent: 0, marks: [{ type: "strike", start: 0, end: 1 }] },
     ]);
   });
+
+  it("缩进内起点与恰在换行符上的 mark 在拆行时规范化", () => {
+    // [0,5) 盖住 4 空格缩进 + 'a'：行内起点吸附到内容起点，只盖住 'a'
+    const indented = linesFromEditorState("    ab\ncd", [{ type: "highlight", start: 0, end: 5, color: "amber" }]);
+    expect(indented[0].marks).toEqual([{ type: "highlight", start: 0, end: 1, color: "amber" }]);
+    // 恰在换行符上的 mark 两行都不留
+    const newlineOnly = linesFromEditorState("ab\ncd", [{ type: "strike", start: 2, end: 3 }]);
+    expect(newlineOnly[0].marks).toBeUndefined();
+    expect(newlineOnly[1].marks).toBeUndefined();
+  });
 });

@@ -5,21 +5,22 @@ import { NDropdown, NIcon, NScrollbar } from "naive-ui";
 import type { DropdownOption } from "naive-ui";
 import { ClipboardOutline, CopyOutline, HelpCircleOutline, TrashOutline } from "@vicons/ionicons5";
 import SparklesOutlineIcon from "./SparklesOutlineIcon.vue";
-import type { LineItem } from "../types";
+import type { LineItem, TextMark } from "../types";
 import { GUIDE_MENU_OPTION } from "../state/defaults";
 import { getUiText } from "../state/i18n";
 import type { AppLanguage } from "../types";
 import {
-  editorTextToLines,
+  editorStateFromLines,
   getLineTextStartOffset,
   handleTextareaTab,
   insertIndentedLineBreak,
   insertPlainLineBreak,
+  linesFromEditorState,
   moveCaretToLineBoundary,
   moveTextareaLine,
   renumberOrderedListText,
-  textLinesToEditorText,
 } from "../utils/textEditor";
+import { translateMarksForEdit } from "../utils/textMarks";
 import { CONTEXT_MENU_Z_INDEX, createExclusiveContextMenu, renderPolishMenuLabel } from "../utils/contextMenu";
 import { copySelection, getSelectionRange, hasSelection, pasteIntoField, hasAsyncClipboard as hasClipboardApi } from "../utils/clipboard";
 import { renderIcon } from "../utils/dropdownIcons";
@@ -55,12 +56,20 @@ const emit = defineEmits<{
 const isDragHover = ref(false);
 const isLocalDrag = ref(false);
 const textareaRef = ref<HTMLTextAreaElement | null>(null);
-const text = ref(textLinesToEditorText(props.lines));
+const initialEditorState = editorStateFromLines(props.lines);
+const text = ref(initialEditorState.text);
+const editorMarks = ref<TextMark[]>(initialEditorState.marks);
+const committedText = ref(initialEditorState.text);
 const focused = ref(false);
 const editing = ref(false);
 const titleRef = ref<{ openMenuAt: (x: number, y: number, event?: Event) => void } | null>(null);
-const undoStack = ref<string[]>([]);
-const lastUndoText = ref(text.value);
+interface EditorSnapshot {
+  text: string;
+  marks: TextMark[];
+}
+
+const undoStack = ref<EditorSnapshot[]>([]);
+const lastUndoState = ref<EditorSnapshot>({ text: initialEditorState.text, marks: initialEditorState.marks });
 const lastCaret = ref<number | null>(null);
 const lastTextSelection = ref<{ start: number; end: number } | null>(null);
 const menu = ref<{
@@ -126,15 +135,24 @@ const menuOptions = computed<DropdownOption[]>(() => {
 watch(
   () => props.lines,
   (lines) => {
-    const next = textLinesToEditorText(lines);
-    if (next !== text.value) {
-      text.value = next;
-      lastUndoText.value = next;
-      undoStack.value = [];
-    }
+    const next = editorStateFromLines(lines);
+    if (next.text === text.value && isSameMarks(next.marks, editorMarks.value)) return;
+    text.value = next.text;
+    committedText.value = next.text;
+    editorMarks.value = next.marks;
+    undoStack.value = [];
+    lastUndoState.value = { text: next.text, marks: [...next.marks] };
   },
   { deep: true },
 );
+
+function isSameMarks(left: TextMark[], right: TextMark[]): boolean {
+  if (left.length !== right.length) return false;
+  return left.every((mark, index) => {
+    const other = right[index];
+    return mark.type === other.type && mark.start === other.start && mark.end === other.end && mark.color === other.color;
+  });
+}
 
 const textPanelClasses = computed(() => ({
   panel: !props.split,
@@ -146,8 +164,8 @@ function update(): void {
   if (!editing.value) return;
   const textarea = textareaRef.value;
   if (textarea) normalizeTextareaText(textarea);
-  else recordUndoForText(text.value);
-  emit("update", editorTextToLines(text.value));
+  else commitEditorText(text.value);
+  emit("update", linesFromEditorState(text.value, editorMarks.value));
 }
 
 function handleKeydown(event: KeyboardEvent): void {
@@ -307,7 +325,7 @@ function handleExternalTextDrop(event: DragEvent): void {
     const cursorPos = offset + dropped.length;
     textarea.setSelectionRange(cursorPos, cursorPos);
   }
-  emit("update", editorTextToLines(text.value));
+  emit("update", linesFromEditorState(text.value, editorMarks.value));
 }
 
 async function startEditing(event: MouseEvent): Promise<void> {
@@ -363,7 +381,7 @@ function startEditingFromTextarea(textarea: HTMLTextAreaElement, keyboardFocus =
   const caret = preservedSelection?.start ?? lastCaret.value ?? textarea.selectionStart ?? textarea.value.length;
   editing.value = true;
   undoStack.value = [];
-  lastUndoText.value = text.value;
+  lastUndoState.value = { text: committedText.value, marks: [...editorMarks.value] };
   unlockTextareaForMobileKeyboard(textarea, caret, keyboardFocus);
   if (preservedSelection) restoreSelection(textarea, preservedSelection);
 }
@@ -549,7 +567,7 @@ function deleteTextSelection(target: HTMLTextAreaElement): void {
   normalizeTextareaText(target);
   lastTextSelection.value = null;
   collapseSelection(target, target.selectionStart ?? 0);
-  emit("update", editorTextToLines(text.value));
+  emit("update", linesFromEditorState(text.value, editorMarks.value));
 }
 
 async function pasteTextFromClipboard(target: HTMLTextAreaElement): Promise<void> {
@@ -559,7 +577,7 @@ async function pasteTextFromClipboard(target: HTMLTextAreaElement): Promise<void
   const pasted = await pasteIntoField(target, range);
   if (!pasted) return;
   normalizeTextareaText(target);
-  emit("update", editorTextToLines(text.value));
+  emit("update", linesFromEditorState(text.value, editorMarks.value));
 }
 
 /** 智能粘贴（便签区）：剪贴板全文交服务端排版润色，失败退化为原文粘贴。 */
@@ -615,7 +633,7 @@ function insertTextsAtSelection(target: HTMLTextAreaElement, texts: string[], la
   normalizeTextareaText(target);
   lastTextSelection.value = null;
   collapseSelection(target, target.selectionEnd ?? target.selectionStart ?? 0);
-  emit("update", editorTextToLines(text.value));
+  emit("update", linesFromEditorState(text.value, editorMarks.value));
 }
 
 /** 整理结果是整行条目：插入点落在既有行中间时在块前后补换行，避免把整理结果拼进行内。 */
@@ -638,28 +656,21 @@ function hasAsyncClipboard(): boolean {
 }
 
 function applyEditorText(next: string): void {
-  recordUndoForText(next);
-  text.value = next;
-  if (textareaRef.value && textareaRef.value.value !== next) textareaRef.value.value = next;
+  commitEditorText(next);
 }
 
 function normalizeTextareaText(textarea: HTMLTextAreaElement): void {
   const raw = textarea.value;
   const normalized = renumberOrderedListText(raw);
-  if (normalized === raw) {
-    recordUndoForText(raw);
-    text.value = raw;
-    return;
+  if (normalized !== raw) {
+    const selectionStart = textarea.selectionStart ?? raw.length;
+    const selectionEnd = textarea.selectionEnd ?? selectionStart;
+    const nextSelectionStart = getAdjustedSelectionOffset(raw, normalized, selectionStart);
+    const nextSelectionEnd = getAdjustedSelectionOffset(raw, normalized, selectionEnd);
+    textarea.value = normalized;
+    textarea.setSelectionRange(nextSelectionStart, nextSelectionEnd);
   }
-
-  const selectionStart = textarea.selectionStart ?? raw.length;
-  const selectionEnd = textarea.selectionEnd ?? selectionStart;
-  const nextSelectionStart = getAdjustedSelectionOffset(raw, normalized, selectionStart);
-  const nextSelectionEnd = getAdjustedSelectionOffset(raw, normalized, selectionEnd);
-  recordUndoForText(normalized);
-  text.value = normalized;
-  textarea.value = normalized;
-  textarea.setSelectionRange(nextSelectionStart, nextSelectionEnd);
+  commitEditorText(normalized);
 }
 
 /** 重编号后的光标平移。重编号是逐行等量映射（行数不变、只改写行内标记），因此按
@@ -704,22 +715,34 @@ function clampSelectionOffset(offset: number, textLength: number): number {
   return Math.max(0, Math.min(offset, textLength));
 }
 
-function recordUndoForText(next: string): void {
-  if (next === lastUndoText.value) return;
-  undoStack.value = [...undoStack.value.slice(-49), lastUndoText.value];
-  lastUndoText.value = next;
+function recordUndoState(): void {
+  undoStack.value = [...undoStack.value.slice(-49), lastUndoState.value];
+  lastUndoState.value = { text: committedText.value, marks: [...editorMarks.value] };
+}
+
+/** 所有文本变更的唯一入口：marks 平移、undo 快照、text/DOM 同步都在这里。 */
+function commitEditorText(next: string): void {
+  if (next === committedText.value) return;
+  editorMarks.value = translateMarksForEdit(editorMarks.value, committedText.value, next);
+  committedText.value = next;
+  recordUndoState();
+  text.value = next;
+  const textarea = textareaRef.value;
+  if (textarea && textarea.value !== next) textarea.value = next;
 }
 
 function undoLastTextChange(textarea: HTMLTextAreaElement): void {
   const previous = undoStack.value.at(-1);
-  if (typeof previous !== "string") return;
+  if (!previous) return;
   undoStack.value = undoStack.value.slice(0, -1);
-  text.value = previous;
-  textarea.value = previous;
-  lastUndoText.value = previous;
-  const caret = Math.min(previous.length, textarea.selectionStart ?? previous.length);
+  editorMarks.value = [...previous.marks];
+  committedText.value = previous.text;
+  text.value = previous.text;
+  textarea.value = previous.text;
+  lastUndoState.value = { text: previous.text, marks: [...previous.marks] };
+  const caret = Math.min(previous.text.length, textarea.selectionStart ?? previous.text.length);
   textarea.setSelectionRange(caret, caret);
-  emit("update", editorTextToLines(previous));
+  emit("update", linesFromEditorState(previous.text, previous.marks));
 }
 
 function collapseSelection(textarea: HTMLTextAreaElement, caret: number): void {

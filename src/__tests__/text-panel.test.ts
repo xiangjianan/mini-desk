@@ -4,6 +4,7 @@ import { readFileSync } from "node:fs";
 import { resolve } from "node:path";
 import TextPanel from "../components/TextPanel.vue";
 import type { PolishResult } from "../sync/polishClient";
+import type { LineItem } from "../types";
 import { menuDropdownStub } from "./helpers/menu-dropdown-stub";
 
 const tooltipStub = {
@@ -1826,5 +1827,56 @@ describe("TextPanel", () => {
 
     expect(textarea.value).toBe("root");
     expect(wrapper.emitted("update")).toBeUndefined();
+  });
+
+  it("marks 随编辑平移：高亮前打字偏移右移并随 update 上报", async () => {
+    const wrapper = mount(TextPanel, {
+      props: {
+        titleId: "workspace-title",
+        title: "工作空间",
+        lines: [{ text: "hello world", indent: 0, marks: [{ type: "highlight", start: 6, end: 11, color: "amber" }] }],
+      },
+    });
+    await wrapper.get("textarea").trigger("dblclick");
+    await wrapper.get("textarea").setValue("hello brave world");
+    const update = wrapper.emitted("update")?.at(-1)?.[0] as LineItem[];
+    expect(update[0].marks).toEqual([{ type: "highlight", start: 12, end: 17, color: "amber" }]);
+  });
+
+  it("本地撤销把文本与 marks 一起还原", async () => {
+    const wrapper = mount(TextPanel, {
+      props: {
+        titleId: "workspace-title",
+        title: "工作空间",
+        lines: [{ text: "hello world", indent: 0, marks: [{ type: "strike", start: 0, end: 5 }] }],
+      },
+    });
+    const textarea = wrapper.get("textarea").element;
+    await wrapper.get("textarea").trigger("dblclick");
+    await wrapper.get("textarea").setValue("hello new world");
+    await wrapper.get("textarea").trigger("keydown", { key: "z", ctrlKey: true });
+    expect(textarea.value).toBe("hello world");
+    const update = wrapper.emitted("update")?.at(-1)?.[0] as LineItem[];
+    expect(update[0].marks).toEqual([{ type: "strike", start: 0, end: 5 }]);
+  });
+
+  it("外部 lines 变化（如手机速记追加）重建 marks 且不丢既有格式", async () => {
+    const wrapper = mount(TextPanel, {
+      props: {
+        titleId: "workspace-title",
+        title: "工作空间",
+        lines: [{ text: "重点", indent: 0, marks: [{ type: "highlight", start: 0, end: 2, color: "rose" }] }],
+      },
+    });
+    await wrapper.setProps({
+      lines: [
+        { text: "重点", indent: 0, marks: [{ type: "highlight", start: 0, end: 2, color: "rose" }] },
+        { text: "速记新行", indent: 0 },
+      ],
+    });
+    await wrapper.get("textarea").trigger("dblclick");
+    await wrapper.get("textarea").setValue("重点\n速记新行\n再来一行");
+    const update = wrapper.emitted("update")?.at(-1)?.[0] as LineItem[];
+    expect(update[0].marks).toEqual([{ type: "highlight", start: 0, end: 2, color: "rose" }]);
   });
 });
