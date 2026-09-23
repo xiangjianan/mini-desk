@@ -23,6 +23,7 @@ describe("TextPanel", () => {
   /** 注入 navigator.clipboard mock 并在结束后恢复——泄漏会破坏同文件里
    *  「无 async clipboard 时保留原生菜单」的既有用例。 */
   async function withClipboard(test: () => Promise<void> | void): Promise<void> {
+    const previous = Object.getOwnPropertyDescriptor(navigator, "clipboard");
     Object.defineProperty(navigator, "clipboard", {
       configurable: true,
       value: { readText: vi.fn().mockResolvedValue(""), writeText: vi.fn() },
@@ -30,7 +31,8 @@ describe("TextPanel", () => {
     try {
       await test();
     } finally {
-      Reflect.deleteProperty(navigator, "clipboard");
+      if (previous) Object.defineProperty(navigator, "clipboard", previous);
+      else Reflect.deleteProperty(navigator, "clipboard");
     }
   }
 
@@ -2006,6 +2008,40 @@ describe("TextPanel", () => {
       const cleared = wrapper.emitted("update")?.at(-1)?.[0] as LineItem[];
       expect(cleared[0].marks).toBeUndefined();
       expect(cleared[1].marks).toBeUndefined();
+    });
+  });
+
+  it("清除高亮子菜单项只清高亮跨全部颜色，保留其他格式", async () => {
+    await withClipboard(async () => {
+      const wrapper = mount(TextPanel, {
+        props: { titleId: "workspace-title", title: "工作空间", lines: [{ text: "hello", indent: 0, marks: [
+          { type: "highlight", start: 0, end: 5, color: "rose" },
+          { type: "strike", start: 0, end: 5 },
+        ] }] },
+        global: { stubs: { Dropdown: menuDropdownStub, NDropdown: menuDropdownStub, NTooltip: tooltipStub } },
+      });
+      const textarea = wrapper.get("textarea").element;
+      textarea.setSelectionRange(0, 5);
+      await wrapper.get("textarea").trigger("contextmenu");
+      await wrapper.get('[data-key="format-highlight-clear"]').trigger("click");
+      const update = wrapper.emitted("update")?.at(-1)?.[0] as LineItem[];
+      expect(update[0].marks).toEqual([{ type: "strike", start: 0, end: 5 }]);
+    });
+  });
+
+  it("菜单施加格式后 Ctrl+Z 一步还原", async () => {
+    await withClipboard(async () => {
+      const wrapper = mount(TextPanel, {
+        props: { titleId: "workspace-title", title: "工作空间", lines: [{ text: "hello", indent: 0 }] },
+        global: { stubs: { Dropdown: menuDropdownStub, NDropdown: menuDropdownStub, NTooltip: tooltipStub } },
+      });
+      const textarea = wrapper.get("textarea").element;
+      textarea.setSelectionRange(0, 5);
+      await wrapper.get("textarea").trigger("contextmenu");
+      await wrapper.get('[data-key="format-strike"]').trigger("click");
+      await wrapper.get("textarea").trigger("keydown", { key: "z", ctrlKey: true });
+      const update = wrapper.emitted("update")?.at(-1)?.[0] as LineItem[];
+      expect(update[0].marks).toBeUndefined();
     });
   });
 });

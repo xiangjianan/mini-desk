@@ -152,11 +152,10 @@ function parseMarkColor(value: string): MarkColor | null {
   return (MARK_COLORS as readonly string[]).includes(value) ? (value as MarkColor) : null;
 }
 
-/** 格式变更的统一落点：入撤销栈 → 换 marks → 上报。文本不动。 */
+/** 格式变更的统一落点：换 marks → 入撤销栈 → 上报。文本不动。 */
 function applyMarkChange(next: TextMark[]): void {
-  undoStack.value = [...undoStack.value.slice(-49), lastUndoState.value];
   editorMarks.value = next;
-  lastUndoState.value = { text: committedText.value, marks: [...next] };
+  recordUndoState();
   emit("update", linesFromEditorState(text.value, next));
 }
 
