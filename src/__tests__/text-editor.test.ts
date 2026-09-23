@@ -1,5 +1,15 @@
 import { describe, expect, it } from "vitest";
-import { appendContinuingListFormat, handleTextareaTab, moveCaretToLineBoundary, moveTextareaLine, renumberOrderedListText } from "../utils/textEditor";
+import {
+  appendContinuingListFormat,
+  editorStateFromLines,
+  editorTextToLines,
+  handleTextareaTab,
+  linesFromEditorState,
+  moveCaretToLineBoundary,
+  moveTextareaLine,
+  renumberOrderedListText,
+  textLinesToEditorText,
+} from "../utils/textEditor";
 
 function textareaWith(value: string, caret: number): HTMLTextAreaElement {
   const textarea = document.createElement("textarea");
@@ -450,5 +460,52 @@ describe("moveTextareaLine — Ctrl/Cmd+↑/↓ 移动当前行", () => {
     expect(textarea.value).toBe("1. b\n2. a");
     expect(textarea.selectionStart).toBe(3);
     expect(textarea.selectionEnd).toBe(3);
+  });
+});
+
+describe("editorStateFromLines / linesFromEditorState — marks 双向携带", () => {
+  it("拼接时把行内 marks 映射到全文坐标（缩进计入 base）", () => {
+    const state = editorStateFromLines([
+      { text: "标题", indent: 0 },
+      { text: "重点内容", indent: 1, marks: [{ type: "highlight", start: 0, end: 2, color: "amber" }] },
+    ]);
+    expect(state.text).toBe("标题\n    重点内容");
+    expect(state.marks).toEqual([{ type: "highlight", start: 7, end: 9, color: "amber" }]);
+  });
+
+  it("拆行时把全文 marks 切回行内坐标，无 marks 的行不挂字段", () => {
+    const lines = linesFromEditorState("标题\n    重点内容", [
+      { type: "highlight", start: 7, end: 9, color: "amber" },
+    ]);
+    expect(lines).toEqual([
+      { text: "标题", indent: 0 },
+      { text: "重点内容", indent: 1, marks: [{ type: "highlight", start: 0, end: 2, color: "amber" }] },
+    ]);
+  });
+
+  it("renumber 改写前缀时 marks 随文本平移", () => {
+    const state = editorStateFromLines([
+      { text: "1. 甲", indent: 0 },
+      { text: "1. 乙重点", indent: 0, marks: [{ type: "strike", start: 4, end: 6 }] },
+    ]);
+    expect(state.text).toBe("1. 甲\n2. 乙重点");
+    expect(state.marks).toEqual([{ type: "strike", start: 9, end: 11 }]);
+  });
+
+  it("旧契约保持：textLinesToEditorText / editorTextToLines 输出不变", () => {
+    expect(textLinesToEditorText([{ text: "a", indent: 1 }])).toBe("    a");
+    expect(editorTextToLines("    a")).toEqual([{ text: "a", indent: 1 }]);
+    // 首行为空行时 join("\n") 语义不变：前导换行保留，空行不丢。
+    expect(textLinesToEditorText([{ text: "", indent: 0 }, { text: "b", indent: 0 }])).toBe("\nb");
+    expect(editorTextToLines("\nb")).toEqual([{ text: "", indent: 0 }, { text: "b", indent: 0 }]);
+  });
+
+  it("全文坐标跨行 mark 在拆行时防御性截断为两段", () => {
+    // [1,4) 覆盖 b、换行、c："ab" 行保留 [1,2)，"cd" 行从全文 3 起算保留 [0,1)（只盖住 c）。
+    const lines = linesFromEditorState("ab\ncd", [{ type: "strike", start: 1, end: 4 }]);
+    expect(lines).toEqual([
+      { text: "ab", indent: 0, marks: [{ type: "strike", start: 1, end: 2 }] },
+      { text: "cd", indent: 0, marks: [{ type: "strike", start: 0, end: 1 }] },
+    ]);
   });
 });

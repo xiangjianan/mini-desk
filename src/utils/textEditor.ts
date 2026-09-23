@@ -1,5 +1,6 @@
-import type { LineItem } from "../types";
+import type { LineItem, TextMark } from "../types";
 import { serializeTextLines, textLinesToText } from "../state/storage";
+import { translateMarksForEdit } from "./textMarks";
 
 export { serializeTextLines, textLinesToText };
 
@@ -7,20 +8,67 @@ const INDENT_UNIT = "    ";
 const ORDERED_MARKER_PATTERN = /^(\d+)\.\s+(.*)$/;
 const MAX_ORDERED_LIST_MARKER = 99;
 
+export interface EditorState {
+  text: string;
+  marks: TextMark[];
+}
+
 export function textLinesToEditorText(lines: LineItem[]): string {
-  return renumberOrderedListText(lines.map((line) => formatEditorLine(line.indent, line.text)).join("\n"));
+  return editorStateFromLines(lines).text;
 }
 
 export function editorTextToLines(value = ""): LineItem[] {
-  const normalized = renumberOrderedListText(value);
-  if (!normalized) return [];
-  return normalized.split("\n").map((line) => {
+  return linesFromEditorState(value);
+}
+
+/** 行列表 → 编辑器全文态：行内 marks 映射到全文坐标（base = 行首 + 缩进），随后跑重编号。 */
+export function editorStateFromLines(lines: LineItem[]): EditorState {
+  let text = "";
+  const marks: TextMark[] = [];
+  // 换行符按行序拼接（首行除外），与 join("\n") 语义一致：首行为空行时前导换行保留。
+  for (const [index, line] of lines.entries()) {
+    if (index > 0) text += "\n";
+    const indentText = INDENT_UNIT.repeat(Math.max(0, line.indent));
+    const base = text.length + indentText.length;
+    text += `${indentText}${line.text}`;
+    for (const mark of line.marks ?? []) {
+      marks.push({ ...mark, start: base + mark.start, end: base + mark.end });
+    }
+  }
+  const renumbered = renumberOrderedListText(text);
+  return {
+    text: renumbered,
+    marks: renumbered === text ? marks : translateMarksForEdit(marks, text, renumbered),
+  };
+}
+
+/** 编辑器全文态 → 行列表：先重编号（marks 同步平移），再逐行拆缩进并把全文 marks 切回行内。 */
+export function linesFromEditorState(value = "", marks: TextMark[] = []): LineItem[] {
+  const renumbered = renumberOrderedListText(value);
+  const fullTextMarks = renumbered === value
+    ? marks.map((mark) => ({ ...mark }))
+    : translateMarksForEdit(marks, value, renumbered);
+  if (!renumbered) return [];
+  const result: LineItem[] = [];
+  let lineStart = 0;
+  for (const line of renumbered.split("\n")) {
     const indent = getIndentInfo(line);
-    return {
+    const contentStart = lineStart + indent.contentStart;
+    const lineEnd = lineStart + line.length;
+    const lineMarks: TextMark[] = [];
+    for (const mark of fullTextMarks) {
+      const start = Math.max(mark.start, contentStart) - contentStart;
+      const end = Math.min(mark.end, lineEnd) - contentStart;
+      if (start < end) lineMarks.push({ ...mark, start, end });
+    }
+    result.push({
       text: line.slice(indent.contentStart),
       indent: indent.depth,
-    };
-  });
+      ...(lineMarks.length > 0 ? { marks: lineMarks } : {}),
+    });
+    lineStart = lineEnd + 1;
+  }
+  return result;
 }
 
 export function splitDroppedTodoText(value: string): string[] {
