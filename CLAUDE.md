@@ -50,9 +50,11 @@ WorkspaceData = {
 }
 ```
 
-### Line Editors (`ws-editor`)
+### Line Editors
 
-The note, workspace, and storage panels use a custom line editor (not `<textarea>`). Each line is a `<div.ws-row>` containing an `<input.ws-input>`. Tab/Shift+Tab controls indent level. Enter splits the line. Backspace at column 0 merges with the previous line.
+The notes area (`SpacePanel.vue` space tabs) shares a single `TextPanel.vue` whose editor is one native `<textarea>` (plain text, `\n`-separated lines, 4-space indent via `INDENT_UNIT` in `src/utils/textEditor.ts`). Tab/Shift+Tab indents, Enter continues list markers, Cmd+arrows move/jump lines, and `renumberOrderedListText` rewrites ordered-list prefixes on every input.
+
+Rich-text annotations (highlight / strikethrough / underline / text color) are stored as per-line `LineItem.marks` metadata (`src/utils/textMarks.ts`) — the textarea text itself stays plain. The textarea's text is transparent; a typography-paired mirror layer (`.text-mirror` in `TextPanel.vue`) renders the same text with styled spans behind it and syncs `scrollTop`. All text mutations translate mark offsets through `translateMarksForEdit` (line prefix/suffix alignment + per-line diff), which typing, paste, IME, AI-polish replacement, undo, and renumber all share. Apply formats via the selection right-click「格式」menu or Ctrl/Cmd+Shift+H/X/U. The shared typography CSS rule MUST keep `.text-editor-textarea` and `.text-mirror` selectors paired (guarded by `style-contract.test.ts`).
 
 ### Save Triggers
 
