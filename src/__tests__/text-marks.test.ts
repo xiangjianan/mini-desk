@@ -7,6 +7,7 @@ import {
   toggleMarkInRange,
   translateMarksForEdit,
 } from "../utils/textMarks";
+import { editorStateFromLines, linesFromEditorState } from "../utils/textEditor";
 import type { TextMark } from "../types";
 
 const hl = (start: number, end: number, color: TextMark["color"] = "amber"): TextMark =>
@@ -129,6 +130,18 @@ describe("toggleMarkInRange — toggle 语义", () => {
   it("选区含尾随换行且其余已全覆盖：可一次取消（尾部换行豁免）", () => {
     const marks: TextMark[] = [{ type: "strike", start: 0, end: 2 }];
     expect(toggleMarkInRange("ab\n", marks, { start: 0, end: 3 }, "strike")).toEqual([]);
+  });
+
+  it("选区从行首缩进开始：施加后经行存储往返仍可一次取消（缩进位豁免）", () => {
+    const text = "第一行\n    第二行\n第三行";
+    // 选区从第二行行首（含 4 空格缩进）选到第三行行尾
+    const range = { start: 4, end: text.length };
+    const applied = toggleMarkInRange(text, [], range, "highlight", "amber");
+    // 模拟生产往返：全文 marks → 行内（缩进被裁到内容起点）→ 父层存储 → 回声全文
+    const roundtrip = editorStateFromLines(linesFromEditorState(text, applied)).marks;
+    // 往返后 marks 从内容起点（8 = 行首 4 + 缩进 4）开始，选区起点 4 仍落在缩进里——缩进位不算覆盖缺口
+    expect(roundtrip[0].start).toBe(8);
+    expect(toggleMarkInRange(text, roundtrip, range, "highlight", "amber")).toEqual([]);
   });
 });
 

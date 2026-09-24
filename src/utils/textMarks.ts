@@ -168,7 +168,44 @@ export function translateMarksForEdit(marks: TextMark[], previous: string, next:
   return result;
 }
 
-/** 选区（跨行时换行符本身豁免）是否每一段都被同款 mark 完整覆盖。 */
+/**
+ * 行首缩进长度（\t 或连续 4 空格组）。口径与 textEditor.ts 的 getIndentInfo 一致：
+ * marks 相对缩进后的行文本，缩进位不承载 mark，往返存储时会被钳到内容起点。
+ */
+function getLeadingIndentLength(text: string, lineStart: number): number {
+  let index = lineStart;
+  while (index < text.length) {
+    if (text[index] === "\t") {
+      index += 1;
+      continue;
+    }
+    if (text.slice(index, index + 4) === "    ") {
+      index += 4;
+      continue;
+    }
+    break;
+  }
+  return index - lineStart;
+}
+
+/**
+ * 覆盖判定的缺口豁免：换行符与行首缩进位不算未覆盖——它们在存储模型中不承载
+ * mark（行文本不含缩进），从行首开始选多行的选区因此仍可判定为「已完整覆盖」。
+ */
+function isGapExempt(text: string, from: number, to: number): boolean {
+  for (let index = from; index < to; index += 1) {
+    const ch = text[index];
+    if (ch === "\n") continue;
+    if (ch === " " || ch === "\t") {
+      const lineStart = text.lastIndexOf("\n", index - 1) + 1;
+      if (index - lineStart < getLeadingIndentLength(text, lineStart)) continue;
+    }
+    return false;
+  }
+  return true;
+}
+
+/** 选区（跨行时换行符与行首缩进位豁免）是否每一段都被同款 mark 完整覆盖。 */
 function isRangeFullyMarked(
   text: string,
   marks: TextMark[],
@@ -182,24 +219,12 @@ function isRangeFullyMarked(
   let covered = range.start;
   for (const mark of matching) {
     if (mark.end <= covered) continue;
-    if (mark.start > covered) {
-      let gapsAreNewlines = true;
-      for (let index = covered; index < mark.start; index += 1) {
-        if (text[index] !== "\n") {
-          gapsAreNewlines = false;
-          break;
-        }
-      }
-      if (!gapsAreNewlines) return false;
-    }
+    if (mark.start > covered && !isGapExempt(text, covered, mark.start)) return false;
     covered = mark.end;
     if (covered >= range.end) return true;
   }
-  // 尾部余量若全是换行（选区选到文本末尾含尾随换行的场景），同样视为已覆盖。
-  for (let index = covered; index < range.end; index += 1) {
-    if (text[index] !== "\n") return false;
-  }
-  return true;
+  // 尾部余量（选到文本末尾含尾随换行、或末行行首缩进）同样豁免。
+  return isGapExempt(text, covered, range.end);
 }
 
 /** 清除选区内指定 type（不传 color = 该 type 全部颜色）的 marks，边界外保留。 */

@@ -2085,6 +2085,29 @@ describe("TextPanel", () => {
     expect(wrapper.emitted("update")).toBeUndefined();
   });
 
+  it("从行首缩进开始选多行时快捷键可反复 toggle（经父层回声往返）", async () => {
+    const wrapper = mount(TextPanel, {
+      props: {
+        titleId: "workspace-title",
+        title: "工作空间",
+        lines: [{ text: "第一行", indent: 0 }, { text: "第二行", indent: 1 }],
+      },
+    });
+    const textarea = wrapper.get("textarea").element;
+    await wrapper.get("textarea").trigger("dblclick");
+    // 编辑器文本 "第一行\n    第二行"：从第二行行首（含缩进，偏移 4）选到行尾（11）
+    textarea.setSelectionRange(4, 11);
+    await wrapper.get("textarea").trigger("keydown", { key: "h", ctrlKey: true, shiftKey: true });
+    let update = wrapper.emitted("update")?.at(-1)?.[0] as LineItem[];
+    expect(update[1].marks).toEqual([{ type: "highlight", start: 0, end: 3, color: "amber" }]);
+    // 生产路径：emit 的 lines 回灌为 props（SpacePanel 即如此），marks 被行存储规范化
+    await wrapper.setProps({ lines: update });
+    textarea.setSelectionRange(4, 11);
+    await wrapper.get("textarea").trigger("keydown", { key: "h", ctrlKey: true, shiftKey: true });
+    update = wrapper.emitted("update")?.at(-1)?.[0] as LineItem[];
+    expect(update[1].marks).toBeUndefined();
+  });
+
   it("按住不放的系统重复击键不触发格式快捷键", async () => {
     const wrapper = mount(TextPanel, {
       props: { titleId: "workspace-title", title: "工作空间", lines: [{ text: "hello", indent: 0 }] },
