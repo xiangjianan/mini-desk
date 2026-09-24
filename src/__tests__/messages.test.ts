@@ -20,7 +20,7 @@ const messageKeys = [
   "workspaceDensityTodoGroup",
   "todoCompleted",
   "clipboardPasteUnsupported",
-  "clipboardImageMissing",
+  "clipboardImageUseKeyboard",
   "imageAdded",
   "imageOverload",
   "imageEdited",

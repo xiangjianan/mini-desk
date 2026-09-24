@@ -3415,6 +3415,84 @@ describe("TodoPanel", () => {
     wrapper.unmount();
   });
 
+  it("notifies with the image bubble when reminder paste finds an image clipboard", async () => {
+    const readText = vi.fn().mockResolvedValue("");
+    const read = vi.fn().mockResolvedValue([{ types: ["image/png"] }]);
+    Object.assign(navigator, { clipboard: { readText, writeText: vi.fn(), read } });
+    const wrapper = mount(TodoPanel, {
+      props: {
+        todos: {
+          morning: [{ id: "a", text: "第一项", done: false }],
+          noon: [],
+          evening: [],
+        },
+        titles: DEFAULT_TITLES,
+      },
+      global: {
+        stubs: {
+          Button: true,
+          Dropdown: dropdownStub,
+          NDropdown: dropdownStub,
+          NTooltip: tooltipStub,
+        },
+      },
+    });
+    const inputWrapper = wrapper.get("input.todo-input");
+    const input = inputWrapper.element as HTMLInputElement;
+
+    input.setSelectionRange(0, 0);
+    await inputWrapper.trigger("contextmenu");
+    await wrapper.findAll(".dropdown-option").find((option) => option.text() === "粘贴")?.trigger("click");
+    await Promise.resolve();
+    await Promise.resolve();
+    await Promise.resolve();
+
+    // 图片剪贴板不产生新提醒，改出对应气泡：Ctrl+V 会把图贴到贴图区。
+    expect(wrapper.emitted("createFromText")).toBeUndefined();
+    const events = wrapper.emitted("polishMessage");
+    expect(events?.at(-1)?.[0]).toBe("fallback");
+    expect(events?.at(-1)?.[1]).toContain("Ctrl+V");
+    wrapper.unmount();
+  });
+
+  it("notifies when reminder paste finds no text in the clipboard", async () => {
+    const readText = vi.fn().mockResolvedValue("");
+    const read = vi.fn().mockResolvedValue([{ types: ["text/plain"] }]);
+    Object.assign(navigator, { clipboard: { readText, writeText: vi.fn(), read } });
+    const wrapper = mount(TodoPanel, {
+      props: {
+        todoLists: defaultTodoLists,
+        todos: {
+          morning: [{ id: "a", text: "已有任务", done: false }],
+          noon: [],
+          evening: [],
+        },
+        showCompleted: { morning: false, noon: false, evening: false },
+        titles: DEFAULT_TITLES,
+      },
+      global: {
+        stubs: {
+          Button: true,
+          Dropdown: dropdownStub,
+          NDropdown: dropdownStub,
+          NTooltip: tooltipStub,
+        },
+      },
+    });
+
+    await wrapper.get('.todo-section[data-period="morning"]').trigger("contextmenu");
+    await wrapper.findAll(".dropdown-option").find((option) => option.text() === "粘贴")?.trigger("click");
+    await Promise.resolve();
+    await Promise.resolve();
+    await Promise.resolve();
+
+    expect(wrapper.emitted("createFromText")).toBeUndefined();
+    const events = wrapper.emitted("polishMessage");
+    expect(events?.at(-1)?.[0]).toBe("fallback");
+    expect(events?.at(-1)?.[1]).toContain("没有文字");
+    wrapper.unmount();
+  });
+
   it("pastes clipboard text from a blank reminder list context menu above the new-list action", async () => {
     const readText = vi.fn().mockResolvedValue("任务 A\n\n任务 B");
     Object.assign(navigator, { clipboard: { readText, writeText: vi.fn() } });

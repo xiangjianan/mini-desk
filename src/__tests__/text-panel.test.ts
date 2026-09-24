@@ -1005,6 +1005,75 @@ describe("TextPanel", () => {
     wrapper.unmount();
   });
 
+  it("notifies with the image bubble when context-menu paste finds an image clipboard", async () => {
+    const readText = vi.fn().mockResolvedValue("");
+    const read = vi.fn().mockResolvedValue([{ types: ["image/png"] }]);
+    Object.assign(navigator, { clipboard: { readText, writeText: vi.fn(), read } });
+    const wrapper = mount(TextPanel, {
+      attachTo: document.body,
+      props: {
+        titleId: "workspace-title",
+        title: "工作空间",
+        lines: [{ text: "root", indent: 0 }],
+      },
+      global: {
+        stubs: {
+          Dropdown: menuDropdownStub,
+          NDropdown: menuDropdownStub,
+        },
+      },
+    });
+    const textarea = wrapper.get("textarea").element as HTMLTextAreaElement;
+
+    textarea.setSelectionRange(textarea.value.length, textarea.value.length);
+    await wrapper.get("textarea").trigger("contextmenu");
+    await wrapper.get('[data-key="paste"]').trigger("click");
+    await Promise.resolve();
+    await Promise.resolve();
+    await Promise.resolve();
+
+    expect(wrapper.emitted("update")).toBeUndefined();
+    // 图片剪贴板给出可行动的对应提示：Ctrl+V 会把图贴到贴图区。
+    const events = wrapper.emitted("polishMessage");
+    expect(events?.at(-1)?.[0]).toBe("fallback");
+    expect(events?.at(-1)?.[1]).toContain("Ctrl+V");
+    wrapper.unmount();
+  });
+
+  it("notifies when context-menu paste finds no text in the clipboard", async () => {
+    const readText = vi.fn().mockResolvedValue("");
+    const read = vi.fn().mockResolvedValue([{ types: ["text/plain"] }]);
+    Object.assign(navigator, { clipboard: { readText, writeText: vi.fn(), read } });
+    const wrapper = mount(TextPanel, {
+      attachTo: document.body,
+      props: {
+        titleId: "workspace-title",
+        title: "工作空间",
+        lines: [{ text: "root", indent: 0 }],
+      },
+      global: {
+        stubs: {
+          Dropdown: menuDropdownStub,
+          NDropdown: menuDropdownStub,
+        },
+      },
+    });
+    const textarea = wrapper.get("textarea").element as HTMLTextAreaElement;
+
+    textarea.setSelectionRange(textarea.value.length, textarea.value.length);
+    await wrapper.get("textarea").trigger("contextmenu");
+    await wrapper.get('[data-key="paste"]').trigger("click");
+    await Promise.resolve();
+    await Promise.resolve();
+    await Promise.resolve();
+
+    expect(wrapper.emitted("update")).toBeUndefined();
+    const events = wrapper.emitted("polishMessage");
+    expect(events?.at(-1)?.[0]).toBe("fallback");
+    expect(events?.at(-1)?.[1]).toContain("没有文字");
+    wrapper.unmount();
+  });
+
   it("pastes clipboard text into the editable text panel from the context menu", async () => {
     const readText = vi.fn().mockResolvedValue(" pasted");
     Object.assign(navigator, { clipboard: { readText, writeText: vi.fn() } });

@@ -23,7 +23,7 @@ import {
 } from "../utils/textEditor";
 import { clearMarksInRange, MARK_COLORS, toggleMarkInRange, buildMirrorSegments, translateMarksForEdit, type MirrorSegment } from "../utils/textMarks";
 import { CONTEXT_MENU_Z_INDEX, createExclusiveContextMenu, renderPolishMenuLabel } from "../utils/contextMenu";
-import { copySelection, getSelectionRange, hasSelection, pasteIntoField, hasAsyncClipboard as hasClipboardApi } from "../utils/clipboard";
+import { copySelection, getSelectionRange, hasSelection, pasteWithBrowserCommand, probeClipboardForTextPaste, hasAsyncClipboard as hasClipboardApi } from "../utils/clipboard";
 import { renderIcon } from "../utils/dropdownIcons";
 import { clampCaret, setStickySelection } from "../utils/caret";
 import { isImeComposing } from "../utils/ime";
@@ -722,8 +722,18 @@ async function pasteTextFromClipboard(target: HTMLTextAreaElement): Promise<void
   const range = getTextSelectionRange(target);
   if (!editing.value || target.readOnly) startEditingFromTextarea(target);
   target.setSelectionRange(range.start, range.end);
-  const pasted = await pasteIntoField(target, range);
-  if (!pasted) return;
+  const probe = await probeClipboardForTextPaste();
+  if (probe.kind === "text") {
+    target.setRangeText(probe.text, range.start, range.end, "end");
+  } else if (!pasteWithBrowserCommand(target, range)) {
+    // 剪贴板没有文字（或是图片）：不再静默返回，出对应气泡——图片还给出去向
+    //（Ctrl+V 会贴到贴图区）。
+    const message = probe.kind === "image"
+      ? uiText.value.app.pasteImageClipboard
+      : uiText.value.app.pasteEmptyClipboard;
+    emit("polishMessage", "fallback", message, target.closest<HTMLElement>(".text-panel") ?? undefined);
+    return;
+  }
   normalizeTextareaText(target);
   emit("update", linesFromEditorState(text.value, editorMarks.value));
 }

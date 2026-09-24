@@ -614,6 +614,7 @@ onMounted(async () => {
   window.addEventListener("storage", handleStorageEvent);
   window.addEventListener("beforeunload", handleBeforeUnload);
   document.addEventListener("paste", handlePaste);
+  window.addEventListener("blur", clearDeferredImagePaste);
   document.addEventListener("visibilitychange", handleDocumentVisibilityChange);
   setupStateSyncChannel();
   window.addEventListener("focus", handleWindowFocusInbox);
@@ -643,6 +644,7 @@ onUnmounted(() => {
   window.removeEventListener("storage", handleStorageEvent);
   window.removeEventListener("beforeunload", handleBeforeUnload);
   document.removeEventListener("paste", handlePaste);
+  window.removeEventListener("blur", clearDeferredImagePaste);
   document.removeEventListener("visibilitychange", handleDocumentVisibilityChange);
   teardownStateSyncChannel();
   window.removeEventListener("focus", handleWindowFocusInbox);
@@ -1501,6 +1503,7 @@ async function pasteImageFromClipboard(request: ImagePasteRequest): Promise<void
   };
   if (!clipboard?.read) {
     if (pasteImageWithBrowserCommand(request)) return;
+    deferImagePasteToKeyboard(request);
     showBubble("clipboardPasteUnsupported", undefined, { hideCompanionAfter: true });
     return;
   }
@@ -1510,6 +1513,7 @@ async function pasteImageFromClipboard(request: ImagePasteRequest): Promise<void
   } catch {
     if (shouldBlockBoardEffects()) return;
     if (pasteImageWithBrowserCommand(request)) return;
+    deferImagePasteToKeyboard(request);
     showBubble("clipboardPermissionDenied", undefined, { hideCompanionAfter: true });
     return;
   }
@@ -1522,6 +1526,7 @@ async function pasteImageFromClipboard(request: ImagePasteRequest): Promise<void
       blob = await item.getType(type);
     } catch {
       if (shouldBlockBoardEffects()) return;
+      deferImagePasteToKeyboard(request);
       showBubble("imageReadFailed", undefined, { hideCompanionAfter: true });
       return;
     }
@@ -1530,7 +1535,24 @@ async function pasteImageFromClipboard(request: ImagePasteRequest): Promise<void
     return;
   }
   if (shouldBlockBoardEffects()) return;
-  showBubble("clipboardImageMissing", undefined, { hideCompanionAfter: true });
+  // Windows 外部复制的图片常以 DIB/文件引用落在剪贴板：paste 事件面拿得到
+  // 图片项，而 clipboard.read() 只暴露其支持的少量 Web 格式、可能一项图片
+  // 类型都看不到（Chromium 平台限制，网页无法绕过）。把菜单意图挂到下一
+  // 次真实 Ctrl+V 并用专用文案说清「按一下即贴入」，而非报错措辞。
+  deferImagePasteToKeyboard(request);
+  showBubble("clipboardImageUseKeyboard", undefined, { hideCompanionAfter: true });
+}
+
+/** clipboard.read() 读不到图片（DIB/文件格式只在 paste 事件面上可见）或
+    被浏览器拒绝时，把粘贴意图挂到 pending：用户紧接着按 Ctrl+V，document
+    级 paste 监听会沿用本次菜单的落位插入。窗口失焦即弃置（clearDeferred-
+    ImagePaste），避免陈旧意图劫持之后无关粘贴的落位。 */
+function deferImagePasteToKeyboard(request: ImagePasteRequest): void {
+  pendingBrowserImagePasteRequest = { request, token: ++browserImagePasteRequestToken };
+}
+
+function clearDeferredImagePaste(): void {
+  pendingBrowserImagePasteRequest = undefined;
 }
 
 function pasteImageWithBrowserCommand(request: ImagePasteRequest): boolean {

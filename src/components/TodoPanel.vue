@@ -51,7 +51,7 @@ import type {
 import { TODO_DENSITY_THRESHOLD, getOrderedTodos, getTodoReorderTarget, todoKey } from "../state/todos";
 import { clampCaret } from "../utils/caret";
 import { splitDroppedTodoText } from "../utils/textEditor";
-import { copySelection, copyTextToClipboard, getSelectionRange, readClipboardText } from "../utils/clipboard";
+import { copySelection, copyTextToClipboard, getSelectionRange, probeClipboardForTextPaste } from "../utils/clipboard";
 import { CONTEXT_MENU_Z_INDEX, createExclusiveContextMenu, renderPolishMenuLabel } from "../utils/contextMenu";
 import { renderIcon } from "../utils/dropdownIcons";
 import { isImeComposing } from "../utils/ime";
@@ -1478,18 +1478,33 @@ async function copyTodoText(period: TodoPeriod, id: string): Promise<void> {
 }
 
 async function pasteTodosFromClipboard(period: TodoPeriod): Promise<void> {
-  const text = await readClipboardText();
-  const texts = splitDroppedTodoText(text ?? "");
+  const probe = await probeClipboardForTextPaste();
+  if (probe.kind !== "text") {
+    notifyClipboardPasteProbe(probe.kind, period);
+    return;
+  }
+  const texts = splitDroppedTodoText(probe.text);
   if (texts.length === 0) return;
   emit("createFromText", period, texts);
 }
 
 /** 右键某条提醒时的「粘贴」：把剪贴板全文拆成多条新提醒，插到该条（afterId）下方。 */
 async function pasteTodosAfter(period: TodoPeriod, afterId: string): Promise<void> {
-  const text = await readClipboardText();
-  const texts = splitDroppedTodoText(text ?? "");
+  const probe = await probeClipboardForTextPaste();
+  if (probe.kind !== "text") {
+    notifyClipboardPasteProbe(probe.kind, period);
+    return;
+  }
+  const texts = splitDroppedTodoText(probe.text);
   if (texts.length === 0) return;
   emit("createFromText", period, texts, afterId);
+}
+
+/** 剪贴板没有文字（或是图片）时右键「粘贴」不再静默：出对应气泡，图片还给出去向
+ * （Ctrl+V 会贴到贴图区）。 */
+function notifyClipboardPasteProbe(kind: "image" | "empty", period: TodoPeriod): void {
+  const message = kind === "image" ? uiText.value.app.pasteImageClipboard : uiText.value.app.pasteEmptyClipboard;
+  emit("polishMessage", "fallback", message, getTodoSectionAnchor(period));
 }
 
 async function startTodoEdit(event: MouseEvent, period: TodoPeriod, id: string): Promise<void> {

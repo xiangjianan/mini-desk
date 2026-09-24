@@ -29,6 +29,20 @@ export interface ChangelogEntry {
 
 export const CHANGELOG: ChangelogEntry[] = [
   {
+    version: "1.0.190",
+    date: "2026-09-24",
+    notes: {
+      zh: [
+        "修复：贴图区右键/按钮「粘贴」遇到浏览器读不到的图片格式（Windows 外部复制的截图或文件图常属此类）不再提示「没有图片」了事——记好右键指定的落图位置，气泡引导按 Ctrl+V 一步贴入；剪贴板可直读的图仍直接贴上",
+        "新功能：提醒事项与记事本右键「粘贴」遇到空剪贴板或图片剪贴板时给出对应气泡提示（图片会告知 Ctrl+V 将贴到贴图区），不再静默无反馈",
+      ],
+      en: [
+        "Fixed: pasting into the image area via the right-click menu or button no longer dead-ends with \"no image\" for formats the browser cannot read (common for Windows screenshots and copied image files) — the drop position is remembered and a bubble guides a single Ctrl+V to finish; directly readable images still paste instantly",
+        "New: right-click \"Paste\" in reminders and notes now shows a matching bubble when the clipboard holds no text or holds an image (the image hint points to Ctrl+V into the image list) instead of failing silently",
+      ],
+    },
+  },
+  {
     version: "1.0.189",
     date: "2026-09-24",
     notes: {

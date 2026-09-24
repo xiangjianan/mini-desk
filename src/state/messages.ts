@@ -14,7 +14,7 @@ export type MessageKey =
   | "workspaceDensityTodoGroup"
   | "todoCompleted"
   | "clipboardPasteUnsupported"
-  | "clipboardImageMissing"
+  | "clipboardImageUseKeyboard"
   | "imageAdded"
   | "imageOverload"
   | "imageEdited"
@@ -277,20 +277,23 @@ export const MESSAGE_CATALOG: Record<MessageKey, MessageEntry> = {
       "请改用快捷键",
     ],
   },
-  clipboardImageMissing: {
-    mood: "warning",
+  // clipboard.read() 读不到这张图（Windows 外部复制的 DIB/文件格式只在
+  // paste 事件面上可见）但粘贴意图已挂起：每条变体都必须传达「按 Ctrl+V
+  // 即可按记好的位置贴入」，不写成报错措辞。
+  clipboardImageUseKeyboard: {
+    mood: "calm",
     surface: "companion",
     variants: [
-      "剪贴板里没有图片",
-      "这次没找到图片",
-      "没有可粘贴的图片",
-      "剪贴板暂无图片",
-      "未发现图片内容",
-      "没有图片可贴",
-      "先复制一张图片",
-      "请先复制图片",
-      "这里没读到图片",
-      "图片不在剪贴板",
+      "位置已记好，Ctrl+V 贴入",
+      "Ctrl+V 贴入这张图",
+      "已锁定位置，按 Ctrl+V",
+      "这张图要用 Ctrl+V 读取",
+      "Ctrl+V 一下就贴入",
+      "剪贴板就绪，Ctrl+V 贴入",
+      "就差一步：Ctrl+V 贴入",
+      "按 Ctrl+V，图片落到这里",
+      "Ctrl+V 即可贴入图片",
+      "Ctrl+V 完成这次粘贴",
     ],
   },
   imageAdded: {
@@ -1027,7 +1030,7 @@ const EN_MESSAGE_VARIANTS = {
   ],
   todoCompleted: ["One more reminder completed", "Progress updated", "Reminder completed"],
   clipboardPasteUnsupported: ["Clipboard images are not available here", "Try pressing Ctrl+V to paste an image", "Use the paste shortcut instead"],
-  clipboardImageMissing: ["No image found in the clipboard", "Copy an image first", "The clipboard does not contain an image"],
+  clipboardImageUseKeyboard: ["Spot saved — press Ctrl+V to drop the image here", "Press Ctrl+V to paste this image right in", "This image format is read by Ctrl+V only"],
   imageAdded: ["Image added", "Screenshot saved", "Image placed in the list"],
   imageOverload: [
     "The desk is warming; cool it down.",

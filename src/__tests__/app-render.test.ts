@@ -2333,6 +2333,158 @@ describe("App shell", () => {
     }
   });
 
+  it("defers an unreadable clipboard image to the next Ctrl+V paste with the menu's placement", async () => {
+    stubMatchMedia(false);
+    localStorage.setItem(
+      STORAGE_KEY,
+      JSON.stringify({
+        images: [
+          { id: "img-1", src: "data:image/png;base64,one", createdAt: 1 },
+          { id: "img-2", src: "data:image/png;base64,two", createdAt: 2 },
+        ],
+      }),
+    );
+    // Windows 外部复制的图片常以 DIB/文件引用落在剪贴板：paste 事件面拿得到
+    // 图片项，而 clipboard.read() 只见文本类型——右键粘贴读不到图时必须把
+    // 菜单意图挂到下一次真实 Ctrl+V，而不是死路提示。
+    Object.assign(navigator, { clipboard: { read: async () => [{ types: ["text/plain"] }] } });
+    const wrapper = mountApp();
+
+    const imageIds = () =>
+      (wrapper.getComponent(ImagePanel).props("images") as Array<{ id: string }>).map((image) => image.id);
+
+    try {
+      wrapper.getComponent(ImagePanel).vm.$emit("paste", { placement: "after", targetId: "img-1" });
+      await flushPromises();
+      expect(imageIds()).toEqual(["img-1", "img-2"]);
+
+      const pasteEvent = new Event("paste", { cancelable: true }) as ClipboardEvent;
+      Object.defineProperty(pasteEvent, "clipboardData", {
+        value: {
+          items: [
+            {
+              type: "image/png",
+              getAsFile: vi.fn(() => new File(["board"], "clipboard.png", { type: "image/png" })),
+            },
+          ],
+        },
+      });
+      document.dispatchEvent(pasteEvent);
+
+      await vi.waitFor(() => {
+        expect(imageIds()).toHaveLength(3);
+      });
+      const ids = imageIds();
+      expect(ids[0]).toBe("img-1");
+      expect(ids[1]).not.toBe("img-2");
+      expect(ids[2]).toBe("img-2");
+    } finally {
+      wrapper.unmount();
+      delete (navigator as { clipboard?: unknown }).clipboard;
+    }
+  });
+
+  it("defers to Ctrl+V as well when clipboard.read() rejects", async () => {
+    stubMatchMedia(false);
+    localStorage.setItem(
+      STORAGE_KEY,
+      JSON.stringify({
+        images: [
+          { id: "img-1", src: "data:image/png;base64,one", createdAt: 1 },
+          { id: "img-2", src: "data:image/png;base64,two", createdAt: 2 },
+        ],
+      }),
+    );
+    Object.assign(navigator, {
+      clipboard: {
+        read: async () => {
+          throw new DOMException("Read permission denied", "NotAllowedError");
+        },
+      },
+    });
+    const wrapper = mountApp();
+
+    const imageIds = () =>
+      (wrapper.getComponent(ImagePanel).props("images") as Array<{ id: string }>).map((image) => image.id);
+
+    try {
+      wrapper.getComponent(ImagePanel).vm.$emit("paste", { placement: "after", targetId: "img-1" });
+      await flushPromises();
+      expect(imageIds()).toEqual(["img-1", "img-2"]);
+
+      const pasteEvent = new Event("paste", { cancelable: true }) as ClipboardEvent;
+      Object.defineProperty(pasteEvent, "clipboardData", {
+        value: {
+          items: [
+            {
+              type: "image/png",
+              getAsFile: vi.fn(() => new File(["board"], "clipboard.png", { type: "image/png" })),
+            },
+          ],
+        },
+      });
+      document.dispatchEvent(pasteEvent);
+
+      await vi.waitFor(() => {
+        expect(imageIds()).toHaveLength(3);
+      });
+      const ids = imageIds();
+      expect(ids[0]).toBe("img-1");
+      expect(ids[1]).not.toBe("img-2");
+      expect(ids[2]).toBe("img-2");
+    } finally {
+      wrapper.unmount();
+      delete (navigator as { clipboard?: unknown }).clipboard;
+    }
+  });
+
+  it("drops the deferred paste intent after the window loses focus", async () => {
+    stubMatchMedia(false);
+    localStorage.setItem(
+      STORAGE_KEY,
+      JSON.stringify({
+        images: [
+          { id: "img-1", src: "data:image/png;base64,one", createdAt: 1 },
+          { id: "img-2", src: "data:image/png;base64,two", createdAt: 2 },
+        ],
+      }),
+    );
+    Object.assign(navigator, { clipboard: { read: async () => [{ types: ["text/plain"] }] } });
+    const wrapper = mountApp();
+
+    const imageIds = () =>
+      (wrapper.getComponent(ImagePanel).props("images") as Array<{ id: string }>).map((image) => image.id);
+
+    try {
+      wrapper.getComponent(ImagePanel).vm.$emit("paste", { placement: "after", targetId: "img-1" });
+      await flushPromises();
+
+      // 窗口失焦后粘贴意图弃置：之后的 Ctrl+V 回落默认追加到列表末尾。
+      window.dispatchEvent(new Event("blur"));
+
+      const pasteEvent = new Event("paste", { cancelable: true }) as ClipboardEvent;
+      Object.defineProperty(pasteEvent, "clipboardData", {
+        value: {
+          items: [
+            {
+              type: "image/png",
+              getAsFile: vi.fn(() => new File(["board"], "clipboard.png", { type: "image/png" })),
+            },
+          ],
+        },
+      });
+      document.dispatchEvent(pasteEvent);
+
+      await vi.waitFor(() => {
+        expect(imageIds()).toHaveLength(3);
+      });
+      expect(imageIds()).toEqual(["img-1", "img-2", expect.any(String)]);
+    } finally {
+      wrapper.unmount();
+      delete (navigator as { clipboard?: unknown }).clipboard;
+    }
+  });
+
   it("removes a stored image payload when mobile handoff starts before image state is updated", async () => {
     const mediaQuery = stubMatchMedia(false);
     const putRequests: Array<{
@@ -5079,7 +5231,7 @@ describe("App shell", () => {
     wrapper.unmount();
   });
 
-  it("shows missing clipboard images and added images through the companion bubble", async () => {
+  it("shows the Ctrl+V fallback bubble for unreadable clipboard images and confirms added images", async () => {
     vi.useFakeTimers();
     const imageBlob = new Blob(["img"], { type: "image/png" });
     const getType = vi.fn().mockResolvedValue(imageBlob);
@@ -5102,7 +5254,9 @@ describe("App shell", () => {
       await vi.advanceTimersByTimeAsync(200);
       await wrapper.vm.$nextTick();
 
-      expect(wrapper.find('[data-testid="companion-confirm"]').text()).toMatch(/没有|图片|剪贴板/);
+      // read() 看不到这张图时不再是报错措辞：每条专用文案都明确「按 Ctrl+V
+      // 即可按记好的位置贴入」。
+      expect(wrapper.find('[data-testid="companion-confirm"]').text()).toMatch(/Ctrl\+V/);
       expect(imagePanel.props("pasteFeedback")).toBeUndefined();
 
       await vi.advanceTimersByTimeAsync(3000);

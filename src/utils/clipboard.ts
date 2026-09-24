@@ -77,6 +77,27 @@ export async function readClipboardText(): Promise<string | undefined> {
   return undefined;
 }
 
+export type TextPasteProbe = { kind: "text"; text: string } | { kind: "image" } | { kind: "empty" };
+
+/** 文字粘贴前的剪贴板诊断：有文字 / 剪贴板里是图片 / 没有可用文字。
+ *  readText 区分不了空与图片，图片探测走 clipboard.read() 的类型清单；
+ *  读不到格式清单时按「没有文字」口径降级（与图片直读同一套平台限制）。 */
+export async function probeClipboardForTextPaste(): Promise<TextPasteProbe> {
+  const text = await readClipboardText();
+  if (typeof text === "string" && text.trim()) return { kind: "text", text };
+  const clipboard = navigator.clipboard as Clipboard & { read?: () => Promise<ClipboardItem[]> };
+  if (clipboard?.read) {
+    try {
+      const items = await clipboard.read();
+      const hasImage = items.some((item) => item.types.some((type) => type.startsWith("image/")));
+      if (hasImage) return { kind: "image" };
+    } catch {
+      // 格式清单读不到（权限/平台限制）：按「没有文字」口径提示。
+    }
+  }
+  return { kind: "empty" };
+}
+
 /** Paste into an editor field. Returns true when the field value changed. */
 export async function pasteIntoField(
   target: HTMLTextAreaElement | HTMLInputElement,
