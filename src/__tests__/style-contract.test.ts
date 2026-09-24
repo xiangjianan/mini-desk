@@ -318,10 +318,14 @@ describe("workbench style contract", () => {
     const styles = readFileSync(resolve(__dirname, "../styles.css"), "utf8");
     const activeKeycap = ruleBodies(styles, ".shortcut-keyboard-diagram--shared .shortcut-keycap--active").join("\n");
     const keyPill = ruleBodies(styles, ".shortcut-key-pill").join("\n");
+    const gesturePill = ruleBodies(styles, ".shortcut-gesture-pill").join("\n");
 
     expect(activeKeycap).toContain("background: color-mix(in srgb, var(--line-focus) 18%, var(--button))");
     expect(keyPill).toContain("background: color-mix(in srgb, var(--line-focus) 18%, var(--button))");
     expect(keyPill).toContain("border-color: color-mix(in srgb, var(--line-focus) 42%, var(--line-subtle))");
+    // 手势药丸（含 ⌘/右键 等无法全量映射键帽的组合）与键位药丸同一浅蓝底，不允许样式分叉。
+    expect(gesturePill).toContain("background: color-mix(in srgb, var(--line-focus) 18%, var(--button))");
+    expect(gesturePill).toContain("border-color: color-mix(in srgb, var(--line-focus) 42%, var(--line-subtle))");
   });
 
   it("centers reminder star icons and unifies thin scrollbars", () => {
