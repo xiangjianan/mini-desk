@@ -481,5 +481,8 @@ describe("workbench style contract", () => {
     expectSelectorBody(styles, ".text-editor-textarea", "caret-color: var(--text)");
     expectSelectorBody(styles, ".text-mirror", "position: absolute");
     expectSelectorBody(styles, ".text-mirror", "pointer-events: none");
+    // 选区必须半透明且字色透明：不透明选区底会盖住镜像层的格式标注（高亮/划线/文字色）。
+    expectSelectorBody(styles, ".text-editor-textarea::selection", "color: transparent");
+    expectSelectorBody(styles, ".text-editor-textarea::selection", "color-mix(in srgb, var(--primary) 26%, transparent)");
   });
 });

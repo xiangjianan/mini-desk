@@ -7592,6 +7592,18 @@ button.mobile-inbox-revoked-change {
   z-index: 0;
 }
 
+/* 选区半透明化：原生选区画在 textarea 层（镜像之上），全局 ::selection 的近实底会把
+   高亮/文字颜色糊成一片且白字与镜像字形重影——透明字色防重影，半透明底让格式透出来。 */
+.text-editor-textarea::selection {
+  color: transparent;
+  -webkit-text-fill-color: transparent;
+  background: color-mix(in srgb, var(--primary) 26%, transparent);
+}
+
+html[data-theme="dark"] .text-editor-textarea::selection {
+  background: color-mix(in srgb, var(--primary) 38%, transparent);
+}
+
 .text-mirror .mark-strike {
   text-decoration: line-through;
 }
