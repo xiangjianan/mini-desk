@@ -29,6 +29,22 @@ export interface ChangelogEntry {
 
 export const CHANGELOG: ChangelogEntry[] = [
   {
+    version: "1.0.187",
+    date: "2026-09-24",
+    notes: {
+      zh: [
+        "新功能：记事本支持行内富文本标注——选中文字右键「格式」或按 Ctrl/⌘+Shift+H/X/U，可施加荧光笔高亮、中划线、下划线和文字颜色（各 5 色），重复施加即取消，Ctrl+Z 可撤销",
+        "新功能：格式跟随文字编辑自动保持——打字、粘贴、重排编号、AI 润色替换后高亮和划线始终贴在原文字上，保存后刷新不丢失，旧数据无需迁移",
+        "改进：智能粘贴遇到空剪贴板或非文本内容时气泡提示后返回，不再静默无反馈",
+      ],
+      en: [
+        "New: rich-text annotations in notes — select text and use the right-click \"Format\" menu or Ctrl/⌘+Shift+H/X/U to apply highlight, strikethrough, underline, and text color (5 tints each); applying again removes the format, and Ctrl+Z undoes it",
+        "New: formats follow the text as you edit — typing, pasting, list renumbering, and AI-polish replacements keep highlights and strikes attached to the original words; they persist across saves and refreshes with zero migration",
+        "Improved: smart paste now shows a bubble and returns when the clipboard is empty or holds non-text content instead of failing silently",
+      ],
+    },
+  },
+  {
     version: "1.0.186",
     date: "2026-09-21",
     notes: {
