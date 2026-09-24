@@ -80,6 +80,7 @@ import type { PolishKind, PolishResult, PolishStyle } from "./sync/polishClient"
 import type { SmartPastePhase } from "./utils/smartPaste";
 import { copyTextToClipboard } from "./utils/clipboard";
 import { binaryStringToBytes } from "./utils/base64";
+import { isTextEntryTarget } from "./utils/dom";
 import { extractRetainedImageIds, useUndoHistory } from "./composables/useUndoHistory";
 import { useTodoNotifications } from "./composables/useTodoNotifications";
 import { useCompanionBubble } from "./composables/useCompanionBubble";
@@ -2902,7 +2903,14 @@ function handleGlobalKeydown(event: KeyboardEvent): void {
   if (isMobileBlocked.value) return;
   if (event.defaultPrevented) return;
   const previewId = activePreviewId.value;
-  if (previewId) {
+  // 预览快捷键只在被预览图片仍真实在场时接管：撤销/竞态等可能让图片离开
+  // 列表而 activePreviewId 残留（浮层因查不到图而不可见），此时继续武装
+  // 快捷键会让不可见的预览劫持全页按键。
+  if (previewId && activeWorkspace.value.images.some((image) => image.id === previewId)) {
+    // 焦点在文本录入元素（记事本/提醒/标题等任意编辑器）里时放行：打字、
+    // 退格、复制选中文字都必须保持原生行为，与 shouldSkipGlobalUndo 的
+    // 豁免口径一致。
+    if (isTextEntryTarget(event.target)) return;
     const key = event.key.toLowerCase();
     if ((event.ctrlKey || event.metaKey) && key === "c") {
       event.preventDefault();

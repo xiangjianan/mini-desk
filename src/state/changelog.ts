@@ -29,6 +29,18 @@ export interface ChangelogEntry {
 
 export const CHANGELOG: ChangelogEntry[] = [
   {
+    version: "1.0.189",
+    date: "2026-09-24",
+    notes: {
+      zh: [
+        "修复：图片预览打开期间在记事本等任意输入区打字，退格/删除键不再被劫持成「删除图片」确认框、文字可正常删除；被预览的图片已不在列表时预览快捷键也会自动解除武装，不再有看不见的预览拦截全页按键",
+      ],
+      en: [
+        "Fixed: while the image preview is open, Backspace/Delete inside any text field (notes, todos, titles) now edits text natively instead of popping the delete-image confirm; preview shortcuts also disarm once the previewed image is gone, so an invisible preview can no longer intercept page-wide keys",
+      ],
+    },
+  },
+  {
     version: "1.0.188",
     date: "2026-09-24",
     notes: {

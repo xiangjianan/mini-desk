@@ -10,6 +10,7 @@ import { getUiText } from "../state/i18n";
 import { clamp } from "../utils/math";
 import type { AppLanguage, ImagePasteRequest, StoredImage } from "../types";
 import { CONTEXT_MENU_Z_INDEX, createExclusiveContextMenu } from "../utils/contextMenu";
+import { isTextEntryTarget } from "../utils/dom";
 import { renderIcon } from "../utils/dropdownIcons";
 import ImageEditor from "./ImageEditor.vue";
 
@@ -454,12 +455,6 @@ function isEditorUndoShortcut(event: KeyboardEvent): boolean {
 function isEditorRedoShortcut(event: KeyboardEvent): boolean {
   const key = event.key.toLowerCase();
   return (event.ctrlKey || event.metaKey) && ((event.shiftKey && key === "z") || key === "y");
-}
-
-function isTextEntryTarget(target: EventTarget | null): boolean {
-  const element = target as { closest?: (selector: string) => Element | null } | null;
-  if (typeof element?.closest !== "function") return false;
-  return Boolean(element.closest("input, textarea, select, [contenteditable='true'], [contenteditable='']"));
 }
 
 function isPreviewShortcutKey(event: KeyboardEvent): boolean {

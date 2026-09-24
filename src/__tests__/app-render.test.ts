@@ -4374,6 +4374,113 @@ describe("App shell", () => {
     }
   });
 
+  it("keeps Backspace native in the notes textarea while the image preview is open", async () => {
+    localStorage.setItem(
+      STORAGE_KEY,
+      JSON.stringify({
+        images: [{ id: "img-1", src: "data:image/png;base64,one", createdAt: 1 }],
+      }),
+    );
+    const wrapper = mountApp();
+
+    try {
+      await wrapper.get(".image-card").trigger("click");
+      await wrapper.vm.$nextTick();
+      await flushAsyncComponents();
+      expect(getImagePreview(wrapper).props("activeId")).toBe("img-1");
+
+      // 焦点在记事本文本域里退格：按键必须保持原生行为（删除字符），
+      // 不得被全局预览快捷键劫持成 preventDefault + 删除图片确认。
+      const textarea = wrapper.get(".text-editor-textarea");
+      (textarea.element as HTMLTextAreaElement).focus();
+      expect(document.activeElement).toBe(textarea.element);
+
+      const backspace = new KeyboardEvent("keydown", { key: "Backspace", bubbles: true, cancelable: true });
+      textarea.element.dispatchEvent(backspace);
+
+      expect(backspace.defaultPrevented).toBe(false);
+      expect(wrapper.find('[data-testid="companion-yes"]').exists()).toBe(false);
+
+      // 同一状态下焦点不在文本录入元素（window 级事件）：删除确认照常服务。
+      const globalBackspace = new KeyboardEvent("keydown", { key: "Backspace", cancelable: true });
+      window.dispatchEvent(globalBackspace);
+
+      expect(globalBackspace.defaultPrevented).toBe(true);
+      await vi.waitFor(() => {
+        expect(wrapper.find('[data-testid="companion-yes"]').exists()).toBe(true);
+      });
+    } finally {
+      wrapper.unmount();
+    }
+  });
+
+  it("keeps Ctrl+C inside the notes textarea for text selection while the image preview is open", async () => {
+    localStorage.setItem(
+      STORAGE_KEY,
+      JSON.stringify({
+        images: [{ id: "img-1", src: "data:image/png;base64,one", createdAt: 1 }],
+      }),
+    );
+    const write = vi.fn().mockResolvedValue(undefined);
+    vi.stubGlobal(
+      "ClipboardItem",
+      class {
+        constructor(_items: Record<string, Blob | Promise<Blob>>) {}
+      },
+    );
+    Object.assign(navigator, { clipboard: { write } });
+    const wrapper = mountApp();
+
+    try {
+      await wrapper.get(".image-card").trigger("click");
+      await wrapper.vm.$nextTick();
+      await flushAsyncComponents();
+      expect(getImagePreview(wrapper).props("activeId")).toBe("img-1");
+
+      const textarea = wrapper.get(".text-editor-textarea");
+      (textarea.element as HTMLTextAreaElement).focus();
+
+      const copy = new KeyboardEvent("keydown", { key: "c", ctrlKey: true, bubbles: true, cancelable: true });
+      textarea.element.dispatchEvent(copy);
+      await flushPromises();
+
+      expect(copy.defaultPrevented).toBe(false);
+      expect(write).not.toHaveBeenCalled();
+    } finally {
+      wrapper.unmount();
+      vi.unstubAllGlobals();
+      delete (navigator as { clipboard?: unknown }).clipboard;
+    }
+  });
+
+  it("disarms preview shortcuts when the previewed image is no longer in the list", async () => {
+    localStorage.setItem(
+      STORAGE_KEY,
+      JSON.stringify({
+        images: [{ id: "img-1", src: "data:image/png;base64,one", createdAt: 1 }],
+      }),
+    );
+    const wrapper = mountApp();
+
+    try {
+      // 被预览的图片已不在当前列表（撤销/竞态等造成的状态残留）：浮层因
+      // NModal v-if="active" 查不到图而不可见，快捷键不得继续武装。
+      wrapper.getComponent(ImagePanel).vm.$emit("preview", "img-ghost");
+      await wrapper.vm.$nextTick();
+      await flushAsyncComponents();
+      expect(wrapper.find(".image-preview").exists()).toBe(false);
+
+      const backspace = new KeyboardEvent("keydown", { key: "Backspace", cancelable: true });
+      window.dispatchEvent(backspace);
+      await wrapper.vm.$nextTick();
+
+      expect(backspace.defaultPrevented).toBe(false);
+      expect(wrapper.find('[data-testid="companion-yes"]').exists()).toBe(false);
+    } finally {
+      wrapper.unmount();
+    }
+  });
+
   it("closes image preview from the shared image list close event", async () => {
     vi.useFakeTimers();
     localStorage.setItem(
