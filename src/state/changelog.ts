@@ -29,6 +29,20 @@ export interface ChangelogEntry {
 
 export const CHANGELOG: ChangelogEntry[] = [
   {
+    version: "1.0.191",
+    date: "2026-09-27",
+    notes: {
+      zh: [
+        "修复：选中记事本/提醒事项的文字后点击图片预览，按空格不再把选中文字替换成一个空格——预览打开时即取消选区并让编辑器失焦，空格照常关闭预览，预览期间所有快捷键都作用于当前预览的图片",
+        "修复：记事本末行有回车时滚动到接近底部，文字与选区/光标错位一行的问题",
+      ],
+      en: [
+        "Fixed: after selecting text in notes or reminders and opening an image preview, pressing Space no longer replaces the selected text with a stray space — the selection is cleared and the editor blurred as the preview opens, Space closes the preview, and all shortcuts during preview act on the previewed image",
+        "Fixed: notes whose last line ends with Enter no longer misalign text from the caret/selection by one line when scrolled near the bottom",
+      ],
+    },
+  },
+  {
     version: "1.0.190",
     date: "2026-09-24",
     notes: {

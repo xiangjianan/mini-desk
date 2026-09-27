@@ -80,7 +80,7 @@ import type { PolishKind, PolishResult, PolishStyle } from "./sync/polishClient"
 import type { SmartPastePhase } from "./utils/smartPaste";
 import { copyTextToClipboard } from "./utils/clipboard";
 import { binaryStringToBytes } from "./utils/base64";
-import { isTextEntryTarget } from "./utils/dom";
+import { collapseTextEntrySelection, isTextEntryTarget } from "./utils/dom";
 import { extractRetainedImageIds, useUndoHistory } from "./composables/useUndoHistory";
 import { useTodoNotifications } from "./composables/useTodoNotifications";
 import { useCompanionBubble } from "./composables/useCompanionBubble";
@@ -1820,7 +1820,13 @@ function openImagePreview(id: string): void {
   // 浮层，打开时把焦点还给 <body>；预览快捷键走 window 级监听与预览组件
   // 自身，不依赖被 blur 的背景元素。
   const active = document.activeElement;
-  if (active instanceof HTMLElement && active !== document.body) active.blur();
+  if (active instanceof HTMLElement && active !== document.body) {
+    // 先取消文本选区再失焦：只 blur 的话记事本/提醒的 selectionStart/End
+    // 仍在（高亮隐去），迟到的 select 事件或记忆选区会复活它，下一次打字
+    // 就打在看不见的选区上（空格把选中文字替换成一个空格）。
+    collapseTextEntrySelection(active);
+    active.blur();
+  }
   if (activeWorkspace.value.images.length > IMAGE_DENSITY_THRESHOLD) {
     showBubble("imageOverload", document.querySelector<HTMLElement>(".image-panel") ?? undefined, { hideCompanionAfter: true });
   }
@@ -1833,6 +1839,12 @@ function openImageEditor(id: string): void {
   hideCompanion();
   activePreviewId.value = id;
   activeEditorId.value = id;
+  // 与 openImagePreview 同口径：编辑浮层接管键盘前同样取消背景文本选区并失焦。
+  const active = document.activeElement;
+  if (active instanceof HTMLElement && active !== document.body) {
+    collapseTextEntrySelection(active);
+    active.blur();
+  }
 }
 
 function closeImagePreview(): void {

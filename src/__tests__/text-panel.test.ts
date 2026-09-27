@@ -869,14 +869,22 @@ describe("TextPanel", () => {
         title: "工作空间",
         lines: [{ text: "可以被选中的文本", indent: 0 }],
       },
+      // 真实浏览器里拖选必然伴随焦点：select 事件进入编辑态的前提是 textarea
+      // 持焦点（连到文档才可能在 jsdom 里聚焦）。
+      attachTo: document.body,
     });
-    const textarea = wrapper.get("textarea").element as HTMLTextAreaElement;
-    textarea.setSelectionRange(0, 4);
+    try {
+      const textarea = wrapper.get("textarea").element as HTMLTextAreaElement;
+      textarea.focus();
+      textarea.setSelectionRange(0, 4);
 
-    await wrapper.get("textarea").trigger("select");
+      await wrapper.get("textarea").trigger("select");
 
-    expect(textarea.readOnly).toBe(false);
-    expect(textarea.getAttribute("inputmode")).toBe("text");
+      expect(textarea.readOnly).toBe(false);
+      expect(textarea.getAttribute("inputmode")).toBe("text");
+    } finally {
+      wrapper.unmount();
+    }
   });
 
   it("copies a readonly mouse selection from the context menu after editing starts", async () => {
@@ -2040,6 +2048,35 @@ describe("TextPanel", () => {
     // 删掉末行回车后占位随之消失
     await wrapper.get("textarea").setValue("第一行");
     expect(wrapper.get(".text-mirror").element.textContent).toBe("第一行");
+  });
+
+  it("失焦后迟到的 select 事件不把焦点抢回 textarea", async () => {
+    const wrapper = mount(TextPanel, {
+      props: { titleId: "workspace-title", title: "工作空间", lines: [{ text: "第一行内容", indent: 0 }] },
+      // 真实焦点断言需要元素连到文档：jsdom 的 focus() 对脱离文档树的元素静默无效
+      attachTo: document.body,
+    });
+    try {
+      const textarea = wrapper.get("textarea");
+      const editor = textarea.element as HTMLTextAreaElement;
+      // 合法路径：textarea 持焦点时 select 事件照常进入编辑态（拖选解锁）
+      editor.focus();
+      editor.setSelectionRange(0, 4);
+      await textarea.trigger("select");
+      expect(editor.hasAttribute("readonly")).toBe(false);
+      // startEditingFromTextarea 会把选区折叠成光标；重新设回选区，
+      // 模拟真实拖选结束（mouseup）时 textarea 持有的最终选区
+      editor.setSelectionRange(0, 4);
+      // 失焦（如点击图片打开预览）后，浏览器补发的迟到 select 事件不得
+      // 重夺焦点并复活选区——否则空格会打在看不见的选区上替换选中文字
+      editor.blur();
+      await textarea.trigger("blur");
+      expect(document.activeElement).not.toBe(editor);
+      await textarea.trigger("select");
+      expect(document.activeElement).not.toBe(editor);
+    } finally {
+      wrapper.unmount();
+    }
   });
 
   it("选中文本后右键出现「格式」组，点高亮色即施加", async () => {

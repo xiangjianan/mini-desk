@@ -3683,13 +3683,59 @@ describe("TodoPanel", () => {
           NTooltip: tooltipStub,
         },
       },
+      // 真实浏览器里拖选必然伴随焦点：select 事件进入编辑态的前提是输入框
+      // 持焦点（连到文档才可能在 jsdom 里聚焦）。
+      attachTo: document.body,
     });
-    const input = wrapper.get("input.todo-input").element as HTMLInputElement;
-    input.setSelectionRange(2, 6);
+    try {
+      const input = wrapper.get("input.todo-input").element as HTMLInputElement;
+      input.focus();
+      input.setSelectionRange(2, 6);
 
-    await wrapper.get("input.todo-input").trigger("select");
+      await wrapper.get("input.todo-input").trigger("select");
 
-    expect(input.readOnly).toBe(false);
+      expect(input.readOnly).toBe(false);
+    } finally {
+      wrapper.unmount();
+    }
+  });
+
+  it("失焦后迟到的 select 事件不把焦点抢回提醒输入框", async () => {
+    const wrapper = mount(TodoPanel, {
+      props: {
+        todos: {
+          morning: [{ id: "a", text: "可以直接编辑的提醒", done: false }],
+          noon: [],
+          evening: [],
+        },
+        titles: DEFAULT_TITLES,
+      },
+      global: {
+        stubs: {
+          Button: true,
+          Dropdown: dropdownStub,
+          NDropdown: dropdownStub,
+          NTooltip: tooltipStub,
+        },
+      },
+      attachTo: document.body,
+    });
+    try {
+      const input = wrapper.get("input.todo-input").element as HTMLInputElement;
+      input.focus();
+      input.setSelectionRange(2, 6);
+      await wrapper.get("input.todo-input").trigger("select");
+      expect(input.readOnly).toBe(false);
+      // 失焦（如点击图片打开预览）后，浏览器补发的迟到 select 事件不得重夺
+      // 焦点并复活选区——否则预览的空格/快捷键会打在看不见的选区上
+      input.blur();
+      await wrapper.get("input.todo-input").trigger("blur");
+      expect(document.activeElement).not.toBe(input);
+      await wrapper.get("input.todo-input").trigger("select");
+      expect(document.activeElement).not.toBe(input);
+    } finally {
+      wrapper.unmount();
+    }
   });
 
   it("does not render an empty notification slot when no notification time exists", () => {

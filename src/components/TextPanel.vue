@@ -599,7 +599,10 @@ function rememberSelection(event: Event): void {
   const textarea = event.currentTarget as HTMLTextAreaElement;
   rememberTextSelection(textarea);
   textarea.draggable = hasSelection(textarea);
-  if (hasSelection(textarea) && !editing.value) {
+  // 仅当 textarea 仍持焦点（用户正在拖选）才借此进入编辑态：浏览器在失焦后
+  // 还会补发迟到的 select 事件，此时重夺焦点会让图片预览「打开即失焦」，
+  // 空格打在复活的选区上把选中文字替换成一个空格。
+  if (hasSelection(textarea) && !editing.value && document.activeElement === textarea) {
     startEditingFromTextarea(textarea);
     restoreSelection(textarea, getTextSelectionRange(textarea));
   }

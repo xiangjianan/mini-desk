@@ -1544,7 +1544,10 @@ function handleTodoSelection(period: TodoPeriod, id: string, event: Event): void
   if (!hasSelection(input)) return;
   const key = todoKey(period, id);
   rememberTodoSelection(period, id, input);
-  if (editingTodoKey.value === key) return;
+  // 仅当输入框仍持焦点（用户正在拖选）才进入编辑态并重申焦点：浏览器在失焦后
+  // 还会补发迟到的 select 事件（如点击图片打开预览之后），此时重夺焦点会让
+  // 预览的空格/快捷键打在复活的选区上——选中文字被一个空格替换。
+  if (editingTodoKey.value === key || document.activeElement !== input) return;
   editingTodoKey.value = key;
   void nextTick(() => {
     input.focus({ preventScroll: true });

@@ -4526,6 +4526,53 @@ describe("App shell", () => {
     }
   });
 
+  it("collapses the notes selection when the preview opens so Space closes it instead of typing over the text", async () => {
+    vi.useFakeTimers();
+    localStorage.setItem(
+      STORAGE_KEY,
+      JSON.stringify({
+        spaces: [{ id: "workspace", title: "工作空间", lines: [{ text: "第一行内容", indent: 0 }] }],
+        activeSpaceId: "workspace",
+        images: [{ id: "img-1", src: "data:image/png;base64,one", createdAt: 1 }],
+      }),
+    );
+    const wrapper = mountApp();
+
+    try {
+      // 前置复现：记事本里选中一段文字（textarea 持焦点 + 非空选区）。
+      const textarea = wrapper.get(".text-editor-textarea");
+      const editor = textarea.element as HTMLTextAreaElement;
+      await textarea.trigger("dblclick");
+      editor.focus();
+      editor.setSelectionRange(0, 4);
+      expect(document.activeElement).toBe(editor);
+
+      // 点击图片卡片打开预览。
+      await wrapper.get(".image-card").trigger("click");
+      await wrapper.vm.$nextTick();
+      await flushAsyncComponents();
+      expect(wrapper.find(".image-preview").exists()).toBe(true);
+
+      // 预览接管键盘：记事本失焦，选区折叠成光标——不再是可被下一次打字覆盖的选中态。
+      expect(document.activeElement).not.toBe(editor);
+      expect(editor.selectionStart).toBe(editor.selectionEnd);
+
+      // 浏览器失焦后会补发迟到的 select 事件，不得借此把焦点抢回记事本。
+      await textarea.trigger("select");
+      expect(document.activeElement).not.toBe(editor);
+
+      // 空格关闭预览，而不是把刚选中的文字替换成一个空格。
+      window.dispatchEvent(new KeyboardEvent("keydown", { key: " ", cancelable: true }));
+      await wrapper.vm.$nextTick();
+      await vi.advanceTimersByTimeAsync(220);
+      expect(wrapper.find(".image-preview").exists()).toBe(false);
+      expect(editor.value).toBe("第一行内容");
+    } finally {
+      wrapper.unmount();
+      vi.useRealTimers();
+    }
+  });
+
   it("keeps Backspace native in the notes textarea while the image preview is open", async () => {
     localStorage.setItem(
       STORAGE_KEY,
