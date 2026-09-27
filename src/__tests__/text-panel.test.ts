@@ -2025,6 +2025,23 @@ describe("TextPanel", () => {
     expect(wrapper.get(".text-mirror").element.scrollTop).toBe(40);
   });
 
+  it("文本以换行结尾时镜像层补末行空行行盒，滚动范围与 textarea 对齐", async () => {
+    const wrapper = mount(TextPanel, {
+      props: { titleId: "workspace-title", title: "工作空间", lines: [{ text: "第一行", indent: 0 }] },
+    });
+    // 无结尾换行：镜像内容与纯文本一致，不掺零宽占位
+    expect(wrapper.get(".text-mirror").element.textContent).toBe("第一行");
+    // 末行回车（text 以 \n 结尾）：textarea 会多出一行可滚动空行（光标要能落上去），
+    // pre-wrap 的 div 不渲染这条尾随空行——不补占位，两层 scrollHeight 差一行，
+    // 滚到接近底部时镜像被钳制，原生选区/光标与镜像字形错位一行
+    await wrapper.get("textarea").trigger("dblclick");
+    await wrapper.get("textarea").setValue("第一行\n");
+    expect(wrapper.get(".text-mirror").element.textContent).toBe("第一行\n​");
+    // 删掉末行回车后占位随之消失
+    await wrapper.get("textarea").setValue("第一行");
+    expect(wrapper.get(".text-mirror").element.textContent).toBe("第一行");
+  });
+
   it("选中文本后右键出现「格式」组，点高亮色即施加", async () => {
     await withClipboard(async () => {
       const wrapper = mount(TextPanel, {

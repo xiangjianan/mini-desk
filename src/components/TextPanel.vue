@@ -63,6 +63,10 @@ const editorMarks = ref<TextMark[]>(initialEditorState.marks);
 const committedText = ref(initialEditorState.text);
 const mirrorRef = ref<HTMLElement | null>(null);
 const mirrorSegments = computed(() => buildMirrorSegments(text.value, editorMarks.value));
+/** textarea 会为结尾 \n 多出一行可滚动空行（光标要能落上去），pre-wrap 的 div 不渲染
+ *  这条尾随空行——两层 scrollHeight 差一行，滚到接近底部时镜像被钳制、原生选区/光标与
+ *  镜像字形错位一行。结尾补一个零宽字符把末行空行的行盒撑出来，滚动范围对齐。 */
+const hasTrailingLineBreak = computed(() => text.value.endsWith("\n"));
 const focused = ref(false);
 const editing = ref(false);
 const titleRef = ref<{ openMenuAt: (x: number, y: number, event?: Event) => void } | null>(null);
@@ -941,7 +945,7 @@ function restoreSelection(textarea: HTMLTextAreaElement, selection: { start: num
         v-for="(segment, index) in mirrorSegments"
         :key="index"
         :class="mirrorSegmentClasses(segment)"
-      >{{ segment.chunk }}</span></div>
+      >{{ segment.chunk }}</span><span v-if="hasTrailingLineBreak" class="mirror-trailing-pad">&#8203;</span></div>
       <NScrollbar class="text-editor-scrollbar">
       <textarea
         ref="textareaRef"
