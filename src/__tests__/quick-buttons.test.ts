@@ -14,6 +14,9 @@ import {
   groupQuickButtonsByColumn,
   hasOverloadedVisibleQuickButtonGroup,
   QUICK_BUTTON_OTHER_GROUP_ID,
+  QUICK_TAG_USAGE_MAX_CLICKS,
+  quickTagUsagePercent,
+  recordQuickTagClick,
 } from "../state/quickButtons";
 import { globalSearchQuery, resetGlobalSearch, setGlobalSearch } from "../state/globalSearch";
 import { menuDropdownStub } from "./helpers/menu-dropdown-stub";
@@ -283,6 +286,48 @@ describe("QuickButtons", () => {
 
     expect(hasOverloadedVisibleQuickButtonGroup([...visibleButtons, ...hiddenButtons], tags, 12)).toBe(true);
     expect(hasOverloadedVisibleQuickButtonGroup([...visibleButtons.slice(0, 12), ...hiddenButtons], tags, 12)).toBe(false);
+  });
+
+  it("把标签点击数折算成 0–100 的染色百分比并在封顶值处钳制", () => {
+    expect(QUICK_TAG_USAGE_MAX_CLICKS).toBe(100);
+    expect(quickTagUsagePercent(undefined)).toBe(0);
+    expect(quickTagUsagePercent(0)).toBe(0);
+    expect(quickTagUsagePercent(1)).toBe(1);
+    expect(quickTagUsagePercent(50)).toBe(50);
+    expect(quickTagUsagePercent(100)).toBe(100);
+    expect(quickTagUsagePercent(132)).toBe(100);
+    expect(quickTagUsagePercent(-3)).toBe(0);
+    expect(quickTagUsagePercent(2.5)).toBe(2);
+    expect(quickTagUsagePercent("x" as unknown)).toBe(0);
+  });
+
+  it("记录标签点击：命中 +1 返回 true，未命中不动也不报错", () => {
+    const tags = [{ id: "t1", title: "A" }, { id: "t2", title: "B", clicks: 41 }];
+    expect(recordQuickTagClick(tags, "t1")).toBe(true);
+    expect(tags[0]).toMatchObject({ clicks: 1 });
+    expect(recordQuickTagClick(tags, "t2")).toBe(true);
+    expect(tags[1]).toMatchObject({ clicks: 42 });
+    expect(recordQuickTagClick(tags, undefined)).toBe(false);
+    expect(recordQuickTagClick(tags, "missing")).toBe(false);
+    expect(tags).toHaveLength(2);
+  });
+
+  it("组构建为每个真实标签组带 usagePercent，其他/空态组不带", () => {
+    const groups = buildVisibleQuickButtonGroups(
+      [
+        { id: "b1", title: "B1", value: "v", type: "text", hidden: false, tagId: "t1" },
+        { id: "b2", title: "B2", value: "v", type: "text", hidden: false },
+      ],
+      [
+        { id: "t1", title: "常用", clicks: 40 },
+        { id: "t2", title: "闲置" },
+      ],
+      false,
+      "其他",
+    );
+    expect(groups[0]).toMatchObject({ id: "t1", usagePercent: 40 });
+    expect(groups[1]).toMatchObject({ id: QUICK_BUTTON_OTHER_GROUP_ID });
+    expect(groups[1]).not.toHaveProperty("usagePercent");
   });
 
   it("maps the measured quick panel width to a clamped column count", () => {

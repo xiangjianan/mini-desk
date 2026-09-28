@@ -10,6 +10,8 @@ export interface QuickButtonGroup {
   collapsed: boolean;
   /** Resolved palette color; undefined for the untagged/empty groups (no tint). */
   color?: string;
+  /** 0–100 使用热度染色强度（quickTagUsagePercent 数学折算）；其他/空态组不带。 */
+  usagePercent?: number;
   /** Pinned masonry column (from the tag); undefined for the 其他/empty groups. */
   column?: number;
 }
@@ -36,6 +38,24 @@ export const QUICK_TAG_COLORS = [
 
 /** Sentinel for "use the default button color" (no tint): white in light, dark in dark. */
 export const QUICK_TAG_DEFAULT_COLOR = "default";
+
+/** 点击数封顶：达到该次数即染到最深（100%）。 */
+export const QUICK_TAG_USAGE_MAX_CLICKS = 100;
+
+/** 把标签点击数折算成 0–100 的染色百分比；非法输入按 0 处理。 */
+export function quickTagUsagePercent(clicks: unknown): number {
+  if (typeof clicks !== "number" || !Number.isFinite(clicks)) return 0;
+  return Math.max(0, Math.min(QUICK_TAG_USAGE_MAX_CLICKS, Math.floor(clicks)));
+}
+
+/** 命中则该标签 clicks +1 并返回 true；tagId 缺失/失效（「其他」组）不计。 */
+export function recordQuickTagClick(tags: QuickTag[], tagId: string | undefined): boolean {
+  if (!tagId) return false;
+  const tag = tags.find((item) => item.id === tagId);
+  if (!tag) return false;
+  tag.clicks = (tag.clicks ?? 0) + 1;
+  return true;
+}
 
 export function getQuickTagColor(index: number): string {
   const colors = QUICK_TAG_COLORS;
@@ -76,6 +96,7 @@ export function buildVisibleQuickButtonGroups(
       reorderable: true,
       collapsed: Boolean(tag.collapsed),
       color: resolvedColor === QUICK_TAG_DEFAULT_COLOR ? undefined : resolvedColor,
+      usagePercent: quickTagUsagePercent(tag.clicks),
       column: tag.column ?? 0,
     }];
   });
