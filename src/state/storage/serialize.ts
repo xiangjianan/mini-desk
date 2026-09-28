@@ -5,6 +5,7 @@ import type {
   CompanionCustomGif,
   CompanionCustomGifStored,
   LineItem,
+  QuickButton,
   QuickTag,
   SerializableOptions,
   TodoCompletedVisibility,
@@ -46,8 +47,13 @@ export function getSerializableWorkspace(
     todoLists,
     showCompletedTodos: cloneCompletedVisibility(workspace.showCompletedTodos, todoLists),
     todos: cloneTodos(workspace.todos, todoLists),
-    quickTags: cloneQuickTags(workspace.quickTags, options.omitQuickTagClicks === true),
-    quickButtons: workspace.quickButtons.map((button) => ({ ...button })),
+    quickTags: cloneQuickTags(workspace.quickTags),
+    quickButtons: workspace.quickButtons.map((button) => {
+      if (options.omitQuickButtonClicks !== true) return { ...button };
+      const next: QuickButton = { ...button };
+      delete next.clicks;
+      return next;
+    }),
     quickOtherCollapsed: workspace.quickOtherCollapsed,
     showHiddenQuickButtons: workspace.showHiddenQuickButtons,
     quickCompact: workspace.quickCompact,
@@ -112,13 +118,8 @@ function cloneCompletedVisibility(
   ) as TodoCompletedVisibility;
 }
 
-function cloneQuickTags(tags: QuickTag[] | undefined, omitClicks = false): QuickTag[] {
-  return (tags ?? []).map((tag) => {
-    if (!omitClicks) return { ...tag };
-    const next: QuickTag = { ...tag };
-    delete next.clicks;
-    return next;
-  });
+function cloneQuickTags(tags: QuickTag[] | undefined): QuickTag[] {
+  return (tags ?? []).map((tag) => ({ ...tag }));
 }
 
 function cloneTodos(todos: TodoMap, todoLists: TodoListConfig[]): TodoMap {

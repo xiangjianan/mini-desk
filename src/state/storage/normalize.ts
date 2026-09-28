@@ -360,9 +360,8 @@ export function normalizeQuickTags(tags: unknown): QuickTag[] {
       seen.add(id);
       // Numeric guard (not Boolean()): column 0 is valid and falsy.
       const column = typeof record.column === "number" && Number.isFinite(record.column) ? Math.max(0, Math.floor(record.column)) : 0;
-      // 存量 color 就此退役：导入即静默剥除，染色改由 clicks 使用热度驱动。
-      const clicks = typeof record.clicks === "number" && Number.isInteger(record.clicks) && record.clicks > 0 ? record.clicks : undefined;
-      return { id, title, column, ...(clicks ? { clicks } : {}), ...(record.collapsed === true ? { collapsed: true } : {}) };
+      // 存量 color 与标签级 clicks 就此退役：导入即静默剥除（V2 起计数在按钮级 quickButtons[].clicks）。
+      return { id, title, column, ...(record.collapsed === true ? { collapsed: true } : {}) };
     })
     .filter((item): item is QuickTag => item !== null);
 }
@@ -387,12 +386,15 @@ export function normalizeQuickButtons(buttons: unknown, language = "zh", quickTa
       const tagId = typeof record.tagId === "string" && validTagIds.has(record.tagId.trim())
         ? record.tagId.trim()
         : undefined;
+      // 使用计数只收正整数（0/负数/小数/异型按缺省 0 处理）。
+      const clicks = typeof record.clicks === "number" && Number.isInteger(record.clicks) && record.clicks > 0 ? record.clicks : undefined;
       return {
         id: typeof record.id === "string" ? record.id : createId(),
         title: title || getUntitledQuickTitle(type, language),
         value,
         type,
         ...(tagId ? { tagId } : {}),
+        ...(clicks !== undefined ? { clicks } : {}),
         ...(type === "api" ? {
           apiMethod,
           apiHeaders: normalizeQuickApiHeaders(record.apiHeaders),

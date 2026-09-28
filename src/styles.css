@@ -33,8 +33,8 @@
   --input: #ffffff;
   --button: #ffffff;
   --button-hover: color-mix(in srgb, #ffffff 88%, var(--primary) 12%);
-  /* 快捷标签使用热度染色的最深色：0 次 = --button（浅色纯白），100 次 = 该蓝。
-     取旧调色板首色 #3b82f6 作历史沿革；折算见 src/state/quickButtons.ts quickTagUsagePercent。 */
+  /* 快捷按钮使用热度染色的最深色：0 次 = --button（浅色纯白），100 次 = 该蓝。
+     取旧调色板首色 #3b82f6 作历史沿革；折算见 src/state/quickButtons.ts quickButtonUsagePercent。 */
   --quick-usage-accent: #3b82f6;
   --danger: #b42318;
   --radius: 12px;
@@ -5541,11 +5541,11 @@ button.quick-button {
   background: var(--button-hover);
 }
 
-/* Usage-frequency tint: buttons in a tag group darken from the plain button
-   color (--button: white in light, the dark base in dark) toward the accent
-   blue as the tag accumulates clicks. --tag-usage is a 0–100% mix percentage
-   computed in JS (quickTagUsagePercent) and set per group in QuickButtons.vue
-   — one color-mix formula for both themes, no enumerated gradient. */
+/* Usage-frequency tint: buttons darken from the plain button color (--button:
+   white in light, the dark base in dark) toward the accent blue as each
+   accumulates clicks. The percentage is computed in JS (quickButtonUsagePercent)
+   in QuickButtons.vue — one color-mix formula for both themes, no enumerated
+   gradient. */
 .quick-tag-group.has-usage .quick-button,
 .quick-tag-group.has-usage button.quick-button {
   background: color-mix(in srgb, var(--quick-usage-accent) var(--tag-usage), var(--button));

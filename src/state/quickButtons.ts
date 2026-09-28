@@ -8,8 +8,6 @@ export interface QuickButtonGroup {
   buttons: QuickButton[];
   reorderable: boolean;
   collapsed: boolean;
-  /** 0–100 使用热度染色强度（quickTagUsagePercent 数学折算）；其他/空态组不带。 */
-  usagePercent?: number;
   /** Pinned masonry column (from the tag); undefined for the 其他/empty groups. */
   column?: number;
 }
@@ -19,45 +17,46 @@ export const QUICK_BUTTON_OTHER_GROUP_ID = "__other";
 export const QUICK_DENSITY_THRESHOLD = 50;
 
 /** 点击数封顶：达到该次数即染到最深（100%）。 */
-export const QUICK_TAG_USAGE_MAX_CLICKS = 100;
+export const QUICK_USAGE_MAX_CLICKS = 100;
 
-/** 把标签点击数折算成 0–100 的染色百分比；非法输入按 0 处理。 */
-export function quickTagUsagePercent(clicks: unknown): number {
+/** 把按钮点击数折算成 0–100 的染色百分比；非法输入按 0 处理。 */
+export function quickButtonUsagePercent(clicks: unknown): number {
   if (typeof clicks !== "number" || !Number.isFinite(clicks)) return 0;
-  return Math.max(0, Math.min(QUICK_TAG_USAGE_MAX_CLICKS, Math.floor(clicks)));
+  return Math.max(0, Math.min(QUICK_USAGE_MAX_CLICKS, Math.floor(clicks)));
 }
 
-/** 命中则该标签 clicks +1 并返回 true；tagId 缺失/失效（「其他」组）不计。 */
-export function recordQuickTagClick(tags: QuickTag[], tagId: string | undefined): boolean {
-  if (!tagId) return false;
-  const tag = tags.find((item) => item.id === tagId);
-  if (!tag) return false;
-  tag.clicks = (tag.clicks ?? 0) + 1;
-  return true;
+/** 该快捷按钮使用计数 +1（按钮级：点谁计谁，未分组按钮同样计数）。 */
+export function recordQuickButtonClick(button: QuickButton): void {
+  button.clicks = (button.clicks ?? 0) + 1;
 }
 
-/** 各工作区标签的现行使用计数快照（撤销恢复前捕获，恢复后回填）。 */
-export function captureQuickTagClicks(state: BoardState): Record<string, Record<string, number>> {
+/** 各工作区按钮的现行使用计数快照（撤销恢复前捕获，恢复后回填）。 */
+export function captureQuickButtonClicks(state: BoardState): Record<string, Record<string, number>> {
   const captured: Record<string, Record<string, number>> = {};
   for (const workspace of state.workspaces) {
-    for (const tag of workspace.quickTags) {
-      if (tag.clicks === undefined) continue;
-      (captured[workspace.id] ??= {})[tag.id] = tag.clicks;
+    for (const button of workspace.quickButtons) {
+      if (button.clicks === undefined) continue;
+      (captured[workspace.id] ??= {})[button.id] = button.clicks;
     }
   }
   return captured;
 }
 
-/** 把捕获的计数回填到恢复后的状态：标签还在则覆盖，标签已被删除则丢弃。 */
-export function restoreQuickTagClicks(state: BoardState, captured: Record<string, Record<string, number>>): void {
+/** 把捕获的计数回填到恢复后的状态：按钮还在则覆盖，按钮已删除则丢弃。 */
+export function restoreQuickButtonClicks(state: BoardState, captured: Record<string, Record<string, number>>): void {
   for (const workspace of state.workspaces) {
-    const tagClicks = captured[workspace.id];
-    if (!tagClicks) continue;
-    for (const tag of workspace.quickTags) {
-      const clicks = tagClicks[tag.id];
-      if (clicks !== undefined) tag.clicks = clicks;
+    const buttonClicks = captured[workspace.id];
+    if (!buttonClicks) continue;
+    for (const button of workspace.quickButtons) {
+      const clicks = buttonClicks[button.id];
+      if (clicks !== undefined) button.clicks = clicks;
     }
   }
+}
+
+/** 标签管理器徽标：该标签下全部按钮（含隐藏）的使用计数之和。 */
+export function sumQuickTagClicks(buttons: QuickButton[], tagId: string): number {
+  return buttons.reduce((sum, button) => (button.tagId === tagId ? sum + (button.clicks ?? 0) : sum), 0);
 }
 
 export function buildVisibleQuickButtonGroups(
@@ -86,7 +85,6 @@ export function buildVisibleQuickButtonGroups(
       buttons: groupButtons,
       reorderable: true,
       collapsed: Boolean(tag.collapsed),
-      usagePercent: quickTagUsagePercent(tag.clicks),
       column: tag.column ?? 0,
     }];
   });

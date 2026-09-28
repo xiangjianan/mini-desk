@@ -13,11 +13,13 @@ import {
   groupQuickButtonsByColumn,
   hasOverloadedVisibleQuickButtonGroup,
   QUICK_BUTTON_OTHER_GROUP_ID,
-  QUICK_TAG_USAGE_MAX_CLICKS,
-  quickTagUsagePercent,
-  recordQuickTagClick,
+  QUICK_USAGE_MAX_CLICKS,
+  quickButtonUsagePercent,
+  recordQuickButtonClick,
+  sumQuickTagClicks,
 } from "../state/quickButtons";
 import { globalSearchQuery, resetGlobalSearch, setGlobalSearch } from "../state/globalSearch";
+import type { QuickButton } from "../types";
 import { menuDropdownStub } from "./helpers/menu-dropdown-stub";
 
 const buttonStub = {
@@ -287,69 +289,84 @@ describe("QuickButtons", () => {
     expect(hasOverloadedVisibleQuickButtonGroup([...visibleButtons.slice(0, 12), ...hiddenButtons], tags, 12)).toBe(false);
   });
 
-  it("把标签点击数折算成 0–100 的染色百分比并在封顶值处钳制", () => {
-    expect(QUICK_TAG_USAGE_MAX_CLICKS).toBe(100);
-    expect(quickTagUsagePercent(undefined)).toBe(0);
-    expect(quickTagUsagePercent(0)).toBe(0);
-    expect(quickTagUsagePercent(1)).toBe(1);
-    expect(quickTagUsagePercent(50)).toBe(50);
-    expect(quickTagUsagePercent(100)).toBe(100);
-    expect(quickTagUsagePercent(132)).toBe(100);
-    expect(quickTagUsagePercent(-3)).toBe(0);
-    expect(quickTagUsagePercent(2.5)).toBe(2);
-    expect(quickTagUsagePercent("x" as unknown)).toBe(0);
-    expect(quickTagUsagePercent(NaN)).toBe(0);
-    expect(quickTagUsagePercent(Infinity)).toBe(0);
+  it("把按钮点击数折算成 0–100 的染色百分比并在封顶值处钳制", () => {
+    expect(QUICK_USAGE_MAX_CLICKS).toBe(100);
+    expect(quickButtonUsagePercent(undefined)).toBe(0);
+    expect(quickButtonUsagePercent(0)).toBe(0);
+    expect(quickButtonUsagePercent(1)).toBe(1);
+    expect(quickButtonUsagePercent(50)).toBe(50);
+    expect(quickButtonUsagePercent(100)).toBe(100);
+    expect(quickButtonUsagePercent(132)).toBe(100);
+    expect(quickButtonUsagePercent(-3)).toBe(0);
+    expect(quickButtonUsagePercent(2.5)).toBe(2);
+    expect(quickButtonUsagePercent("x" as unknown)).toBe(0);
+    expect(quickButtonUsagePercent(NaN)).toBe(0);
+    expect(quickButtonUsagePercent(Infinity)).toBe(0);
   });
 
-  it("记录标签点击：命中 +1 返回 true，未命中不动也不报错", () => {
-    const tags = [{ id: "t1", title: "A" }, { id: "t2", title: "B", clicks: 41 }];
-    expect(recordQuickTagClick(tags, "t1")).toBe(true);
-    expect(tags[0]).toMatchObject({ clicks: 1 });
-    expect(recordQuickTagClick(tags, "t2")).toBe(true);
-    expect(tags[1]).toMatchObject({ clicks: 42 });
-    expect(recordQuickTagClick(tags, undefined)).toBe(false);
-    expect(recordQuickTagClick(tags, "missing")).toBe(false);
-    expect(tags).toHaveLength(2);
+  it("按钮点击计数 +1：缺省 0→1，已有值 41→42", () => {
+    const fresh: QuickButton = { id: "b1", title: "B", value: "v", type: "text", hidden: false };
+    recordQuickButtonClick(fresh);
+    expect(fresh.clicks).toBe(1);
+    const seeded: QuickButton = { id: "b2", title: "B2", value: "v", type: "text", hidden: false, clicks: 41 };
+    recordQuickButtonClick(seeded);
+    expect(seeded.clicks).toBe(42);
   });
 
-  it("组构建为每个真实标签组带 usagePercent，其他/空态组不带", () => {
+  it("组构建不为标签组携带 usagePercent（染色下沉到按钮级）", () => {
     const groups = buildVisibleQuickButtonGroups(
       [
         { id: "b1", title: "B1", value: "v", type: "text", hidden: false, tagId: "t1" },
         { id: "b2", title: "B2", value: "v", type: "text", hidden: false },
       ],
       [
-        { id: "t1", title: "常用", clicks: 40 },
+        { id: "t1", title: "常用" },
         { id: "t2", title: "闲置" },
       ],
       false,
       "其他",
     );
-    expect(groups[0]).toMatchObject({ id: "t1", usagePercent: 40 });
+    expect(groups[0]).toMatchObject({ id: "t1" });
+    expect(groups[0]).not.toHaveProperty("usagePercent");
     expect(groups[1]).toMatchObject({ id: QUICK_BUTTON_OTHER_GROUP_ID });
     expect(groups[1]).not.toHaveProperty("usagePercent");
   });
 
-  it("按使用次数给标签组挂 has-usage 类与 --tag-usage 变量", () => {
+  it("sumQuickTagClicks 汇总标签下全部按钮（含隐藏）的使用计数", () => {
+    const buttons = [
+      { id: "a1", title: "A1", value: "v", type: "text" as const, hidden: false, tagId: "tag-a", clicks: 7 },
+      { id: "a2", title: "A2", value: "v", type: "text" as const, hidden: true, tagId: "tag-a", clicks: 15 },
+      { id: "b1", title: "B1", value: "v", type: "text" as const, hidden: false, tagId: "tag-b", clicks: 3 },
+      { id: "no-tag", title: "N", value: "v", type: "text" as const, hidden: false, clicks: 99 },
+      { id: "orphan", title: "O", value: "v", type: "text" as const, hidden: false, tagId: "tag-gone", clicks: 5 },
+    ];
+    expect(sumQuickTagClicks(buttons, "tag-a")).toBe(22);
+    expect(sumQuickTagClicks(buttons, "tag-b")).toBe(3);
+    expect(sumQuickTagClicks(buttons, "missing")).toBe(0);
+  });
+
+  it("按使用次数给按钮挂 has-usage 类与 --button-usage 变量", () => {
     const wrapper = mountQuickButtons({
-      tags: [
-        { id: "tag-hot", title: "常用", clicks: 40 },
-        { id: "tag-cold", title: "闲置" },
-      ],
+      tags: [{ id: "tag-hot", title: "常用" }],
       buttons: [
-        { id: "a", title: "A", value: "a", type: "text", hidden: false, tagId: "tag-hot" },
-        { id: "b", title: "B", value: "b", type: "text", hidden: false, tagId: "tag-cold" },
+        { id: "b-hot", title: "热", value: "a", type: "text", hidden: false, tagId: "tag-hot", clicks: 40 },
+        { id: "b-cold", title: "冷", value: "b", type: "text", hidden: false, tagId: "tag-hot" },
+        { id: "b-other", title: "其他", value: "c", type: "text", hidden: false, clicks: 12 },
       ],
     });
 
-    const hot = wrapper.get('[data-tag-id="tag-hot"]');
+    const hot = wrapper.get('[data-id="b-hot"]');
     expect(hot.classes()).toContain("has-usage");
-    expect(hot.attributes("style")).toContain("--tag-usage: 40%");
+    expect(hot.attributes("style")).toContain("--button-usage: 40%");
 
-    const cold = wrapper.get('[data-tag-id="tag-cold"]');
+    const cold = wrapper.get('[data-id="b-cold"]');
     expect(cold.classes()).not.toContain("has-usage");
     expect(cold.attributes("style")).toBeUndefined();
+
+    // 未分组（「其他」组）按钮的计数同样染色。
+    const other = wrapper.get('[data-id="b-other"]');
+    expect(other.classes()).toContain("has-usage");
+    expect(other.attributes("style")).toContain("--button-usage: 12%");
 
     wrapper.unmount();
   });
@@ -1266,7 +1283,11 @@ describe("QuickButtons", () => {
 
   it("opens tag management and emits add, edit, and delete tag actions", async () => {
     const wrapper = mountQuickButtons({
-      tags: [{ id: "tag-work", title: "工作", clicks: 7 }],
+      tags: [{ id: "tag-work", title: "工作" }],
+      buttons: [
+        { id: "b1", title: "B1", value: "v", type: "link", hidden: false, tagId: "tag-work", clicks: 7 },
+        { id: "b2", title: "B2", value: "v", type: "link", hidden: true, tagId: "tag-work", clicks: 15 },
+      ],
     });
 
     await wrapper.get(".quick-menu-button").trigger("click");
@@ -1274,7 +1295,8 @@ describe("QuickButtons", () => {
 
     expect(wrapper.get(".quick-tag-manager").text()).toContain("标签管理");
     expect(wrapper.find(".quick-tag-color-picker").exists()).toBe(false);
-    expect(wrapper.get(".quick-tag-clicks").text()).toBe("7 次");
+    // 徽标 = 标签下全部按钮（含隐藏）的计数之和。
+    expect(wrapper.get(".quick-tag-clicks").text()).toBe("22 次");
 
     await wrapper.get(".quick-tag-new-input").setValue("资料");
     await wrapper.get(".quick-tag-add").trigger("click");
@@ -1296,14 +1318,18 @@ describe("QuickButtons", () => {
 
   it("标签管理器徽标按语言切换文案", async () => {
     const wrapper = mountQuickButtons({
-      tags: [{ id: "tag-work", title: "工作", clicks: 7 }],
+      tags: [{ id: "tag-work", title: "工作" }],
+      buttons: [
+        { id: "b1", title: "B1", value: "v", type: "link", hidden: false, tagId: "tag-work", clicks: 7 },
+        { id: "b2", title: "B2", value: "v", type: "link", hidden: true, tagId: "tag-work", clicks: 15 },
+      ],
       language: "en",
     });
 
     await wrapper.get(".quick-menu-button").trigger("click");
     await wrapper.findAll(".dropdown-option").find((option) => option.text() === "Manage tags")?.trigger("click");
 
-    expect(wrapper.get(".quick-tag-clicks").text()).toBe("7 clicks");
+    expect(wrapper.get(".quick-tag-clicks").text()).toBe("22 clicks");
     wrapper.unmount();
   });
 

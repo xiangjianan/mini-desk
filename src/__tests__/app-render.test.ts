@@ -4325,7 +4325,7 @@ describe("App shell", () => {
     wrapper.unmount();
   });
 
-  it("点击带标签的快捷按钮给标签使用计数 +1 并落盘，无标签按钮不计数", async () => {
+  it("点击快捷按钮给该按钮使用计数 +1 并落盘（未分组按钮同样计数）", async () => {
     localStorage.setItem(
       STORAGE_KEY,
       JSON.stringify({
@@ -4351,7 +4351,9 @@ describe("App shell", () => {
 
     const stored = JSON.parse(localStorage.getItem(STORAGE_KEY) || "{}");
     expect(stored.workspaces[0].quickTags).toHaveLength(1);
-    expect(stored.workspaces[0].quickTags[0].clicks).toBe(1);
+    expect(stored.workspaces[0].quickTags[0]).not.toHaveProperty("clicks");
+    expect(stored.workspaces[0].quickButtons[0].clicks).toBe(1);
+    expect(stored.workspaces[0].quickButtons[1].clicks).toBe(1);
     wrapper.unmount();
   });
 

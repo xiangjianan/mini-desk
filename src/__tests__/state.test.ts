@@ -718,32 +718,34 @@ describe("state compatibility", () => {
   it("normalizes quick action tags and keeps invalid tag references untagged", () => {
     const state = normalizeImportedState({
       quickTags: [
-        { id: "tag-a", title: "标签 A", collapsed: true, color: "#22c55e" },
-        { id: "tag-b", title: "标签 B", color: "#3b82f6", clicks: 7 },
-        { id: "tag-c", title: "标签 C", clicks: 132 },
-        { id: "tag-d", title: "标签 D", clicks: -3 },
-        { id: "tag-e", title: "标签 E", clicks: 2.5 },
-        { id: "tag-f", title: "标签 F", clicks: "x" },
+        { id: "tag-a", title: "标签 A", collapsed: true, color: "#22c55e", clicks: 9 },
+        { id: "tag-b", title: "标签 B" },
         { id: "tag-a", title: "重复" },
       ],
       quickButtons: [
-        { id: "a", title: "A", value: "a", type: "text", tagId: "tag-a" },
+        { id: "a", title: "A", value: "a", type: "text", tagId: "tag-a", clicks: 7 },
+        { id: "b", title: "B", value: "b", type: "text", clicks: 132 },
+        { id: "c", title: "C", value: "c", type: "text", clicks: -3 },
+        { id: "d", title: "D", value: "d", type: "text", clicks: 2.5 },
+        { id: "e", title: "E", value: "e", type: "text", clicks: "x" },
         { id: "orphan", title: "孤儿", value: "x", type: "text", tagId: "missing" },
       ],
     });
     const ws = () => state.workspaces[0];
 
+    // 标签级 clicks（V1 存量）就此退役：导入即静默丢弃，不迁移到按钮。
     expect(ws().quickTags).toEqual([
       { id: "tag-a", title: "标签 A", collapsed: true, column: 0 },
-      { id: "tag-b", title: "标签 B", column: 0, clicks: 7 },
-      { id: "tag-c", title: "标签 C", column: 0, clicks: 132 },
-      { id: "tag-d", title: "标签 D", column: 0 },
-      { id: "tag-e", title: "标签 E", column: 0 },
-      { id: "tag-f", title: "标签 F", column: 0 },
+      { id: "tag-b", title: "标签 B", column: 0 },
     ]);
-    expect(ws().quickButtons[0]).toMatchObject({ tagId: "tag-a" });
-    expect(ws().quickButtons[1]).not.toHaveProperty("tagId");
+    expect(ws().quickButtons[0]).toMatchObject({ tagId: "tag-a", clicks: 7 });
+    expect(ws().quickButtons[1]).toMatchObject({ clicks: 132 });
+    expect(ws().quickButtons[2]).not.toHaveProperty("clicks");
+    expect(ws().quickButtons[3]).not.toHaveProperty("clicks");
+    expect(ws().quickButtons[4]).not.toHaveProperty("clicks");
+    expect(ws().quickButtons[5]).not.toHaveProperty("tagId");
     expect(getSerializableState(state).workspaces[0].quickTags).toEqual(ws().quickTags);
+    expect(getSerializableState(state).workspaces[0].quickButtons).toEqual(ws().quickButtons);
   });
 
   it("normalizes persisted spaces and starred reminders", () => {

@@ -8,7 +8,7 @@ import type { AppLanguage, GuideKey, QuickApiBodyType, QuickApiHeader, QuickApiM
 import { GUIDE_MENU_OPTION } from "../state/defaults";
 import { getIconHeadingText, getUiText } from "../state/i18n";
 import type { QuickButtonGroup } from "../state/quickButtons";
-import { buildVisibleQuickButtonGroups, computeQuickColumnCount, filterVisibleQuickButtonGroups, groupQuickButtonsByColumn, hasOverloadedVisibleQuickButtonGroup, QUICK_BUTTON_EMPTY_GROUP_ID, QUICK_DENSITY_THRESHOLD } from "../state/quickButtons";
+import { buildVisibleQuickButtonGroups, computeQuickColumnCount, filterVisibleQuickButtonGroups, groupQuickButtonsByColumn, hasOverloadedVisibleQuickButtonGroup, quickButtonUsagePercent, QUICK_BUTTON_EMPTY_GROUP_ID, QUICK_DENSITY_THRESHOLD, sumQuickTagClicks } from "../state/quickButtons";
 import { findQuickAppPresetByScheme, getQuickAppPresetHint, getQuickAppPresetTitle, QUICK_APP_PRESETS } from "../state/quickApps";
 import { findQuickApiTemplate, QUICK_API_TEMPLATES } from "../state/quickApiTemplates";
 import { clearGlobalSearch, globalSearchNormalized, globalSearchQuery, setGlobalSearch } from "../state/globalSearch";
@@ -397,6 +397,11 @@ function getQuickTagTitle(tagId?: string): string {
 function formatTagClicks(clicks: number | undefined): string {
   const count = clicks ?? 0;
   return props.language === "en" ? `${count} clicks` : `${count} 次`;
+}
+
+/** 按钮级使用热度百分比（0–100）：驱动 .has-usage 类与 --button-usage 变量。 */
+function buttonUsage(button: QuickButton): number {
+  return quickButtonUsagePercent(button.clicks);
 }
 
 function setQuickType(type: QuickButtonType): void {
@@ -941,9 +946,8 @@ function handleQuickGroupDrop(event: DragEvent, groupId: string): void {
         <section
           v-for="group in bucket"
           :key="group.id"
-          :class="['quick-tag-group', { 'has-usage': (group.usagePercent ?? 0) > 0 }]"
+          class="quick-tag-group"
           :data-tag-id="group.id"
-          :style="(group.usagePercent ?? 0) > 0 ? { '--tag-usage': `${group.usagePercent}%` } : undefined"
           @dragover="handleTagDragOver($event, group.id)"
           @drop.stop.prevent="handleQuickGroupDrop($event, group.id)"
         >
@@ -1033,7 +1037,8 @@ function handleQuickGroupDrop(event: DragEvent, groupId: string): void {
                 v-for="button in group.buttons"
                 :key="button.id"
                 class="quick-button"
-                :class="{ 'is-hidden': button.hidden, 'is-copy': button.type === 'text', 'is-api': button.type === 'api', 'is-app': button.type === 'app', 'is-dragging': draggingId === button.id }"
+                :class="{ 'is-hidden': button.hidden, 'is-copy': button.type === 'text', 'is-api': button.type === 'api', 'is-app': button.type === 'app', 'is-dragging': draggingId === button.id, 'has-usage': buttonUsage(button) > 0 }"
+                :style="buttonUsage(button) > 0 ? { '--button-usage': `${buttonUsage(button)}%` } : undefined"
                 :data-id="button.id"
                 :title="button.title"
                 type="button"
@@ -1244,7 +1249,7 @@ function handleQuickGroupDrop(event: DragEvent, groupId: string): void {
             <span
               class="quick-tag-clicks"
               :title="uiText.quick.tagClicks"
-            >{{ formatTagClicks(tag.clicks) }}</span>
+            >{{ formatTagClicks(sumQuickTagClicks(props.buttons, tag.id)) }}</span>
             <button
               type="button"
               class="quick-tag-delete icon-button is-delete"

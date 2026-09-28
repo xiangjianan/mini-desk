@@ -17,8 +17,6 @@ export interface QuickTag {
   id: string;
   title: string;
   collapsed?: boolean;
-  /** 使用热度计数：组内快捷按钮每点一次 +1，驱动 0–100 染色（quickTagUsagePercent）。缺省 = 0。 */
-  clicks?: number;
   /**
    * Which masonry column (0-indexed) this tag group is pinned to, mirroring
    * `TodoListConfig.column`. Auto-distributed while `quickLayoutManual` is
@@ -93,6 +91,8 @@ export interface QuickButton {
   apiHeaders?: QuickApiHeader[];
   apiBodyType?: QuickApiBodyType;
   apiBody?: string;
+  /** 使用热度计数，点击 +1，驱动 0–100 染色（quickButtonUsagePercent）；缺省 = 0。 */
+  clicks?: number;
   hidden: boolean;
 }
 
@@ -220,8 +220,8 @@ export interface BoardState {
 export interface SerializableOptions {
   includeImageData?: boolean;
   includeCustomGifData?: boolean;
-  /** 撤销快照用：剥除 quickTags[].clicks——点击计数是使用分析而非可撤销内容。 */
-  omitQuickTagClicks?: boolean;
+  /** 撤销快照用：剥除 quickButtons[].clicks——点击计数是使用分析而非可撤销内容。 */
+  omitQuickButtonClicks?: boolean;
 }
 
 export interface DraggedTodo {
