@@ -376,18 +376,21 @@ describe("QuickButtons", () => {
 
     expect(styles).toMatch(/--quick-usage-accent:\s*#3b82f6/);
     expect(styles).toMatch(
-      /\.quick-buttons \.quick-button\.has-usage\s*\{[^}]*background:\s*color-mix\(in srgb, var\(--quick-usage-accent\) calc\(var\(--button-usage\) \* 18%\), var\(--button\)\)/s,
+      /\.quick-buttons \.quick-button\.has-usage\s*\{[^}]*background:\s*color-mix\(in srgb, var\(--quick-usage-accent\) calc\(var\(--button-usage\) \* 0\.18\), var\(--button\)\)/s,
     );
-    expect(styles).toMatch(/html\[data-theme="dark"\] \.quick-buttons \.quick-button\.has-usage\s*\{[^}]*calc\(var\(--button-usage\) \* 24%\)/s);
+    expect(styles).toMatch(/html\[data-theme="dark"\] \.quick-buttons \.quick-button\.has-usage\s*\{[^}]*calc\(var\(--button-usage\) \* 0\.24\)/s);
     expect(styles).toMatch(
-      /\.quick-buttons \.quick-button\.has-usage:hover[^{]*\{[^}]*calc\(min\(var\(--button-usage\) \* 18% \+ 12%, 30%\)\)/s,
+      /\.quick-buttons \.quick-button\.has-usage:hover[^{]*\{[^}]*calc\(min\(var\(--button-usage\) \* 0\.18 \+ 12%, 30%\)\)/s,
     );
     expect(styles).toMatch(
       /\.quick-buttons \.quick-button\.has-usage:hover[^{]*\{[^}]*!important/s,
     );
     expect(styles).toMatch(
-      /html\[data-theme="dark"\] \.quick-buttons \.quick-button\.has-usage:hover[^{]*\{[^}]*calc\(min\(var\(--button-usage\) \* 24% \+ 14%, 38%\)\)/s,
+      /html\[data-theme="dark"\] \.quick-buttons \.quick-button\.has-usage:hover[^{]*\{[^}]*calc\(min\(var\(--button-usage\) \* 0\.24 \+ 14%, 38%\)\)/s,
     );
+    // --button-usage 是带百分号的值，乘数必须是纯数值：百分比×百分比在 calc 里非法，
+    // 浏览器会在解析时整条丢弃声明（按钮退回透明底色）。
+    expect(styles).not.toMatch(/--button-usage\) \* \d+%/);
     expect(styles).toMatch(/\.quick-tag-clicks\s*\{/);
     expect(styles).not.toContain("--tag-usage");
     expect(styles).not.toContain(".quick-tag-group.has-usage");
