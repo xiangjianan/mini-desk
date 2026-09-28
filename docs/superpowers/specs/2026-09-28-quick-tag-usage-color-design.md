@@ -72,7 +72,7 @@ export interface QuickTag {
 `recordQuickTagClick(workspace, tagId)` 纯辅助函数，便于测试），
 随后按现有口径 `persistNow()` 落盘（与待办勾选等结构性修改一致）。
 
-不与撤销系统交互（undo 快照仅覆盖图片与文本管线，不涉及 quickTags）。
+不与撤销系统交互：撤销快照序列化时剥除 `clicks`（点击不产生也不消耗撤销历史），撤销恢复后回填现行计数（标签已删则丢弃）。
 
 ## UI 变更
 

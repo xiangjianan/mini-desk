@@ -1,4 +1,4 @@
-import type { QuickButton, QuickTag } from "../types";
+import type { BoardState, QuickButton, QuickTag } from "../types";
 import { matchesSearch } from "../utils/searchHighlight";
 import { assignColumn, distributeColumns } from "./columns";
 
@@ -34,6 +34,30 @@ export function recordQuickTagClick(tags: QuickTag[], tagId: string | undefined)
   if (!tag) return false;
   tag.clicks = (tag.clicks ?? 0) + 1;
   return true;
+}
+
+/** 各工作区标签的现行使用计数快照（撤销恢复前捕获，恢复后回填）。 */
+export function captureQuickTagClicks(state: BoardState): Record<string, Record<string, number>> {
+  const captured: Record<string, Record<string, number>> = {};
+  for (const workspace of state.workspaces) {
+    for (const tag of workspace.quickTags) {
+      if (tag.clicks === undefined) continue;
+      (captured[workspace.id] ??= {})[tag.id] = tag.clicks;
+    }
+  }
+  return captured;
+}
+
+/** 把捕获的计数回填到恢复后的状态：标签还在则覆盖，标签已被删除则丢弃。 */
+export function restoreQuickTagClicks(state: BoardState, captured: Record<string, Record<string, number>>): void {
+  for (const workspace of state.workspaces) {
+    const tagClicks = captured[workspace.id];
+    if (!tagClicks) continue;
+    for (const tag of workspace.quickTags) {
+      const clicks = tagClicks[tag.id];
+      if (clicks !== undefined) tag.clicks = clicks;
+    }
+  }
 }
 
 export function buildVisibleQuickButtonGroups(

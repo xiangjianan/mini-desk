@@ -220,6 +220,8 @@ export interface BoardState {
 export interface SerializableOptions {
   includeImageData?: boolean;
   includeCustomGifData?: boolean;
+  /** 撤销快照用：剥除 quickTags[].clicks——点击计数是使用分析而非可撤销内容。 */
+  omitQuickTagClicks?: boolean;
 }
 
 export interface DraggedTodo {

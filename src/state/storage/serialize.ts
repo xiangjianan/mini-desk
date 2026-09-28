@@ -46,7 +46,7 @@ export function getSerializableWorkspace(
     todoLists,
     showCompletedTodos: cloneCompletedVisibility(workspace.showCompletedTodos, todoLists),
     todos: cloneTodos(workspace.todos, todoLists),
-    quickTags: cloneQuickTags(workspace.quickTags),
+    quickTags: cloneQuickTags(workspace.quickTags, options.omitQuickTagClicks === true),
     quickButtons: workspace.quickButtons.map((button) => ({ ...button })),
     quickOtherCollapsed: workspace.quickOtherCollapsed,
     showHiddenQuickButtons: workspace.showHiddenQuickButtons,
@@ -80,8 +80,8 @@ export function getSerializableState(
   };
 }
 
-export function exportUndoSnapshotState(state: BoardState): string {
-  return JSON.stringify(getSerializableState(state));
+export function exportUndoSnapshotState(state: BoardState, options: SerializableOptions = {}): string {
+  return JSON.stringify(getSerializableState(state, options));
 }
 
 export function serializeTextLines(value = ""): LineItem[] {
@@ -112,8 +112,13 @@ function cloneCompletedVisibility(
   ) as TodoCompletedVisibility;
 }
 
-function cloneQuickTags(tags: QuickTag[] | undefined): QuickTag[] {
-  return (tags ?? []).map((tag) => ({ ...tag }));
+function cloneQuickTags(tags: QuickTag[] | undefined, omitClicks = false): QuickTag[] {
+  return (tags ?? []).map((tag) => {
+    if (!omitClicks) return { ...tag };
+    const next: QuickTag = { ...tag };
+    delete next.clicks;
+    return next;
+  });
 }
 
 function cloneTodos(todos: TodoMap, todoLists: TodoListConfig[]): TodoMap {

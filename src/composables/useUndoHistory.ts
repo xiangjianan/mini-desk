@@ -1,5 +1,6 @@
 import { ref } from "vue";
 import type { Ref } from "vue";
+import { captureQuickTagClicks, restoreQuickTagClicks } from "../state/quickButtons";
 import { exportUndoSnapshotState, normalizeImportedState } from "../state/storage";
 import { hydrateStoredImages } from "../state/images";
 import type { BoardState } from "../types";
@@ -39,7 +40,8 @@ export function useUndoHistory(state: BoardState, deps: UndoHistoryDeps) {
   let undoInFlight = false;
 
   function createUndoSnapshot(): UndoSnapshot {
-    const text = exportUndoSnapshotState(state);
+    // 点击计数是使用分析而非可撤销内容：快照剥除 clicks，仅计数变化不产生撤销历史。
+    const text = exportUndoSnapshotState(state, { omitQuickTagClicks: true });
     return { text, retainedImageIds: extractRetainedImageIds(JSON.parse(text) as unknown) };
   }
 
@@ -95,7 +97,10 @@ export function useUndoHistory(state: BoardState, deps: UndoHistoryDeps) {
       undoSnapshots.value = undoSnapshots.value.slice(0, -1);
       deps.cancelPendingEdits();
       deps.clearTransientUi();
+      const liveTagClicks = captureQuickTagClicks(state);
       Object.assign(state, nextState);
+      // 撤销恢复的是内容，不是使用分析：现行计数在恢复后、立即保存前回填。
+      restoreQuickTagClicks(state, liveTagClicks);
       deps.persistAfterRestore();
       lastUndoSnapshot.value = createUndoSnapshot();
     } finally {
