@@ -719,7 +719,7 @@ describe("state compatibility", () => {
     const state = normalizeImportedState({
       quickTags: [
         { id: "tag-a", title: "标签 A", collapsed: true, color: "#22c55e" },
-        { id: "tag-b", title: "标签 B", clicks: 7 },
+        { id: "tag-b", title: "标签 B", color: "#3b82f6", clicks: 7 },
         { id: "tag-c", title: "标签 C", clicks: 132 },
         { id: "tag-d", title: "标签 D", clicks: -3 },
         { id: "tag-e", title: "标签 E", clicks: 2.5 },

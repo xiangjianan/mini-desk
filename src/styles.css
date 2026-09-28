@@ -34,7 +34,7 @@
   --button: #ffffff;
   --button-hover: color-mix(in srgb, #ffffff 88%, var(--primary) 12%);
   /* 快捷标签使用热度染色的最深色：0 次 = --button（浅色纯白），100 次 = 该蓝。
-     同旧 QUICK_TAG_COLORS[0]；折算见 src/state/quickButtons.ts quickTagUsagePercent。 */
+     取旧调色板首色 #3b82f6 作历史沿革；折算见 src/state/quickButtons.ts quickTagUsagePercent。 */
   --quick-usage-accent: #3b82f6;
   --danger: #b42318;
   --radius: 12px;
@@ -1557,7 +1557,7 @@ button.quick-button {
   min-width: 0;
 }
 
-/* 标签管理器行内的使用次数徽标（取代原色板）：纯展示，右对齐对齐删除钮。 */
+/* 标签管理器行内的使用次数徽标（取代原色板）：纯展示，右对齐并与删除钮对齐。 */
 .quick-tag-clicks {
   flex-shrink: 0;
   min-width: 52px;

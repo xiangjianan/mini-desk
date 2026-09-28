@@ -665,6 +665,8 @@ export function normalizeQuickTags(tags: unknown): QuickTag[] {
 }
 ```
 
+> 注：clicks 归一化实际落地为 `Number.isInteger` 整数校验（Task 2 评审通过的偏离——`Math.floor` 会把 2.5 保留为 2，违背「非法丢弃」口径），Task 5 沿用未改。
+
 (d) `src/App.vue`：
 - import 行 60 删 `getQuickTagColor`：
 
