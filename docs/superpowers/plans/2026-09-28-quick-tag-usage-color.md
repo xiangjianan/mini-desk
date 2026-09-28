@@ -530,7 +530,7 @@ Expected: FAIL——变量/公式/徽标样式缺失，旧选择器仍在。
 .quick-tag-group.has-usage .quick-button:focus-visible,
 .quick-tag-group.has-usage button.quick-button:hover,
 .quick-tag-group.has-usage button.quick-button:focus-visible {
-  background: color-mix(in srgb, var(--quick-usage-accent) calc(min(var(--tag-usage) + 12, 100)), var(--button)) !important;
+  background: color-mix(in srgb, var(--quick-usage-accent) calc(min(var(--tag-usage) + 12%, 100%)), var(--button)) !important;
 }
 ```
 

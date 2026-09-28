@@ -41,7 +41,7 @@ quickTagUsagePercent(clicks) = clamp(min(clicks, 100), 0, 100)   // 0–100 整�
 ```
 
 - 深色主题同规则（`--button` 自动切换基色），无需媒体查询或主题分支。
-- hover/focus：`color-mix(in srgb, #3b82f6 calc(min(var(--tag-usage) + 12, 100)), var(--button))`，
+- hover/focus：`color-mix(in srgb, #3b82f6 calc(min(var(--tag-usage) + 12%, 100%)), var(--button))`，
   保留现有「悬停加深」手感。
 - 文字颜色不翻转：最深 `#3b82f6` 上，浅色主题深字对比 ≈ 3.99:1、深色主题
   浅字 ≈ 3.67:1，全程可读，省去阈值翻转逻辑。

@@ -361,6 +361,9 @@ describe("QuickButtons", () => {
     expect(styles).toMatch(
       /\.quick-tag-group\.has-usage button\.quick-button\s*\{[^}]*background:\s*color-mix\(in srgb, var\(--quick-usage-accent\) var\(--tag-usage\), var\(--button\)\)/s,
     );
+    expect(styles).toMatch(
+      /\.quick-tag-group\.has-usage button\.quick-button:hover[^{]*\{[^}]*background:\s*color-mix\(in srgb, var\(--quick-usage-accent\) calc\(min\(var\(--tag-usage\) \+ 12%, 100%\)\), var\(--button\)\) !important/s,
+    );
     expect(styles).toMatch(/\.quick-tag-clicks\s*\{/);
     expect(styles).not.toContain("has-tag-color");
     expect(styles).not.toContain("--tag-bg");
