@@ -10,7 +10,6 @@ import {
   distributeQuickTagColumns,
   filterVisibleQuickButtonGroups,
   formatQuickCopiedPreview,
-  getQuickTagColor,
   groupQuickButtonsByColumn,
   hasOverloadedVisibleQuickButtonGroup,
   QUICK_BUTTON_OTHER_GROUP_ID,
@@ -299,6 +298,8 @@ describe("QuickButtons", () => {
     expect(quickTagUsagePercent(-3)).toBe(0);
     expect(quickTagUsagePercent(2.5)).toBe(2);
     expect(quickTagUsagePercent("x" as unknown)).toBe(0);
+    expect(quickTagUsagePercent(NaN)).toBe(0);
+    expect(quickTagUsagePercent(Infinity)).toBe(0);
   });
 
   it("记录标签点击：命中 +1 返回 true，未命中不动也不报错", () => {
@@ -328,6 +329,29 @@ describe("QuickButtons", () => {
     expect(groups[0]).toMatchObject({ id: "t1", usagePercent: 40 });
     expect(groups[1]).toMatchObject({ id: QUICK_BUTTON_OTHER_GROUP_ID });
     expect(groups[1]).not.toHaveProperty("usagePercent");
+  });
+
+  it("按使用次数给标签组挂 has-usage 类与 --tag-usage 变量", () => {
+    const wrapper = mountQuickButtons({
+      tags: [
+        { id: "tag-hot", title: "常用", clicks: 40 },
+        { id: "tag-cold", title: "闲置" },
+      ],
+      buttons: [
+        { id: "a", title: "A", value: "a", type: "text", hidden: false, tagId: "tag-hot" },
+        { id: "b", title: "B", value: "b", type: "text", hidden: false, tagId: "tag-cold" },
+      ],
+    });
+
+    const hot = wrapper.get('[data-tag-id="tag-hot"]');
+    expect(hot.classes()).toContain("has-usage");
+    expect(hot.attributes("style")).toContain("--tag-usage: 40%");
+
+    const cold = wrapper.get('[data-tag-id="tag-cold"]');
+    expect(cold.classes()).not.toContain("has-usage");
+    expect(cold.attributes("style")).toBeUndefined();
+
+    wrapper.unmount();
   });
 
   it("maps the measured quick panel width to a clamped column count", () => {
@@ -1226,13 +1250,15 @@ describe("QuickButtons", () => {
 
   it("opens tag management and emits add, edit, and delete tag actions", async () => {
     const wrapper = mountQuickButtons({
-      tags: [{ id: "tag-work", title: "工作" }],
+      tags: [{ id: "tag-work", title: "工作", clicks: 7 }],
     });
 
     await wrapper.get(".quick-menu-button").trigger("click");
     await wrapper.findAll(".dropdown-option").find((option) => option.text() === "标签管理")?.trigger("click");
 
     expect(wrapper.get(".quick-tag-manager").text()).toContain("标签管理");
+    expect(wrapper.find(".quick-tag-color-picker").exists()).toBe(false);
+    expect(wrapper.get(".quick-tag-clicks").text()).toBe("7 次");
 
     await wrapper.get(".quick-tag-new-input").setValue("资料");
     await wrapper.get(".quick-tag-add").trigger("click");
@@ -1243,7 +1269,7 @@ describe("QuickButtons", () => {
     await wrapper.get(".quick-tag-name-input").trigger("blur");
     await wrapper.get(".quick-tag-delete").trigger("click");
 
-    expect(wrapper.emitted("saveTag")?.[1]).toEqual([{ id: "tag-work", title: "工作台", color: getQuickTagColor(0) }]);
+    expect(wrapper.emitted("saveTag")?.[1]).toEqual([{ id: "tag-work", title: "工作台" }]);
     expect(wrapper.emitted("deleteTag")?.[0]).toEqual(["tag-work", expect.any(HTMLElement)]);
 
     expect(wrapper.find(".quick-tag-save").exists()).toBe(false);

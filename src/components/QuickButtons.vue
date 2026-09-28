@@ -8,7 +8,7 @@ import type { AppLanguage, GuideKey, QuickApiBodyType, QuickApiHeader, QuickApiM
 import { GUIDE_MENU_OPTION } from "../state/defaults";
 import { getIconHeadingText, getUiText } from "../state/i18n";
 import type { QuickButtonGroup } from "../state/quickButtons";
-import { buildVisibleQuickButtonGroups, computeQuickColumnCount, filterVisibleQuickButtonGroups, getQuickTagColor, groupQuickButtonsByColumn, hasOverloadedVisibleQuickButtonGroup, normalizeQuickTagColor, QUICK_BUTTON_EMPTY_GROUP_ID, QUICK_DENSITY_THRESHOLD, QUICK_TAG_COLORS, QUICK_TAG_DEFAULT_COLOR } from "../state/quickButtons";
+import { buildVisibleQuickButtonGroups, computeQuickColumnCount, filterVisibleQuickButtonGroups, groupQuickButtonsByColumn, hasOverloadedVisibleQuickButtonGroup, QUICK_BUTTON_EMPTY_GROUP_ID, QUICK_DENSITY_THRESHOLD } from "../state/quickButtons";
 import { findQuickAppPresetByScheme, getQuickAppPresetHint, getQuickAppPresetTitle, QUICK_APP_PRESETS } from "../state/quickApps";
 import { findQuickApiTemplate, QUICK_API_TEMPLATES } from "../state/quickApiTemplates";
 import { clearGlobalSearch, globalSearchNormalized, globalSearchQuery, setGlobalSearch } from "../state/globalSearch";
@@ -54,7 +54,7 @@ const emit = defineEmits<{
   toggleCompact: [];
   reorder: [dragId: string, targetId: string];
   moveToTag: [buttonId: string, tagId?: string, targetId?: string];
-  saveTag: [payload: { id?: string; title: string; color?: string }];
+  saveTag: [payload: { id?: string; title: string }];
   toggleTagCollapsed: [id: string];
   deleteTag: [id: string, anchor?: HTMLElement];
   deleteTagWithButtons: [tagId: string, anchor?: HTMLElement];
@@ -72,7 +72,7 @@ const tagManagerOpen = ref(false);
 const editingId = ref<string | undefined>();
 const titleRef = ref<{ openMenuAt: (x: number, y: number, event?: Event) => void } | null>(null);
 type QuickApiHeaderFormRow = QuickApiHeader & { id: string };
-type QuickTagDraft = QuickTag & { titleDraft: string; colorDraft: string };
+type QuickTagDraft = QuickTag & { titleDraft: string };
 
 let headerRowId = 0;
 
@@ -317,10 +317,9 @@ function openEdit(id: string): void {
 }
 
 function refreshTagDrafts(): void {
-  tagDrafts.value = props.tags.map((tag, index) => ({
+  tagDrafts.value = props.tags.map((tag) => ({
     ...tag,
     titleDraft: tag.title,
-    colorDraft: normalizeQuickTagColor(tag.color, getQuickTagColor(index)),
   }));
 }
 
@@ -380,15 +379,9 @@ function addTag(): void {
 
 function saveTag(draft: QuickTagDraft): void {
   const title = draft.titleDraft.trim();
-  const color = draft.colorDraft;
   if (!title) return;
-  if (title === draft.title && color === draft.color) return;
-  emit("saveTag", { id: draft.id, title, color });
-}
-
-function setTagColor(draft: QuickTagDraft, color: string): void {
-  draft.colorDraft = color;
-  emit("saveTag", { id: draft.id, title: draft.titleDraft.trim() || draft.title, color });
+  if (title === draft.title) return;
+  emit("saveTag", { id: draft.id, title });
 }
 
 function deleteTag(id: string, event: MouseEvent): void {
@@ -398,6 +391,12 @@ function deleteTag(id: string, event: MouseEvent): void {
 function getQuickTagTitle(tagId?: string): string {
   if (!tagId) return "";
   return props.tags.find((tag) => tag.id === tagId)?.title ?? "";
+}
+
+/** 标签管理器使用次数徽标：zh「N 次」/ en「N clicks」；超过 100 照实显示（仅颜色封顶）。 */
+function formatTagClicks(clicks: number | undefined): string {
+  const count = clicks ?? 0;
+  return props.language === "en" ? `${count} clicks` : `${count} 次`;
 }
 
 function setQuickType(type: QuickButtonType): void {
@@ -942,9 +941,9 @@ function handleQuickGroupDrop(event: DragEvent, groupId: string): void {
         <section
           v-for="group in bucket"
           :key="group.id"
-          :class="['quick-tag-group', { 'has-tag-color': Boolean(group.color) }]"
+          :class="['quick-tag-group', { 'has-usage': (group.usagePercent ?? 0) > 0 }]"
           :data-tag-id="group.id"
-          :style="group.color ? { '--tag-bg': group.color } : undefined"
+          :style="group.usagePercent ? { '--tag-usage': `${group.usagePercent}%` } : undefined"
           @dragover="handleTagDragOver($event, group.id)"
           @drop.stop.prevent="handleQuickGroupDrop($event, group.id)"
         >
@@ -1242,27 +1241,11 @@ function handleQuickGroupDrop(event: DragEvent, groupId: string): void {
               @keydown.enter.prevent="saveTag(tag)"
               @blur="saveTag(tag)"
             />
-            <div class="quick-tag-color-picker" role="group" :aria-label="uiText.quick.tagColor">
-              <button
-                type="button"
-                class="quick-tag-color-swatch quick-tag-color-swatch--default"
-                :class="{ 'is-selected': tag.colorDraft === QUICK_TAG_DEFAULT_COLOR }"
-                :aria-label="uiText.quick.tagColorDefault"
-                :title="uiText.quick.tagColorDefault"
-                @click="setTagColor(tag, QUICK_TAG_DEFAULT_COLOR)"
-              />
-              <button
-                v-for="color in QUICK_TAG_COLORS"
-                :key="color"
-                type="button"
-                class="quick-tag-color-swatch"
-                :class="{ 'is-selected': tag.colorDraft === color }"
-                :style="{ '--swatch-color': color }"
-                :aria-label="color"
-                :title="color"
-                @click="setTagColor(tag, color)"
-              />
-            </div>
+            <span
+              class="quick-tag-clicks"
+              :aria-label="uiText.quick.tagClicks"
+              :title="uiText.quick.tagClicks"
+            >{{ formatTagClicks(tag.clicks) }}</span>
             <button
               type="button"
               class="quick-tag-delete icon-button is-delete"
