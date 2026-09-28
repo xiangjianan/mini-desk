@@ -45,7 +45,8 @@ quickTagUsagePercent(clicks) = clamp(min(clicks, 100), 0, 100)   // 0–100 整�
   保留现有「悬停加深」手感。
 - 文字颜色不翻转：最深 `#3b82f6` 上，浅色主题深字对比 ≈ 3.99:1、深色主题
   浅字 ≈ 3.67:1，全程可读，省去阈值翻转逻辑。
-- 常量 `QUICK_TAG_USAGE_ACCENT = "#3b82f6"` 取代整个 `QUICK_TAG_COLORS` 调色板。
+- 最深色常量落在 CSS 变量 `:root { --quick-usage-accent: #3b82f6 }`（同旧
+  `QUICK_TAG_COLORS[0]`），取代整个调色板；JS 侧不需要重复常量。
 
 ## 数据模型
 
@@ -114,4 +115,6 @@ export interface QuickTag {
 | `src/state/storage/normalize.ts` | 剥 `color`、校验 `clicks` |
 | `src/styles.css` | `.has-tag-color` 规则族 → `.has-usage` color-mix 公式族 |
 | `src/state/i18n.ts` | 删 tagColor 文案；增徽标文案 |
-| `src/state/changelog.ts` | 新条目 |
+
+更新日志不手改：`/release-mini-desk` 发版流程会在版本提交时按实际 diff
+追加 changelog 条目（其 curation policy 见 `src/state/changelog.ts` 头注）。
