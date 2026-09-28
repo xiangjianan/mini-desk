@@ -41,7 +41,7 @@ export type NotifyPresetGroup = "relative" | "time";
 
 export type NotifyPresetKey =
   | "in15m" | "in30m" | "in1h" | "in2h" | "in4h"
-  | "at9" | "at12" | "at15" | "at18" | "tomorrow9";
+  | "at9" | "at12" | "at15" | "at18" | "tomorrow21";
 
 export interface NotifyPreset {
   key: NotifyPresetKey;
@@ -53,7 +53,7 @@ export interface NotifyPreset {
  * Quick deadline presets for the notify picker, in two groups: relative
  * durations and time-of-day slots. Durations add to `now` (seconds cleared).
  * The 09:00 / 12:00 / 15:00 / 18:00 slots always land on today
- * (the picker's default date); tomorrow 09:00 is an explicit +1 day offset. Picked
+ * (the picker's default date); tomorrow 21:00 is an explicit +1 day offset. Picked
  * presets commit immediately; the user can still shift the date via the picker.
  */
 export function getNotifyPresets(now = new Date()): NotifyPreset[] {
@@ -79,7 +79,7 @@ export function getNotifyPresets(now = new Date()): NotifyPreset[] {
     { key: "at12", group: "time", at: todayAt(12) },
     { key: "at15", group: "time", at: todayAt(15) },
     { key: "at18", group: "time", at: todayAt(18) },
-    { key: "tomorrow9", group: "time", at: tomorrowAt(9) },
+    { key: "tomorrow21", group: "time", at: tomorrowAt(21) },
   ];
 }
 
