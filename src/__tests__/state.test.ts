@@ -22,7 +22,6 @@ import {
   starTodo,
   updateTodoText,
 } from "../state/todos";
-import { getQuickTagColor } from "../state/quickButtons";
 import type { BoardState } from "../types";
 
 describe("state compatibility", () => {
@@ -719,7 +718,7 @@ describe("state compatibility", () => {
   it("normalizes quick action tags and keeps invalid tag references untagged", () => {
     const state = normalizeImportedState({
       quickTags: [
-        { id: "tag-a", title: "标签 A", collapsed: true },
+        { id: "tag-a", title: "标签 A", collapsed: true, color: "#22c55e" },
         { id: "tag-b", title: "标签 B", clicks: 7 },
         { id: "tag-c", title: "标签 C", clicks: 132 },
         { id: "tag-d", title: "标签 D", clicks: -3 },
@@ -735,12 +734,12 @@ describe("state compatibility", () => {
     const ws = () => state.workspaces[0];
 
     expect(ws().quickTags).toEqual([
-      { id: "tag-a", title: "标签 A", collapsed: true, color: getQuickTagColor(0), column: 0 },
-      { id: "tag-b", title: "标签 B", color: getQuickTagColor(1), column: 0, clicks: 7 },
-      { id: "tag-c", title: "标签 C", color: getQuickTagColor(2), column: 0, clicks: 132 },
-      { id: "tag-d", title: "标签 D", color: getQuickTagColor(3), column: 0 },
-      { id: "tag-e", title: "标签 E", color: getQuickTagColor(4), column: 0 },
-      { id: "tag-f", title: "标签 F", color: getQuickTagColor(5), column: 0 },
+      { id: "tag-a", title: "标签 A", collapsed: true, column: 0 },
+      { id: "tag-b", title: "标签 B", column: 0, clicks: 7 },
+      { id: "tag-c", title: "标签 C", column: 0, clicks: 132 },
+      { id: "tag-d", title: "标签 D", column: 0 },
+      { id: "tag-e", title: "标签 E", column: 0 },
+      { id: "tag-f", title: "标签 F", column: 0 },
     ]);
     expect(ws().quickButtons[0]).toMatchObject({ tagId: "tag-a" });
     expect(ws().quickButtons[1]).not.toHaveProperty("tagId");

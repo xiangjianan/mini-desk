@@ -1,7 +1,6 @@
 import { DEFAULT_SPACE_ID, DEFAULT_SPACE_TITLE, DEFAULT_TODO_LISTS, DEFAULT_WORKSPACE_ID, defaultWorkspace } from "../defaults";
 import { isValidNotifyAt } from "../deadlines";
 import { normalizeCompanionGifTheme } from "../companionGifThemes";
-import { getQuickTagColor, normalizeQuickTagColor } from "../quickButtons";
 import { isQuickAppScheme } from "../quickApps";
 import { INBOX_CODE_PATTERN } from "../../sync/pairing";
 import { normalizeMarkList } from "../../utils/textMarks";
@@ -352,18 +351,18 @@ export function normalizeQuickTags(tags: unknown): QuickTag[] {
   if (!Array.isArray(tags)) return [];
   const seen = new Set<string>();
   return tags
-    .map((item, index): QuickTag | null => {
+    .map((item): QuickTag | null => {
       if (!isPlainObject(item)) return null;
       const record = item as Record<string, unknown>;
       const id = typeof record.id === "string" ? record.id.trim() : "";
       const title = typeof record.title === "string" ? record.title.trim() : "";
       if (!id || !title || seen.has(id)) return null;
       seen.add(id);
-      const color = normalizeQuickTagColor(record.color, getQuickTagColor(index));
       // Numeric guard (not Boolean()): column 0 is valid and falsy.
       const column = typeof record.column === "number" && Number.isFinite(record.column) ? Math.max(0, Math.floor(record.column)) : 0;
+      // 存量 color 就此退役：导入即静默剥除，染色改由 clicks 使用热度驱动。
       const clicks = typeof record.clicks === "number" && Number.isInteger(record.clicks) && record.clicks > 0 ? record.clicks : undefined;
-      return { id, title, color, column, ...(clicks ? { clicks } : {}), ...(record.collapsed === true ? { collapsed: true } : {}) };
+      return { id, title, column, ...(clicks ? { clicks } : {}), ...(record.collapsed === true ? { collapsed: true } : {}) };
     })
     .filter((item): item is QuickTag => item !== null);
 }

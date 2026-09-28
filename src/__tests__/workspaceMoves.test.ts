@@ -14,19 +14,20 @@ function workspace(id: string, overrides: Partial<WorkspaceData> = {}): Workspac
 }
 
 describe("moveQuickButtonToWorkspace", () => {
-  const tag = { id: "tag-1", title: "常用", color: "#4ade80" };
+  const tag = { id: "tag-1", title: "常用", clicks: 5 };
   const button = { id: "btn-1", title: "搜索", value: "https://example.com", type: "link" as const, tagId: "tag-1", hidden: false };
   const source = workspace("ws-a", { quickTags: [tag], quickButtons: [button] });
   const target = workspace("ws-b");
 
-  it("移动按钮并在目标重建同名同色标签", () => {
+  it("移动按钮并在目标重建同名标签，计数不随按钮迁移", () => {
     const next = moveQuickButtonToWorkspace([source, target], "ws-a", "btn-1", "ws-b");
     const from = next.find((w) => w.id === "ws-a")!;
     const to = next.find((w) => w.id === "ws-b")!;
     expect(from.quickButtons).toHaveLength(0);
     expect(to.quickButtons).toHaveLength(1);
     expect(to.quickTags).toHaveLength(1);
-    expect(to.quickTags[0]).toMatchObject({ title: "常用", color: "#4ade80" });
+    expect(to.quickTags[0]).toMatchObject({ title: "常用" });
+    expect(to.quickTags[0].clicks).toBeUndefined();
     expect(to.quickButtons[0].tagId).toBe(to.quickTags[0].id);
   });
 

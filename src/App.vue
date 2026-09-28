@@ -57,7 +57,7 @@ import { applyThemeColor } from "./state/theme-color";
 import { removeWorkbenchWidths } from "./state/layoutPrefs";
 import { createWorkspaceData, ensureUniqueWorkspaceTitle, getWorkspaceBoardTitle, projectLegacySpaceLines, removeWorkspace, reorderWorkspaces } from "./state/workspaces";
 import * as workspaceMover from "./state/workspaceMoves";
-import { QUICK_BUTTON_OTHER_GROUP_ID, QUICK_DENSITY_THRESHOLD, assignQuickTagColumn, distributeQuickTagColumns, formatQuickCopiedPreview, getQuickTagColor, recordQuickTagClick } from "./state/quickButtons";
+import { QUICK_BUTTON_OTHER_GROUP_ID, QUICK_DENSITY_THRESHOLD, assignQuickTagColumn, distributeQuickTagColumns, formatQuickCopiedPreview, recordQuickTagClick } from "./state/quickButtons";
 import { isQuickAppScheme } from "./state/quickApps";
 import { advanceTipRotation, resolveTipGuideKey, type TipRotationState } from "./state/guideTips";
 import { INBOX_FOCUS_THROTTLE_MS, INBOX_PULL_INTERVAL_MS } from "./sync/config";
@@ -2021,18 +2021,17 @@ function resolveQuickTagId(tagTitle?: string): string | undefined {
   if (!title) return undefined;
   const existing = activeWorkspace.value.quickTags.find((tag) => tag.title === title);
   if (existing) return existing.id;
-  const tag = { id: createId(), title, color: getQuickTagColor(activeWorkspace.value.quickTags.length) };
+  const tag = { id: createId(), title };
   activeWorkspace.value.quickTags.push(tag);
   return tag.id;
 }
 
-function saveQuickTag(payload: { id?: string; title: string; color?: string }): void {
+function saveQuickTag(payload: { id?: string; title: string }): void {
   const title = payload.title.trim();
   if (!title) return;
   if (!payload.id) {
     if (activeWorkspace.value.quickTags.some((tag) => tag.title === title)) return;
-    const color = payload.color ?? getQuickTagColor(activeWorkspace.value.quickTags.length);
-    activeWorkspace.value.quickTags.push({ id: createId(), title, color });
+    activeWorkspace.value.quickTags.push({ id: createId(), title });
     persistNow();
     return;
   }
@@ -2045,7 +2044,6 @@ function saveQuickTag(payload: { id?: string; title: string; color?: string }): 
     activeWorkspace.value.quickTags = activeWorkspace.value.quickTags.filter((tag) => tag.id !== payload.id);
   } else {
     current.title = title;
-    if (payload.color) current.color = payload.color;
   }
   persistNow();
 }

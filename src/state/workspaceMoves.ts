@@ -35,7 +35,7 @@ function uniqueIdAmong(taken: Iterable<string>, desired: string): string {
 
 /**
  * 移动单个快捷按钮。标签仍存在时保留分组：使用目标的同名标签，没有则在
- * 目标新建同名同色标签；悬空 tagId 视为无标签（落入目标的「其他」分组）。
+ * 目标新建同名标签；悬空 tagId 视为无标签（落入目标的「其他」分组）。
  * 目标已有同 id 时重新生成 id，避免跨空间 id 碰撞。
  */
 export function moveQuickButtonToWorkspace(
@@ -56,9 +56,7 @@ export function moveQuickButtonToWorkspace(
       if (existing) {
         tagId = existing.id;
       } else {
-        const created: QuickTag = sourceTag.color
-          ? { id: createId(), title: sourceTag.title, color: sourceTag.color }
-          : { id: createId(), title: sourceTag.title };
+        const created: QuickTag = { id: createId(), title: sourceTag.title };
         quickTags = [...to.quickTags, created];
         tagId = created.id;
       }

@@ -17,8 +17,6 @@ export interface QuickTag {
   id: string;
   title: string;
   collapsed?: boolean;
-  /** One of QUICK_TAG_COLORS. Persisted so a tag keeps its color for its lifetime. */
-  color?: string;
   /** 使用热度计数：组内快捷按钮每点一次 +1，驱动 0–100 染色（quickTagUsagePercent）。缺省 = 0。 */
   clicks?: number;
   /**
