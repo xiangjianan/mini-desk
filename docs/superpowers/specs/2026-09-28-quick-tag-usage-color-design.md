@@ -118,3 +118,23 @@ export interface QuickTag {
 
 更新日志不手改：`/release-mini-desk` 发版流程会在版本提交时按实际 diff
 追加 changelog 条目（其 curation policy 见 `src/state/changelog.ts` 头注）。
+
+## 修订 V2（2026-09-29，用户验收反馈）
+
+实机使用后两条修正，覆盖上文对应条目：
+
+1. **最深色对齐旧观感**：100% 纯 `#3b82f6` 太深。修改前「第一个蓝」标签
+   的按钮实际成色是 18% 混入（浅色）/ 24%（深色）的淡蓝——梯度上限改为
+   该成色：`color-mix(in srgb, var(--quick-usage-accent) calc(var(--button-usage) * 18%), var(--button))`
+   （深色 ×24%）。hover 复刻旧手感：浅色 `min(usage×18% + 12%, 30%)`、
+   深色 `min(usage×24% + 14%, 38%)`，梯度仍为 0–100 线性数学折算。
+2. **计数与染色下沉到按钮级**：`clicks` 从 `QuickTag` 移到 `QuickButton`。
+   点击哪个按钮就加深哪个按钮（含「其他」组未分组按钮）；换标签/换工作区
+   计数随按钮迁移，删按钮即失计数。标签管理器徽标改为该标签下全部按钮
+   （含隐藏）计数之和。存量标签级 `clicks` 迁移时丢弃（本地仅一天数据）；
+   撤销快照剥除/回填机制沿用，字段换到 `buttons[].clicks`。
+
+命名随语义更新：`quickButtonUsagePercent` / `QUICK_USAGE_MAX_CLICKS` /
+`recordQuickButtonClick` / `captureQuickButtonClicks`·`restoreQuickButtonClicks` /
+`omitQuickButtonClicks` / CSS `--button-usage` / `.quick-button.has-usage`
+（按钮级类；选择器需 `.quick-buttons` 前缀压过 desk.css 的透明底规则）。
