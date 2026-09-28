@@ -773,7 +773,7 @@ export const UI_TEXT = {
         at12: "中午 12 点",
         at15: "下午 3 点",
         at18: "傍晚 6 点",
-        tomorrow21: "明天晚上 9 点",
+        at21: "晚上 9 点",
       },
     },
     preview: {
@@ -1155,7 +1155,7 @@ export const UI_TEXT = {
         at12: "12 PM",
         at15: "3 PM",
         at18: "6 PM",
-        tomorrow21: "Tomorrow 9 PM",
+        at21: "9 PM",
       },
     },
     preview: {

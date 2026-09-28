@@ -41,7 +41,7 @@ export type NotifyPresetGroup = "relative" | "time";
 
 export type NotifyPresetKey =
   | "in15m" | "in30m" | "in1h" | "in2h" | "in4h"
-  | "at9" | "at12" | "at15" | "at18" | "tomorrow21";
+  | "at9" | "at12" | "at15" | "at18" | "at21";
 
 export interface NotifyPreset {
   key: NotifyPresetKey;
@@ -52,9 +52,9 @@ export interface NotifyPreset {
 /**
  * Quick deadline presets for the notify picker, in two groups: relative
  * durations and time-of-day slots. Durations add to `now` (seconds cleared).
- * The 09:00 / 12:00 / 15:00 / 18:00 slots always land on today
- * (the picker's default date); tomorrow 21:00 is an explicit +1 day offset. Picked
- * presets commit immediately; the user can still shift the date via the picker.
+ * Time-of-day slots land on the next occurrence: today's slot while it is
+ * still ahead, otherwise the same hour tomorrow. Picked presets commit
+ * immediately; the user can still shift the date via the picker.
  */
 export function getNotifyPresets(now = new Date()): NotifyPreset[] {
   const inMinutes = (minutes: number): number => {
@@ -66,8 +66,14 @@ export function getNotifyPresets(now = new Date()): NotifyPreset[] {
   const todayAt = (hour: number): number =>
     new Date(now.getFullYear(), now.getMonth(), now.getDate(), hour, 0, 0, 0).getTime();
 
-  const tomorrowAt = (hour: number): number =>
-    new Date(now.getFullYear(), now.getMonth(), now.getDate() + 1, hour, 0, 0, 0).getTime();
+  // Today's slot while it is still ahead; a slot that has already arrived
+  // (>= now, so exactly-at-the-hour counts as passed) rolls to tomorrow.
+  const nextAt = (hour: number): number => {
+    const today = todayAt(hour);
+    return today > now.getTime()
+      ? today
+      : new Date(now.getFullYear(), now.getMonth(), now.getDate() + 1, hour, 0, 0, 0).getTime();
+  };
 
   return [
     { key: "in15m", group: "relative", at: inMinutes(15) },
@@ -75,11 +81,11 @@ export function getNotifyPresets(now = new Date()): NotifyPreset[] {
     { key: "in1h", group: "relative", at: inMinutes(60) },
     { key: "in2h", group: "relative", at: inMinutes(120) },
     { key: "in4h", group: "relative", at: inMinutes(240) },
-    { key: "at9", group: "time", at: todayAt(9) },
-    { key: "at12", group: "time", at: todayAt(12) },
-    { key: "at15", group: "time", at: todayAt(15) },
-    { key: "at18", group: "time", at: todayAt(18) },
-    { key: "tomorrow21", group: "time", at: tomorrowAt(21) },
+    { key: "at9", group: "time", at: nextAt(9) },
+    { key: "at12", group: "time", at: nextAt(12) },
+    { key: "at15", group: "time", at: nextAt(15) },
+    { key: "at18", group: "time", at: nextAt(18) },
+    { key: "at21", group: "time", at: nextAt(21) },
   ];
 }
 

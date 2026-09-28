@@ -121,13 +121,13 @@ describe("notification time helpers", () => {
   });
 
   it("builds quick presets in relative and time-of-day groups", () => {
-    // 2024-01-15 10:30 — 09:00 has passed, 12:00/15:00/18:00 still upcoming today.
+    // 2024-01-15 10:30 — 09:00 has passed, 12:00/15:00/18:00/21:00 still upcoming today.
     const now = new Date(2024, 0, 15, 10, 30, 0, 0);
     const presets = getNotifyPresets(now);
 
     expect(presets.map((preset) => preset.key)).toEqual([
       "in15m", "in30m", "in1h", "in2h", "in4h", // relative group
-      "at9", "at12", "at15", "at18", "tomorrow21", // time-of-day group
+      "at9", "at12", "at15", "at18", "at21", // time-of-day group
     ]);
     expect(presets.map((preset) => preset.group)).toEqual([
       "relative", "relative", "relative", "relative", "relative",
@@ -141,24 +141,33 @@ describe("notification time helpers", () => {
     expect(presets[3].at).toBe(new Date(2024, 0, 15, 12, 30, 0, 0).getTime()); // +2h → 12:30
     expect(presets[4].at).toBe(new Date(2024, 0, 15, 14, 30, 0, 0).getTime()); // +4h → 14:30
 
-    // Time-of-day: 09:00/12:00/15:00/18:00 always land on today (even 09:00,
-    // which has already passed); tomorrow21 is a fixed +1 day offset.
-    expect(presets[5].at).toBe(new Date(2024, 0, 15, 9, 0, 0, 0).getTime()); // 09:00 today
+    // Time-of-day slots land on the next occurrence: today's slot while it is
+    // still ahead (12:00/15:00/18:00/21:00), otherwise the same hour tomorrow
+    // (09:00 has already passed at 10:30).
+    expect(presets[5].at).toBe(new Date(2024, 0, 16, 9, 0, 0, 0).getTime()); // tomorrow 09:00
     expect(presets[6].at).toBe(new Date(2024, 0, 15, 12, 0, 0, 0).getTime()); // 12:00 today
     expect(presets[7].at).toBe(new Date(2024, 0, 15, 15, 0, 0, 0).getTime()); // 15:00 today
     expect(presets[8].at).toBe(new Date(2024, 0, 15, 18, 0, 0, 0).getTime()); // 18:00 today
-    expect(presets[9].at).toBe(new Date(2024, 0, 16, 21, 0, 0, 0).getTime()); // tomorrow 21:00
+    expect(presets[9].at).toBe(new Date(2024, 0, 15, 21, 0, 0, 0).getTime()); // 21:00 today
   });
 
-  it("keeps time-of-day presets on today even when late in the day", () => {
-    // 20:00 — 09:00/12:00/15:00/18:00 have all passed today, but still land on today.
+  it("rolls time-of-day presets that already passed today to tomorrow", () => {
+    // 20:00 — 09:00/12:00/15:00/18:00 have all passed today; 21:00 is still ahead.
     const now = new Date(2024, 0, 15, 20, 0, 0, 0);
     const presets = getNotifyPresets(now);
 
-    expect(presets[5].at).toBe(new Date(2024, 0, 15, 9, 0, 0, 0).getTime()); // 09:00 today
-    expect(presets[6].at).toBe(new Date(2024, 0, 15, 12, 0, 0, 0).getTime()); // 12:00 today
-    expect(presets[7].at).toBe(new Date(2024, 0, 15, 15, 0, 0, 0).getTime()); // 15:00 today
-    expect(presets[8].at).toBe(new Date(2024, 0, 15, 18, 0, 0, 0).getTime()); // 18:00 today
-    expect(presets[9].at).toBe(new Date(2024, 0, 16, 21, 0, 0, 0).getTime()); // tomorrow 21:00
+    expect(presets[5].at).toBe(new Date(2024, 0, 16, 9, 0, 0, 0).getTime()); // tomorrow 09:00
+    expect(presets[6].at).toBe(new Date(2024, 0, 16, 12, 0, 0, 0).getTime()); // tomorrow 12:00
+    expect(presets[7].at).toBe(new Date(2024, 0, 16, 15, 0, 0, 0).getTime()); // tomorrow 15:00
+    expect(presets[8].at).toBe(new Date(2024, 0, 16, 18, 0, 0, 0).getTime()); // tomorrow 18:00
+    expect(presets[9].at).toBe(new Date(2024, 0, 15, 21, 0, 0, 0).getTime()); // 21:00 today
+  });
+
+  it("rolls a time-of-day preset to tomorrow when now is exactly at the hour", () => {
+    // 18:00 sharp — the 18:00 slot has arrived, so it moves to tomorrow.
+    const presets = getNotifyPresets(new Date(2024, 0, 15, 18, 0, 0, 0));
+
+    expect(presets[8].at).toBe(new Date(2024, 0, 16, 18, 0, 0, 0).getTime()); // tomorrow 18:00
+    expect(presets[9].at).toBe(new Date(2024, 0, 15, 21, 0, 0, 0).getTime()); // 21:00 today
   });
 });

@@ -29,6 +29,19 @@ export interface ChangelogEntry {
 
 export const CHANGELOG: ChangelogEntry[] = [
   {
+  {
+    version: "1.0.192",
+    date: "2026-09-28",
+    notes: {
+      zh: [
+        "优化：提醒时间快捷时段改为 上午9点/中午12点/下午3点/傍晚6点/晚上9点，默认取下一次到达的时刻——今天还没过的落今天，已过的自动顺延到明天",
+      ],
+      en: [
+        "Improved: reminder time presets are now 9 AM / 12 PM / 3 PM / 6 PM / 9 PM and always land on the next occurrence — slots still ahead today stay today, passed ones roll over to tomorrow",
+      ],
+    },
+  },
+  {
     version: "1.0.191",
     date: "2026-09-27",
     notes: {
