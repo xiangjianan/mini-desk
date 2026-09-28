@@ -2379,53 +2379,66 @@ html[data-theme="dark"] .notify-date-picker .n-date-panel-calendar {
   display: flex;
   flex-direction: column;
   gap: 8px;
-  padding: 12px 8px 8px;
+  padding: 12px 12px 14px;
+  border-top: 1px solid var(--line-subtle);
 }
 
 .notify-panel-preset-group {
-  display: flex;
-  flex-wrap: wrap;
+  display: grid;
+  grid-template-columns: 34px repeat(5, minmax(0, 1fr));
   align-items: center;
-  gap: 4px;
+  gap: 6px;
 }
 
 .notify-panel-preset-label {
-  flex: 0 0 auto;
-  padding-left: 4px;
-  font-size: 12px;
-  line-height: 1;
+  font-size: 11px;
+  line-height: 1.4;
   color: var(--muted);
 }
 
 button.notify-panel-preset {
-  flex: 0 0 70px;
-  height: 20px;
-  min-height: 0;
+  width: 100%;
+  min-height: 30px;
   min-width: 0;
-  padding: 0 6px;
-  border: 1px solid var(--line-control);
-  border-radius: 5px;
-  background: var(--button);
+  padding: 6px 4px;
+  border: 1px solid transparent;
+  border-radius: 8px;
+  background: color-mix(in srgb, var(--muted-surface) 60%, transparent);
   color: var(--text);
   font-size: 11px;
-  line-height: 1;
-  white-space: nowrap;
-  overflow: hidden;
-  text-overflow: ellipsis;
+  font-weight: 500;
+  line-height: 1.35;
+  white-space: normal;
   cursor: pointer;
-  box-shadow: 0 1px 2px rgba(0, 0, 0, 0.1);
+  box-shadow: none;
   transition:
     background-color var(--motion-fast) ease,
-    border-color var(--motion-fast) ease,
-    color var(--motion-fast) ease,
-    box-shadow var(--motion-fast) ease;
+    color var(--motion-fast) ease;
 }
 
-.notify-panel-preset:hover {
+button.notify-panel-preset:hover {
   background: var(--button-hover);
-  border-color: var(--foreground);
-  color: var(--foreground);
-  box-shadow: 0 1px 3px rgba(0, 0, 0, 0.14);
+  color: var(--primary);
+  box-shadow: none;
+}
+
+button.notify-panel-preset:active {
+  background: var(--accent);
+}
+
+button.notify-panel-preset:focus-visible {
+  outline: 2px solid var(--primary);
+  outline-offset: 2px;
+}
+
+@media (max-width: 540px) {
+  .notify-panel-preset-group {
+    grid-template-columns: repeat(3, minmax(0, 1fr));
+  }
+
+  .notify-panel-preset-label {
+    grid-column: 1 / -1;
+  }
 }
 
 .notify-panel-actions {

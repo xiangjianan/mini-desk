@@ -40,8 +40,8 @@ export function withDefaultNotifyTime(dateTimestamp: number, now = new Date()): 
 export type NotifyPresetGroup = "relative" | "time";
 
 export type NotifyPresetKey =
-  | "in15m" | "in30m" | "in1h" | "in3h" | "in6h"
-  | "at10" | "at14" | "at17" | "at19" | "tomorrow10";
+  | "in15m" | "in30m" | "in1h" | "in2h" | "in4h"
+  | "at9" | "at12" | "at15" | "at18" | "tomorrow9";
 
 export interface NotifyPreset {
   key: NotifyPresetKey;
@@ -52,8 +52,8 @@ export interface NotifyPreset {
 /**
  * Quick deadline presets for the notify picker, in two groups: relative
  * durations and time-of-day slots. Durations add to `now` (seconds cleared).
- * The 上午 10 点 / 下午 2 点 / 下午 5 点 / 晚上 7 点 slots always land on today
- * (the picker's default date); 明天 10 点 is an explicit +1 day offset. Picked
+ * The 09:00 / 12:00 / 15:00 / 18:00 slots always land on today
+ * (the picker's default date); tomorrow 09:00 is an explicit +1 day offset. Picked
  * presets commit immediately; the user can still shift the date via the picker.
  */
 export function getNotifyPresets(now = new Date()): NotifyPreset[] {
@@ -73,13 +73,13 @@ export function getNotifyPresets(now = new Date()): NotifyPreset[] {
     { key: "in15m", group: "relative", at: inMinutes(15) },
     { key: "in30m", group: "relative", at: inMinutes(30) },
     { key: "in1h", group: "relative", at: inMinutes(60) },
-    { key: "in3h", group: "relative", at: inMinutes(180) },
-    { key: "in6h", group: "relative", at: inMinutes(360) },
-    { key: "at10", group: "time", at: todayAt(10) },
-    { key: "at14", group: "time", at: todayAt(14) },
-    { key: "at17", group: "time", at: todayAt(17) },
-    { key: "at19", group: "time", at: todayAt(19) },
-    { key: "tomorrow10", group: "time", at: tomorrowAt(10) },
+    { key: "in2h", group: "relative", at: inMinutes(120) },
+    { key: "in4h", group: "relative", at: inMinutes(240) },
+    { key: "at9", group: "time", at: todayAt(9) },
+    { key: "at12", group: "time", at: todayAt(12) },
+    { key: "at15", group: "time", at: todayAt(15) },
+    { key: "at18", group: "time", at: todayAt(18) },
+    { key: "tomorrow9", group: "time", at: tomorrowAt(9) },
   ];
 }
 
