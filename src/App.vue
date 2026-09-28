@@ -57,7 +57,7 @@ import { applyThemeColor } from "./state/theme-color";
 import { removeWorkbenchWidths } from "./state/layoutPrefs";
 import { createWorkspaceData, ensureUniqueWorkspaceTitle, getWorkspaceBoardTitle, projectLegacySpaceLines, removeWorkspace, reorderWorkspaces } from "./state/workspaces";
 import * as workspaceMover from "./state/workspaceMoves";
-import { QUICK_BUTTON_OTHER_GROUP_ID, QUICK_DENSITY_THRESHOLD, assignQuickTagColumn, distributeQuickTagColumns, formatQuickCopiedPreview, getQuickTagColor } from "./state/quickButtons";
+import { QUICK_BUTTON_OTHER_GROUP_ID, QUICK_DENSITY_THRESHOLD, assignQuickTagColumn, distributeQuickTagColumns, formatQuickCopiedPreview, getQuickTagColor, recordQuickTagClick } from "./state/quickButtons";
 import { isQuickAppScheme } from "./state/quickApps";
 import { advanceTipRotation, resolveTipGuideKey, type TipRotationState } from "./state/guideTips";
 import { INBOX_FOCUS_THROTTLE_MS, INBOX_PULL_INTERVAL_MS } from "./sync/config";
@@ -2198,6 +2198,7 @@ function openQuickApp(button: QuickButton, anchor?: HTMLElement): void {
 async function handleQuickButton(id: string, anchor?: HTMLElement): Promise<void> {
   const button = activeWorkspace.value.quickButtons.find((item) => item.id === id);
   if (!button) return;
+  if (recordQuickTagClick(activeWorkspace.value.quickTags, button.tagId)) persistNow();
   if (button.type === "link") {
     // noopener 下 window.open 成功也返回 null（规范行为），返回值判不出弹窗拦截；
     // 与 openQuickApp 同一处理：用户手势触发的打开默认成功，只提示已发起。

@@ -720,7 +720,11 @@ describe("state compatibility", () => {
     const state = normalizeImportedState({
       quickTags: [
         { id: "tag-a", title: "标签 A", collapsed: true },
-        { id: "tag-b", title: "标签 B" },
+        { id: "tag-b", title: "标签 B", clicks: 7 },
+        { id: "tag-c", title: "标签 C", clicks: 132 },
+        { id: "tag-d", title: "标签 D", clicks: -3 },
+        { id: "tag-e", title: "标签 E", clicks: 2.5 },
+        { id: "tag-f", title: "标签 F", clicks: "x" },
         { id: "tag-a", title: "重复" },
       ],
       quickButtons: [
@@ -732,7 +736,11 @@ describe("state compatibility", () => {
 
     expect(ws().quickTags).toEqual([
       { id: "tag-a", title: "标签 A", collapsed: true, color: getQuickTagColor(0), column: 0 },
-      { id: "tag-b", title: "标签 B", color: getQuickTagColor(1), column: 0 },
+      { id: "tag-b", title: "标签 B", color: getQuickTagColor(1), column: 0, clicks: 7 },
+      { id: "tag-c", title: "标签 C", color: getQuickTagColor(2), column: 0, clicks: 132 },
+      { id: "tag-d", title: "标签 D", color: getQuickTagColor(3), column: 0 },
+      { id: "tag-e", title: "标签 E", color: getQuickTagColor(4), column: 0 },
+      { id: "tag-f", title: "标签 F", color: getQuickTagColor(5), column: 0 },
     ]);
     expect(ws().quickButtons[0]).toMatchObject({ tagId: "tag-a" });
     expect(ws().quickButtons[1]).not.toHaveProperty("tagId");

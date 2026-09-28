@@ -362,7 +362,8 @@ export function normalizeQuickTags(tags: unknown): QuickTag[] {
       const color = normalizeQuickTagColor(record.color, getQuickTagColor(index));
       // Numeric guard (not Boolean()): column 0 is valid and falsy.
       const column = typeof record.column === "number" && Number.isFinite(record.column) ? Math.max(0, Math.floor(record.column)) : 0;
-      return { id, title, color, column, ...(record.collapsed === true ? { collapsed: true } : {}) };
+      const clicks = typeof record.clicks === "number" && Number.isInteger(record.clicks) && record.clicks > 0 ? record.clicks : undefined;
+      return { id, title, color, column, ...(clicks ? { clicks } : {}), ...(record.collapsed === true ? { collapsed: true } : {}) };
     })
     .filter((item): item is QuickTag => item !== null);
 }

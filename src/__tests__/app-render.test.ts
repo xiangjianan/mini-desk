@@ -4325,6 +4325,36 @@ describe("App shell", () => {
     wrapper.unmount();
   });
 
+  it("点击带标签的快捷按钮给标签使用计数 +1 并落盘，无标签按钮不计数", async () => {
+    localStorage.setItem(
+      STORAGE_KEY,
+      JSON.stringify({
+        quickTags: [{ id: "tag-1", title: "常用" }],
+        quickButtons: [
+          { id: "text-1", title: "片段", value: "复制内容", type: "text", tagId: "tag-1" },
+          { id: "text-2", title: "无标签", value: "x", type: "text" },
+        ],
+      }),
+    );
+    Object.assign(navigator, {
+      clipboard: {
+        writeText: vi.fn().mockResolvedValue(undefined),
+      },
+    });
+    const wrapper = mountApp();
+
+    const buttons = wrapper.findAll(".quick-button");
+    await buttons[0].trigger("click");
+    await Promise.resolve();
+    await buttons[1].trigger("click");
+    await Promise.resolve();
+
+    const stored = JSON.parse(localStorage.getItem(STORAGE_KEY) || "{}");
+    expect(stored.workspaces[0].quickTags).toHaveLength(1);
+    expect(stored.workspaces[0].quickTags[0].clicks).toBe(1);
+    wrapper.unmount();
+  });
+
   it("calls API quick buttons and reports invocation plus response status in the companion bubble", async () => {
     vi.useFakeTimers();
     const apiResult = createDeferred<{ status: number; text: () => Promise<string> }>();
