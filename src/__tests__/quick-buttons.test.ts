@@ -376,14 +376,22 @@ describe("QuickButtons", () => {
 
     expect(styles).toMatch(/--quick-usage-accent:\s*#3b82f6/);
     expect(styles).toMatch(
-      /\.quick-tag-group\.has-usage button\.quick-button\s*\{[^}]*background:\s*color-mix\(in srgb, var\(--quick-usage-accent\) var\(--tag-usage\), var\(--button\)\)/s,
+      /\.quick-buttons \.quick-button\.has-usage\s*\{[^}]*background:\s*color-mix\(in srgb, var\(--quick-usage-accent\) calc\(var\(--button-usage\) \* 18%\), var\(--button\)\)/s,
+    );
+    expect(styles).toMatch(/html\[data-theme="dark"\] \.quick-buttons \.quick-button\.has-usage\s*\{[^}]*calc\(var\(--button-usage\) \* 24%\)/s);
+    expect(styles).toMatch(
+      /\.quick-buttons \.quick-button\.has-usage:hover[^{]*\{[^}]*calc\(min\(var\(--button-usage\) \* 18% \+ 12%, 30%\)\)/s,
     );
     expect(styles).toMatch(
-      /\.quick-tag-group\.has-usage button\.quick-button:hover[^{]*\{[^}]*background:\s*color-mix\(in srgb, var\(--quick-usage-accent\) calc\(min\(var\(--tag-usage\) \+ 12%, 100%\)\), var\(--button\)\) !important/s,
+      /\.quick-buttons \.quick-button\.has-usage:hover[^{]*\{[^}]*!important/s,
+    );
+    expect(styles).toMatch(
+      /html\[data-theme="dark"\] \.quick-buttons \.quick-button\.has-usage:hover[^{]*\{[^}]*calc\(min\(var\(--button-usage\) \* 24% \+ 14%, 38%\)\)/s,
     );
     expect(styles).toMatch(/\.quick-tag-clicks\s*\{/);
+    expect(styles).not.toContain("--tag-usage");
+    expect(styles).not.toContain(".quick-tag-group.has-usage");
     expect(styles).not.toContain("has-tag-color");
-    expect(styles).not.toContain("--tag-bg");
     expect(styles).not.toContain(".quick-tag-color-picker");
   });
 

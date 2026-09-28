@@ -5541,24 +5541,32 @@ button.quick-button {
   background: var(--button-hover);
 }
 
-/* Usage-frequency tint: buttons darken from the plain button color (--button:
-   white in light, the dark base in dark) toward the accent blue as each
-   accumulates clicks. The percentage is computed in JS (quickButtonUsagePercent)
-   in QuickButtons.vue — one color-mix formula for both themes, no enumerated
-   gradient. */
-.quick-tag-group.has-usage .quick-button,
-.quick-tag-group.has-usage button.quick-button {
-  background: color-mix(in srgb, var(--quick-usage-accent) var(--tag-usage), var(--button));
+/* Usage-frequency tint (per button): each quick button darkens from the plain
+   button color toward the accent blue as IT accumulates clicks. The cap
+   matches the depth of the old first-blue tag tint: 0–100 clicks map to a
+   0–18% mix in light / 0–24% in dark (calc math, one formula per theme — no
+   enumerated gradient). --button-usage is a 0–100 percentage set per button
+   in QuickButtons.vue. The .quick-buttons prefix keeps specificity above
+   desk.css's transparent button base (0,2,1). */
+.quick-buttons .quick-button.has-usage {
+  background: color-mix(in srgb, var(--quick-usage-accent) calc(var(--button-usage) * 18%), var(--button));
 }
 
-/* Hover deepens the SAME hue (not the global primary tint), so the hovered
-   button stays tonally consistent with its group. !important is needed to
-   override the generic button-hover rule further down. */
-.quick-tag-group.has-usage .quick-button:hover,
-.quick-tag-group.has-usage .quick-button:focus-visible,
-.quick-tag-group.has-usage button.quick-button:hover,
-.quick-tag-group.has-usage button.quick-button:focus-visible {
-  background: color-mix(in srgb, var(--quick-usage-accent) calc(min(var(--tag-usage) + 12%, 100%)), var(--button)) !important;
+html[data-theme="dark"] .quick-buttons .quick-button.has-usage {
+  background: color-mix(in srgb, var(--quick-usage-accent) calc(var(--button-usage) * 24%), var(--button));
+}
+
+/* Hover deepens the SAME hue, capping at the old colored-tag hover depth
+   (30% light / 38% dark). !important overrides the generic button-hover
+   rule further down. */
+.quick-buttons .quick-button.has-usage:hover,
+.quick-buttons .quick-button.has-usage:focus-visible {
+  background: color-mix(in srgb, var(--quick-usage-accent) calc(min(var(--button-usage) * 18% + 12%, 30%)), var(--button)) !important;
+}
+
+html[data-theme="dark"] .quick-buttons .quick-button.has-usage:hover,
+html[data-theme="dark"] .quick-buttons .quick-button.has-usage:focus-visible {
+  background: color-mix(in srgb, var(--quick-usage-accent) calc(min(var(--button-usage) * 24% + 14%, 38%)), var(--button)) !important;
 }
 
 /* Animate tag groups sliding into place when the tag list is reordered. */
