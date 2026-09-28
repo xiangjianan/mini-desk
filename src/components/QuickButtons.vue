@@ -943,7 +943,7 @@ function handleQuickGroupDrop(event: DragEvent, groupId: string): void {
           :key="group.id"
           :class="['quick-tag-group', { 'has-usage': (group.usagePercent ?? 0) > 0 }]"
           :data-tag-id="group.id"
-          :style="group.usagePercent ? { '--tag-usage': `${group.usagePercent}%` } : undefined"
+          :style="(group.usagePercent ?? 0) > 0 ? { '--tag-usage': `${group.usagePercent}%` } : undefined"
           @dragover="handleTagDragOver($event, group.id)"
           @drop.stop.prevent="handleQuickGroupDrop($event, group.id)"
         >
@@ -1243,7 +1243,6 @@ function handleQuickGroupDrop(event: DragEvent, groupId: string): void {
             />
             <span
               class="quick-tag-clicks"
-              :aria-label="uiText.quick.tagClicks"
               :title="uiText.quick.tagClicks"
             >{{ formatTagClicks(tag.clicks) }}</span>
             <button

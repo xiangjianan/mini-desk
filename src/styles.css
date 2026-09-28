@@ -33,6 +33,9 @@
   --input: #ffffff;
   --button: #ffffff;
   --button-hover: color-mix(in srgb, #ffffff 88%, var(--primary) 12%);
+  /* 快捷标签使用热度染色的最深色：0 次 = --button（浅色纯白），100 次 = 该蓝。
+     同旧 QUICK_TAG_COLORS[0]；折算见 src/state/quickButtons.ts quickTagUsagePercent。 */
+  --quick-usage-accent: #3b82f6;
   --danger: #b42318;
   --radius: 12px;
   --radius-control: 10px;
@@ -1554,50 +1557,14 @@ button.quick-button {
   min-width: 0;
 }
 
-/* Tag color picker in the tag manager — a compact row of palette swatches.
-   Only system-provided colors are offered (no custom picker). */
-.quick-tag-color-picker {
-  display: inline-flex;
-  align-items: center;
-  gap: 4px;
+/* 标签管理器行内的使用次数徽标（取代原色板）：纯展示，右对齐对齐删除钮。 */
+.quick-tag-clicks {
   flex-shrink: 0;
-}
-
-.quick-tag-color-swatch {
-  width: 18px;
-  height: 18px;
-  padding: 0;
-  border: 1px solid var(--swatch-color);
-  border-radius: 50%;
-  background: color-mix(in srgb, var(--swatch-color) 18%, var(--button));
-  cursor: pointer;
-  transition: transform var(--motion-fast) ease, box-shadow var(--motion-fast) ease;
-}
-
-/* Swatch fill mirrors the actual (tinted) button color in each theme; the raw
-   colored border keeps the small swatches easy to tell apart. */
-html[data-theme="dark"] .quick-tag-color-swatch {
-  background: color-mix(in srgb, var(--swatch-color) 24%, var(--button));
-}
-
-.quick-tag-color-swatch:hover {
-  transform: scale(1.15);
-}
-
-.quick-tag-color-swatch.is-selected {
-  box-shadow: 0 0 0 2px var(--card), 0 0 0 3px var(--swatch-color);
-}
-
-/* "Default" swatch = the plain button color (white in light, dark in dark),
-   i.e. no tag tint. Doubled class keeps specificity above the dark-theme
-   background override so --button wins in both themes. */
-.quick-tag-color-swatch.quick-tag-color-swatch--default {
-  background: var(--button);
-  border: 1px dashed var(--muted);
-}
-
-.quick-tag-color-swatch.quick-tag-color-swatch--default.is-selected {
-  box-shadow: 0 0 0 2px var(--card), 0 0 0 3px var(--muted);
+  min-width: 52px;
+  text-align: right;
+  color: var(--muted);
+  font-size: 12px;
+  font-variant-numeric: tabular-nums;
 }
 
 .quick-tag-empty {
@@ -5574,35 +5541,24 @@ button.quick-button {
   background: var(--button-hover);
 }
 
-/* Subtle per-tag-group tint so buttons in different groups read as different
-   colors. --tag-bg is the tag's persisted palette color, set on each
-   .has-tag-color group in QuickButtons.vue (the untagged/empty groups stay
-   plain). Strength is kept low so it stays soft rather than loud. */
-.quick-tag-group.has-tag-color .quick-button,
-.quick-tag-group.has-tag-color button.quick-button {
-  background: color-mix(in srgb, var(--tag-bg) 18%, var(--button));
-}
-
-html[data-theme="dark"] .quick-tag-group.has-tag-color .quick-button,
-html[data-theme="dark"] .quick-tag-group.has-tag-color button.quick-button {
-  background: color-mix(in srgb, var(--tag-bg) 24%, var(--button));
+/* Usage-frequency tint: buttons in a tag group darken from the plain button
+   color (--button: white in light, the dark base in dark) toward the accent
+   blue as the tag accumulates clicks. --tag-usage is a 0–100% mix percentage
+   computed in JS (quickTagUsagePercent) and set per group in QuickButtons.vue
+   — one color-mix formula for both themes, no enumerated gradient. */
+.quick-tag-group.has-usage .quick-button,
+.quick-tag-group.has-usage button.quick-button {
+  background: color-mix(in srgb, var(--quick-usage-accent) var(--tag-usage), var(--button));
 }
 
 /* Hover deepens the SAME hue (not the global primary tint), so the hovered
    button stays tonally consistent with its group. !important is needed to
    override the generic button-hover rule further down. */
-.quick-tag-group.has-tag-color .quick-button:hover,
-.quick-tag-group.has-tag-color .quick-button:focus-visible,
-.quick-tag-group.has-tag-color button.quick-button:hover,
-.quick-tag-group.has-tag-color button.quick-button:focus-visible {
-  background: color-mix(in srgb, var(--tag-bg) 30%, var(--button)) !important;
-}
-
-html[data-theme="dark"] .quick-tag-group.has-tag-color .quick-button:hover,
-html[data-theme="dark"] .quick-tag-group.has-tag-color .quick-button:focus-visible,
-html[data-theme="dark"] .quick-tag-group.has-tag-color button.quick-button:hover,
-html[data-theme="dark"] .quick-tag-group.has-tag-color button.quick-button:focus-visible {
-  background: color-mix(in srgb, var(--tag-bg) 38%, var(--button)) !important;
+.quick-tag-group.has-usage .quick-button:hover,
+.quick-tag-group.has-usage .quick-button:focus-visible,
+.quick-tag-group.has-usage button.quick-button:hover,
+.quick-tag-group.has-usage button.quick-button:focus-visible {
+  background: color-mix(in srgb, var(--quick-usage-accent) calc(min(var(--tag-usage) + 12, 100)), var(--button)) !important;
 }
 
 /* Animate tag groups sliding into place when the tag list is reordered. */

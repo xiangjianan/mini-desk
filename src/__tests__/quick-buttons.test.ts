@@ -354,6 +354,19 @@ describe("QuickButtons", () => {
     wrapper.unmount();
   });
 
+  it("使用热度染色用 color-mix 数学梯度且不留旧色板痕迹", () => {
+    const styles = readSource("styles.css");
+
+    expect(styles).toMatch(/--quick-usage-accent:\s*#3b82f6/);
+    expect(styles).toMatch(
+      /\.quick-tag-group\.has-usage button\.quick-button\s*\{[^}]*background:\s*color-mix\(in srgb, var\(--quick-usage-accent\) var\(--tag-usage\), var\(--button\)\)/s,
+    );
+    expect(styles).toMatch(/\.quick-tag-clicks\s*\{/);
+    expect(styles).not.toContain("has-tag-color");
+    expect(styles).not.toContain("--tag-bg");
+    expect(styles).not.toContain(".quick-tag-color-picker");
+  });
+
   it("maps the measured quick panel width to a clamped column count", () => {
     expect(computeQuickColumnCount(0, 5)).toBe(1);
     expect(computeQuickColumnCount(639, 5)).toBe(1);
@@ -1275,6 +1288,19 @@ describe("QuickButtons", () => {
     expect(wrapper.find(".quick-tag-save").exists()).toBe(false);
     expect(wrapper.find(".quick-tag-manager .quick-dialog-action").exists()).toBe(false);
 
+    wrapper.unmount();
+  });
+
+  it("标签管理器徽标按语言切换文案", async () => {
+    const wrapper = mountQuickButtons({
+      tags: [{ id: "tag-work", title: "工作", clicks: 7 }],
+      language: "en",
+    });
+
+    await wrapper.get(".quick-menu-button").trigger("click");
+    await wrapper.findAll(".dropdown-option").find((option) => option.text() === "Manage tags")?.trigger("click");
+
+    expect(wrapper.get(".quick-tag-clicks").text()).toBe("7 clicks");
     wrapper.unmount();
   });
 
