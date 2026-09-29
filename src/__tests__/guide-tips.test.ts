@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { advanceTipRotation, resolveTipGuideKey } from "../state/guideTips";
+import { pickRandomTip, resolveTipGuideKey } from "../state/guideTips";
 import { getGuideMessages } from "../state/i18n";
 
 function panel(...classNames: string[]): HTMLElement {
@@ -36,27 +36,52 @@ describe("resolveTipGuideKey", () => {
   });
 });
 
-describe("advanceTipRotation", () => {
-  it("advances within the same guide key and wraps around", () => {
-    expect(advanceTipRotation({ guideKey: "note", index: 0 }, "note", 3)).toEqual({ guideKey: "note", index: 1 });
-    expect(advanceTipRotation({ guideKey: "note", index: 2 }, "note", 3)).toEqual({ guideKey: "note", index: 0 });
+describe("pickRandomTip", () => {
+  it("returns a safe zero index for empty or single-entry tip pools", () => {
+    expect(pickRandomTip({ guideKey: "note", index: 2 }, "note", 0)).toEqual({ guideKey: "note", index: 0 });
+    expect(pickRandomTip({ guideKey: "note", index: 0 }, "note", 1)).toEqual({ guideKey: "note", index: 0 });
   });
 
-  it("restarts from zero when the guide key changes or state is missing", () => {
-    expect(advanceTipRotation({ guideKey: "note", index: 2 }, "todos", 3)).toEqual({ guideKey: "todos", index: 0 });
-    expect(advanceTipRotation(null, "todos", 3)).toEqual({ guideKey: "todos", index: 0 });
+  it("picks uniformly from the whole pool when the guide key changes or state is missing", () => {
+    const randomSpy = vi.spyOn(Math, "random");
+    randomSpy.mockReturnValue(0);
+    expect(pickRandomTip({ guideKey: "note", index: 4 }, "todos", 5)).toEqual({ guideKey: "todos", index: 0 });
+    randomSpy.mockReturnValue(0.999);
+    expect(pickRandomTip(null, "todos", 5)).toEqual({ guideKey: "todos", index: 4 });
+    randomSpy.mockRestore();
   });
 
-  it("returns a safe zero index for empty tip pools", () => {
-    expect(advanceTipRotation({ guideKey: "note", index: 2 }, "note", 0)).toEqual({ guideKey: "note", index: 0 });
+  it("never repeats the previous tip of the same area regardless of the random draw", () => {
+    const randomSpy = vi.spyOn(Math, "random");
+    for (let previous = 0; previous < 5; previous++) {
+      for (let draw = 0; draw < 10; draw++) {
+        randomSpy.mockReturnValue(draw / 10);
+        const next = pickRandomTip({ guideKey: "note", index: previous }, "note", 5);
+        expect(next.index).toBeGreaterThanOrEqual(0);
+        expect(next.index).toBeLessThan(5);
+        expect(next.index).not.toBe(previous);
+      }
+    }
+    randomSpy.mockRestore();
   });
 
-  it("rotates over the same GUIDE_MESSAGES pool the right-click Tips menu shows", () => {
-    // GIF 点击的 Tips 与右键菜单「Tips」共用同一份文案池。
+  it("every pool index is reachable across random draws", () => {
+    const randomSpy = vi.spyOn(Math, "random");
+    const seen = new Set<number>();
+    for (let draw = 0; draw < 50; draw++) {
+      randomSpy.mockReturnValue(draw / 50);
+      seen.add(pickRandomTip(null, "note", 7).index);
+    }
+    randomSpy.mockRestore();
+    expect(seen.size).toBe(7);
+  });
+
+  it("picks over the same GUIDE_MESSAGES pool the right-click Tips menu shows", () => {
+    // GIF 点击的 Tips 与右键菜单「Tips」共用同一份文案池（各自随机抽取）。
     const workspaceMessages = getGuideMessages("zh").workspace;
     expect(workspaceMessages.length).toBeGreaterThan(1);
-    const first = advanceTipRotation(null, "workspace", workspaceMessages.length);
-    const second = advanceTipRotation(first, "workspace", workspaceMessages.length);
+    const first = pickRandomTip(null, "workspace", workspaceMessages.length);
+    const second = pickRandomTip(first, "workspace", workspaceMessages.length);
     expect(workspaceMessages[first.index]).toBeTruthy();
     expect(workspaceMessages[second.index]).toBeTruthy();
     expect(first.index).not.toBe(second.index);

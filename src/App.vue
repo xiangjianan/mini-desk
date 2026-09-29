@@ -59,7 +59,7 @@ import { createWorkspaceData, ensureUniqueWorkspaceTitle, getWorkspaceBoardTitle
 import * as workspaceMover from "./state/workspaceMoves";
 import { QUICK_BUTTON_OTHER_GROUP_ID, QUICK_DENSITY_THRESHOLD, assignQuickTagColumn, distributeQuickTagColumns, formatQuickCopiedPreview, recordQuickButtonClick } from "./state/quickButtons";
 import { isQuickAppScheme } from "./state/quickApps";
-import { advanceTipRotation, resolveTipGuideKey, type TipRotationState } from "./state/guideTips";
+import { pickRandomTip, resolveTipGuideKey, type TipPickState } from "./state/guideTips";
 import { INBOX_FOCUS_THROTTLE_MS, INBOX_PULL_INTERVAL_MS } from "./sync/config";
 import {
   clearRememberedInboxCode,
@@ -344,7 +344,7 @@ const GITHUB_REPO_LABEL = "xiangjianan / mini-desk";
 const ABOUT_MESSAGE_DURATION_MS = 10000;
 const activeGuideKey = ref<GuideKey | null>(null);
 /** GIF 点击 Tips 的轮换状态：换指南区域从头开始，同区域逐条前进。 */
-const companionTipRotation = ref<TipRotationState | null>(null);
+const companionTipPick = ref<TipPickState | null>(null);
 
 /** 系统明暗偏好：默认 false（浅色），监听 prefers-color-scheme 变化。 */
 const systemDark = ref(false);
@@ -3196,7 +3196,7 @@ function hideCompanion(): void {
   activeGuideKey.value = null;
 }
 
-/** GIF 点击弹出该区域的 Tips：普通气泡在场时逐条轮换；二次确认框保持原流程不响应。 */
+/** GIF 点击弹出该区域的 Tips：与右键「Tips」同池，按区域随机抽取（不与上一条相同）；二次确认框保持原流程不响应。 */
 function handleCompanionGifClick(): void {
   if (pendingConfirm.value || shouldBlockBoardEffects()) return;
   // 锚点必须原样透传回去：showBubbleText 收到 undefined 会把 bubbleAnchor 清空，
@@ -3206,9 +3206,9 @@ function handleCompanionGifClick(): void {
   const guideKey = resolveTipGuideKey({ guideKey: activeGuideKey.value, anchor: anchor ?? null });
   const tips = getGuideMessages(state.language)[guideKey];
   if (tips.length === 0) return;
-  companionTipRotation.value = advanceTipRotation(companionTipRotation.value, guideKey, tips.length);
-  // 透传解析出的 guideKey 与锚点，Tips 冒泡不清指南区域/锚点，后续点击继续按该区域轮换。
-  showBubbleText(withKaomoji(tips[companionTipRotation.value.index], "encouraging"), anchor, { guideKey }, GUIDE_MESSAGE_DURATION_MS);
+  companionTipPick.value = pickRandomTip(companionTipPick.value, guideKey, tips.length);
+  // 透传解析出的 guideKey 与锚点，Tips 冒泡不清指南区域/锚点，后续点击继续按该区域随机。
+  showBubbleText(withKaomoji(tips[companionTipPick.value.index], "encouraging"), anchor, { guideKey }, GUIDE_MESSAGE_DURATION_MS);
 }
 
 function showToast(messageKey: MessageKey): void {

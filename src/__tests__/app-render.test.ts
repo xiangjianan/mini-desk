@@ -1634,7 +1634,7 @@ describe("App shell", () => {
     }
   });
 
-  it("keeps rotating the anchored toast's own area tips on repeated GIF clicks", async () => {
+  it("随机弹出锚定气泡所属区域的 Tips：连点不重复上一条", async () => {
     vi.useFakeTimers();
     // 快捷文本复制气泡带 quick-block 锚点但没有 guideKey：区域只能靠锚点解析。
     localStorage.setItem(
@@ -1658,25 +1658,31 @@ describe("App shell", () => {
       await wrapper.vm.$nextTick();
       expect(wrapper.find('[data-testid="companion-confirm"]').text()).toMatch(/文本|文字|复制|剪贴板|粘贴/);
 
-      // 快捷区气泡按锚点解析到 quickButtons 指南键，文案与右键「Tips」同池。
+      // 快捷区气泡按锚点解析到 quickButtons 指南键，文案与右键「Tips」同池（随机抽取）。
       const quickTips = getGuideMessages("zh").quickButtons;
       expect(quickTips.length).toBeGreaterThan(1);
 
-      await wrapper.get('[data-testid="companion-gif"]').trigger("click");
-      await vi.advanceTimersByTimeAsync(200);
-      await wrapper.vm.$nextTick();
-      const firstTipBubble = wrapper.get('[data-testid="companion-confirm"]').text();
-      expect(firstTipBubble.startsWith(quickTips[0])).toBe(true);
-      // 与右键菜单的 Tips 项一致：句尾附带颜文字。
-      expect(firstTipBubble.length).toBeGreaterThan(quickTips[0].length);
+      const readTipBubble = (): { text: string; tip: string } => {
+        const text = wrapper.get('[data-testid="companion-confirm"]').text();
+        const tip = quickTips.find((candidate) => text.startsWith(candidate));
+        expect(tip).toBeTruthy();
+        // 与右键菜单的 Tips 项一致：句尾附带颜文字。
+        expect(text.length).toBeGreaterThan(tip!.length);
+        return { text, tip: tip! };
+      };
 
-      // 第二次点击仍在原区域逐条轮换，而不是锚点被清空后退回「工作台」。
       await wrapper.get('[data-testid="companion-gif"]').trigger("click");
       await vi.advanceTimersByTimeAsync(200);
       await wrapper.vm.$nextTick();
-      const secondTipBubble = wrapper.get('[data-testid="companion-confirm"]').text();
-      expect(secondTipBubble.startsWith(quickTips[1])).toBe(true);
-      expect(secondTipBubble.length).toBeGreaterThan(quickTips[1].length);
+      const first = readTipBubble();
+
+      // 第二次点击仍在原区域随机抽取（不与上一条相同），而不是锚点被清空后退回「工作台」。
+      await wrapper.get('[data-testid="companion-gif"]').trigger("click");
+      await vi.advanceTimersByTimeAsync(200);
+      await wrapper.vm.$nextTick();
+      const second = readTipBubble();
+
+      expect(second.tip).not.toBe(first.tip);
     } finally {
       wrapper.unmount();
       vi.useRealTimers();
