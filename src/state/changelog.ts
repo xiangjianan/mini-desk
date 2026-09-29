@@ -29,6 +29,26 @@ export interface ChangelogEntry {
 
 export const CHANGELOG: ChangelogEntry[] = [
   {
+    version: "1.0.193",
+    date: "2026-09-29",
+    notes: {
+      zh: [
+        "新功能：快捷按钮使用热度染色——移除标签管理里的手动配色，点哪个按钮哪个按钮自动加深，0 次保持默认底色、100 次封顶到淡蓝（与原「第一蓝」标签观感一致）；未分组按钮同样计数，按钮换标签/换工作区计数跟着走",
+        "注意：升级后原有标签颜色配置将消失，使用计数从 0 开始重新累计",
+        "新功能：标签管理器原色板位置改为显示该标签下全部按钮（含隐藏）的使用次数总和",
+        "优化：撤销不再回滚使用计数，点击也不会占用撤销历史",
+        "优化：快捷动作 Tips 新增热度染色的多条提示；各区域 Tips 气泡改为随机抽取，连点不会重复上一条",
+      ],
+      en: [
+        "New: usage-heat tinting for quick buttons — manual tag colors are removed; the button you click darkens itself, from the plain base at 0 clicks to a light-blue cap at 100 (matching the old first-blue tag look); untagged buttons count too and counts travel with buttons across tags and workspaces",
+        "Note: existing tag color settings disappear on upgrade, and usage counts restart from 0",
+        "New: the tag manager's color picker is replaced by a per-tag total usage count badge (hidden buttons included)",
+        "Improved: undo no longer reverts usage counts, and clicks no longer consume undo history",
+        "Improved: quick-action Tips gained multiple heat-tinting hints; Tips bubbles in every area now pick messages at random, never repeating the previous one back-to-back",
+      ],
+    },
+  },
+  {
     version: "1.0.192",
     date: "2026-09-28",
     notes: {
