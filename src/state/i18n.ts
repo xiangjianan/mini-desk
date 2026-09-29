@@ -209,6 +209,11 @@ export const GUIDE_MESSAGES: Record<AppLanguage, Record<GuideKey, string[]>> = {
       "标题和内容都要填写。",
       "常用文本也可以做成快捷按钮。",
       "右键菜单可以删除不需要的入口。",
+      "点击次数越多，按钮颜色越深。",
+      "越常用的按钮，蓝色越明显。",
+      "每个按钮只统计自己的点击。",
+      "按钮颜色会随使用慢慢加深。",
+      "标签管理里可以看使用次数。",
     ],
     todos: [
       "试试把提醒事项拖到工作空间。",
@@ -341,6 +346,11 @@ export const GUIDE_MESSAGES: Record<AppLanguage, Record<GuideKey, string[]>> = {
       "A shortcut needs both title and content.",
       "Common snippets can become quick buttons.",
       "Use the context menu to delete an entry.",
+      "The more you click a button, the deeper its tint.",
+      "Frequently used buttons turn visibly bluer.",
+      "Each button only counts its own clicks.",
+      "A button's tint deepens gradually with use.",
+      "Tag management shows usage counts.",
     ],
     todos: [
       "Try dragging a reminder into the memo.",
