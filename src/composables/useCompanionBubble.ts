@@ -27,6 +27,8 @@ export interface BubbleOptions {
   signatureText?: string;
   /** 绕过 isBoardBlocked 与「不显示」主题的普通气泡静音强制显示：手机速记壳的发送成功反馈复用伴宠气泡。 */
   force?: boolean;
+  /** 用户显式请求的 Tips（右键菜单/GIF 点击）：绕过「不显示」安静模式，但 board 阻断（手机壳/预览层）仍拦截。 */
+  explicit?: boolean;
 }
 
 export interface PendingConfirm {
@@ -125,8 +127,9 @@ export function useCompanionBubble(deps: CompanionBubbleDeps) {
 
   function showBubbleText(message: string, anchor?: HTMLElement, options: BubbleOptions = {}, duration = 3000): void {
     if (deps.isBoardBlocked() && !options.force) return;
-    // 「不显示」安静模式：普通提示气泡随 GIF 一并静音（二次确认走 requestConfirmation，不受影响）。
-    if (deps.state.companionGifTheme === "none" && !options.force) return;
+    // 「不显示」安静模式：普通提示气泡随 GIF 一并静音（二次确认走 requestConfirmation，
+    // 不受影响）；用户显式点出的 Tips（explicit）与 force 反馈不受静音。
+    if (deps.state.companionGifTheme === "none" && !options.force && !options.explicit) return;
     window.clearTimeout(bubbleTimer.value);
     window.clearTimeout(bubbleFadeTimer.value);
     clearPendingConfirm();

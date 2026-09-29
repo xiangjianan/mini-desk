@@ -1,3 +1,5 @@
+import { readFileSync } from "node:fs";
+import { resolve } from "node:path";
 import { describe, expect, it } from "vitest";
 import { pickRandomTip, resolveTipGuideKey } from "../state/guideTips";
 import { getGuideMessages } from "../state/i18n";
@@ -85,5 +87,17 @@ describe("pickRandomTip", () => {
     expect(workspaceMessages[first.index]).toBeTruthy();
     expect(workspaceMessages[second.index]).toBeTruthy();
     expect(first.index).not.toBe(second.index);
+  });
+
+  it("右键菜单 Tips（immediate）在「不显示」伴宠主题下仍以 explicit 弹出", () => {
+    // 「不显示」安静模式只静音被动提示；用户显式点出的 Tips 必须弹出——
+    // handleGuideClick 的 immediate 路径传 explicit，showGuideBubble 原样透传进气泡。
+    const app = readFileSync(resolve(__dirname, "../App.vue"), "utf8");
+    expect(app).toContain(
+      "void showGuideBubble(key, anchor, true, activeGuideKey.value === key || bubbleVisible.value, true)",
+    );
+    expect(app).toContain("{ hideCompanionAfter, guideKey: key, explicit }");
+    // GIF 点击 Tips 与右键菜单同语义：显式请求，同样带 explicit。
+    expect(app).toContain("showBubbleText(withKaomoji(tips[companionTipPick.value.index], \"encouraging\"), anchor, { guideKey, explicit: true }");
   });
 });

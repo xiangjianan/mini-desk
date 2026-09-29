@@ -1242,7 +1242,8 @@ function handleGuideFocus(key: GuideKey, anchor?: HTMLElement): void {
 function handleGuideClick(key: GuideKey, anchor?: HTMLElement, immediate = false): void {
   invalidateGuideCompanion(key);
   if (immediate) {
-    void showGuideBubble(key, anchor, true, activeGuideKey.value === key || bubbleVisible.value);
+    // 右键菜单「Tips」是用户显式请求：explicit 穿透「不显示」安静模式照常弹出。
+    void showGuideBubble(key, anchor, true, activeGuideKey.value === key || bubbleVisible.value, true);
     return;
   }
   showAreaGuide(key, anchor);
@@ -2924,7 +2925,8 @@ function about(anchor?: HTMLElement): void {
   showBubbleText(
     [`${uiText.value.app.aboutTitle} ${uiText.value.app.aboutSignature}`, uiText.value.app.aboutDescription].join("\n"),
     anchor,
-    { hideCompanionAfter: true, linkText: GITHUB_REPO_LABEL, linkHref: GITHUB_REPO_URL },
+    // 「关于」是设置菜单里的显式请求：explicit 穿透「不显示」安静模式照常弹出。
+    { hideCompanionAfter: true, explicit: true, linkText: GITHUB_REPO_LABEL, linkHref: GITHUB_REPO_URL },
     ABOUT_MESSAGE_DURATION_MS,
   );
 }
@@ -3210,7 +3212,8 @@ function handleCompanionGifClick(): void {
   if (tips.length === 0) return;
   companionTipPick.value = pickRandomTip(companionTipPick.value, guideKey, tips.length);
   // 透传解析出的 guideKey 与锚点，Tips 冒泡不清指南区域/锚点，后续点击继续按该区域随机。
-  showBubbleText(withKaomoji(tips[companionTipPick.value.index], "encouraging"), anchor, { guideKey }, GUIDE_MESSAGE_DURATION_MS);
+  // GIF 点击与右键菜单同语义 = 显式请求，explicit 穿透「不显示」安静模式。
+  showBubbleText(withKaomoji(tips[companionTipPick.value.index], "encouraging"), anchor, { guideKey, explicit: true }, GUIDE_MESSAGE_DURATION_MS);
 }
 
 function showToast(messageKey: MessageKey): void {
@@ -3321,7 +3324,7 @@ function clearEmptyTodoRemovalTimersForList(listId: TodoListId): void {
   }
 }
 
-async function showGuideBubble(key: GuideKey, anchor?: HTMLElement, hideCompanionAfter = true, force = false): Promise<void> {
+async function showGuideBubble(key: GuideKey, anchor?: HTMLElement, hideCompanionAfter = true, force = false, explicit = false): Promise<void> {
   if (pendingConfirm.value) return;
   if (!force && isRepeatLockedGuide(key)) {
     companionPosition.value = getToastPosition();
@@ -3334,7 +3337,7 @@ async function showGuideBubble(key: GuideKey, anchor?: HTMLElement, hideCompanio
   showBubbleText(
     withKaomoji(randomGuideMessage(key), "encouraging"),
     anchor,
-    { hideCompanionAfter, guideKey: key },
+    { hideCompanionAfter, guideKey: key, explicit },
     GUIDE_MESSAGE_DURATION_MS,
   );
 }

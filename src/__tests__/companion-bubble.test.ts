@@ -80,6 +80,31 @@ describe("CompanionBubble", () => {
     wrapper.unmount();
   });
 
+  it("「不显示」安静模式下消息气泡带 Mini Desk 静态 logo（随明暗主题）", () => {
+    const mountQuiet = (theme: "light" | "dark") =>
+      mount(CompanionBubble, {
+        props: { visible: true, message: "Tip 内容", gifTheme: "none", theme },
+        global: { stubs: { NPopover: popoverStub } },
+      });
+
+    const light = mountQuiet("light");
+    expect(light.get('[data-testid="companion-gif"]').attributes("src")).toContain("mini-desk-cat.png");
+    light.unmount();
+
+    const dark = mountQuiet("dark");
+    expect(dark.get('[data-testid="companion-gif"]').attributes("src")).toContain("mini-desk-cat-dark.png");
+    dark.unmount();
+  });
+
+  it("「不显示」安静模式下二次确认与消息气泡统一用静态 logo（不再回退默认动画 GIF）", () => {
+    const wrapper = mount(CompanionBubble, {
+      props: { visible: true, message: "确认删除？", confirm: true, confirmText: "删除", cancelText: "取消", gifTheme: "none" },
+      global: { stubs: { NPopover: popoverStub } },
+    });
+    expect(wrapper.get('[data-testid="companion-gif"]').attributes("src")).toContain("mini-desk-cat");
+    wrapper.unmount();
+  });
+
   it("emits gifClick for normal messages but stays silent while a confirm is pending", async () => {
     const wrapper = mount(CompanionBubble, {
       props: {
@@ -769,7 +794,7 @@ describe("CompanionBubble", () => {
     wrapper.unmount();
   });
 
-  it("renders bubble content without an image when GIF theme is none", async () => {
+  it("「不显示」安静模式下气泡内容带 Mini Desk 静态 logo（不再无图）", async () => {
     vi.useFakeTimers();
     const wrapper = mount(CompanionBubble, {
       props: {
@@ -784,7 +809,8 @@ describe("CompanionBubble", () => {
       },
     });
 
-    expect(wrapper.find("img").exists()).toBe(false);
+    // 安静模式气泡配品牌静态图（像素猫 logo）作伴宠形象，随明暗主题切换。
+    expect(wrapper.get('[data-testid="companion-gif"]').attributes("src")).toContain("mini-desk-cat");
     await vi.advanceTimersByTimeAsync(200);
 
     expect(document.body.querySelector('[data-testid="companion-confirm"]')?.textContent).toContain("只显示气泡");
@@ -959,7 +985,7 @@ describe("CompanionBubble", () => {
     wrapper.unmount();
   });
 
-  it("falls back to the default GIF for confirm dialogs when the theme is none", async () => {
+  it("falls back to the static brand logo for confirm dialogs when the theme is none", async () => {
     vi.useFakeTimers();
     const wrapper = mount(CompanionBubble, {
       attachTo: document.body,
@@ -979,14 +1005,15 @@ describe("CompanionBubble", () => {
 
     try {
       await wrapper.vm.$nextTick();
-      // 安静模式唯一例外：二次确认框带默认 GIF（像素猫）弹出。
+      // 安静模式确认框与消息气泡统一：静态 logo（不再回退默认动画 GIF）。
       expect(wrapper.find(".focus-companion.is-visible img").exists()).toBe(true);
+      expect(wrapper.get('[data-testid="companion-gif"]').attributes("src")).toContain("mini-desk-cat");
     } finally {
       wrapper.unmount();
     }
   });
 
-  it("keeps the GIF hidden for ordinary messages when the theme is none", async () => {
+  it("carries the static logo for messages that reach the bubble layer in quiet mode", async () => {
     vi.useFakeTimers();
     const wrapper = mount(CompanionBubble, {
       attachTo: document.body,
@@ -1005,7 +1032,10 @@ describe("CompanionBubble", () => {
 
     try {
       await wrapper.vm.$nextTick();
-      expect(wrapper.find(".focus-companion img").exists()).toBe(false);
+      // 安静模式下能到达气泡层的消息（显式 Tips/关于/force 反馈）一律带静态 logo；
+      // 被静音的被动提示在 composable 层就不会走到这里。
+      expect(wrapper.find(".focus-companion img").exists()).toBe(true);
+      expect(wrapper.get('[data-testid="companion-gif"]').attributes("src")).toContain("mini-desk-cat");
     } finally {
       wrapper.unmount();
     }

@@ -96,6 +96,15 @@ html[data-theme="dark"] .workbench-shell,
 .workbench-shell .quick-tag-add-button { color: var(--muted); }
 .workbench-shell .quick-tag-add-button:hover,
 .workbench-shell .quick-tag-add-button:focus-visible { color: var(--primary); background: transparent; }
+/* 弹窗类加号按钮的焦点环豁免：快捷区新增（NModal 关闭时 vueuc FocusTrap 还原
+   焦点）与贴图区新增（原生文件框，ESC/回车的键盘交互本身即命中 :focus-visible）
+   都会让保持焦点的加号按钮被上面的全局实线环 + styles.css 全局 :focus-visible
+   box-shadow 光晕（24% 浅蓝）凭空描边。这些按钮的焦点反馈已有配色变化
+   （hover/:focus-visible recolor），两套指示一并豁免（特异性 0,3,0 压过
+   全局环与全局光晕）。 */
+.workbench-shell .quick-add-button:focus-visible,
+.workbench-shell .quick-tag-add-button:focus-visible,
+.workbench-shell .image-add-button:focus-visible { outline: none; box-shadow: none; }
 
 /* 紧凑按钮：单行、类型副标题塌缩，高度对齐提醒列表的紧凑行（42px）。
    副标题用 max-height/opacity 过渡而非 display:none，大↔紧凑切换整体有动画。 */

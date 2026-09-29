@@ -16,7 +16,6 @@ import {
   QUICK_USAGE_MAX_CLICKS,
   quickButtonUsagePercent,
   recordQuickButtonClick,
-  sumQuickTagClicks,
 } from "../state/quickButtons";
 import { globalSearchQuery, resetGlobalSearch, setGlobalSearch } from "../state/globalSearch";
 import type { QuickButton } from "../types";
@@ -332,19 +331,6 @@ describe("QuickButtons", () => {
     expect(groups[1]).not.toHaveProperty("usagePercent");
   });
 
-  it("sumQuickTagClicks 汇总标签下全部按钮（含隐藏）的使用计数", () => {
-    const buttons = [
-      { id: "a1", title: "A1", value: "v", type: "text" as const, hidden: false, tagId: "tag-a", clicks: 7 },
-      { id: "a2", title: "A2", value: "v", type: "text" as const, hidden: true, tagId: "tag-a", clicks: 15 },
-      { id: "b1", title: "B1", value: "v", type: "text" as const, hidden: false, tagId: "tag-b", clicks: 3 },
-      { id: "no-tag", title: "N", value: "v", type: "text" as const, hidden: false, clicks: 99 },
-      { id: "orphan", title: "O", value: "v", type: "text" as const, hidden: false, tagId: "tag-gone", clicks: 5 },
-    ];
-    expect(sumQuickTagClicks(buttons, "tag-a")).toBe(22);
-    expect(sumQuickTagClicks(buttons, "tag-b")).toBe(3);
-    expect(sumQuickTagClicks(buttons, "missing")).toBe(0);
-  });
-
   it("按使用次数给按钮挂 has-usage 类与 --button-usage 变量", () => {
     const wrapper = mountQuickButtons({
       tags: [{ id: "tag-hot", title: "常用" }],
@@ -391,7 +377,8 @@ describe("QuickButtons", () => {
     // --button-usage 是带百分号的值，乘数必须是纯数值：百分比×百分比在 calc 里非法，
     // 浏览器会在解析时整条丢弃声明（按钮退回透明底色）。
     expect(styles).not.toMatch(/--button-usage\) \* \d+%/);
-    expect(styles).toMatch(/\.quick-tag-clicks\s*\{/);
+    // 标签管理器的使用次数徽标已删除：不再有任何徽标样式痕迹。
+    expect(styles).not.toMatch(/\.quick-tag-clicks/);
     expect(styles).not.toContain("--tag-usage");
     expect(styles).not.toContain(".quick-tag-group.has-usage");
     expect(styles).not.toContain("has-tag-color");
@@ -1306,8 +1293,8 @@ describe("QuickButtons", () => {
 
     expect(wrapper.get(".quick-tag-manager").text()).toContain("标签管理");
     expect(wrapper.find(".quick-tag-color-picker").exists()).toBe(false);
-    // 徽标 = 标签下全部按钮（含隐藏）的计数之和。
-    expect(wrapper.get(".quick-tag-clicks").text()).toBe("22 次");
+    // 使用次数徽标已删除：标签行只剩名称输入与删除按钮。
+    expect(wrapper.find(".quick-tag-clicks").exists()).toBe(false);
 
     await wrapper.get(".quick-tag-new-input").setValue("资料");
     await wrapper.get(".quick-tag-add").trigger("click");
@@ -1324,23 +1311,6 @@ describe("QuickButtons", () => {
     expect(wrapper.find(".quick-tag-save").exists()).toBe(false);
     expect(wrapper.find(".quick-tag-manager .quick-dialog-action").exists()).toBe(false);
 
-    wrapper.unmount();
-  });
-
-  it("标签管理器徽标按语言切换文案", async () => {
-    const wrapper = mountQuickButtons({
-      tags: [{ id: "tag-work", title: "工作" }],
-      buttons: [
-        { id: "b1", title: "B1", value: "v", type: "link", hidden: false, tagId: "tag-work", clicks: 7 },
-        { id: "b2", title: "B2", value: "v", type: "link", hidden: true, tagId: "tag-work", clicks: 15 },
-      ],
-      language: "en",
-    });
-
-    await wrapper.get(".quick-menu-button").trigger("click");
-    await wrapper.findAll(".dropdown-option").find((option) => option.text() === "Manage tags")?.trigger("click");
-
-    expect(wrapper.get(".quick-tag-clicks").text()).toBe("22 clicks");
     wrapper.unmount();
   });
 

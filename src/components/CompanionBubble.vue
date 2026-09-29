@@ -6,7 +6,7 @@ import { CloseOutline, EyeOffOutline } from "@vicons/ionicons5";
 import { NButton, NDropdown, NIcon, NPopover } from "naive-ui";
 import type { DropdownOption } from "naive-ui";
 import type { AppLanguage, CompanionGifTheme } from "../types";
-import { DEFAULT_COMPANION_GIF_THEME, getCompanionGifSrc } from "../state/companionGifThemes";
+import { DEFAULT_COMPANION_GIF_THEME, getCompanionGifSrc, getCompanionNotificationIconSrc } from "../state/companionGifThemes";
 import { getUiText } from "../state/i18n";
 import { CONTEXT_MENU_Z_INDEX, createExclusiveContextMenu } from "../utils/contextMenu";
 
@@ -101,7 +101,8 @@ function openGifMenu(event: MouseEvent): void {
 
 function onSurfaceContextmenu(event: MouseEvent): void {
   // 确认在场时禁用右键菜单：此刻选「不显示」会把待处理的二次确认一并杀掉。
-  if (!shouldRenderGif.value || props.confirm) return;
+  // 「不显示」安静模式下的静态 logo 是品牌形象不是伴宠：右键「不显示」无意义，不出菜单。
+  if (!shouldRenderGif.value || props.confirm || activeGifTheme.value === "none") return;
   openGifMenu(event);
 }
 
@@ -128,17 +129,21 @@ const placementStyle = computed(() => {
 });
 
 const activeGifTheme = computed(() => props.gifTheme ?? DEFAULT_COMPANION_GIF_THEME);
+const hasPopoverPayload = computed(() => Boolean(props.message || props.confirm || props.linkText || props.signatureText));
 const gifSrc = computed(() => {
   const src = getCompanionGifSrc(activeGifTheme.value, props.theme ?? "light", {
     light: props.customGifLightSrc,
     dark: props.customGifDarkSrc,
   });
   if (src) return src;
-  // 「不显示」的安静模式下唯一例外：二次确认框带默认 GIF 弹出（贴鼠标锚定），答完即随确认一并收起。
-  return props.confirm ? getCompanionGifSrc(DEFAULT_COMPANION_GIF_THEME, props.theme ?? "light") : "";
+  // 没有主题图（「不显示」安静模式 / 自定义缺当前主题源）但气泡有内容时，
+  // 用 Mini Desk 静态 logo（像素猫通知图标，随明暗主题切换）当伴宠形象：
+  // 安静模式选的是「不养常驻伴宠」，气泡弹出时配品牌静态图而非动画 GIF，
+  // 消息气泡（显式 Tips/关于）与二次确认框统一同一形象；纯伴宠可见性
+  // （无气泡内容）保持隐藏。
+  return hasPopoverPayload.value ? getCompanionNotificationIconSrc(DEFAULT_COMPANION_GIF_THEME, props.theme ?? "light") : "";
 });
 const shouldRenderGif = computed(() => Boolean(gifSrc.value));
-const hasPopoverPayload = computed(() => Boolean(props.message || props.confirm || props.linkText || props.signatureText));
 const surfaceVisible = computed(() => {
   if (!props.visible) return false;
   if (shouldRenderGif.value) return gifVisible.value || gifFading.value;

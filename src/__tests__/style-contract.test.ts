@@ -485,4 +485,31 @@ describe("workbench style contract", () => {
     expectSelectorBody(styles, ".text-editor-textarea::selection", "color: transparent");
     expectSelectorBody(styles, ".text-editor-textarea::selection", "color-mix(in srgb, var(--primary) 26%, transparent)");
   });
+
+  it("never paints the focus ring on quick add buttons after dialog focus restore", () => {
+    const styles = readFileSync(resolve(__dirname, "../styles.css"), "utf8");
+    const desk = readFileSync(resolve(__dirname, "../desk.css"), "utf8");
+
+    // NModal 关闭时 vueuc FocusTrap 把焦点还原给打开弹窗的加号按钮
+    // （returnFocusOnDeactivated 默认 true，NModal 不透传关闭项）；回车提交后
+    // 紧跟的程序化 focus 命中 :focus-visible，两套全局焦点指示都会画到加号按钮上：
+    // desk.css 的 .workbench-shell button:focus-visible 实线环 + styles.css 的
+    // 全局 :focus-visible box-shadow 光晕（24% 浅蓝）。贴图区加号弹的是原生文件
+    // 框（无 FocusTrap），但 ESC/回车的键盘交互同样让保持焦点的按钮命中
+    // :focus-visible——机制同源。这些加号按钮的键盘焦点反馈已有配色变化
+    // （recolor），两套指示必须一并豁免——基座规则（styles.css）与 workbench
+    // 覆写（desk.css，特异性压过全局环）缺一不可。
+    expectSelectorBody(styles, ".quick-add-button:focus-visible", "outline: none");
+    expectSelectorBody(styles, ".quick-add-button:focus-visible", "box-shadow: none");
+    expectSelectorBody(styles, ".quick-tag-add-button:focus-visible", "outline: none");
+    expectSelectorBody(styles, ".quick-tag-add-button:focus-visible", "box-shadow: none");
+    expectSelectorBody(styles, ".image-add-button:focus-visible", "outline: none");
+    expectSelectorBody(styles, ".image-add-button:focus-visible", "box-shadow: none");
+    expectSelectorBody(desk, ".workbench-shell .quick-add-button:focus-visible", "outline: none");
+    expectSelectorBody(desk, ".workbench-shell .quick-add-button:focus-visible", "box-shadow: none");
+    expectSelectorBody(desk, ".workbench-shell .quick-tag-add-button:focus-visible", "outline: none");
+    expectSelectorBody(desk, ".workbench-shell .quick-tag-add-button:focus-visible", "box-shadow: none");
+    expectSelectorBody(desk, ".workbench-shell .image-add-button:focus-visible", "outline: none");
+    expectSelectorBody(desk, ".workbench-shell .image-add-button:focus-visible", "box-shadow: none");
+  });
 });

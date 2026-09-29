@@ -54,11 +54,6 @@ export function restoreQuickButtonClicks(state: BoardState, captured: Record<str
   }
 }
 
-/** 标签管理器徽标：该标签下全部按钮（含隐藏）的使用计数之和。 */
-export function sumQuickTagClicks(buttons: QuickButton[], tagId: string): number {
-  return buttons.reduce((sum, button) => (button.tagId === tagId ? sum + (button.clicks ?? 0) : sum), 0);
-}
-
 export function buildVisibleQuickButtonGroups(
   buttons: QuickButton[],
   tags: QuickTag[],

@@ -8,7 +8,7 @@ import type { AppLanguage, GuideKey, QuickApiBodyType, QuickApiHeader, QuickApiM
 import { GUIDE_MENU_OPTION } from "../state/defaults";
 import { getIconHeadingText, getUiText } from "../state/i18n";
 import type { QuickButtonGroup } from "../state/quickButtons";
-import { buildVisibleQuickButtonGroups, computeQuickColumnCount, filterVisibleQuickButtonGroups, groupQuickButtonsByColumn, hasOverloadedVisibleQuickButtonGroup, quickButtonUsagePercent, QUICK_BUTTON_EMPTY_GROUP_ID, QUICK_DENSITY_THRESHOLD, sumQuickTagClicks } from "../state/quickButtons";
+import { buildVisibleQuickButtonGroups, computeQuickColumnCount, filterVisibleQuickButtonGroups, groupQuickButtonsByColumn, hasOverloadedVisibleQuickButtonGroup, quickButtonUsagePercent, QUICK_BUTTON_EMPTY_GROUP_ID, QUICK_DENSITY_THRESHOLD } from "../state/quickButtons";
 import { findQuickAppPresetByScheme, getQuickAppPresetHint, getQuickAppPresetTitle, QUICK_APP_PRESETS } from "../state/quickApps";
 import { findQuickApiTemplate, QUICK_API_TEMPLATES } from "../state/quickApiTemplates";
 import { clearGlobalSearch, globalSearchNormalized, globalSearchQuery, setGlobalSearch } from "../state/globalSearch";
@@ -391,12 +391,6 @@ function deleteTag(id: string, event: MouseEvent): void {
 function getQuickTagTitle(tagId?: string): string {
   if (!tagId) return "";
   return props.tags.find((tag) => tag.id === tagId)?.title ?? "";
-}
-
-/** 标签管理器使用次数徽标：zh「N 次」/ en「N clicks」；超过 100 照实显示（仅颜色封顶）。 */
-function formatTagClicks(clicks: number | undefined): string {
-  const count = clicks ?? 0;
-  return props.language === "en" ? `${count} clicks` : `${count} 次`;
 }
 
 /** 按钮级使用热度百分比（0–100）：驱动 .has-usage 类与 --button-usage 变量。 */
@@ -1246,10 +1240,6 @@ function handleQuickGroupDrop(event: DragEvent, groupId: string): void {
               @keydown.enter.prevent="saveTag(tag)"
               @blur="saveTag(tag)"
             />
-            <span
-              class="quick-tag-clicks"
-              :title="uiText.quick.tagClicks"
-            >{{ formatTagClicks(sumQuickTagClicks(props.buttons, tag.id)) }}</span>
             <button
               type="button"
               class="quick-tag-delete icon-button is-delete"

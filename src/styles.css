@@ -1289,6 +1289,17 @@ button.image-card {
   color: var(--primary);
 }
 
+/* 新增弹窗关闭时 vueuc FocusTrap 把焦点还原给打开弹窗的加号按钮，回车提交后
+   紧跟的程序化 focus 被 :focus-visible 命中：desk.css 的全局按钮实线环 + 本文件
+   底部的全局 :focus-visible box-shadow 光晕（24% 浅蓝）都会画上来（workbench
+   覆写在 desk.css 同款规则）。这两个按钮的键盘焦点反馈已有配色变化（上面的
+   recolor 规则），两套焦点指示一并关掉。 */
+.quick-add-button:focus-visible,
+.quick-tag-add-button:focus-visible {
+  outline: none;
+  box-shadow: none;
+}
+
 /* 紧凑模式：类型副标题高度塌缩（可随 min-height 一起过渡，见 desk.css 基座），
    按钮回落为单行小尺寸。 */
 .quick-block.is-compact .quick-button-kind {
@@ -1536,7 +1547,7 @@ button.quick-button {
 
 .quick-tag-manager-row {
   display: grid;
-  grid-template-columns: minmax(0, 1fr) auto 30px;
+  grid-template-columns: minmax(0, 1fr) 30px;
   min-width: 0;
   gap: 6px;
   align-items: center;
@@ -1555,16 +1566,6 @@ button.quick-button {
 .quick-tag-name-input,
 .quick-tag-new-input {
   min-width: 0;
-}
-
-/* 标签管理器行内的使用次数徽标（取代原色板）：纯展示，右对齐并与删除钮对齐。 */
-.quick-tag-clicks {
-  flex-shrink: 0;
-  min-width: 52px;
-  text-align: right;
-  color: var(--muted);
-  font-size: 12px;
-  font-variant-numeric: tabular-nums;
 }
 
 .quick-tag-empty {
@@ -5762,6 +5763,14 @@ button.workbench-resizer:active {
 .todo-section-menu-button:focus-visible {
   color: var(--foreground);
   background: transparent;
+  box-shadow: none;
+}
+
+/* 贴图区加号（原生文件框）：ESC/回车的键盘交互会让保持焦点的按钮命中
+   :focus-visible，被全局焦点环凭空描边——焦点反馈已有上面的 recolor，
+   两套全局指示一并豁免（workbench 覆写在 desk.css 同款规则）。 */
+.image-add-button:focus-visible {
+  outline: none;
   box-shadow: none;
 }
 
