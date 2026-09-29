@@ -357,7 +357,9 @@ const uiText = computed(() => getUiText(state.language));
 const companionVisible = computed(() => companionFocused.value || bubbleVisible.value);
 const displayedPreviewId = computed(() => activePreviewId.value ?? closingPreviewId.value);
 const imagePreviewClosing = computed(() => Boolean(closingPreviewId.value) && !activePreviewId.value);
-const settingsAppVersion = computed(() => (versionPromptVisible.value ? availableAppVersion.value : appVersion.value));
+// 菜单版本号始终显示正在运行的本地版本：云上有新版只点亮红点，
+// 点击更新并重载进新版后数字才会变（availableAppVersion 仅供更新横幅）。
+
 const densityGroupingTipKeys: Partial<Record<DensityAreaType, MessageKey>> = {
   todos: "workspaceDensityTodoGroup",
   quickButtons: "workspaceDensityQuickGroup",
@@ -3580,7 +3582,7 @@ function moveItem<T extends { id: string }>(items: T[], dragId: string, targetId
 
       <template #actions>
         <SettingsMenu
-          :app-version="settingsAppVersion"
+          :app-version="appVersion"
           :update-available="versionPromptVisible"
           :companion-gif-theme="state.companionGifTheme"
           :custom-companion-gif="state.customCompanionGif"

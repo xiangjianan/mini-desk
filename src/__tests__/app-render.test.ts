@@ -7945,7 +7945,10 @@ describe("App shell", () => {
       await wrapper.vm.$nextTick();
 
       const settings = wrapper.getComponent(SettingsMenu);
-      expect(settings.props("appVersion")).toBe(deployedVersion);
+      // 菜单版本号始终显示「正在运行的本地版本」：云上有新版只点亮红点，
+      // 数字要等点击更新、页面重载进新版后才变。
+      expect(settings.props("appVersion")).toBe(FALLBACK_APP_VERSION);
+      expect(settings.props("appVersion")).not.toBe(deployedVersion);
       expect(settings.props("updateAvailable")).toBe(true);
       expect(wrapper.get('[aria-label="设置"]').attributes("data-update-available")).toBe("true");
       expect(localStorage.getItem("mini-desk-app-version")).not.toBe(deployedVersion);
