@@ -46,6 +46,7 @@ export function applyInboxItems(workspace: WorkspaceData, plains: InboxPlainItem
             id: createId(),
             text: plain.text.slice(0, INBOX_PLAINTEXT_MAX_CHARS),
             done: false,
+            ...(plain.notifyAt !== undefined ? { notifyAt: plain.notifyAt } : {}),
           })),
         ],
       },

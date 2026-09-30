@@ -101,6 +101,17 @@ describe("applyInboxItems", () => {
     expect(merged.workspaceLines.at(-1)).toEqual({ text: "x", indent: 0 });
   });
 
+  it("todo 条目携带 notifyAt 时落地为待办提醒时间，缺失不带字段", () => {
+    const base = workspace("a", inbox({ todoListId: "morning" }));
+    const merged = applyInboxItems(base, [
+      { kind: "todo", text: "去咖啡厅", createdAt: 1, notifyAt: 1759312800000 },
+      { kind: "todo", text: "交电费", createdAt: 2 },
+    ], 2);
+    expect(merged.todos.morning.at(-2)).toMatchObject({ text: "去咖啡厅", done: false, notifyAt: 1759312800000 });
+    expect(merged.todos.morning.at(-1)).toMatchObject({ text: "交电费", done: false });
+    expect("notifyAt" in merged.todos.morning.at(-1)!).toBe(false);
+  });
+
   it("todoListId 失效时回退第一个清单；文本裁剪 500 字", () => {
     const merged = applyInboxItems(
       workspace("a", inbox({ todoListId: "ghost" })),

@@ -36,6 +36,18 @@ describe("inbox crypto", () => {
     expect(hash).toMatch(/^[0-9a-f]{64}$/);
     expect(await inboxKeyHash("ZZ9ZZ9ZZ9ZZ9")).not.toBe(hash);
   });
+
+  it("明文行 notifyAt：合法正数保留，非法/缺失不带字段", async () => {
+    const valid = JSON.stringify({ kind: "todo", text: "去咖啡厅", createdAt: 1, notifyAt: 1759312800000 });
+    expect(await decodeInboxPayload(CODE, valid)).toEqual({ kind: "todo", text: "去咖啡厅", createdAt: 1, notifyAt: 1759312800000 });
+
+    for (const notifyAt of ["x", -1, Number.NaN, null]) {
+      const payload = JSON.stringify({ kind: "todo", text: "去咖啡厅", createdAt: 1, notifyAt });
+      const decoded = await decodeInboxPayload(CODE, payload);
+      expect(decoded).toEqual({ kind: "todo", text: "去咖啡厅", createdAt: 1 });
+      expect("notifyAt" in (decoded ?? {})).toBe(false);
+    }
+  });
 });
 
 describe("decryptInboxPayload（存量密文行）", () => {

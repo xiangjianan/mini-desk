@@ -140,7 +140,8 @@ function errorTextFor(reason: InboxPostFailure): string {
 
 /** 发送中再次触发直接忽略（同步判定，先于任何 await 生效）。
  *  多行输入按行拆分：待办每行一条、便签每行落一行（与桌面行编辑器模型一致）；
- *  逐条以明文 JSON 串行发送（服务端负责润色），中途失败把未发送的行放回输入框供直接重试。 */
+ *  逐条以明文 JSON 串行发送（服务端负责润色），中途失败把未发送的行放回输入框供直接重试。
+ *  tzOffsetMinutes 随行携带：服务端按手机时区折算当前基准时间解析相对时间。 */
 async function send(kind: CaptureKind): Promise<void> {
   const lines = draft.value
     .split(/\r?\n/)
@@ -163,7 +164,14 @@ async function send(kind: CaptureKind): Promise<void> {
     const keyHash = await inboxKeyHash(props.code);
     for (let index = 0; index < lines.length; index += 1) {
       try {
-        const payload = JSON.stringify({ kind, text: lines[index], createdAt: Date.now(), polish: polishEnabled.value });
+        // 符号约定：JS getTimezoneOffset() 向西为正，服务端契约以东为正，取负——UTC+8 → 480。
+        const payload = JSON.stringify({
+          kind,
+          text: lines[index],
+          createdAt: Date.now(),
+          polish: polishEnabled.value,
+          tzOffsetMinutes: -new Date().getTimezoneOffset(),
+        });
         const result = await postInboxItem(keyHash, createId(), payload);
         if (!result.ok) {
           failAt(index, result.reason);

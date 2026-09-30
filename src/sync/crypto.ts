@@ -4,6 +4,8 @@ export interface InboxPlainItem {
   kind: "todo" | "note";
   text: string;
   createdAt: number;
+  /** 服务端润色识别到的提醒时间（epoch 毫秒）；旧数据/无时间/便签不带。 */
+  notifyAt?: number;
 }
 
 const PBKDF2_ITERATIONS = 600_000;
@@ -33,15 +35,20 @@ async function deriveAesKey(code: string, salt: Uint8Array<ArrayBuffer>): Promis
   );
 }
 
-/** 校验已解析的明文并收敛为 InboxPlainItem：kind ∈ todo/note、text 为字符串（不要求非空）、createdAt 非数字记 0；结构非法返回 null。 */
+/** 校验已解析的明文并收敛为 InboxPlainItem：kind ∈ todo/note、text 为字符串（不要求非空）、createdAt 非数字记 0、
+ *  notifyAt 为合法正数才保留（非有限数字/≤0/缺失都剥掉，不写字段）；结构非法返回 null。 */
 function coercePlainItem(parsed: unknown): InboxPlainItem | null {
   if (typeof parsed !== "object" || parsed === null) return null;
   const typed = parsed as Record<string, unknown>;
   if ((typed.kind !== "todo" && typed.kind !== "note") || typeof typed.text !== "string") return null;
+  const notifyAt = typeof typed.notifyAt === "number" && Number.isFinite(typed.notifyAt) && typed.notifyAt > 0
+    ? typed.notifyAt
+    : undefined;
   return {
     kind: typed.kind,
     text: typed.text,
     createdAt: typeof typed.createdAt === "number" ? typed.createdAt : 0,
+    ...(notifyAt !== undefined ? { notifyAt } : {}),
   };
 }
 
