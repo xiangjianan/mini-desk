@@ -9,6 +9,8 @@
 自建服务器无次数限制：只做输入校验，不做限流/配额。
 Origin 闸门：带 Origin 且不在 ALLOWED_ORIGINS 白名单的请求 403（预检在内；无 Origin 的非浏览器请求放行，白名单缺省 fail-closed）。
 智能粘贴：POST /polish/<key_hash> 同步调 LLM 整理剪贴板文本（todo/note 拆条排版、quick 生成快捷按钮；无状态不入库，鉴权同注册制）。
+todo 拆条同时识别时间写入条目 notifyAt（epoch 毫秒，ISO 由 llm.py 换算校验），note 响应维持纯文本数组；
+请求体可选 tzOffsetMinutes（整数分钟，UTC 以东为正）用于相对时间解析的用户时区折算，手机速记 payload 同名字段同语义。
 """
 import json
 import os
@@ -76,24 +78,45 @@ def plain_item_polish_enabled(value: dict) -> bool:
     return polish if isinstance(polish, bool) else True
 
 
-def encode_payload(kind: str, text: str, created_at: int) -> str:
-    """明文入库行：与桌面端 InboxPlainItem 同构的紧凑 JSON。"""
-    return json.dumps({"kind": kind, "text": text, "createdAt": created_at}, ensure_ascii=False, separators=(",", ":"))
+def parse_tz_offset_minutes(value: object) -> Optional[int]:
+    """用户时区偏移（分钟，UTC 以东为正，客户端取 -new Date().getTimezoneOffset()）：缺省 None=服务器本地时区；
+    存在则必须是 [-720, 840] 的整数（bool 不算），否则 ValueError 由调用方转 400。"""
+    if value is None:
+        return None
+    if isinstance(value, bool) or not isinstance(value, int) or not -720 <= value <= 840:
+        raise ValueError("bad tz offset")
+    return value
 
 
-def store_plain_items(key_hash: str, item_id: str, kind: str, text: str, polish: bool = True) -> None:
+def encode_payload(kind: str, text: str, created_at: int, notify_at: Optional[int] = None) -> str:
+    """明文入库行：与桌面端 InboxPlainItem 同构的紧凑 JSON；notifyAt 仅 todo 润色识别到时间时携带。"""
+    payload = {"kind": kind, "text": text, "createdAt": created_at}
+    if notify_at is not None:
+        payload["notifyAt"] = notify_at
+    return json.dumps(payload, ensure_ascii=False, separators=(",", ":"))
+
+
+def store_plain_items(key_hash: str, item_id: str, kind: str, text: str, polish: bool = True, tz_offset_minutes: Optional[int] = None) -> None:
     """后台润色入库：polish=False 跳过 LLM 直接存原文一行（原 id）；LLM 失败或空结果同样兜底存原文一行；
-    非空则每条一行（id 加 #序号）。同基名旧行先清——手机端同 id 重试时以最后一次结果为准，避免兜底行与润色行并存。"""
+    非空则每条一行（id 加 #序号，todo 条目携带润色识别到的 notifyAt）。同基名旧行先清——手机端同 id 重试时
+    以最后一次结果为准，避免兜底行与润色行并存。"""
     try:
-        items = llm.polish_capture(kind, text) if polish else None
+        items = llm.polish_capture(kind, text, None, tz_offset_minutes) if polish else None
     except Exception:
         items = None  # polish_capture 自身不应抛出，双保险：任何异常都走原文兜底。
     now = int(time.time() * 1000)
     if not items:
         rows_to_insert = [(key_hash, item_id, encode_payload(kind, text, now), now)]
     else:
+        # notifyAt 只随 todo 行入库（双保险：note 结果即使夹带时间也剥掉，与 llm/端点两层同口径）。
         rows_to_insert = [
-            (key_hash, f"{item_id}#{index}", encode_payload(kind, item, now), now) for index, item in enumerate(items)
+            (
+                key_hash,
+                f"{item_id}#{index}",
+                encode_payload(kind, item["text"], now, item.get("notifyAt") if kind == "todo" else None),
+                now,
+            )
+            for index, item in enumerate(items)
         ]
     try:
         with pymysql.connect(**database_kwargs()) as conn:
@@ -220,6 +243,11 @@ def create_app() -> Flask:
         style = body.get("style")
         if style is not None and style not in ("tech", "concise", "casual"):
             return error_response(400, "bad_request")
+        # tzOffsetMinutes 可选（todo 时间识别的用户时区折算）：缺省=服务器本地，给了就必须是合法整数偏移。
+        try:
+            tz_offset_minutes = parse_tz_offset_minutes(body.get("tzOffsetMinutes"))
+        except ValueError:
+            return error_response(400, "bad_request")
         if kind not in ("todo", "note", "quick") or not isinstance(text, str) or not text.strip():
             return error_response(400, "bad_request")
         if len(text) > MAX_POLISH_CHARS:
@@ -241,12 +269,15 @@ def create_app() -> Flask:
                 return jsonify({"button": None, "fallback": True})
             return jsonify({"button": button})
         try:
-            items = llm.polish_capture(kind, text, style)
+            items = llm.polish_capture(kind, text, style, tz_offset_minutes)
         except Exception:
             items = None  # polish_capture 自身不应抛出，双保险与 store_plain_items 同口径。
         if not items:
             return jsonify({"items": None, "fallback": True})
-        return jsonify({"items": items})
+        # todo 透传结构化条目（含可选 notifyAt epoch 毫秒）；note 维持旧契约纯文本数组。
+        if kind == "todo":
+            return jsonify({"items": items})
+        return jsonify({"items": [item["text"] for item in items]})
 
     def store_cipher_item(key_hash: str, item_id: str, payload: str) -> tuple:
         """旧密文路径：与改造前完全一致——状态检查 + 幂等插入 + 保留期清扫，同步完成。"""
@@ -298,11 +329,15 @@ def create_app() -> Flask:
             return error_response(404, "unknown_code")
         if key_row["revoked_at"] is not None:
             return error_response(410, "revoked")
+        try:
+            tz_offset_minutes = parse_tz_offset_minutes(parsed.get("tzOffsetMinutes"))
+        except ValueError:
+            return error_response(400, "bad_request")
         kind = parsed["kind"]
         text = parsed["text"]
         polish = plain_item_polish_enabled(parsed)
         # 秒回 + 后台润色：入库前 GET 拉不到本条；润色失败由 store_plain_items 兜底存原文。
-        spawn_worker(lambda: store_plain_items(key_hash, item_id, kind, text, polish))
+        spawn_worker(lambda: store_plain_items(key_hash, item_id, kind, text, polish, tz_offset_minutes))
         return jsonify({"ok": True})
 
     def handle_delete(key_hash: str) -> tuple:

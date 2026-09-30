@@ -17,11 +17,11 @@ def _registered(client):
 def polish(monkeypatch):
     """可控润色桩：默认两条结果；改 result 控制成败，calls 记录调用。"""
     stub = lambda: None  # noqa: E731
-    stub.result = ["明天买牛奶", "交电费"]
+    stub.result = [{"text": "明天买牛奶"}, {"text": "交电费"}]
     stub.calls = []
 
-    def fake(kind, text, style=None):
-        stub.calls.append((kind, text, style))
+    def fake(kind, text, style=None, tz_offset_minutes=None):
+        stub.calls.append((kind, text, style, tz_offset_minutes))
         return stub.result
 
     monkeypatch.setattr(llm_module, "polish_capture", fake)
@@ -43,10 +43,12 @@ def quick(monkeypatch):
     return stub
 
 
-def post_polish(client, kind, text, key=KEY, style=None):
+def post_polish(client, kind, text, key=KEY, style=None, tz=None):
     payload = {"kind": kind, "text": text}
     if style is not None:
         payload["style"] = style
+    if tz is not None:
+        payload["tzOffsetMinutes"] = tz
     return client.post(f"/polish/{key}", json=payload, headers={"Origin": ORIGIN})
 
 
@@ -55,20 +57,44 @@ class TestSuccess:
         response = post_polish(client, "todo", "买牛奶、交电费")
 
         assert response.status_code == 200
-        assert response.get_json() == {"items": ["明天买牛奶", "交电费"]}
-        assert polish.calls == [("todo", "买牛奶、交电费", None)]
+        assert response.get_json() == {"items": [{"text": "明天买牛奶"}, {"text": "交电费"}]}
+        assert polish.calls == [("todo", "买牛奶、交电费", None, None)]
 
-    def test_note_kind_branch(self, client, polish):
-        polish.result = ["1、要点A"]
+    def test_todo_notify_at_passthrough_epoch_ms(self, client, polish):
+        polish.result = [{"text": "去咖啡厅", "notifyAt": 1759312800000}, {"text": "交电费"}]
+        response = post_polish(client, "todo", "上午10点去咖啡厅、交电费")
+        assert response.get_json() == {"items": [{"text": "去咖啡厅", "notifyAt": 1759312800000}, {"text": "交电费"}]}
+
+    def test_note_kind_branch_flattens_to_strings(self, client, polish):
+        polish.result = [{"text": "1、要点A"}, {"text": "2、要点B"}]
         response = post_polish(client, "note", "一段想法")
-        assert response.get_json() == {"items": ["1、要点A"]}
-        assert polish.calls == [("note", "一段想法", None)]
+        assert response.get_json() == {"items": ["1、要点A", "2、要点B"]}
+        assert polish.calls == [("note", "一段想法", None, None)]
+
+    def test_note_never_leaks_notify_at(self, client, polish):
+        polish.result = [{"text": "要点", "notifyAt": 1759312800000}]
+        response = post_polish(client, "note", "一段想法")
+        assert response.get_json() == {"items": ["要点"]}
 
     def test_style_passes_through_to_llm(self, client, polish):
         response = post_polish(client, "note", "一段想法", style="concise")
 
         assert response.status_code == 200
-        assert polish.calls == [("note", "一段想法", "concise")]
+        assert polish.calls == [("note", "一段想法", "concise", None)]
+
+    def test_tz_offset_forwarded_to_llm(self, client, polish):
+        post_polish(client, "todo", "明早买牛奶", tz=480)
+        assert polish.calls == [("todo", "明早买牛奶", None, 480)]
+
+        post_polish(client, "todo", "明早买牛奶")
+        assert polish.calls[-1] == ("todo", "明早买牛奶", None, None)
+
+    def test_invalid_tz_offset_400_without_llm(self, client, polish):
+        for tz in ["x", 1.5, True, 999, -721, [480]]:
+            response = post_polish(client, "todo", "x", tz=tz)
+            assert response.status_code == 400, tz
+            assert response.get_json() == {"error": "bad_request"}
+        assert polish.calls == []
 
 
 class TestFallback:
@@ -131,7 +157,7 @@ class TestValidation:
         assert polish.calls == []
 
     def test_exactly_2000_chars_accepted(self, client, polish):
-        polish.result = ["ok"]
+        polish.result = [{"text": "ok"}]
         response = post_polish(client, "todo", "长" * 2000)
         assert response.status_code == 200
 

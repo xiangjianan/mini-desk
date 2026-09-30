@@ -13,11 +13,13 @@ ORIGIN = "https://todolist.pages.dev"
 KEY = "a" * 64
 
 
-def post_plain(client, item_id, kind, text, polish=None):
-    """polish=None 不带标志（旧手机页语义）；True/False 显式携带开关。"""
+def post_plain(client, item_id, kind, text, polish=None, tz=None):
+    """polish=None 不带标志（旧手机页语义）；True/False 显式携带开关；tz 为手机端时区偏移（分钟）。"""
     item = {"kind": kind, "text": text, "createdAt": 1}
     if polish is not None:
         item["polish"] = polish
+    if tz is not None:
+        item["tzOffsetMinutes"] = tz
     payload = json.dumps(item, ensure_ascii=False)
     return client.post(f"/inbox/{KEY}", json={"id": item_id, "payload": payload}, headers={"Origin": ORIGIN})
 
@@ -39,13 +41,15 @@ def inline_worker(monkeypatch):
 
 @pytest.fixture
 def polish(monkeypatch):
-    """可控润色桩：默认两条结果；改 result 控制成败，calls 记录调用。"""
+    """可控润色桩：默认两条结果；改 result 控制成败，calls 记录调用，tz_calls 记录时区偏移。"""
     stub = lambda: None  # noqa: E731
-    stub.result = ["明天买牛奶", "交电费"]
+    stub.result = [{"text": "明天买牛奶"}, {"text": "交电费"}]
     stub.calls = []
+    stub.tz_calls = []
 
-    def fake(kind, text):
+    def fake(kind, text, style=None, tz_offset_minutes=None):
         stub.calls.append((kind, text))
+        stub.tz_calls.append(tz_offset_minutes)
         return stub.result
 
     monkeypatch.setattr(llm_module, "polish_capture", fake)
@@ -67,7 +71,7 @@ class TestPolishedStore:
         assert len({item["createdAt"] for item in items}) == 1
 
     def test_note_numbered_paragraphs_stored_as_rows(self, client, polish):
-        polish.result = ["1、要点A", "2、要点B"]
+        polish.result = [{"text": "1、要点A"}, {"text": "2、要点B"}]
         post_plain(client, "n1", "note", "一段想法")
         assert [json.loads(i["payload"])["text"] for i in rows(client)] == ["1、要点A", "2、要点B"]
 
@@ -77,7 +81,7 @@ class TestPolishedStore:
         monkeypatch.setattr(
             llm_module,
             "polish_capture",
-            lambda kind, text: (time.sleep(0.3), ["慢润色结果"])[1],
+            lambda kind, text, style=None, tz_offset_minutes=None: (time.sleep(0.3), [{"text": "慢润色结果"}])[1],
         )
 
         assert post_plain(client, "slow", "todo", "慢条目").status_code == 200
@@ -97,6 +101,36 @@ class TestPolishedStore:
         post_plain(client, "i1", "todo", "x")
         assert len(rows(client)) == 2
         assert rows(client) == []
+
+    def test_todo_rows_carry_notify_at(self, client, polish):
+        polish.result = [{"text": "去咖啡厅", "notifyAt": 1759312800000}]
+        post_plain(client, "t1", "todo", "上午10点去咖啡厅")
+
+        payloads = [json.loads(i["payload"]) for i in rows(client)]
+        assert payloads == [{"kind": "todo", "text": "去咖啡厅", "createdAt": payloads[0]["createdAt"], "notifyAt": 1759312800000}]
+
+    def test_note_rows_and_raw_rows_have_no_notify_at(self, client, polish):
+        polish.result = [{"text": "1、要点", "notifyAt": 1759312800000}]
+        post_plain(client, "n1", "note", "一段想法")
+        polish.result = None
+        post_plain(client, "t2", "todo", "原文兜底")
+
+        payloads = [json.loads(i["payload"]) for i in rows(client)]
+        assert all("notifyAt" not in p for p in payloads)
+
+    def test_tz_offset_forwarded_to_llm(self, client, polish):
+        post_plain(client, "t3", "todo", "明早买牛奶", tz=480)
+        assert polish.tz_calls == [480]
+
+        post_plain(client, "t4", "todo", "无时区")
+        assert polish.tz_calls[-1] is None
+
+    def test_invalid_tz_offset_400(self, client, polish):
+        for tz in ["x", 1.5, True, 999]:
+            payload = json.dumps({"kind": "todo", "text": "x", "createdAt": 1, "tzOffsetMinutes": tz}, ensure_ascii=False)
+            response = client.post(f"/inbox/{KEY}", json={"id": "i1", "payload": payload}, headers={"Origin": ORIGIN})
+            assert response.status_code == 400, tz
+        assert polish.calls == []
 
 
 class TestPolishToggle:
@@ -156,7 +190,7 @@ class TestIdempotency:
     def test_retry_same_id_last_attempt_wins(self, client, polish):
         polish.result = None
         post_plain(client, "i1", "todo", "原文")
-        polish.result = ["润色A", "润色B"]
+        polish.result = [{"text": "润色A"}, {"text": "润色B"}]
         post_plain(client, "i1", "todo", "原文")
 
         assert [item["id"] for item in rows(client)] == ["i1#0", "i1#1"]

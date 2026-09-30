@@ -1,5 +1,6 @@
 """llm.polish_capture 单元测试：mock urlopen，不发真实请求。覆盖成功、清洗与各类失败。"""
 
+import datetime
 import json
 
 import llm
@@ -38,7 +39,7 @@ def api(monkeypatch):
 
 class TestSuccess:
     def test_returns_items(self, api):
-        assert polish_capture("todo", "明天买牛奶、交电费") == ["明天买牛奶", "交电费"]
+        assert polish_capture("todo", "明天买牛奶、交电费") == [{"text": "明天买牛奶"}, {"text": "交电费"}]
 
     def test_request_shape(self, api):
         polish_capture("note", "一个想法")
@@ -80,8 +81,8 @@ class TestStyle:
 
 class TestCleaning:
     def test_filters_blank_and_non_string_items(self, api):
-        api["content"] = json.dumps({"items": ["有效", "  ", "", 42, None]}, ensure_ascii=False)
-        assert polish_capture("todo", "x") == ["有效"]
+        api["content"] = json.dumps({"items": ["有效", "  ", "", 42, None, {"notifyAt": 1}, {"text": 42}]}, ensure_ascii=False)
+        assert polish_capture("todo", "x") == [{"text": "有效"}]
 
     def test_all_invalid_returns_none(self, api):
         api["content"] = json.dumps({"items": ["", "  "]})
@@ -92,12 +93,12 @@ class TestCleaning:
         assert len(polish_capture("todo", "x")) == 20
 
     def test_slices_item_to_500_chars(self, api):
-        api["content"] = json.dumps({"items": ["长" * 600]}, ensure_ascii=False)
-        assert len(polish_capture("todo", "x")[0]) == 500
+        api["content"] = json.dumps({"items": [{"text": "长" * 600}]}, ensure_ascii=False)
+        assert len(polish_capture("todo", "x")[0]["text"]) == 500
 
     def test_collapses_internal_newlines(self, api):
-        api["content"] = json.dumps({"items": ["买牛奶\n看保质期"]}, ensure_ascii=False)
-        assert polish_capture("todo", "x") == ["买牛奶 看保质期"]
+        api["content"] = json.dumps({"items": [{"text": "买牛奶\n看保质期"}]}, ensure_ascii=False)
+        assert polish_capture("todo", "x") == [{"text": "买牛奶 看保质期"}]
 
 
 class TestFailures:
@@ -137,3 +138,53 @@ class TestFailures:
 
         monkeypatch.setattr(llm, "urlopen", lambda request, timeout=None: EmptyEnvelope())
         assert polish_capture("todo", "x") is None
+
+
+class TestTimeExtraction:
+    def _iso_in_range(self, days: int) -> str:
+        return (datetime.datetime.now(datetime.timezone.utc) + datetime.timedelta(days=days)).isoformat()
+
+    def test_todo_prompt_appends_now_hint(self, api):
+        polish_capture("todo", "x")
+        system_content = json.loads(api["request"].data)["messages"][0]["content"]
+        assert system_content.startswith(llm.SYSTEM_PROMPT)
+        assert "当前基准时间" in system_content
+
+    def test_note_prompt_has_no_now_hint(self, api):
+        polish_capture("note", "x")
+        system_content = json.loads(api["request"].data)["messages"][0]["content"]
+        assert system_content == llm.SYSTEM_PROMPT
+
+    def test_todo_items_carry_notify_at_epoch_ms(self, api):
+        iso = self._iso_in_range(1)
+        api["content"] = json.dumps({"items": [{"text": "去咖啡厅", "notifyAt": iso}]}, ensure_ascii=False)
+        expected = int(datetime.datetime.fromisoformat(iso).timestamp() * 1000)
+        assert polish_capture("todo", "x") == [{"text": "去咖啡厅", "notifyAt": expected}]
+
+    def test_no_time_item_omits_notify_at(self, api):
+        api["content"] = json.dumps({"items": [{"text": "去咖啡厅"}, {"text": "交电费", "notifyAt": None}]}, ensure_ascii=False)
+        assert polish_capture("todo", "x") == [{"text": "去咖啡厅"}, {"text": "交电费"}]
+
+    def test_invalid_notify_at_drops_field_keeps_item(self, api):
+        for bad in ["not a time", "", "  ", 42, None, "2200-01-01T00:00:00+00:00", "1999-01-01T00:00:00+00:00"]:
+            api["content"] = json.dumps({"items": [{"text": "去咖啡厅", "notifyAt": bad}]}, ensure_ascii=False)
+            assert polish_capture("todo", "x") == [{"text": "去咖啡厅"}], bad
+
+    def test_z_suffix_iso_accepted(self, api):
+        iso = self._iso_in_range(2).replace("+00:00", "Z")
+        api["content"] = json.dumps({"items": [{"text": "开会", "notifyAt": iso}]}, ensure_ascii=False)
+        expected = int(datetime.datetime.fromisoformat(iso.replace("Z", "+00:00")).timestamp() * 1000)
+        assert polish_capture("todo", "x") == [{"text": "开会", "notifyAt": expected}]
+
+    def test_naive_iso_uses_user_timezone(self, api):
+        target = datetime.datetime.now(datetime.timezone.utc) + datetime.timedelta(days=3)
+        naive = target.replace(tzinfo=None).isoformat()
+        api["content"] = json.dumps({"items": [{"text": "取快递", "notifyAt": naive}]}, ensure_ascii=False)
+        user_tz = datetime.timezone(datetime.timedelta(minutes=480))
+        expected = int(target.replace(tzinfo=user_tz).timestamp() * 1000)
+        assert polish_capture("todo", "x", None, 480) == [{"text": "取快递", "notifyAt": expected}]
+
+    def test_note_items_never_carry_notify_at(self, api):
+        iso = self._iso_in_range(1)
+        api["content"] = json.dumps({"items": [{"text": "要点", "notifyAt": iso}]}, ensure_ascii=False)
+        assert polish_capture("note", "x") == [{"text": "要点"}]
