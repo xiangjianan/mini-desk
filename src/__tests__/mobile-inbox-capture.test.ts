@@ -47,9 +47,10 @@ function lastPayload(): string {
   return payload;
 }
 
-/** 明文 payload 回验：服务端润色前的新格式行。 */
-function plainPayload(payload: string): InboxPlainItem {
-  return JSON.parse(payload) as InboxPlainItem;
+/** 明文 payload 回验：服务端润色前的新格式行。发送 payload 是 InboxPlainItem 的超集
+ *  （另带 polish 开关与 tzOffsetMinutes 时区偏移），类型上如实建模便于直接取字段断言。 */
+function plainPayload(payload: string): InboxPlainItem & { polish?: boolean; tzOffsetMinutes?: number } {
+  return JSON.parse(payload) as InboxPlainItem & { polish?: boolean; tzOffsetMinutes?: number };
 }
 
 /** 润色开关内的真实 checkbox（视觉隐藏但保留可达性）。 */
@@ -148,6 +149,9 @@ describe("MobileInboxCapture", () => {
     expect(typeof payload).toBe("string");
     expect(payload.length).toBeGreaterThan(40);
     expect(plainPayload(payload)).toMatchObject({ kind: "todo", text: "买牛奶" });
+    // 时区偏移符号钉死：JS getTimezoneOffset() 向西为正，服务端契约以东为正，取负（UTC+8 → 480）。
+    // 丢了负号会把每条提醒偏 16 小时，必须精确断言而非 toMatchObject 部分匹配。
+    expect(plainPayload(payload).tzOffsetMinutes).toBe(-new Date().getTimezoneOffset());
     // 成功反馈上抛 sent（App.vue 复用右下角伴宠气泡弹出），组件内不再渲染结果。
     await until(() => expect(wrapper.emitted("sent")).toBeTruthy());
     expect(wrapper.emitted("sent")).toEqual([[1]]);

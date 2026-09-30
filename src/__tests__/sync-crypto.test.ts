@@ -41,7 +41,9 @@ describe("inbox crypto", () => {
     const valid = JSON.stringify({ kind: "todo", text: "去咖啡厅", createdAt: 1, notifyAt: 1759312800000 });
     expect(await decodeInboxPayload(CODE, valid)).toEqual({ kind: "todo", text: "去咖啡厅", createdAt: 1, notifyAt: 1759312800000 });
 
-    for (const notifyAt of ["x", -1, Number.NaN, null]) {
+    // 0 是 >0 线上守卫与 >=0 域守卫的分界（防未来「对齐」放宽）；Infinity 经 JSON.stringify 落为 null
+    // （与既有的 null 用例重复、JSON 路径不可达），运行时的 Number.isFinite 守卫独立兜底。
+    for (const notifyAt of ["x", -1, 0, Number.NaN, null]) {
       const payload = JSON.stringify({ kind: "todo", text: "去咖啡厅", createdAt: 1, notifyAt });
       const decoded = await decodeInboxPayload(CODE, payload);
       expect(decoded).toEqual({ kind: "todo", text: "去咖啡厅", createdAt: 1 });
