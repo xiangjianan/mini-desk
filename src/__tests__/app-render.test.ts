@@ -1050,6 +1050,61 @@ describe("App shell", () => {
     }
   });
 
+  it("lands structured smart-paste todos with notifyAt and prompts for notification permission", async () => {
+    // 未来一小时：提醒未到期，只验证权限请求本身，不触发原生通知。
+    const notifyAt = Date.now() + 60 * 60 * 1000;
+    class NotificationStub {
+      static permission: NotificationPermission = "default";
+      static requestPermission = vi.fn(async () => {
+        NotificationStub.permission = "granted";
+        return "granted" as NotificationPermission;
+      });
+
+      constructor(_title: string, _options?: NotificationOptions) {}
+    }
+    vi.stubGlobal("Notification", NotificationStub);
+    const wrapper = mountApp();
+
+    try {
+      wrapper.getComponent(TodoPanel).vm.$emit("createFromText", "morning", [{ text: "去咖啡厅", notifyAt }, { text: "交电费" }]);
+      await flushPromises();
+
+      const todos = JSON.parse(localStorage.getItem(STORAGE_KEY) || "{}").workspaces[0].todos.morning;
+      expect(todos).toHaveLength(2);
+      expect(todos[0]).toMatchObject({ text: "去咖啡厅", done: false, notifyAt });
+      expect(todos[1]).toMatchObject({ text: "交电费", done: false });
+      expect(todos[1]).not.toHaveProperty("notifyAt");
+      expect(NotificationStub.requestPermission).toHaveBeenCalledTimes(1);
+    } finally {
+      wrapper.unmount();
+      vi.unstubAllGlobals();
+    }
+  });
+
+  it("skips the notification permission prompt when created todos carry no notifyAt", async () => {
+    class NotificationStub {
+      static permission: NotificationPermission = "default";
+      static requestPermission = vi.fn();
+
+      constructor(_title: string, _options?: NotificationOptions) {}
+    }
+    vi.stubGlobal("Notification", NotificationStub);
+    const wrapper = mountApp();
+
+    try {
+      wrapper.getComponent(TodoPanel).vm.$emit("createFromText", "morning", ["任务 A", "任务 B"]);
+      await flushPromises();
+
+      const todos = JSON.parse(localStorage.getItem(STORAGE_KEY) || "{}").workspaces[0].todos.morning;
+      expect(todos).toHaveLength(2);
+      expect(todos.every((todo: { notifyAt?: number }) => !("notifyAt" in todo))).toBe(true);
+      expect(NotificationStub.requestPermission).not.toHaveBeenCalled();
+    } finally {
+      wrapper.unmount();
+      vi.unstubAllGlobals();
+    }
+  });
+
   it("creates a configurable reminder list with the submitted title and persists it", async () => {
     const wrapper = mountApp();
 

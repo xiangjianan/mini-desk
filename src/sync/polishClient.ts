@@ -72,6 +72,7 @@ export async function polishClipboardText(kind: PolishKind, text: string, code: 
     const response = await fetch(polishUrl(keyHash), {
       method: "POST",
       headers: { "Content-Type": "application/json" },
+      // UTC 以东为正：JS 偏移向西为正需取负（UTC+8 → 480），与服务端契约对齐。
       body: JSON.stringify({ kind, text, tzOffsetMinutes: -new Date().getTimezoneOffset(), ...(style ? { style } : {}) }),
       signal: controller.signal,
     }).finally(() => clearTimeout(timer));
