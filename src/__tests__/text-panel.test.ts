@@ -1545,7 +1545,7 @@ describe("TextPanel", () => {
 
   it("smart paste inserts polished lines at the caret and bubbles working then done", async () => {
     Object.assign(navigator, { clipboard: { readText: vi.fn().mockResolvedValue("杂乱文本"), writeText: vi.fn() } });
-    const polish = vi.fn(async (): Promise<PolishResult> => ({ items: ["1、要点A", "2、要点B"] }));
+    const polish = vi.fn(async (): Promise<PolishResult> => ({ items: [{ text: "1、要点A" }, { text: "2、要点B" }] }));
     const wrapper = mount(TextPanel, {
       props: {
         titleId: "workspace-title",
@@ -1640,7 +1640,7 @@ describe("TextPanel", () => {
 
   it("smart polish replaces the selection with polished lines", async () => {
     Object.assign(navigator, { clipboard: { readText: vi.fn().mockResolvedValue("剪贴板内容"), writeText: vi.fn() } });
-    const polish = vi.fn(async (): Promise<PolishResult> => ({ items: ["1、要点A", "2、要点B"] }));
+    const polish = vi.fn(async (): Promise<PolishResult> => ({ items: [{ text: "1、要点A" }, { text: "2、要点B" }] }));
     const wrapper = mount(TextPanel, {
       props: {
         titleId: "workspace-title",
@@ -1711,7 +1711,7 @@ describe("TextPanel", () => {
 
   it("smart polish cancels the selection after applying the result", async () => {
     Object.assign(navigator, { clipboard: { readText: vi.fn().mockResolvedValue("剪贴板内容"), writeText: vi.fn() } });
-    const polish = vi.fn(async (): Promise<PolishResult> => ({ items: ["1、要点A", "2、要点B"] }));
+    const polish = vi.fn(async (): Promise<PolishResult> => ({ items: [{ text: "1、要点A" }, { text: "2、要点B" }] }));
     const wrapper = mount(TextPanel, {
       props: {
         titleId: "workspace-title",
@@ -1884,7 +1884,7 @@ describe("TextPanel", () => {
     await flushPromises();
 
     await wrapper.get("textarea").setValue("root 手动编辑");
-    resolvePolish?.({ items: ["1、要点A", "2、要点B"] });
+    resolvePolish?.({ items: [{ text: "1、要点A" }, { text: "2、要点B" }] });
     await flushPromises();
 
     expect(textarea.value).toBe("root 手动编辑");
@@ -1923,7 +1923,7 @@ describe("TextPanel", () => {
     await flushPromises();
 
     wrapper.unmount();
-    resolvePolish?.({ items: ["1、要点A", "2、要点B"] });
+    resolvePolish?.({ items: [{ text: "1、要点A" }, { text: "2、要点B" }] });
     await flushPromises();
 
     expect(textarea.value).toBe("root");

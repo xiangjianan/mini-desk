@@ -103,7 +103,7 @@ afterEach(() => {
 describe("runSmartPaste", () => {
   it("剪贴板为空/非文本时提示后返回：不插入、不调服务端", async () => {
     for (const clipboard of [undefined, "", "   "]) {
-      const { notify, insert, polish, run } = setup(clipboard, { items: ["A"] });
+      const { notify, insert, polish, run } = setup(clipboard, { items: [{ text: "A" }] });
       await run();
       expect(polish).not.toHaveBeenCalled();
       expect(insert).not.toHaveBeenCalled();
@@ -113,23 +113,23 @@ describe("runSmartPaste", () => {
   });
 
   it("成功：先 working 后 done，插入整理条目并带条数文案", async () => {
-    const { notify, insert, polish, run } = setup("买牛奶、交电费", { items: ["买牛奶", "交电费"] });
+    const { notify, insert, polish, run } = setup("买牛奶、交电费", { items: [{ text: "买牛奶" }, { text: "交电费" }] });
     await run();
 
     expect(polish).toHaveBeenCalledWith("todo", "买牛奶、交电费", undefined);
-    expect(insert).toHaveBeenCalledWith(["买牛奶", "交电费"]);
+    expect(insert).toHaveBeenCalledWith([{ text: "买牛奶" }, { text: "交电费" }]);
     expect(notify.mock.calls.map((call) => call[0])).toEqual(["working", "done"]);
     expect(notify.mock.calls[1][1]).toBe("已整理为 2 条提醒");
   });
 
   it("恰好 2000 字符（限长边界）走服务端并成功落位", async () => {
     const raw = "长".repeat(2000);
-    const { notify, insert, polish, run } = setup(raw, { items: ["整理结果"] });
+    const { notify, insert, polish, run } = setup(raw, { items: [{ text: "整理结果" }] });
     await run();
 
     expect(polish).toHaveBeenCalledTimes(1);
     expect(polish).toHaveBeenCalledWith("todo", raw, undefined);
-    expect(insert).toHaveBeenCalledWith(["整理结果"]);
+    expect(insert).toHaveBeenCalledWith([{ text: "整理结果" }]);
     expect(notify.mock.calls.map((call) => call[0])).toEqual(["working", "done"]);
   });
 
@@ -138,18 +138,18 @@ describe("runSmartPaste", () => {
       const { notify, insert, run } = setup("行A\n行B", result);
       await run();
 
-      expect(insert).toHaveBeenCalledWith(["行A", "行B"]);
+      expect(insert).toHaveBeenCalledWith([{ text: "行A" }, { text: "行B" }]);
       expect(notify.mock.calls.map((call) => call[0])).toEqual(["working", "fallback"]);
       expect(notify.mock.calls[1][1]).toBe("暂不可用");
     }
   });
 
   it("超长：不调服务端，直接原文落位 + 限长提示", async () => {
-    const { notify, insert, polish, run } = setup("长".repeat(2001), { items: ["不该出现"] });
+    const { notify, insert, polish, run } = setup("长".repeat(2001), { items: [{ text: "不该出现" }] });
     await run();
 
     expect(polish).not.toHaveBeenCalled();
-    expect(insert).toHaveBeenCalledWith(["长".repeat(2001)]);
+    expect(insert).toHaveBeenCalledWith([{ text: "长".repeat(2001) }]);
     expect(notify).toHaveBeenCalledTimes(1);
     expect(notify.mock.calls[0]).toEqual(["fallback", "过长", undefined]);
   });
@@ -157,14 +157,14 @@ describe("runSmartPaste", () => {
 
 describe("runSelectionPolish", () => {
   it("空白文本静默返回", async () => {
-    const { notify, apply, run } = setupSelection("   ", { items: ["A"] });
+    const { notify, apply, run } = setupSelection("   ", { items: [{ text: "A" }] });
     await run();
     expect(notify).not.toHaveBeenCalled();
     expect(apply).not.toHaveBeenCalled();
   });
 
   it("成功：apply 收到整理条目并按行计数提示", async () => {
-    const { notify, apply, polish, run } = setupSelection("杂乱段落", { items: ["1、要点A", "2、要点B"] });
+    const { notify, apply, polish, run } = setupSelection("杂乱段落", { items: [{ text: "1、要点A" }, { text: "2、要点B" }] });
     await run();
 
     expect(polish).toHaveBeenCalledWith("note", "杂乱段落", undefined);
@@ -174,12 +174,12 @@ describe("runSelectionPolish", () => {
   });
 
   it("风格：style 透传给宿主润色调用（智能粘贴不带风格仍是 undefined）", async () => {
-    const { polish, run } = setupSelection("杂乱段落", { items: ["1、要点"] }, "concise");
+    const { polish, run } = setupSelection("杂乱段落", { items: [{ text: "1、要点" }] }, "concise");
     await run();
 
     expect(polish).toHaveBeenCalledWith("note", "杂乱段落", "concise");
 
-    const paste = setup("买牛奶", { items: ["买牛奶"] });
+    const paste = setup("买牛奶", { items: [{ text: "买牛奶" }] });
     await paste.run();
     expect(paste.polish).toHaveBeenCalledWith("todo", "买牛奶", undefined);
   });
@@ -196,7 +196,7 @@ describe("runSelectionPolish", () => {
   });
 
   it("超长：不调服务端不改动，提示保留原文", async () => {
-    const { notify, apply, polish, run } = setupSelection("长".repeat(2001), { items: ["不该出现"] });
+    const { notify, apply, polish, run } = setupSelection("长".repeat(2001), { items: [{ text: "不该出现" }] });
     await run();
 
     expect(polish).not.toHaveBeenCalled();
@@ -253,7 +253,7 @@ describe("runQuickSmartPaste", () => {
   });
 
   it("降级：LLM 失败与网络失败都用宿主普通粘贴语义生成并提示", async () => {
-    for (const result of [{ fallback: true } as PolishResult, { items: ["x"] } as PolishResult, null]) {
+    for (const result of [{ fallback: true } as PolishResult, { items: [{ text: "x" }] } as PolishResult, null]) {
       const { notify, insert, run } = setupQuick("https://github.com", result);
       await run();
 

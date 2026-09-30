@@ -9,15 +9,15 @@ afterEach(() => {
 
 describe("polishClient", () => {
   it("成功返回 items，请求打到 /polish/:keyHash 且带 kind/text body", async () => {
-    const fetchMock = vi.fn(async () => new Response(JSON.stringify({ items: ["任务 A", "任务 B"] }), { status: 200 }));
+    const fetchMock = vi.fn(async () => new Response(JSON.stringify({ items: [{ text: "任务 A" }, { text: "任务 B" }] }), { status: 200 }));
     vi.stubGlobal("fetch", fetchMock);
 
-    expect(await polishClipboardText("todo", "杂乱文本", CODE)).toEqual({ items: ["任务 A", "任务 B"] });
+    expect(await polishClipboardText("todo", "杂乱文本", CODE)).toEqual({ items: [{ text: "任务 A" }, { text: "任务 B" }] });
 
     const [url, init] = fetchMock.mock.calls[0] as unknown as [string, RequestInit];
     expect(url).toContain("/polish/");
     expect(init.method).toBe("POST");
-    expect(JSON.parse(init.body as string)).toEqual({ kind: "todo", text: "杂乱文本" });
+    expect(JSON.parse(init.body as string)).toEqual({ kind: "todo", text: "杂乱文本", tzOffsetMinutes: -new Date().getTimezoneOffset() });
     expect(init.signal).toBeInstanceOf(AbortSignal);
   });
 
@@ -25,19 +25,19 @@ describe("polishClient", () => {
     const fetchMock = vi.fn(async () => new Response(JSON.stringify({ items: ["1、要点"] }), { status: 200 }));
     vi.stubGlobal("fetch", fetchMock);
 
-    expect(await polishClipboardText("note", "文本", CODE)).toEqual({ items: ["1、要点"] });
-    expect(JSON.parse((fetchMock.mock.calls[0] as unknown as [string, RequestInit])[1].body as string)).toEqual({ kind: "note", text: "文本" });
+    expect(await polishClipboardText("note", "文本", CODE)).toEqual({ items: [{ text: "1、要点" }] });
+    expect(JSON.parse((fetchMock.mock.calls[0] as unknown as [string, RequestInit])[1].body as string)).toEqual({ kind: "note", text: "文本", tzOffsetMinutes: -new Date().getTimezoneOffset() });
   });
 
   it("指定风格时 body 附带 style，缺省不带 style 字段（老口径不变）", async () => {
     const fetchMock = vi.fn(async () => new Response(JSON.stringify({ items: ["1、要点"] }), { status: 200 }));
     vi.stubGlobal("fetch", fetchMock);
 
-    expect(await polishClipboardText("note", "文本", CODE, "casual")).toEqual({ items: ["1、要点"] });
+    expect(await polishClipboardText("note", "文本", CODE, "casual")).toEqual({ items: [{ text: "1、要点" }] });
     expect(JSON.parse(((fetchMock.mock.calls[0] as unknown as [string, RequestInit])[1]).body as string))
-      .toEqual({ kind: "note", text: "文本", style: "casual" });
+      .toEqual({ kind: "note", text: "文本", style: "casual", tzOffsetMinutes: -new Date().getTimezoneOffset() });
 
-    expect(await polishClipboardText("note", "文本", CODE)).toEqual({ items: ["1、要点"] });
+    expect(await polishClipboardText("note", "文本", CODE)).toEqual({ items: [{ text: "1、要点" }] });
     const plainBody = JSON.parse(((fetchMock.mock.calls[1] as unknown as [string, RequestInit])[1]).body as string);
     expect("style" in plainBody).toBe(false);
   });
@@ -58,6 +58,22 @@ describe("polishClient", () => {
     expect(await polishClipboardText("todo", "文本", CODE)).toBeNull();
     vi.stubGlobal("fetch", vi.fn(async () => new Response(JSON.stringify({ items: [] }), { status: 200 })));
     expect(await polishClipboardText("todo", "文本", CODE)).toBeNull();
+    vi.stubGlobal("fetch", vi.fn(async () => new Response(JSON.stringify({ items: [{ notifyAt: 1 }] }), { status: 200 })));
+    expect(await polishClipboardText("todo", "文本", CODE)).toBeNull();
+    vi.stubGlobal("fetch", vi.fn(async () => new Response(JSON.stringify({ items: [42] }), { status: 200 })));
+    expect(await polishClipboardText("todo", "文本", CODE)).toBeNull();
+  });
+
+  it("todo 条目双形态收敛：字符串→{text}，notifyAt 非法丢字段、合法保留", async () => {
+    const notifyAt = 1759312800000;
+    vi.stubGlobal("fetch", vi.fn(async () => new Response(
+      JSON.stringify({ items: ["纯字符串", { text: "A", notifyAt: "x" }, { text: "B", notifyAt: -1 }, { text: "C", notifyAt }] }),
+      { status: 200 },
+    )));
+
+    expect(await polishClipboardText("todo", "文本", CODE)).toEqual({
+      items: [{ text: "纯字符串" }, { text: "A" }, { text: "B" }, { text: "C", notifyAt }],
+    });
   });
 
   it("quick kind：成功收敛为 button 对象，body 带 kind=quick", async () => {
@@ -71,7 +87,7 @@ describe("polishClient", () => {
       .toEqual({ button: { title: "GitHub 主页", value: "https://github.com", type: "link" } });
     const [url, init] = fetchMock.mock.calls[0] as unknown as [string, RequestInit];
     expect(url).toContain("/polish/");
-    expect(JSON.parse(init.body as string)).toEqual({ kind: "quick", text: "https://github.com" });
+    expect(JSON.parse(init.body as string)).toEqual({ kind: "quick", text: "https://github.com", tzOffsetMinutes: -new Date().getTimezoneOffset() });
     expect(init.signal).toBeInstanceOf(AbortSignal);
   });
 

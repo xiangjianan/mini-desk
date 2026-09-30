@@ -60,6 +60,7 @@ import * as workspaceMover from "./state/workspaceMoves";
 import { QUICK_BUTTON_OTHER_GROUP_ID, QUICK_DENSITY_THRESHOLD, assignQuickTagColumn, distributeQuickTagColumns, formatQuickCopiedPreview, recordQuickButtonClick } from "./state/quickButtons";
 import { isQuickAppScheme } from "./state/quickApps";
 import { pickRandomTip, resolveTipGuideKey, type TipPickState } from "./state/guideTips";
+import { isValidNotifyAt } from "./state/deadlines";
 import { INBOX_FOCUS_THROTTLE_MS, INBOX_PULL_INTERVAL_MS } from "./sync/config";
 import {
   clearRememberedInboxCode,
@@ -76,7 +77,7 @@ import { applyInboxItems, pullAllInboxes } from "./sync/pull";
 import { inboxKeyHash } from "./sync/crypto";
 import { checkInboxKeyStatus, registerInboxKey, revokeInboxKey } from "./sync/inboxClient";
 import { polishClipboardText } from "./sync/polishClient";
-import type { PolishKind, PolishResult, PolishStyle } from "./sync/polishClient";
+import type { PolishKind, PolishResult, PolishStyle, PolishTodoItem } from "./sync/polishClient";
 import type { SmartPastePhase } from "./utils/smartPaste";
 import { copyTextToClipboard } from "./utils/clipboard";
 import { binaryStringToBytes } from "./utils/base64";
@@ -2480,24 +2481,34 @@ function createTodo(period: TodoPeriod, afterId?: string): void {
   nextTick(() => focusTodoInput(period, id));
 }
 
-function createTodosFromText(period: TodoPeriod, texts: string[], afterId?: string): void {
+/** 批量创建待办的统一入口：items 为纯文本拆分（粘贴/拖放）或结构化条目（智能粘贴，可带 notifyAt）。
+ *  时间落地前用与闹钟选择器同口径的 isValidNotifyAt 复检；落地后重排下一提醒，含时间时对齐
+ *  updateTodoNotify 的行为同步请求通知权限。 */
+function createTodosFromText(period: TodoPeriod, items: string[] | PolishTodoItem[], afterId?: string): void {
   if (!isConfiguredTodoListId(period)) return;
   let insertAfter: string | undefined = afterId;
-  texts.forEach((text) => {
+  let anyNotify = false;
+  items.forEach((item) => {
+    const draft = typeof item === "string" ? { text: item } : item;
+    const notifyAt = isValidNotifyAt(draft.notifyAt) ? draft.notifyAt : undefined;
     const id = createId();
     activeWorkspace.value.todos = addTodoToMap(
       activeWorkspace.value.todos,
       period,
       {
         id,
-        text,
+        text: draft.text,
         done: false,
+        ...(notifyAt !== undefined ? { notifyAt } : {}),
       },
       insertAfter,
     );
+    anyNotify = anyNotify || notifyAt !== undefined;
     insertAfter = id;
   });
   persistNow();
+  scheduleNextTodoNotification();
+  if (anyNotify) void prepareTodoNotifications();
 }
 
 function findOpenBlankTodo(): { period: TodoPeriod; id: string } | undefined {

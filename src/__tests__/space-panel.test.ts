@@ -551,7 +551,7 @@ describe("SpacePanel", () => {
 
   it("forwards the smart paste polish handler and status events to the text panel", async () => {
     Object.assign(navigator, { clipboard: { readText: vi.fn().mockResolvedValue("杂乱文本"), writeText: vi.fn() } });
-    const polish = vi.fn(async () => ({ items: ["1、要点"] }) as import("../sync/polishClient").PolishResult);
+    const polish = vi.fn(async () => ({ items: [{ text: "1、要点" }] }) as import("../sync/polishClient").PolishResult);
     const wrapper = mount(SpacePanel, {
       attachTo: document.body,
       props: {

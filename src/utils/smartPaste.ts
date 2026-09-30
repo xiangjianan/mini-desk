@@ -1,5 +1,5 @@
 import { readClipboardText } from "./clipboard";
-import { POLISH_MAX_CHARS, type PolishKind, type PolishResult, type PolishStyle } from "../sync/polishClient";
+import { POLISH_MAX_CHARS, type PolishKind, type PolishResult, type PolishStyle, type PolishTodoItem } from "../sync/polishClient";
 import type { QuickButtonType } from "../types";
 
 /**
@@ -34,9 +34,9 @@ interface PolishFlowBase {
 }
 
 export interface SmartPasteOptions extends PolishFlowBase {
-  /** 结果落位：成功=整理后的条目；失败/超长=原文的兜底拆分。 */
-  insert: (texts: string[]) => void;
-  /** 失败兜底时的原文拆分（便签=[原文整体]，提醒=按行拆条）。 */
+  /** 结果落位：成功=整理后的条目（todo 条目可能带 notifyAt）；失败/超长=原文的兜底拆分（无时间）。 */
+  insert: (items: PolishTodoItem[]) => void;
+  /** 失败兜底时的原文拆分（便签=[原文整体]，提醒=按行拆条）；返回纯文本，由编排层包装为无时间条目。 */
   fallbackTexts: (raw: string) => string[];
 }
 
@@ -91,7 +91,7 @@ export async function runQuickSmartPaste(options: QuickSmartPasteOptions): Promi
 }
 
 /** 智能粘贴/AI润色共用主干：空白预检 → 限长预检 → 气泡「整理中」→ 服务端整理 → 应用/降级。 */
-async function polishText(raw: string, base: PolishFlowBase, apply: (texts: string[]) => void, onFallback: () => void): Promise<void> {
+async function polishText(raw: string, base: PolishFlowBase, apply: (items: PolishTodoItem[]) => void, onFallback: () => void): Promise<void> {
   if (!raw.trim()) return;
   const { anchor, notify, messages } = base;
   // raw.length 按 UTF-16 计，服务端按码点计：客户端略严，方向安全。
@@ -124,19 +124,20 @@ export async function runSmartPaste(options: SmartPasteOptions): Promise<void> {
     options.notify("fallback", options.messages.empty, options.anchor);
     return;
   }
-  await polishText(clipboardText, options, options.insert, () => options.insert(options.fallbackTexts(clipboardText)));
+  await polishText(clipboardText, options, options.insert, () =>
+    options.insert(options.fallbackTexts(clipboardText).map((text) => ({ text }))));
 }
 
 export interface SelectionPolishOptions extends PolishFlowBase {
   /** 待润色的选中文本（调用方从编辑器选区取）。 */
   text: string;
-  /** 成功时用整理结果替换选区。 */
+  /** 成功时用整理结果替换选区（行文本；note 润色无时间语义）。 */
   apply: (texts: string[]) => void;
 }
 
-/** AI润色编排（选中文本）：与智能粘贴同主干；失败/超长保留原文，只提示。 */
+/** AI润色编排（选中文本）：与智能粘贴同主干；失败/超长保留原文，只提示。条目映回纯文本。 */
 export async function runSelectionPolish(options: SelectionPolishOptions): Promise<void> {
-  await polishText(options.text, options, options.apply, () => undefined);
+  await polishText(options.text, options, (items) => options.apply(items.map((item) => item.text)), () => undefined);
 }
 
 /** 从 uiText 组装两区域各自的文案（done 模板按 kind 区分，{count} 占位替换；quick 走 quickSmartPasteMessages）。 */

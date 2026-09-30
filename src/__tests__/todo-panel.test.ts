@@ -4420,7 +4420,7 @@ describe("TodoPanel 编辑快捷键", () => {
 
   it("智能粘贴成功：拆条落到右键所在列表并气泡提示", async () => {
     Object.assign(navigator, { clipboard: { readText: vi.fn().mockResolvedValue("买牛奶、交电费"), writeText: vi.fn() } });
-    const polish = vi.fn(async (): Promise<PolishResult> => ({ items: ["买牛奶", "交电费"] }));
+    const polish = vi.fn(async (): Promise<PolishResult> => ({ items: [{ text: "买牛奶" }, { text: "交电费" }] }));
     const wrapper = mount(TodoPanel, {
       props: {
         todoLists: defaultTodoLists,
@@ -4443,7 +4443,7 @@ describe("TodoPanel 编辑快捷键", () => {
     await flushPromises();
 
     expect(polish).toHaveBeenCalledWith("todo", "买牛奶、交电费", undefined);
-    expect(wrapper.emitted("createFromText")?.at(-1)).toEqual(["morning", ["买牛奶", "交电费"]]);
+    expect(wrapper.emitted("createFromText")?.at(-1)).toEqual(["morning", [{ text: "买牛奶" }, { text: "交电费" }]]);
     const statuses = wrapper.emitted("polishMessage") ?? [];
     expect(statuses.map((call) => call[0])).toEqual(["working", "done"]);
     expect(statuses[1][1]).toBe("已整理为 2 条提醒");
@@ -4474,7 +4474,7 @@ describe("TodoPanel 编辑快捷键", () => {
     await wrapper.get('[data-key="smart-paste"]').trigger("click");
     await flushPromises();
 
-    expect(wrapper.emitted("createFromText")?.at(-1)).toEqual(["morning", ["行A", "行B"]]);
+    expect(wrapper.emitted("createFromText")?.at(-1)).toEqual(["morning", [{ text: "行A" }, { text: "行B" }]]);
     const statuses = wrapper.emitted("polishMessage") ?? [];
     expect(statuses.map((call) => call[0])).toEqual(["working", "fallback"]);
     wrapper.unmount();
@@ -4515,7 +4515,7 @@ describe("TodoPanel 编辑快捷键", () => {
     await wrapper.setProps({
       todoLists: defaultTodoLists.map((list) => ({ ...list })),
     });
-    resolvePolish({ items: ["买牛奶", "交电费"] });
+    resolvePolish({ items: [{ text: "买牛奶" }, { text: "交电费" }] });
     await flushPromises();
 
     expect(wrapper.emitted("createFromText")).toBeUndefined();
@@ -4558,7 +4558,7 @@ describe("TodoPanel 编辑快捷键", () => {
     // 目前由 Vue 对已卸载实例的 emit no-op（runtime-core emit 首行 isUnmounted 早退）与
     // 组件内卸载守卫共同保证——若日后 emit 通道改为回调属性等直调形式，这里会先变红。
     wrapper.unmount();
-    resolvePolish({ items: ["买牛奶", "交电费"] });
+    resolvePolish({ items: [{ text: "买牛奶" }, { text: "交电费" }] });
     await flushPromises();
 
     expect(wrapper.emitted("createFromText")).toBeUndefined();

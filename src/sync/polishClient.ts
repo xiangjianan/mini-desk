@@ -9,8 +9,14 @@ export type PolishStyle = "tech" | "concise" | "casual";
 /** 快捷动作智能粘贴生成的按钮（value 为服务端确定性回填：link=原文 URL，text=原文）。 */
 export type QuickPolishButton = { title: string; value: string; type: "link" | "text" };
 
+/** todo 智能粘贴的结构化条目：服务端拆条并识别时间，notifyAt 为 epoch 毫秒（无时间不带）。 */
+export interface PolishTodoItem {
+  text: string;
+  notifyAt?: number;
+}
+
 /** 成功：整理后的条目/快捷按钮（服务端保证非空）；降级：LLM 失败（200 + fallback 标记）；null：网络/HTTP/结构非法。 */
-export type PolishResult = { items: string[] } | { button: QuickPolishButton } | { fallback: true } | null;
+export type PolishResult = { items: PolishTodoItem[] } | { button: QuickPolishButton } | { fallback: true } | null;
 
 /** 与服务端 MAX_POLISH_CHARS 对齐：超长不请求，直接走原文粘贴。 */
 export const POLISH_MAX_CHARS = 2000;
@@ -31,13 +37,26 @@ function coerceQuickButton(data: unknown): QuickPolishButton | null {
   return { title: typed.title, value: typed.value, type: typed.type };
 }
 
+/** 单条 todo 条目收敛：旧式纯字符串→{text}；对象要求非空 text，notifyAt 非有限正数即丢字段；非法返回 null。 */
+function coerceTodoItem(item: unknown): PolishTodoItem | null {
+  if (typeof item === "string") return item.trim() ? { text: item } : null;
+  if (typeof item !== "object" || item === null) return null;
+  const typed = item as { text?: unknown; notifyAt?: unknown };
+  if (typeof typed.text !== "string" || !typed.text.trim()) return null;
+  if (typeof typed.notifyAt !== "number" || !Number.isFinite(typed.notifyAt) || typed.notifyAt <= 0) {
+    return { text: typed.text };
+  }
+  return { text: typed.text, notifyAt: typed.notifyAt };
+}
+
 /** 响应收敛：{items:[...]} / {button:{...}} / 对应的 fallback 标记之外的形状一律按失败（null）处理。 */
 function coercePolishResponse(data: unknown): PolishResult {
   if (typeof data !== "object" || data === null) return null;
   const typed = data as { items?: unknown; fallback?: unknown; button?: unknown };
   if (typed.fallback === true && (typed.items === null || typed.button === null)) return { fallback: true };
-  if (Array.isArray(typed.items) && typed.items.length > 0 && typed.items.every((item) => typeof item === "string")) {
-    return { items: typed.items };
+  if (Array.isArray(typed.items) && typed.items.length > 0) {
+    const coerced = typed.items.map(coerceTodoItem);
+    if (coerced.every((item): item is PolishTodoItem => item !== null)) return { items: coerced };
   }
   const button = coerceQuickButton(typed.button);
   return button ? { button } : null;
@@ -53,7 +72,7 @@ export async function polishClipboardText(kind: PolishKind, text: string, code: 
     const response = await fetch(polishUrl(keyHash), {
       method: "POST",
       headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ kind, text, ...(style ? { style } : {}) }),
+      body: JSON.stringify({ kind, text, tzOffsetMinutes: -new Date().getTimezoneOffset(), ...(style ? { style } : {}) }),
       signal: controller.signal,
     }).finally(() => clearTimeout(timer));
     if (!response.ok) return null;

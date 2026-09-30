@@ -55,7 +55,7 @@ import { copySelection, copyTextToClipboard, getSelectionRange, probeClipboardFo
 import { CONTEXT_MENU_Z_INDEX, createExclusiveContextMenu, renderPolishMenuLabel } from "../utils/contextMenu";
 import { renderIcon } from "../utils/dropdownIcons";
 import { isImeComposing } from "../utils/ime";
-import type { PolishKind, PolishResult, PolishStyle } from "../sync/polishClient";
+import type { PolishKind, PolishResult, PolishStyle, PolishTodoItem } from "../sync/polishClient";
 import { runSmartPaste, smartPasteMessages } from "../utils/smartPaste";
 import type { SmartPastePhase } from "../utils/smartPaste";
 import EditableTitle from "./EditableTitle.vue";
@@ -97,7 +97,7 @@ const emit = defineEmits<{
   blurEmpty: [period: TodoPeriod, id: string];
   blur: [];
   move: [dragged: DraggedTodo, destinationPeriod: TodoPeriod, targetId?: string];
-  createFromText: [period: TodoPeriod, texts: string[], afterId?: string];
+  createFromText: [period: TodoPeriod, items: string[] | PolishTodoItem[], afterId?: string];
   focus: [element: HTMLElement];
   guide: [key: GuideKey, anchor: HTMLElement, immediate?: boolean];
   declutter: [anchor: HTMLElement];
@@ -1282,9 +1282,9 @@ async function handleMenuSelect(key: string): Promise<void> {
       polish: props.polish,
       messages: smartPasteMessages(uiText.value, "todo"),
       anchor: getTodoSectionAnchor(period),
-      insert: (texts) => {
+      insert: (items) => {
         if (isUnmounted || props.todoLists !== landingLists) return;
-        emit("createFromText", period, texts);
+        emit("createFromText", period, items);
       },
       fallbackTexts: splitDroppedTodoText,
       notify: (phase, message, anchor) => emit("polishMessage", phase, message, anchor),
@@ -1315,9 +1315,9 @@ async function handleMenuSelect(key: string): Promise<void> {
       polish: props.polish,
       messages: smartPasteMessages(uiText.value, "todo"),
       anchor,
-      insert: (texts) => {
+      insert: (items) => {
         if (isUnmounted || props.todoLists !== landingLists) return;
-        emit("createFromText", period, texts, id);
+        emit("createFromText", period, items, id);
       },
       fallbackTexts: splitDroppedTodoText,
       notify: (phase, message, anchor) => emit("polishMessage", phase, message, anchor),

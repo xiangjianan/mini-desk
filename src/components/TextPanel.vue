@@ -756,7 +756,7 @@ async function smartPasteFromClipboard(
     polish: props.polish,
     messages: smartPasteMessages(uiText.value, "note"),
     anchor: target.closest<HTMLElement>(".text-panel") ?? undefined,
-    insert: (texts) => insertTextsAtSelection(target, texts, landing),
+    insert: (items) => insertTextsAtSelection(target, items.map((item) => item.text), landing),
     fallbackTexts: (raw) => [raw],
     notify: (phase, message, anchor) => emit("polishMessage", phase, message, anchor),
   });

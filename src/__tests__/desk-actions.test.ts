@@ -49,7 +49,7 @@ describe("visible workbench actions", () => {
   });
 
   it("smart paste appends below the last line instead of replacing the selection", async () => {
-    const polish = vi.fn(async (): Promise<PolishResult> => ({ items: ["Organized line"] }));
+    const polish = vi.fn(async (): Promise<PolishResult> => ({ items: [{ text: "Organized line" }] }));
     const { wrapper } = mountPastePanel(polish);
     const textarea = wrapper.get("textarea");
     textarea.element.setSelectionRange(0, 7);
@@ -78,7 +78,7 @@ describe("visible workbench actions", () => {
     expect(button.attributes("disabled")).toBeDefined();
     await button.trigger("click");
     expect(readText).toHaveBeenCalledTimes(1);
-    finish({ items: ["Done"] });
+    finish({ items: [{ text: "Done" }] });
     await flushPromises();
     expect(button.attributes("disabled")).toBeUndefined();
   });
@@ -89,7 +89,7 @@ describe("visible workbench actions", () => {
     await wrapper.get('[aria-label="智能粘贴"]').trigger("click");
     await flushPromises();
     await wrapper.setProps({ spaces: [{ id: "other", title: "Other", lines: [{ text: "Do not touch", indent: 0 }] }], activeSpaceId: "other" });
-    finish({ items: ["Late result"] });
+    finish({ items: [{ text: "Late result" }] });
     await flushPromises();
     expect(wrapper.get("textarea").element.value).toBe("Do not touch");
     expect(wrapper.emitted("update")).toBeUndefined();
@@ -101,7 +101,7 @@ describe("visible workbench actions", () => {
     await wrapper.get('[aria-label="智能粘贴"]').trigger("click");
     await flushPromises();
     await wrapper.get("textarea").setValue("Changed while waiting");
-    finish({ items: ["Late result"] });
+    finish({ items: [{ text: "Late result" }] });
     await flushPromises();
     expect(wrapper.get("textarea").element.value).toBe("Changed while waiting");
   });
