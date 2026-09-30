@@ -62,6 +62,18 @@ const uploadStub = defineComponent({
   template: '<div class="upload-stub"><slot /></div>',
 });
 
+type VNodeLike = { type: unknown; props?: { class?: string }; children?: unknown };
+
+// The version option's label is a render function returning a root span whose
+// children hold the version text and (when updating) the badge vnode.
+function findVersionBadge(wrapper: ReturnType<typeof mount>) {
+  const dropdown = wrapper.findComponent(dropdownStub);
+  const options = dropdown.props("options") as Array<{ key: string; label?: () => VNodeLike }>;
+  const versionOption = options.find((option) => option.key === "version");
+  const nodes = (versionOption?.label?.()?.children ?? []) as VNodeLike[];
+  return nodes.find((node) => node?.props?.class === "settings-version-badge");
+}
+
 describe("SettingsMenu", () => {
   it("groups data actions under one icon menu", async () => {
     const wrapper = mount(SettingsMenu, {
@@ -221,6 +233,76 @@ describe("SettingsMenu", () => {
 
     expect(wrapper.emitted("changelog")).toHaveLength(1);
     expect(wrapper.emitted("update")).toBeUndefined();
+  });
+
+  it("有更新时版本号右侧显示「有更新」红色角标而非小红点", () => {
+    const wrapper = mount(SettingsMenu, {
+      props: {
+        appVersion: "1.0.11",
+        updateAvailable: true,
+        companionGifTheme: "hermes",
+        language: "zh",
+      },
+      global: {
+        stubs: {
+          Dropdown: dropdownStub,
+          NDropdown: dropdownStub,
+          NBadge: { template: "<span><slot /></span>" },
+          NButton: { template: "<button><slot /></button>" },
+          NIcon: { template: "<span />" },
+          NUpload: uploadStub,
+          Upload: uploadStub,
+        },
+      },
+    });
+
+    const badge = findVersionBadge(wrapper);
+    expect(badge?.children).toBe("有更新");
+
+    const quiet = mount(SettingsMenu, {
+      props: {
+        appVersion: "1.0.11",
+        updateAvailable: false,
+        companionGifTheme: "hermes",
+        language: "zh",
+      },
+      global: {
+        stubs: {
+          Dropdown: dropdownStub,
+          NDropdown: dropdownStub,
+          NBadge: { template: "<span><slot /></span>" },
+          NButton: { template: "<button><slot /></button>" },
+          NIcon: { template: "<span />" },
+          NUpload: uploadStub,
+          Upload: uploadStub,
+        },
+      },
+    });
+    expect(findVersionBadge(quiet)).toBeUndefined();
+  });
+
+  it("英文下更新角标显示 New", () => {
+    const wrapper = mount(SettingsMenu, {
+      props: {
+        appVersion: "1.0.11",
+        updateAvailable: true,
+        companionGifTheme: "hermes",
+        language: "en",
+      },
+      global: {
+        stubs: {
+          Dropdown: dropdownStub,
+          NDropdown: dropdownStub,
+          NBadge: { template: "<span><slot /></span>" },
+          NButton: { template: "<button><slot /></button>" },
+          NIcon: { template: "<span />" },
+          NUpload: uploadStub,
+          Upload: uploadStub,
+        },
+      },
+    });
+
+    expect(findVersionBadge(wrapper)?.children).toBe("New");
   });
 
   it("shows help and shortcut copy from the settings menu", async () => {

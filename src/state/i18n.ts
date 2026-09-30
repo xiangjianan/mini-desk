@@ -630,6 +630,7 @@ export const UI_TEXT = {
       suggest: "提建议",
       shortcutHelp: "帮助与快捷键",
       about: "关于",
+      updateAvailable: "有更新",
       customGif: "自定义 GIF",
       lightGif: "浅色 GIF",
       darkGif: "深色 GIF",
@@ -822,6 +823,8 @@ export const UI_TEXT = {
     changelog: {
       title: "更新记录",
       latest: "最新",
+      currentVersion: "当前版本 v{version}",
+      latestVersion: "最新版本 v{version}",
       updateTo: "立即更新到 v{version}",
     },
   },
@@ -1010,6 +1013,7 @@ export const UI_TEXT = {
       suggest: "Feedback",
       shortcutHelp: "Help & Shortcuts",
       about: "About",
+      updateAvailable: "New",
       customGif: "Custom GIF",
       lightGif: "Light GIF",
       darkGif: "Dark GIF",
@@ -1202,6 +1206,8 @@ export const UI_TEXT = {
     changelog: {
       title: "Release notes",
       latest: "Latest",
+      currentVersion: "Current v{version}",
+      latestVersion: "Latest v{version}",
       updateTo: "Update to v{version}",
     },
   },

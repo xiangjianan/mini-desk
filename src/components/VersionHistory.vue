@@ -10,10 +10,12 @@ const props = withDefaults(defineProps<{
   language?: AppLanguage;
   updateAvailable?: boolean;
   availableVersion?: string;
+  currentVersion?: string;
 }>(), {
   language: "zh",
   updateAvailable: false,
   availableVersion: "",
+  currentVersion: "",
 });
 
 const emit = defineEmits<{ close: []; update: [] }>();
@@ -21,6 +23,9 @@ const emit = defineEmits<{ close: []; update: [] }>();
 const uiText = computed(() => getUiText(props.language));
 const isEn = computed(() => normalizeLanguage(props.language) === "en");
 const updateLabel = computed(() => uiText.value.changelog.updateTo.replace("{version}", props.availableVersion || ""));
+const statusVisible = computed(() => props.updateAvailable && Boolean(props.availableVersion) && Boolean(props.currentVersion));
+const currentVersionLabel = computed(() => uiText.value.changelog.currentVersion.replace("{version}", props.currentVersion));
+const latestVersionLabel = computed(() => uiText.value.changelog.latestVersion.replace("{version}", props.availableVersion));
 
 const MONTHS_EN = ["Jan", "Feb", "Mar", "Apr", "May", "Jun", "Jul", "Aug", "Sep", "Oct", "Nov", "Dec"];
 
@@ -48,6 +53,11 @@ function formatDate(iso: string): string {
   >
     <NScrollbar class="version-history-content" @wheel.stop>
       <div class="version-history-inner">
+        <div v-if="statusVisible" class="version-history-status">
+          <span class="version-history-status-current">{{ currentVersionLabel }}</span>
+          <span class="version-history-status-arrow" aria-hidden="true">→</span>
+          <span class="version-history-status-latest">{{ latestVersionLabel }}</span>
+        </div>
         <button
           v-if="updateAvailable"
           type="button"
@@ -60,7 +70,7 @@ function formatDate(iso: string): string {
           <li v-for="(entry, index) in CHANGELOG" :key="entry.version" class="version-history-entry">
             <div class="version-history-entry-head">
               <span class="version-history-version">v{{ entry.version }}</span>
-              <span v-if="index === 0" class="version-history-badge">{{ uiText.changelog.latest }}</span>
+              <span v-if="index === 0 && !statusVisible" class="version-history-badge">{{ uiText.changelog.latest }}</span>
               <span class="version-history-date">{{ formatDate(entry.date) }}</span>
             </div>
             <ul class="version-history-notes">

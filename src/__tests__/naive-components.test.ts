@@ -966,7 +966,7 @@ describe("Naive UI component usage", () => {
     expect(app).not.toContain("version-badge");
     expect(settings).toContain("appVersion");
     expect(settings).toContain("updateAvailable");
-    expect(settings).toContain("settings-version-dot");
+    expect(settings).toContain("settings-version-badge");
     expect(settings).toContain('"data-testid": "settings-version"');
   });
 

@@ -3417,7 +3417,6 @@ button.todo-section-menu-button {
 }
 
 .settings-version-item {
-  position: relative;
   display: inline-flex;
   align-items: center;
   gap: 8px;
@@ -3425,14 +3424,14 @@ button.todo-section-menu-button {
   color: var(--muted);
 }
 
-.settings-version-dot {
-  position: absolute;
-  top: -3px;
-  right: -7px;
-  width: 7px;
-  height: 7px;
+.settings-version-badge {
+  padding: 1px 8px;
   border-radius: 999px;
   background: var(--danger);
+  color: #fff;
+  font-size: calc(var(--app-font-size) - 3px);
+  line-height: 1.5;
+  white-space: nowrap;
 }
 
 .dropdown-anchor {
@@ -4503,6 +4502,24 @@ button.mobile-home-btn-danger:focus-visible {
   flex-direction: column;
   gap: 4px;
   padding: 12px 16px 18px;
+}
+
+.version-history-status {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  margin: 2px 0 4px;
+  font-size: var(--app-font-size);
+}
+
+.version-history-status-current,
+.version-history-status-arrow {
+  color: var(--muted);
+}
+
+.version-history-status-latest {
+  color: var(--danger);
+  font-weight: 600;
 }
 
 .version-history-update {
@@ -6656,8 +6673,7 @@ select {
   background-color: var(--button-hover) !important;
 }
 
-[data-key="clear-data"],
-.settings-version-dot {
+[data-key="clear-data"] {
   color: var(--danger);
 }
 

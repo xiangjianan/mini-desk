@@ -55,4 +55,34 @@ describe("VersionHistory", () => {
     await button.trigger("click");
     expect(withUpdate.emitted("update")).toHaveLength(1);
   });
+
+  it("有更新时弹框顶部携带当前与最新版本信息", () => {
+    const wrapper = mountHistory({
+      updateAvailable: true,
+      availableVersion: "1.0.130",
+      currentVersion: "1.0.129",
+    });
+    const status = wrapper.find(".version-history-status");
+    expect(status.exists()).toBe(true);
+    expect(status.find(".version-history-status-current").text()).toBe("当前版本 v1.0.129");
+    expect(status.find(".version-history-status-latest").text()).toBe("最新版本 v1.0.130");
+    // 状态行已标明最新版本，列表首条不再重复标「最新」。
+    expect(wrapper.find(".version-history-entry .version-history-badge").exists()).toBe(false);
+  });
+
+  it("无更新时不展示版本状态行", () => {
+    const wrapper = mountHistory({ updateAvailable: false, availableVersion: "", currentVersion: "1.0.129" });
+    expect(wrapper.find(".version-history-status").exists()).toBe(false);
+  });
+
+  it("英文下版本状态行渲染英文文案", () => {
+    const wrapper = mountHistory({
+      updateAvailable: true,
+      availableVersion: "1.0.130",
+      currentVersion: "1.0.129",
+      language: "en",
+    });
+    expect(wrapper.find(".version-history-status-current").text()).toBe("Current v1.0.129");
+    expect(wrapper.find(".version-history-status-latest").text()).toBe("Latest v1.0.130");
+  });
 });

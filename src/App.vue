@@ -3831,6 +3831,7 @@ function moveItem<T extends { id: string }>(items: T[], dragId: string, targetId
       :language="state.language"
       :update-available="versionPromptVisible"
       :available-version="availableAppVersion"
+      :current-version="appVersion"
       @close="changelogVisible = false"
       @update="applyChangelogUpdate"
     />

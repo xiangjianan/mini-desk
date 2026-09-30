@@ -119,7 +119,9 @@ const options = computed(() => [
     label: () =>
       h("span", { class: "settings-version-item", "data-testid": "settings-version" }, [
         h("span", `v${props.appVersion}`),
-        props.updateAvailable ? h("span", { class: "settings-version-dot", "aria-hidden": "true" }) : null,
+        props.updateAvailable
+          ? h("span", { class: "settings-version-badge" }, text.value.settings.updateAvailable)
+          : null,
       ]),
     key: "version",
   },

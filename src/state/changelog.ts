@@ -29,6 +29,20 @@ export interface ChangelogEntry {
 
 export const CHANGELOG: ChangelogEntry[] = [
   {
+    version: "1.0.196",
+    date: "2026-09-30",
+    notes: {
+      zh: [
+        "调整：有新版本时，设置菜单版本号右侧的小红点升级为红色椭圆「有更新」角标，提示更醒目",
+        "新功能：更新记录弹框顶部新增「当前版本 → 最新版本」信息行，点击版本号即可看清云端最新版本号",
+      ],
+      en: [
+        "Changed: an available update now shows a red \"New\" pill beside the version number in the settings menu instead of the tiny red dot",
+        "New: the release-notes modal leads with a current → latest version line, so clicking the version shows the latest deployed version at a glance",
+      ],
+    },
+  },
+  {
     version: "1.0.195",
     date: "2026-09-29",
     notes: {
