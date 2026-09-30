@@ -29,6 +29,20 @@ export interface ChangelogEntry {
 
 export const CHANGELOG: ChangelogEntry[] = [
   {
+    version: "1.0.197",
+    date: "2026-09-30",
+    notes: {
+      zh: [
+        "新功能：提醒事项智能粘贴自动识别时间——粘贴「上午10点去咖啡厅」生成提醒「去咖啡厅」并自动设置 10:00 闹钟；无时间不设置，时间段取起始时刻，相对时间（明早、下周三、3小时后）也能识别",
+        "新功能：手机速记同样识别时间，桌面拉取后提醒自动带上闹钟时间，闹钟角标与通知照常生效",
+      ],
+      en: [
+        "New: smart paste for todos now extracts times — pasting \"Coffee at 10 AM\" creates a \"Coffee\" reminder with a 10:00 alarm; no time means none set, ranges use the start, and relative times (tomorrow morning, next Wednesday, in 3 hours) are recognized too",
+        "New: mobile quick notes recognize times the same way — reminders pulled to the desktop land with the alarm pre-set, badge and notifications included",
+      ],
+    },
+  },
+  {
     version: "1.0.196",
     date: "2026-09-30",
     notes: {
