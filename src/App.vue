@@ -595,12 +595,7 @@ onMounted(async () => {
   } catch {
     state.customCompanionGifStored = {};
   }
-  const inlineImagePayloads: (StoredImage & { src: string })[] = [];
-  for (const workspace of state.workspaces) {
-    for (const image of workspace.images) {
-      if (image.src) inlineImagePayloads.push(image as StoredImage & { src: string });
-    }
-  }
+  const inlineImagePayloads = collectInlineImagePayloads(state.workspaces);
   // One-time legacy migration still walks every workspace (inline payloads must
   // reach IndexedDB before any src is dropped), but runtime hydration below only
   // needs the active workspace — inactive ones hydrate lazily on switch.
@@ -2980,13 +2975,28 @@ function requestImport(anchor?: HTMLElement): void {
   importInput.value?.click();
 }
 
-async function persistWorkspaceImages(workspaces: WorkspaceData[]): Promise<void> {
+/** 收集工作区里仍带内联载荷的贴图（board images + todo.focusImages）：导入与启动的
+ *  一次性迁移都要先把 src 写进 IndexedDB——否则下次序列化剥掉 src 后只剩无法水合、
+ *  且会被静默删除的幽灵元数据。 */
+function collectInlineImagePayloads(workspaces: WorkspaceData[]): (StoredImage & { src: string })[] {
   const inline: (StoredImage & { src: string })[] = [];
   for (const workspace of workspaces) {
     for (const image of workspace.images) {
       if (image.src) inline.push(image as StoredImage & { src: string });
     }
+    for (const todos of Object.values(workspace.todos)) {
+      for (const todo of todos) {
+        for (const image of todo.focusImages ?? []) {
+          if (image.src) inline.push(image as StoredImage & { src: string });
+        }
+      }
+    }
   }
+  return inline;
+}
+
+async function persistWorkspaceImages(workspaces: WorkspaceData[]): Promise<void> {
+  const inline = collectInlineImagePayloads(workspaces);
   if (inline.length > 0) await persistImagePayloads(inline);
 }
 

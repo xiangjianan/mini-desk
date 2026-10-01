@@ -6296,6 +6296,86 @@ describe("App shell", () => {
     }
   });
 
+  it("启动迁移把 todo.focusImages 的内联载荷写入 IndexedDB", async () => {
+    const restoreIndexedDb = installMemoryImageDb();
+    localStorage.setItem(
+      STORAGE_KEY,
+      JSON.stringify({
+        todos: {
+          morning: [{
+            id: "t1",
+            text: "带内联专注截图的任务",
+            done: false,
+            focusImages: [{ id: "img-1", payloadId: "pay-1", src: "data:image/png;base64,inline", createdAt: 9 }],
+          }],
+        },
+      }),
+    );
+    const wrapper = mountApp();
+
+    try {
+      await flushPromises();
+      // 启动扫描把 src 写进 IndexedDB：之后序列化剥掉 src 也不产生幽灵元数据。
+      await expect(getStoredImagePayload({ id: "img-1", payloadId: "pay-1" })).resolves.toBe("data:image/png;base64,inline");
+    } finally {
+      wrapper.unmount();
+      restoreIndexedDb();
+    }
+  });
+
+  it("导入带 focusImages 内联载荷的工作区时把载荷写入 IndexedDB", async () => {
+    vi.useFakeTimers();
+    const restoreIndexedDb = installMemoryImageDb();
+    Object.assign(URL, { createObjectURL: vi.fn(() => "blob:todo-board"), revokeObjectURL: vi.fn() });
+    vi.spyOn(HTMLAnchorElement.prototype, "click").mockImplementation(() => {});
+    const wrapper = mountApp();
+
+    try {
+      const settings = wrapper.getComponent(SettingsMenu);
+      settings.vm.$emit("import", settings.element as HTMLElement);
+      const input = wrapper.get('input[type="file"]').element as HTMLInputElement;
+      const file = new File([JSON.stringify({
+        miniDeskWorkspaceExport: true,
+        version: 1,
+        workspace: {
+          customTitles: { "board-title": "导入空间" },
+          todos: {
+            morning: [{
+              id: "t1",
+              text: "导入的专注任务",
+              done: false,
+              focusImages: [{ id: "img-1", payloadId: "pay-1", src: "data:image/png;base64,imported", createdAt: 9 }],
+            }],
+          },
+        },
+      })], "todo.json", { type: "application/json" });
+      Object.defineProperty(input, "files", { value: [file], configurable: true });
+      await wrapper.get('input[type="file"]').trigger("change");
+      await Promise.resolve();
+      await wrapper.vm.$nextTick();
+      await vi.advanceTimersByTimeAsync(200);
+      await wrapper.vm.$nextTick();
+
+      // 无同名冲突也走「新增」二次确认：点确认后 finishImport 落盘并迁移内联载荷。
+      expect(wrapper.get('[data-testid="companion-yes"]').text()).toBe("新增");
+      await wrapper.get('[data-testid="companion-yes"]').trigger("click");
+      await Promise.resolve();
+      await wrapper.vm.$nextTick();
+      await vi.advanceTimersByTimeAsync(200);
+      await wrapper.vm.$nextTick();
+
+      const stored = JSON.parse(localStorage.getItem(STORAGE_KEY) || "{}");
+      expect(stored.workspaces).toHaveLength(2);
+      const imported = stored.workspaces[1];
+      expect(imported.todos.morning[0].focusImages).toEqual([{ id: "img-1", payloadId: "pay-1", createdAt: 9 }]);
+      await expect(getStoredImagePayload({ id: "img-1", payloadId: "pay-1" })).resolves.toBe("data:image/png;base64,imported");
+    } finally {
+      wrapper.unmount();
+      restoreIndexedDb();
+      vi.useRealTimers();
+    }
+  });
+
   it("stores pasted screenshot display size using the device pixel ratio", async () => {
     vi.useFakeTimers();
     const originalDevicePixelRatio = window.devicePixelRatio;
