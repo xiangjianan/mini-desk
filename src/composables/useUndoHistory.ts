@@ -136,6 +136,17 @@ export function extractRetainedImageIds(parsed: unknown): Set<string> {
       if (!workspace || typeof workspace !== "object" || Array.isArray(workspace)) continue;
       const record = workspace as Record<string, unknown>;
       if (Array.isArray(record.images)) imageLists.push(record.images);
+      const todos = record.todos;
+      if (todos && typeof todos === "object" && !Array.isArray(todos)) {
+        for (const list of Object.values(todos as Record<string, unknown>)) {
+          if (!Array.isArray(list)) continue;
+          for (const todo of list) {
+            if (!todo || typeof todo !== "object" || Array.isArray(todo)) continue;
+            const focus = (todo as Record<string, unknown>).focusImages;
+            if (Array.isArray(focus)) imageLists.push(focus);
+          }
+        }
+      }
     }
   }
   for (const list of imageLists) {

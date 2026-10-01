@@ -6124,6 +6124,52 @@ describe("App shell", () => {
     }
   });
 
+  it("reclaims the focusImages payload of a deleted todo after the grace window, keeping board images", async () => {
+    vi.useFakeTimers();
+    const restoreIndexedDb = installMemoryImageDb();
+    localStorage.setItem(
+      STORAGE_KEY,
+      JSON.stringify({
+        images: [{ id: "img-board", src: "data:image/png;base64,board", createdAt: 7 }],
+        todos: {
+          morning: [{
+            id: "todo-1",
+            text: "带专注截图的提醒",
+            done: false,
+            focusImages: [{ id: "img-1", payloadId: "pay-1", createdAt: 9 }],
+          }],
+        },
+      }),
+    );
+    const deleteSpy = vi.spyOn(imageState, "deleteStoredImage").mockResolvedValue(undefined);
+    const wrapper = mountApp();
+
+    try {
+      const todoSection = wrapper.get('.todo-section[data-period="morning"]').element as HTMLElement;
+      wrapper.getComponent(TodoPanel).vm.$emit("remove", "morning", "todo-1", todoSection);
+      await wrapper.vm.$nextTick();
+      await vi.advanceTimersByTimeAsync(200);
+      await wrapper.get('[data-testid="companion-yes"]').trigger("click");
+      await Promise.resolve();
+      await wrapper.vm.$nextTick();
+
+      expect(wrapper.getComponent(TodoPanel).props("todos").morning).toEqual([]);
+
+      // Within the grace window the focus payload is still retained for undo.
+      await vi.advanceTimersByTimeAsync(4000);
+      expect(deleteSpy).not.toHaveBeenCalledWith("pay-1");
+
+      // Once the grace window elapses, only the todo's focus payload is reclaimed.
+      await vi.advanceTimersByTimeAsync(1500);
+      expect(deleteSpy).toHaveBeenCalledWith("pay-1");
+      expect(deleteSpy).not.toHaveBeenCalledWith("img-board");
+    } finally {
+      wrapper.unmount();
+      restoreIndexedDb();
+      vi.useRealTimers();
+    }
+  });
+
   it("stores pasted screenshot display size using the device pixel ratio", async () => {
     vi.useFakeTimers();
     const originalDevicePixelRatio = window.devicePixelRatio;

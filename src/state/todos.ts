@@ -1,6 +1,7 @@
 import type { LineItem, StoredImage, TodoCompletedVisibility, TodoItem, TodoListConfig, TodoListId, TodoMap, TodoPeriod } from "../types";
 import { isValidNotifyAt } from "./deadlines";
 import { assignColumn, distributeColumns } from "./columns";
+import { getImagePayloadId } from "./images";
 
 /** 可见提醒条数超过该阈值时，点击/聚焦列表会弹瘦身提示（App.vue 与 TodoPanel 共用）。 */
 export const TODO_DENSITY_THRESHOLD = 20;
@@ -230,6 +231,11 @@ export function updateTodoFocus(
     else delete todo.focusImages;
   }
   return next;
+}
+
+/** 收集一批 todo 的 focusImages 载荷 id：删除连坐与保留扫描共用。 */
+export function collectTodoFocusPayloadIds(todos: TodoItem[]): string[] {
+  return todos.flatMap((todo) => (todo.focusImages ?? []).map((image) => getImagePayloadId(image)));
 }
 
 /** 累计专注时长的行内展示：mm:ss，满一小时 h:mm:ss（秒向上取整）。 */

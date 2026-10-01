@@ -1,6 +1,7 @@
 import { describe, expect, it } from "vitest";
 import type { TodoItem, TodoMap } from "../types";
-import { formatFocusDuration, getTodoReorderTarget, updateTodoFocus } from "../state/todos";
+import { collectTodoFocusPayloadIds, formatFocusDuration, getTodoReorderTarget, updateTodoFocus } from "../state/todos";
+import { extractRetainedImageIds } from "../composables/useUndoHistory";
 import { defaultState } from "../state/defaults";
 import { getSerializableState, normalizeImportedState } from "../state/storage";
 
@@ -147,6 +148,34 @@ describe("focus 字段的序列化与归一化屏障", () => {
     expect(todo.focusElapsedMs).toBeUndefined();
     expect(todo.focusNotes).toBeUndefined();
     expect(todo.focusImages).toEqual([{ id: "ok1", createdAt: 1 }]);
+  });
+});
+
+describe("collectTodoFocusPayloadIds", () => {
+  it("收集全部 focusImages 的载荷 id（payloadId 优先）", () => {
+    const todos = [
+      { id: "t1", text: "a", done: false, focusImages: [{ id: "i1", payloadId: "p1", createdAt: 1 }] },
+      { id: "t2", text: "b", done: false },
+      { id: "t3", text: "c", done: false, focusImages: [{ id: "i2", createdAt: 2 }] },
+    ];
+    expect(collectTodoFocusPayloadIds(todos)).toEqual(["p1", "i2"]);
+  });
+  it("无 focusImages 时返回空数组", () => {
+    expect(collectTodoFocusPayloadIds([{ id: "t", text: "a", done: false }])).toEqual([]);
+  });
+});
+
+describe("extractRetainedImageIds 覆盖 focusImages", () => {
+  it("扫描撤销快照 JSON 里 todos 下的 focusImages", () => {
+    const parsed = {
+      workspaces: [{
+        id: "w1", images: [{ id: "board-img" }],
+        todos: { morning: [{ id: "t1", focusImages: [{ id: "f1", payloadId: "fp1" }] }] },
+      }],
+    };
+    const retained = extractRetainedImageIds(parsed);
+    expect(retained.has("board-img")).toBe(true);
+    expect(retained.has("fp1")).toBe(true);
   });
 });
 

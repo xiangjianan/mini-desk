@@ -40,6 +40,7 @@ import {
   addTodo as addTodoToMap,
   assignTodoListColumn,
   clearCompleted,
+  collectTodoFocusPayloadIds,
   completeTodo,
   distributeTodoListColumns,
   moveTodo as moveTodoInMap,
@@ -1182,7 +1183,10 @@ function deleteWorkspace(id: string, anchor?: HTMLElement): void {
       // 整区删除连坐配对：被删工作区的配对码随区消失，云端队列同步注销（失败仅气泡警告）。
       const doomedWorkspace = state.workspaces.find((workspace) => workspace.id === id);
       const doomedInboxCode = doomedWorkspace?.inbox?.code;
-      const doomedPayloadIds = new Set(doomedWorkspace?.images.map((image) => getImagePayloadId(image)) ?? []);
+      const doomedPayloadIds = new Set([
+        ...(doomedWorkspace?.images ?? []).map((image) => getImagePayloadId(image)),
+        ...Object.values(doomedWorkspace?.todos ?? {}).flatMap((todos) => collectTodoFocusPayloadIds(todos)),
+      ]);
       const result = removeWorkspace(state.workspaces, state.activeWorkspaceId, id);
       if (result.workspaces === state.workspaces) return;
       state.workspaces = result.workspaces;
@@ -1384,7 +1388,9 @@ function scheduleImagePayloadPrune(): void {
 
 function isImagePayloadRetained(payloadId: string): boolean {
   return state.workspaces.some((workspace) =>
-    workspace.images.some((image) => getImagePayloadId(image) === payloadId),
+    workspace.images.some((image) => getImagePayloadId(image) === payloadId) ||
+    Object.values(workspace.todos).some((todos) =>
+      todos.some((todo) => (todo.focusImages ?? []).some((image) => getImagePayloadId(image) === payloadId))),
   );
 }
 
@@ -1413,6 +1419,9 @@ function collectRetainedImagePayloadIds(): Set<string> {
   const retained = new Set<string>();
   for (const workspace of state.workspaces) {
     for (const image of workspace.images) retained.add(getImagePayloadId(image));
+    for (const todos of Object.values(workspace.todos)) {
+      for (const id of collectTodoFocusPayloadIds(todos)) retained.add(id);
+    }
   }
   // Snapshots carry pre-extracted payload-id sets, so retention checks no longer
   // re-parse every historical snapshot string on each save.
@@ -2396,6 +2405,8 @@ function deleteTodoList(listId: TodoListId, anchor?: HTMLElement): void {
 function removeTodoList(listId: TodoListId, anchor?: HTMLElement): void {
   const index = activeWorkspace.value.todoLists.findIndex((list) => list.id === listId);
   if (index < 0 || activeWorkspace.value.todoLists.length <= 1) return;
+  // 列删除连坐：整列 todo 的 focusImages 载荷随列表一起进宽限删除队列。
+  const doomedFocusIds = collectTodoFocusPayloadIds(getTodos(listId) ?? []);
   activeWorkspace.value.todoLists.splice(index, 1);
   const next = removeTodoListData(activeWorkspace.value.todos, activeWorkspace.value.showCompletedTodos, listId);
   activeWorkspace.value.todos = next.todos;
@@ -2403,6 +2414,7 @@ function removeTodoList(listId: TodoListId, anchor?: HTMLElement): void {
   clearEmptyTodoRemovalTimersForList(listId);
   if (pendingEditTodoListId.value === listId) pendingEditTodoListId.value = null;
   persistNow();
+  doomedFocusIds.forEach((payloadId) => scheduleImagePayloadDeletion(payloadId));
   showBubbleText(uiText.value.app.todoListDeleted, anchor, { hideCompanionAfter: true });
 }
 
@@ -2602,8 +2614,11 @@ function updateTodoNotify(period: TodoPeriod, id: string, notifyAt: number | und
 function deleteTodoNow(period: TodoPeriod, id: string, anchor?: HTMLElement): boolean {
   if (!isConfiguredTodoListId(period)) return false;
   if (getTodos(period).findIndex((todo) => todo.id === id) < 0) return false;
+  // 删除连坐：被删 todo 的 focusImages 载荷与单图删除同口径走 5 秒宽限（撤销可保住）。
+  const doomedFocusIds = collectTodoFocusPayloadIds(getTodos(period).filter((todo) => todo.id === id));
   activeWorkspace.value.todos = removeTodoFromMap(activeWorkspace.value.todos, period, id);
   persistNow();
+  doomedFocusIds.forEach((payloadId) => scheduleImagePayloadDeletion(payloadId));
   showBubble("deleteTodo", anchor, { hideCompanionAfter: true });
   return true;
 }
@@ -2628,8 +2643,11 @@ function clearDone(period: TodoPeriod, anchor?: HTMLElement): void {
     anchor,
     () => {
       if (!isConfiguredTodoListId(period)) return;
+      // 清理连坐：被清 todo 的 focusImages 载荷走同一 5 秒宽限删除。
+      const doomedFocusIds = collectTodoFocusPayloadIds(getTodos(period).filter((todo) => todo.done));
       activeWorkspace.value.todos = clearCompleted(activeWorkspace.value.todos, period);
       persistNow();
+      doomedFocusIds.forEach((payloadId) => scheduleImagePayloadDeletion(payloadId));
       showBubble("clearCompleted", anchor, { hideCompanionAfter: true });
     },
     undefined,
