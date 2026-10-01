@@ -63,6 +63,18 @@ describe("updateTodoFocus", () => {
     });
   });
 
+  it("负增量把累计清到零及以下时删除字段", () => {
+    const seeded = { morning: [{ id: "t1", text: "写周报", done: false, focusElapsedMs: 60_000 }] };
+    const next = updateTodoFocus(seeded, "morning", "t1", { addElapsedMs: -60_000 });
+    expect(next.morning[0].focusElapsedMs).toBeUndefined();
+  });
+
+  it("负增量部分抵扣时钳制到剩余值", () => {
+    const seeded = { morning: [{ id: "t1", text: "写周报", done: false, focusElapsedMs: 60_000 }] };
+    const next = updateTodoFocus(seeded, "morning", "t1", { addElapsedMs: -5_000 });
+    expect(next.morning[0].focusElapsedMs).toBe(55_000);
+  });
+
   it("笔记与图片整体替换；空数组删除字段保持无痕", () => {
     const seeded = {
       morning: [{

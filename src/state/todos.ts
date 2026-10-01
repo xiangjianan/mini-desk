@@ -197,6 +197,7 @@ export function cloneTodoMap(todos: TodoMap): TodoMap {
   ) as TodoMap;
 }
 
+/** focusNotes/focusImages 数组按引用收归状态所有，调用方不得复用或原地修改。 */
 export interface TodoFocusPatch {
   /** 增量合并进 focusElapsedMs（毫秒）。 */
   addElapsedMs?: number;
