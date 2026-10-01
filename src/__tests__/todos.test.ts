@@ -107,7 +107,7 @@ describe("focus 字段的序列化与归一化屏障", () => {
     id: "t1", text: "写周报", done: false,
     focusElapsedMs: 5_000,
     focusNotes: [{ text: "要点", indent: 1, marks: [{ type: "highlight", start: 0, end: 2, color: "amber" }] }],
-    focusImages: [{ id: "img1", src: "data:image/png;base64,AAAA", createdAt: 9 }],
+    focusImages: [{ id: "img1", payloadId: "pay-1", src: "data:image/png;base64,AAAA", createdAt: 9 }],
   };
 
   it("saveState 序列化剥除 focusImages 载荷只留元数据", () => {
@@ -117,6 +117,8 @@ describe("focus 字段的序列化与归一化屏障", () => {
     const todo = serialized.workspaces[0].todos.morning[0];
     expect(todo.focusImages?.[0].src).toBeUndefined();
     expect(todo.focusImages?.[0].id).toBe("img1");
+    // payloadId 是 IndexedDB 懒水合键（getImagePayloadId = payloadId ?? id），必须随元数据存活。
+    expect(todo.focusImages?.[0].payloadId).toBe("pay-1");
     expect(todo.focusImages?.[0].createdAt).toBe(9);
   });
 
@@ -138,13 +140,13 @@ describe("focus 字段的序列化与归一化屏障", () => {
       ...focusTodo,
       focusElapsedMs: -3,
       focusNotes: "不是数组" as never,
-      focusImages: [{ nope: true }, "x"] as never,
+      focusImages: [{ id: "ok1", createdAt: 1 }, { nope: true }, "x"] as never,
     }];
     const restored = normalizeImportedState(JSON.parse(JSON.stringify(state)));
     const todo = restored.workspaces[0].todos.morning[0];
     expect(todo.focusElapsedMs).toBeUndefined();
     expect(todo.focusNotes).toBeUndefined();
-    expect(todo.focusImages).toBeUndefined();
+    expect(todo.focusImages).toEqual([{ id: "ok1", createdAt: 1 }]);
   });
 });
 
