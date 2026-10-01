@@ -6579,6 +6579,39 @@ describe("App shell", () => {
     }
   });
 
+  it("专注计时 checkpoint 落盘不产生撤销快照：Ctrl+Z 不回滚计时", async () => {
+    vi.useFakeTimers();
+    vi.setSystemTime(new Date("2026-10-02T11:00:00Z").getTime());
+    localStorage.setItem(
+      STORAGE_KEY,
+      JSON.stringify({
+        todos: { morning: [{ id: "t1", text: "计时不应被撤销", done: false }] },
+      }),
+    );
+    const wrapper = mountApp();
+
+    try {
+      wrapper.getComponent(TodoPanel).vm.$emit("focusNow", "morning", "t1");
+      await flushPromises();
+      await wrapper.vm.$nextTick();
+
+      await vi.advanceTimersByTimeAsync(120_000);
+      const before = JSON.parse(localStorage.getItem(STORAGE_KEY) || "{}");
+      expect(before.workspaces[0].todos.morning[0].focusElapsedMs).toBeGreaterThanOrEqual(120_000);
+
+      // 计时保存不入撤销栈：Ctrl+Z 不得把计时器回滚到上一个 checkpoint。
+      window.dispatchEvent(new KeyboardEvent("keydown", { key: "z", ctrlKey: true }));
+      await flushPromises();
+      await wrapper.vm.$nextTick();
+
+      const after = JSON.parse(localStorage.getItem(STORAGE_KEY) || "{}");
+      expect(after.workspaces[0].todos.morning[0].focusElapsedMs).toBeGreaterThanOrEqual(120_000);
+    } finally {
+      wrapper.unmount();
+      vi.useRealTimers();
+    }
+  });
+
   it("stores pasted screenshot display size using the device pixel ratio", async () => {
     vi.useFakeTimers();
     const originalDevicePixelRatio = window.devicePixelRatio;

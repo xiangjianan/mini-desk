@@ -7,6 +7,8 @@ export type SaveStatusKind = "saved" | "saving" | "dirty";
 
 export interface PersistOptions {
   force?: boolean;
+  /** 跳过保存前的撤销快照记录：专注计时落盘等高频、无撤销语义的保存专用。 */
+  recordCheckpoint?: boolean;
   imagePlacement?: SaveStateOptions["imagePlacement"];
   imageReplacement?: SaveStateOptions["imageReplacement"];
 }
@@ -102,7 +104,9 @@ export function useBoardPersistence(deps: BoardPersistenceDeps) {
   }
 
   function persistNow(scope: SaveScope = "all", options: PersistOptions = {}): boolean {
-    deps.onBeforeSave();
+    // 专注计时等高频保存跳过快照：每分钟一条快照会以 50 条/8MB 上限挤掉真实撤销
+    // 历史，且 Ctrl+Z 会把计时器回滚到上一个 checkpoint。
+    if (options.recordCheckpoint !== false) deps.onBeforeSave();
     markSaving();
     // A direct save supersedes any pending debounced todo/text save: it persists
     // the whole in-memory state anyway, so retire the timers and adopt the current
@@ -143,8 +147,8 @@ export function useBoardPersistence(deps: BoardPersistenceDeps) {
     return true;
   }
 
-  function markDirty(): void {
-    deps.onBeforeSave();
+  function markDirty(options: { recordCheckpoint?: boolean } = {}): void {
+    if (options.recordCheckpoint !== false) deps.onBeforeSave();
     window.clearTimeout(saveStatusTimer.value);
     saveStatus.value = "dirty";
   }

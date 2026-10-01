@@ -2322,8 +2322,10 @@ function mergeFocusElapsed(persist: boolean): void {
   activeWorkspace.value.todos = updateTodoFocus(activeWorkspace.value.todos, session.period, session.id, {
     addElapsedMs: delta,
   });
-  markDirty();
-  if (persist) persistNow();
+  // 计时不入撤销历史（markDirty/persistNow 的 recordCheckpoint）：否则每分钟一条
+  // 快照挤掉真实撤销历史，且 Ctrl+Z 会把计时器回滚到上一个 checkpoint。
+  markDirty({ recordCheckpoint: false });
+  if (persist) persistNow("all", { recordCheckpoint: false });
 }
 
 function closeFocusNow(): void {
