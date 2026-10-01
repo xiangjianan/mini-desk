@@ -21,6 +21,8 @@ const props = withDefaults(defineProps<{
   activePreviewId?: string;
   pasteFeedback?: ImagePasteFeedback;
   language?: AppLanguage;
+  /** true = 紧凑形态：隐藏标题行（专注弹窗贴图条），对齐 TextPanel 的 hideHeader 先例。 */
+  hideHeader?: boolean;
 }>(), {
   language: "zh",
 });
@@ -589,7 +591,7 @@ function handleImageDragWheel(event: WheelEvent): void {
     @dragend="handleImageDragLeave"
     @contextmenu="openMenu($event)"
   >
-    <div class="panel-header desk-zone-heading" @contextmenu="openTitleMenu">
+    <div v-if="!hideHeader" class="panel-header desk-zone-heading" @contextmenu="openTitleMenu">
       <h1 id="image-title">
         <NIcon :component="ImageOutline" />
         <EditableTitle

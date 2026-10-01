@@ -787,4 +787,22 @@ describe("ImagePanel", () => {
     expect(hoverRules.length).toBeGreaterThan(0);
     expect(hoverRules.join("\n")).not.toMatch(/transform\s*:\s*translate/);
   });
+
+  it("hides the panel header in the compact hideHeader form while image cards still render", () => {
+    const wrapper = mountImagePanel(
+      [{ id: "img-1", src: "data:image/png;base64,one", createdAt: 1 }],
+      { hideHeader: true },
+    );
+
+    expect(wrapper.find(".panel-header").exists()).toBe(false);
+    expect(wrapper.findAll(".image-card")).toHaveLength(1);
+    wrapper.unmount();
+  });
+
+  it("renders the panel header by default", () => {
+    const wrapper = mountImagePanel();
+
+    expect(wrapper.find(".panel-header").exists()).toBe(true);
+    wrapper.unmount();
+  });
 });
