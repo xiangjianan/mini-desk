@@ -1,5 +1,6 @@
 import { describe, expect, it } from "vitest";
-import { getTodoReorderTarget } from "../state/todos";
+import type { TodoMap } from "../types";
+import { formatFocusDuration, getTodoReorderTarget, updateTodoFocus } from "../state/todos";
 
 describe("getTodoReorderTarget — Ctrl+Up/Down 换算为 moveTodo 落位目标", () => {
   const todos = [
@@ -43,5 +44,58 @@ describe("getTodoReorderTarget — Ctrl+Up/Down 换算为 moveTodo 落位目标"
       { id: "o1", text: "o1", done: false },
     ];
     expect(getTodoReorderTarget(starred, "s1", 1)).toStrictEqual({ targetId: "s2" });
+  });
+});
+
+describe("updateTodoFocus", () => {
+  const base: TodoMap = { morning: [{ id: "t1", text: "写周报", done: false }] };
+
+  it("增量合并专注时长，未计时任务从零起算", () => {
+    expect(updateTodoFocus(base, "morning", "t1", { addElapsedMs: 90_000 })).toEqual({
+      morning: [{ id: "t1", text: "写周报", done: false, focusElapsedMs: 90_000 }],
+    });
+  });
+
+  it("在既有累计之上累加", () => {
+    const seeded = { morning: [{ id: "t1", text: "写周报", done: false, focusElapsedMs: 60_000 }] };
+    expect(updateTodoFocus(seeded, "morning", "t1", { addElapsedMs: 1_500 })).toEqual({
+      morning: [{ id: "t1", text: "写周报", done: false, focusElapsedMs: 61_500 }],
+    });
+  });
+
+  it("笔记与图片整体替换；空数组删除字段保持无痕", () => {
+    const seeded = {
+      morning: [{
+        id: "t1", text: "写周报", done: false,
+        focusElapsedMs: 1_000,
+        focusNotes: [{ text: "旧", indent: 0 }],
+        focusImages: [{ id: "img1", createdAt: 1 }],
+      }],
+    };
+    const next = updateTodoFocus(seeded, "morning", "t1", { focusNotes: [], focusImages: [] });
+    expect(next.morning[0].focusNotes).toBeUndefined();
+    expect(next.morning[0].focusImages).toBeUndefined();
+    expect(next.morning[0].focusElapsedMs).toBe(1_000);
+  });
+
+  it("任务不存在时原样返回（引用相等）", () => {
+    expect(updateTodoFocus(base, "morning", "nope", { addElapsedMs: 1 })).toBe(base);
+  });
+
+  it("不修改原对象（不可变）", () => {
+    updateTodoFocus(base, "morning", "t1", { addElapsedMs: 1 });
+    expect(base.morning[0].focusElapsedMs).toBeUndefined();
+  });
+});
+
+describe("formatFocusDuration", () => {
+  it("不足一小时显示 mm:ss", () => {
+    expect(formatFocusDuration(0)).toBe("00:00");
+    expect(formatFocusDuration(754_000)).toBe("12:34");
+    expect(formatFocusDuration(59_999)).toBe("01:00"); // 向上取整到秒
+  });
+  it("超过一小时显示 h:mm:ss", () => {
+    expect(formatFocusDuration(3_723_000)).toBe("1:02:03");
+    expect(formatFocusDuration(3_600_000)).toBe("1:00:00");
   });
 });

@@ -1,4 +1,4 @@
-import type { TodoCompletedVisibility, TodoItem, TodoListConfig, TodoListId, TodoMap, TodoPeriod } from "../types";
+import type { LineItem, StoredImage, TodoCompletedVisibility, TodoItem, TodoListConfig, TodoListId, TodoMap, TodoPeriod } from "../types";
 import { isValidNotifyAt } from "./deadlines";
 import { assignColumn, distributeColumns } from "./columns";
 
@@ -195,6 +195,51 @@ export function cloneTodoMap(todos: TodoMap): TodoMap {
   return Object.fromEntries(
     Object.entries(todos).map(([period, list]) => [period, list.map((todo) => ({ ...todo }))]),
   ) as TodoMap;
+}
+
+export interface TodoFocusPatch {
+  /** 增量合并进 focusElapsedMs（毫秒）。 */
+  addElapsedMs?: number;
+  /** 整体替换；空数组删除字段。 */
+  focusNotes?: LineItem[];
+  focusImages?: StoredImage[];
+}
+
+/** 「现在做这个」状态迁移：时长增量合并、笔记/图片整体替换，字段按需存在。 */
+export function updateTodoFocus(
+  todos: TodoMap,
+  period: TodoPeriod,
+  id: string,
+  patch: TodoFocusPatch,
+): TodoMap {
+  const next = cloneTodoMap(todos);
+  const todo = next[period]?.find((item) => item.id === id);
+  if (!todo) return todos;
+  if (patch.addElapsedMs !== undefined) {
+    const merged = Math.max(0, Math.round((todo.focusElapsedMs ?? 0) + patch.addElapsedMs));
+    if (merged > 0) todo.focusElapsedMs = merged;
+    else delete todo.focusElapsedMs;
+  }
+  if (patch.focusNotes !== undefined) {
+    if (patch.focusNotes.length) todo.focusNotes = patch.focusNotes;
+    else delete todo.focusNotes;
+  }
+  if (patch.focusImages !== undefined) {
+    if (patch.focusImages.length) todo.focusImages = patch.focusImages;
+    else delete todo.focusImages;
+  }
+  return next;
+}
+
+/** 累计专注时长的行内展示：mm:ss，满一小时 h:mm:ss（秒向上取整）。 */
+export function formatFocusDuration(ms: number): string {
+  const totalSeconds = Math.max(0, Math.ceil(ms / 1000));
+  const seconds = totalSeconds % 60;
+  const minutes = Math.floor(totalSeconds / 60) % 60;
+  const hours = Math.floor(totalSeconds / 3600);
+  const mm = String(minutes).padStart(2, "0");
+  const ss = String(seconds).padStart(2, "0");
+  return hours > 0 ? `${hours}:${mm}:${ss}` : `${mm}:${ss}`;
 }
 
 function ensureTodoList(todos: TodoMap, period: TodoPeriod): TodoItem[] {

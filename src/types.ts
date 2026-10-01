@@ -103,6 +103,12 @@ export interface TodoItem {
   starred?: boolean;
   notifyAt?: number;
   deadlineAt?: number;
+  /** 「现在做这个」累计专注毫秒；仅 >0 时存在。 */
+  focusElapsedMs?: number;
+  /** 「现在做这个」随手记；与便签/空间 Tab 同构（含 marks 高亮元数据）。 */
+  focusNotes?: LineItem[];
+  /** 「现在做这个」贴图元数据；载荷走 IndexedDB（同工作区贴图设施）。 */
+  focusImages?: StoredImage[];
 }
 
 export interface CompanionCustomGif {
