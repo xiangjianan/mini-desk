@@ -6551,6 +6551,34 @@ describe("App shell", () => {
     }
   });
 
+  it("beforeunload 同步落盘专注计时末段增量", async () => {
+    vi.useFakeTimers();
+    vi.setSystemTime(new Date("2026-10-02T10:00:00Z").getTime());
+    localStorage.setItem(
+      STORAGE_KEY,
+      JSON.stringify({
+        todos: { morning: [{ id: "t1", text: "关页前的末段", done: false }] },
+      }),
+    );
+    const wrapper = mountApp();
+
+    try {
+      wrapper.getComponent(TodoPanel).vm.$emit("focusNow", "morning", "t1");
+      await flushPromises();
+      await wrapper.vm.$nextTick();
+
+      // 30s：不跨 60s checkpoint，末段只靠 beforeunload 冲刷。
+      await vi.advanceTimersByTimeAsync(30_000);
+      window.dispatchEvent(new Event("beforeunload"));
+
+      const stored = JSON.parse(localStorage.getItem(STORAGE_KEY) || "{}");
+      expect(stored.workspaces[0].todos.morning[0].focusElapsedMs).toBeGreaterThanOrEqual(30_000);
+    } finally {
+      wrapper.unmount();
+      vi.useRealTimers();
+    }
+  });
+
   it("stores pasted screenshot display size using the device pixel ratio", async () => {
     vi.useFakeTimers();
     const originalDevicePixelRatio = window.devicePixelRatio;

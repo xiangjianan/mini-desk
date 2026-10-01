@@ -660,8 +660,12 @@ onUnmounted(() => {
 // Closing the tab mid-debounce would drop the last second of todo/line edits;
 // flush synchronously before the page goes away.
 function handleBeforeUnload(): void {
-  // 专注会话末段增量先并入内存态：若确有待冲刷的文本编辑，随后的同步落盘会一并带上。
-  if (focusSession.value) mergeFocusElapsed(false);
+  if (focusSession.value) {
+    mergeFocusElapsed(false);
+    // 同步落盘：页面即将销毁，markDirty 不 bump 文本 generation——不立即写，
+    // 末段增量就随内存一起消失（hasPendingEdits 为 false 时下方冲刷不会跑）。
+    persistNow();
+  }
   if (!hasPendingEdits()) return;
   flushTodoSave();
   flushTextSave();
