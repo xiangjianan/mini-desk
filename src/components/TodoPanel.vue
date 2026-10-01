@@ -19,6 +19,7 @@ import {
   Star,
   StarOutline,
   SwapHorizontalOutline,
+  TimerOutline,
   TrashOutline,
 } from "@vicons/ionicons5";
 import { NDatePicker, NDropdown, NIcon, NScrollbar } from "naive-ui";
@@ -48,7 +49,7 @@ import type {
   TodoStarChange,
   WorkspaceMoveTarget,
 } from "../types";
-import { TODO_DENSITY_THRESHOLD, getOrderedTodos, getTodoReorderTarget, todoKey } from "../state/todos";
+import { TODO_DENSITY_THRESHOLD, formatFocusDuration, getOrderedTodos, getTodoReorderTarget, todoKey } from "../state/todos";
 import { clampCaret } from "../utils/caret";
 import { splitDroppedTodoText } from "../utils/textEditor";
 import { copySelection, copyTextToClipboard, getSelectionRange, probeClipboardForTextPaste } from "../utils/clipboard";
@@ -91,6 +92,7 @@ const emit = defineEmits<{
   complete: [period: TodoPeriod, id: string, done: boolean, anchor?: HTMLElement];
   star: [change: TodoStarChange];
   notify: [period: TodoPeriod, id: string, notifyAt: number | undefined, anchor?: HTMLElement];
+  focusNow: [period: TodoPeriod, id: string];
   remove: [period: TodoPeriod, id: string, anchor?: HTMLElement];
   clearCompleted: [period: TodoPeriod, anchor?: HTMLElement];
   toggleCompletedVisibility: [period: TodoPeriod, showCompleted: boolean];
@@ -210,6 +212,7 @@ const menuOptions = computed<DropdownOption[]>(() => {
     options.push({ label: uiText.value.todo.newList, key: "create-list", icon: renderIcon(AddOutline) });
   }
   if (menu.value?.id) {
+    options.push({ label: uiText.value.todo.focusNow, key: "focus-now", icon: renderIcon(TimerOutline) });
     options.push({ label: uiText.value.common.copy, key: "copy", icon: renderIcon(CopyOutline) });
     if (canPasteTodoText(menu.value.period)) {
       // 右键提醒事项时，「粘贴/智能粘贴」把剪贴板内容拆成新增提醒，插到该条提醒下方。
@@ -1218,6 +1221,11 @@ function handleFloatingEditorOutsidePointerDown(event: PointerEvent): void {
 async function handleMenuSelect(key: string): Promise<void> {
   if (!menu.value) return;
   const { period, id, anchor, target, x, y } = menu.value;
+  if (key === "focus-now" && id) {
+    closeMenu();
+    emit("focusNow", period, id);
+    return;
+  }
   if (key.startsWith("move-list-ws:")) {
     closeMenu();
     emit("moveListToWorkspace", period, key.slice("move-list-ws:".length));
@@ -1754,6 +1762,16 @@ function buildTodoListEntries(period: TodoListId, todos: TodoItem[], deferredDon
               <NIcon v-else class="todo-notify-icon" :component="AlarmOutline" />
             </button>
             <button
+              v-if="(item.todo.focusElapsedMs ?? 0) > 0"
+              class="todo-focus-badge"
+              type="button"
+              :aria-label="uiText.todo.focusBadgeAria.replace('{time}', formatFocusDuration(item.todo.focusElapsedMs ?? 0))"
+              :title="uiText.todo.focusBadgeAria.replace('{time}', formatFocusDuration(item.todo.focusElapsedMs ?? 0))"
+              @click.stop="emit('focusNow', item.period, item.todo.id)"
+            >
+              ⏱ {{ formatFocusDuration(item.todo.focusElapsedMs ?? 0) }}
+            </button>
+            <button
               class="todo-star-button is-starred"
               type="button"
               :aria-label="uiText.todo.unpin"
@@ -1967,6 +1985,16 @@ function buildTodoListEntries(period: TodoListId, todos: TodoItem[], deferredDon
                     {{ getTodoCompactNotifyLabel(entry.todo) }}
                   </span>
                   <NIcon v-else class="todo-notify-icon" :component="AlarmOutline" />
+                </button>
+                <button
+                  v-if="(entry.todo.focusElapsedMs ?? 0) > 0"
+                  class="todo-focus-badge"
+                  type="button"
+                  :aria-label="uiText.todo.focusBadgeAria.replace('{time}', formatFocusDuration(entry.todo.focusElapsedMs ?? 0))"
+                  :title="uiText.todo.focusBadgeAria.replace('{time}', formatFocusDuration(entry.todo.focusElapsedMs ?? 0))"
+                  @click.stop="emit('focusNow', list.id, entry.todo.id)"
+                >
+                  ⏱ {{ formatFocusDuration(entry.todo.focusElapsedMs ?? 0) }}
                 </button>
                 <button
                   class="todo-star-button"

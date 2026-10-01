@@ -2247,6 +2247,7 @@ describe("TodoPanel", () => {
 
     expect(wrapper.get(".today-focus-item").classes()).toContain("is-menu-selected");
     expect(wrapper.findAll(".dropdown-option").map((option) => option.text())).toEqual([
+      "现在做这个",
       "复制",
       "设置通知时间",
       "取消星标",
@@ -2856,6 +2857,7 @@ describe("TodoPanel", () => {
 
     expect(wrapper.findAll(".todo-item")[1].classes()).toContain("is-menu-selected");
     expect(wrapper.findAll(".dropdown-option").map((option) => option.text())).toEqual([
+      "现在做这个",
       "复制",
       "设置通知时间",
       "星标",
@@ -3279,6 +3281,7 @@ describe("TodoPanel", () => {
 
     expect(wrapper.get(".todo-item").classes()).toContain("is-menu-selected");
     expect(wrapper.findAll(".dropdown-option").map((option) => option.text())).toEqual([
+      "现在做这个",
       "复制",
       "设置通知时间",
       "星标",
@@ -3286,7 +3289,7 @@ describe("TodoPanel", () => {
       "Tips",
     ]);
 
-    await wrapper.findAll(".dropdown-option")[0].trigger("click");
+    await wrapper.findAll(".dropdown-option").find((option) => option.text() === "复制")?.trigger("click");
     await Promise.resolve();
 
     expect(writeText).toHaveBeenCalledWith("第一项内容");
@@ -3326,6 +3329,7 @@ describe("TodoPanel", () => {
 
     expect(event.defaultPrevented).toBe(true);
     expect(wrapper.findAll(".dropdown-option").map((option) => option.text())).toEqual([
+      "现在做这个",
       "复制",
       "设置通知时间",
       "星标",
@@ -3360,7 +3364,7 @@ describe("TodoPanel", () => {
     });
 
     await wrapper.get("input.todo-input").trigger("contextmenu");
-    await wrapper.findAll(".dropdown-option")[0].trigger("click");
+    await wrapper.findAll(".dropdown-option").find((option) => option.text() === "复制")?.trigger("click");
     await Promise.resolve();
 
     expect(writeText).toHaveBeenCalledWith("第一项内容");
@@ -3397,6 +3401,7 @@ describe("TodoPanel", () => {
     await inputWrapper.trigger("contextmenu");
 
     expect(wrapper.findAll(".dropdown-option").map((option) => option.text())).toEqual([
+      "现在做这个",
       "复制",
       "粘贴",
       "设置通知时间",
@@ -3566,7 +3571,7 @@ describe("TodoPanel", () => {
     input.setSelectionRange(1, 3);
     await inputWrapper.trigger("select");
     await inputWrapper.trigger("contextmenu");
-    await wrapper.findAll(".dropdown-option")[0].trigger("click");
+    await wrapper.findAll(".dropdown-option").find((option) => option.text() === "复制")?.trigger("click");
     await Promise.resolve();
 
     expect(writeText).toHaveBeenCalledWith("一项");
@@ -4661,6 +4666,100 @@ describe("TodoPanel 跨空间移动菜单", () => {
 
     await wrapper.get(".todo-section").trigger("contextmenu");
     expect(wrapper.findAll('[data-key^="move-list"]')).toHaveLength(0);
+    wrapper.unmount();
+  });
+});
+
+describe("TodoPanel 现在做这个入口", () => {
+  function mountFocusPanel(todos: TodoMap) {
+    return mount(TodoPanel, {
+      props: {
+        todoLists: defaultTodoLists,
+        todos,
+        showCompleted: { morning: true, noon: false, evening: false },
+        titles: DEFAULT_TITLES,
+      },
+      global: {
+        stubs: {
+          Button: true,
+          Dropdown: dropdownStub,
+          NDatePicker: datePickerStub,
+          NDropdown: dropdownStub,
+          NTooltip: tooltipStub,
+        },
+      },
+    });
+  }
+
+  it("右键菜单首项「现在做这个」，点击后 emit focusNow", async () => {
+    const wrapper = mountFocusPanel({
+      morning: [{ id: "t1", text: "任务", done: false }],
+      noon: [],
+      evening: [],
+    });
+
+    await wrapper.get(".todo-item").trigger("contextmenu");
+
+    expect(wrapper.findAll(".dropdown-option")[0].text()).toBe("现在做这个");
+
+    await wrapper.get('[data-key="focus-now"]').trigger("click");
+
+    expect(wrapper.emitted("focusNow")).toEqual([["morning", "t1"]]);
+    wrapper.unmount();
+  });
+
+  it("已完成的提醒同样显示「现在做这个」入口（完成不清除数据）", async () => {
+    const wrapper = mountFocusPanel({
+      morning: [{ id: "t1", text: "任务", done: true }],
+      noon: [],
+      evening: [],
+    });
+
+    await wrapper.get(".todo-item").trigger("contextmenu");
+
+    expect(wrapper.findAll(".dropdown-option").map((option) => option.text())).toContain("现在做这个");
+
+    await wrapper.get('[data-key="focus-now"]').trigger("click");
+
+    expect(wrapper.emitted("focusNow")).toEqual([["morning", "t1"]]);
+    wrapper.unmount();
+  });
+
+  it("累计专注时长的提醒行渲染徽标，点击后 emit focusNow", async () => {
+    const wrapper = mountFocusPanel({
+      morning: [{ id: "t1", text: "任务", done: false, focusElapsedMs: 754_000 }],
+      noon: [],
+      evening: [],
+    });
+
+    const badge = wrapper.get(".todo-item .todo-focus-badge");
+    expect(badge.text()).toContain("12:34");
+
+    await badge.trigger("click");
+
+    expect(wrapper.emitted("focusNow")).toEqual([["morning", "t1"]]);
+    wrapper.unmount();
+  });
+
+  it("无累计时长的提醒不渲染徽标", () => {
+    const wrapper = mountFocusPanel({
+      morning: [{ id: "t1", text: "任务", done: false }],
+      noon: [],
+      evening: [],
+    });
+
+    expect(wrapper.find(".todo-focus-badge").exists()).toBe(false);
+    wrapper.unmount();
+  });
+
+  it("今日聚焦区同样渲染累计时长徽标", () => {
+    const wrapper = mountFocusPanel({
+      morning: [{ id: "t1", text: "重点", done: false, starred: true, focusElapsedMs: 754_000 }],
+      noon: [],
+      evening: [],
+    });
+
+    expect(wrapper.get(".today-focus-section .todo-focus-badge").text()).toContain("12:34");
     wrapper.unmount();
   });
 });

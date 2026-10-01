@@ -248,4 +248,9 @@ describe("localized public copy", () => {
     expect(UI_TEXT.zh.app.polishKeepTooLarge).toContain("保留原文");
     expect(UI_TEXT.en.app.polishKeepTooLarge).toBeTruthy();
   });
+
+  it("「现在做这个」徽标 aria 文案中英都含 {time} 占位符", () => {
+    expect(getUiText("zh").todo.focusBadgeAria).toContain("{time}");
+    expect(getUiText("en").todo.focusBadgeAria).toContain("{time}");
+  });
 });
