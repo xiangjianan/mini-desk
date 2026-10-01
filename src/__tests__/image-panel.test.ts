@@ -796,6 +796,7 @@ describe("ImagePanel", () => {
 
     expect(wrapper.find(".panel-header").exists()).toBe(false);
     expect(wrapper.findAll(".image-card")).toHaveLength(1);
+    expect(wrapper.get(".image-panel").attributes("aria-labelledby")).toBeUndefined();
     wrapper.unmount();
   });
 
@@ -803,6 +804,7 @@ describe("ImagePanel", () => {
     const wrapper = mountImagePanel();
 
     expect(wrapper.find(".panel-header").exists()).toBe(true);
+    expect(wrapper.get(".image-panel").attributes("aria-labelledby")).toBe("image-title");
     wrapper.unmount();
   });
 });

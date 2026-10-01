@@ -581,7 +581,7 @@ function handleImageDragWheel(event: WheelEvent): void {
     ref="panelRef"
     class="panel image-panel"
     :class="{ 'drag-hover': isDragHover }"
-    aria-labelledby="image-title"
+    :aria-labelledby="hideHeader ? undefined : 'image-title'"
     tabindex="-1"
     @click="handleGuideClick"
     @dragover.prevent
