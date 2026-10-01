@@ -203,4 +203,44 @@ describe("TodoFocusModal", () => {
     expect(wrapper.findComponent(ImagePreview).exists()).toBe(false);
     wrapper.unmount();
   });
+
+  it("show 重开时重置段起点：隐藏期间的空闲间隔不计入", async () => {
+    const wrapper = mountModal();
+    vi.advanceTimersByTime(60_000); // 12:34 → 13:34
+    await wrapper.setProps({ show: false });
+    vi.advanceTimersByTime(120_000); // 隐藏期间空闲两分钟
+
+    await wrapper.setProps({ show: true });
+
+    // 显示回到 baseMs 起点（12:34），空闲的两分钟被丢弃；此后每秒正常推进。
+    expect(wrapper.find(".focus-now-timer").text()).toBe("12:34");
+    vi.advanceTimersByTime(1_000);
+    await nextTick();
+    expect(wrapper.find(".focus-now-timer").text()).toBe("12:35");
+    wrapper.unmount();
+  });
+
+  it("以 show=false 挂载时不启动计时，转 true 后从 baseMs 起步", async () => {
+    const wrapper = mountModal({ show: false });
+    vi.advanceTimersByTime(5_000);
+
+    await wrapper.setProps({ show: true });
+
+    expect(wrapper.find(".focus-now-timer").text()).toBe("12:34");
+    vi.advanceTimersByTime(2_000);
+    await nextTick();
+    expect(wrapper.find(".focus-now-timer").text()).toBe("12:36");
+    wrapper.unmount();
+  });
+
+  it("show 撤下时停掉 1s 计时 interval（隐藏期间不空转）", async () => {
+    const clearIntervalSpy = vi.spyOn(window, "clearInterval");
+    const wrapper = mountModal();
+
+    await wrapper.setProps({ show: false });
+
+    expect(clearIntervalSpy).toHaveBeenCalled();
+    wrapper.unmount();
+    clearIntervalSpy.mockRestore();
+  });
 });

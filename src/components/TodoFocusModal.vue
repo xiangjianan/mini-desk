@@ -45,10 +45,22 @@ const nowTick = ref(Date.now());
 const segmentStartAt = ref(Date.now());
 let displayTimer: number | undefined;
 
-onMounted(() => {
+/** 1s 心跳只在实际展示期间运行：App 常驻挂载（只切 show）时，隐藏期空转是纯浪费。 */
+function startDisplayTimer(): void {
+  if (displayTimer !== undefined) return;
   displayTimer = window.setInterval(() => {
     nowTick.value = Date.now();
   }, 1000);
+}
+
+function stopDisplayTimer(): void {
+  if (displayTimer === undefined) return;
+  window.clearInterval(displayTimer);
+  displayTimer = undefined;
+}
+
+onMounted(() => {
+  if (props.show) startDisplayTimer();
 });
 
 // App checkpoint 提升 baseMs 时重置段起点：显示 = baseMs + (now − 段起点)，接续不跳变。
@@ -121,10 +133,19 @@ watch(() => props.images.some((image) => image.id === displayedPreviewId.value),
   clearPreview();
 });
 
-// NModal 常驻挂载（App 只切 show 不 v-if）时，撤下即清预览态：重开弹窗不得复活
-// 陈旧的全屏预览。displayedPreviewId 归零会连带摘掉 Esc 捕获监听。
+// NModal 常驻挂载（App 只切 show 不 v-if）：show 翻转既管预览态也管计时段。
 watch(() => props.show, (visible) => {
-  if (visible) return;
+  if (visible) {
+    // 重开弹窗重置段起点与刻度：隐藏期间的空闲间隔不计入专注时长
+    //（关闭时增量已并入 App 的 baseMs，显示从新 baseMs 重新起步）。
+    segmentStartAt.value = Date.now();
+    nowTick.value = Date.now();
+    startDisplayTimer();
+    return;
+  }
+  stopDisplayTimer();
+  // 撤下即清预览态：重开弹窗不得复活陈旧的全屏预览；displayedPreviewId 归零
+  // 会连带摘掉 Esc 捕获监听。
   clearPreview();
 });
 
@@ -137,7 +158,7 @@ function navigatePreview(direction: number): void {
 }
 
 onBeforeUnmount(() => {
-  window.clearInterval(displayTimer);
+  stopDisplayTimer();
   window.clearTimeout(previewCloseTimer);
   document.removeEventListener("keydown", handlePreviewKeydown, { capture: true });
 });
