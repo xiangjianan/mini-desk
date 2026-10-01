@@ -4734,6 +4734,7 @@ describe("TodoPanel 现在做这个入口", () => {
 
     const badge = wrapper.get(".todo-item .todo-focus-badge");
     expect(badge.text()).toContain("12:34");
+    expect(badge.attributes("aria-label")).toContain("12:34");
 
     await badge.trigger("click");
 
