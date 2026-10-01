@@ -125,6 +125,8 @@ export function clearCompleted(todos: TodoMap, period: TodoPeriod): TodoMap {
   return next;
 }
 
+/** 空白校验后按 id 删除单个 todo（纯函数）。生产路径已由 App.vue 的
+ *  removeEmptyTodoWithFocusCleanup（含 focusImages 载荷连坐）取代，保留供纯函数测试。 */
 export function removeEmptyTodo(todos: TodoMap, period: TodoPeriod, id: string): TodoMap {
   const todo = todos[period]?.find((item) => item.id === id);
   if (!todo || todo.text.trim()) return todos;
