@@ -7,11 +7,13 @@ import ImagePanel from "../components/ImagePanel.vue";
 import QuickButtons from "../components/QuickButtons.vue";
 import SettingsMenu from "../components/SettingsMenu.vue";
 import SpacePanel from "../components/SpacePanel.vue";
+import TextPanel from "../components/TextPanel.vue";
+import TodoFocusModal from "../components/TodoFocusModal.vue";
 import TodoPanel from "../components/TodoPanel.vue";
 import WorkspaceInboxDialog from "../components/WorkspaceInboxDialog.vue";
 import WorkspaceSwitcher from "../components/WorkspaceSwitcher.vue";
 import { DEFAULT_SPACE_ID, DEFAULT_WORKSPACE_ID, defaultState, defaultWorkspace, STORAGE_KEY } from "../state/defaults";
-import { hydrateStoredImages, storeImagePayload } from "../state/images";
+import { getStoredImagePayload, hydrateStoredImages, storeImagePayload } from "../state/images";
 import { getGuideMessages } from "../state/i18n";
 import * as imageState from "../state/images";
 import { KAOMOJI_BY_MOOD } from "../state/messages";
@@ -21,6 +23,7 @@ import { normalizeInboxCode, REMEMBERED_INBOX_CODE_KEY } from "../sync/pairing";
 import { pullAllInboxes } from "../sync/pull";
 import type { InboxPullResult } from "../sync/pull";
 import { FALLBACK_APP_VERSION } from "../state/version";
+import { loadState } from "../state/storage";
 
 vi.mock("naive-ui", async () => {
   const { createNaiveUiStubModule } = await import("./helpers/naive-ui-mock");
@@ -6167,6 +6170,129 @@ describe("App shell", () => {
       wrapper.unmount();
       restoreIndexedDb();
       vi.useRealTimers();
+    }
+  });
+
+  it("「现在做这个」端到端：跨 checkpoint 计时落盘、关窗落徽标、重开续跳不归零", async () => {
+    vi.useFakeTimers();
+    vi.setSystemTime(new Date("2026-10-02T09:00:00Z").getTime());
+    localStorage.setItem(
+      STORAGE_KEY,
+      JSON.stringify({
+        todos: { morning: [{ id: "t1", text: "写专注任务的端到端用例", done: false }] },
+      }),
+    );
+    const wrapper = mountApp();
+
+    try {
+      // 打开专注弹窗：计时从 00:00 起步。
+      wrapper.getComponent(TodoPanel).vm.$emit("focusNow", "morning", "t1");
+      await flushPromises();
+      await wrapper.vm.$nextTick();
+      expect(wrapper.get(".focus-now-timer").text()).toBe("00:00");
+
+      // 前进 90s（跨过 60s checkpoint）：App 把首段增量落盘，弹窗计时继续推进。
+      await vi.advanceTimersByTimeAsync(90_000);
+      await wrapper.vm.$nextTick();
+      const afterCheckpoint = JSON.parse(localStorage.getItem(STORAGE_KEY) || "{}");
+      expect(afterCheckpoint.workspaces[0].todos.morning[0].focusElapsedMs).toBeGreaterThanOrEqual(60_000);
+      expect(wrapper.get(".focus-now-timer").text()).toBe("01:30");
+
+      // 关闭（=暂停）：合并尾段增量并落盘，列表行出现累计徽标。
+      await wrapper.get(".focus-now-close").trigger("click");
+      await flushPromises();
+      await wrapper.vm.$nextTick();
+      const afterClose = JSON.parse(localStorage.getItem(STORAGE_KEY) || "{}");
+      expect(afterClose.workspaces[0].todos.morning[0].focusElapsedMs).toBeGreaterThanOrEqual(90_000);
+      expect(wrapper.find(".focus-now-timer").exists()).toBe(false);
+      expect(wrapper.get(".todo-focus-badge").text()).toContain("01:30");
+
+      // 重新打开：从累计时长起跳，不归零。
+      wrapper.getComponent(TodoPanel).vm.$emit("focusNow", "morning", "t1");
+      await flushPromises();
+      await wrapper.vm.$nextTick();
+      expect(wrapper.get(".focus-now-timer").text()).toBe("01:30");
+    } finally {
+      wrapper.unmount();
+      vi.useRealTimers();
+    }
+  });
+
+  it("专注弹窗内 TextPanel 笔记写入 focusNotes 并经文本防抖落盘", async () => {
+    vi.useFakeTimers();
+    localStorage.setItem(
+      STORAGE_KEY,
+      JSON.stringify({
+        todos: { morning: [{ id: "t1", text: "带随手记的任务", done: false }] },
+      }),
+    );
+    const wrapper = mountApp();
+
+    try {
+      wrapper.getComponent(TodoPanel).vm.$emit("focusNow", "morning", "t1");
+      await flushPromises();
+      await wrapper.vm.$nextTick();
+
+      const modal = wrapper.getComponent(TodoFocusModal);
+      modal.getComponent(TextPanel).vm.$emit("update", [{ text: "随手记第一条", indent: 0 }]);
+      await wrapper.vm.$nextTick();
+
+      // 3s 文本防抖到点冲刷：focusNotes 落进 localStorage。
+      await vi.advanceTimersByTimeAsync(3000);
+      await wrapper.vm.$nextTick();
+      const loaded = loadState();
+      const todo = loaded.workspaces[0].todos.morning[0];
+      expect(todo.focusNotes).toEqual([{ text: "随手记第一条", indent: 0 }]);
+    } finally {
+      wrapper.unmount();
+      vi.useRealTimers();
+    }
+  });
+
+  it("专注弹窗打开期间 document 粘贴图片路由进 focusImages 而非工作区贴图", async () => {
+    const restoreIndexedDb = installMemoryImageDb();
+    localStorage.setItem(
+      STORAGE_KEY,
+      JSON.stringify({
+        images: [{ id: "board-img", src: "data:image/png;base64,board", createdAt: 1 }],
+        todos: { morning: [{ id: "t1", text: "贴图路由的目标任务", done: false }] },
+      }),
+    );
+    const wrapper = mountApp();
+
+    try {
+      wrapper.getComponent(TodoPanel).vm.$emit("focusNow", "morning", "t1");
+      await flushPromises();
+      await wrapper.vm.$nextTick();
+
+      const pasteEvent = new Event("paste", { cancelable: true }) as ClipboardEvent;
+      Object.defineProperty(pasteEvent, "clipboardData", {
+        value: {
+          items: [
+            {
+              type: "image/png",
+              getAsFile: vi.fn(() => new File(["shot"], "shot.png", { type: "image/png" })),
+            },
+          ],
+        },
+      });
+      document.dispatchEvent(pasteEvent);
+      expect(pasteEvent.defaultPrevented).toBe(true);
+
+      await vi.waitFor(() => {
+        const stored = JSON.parse(localStorage.getItem(STORAGE_KEY) || "{}");
+        expect(stored.workspaces[0].todos.morning[0].focusImages).toHaveLength(1);
+      });
+      const stored = JSON.parse(localStorage.getItem(STORAGE_KEY) || "{}");
+      // 工作区贴图列表不受影响（序列化后 focusImages 只剩元数据，载荷在 IndexedDB）。
+      expect(stored.workspaces[0].images).toEqual([{ id: "board-img", createdAt: 1 }]);
+      const focusImage = stored.workspaces[0].todos.morning[0].focusImages[0];
+      expect(focusImage.id).toBeTypeOf("string");
+      expect(focusImage.src).toBeUndefined();
+      await expect(getStoredImagePayload(focusImage)).resolves.toBe("data:image/png;base64,c2hvdA==");
+    } finally {
+      wrapper.unmount();
+      restoreIndexedDb();
     }
   });
 

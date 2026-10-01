@@ -8,6 +8,7 @@ import MobileInboxCapture from "./components/MobileInboxCapture.vue";
 import QuickButtons from "./components/QuickButtons.vue";
 import SettingsMenu from "./components/SettingsMenu.vue";
 import SpacePanel from "./components/SpacePanel.vue";
+import TodoFocusModal from "./components/TodoFocusModal.vue";
 import TodoPanel from "./components/TodoPanel.vue";
 import WorkbenchShell from "./components/WorkbenchShell.vue";
 import WorkspaceSwitcher from "./components/WorkspaceSwitcher.vue";
@@ -51,6 +52,7 @@ import {
   splitTodo as splitTodoInMap,
   starTodo,
   todoKey,
+  updateTodoFocus,
   updateTodoText,
 } from "./state/todos";
 import { DEFAULT_BOARD_TITLE, defaultState, STORAGE_KEY } from "./state/defaults";
@@ -656,6 +658,7 @@ onUnmounted(() => {
   stopInboxPolling();
   teardownMobileBreakpoint();
   teardownSystemThemeListener();
+  discardFocusSession();
   clearTimers();
   clearMobileCopyToast();
 });
@@ -663,6 +666,8 @@ onUnmounted(() => {
 // Closing the tab mid-debounce would drop the last second of todo/line edits;
 // flush synchronously before the page goes away.
 function handleBeforeUnload(): void {
+  // 专注会话末段增量先并入内存态：若确有待冲刷的文本编辑，随后的同步落盘会一并带上。
+  if (focusSession.value) mergeFocusElapsed(false);
   if (!hasPendingEdits()) return;
   flushTodoSave();
   flushTextSave();
@@ -1506,10 +1511,18 @@ async function handlePaste(event: ClipboardEvent): Promise<void> {
   event.preventDefault();
   const file = imageItem.getAsFile();
   if (!file) return;
+  // 专注弹窗打开期间，document 级粘贴路由进该任务的 focusImages（落位固定 append）。
+  if (focusSession.value) {
+    await addPastedImageFile(file, { placement: "append" }, {
+      period: focusSession.value.period,
+      id: focusSession.value.id,
+    });
+    return;
+  }
   await addPastedImageFile(file, request);
 }
 
-async function pasteImageFromClipboard(request: ImagePasteRequest): Promise<void> {
+async function pasteImageFromClipboard(request: ImagePasteRequest, destination?: FocusDestination): Promise<void> {
   if (shouldBlockBoardEffects()) return;
   const clipboard = navigator.clipboard as Clipboard & {
     read?: () => Promise<ClipboardItem[]>;
@@ -1544,7 +1557,7 @@ async function pasteImageFromClipboard(request: ImagePasteRequest): Promise<void
       return;
     }
     if (shouldBlockBoardEffects()) return;
-    await addPastedImageFile(new File([blob], "clipboard-image", { type }), request);
+    await addPastedImageFile(new File([blob], "clipboard-image", { type }), request, destination);
     return;
   }
   if (shouldBlockBoardEffects()) return;
@@ -1583,11 +1596,16 @@ function pasteImageWithBrowserCommand(request: ImagePasteRequest): boolean {
   return pasted;
 }
 
-async function addPastedImageFile(file: File, request: ImagePasteRequest): Promise<StoredImage | undefined> {
+/** 粘贴单图入口：append 落位可参数化 destination 进专注贴图；before/after/replace
+ *  落位与 board 图片条目强耦合（冲突校验按 workspace.images 比对），专注弹窗
+ *  调用方只传 append，非 append 分支忽略 destination。 */
+async function addPastedImageFile(file: File, request: ImagePasteRequest, destination?: FocusDestination): Promise<StoredImage | undefined> {
   if (request.placement === "append") {
     return addImageFile(file, {
+      showMessage: true,
       matchDisplaySizeToDevicePixelRatio: true,
       onPersisted: (image) => publishPasteFeedback(image.id),
+      ...(destination ? { destination } : {}),
     });
   }
   if (shouldBlockBoardEffects()) return undefined;
@@ -1698,6 +1716,8 @@ async function addImageFile(
     matchDisplaySizeToDevicePixelRatio?: boolean;
     insertAfterId?: string;
     onPersisted?: (image: StoredImage) => void;
+    /** 提供时插入 todo.focusImages 而非工作区贴图列表。 */
+    destination?: FocusDestination;
   } = {},
 ): Promise<StoredImage | undefined> {
   if (shouldBlockBoardEffects()) return undefined;
@@ -1735,13 +1755,30 @@ async function addImageFile(
     }
     return undefined;
   }
-  insertStoredImage(image, options.insertAfterId);
+  if (options.destination) {
+    // 任务在载荷落库后消失（如撤销/清空数据）：best-effort 清载荷，不落列表。
+    if (!insertFocusImage(image, options.destination, options.insertAfterId)) {
+      try {
+        await deleteStoredImage(image);
+      } catch {
+        // Best-effort cleanup when the focus todo disappears after payload storage.
+      }
+      return undefined;
+    }
+  } else {
+    insertStoredImage(image, options.insertAfterId);
+  }
   if (persistNow("images")) options.onPersisted?.(image);
   if (options.showMessage ?? true) showBubble("imageAdded", undefined, { hideCompanionAfter: true });
   return image;
 }
 
-async function addImageFiles(files: File[], anchor?: HTMLElement, targetId?: string): Promise<void> {
+async function addImageFiles(
+  files: File[],
+  anchor?: HTMLElement,
+  targetId?: string,
+  destination?: FocusDestination,
+): Promise<void> {
   if (shouldBlockBoardEffects()) return;
   const imageFiles = files.filter((file) => file.type.startsWith("image/"));
   const ignoredCount = files.length - imageFiles.length;
@@ -1755,7 +1792,7 @@ async function addImageFiles(files: File[], anchor?: HTMLElement, targetId?: str
   // multi-file drop keeps its file order immediately after the target image.
   let insertAfterId = targetId;
   for (const file of imageFiles) {
-    const image = await addImageFile(file, { showMessage: false, insertAfterId });
+    const image = await addImageFile(file, { showMessage: false, insertAfterId, ...(destination ? { destination } : {}) });
     if (shouldBlockBoardEffects()) return;
     if (image) {
       added.push(image);
@@ -1764,7 +1801,8 @@ async function addImageFiles(files: File[], anchor?: HTMLElement, targetId?: str
   }
   if (added.length === 0) return;
   if (shouldBlockBoardEffects()) return;
-  if (targetId) {
+  // 专注弹窗没有「复制收尾」语义：聚焦新增反馈而非复制图片。
+  if (destination || targetId) {
     publishPasteFeedback(added.at(-1)!.id);
   } else {
     await copyImage(added.at(-1)!.id, anchor);
@@ -1818,6 +1856,18 @@ function deleteImage(id: string, anchor?: HTMLElement): void {
     scheduleImagePayloadDeletion(getImagePayloadId(deletedImage));
     showBubble("deleteImage", feedbackAnchor, { hideCompanionAfter: true });
   }, undefined, { confirmText: uiText.value.common.delete, cancelText: uiText.value.common.cancel });
+}
+
+/** 专注贴图删除：与 board 删除同款二次确认 + 5 秒宽限（撤销可保住）。 */
+function deleteFocusImage(id: string, anchor?: HTMLElement): void {
+  requestConfirmation("confirmDeleteImage", anchor, async () => {
+    const session = focusSession.value;
+    const todo = focusTodo.value;
+    if (!session || !todo) return;
+    const deleted = todo.focusImages?.find((item) => item.id === id);
+    replaceFocusImages({ period: session.period, id: session.id }, (list) => list.filter((item) => item.id !== id));
+    if (deleted) scheduleImagePayloadDeletion(getImagePayloadId(deleted));
+  }, undefined, { confirmText: uiText.value.common.delete, cancelText: uiText.value.common.cancel, danger: true });
 }
 
 function openImagePreview(id: string): void {
@@ -1930,6 +1980,19 @@ async function copyImage(id: string, anchor?: HTMLElement): Promise<void> {
   if (shouldBlockBoardEffects()) return;
   const image = activeWorkspace.value.images.find((item) => item.id === id);
   if (!image?.src) return;
+  await writeImageToClipboard(image.src, anchor);
+}
+
+/** 专注贴图复制：与 board 复制共用剪贴板写入体，只在列表里查图不同。 */
+async function copyFocusImage(id: string, anchor?: HTMLElement): Promise<void> {
+  if (shouldBlockBoardEffects()) return;
+  const image = focusTodo.value?.focusImages?.find((item) => item.id === id);
+  if (!image?.src) return;
+  await writeImageToClipboard(image.src, anchor);
+}
+
+/** 剪贴板写入体（PNG 化 + data-url 直转 / fetch 降级）：board 贴图与专注贴图两路共用。 */
+async function writeImageToClipboard(src: string, anchor?: HTMLElement): Promise<void> {
   const clipboard = navigator.clipboard as Clipboard & {
     write?: (items: ClipboardItem[]) => Promise<void>;
   };
@@ -1938,21 +2001,21 @@ async function copyImage(id: string, anchor?: HTMLElement): Promise<void> {
     return;
   }
   try {
-    const dataUrlBlob = getImageDataUrlBlob(image.src);
+    const dataUrlBlob = getImageDataUrlBlob(src);
     if (dataUrlBlob) {
-      const payload = dataUrlBlob.type === "image/png" ? dataUrlBlob : imageSourceToPngBlob(image.src);
+      const payload = dataUrlBlob.type === "image/png" ? dataUrlBlob : imageSourceToPngBlob(src);
       await clipboard.write([new window.ClipboardItem({ "image/png": payload })]);
       if (shouldBlockBoardEffects()) return;
       showBubble("imageCopied", anchor, { hideCompanionAfter: true });
       return;
     }
-    const response = await fetch(image.src);
+    const response = await fetch(src);
     if (shouldBlockBoardEffects()) return;
     const blob = await response.blob();
     if (shouldBlockBoardEffects()) return;
-    const type = blob.type || getImageSourceType(image.src);
+    const type = blob.type || getImageSourceType(src);
     const typedBlob = type && !blob.type ? blob.slice(0, blob.size, type) : blob;
-    const payload = type === "image/png" ? typedBlob : imageSourceToPngBlob(image.src);
+    const payload = type === "image/png" ? typedBlob : imageSourceToPngBlob(src);
     await clipboard.write([new window.ClipboardItem({ "image/png": payload })]);
     if (shouldBlockBoardEffects()) return;
     showBubble("imageCopied", anchor, { hideCompanionAfter: true });
@@ -2204,6 +2267,105 @@ function openQuickApp(button: QuickButton, anchor?: HTMLElement): void {
   trigger.click();
   trigger.remove();
   showBubbleText(getQuickAppOpeningMessage(button.title || scheme), anchor, { hideCompanionAfter: true }, 2200);
+}
+
+/* ---------- 「现在做这个」专注会话：计时单一事实源在 App（focusSession），
+   弹窗只做展示（baseMs + 段内增量）；关闭 = 暂停并合并增量到 todo.focusElapsedMs。 ---------- */
+
+const FOCUS_CHECKPOINT_MS = 60_000;
+const focusSession = ref<{ period: TodoPeriod; id: string; startedAt: number } | null>(null);
+let focusCheckpointTimer: number | undefined;
+
+const focusTodo = computed(() => {
+  const session = focusSession.value;
+  if (!session) return undefined;
+  return getTodos(session.period).find((todo) => todo.id === session.id);
+});
+
+/** 打开即开始计时：先水合该任务 focusImages（幽灵条目过滤），再建 session。
+ *  水合是异步的：期间数据可能被清空/撤销整树重挂，session 建立前复查任务仍在。 */
+async function openFocusNow(period: TodoPeriod, id: string): Promise<void> {
+  if (focusSession.value) return;
+  const todo = getTodos(period).find((item) => item.id === id);
+  if (!todo) return;
+  if (todo.focusImages?.length) {
+    const hydrated = (await hydrateStoredImages(todo.focusImages)).filter((image) => Boolean(image.src));
+    if (!getTodos(period).some((item) => item.id === id)) return;
+    if (hydrated.length !== todo.focusImages.length) {
+      activeWorkspace.value.todos = updateTodoFocus(activeWorkspace.value.todos, period, id, {
+        focusImages: hydrated,
+      });
+    }
+  }
+  focusSession.value = { period, id, startedAt: Date.now() };
+  window.clearInterval(focusCheckpointTimer);
+  focusCheckpointTimer = window.setInterval(() => mergeFocusElapsed(true), FOCUS_CHECKPOINT_MS);
+}
+
+/** 合并本次段增量（关窗/checkpoint/beforeunload 共用）；persist=true 时静默落盘。 */
+function mergeFocusElapsed(persist: boolean): void {
+  const session = focusSession.value;
+  if (!session) return;
+  const delta = Date.now() - session.startedAt;
+  session.startedAt = Date.now();
+  if (delta <= 0) return;
+  activeWorkspace.value.todos = updateTodoFocus(activeWorkspace.value.todos, session.period, session.id, {
+    addElapsedMs: delta,
+  });
+  markDirty();
+  if (persist) persistNow();
+}
+
+function closeFocusNow(): void {
+  if (!focusSession.value) return;
+  mergeFocusElapsed(true);
+  discardFocusSession();
+}
+
+/** 丢弃会话与 checkpoint 心跳（不合并增量）：任务已被清空数据等连根移除时用。 */
+function discardFocusSession(): void {
+  window.clearInterval(focusCheckpointTimer);
+  focusCheckpointTimer = undefined;
+  focusSession.value = null;
+}
+
+/** 专注随手记：与空间便签同一文本管线（generation 基线 + 3s 防抖冲刷）。 */
+function updateFocusNotes(period: TodoPeriod, id: string, lines: LineItem[]): void {
+  activeWorkspace.value.todos = updateTodoFocus(activeWorkspace.value.todos, period, id, { focusNotes: lines });
+  bumpTextGeneration();
+  markDirty();
+  scheduleTextSave();
+}
+
+/* ---------- 专注贴图管线：复用 board 贴图的读剪贴板/落 IndexedDB 链路，
+   只把「插入哪个列表」参数化为 FocusDestination（todo.focusImages）。 ---------- */
+
+type FocusDestination = { period: TodoPeriod; id: string };
+
+function findFocusTodo(destination: FocusDestination): TodoItem | undefined {
+  return getTodos(destination.period).find((item) => item.id === destination.id);
+}
+
+function insertFocusImage(image: StoredImage, destination: FocusDestination, afterId?: string): boolean {
+  const todo = findFocusTodo(destination);
+  if (!todo) return false;
+  const list = [...(todo.focusImages ?? [])];
+  const index = afterId ? list.findIndex((item) => item.id === afterId) : -1;
+  if (index >= 0) list.splice(index + 1, 0, image);
+  else list.push(image);
+  activeWorkspace.value.todos = updateTodoFocus(activeWorkspace.value.todos, destination.period, destination.id, {
+    focusImages: list,
+  });
+  return true;
+}
+
+function replaceFocusImages(destination: FocusDestination, mutate: (list: StoredImage[]) => StoredImage[]): void {
+  const todo = findFocusTodo(destination);
+  if (!todo) return;
+  activeWorkspace.value.todos = updateTodoFocus(activeWorkspace.value.todos, destination.period, destination.id, {
+    focusImages: mutate([...(todo.focusImages ?? [])]),
+  });
+  persistNow();
 }
 
 async function handleQuickButton(id: string, anchor?: HTMLElement): Promise<void> {
@@ -2770,6 +2932,8 @@ function clearData(anchor?: HTMLElement): void {
       emptyTodoRemovalTimers.clear();
       clearPendingImagePayloadDeletions();
       clearImagePreview();
+      // 清空数据连根移除全部 todo：专注会话一并丢弃，避免幽灵 checkpoint 打到新状态。
+      discardFocusSession();
       pendingEditSpaceId.value = null;
       pendingEditTodoListId.value = null;
       resetUndoHistory();
@@ -3725,6 +3889,7 @@ function moveItem<T extends { id: string }>(items: T[], dragId: string, targetId
           @clear-completed="clearDone"
           @toggle-completed-visibility="toggleCompletedVisibility"
           @blur-empty="blurEmptyTodo"
+          @focus-now="openFocusNow"
           @blur="handleCompanionBlur"
           @move="moveTodo"
           @move-list-to-workspace="moveTodoListAcrossWorkspaces"
@@ -3821,6 +3986,26 @@ function moveItem<T extends { id: string }>(items: T[], dragId: string, targetId
       @move-to-bottom="moveImageToBottom"
       @tips="showPreviewTips"
       @save-edit="saveEditedImage"
+    />
+
+    <!-- 「现在做这个」专注弹窗：常驻挂载只切 show（计时段随 show 重置）；
+         计时单一事实源在 App 的 focusSession，弹窗只展示 baseMs + 段内增量。 -->
+    <TodoFocusModal
+      :show="Boolean(focusSession && focusTodo)"
+      :title="focusTodo?.text ?? ''"
+      :base-ms="focusTodo?.focusElapsedMs ?? 0"
+      :notes="focusTodo?.focusNotes ?? []"
+      :images="focusTodo?.focusImages ?? []"
+      :language="state.language"
+      :polish="polishClipboard"
+      @close="closeFocusNow"
+      @notes-update="(lines) => focusSession && updateFocusNotes(focusSession.period, focusSession.id, lines)"
+      @paste-image="(request) => focusSession && pasteImageFromClipboard(request, { period: focusSession.period, id: focusSession.id })"
+      @drop-image-files="(files, targetId) => focusSession && addImageFiles(files, undefined, targetId, { period: focusSession.period, id: focusSession.id })"
+      @copy-image="copyFocusImage"
+      @delete-image="deleteFocusImage"
+      @reorder-images="(dragId, targetId) => focusSession && replaceFocusImages({ period: focusSession.period, id: focusSession.id }, (list) => { moveItem(list, dragId, targetId); return list; })"
+      @move-image-to-bottom="(id) => focusSession && replaceFocusImages({ period: focusSession.period, id: focusSession.id }, (list) => { const i = list.findIndex((item) => item.id === id); if (i >= 0 && i < list.length - 1) list.push(...list.splice(i, 1)); return list; })"
     />
 
     <!-- 伴宠气泡（GIF + 消息）：常挂载，桌面端随编辑/保存触发；移动端速记发送成功时
