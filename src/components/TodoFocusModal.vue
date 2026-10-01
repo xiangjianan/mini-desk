@@ -75,28 +75,57 @@ function openPreview(id: string): void {
   activePreviewId.value = id;
 }
 
+/** 两段式关闭（App.vue closeImagePreview 同口径）：先落 closing 相位让 ImagePreview
+ *  播 220ms 离场淡出（期间仍渲染、activeId 不变），超时后再卸载。 */
 function closePreview(): void {
-  // ImagePreview 自带 220ms 离场淡出，emit close 时动画已播完，直接卸载即可
-  //（App.vue clearImagePreview 同口径）。
+  const previewId = activePreviewId.value;
+  if (!previewId) return;
+  window.clearTimeout(previewCloseTimer);
+  closingPreviewId.value = previewId;
+  activePreviewId.value = undefined;
+  previewCloseTimer = window.setTimeout(() => {
+    previewCloseTimer = undefined;
+    closingPreviewId.value = undefined;
+  }, PREVIEW_CLOSE_MS);
+}
+
+/** ImagePreview 自身发起的离场（内部 220ms 淡出后才 emit close）：动画已播完，直接卸载
+ *  （App.vue clearImagePreview 同口径）。 */
+function clearPreview(): void {
   window.clearTimeout(previewCloseTimer);
   previewCloseTimer = undefined;
   activePreviewId.value = undefined;
   closingPreviewId.value = undefined;
 }
 
-// 预览中的图片被删除（images 经 App 更新回落）时：走 closing 相位播完淡出再卸载，
-// 避免预览层连同图片一起瞬间消失。
+// 预览打开期间在 document 捕获阶段截住 Escape：只关预览，且阻止事件继续传播到外层
+// 专注弹窗的 vueuc FocusTrap（document 冒泡阶段收 Esc 会关掉整个弹窗）。
+// ImagePreview 编辑器的 window 捕获处理器先于本监听执行且 stopImmediatePropagation，
+// 编辑器内的 Esc 语义不受影响；预览收起/弹窗撤下/组件卸载都会摘掉本监听。
+function handlePreviewKeydown(event: KeyboardEvent): void {
+  if (event.key !== "Escape") return;
+  event.preventDefault();
+  event.stopPropagation();
+  closePreview();
+}
+
+watch(() => Boolean(displayedPreviewId.value), (open) => {
+  if (open) document.addEventListener("keydown", handlePreviewKeydown, { capture: true });
+  else document.removeEventListener("keydown", handlePreviewKeydown, { capture: true });
+});
+
+// 防悬空 id：预览中的图片被删后 ImagePreview 因 active 找不到已整层卸载（closing 淡出段
+// 实际不可达），这里只负责清掉残留 id，不模拟淡出。删图的邻图跳转由 App 侧（T8）决定。
 watch(() => props.images.some((image) => image.id === displayedPreviewId.value), (exists, was) => {
   if (exists || !was) return;
-  const closingId = displayedPreviewId.value;
-  if (!closingId) return;
-  activePreviewId.value = undefined;
-  closingPreviewId.value = closingId;
-  window.clearTimeout(previewCloseTimer);
-  previewCloseTimer = window.setTimeout(() => {
-    previewCloseTimer = undefined;
-    closingPreviewId.value = undefined;
-  }, PREVIEW_CLOSE_MS);
+  clearPreview();
+});
+
+// NModal 常驻挂载（App 只切 show 不 v-if）时，撤下即清预览态：重开弹窗不得复活
+// 陈旧的全屏预览。displayedPreviewId 归零会连带摘掉 Esc 捕获监听。
+watch(() => props.show, (visible) => {
+  if (visible) return;
+  clearPreview();
 });
 
 // 预览内上一张/下一张：只移动 activePreviewId（App.vue navigatePreview 同口径）。
@@ -110,6 +139,7 @@ function navigatePreview(direction: number): void {
 onBeforeUnmount(() => {
   window.clearInterval(displayTimer);
   window.clearTimeout(previewCloseTimer);
+  document.removeEventListener("keydown", handlePreviewKeydown, { capture: true });
 });
 
 // Esc/遮罩点击：NModal 撤下 show（update:show(false)）同样视作关闭（=暂停）。
@@ -125,6 +155,7 @@ function handleModalShow(value: boolean): void {
     preset="card"
     :title="uiText.todo.focusDoing"
     :mask-closable="true"
+    :close-on-esc="!displayedPreviewId"
     @update:show="handleModalShow"
   >
     <div class="focus-now-stage">
@@ -188,7 +219,7 @@ function handleModalShow(value: boolean): void {
       :closing="previewClosing"
       :language="language"
       :can-edit="false"
-      @close="closePreview"
+      @close="clearPreview"
       @copy="(id: string) => emit('copyImage', id)"
       @delete="(id: string, anchor?: HTMLElement) => emit('deleteImage', id, anchor)"
       @navigate="navigatePreview"

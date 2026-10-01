@@ -106,4 +106,101 @@ describe("TodoFocusModal", () => {
     await flushPromises();
     expect(wrapper.findComponent(ImagePreview).props("canEdit")).toBe(false);
   });
+
+  it("预览打开时 Esc 只关预览：截停事件、不 emit close、走 220ms 两段式淡出", async () => {
+    const wrapper = mountModal({ images: [{ id: "i1", createdAt: 1 }] });
+    wrapper.findComponent({ name: "ImagePanel" }).vm.$emit("preview", "i1");
+    await flushPromises();
+    expect(wrapper.findComponent(ImagePreview).exists()).toBe(true);
+    // 双保险：预览期外层专注弹窗的 Esc 关闭被禁用。
+    expect(wrapper.findComponent({ name: "NModal" }).attributes("close-on-esc")).toBe("false");
+
+    const escape = new KeyboardEvent("keydown", { key: "Escape", bubbles: true, cancelable: true });
+    document.body.dispatchEvent(escape);
+    await nextTick();
+
+    expect(escape.defaultPrevented).toBe(true);
+    expect(wrapper.emitted("close")).toBeUndefined();
+    // 两段式（App closeImagePreview 同口径）：先落 closing 相位挂淡出，220ms 后才卸载。
+    const fading = wrapper.findComponent(ImagePreview);
+    expect(fading.exists()).toBe(true);
+    expect(fading.props("closing")).toBe(true);
+    expect(fading.props("activeId")).toBe("i1");
+    vi.advanceTimersByTime(220);
+    await nextTick();
+    expect(wrapper.findComponent(ImagePreview).exists()).toBe(false);
+    // 预览关掉后 Esc 双保险恢复。
+    expect(wrapper.findComponent({ name: "NModal" }).attributes("close-on-esc")).toBe("true");
+    wrapper.unmount();
+  });
+
+  it("编辑器 window 捕获层 stopImmediatePropagation 的 Esc 不触发弹窗侧关闭", async () => {
+    const wrapper = mountModal({ images: [{ id: "i1", createdAt: 1 }] });
+    wrapper.findComponent({ name: "ImagePanel" }).vm.$emit("preview", "i1");
+    await flushPromises();
+
+    // 模拟 ImagePreview 编辑器的 window 捕获处理器（捕获顺序 window → document，
+    // 先于弹窗侧的 document 捕获监听执行）截停 Esc。
+    const editorLikeStopper = (event: KeyboardEvent): void => {
+      event.preventDefault();
+      event.stopImmediatePropagation();
+    };
+    window.addEventListener("keydown", editorLikeStopper, { capture: true });
+    try {
+      document.body.dispatchEvent(new KeyboardEvent("keydown", { key: "Escape", bubbles: true, cancelable: true }));
+      await nextTick();
+      vi.advanceTimersByTime(300);
+      await nextTick();
+
+      expect(wrapper.findComponent(ImagePreview).exists()).toBe(true);
+      expect(wrapper.emitted("close")).toBeUndefined();
+    } finally {
+      window.removeEventListener("keydown", editorLikeStopper, { capture: true });
+      wrapper.unmount();
+    }
+  });
+
+  it("贴图条「取消预览」emit closePreview 走 220ms 两段式淡出", async () => {
+    const wrapper = mountModal({ images: [{ id: "i1", createdAt: 1 }] });
+    wrapper.findComponent({ name: "ImagePanel" }).vm.$emit("preview", "i1");
+    await flushPromises();
+
+    wrapper.findComponent({ name: "ImagePanel" }).vm.$emit("closePreview");
+    await nextTick();
+
+    const fading = wrapper.findComponent(ImagePreview);
+    expect(fading.exists()).toBe(true);
+    expect(fading.props("closing")).toBe(true);
+
+    vi.advanceTimersByTime(220);
+    await nextTick();
+    expect(wrapper.findComponent(ImagePreview).exists()).toBe(false);
+    wrapper.unmount();
+  });
+
+  it("ImagePreview 自身离场（emit close）后立即卸载，不再等淡出", async () => {
+    const wrapper = mountModal({ images: [{ id: "i1", createdAt: 1 }] });
+    wrapper.findComponent({ name: "ImagePanel" }).vm.$emit("preview", "i1");
+    await flushPromises();
+
+    wrapper.findComponent(ImagePreview).vm.$emit("close");
+    await nextTick();
+
+    expect(wrapper.findComponent(ImagePreview).exists()).toBe(false);
+    wrapper.unmount();
+  });
+
+  it("show 撤下时重置预览态，重开弹窗不复活陈旧全屏预览", async () => {
+    const wrapper = mountModal({ images: [{ id: "i1", createdAt: 1 }] });
+    wrapper.findComponent({ name: "ImagePanel" }).vm.$emit("preview", "i1");
+    await flushPromises();
+    expect(wrapper.findComponent(ImagePreview).exists()).toBe(true);
+
+    await wrapper.setProps({ show: false });
+    await wrapper.setProps({ show: true });
+    await flushPromises();
+
+    expect(wrapper.findComponent(ImagePreview).exists()).toBe(false);
+    wrapper.unmount();
+  });
 });
