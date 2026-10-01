@@ -15,6 +15,11 @@ describe("isQuickAppScheme", () => {
     expect(isQuickAppScheme("vscode://file/~/notes.md")).toBe(true);
     expect(isQuickAppScheme("x-apple.systempreferences:com.apple.preference.security")).toBe(true);
     expect(isQuickAppScheme("slack://channel?id=C123")).toBe(true);
+    // macOS system apps: Notes and Reminders (Reminders only registers ReminderKit's scheme).
+    expect(isQuickAppScheme("notes://")).toBe(true);
+    expect(isQuickAppScheme("x-apple-reminderkit://")).toBe(true);
+    // Shortcuts bridge for list/folder-level deep links; shortcut names may be non-ASCII.
+    expect(isQuickAppScheme("shortcuts://run-shortcut?name=打开购物列表")).toBe(true);
   });
 
   it("rejects plain and web URLs", () => {

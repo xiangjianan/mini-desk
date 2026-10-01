@@ -27,6 +27,12 @@ export const QUICK_APP_PRESETS: readonly QuickAppPreset[] = [
   { title: { zh: "Xcode", en: "Xcode" }, scheme: "xcode://", hint: { zh: "仅启动", en: "launch only" } },
   { title: { zh: "App Store", en: "App Store" }, scheme: "macappstore://", hint: { zh: "应用链接", en: "app URL" } },
   { title: { zh: "系统设置", en: "System Settings" }, scheme: "x-apple.systempreferences:", hint: { zh: "面板ID", en: "pane id" } },
+  // macOS system apps; Reminders registers no "reminders://" — its only scheme is ReminderKit's.
+  { title: { zh: "备忘录", en: "Notes" }, scheme: "notes://", hint: { zh: "仅启动", en: "launch only" } },
+  { title: { zh: "提醒事项", en: "Reminders" }, scheme: "x-apple-reminderkit://", hint: { zh: "仅启动", en: "launch only" } },
+  // Shortcuts bridge: neither app exposes a list/folder-level deep link, but a shortcut
+  // running AppleScript ("show list"/"show folder") does — append the shortcut's name.
+  { title: { zh: "快捷指令", en: "Shortcuts" }, scheme: "shortcuts://run-shortcut?name=", hint: { zh: "指令名", en: "shortcut name" } },
   { title: { zh: "Slack", en: "Slack" }, scheme: "slack://", hint: { zh: "channel?...", en: "channel?..." } },
   { title: { zh: "Spotify", en: "Spotify" }, scheme: "spotify://", hint: { zh: "track:ID", en: "track:ID" } },
   { title: { zh: "Telegram", en: "Telegram" }, scheme: "tg://", hint: { zh: "resolve?domain=", en: "resolve?domain=" } },
