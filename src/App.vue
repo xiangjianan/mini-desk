@@ -2289,6 +2289,8 @@ const focusTodo = computed(() => {
 /** 打开即开始计时：先水合该任务 focusImages（幽灵条目过滤），再建 session。
  *  水合是异步的：期间数据可能被清空/撤销整树重挂，session 建立前复查任务仍在。 */
 async function openFocusNow(period: TodoPeriod, id: string): Promise<void> {
+  // 症状守卫：上一会话的任务已消失（watch 未覆盖到的存量僵尸）时先清再开新会话。
+  if (focusSession.value && !focusTodo.value) discardFocusSession();
   if (focusSession.value) return;
   const todo = getTodos(period).find((item) => item.id === id);
   if (!todo) return;
@@ -2332,6 +2334,14 @@ function discardFocusSession(): void {
   focusCheckpointTimer = undefined;
   focusSession.value = null;
 }
+
+// 任务消失（undo/清空数据/跨标签同步的整树替换）即丢弃会话：不丢弃的话
+// focusSession 会指着不存在的 todo——幽灵心跳每分钟空转落盘，且 openFocusNow
+// 的防重早退会永远挡住新会话。状态替换均为单次同步赋值，无瞬时 undefined 窗口。
+watch(focusTodo, (todo, was) => {
+  if (todo || !was) return;
+  discardFocusSession();
+});
 
 /** 专注随手记：与空间便签同一文本管线（generation 基线 + 3s 防抖冲刷）。 */
 function updateFocusNotes(period: TodoPeriod, id: string, lines: LineItem[]): void {

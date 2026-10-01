@@ -6508,6 +6508,49 @@ describe("App shell", () => {
     }
   });
 
+  it("专注任务被 undo 移除即丢弃会话：interval 清、再开另一任务不被阻塞", async () => {
+    vi.useFakeTimers();
+    localStorage.setItem(STORAGE_KEY, JSON.stringify({ todos: { morning: [] } }));
+    const wrapper = mountApp();
+
+    try {
+      // 创建动作产生真实撤销快照：撤销将移除该任务。
+      wrapper.getComponent(TodoPanel).vm.$emit("createFromText", "morning", ["会被撤销的任务"]);
+      await flushPromises();
+      await wrapper.vm.$nextTick();
+      const todoId = wrapper.getComponent(TodoPanel).props("todos").morning[0].id;
+
+      wrapper.getComponent(TodoPanel).vm.$emit("focusNow", "morning", todoId);
+      await flushPromises();
+      await wrapper.vm.$nextTick();
+      expect(wrapper.get(".focus-now-timer").text()).toBe("00:00");
+
+      // 撤销创建：任务消失 → 会话即时丢弃（弹窗撤下、心跳清理）。
+      window.dispatchEvent(new KeyboardEvent("keydown", { key: "z", ctrlKey: true }));
+      await flushPromises();
+      await wrapper.vm.$nextTick();
+      expect(wrapper.find(".focus-now-timer").exists()).toBe(false);
+      expect(wrapper.getComponent(TodoPanel).props("todos").morning).toEqual([]);
+
+      // 僵尸会话不得阻塞新会话：另一任务可打开并正常计时落盘。
+      wrapper.getComponent(TodoPanel).vm.$emit("createFromText", "morning", ["新任务"]);
+      await flushPromises();
+      await wrapper.vm.$nextTick();
+      const nextId = wrapper.getComponent(TodoPanel).props("todos").morning[0].id;
+      wrapper.getComponent(TodoPanel).vm.$emit("focusNow", "morning", nextId);
+      await flushPromises();
+      await wrapper.vm.$nextTick();
+      expect(wrapper.get(".focus-now-timer").text()).toBe("00:00");
+
+      await vi.advanceTimersByTimeAsync(61_000);
+      const stored = JSON.parse(localStorage.getItem(STORAGE_KEY) || "{}");
+      expect(stored.workspaces[0].todos.morning[0].focusElapsedMs).toBeGreaterThanOrEqual(60_000);
+    } finally {
+      wrapper.unmount();
+      vi.useRealTimers();
+    }
+  });
+
   it("stores pasted screenshot display size using the device pixel ratio", async () => {
     vi.useFakeTimers();
     const originalDevicePixelRatio = window.devicePixelRatio;
