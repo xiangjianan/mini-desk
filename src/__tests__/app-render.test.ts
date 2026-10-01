@@ -6459,6 +6459,55 @@ describe("App shell", () => {
     }
   });
 
+  it("弹窗内逐图粘贴归一为插到目标图之后", async () => {
+    const restoreIndexedDb = installMemoryImageDb();
+    localStorage.setItem(
+      STORAGE_KEY,
+      JSON.stringify({
+        todos: {
+          morning: [{
+            id: "t1",
+            text: "逐图粘贴",
+            done: false,
+            focusImages: [
+              { id: "img-1", src: "data:image/png;base64,one", createdAt: 1 },
+              { id: "img-2", src: "data:image/png;base64,two", createdAt: 2 },
+            ],
+          }],
+        },
+      }),
+    );
+    const imageBlob = new Blob(["pasted"], { type: "image/png" });
+    Object.assign(navigator, {
+      clipboard: {
+        read: vi.fn().mockResolvedValue([{ types: ["image/png"], getType: vi.fn().mockResolvedValue(imageBlob) }]),
+      },
+    });
+    const wrapper = mountApp();
+
+    try {
+      wrapper.getComponent(TodoPanel).vm.$emit("focusNow", "morning", "t1");
+      await flushPromises();
+      await wrapper.vm.$nextTick();
+
+      wrapper.getComponent(TodoFocusModal).vm.$emit("pasteImage", { placement: "after", targetId: "img-2" });
+      await vi.waitFor(() => {
+        const stored = JSON.parse(localStorage.getItem(STORAGE_KEY) || "{}");
+        expect(stored.workspaces[0].todos.morning[0].focusImages).toHaveLength(3);
+      });
+
+      const stored = JSON.parse(localStorage.getItem(STORAGE_KEY) || "{}");
+      const ids = stored.workspaces[0].todos.morning[0].focusImages.map((image: { id: string }) => image.id);
+      // 新图落在图 2 之后，而不是退化为 board 贴图的 before/after 落位。
+      expect(ids.slice(0, 2)).toEqual(["img-1", "img-2"]);
+      expect(ids[2]).toBeTypeOf("string");
+      expect(stored.workspaces[0].images).toEqual([]);
+    } finally {
+      wrapper.unmount();
+      restoreIndexedDb();
+    }
+  });
+
   it("stores pasted screenshot display size using the device pixel ratio", async () => {
     vi.useFakeTimers();
     const originalDevicePixelRatio = window.devicePixelRatio;

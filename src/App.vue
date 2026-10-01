@@ -1590,16 +1590,24 @@ function pasteImageWithBrowserCommand(request: ImagePasteRequest): boolean {
   return pasted;
 }
 
-/** 粘贴单图入口：append 落位可参数化 destination 进专注贴图；before/after/replace
- *  落位与 board 图片条目强耦合（冲突校验按 workspace.images 比对），专注弹窗
- *  调用方只传 append，非 append 分支忽略 destination。 */
+/** 粘贴单图入口。专注贴图（destination）把逐图落位归一为「插到目标之后」：
+ *  replace 在弹窗内没有编辑语义（预览编辑 v1 关闭）降级追加，before/append
+ *  同样直接追加；board 路径保留 before/after/replace 的完整落位与冲突校验。 */
 async function addPastedImageFile(file: File, request: ImagePasteRequest, destination?: FocusDestination): Promise<StoredImage | undefined> {
+  if (destination) {
+    return addImageFile(file, {
+      showMessage: true,
+      matchDisplaySizeToDevicePixelRatio: true,
+      insertAfterId: request.placement === "after" ? request.targetId : undefined,
+      onPersisted: (image) => publishPasteFeedback(image.id),
+      destination,
+    });
+  }
   if (request.placement === "append") {
     return addImageFile(file, {
       showMessage: true,
       matchDisplaySizeToDevicePixelRatio: true,
       onPersisted: (image) => publishPasteFeedback(image.id),
-      ...(destination ? { destination } : {}),
     });
   }
   if (shouldBlockBoardEffects()) return undefined;
@@ -1762,7 +1770,9 @@ async function addImageFile(
   } else {
     insertStoredImage(image, options.insertAfterId);
   }
-  if (persistNow("images")) options.onPersisted?.(image);
+  // 专注贴图存盘用全量 scope：images scope 的跨标签合并分支按图片语义写回，
+  // 可能拿本 tab 的旧 todos 整块覆盖对方，丢掉 focus 元数据。
+  if (persistNow(options.destination ? "all" : "images")) options.onPersisted?.(image);
   if (options.showMessage ?? true) showBubble("imageAdded", undefined, { hideCompanionAfter: true });
   return image;
 }
