@@ -45,7 +45,6 @@ import {
   completeTodo,
   distributeTodoListColumns,
   moveTodo as moveTodoInMap,
-  removeEmptyTodo,
   removeTodo as removeTodoFromMap,
   removeTodoListData,
   setTodoNotifyAt,
@@ -2628,11 +2627,11 @@ function createTodo(period: TodoPeriod, afterId?: string): void {
       if (blankTodo.period === period) {
         const input = getTodoInput(blankTodo.period, blankTodo.id);
         input?.blur();
-        activeWorkspace.value.todos = removeTodoFromMap(activeWorkspace.value.todos, blankTodo.period, blankTodo.id);
+        removeEmptyTodoWithFocusCleanup(blankTodo.period, blankTodo.id);
         persistNow();
         return;
       }
-      activeWorkspace.value.todos = removeTodoFromMap(activeWorkspace.value.todos, blankTodo.period, blankTodo.id);
+      removeEmptyTodoWithFocusCleanup(blankTodo.period, blankTodo.id);
     }
   }
   const id = createId();
@@ -2831,11 +2830,21 @@ function blurEmptyTodo(period: TodoPeriod, id: string): void {
         emptyTodoRemovalTimers.delete(key);
         return;
       }
-      activeWorkspace.value.todos = removeEmptyTodo(activeWorkspace.value.todos, period, id);
+      removeEmptyTodoWithFocusCleanup(period, id);
       emptyTodoRemovalTimers.delete(key);
       persistNow();
     }, 260),
   );
+}
+
+/** 空白提醒移除的连坐清理：仅在仍是空白 todo 时按 id 删除，focusImages 载荷与显式
+ *  删除同口径走 5 秒宽限（撤销可保住）。不负责 persist——各调用路径删除后统一 persistNow。 */
+function removeEmptyTodoWithFocusCleanup(period: TodoPeriod, id: string): void {
+  const todo = getTodos(period).find((item) => item.id === id);
+  if (!todo || todo.text.trim()) return;
+  const doomedFocusIds = collectTodoFocusPayloadIds([todo]);
+  activeWorkspace.value.todos = removeTodoFromMap(activeWorkspace.value.todos, period, id);
+  doomedFocusIds.forEach((payloadId) => scheduleImagePayloadDeletion(payloadId));
 }
 
 function moveTodo(dragged: DraggedTodo, destinationPeriod: TodoPeriod, targetId?: string): void {

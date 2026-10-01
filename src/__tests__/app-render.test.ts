@@ -6296,6 +6296,89 @@ describe("App shell", () => {
     }
   });
 
+  it("宽限窗口内 undo 复活带 focusImages 的 todo 后不回收其载荷", async () => {
+    vi.useFakeTimers();
+    const restoreIndexedDb = installMemoryImageDb();
+    localStorage.setItem(
+      STORAGE_KEY,
+      JSON.stringify({
+        todos: {
+          morning: [{
+            id: "todo-1",
+            text: "撤销可保住专注截图",
+            done: false,
+            focusImages: [{ id: "img-1", payloadId: "pay-1", createdAt: 9 }],
+          }],
+        },
+      }),
+    );
+    const deleteSpy = vi.spyOn(imageState, "deleteStoredImage").mockResolvedValue(undefined);
+    const wrapper = mountApp();
+
+    try {
+      const todoSection = wrapper.get('.todo-section[data-period="morning"]').element as HTMLElement;
+      wrapper.getComponent(TodoPanel).vm.$emit("remove", "morning", "todo-1", todoSection);
+      await wrapper.vm.$nextTick();
+      await vi.advanceTimersByTimeAsync(200);
+      await wrapper.get('[data-testid="companion-yes"]').trigger("click");
+      await Promise.resolve();
+      await wrapper.vm.$nextTick();
+      expect(wrapper.getComponent(TodoPanel).props("todos").morning).toEqual([]);
+
+      // 宽限窗口内 Ctrl+Z 撤销删除：todo 连同 focusImages 元数据一起复活。
+      window.dispatchEvent(new KeyboardEvent("keydown", { key: "z", ctrlKey: true }));
+      await flushPromises();
+      await wrapper.vm.$nextTick();
+      const restored = wrapper.getComponent(TodoPanel).props("todos").morning;
+      expect(restored[0]).toMatchObject({ id: "todo-1" });
+      expect(restored[0].focusImages).toEqual([{ id: "img-1", payloadId: "pay-1", createdAt: 9 }]);
+
+      // 过了宽限窗口载荷仍在：undo 复活即保留。
+      await vi.advanceTimersByTimeAsync(6000);
+      expect(deleteSpy).not.toHaveBeenCalledWith("pay-1");
+    } finally {
+      wrapper.unmount();
+      restoreIndexedDb();
+      vi.useRealTimers();
+    }
+  });
+
+  it("失焦空白提醒移除时连坐清理其专注贴图载荷", async () => {
+    vi.useFakeTimers();
+    const restoreIndexedDb = installMemoryImageDb();
+    localStorage.setItem(
+      STORAGE_KEY,
+      JSON.stringify({
+        todos: {
+          morning: [{
+            id: "todo-1",
+            text: "",
+            done: false,
+            focusImages: [{ id: "img-1", payloadId: "pay-1", createdAt: 9 }],
+          }],
+        },
+      }),
+    );
+    const deleteSpy = vi.spyOn(imageState, "deleteStoredImage").mockResolvedValue(undefined);
+    const wrapper = mountApp();
+
+    try {
+      wrapper.getComponent(TodoPanel).vm.$emit("blurEmpty", "morning", "todo-1");
+      await wrapper.vm.$nextTick();
+      // 空白失焦 260ms 后移除 todo，随后 5s 宽限窗口过点回收载荷。
+      await vi.advanceTimersByTimeAsync(260);
+      await wrapper.vm.$nextTick();
+      expect(wrapper.getComponent(TodoPanel).props("todos").morning).toEqual([]);
+
+      await vi.advanceTimersByTimeAsync(5100);
+      expect(deleteSpy).toHaveBeenCalledWith("pay-1");
+    } finally {
+      wrapper.unmount();
+      restoreIndexedDb();
+      vi.useRealTimers();
+    }
+  });
+
   it("启动迁移把 todo.focusImages 的内联载荷写入 IndexedDB", async () => {
     const restoreIndexedDb = installMemoryImageDb();
     localStorage.setItem(
