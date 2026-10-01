@@ -173,11 +173,15 @@ function handleModalShow(value: boolean): void {
 </script>
 
 <template>
+  <!-- preset=card 不传 title 且 closable=false：卡片自带的「正在做」头与内置 ✕
+       （M6 双头）弃用，头部完全由组件内 .focus-now-header（标题+计时+关闭）承担；
+       aria-label 落到卡根元素保住对话框的可读名。 -->
   <NModal
     :show="show"
     class="focus-now-modal"
     preset="card"
-    :title="uiText.todo.focusDoing"
+    :closable="false"
+    :aria-label="uiText.todo.focusDoing"
     :mask-closable="!displayedPreviewId"
     :close-on-esc="!displayedPreviewId"
     @update:show="handleModalShow"

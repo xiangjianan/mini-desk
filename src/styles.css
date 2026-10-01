@@ -7642,3 +7642,226 @@ html[data-theme="dark"] .text-editor-textarea::selection {
 .mark-swatch-green { background: var(--mark-highlight-green); }
 .mark-swatch-blue { background: var(--mark-highlight-blue); }
 .mark-swatch-violet { background: var(--mark-highlight-violet); }
+
+/* ============================================================
+   「现在做这个」专注弹窗（TodoFocusModal）与行内专注徽标
+   ============================================================ */
+
+/* 行内徽标：todo 行右段的累计专注时长（mm:ss / h:mm:ss），点击续做。
+   配色复用 --accent 瓶对（浅蓝面/深蓝字，深色蓝面/近白字），不引入新色。
+   列位：徽标只在有累计时长的行渲染（v-if），用 :has() 给这类行追加一条
+   auto 宽的徽标轨道，插在 notify 与 star 之间；star 改用负序列位
+   （-2 = 最后一列）顺移一位，避免徽标把星标挤出行右缘。四组轨道变体与
+   has-notify/has-link 的既有组合一一对应（本节位于文件末尾，与
+   .todo-item.has-link .todo-star-button 等同特异性规则靠源序取胜）。 */
+.todo-focus-badge {
+  grid-column: -3;
+  justify-self: end;
+  margin-left: 6px;
+  padding: 3px 6px;
+  border: 0;
+  border-radius: 999px;
+  background: var(--accent);
+  color: var(--accent-foreground);
+  font-size: 11px;
+  line-height: 1;
+  font-variant-numeric: tabular-nums;
+  white-space: nowrap;
+  cursor: pointer;
+}
+
+.todo-focus-badge:hover {
+  background: color-mix(in srgb, var(--accent-foreground) 14%, transparent);
+}
+
+.todo-item:has(.todo-focus-badge) {
+  grid-template-columns: 22px 32px minmax(0, 1fr) 26px auto 26px;
+}
+
+.todo-item.has-notify:has(.todo-focus-badge) {
+  grid-template-columns: 22px 32px minmax(0, 1fr) minmax(0, 64px) auto 26px;
+}
+
+.todo-item.has-link:has(.todo-focus-badge) {
+  grid-template-columns: 22px 32px minmax(0, 1fr) 26px 26px auto 26px;
+}
+
+.todo-item.has-link.has-notify:has(.todo-focus-badge) {
+  grid-template-columns: 22px 32px minmax(0, 1fr) 26px minmax(0, 64px) auto 26px;
+}
+
+.todo-item:has(.todo-focus-badge) .todo-star-button {
+  grid-column: -2;
+}
+
+.today-focus-item:has(.todo-focus-badge) {
+  grid-template-columns: 42px minmax(0, 1fr) 26px auto 26px;
+}
+
+.today-focus-item.has-notify:has(.todo-focus-badge) {
+  grid-template-columns: 42px minmax(0, 1fr) minmax(0, 64px) auto 26px;
+}
+
+.today-focus-item.has-link:has(.todo-focus-badge) {
+  grid-template-columns: 42px minmax(0, 1fr) 26px 26px auto 26px;
+}
+
+.today-focus-item.has-link.has-notify:has(.todo-focus-badge) {
+  grid-template-columns: 42px minmax(0, 1fr) 26px minmax(0, 64px) auto 26px;
+}
+
+.today-focus-item:has(.todo-focus-badge) .todo-star-button {
+  grid-column: -2;
+}
+
+/* 专注弹窗的专属遮罩：强虚化（18px，与 .image-preview 面板材质同档）
+   + 加重压暗，作为「进入专注」的全屏信号；其他弹窗维持 6px 通用遮罩。
+   NModal preset=card 的 class 落在卡上，容器经 :has() 选取
+   （workspace-dialog-modal 同款先例）。预览在场时沿用全局「遮罩清空」
+   约定（background 透明由全局 !important 接管），这里同步摘掉强虚化。 */
+.n-modal-container:has(.focus-now-modal) .n-modal-mask {
+  -webkit-backdrop-filter: blur(18px) saturate(1.4);
+  backdrop-filter: blur(18px) saturate(1.4);
+  background: rgba(15, 23, 42, 0.45);
+}
+
+html[data-theme="dark"] .n-modal-container:has(.focus-now-modal) .n-modal-mask {
+  background: rgba(0, 0, 0, 0.58);
+}
+
+body:has(.image-preview) .n-modal-container:has(.focus-now-modal) .n-modal-mask {
+  -webkit-backdrop-filter: none;
+  backdrop-filter: none;
+}
+
+/* 卡片自带 header 弃用（preset=card 不传 title 且 closable=false），
+   头部完全由组件内 .focus-now-header 承担（M6 去重）。尺寸走
+   shortcut-help-modal 同款 min() 宽度口径，高度由 stage 定。 */
+.focus-now-modal.n-card {
+  width: min(1080px, calc(100vw - 32px)) !important;
+  max-width: 1080px !important;
+}
+
+/* naive-ui 2.44 的内容类名是 .n-card-content（连字符；.n-card__content 是
+   旧版类名，同文件 shortcut-help/version-history 处的旧选择器已不命中）。 */
+.focus-now-modal .n-card-content {
+  padding: 0 !important;
+}
+
+.focus-now-stage {
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+  height: min(720px, 82vh);
+  padding: 16px 20px 20px;
+}
+
+.focus-now-header {
+  display: flex;
+  align-items: center;
+  gap: 16px;
+}
+
+.focus-now-title {
+  flex: 1 1 auto;
+  min-width: 0;
+  margin: 0;
+  overflow: hidden;
+  font-size: 18px;
+  font-weight: 600;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.focus-now-timer {
+  flex: none;
+  color: var(--text);
+  font-size: 40px;
+  font-weight: 700;
+  font-variant-numeric: tabular-nums;
+  letter-spacing: 1px;
+  line-height: 1;
+}
+
+.focus-now-close {
+  flex: none;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 32px;
+  height: 32px;
+  padding: 0;
+  border: 0;
+  border-radius: 8px;
+  background: transparent;
+  color: var(--muted);
+  font-size: 16px;
+  line-height: 1;
+  cursor: pointer;
+}
+
+.focus-now-close:hover {
+  background: color-mix(in srgb, var(--foreground) 8%, transparent);
+  color: var(--text);
+}
+
+.focus-now-body {
+  flex: 1 1 auto;
+  display: grid;
+  grid-template-columns: minmax(96px, 10%) minmax(0, 1fr);
+  gap: 12px;
+  min-height: 0;
+}
+
+.focus-now-images {
+  min-width: 0;
+  min-height: 0;
+  overflow: hidden;
+  border: 1px solid var(--line-subtle);
+  border-radius: var(--radius);
+}
+
+.focus-now-images .image-panel {
+  height: 100%;
+  border-right: 0;
+}
+
+/* 10% 宽贴图条：卡片收成单列缩略——28px 序号列会把图挤没，序号信息由
+   预览的上一张/下一张承担；缩略高度也随条宽收紧。 */
+.focus-now-images .image-card {
+  grid-template-columns: minmax(0, 1fr);
+}
+
+.focus-now-images .image-index {
+  display: none;
+}
+
+.focus-now-images .image-card img,
+.focus-now-images .image-drag-preview img {
+  max-height: 88px;
+  margin: 6px;
+}
+
+.focus-now-notes {
+  display: flex;
+  flex-direction: column;
+  min-width: 0;
+  min-height: 0;
+  border: 1px solid var(--line-subtle);
+  border-radius: var(--radius);
+  overflow: hidden;
+}
+
+.focus-now-notes .text-panel {
+  height: 100%;
+}
+
+@media (max-width: 940px) {
+  .focus-now-body {
+    grid-template-columns: 72px minmax(0, 1fr);
+  }
+
+  .focus-now-timer {
+    font-size: 28px;
+  }
+}

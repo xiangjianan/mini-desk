@@ -1774,8 +1774,8 @@ async function addImageFile(
   } else {
     insertStoredImage(image, options.insertAfterId);
   }
-  // 专注贴图存盘用全量 scope：images scope 的跨标签合并分支按图片语义写回，
-  // 可能拿本 tab 的旧 todos 整块覆盖对方，丢掉 focus 元数据。
+  // 专注贴图存盘用全量 scope：images scope 的跨标签合并分支以对方（current）快照
+  // 为底、只回写图片——落盘的 todos 是对方的，本 tab 未落盘的 focus 元数据被丢弃。
   if (persistNow(options.destination ? "all" : "images")) options.onPersisted?.(image);
   if (options.showMessage ?? true) showBubble("imageAdded", undefined, { hideCompanionAfter: true });
   return image;
