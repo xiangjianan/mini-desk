@@ -1,11 +1,14 @@
-import { mount } from "@vue/test-utils";
+import { flushPromises, mount } from "@vue/test-utils";
 import { nextTick } from "vue";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import TodoFocusModal from "../components/TodoFocusModal.vue";
+import ImagePreview from "../components/ImagePreview.vue";
 
 // NModal teleports to <body>（VTU 的 find 无法穿透），按 app-render 等文件的
 // 惯例 mock naive-ui 模块换轻量桩；TextPanel/ImagePanel 用默认桩保留 props
 // 声明，供 findComponent(...).props(...) 断言接线。
+// ImagePreview 不 stub：defineAsyncComponent 的包装组件会按 setupState 变量名被
+// 换成无 props 声明的桩（断言不了接线）——放真组件异步加载后用组件对象查询。
 vi.mock("naive-ui", async () => {
   const { createNaiveUiStubModule } = await import("./helpers/naive-ui-mock");
   return createNaiveUiStubModule();
@@ -21,7 +24,7 @@ function mountModal(overrides: Record<string, unknown> = {}) {
       images: [],
       ...overrides,
     },
-    global: { stubs: { TextPanel: true, ImagePanel: true, ImagePreview: true } },
+    global: { stubs: { TextPanel: true, ImagePanel: true } },
   });
 }
 
@@ -94,5 +97,13 @@ describe("TodoFocusModal", () => {
     imagePanel.vm.$emit("paste", { placement: "append" });
     await nextTick();
     expect(wrapper.emitted("pasteImage")).toHaveLength(1);
+  });
+
+  it("向 ImagePanel/ImagePreview 传 canEdit=false 抑制编辑入口", async () => {
+    const wrapper = mountModal({ images: [{ id: "i1", createdAt: 1 }] });
+    expect(wrapper.findComponent({ name: "ImagePanel" }).props("canEdit")).toBe(false);
+    wrapper.findComponent({ name: "ImagePanel" }).vm.$emit("preview", "i1");
+    await flushPromises();
+    expect(wrapper.findComponent(ImagePreview).props("canEdit")).toBe(false);
   });
 });

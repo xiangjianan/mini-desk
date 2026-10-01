@@ -153,6 +153,7 @@ function handleModalShow(value: boolean): void {
             :images="images"
             :active-preview-id="activePreviewId"
             :language="language"
+            :can-edit="false"
             hide-header
             @preview="openPreview"
             @close-preview="closePreview"
@@ -178,13 +179,15 @@ function handleModalShow(value: boolean): void {
         </section>
       </div>
     </div>
-    <!-- 预览内编辑（editId/saveEdit）v1 显式不接：编辑浮层依赖 App 的图片存储/保存链路，留后续接入。 -->
+    <!-- 预览内编辑 v1 经 canEdit=false 隐藏入口：编辑浮层依赖 App 的图片存储/保存链路，
+         后续如需支持走 saveEdit 链路（需独立的冲突处理）。 -->
     <ImagePreview
       v-if="displayedPreviewId"
       :images="images"
       :active-id="displayedPreviewId"
       :closing="previewClosing"
       :language="language"
+      :can-edit="false"
       @close="closePreview"
       @copy="(id: string) => emit('copyImage', id)"
       @delete="(id: string, anchor?: HTMLElement) => emit('deleteImage', id, anchor)"

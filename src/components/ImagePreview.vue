@@ -20,9 +20,13 @@ const props = withDefaults(defineProps<{
   editId?: string;
   language?: AppLanguage;
   closing?: boolean;
+  /** false = 抑制编辑入口（专注弹窗内预览）：工具栏「编辑」按钮、右键「编辑」项与 Enter
+   *  快捷键全部隐藏/失效，「Tips」项一并隐藏（无 tips 接线的宿主里是死路）。默认 true。 */
+  canEdit?: boolean;
 }>(), {
   language: "zh",
   closing: false,
+  canEdit: true,
 });
 
 const emit = defineEmits<{
@@ -75,10 +79,13 @@ const activeImageStyle = computed(() => {
   return style;
 });
 const menuOptions = computed<DropdownOption[]>(() => [
-  ...getImageItemContextMenuItems(uiText.value, true).map((option) => ({
-    ...option,
-    icon: renderIcon(getImageMenuIcon(option.key), option.key === "delete"),
-  })),
+  // canEdit=false：编辑入口与无 tips 接线的「Tips」引导项一并隐藏。
+  ...getImageItemContextMenuItems(uiText.value, true)
+    .filter((option) => props.canEdit || (option.key !== "edit" && option.key !== "tips"))
+    .map((option) => ({
+      ...option,
+      icon: renderIcon(getImageMenuIcon(option.key), option.key === "delete"),
+    })),
 ]);
 const exclusiveMenu = createExclusiveContextMenu(closeMenu);
 
@@ -393,7 +400,8 @@ function handleKeydown(event: KeyboardEvent): void {
   }
   if (event.key === "Enter") {
     event.preventDefault();
-    openEditor();
+    // canEdit=false：编辑入口被抑制，Enter 无操作（预览本身已打开）。
+    if (props.canEdit) openEditor();
     return;
   }
   if (event.key === "5") {
@@ -568,7 +576,7 @@ function isPreviewShortcutKey(event: KeyboardEvent): boolean {
                 <AddOutline />
               </NIcon>
             </button>
-            <button type="button" class="preview-toolbar-button is-edit" :aria-label="uiText.common.edit" @click.stop.prevent="openEditor">
+            <button v-if="canEdit" type="button" class="preview-toolbar-button is-edit" :aria-label="uiText.common.edit" @click.stop.prevent="openEditor">
               <NIcon size="18">
                 <CreateOutline />
               </NIcon>

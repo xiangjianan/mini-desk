@@ -23,8 +23,12 @@ const props = withDefaults(defineProps<{
   language?: AppLanguage;
   /** true = 紧凑形态：隐藏标题行（专注弹窗贴图条），对齐 TextPanel 的 hideHeader 先例。 */
   hideHeader?: boolean;
+  /** false = 抑制编辑入口（专注弹窗贴图条）：右键「编辑」项隐藏、卡片 Enter 重映射为预览，
+   *  「Tips」引导项一并隐藏（无 guide 接线的宿主里是死路）。默认 true 保持既有形态。 */
+  canEdit?: boolean;
 }>(), {
   language: "zh",
+  canEdit: true,
 });
 
 const emit = defineEmits<{
@@ -171,17 +175,17 @@ watch(
 );
 
 const menuOptions = computed<DropdownOption[]>(() =>
-  menu.value?.id
-    ? getImageItemContextMenuItems(uiText.value, isPreviewCloseMenuItem.value, true).map((option) => ({
-        ...option,
-        ...(option.key === "tips" ? guideMenuOption.value : {}),
-        icon: renderIcon(getImageMenuIcon(option.key), option.key === "delete"),
-      }))
-    : getBlankImageContextMenuItems(uiText.value).map((option) => ({
-        ...option,
-        ...(option.key === "tips" ? guideMenuOption.value : {}),
-        icon: renderIcon(getImageMenuIcon(option.key), option.key === "delete"),
-      })),
+  (menu.value?.id
+    ? getImageItemContextMenuItems(uiText.value, isPreviewCloseMenuItem.value, true)
+    : getBlankImageContextMenuItems(uiText.value)
+  )
+    // canEdit=false：编辑入口与无 guide 接线的 Tips 引导项一并隐藏。
+    .filter((option) => props.canEdit || (option.key !== "edit" && option.key !== "tips"))
+    .map((option) => ({
+      ...option,
+      ...(option.key === "tips" ? guideMenuOption.value : {}),
+      icon: renderIcon(getImageMenuIcon(option.key), option.key === "delete"),
+    })),
 );
 
 function openMenu(event: MouseEvent, id?: string): void {
@@ -287,6 +291,15 @@ function handleGuideClick(event: MouseEvent): void {
   const target = event.target as HTMLElement;
   if (target.closest("button, input, textarea, .image-card")) return;
   emit("guide", "images", event.currentTarget as HTMLElement);
+}
+
+/** 卡片 Enter：默认打开编辑；canEdit=false 时重映射为预览，键盘用户仍有可用操作。 */
+function handleCardEnter(id: string): void {
+  if (props.canEdit) {
+    emit("edit", id);
+    return;
+  }
+  emit("preview", id);
 }
 
 function handleExternalDrop(event: DragEvent): void {
@@ -650,7 +663,7 @@ function handleImageDragWheel(event: WheelEvent): void {
         }"
         type="button"
         @click="handleImageCardClick($event, image.id)"
-        @keydown.enter.stop.prevent="emit('edit', image.id)"
+        @keydown.enter.stop.prevent="handleCardEnter(image.id)"
         @dblclick.stop.prevent="emit('copy', image.id)"
         @contextmenu.stop="openMenu($event, image.id)"
         @dragover="handleImageCardDragOver($event, image.id)"

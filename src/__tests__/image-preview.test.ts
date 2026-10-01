@@ -1673,6 +1673,48 @@ describe("ImagePreview", () => {
     wrapper.unmount();
   });
 
+  it("suppresses every editor entry point and hides tips when canEdit is false", async () => {
+    const wrapper = mount(ImagePreview, {
+      props: {
+        images: [
+          { id: "img-1", src: "data:image/png;base64,one", createdAt: 1 },
+          { id: "img-2", src: "data:image/png;base64,two", createdAt: 2 },
+        ],
+        activeId: "img-1",
+        canEdit: false,
+      },
+      global: {
+        stubs: {
+          Button: buttonStub,
+          Dropdown: menuDropdownStub,
+          Modal: modalStub,
+          NButton: buttonStub,
+          NDropdown: menuDropdownStub,
+          NModal: modalStub,
+        },
+      },
+    });
+
+    // 工具栏不再有「编辑」按钮（7 → 6），键盘 Enter 不再打开编辑器。
+    expect(wrapper.findAll(".preview-actions button")).toHaveLength(6);
+    expect(wrapper.find(".preview-toolbar-button.is-edit").exists()).toBe(false);
+
+    await wrapper.get(".image-preview").trigger("keydown", { key: "Enter" });
+    expect(wrapper.find(".image-editor").exists()).toBe(false);
+
+    // 右键菜单隐藏「编辑」与「Tips」（无接线的死路项一并清理）。
+    await wrapper.get(".preview-stage img").trigger("contextmenu");
+
+    expect(wrapper.findAll(".dropdown-option").map((option) => option.text())).toEqual([
+      "取消预览",
+      "复制",
+      "置顶",
+      "置底",
+      "删除",
+    ]);
+    wrapper.unmount();
+  });
+
   it("uses WASD keys to navigate images", async () => {
     const wrapper = mount(ImagePreview, {
       props: {

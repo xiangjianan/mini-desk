@@ -788,6 +788,39 @@ describe("ImagePanel", () => {
     expect(hoverRules.join("\n")).not.toMatch(/transform\s*:\s*translate/);
   });
 
+  it("canEdit=false 抑制编辑入口：菜单隐藏「编辑」「Tips」，Enter 改发 preview", async () => {
+    const wrapper = mountImagePanel(
+      [{ id: "img-1", src: "data:image/png;base64,one", createdAt: 1 }],
+      { canEdit: false },
+    );
+
+    await wrapper.get(".image-card").trigger("contextmenu");
+
+    expect(wrapper.findAll(".dropdown-option").map((option) => option.text())).toEqual([
+      "预览",
+      "复制",
+      "粘贴",
+      "置顶",
+      "置底",
+      "删除",
+    ]);
+
+    await wrapper.get(".image-card").trigger("keydown", { key: "Enter" });
+
+    expect(wrapper.emitted("edit")).toBeUndefined();
+    expect(wrapper.emitted("preview")?.[0]).toEqual(["img-1"]);
+    wrapper.unmount();
+  });
+
+  it("canEdit=false 时空白区菜单也隐藏 Tips 引导项", async () => {
+    const wrapper = mountImagePanel([], { canEdit: false });
+
+    await wrapper.get(".image-list-scrollbar").trigger("contextmenu");
+
+    expect(wrapper.findAll(".dropdown-option").map((option) => option.text())).toEqual(["粘贴图片"]);
+    wrapper.unmount();
+  });
+
   it("hides the panel header in the compact hideHeader form while image cards still render", () => {
     const wrapper = mountImagePanel(
       [{ id: "img-1", src: "data:image/png;base64,one", createdAt: 1 }],
