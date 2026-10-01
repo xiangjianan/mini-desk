@@ -487,7 +487,32 @@ function normalizeTodo(item: unknown): TodoItem | null {
   if (isValidNotifyAt(notifyAt)) {
     todo.notifyAt = notifyAt;
   }
+  // 「现在做这个」专注字段：只收正整数毫秒（同 quickButtons.clicks 口径），非法即丢。
+  const focusElapsedMs = typeof record.focusElapsedMs === "number"
+    && Number.isInteger(record.focusElapsedMs)
+    && record.focusElapsedMs > 0
+    ? record.focusElapsedMs
+    : undefined;
+  if (focusElapsedMs !== undefined) todo.focusElapsedMs = focusElapsedMs;
+  const focusNotes = normalizeFocusNotes(record.focusNotes);
+  if (focusNotes.length) todo.focusNotes = focusNotes;
+  const focusImages = normalizeFocusImages(record.focusImages);
+  if (focusImages.length) todo.focusImages = focusImages;
   return todo;
+}
+
+/** 专注笔记只收数组：focusNotes 是新字段、无历史字符串格式，字符串属于畸形导入、整体丢弃。 */
+function normalizeFocusNotes(value: unknown): LineItem[] {
+  if (!Array.isArray(value)) return [];
+  return normalizeLineCollection(value);
+}
+
+/** 专注贴图只收带合法 id 的条目：normalizeImages 会给无 id 对象合成占位图，先剔除再委托。 */
+function normalizeFocusImages(value: unknown): StoredImage[] {
+  if (!Array.isArray(value)) return [];
+  const candidates = value.filter((item): item is Record<string, unknown> =>
+    isPlainObject(item) && typeof item.id === "string" && item.id.trim() !== "");
+  return normalizeImages(candidates);
 }
 
 export function normalizeCustomCompanionGif(value: unknown): CompanionCustomGif {
