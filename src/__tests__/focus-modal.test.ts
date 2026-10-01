@@ -243,4 +243,30 @@ describe("TodoFocusModal", () => {
     wrapper.unmount();
     clearIntervalSpy.mockRestore();
   });
+
+  it("预览打开时点遮罩不再穿透关闭整个弹窗", async () => {
+    const wrapper = mountModal({ images: [{ id: "i1", createdAt: 1 }] });
+    // 预览关闭时遮罩可点（正常形态不回归）。
+    expect(wrapper.findComponent({ name: "NModal" }).attributes("mask-closable")).toBe("true");
+
+    wrapper.findComponent({ name: "ImagePanel" }).vm.$emit("preview", "i1");
+    await flushPromises();
+
+    // 双保险一（与 close-on-esc 同款绑定）：预览期遮罩不可点。
+    expect(wrapper.findComponent({ name: "NModal" }).attributes("mask-closable")).toBe("false");
+
+    // 双保险二：即便 update:show(false) 漏进来（遮罩路径穿透到 NModal），
+    // 也不 emit close——预览是顶层，此时收起弹窗等于把专注会话误暂停落盘。
+    wrapper.findComponent({ name: "NModal" }).vm.$emit("update:show", false);
+    await nextTick();
+    expect(wrapper.emitted("close")).toBeUndefined();
+
+    // 预览关掉后遮罩路径恢复常态：update:show(false) 正常视作关闭。
+    wrapper.findComponent(ImagePreview).vm.$emit("close");
+    await nextTick();
+    wrapper.findComponent({ name: "NModal" }).vm.$emit("update:show", false);
+    await nextTick();
+    expect(wrapper.emitted("close")).toHaveLength(1);
+    wrapper.unmount();
+  });
 });

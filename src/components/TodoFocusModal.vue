@@ -164,8 +164,11 @@ onBeforeUnmount(() => {
 });
 
 // Esc/遮罩点击：NModal 撤下 show（update:show(false)）同样视作关闭（=暂停）。
+// 预览打开期间豁免（双保险二的同款语义）：遮罩经 mask-closable=false 已挡在 NModal，
+// 若仍漏进 update:show(false)（ImagePreview 的遮罩是 pointer-events:none，点击会
+// 穿透到本弹窗遮罩），忽略之——预览是顶层，此时收起弹窗等于把专注会话误暂停落盘。
 function handleModalShow(value: boolean): void {
-  if (!value) emit("close");
+  if (!value && !displayedPreviewId.value) emit("close");
 }
 </script>
 
@@ -175,7 +178,7 @@ function handleModalShow(value: boolean): void {
     class="focus-now-modal"
     preset="card"
     :title="uiText.todo.focusDoing"
-    :mask-closable="true"
+    :mask-closable="!displayedPreviewId"
     :close-on-esc="!displayedPreviewId"
     @update:show="handleModalShow"
   >
