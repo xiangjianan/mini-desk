@@ -93,9 +93,19 @@ describe("WorkspaceInboxDialog", () => {
     expect(payload?.todoListId).toBe(wrapper.props("workspace").todoLists[0]?.id);
     expect(payload?.noteTarget).toBe(wrapper.props("workspace").spaces[0]?.id);
     expect(payload?.lastSeenAt).toBe(0);
-    // 弹窗保持打开供扫码/抄录，展示层同步为新码。
+    // 弹窗保持打开供扫码/抄录，展示层同步为新码；生成按钮随 hasCode 翻转卸载（不可重复生成）。
     expect(order).toEqual(["update"]);
     expect(wrapper.find('[data-testid="inbox-code"]').text()).toBe(payload?.code);
+    expect(wrapper.find('[data-testid="inbox-generate"]').exists()).toBe(false);
+  });
+
+  it("生成后点取消：仅 emit close，不回收已生效的配对", async () => {
+    const wrapper = mountDialog(undefined);
+    await wrapper.find('[data-testid="inbox-generate"]').trigger("click");
+    await wrapper.get('[data-testid="inbox-close"]').trigger("click");
+    // 取消不 emit 补偿 update：生成的码已落盘注册，保持生效（与重置配对码同口径）。
+    expect(updatePayloads(wrapper)).toHaveLength(1);
+    expect(wrapper.emitted("close")).toHaveLength(1);
   });
 
   it("弹窗顶部标明当前配对的工作空间", () => {
