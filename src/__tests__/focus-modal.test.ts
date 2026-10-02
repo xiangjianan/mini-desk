@@ -26,6 +26,7 @@ function mountModal(overrides: Record<string, unknown> = {}) {
 }
 
 const IMG = { id: "i1", src: "data:image/png;base64,AAA", createdAt: 1 };
+const IMG2 = { id: "i2", src: "data:image/png;base64,BBB", createdAt: 2 };
 
 function pressKey(key: string, code?: string): KeyboardEvent {
   const event = new KeyboardEvent("keydown", { key, code, bubbles: true, cancelable: true });
@@ -124,7 +125,7 @@ describe("TodoFocusModal", () => {
     // 记事本仍在 DOM（浮层盖住而非卸载，滚动位置得以保留）。
     expect(wrapper.findComponent({ name: "TextPanel" }).exists()).toBe(true);
 
-    await wrapper.get(".focus-now-preview-close").trigger("click");
+    await wrapper.get(".preview-toolbar-button.is-close").trigger("click");
     expect(wrapper.find(".focus-now-preview").exists()).toBe(false);
     expect(wrapper.findComponent({ name: "TextPanel" }).exists()).toBe(true);
     wrapper.unmount();
@@ -183,12 +184,12 @@ describe("TodoFocusModal", () => {
     wrapper.findComponent({ name: "ImagePanel" }).vm.$emit("preview", "i1");
     await nextTick();
 
-    await wrapper.get(".focus-now-preview-action").trigger("click");
+    await wrapper.get(".preview-toolbar-button.is-edit").trigger("click");
     expect(wrapper.findComponent({ name: "ImageEditor" }).exists()).toBe(true);
     wrapper.unmount();
   });
 
-  it("编辑态 Esc 退出编辑回预览，不关弹窗", async () => {
+  it("编辑态 Esc 关掉整个预览（复刻主页面口径），不关弹窗", async () => {
     const wrapper = mountModal({ images: [IMG] });
     wrapper.findComponent({ name: "ImagePanel" }).vm.$emit("preview", "i1");
     await nextTick();
@@ -199,7 +200,7 @@ describe("TodoFocusModal", () => {
     await nextTick();
 
     expect(wrapper.findComponent({ name: "ImageEditor" }).exists()).toBe(false);
-    expect(wrapper.find(".focus-now-preview").exists()).toBe(true);
+    expect(wrapper.find(".focus-now-preview").exists()).toBe(false);
     expect(wrapper.emitted("close")).toBeUndefined();
     wrapper.unmount();
   });
@@ -215,6 +216,90 @@ describe("TodoFocusModal", () => {
     await nextTick();
     expect(wrapper.findComponent({ name: "ImageEditor" }).exists()).toBe(false);
     expect(wrapper.find(".focus-now-preview-image").exists()).toBe(true);
+    wrapper.unmount();
+  });
+
+  it("工具栏缩放按钮驱动图片 transform，回 1 时归位", async () => {
+    const wrapper = mountModal({ images: [IMG] });
+    wrapper.findComponent({ name: "ImagePanel" }).vm.$emit("preview", "i1");
+    await nextTick();
+    const img = () => wrapper.get(".focus-now-preview-image");
+
+    await wrapper.get(".preview-toolbar-button.is-zoom-in").trigger("click");
+    expect(img().attributes("style")).toContain("scale(1.1)");
+    await wrapper.get(".preview-toolbar-button.is-zoom-in").trigger("click");
+    expect(img().attributes("style")).toContain("scale(1.2)");
+    await wrapper.get(".preview-toolbar-button.is-zoom-out").trigger("click");
+    await wrapper.get(".preview-toolbar-button.is-zoom-out").trigger("click");
+    expect(img().attributes("style")).toContain("scale(1)");
+    wrapper.unmount();
+  });
+
+  it("上一张/下一张按钮与 w/s 键翻页，边界禁用", async () => {
+    const wrapper = mountModal({ images: [IMG, IMG2] });
+    wrapper.findComponent({ name: "ImagePanel" }).vm.$emit("preview", "i1");
+    await nextTick();
+    const img = () => wrapper.get(".focus-now-preview-image");
+
+    expect(wrapper.get(".preview-nav-button.is-previous").attributes("disabled")).toBeDefined();
+    await wrapper.get(".preview-nav-button.is-next").trigger("click");
+    expect(img().attributes("src")).toBe("data:image/png;base64,BBB");
+    expect(wrapper.get(".preview-nav-button.is-next").attributes("disabled")).toBeDefined();
+
+    pressKey("w");
+    await nextTick();
+    expect(img().attributes("src")).toBe("data:image/png;base64,AAA");
+    pressKey("s");
+    await nextTick();
+    expect(img().attributes("src")).toBe("data:image/png;base64,BBB");
+    wrapper.unmount();
+  });
+
+  it("键盘 5 复制、Delete 删除预览中的图片并按主页面口径跳邻图", async () => {
+    const wrapper = mountModal({ images: [IMG, IMG2] });
+    wrapper.findComponent({ name: "ImagePanel" }).vm.$emit("preview", "i1");
+    await nextTick();
+
+    pressKey("5");
+    await nextTick();
+    expect(wrapper.emitted("copyImage")?.[0]).toEqual(["i1"]);
+
+    pressKey("Delete");
+    await nextTick();
+    expect(wrapper.emitted("deleteImage")?.[0]).toEqual(["i1"]);
+    // App 删除后 images 里没有 i1：跳到同侧邻居 i2 而不是关预览。
+    await wrapper.setProps({ images: [IMG2] });
+    await nextTick();
+    expect(wrapper.get(".focus-now-preview-image").attributes("src")).toBe("data:image/png;base64,BBB");
+    wrapper.unmount();
+  });
+
+  it("预览中的图片全部删光才收起浮层", async () => {
+    const wrapper = mountModal({ images: [IMG] });
+    wrapper.findComponent({ name: "ImagePanel" }).vm.$emit("preview", "i1");
+    await nextTick();
+    await wrapper.setProps({ images: [] });
+    await nextTick();
+    expect(wrapper.find(".focus-now-preview").exists()).toBe(false);
+    wrapper.unmount();
+  });
+
+  it("Ctrl+C 复制、Ctrl+V 贴到当前图之后（placement after）", async () => {
+    const wrapper = mountModal({ images: [IMG] });
+    wrapper.findComponent({ name: "ImagePanel" }).vm.$emit("preview", "i1");
+    await nextTick();
+
+    const copy = new KeyboardEvent("keydown", { key: "c", ctrlKey: true, bubbles: true, cancelable: true });
+    document.body.dispatchEvent(copy);
+    await nextTick();
+    expect(wrapper.emitted("copyImage")?.[0]).toEqual(["i1"]);
+
+    const paste = new KeyboardEvent("keydown", { key: "v", ctrlKey: true, bubbles: true, cancelable: true });
+    document.body.dispatchEvent(paste);
+    await nextTick();
+    const request = wrapper.emitted("pasteImage")?.[0]?.[0] as { placement: string; targetId: string };
+    expect(request.placement).toBe("after");
+    expect(request.targetId).toBe("i1");
     wrapper.unmount();
   });
 

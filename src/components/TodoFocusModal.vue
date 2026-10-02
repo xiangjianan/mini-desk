@@ -1,9 +1,12 @@
 <script setup lang="ts">
 import { computed, nextTick, onBeforeUnmount, onMounted, ref, watch } from "vue";
-import { NModal } from "naive-ui";
+import { NIcon, NModal } from "naive-ui";
+import { AddOutline, ChevronDownOutline, ChevronUpOutline, CloseOutline, CreateOutline, RemoveOutline, TrashOutline } from "@vicons/ionicons5";
 import type { AppLanguage, ImagePasteRequest, LineItem, StoredImage } from "../types";
 import { getUiText } from "../state/i18n";
 import { formatFocusDuration } from "../state/todos";
+import { isTextEntryTarget } from "../utils/dom";
+import { clamp } from "../utils/math";
 import type { PolishKind, PolishResult, PolishStyle } from "../sync/polishClient";
 import TextPanel from "./TextPanel.vue";
 import ImagePanel from "./ImagePanel.vue";
@@ -75,26 +78,132 @@ const displayMs = computed(() => props.baseMs + Math.max(0, nowTick.value - segm
 const displayDuration = computed(() => formatFocusDuration(displayMs.value));
 const displayDurationIso = computed(() => `PT${Math.ceil(displayMs.value / 1000)}S`);
 
-// —— 贴图预览/编辑：内嵌在右侧记事本区上方的浮层（不离开弹窗），记事本在下层原样保留 ——
+// —— 贴图预览/编辑：内嵌在右侧记事本区上方的浮层（不离开弹窗），记事本在下层原样保留。
+//    工具栏与缩放/拖拽/键盘交互完全复刻主页面 ImagePreview（.preview-actions /
+//    .preview-stage 全局样式直接复用），差异只在：数据源是 focusImages、保存经
+//    saveImage 上抛 App、关预览是收浮层而非撤全屏。 ——
+const MIN_SCALE = 0.3;
+const MAX_SCALE = 5;
+const ZOOM_STEP = 0.1;
+const DOUBLE_CLICK_SCALE = 2;
+
 const activePreviewId = ref<string>();
 const editorActive = ref(false);
 const previewRef = ref<HTMLElement>();
+const previewImageRef = ref<HTMLImageElement>();
+const editorRef = ref<InstanceType<typeof ImageEditor> | null>(null);
+const scale = ref(1);
+const offset = ref({ x: 0, y: 0 });
+const dragging = ref(false);
+const start = ref({ x: 0, y: 0, ox: 0, oy: 0 });
+// 删除预览中的图片后按主页面口径跳邻图：记录最近的下标，悬空时按它选邻居。
+const lastPreviewIndex = ref(0);
 
 const previewImage = computed(() =>
   props.images.find((image) => image.id === activePreviewId.value));
+const activeIndex = computed(() =>
+  props.images.findIndex((image) => image.id === activePreviewId.value));
+const canNavigatePrevious = computed(() => activeIndex.value > 0);
+const canNavigateNext = computed(() => activeIndex.value >= 0 && activeIndex.value < props.images.length - 1);
+const activeImageStyle = computed(() => ({
+  transform: `translate(${offset.value.x}px, ${offset.value.y}px) scale(${scale.value})`,
+}));
+
+function clampScale(value: number): number {
+  return Number(clamp(value, MIN_SCALE, MAX_SCALE).toFixed(2));
+}
+
+function adjustZoom(delta: number): void {
+  scale.value = clampScale(scale.value + delta);
+  if (scale.value === 1) offset.value = { x: 0, y: 0 };
+}
+
+function getAnchoredZoomOffset(event: MouseEvent | WheelEvent, nextScale: number): { x: number; y: number } {
+  const target = event.currentTarget instanceof HTMLElement ? event.currentTarget : null;
+  if (!target || scale.value <= 0) return offset.value;
+  const rect = target.getBoundingClientRect();
+  const centerX = rect.left + rect.width / 2;
+  const centerY = rect.top + rect.height / 2;
+  const pointX = event.clientX - centerX;
+  const pointY = event.clientY - centerY;
+  const sourceX = (pointX - offset.value.x) / scale.value;
+  const sourceY = (pointY - offset.value.y) / scale.value;
+  return {
+    x: Number((pointX - nextScale * sourceX).toFixed(2)),
+    y: Number((pointY - nextScale * sourceY).toFixed(2)),
+  };
+}
+
+function toggleZoom(event: MouseEvent): void {
+  if (scale.value === 1) {
+    offset.value = getAnchoredZoomOffset(event, DOUBLE_CLICK_SCALE);
+    scale.value = DOUBLE_CLICK_SCALE;
+    return;
+  }
+  scale.value = 1;
+  offset.value = { x: 0, y: 0 };
+}
+
+function wheel(event: WheelEvent): void {
+  event.preventDefault();
+  if (!event.ctrlKey && !event.metaKey) return;
+  const nextScale = clampScale(scale.value + (event.deltaY < 0 ? ZOOM_STEP : -ZOOM_STEP));
+  if (nextScale === scale.value) return;
+  offset.value = getAnchoredZoomOffset(event, nextScale);
+  scale.value = nextScale;
+  if (scale.value === 1) offset.value = { x: 0, y: 0 };
+}
+
+function down(event: MouseEvent): void {
+  dragging.value = true;
+  start.value = { x: event.clientX, y: event.clientY, ox: offset.value.x, oy: offset.value.y };
+}
+
+function move(event: MouseEvent): void {
+  if (!dragging.value) return;
+  offset.value = {
+    x: start.value.ox + event.clientX - start.value.x,
+    y: start.value.oy + event.clientY - start.value.y,
+  };
+}
+
+function navigateFocus(direction: number): boolean {
+  if (direction < 0 && !canNavigatePrevious.value) return false;
+  if (direction > 0 && !canNavigateNext.value) return false;
+  const next = props.images[activeIndex.value + direction];
+  if (next) {
+    activePreviewId.value = next.id;
+    editorActive.value = false;
+  }
+  return true;
+}
+
+function focusPreviewSurface(): void {
+  previewRef.value?.focus({ preventScroll: true });
+}
+
+function navigateFromToolbar(direction: number): void {
+  if (navigateFocus(direction)) focusPreviewSurface();
+}
 
 function openPreview(id: string): void {
   activePreviewId.value = id;
   editorActive.value = false;
 }
 
-// 打开/切换预览即把焦点收进浮层：回车进编辑、空格关预览的键盘语义随即生效，
-// 也避免焦点滞留在缩略卡按钮上让 Enter 语义分叉（浮层是 tabindex=-1 的容器，
-// 不进 Tab 序列、不抢屏幕阅读器焦点语义）。
+// 打开/切换预览：重置缩放/拖拽态（主页面同口径）并把焦点收进浮层——回车进编辑、
+// 空格关预览的键盘语义随即生效（浮层是 tabindex=-1 容器，不进 Tab 序列）。
 watch(activePreviewId, async (id) => {
+  scale.value = 1;
+  offset.value = { x: 0, y: 0 };
+  dragging.value = false;
   if (!id) return;
   await nextTick();
-  previewRef.value?.focus({ preventScroll: true });
+  focusPreviewSurface();
+});
+
+watch(activeIndex, (index) => {
+  if (index >= 0) lastPreviewIndex.value = index;
 });
 
 function clearPreview(): void {
@@ -111,32 +220,98 @@ function exitEditor(): void {
   editorActive.value = false;
 }
 
-// 预览/编辑浮层的键盘语义（document 捕获阶段，浮层关闭即摘除）：
-// - 预览态：Esc/空格关预览；回车进编辑（焦点在按钮等交互元素上时不抢键）。
-// - 编辑态：Esc 退出编辑回预览（ImageEditor 自身只拦撤销/重做）。
-// - 预览打开期间 Esc 必须截停：外层 NModal 的 FocusTrap 在冒泡阶段收 Esc
-//   会关掉整个弹窗（专注会话被误暂停），捕获层先到先得。
+// 键盘语义完全复刻 ImagePreview.handleKeydown：Esc/空格关、回车编辑、5 复制、
+// w/a/s/d 翻页、Delete 删除、Ctrl+C/Ctrl+V 复制/贴到图后；编辑态回车保存、
+// Esc 关整预览。document 捕获阶段截停——外层 NModal 的 FocusTrap 在冒泡阶段
+// 收 Esc 会关掉整个弹窗（专注会话被误暂停）。
 function handlePreviewKeydown(event: KeyboardEvent): void {
-  if (event.key === "Escape") {
+  if (!activePreviewId.value) return;
+  const key = event.key.toLowerCase();
+  if (editorActive.value && isTextEntryTarget(event.target)) return;
+  if (editorActive.value && event.key === "Enter") {
     event.preventDefault();
     event.stopPropagation();
-    if (editorActive.value) exitEditor();
-    else clearPreview();
+    editorRef.value?.saveImage();
     return;
   }
-  if (editorActive.value) return;
-  const onInteractiveTarget = event.target instanceof HTMLElement &&
-    Boolean(event.target.closest("button, input, textarea, [contenteditable]"));
-  if (onInteractiveTarget) return;
+  if (editorActive.value && event.key === "Escape") {
+    event.preventDefault();
+    event.stopPropagation();
+    clearPreview();
+    return;
+  }
+  if (editorActive.value && isPreviewShortcutKey(event)) {
+    event.preventDefault();
+    event.stopPropagation();
+    return;
+  }
+  if (!editorActive.value && (event.ctrlKey || event.metaKey)) {
+    if (key === "c") {
+      event.preventDefault();
+      event.stopPropagation();
+      if (previewImage.value) emit("copyImage", previewImage.value.id);
+      return;
+    }
+    if (key === "v") {
+      const anchor = previewImageRef.value ?? previewRef.value;
+      if (anchor && previewImage.value) {
+        event.preventDefault();
+        event.stopPropagation();
+        emit("pasteImage", { placement: "after", targetId: previewImage.value.id, anchor });
+      }
+      return;
+    }
+  }
+  if (event.key === "Escape" || event.key === " ") {
+    event.preventDefault();
+    event.stopPropagation();
+    clearPreview();
+    return;
+  }
   if (event.key === "Enter") {
     event.preventDefault();
+    event.stopPropagation();
     enterEditor();
     return;
   }
-  if (event.key === " " || event.code === "Space") {
+  if (event.key === "5") {
     event.preventDefault();
-    clearPreview();
+    event.stopPropagation();
+    if (previewImage.value) emit("copyImage", previewImage.value.id);
+    return;
   }
+  if (key === "w" || key === "a") {
+    event.preventDefault();
+    event.stopPropagation();
+    navigateFocus(-1);
+    return;
+  }
+  if (key === "s" || key === "d") {
+    event.preventDefault();
+    event.stopPropagation();
+    navigateFocus(1);
+    return;
+  }
+  if (event.key === "Delete" || event.key === "Backspace") {
+    event.preventDefault();
+    event.stopPropagation();
+    if (previewImage.value) emit("deleteImage", previewImage.value.id);
+  }
+}
+
+function isPreviewShortcutKey(event: KeyboardEvent): boolean {
+  const key = event.key.toLowerCase();
+  return key === "escape"
+    || key === " "
+    || key === "spacebar"
+    || key === "enter"
+    || key === "5"
+    || key === "backspace"
+    || key === "delete"
+    || key === "w"
+    || key === "a"
+    || key === "s"
+    || key === "d";
 }
 
 watch(() => Boolean(activePreviewId.value), (open) => {
@@ -144,9 +319,17 @@ watch(() => Boolean(activePreviewId.value), (open) => {
   else document.removeEventListener("keydown", handlePreviewKeydown, { capture: true });
 });
 
-// 防悬空 id：预览中的图片被删后收起浮层（连同编辑态）。
+// 预览中的图片被删：按主页面口径跳邻图（同侧邻居优先），全部删光才收浮层。
+// 主动关闭（clearPreview 已把 activePreviewId 清空）不算悬空，不复活。
 watch(() => props.images.some((image) => image.id === activePreviewId.value), (exists, was) => {
   if (exists || !was) return;
+  if (!activePreviewId.value) return;
+  const neighbor = props.images[Math.min(lastPreviewIndex.value, props.images.length - 1)];
+  if (neighbor) {
+    activePreviewId.value = neighbor.id;
+    editorActive.value = false;
+    return;
+  }
   clearPreview();
 });
 
@@ -230,9 +413,8 @@ function handleModalShow(value: boolean): void {
             @drop-files="(files: File[], _anchor: HTMLElement | undefined, targetId: string | undefined) => emit('dropImageFiles', files, targetId)"
           />
         </aside>
-        <!-- 右侧区域 = 记事本 + 预览/编辑浮层：点左栏缩略图在右侧看大图，回车进编辑，
-             空格/Esc 关预览回到记事本。浮层绝对定位盖住（而非 v-show 藏起记事本）：
-             display:none 会丢记事本滚动位置。 -->
+        <!-- 右侧区域 = 记事本 + 预览/编辑浮层：浮层绝对定位盖住（而非 v-show 藏起
+             记事本——display:none 会丢滚动位置），关预览即原样露出。 -->
         <section class="focus-now-notes">
           <TextPanel
             title-id="focus-now-notes-title"
@@ -250,9 +432,14 @@ function handleModalShow(value: boolean): void {
             class="focus-now-preview"
             tabindex="-1"
             :aria-label="uiText.todo.focusImagesLabel"
+            @mousemove="move"
+            @mouseup="dragging = false"
+            @mouseleave="dragging = false"
+            @selectstart.prevent
           >
             <ImageEditor
               v-if="editorActive && previewImage?.src"
+              ref="editorRef"
               class="focus-now-editor"
               :image="previewImage"
               :language="language"
@@ -260,31 +447,79 @@ function handleModalShow(value: boolean): void {
               @save="(payload: FocusImageSavePayload) => emit('saveImage', payload)"
             />
             <template v-else>
-              <img class="focus-now-preview-image" :src="previewImage?.src ?? ''" :alt="uiText.todo.focusImagesLabel" draggable="false" />
-              <div class="focus-now-preview-toolbar" role="toolbar" :aria-label="uiText.todo.focusImagesLabel">
+              <div class="preview-stage focus-now-preview-stage" @wheel="wheel" @mousedown="down">
+                <img
+                  ref="previewImageRef"
+                  :key="activePreviewId"
+                  class="focus-now-preview-image"
+                  :src="previewImage?.src ?? ''"
+                  :alt="uiText.todo.focusImagesLabel"
+                  :style="activeImageStyle"
+                  draggable="false"
+                  @dblclick.stop.prevent="toggleZoom"
+                />
+              </div>
+              <div class="preview-actions" role="toolbar" :aria-label="uiText.preview.help">
                 <button
-                  class="focus-now-preview-action"
                   type="button"
-                  :disabled="!previewImage?.src"
-                  @click="enterEditor"
-                >{{ uiText.todo.focusEditImage }}</button>
+                  class="preview-toolbar-button preview-nav-button is-previous"
+                  :aria-label="uiText.preview.previous"
+                  :aria-disabled="!canNavigatePrevious"
+                  :disabled="!canNavigatePrevious"
+                  @click.stop.prevent="navigateFromToolbar(-1)"
+                  @keydown.enter.stop.prevent="navigateFromToolbar(-1)"
+                  @keydown.space.stop.prevent="clearPreview"
+                >
+                  <NIcon size="20">
+                    <ChevronUpOutline />
+                  </NIcon>
+                </button>
                 <button
-                  class="focus-now-preview-action"
                   type="button"
-                  @click="previewImage && emit('copyImage', previewImage.id)"
-                >{{ uiText.common.copy }}</button>
+                  class="preview-toolbar-button preview-nav-button is-next"
+                  :aria-label="uiText.preview.next"
+                  :aria-disabled="!canNavigateNext"
+                  :disabled="!canNavigateNext"
+                  @click.stop.prevent="navigateFromToolbar(1)"
+                  @keydown.enter.stop.prevent="navigateFromToolbar(1)"
+                  @keydown.space.stop.prevent="clearPreview"
+                >
+                  <NIcon size="20">
+                    <ChevronDownOutline />
+                  </NIcon>
+                </button>
+                <button type="button" class="preview-toolbar-button preview-zoom-button is-zoom-out" :aria-label="uiText.preview.zoomOut" @click.stop.prevent="adjustZoom(-ZOOM_STEP)">
+                  <NIcon size="18">
+                    <RemoveOutline />
+                  </NIcon>
+                </button>
+                <button type="button" class="preview-toolbar-button preview-zoom-button is-zoom-in" :aria-label="uiText.preview.zoomIn" @click.stop.prevent="adjustZoom(ZOOM_STEP)">
+                  <NIcon size="18">
+                    <AddOutline />
+                  </NIcon>
+                </button>
+                <button type="button" class="preview-toolbar-button is-edit" :aria-label="uiText.common.edit" @click.stop.prevent="enterEditor">
+                  <NIcon size="18">
+                    <CreateOutline />
+                  </NIcon>
+                </button>
+                <button type="button" class="preview-toolbar-button is-delete" :aria-label="uiText.common.delete" @click.stop.prevent="previewImage && emit('deleteImage', previewImage.id)">
+                  <NIcon size="18">
+                    <TrashOutline />
+                  </NIcon>
+                </button>
                 <button
-                  class="focus-now-preview-action is-danger"
                   type="button"
-                  @click="previewImage && emit('deleteImage', previewImage.id)"
-                >{{ uiText.common.delete }}</button>
-                <button
-                  class="focus-now-preview-close"
-                  type="button"
-                  :aria-label="uiText.todo.focusClosePreview"
-                  :title="uiText.todo.focusClosePreview"
-                  @click="clearPreview"
-                >{{ uiText.todo.focusClosePreview }}</button>
+                  class="preview-toolbar-button is-close"
+                  :aria-label="uiText.preview.close"
+                  @click.stop.prevent="clearPreview"
+                  @keydown.enter.stop.prevent="clearPreview"
+                  @keydown.space.stop.prevent="clearPreview"
+                >
+                  <NIcon size="18">
+                    <CloseOutline />
+                  </NIcon>
+                </button>
               </div>
             </template>
           </div>
