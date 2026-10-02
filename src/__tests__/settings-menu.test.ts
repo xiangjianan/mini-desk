@@ -147,7 +147,7 @@ describe("SettingsMenu", () => {
     });
 
     // Promoted to a top-level entry renamed 手机速记, directly below the 数据 group
-    // (dropdownStub renders parents before children, so the head order pins the position).
+    // (dropdownStub renders parents before children, so the flattened order pins the position).
     expect(wrapper.find('[data-key="pair-inbox"]').text()).toBe("手机速记");
     expect(wrapper.find('[data-key="pair-inbox"]').classes()).not.toContain("dropdown-child-option");
     const keys = wrapper.findAll(".dropdown-option").map((option) => option.attributes("data-key"));
