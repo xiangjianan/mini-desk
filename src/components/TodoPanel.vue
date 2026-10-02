@@ -19,6 +19,7 @@ import {
   Star,
   StarOutline,
   SwapHorizontalOutline,
+  SyncOutline,
   TimerOutline,
   TrashOutline,
 } from "@vicons/ionicons5";
@@ -71,10 +72,14 @@ const props = withDefaults(defineProps<{
   language?: AppLanguage;
   moveTargets?: WorkspaceMoveTarget[];
   polish?: (kind: PolishKind, text: string, style?: PolishStyle) => Promise<PolishResult>;
+  inboxSyncEnabled?: boolean;
+  inboxSyncing?: boolean;
 }>(), {
   notificationFlashKeys: () => [],
   language: "zh",
   moveTargets: () => [],
+  inboxSyncEnabled: false,
+  inboxSyncing: false,
 });
 
 const emit = defineEmits<{
@@ -106,6 +111,7 @@ const emit = defineEmits<{
   moveListToWorkspace: [listId: TodoListId, workspaceId: string];
   moveTodoToWorkspace: [period: TodoPeriod, todoId: string, workspaceId: string, listId: TodoListId];
   polishMessage: [phase: SmartPastePhase, message: string, anchor: HTMLElement | undefined];
+  syncInbox: [];
 }>();
 
 const focusedListId = ref<TodoListId | null>(null);
@@ -1670,6 +1676,21 @@ function buildTodoListEntries(period: TodoListId, todos: TodoItem[], deferredDon
   <section ref="panelRef" class="panel todo-panel" aria-labelledby="todo-title" @contextmenu="openPanelMenu" @dragleave="handleTodoDragLeave" @drop="handleTodoDragLeave" @dragend="handleTodoDragEnd">
     <div class="panel-header desk-zone-heading">
       <h2 id="todo-title"><NIcon :component="CheckboxOutline" /><span>{{ uiText.desk.reminders }}</span></h2>
+      <!-- 手机速记手动同步：当前工作区已配对才渲染；拉取中旋转禁用。绝对居中见 desk.css。 -->
+      <button
+        v-if="props.inboxSyncEnabled"
+        type="button"
+        class="icon-button inbox-sync-button"
+        :class="{ 'is-syncing': props.inboxSyncing }"
+        :disabled="props.inboxSyncing"
+        :aria-busy="props.inboxSyncing ? 'true' : undefined"
+        :aria-label="uiText.app.syncInbox"
+        :title="uiText.app.syncInbox"
+        data-testid="inbox-sync"
+        @click.stop="emit('syncInbox')"
+      >
+        <NIcon :component="SyncOutline" />
+      </button>
       <div class="header-actions">
         <button type="button" class="icon-button" :aria-label="uiText.todo.newList" :title="uiText.todo.newList"
           @click.stop="openCreateListDialog($event.currentTarget as HTMLElement)"><NIcon :component="AddOutline" /></button>

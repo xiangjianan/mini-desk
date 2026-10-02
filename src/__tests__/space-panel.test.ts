@@ -624,3 +624,31 @@ describe("SpacePanel 跨空间移动", () => {
     wrapper.unmount();
   });
 });
+
+describe("手机速记手动同步按钮", () => {
+  it("未配对不渲染；已配对渲染并 emit syncInbox", async () => {
+    const spaces: WorkspaceSpace[] = [{ id: "s1", title: "便签", lines: [] }];
+    const hidden = mount(SpacePanel, {
+      props: { spaces, activeSpaceId: "s1" },
+      global: { stubs: { Dropdown: dropdownStub, NDropdown: dropdownStub } },
+    });
+    expect(hidden.find('[data-testid="inbox-sync"]').exists()).toBe(false);
+    hidden.unmount();
+
+    const wrapper = mount(SpacePanel, {
+      props: { spaces, activeSpaceId: "s1", inboxSyncEnabled: true },
+      global: { stubs: { Dropdown: dropdownStub, NDropdown: dropdownStub } },
+    });
+    await wrapper.get('[data-testid="inbox-sync"]').trigger("click");
+    expect(wrapper.emitted("syncInbox")).toHaveLength(1);
+    wrapper.unmount();
+  });
+
+  it("desk.css 契约：按钮在标题栏几何居中", () => {
+    const styles = readFileSync(resolve(__dirname, "../desk.css"), "utf8");
+    const bodies = ruleBodies(styles, ".workbench-zone .panel-header .inbox-sync-button");
+    expect(bodies.length).toBeGreaterThan(0);
+    expect(bodies.join("\n")).toContain("left: 50%");
+    expect(bodies.join("\n")).toContain("translateX(-50%)");
+  });
+});
