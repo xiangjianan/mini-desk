@@ -89,6 +89,7 @@ const DOUBLE_CLICK_SCALE = 2;
 
 const activePreviewId = ref<string>();
 const editorActive = ref(false);
+const imageFileInput = ref<HTMLInputElement>();
 const previewRef = ref<HTMLElement>();
 const previewImageRef = ref<HTMLImageElement>();
 const editorRef = ref<InstanceType<typeof ImageEditor> | null>(null);
@@ -209,6 +210,14 @@ watch(activeIndex, (index) => {
 function clearPreview(): void {
   activePreviewId.value = undefined;
   editorActive.value = false;
+}
+
+/** 「添加图片」：原生文件选择 → 上抛 dropImageFiles（App 落 focusImages，同拖放链路）。 */
+function handleImageFilesPicked(event: Event): void {
+  const input = event.target as HTMLInputElement;
+  const files = Array.from(input.files ?? []);
+  input.value = "";
+  if (files.length) emit("dropImageFiles", files);
 }
 
 function enterEditor(): void {
@@ -404,6 +413,28 @@ function handleModalShow(value: boolean): void {
       </header>
       <div class="focus-now-body">
         <aside class="focus-now-images" :aria-label="uiText.todo.focusImagesLabel">
+          <div class="focus-now-images-toolbar">
+            <button
+              class="focus-now-add-image"
+              type="button"
+              :aria-label="uiText.todo.focusAddImage"
+              :title="uiText.todo.focusAddImage"
+              @click="imageFileInput?.click()"
+            >
+              <NIcon size="14" aria-hidden="true">
+                <AddOutline />
+              </NIcon>
+              {{ uiText.todo.focusAddImage }}
+            </button>
+            <input
+              ref="imageFileInput"
+              type="file"
+              accept="image/*"
+              multiple
+              hidden
+              @change="handleImageFilesPicked"
+            />
+          </div>
           <ImagePanel
             :title="uiText.todo.focusImagesLabel"
             :images="images"

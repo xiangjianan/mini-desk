@@ -95,10 +95,24 @@ describe("TodoFocusModal", () => {
     const wrapper = mountModal();
     const textPanel = wrapper.findComponent({ name: "TextPanel" });
     expect(textPanel.props("lines")).toEqual([{ text: "第一行", indent: 0 }]);
-    expect(textPanel.props("placeholder")).toContain("随手记");
+    expect(textPanel.props("placeholder")).toContain("左边贴图");
     textPanel.vm.$emit("update", [{ text: "新", indent: 0 }]);
     await nextTick();
     expect(wrapper.emitted("notesUpdate")?.[0]).toEqual([[{ text: "新", indent: 0 }]]);
+  });
+
+  it("「添加图片」按钮存在且文件选择上抛 dropImageFiles", async () => {
+    const wrapper = mountModal();
+    expect(wrapper.get(".focus-now-add-image").text()).toContain("添加图片");
+
+    const input = wrapper.get("input[type=file]");
+    const file = new File(["x"], "a.png", { type: "image/png" });
+    Object.defineProperty(input.element, "files", { value: [file] });
+    await input.trigger("change");
+    expect(wrapper.emitted("dropImageFiles")?.[0]).toEqual([[file]]);
+    // 选择后重置 input，便于连续添加。
+    expect((input.element as HTMLInputElement).value).toBe("");
+    wrapper.unmount();
   });
 
   it("ImagePanel hideHeader 渲染且 paste 事件上抛", async () => {

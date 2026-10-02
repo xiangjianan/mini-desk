@@ -7841,12 +7841,14 @@ body:has(.image-preview) .n-modal-container:has(.focus-now-modal) .n-modal-mask 
 .focus-now-body {
   flex: 1 1 auto;
   display: grid;
-  grid-template-columns: minmax(96px, 10%) minmax(0, 1fr);
+  grid-template-columns: minmax(120px, 15%) minmax(0, 1fr);
   gap: 12px;
   min-height: 0;
 }
 
 .focus-now-images {
+  display: flex;
+  flex-direction: column;
   min-width: 0;
   min-height: 0;
   overflow: hidden;
@@ -7854,8 +7856,39 @@ body:has(.image-preview) .n-modal-container:has(.focus-now-modal) .n-modal-mask 
   border-radius: var(--radius);
 }
 
+/* 贴图条顶部「添加图片」：15% 宽窄条里占满一行的主行动按钮（左图右文提示的左半）。 */
+.focus-now-images-toolbar {
+  flex: none;
+  padding: 8px;
+  border-bottom: 1px solid var(--line-subtle);
+}
+
+.focus-now-add-image {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 4px;
+  width: 100%;
+  padding: 6px 8px;
+  border: 1px dashed var(--line-subtle);
+  border-radius: 8px;
+  background: transparent;
+  color: var(--muted);
+  font-size: 12px;
+  line-height: 1;
+  cursor: pointer;
+}
+
+.focus-now-add-image:hover {
+  border-color: var(--accent);
+  color: var(--accent-foreground);
+  background: color-mix(in srgb, var(--accent) 12%, transparent);
+}
+
 .focus-now-images .image-panel {
-  height: 100%;
+  flex: 1 1 auto;
+  min-height: 0;
+  height: auto;
   border-right: 0;
 }
 
@@ -7923,7 +7956,7 @@ body:has(.image-preview) .n-modal-container:has(.focus-now-modal) .n-modal-mask 
 
 @media (max-width: 940px) {
   .focus-now-body {
-    grid-template-columns: 72px minmax(0, 1fr);
+    grid-template-columns: 96px minmax(0, 1fr);
   }
 
   .focus-now-timer {
