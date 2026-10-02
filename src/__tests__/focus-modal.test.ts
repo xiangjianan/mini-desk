@@ -21,8 +21,16 @@ function mountModal(overrides: Record<string, unknown> = {}) {
       images: [],
       ...overrides,
     },
-    global: { stubs: { TextPanel: true, ImagePanel: true } },
+    global: { stubs: { TextPanel: true, ImagePanel: true, ImageEditor: true } },
   });
+}
+
+const IMG = { id: "i1", src: "data:image/png;base64,AAA", createdAt: 1 };
+
+function pressKey(key: string, code?: string): KeyboardEvent {
+  const event = new KeyboardEvent("keydown", { key, code, bubbles: true, cancelable: true });
+  document.body.dispatchEvent(event);
+  return event;
 }
 
 describe("TodoFocusModal", () => {
@@ -63,12 +71,12 @@ describe("TodoFocusModal", () => {
     expect(wrapper.emitted("close")).toHaveLength(1);
   });
 
-  it("mask 与 Esc 均不关闭弹窗（只认右上角 ✕）", async () => {
+  it("mask 不关弹窗；无预览时 Esc 可关（close-on-esc 开启）", async () => {
     const wrapper = mountModal();
     const modal = wrapper.findComponent({ name: "NModal" });
     expect(modal.attributes("mask-closable")).toBe("false");
-    expect(modal.attributes("close-on-esc")).toBe("false");
-    // 即便 update:show(false) 程序化漏进来（兜底转发），仍视作关闭。
+    expect(modal.attributes("close-on-esc")).toBe("true");
+    // update:show(false) 兜底转发仍视作关闭。
     modal.vm.$emit("update:show", false);
     await nextTick();
     expect(wrapper.emitted("close")).toHaveLength(1);
@@ -122,18 +130,91 @@ describe("TodoFocusModal", () => {
     wrapper.unmount();
   });
 
-  it("预览打开时 Esc 只关预览：截停事件、不 emit close", async () => {
-    const wrapper = mountModal({ images: [{ id: "i1", src: "data:image/png;base64,AAA", createdAt: 1 }] });
+  it("预览打开时 Esc 只关预览：截停事件、不 emit close、NModal Esc 关闭临时禁用", async () => {
+    const wrapper = mountModal({ images: [IMG] });
     wrapper.findComponent({ name: "ImagePanel" }).vm.$emit("preview", "i1");
     await nextTick();
+    // 预览期外层 Esc 关闭禁用（防 FocusTrap 在冒泡阶段收 Esc 误关弹窗）。
+    expect(wrapper.findComponent({ name: "NModal" }).attributes("close-on-esc")).toBe("false");
 
-    const escape = new KeyboardEvent("keydown", { key: "Escape", bubbles: true, cancelable: true });
-    document.body.dispatchEvent(escape);
+    const escape = pressKey("Escape");
     await nextTick();
 
     expect(escape.defaultPrevented).toBe(true);
     expect(wrapper.emitted("close")).toBeUndefined();
     expect(wrapper.find(".focus-now-preview").exists()).toBe(false);
+    // 预览收起后恢复 Esc 关弹窗。
+    expect(wrapper.findComponent({ name: "NModal" }).attributes("close-on-esc")).toBe("true");
+    wrapper.unmount();
+  });
+
+  it("空格键关闭预览（不关弹窗）", async () => {
+    const wrapper = mountModal({ images: [IMG] });
+    wrapper.findComponent({ name: "ImagePanel" }).vm.$emit("preview", "i1");
+    await nextTick();
+
+    const space = pressKey(" ", "Space");
+    await nextTick();
+
+    expect(space.defaultPrevented).toBe(true);
+    expect(wrapper.find(".focus-now-preview").exists()).toBe(false);
+    expect(wrapper.emitted("close")).toBeUndefined();
+    wrapper.unmount();
+  });
+
+  it("回车键进入编辑模式，编辑器保存上抛 saveImage", async () => {
+    const wrapper = mountModal({ images: [IMG] });
+    wrapper.findComponent({ name: "ImagePanel" }).vm.$emit("preview", "i1");
+    await nextTick();
+
+    pressKey("Enter");
+    await nextTick();
+
+    const editor = wrapper.findComponent({ name: "ImageEditor" });
+    expect(editor.exists()).toBe(true);
+    editor.vm.$emit("save", { id: "i1", src: "data:image/png;base64,BBB", displayWidth: 2, displayHeight: 2 });
+    await nextTick();
+    expect(wrapper.emitted("saveImage")?.[0]).toEqual([{ id: "i1", src: "data:image/png;base64,BBB", displayWidth: 2, displayHeight: 2 }]);
+    wrapper.unmount();
+  });
+
+  it("工具栏「编辑图片」按钮同样进入编辑模式", async () => {
+    const wrapper = mountModal({ images: [IMG] });
+    wrapper.findComponent({ name: "ImagePanel" }).vm.$emit("preview", "i1");
+    await nextTick();
+
+    await wrapper.get(".focus-now-preview-action").trigger("click");
+    expect(wrapper.findComponent({ name: "ImageEditor" }).exists()).toBe(true);
+    wrapper.unmount();
+  });
+
+  it("编辑态 Esc 退出编辑回预览，不关弹窗", async () => {
+    const wrapper = mountModal({ images: [IMG] });
+    wrapper.findComponent({ name: "ImagePanel" }).vm.$emit("preview", "i1");
+    await nextTick();
+    pressKey("Enter");
+    await nextTick();
+
+    pressKey("Escape");
+    await nextTick();
+
+    expect(wrapper.findComponent({ name: "ImageEditor" }).exists()).toBe(false);
+    expect(wrapper.find(".focus-now-preview").exists()).toBe(true);
+    expect(wrapper.emitted("close")).toBeUndefined();
+    wrapper.unmount();
+  });
+
+  it("编辑器取消回到预览展示", async () => {
+    const wrapper = mountModal({ images: [IMG] });
+    wrapper.findComponent({ name: "ImagePanel" }).vm.$emit("preview", "i1");
+    await nextTick();
+    pressKey("Enter");
+    await nextTick();
+
+    wrapper.findComponent({ name: "ImageEditor" }).vm.$emit("cancel");
+    await nextTick();
+    expect(wrapper.findComponent({ name: "ImageEditor" }).exists()).toBe(false);
+    expect(wrapper.find(".focus-now-preview-image").exists()).toBe(true);
     wrapper.unmount();
   });
 

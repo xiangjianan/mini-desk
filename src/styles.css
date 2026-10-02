@@ -7857,40 +7857,74 @@ body:has(.image-preview) .n-modal-container:has(.focus-now-modal) .n-modal-mask 
   height: 100%;
 }
 
-/* 右侧预览浮层：点左栏缩略图在右侧看大图。绝对定位盖住记事本（而非 v-show
-   藏起——display:none 会丢滚动位置），关预览即原样露出。 */
+/* 右侧预览浮层：点左栏缩略图在右侧看大图（图 + 底部编辑菜单栏），回车切换到
+   编辑器。绝对定位盖住记事本（而非 v-show 藏起——display:none 会丢滚动位置），
+   关预览即原样露出。 */
 .focus-now-preview {
   position: absolute;
   inset: 0;
   display: flex;
-  align-items: center;
-  justify-content: center;
+  flex-direction: column;
   background: var(--card);
   z-index: 1;
 }
 
 .focus-now-preview-image {
-  max-width: 100%;
-  max-height: 100%;
+  flex: 1 1 auto;
+  min-height: 0;
+  width: 100%;
   object-fit: contain;
   user-select: none;
 }
 
+.focus-now-preview-toolbar {
+  flex: none;
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 10px 12px;
+  border-top: 1px solid var(--line-subtle);
+}
+
+.focus-now-preview-action,
 .focus-now-preview-close {
-  position: absolute;
-  right: 12px;
-  bottom: 12px;
+  flex: none;
   padding: 6px 14px;
   border: 1px solid var(--line-subtle);
   border-radius: 999px;
   background: var(--card);
   color: var(--text);
   font-size: 13px;
+  line-height: 1;
   cursor: pointer;
 }
 
+.focus-now-preview-action:disabled {
+  cursor: default;
+  opacity: 0.5;
+}
+
+.focus-now-preview-action:not(:disabled):hover,
 .focus-now-preview-close:hover {
   background: color-mix(in srgb, var(--foreground) 8%, transparent);
+}
+
+.focus-now-preview-action.is-danger {
+  color: #dc2626;
+}
+
+html[data-theme="dark"] .focus-now-preview-action.is-danger {
+  color: #f87171;
+}
+
+.focus-now-preview-close {
+  margin-left: auto;
+}
+
+/* 编辑器铺满预览浮层（裁剪/画笔/文字等完整能力，保存走 saveImage 上抛）。 */
+.focus-now-editor {
+  position: absolute;
+  inset: 0;
 }
 
 @media (max-width: 940px) {

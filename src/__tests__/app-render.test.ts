@@ -6218,6 +6218,110 @@ describe("App shell", () => {
     }
   });
 
+  it("勾选完成即清空专注数据：贴图/笔记/计时连坐，载荷走宽限回收", async () => {
+    vi.useFakeTimers();
+    vi.setSystemTime(new Date("2026-10-02T12:00:00Z").getTime());
+    const restoreIndexedDb = installMemoryImageDb();
+    localStorage.setItem(
+      STORAGE_KEY,
+      JSON.stringify({
+        workspaces: [{
+          ...defaultWorkspace(),
+          todos: {
+            morning: [{
+              id: "t1", text: "写周报", done: false,
+              focusElapsedMs: 90_000,
+              focusNotes: [{ text: "要点", indent: 0 }],
+              focusImages: [{ id: "img1", payloadId: "pay-1", createdAt: 7 }],
+            }],
+          },
+        }],
+      }),
+    );
+    const deleteSpy = vi.spyOn(imageState, "deleteStoredImage").mockResolvedValue(undefined);
+    const wrapper = mountApp();
+
+    try {
+      expect(wrapper.get(".todo-focus-badge").text()).toContain("0:01");
+      wrapper.getComponent(TodoPanel).vm.$emit("complete", "morning", "t1", true);
+      await flushPromises();
+      await wrapper.vm.$nextTick();
+
+      // 三字段全部清空、徽标消失。
+      const saved = JSON.parse(localStorage.getItem(STORAGE_KEY) || "{}");
+      const todo = saved.workspaces[0].todos.morning[0];
+      expect(todo.done).toBe(true);
+      expect(todo.focusElapsedMs).toBeUndefined();
+      expect(todo.focusNotes).toBeUndefined();
+      expect(todo.focusImages).toBeUndefined();
+      expect(wrapper.find(".todo-focus-badge").exists()).toBe(false);
+
+      // 宽限期内保留（可撤销），期满回收。
+      await vi.advanceTimersByTimeAsync(4_000);
+      expect(deleteSpy).not.toHaveBeenCalledWith("pay-1");
+      await vi.advanceTimersByTimeAsync(1_500);
+      expect(deleteSpy).toHaveBeenCalledWith("pay-1");
+    } finally {
+      wrapper.unmount();
+      restoreIndexedDb();
+      deleteSpy.mockRestore();
+      vi.useRealTimers();
+    }
+  });
+
+  it("专注预览编辑保存写回 focusImages：新载荷落库、旧载荷宽限回收", async () => {
+    vi.useFakeTimers();
+    vi.setSystemTime(new Date("2026-10-02T13:00:00Z").getTime());
+    const restoreIndexedDb = installMemoryImageDb();
+    localStorage.setItem(
+      STORAGE_KEY,
+      JSON.stringify({
+        workspaces: [{
+          ...defaultWorkspace(),
+          todos: {
+            morning: [{
+              id: "t1", text: "写周报", done: false,
+              focusImages: [{ id: "img1", payloadId: "pay-1", createdAt: 7 }],
+            }],
+          },
+        }],
+      }),
+    );
+    const deleteSpy = vi.spyOn(imageState, "deleteStoredImage").mockResolvedValue(undefined);
+    const wrapper = mountApp();
+
+    try {
+      await storeImagePayload({ id: "pay-1", src: "data:image/png;base64,old", createdAt: 7 } as never);
+      wrapper.getComponent(TodoPanel).vm.$emit("focusNow", "morning", "t1");
+      await flushPromises();
+      await wrapper.vm.$nextTick();
+
+      wrapper.getComponent(TodoFocusModal).vm.$emit("saveImage", {
+        id: "img1", src: "data:image/png;base64,new", displayWidth: 3, displayHeight: 4,
+      });
+      await flushPromises();
+      await wrapper.vm.$nextTick();
+
+      const images = wrapper.getComponent(TodoFocusModal).props("images") as Array<{ id: string; payloadId?: string; src?: string; displayWidth?: number }>;
+      expect(images).toHaveLength(1);
+      expect(images[0].payloadId).not.toBe("pay-1"); // 新载荷版本
+      expect(images[0].src).toBe("data:image/png;base64,new");
+      expect(images[0].displayWidth).toBe(3);
+
+      const saved = JSON.parse(localStorage.getItem(STORAGE_KEY) || "{}");
+      expect(saved.workspaces[0].todos.morning[0].focusImages[0].payloadId).not.toBe("pay-1");
+
+      // 旧载荷宽限回收（撤销窗口内可保住）。
+      await vi.advanceTimersByTimeAsync(5_600);
+      expect(deleteSpy).toHaveBeenCalledWith("pay-1");
+    } finally {
+      wrapper.unmount();
+      restoreIndexedDb();
+      deleteSpy.mockRestore();
+      vi.useRealTimers();
+    }
+  });
+
   it("专注弹窗内 TextPanel 笔记写入 focusNotes 并经文本防抖落盘", async () => {
     vi.useFakeTimers();
     localStorage.setItem(

@@ -2290,6 +2290,20 @@ const focusTodo = computed(() => {
   return getTodos(session.period).find((todo) => todo.id === session.id);
 });
 
+// 计时基线防闪零：baseMs 绑定 `focusTodo?.focusElapsedMs ?? 0`，任务对象在整树
+// 替换的任何瞬时缺位都会把计时器闪成 0:00。会话存续期间用最近一次读到的累计
+// 兜底（用户报告过关预览时闪零，亚帧采样未能复现——防御性构造修复），仅会话
+// 真正结束（focusSession 清空）才回落 0。
+const lastFocusBaseMs = ref(0);
+watch(() => focusTodo.value?.focusElapsedMs, (ms) => {
+  if (ms !== undefined) lastFocusBaseMs.value = ms;
+});
+const focusBaseMs = computed(() => {
+  const ms = focusTodo.value?.focusElapsedMs;
+  if (ms !== undefined) return ms;
+  return focusSession.value ? lastFocusBaseMs.value : 0;
+});
+
 /** 打开即开始计时：先水合该任务 focusImages（幽灵条目过滤），再建 session。
  *  水合是异步的：期间数据可能被清空/撤销整树重挂，session 建立前复查任务仍在。 */
 async function openFocusNow(period: TodoPeriod, id: string): Promise<void> {
@@ -2301,7 +2315,11 @@ async function openFocusNow(period: TodoPeriod, id: string): Promise<void> {
   if (todo.focusImages?.length) {
     const hydrated = (await hydrateStoredImages(todo.focusImages)).filter((image) => Boolean(image.src));
     if (!getTodos(period).some((item) => item.id === id)) return;
-    if (hydrated.length !== todo.focusImages.length) {
+    // 水合结果总是写回：不只长度变化时——水合出的 src 必须进 state，否则预览空图、
+    // 编辑入口被禁用（保存时 serialize 会把 src 再剥掉，无持久化副作用）。
+    const changed = hydrated.length !== todo.focusImages.length
+      || hydrated.some((image, index) => image.src !== todo.focusImages?.[index]?.src);
+    if (changed) {
       activeWorkspace.value.todos = updateTodoFocus(activeWorkspace.value.todos, period, id, {
         focusImages: hydrated,
       });
@@ -2364,6 +2382,33 @@ type FocusDestination = { period: TodoPeriod; id: string };
 
 function findFocusTodo(destination: FocusDestination): TodoItem | undefined {
   return getTodos(destination.period).find((item) => item.id === destination.id);
+}
+
+/** 专注预览内编辑保存：新载荷版本落 IndexedDB，元数据原子切换；旧载荷走 5s 撤销
+ * 宽限（撤销快照的保留 id 扫描已覆盖 focusImages，宽限内 Ctrl+Z 可回到旧图）。 */
+async function saveFocusImage(payload: { id: string; src: string; displayWidth: number; displayHeight: number }): Promise<void> {
+  const session = focusSession.value;
+  if (!session) return;
+  const target = findFocusTodo(session)?.focusImages?.find((image) => image.id === payload.id);
+  if (!target) return;
+  const expectedPayloadId = getImagePayloadId(target);
+  const replacement: StoredImage = {
+    ...target,
+    payloadId: createId(),
+    src: payload.src,
+    displayWidth: payload.displayWidth,
+    displayHeight: payload.displayHeight,
+  };
+  try {
+    await storeImagePayload(replacement);
+  } catch {
+    if (shouldBlockBoardEffects()) return;
+    showBubble("imageStoreFailed", undefined, { hideCompanionAfter: true });
+    return;
+  }
+  replaceFocusImages(session, (list) => list.map((image) =>
+    image.id === payload.id && getImagePayloadId(image) === expectedPayloadId ? replacement : image));
+  scheduleImagePayloadDeletion(expectedPayloadId);
 }
 
 function insertFocusImage(image: StoredImage, destination: FocusDestination, afterId?: string): boolean {
@@ -2769,8 +2814,21 @@ function splitTodo(period: TodoPeriod, id: string, before: string, after: string
 
 function complete(period: TodoPeriod, id: string, done: boolean, anchor?: HTMLElement): void {
   if (!isConfiguredTodoListId(period)) return;
+  // 完成即收档：未完成 → 已完成时连坐清空专注数据（贴图/随手记/累计时长），载荷走
+  // 5s 撤销宽限；取消勾选不恢复——数据已按用户决定随完成清空。
+  const todo = getTodos(period).find((item) => item.id === id);
+  const clearingFocus = done && !todo?.done;
+  const doomedFocusIds = clearingFocus ? collectTodoFocusPayloadIds(todo ? [todo] : []) : [];
   activeWorkspace.value.todos = completeTodo(activeWorkspace.value.todos, period, id, done);
+  if (clearingFocus) {
+    activeWorkspace.value.todos = updateTodoFocus(activeWorkspace.value.todos, period, id, {
+      addElapsedMs: -(todo?.focusElapsedMs ?? 0),
+      focusNotes: [],
+      focusImages: [],
+    });
+  }
   persistNow();
+  doomedFocusIds.forEach((payloadId) => scheduleImagePayloadDeletion(payloadId));
   if (done) showBubble("todoCompleted", anchor);
 }
 
@@ -4038,7 +4096,7 @@ function moveItem<T extends { id: string }>(items: T[], dragId: string, targetId
     <TodoFocusModal
       :show="Boolean(focusSession && focusTodo)"
       :title="focusTodo?.text ?? ''"
-      :base-ms="focusTodo?.focusElapsedMs ?? 0"
+      :base-ms="focusBaseMs"
       :notes="focusTodo?.focusNotes ?? []"
       :images="focusTodo?.focusImages ?? []"
       :language="state.language"
@@ -4049,6 +4107,7 @@ function moveItem<T extends { id: string }>(items: T[], dragId: string, targetId
       @drop-image-files="(files, targetId) => focusSession && addImageFiles(files, undefined, targetId, { period: focusSession.period, id: focusSession.id })"
       @copy-image="copyFocusImage"
       @delete-image="deleteFocusImage"
+      @save-image="saveFocusImage"
       @reorder-images="(dragId, targetId) => focusSession && replaceFocusImages({ period: focusSession.period, id: focusSession.id }, (list) => { moveItem(list, dragId, targetId); return list; })"
       @move-image-to-bottom="(id) => focusSession && replaceFocusImages({ period: focusSession.period, id: focusSession.id }, (list) => { const i = list.findIndex((item) => item.id === id); if (i >= 0 && i < list.length - 1) list.push(...list.splice(i, 1)); return list; })"
     />
