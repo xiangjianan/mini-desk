@@ -9067,6 +9067,87 @@ describe("App inbox pull wiring", () => {
     vi.mocked(pullAllInboxes).mockImplementation(async () => ({ patches: [], reports: [], changed: false, networkFailed: false }));
   });
 
+  it("shows both manual sync buttons only when the active workspace is paired", async () => {
+    const unpaired = mountApp();
+    await flushAsyncComponents();
+    expect(unpaired.findAll('[data-testid="inbox-sync"]')).toHaveLength(0);
+    unpaired.unmount();
+
+    seedPairedState();
+    const wrapper = mountApp();
+    await flushAsyncComponents();
+    expect(wrapper.findAll('[data-testid="inbox-sync"]')).toHaveLength(2);
+    wrapper.unmount();
+  });
+
+  it("manual sync pulls and toasts 已是最新 when nothing new arrives", async () => {
+    vi.useFakeTimers();
+    seedPairedState();
+    const wrapper = mountApp();
+    try {
+      // 气泡文案藏在 CompanionBubble 的 200ms POPOVER_DELAY_MS 定时器后，走假时钟推进断言（同自动路径用例）。
+      await vi.advanceTimersByTimeAsync(300);
+      vi.mocked(pullAllInboxes).mockClear();
+      await wrapper.findAll('[data-testid="inbox-sync"]')[0]!.trigger("click");
+      await vi.advanceTimersByTimeAsync(300);
+      expect(pullAllInboxes).toHaveBeenCalledTimes(1);
+      expect(wrapper.text()).toContain("已是最新");
+      expect(wrapper.text()).not.toContain("收到");
+    } finally {
+      wrapper.unmount();
+      vi.useRealTimers();
+    }
+  });
+
+  it("manual sync toasts 同步失败 when every paired fetch fails", async () => {
+    vi.useFakeTimers();
+    seedPairedState();
+    vi.mocked(pullAllInboxes).mockImplementation(async () => ({ patches: [], reports: [], changed: false, networkFailed: true }));
+    const wrapper = mountApp();
+    try {
+      await vi.advanceTimersByTimeAsync(300);
+      await wrapper.findAll('[data-testid="inbox-sync"]')[1]!.trigger("click");
+      await vi.advanceTimersByTimeAsync(300);
+      expect(wrapper.text()).toContain("同步失败");
+    } finally {
+      wrapper.unmount();
+      vi.useRealTimers();
+    }
+  });
+
+  it("manual sync replays patches and toasts 收到 when new items arrive", async () => {
+    vi.useFakeTimers();
+    seedPairedState();
+    const wrapper = mountApp();
+    try {
+      await vi.advanceTimersByTimeAsync(300);
+      vi.mocked(pullAllInboxes).mockClear();
+      vi.mocked(pullAllInboxes).mockResolvedValueOnce({
+        patches: [
+          {
+            workspaceId: DEFAULT_WORKSPACE_ID,
+            plains: [{ kind: "note", text: "手动同步的速记", createdAt: 999 }],
+            lastSeenAt: 999,
+          },
+        ],
+        reports: [{ workspaceId: DEFAULT_WORKSPACE_ID, imported: 1 }],
+        changed: true,
+        networkFailed: false,
+      });
+      await wrapper.findAll('[data-testid="inbox-sync"]')[0]!.trigger("click");
+      await vi.advanceTimersByTimeAsync(300);
+      expect(wrapper.text()).toContain("收到");
+      const persisted = JSON.parse(localStorage.getItem(STORAGE_KEY) || "{}") as {
+        workspaces: { inbox?: { lastSeenAt: number }; spaces: { lines: { text: string }[] }[] }[];
+      };
+      expect(persisted.workspaces[0].spaces[0].lines.map((line) => line.text)).toContain("手动同步的速记");
+      expect(persisted.workspaces[0].inbox?.lastSeenAt).toBe(999);
+    } finally {
+      wrapper.unmount();
+      vi.useRealTimers();
+    }
+  });
+
   it("pulls inboxes exactly once on startup when a workspace is paired", async () => {
     seedPairedState();
     const wrapper = mountApp();

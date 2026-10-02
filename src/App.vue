@@ -1099,18 +1099,22 @@ function handlePolishStatus(phase: SmartPastePhase, message: string, anchor?: HT
 // in-flight 守卫串行化并发快照（pullAllInboxes 契约要求，否则并发合并会以新 ID 重复导入）。
 let inboxPullTimer: number | undefined;
 let inboxLastPullAt = 0;
-let inboxPullInFlight = false;
+// 在途守卫（手动按钮的忙碌态也读它）：串行化并发快照，防止并发批次以新 ID 重复导入。
+const inboxPullInFlight = ref(false);
 // 轮询跟随当前活动空间：只有停在配置过配对码的空间才拉取；
 // 切到未配对空间时定时/聚焦/启动/Ctrl+S 全部静默，不发任何请求。
 const hasInboxConfigured = computed(() => activeWorkspace.value.inbox !== undefined);
 
-async function pullInboxes(): Promise<void> {
-  if (!appMounted || inboxPullInFlight || !hasInboxConfigured.value) return;
-  inboxPullInFlight = true;
+type InboxSyncOutcome = "applied" | "uptodate" | "failed" | "skipped";
+
+async function pullInboxes(): Promise<InboxSyncOutcome> {
+  if (!appMounted || inboxPullInFlight.value || !hasInboxConfigured.value) return "skipped";
+  inboxPullInFlight.value = true;
   inboxLastPullAt = Date.now();
   try {
-    const { patches, reports, changed } = await pullAllInboxes(state.workspaces);
-    if (!appMounted) return;
+    const { patches, reports, changed, networkFailed } = await pullAllInboxes(state.workspaces);
+    if (!appMounted) return "skipped";
+    if (networkFailed) return "failed";
     // 水位线单调门控：拉取在途期间，跨标签页广播采纳（applyExternalStoredState 整体覆盖）
     // 或同名导入覆盖都可能已把同批条目合入并推进水位线。补丁水位线未严格领先即说明本批
     // 已被应用过，重放会以新 ID 重复导入同文本——先按当前活对象过滤，只保留仍严格领先的补丁。
@@ -1120,7 +1124,7 @@ async function pullInboxes(): Promise<void> {
     });
     // 补丁全部失配（工作区已删/配对已清/水位线已被采纳或导入推进）：无落点或本批已应用过，
     // 直接返回，跳过空转的整组替换与持久化，也不弹「收到 N 条」。
-    if (!changed || applicable.length === 0) return;
+    if (!changed || applicable.length === 0) return "uptodate";
     // 补丁重放：在 await 之后的同一同步块内对当前活对象合并，读-合-写之间零宏任务间隙，
     // 用户在途编辑（同对象字段替换，不换数组身份）无法插入，也就不会被旧快照覆盖。
     // 结构性变更天然安全：工作区已删则按 id 查无目标自然跳过；配对已清除则不在 applicable 中。
@@ -1140,9 +1144,18 @@ async function pullInboxes(): Promise<void> {
         { hideCompanionAfter: true },
       );
     }
+    return "applied";
   } finally {
-    inboxPullInFlight = false;
+    inboxPullInFlight.value = false;
   }
+}
+
+/** 手动同步入口（两面板标题栏按钮）：自动路径忽略返回值，仅手动路径按结果补气泡。 */
+async function requestManualInboxSync(): Promise<void> {
+  const outcome = await pullInboxes();
+  if (!appMounted) return;
+  if (outcome === "uptodate") showBubbleText(uiText.value.app.inboxUpToDate, undefined, { hideCompanionAfter: true });
+  else if (outcome === "failed") showBubbleText(uiText.value.app.inboxSyncFailed, undefined, { hideCompanionAfter: true });
 }
 
 function startInboxPolling(): void {
@@ -3965,6 +3978,8 @@ function moveItem<T extends { id: string }>(items: T[], dragId: string, targetId
           :language="state.language"
           :move-targets="workspaceMoveTargets"
           :polish="polishClipboard"
+          :inbox-sync-enabled="hasInboxConfigured"
+          :inbox-syncing="inboxPullInFlight"
           @title-update="updateTitle"
           @create-list="createTodoList"
           @update-list-title="updateTodoListTitle"
@@ -3993,6 +4008,7 @@ function moveItem<T extends { id: string }>(items: T[], dragId: string, targetId
           @guide="handleGuideClick"
           @declutter="showDeclutterBubble"
           @polish-message="handlePolishStatus"
+          @sync-inbox="requestManualInboxSync"
         />
       </template>
 
@@ -4005,6 +4021,8 @@ function moveItem<T extends { id: string }>(items: T[], dragId: string, targetId
           :language="state.language"
           :move-targets="workspaceMoveTargets"
           :polish="polishClipboard"
+          :inbox-sync-enabled="hasInboxConfigured"
+          :inbox-syncing="inboxPullInFlight"
           @activate="activateSpace"
           @create="createSpace"
           @rename="renameSpace"
@@ -4018,6 +4036,7 @@ function moveItem<T extends { id: string }>(items: T[], dragId: string, targetId
           @guide="(_, anchor, immediate) => handleGuideClick('workspace', anchor, immediate)"
           @blur="handleEditorBlur"
           @polish-message="handlePolishStatus"
+          @sync-inbox="requestManualInboxSync"
         />
       </template>
     </WorkbenchShell>
