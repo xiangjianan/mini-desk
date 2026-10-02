@@ -96,7 +96,7 @@ Desktop clear/rotate of a pairing key fires the relay revocation in the backgrou
 
 手机端首页壳是 `src/components/MobileHome.vue`（文案刻意精简）：未配对 = 桌面优先 Hero（像素猫 logo 随明暗主题切换）+ 三步引导 + 3 组 × 4 位分组输码卡（自动跳组/组首退格回上一组/整段粘贴自动分发，填满 12 位才可提交）；已配对 = 连接状态卡 + 速记卡（slot 注入 `MobileInboxCapture`）+ 同步提示卡。配对校验/换码/复制逻辑留在 App.vue；「更换配对码」用底部 sheet 二次确认（不再是 window.confirm，board 删除类操作仍走 confirm）。viewport meta 带 `viewport-fit=cover` 且配 `apple-mobile-web-app-status-bar-style=black-translucent`（index.html，两者缺一不可，有契约测试守护）：内容延伸到刘海/状态栏下且状态栏透明，由 `.mobile-handoff` 的浅蓝渐变自己涂满状态栏区域（代价：iOS 状态栏符号固定白色，浅色主题下对比度低是已知取舍），`.workbench-shell` 用 safe-area padding 防桌面布局被刘海遮挡，移动断点 940px（cover 后 Pro Max 横屏 932pt 仍属移动布局）；换码 sheet 的 scrim 是 `v-if` + `<Transition>`（关闭淡出后必须卸载）——iOS standalone 采状态栏底色时会读顶部 fixed 元素的背景且无视 opacity，常驻 DOM 的半透明遮罩会让状态栏在关 sheet 后持续发灰（有测试守护 scrim 离场）。
 
-Known test-suite noise (both pre-existing, safe to ignore after one re-run): `npm test` always ends with `Errors 1 error` (an unhandled IndexedDB stub rejection from `app-render.test.ts`), and the `输码验证 unknown/revoked` case in that same file flakes intermittently on full runs.
+Known test-suite noise (both pre-existing, safe to ignore after one re-run): `npm test` always ends with `Errors 1 error` (an unhandled IndexedDB stub rejection from `app-render.test.ts`), and app-render's mobile-inbox cases (e.g. `输码验证 unknown/revoked`, `preserves the capture draft across a code change and re-pairing`) flake intermittently on full runs — each passes standalone; the dynamic-import timing drifts under full-suite load.
 
 ## Conventions
 
