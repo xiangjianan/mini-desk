@@ -114,7 +114,7 @@ describe("SettingsMenu", () => {
     expect(wrapper.emitted("clearData")?.[0]).toEqual([expect.any(HTMLElement)]);
   });
 
-  it("keeps icons on the data menu and its child actions", () => {
+  it("keeps icons on the data menu, its child actions, and the promoted inbox entry", () => {
     const source = readFileSync(resolve(__dirname, "../components/SettingsMenu.vue"), "utf8");
 
     expect(source).toContain("ServerOutline");
@@ -124,6 +124,7 @@ describe("SettingsMenu", () => {
     expect(source).toMatch(/key:\s*"import"[\s\S]*?icon:\s*renderIcon\(CloudUploadOutline\)/);
     expect(source).toMatch(/key:\s*"export-workspace"[\s\S]*?icon:\s*renderIcon\(CloudDownloadOutline\)/);
     expect(source).toMatch(/key:\s*"clear-data"[\s\S]*?icon:\s*renderIcon\(TrashOutline,\s*true\)/);
+    expect(source).toMatch(/key:\s*"pair-inbox"[\s\S]*?icon:\s*renderIcon\(PhonePortraitOutline\)/);
   });
 
   it("pairs a phone from the settings menu for the active workspace", async () => {
@@ -150,7 +151,9 @@ describe("SettingsMenu", () => {
     expect(wrapper.find('[data-key="pair-inbox"]').text()).toBe("手机速记");
     expect(wrapper.find('[data-key="pair-inbox"]').classes()).not.toContain("dropdown-child-option");
     const keys = wrapper.findAll(".dropdown-option").map((option) => option.attributes("data-key"));
-    expect(keys.slice(0, 6)).toEqual(["data", "create-workspace", "import", "export-workspace", "clear-data", "pair-inbox"]);
+    // 锚定 data 组起点而非数组头部：未来在「数据」之前新增一级项不打断本断言。
+    const base = keys.indexOf("data");
+    expect(keys.slice(base, base + 6)).toEqual(["data", "create-workspace", "import", "export-workspace", "clear-data", "pair-inbox"]);
 
     await wrapper.find('[data-key="pair-inbox"]').trigger("click");
 

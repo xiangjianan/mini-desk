@@ -180,7 +180,7 @@ describe("WorkspaceSwitcher", () => {
 });
 
 describe("WorkspaceSwitcher 配对入口", () => {
-  it("每个工作区提供配对手机按钮并 emit pairInbox", async () => {
+  it("每个工作区提供手机速记入口并 emit pairInbox", async () => {
     const wrapper = mount(WorkspaceSwitcher, {
       props: { workspaces, activeWorkspaceId: "a", theme: "light", language: "zh" },
       attachTo: document.body,
