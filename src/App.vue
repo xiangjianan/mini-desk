@@ -3844,8 +3844,11 @@ function moveItem<T extends { id: string }>(items: T[], dragId: string, targetId
       :image-preview-open="Boolean(displayedPreviewId)"
       :zone-visibility="activeWorkspace.zoneVisibility"
       :workspace-id="state.activeWorkspaceId"
+      :inbox-sync-enabled="hasInboxConfigured"
+      :inbox-syncing="inboxPullInFlight"
       @theme="handleThemeClick"
       @toggle-zone="toggleActiveWorkspaceZone"
+      @sync-inbox="requestManualInboxSync"
       @dragover.prevent
       @drop.prevent="handleBoardDrop"
     >
@@ -3978,8 +3981,6 @@ function moveItem<T extends { id: string }>(items: T[], dragId: string, targetId
           :language="state.language"
           :move-targets="workspaceMoveTargets"
           :polish="polishClipboard"
-          :inbox-sync-enabled="hasInboxConfigured"
-          :inbox-syncing="inboxPullInFlight"
           @title-update="updateTitle"
           @create-list="createTodoList"
           @update-list-title="updateTodoListTitle"
@@ -4008,7 +4009,6 @@ function moveItem<T extends { id: string }>(items: T[], dragId: string, targetId
           @guide="handleGuideClick"
           @declutter="showDeclutterBubble"
           @polish-message="handlePolishStatus"
-          @sync-inbox="requestManualInboxSync"
         />
       </template>
 
@@ -4021,8 +4021,6 @@ function moveItem<T extends { id: string }>(items: T[], dragId: string, targetId
           :language="state.language"
           :move-targets="workspaceMoveTargets"
           :polish="polishClipboard"
-          :inbox-sync-enabled="hasInboxConfigured"
-          :inbox-syncing="inboxPullInFlight"
           @activate="activateSpace"
           @create="createSpace"
           @rename="renameSpace"
@@ -4036,7 +4034,6 @@ function moveItem<T extends { id: string }>(items: T[], dragId: string, targetId
           @guide="(_, anchor, immediate) => handleGuideClick('workspace', anchor, immediate)"
           @blur="handleEditorBlur"
           @polish-message="handlePolishStatus"
-          @sync-inbox="requestManualInboxSync"
         />
       </template>
     </WorkbenchShell>

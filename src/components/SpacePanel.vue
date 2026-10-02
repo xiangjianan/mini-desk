@@ -2,7 +2,7 @@
 import { computed, h, nextTick, onMounted, onUnmounted, ref, watch } from "vue";
 import type { Component, VNode } from "vue";
 import { NDropdown, NIcon, NScrollbar } from "naive-ui";
-import { AddOutline, DocumentTextOutline, ClipboardOutline, CreateOutline, SwapHorizontalOutline, SyncOutline, TrashOutline } from "@vicons/ionicons5";
+import { AddOutline, DocumentTextOutline, ClipboardOutline, CreateOutline, SwapHorizontalOutline, TrashOutline } from "@vicons/ionicons5";
 import type { DropdownOption } from "naive-ui";
 import type { AppLanguage, GuideKey, LineItem, WorkspaceMoveTarget, WorkspaceSpace } from "../types";
 import { getUiText } from "../state/i18n";
@@ -20,13 +20,9 @@ const props = withDefaults(defineProps<{
   language?: AppLanguage;
   moveTargets?: WorkspaceMoveTarget[];
   polish?: (kind: PolishKind, text: string, style?: PolishStyle) => Promise<PolishResult>;
-  inboxSyncEnabled?: boolean;
-  inboxSyncing?: boolean;
 }>(), {
   language: "zh",
   moveTargets: () => [],
-  inboxSyncEnabled: false,
-  inboxSyncing: false,
 });
 
 const emit = defineEmits<{
@@ -43,7 +39,6 @@ const emit = defineEmits<{
   moveSpaceToWorkspace: [spaceId: string, workspaceId: string];
   polishMessage: [phase: SmartPastePhase, message: string, anchor: HTMLElement | undefined];
   dropTodo: [payload: string];
-  syncInbox: [];
 }>();
 
 const editingSpaceId = ref<string | null>(null);
@@ -305,21 +300,6 @@ function handleTabsWheel(event: WheelEvent): void {
   >
     <div class="panel-header desk-zone-heading">
       <h2><NIcon :component="DocumentTextOutline" /><span>{{ uiText.desk.notes }}</span></h2>
-      <!-- 手机速记手动同步：当前工作区已配对才渲染；拉取中旋转禁用。绝对居中见 desk.css。 -->
-      <button
-        v-if="props.inboxSyncEnabled"
-        type="button"
-        class="icon-button inbox-sync-button"
-        :class="{ 'is-syncing': props.inboxSyncing }"
-        :disabled="props.inboxSyncing"
-        :aria-busy="props.inboxSyncing ? 'true' : undefined"
-        :aria-label="uiText.app.syncInbox"
-        :title="uiText.app.syncInbox"
-        data-testid="inbox-sync"
-        @click.stop="emit('syncInbox')"
-      >
-        <NIcon :component="SyncOutline" />
-      </button>
       <div class="header-actions">
         <button v-if="props.polish && activeSpace" class="desk-ai-action desk-ai-button desk-smart-paste" type="button"
           :aria-label="uiText.common.smartPaste" :disabled="smartPastePending" :aria-busy="smartPastePending" @mousedown.prevent

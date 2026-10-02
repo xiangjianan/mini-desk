@@ -9067,7 +9067,7 @@ describe("App inbox pull wiring", () => {
     vi.mocked(pullAllInboxes).mockImplementation(async () => ({ patches: [], reports: [], changed: false, networkFailed: false }));
   });
 
-  it("shows both manual sync buttons only when the active workspace is paired", async () => {
+  it("shows the header manual sync button only when the active workspace is paired", async () => {
     const unpaired = mountApp();
     await flushAsyncComponents();
     expect(unpaired.findAll('[data-testid="inbox-sync"]')).toHaveLength(0);
@@ -9076,7 +9076,12 @@ describe("App inbox pull wiring", () => {
     seedPairedState();
     const wrapper = mountApp();
     await flushAsyncComponents();
-    expect(wrapper.findAll('[data-testid="inbox-sync"]')).toHaveLength(2);
+    // 单按钮置于顶栏操作区首位（「显示区域」左侧），样式与其他顶栏 icon-button 一致。
+    const bar = wrapper.get('[data-testid="workbench-command-bar"]');
+    expect(bar.findAll('[data-testid="inbox-sync"]')).toHaveLength(1);
+    const button = bar.get('[data-testid="inbox-sync"]');
+    expect(button.classes()).toContain("icon-button");
+    expect(button.element.compareDocumentPosition(wrapper.get('[data-testid="zone-visibility-trigger"]').element) & Node.DOCUMENT_POSITION_FOLLOWING).toBe(Node.DOCUMENT_POSITION_FOLLOWING);
     wrapper.unmount();
   });
 
@@ -9106,7 +9111,7 @@ describe("App inbox pull wiring", () => {
     const wrapper = mountApp();
     try {
       await vi.advanceTimersByTimeAsync(300);
-      await wrapper.findAll('[data-testid="inbox-sync"]')[1]!.trigger("click");
+      await wrapper.findAll('[data-testid="inbox-sync"]')[0]!.trigger("click");
       await vi.advanceTimersByTimeAsync(300);
       expect(wrapper.text()).toContain("同步失败");
     } finally {

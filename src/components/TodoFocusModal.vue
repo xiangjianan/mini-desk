@@ -390,7 +390,7 @@ function handleModalShow(value: boolean): void {
         <h2 class="focus-now-title" :title="title">{{ title }}</h2>
         <div class="focus-now-header-controls">
           <span class="focus-now-timer-group">
-            <NIcon class="focus-now-timer-icon" :size="32" :aria-label="uiText.todo.focusTimer" aria-hidden="true">
+            <NIcon class="focus-now-timer-icon" :size="28" :aria-label="uiText.todo.focusTimer" aria-hidden="true">
               <TimeOutline />
             </NIcon>
             <time

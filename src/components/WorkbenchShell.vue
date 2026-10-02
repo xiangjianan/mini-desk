@@ -1,6 +1,6 @@
 <script setup lang="ts">
 import { computed, nextTick, onMounted, onUnmounted, ref, watch } from "vue";
-import { SunnyOutline } from "@vicons/ionicons5";
+import { SunnyOutline, SyncOutline } from "@vicons/ionicons5";
 import { NIcon } from "naive-ui";
 import { Moon as LucideMoon, PanelTopClose, PanelTopOpen } from "lucide-vue-next";
 import ZoneVisibilityPopover from "./ZoneVisibilityPopover.vue";
@@ -29,6 +29,9 @@ const props = withDefaults(defineProps<{
   zoneVisibility?: ZoneVisibility;
   /** 区域尺寸按工作区独立存储；缺省回落到旧的共享键（兼容无工作区上下文的挂载）。 */
   workspaceId?: string;
+  /** 手机速记手动同步：当前工作区已配对才渲染顶栏按钮；in-flight 时旋转禁用。 */
+  inboxSyncEnabled?: boolean;
+  inboxSyncing?: boolean;
 }>(), {
   language: DEFAULT_LANGUAGE,
   assetsTitle: "",
@@ -37,6 +40,8 @@ const props = withDefaults(defineProps<{
   imagePreviewOpen: false,
   zoneVisibility: () => ({ assets: true, notes: true, tasks: true, workspace: true }),
   workspaceId: "",
+  inboxSyncEnabled: false,
+  inboxSyncing: false,
 });
 
 // Collapsed-rail labels per zone. Assets and notes follow their editable area
@@ -58,6 +63,7 @@ const expandHint = computed(() => (props.language === "en" ? "Click to expand" :
 const emit = defineEmits<{
   theme: [];
   toggleZone: [zone: ZoneKey];
+  syncInbox: [];
 }>();
 
 defineSlots<{
@@ -720,6 +726,21 @@ onUnmounted(() => {
             <p v-if="slogan" class="workbench-slogan">{{ slogan }}</p>
           </div>
           <div class="workbench-command-actions">
+            <!-- 手机速记手动同步：配对才显示，样式与相邻顶栏 icon-button 一致（同隐藏/主题按钮硬编码中文标签）。 -->
+            <button
+              v-if="props.inboxSyncEnabled"
+              type="button"
+              class="icon-button inbox-sync-button"
+              :class="{ 'is-syncing': props.inboxSyncing }"
+              :disabled="props.inboxSyncing"
+              :aria-busy="props.inboxSyncing ? 'true' : undefined"
+              aria-label="同步手机速记"
+              title="同步手机速记"
+              data-testid="inbox-sync"
+              @click="emit('syncInbox')"
+            >
+              <NIcon :component="SyncOutline" :size="16" />
+            </button>
             <ZoneVisibilityPopover
               :visibility="zoneVisibility"
               :language="language"
