@@ -1,14 +1,11 @@
-import { flushPromises, mount } from "@vue/test-utils";
+import { mount } from "@vue/test-utils";
 import { nextTick } from "vue";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import TodoFocusModal from "../components/TodoFocusModal.vue";
-import ImagePreview from "../components/ImagePreview.vue";
 
 // NModal teleports to <body>（VTU 的 find 无法穿透），按 app-render 等文件的
 // 惯例 mock naive-ui 模块换轻量桩；TextPanel/ImagePanel 用默认桩保留 props
 // 声明，供 findComponent(...).props(...) 断言接线。
-// ImagePreview 不 stub：defineAsyncComponent 的包装组件会按 setupState 变量名被
-// 换成无 props 声明的桩（断言不了接线）——放真组件异步加载后用组件对象查询。
 vi.mock("naive-ui", async () => {
   const { createNaiveUiStubModule } = await import("./helpers/naive-ui-mock");
   return createNaiveUiStubModule();
@@ -38,17 +35,17 @@ describe("TodoFocusModal", () => {
     vi.useRealTimers();
   });
 
-  it("渲染任务标题与初始累计计时（12:34）", () => {
+  it("渲染任务标题与初始累计计时（h:mm）", () => {
     const wrapper = mountModal();
     expect(wrapper.text()).toContain("写周报");
-    expect(wrapper.find(".focus-now-timer").text()).toBe("12:34");
+    expect(wrapper.find(".focus-now-timer").text()).toBe("0:12"); // 754s → 12.5 分钟向下取整
   });
 
-  it("每秒推进计时显示", async () => {
+  it("计时按分钟推进显示", async () => {
     const wrapper = mountModal();
-    vi.advanceTimersByTime(2_000);
+    vi.advanceTimersByTime(60_000);
     await nextTick();
-    expect(wrapper.find(".focus-now-timer").text()).toBe("12:36");
+    expect(wrapper.find(".focus-now-timer").text()).toBe("0:13");
   });
 
   it("baseMs 提升（App checkpoint）后显示接续不跳变", async () => {
@@ -57,7 +54,7 @@ describe("TodoFocusModal", () => {
     await wrapper.setProps({ baseMs: 754_000 + 60_000 });
     vi.advanceTimersByTime(1_000);
     await nextTick();
-    expect(wrapper.find(".focus-now-timer").text()).toBe("13:35"); // 754s + 60s + 1s
+    expect(wrapper.find(".focus-now-timer").text()).toBe("0:13"); // 754s + 60s + 1s
   });
 
   it("关闭按钮 emit close（App 负责合并增量）", async () => {
@@ -66,11 +63,16 @@ describe("TodoFocusModal", () => {
     expect(wrapper.emitted("close")).toHaveLength(1);
   });
 
-  it("NModal update:show(false)（Esc/遮罩关闭）同样 emit close", async () => {
+  it("mask 与 Esc 均不关闭弹窗（只认右上角 ✕）", async () => {
     const wrapper = mountModal();
-    wrapper.findComponent({ name: "NModal" }).vm.$emit("update:show", false);
+    const modal = wrapper.findComponent({ name: "NModal" });
+    expect(modal.attributes("mask-closable")).toBe("false");
+    expect(modal.attributes("close-on-esc")).toBe("false");
+    // 即便 update:show(false) 程序化漏进来（兜底转发），仍视作关闭。
+    modal.vm.$emit("update:show", false);
     await nextTick();
     expect(wrapper.emitted("close")).toHaveLength(1);
+    wrapper.unmount();
   });
 
   it("update:show(true) 不误触发 close", async () => {
@@ -99,21 +101,31 @@ describe("TodoFocusModal", () => {
     expect(wrapper.emitted("pasteImage")).toHaveLength(1);
   });
 
-  it("向 ImagePanel/ImagePreview 传 canEdit=false 抑制编辑入口", async () => {
+  it("向 ImagePanel 传 canEdit=false 抑制编辑入口", () => {
     const wrapper = mountModal({ images: [{ id: "i1", createdAt: 1 }] });
     expect(wrapper.findComponent({ name: "ImagePanel" }).props("canEdit")).toBe(false);
-    wrapper.findComponent({ name: "ImagePanel" }).vm.$emit("preview", "i1");
-    await flushPromises();
-    expect(wrapper.findComponent(ImagePreview).props("canEdit")).toBe(false);
   });
 
-  it("预览打开时 Esc 只关预览：截停事件、不 emit close、走 220ms 两段式淡出", async () => {
-    const wrapper = mountModal({ images: [{ id: "i1", createdAt: 1 }] });
+  it("点左栏缩略图在右侧浮层看大图，点「关预览」回到记事本", async () => {
+    const wrapper = mountModal({ images: [{ id: "i1", src: "data:image/png;base64,AAA", createdAt: 1 }] });
     wrapper.findComponent({ name: "ImagePanel" }).vm.$emit("preview", "i1");
-    await flushPromises();
-    expect(wrapper.findComponent(ImagePreview).exists()).toBe(true);
-    // 双保险：预览期外层专注弹窗的 Esc 关闭被禁用。
-    expect(wrapper.findComponent({ name: "NModal" }).attributes("close-on-esc")).toBe("false");
+    await nextTick();
+
+    const preview = wrapper.get(".focus-now-preview");
+    expect(preview.find("img").attributes("src")).toBe("data:image/png;base64,AAA");
+    // 记事本仍在 DOM（浮层盖住而非卸载，滚动位置得以保留）。
+    expect(wrapper.findComponent({ name: "TextPanel" }).exists()).toBe(true);
+
+    await wrapper.get(".focus-now-preview-close").trigger("click");
+    expect(wrapper.find(".focus-now-preview").exists()).toBe(false);
+    expect(wrapper.findComponent({ name: "TextPanel" }).exists()).toBe(true);
+    wrapper.unmount();
+  });
+
+  it("预览打开时 Esc 只关预览：截停事件、不 emit close", async () => {
+    const wrapper = mountModal({ images: [{ id: "i1", src: "data:image/png;base64,AAA", createdAt: 1 }] });
+    wrapper.findComponent({ name: "ImagePanel" }).vm.$emit("preview", "i1");
+    await nextTick();
 
     const escape = new KeyboardEvent("keydown", { key: "Escape", bubbles: true, cancelable: true });
     document.body.dispatchEvent(escape);
@@ -121,102 +133,57 @@ describe("TodoFocusModal", () => {
 
     expect(escape.defaultPrevented).toBe(true);
     expect(wrapper.emitted("close")).toBeUndefined();
-    // 两段式（App closeImagePreview 同口径）：先落 closing 相位挂淡出，220ms 后才卸载。
-    const fading = wrapper.findComponent(ImagePreview);
-    expect(fading.exists()).toBe(true);
-    expect(fading.props("closing")).toBe(true);
-    expect(fading.props("activeId")).toBe("i1");
-    vi.advanceTimersByTime(220);
-    await nextTick();
-    expect(wrapper.findComponent(ImagePreview).exists()).toBe(false);
-    // 预览关掉后 Esc 双保险恢复。
-    expect(wrapper.findComponent({ name: "NModal" }).attributes("close-on-esc")).toBe("true");
+    expect(wrapper.find(".focus-now-preview").exists()).toBe(false);
     wrapper.unmount();
   });
 
-  it("编辑器 window 捕获层 stopImmediatePropagation 的 Esc 不触发弹窗侧关闭", async () => {
-    const wrapper = mountModal({ images: [{ id: "i1", createdAt: 1 }] });
+  it("贴图条「取消预览」同样收起右侧浮层", async () => {
+    const wrapper = mountModal({ images: [{ id: "i1", src: "data:image/png;base64,AAA", createdAt: 1 }] });
     wrapper.findComponent({ name: "ImagePanel" }).vm.$emit("preview", "i1");
-    await flushPromises();
-
-    // 模拟 ImagePreview 编辑器的 window 捕获处理器（捕获顺序 window → document，
-    // 先于弹窗侧的 document 捕获监听执行）截停 Esc。
-    const editorLikeStopper = (event: KeyboardEvent): void => {
-      event.preventDefault();
-      event.stopImmediatePropagation();
-    };
-    window.addEventListener("keydown", editorLikeStopper, { capture: true });
-    try {
-      document.body.dispatchEvent(new KeyboardEvent("keydown", { key: "Escape", bubbles: true, cancelable: true }));
-      await nextTick();
-      vi.advanceTimersByTime(300);
-      await nextTick();
-
-      expect(wrapper.findComponent(ImagePreview).exists()).toBe(true);
-      expect(wrapper.emitted("close")).toBeUndefined();
-    } finally {
-      window.removeEventListener("keydown", editorLikeStopper, { capture: true });
-      wrapper.unmount();
-    }
-  });
-
-  it("贴图条「取消预览」emit closePreview 走 220ms 两段式淡出", async () => {
-    const wrapper = mountModal({ images: [{ id: "i1", createdAt: 1 }] });
-    wrapper.findComponent({ name: "ImagePanel" }).vm.$emit("preview", "i1");
-    await flushPromises();
-
+    await nextTick();
     wrapper.findComponent({ name: "ImagePanel" }).vm.$emit("closePreview");
     await nextTick();
-
-    const fading = wrapper.findComponent(ImagePreview);
-    expect(fading.exists()).toBe(true);
-    expect(fading.props("closing")).toBe(true);
-
-    vi.advanceTimersByTime(220);
-    await nextTick();
-    expect(wrapper.findComponent(ImagePreview).exists()).toBe(false);
+    expect(wrapper.find(".focus-now-preview").exists()).toBe(false);
     wrapper.unmount();
   });
 
-  it("ImagePreview 自身离场（emit close）后立即卸载，不再等淡出", async () => {
-    const wrapper = mountModal({ images: [{ id: "i1", createdAt: 1 }] });
+  it("show 撤下时重置预览态，重开弹窗不复活陈旧预览", async () => {
+    const wrapper = mountModal({ images: [{ id: "i1", src: "data:image/png;base64,AAA", createdAt: 1 }] });
     wrapper.findComponent({ name: "ImagePanel" }).vm.$emit("preview", "i1");
-    await flushPromises();
-
-    wrapper.findComponent(ImagePreview).vm.$emit("close");
     await nextTick();
-
-    expect(wrapper.findComponent(ImagePreview).exists()).toBe(false);
-    wrapper.unmount();
-  });
-
-  it("show 撤下时重置预览态，重开弹窗不复活陈旧全屏预览", async () => {
-    const wrapper = mountModal({ images: [{ id: "i1", createdAt: 1 }] });
-    wrapper.findComponent({ name: "ImagePanel" }).vm.$emit("preview", "i1");
-    await flushPromises();
-    expect(wrapper.findComponent(ImagePreview).exists()).toBe(true);
+    expect(wrapper.find(".focus-now-preview").exists()).toBe(true);
 
     await wrapper.setProps({ show: false });
     await wrapper.setProps({ show: true });
-    await flushPromises();
+    await nextTick();
 
-    expect(wrapper.findComponent(ImagePreview).exists()).toBe(false);
+    expect(wrapper.find(".focus-now-preview").exists()).toBe(false);
+    wrapper.unmount();
+  });
+
+  it("预览中的图片被删后浮层收起（防悬空 id）", async () => {
+    const wrapper = mountModal({ images: [{ id: "i1", src: "data:image/png;base64,AAA", createdAt: 1 }] });
+    wrapper.findComponent({ name: "ImagePanel" }).vm.$emit("preview", "i1");
+    await nextTick();
+
+    await wrapper.setProps({ images: [] });
+    expect(wrapper.find(".focus-now-preview").exists()).toBe(false);
     wrapper.unmount();
   });
 
   it("show 重开时重置段起点：隐藏期间的空闲间隔不计入", async () => {
     const wrapper = mountModal();
-    vi.advanceTimersByTime(60_000); // 12:34 → 13:34
+    vi.advanceTimersByTime(60_000); // 0:12 → 0:13
     await wrapper.setProps({ show: false });
     vi.advanceTimersByTime(120_000); // 隐藏期间空闲两分钟
 
     await wrapper.setProps({ show: true });
 
-    // 显示回到 baseMs 起点（12:34），空闲的两分钟被丢弃；此后每秒正常推进。
-    expect(wrapper.find(".focus-now-timer").text()).toBe("12:34");
-    vi.advanceTimersByTime(1_000);
+    // 显示回到 baseMs 起点（0:12），空闲的两分钟被丢弃；此后按分钟正常推进。
+    expect(wrapper.find(".focus-now-timer").text()).toBe("0:12");
+    vi.advanceTimersByTime(60_000);
     await nextTick();
-    expect(wrapper.find(".focus-now-timer").text()).toBe("12:35");
+    expect(wrapper.find(".focus-now-timer").text()).toBe("0:13");
     wrapper.unmount();
   });
 
@@ -226,10 +193,10 @@ describe("TodoFocusModal", () => {
 
     await wrapper.setProps({ show: true });
 
-    expect(wrapper.find(".focus-now-timer").text()).toBe("12:34");
-    vi.advanceTimersByTime(2_000);
+    expect(wrapper.find(".focus-now-timer").text()).toBe("0:12");
+    vi.advanceTimersByTime(60_000);
     await nextTick();
-    expect(wrapper.find(".focus-now-timer").text()).toBe("12:36");
+    expect(wrapper.find(".focus-now-timer").text()).toBe("0:13");
     wrapper.unmount();
   });
 
@@ -242,31 +209,5 @@ describe("TodoFocusModal", () => {
     expect(clearIntervalSpy).toHaveBeenCalled();
     wrapper.unmount();
     clearIntervalSpy.mockRestore();
-  });
-
-  it("预览打开时点遮罩不再穿透关闭整个弹窗", async () => {
-    const wrapper = mountModal({ images: [{ id: "i1", createdAt: 1 }] });
-    // 预览关闭时遮罩可点（正常形态不回归）。
-    expect(wrapper.findComponent({ name: "NModal" }).attributes("mask-closable")).toBe("true");
-
-    wrapper.findComponent({ name: "ImagePanel" }).vm.$emit("preview", "i1");
-    await flushPromises();
-
-    // 双保险一（与 close-on-esc 同款绑定）：预览期遮罩不可点。
-    expect(wrapper.findComponent({ name: "NModal" }).attributes("mask-closable")).toBe("false");
-
-    // 双保险二：即便 update:show(false) 漏进来（遮罩路径穿透到 NModal），
-    // 也不 emit close——预览是顶层，此时收起弹窗等于把专注会话误暂停落盘。
-    wrapper.findComponent({ name: "NModal" }).vm.$emit("update:show", false);
-    await nextTick();
-    expect(wrapper.emitted("close")).toBeUndefined();
-
-    // 预览关掉后遮罩路径恢复常态：update:show(false) 正常视作关闭。
-    wrapper.findComponent(ImagePreview).vm.$emit("close");
-    await nextTick();
-    wrapper.findComponent({ name: "NModal" }).vm.$emit("update:show", false);
-    await nextTick();
-    expect(wrapper.emitted("close")).toHaveLength(1);
-    wrapper.unmount();
   });
 });

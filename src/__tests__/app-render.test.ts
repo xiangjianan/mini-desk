@@ -6185,18 +6185,18 @@ describe("App shell", () => {
     const wrapper = mountApp();
 
     try {
-      // 打开专注弹窗：计时从 00:00 起步。
+      // 打开专注弹窗：计时从 0:00 起步。
       wrapper.getComponent(TodoPanel).vm.$emit("focusNow", "morning", "t1");
       await flushPromises();
       await wrapper.vm.$nextTick();
-      expect(wrapper.get(".focus-now-timer").text()).toBe("00:00");
+      expect(wrapper.get(".focus-now-timer").text()).toBe("0:00");
 
       // 前进 90s（跨过 60s checkpoint）：App 把首段增量落盘，弹窗计时继续推进。
       await vi.advanceTimersByTimeAsync(90_000);
       await wrapper.vm.$nextTick();
       const afterCheckpoint = JSON.parse(localStorage.getItem(STORAGE_KEY) || "{}");
       expect(afterCheckpoint.workspaces[0].todos.morning[0].focusElapsedMs).toBeGreaterThanOrEqual(60_000);
-      expect(wrapper.get(".focus-now-timer").text()).toBe("01:30");
+      expect(wrapper.get(".focus-now-timer").text()).toBe("0:01");
 
       // 关闭（=暂停）：合并尾段增量并落盘，列表行出现累计徽标。
       await wrapper.get(".focus-now-close").trigger("click");
@@ -6205,13 +6205,13 @@ describe("App shell", () => {
       const afterClose = JSON.parse(localStorage.getItem(STORAGE_KEY) || "{}");
       expect(afterClose.workspaces[0].todos.morning[0].focusElapsedMs).toBeGreaterThanOrEqual(90_000);
       expect(wrapper.find(".focus-now-timer").exists()).toBe(false);
-      expect(wrapper.get(".todo-focus-badge").text()).toContain("01:30");
+      expect(wrapper.get(".todo-focus-badge").text()).toContain("0:01");
 
       // 重新打开：从累计时长起跳，不归零。
       wrapper.getComponent(TodoPanel).vm.$emit("focusNow", "morning", "t1");
       await flushPromises();
       await wrapper.vm.$nextTick();
-      expect(wrapper.get(".focus-now-timer").text()).toBe("01:30");
+      expect(wrapper.get(".focus-now-timer").text()).toBe("0:01");
     } finally {
       wrapper.unmount();
       vi.useRealTimers();
@@ -6523,7 +6523,7 @@ describe("App shell", () => {
       wrapper.getComponent(TodoPanel).vm.$emit("focusNow", "morning", todoId);
       await flushPromises();
       await wrapper.vm.$nextTick();
-      expect(wrapper.get(".focus-now-timer").text()).toBe("00:00");
+      expect(wrapper.get(".focus-now-timer").text()).toBe("0:00");
 
       // 撤销创建：任务消失 → 会话即时丢弃（弹窗撤下、心跳清理）。
       window.dispatchEvent(new KeyboardEvent("keydown", { key: "z", ctrlKey: true }));
@@ -6540,7 +6540,7 @@ describe("App shell", () => {
       wrapper.getComponent(TodoPanel).vm.$emit("focusNow", "morning", nextId);
       await flushPromises();
       await wrapper.vm.$nextTick();
-      expect(wrapper.get(".focus-now-timer").text()).toBe("00:00");
+      expect(wrapper.get(".focus-now-timer").text()).toBe("0:00");
 
       await vi.advanceTimersByTimeAsync(61_000);
       const stored = JSON.parse(localStorage.getItem(STORAGE_KEY) || "{}");

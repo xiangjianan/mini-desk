@@ -7735,11 +7735,11 @@ body:has(.image-preview) .n-modal-container:has(.focus-now-modal) .n-modal-mask 
 }
 
 /* 卡片自带 header 弃用（preset=card 不传 title 且 closable=false），
-   头部完全由组件内 .focus-now-header 承担（M6 去重）。尺寸走
-   shortcut-help-modal 同款 min() 宽度口径，高度由 stage 定。 */
+   头部完全由组件内 .focus-now-header 承担（M6 去重）。专注场景要「占据
+   眼前」：整卡铺到屏幕的 90%（宽 90vw，高由 stage 的 90vh 决定）。 */
 .focus-now-modal.n-card {
-  width: min(1080px, calc(100vw - 32px)) !important;
-  max-width: 1080px !important;
+  width: 90vw !important;
+  max-width: 90vw !important;
 }
 
 /* naive-ui 2.44 的内容类名是 .n-card-content（连字符；.n-card__content 是
@@ -7752,7 +7752,7 @@ body:has(.image-preview) .n-modal-container:has(.focus-now-modal) .n-modal-mask 
   display: flex;
   flex-direction: column;
   gap: 12px;
-  height: min(720px, 82vh);
+  height: 90vh;
   padding: 16px 20px 20px;
 }
 
@@ -7843,6 +7843,7 @@ body:has(.image-preview) .n-modal-container:has(.focus-now-modal) .n-modal-mask 
 }
 
 .focus-now-notes {
+  position: relative;
   display: flex;
   flex-direction: column;
   min-width: 0;
@@ -7854,6 +7855,42 @@ body:has(.image-preview) .n-modal-container:has(.focus-now-modal) .n-modal-mask 
 
 .focus-now-notes .text-panel {
   height: 100%;
+}
+
+/* 右侧预览浮层：点左栏缩略图在右侧看大图。绝对定位盖住记事本（而非 v-show
+   藏起——display:none 会丢滚动位置），关预览即原样露出。 */
+.focus-now-preview {
+  position: absolute;
+  inset: 0;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  background: var(--card);
+  z-index: 1;
+}
+
+.focus-now-preview-image {
+  max-width: 100%;
+  max-height: 100%;
+  object-fit: contain;
+  user-select: none;
+}
+
+.focus-now-preview-close {
+  position: absolute;
+  right: 12px;
+  bottom: 12px;
+  padding: 6px 14px;
+  border: 1px solid var(--line-subtle);
+  border-radius: 999px;
+  background: var(--card);
+  color: var(--text);
+  font-size: 13px;
+  cursor: pointer;
+}
+
+.focus-now-preview-close:hover {
+  background: color-mix(in srgb, var(--foreground) 8%, transparent);
 }
 
 @media (max-width: 940px) {

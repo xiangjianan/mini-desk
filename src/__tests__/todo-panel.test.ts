@@ -4733,8 +4733,8 @@ describe("TodoPanel 现在做这个入口", () => {
     });
 
     const badge = wrapper.get(".todo-item .todo-focus-badge");
-    expect(badge.text()).toContain("12:34");
-    expect(badge.attributes("aria-label")).toContain("12:34");
+    expect(badge.text()).toContain("0:12");
+    expect(badge.attributes("aria-label")).toContain("0:12");
 
     await badge.trigger("click");
 
@@ -4760,7 +4760,7 @@ describe("TodoPanel 现在做这个入口", () => {
       evening: [],
     });
 
-    expect(wrapper.get(".today-focus-section .todo-focus-badge").text()).toContain("12:34");
+    expect(wrapper.get(".today-focus-section .todo-focus-badge").text()).toContain("0:12");
     wrapper.unmount();
   });
 });

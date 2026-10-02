@@ -1,5 +1,5 @@
 <script setup lang="ts">
-import { computed, defineAsyncComponent, onBeforeUnmount, onMounted, ref, watch } from "vue";
+import { computed, onBeforeUnmount, onMounted, ref, watch } from "vue";
 import { NModal } from "naive-ui";
 import type { AppLanguage, ImagePasteRequest, LineItem, StoredImage } from "../types";
 import { getUiText } from "../state/i18n";
@@ -7,12 +7,6 @@ import { formatFocusDuration } from "../state/todos";
 import type { PolishKind, PolishResult, PolishStyle } from "../sync/polishClient";
 import TextPanel from "./TextPanel.vue";
 import ImagePanel from "./ImagePanel.vue";
-
-// 预览是「弹窗上的弹窗」：懒加载（App.vue 同款先例），后开者 z-index 更高天然盖住本弹窗。
-const ImagePreview = defineAsyncComponent(() => import("./ImagePreview.vue"));
-
-// ImagePreview 离场淡出时长（App.vue IMAGE_PREVIEW_CLOSE_MS 同口径）。
-const PREVIEW_CLOSE_MS = 220;
 
 const props = withDefaults(defineProps<{
   show: boolean;
@@ -72,63 +66,36 @@ const displayMs = computed(() => props.baseMs + Math.max(0, nowTick.value - segm
 const displayDuration = computed(() => formatFocusDuration(displayMs.value));
 const displayDurationIso = computed(() => `PT${Math.ceil(displayMs.value / 1000)}S`);
 
-// —— 贴图预览：预览态是本组件私有，App 只通过 images/copy/delete 等 props+emits 参与 ——
+// —— 贴图预览：内嵌在右侧记事本区上方的浮层（不离开弹窗），记事本在下层原样保留 ——
 const activePreviewId = ref<string>();
-const closingPreviewId = ref<string>();
-let previewCloseTimer: number | undefined;
 
-const displayedPreviewId = computed(() => activePreviewId.value ?? closingPreviewId.value);
-const previewClosing = computed(() => Boolean(closingPreviewId.value) && !activePreviewId.value);
+const previewSrc = computed(() =>
+  props.images.find((image) => image.id === activePreviewId.value)?.src ?? "");
 
 function openPreview(id: string): void {
-  window.clearTimeout(previewCloseTimer);
-  previewCloseTimer = undefined;
-  closingPreviewId.value = undefined;
   activePreviewId.value = id;
 }
 
-/** 两段式关闭（App.vue closeImagePreview 同口径）：先落 closing 相位让 ImagePreview
- *  播 220ms 离场淡出（期间仍渲染、activeId 不变），超时后再卸载。 */
-function closePreview(): void {
-  const previewId = activePreviewId.value;
-  if (!previewId) return;
-  window.clearTimeout(previewCloseTimer);
-  closingPreviewId.value = previewId;
-  activePreviewId.value = undefined;
-  previewCloseTimer = window.setTimeout(() => {
-    previewCloseTimer = undefined;
-    closingPreviewId.value = undefined;
-  }, PREVIEW_CLOSE_MS);
-}
-
-/** ImagePreview 自身发起的离场（内部 220ms 淡出后才 emit close）：动画已播完，直接卸载
- *  （App.vue clearImagePreview 同口径）。 */
 function clearPreview(): void {
-  window.clearTimeout(previewCloseTimer);
-  previewCloseTimer = undefined;
   activePreviewId.value = undefined;
-  closingPreviewId.value = undefined;
 }
 
-// 预览打开期间在 document 捕获阶段截住 Escape：只关预览，且阻止事件继续传播到外层
-// 专注弹窗的 vueuc FocusTrap（document 冒泡阶段收 Esc 会关掉整个弹窗）。
-// ImagePreview 编辑器的 window 捕获处理器先于本监听执行且 stopImmediatePropagation，
-// 编辑器内的 Esc 语义不受影响；预览收起/弹窗撤下/组件卸载都会摘掉本监听。
+// 预览打开期间 Esc 只关预览：本弹窗 NModal 已 close-on-esc=false，但 App 的全局
+// keydown 也听 Esc（贴图预览快捷键等），捕获阶段截停避免穿透。
 function handlePreviewKeydown(event: KeyboardEvent): void {
   if (event.key !== "Escape") return;
   event.preventDefault();
   event.stopPropagation();
-  closePreview();
+  clearPreview();
 }
 
-watch(() => Boolean(displayedPreviewId.value), (open) => {
-  if (open) document.addEventListener("keydown", handlePreviewKeydown, { capture: true });
+watch(activePreviewId, (id) => {
+  if (id) document.addEventListener("keydown", handlePreviewKeydown, { capture: true });
   else document.removeEventListener("keydown", handlePreviewKeydown, { capture: true });
 });
 
-// 防悬空 id：预览中的图片被删后 ImagePreview 因 active 找不到已整层卸载（closing 淡出段
-// 实际不可达），这里只负责清掉残留 id，不模拟淡出。删图的邻图跳转由 App 侧（T8）决定。
-watch(() => props.images.some((image) => image.id === displayedPreviewId.value), (exists, was) => {
+// 防悬空 id：预览中的图片被删后收起浮层。
+watch(() => props.images.some((image) => image.id === activePreviewId.value), (exists, was) => {
   if (exists || !was) return;
   clearPreview();
 });
@@ -144,46 +111,35 @@ watch(() => props.show, (visible) => {
     return;
   }
   stopDisplayTimer();
-  // 撤下即清预览态：重开弹窗不得复活陈旧的全屏预览；displayedPreviewId 归零
-  // 会连带摘掉 Esc 捕获监听。
+  // 撤下即清预览态：重开弹窗不得复活陈旧预览；activePreviewId 归零连带摘掉 Esc 捕获监听。
   clearPreview();
 });
 
-// 预览内上一张/下一张：只移动 activePreviewId（App.vue navigatePreview 同口径）。
-function navigatePreview(direction: number): void {
-  const index = props.images.findIndex((image) => image.id === activePreviewId.value);
-  if (index < 0) return;
-  const next = props.images[index + direction];
-  if (next) activePreviewId.value = next.id;
-}
-
 onBeforeUnmount(() => {
   stopDisplayTimer();
-  window.clearTimeout(previewCloseTimer);
   document.removeEventListener("keydown", handlePreviewKeydown, { capture: true });
 });
 
-// Esc/遮罩点击：NModal 撤下 show（update:show(false)）同样视作关闭（=暂停）。
-// 预览打开期间豁免（双保险二的同款语义）：遮罩经 mask-closable=false 已挡在 NModal，
-// 若仍漏进 update:show(false)（ImagePreview 的遮罩是 pointer-events:none，点击会
-// 穿透到本弹窗遮罩），忽略之——预览是顶层，此时收起弹窗等于把专注会话误暂停落盘。
+// 关闭只认右上角 ✕（mask/Esc 均不触发）。NModal 理论上不会再发 update:show(false)，
+// 保留转发作为兜底：任何程序化撤下同样视作关闭（=暂停）。
 function handleModalShow(value: boolean): void {
-  if (!value && !displayedPreviewId.value) emit("close");
+  if (!value) emit("close");
 }
 </script>
 
 <template>
   <!-- preset=card 不传 title 且 closable=false：卡片自带的「正在做」头与内置 ✕
        （M6 双头）弃用，头部完全由组件内 .focus-now-header（标题+计时+关闭）承担；
-       aria-label 落到卡根元素保住对话框的可读名。 -->
+       aria-label 落到卡根元素保住对话框的可读名。mask/Esc 都不关弹窗——专注会话
+       只经右上角 ✕ 显式暂停。 -->
   <NModal
     :show="show"
     class="focus-now-modal"
     preset="card"
     :closable="false"
     :aria-label="uiText.todo.focusDoing"
-    :mask-closable="!displayedPreviewId"
-    :close-on-esc="!displayedPreviewId"
+    :mask-closable="false"
+    :close-on-esc="false"
     @update:show="handleModalShow"
   >
     <div class="focus-now-stage">
@@ -215,7 +171,7 @@ function handleModalShow(value: boolean): void {
             :can-edit="false"
             hide-header
             @preview="openPreview"
-            @close-preview="closePreview"
+            @close-preview="clearPreview"
             @copy="(id: string) => emit('copyImage', id)"
             @delete="(id: string, anchor?: HTMLElement) => emit('deleteImage', id, anchor)"
             @reorder="(dragId: string, targetId: string) => emit('reorderImages', dragId, targetId)"
@@ -224,6 +180,8 @@ function handleModalShow(value: boolean): void {
             @drop-files="(files: File[], _anchor: HTMLElement | undefined, targetId: string | undefined) => emit('dropImageFiles', files, targetId)"
           />
         </aside>
+        <!-- 右侧区域 = 记事本 + 预览浮层：点左栏缩略图在右侧看大图，关预览回到记事本。
+             浮层绝对定位盖住（而非 v-show 藏起记事本）：display:none 会丢记事本滚动位置。 -->
         <section class="focus-now-notes">
           <TextPanel
             title-id="focus-now-notes-title"
@@ -235,26 +193,20 @@ function handleModalShow(value: boolean): void {
             hide-header
             @update="(lines: LineItem[]) => emit('notesUpdate', lines)"
           />
+          <div v-if="activePreviewId" class="focus-now-preview" :aria-label="uiText.todo.focusImagesLabel">
+            <img class="focus-now-preview-image" :src="previewSrc" :alt="uiText.todo.focusImagesLabel" draggable="false" />
+            <button
+              class="focus-now-preview-close"
+              type="button"
+              :aria-label="uiText.todo.focusClosePreview"
+              :title="uiText.todo.focusClosePreview"
+              @click="clearPreview"
+            >
+              {{ uiText.todo.focusClosePreview }}
+            </button>
+          </div>
         </section>
       </div>
     </div>
-    <!-- 预览内编辑 v1 经 canEdit=false 隐藏入口：编辑浮层依赖 App 的图片存储/保存链路，
-         后续如需支持走 saveEdit 链路（需独立的冲突处理）。 -->
-    <ImagePreview
-      v-if="displayedPreviewId"
-      :images="images"
-      :active-id="displayedPreviewId"
-      :closing="previewClosing"
-      :language="language"
-      :can-edit="false"
-      @close="clearPreview"
-      @copy="(id: string) => emit('copyImage', id)"
-      @delete="(id: string, anchor?: HTMLElement) => emit('deleteImage', id, anchor)"
-      @navigate="navigatePreview"
-      @reorder="(dragId: string, targetId: string) => emit('reorderImages', dragId, targetId)"
-      @move-to-bottom="(id: string) => emit('moveImageToBottom', id)"
-      @paste="(request: ImagePasteRequest) => emit('pasteImage', request)"
-      @drop-files="(files: File[], _anchor: HTMLElement, targetId: string) => emit('dropImageFiles', files, targetId)"
-    />
   </NModal>
 </template>

@@ -180,13 +180,14 @@ describe("extractRetainedImageIds 覆盖 focusImages", () => {
 });
 
 describe("formatFocusDuration", () => {
-  it("不足一小时显示 mm:ss", () => {
-    expect(formatFocusDuration(0)).toBe("00:00");
-    expect(formatFocusDuration(754_000)).toBe("12:34");
-    expect(formatFocusDuration(59_999)).toBe("01:00"); // 向上取整到秒
+  it("不足一小时显示 h:mm（分钟向下取整）", () => {
+    expect(formatFocusDuration(0)).toBe("0:00");
+    expect(formatFocusDuration(754_000)).toBe("0:12");
+    expect(formatFocusDuration(59_999)).toBe("0:00"); // 不足一分钟按 0 分
   });
-  it("超过一小时显示 h:mm:ss", () => {
-    expect(formatFocusDuration(3_723_000)).toBe("1:02:03");
-    expect(formatFocusDuration(3_600_000)).toBe("1:00:00");
+  it("超过一小时显示 h:mm", () => {
+    expect(formatFocusDuration(3_723_000)).toBe("1:02");
+    expect(formatFocusDuration(3_600_000)).toBe("1:00");
+    expect(formatFocusDuration(43_200_000)).toBe("12:00");
   });
 });
