@@ -7670,15 +7670,8 @@ html[data-theme="dark"] .text-editor-textarea::selection {
   cursor: pointer;
 }
 
-/* 徽标的焦点/悬停反馈走加深底色；蓝描边在 desk.css 按全局环豁免口径免除。 */
-.todo-focus-badge:hover,
-.todo-focus-badge:focus-visible {
-  background: color-mix(in srgb, var(--accent) 78%, var(--foreground));
-}
-
-.todo-focus-badge:hover {
-  background: color-mix(in srgb, var(--accent-foreground) 14%, transparent);
-}
+/* 徽标不做 hover/focus 变色：Esc 关弹窗后鼠标常仍悬在徽标上，任何加深态都会
+   被解读成「变灰且点空白才恢复」（描边亦在 desk.css 豁免）；浅蓝恒定。 */
 
 .todo-item:has(.todo-focus-badge) {
   grid-template-columns: 22px 32px minmax(0, 1fr) 26px auto 26px;
@@ -7800,7 +7793,17 @@ body:has(.image-preview) .n-modal-container:has(.focus-now-modal) .n-modal-mask 
 }
 
 .focus-now-timer-icon {
+  flex: none;
+  width: 32px;
+  height: 32px;
   color: var(--muted);
+}
+
+/* ionicons 的 svg 会按内在属性压窄字形（实测 16×32），且 NIcon 运行时注入的
+   .n-icon svg 同特异性但更晚生效——提到 (0,2,1) 强制方形，与 40px 数字协调。 */
+.focus-now-header .focus-now-timer-icon svg {
+  width: 32px;
+  height: 32px;
 }
 
 .focus-now-timer {
