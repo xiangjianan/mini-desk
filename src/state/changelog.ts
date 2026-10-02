@@ -28,6 +28,20 @@ export interface ChangelogEntry {
 }
 
 export const CHANGELOG: ChangelogEntry[] = [
+    {
+      version: "1.0.199",
+      date: "2026-10-02",
+      notes: {
+        zh: [
+          "优化：专注弹窗贴图条加宽至 15%，顶部新增「添加图片」按钮（支持多选），笔记区占位文案提示左图右字分区",
+          "修复：不同提醒事项的专注计时互不干扰——修复新任务打开时继承上一个任务累计时长的问题",
+        ],
+        en: [
+          "Improved: focus-modal image rail widened to 15% with an \u201cAdd image\u201d button (multi-select); notes placeholder now hints the images-left / words-right split",
+          "Fixed: focus timers are now fully independent per reminder — new tasks no longer inherit the previous task\u2019s accumulated time",
+        ],
+      },
+    },
   {
     version: "1.0.198",
       date: "2026-10-02",
