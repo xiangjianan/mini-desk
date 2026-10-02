@@ -146,14 +146,13 @@ describe("SettingsMenu", () => {
       },
     });
 
-    // Promoted to a top-level entry renamed 手机速记, directly below the 数据 group
-    // (dropdownStub renders parents before children, so the flattened order pins the position).
+    // Top-level entry renamed 手机速记, positioned after the GIF 主题 group and before 提建议.
     expect(wrapper.find('[data-key="pair-inbox"]').text()).toBe("手机速记");
     expect(wrapper.find('[data-key="pair-inbox"]').classes()).not.toContain("dropdown-child-option");
     const keys = wrapper.findAll(".dropdown-option").map((option) => option.attributes("data-key"));
-    // 锚定 data 组起点而非数组头部：未来在「数据」之前新增一级项不打断本断言。
-    const base = keys.indexOf("data");
-    expect(keys.slice(base, base + 6)).toEqual(["data", "create-workspace", "import", "export-workspace", "clear-data", "pair-inbox"]);
+    // 位于 GIF 主题组之后、提建议之前：不依赖 GIF 主题子项个数。
+    expect(keys.indexOf("gif-theme")).toBeLessThan(keys.indexOf("pair-inbox"));
+    expect(keys.indexOf("pair-inbox")).toBeLessThan(keys.indexOf("suggest"));
 
     await wrapper.find('[data-key="pair-inbox"]').trigger("click");
 
