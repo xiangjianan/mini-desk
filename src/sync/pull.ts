@@ -22,6 +22,8 @@ export interface InboxPullResult {
   reports: InboxPullReport[];
   /** 任一工作区有补丁（含纯水位线前进）时为 true；调用方仅在此为 true 时重放并持久化。 */
   changed: boolean;
+  /** 所有已配对工作区的拉取全部网络失败时 true（未配对不计入分母；部分失败为 false，轮询自愈）。 */
+  networkFailed: boolean;
 }
 
 /** 纯合并：todo 追加为未完成条目（落点清单失效则回退第一个清单），note 按 noteTarget 追加一行
@@ -81,12 +83,17 @@ function resolveTodoListId(workspace: WorkspaceData, preferred: TodoListId): Tod
 export async function pullAllInboxes(workspaces: WorkspaceData[]): Promise<InboxPullResult> {
   // 单工作区内条目解码保持串行：每次解密是一次 600k 迭代的 PBKDF2（约 60-80ms），并行会放大 CPU 峰值。
   // 工作区之间互相独立，用 allSettled 并发互不拖累。
+  const pairedCount = workspaces.filter((workspace) => workspace.inbox !== undefined).length;
+  const fetchFailures: string[] = [];
   const results = await Promise.allSettled(
     workspaces.map(async (workspace): Promise<InboxPullPatch | null> => {
       const inbox = workspace.inbox;
       if (!inbox) return null;
       const stored = await fetchInboxItems(await inboxKeyHash(inbox.code));
-      if (!stored) return null;
+      if (!stored) {
+        fetchFailures.push(workspace.id);
+        return null;
+      }
       // createdAt 由 Worker 时钟签发（客户端不可控）；此处信任服务器时钟。若中转被替换为恶意镜像，
       // 远未来时间戳会推爆水位线——该前提已记录在设计文档威胁模型权衡中。
       const maxSeenAt = stored.reduce((max, entry) => Math.max(max, entry.createdAt), inbox.lastSeenAt);
@@ -109,5 +116,5 @@ export async function pullAllInboxes(workspaces: WorkspaceData[]): Promise<Inbox
     patches.push(result.value);
     if (result.value.plains.length > 0) reports.push({ workspaceId: result.value.workspaceId, imported: result.value.plains.length });
   }
-  return { patches, reports, changed: patches.length > 0 };
+  return { patches, reports, changed: patches.length > 0, networkFailed: pairedCount > 0 && fetchFailures.length === pairedCount };
 }

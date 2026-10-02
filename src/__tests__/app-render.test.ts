@@ -35,7 +35,7 @@ vi.mock("naive-ui", async () => {
 // 默认实现按契约返回空补丁 + changed:false，等价于「拉取无变更」，未显式设值的用例行为与真实模块一致。
 vi.mock("../sync/pull", async (importOriginal) => ({
   ...(await importOriginal<typeof import("../sync/pull")>()),
-  pullAllInboxes: vi.fn(async (): Promise<InboxPullResult> => ({ patches: [], reports: [], changed: false })),
+  pullAllInboxes: vi.fn(async (): Promise<InboxPullResult> => ({ patches: [], reports: [], changed: false, networkFailed: false })),
 }));
 
 // App 只消费 revokeInboxKey/registerInboxKey/checkInboxKeyStatus；其余保留真实现（经 mocked 的 pull.ts 隔离）。
@@ -9064,7 +9064,7 @@ describe("App inbox pull wiring", () => {
     // vi.restoreAllMocks() 不重置 vi.fn() 的实现，逐用例显式回到安全默认值，
     // 避免上一个用例的 mockResolvedValueOnce 泄漏到后续用例。
     vi.mocked(pullAllInboxes).mockReset();
-    vi.mocked(pullAllInboxes).mockImplementation(async () => ({ patches: [], reports: [], changed: false }));
+    vi.mocked(pullAllInboxes).mockImplementation(async () => ({ patches: [], reports: [], changed: false, networkFailed: false }));
   });
 
   it("pulls inboxes exactly once on startup when a workspace is paired", async () => {
@@ -9092,6 +9092,7 @@ describe("App inbox pull wiring", () => {
       ],
       reports: [{ workspaceId: DEFAULT_WORKSPACE_ID, imported: 1 }],
       changed: true,
+      networkFailed: false,
     });
     const wrapper = mountApp();
 
@@ -9167,6 +9168,7 @@ describe("App inbox pull wiring", () => {
         ],
         reports: [{ workspaceId: DEFAULT_WORKSPACE_ID, imported: 1 }],
         changed: true,
+        networkFailed: false,
       });
       await flushAsyncComponents();
 
@@ -9219,6 +9221,7 @@ describe("App inbox pull wiring", () => {
         ],
         reports: [{ workspaceId: DEFAULT_WORKSPACE_ID, imported: 1 }],
         changed: true,
+        networkFailed: false,
       });
       await flushAsyncComponents();
 
@@ -9282,6 +9285,7 @@ describe("App inbox pull wiring", () => {
         ],
         reports: [{ workspaceId: DEFAULT_WORKSPACE_ID, imported: 1 }],
         changed: true,
+        networkFailed: false,
       });
       await flushAsyncComponents();
 
@@ -9334,6 +9338,7 @@ describe("App inbox pull wiring", () => {
         ],
         reports: [{ workspaceId: DEFAULT_WORKSPACE_ID, imported: 1 }],
         changed: true,
+        networkFailed: false,
       });
       await flushAsyncComponents();
 

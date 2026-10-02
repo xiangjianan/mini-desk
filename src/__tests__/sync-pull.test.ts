@@ -200,3 +200,32 @@ describe("pullAllInboxes", () => {
     ]);
   });
 });
+
+function pairedSyncWorkspace(id: string): WorkspaceData {
+  return {
+    ...defaultWorkspace(id),
+    inbox: { code: "AB2CDE4FGHJK", todoListId: "list-1", noteTarget: "space-1", lastSeenAt: 0 },
+  };
+}
+
+describe("pullAllInboxes networkFailed", () => {
+  it("全部已配对工作区拉取失败时为 true", async () => {
+    fetchMock.mockResolvedValue(null);
+    const result = await pullAllInboxes([pairedSyncWorkspace("a"), pairedSyncWorkspace("b")]);
+    expect(result.networkFailed).toBe(true);
+    expect(result.patches).toEqual([]);
+    expect(result.changed).toBe(false);
+  });
+
+  it("部分失败为 false：成功侧确认无变更，失败侧轮询自愈", async () => {
+    fetchMock.mockResolvedValueOnce(null).mockResolvedValueOnce([]);
+    const result = await pullAllInboxes([pairedSyncWorkspace("a"), pairedSyncWorkspace("b")]);
+    expect(result.networkFailed).toBe(false);
+  });
+
+  it("全部成功无变更为 false；未配对工作区不计入分母", async () => {
+    fetchMock.mockResolvedValue([]);
+    const result = await pullAllInboxes([pairedSyncWorkspace("a"), defaultWorkspace("b")]);
+    expect(result.networkFailed).toBe(false);
+  });
+});
