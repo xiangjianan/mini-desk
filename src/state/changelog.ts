@@ -29,6 +29,26 @@ export interface ChangelogEntry {
 
 export const CHANGELOG: ChangelogEntry[] = [
   {
+    version: "1.0.198",
+      date: "2026-10-02",
+      notes: {
+        zh: [
+          "新功能：提醒事项右键「现在做这个」专注弹窗——全屏毛玻璃虚化背景，居中任务标题与专注计时（时:分），关窗即暂停、重开接续累计",
+          "新功能：任务行显示累计专注时长徽标，点击即可继续专注；完成任务保留全部专注数据（计时/随手记/贴图）供追溯，删除提醒时才清空",
+          "新功能：专注弹窗下方 = 左侧贴图条 + 右侧记事本（与主页面记事本同款编辑：缩进、高亮格式、AI 润色），随手记录不打断专注",
+          "新功能：弹窗内贴图预览/编辑与主页面完全一致——底部工具栏（翻页/缩放/编辑/删除）、键盘快捷键（空格关闭、回车编辑、WASD 翻页）、裁剪标注编辑器",
+          "新功能：常用应用新增 备忘录、提醒事项、快捷指令 预设（快捷指令可桥接 AppleScript 打开具体列表/文件夹）",
+        ],
+        en: [
+          "New: \u201cDo it now\u201d focus modal on reminders — full-screen frosted blur with the centered task title and an h:mm focus timer; closing pauses, reopening resumes the accumulated time",
+          "New: per-task focus-time badge in the list, click to jump back in; completing a task keeps all focus data (timer, notes, images) for traceability and only deleting the reminder clears it",
+          "New: the modal's lower area is an image rail plus a notes editor identical to the main workspace (indent, highlight formats, AI polish) — jot without breaking focus",
+          "New: in-modal image preview/editing mirrors the main page — bottom toolbar (navigate/zoom/edit/delete), keyboard shortcuts (Space closes, Enter edits, WASD navigates), crop & annotate editor",
+          "New: common-app presets for Notes, Reminders and Shortcuts (Shortcuts bridges AppleScript to open a specific list/folder)",
+        ],
+      },
+    },
+  {
     version: "1.0.197",
     date: "2026-09-30",
     notes: {
