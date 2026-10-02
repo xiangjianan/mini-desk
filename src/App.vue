@@ -1095,8 +1095,8 @@ function handlePolishStatus(phase: SmartPastePhase, message: string, anchor?: HT
   showBubbleText(message, anchor, { hideCompanionAfter: true }, POLISH_RESULT_BUBBLE_MS);
 }
 
-// 手机速记拉取（单向收件箱）：启动/窗口聚焦（节流）/定时/Ctrl+S 四个触发点共用 pullInboxes，
-// in-flight 守卫串行化并发快照（pullAllInboxes 契约要求，否则并发合并会以新 ID 重复导入）。
+// 手机速记拉取（单向收件箱）：各自动触发点（启动/聚焦/定时/切空间/Ctrl+S）与两面板手动同步按钮
+// 共用 pullInboxes；in-flight 守卫串行化并发快照（否则并发合并会以新 ID 重复导入）。
 let inboxPullTimer: number | undefined;
 let inboxLastPullAt = 0;
 // 在途守卫（手动按钮的忙碌态也读它）：串行化并发快照，防止并发批次以新 ID 重复导入。
