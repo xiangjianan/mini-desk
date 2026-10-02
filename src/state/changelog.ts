@@ -29,6 +29,22 @@ export interface ChangelogEntry {
 
 export const CHANGELOG: ChangelogEntry[] = [
     {
+      version: "1.0.200",
+      date: "2026-10-02",
+      notes: {
+        zh: [
+          "新功能：顶栏新增「手机速记」手动同步按钮——已配对的工作区显示，一键拉取云端速记，结果气泡提示（收到 N 条 / 已是最新 / 同步失败）",
+          "优化：配对弹窗点「生成配对码」即刻注册云端，扫二维码立即可配对，不再需要先点保存",
+          "优化：设置菜单按使用习惯重排——「手机速记」（原「配对手机」，藏在「数据」子菜单）提为一级入口并置顶，快捷键提前、关于居末",
+        ],
+        en: [
+          "New: manual “Sync mobile notes” button in the top bar — visible on paired workspaces, pulls cloud captures on demand and toasts the outcome (received N / up to date / sync failed)",
+          "Improved: generating a pairing code now registers it with the relay instantly — scanning the QR works right away, no need to hit Save first",
+          "Improved: settings menu reordered by usage — “Mobile notes” (formerly “Pair phone”, buried in the Data submenu) promoted to a top-level entry at the top; Shortcut help moved up, About last",
+        ],
+      },
+    },
+    {
       version: "1.0.199",
       date: "2026-10-02",
       notes: {
