@@ -146,13 +146,14 @@ describe("SettingsMenu", () => {
       },
     });
 
-    // Top-level entry renamed 手机速记, positioned after the GIF 主题 group and before 提建议.
+    // Top-level entry renamed 手机速记, promoted to the top of the settings menu.
     expect(wrapper.find('[data-key="pair-inbox"]').text()).toBe("手机速记");
     expect(wrapper.find('[data-key="pair-inbox"]').classes()).not.toContain("dropdown-child-option");
     const keys = wrapper.findAll(".dropdown-option").map((option) => option.attributes("data-key"));
-    // 位于 GIF 主题组之后、提建议之前：不依赖 GIF 主题子项个数。
-    expect(keys.indexOf("gif-theme")).toBeLessThan(keys.indexOf("pair-inbox"));
-    expect(keys.indexOf("pair-inbox")).toBeLessThan(keys.indexOf("suggest"));
+    // 一级项新序：手机速记 → 数据 → 语言 → GIF 主题 → 快捷键 → 提建议 → 关于（子项不参与，index 单调）。
+    const order = ["pair-inbox", "data", "language", "gif-theme", "shortcut-help", "suggest", "about"].map((key) => keys.indexOf(key));
+    expect(order.every((index) => index >= 0)).toBe(true);
+    expect(order).toEqual([...order].sort((a, b) => a - b));
 
     await wrapper.find('[data-key="pair-inbox"]').trigger("click");
 

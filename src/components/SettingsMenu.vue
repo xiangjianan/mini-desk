@@ -69,6 +69,8 @@ const text = computed(() => getUiText(props.language));
 const customGifLightPreview = computed(() => customGifLightPreviewSrc.value ?? props.customCompanionGif.light);
 const customGifDarkPreview = computed(() => customGifDarkPreviewSrc.value ?? props.customCompanionGif.dark);
 const options = computed(() => [
+  // 手机速记独立一级入口置顶：配套手动同步按钮已就位，提升为一等功能。
+  { label: text.value.app.inboxPair, key: "pair-inbox", icon: renderIcon(PhonePortraitOutline) },
   {
     label: text.value.settings.data,
     key: "data",
@@ -107,13 +109,11 @@ const options = computed(() => [
       icon: option.value === props.companionGifTheme ? renderIcon(CheckmarkOutline) : undefined,
     })),
   },
-  // 手机速记独立一级入口：位于「GIF 主题」之后。配对弹窗承担生成/注册全流程，不折进数据子菜单。
-  { label: text.value.app.inboxPair, key: "pair-inbox", icon: renderIcon(PhonePortraitOutline) },
+  { label: text.value.settings.shortcutHelp, key: "shortcut-help", icon: renderIcon(KeyOutline) },
   { label: text.value.settings.suggest, key: "suggest", icon: renderIcon(CreateOutline) },
   ...(SUPPORT_AUTHOR_ENABLED
     ? [{ label: text.value.settings.support, key: "support", icon: renderIcon(HeartOutline) }]
     : []),
-  { label: text.value.settings.shortcutHelp, key: "shortcut-help", icon: renderIcon(KeyOutline) },
   { label: text.value.settings.about, key: "about", icon: renderIcon(InformationCircleOutline) },
   { type: "divider", key: "version-divider" },
   {
