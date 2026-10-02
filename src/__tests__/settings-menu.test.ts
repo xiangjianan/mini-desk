@@ -145,9 +145,12 @@ describe("SettingsMenu", () => {
       },
     });
 
-    // Sits in the data group next to export workspace, before the destructive clear-data.
-    expect(wrapper.find('[data-key="pair-inbox"]').text()).toBe("配对手机");
-    expect(wrapper.find('[data-key="pair-inbox"]').classes()).toContain("dropdown-child-option");
+    // Promoted to a top-level entry renamed 手机速记, directly below the 数据 group
+    // (dropdownStub renders parents before children, so the head order pins the position).
+    expect(wrapper.find('[data-key="pair-inbox"]').text()).toBe("手机速记");
+    expect(wrapper.find('[data-key="pair-inbox"]').classes()).not.toContain("dropdown-child-option");
+    const keys = wrapper.findAll(".dropdown-option").map((option) => option.attributes("data-key"));
+    expect(keys.slice(0, 6)).toEqual(["data", "create-workspace", "import", "export-workspace", "clear-data", "pair-inbox"]);
 
     await wrapper.find('[data-key="pair-inbox"]').trigger("click");
 
