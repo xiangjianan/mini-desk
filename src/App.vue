@@ -2814,21 +2814,10 @@ function splitTodo(period: TodoPeriod, id: string, before: string, after: string
 
 function complete(period: TodoPeriod, id: string, done: boolean, anchor?: HTMLElement): void {
   if (!isConfiguredTodoListId(period)) return;
-  // 完成即收档：未完成 → 已完成时连坐清空专注数据（贴图/随手记/累计时长），载荷走
-  // 5s 撤销宽限；取消勾选不恢复——数据已按用户决定随完成清空。
-  const todo = getTodos(period).find((item) => item.id === id);
-  const clearingFocus = done && !todo?.done;
-  const doomedFocusIds = clearingFocus ? collectTodoFocusPayloadIds(todo ? [todo] : []) : [];
+  // 完成 = 保留全部专注数据（贴图/随手记/累计时长）作追溯备份，徽标继续可读可续做；
+  // 只有真正删除提醒事项（deleteTodoNow 连坐）才清空对应图片与文本。
   activeWorkspace.value.todos = completeTodo(activeWorkspace.value.todos, period, id, done);
-  if (clearingFocus) {
-    activeWorkspace.value.todos = updateTodoFocus(activeWorkspace.value.todos, period, id, {
-      addElapsedMs: -(todo?.focusElapsedMs ?? 0),
-      focusNotes: [],
-      focusImages: [],
-    });
-  }
   persistNow();
-  doomedFocusIds.forEach((payloadId) => scheduleImagePayloadDeletion(payloadId));
   if (done) showBubble("todoCompleted", anchor);
 }
 

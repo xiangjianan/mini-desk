@@ -7670,6 +7670,12 @@ html[data-theme="dark"] .text-editor-textarea::selection {
   cursor: pointer;
 }
 
+/* 徽标的焦点/悬停反馈走加深底色；蓝描边在 desk.css 按全局环豁免口径免除。 */
+.todo-focus-badge:hover,
+.todo-focus-badge:focus-visible {
+  background: color-mix(in srgb, var(--accent) 78%, var(--foreground));
+}
+
 .todo-focus-badge:hover {
   background: color-mix(in srgb, var(--accent-foreground) 14%, transparent);
 }

@@ -6218,7 +6218,7 @@ describe("App shell", () => {
     }
   });
 
-  it("勾选完成即清空专注数据：贴图/笔记/计时连坐，载荷走宽限回收", async () => {
+  it("勾选完成保留全部专注数据作追溯备份（删除提醒才清空）", async () => {
     vi.useFakeTimers();
     vi.setSystemTime(new Date("2026-10-02T12:00:00Z").getTime());
     const restoreIndexedDb = installMemoryImageDb();
@@ -6227,6 +6227,7 @@ describe("App shell", () => {
       JSON.stringify({
         workspaces: [{
           ...defaultWorkspace(),
+          showCompletedTodos: { morning: true },
           todos: {
             morning: [{
               id: "t1", text: "写周报", done: false,
@@ -6247,20 +6248,18 @@ describe("App shell", () => {
       await flushPromises();
       await wrapper.vm.$nextTick();
 
-      // 三字段全部清空、徽标消失。
+      // 完成 = 保留：三字段原地不动、徽标仍在，可回看可续做。
       const saved = JSON.parse(localStorage.getItem(STORAGE_KEY) || "{}");
       const todo = saved.workspaces[0].todos.morning[0];
       expect(todo.done).toBe(true);
-      expect(todo.focusElapsedMs).toBeUndefined();
-      expect(todo.focusNotes).toBeUndefined();
-      expect(todo.focusImages).toBeUndefined();
-      expect(wrapper.find(".todo-focus-badge").exists()).toBe(false);
+      expect(todo.focusElapsedMs).toBe(90_000);
+      expect(todo.focusNotes).toEqual([{ text: "要点", indent: 0 }]);
+      expect(todo.focusImages).toEqual([{ id: "img1", payloadId: "pay-1", createdAt: 7 }]);
+      expect(wrapper.get(".todo-focus-badge").text()).toContain("0:01");
 
-      // 宽限期内保留（可撤销），期满回收。
-      await vi.advanceTimersByTimeAsync(4_000);
+      // 载荷不进任何清理调度。
+      await vi.advanceTimersByTimeAsync(6_000);
       expect(deleteSpy).not.toHaveBeenCalledWith("pay-1");
-      await vi.advanceTimersByTimeAsync(1_500);
-      expect(deleteSpy).toHaveBeenCalledWith("pay-1");
     } finally {
       wrapper.unmount();
       restoreIndexedDb();

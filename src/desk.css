@@ -105,6 +105,10 @@ html[data-theme="dark"] .workbench-shell,
 .workbench-shell .quick-add-button:focus-visible,
 .workbench-shell .quick-tag-add-button:focus-visible,
 .workbench-shell .image-add-button:focus-visible { outline: none; box-shadow: none; }
+/* 专注徽标同款豁免：Esc 关专注弹窗时 FocusTrap 把焦点还原到打开弹窗的徽标上，
+   全局实线环 + 光晕会凭空描蓝框；徽标的焦点反馈走上面的变色（hover/:focus-visible
+   recolor），两套指示一并豁免（特异性 0,3,0）。 */
+.workbench-shell .todo-focus-badge:focus-visible { outline: none; box-shadow: none; }
 
 /* 紧凑按钮：单行、类型副标题塌缩，高度对齐提醒列表的紧凑行（42px）。
    副标题用 max-height/opacity 过渡而非 display:none，大↔紧凑切换整体有动画。 */
@@ -194,12 +198,13 @@ html[data-theme="dark"] .workbench-shell,
 }
 
 /* 专注弹窗经 NModal 传送门挂在 body 下，吃不到 .workbench-shell 的记事本排版；
-   原样对齐主页面记事本字号（textarea 与 mirror 必须成对，见 style-contract）。 */
+   字号/行高对齐主页面，横向 padding 加大到 16px（主页面两侧另有面板留白，
+   弹窗里文字会紧贴边框，按用户要求留出呼吸）。textarea 与 mirror 必须成对。 */
 .focus-now-modal .text-editor-textarea,
 .focus-now-modal .text-mirror {
   font-size: 14px;
   line-height: 1.85;
-  padding: 18px 4px;
+  padding: 18px 16px;
 }
 .workbench-shell .desk-ai-action {
   display: inline-flex; align-items: center; gap: 6px;
