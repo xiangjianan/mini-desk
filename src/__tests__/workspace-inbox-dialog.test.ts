@@ -78,11 +78,24 @@ describe("WorkspaceInboxDialog", () => {
     vi.restoreAllMocks();
   });
 
-  it("无配对时显示生成按钮，点击生成合法码", async () => {
-    const wrapper = mountDialog();
+  it("无配对时点击生成：立即 emit update（合法码+默认落点）且弹窗保持打开", async () => {
+    const order: string[] = [];
+    const wrapper = mountDialog(undefined, defaultWorkspace("a"), {
+      onUpdate: () => order.push("update"),
+      onClose: () => order.push("close"),
+    });
     expect(wrapper.text()).toContain("生成配对码");
     await wrapper.find('[data-testid="inbox-generate"]').trigger("click");
-    expect(wrapper.find('[data-testid="inbox-code"]').text()).toMatch(/^[0-9A-HJKMNP-TV-Z]{12}$/);
+    // 生成即上云：立即 emit（App 侧 handleInboxUpdate 落盘并注册中继）。
+    const [payload] = updatePayloads(wrapper);
+    expect(payload?.code).toMatch(/^[0-9A-HJKMNP-TV-Z]{12}$/);
+    // 落点为当前下拉默认值：首个提醒清单与首个空间。
+    expect(payload?.todoListId).toBe(wrapper.props("workspace").todoLists[0]?.id);
+    expect(payload?.noteTarget).toBe(wrapper.props("workspace").spaces[0]?.id);
+    expect(payload?.lastSeenAt).toBe(0);
+    // 弹窗保持打开供扫码/抄录，展示层同步为新码。
+    expect(order).toEqual(["update"]);
+    expect(wrapper.find('[data-testid="inbox-code"]').text()).toBe(payload?.code);
   });
 
   it("弹窗顶部标明当前配对的工作空间", () => {

@@ -37,6 +37,7 @@ const workspaceTitle = computed(() => getWorkspaceBoardTitle(props.workspace));
 const canvasRef = ref<HTMLCanvasElement | null>(null);
 // 编辑草稿以 props 里的既有配对为初值；保存/清除时一次性 emit，取消则原样丢弃。
 // 轮换例外：confirm 已承诺「旧地址立即失效」，确认后立即 emit 生效，弹窗保持打开供抄录/扫码。
+// 生成例外：新码一旦展示就要可被扫码配对，立即 emit 生效（落点用当前下拉值）。
 const code = ref(props.workspace.inbox?.code ?? "");
 const todoListId = ref(props.workspace.inbox?.todoListId ?? props.workspace.todoLists[0]?.id ?? "");
 const noteTarget = ref(props.workspace.inbox?.noteTarget ?? props.workspace.spaces[0]?.id ?? "");
@@ -68,6 +69,9 @@ onBeforeUnmount(clearCopyResetTimer);
 
 function generate(): void {
   code.value = generateInboxCode();
+  // 生成即生效：立即 emit 落盘并向中继注册（否则扫码 /status 校验 404 配不上），
+  // 弹窗保持打开供抄录/扫码——与 rotate 同口径。
+  emit("update", buildInbox());
 }
 
 function buildInbox(): WorkspaceInbox {
