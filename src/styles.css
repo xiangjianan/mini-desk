@@ -7757,20 +7757,44 @@ body:has(.image-preview) .n-modal-container:has(.focus-now-modal) .n-modal-mask 
 }
 
 .focus-now-header {
-  display: flex;
+  display: grid;
+  grid-template-columns: 1fr auto 1fr;
   align-items: center;
   gap: 16px;
 }
 
-.focus-now-title {
-  flex: 1 1 auto;
+/* 三列网格保真居中：空占位与控件区等宽（各 1fr），标题恒在视觉正中。 */
+.focus-now-header-spacer,
+.focus-now-header-controls {
   min-width: 0;
+}
+
+.focus-now-header-controls {
+  display: flex;
+  align-items: center;
+  justify-content: flex-end;
+  gap: 12px;
+}
+
+.focus-now-title {
   margin: 0;
+  max-width: min(560px, 48vw);
   overflow: hidden;
-  font-size: 18px;
+  font-size: 20px;
   font-weight: 600;
+  text-align: center;
   text-overflow: ellipsis;
   white-space: nowrap;
+}
+
+.focus-now-timer-group {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.focus-now-timer-icon {
+  color: var(--muted);
 }
 
 .focus-now-timer {

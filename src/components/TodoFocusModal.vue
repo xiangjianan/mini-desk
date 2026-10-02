@@ -1,7 +1,7 @@
 <script setup lang="ts">
 import { computed, nextTick, onBeforeUnmount, onMounted, ref, watch } from "vue";
 import { NIcon, NModal } from "naive-ui";
-import { AddOutline, ChevronDownOutline, ChevronUpOutline, CloseOutline, CreateOutline, RemoveOutline, TrashOutline } from "@vicons/ionicons5";
+import { AddOutline, ChevronDownOutline, ChevronUpOutline, CloseOutline, CreateOutline, RemoveOutline, TimeOutline, TrashOutline } from "@vicons/ionicons5";
 import type { AppLanguage, ImagePasteRequest, LineItem, StoredImage } from "../types";
 import { getUiText } from "../state/i18n";
 import { formatFocusDuration } from "../state/todos";
@@ -377,22 +377,30 @@ function handleModalShow(value: boolean): void {
   >
     <div class="focus-now-stage">
       <header class="focus-now-header">
+        <div class="focus-now-header-spacer" aria-hidden="true"></div>
         <h2 class="focus-now-title" :title="title">{{ title }}</h2>
-        <time
-          class="focus-now-timer"
-          role="timer"
-          :aria-label="uiText.todo.focusTimer"
-          :datetime="displayDurationIso"
-        >{{ displayDuration }}</time>
-        <button
-          class="focus-now-close"
-          type="button"
-          :aria-label="uiText.todo.focusClosePause"
-          :title="uiText.todo.focusClosePause"
-          @click="emit('close')"
-        >
-          <span aria-hidden="true">✕</span>
-        </button>
+        <div class="focus-now-header-controls">
+          <span class="focus-now-timer-group">
+            <NIcon class="focus-now-timer-icon" :aria-label="uiText.todo.focusTimer" aria-hidden="true">
+              <TimeOutline />
+            </NIcon>
+            <time
+              class="focus-now-timer"
+              role="timer"
+              :aria-label="uiText.todo.focusTimer"
+              :datetime="displayDurationIso"
+            >{{ displayDuration }}</time>
+          </span>
+          <button
+            class="focus-now-close"
+            type="button"
+            :aria-label="uiText.todo.focusClosePause"
+            :title="uiText.todo.focusClosePause"
+            @click="emit('close')"
+          >
+            <span aria-hidden="true">✕</span>
+          </button>
+        </div>
       </header>
       <div class="focus-now-body">
         <aside class="focus-now-images" :aria-label="uiText.todo.focusImagesLabel">

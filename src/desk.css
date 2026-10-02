@@ -192,6 +192,15 @@ html[data-theme="dark"] .workbench-shell,
   line-height: 1.85;
   padding: 18px 4px;
 }
+
+/* 专注弹窗经 NModal 传送门挂在 body 下，吃不到 .workbench-shell 的记事本排版；
+   原样对齐主页面记事本字号（textarea 与 mirror 必须成对，见 style-contract）。 */
+.focus-now-modal .text-editor-textarea,
+.focus-now-modal .text-mirror {
+  font-size: 14px;
+  line-height: 1.85;
+  padding: 18px 4px;
+}
 .workbench-shell .desk-ai-action {
   display: inline-flex; align-items: center; gap: 6px;
   border-radius: 6px; min-height: 30px; padding: 0 8px;
