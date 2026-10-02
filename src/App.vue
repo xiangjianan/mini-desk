@@ -2298,9 +2298,12 @@ const lastFocusBaseMs = ref(0);
 watch(() => focusTodo.value?.focusElapsedMs, (ms) => {
   if (ms !== undefined) lastFocusBaseMs.value = ms;
 });
+// 关键区分：任务对象存在但尚无累计（focusElapsedMs undefined）= 真实的 0，必须从 0
+// 起步——否则上一个任务的 lastFocusBaseMs 会漏进新任务（时间混淆 bug）；只有任务
+// 对象本身瞬时缺位（整树替换）才用最近读到的值兜底防闪零。
 const focusBaseMs = computed(() => {
-  const ms = focusTodo.value?.focusElapsedMs;
-  if (ms !== undefined) return ms;
+  const todo = focusTodo.value;
+  if (todo) return todo.focusElapsedMs ?? 0;
   return focusSession.value ? lastFocusBaseMs.value : 0;
 });
 

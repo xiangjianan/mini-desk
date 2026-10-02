@@ -6321,6 +6321,61 @@ describe("App shell", () => {
     }
   });
 
+  it("不同提醒事项的专注计时互不干扰：新任务从 0 起步、各记各的", async () => {
+    vi.useFakeTimers();
+    vi.setSystemTime(new Date("2026-10-02T15:00:00Z").getTime());
+    localStorage.setItem(
+      STORAGE_KEY,
+      JSON.stringify({
+        workspaces: [{
+          ...defaultWorkspace(),
+          todos: {
+            morning: [
+              { id: "t1", text: "任务一", done: false, focusElapsedMs: 90_000 },
+              { id: "t2", text: "任务二", done: false },
+            ],
+          },
+        }],
+      }),
+    );
+    const wrapper = mountApp();
+
+    try {
+      // 任务一：从既有累计起步。
+      wrapper.getComponent(TodoPanel).vm.$emit("focusNow", "morning", "t1");
+      await flushPromises();
+      await wrapper.vm.$nextTick();
+      expect(wrapper.get(".focus-now-timer").text()).toBe("0:01");
+      await wrapper.get(".focus-now-close").trigger("click");
+      await flushPromises();
+      await wrapper.vm.$nextTick();
+
+      // 任务二（从未专注）：必须从 0:00 起步，不得继承任务一的基数。
+      wrapper.getComponent(TodoPanel).vm.$emit("focusNow", "morning", "t2");
+      await flushPromises();
+      await wrapper.vm.$nextTick();
+      expect(wrapper.get(".focus-now-timer").text()).toBe("0:00");
+
+      // 专注任务二 61s（跨 checkpoint）：增量只落在任务二，任务一原地不动。
+      await vi.advanceTimersByTimeAsync(61_000);
+      await wrapper.vm.$nextTick();
+      const saved = JSON.parse(localStorage.getItem(STORAGE_KEY) || "{}");
+      const todos = saved.workspaces[0].todos.morning;
+      expect(todos.find((t: { id: string }) => t.id === "t1").focusElapsedMs).toBe(90_000);
+      expect(todos.find((t: { id: string }) => t.id === "t2").focusElapsedMs).toBeGreaterThanOrEqual(60_000);
+
+      // 关窗后各自徽标独立。
+      await wrapper.get(".focus-now-close").trigger("click");
+      await flushPromises();
+      await wrapper.vm.$nextTick();
+      // 两任务徽标各自出现（数值独立性已由上面的 localStorage 断言证明）。
+      expect(wrapper.findAll(".todo-focus-badge")).toHaveLength(2);
+    } finally {
+      wrapper.unmount();
+      vi.useRealTimers();
+    }
+  });
+
   it("专注弹窗内 TextPanel 笔记写入 focusNotes 并经文本防抖落盘", async () => {
     vi.useFakeTimers();
     localStorage.setItem(
