@@ -22,7 +22,8 @@ export interface InboxPullResult {
   reports: InboxPullReport[];
   /** 任一工作区有补丁（含纯水位线前进）时为 true；调用方仅在此为 true 时重放并持久化。 */
   changed: boolean;
-  /** 所有已配对工作区的拉取全部网络失败时 true（未配对不计入分母；部分失败为 false，轮询自愈）。 */
+  /** 所有已配对工作区的拉取全部失败时 true（网络/非 2xx/响应异常——fetchInboxItems 一律归 null；
+   *  未配对不计入分母；部分失败为 false，轮询自愈）。 */
   networkFailed: boolean;
 }
 

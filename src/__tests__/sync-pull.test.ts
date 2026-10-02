@@ -228,4 +228,10 @@ describe("pullAllInboxes networkFailed", () => {
     const result = await pullAllInboxes([pairedSyncWorkspace("a"), defaultWorkspace("b")]);
     expect(result.networkFailed).toBe(false);
   });
+
+  it("唯一已配对工作区拉取失败而另一未配对时仍为 true（未配对不入分母）", async () => {
+    fetchMock.mockResolvedValue(null);
+    const result = await pullAllInboxes([pairedSyncWorkspace("a"), defaultWorkspace("b")]);
+    expect(result.networkFailed).toBe(true);
+  });
 });
