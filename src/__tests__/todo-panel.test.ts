@@ -4800,6 +4800,8 @@ describe("手机速记手动同步按钮", () => {
     const button = wrapper.get('[data-testid="inbox-sync"]');
     expect(button.attributes("disabled")).toBeDefined();
     expect(button.attributes("aria-busy")).toBe("true");
+    // is-syncing 驱动 CSS 旋转动画（reduced-motion 下动画被豁免，状态仍由此类承载）。
+    expect(button.classes()).toContain("is-syncing");
     wrapper.unmount();
   });
 });

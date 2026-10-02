@@ -75,7 +75,7 @@ html[data-theme="dark"] .workbench-shell,
 }
 
 .inbox-sync-button:disabled {
-  cursor: default;
+  cursor: wait;
   opacity: 0.6;
 }
 
@@ -340,5 +340,6 @@ html[data-theme="dark"] .workbench-shell,
 .workbench-shell .desk-ai-button:disabled { cursor: wait; opacity: 0.6; }
 @media (prefers-reduced-motion: reduce) {
   .workbench-shell .desk-ai-button:hover .n-icon,
+  .inbox-sync-button.is-syncing .n-icon,
   .workbench-shell .desk-smart-paste:hover > span { animation: none; }
 }
