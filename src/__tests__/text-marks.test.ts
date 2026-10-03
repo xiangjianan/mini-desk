@@ -94,6 +94,15 @@ describe("translateMarksForEdit — 文本变更平移", () => {
   it("替换紧贴 mark 末尾的字符：新字符延续高亮（粘性末端，锁定既有语义）", () => {
     expect(translateMarksForEdit([hl(0, 2)], "ABC", "ABD")).toEqual([hl(0, 3)]);
   });
+
+  it("删除高亮编号行上方的空行并顺延编号：高亮随行平移（缺口在中段，不误判整行删除）", () => {
+    // 现场复刻：commitEditorText 把「删空行 + 重编号」合并为一次平移（1. aaa\n\n1. bbb → 1. aaa\n2. bbb）。
+    expect(translateMarksForEdit([hl(11, 14)], "1. aaa\n\n1. bbb", "1. aaa\n2. bbb")).toEqual([hl(10, 13)]);
+  });
+
+  it("删除高亮编号行上方的整行并级联重编号：高亮随行平移", () => {
+    expect(translateMarksForEdit([hl(13, 19)], "1. a\n2. b\n5. cccccc", "1. a\n2. cccccc")).toEqual([hl(8, 14)]);
+  });
 });
 
 describe("toggleMarkInRange — toggle 语义", () => {

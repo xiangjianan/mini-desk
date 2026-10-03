@@ -119,10 +119,63 @@ function findLineForOffset(lineStarts: number[], offset: number): number {
   return index;
 }
 
+/** 行相似度：公共前缀 + 公共后缀长度。重编号只改写行首标记，改写前后高度相似；
+ *  行相等锚不住时用相似度选缺口位置。 */
+function lineSimilarity(left: string, right: string): number {
+  const prefix = getCommonPrefixLength(left, right);
+  return prefix + getCommonSuffixLength(left.slice(prefix), right.slice(prefix));
+}
+
 /**
- * 文本变更后的 marks 平移器。行级公共前缀/后缀对齐，中段旧行按位置配对（等行数时
- * 逐行等价改写——重编号级联改写多行也走这里），行内再用前后缀 diff 夹出编辑区。
- * 打字、粘贴、IME、AI 润色替换、撤销、自动重编号全部走这同一个通道，无特判。
+ * 行数不等的区段对齐。删除侧（旧行多，delta>0）：单次拼接编辑删除的是一段连续行，
+ * 枚举缺口位置 k（前 k 行 1:1 配对、跳过 delta 行、其余继续 1:1），取配对行相似度
+ * 总和最大者——纯位置配对会把「被删空行 + 重编号改写」误判成「高亮行本身被删」，
+ * 高亮随行消失。平分时保持缺口在末尾（= 旧位置配对）。
+ * 插入侧（delta<0）与等行数保持纯位置配对：Enter 断行的「前半段保留、移下去的
+ * 后半段裁剪」语义由此钉死（text-marks 测试），相似度配对无法区分断行与行首插行。
+ * 返回旧区行号 → 新区行号的映射；缺口内的旧行映射 null（行被删除）。
+ */
+function buildRegionPairing(
+  beforeRegion: string[],
+  afterRegion: string[],
+): (oldIndex: number) => number | null {
+  const delta = beforeRegion.length - afterRegion.length;
+  const pairCount = Math.min(beforeRegion.length, afterRegion.length);
+  if (delta <= 0) return (oldIndex) => (oldIndex < pairCount ? oldIndex : null);
+  // k=pairCount（缺口在末尾）先作基线，其余 k 需严格更优才接管——平局时回归旧行为。
+  let bestK = pairCount;
+  let bestScore = regionPairingScore(beforeRegion, afterRegion, delta, pairCount);
+  for (let k = 0; k < pairCount; k += 1) {
+    const score = regionPairingScore(beforeRegion, afterRegion, delta, k);
+    if (score > bestScore) {
+      bestScore = score;
+      bestK = k;
+    }
+  }
+  return (oldIndex) => {
+    if (oldIndex < bestK) return oldIndex;
+    if (oldIndex < bestK + delta) return null;
+    return oldIndex - delta;
+  };
+}
+
+/** 缺口位置 k 的配对总分：前 k 对位置配对，其后长侧跳过 delta 行再继续配对。 */
+function regionPairingScore(beforeRegion: string[], afterRegion: string[], delta: number, k: number): number {
+  let score = 0;
+  for (let index = 0; index < k; index += 1) {
+    score += lineSimilarity(beforeRegion[index] ?? "", afterRegion[index] ?? "");
+  }
+  for (let index = k; index < Math.min(beforeRegion.length, afterRegion.length); index += 1) {
+    score += lineSimilarity(beforeRegion[index + delta] ?? "", afterRegion[index] ?? "");
+  }
+  return score;
+}
+
+/**
+ * 文本变更后的 marks 平移器。行级公共前缀/后缀对齐夹出变化区段；区段内等行数时
+ * 逐行等价改写（重编号级联改写多行也走这里），行数不等时按连续缺口对齐（见
+ * buildRegionPairing），行内再用前后缀 diff 夹出编辑区。打字、粘贴、IME、AI 润色
+ * 替换、撤销、自动重编号全部走这同一个通道，无特判。
  */
 export function translateMarksForEdit(marks: TextMark[], previous: string, next: string): TextMark[] {
   if (previous === next || marks.length === 0) return marks;
@@ -136,7 +189,10 @@ export function translateMarksForEdit(marks: TextMark[], previous: string, next:
   while (tail < tailMax && before[before.length - 1 - tail] === after[after.length - 1 - tail]) tail += 1;
   const replacedStart = head;
   const replacedEnd = before.length - tail;
-  const pairedCount = Math.min(replacedEnd - replacedStart, after.length - tail - head);
+  const pairInRegion = buildRegionPairing(
+    before.slice(replacedStart, replacedEnd),
+    after.slice(head, after.length - tail),
+  );
   const totalDelta = next.length - previous.length;
   const beforeStarts = getLineStarts(before);
   const afterStarts = getLineStarts(after);
@@ -152,9 +208,9 @@ export function translateMarksForEdit(marks: TextMark[], previous: string, next:
       result.push({ ...mark, start: mark.start + totalDelta, end: mark.end + totalDelta });
       continue;
     }
-    const pairedIndex = line - replacedStart;
-    if (pairedIndex >= pairedCount) continue; // 行被删除，mark 随之消失
-    const edit = getInLineEdit(before[line] ?? "", after[replacedStart + pairedIndex] ?? "");
+    const pairedIndex = pairInRegion(line - replacedStart);
+    if (pairedIndex === null) continue; // 行被删除，mark 随之消失
+    const edit = getInLineEdit(before[line] ?? "", after[head + pairedIndex] ?? "");
     if (edit.removed === 0 && edit.added === 0) {
       result.push(mark);
       continue;
