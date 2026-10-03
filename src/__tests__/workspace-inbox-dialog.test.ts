@@ -221,6 +221,8 @@ describe("WorkspaceInboxDialog", () => {
     const wrapper = mountDialog(undefined);
     expect(wrapper.get('[data-testid="inbox-steps"]').text()).toContain("一、手机安装");
     expect(wrapper.find('[data-testid="inbox-generate"]').exists()).toBe(true);
+    // 空态同样能走完引导第一步：App Store 下载链接在场。
+    expect(wrapper.find('[data-testid="inbox-app-store"]').exists()).toBe(true);
   });
 
   it("保存时 emit update 并保留水位线与落点", async () => {
