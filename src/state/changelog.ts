@@ -29,6 +29,22 @@ export interface ChangelogEntry {
 
 export const CHANGELOG: ChangelogEntry[] = [
     {
+      version: "1.0.201",
+      date: "2026-10-03",
+      notes: {
+        zh: [
+          "新功能：手机速记配对弹窗新增四步操作引导（手机安装→扫码配对→手机速记→自动同步），附 App Store 下载入口，配对地址改为可点击链接",
+          "修复：记事本删除空行触发编号顺延时，该行已有高亮不再丢失",
+          "修复：记事本滚动到底部后按回车，视口跟随光标滚动，不再出现光标与文本错位",
+        ],
+        en: [
+          "New: the phone-capture pairing dialog now walks you through four clear steps (install → scan to pair → capture → auto sync), with an App Store download link and a clickable pairing address",
+          "Fixed: highlights no longer vanish from a numbered line when deleting the blank line above it renumbers the list",
+          "Fixed: pressing Enter near the bottom of the notes now scrolls the view to follow the caret — no more caret/text misalignment",
+        ],
+      },
+    },
+    {
       version: "1.0.200",
       date: "2026-10-02",
       notes: {
