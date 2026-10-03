@@ -156,8 +156,24 @@ function save(): void {
       <span class="workspace-inbox-workspace-label">{{ text.app.inboxWorkspaceLabel }}</span>
       <span class="workspace-inbox-workspace-name">{{ workspaceTitle }}</span>
     </p>
-    <p class="workspace-inbox-intro">{{ text.app.inboxDialogIntro }}</p>
-    <p class="workspace-inbox-hint">{{ text.app.inboxSyncHint }}</p>
+    <ol class="workspace-inbox-steps" data-testid="inbox-steps">
+      <li class="workspace-inbox-step">
+        <span class="workspace-inbox-step-title">{{ text.app.inboxStep1Title }}</span>
+        <span class="workspace-inbox-step-body">{{ text.app.inboxStep1Body }}</span>
+      </li>
+      <li class="workspace-inbox-step">
+        <span class="workspace-inbox-step-title">{{ text.app.inboxStep2Title }}</span>
+        <span class="workspace-inbox-step-body">{{ text.app.inboxStep2Body }}</span>
+      </li>
+      <li class="workspace-inbox-step">
+        <span class="workspace-inbox-step-title">{{ text.app.inboxStep3Title }}</span>
+        <span class="workspace-inbox-step-body">{{ text.app.inboxStep3Body }}</span>
+      </li>
+      <li class="workspace-inbox-step">
+        <span class="workspace-inbox-step-title">{{ text.app.inboxStep4Title }}</span>
+        <span class="workspace-inbox-step-body">{{ text.app.inboxStep4Body }}</span>
+      </li>
+    </ol>
 
     <div v-if="!hasCode" class="workspace-inbox-empty">
       <NButton type="primary" data-testid="inbox-generate" @click="generate">{{ text.app.inboxGenerate }}</NButton>

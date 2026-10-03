@@ -7139,8 +7139,10 @@ html[data-theme="dark"] .quick-search .quick-search-toggle:focus-visible {
 .workspace-inbox-workspace { display: flex; align-items: baseline; gap: 6px; margin: 0 0 8px; font-size: 12px; line-height: 1.6; min-width: 0; }
 .workspace-inbox-workspace-label { flex: none; color: var(--muted); }
 .workspace-inbox-workspace-name { font-weight: 600; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
-.workspace-inbox-intro { margin: 0 0 6px; color: var(--muted); font-size: 12px; line-height: 1.6; }
-.workspace-inbox-hint { margin: 0 0 10px; color: var(--muted); font-size: 11px; line-height: 1.6; opacity: 0.85; }
+.workspace-inbox-steps { list-style: none; margin: 0 0 10px; padding: 0; display: grid; gap: 6px; }
+.workspace-inbox-step { display: grid; gap: 2px; }
+.workspace-inbox-step-title { font-size: 12px; font-weight: 600; line-height: 1.6; }
+.workspace-inbox-step-body { color: var(--muted); font-size: 12px; line-height: 1.6; }
 .workspace-inbox-field { display: grid; grid-template-columns: 64px 1fr; align-items: center; gap: 8px; margin: 8px 0; }
 .workspace-inbox-label { color: var(--muted); font-size: 12px; }
 .workspace-inbox-code-row { display: flex; align-items: center; justify-content: space-between; gap: 8px; min-width: 0; }

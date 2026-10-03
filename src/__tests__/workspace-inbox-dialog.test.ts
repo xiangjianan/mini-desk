@@ -190,11 +190,23 @@ describe("WorkspaceInboxDialog", () => {
     }
   });
 
-  it("渲染介绍与同步频率提示（不再展示队列上限）", () => {
+  it("渲染四步引导：一至四标题齐全，每 5 分钟折入步骤四", () => {
     const wrapper = mountDialog(INBOX);
-    // inboxSyncHint 提示每 5 分钟自动同步一次。
-    expect(wrapper.text()).toContain("每 5 分钟");
-    expect(wrapper.text()).not.toContain("200 条");
+    const steps = wrapper.get('[data-testid="inbox-steps"]');
+    expect(steps.text()).toContain("一、手机安装");
+    expect(steps.text()).toContain("二、扫码配对");
+    expect(steps.text()).toContain("三、手机速记");
+    expect(steps.text()).toContain("四、自动同步");
+    // 同步频率提示折入步骤四正文。
+    expect(steps.text()).toContain("每 5 分钟");
+    // 旧两段说明文案已被四步引导替代。
+    expect(wrapper.text()).not.toContain("在手机上打开下面的地址");
+  });
+
+  it("未生成码的空态同样展示四步引导", () => {
+    const wrapper = mountDialog(undefined);
+    expect(wrapper.get('[data-testid="inbox-steps"]').text()).toContain("一、手机安装");
+    expect(wrapper.find('[data-testid="inbox-generate"]').exists()).toBe(true);
   });
 
   it("保存时 emit update 并保留水位线与落点", async () => {
