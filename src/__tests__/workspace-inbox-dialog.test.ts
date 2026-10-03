@@ -2,6 +2,7 @@ import { afterEach, describe, expect, it, vi } from "vitest";
 import { mount } from "@vue/test-utils";
 import { defineComponent } from "vue";
 import WorkspaceInboxDialog from "../components/WorkspaceInboxDialog.vue";
+import { INBOX_APP_STORE_URL } from "../sync/pairing";
 import { defaultWorkspace } from "../state/defaults";
 import type { WorkspaceData, WorkspaceInbox, WorkspaceSpace } from "../types";
 
@@ -124,10 +125,14 @@ describe("WorkspaceInboxDialog", () => {
     fallback.unmount();
   });
 
-  it("已配对时展示码与含 #inbox= 的地址", () => {
+  it("已配对时展示码与含 #inbox= 的可点击配对地址", () => {
     const wrapper = mountDialog(INBOX);
     expect(wrapper.find('[data-testid="inbox-code"]').text()).toBe("AB2CDE4FGHJK");
-    expect(wrapper.find('[data-testid="inbox-address"]').text()).toContain("#inbox=AB2CDE4FGHJK");
+    const address = wrapper.get('[data-testid="inbox-address"]');
+    expect(address.text()).toContain("#inbox=AB2CDE4FGHJK");
+    expect(address.attributes("href")).toContain("#inbox=AB2CDE4FGHJK");
+    expect(address.attributes("target")).toBe("_blank");
+    expect(address.attributes("rel")).toContain("noopener");
   });
 
   it("配对码旁的复制按钮：写入剪贴板并短暂反馈「已复制」", async () => {
@@ -201,6 +206,15 @@ describe("WorkspaceInboxDialog", () => {
     expect(steps.text()).toContain("每 5 分钟");
     // 旧两段说明文案已被四步引导替代。
     expect(wrapper.text()).not.toContain("在手机上打开下面的地址");
+  });
+
+  it("步骤一正文附 App Store 下载链接：href 取常量、新标签打开", () => {
+    const wrapper = mountDialog(INBOX);
+    const link = wrapper.get('[data-testid="inbox-app-store"]');
+    expect(link.attributes("href")).toBe(INBOX_APP_STORE_URL);
+    expect(link.attributes("target")).toBe("_blank");
+    expect(link.attributes("rel")).toContain("noopener");
+    expect(link.text()).toBe("下载");
   });
 
   it("未生成码的空态同样展示四步引导", () => {

@@ -3,7 +3,7 @@ import { computed, onBeforeUnmount, onMounted, ref, watch } from "vue";
 import { NButton, NIcon, NModal, NSelect } from "naive-ui";
 import { CheckmarkOutline, CloseCircleOutline, CopyOutline } from "@vicons/ionicons5";
 import QRCode from "qrcode";
-import { buildInboxAddress, generateInboxCode, isValidInboxCode } from "../sync/pairing";
+import { buildInboxAddress, generateInboxCode, INBOX_APP_STORE_URL, isValidInboxCode } from "../sync/pairing";
 import { getDisplaySpaceTitle, getDisplayTodoListTitle, getUiText } from "../state/i18n";
 import { getWorkspaceBoardTitle } from "../state/workspaces";
 import { copyTextToClipboard } from "../utils/clipboard";
@@ -159,7 +159,16 @@ function save(): void {
     <ol class="workspace-inbox-steps" data-testid="inbox-steps">
       <li class="workspace-inbox-step">
         <span class="workspace-inbox-step-title">{{ text.app.inboxStep1Title }}</span>
-        <span class="workspace-inbox-step-body">{{ text.app.inboxStep1Body }}</span>
+        <span class="workspace-inbox-step-body">
+          {{ text.app.inboxStep1Body }}
+          <a
+            class="workspace-inbox-step-link"
+            data-testid="inbox-app-store"
+            :href="INBOX_APP_STORE_URL"
+            target="_blank"
+            rel="noopener noreferrer"
+          >{{ text.app.inboxAppStoreLink }}</a>
+        </span>
       </li>
       <li class="workspace-inbox-step">
         <span class="workspace-inbox-step-title">{{ text.app.inboxStep2Title }}</span>
@@ -223,7 +232,13 @@ function save(): void {
 
       <div class="workspace-inbox-field">
         <span class="workspace-inbox-label">{{ text.app.inboxAddressLabel }}</span>
-        <span class="workspace-inbox-address" data-testid="inbox-address">{{ address }}</span>
+        <a
+          class="workspace-inbox-address"
+          data-testid="inbox-address"
+          :href="address"
+          target="_blank"
+          rel="noopener noreferrer"
+        >{{ address }}</a>
       </div>
 
       <canvas

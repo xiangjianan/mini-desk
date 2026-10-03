@@ -28,6 +28,9 @@ export function buildInboxAddress(code: string): string {
   return `${window.location.origin}${window.location.pathname}#inbox=${code}`;
 }
 
+// TODO(占位链接): App 上架后替换为真实 App Store 地址（workspace-inbox-dialog 测试 import 本常量断言，改这里即可）。
+export const INBOX_APP_STORE_URL = "https://apps.apple.com/app/mini-desk";
+
 export const REMEMBERED_INBOX_CODE_KEY = "mini-desk-inbox-code";
 
 /** 手机壳本地记忆最近配对码：主屏图标（start_url=/）与微信重开都会丢 fragment，裸访问时用它自动配对。
