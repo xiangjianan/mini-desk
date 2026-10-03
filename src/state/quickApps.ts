@@ -15,8 +15,6 @@ export interface QuickAppPreset {
 }
 
 export const QUICK_APP_PRESETS: readonly QuickAppPreset[] = [
-  // "im:" opens WeLink; append the target's employee number, e.g. im:10012345.
-  { title: { zh: "WeLink", en: "WeLink" }, scheme: "im:", hint: { zh: "工号", en: "employee ID" } },
   { title: { zh: "微信", en: "WeChat" }, scheme: "wechat://", hint: { zh: "仅启动", en: "launch only" } },
   { title: { zh: "钉钉", en: "DingTalk" }, scheme: "dingtalk://", hint: { zh: "仅启动", en: "launch only" } },
   { title: { zh: "飞书", en: "Lark" }, scheme: "lark://", hint: { zh: "仅启动", en: "launch only" } },
