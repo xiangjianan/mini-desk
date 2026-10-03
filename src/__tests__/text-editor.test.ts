@@ -3,6 +3,7 @@ import {
   appendContinuingListFormat,
   editorStateFromLines,
   editorTextToLines,
+  computeCaretRevealScroll,
   handleTextareaTab,
   linesFromEditorState,
   moveCaretToLineBoundary,
@@ -517,5 +518,39 @@ describe("editorStateFromLines / linesFromEditorState — marks 双向携带", (
     const newlineOnly = linesFromEditorState("ab\ncd", [{ type: "strike", start: 2, end: 3 }]);
     expect(newlineOnly[0].marks).toBeUndefined();
     expect(newlineOnly[1].marks).toBeUndefined();
+  });
+});
+
+describe("computeCaretRevealScroll — 合成编辑后的光标可见化", () => {
+  // 6 行短行、行高 10、上下 padding 10：内容高 80，视口 50，最大 scrollTop 30。
+  const sixLines = "l1\nl2\nl3\nl4\nl5\nl6";
+  const base = { value: sixLines, clientHeight: 50, lineHeight: 10, paddingTop: 10, paddingBottom: 10 };
+
+  it("光标行已在视口内：不动（null）", () => {
+    expect(computeCaretRevealScroll({ ...base, caret: 0, scrollTop: 0 })).toBeNull();
+    // 滚到底（scrollTop=30）时光标在末行行尾仍可见。
+    expect(computeCaretRevealScroll({ ...base, caret: sixLines.length, scrollTop: 30 })).toBeNull();
+  });
+
+  it("合成 Enter 新增行把光标顶出视口底：滚到恰好露出光标行", () => {
+    // 滚到底后回车：第 7 行（光标行）下边沿 80 > 视口内容底 70 → 滚到 40（新 scrollHeight 90 的底部）。
+    const sevenLines = `${sixLines}\nl7`;
+    expect(
+      computeCaretRevealScroll({ ...base, value: sevenLines, caret: sevenLines.length, scrollTop: 30 }),
+    ).toBe(40);
+  });
+
+  it("光标行在视口上方：回滚露出行首（不小于 0）", () => {
+    expect(computeCaretRevealScroll({ ...base, caret: 0, scrollTop: 30 })).toBe(0);
+  });
+
+  it("行高非法或视口非法：不动作", () => {
+    expect(computeCaretRevealScroll({ ...base, caret: sixLines.length, scrollTop: 30, lineHeight: 0 })).toBeNull();
+    expect(computeCaretRevealScroll({ ...base, caret: sixLines.length, scrollTop: 30, lineHeight: Number.NaN })).toBeNull();
+    expect(computeCaretRevealScroll({ ...base, caret: sixLines.length, scrollTop: 30, clientHeight: 0 })).toBeNull();
+  });
+
+  it("光标偏移越界时按钳制值计算（防御外部脏值）", () => {
+    expect(computeCaretRevealScroll({ ...base, caret: 9999, scrollTop: 0 })).not.toBeNull();
   });
 });

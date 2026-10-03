@@ -11,6 +11,7 @@ import { GUIDE_MENU_OPTION } from "../state/defaults";
 import { getUiText } from "../state/i18n";
 import type { AppLanguage } from "../types";
 import {
+  computeCaretRevealScroll,
   editorStateFromLines,
   getLineTextStartOffset,
   handleTextareaTab,
@@ -349,8 +350,32 @@ function handleKeydown(event: KeyboardEvent): void {
   if (event.key === "Enter") {
     event.preventDefault();
     applyEditorText(event.shiftKey ? insertPlainLineBreak(textarea) : insertIndentedLineBreak(textarea));
-    nextTick(() => update());
+    nextTick(() => {
+      update();
+      revealCaretInTextarea(textarea);
+    });
   }
+}
+
+/** 合成 Enter（setRangeText）不走浏览器原生的「光标可见化」滚动：滚到底部时新行
+ *  落到视口外，光标随回车逐行走出视野而视口冻结。按光标行补一次滚动并同步镜像层
+ *  （行高/内边距取计算样式，与 getTextOffsetAtPoint 同口径的估算）。 */
+function revealCaretInTextarea(textarea: HTMLTextAreaElement): void {
+  const style = window.getComputedStyle(textarea);
+  const fontSize = parseFloat(style.fontSize) || 16;
+  const lineHeight = parseFloat(style.lineHeight) || fontSize * 1.2;
+  const target = computeCaretRevealScroll({
+    value: textarea.value,
+    caret: textarea.selectionStart ?? textarea.value.length,
+    scrollTop: textarea.scrollTop,
+    clientHeight: textarea.clientHeight,
+    lineHeight,
+    paddingTop: parseFloat(style.paddingTop) || 0,
+    paddingBottom: parseFloat(style.paddingBottom) || 0,
+  });
+  if (target === null) return;
+  textarea.scrollTop = target;
+  if (mirrorRef.value) mirrorRef.value.scrollTop = textarea.scrollTop;
 }
 
 function handleFocus(event: FocusEvent): void {

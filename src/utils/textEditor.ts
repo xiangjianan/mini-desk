@@ -333,6 +333,42 @@ export function getLineTextStartOffset(line: string): number {
   return 0;
 }
 
+export interface CaretRevealMetrics {
+  value: string;
+  caret: number;
+  scrollTop: number;
+  clientHeight: number;
+  lineHeight: number;
+  paddingTop?: number;
+  paddingBottom?: number;
+}
+
+/**
+ * 合成编辑（Enter 被 preventDefault 后走 setRangeText）不触发浏览器原生的「光标
+ * 可见化」滚动：滚到底部时新行落到视口外，光标随回车逐行走出视野而视口冻结。
+ * 按光标所在逻辑行估算需要的 scrollTop——光标行已可见返回 null（不动）；越过
+ * 视口底则滚到恰好露出该行，跑到视口上方则回滚露出行首。行数按逻辑行计（与
+ * getTextOffsetAtPoint 同口径），长行折行时不感知二次换行，列表行场景足够。
+ */
+export function computeCaretRevealScroll(metrics: CaretRevealMetrics): number | null {
+  const { value, caret, scrollTop, clientHeight, lineHeight } = metrics;
+  if (!Number.isFinite(lineHeight) || lineHeight <= 0 || clientHeight <= 0) return null;
+  const offset = Math.max(0, Math.min(caret, value.length));
+  let lineIndex = 0;
+  for (let index = 0; index < offset; index += 1) {
+    if (value[index] === "\n") lineIndex += 1;
+  }
+  const paddingTop = metrics.paddingTop ?? 0;
+  const paddingBottom = metrics.paddingBottom ?? 0;
+  const caretTop = paddingTop + lineIndex * lineHeight;
+  const caretBottom = caretTop + lineHeight;
+  if (caretBottom > scrollTop + clientHeight - paddingBottom) {
+    return Math.max(0, caretBottom + paddingBottom - clientHeight);
+  }
+  if (caretTop < scrollTop) return Math.max(0, caretTop - paddingTop);
+  return null;
+}
+
 /**
  * Cmd/Ctrl+Up/Down 把光标所在行与相邻行交换。同类同级列表行（同为编号或同为
  * 短横线、缩进层级一致）只交换条目文本：编号与短横线留在原位，编号因此保持
