@@ -7594,6 +7594,9 @@ button.mobile-inbox-revoked-change {
   inset: 0;
   overflow-x: hidden;
   overflow-y: auto;
+  /* 镜像是纯从属层（scrollTop 永远由 textarea 侧同步）：滚动锚定会在内容重渲染时
+     自作主张把 mirror 顶到新底部，而 textarea 无对称补偿——两层错位、光标与字形脱节。 */
+  overflow-anchor: none;
   pointer-events: none;
   color: var(--text);
   z-index: 0;

@@ -350,32 +350,143 @@ function handleKeydown(event: KeyboardEvent): void {
   if (event.key === "Enter") {
     event.preventDefault();
     applyEditorText(event.shiftKey ? insertPlainLineBreak(textarea) : insertIndentedLineBreak(textarea));
+    // 两跳 nextTick：update() 的重编号改写 text.value 后再等一帧镜像层渲染完毕，
+    // reveal 才能按镜像实测光标行的视觉矩形（折行也准）。
     nextTick(() => {
       update();
-      revealCaretInTextarea(textarea);
+      nextTick(() => revealCaretInTextarea(textarea));
     });
   }
 }
 
-/** 合成 Enter（setRangeText）不走浏览器原生的「光标可见化」滚动：滚到底部时新行
- *  落到视口外，光标随回车逐行走出视野而视口冻结。按光标行补一次滚动并同步镜像层
- *  （行高/内边距取计算样式，与 getTextOffsetAtPoint 同口径的估算）。 */
+/**
+ * 合成 Enter（setRangeText）不走浏览器原生的「光标可见化」滚动：滚到底部时新行
+ * 落到视口外，光标随回车逐行走出视野而视口冻结。优先用镜像层 Range 实测光标行
+ * 的视觉矩形（镜像与 textarea 排版契约同步，软折行/长行也准）；镜像不可用或无
+ * 布局（jsdom）时退回 computeCaretRevealScroll 的逻辑行估算（不感知折行）。
+ * 需要滚动时滚动 textarea 并同步镜像层。
+ */
 function revealCaretInTextarea(textarea: HTMLTextAreaElement): void {
   const style = window.getComputedStyle(textarea);
   const fontSize = parseFloat(style.fontSize) || 16;
   const lineHeight = parseFloat(style.lineHeight) || fontSize * 1.2;
-  const target = computeCaretRevealScroll({
-    value: textarea.value,
-    caret: textarea.selectionStart ?? textarea.value.length,
-    scrollTop: textarea.scrollTop,
-    clientHeight: textarea.clientHeight,
-    lineHeight,
-    paddingTop: parseFloat(style.paddingTop) || 0,
-    paddingBottom: parseFloat(style.paddingBottom) || 0,
-  });
-  if (target === null) return;
-  textarea.scrollTop = target;
+  const paddingTop = parseFloat(style.paddingTop) || 0;
+  const paddingBottom = parseFloat(style.paddingBottom) || 0;
+  const measured = measureCaretLineShift(textarea, mirrorRef.value, { paddingTop, paddingBottom, lineHeight });
+  let shift: number | null;
+  if (measured !== null) {
+    shift = measured;
+  } else {
+    const target = computeCaretRevealScroll({
+      value: textarea.value,
+      caret: textarea.selectionStart ?? textarea.value.length,
+      scrollTop: textarea.scrollTop,
+      clientHeight: textarea.clientHeight,
+      lineHeight,
+      paddingTop,
+      paddingBottom,
+    });
+    shift = target === null ? null : target - textarea.scrollTop;
+  }
+  if (shift === null || Math.abs(shift) < 1) return;
+  const maxScroll = Math.max(0, textarea.scrollHeight - textarea.clientHeight);
+  const next = Math.max(0, Math.min(textarea.scrollTop + shift, maxScroll));
+  if (Math.abs(next - textarea.scrollTop) < 1) return;
+  textarea.scrollTop = next;
   if (mirrorRef.value) mirrorRef.value.scrollTop = textarea.scrollTop;
+}
+
+/**
+ * 镜像层实测光标行的可见性：按字符偏移在镜像文本节点上建 Range 覆盖整行，取包
+ * 围盒与 textarea 视口（去上下内边距）比较。空行的行盒由换行符归属上一行测不出
+ * ——改为测上方最近非空行的盒底，加空行步数×行高推算。返回需要的滚动量（正=向
+ * 下滚）；镜像未就绪/无布局（jsdom 全零矩形）返回 null 交由调用方走估算兜底。
+ */
+function measureCaretLineShift(
+  textarea: HTMLTextAreaElement,
+  mirror: HTMLElement | null,
+  pads: { paddingTop: number; paddingBottom: number; lineHeight: number },
+): number | null {
+  if (!mirror) return null;
+  const value = textarea.value;
+  const caret = Math.max(0, Math.min(textarea.selectionStart ?? value.length, value.length));
+  const lineStart = caret <= 0 ? 0 : value.lastIndexOf("\n", caret - 1) + 1;
+  const nextBreak = value.indexOf("\n", caret);
+  const lineEnd = nextBreak === -1 ? value.length : nextBreak;
+  // jsdom 的 Range 无 getBoundingClientRect（全零布局）：走估算兜底。
+  if (typeof Range.prototype.getBoundingClientRect !== "function") return null;
+
+  let rectTop: number;
+  let rectBottom: number;
+  if (lineEnd > lineStart) {
+    const positioned = buildMirrorRange(mirror, lineStart, Math.min(value.length, lineEnd + 1));
+    if (!positioned) return null;
+    const rect = positioned.getBoundingClientRect();
+    if (rect.height <= 0) return null;
+    rectTop = rect.top;
+    rectBottom = rect.bottom;
+  } else {
+    // 空行：向上找最近非空行，其盒底 + 步数×行高即空行位置。
+    let probeEnd = lineStart - 1;
+    let steps = 1;
+    while (probeEnd >= 0) {
+      const probeStart = probeEnd <= 0 ? 0 : value.lastIndexOf("\n", probeEnd - 1) + 1;
+      if (probeEnd > probeStart) {
+        const positioned = buildMirrorRange(mirror, probeStart, probeEnd + 1);
+        if (positioned) {
+          const rect = positioned.getBoundingClientRect();
+          if (rect.height > 0) {
+            rectTop = rect.bottom + (steps - 1) * pads.lineHeight;
+            rectBottom = rectTop + pads.lineHeight;
+            return caretShiftFromRect(rectTop, rectBottom, textarea, pads);
+          }
+        }
+        return null; // 上方有非空行但测不到：交估算兜底。
+      }
+      steps += 1;
+      probeEnd = probeStart - 1;
+    }
+    return null; // 光标行之上全是空行/在首行：交估算兜底。
+  }
+  return caretShiftFromRect(rectTop, rectBottom, textarea, pads);
+}
+
+function caretShiftFromRect(
+  rectTop: number,
+  rectBottom: number,
+  textarea: HTMLTextAreaElement,
+  pads: { paddingTop: number; paddingBottom: number },
+): number | null {
+  const view = textarea.getBoundingClientRect();
+  const viewTop = view.top + pads.paddingTop;
+  const viewBottom = view.bottom - pads.paddingBottom;
+  if (rectBottom > viewBottom + 0.5) return rectBottom - viewBottom;
+  if (rectTop < viewTop - 0.5) return rectTop - viewTop;
+  return 0;
+}
+
+/** 在镜像层文本节点上按全文偏移建 Range（镜像渲染同一全文，按标记边界分段）；
+ *  偏移越界（渲染滞后/尾垫差异）返回 null。 */
+function buildMirrorRange(mirror: HTMLElement, start: number, end: number): Range | null {
+  const range = document.createRange();
+  const walker = document.createTreeWalker(mirror, NodeFilter.SHOW_TEXT);
+  let consumed = 0;
+  let anchor: { node: Text; offset: number } | null = null;
+  let head: { node: Text; offset: number } | null = null;
+  let node = walker.nextNode();
+  while (node) {
+    const text = node as Text;
+    const length = text.length;
+    if (anchor === null && start <= consumed + length) anchor = { node: text, offset: start - consumed };
+    if (head === null && end <= consumed + length) head = { node: text, offset: end - consumed };
+    if (anchor && head) break;
+    consumed += length;
+    node = walker.nextNode();
+  }
+  if (!anchor || !head) return null;
+  range.setStart(anchor.node, Math.min(anchor.offset, anchor.node.length));
+  range.setEnd(head.node, Math.min(head.offset, head.node.length));
+  return range;
 }
 
 function handleFocus(event: FocusEvent): void {
