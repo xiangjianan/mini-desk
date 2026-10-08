@@ -7173,6 +7173,7 @@ html[data-theme="dark"] .quick-search .quick-search-toggle:focus-visible {
 }
 .workspace-inbox-copy-hint.is-fail { background: var(--destructive); color: var(--primary-foreground); }
 .workspace-inbox-rotate { border: none; background: none; color: var(--primary); font-size: 12px; cursor: pointer; padding: 2px 4px; flex: none; }
+.workspace-inbox-rotate:disabled { opacity: 0.6; cursor: wait; }
 .workspace-inbox-address { font-size: 11px; color: var(--primary); word-break: break-all; }
 .workspace-inbox-address:hover, .workspace-inbox-address:focus-visible { text-decoration: underline; }
 .workspace-inbox-qr { display: block; margin: 8px auto; border: 1px solid var(--line-subtle); border-radius: 8px; }

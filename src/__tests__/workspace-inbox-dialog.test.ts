@@ -6,6 +6,12 @@ import { INBOX_APP_STORE_URL } from "../sync/pairing";
 import { defaultWorkspace } from "../state/defaults";
 import type { WorkspaceData, WorkspaceInbox, WorkspaceSpace } from "../types";
 
+// 生成/重置先注册中继成功才 emit（注册门禁）：组件级用例固定注册成功。
+vi.mock("../sync/inboxClient", async (importOriginal) => ({
+  ...(await importOriginal<typeof import("../sync/inboxClient")>()),
+  registerInboxKey: vi.fn(async () => true),
+}));
+
 const INBOX: WorkspaceInbox = { code: "AB2CDE4FGHJK", todoListId: "morning", noteTarget: "workspace", lastSeenAt: 42 };
 
 // NModal teleports to <body>, which VTU's wrapper.find cannot traverse, so the
@@ -74,6 +80,15 @@ function updatePayloads(wrapper: ReturnType<typeof mountDialog>): WorkspaceInbox
   return (wrapper.emitted("update") ?? []).map((args) => args[0] as WorkspaceInbox);
 }
 
+// 注册门禁为异步链（哈希→注册→emit）：SHA-256 摘要走 libuv 线程池、跨宏任务
+// 才落地，固定轮次的冲刷在冷启动/高负载下可能抢跑；轮询等到 update emit 落地
+// 再继续（真实时序里注册先于用户后续操作完成）。
+async function waitForRegistrationEmit(wrapper: ReturnType<typeof mountDialog>): Promise<void> {
+  await vi.waitFor(() => {
+    expect(updatePayloads(wrapper).length).toBeGreaterThan(0);
+  });
+}
+
 describe("WorkspaceInboxDialog", () => {
   afterEach(() => {
     vi.restoreAllMocks();
@@ -87,7 +102,7 @@ describe("WorkspaceInboxDialog", () => {
     });
     expect(wrapper.text()).toContain("生成配对码");
     await wrapper.find('[data-testid="inbox-generate"]').trigger("click");
-    // 生成即上云：立即 emit（App 侧 handleInboxUpdate 落盘并注册中继）。
+    await waitForRegistrationEmit(wrapper);
     const [payload] = updatePayloads(wrapper);
     expect(payload?.code).toMatch(/^[0-9A-HJKMNP-TV-Z]{12}$/);
     // 落点为当前下拉默认值：首个提醒清单与首个空间。
@@ -103,6 +118,8 @@ describe("WorkspaceInboxDialog", () => {
   it("生成后点取消：仅 emit close，不回收已生效的配对", async () => {
     const wrapper = mountDialog(undefined);
     await wrapper.find('[data-testid="inbox-generate"]').trigger("click");
+    // 真实时序里注册先于用户点取消完成：等 update 落地再点关闭。
+    await waitForRegistrationEmit(wrapper);
     await wrapper.get('[data-testid="inbox-close"]').trigger("click");
     // 取消不 emit 补偿 update：生成的码已落盘注册，保持生效（与重置配对码同口径）。
     expect(updatePayloads(wrapper)).toHaveLength(1);
@@ -274,6 +291,7 @@ describe("WorkspaceInboxDialog", () => {
       onClose: () => order.push("close"),
     });
     await wrapper.find('[data-testid="inbox-rotate"]').trigger("click");
+    await waitForRegistrationEmit(wrapper);
     const [payload] = updatePayloads(wrapper);
     expect(payload?.code).toMatch(/^[0-9A-HJKMNP-TV-Z]{12}$/);
     expect(payload?.code).not.toBe(INBOX.code);

@@ -32,6 +32,9 @@ const closing = ref(false);
 function requestClose(): void {
   if (closing.value) return;
   closing.value = true;
+  // 关闭即弃置：真实 NModal 从关闭请求到卸载有 ~200ms 离场过渡，窗口内迟到的
+  // 注册成功仍会写码+emit（最坏：清除配对后复活配对）；closing 单向，这里置位安全。
+  disposed = true;
   show.value = false;
 }
 // 弹窗可从任意工作空间的「⋯」菜单或设置菜单打开：标明手机将同步到哪个空间。

@@ -9941,6 +9941,90 @@ describe("App inbox register wiring", () => {
     }
   });
 
+  it("注册在途时生成按钮禁用且防重复触发", async () => {
+    seedUnpaired();
+    let resolveRegister!: (ok: boolean) => void;
+    vi.mocked(registerInboxKey).mockImplementation(
+      () => new Promise<boolean>((resolve) => { resolveRegister = resolve; }),
+    );
+    const wrapper = mountApp();
+
+    try {
+      await openInboxDialog(wrapper);
+      await wrapper.get('[data-testid="inbox-generate"]').trigger("click");
+      await flushAsyncComponents();
+
+      expect(registerInboxKey).toHaveBeenCalledTimes(1);
+      // 在途：真 NButton 渲染的按钮带 disabled；再点一次也不应重复注册。
+      expect((wrapper.get('[data-testid="inbox-generate"]').element as HTMLButtonElement).disabled).toBe(true);
+      await wrapper.get('[data-testid="inbox-generate"]').trigger("click");
+      await flushAsyncComponents();
+      expect(registerInboxKey).toHaveBeenCalledTimes(1);
+
+      resolveRegister(false);
+      await flushAsyncComponents();
+      expect((wrapper.get('[data-testid="inbox-generate"]').element as HTMLButtonElement).disabled).toBe(false);
+    } finally {
+      wrapper.unmount();
+    }
+  });
+
+  it("关闭弹窗后迟到的注册成功不落盘", async () => {
+    seedUnpaired();
+    let resolveRegister!: (ok: boolean) => void;
+    vi.mocked(registerInboxKey).mockImplementation(
+      () => new Promise<boolean>((resolve) => { resolveRegister = resolve; }),
+    );
+    const wrapper = mountApp();
+
+    try {
+      await openInboxDialog(wrapper);
+      await wrapper.get('[data-testid="inbox-generate"]').trigger("click");
+      await wrapper.get('[data-testid="inbox-close"]').trigger("click");
+      // 模态桩在 show 翻 false 时同步发 after-leave，弹窗随即卸载。
+      await flushAsyncComponents();
+      expect(wrapper.findComponent(WorkspaceInboxDialog).exists()).toBe(false);
+
+      resolveRegister(true);
+      await flushAsyncComponents();
+
+      const persisted = JSON.parse(localStorage.getItem(STORAGE_KEY) || "{}");
+      expect(persisted.workspaces[0].inbox).toBeUndefined();
+    } finally {
+      wrapper.unmount();
+    }
+  });
+
+  it("重置注册在途时重置按钮禁用且防重复触发", async () => {
+    seedPaired();
+    vi.spyOn(window, "confirm").mockReturnValue(true);
+    let resolveRegister!: (ok: boolean) => void;
+    vi.mocked(registerInboxKey).mockImplementation(
+      () => new Promise<boolean>((resolve) => { resolveRegister = resolve; }),
+    );
+    const wrapper = mountApp();
+
+    try {
+      await openInboxDialog(wrapper);
+      await flushAsyncComponents();
+      const callsAfterStartup = vi.mocked(registerInboxKey).mock.calls.length;
+      await wrapper.get('[data-testid="inbox-rotate"]').trigger("click");
+      await flushAsyncComponents();
+
+      expect(vi.mocked(registerInboxKey).mock.calls.length).toBe(callsAfterStartup + 1);
+      expect((wrapper.get('[data-testid="inbox-rotate"]').element as HTMLButtonElement).disabled).toBe(true);
+      await wrapper.get('[data-testid="inbox-rotate"]').trigger("click");
+      await flushAsyncComponents();
+      expect(vi.mocked(registerInboxKey).mock.calls.length).toBe(callsAfterStartup + 1);
+
+      resolveRegister(false);
+      await flushAsyncComponents();
+      expect((wrapper.get('[data-testid="inbox-rotate"]').element as HTMLButtonElement).disabled).toBe(false);
+    } finally {
+      wrapper.unmount();
+    }
+  });
+
   async function openInboxDialog(wrapper: ReturnType<typeof mountApp>): Promise<void> {
     await wrapper.get('[data-testid="workspace-trigger"]').trigger("click");
     await openWorkspaceMenu(wrapper);
