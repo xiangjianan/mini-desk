@@ -9913,6 +9913,8 @@ describe("App inbox register wiring", () => {
       expect(wrapper.find('[data-testid="inbox-register-error"]').exists()).toBe(false);
       const persisted = JSON.parse(localStorage.getItem(STORAGE_KEY) || "{}");
       expect(persisted.workspaces[0].inbox?.code).toMatch(/^[A-Z0-9]{12}$/);
+      // 收缩契约：生成成功后 App 侧不再二次注册（seedUnpaired 无启动注册，总数=两次点击各一次）。
+      expect(vi.mocked(registerInboxKey).mock.calls.length).toBe(2);
     } finally {
       wrapper.unmount();
     }
