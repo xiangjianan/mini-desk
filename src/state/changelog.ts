@@ -29,6 +29,18 @@ export interface ChangelogEntry {
 
 export const CHANGELOG: ChangelogEntry[] = [
     {
+      version: "1.0.202",
+      date: "2026-10-08",
+      notes: {
+        zh: [
+          "修复：配对码注册中继失败时不再展示配对码与二维码，改为内联提示重试；重置配对码同样先注册成功再换码，失败保留旧地址",
+        ],
+        en: [
+          "Fix: pairing code and QR are no longer shown when relay registration fails — retry inline; resetting now registers the new code before swapping and keeps the old address on failure",
+        ],
+      },
+    },
+    {
       version: "1.0.201",
       date: "2026-10-03",
       notes: {
