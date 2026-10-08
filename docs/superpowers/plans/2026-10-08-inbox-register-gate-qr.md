@@ -374,7 +374,7 @@ git commit -m "fix: 重置配对码同样先注册成功再换码，注册失败
     try {
       await openInboxDialog(wrapper);
       await wrapper.get('[data-testid="inbox-generate"]').trigger("click");
-      await wrapper.get('[data-testid="inbox-cancel"]').trigger("click");
+      await wrapper.get('[data-testid="inbox-close"]').trigger("click");
       // 模态桩在 show 翻 false 时同步发 after-leave，弹窗随即卸载。
       await flushAsyncComponents();
       expect(wrapper.findComponent(WorkspaceInboxDialog).exists()).toBe(false);
@@ -400,14 +400,17 @@ git commit -m "fix: 重置配对码同样先注册成功再换码，注册失败
 
     try {
       await openInboxDialog(wrapper);
+      await flushAsyncComponents();
+      // seedPaired 会触发启动期幂等注册：以打开后的调用数为基线做相对断言。
+      const callsAfterStartup = vi.mocked(registerInboxKey).mock.calls.length;
       await wrapper.get('[data-testid="inbox-rotate"]').trigger("click");
       await flushAsyncComponents();
 
-      expect(registerInboxKey).toHaveBeenCalledTimes(1);
+      expect(vi.mocked(registerInboxKey).mock.calls.length).toBe(callsAfterStartup + 1);
       expect((wrapper.get('[data-testid="inbox-rotate"]').element as HTMLButtonElement).disabled).toBe(true);
       await wrapper.get('[data-testid="inbox-rotate"]').trigger("click");
       await flushAsyncComponents();
-      expect(registerInboxKey).toHaveBeenCalledTimes(1);
+      expect(vi.mocked(registerInboxKey).mock.calls.length).toBe(callsAfterStartup + 1);
 
       resolveRegister(false);
       await flushAsyncComponents();
@@ -417,6 +420,12 @@ git commit -m "fix: 重置配对码同样先注册成功再换码，注册失败
     }
   });
 ```
+
+> 执行期勘误（控制器确认）：取消按钮 testid 实为 `inbox-close`（计划初稿误写 `inbox-cancel`）；
+> 重置在途用例的注册调用数改用 `callsAfterStartup` 相对断言（seedPaired 触发启动期注册，绝对数恒 +1）。
+> 另发现 `src/__tests__/workspace-inbox-dialog.test.ts`（组件级，19 例）未 mock 注册接口、
+> Tasks 1-2 后 3 例红——随本任务补模块级 `registerInboxKey: vi.fn(async () => true)` 部分 mock，
+> 并为受影响用例补时序 await（不弱化断言），一并纳入本任务提交。
 
 - [ ] **Step 2: 跑测试**
 
