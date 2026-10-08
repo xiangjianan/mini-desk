@@ -426,6 +426,12 @@ git commit -m "fix: 重置配对码同样先注册成功再换码，注册失败
 > 另发现 `src/__tests__/workspace-inbox-dialog.test.ts`（组件级，19 例）未 mock 注册接口、
 > Tasks 1-2 后 3 例红——随本任务补模块级 `registerInboxKey: vi.fn(async () => true)` 部分 mock，
 > 并为受影响用例补时序 await（不弱化断言），一并纳入本任务提交。
+>
+> Task 3 质量审查跟进（随后续提交落地）：同步桩观察不到离场窗口，`requestClose()` 的
+> `disposed = true` 无回归覆盖（删行套件仍绿，突变验证）——补一条 quietModalStub（不发
+> after-leave、组件保持挂载）下的组件级用例锁定该行；`waitForRegistrationEmit` 的
+> `vi.waitFor` 显式 `{ timeout: 2500 }` 抗整跑负载漂移；mock 站点补一句实现泄漏注释
+> （restoreAllMocks 不重置 vi.fn 的 mockImplementation，挂起态用例须在 finally 恢复）。
 
 - [ ] **Step 2: 跑测试**
 
