@@ -1,12 +1,15 @@
 import { afterEach, describe, expect, it, vi } from "vitest";
-import { mount } from "@vue/test-utils";
+import { flushPromises, mount } from "@vue/test-utils";
 import { defineComponent } from "vue";
 import WorkspaceInboxDialog from "../components/WorkspaceInboxDialog.vue";
 import { INBOX_APP_STORE_URL } from "../sync/pairing";
+import { registerInboxKey } from "../sync/inboxClient";
 import { defaultWorkspace } from "../state/defaults";
 import type { WorkspaceData, WorkspaceInbox, WorkspaceSpace } from "../types";
 
 // 生成/重置先注册中继成功才 emit（注册门禁）：组件级用例固定注册成功。
+// vi.restoreAllMocks() 只还原 spyOn，不会重置 vi.fn 的 mockImplementation——
+// 用 mockImplementation 控制挂起态的用例必须在 finally 里恢复 async () => true，否则泄漏到后续用例。
 vi.mock("../sync/inboxClient", async (importOriginal) => ({
   ...(await importOriginal<typeof import("../sync/inboxClient")>()),
   registerInboxKey: vi.fn(async () => true),
@@ -86,7 +89,7 @@ function updatePayloads(wrapper: ReturnType<typeof mountDialog>): WorkspaceInbox
 async function waitForRegistrationEmit(wrapper: ReturnType<typeof mountDialog>): Promise<void> {
   await vi.waitFor(() => {
     expect(updatePayloads(wrapper).length).toBeGreaterThan(0);
-  });
+  }, { timeout: 2500 });
 }
 
 describe("WorkspaceInboxDialog", () => {
@@ -362,5 +365,61 @@ describe("WorkspaceInboxDialog", () => {
 
     expect(wrapper.findComponent({ name: "NModal" }).props("show")).toBe(false);
     expect(wrapper.emitted("close")).toBeUndefined();
+  });
+
+  it("关闭请求后离场窗口内迟到的注册成功不写码不 emit", async () => {
+    // 挂起注册：点击生成后手动放行，制造「关闭发生在注册完成前」的离场窗口。
+    // 本文件无逐用例 mockClear：先清计数，「已调用」才专指本用例的在途注册。
+    let resolveRegister!: (ok: boolean) => void;
+    vi.mocked(registerInboxKey).mockClear();
+    vi.mocked(registerInboxKey).mockImplementation(
+      () => new Promise<boolean>((resolve) => { resolveRegister = resolve; }),
+    );
+    // 静默桩（无 after-leave）= 离场过渡一直没播完：show 已翻 false 但组件保持挂载，
+    // 正是真实 NModal 从 requestClose 到卸载的 ~200ms 离场窗口；与既有静默桩不同，
+    // 插槽不随 show 撤下（真实离场中内容仍在渐隐），供断言「未配对态未变」。
+    const leaveWindowModalStub = defineComponent({
+      name: "NModal",
+      props: ["show", "title"],
+      template: '<section class="workspace-inbox-dialog"><h2>{{ title }}</h2><slot /></section>',
+    });
+    const wrapper = mount(WorkspaceInboxDialog, {
+      props: { workspace: { ...defaultWorkspace("a") }, language: "zh" },
+      global: {
+        stubs: {
+          Modal: leaveWindowModalStub,
+          NModal: leaveWindowModalStub,
+          Button: buttonStub,
+          NButton: buttonStub,
+          Select: selectStub,
+          NSelect: selectStub,
+        },
+      },
+    });
+
+    try {
+      await wrapper.get('[data-testid="inbox-generate"]').trigger("click");
+      // 哈希摘要跨宏任务：先等注册真正在途（deferred 已创建）再点关闭，窗口才成立。
+      await vi.waitFor(() => {
+        expect(registerInboxKey).toHaveBeenCalled();
+      }, { timeout: 2500 });
+      await wrapper.get('[data-testid="inbox-close"]').trigger("click");
+
+      // 关闭请求已受理：show 翻 false、close 未 emit、组件仍在挂载（离场中）。
+      expect(wrapper.findComponent({ name: "NModal" }).props("show")).toBe(false);
+      expect(wrapper.emitted("close")).toBeUndefined();
+
+      resolveRegister(true);
+      await flushPromises();
+
+      // 迟到的注册成功被弃置：不 emit、不落码，停留未配对态。
+      expect(updatePayloads(wrapper)).toHaveLength(0);
+      expect(wrapper.find('[data-testid="inbox-code"]').exists()).toBe(false);
+      expect(wrapper.find('[data-testid="inbox-generate"]').exists()).toBe(true);
+    } finally {
+      wrapper.unmount();
+      // restoreAllMocks 不重置 vi.fn 的实现：手动恢复默认注册成功，防挂起态泄漏到后续用例。
+      vi.mocked(registerInboxKey).mockImplementation(async () => true);
+    }
   });
 });
