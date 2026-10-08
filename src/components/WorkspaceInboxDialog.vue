@@ -4,6 +4,8 @@ import { NButton, NIcon, NModal, NSelect } from "naive-ui";
 import { CheckmarkOutline, CloseCircleOutline, CopyOutline } from "@vicons/ionicons5";
 import QRCode from "qrcode";
 import { buildInboxAddress, generateInboxCode, INBOX_APP_STORE_URL, isValidInboxCode } from "../sync/pairing";
+import { inboxKeyHash } from "../sync/crypto";
+import { registerInboxKey } from "../sync/inboxClient";
 import { getDisplaySpaceTitle, getDisplayTodoListTitle, getUiText } from "../state/i18n";
 import { getWorkspaceBoardTitle } from "../state/workspaces";
 import { copyTextToClipboard } from "../utils/clipboard";
@@ -37,8 +39,15 @@ const workspaceTitle = computed(() => getWorkspaceBoardTitle(props.workspace));
 const canvasRef = ref<HTMLCanvasElement | null>(null);
 // 编辑草稿以 props 里的既有配对为初值；保存/清除时一次性 emit，取消则原样丢弃。
 // 轮换例外：confirm 已承诺「旧地址立即失效」，确认后立即 emit 生效，弹窗保持打开供抄录/扫码。
-// 生成例外：新码一旦展示就要可被扫码配对，立即 emit 生效（落点用当前下拉值）。
+// 生成/轮换例外：先在中继注册新码、成功才赋码 + emit 落盘（未注册的码手机端扫码即
+// unknown_code）；注册失败停留原状态（未配对态/旧码）并内联提示，重试即重新生码注册。
 const code = ref(props.workspace.inbox?.code ?? "");
+// 注册在途守卫：生成/重置按钮 loading/disabled，防重复触发。
+const registering = ref(false);
+// 注册失败内联提示：码未落地，重试即重新生码注册。
+const registerError = ref(false);
+// 卸载守卫：弹窗关闭后迟到的注册结果不再写码/emit（惯例同 App 的卸载守卫）。
+let disposed = false;
 const todoListId = ref(props.workspace.inbox?.todoListId ?? props.workspace.todoLists[0]?.id ?? "");
 const noteTarget = ref(props.workspace.inbox?.noteTarget ?? props.workspace.spaces[0]?.id ?? "");
 
@@ -65,13 +74,30 @@ function renderQr(): void {
 onMounted(renderQr);
 // flush: "post" 保证地址变化后先等 canvas 挂载/更新再重绘。
 watch(address, renderQr, { flush: "post" });
-onBeforeUnmount(clearCopyResetTimer);
+onBeforeUnmount(() => {
+  disposed = true;
+  clearCopyResetTimer();
+});
 
-function generate(): void {
-  code.value = generateInboxCode();
-  // 生成即生效：立即 emit 落盘并向中继注册（否则扫码 /status 校验 404 配不上），
-  // 弹窗保持打开供抄录/扫码——与 rotate 同口径。
-  emit("update", buildInbox());
+async function generate(): Promise<void> {
+  if (registering.value) return;
+  registering.value = true;
+  registerError.value = false;
+  try {
+    // 先注册后落码：未注册的码手机端扫码即 unknown_code，注册失败停留未配对态供重试。
+    const nextCode = generateInboxCode();
+    const registered = await registerInboxKey(await inboxKeyHash(nextCode));
+    if (!registered) {
+      registerError.value = true;
+      return;
+    }
+    if (disposed) return;
+    // 注册成功即生效：立即 emit 落盘，弹窗保持打开供抄录/扫码——与 rotate 同口径。
+    code.value = nextCode;
+    emit("update", buildInbox());
+  } finally {
+    registering.value = false;
+  }
 }
 
 function buildInbox(): WorkspaceInbox {
@@ -185,7 +211,13 @@ function save(): void {
     </ol>
 
     <div v-if="!hasCode" class="workspace-inbox-empty">
-      <NButton type="primary" data-testid="inbox-generate" @click="generate">{{ text.app.inboxGenerate }}</NButton>
+      <NButton
+        type="primary"
+        data-testid="inbox-generate"
+        :loading="registering"
+        :disabled="registering"
+        @click="generate"
+      >{{ text.app.inboxGenerate }}</NButton>
     </div>
 
     <template v-else>
@@ -270,6 +302,15 @@ function save(): void {
         />
       </label>
     </template>
+
+    <p
+      v-if="registerError"
+      class="workspace-inbox-error"
+      role="status"
+      data-testid="inbox-register-error"
+    >
+      {{ text.app.inboxRegisterFailedRetry }}
+    </p>
 
     <div class="workspace-inbox-footer">
       <NButton v-if="hasCode" quaternary type="error" data-testid="inbox-clear" @click="clear">

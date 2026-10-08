@@ -9870,6 +9870,54 @@ describe("App inbox register wiring", () => {
     vi.mocked(registerInboxKey).mockResolvedValue(true);
   });
 
+  // 生成路径的未配对种子：默认工作区、无 inbox。
+  function seedUnpaired(): void {
+    localStorage.setItem(STORAGE_KEY, JSON.stringify(defaultState()));
+  }
+
+  it("生成配对码注册失败：停留未配对态不落盘，内联提示可重试", async () => {
+    seedUnpaired();
+    vi.mocked(registerInboxKey).mockResolvedValue(false);
+    const wrapper = mountApp();
+
+    try {
+      await openInboxDialog(wrapper);
+      await wrapper.get('[data-testid="inbox-generate"]').trigger("click");
+      await flushAsyncComponents();
+
+      expect(registerInboxKey).toHaveBeenCalledTimes(1);
+      expect(wrapper.find('[data-testid="inbox-code"]').exists()).toBe(false);
+      expect(wrapper.get('[data-testid="inbox-register-error"]').text()).toContain("配对码注册失败");
+      const persisted = JSON.parse(localStorage.getItem(STORAGE_KEY) || "{}");
+      expect(persisted.workspaces[0].inbox).toBeUndefined();
+    } finally {
+      wrapper.unmount();
+    }
+  });
+
+  it("注册失败后重试成功：展示配对码并落盘", async () => {
+    seedUnpaired();
+    vi.mocked(registerInboxKey).mockResolvedValueOnce(false);
+    const wrapper = mountApp();
+
+    try {
+      await openInboxDialog(wrapper);
+      await wrapper.get('[data-testid="inbox-generate"]').trigger("click");
+      await flushAsyncComponents();
+      expect(wrapper.find('[data-testid="inbox-register-error"]').exists()).toBe(true);
+
+      await wrapper.get('[data-testid="inbox-generate"]').trigger("click");
+      await flushAsyncComponents();
+
+      expect(wrapper.find('[data-testid="inbox-code"]').exists()).toBe(true);
+      expect(wrapper.find('[data-testid="inbox-register-error"]').exists()).toBe(false);
+      const persisted = JSON.parse(localStorage.getItem(STORAGE_KEY) || "{}");
+      expect(persisted.workspaces[0].inbox?.code).toMatch(/^[A-Z0-9]{12}$/);
+    } finally {
+      wrapper.unmount();
+    }
+  });
+
   async function openInboxDialog(wrapper: ReturnType<typeof mountApp>): Promise<void> {
     await wrapper.get('[data-testid="workspace-trigger"]').trigger("click");
     await openWorkspaceMenu(wrapper);

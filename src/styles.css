@@ -7177,6 +7177,7 @@ html[data-theme="dark"] .quick-search .quick-search-toggle:focus-visible {
 .workspace-inbox-address:hover, .workspace-inbox-address:focus-visible { text-decoration: underline; }
 .workspace-inbox-qr { display: block; margin: 8px auto; border: 1px solid var(--line-subtle); border-radius: 8px; }
 .workspace-inbox-empty { display: flex; justify-content: center; padding: 12px 0; }
+.workspace-inbox-error { margin: 4px 0 0; color: var(--destructive); font-size: 12px; text-align: center; }
 .workspace-inbox-footer { display: flex; justify-content: flex-end; gap: 8px; }
 
 /* ---- 手机端速记卡（已配对视图，材质同 .mobile-home-card） ---- */
