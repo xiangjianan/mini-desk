@@ -143,11 +143,17 @@ async function generate(): Promise<void> {
     // 注册成功即生效：立即 emit 落盘，弹窗保持打开供抄录/扫码——与 rotate 同口径。
     code.value = nextCode;
     emit("update", buildInbox());
+  } catch {
+    // inboxKeyHash 在非安全上下文等场景会异常（registerInboxKey 自身不抛）：
+    // 按注册失败处理，停留原状态可重试，避免未处理拒绝且无反馈。
+    registerError.value = true;
   } finally {
     registering.value = false;
   }
 }
 ```
+
+（质量审查补充：catch 兜底为 Task 1 审查发现的计划缺口，随 Task 2 一并落地到 generate 与 rotate。）
 
 template 两处：
 
@@ -277,6 +283,10 @@ async function rotate(): Promise<void> {
     // 确认即兑现「旧地址立即失效」：立即 emit 新码，持久化不等「保存」；弹窗保持打开。
     code.value = nextCode;
     emit("update", buildInbox());
+  } catch {
+    // inboxKeyHash 在非安全上下文等场景会异常（registerInboxKey 自身不抛）：
+    // 按注册失败处理，旧码原样保留，避免未处理拒绝且无反馈。
+    registerError.value = true;
   } finally {
     registering.value = false;
   }
