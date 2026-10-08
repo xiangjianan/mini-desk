@@ -323,7 +323,14 @@ git commit -m "fix: 重置配对码同样先注册成功再换码，注册失败
 
 **Files:**
 - Test: `src/__tests__/app-render.test.ts`（`App inbox register wiring` describe 内）
-- Modify: `src/components/WorkspaceInboxDialog.vue`（无新逻辑，仅验证 Task 1 已落的守卫；若断言不过再补实现）
+- Modify: `src/components/WorkspaceInboxDialog.vue`（Task 2 质量审查补充的两处守卫实现）
+- Modify: `src/styles.css`（rotate 按钮 disabled 态样式）
+
+> Task 2 质量审查结论（随本任务落地）：
+> 1. `disposed` 只在 `onBeforeUnmount` 置位——真实 NModal 从关闭请求到卸载有 ~200ms 离场窗口，
+>    窗口内迟到的注册成功仍会写码+emit（最坏：清除配对后复活配对）。测试桩同步发 after-leave
+>    观察不到该窗口，靠实现侧在 `requestClose()` 一并置位兜住。
+> 2. `.workspace-inbox-rotate` 自定义样式盖掉了 UA 的 disabled 灰显，在途 15s 无任何可见反馈。
 
 - [ ] **Step 1: 写失败风险测试（守卫行为验证）**
 
@@ -381,19 +388,73 @@ git commit -m "fix: 重置配对码同样先注册成功再换码，注册失败
       wrapper.unmount();
     }
   });
+
+  it("重置注册在途时重置按钮禁用且防重复触发", async () => {
+    seedPaired();
+    vi.spyOn(window, "confirm").mockReturnValue(true);
+    let resolveRegister!: (ok: boolean) => void;
+    vi.mocked(registerInboxKey).mockImplementation(
+      () => new Promise<boolean>((resolve) => { resolveRegister = resolve; }),
+    );
+    const wrapper = mountApp();
+
+    try {
+      await openInboxDialog(wrapper);
+      await wrapper.get('[data-testid="inbox-rotate"]').trigger("click");
+      await flushAsyncComponents();
+
+      expect(registerInboxKey).toHaveBeenCalledTimes(1);
+      expect((wrapper.get('[data-testid="inbox-rotate"]').element as HTMLButtonElement).disabled).toBe(true);
+      await wrapper.get('[data-testid="inbox-rotate"]').trigger("click");
+      await flushAsyncComponents();
+      expect(registerInboxKey).toHaveBeenCalledTimes(1);
+
+      resolveRegister(false);
+      await flushAsyncComponents();
+      expect((wrapper.get('[data-testid="inbox-rotate"]').element as HTMLButtonElement).disabled).toBe(false);
+    } finally {
+      wrapper.unmount();
+    }
+  });
 ```
 
 - [ ] **Step 2: 跑测试**
 
 Run: `npx vitest run src/__tests__/app-render.test.ts -t "注册在途"`
 Run: `npx vitest run src/__tests__/app-render.test.ts -t "迟到的注册成功"`
-Expected: 两条 PASS（Task 1 的 `registering`/`disposed` 守卫已覆盖；若「迟到」用例失败，检查 `disposed` 是否确实在 `onBeforeUnmount` 里置位、成功分支是否 `if (disposed) return;` 在 `code.value` 赋值之前）。
+Expected: 前两条 PASS（Task 1 的 `registering`/`disposed` 守卫已覆盖）；新增的重置在途用例先按 TDD 补实现再绿。
 
-- [ ] **Step 3: Commit**
+- [ ] **Step 3: 实现审查补充的两处守卫**
+
+1）`requestClose()` 关闭即弃置（兜住真实 NModal 的 ~200ms 离场窗口；`closing` 已保证单向）：
+
+```ts
+function requestClose(): void {
+  if (closing.value) return;
+  closing.value = true;
+  // 关闭即弃置：真实 NModal 从关闭请求到卸载有 ~200ms 离场过渡，窗口内迟到的
+  // 注册成功仍会写码+emit（最坏：清除配对后复活配对）；closing 单向，这里置位安全。
+  disposed = true;
+  show.value = false;
+}
+```
+
+2）rotate 按钮 disabled 可见态（`src/styles.css`，`.workspace-inbox-rotate` 规则之后）：
+
+```css
+.workspace-inbox-rotate:disabled { opacity: 0.6; cursor: wait; }
+```
+
+- [ ] **Step 4: 复跑全部相关用例**
+
+Run: `npx vitest run src/__tests__/app-render.test.ts -t "inbox"`
+Expected: 全部 PASS（已知噪音 `Errors 1 error` 既有 IndexedDB stub 拒绝，可忽略）。
+
+- [ ] **Step 5: Commit**
 
 ```bash
-git add src/__tests__/app-render.test.ts
-git commit -m "test: 配对码注册在途防重复与弹窗关闭后丢弃迟到结果的守卫用例"
+git add src/components/WorkspaceInboxDialog.vue src/styles.css src/__tests__/app-render.test.ts
+git commit -m "fix: 配对码注册在途防重复，弹窗关闭后丢弃迟到结果"
 ```
 
 ---
