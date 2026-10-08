@@ -95,6 +95,10 @@ async function generate(): Promise<void> {
     // 注册成功即生效：立即 emit 落盘，弹窗保持打开供抄录/扫码——与 rotate 同口径。
     code.value = nextCode;
     emit("update", buildInbox());
+  } catch {
+    // inboxKeyHash 在非安全上下文等场景会异常（registerInboxKey 自身不抛）：
+    // 按注册失败处理，停留原状态可重试，避免未处理拒绝且无反馈。
+    registerError.value = true;
   } finally {
     registering.value = false;
   }
@@ -114,11 +118,30 @@ function buildInbox(): WorkspaceInbox {
   };
 }
 
-function rotate(): void {
-  if (!window.confirm(text.value.app.inboxRotateConfirm)) return;
-  // 确认即兑现「旧地址立即失效」：立即 emit 新码，持久化不等「保存」；弹窗保持打开。
-  code.value = generateInboxCode();
-  emit("update", buildInbox());
+async function rotate(): Promise<void> {
+  if (registering.value || !window.confirm(text.value.app.inboxRotateConfirm)) return;
+  registering.value = true;
+  registerError.value = false;
+  try {
+    // 先注册新码成功再换码：失败则旧地址原样可用，不再出现
+    // 「旧码已注销、新码没注册上」的断档；成功后 App 侧随之注销旧码。
+    const nextCode = generateInboxCode();
+    const registered = await registerInboxKey(await inboxKeyHash(nextCode));
+    if (!registered) {
+      registerError.value = true;
+      return;
+    }
+    if (disposed) return;
+    // 确认即兑现「旧地址立即失效」：立即 emit 新码，持久化不等「保存」；弹窗保持打开。
+    code.value = nextCode;
+    emit("update", buildInbox());
+  } catch {
+    // inboxKeyHash 在非安全上下文等场景会异常（registerInboxKey 自身不抛）：
+    // 按注册失败处理，旧码原样保留，避免未处理拒绝且无反馈。
+    registerError.value = true;
+  } finally {
+    registering.value = false;
+  }
 }
 
 /** 配对码一键复制：图标短暂切为成功/失败标记，超时自动还原。 */
@@ -255,6 +278,7 @@ function save(): void {
             type="button"
             class="workspace-inbox-rotate"
             data-testid="inbox-rotate"
+            :disabled="registering"
             @click="rotate"
           >
             {{ text.app.inboxRotate }}

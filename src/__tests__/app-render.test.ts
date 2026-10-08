@@ -9918,6 +9918,29 @@ describe("App inbox register wiring", () => {
     }
   });
 
+  it("重置注册失败：旧码保留、不注销旧码、不落新码", async () => {
+    seedPaired();
+    vi.spyOn(window, "confirm").mockReturnValue(true);
+    vi.mocked(registerInboxKey).mockResolvedValue(false);
+    vi.mocked(revokeInboxKey).mockClear();
+    const wrapper = mountApp();
+
+    try {
+      await openInboxDialog(wrapper);
+      const oldCode = wrapper.get('[data-testid="inbox-code"]').text();
+      await wrapper.get('[data-testid="inbox-rotate"]').trigger("click");
+      await flushAsyncComponents();
+
+      expect(wrapper.get('[data-testid="inbox-code"]').text()).toBe(oldCode);
+      expect(wrapper.get('[data-testid="inbox-register-error"]').text()).toContain("配对码注册失败");
+      expect(revokeInboxKey).not.toHaveBeenCalled();
+      const persisted = JSON.parse(localStorage.getItem(STORAGE_KEY) || "{}");
+      expect(persisted.workspaces[0].inbox?.code).toBe("AB2CDE4FGHJK");
+    } finally {
+      wrapper.unmount();
+    }
+  });
+
   async function openInboxDialog(wrapper: ReturnType<typeof mountApp>): Promise<void> {
     await wrapper.get('[data-testid="workspace-trigger"]').trigger("click");
     await openWorkspaceMenu(wrapper);
