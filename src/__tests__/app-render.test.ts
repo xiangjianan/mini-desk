@@ -10046,31 +10046,20 @@ describe("App inbox register wiring", () => {
     }
   });
 
-  it("配对弹窗保存后注册当前码；注册失败弹警告", async () => {
+  it("配对弹窗保存未改码：不再触发注册（生成/重置已在弹窗内前置注册）", async () => {
     seedPaired();
-    // 气泡文案有 200ms 入场延迟（POPOVER_DELAY_MS）：假时钟须在首条气泡出现前装好，推进 300ms 越过延迟再断言 DOM 文本。
-    vi.useFakeTimers();
     const wrapper = mountApp();
 
     try {
-      await openInboxDialog(wrapper);
       await flushAsyncComponents();
       const callsAfterStartup = vi.mocked(registerInboxKey).mock.calls.length;
 
-      await wrapper.get('[data-testid="inbox-save"]').trigger("click");
-      await flushAsyncComponents();
-      expect(vi.mocked(registerInboxKey).mock.calls.length).toBe(callsAfterStartup + 1);
-
-      vi.mocked(registerInboxKey).mockResolvedValueOnce(false);
       await openInboxDialog(wrapper);
       await wrapper.get('[data-testid="inbox-save"]').trigger("click");
       await flushAsyncComponents();
-      await vi.advanceTimersByTimeAsync(300);
-      await wrapper.vm.$nextTick();
-      expect(wrapper.text()).toContain("配对码注册失败，手机暂时无法配对，下次启动会自动重试");
+      expect(vi.mocked(registerInboxKey).mock.calls.length).toBe(callsAfterStartup);
     } finally {
       wrapper.unmount();
-      vi.useRealTimers();
     }
   });
 });

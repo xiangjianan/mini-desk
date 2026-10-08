@@ -626,10 +626,10 @@ onMounted(async () => {
   }
   // 注册制迁移与自愈：启动即幂等注册所有已配对码，失败静默等下次启动。
   for (const workspace of state.workspaces) {
-    if (workspace.inbox) registerInbox(workspace.inbox.code, false);
+    if (workspace.inbox) registerInbox(workspace.inbox.code);
   }
   // 智能粘贴配对码同样启动自愈注册（INSERT IGNORE 幂等；首次使用时仍会串行复核）。
-  if (state.polishCode && isValidInboxCode(state.polishCode)) registerInbox(state.polishCode, false);
+  if (state.polishCode && isValidInboxCode(state.polishCode)) registerInbox(state.polishCode);
   startVersionPolling();
   startNotificationFallbackInterval();
   refreshTodoNotifications();
@@ -1010,7 +1010,7 @@ function exportCurrentWorkspace(anchor?: HTMLElement): void {
   exportWorkspaceById(state.activeWorkspaceId, anchor);
 }
 
-/** 配对弹窗更新/清除：按 id 不可变替换目标工作区并立即落盘。弹窗开合由弹窗自身的 close 事件驱动（轮换仅更新、不关闭）。 */
+/** 配对弹窗更新/清除：按 id 不可变替换目标工作区并立即落盘。弹窗开合由弹窗自身的 close 事件驱动（轮换仅更新、不关闭）。生成/重置码由弹窗内前置注册成功后才 emit，此处无需再注册。 */
 function handleInboxUpdate(inbox: WorkspaceInbox | null): void {
   const id = inboxPairingWorkspaceId.value;
   if (!id) return;
@@ -1031,8 +1031,6 @@ function handleInboxUpdate(inbox: WorkspaceInbox | null): void {
   if (oldCode !== undefined && (inbox === null || inbox.code !== oldCode)) {
     void revokeInbox(oldCode);
   }
-  // 注册制：保存/轮换后当前码立即可配对（启动路径见 onMounted 的幂等注册）。
-  if (inbox) registerInbox(inbox.code, true);
 }
 
 /** 注销旧配对码：任何失败（网络/服务端/哈希异常）只提示，不抛出；卸载后不再弹气泡。 */
@@ -1045,20 +1043,11 @@ async function revokeInbox(oldCode: string): Promise<void> {
   }
 }
 
-/** 注册配对码：warn=true 时失败弹警告（保存/轮换路径）；启动路径静默等下次自愈。 */
-function registerInbox(code: string, warn: boolean): void {
+/** 注册配对码（启动路径幂等补注册，存量码自愈）：失败静默等下次启动；生成/重置路径已在弹窗内前置注册。 */
+function registerInbox(code: string): void {
   inboxKeyHash(code)
     .then((hash) => registerInboxKey(hash))
-    .then((ok) => {
-      if (!ok && warn && appMounted) {
-        showBubbleText(uiText.value.app.inboxRegisterFailed, undefined, { hideCompanionAfter: true });
-      }
-    })
-    .catch(() => {
-      if (warn && appMounted) {
-        showBubbleText(uiText.value.app.inboxRegisterFailed, undefined, { hideCompanionAfter: true });
-      }
-    });
+    .catch(() => undefined);
 }
 
 /** 智能粘贴气泡时长：整理中长驻（服务端 LLM 硬超时 30s + 余量，结果到达即替换），结果常规停留。 */
