@@ -3340,6 +3340,13 @@ button.todo-section-menu-button {
   stroke-width: 1.8;
 }
 
+/* Safari can retain :focus-visible after reload and clicking the trigger.
+   The icon's focus color already provides feedback without the global halo. */
+.settings-btn.icon-button:focus-visible {
+  outline: none;
+  box-shadow: none;
+}
+
 .gif-theme-custom-dialog {
   position: fixed;
   top: 38px;

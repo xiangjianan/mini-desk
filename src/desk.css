@@ -120,7 +120,8 @@ html[data-theme="dark"] .workbench-shell,
    全局环与全局光晕）。 */
 .workbench-shell .quick-add-button:focus-visible,
 .workbench-shell .quick-tag-add-button:focus-visible,
-.workbench-shell .image-add-button:focus-visible { outline: none; box-shadow: none; }
+.workbench-shell .image-add-button:focus-visible,
+.workbench-shell .settings-btn.icon-button:focus-visible { outline: none; box-shadow: none; }
 /* 专注徽标同款豁免：Esc 关专注弹窗时 FocusTrap 把焦点还原到打开弹窗的徽标上，
    全局实线环 + 光晕会凭空描蓝框；徽标的焦点反馈走上面的变色（hover/:focus-visible
    recolor），两套指示一并豁免（特异性 0,3,0）。 */
