@@ -2,6 +2,7 @@ import { defineComponent, nextTick, ref } from "vue";
 import type { VNode } from "vue";
 import { config, flushPromises, mount } from "@vue/test-utils";
 import { describe, expect, it, vi } from "vitest";
+import { NModal } from "naive-ui";
 import { AddOutline } from "@vicons/ionicons5";
 import { readFileSync } from "node:fs";
 import { resolve } from "node:path";
@@ -447,6 +448,13 @@ describe("TodoPanel", () => {
     expect(document.body.contains(dialog)).toBe(true);
     expect(dialog?.closest(".workbench-zone, .todo-panel")).toBeNull();
     expect(wrapper.emitted("createList")).toBeUndefined();
+    const modal = wrapper.findComponent(NModal);
+    expect(modal.props("preset")).toBe("card");
+    expect(modal.props("maskClosable")).toBe(false);
+    dialog?.querySelector<HTMLButtonElement>(".todo-list-create-confirm")?.click();
+    await nextTick();
+    expect(wrapper.emitted("createList")).toBeUndefined();
+    expect(getLatestListCreateDialogElement()).not.toBeNull();
 
     input!.value = "会议";
     input!.dispatchEvent(new Event("input", { bubbles: true }));

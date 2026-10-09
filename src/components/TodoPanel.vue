@@ -22,8 +22,8 @@ import {
   TimerOutline,
   TrashOutline,
 } from "@vicons/ionicons5";
-import { NDatePicker, NDropdown, NIcon, NScrollbar } from "naive-ui";
-import type { DropdownOption } from "naive-ui";
+import { NButton, NDatePicker, NDropdown, NIcon, NInput, NModal, NScrollbar } from "naive-ui";
+import type { DropdownOption, InputInst } from "naive-ui";
 import { DEFAULT_TODO_LISTS, GUIDE_MENU_OPTION } from "../state/defaults";
 import { LEGACY_TODO_TITLE_IDS } from "../state/storage";
 import { getDisplayTodoListTitle, getIconHeadingText, getUiText } from "../state/i18n";
@@ -146,12 +146,9 @@ const notifyPresets = computed(() => {
 });
 const relativeNotifyPresets = computed(() => notifyPresets.value.filter((preset) => preset.group === "relative"));
 const timeNotifyPresets = computed(() => notifyPresets.value.filter((preset) => preset.group === "time"));
-const listCreateDialogRef = ref<HTMLElement | null>(null);
-const listCreateInputRef = ref<HTMLInputElement | null>(null);
+const listCreateInputRef = ref<InputInst | null>(null);
 const todayFocusTitleRef = ref<{ openMenuAt: (x: number, y: number, event?: Event) => void } | null>(null);
 const listCreateDialog = ref<{
-  x: number;
-  y: number;
   anchor?: HTMLElement;
   title: string;
 } | null>(null);
@@ -274,8 +271,6 @@ const NOTIFY_TIME_LOOP_CYCLES = 5;
 const NOTIFY_TIME_LOOP_MIDDLE_CYCLE = Math.floor(NOTIFY_TIME_LOOP_CYCLES / 2);
 const NOTIFY_LOOPED_HOURS = createNotifyTimeLoopOptions(NOTIFY_HOURS);
 const NOTIFY_LOOPED_MINUTES = createNotifyTimeLoopOptions(NOTIFY_MINUTES);
-const LIST_CREATE_DIALOG_WIDTH = 260;
-const LIST_CREATE_DIALOG_HEIGHT = 112;
 const deadlineNow = ref(Date.now());
 const deadlineClockTimer = ref<number | undefined>();
 const resettingNotifyTimeColumns = new WeakSet<HTMLElement>();
@@ -317,14 +312,6 @@ const todayFocus = computed(() => {
     entry.index = index;
   });
   return entries.sort(compareTodayFocusEntries).map(({ period, todo }) => ({ period, todo }));
-});
-
-const listCreateDialogStyle = computed(() => {
-  if (!listCreateDialog.value) return {};
-  return {
-    left: `${listCreateDialog.value.x}px`,
-    top: `${listCreateDialog.value.y}px`,
-  };
 });
 
 const notifyPickerStyle = computed(() => {
@@ -904,15 +891,13 @@ function closeMenu(): void {
   selectedMenuTodoKey.value = null;
 }
 
-async function openCreateListDialog(anchor?: HTMLElement, x?: number, y?: number): Promise<void> {
-  const position = getListCreateDialogPosition(anchor, x, y);
+async function openCreateListDialog(anchor?: HTMLElement): Promise<void> {
   listCreateDialog.value = {
-    ...position,
     anchor,
     title: "",
   };
   await nextTick();
-  listCreateInputRef.value?.focus({ preventScroll: true });
+  listCreateInputRef.value?.focus();
 }
 
 function updateCreateListTitle(value: string): void {
@@ -925,7 +910,7 @@ function confirmCreateListDialog(): void {
   if (!dialog) return;
   const title = dialog.title.trim();
   if (!title) {
-    listCreateInputRef.value?.focus({ preventScroll: true });
+    listCreateInputRef.value?.focus();
     return;
   }
   emit("createList", dialog.anchor, title);
@@ -1197,25 +1182,12 @@ function removeNotifyPickerDraft(key: string): void {
   notifyPickerDrafts.value = nextDrafts;
 }
 
-function getListCreateDialogPosition(anchor?: HTMLElement, x?: number, y?: number): { x: number; y: number } {
-  const viewportWidth = window.innerWidth || document.documentElement.clientWidth || LIST_CREATE_DIALOG_WIDTH;
-  const viewportHeight = window.innerHeight || document.documentElement.clientHeight || LIST_CREATE_DIALOG_HEIGHT;
-  const anchorRect = anchor?.getBoundingClientRect();
-  const rawX = x ?? (anchorRect ? anchorRect.left + DEADLINE_EDITOR_OFFSET : DEADLINE_EDITOR_OFFSET);
-  const rawY = y ?? (anchorRect ? anchorRect.top + DEADLINE_EDITOR_OFFSET : DEADLINE_EDITOR_OFFSET);
-  return {
-    x: clampToViewport(rawX, viewportWidth, LIST_CREATE_DIALOG_WIDTH),
-    y: clampToViewport(rawY, viewportHeight, LIST_CREATE_DIALOG_HEIGHT),
-  };
-}
-
 function handleFloatingEditorOutsidePointerDown(event: PointerEvent): void {
   const target = event.target;
   if (!(target instanceof Node)) return;
   if (notifyPicker.value && !notifyPickerRef.value?.contains(target) && !(target as HTMLElement).closest?.(".todo-notify-button")) {
     closeNotifyPicker();
   }
-  if (listCreateDialog.value && !listCreateDialogRef.value?.contains(target)) listCreateDialog.value = null;
 }
 
 async function handleMenuSelect(key: string): Promise<void> {
@@ -1253,7 +1225,7 @@ async function handleMenuSelect(key: string): Promise<void> {
   }
   if (key === "create-list") {
     closeMenu();
-    await openCreateListDialog(anchor, x, y);
+    await openCreateListDialog(anchor);
     return;
   }
   if (key === "delete-list") {
@@ -2117,32 +2089,34 @@ function buildTodoListEntries(period: TodoListId, todos: TodoItem[], deferredDon
       </Transition>
     </Teleport>
 
-    <Teleport to="body">
-      <Transition name="floating-pop" :duration="240">
-        <section
-          v-if="listCreateDialog"
-          ref="listCreateDialogRef"
-          class="todo-list-create-dialog"
-          :style="listCreateDialogStyle"
-          :aria-label="uiText.todo.listDialog"
-        >
-          <label class="todo-list-create-label" for="todo-list-create-input">{{ uiText.todo.listName }}</label>
-          <input
-            id="todo-list-create-input"
+    <NModal
+      v-if="listCreateDialog"
+      :show="true"
+      preset="card"
+      class="quick-dialog todo-list-create-dialog"
+      :mask-closable="false"
+      :title="uiText.todo.listDialog"
+      :aria-label="uiText.todo.listDialog"
+      @close="closeCreateListDialog"
+      @esc="closeCreateListDialog"
+    >
+      <form class="quick-form" @submit.prevent="confirmCreateListDialog">
+        <label for="todo-list-create-input">
+          <span>{{ uiText.todo.listName }}</span>
+          <NInput
             ref="listCreateInputRef"
-            class="todo-list-create-input"
             :value="listCreateDialog.title"
-            @input="updateCreateListTitle(($event.target as HTMLInputElement).value)"
-            @keydown.enter.prevent="confirmCreateListDialog"
-            @keydown.esc.prevent="closeCreateListDialog"
+            :input-props="{ id: 'todo-list-create-input', class: 'todo-list-create-input' }"
+            autocomplete="off"
+            @update:value="updateCreateListTitle"
           />
-          <div class="todo-list-create-actions">
-            <button class="todo-list-create-cancel" type="button" @click="closeCreateListDialog">{{ uiText.common.cancel }}</button>
-            <button class="todo-list-create-confirm" type="button" @click="confirmCreateListDialog">{{ uiText.common.confirm }}</button>
-          </div>
-        </section>
-      </Transition>
-    </Teleport>
+        </label>
+        <div class="dialog-actions">
+          <NButton class="quick-dialog-action todo-list-create-cancel" @click="closeCreateListDialog">{{ uiText.common.cancel }}</NButton>
+          <NButton class="quick-dialog-action quick-dialog-submit todo-list-create-confirm" attr-type="submit">{{ uiText.common.confirm }}</NButton>
+        </div>
+      </form>
+    </NModal>
 
     <NDropdown
       v-if="menu"

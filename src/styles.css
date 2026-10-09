@@ -2879,54 +2879,6 @@ button.todo-star-button {
   color: var(--text);
 }
 
-.todo-list-create-dialog {
-  position: fixed;
-  z-index: 32;
-  width: 260px;
-  padding: 10px;
-  border: 1px solid var(--line-control);
-  border-radius: var(--radius);
-  background: var(--panel);
-}
-
-.todo-list-create-label {
-  display: block;
-  margin-bottom: 6px;
-  color: var(--muted);
-  font-size: 12px;
-}
-
-.todo-list-create-input {
-  width: 100%;
-  height: 30px;
-  padding: 0 6px;
-  border: 1px solid var(--line-control);
-  background: var(--panel);
-  color: var(--text);
-  font-size: var(--app-font-size);
-}
-
-.todo-list-create-actions {
-  display: flex;
-  justify-content: flex-end;
-  gap: 6px;
-  margin-top: 8px;
-}
-
-.todo-list-create-cancel,
-.todo-list-create-confirm {
-  height: 28px;
-  padding: 0 8px;
-  border: 1px solid var(--line-control);
-  background: transparent;
-  color: var(--text);
-  font-size: var(--app-font-size);
-}
-
-.todo-list-create-confirm {
-  background: var(--button-hover);
-}
-
 .today-focus-move-move,
 .today-focus-move-enter-active,
 .today-focus-move-leave-active,
