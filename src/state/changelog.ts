@@ -30,12 +30,14 @@ export interface ChangelogEntry {
 export const CHANGELOG: ChangelogEntry[] = [
     {
       version: "1.0.202",
-      date: "2026-10-08",
+      date: "2026-10-10",
       notes: {
         zh: [
+          "优化：提醒事项「新建列表」改用与快捷动作同款的居中卡片弹窗",
           "修复：配对码注册中继失败时不再展示配对码与二维码，改为内联提示重试；重置配对码同样先注册成功再换码，失败保留旧地址",
         ],
         en: [
+          "Improved: creating a reminder list now opens the same centered card dialog used by quick actions",
           "Fix: pairing code and QR are no longer shown when relay registration fails — retry inline; resetting now registers the new code before swapping and keeps the old address on failure",
         ],
       },
