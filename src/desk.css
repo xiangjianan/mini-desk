@@ -297,9 +297,10 @@ html[data-theme="dark"] .workbench-shell,
 .workbench-shell .quick-tag-collapse-button:hover,
 .workbench-shell .quick-tag-collapse-button:focus-visible { color: var(--primary); }
 
-/* Keep the heading centered between the collapsed row's separators. */
+/* Let the section follow its animated content height in both directions.
+   A fixed collapsed flex-basis makes the following list jump immediately. */
 .workbench-shell .todo-section.is-compact.is-collapsed {
-  flex: 0 0 54px;
+  flex: 0 0 auto;
   min-height: 54px;
   padding-block: 0;
 }

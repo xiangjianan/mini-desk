@@ -394,6 +394,14 @@ describe("workbench style contract", () => {
     expect(todo).not.toContain("<NScrollbar");
   });
 
+  it("lets collapsed reminder sections follow the content height transition", () => {
+    const desk = readFileSync(resolve(__dirname, "../desk.css"), "utf8");
+    const selector = ".workbench-shell .todo-section.is-compact.is-collapsed";
+    expectSelectorBody(desk, selector, "flex: 0 0 auto");
+    expectSelectorBody(desk, selector, "min-height: 54px");
+    expect(ruleBodies(desk, selector).some(body => /flex:\s*0\s+0\s+54px/.test(body))).toBe(false);
+  });
+
   it("renders reminder lists in explicit independent columns (not CSS multicol)", () => {
     const styles = readFileSync(resolve(__dirname, "../styles.css"), "utf8");
 
