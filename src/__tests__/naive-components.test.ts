@@ -622,13 +622,14 @@ describe("Naive UI component usage", () => {
     expect(i18n).toContain("设置通知时间");
   });
 
-  it("keeps blank reminder hints outside the moving todo transition list", () => {
+  it("keeps blank reminder hints inside the single stable todo transition list", () => {
     const todo = read("src/components/TodoPanel.vue");
     const todoMoveBlock = todo.match(/<TransitionGroup\s+name="todo-move"[\s\S]*?<\/TransitionGroup>/)?.[0] ?? "";
 
-    expect(todoMoveBlock).not.toContain('v-if="listEntries[list.id].length === 0"');
-    expect(todo).toContain('v-if="listEntries[list.id].length === 0"');
-    expect(todo).toContain('v-else');
+    expect(todoMoveBlock).toContain('v-if="listEntries[list.id].length === 0"');
+    expect(todoMoveBlock).toContain('todo-empty-hint');
+    expect(todo).toContain("'todo-empty-list': listEntries[list.id].length === 0");
+    expect(todo.match(/class="todo-list-scrollbar"/g)).toHaveLength(1);
   });
 
   it("uses a clear separated drag handle for reminder rows", () => {
@@ -793,7 +794,8 @@ describe("Naive UI component usage", () => {
     expect(space).toContain(':duration="90"');
     expect(space).toContain('class="space-text-stage"');
     expect(space).not.toContain('class="space-tab-indicator"');
-    expect(todo).toContain('name="section-reveal"');
+    expect(todo).toContain('name="todo-focus-reveal"');
+    expect(todo).toContain(':duration="180"');
     expect(todo).toContain('name="today-focus-move"');
     expect(todo).toContain('name="floating-pop"');
     expect(todo).toContain(':duration="240"');
@@ -802,8 +804,9 @@ describe("Naive UI component usage", () => {
     expect(styles).not.toContain(".space-tab-indicator");
     expect(styles).toMatch(/\.todo-list-shell\s*\{[^}]*max-height var\(--motion-medium\)/s);
     expect(styles).toMatch(/\.todo-list-shell\.is-hidden\s*\{[^}]*max-height: 0/s);
-    expect(styles).toMatch(/\.today-focus-move-move,[\s\S]*?\.today-focus-move-enter-active,[\s\S]*?\.today-focus-move-leave-active[\s\S]*?\{[^}]*transform 0\.22s/s);
-    expect(styles).toMatch(/\.section-reveal-enter-active,[\s\S]*?\.section-reveal-leave-active\s*\{[^}]*max-height var\(--motion-medium\)/s);
+    expect(styles).toMatch(/\.today-focus-move-move,\s*\.todo-move-move\s*\{[^}]*transform 0\.22s cubic-bezier\(0\.2, 0, 0, 1\)/s);
+    expect(styles).toMatch(/\.todo-focus-reveal-enter-active,\s*\.todo-focus-reveal-leave-active\s*\{[^}]*transition: opacity 0\.18s ease/s);
+    expect(styles).not.toContain(".section-reveal-");
     expect(styles).toMatch(/\.floating-pop-enter-active,[\s\S]*?\.floating-pop-leave-active\s*\{[^}]*transform var\(--motion-medium\)/s);
   });
 

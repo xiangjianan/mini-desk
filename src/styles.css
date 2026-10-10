@@ -2922,29 +2922,6 @@ button.todo-star-button {
   pointer-events: none;
 }
 
-.section-reveal-enter-active,
-.section-reveal-leave-active {
-  overflow: hidden;
-  transition:
-    max-height var(--motion-medium) var(--motion-ease),
-    opacity var(--motion-fast) ease,
-    transform var(--motion-medium) var(--motion-ease);
-}
-
-.section-reveal-enter-from,
-.section-reveal-leave-to {
-  max-height: 0;
-  opacity: 0;
-  transform: translateY(-6px);
-}
-
-.section-reveal-enter-to,
-.section-reveal-leave-from {
-  max-height: calc(100vh - 34px);
-  opacity: 1;
-  transform: translateY(0);
-}
-
 .floating-pop-enter-active,
 .floating-pop-leave-active {
   transform-origin: top left;
@@ -6508,26 +6485,6 @@ button.todo-collapse-button:active {
 
 .todo-collapse-button.is-collapsed .n-icon {
   transform: rotate(180deg);
-}
-
-.section-reveal-enter-active,
-.section-reveal-leave-active {
-  transition:
-    max-height 220ms var(--motion-ease),
-    opacity 160ms ease,
-    clip-path 220ms var(--motion-ease);
-}
-
-.section-reveal-enter-from,
-.section-reveal-leave-to {
-  opacity: 0;
-  clip-path: inset(0 0 100% 0 round var(--radius-control));
-}
-
-.section-reveal-enter-to,
-.section-reveal-leave-from {
-  opacity: 1;
-  clip-path: inset(0 0 0 0 round var(--radius-control));
 }
 
 /* Apple HIG foundation pass: semantic color, materials, icon weight, type, and directionality. */
