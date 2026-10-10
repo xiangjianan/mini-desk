@@ -1632,33 +1632,32 @@ button.quick-button {
   align-items: center;
 }
 
+/* One scroll surface for focus and all reminder columns. */
+.todo-content-scroll {
+  flex: 1 1 auto;
+  min-height: 0;
+  overflow-y: auto;
+  overflow-x: hidden;
+  scroll-padding-top: 53px;
+}
+
 .todo-sections {
   display: flex;
   flex-direction: column;
-  height: 100%;
   min-height: 0;
-  overflow: hidden;
+  overflow: visible;
 }
 
-/* 提醒事项显式分列(替代 CSS 多列)。列数由 JS 按面板宽度测量得出并写到
-   .todo-sections 的内联 grid-template-columns;每个 .todo-column 是独立的
-   flex 列,各列表按自身内容撑开高度,因此收起某一列里的列表不会把其它列
-   的列表吸过来,列与列高度也互不强制对齐。
-   未加 .is-multi-column 时(单列/窄屏)沿用上面的 flex column 布局。 */
+/* Explicit columns preserve list placement while each list grows with content. */
 .todo-sections.is-multi-column {
   display: grid;
-  height: 100%;
-  min-height: 0;
+  align-items: start;
   column-gap: 10px;
-  /* 多列内容超出可视高度时由容器整体纵向滚动。 */
-  overflow-y: auto;
 }
 
 .todo-column {
   display: flex;
   flex-direction: column;
-  flex: 1 1 auto;
-  min-height: 0;
   min-width: 0;
 }
 
@@ -1666,13 +1665,18 @@ button.quick-button {
   row-gap: 8px;
 }
 
-/* 多列下,同一列里展开的列表平分该列剩余的垂直高度;收起的列表仍占固定
-   34px(由 .todo-section.is-compact.is-collapsed 覆盖)。列高由 .todo-sections
-   的 100% 高度撑开,各展开列表 flex:1 1 0 等分空间,内部内容超出时由各自的
-   NScrollbar 滚动。 */
 .todo-sections.is-multi-column .todo-section {
-  flex: 1 1 0;
+  flex: 0 0 auto;
   margin-bottom: 0;
+}
+
+.todo-section > .todo-heading,
+.today-focus-section > .today-focus-heading {
+  position: sticky;
+  top: 0;
+  z-index: 3;
+  flex-shrink: 0;
+  background: var(--card);
 }
 
 .today-focus-section {
@@ -1683,7 +1687,7 @@ button.quick-button {
   border-right: 0;
   background: var(--panel);
   box-shadow: none;
-  overflow: hidden;
+  overflow: visible;
 }
 
 .today-focus-heading {
@@ -1701,12 +1705,11 @@ button.quick-button {
   list-style: none;
   margin: 0;
   padding: 0;
-  max-height: 25vh;
-  overflow-y: auto;
+  overflow: visible;
 }
 
 .today-focus-scrollbar {
-  max-height: 25vh;
+  overflow: visible;
 }
 
 .today-focus-scrollbar .today-focus-list {
@@ -1756,12 +1759,12 @@ button.quick-button {
   display: flex;
   flex-direction: column;
   min-height: 0;
-  flex: 1 1 33.33%;
+  flex: 0 0 auto;
   border-bottom: 1px solid var(--line-main);
   border-left: 0;
   border-right: 0;
   box-shadow: none;
-  overflow: hidden;
+  overflow: visible;
   transition:
     flex-basis var(--motion-medium) var(--motion-ease),
     flex-grow var(--motion-medium) var(--motion-ease),
@@ -1771,16 +1774,16 @@ button.quick-button {
 }
 
 .todo-section.is-collapsed {
-  flex: 0 0 34px;
+  flex: 0 0 auto;
   min-height: 34px;
 }
 
 .todo-section.is-compact {
-  flex: 1 1 0;
+  flex: 0 0 auto;
 }
 
 .todo-section.is-compact.is-collapsed {
-  flex: 0 0 34px;
+  flex: 0 0 auto;
 }
 
 .todo-section.is-collapsed .todo-list-shell {
@@ -1798,30 +1801,30 @@ button.quick-button {
 }
 
 .todo-list-shell {
-  display: flex;
-  flex: 1 1 auto;
-  flex-direction: column;
-  max-height: 100vh;
+  display: grid;
+  grid-template-rows: 1fr;
   min-height: 0;
   opacity: 1;
   overflow: hidden;
-  transform: translateY(0);
   transition:
-    max-height var(--motion-medium) var(--motion-ease),
-    opacity var(--motion-fast) ease,
-    transform var(--motion-medium) var(--motion-ease);
+    grid-template-rows var(--motion-medium) var(--motion-ease),
+    opacity var(--motion-fast) ease;
 }
 
 .todo-list-shell.is-hidden {
-  max-height: 0;
+  grid-template-rows: 0fr;
   opacity: 0;
   pointer-events: none;
-  transform: translateY(-6px);
+}
+
+.todo-list-shell > .todo-list-scrollbar {
+  min-height: 0;
+  overflow: hidden;
 }
 
 .todo-section.is-compact .todo-list {
-  flex: 1 1 auto;
-  overflow-y: auto;
+  flex: 0 0 auto;
+  overflow: visible;
 }
 
 .todo-empty-list {

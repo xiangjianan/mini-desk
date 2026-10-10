@@ -2046,8 +2046,8 @@ describe("TodoPanel", () => {
     const collapsedRule = styles.match(/\.todo-section\.is-collapsed \{([\s\S]*?)\}/)?.[1] ?? "";
     const compactCollapsedRule = styles.match(/\.todo-section\.is-compact\.is-collapsed \{([\s\S]*?)\}/)?.[1] ?? "";
 
-    expect(collapsedRule).toContain("flex: 0 0 34px");
-    expect(compactCollapsedRule).toContain("flex: 0 0 34px");
+    expect(collapsedRule).toContain("flex: 0 0 auto");
+    expect(compactCollapsedRule).toContain("flex: 0 0 auto");
   });
 
   it("closes notification selection without changing the reminder", async () => {

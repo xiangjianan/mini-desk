@@ -22,7 +22,7 @@ import {
   TimerOutline,
   TrashOutline,
 } from "@vicons/ionicons5";
-import { NButton, NDatePicker, NDropdown, NIcon, NInput, NModal, NScrollbar } from "naive-ui";
+import { NButton, NDatePicker, NDropdown, NIcon, NInput, NModal } from "naive-ui";
 import type { DropdownOption, InputInst } from "naive-ui";
 import { DEFAULT_TODO_LISTS, GUIDE_MENU_OPTION } from "../state/defaults";
 import { LEGACY_TODO_TITLE_IDS } from "../state/storage";
@@ -1744,6 +1744,7 @@ function buildTodoListEntries(period: TodoListId, todos: TodoItem[], deferredDon
           @click.stop="openCreateListDialog($event.currentTarget as HTMLElement)"><NIcon :component="AddOutline" /></button>
       </div>
     </div>
+    <div class="todo-content-scroll">
     <Transition name="todo-focus-reveal" :duration="180">
       <section v-if="todayFocus.length" class="today-focus-section" :aria-label="uiText.todo.todayFocus">
         <div class="today-focus-heading" @contextmenu="openTodayFocusTitleMenu">
@@ -1757,7 +1758,7 @@ function buildTodoListEntries(period: TodoListId, todos: TodoItem[], deferredDon
             @update="(id, value) => emit('titleUpdate', id, value)"
           />
         </div>
-        <NScrollbar class="today-focus-scrollbar">
+        <div class="today-focus-scrollbar">
         <TransitionGroup
           name="today-focus-move"
           tag="ul"
@@ -1850,7 +1851,7 @@ function buildTodoListEntries(period: TodoListId, todos: TodoItem[], deferredDon
             </button>
           </li>
         </TransitionGroup>
-        </NScrollbar>
+        </div>
       </section>
     </Transition>
     <div
@@ -1943,7 +1944,7 @@ function buildTodoListEntries(period: TodoListId, todos: TodoItem[], deferredDon
           :inert="list.collapsed"
           @click="handleListClick($event, list.id)"
         >
-          <NScrollbar class="todo-list-scrollbar">
+          <div class="todo-list-scrollbar">
           <TransitionGroup
             name="todo-move"
             tag="ul"
@@ -2075,10 +2076,12 @@ function buildTodoListEntries(period: TodoListId, todos: TodoItem[], deferredDon
               </li>
             </template>
           </TransitionGroup>
-          </NScrollbar>
+          </div>
         </div>
       </section>
       </TransitionGroup>
+    </div>
+
     </div>
 
     <Teleport to="body">

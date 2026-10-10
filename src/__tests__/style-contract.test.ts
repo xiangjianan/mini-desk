@@ -375,6 +375,21 @@ describe("workbench style contract", () => {
     expectSelectorBody(styles, ".today-focus-scrollbar", "--n-scrollbar-width: var(--scrollbar-size) !important");
   });
 
+  it("scrolls reminders as one region with content-sized lists and section-bound sticky headings", () => {
+    const styles = readFileSync(resolve(__dirname, "../styles.css"), "utf8");
+    const todo = readFileSync(resolve(__dirname, "../components/TodoPanel.vue"), "utf8");
+
+    expectSelectorBody(styles, ".todo-content-scroll", "overflow-y: auto");
+    expectSelectorBody(styles, ".todo-section", "overflow: visible");
+    expectSelectorBody(styles, ".todo-section.is-compact", "flex: 0 0 auto");
+    expectSelectorBody(styles, ".todo-section > .todo-heading", "position: sticky");
+    expectSelectorBody(styles, ".todo-section > .todo-heading", "top: 0");
+    expectSelectorBody(styles, ".todo-list-shell", "grid-template-rows: 1fr");
+    expectSelectorBody(styles, ".todo-list-shell.is-hidden", "grid-template-rows: 0fr");
+    expect(todo).toContain('<div class="todo-content-scroll">');
+    expect(todo).not.toContain("<NScrollbar");
+  });
+
   it("renders reminder lists in explicit independent columns (not CSS multicol)", () => {
     const styles = readFileSync(resolve(__dirname, "../styles.css"), "utf8");
 

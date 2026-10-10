@@ -306,10 +306,10 @@ describe("Naive UI component usage", () => {
     expect(todo).toContain('preset="card"');
     expect(styles).toMatch(/\.quick-dialog\s*\{[^}]*width: min\(420px, calc\(100vw - 32px\)\)/s);
     expect(styles).toMatch(/\.todo-list-drag-handle\s*\{[^}]*display: none/s);
-    expect(styles).toMatch(/\.todo-section\.is-collapsed\s*\{[^}]*flex: 0 0 34px/s);
-    expect(styles).toMatch(/\.todo-section\.is-compact\.is-collapsed\s*\{[^}]*flex: 0 0 34px/s);
-    expect(styles).toMatch(/\.todo-section\.is-compact\s*\{[^}]*flex: 1 1 0/s);
-    expect(styles).toMatch(/\.todo-section\.is-compact \.todo-list\s*\{[^}]*overflow-y: auto/s);
+    expect(styles).toMatch(/\.todo-section\.is-collapsed\s*\{[^}]*flex: 0 0 auto/s);
+    expect(styles).toMatch(/\.todo-section\.is-compact\.is-collapsed\s*\{[^}]*flex: 0 0 auto/s);
+    expect(styles).toMatch(/\.todo-section\.is-compact\s*\{[^}]*flex: 0 0 auto/s);
+    expect(styles).toMatch(/\.todo-section\.is-compact \.todo-list\s*\{[^}]*overflow: visible/s);
     expect(styles).toMatch(/\.todo-list-shell\s*\{[^}]*overflow: hidden/s);
     expect(styles).toMatch(/\.todo-section\.is-compact \.todo-empty-hint\s*\{[^}]*min-height: 90px/s);
     expect(styles).toMatch(/\.todo-section\.is-compact \.todo-star-button\s*\{[^}]*height: 26px/s);
@@ -589,7 +589,6 @@ describe("Naive UI component usage", () => {
       "src/components/QuickButtons.vue",
       "src/components/SpacePanel.vue",
       "src/components/TextPanel.vue",
-      "src/components/TodoPanel.vue",
     ];
 
     for (const file of scrollbarSources) {
@@ -802,8 +801,8 @@ describe("Naive UI component usage", () => {
     expect(styles).toMatch(/:root\s*\{[^}]*--motion-medium: 240ms/s);
     expect(styles).toMatch(/\.space-panel-switch-enter-active,[\s\S]*?\.space-panel-switch-leave-active\s*\{[^}]*opacity 90ms/s);
     expect(styles).not.toContain(".space-tab-indicator");
-    expect(styles).toMatch(/\.todo-list-shell\s*\{[^}]*max-height var\(--motion-medium\)/s);
-    expect(styles).toMatch(/\.todo-list-shell\.is-hidden\s*\{[^}]*max-height: 0/s);
+    expect(styles).toMatch(/\.todo-list-shell\s*\{[^}]*grid-template-rows var\(--motion-medium\)/s);
+    expect(styles).toMatch(/\.todo-list-shell\.is-hidden\s*\{[^}]*grid-template-rows: 0fr/s);
     expect(styles).toMatch(/\.today-focus-move-move,\s*\.todo-move-move\s*\{[^}]*transform 0\.22s cubic-bezier\(0\.2, 0, 0, 1\)/s);
     expect(styles).toMatch(/\.todo-focus-reveal-enter-active,\s*\.todo-focus-reveal-leave-active\s*\{[^}]*transition: opacity 0\.18s ease/s);
     expect(styles).not.toContain(".section-reveal-");
