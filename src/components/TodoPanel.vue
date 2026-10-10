@@ -154,6 +154,8 @@ const listCreateDialog = ref<{
 } | null>(null);
 const pendingDoneReorderIds = ref<string[]>([]);
 const reorderTimers = new Map<string, number>();
+const reorderCountdowns = new Map<string, { remaining: number; startedAt?: number }>();
+let focusedTodoKey: string | null = null;
 const lastTodoCarets = new Map<string, number>();
 const lastTodoSelections = new Map<string, { start: number; end: number }>();
 const todoSectionRefs = new Map<TodoListId, HTMLElement>();
@@ -671,10 +673,8 @@ function handleChecked(period: TodoPeriod, id: string, checked: boolean): void {
   clearPendingReorder(key);
   if (checked) {
     pendingDoneReorderIds.value = [...pendingDoneReorderIds.value, key];
-    reorderTimers.set(
-      key,
-      window.setTimeout(() => clearPendingReorder(key), 3000),
-    );
+    reorderCountdowns.set(key, { remaining: 3000 });
+    if (focusedTodoKey !== key) resumePendingReorder(key);
   }
   emit("complete", period, id, checked, todoSectionRefs.get(period));
 }
@@ -683,6 +683,9 @@ function handleInputBlur(period: TodoPeriod, id: string): void {
   // 换序 patch 摘下焦点行时派发的瞬时 blur：吞掉（见 todoReorderBlurGuard
   // 声明处注释），焦点与编辑态在同一个交互内就会恢复。
   if (todoReorderBlurGuard > 0) return;
+  const key = todoKey(period, id);
+  if (focusedTodoKey === key) focusedTodoKey = null;
+  resumePendingReorder(key);
   focusedListId.value = null;
   if (editingTodoKey.value === todoKey(period, id)) editingTodoKey.value = null;
   emit("blurEmpty", period, id);
@@ -711,6 +714,8 @@ function handleInputComposition(event: CompositionEvent): void {
 }
 
 function handleInputFocus(period: TodoPeriod, todo: TodoItem, event: FocusEvent): void {
+  focusedTodoKey = todoKey(period, todo.id);
+  pausePendingReorder(focusedTodoKey);
   focusedListId.value = period;
   if (!todo.done && todo.text.trim().length === 0) editingTodoKey.value = todoKey(period, todo.id);
   const anchor = todoSectionRefs.get(period) ?? (event.currentTarget as HTMLElement);
@@ -793,10 +798,28 @@ function emitDeclutterPrompt(period: TodoPeriod, anchor: HTMLElement): void {
   emit("declutter", anchor);
 }
 
+function pausePendingReorder(key: string): void {
+  const countdown = reorderCountdowns.get(key);
+  if (!countdown || countdown.startedAt === undefined) return;
+  countdown.remaining = Math.max(0, countdown.remaining - (Date.now() - countdown.startedAt));
+  countdown.startedAt = undefined;
+  const timer = reorderTimers.get(key);
+  if (timer !== undefined) window.clearTimeout(timer);
+  reorderTimers.delete(key);
+}
+
+function resumePendingReorder(key: string): void {
+  const countdown = reorderCountdowns.get(key);
+  if (!countdown || countdown.startedAt !== undefined) return;
+  countdown.startedAt = Date.now();
+  reorderTimers.set(key, window.setTimeout(() => clearPendingReorder(key), countdown.remaining));
+}
+
 function clearPendingReorder(key: string): void {
   const timer = reorderTimers.get(key);
   if (timer) window.clearTimeout(timer);
   reorderTimers.delete(key);
+  reorderCountdowns.delete(key);
   pendingDoneReorderIds.value = pendingDoneReorderIds.value.filter((item) => item !== key);
 }
 

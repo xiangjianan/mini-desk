@@ -1154,7 +1154,7 @@ describe("TodoPanel", () => {
     vi.useRealTimers();
   });
 
-  it("hides newly completed focus reminders after the transition when their source list hides completed reminders", async () => {
+  it("hides newly completed focus reminders after resuming the remaining countdown on blur when their source list hides completed reminders", async () => {
     vi.useFakeTimers();
 
     const Harness = defineComponent({
@@ -1196,7 +1196,13 @@ describe("TodoPanel", () => {
 
     expect(todayFocusValues(wrapper)).toEqual(["完成后隐藏重点", "仍然显示重点"]);
 
-    await vi.advanceTimersByTimeAsync(2999);
+    await vi.advanceTimersByTimeAsync(1000);
+    const input = wrapper.get('.today-focus-item .today-focus-input');
+    await input.trigger("focus");
+    await vi.advanceTimersByTimeAsync(5000);
+    expect(todayFocusValues(wrapper)).toEqual(["完成后隐藏重点", "仍然显示重点"]);
+    await input.trigger("blur");
+    await vi.advanceTimersByTimeAsync(1999);
     expect(todayFocusValues(wrapper)).toEqual(["完成后隐藏重点", "仍然显示重点"]);
 
     await vi.advanceTimersByTimeAsync(1);
@@ -2545,6 +2551,8 @@ describe("TodoPanel", () => {
 
     expect(values(wrapper)).toEqual(["第一项", "第二项"]);
 
+    const input = wrapper.get(".todo-input");
+    await input.trigger("focus");
     const checkbox = wrapper.get(".todo-checkbox");
     (checkbox.element as HTMLInputElement).checked = true;
     await checkbox.trigger("change");
@@ -2553,6 +2561,9 @@ describe("TodoPanel", () => {
     expect(values(wrapper)).toEqual(["第一项", "第二项"]);
     expect(wrapper.find(".todo-completed-divider").exists()).toBe(false);
 
+    await vi.advanceTimersByTimeAsync(5000);
+    expect(values(wrapper)).toEqual(["第一项", "第二项"]);
+    await input.trigger("blur");
     await vi.advanceTimersByTimeAsync(2999);
     expect(values(wrapper)).toEqual(["第一项", "第二项"]);
     expect(wrapper.find(".todo-completed-divider").exists()).toBe(false);
