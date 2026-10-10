@@ -1744,7 +1744,7 @@ function buildTodoListEntries(period: TodoListId, todos: TodoItem[], deferredDon
           @click.stop="openCreateListDialog($event.currentTarget as HTMLElement)"><NIcon :component="AddOutline" /></button>
       </div>
     </div>
-    <Transition name="section-reveal" :duration="240">
+    <Transition name="todo-focus-reveal" :duration="180">
       <section v-if="todayFocus.length" class="today-focus-section" :aria-label="uiText.todo.todayFocus">
         <div class="today-focus-heading" @contextmenu="openTodayFocusTitleMenu">
           <NIcon class="today-focus-title-icon" :component="AlertCircleOutline" />
@@ -1943,37 +1943,22 @@ function buildTodoListEntries(period: TodoListId, todos: TodoItem[], deferredDon
           :inert="list.collapsed"
           @click="handleListClick($event, list.id)"
         >
-          <NScrollbar
-            v-if="listEntries[list.id].length === 0"
-            class="todo-list-scrollbar"
-          >
-            <ul
-              class="todo-list todo-empty-list"
-              :data-testid="`todo-list-${list.id}`"
-              @dragover.prevent
-              @drop="handleTodoTextDrop($event, list.id)"
-            >
-              <li
-                :key="`${list.id}-empty-hint`"
-                class="todo-empty-hint"
-                :aria-label="uiText.todo.tips"
-              />
-            </ul>
-          </NScrollbar>
-
-          <NScrollbar
-            v-else
-            class="todo-list-scrollbar"
-          >
+          <NScrollbar class="todo-list-scrollbar">
           <TransitionGroup
             name="todo-move"
             tag="ul"
             class="todo-list"
-            :class="{ 'todo-move': true }"
+            :class="{ 'todo-move': true, 'todo-empty-list': listEntries[list.id].length === 0 }"
             :data-testid="`todo-list-${list.id}`"
             @dragover.prevent
             @drop="handleTodoTextDrop($event, list.id)"
           >
+            <li
+              v-if="listEntries[list.id].length === 0"
+              :key="`${list.id}-empty-hint`"
+              class="todo-empty-hint"
+              :aria-label="uiText.todo.tips"
+            />
             <template
               v-for="entry in listEntries[list.id]"
               :key="entry.type === 'todo' ? entry.todo.id : entry.id"

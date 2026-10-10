@@ -2883,18 +2883,25 @@ button.todo-star-button {
 }
 
 .today-focus-move-move,
+.todo-move-move {
+  transition: transform 0.22s cubic-bezier(0.2, 0, 0, 1);
+}
+
 .today-focus-move-enter-active,
 .today-focus-move-leave-active,
-.todo-move-move,
 .todo-move-enter-active,
-.todo-move-leave-active {
-  transition: transform 0.22s cubic-bezier(0.2, 0, 0, 1), opacity 0.18s ease;
+.todo-move-leave-active,
+.todo-focus-reveal-enter-active,
+.todo-focus-reveal-leave-active {
+  transition: opacity 0.18s ease;
 }
 
 .today-focus-move-enter-from,
 .today-focus-move-leave-to,
 .todo-move-enter-from,
-.todo-move-leave-to {
+.todo-move-leave-to,
+.todo-focus-reveal-enter-from,
+.todo-focus-reveal-leave-to {
   opacity: 0;
 }
 

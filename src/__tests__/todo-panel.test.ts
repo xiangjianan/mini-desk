@@ -4903,6 +4903,7 @@ describe("完成提醒共用两秒倒计时", () => {
   it("连续勾选跨清单事项重新计时，到期一次隐藏全部", async () => {
     vi.useFakeTimers();
     const wrapper = mountSharedCountdown();
+    const list = wrapper.get('[data-testid="todo-list-morning"]').element;
     try {
       await check(wrapper, "a");
       await vi.advanceTimersByTimeAsync(1500);
@@ -4913,6 +4914,9 @@ describe("完成提醒共用两秒倒计时", () => {
       expect(values(wrapper)).toEqual(["第一项", "第二项", "另一清单"]);
       await vi.advanceTimersByTimeAsync(1);
       expect(values(wrapper)).toEqual([]);
+      // Keep the same transition container when the last batch leaves, so its fade can finish.
+      expect(wrapper.get('[data-testid="todo-list-morning"]').element).toBe(list);
+      expect(wrapper.get('[data-testid="todo-list-morning"] .todo-empty-hint').exists()).toBe(true);
     } finally { wrapper.unmount(); vi.useRealTimers(); }
   });
 
