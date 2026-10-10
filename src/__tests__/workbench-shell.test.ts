@@ -380,6 +380,62 @@ describe("WorkbenchShell", () => {
     wrapper.unmount();
   });
 
+  it("coalesces drag moves per frame and saves only on release", async () => {
+    vi.spyOn(window, "innerWidth", "get").mockReturnValue(1600);
+    HTMLElement.prototype.getBoundingClientRect = function getMockRect() {
+      if (this instanceof HTMLElement && this.classList.contains("workbench-grid")) {
+        return {
+          x: 0,
+          y: 52,
+          left: 0,
+          top: 52,
+          right: 1200,
+          bottom: 800,
+          width: 1200,
+          height: 748,
+          toJSON: () => undefined,
+        };
+      }
+      return originalGetBoundingClientRect.call(this);
+    };
+    let frameCallback: FrameRequestCallback | undefined;
+    const requestFrame = vi.spyOn(window, "requestAnimationFrame").mockImplementation((callback) => {
+      frameCallback = callback;
+      return 123;
+    });
+    vi.spyOn(window, "cancelAnimationFrame").mockImplementation(() => {});
+    const save = vi.spyOn(Storage.prototype, "setItem");
+    const wrapper = mount(WorkbenchShell, {
+      attachTo: document.body,
+      props: defaultProps,
+    });
+    await nextTick();
+    await nextTick();
+
+    const grid = wrapper.get(".workbench-grid");
+    const before = grid.attributes("style");
+    const down = new MouseEvent("pointerdown", { bubbles: true, cancelable: true, clientX: 200 });
+    wrapper.findAll(".workbench-resizer")[0].element.dispatchEvent(down);
+    save.mockClear();
+    window.dispatchEvent(new MouseEvent("pointermove", { clientX: 240 }));
+    window.dispatchEvent(new MouseEvent("pointermove", { clientX: 260 }));
+    window.dispatchEvent(new MouseEvent("mousemove", { clientX: 999 }));
+    await nextTick();
+    expect(requestFrame).toHaveBeenCalledTimes(1);
+    expect(grid.attributes("style")).toBe(before);
+    frameCallback!(0);
+    await nextTick();
+    expect(grid.attributes("style")).not.toBe(before);
+    expect(save).not.toHaveBeenCalled();
+    window.dispatchEvent(new MouseEvent("pointermove", { clientX: 280 }));
+    window.dispatchEvent(new MouseEvent("pointerup"));
+    await nextTick();
+    expect(save).toHaveBeenCalledTimes(1);
+    const stored = JSON.parse(localStorage.getItem(WORKBENCH_WIDTH_STORAGE_KEY) ?? "[]");
+    expect(stored).toHaveLength(4);
+    wrapper.unmount();
+  });
+
   it("resizes adjacent workbench zones and syncs the image preview start edge", async () => {
     vi.spyOn(window, "innerWidth", "get").mockReturnValue(1600);
     HTMLElement.prototype.getBoundingClientRect = function getMockRect() {

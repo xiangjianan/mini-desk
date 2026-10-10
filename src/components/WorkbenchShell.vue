@@ -465,7 +465,7 @@ function shrinkColumns(widths: number[], indices: number[], requestedShrink: num
   return { widths: nextWidths, actualShrink };
 }
 
-function applyResizeDelta(index: number, delta: number, startWidths: number[], trailing = false): void {
+function applyResizeDelta(index: number, delta: number, startWidths: number[], trailing = false, persist = true): void {
   // Trailing edge (solo assets): no right neighbor absorbs the space, so the
   // column grows/shrinks directly against the empty area, clamped to
   // [collapsed rail, content width]. Width is session-only (solo resets to the
@@ -492,22 +492,37 @@ function applyResizeDelta(index: number, delta: number, startWidths: number[], t
     nextWidths[index] = startWidths[index] + actualShrink;
   }
   columnWidths.value = nextWidths;
-  persistColumnWidths(nextWidths);
+  if (persist) persistColumnWidths(nextWidths);
   syncImagePreviewLeft();
 }
 
-function handleResizeMove(event: PointerEvent | MouseEvent): void {
+let resizeFrame: number | undefined;
+let pendingResizeX: number | undefined;
+
+function flushResizeMove(): void {
+  resizeFrame = undefined;
   const current = activeResize.value;
-  if (!current) return;
-  applyResizeDelta(current.index, event.clientX - current.startX, current.startWidths, current.trailing);
+  const clientX = pendingResizeX;
+  pendingResizeX = undefined;
+  if (!current || clientX === undefined) return;
+  applyResizeDelta(current.index, clientX - current.startX, current.startWidths, current.trailing, false);
+}
+
+function handleResizeMove(event: PointerEvent): void {
+  if (!activeResize.value) return;
+  pendingResizeX = event.clientX;
+  if (resizeFrame === undefined) resizeFrame = window.requestAnimationFrame(flushResizeMove);
 }
 
 function finishResize(): void {
+  if (resizeFrame !== undefined) window.cancelAnimationFrame(resizeFrame);
+  resizeFrame = undefined;
+  // Preserve the last pointer position even when release happens before the frame.
+  flushResizeMove();
+  if (activeResize.value && !activeResize.value.trailing) persistColumnWidths(columnWidths.value);
   activeResize.value = null;
   window.removeEventListener("pointermove", handleResizeMove);
   window.removeEventListener("pointerup", finishResize);
-  window.removeEventListener("mousemove", handleResizeMove);
-  window.removeEventListener("mouseup", finishResize);
 }
 
 function startResize(event: PointerEvent, index: number, trailing = false): void {
@@ -517,8 +532,6 @@ function startResize(event: PointerEvent, index: number, trailing = false): void
   activeResize.value = { index, startX: event.clientX, startWidths: [...columnWidths.value], trailing };
   window.addEventListener("pointermove", handleResizeMove);
   window.addEventListener("pointerup", finishResize);
-  window.addEventListener("mousemove", handleResizeMove);
-  window.addEventListener("mouseup", finishResize);
 }
 
 function resizeWithKeyboard(event: KeyboardEvent, index: number, trailing = false): void {

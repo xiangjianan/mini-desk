@@ -752,11 +752,10 @@ function updateLanguage(language: AppLanguage): void {
 }
 
 function toggleWorkspaceZone(workspaceId: string, zone: ZoneKey): void {
-  state.workspaces = state.workspaces.map((workspace) =>
-    workspace.id === workspaceId
-      ? { ...workspace, zoneVisibility: { ...workspace.zoneVisibility, [zone]: !workspace.zoneVisibility[zone] } }
-      : workspace,
-  );
+  const workspace = state.workspaces.find((entry) => entry.id === workspaceId);
+  if (!workspace) return;
+  // Visibility does not change reminder data; keep workspace-derived props stable.
+  workspace.zoneVisibility = { ...workspace.zoneVisibility, [zone]: !workspace.zoneVisibility[zone] };
   persistNow();
 }
 

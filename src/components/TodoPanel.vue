@@ -127,7 +127,7 @@ const todoDragScroll = createDragAutoScroll();
 const draggedListId = ref<TodoListId | null>(null);
 const panelRef = ref<HTMLElement | null>(null);
 // Measured content width of the todo panel, kept in sync via ResizeObserver.
-const measuredPanelWidth = ref(0);
+let measuredPanelWidth = 0;
 const editingListTitleIds = ref<Set<TodoListId>>(new Set());
 const editingTodoKey = ref<string | null>(null);
 const selectedMenuTodoKey = ref<string | null>(null);
@@ -180,7 +180,11 @@ const effectiveTodoLists = computed(() => {
 });
 // Number of masonry columns: derived from the measured panel width and clamped
 // to the list count so a few lists never leave empty columns. 1 = single column.
-const columnCount = computed(() => computeColumnCount(measuredPanelWidth.value, effectiveTodoLists.value.length));
+const columnCount = ref(1);
+function refreshColumnCount(): void {
+  columnCount.value = computeColumnCount(measuredPanelWidth, effectiveTodoLists.value.length);
+}
+watch(() => effectiveTodoLists.value.length, refreshColumnCount);
 watch(columnCount, (next) => emit("columnCountChange", next));
 // Group lists into explicit column buckets by their pinned `column`, clamped to
 // the current column count. Array order within a bucket = vertical order.
@@ -406,7 +410,9 @@ onMounted(() => {
   // workbench resizer drags, and zone show/hide (none of which fire window resize).
   if (panelRef.value && typeof ResizeObserver !== "undefined") {
     columnResizeObserver = new ResizeObserver((entries) => {
-      measuredPanelWidth.value = entries[0]?.contentRect.width ?? 0;
+      measuredPanelWidth = entries[0]?.contentRect.width ?? 0;
+      // Pixel changes within the same column breakpoint must not rerender every row.
+      refreshColumnCount();
     });
     columnResizeObserver.observe(panelRef.value);
   }

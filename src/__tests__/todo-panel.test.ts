@@ -114,6 +114,41 @@ const defaultTodoLists = [
 ];
 
 describe("TodoPanel", () => {
+  it("does not update reminder rows for width changes within the same column breakpoint", async () => {
+    let notifyResize: ResizeObserverCallback | undefined;
+    const originalObserver = globalThis.ResizeObserver;
+    globalThis.ResizeObserver = class {
+      constructor(callback: ResizeObserverCallback) { notifyResize = callback; }
+      observe() {}
+      unobserve() {}
+      disconnect() {}
+    } as unknown as typeof ResizeObserver;
+    const wrapper = mount(TodoPanel, {
+      props: { todoLists: defaultTodoLists, todos: { morning: [{ id: "a", text: "A", done: false }], noon: [], evening: [] }, titles: DEFAULT_TITLES },
+    });
+    try {
+      const measure = (width: number) => notifyResize!([{ contentRect: { width } } as ResizeObserverEntry], {} as ResizeObserver);
+      measure(700);
+      await nextTick();
+      expect(wrapper.findAll(".todo-column")).toHaveLength(2);
+      const row = wrapper.get(".todo-item").element;
+      const mutations: MutationRecord[] = [];
+      const observer = new MutationObserver((records) => mutations.push(...records));
+      observer.observe(wrapper.element, { subtree: true, childList: true, attributes: true });
+      measure(750);
+      await nextTick();
+      expect(wrapper.get(".todo-item").element).toBe(row);
+      expect(mutations).toHaveLength(0);
+      measure(1100);
+      await nextTick();
+      expect(wrapper.findAll(".todo-column")).toHaveLength(3);
+      observer.disconnect();
+    } finally {
+      wrapper.unmount();
+      globalThis.ResizeObserver = originalObserver;
+    }
+  });
+
   it("suppresses update emits during IME composition and emits the committed text", async () => {
     const wrapper = mount(TodoPanel, {
       props: {
