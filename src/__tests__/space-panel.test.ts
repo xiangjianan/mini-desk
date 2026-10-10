@@ -56,7 +56,7 @@ function ruleBodies(styles: string, selector: string): string[] {
 describe("SpacePanel", () => {
   it("offers paste, smart paste and Tips on the notebook heading in both languages", async () => {
     const wrapper = mountSpacePanel([{ id: "note", title: "笔记", lines: [] }]);
-    const heading = wrapper.get(".desk-zone-heading h2");
+    const heading = wrapper.get(".desk-zone-heading");
     await heading.trigger("contextmenu");
     expect(wrapper.findAll(".dropdown-option").map(option => option.text())).toEqual(["粘贴", "智能粘贴", "Tips"]);
     expect(wrapper.get('[data-key="smart-paste"]').attributes("disabled")).toBeDefined();
@@ -65,6 +65,21 @@ describe("SpacePanel", () => {
     await wrapper.setProps({ language: "en" });
     await heading.trigger("contextmenu");
     expect(wrapper.findAll(".dropdown-option").map(option => option.text())).toEqual(["Paste", "Smart paste", "Tips"]);
+    wrapper.unmount();
+  });
+
+  it("opens the menu across the heading row but excludes the smart paste area", async () => {
+    const wrapper = mountSpacePanel([{ id: "note", title: "笔记", lines: [] }]);
+    await wrapper.setProps({ polish: vi.fn() });
+    await wrapper.get(".header-actions").trigger("contextmenu");
+    expect(wrapper.find(".dropdown-option").exists()).toBe(false);
+    await wrapper.get(".desk-smart-paste").trigger("contextmenu");
+    expect(wrapper.find(".dropdown-option").exists()).toBe(false);
+    await wrapper.get(".desk-zone-heading").trigger("contextmenu");
+    expect(wrapper.findAll(".dropdown-option")).toHaveLength(3);
+    await wrapper.get('[data-key="guide"]').trigger("click");
+    await wrapper.get(".desk-zone-heading h2").trigger("contextmenu");
+    expect(wrapper.findAll(".dropdown-option")).toHaveLength(3);
     wrapper.unmount();
   });
 

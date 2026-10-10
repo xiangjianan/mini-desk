@@ -313,9 +313,9 @@ function handleTabsWheel(event: WheelEvent): void {
     @dragleave="handleTodoDragLeave"
     @drop="handleTodoDrop"
   >
-    <div class="panel-header desk-zone-heading">
-      <h2 @contextmenu.stop.prevent="openHeaderMenu($event)"><NIcon :component="DocumentTextOutline" /><span>{{ uiText.desk.notes }}</span></h2>
-      <div class="header-actions">
+    <div class="panel-header desk-zone-heading" @contextmenu.stop.prevent="openHeaderMenu($event)">
+      <h2><NIcon :component="DocumentTextOutline" /><span>{{ uiText.desk.notes }}</span></h2>
+      <div class="header-actions" @contextmenu.stop>
         <button v-if="props.polish && activeSpace" class="desk-ai-action desk-ai-button desk-smart-paste" type="button"
           :aria-label="uiText.common.smartPaste" :disabled="smartPastePending" :aria-busy="smartPastePending" @mousedown.prevent
           @click.stop="appendSmartPaste">
