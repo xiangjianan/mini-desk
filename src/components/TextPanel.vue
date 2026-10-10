@@ -680,6 +680,14 @@ function focusEditor(): void {
   startEditingFromTextarea(textarea, true);
 }
 
+async function appendPaste(): Promise<void> {
+  const target = textareaRef.value;
+  if (!target) return;
+  const end = text.value.length;
+  await pasteTextFromClipboard(target, { start: end, end });
+  if (!isUnmounted) target.scrollTop = target.scrollHeight;
+}
+
 /** Header paste always appends to this editor, independently of its selection. */
 async function appendSmartPaste(): Promise<void> {
   const target = textareaRef.value;
@@ -696,6 +704,7 @@ function scrollToEnd(): void {
 }
 
 defineExpose({
+  appendPaste,
   appendSmartPaste,
   focusEditor,
   scrollToEnd,
@@ -865,8 +874,7 @@ function deleteTextSelection(target: HTMLTextAreaElement): void {
   emit("update", linesFromEditorState(text.value, editorMarks.value));
 }
 
-async function pasteTextFromClipboard(target: HTMLTextAreaElement): Promise<void> {
-  const range = getTextSelectionRange(target);
+async function pasteTextFromClipboard(target: HTMLTextAreaElement, range = getTextSelectionRange(target)): Promise<void> {
   if (!editing.value || target.readOnly) startEditingFromTextarea(target);
   target.setSelectionRange(range.start, range.end);
   const probe = await probeClipboardForTextPaste();

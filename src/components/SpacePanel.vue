@@ -2,7 +2,7 @@
 import { computed, h, nextTick, onMounted, onUnmounted, ref, watch } from "vue";
 import type { Component, VNode } from "vue";
 import { NDropdown, NIcon, NScrollbar } from "naive-ui";
-import { AddOutline, DocumentTextOutline, ClipboardOutline, CreateOutline, SwapHorizontalOutline, TrashOutline } from "@vicons/ionicons5";
+import { AddOutline, DocumentTextOutline, ClipboardOutline, CreateOutline, SwapHorizontalOutline, TrashOutline, HelpCircleOutline } from "@vicons/ionicons5";
 import type { DropdownOption } from "naive-ui";
 import type { AppLanguage, GuideKey, LineItem, WorkspaceMoveTarget, WorkspaceSpace } from "../types";
 import { getUiText } from "../state/i18n";
@@ -50,8 +50,8 @@ const draggedSpaceId = ref<string | null>(null);
 // 提醒事项拖到笔记本上时高亮整个面板；只在待办拖拽（application/x-todo-id）时生效。
 const todoDropHover = ref(false);
 const suppressTabCommitTransition = ref(false);
-const menu = ref<{ x: number; y: number; spaceId: string } | null>(null);
-const textPanelRef = ref<{ focusEditor: () => void; appendSmartPaste: () => Promise<void>; scrollToEnd: () => void } | null>(null);
+const menu = ref<{ x: number; y: number; spaceId: string; anchor?: HTMLElement } | null>(null);
+const textPanelRef = ref<{ focusEditor: () => void; appendSmartPaste: () => Promise<void>; appendPaste: () => Promise<void>; scrollToEnd: () => void } | null>(null);
 const smartPastePending = ref(false);
 async function appendSmartPaste(): Promise<void> {
   if (smartPastePending.value) return;
@@ -90,7 +90,11 @@ function buildSpaceMoveOptions(): DropdownOption[] {
   }];
 }
 
-const menuOptions = computed<DropdownOption[]>(() => [
+const menuOptions = computed<DropdownOption[]>(() => menu.value?.anchor ? [
+  { label: uiText.value.common.paste, key: "paste", icon: renderIcon(ClipboardOutline), disabled: !activeSpace.value },
+  { label: uiText.value.common.smartPaste, key: "smart-paste", icon: renderIcon(ClipboardOutline), disabled: !activeSpace.value || !props.polish || smartPastePending.value },
+  { label: uiText.value.common.tips, key: "guide", icon: renderIcon(HelpCircleOutline) },
+] : [
   { label: uiText.value.space.create, key: "create", icon: renderIcon(AddOutline) },
   { label: uiText.value.common.edit, key: "edit", icon: renderIcon(CreateOutline) },
   ...buildSpaceMoveOptions(),
@@ -203,6 +207,11 @@ function openTabMenu(event: MouseEvent, id: string): void {
   menu.value = { x: event.clientX, y: event.clientY, spaceId: id };
 }
 
+function openHeaderMenu(event: MouseEvent): void {
+  exclusiveMenu.notifyOpen(event, { replacingExistingMenu: Boolean(menu.value) });
+  menu.value = { x: event.clientX, y: event.clientY, spaceId: activeSpace.value?.id ?? "", anchor: event.currentTarget as HTMLElement };
+}
+
 function closeMenu(): void {
   menu.value = null;
 }
@@ -211,6 +220,12 @@ function handleMenuSelect(key: string): void {
   const current = menu.value;
   if (!current) return;
   closeMenu();
+  if (current.anchor) {
+    if (key === "paste") void textPanelRef.value?.appendPaste();
+    if (key === "smart-paste") void appendSmartPaste();
+    if (key === "guide") emit("guide", "workspace", current.anchor, true);
+    return;
+  }
   if (key === "create") {
     emit("create");
     return;
@@ -299,7 +314,7 @@ function handleTabsWheel(event: WheelEvent): void {
     @drop="handleTodoDrop"
   >
     <div class="panel-header desk-zone-heading">
-      <h2><NIcon :component="DocumentTextOutline" /><span>{{ uiText.desk.notes }}</span></h2>
+      <h2 @contextmenu.stop.prevent="openHeaderMenu($event)"><NIcon :component="DocumentTextOutline" /><span>{{ uiText.desk.notes }}</span></h2>
       <div class="header-actions">
         <button v-if="props.polish && activeSpace" class="desk-ai-action desk-ai-button desk-smart-paste" type="button"
           :aria-label="uiText.common.smartPaste" :disabled="smartPastePending" :aria-busy="smartPastePending" @mousedown.prevent

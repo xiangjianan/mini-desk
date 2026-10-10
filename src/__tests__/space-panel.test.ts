@@ -54,6 +54,50 @@ function ruleBodies(styles: string, selector: string): string[] {
 }
 
 describe("SpacePanel", () => {
+  it("offers paste, smart paste and Tips on the notebook heading in both languages", async () => {
+    const wrapper = mountSpacePanel([{ id: "note", title: "笔记", lines: [] }]);
+    const heading = wrapper.get(".desk-zone-heading h2");
+    await heading.trigger("contextmenu");
+    expect(wrapper.findAll(".dropdown-option").map(option => option.text())).toEqual(["粘贴", "智能粘贴", "Tips"]);
+    expect(wrapper.get('[data-key="smart-paste"]').attributes("disabled")).toBeDefined();
+    await wrapper.get('[data-key="guide"]').trigger("click");
+    expect(wrapper.emitted("guide")?.[0]).toEqual(["workspace", heading.element, true]);
+    await wrapper.setProps({ language: "en" });
+    await heading.trigger("contextmenu");
+    expect(wrapper.findAll(".dropdown-option").map(option => option.text())).toEqual(["Paste", "Smart paste", "Tips"]);
+    wrapper.unmount();
+  });
+
+  it("appends heading paste to the active notebook without replacing selected text", async () => {
+    Object.assign(navigator, { clipboard: { readText: vi.fn().mockResolvedValue("追加文字"), writeText: vi.fn() } });
+    const wrapper = mountSpacePanel([
+      { id: "other", title: "其他", lines: [] },
+      { id: "note", title: "笔记", lines: [{ text: "原文", indent: 0 }] },
+    ], "note");
+    const textarea = wrapper.get("textarea").element as HTMLTextAreaElement;
+    textarea.setSelectionRange(0, 2);
+    await wrapper.get(".desk-zone-heading h2").trigger("contextmenu");
+    await wrapper.get('[data-key="paste"]').trigger("click");
+    await flushPromises();
+    const update = wrapper.emitted("update")?.at(-1);
+    expect(update?.[0]).toBe("note");
+    expect((update?.[1] as { text: string }[]).map(line => line.text).join("\n")).toBe("原文追加文字");
+    wrapper.unmount();
+  });
+
+  it("uses the existing smart paste flow from the notebook heading", async () => {
+    Object.assign(navigator, { clipboard: { readText: vi.fn().mockResolvedValue("杂乱文本"), writeText: vi.fn() } });
+    const polish = vi.fn(async () => ({ items: [{ text: "整理结果" }] }) as import("../sync/polishClient").PolishResult);
+    const wrapper = mountSpacePanel([{ id: "note", title: "笔记", lines: [] }]);
+    await wrapper.setProps({ polish });
+    await wrapper.get(".desk-zone-heading h2").trigger("contextmenu");
+    await wrapper.get('[data-key="smart-paste"]').trigger("click");
+    await flushPromises();
+    expect(polish).toHaveBeenCalledWith("note", "杂乱文本", undefined);
+    expect(wrapper.emitted("update")?.at(-1)?.[0]).toBe("note");
+    wrapper.unmount();
+  });
+
   it("renders tabs, switches spaces, and creates new spaces", async () => {
     const wrapper = mountSpacePanel([
       { id: "workspace", title: "工作空间", lines: [] },
