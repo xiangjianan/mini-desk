@@ -170,7 +170,6 @@ export const GUIDE_MESSAGES: Record<AppLanguage, Record<GuideKey, string[]>> = {
       "Ctrl+V 粘贴截图，也可以直接贴图片。",
       "Ctrl+V 可以直接粘贴图片。",
       "试试把外部图片拖到这里。",
-      "双击截图标题可以修改名称。",
       "按住图片拖动可以调整顺序。",
       "单击图片可以预览。",
       "右键图片可复制、预览或删除。",
@@ -200,7 +199,6 @@ export const GUIDE_MESSAGES: Record<AppLanguage, Record<GuideKey, string[]>> = {
       "右键菜单可以隐藏动作。",
       "右键菜单可以编辑动作。",
       "按住动作拖动可以排序。",
-      "双击标题可以修改名称。",
       "选择复制文本属性，可以一键复制文本。",
       "链接属性会直接打开目标地址。",
       "加号菜单可以新增快捷内容。",
@@ -308,7 +306,6 @@ export const GUIDE_MESSAGES: Record<AppLanguage, Record<GuideKey, string[]>> = {
     images: [
       "Try dropping an image from outside here.",
       "Press Ctrl+V to paste an image here.",
-      "Double-click the screenshots title to rename it.",
       "Drag images to reorder them.",
       "Click an image to preview it.",
       "Right-click an image to copy, preview, or delete it.",
@@ -337,7 +334,6 @@ export const GUIDE_MESSAGES: Record<AppLanguage, Record<GuideKey, string[]>> = {
       "Use the context menu to hide an action.",
       "Use the context menu to edit an action.",
       "Drag actions to reorder them.",
-      "Double-click the title to rename it.",
       "Text shortcuts copy their text instantly.",
       "Link shortcuts open their target URL.",
       "Use the menu to add a shortcut.",
@@ -654,10 +650,10 @@ export const UI_TEXT = {
     },
     zoneVisibility: {
       title: "显示区域",
-      assets: "图片",
+      assets: "贴图",
       notes: "快捷动作",
       tasks: "提醒事项",
-      workspace: "便签",
+      workspace: "记事本",
     },
     support: {
       title: "打赏作者",
@@ -1058,10 +1054,10 @@ export const UI_TEXT = {
     },
     zoneVisibility: {
       title: "Visible areas",
-      assets: "Images",
+      assets: "Clippings",
       notes: "Quick actions",
       tasks: "Reminders",
-      workspace: "Sticky notes",
+      workspace: "Notebook",
     },
     support: {
       title: "Support the Author",
@@ -1342,7 +1338,7 @@ export const SHORTCUT_HELP: Record<AppLanguage, ShortcutHelpSection[]> = {
     { area: "工作台", icon: "⌘", summary: "把图片、提醒、快捷动作和便签放在一个桌面里。", tips: [
       "拖动栏间分隔线可以调整宽度，布局会自动记住。",
       "顶部菜单可以收起，适合给内容区让出空间。",
-      "双击任意区域标题可以改名，包括今日重点和空间标签。",
+      "双击列表标题或空间标签可以改名。",
     ], shortcuts: [
       { key: "Ctrl + S", desc: "立即保存" },
     ]},
@@ -1403,7 +1399,7 @@ export const SHORTCUT_HELP: Record<AppLanguage, ShortcutHelpSection[]> = {
     { area: "Desk", icon: "⌘", summary: "Screenshots, reminders, quick actions, and notes in one local workspace.", tips: [
       "Drag column dividers to resize areas; the layout is remembered.",
       "Hide the top bar when you want more room for content.",
-      "Double-click section titles to rename them, including Focus and space tabs.",
+      "Double-click list titles or space tabs to rename them.",
     ], shortcuts: [
       { key: "Ctrl + S", desc: "Save immediately" },
     ]},

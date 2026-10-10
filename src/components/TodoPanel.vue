@@ -15,6 +15,7 @@ import {
   EyeOutline,
   HelpCircleOutline,
   LinkOutline,
+  GridOutline,
   NotificationsOutline,
   Star,
   StarOutline,
@@ -219,6 +220,7 @@ function columnLimitMenu(): DropdownOption {
   return {
     label: uiText.value.todo.maxColumns,
     key: "max-columns",
+    icon: renderIcon(GridOutline),
     children: TODO_COLUMN_LIMIT_OPTIONS.map((count) => ({
       key: `max-columns:${count}`,
       label: uiText.value.todo.columnLimit.replace("{count}", String(count)),

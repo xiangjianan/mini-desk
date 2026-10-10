@@ -86,7 +86,7 @@ describe("localized public copy", () => {
       summary: expect.stringContaining("一个桌面"),
     });
     expect(SHORTCUT_HELP.zh.flatMap((section) => section.tips)).toEqual(expect.arrayContaining([
-      "双击任意区域标题可以改名，包括今日重点和空间标签。",
+      "双击列表标题或空间标签可以改名。",
       "右键空白处可以新增提醒事项列表，列表名也能拖动排序。",
       "快捷动作可以按标签分组，也能拖到其他分类或无标签区域。",
     ]));
@@ -106,7 +106,7 @@ describe("localized public copy", () => {
       { key: "5 / Enter", desc: "复制图片" },
     ]));
     expect(SHORTCUT_HELP.zh.flatMap((section) => [section.area, section.summary, ...section.tips, ...section.shortcuts.map((shortcut) => `${shortcut.key} ${shortcut.desc}`)]).join("\n")).not.toContain("工具");
-    expect(SHORTCUT_HELP.en.flatMap((section) => section.tips)).toContain("Double-click section titles to rename them, including Focus and space tabs.");
+    expect(SHORTCUT_HELP.en.flatMap((section) => section.tips)).toContain("Double-click list titles or space tabs to rename them.");
     const englishImageShortcuts = SHORTCUT_HELP.en.find((section) => section.area === "Images & Preview")?.shortcuts ?? [];
     expect(englishImageShortcuts).toEqual(expect.arrayContaining([
       { key: "Enter", desc: "Edit image / Save edit" },

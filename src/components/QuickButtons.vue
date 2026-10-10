@@ -19,7 +19,6 @@ import type { SmartPastePhase } from "../utils/smartPaste";
 import { readClipboardText } from "../utils/clipboard";
 import { renderIcon } from "../utils/dropdownIcons";
 import { createDragAutoScroll, findDragScrollContainer } from "../utils/dragScroll";
-import EditableTitle from "./EditableTitle.vue";
 import HighlightText from "./HighlightText.vue";
 
 const props = withDefaults(defineProps<{
@@ -70,7 +69,6 @@ const emit = defineEmits<{
 const dialogOpen = ref(false);
 const tagManagerOpen = ref(false);
 const editingId = ref<string | undefined>();
-const titleRef = ref<{ openMenuAt: (x: number, y: number, event?: Event) => void } | null>(null);
 type QuickApiHeaderFormRow = QuickApiHeader & { id: string };
 type QuickTagDraft = QuickTag & { titleDraft: string };
 
@@ -497,13 +495,6 @@ function openHeaderMenu(event: MouseEvent): void {
   menu.value = { x: event.clientX, y: event.clientY, anchor: event.currentTarget as HTMLElement };
 }
 
-function openTitleMenu(event: MouseEvent): void {
-  const target = event.target as HTMLElement;
-  if (target.closest("button, input, textarea")) return;
-  event.preventDefault();
-  event.stopPropagation();
-  titleRef.value?.openMenuAt(event.clientX, event.clientY, event);
-}
 
 function closeMenu(): void {
   menu.value = null;
@@ -844,17 +835,10 @@ function handleQuickGroupDrop(event: DragEvent, groupId: string): void {
     @drop="handleQuickDrop"
     @dragend="handleQuickDragEnd"
   >
-    <div class="panel-header desk-zone-heading" @contextmenu="openTitleMenu">
+    <div class="panel-header desk-zone-heading">
       <h2 id="quick-title">
         <NIcon :component="FlashOutline" />
-        <EditableTitle
-          ref="titleRef"
-          id="quick-title"
-          :value="title"
-          :display-value="getIconHeadingText(title, 'quick')"
-          :edit-label="uiText.common.rename"
-          @update="(id, value) => emit('titleUpdate', id, value)"
-        />
+        <span>{{ getIconHeadingText(title, 'quick') }}</span>
       </h2>
       <div class="header-actions">
         <div class="quick-search" :class="{ 'is-open': searchOpen }">

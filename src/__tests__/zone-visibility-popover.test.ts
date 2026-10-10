@@ -32,10 +32,10 @@ describe("ZoneVisibilityPopover", () => {
     const wrapper = mountPopover(allVisible, "zh");
 
     expect(wrapper.findAll(".zone-visibility-option").map((option) => option.text())).toEqual([
-      "图片",
+      "贴图",
       "快捷动作",
       "提醒事项",
-      "便签",
+      "记事本",
     ]);
   });
 
@@ -43,10 +43,10 @@ describe("ZoneVisibilityPopover", () => {
     const wrapper = mountPopover(allVisible, "en");
 
     expect(wrapper.findAll(".zone-visibility-option").map((option) => option.text())).toEqual([
-      "Images",
+      "Clippings",
       "Quick actions",
       "Reminders",
-      "Sticky notes",
+      "Notebook",
     ]);
   });
 

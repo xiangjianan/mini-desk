@@ -84,6 +84,15 @@ function createImageDataTransfer(): {
 }
 
 describe("ImagePanel", () => {
+  it("keeps the panel title read-only without a rename menu", async () => {
+    const wrapper = mountImagePanel();
+    await wrapper.get("#image-title").trigger("dblclick");
+    expect(wrapper.findComponent({ name: "EditableTitle" }).exists()).toBe(false);
+    await wrapper.get("#image-title").trigger("contextmenu");
+    expect(wrapper.findAll(".dropdown-option").map((option) => option.text())).not.toContain("重命名");
+    expect(wrapper.emitted("titleUpdate")).toBeUndefined();
+    wrapper.unmount();
+  });
   afterEach(() => {
     vi.restoreAllMocks();
   });
@@ -111,16 +120,14 @@ describe("ImagePanel", () => {
     wrapper.unmount();
   });
 
-  it("opens the title edit menu from any blank point in the header bar", async () => {
+  it("does not offer renaming from the header bar", async () => {
     const wrapper = mountImagePanel();
 
     await wrapper.get(".panel-header").trigger("contextmenu");
 
-    expect(wrapper.findAll(".dropdown-option").map((option) => option.text())).toEqual(["重命名"]);
+    expect(wrapper.findAll(".dropdown-option").map((option) => option.text())).not.toContain("重命名");
 
-    await wrapper.get(".dropdown-option").trigger("click");
-
-    expect(wrapper.find(".title-edit-input").exists()).toBe(true);
+    expect(wrapper.find(".title-edit-input").exists()).toBe(false);
     wrapper.unmount();
   });
 

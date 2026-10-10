@@ -13,7 +13,6 @@ import { CONTEXT_MENU_Z_INDEX, createExclusiveContextMenu } from "../utils/conte
 import { binaryStringToBytes } from "../utils/base64";
 import { createDragAutoScroll } from "../utils/dragScroll";
 import { renderIcon } from "../utils/dropdownIcons";
-import EditableTitle from "./EditableTitle.vue";
 
 const props = withDefaults(defineProps<{
   title: string;
@@ -75,7 +74,6 @@ const menu = ref<{ x: number; y: number; id?: string; anchor?: HTMLElement } | n
 const draggingId = ref<string | null>(null);
 const isDragHover = ref(false);
 const panelRef = ref<HTMLElement | null>(null);
-const titleRef = ref<{ openMenuAt: (x: number, y: number, event?: Event) => void } | null>(null);
 const imageCardRefs = new Map<string, HTMLElement>();
 const imageDragPreview = ref<ImageDragPreview | null>(null);
 const pasteHighlightedId = ref<string | null>(null);
@@ -195,13 +193,6 @@ function openMenu(event: MouseEvent, id?: string): void {
   menu.value = { x: event.clientX, y: event.clientY, id, anchor: event.currentTarget as HTMLElement };
 }
 
-function openTitleMenu(event: MouseEvent): void {
-  const target = event.target as HTMLElement;
-  if (target.closest("button, input, textarea")) return;
-  event.preventDefault();
-  event.stopPropagation();
-  titleRef.value?.openMenuAt(event.clientX, event.clientY, event);
-}
 
 function closeMenu(): void {
   menu.value = null;
@@ -604,17 +595,10 @@ function handleImageDragWheel(event: WheelEvent): void {
     @dragend="handleImageDragLeave"
     @contextmenu="openMenu($event)"
   >
-    <div v-if="!hideHeader" class="panel-header desk-zone-heading" @contextmenu="openTitleMenu">
+    <div v-if="!hideHeader" class="panel-header desk-zone-heading">
       <h1 id="image-title">
         <NIcon :component="ImageOutline" />
-        <EditableTitle
-          ref="titleRef"
-          id="image-title"
-          :value="title"
-          :display-value="getIconHeadingText(title, 'image')"
-          :edit-label="uiText.common.rename"
-          @update="(id, value) => emit('titleUpdate', id, value)"
-        />
+        <span>{{ getIconHeadingText(title, 'image') }}</span>
       </h1>
       <div class="header-actions">
         <span class="count">{{ images.length }}</span>
