@@ -29,6 +29,20 @@ export interface ChangelogEntry {
 
 export const CHANGELOG: ChangelogEntry[] = [
     {
+      version: "1.0.207",
+      date: "2026-10-11",
+      notes: {
+        zh: [
+          "优化：快捷动作区滚动时标签标题吸顶，随时可见可点",
+          "修复：提醒列表展开/收起的高度过渡动画不再跳变",
+        ],
+        en: [
+          "Improved: quick-action tag headings stay pinned and clickable while the panel scrolls",
+          "Fixed: reminder lists no longer jump while animating their expand/collapse height",
+        ],
+      },
+    },
+    {
       version: "1.0.206",
       date: "2026-10-11",
       notes: {
