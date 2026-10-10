@@ -115,7 +115,7 @@ const WorkspaceInboxDialog = defineAsyncComponent(() => import("./components/Wor
 const MOBILE_BREAKPOINT_QUERY = "(max-width: 940px)";
 const IMAGE_DELETE_GRACE_MS = 5000;
 const IMAGE_PREVIEW_CLOSE_MS = 220;
-const IMAGE_DENSITY_THRESHOLD = 30;
+const IMAGE_DENSITY_THRESHOLD = 10;
 const WORKSPACE_DENSITY_GROUP_TIP_CHANCE = 0.5;
 const STATE_SYNC_CHANNEL = "mini-desk-state-sync";
 

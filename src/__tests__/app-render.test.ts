@@ -1828,7 +1828,7 @@ describe("App shell", () => {
     localStorage.setItem(
       STORAGE_KEY,
       JSON.stringify({
-        images: buildStoredImages(31),
+        images: buildStoredImages(11),
       }),
     );
     const wrapper = mountApp();
@@ -1844,7 +1844,7 @@ describe("App shell", () => {
       const message = wrapper.getComponent(CompanionBubble).props("message") as string;
       expect(message).toContain("桌面");
       expect(message).toContain("贴图");
-      expect(message).toContain("31");
+      expect(message).toContain("11");
       expect(KAOMOJI_BY_MOOD.warning.some((kaomoji) => message.endsWith(kaomoji))).toBe(true);
     } finally {
       wrapper.unmount();
@@ -1857,7 +1857,7 @@ describe("App shell", () => {
       STORAGE_KEY,
       JSON.stringify({
         todoLists: [{ id: "done-heavy", title: "已完成", collapsed: false, compact: false }],
-        todos: { "done-heavy": buildCompletedTodos(21) },
+        todos: { "done-heavy": buildCompletedTodos(8) },
       }),
     );
     const wrapper = mountApp();
@@ -1876,11 +1876,11 @@ describe("App shell", () => {
     localStorage.setItem(
       STORAGE_KEY,
       JSON.stringify({
-        images: buildStoredImages(31),
+        images: buildStoredImages(11),
         quickTags: [{ id: "tag-heavy", title: "工作" }],
-        quickButtons: buildQuickButtons(51),
+        quickButtons: buildQuickButtons(13),
         todoLists: [{ id: "heavy", title: "任务", collapsed: false, compact: false }],
-        todos: { heavy: buildTodos(21) },
+        todos: { heavy: buildTodos(8) },
       }),
     );
     const wrapper = mountApp();
@@ -1896,9 +1896,9 @@ describe("App shell", () => {
       const message = wrapper.getComponent(CompanionBubble).props("message") as string;
       expect(message).toContain("今日桌面");
       expect(message).toContain("过热");
-      expect(message).toContain("提醒事项 21");
-      expect(message).toContain("快捷动作 51");
-      expect(message).toContain("贴图 31");
+      expect(message).toContain("提醒事项 8");
+      expect(message).toContain("快捷动作 13");
+      expect(message).toContain("贴图 11");
       expect(KAOMOJI_BY_MOOD.warning.some((kaomoji) => message.endsWith(kaomoji))).toBe(true);
     } finally {
       wrapper.unmount();
@@ -1912,7 +1912,7 @@ describe("App shell", () => {
     localStorage.setItem(
       STORAGE_KEY,
       JSON.stringify({
-        quickButtons: buildQuickButtons(51, undefined),
+        quickButtons: buildQuickButtons(13, undefined),
       }),
     );
     const wrapper = mountApp();
@@ -1941,7 +1941,7 @@ describe("App shell", () => {
       STORAGE_KEY,
       JSON.stringify({
         todoLists: [{ id: "heavy", title: "任务", collapsed: false, compact: false }],
-        todos: { heavy: buildTodos(21) },
+        todos: { heavy: buildTodos(8) },
       }),
     );
     const wrapper = mountApp();
@@ -1963,11 +1963,12 @@ describe("App shell", () => {
     }
   });
 
-  it("keeps quick action density airy at exactly fifty untagged buttons", () => {
+  it("keeps todo density airy at exactly seven unfinished reminders", () => {
     localStorage.setItem(
       STORAGE_KEY,
       JSON.stringify({
-        quickButtons: buildQuickButtons(50, undefined),
+        todoLists: [{ id: "boundary", title: "任务", collapsed: false, compact: false }],
+        todos: { boundary: buildTodos(7) },
       }),
     );
     const wrapper = mountApp();
@@ -1980,11 +1981,28 @@ describe("App shell", () => {
     }
   });
 
-  it("flags image density full once the list passes thirty items", () => {
+  it("keeps quick action density airy at exactly twelve untagged buttons", () => {
     localStorage.setItem(
       STORAGE_KEY,
       JSON.stringify({
-        images: buildStoredImages(31),
+        quickButtons: buildQuickButtons(12, undefined),
+      }),
+    );
+    const wrapper = mountApp();
+
+    try {
+      expect(wrapper.get('[data-testid="save-status"]').attributes("data-state")).toBe("saved");
+      expect(wrapper.get('[data-testid="save-status"]').attributes("aria-label")).toBe("今日桌面：轻盈");
+    } finally {
+      wrapper.unmount();
+    }
+  });
+
+  it("flags image density full once the list passes ten items", () => {
+    localStorage.setItem(
+      STORAGE_KEY,
+      JSON.stringify({
+        images: buildStoredImages(11),
       }),
     );
     const wrapper = mountApp();
@@ -1997,11 +2015,11 @@ describe("App shell", () => {
     }
   });
 
-  it("keeps image density airy at exactly thirty items", () => {
+  it("keeps image density airy at exactly ten items", () => {
     localStorage.setItem(
       STORAGE_KEY,
       JSON.stringify({
-        images: buildStoredImages(30),
+        images: buildStoredImages(10),
       }),
     );
     const wrapper = mountApp();
@@ -4917,12 +4935,12 @@ describe("App shell", () => {
     }
   });
 
-  it("shows a declutter bubble when previewing images after the list passes thirty items", async () => {
+  it("shows a declutter bubble when previewing images after the list passes ten items", async () => {
     vi.spyOn(Math, "random").mockReturnValue(0);
     localStorage.setItem(
       STORAGE_KEY,
       JSON.stringify({
-        images: buildStoredImages(31),
+        images: buildStoredImages(11),
       }),
     );
     const wrapper = mountApp();
@@ -8328,7 +8346,7 @@ describe("App shell", () => {
     }
   });
 
-  it("shows a declutter companion bubble and GIF when focusing a reminder list with at least twenty items", async () => {
+  it("shows a declutter companion bubble and GIF when focusing a reminder list with at least seven items", async () => {
     vi.useFakeTimers();
     localStorage.setItem(
       STORAGE_KEY,
@@ -8337,7 +8355,7 @@ describe("App shell", () => {
         workspaces: [{
           ...defaultWorkspace(),
           todos: {
-            morning: Array.from({ length: 20 }, (_, index) => ({
+            morning: Array.from({ length: 7 }, (_, index) => ({
               id: `todo-${index}`,
               text: `提醒 ${index + 1}`,
               done: false,
@@ -8413,7 +8431,7 @@ describe("App shell", () => {
     }
   });
 
-  it("shows a declutter companion bubble and GIF when a quick-action tag has more than fifty visible buttons", async () => {
+  it("shows a declutter companion bubble and GIF when a quick-action tag has more than twelve visible buttons", async () => {
     vi.useFakeTimers();
     localStorage.setItem(
       STORAGE_KEY,
@@ -8422,7 +8440,7 @@ describe("App shell", () => {
         workspaces: [{
           ...defaultWorkspace(),
           quickTags: [{ id: "tag-work", title: "工作" }],
-          quickButtons: Array.from({ length: 51 }, (_, index) => ({
+          quickButtons: Array.from({ length: 13 }, (_, index) => ({
             id: `quick-${index}`,
             title: `按钮 ${index + 1}`,
             value: `https://example.com/${index}`,
@@ -8469,7 +8487,7 @@ describe("App shell", () => {
             { id: "tag-b", title: "标签 B" },
           ],
           quickButtons: [
-            ...Array.from({ length: 26 }, (_, index) => ({
+            ...Array.from({ length: 7 }, (_, index) => ({
               id: `a-${index}`,
               title: `A ${index + 1}`,
               value: `https://example.com/a/${index}`,
@@ -8477,7 +8495,7 @@ describe("App shell", () => {
               hidden: false,
               tagId: "tag-a",
             })),
-            ...Array.from({ length: 26 }, (_, index) => ({
+            ...Array.from({ length: 7 }, (_, index) => ({
               id: `b-${index}`,
               title: `B ${index + 1}`,
               value: `https://example.com/b/${index}`,

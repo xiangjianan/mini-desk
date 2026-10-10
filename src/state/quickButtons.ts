@@ -14,7 +14,7 @@ export interface QuickButtonGroup {
 
 export const QUICK_BUTTON_EMPTY_GROUP_ID = "__empty";
 export const QUICK_BUTTON_OTHER_GROUP_ID = "__other";
-export const QUICK_DENSITY_THRESHOLD = 50;
+export const QUICK_DENSITY_THRESHOLD = 12;
 
 /** 点击数封顶：达到该次数即染到最深（100%）。 */
 export const QUICK_USAGE_MAX_CLICKS = 100;
