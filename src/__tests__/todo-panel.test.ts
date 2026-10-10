@@ -4797,13 +4797,13 @@ describe("提醒选区 AI 润色", () => {
     });
   }
 
-  it.each(["zh", "en"] as const)("%s 仅选中文字时显示三种风格，位于智能粘贴下方", async (language) => {
+  it.each(["zh", "en"] as const)("%s 未选中和选中文字时均显示三种风格，位于智能粘贴下方", async (language) => {
     Object.assign(navigator, { clipboard: { readText: vi.fn() } });
     const wrapper = mountPolishPanel(vi.fn(), language);
     const input = wrapper.get('.todo-input');
     (input.element as HTMLInputElement).setSelectionRange(0, 0);
     await input.trigger("contextmenu");
-    expect(wrapper.find('[data-key="smart-polish"]').exists()).toBe(false);
+    expect(wrapper.find('[data-key="smart-polish"]').exists()).toBe(true);
     (input.element as HTMLInputElement).setSelectionRange(3, 5);
     await input.trigger("contextmenu");
     const keys = wrapper.findAll('.dropdown-option').map((option) => option.attributes('data-key'));
@@ -4824,6 +4824,24 @@ describe("提醒选区 AI 润色", () => {
     await flushPromises();
     expect(polish).toHaveBeenCalledWith("note", "原文", style);
     expect(wrapper.emitted("update")?.at(-1)).toEqual(["morning", "selected", "前缀 润色结果 后缀"]);
+    expect(wrapper.emitted("createFromText")).toBeUndefined();
+    wrapper.unmount();
+  });
+
+  it.each(["input", "row", "focus-row", "done-row"])("未选中时右键 %s 润色整条提醒", async (location) => {
+    const polish = vi.fn(async (): Promise<PolishResult> => ({ items: [{ text: "整条润色结果" }] }));
+    const wrapper = mountPolishPanel(polish);
+    if (location === "focus-row" || location === "done-row") {
+      await wrapper.setProps({ todos: { morning: [{ id: "selected", text: "前缀 原文 后缀", done: location === "done-row", starred: location === "focus-row" }], noon: [], evening: [] } });
+    }
+    const input = wrapper.get('.todo-input');
+    (input.element as HTMLInputElement).setSelectionRange(0, 0);
+    const target = location === "input" ? input : wrapper.get(location === "focus-row" ? '.today-focus-item' : '.todo-item');
+    await target.trigger("contextmenu");
+    await wrapper.get('[data-key="smart-polish-concise"]').trigger("click");
+    await flushPromises();
+    expect(polish).toHaveBeenCalledWith("note", "前缀 原文 后缀", "concise");
+    expect(wrapper.emitted("update")?.at(-1)).toEqual(["morning", "selected", "整条润色结果"]);
     expect(wrapper.emitted("createFromText")).toBeUndefined();
     wrapper.unmount();
   });

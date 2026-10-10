@@ -223,7 +223,7 @@ const menuOptions = computed<DropdownOption[]>(() => {
         options.push({ label: uiText.value.common.smartPaste, key: "smart-paste", icon: renderIcon(ClipboardOutline) });
       }
     }
-    if (props.polish && !todo?.done && menu.value.selection?.text.trim()) {
+    if (props.polish && todo?.text.trim()) {
       options.push({
         label: uiText.value.common.smartPolish,
         key: "smart-polish",
@@ -1230,10 +1230,15 @@ async function handleMenuSelect(key: string): Promise<void> {
   if (!menu.value) return;
   const { period, id, anchor, target, x, y } = menu.value;
   const style = POLISH_STYLE_ENTRIES.find((entry) => entry.key === key)?.style;
-  if (style && id && target && menu.value.selection?.text.trim()) {
-    const selection = menu.value.selection;
+  if (style && id) {
+    const todo = getMenuTodo();
+    if (!todo?.text.trim()) return;
+    const selection = menu.value.selection?.text.trim()
+      ? menu.value.selection
+      : { start: 0, end: todo.text.length, text: todo.text, baseline: todo.text };
+    const input = target ?? anchor?.querySelector<HTMLInputElement>(".todo-input, .today-focus-input") ?? undefined;
     closeMenu();
-    await polishTodoSelection(period, id, target, selection, style);
+    await polishTodoSelection(period, id, input, selection, style);
     return;
   }
   if (key === "focus-now" && id) {
@@ -1464,14 +1469,15 @@ function compareTodayFocusEntries(left: TodayFocusEntry, right: TodayFocusEntry)
 async function polishTodoSelection(
   period: TodoPeriod,
   id: string,
-  target: HTMLInputElement,
+  target: HTMLInputElement | undefined,
   selection: { start: number; end: number; text: string; baseline: string },
   style: PolishStyle,
 ): Promise<void> {
   if (!props.polish) return;
   const landingLists = props.todoLists;
   const todo = getTodoById(period, id);
-  if (!todo || todo.done) return;
+  if (!todo) return;
+  const baselineDone = todo.done;
   await runSelectionPolish({
     kind: "note",
     text: selection.text,
@@ -1481,14 +1487,14 @@ async function polishTodoSelection(
     anchor: getTodoSectionAnchor(period),
     apply: (texts) => {
       const current = getTodoById(period, id);
-      if (isUnmounted || props.todoLists !== landingLists || current !== todo || current.done || current.text !== selection.baseline) return;
+      if (isUnmounted || props.todoLists !== landingLists || current !== todo || current.done !== baselineDone || current.text !== selection.baseline) return;
       const replacement = texts.join(" ").replace(/\s*\n\s*/g, " ");
       const nextText = selection.baseline.slice(0, selection.start) + replacement + selection.baseline.slice(selection.end);
       lastTodoSelections.delete(todoKey(period, id));
-      editingTodoKey.value = todoKey(period, id);
+      if (!current.done) editingTodoKey.value = todoKey(period, id);
       emit("update", period, id, nextText);
       void nextTick(() => {
-        if (!target.isConnected) return;
+        if (!target?.isConnected) return;
         target.focus({ preventScroll: true });
         restoreTodoCaret(target, selection.start + replacement.length);
       });
