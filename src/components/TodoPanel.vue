@@ -156,8 +156,10 @@ const listCreateDialog = ref<{
   title: string;
 } | null>(null);
 const pendingDoneReorderIds = ref<string[]>([]);
-const reorderTimers = new Map<string, number>();
-const reorderCountdowns = new Map<string, { remaining: number; startedAt?: number }>();
+const COMPLETION_DELAY_MS = 2000;
+let reorderTimer: number | undefined;
+let reorderRemaining = COMPLETION_DELAY_MS;
+let reorderStartedAt: number | undefined;
 let focusedTodoKey: string | null = null;
 const lastTodoCarets = new Map<string, number>();
 const lastTodoSelections = new Map<string, { start: number; end: number }>();
@@ -214,7 +216,6 @@ const menuOptions = computed<DropdownOption[]>(() => {
     options.push({ label: uiText.value.todo.newList, key: "create-list", icon: renderIcon(AddOutline) });
   }
   if (menu.value?.id) {
-    options.push({ label: uiText.value.todo.focusNow, key: "focus-now", icon: renderIcon(TimerOutline) });
     options.push({ label: uiText.value.common.copy, key: "copy", icon: renderIcon(CopyOutline) });
     if (canPasteTodoText(menu.value.period)) {
       // 右键提醒事项时，「粘贴/智能粘贴」把剪贴板内容拆成新增提醒，插到该条提醒下方。
@@ -231,6 +232,7 @@ const menuOptions = computed<DropdownOption[]>(() => {
         children: POLISH_STYLE_ENTRIES.map(({ key, labelKey }) => ({ label: uiText.value.common[labelKey], key })),
       });
     }
+    options.push({ label: uiText.value.todo.focusNow, key: "focus-now", icon: renderIcon(TimerOutline) });
     options.push({
       label: isValidNotifyAt(todo?.notifyAt) ? uiText.value.todo.editNotify : uiText.value.todo.setNotify,
       key: "notify",
@@ -413,7 +415,7 @@ onMounted(() => {
 onUnmounted(() => {
   isUnmounted = true;
   exclusiveMenu.unmount();
-  reorderTimers.forEach((timer) => window.clearTimeout(timer));
+  stopReorderTimer();
   document.removeEventListener("pointerdown", handleFloatingEditorOutsidePointerDown, true);
   window.removeEventListener("focus", refreshNotifyNow);
   document.removeEventListener("visibilitychange", handleVisibilityChange);
@@ -684,8 +686,9 @@ function handleChecked(period: TodoPeriod, id: string, checked: boolean): void {
   clearPendingReorder(key);
   if (checked) {
     pendingDoneReorderIds.value = [...pendingDoneReorderIds.value, key];
-    reorderCountdowns.set(key, { remaining: 3000 });
-    if (focusedTodoKey !== key) resumePendingReorder(key);
+    stopReorderTimer();
+    reorderRemaining = COMPLETION_DELAY_MS;
+    resumePendingReorder();
   }
   emit("complete", period, id, checked, todoSectionRefs.get(period));
 }
@@ -696,7 +699,7 @@ function handleInputBlur(period: TodoPeriod, id: string): void {
   if (todoReorderBlurGuard > 0) return;
   const key = todoKey(period, id);
   if (focusedTodoKey === key) focusedTodoKey = null;
-  resumePendingReorder(key);
+  resumePendingReorder();
   focusedListId.value = null;
   if (editingTodoKey.value === todoKey(period, id)) editingTodoKey.value = null;
   emit("blurEmpty", period, id);
@@ -809,29 +812,37 @@ function emitDeclutterPrompt(period: TodoPeriod, anchor: HTMLElement): void {
   emit("declutter", anchor);
 }
 
-function pausePendingReorder(key: string): void {
-  const countdown = reorderCountdowns.get(key);
-  if (!countdown || countdown.startedAt === undefined) return;
-  countdown.remaining = Math.max(0, countdown.remaining - (Date.now() - countdown.startedAt));
-  countdown.startedAt = undefined;
-  const timer = reorderTimers.get(key);
-  if (timer !== undefined) window.clearTimeout(timer);
-  reorderTimers.delete(key);
+function stopReorderTimer(): void {
+  if (reorderTimer !== undefined) window.clearTimeout(reorderTimer);
+  reorderTimer = undefined;
+  reorderStartedAt = undefined;
 }
 
-function resumePendingReorder(key: string): void {
-  const countdown = reorderCountdowns.get(key);
-  if (!countdown || countdown.startedAt !== undefined) return;
-  countdown.startedAt = Date.now();
-  reorderTimers.set(key, window.setTimeout(() => clearPendingReorder(key), countdown.remaining));
+function pausePendingReorder(key: string): void {
+  if (!pendingDoneReorderIds.value.includes(key) || reorderStartedAt === undefined) return;
+  reorderRemaining = Math.max(0, reorderRemaining - (Date.now() - reorderStartedAt));
+  stopReorderTimer();
+}
+
+function resumePendingReorder(): void {
+  if (pendingDoneReorderIds.value.length === 0 || reorderStartedAt !== undefined) return;
+  if (focusedTodoKey && pendingDoneReorderIds.value.includes(focusedTodoKey)) return;
+  reorderStartedAt = Date.now();
+  reorderTimer = window.setTimeout(() => {
+    stopReorderTimer();
+    pendingDoneReorderIds.value = [];
+    reorderRemaining = COMPLETION_DELAY_MS;
+  }, reorderRemaining);
 }
 
 function clearPendingReorder(key: string): void {
-  const timer = reorderTimers.get(key);
-  if (timer) window.clearTimeout(timer);
-  reorderTimers.delete(key);
-  reorderCountdowns.delete(key);
   pendingDoneReorderIds.value = pendingDoneReorderIds.value.filter((item) => item !== key);
+  if (pendingDoneReorderIds.value.length === 0) {
+    stopReorderTimer();
+    reorderRemaining = COMPLETION_DELAY_MS;
+  } else {
+    resumePendingReorder();
+  }
 }
 
 function openMenu(event: MouseEvent, period: TodoPeriod, id: string): void {

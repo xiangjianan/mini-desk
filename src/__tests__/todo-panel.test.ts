@@ -1141,7 +1141,7 @@ describe("TodoPanel", () => {
     expect(todayFocusValues(wrapper)).toEqual(["第一重点", "第二重点"]);
     expect(wrapper.find(".today-focus-list.today-focus-move").exists()).toBe(true);
 
-    await vi.advanceTimersByTimeAsync(2999);
+    await vi.advanceTimersByTimeAsync(1999);
     expect(todayFocusValues(wrapper)).toEqual(["第一重点", "第二重点"]);
 
     await vi.advanceTimersByTimeAsync(1);
@@ -1202,7 +1202,7 @@ describe("TodoPanel", () => {
     await vi.advanceTimersByTimeAsync(5000);
     expect(todayFocusValues(wrapper)).toEqual(["完成后隐藏重点", "仍然显示重点"]);
     await input.trigger("blur");
-    await vi.advanceTimersByTimeAsync(1999);
+    await vi.advanceTimersByTimeAsync(999);
     expect(todayFocusValues(wrapper)).toEqual(["完成后隐藏重点", "仍然显示重点"]);
 
     await vi.advanceTimersByTimeAsync(1);
@@ -2261,8 +2261,8 @@ describe("TodoPanel", () => {
 
     expect(wrapper.get(".today-focus-item").classes()).toContain("is-menu-selected");
     expect(wrapper.findAll(".dropdown-option").map((option) => option.text())).toEqual([
-      "现在做这个",
       "复制",
+      "现在做这个",
       "设置通知时间",
       "取消星标",
       "删除",
@@ -2516,7 +2516,7 @@ describe("TodoPanel", () => {
     wrapper.unmount();
   });
 
-  it("keeps a newly completed todo in place for 3 seconds before animated regrouping", async () => {
+  it("keeps a newly completed todo in place for 2 seconds before animated regrouping", async () => {
     vi.useFakeTimers();
 
     const Harness = defineComponent({
@@ -2564,7 +2564,7 @@ describe("TodoPanel", () => {
     await vi.advanceTimersByTimeAsync(5000);
     expect(values(wrapper)).toEqual(["第一项", "第二项"]);
     await input.trigger("blur");
-    await vi.advanceTimersByTimeAsync(2999);
+    await vi.advanceTimersByTimeAsync(1999);
     expect(values(wrapper)).toEqual(["第一项", "第二项"]);
     expect(wrapper.find(".todo-completed-divider").exists()).toBe(false);
 
@@ -2876,8 +2876,8 @@ describe("TodoPanel", () => {
 
     expect(wrapper.findAll(".todo-item")[1].classes()).toContain("is-menu-selected");
     expect(wrapper.findAll(".dropdown-option").map((option) => option.text())).toEqual([
-      "现在做这个",
       "复制",
+      "现在做这个",
       "设置通知时间",
       "星标",
       "删除",
@@ -3300,8 +3300,8 @@ describe("TodoPanel", () => {
 
     expect(wrapper.get(".todo-item").classes()).toContain("is-menu-selected");
     expect(wrapper.findAll(".dropdown-option").map((option) => option.text())).toEqual([
-      "现在做这个",
       "复制",
+      "现在做这个",
       "设置通知时间",
       "星标",
       "删除",
@@ -3348,8 +3348,8 @@ describe("TodoPanel", () => {
 
     expect(event.defaultPrevented).toBe(true);
     expect(wrapper.findAll(".dropdown-option").map((option) => option.text())).toEqual([
-      "现在做这个",
       "复制",
+      "现在做这个",
       "设置通知时间",
       "星标",
       "删除",
@@ -3420,9 +3420,9 @@ describe("TodoPanel", () => {
     await inputWrapper.trigger("contextmenu");
 
     expect(wrapper.findAll(".dropdown-option").map((option) => option.text())).toEqual([
-      "现在做这个",
       "复制",
       "粘贴",
+      "现在做这个",
       "设置通知时间",
       "星标",
       "删除",
@@ -4710,7 +4710,7 @@ describe("TodoPanel 现在做这个入口", () => {
     });
   }
 
-  it("右键菜单首项「现在做这个」，点击后 emit focusNow", async () => {
+  it("右键菜单「现在做这个」位于设置通知时间上方，点击后 emit focusNow", async () => {
     const wrapper = mountFocusPanel({
       morning: [{ id: "t1", text: "任务", done: false }],
       noon: [],
@@ -4719,7 +4719,8 @@ describe("TodoPanel 现在做这个入口", () => {
 
     await wrapper.get(".todo-item").trigger("contextmenu");
 
-    expect(wrapper.findAll(".dropdown-option")[0].text()).toBe("现在做这个");
+    const keys = wrapper.findAll(".dropdown-option").map((option) => option.attributes("data-key"));
+    expect(keys.indexOf("focus-now")).toBe(keys.indexOf("notify") - 1);
 
     await wrapper.get('[data-key="focus-now"]').trigger("click");
 
@@ -4872,5 +4873,78 @@ describe("提醒选区 AI 润色", () => {
     await flushPromises();
     expect(wrapper.emitted("update")).toBeUndefined();
     if (change !== "unmount") wrapper.unmount();
+  });
+});
+
+
+describe("完成提醒共用两秒倒计时", () => {
+  function mountSharedCountdown() {
+    const Harness = defineComponent({
+      components: { TodoPanel },
+      setup() {
+        const todos = ref<TodoMap>({
+          morning: [{ id: "a", text: "第一项", done: false }, { id: "b", text: "第二项", done: false }],
+          noon: [{ id: "c", text: "另一清单", done: false }], evening: [],
+        });
+        return { todos, todoLists: defaultTodoLists, titles: DEFAULT_TITLES, complete: (period: TodoPeriod, id: string, done: boolean) => {
+          todos.value = completeTodo(todos.value, period, id, done);
+        } };
+      },
+      template: '<TodoPanel :todos="todos" :todo-lists="todoLists" :titles="titles" :show-completed="{ morning: false, noon: false }" @complete="complete" />',
+    });
+    return mount(Harness, { global: { stubs: { Dropdown: dropdownStub, NDropdown: dropdownStub, NTooltip: tooltipStub } } });
+  }
+  async function check(wrapper: ReturnType<typeof mount>, id: string, checked = true) {
+    const checkbox = wrapper.get(`.todo-item[data-todo-id="${id}"] .todo-checkbox`);
+    (checkbox.element as HTMLInputElement).checked = checked;
+    await checkbox.trigger("change");
+  }
+
+  it("连续勾选跨清单事项重新计时，到期一次隐藏全部", async () => {
+    vi.useFakeTimers();
+    const wrapper = mountSharedCountdown();
+    try {
+      await check(wrapper, "a");
+      await vi.advanceTimersByTimeAsync(1500);
+      await check(wrapper, "b");
+      await vi.advanceTimersByTimeAsync(1500);
+      await check(wrapper, "c");
+      await vi.advanceTimersByTimeAsync(1999);
+      expect(values(wrapper)).toEqual(["第一项", "第二项", "另一清单"]);
+      await vi.advanceTimersByTimeAsync(1);
+      expect(values(wrapper)).toEqual([]);
+    } finally { wrapper.unmount(); vi.useRealTimers(); }
+  });
+
+  it("取消勾选的事项保留，其余事项按共享倒计时隐藏", async () => {
+    vi.useFakeTimers();
+    const wrapper = mountSharedCountdown();
+    try {
+      await check(wrapper, "a");
+      await check(wrapper, "b");
+      await vi.advanceTimersByTimeAsync(1000);
+      await check(wrapper, "a", false);
+      await vi.advanceTimersByTimeAsync(1000);
+      expect(values(wrapper)).toEqual(["第一项", "另一清单"]);
+    } finally { wrapper.unmount(); vi.useRealTimers(); }
+  });
+
+  it("聚焦已勾选事项暂停整批，继续勾选后失焦开始完整两秒", async () => {
+    vi.useFakeTimers();
+    const wrapper = mountSharedCountdown();
+    try {
+      await check(wrapper, "a");
+      await vi.advanceTimersByTimeAsync(500);
+      const input = wrapper.get('.todo-item[data-todo-id="a"] .todo-input');
+      await input.trigger("focus");
+      await check(wrapper, "b");
+      await vi.advanceTimersByTimeAsync(5000);
+      expect(values(wrapper)).toEqual(["第一项", "第二项", "另一清单"]);
+      await input.trigger("blur");
+      await vi.advanceTimersByTimeAsync(1999);
+      expect(values(wrapper)).toEqual(["第一项", "第二项", "另一清单"]);
+      await vi.advanceTimersByTimeAsync(1);
+      expect(values(wrapper)).toEqual(["另一清单"]);
+    } finally { wrapper.unmount(); vi.useRealTimers(); }
   });
 });
