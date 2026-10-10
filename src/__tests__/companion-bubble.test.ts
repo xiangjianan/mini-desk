@@ -80,7 +80,7 @@ describe("CompanionBubble", () => {
     wrapper.unmount();
   });
 
-  it("「不显示」安静模式下消息气泡带 Mini Desk 静态 logo（随明暗主题）", () => {
+  it("「不显示」安静模式下消息气泡带 MiniDesk 静态 logo（随明暗主题）", () => {
     const mountQuiet = (theme: "light" | "dark") =>
       mount(CompanionBubble, {
         props: { visible: true, message: "Tip 内容", gifTheme: "none", theme },
@@ -794,7 +794,7 @@ describe("CompanionBubble", () => {
     wrapper.unmount();
   });
 
-  it("「不显示」安静模式下气泡内容带 Mini Desk 静态 logo（不再无图）", async () => {
+  it("「不显示」安静模式下气泡内容带 MiniDesk 静态 logo（不再无图）", async () => {
     vi.useFakeTimers();
     const wrapper = mount(CompanionBubble, {
       props: {

@@ -3168,7 +3168,7 @@ async function importData(event: Event): Promise<void> {
       await finishImport(replacement);
     };
 
-    // Resolve titles with the "Mini Desk" fallback so default-named (unnamed)
+    // Resolve titles with the "MiniDesk" fallback so default-named (unnamed)
     // workspaces are treated as their displayed title, not as empty/non-matching.
     const resolveTitle = (workspace: WorkspaceData): string => getWorkspaceBoardTitle(workspace);
     const importedTitle = resolveTitle(importedWorkspace);

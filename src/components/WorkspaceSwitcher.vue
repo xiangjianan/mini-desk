@@ -7,8 +7,7 @@ import { DEFAULT_BOARD_TITLE } from "../state/defaults";
 import { getWorkspaceBoardTitle } from "../state/workspaces";
 import { CONTEXT_MENU_Z_INDEX } from "../utils/contextMenu";
 import type { AppLanguage, ThemeMode, WorkspaceData } from "../types";
-import miniDeskLogo from "../../static/img/mini-desk-cat.png?url";
-import miniDeskDarkLogo from "../../static/img/mini-desk-cat-dark.png?url";
+import miniDeskLogo from "../../static/img/mini-desk-logo.svg?url";
 
 const props = defineProps<{
   workspaces: WorkspaceData[];
@@ -37,7 +36,7 @@ let outsideClickGuard: ((event: MouseEvent) => void) | null = null;
 const activeWorkspace = computed<WorkspaceData>(
   () => props.workspaces.find((workspace) => workspace.id === props.activeWorkspaceId) ?? props.workspaces[0],
 );
-const logoSrc = computed(() => (props.theme === "dark" ? miniDeskDarkLogo : miniDeskLogo));
+const logoSrc = computed(() => miniDeskLogo);
 const activeTitle = computed(() =>
   activeWorkspace.value ? getWorkspaceBoardTitle(activeWorkspace.value) : DEFAULT_BOARD_TITLE,
 );

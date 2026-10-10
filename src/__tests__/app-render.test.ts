@@ -260,14 +260,14 @@ describe("App shell", () => {
 
     expect(wrapper.find('[aria-label="应用导航"]').exists()).toBe(false);
     expect(wrapper.find(".workbench-rail").exists()).toBe(false);
-    expect(wrapper.find('[data-testid="workbench-command-bar"]').text()).toContain("Mini Desk");
+    expect(wrapper.find('[data-testid="workbench-command-bar"]').text()).toContain("MiniDesk");
     expect(wrapper.find('[data-testid="workbench-command-bar"]').text()).not.toContain("搜索或执行命令");
     expect(wrapper.find('[data-testid="workbench-command-bar"]').text()).not.toContain("⌘K");
     expect(wrapper.get(".workbench-zone-assets").attributes("aria-label")).toBe("🎨 贴图");
     expect(wrapper.get(".workbench-zone-notes").attributes("aria-label")).toBe("⚡ 快捷动作");
     expect(wrapper.get(".workbench-zone-tasks").attributes("aria-label")).toBe("✅ 提醒事项");
     expect(wrapper.get(".workbench-zone-workspace").attributes("aria-label")).toBe("📝 便签");
-    expect(wrapper.find('[aria-label="Mini Desk"]').exists()).toBe(false);
+    expect(wrapper.find('[aria-label="MiniDesk"]').exists()).toBe(false);
     expect(wrapper.text()).toContain("贴图");
     expect(wrapper.text()).toContain("快捷动作");
     expect(wrapper.text()).toContain("提醒事项");
@@ -354,11 +354,11 @@ describe("App shell", () => {
       wrapper = mountApp();
 
       expect(wrapper.find(".mobile-handoff").exists()).toBe(true);
-      expect(wrapper.get(".mobile-handoff-title").text()).toBe("Mini Desk");
+      expect(wrapper.get(".mobile-handoff-title").text()).toBe("MiniDesk");
       expect(wrapper.text()).toContain("完整工作台，请在电脑端打开");
       expect(wrapper.find(".mobile-drawer-trigger").exists()).toBe(false);
       expect(wrapper.find(".mobile-drawer-menu").exists()).toBe(false);
-      expect(wrapper.find('[aria-label="Mini Desk"]').exists()).toBe(false);
+      expect(wrapper.find('[aria-label="MiniDesk"]').exists()).toBe(false);
       expect(wrapper.findComponent(ImagePanel).exists()).toBe(false);
       expect(wrapper.findComponent(QuickButtons).exists()).toBe(false);
       expect(wrapper.findComponent(TodoPanel).exists()).toBe(false);
@@ -3016,7 +3016,7 @@ describe("App shell", () => {
       await nextTick();
 
       const inputs = wrapper.findAll(".n-modal input");
-      expect((inputs[0].element as HTMLInputElement).value).toBe("Mini Desk");
+      expect((inputs[0].element as HTMLInputElement).value).toBe("MiniDesk");
       expect((inputs[1].element as HTMLInputElement).value).toBe("");
     } finally {
       wrapper.unmount();
@@ -3163,19 +3163,19 @@ describe("App shell", () => {
       expect(document.title).toContain("新提醒");
 
       await vi.advanceTimersByTimeAsync(1);
-      expect(document.title).toBe("Mini Desk");
+      expect(document.title).toBe("MiniDesk");
 
       await vi.advanceTimersByTimeAsync(749);
-      expect(document.title).toBe("Mini Desk");
+      expect(document.title).toBe("MiniDesk");
 
       await vi.advanceTimersByTimeAsync(1);
       expect(document.title).toContain("新提醒");
 
       window.dispatchEvent(new Event("focus"));
-      expect(document.title).toBe("Mini Desk");
+      expect(document.title).toBe("MiniDesk");
 
       await vi.advanceTimersByTimeAsync(1200);
-      expect(document.title).toBe("Mini Desk");
+      expect(document.title).toBe("MiniDesk");
 
       const secondNotifyAt = new Date(2026, 4, 25, 8, 0, 3).getTime();
       wrapper.getComponent(TodoPanel).vm.$emit("notify", "morning", "todo-1", secondNotifyAt);
@@ -3184,13 +3184,13 @@ describe("App shell", () => {
 
       Object.defineProperty(document, "visibilityState", { configurable: true, get: () => "visible" });
       document.dispatchEvent(new Event("visibilitychange"));
-      expect(document.title).toBe("Mini Desk");
+      expect(document.title).toBe("MiniDesk");
 
       await vi.advanceTimersByTimeAsync(1200);
-      expect(document.title).toBe("Mini Desk");
+      expect(document.title).toBe("MiniDesk");
     } finally {
       wrapper.unmount();
-      document.title = "Mini Desk";
+      document.title = "MiniDesk";
       if (originalVisibilityDescriptor) Object.defineProperty(document, "visibilityState", originalVisibilityDescriptor);
       vi.unstubAllGlobals();
       vi.useRealTimers();
@@ -3228,7 +3228,7 @@ describe("App shell", () => {
       expect(document.title).not.toContain("新提醒");
     } finally {
       wrapper.unmount();
-      document.title = "Mini Desk";
+      document.title = "MiniDesk";
       if (originalVisibilityDescriptor) Object.defineProperty(document, "visibilityState", originalVisibilityDescriptor);
       vi.unstubAllGlobals();
       vi.useRealTimers();
@@ -7114,7 +7114,7 @@ describe("App shell", () => {
     vi.useFakeTimers();
     Object.assign(URL, { createObjectURL: vi.fn(() => "blob:todo-board"), revokeObjectURL: vi.fn() });
     vi.spyOn(HTMLAnchorElement.prototype, "click").mockImplementation(() => {});
-    // Existing workspace is unnamed → displayed as the default "Mini Desk".
+    // Existing workspace is unnamed → displayed as the default "MiniDesk".
     localStorage.setItem(STORAGE_KEY, JSON.stringify({
       ...defaultState(),
       workspaces: [{ ...defaultWorkspace("existing"), workspaceLines: [{ text: "原有内容", indent: 0 }] }],
@@ -7125,7 +7125,7 @@ describe("App shell", () => {
       const settings = wrapper.getComponent(SettingsMenu);
       settings.vm.$emit("import", settings.element as HTMLElement);
       const input = wrapper.get('input[type="file"]').element as HTMLInputElement;
-      // Imported workspace is also unnamed → same displayed title "Mini Desk".
+      // Imported workspace is also unnamed → same displayed title "MiniDesk".
       const file = new File([JSON.stringify({
         miniDeskWorkspaceExport: true,
         version: 1,
@@ -7149,9 +7149,9 @@ describe("App shell", () => {
       await wrapper.vm.$nextTick();
 
       const stored = JSON.parse(localStorage.getItem(STORAGE_KEY) || "{}");
-      const resolveTitle = (workspace: { customTitles?: Record<string, string> }) => workspace.customTitles?.["board-title"]?.trim() || "Mini Desk";
+      const resolveTitle = (workspace: { customTitles?: Record<string, string> }) => workspace.customTitles?.["board-title"]?.trim() || "MiniDesk";
       // Add-new auto-numbers so no two workspaces share the displayed name.
-      expect(stored.workspaces.map(resolveTitle)).toEqual(["Mini Desk", "Mini Desk 2"]);
+      expect(stored.workspaces.map(resolveTitle)).toEqual(["MiniDesk", "MiniDesk 2"]);
     } finally {
       wrapper.unmount();
       vi.useRealTimers();
@@ -7472,7 +7472,7 @@ describe("App shell", () => {
       await vi.advanceTimersByTimeAsync(200);
       await wrapper.vm.$nextTick();
 
-      expect(wrapper.find('[data-testid="companion-confirm"]').text()).toContain("Mini Desk (100% AI BUILT)");
+      expect(wrapper.find('[data-testid="companion-confirm"]').text()).toContain("MiniDesk (100% AI BUILT)");
       expect(wrapper.find('[data-testid="companion-confirm"]').text()).toContain("把截图、提醒事项、快捷动作和便签缝合得恰到好处");
       expect(wrapper.find('[data-testid="companion-confirm"]').text()).toContain("无需任何登录，所有数据全部保存在浏览器本地。");
       const repoLink = wrapper.get('[data-testid="companion-link"]');
@@ -7512,7 +7512,7 @@ describe("App shell", () => {
       await wrapper.vm.$nextTick();
 
       const aboutText = wrapper.find('[data-testid="companion-confirm"]').text();
-      expect(aboutText).toContain("Mini Desk (100% AI BUILT)");
+      expect(aboutText).toContain("MiniDesk (100% AI BUILT)");
       expect(aboutText).toContain("screenshots, reminders, quick actions, and sticky notes");
       expect(aboutText).toContain("No sign-in required — all your data stays in your browser.");
       expect(aboutText).not.toContain("100% developed by AI");
@@ -7535,7 +7535,7 @@ describe("App shell", () => {
       await vi.advanceTimersByTimeAsync(200);
       await wrapper.vm.$nextTick();
 
-      expect(wrapper.find('[data-testid="companion-confirm"]').text()).toContain("Mini Desk");
+      expect(wrapper.find('[data-testid="companion-confirm"]').text()).toContain("MiniDesk");
       expect(wrapper.find('[data-testid="companion-confirm"]').text()).not.toContain("给老婆做的 todolist 看板");
       expect(wrapper.find('[data-testid="companion-confirm"]').text()).toContain("xiangjianan / mini-desk");
 
@@ -7550,7 +7550,7 @@ describe("App shell", () => {
 
       expect(wrapper.find(".companion-popover-shell").classes()).toContain("is-popover-fading");
       expect(wrapper.find('[data-testid="companion-confirm"]').classes()).not.toContain("is-popover-fading");
-      expect(wrapper.find('[data-testid="companion-confirm"]').text()).toContain("Mini Desk");
+      expect(wrapper.find('[data-testid="companion-confirm"]').text()).toContain("MiniDesk");
       expect(wrapper.find('[data-testid="companion-confirm"]').text()).not.toContain("给老婆做的 todolist 看板");
     } finally {
       wrapper.unmount();
@@ -7572,7 +7572,7 @@ describe("App shell", () => {
       await vi.advanceTimersByTimeAsync(10000);
       await wrapper.vm.$nextTick();
 
-      expect(wrapper.find('[data-testid="companion-confirm"]').text()).toContain("Mini Desk");
+      expect(wrapper.find('[data-testid="companion-confirm"]').text()).toContain("MiniDesk");
       expect(wrapper.find('[data-testid="companion-confirm"]').text()).not.toContain("给老婆做的 todolist 看板");
       expect(wrapper.find(".companion-popover-shell").classes()).not.toContain("is-popover-fading");
 
@@ -7605,7 +7605,7 @@ describe("App shell", () => {
       await wrapper.vm.$nextTick();
 
       expect(wrapper.find('[data-testid="companion-bubble"]').exists()).toBe(true);
-      expect(wrapper.find('[data-testid="companion-confirm"]').text()).toContain("Mini Desk");
+      expect(wrapper.find('[data-testid="companion-confirm"]').text()).toContain("MiniDesk");
       expect(wrapper.find('[data-testid="companion-confirm"]').text()).not.toContain("给老婆做的 todolist 看板");
       expect(wrapper.find(".companion-popover-shell").classes()).not.toContain("is-popover-fading");
 

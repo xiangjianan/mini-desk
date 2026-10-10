@@ -730,7 +730,7 @@ describe("ImageEditor", () => {
 
     await wrapper.findAll(".image-editor-tool").find((button) => button.attributes("aria-label") === "文本")?.trigger("click");
     await dispatchPointer(canvas.element, "pointerdown", 120, 90);
-    await wrapper.get(".image-editor-text-input").setValue("Hello\nMini Desk");
+    await wrapper.get(".image-editor-text-input").setValue("Hello\nMiniDesk");
 
     await dispatchPointer(wrapper.get(".image-editor-text-input").element, "pointerdown", 120, 90);
     await dispatchPointer(wrapper.get(".image-editor-text-input").element, "pointermove", 150, 120);
@@ -746,11 +746,11 @@ describe("ImageEditor", () => {
     expect(canvasContextMock.fillText.mock.calls.length).toBeGreaterThan(0);
     expect(canvasContextMock.strokeText.mock.calls).toEqual(expect.arrayContaining([
       ["Hello", 150, 120],
-      ["Mini Desk", 150, 152],
+      ["MiniDesk", 150, 152],
     ]));
     expect(canvasContextMock.fillText.mock.calls).toEqual(expect.arrayContaining([
       ["Hello", 150, 120],
-      ["Mini Desk", 150, 152],
+      ["MiniDesk", 150, 152],
     ]));
 
     wrapper.unmount();

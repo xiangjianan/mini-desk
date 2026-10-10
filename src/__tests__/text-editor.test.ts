@@ -242,7 +242,7 @@ describe("handleTextareaTab — preserved indent/outdent behavior", () => {
     const textarea = textareaWith("第一行\n第二行", 0);
     textarea.setSelectionRange(0, textarea.value.length);
     handleTextareaTab(textarea, false);
-    expect(textarea.value).toBe("    第一行\n    第二行");
+    expect(textarea.value).toBe("    - 第一行\n    - 第二行");
   });
 });
 
@@ -552,5 +552,20 @@ describe("computeCaretRevealScroll — 合成编辑后的光标可见化", () =>
 
   it("光标偏移越界时按钳制值计算（防御外部脏值）", () => {
     expect(computeCaretRevealScroll({ ...base, caret: 9999, scrollTop: 0 })).not.toBeNull();
+  });
+});
+
+ describe("selected list outdent", () => {
+  it("removes all markers when the selection reaches the left edge", () => {
+    const textarea = textareaWith("    1. 第一\n    2. 第二\n    - 第三", 0);
+    textarea.setSelectionRange(0, textarea.value.length);
+    handleTextareaTab(textarea, true);
+    expect(textarea.value).toBe("第一\n第二\n第三");
+  });
+  it("inherits numbering within a selected nested level", () => {
+    const textarea = textareaWith("    1. 已有\n第一\n第二", 0);
+    textarea.setSelectionRange(textarea.value.indexOf("第一"), textarea.value.length);
+    handleTextareaTab(textarea);
+    expect(renumbered(textarea.value)).toBe("    1. 已有\n    2. 第一\n    3. 第二");
   });
 });

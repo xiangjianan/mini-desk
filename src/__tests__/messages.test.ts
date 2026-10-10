@@ -90,7 +90,7 @@ describe("message catalog", () => {
       if (key === "about") {
         expect(MESSAGE_CATALOG.about.variants).toEqual([
           [
-            "Mini Desk",
+            "MiniDesk",
             "一个本地优先的轻量工作台，把截图、提醒事项、快捷动作和便签缝合得恰到好处。",
             "无需任何登录，所有数据全部保存在浏览器本地。",
           ].join("\n"),

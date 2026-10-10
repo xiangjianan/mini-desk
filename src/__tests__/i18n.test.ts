@@ -130,17 +130,17 @@ describe("localized public copy", () => {
     expect(getUiText("zh").images.paste).toBe("粘贴");
   });
 
-  it("uses Mini Desk as the public app name while naming the Chinese about board", () => {
-    expect(getUiText("zh").app.boardLabel).toBe("Mini Desk");
-    expect(getUiText("zh").app.mobileTitle).toBe("Mini Desk");
-    expect(getUiText("zh").app.aboutTitle).toBe("Mini Desk");
+  it("uses MiniDesk as the public app name while naming the Chinese about board", () => {
+    expect(getUiText("zh").app.boardLabel).toBe("MiniDesk");
+    expect(getUiText("zh").app.mobileTitle).toBe("MiniDesk");
+    expect(getUiText("zh").app.aboutTitle).toBe("MiniDesk");
     expect(getUiText("zh").app.aboutDescription).toBe(
       "一个本地优先的轻量工作台，把截图、提醒事项、快捷动作和便签缝合得恰到好处。\n无需任何登录，所有数据全部保存在浏览器本地。",
     );
     expect(getUiText("zh").app.aboutSignature).toBe("(100% AI BUILT)");
-    expect(getUiText("en").app.boardLabel).toBe("Mini Desk");
-    expect(getUiText("en").app.mobileTitle).toBe("Mini Desk");
-    expect(getUiText("en").app.aboutTitle).toBe("Mini Desk");
+    expect(getUiText("en").app.boardLabel).toBe("MiniDesk");
+    expect(getUiText("en").app.mobileTitle).toBe("MiniDesk");
+    expect(getUiText("en").app.aboutTitle).toBe("MiniDesk");
     expect(getUiText("en").app.aboutDescription).toBe(
       "A local-first lightweight desk for organizing screenshots, reminders, quick actions, and sticky notes.\nNo sign-in required — all your data stays in your browser.",
     );

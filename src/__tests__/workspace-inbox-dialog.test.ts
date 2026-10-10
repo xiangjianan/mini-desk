@@ -141,7 +141,7 @@ describe("WorkspaceInboxDialog", () => {
 
     // 未自定义标题的工作空间回退默认看板标题。
     const fallback = mountDialog(INBOX);
-    expect(fallback.get(".workspace-inbox-workspace-name").text()).toBe("Mini Desk");
+    expect(fallback.get(".workspace-inbox-workspace-name").text()).toBe("MiniDesk");
     fallback.unmount();
   });
 

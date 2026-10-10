@@ -8,7 +8,7 @@ import {
 } from "@vicons/ionicons5";
 import { NIcon } from "naive-ui";
 import { getUiText } from "../state/i18n";
-import { getCompanionNotificationIconSrc } from "../state/companionGifThemes";
+import miniDeskLogo from "../../static/img/mini-desk-logo.svg?url";
 import { maskInboxCode, normalizeInboxCode } from "../sync/pairing";
 import type { AppLanguage } from "../types";
 
@@ -48,8 +48,8 @@ const isComplete = computed(() => rawCode.value.length === CODE_GROUPS * 4);
 /** 已配对态码展示：中间四位打码（防旁人窥屏），点按仍复制完整码（App.vue 侧 formatInboxCode）。 */
 const pairedCodeText = computed(() => (props.code ? maskInboxCode(props.code) : ""));
 
-/** 左上角品牌 logo：Mini Desk 像素猫（通知图标素材），随明暗主题切换配色。 */
-const logoSrc = computed(() => getCompanionNotificationIconSrc("cat", props.theme));
+/** 左上角品牌 logo：MiniDesk 渐变显示器品牌图标。 */
+const logoSrc = computed(() => miniDeskLogo);
 
 /** 组内输入：归一化（去空白/大写/IL→1、O→0）截到 4 位；填满自动跳下一组。 */
 function onGroupInput(index: number, event: Event): void {

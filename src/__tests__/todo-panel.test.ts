@@ -1141,7 +1141,7 @@ describe("TodoPanel", () => {
     expect(todayFocusValues(wrapper)).toEqual(["第一重点", "第二重点"]);
     expect(wrapper.find(".today-focus-list.today-focus-move").exists()).toBe(true);
 
-    await vi.advanceTimersByTimeAsync(199);
+    await vi.advanceTimersByTimeAsync(2999);
     expect(todayFocusValues(wrapper)).toEqual(["第一重点", "第二重点"]);
 
     await vi.advanceTimersByTimeAsync(1);
@@ -1196,7 +1196,7 @@ describe("TodoPanel", () => {
 
     expect(todayFocusValues(wrapper)).toEqual(["完成后隐藏重点", "仍然显示重点"]);
 
-    await vi.advanceTimersByTimeAsync(199);
+    await vi.advanceTimersByTimeAsync(2999);
     expect(todayFocusValues(wrapper)).toEqual(["完成后隐藏重点", "仍然显示重点"]);
 
     await vi.advanceTimersByTimeAsync(1);
@@ -2510,7 +2510,7 @@ describe("TodoPanel", () => {
     wrapper.unmount();
   });
 
-  it("keeps a newly completed todo in place for 200ms before animated regrouping", async () => {
+  it("keeps a newly completed todo in place for 3 seconds before animated regrouping", async () => {
     vi.useFakeTimers();
 
     const Harness = defineComponent({
@@ -2553,7 +2553,7 @@ describe("TodoPanel", () => {
     expect(values(wrapper)).toEqual(["第一项", "第二项"]);
     expect(wrapper.find(".todo-completed-divider").exists()).toBe(false);
 
-    await vi.advanceTimersByTimeAsync(199);
+    await vi.advanceTimersByTimeAsync(2999);
     expect(values(wrapper)).toEqual(["第一项", "第二项"]);
     expect(wrapper.find(".todo-completed-divider").exists()).toBe(false);
 

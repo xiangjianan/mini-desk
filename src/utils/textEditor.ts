@@ -251,21 +251,22 @@ export function handleTextareaTab(textarea: HTMLTextAreaElement, outdent = false
   const range = getSelectedLineRange(value, selectionStart, selectionEnd);
   const selected = value.slice(range.start, range.end);
   const lines = selected.split("\n");
-  const firstLineIndentDelta = outdent ? -getRemovedIndentLength(lines[0] ?? "") : INDENT_UNIT.length;
-  const transformed = lines
-    .map((line, index) => {
-      const shifted = outdent ? removeOneIndentUnit(line) : `${INDENT_UNIT}${line}`;
-      if (outdent || index > 0) return shifted;
-      return shifted.replace(/^(\s*)\d+(\.\s+)/, (_match, indent: string, suffix: string) => `${indent}1${suffix}`);
-    })
-    .join("\n");
-
+  let workingValue = value;
+  let lineStart = range.start;
+  const transformedLines: string[] = [];
+  for (const line of lines) {
+    const result = applySingleLineIndent(workingValue, lineStart, outdent);
+    let nextLine = getLineAt(result.text, lineStart).text;
+    if (outdent && getIndentInfo(nextLine).depth === 0) {
+      nextLine = nextLine.replace(/^(?:\d+\.\s+|[-*]\s+)/, "");
+    }
+    workingValue = `${workingValue.slice(0, lineStart)}${nextLine}${workingValue.slice(lineStart + line.length)}`;
+    transformedLines.push(nextLine);
+    lineStart += nextLine.length + 1;
+  }
+  const transformed = transformedLines.join("\n");
   textarea.setRangeText(transformed, range.start, range.end, "preserve");
-  const delta = transformed.length - selected.length;
-  textarea.setSelectionRange(
-    Math.max(range.start, selectionStart + firstLineIndentDelta),
-    Math.max(range.start, selectionEnd + delta),
-  );
+  textarea.setSelectionRange(range.start, range.start + transformed.length);
   return textarea.value;
 }
 

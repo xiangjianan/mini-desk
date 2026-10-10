@@ -673,7 +673,7 @@ function handleChecked(period: TodoPeriod, id: string, checked: boolean): void {
     pendingDoneReorderIds.value = [...pendingDoneReorderIds.value, key];
     reorderTimers.set(
       key,
-      window.setTimeout(() => clearPendingReorder(key), 200),
+      window.setTimeout(() => clearPendingReorder(key), 3000),
     );
   }
   emit("complete", period, id, checked, todoSectionRefs.get(period));

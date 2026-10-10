@@ -22,7 +22,7 @@ afterEach(() => {
 
 describe("WorkbenchShell", () => {
   const defaultProps = {
-    title: "Mini Desk",
+    title: "MiniDesk",
     saveStatusLabel: "已保存",
     theme: "light" as const,
   };
@@ -41,7 +41,7 @@ describe("WorkbenchShell", () => {
 
     expect(wrapper.find('[aria-label="应用导航"]').exists()).toBe(false);
     expect(wrapper.find(".workbench-rail").exists()).toBe(false);
-    expect(wrapper.get('[data-testid="workbench-command-bar"]').text()).toContain("Mini Desk");
+    expect(wrapper.get('[data-testid="workbench-command-bar"]').text()).toContain("MiniDesk");
     expect(wrapper.find(".workbench-slogan").exists()).toBe(false);
     expect(wrapper.get('[data-testid="workbench-command-bar"]').text()).not.toContain("搜索或执行命令");
     expect(wrapper.get('[data-testid="workbench-command-bar"]').text()).not.toContain("⌘K");
@@ -92,7 +92,7 @@ describe("WorkbenchShell", () => {
       },
     });
 
-    expect(wrapper.get(".workbench-title-group").text()).toContain("Mini Desk");
+    expect(wrapper.get(".workbench-title-group").text()).toContain("MiniDesk");
     expect(wrapper.get(".workbench-title-group").text()).toContain("已保存");
     expect(wrapper.get(".workbench-slogan").text()).toBe("Do less, do it well.");
   });
@@ -102,7 +102,7 @@ describe("WorkbenchShell", () => {
       props: defaultProps,
     });
 
-    expect(wrapper.get(".workbench-title-fallback").text()).toBe("Mini Desk");
+    expect(wrapper.get(".workbench-title-fallback").text()).toBe("MiniDesk");
   });
 
   it("renders provided workspace-trigger slot content in place of the fallback", () => {
@@ -883,7 +883,7 @@ describe("WorkbenchShell", () => {
   it("emits theme requests from the top command theme action", async () => {
     const wrapper = mount(WorkbenchShell, {
       props: {
-        title: "Mini Desk",
+        title: "MiniDesk",
         saveStatusLabel: "已保存",
         theme: "dark",
       },

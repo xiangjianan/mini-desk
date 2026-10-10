@@ -17,7 +17,7 @@ export const DEFAULT_SPACE_TITLE = DEFAULT_SPACE_TITLES.zh.workspace;
 export const DEFAULT_WORKSPACE_ID = "default";
 
 export const DEFAULT_BOARD_SLOGAN = "Do less, do it well.";
-export const DEFAULT_BOARD_TITLE = "Mini Desk";
+export const DEFAULT_BOARD_TITLE = "MiniDesk";
 
 /** Every workbench zone visible by default. */
 export const DEFAULT_ZONE_VISIBILITY: ZoneVisibility = {
