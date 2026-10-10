@@ -42,7 +42,7 @@ describe("ShortcutHelp", () => {
 
     expect(wrapper.text()).toContain("帮助与快捷键");
     expect(wrapper.findAll(".shortcut-section")).toHaveLength(5);
-    expect(wrapper.text()).toContain("双击任意区域标题可以改名");
+    expect(wrapper.text()).toContain("双击列表标题或空间标签可以改名");
     expect(wrapper.text()).toContain("右键空白处可以新增提醒事项列表");
     expect(wrapper.text()).toContain("快捷动作可以按标签分组");
     expect(wrapper.text()).not.toContain("工具栏");
@@ -56,7 +56,7 @@ describe("ShortcutHelp", () => {
     const wrapper = mountShortcutHelp("en");
 
     expect(wrapper.text()).toContain("Help & Shortcuts");
-    expect(wrapper.text()).toContain("Double-click section titles to rename them");
+    expect(wrapper.text()).toContain("Double-click list titles or space tabs to rename them");
     expect(wrapper.text()).toContain("Notification time works without starring");
     expect(wrapper.text()).toContain("Drag action");
     expect(wrapper.text()).not.toContain("Tool menu");

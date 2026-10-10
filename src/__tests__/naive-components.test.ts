@@ -623,7 +623,7 @@ describe("Naive UI component usage", () => {
 
   it("keeps blank reminder hints inside the single stable todo transition list", () => {
     const todo = read("src/components/TodoPanel.vue");
-    const todoMoveBlock = todo.match(/<TransitionGroup\s+name="todo-move"[\s\S]*?<\/TransitionGroup>/)?.[0] ?? "";
+    const todoMoveBlock = todo.match(/<TodoRowsTransition[\s\S]*?name="todo-move"[\s\S]*?<\/TodoRowsTransition>/)?.[0] ?? "";
 
     expect(todoMoveBlock).toContain('v-if="listEntries[list.id].length === 0"');
     expect(todoMoveBlock).toContain('todo-empty-hint');
