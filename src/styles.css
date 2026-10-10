@@ -6973,7 +6973,13 @@ html[data-theme="dark"] .quick-search .quick-search-toggle:focus-visible {
   background: var(--muted-surface);
   box-shadow: inset 0 0 0 1px var(--line-subtle);
 }
-.workspace-trigger-logo { display: block; border-radius: 5px; }
+/* Keep the circular mark at the same proportion of both brand tiles. */
+.workspace-trigger-logo,
+.workspace-switcher-header-logo {
+  display: block;
+  width: 75%;
+  height: 75%;
+}
 .workspace-trigger-title { font-weight: 600; line-height: 1; }
 .workspace-trigger-chevron { opacity: 0.55; }
 
@@ -6998,7 +7004,6 @@ html[data-theme="dark"] .quick-search .quick-search-toggle:focus-visible {
   background: var(--muted-surface);
   box-shadow: inset 0 0 0 1px var(--line-subtle);
 }
-.workspace-switcher-header-logo { display: block; border-radius: 7px; }
 .workspace-switcher-header-text { display: flex; flex-direction: column; gap: 2px; min-width: 0; }
 .workspace-switcher-header-title {
   font-size: 13px; font-weight: 700; line-height: 1.2;
