@@ -479,6 +479,8 @@ describe("workbench style contract", () => {
     expect(unpaired).toEqual([]);
     expectSelectorBody(styles, ".text-editor-textarea", "color: transparent");
     expectSelectorBody(styles, ".text-editor-textarea", "caret-color: var(--text)");
+    expectSelectorBody(styles, ".text-editor-textarea", "overscroll-behavior: none");
+    expectSelectorBody(styles, ".text-editor-textarea", "display: block");
     expectSelectorBody(styles, ".text-mirror", "position: absolute");
     expectSelectorBody(styles, ".text-mirror", "pointer-events: none");
     // 选区必须半透明且字色透明：不透明选区底会盖住镜像层的格式标注（高亮/划线/文字色）。

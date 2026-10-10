@@ -963,6 +963,9 @@ button.space-tab {
 }
 
 .text-editor-textarea {
+  display: block;
+  /* 选区在输入框、字形在镜像层：禁止输入框独立回弹和滚动传递，保持两层重合。 */
+  overscroll-behavior: none;
   color: transparent;
   caret-color: var(--text);
   background: transparent;

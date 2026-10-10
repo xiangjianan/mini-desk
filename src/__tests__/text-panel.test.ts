@@ -2033,6 +2033,60 @@ describe("TextPanel", () => {
     expect(wrapper.get(".text-mirror").element.scrollTop).toBe(40);
   });
 
+  it("在滚动边界继续滚轮时阻止回弹和外层滚动，保留选区并同步镜像", async () => {
+    const wrapper = mount(TextPanel, {
+      props: { titleId: "workspace-title", title: "工作空间", lines: [{ text: "首行\n末行", indent: 0 }] },
+    });
+    const textarea = wrapper.get("textarea").element;
+    Object.defineProperties(textarea, {
+      scrollHeight: { value: 500 },
+      clientHeight: { value: 200 },
+    });
+    textarea.setSelectionRange(3, 5);
+    try {
+      for (const [scrollTop, deltaY, expectedTop] of [[0, -80, 0], [300, 80, 300], [-8, -80, 0], [308, 80, 300]]) {
+        textarea.scrollTop = scrollTop;
+        const event = new WheelEvent("wheel", { deltaY, cancelable: true });
+        textarea.dispatchEvent(event);
+        expect(event.defaultPrevented).toBe(true);
+        expect(textarea.scrollTop).toBe(expectedTop);
+        expect(wrapper.get(".text-mirror").element.scrollTop).toBe(expectedTop);
+        expect([textarea.selectionStart, textarea.selectionEnd]).toEqual([3, 5]);
+      }
+      for (const [scrollTop, deltaY] of [[0, 80], [300, -80], [150, 80], [150, -80]]) {
+        textarea.scrollTop = scrollTop;
+        const event = new WheelEvent("wheel", { deltaY, cancelable: true });
+        textarea.dispatchEvent(event);
+        expect(event.defaultPrevented).toBe(false);
+      }
+      textarea.scrollTop = 300;
+      const zoom = new WheelEvent("wheel", { deltaY: 80, ctrlKey: true, cancelable: true });
+      textarea.dispatchEvent(zoom);
+      expect(zoom.defaultPrevented).toBe(false);
+    } finally {
+      wrapper.unmount();
+    }
+  });
+
+  it("内容无需滚动时滚轮复位输入框和镜像", () => {
+    const wrapper = mount(TextPanel, {
+      props: { titleId: "workspace-title", title: "工作空间", lines: [{ text: "首行", indent: 0 }] },
+    });
+    const textarea = wrapper.get("textarea").element;
+    Object.defineProperties(textarea, {
+      scrollHeight: { value: 200 },
+      clientHeight: { value: 200 },
+    });
+    textarea.scrollTop = 8;
+    wrapper.get(".text-mirror").element.scrollTop = 8;
+    const event = new WheelEvent("wheel", { deltaY: 80, cancelable: true });
+    textarea.dispatchEvent(event);
+    expect(event.defaultPrevented).toBe(true);
+    expect(textarea.scrollTop).toBe(0);
+    expect(wrapper.get(".text-mirror").element.scrollTop).toBe(0);
+    wrapper.unmount();
+  });
+
   it("文本以换行结尾时镜像层补末行空行行盒，滚动范围与 textarea 对齐", async () => {
     const wrapper = mount(TextPanel, {
       props: { titleId: "workspace-title", title: "工作空间", lines: [{ text: "第一行", indent: 0 }] },

@@ -579,10 +579,20 @@ function handleTextareaDrop(event: DragEvent): void {
 }
 
 function handleTextareaWheel(event: WheelEvent): void {
+  // Ctrl+滚轮也用于触控板缩放，不拦截；横向滚轮不参与纵向边界判断。
+  if (event.ctrlKey || event.deltaY === 0) return;
   const textarea = event.currentTarget as HTMLTextAreaElement;
-  if (textarea.scrollHeight <= textarea.clientHeight + 1) {
-    textarea.scrollTop = 0;
+  const maxScrollTop = Math.max(0, textarea.scrollHeight - textarea.clientHeight);
+  if (
+    maxScrollTop <= 1 ||
+    (event.deltaY < 0 && textarea.scrollTop <= 0) ||
+    (event.deltaY > 0 && textarea.scrollTop >= maxScrollTop)
+  ) {
+    // 镜像只能同步 scrollTop，无法跟随原生输入框的边界回弹或外层滚动。
+    // 在边界消耗滚轮，并修正已有的越界偏移；即便没有 scroll 事件也同步镜像。
     event.preventDefault();
+    textarea.scrollTop = maxScrollTop <= 1 ? 0 : Math.max(0, Math.min(textarea.scrollTop, maxScrollTop));
+    syncMirrorScroll(event);
   }
 }
 
