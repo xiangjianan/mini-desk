@@ -1,3 +1,10 @@
+export const TODO_COLUMN_LIMIT_OPTIONS = [1, 2, 3, 4, 5, 6] as const;
+
+/** Missing/invalid legacy settings retain the default single-column layout. */
+export function normalizeTodoMaxColumns(value: unknown): number {
+  return typeof value === "number" && Number.isInteger(value) && value >= 1 && value <= 6 ? value : 1;
+}
+
 /**
  * Masonry-column layout shared by the todo list panel and the quick-tag panel.
  * Both pin each item to an explicit `column` index (0-based, clamped to the

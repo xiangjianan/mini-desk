@@ -62,9 +62,11 @@ import type { SmartPastePhase } from "../utils/smartPaste";
 import { POLISH_STYLE_ENTRIES } from "../state/polishStyles";
 import SparklesOutlineIcon from "./SparklesOutlineIcon.vue";
 import EditableTitle from "./EditableTitle.vue";
+import { normalizeTodoMaxColumns, TODO_COLUMN_LIMIT_OPTIONS } from "../state/columns";
 
 const props = withDefaults(defineProps<{
   todoLists?: TodoListConfig[];
+  maxColumns?: number;
   todos: TodoMap;
   titles: Record<string, string>;
   showCompleted?: TodoCompletedVisibility;
@@ -74,6 +76,7 @@ const props = withDefaults(defineProps<{
   moveTargets?: WorkspaceMoveTarget[];
   polish?: (kind: PolishKind, text: string, style?: PolishStyle) => Promise<PolishResult>;
 }>(), {
+  maxColumns: 1,
   notificationFlashKeys: () => [],
   language: "zh",
   moveTargets: () => [],
@@ -87,6 +90,7 @@ const emit = defineEmits<{
   toggleListCompact: [listId: TodoListId, compact: boolean];
   deleteList: [listId: TodoListId, anchor?: HTMLElement];
   columnCountChange: [count: number];
+  maxColumnsChange: [count: number];
   assignListColumn: [draggedId: TodoListId, targetColumn: number, anchorId: TodoListId | null, insertBefore: boolean];
   create: [period: TodoPeriod, afterId?: string];
   update: [period: TodoPeriod, id: string, text: string];
@@ -183,11 +187,11 @@ const effectiveTodoLists = computed(() => {
 const columnCount = ref(1);
 const allocatedColumnCount = ref(1);
 function refreshColumnCount(): void {
-  const next = computeColumnCount(measuredPanelWidth, effectiveTodoLists.value.length);
+  const next = Math.min(normalizeTodoMaxColumns(props.maxColumns), computeColumnCount(measuredPanelWidth, effectiveTodoLists.value.length));
   allocatedColumnCount.value = Math.max(allocatedColumnCount.value, next);
   columnCount.value = next;
 }
-watch(() => effectiveTodoLists.value.length, refreshColumnCount);
+watch([() => effectiveTodoLists.value.length, () => props.maxColumns], refreshColumnCount);
 watch(columnCount, (next) => emit("columnCountChange", next));
 // Keep each list under one stable keyed Teleport so changing columns moves its
 // existing DOM instead of unmounting and recreating every reminder and icon.
@@ -211,6 +215,18 @@ onUpdated(() => {
     positions.set(columnIndex, position + 1);
   }
 });
+function columnLimitMenu(): DropdownOption {
+  return {
+    label: uiText.value.todo.maxColumns,
+    key: "max-columns",
+    children: TODO_COLUMN_LIMIT_OPTIONS.map((count) => ({
+      key: `max-columns:${count}`,
+      label: uiText.value.todo.columnLimit.replace("{count}", String(count)),
+      icon: count === normalizeTodoMaxColumns(props.maxColumns) ? renderIcon(CheckmarkDoneOutline) : undefined,
+    })),
+  };
+}
+
 const menuOptions = computed<DropdownOption[]>(() => {
   if (menu.value?.sectionActions) {
     const list = getListById(menu.value.period);
@@ -225,6 +241,7 @@ const menuOptions = computed<DropdownOption[]>(() => {
       { label: uiText.value.todo.newList, key: "create-list", icon: renderIcon(AddOutline) },
       { label: uiText.value.todo.editList, key: "edit-list", icon: renderIcon(CreateOutline) },
       ...buildListMoveOptions(),
+      columnLimitMenu(),
       { label: uiText.value.todo.deleteList, key: "delete-list", disabled: effectiveTodoLists.value.length <= 1, icon: renderIcon(TrashOutline, true) },
       { ...guideMenuOption.value, icon: renderIcon(HelpCircleOutline) },
     ];
@@ -261,6 +278,7 @@ const menuOptions = computed<DropdownOption[]>(() => {
     options.push(...buildTodoMoveOptions());
     options.push({ label: uiText.value.common.delete, key: "delete", icon: renderIcon(TrashOutline, true) });
   }
+  if (!menu.value?.id) options.push(columnLimitMenu());
   options.push({ ...guideMenuOption.value, icon: renderIcon(HelpCircleOutline) });
   return options;
 });
@@ -944,7 +962,7 @@ function openPanelMenu(event: MouseEvent): void {
   selectedMenuTodoKey.value = null;
   exclusiveMenu.notifyOpen(event, { replacingExistingMenu: Boolean(menu.value) });
   // `period` only satisfies the menu shape — with no id/sectionActions the
-  // rendered options are the list-agnostic ones (新建列表 / Tips).
+  // rendered options are list-agnostic (new list / column limit / Tips).
   menu.value = { x: event.clientX, y: event.clientY, period, anchor: event.currentTarget as HTMLElement };
 }
 
@@ -1283,6 +1301,12 @@ function handleFloatingEditorOutsidePointerDown(event: PointerEvent): void {
 async function handleMenuSelect(key: string): Promise<void> {
   if (!menu.value) return;
   const { period, id, anchor, target, x, y } = menu.value;
+  if (key.startsWith("max-columns:")) {
+    const count = normalizeTodoMaxColumns(Number(key.slice("max-columns:".length)));
+    closeMenu();
+    if (count !== normalizeTodoMaxColumns(props.maxColumns)) emit("maxColumnsChange", count);
+    return;
+  }
   const style = POLISH_STYLE_ENTRIES.find((entry) => entry.key === key)?.style;
   if (style && id) {
     const todo = getMenuTodo();

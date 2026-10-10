@@ -751,6 +751,8 @@ export const UI_TEXT = {
       create: "新建",
     },
     todo: {
+      maxColumns: "最多展示列数",
+      columnLimit: "{count} 列",
       todayFocus: "今日重点",
       focusNow: "现在做这个",
       focusDoing: "正在做",
@@ -1153,6 +1155,8 @@ export const UI_TEXT = {
       create: "New",
     },
     todo: {
+      maxColumns: "Maximum columns",
+      columnLimit: "{count} column(s)",
       todayFocus: "Pinned reminders",
       focusNow: "Do it now",
       focusDoing: "Now doing",

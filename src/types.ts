@@ -183,6 +183,8 @@ export interface WorkspaceData {
    * changes — each list's `column` is only changed by explicit drag reordering.
    */
   todoLayoutManual: boolean;
+  /** Responsive reminder column limit, defaulting to one for older workspaces. */
+  todoMaxColumns?: number;
   todoLists: TodoListConfig[];
   showCompletedTodos: TodoCompletedVisibility;
   todos: TodoMap;

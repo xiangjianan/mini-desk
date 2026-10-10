@@ -114,6 +114,44 @@ const defaultTodoLists = [
 ];
 
 describe("TodoPanel", () => {
+  it("defaults to one column and respects the configured responsive limit", async () => {
+    let resize: ResizeObserverCallback | undefined;
+    const original = globalThis.ResizeObserver;
+    globalThis.ResizeObserver = class {
+      constructor(callback: ResizeObserverCallback) { resize = callback; }
+      observe() {} unobserve() {} disconnect() {}
+    } as unknown as typeof ResizeObserver;
+    const wrapper = mount(TodoPanel, { props: { todoLists: defaultTodoLists, todos: { morning: [], noon: [], evening: [] }, titles: DEFAULT_TITLES } });
+    try {
+      resize!([{ contentRect: { width: 1800 } } as ResizeObserverEntry], {} as ResizeObserver);
+      await nextTick();
+      expect(wrapper.findAll(".todo-column:not(.is-inactive)")).toHaveLength(1);
+      await wrapper.setProps({ maxColumns: 2 });
+      expect(wrapper.findAll(".todo-column:not(.is-inactive)")).toHaveLength(2);
+      resize!([{ contentRect: { width: 500 } } as ResizeObserverEntry], {} as ResizeObserver);
+      await nextTick();
+      expect(wrapper.findAll(".todo-column:not(.is-inactive)")).toHaveLength(1);
+    } finally { wrapper.unmount(); globalThis.ResizeObserver = original; }
+  });
+
+  it("offers column limits in the context menu in both languages", async () => {
+    const wrapper = mount(TodoPanel, {
+      props: { todoLists: defaultTodoLists, todos: { morning: [], noon: [], evening: [] }, titles: DEFAULT_TITLES },
+      global: { stubs: { Dropdown: menuDropdownStub, NDropdown: menuDropdownStub } },
+    });
+    await wrapper.get('.todo-section[data-list-id="morning"] .todo-heading').trigger("contextmenu");
+    expect(wrapper.get('[data-key="max-columns"]').text()).toBe("最多展示列数");
+    expect(wrapper.findAll('[data-key^="max-columns:"]')).toHaveLength(6);
+    await wrapper.get('[data-key="max-columns:2"]').trigger("click");
+    expect(wrapper.emitted("maxColumnsChange")).toEqual([[2]]);
+    await wrapper.setProps({ language: "en", maxColumns: 2 });
+    await wrapper.get('.todo-section[data-list-id="morning"] .todo-heading').trigger("contextmenu");
+    expect(wrapper.get('[data-key="max-columns"]').text()).toBe("Maximum columns");
+    await wrapper.get('[data-key="max-columns:2"]').trigger("click");
+    expect(wrapper.emitted("maxColumnsChange")).toEqual([[2]]);
+    wrapper.unmount();
+  });
+
   it("preserves reminder nodes within and across column breakpoints", async () => {
     let notifyResize: ResizeObserverCallback | undefined;
     const originalObserver = globalThis.ResizeObserver;
@@ -124,7 +162,7 @@ describe("TodoPanel", () => {
       disconnect() {}
     } as unknown as typeof ResizeObserver;
     const wrapper = mount(TodoPanel, {
-      props: { todoLists: defaultTodoLists.map((list) => ({ ...list, column: 2 })), todos: { morning: Array.from({ length: 200 }, (_, index) => ({ id: `reminder-${index}`, text: `Reminder ${index}`, done: false })), noon: [], evening: [] }, titles: DEFAULT_TITLES },
+      props: { maxColumns: 6, todoLists: defaultTodoLists.map((list) => ({ ...list, column: 2 })), todos: { morning: Array.from({ length: 200 }, (_, index) => ({ id: `reminder-${index}`, text: `Reminder ${index}`, done: false })), noon: [], evening: [] }, titles: DEFAULT_TITLES },
     });
     try {
       const measure = (width: number) => notifyResize!([{ contentRect: { width } } as ResizeObserverEntry], {} as ResizeObserver);
@@ -180,7 +218,7 @@ describe("TodoPanel", () => {
     } as unknown as typeof ResizeObserver;
     const lists = Array.from({ length: 32 }, (_, index) => ({ id: `list-${index}`, title: `List ${index}`, column: 0, collapsed: false, compact: true }));
     const todos = Object.fromEntries(lists.map((list) => [list.id, Array.from({ length: 30 }, (_, index) => ({ id: `${list.id}-${index}`, text: `Reminder ${index}`, done: false }))]));
-    const wrapper = mount(TodoPanel, { props: { todoLists: lists, todos, titles: DEFAULT_TITLES } });
+    const wrapper = mount(TodoPanel, { props: { maxColumns: 6, todoLists: lists, todos, titles: DEFAULT_TITLES } });
     let rowReads = 0;
     const originalRect = HTMLElement.prototype.getBoundingClientRect;
     const rectSpy = vi.spyOn(HTMLElement.prototype, "getBoundingClientRect").mockImplementation(function (this: HTMLElement) {
@@ -508,6 +546,7 @@ describe("TodoPanel", () => {
       "粘贴",
       "新建列表",
       "编辑列表",
+      "最多展示列数",
       "删除列表",
       "Tips",
     ]);
@@ -624,6 +663,7 @@ describe("TodoPanel", () => {
       "粘贴",
       "新建列表",
       "编辑列表",
+      "最多展示列数",
       "删除列表",
       "Tips",
     ]);
@@ -1062,6 +1102,7 @@ describe("TodoPanel", () => {
       "粘贴",
       "新建列表",
       "编辑列表",
+      "最多展示列数",
       "删除列表",
       "Tips",
     ]);
@@ -1115,6 +1156,7 @@ describe("TodoPanel", () => {
       "粘贴",
       "新建列表",
       "编辑列表",
+      "最多展示列数",
       "删除列表",
       "Tips",
     ]);
@@ -3658,6 +3700,7 @@ describe("TodoPanel", () => {
       "粘贴",
       "新建列表",
       "编辑列表",
+      "最多展示列数",
       "删除列表",
       "Tips",
     ]);
@@ -4544,6 +4587,7 @@ describe("TodoPanel 编辑快捷键", () => {
       "智能粘贴",
       "新建列表",
       "编辑列表",
+      "最多展示列数",
       "删除列表",
       "Tips",
     ]);

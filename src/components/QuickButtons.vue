@@ -8,7 +8,7 @@ import type { AppLanguage, GuideKey, QuickApiBodyType, QuickApiHeader, QuickApiM
 import { GUIDE_MENU_OPTION } from "../state/defaults";
 import { getIconHeadingText, getUiText } from "../state/i18n";
 import type { QuickButtonGroup } from "../state/quickButtons";
-import { buildVisibleQuickButtonGroups, computeQuickColumnCount, filterVisibleQuickButtonGroups, groupQuickButtonsByColumn, hasOverloadedVisibleQuickButtonGroup, quickButtonUsagePercent, QUICK_BUTTON_EMPTY_GROUP_ID, QUICK_DENSITY_THRESHOLD } from "../state/quickButtons";
+import { buildVisibleQuickButtonGroups, filterVisibleQuickButtonGroups, groupQuickButtonsByColumn, hasOverloadedVisibleQuickButtonGroup, quickButtonUsagePercent, QUICK_BUTTON_EMPTY_GROUP_ID, QUICK_DENSITY_THRESHOLD } from "../state/quickButtons";
 import { findQuickAppPresetByScheme, getQuickAppPresetHint, getQuickAppPresetTitle, QUICK_APP_PRESETS } from "../state/quickApps";
 import { findQuickApiTemplate, QUICK_API_TEMPLATES } from "../state/quickApiTemplates";
 import { clearGlobalSearch, globalSearchNormalized, globalSearchQuery, setGlobalSearch } from "../state/globalSearch";
@@ -157,29 +157,22 @@ const groupedButtons = computed(() => {
   return filterVisibleQuickButtonGroups(base, globalSearchNormalized.value);
 });
 
-// Measured content width of the quick panel, kept in sync via ResizeObserver so
-// the column count reacts to window resize, workbench resizer drags, and zone
-// show/hide (none of which fire window resize).
+// Quick actions always use one column, including legacy pinned tag layouts.
 const panelRef = ref<HTMLElement | null>(null);
-const measuredPanelWidth = ref(0);
-let columnResizeObserver: ResizeObserver | undefined;
-// Number of masonry columns: derived from the measured panel width and clamped
-// to the visible group count so a few groups never leave empty columns. 1 = single column.
-const columnCount = computed(() => computeQuickColumnCount(measuredPanelWidth.value, groupedButtons.value.length));
-watch(columnCount, (next) => emit("columnCountChange", next));
+const columnCount = 1;
 // Group visible groups into explicit column buckets by their pinned `column`.
 // Array order within a bucket = vertical order; 其他/空态 groups land last.
-const groupsByColumn = computed<QuickButtonGroup[][]>(() => groupQuickButtonsByColumn(groupedButtons.value, columnCount.value));
+const groupsByColumn = computed<QuickButtonGroup[][]>(() => groupQuickButtonsByColumn(groupedButtons.value, columnCount));
 
 function clampColumn(column: number): number {
-  return Math.max(0, Math.min(column, columnCount.value - 1));
+  return Math.max(0, Math.min(column, columnCount - 1));
 }
 
 /** 显示列：真实标签读自身 column；其他/空态组固定最后一列。 */
 function getGroupColumn(groupId: string): number {
   const group = groupedButtons.value.find((item) => item.id === groupId);
   if (!group) return 0;
-  return group.column === undefined ? columnCount.value - 1 : clampColumn(group.column);
+  return group.column === undefined ? columnCount - 1 : clampColumn(group.column);
 }
 const searchOpen = ref(false);
 const searchInputRef = ref<{ focus?: () => void } | null>(null);
@@ -212,17 +205,9 @@ function handleSearchClickOutside(event: MouseEvent): void {
 
 onMounted(() => {
   document.addEventListener("click", handleSearchClickOutside);
-  if (panelRef.value && typeof ResizeObserver !== "undefined") {
-    columnResizeObserver = new ResizeObserver((entries) => {
-      measuredPanelWidth.value = entries[0]?.contentRect.width ?? 0;
-    });
-    columnResizeObserver.observe(panelRef.value);
-  }
 });
 onUnmounted(() => {
   document.removeEventListener("click", handleSearchClickOutside);
-  columnResizeObserver?.disconnect();
-  columnResizeObserver = undefined;
 });
 const canSubmit = computed(() => {
   if (form.title.trim().length === 0 || form.value.trim().length === 0) return false;

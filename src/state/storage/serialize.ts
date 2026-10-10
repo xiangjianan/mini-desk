@@ -1,3 +1,4 @@
+import { normalizeTodoMaxColumns } from "../columns";
 import { DEFAULT_SPACE_ID, DEFAULT_WORKSPACE_ID } from "../defaults";
 import { isValidNotifyAt } from "../deadlines";
 import type {
@@ -59,6 +60,7 @@ export function getSerializableWorkspace(
     quickCompact: workspace.quickCompact,
     quickLayoutManual: workspace.quickLayoutManual,
     todoLayoutManual: workspace.todoLayoutManual,
+    todoMaxColumns: normalizeTodoMaxColumns(workspace.todoMaxColumns),
     zoneVisibility: normalizeZoneVisibility(workspace.zoneVisibility),
     ...(workspace.inbox ? { inbox: { ...workspace.inbox } } : {}),
   };

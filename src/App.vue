@@ -10,6 +10,7 @@ import SettingsMenu from "./components/SettingsMenu.vue";
 import SpacePanel from "./components/SpacePanel.vue";
 import TodoFocusModal from "./components/TodoFocusModal.vue";
 import TodoPanel from "./components/TodoPanel.vue";
+import { normalizeTodoMaxColumns } from "./state/columns";
 import WorkbenchShell from "./components/WorkbenchShell.vue";
 import WorkspaceSwitcher from "./components/WorkspaceSwitcher.vue";
 import { getCompanionGifSrc, getCompanionNotificationIconSrc } from "./state/companionGifThemes";
@@ -2649,6 +2650,11 @@ function removeTodoList(listId: TodoListId, anchor?: HTMLElement): void {
   showBubbleText(uiText.value.app.todoListDeleted, anchor, { hideCompanionAfter: true });
 }
 
+function updateTodoMaxColumns(count: number): void {
+  activeWorkspace.value.todoMaxColumns = normalizeTodoMaxColumns(count);
+  persistNow();
+}
+
 function onTodoColumnCountChange(count: number): void {
   todoColumnCount.value = count;
 }
@@ -3962,6 +3968,7 @@ function moveItem<T extends { id: string }>(items: T[], dragId: string, targetId
       <template #tasks>
         <TodoPanel
           :todo-lists="displayTodoLists"
+          :max-columns="activeWorkspace.todoMaxColumns ?? 1"
           :edit-list-id="pendingEditTodoListId"
           :notification-flash-keys="notificationFlashKeys"
           :todos="activeWorkspace.todos"
@@ -3977,6 +3984,7 @@ function moveItem<T extends { id: string }>(items: T[], dragId: string, targetId
           @toggle-list-compact="toggleTodoListCompact"
           @delete-list="deleteTodoList"
           @column-count-change="onTodoColumnCountChange"
+          @max-columns-change="updateTodoMaxColumns"
           @assign-list-column="assignTodoListSections"
           @create="createTodo"
           @create-from-text="createTodosFromText"

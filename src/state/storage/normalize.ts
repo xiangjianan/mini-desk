@@ -1,3 +1,4 @@
+import { normalizeTodoMaxColumns } from "../columns";
 import { DEFAULT_SPACE_ID, DEFAULT_SPACE_TITLE, DEFAULT_TODO_LISTS, DEFAULT_WORKSPACE_ID, defaultWorkspace } from "../defaults";
 import { isValidNotifyAt } from "../deadlines";
 import { normalizeCompanionGifTheme } from "../companionGifThemes";
@@ -99,6 +100,7 @@ export function normalizeWorkspaceData(item: unknown, language: AppLanguage = DE
     quickCompact: Boolean(typed.quickCompact),
     quickLayoutManual: Boolean(typed.quickLayoutManual),
     todoLayoutManual: Boolean(typed.todoLayoutManual),
+    todoMaxColumns: normalizeTodoMaxColumns(typed.todoMaxColumns),
     todoLists,
     showCompletedTodos: normalizeCompletedVisibility(typed.showCompletedTodos, todoLists),
     todos: normalizeTodos(typed.todos, todoLists),

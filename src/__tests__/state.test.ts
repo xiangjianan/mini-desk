@@ -25,6 +25,15 @@ import {
 import type { BoardState } from "../types";
 
 describe("state compatibility", () => {
+  it("defaults legacy reminder column limits to one and preserves valid settings", () => {
+    expect(defaultWorkspace().todoMaxColumns).toBe(1);
+    for (const value of [undefined, 0, 7, 1.5, "2"]) {
+      expect(normalizeWorkspaceData({ ...defaultWorkspace(), todoMaxColumns: value }).todoMaxColumns).toBe(1);
+    }
+    const state = defaultState();
+    state.workspaces[0].todoMaxColumns = 3;
+    expect(normalizeImportedState(getSerializableState(state)).workspaces[0].todoMaxColumns).toBe(3);
+  });
   it("normalizes legacy text fields into line collections", () => {
     const state = normalizeImportedState({
       workspace: "alpha\n\tbeta",

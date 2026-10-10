@@ -145,6 +145,19 @@ function readSource(path: string): string {
 }
 
 describe("QuickButtons", () => {
+  it("renders legacy multi-column tags together in one column", async () => {
+    const wrapper = mountQuickButtons({
+      tags: [0, 1, 2].map((column) => ({ id: `tag-${column}`, title: `Tag ${column}`, column })),
+      buttons: [0, 1, 2].map((column) => ({ id: `button-${column}`, title: `Action ${column}`, value: "https://example.com", type: "link" as const, hidden: false, tagId: `tag-${column}` })),
+    });
+    await flushPromises();
+    expect(wrapper.findAll(".quick-tag-column")).toHaveLength(1);
+    expect(wrapper.text()).toContain("Action 0");
+    expect(wrapper.text()).toContain("Action 1");
+    expect(wrapper.text()).toContain("Action 2");
+    expect(wrapper.emitted("columnCountChange")).toBeUndefined();
+    wrapper.unmount();
+  });
   afterEach(() => {
     resetGlobalSearch();
     Object.assign(navigator, { clipboard: undefined });
