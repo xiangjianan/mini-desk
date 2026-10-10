@@ -232,10 +232,21 @@ const canSubmit = computed(() => {
 const moveMenuChildren = computed<DropdownOption[]>(() =>
   props.moveTargets.map((target) => ({ label: target.title, key: `move-ws:${target.id}` })),
 );
+const areaMenuOptions = computed<DropdownOption[]>(() => [
+  { label: uiText.value.quick.add, key: "add", icon: renderIcon(AddOutline) },
+  { label: uiText.value.common.paste, key: "paste", icon: renderIcon(ClipboardOutline) },
+  ...(props.polish
+    ? [{ label: uiText.value.common.smartPaste, key: "smart-paste", icon: renderIcon(ClipboardOutline) }]
+    : []),
+  { label: props.showHidden ? uiText.value.quick.hideHidden : uiText.value.quick.showHidden, key: "toggle-show-hidden", icon: renderIcon(props.showHidden ? EyeOffOutline : EyeOutline) },
+  { label: uiText.value.quick.tagManage, key: "manage-tags", icon: renderIcon(PricetagsOutline) },
+  { label: props.compact ? uiText.value.quick.largeButtons : uiText.value.quick.compactButtons, key: "toggle-compact", icon: renderIcon(ResizeOutline) },
+  { ...guideMenuOption.value, icon: renderIcon(HelpCircleOutline) },
+]);
 const menuOptions = computed<DropdownOption[]>(() => {
   if (menu.value?.tagId) {
     return [
-      { label: uiText.value.quick.tagManage, key: "manage-tags", icon: renderIcon(PricetagsOutline) },
+      ...areaMenuOptions.value,
       ...(moveMenuChildren.value.length > 0
         ? [{
             label: uiText.value.common.moveToWorkspace,
@@ -248,19 +259,8 @@ const menuOptions = computed<DropdownOption[]>(() => {
     ];
   }
   const button = props.buttons.find((item) => item.id === menu.value?.id);
-  if (!menu.value?.id) {
-    return [
-      { label: uiText.value.quick.add, key: "add", icon: renderIcon(AddOutline) },
-      { label: uiText.value.common.paste, key: "paste", icon: renderIcon(ClipboardOutline) },
-      ...(props.polish
-        ? [{ label: uiText.value.common.smartPaste, key: "smart-paste", icon: renderIcon(ClipboardOutline) }]
-        : []),
-      { label: props.showHidden ? uiText.value.quick.hideHidden : uiText.value.quick.showHidden, key: "toggle-show-hidden", icon: renderIcon(props.showHidden ? EyeOffOutline : EyeOutline) },
-      { label: uiText.value.quick.tagManage, key: "manage-tags", icon: renderIcon(PricetagsOutline) },
-      { label: props.compact ? uiText.value.quick.largeButtons : uiText.value.quick.compactButtons, key: "toggle-compact", icon: renderIcon(ResizeOutline) },
-      { ...guideMenuOption.value, icon: renderIcon(HelpCircleOutline) },
-    ];
-  }
+  if (!menu.value?.id) return areaMenuOptions.value;
+
   return [
     { label: uiText.value.common.edit, key: "edit", icon: renderIcon(CreateOutline) },
     { label: button?.hidden ? uiText.value.quick.show : uiText.value.quick.hide, key: "toggle-hidden", icon: renderIcon(button?.hidden ? EyeOutline : EyeOffOutline) },
@@ -493,7 +493,7 @@ function openAreaMenu(event: MouseEvent): void {
   menu.value = { x: event.clientX, y: event.clientY, anchor: event.currentTarget as HTMLElement, tagTitle };
 }
 
-/** 标签头右键：仅真实标签提供「标签管理 + 移动到空间 + 删除标签及动作」；其他目标回落到区域菜单。 */
+/** 标签头右键：真实标签沿用区域菜单，并增加移动到空间和删除标签及动作；其他目标回落到区域菜单。 */
 function openTagMenu(event: MouseEvent, tagId: string): void {
   const target = event.target as HTMLElement;
   if (target.closest("button, input, textarea")) return;
@@ -501,7 +501,7 @@ function openTagMenu(event: MouseEvent, tagId: string): void {
   event.preventDefault();
   event.stopPropagation();
   exclusiveMenu.notifyOpen(event, { replacingExistingMenu: Boolean(menu.value) });
-  menu.value = { x: event.clientX, y: event.clientY, anchor: event.currentTarget as HTMLElement, tagId };
+  menu.value = { x: event.clientX, y: event.clientY, anchor: event.currentTarget as HTMLElement, tagId, tagTitle: props.tags.find((tag) => tag.id === tagId)?.title };
 }
 
 function openHeaderMenu(event: MouseEvent): void {

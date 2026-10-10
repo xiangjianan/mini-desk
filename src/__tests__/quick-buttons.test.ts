@@ -537,7 +537,7 @@ describe("QuickButtons", () => {
     wrapper.unmount();
   });
 
-  it("offers tag management at the top of the tag heading menu", async () => {
+  it("extends the area menu with tag movement and deletion", async () => {
     const wrapper = mountQuickButtons({
       tags: [{ id: "tag-work", title: "工作" }],
       buttons: [{ id: "b1", title: "Btn", value: "v", type: "link", tagId: "tag-work", hidden: false }],
@@ -547,7 +547,12 @@ describe("QuickButtons", () => {
     await wrapper.get(".quick-tag-heading").trigger("contextmenu");
 
     expect(wrapper.findAll(".dropdown-option").map((option) => option.text())).toEqual([
+      "新增",
+      "粘贴",
+      "显示隐藏项",
       "标签管理",
+      "切换为紧凑按钮",
+      "Tips",
       "移动到空间",
       "生活",
       "删除",
@@ -1770,6 +1775,21 @@ describe("QuickButtons 跨空间移动", () => {
     wrapper.unmount();
   });
 
+  it("新增菜单沿用右键标签作为默认标签", async () => {
+    const wrapper = mountQuickButtons({
+      tags: [{ id: "tag-work", title: "工作" }],
+      buttons: [{ id: "b1", title: "Btn", value: "v", type: "link", tagId: "tag-work", hidden: false }],
+    });
+    await wrapper.get(".quick-tag-title").trigger("contextmenu");
+    await wrapper.get('[data-key="add"]').trigger("click");
+    expect(wrapper.findAll(".quick-tag-choice").find((choice) => choice.text() === "工作")?.attributes("aria-pressed")).toBe("true");
+    await wrapper.findAll(".quick-form input")[0].setValue("新动作");
+    await wrapper.findAll(".quick-form input")[1].setValue("https://example.com");
+    await wrapper.get("form").trigger("submit.prevent");
+    expect(wrapper.emitted("save")?.[0][0]).toMatchObject({ title: "新动作", tagTitle: "工作" });
+    wrapper.unmount();
+  });
+
   it("没有其他空间时标签头菜单仍打开且不含移动项", async () => {
     const wrapper = mountQuickButtons({
       buttons: [{ id: "btn-1", title: "搜索", value: "https://example.com", type: "link", tagId: "tag-1", hidden: false }],
@@ -1778,7 +1798,9 @@ describe("QuickButtons 跨空间移动", () => {
     await wrapper.get(".quick-tag-title").trigger("contextmenu");
     expect(wrapper.findAll('[data-key^="move-ws:"]')).toHaveLength(0);
     expect(wrapper.find('[data-key="move-tag"]').exists()).toBe(false);
-    expect(wrapper.find('[data-key="add"]').exists()).toBe(false);
+    expect(wrapper.findAll(".dropdown-option").map((option) => option.text())).toEqual([
+      "新增", "粘贴", "显示隐藏项", "标签管理", "切换为紧凑按钮", "Tips", "删除",
+    ]);
     expect(wrapper.get('[data-key="manage-tags"]').text()).toBe("标签管理");
     expect(wrapper.get('[data-key="delete-tag"]').text()).toBe("删除");
     wrapper.unmount();
