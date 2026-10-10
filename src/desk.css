@@ -270,9 +270,12 @@ html[data-theme="dark"] .workbench-shell,
 .workbench-zone .panel-header h1,
 .workbench-zone .panel-header h2 { flex-shrink: 1; }
 
-/* Match reminder headers: label left, disclosure centered, count right. */
+/* Keep each tag heading available while its actions scroll underneath. */
 .workbench-shell .quick-tag-heading {
-  position: relative;
+  position: sticky;
+  top: 0;
+  z-index: 2;
+  background: var(--card);
   min-height: 40px;
   padding: 4px 0;
 }
