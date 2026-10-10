@@ -4916,7 +4916,7 @@ describe("完成提醒共用两秒倒计时", () => {
       expect(values(wrapper)).toEqual([]);
       // Keep the same transition container when the last batch leaves, so its fade can finish.
       expect(wrapper.get('[data-testid="todo-list-morning"]').element).toBe(list);
-      expect(wrapper.get('[data-testid="todo-list-morning"] .todo-empty-hint').exists()).toBe(true);
+      expect(wrapper.find('[data-testid="todo-list-morning"] .todo-empty-hint').exists()).toBe(true);
     } finally { wrapper.unmount(); vi.useRealTimers(); }
   });
 
