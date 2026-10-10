@@ -114,7 +114,7 @@ const defaultTodoLists = [
 ];
 
 describe("TodoPanel", () => {
-  it("does not update reminder rows for width changes within the same column breakpoint", async () => {
+  it("preserves reminder nodes within and across column breakpoints", async () => {
     let notifyResize: ResizeObserverCallback | undefined;
     const originalObserver = globalThis.ResizeObserver;
     globalThis.ResizeObserver = class {
@@ -124,13 +124,19 @@ describe("TodoPanel", () => {
       disconnect() {}
     } as unknown as typeof ResizeObserver;
     const wrapper = mount(TodoPanel, {
-      props: { todoLists: defaultTodoLists, todos: { morning: [{ id: "a", text: "A", done: false }], noon: [], evening: [] }, titles: DEFAULT_TITLES },
+      props: { todoLists: defaultTodoLists.map((list) => ({ ...list, column: 2 })), todos: { morning: Array.from({ length: 200 }, (_, index) => ({ id: `reminder-${index}`, text: `Reminder ${index}`, done: false })), noon: [], evening: [] }, titles: DEFAULT_TITLES },
     });
     try {
       const measure = (width: number) => notifyResize!([{ contentRect: { width } } as ResizeObserverEntry], {} as ResizeObserver);
       expect(wrapper.get(".todo-content-scroll").classes()).not.toContain("is-multi-column");
+      await nextTick();
+      const originalRow = wrapper.get(".todo-item").element;
+      const originalInput = wrapper.get(".todo-input").element;
+      const originalRows = wrapper.findAll(".todo-item").map((item) => item.element);
       measure(700);
       await nextTick();
+      expect(wrapper.get(".todo-item").element).toBe(originalRow);
+      expect(wrapper.get(".todo-input").element).toBe(originalInput);
       expect(wrapper.get(".todo-content-scroll").classes()).toContain("is-multi-column");
       expect(wrapper.findAll(".todo-column")).toHaveLength(2);
       const row = wrapper.get(".todo-item").element;
@@ -144,11 +150,19 @@ describe("TodoPanel", () => {
       measure(1100);
       await nextTick();
       expect(wrapper.findAll(".todo-column")).toHaveLength(3);
+      expect(wrapper.findAll(".todo-item").map((item) => item.element)).toEqual(originalRows);
+      expect(wrapper.get(".todo-item").element).toBe(originalRow);
+      expect(wrapper.get(".todo-input").element).toBe(originalInput);
       observer.disconnect();
       measure(500);
       await nextTick();
       expect(wrapper.findAll(".todo-column")).toHaveLength(1);
+      expect(wrapper.get(".todo-item").element).toBe(originalRow);
       expect(wrapper.get(".todo-content-scroll").classes()).not.toContain("is-multi-column");
+      await wrapper.setProps({ todoLists: [...defaultTodoLists].reverse().map((list) => ({ ...list, column: 2 })) });
+      await nextTick();
+      expect(wrapper.findAll(".todo-section").map((section) => section.attributes("data-list-id"))).toEqual(["evening", "noon", "morning"]);
+      expect(wrapper.get(".todo-item").element).toBe(originalRow);
     } finally {
       wrapper.unmount();
       globalThis.ResizeObserver = originalObserver;
@@ -718,7 +732,7 @@ describe("TodoPanel", () => {
     const styles = readFileSync(resolve(__dirname, "../styles.css"), "utf8");
 
     expect(source).toMatch(/class="todo-sections"/);
-    expect(source).toMatch(/<TransitionGroup[\s\S]*?class="todo-column"/);
+    expect(source).toMatch(/<div[\s\S]*?class="todo-column"/);
     expect(styles).toMatch(/\.todo-section-reorder-move,[\s\S]*?\.todo-section-reorder-enter-active,[\s\S]*?\.todo-section-reorder-leave-active\s*\{[^}]*transform 0\.22s/s);
 
     await wrapper.get('.todo-section[data-list-id="morning"] .todo-heading').trigger("dragstart", { dataTransfer });

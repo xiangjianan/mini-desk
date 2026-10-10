@@ -1,5 +1,5 @@
 <script setup lang="ts">
-import { computed, h, nextTick, onMounted, onUnmounted, ref, watch } from "vue";
+import { computed, h, nextTick, onMounted, onUnmounted, onUpdated, ref, shallowReactive, watch } from "vue";
 import type { Component, VNode } from "vue";
 import {
   AlertCircleOutline,
@@ -186,15 +186,27 @@ function refreshColumnCount(): void {
 }
 watch(() => effectiveTodoLists.value.length, refreshColumnCount);
 watch(columnCount, (next) => emit("columnCountChange", next));
-// Group lists into explicit column buckets by their pinned `column`, clamped to
-// the current column count. Array order within a bucket = vertical order.
-const listsByColumn = computed<TodoListConfig[][]>(() => {
-  const columns = columnCount.value;
-  const buckets: TodoListConfig[][] = Array.from({ length: columns }, () => []);
-  effectiveTodoLists.value.forEach((list) => {
-    buckets[clampColumn(list.column ?? 0)].push(list);
-  });
-  return buckets;
+// Keep each list under one stable keyed Teleport so changing columns moves its
+// existing DOM instead of unmounting and recreating every reminder and icon.
+const columnElements = shallowReactive<Record<number, HTMLElement | null>>({});
+function setColumnElement(index: number, element: Element | null): void {
+  columnElements[index] = element as HTMLElement | null;
+}
+
+// Teleport keyed reordering moves source anchors, not the destination content.
+// Reconcile only list sections (never individual rows) with the stored order.
+onUpdated(() => {
+  const positions = new Map<number, number>();
+  for (const list of effectiveTodoLists.value) {
+    const columnIndex = clampColumn(list.column ?? 0);
+    const column = columnElements[columnIndex];
+    const section = todoSectionRefs.get(list.id);
+    if (!column || !section || section.parentElement !== column) continue;
+    const position = positions.get(columnIndex) ?? 0;
+    const anchor = column.children[position] ?? null;
+    if (anchor !== section) column.insertBefore(section, anchor);
+    positions.set(columnIndex, position + 1);
+  }
 });
 const menuOptions = computed<DropdownOption[]>(() => {
   if (menu.value?.sectionActions) {
@@ -1865,18 +1877,21 @@ function buildTodoListEntries(period: TodoListId, todos: TodoItem[], deferredDon
       :class="{ 'is-multi-column': columnCount > 1 }"
       :style="columnCount > 1 ? { gridTemplateColumns: `repeat(${columnCount}, minmax(0, 1fr))` } : undefined"
     >
-      <TransitionGroup
-        v-for="(bucket, columnIndex) in listsByColumn"
-        :key="columnIndex"
-        name="todo-section-reorder"
-        tag="div"
+      <div
+        v-for="columnIndex in columnCount"
+        :key="columnIndex - 1"
+        :ref="(element) => setColumnElement(columnIndex - 1, element as Element | null)"
         class="todo-column"
         @dragover.prevent
-        @drop="handleColumnDrop($event, columnIndex)"
+        @drop="handleColumnDrop($event, columnIndex - 1)"
+      />
+      <Teleport
+        v-for="list in effectiveTodoLists"
+        :key="list.id"
+        :to="columnElements[clampColumn(list.column ?? 0)] ?? panelRef ?? 'body'"
+        :disabled="!columnElements[clampColumn(list.column ?? 0)]"
       >
       <section
-        v-for="list in bucket"
-        :key="list.id"
         :ref="(element) => setTodoSectionRef(list.id, element as Element | null)"
         class="todo-section"
         :class="{ 'is-focused': focusedListId === list.id, 'is-collapsed': list.collapsed, 'is-compact': true, 'is-list-dragging': draggedListId === list.id, 'drag-hover': dragHoverListId === list.id }"
@@ -2085,7 +2100,7 @@ function buildTodoListEntries(period: TodoListId, todos: TodoItem[], deferredDon
           </div>
         </div>
       </section>
-      </TransitionGroup>
+      </Teleport>
     </div>
 
     </div>
