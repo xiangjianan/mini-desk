@@ -29,6 +29,20 @@ export interface ChangelogEntry {
 
 export const CHANGELOG: ChangelogEntry[] = [
     {
+      version: "1.0.203",
+      date: "2026-10-10",
+      notes: {
+        zh: [
+          "优化：密度整理提示大幅提前触发（提醒 20→7 条、快捷按钮 50→12 个、贴图 30→10 张）",
+          "修复：导入工作区的确认气泡固定显示在右下角",
+        ],
+        en: [
+          "Improved: density clean-up tips now trigger much sooner (todos 20→7, quick buttons 50→12, images 30→10)",
+          "Fixed: workspace import confirmations now appear at the bottom right",
+        ],
+      },
+    },
+    {
       version: "1.0.202",
       date: "2026-10-10",
       notes: {
