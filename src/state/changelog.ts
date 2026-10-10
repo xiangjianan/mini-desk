@@ -29,6 +29,28 @@ export interface ChangelogEntry {
 
 export const CHANGELOG: ChangelogEntry[] = [
     {
+      version: "1.0.206",
+      date: "2026-10-11",
+      notes: {
+        zh: [
+          "新功能：提醒事项支持多列布局——可设「最多展示列数」（1–6 列），每列独立滚动，手动排序按列数分别记忆",
+          "优化：提醒列表高度随内容自适应、标题吸顶；切换列数不再重建内容，不闪烁、滚动位置不丢",
+          "优化：快捷动作区在宽面板下自动多列铺开，按钮不再挤成一条",
+          "新功能：导出的工作区文件包含各区宽度比例，导入后自动还原布局",
+          "新功能：记事本标题行右键新增菜单——粘贴、智能粘贴、使用贴士",
+          "调整：贴图区与快捷区大标题不再支持改名（双击列表标题或空间标签改名），区域菜单文案同步对齐",
+        ],
+        en: [
+          "New: reminders support a multi-column layout — a configurable column limit (1–6), independent per-column scrolling, and manual orders remembered separately per column count",
+          "Improved: reminder lists size to their content with sticky headings; switching column counts no longer rebuilds rows — no flicker, scroll positions survive",
+          "Improved: quick-action buttons automatically spread across multiple columns on wide panels instead of one long strip",
+          "New: exported workspace files now carry zone width ratios and restore the layout on import",
+          "New: the notebook heading row gains a right-click menu — paste, smart paste, and usage tips",
+          "Changed: the clippings and quick-area panel titles are no longer renameable (double-click list titles or space tabs instead); area menu labels aligned",
+        ],
+      },
+    },
+    {
       version: "1.0.205",
       date: "2026-10-10",
       notes: {
