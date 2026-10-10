@@ -550,12 +550,12 @@ describe("QuickButtons", () => {
       "新增",
       "粘贴",
       "显示隐藏项",
+      "删除",
       "标签管理",
       "切换为紧凑按钮",
       "Tips",
       "移动到空间",
       "生活",
-      "删除",
     ]);
 
     await wrapper.findAll(".dropdown-option").find((option) => option.text() === "标签管理")?.trigger("click");
@@ -1799,7 +1799,7 @@ describe("QuickButtons 跨空间移动", () => {
     expect(wrapper.findAll('[data-key^="move-ws:"]')).toHaveLength(0);
     expect(wrapper.find('[data-key="move-tag"]').exists()).toBe(false);
     expect(wrapper.findAll(".dropdown-option").map((option) => option.text())).toEqual([
-      "新增", "粘贴", "显示隐藏项", "标签管理", "切换为紧凑按钮", "Tips", "删除",
+      "新增", "粘贴", "显示隐藏项", "删除", "标签管理", "切换为紧凑按钮", "Tips",
     ]);
     expect(wrapper.get('[data-key="manage-tags"]').text()).toBe("标签管理");
     expect(wrapper.get('[data-key="delete-tag"]').text()).toBe("删除");

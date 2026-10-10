@@ -5,6 +5,7 @@ import { NDropdown, NIcon, NScrollbar } from "naive-ui";
 import type { DropdownOption } from "naive-ui";
 import { ClipboardOutline, CopyOutline, HelpCircleOutline, TrashOutline } from "@vicons/ionicons5";
 import { Highlighter, Paintbrush, Palette, RemoveFormatting, Strikethrough, Underline } from "lucide-vue-next";
+import { POLISH_STYLE_ENTRIES } from "../state/polishStyles";
 import SparklesOutlineIcon from "./SparklesOutlineIcon.vue";
 import type { LineItem, MarkColor, TextMark } from "../types";
 import { GUIDE_MENU_OPTION } from "../state/defaults";
@@ -112,13 +113,6 @@ function syncMirrorScroll(event: Event): void {
   const textarea = event.currentTarget as HTMLTextAreaElement;
   if (mirrorRef.value) mirrorRef.value.scrollTop = textarea.scrollTop;
 }
-
-/** AI 润色子菜单的风格项：key 同时用于菜单项与 select 反查 style，保持单一来源。 */
-const POLISH_STYLE_ENTRIES: { key: string; style: PolishStyle; labelKey: "polishStyleTech" | "polishStyleConcise" | "polishStyleCasual" }[] = [
-  { key: "smart-polish-tech", style: "tech", labelKey: "polishStyleTech" },
-  { key: "smart-polish-concise", style: "concise", labelKey: "polishStyleConcise" },
-  { key: "smart-polish-casual", style: "casual", labelKey: "polishStyleCasual" },
-];
 
 let isUnmounted = false;
 

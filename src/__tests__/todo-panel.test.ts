@@ -9,7 +9,7 @@ import { resolve } from "node:path";
 import TodoPanel from "../components/TodoPanel.vue";
 import { DEFAULT_TITLES } from "../state/defaults";
 import { completeTodo } from "../state/todos";
-import type { PolishResult } from "../sync/polishClient";
+import type { PolishKind, PolishStyle, PolishResult } from "../sync/polishClient";
 import type { TodoMap, TodoPeriod } from "../types";
 import { menuDropdownStub } from "./helpers/menu-dropdown-stub";
 
@@ -4781,5 +4781,78 @@ describe("TodoPanel 现在做这个入口", () => {
 
     expect(wrapper.get(".today-focus-section .todo-focus-badge").text()).toContain("0:12");
     wrapper.unmount();
+  });
+});
+
+
+describe("提醒选区 AI 润色", () => {
+  function mountPolishPanel(polish: (kind: PolishKind, text: string, style?: PolishStyle) => Promise<PolishResult>, language: "zh" | "en" = "zh") {
+    return mount(TodoPanel, {
+      props: {
+        todoLists: defaultTodoLists,
+        todos: { morning: [{ id: "selected", text: "前缀 原文 后缀", done: false }], noon: [], evening: [] },
+        titles: DEFAULT_TITLES, polish, language,
+      },
+      global: { stubs: { Dropdown: menuDropdownStub, NDropdown: menuDropdownStub, NTooltip: tooltipStub, NDatePicker: datePickerStub } },
+    });
+  }
+
+  it.each(["zh", "en"] as const)("%s 仅选中文字时显示三种风格，位于智能粘贴下方", async (language) => {
+    Object.assign(navigator, { clipboard: { readText: vi.fn() } });
+    const wrapper = mountPolishPanel(vi.fn(), language);
+    const input = wrapper.get('.todo-input');
+    (input.element as HTMLInputElement).setSelectionRange(0, 0);
+    await input.trigger("contextmenu");
+    expect(wrapper.find('[data-key="smart-polish"]').exists()).toBe(false);
+    (input.element as HTMLInputElement).setSelectionRange(3, 5);
+    await input.trigger("contextmenu");
+    const keys = wrapper.findAll('.dropdown-option').map((option) => option.attributes('data-key'));
+    expect(keys.indexOf('smart-polish')).toBe(keys.indexOf('smart-paste') + 1);
+    expect(wrapper.findAll('[data-key^="smart-polish-"]').map((option) => option.text())).toEqual(
+      language === "zh" ? ["技术风格", "简洁风格", "口语风格"] : ["Technical", "Concise", "Casual"],
+    );
+    wrapper.unmount();
+  });
+
+  it.each(["tech", "concise", "casual"])("%s 风格只替换选区并保留前后文本", async (style) => {
+    const polish = vi.fn(async (): Promise<PolishResult> => ({ items: [{ text: "润色结果" }] }));
+    const wrapper = mountPolishPanel(polish);
+    const input = wrapper.get('.todo-input');
+    (input.element as HTMLInputElement).setSelectionRange(3, 5);
+    await input.trigger("contextmenu");
+    await wrapper.get(`[data-key="smart-polish-${style}"]`).trigger("click");
+    await flushPromises();
+    expect(polish).toHaveBeenCalledWith("note", "原文", style);
+    expect(wrapper.emitted("update")?.at(-1)).toEqual(["morning", "selected", "前缀 润色结果 后缀"]);
+    expect(wrapper.emitted("createFromText")).toBeUndefined();
+    wrapper.unmount();
+  });
+
+  it("失败时保留原文", async () => {
+    const wrapper = mountPolishPanel(vi.fn(async () => null));
+    const input = wrapper.get('.todo-input');
+    (input.element as HTMLInputElement).setSelectionRange(3, 5);
+    await input.trigger("contextmenu");
+    await wrapper.get('[data-key="smart-polish-tech"]').trigger("click");
+    await flushPromises();
+    expect(wrapper.emitted("update")).toBeUndefined();
+    expect(wrapper.emitted("polishMessage")?.at(-1)?.[0]).toBe("fallback");
+    wrapper.unmount();
+  });
+
+  it.each(["edit", "workspace", "unmount"])("%s 后丢弃迟到结果", async (change) => {
+    let resolvePolish!: (result: PolishResult) => void;
+    const wrapper = mountPolishPanel(vi.fn(() => new Promise<PolishResult>((resolve) => { resolvePolish = resolve; })));
+    const input = wrapper.get('.todo-input');
+    (input.element as HTMLInputElement).setSelectionRange(3, 5);
+    await input.trigger("contextmenu");
+    await wrapper.get('[data-key="smart-polish-tech"]').trigger("click");
+    if (change === "edit") await wrapper.setProps({ todos: { morning: [{ id: "selected", text: "用户新文本", done: false }], noon: [], evening: [] } });
+    if (change === "workspace") await wrapper.setProps({ todoLists: [...defaultTodoLists] });
+    if (change === "unmount") wrapper.unmount();
+    resolvePolish({ items: [{ text: "过期结果" }] });
+    await flushPromises();
+    expect(wrapper.emitted("update")).toBeUndefined();
+    if (change !== "unmount") wrapper.unmount();
   });
 });

@@ -246,7 +246,9 @@ const areaMenuOptions = computed<DropdownOption[]>(() => [
 const menuOptions = computed<DropdownOption[]>(() => {
   if (menu.value?.tagId) {
     return [
-      ...areaMenuOptions.value,
+      ...areaMenuOptions.value.flatMap((option) => option.key === "manage-tags"
+        ? [{ label: uiText.value.common.delete, key: "delete-tag", icon: renderIcon(TrashOutline, true) }, option]
+        : [option]),
       ...(moveMenuChildren.value.length > 0
         ? [{
             label: uiText.value.common.moveToWorkspace,
@@ -255,7 +257,6 @@ const menuOptions = computed<DropdownOption[]>(() => {
             children: moveMenuChildren.value,
           }]
         : []),
-      { label: uiText.value.common.delete, key: "delete-tag", icon: renderIcon(TrashOutline, true) },
     ];
   }
   const button = props.buttons.find((item) => item.id === menu.value?.id);

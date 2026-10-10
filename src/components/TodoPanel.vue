@@ -57,8 +57,10 @@ import { CONTEXT_MENU_Z_INDEX, createExclusiveContextMenu, renderPolishMenuLabel
 import { renderIcon } from "../utils/dropdownIcons";
 import { isImeComposing } from "../utils/ime";
 import type { PolishKind, PolishResult, PolishStyle, PolishTodoItem } from "../sync/polishClient";
-import { runSmartPaste, smartPasteMessages } from "../utils/smartPaste";
+import { runSmartPaste, smartPasteMessages, runSelectionPolish, selectionPolishMessages } from "../utils/smartPaste";
 import type { SmartPastePhase } from "../utils/smartPaste";
+import { POLISH_STYLE_ENTRIES } from "../state/polishStyles";
+import SparklesOutlineIcon from "./SparklesOutlineIcon.vue";
 import EditableTitle from "./EditableTitle.vue";
 
 const props = withDefaults(defineProps<{
@@ -117,6 +119,7 @@ const menu = ref<{
   id?: string;
   anchor?: HTMLElement;
   target?: HTMLInputElement;
+  selection?: { start: number; end: number; text: string; baseline: string };
   sectionActions?: boolean;
 } | null>(null);
 const dragged = ref<DraggedTodo | null>(null);
@@ -219,6 +222,14 @@ const menuOptions = computed<DropdownOption[]>(() => {
       if (props.polish) {
         options.push({ label: uiText.value.common.smartPaste, key: "smart-paste", icon: renderIcon(ClipboardOutline) });
       }
+    }
+    if (props.polish && !todo?.done && menu.value.selection?.text.trim()) {
+      options.push({
+        label: uiText.value.common.smartPolish,
+        key: "smart-polish",
+        icon: renderIcon(SparklesOutlineIcon, false, 14),
+        children: POLISH_STYLE_ENTRIES.map(({ key, labelKey }) => ({ label: uiText.value.common[labelKey], key })),
+      });
     }
     options.push({
       label: isValidNotifyAt(todo?.notifyAt) ? uiText.value.todo.editNotify : uiText.value.todo.setNotify,
@@ -837,6 +848,7 @@ function openTodoTextMenu(event: MouseEvent, period: TodoPeriod, todo: TodoItem)
   event.stopPropagation();
   selectedMenuTodoKey.value = todoKey(period, todo.id);
   exclusiveMenu.notifyOpen(event, { replacingExistingMenu: Boolean(menu.value) });
+  const range = getTodoSelectionRange(period, todo.id, target);
   menu.value = {
     x: event.clientX,
     y: event.clientY,
@@ -844,6 +856,7 @@ function openTodoTextMenu(event: MouseEvent, period: TodoPeriod, todo: TodoItem)
     id: todo.id,
     anchor: target,
     target,
+    selection: { ...range, text: target.value.slice(range.start, range.end), baseline: todo.text },
   };
 }
 
@@ -1216,6 +1229,13 @@ function handleFloatingEditorOutsidePointerDown(event: PointerEvent): void {
 async function handleMenuSelect(key: string): Promise<void> {
   if (!menu.value) return;
   const { period, id, anchor, target, x, y } = menu.value;
+  const style = POLISH_STYLE_ENTRIES.find((entry) => entry.key === key)?.style;
+  if (style && id && target && menu.value.selection?.text.trim()) {
+    const selection = menu.value.selection;
+    closeMenu();
+    await polishTodoSelection(period, id, target, selection, style);
+    return;
+  }
   if (key === "focus-now" && id) {
     closeMenu();
     emit("focusNow", period, id);
@@ -1438,6 +1458,43 @@ function compareTodayFocusEntries(left: TodayFocusEntry, right: TodayFocusEntry)
   }
   if (leftHasDeadline !== rightHasDeadline) return leftHasDeadline ? -1 : 1;
   return left.index - right.index;
+}
+
+/** Replace only the captured selection; discard results after edits, completion or workspace changes. */
+async function polishTodoSelection(
+  period: TodoPeriod,
+  id: string,
+  target: HTMLInputElement,
+  selection: { start: number; end: number; text: string; baseline: string },
+  style: PolishStyle,
+): Promise<void> {
+  if (!props.polish) return;
+  const landingLists = props.todoLists;
+  const todo = getTodoById(period, id);
+  if (!todo || todo.done) return;
+  await runSelectionPolish({
+    kind: "note",
+    text: selection.text,
+    style,
+    polish: props.polish,
+    messages: selectionPolishMessages(uiText.value),
+    anchor: getTodoSectionAnchor(period),
+    apply: (texts) => {
+      const current = getTodoById(period, id);
+      if (isUnmounted || props.todoLists !== landingLists || current !== todo || current.done || current.text !== selection.baseline) return;
+      const replacement = texts.join(" ").replace(/\s*\n\s*/g, " ");
+      const nextText = selection.baseline.slice(0, selection.start) + replacement + selection.baseline.slice(selection.end);
+      lastTodoSelections.delete(todoKey(period, id));
+      editingTodoKey.value = todoKey(period, id);
+      emit("update", period, id, nextText);
+      void nextTick(() => {
+        if (!target.isConnected) return;
+        target.focus({ preventScroll: true });
+        restoreTodoCaret(target, selection.start + replacement.length);
+      });
+    },
+    notify: (phase, message, anchor) => emit("polishMessage", phase, message, anchor),
+  });
 }
 
 function hasSelection(target: HTMLTextAreaElement | HTMLInputElement): boolean {
