@@ -20,3 +20,28 @@ export function removeWorkbenchWidths(workspaceId: string): void {
     // Storage may be unavailable in restricted contexts; cleanup is best-effort.
   }
 }
+
+/** Relative widths in visible-zone order; older files simply omit this field. */
+export function normalizeZoneWidthRatios(value: unknown): number[] | undefined {
+  if (!Array.isArray(value) || value.length < 1 || value.length > 4 || !value.every((width) => typeof width === "number" && Number.isFinite(width) && width > 0)) return undefined;
+  const total = value.reduce((sum, width) => sum + width, 0);
+  if (!Number.isFinite(total)) return undefined;
+  return value.map((width) => width / total);
+}
+
+export function readWorkbenchWidthRatios(workspaceId: string): number[] | undefined {
+  try {
+    const raw = localStorage.getItem(workbenchWidthStorageKey(workspaceId))
+      ?? localStorage.getItem(WORKBENCH_WIDTH_STORAGE_KEY)
+      ?? localStorage.getItem(LEGACY_WORKBENCH_WIDTH_STORAGE_KEY);
+    return normalizeZoneWidthRatios(JSON.parse(raw ?? "null"));
+  } catch { return undefined; }
+}
+
+export function restoreWorkbenchWidthRatios(workspaceId: string, value: unknown): void {
+  const ratios = normalizeZoneWidthRatios(value);
+  if (!ratios) return;
+  try {
+    localStorage.setItem(workbenchWidthStorageKey(workspaceId), JSON.stringify(ratios.map((ratio) => ratio * 10000)));
+  } catch { /* Layout storage is optional. */ }
+}

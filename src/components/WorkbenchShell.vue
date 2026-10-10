@@ -29,6 +29,7 @@ const props = withDefaults(defineProps<{
   zoneVisibility?: ZoneVisibility;
   /** 区域尺寸按工作区独立存储；缺省回落到旧的共享键（兼容无工作区上下文的挂载）。 */
   workspaceId?: string;
+  zoneWidthRatios?: number[];
   /** 手机速记手动同步：当前工作区已配对才渲染顶栏按钮；in-flight 时旋转禁用。 */
   inboxSyncEnabled?: boolean;
   inboxSyncing?: boolean;
@@ -233,7 +234,7 @@ function readStoredColumnWidths(expectedLength: number = MIN_COLUMN_WIDTHS.lengt
     const raw = localStorage.getItem(widthStorageKey())
       ?? localStorage.getItem(WORKBENCH_WIDTH_STORAGE_KEY)
       ?? localStorage.getItem(LEGACY_WORKBENCH_WIDTH_STORAGE_KEY);
-    const parsed = JSON.parse(raw ?? "null");
+    const parsed = raw ? JSON.parse(raw) : props.zoneWidthRatios?.map((ratio) => ratio * 10000);
     if (!Array.isArray(parsed) || parsed.length !== expectedLength) return undefined;
     const widths = parsed.map((value) => Number(value));
     return widths.every((value) => Number.isFinite(value) && value > 0) ? widths : undefined;
@@ -697,7 +698,7 @@ watch(
 // 切换工作区时区域尺寸跟着换：丢弃当前列宽，让布局按新工作区的存储宽度
 // （或默认权重）重新拟合——每个空间的四区尺寸互不影响。
 watch(
-  () => props.workspaceId,
+  () => [props.workspaceId, props.zoneWidthRatios],
   () => {
     columnWidths.value = [];
     soloAssetsEngaged.value = false;

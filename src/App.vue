@@ -56,7 +56,7 @@ import {
 } from "./state/todos";
 import { DEFAULT_BOARD_TITLE, defaultState, STORAGE_KEY } from "./state/defaults";
 import { applyThemeColor } from "./state/theme-color";
-import { removeWorkbenchWidths } from "./state/layoutPrefs";
+import { readWorkbenchWidthRatios, restoreWorkbenchWidthRatios, removeWorkbenchWidths } from "./state/layoutPrefs";
 import { createWorkspaceData, ensureUniqueWorkspaceTitle, getWorkspaceBoardTitle, projectLegacySpaceLines, removeWorkspace, reorderWorkspaces } from "./state/workspaces";
 import * as workspaceMover from "./state/workspaceMoves";
 import { QUICK_BUTTON_OTHER_GROUP_ID, QUICK_DENSITY_THRESHOLD, assignQuickTagColumn, distributeQuickTagColumns, formatQuickCopiedPreview, recordQuickButtonClick } from "./state/quickButtons";
@@ -985,6 +985,8 @@ function exportWorkspaceById(id: string, anchor?: HTMLElement): void {
   const workspace = state.workspaces.find((item) => item.id === id);
   if (!workspace) return;
   const serialized = getSerializableWorkspace(workspace, { includeImageData: true });
+  const ratios = readWorkbenchWidthRatios(workspace.id);
+  if (ratios) serialized.zoneWidthRatios = ratios;
   const content = JSON.stringify({ miniDeskWorkspaceExport: true, version: 1, workspace: serialized }, null, 2);
   const title = getWorkspaceBoardTitle(workspace);
   downloadExportFile(content, `mini-desk-${slugifyTitle(title)}-${new Date().toISOString().slice(0, 10)}.json`);
@@ -3142,6 +3144,7 @@ async function importData(event: Event): Promise<void> {
         state.workspaces,
         DEFAULT_BOARD_TITLE,
       );
+      restoreWorkbenchWidthRatios(workspace.id, workspace.zoneWidthRatios);
       state.workspaces = [...state.workspaces, workspace];
       state.activeWorkspaceId = workspace.id;
       await finishImport(workspace);
@@ -3155,6 +3158,7 @@ async function importData(event: Event): Promise<void> {
         return;
       }
       const replacement: WorkspaceData = { ...importedWorkspace, id: target.id, createdAt: target.createdAt };
+      restoreWorkbenchWidthRatios(replacement.id, replacement.zoneWidthRatios);
       state.workspaces = state.workspaces.map((item) => (item.id === target.id ? replacement : item));
       state.activeWorkspaceId = target.id;
       await finishImport(replacement);
@@ -3826,6 +3830,7 @@ function moveItem<T extends { id: string }>(items: T[], dragId: string, targetId
       :image-preview-open="Boolean(displayedPreviewId)"
       :zone-visibility="activeWorkspace.zoneVisibility"
       :workspace-id="state.activeWorkspaceId"
+      :zone-width-ratios="activeWorkspace.zoneWidthRatios"
       :inbox-sync-enabled="hasInboxConfigured"
       :inbox-syncing="inboxPullInFlight"
       @theme="handleThemeClick"

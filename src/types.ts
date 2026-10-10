@@ -182,6 +182,8 @@ export interface WorkspaceData {
   todoLayoutManual: boolean;
   /** Responsive reminder column limit, defaulting to one for older workspaces. */
   todoMaxColumns?: number;
+  /** Relative area widths in visible-zone order (assets, notes, tasks, workspace). */
+  zoneWidthRatios?: number[];
   todoListOrder?: string[];
   todoColumnLayouts?: Record<string, { id: string; column: number }[]>;
   todoLists: TodoListConfig[];

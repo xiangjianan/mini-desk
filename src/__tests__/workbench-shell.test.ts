@@ -27,6 +27,21 @@ describe("WorkbenchShell", () => {
     theme: "light" as const,
   };
 
+  it("restores imported area proportions and refreshes them within the same workspace", async () => {
+    vi.spyOn(window, "innerWidth", "get").mockReturnValue(1600);
+    HTMLElement.prototype.getBoundingClientRect = function () {
+      if (this.classList.contains("workbench-grid")) return { width: 1200, height: 748, top: 52, left: 0, right: 1200, bottom: 800, x: 0, y: 52, toJSON: () => undefined };
+      return originalGetBoundingClientRect.call(this);
+    };
+    const wrapper = mount(WorkbenchShell, { attachTo: document.body, props: { ...defaultProps, workspaceId: "imported", zoneWidthRatios: [0.1, 0.2, 0.3, 0.4] } });
+    await nextTick(); await nextTick();
+    expect(wrapper.get(".workbench-grid").attributes("style")).toContain("grid-template-columns: 116px 232px 347px 463px");
+    await wrapper.setProps({ zoneWidthRatios: [0.4, 0.3, 0.2, 0.1] });
+    await nextTick(); await nextTick();
+    expect(wrapper.get(".workbench-grid").attributes("style")).toContain("grid-template-columns: 463px 347px 232px 116px");
+    wrapper.unmount();
+  });
+
   it("renders a single rounded command shell and four named work zones", () => {
     const wrapper = mount(WorkbenchShell, {
       props: defaultProps,

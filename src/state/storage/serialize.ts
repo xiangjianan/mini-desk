@@ -1,3 +1,4 @@
+import { normalizeZoneWidthRatios } from "../layoutPrefs";
 import { normalizeTodoColumnLayouts, normalizeTodoMaxColumns } from "../columns";
 import { DEFAULT_SPACE_ID, DEFAULT_WORKSPACE_ID } from "../defaults";
 import { isValidNotifyAt } from "../deadlines";
@@ -61,6 +62,7 @@ export function getSerializableWorkspace(
     quickLayoutManual: workspace.quickLayoutManual,
     todoLayoutManual: workspace.todoLayoutManual,
     todoMaxColumns: normalizeTodoMaxColumns(workspace.todoMaxColumns),
+    ...(normalizeZoneWidthRatios(workspace.zoneWidthRatios) ? { zoneWidthRatios: normalizeZoneWidthRatios(workspace.zoneWidthRatios) } : {}),
     todoListOrder: workspace.todoListOrder ?? workspace.todoLists.map((list) => list.id),
     todoColumnLayouts: normalizeTodoColumnLayouts(workspace.todoColumnLayouts ?? (workspace.todoLayoutManual ? { 1: workspace.todoLists.map((list) => ({ id: list.id, column: 0 })) } : {}), workspace.todoLists),
     zoneVisibility: normalizeZoneVisibility(workspace.zoneVisibility),

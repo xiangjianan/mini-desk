@@ -6638,6 +6638,7 @@ describe("App shell", () => {
         version: 1,
         workspace: {
           customTitles: { "board-title": "导入空间" },
+          zoneWidthRatios: [1, 2, 3, 4],
           todos: {
             morning: [{
               id: "t1",
@@ -6667,6 +6668,8 @@ describe("App shell", () => {
       const stored = JSON.parse(localStorage.getItem(STORAGE_KEY) || "{}");
       expect(stored.workspaces).toHaveLength(2);
       const imported = stored.workspaces[1];
+      expect(imported.zoneWidthRatios).toEqual([0.1, 0.2, 0.3, 0.4]);
+      expect(JSON.parse(localStorage.getItem(`mini-desk-workbench-widths:${imported.id}`)!)).toEqual([1000, 2000, 3000, 4000]);
       expect(imported.todos.morning[0].focusImages).toEqual([{ id: "img-1", payloadId: "pay-1", createdAt: 9 }]);
       await expect(getStoredImagePayload({ id: "img-1", payloadId: "pay-1" })).resolves.toBe("data:image/png;base64,imported");
     } finally {
@@ -7214,6 +7217,7 @@ describe("App shell", () => {
     const wrapper = mountApp();
 
     try {
+      localStorage.setItem(`mini-desk-workbench-widths:${DEFAULT_WORKSPACE_ID}`, JSON.stringify([100, 200, 300, 400]));
       const settings = wrapper.getComponent(SettingsMenu);
       settings.vm.$emit("exportWorkspace", settings.element as HTMLElement);
       await wrapper.vm.$nextTick();
@@ -7229,7 +7233,7 @@ describe("App shell", () => {
       if (!exportedBlob) throw new Error("Expected export blob");
       const exported = await exportedBlob.text();
       expect(JSON.parse(exported)).toMatchObject({ miniDeskWorkspaceExport: true, version: 1 });
-      expect(JSON.parse(exported).workspace).toBeTruthy();
+      expect(JSON.parse(exported).workspace.zoneWidthRatios).toEqual([0.1, 0.2, 0.3, 0.4]);
 
       await vi.advanceTimersByTimeAsync(200);
       await wrapper.vm.$nextTick();

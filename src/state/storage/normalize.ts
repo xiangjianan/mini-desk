@@ -1,3 +1,4 @@
+import { normalizeZoneWidthRatios } from "../layoutPrefs";
 import { normalizeTodoColumnLayouts, normalizeTodoMaxColumns } from "../columns";
 import { DEFAULT_SPACE_ID, DEFAULT_SPACE_TITLE, DEFAULT_TODO_LISTS, DEFAULT_WORKSPACE_ID, defaultWorkspace } from "../defaults";
 import { isValidNotifyAt } from "../deadlines";
@@ -101,6 +102,7 @@ export function normalizeWorkspaceData(item: unknown, language: AppLanguage = DE
     quickLayoutManual: Boolean(typed.quickLayoutManual),
     todoLayoutManual: Boolean(typed.todoLayoutManual),
     todoMaxColumns: normalizeTodoMaxColumns(typed.todoMaxColumns),
+    ...(normalizeZoneWidthRatios(typed.zoneWidthRatios) ? { zoneWidthRatios: normalizeZoneWidthRatios(typed.zoneWidthRatios) } : {}),
     todoListOrder: Array.isArray(typed.todoListOrder) ? [...new Set(typed.todoListOrder.filter((id): id is string => typeof id === "string" && todoLists.some((list) => list.id === id)))] : todoLists.map((list) => list.id),
     todoColumnLayouts: normalizeTodoColumnLayouts(typed.todoColumnLayouts ?? (typed.todoLayoutManual ? { 1: todoLists.map((list) => ({ id: list.id, column: 0 })) } : {}), todoLists),
     todoLists,

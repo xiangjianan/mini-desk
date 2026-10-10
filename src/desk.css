@@ -254,12 +254,11 @@ html[data-theme="dark"] .workbench-shell,
   .workbench-shell .quick-tag-column { gap: 12px; }
 }
 
-/* 快捷按钮一行最多两个：以标签组自身宽度为准（容器查询），多列标签布局下
-   自动按列宽回落单列；组宽不足 400px 时保持整行一个。 */
-.workbench-shell .quick-tag-group { container-type: inline-size; }
-@container (min-width: 400px) {
-  .workbench-shell .quick-buttons { grid-template-columns: repeat(2, minmax(0, 1fr)); }
+/* Add a track every ~200px; buttons never stretch beyond the single-track range. */
+.workbench-shell .quick-buttons {
+  grid-template-columns: repeat(auto-fill, minmax(min(100%, 196px), 1fr));
 }
+.workbench-shell button.quick-button { max-width: 400px; }
 
 /* 过期提醒整行文本染红：styles.css 的 var(--danger) 规则在此不再被覆盖。 */
 

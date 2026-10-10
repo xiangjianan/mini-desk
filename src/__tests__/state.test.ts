@@ -1,3 +1,4 @@
+import { normalizeZoneWidthRatios, readWorkbenchWidthRatios, restoreWorkbenchWidthRatios, workbenchWidthStorageKey } from "../state/layoutPrefs";
 import { normalizeTodoColumnLayouts, resolveTodoColumns } from "../state/columns";
 import { describe, expect, it } from "vitest";
 import { DEFAULT_COMPANION_GIF_THEME, getCompanionGifSrc, getCompanionNotificationIconSrc } from "../state/companionGifThemes";
@@ -26,6 +27,16 @@ import {
 import type { BoardState } from "../types";
 
 describe("state compatibility", () => {
+  it("round-trips optional workspace area proportions", () => {
+    const state = defaultState();
+    state.workspaces[0].zoneWidthRatios = [1, 2, 3, 4];
+    expect(normalizeImportedState(getSerializableState(state)).workspaces[0].zoneWidthRatios).toEqual([0.1, 0.2, 0.3, 0.4]);
+    expect(normalizeWorkspaceData(defaultWorkspace()).zoneWidthRatios).toBeUndefined();
+    for (const invalid of [[], [0, 1], [-1, 2], [Infinity, 1], [1, 2, 3, 4, 5]]) expect(normalizeZoneWidthRatios(invalid)).toBeUndefined();
+    restoreWorkbenchWidthRatios("width-roundtrip", [1, 2, 3, 4]);
+    expect(readWorkbenchWidthRatios("width-roundtrip")).toEqual([0.1, 0.2, 0.3, 0.4]);
+    localStorage.removeItem(workbenchWidthStorageKey("width-roundtrip"));
+  });
   it("balances unsaved counts and restores independent manual orders", () => {
     const lists = ["a", "b", "c", "d", "e"].map((id) => ({ id, column: 0 }));
     const order = lists.map((list) => list.id);
