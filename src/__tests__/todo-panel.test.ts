@@ -218,7 +218,7 @@ describe("TodoPanel", () => {
     } as unknown as typeof ResizeObserver;
     const lists = Array.from({ length: 32 }, (_, index) => ({ id: `list-${index}`, title: `List ${index}`, column: 0, collapsed: false, compact: true }));
     const todos = Object.fromEntries(lists.map((list) => [list.id, Array.from({ length: 30 }, (_, index) => ({ id: `${list.id}-${index}`, text: `Reminder ${index}`, done: false }))]));
-    const wrapper = mount(TodoPanel, { props: { maxColumns: 6, todoLists: lists, todos, titles: DEFAULT_TITLES } });
+    const wrapper = mount(TodoPanel, { props: { maxColumns: 6, todoLists: lists, todos, titles: DEFAULT_TITLES }, global: { stubs: { TransitionGroup: false } } });
     let rowReads = 0;
     const originalRect = HTMLElement.prototype.getBoundingClientRect;
     const rectSpy = vi.spyOn(HTMLElement.prototype, "getBoundingClientRect").mockImplementation(function (this: HTMLElement) {
@@ -249,10 +249,29 @@ describe("TodoPanel", () => {
       await nextTick();
       expect(wrapper.findAll(".todo-column").map((column) => column.element)).toEqual(columns);
       expect(rowReads).toBe(0);
+      // Restoring per-count manual layouts also changes list order. Source
+      // render slots must remain stable so this never patches/measures 960 rows.
+      for (const [width, count] of [[1100, 3], [1500, 4], [700, 2], [1100, 3]]) {
+        rowReads = 0;
+        notifyResize!([{ contentRect: { width } } as ResizeObserverEntry], {} as ResizeObserver);
+        await nextTick();
+        await wrapper.setProps({ todoLists: (count % 2 === 0 ? [...lists].reverse() : lists).map((list, index) => ({ ...list, column: Math.floor(index * count / lists.length) })) });
+        await nextTick();
+        expect(wrapper.findAll(".todo-column:not(.is-inactive)")).toHaveLength(count);
+        expect(new Set(wrapper.findAll(".todo-input").map((input) => input.element))).toEqual(new Set(inputs));
+        expect(wrapper.get(".todo-column").findAll(".todo-section")[0].attributes("data-list-id")).toBe(count % 2 === 0 ? "list-31" : "list-0");
+        expect(rowReads).toBe(0);
+      }
       // Memo invalidation must also catch edits made in place after a layout change.
       todos["list-0"][0].text = "Updated reminder";
       await wrapper.setProps({ todos: { ...todos } });
       expect((wrapper.get('.todo-section[data-list-id="list-0"] .todo-input').element as HTMLInputElement).value).toBe("Updated reminder");
+      rowReads = 0;
+      todos["list-0"] = [...todos["list-0"]].reverse();
+      await wrapper.setProps({ todos: { ...todos } });
+      expect(wrapper.get('.todo-section[data-list-id="list-0"] .todo-item').attributes("data-todo-id")).toBe("list-0-29");
+      // Actual row reorders retain the real TransitionGroup animation path.
+      expect(rowReads).toBeGreaterThan(0);
     } finally {
       rectSpy.mockRestore();
       wrapper.unmount();

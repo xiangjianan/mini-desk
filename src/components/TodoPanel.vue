@@ -63,6 +63,7 @@ import type { SmartPastePhase } from "../utils/smartPaste";
 import { POLISH_STYLE_ENTRIES } from "../state/polishStyles";
 import SparklesOutlineIcon from "./SparklesOutlineIcon.vue";
 import EditableTitle from "./EditableTitle.vue";
+import TodoRowsTransition from "./TodoRowsTransition";
 import { normalizeTodoMaxColumns, TODO_COLUMN_LIMIT_OPTIONS } from "../state/columns";
 
 const props = withDefaults(defineProps<{
@@ -333,7 +334,8 @@ const centeringTimeColumns = new Map<HTMLElement, number>();
 // Layout metadata (column/title/collapse) must not invalidate reminder content.
 const contentTodoLists = computed<{ id: TodoListId }[]>((previous) => {
   const next = effectiveTodoLists.value.map(({ id }) => ({ id }));
-  return previous && previous.length === next.length && previous.every((list, index) => list.id === next[index].id)
+  const ids = new Set(next.map((list) => list.id));
+  return previous && previous.length === next.length && previous.every((list) => ids.has(list.id))
     ? previous
     : next;
 });
@@ -2021,9 +2023,9 @@ function buildTodoListEntries(period: TodoListId, todos: TodoItem[], deferredDon
           <div
             class="todo-list-scrollbar"
             :style="{ containIntrinsicBlockSize: `auto ${getTodoListEstimatedHeight(list.id)}px` }"
-            v-memo="[listEntries[list.id], todoRenderSignatures[list.id], notifyDisplays, editingTodoKey, selectedMenuTodoKey, dragged, notificationFlashKeys.join('|'), uiText]"
           >
-          <TransitionGroup
+          <TodoRowsTransition
+            :memo="[listEntries[list.id], todoRenderSignatures[list.id], notifyDisplays, editingTodoKey, selectedMenuTodoKey, dragged, notificationFlashKeys.join('|'), uiText]"
             name="todo-move"
             tag="ul"
             class="todo-list"
@@ -2153,7 +2155,7 @@ function buildTodoListEntries(period: TodoListId, todos: TodoItem[], deferredDon
                 </button>
               </li>
             </template>
-          </TransitionGroup>
+          </TodoRowsTransition>
           </div>
         </div>
       </section>
