@@ -1027,6 +1027,45 @@ describe("App shell", () => {
     }
   });
 
+  it("remembers manual reminder layouts only for the active column count", async () => {
+    const fixture = defaultState();
+    fixture.workspaces[0].todoLists = ["morning", "noon", "evening"].map((id) => ({ id, title: id, collapsed: false, compact: false, column: 0 }));
+    localStorage.setItem(STORAGE_KEY, JSON.stringify(fixture));
+    const wrapper = mountApp();
+    try {
+      await flushAsyncComponents();
+      const panel = wrapper.getComponent(TodoPanel);
+      panel.vm.$emit("columnCountChange", 2);
+      await nextTick();
+      expect(panel.props("todoLists")!.map((list) => list.column)).toEqual([0, 0, 1]);
+      panel.vm.$emit("assignListColumn", "evening", 0, "morning", true);
+      await nextTick();
+      expect(panel.props("todoLists")!.map((list) => list.id)).toEqual(["evening", "morning", "noon"]);
+      panel.vm.$emit("columnCountChange", 1);
+      await nextTick();
+      expect(panel.props("todoLists")!.map((list) => list.id)).toEqual(["morning", "noon", "evening"]);
+      panel.vm.$emit("assignListColumn", "noon", 0, "morning", true);
+      await nextTick();
+      panel.vm.$emit("columnCountChange", 2);
+      await nextTick();
+      expect(panel.props("todoLists")!.map((list) => list.id)).toEqual(["evening", "morning", "noon"]);
+      panel.vm.$emit("columnCountChange", 1);
+      await nextTick();
+      expect(panel.props("todoLists")!.map((list) => list.id)).toEqual(["noon", "morning", "evening"]);
+      const saved = loadState().workspaces[0];
+      expect(Object.keys(saved.todoColumnLayouts ?? {})).toEqual(["1", "2"]);
+      const reloaded = mountApp();
+      try {
+        await flushAsyncComponents();
+        const restoredPanel = reloaded.getComponent(TodoPanel);
+        expect(restoredPanel.props("todoLists")!.map((list) => list.id)).toEqual(["noon", "morning", "evening"]);
+        restoredPanel.vm.$emit("columnCountChange", 2);
+        await nextTick();
+        expect(restoredPanel.props("todoLists")!.map((list) => list.id)).toEqual(["evening", "morning", "noon"]);
+      } finally { reloaded.unmount(); }
+    } finally { wrapper.unmount(); }
+  });
+
   it("creates and persists todos from TodoPanel external text events", async () => {
     const wrapper = mountApp();
 

@@ -85,3 +85,39 @@ export function assignColumn<T extends ColumnItem>(
   next.splice(insertIndex, 0, moved);
   return next;
 }
+
+/** Persist only valid per-count layouts, discarding deleted/duplicate IDs. */
+export function normalizeTodoColumnLayouts(value: unknown, items: ColumnItem[]): Record<string, { id: string; column: number }[]> {
+  const result: Record<string, { id: string; column: number }[]> = {};
+  if (!value || typeof value !== "object") return result;
+  const ids = new Set(items.map((item) => item.id));
+  for (const [key, entries] of Object.entries(value)) {
+    const count = Number(key);
+    if (!Number.isInteger(count) || count < 1 || count > 6 || !Array.isArray(entries)) continue;
+    const seen = new Set<string>();
+    result[String(count)] = entries.flatMap((entry) => {
+      if (!entry || typeof entry.id !== "string" || !ids.has(entry.id) || seen.has(entry.id)) return [];
+      seen.add(entry.id);
+      const column = Number.isInteger(entry.column) ? Math.max(0, Math.min(count - 1, entry.column)) : 0;
+      return [{ id: entry.id, column }];
+    });
+  }
+  return result;
+}
+
+/** Restore a manual layout for this count, otherwise balance the canonical order. */
+export function resolveTodoColumns<T extends ColumnItem>(items: T[], count: number, order: string[] = [], layouts: Record<string, { id: string; column: number }[]> = {}): T[] {
+  const byId = new Map(items.map((item) => [item.id, item]));
+  const saved = layouts[String(count)];
+  const entries = saved ?? order.map((id) => ({ id, column: 0 }));
+  const used = new Set<string>();
+  const next: T[] = [];
+  for (const entry of entries) {
+    const item = byId.get(entry.id);
+    if (!item || used.has(entry.id)) continue;
+    used.add(entry.id);
+    next.push(saved && item.column !== entry.column ? { ...item, column: entry.column } : item);
+  }
+  for (const item of items) if (!used.has(item.id)) next.push(saved ? { ...item, column: count - 1 } : item);
+  return saved ? next : distributeColumns(next, count);
+}

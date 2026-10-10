@@ -1,3 +1,4 @@
+import { normalizeTodoColumnLayouts, resolveTodoColumns } from "../state/columns";
 import { describe, expect, it } from "vitest";
 import { DEFAULT_COMPANION_GIF_THEME, getCompanionGifSrc, getCompanionNotificationIconSrc } from "../state/companionGifThemes";
 import { DEFAULT_ZONE_VISIBILITY, defaultState, defaultWorkspace, STORAGE_KEY } from "../state/defaults";
@@ -25,6 +26,32 @@ import {
 import type { BoardState } from "../types";
 
 describe("state compatibility", () => {
+  it("balances unsaved counts and restores independent manual orders", () => {
+    const lists = ["a", "b", "c", "d", "e"].map((id) => ({ id, column: 0 }));
+    const order = lists.map((list) => list.id);
+    const layouts = { "2": [{ id: "e", column: 0 }, { id: "a", column: 0 }, { id: "b", column: 1 }, { id: "c", column: 1 }, { id: "d", column: 1 }] };
+    const two = resolveTodoColumns(lists, 2, order, layouts);
+    expect(two.map((list) => list.id)).toEqual(["e", "a", "b", "c", "d"]);
+    const three = resolveTodoColumns(two, 3, order, layouts);
+    expect(three.map((list) => list.id)).toEqual(order);
+    expect(three.map((list) => list.column)).toEqual([0, 0, 1, 1, 2]);
+    expect(resolveTodoColumns(three, 2, order, layouts)).toEqual(two);
+    expect(resolveTodoColumns(two, 1, order, layouts).map((list) => list.id)).toEqual(order);
+    const changed = [...lists.filter((list) => list.id !== "a"), { id: "new", column: 0 }];
+    expect(resolveTodoColumns(changed, 2, order, layouts).map((list) => list.id)).toEqual(["e", "b", "c", "d", "new"]);
+  });
+
+  it("persists per-count layouts and sanitizes stale entries", () => {
+    const state = defaultState();
+    const workspace = state.workspaces[0];
+    workspace.todoListOrder = workspace.todoLists.map((list) => list.id);
+    workspace.todoColumnLayouts = { "2": [...workspace.todoLists].reverse().map((list) => ({ id: list.id, column: 1 })) };
+    const restored = normalizeImportedState(getSerializableState(state)).workspaces[0];
+    expect(restored.todoListOrder).toEqual(workspace.todoListOrder);
+    expect(restored.todoColumnLayouts).toEqual(workspace.todoColumnLayouts);
+    expect(normalizeTodoColumnLayouts({ "2": [{ id: "morning", column: 9 }, { id: "morning", column: 0 }, { id: "deleted", column: 1 }], "9": [] }, workspace.todoLists)).toEqual({ "2": [{ id: "morning", column: 1 }] });
+  });
+
   it("defaults legacy reminder column limits to one and preserves valid settings", () => {
     expect(defaultWorkspace().todoMaxColumns).toBe(1);
     for (const value of [undefined, 0, 7, 1.5, "2"]) {

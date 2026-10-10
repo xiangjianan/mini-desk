@@ -127,9 +127,9 @@ export interface TodoListConfig {
   collapsed: boolean;
   compact: boolean;
   /**
-   * Which masonry column (0-indexed) this list is pinned to. Auto-distributed
-   * while `WorkspaceData.todoLayoutManual` is false; frozen once the user
-   * manually reorders. Displayed value is clamped to the current column count.
+   * Current masonry column (0-indexed). Restored from the manual layout for
+   * the current column count, or assigned by balanced automatic distribution.
+   * Displayed value is clamped to the current column count.
    * Always present on persisted/migrated data; optional only so test fixtures
    * can omit it (treated as column 0).
    */
@@ -178,13 +178,12 @@ export interface WorkspaceData {
    * changes — each tag's `column` is only changed by explicit drag reordering.
    */
   quickLayoutManual: boolean;
-  /**
-   * Once true, todo lists stop auto-distributing across columns on width/list
-   * changes — each list's `column` is only changed by explicit drag reordering.
-   */
+  /** Legacy flag retained for compatibility; new manual layouts are per count. */
   todoLayoutManual: boolean;
   /** Responsive reminder column limit, defaulting to one for older workspaces. */
   todoMaxColumns?: number;
+  todoListOrder?: string[];
+  todoColumnLayouts?: Record<string, { id: string; column: number }[]>;
   todoLists: TodoListConfig[];
   showCompletedTodos: TodoCompletedVisibility;
   todos: TodoMap;

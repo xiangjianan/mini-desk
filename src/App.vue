@@ -10,7 +10,7 @@ import SettingsMenu from "./components/SettingsMenu.vue";
 import SpacePanel from "./components/SpacePanel.vue";
 import TodoFocusModal from "./components/TodoFocusModal.vue";
 import TodoPanel from "./components/TodoPanel.vue";
-import { normalizeTodoMaxColumns } from "./state/columns";
+import { normalizeTodoMaxColumns, resolveTodoColumns } from "./state/columns";
 import WorkbenchShell from "./components/WorkbenchShell.vue";
 import WorkspaceSwitcher from "./components/WorkspaceSwitcher.vue";
 import { getCompanionGifSrc, getCompanionNotificationIconSrc } from "./state/companionGifThemes";
@@ -44,7 +44,6 @@ import {
   clearCompleted,
   collectTodoFocusPayloadIds,
   completeTodo,
-  distributeTodoListColumns,
   moveTodo as moveTodoInMap,
   removeTodo as removeTodoFromMap,
   removeTodoListData,
@@ -690,31 +689,17 @@ watch(boardTitle, (value) => {
 });
 
 const todoColumnCount = ref(1);
-// distributionKey dedupes the auto-distribute watcher so it only re-runs when
-// the workspace, column count, or list count actually changes (not every tick).
-const distributionKey = ref("");
-
-// Auto-distribute todo lists across columns while the layout is not yet manual.
-// Re-runs only when the active workspace, measured column count, or list count
-// changes (distributionKey dedupes). Once `todoLayoutManual` is true this is a
-// no-op — assignments are frozen and only changed by explicit drag reordering.
+// Each column count restores its own manual layout, or balances the base order.
 watch(
-  () => [state.activeWorkspaceId, todoColumnCount.value, activeWorkspace.value.todoLists.length],
+  () => [state.activeWorkspaceId, todoColumnCount.value, activeWorkspace.value.todoLists.map((list) => list.id).sort().join("\0")],
   () => {
-    if (activeWorkspace.value.todoLayoutManual) return;
-    // Single column ⇒ nothing to distribute (every list is column 0; narrower
-    // windows just clamp the display). Skipping here also avoids a pointless
-    // persist that would race with async image-sync handling.
-    if (todoColumnCount.value <= 1) return;
-    const key = `${state.activeWorkspaceId}:${todoColumnCount.value}:${activeWorkspace.value.todoLists.length}`;
-    if (key === distributionKey.value) return;
-    distributionKey.value = key;
-    activeWorkspace.value.todoLists = distributeTodoListColumns(
-      activeWorkspace.value.todoLists,
-      todoColumnCount.value,
-    );
+    const workspace = activeWorkspace.value;
+    const next = resolveTodoColumns(workspace.todoLists, todoColumnCount.value, workspace.todoListOrder, workspace.todoColumnLayouts);
+    if (next.every((list, index) => list === workspace.todoLists[index])) return;
+    workspace.todoLists = next;
     persistNow();
   },
+  { immediate: true },
 );
 
 // 快捷标签列布局与提醒列表同一套规则：未手动拖过时按列数自动分配，
@@ -2687,7 +2672,7 @@ function assignTodoListSections(
   anchorId: TodoListId | null,
   insertBefore: boolean,
 ): void {
-  // Any manual drag freezes auto-distribution permanently for this workspace.
+  activeWorkspace.value.todoListOrder ??= activeWorkspace.value.todoLists.map((list) => list.id);
   activeWorkspace.value.todoLayoutManual = true;
   activeWorkspace.value.todoLists = assignTodoListColumn(
     activeWorkspace.value.todoLists,
@@ -2696,6 +2681,8 @@ function assignTodoListSections(
     anchorId,
     insertBefore,
   );
+  activeWorkspace.value.todoColumnLayouts ??= {};
+  activeWorkspace.value.todoColumnLayouts[String(todoColumnCount.value)] = activeWorkspace.value.todoLists.map((list) => ({ id: list.id, column: list.column ?? 0 }));
   persistNow();
 }
 
