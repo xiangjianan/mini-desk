@@ -247,7 +247,7 @@ const menuOptions = computed<DropdownOption[]>(() => {
   if (menu.value?.tagId) {
     return [
       ...areaMenuOptions.value.flatMap((option) => option.key === "guide"
-        ? [{ label: uiText.value.common.delete, key: "delete-tag", icon: renderIcon(TrashOutline, true) }, option]
+        ? [{ label: uiText.value.quick.deleteTag, key: "delete-tag", icon: renderIcon(TrashOutline, true) }, option]
         : [option]),
       ...(moveMenuChildren.value.length > 0
         ? [{

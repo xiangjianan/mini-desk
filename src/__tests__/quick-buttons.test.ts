@@ -552,7 +552,7 @@ describe("QuickButtons", () => {
       "显示隐藏项",
       "标签管理",
       "切换为紧凑按钮",
-      "删除",
+      "删除标签",
       "Tips",
       "移动到空间",
       "生活",
@@ -572,7 +572,7 @@ describe("QuickButtons", () => {
 
     await wrapper.get(".quick-tag-heading").trigger("contextmenu");
 
-    await wrapper.findAll(".dropdown-option").find((option) => option.text() === "删除")?.trigger("click");
+    await wrapper.findAll(".dropdown-option").find((option) => option.text() === "删除标签")?.trigger("click");
     expect(wrapper.emitted("deleteTagWithButtons")?.[0]).toEqual(["tag-work", expect.any(HTMLElement)]);
     wrapper.unmount();
   });
@@ -1799,10 +1799,10 @@ describe("QuickButtons 跨空间移动", () => {
     expect(wrapper.findAll('[data-key^="move-ws:"]')).toHaveLength(0);
     expect(wrapper.find('[data-key="move-tag"]').exists()).toBe(false);
     expect(wrapper.findAll(".dropdown-option").map((option) => option.text())).toEqual([
-      "新增", "粘贴", "显示隐藏项", "标签管理", "切换为紧凑按钮", "删除", "Tips",
+      "新增", "粘贴", "显示隐藏项", "标签管理", "切换为紧凑按钮", "删除标签", "Tips",
     ]);
     expect(wrapper.get('[data-key="manage-tags"]').text()).toBe("标签管理");
-    expect(wrapper.get('[data-key="delete-tag"]').text()).toBe("删除");
+    expect(wrapper.get('[data-key="delete-tag"]').text()).toBe("删除标签");
     wrapper.unmount();
   });
 
