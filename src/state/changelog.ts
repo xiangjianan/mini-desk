@@ -29,6 +29,24 @@ export interface ChangelogEntry {
 
 export const CHANGELOG: ChangelogEntry[] = [
     {
+      version: "1.0.204",
+      date: "2026-10-10",
+      notes: {
+        zh: [
+          "新功能：提醒事项右键菜单新增「AI 润色」——选中文字后按风格（技术/简洁/口语）润色替换，未选中时润色整条",
+          "调整：勾选完成的提醒延迟 3 秒再沉底，期间聚焦该行继续编辑会暂停倒计时",
+          "调整：快捷区标签头右键菜单升级——保留区域全部操作（新增、粘贴、智能粘贴等），并新增移动到空间与删除标签及动作",
+          "调整：品牌升级为 MiniDesk——全新渐变显示器 logo，浏览器图标、PWA 图标、移动端首页与工作区切换器统一换新",
+        ],
+        en: [
+          "New: reminders gain a right-click AI polish entry — polish the selected text in tech, concise, or casual style, or the whole item when nothing is selected",
+          "Changed: a checked reminder now waits 3 seconds before sinking to the done section; focusing the row to keep editing pauses the countdown",
+          "Changed: the quick-area tag heading context menu now carries the full area actions (add, paste, smart paste, …) plus move-to-workspace and delete-tag-and-its-actions",
+          "Changed: rebranded as MiniDesk — a new gradient-monitor logo across the favicon, PWA icons, mobile home, and workspace switcher",
+        ],
+      },
+    },
+    {
       version: "1.0.203",
       date: "2026-10-10",
       notes: {
