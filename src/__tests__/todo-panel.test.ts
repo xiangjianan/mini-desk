@@ -138,7 +138,7 @@ describe("TodoPanel", () => {
       expect(wrapper.get(".todo-item").element).toBe(originalRow);
       expect(wrapper.get(".todo-input").element).toBe(originalInput);
       expect(wrapper.get(".todo-content-scroll").classes()).toContain("is-multi-column");
-      expect(wrapper.findAll(".todo-column")).toHaveLength(2);
+      expect(wrapper.findAll(".todo-column:not(.is-inactive)")).toHaveLength(2);
       const row = wrapper.get(".todo-item").element;
       const mutations: MutationRecord[] = [];
       const observer = new MutationObserver((records) => mutations.push(...records));
@@ -149,14 +149,14 @@ describe("TodoPanel", () => {
       expect(mutations).toHaveLength(0);
       measure(1100);
       await nextTick();
-      expect(wrapper.findAll(".todo-column")).toHaveLength(3);
+      expect(wrapper.findAll(".todo-column:not(.is-inactive)")).toHaveLength(3);
       expect(wrapper.findAll(".todo-item").map((item) => item.element)).toEqual(originalRows);
       expect(wrapper.get(".todo-item").element).toBe(originalRow);
       expect(wrapper.get(".todo-input").element).toBe(originalInput);
       observer.disconnect();
       measure(500);
       await nextTick();
-      expect(wrapper.findAll(".todo-column")).toHaveLength(1);
+      expect(wrapper.findAll(".todo-column:not(.is-inactive)")).toHaveLength(1);
       expect(wrapper.get(".todo-item").element).toBe(originalRow);
       expect(wrapper.get(".todo-content-scroll").classes()).not.toContain("is-multi-column");
       await wrapper.setProps({ todoLists: [...defaultTodoLists].reverse().map((list) => ({ ...list, column: 2 })) });
@@ -195,8 +195,21 @@ describe("TodoPanel", () => {
       await nextTick();
       await wrapper.setProps({ todoLists: lists.map((list, index) => ({ ...list, column: index < 16 ? 0 : 1 })) });
       await nextTick();
-      expect(wrapper.findAll(".todo-column")).toHaveLength(2);
+      expect(wrapper.findAll(".todo-column:not(.is-inactive)")).toHaveLength(2);
       expect(wrapper.findAll(".todo-input").map((input) => input.element)).toEqual(inputs);
+      expect(rowReads).toBe(0);
+      const columns = wrapper.findAll(".todo-column").map((column) => column.element);
+      rowReads = 0;
+      notifyResize!([{ contentRect: { width: 500 } } as ResizeObserverEntry], {} as ResizeObserver);
+      await nextTick();
+      expect(wrapper.findAll(".todo-column:not(.is-inactive)")).toHaveLength(1);
+      expect(wrapper.findAll(".todo-column").map((column) => column.element)).toEqual(columns);
+      expect(wrapper.findAll(".todo-input").map((input) => input.element)).toEqual(inputs);
+      expect(wrapper.get(".todo-column").findAll(".todo-section")).toHaveLength(32);
+      expect(rowReads).toBe(0);
+      notifyResize!([{ contentRect: { width: 700 } } as ResizeObserverEntry], {} as ResizeObserver);
+      await nextTick();
+      expect(wrapper.findAll(".todo-column").map((column) => column.element)).toEqual(columns);
       expect(rowReads).toBe(0);
       // Memo invalidation must also catch edits made in place after a layout change.
       todos["list-0"][0].text = "Updated reminder";

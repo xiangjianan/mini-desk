@@ -1632,54 +1632,45 @@ button.quick-button {
   align-items: center;
 }
 
-/* Single-column reminders share one scroll surface. */
+/* Keep the same bounded scroll/layout chain in both one and multiple columns.
+   Returning to one column must not temporarily expand every list to page height. */
 .todo-content-scroll {
+  display: flex;
+  flex-direction: column;
   flex: 1 1 auto;
   min-height: 0;
-  overflow-y: auto;
-  overflow-x: hidden;
-  scroll-padding-top: 53px;
-}
-
-.todo-sections {
-  display: flex;
-  flex-direction: column;
-  min-height: 0;
-  overflow: visible;
-}
-
-/* In multi-column mode the grid fills the available height; each column scrolls. */
-.todo-content-scroll.is-multi-column {
-  display: flex;
-  flex-direction: column;
   overflow: hidden;
 }
 
-.todo-content-scroll.is-multi-column > .today-focus-section {
+.todo-content-scroll > .today-focus-section {
   max-height: 25vh;
   overflow-y: auto;
 }
 
-/* Explicit columns preserve list placement while each list grows with content. */
-.todo-sections.is-multi-column {
+.todo-sections {
   display: grid;
   flex: 1 1 0;
   grid-template-rows: minmax(0, 1fr);
+  min-height: 0;
   overflow: hidden;
   column-gap: 10px;
+}
+
+.todo-sections.is-multi-column {
+  display: grid;
 }
 
 .todo-column {
   display: flex;
   flex-direction: column;
   min-width: 0;
-}
-
-.todo-sections.is-multi-column .todo-column {
   min-height: 0;
   overflow-y: auto;
   overflow-x: hidden;
   scroll-padding-top: 53px;
+}
+
+.todo-sections.is-multi-column .todo-column {
   row-gap: 8px;
 }
 
@@ -7926,8 +7917,8 @@ body:has(.image-preview) .n-modal-container:has(.focus-now-modal) .n-modal-mask 
   }
 }
 
-/* Reminder rows have a fixed height; skip offscreen row content during layout. */
-.todo-section.is-compact .todo-item {
+/* Keep headings available for sticky controls, but skip entire offscreen list
+   bodies rather than managing visibility separately for hundreds of rows. */
+.todo-list-scrollbar {
   content-visibility: auto;
-  contain-intrinsic-block-size: auto 42px;
 }

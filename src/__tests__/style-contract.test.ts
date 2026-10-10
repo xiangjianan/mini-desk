@@ -379,7 +379,7 @@ describe("workbench style contract", () => {
     const styles = readFileSync(resolve(__dirname, "../styles.css"), "utf8");
     const todo = readFileSync(resolve(__dirname, "../components/TodoPanel.vue"), "utf8");
 
-    expectSelectorBody(styles, ".todo-content-scroll", "overflow-y: auto");
+    expectSelectorBody(styles, ".todo-column", "overflow-y: auto");
     expectSelectorBody(styles, ".todo-section", "overflow: visible");
     expectSelectorBody(styles, ".todo-section.is-compact", "flex: 0 0 auto");
     expectSelectorBody(styles, ".todo-section > .todo-heading", "position: sticky");
@@ -387,10 +387,10 @@ describe("workbench style contract", () => {
     expectSelectorBody(styles, ".todo-list-shell", "grid-template-rows: 1fr");
     expectSelectorBody(styles, ".todo-list-shell.is-hidden", "grid-template-rows: 0fr");
     expect(todo).toContain('class="todo-content-scroll" :class="{ \'is-multi-column\': columnCount > 1 }"');
-    expectSelectorBody(styles, ".todo-content-scroll.is-multi-column", "overflow: hidden");
-    expectSelectorBody(styles, ".todo-sections.is-multi-column", "grid-template-rows: minmax(0, 1fr)");
-    expectSelectorBody(styles, ".todo-sections.is-multi-column .todo-column", "overflow-y: auto");
-    expectSelectorBody(styles, ".todo-sections.is-multi-column .todo-column", "min-height: 0");
+    expectSelectorBody(styles, ".todo-content-scroll", "overflow: hidden");
+    expectSelectorBody(styles, ".todo-sections", "grid-template-rows: minmax(0, 1fr)");
+    expectSelectorBody(styles, ".todo-column", "overflow-y: auto");
+    expectSelectorBody(styles, ".todo-column", "min-height: 0");
     expect(todo).not.toContain("<NScrollbar");
   });
 

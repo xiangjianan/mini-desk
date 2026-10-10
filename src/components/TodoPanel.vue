@@ -181,8 +181,11 @@ const effectiveTodoLists = computed(() => {
 // Number of masonry columns: derived from the measured panel width and clamped
 // to the list count so a few lists never leave empty columns. 1 = single column.
 const columnCount = ref(1);
+const allocatedColumnCount = ref(1);
 function refreshColumnCount(): void {
-  columnCount.value = computeColumnCount(measuredPanelWidth, effectiveTodoLists.value.length);
+  const next = computeColumnCount(measuredPanelWidth, effectiveTodoLists.value.length);
+  allocatedColumnCount.value = Math.max(allocatedColumnCount.value, next);
+  columnCount.value = next;
 }
 watch(() => effectiveTodoLists.value.length, refreshColumnCount);
 watch(columnCount, (next) => emit("columnCountChange", next));
@@ -408,6 +411,12 @@ const listEntries = computed(() =>
     }),
   ) as Record<TodoListId, TodoListEntry[]>,
 );
+
+function getTodoListEstimatedHeight(period: TodoListId): number {
+  const entries = listEntries.value[period] ?? [];
+  if (!entries.length) return 90;
+  return entries.reduce((height, entry) => height + (entry.type === "todo" ? 42 : 32), 0);
+}
 
 // Width below which the panel stays single-column (= 2 × the target column width).
 const TODO_MULTI_COLUMN_THRESHOLD = 680;
@@ -1894,10 +1903,12 @@ function buildTodoListEntries(period: TodoListId, todos: TodoItem[], deferredDon
       :style="columnCount > 1 ? { gridTemplateColumns: `repeat(${columnCount}, minmax(0, 1fr))` } : undefined"
     >
       <div
-        v-for="columnIndex in columnCount"
+        v-for="columnIndex in allocatedColumnCount"
         :key="columnIndex - 1"
         :ref="(element) => setColumnElement(columnIndex - 1, element as Element | null)"
         class="todo-column"
+        v-show="columnIndex <= columnCount"
+        :class="{ 'is-inactive': columnIndex > columnCount }"
         @dragover.prevent
         @drop="handleColumnDrop($event, columnIndex - 1)"
       />
@@ -1983,6 +1994,7 @@ function buildTodoListEntries(period: TodoListId, todos: TodoItem[], deferredDon
         >
           <div
             class="todo-list-scrollbar"
+            :style="{ containIntrinsicBlockSize: `auto ${getTodoListEstimatedHeight(list.id)}px` }"
             v-memo="[listEntries[list.id], todoRenderSignatures[list.id], notifyDisplays, editingTodoKey, selectedMenuTodoKey, dragged, notificationFlashKeys.join('|'), uiText]"
           >
           <TransitionGroup
