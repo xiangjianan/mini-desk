@@ -128,8 +128,10 @@ describe("TodoPanel", () => {
     });
     try {
       const measure = (width: number) => notifyResize!([{ contentRect: { width } } as ResizeObserverEntry], {} as ResizeObserver);
+      expect(wrapper.get(".todo-content-scroll").classes()).not.toContain("is-multi-column");
       measure(700);
       await nextTick();
+      expect(wrapper.get(".todo-content-scroll").classes()).toContain("is-multi-column");
       expect(wrapper.findAll(".todo-column")).toHaveLength(2);
       const row = wrapper.get(".todo-item").element;
       const mutations: MutationRecord[] = [];
@@ -143,6 +145,10 @@ describe("TodoPanel", () => {
       await nextTick();
       expect(wrapper.findAll(".todo-column")).toHaveLength(3);
       observer.disconnect();
+      measure(500);
+      await nextTick();
+      expect(wrapper.findAll(".todo-column")).toHaveLength(1);
+      expect(wrapper.get(".todo-content-scroll").classes()).not.toContain("is-multi-column");
     } finally {
       wrapper.unmount();
       globalThis.ResizeObserver = originalObserver;

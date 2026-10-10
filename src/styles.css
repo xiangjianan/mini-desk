@@ -1632,7 +1632,7 @@ button.quick-button {
   align-items: center;
 }
 
-/* One scroll surface for focus and all reminder columns. */
+/* Single-column reminders share one scroll surface. */
 .todo-content-scroll {
   flex: 1 1 auto;
   min-height: 0;
@@ -1648,10 +1648,24 @@ button.quick-button {
   overflow: visible;
 }
 
+/* In multi-column mode the grid fills the available height; each column scrolls. */
+.todo-content-scroll.is-multi-column {
+  display: flex;
+  flex-direction: column;
+  overflow: hidden;
+}
+
+.todo-content-scroll.is-multi-column > .today-focus-section {
+  max-height: 25vh;
+  overflow-y: auto;
+}
+
 /* Explicit columns preserve list placement while each list grows with content. */
 .todo-sections.is-multi-column {
   display: grid;
-  align-items: start;
+  flex: 1 1 0;
+  grid-template-rows: minmax(0, 1fr);
+  overflow: hidden;
   column-gap: 10px;
 }
 
@@ -1662,6 +1676,10 @@ button.quick-button {
 }
 
 .todo-sections.is-multi-column .todo-column {
+  min-height: 0;
+  overflow-y: auto;
+  overflow-x: hidden;
+  scroll-padding-top: 53px;
   row-gap: 8px;
 }
 

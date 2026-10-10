@@ -1750,7 +1750,7 @@ function buildTodoListEntries(period: TodoListId, todos: TodoItem[], deferredDon
           @click.stop="openCreateListDialog($event.currentTarget as HTMLElement)"><NIcon :component="AddOutline" /></button>
       </div>
     </div>
-    <div class="todo-content-scroll">
+    <div class="todo-content-scroll" :class="{ 'is-multi-column': columnCount > 1 }">
     <Transition name="todo-focus-reveal" :duration="180">
       <section v-if="todayFocus.length" class="today-focus-section" :aria-label="uiText.todo.todayFocus">
         <div class="today-focus-heading" @contextmenu="openTodayFocusTitleMenu">
