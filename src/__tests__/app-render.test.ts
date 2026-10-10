@@ -6572,6 +6572,7 @@ describe("App shell", () => {
     const wrapper = mountApp();
 
     try {
+      document.dispatchEvent(new MouseEvent("pointerdown", { clientX: 300, clientY: 300, bubbles: true }));
       const settings = wrapper.getComponent(SettingsMenu);
       settings.vm.$emit("import", settings.element as HTMLElement);
       const input = wrapper.get('input[type="file"]').element as HTMLInputElement;
@@ -6597,6 +6598,7 @@ describe("App shell", () => {
       await vi.advanceTimersByTimeAsync(200);
       await wrapper.vm.$nextTick();
 
+      expect(wrapper.getComponent(CompanionBubble).props("position")).toBeUndefined();
       // 无同名冲突也走「新增」二次确认：点确认后 finishImport 落盘并迁移内联载荷。
       expect(wrapper.get('[data-testid="companion-yes"]').text()).toBe("新增");
       await wrapper.get('[data-testid="companion-yes"]').trigger("click");
@@ -6999,6 +7001,7 @@ describe("App shell", () => {
     const wrapper = mountApp();
 
     try {
+      document.dispatchEvent(new MouseEvent("pointerdown", { clientX: 300, clientY: 300, bubbles: true }));
       const settings = wrapper.getComponent(SettingsMenu);
       settings.vm.$emit("import", settings.element as HTMLElement);
       const input = wrapper.get('input[type="file"]').element as HTMLInputElement;
@@ -7014,6 +7017,7 @@ describe("App shell", () => {
       await vi.advanceTimersByTimeAsync(200);
       await wrapper.vm.$nextTick();
 
+      expect(wrapper.getComponent(CompanionBubble).props("position")).toBeUndefined();
       // Conflict prompt: overwrite / add-new / cancel, with the colliding name surfaced.
       // The bubble text is picked at random from several variants — the regex
       // must match every one of them (该空间名称已存在 has neither 同名 nor 冲突).

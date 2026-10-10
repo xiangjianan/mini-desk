@@ -241,7 +241,7 @@ export function useCompanionBubble(deps: CompanionBubbleDeps) {
     anchor: HTMLElement | undefined,
     onConfirm: () => void | Promise<void>,
     onCancel?: () => void,
-    options: { confirmText?: string; cancelText?: string; danger?: boolean; confirmHint?: string; secondaryText?: string; onSecondary?: () => void | Promise<void>; highlightTarget?: HTMLElement | HTMLElement[] | null } = {},
+    options: { confirmText?: string; cancelText?: string; danger?: boolean; confirmHint?: string; secondaryText?: string; onSecondary?: () => void | Promise<void>; position?: "toast"; highlightTarget?: HTMLElement | HTMLElement[] | null } = {},
   ): void {
     if (deps.isBoardBlocked()) return;
     window.clearTimeout(bubbleTimer.value);
@@ -272,7 +272,7 @@ export function useCompanionBubble(deps: CompanionBubbleDeps) {
     };
     bubbleVisible.value = true;
     companionFocused.value = true;
-    companionPosition.value = getConfirmPosition();
+    companionPosition.value = options.position === "toast" ? getToastPosition() : getConfirmPosition();
     setConfirmHighlight(options.highlightTarget === null ? null : options.highlightTarget ?? anchor ?? null);
   }
 

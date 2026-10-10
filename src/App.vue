@@ -3182,6 +3182,7 @@ async function importData(event: Event): Promise<void> {
         () => overwriteConflictWorkspace(conflictTarget.id),
         cancelImport,
         {
+          position: "toast",
           confirmText: uiText.value.common.overwrite,
           cancelText: uiText.value.common.cancel,
           danger: true,
@@ -3200,7 +3201,7 @@ async function importData(event: Event): Promise<void> {
       importFeedbackAnchor.value,
       addAsNewWorkspace,
       cancelImport,
-      { confirmText: uiText.value.common.add, cancelText: uiText.value.common.cancel, highlightTarget: null },
+      { position: "toast", confirmText: uiText.value.common.add, cancelText: uiText.value.common.cancel, highlightTarget: null },
     );
     return;
   }
