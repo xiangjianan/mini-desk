@@ -7925,3 +7925,9 @@ body:has(.image-preview) .n-modal-container:has(.focus-now-modal) .n-modal-mask 
     font-size: 20px;
   }
 }
+
+/* Reminder rows have a fixed height; skip offscreen row content during layout. */
+.todo-section.is-compact .todo-item {
+  content-visibility: auto;
+  contain-intrinsic-block-size: auto 42px;
+}

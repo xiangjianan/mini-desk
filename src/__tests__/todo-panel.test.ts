@@ -169,6 +169,46 @@ describe("TodoPanel", () => {
     }
   });
 
+  it("skips row position measurements when 32 lists of 30 reminders are redistributed", async () => {
+    let notifyResize: ResizeObserverCallback | undefined;
+    const originalObserver = globalThis.ResizeObserver;
+    globalThis.ResizeObserver = class {
+      constructor(callback: ResizeObserverCallback) { notifyResize = callback; }
+      observe() {}
+      unobserve() {}
+      disconnect() {}
+    } as unknown as typeof ResizeObserver;
+    const lists = Array.from({ length: 32 }, (_, index) => ({ id: `list-${index}`, title: `List ${index}`, column: 0, collapsed: false, compact: true }));
+    const todos = Object.fromEntries(lists.map((list) => [list.id, Array.from({ length: 30 }, (_, index) => ({ id: `${list.id}-${index}`, text: `Reminder ${index}`, done: false }))]));
+    const wrapper = mount(TodoPanel, { props: { todoLists: lists, todos, titles: DEFAULT_TITLES } });
+    let rowReads = 0;
+    const originalRect = HTMLElement.prototype.getBoundingClientRect;
+    const rectSpy = vi.spyOn(HTMLElement.prototype, "getBoundingClientRect").mockImplementation(function (this: HTMLElement) {
+      if (this.classList.contains("todo-item")) rowReads++;
+      return originalRect.call(this);
+    });
+    try {
+      await nextTick();
+      const inputs = wrapper.findAll(".todo-input").map((input) => input.element);
+      rowReads = 0;
+      notifyResize!([{ contentRect: { width: 700 } } as ResizeObserverEntry], {} as ResizeObserver);
+      await nextTick();
+      await wrapper.setProps({ todoLists: lists.map((list, index) => ({ ...list, column: index < 16 ? 0 : 1 })) });
+      await nextTick();
+      expect(wrapper.findAll(".todo-column")).toHaveLength(2);
+      expect(wrapper.findAll(".todo-input").map((input) => input.element)).toEqual(inputs);
+      expect(rowReads).toBe(0);
+      // Memo invalidation must also catch edits made in place after a layout change.
+      todos["list-0"][0].text = "Updated reminder";
+      await wrapper.setProps({ todos: { ...todos } });
+      expect((wrapper.get('.todo-section[data-list-id="list-0"] .todo-input').element as HTMLInputElement).value).toBe("Updated reminder");
+    } finally {
+      rectSpy.mockRestore();
+      wrapper.unmount();
+      globalThis.ResizeObserver = originalObserver;
+    }
+  });
+
   it("suppresses update emits during IME composition and emits the committed text", async () => {
     const wrapper = mount(TodoPanel, {
       props: {

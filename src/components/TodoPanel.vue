@@ -307,9 +307,25 @@ const deadlineClockTimer = ref<number | undefined>();
 const resettingNotifyTimeColumns = new WeakSet<HTMLElement>();
 const centeringTimeColumns = new Map<HTMLElement, number>();
 
+// Layout metadata (column/title/collapse) must not invalidate reminder content.
+const contentTodoLists = computed<{ id: TodoListId }[]>((previous) => {
+  const next = effectiveTodoLists.value.map(({ id }) => ({ id }));
+  return previous && previous.length === next.length && previous.every((list, index) => list.id === next[index].id)
+    ? previous
+    : next;
+});
+
+// Read the row fields explicitly so both immutable updates and in-place edits
+// invalidate the memo, while changing only column assignments keeps it stable.
+const todoRenderSignatures = computed(() => Object.fromEntries(
+  contentTodoLists.value.map(({ id }) => [id, getTodos(id).map((todo) =>
+    [todo.id, todo.text, todo.done, todo.starred, todo.notifyAt, todo.focusElapsedMs],
+  )]),
+));
+
 const ordered = computed(() =>
   Object.fromEntries(
-    effectiveTodoLists.value.map((list) => {
+    contentTodoLists.value.map((list) => {
       const period = list.id;
       const deferredIds = getDeferredTodoIds(period);
       return [period, getOrderedTodos(getTodos(period), deferredIds)];
@@ -319,7 +335,7 @@ const ordered = computed(() =>
 
 const periodStats = computed(() =>
   Object.fromEntries(
-    effectiveTodoLists.value.map((list) => {
+    contentTodoLists.value.map((list) => {
       const period = list.id;
       const todos = getTodos(period);
       const total = todos.length;
@@ -333,7 +349,7 @@ type TodayFocusEntry = { period: TodoListId; todo: TodoItem; index: number; defe
 type NotifyTimeLoopOption = { key: string; value: number; cycle: number; isScrollAnchor: boolean };
 
 const todayFocus = computed(() => {
-  const entries: TodayFocusEntry[] = effectiveTodoLists.value.flatMap((list) => {
+  const entries: TodayFocusEntry[] = contentTodoLists.value.flatMap((list) => {
     const deferredIds = getDeferredTodoIds(list.id);
     return (ordered.value[list.id] ?? [])
       .filter((todo) => todo.starred && (!todo.done || isCompletedVisible(list.id) || deferredIds.has(todo.id)))
@@ -356,7 +372,7 @@ const notifyPickerStyle = computed(() => {
 const notifyDisplays = computed(() => {
   const displays = new Map<TodoItem, NotifyDisplay>();
   const now = deadlineNow.value;
-  effectiveTodoLists.value.forEach((list) => {
+  contentTodoLists.value.forEach((list) => {
     getTodos(list.id).forEach((todo) => {
       const display = getNotifyDisplay(todo.notifyAt, now, props.language);
       if (display) displays.set(todo, display);
@@ -367,7 +383,7 @@ const notifyDisplays = computed(() => {
 
 const visibleOrdered = computed(() =>
   Object.fromEntries(
-    effectiveTodoLists.value.map((list) => {
+    contentTodoLists.value.map((list) => {
       const period = list.id;
       const deferredIds = getDeferredTodoIds(period);
       return [
@@ -386,7 +402,7 @@ type TodoListEntry =
 
 const listEntries = computed(() =>
   Object.fromEntries(
-    effectiveTodoLists.value.map((list) => {
+    contentTodoLists.value.map((list) => {
       const period = list.id;
       return [period, buildTodoListEntries(period, visibleOrdered.value[period] ?? [], getDeferredTodoIds(period))];
     }),
@@ -1965,7 +1981,10 @@ function buildTodoListEntries(period: TodoListId, todos: TodoItem[], deferredDon
           :inert="list.collapsed"
           @click="handleListClick($event, list.id)"
         >
-          <div class="todo-list-scrollbar">
+          <div
+            class="todo-list-scrollbar"
+            v-memo="[listEntries[list.id], todoRenderSignatures[list.id], notifyDisplays, editingTodoKey, selectedMenuTodoKey, dragged, notificationFlashKeys.join('|'), uiText]"
+          >
           <TransitionGroup
             name="todo-move"
             tag="ul"
