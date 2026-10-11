@@ -2857,7 +2857,11 @@ function removeTodo(period: TodoPeriod, id: string, anchor?: HTMLElement): void 
   if (!isConfiguredTodoListId(period)) return;
   requestConfirmation("confirmDeleteTodo", anchor, () => {
     deleteTodoNow(period, id, anchor);
-  }, undefined, { confirmText: uiText.value.common.delete, cancelText: uiText.value.common.cancel });
+  }, undefined, {
+    confirmText: uiText.value.common.delete,
+    cancelText: uiText.value.common.cancel,
+    highlightTarget: anchor?.closest<HTMLElement>(".todo-item, .today-focus-item") ?? anchor,
+  });
 }
 
 function clearDone(period: TodoPeriod, anchor?: HTMLElement): void {

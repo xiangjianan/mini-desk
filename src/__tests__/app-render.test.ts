@@ -2184,7 +2184,7 @@ describe("App shell", () => {
     }
   });
 
-  it("highlights the todo row pending deletion and clears the highlight on cancel", async () => {
+  it.each(["row", "text"])("highlights the whole todo row pending deletion from its %s menu and clears it on cancel", async (target) => {
     vi.useFakeTimers();
     vi.spyOn(Math, "random").mockReturnValue(0);
     localStorage.setItem(
@@ -2198,12 +2198,13 @@ describe("App shell", () => {
 
     try {
       const rows = wrapper.findAll(".todo-item");
-      await rows[0].trigger("contextmenu");
+      await (target === "text" ? rows[0].get(".todo-input") : rows[0]).trigger("contextmenu");
       await wrapper.findAll(".dropdown-option").find((option) => option.text() === "删除")?.trigger("click");
       await wrapper.vm.$nextTick();
 
       // 确认框在场时：被删的那一行高亮，其余行不高亮。
       expect(rows[0].attributes("data-confirm-target")).toBeDefined();
+      expect(rows[0].get(".todo-input").attributes("data-confirm-target")).toBeUndefined();
       expect(rows[1].attributes("data-confirm-target")).toBeUndefined();
       expect(rows[2].attributes("data-confirm-target")).toBeUndefined();
 
