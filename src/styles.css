@@ -33,7 +33,7 @@
   --input: #ffffff;
   --button: #ffffff;
   --button-hover: color-mix(in srgb, #ffffff 88%, var(--primary) 12%);
-  /* 快捷按钮使用热度染色的基准色：mix 起点 1%、上限（浅色 18%/深色 24%）见下方
+  /* 快捷按钮使用热度染色的基准色：mix 起点 3%、上限（浅色 18%/深色 24%）见下方
      .quick-buttons .quick-button.has-usage 规则族；折算见 src/state/quickButtons.ts quickButtonUsagePercent。 */
   --quick-usage-accent: #3b82f6;
   --danger: #b42318;
@@ -5517,26 +5517,26 @@ button.quick-button {
   background: var(--button-hover);
 }
 
-/* Every button starts with a 1% accent mix, including unused buttons.
+/* Every button starts with a 3% accent mix, including unused buttons.
    Clicks reach an 18% mix in light / 24% in dark at 100 clicks.
    Keep the usage selector above the desktop button base in specificity. */
 .quick-buttons .quick-button.has-usage {
-  background: color-mix(in srgb, var(--quick-usage-accent) calc(1% + var(--button-usage) * 0.17), var(--button));
+  background: color-mix(in srgb, var(--quick-usage-accent) calc(3% + var(--button-usage) * 0.15), var(--button));
 }
 
 html[data-theme="dark"] .quick-buttons .quick-button.has-usage {
-  background: color-mix(in srgb, var(--quick-usage-accent) calc(1% + var(--button-usage) * 0.23), var(--button));
+  background: color-mix(in srgb, var(--quick-usage-accent) calc(3% + var(--button-usage) * 0.21), var(--button));
 }
 
 /* Hover and keyboard focus deepen the same hue. */
 .quick-buttons .quick-button.has-usage:hover,
 .quick-buttons .quick-button.has-usage:focus-visible {
-  background: color-mix(in srgb, var(--quick-usage-accent) calc(min(var(--button-usage) * 0.17 + 13%, 30%)), var(--button)) !important;
+  background: color-mix(in srgb, var(--quick-usage-accent) calc(min(var(--button-usage) * 0.15 + 15%, 30%)), var(--button)) !important;
 }
 
 html[data-theme="dark"] .quick-buttons .quick-button.has-usage:hover,
 html[data-theme="dark"] .quick-buttons .quick-button.has-usage:focus-visible {
-  background: color-mix(in srgb, var(--quick-usage-accent) calc(min(var(--button-usage) * 0.23 + 15%, 38%)), var(--button)) !important;
+  background: color-mix(in srgb, var(--quick-usage-accent) calc(min(var(--button-usage) * 0.21 + 17%, 38%)), var(--button)) !important;
 }
 
 /* Animate tag groups sliding into place when the tag list is reordered. */
