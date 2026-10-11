@@ -8,6 +8,7 @@
   --desk-group-gap: 16px;
   --desk-group-top: 16px;
   --desk-group-scroll-gutter: 12px;
+  --desk-group-content: color-mix(in srgb, var(--card) 72%, var(--muted-surface));
   --desk-group-surface: color-mix(in srgb, var(--card) 34%, var(--muted-surface));
   --desk-edge: color-mix(in srgb, var(--line-section) 65%, transparent);
   --desk-control-shadow: 0 1px 2px color-mix(in srgb, var(--foreground) 5%, transparent);
@@ -127,8 +128,9 @@ html[data-theme="dark"] .workbench-shell,
 /* 右侧 12px 让位给悬浮滚动条（NScrollbar 轨道压在内容上缘，滚动时不再盖住按钮/计数）。 */
 .workbench-shell .quick-tag-groups { gap: var(--desk-group-gap); padding: var(--desk-group-top) var(--desk-group-scroll-gutter) 16px 0; }
 .workbench-shell .quick-tag-column { gap: var(--desk-group-gap); }
-.workbench-shell .quick-tag-content > .quick-buttons { padding-block: 0; }
-.workbench-shell .quick-tag-heading + .quick-tag-content { margin-top: 8px; }
+.workbench-shell .quick-tag-content > .quick-buttons { padding: 8px; }
+.workbench-shell .quick-tag-content.is-collapsed > .quick-buttons { padding-block: 0; }
+.workbench-shell .quick-tag-heading + .quick-tag-content { margin-top: 0; }
 .workbench-shell .quick-tag-heading + .quick-tag-content.is-collapsed { margin-top: 0; }
 .workbench-shell .quick-tag-heading { min-height: 32px; padding: 0 0 8px; }
 .workbench-shell .quick-tag-title { font-weight: 600; }
@@ -212,6 +214,21 @@ html[data-theme="dark"] .workbench-shell,
 }
 .workbench-shell .todo-sections.is-multi-column .todo-column { gap: var(--desk-group-gap); }
 .workbench-shell .todo-section { border-bottom: 0; margin-bottom: 0; }
+/* One rounded group: a stronger title surface joins a lighter content surface. */
+.workbench-shell .todo-section,
+.workbench-shell .quick-tag-group {
+  border-radius: 8px;
+  background: var(--desk-group-content);
+}
+.workbench-shell .todo-list-shell,
+.workbench-shell .quick-tag-content { border-radius: 0 0 8px 8px; }
+.workbench-shell .todo-list { padding: 8px; }
+.workbench-shell .todo-section.is-collapsed > .todo-heading,
+.workbench-shell .quick-tag-group:has(> .quick-tag-content.is-collapsed) > .quick-tag-heading {
+  border-radius: 8px;
+}
+.workbench-shell .quick-tag-group:has(> .quick-tag-content.is-collapsed) { background: transparent; }
+
 .workbench-shell .todo-heading h3 { font-size: 14px; }
 .workbench-shell .todo-heading-actions { gap: 0; align-items: center; }
 .workbench-shell .todo-heading-actions > .icon-button {
@@ -256,7 +273,7 @@ html[data-theme="dark"] .workbench-shell,
 .workbench-shell button.space-tab {
   height: 32px;
   min-height: 32px;
-  border-radius: 8px 8px 0 0;
+  border-radius: 8px;
   background: var(--desk-group-surface);
   box-shadow: none;
   padding-inline: 12px;
@@ -267,7 +284,7 @@ html[data-theme="dark"] .workbench-shell,
   box-shadow: none;
 }
 .workbench-shell button.space-tab:hover { background: var(--secondary); }
-.workbench-shell .space-tab-edit-shell { height: 32px; min-height: 32px; border-radius: 8px 8px 0 0; background: var(--desk-group-surface); }
+.workbench-shell .space-tab-edit-shell { height: 32px; min-height: 32px; border-radius: 8px; background: var(--desk-group-surface); }
 .workbench-shell .space-tab-edit-input,
 .workbench-shell .space-tab-edit-measure { height: 32px; min-height: 32px; }
 .workbench-shell .text-editor-textarea,
