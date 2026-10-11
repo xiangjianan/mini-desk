@@ -624,6 +624,13 @@ function handleToggleShowHidden(anchor?: HTMLElement): void {
   if (anchor) emit("guide", "toggleHiddenQuick", anchor);
 }
 
+function handleQuickButtonDragStart(event: DragEvent, button: QuickButton): void {
+  draggingId.value = button.id;
+  if (!event.dataTransfer) return;
+  event.dataTransfer.effectAllowed = "copyMove";
+  event.dataTransfer.setData("application/x-quick-text", button.value);
+}
+
 function handleQuickDragOver(event: DragEvent): void {
   const types = Array.from(event.dataTransfer?.types ?? []);
   const hasText = types.includes("text/plain") || types.includes("text/uri-list") || types.includes("application/x-todo-text");
@@ -633,6 +640,7 @@ function handleQuickDragOver(event: DragEvent): void {
     dragHoverGroupId.value = (event.target as HTMLElement | null)?.closest<HTMLElement>(".quick-tag-group")?.dataset.tagId ?? QUICK_BUTTON_OTHER_GROUP_ID;
   }
   if (draggingId.value || draggingTagId.value) {
+    if (event.dataTransfer) event.dataTransfer.dropEffect = "move";
     dragScroll.update(findDragScrollContainer(event.target, "quick-buttons-scrollbar"), event.clientY);
   }
 }
@@ -1072,7 +1080,7 @@ function handleQuickGroupDrop(event: DragEvent, groupId: string): void {
                 draggable="true"
                 @click="emit('copy', button.id, $event.currentTarget as HTMLElement)"
                 @contextmenu.stop="openMenu($event, button.id)"
-                @dragstart="draggingId = button.id"
+                @dragstart="handleQuickButtonDragStart($event, button)"
                 @dragover.prevent
                 @drop.stop.prevent="handleQuickButtonDrop($event, button.id, group.id)"
                 @dragend="draggingId = null"

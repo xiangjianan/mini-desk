@@ -528,12 +528,15 @@ function openTitleMenu(event: MouseEvent): void {
   titleRef.value?.openMenuAt(event.clientX, event.clientY, event);
 }
 
+function acceptsTextDrag(event: DragEvent): boolean {
+  const types = Array.from(event.dataTransfer?.types ?? []);
+  return !types.includes("Files") && ["text/plain", "text/uri-list", "application/x-todo-text", "application/x-quick-text"]
+    .some((type) => types.includes(type));
+}
+
 function handleDragEnter(event: DragEvent): void {
   if (isLocalDrag.value) return;
-  const types = Array.from(event.dataTransfer?.types ?? []);
-  if (types.includes("text/plain") && !types.includes("Files")) {
-    isDragHover.value = true;
-  }
+  if (acceptsTextDrag(event)) isDragHover.value = true;
 }
 
 function handleDragLeaveClear(): void {
@@ -573,9 +576,9 @@ function handleDragOver(event: DragEvent): void {
     if (event.dataTransfer) event.dataTransfer.dropEffect = "none";
     return;
   }
-  const types = Array.from(event.dataTransfer?.types ?? []);
-  if (types.includes("text/plain") || types.includes("text/uri-list")) {
+  if (acceptsTextDrag(event)) {
     event.preventDefault();
+    if (event.dataTransfer) event.dataTransfer.dropEffect = "copy";
     isDragHover.value = true;
   }
 }
@@ -622,7 +625,10 @@ function handleExternalTextDrop(event: DragEvent): void {
   if (wasLocal) return;
   const files = Array.from(event.dataTransfer?.files ?? []);
   if (files.length > 0) return;
-  const dropped = event.dataTransfer?.getData("text/plain") ?? "";
+  const transfer = event.dataTransfer;
+  const dropped = ["application/x-todo-text", "application/x-quick-text", "text/plain"]
+    .map((type) => transfer?.getData(type) ?? "")
+    .find((text) => text.trim()) ?? "";
   if (!dropped.trim()) return;
   event.preventDefault();
   event.stopPropagation();

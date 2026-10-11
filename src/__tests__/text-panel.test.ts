@@ -1380,6 +1380,25 @@ describe("TextPanel", () => {
     expect(textarea.selectionEnd).toBe(textarea.value.length);
   });
 
+  it.each(["application/x-todo-text", "application/x-quick-text"])("highlights the notebook and copies dropped internal text (%s)", async (type) => {
+    const wrapper = mount(TextPanel, {
+      props: { titleId: "note-title", title: "记事本", lines: [] },
+    });
+    const dataTransfer = {
+      types: [type], files: [], dropEffect: "none",
+      getData: (requested: string) => requested === type ? "拖入的内容" : "",
+    };
+    await wrapper.get(".text-panel").trigger("dragenter", { dataTransfer });
+    expect(wrapper.get(".text-panel").classes()).toContain("drag-hover");
+    await wrapper.get(".text-editor-frame").trigger("dragover", { dataTransfer });
+    expect(dataTransfer.dropEffect).toBe("copy");
+    await wrapper.get(".text-editor-frame").trigger("drop", { dataTransfer });
+    expect(wrapper.get("textarea").element.value).toBe("拖入的内容");
+    expect(wrapper.get(".text-panel").classes()).not.toContain("drag-hover");
+    expect(wrapper.emitted("update")).toBeTruthy();
+    wrapper.unmount();
+  });
+
   it("places selected workspace text on the drag payload for reminders", async () => {
     const setData = vi.fn();
     const wrapper = mount(TextPanel, {

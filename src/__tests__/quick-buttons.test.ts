@@ -815,6 +815,19 @@ describe("QuickButtons", () => {
     wrapper.unmount();
   });
 
+  it("exports quick action content for copying to the notebook while retaining internal moves", async () => {
+    const wrapper = mountQuickButtons({
+      buttons: [{ id: "a", title: "标题", value: "按钮实际内容", type: "text", hidden: false }],
+    });
+    const dataTransfer = { effectAllowed: "", dropEffect: "", setData: vi.fn(), types: ["application/x-quick-text"] };
+    await wrapper.get(".quick-button").trigger("dragstart", { dataTransfer });
+    expect(dataTransfer.effectAllowed).toBe("copyMove");
+    expect(dataTransfer.setData).toHaveBeenCalledWith("application/x-quick-text", "按钮实际内容");
+    await wrapper.get(".quick-block").trigger("dragover", { dataTransfer });
+    expect(dataTransfer.dropEffect).toBe("move");
+    wrapper.unmount();
+  });
+
   it.each(["area", "group", "button"])("copies a reminder into a quick action when dropped on the %s", async (target) => {
     const wrapper = mountQuickButtons({
       tags: [{ id: "tag-work", title: "工作" }],
