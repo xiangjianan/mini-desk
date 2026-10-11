@@ -1330,7 +1330,8 @@ describe("TextPanel", () => {
     await wrapper.get(".text-editor-frame").element.dispatchEvent(event);
 
     expect(wrapper.emitted("update")?.at(-1)?.[0]).toEqual([
-      { text: "已有内容新增 A", indent: 0 },
+      { text: "已有内容", indent: 0 },
+      { text: "新增 A", indent: 0 },
       { text: "新增 B", indent: 0 },
     ]);
   });
@@ -1353,7 +1354,7 @@ describe("TextPanel", () => {
 
     await wrapper.get(".text-editor-frame").element.dispatchEvent(event);
 
-    expect(wrapper.get("textarea").element.value).toBe("已有内容    新增 A  ");
+    expect(wrapper.get("textarea").element.value).toBe("已有内容  \n  新增 A  ");
   });
 
   it("moves the caret to the end after external text is dropped", async () => {
@@ -1380,7 +1381,7 @@ describe("TextPanel", () => {
     expect(textarea.selectionEnd).toBe(textarea.value.length);
   });
 
-  it.each(["application/x-todo-text", "application/x-quick-text"])("highlights the notebook and copies dropped internal text (%s)", async (type) => {
+  it.each(["application/x-todo-text", "application/x-quick-text", "text/plain"])("highlights the notebook and appends dropped text (%s)", async (type) => {
     const wrapper = mount(TextPanel, {
       props: { titleId: "note-title", title: "记事本", lines: [{ text: "第一行", indent: 0 }, { text: "最后一行", indent: 0 }] },
     });

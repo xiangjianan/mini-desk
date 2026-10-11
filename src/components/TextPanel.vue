@@ -636,16 +636,13 @@ function handleExternalTextDrop(event: DragEvent): void {
   const textarea = textareaRef.value;
   if (textarea && !editing.value) startEditingFromTextarea(textarea);
   const current = text.value;
-  const offset = internalText ? current.length : textarea ? getTextOffsetAtPoint(textarea, event.clientX, event.clientY) : current.length;
-  const inserted = internalText && current && !current.endsWith("\n") ? `\n${dropped}` : dropped;
-  const before = current.slice(0, offset);
-  const after = current.slice(offset);
-  const next = before + inserted + after;
+  const inserted = current && !current.endsWith("\n") ? `\n${dropped}` : dropped;
+  const next = current + inserted;
   applyEditorText(next);
   if (textarea) {
-    const cursorPos = offset + inserted.length;
+    const cursorPos = next.length;
     textarea.setSelectionRange(cursorPos, cursorPos);
-    if (internalText) void nextTick(() => { textarea.scrollTop = textarea.scrollHeight; });
+    void nextTick(() => { textarea.scrollTop = textarea.scrollHeight; });
   }
   emit("update", linesFromEditorState(text.value, editorMarks.value));
 }
