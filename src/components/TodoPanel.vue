@@ -922,9 +922,9 @@ function openMenu(event: MouseEvent, period: TodoPeriod, id: string): void {
   event.stopPropagation();
   selectedMenuTodoKey.value = todoKey(period, id);
   exclusiveMenu.notifyOpen(event, { replacingExistingMenu: Boolean(menu.value) });
-  const focused = document.activeElement;
+  const focused = (event.currentTarget as HTMLElement).querySelector<HTMLInputElement>("input.todo-input");
   const todo = getTodoById(period, id);
-  if (todo && focused instanceof HTMLInputElement && (event.currentTarget as HTMLElement).contains(focused)) {
+  if (todo && focused && isTodoEditable(period, todo)) {
     const range = getSelectionRange(focused);
     menu.value = { x: event.clientX, y: event.clientY, period, id, anchor: focused, target: focused, pasteAtCaret: true, selection: { ...range, text: focused.value.slice(range.start, range.end), baseline: todo.text } };
   } else {
@@ -938,7 +938,7 @@ function openTodoTextMenu(event: MouseEvent, period: TodoPeriod, todo: TodoItem)
   event.stopPropagation();
   selectedMenuTodoKey.value = todoKey(period, todo.id);
   exclusiveMenu.notifyOpen(event, { replacingExistingMenu: Boolean(menu.value) });
-  const pasteAtCaret = document.activeElement === target;
+  const pasteAtCaret = isTodoEditable(period, todo);
   const range = pasteAtCaret ? getSelectionRange(target) : getTodoSelectionRange(period, todo.id, target);
   menu.value = {
     x: event.clientX,

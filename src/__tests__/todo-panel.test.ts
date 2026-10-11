@@ -3572,7 +3572,7 @@ describe("TodoPanel", () => {
     });
     const inputWrapper = wrapper.get("input.todo-input");
     const input = inputWrapper.element as HTMLInputElement;
-    input.focus();
+    await inputWrapper.trigger("click");
     input.setSelectionRange(start, end);
     await inputWrapper.trigger("contextmenu");
     input.blur(); // Choosing a menu item must keep the range captured while editing.
@@ -3580,6 +3580,25 @@ describe("TodoPanel", () => {
     await flushPromises();
     expect(wrapper.emitted("update")?.at(-1)).toEqual(["morning", "a", expected]);
     expect(wrapper.emitted("createFromText")).toBeUndefined();
+    wrapper.unmount();
+  });
+
+  it("creates reminders when an input has focus but has not entered editing mode", async () => {
+    Object.assign(navigator, { clipboard: { readText: vi.fn().mockResolvedValue("新增"), writeText: vi.fn() } });
+    const wrapper = mount(TodoPanel, {
+      attachTo: document.body,
+      props: { todos: { morning: [{ id: "a", text: "第一项", done: false }], noon: [], evening: [] }, titles: DEFAULT_TITLES },
+      global: { stubs: { Dropdown: dropdownStub, NDropdown: dropdownStub, NTooltip: tooltipStub } },
+    });
+    const inputWrapper = wrapper.get("input.todo-input");
+    const input = inputWrapper.element as HTMLInputElement;
+    input.focus();
+    expect(input.readOnly).toBe(true);
+    await inputWrapper.trigger("contextmenu");
+    await wrapper.findAll(".dropdown-option").find(option => option.text() === "粘贴")!.trigger("click");
+    await flushPromises();
+    expect(wrapper.emitted("createFromText")?.at(-1)).toEqual(["morning", ["新增"], "a"]);
+    expect(wrapper.emitted("update")).toBeUndefined();
     wrapper.unmount();
   });
 
@@ -3592,7 +3611,7 @@ describe("TodoPanel", () => {
     });
     const inputWrapper = wrapper.get("input.todo-input");
     const input = inputWrapper.element as HTMLInputElement;
-    input.focus();
+    await inputWrapper.trigger("click");
     input.setSelectionRange(1, 2);
     input.blur();
     await inputWrapper.trigger("contextmenu");
