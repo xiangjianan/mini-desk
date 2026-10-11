@@ -720,24 +720,25 @@ describe("Naive UI component usage", () => {
     expect(styles).toMatch(/\.todo-star-button\.is-starred\s*\{[^}]*pointer-events: auto/s);
   });
 
-  it("draws selected reminder borders inside the row so every edge stays visible", () => {
+  it("highlights the context-selected reminder row with a blue overlay that yields to confirm targets", () => {
     const styles = read("src/styles.css");
     const selectedRule =
-      styles.match(/\.today-focus-item\.is-menu-selected,[\s\S]*?\.todo-item\.is-menu-selected\s*\{(?<body>[^}]*)\}/)
-        ?.groups?.body ?? "";
-    const selectedBorderRule =
+      styles.match(
+        /\.today-focus-item\.is-menu-selected:not\(\[data-confirm-target\]\),[\s\S]*?\.todo-item\.is-menu-selected:not\(\[data-confirm-target\]\)\s*\{(?<body>[^}]*)\}/
+      )?.groups?.body ?? "";
+    const selectedBeforeRule =
       styles.match(
         /\.today-focus-item\.is-menu-selected::before,[\s\S]*?\.todo-item\.is-menu-selected::before\s*\{(?<body>[^}]*)\}/
       )?.groups?.body ?? "";
 
-    expect(selectedRule).toContain("background: transparent");
-    expect(selectedBorderRule).toContain("top: 0");
-    expect(selectedBorderRule).toContain("right: 6px");
-    expect(selectedBorderRule).toContain("bottom: 0");
-    expect(selectedBorderRule).toContain("left: 6px");
-    expect(selectedBorderRule).toContain("border: 1px solid var(--line-focus)");
-    expect(selectedBorderRule).toContain("pointer-events: none");
-    expect(selectedBorderRule).toContain("z-index: 3");
+    // 蓝色半透明高亮叠底：background-image 不覆盖元素自身底色，深浅主题通用。
+    expect(selectedRule).toContain("background-image: linear-gradient(");
+    expect(selectedRule).toContain("color-mix(in srgb, var(--primary) 14%, transparent)");
+    expect(selectedRule).toContain("!important");
+    // 旧的 inset 描边已废弃：::before 不再产出任何覆盖层。
+    expect(selectedBeforeRule).toContain("content: none");
+    // 二次确认的浅红高亮要能盖过菜单选中蓝底，靠 :not([data-confirm-target]) 守卫。
+    expect(styles).toMatch(/\[data-confirm-target\]\s*\{[^}]*var\(--danger\) 14%, transparent/s);
   });
 
   it("uses click editing for area text and reminders while titles keep double-click editing", () => {
