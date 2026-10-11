@@ -29,6 +29,26 @@ export interface ChangelogEntry {
 
 export const CHANGELOG: ChangelogEntry[] = [
     {
+      version: "1.0.210",
+      date: "2026-10-12",
+      notes: {
+        zh: [
+          "新功能：提醒事项可拖到快捷动作区一键生成快捷按钮——拖到具体标签组自动归组，拖到空白区落「其他」",
+          "新功能：提醒与快捷动作的文本可拖入记事本追加（内部拖拽换行续写），拖放目标带底色与预览提示",
+          "优化：提醒列表高度全程平滑动画——行淡出保持占位，内容增减、清空收展与空列表展开不再跳变；快捷动作增删、工作区列表拖拽排序同步补齐动画",
+          "修复：记事本拆行保留行内格式、多行减少缩进保留前续列表格式（覆盖一轮编辑边角审计确认的问题）",
+          "优化：窗口缩放容器尺寸变化时提醒列宽自动重排，新建列表更轻量",
+        ],
+        en: [
+          "New: drag a reminder onto the quick-action area to create a quick button from its text — dropping on a tag group files it there, dropping on empty space lands in \"Other\"",
+          "New: reminder and quick-action text can be dragged into the notebook to append (internal drags continue on a new line), with tinted drop targets and a drag preview",
+          "Improved: reminder list heights animate throughout — fading rows keep their space, and content changes, clears, and empty-list expansion no longer jump; quick-action add/remove and workspace list reordering gained matching animations",
+          "Fixed: notebook line splits keep inline formatting, and outdenting multiple lines preserves the preceding list format (covers a round of confirmed editing-audit findings)",
+          "Improved: reminder columns refit when the window resizes the container, and creating lists is lighter",
+        ],
+      },
+    },
+    {
       version: "1.0.209",
       date: "2026-10-11",
       notes: {
