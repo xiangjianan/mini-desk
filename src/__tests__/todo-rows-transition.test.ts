@@ -4,6 +4,33 @@ import { h } from "vue";
 import TodoRowsTransition, { createTodoLeaveHooks } from "../components/TodoRowsTransition";
 
 describe("reminder row leave layout", () => {
+  it("holds a single row height until fading ends, then grows to the taller empty placeholder", () => {
+    const list = document.createElement("ul");
+    const row = list.appendChild(document.createElement("li"));
+    let naturalHeight = 58;
+    vi.spyOn(list, "getBoundingClientRect").mockImplementation(() => ({
+      height: list.style.height ? Number.parseFloat(list.style.height) : naturalHeight,
+    }) as DOMRect);
+    const animate = vi.fn(() => ({ cancel: vi.fn(), finished: new Promise(() => {}) }) as unknown as Animation);
+    list.animate = animate;
+    const hooks = createTodoLeaveHooks();
+    hooks.beforeUpdate(list);
+    hooks.onBeforeLeave(row);
+    list.appendChild(document.createElement("li")).className = "todo-empty-hint";
+    naturalHeight = 106;
+    hooks.afterUpdate(list);
+    expect(list.getBoundingClientRect().height).toBe(58);
+    expect(animate).not.toHaveBeenCalled();
+    row.remove();
+    hooks.onAfterLeave(row);
+    expect(list.style.height).toBe("");
+    expect(animate).toHaveBeenCalledWith(
+      [{ height: "58px" }, { height: "106px" }],
+      expect.objectContaining({ duration: 220 }),
+    );
+    hooks.dispose();
+  });
+
   it("connects height measurement and expansion to memoized list updates", async () => {
     const wrapper = mount(TodoRowsTransition, {
       props: { memo: [1], tag: "ul" },

@@ -2,7 +2,7 @@ import { defineComponent, h, onBeforeUnmount, onUpdated, TransitionGroup, withMe
 import type { PropType, VNode } from "vue";
 
 export function createTodoLeaveHooks() {
-  const lists = new Map<HTMLElement, { count: number; minHeight: string }>();
+  const lists = new Map<HTMLElement, { count: number; minHeight: string; height: string }>();
   const rows = new Map<HTMLElement, { list: HTMLElement; top: string }>();
   const animations = new Map<HTMLElement, Animation>();
   const previousHeights = new Map<HTMLElement, number>();
@@ -27,6 +27,7 @@ export function createTodoLeaveHooks() {
     if (--state.count === 0) {
       const fromHeight = entry.list.getBoundingClientRect().height;
       entry.list.style.minHeight = state.minHeight;
+      entry.list.style.height = state.height;
       lists.delete(entry.list);
       const toHeight = entry.list.getBoundingClientRect().height;
       animateHeight(entry.list, fromHeight, toHeight);
@@ -58,9 +59,12 @@ export function createTodoLeaveHooks() {
         const height = previousHeights.get(list) ?? list.getBoundingClientRect().height;
         animations.get(list)?.cancel();
         animations.delete(list);
-        state = { count: 0, minHeight: list.style.minHeight };
+        state = { count: 0, minHeight: list.style.minHeight, height: list.style.height };
         lists.set(list, state);
         list.style.minHeight = `${height}px`;
+        // A single-row list can be shorter than its empty placeholder. Pin
+        // both bounds so that placeholder cannot expand it during the fade.
+        list.style.height = `${height}px`;
       }
       state.count++;
       rows.set(row, { list, top: row.style.top });
@@ -71,7 +75,10 @@ export function createTodoLeaveHooks() {
     dispose() {
       for (const animation of animations.values()) animation.cancel();
       animations.clear();
-      for (const [list, state] of lists) list.style.minHeight = state.minHeight;
+      for (const [list, state] of lists) {
+        list.style.minHeight = state.minHeight;
+        list.style.height = state.height;
+      }
       for (const [row, entry] of rows) row.style.top = entry.top;
       lists.clear();
       rows.clear();
