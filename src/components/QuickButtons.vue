@@ -1,6 +1,6 @@
 <script setup lang="ts">
 import { isGroupDropBefore } from "../utils/groupDrop";
-import { computed, h, nextTick, onMounted, onUnmounted, reactive, ref, watch } from "vue";
+import { computed, h, nextTick, onBeforeUpdate, onMounted, onUnmounted, onUpdated, reactive, ref, watch } from "vue";
 import type { Component, ComponentPublicInstance, VNode } from "vue";
 import { NButton, NCheckbox, NDropdown, NIcon, NInput, NModal, NScrollbar, NSelect } from "naive-ui";
 import { AddOutline, AppsOutline, ChevronDownOutline, ClipboardOutline, CloudUploadOutline, CopyOutline, CreateOutline, DocumentTextOutline, EyeOffOutline, EyeOutline, FlashOutline, HelpCircleOutline, LinkOutline, PricetagsOutline, ResizeOutline, SearchOutline, SwapHorizontalOutline, TrashOutline } from "@vicons/ionicons5";
@@ -162,6 +162,51 @@ const columnCount = 1;
 // Group visible groups into explicit column buckets by their pinned `column`.
 // Array order within a bucket = vertical order; 其他/空态 groups land last.
 const groupsByColumn = computed<QuickButtonGroup[][]>(() => groupQuickButtonsByColumn(groupedButtons.value, columnCount));
+
+const buttonLayoutSignature = computed(() => JSON.stringify([
+  props.compact,
+  groupedButtons.value.map((group) => [group.id, group.buttons.map((button) => [button.id, button.title])]),
+]));
+let renderedButtonLayout = buttonLayoutSignature.value;
+const quickHeights = new Map<HTMLElement, number>();
+const quickHeightAnimations = new Map<HTMLElement, Animation>();
+
+onBeforeUpdate(() => {
+  if (renderedButtonLayout === buttonLayoutSignature.value) return;
+  renderedButtonLayout = buttonLayoutSignature.value;
+  // Capture every current height before cancelling an interrupted animation.
+  for (const element of panelRef.value?.querySelectorAll<HTMLElement>(".quick-tag-groups, .quick-tag-content:not(.is-collapsed)") ?? []) {
+    quickHeights.set(element, element.getBoundingClientRect().height);
+  }
+  for (const animation of quickHeightAnimations.values()) animation.cancel();
+  quickHeightAnimations.clear();
+});
+
+onUpdated(() => {
+  // Measure all final sizes before starting animations, so a group's animation
+  // does not affect the measurement of the whole quick-actions area.
+  const changes = [...quickHeights].filter(([element]) => element.isConnected && !element.classList.contains("is-collapsed"))
+    .map(([element, from]) => ({ element, from, to: element.getBoundingClientRect().height }));
+  quickHeights.clear();
+  if (window.matchMedia?.("(prefers-reduced-motion: reduce)").matches) return;
+  for (const { element, from, to } of changes) {
+    if (Math.abs(from - to) < 0.5 || !element.animate) continue;
+    const animation = element.animate(
+      [{ height: `${from}px` }, { height: `${to}px` }],
+      { duration: 220, easing: "cubic-bezier(0.2, 0, 0, 1)" },
+    );
+    quickHeightAnimations.set(element, animation);
+    void animation.finished.catch(() => {}).then(() => {
+      if (quickHeightAnimations.get(element) === animation) quickHeightAnimations.delete(element);
+    });
+  }
+});
+
+onUnmounted(() => {
+  for (const animation of quickHeightAnimations.values()) animation.cancel();
+  quickHeightAnimations.clear();
+  quickHeights.clear();
+});
 
 function clampColumn(column: number): number {
   return Math.max(0, Math.min(column, columnCount - 1));

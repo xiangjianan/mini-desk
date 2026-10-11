@@ -1136,6 +1136,8 @@ button.image-card {
 .quick-tag-groups {
   display: flex;
   flex-direction: column;
+  min-height: 0;
+  overflow: hidden;
   gap: 3px;
   padding: 8px 0 12px;
 }
@@ -1160,11 +1162,14 @@ button.image-card {
 .quick-tag-group {
   display: flex;
   flex-direction: column;
+  flex-shrink: 0;
   gap: 0;
 }
 
 .quick-tag-content {
   display: grid;
+  min-height: 0;
+  overflow: hidden;
   grid-template-rows: 1fr;
   opacity: 1;
   transition:

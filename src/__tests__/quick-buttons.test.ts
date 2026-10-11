@@ -1566,6 +1566,38 @@ describe("QuickButtons", () => {
     wrapper.unmount();
   });
 
+  it("animates tag and area heights when adding and deleting quick buttons", async () => {
+    const a: QuickButton = { id: "a", title: "A", value: "a", type: "text", hidden: false, tagId: "work" };
+    const b: QuickButton = { ...a, id: "b", title: "B" };
+    const wrapper = mountQuickButtons({ buttons: [a], tags: [{ id: "work", title: "工作" }] });
+    const elements = [wrapper.get(".quick-tag-groups").element, wrapper.get(".quick-tag-content").element] as HTMLElement[];
+    let height = 50;
+    const cancels = elements.map(() => vi.fn());
+    const animations = elements.map((element, index) => {
+      vi.spyOn(element, "getBoundingClientRect").mockImplementation(() => ({ height }) as DOMRect);
+      const animate = vi.fn(() => ({ cancel: cancels[index], finished: new Promise(() => {}) }) as unknown as Animation);
+      element.animate = animate;
+      return animate;
+    });
+    // The rendered children determine the final size after Vue applies props.
+    for (const element of elements) {
+      vi.spyOn(element, "getBoundingClientRect").mockImplementation(() => ({
+        height: element.querySelectorAll(".quick-button").length === 2 ? 92 : height,
+      }) as DOMRect);
+    }
+    await wrapper.setProps({ buttons: [a, b] });
+    for (const animate of animations) expect(animate).toHaveBeenLastCalledWith(
+      [{ height: "50px" }, { height: "92px" }], expect.objectContaining({ duration: 220 }),
+    );
+    await wrapper.setProps({ buttons: [a] });
+    for (const animate of animations) expect(animate).toHaveBeenLastCalledWith(
+      [{ height: "92px" }, { height: "50px" }], expect.objectContaining({ duration: 220 }),
+    );
+    for (const cancel of cancels) expect(cancel).toHaveBeenCalledOnce();
+    wrapper.unmount();
+    for (const cancel of cancels) expect(cancel).toHaveBeenCalledTimes(2);
+  });
+
   it("标签头在加号左侧渲染智能粘贴按钮，点击后生成按钮落位到该标签", async () => {
     const polish = vi.fn(async () => ({ button: { title: "GitHub 主页", value: "https://github.com", type: "link" as const } }));
     const wrapper = mountQuickButtons({
