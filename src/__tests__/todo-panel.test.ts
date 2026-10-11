@@ -582,7 +582,8 @@ describe("TodoPanel", () => {
     await nextTick();
 
     expect(wrapper.emitted("createList")?.[0]).toEqual([expect.any(HTMLElement), "工作提醒"]);
-    expect(getLatestListCreateDialogElement()).toBeNull();
+    expect(wrapper.findComponent(NModal).props("show")).toBe(false);
+    wrapper.unmount();
   });
 
   it("opens the create-list dialog from the section menu button without creating immediately", async () => {
@@ -628,6 +629,49 @@ describe("TodoPanel", () => {
     await nextTick();
 
     expect(wrapper.emitted("createList")?.[0]).toEqual([expect.any(HTMLElement), "会议"]);
+    wrapper.unmount();
+  });
+
+  it("keeps the create-list form intact until its closing animation finishes", async () => {
+    const persistentModal = {
+      props: ["show"],
+      emits: ["afterLeave"],
+      template: '<section class="todo-list-create-dialog"><slot /></section>',
+    };
+    const wrapper = mount(TodoPanel, {
+      props: {
+        todoLists: defaultTodoLists,
+        todos: { morning: [], noon: [], evening: [] },
+        showCompleted: { morning: true, noon: true, evening: true },
+        titles: DEFAULT_TITLES,
+      },
+      global: {
+        stubs: {
+          Dropdown: dropdownStub,
+          NDropdown: dropdownStub,
+          NTooltip: tooltipStub,
+          Modal: persistentModal,
+          NModal: persistentModal,
+        },
+      },
+    });
+
+    await wrapper.get('.todo-section[data-list-id="morning"] .todo-section-menu-button').trigger("click");
+    await wrapper.findAll(".dropdown-option").find((option) => option.text() === "新建列表")?.trigger("click");
+    await wrapper.get(".todo-list-create-input").setValue("会议");
+    const modal = wrapper.findComponent(NModal);
+    expect(modal.props("show")).toBe(true);
+    await wrapper.get(".todo-list-create-cancel").trigger("click");
+
+    expect(wrapper.findComponent(NModal).exists()).toBe(true);
+    expect(modal.props("show")).toBe(false);
+    expect((wrapper.get(".todo-list-create-input").element as HTMLInputElement).value).toBe("会议");
+    expect(wrapper.find(".todo-list-create-confirm").exists()).toBe(true);
+
+    modal.vm.$emit("afterLeave");
+    await nextTick();
+    expect((wrapper.get(".todo-list-create-input").element as HTMLInputElement).value).toBe("");
+    expect(wrapper.emitted("createList")).toBeUndefined();
     wrapper.unmount();
   });
 

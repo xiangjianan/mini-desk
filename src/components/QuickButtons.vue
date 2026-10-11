@@ -912,6 +912,7 @@ function handleQuickGroupDrop(event: DragEvent, groupId: string): void {
           v-for="group in bucket"
           :key="group.id"
           class="quick-tag-group"
+          :class="{ 'is-empty': group.id === QUICK_BUTTON_EMPTY_GROUP_ID }"
           :data-tag-id="group.id"
           @dragover="handleTagDragOver($event, group.id)"
           @drop.stop.prevent="handleQuickGroupDrop($event, group.id)"

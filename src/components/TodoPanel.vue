@@ -158,6 +158,7 @@ const notifyPresets = computed(() => {
 const relativeNotifyPresets = computed(() => notifyPresets.value.filter((preset) => preset.group === "relative"));
 const timeNotifyPresets = computed(() => notifyPresets.value.filter((preset) => preset.group === "time"));
 const listCreateInputRef = ref<InputInst | null>(null);
+const listCreateDialogOpen = ref(false);
 const todayFocusTitleRef = ref<{ openMenuAt: (x: number, y: number, event?: Event) => void } | null>(null);
 const listCreateDialog = ref<{
   anchor?: HTMLElement;
@@ -1064,6 +1065,7 @@ async function openCreateListDialog(anchor?: HTMLElement): Promise<void> {
     anchor,
     title: "",
   };
+  listCreateDialogOpen.value = true;
   await nextTick();
   listCreateInputRef.value?.focus();
 }
@@ -1082,11 +1084,15 @@ function confirmCreateListDialog(): void {
     return;
   }
   emit("createList", dialog.anchor, title);
-  listCreateDialog.value = null;
+  closeCreateListDialog();
 }
 
 function closeCreateListDialog(): void {
-  listCreateDialog.value = null;
+  listCreateDialogOpen.value = false;
+}
+
+function clearCreateListDialog(): void {
+  if (!listCreateDialogOpen.value) listCreateDialog.value = null;
 }
 
 function handleListTitleUpdate(listId: TodoListId, value: string): void {
@@ -2345,8 +2351,7 @@ function buildTodoListEntries(period: TodoListId, todos: TodoItem[], deferredDon
     </Teleport>
 
     <NModal
-      v-if="listCreateDialog"
-      :show="true"
+      :show="listCreateDialogOpen"
       preset="card"
       class="quick-dialog todo-list-create-dialog"
       :mask-closable="false"
@@ -2354,13 +2359,14 @@ function buildTodoListEntries(period: TodoListId, todos: TodoItem[], deferredDon
       :aria-label="uiText.todo.listDialog"
       @close="closeCreateListDialog"
       @esc="closeCreateListDialog"
+      @after-leave="clearCreateListDialog"
     >
       <form class="quick-form" @submit.prevent="confirmCreateListDialog">
         <label for="todo-list-create-input">
           <span>{{ uiText.todo.listName }}</span>
           <NInput
             ref="listCreateInputRef"
-            :value="listCreateDialog.title"
+            :value="listCreateDialog?.title ?? ''"
             :input-props="{ id: 'todo-list-create-input', class: 'todo-list-create-input' }"
             autocomplete="off"
             @update:value="updateCreateListTitle"

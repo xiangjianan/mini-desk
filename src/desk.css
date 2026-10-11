@@ -249,6 +249,9 @@ html[data-theme="dark"] .workbench-shell,
   border-radius: 8px;
 }
 .workbench-shell .quick-tag-group:has(> .quick-tag-content.is-collapsed) { background: transparent; }
+.workbench-shell .quick-tag-group.is-empty,
+.workbench-shell .quick-tag-group.is-empty > .quick-tag-content { background: transparent; }
+.workbench-shell .quick-tag-group.is-empty .quick-buttons { padding: 0; }
 
 .workbench-shell .todo-heading h3 { font-size: 14px; font-weight: 600; }
 .workbench-shell .todo-heading-actions { gap: 0; align-items: center; }
