@@ -901,6 +901,46 @@ describe("TodoPanel", () => {
     }
   });
 
+  it("slides the lists below completed reminders when hiding and showing them", async () => {
+    const wrapper = mount(TodoPanel, {
+      props: {
+        todoLists: defaultTodoLists,
+        todos: { morning: [{ id: "done", text: "已完成", done: true }], noon: [], evening: [] },
+        showCompleted: { morning: true, noon: true, evening: true },
+        titles: DEFAULT_TITLES,
+      },
+    });
+    await nextTick();
+    const sections = wrapper.findAll(".todo-section").map((item) => item.element as HTMLElement);
+    const animations = sections.map((section, index) => {
+      vi.spyOn(section, "getBoundingClientRect").mockImplementation(() => ({
+        left: 0,
+        top: index * (sections[0].querySelector(".todo-item.is-done") ? 150 : 100),
+      } as DOMRect));
+      const animate = vi.fn(() => ({ cancel: vi.fn(), onfinish: null }));
+      Object.defineProperty(section, "animate", { value: animate, configurable: true });
+      return animate;
+    });
+    try {
+      await wrapper.setProps({ showCompleted: { morning: false, noon: true, evening: true } });
+      expect(animations[0]).not.toHaveBeenCalled();
+      expect(animations[1]).toHaveBeenLastCalledWith(
+        [{ transform: "translate(0px, 50px)" }, { transform: "translate(0, 0)" }],
+        { duration: 220, easing: "cubic-bezier(0.2, 0, 0, 1)" },
+      );
+      await wrapper.setProps({ showCompleted: { morning: true, noon: true, evening: true } });
+      expect(animations[1]).toHaveBeenLastCalledWith(
+        [{ transform: "translate(0px, -50px)" }, { transform: "translate(0, 0)" }],
+        { duration: 220, easing: "cubic-bezier(0.2, 0, 0, 1)" },
+      );
+      expect(animations[2]).toHaveBeenCalledTimes(2);
+      expect(wrapper.findAll(".todo-section").map((item) => item.element)).toEqual(sections);
+    } finally {
+      wrapper.unmount();
+      vi.restoreAllMocks();
+    }
+  });
+
   it("emits list reorder actions from header dragging without moving reminders", async () => {
     const wrapper = mount(TodoPanel, {
       props: {

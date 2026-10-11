@@ -205,12 +205,12 @@ function setColumnElement(index: number, element: Element | null): void {
   columnElements[index] = element as HTMLElement | null;
 }
 
-// Capture the rendered positions before a stored list order/column changes.
+// Capture positions before list order, columns, or completed visibility changes.
 // Stable Teleports preserve editing state; animate their destinations with FLIP.
 let listPositionsBeforeReorder: Map<TodoListId, DOMRect> | null = null;
 const listReorderAnimations = new Map<TodoListId, Animation>();
 watch(
-  () => effectiveTodoLists.value.map((list) => `${list.id}:${list.column ?? 0}`).join("|"),
+  () => effectiveTodoLists.value.map((list) => `${list.id}:${list.column ?? 0}:${isCompletedVisible(list.id)}`).join("|"),
   () => {
     listPositionsBeforeReorder = new Map(
       [...todoSectionRefs].map(([id, element]) => [id, element.getBoundingClientRect()]),
