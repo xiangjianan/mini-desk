@@ -52,6 +52,16 @@ describe("state compatibility", () => {
     expect(resolveTodoColumns(changed, 2, order, layouts).map((list) => list.id)).toEqual(["e", "b", "c", "d", "new"]);
   });
 
+  it("stabilizes new lists missing from a saved column layout", () => {
+    const lists = [{ id: "old", column: 0 }, { id: "new", column: 0 }];
+    const layouts = { "2": [{ id: "old", column: 0 }] };
+    const first = resolveTodoColumns(lists, 2, [], layouts);
+    expect(first[1].column).toBe(1);
+    const second = resolveTodoColumns(first, 2, [], layouts);
+    expect(second[0]).toBe(first[0]);
+    expect(second[1]).toBe(first[1]);
+  });
+
   it("persists per-count layouts and sanitizes stale entries", () => {
     const state = defaultState();
     const workspace = state.workspaces[0];

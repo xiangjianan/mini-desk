@@ -1168,6 +1168,24 @@ describe("App shell", () => {
     }
   });
 
+  it("adds a reminder list with a saved layout without recursive updates", async () => {
+    const fixture = defaultState();
+    const workspace = fixture.workspaces[0];
+    workspace.todoColumnLayouts = { "1": workspace.todoLists.map((list) => ({ id: list.id, column: 0 })) };
+    localStorage.setItem(STORAGE_KEY, JSON.stringify(fixture));
+    const wrapper = mountApp();
+    try {
+      await nextTick();
+      wrapper.getComponent(TodoPanel).vm.$emit("createList", wrapper.get(".todo-panel").element, "新列表");
+      await nextTick();
+      await nextTick();
+      const stored = JSON.parse(localStorage.getItem(STORAGE_KEY) || "{}");
+      expect(stored.workspaces[0].todoLists).toHaveLength(workspace.todoLists.length + 1);
+      expect(stored.workspaces[0].todoLists.at(-1)).toMatchObject({ title: "新列表", column: 0 });
+      expect(wrapper.findAll('.todo-section')).toHaveLength(workspace.todoLists.length + 1);
+    } finally { wrapper.unmount(); }
+  });
+
   it("does not create a reminder list until the create-list dialog submits a title", async () => {
     const wrapper = mountApp();
 

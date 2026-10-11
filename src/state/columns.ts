@@ -118,6 +118,10 @@ export function resolveTodoColumns<T extends ColumnItem>(items: T[], count: numb
     used.add(entry.id);
     next.push(saved && item.column !== entry.column ? { ...item, column: entry.column } : item);
   }
-  for (const item of items) if (!used.has(item.id)) next.push(saved ? { ...item, column: count - 1 } : item);
+  // New IDs may be absent from a saved layout. Once placed, keep their object
+  // identity so a reactive layout restore converges instead of replacing forever.
+  for (const item of items) if (!used.has(item.id)) {
+    next.push(saved && item.column !== count - 1 ? { ...item, column: count - 1 } : item);
+  }
   return saved ? next : distributeColumns(next, count);
 }

@@ -691,7 +691,11 @@ watch(boardTitle, (value) => {
 const todoColumnCount = ref(1);
 // Each column count restores its own manual layout, or balances the base order.
 watch(
-  () => [state.activeWorkspaceId, todoColumnCount.value, activeWorkspace.value.todoLists.map((list) => list.id).sort().join("\0")],
+  [
+    () => state.activeWorkspaceId,
+    () => todoColumnCount.value,
+    () => activeWorkspace.value.todoLists.map((list) => list.id).sort().join("\0"),
+  ],
   () => {
     const workspace = activeWorkspace.value;
     const next = resolveTodoColumns(workspace.todoLists, todoColumnCount.value, workspace.todoListOrder, workspace.todoColumnLayouts);
