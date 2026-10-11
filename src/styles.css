@@ -4398,15 +4398,15 @@ button.mobile-home-btn-danger:focus-visible {
   pointer-events: none;
 }
 
-.panel.drag-hover,
-.text-panel.drag-hover,
-.split-block.drag-hover:not(.quick-block) {
+.panel.drag-hover:not(.text-panel),
+.split-block.drag-hover:not(.quick-block):not(.text-panel) {
   outline: 2px dashed var(--line-focus);
   outline-offset: -2px;
   transition: outline 0.15s ease;
 }
 
 /* Tint the content surfaces too: desktop groups have their own opaque backgrounds. */
+:root .text-panel.drag-hover,
 :root .quick-tag-group.drag-hover,
 :root .quick-tag-group.drag-hover .quick-tag-heading,
 :root .quick-tag-group.drag-hover .quick-tag-content,
