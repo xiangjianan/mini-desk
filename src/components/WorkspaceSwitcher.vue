@@ -193,7 +193,7 @@ function onDrop(targetId: string): void {
 
       <p class="workspace-switcher-section">{{ text.app.workspaces }}</p>
 
-      <ul class="workspace-switcher-list">
+      <TransitionGroup name="workspace-sort" tag="ul" class="workspace-switcher-list">
         <li
           v-for="workspace in workspaces"
           :key="workspace.id"
@@ -279,7 +279,7 @@ function onDrop(targetId: string): void {
             </NPopover>
           </span>
         </li>
-      </ul>
+      </TransitionGroup>
 
       <div class="workspace-switcher-footer">
         <button type="button" class="workspace-switcher-create" data-testid="workspace-create-button" @click="emit('create')">

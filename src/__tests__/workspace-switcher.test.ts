@@ -1,6 +1,8 @@
 import { describe, expect, it } from "vitest";
 import { mount, type VueWrapper } from "@vue/test-utils";
-import { nextTick } from "vue";
+import { nextTick, TransitionGroup } from "vue";
+import { readFileSync } from "node:fs";
+import { resolve } from "node:path";
 import WorkspaceSwitcher from "../components/WorkspaceSwitcher.vue";
 import { defaultWorkspace } from "../state/defaults";
 import type { WorkspaceData } from "../types";
@@ -30,6 +32,28 @@ async function clickMenuAction(wrapper: VueWrapper, id: string, action: "export"
 }
 
 describe("WorkspaceSwitcher", () => {
+  it("拖拽排序保留列表项并通过移动过渡换位", async () => {
+    const wrapper = mount(WorkspaceSwitcher, {
+      props: { workspaces, activeWorkspaceId: "a", theme: "light", language: "zh" },
+      global: { stubs: { "transition-group": false } },
+    });
+    await wrapper.get('[data-testid="workspace-trigger"]').trigger("click");
+    const first = wrapper.get('[data-testid="workspace-option-a"]');
+    const second = wrapper.get('[data-testid="workspace-option-b"]');
+    const elements = [first.element, second.element];
+    await first.trigger("dragstart");
+    await second.trigger("drop");
+    expect(wrapper.emitted("reorder")).toEqual([["a", "b"]]);
+    await wrapper.setProps({ workspaces: [workspaces[1], workspaces[0]] });
+    expect(wrapper.findAll(".workspace-switcher-item").map((item) => item.element)).toEqual(elements.reverse());
+    const group = wrapper.getComponent(TransitionGroup);
+    expect(group.props("tag")).toBe("ul");
+    expect(group.props("name")).toBe("workspace-sort");
+    const styles = readFileSync(resolve(__dirname, "../styles.css"), "utf8");
+    expect(styles).toMatch(/\.workspace-sort-move\s*\{\s*transition: transform 220ms cubic-bezier\(0\.2, 0, 0, 1\);/);
+    wrapper.unmount();
+  });
+
   it("渲染当前工作空间标题作为触发按钮", () => {
     const wrapper = mount(WorkspaceSwitcher, {
       props: { workspaces, activeWorkspaceId: "a", theme: "light", language: "zh" },
