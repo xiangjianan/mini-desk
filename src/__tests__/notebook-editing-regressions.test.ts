@@ -19,6 +19,28 @@ function panel(lines: LineItem[]) {
 }
 
 describe('notebook editing audit regressions', () => {
+  it.each(['', '- ', '1. '])('preserves highlighting when Enter splits %s before the highlighted text', async (prefix) => {
+    const content = `${prefix}before highlight`;
+    const start = content.indexOf('highlight');
+    const lines: LineItem[] = [{ text: content, indent: 0, marks: [mark(start, start + 9)] }];
+    if (prefix === '1. ') lines.push({ text: '2. following', indent: 0 });
+    const wrapper = panel(lines);
+    await wrapper.get('textarea').trigger('click');
+    const field = wrapper.get('textarea').element as HTMLTextAreaElement;
+    const original = field.value;
+    field.setSelectionRange(start, start);
+    await wrapper.get('textarea').trigger('keydown', { key: 'Enter' });
+    const result = wrapper.emitted('update')!.at(-1)![0] as LineItem[];
+    const highlighted = result.flatMap(line => (line.marks ?? []).map(m => line.text.slice(m.start, m.end)));
+    expect(highlighted).toEqual(['highlight']);
+    if (prefix === '1. ') expect(result.map(l => l.text)).toEqual(['1. before ', '2. highlight', '3. following']);
+    await wrapper.get('textarea').trigger('keydown', { key: 'z', ctrlKey: true });
+    expect(field.value).toBe(original);
+    await wrapper.get('textarea').trigger('keydown', { key: 'z', ctrlKey: true, shiftKey: true });
+    expect((wrapper.emitted('update')!.at(-1)![0] as LineItem[]).flatMap(l => (l.marks ?? []).map(m => l.text.slice(m.start, m.end)))).toEqual(['highlight']);
+    wrapper.unmount();
+  });
+
   it.each([false, true])('does not change an unselected next line when outdent=%s', (outdent) => {
     const prefix = outdent ? '    - ' : '';
     const value = `${prefix}first\n${prefix}second\nthird`;

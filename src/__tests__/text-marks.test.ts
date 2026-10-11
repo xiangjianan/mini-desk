@@ -82,9 +82,14 @@ describe("translateMarksForEdit — 文本变更平移", () => {
     expect(translateMarksForEdit([hl(8, 9)], "8. 乙\n9. 丙", "9. 乙\n10. 丙")).toEqual([hl(9, 10)]);
   });
 
-  it("Enter 断行：断点后的 mark 被裁剪（不复活也不错位）", () => {
-    expect(translateMarksForEdit([hl(2, 3)], "abc\nrest", "a\nbc\nrest")).toEqual([]);
+  it("Enter 断行：断点后的 mark 跟随原文移动", () => {
+    expect(translateMarksForEdit([hl(2, 3)], "abc\nrest", "a\nbc\nrest")).toEqual([hl(3, 4)]);
     expect(translateMarksForEdit([hl(0, 1)], "abc\nrest", "a\nbc\nrest")).toEqual([hl(0, 1)]);
+  });
+
+  it("在高亮起点换行，整段高亮移到新行；在高亮内换行则分成两段", () => {
+    expect(translateMarksForEdit([hl(2, 5)], "abcde", "ab\ncde")).toEqual([hl(3, 6)]);
+    expect(translateMarksForEdit([hl(1, 5)], "abcde", "abc\n    - de")).toEqual([hl(1, 3), hl(10, 12)]);
   });
 
   it("整块行删除：区间内 marks 消失，其后 marks 平移", () => {

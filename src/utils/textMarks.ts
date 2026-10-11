@@ -131,8 +131,8 @@ function lineSimilarity(left: string, right: string): number {
  * 枚举缺口位置 k（前 k 行 1:1 配对、跳过 delta 行、其余继续 1:1），取配对行相似度
  * 总和最大者——纯位置配对会把「被删空行 + 重编号改写」误判成「高亮行本身被删」，
  * 高亮随行消失。平分时保持缺口在末尾（= 旧位置配对）。
- * 插入侧（delta<0）与等行数保持纯位置配对：Enter 断行的「前半段保留、移下去的
- * 后半段裁剪」语义由此钉死（text-marks 测试），相似度配对无法区分断行与行首插行。
+ * 插入侧（delta<0）与等行数保持纯位置配对：纯换行插入已在全文偏移通道处理，
+ * 此处只处理其他替换；相似度配对无法可靠区分断行与行首插行。
  * 返回旧区行号 → 新区行号的映射；缺口内的旧行映射 null（行被删除）。
  */
 function buildRegionPairing(
@@ -172,13 +172,26 @@ function regionPairingScore(beforeRegion: string[], afterRegion: string[], delta
 }
 
 /**
- * 文本变更后的 marks 平移器。行级公共前缀/后缀对齐夹出变化区段；区段内等行数时
+ * 文本变更后的 marks 平移器。纯换行插入按全文偏移保留原文格式；其他编辑用
+ * 行级公共前缀/后缀对齐夹出变化区段；区段内等行数时
  * 逐行等价改写（重编号级联改写多行也走这里），行数不等时按连续缺口对齐（见
  * buildRegionPairing），行内再用前后缀 diff 夹出编辑区。打字、粘贴、IME、AI 润色
- * 替换、撤销、自动重编号全部走这同一个通道，无特判。
+ * 替换、撤销、自动重编号全部走这同一个通道。
  */
 export function translateMarksForEdit(marks: TextMark[], previous: string, next: string): TextMark[] {
   if (previous === next || marks.length === 0) return marks;
+  const insertionStart = getCommonPrefixLength(previous, next);
+  const addedLength = next.length - previous.length;
+  if (addedLength > 0 && next.slice(insertionStart, insertionStart + addedLength).includes("\n") &&
+    previous.slice(insertionStart) === next.slice(insertionStart + addedLength)) {
+    // A line break moves existing text; it does not replace it. Split marks
+    // spanning the insertion so new list prefixes do not inherit formatting.
+    return marks.flatMap((mark): TextMark[] => {
+      if (mark.end <= insertionStart) return [mark];
+      if (mark.start >= insertionStart) return [{ ...mark, start: mark.start + addedLength, end: mark.end + addedLength }];
+      return [{ ...mark, end: insertionStart }, { ...mark, start: insertionStart + addedLength, end: mark.end + addedLength }];
+    });
+  }
   const before = previous.split("\n");
   const after = next.split("\n");
   let head = 0;

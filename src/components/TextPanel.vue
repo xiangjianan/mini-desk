@@ -349,12 +349,14 @@ function handleKeydown(event: KeyboardEvent): void {
   }
   if (event.key === "Tab") {
     event.preventDefault();
-    applyEditorText(handleTextareaTab(textarea, event.shiftKey));
+    handleTextareaTab(textarea, event.shiftKey);
     update();
   }
   if (event.key === "Enter") {
     event.preventDefault();
-    applyEditorText(event.shiftKey ? insertPlainLineBreak(textarea) : insertIndentedLineBreak(textarea));
+    if (event.shiftKey) insertPlainLineBreak(textarea);
+    else insertIndentedLineBreak(textarea);
+    normalizeTextareaText(textarea);
     // 两跳 nextTick：update() 的重编号改写 text.value 后再等一帧镜像层渲染完毕，
     // reveal 才能按镜像实测光标行的视觉矩形（折行也准）。
     nextTick(() => {
@@ -1000,7 +1002,10 @@ function normalizeTextareaText(textarea: HTMLTextAreaElement): void {
     if (mirrorRef.value) mirrorRef.value.scrollTop = textarea.scrollTop;
     textarea.setSelectionRange(nextSelectionStart, nextSelectionEnd);
   }
-  commitEditorText(normalized);
+  // Keep the structural edit separate from cascading renumbering when mapping
+  // marks, while recording the whole user action as a single undo snapshot.
+  const rawMarks = translateMarksForEdit(editorMarks.value, committedText.value, raw);
+  commitEditorText(normalized, translateMarksForEdit(rawMarks, raw, normalized));
 }
 
 /** 重编号后的光标平移。重编号是逐行等量映射（行数不变、只改写行内标记），因此按
