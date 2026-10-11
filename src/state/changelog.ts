@@ -29,6 +29,28 @@ export interface ChangelogEntry {
 
 export const CHANGELOG: ChangelogEntry[] = [
     {
+      version: "1.0.208",
+      date: "2026-10-11",
+      notes: {
+        zh: [
+          "调整：桌面工作台视觉整体升级——各区统一米白底面，分组标题与便签标签以柔和阴影、圆角连通背景同内容分层，折叠箭头移到标题左侧",
+          "新功能：提醒列表拖拽排序带过渡动画，拖到分组标题上半插到其前、下半插到其后",
+          "优化：切换「显示已完成」时列表平滑过渡，待清理的已完成条目带高亮提示",
+          "修复：提醒区粘贴按编辑状态正确路由，不再串焦点或误建空白行",
+          "修复：空的快捷分组不再占位，列表管理弹窗关闭保留淡出动画",
+          "调整：右键选中的提醒行蓝底高亮；「新便签」更名「新建记事本」，反馈入口改用邮件图标",
+        ],
+        en: [
+          "Changed: a full visual pass on the desktop workbench — unified off-white surfaces, group headings and notebook tabs layered from content via soft shadows and connected rounded backgrounds, collapse chevrons moved before titles",
+          "New: reminder list drag-sorting animates, and dropping on a group heading inserts before it (upper half) or after the group (lower half)",
+          "Improved: toggling completed-reminder visibility transitions smoothly, with completed items pending cleanup highlighted",
+          "Fixed: pasting in the reminder area routes by edit state — no more stolen focus or stray blank rows",
+          "Fixed: empty quick groups no longer take space, and the list dialog keeps its fade-out on close",
+          "Changed: right-click selected reminder rows highlight in blue; \"New Sticky\" renamed to \"New Notebook\", and the feedback entry uses a mail icon",
+        ],
+      },
+    },
+    {
       version: "1.0.207",
       date: "2026-10-11",
       notes: {
