@@ -1,7 +1,50 @@
 import { describe, expect, it, vi } from "vitest";
-import { createTodoLeaveHooks } from "../components/TodoRowsTransition";
+import { mount } from "@vue/test-utils";
+import { h } from "vue";
+import TodoRowsTransition, { createTodoLeaveHooks } from "../components/TodoRowsTransition";
 
 describe("reminder row leave layout", () => {
+  it("connects height measurement and expansion to memoized list updates", async () => {
+    const wrapper = mount(TodoRowsTransition, {
+      props: { memo: [1], tag: "ul" },
+      slots: { default: () => h("li", "Reminder") },
+      global: { stubs: { "transition-group": false } },
+    });
+    const list = wrapper.get("ul").element as HTMLElement;
+    vi.spyOn(list, "getBoundingClientRect")
+      .mockReturnValueOnce({ height: 58 } as DOMRect)
+      .mockReturnValue({ height: 100 } as DOMRect);
+    const animate = vi.fn(() => ({ cancel: vi.fn(), finished: new Promise(() => {}) }) as unknown as Animation);
+    list.animate = animate;
+    await wrapper.setProps({ memo: [2] });
+    expect(animate).toHaveBeenCalledWith([{ height: "58px" }, { height: "100px" }], expect.objectContaining({ duration: 220 }));
+    wrapper.unmount();
+  });
+
+  it("animates growth from the height before insertion and continues from an interrupted animation", () => {
+    const list = document.createElement("ul");
+    let height = 58;
+    vi.spyOn(list, "getBoundingClientRect").mockImplementation(() => ({ height }) as DOMRect);
+    const animation = { cancel: vi.fn(), finished: new Promise(() => {}) };
+    const animate = vi.fn(() => animation as unknown as Animation);
+    list.animate = animate;
+    const hooks = createTodoLeaveHooks();
+    hooks.beforeUpdate(list);
+    height = 100;
+    hooks.afterUpdate(list);
+    expect(animate).toHaveBeenLastCalledWith(
+      [{ height: "58px" }, { height: "100px" }],
+      { duration: 220, easing: "cubic-bezier(0.2, 0, 0, 1)" },
+    );
+    height = 80;
+    hooks.beforeUpdate(list);
+    expect(animation.cancel).toHaveBeenCalledOnce();
+    height = 142;
+    hooks.afterUpdate(list);
+    expect(animate).toHaveBeenLastCalledWith([{ height: "80px" }, { height: "142px" }], expect.objectContaining({ duration: 220 }));
+    hooks.dispose();
+  });
+
   it("animates the released height and cancels an interrupted shrink", () => {
     const list = document.createElement("ul");
     const row = list.appendChild(document.createElement("li"));
