@@ -14,6 +14,7 @@ const LEGACY_WORKBENCH_HEADER_STORAGE_KEY = "todo-board-workbench-header-hidden"
 afterEach(() => {
   vi.useRealTimers();
   vi.restoreAllMocks();
+  vi.unstubAllGlobals();
   HTMLElement.prototype.getBoundingClientRect = originalGetBoundingClientRect;
   document.documentElement.style.removeProperty("--image-preview-left");
   document.documentElement.style.removeProperty("--image-preview-top");
@@ -26,6 +27,36 @@ describe("WorkbenchShell", () => {
     saveStatusLabel: "已保存",
     theme: "light" as const,
   };
+
+  it("refits fixed columns when the grid width changes without a window resize", async () => {
+    vi.useFakeTimers();
+    vi.spyOn(window, "innerWidth", "get").mockReturnValue(2400);
+    let width = 1200;
+    let callback: ResizeObserverCallback;
+    const disconnect = vi.fn();
+    vi.stubGlobal("ResizeObserver", class {
+      constructor(handler: ResizeObserverCallback) { callback = handler; }
+      observe = vi.fn();
+      disconnect = disconnect;
+    });
+    HTMLElement.prototype.getBoundingClientRect = function () {
+      return this.classList.contains("workbench-grid")
+        ? { width, height: 748, top: 52, left: 0, right: width, bottom: 800, x: 0, y: 52, toJSON: () => undefined }
+        : originalGetBoundingClientRect.call(this);
+    };
+    const wrapper = mount(WorkbenchShell, { props: defaultProps });
+    await nextTick(); await nextTick();
+    const total = () => [...wrapper.get(".workbench-grid").attributes("style")!.matchAll(/(\d+)px/g)]
+      .reduce((sum, match) => sum + Number(match[1]), 0);
+    const initial = total();
+    width = 2000;
+    callback!([{ contentRect: { width } } as ResizeObserverEntry], {} as ResizeObserver);
+    await vi.advanceTimersByTimeAsync(20);
+    await nextTick();
+    expect(total() - initial).toBeCloseTo(800, -1);
+    wrapper.unmount();
+    expect(disconnect).toHaveBeenCalledOnce();
+  });
 
   it("restores imported area proportions and refreshes them within the same workspace", async () => {
     vi.spyOn(window, "innerWidth", "get").mockReturnValue(1600);

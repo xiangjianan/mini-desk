@@ -7,6 +7,7 @@ import { AddOutline } from "@vicons/ionicons5";
 import { readFileSync } from "node:fs";
 import { resolve } from "node:path";
 import TodoPanel from "../components/TodoPanel.vue";
+import TodoListCreateDialog from "../components/TodoListCreateDialog.vue";
 import { DEFAULT_TITLES } from "../state/defaults";
 import { completeTodo } from "../state/todos";
 import type { PolishKind, PolishStyle, PolishResult } from "../sync/polishClient";
@@ -629,6 +630,43 @@ describe("TodoPanel", () => {
     await nextTick();
 
     expect(wrapper.emitted("createList")?.[0]).toEqual([expect.any(HTMLElement), "会议"]);
+    wrapper.unmount();
+  });
+
+  it("does not rerender reminder rows while entering a new list title", async () => {
+    const updates = vi.fn();
+    const wrapper = mount(TodoPanel, {
+      props: { todoLists: defaultTodoLists, todos: { morning: [{ id: "a", text: "原有提醒", done: false }], noon: [], evening: [] }, titles: DEFAULT_TITLES },
+      global: {
+        mixins: [{ updated() { if ((this.$options as { __name?: string }).__name === "TodoPanel") updates(); } }],
+        stubs: { Modal: { props: ["show"], template: '<section><slot /></section>' }, NModal: { props: ["show"], template: '<section><slot /></section>' }, NDropdown: dropdownStub },
+      },
+    });
+    await flushPromises();
+    await wrapper.findComponent(TodoListCreateDialog).vm.open();
+    await flushPromises();
+    updates.mockClear();
+    await wrapper.get(".todo-list-create-input").setValue("新建工作提醒");
+    await flushPromises();
+    expect(updates).not.toHaveBeenCalled();
+    expect((wrapper.get(".todo-input").element as HTMLInputElement).value).toBe("原有提醒");
+    wrapper.unmount();
+  });
+
+  it("does not measure existing list positions when appending a reminder list", async () => {
+    const wrapper = mount(TodoPanel, {
+      props: { todoLists: defaultTodoLists, todos: { morning: [], noon: [], evening: [] }, titles: DEFAULT_TITLES },
+      global: { stubs: { NDropdown: dropdownStub } },
+    });
+    await flushPromises();
+    const measurements = wrapper.findAll(".todo-section").map((section) => vi.spyOn(section.element, "getBoundingClientRect"));
+    await wrapper.setProps({
+      todoLists: [...defaultTodoLists, { id: "new-list", title: "新建列表", column: 0, collapsed: false, compact: false }],
+      todos: { morning: [], noon: [], evening: [], "new-list": [] },
+    });
+    await flushPromises();
+    expect(wrapper.find('[data-list-id="new-list"]').exists()).toBe(true);
+    for (const measurement of measurements) expect(measurement).not.toHaveBeenCalled();
     wrapper.unmount();
   });
 

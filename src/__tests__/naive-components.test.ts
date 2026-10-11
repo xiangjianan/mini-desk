@@ -288,12 +288,14 @@ describe("Naive UI component usage", () => {
 
   it("styles configurable reminder list controls and compact collapsed states", () => {
     const todo = read("src/components/TodoPanel.vue");
+    const createDialog = read("src/components/TodoListCreateDialog.vue");
     const styles = read("src/styles.css");
 
     expect(todo).not.toContain("todo-add-list-button");
     expect(todo).toContain("todo-list-drag-handle");
     expect(todo).toContain("todo-collapse-button");
-    expect(todo).toContain("todo-list-create-dialog");
+    expect(todo).toContain("TodoListCreateDialog");
+    expect(createDialog).toContain("todo-list-create-dialog");
     expect(todo).toContain('class="todo-list-shell"');
     expect(todo).toContain(":class=\"{ 'is-hidden': list.collapsed }\"");
     expect(todo).toContain("is-collapsed");
@@ -302,8 +304,8 @@ describe("Naive UI component usage", () => {
     expect(styles).toMatch(/\.todo-collapse-button\s*\{[^}]*background: transparent/s);
     expect(styles).toMatch(/\.todo-collapse-button:hover,[\s\S]*?\.todo-collapse-button:focus-visible\s*\{[^}]*background: transparent/s);
     expect(styles).toMatch(/\.todo-collapse-button \.n-icon\s*\{[^}]*transition: transform var\(--motion-medium\) var\(--motion-ease\)/s);
-    expect(todo).toContain('class="quick-dialog todo-list-create-dialog"');
-    expect(todo).toContain('preset="card"');
+    expect(createDialog).toContain('class="quick-dialog todo-list-create-dialog"');
+    expect(createDialog).toContain('preset="card"');
     expect(styles).toMatch(/\.quick-dialog\s*\{[^}]*width: min\(420px, calc\(100vw - 32px\)\)/s);
     expect(styles).toMatch(/\.todo-list-drag-handle\s*\{[^}]*display: none/s);
     expect(styles).toMatch(/\.todo-section\.is-collapsed\s*\{[^}]*flex: 0 0 auto/s);

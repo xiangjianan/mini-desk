@@ -107,6 +107,9 @@ const HEADER_REVEAL_AUTO_HIDE_MS = 100;
 const HEADER_REVEAL_POINTER_LEAVE_HIDE_MS = 150;
 
 const gridRef = ref<HTMLElement | null>(null);
+let gridResizeObserver: ResizeObserver | undefined;
+let gridResizeFrame: number | undefined;
+let observedGridWidth = 0;
 const headerRevealZoneRef = ref<HTMLElement | null>(null);
 // 隐藏态必须在首帧渲染前就位：若先按 false 渲染、再在 onMounted 里隐藏，
 // header 的 200ms 离场过渡会把导航栏画在屏幕上（刷新闪现）。
@@ -707,6 +710,19 @@ watch(
 );
 
 onMounted(() => {
+  if (gridRef.value && typeof ResizeObserver !== "undefined") {
+    gridResizeObserver = new ResizeObserver((entries) => {
+      const width = entries[0]?.contentRect.width ?? 0;
+      if (width <= 0 || Math.abs(width - observedGridWidth) < 0.5) return;
+      observedGridWidth = width;
+      if (gridResizeFrame !== undefined) return;
+      gridResizeFrame = window.requestAnimationFrame(() => {
+        gridResizeFrame = undefined;
+        refreshWorkbenchLayout();
+      });
+    });
+    gridResizeObserver.observe(gridRef.value);
+  }
   if (headerHidden.value) {
     headerRevealVisible.value = true;
     scheduleHeaderRevealHide();
@@ -716,6 +732,8 @@ onMounted(() => {
 });
 
 onUnmounted(() => {
+  gridResizeObserver?.disconnect();
+  if (gridResizeFrame !== undefined) window.cancelAnimationFrame(gridResizeFrame);
   finishResize();
   clearHeaderRevealShowTimer();
   clearHeaderRevealHideTimer();

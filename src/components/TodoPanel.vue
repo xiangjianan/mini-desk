@@ -1,5 +1,6 @@
 <script setup lang="ts">
 import { isGroupDropBefore } from "../utils/groupDrop";
+import TodoListCreateDialog from "./TodoListCreateDialog.vue";
 import { computed, h, nextTick, onMounted, onUnmounted, onUpdated, ref, shallowReactive, watch } from "vue";
 import type { Component, VNode } from "vue";
 import {
@@ -24,8 +25,8 @@ import {
   TimerOutline,
   TrashOutline,
 } from "@vicons/ionicons5";
-import { NButton, NDatePicker, NDropdown, NIcon, NInput, NModal } from "naive-ui";
-import type { DropdownOption, InputInst } from "naive-ui";
+import { NDatePicker, NDropdown, NIcon } from "naive-ui";
+import type { DropdownOption } from "naive-ui";
 import { DEFAULT_TODO_LISTS, GUIDE_MENU_OPTION } from "../state/defaults";
 import { LEGACY_TODO_TITLE_IDS } from "../state/storage";
 import { getDisplayTodoListTitle, getIconHeadingText, getUiText } from "../state/i18n";
@@ -157,13 +158,8 @@ const notifyPresets = computed(() => {
 });
 const relativeNotifyPresets = computed(() => notifyPresets.value.filter((preset) => preset.group === "relative"));
 const timeNotifyPresets = computed(() => notifyPresets.value.filter((preset) => preset.group === "time"));
-const listCreateInputRef = ref<InputInst | null>(null);
-const listCreateDialogOpen = ref(false);
+const listCreateDialogRef = ref<InstanceType<typeof TodoListCreateDialog> | null>(null);
 const todayFocusTitleRef = ref<{ openMenuAt: (x: number, y: number, event?: Event) => void } | null>(null);
-const listCreateDialog = ref<{
-  anchor?: HTMLElement;
-  title: string;
-} | null>(null);
 const pendingDoneReorderIds = ref<string[]>([]);
 const COMPLETION_DELAY_MS = 2000;
 let reorderTimer: number | undefined;
@@ -211,7 +207,10 @@ let listPositionsBeforeReorder: Map<TodoListId, DOMRect> | null = null;
 const listReorderAnimations = new Map<TodoListId, Animation>();
 watch(
   () => effectiveTodoLists.value.map((list) => `${list.id}:${list.column ?? 0}:${isCompletedVisible(list.id)}`).join("|"),
-  () => {
+  (next, previous) => {
+    // Appending a list does not move existing sections. Avoid forcing layout
+    // of every off-screen reminder list just to discover zero animation deltas.
+    if (columnCount.value === 1 && previous && next.startsWith(`${previous}|`)) return;
     listPositionsBeforeReorder = new Map(
       [...todoSectionRefs].map(([id, element]) => [id, element.getBoundingClientRect()]),
     );
@@ -242,10 +241,18 @@ onUpdated(() => {
   for (const animation of listReorderAnimations.values()) animation.cancel();
   listReorderAnimations.clear();
   if (window.matchMedia?.("(prefers-reduced-motion: reduce)").matches) return;
+  // Read every destination before starting animations, which change styles.
+  const currentPositions = new Map(
+    [...previousPositions.keys()].flatMap((id) => {
+      const section = todoSectionRefs.get(id);
+      return section?.animate ? [[id, section.getBoundingClientRect()] as const] : [];
+    }),
+  );
   for (const [id, previous] of previousPositions) {
     const section = todoSectionRefs.get(id);
     if (!section?.animate) continue;
-    const current = section.getBoundingClientRect();
+    const current = currentPositions.get(id);
+    if (!current) continue;
     const dx = previous.left - current.left;
     const dy = previous.top - current.top;
     if (!dx && !dy) continue;
@@ -1060,39 +1067,8 @@ function closeMenu(): void {
   selectedMenuTodoKey.value = null;
 }
 
-async function openCreateListDialog(anchor?: HTMLElement): Promise<void> {
-  listCreateDialog.value = {
-    anchor,
-    title: "",
-  };
-  listCreateDialogOpen.value = true;
-  await nextTick();
-  listCreateInputRef.value?.focus();
-}
-
-function updateCreateListTitle(value: string): void {
-  if (!listCreateDialog.value) return;
-  listCreateDialog.value = { ...listCreateDialog.value, title: value };
-}
-
-function confirmCreateListDialog(): void {
-  const dialog = listCreateDialog.value;
-  if (!dialog) return;
-  const title = dialog.title.trim();
-  if (!title) {
-    listCreateInputRef.value?.focus();
-    return;
-  }
-  emit("createList", dialog.anchor, title);
-  closeCreateListDialog();
-}
-
-function closeCreateListDialog(): void {
-  listCreateDialogOpen.value = false;
-}
-
-function clearCreateListDialog(): void {
-  if (!listCreateDialogOpen.value) listCreateDialog.value = null;
+function openCreateListDialog(anchor?: HTMLElement): void {
+  void listCreateDialogRef.value?.open(anchor);
 }
 
 function handleListTitleUpdate(listId: TodoListId, value: string): void {
@@ -2352,34 +2328,11 @@ function buildTodoListEntries(period: TodoListId, todos: TodoItem[], deferredDon
       </Transition>
     </Teleport>
 
-    <NModal
-      :show="listCreateDialogOpen"
-      preset="card"
-      class="quick-dialog todo-list-create-dialog"
-      :mask-closable="false"
-      :title="uiText.todo.listDialog"
-      :aria-label="uiText.todo.listDialog"
-      @close="closeCreateListDialog"
-      @esc="closeCreateListDialog"
-      @after-leave="clearCreateListDialog"
-    >
-      <form class="quick-form" @submit.prevent="confirmCreateListDialog">
-        <label for="todo-list-create-input">
-          <span>{{ uiText.todo.listName }}</span>
-          <NInput
-            ref="listCreateInputRef"
-            :value="listCreateDialog?.title ?? ''"
-            :input-props="{ id: 'todo-list-create-input', class: 'todo-list-create-input' }"
-            autocomplete="off"
-            @update:value="updateCreateListTitle"
-          />
-        </label>
-        <div class="dialog-actions">
-          <NButton class="quick-dialog-action todo-list-create-cancel" @click="closeCreateListDialog">{{ uiText.common.cancel }}</NButton>
-          <NButton class="quick-dialog-action quick-dialog-submit todo-list-create-confirm" attr-type="submit">{{ uiText.common.confirm }}</NButton>
-        </div>
-      </form>
-    </NModal>
+    <TodoListCreateDialog
+      ref="listCreateDialogRef"
+      :language="language"
+      @confirm="(anchor, title) => emit('createList', anchor, title)"
+    />
 
     <NDropdown
       v-if="menu"
