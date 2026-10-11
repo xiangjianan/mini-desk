@@ -110,7 +110,8 @@ html[data-theme="dark"] .workbench-shell,
   width: 20px;
   height: 20px;
   border-radius: 5px;
-  background: var(--desk-group-surface);
+  background: color-mix(in srgb, var(--primary) 16%, var(--desk-surface));
+  color: var(--primary);
   font-size: 14px;
 }
 .desk-zone-heading h1 > .n-icon svg,
