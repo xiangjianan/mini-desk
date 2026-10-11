@@ -8,9 +8,7 @@
   --desk-group-gap: 16px;
   --desk-group-top: 16px;
   --desk-group-scroll-gutter: 12px;
-  --desk-group-surface: color-mix(in srgb, var(--card) 42%, var(--muted-surface));
-  --desk-group-surface-bottom: color-mix(in srgb, var(--card) 70%, var(--muted-surface));
-  --desk-group-gradient: linear-gradient(180deg, var(--desk-group-surface) 0%, var(--desk-group-surface-bottom) 100%);
+  --desk-group-surface: color-mix(in srgb, var(--card) 34%, var(--muted-surface));
   --desk-edge: color-mix(in srgb, var(--line-section) 65%, transparent);
   --desk-control-shadow: 0 1px 2px color-mix(in srgb, var(--foreground) 5%, transparent);
   font-size: var(--app-font-size);
@@ -198,7 +196,7 @@ html[data-theme="dark"] .workbench-shell,
 .workbench-shell .todo-heading {
   min-height: var(--desk-group-heading-height);
   padding: 4px 8px;
-  background: var(--desk-group-gradient);
+  background: var(--desk-group-surface);
   backdrop-filter: none;
   box-shadow: none;
   border: 0;
@@ -259,19 +257,17 @@ html[data-theme="dark"] .workbench-shell,
   height: 32px;
   min-height: 32px;
   border-radius: 8px;
-  background: var(--desk-group-gradient);
+  background: var(--desk-group-surface);
   box-shadow: none;
   padding-inline: 12px;
 }
 .workbench-shell .space-tab.is-active {
   color: var(--accent-foreground);
-  background: linear-gradient(180deg,
-    color-mix(in srgb, var(--primary) 12%, var(--desk-surface)) 0%,
-    color-mix(in srgb, var(--primary) 4%, var(--desk-group-surface-bottom)) 100%);
+  background: color-mix(in srgb, var(--primary) 12%, var(--desk-group-surface));
   box-shadow: none;
 }
-.workbench-shell button.space-tab:hover { background: linear-gradient(180deg, var(--secondary), var(--desk-group-surface-bottom)); }
-.workbench-shell .space-tab-edit-shell { height: 32px; min-height: 32px; border-radius: 8px; background: var(--desk-group-gradient); }
+.workbench-shell button.space-tab:hover { background: var(--secondary); }
+.workbench-shell .space-tab-edit-shell { height: 32px; min-height: 32px; border-radius: 8px; background: var(--desk-group-surface); }
 .workbench-shell .space-tab-edit-input,
 .workbench-shell .space-tab-edit-measure { height: 32px; min-height: 32px; }
 .workbench-shell .text-editor-textarea,
@@ -341,7 +337,7 @@ html[data-theme="dark"] .workbench-shell,
   position: sticky;
   top: 0;
   z-index: 2;
-  background: var(--desk-group-gradient);
+  background: var(--desk-group-surface);
   min-height: var(--desk-group-heading-height);
   padding: 4px 8px;
   border-radius: 8px;
