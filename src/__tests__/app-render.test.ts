@@ -2220,6 +2220,51 @@ describe("App shell", () => {
     }
   });
 
+  it.each([true, false])("highlights only visible completed reminders pending cleanup (show completed: %s)", async (showCompleted) => {
+    vi.useFakeTimers();
+    localStorage.setItem(STORAGE_KEY, JSON.stringify({
+      todoLists: [
+        { id: "morning", title: "列表甲", collapsed: false, compact: false },
+        { id: "noon", title: "列表乙", collapsed: false, compact: false },
+      ],
+      todos: {
+        morning: buildTodos(3).map((todo, index) => ({ ...todo, done: index !== 1 })),
+        noon: [{ ...buildTodos(1)[0], id: "other-done", done: true }],
+      },
+      showCompletedTodos: { morning: showCompleted, noon: true },
+    }));
+    const wrapper = mountApp();
+    try {
+      const section = wrapper.get('.todo-section[data-list-id="morning"]');
+      const requestCleanup = async () => {
+        await section.trigger("contextmenu");
+        await wrapper.findAll(".dropdown-option").find((option) => option.text() === "清理已完成")!.trigger("click");
+        await vi.advanceTimersByTimeAsync(200);
+        await nextTick();
+      };
+      await requestCleanup();
+      expect(section.findAll(".todo-item.is-done[data-confirm-target]")).toHaveLength(showCompleted ? 2 : 0);
+      expect(section.findAll(".todo-item.is-done")).toHaveLength(showCompleted ? 2 : 0);
+      expect(section.find(".todo-item:not(.is-done)[data-confirm-target]").exists()).toBe(false);
+      expect(section.get(".todo-heading").attributes("data-confirm-target")).toBeUndefined();
+      expect(wrapper.get('.todo-section[data-list-id="noon"] .todo-item').attributes("data-confirm-target")).toBeUndefined();
+
+      await wrapper.get('[data-testid="companion-no"]').trigger("click");
+      expect(wrapper.find("[data-confirm-target]").exists()).toBe(false);
+      expect(loadState().workspaces[0].todos.morning).toHaveLength(3);
+
+      await requestCleanup();
+      await wrapper.get('[data-testid="companion-yes"]').trigger("click");
+      await nextTick();
+      expect(loadState().workspaces[0].todos.morning).toHaveLength(1);
+      expect(loadState().workspaces[0].todos.noon).toHaveLength(1);
+      expect(wrapper.find("[data-confirm-target]").exists()).toBe(false);
+    } finally {
+      wrapper.unmount();
+      vi.useRealTimers();
+    }
+  });
+
   it("highlights the tag heading and all its quick buttons pending tag deletion", async () => {
     vi.useFakeTimers();
     vi.spyOn(Math, "random").mockReturnValue(0);

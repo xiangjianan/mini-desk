@@ -2879,7 +2879,11 @@ function clearDone(period: TodoPeriod, anchor?: HTMLElement): void {
       showBubble("clearCompleted", anchor, { hideCompanionAfter: true });
     },
     undefined,
-    { confirmText: uiText.value.todo.clearCompletedConfirm, cancelText: uiText.value.common.cancel },
+    {
+      confirmText: uiText.value.todo.clearCompletedConfirm,
+      cancelText: uiText.value.common.cancel,
+      highlightTarget: getCompletedTodoTargets(period),
+    },
   );
 }
 
@@ -3725,6 +3729,13 @@ function getQuickTagGroupTargets(tagId: string, anchor?: HTMLElement): HTMLEleme
     ...Array.from(group.querySelectorAll<HTMLElement>(".quick-button")),
   ].filter((element): element is HTMLElement => Boolean(element));
   return targets.length ? targets : anchor;
+}
+
+/** 清理已完成：只标记正在展示的已完成行，不标记标题或恢复隐藏事项。 */
+function getCompletedTodoTargets(listId: TodoListId): HTMLElement[] {
+  if (activeWorkspace.value.showCompletedTodos[listId] === false) return [];
+  const section = document.querySelector<HTMLElement>(`.todo-section:not(.is-collapsed)[data-list-id="${cssAttrValue(listId)}"]`);
+  return Array.from(section?.querySelectorAll<HTMLElement>(".todo-item.is-done") ?? []);
 }
 
 /** 删除列表：列表标题行 + 该列表下全部提醒事项。 */
