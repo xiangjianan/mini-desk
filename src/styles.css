@@ -4388,10 +4388,9 @@ button.mobile-home-btn-danger:focus-visible {
 }
 
 /* Tint the content surfaces too: desktop groups have their own opaque backgrounds. */
-:root .quick-block.drag-hover,
-:root .quick-block.drag-hover .quick-tag-group,
-:root .quick-block.drag-hover .quick-tag-heading,
-:root .quick-block.drag-hover .quick-tag-content,
+:root .quick-tag-group.drag-hover,
+:root .quick-tag-group.drag-hover .quick-tag-heading,
+:root .quick-tag-group.drag-hover .quick-tag-content,
 :root .todo-section.drag-hover,
 :root .todo-section.drag-hover .todo-heading,
 :root .todo-section.drag-hover .todo-list-shell {

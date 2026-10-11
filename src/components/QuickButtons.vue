@@ -115,7 +115,7 @@ const dragScroll = createDragAutoScroll();
 const editingTagId = ref<string | null>(null);
 const inlineTagDraft = ref("");
 let inlineRenameInput: HTMLInputElement | null = null;
-const isDragHover = ref(false);
+const dragHoverGroupId = ref<string | null>(null);
 const leavingHiddenIds = new Set<string>();
 const uiText = computed(() => getUiText(props.language));
 const guideMenuOption = computed<DropdownOption>(() => ({ ...GUIDE_MENU_OPTION, label: uiText.value.common.tips }));
@@ -623,15 +623,21 @@ function handleQuickDragOver(event: DragEvent): void {
   if (hasText && !types.includes("Files")) {
     event.preventDefault();
     event.dataTransfer!.dropEffect = "copy";
-    isDragHover.value = true;
+    dragHoverGroupId.value = (event.target as HTMLElement | null)?.closest<HTMLElement>(".quick-tag-group")?.dataset.tagId ?? null;
   }
   if (draggingId.value || draggingTagId.value) {
     dragScroll.update(findDragScrollContainer(event.target, "quick-buttons-scrollbar"), event.clientY);
   }
 }
 
-function handleQuickDragLeave(): void {
-  isDragHover.value = false;
+function handleQuickDragLeave(event?: DragEvent): void {
+  if (dragHoverGroupId.value === null) return;
+  const nextTarget = event?.relatedTarget;
+  if (nextTarget instanceof HTMLElement && panelRef.value?.contains(nextTarget)) {
+    dragHoverGroupId.value = nextTarget.closest<HTMLElement>(".quick-tag-group")?.dataset.tagId ?? null;
+    return;
+  }
+  dragHoverGroupId.value = null;
 }
 
 function handleQuickDragEnd(): void {
@@ -708,9 +714,8 @@ async function runQuickSmartPasteFlow(tagTitle: string | undefined, anchor?: HTM
 
 function handleExternalQuickDrop(event: DragEvent, groupId: string): boolean {
   if (draggingId.value || draggingTagId.value) return false;
-  // Inner group/heading drops use .stop, so the outer handleQuickDrop (which clears
-  // isDragHover) never runs — clear the drag-hover background here too.
-  isDragHover.value = false;
+  // Inner drops stop bubbling, so clear the target highlight here too.
+  dragHoverGroupId.value = null;
   const text = readQuickDropText(event.dataTransfer);
   if (!text.trim()) return false;
   emit("save", buildQuickDropPayload(text, groupId));
@@ -719,7 +724,7 @@ function handleExternalQuickDrop(event: DragEvent, groupId: string): boolean {
 
 function handleQuickDrop(event: DragEvent): void {
   event.preventDefault();
-  isDragHover.value = false;
+  dragHoverGroupId.value = null;
   const text = readQuickDropText(event.dataTransfer);
   if (!text.trim()) return;
   emit("save", buildQuickDropPayload(text));
@@ -840,7 +845,8 @@ function getGroupTagId(groupId: string): string | undefined {
 }
 
 function handleQuickButtonDrop(event: DragEvent, targetButtonId: string, targetGroupId: string): void {
-  isDragHover.value = false;
+  dragHoverGroupId.value = null;
+  if (handleExternalQuickDrop(event, targetGroupId)) return;
   // 标签拖到某个按钮上松手：与提醒列表一致回落为该组的列落位（按钮自身的
   // drop 带 .stop，不回落会被直接吞掉）。
   if (!draggingId.value && draggingTagId.value) {
@@ -875,7 +881,7 @@ function handleQuickGroupDrop(event: DragEvent, groupId: string): void {
   <section
     ref="panelRef"
     class="split-block quick-block"
-    :class="{ 'drag-hover': isDragHover, 'is-compact': compact }"
+    :class="{ 'is-compact': compact }"
     @click="handleAreaClick"
     @contextmenu="openAreaMenu"
     @dragover="handleQuickDragOver"
@@ -959,7 +965,7 @@ function handleQuickGroupDrop(event: DragEvent, groupId: string): void {
           v-for="group in bucket"
           :key="group.id"
           class="quick-tag-group"
-          :class="{ 'is-empty': group.id === QUICK_BUTTON_EMPTY_GROUP_ID }"
+          :class="{ 'is-empty': group.id === QUICK_BUTTON_EMPTY_GROUP_ID, 'drag-hover': dragHoverGroupId === group.id }"
           :data-tag-id="group.id"
           @dragover="handleTagDragOver($event, group.id)"
           @drop.stop.prevent="handleQuickGroupDrop($event, group.id)"

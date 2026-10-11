@@ -815,7 +815,7 @@ describe("QuickButtons", () => {
     wrapper.unmount();
   });
 
-  it.each(["area", "group"])("copies a reminder into a quick action when dropped on the %s", async (target) => {
+  it.each(["area", "group", "button"])("copies a reminder into a quick action when dropped on the %s", async (target) => {
     const wrapper = mountQuickButtons({
       tags: [{ id: "tag-work", title: "工作" }],
       buttons: [{ id: "a", title: "A", value: "a", type: "text", hidden: false, tagId: "tag-work" }],
@@ -826,16 +826,41 @@ describe("QuickButtons", () => {
       dropEffect: "none",
       getData: (type: string) => type === "application/x-todo-text" ? "需要处理的提醒" : "",
     };
-    const dropTarget = wrapper.get(target === "area" ? ".quick-block" : ".quick-tag-group");
+    const dropTarget = wrapper.get(target === "area" ? ".quick-block" : target === "group" ? ".quick-tag-group" : ".quick-button");
     await dropTarget.trigger("dragover", { dataTransfer });
     expect(dataTransfer.dropEffect).toBe("copy");
-    expect(wrapper.get(".quick-block").classes()).toContain("drag-hover");
+    expect(wrapper.get(".quick-tag-group").classes().includes("drag-hover")).toBe(target !== "area");
+    expect(wrapper.get(".quick-block").classes()).not.toContain("drag-hover");
     await dropTarget.trigger("drop", { dataTransfer });
     expect(wrapper.emitted("save")).toEqual([[{
       title: "需要处理的提醒", value: "需要处理的提醒", type: "text",
-      tagTitle: target === "group" ? "工作" : undefined,
+      tagTitle: target !== "area" ? "工作" : undefined,
     }]]);
     expect(wrapper.get(".quick-block").classes()).not.toContain("drag-hover");
+    wrapper.unmount();
+  });
+
+  it("highlights only the target tag and keeps the highlight when moving between its children", async () => {
+    const wrapper = mountQuickButtons({
+      tags: [{ id: "first", title: "工作" }, { id: "second", title: "生活" }],
+      buttons: [
+        { id: "a", title: "A", value: "a", type: "text", hidden: false, tagId: "first" },
+        { id: "b", title: "B", value: "b", type: "text", hidden: false, tagId: "second" },
+      ],
+    });
+    const groups = wrapper.findAll(".quick-tag-group");
+    const dataTransfer = { types: ["text/plain"], getData: () => "笔记文字" };
+    await groups[0].get(".quick-tag-heading").trigger("dragover", { dataTransfer });
+    expect(groups[0].classes()).toContain("drag-hover");
+    expect(groups[1].classes()).not.toContain("drag-hover");
+    expect(wrapper.get(".quick-block").classes()).not.toContain("drag-hover");
+    await groups[0].get(".quick-tag-heading").trigger("dragleave", { relatedTarget: groups[0].get(".quick-tag-content").element });
+    expect(groups[0].classes()).toContain("drag-hover");
+    await groups[1].trigger("dragover", { dataTransfer });
+    expect(groups[0].classes()).not.toContain("drag-hover");
+    expect(groups[1].classes()).toContain("drag-hover");
+    await groups[1].trigger("dragleave", { relatedTarget: null });
+    expect(wrapper.findAll(".quick-tag-group.drag-hover")).toHaveLength(0);
     wrapper.unmount();
   });
 
@@ -850,7 +875,7 @@ describe("QuickButtons", () => {
     };
 
     await wrapper.get(".quick-block").trigger("dragover", { dataTransfer });
-    expect(wrapper.get(".quick-block").classes()).toContain("drag-hover");
+    expect(wrapper.get(".quick-block").classes()).not.toContain("drag-hover");
 
     await wrapper.get(".quick-block").trigger("drop", { dataTransfer });
 
@@ -931,7 +956,7 @@ describe("QuickButtons", () => {
     };
 
     await wrapper.get(".quick-block").trigger("dragover", { dataTransfer });
-    expect(wrapper.get(".quick-block").classes()).toContain("drag-hover");
+    expect(wrapper.get(".quick-block").classes()).not.toContain("drag-hover");
 
     await wrapper.get(".quick-block").trigger("drop", { dataTransfer });
 
@@ -993,7 +1018,7 @@ describe("QuickButtons", () => {
     wrapper.unmount();
   });
 
-  it("clears the drag-hover frame after an external text drop on a tag group", async () => {
+  it("clears the tag background after an external text drop on a tag group", async () => {
     const wrapper = mountQuickButtons({
       tags: [{ id: "tag-work", title: "工作" }],
       buttons: [{ id: "tagged", title: "T", value: "t", type: "text", hidden: false, tagId: "tag-work" }],
@@ -1004,10 +1029,12 @@ describe("QuickButtons", () => {
       getData: (type: string) => (type === "text/plain" ? "外部文字" : ""),
     };
 
-    await wrapper.get(".quick-block").trigger("dragover", { dataTransfer });
-    expect(wrapper.get(".quick-block").classes()).toContain("drag-hover");
+    await wrapper.get(".quick-tag-group").trigger("dragover", { dataTransfer });
+    expect(wrapper.get(".quick-block").classes()).not.toContain("drag-hover");
 
+    expect(wrapper.get(".quick-tag-group").classes()).toContain("drag-hover");
     await wrapper.findAll(".quick-tag-group")[0].trigger("drop", { dataTransfer });
+    expect(wrapper.get(".quick-tag-group").classes()).not.toContain("drag-hover");
 
     expect(wrapper.get(".quick-block").classes()).not.toContain("drag-hover");
 
