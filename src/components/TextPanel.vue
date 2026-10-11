@@ -117,10 +117,22 @@ function syncMirrorScroll(event: Event): void {
 
 let isUnmounted = false;
 let editorRevision = 0;
+let textDragPreview: HTMLElement | null = null;
+
+function clearTextDragPreview(): void {
+  textDragPreview?.remove();
+  textDragPreview = null;
+}
+
+function handleTextDragEnd(): void {
+  clearTextDragPreview();
+  handleDragLeaveClear();
+}
 
 onMounted(exclusiveMenu.mount);
 onUnmounted(() => {
   isUnmounted = true;
+  clearTextDragPreview();
   exclusiveMenu.unmount();
 });
 
@@ -806,6 +818,19 @@ function handleTextDragStart(event: DragEvent): void {
   isLocalDrag.value = true;
   event.dataTransfer.effectAllowed = "copy";
   event.dataTransfer.setData("text/plain", selectedText);
+  clearTextDragPreview();
+  if (event.dataTransfer.setDragImage) {
+    const preview = document.createElement("div");
+    preview.className = "notebook-text-drag-preview";
+    preview.textContent = selectedText;
+    preview.setAttribute("aria-hidden", "true");
+    const style = window.getComputedStyle(target);
+    preview.style.font = style.font;
+    preview.style.lineHeight = style.lineHeight;
+    document.body.appendChild(preview);
+    textDragPreview = preview;
+    event.dataTransfer.setDragImage(preview, 12, 12);
+  }
 }
 
 async function handleMenuSelect(key: string): Promise<void> {
@@ -1115,7 +1140,7 @@ function restoreSelection(textarea: HTMLTextAreaElement, selection: { start: num
 </script>
 
 <template>
-  <section class="text-panel" :class="[textPanelClasses, { 'drag-hover': isDragHover }]" @dragenter="handleDragEnter" @dragleave="handleDragLeaveClear" @drop="handleDragLeaveClear" @dragend="handleDragLeaveClear">
+  <section class="text-panel" :class="[textPanelClasses, { 'drag-hover': isDragHover }]" @dragenter="handleDragEnter" @dragleave="handleDragLeaveClear" @drop="handleDragLeaveClear" @dragend="handleTextDragEnd">
     <div v-if="!hideHeader" class="panel-header" @contextmenu="openTitleMenu">
       <h2>
         <EditableTitle

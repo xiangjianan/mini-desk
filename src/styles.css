@@ -4379,6 +4379,25 @@ button.mobile-home-btn-danger:focus-visible {
 }
 
 /* Drag text highlight */
+.notebook-text-drag-preview {
+  position: fixed;
+  top: 0;
+  left: -10000px;
+  width: max-content;
+  max-width: 320px;
+  max-height: 160px;
+  padding: 10px 14px;
+  overflow: hidden;
+  white-space: pre-wrap;
+  overflow-wrap: anywhere;
+  color: var(--foreground);
+  background: var(--card);
+  border: 1px solid var(--line-subtle);
+  border-radius: 10px;
+  box-shadow: 0 8px 24px rgb(0 0 0 / 18%);
+  pointer-events: none;
+}
+
 .panel.drag-hover,
 .text-panel.drag-hover,
 .split-block.drag-hover:not(.quick-block) {

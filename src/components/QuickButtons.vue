@@ -9,7 +9,7 @@ import type { AppLanguage, GuideKey, QuickApiBodyType, QuickApiHeader, QuickApiM
 import { GUIDE_MENU_OPTION } from "../state/defaults";
 import { getIconHeadingText, getUiText } from "../state/i18n";
 import type { QuickButtonGroup } from "../state/quickButtons";
-import { buildVisibleQuickButtonGroups, filterVisibleQuickButtonGroups, groupQuickButtonsByColumn, hasOverloadedVisibleQuickButtonGroup, quickButtonUsagePercent, QUICK_BUTTON_EMPTY_GROUP_ID, QUICK_DENSITY_THRESHOLD } from "../state/quickButtons";
+import { buildVisibleQuickButtonGroups, filterVisibleQuickButtonGroups, groupQuickButtonsByColumn, hasOverloadedVisibleQuickButtonGroup, quickButtonUsagePercent, QUICK_BUTTON_OTHER_GROUP_ID, QUICK_BUTTON_EMPTY_GROUP_ID, QUICK_DENSITY_THRESHOLD } from "../state/quickButtons";
 import { findQuickAppPresetByScheme, getQuickAppPresetHint, getQuickAppPresetTitle, QUICK_APP_PRESETS } from "../state/quickApps";
 import { findQuickApiTemplate, QUICK_API_TEMPLATES } from "../state/quickApiTemplates";
 import { clearGlobalSearch, globalSearchNormalized, globalSearchQuery, setGlobalSearch } from "../state/globalSearch";
@@ -153,7 +153,14 @@ watch(() => props.tags, refreshTagDrafts, { deep: true });
 
 const groupedButtons = computed(() => {
   const base = buildVisibleQuickButtonGroups(props.buttons, props.tags, props.showHidden, uiText.value.quick.otherTag, props.otherCollapsed);
-  return filterVisibleQuickButtonGroups(base, globalSearchNormalized.value);
+  const groups = filterVisibleQuickButtonGroups(base, globalSearchNormalized.value);
+  if (dragHoverGroupId.value === QUICK_BUTTON_OTHER_GROUP_ID && !groups.some((group) => group.id === QUICK_BUTTON_OTHER_GROUP_ID)) {
+    return [...groups.filter((group) => group.id !== QUICK_BUTTON_EMPTY_GROUP_ID), {
+      id: QUICK_BUTTON_OTHER_GROUP_ID, title: uiText.value.quick.otherTag,
+      buttons: [], reorderable: false, collapsed: false,
+    }];
+  }
+  return groups;
 });
 
 // Quick actions always use one column, including legacy pinned tag layouts.
@@ -623,7 +630,7 @@ function handleQuickDragOver(event: DragEvent): void {
   if (hasText && !types.includes("Files")) {
     event.preventDefault();
     event.dataTransfer!.dropEffect = "copy";
-    dragHoverGroupId.value = (event.target as HTMLElement | null)?.closest<HTMLElement>(".quick-tag-group")?.dataset.tagId ?? null;
+    dragHoverGroupId.value = (event.target as HTMLElement | null)?.closest<HTMLElement>(".quick-tag-group")?.dataset.tagId ?? QUICK_BUTTON_OTHER_GROUP_ID;
   }
   if (draggingId.value || draggingTagId.value) {
     dragScroll.update(findDragScrollContainer(event.target, "quick-buttons-scrollbar"), event.clientY);
@@ -634,7 +641,7 @@ function handleQuickDragLeave(event?: DragEvent): void {
   if (dragHoverGroupId.value === null) return;
   const nextTarget = event?.relatedTarget;
   if (nextTarget instanceof HTMLElement && panelRef.value?.contains(nextTarget)) {
-    dragHoverGroupId.value = nextTarget.closest<HTMLElement>(".quick-tag-group")?.dataset.tagId ?? null;
+    dragHoverGroupId.value = nextTarget.closest<HTMLElement>(".quick-tag-group")?.dataset.tagId ?? QUICK_BUTTON_OTHER_GROUP_ID;
     return;
   }
   dragHoverGroupId.value = null;

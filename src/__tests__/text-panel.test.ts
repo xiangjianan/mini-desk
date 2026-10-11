@@ -1403,6 +1403,30 @@ describe("TextPanel", () => {
     expect(setData).toHaveBeenCalledWith("text/plain", "拖入提醒");
   });
 
+  it("uses the selected text as a floating drag preview and removes it at drag end or unmount", async () => {
+    const wrapper = mount(TextPanel, {
+      props: {
+        titleId: "workspace-title", title: "记事本",
+        lines: [{ text: "第一行", indent: 0 }, { text: "第二行", indent: 0 }],
+      },
+    });
+    const textarea = wrapper.get("textarea").element as HTMLTextAreaElement;
+    textarea.setSelectionRange(0, textarea.value.length);
+    await wrapper.get("textarea").trigger("select");
+    const setDragImage = vi.fn();
+    const dataTransfer = { effectAllowed: "", setData: vi.fn(), setDragImage };
+    await wrapper.get("textarea").trigger("dragstart", { dataTransfer });
+    const preview = document.querySelector(".notebook-text-drag-preview");
+    expect(preview?.textContent).toBe(textarea.value);
+    expect(setDragImage).toHaveBeenCalledWith(preview, 12, 12);
+    await wrapper.get("textarea").trigger("dragend");
+    expect(document.querySelector(".notebook-text-drag-preview")).toBeNull();
+    await wrapper.get("textarea").trigger("dragstart", { dataTransfer });
+    expect(document.querySelector(".notebook-text-drag-preview")).not.toBeNull();
+    wrapper.unmount();
+    expect(document.querySelector(".notebook-text-drag-preview")).toBeNull();
+  });
+
   it("keeps remembered workspace text draggable when the drag gesture disturbs the live selection", async () => {
     const setData = vi.fn();
     const wrapper = mount(TextPanel, {

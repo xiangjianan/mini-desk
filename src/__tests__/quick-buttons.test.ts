@@ -840,6 +840,27 @@ describe("QuickButtons", () => {
     wrapper.unmount();
   });
 
+  it.each([true, false])("highlights the other group over blank space (existing other group: %s)", async (hasOther) => {
+    const wrapper = mountQuickButtons({
+      tags: [{ id: "work", title: "工作" }],
+      buttons: [
+        { id: "a", title: "A", value: "a", type: "text", hidden: false, tagId: "work" },
+        ...(hasOther ? [{ id: "b", title: "B", value: "b", type: "text" as const, hidden: false }] : []),
+      ],
+    });
+    const dataTransfer = { types: ["text/plain"], getData: () => "记事本文字" };
+    await wrapper.get('[data-tag-id="work"]').trigger("dragover", { dataTransfer });
+    await wrapper.get(".quick-block").trigger("dragover", { dataTransfer });
+    expect(wrapper.get('[data-tag-id="__other"]').classes()).toContain("drag-hover");
+    expect(wrapper.get('[data-tag-id="work"]').classes()).not.toContain("drag-hover");
+    expect(wrapper.get(".quick-block").classes()).not.toContain("drag-hover");
+    await wrapper.get(".quick-block").trigger("drop", { dataTransfer });
+    expect(wrapper.emitted("save")?.[0][0]).toMatchObject({ value: "记事本文字", tagTitle: undefined });
+    expect(wrapper.findAll(".quick-tag-group.drag-hover")).toHaveLength(0);
+    if (!hasOther) expect(wrapper.find('[data-tag-id="__other"]').exists()).toBe(false);
+    wrapper.unmount();
+  });
+
   it("highlights only the target tag and keeps the highlight when moving between its children", async () => {
     const wrapper = mountQuickButtons({
       tags: [{ id: "first", title: "工作" }, { id: "second", title: "生活" }],
