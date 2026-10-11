@@ -5,7 +5,7 @@ import {
   CheckmarkOutline,
   CloudDownloadOutline,
   CloudUploadOutline,
-  CreateOutline,
+  MailOutline,
   GlobeOutline,
   HeartOutline,
   ImagesOutline,
@@ -109,7 +109,7 @@ const options = computed(() => [
   },
   { label: text.value.app.inboxPair, key: "pair-inbox", icon: renderIcon(PhonePortraitOutline) },
   { label: text.value.settings.shortcutHelp, key: "shortcut-help", icon: renderIcon(KeyOutline) },
-  { label: text.value.settings.suggest, key: "suggest", icon: renderIcon(CreateOutline) },
+  { label: text.value.settings.suggest, key: "suggest", icon: renderIcon(MailOutline) },
   ...(SUPPORT_AUTHOR_ENABLED
     ? [{ label: text.value.settings.support, key: "support", icon: renderIcon(HeartOutline) }]
     : []),
