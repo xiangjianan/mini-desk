@@ -102,7 +102,19 @@ html[data-theme="dark"] .workbench-shell,
 }
 
 .desk-zone-heading h1 > .n-icon,
-.desk-zone-heading h2 > .n-icon { flex: 0 0 auto; font-size: 20px; }
+.desk-zone-heading h2 > .n-icon {
+  flex: 0 0 auto;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 20px;
+  height: 20px;
+  border-radius: 5px;
+  background: var(--desk-group-surface);
+  font-size: 14px;
+}
+.desk-zone-heading h1 > .n-icon svg,
+.desk-zone-heading h2 > .n-icon svg { width: 14px; height: 14px; }
 .workbench-shell .header-actions { flex-shrink: 0; gap: 2px; }
 .workbench-shell .icon-button { box-shadow: none; background: transparent; border-radius: 6px; }
 .workbench-shell .icon-button:hover { background: var(--secondary); }

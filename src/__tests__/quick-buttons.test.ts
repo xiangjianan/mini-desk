@@ -746,6 +746,13 @@ describe("QuickButtons", () => {
     await wrapper.findAll(".quick-tag-heading")[1].trigger("drop");
 
     expect(wrapper.emitted("assignTagColumn")?.[0]).toEqual(["tag-a", 0, "tag-b", true]);
+    const heading = wrapper.findAll(".quick-tag-heading")[1];
+    const bounds = vi.spyOn(heading.element, "getBoundingClientRect").mockReturnValue({ top: 100, height: 42 } as DOMRect);
+    await wrapper.findAll(".quick-tag-heading")[0].trigger("dragstart");
+    await heading.trigger("drop", { clientY: 135 });
+    expect(wrapper.emitted("assignTagColumn")?.[1]).toEqual(["tag-a", 0, "tag-b", false]);
+    bounds.mockRestore();
+
 
     wrapper.unmount();
   });

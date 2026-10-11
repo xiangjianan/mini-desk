@@ -891,6 +891,13 @@ describe("TodoPanel", () => {
     expect(dataTransfer.setData).not.toHaveBeenCalledWith("text/plain", "☀️ 早上");
     expect(dataTransfer.setData).toHaveBeenCalledWith("application/x-todo-list-id", "morning");
     expect(wrapper.emitted("assignListColumn")?.[0]).toEqual(["morning", 0, "noon", true]);
+    const heading = wrapper.get('.todo-section[data-list-id="noon"] .todo-heading');
+    const bounds = vi.spyOn(heading.element, "getBoundingClientRect").mockReturnValue({ top: 100, height: 42 } as DOMRect);
+    await wrapper.get('.todo-section[data-list-id="morning"] .todo-heading').trigger("dragstart", { dataTransfer });
+    await wrapper.get('.todo-section[data-list-id="noon"]').trigger("drop", { clientY: 135 });
+    expect(wrapper.emitted("assignListColumn")?.[1]).toEqual(["morning", 0, "noon", false]);
+    bounds.mockRestore();
+
     expect(wrapper.emitted("move")).toBeUndefined();
 
     await wrapper.get('.todo-section[data-list-id="morning"] .todo-heading').trigger("dragend");

@@ -1,4 +1,5 @@
 <script setup lang="ts">
+import { isGroupDropBefore } from "../utils/groupDrop";
 import { computed, h, nextTick, onMounted, onUnmounted, onUpdated, ref, shallowReactive, watch } from "vue";
 import type { Component, VNode } from "vue";
 import {
@@ -569,7 +570,7 @@ function handleTodoTextDrop(event: DragEvent, period: TodoPeriod): void {
     event.preventDefault();
     event.stopPropagation();
     const targetList = getListById(period);
-    emit("assignListColumn", draggedListId.value, targetList ? clampColumn(targetList.column ?? 0) : 0, period, true);
+    emit("assignListColumn", draggedListId.value, targetList ? clampColumn(targetList.column ?? 0) : 0, period, isGroupDropBefore(event, ".todo-section", ".todo-heading"));
     draggedListId.value = null;
     return;
   }
@@ -607,8 +608,8 @@ function handleListSectionDrop(event: DragEvent, list: TodoListConfig): void {
   if (draggedListId.value) {
     event.preventDefault();
     event.stopPropagation();
-    // Drop onto a list: join that list's column, placed right before it.
-    emit("assignListColumn", draggedListId.value, clampColumn(list.column ?? 0), list.id, true);
+    // Join the target column, before or after its heading midpoint.
+    emit("assignListColumn", draggedListId.value, clampColumn(list.column ?? 0), list.id, isGroupDropBefore(event, ".todo-section", ".todo-heading"));
     draggedListId.value = null;
     return;
   }

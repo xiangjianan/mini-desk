@@ -1,4 +1,5 @@
 <script setup lang="ts">
+import { isGroupDropBefore } from "../utils/groupDrop";
 import { computed, h, nextTick, onMounted, onUnmounted, reactive, ref, watch } from "vue";
 import type { Component, ComponentPublicInstance, VNode } from "vue";
 import { NButton, NCheckbox, NDropdown, NIcon, NInput, NModal, NScrollbar, NSelect } from "naive-ui";
@@ -739,8 +740,8 @@ function onTagDrop(event: DragEvent, groupId: string): void {
   }
   if (handleExternalQuickDrop(event, groupId)) return;
   if (!draggingTagId.value || draggingTagId.value === groupId || !isRealTagGroup(groupId)) return;
-  // 标签落位走显式列分配（与提醒列表一致）：换列 + 列内插到目标标签前。
-  emit("assignTagColumn", draggingTagId.value, getGroupColumn(groupId), groupId, true);
+  // 标签落位与提醒列表一致：根据标题中线判断前后位置。
+  emit("assignTagColumn", draggingTagId.value, getGroupColumn(groupId), groupId, isGroupDropBefore(event, ".quick-tag-group", ".quick-tag-heading"));
 }
 
 /**
@@ -791,13 +792,13 @@ function getGroupTagId(groupId: string): string | undefined {
   return groupId === "__other" ? undefined : groupId;
 }
 
-function handleQuickButtonDrop(targetButtonId: string, targetGroupId: string): void {
+function handleQuickButtonDrop(event: DragEvent, targetButtonId: string, targetGroupId: string): void {
   isDragHover.value = false;
   // 标签拖到某个按钮上松手：与提醒列表一致回落为该组的列落位（按钮自身的
   // drop 带 .stop，不回落会被直接吞掉）。
   if (!draggingId.value && draggingTagId.value) {
     if (draggingTagId.value !== targetGroupId && isRealTagGroup(targetGroupId)) {
-      emit("assignTagColumn", draggingTagId.value, getGroupColumn(targetGroupId), targetGroupId, true);
+      emit("assignTagColumn", draggingTagId.value, getGroupColumn(targetGroupId), targetGroupId, isGroupDropBefore(event, ".quick-tag-group", ".quick-tag-heading"));
     }
     return;
   }
@@ -1011,7 +1012,7 @@ function handleQuickGroupDrop(event: DragEvent, groupId: string): void {
                 @contextmenu.stop="openMenu($event, button.id)"
                 @dragstart="draggingId = button.id"
                 @dragover.prevent
-                @drop.stop.prevent="handleQuickButtonDrop(button.id, group.id)"
+                @drop.stop.prevent="handleQuickButtonDrop($event, button.id, group.id)"
                 @dragend="draggingId = null"
               >
                 <NIcon v-if="button.type === 'text'" class="quick-button-icon" :component="CopyOutline" />
