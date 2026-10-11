@@ -29,6 +29,20 @@ export interface ChangelogEntry {
 
 export const CHANGELOG: ChangelogEntry[] = [
     {
+      version: "1.0.209",
+      date: "2026-10-11",
+      notes: {
+        zh: [
+          "安全：工作区导出文件不再包含手机速记配对信息——分享导出文件不会外泄配对码，本机数据不受影响",
+          "修复：提醒删除二次确认的高亮与整行选中样式保持一致",
+        ],
+        en: [
+          "Security: exported workspace files no longer carry the mobile-inbox pairing configuration — sharing an export never leaks the pairing code, and local data is untouched",
+          "Fixed: the reminder delete-confirmation highlight now matches the full-row selection style",
+        ],
+      },
+    },
+    {
       version: "1.0.208",
       date: "2026-10-11",
       notes: {
