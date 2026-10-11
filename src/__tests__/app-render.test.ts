@@ -7260,6 +7260,9 @@ describe("App shell", () => {
     Object.defineProperty(window, "showSaveFilePicker", { value: showSaveFilePicker, configurable: true });
     Object.defineProperty(window, "showDirectoryPicker", { value: showDirectoryPicker, configurable: true });
     Object.assign(URL, { createObjectURL, revokeObjectURL });
+    const pairedState = defaultState();
+    pairedState.workspaces[0].inbox = { code: "0123456789AB", todoListId: "morning", noteTarget: DEFAULT_SPACE_ID, lastSeenAt: 123 };
+    localStorage.setItem(STORAGE_KEY, JSON.stringify(pairedState));
     const wrapper = mountApp();
 
     try {
@@ -7280,6 +7283,9 @@ describe("App shell", () => {
       const exported = await exportedBlob.text();
       expect(JSON.parse(exported)).toMatchObject({ miniDeskWorkspaceExport: true, version: 1 });
       expect(JSON.parse(exported).workspace.zoneWidthRatios).toEqual([0.1, 0.2, 0.3, 0.4]);
+      expect(JSON.parse(exported).workspace).not.toHaveProperty("inbox");
+      expect(exported).not.toContain("0123456789AB");
+      expect(loadState().workspaces[0].inbox).toEqual(pairedState.workspaces[0].inbox);
 
       await vi.advanceTimersByTimeAsync(200);
       await wrapper.vm.$nextTick();

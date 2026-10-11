@@ -984,7 +984,7 @@ function slugifyTitle(title: string): string {
 function exportWorkspaceById(id: string, anchor?: HTMLElement): void {
   const workspace = state.workspaces.find((item) => item.id === id);
   if (!workspace) return;
-  const serialized = getSerializableWorkspace(workspace, { includeImageData: true });
+  const serialized = getSerializableWorkspace(workspace, { includeImageData: true, omitInbox: true });
   const ratios = readWorkbenchWidthRatios(workspace.id);
   if (ratios) serialized.zoneWidthRatios = ratios;
   const content = JSON.stringify({ miniDeskWorkspaceExport: true, version: 1, workspace: serialized }, null, 2);
