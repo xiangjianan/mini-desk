@@ -184,6 +184,33 @@ describe("TextPanel", () => {
     wrapper.unmount();
   });
 
+  it.each([
+    ["1. 上方", "1. 上方\n2. 第一\n3. 第二\n4. 后续"],
+    ["- 上方", "- 上方\n- 第一\n- 第二\n- 后续"],
+  ])("multi-line Shift+Tab follows the list format of %s", async (above, expected) => {
+    const wrapper = mount(TextPanel, {
+      props: {
+        titleId: "workspace-title", title: "工作空间",
+        lines: [
+          { text: above, indent: 0 },
+          { text: "- 第一", indent: 1 },
+          { text: "1. 第二", indent: 1 },
+          { text: above.startsWith("1.") ? "2. 后续" : "- 后续", indent: 0 },
+        ],
+      },
+    });
+    await wrapper.get("textarea").trigger("dblclick");
+    const textarea = wrapper.get("textarea").element as HTMLTextAreaElement;
+    const start = textarea.value.indexOf("    - 第一");
+    const end = textarea.value.indexOf("\n", textarea.value.indexOf("第二"));
+    textarea.setSelectionRange(start, end);
+    await wrapper.get("textarea").trigger("keydown", { key: "Tab", shiftKey: true });
+    expect(textarea.value).toBe(expected);
+    expect(textarea.selectionStart).toBe(start);
+    expect(textarea.value.slice(textarea.selectionStart, textarea.selectionEnd)).toBe(expected.split("\n").slice(1, 3).join("\n"));
+    wrapper.unmount();
+  });
+
   it("continues an indented dash line after the current line when pressing Shift+Enter", async () => {
     const wrapper = mount(TextPanel, {
       props: {

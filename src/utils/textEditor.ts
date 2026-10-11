@@ -258,7 +258,12 @@ export function handleTextareaTab(textarea: HTMLTextAreaElement, outdent = false
     const result = applySingleLineIndent(workingValue, lineStart, outdent);
     let nextLine = getLineAt(result.text, lineStart).text;
     if (outdent && getIndentInfo(nextLine).depth === 0) {
-      nextLine = nextLine.replace(/^(?:\d+\.\s+|[-*]\s+)/, "");
+      const sibling = getPreviousLineAtDepth(workingValue, lineStart, 0);
+      // Keep the inherited root marker when joining an existing list. Only
+      // turn the selection into plain lines when no marked sibling precedes it.
+      if (!sibling || getMarkerKind(sibling) === "plain") {
+        nextLine = nextLine.replace(/^(?:\d+\.\s+|[-*]\s+)/, "");
+      }
     }
     workingValue = `${workingValue.slice(0, lineStart)}${nextLine}${workingValue.slice(lineStart + line.length)}`;
     transformedLines.push(nextLine);

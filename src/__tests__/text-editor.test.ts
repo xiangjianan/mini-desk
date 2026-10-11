@@ -556,6 +556,19 @@ describe("computeCaretRevealScroll — 合成编辑后的光标可见化", () =>
 });
 
  describe("selected list outdent", () => {
+  it.each([
+    ["1. 上方", "1. 上方\n2. 第一\n3. 第二\n4. 第三"],
+    ["- 上方", "- 上方\n- 第一\n- 第二\n- 第三"],
+  ])("inherits the root list marker from %s for every selected line", (above, expected) => {
+    const textarea = textareaWith(`${above}\n    - 第一\n    1. 第二\n    - 第三`, 0);
+    const start = textarea.value.indexOf("    - 第一");
+    textarea.setSelectionRange(start, textarea.value.length);
+    handleTextareaTab(textarea, true);
+    expect(renumbered(textarea.value)).toBe(expected);
+    expect(textarea.selectionStart).toBe(start);
+    expect(textarea.selectionEnd).toBe(textarea.value.length);
+  });
+
   it("removes all markers when the selection reaches the left edge", () => {
     const textarea = textareaWith("    1. 第一\n    2. 第二\n    - 第三", 0);
     textarea.setSelectionRange(0, textarea.value.length);
