@@ -212,7 +212,8 @@ export function translateMarksForEdit(marks: TextMark[], previous: string, next:
     if (pairedIndex === null) continue; // 行被删除，mark 随之消失
     const edit = getInLineEdit(before[line] ?? "", after[head + pairedIndex] ?? "");
     if (edit.removed === 0 && edit.added === 0) {
-      result.push(mark);
+      const delta = (afterStarts[head + pairedIndex] ?? 0) - (beforeStarts[line] ?? 0);
+      result.push({ ...mark, start: mark.start + delta, end: mark.end + delta });
       continue;
     }
     const baseBefore = beforeStarts[line] ?? 0;

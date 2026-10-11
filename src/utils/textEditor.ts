@@ -1,12 +1,11 @@
 import type { LineItem, TextMark } from "../types";
 import { serializeTextLines, textLinesToText } from "../state/storage";
-import { translateMarksForEdit } from "./textMarks";
+import { mergeMarkList, translateMarksForEdit } from "./textMarks";
 
 export { serializeTextLines, textLinesToText };
 
 const INDENT_UNIT = "    ";
 const ORDERED_MARKER_PATTERN = /^(\d+)\.\s+(.*)$/;
-const MAX_ORDERED_LIST_MARKER = 99;
 
 export interface EditorState {
   text: string;
@@ -102,7 +101,10 @@ export function renumberOrderedListText(value = ""): string {
     }
 
     const markerNumber = Number(match[1]);
-    const startsList = markerNumber === 1 || (active.has(indent) && markerNumber <= MAX_ORDERED_LIST_MARKER);
+    // A spaced year/month date can resemble a marker ("2026. 05 launch").
+    // Preserve that prose without imposing a maximum length on real lists.
+    const isSpacedDate = /^\d{4}\.\s+(?:0?[1-9]|1[0-2])(?:\s|[./-]|$)/.test(content);
+    const startsList = !isSpacedDate && (markerNumber === 1 || active.has(indent));
     if (!startsList) {
       counters.delete(indent);
       active.delete(indent);
@@ -139,8 +141,9 @@ function getLineAt(value: string, caret: number): LineSlice {
 function getPreviousLineAtDepth(value: string, lineStart: number, depth: number): string | null {
   let end = lineStart - 1;
   while (end >= 0) {
-    const start = value.lastIndexOf("\n", end - 1) + 1;
+    const start = end === 0 ? 0 : value.lastIndexOf("\n", end - 1) + 1;
     const text = value.slice(start, end);
+    if (text.trim() && getIndentInfo(text).depth < depth) return null;
     if (text.trim() && getIndentInfo(text).depth === depth) return text;
     if (start === 0) return null;
     end = start - 1;
@@ -182,7 +185,7 @@ function resolveListMarker(
 function getPreviousPhysicalLine(value: string, lineStart: number): string | null {
   if (lineStart === 0) return null;
   const prevEnd = lineStart - 1;
-  const prevStart = value.lastIndexOf("\n", prevEnd - 1) + 1;
+  const prevStart = prevEnd === 0 ? 0 : value.lastIndexOf("\n", prevEnd - 1) + 1;
   return value.slice(prevStart, prevEnd);
 }
 
@@ -277,7 +280,7 @@ export function handleTextareaTab(textarea: HTMLTextAreaElement, outdent = false
 
 export function insertIndentedLineBreak(textarea: HTMLTextAreaElement): string {
   const { selectionStart, value } = textarea;
-  const lineStart = value.lastIndexOf("\n", selectionStart - 1) + 1;
+  const lineStart = getLineAt(value, selectionStart).start;
   const lineEndIndex = value.indexOf("\n", selectionStart);
   const lineEnd = lineEndIndex === -1 ? value.length : lineEndIndex;
   const line = value.slice(lineStart, lineEnd);
@@ -296,7 +299,7 @@ export function insertIndentedLineBreak(textarea: HTMLTextAreaElement): string {
 
 export function insertPlainLineBreak(textarea: HTMLTextAreaElement): string {
   const { selectionEnd, value } = textarea;
-  const lineStart = value.lastIndexOf("\n", selectionEnd - 1) + 1;
+  const lineStart = getLineAt(value, selectionEnd).start;
   const lineEndIndex = value.indexOf("\n", selectionEnd);
   const lineEnd = lineEndIndex === -1 ? value.length : lineEndIndex;
   const line = value.slice(lineStart, lineEnd);
@@ -382,12 +385,24 @@ export function computeCaretRevealScroll(metrics: CaretRevealMetrics): number | 
  * 相邻行可换时返回 undefined 且不改动。
  */
 export function moveTextareaLine(textarea: HTMLTextAreaElement, direction: -1 | 1): string | undefined {
+  return moveTextareaLineWithMarks(textarea, direction, [])?.text;
+}
+
+export function moveTextareaLineWithMarks(textarea: HTMLTextAreaElement, direction: -1 | 1, marks: TextMark[]): EditorState | undefined {
   const { selectionStart, selectionEnd, value } = textarea;
   const result = moveLineInText(value, Math.min(selectionStart, selectionEnd), direction);
   if (!result) return undefined;
   textarea.value = result.text;
   textarea.setSelectionRange(result.caret, result.caret);
-  return result.text;
+  const movedMarks: TextMark[] = [];
+  for (const mark of marks) {
+    for (const range of result.ranges) {
+      const start = Math.max(mark.start, range.start);
+      const end = Math.min(mark.end, range.end);
+      if (start < end) movedMarks.push({ ...mark, start: start + range.delta, end: end + range.delta });
+    }
+  }
+  return { text: result.text, marks: mergeMarkList(movedMarks) };
 }
 
 interface ListLineParts {
@@ -413,14 +428,14 @@ function splitListLine(line: string): ListLineParts {
   };
 }
 
-function moveLineInText(value: string, caret: number, direction: -1 | 1): { text: string; caret: number } | undefined {
+function moveLineInText(value: string, caret: number, direction: -1 | 1): { text: string; caret: number; ranges: { start: number; end: number; delta: number }[] } | undefined {
   const current = getLineAt(value, caret);
   let neighborStart: number;
   let neighborEnd: number;
   if (direction === -1) {
     if (current.start === 0) return undefined;
     neighborEnd = current.start - 1;
-    neighborStart = value.lastIndexOf("\n", neighborEnd - 1) + 1;
+    neighborStart = neighborEnd === 0 ? 0 : value.lastIndexOf("\n", neighborEnd - 1) + 1;
   } else {
     if (current.end >= value.length) return undefined;
     neighborStart = current.end + 1;
@@ -454,9 +469,30 @@ function moveLineInText(value: string, caret: number, direction: -1 | 1): { text
   const movedTextStart = movedLineStart + (swapContentOnly
     ? neighborParts.indent.length + neighborParts.marker.length
     : 0);
+  const displacedLineStart = direction === -1 ? regionStart + movedLine.length + 1 : regionStart;
+  const ranges = [
+    { start: 0, end: regionStart, delta: 0 },
+    { start: regionEnd, end: value.length, delta: 0 },
+  ];
+  for (const [source, parts, destination] of [
+    [current.start, currentParts, movedLineStart],
+    [neighborStart, neighborParts, displacedLineStart],
+  ] as const) {
+    const prefixLength = swapContentOnly ? parts.indent.length + parts.marker.length : 0;
+    const destinationPrefix = swapContentOnly
+      ? (source === current.start ? neighborParts : currentParts).indent.length +
+        (source === current.start ? neighborParts : currentParts).marker.length : 0;
+    ranges.push({ start: source + prefixLength, end: source + parts.indent.length + parts.marker.length + parts.content.length,
+      delta: destination + destinationPrefix - source - prefixLength });
+    if (prefixLength) {
+      const slot = source === regionStart ? regionStart : regionStart + (direction === -1 ? movedLine.length : displacedLine.length) + 1;
+      ranges.push({ start: source, end: source + prefixLength, delta: slot - source });
+    }
+  }
   return {
     text,
     caret: Math.min(movedTextStart + caretInMovedText, movedLineStart + movedLine.length),
+    ranges,
   };
 }
 
@@ -518,8 +554,8 @@ function continueListFormatFromLines(lines: LineItem[], text: string): LineItem 
 }
 
 function getSelectedLineRange(value: string, start: number, end: number): { start: number; end: number } {
-  const lineStart = value.lastIndexOf("\n", start - 1) + 1;
-  const nextBreak = value.indexOf("\n", end);
+  const lineStart = start === 0 ? 0 : value.lastIndexOf("\n", start - 1) + 1;
+  const nextBreak = value.indexOf("\n", Math.max(start, end - 1));
   return {
     start: lineStart,
     end: nextBreak === -1 ? value.length : nextBreak,

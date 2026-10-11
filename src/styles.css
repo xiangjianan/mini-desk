@@ -7557,6 +7557,10 @@ html[data-theme="dark"] .text-editor-textarea::selection {
   text-decoration: underline;
 }
 
+.text-mirror .mark-strike.mark-underline {
+  text-decoration: underline line-through;
+}
+
 .text-mirror .mark-highlight-amber { background: var(--mark-highlight-amber); border-radius: 2px; }
 .text-mirror .mark-highlight-rose { background: var(--mark-highlight-rose); border-radius: 2px; }
 .text-mirror .mark-highlight-green { background: var(--mark-highlight-green); border-radius: 2px; }

@@ -20,7 +20,7 @@ import {
   insertPlainLineBreak,
   linesFromEditorState,
   moveCaretToLineBoundary,
-  moveTextareaLine,
+  moveTextareaLineWithMarks,
   renumberOrderedListText,
 } from "../utils/textEditor";
 import { clearMarksInRange, MARK_COLORS, toggleMarkInRange, buildMirrorSegments, translateMarksForEdit, type MirrorSegment } from "../utils/textMarks";
@@ -78,6 +78,7 @@ interface EditorSnapshot {
 }
 
 const undoStack = ref<EditorSnapshot[]>([]);
+const redoStack = ref<EditorSnapshot[]>([]);
 const lastUndoState = ref<EditorSnapshot>({ text: initialEditorState.text, marks: [...initialEditorState.marks] });
 const lastCaret = ref<number | null>(null);
 const lastTextSelection = ref<{ start: number; end: number } | null>(null);
@@ -115,6 +116,7 @@ function syncMirrorScroll(event: Event): void {
 }
 
 let isUnmounted = false;
+let editorRevision = 0;
 
 onMounted(exclusiveMenu.mount);
 onUnmounted(() => {
@@ -153,6 +155,7 @@ function parseMarkColor(value: string): MarkColor | null {
 
 /** 格式变更的统一落点：换 marks → 入撤销栈 → 上报。文本不动。 */
 function applyMarkChange(next: TextMark[]): void {
+  editorRevision++;
   editorMarks.value = next;
   recordUndoState();
   emit("update", linesFromEditorState(text.value, next));
@@ -273,10 +276,12 @@ watch(
   (lines) => {
     const next = editorStateFromLines(lines);
     if (next.text === text.value && isSameMarks(next.marks, editorMarks.value)) return;
+    editorRevision++;
     text.value = next.text;
     committedText.value = next.text;
     editorMarks.value = next.marks;
     undoStack.value = [];
+    redoStack.value = [];
     lastUndoState.value = { text: next.text, marks: [...next.marks] };
   },
   { deep: true },
@@ -318,7 +323,13 @@ function handleKeydown(event: KeyboardEvent): void {
   }
   if ((event.ctrlKey || event.metaKey) && event.key.toLowerCase() === "z") {
     event.preventDefault();
-    undoLastTextChange(textarea);
+    if (event.shiftKey) redoLastTextChange(textarea);
+    else undoLastTextChange(textarea);
+    return;
+  }
+  if (event.ctrlKey && !event.metaKey && event.key.toLowerCase() === "y") {
+    event.preventDefault();
+    redoLastTextChange(textarea);
     return;
   }
   if (!event.shiftKey && (event.metaKey || event.ctrlKey) && (event.key === "ArrowLeft" || event.key === "ArrowRight")) {
@@ -329,9 +340,9 @@ function handleKeydown(event: KeyboardEvent): void {
   }
   if (!event.shiftKey && (event.metaKey || event.ctrlKey) && (event.key === "ArrowUp" || event.key === "ArrowDown")) {
     event.preventDefault();
-    const moved = moveTextareaLine(textarea, event.key === "ArrowUp" ? -1 : 1);
+    const moved = moveTextareaLineWithMarks(textarea, event.key === "ArrowUp" ? -1 : 1, editorMarks.value);
     if (moved !== undefined) {
-      applyEditorText(moved);
+      commitEditorText(moved.text, moved.marks);
       update();
     }
     return;
@@ -669,6 +680,7 @@ function startEditingFromTextarea(textarea: HTMLTextAreaElement, keyboardFocus =
   const caret = preservedSelection?.start ?? lastCaret.value ?? textarea.selectionStart ?? textarea.value.length;
   editing.value = true;
   undoStack.value = [];
+  redoStack.value = [];
   lastUndoState.value = { text: committedText.value, marks: [...editorMarks.value] };
   unlockTextareaForMobileKeyboard(textarea, caret, keyboardFocus);
   if (preservedSelection) restoreSelection(textarea, preservedSelection);
@@ -876,8 +888,10 @@ function deleteTextSelection(target: HTMLTextAreaElement): void {
 
 async function pasteTextFromClipboard(target: HTMLTextAreaElement, range = getTextSelectionRange(target)): Promise<void> {
   if (!editing.value || target.readOnly) startEditingFromTextarea(target);
+  const revision = editorRevision;
   target.setSelectionRange(range.start, range.end);
   const probe = await probeClipboardForTextPaste();
+  if (isUnmounted || editorRevision !== revision) return;
   if (probe.kind === "text") {
     target.setRangeText(probe.text, range.start, range.end, "end");
   } else if (!pasteWithBrowserCommand(target, range)) {
@@ -890,6 +904,8 @@ async function pasteTextFromClipboard(target: HTMLTextAreaElement, range = getTe
     return;
   }
   normalizeTextareaText(target);
+  lastTextSelection.value = null;
+  collapseSelection(target, target.selectionEnd ?? 0);
   emit("update", linesFromEditorState(text.value, editorMarks.value));
 }
 
@@ -1030,14 +1046,16 @@ function clampSelectionOffset(offset: number, textLength: number): number {
 }
 
 function recordUndoState(): void {
+  redoStack.value = [];
   undoStack.value = [...undoStack.value.slice(-49), lastUndoState.value];
   lastUndoState.value = { text: committedText.value, marks: [...editorMarks.value] };
 }
 
 /** 所有文本变更的唯一入口：marks 平移、undo 快照、text/DOM 同步都在这里。 */
-function commitEditorText(next: string): void {
-  if (next === committedText.value) return;
-  editorMarks.value = translateMarksForEdit(editorMarks.value, committedText.value, next);
+function commitEditorText(next: string, marks?: TextMark[]): void {
+  if (next === committedText.value && (!marks || isSameMarks(marks, editorMarks.value))) return;
+  editorRevision++;
+  editorMarks.value = marks ?? translateMarksForEdit(editorMarks.value, committedText.value, next);
   committedText.value = next;
   recordUndoState();
   text.value = next;
@@ -1049,6 +1067,20 @@ function undoLastTextChange(textarea: HTMLTextAreaElement): void {
   const previous = undoStack.value.at(-1);
   if (!previous) return;
   undoStack.value = undoStack.value.slice(0, -1);
+  redoStack.value = [...redoStack.value, { text: committedText.value, marks: [...editorMarks.value] }];
+  restoreEditorSnapshot(textarea, previous);
+}
+
+function redoLastTextChange(textarea: HTMLTextAreaElement): void {
+  const next = redoStack.value.at(-1);
+  if (!next) return;
+  redoStack.value = redoStack.value.slice(0, -1);
+  undoStack.value = [...undoStack.value.slice(-49), { text: committedText.value, marks: [...editorMarks.value] }];
+  restoreEditorSnapshot(textarea, next);
+}
+
+function restoreEditorSnapshot(textarea: HTMLTextAreaElement, previous: EditorSnapshot): void {
+  editorRevision++;
   editorMarks.value = [...previous.marks];
   committedText.value = previous.text;
   text.value = previous.text;
