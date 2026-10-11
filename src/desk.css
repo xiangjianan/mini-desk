@@ -8,6 +8,7 @@
   --desk-group-gap: 16px;
   --desk-group-top: 16px;
   --desk-group-scroll-gutter: 12px;
+  --desk-group-shadow: 0 1px 3px color-mix(in srgb, var(--foreground) 7%, transparent);
   --desk-group-surface: color-mix(in srgb, var(--card) 42%, var(--muted-surface));
   --desk-edge: color-mix(in srgb, var(--line-section) 65%, transparent);
   --desk-control-shadow: 0 1px 2px color-mix(in srgb, var(--foreground) 5%, transparent);
@@ -198,7 +199,7 @@ html[data-theme="dark"] .workbench-shell,
   padding: 4px 8px;
   background: var(--desk-group-surface);
   backdrop-filter: none;
-  box-shadow: none;
+  box-shadow: var(--desk-group-shadow);
   border: 0;
   border-radius: 8px;
 }
@@ -258,13 +259,13 @@ html[data-theme="dark"] .workbench-shell,
   min-height: 32px;
   border-radius: 8px;
   background: var(--desk-group-surface);
-  box-shadow: none;
+  box-shadow: var(--desk-group-shadow);
   padding-inline: 12px;
 }
 .workbench-shell .space-tab.is-active {
   color: var(--accent-foreground);
   background: color-mix(in srgb, var(--primary) 12%, var(--desk-surface));
-  box-shadow: none;
+  box-shadow: var(--desk-group-shadow);
 }
 .workbench-shell button.space-tab:hover { background: var(--secondary); }
 .workbench-shell .space-tab-edit-shell { height: 32px; min-height: 32px; border-radius: 8px; background: var(--desk-group-surface); }
@@ -341,7 +342,7 @@ html[data-theme="dark"] .workbench-shell,
   min-height: var(--desk-group-heading-height);
   padding: 4px 8px;
   border-radius: 8px;
-  box-shadow: none;
+  box-shadow: var(--desk-group-shadow);
   border: 0;
 }
 .workbench-shell .quick-tag-title {
