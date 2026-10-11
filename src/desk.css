@@ -339,3 +339,7 @@ html[data-theme="dark"] .workbench-shell,
   .inbox-sync-button.is-syncing .n-icon,
   .workbench-shell .desk-smart-paste:hover > span { animation: none; }
 }
+
+/* Region headings are controls rather than selectable document text. */
+.desk-zone-heading h1,
+.desk-zone-heading h2 { user-select: none; -webkit-user-select: none; }

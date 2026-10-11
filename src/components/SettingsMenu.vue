@@ -69,8 +69,6 @@ const text = computed(() => getUiText(props.language));
 const customGifLightPreview = computed(() => customGifLightPreviewSrc.value ?? props.customCompanionGif.light);
 const customGifDarkPreview = computed(() => customGifDarkPreviewSrc.value ?? props.customCompanionGif.dark);
 const options = computed(() => [
-  // 手机速记独立一级入口置顶：配套手动同步按钮已就位，提升为一等功能。
-  { label: text.value.app.inboxPair, key: "pair-inbox", icon: renderIcon(PhonePortraitOutline) },
   {
     label: text.value.settings.data,
     key: "data",
@@ -109,6 +107,7 @@ const options = computed(() => [
       icon: option.value === props.companionGifTheme ? renderIcon(CheckmarkOutline) : undefined,
     })),
   },
+  { label: text.value.app.inboxPair, key: "pair-inbox", icon: renderIcon(PhonePortraitOutline) },
   { label: text.value.settings.shortcutHelp, key: "shortcut-help", icon: renderIcon(KeyOutline) },
   { label: text.value.settings.suggest, key: "suggest", icon: renderIcon(CreateOutline) },
   ...(SUPPORT_AUTHOR_ENABLED

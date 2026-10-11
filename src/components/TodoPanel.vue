@@ -127,6 +127,7 @@ const menu = ref<{
   target?: HTMLInputElement;
   selection?: { start: number; end: number; text: string; baseline: string };
   sectionActions?: boolean;
+  pasteAtCaret?: boolean;
 } | null>(null);
 const dragged = ref<DraggedTodo | null>(null);
 const todoDragScroll = createDragAutoScroll();
@@ -257,7 +258,7 @@ const menuOptions = computed<DropdownOption[]>(() => {
   if (menu.value?.id) {
     options.push({ label: uiText.value.common.copy, key: "copy", icon: renderIcon(CopyOutline) });
     if (canPasteTodoText(menu.value.period)) {
-      // 右键提醒事项时，「粘贴/智能粘贴」把剪贴板内容拆成新增提醒，插到该条提醒下方。
+      // 普通粘贴在聚焦时写入选区；失焦及智能粘贴继续新增提醒。
       options.push({ label: uiText.value.common.paste, key: "paste", icon: renderIcon(ClipboardOutline) });
       if (props.polish) {
         options.push({ label: uiText.value.common.smartPaste, key: "smart-paste", icon: renderIcon(ClipboardOutline) });
@@ -497,6 +498,12 @@ function refreshNotifyNow(): void {
 
 function handleVisibilityChange(): void {
   if (document.visibilityState === "visible") refreshNotifyNow();
+}
+
+function handleColumnBlankClick(event: MouseEvent, column: number): void {
+  const list = effectiveTodoLists.value.filter(list => clampColumn(list.column ?? 0) === column).at(-1);
+  if (!list || list.collapsed) return;
+  handleListClick(event, list.id);
 }
 
 function handleListClick(event: MouseEvent, period: TodoPeriod): void {
@@ -915,7 +922,14 @@ function openMenu(event: MouseEvent, period: TodoPeriod, id: string): void {
   event.stopPropagation();
   selectedMenuTodoKey.value = todoKey(period, id);
   exclusiveMenu.notifyOpen(event, { replacingExistingMenu: Boolean(menu.value) });
-  menu.value = { x: event.clientX, y: event.clientY, period, id, anchor: event.currentTarget as HTMLElement };
+  const focused = document.activeElement;
+  const todo = getTodoById(period, id);
+  if (todo && focused instanceof HTMLInputElement && (event.currentTarget as HTMLElement).contains(focused)) {
+    const range = getSelectionRange(focused);
+    menu.value = { x: event.clientX, y: event.clientY, period, id, anchor: focused, target: focused, pasteAtCaret: true, selection: { ...range, text: focused.value.slice(range.start, range.end), baseline: todo.text } };
+  } else {
+    menu.value = { x: event.clientX, y: event.clientY, period, id, anchor: event.currentTarget as HTMLElement };
+  }
 }
 
 function openTodoTextMenu(event: MouseEvent, period: TodoPeriod, todo: TodoItem): void {
@@ -924,7 +938,8 @@ function openTodoTextMenu(event: MouseEvent, period: TodoPeriod, todo: TodoItem)
   event.stopPropagation();
   selectedMenuTodoKey.value = todoKey(period, todo.id);
   exclusiveMenu.notifyOpen(event, { replacingExistingMenu: Boolean(menu.value) });
-  const range = getTodoSelectionRange(period, todo.id, target);
+  const pasteAtCaret = document.activeElement === target;
+  const range = pasteAtCaret ? getSelectionRange(target) : getTodoSelectionRange(period, todo.id, target);
   menu.value = {
     x: event.clientX,
     y: event.clientY,
@@ -932,6 +947,7 @@ function openTodoTextMenu(event: MouseEvent, period: TodoPeriod, todo: TodoItem)
     id: todo.id,
     anchor: target,
     target,
+    pasteAtCaret,
     selection: { ...range, text: target.value.slice(range.start, range.end), baseline: todo.text },
   };
 }
@@ -1304,7 +1320,7 @@ function handleFloatingEditorOutsidePointerDown(event: PointerEvent): void {
 
 async function handleMenuSelect(key: string): Promise<void> {
   if (!menu.value) return;
-  const { period, id, anchor, target, x, y } = menu.value;
+  const { period, id, anchor, target, x, y, pasteAtCaret, selection } = menu.value;
   if (key.startsWith("max-columns:")) {
     const count = normalizeTodoMaxColumns(Number(key.slice("max-columns:".length)));
     closeMenu();
@@ -1411,6 +1427,11 @@ async function handleMenuSelect(key: string): Promise<void> {
     return;
   }
   if (key === "paste" && id) {
+    if (pasteAtCaret && target && selection) {
+      closeMenu();
+      await pasteTodoAtCaret(period, id, target, selection);
+      return;
+    }
     await pasteTodosAfter(period, id);
     closeMenu();
     return;
@@ -1634,6 +1655,32 @@ async function pasteTodosFromClipboard(period: TodoPeriod): Promise<void> {
   const texts = splitDroppedTodoText(probe.text);
   if (texts.length === 0) return;
   emit("createFromText", period, texts);
+}
+
+async function pasteTodoAtCaret(
+  period: TodoPeriod,
+  id: string,
+  target: HTMLInputElement,
+  selection: { start: number; end: number; baseline: string },
+): Promise<void> {
+  const landingLists = props.todoLists;
+  const probe = await probeClipboardForTextPaste();
+  if (isUnmounted || props.todoLists !== landingLists) return;
+  if (probe.kind !== "text") {
+    notifyClipboardPasteProbe(probe.kind, period);
+    return;
+  }
+  const todo = getTodoById(period, id);
+  if (!todo || todo.done || todo.text !== selection.baseline) return;
+  const replacement = probe.text.replace(/\r?\n/g, " ");
+  const nextText = selection.baseline.slice(0, selection.start) + replacement + selection.baseline.slice(selection.end);
+  lastTodoSelections.delete(todoKey(period, id));
+  editingTodoKey.value = todoKey(period, id);
+  emit("update", period, id, nextText);
+  await nextTick();
+  if (!target.isConnected) return;
+  target.focus({ preventScroll: true });
+  restoreTodoCaret(target, selection.start + replacement.length);
 }
 
 /** 右键某条提醒时的「粘贴」：把剪贴板全文拆成多条新提醒，插到该条（afterId）下方。 */
@@ -1935,6 +1982,7 @@ function buildTodoListEntries(period: TodoListId, todos: TodoItem[], deferredDon
         :key="columnIndex - 1"
         :ref="(element) => setColumnElement(columnIndex - 1, element as Element | null)"
         class="todo-column"
+        @click.self="handleColumnBlankClick($event, columnIndex - 1)"
         v-show="columnIndex <= columnCount"
         :class="{ 'is-inactive': columnIndex > columnCount }"
         @dragover.prevent

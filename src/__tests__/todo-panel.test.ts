@@ -3560,6 +3560,66 @@ describe("TodoPanel", () => {
     wrapper.unmount();
   });
 
+  it.each([
+    [1, 1, "第粘贴一项"],
+    [1, 2, "第粘贴项"],
+  ])("pastes into a focused reminder at its saved range %s-%s", async (start, end, expected) => {
+    Object.assign(navigator, { clipboard: { readText: vi.fn().mockResolvedValue("粘贴"), writeText: vi.fn() } });
+    const wrapper = mount(TodoPanel, {
+      attachTo: document.body,
+      props: { todos: { morning: [{ id: "a", text: "第一项", done: false }], noon: [], evening: [] }, titles: DEFAULT_TITLES },
+      global: { stubs: { Dropdown: dropdownStub, NDropdown: dropdownStub, NTooltip: tooltipStub } },
+    });
+    const inputWrapper = wrapper.get("input.todo-input");
+    const input = inputWrapper.element as HTMLInputElement;
+    input.focus();
+    input.setSelectionRange(start, end);
+    await inputWrapper.trigger("contextmenu");
+    input.blur(); // Choosing a menu item must keep the range captured while editing.
+    await wrapper.findAll(".dropdown-option").find(option => option.text() === "粘贴")!.trigger("click");
+    await flushPromises();
+    expect(wrapper.emitted("update")?.at(-1)).toEqual(["morning", "a", expected]);
+    expect(wrapper.emitted("createFromText")).toBeUndefined();
+    wrapper.unmount();
+  });
+
+  it("creates a new reminder when the editor lost focus before opening its menu", async () => {
+    Object.assign(navigator, { clipboard: { readText: vi.fn().mockResolvedValue("新增"), writeText: vi.fn() } });
+    const wrapper = mount(TodoPanel, {
+      attachTo: document.body,
+      props: { todos: { morning: [{ id: "a", text: "第一项", done: false }], noon: [], evening: [] }, titles: DEFAULT_TITLES },
+      global: { stubs: { Dropdown: dropdownStub, NDropdown: dropdownStub, NTooltip: tooltipStub } },
+    });
+    const inputWrapper = wrapper.get("input.todo-input");
+    const input = inputWrapper.element as HTMLInputElement;
+    input.focus();
+    input.setSelectionRange(1, 2);
+    input.blur();
+    await inputWrapper.trigger("contextmenu");
+    await wrapper.findAll(".dropdown-option").find(option => option.text() === "粘贴")!.trigger("click");
+    await flushPromises();
+    expect(wrapper.emitted("createFromText")?.at(-1)).toEqual(["morning", ["新增"], "a"]);
+    expect(wrapper.emitted("update")).toBeUndefined();
+    wrapper.unmount();
+  });
+
+  it("adds to the last list from column whitespace only while that list is expanded", async () => {
+    const lists = [
+      { id: "first", title: "上方列表", collapsed: false, compact: false },
+      { id: "last", title: "最后列表", collapsed: false, compact: false },
+    ];
+    const wrapper = mount(TodoPanel, {
+      props: { todoLists: lists, todos: { first: [], last: [] }, titles: DEFAULT_TITLES },
+      global: { stubs: { Dropdown: dropdownStub, NDropdown: dropdownStub, NTooltip: tooltipStub } },
+    });
+    await wrapper.get(".todo-column").trigger("click");
+    expect(wrapper.emitted("create")?.at(-1)).toEqual(["last"]);
+    await wrapper.setProps({ todoLists: [lists[0], { ...lists[1], collapsed: true }] });
+    await wrapper.get(".todo-column").trigger("click");
+    expect(wrapper.emitted("create")).toHaveLength(1);
+    wrapper.unmount();
+  });
+
   it("pastes clipboard text from an existing reminder context menu", async () => {
     const readText = vi.fn().mockResolvedValue("粘贴内容");
     Object.assign(navigator, { clipboard: { readText, writeText: vi.fn() } });
