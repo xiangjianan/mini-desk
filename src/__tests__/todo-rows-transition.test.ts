@@ -2,6 +2,33 @@ import { describe, expect, it, vi } from "vitest";
 import { createTodoLeaveHooks } from "../components/TodoRowsTransition";
 
 describe("reminder row leave layout", () => {
+  it("animates the released height and cancels an interrupted shrink", () => {
+    const list = document.createElement("ul");
+    const row = list.appendChild(document.createElement("li"));
+    let height = 100;
+    vi.spyOn(list, "getBoundingClientRect").mockImplementation(() => ({ height }) as DOMRect);
+    const animation = { cancel: vi.fn(), finished: new Promise(() => {}) };
+    const animate = vi.fn(() => animation as unknown as Animation);
+    list.animate = animate;
+    const hooks = createTodoLeaveHooks();
+    hooks.onBeforeLeave(row);
+    row.remove();
+    vi.spyOn(list, "getBoundingClientRect").mockImplementation(() => ({ height: list.style.minHeight ? 100 : 58 }) as DOMRect);
+    hooks.onAfterLeave(row);
+    expect(animate).toHaveBeenCalledWith(
+      [{ height: "100px" }, { height: "58px" }],
+      { duration: 220, easing: "cubic-bezier(0.2, 0, 0, 1)" },
+    );
+    vi.spyOn(list, "getBoundingClientRect").mockImplementation(() => ({ height: 80 }) as DOMRect);
+    list.appendChild(row);
+    hooks.onBeforeLeave(row);
+    expect(animation.cancel).toHaveBeenCalledOnce();
+    expect(list.style.minHeight).toBe("80px");
+    hooks.dispose();
+    expect(list.style.minHeight).toBe("");
+    expect(row.style.top).toBe("");
+  });
+
   it.each([1, 3])("holds list height while its last row fades with %i rows", (count) => {
     const list = document.createElement("ul");
     const rows = Array.from({ length: count }, () => list.appendChild(document.createElement("li")));
