@@ -612,6 +612,8 @@ describe("TodoPanel", () => {
 
     const dialog = getLatestListCreateDialogElement();
     const input = dialog?.querySelector<HTMLInputElement>(".todo-list-create-input");
+    expect(input?.getAttribute("autocomplete")).toBe("off");
+    expect(input?.getAttribute("name")).toBe("mini-desk-todo-list-title");
     expect(dialog?.getAttribute("aria-label")).toBe("新增提醒事项列表");
     expect(document.body.contains(dialog)).toBe(true);
     expect(dialog?.closest(".workbench-zone, .todo-panel")).toBeNull();

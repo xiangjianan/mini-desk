@@ -38,11 +38,11 @@ defineExpose({ open });
   <NModal :show="show" preset="card" class="quick-dialog todo-list-create-dialog"
     :mask-closable="false" :title="uiText.todo.listDialog" :aria-label="uiText.todo.listDialog"
     @close="show = false" @esc="show = false" @after-leave="clear">
-    <form class="quick-form" @submit.prevent="confirm">
+    <form class="quick-form" autocomplete="off" @submit.prevent="confirm">
       <label for="todo-list-create-input">
         <span>{{ uiText.todo.listName }}</span>
         <NInput ref="inputRef" v-model:value="title"
-          :input-props="{ id: 'todo-list-create-input', class: 'todo-list-create-input' }" autocomplete="off" />
+          :input-props="{ id: 'todo-list-create-input', class: 'todo-list-create-input', name: 'mini-desk-todo-list-title', autocomplete: 'off' }" />
       </label>
       <div class="dialog-actions">
         <NButton class="quick-dialog-action todo-list-create-cancel" @click="show = false">{{ uiText.common.cancel }}</NButton>
