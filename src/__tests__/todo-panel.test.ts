@@ -5256,16 +5256,6 @@ describe("提醒选区 AI 润色", () => {
 
 
 describe("完成提醒共用两秒倒计时", () => {
-  it("空清单在最后一批事项淡出期间保留行占位，避免内容被提前裁切", () => {
-    const styles = readFileSync(resolve(process.cwd(), "src/styles.css"), "utf8");
-    const leavingRule = styles.match(/\.todo-list:has\(> \.todo-empty-hint\) > \.todo-move-leave-active\s*\{([^}]+)\}/)?.[1];
-    expect(leavingRule).toContain("position: relative;");
-    expect(leavingRule).toContain("left: auto;");
-    expect(leavingRule).toContain("right: auto;");
-    const emptyRule = styles.match(/\.todo-list:has\(> \.todo-move-leave-active\) > \.todo-empty-hint\s*\{([^}]+)\}/)?.[1];
-    expect(emptyRule).toContain("display: none;");
-  });
-
   function mountSharedCountdown() {
     const Harness = defineComponent({
       components: { TodoPanel },

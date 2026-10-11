@@ -2929,18 +2929,6 @@ button.todo-star-button {
   pointer-events: none;
 }
 
-/* An empty list has no remaining rows to slide. Keep the outgoing rows in
-   flow until their fade finishes so the shell cannot clip them as it shrinks. */
-.todo-list:has(> .todo-empty-hint) > .todo-move-leave-active {
-  position: relative;
-  left: auto;
-  right: auto;
-}
-
-.todo-list:has(> .todo-move-leave-active) > .todo-empty-hint {
-  display: none;
-}
-
 .floating-pop-enter-active,
 .floating-pop-leave-active {
   transform-origin: top left;
