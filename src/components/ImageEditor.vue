@@ -352,6 +352,17 @@ function drawCropOverlay(context: CanvasRenderingContext2D, rect: EditorRect, wi
   context.lineWidth = 2;
   context.setLineDash([8, 6]);
   context.strokeRect(left, top, right - left, bottom - top);
+  context.setLineDash([]);
+  context.fillStyle = "#ffffff";
+  const middleX = (left + right) / 2;
+  const middleY = (top + bottom) / 2;
+  for (const [x, y] of [
+    [left, top], [middleX, top], [right, top],
+    [left, middleY], [right, middleY],
+    [left, bottom], [middleX, bottom], [right, bottom],
+  ]) {
+    context.fillRect(x - 3, y - 3, 6, 6);
+  }
   context.restore();
 }
 
@@ -379,9 +390,6 @@ function getPointerPoint(event: PointerEvent): EditorPoint {
 function selectTool(tool: EditorTool): void {
   pruneEmptyTextCommands();
   activeTool.value = tool;
-  if (tool === "crop" && !cropRect.value) {
-    cropRect.value = { x: 0, y: 0, width: canvasWidth.value, height: canvasHeight.value };
-  }
 }
 
 function handlePointerDown(event: PointerEvent): void {
@@ -405,13 +413,13 @@ function handlePointerDown(event: PointerEvent): void {
     pointerId: event.pointerId,
     tool: activeTool.value,
     start: point,
-    ...(activeTool.value === "crop" ? { cropStart: cropRect.value ?? getFullCropRect(), cropHandle } : {}),
+    ...(activeTool.value === "crop" ? { cropStart: cropRect.value ?? undefined, cropHandle } : {}),
   };
   (event.currentTarget as HTMLElement).setPointerCapture?.(event.pointerId);
   if (activeTool.value === "brush") {
     previewCommand.value = { type: "brush", color: selectedColor.value, width: strokeWidth.value, points: [point] };
   }
-  if (activeTool.value === "crop" && !cropRect.value) cropRect.value = getFullCropRect();
+  if (activeTool.value === "crop" && !cropHandle) cropRect.value = null;
 }
 
 function handlePointerMove(event: PointerEvent): void {
@@ -420,7 +428,9 @@ function handlePointerMove(event: PointerEvent): void {
   const point = getPointerPoint(event);
 
   if (state.tool === "crop") {
-    cropRect.value = resizeCropRect(state.cropStart ?? getFullCropRect(), state.cropHandle ?? getCropHandle(state.start), state.start, point);
+    cropRect.value = state.cropHandle && state.cropStart
+      ? resizeCropRect(state.cropStart, state.cropHandle, state.start, point)
+      : normalizeRect(state.start, point);
     return;
   }
 
@@ -435,10 +445,14 @@ function handlePointerMove(event: PointerEvent): void {
 function handlePointerUp(event: PointerEvent): void {
   const state = dragState.value;
   if (!state || event.pointerId !== state.pointerId) return;
+  if (state.tool === "crop") handlePointerMove(event);
   (event.currentTarget as HTMLElement).releasePointerCapture?.(event.pointerId);
   dragState.value = null;
 
   if (state.tool === "crop") {
+    if (cropRect.value && (cropRect.value.width < 2 || cropRect.value.height < 2)) {
+      cropRect.value = state.cropStart ?? null;
+    }
     recordEditorHistory();
     return;
   }
@@ -452,6 +466,7 @@ function handlePointerUp(event: PointerEvent): void {
 function handlePointerCancel(event: PointerEvent): void {
   const state = dragState.value;
   if (!state || event.pointerId !== state.pointerId) return;
+  if (state.tool === "crop") cropRect.value = state.cropStart ?? null;
   dragState.value = null;
   previewCommand.value = null;
 }
@@ -612,8 +627,9 @@ function getFullCropRect(): EditorRect {
   return { x: 0, y: 0, width: canvasWidth.value, height: canvasHeight.value };
 }
 
-function getCropHandle(point: EditorPoint): CropHandle {
-  const rect = cropRect.value ?? getFullCropRect();
+function getCropHandle(point: EditorPoint): CropHandle | undefined {
+  const rect = cropRect.value;
+  if (!rect) return undefined;
   const edge = Math.max(10, Math.min(canvasWidth.value, canvasHeight.value) * 0.035);
   const nearLeft = Math.abs(point.x - rect.x) <= edge;
   const nearRight = Math.abs(point.x - (rect.x + rect.width)) <= edge;
@@ -623,11 +639,13 @@ function getCropHandle(point: EditorPoint): CropHandle {
   if (nearRight && nearTop) return "top-right";
   if (nearLeft && nearBottom) return "bottom-left";
   if (nearRight && nearBottom) return "bottom-right";
-  if (nearLeft) return "left";
-  if (nearRight) return "right";
-  if (nearTop) return "top";
-  if (nearBottom) return "bottom";
-  return "move";
+  const withinX = point.x >= rect.x && point.x <= rect.x + rect.width;
+  const withinY = point.y >= rect.y && point.y <= rect.y + rect.height;
+  if (nearLeft && withinY) return "left";
+  if (nearRight && withinY) return "right";
+  if (nearTop && withinX) return "top";
+  if (nearBottom && withinX) return "bottom";
+  return withinX && withinY ? "move" : undefined;
 }
 
 function resizeCropRect(startRect: EditorRect, handle: CropHandle, start: EditorPoint, point: EditorPoint): EditorRect {

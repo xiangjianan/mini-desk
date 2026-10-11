@@ -493,7 +493,7 @@ describe("ImageEditor", () => {
     wrapper.unmount();
   });
 
-  it("starts crop mode with a full-image dashed box and resizes from the right edge", async () => {
+  it("creates a retained region by dragging and then resizes its right edge", async () => {
     const wrapper = mount(ImageEditor, {
       props: {
         image: { id: "img-1", src: "data:image/png;base64,one", createdAt: 1, displayWidth: 400, displayHeight: 300 },
@@ -509,6 +509,10 @@ describe("ImageEditor", () => {
     mockRect(canvas.element);
 
     await wrapper.findAll(".image-editor-tool").find((button) => button.attributes("aria-label") === "裁切")?.trigger("click");
+    expect(wrapper.find(".image-editor-crop-actions").exists()).toBe(false);
+    await dispatchPointer(canvas.element, "pointerdown", 0, 0);
+    await dispatchPointer(canvas.element, "pointermove", 400, 300);
+    await dispatchPointer(canvas.element, "pointerup", 400, 300);
     expect(canvasContextMock.strokeRect).toHaveBeenCalledWith(0, 0, 400, 300);
 
     await dispatchPointer(canvas.element, "pointerdown", 398, 150);
@@ -542,6 +546,8 @@ describe("ImageEditor", () => {
     mockRect(canvas.element);
 
     await wrapper.findAll(".image-editor-tool").find((button) => button.attributes("aria-label") === "裁切")?.trigger("click");
+    await dispatchPointer(canvas.element, "pointerdown", 0, 0);
+    await dispatchPointer(canvas.element, "pointerup", 400, 300);
     await dispatchPointer(canvas.element, "pointerdown", 398, 298);
     await dispatchPointer(canvas.element, "pointermove", 320, 220);
     await dispatchPointer(canvas.element, "pointerup", 320, 220);
@@ -551,6 +557,39 @@ describe("ImageEditor", () => {
     expect(wrapper.emitted("save")?.[0]?.[0]).toMatchObject({
       displayWidth: 320,
       displayHeight: 220,
+    });
+    wrapper.unmount();
+  });
+
+  it.each([
+    ["left", 50, 150, 70, 150, 230, 200],
+    ["right", 300, 150, 330, 150, 280, 200],
+    ["top", 175, 50, 175, 70, 250, 180],
+    ["bottom", 175, 250, 175, 280, 250, 230],
+    ["top-left", 50, 50, 70, 70, 230, 180],
+    ["top-right", 300, 50, 330, 70, 280, 180],
+    ["bottom-left", 50, 250, 70, 280, 230, 230],
+    ["bottom-right", 300, 250, 330, 280, 280, 230],
+  ])("adjusts the %s handle after drawing a selection", async (_handle, x, y, endX, endY, width, height) => {
+    const wrapper = mount(ImageEditor, {
+      props: {
+        image: { id: "img-1", src: "data:image/png;base64,one", createdAt: 1, displayWidth: 400, displayHeight: 300 },
+      },
+      global: { stubs: { NIcon: iconStub } },
+    });
+    const canvas = wrapper.get(".image-editor-canvas");
+    mockRect(canvas.element);
+    await wrapper.findAll(".image-editor-tool").find((button) => button.attributes("aria-label") === "裁切")?.trigger("click");
+    await dispatchPointer(canvas.element, "pointerdown", 300, 250);
+    await dispatchPointer(canvas.element, "pointermove", 50, 50);
+    await dispatchPointer(canvas.element, "pointerup", 50, 50);
+    expect(canvasContextMock.strokeRect).toHaveBeenCalledWith(50, 50, 250, 200);
+    await dispatchPointer(canvas.element, "pointerdown", x, y);
+    await dispatchPointer(canvas.element, "pointermove", endX, endY);
+    await dispatchPointer(canvas.element, "pointerup", endX, endY);
+    await wrapper.get(".image-editor-save").trigger("click");
+    expect(wrapper.emitted("save")?.[0]?.[0]).toMatchObject({
+      displayWidth: width, displayHeight: height,
     });
     wrapper.unmount();
   });
@@ -571,7 +610,7 @@ describe("ImageEditor", () => {
     mockRect(canvas.element);
 
     await wrapper.findAll(".image-editor-tool").find((button) => button.attributes("aria-label") === "裁切")?.trigger("click");
-    await dispatchPointer(canvas.element, "pointerdown", 398, 150);
+    await dispatchPointer(canvas.element, "pointerdown", 20, 20);
     await dispatchPointer(canvas.element, "pointermove", 220, 150);
     await dispatchPointer(canvas.element, "pointerup", 220, 150);
 
@@ -637,6 +676,9 @@ describe("ImageEditor", () => {
     await wrapper.findAll(".image-editor-tool").find((button) => button.attributes("aria-label") === "标注")?.trigger("click");
     await dispatchPointer(canvas.element, "pointerdown", 100, 80);
     await wrapper.findAll(".image-editor-tool").find((button) => button.attributes("aria-label") === "裁切")?.trigger("click");
+
+    await dispatchPointer(canvas.element, "pointerdown", 400, 300);
+    await dispatchPointer(canvas.element, "pointerup", 0, 0);
 
     expect(wrapper.get(".image-editor-crop-cancel").attributes("aria-label")).toBe("取消裁切");
     expect(wrapper.get(".image-editor-crop-apply").attributes("aria-label")).toBe("应用裁切");
