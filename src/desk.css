@@ -8,7 +8,7 @@
   --desk-group-gap: 16px;
   --desk-group-top: 16px;
   --desk-group-scroll-gutter: 12px;
-  --desk-group-content: color-mix(in srgb, var(--card) 72%, var(--muted-surface));
+  --desk-group-content: color-mix(in srgb, var(--card) 64%, var(--muted-surface));
   --desk-group-surface: color-mix(in srgb, var(--card) 34%, var(--muted-surface));
   --desk-edge: color-mix(in srgb, var(--line-section) 65%, transparent);
   --desk-control-shadow: 0 1px 2px color-mix(in srgb, var(--foreground) 5%, transparent);
@@ -221,7 +221,11 @@ html[data-theme="dark"] .workbench-shell,
   background: var(--desk-group-content);
 }
 .workbench-shell .todo-list-shell,
-.workbench-shell .quick-tag-content { border-radius: 0 0 8px 8px; }
+.workbench-shell .quick-tag-content {
+  border-radius: 0 0 8px 8px;
+  background: var(--desk-group-content);
+  overflow: hidden;
+}
 .workbench-shell .todo-list { padding: 8px; }
 .workbench-shell .todo-section.is-collapsed > .todo-heading,
 .workbench-shell .quick-tag-group:has(> .quick-tag-content.is-collapsed) > .quick-tag-heading {
