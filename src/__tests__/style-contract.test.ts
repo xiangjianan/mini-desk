@@ -398,7 +398,7 @@ describe("workbench style contract", () => {
     const desk = readFileSync(resolve(__dirname, "../desk.css"), "utf8");
     const selector = ".workbench-shell .todo-section.is-compact.is-collapsed";
     expectSelectorBody(desk, selector, "flex: 0 0 auto");
-    expectSelectorBody(desk, selector, "min-height: 54px");
+    expectSelectorBody(desk, selector, "min-height: var(--desk-group-heading-height)");
     expect(ruleBodies(desk, selector).some(body => /flex:\s*0\s+0\s+54px/.test(body))).toBe(false);
   });
 
@@ -425,20 +425,21 @@ describe("workbench style contract", () => {
     expect(styles).not.toMatch(/\.todo-section:first-child \.todo-heading\s*\{[^}]*border-top/);
   });
 
-  it("keeps the notes smart-paste button plain blue and menu entries on the clipboard icon", () => {
+  it("keeps smart-paste controls neutral until hover and menu entries on the clipboard icon", () => {
     const desk = readFileSync(resolve(__dirname, "../desk.css"), "utf8");
     const space = readFileSync(resolve(__dirname, "../components/SpacePanel.vue"), "utf8");
     const text = readFileSync(resolve(__dirname, "../components/TextPanel.vue"), "utf8");
     const todo = readFileSync(resolve(__dirname, "../components/TodoPanel.vue"), "utf8");
 
-    // 便签头部「智能粘贴」按钮：复用提醒粘贴按钮的 desk-ai-button 主色蓝 token；
+    // 便签头部「智能粘贴」按钮：复用提醒粘贴按钮的 desk-ai-button 中性灰 token；
     // 彩色流动不再常驻（markup 不带任何 flow 类），只在 :hover 时由 desk.css 恢复。
     expect(space).toContain('class="desk-ai-action desk-ai-button desk-smart-paste"');
     expect(space).not.toContain('class="smart-paste-icon-flow"');
     expect(space).not.toContain("polish-menu-flow");
-    expectSelectorBody(desk, ".workbench-shell .desk-ai-button", "color: var(--primary)");
+    expectSelectorBody(desk, ".workbench-shell .desk-ai-button", "color: var(--muted)");
+    expectSelectorBody(desk, ".workbench-shell .desk-ai-button:hover", "color: var(--primary)");
     // 悬浮动效：两个智能粘贴入口（提醒粘贴按钮 + 便签头部按钮共用 desk-ai-button）
-    // 图标循环变色、文字渐变滚动；平时保持主色蓝。
+    // 图标循环变色、文字渐变滚动；平时保持中性灰。
     expect(desk).toContain("@keyframes smart-paste-icon-flow");
     expectSelectorBody(desk, ".workbench-shell .desk-ai-button:hover .n-icon", "animation: smart-paste-icon-flow 4.8s linear infinite");
     expectSelectorBody(desk, ".workbench-shell .desk-smart-paste:hover > span", "animation: starred-text-flow 4.8s linear infinite");
@@ -449,7 +450,7 @@ describe("workbench style contract", () => {
     // 菜单标签的渐变流动文字仍由 contextMenu.ts 渲染，样式类保留。
     expect(readFileSync(resolve(__dirname, "../utils/contextMenu.ts"), "utf8")).toContain("polish-menu-flow");
     const quick = readFileSync(resolve(__dirname, "../components/QuickButtons.vue"), "utf8");
-    // 快捷区标签头智能粘贴按钮：与提醒列表入口同款 desk-ai-button 主色蓝（markup 不带 flow 类）。
+    // 快捷区标签头智能粘贴按钮：与提醒列表入口同款 desk-ai-button 中性灰（markup 不带 flow 类）。
     expect(quick).toContain('class="icon-button desk-ai-button"');
     expect(quick).not.toContain("ColorWandOutline");
     // 右键菜单「智能粘贴」条目与「粘贴」共用剪贴板图标，文字渐变流动走共享 render-label。

@@ -9888,7 +9888,11 @@ describe("App inbox revoke wiring", () => {
         ],
       }),
     );
-    const deleteDatabase = vi.fn();
+    const deleteDatabase = vi.fn(() => {
+      const request = {} as IDBOpenDBRequest;
+      queueMicrotask(() => request.onsuccess?.call(request, new Event("success")));
+      return request;
+    });
     vi.stubGlobal("indexedDB", { deleteDatabase });
     const wrapper = mountApp();
 
