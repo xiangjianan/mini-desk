@@ -750,7 +750,7 @@ describe("TodoPanel", () => {
     expect(wrapper.emitted("updateListTitle")).toBeUndefined();
   });
 
-  it("toggles list collapse from a centered header icon and keeps compact out of the menu", async () => {
+  it("toggles list collapse from a leading header icon and keeps compact out of the menu", async () => {
     const wrapper = mount(TodoPanel, {
       props: {
         todoLists: defaultTodoLists,
@@ -767,6 +767,8 @@ describe("TodoPanel", () => {
       },
     });
 
+    const heading = wrapper.get('.todo-section[data-list-id="morning"] .todo-heading').element;
+    expect(heading.querySelector(".todo-collapse-button")?.nextElementSibling?.tagName).toBe("H3");
     await wrapper.get('.todo-section[data-list-id="morning"] .todo-collapse-button').trigger("click");
     await wrapper.get('.todo-section[data-list-id="morning"] .todo-section-menu-button').trigger("click");
     const optionTexts = wrapper.findAll(".dropdown-option").map((option) => option.text());

@@ -538,6 +538,7 @@ describe("QuickButtons", () => {
     expect(wrapper.get(".quick-tag-content").classes()).toContain("is-collapsed");
     expect(wrapper.get(".quick-tag-content").attributes("aria-hidden")).toBe("true");
     expect(wrapper.get(".quick-tag-content").attributes()).toHaveProperty("inert");
+    expect(wrapper.get(".quick-tag-collapse-button").element.nextElementSibling?.classList.contains("quick-tag-title")).toBe(true);
     expect(wrapper.get(".quick-tag-collapse-button").attributes("aria-expanded")).toBe("false");
     await wrapper.get(".quick-tag-collapse-button").trigger("click");
     expect(wrapper.emitted("toggleTagCollapsed")?.[0]).toEqual(["tag-work"]);

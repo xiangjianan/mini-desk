@@ -928,18 +928,6 @@ function handleQuickGroupDrop(event: DragEvent, groupId: string): void {
             @drop.stop.prevent="onTagDrop($event, group.id)"
             @dragend="draggingTagId = null"
           >
-            <input
-              v-if="editingTagId === group.id"
-              :ref="setInlineRenameInput"
-              v-model="inlineTagDraft"
-              class="quick-tag-title-input"
-              :placeholder="uiText.quick.tagName"
-              autocomplete="off"
-              @keydown.enter.prevent="commitInlineTagRename"
-              @keydown.esc.prevent="cancelInlineTagRename"
-              @blur="commitInlineTagRename"
-            />
-            <span v-else class="quick-tag-title">{{ group.title }}</span>
             <button
               v-if="group.id !== QUICK_BUTTON_EMPTY_GROUP_ID && editingTagId !== group.id"
               type="button"
@@ -952,6 +940,19 @@ function handleQuickGroupDrop(event: DragEvent, groupId: string): void {
             >
               <NIcon :component="ChevronDownOutline" />
             </button>
+            <input
+              v-if="editingTagId === group.id"
+              :ref="setInlineRenameInput"
+              v-model="inlineTagDraft"
+              class="quick-tag-title-input"
+              :placeholder="uiText.quick.tagName"
+              autocomplete="off"
+              @keydown.enter.prevent="commitInlineTagRename"
+              @keydown.esc.prevent="cancelInlineTagRename"
+              @blur="commitInlineTagRename"
+            />
+            <span v-else class="quick-tag-title">{{ group.title }}</span>
+
             <span v-if="editingTagId !== group.id" class="quick-tag-count">{{ group.buttons.length }}</span>
             <button
               v-if="group.title && editingTagId !== group.id && props.polish"

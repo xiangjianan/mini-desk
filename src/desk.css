@@ -345,23 +345,31 @@ html[data-theme="dark"] .workbench-shell,
   border: 0;
 }
 .workbench-shell .quick-tag-title {
-  flex: 0 1 calc(50% - 20px);
-  max-width: calc(50% - 20px);
+  flex: 1 1 auto;
+  min-width: 0;
+  max-width: none;
 }
 .workbench-shell .quick-tag-count { margin-left: auto; }
-.workbench-shell button.quick-tag-collapse-button {
-  position: absolute;
-  left: 50%;
-  top: 50%;
+.workbench-shell button.quick-tag-collapse-button,
+.workbench-shell button.todo-collapse-button {
+  position: static;
+  flex: 0 0 26px;
+  align-self: center;
+  left: auto;
+  top: auto;
   width: 26px;
   min-width: 26px;
   height: 26px;
   min-height: 26px;
   margin: 0;
   padding: 0;
-  transform: translate(-50%, -50%);
+  transform: none;
 }
-.workbench-shell .quick-tag-collapse-button.is-collapsed .n-icon { transform: rotate(180deg); }
+.workbench-shell .quick-tag-collapse-button .n-icon,
+.workbench-shell .todo-collapse-button .n-icon { transform: none; }
+.workbench-shell .quick-tag-collapse-button.is-collapsed .n-icon,
+.workbench-shell .todo-collapse-button.is-collapsed .n-icon { transform: rotate(-90deg); }
+.workbench-shell .todo-heading h3 { min-width: 0; }
 .workbench-shell .quick-tag-collapse-button:hover,
 .workbench-shell .quick-tag-collapse-button:focus-visible { color: var(--primary); }
 

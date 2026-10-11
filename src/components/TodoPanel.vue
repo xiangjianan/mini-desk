@@ -2058,6 +2058,16 @@ function buildTodoListEntries(period: TodoListId, todos: TodoItem[], deferredDon
             class="todo-list-drag-handle"
             :aria-label="uiText.todo.dragList"
           />
+          <button
+            type="button"
+            class="todo-collapse-button icon-button"
+            :class="{ 'is-collapsed': list.collapsed }"
+            :aria-label="list.collapsed ? uiText.todo.expand : uiText.todo.collapse"
+            :aria-expanded="!list.collapsed"
+            @click.stop="emit('toggleListCollapsed', list.id, !list.collapsed)"
+          >
+            <NIcon :component="ChevronDownOutline" />
+          </button>
           <h3 :class="{ 'is-notify-flashing': isListTitleNotificationFlashing(list) }">
             <span
               v-if="listHasOverdue(list.id)"
@@ -2074,15 +2084,7 @@ function buildTodoListEntries(period: TodoListId, todos: TodoItem[], deferredDon
               @edit-state="(_id, editing) => setListTitleEditing(list.id, editing)"
             />
           </h3>
-          <button
-            type="button"
-            class="todo-collapse-button icon-button"
-            :class="{ 'is-collapsed': list.collapsed }"
-            :aria-label="list.collapsed ? uiText.todo.expand : uiText.todo.collapse"
-            @click.stop="emit('toggleListCollapsed', list.id, !list.collapsed)"
-          >
-            <NIcon :component="ChevronDownOutline" />
-          </button>
+
           <div class="todo-heading-actions">
             <span class="todo-count">{{ periodStats[list.id] }}</span>
             <button v-if="props.polish" type="button" class="icon-button desk-ai-button"
