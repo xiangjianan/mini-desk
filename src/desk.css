@@ -8,7 +8,7 @@
   --desk-group-gap: 16px;
   --desk-group-top: 16px;
   --desk-group-scroll-gutter: 12px;
-  --desk-group-surface: color-mix(in srgb, var(--card) 55%, var(--muted-surface));
+  --desk-group-surface: color-mix(in srgb, var(--card) 42%, var(--muted-surface));
   --desk-edge: color-mix(in srgb, var(--line-section) 65%, transparent);
   --desk-control-shadow: 0 1px 2px color-mix(in srgb, var(--foreground) 5%, transparent);
   font-size: var(--app-font-size);
