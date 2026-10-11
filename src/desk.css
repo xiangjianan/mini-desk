@@ -200,7 +200,7 @@ html[data-theme="dark"] .workbench-shell,
   backdrop-filter: none;
   box-shadow: none;
   border: 0;
-  border-radius: 8px;
+  border-radius: 8px 8px 0 0;
 }
 /* Match tag groups and reminder lists, including independent scroll columns. */
 .workbench-shell .todo-content-scroll { padding-top: var(--desk-group-top); }
@@ -256,7 +256,7 @@ html[data-theme="dark"] .workbench-shell,
 .workbench-shell button.space-tab {
   height: 32px;
   min-height: 32px;
-  border-radius: 8px;
+  border-radius: 8px 8px 0 0;
   background: var(--desk-group-surface);
   box-shadow: none;
   padding-inline: 12px;
@@ -267,7 +267,7 @@ html[data-theme="dark"] .workbench-shell,
   box-shadow: none;
 }
 .workbench-shell button.space-tab:hover { background: var(--secondary); }
-.workbench-shell .space-tab-edit-shell { height: 32px; min-height: 32px; border-radius: 8px; background: var(--desk-group-surface); }
+.workbench-shell .space-tab-edit-shell { height: 32px; min-height: 32px; border-radius: 8px 8px 0 0; background: var(--desk-group-surface); }
 .workbench-shell .space-tab-edit-input,
 .workbench-shell .space-tab-edit-measure { height: 32px; min-height: 32px; }
 .workbench-shell .text-editor-textarea,
@@ -340,7 +340,7 @@ html[data-theme="dark"] .workbench-shell,
   background: var(--desk-group-surface);
   min-height: var(--desk-group-heading-height);
   padding: 4px 8px;
-  border-radius: 8px;
+  border-radius: 8px 8px 0 0;
   box-shadow: none;
   border: 0;
 }
