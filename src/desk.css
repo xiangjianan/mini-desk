@@ -205,6 +205,13 @@ html[data-theme="dark"] .workbench-shell,
 .workbench-shell .todo-input { font-size: 14px; }
 .workbench-shell .todo-section.is-collapsed { flex-shrink: 0; }
 
+/* Tabs and their nested editor share the surrounding workbench surface. */
+.workbench-shell .space-tabs-scrollbar,
+.workbench-shell .space-tab-edit-shell,
+.workbench-shell .space-text-panel {
+  background: transparent;
+}
+
 .workbench-shell .space-tabs-scrollbar,
 .workbench-shell .space-tabs-scrollbar-inner,
 .workbench-shell .space-tabs { height: 42px; min-height: 42px; }
