@@ -178,9 +178,11 @@ html[data-theme="dark"] .workbench-shell,
   padding: 4px 8px;
   background: var(--desk-group-surface);
   backdrop-filter: none;
-  box-shadow: inset 0 -1px var(--desk-edge);
+  box-shadow: none;
+  border: 0;
   border-radius: 8px;
 }
+.workbench-shell .todo-section { border-bottom: 0; }
 .workbench-shell .todo-heading h3 { font-size: 14px; }
 .workbench-shell .todo-heading-actions { gap: 0; align-items: center; }
 .workbench-shell .todo-heading-actions > .icon-button {
@@ -217,7 +219,7 @@ html[data-theme="dark"] .workbench-shell,
 .workbench-shell .space-tabs { height: 42px; min-height: 42px; }
 .workbench-shell .space-tabs-scrollbar {
   flex-basis: 42px;
-  border-color: var(--desk-edge);
+  border: 0;
   border-radius: 8px 8px 0 0;
   background: var(--desk-group-surface);
 }
@@ -295,7 +297,8 @@ html[data-theme="dark"] .workbench-shell,
   min-height: 40px;
   padding: 4px 8px;
   border-radius: 8px;
-  box-shadow: inset 0 -1px var(--desk-edge);
+  box-shadow: none;
+  border: 0;
 }
 .workbench-shell .quick-tag-title {
   flex: 0 1 calc(50% - 20px);
