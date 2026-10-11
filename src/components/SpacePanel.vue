@@ -263,7 +263,7 @@ function handleTodoDragOver(event: DragEvent): void {
   const types = Array.from(event.dataTransfer?.types ?? []);
   if (!types.includes("application/x-todo-id")) return;
   event.preventDefault();
-  if (event.dataTransfer) event.dataTransfer.dropEffect = "move";
+  if (event.dataTransfer) event.dataTransfer.dropEffect = "copy";
   todoDropHover.value = true;
 }
 
@@ -312,6 +312,7 @@ function handleTabsWheel(event: WheelEvent): void {
     @dragover="handleTodoDragOver"
     @dragleave="handleTodoDragLeave"
     @drop="handleTodoDrop"
+    @drop.capture="todoDropHover = false"
   >
     <div class="panel-header desk-zone-heading" @contextmenu.stop.prevent="openHeaderMenu($event)">
       <h2><NIcon :component="DocumentTextOutline" /><span>{{ uiText.desk.notes }}</span></h2>

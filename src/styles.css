@@ -4398,7 +4398,7 @@ button.mobile-home-btn-danger:focus-visible {
   pointer-events: none;
 }
 
-.panel.drag-hover:not(.text-panel),
+.panel.drag-hover:not(.text-panel):not(.space-panel),
 .split-block.drag-hover:not(.quick-block):not(.text-panel) {
   outline: 2px dashed var(--line-focus);
   outline-offset: -2px;
@@ -4407,6 +4407,7 @@ button.mobile-home-btn-danger:focus-visible {
 
 /* Tint the content surfaces too: desktop groups have their own opaque backgrounds. */
 :root .text-panel.drag-hover,
+:root .space-panel.drag-hover,
 :root .quick-tag-group.drag-hover,
 :root .quick-tag-group.drag-hover .quick-tag-heading,
 :root .quick-tag-group.drag-hover .quick-tag-content,

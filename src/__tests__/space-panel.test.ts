@@ -352,6 +352,22 @@ describe("SpacePanel", () => {
     wrapper.unmount();
   });
 
+  it("clears the outer highlight when the notebook consumes a reminder drop", async () => {
+    const wrapper = mountSpacePanel([{ id: "note", title: "记事本", lines: [{ text: "原文", indent: 0 }] }]);
+    const dataTransfer = {
+      types: ["application/x-todo-id", "application/x-todo-text"], files: [], dropEffect: "none",
+      getData: (type: string) => type === "application/x-todo-text" ? "提醒内容" : type === "application/x-todo-id" ? "work:t1" : "",
+    };
+    await wrapper.get(".text-editor-frame").trigger("dragover", { dataTransfer });
+    expect(wrapper.get(".space-panel").classes()).toContain("drag-hover");
+    expect(dataTransfer.dropEffect).toBe("copy");
+    await wrapper.get(".text-editor-frame").trigger("drop", { dataTransfer });
+    expect(wrapper.get("textarea").element.value).toBe("原文\n提醒内容");
+    expect(wrapper.get(".space-panel").classes()).not.toContain("drag-hover");
+    expect(wrapper.emitted("dropTodo")).toBeUndefined();
+    wrapper.unmount();
+  });
+
   it("ignores non-todo drags hovering the note panel", async () => {
     const wrapper = mountSpacePanel([{ id: "workspace", title: "工作空间", lines: [] }]);
     const textDrag = { types: ["text/plain"], getData: (mime: string) => (mime === "text/plain" ? "hi" : "") };

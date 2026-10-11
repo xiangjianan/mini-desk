@@ -1382,7 +1382,7 @@ describe("TextPanel", () => {
 
   it.each(["application/x-todo-text", "application/x-quick-text"])("highlights the notebook and copies dropped internal text (%s)", async (type) => {
     const wrapper = mount(TextPanel, {
-      props: { titleId: "note-title", title: "记事本", lines: [] },
+      props: { titleId: "note-title", title: "记事本", lines: [{ text: "第一行", indent: 0 }, { text: "最后一行", indent: 0 }] },
     });
     const dataTransfer = {
       types: [type], files: [], dropEffect: "none",
@@ -1393,9 +1393,21 @@ describe("TextPanel", () => {
     await wrapper.get(".text-editor-frame").trigger("dragover", { dataTransfer });
     expect(dataTransfer.dropEffect).toBe("copy");
     await wrapper.get(".text-editor-frame").trigger("drop", { dataTransfer });
-    expect(wrapper.get("textarea").element.value).toBe("拖入的内容");
+    expect(wrapper.get("textarea").element.value).toBe("第一行\n最后一行\n拖入的内容");
+    expect(wrapper.get("textarea").element.selectionStart).toBe(wrapper.get("textarea").element.value.length);
     expect(wrapper.get(".text-panel").classes()).not.toContain("drag-hover");
     expect(wrapper.emitted("update")).toBeTruthy();
+    wrapper.unmount();
+  });
+
+  it.each(["", "已有内容\n"])("appends internal drops without adding an extra empty line after %j", async (existing) => {
+    const wrapper = mount(TextPanel, {
+      props: { titleId: "note-title", title: "记事本", lines: existing ? [{ text: "已有内容", indent: 0 }, { text: "", indent: 0 }] : [] },
+    });
+    await wrapper.get(".text-editor-frame").trigger("drop", {
+      dataTransfer: { files: [], getData: (type: string) => type === "application/x-quick-text" ? "新增内容" : "" },
+    });
+    expect(wrapper.get("textarea").element.value).toBe(`${existing}新增内容`);
     wrapper.unmount();
   });
 

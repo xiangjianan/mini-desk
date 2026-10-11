@@ -626,23 +626,26 @@ function handleExternalTextDrop(event: DragEvent): void {
   const files = Array.from(event.dataTransfer?.files ?? []);
   if (files.length > 0) return;
   const transfer = event.dataTransfer;
-  const dropped = ["application/x-todo-text", "application/x-quick-text", "text/plain"]
+  const internalText = ["application/x-todo-text", "application/x-quick-text"]
     .map((type) => transfer?.getData(type) ?? "")
     .find((text) => text.trim()) ?? "";
+  const dropped = internalText || transfer?.getData("text/plain") || "";
   if (!dropped.trim()) return;
   event.preventDefault();
   event.stopPropagation();
   const textarea = textareaRef.value;
   if (textarea && !editing.value) startEditingFromTextarea(textarea);
   const current = text.value;
-  const offset = textarea ? getTextOffsetAtPoint(textarea, event.clientX, event.clientY) : current.length;
+  const offset = internalText ? current.length : textarea ? getTextOffsetAtPoint(textarea, event.clientX, event.clientY) : current.length;
+  const inserted = internalText && current && !current.endsWith("\n") ? `\n${dropped}` : dropped;
   const before = current.slice(0, offset);
   const after = current.slice(offset);
-  const next = before + dropped + after;
+  const next = before + inserted + after;
   applyEditorText(next);
   if (textarea) {
-    const cursorPos = offset + dropped.length;
+    const cursorPos = offset + inserted.length;
     textarea.setSelectionRange(cursorPos, cursorPos);
+    if (internalText) void nextTick(() => { textarea.scrollTop = textarea.scrollHeight; });
   }
   emit("update", linesFromEditorState(text.value, editorMarks.value));
 }
