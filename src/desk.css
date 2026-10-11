@@ -3,6 +3,10 @@
 .workbench-shell {
   --app-font-size: 14px;
   --scrollbar-size: 4px;
+  --desk-recessed: color-mix(in srgb, var(--card) 48%, var(--muted-surface));
+  --desk-raised: var(--card);
+  --desk-edge: color-mix(in srgb, var(--line-section) 65%, transparent);
+  --desk-control-shadow: 0 1px 2px color-mix(in srgb, var(--foreground) 5%, transparent);
   font-size: var(--app-font-size);
 }
 
@@ -18,7 +22,8 @@ html[data-theme="dark"] .workbench-shell,
   padding-inline-start: 16px;
   background: var(--card);
   backdrop-filter: none;
-  border-bottom: 1px solid var(--line-subtle);
+  border-bottom: 1px solid var(--desk-edge);
+  box-shadow: 0 2px 8px color-mix(in srgb, var(--foreground) 4%, transparent);
 }
 
 .workbench-grid {
@@ -35,6 +40,19 @@ html[data-theme="dark"] .workbench-shell,
   backdrop-filter: none;
   animation: none;
   container-type: inline-size;
+}
+
+/* Recessed utility areas frame the white reading and writing surfaces.
+   Surface-only changes keep column resizing and narrow layouts stable. */
+.workbench-zone-assets,
+.workbench-zone-notes {
+  --desk-raised: var(--desk-recessed);
+  background: var(--desk-recessed);
+}
+
+.workbench-zone-tasks,
+.workbench-zone-workspace {
+  box-shadow: inset 1px 0 0 color-mix(in srgb, var(--card) 70%, transparent);
 }
 
 .workbench-zone:last-of-type { border-inline-end: 0; }
@@ -100,7 +118,7 @@ html[data-theme="dark"] .workbench-shell,
 .workbench-shell button:focus-visible { outline: 2px solid var(--ring); outline-offset: 2px; }
 
 .workbench-shell .image-list { padding: 18px 0; gap: 14px; }
-.workbench-shell .image-card { border-radius: 8px; box-shadow: none; }
+.workbench-shell .image-card { border-radius: 8px; background: var(--card); box-shadow: var(--desk-control-shadow); }
 
 /* 右侧 12px 让位给悬浮滚动条（NScrollbar 轨道压在内容上缘，滚动时不再盖住按钮/计数）。 */
 .workbench-shell .quick-tag-groups { gap: 20px; padding: 16px 12px 16px 0; }
@@ -143,8 +161,8 @@ html[data-theme="dark"] .workbench-shell,
   text-align: start;
   border: 1px solid var(--line-subtle);
   border-radius: 8px;
-  background: transparent;
-  box-shadow: none;
+  background: var(--card);
+  box-shadow: var(--desk-control-shadow);
   transform: none;
   /* 必须在此声明（0,2,1）而非 .quick-button 基座：全局 button:not(.icon-button)
      的 transition（0,1,1）会压过基座；min-height/padding 让大↔紧凑切换平滑缩放。 */
@@ -171,7 +189,7 @@ html[data-theme="dark"] .workbench-shell,
 .workbench-shell .todo-heading {
   min-height: 53px;
   padding: 4px 0;
-  background: var(--card);
+  background: var(--desk-raised);
   backdrop-filter: none;
   box-shadow: none;
   border-radius: 0;
@@ -275,7 +293,7 @@ html[data-theme="dark"] .workbench-shell,
   position: sticky;
   top: 0;
   z-index: 2;
-  background: var(--card);
+  background: var(--desk-raised);
   min-height: 40px;
   padding: 4px 0;
 }
