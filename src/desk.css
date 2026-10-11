@@ -114,6 +114,9 @@ html[data-theme="dark"] .workbench-shell,
 /* 右侧 12px 让位给悬浮滚动条（NScrollbar 轨道压在内容上缘，滚动时不再盖住按钮/计数）。 */
 .workbench-shell .quick-tag-groups { gap: var(--desk-group-gap); padding: var(--desk-group-top) var(--desk-group-scroll-gutter) 16px 0; }
 .workbench-shell .quick-tag-column { gap: var(--desk-group-gap); }
+.workbench-shell .quick-tag-content > .quick-buttons { padding-block: 0; }
+.workbench-shell .quick-tag-heading + .quick-tag-content { margin-top: 8px; }
+.workbench-shell .quick-tag-heading + .quick-tag-content.is-collapsed { margin-top: 0; }
 .workbench-shell .quick-tag-heading { min-height: 32px; padding: 0 0 8px; }
 .workbench-shell .quick-tag-title { font-weight: 600; }
 .workbench-shell .quick-tag-count { background: transparent; font-size: 12px; }
@@ -233,11 +236,27 @@ html[data-theme="dark"] .workbench-shell,
 .workbench-shell .space-tabs-scrollbar {
   flex-basis: 42px;
   border: 0;
-  border-radius: 8px 8px 0 0;
-  background: var(--desk-group-surface);
+  border-radius: 0;
+  background: transparent;
 }
-.workbench-shell button.space-tab { border-radius: 6px 6px 0 0; background: transparent; box-shadow: none; padding-inline: 12px; }
-.workbench-shell .space-tab.is-active { color: var(--primary); background: var(--desk-surface); box-shadow: inset 0 -2px var(--primary); }
+.workbench-shell .space-tabs { gap: 8px; align-items: center; }
+.workbench-shell button.space-tab {
+  height: 32px;
+  min-height: 32px;
+  border-radius: 8px;
+  background: var(--desk-group-surface);
+  box-shadow: none;
+  padding-inline: 12px;
+}
+.workbench-shell .space-tab.is-active {
+  color: var(--accent-foreground);
+  background: color-mix(in srgb, var(--primary) 12%, var(--desk-surface));
+  box-shadow: none;
+}
+.workbench-shell button.space-tab:hover { background: var(--secondary); }
+.workbench-shell .space-tab-edit-shell { height: 32px; min-height: 32px; border-radius: 8px; background: var(--desk-group-surface); }
+.workbench-shell .space-tab-edit-input,
+.workbench-shell .space-tab-edit-measure { height: 32px; min-height: 32px; }
 .workbench-shell .text-editor-textarea,
 .workbench-shell .text-mirror {
   font-size: 14px;

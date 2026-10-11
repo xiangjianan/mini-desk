@@ -820,6 +820,41 @@ describe("TodoPanel", () => {
     expect(wrapper.get('.todo-section[data-list-id="morning"] .todo-heading').attributes("draggable")).toBe("false");
   });
 
+  it("animates reordered list sections while retaining their existing DOM", async () => {
+    const wrapper = mount(TodoPanel, {
+      props: {
+        todoLists: defaultTodoLists,
+        todos: { morning: [], noon: [], evening: [] },
+        showCompleted: { morning: false, noon: false, evening: false },
+        titles: DEFAULT_TITLES,
+      },
+    });
+    await nextTick();
+    const sections = wrapper.findAll(".todo-section").map((item) => item.element as HTMLElement);
+    const animations = sections.map((section) => {
+      vi.spyOn(section, "getBoundingClientRect").mockImplementation(() => {
+        const index = Array.from(section.parentElement!.children).indexOf(section);
+        return { left: 0, top: index * 100 } as DOMRect;
+      });
+      const animate = vi.fn(() => ({ cancel: vi.fn(), onfinish: null }));
+      Object.defineProperty(section, "animate", { value: animate, configurable: true });
+      return animate;
+    });
+    try {
+      await wrapper.setProps({ todoLists: [...defaultTodoLists].reverse() });
+      expect(wrapper.findAll(".todo-section").map((item) => item.element)).toEqual([...sections].reverse());
+      expect(animations[0]).toHaveBeenCalledWith(
+        [{ transform: "translate(0px, -200px)" }, { transform: "translate(0, 0)" }],
+        { duration: 220, easing: "cubic-bezier(0.2, 0, 0, 1)" },
+      );
+      expect(animations[1]).not.toHaveBeenCalled();
+      expect(animations[2]).toHaveBeenCalled();
+    } finally {
+      wrapper.unmount();
+      vi.restoreAllMocks();
+    }
+  });
+
   it("emits list reorder actions from header dragging without moving reminders", async () => {
     const wrapper = mount(TodoPanel, {
       props: {

@@ -203,6 +203,23 @@ function setColumnElement(index: number, element: Element | null): void {
   columnElements[index] = element as HTMLElement | null;
 }
 
+// Capture the rendered positions before a stored list order/column changes.
+// Stable Teleports preserve editing state; animate their destinations with FLIP.
+let listPositionsBeforeReorder: Map<TodoListId, DOMRect> | null = null;
+const listReorderAnimations = new Map<TodoListId, Animation>();
+watch(
+  () => effectiveTodoLists.value.map((list) => `${list.id}:${list.column ?? 0}`).join("|"),
+  () => {
+    listPositionsBeforeReorder = new Map(
+      [...todoSectionRefs].map(([id, element]) => [id, element.getBoundingClientRect()]),
+    );
+  },
+  { flush: "pre" },
+);
+onUnmounted(() => {
+  for (const animation of listReorderAnimations.values()) animation.cancel();
+});
+
 // Teleport keyed reordering moves source anchors, not the destination content.
 // Reconcile only list sections (never individual rows) with the stored order.
 onUpdated(() => {
@@ -216,6 +233,28 @@ onUpdated(() => {
     const anchor = column.children[position] ?? null;
     if (anchor !== section) column.insertBefore(section, anchor);
     positions.set(columnIndex, position + 1);
+  }
+  const previousPositions = listPositionsBeforeReorder;
+  listPositionsBeforeReorder = null;
+  if (!previousPositions) return;
+  for (const animation of listReorderAnimations.values()) animation.cancel();
+  listReorderAnimations.clear();
+  if (window.matchMedia?.("(prefers-reduced-motion: reduce)").matches) return;
+  for (const [id, previous] of previousPositions) {
+    const section = todoSectionRefs.get(id);
+    if (!section?.animate) continue;
+    const current = section.getBoundingClientRect();
+    const dx = previous.left - current.left;
+    const dy = previous.top - current.top;
+    if (!dx && !dy) continue;
+    const animation = section.animate(
+      [{ transform: `translate(${dx}px, ${dy}px)` }, { transform: "translate(0, 0)" }],
+      { duration: 220, easing: "cubic-bezier(0.2, 0, 0, 1)" },
+    );
+    listReorderAnimations.set(id, animation);
+    animation.onfinish = () => {
+      if (listReorderAnimations.get(id) === animation) listReorderAnimations.delete(id);
+    };
   }
 });
 function columnLimitMenu(): DropdownOption {
