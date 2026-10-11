@@ -4381,11 +4381,21 @@ button.mobile-home-btn-danger:focus-visible {
 /* Drag text highlight */
 .panel.drag-hover,
 .text-panel.drag-hover,
-.split-block.drag-hover,
-.todo-section.drag-hover {
+.split-block.drag-hover:not(.quick-block) {
   outline: 2px dashed var(--line-focus);
   outline-offset: -2px;
   transition: outline 0.15s ease;
+}
+
+/* Tint the content surfaces too: desktop groups have their own opaque backgrounds. */
+:root .quick-block.drag-hover,
+:root .quick-block.drag-hover .quick-tag-group,
+:root .quick-block.drag-hover .quick-tag-heading,
+:root .quick-block.drag-hover .quick-tag-content,
+:root .todo-section.drag-hover,
+:root .todo-section.drag-hover .todo-heading,
+:root .todo-section.drag-hover .todo-list-shell {
+  background: color-mix(in srgb, var(--line-focus) 12%, var(--card));
 }
 
 .shortcut-help-modal {

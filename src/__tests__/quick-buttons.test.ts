@@ -815,6 +815,30 @@ describe("QuickButtons", () => {
     wrapper.unmount();
   });
 
+  it.each(["area", "group"])("copies a reminder into a quick action when dropped on the %s", async (target) => {
+    const wrapper = mountQuickButtons({
+      tags: [{ id: "tag-work", title: "工作" }],
+      buttons: [{ id: "a", title: "A", value: "a", type: "text", hidden: false, tagId: "tag-work" }],
+    });
+    const dataTransfer = {
+      types: ["application/x-todo-id", "application/x-todo-text"],
+      files: [],
+      dropEffect: "none",
+      getData: (type: string) => type === "application/x-todo-text" ? "需要处理的提醒" : "",
+    };
+    const dropTarget = wrapper.get(target === "area" ? ".quick-block" : ".quick-tag-group");
+    await dropTarget.trigger("dragover", { dataTransfer });
+    expect(dataTransfer.dropEffect).toBe("copy");
+    expect(wrapper.get(".quick-block").classes()).toContain("drag-hover");
+    await dropTarget.trigger("drop", { dataTransfer });
+    expect(wrapper.emitted("save")).toEqual([[{
+      title: "需要处理的提醒", value: "需要处理的提醒", type: "text",
+      tagTitle: target === "group" ? "工作" : undefined,
+    }]]);
+    expect(wrapper.get(".quick-block").classes()).not.toContain("drag-hover");
+    wrapper.unmount();
+  });
+
   it("accepts an external text/plain drop and creates a text quick button", async () => {
     const wrapper = mountQuickButtons({
       buttons: [{ id: "a", title: "A", value: "a", type: "text", hidden: false }],

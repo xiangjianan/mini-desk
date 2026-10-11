@@ -619,7 +619,7 @@ function handleToggleShowHidden(anchor?: HTMLElement): void {
 
 function handleQuickDragOver(event: DragEvent): void {
   const types = Array.from(event.dataTransfer?.types ?? []);
-  const hasText = types.includes("text/plain") || types.includes("text/uri-list");
+  const hasText = types.includes("text/plain") || types.includes("text/uri-list") || types.includes("application/x-todo-text");
   if (hasText && !types.includes("Files")) {
     event.preventDefault();
     event.dataTransfer!.dropEffect = "copy";
@@ -641,6 +641,8 @@ function handleQuickDragEnd(): void {
 
 function readQuickDropText(transfer: DataTransfer | null): string {
   if (!transfer) return "";
+  const todoText = transfer.getData("application/x-todo-text");
+  if (todoText.trim()) return todoText;
   const plain = transfer.getData("text/plain");
   if (plain.trim()) return plain;
   // Windows often exposes dragged URLs only as text/uri-list (no text/plain flavor).
@@ -707,7 +709,7 @@ async function runQuickSmartPasteFlow(tagTitle: string | undefined, anchor?: HTM
 function handleExternalQuickDrop(event: DragEvent, groupId: string): boolean {
   if (draggingId.value || draggingTagId.value) return false;
   // Inner group/heading drops use .stop, so the outer handleQuickDrop (which clears
-  // isDragHover) never runs — clear the drag-hover frame here too.
+  // isDragHover) never runs — clear the drag-hover background here too.
   isDragHover.value = false;
   const text = readQuickDropText(event.dataTransfer);
   if (!text.trim()) return false;
@@ -810,7 +812,7 @@ function handleTagDragOver(event: DragEvent, groupId: string): void {
   const types = Array.from(event.dataTransfer?.types ?? []);
   const isExternalText = !draggingId.value && !draggingTagId.value
     && !types.includes("Files")
-    && (types.includes("text/plain") || types.includes("text/uri-list"));
+    && (types.includes("text/plain") || types.includes("text/uri-list") || types.includes("application/x-todo-text"));
   if (isExternalText) {
     event.preventDefault();
     return;

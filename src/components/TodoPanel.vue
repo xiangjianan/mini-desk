@@ -1143,8 +1143,9 @@ function handleNotifyClick(event: MouseEvent, period: TodoPeriod, todo: TodoItem
 function handleTodoDragStart(event: DragEvent, period: TodoPeriod, todo: TodoItem): void {
   dragged.value = { period, id: todo.id };
   if (!event.dataTransfer) return;
-  event.dataTransfer.effectAllowed = "move";
+  event.dataTransfer.effectAllowed = "copyMove";
   event.dataTransfer.setData("application/x-todo-id", `${period}:${todo.id}`);
+  event.dataTransfer.setData("application/x-todo-text", todo.text);
   const handle = event.currentTarget instanceof HTMLElement ? event.currentTarget : null;
   const dragPreview = handle?.closest<HTMLElement>(".todo-item");
   if (dragPreview) event.dataTransfer.setDragImage?.(dragPreview, 0, 0);
@@ -1828,6 +1829,7 @@ function handleTodoDragOver(event: DragEvent): void {
     dragHoverListId.value = getListIdFromDragEvent(event);
   }
   if (dragged.value) {
+    if (event.dataTransfer) event.dataTransfer.dropEffect = "move";
     todoDragScroll.update(findDragScrollContainer(event.target, "todo-list-scrollbar"), event.clientY);
   }
 }

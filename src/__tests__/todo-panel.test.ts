@@ -4255,8 +4255,9 @@ describe("TodoPanel", () => {
     expect(wrapper.emitted("createFromText")?.[0]).toEqual(["morning", ["任务 C", "任务 D"]]);
   });
 
-  it("keeps internal reminder drags off the plain-text payload", async () => {
+  it("exports reminder text for quick actions while keeping it off generic plain-text targets", async () => {
     const setData = vi.fn();
+    const dataTransfer = { effectAllowed: "", dropEffect: "", types: ["application/x-todo-id", "application/x-todo-text"], setData };
     const wrapper = mount(TodoPanel, {
       props: {
         todos: {
@@ -4277,11 +4278,16 @@ describe("TodoPanel", () => {
     });
 
     await wrapper.get(".todo-drag-handle").trigger("dragstart", {
-      dataTransfer: { effectAllowed: "", setData },
+      dataTransfer,
     });
 
+    expect(dataTransfer.effectAllowed).toBe("copyMove");
     expect(setData).not.toHaveBeenCalledWith("text/plain", "拖到工作空间");
     expect(setData).toHaveBeenCalledWith("application/x-todo-id", "morning:a");
+    expect(setData).toHaveBeenCalledWith("application/x-todo-text", "拖到工作空间");
+    await wrapper.get('.todo-section[data-list-id="morning"]').trigger("dragover", { dataTransfer });
+    expect(dataTransfer.dropEffect).toBe("move");
+    wrapper.unmount();
   });
 
   it("keeps internal reminder list drags off the plain-text payload", async () => {
