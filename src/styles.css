@@ -2941,8 +2941,10 @@ button.todo-star-button {
   pointer-events: none;
 }
 
-/* Keep the focus row's space until its fade finishes, so the next row cannot overlap it. */
-.today-focus-move-leave-active {
+/* Freeze outgoing focus content while remaining rows and the region move together. */
+.today-focus-move-leave-active,
+.today-focus-section.todo-focus-reveal-leave-active {
+  position: absolute;
   pointer-events: none;
 }
 
@@ -7947,4 +7949,4 @@ body:has(.image-preview) .n-modal-container:has(.focus-now-modal) .n-modal-mask 
   content-visibility: auto;
 }
 
-.todo-focus-region { overflow: clip; display: flow-root; flex: 0 0 auto; }
+.todo-focus-region { position: relative; overflow: clip; display: flow-root; flex: 0 0 auto; }

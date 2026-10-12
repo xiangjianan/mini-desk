@@ -19,17 +19,17 @@ function expectSelectorBody(styles: string, selector: string, text: string): voi
 }
 
 describe("workbench style contract", () => {
-  it("keeps completing focus reminders in flow until their exit fade finishes", () => {
+  it("moves focus reminders and their region during the exit fade", () => {
     const styles = readFileSync(resolve(__dirname, "../styles.css"), "utf8");
-    expect(ruleBodies(styles, ".today-focus-move-leave-active").join("\n")).not.toMatch(/position:\s*absolute/);
+    expect(ruleBodies(styles, ".today-focus-move-leave-active").join("\n")).toMatch(/position:\s*absolute/);
     expectSelectorBody(styles, ".today-focus-item", "position: relative");
     expectSelectorBody(styles, ".today-focus-move-leave-active", "pointer-events: none");
     expectSelectorBody(styles, ".today-focus-item.today-focus-move-leave-to", "opacity: 0");
     expect(styles.indexOf(".today-focus-item.today-focus-move-leave-to")).toBeGreaterThan(styles.indexOf(".today-focus-item.is-done"));
     const panel = readFileSync(resolve(__dirname, "../components/TodoPanel.vue"), "utf8");
     expect(panel).toContain('<Transition name="todo-focus-reveal" :duration="180"');
-    expect(panel).toContain('@before-leave="rememberFocusRegionHeight"');
-    expect(panel).toContain('@after-leave="handleFocusLeaveFinished"');
+    expect(panel).toContain('@before-leave="positionLeavingFocusElement"');
+    expect(panel).toContain('@leave-cancelled="clearLeavingFocusPosition"');
   });
 
   it("insets the notebook scroll viewport and its mirror equally to preserve vertical whitespace", () => {

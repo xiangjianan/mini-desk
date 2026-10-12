@@ -1879,10 +1879,19 @@ function buildTodoListEntries(period: TodoListId, todos: TodoItem[], deferredDon
 // Animate the region height so starred rows also move the lists below them.
 const focusRegionRef = ref<HTMLElement | null>(null);
 let focusRegionAnimation: Animation | undefined;
-let focusRegionBeforeLeaveHeight: number | undefined;
+function positionLeavingFocusElement(element: Element): void {
+  const row = element as HTMLElement;
+  // Freeze the leaving element before removing its space from layout.
+  row.style.top = `${row.offsetTop}px`;
+  row.style.left = `${row.offsetLeft}px`;
+  row.style.width = `${row.getBoundingClientRect().width}px`;
+}
 
-function rememberFocusRegionHeight(): void {
-  focusRegionBeforeLeaveHeight = focusRegionRef.value?.getBoundingClientRect().height;
+function clearLeavingFocusPosition(element: Element): void {
+  const row = element as HTMLElement;
+  row.style.removeProperty("top");
+  row.style.removeProperty("left");
+  row.style.removeProperty("width");
 }
 
 function animateFocusRegionHeight(fromHeight: number): void {
@@ -1897,12 +1906,6 @@ function animateFocusRegionHeight(fromHeight: number): void {
   );
 }
 
-function handleFocusLeaveFinished(): void {
-  if (focusRegionBeforeLeaveHeight === undefined) return;
-  const fromHeight = focusRegionBeforeLeaveHeight;
-  focusRegionBeforeLeaveHeight = undefined;
-  animateFocusRegionHeight(fromHeight);
-}
 watch(() => todayFocus.value.map(item => `${item.period}:${item.todo.id}`).join("|"), async () => {
   const region = focusRegionRef.value;
   if (!region) return;
@@ -1927,7 +1930,7 @@ onUnmounted(() => focusRegionAnimation?.cancel());
     <div class="todo-content-scroll" :class="{ 'is-multi-column': columnCount > 1 }">
     <div ref="focusRegionRef" class="todo-focus-region">
       <Transition name="todo-focus-reveal" :duration="180"
-        @before-leave="rememberFocusRegionHeight" @after-leave="handleFocusLeaveFinished">
+        @before-leave="positionLeavingFocusElement" @leave-cancelled="clearLeavingFocusPosition">
       <section v-if="todayFocus.length" class="today-focus-section" :aria-label="uiText.todo.todayFocus">
         <div class="today-focus-heading" @contextmenu="openTodayFocusTitleMenu">
           <NIcon class="today-focus-title-icon" :component="AlertCircleOutline" />
@@ -1946,8 +1949,8 @@ onUnmounted(() => focusRegionAnimation?.cancel());
           tag="ul"
           class="today-focus-list"
           :class="{ 'today-focus-move': true }"
-          @before-leave="rememberFocusRegionHeight"
-          @after-leave="handleFocusLeaveFinished"
+          @before-leave="positionLeavingFocusElement"
+          @leave-cancelled="clearLeavingFocusPosition"
         >
           <li
             v-for="item in todayFocus"
