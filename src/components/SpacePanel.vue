@@ -2,7 +2,15 @@
 import { computed, h, nextTick, onMounted, onUnmounted, ref, watch } from "vue";
 import type { Component, VNode } from "vue";
 import { NDropdown, NIcon, NScrollbar } from "naive-ui";
-import { AddOutline, DocumentTextOutline, ClipboardOutline, CreateOutline, SwapHorizontalOutline, TrashOutline, HelpCircleOutline } from "@vicons/ionicons5";
+import {
+  Plus as AddOutline,
+  FileText as DocumentTextOutline,
+  Clipboard as ClipboardOutline,
+  Pencil as CreateOutline,
+  ArrowLeftRight as SwapHorizontalOutline,
+  Trash2 as TrashOutline,
+  CircleHelp as HelpCircleOutline,
+} from "lucide-vue-next";
 import type { DropdownOption } from "naive-ui";
 import type { AppLanguage, GuideKey, LineItem, WorkspaceMoveTarget, WorkspaceSpace } from "../types";
 import { getUiText } from "../state/i18n";

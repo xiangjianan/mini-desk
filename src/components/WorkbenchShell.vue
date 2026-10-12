@@ -1,6 +1,8 @@
 <script setup lang="ts">
 import { computed, nextTick, onMounted, onUnmounted, ref, watch } from "vue";
-import { SyncOutline } from "@vicons/ionicons5";
+import {
+  RefreshCw as SyncOutline,
+} from "lucide-vue-next";
 import { NIcon } from "naive-ui";
 import { ChevronUp, ChevronDown } from "lucide-vue-next";
 import type { AppLanguage, ZoneVisibility } from "../types";

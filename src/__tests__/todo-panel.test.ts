@@ -3,7 +3,7 @@ import type { VNode } from "vue";
 import { config, flushPromises, mount } from "@vue/test-utils";
 import { describe, expect, it, vi } from "vitest";
 import { NModal } from "naive-ui";
-import { AddOutline } from "@vicons/ionicons5";
+import { Plus as AddOutline } from "lucide-vue-next";
 import { readFileSync } from "node:fs";
 import { resolve } from "node:path";
 import TodoPanel from "../components/TodoPanel.vue";

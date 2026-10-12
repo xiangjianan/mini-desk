@@ -4,27 +4,28 @@ import TodoListCreateDialog from "./TodoListCreateDialog.vue";
 import { computed, h, nextTick, onMounted, onUnmounted, onUpdated, ref, shallowReactive, watch } from "vue";
 import type { Component, VNode } from "vue";
 import {
-  AlertCircleOutline,
-  AddOutline,
-  AlarmOutline,
-  CheckmarkDoneOutline,
-  CheckboxOutline,
-  ChevronDownOutline,
-  ClipboardOutline,
-  CopyOutline,
-  CreateOutline,
-  EyeOffOutline,
-  EyeOutline,
-  HelpCircleOutline,
-  LinkOutline,
-  GridOutline,
-  NotificationsOutline,
+  CircleAlert as AlertCircleOutline,
+  Plus as AddOutline,
+  AlarmClock as AlarmOutline,
+  CheckCheck as CheckmarkDoneOutline,
+  SquareCheck as CheckboxOutline,
+  ChevronDown as ChevronDownOutline,
+  Clipboard as ClipboardOutline,
+  Copy as CopyOutline,
+  Pencil as CreateOutline,
+  EyeOff as EyeOffOutline,
+  Eye as EyeOutline,
+  CircleHelp as HelpCircleOutline,
+  Link as LinkOutline,
+  LayoutGrid as GridOutline,
+  Bell as NotificationsOutline,
   Star,
-  StarOutline,
-  SwapHorizontalOutline,
-  TimerOutline,
-  TrashOutline,
-} from "@vicons/ionicons5";
+  Star as StarOutline,
+  ArrowLeftRight as SwapHorizontalOutline,
+  Timer as TimerOutline,
+  Trash2 as TrashOutline,
+  Ellipsis,
+} from "lucide-vue-next";
 import { NDatePicker, NDropdown, NIcon } from "naive-ui";
 import type { DropdownOption } from "naive-ui";
 import { DEFAULT_TODO_LISTS, GUIDE_MENU_OPTION } from "../state/defaults";
@@ -2008,7 +2009,7 @@ onUnmounted(() => focusRegionAnimation?.cancel());
               :aria-label="uiText.todo.unpin"
               @click="handleStarClick($event, item.period, item.todo)"
             >
-              ★
+              <NIcon :component="Star" />
             </button>
           </li>
         </TransitionGroup>
@@ -2101,7 +2102,7 @@ onUnmounted(() => focusRegionAnimation?.cancel());
               :aria-label="uiText.todo.menu"
               @click="openSectionActions($event, list.id)"
             >
-              ⋯
+              <NIcon :component="Ellipsis" />
             </button>
           </div>
         </div>
@@ -2231,7 +2232,7 @@ onUnmounted(() => focusRegionAnimation?.cancel());
                   :aria-label="entry.todo.starred ? uiText.todo.unpin : uiText.todo.pin"
                   @click="handleStarClick($event, list.id, entry.todo)"
                 >
-                  {{ entry.todo.starred ? "★" : "☆" }}
+                  <NIcon :component="StarOutline" />
                 </button>
               </li>
               <li

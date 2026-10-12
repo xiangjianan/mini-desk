@@ -1,23 +1,23 @@
 <script setup lang="ts">
 import { computed, h, onBeforeUnmount, ref } from "vue";
 import {
-  AddOutline,
-  CheckmarkOutline,
-  CloudDownloadOutline,
-  CloudUploadOutline,
-  MailOutline,
-  GlobeOutline,
-  HeartOutline,
-  ImagesOutline,
-  InformationCircleOutline,
-  KeyOutline,
-  PhonePortraitOutline,
-  ServerOutline,
-  SettingsOutline,
-  ContrastOutline,
-  GridOutline,
-  TrashOutline,
-} from "@vicons/ionicons5";
+  Plus as AddOutline,
+  Check as CheckmarkOutline,
+  CloudDownload as CloudDownloadOutline,
+  CloudUpload as CloudUploadOutline,
+  Mail as MailOutline,
+  Globe as GlobeOutline,
+  Heart as HeartOutline,
+  Images as ImagesOutline,
+  Info as InformationCircleOutline,
+  KeyRound as KeyOutline,
+  Smartphone as PhonePortraitOutline,
+  Database as ServerOutline,
+  Settings as SettingsOutline,
+  CircleFadingPlus as ContrastOutline,
+  LayoutGrid as GridOutline,
+  Trash2 as TrashOutline,
+} from "lucide-vue-next";
 import { NBadge, NButton, NDropdown, NIcon, NUpload } from "naive-ui";
 import type { Component } from "vue";
 import type { UploadFileInfo } from "naive-ui";

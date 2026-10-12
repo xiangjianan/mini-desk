@@ -1,7 +1,17 @@
 <script setup lang="ts">
 import { computed, nextTick, onUnmounted, ref, watch } from "vue";
 import { NPopover, NIcon } from "naive-ui";
-import { ChevronDownOutline, AddOutline, CreateOutline, TrashOutline, DownloadOutline, CloudUploadOutline, CheckmarkOutline, PhonePortraitOutline, EllipsisHorizontalOutline } from "@vicons/ionicons5";
+import {
+  ChevronDown as ChevronDownOutline,
+  Plus as AddOutline,
+  Pencil as CreateOutline,
+  Trash2 as TrashOutline,
+  Download as DownloadOutline,
+  CloudUpload as CloudUploadOutline,
+  Check as CheckmarkOutline,
+  Smartphone as PhonePortraitOutline,
+  Ellipsis as EllipsisHorizontalOutline,
+} from "lucide-vue-next";
 import { getUiText } from "../state/i18n";
 import { DEFAULT_BOARD_TITLE } from "../state/defaults";
 import { getWorkspaceBoardTitle } from "../state/workspaces";

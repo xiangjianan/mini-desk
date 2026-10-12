@@ -2,7 +2,19 @@
 import { computed, h, nextTick, onMounted, onUnmounted, ref, watch } from "vue";
 import type { Component, ComponentPublicInstance, VNode } from "vue";
 import { NDropdown, NIcon, NScrollbar } from "naive-ui";
-import { AddOutline, ArrowDownOutline, ArrowUpOutline, ClipboardOutline, CloseOutline, CopyOutline, CreateOutline, EyeOutline, HelpCircleOutline, ImageOutline, TrashOutline } from "@vicons/ionicons5";
+import {
+  Plus as AddOutline,
+  ArrowDown as ArrowDownOutline,
+  ArrowUp as ArrowUpOutline,
+  Clipboard as ClipboardOutline,
+  X as CloseOutline,
+  Copy as CopyOutline,
+  Pencil as CreateOutline,
+  Eye as EyeOutline,
+  CircleHelp as HelpCircleOutline,
+  Image as ImageOutline,
+  Trash2 as TrashOutline,
+} from "lucide-vue-next";
 import type { DropdownOption } from "naive-ui";
 import type { AppLanguage, GuideKey, ImagePasteFeedback, ImagePasteRequest, StoredImage } from "../types";
 import { GUIDE_MENU_OPTION } from "../state/defaults";

@@ -3,7 +3,12 @@ import { computed, h, nextTick, onMounted, onUnmounted, ref, watch } from "vue";
 import type { Component, VNode } from "vue";
 import { NDropdown, NIcon, NScrollbar } from "naive-ui";
 import type { DropdownOption } from "naive-ui";
-import { ClipboardOutline, CopyOutline, HelpCircleOutline, TrashOutline } from "@vicons/ionicons5";
+import {
+  Clipboard as ClipboardOutline,
+  Copy as CopyOutline,
+  CircleHelp as HelpCircleOutline,
+  Trash2 as TrashOutline,
+} from "lucide-vue-next";
 import { Highlighter, Paintbrush, Palette, RemoveFormatting, Strikethrough, Underline } from "lucide-vue-next";
 import { POLISH_STYLE_ENTRIES } from "../state/polishStyles";
 import SparklesOutlineIcon from "./SparklesOutlineIcon.vue";

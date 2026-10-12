@@ -4,6 +4,8 @@
   --app-font-size: 14px;
   --scrollbar-size: 4px;
   --desk-surface: #f8f9fa;
+  --desk-card-radius: 12px;
+  --desk-row-hover: #f1f5f9;
   --desk-selected-surface: #e5efff;
   --desk-selected-text: #005ac1;
   --desk-zone-accent: var(--muted);
@@ -30,6 +32,7 @@
 
 html[data-theme="dark"] .workbench-shell {
   --desk-surface: #242426;
+  --desk-row-hover: #353539;
   --desk-group-surface: #303032;
   --desk-group-content: var(--card);
   --desk-selected-surface: #243c59;
@@ -161,7 +164,7 @@ html[data-theme="dark"] .workbench-shell,
 .workbench-zone-assets .image-list-scrollbar { width: calc(100% + 12px); }
 .workbench-zone-assets .image-list-scrollbar .image-list { padding-inline-end: 12px; }
 .workbench-shell .image-list { padding: 18px 0; gap: 14px; }
-.workbench-shell .image-card { border-radius: 8px; background: var(--card); box-shadow: var(--desk-card-shadow); }
+.workbench-shell .image-card { border-radius: var(--desk-card-radius); background: var(--card); box-shadow: var(--desk-card-shadow); }
 
 /* Put scroll rails in the zone inset while groups align with the header rule. */
 .workbench-zone-notes > .quick-block { overflow: visible; }
@@ -176,7 +179,7 @@ html[data-theme="dark"] .workbench-shell,
 .workbench-shell .quick-tag-heading + .quick-tag-content { margin-top: 0; }
 .workbench-shell .quick-tag-heading + .quick-tag-content.is-collapsed { margin-top: 0; }
 .workbench-shell .quick-tag-heading { min-height: 32px; padding: 0 0 8px; }
-.workbench-shell .quick-tag-title { font-size: 14px; font-weight: 600; }
+.workbench-shell .quick-tag-title { font-size: 13px; font-weight: 500; color: var(--muted); }
 .workbench-shell .quick-tag-count { background: transparent; font-size: 12px; }
 .workbench-shell .quick-buttons { display: grid; grid-template-columns: minmax(0, 1fr); gap: 8px; padding: 0; }
 .workbench-shell .quick-tag-add-button { color: var(--muted); }
@@ -197,22 +200,22 @@ html[data-theme="dark"] .workbench-shell,
    recolor），两套指示一并豁免（特异性 0,3,0）。 */
 .workbench-shell .todo-focus-badge:focus-visible { outline: none; box-shadow: none; }
 
-/* 紧凑按钮：单行、类型副标题塌缩，高度对齐提醒列表的紧凑行（42px）。
+/* 紧凑按钮：单行、类型副标题塌缩，高度对齐提醒列表的紧凑行（44px）。
    副标题用 max-height/opacity 过渡而非 display:none，大↔紧凑切换整体有动画。 */
-.workbench-shell .quick-block.is-compact button.quick-button { min-height: 42px; padding: 8px 12px; }
+.workbench-shell .quick-block.is-compact button.quick-button { min-height: 44px; padding: 8px 12px; }
 .workbench-shell .quick-block.is-compact .quick-button-content { gap: 0; }
 .workbench-shell .quick-block.is-compact .quick-button-kind { max-height: 0; opacity: 0; overflow: hidden; }
 .workbench-shell button.quick-button {
   display: flex;
   width: 100%;
   height: auto;
-  min-height: 60px;
-  padding: 10px 12px;
+  min-height: 64px;
+  padding: 12px;
   gap: 12px;
   justify-content: flex-start;
   text-align: start;
   border: 1px solid var(--line-subtle);
-  border-radius: 8px;
+  border-radius: 6px;
   background: var(--card);
   box-shadow: var(--desk-control-shadow);
   transform: none;
@@ -229,11 +232,11 @@ html[data-theme="dark"] .workbench-shell,
 }
 .workbench-shell button.quick-button:hover {
   border-color: var(--line-control);
-  background: var(--secondary);
+  background: var(--desk-row-hover);
   box-shadow: none;
   transform: none;
 }
-.workbench-shell .quick-button-icon { font-size: 20px; color: var(--muted); }
+.workbench-shell .quick-button-icon { font-size: 18px; color: var(--muted); }
 .quick-button-content { display: flex; flex-direction: column; min-width: 0; gap: 3px; transition: gap var(--motion-medium) var(--motion-ease); }
 .workbench-shell .quick-button-label { font-weight: 400; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
 .quick-button-kind { color: var(--muted); font-size: 12px; line-height: 1.4; max-height: 20px; transition: max-height var(--motion-medium) var(--motion-ease), opacity var(--motion-fast) ease; }
@@ -245,7 +248,7 @@ html[data-theme="dark"] .workbench-shell,
   backdrop-filter: none;
   box-shadow: none;
   border: 0;
-  border-radius: 8px 8px 0 0;
+  border-radius: var(--desk-card-radius) var(--desk-card-radius) 0 0;
 }
 /* Match tag groups and reminder lists, including independent scroll columns. */
 .workbench-zone > .todo-panel { overflow: visible; }
@@ -273,20 +276,20 @@ html[data-theme="dark"] .workbench-shell,
 /* White cards rise above the page; quiet headers provide the third surface level. */
 .workbench-shell .todo-section,
 .workbench-shell .quick-tag-group {
-  border-radius: 8px;
+  border-radius: var(--desk-card-radius);
   background: var(--desk-group-content);
   box-shadow: var(--desk-card-shadow);
 }
 .workbench-shell .todo-list-shell,
 .workbench-shell .quick-tag-content {
-  border-radius: 0 0 8px 8px;
+  border-radius: 0 0 var(--desk-card-radius) var(--desk-card-radius);
   background: transparent;
   overflow: hidden;
 }
 .workbench-shell .todo-list { padding: 8px; }
 .workbench-shell .todo-section.is-collapsed > .todo-heading,
 .workbench-shell .quick-tag-group:has(> .quick-tag-content.is-collapsed) > .quick-tag-heading {
-  border-radius: 8px;
+  border-radius: var(--desk-card-radius);
 }
 .workbench-shell .quick-tag-group:has(> .quick-tag-content.is-collapsed) { background: transparent; }
 .workbench-shell .quick-tag-content.is-collapsed { background: transparent; }
@@ -294,7 +297,7 @@ html[data-theme="dark"] .workbench-shell,
 .workbench-shell .quick-tag-group.is-empty > .quick-tag-content { background: transparent; }
 .workbench-shell .quick-tag-group.is-empty .quick-buttons { padding: 0; }
 
-.workbench-shell .todo-heading h3 { font-size: 15px; font-weight: 600; }
+.workbench-shell .todo-heading h3 { font-size: 13px; font-weight: 500; color: var(--muted); }
 .workbench-shell .todo-heading-actions { gap: 0; align-items: center; }
 .workbench-shell .todo-heading-actions > .icon-button {
   display: inline-flex;
@@ -310,9 +313,19 @@ html[data-theme="dark"] .workbench-shell,
 .workbench-shell .todo-section.is-compact .todo-item,
 .workbench-shell .todo-section.is-compact .todo-input,
 .workbench-shell .todo-section.is-compact .todo-deadline-slot,
-.workbench-shell .todo-section.is-compact .todo-drag-handle { height: 42px; min-height: 42px; }
-.workbench-shell .todo-section.is-compact .todo-input { line-height: 42px; }
-.workbench-shell .todo-item { border-radius: 4px; }
+.workbench-shell .todo-section.is-compact .todo-drag-handle { height: 32px; min-height: 32px; }
+.workbench-shell .todo-section.is-compact .todo-item { height: 44px; min-height: 44px; padding: 6px 4px; }
+.workbench-shell .todo-section.is-compact .todo-input { line-height: 32px; }
+.workbench-shell .todo-item,
+.workbench-shell .today-focus-item {
+  height: 50px;
+  min-height: 50px;
+  padding: 8px 4px;
+  border-radius: 6px;
+  transition: background-color var(--motion-fast) var(--motion-ease), opacity var(--motion-fast) ease, transform var(--motion-medium) var(--motion-ease);
+}
+.workbench-shell .todo-item:hover,
+.workbench-shell .today-focus-item:hover { background-color: var(--desk-row-hover); }
 .workbench-shell .todo-item::after { left: 34px; right: 0; border-color: transparent; }
 .workbench-shell .todo-item.deadline-overdue { color: var(--text); }
 .workbench-shell .todo-item.deadline-overdue .todo-notify-button { color: var(--danger); }
@@ -327,7 +340,7 @@ html[data-theme="dark"] .workbench-shell,
 .workbench-shell .space-tab-edit-shell { background: transparent; }
 .workbench-shell .space-text-panel {
   background: var(--card);
-  border-radius: 8px;
+  border-radius: var(--desk-card-radius);
   box-shadow: var(--desk-card-shadow);
 }
 
@@ -433,7 +446,7 @@ html[data-theme="dark"] .workbench-shell,
   background: var(--desk-group-surface);
   min-height: var(--desk-group-heading-height);
   padding: 4px 8px;
-  border-radius: 8px 8px 0 0;
+  border-radius: var(--desk-card-radius) var(--desk-card-radius) 0 0;
   box-shadow: none;
   border: 0;
 }
@@ -614,6 +627,7 @@ html[data-theme="dark"] .workbench-shell,
 
 /* Accent color belongs to status marks; task text stays steady and readable. */
 .workbench-shell .todo-star-button.is-starred { color: var(--desk-accent-amber); }
+.workbench-shell .todo-star-button.is-starred svg { fill: currentColor; }
 .workbench-shell .todo-item .todo-checkbox:checked,
 .workbench-shell .today-focus-item .todo-checkbox:checked {
   border-color: var(--desk-accent-emerald);
@@ -636,4 +650,18 @@ html[data-theme="dark"] .workbench-shell,
   background-color: var(--desk-accent-emerald);
   box-shadow: 0 0 0 1px color-mix(in srgb, var(--desk-accent-emerald) 20%, transparent),
     0 0 0 4px color-mix(in srgb, var(--desk-accent-emerald) 8%, transparent);
+}
+
+/* Uniform stroke icons, with smaller disclosure chevrons and generous hit areas. */
+.workbench-shell .n-icon { font-size: 16px; }
+.workbench-shell .n-icon svg { width: 1em; height: 1em; stroke-width: 1.75; }
+.desk-zone-heading h1 > .n-icon svg,
+.desk-zone-heading h2 > .n-icon svg { width: 16px; height: 16px; }
+.workbench-shell .quick-button-icon { font-size: 18px; }
+.workbench-shell .quick-tag-collapse-button .n-icon,
+.workbench-shell .todo-collapse-button .n-icon { font-size: 14px; }
+.workbench-shell .header-actions { gap: 4px; }
+.workbench-shell .quick-buttons .quick-button.has-usage:hover,
+.workbench-shell .quick-buttons .quick-button.has-usage:focus-visible {
+  background: var(--desk-row-hover) !important;
 }

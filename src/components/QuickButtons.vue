@@ -3,7 +3,27 @@ import { isGroupDropBefore } from "../utils/groupDrop";
 import { computed, h, nextTick, onBeforeUpdate, onMounted, onUnmounted, onUpdated, reactive, ref, watch } from "vue";
 import type { Component, ComponentPublicInstance, VNode } from "vue";
 import { NButton, NCheckbox, NDropdown, NIcon, NInput, NModal, NScrollbar, NSelect } from "naive-ui";
-import { AddOutline, AppsOutline, ChevronDownOutline, ClipboardOutline, CloudUploadOutline, CopyOutline, CreateOutline, DocumentTextOutline, EyeOffOutline, EyeOutline, FlashOutline, HelpCircleOutline, LinkOutline, PricetagsOutline, ResizeOutline, SearchOutline, SwapHorizontalOutline, TrashOutline } from "@vicons/ionicons5";
+import {
+  Plus as AddOutline,
+  LayoutGrid as AppsOutline,
+  ChevronDown as ChevronDownOutline,
+  Clipboard as ClipboardOutline,
+  CloudUpload as CloudUploadOutline,
+  Copy as CopyOutline,
+  Pencil as CreateOutline,
+  FileText as DocumentTextOutline,
+  EyeOff as EyeOffOutline,
+  Eye as EyeOutline,
+  Zap as FlashOutline,
+  CircleHelp as HelpCircleOutline,
+  Link as LinkOutline,
+  Tags as PricetagsOutline,
+  Maximize2 as ResizeOutline,
+  Search as SearchOutline,
+  ArrowLeftRight as SwapHorizontalOutline,
+  Trash2 as TrashOutline,
+  Ellipsis,
+} from "lucide-vue-next";
 import type { DropdownOption } from "naive-ui";
 import type { AppLanguage, GuideKey, QuickApiBodyType, QuickApiHeader, QuickApiMethod, QuickButton, QuickButtonType, QuickTag, WorkspaceMoveTarget } from "../types";
 import { GUIDE_MENU_OPTION } from "../state/defaults";
@@ -956,7 +976,7 @@ function handleQuickGroupDrop(event: DragEvent, groupId: string): void {
           :aria-label="uiText.quick.menu"
           @click="openHeaderMenu"
         >
-          ⋯
+          <NIcon :component="Ellipsis" />
         </button>
       </div>
     </div>
