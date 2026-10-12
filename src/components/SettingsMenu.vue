@@ -18,7 +18,7 @@ import {
   LayoutGrid as GridOutline,
   Trash2 as TrashOutline,
 } from "lucide-vue-next";
-import { NBadge, NButton, NDropdown, NIcon, NUpload } from "naive-ui";
+import { NBadge, NButton, NDropdown, NIcon, NModal, NUpload } from "naive-ui";
 import type { Component } from "vue";
 import type { UploadFileInfo } from "naive-ui";
 import { COMPANION_GIF_THEME_OPTIONS } from "../state/companionGifThemes";
@@ -161,7 +161,7 @@ const options = computed(() => [
 ]);
 
 function handleSelect(key: string): void {
-  keepOpenAfterPreferenceSelect = key.startsWith("zone:") || key.startsWith("appearance:") || key.startsWith("gif-theme:");
+  keepOpenAfterPreferenceSelect = key.startsWith("zone:") || key.startsWith("appearance:") || (key.startsWith("gif-theme:") && key !== "gif-theme:custom");
   if (!keepOpenAfterPreferenceSelect) menuOpen.value = false;
   if (key === "zone:assets" || key === "zone:notes" || key === "zone:tasks" || key === "zone:workspace") {
     emit("toggleZone", key.slice("zone:".length) as ZoneKey);
@@ -311,7 +311,11 @@ function getCompanionGifThemeLabel(theme: CompanionGifTheme): string {
       </NBadge>
     </span>
   </NDropdown>
-  <section v-if="customGifDialogOpen" class="gif-theme-custom-dialog" :aria-label="text.settings.customGif">
+  <NModal :show="customGifDialogOpen" preset="card" class="quick-dialog gif-theme-custom-modal"
+    :z-index="CONTEXT_MENU_Z_INDEX + 1" :mask-closable="false"
+    :title="text.settings.customGif" :aria-label="text.settings.customGif"
+    @close="closeCustomGifDialog" @esc="closeCustomGifDialog">
+  <section class="gif-theme-custom-dialog">
     <label>
       <span>{{ text.settings.lightGif }}</span>
       <span v-if="customGifLightPreview" class="gif-theme-custom-preview">
@@ -347,4 +351,5 @@ function getCompanionGifThemeLabel(theme: CompanionGifTheme): string {
       <button class="gif-theme-custom-confirm" type="button" @click="confirmCustomGif">{{ text.common.confirm }}</button>
     </div>
   </section>
+  </NModal>
 </template>

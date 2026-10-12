@@ -155,6 +155,7 @@ describe("SettingsMenu", () => {
         stubs: {
           Dropdown: dropdownStub,
           NDropdown: dropdownStub,
+          teleport: true,
           NBadge: { template: "<span><slot /></span>" },
           NButton: { template: "<button><slot /></button>" },
           NIcon: { template: "<span />" },
@@ -207,6 +208,7 @@ describe("SettingsMenu", () => {
         stubs: {
           Dropdown: dropdownStub,
           NDropdown: dropdownStub,
+          teleport: true,
           NBadge: { template: "<span><slot /></span>" },
           NButton: { template: "<button><slot /></button>" },
           NIcon: { template: "<span />" },
@@ -240,6 +242,7 @@ describe("SettingsMenu", () => {
         stubs: {
           Dropdown: dropdownStub,
           NDropdown: dropdownStub,
+          teleport: true,
           NBadge: { template: "<span><slot /></span>" },
           NButton: { template: "<button><slot /></button>" },
           NIcon: { template: "<span />" },
@@ -268,6 +271,7 @@ describe("SettingsMenu", () => {
         stubs: {
           Dropdown: dropdownStub,
           NDropdown: dropdownStub,
+          teleport: true,
           NBadge: { template: "<span><slot /></span>" },
           NButton: { template: "<button><slot /></button>" },
           NIcon: { template: "<span />" },
@@ -294,6 +298,7 @@ describe("SettingsMenu", () => {
         stubs: {
           Dropdown: dropdownStub,
           NDropdown: dropdownStub,
+          teleport: true,
           NBadge: { template: "<span><slot /></span>" },
           NButton: { template: "<button><slot /></button>" },
           NIcon: { template: "<span />" },
@@ -321,6 +326,7 @@ describe("SettingsMenu", () => {
         stubs: {
           Dropdown: dropdownStub,
           NDropdown: dropdownStub,
+          teleport: true,
           NBadge: { template: "<span><slot /></span>" },
           NButton: { template: "<button><slot /></button>" },
           NIcon: { template: "<span />" },
@@ -344,6 +350,7 @@ describe("SettingsMenu", () => {
         stubs: {
           Dropdown: dropdownStub,
           NDropdown: dropdownStub,
+          teleport: true,
           NBadge: { template: "<span><slot /></span>" },
           NButton: { template: "<button><slot /></button>" },
           NIcon: { template: "<span />" },
@@ -367,6 +374,7 @@ describe("SettingsMenu", () => {
         stubs: {
           Dropdown: dropdownStub,
           NDropdown: dropdownStub,
+          teleport: true,
           NBadge: { template: "<span><slot /></span>" },
           NButton: { template: "<button><slot /></button>" },
           NIcon: { template: "<span />" },
@@ -391,6 +399,7 @@ describe("SettingsMenu", () => {
         stubs: {
           Dropdown: dropdownStub,
           NDropdown: dropdownStub,
+          teleport: true,
           NBadge: { template: "<span><slot /></span>" },
           NButton: { template: "<button><slot /></button>" },
           NIcon: { template: "<span />" },
@@ -417,6 +426,7 @@ describe("SettingsMenu", () => {
         stubs: {
           Dropdown: dropdownStub,
           NDropdown: dropdownStub,
+          teleport: true,
           NBadge: { template: "<span><slot /></span>" },
           NButton: { template: "<button><slot /></button>" },
           NIcon: { template: "<span />" },
@@ -453,6 +463,7 @@ describe("SettingsMenu", () => {
         stubs: {
           Dropdown: dropdownStub,
           NDropdown: dropdownStub,
+          teleport: true,
           NBadge: { template: "<span><slot /></span>" },
           NButton: { template: "<button><slot /></button>" },
           NIcon: { template: "<span />" },
@@ -482,6 +493,7 @@ describe("SettingsMenu", () => {
         stubs: {
           Dropdown: dropdownStub,
           NDropdown: dropdownStub,
+          teleport: true,
           NBadge: { template: "<span><slot /></span>" },
           NButton: { template: "<button><slot /></button>" },
           NIcon: { template: "<span />" },
@@ -511,6 +523,7 @@ describe("SettingsMenu", () => {
         stubs: {
           Dropdown: dropdownStub,
           NDropdown: dropdownStub,
+          teleport: true,
           NBadge: { template: "<span><slot /></span>" },
           NButton: { template: "<button><slot /></button>" },
           NIcon: { template: "<span />" },
@@ -553,6 +566,7 @@ describe("SettingsMenu", () => {
         stubs: {
           Dropdown: dropdownStub,
           NDropdown: dropdownStub,
+          teleport: true,
           NBadge: { template: "<span><slot /></span>" },
           NButton: { template: "<button><slot /></button>" },
           NIcon: { template: "<span />" },
@@ -588,6 +602,7 @@ describe("SettingsMenu", () => {
         stubs: {
           Dropdown: dropdownStub,
           NDropdown: dropdownStub,
+          teleport: true,
           NBadge: { template: "<span><slot /></span>" },
           NButton: { template: "<button><slot /></button>" },
           NIcon: { template: "<span />" },
@@ -624,6 +639,7 @@ describe("SettingsMenu", () => {
         stubs: {
           Dropdown: dropdownStub,
           NDropdown: dropdownStub,
+          teleport: true,
           NBadge: { template: "<span><slot /></span>" },
           NButton: { template: "<button><slot /></button>" },
           NIcon: { template: "<span />" },

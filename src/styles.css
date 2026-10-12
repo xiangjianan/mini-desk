@@ -3319,16 +3319,8 @@ button.todo-section-menu-button {
 }
 
 .gif-theme-custom-dialog {
-  position: fixed;
-  top: 38px;
-  right: 8px;
-  z-index: 80;
   display: grid;
-  gap: 8px;
-  width: 260px;
-  padding: 10px;
-  border: 1px solid var(--line-control);
-  background: var(--panel);
+  gap: 16px;
 }
 
 .gif-theme-custom-dialog label {
@@ -5470,7 +5462,6 @@ html[data-theme="dark"] .workbench-shell {
   min-height: 30px;
 }
 
-.gif-theme-custom-dialog,
 .notify-floating-date-picker {
   background: var(--material-elevated);
   backdrop-filter: blur(28px) saturate(1.7);
@@ -5483,15 +5474,7 @@ html[data-theme="dark"] .workbench-shell {
   overflow: visible;
 }
 
-.gif-theme-custom-dialog {
-  top: max(38px, env(safe-area-inset-top));
-  right: max(8px, env(safe-area-inset-right));
-  z-index: 4210;
-  max-width: calc(100vw - 16px);
-  border-color: var(--line-control);
-  -webkit-backdrop-filter: blur(28px) saturate(1.7);
-  backdrop-filter: blur(28px) saturate(1.7);
-}
+
 
 .text-editor-textarea,
 .text-mirror {
