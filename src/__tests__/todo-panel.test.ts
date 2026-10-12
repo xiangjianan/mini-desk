@@ -2911,6 +2911,43 @@ describe("TodoPanel", () => {
     wrapper.unmount();
   });
 
+  it.each([false, true])("restarts the shared completion delay on every check and uncheck (focus=%s)", async (starred) => {
+    vi.useFakeTimers();
+    const todos: TodoMap = { morning: [
+      { id: "a", text: "第一项", done: false, starred },
+      { id: "b", text: "第二项", done: false, starred },
+    ], noon: [], evening: [] };
+    const wrapper = mount(TodoPanel, {
+      props: { todos, titles: DEFAULT_TITLES, showCompleted: { morning: false, noon: false, evening: false } },
+      global: { stubs: { NDropdown: dropdownStub, NTooltip: tooltipStub } },
+    });
+    const rowSelector = starred ? ".today-focus-item" : ".todo-item";
+    let current = todos;
+    const check = async (index: number, done: boolean) => {
+      const checkbox = wrapper.findAll(`${rowSelector} .todo-checkbox`)[index];
+      (checkbox.element as HTMLInputElement).checked = done;
+      await checkbox.trigger("change");
+      current = completeTodo(current, "morning", index === 0 ? "a" : "b", done);
+      await wrapper.setProps({ todos: current });
+    };
+    try {
+      await check(0, true);
+      await vi.advanceTimersByTimeAsync(1000);
+      await check(1, true);
+      await vi.advanceTimersByTimeAsync(1000);
+      expect(wrapper.findAll(rowSelector)).toHaveLength(2);
+      await check(1, false);
+      await vi.advanceTimersByTimeAsync(1999);
+      expect(wrapper.findAll(rowSelector)).toHaveLength(2);
+      await vi.advanceTimersByTimeAsync(1);
+      expect(wrapper.findAll(rowSelector)).toHaveLength(1);
+      expect(wrapper.get(`${rowSelector} input[data-todo-id]`).attributes("data-todo-id")).toBe("b");
+    } finally {
+      wrapper.unmount();
+      vi.useRealTimers();
+    }
+  });
+
   it("keeps a newly completed todo in place for 2 seconds before animated regrouping", async () => {
     vi.useFakeTimers();
 
@@ -5413,7 +5450,9 @@ describe("完成提醒共用两秒倒计时", () => {
       await check(wrapper, "b");
       await vi.advanceTimersByTimeAsync(1000);
       await check(wrapper, "a", false);
-      await vi.advanceTimersByTimeAsync(1000);
+      await vi.advanceTimersByTimeAsync(1999);
+      expect(values(wrapper)).toEqual(["第一项", "第二项", "另一清单"]);
+      await vi.advanceTimersByTimeAsync(1);
       expect(values(wrapper)).toEqual(["第一项", "另一清单"]);
     } finally { wrapper.unmount(); vi.useRealTimers(); }
   });

@@ -807,10 +807,10 @@ function handleChecked(period: TodoPeriod, id: string, checked: boolean): void {
   clearPendingReorder(key);
   if (checked) {
     pendingDoneReorderIds.value = [...pendingDoneReorderIds.value, key];
-    stopReorderTimer();
-    reorderRemaining = COMPLETION_DELAY_MS;
-    resumePendingReorder();
   }
+  stopReorderTimer();
+  reorderRemaining = COMPLETION_DELAY_MS;
+  resumePendingReorder();
   emit("complete", period, id, checked, todoSectionRefs.get(period));
 }
 
