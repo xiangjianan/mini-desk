@@ -331,6 +331,22 @@ html[data-theme="dark"] .workbench-shell,
   padding: 0;
   line-height: 1;
 }
+.workbench-shell .quick-tag-heading .icon-button,
+.workbench-shell .quick-tag-add-button,
+.workbench-shell .todo-heading-actions > .icon-button {
+  border-radius: 8px;
+  box-shadow: none;
+  transition: background-color 180ms ease, color 180ms ease;
+}
+.workbench-shell .quick-tag-heading .icon-button:hover,
+.workbench-shell .quick-tag-heading .icon-button:focus-visible,
+.workbench-shell .quick-tag-add-button:hover,
+.workbench-shell .quick-tag-add-button:focus-visible,
+.workbench-shell .todo-heading-actions > .icon-button:hover,
+.workbench-shell .todo-heading-actions > .icon-button:focus-visible {
+  background: var(--secondary);
+  box-shadow: none;
+}
 .workbench-shell .todo-count { font-size: 12px; padding-inline: 4px; }
 .workbench-shell .todo-section.is-compact .todo-item,
 .workbench-shell .todo-section.is-compact .todo-input,
@@ -595,14 +611,16 @@ html[data-theme="dark"] .workbench-shell,
   margin: 0 8px;
   padding: 4px;
   border: 0;
-  border-radius: 4px;
+  border-radius: 8px;
   background: transparent;
   color: var(--muted);
   font: inherit;
   cursor: pointer;
+  transition: background-color 180ms ease, color 180ms ease;
 }
 .workbench-shell .todo-add-row:hover,
 .workbench-shell .todo-add-row:focus-visible {
+  background: var(--secondary);
   color: var(--primary);
 }
 .workbench-shell .todo-add-row .n-icon { flex-shrink: 0; font-size: 16px; }
@@ -662,7 +680,7 @@ html[data-theme="dark"] .workbench-shell,
 .workbench-shell .workbench-header-hide-button:focus-visible svg,
 .workbench-shell .workbench-header-reveal:hover svg,
 .workbench-shell .workbench-header-reveal:focus-visible svg {
-  transform: scale(1.65, 1.15);
+  transform: scale(3, 1.15);
 }
 .workbench-shell .workbench-header-reveal-enter-active,
 .workbench-shell .workbench-header-reveal-leave-active { transition: opacity 220ms ease; }
