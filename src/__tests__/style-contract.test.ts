@@ -27,7 +27,9 @@ describe("workbench style contract", () => {
     expectSelectorBody(styles, ".today-focus-item.today-focus-move-leave-to", "opacity: 0");
     expect(styles.indexOf(".today-focus-item.today-focus-move-leave-to")).toBeGreaterThan(styles.indexOf(".today-focus-item.is-done"));
     const panel = readFileSync(resolve(__dirname, "../components/TodoPanel.vue"), "utf8");
-    expect(panel).toContain('<Transition name="todo-focus-reveal" :duration="180">');
+    expect(panel).toContain('<Transition name="todo-focus-reveal" :duration="180"');
+    expect(panel).toContain('@before-leave="rememberFocusRegionHeight"');
+    expect(panel).toContain('@after-leave="handleFocusLeaveFinished"');
   });
 
   it("insets the notebook scroll viewport and its mirror equally to preserve vertical whitespace", () => {
