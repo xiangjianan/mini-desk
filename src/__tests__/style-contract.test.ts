@@ -24,6 +24,10 @@ describe("workbench style contract", () => {
     expect(ruleBodies(styles, ".today-focus-move-leave-active").join("\n")).not.toMatch(/position:\s*absolute/);
     expectSelectorBody(styles, ".today-focus-item", "position: relative");
     expectSelectorBody(styles, ".today-focus-move-leave-active", "pointer-events: none");
+    expectSelectorBody(styles, ".today-focus-item.today-focus-move-leave-to", "opacity: 0");
+    expect(styles.indexOf(".today-focus-item.today-focus-move-leave-to")).toBeGreaterThan(styles.indexOf(".today-focus-item.is-done"));
+    const panel = readFileSync(resolve(__dirname, "../components/TodoPanel.vue"), "utf8");
+    expect(panel).toContain('<Transition name="todo-focus-reveal" :duration="180">');
   });
 
   it("insets the notebook scroll viewport and its mirror equally to preserve vertical whitespace", () => {

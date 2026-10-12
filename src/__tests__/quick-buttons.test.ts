@@ -178,62 +178,11 @@ describe("QuickButtons", () => {
     Object.assign(navigator, { clipboard: undefined });
   });
 
-  it("renders the quick search input in the header", () => {
-    const wrapper = mountQuickButtons({
-      tags: [{ id: "tag-a", title: "工作" }],
-      buttons: [
-        { id: "a1", title: "GitHub", value: "https://github.com", type: "link", hidden: false, tagId: "tag-a" },
-      ],
-    });
-    expect(wrapper.find(".quick-search-input").exists()).toBe(true);
-  });
-
-  it("expands the quick search input when the toggle is clicked and collapses on second click", async () => {
-    const wrapper = mountQuickButtons({
-      tags: [{ id: "tag-a", title: "工作" }],
-      buttons: [
-        { id: "a1", title: "GitHub", value: "https://github.com", type: "link", hidden: false, tagId: "tag-a" },
-      ],
-    });
-    expect(wrapper.find(".quick-search").classes()).not.toContain("is-open");
-    await wrapper.find(".quick-search-toggle").trigger("click");
-    expect(wrapper.find(".quick-search").classes()).toContain("is-open");
-    await wrapper.find(".quick-search-toggle").trigger("click");
-    expect(wrapper.find(".quick-search").classes()).not.toContain("is-open");
-  });
-
-  it("collapses the quick search when clicking outside", async () => {
-    const wrapper = mountQuickButtons({
-      tags: [{ id: "tag-a", title: "工作" }],
-      buttons: [
-        { id: "a1", title: "GitHub", value: "https://github.com", type: "link", hidden: false, tagId: "tag-a" },
-      ],
-    });
-    await wrapper.find(".quick-search-toggle").trigger("click");
-    expect(wrapper.find(".quick-search").classes()).toContain("is-open");
-    document.body.click();
-    await wrapper.vm.$nextTick();
-    expect(wrapper.find(".quick-search").classes()).not.toContain("is-open");
-  });
-
-  it("keeps the search query when clicking a quick action button", async () => {
-    setGlobalSearch("git");
-    const wrapper = mountQuickButtons({
-      tags: [{ id: "tag-a", title: "工作" }],
-      buttons: [
-        { id: "a1", title: "GitHub", value: "https://github.com", type: "link", hidden: false, tagId: "tag-a" },
-        { id: "a2", title: "部署", value: "deploy", type: "text", hidden: false, tagId: "tag-a" },
-      ],
-    });
-    await wrapper.find(".quick-search-toggle").trigger("click");
-    expect(wrapper.find(".quick-search").classes()).toContain("is-open");
-
-    await wrapper.find(".quick-button").trigger("click");
-    await wrapper.vm.$nextTick();
-
-    // 点击快捷动作按钮不应清除搜索输入框，也不应收起搜索面板
-    expect(globalSearchQuery.value).toBe("git");
-    expect(wrapper.find(".quick-search").classes()).toContain("is-open");
+  it("omits the search entry from the quick actions header", () => {
+    const wrapper = mountQuickButtons({ tags: [], buttons: [] });
+    expect(wrapper.find(".quick-search-toggle").exists()).toBe(false);
+    expect(wrapper.find(".quick-search-input").exists()).toBe(false);
+    wrapper.unmount();
   });
 
   it("filters buttons globally and force-expands matching groups while a query is active", async () => {

@@ -2946,6 +2946,12 @@ button.todo-star-button {
   pointer-events: none;
 }
 
+/* Completion opacity must not override the TransitionGroup fade endpoint. */
+.today-focus-item.today-focus-move-leave-to,
+.today-focus-item.today-focus-move-enter-from {
+  opacity: 0;
+}
+
 .floating-pop-enter-active,
 .floating-pop-leave-active {
   transform-origin: top left;

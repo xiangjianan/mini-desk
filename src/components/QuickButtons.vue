@@ -19,7 +19,6 @@ import {
   Link as LinkOutline,
   Tags as PricetagsOutline,
   Maximize2 as ResizeOutline,
-  Search as SearchOutline,
   ArrowLeftRight as SwapHorizontalOutline,
   Trash2 as TrashOutline,
   Ellipsis,
@@ -32,7 +31,7 @@ import type { QuickButtonGroup } from "../state/quickButtons";
 import { buildVisibleQuickButtonGroups, filterVisibleQuickButtonGroups, groupQuickButtonsByColumn, hasOverloadedVisibleQuickButtonGroup, quickButtonUsagePercent, QUICK_BUTTON_OTHER_GROUP_ID, QUICK_BUTTON_EMPTY_GROUP_ID, QUICK_DENSITY_THRESHOLD } from "../state/quickButtons";
 import { findQuickAppPresetByScheme, getQuickAppPresetHint, getQuickAppPresetTitle, QUICK_APP_PRESETS } from "../state/quickApps";
 import { findQuickApiTemplate, QUICK_API_TEMPLATES } from "../state/quickApiTemplates";
-import { clearGlobalSearch, globalSearchNormalized, globalSearchQuery, setGlobalSearch } from "../state/globalSearch";
+import { globalSearchNormalized, globalSearchQuery } from "../state/globalSearch";
 import { CONTEXT_MENU_Z_INDEX, createExclusiveContextMenu, renderPolishMenuLabel } from "../utils/contextMenu";
 import type { PolishKind, PolishResult, PolishStyle } from "../sync/polishClient";
 import { quickSmartPasteMessages, runQuickSmartPaste } from "../utils/smartPaste";
@@ -245,41 +244,6 @@ function getGroupColumn(groupId: string): number {
   if (!group) return 0;
   return group.column === undefined ? columnCount - 1 : clampColumn(group.column);
 }
-const searchOpen = ref(false);
-const searchInputRef = ref<{ focus?: () => void } | null>(null);
-
-function openSearch(): void {
-  searchOpen.value = true;
-  void nextTick(() => {
-    searchInputRef.value?.focus?.();
-  });
-}
-
-function closeSearch(): void {
-  searchOpen.value = false;
-  clearGlobalSearch();
-}
-
-function toggleSearch(): void {
-  if (searchOpen.value) closeSearch();
-  else openSearch();
-}
-
-function handleSearchClickOutside(event: MouseEvent): void {
-  if (!searchOpen.value) return;
-  const target = event.target as HTMLElement | null;
-  if (target?.closest?.(".quick-search")) return;
-  // Clicking a quick action button should not clear the search input.
-  if (target?.closest?.(".quick-button")) return;
-  closeSearch();
-}
-
-onMounted(() => {
-  document.addEventListener("click", handleSearchClickOutside);
-});
-onUnmounted(() => {
-  document.removeEventListener("click", handleSearchClickOutside);
-});
 const canSubmit = computed(() => {
   if (form.title.trim().length === 0 || form.value.trim().length === 0) return false;
   if (form.type !== "api") return true;
@@ -930,29 +894,6 @@ function handleQuickGroupDrop(event: DragEvent, groupId: string): void {
         <span>{{ getIconHeadingText(title, 'quick') }}</span>
       </h2>
       <div class="header-actions">
-        <div class="quick-search" :class="{ 'is-open': searchOpen }">
-          <button
-            type="button"
-            class="quick-search-toggle icon-button"
-            :aria-label="uiText.quick.searchPlaceholder"
-            :aria-expanded="searchOpen"
-            @click="toggleSearch"
-          >
-            <NIcon :component="SearchOutline" />
-          </button>
-          <div class="quick-search-input-wrapper">
-            <NInput
-              ref="searchInputRef"
-              class="quick-search-input"
-              :value="globalSearchQuery"
-              :placeholder="uiText.quick.searchPlaceholder"
-              :aria-label="uiText.quick.searchPlaceholder"
-              clearable
-              @update:value="setGlobalSearch"
-              @keydown.esc.prevent.stop="closeSearch"
-            />
-          </div>
-        </div>
         <button
           v-if="props.polish"
           type="button"

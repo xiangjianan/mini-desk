@@ -1908,6 +1908,7 @@ onUnmounted(() => focusRegionAnimation?.cancel());
     </div>
     <div class="todo-content-scroll" :class="{ 'is-multi-column': columnCount > 1 }">
     <div ref="focusRegionRef" class="todo-focus-region">
+      <Transition name="todo-focus-reveal" :duration="180">
       <section v-if="todayFocus.length" class="today-focus-section" :aria-label="uiText.todo.todayFocus">
         <div class="today-focus-heading" @contextmenu="openTodayFocusTitleMenu">
           <NIcon class="today-focus-title-icon" :component="AlertCircleOutline" />
@@ -2015,6 +2016,7 @@ onUnmounted(() => focusRegionAnimation?.cancel());
         </TransitionGroup>
         </div>
       </section>
+      </Transition>
     </div>
     <div
       class="todo-sections"
