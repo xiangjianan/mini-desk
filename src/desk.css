@@ -501,7 +501,9 @@ html[data-theme="dark"] .workbench-shell,
   .workbench-zone-assets .panel-header { flex-wrap: wrap; }
 }
 
-/* Keep empty lists compact and the creation target visually quiet. */
+/* The add row owns all spacing below the final reminder, so its icon stays centered. */
+.workbench-shell .todo-list { padding-bottom: 0; }
+.workbench-shell .todo-list .todo-item:last-child { margin-bottom: 0; }
 .workbench-shell .todo-empty-list { padding: 0; }
 .workbench-shell .todo-empty-hint { display: none; }
 .workbench-shell .todo-add-row {
@@ -509,8 +511,8 @@ html[data-theme="dark"] .workbench-shell,
   align-items: center;
   justify-content: center;
   width: calc(100% - 16px);
-  min-height: 26px;
-  margin: 0 8px 4px;
+  min-height: 48px;
+  margin: 0 8px;
   padding: 4px;
   border: 0;
   border-radius: 4px;

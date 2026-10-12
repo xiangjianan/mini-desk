@@ -485,8 +485,8 @@ const listEntries = computed(() =>
 
 function getTodoListEstimatedHeight(period: TodoListId): number {
   const entries = listEntries.value[period] ?? [];
-  if (!entries.length) return 30;
-  return entries.reduce((height, entry) => height + (entry.type === "todo" ? 42 : 32), 30);
+  if (!entries.length) return 48;
+  return entries.reduce((height, entry) => height + (entry.type === "todo" ? 42 : 32), 56);
 }
 
 // Width below which the panel stays single-column (= 2 × the target column width).
