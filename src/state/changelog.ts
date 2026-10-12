@@ -29,6 +29,28 @@ export interface ChangelogEntry {
 
 export const CHANGELOG: ChangelogEntry[] = [
     {
+      version: "1.1.1",
+      date: "2026-10-13",
+      notes: {
+        zh: [
+          "优化：桌面全套视觉打磨——卡片表面层级与状态点缀更克制、列表间距与描边图标统一、各滚动区可见性对齐、记事本与快捷动作留白更舒展",
+          "优化：分区头部折叠箭头加宽带动画，悬停反馈统一为圆角高亮，拖拽分隔条与头部控件观感更柔和",
+          "优化：完成待办在专注区整组淡出收拢，布局过渡不再跳变",
+          "修复：取消勾选待办后完成倒计时重新开始",
+          "修复：自定义 GIF 主题弹窗相对设置菜单居中",
+          "调整：移除快捷动作区的搜索入口",
+        ],
+        en: [
+          "Improved: full visual polish pass — calmer card surface hierarchy and status accents, unified list spacing and outline icons, aligned scroll-region visibility, roomier notebook and quick-action spacing",
+          "Improved: section header chevrons are wider and animated, hover feedback is unified as rounded highlights, and resize handles with header controls feel softer",
+          "Improved: completed todos fade out as their focus region collapses, without layout jumps",
+          "Fixed: the completion countdown restarts when a reminder is unchecked",
+          "Fixed: the custom GIF theme modal centers above the settings menu",
+          "Changed: removed the search entry from the quick-action area",
+        ],
+      },
+    },
+    {
       version: "1.1.0",
       date: "2026-10-12",
       notes: {
