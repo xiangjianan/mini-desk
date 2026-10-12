@@ -50,6 +50,9 @@ export function createTodoLeaveHooks() {
     },
     onBeforeLeave(element: Element) {
       const row = element as HTMLElement;
+      // Hidden empty-state markers have no layout to preserve. Holding their
+      // zero height delays the first insertion until the leave fade finishes.
+      if (row.classList.contains("todo-empty-hint") && window.getComputedStyle(row).display === "none") return;
       const list = row.parentElement;
       if (!list || rows.has(row)) return;
       // Read before Vue applies absolute positioning to the leaving row.

@@ -4,6 +4,31 @@ import { h } from "vue";
 import TodoRowsTransition, { createTodoLeaveHooks } from "../components/TodoRowsTransition";
 
 describe("reminder row leave layout", () => {
+  it("grows immediately when the first reminder replaces a hidden empty marker", () => {
+    const list = document.createElement("ul");
+    const marker = list.appendChild(document.createElement("li"));
+    marker.className = "todo-empty-hint";
+    marker.style.display = "none";
+    let height = 0;
+    vi.spyOn(list, "getBoundingClientRect").mockImplementation(() => ({ height }) as DOMRect);
+    const animate = vi.fn(() => ({ cancel: vi.fn(), finished: new Promise(() => {}) }) as unknown as Animation);
+    list.animate = animate;
+    const hooks = createTodoLeaveHooks();
+    hooks.beforeUpdate(list);
+    hooks.onBeforeLeave(marker);
+    height = 50;
+    hooks.afterUpdate(list);
+    expect(list.style.height).toBe("");
+    expect(list.style.minHeight).toBe("");
+    expect(animate).toHaveBeenCalledWith(
+      [{ height: "0px" }, { height: "50px" }],
+      expect.objectContaining({ duration: 220 }),
+    );
+    hooks.onAfterLeave(marker);
+    expect(animate).toHaveBeenCalledOnce();
+    hooks.dispose();
+  });
+
   it("holds a single row height until fading ends, then grows to the taller empty placeholder", () => {
     const list = document.createElement("ul");
     const row = list.appendChild(document.createElement("li"));
