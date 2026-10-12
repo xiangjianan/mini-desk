@@ -416,12 +416,11 @@ describe("workbench style contract", () => {
     expect(styles).not.toContain("grid-auto-rows: minmax(0, 1fr)");
   });
 
-  it("keeps the today-focus/list divider as a full-width line across columns", () => {
+  it("separates the rounded focus list with spacing instead of a divider", () => {
     const styles = readFileSync(resolve(__dirname, "../styles.css"), "utf8");
 
-    // 分隔线必须挂在 .todo-sections 容器上(通栏),不能只挂在首个列表标题,
-    // 否则提醒事项多列布局下只有第一列上方有这条线。
-    expectSelectorBody(styles, ".today-focus-section + .todo-sections", "border-top: 1px solid var(--line-section)");
+    expectSelectorBody(styles, ".today-focus-section + .todo-sections", "border-top: 0");
+    expectSelectorBody(styles, ".todo-content-scroll > .today-focus-section", "margin: 6px 6px 12px");
     expect(styles).not.toMatch(/\.todo-section:first-child \.todo-heading\s*\{[^}]*border-top/);
   });
 
