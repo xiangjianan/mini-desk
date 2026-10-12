@@ -800,7 +800,7 @@ onUnmounted(() => {
         @pointermove="showHeaderRevealControl($event)"
         @mouseleave="handleHeaderRevealZoneLeave($event)"
       >
-        <Transition name="workbench-header-reveal" :duration="100">
+        <Transition name="workbench-header-reveal" :duration="220">
           <button
             v-if="headerRevealVisible"
             type="button"
