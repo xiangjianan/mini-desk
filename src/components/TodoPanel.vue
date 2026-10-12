@@ -486,7 +486,7 @@ const listEntries = computed(() =>
 function getTodoListEstimatedHeight(period: TodoListId): number {
   const entries = listEntries.value[period] ?? [];
   if (!entries.length) return 90;
-  return entries.reduce((height, entry) => height + (entry.type === "todo" ? 42 : 32), 0);
+  return entries.reduce((height, entry) => height + (entry.type === "todo" ? 42 : 32), 42);
 }
 
 // Width below which the panel stays single-column (= 2 × the target column width).
@@ -2230,6 +2230,15 @@ function buildTodoListEntries(period: TodoListId, todos: TodoItem[], deferredDon
               </li>
             </template>
           </TodoRowsTransition>
+          <button
+            v-if="!list.collapsed"
+            type="button"
+            class="todo-add-row"
+            @click.stop="handleHeadingAddClick(list)"
+          >
+            <NIcon :component="AddOutline" />
+            <span>{{ uiText.todo.addItem }}</span>
+          </button>
           </div>
         </div>
       </section>
