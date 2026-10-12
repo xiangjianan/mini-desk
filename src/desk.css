@@ -139,6 +139,10 @@ html[data-theme="dark"] .workbench-shell,
 .workbench-shell .icon-button:focus-visible { background: var(--secondary); color: var(--primary); }
 .workbench-shell button:focus-visible { outline: 2px solid var(--ring); outline-offset: 2px; }
 
+/* Keep image cards in place and move the scroll rail into the outer inset. */
+.workbench-zone-assets > .image-panel { overflow: visible; }
+.workbench-zone-assets .image-list-scrollbar { width: calc(100% + 8px); }
+.workbench-zone-assets .image-list-scrollbar .image-list { padding-inline-end: 8px; }
 .workbench-shell .image-list { padding: 18px 0; gap: 14px; }
 .workbench-shell .image-card { border-radius: 8px; background: var(--card); box-shadow: var(--desk-control-shadow); }
 
