@@ -32,8 +32,8 @@ describe("workbench style contract", () => {
     expectSelectorBody(styles, ".workbench-shell .text-editor-frame > .text-mirror", "top: 20px");
     expectSelectorBody(styles, ".workbench-shell .text-editor-frame > .text-mirror", "bottom: 20px");
     expectSelectorBody(styles, ".workbench-shell .text-editor-frame > .text-mirror", "height: calc(100% - 40px)");
-    expectSelectorBody(styles, ".workbench-shell .text-editor-textarea", "padding: 12px 16px");
-    expectSelectorBody(styles, ".workbench-shell .text-mirror", "padding: 12px 16px");
+    expectSelectorBody(styles, ".workbench-shell .text-editor-textarea", "padding: 0 16px");
+    expectSelectorBody(styles, ".workbench-shell .text-mirror", "padding: 0 16px");
   });
 
   it("uses a rail-free rounded surface model instead of boxed borders", () => {
