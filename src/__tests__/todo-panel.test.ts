@@ -1108,6 +1108,24 @@ describe("TodoPanel", () => {
     wrapper.unmount();
   });
 
+  it("retains the empty list add row while its container collapses", async () => {
+    const list = { id: "morning", title: "List", collapsed: false, compact: true };
+    const wrapper = mount(TodoPanel, {
+      props: { todoLists: [list], todos: { morning: [] }, titles: DEFAULT_TITLES },
+      global: { stubs: { NDropdown: dropdownStub, NTooltip: tooltipStub } },
+    });
+    const button = wrapper.get(".todo-add-row").element;
+    await wrapper.setProps({ todoLists: [{ ...list, collapsed: true }] });
+    expect(wrapper.get(".todo-add-row").element).toBe(button);
+    expect(wrapper.get(".todo-list-shell").classes()).toContain("is-hidden");
+    expect(wrapper.get(".todo-list-shell").attributes("aria-hidden")).toBe("true");
+    expect(wrapper.get(".todo-list-shell").attributes()).toHaveProperty("inert");
+    await wrapper.setProps({ todoLists: [list] });
+    expect(wrapper.get(".todo-add-row").element).toBe(button);
+    expect(wrapper.get(".todo-list-shell").classes()).not.toContain("is-hidden");
+    wrapper.unmount();
+  });
+
   it("creates a reminder from blank space inside a non-empty list scrollbar", async () => {
     const wrapper = mount(TodoPanel, {
       props: {

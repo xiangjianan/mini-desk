@@ -2231,7 +2231,6 @@ function buildTodoListEntries(period: TodoListId, todos: TodoItem[], deferredDon
             </template>
           </TodoRowsTransition>
           <button
-            v-if="!list.collapsed"
             type="button"
             class="todo-add-row"
             :aria-label="uiText.todo.addItem"
