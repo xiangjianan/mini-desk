@@ -383,12 +383,12 @@ html[data-theme="dark"] .workbench-shell,
 .workbench-shell .space-tab-edit-input,
 .workbench-shell .space-tab-edit-measure { height: 32px; min-height: 32px; }
 .workbench-shell .text-editor-frame {
-  padding-block: 20px;
+  padding-block: 12px;
 }
 .workbench-shell .text-editor-frame > .text-mirror {
-  top: 20px;
-  bottom: 20px;
-  height: calc(100% - 40px);
+  top: 12px;
+  bottom: 12px;
+  height: calc(100% - 24px);
 }
 .workbench-shell .text-editor-textarea,
 .workbench-shell .text-mirror {

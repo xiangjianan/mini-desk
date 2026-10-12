@@ -28,10 +28,10 @@ describe("workbench style contract", () => {
 
   it("insets the notebook scroll viewport and its mirror equally to preserve vertical whitespace", () => {
     const styles = readFileSync(resolve(__dirname, "../desk.css"), "utf8");
-    expectSelectorBody(styles, ".workbench-shell .text-editor-frame", "padding-block: 20px");
-    expectSelectorBody(styles, ".workbench-shell .text-editor-frame > .text-mirror", "top: 20px");
-    expectSelectorBody(styles, ".workbench-shell .text-editor-frame > .text-mirror", "bottom: 20px");
-    expectSelectorBody(styles, ".workbench-shell .text-editor-frame > .text-mirror", "height: calc(100% - 40px)");
+    expectSelectorBody(styles, ".workbench-shell .text-editor-frame", "padding-block: 12px");
+    expectSelectorBody(styles, ".workbench-shell .text-editor-frame > .text-mirror", "top: 12px");
+    expectSelectorBody(styles, ".workbench-shell .text-editor-frame > .text-mirror", "bottom: 12px");
+    expectSelectorBody(styles, ".workbench-shell .text-editor-frame > .text-mirror", "height: calc(100% - 24px)");
     expectSelectorBody(styles, ".workbench-shell .text-editor-textarea", "padding: 0 16px");
     expectSelectorBody(styles, ".workbench-shell .text-mirror", "padding: 0 16px");
   });

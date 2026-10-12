@@ -1743,7 +1743,7 @@ button.quick-button {
 .today-focus-item {
   position: relative;
   display: grid;
-  grid-template-columns: 54px minmax(0, 1fr) 26px 26px;
+  grid-template-columns: 24px minmax(0, 1fr) 26px 26px;
   align-items: center;
   gap: 0;
   height: 34px;
@@ -1754,15 +1754,15 @@ button.quick-button {
 }
 
 .today-focus-item.has-notify {
-  grid-template-columns: 54px minmax(0, 1fr) minmax(0, 64px) 26px;
+  grid-template-columns: 24px minmax(0, 1fr) minmax(0, 64px) 26px;
 }
 
 .today-focus-item.has-link {
-  grid-template-columns: 54px minmax(0, 1fr) 26px 26px 26px;
+  grid-template-columns: 24px minmax(0, 1fr) 26px 26px 26px;
 }
 
 .today-focus-item.has-link.has-notify {
-  grid-template-columns: 54px minmax(0, 1fr) 26px minmax(0, 64px) 26px;
+  grid-template-columns: 24px minmax(0, 1fr) 26px minmax(0, 64px) 26px;
 }
 
 .today-focus-item.is-done {
@@ -2651,8 +2651,8 @@ button.todo-star-button {
 }
 
 .today-focus-item .n-checkbox {
-  justify-self: start;
-  margin-left: 30.5px;
+  justify-self: center;
+  margin-left: 0;
 }
 
 /* Native per-row checkbox (replaced NCheckbox instances: one Vue component per
@@ -2695,8 +2695,8 @@ button.todo-star-button {
 }
 
 .today-focus-item .todo-checkbox {
-  justify-self: start;
-  margin-left: 30.5px;
+  justify-self: center;
+  margin-left: 0;
 }
 
 .todo-item.is-done .todo-checkbox,
