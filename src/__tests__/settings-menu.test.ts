@@ -75,6 +75,32 @@ function findVersionBadge(wrapper: ReturnType<typeof mount>) {
 }
 
 describe("SettingsMenu", () => {
+  it.each(["zh", "en"] as const)("offers explicit and system appearance in %s", async (language) => {
+    const wrapper = mount(SettingsMenu, {
+      props: { appVersion: "1.1.0", updateAvailable: false, companionGifTheme: "none", theme: "dark", language },
+      global: { stubs: {
+        Dropdown: dropdownStub,
+        NDropdown: dropdownStub,
+        Badge: { template: "<span><slot /></span>" },
+        NBadge: { template: "<span><slot /></span>" },
+        Button: { template: "<button><slot /></button>" },
+        NButton: { template: "<button><slot /></button>" },
+        Icon: { template: "<span />" },
+        NIcon: { template: "<span />" },
+      } },
+    });
+    expect(wrapper.get('[data-key="appearance"]').text()).toBe(language === "zh" ? "外观" : "Appearance");
+    expect(wrapper.get('[data-key="appearance:dark"]').classes()).toContain("is-selected");
+    expect(wrapper.get('[data-key="appearance:auto"]').classes()).not.toContain("is-selected");
+    for (const mode of ["auto", "light", "dark"] as const) {
+      await wrapper.get(`[data-key="appearance:${mode}"]`).trigger("click");
+    }
+    expect(wrapper.emitted("theme")).toEqual([["auto"], ["light"], ["dark"]]);
+    await wrapper.setProps({ theme: "auto" });
+    expect(wrapper.get('[data-key="appearance:auto"]').classes()).toContain("is-selected");
+    expect(wrapper.get('[data-key="appearance:dark"]').classes()).not.toContain("is-selected");
+  });
+
   it("groups data actions under one icon menu", async () => {
     const wrapper = mount(SettingsMenu, {
       props: {

@@ -14,6 +14,7 @@ import {
   PhonePortraitOutline,
   ServerOutline,
   SettingsOutline,
+  ContrastOutline,
   TrashOutline,
 } from "@vicons/ionicons5";
 import { NBadge, NButton, NDropdown, NIcon, NUpload } from "naive-ui";
@@ -21,7 +22,7 @@ import type { Component } from "vue";
 import type { UploadFileInfo } from "naive-ui";
 import { COMPANION_GIF_THEME_OPTIONS } from "../state/companionGifThemes";
 import { getUiText, normalizeLanguage } from "../state/i18n";
-import type { AppLanguage, CompanionCustomGif, CompanionGifTheme, GuideKey } from "../types";
+import type { AppLanguage, CompanionCustomGif, CompanionGifTheme, GuideKey, ThemeMode } from "../types";
 import { CONTEXT_MENU_Z_INDEX } from "../utils/contextMenu";
 import { renderIcon } from "../utils/dropdownIcons";
 
@@ -32,8 +33,10 @@ const props = withDefaults(defineProps<{
   customCompanionGif?: CompanionCustomGif;
   hasCustomCompanionGif?: boolean;
   language?: AppLanguage;
+  theme?: ThemeMode;
 }>(), {
   language: "zh",
+  theme: "auto",
   customCompanionGif: () => ({}),
   hasCustomCompanionGif: false,
 });
@@ -50,6 +53,7 @@ const emit = defineEmits<{
   shortcutHelp: [];
   changelog: [];
   language: [language: AppLanguage, anchor?: HTMLElement];
+  theme: [theme: ThemeMode];
   gifTheme: [theme: CompanionGifTheme, anchor?: HTMLElement];
   customGif: [files: { light?: File; dark?: File }, anchor?: HTMLElement];
   guide: [key: GuideKey, anchor: HTMLElement];
@@ -69,6 +73,17 @@ const text = computed(() => getUiText(props.language));
 const customGifLightPreview = computed(() => customGifLightPreviewSrc.value ?? props.customCompanionGif.light);
 const customGifDarkPreview = computed(() => customGifDarkPreviewSrc.value ?? props.customCompanionGif.dark);
 const options = computed(() => [
+  {
+    label: text.value.settings.appearance,
+    key: "appearance",
+    icon: renderIcon(ContrastOutline),
+    children: (["auto", "light", "dark"] as const).map((mode) => ({
+      label: text.value.settings[mode],
+      key: `appearance:${mode}`,
+      icon: props.theme === mode ? renderIcon(CheckmarkOutline) : undefined,
+    })),
+  },
+  { type: "divider", key: "appearance-divider" },
   {
     label: text.value.settings.data,
     key: "data",
@@ -107,7 +122,9 @@ const options = computed(() => [
       icon: option.value === props.companionGifTheme ? renderIcon(CheckmarkOutline) : undefined,
     })),
   },
+  { type: "divider", key: "preferences-divider" },
   { label: text.value.app.inboxPair, key: "pair-inbox", icon: renderIcon(PhonePortraitOutline) },
+  { type: "divider", key: "help-divider" },
   { label: text.value.settings.shortcutHelp, key: "shortcut-help", icon: renderIcon(KeyOutline) },
   { label: text.value.settings.suggest, key: "suggest", icon: renderIcon(MailOutline) },
   ...(SUPPORT_AUTHOR_ENABLED
@@ -128,6 +145,10 @@ const options = computed(() => [
 ]);
 
 function handleSelect(key: string): void {
+  if (key === "appearance:auto" || key === "appearance:light" || key === "appearance:dark") {
+    emit("theme", key.slice("appearance:".length) as ThemeMode);
+    return;
+  }
   if (key === "create-workspace") emit("createWorkspace");
   if (key === "export-workspace") emit("exportWorkspace", triggerRef.value ?? undefined);
   if (key === "import") emit("import", triggerRef.value ?? undefined);

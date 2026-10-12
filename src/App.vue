@@ -354,6 +354,16 @@ const systemDark = ref(false);
 /** 解析后的实际渲染主题：auto 时跟随 systemDark。 */
 const effectiveTheme = computed<ResolvedTheme>(() => resolveTheme(state.theme, systemDark.value));
 const naiveTheme = computed(() => (effectiveTheme.value === "dark" ? darkTheme : null));
+const naiveThemeOverrides = computed(() => ({
+  common: {
+    primaryColor: effectiveTheme.value === "dark" ? "#0a84ff" : "#007aff",
+    primaryColorHover: effectiveTheme.value === "dark" ? "#409cff" : "#0066d6",
+    primaryColorPressed: "#0057b8",
+    primaryColorSuppl: "#007aff",
+    borderRadius: "8px",
+    fontFamily: '-apple-system, BlinkMacSystemFont, "Segoe UI", "PingFang SC", sans-serif',
+  },
+}));
 const naiveLocale = computed(() => (state.language === "en" ? enUS : zhCN));
 const naiveDateLocale = computed(() => (state.language === "en" ? dateEnUS : dateZhCN));
 const uiText = computed(() => getUiText(state.language));
@@ -3834,7 +3844,7 @@ function moveItem<T extends { id: string }>(items: T[], dragId: string, targetId
 </script>
 
 <template>
-  <NConfigProvider :theme="naiveTheme" :locale="naiveLocale" :date-locale="naiveDateLocale">
+  <NConfigProvider :theme="naiveTheme" :theme-overrides="naiveThemeOverrides" :locale="naiveLocale" :date-locale="naiveDateLocale">
     <NGlobalStyle />
     <WorkbenchShell
       v-if="!isMobileBlocked"
@@ -3895,6 +3905,7 @@ function moveItem<T extends { id: string }>(items: T[], dragId: string, targetId
 
       <template #actions>
         <SettingsMenu
+          :theme="state.theme"
           :app-version="appVersion"
           :update-available="versionPromptVisible"
           :companion-gif-theme="state.companionGifTheme"
@@ -3912,6 +3923,7 @@ function moveItem<T extends { id: string }>(items: T[], dragId: string, targetId
           @shortcut-help="shortcutHelpVisible = true"
           @changelog="changelogVisible = true"
           @language="updateLanguage"
+          @theme="(theme) => { state.theme = theme; hideCompanion(); }"
           @gif-theme="updateCompanionGifTheme"
           @custom-gif="updateCustomCompanionGif"
           @guide="handleGuideClick"

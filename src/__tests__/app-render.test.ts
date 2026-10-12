@@ -2833,6 +2833,28 @@ describe("App shell", () => {
     }
   });
 
+  it("restores system appearance through settings and persists the preference", async () => {
+    localStorage.setItem(STORAGE_KEY, JSON.stringify({ theme: "dark" }));
+    const previousMatchMedia = window.matchMedia;
+    const scheme = stubSystemThemeMatchMedia(false);
+    const wrapper = mountApp();
+    try {
+      const settings = wrapper.getComponent(SettingsMenu);
+      expect(settings.props("theme")).toBe("dark");
+      settings.vm.$emit("theme", "auto");
+      await nextTick();
+      expect(document.documentElement.dataset.theme).toBe("light");
+      expect(JSON.parse(localStorage.getItem(STORAGE_KEY) || "{}").theme).toBe("auto");
+      scheme.setMatches(true);
+      await nextTick();
+      expect(document.documentElement.dataset.theme).toBe("dark");
+      expect(settings.props("theme")).toBe("auto");
+    } finally {
+      wrapper.unmount();
+      vi.stubGlobal("matchMedia", previousMatchMedia);
+    }
+  });
+
   it("主题明暗切换时开启短暂的全页颜色过渡窗口", async () => {
     vi.useFakeTimers();
     // 显式钉住起点：dataset 跨用例共享，首帧挂主题（无变化）不应开过渡窗口。

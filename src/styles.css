@@ -4,16 +4,16 @@
   --scrollbar-thumb: color-mix(in srgb, var(--line-control) 30%, transparent);
   --scrollbar-thumb-hover: color-mix(in srgb, var(--line-control) 46%, transparent);
   --background: #fcfcfe;
-  --foreground: #111827;
+  --foreground: #1d1d1f;
   --card: #ffffff;
   --card-foreground: #111827;
   --popover: #ffffff;
   --popover-foreground: #111827;
   --primary: #007aff;
   --primary-foreground: #ffffff;
-  --secondary: #e9eef7;
+  --secondary: #ececee;
   --secondary-foreground: #18181b;
-  --muted-surface: #eef0f4;
+  --muted-surface: #f2f2f4;
   --muted-foreground: #71717a;
   --accent: #e7f0ff;
   --accent-foreground: #0057d9;
@@ -23,7 +23,7 @@
   --ring: #007aff;
   --bg: #fcfcfe;
   --panel: #ffffff;
-  --text: #111111;
+  --text: #1d1d1f;
   --muted: #6e6e73;
   --line-main: rgba(60, 60, 67, 0.18);
   --line-section: rgba(60, 60, 67, 0.14);
@@ -39,7 +39,7 @@
   --danger: #b42318;
   --radius: 12px;
   --radius-control: 10px;
-  --material-surface: rgba(255, 255, 255, 0.78);
+  --material-surface: rgba(246, 246, 248, 0.88);
   --material-elevated: rgba(255, 255, 255, 0.9);
   --material-pressed: rgba(0, 122, 255, 0.12);
   --shadow-soft: 0 1px 2px rgba(15, 23, 42, 0.04), 0 12px 32px rgba(15, 23, 42, 0.07);
@@ -107,7 +107,7 @@ html[data-theme="dark"] {
   --button: color-mix(in srgb, var(--card) 92%, #ffffff 8%);
   --button-hover: color-mix(in srgb, var(--card) 82%, var(--primary) 18%);
   --danger: #ff8b7f;
-  --material-surface: rgba(44, 44, 46, 0.78);
+  --material-surface: rgba(44, 44, 46, 0.90);
   --material-elevated: rgba(44, 44, 46, 0.92);
   --material-pressed: rgba(10, 132, 255, 0.2);
   --shadow-soft: 0 1px 2px rgba(0, 0, 0, 0.18), 0 16px 36px rgba(0, 0, 0, 0.24);

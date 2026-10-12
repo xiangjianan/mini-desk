@@ -627,6 +627,10 @@ export const UI_TEXT = {
     },
     settings: {
       button: "设置",
+      appearance: "外观",
+      auto: "跟随系统",
+      light: "浅色",
+      dark: "深色",
       data: "数据",
       createWorkspace: "新建空间",
       import: "导入空间",
@@ -1032,6 +1036,10 @@ export const UI_TEXT = {
     },
     settings: {
       button: "Settings",
+      appearance: "Appearance",
+      auto: "System",
+      light: "Light",
+      dark: "Dark",
       data: "Data",
       createWorkspace: "Create workspace",
       import: "Import workspace",
