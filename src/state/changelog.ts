@@ -29,7 +29,7 @@ export interface ChangelogEntry {
 
 export const CHANGELOG: ChangelogEntry[] = [
     {
-      version: "1.1.1",
+      version: "1.1.2",
       date: "2026-10-13",
       notes: {
         zh: [
@@ -47,6 +47,24 @@ export const CHANGELOG: ChangelogEntry[] = [
           "Fixed: the completion countdown restarts when a reminder is unchecked",
           "Fixed: the custom GIF theme modal centers above the settings menu",
           "Changed: removed the search entry from the quick-action area",
+        ],
+      },
+    },
+    {
+      version: "1.1.1",
+      date: "2026-10-12",
+      notes: {
+        zh: [
+          "优化：工作台升级 macOS 风格表面质感，各区表面颜色统一、消除拼接白缝",
+          "调整：外观偏好（明暗主题等）移入设置菜单，精简头部控件（移除原桌面主题切换按钮）",
+          "新功能：展开的提醒列表整行可点即新建待办",
+          "优化：提醒列表、快捷区与贴图区滚动条位置及边缘对齐一批修正",
+        ],
+        en: [
+          "Improved: workbench surfaces upgraded to a macOS-style finish, with unified surface colors and seam lines removed",
+          "Changed: appearance preferences (light/dark theme and more) moved into the settings menu with simplified header controls (the old desktop theme toggle is gone)",
+          "New: expanded reminder lists offer a full-row tap target to create a todo",
+          "Improved: a batch of scrollbar placement and edge-alignment fixes across reminder lists, quick actions, and the image panel",
         ],
       },
     },
