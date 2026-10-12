@@ -1,11 +1,10 @@
 <script setup lang="ts">
 import { computed, nextTick, onMounted, onUnmounted, ref, watch } from "vue";
-import { SunnyOutline, SyncOutline } from "@vicons/ionicons5";
+import { SyncOutline } from "@vicons/ionicons5";
 import { NIcon } from "naive-ui";
-import { Moon as LucideMoon, PanelTopClose, PanelTopOpen } from "lucide-vue-next";
+import { PanelTopClose, PanelTopOpen } from "lucide-vue-next";
 import ZoneVisibilityPopover from "./ZoneVisibilityPopover.vue";
 import type { AppLanguage, ZoneKey, ZoneVisibility } from "../types";
-import type { ResolvedTheme } from "../state/theme";
 import {
   DEFAULT_LANGUAGE,
   WORKBENCH_COLLAPSED_FIXED_LABELS_BY_LANGUAGE,
@@ -20,7 +19,6 @@ import {
 const props = withDefaults(defineProps<{
   title: string;
   saveStatusLabel: string;
-  theme: ResolvedTheme;
   language?: AppLanguage;
   assetsTitle?: string;
   notesTitle?: string;
@@ -62,7 +60,6 @@ const zoneLabels = computed<readonly string[]>(() => {
 const expandHint = computed(() => (props.language === "en" ? "Click to expand" : "点击展开"));
 
 const emit = defineEmits<{
-  theme: [];
   toggleZone: [zone: ZoneKey];
   syncInbox: [];
 }>();
@@ -787,17 +784,6 @@ onUnmounted(() => {
               @click="setHeaderHidden(true, $event)"
             >
               <PanelTopClose :size="16" />
-            </button>
-            <button
-              type="button"
-              class="icon-button workbench-theme-button"
-              data-testid="workbench-theme"
-              :aria-label="theme === 'dark' ? '切换到浅色' : '切换到深色'"
-              :title="theme === 'dark' ? '切换到浅色' : '切换到深色'"
-              @click="emit('theme')"
-            >
-              <NIcon v-if="theme === 'dark'" :component="SunnyOutline" />
-              <LucideMoon v-else :size="16" />
             </button>
             <slot name="actions" />
           </div>

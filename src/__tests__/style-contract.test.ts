@@ -224,11 +224,7 @@ describe("workbench style contract", () => {
     expectSelectorBody(styles, ".space-tabs-scrollbar", "max-width: 100%");
     expect(ruleBodies(styles, ".space-tabs-scrollbar").join("\n")).not.toContain("calc(100% - 101px)");
     expectSelectorBody(styles, ".workbench-command-actions", "align-items: center");
-    expectSelectorBody(styles, ".workbench-theme-button", "width: 32px");
-    expectSelectorBody(styles, ".workbench-theme-button", "height: 32px");
-    expectSelectorBody(styles, ".workbench-theme-button", "background: var(--button)");
     expectSelectorBody(styles, ".workbench-header-hide-button:hover", "cursor: pointer");
-    expectSelectorBody(styles, ".workbench-theme-button:hover", "cursor: pointer");
     expectSelectorBody(styles, ".settings-trigger", "height: 32px");
     expectSelectorBody(styles, ".settings-btn.icon-button", "width: 32px");
     expectSelectorBody(styles, ".settings-btn.icon-button", "height: 32px");
@@ -259,9 +255,7 @@ describe("workbench style contract", () => {
     expectSelectorBody(styles, ".todo-collapse-button", "--n-color: transparent !important");
     expectSelectorBody(styles, ".todo-collapse-button", "--n-color-hover: transparent !important");
     expectSelectorBody(styles, ".workbench-header-hide-button", "border-radius: 50%");
-    expectSelectorBody(styles, ".workbench-theme-button", "border-radius: 50%");
     expectSelectorBody(styles, ".workbench-header-hide-button svg", "stroke-width: 1.5");
-    expectSelectorBody(styles, ".workbench-theme-button svg", "stroke-width: 1.5");
     expectSelectorBody(styles, ".workbench-header-reveal svg", "stroke-width: 1.5");
     expectSelectorBody(styles, ".panel.is-focused", "box-shadow: none");
     expectSelectorBody(styles, ".todo-section.is-focused::before", "content: none");

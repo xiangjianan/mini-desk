@@ -553,13 +553,11 @@ html[data-theme="dark"] .workbench-zone-workspace { --desk-zone-accent: #e8c65a;
 .n-dropdown-option-body { border-radius: 6px; }
 .n-dropdown-divider { margin-block: 5px; }
 
-.workbench-shell .workbench-header-hide-button,
-.workbench-shell .workbench-theme-button {
+.workbench-shell .workbench-header-hide-button {
   border-radius: 8px;
   box-shadow: none;
 }
-.workbench-shell .workbench-header-hide-button:hover,
-.workbench-shell .workbench-theme-button:hover {
+.workbench-shell .workbench-header-hide-button:hover {
   background: var(--fill-tertiary);
   box-shadow: none;
 }

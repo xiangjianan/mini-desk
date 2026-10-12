@@ -549,7 +549,7 @@ function teardownMobileBreakpoint(): void {
   mobileMediaQuery.value = null;
 }
 
-/** 系统明暗偏好监听：auto 模式下系统切主题即时生效；手动模式在系统再次切换的那一刻交还跟随。 */
+/** 系统明暗偏好监听：只更新系统状态，显式明暗选择始终保留。 */
 let systemThemeQuery: MediaQueryList | undefined;
 let systemThemeListener: ((event: MediaQueryListEvent) => void) | undefined;
 
@@ -560,8 +560,6 @@ function setupSystemThemeListener(): void {
   systemDark.value = query.matches;
   systemThemeListener = (event) => {
     systemDark.value = event.matches;
-    // 真实的系统切换才交还跟随：手动选择保留到这一刻，加载时的初次同步（上面那行赋值）不触发本分支。
-    if (state.theme !== "auto") state.theme = "auto";
   };
   if (query.addEventListener) {
     query.addEventListener("change", systemThemeListener);
@@ -3852,7 +3850,6 @@ function moveItem<T extends { id: string }>(items: T[], dragId: string, targetId
       :title="boardTitle"
       :slogan="boardSlogan"
       :save-status-label="workspaceDensityLabel"
-      :theme="effectiveTheme"
       :language="state.language"
       :assets-title="titles['image-title']"
       :notes-title="titles['quick-title']"
@@ -3862,7 +3859,6 @@ function moveItem<T extends { id: string }>(items: T[], dragId: string, targetId
       :zone-width-ratios="activeWorkspace.zoneWidthRatios"
       :inbox-sync-enabled="hasInboxConfigured"
       :inbox-syncing="inboxPullInFlight"
-      @theme="handleThemeClick"
       @toggle-zone="toggleActiveWorkspaceZone"
       @sync-inbox="requestManualInboxSync"
       @dragover.prevent

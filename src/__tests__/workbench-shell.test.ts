@@ -25,7 +25,6 @@ describe("WorkbenchShell", () => {
   const defaultProps = {
     title: "MiniDesk",
     saveStatusLabel: "已保存",
-    theme: "light" as const,
   };
 
   it("refits fixed columns when the grid width changes without a window resize", async () => {
@@ -101,7 +100,7 @@ describe("WorkbenchShell", () => {
     expect(wrapper.get('[data-testid="tasks-slot"]').text()).toBe("tasks");
     expect(wrapper.get('[data-testid="workspace-slot"]').text()).toBe("workspace");
     expect(wrapper.get('[data-testid="actions-slot"]').text()).toBe("settings");
-    expect(wrapper.find('[data-testid="workbench-theme"][aria-label="切换到深色"]').exists()).toBe(true);
+    expect(wrapper.find('[data-testid="workbench-theme"]').exists()).toBe(false);
   });
 
   it("labels each collapsed rail with the zone's area title or a fixed name", () => {
@@ -179,11 +178,11 @@ describe("WorkbenchShell", () => {
     expect(wrapper.find('button[aria-label="搜索或执行命令"]').exists()).toBe(false);
     expect(wrapper.find('button[aria-label="设置"]').exists()).toBe(false);
     expect(wrapper.find(".workbench-rail").exists()).toBe(false);
-    // Header actions: zone visibility + hide header + theme (settings comes via the actions slot).
-    expect(wrapper.findAll(".workbench-command-actions button")).toHaveLength(3);
+    // Header actions: zone visibility + hide header (settings comes via the actions slot).
+    expect(wrapper.findAll(".workbench-command-actions button")).toHaveLength(2);
     expect(wrapper.get('[data-testid="zone-visibility-trigger"]').attributes("aria-label")).toBe("显示区域");
     expect(wrapper.get('[data-testid="workbench-header-hide"]').attributes("aria-label")).toBe("隐藏顶部菜单");
-    expect(wrapper.get('[data-testid="workbench-theme"]').attributes("aria-label")).toBe("切换到深色");
+    expect(wrapper.find('[data-testid="workbench-theme"]').exists()).toBe(false);
   });
 
   it("hides the command header and restores it from a centered reveal control", async () => {
@@ -196,7 +195,7 @@ describe("WorkbenchShell", () => {
     });
 
     expect(wrapper.find('[data-testid="workbench-command-bar"]').exists()).toBe(true);
-    expect(wrapper.find('[data-testid="workbench-theme"]').exists()).toBe(true);
+    expect(wrapper.find('[data-testid="workbench-theme"]').exists()).toBe(false);
     expect(wrapper.find('[data-testid="actions-slot"]').exists()).toBe(true);
     expect(wrapper.find('[data-testid="workbench-header-show"]').exists()).toBe(false);
     await nextTick();
@@ -264,7 +263,7 @@ describe("WorkbenchShell", () => {
     expect(localStorage.getItem(WORKBENCH_HEADER_STORAGE_KEY)).toBe("false");
     expect(document.documentElement.style.getPropertyValue("--image-preview-top")).toBe("52px");
     expect(wrapper.find('[data-testid="workbench-command-bar"]').exists()).toBe(true);
-    expect(wrapper.find('[data-testid="workbench-theme"]').exists()).toBe(true);
+    expect(wrapper.find('[data-testid="workbench-theme"]').exists()).toBe(false);
     expect(wrapper.find('[data-testid="actions-slot"]').exists()).toBe(true);
 
     vi.useRealTimers();
@@ -982,17 +981,13 @@ describe("WorkbenchShell", () => {
     wrapper.unmount();
   });
 
-  it("emits theme requests from the top command theme action", async () => {
+  it("keeps appearance controls exclusively in the settings slot", () => {
     const wrapper = mount(WorkbenchShell, {
-      props: {
-        title: "MiniDesk",
-        saveStatusLabel: "已保存",
-        theme: "dark",
-      },
+      props: defaultProps,
+      slots: { actions: '<button aria-label="设置">设置</button>' },
     });
-
-    await wrapper.get('[data-testid="workbench-theme"]').trigger("click");
-
-    expect(wrapper.emitted("theme")).toHaveLength(1);
+    expect(wrapper.find('[data-testid="workbench-theme"]').exists()).toBe(false);
+    expect(wrapper.find('button[aria-label="设置"]').exists()).toBe(true);
+    expect(wrapper.emitted("theme")).toBeUndefined();
   });
 });

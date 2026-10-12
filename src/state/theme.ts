@@ -3,7 +3,7 @@ import type { ThemeMode } from "../types";
 /** 解析后的实际渲染主题：仅明/暗两态，供视觉决策（data-theme、Naive 主题、GIF/logo 等）。 */
 export type ResolvedTheme = Exclude<ThemeMode, "auto">;
 
-/** 依据用户偏好与系统明暗解析出实际渲染主题。auto 仅表示「尚未手动选择」：跟随系统。 */
+/** 仅 auto 跟随系统；显式明暗选择不受系统偏好变化影响。 */
 export function resolveTheme(mode: ThemeMode, systemDark: boolean): ResolvedTheme {
   if (mode === "auto") return systemDark ? "dark" : "light";
   return mode;

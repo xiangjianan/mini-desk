@@ -5025,7 +5025,6 @@ body:has(.image-preview) .workbench-command-bar {
 }
 
 .workbench-header-hide-button,
-.workbench-theme-button,
 .workbench-zone-button {
   width: 32px;
   min-width: 32px;
@@ -5037,7 +5036,6 @@ body:has(.image-preview) .workbench-command-bar {
 }
 
 .workbench-header-hide-button svg,
-.workbench-theme-button svg,
 .workbench-zone-button svg,
 .workbench-header-reveal svg {
   stroke-width: 1.5;
@@ -5045,8 +5043,6 @@ body:has(.image-preview) .workbench-command-bar {
 
 .workbench-header-hide-button:hover,
 .workbench-header-hide-button:focus-visible,
-.workbench-theme-button:hover,
-.workbench-theme-button:focus-visible,
 .workbench-zone-button:hover,
 .workbench-zone-button:focus-visible {
   background: var(--button-hover);
@@ -5314,7 +5310,6 @@ html[data-theme="dark"] .workbench-shell {
 }
 
 .workbench-header-hide-button,
-.workbench-theme-button,
 .settings-btn.icon-button,
 .icon-button {
   background: var(--button);
@@ -5323,8 +5318,6 @@ html[data-theme="dark"] .workbench-shell {
 
 .workbench-header-hide-button:hover,
 .workbench-header-hide-button:focus-visible,
-.workbench-theme-button:hover,
-.workbench-theme-button:focus-visible,
 .settings-btn.icon-button:hover,
 .settings-btn.icon-button:focus-visible,
 .icon-button:hover,
@@ -6591,7 +6584,6 @@ select {
 .n-icon,
 .icon-button .n-icon,
 .workbench-header-hide-button svg,
-.workbench-theme-button svg,
 .workbench-header-reveal svg,
 .settings-btn.icon-button svg,
 .quick-menu-button svg,
@@ -6605,7 +6597,6 @@ select {
 
 .icon-button svg,
 .workbench-header-hide-button svg,
-.workbench-theme-button svg,
 .workbench-header-reveal svg,
 .settings-btn.icon-button svg,
 .quick-menu-button svg,
@@ -6616,7 +6607,6 @@ select {
 .icon-button,
 .settings-btn.icon-button,
 .workbench-header-hide-button,
-.workbench-theme-button,
 .workbench-header-reveal,
 .quick-menu-button,
 .todo-section-menu-button {
@@ -6858,8 +6848,7 @@ body,
 /* Round icon buttons pick up a soft elevation on hover. */
 .icon-button:hover,
 .settings-btn.icon-button:hover,
-.workbench-header-hide-button:hover,
-.workbench-theme-button:hover {
+.workbench-header-hide-button:hover {
   box-shadow: var(--shadow-lift);
 }
 

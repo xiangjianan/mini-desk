@@ -275,7 +275,7 @@ describe("App shell", () => {
     expect(wrapper.findComponent({ name: "ImagePreview" }).exists()).toBe(false);
     expect(wrapper.find(".workbench-zone-notes > .quick-block").exists()).toBe(true);
     expect(wrapper.findAll(".space-tab").map((tab) => tab.text())).toEqual(["随手记"]);
-    expect(wrapper.find('[data-testid="workbench-theme"]').exists()).toBe(true);
+    expect(wrapper.find('[data-testid="workbench-theme"]').exists()).toBe(false);
     expect(wrapper.find('[aria-label="快捷动作菜单"]').exists()).toBe(true);
     expect(wrapper.find('[aria-label="设置"]').exists()).toBe(true);
     expect(wrapper.find(".image-empty").exists()).toBe(false);
@@ -2804,7 +2804,7 @@ describe("App shell", () => {
     await wrapper.get("textarea").trigger("focus");
     expect(wrapper.find(".focus-companion.is-visible img").exists()).toBe(true);
 
-    await wrapper.get('[data-testid="workbench-theme"]').trigger("click");
+    wrapper.getComponent(SettingsMenu).vm.$emit("theme", wrapper.getComponent(SettingsMenu).props("theme") === "dark" ? "light" : "dark");
     await wrapper.vm.$nextTick();
 
     expect(wrapper.find(".focus-companion.is-visible").exists()).toBe(false);
@@ -2815,16 +2815,16 @@ describe("App shell", () => {
     const wrapper = mountApp();
 
     try {
-      // 默认 auto + jsdom 无 matchMedia（systemDark=false）：实际渲染浅色，按钮提示切深色。
-      expect(wrapper.get('[data-testid="workbench-theme"]').attributes("aria-label")).toBe("切换到深色");
+      // 默认 auto + 系统浅色，设置可明确选择深色或浅色。
+      expect(wrapper.getComponent(SettingsMenu).props("theme")).toBe("auto");
 
-      await wrapper.get('[data-testid="workbench-theme"]').trigger("click");
+      wrapper.getComponent(SettingsMenu).vm.$emit("theme", wrapper.getComponent(SettingsMenu).props("theme") === "dark" ? "light" : "dark");
       await wrapper.vm.$nextTick();
       expect(JSON.parse(localStorage.getItem(STORAGE_KEY) || "{}").theme).toBe("dark");
       expect(document.documentElement.dataset.theme).toBe("dark");
-      expect(wrapper.get('[data-testid="workbench-theme"]').attributes("aria-label")).toBe("切换到浅色");
+      expect(wrapper.getComponent(SettingsMenu).props("theme")).toBe("dark");
 
-      await wrapper.get('[data-testid="workbench-theme"]').trigger("click");
+      wrapper.getComponent(SettingsMenu).vm.$emit("theme", wrapper.getComponent(SettingsMenu).props("theme") === "dark" ? "light" : "dark");
       await wrapper.vm.$nextTick();
       expect(JSON.parse(localStorage.getItem(STORAGE_KEY) || "{}").theme).toBe("light");
       expect(document.documentElement.dataset.theme).toBe("light");
@@ -2864,7 +2864,7 @@ describe("App shell", () => {
     try {
       expect(document.documentElement.classList.contains("theme-switching")).toBe(false);
 
-      await wrapper.get('[data-testid="workbench-theme"]').trigger("click");
+      wrapper.getComponent(SettingsMenu).vm.$emit("theme", wrapper.getComponent(SettingsMenu).props("theme") === "dark" ? "light" : "dark");
       await nextTick();
       expect(document.documentElement.dataset.theme).toBe("dark");
       expect(document.documentElement.classList.contains("theme-switching")).toBe(true);
@@ -2877,54 +2877,54 @@ describe("App shell", () => {
     }
   });
 
-  it("系统再次切换明暗时重新交还跟随，手动选择只保留到那一刻", async () => {
-    // 手动深色 + 系统浅色：加载时的初次同步不算「系统切换」，手动选择保持不变。
-    localStorage.setItem(STORAGE_KEY, JSON.stringify({ theme: "dark" }));
+  it.each(["light", "dark"] as const)("preserves persisted %s appearance across system changes and reload", async (mode) => {
+    localStorage.setItem(STORAGE_KEY, JSON.stringify({ theme: mode }));
     const previousMatchMedia = window.matchMedia;
     const scheme = stubSystemThemeMatchMedia(false);
-    const wrapper = mountApp();
-
+    let wrapper = mountApp();
     try {
-      expect(document.documentElement.dataset.theme).toBe("dark");
-      expect(JSON.parse(localStorage.getItem(STORAGE_KEY) || "{}").theme).toBe("dark");
-
-      // 系统切到深色：偏好交还跟随（auto），渲染随系统变深。
+      for (const systemDark of [true, false]) {
+        scheme.setMatches(systemDark);
+        await nextTick();
+        expect(document.documentElement.dataset.theme).toBe(mode);
+        expect(wrapper.getComponent(SettingsMenu).props("theme")).toBe(mode);
+        expect(JSON.parse(localStorage.getItem(STORAGE_KEY) || "{}").theme).toBe(mode);
+      }
+      wrapper.unmount();
       scheme.setMatches(true);
-      await wrapper.vm.$nextTick();
-      expect(JSON.parse(localStorage.getItem(STORAGE_KEY) || "{}").theme).toBe("auto");
-      expect(document.documentElement.dataset.theme).toBe("dark");
-
-      // 系统再切回浅色：仍是跟随模式，页面跟着变浅。
-      scheme.setMatches(false);
-      await wrapper.vm.$nextTick();
-      expect(JSON.parse(localStorage.getItem(STORAGE_KEY) || "{}").theme).toBe("auto");
-      expect(document.documentElement.dataset.theme).toBe("light");
+      wrapper = mountApp();
+      expect(document.documentElement.dataset.theme).toBe(mode);
+      expect(wrapper.getComponent(SettingsMenu).props("theme")).toBe(mode);
     } finally {
       wrapper.unmount();
-      // 本测试的 matchMedia 桩按查询串路由，泄漏会污染后续测试：恢复到测试前的取值。
       vi.stubGlobal("matchMedia", previousMatchMedia);
     }
   });
 
-  it("跟随系统中手动切换立即生效，直到系统再次切换才交还", async () => {
+  it("keeps explicit settings after leaving system appearance until auto is selected again", async () => {
     const previousMatchMedia = window.matchMedia;
     const scheme = stubSystemThemeMatchMedia(false);
     const wrapper = mountApp();
-
     try {
-      expect(document.documentElement.dataset.theme).toBe("light");
-
-      // 手动切深色：脱离跟随，即使系统偏好仍是浅色。
-      await wrapper.get('[data-testid="workbench-theme"]').trigger("click");
-      await wrapper.vm.$nextTick();
-      expect(JSON.parse(localStorage.getItem(STORAGE_KEY) || "{}").theme).toBe("dark");
-      expect(document.documentElement.dataset.theme).toBe("dark");
-
-      // 系统随后切到深色：那一刻起重新跟随（渲染仍为深色，但偏好回到 auto）。
-      scheme.setMatches(true);
-      await wrapper.vm.$nextTick();
-      expect(JSON.parse(localStorage.getItem(STORAGE_KEY) || "{}").theme).toBe("auto");
-      expect(document.documentElement.dataset.theme).toBe("dark");
+      const settings = wrapper.getComponent(SettingsMenu);
+      for (const mode of ["dark", "light"] as const) {
+        settings.vm.$emit("theme", mode);
+        await nextTick();
+        for (const systemDark of [true, false]) {
+          scheme.setMatches(systemDark);
+          await nextTick();
+          expect(document.documentElement.dataset.theme).toBe(mode);
+          expect(JSON.parse(localStorage.getItem(STORAGE_KEY) || "{}").theme).toBe(mode);
+        }
+      }
+      settings.vm.$emit("theme", "auto");
+      await nextTick();
+      for (const systemDark of [true, false]) {
+        scheme.setMatches(systemDark);
+        await nextTick();
+        expect(document.documentElement.dataset.theme).toBe(systemDark ? "dark" : "light");
+        expect(JSON.parse(localStorage.getItem(STORAGE_KEY) || "{}").theme).toBe("auto");
+      }
     } finally {
       wrapper.unmount();
       vi.stubGlobal("matchMedia", previousMatchMedia);
@@ -8913,14 +8913,14 @@ describe("App shell", () => {
       wrapper.getComponent(SettingsMenu).vm.$emit("gifTheme", "ikun", wrapper.getComponent(SettingsMenu).element as HTMLElement);
       await wrapper.vm.$nextTick();
 
-      await wrapper.get('[data-testid="workbench-theme"]').trigger("click");
+      wrapper.getComponent(SettingsMenu).vm.$emit("theme", wrapper.getComponent(SettingsMenu).props("theme") === "dark" ? "light" : "dark");
       await wrapper.vm.$nextTick();
 
       expect(wrapper.getComponent(SettingsMenu).props("companionGifTheme")).toBe("ikun");
       expect(wrapper.getComponent(CompanionBubble).props("gifTheme")).toBe("ikun");
       expect(JSON.parse(localStorage.getItem(STORAGE_KEY) || "{}").companionGifTheme).toBe("ikun");
 
-      await wrapper.get('[data-testid="workbench-theme"]').trigger("click");
+      wrapper.getComponent(SettingsMenu).vm.$emit("theme", wrapper.getComponent(SettingsMenu).props("theme") === "dark" ? "light" : "dark");
       await wrapper.vm.$nextTick();
 
       expect(wrapper.getComponent(SettingsMenu).props("companionGifTheme")).toBe("ikun");
@@ -8943,7 +8943,7 @@ describe("App shell", () => {
 
       expect(wrapper.get(".focus-companion.is-visible img").attributes("src")).toContain("kun");
 
-      await wrapper.get('[data-testid="workbench-theme"]').trigger("click");
+      wrapper.getComponent(SettingsMenu).vm.$emit("theme", wrapper.getComponent(SettingsMenu).props("theme") === "dark" ? "light" : "dark");
       await wrapper.vm.$nextTick();
 
       await wrapper.get(".image-panel").trigger("click");
@@ -9012,7 +9012,7 @@ describe("App shell", () => {
       expect(wrapper.getComponent(CompanionBubble).props("customGifLightSrc")).toBe("data:image/gif;base64,light");
       expect(wrapper.getComponent(CompanionBubble).props("customGifDarkSrc")).toBeUndefined();
 
-      await wrapper.get('[data-testid="workbench-theme"]').trigger("click");
+      wrapper.getComponent(SettingsMenu).vm.$emit("theme", wrapper.getComponent(SettingsMenu).props("theme") === "dark" ? "light" : "dark");
       await wrapper.vm.$nextTick();
 
       expect(wrapper.getComponent(CompanionBubble).props("gifTheme")).toBe("custom");
