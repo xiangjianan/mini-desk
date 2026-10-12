@@ -639,6 +639,7 @@ function handleImageDragWheel(event: WheelEvent): void {
 
     <NScrollbar
       class="image-list-scrollbar"
+      trigger="none"
       :aria-label="uiText.images.list"
       @click="closeMenu"
       @dragover.prevent

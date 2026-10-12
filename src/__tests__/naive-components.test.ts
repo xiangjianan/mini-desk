@@ -982,7 +982,7 @@ describe("Naive UI component usage", () => {
 
     expect(space).toContain("NScrollbar");
     expect(space).toContain('class="space-tabs-scrollbar"');
-    expect(space).toContain('trigger="hover"');
+    expect(space).toContain('trigger="none"');
     expect(space).toContain("@wheel=\"handleTabsWheel\"");
     expect(styles).toMatch(/\.space-tabs\s*\{[^}]*overflow-x: auto/s);
     expect(styles).toMatch(/\.space-tabs\s*\{[^}]*height: 34px/s);

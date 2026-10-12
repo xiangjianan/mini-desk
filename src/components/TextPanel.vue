@@ -1170,7 +1170,7 @@ function restoreSelection(textarea: HTMLTextAreaElement, selection: { start: num
         :key="index"
         :class="mirrorSegmentClasses(segment)"
       >{{ segment.chunk }}</span><span v-if="hasTrailingLineBreak" class="mirror-trailing-pad">&#8203;</span></div>
-      <NScrollbar class="text-editor-scrollbar">
+      <NScrollbar class="text-editor-scrollbar" trigger="none">
       <textarea
         ref="textareaRef"
         v-model="text"

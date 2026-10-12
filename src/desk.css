@@ -18,7 +18,7 @@
   --line-subtle: rgba(0, 0, 0, 0.06);
   --desk-group-heading-height: 42px;
   --desk-group-gap: 16px;
-  --desk-group-top: 16px;
+  --desk-group-top: 0px;
   --desk-group-scroll-gutter: 12px;
   --desk-group-content: var(--card);
   --desk-group-surface: #f1f3f5;
@@ -163,7 +163,7 @@ html[data-theme="dark"] .workbench-shell,
 .workbench-zone-assets > .image-panel { overflow: visible; }
 .workbench-zone-assets .image-list-scrollbar { width: calc(100% + 12px); }
 .workbench-zone-assets .image-list-scrollbar .image-list { padding-inline-end: 12px; }
-.workbench-shell .image-list { padding: 18px 0; gap: 14px; }
+.workbench-shell .image-list { padding: var(--desk-group-top) 0 16px; gap: 14px; }
 .workbench-shell .image-card { border-radius: var(--desk-card-radius); background: var(--card); box-shadow: var(--desk-card-shadow); }
 
 /* Put scroll rails in the zone inset while groups align with the header rule. */
@@ -664,4 +664,46 @@ html[data-theme="dark"] .workbench-shell,
 .workbench-shell .quick-buttons .quick-button.has-usage:hover,
 .workbench-shell .quick-buttons .quick-button.has-usage:focus-visible {
   background: var(--desk-row-hover) !important;
+}
+
+/* Content begins directly below the common header, like the notebook tab strip. */
+.workbench-shell .todo-content-scroll > .todo-focus-region > .today-focus-section {
+  margin-top: var(--desk-group-top);
+}
+
+/* Animate a shared alpha rather than pseudo-element opacity: native scrollbar
+   thumbs cannot reliably transition opacity, while this registered value can. */
+@property --desk-scrollbar-alpha {
+  syntax: "<number>";
+  inherits: true;
+  initial-value: 0;
+}
+.workbench-zone :is(.n-scrollbar-container, .todo-column, .text-editor-textarea, .space-tabs-scrollbar, .today-focus-scrollbar) {
+  --desk-scrollbar-alpha: 0;
+  transition: --desk-scrollbar-alpha 240ms ease;
+}
+.workbench-zone .is-scrolling { --desk-scrollbar-alpha: 1; }
+.workbench-zone *::-webkit-scrollbar-thumb,
+.workbench-zone *:hover::-webkit-scrollbar-thumb {
+  background: color-mix(in srgb, var(--scrollbar-thumb) calc(var(--desk-scrollbar-alpha) * 100%), transparent);
+}
+.workbench-zone .n-scrollbar > .n-scrollbar-rail {
+  opacity: 0 !important;
+  transition: opacity 240ms ease !important;
+}
+.workbench-zone .n-scrollbar.is-scrolling > .n-scrollbar-rail { opacity: 1 !important; }
+.workbench-zone .n-scrollbar-rail__scrollbar,
+.workbench-zone .n-scrollbar-rail__scrollbar:hover {
+  background: var(--scrollbar-thumb) !important;
+  border-radius: 999px;
+}
+@supports not selector(::-webkit-scrollbar) {
+  .workbench-zone * {
+    scrollbar-width: thin;
+    scrollbar-color: color-mix(in srgb, var(--scrollbar-thumb) calc(var(--desk-scrollbar-alpha) * 100%), transparent) transparent;
+  }
+}
+@media (prefers-reduced-motion: reduce) {
+  .workbench-zone *,
+  .workbench-zone .n-scrollbar > .n-scrollbar-rail { transition: none !important; }
 }

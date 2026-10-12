@@ -22,6 +22,27 @@ afterEach(() => {
 });
 
 describe("WorkbenchShell", () => {
+  it("captures scrolling from all four slot regions and clears activity on unmount", async () => {
+    vi.useFakeTimers();
+    const wrapper = mount(WorkbenchShell, {
+      props: { title: "MiniDesk", saveStatusLabel: "已保存" },
+      slots: {
+        assets: '<div class="n-scrollbar"><div class="n-scrollbar-container"></div></div>',
+        notes: '<div class="n-scrollbar"><div class="n-scrollbar-container"></div></div>',
+        tasks: '<div class="todo-column"></div>',
+        workspace: '<textarea class="text-editor-textarea"></textarea>',
+      },
+    });
+    await nextTick();
+    for (const target of wrapper.findAll(".n-scrollbar-container, .todo-column, .text-editor-textarea")) {
+      target.element.dispatchEvent(new Event("scroll"));
+      expect(target.classes()).toContain("is-scrolling");
+    }
+    const root = wrapper.element;
+    wrapper.unmount();
+    expect(root.querySelector(".is-scrolling")).toBeNull();
+  });
+
   const defaultProps = {
     title: "MiniDesk",
     saveStatusLabel: "已保存",

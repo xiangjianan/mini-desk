@@ -4,6 +4,7 @@ import {
   RefreshCw as SyncOutline,
 } from "lucide-vue-next";
 import { NIcon } from "naive-ui";
+import { installScrollActivity } from "../utils/scrollActivity";
 import { ChevronUp, ChevronDown } from "lucide-vue-next";
 import type { AppLanguage, ZoneVisibility } from "../types";
 import {
@@ -706,7 +707,10 @@ watch(
   },
 );
 
+let disposeScrollActivity: (() => void) | undefined;
+
 onMounted(() => {
+  if (gridRef.value) disposeScrollActivity = installScrollActivity(gridRef.value);
   if (gridRef.value && typeof ResizeObserver !== "undefined") {
     gridResizeObserver = new ResizeObserver((entries) => {
       const width = entries[0]?.contentRect.width ?? 0;
@@ -729,6 +733,7 @@ onMounted(() => {
 });
 
 onUnmounted(() => {
+  disposeScrollActivity?.();
   gridResizeObserver?.disconnect();
   if (gridResizeFrame !== undefined) window.cancelAnimationFrame(gridResizeFrame);
   finishResize();

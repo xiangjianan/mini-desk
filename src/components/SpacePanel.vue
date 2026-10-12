@@ -333,7 +333,7 @@ function handleTabsWheel(event: WheelEvent): void {
       </div>
     </div>
     <div class="space-tabs-scrollbar" @wheel="handleTabsWheel">
-      <NScrollbar class="space-tabs-scrollbar-inner" x-scrollable trigger="hover">
+      <NScrollbar class="space-tabs-scrollbar-inner" x-scrollable trigger="none">
         <TransitionGroup
           name="space-reorder"
           tag="div"
