@@ -174,14 +174,14 @@ html[data-theme="dark"] .workbench-shell,
 }
 .workbench-shell .quick-tag-groups { gap: var(--desk-group-gap); padding: var(--desk-group-top) var(--desk-group-scroll-gutter) 16px; }
 .workbench-shell .quick-tag-column { gap: var(--desk-group-gap); }
-.workbench-shell .quick-tag-content > .quick-buttons { padding: 8px; }
+.workbench-shell .quick-tag-content > .quick-buttons { padding: 16px; }
 .workbench-shell .quick-tag-content.is-collapsed > .quick-buttons { padding-block: 0; }
 .workbench-shell .quick-tag-heading + .quick-tag-content { margin-top: 0; }
 .workbench-shell .quick-tag-heading + .quick-tag-content.is-collapsed { margin-top: 0; }
 .workbench-shell .quick-tag-heading { min-height: 32px; padding: 0 0 8px; }
 .workbench-shell .quick-tag-title { font-size: 13px; font-weight: 500; color: var(--muted); }
 .workbench-shell .quick-tag-count { background: transparent; font-size: 12px; }
-.workbench-shell .quick-buttons { display: grid; grid-template-columns: minmax(0, 1fr); gap: 8px; padding: 0; }
+.workbench-shell .quick-buttons { display: grid; grid-template-columns: minmax(0, 1fr); gap: 10px; padding: 0; }
 .workbench-shell .quick-tag-add-button { color: var(--muted); }
 .workbench-shell .quick-tag-add-button:hover,
 .workbench-shell .quick-tag-add-button:focus-visible { color: var(--primary); background: transparent; }
@@ -378,12 +378,11 @@ html[data-theme="dark"] .workbench-shell,
 .workbench-shell .text-mirror {
   font-size: 14px;
   line-height: 1.85;
-  padding: 18px 4px;
+  padding: 20px 16px;
 }
 
 /* 专注弹窗经 NModal 传送门挂在 body 下，吃不到 .workbench-shell 的记事本排版；
-   字号/行高对齐主页面，横向 padding 加大到 16px（主页面两侧另有面板留白，
-   弹窗里文字会紧贴边框，按用户要求留出呼吸）。textarea 与 mirror 必须成对。 */
+   字号/行高对齐主页面，保留弹窗内的留白。textarea 与 mirror 必须成对。 */
 .focus-now-modal .text-editor-textarea,
 .focus-now-modal .text-mirror {
   font-size: 14px;
