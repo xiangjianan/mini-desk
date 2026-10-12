@@ -178,8 +178,8 @@ describe("WorkbenchShell", () => {
     expect(wrapper.find('button[aria-label="搜索或执行命令"]').exists()).toBe(false);
     expect(wrapper.find('button[aria-label="设置"]').exists()).toBe(false);
     expect(wrapper.find(".workbench-rail").exists()).toBe(false);
-    // Header action: hide header (settings comes via the actions slot).
-    expect(wrapper.findAll(".workbench-command-actions button")).toHaveLength(1);
+    // The centered hide control is separate from right-side settings.
+    expect(wrapper.findAll(".workbench-command-actions button")).toHaveLength(0);
     expect(wrapper.find('[data-testid="zone-visibility-trigger"]').exists()).toBe(false);
     expect(wrapper.get('[data-testid="workbench-header-hide"]').attributes("aria-label")).toBe("隐藏顶部菜单");
     expect(wrapper.find('[data-testid="workbench-theme"]').exists()).toBe(false);

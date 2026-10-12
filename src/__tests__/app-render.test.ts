@@ -9259,7 +9259,7 @@ describe("App inbox pull wiring", () => {
     expect(bar.findAll('[data-testid="inbox-sync"]')).toHaveLength(1);
     const button = bar.get('[data-testid="inbox-sync"]');
     expect(button.classes()).toContain("icon-button");
-    expect(button.element.compareDocumentPosition(wrapper.get('[data-testid="workbench-header-hide"]').element) & Node.DOCUMENT_POSITION_FOLLOWING).toBe(Node.DOCUMENT_POSITION_FOLLOWING);
+    expect(button.element.compareDocumentPosition(wrapper.get('.settings-trigger').element) & Node.DOCUMENT_POSITION_FOLLOWING).toBe(Node.DOCUMENT_POSITION_FOLLOWING);
     wrapper.unmount();
   });
 

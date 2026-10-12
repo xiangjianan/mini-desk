@@ -752,6 +752,16 @@ onUnmounted(() => {
             </slot>
             <p v-if="slogan" class="workbench-slogan">{{ slogan }}</p>
           </div>
+            <button
+              type="button"
+              class="icon-button workbench-header-hide-button"
+              data-testid="workbench-header-hide"
+              aria-label="隐藏顶部菜单"
+              title="隐藏顶部菜单"
+              @click="setHeaderHidden(true, $event)"
+            >
+              <ChevronUp :size="16" />
+            </button>
           <div class="workbench-command-actions">
             <!-- 手机速记手动同步：配对才显示，样式与相邻顶栏 icon-button 一致。 -->
             <button
@@ -767,16 +777,6 @@ onUnmounted(() => {
               @click="emit('syncInbox')"
             >
               <NIcon :component="SyncOutline" :size="16" />
-            </button>
-            <button
-              type="button"
-              class="icon-button workbench-header-hide-button"
-              data-testid="workbench-header-hide"
-              aria-label="隐藏顶部菜单"
-              title="隐藏顶部菜单"
-              @click="setHeaderHidden(true, $event)"
-            >
-              <ChevronUp :size="16" />
             </button>
             <slot name="actions" />
           </div>

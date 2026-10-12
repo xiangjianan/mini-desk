@@ -68,7 +68,7 @@ const SUPPORT_AUTHOR_ENABLED = false;
 
 const menuOpen = ref(false);
 // NDropdown requests closure after every selection, even when its show is controlled.
-let keepOpenAfterZoneSelect = false;
+let keepOpenAfterPreferenceSelect = false;
 const triggerRef = ref<HTMLElement | null>(null);
 const customGifDialogOpen = ref(false);
 const customGifLightFile = ref<File | undefined>();
@@ -79,27 +79,6 @@ const text = computed(() => getUiText(props.language));
 const customGifLightPreview = computed(() => customGifLightPreviewSrc.value ?? props.customCompanionGif.light);
 const customGifDarkPreview = computed(() => customGifDarkPreviewSrc.value ?? props.customCompanionGif.dark);
 const options = computed(() => [
-  {
-    label: text.value.settings.appearance,
-    key: "appearance",
-    icon: renderIcon(ContrastOutline),
-    children: (["auto", "light", "dark"] as const).map((mode) => ({
-      label: text.value.settings[mode],
-      key: `appearance:${mode}`,
-      icon: props.theme === mode ? renderIcon(CheckmarkOutline) : undefined,
-    })),
-  },
-  {
-    label: text.value.zoneVisibility.title,
-    key: "zone-visibility",
-    icon: renderIcon(GridOutline),
-    children: (["assets", "notes", "tasks", "workspace"] as const).map((zone) => ({
-      label: text.value.zoneVisibility[zone],
-      key: `zone:${zone}`,
-      icon: props.zoneVisibility[zone] ? renderIcon(CheckmarkOutline) : undefined,
-    })),
-  },
-  { type: "divider", key: "appearance-divider" },
   {
     label: text.value.settings.data,
     key: "data",
@@ -127,6 +106,27 @@ const options = computed(() => [
         icon: normalizeLanguage(props.language) === "en" ? renderIcon(CheckmarkOutline) : undefined,
       },
     ],
+  },
+  { type: "divider", key: "general-divider" },
+  {
+    label: text.value.settings.appearance,
+    key: "appearance",
+    icon: renderIcon(ContrastOutline),
+    children: (["auto", "light", "dark"] as const).map((mode) => ({
+      label: text.value.settings[mode],
+      key: `appearance:${mode}`,
+      icon: props.theme === mode ? renderIcon(CheckmarkOutline) : undefined,
+    })),
+  },
+  {
+    label: text.value.zoneVisibility.title,
+    key: "zone-visibility",
+    icon: renderIcon(GridOutline),
+    children: (["assets", "notes", "tasks", "workspace"] as const).map((zone) => ({
+      label: text.value.zoneVisibility[zone],
+      key: `zone:${zone}`,
+      icon: props.zoneVisibility[zone] ? renderIcon(CheckmarkOutline) : undefined,
+    })),
   },
   {
     label: text.value.settings.gifTheme,
@@ -161,12 +161,12 @@ const options = computed(() => [
 ]);
 
 function handleSelect(key: string): void {
+  keepOpenAfterPreferenceSelect = key.startsWith("zone:") || key.startsWith("appearance:") || key.startsWith("gif-theme:");
+  if (!keepOpenAfterPreferenceSelect) menuOpen.value = false;
   if (key === "zone:assets" || key === "zone:notes" || key === "zone:tasks" || key === "zone:workspace") {
-    keepOpenAfterZoneSelect = true;
     emit("toggleZone", key.slice("zone:".length) as ZoneKey);
     return;
   }
-  menuOpen.value = false;
   if (key === "appearance:auto" || key === "appearance:light" || key === "appearance:dark") {
     emit("theme", key.slice("appearance:".length) as ThemeMode);
     return;
@@ -207,8 +207,8 @@ function handleSelect(key: string): void {
 }
 
 function handleDropdownShow(value: boolean): void {
-  if (!value && keepOpenAfterZoneSelect) {
-    keepOpenAfterZoneSelect = false;
+  if (!value && keepOpenAfterPreferenceSelect) {
+    keepOpenAfterPreferenceSelect = false;
     return;
   }
   menuOpen.value = value;

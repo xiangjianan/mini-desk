@@ -40,6 +40,7 @@ html[data-theme="dark"] .workbench-shell,
 }
 
 .workbench-command-bar {
+  position: relative;
   padding-inline: 24px;
   padding-inline-start: 16px;
   background: var(--desk-surface);
@@ -554,9 +555,17 @@ html[data-theme="dark"] .workbench-zone-workspace { --desk-zone-accent: #e8c65a;
 .n-dropdown-divider { margin-block: 5px; }
 
 .workbench-shell .workbench-header-hide-button {
+  position: absolute;
+  left: 50%;
+  top: 50%;
+  transform: translate(-50%, -50%);
+  width: 48px;
+  min-width: 48px;
   border-radius: 8px;
   box-shadow: none;
 }
+.workbench-shell .workbench-title-group { max-width: calc(50% - 56px); }
+.workbench-shell .workbench-command-actions { margin-inline-start: auto; }
 .workbench-shell .workbench-header-hide-button:hover {
   background: var(--fill-tertiary);
   box-shadow: none;

@@ -4902,9 +4902,10 @@ button.mobile-home-btn-danger:focus-visible {
   position: absolute;
   z-index: 4500;
   top: 0;
-  right: 100px;
-  width: 32px;
-  height: 32px;
+  left: 50%;
+  transform: translateX(-50%);
+  width: 160px;
+  height: 40px;
 }
 
 /* While the image preview is open the modal container is hoisted to z-index
@@ -4929,9 +4930,9 @@ body:has(.image-preview) .workbench-command-bar {
 .workbench-header-reveal {
   position: absolute;
   top: 1px;
-  left: 0;
-  width: 32px;
-  min-width: 32px;
+  left: 16px;
+  width: 128px;
+  min-width: 128px;
   height: 32px;
   min-height: 32px;
   padding: 0;
@@ -4942,14 +4943,7 @@ body:has(.image-preview) .workbench-command-bar {
 }
 
 .workbench-header-reveal::before {
-  content: "";
-  position: absolute;
-  top: -1px;
-  left: 50%;
-  width: 1px;
-  height: 22px;
-  background: color-mix(in srgb, var(--muted-foreground) 58%, transparent);
-  transform: translateX(-50%);
+  content: none;
 }
 
 .workbench-header-reveal:hover,

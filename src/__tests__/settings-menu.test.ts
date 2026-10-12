@@ -85,7 +85,7 @@ describe("SettingsMenu", () => {
     });
     const dropdown = wrapper.getComponent(dropdownStub);
     const options = dropdown.props("options") as Array<{ key: string }>;
-    expect(options.slice(0, 3).map(option => option.key)).toEqual(["appearance", "zone-visibility", "appearance-divider"]);
+    expect(options.slice(0, 7).map(option => option.key)).toEqual(["data", "language", "general-divider", "appearance", "zone-visibility", "gif-theme", "preferences-divider"]);
     expect(wrapper.get('[data-key="zone-visibility"]').text()).toBe(language === "zh" ? "显示区域" : "Visible areas");
     expect(wrapper.get('[data-key="zone:tasks"]').text()).toBe(language === "zh" ? "提醒事项" : "Reminders");
     expect(wrapper.get('[data-key="zone:tasks"]').classes()).not.toContain("is-selected");
@@ -101,6 +101,19 @@ describe("SettingsMenu", () => {
     expect(wrapper.get('[data-key="zone:assets"]').classes()).not.toContain("is-selected");
     expect(wrapper.get('[data-key="zone:tasks"]').classes()).toContain("is-selected");
     await wrapper.get('[data-key="appearance:light"]').trigger("click");
+    expect(dropdown.props("show")).toBe(true);
+    for (const mode of ["dark", "auto"] as const) {
+      await wrapper.get(`[data-key="appearance:${mode}"]`).trigger("click");
+      expect(dropdown.props("show")).toBe(true);
+    }
+    for (const theme of ["cat", "ikun", "none"] as const) {
+      await wrapper.get(`[data-key="gif-theme:${theme}"]`).trigger("click");
+      expect(dropdown.props("show")).toBe(true);
+    }
+    expect(wrapper.emitted("gifTheme")?.map(args => args[0])).toEqual(["cat", "ikun", "none"]);
+    // After consuming selection closure, outside-click / Escape closes normally.
+    dropdown.vm.$emit("update:show", false);
+    await wrapper.vm.$nextTick();
     expect(dropdown.props("show")).toBe(false);
   });
 
