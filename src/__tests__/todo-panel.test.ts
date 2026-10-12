@@ -3397,7 +3397,7 @@ describe("TodoPanel", () => {
     wrapper.unmount();
   });
 
-  it("splits a reminder into two items when Enter is pressed in the middle of editable text", async () => {
+  it("splits a reminder into two items when Shift+Enter is pressed in the middle of editable text", async () => {
     const wrapper = mount(TodoPanel, {
       props: {
         todos: {
@@ -3421,13 +3421,13 @@ describe("TodoPanel", () => {
 
     await inputWrapper.trigger("click");
     input.setSelectionRange(2, 2);
-    await inputWrapper.trigger("keydown", { key: "Enter" });
+    await inputWrapper.trigger("keydown", { key: "Enter", shiftKey: true });
 
     expect(wrapper.emitted("split")?.[0]).toEqual(["morning", "a", "第一", "项内容"]);
     wrapper.unmount();
   });
 
-  it("creates a blank reminder after the current item with Shift+Enter", async () => {
+  it("creates a blank reminder without changing the current text with Enter", async () => {
     const wrapper = mount(TodoPanel, {
       props: {
         todos: {
@@ -3443,10 +3443,13 @@ describe("TodoPanel", () => {
     });
 
     await wrapper.get("input.todo-input").trigger("click");
-    await wrapper.get("input.todo-input").trigger("keydown", { key: "Enter", shiftKey: true });
+    (wrapper.get("input.todo-input").element as HTMLInputElement).setSelectionRange(2, 2);
+    await wrapper.get("input.todo-input").trigger("keydown", { key: "Enter" });
 
     expect(wrapper.emitted("create")?.[0]).toEqual(["morning", "a"]);
     expect(wrapper.emitted("split")).toBeUndefined();
+    expect(wrapper.emitted("update")).toBeUndefined();
+    expect((wrapper.get("input.todo-input").element as HTMLInputElement).value).toBe("第一项内容");
     wrapper.unmount();
   });
 

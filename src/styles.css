@@ -1734,7 +1734,7 @@ button.quick-button {
 .today-focus-item {
   position: relative;
   display: grid;
-  grid-template-columns: 42px minmax(0, 1fr) 26px 26px;
+  grid-template-columns: 54px minmax(0, 1fr) 26px 26px;
   align-items: center;
   gap: 0;
   height: 34px;
@@ -1745,15 +1745,15 @@ button.quick-button {
 }
 
 .today-focus-item.has-notify {
-  grid-template-columns: 42px minmax(0, 1fr) minmax(0, 64px) 26px;
+  grid-template-columns: 54px minmax(0, 1fr) minmax(0, 64px) 26px;
 }
 
 .today-focus-item.has-link {
-  grid-template-columns: 42px minmax(0, 1fr) 26px 26px 26px;
+  grid-template-columns: 54px minmax(0, 1fr) 26px 26px 26px;
 }
 
 .today-focus-item.has-link.has-notify {
-  grid-template-columns: 42px minmax(0, 1fr) 26px minmax(0, 64px) 26px;
+  grid-template-columns: 54px minmax(0, 1fr) 26px minmax(0, 64px) 26px;
 }
 
 .today-focus-item.is-done {
@@ -2644,7 +2644,7 @@ button.todo-star-button {
 
 .today-focus-item .n-checkbox {
   justify-self: start;
-  margin-left: 20px;
+  margin-left: 30.5px;
 }
 
 /* Native per-row checkbox (replaced NCheckbox instances: one Vue component per
@@ -2688,7 +2688,7 @@ button.todo-star-button {
 
 .today-focus-item .todo-checkbox {
   justify-self: start;
-  margin-left: 20px;
+  margin-left: 30.5px;
 }
 
 .todo-item.is-done .todo-checkbox,
@@ -5403,7 +5403,7 @@ html[data-theme="dark"] .workbench-shell {
 }
 
 .today-focus-heading {
-  box-shadow: none;
+  box-shadow: inset 0 -1px color-mix(in srgb, var(--border) 72%, transparent);
 }
 
 .panel-header > h1,
@@ -6876,9 +6876,9 @@ body,
     0 4px 14px color-mix(in srgb, var(--primary) 22%, transparent);
 }
 
-/* Today's focus section gets a quiet accent gradient at the top. */
+/* Focus reminders use the same surface as ordinary reminder lists. */
 .today-focus-section {
-  background: linear-gradient(180deg, color-mix(in srgb, var(--primary) 7%, transparent) 0%, transparent 132px);
+  background: transparent;
 }
 
 /* The companion avatar holds still once visible (no idle float). */
@@ -7670,19 +7670,19 @@ html[data-theme="dark"] .text-editor-textarea::selection {
 }
 
 .today-focus-item:has(.todo-focus-badge) {
-  grid-template-columns: 42px minmax(0, 1fr) 26px auto 26px;
+  grid-template-columns: 54px minmax(0, 1fr) 26px auto 26px;
 }
 
 .today-focus-item.has-notify:has(.todo-focus-badge) {
-  grid-template-columns: 42px minmax(0, 1fr) minmax(0, 64px) auto 26px;
+  grid-template-columns: 54px minmax(0, 1fr) minmax(0, 64px) auto 26px;
 }
 
 .today-focus-item.has-link:has(.todo-focus-badge) {
-  grid-template-columns: 42px minmax(0, 1fr) 26px 26px auto 26px;
+  grid-template-columns: 54px minmax(0, 1fr) 26px 26px auto 26px;
 }
 
 .today-focus-item.has-link.has-notify:has(.todo-focus-badge) {
-  grid-template-columns: 42px minmax(0, 1fr) 26px minmax(0, 64px) auto 26px;
+  grid-template-columns: 54px minmax(0, 1fr) 26px minmax(0, 64px) auto 26px;
 }
 
 .today-focus-item:has(.todo-focus-badge) .todo-star-button {

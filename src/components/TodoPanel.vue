@@ -668,7 +668,7 @@ function handleEnter(event: KeyboardEvent, period: TodoPeriod, todo: TodoItem): 
   if (!isTodoEditable(period, todo)) return;
   if (isImeComposing(event)) return;
   event.preventDefault();
-  if (event.shiftKey) {
+  if (!event.shiftKey) {
     emit("create", period, todo.id);
     return;
   }
