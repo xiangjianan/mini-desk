@@ -142,8 +142,13 @@ html[data-theme="dark"] .workbench-shell,
 .workbench-shell .image-list { padding: 18px 0; gap: 14px; }
 .workbench-shell .image-card { border-radius: 8px; background: var(--card); box-shadow: var(--desk-control-shadow); }
 
-/* 右侧 12px 让位给悬浮滚动条（NScrollbar 轨道压在内容上缘，滚动时不再盖住按钮/计数）。 */
-.workbench-shell .quick-tag-groups { gap: var(--desk-group-gap); padding: var(--desk-group-top) var(--desk-group-scroll-gutter) 16px 0; }
+/* Put scroll rails in the zone inset while groups align with the header rule. */
+.workbench-zone-notes > .quick-block { overflow: visible; }
+.workbench-shell .quick-buttons-scrollbar {
+  width: calc(100% + 2 * var(--desk-group-scroll-gutter));
+  margin-inline: calc(-1 * var(--desk-group-scroll-gutter));
+}
+.workbench-shell .quick-tag-groups { gap: var(--desk-group-gap); padding: var(--desk-group-top) var(--desk-group-scroll-gutter) 16px; }
 .workbench-shell .quick-tag-column { gap: var(--desk-group-gap); }
 .workbench-shell .quick-tag-content > .quick-buttons { padding: 8px; }
 .workbench-shell .quick-tag-content.is-collapsed > .quick-buttons { padding-block: 0; }
@@ -222,8 +227,12 @@ html[data-theme="dark"] .workbench-shell,
   border-radius: 8px 8px 0 0;
 }
 /* Match tag groups and reminder lists, including independent scroll columns. */
-.workbench-shell .todo-content-scroll { padding-top: var(--desk-group-top); }
-.workbench-shell .todo-sections { column-gap: 14px; }
+.workbench-zone > .todo-panel { overflow: visible; }
+.workbench-shell .todo-content-scroll { padding-top: var(--desk-group-top); overflow: visible; }
+.workbench-shell .todo-sections {
+  column-gap: 14px;
+  margin-inline: calc(-1 * var(--desk-group-scroll-gutter));
+}
 .workbench-shell .todo-column {
   gap: var(--desk-group-gap);
   padding: 0 0 16px;
