@@ -3,8 +3,7 @@
 .workbench-shell {
   --app-font-size: 14px;
   --scrollbar-size: 4px;
-  --desk-surface: #ffffff;
-  --desk-sidebar: #f5f5f7;
+  --desk-surface: #f7f7f8;
   --desk-selected-surface: #e5efff;
   --desk-selected-text: #005ac1;
   --desk-zone-accent: var(--primary);
@@ -16,16 +15,15 @@
   --desk-group-top: 16px;
   --desk-group-scroll-gutter: 12px;
   --desk-group-content: var(--desk-surface);
-  --desk-group-surface: #f2f2f4;
+  --desk-group-surface: #ececee;
   --desk-edge: color-mix(in srgb, var(--line-section) 65%, transparent);
   --desk-control-shadow: 0 1px 2px color-mix(in srgb, var(--foreground) 5%, transparent);
   font-size: var(--app-font-size);
 }
 
 html[data-theme="dark"] .workbench-shell {
-  --desk-surface: #202022;
-  --desk-sidebar: #29292c;
-  --desk-group-surface: #303033;
+  --desk-surface: #242426;
+  --desk-group-surface: #303032;
   --desk-group-content: var(--desk-surface);
   --desk-selected-surface: #243c59;
   --desk-selected-text: #8fc2ff;
@@ -38,17 +36,17 @@ html[data-theme="dark"] .workbench-shell {
 html[data-theme="dark"] .workbench-shell,
 .workbench-main,
 .workbench-grid {
-  background: var(--card);
+  background: var(--desk-surface);
 }
 
 .workbench-command-bar {
   padding-inline: 24px;
   padding-inline-start: 16px;
-  background: var(--material-surface);
+  background: var(--desk-surface);
   -webkit-backdrop-filter: blur(20px) saturate(1.3);
   backdrop-filter: blur(20px) saturate(1.3);
   border-bottom: 1px solid var(--desk-edge);
-  box-shadow: inset 0 1px color-mix(in srgb, var(--card) 70%, transparent);
+  box-shadow: none;
 }
 
 .workbench-grid {
@@ -68,8 +66,6 @@ html[data-theme="dark"] .workbench-shell,
 }
 
 .workbench-zone:last-of-type { border-inline-end: 0; }
-.workbench-zone-assets,
-.workbench-zone-notes { background: var(--desk-sidebar); }
 .workbench-zone-notes { --desk-zone-accent: #8b5cc7; }
 .workbench-zone-tasks { --desk-zone-accent: #b85b00; }
 .workbench-zone-workspace { --desk-zone-accent: #957100; }
@@ -274,7 +270,7 @@ html[data-theme="dark"] .workbench-zone-workspace { --desk-zone-accent: #e8c65a;
 .workbench-shell .todo-list-shell,
 .workbench-shell .quick-tag-content {
   border-radius: 0 0 8px 8px;
-  background: var(--desk-group-content);
+  background: transparent;
   overflow: hidden;
 }
 .workbench-shell .todo-list { padding: 8px; }
@@ -283,6 +279,7 @@ html[data-theme="dark"] .workbench-zone-workspace { --desk-zone-accent: #e8c65a;
   border-radius: 8px;
 }
 .workbench-shell .quick-tag-group:has(> .quick-tag-content.is-collapsed) { background: transparent; }
+.workbench-shell .quick-tag-content.is-collapsed { background: transparent; }
 .workbench-shell .quick-tag-group.is-empty,
 .workbench-shell .quick-tag-group.is-empty > .quick-tag-content { background: transparent; }
 .workbench-shell .quick-tag-group.is-empty .quick-buttons { padding: 0; }
@@ -569,7 +566,7 @@ html[data-theme="dark"] .workbench-zone-workspace { --desk-zone-accent: #e8c65a;
 
 /* Keep the reading surfaces and keyboard focus clear under system preferences. */
 @media (prefers-reduced-transparency: reduce) {
-  .workbench-command-bar { background: var(--card); }
+  .workbench-command-bar { background: var(--desk-surface); }
   .n-dropdown-menu,
   .n-popover { background: var(--popover) !important; }
   .workbench-command-bar,
@@ -577,7 +574,7 @@ html[data-theme="dark"] .workbench-zone-workspace { --desk-zone-accent: #e8c65a;
   .n-popover { -webkit-backdrop-filter: none; backdrop-filter: none; }
 }
 @supports not ((backdrop-filter: blur(1px)) or (-webkit-backdrop-filter: blur(1px))) {
-  .workbench-command-bar { background: var(--card); }
+  .workbench-command-bar { background: var(--desk-surface); }
   .n-dropdown-menu,
   .n-popover { background: var(--popover) !important; }
 }
@@ -588,7 +585,7 @@ html[data-theme="dark"] .workbench-zone-workspace { --desk-zone-accent: #e8c65a;
     --line-subtle: var(--line-control);
     --desk-edge: var(--line-control);
   }
-  .workbench-command-bar { background: var(--card); }
+  .workbench-command-bar { background: var(--desk-surface); }
   .n-dropdown-menu,
   .n-popover { background: var(--popover) !important; }
   .workbench-shell button:focus-visible {
