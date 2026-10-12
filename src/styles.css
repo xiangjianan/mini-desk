@@ -1647,7 +1647,7 @@ button.quick-button {
   overflow: hidden;
 }
 
-.todo-content-scroll > .today-focus-section {
+.todo-content-scroll > .todo-focus-region > .today-focus-section {
   max-height: 25vh;
   margin: 6px 0 12px;
   border: 1px solid var(--line-section);
@@ -1657,7 +1657,7 @@ button.quick-button {
   overflow-y: auto;
 }
 
-.todo-content-scroll > .today-focus-section > .today-focus-heading {
+.todo-content-scroll > .todo-focus-region > .today-focus-section > .today-focus-heading {
   background: color-mix(in srgb, var(--background) 92%, var(--foreground) 8%);
 }
 
@@ -1952,7 +1952,7 @@ button.quick-button {
   display: none;
 }
 
-.today-focus-section + .todo-sections {
+.todo-focus-region + .todo-sections {
   border-top: 0;
 }
 
@@ -7936,3 +7936,5 @@ body:has(.image-preview) .n-modal-container:has(.focus-now-modal) .n-modal-mask 
 .todo-list-scrollbar {
   content-visibility: auto;
 }
+
+.todo-focus-region { overflow: clip; display: flow-root; flex: 0 0 auto; }

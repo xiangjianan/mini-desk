@@ -578,7 +578,7 @@ describe("QuickButtons", () => {
     expect(wrapper.findAll(".dropdown-option").map((option) => option.text())).toEqual([
       "新增",
       "粘贴",
-      "显示隐藏项",
+      "查看隐藏动作",
       "标签管理",
       "切换为紧凑按钮",
       "删除标签",
@@ -1493,13 +1493,13 @@ describe("QuickButtons", () => {
     expect(wrapper.findAll(".dropdown-option").map((option) => option.text())).toEqual([
       "新增",
       "粘贴",
-      "显示隐藏项",
+      "查看隐藏动作",
       "标签管理",
       "切换为紧凑按钮",
       "Tips",
     ]);
 
-    await wrapper.findAll(".dropdown-option").find((option) => option.text() === "显示隐藏项")?.trigger("click");
+    await wrapper.findAll(".dropdown-option").find((option) => option.text() === "查看隐藏动作")?.trigger("click");
     expect(wrapper.emitted("toggleShowHidden")).toHaveLength(1);
 
     await wrapper.get(".quick-menu-button").trigger("click");
@@ -1511,7 +1511,7 @@ describe("QuickButtons", () => {
     expect(wrapper.findAll(".dropdown-option").map((option) => option.text())).toEqual([
       "新增",
       "粘贴",
-      "收起隐藏项",
+      "结束查看",
       "标签管理",
       "切换为紧凑按钮",
       "Tips",
@@ -1529,7 +1529,7 @@ describe("QuickButtons", () => {
 
     expect(wrapper.findAll(".dropdown-option").map((option) => option.text())).toEqual([
       "编辑",
-      "隐藏",
+      "隐藏此动作",
       "切换为紧凑按钮",
       "删除",
       "Tips",
@@ -1549,7 +1549,7 @@ describe("QuickButtons", () => {
 
     expect(wrapper.findAll(".dropdown-option").map((option) => option.text())).toEqual([
       "编辑",
-      "隐藏",
+      "隐藏此动作",
       "复制文本",
       "复制链接",
       "切换为紧凑按钮",
@@ -1950,7 +1950,7 @@ describe("QuickButtons 跨空间移动", () => {
     expect(wrapper.findAll('[data-key^="move-ws:"]')).toHaveLength(0);
     expect(wrapper.find('[data-key="move-tag"]').exists()).toBe(false);
     expect(wrapper.findAll(".dropdown-option").map((option) => option.text())).toEqual([
-      "新增", "粘贴", "显示隐藏项", "标签管理", "切换为紧凑按钮", "删除标签", "Tips",
+      "新增", "粘贴", "查看隐藏动作", "标签管理", "切换为紧凑按钮", "删除标签", "Tips",
     ]);
     expect(wrapper.get('[data-key="manage-tags"]').text()).toBe("标签管理");
     expect(wrapper.get('[data-key="delete-tag"]').text()).toBe("删除标签");

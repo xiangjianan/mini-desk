@@ -1389,6 +1389,26 @@ describe("TodoPanel", () => {
     wrapper.unmount();
   });
 
+  it("animates the space above reminder lists when a star is added or removed", async () => {
+    const wrapper = mount(TodoPanel, {
+      attachTo: document.body,
+      props: { todoLists: defaultTodoLists, todos: { morning: [{ id: "a", text: "事项", done: false }] }, titles: DEFAULT_TITLES },
+    });
+    const region = wrapper.get(".todo-focus-region").element as HTMLElement;
+    const cancel = vi.fn();
+    const animate = vi.fn(() => ({ cancel }));
+    region.animate = animate as unknown as typeof region.animate;
+    vi.spyOn(region, "getBoundingClientRect").mockImplementation(() => ({ height: wrapper.find(".today-focus-section").exists() ? 80 : 0 } as DOMRect));
+    await wrapper.setProps({ todos: { morning: [{ id: "a", text: "事项", done: false, starred: true }] } });
+    await nextTick();
+    expect(animate).toHaveBeenCalledWith([{ height: "0px" }, { height: "80px" }], expect.objectContaining({ duration: 220 }));
+    await wrapper.setProps({ todos: { morning: [{ id: "a", text: "事项", done: false, starred: false }] } });
+    await nextTick();
+    expect(animate).toHaveBeenLastCalledWith([{ height: "80px" }, { height: "0px" }], expect.anything());
+    wrapper.unmount();
+    expect(cancel).toHaveBeenCalled();
+  });
+
   it("emits star toggles and aggregates starred reminders into today's focus", async () => {
     const wrapper = mount(TodoPanel, {
       props: {

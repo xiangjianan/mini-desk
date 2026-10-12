@@ -1875,6 +1875,25 @@ function buildTodoListEntries(period: TodoListId, todos: TodoItem[], deferredDon
   });
   return entries;
 }
+// Animate the region height so starred rows also move the lists below them.
+const focusRegionRef = ref<HTMLElement | null>(null);
+let focusRegionAnimation: Animation | undefined;
+watch(() => todayFocus.value.map(item => `${item.period}:${item.todo.id}`).join("|"), async () => {
+  const region = focusRegionRef.value;
+  if (!region) return;
+  const fromHeight = region.getBoundingClientRect().height;
+  focusRegionAnimation?.cancel();
+  await nextTick();
+  if (!region.isConnected || !region.animate || window.matchMedia?.("(prefers-reduced-motion: reduce)").matches) return;
+  const toHeight = region.getBoundingClientRect().height;
+  if (Math.abs(fromHeight - toHeight) < 0.5) return;
+  focusRegionAnimation = region.animate(
+    [{ height: `${fromHeight}px` }, { height: `${toHeight}px` }],
+    { duration: 220, easing: "cubic-bezier(0.2, 0, 0, 1)" },
+  );
+});
+onUnmounted(() => focusRegionAnimation?.cancel());
+
 </script>
 
 <template>
@@ -1887,7 +1906,7 @@ function buildTodoListEntries(period: TodoListId, todos: TodoItem[], deferredDon
       </div>
     </div>
     <div class="todo-content-scroll" :class="{ 'is-multi-column': columnCount > 1 }">
-    <Transition name="todo-focus-reveal" :duration="180">
+    <div ref="focusRegionRef" class="todo-focus-region">
       <section v-if="todayFocus.length" class="today-focus-section" :aria-label="uiText.todo.todayFocus">
         <div class="today-focus-heading" @contextmenu="openTodayFocusTitleMenu">
           <NIcon class="today-focus-title-icon" :component="AlertCircleOutline" />
@@ -1995,7 +2014,7 @@ function buildTodoListEntries(period: TodoListId, todos: TodoItem[], deferredDon
         </TransitionGroup>
         </div>
       </section>
-    </Transition>
+    </div>
     <div
       class="todo-sections"
       :class="{ 'is-multi-column': columnCount > 1 }"
