@@ -158,18 +158,27 @@ html[data-theme="dark"] .workbench-shell,
 .desk-zone-heading h1 > .n-icon svg,
 .desk-zone-heading h2 > .n-icon svg { width: 14px; height: 14px; }
 .workbench-shell .header-actions { flex-shrink: 0; gap: 0; }
-.workbench-shell .icon-button { box-shadow: none; background: transparent; border-radius: 8px; color: var(--muted); }
+.workbench-shell .icon-button {
+  box-shadow: none; background: transparent; border-radius: 8px; color: var(--muted);
+  transition: background-color 180ms ease, color 180ms ease;
+}
 .workbench-shell .icon-button:hover,
-.workbench-shell .icon-button:focus-visible { background: transparent; color: var(--primary); box-shadow: none; }
+.workbench-shell .icon-button:focus-visible { background: var(--secondary); color: var(--primary); box-shadow: none; }
 .workbench-shell .icon-button .n-button__border,
 .workbench-shell .icon-button .n-button__state-border { display: none; }
+.workbench-shell .n-button.icon-button {
+  --n-border-radius: 8px !important;
+  border-radius: 8px !important;
+}
 .workbench-shell .panel-header .desk-ai-action {
   background: transparent;
   border: 0;
+  border-radius: 8px;
   box-shadow: none;
+  transition: background-color 180ms ease, color 180ms ease;
 }
 .workbench-shell .panel-header .desk-ai-action:hover,
-.workbench-shell .panel-header .desk-ai-action:focus-visible { background: transparent; }
+.workbench-shell .panel-header .desk-ai-action:focus-visible { background: var(--secondary); }
 .workbench-shell button:focus-visible { outline: 2px solid var(--ring); outline-offset: 2px; }
 
 /* Keep image cards in place and move the scroll rail into the outer inset. */
@@ -640,21 +649,21 @@ html[data-theme="dark"] .workbench-shell,
   background: transparent;
   box-shadow: none;
 }
-/* Fade a soft area rather than painting a rectangular button. */
+/* The header affordance changes geometry, without a background. */
 .workbench-shell .workbench-header-hide-button::before,
-.workbench-shell .workbench-header-reveal::before {
-  content: "";
-  position: absolute;
-  inset: 0;
-  pointer-events: none;
-  background: radial-gradient(ellipse at center, var(--fill-tertiary), transparent 72%);
-  opacity: 0;
-  transition: opacity 220ms ease;
+.workbench-shell .workbench-header-reveal::before { content: none; }
+.workbench-shell .workbench-header-hide-button svg,
+.workbench-shell .workbench-header-reveal svg {
+  transform: scale(1);
+  transform-origin: center;
+  transition: transform 220ms ease, color 180ms ease;
 }
-.workbench-shell .workbench-header-hide-button:hover::before,
-.workbench-shell .workbench-header-hide-button:focus-visible::before,
-.workbench-shell .workbench-header-reveal:hover::before,
-.workbench-shell .workbench-header-reveal:focus-visible::before { opacity: 1; }
+.workbench-shell .workbench-header-hide-button:hover svg,
+.workbench-shell .workbench-header-hide-button:focus-visible svg,
+.workbench-shell .workbench-header-reveal:hover svg,
+.workbench-shell .workbench-header-reveal:focus-visible svg {
+  transform: scale(1.65, 1.15);
+}
 .workbench-shell .workbench-header-reveal-enter-active,
 .workbench-shell .workbench-header-reveal-leave-active { transition: opacity 220ms ease; }
 .workbench-shell .workbench-header-reveal-enter-from,
@@ -676,13 +685,22 @@ html[data-theme="dark"] .workbench-shell,
 .workbench-shell .workbench-resizer:hover::after,
 .workbench-shell .workbench-resizer:focus-visible::after,
 .workbench-shell .workbench-resizer:active::after { opacity: 0.7; }
-.workbench-shell .workspace-trigger,
-.workbench-shell .workspace-trigger:hover,
-.workbench-shell .workspace-trigger:active,
-.workbench-shell .workspace-trigger:focus-visible {
+.workbench-shell .workspace-trigger {
   background: transparent;
   border-color: transparent;
+  border-radius: 8px;
   box-shadow: none;
+  transition: background-color 180ms ease;
+}
+.workbench-shell .workspace-trigger:hover,
+.workbench-shell .workspace-trigger:active,
+.workbench-shell .workspace-trigger:focus-visible { background: var(--secondary); box-shadow: none; }
+@media (prefers-reduced-motion: reduce) {
+  .workbench-shell .icon-button,
+  .workbench-shell .panel-header .desk-ai-action,
+  .workbench-shell .workspace-trigger,
+  .workbench-shell .workbench-header-hide-button svg,
+  .workbench-shell .workbench-header-reveal svg { transition: none; }
 }
 
 /* Keep the reading surfaces and keyboard focus clear under system preferences. */
