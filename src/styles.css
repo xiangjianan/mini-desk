@@ -1649,7 +1649,16 @@ button.quick-button {
 
 .todo-content-scroll > .today-focus-section {
   max-height: 25vh;
+  margin: 6px 6px 12px;
+  border: 1px solid var(--line-section);
+  border-radius: var(--radius);
+  background: color-mix(in srgb, var(--background) 92%, var(--foreground) 8%);
+  overflow-x: hidden;
   overflow-y: auto;
+}
+
+.todo-content-scroll > .today-focus-section > .today-focus-heading {
+  background: color-mix(in srgb, var(--background) 92%, var(--foreground) 8%);
 }
 
 .todo-sections {
@@ -1944,8 +1953,7 @@ button.quick-button {
 }
 
 .today-focus-section + .todo-sections {
-  /* 分隔线挂在 .todo-sections 容器上(而非首个列表标题),确保多列布局下也是通栏完整线 */
-  border-top: 1px solid var(--line-section);
+  border-top: 0;
 }
 
 .todo-heading > h3 {
