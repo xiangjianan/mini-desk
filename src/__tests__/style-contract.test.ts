@@ -420,7 +420,7 @@ describe("workbench style contract", () => {
     const styles = readFileSync(resolve(__dirname, "../styles.css"), "utf8");
 
     expectSelectorBody(styles, ".today-focus-section + .todo-sections", "border-top: 0");
-    expectSelectorBody(styles, ".todo-content-scroll > .today-focus-section", "margin: 6px 6px 12px");
+    expectSelectorBody(styles, ".todo-content-scroll > .today-focus-section", "margin: 6px 0 12px");
     expect(styles).not.toMatch(/\.todo-section:first-child \.todo-heading\s*\{[^}]*border-top/);
   });
 
