@@ -145,6 +145,12 @@ function readSource(path: string): string {
 }
 
 describe("QuickButtons", () => {
+  it("keeps the overflow scrollbar visible independently of hover", () => {
+    const wrapper = mountQuickButtons();
+    expect(wrapper.findComponent({ name: "Scrollbar" }).props("trigger")).toBe("none");
+    wrapper.unmount();
+  });
+
   it("keeps the panel title read-only without a rename menu", async () => {
     const wrapper = mountQuickButtons({ buttons: [] });
     await wrapper.get("#quick-title").trigger("dblclick");

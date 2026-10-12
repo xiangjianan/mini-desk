@@ -141,8 +141,8 @@ html[data-theme="dark"] .workbench-shell,
 
 /* Keep image cards in place and move the scroll rail into the outer inset. */
 .workbench-zone-assets > .image-panel { overflow: visible; }
-.workbench-zone-assets .image-list-scrollbar { width: calc(100% + 8px); }
-.workbench-zone-assets .image-list-scrollbar .image-list { padding-inline-end: 8px; }
+.workbench-zone-assets .image-list-scrollbar { width: calc(100% + 12px); }
+.workbench-zone-assets .image-list-scrollbar .image-list { padding-inline-end: 12px; }
 .workbench-shell .image-list { padding: 18px 0; gap: 14px; }
 .workbench-shell .image-card { border-radius: 8px; background: var(--card); box-shadow: var(--desk-control-shadow); }
 

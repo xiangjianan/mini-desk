@@ -961,7 +961,7 @@ function handleQuickGroupDrop(event: DragEvent, groupId: string): void {
       </div>
     </div>
 
-    <NScrollbar class="quick-buttons-scrollbar" :aria-label="uiText.quick.list" @click="closeMenu" @contextmenu="openAreaMenu">
+    <NScrollbar class="quick-buttons-scrollbar" trigger="none" :aria-label="uiText.quick.list" @click="closeMenu" @contextmenu="openAreaMenu">
       <div
         class="quick-tag-groups"
         :class="{ 'is-multi-column': columnCount > 1 }"
