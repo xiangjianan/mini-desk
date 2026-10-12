@@ -607,8 +607,8 @@ html[data-theme="dark"] .workbench-shell,
   align-items: center;
   justify-content: center;
   width: calc(100% - 16px);
-  min-height: 48px;
-  margin: 0 8px;
+  min-height: 36px;
+  margin: 6px 8px;
   padding: 4px;
   border: 0;
   border-radius: 8px;
