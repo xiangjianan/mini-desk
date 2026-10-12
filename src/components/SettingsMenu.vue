@@ -15,6 +15,7 @@ import {
   ServerOutline,
   SettingsOutline,
   ContrastOutline,
+  GridOutline,
   TrashOutline,
 } from "@vicons/ionicons5";
 import { NBadge, NButton, NDropdown, NIcon, NUpload } from "naive-ui";
@@ -22,7 +23,7 @@ import type { Component } from "vue";
 import type { UploadFileInfo } from "naive-ui";
 import { COMPANION_GIF_THEME_OPTIONS } from "../state/companionGifThemes";
 import { getUiText, normalizeLanguage } from "../state/i18n";
-import type { AppLanguage, CompanionCustomGif, CompanionGifTheme, GuideKey, ThemeMode } from "../types";
+import type { AppLanguage, CompanionCustomGif, CompanionGifTheme, GuideKey, ThemeMode, ZoneKey, ZoneVisibility } from "../types";
 import { CONTEXT_MENU_Z_INDEX } from "../utils/contextMenu";
 import { renderIcon } from "../utils/dropdownIcons";
 
@@ -34,9 +35,11 @@ const props = withDefaults(defineProps<{
   hasCustomCompanionGif?: boolean;
   language?: AppLanguage;
   theme?: ThemeMode;
+  zoneVisibility?: ZoneVisibility;
 }>(), {
   language: "zh",
   theme: "auto",
+  zoneVisibility: () => ({ assets: true, notes: true, tasks: true, workspace: true }),
   customCompanionGif: () => ({}),
   hasCustomCompanionGif: false,
 });
@@ -54,6 +57,7 @@ const emit = defineEmits<{
   changelog: [];
   language: [language: AppLanguage, anchor?: HTMLElement];
   theme: [theme: ThemeMode];
+  toggleZone: [zone: ZoneKey];
   gifTheme: [theme: CompanionGifTheme, anchor?: HTMLElement];
   customGif: [files: { light?: File; dark?: File }, anchor?: HTMLElement];
   guide: [key: GuideKey, anchor: HTMLElement];
@@ -63,6 +67,8 @@ const emit = defineEmits<{
 const SUPPORT_AUTHOR_ENABLED = false;
 
 const menuOpen = ref(false);
+// NDropdown requests closure after every selection, even when its show is controlled.
+let keepOpenAfterZoneSelect = false;
 const triggerRef = ref<HTMLElement | null>(null);
 const customGifDialogOpen = ref(false);
 const customGifLightFile = ref<File | undefined>();
@@ -81,6 +87,16 @@ const options = computed(() => [
       label: text.value.settings[mode],
       key: `appearance:${mode}`,
       icon: props.theme === mode ? renderIcon(CheckmarkOutline) : undefined,
+    })),
+  },
+  {
+    label: text.value.zoneVisibility.title,
+    key: "zone-visibility",
+    icon: renderIcon(GridOutline),
+    children: (["assets", "notes", "tasks", "workspace"] as const).map((zone) => ({
+      label: text.value.zoneVisibility[zone],
+      key: `zone:${zone}`,
+      icon: props.zoneVisibility[zone] ? renderIcon(CheckmarkOutline) : undefined,
     })),
   },
   { type: "divider", key: "appearance-divider" },
@@ -145,6 +161,12 @@ const options = computed(() => [
 ]);
 
 function handleSelect(key: string): void {
+  if (key === "zone:assets" || key === "zone:notes" || key === "zone:tasks" || key === "zone:workspace") {
+    keepOpenAfterZoneSelect = true;
+    emit("toggleZone", key.slice("zone:".length) as ZoneKey);
+    return;
+  }
+  menuOpen.value = false;
   if (key === "appearance:auto" || key === "appearance:light" || key === "appearance:dark") {
     emit("theme", key.slice("appearance:".length) as ThemeMode);
     return;
@@ -185,6 +207,10 @@ function handleSelect(key: string): void {
 }
 
 function handleDropdownShow(value: boolean): void {
+  if (!value && keepOpenAfterZoneSelect) {
+    keepOpenAfterZoneSelect = false;
+    return;
+  }
   menuOpen.value = value;
 }
 

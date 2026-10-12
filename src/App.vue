@@ -757,7 +757,7 @@ function toggleWorkspaceZone(workspaceId: string, zone: ZoneKey): void {
   persistNow();
 }
 
-// 顶栏「显示区域」按钮只作用于当前激活的工作空间。
+// 设置中的「显示区域」只作用于当前激活的工作空间。
 function toggleActiveWorkspaceZone(zone: ZoneKey): void {
   toggleWorkspaceZone(state.activeWorkspaceId, zone);
 }
@@ -3859,7 +3859,6 @@ function moveItem<T extends { id: string }>(items: T[], dragId: string, targetId
       :zone-width-ratios="activeWorkspace.zoneWidthRatios"
       :inbox-sync-enabled="hasInboxConfigured"
       :inbox-syncing="inboxPullInFlight"
-      @toggle-zone="toggleActiveWorkspaceZone"
       @sync-inbox="requestManualInboxSync"
       @dragover.prevent
       @drop.prevent="handleBoardDrop"
@@ -3902,6 +3901,7 @@ function moveItem<T extends { id: string }>(items: T[], dragId: string, targetId
       <template #actions>
         <SettingsMenu
           :theme="state.theme"
+          :zone-visibility="activeWorkspace.zoneVisibility"
           :app-version="appVersion"
           :update-available="versionPromptVisible"
           :companion-gif-theme="state.companionGifTheme"
@@ -3920,6 +3920,7 @@ function moveItem<T extends { id: string }>(items: T[], dragId: string, targetId
           @changelog="changelogVisible = true"
           @language="updateLanguage"
           @theme="(theme) => { state.theme = theme; hideCompanion(); }"
+          @toggle-zone="toggleActiveWorkspaceZone"
           @gif-theme="updateCompanionGifTheme"
           @custom-gif="updateCustomCompanionGif"
           @guide="handleGuideClick"

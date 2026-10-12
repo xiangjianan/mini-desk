@@ -41,7 +41,7 @@ const dropdownStub = defineComponent({
           :class="{ 'is-selected': isChecked(child) }"
           :data-key="child.key"
           type="button"
-          @click="$emit('select', child.key)"
+          @click="$emit('select', child.key); $emit('update:show', false)"
         >
           {{ child.label }}
         </button>
@@ -75,6 +75,35 @@ function findVersionBadge(wrapper: ReturnType<typeof mount>) {
 }
 
 describe("SettingsMenu", () => {
+  it.each(["zh", "en"] as const)("groups localized visible areas below appearance and permits repeated toggles in %s", async (language) => {
+    const wrapper = mount(SettingsMenu, {
+      props: {
+        appVersion: "1.1.0", updateAvailable: false, companionGifTheme: "none", language,
+        zoneVisibility: { assets: true, notes: true, tasks: false, workspace: true },
+      },
+      global: { stubs: { Dropdown: dropdownStub, NDropdown: dropdownStub } },
+    });
+    const dropdown = wrapper.getComponent(dropdownStub);
+    const options = dropdown.props("options") as Array<{ key: string }>;
+    expect(options.slice(0, 3).map(option => option.key)).toEqual(["appearance", "zone-visibility", "appearance-divider"]);
+    expect(wrapper.get('[data-key="zone-visibility"]').text()).toBe(language === "zh" ? "显示区域" : "Visible areas");
+    expect(wrapper.get('[data-key="zone:tasks"]').text()).toBe(language === "zh" ? "提醒事项" : "Reminders");
+    expect(wrapper.get('[data-key="zone:tasks"]').classes()).not.toContain("is-selected");
+    expect(wrapper.get('[data-key="zone:assets"]').classes()).toContain("is-selected");
+    dropdown.vm.$emit("update:show", true);
+    await wrapper.vm.$nextTick();
+    for (const zone of ["assets", "notes", "tasks", "workspace"] as const) {
+      await wrapper.get(`[data-key="zone:${zone}"]`).trigger("click");
+      expect(dropdown.props("show")).toBe(true);
+    }
+    expect(wrapper.emitted("toggleZone")).toEqual([["assets"], ["notes"], ["tasks"], ["workspace"]]);
+    await wrapper.setProps({ zoneVisibility: { assets: false, notes: true, tasks: true, workspace: true } });
+    expect(wrapper.get('[data-key="zone:assets"]').classes()).not.toContain("is-selected");
+    expect(wrapper.get('[data-key="zone:tasks"]').classes()).toContain("is-selected");
+    await wrapper.get('[data-key="appearance:light"]').trigger("click");
+    expect(dropdown.props("show")).toBe(false);
+  });
+
   it.each(["zh", "en"] as const)("offers explicit and system appearance in %s", async (language) => {
     const wrapper = mount(SettingsMenu, {
       props: { appVersion: "1.1.0", updateAvailable: false, companionGifTheme: "none", theme: "dark", language },

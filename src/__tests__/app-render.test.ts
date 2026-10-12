@@ -2833,6 +2833,27 @@ describe("App shell", () => {
     }
   });
 
+  it("toggles workspace areas through settings and persists their checked state", async () => {
+    const wrapper = mountApp();
+    try {
+      expect(wrapper.find('[data-testid="zone-visibility-trigger"]').exists()).toBe(false);
+      const settings = wrapper.getComponent(SettingsMenu);
+      expect(settings.props("zoneVisibility")!.tasks).toBe(true);
+      settings.vm.$emit("toggleZone", "tasks");
+      await nextTick();
+      expect(wrapper.find(".workbench-zone-tasks").exists()).toBe(false);
+      expect(settings.props("zoneVisibility")!.tasks).toBe(false);
+      const stored = JSON.parse(localStorage.getItem(STORAGE_KEY) || "{}");
+      expect(stored.workspaces.find((workspace: { id: string }) => workspace.id === stored.activeWorkspaceId).zoneVisibility.tasks).toBe(false);
+      settings.vm.$emit("toggleZone", "tasks");
+      await nextTick();
+      expect(wrapper.find(".workbench-zone-tasks").exists()).toBe(true);
+      expect(settings.props("zoneVisibility")!.tasks).toBe(true);
+    } finally {
+      wrapper.unmount();
+    }
+  });
+
   it("restores system appearance through settings and persists the preference", async () => {
     localStorage.setItem(STORAGE_KEY, JSON.stringify({ theme: "dark" }));
     const previousMatchMedia = window.matchMedia;
@@ -9233,12 +9254,12 @@ describe("App inbox pull wiring", () => {
     seedPairedState();
     const wrapper = mountApp();
     await flushAsyncComponents();
-    // 单按钮置于顶栏操作区首位（「显示区域」左侧），样式与其他顶栏 icon-button 一致。
+    // 单按钮置于顶栏操作区首位，样式与其他顶栏 icon-button 一致。
     const bar = wrapper.get('[data-testid="workbench-command-bar"]');
     expect(bar.findAll('[data-testid="inbox-sync"]')).toHaveLength(1);
     const button = bar.get('[data-testid="inbox-sync"]');
     expect(button.classes()).toContain("icon-button");
-    expect(button.element.compareDocumentPosition(wrapper.get('[data-testid="zone-visibility-trigger"]').element) & Node.DOCUMENT_POSITION_FOLLOWING).toBe(Node.DOCUMENT_POSITION_FOLLOWING);
+    expect(button.element.compareDocumentPosition(wrapper.get('[data-testid="workbench-header-hide"]').element) & Node.DOCUMENT_POSITION_FOLLOWING).toBe(Node.DOCUMENT_POSITION_FOLLOWING);
     wrapper.unmount();
   });
 

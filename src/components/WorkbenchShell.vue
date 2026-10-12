@@ -2,9 +2,8 @@
 import { computed, nextTick, onMounted, onUnmounted, ref, watch } from "vue";
 import { SyncOutline } from "@vicons/ionicons5";
 import { NIcon } from "naive-ui";
-import { PanelTopClose, PanelTopOpen } from "lucide-vue-next";
-import ZoneVisibilityPopover from "./ZoneVisibilityPopover.vue";
-import type { AppLanguage, ZoneKey, ZoneVisibility } from "../types";
+import { ChevronUp, ChevronDown } from "lucide-vue-next";
+import type { AppLanguage, ZoneVisibility } from "../types";
 import {
   DEFAULT_LANGUAGE,
   WORKBENCH_COLLAPSED_FIXED_LABELS_BY_LANGUAGE,
@@ -60,7 +59,6 @@ const zoneLabels = computed<readonly string[]>(() => {
 const expandHint = computed(() => (props.language === "en" ? "Click to expand" : "点击展开"));
 
 const emit = defineEmits<{
-  toggleZone: [zone: ZoneKey];
   syncInbox: [];
 }>();
 
@@ -755,7 +753,7 @@ onUnmounted(() => {
             <p v-if="slogan" class="workbench-slogan">{{ slogan }}</p>
           </div>
           <div class="workbench-command-actions">
-            <!-- 手机速记手动同步：配对才显示，样式与相邻顶栏 icon-button 一致（同隐藏/主题按钮硬编码中文标签）。 -->
+            <!-- 手机速记手动同步：配对才显示，样式与相邻顶栏 icon-button 一致。 -->
             <button
               v-if="props.inboxSyncEnabled"
               type="button"
@@ -770,11 +768,6 @@ onUnmounted(() => {
             >
               <NIcon :component="SyncOutline" :size="16" />
             </button>
-            <ZoneVisibilityPopover
-              :visibility="zoneVisibility"
-              :language="language"
-              @toggle="emit('toggleZone', $event)"
-            />
             <button
               type="button"
               class="icon-button workbench-header-hide-button"
@@ -783,7 +776,7 @@ onUnmounted(() => {
               title="隐藏顶部菜单"
               @click="setHeaderHidden(true, $event)"
             >
-              <PanelTopClose :size="16" />
+              <ChevronUp :size="16" />
             </button>
             <slot name="actions" />
           </div>
@@ -810,7 +803,7 @@ onUnmounted(() => {
             title="显示顶部菜单"
             @click="setHeaderHidden(false, $event)"
           >
-            <PanelTopOpen :size="16" />
+            <ChevronDown :size="16" />
           </button>
         </Transition>
       </div>
