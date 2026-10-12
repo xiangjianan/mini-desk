@@ -1099,7 +1099,8 @@ describe("TodoPanel", () => {
     for (const empty of [false, true]) {
       if (empty) await wrapper.setProps({ todos: { morning: [], noon: [], evening: [] } });
       const button = wrapper.get(`.todo-section[data-list-id="morning"] .todo-add-row`);
-      expect(button.text()).toBe("新增提醒事项");
+      expect(button.text()).toBe("");
+      expect(button.attributes("aria-label")).toBe("新增提醒事项");
       expect(button.attributes("type")).toBe("button");
       await button.trigger("click");
     }
