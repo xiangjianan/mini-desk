@@ -19,6 +19,23 @@ function expectSelectorBody(styles: string, selector: string, text: string): voi
 }
 
 describe("workbench style contract", () => {
+  it("keeps completing focus reminders in flow until their exit fade finishes", () => {
+    const styles = readFileSync(resolve(__dirname, "../styles.css"), "utf8");
+    expect(ruleBodies(styles, ".today-focus-move-leave-active").join("\n")).not.toMatch(/position:\s*absolute/);
+    expectSelectorBody(styles, ".today-focus-item", "position: relative");
+    expectSelectorBody(styles, ".today-focus-move-leave-active", "pointer-events: none");
+  });
+
+  it("insets the notebook scroll viewport and its mirror equally to preserve vertical whitespace", () => {
+    const styles = readFileSync(resolve(__dirname, "../desk.css"), "utf8");
+    expectSelectorBody(styles, ".workbench-shell .text-editor-frame", "padding-block: 20px");
+    expectSelectorBody(styles, ".workbench-shell .text-editor-frame > .text-mirror", "top: 20px");
+    expectSelectorBody(styles, ".workbench-shell .text-editor-frame > .text-mirror", "bottom: 20px");
+    expectSelectorBody(styles, ".workbench-shell .text-editor-frame > .text-mirror", "height: calc(100% - 40px)");
+    expectSelectorBody(styles, ".workbench-shell .text-editor-textarea", "padding: 0 16px");
+    expectSelectorBody(styles, ".workbench-shell .text-mirror", "padding: 0 16px");
+  });
+
   it("uses a rail-free rounded surface model instead of boxed borders", () => {
     const styles = readFileSync(resolve(__dirname, "../styles.css"), "utf8");
 

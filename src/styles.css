@@ -2934,11 +2934,15 @@ button.todo-star-button {
   position: relative;
 }
 
-.todo-move-leave-active,
-.today-focus-move-leave-active {
+.todo-move-leave-active {
   position: absolute;
   left: 6px;
   right: 6px;
+  pointer-events: none;
+}
+
+/* Keep the focus row's space until its fade finishes, so the next row cannot overlap it. */
+.today-focus-move-leave-active {
   pointer-events: none;
 }
 

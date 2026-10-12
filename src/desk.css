@@ -382,11 +382,19 @@ html[data-theme="dark"] .workbench-shell,
 .workbench-shell .space-tab-edit-shell { height: 32px; min-height: 32px; border-radius: 8px; background: var(--desk-group-surface); }
 .workbench-shell .space-tab-edit-input,
 .workbench-shell .space-tab-edit-measure { height: 32px; min-height: 32px; }
+.workbench-shell .text-editor-frame {
+  padding-block: 20px;
+}
+.workbench-shell .text-editor-frame > .text-mirror {
+  top: 20px;
+  bottom: 20px;
+  height: calc(100% - 40px);
+}
 .workbench-shell .text-editor-textarea,
 .workbench-shell .text-mirror {
   font-size: 14px;
   line-height: 1.85;
-  padding: 20px 16px;
+  padding: 0 16px;
 }
 
 /* 专注弹窗经 NModal 传送门挂在 body 下，吃不到 .workbench-shell 的记事本排版；
