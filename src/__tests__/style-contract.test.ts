@@ -105,12 +105,11 @@ describe("workbench style contract", () => {
     expectSelectorBody(styles, "button:not(.icon-button)", "min-height: 30px");
   });
 
-  it("keeps the settings custom GIF dialog above workspace content", () => {
-    const styles = readFileSync(resolve(__dirname, "../styles.css"), "utf8");
+  it("centers the custom GIF dialog in a modal above workspace content", () => {
+    const menu = readFileSync(resolve(__dirname, "../components/SettingsMenu.vue"), "utf8");
 
-    expectSelectorBody(styles, ".workbench-command-bar", "overflow: visible");
-    expectSelectorBody(styles, ".workbench-command-bar", "z-index: 4200");
-    expectSelectorBody(styles, ".gif-theme-custom-dialog", "z-index: 4210");
+    expect(menu).toContain('class="quick-dialog gif-theme-custom-modal"');
+    expect(menu).toContain(':z-index="CONTEXT_MENU_Z_INDEX + 1"');
   });
 
   it("reserves the companion GIF trigger size before the asset loads", () => {
@@ -434,8 +433,8 @@ describe("workbench style contract", () => {
   it("separates the rounded focus list with spacing instead of a divider", () => {
     const styles = readFileSync(resolve(__dirname, "../styles.css"), "utf8");
 
-    expectSelectorBody(styles, ".today-focus-section + .todo-sections", "border-top: 0");
-    expectSelectorBody(styles, ".todo-content-scroll > .today-focus-section", "margin: 6px 0 12px");
+    expectSelectorBody(styles, ".todo-content-scroll > .todo-focus-region > .today-focus-section", "margin: 6px 0 12px");
+    expectSelectorBody(styles, ".todo-content-scroll > .todo-focus-region > .today-focus-section", "border-radius: var(--radius)");
     expect(styles).not.toMatch(/\.todo-section:first-child \.todo-heading\s*\{[^}]*border-top/);
   });
 

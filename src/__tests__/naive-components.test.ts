@@ -686,8 +686,8 @@ describe("Naive UI component usage", () => {
     expect(styles).toMatch(/\.today-focus-heading\s*\{[^}]*border-bottom: 0\.5px solid var\(--line-section\)/s);
     expect(styles).toMatch(/\.today-focus-heading\s*\{[^}]*box-shadow: inset 0 -1px/s);
     expect(styles).toMatch(/\.today-focus-list\s*\{[^}]*padding: 0/s);
-    expect(styles).toMatch(/\.today-focus-item\s*\{[^}]*grid-template-columns: 54px minmax\(0, 1fr\) 26px 26px/s);
-    expect(styles).toMatch(/\.today-focus-item\.has-notify\s*\{[^}]*grid-template-columns: 54px minmax\(0, 1fr\) minmax\(0, 64px\) 26px/s);
+    expect(styles).toMatch(/\.today-focus-item\s*\{[^}]*grid-template-columns: 24px minmax\(0, 1fr\) 26px 26px/s);
+    expect(styles).toMatch(/\.today-focus-item\.has-notify\s*\{[^}]*grid-template-columns: 24px minmax\(0, 1fr\) minmax\(0, 64px\) 26px/s);
     expect(styles).toMatch(/\.today-focus-item \.todo-notify-button\s*\{[^}]*grid-column: 3/s);
     expect(styles).toMatch(/\.today-focus-item\s*\{[^}]*gap: 0/s);
     expect(styles).toMatch(/\.today-focus-item\s*\{[^}]*height: 34px/s);
@@ -698,10 +698,10 @@ describe("Naive UI component usage", () => {
     expect(styles).toMatch(/\.today-focus-item::after,[\s\S]*?\.todo-item::after\s*\{[^}]*left: 6px/s);
     expect(styles).toMatch(/\.today-focus-item::after,[\s\S]*?\.todo-item::after\s*\{[^}]*right: 6px/s);
     expect(styles).toMatch(/\.today-focus-item:last-child::after\s*\{[^}]*display: none/s);
-    expect(styles).toMatch(/\.today-focus-section \+ \.todo-sections\s*\{[^}]*border-top: 0/s);
+    expect(styles).toMatch(/\.todo-focus-region \+ \.todo-sections\s*\{[^}]*border-top: 0/s);
     expect(styles).toMatch(/\.todo-item \.n-checkbox\s*\{[^}]*justify-self: center/s);
-    expect(styles).toMatch(/\.today-focus-item \.n-checkbox\s*\{[^}]*justify-self: start/s);
-    expect(styles).toMatch(/\.today-focus-item \.n-checkbox\s*\{[^}]*margin-left: 30\.5px/s);
+    expect(styles).toMatch(/\.today-focus-item \.n-checkbox\s*\{[^}]*justify-self: center/s);
+    expect(styles).toMatch(/\.today-focus-item \.n-checkbox\s*\{[^}]*margin-left: 0;/s);
     expect(styles).toMatch(/\.today-focus-input\s*\{[^}]*height: 34px/s);
   });
 
