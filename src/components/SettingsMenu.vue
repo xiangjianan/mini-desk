@@ -14,7 +14,7 @@ import {
   Smartphone as PhonePortraitOutline,
   Database as ServerOutline,
   Settings as SettingsOutline,
-  CircleFadingPlus as ContrastOutline,
+  SunMoon,
   LayoutGrid as GridOutline,
   Trash2 as TrashOutline,
 } from "lucide-vue-next";
@@ -111,7 +111,7 @@ const options = computed(() => [
   {
     label: text.value.settings.appearance,
     key: "appearance",
-    icon: renderIcon(ContrastOutline),
+    icon: renderIcon(SunMoon),
     children: (["auto", "light", "dark"] as const).map((mode) => ({
       label: text.value.settings[mode],
       key: `appearance:${mode}`,

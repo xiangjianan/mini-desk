@@ -6,6 +6,8 @@
   --desk-surface: #f8f9fa;
   --desk-card-radius: 12px;
   --desk-row-hover: #f1f5f9;
+  --desk-tab-hover: #e2e8f0;
+  --desk-tab-active-hover: #f8fafc;
   --desk-selected-surface: #e5efff;
   --desk-selected-text: #005ac1;
   --desk-zone-accent: var(--muted);
@@ -33,6 +35,8 @@
 html[data-theme="dark"] .workbench-shell {
   --desk-surface: #242426;
   --desk-row-hover: #353539;
+  --desk-tab-hover: #3f3f46;
+  --desk-tab-active-hover: #353539;
   --desk-group-surface: #303032;
   --desk-group-content: var(--card);
   --desk-selected-surface: #243c59;
@@ -344,16 +348,17 @@ html[data-theme="dark"] .workbench-shell,
   box-shadow: var(--desk-card-shadow);
 }
 
-.workbench-shell .space-tabs-scrollbar,
+/* 42px outer strip = 5px inset + 32px tab row + 5px inset. */
+.workbench-shell .space-tabs-scrollbar { height: 42px; min-height: 42px; padding: 5px 4px; }
 .workbench-shell .space-tabs-scrollbar-inner,
-.workbench-shell .space-tabs { height: 42px; min-height: 42px; }
+.workbench-shell .space-tabs { height: 32px; min-height: 32px; }
 .workbench-shell .space-tabs-scrollbar {
   flex-basis: 42px;
   border: 0;
   border-radius: 10px;
   background: var(--desk-group-surface);
 }
-.workbench-shell .space-tabs { gap: 3px; padding-inline: 4px; align-items: center; }
+.workbench-shell .space-tabs { gap: 3px; padding-inline: 4px; align-items: center; overflow: visible; }
 .workbench-shell button.space-tab {
   font-size: 13px;
   font-weight: 500;
@@ -370,7 +375,10 @@ html[data-theme="dark"] .workbench-shell,
   background: var(--card);
   box-shadow: var(--desk-control-shadow), 0 0 0 1px var(--line-subtle);
 }
-.workbench-shell button.space-tab:hover { background: var(--secondary); }
+.workbench-shell button.space-tab:hover,
+.workbench-shell button.space-tab:focus-visible { background: var(--desk-tab-hover); }
+.workbench-shell button.space-tab.is-active:hover,
+.workbench-shell button.space-tab.is-active:focus-visible { background: var(--desk-tab-active-hover); }
 .workbench-shell .space-tab-edit-shell { height: 32px; min-height: 32px; border-radius: 8px; background: var(--desk-group-surface); }
 .workbench-shell .space-tab-edit-input,
 .workbench-shell .space-tab-edit-measure { height: 32px; min-height: 32px; }
