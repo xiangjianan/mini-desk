@@ -160,7 +160,16 @@ html[data-theme="dark"] .workbench-shell,
 .workbench-shell .header-actions { flex-shrink: 0; gap: 2px; }
 .workbench-shell .icon-button { box-shadow: none; background: transparent; border-radius: 8px; color: var(--muted); }
 .workbench-shell .icon-button:hover,
-.workbench-shell .icon-button:focus-visible { background: var(--secondary); color: var(--primary); }
+.workbench-shell .icon-button:focus-visible { background: var(--secondary); color: var(--primary); box-shadow: none; }
+.workbench-shell .icon-button .n-button__border,
+.workbench-shell .icon-button .n-button__state-border { display: none; }
+.workbench-shell .panel-header .desk-ai-action {
+  background: transparent;
+  border: 0;
+  box-shadow: none;
+}
+.workbench-shell .panel-header .desk-ai-action:hover,
+.workbench-shell .panel-header .desk-ai-action:focus-visible { background: var(--secondary); }
 .workbench-shell button:focus-visible { outline: 2px solid var(--ring); outline-offset: 2px; }
 
 /* Keep image cards in place and move the scroll rail into the outer inset. */
@@ -416,9 +425,18 @@ html[data-theme="dark"] .workbench-shell,
 .workbench-shell .desk-ai-button:hover,
 .workbench-shell .desk-ai-button:focus-visible { color: var(--primary); }
 
-.workbench-shell .workbench-resizer::before { top: 0; bottom: 0; width: 2px; }
+.workbench-shell .workbench-resizer::before {
+  top: 50%; bottom: auto; width: 4px; height: 56px;
+  transform: translate(-50%, -50%);
+}
 .workbench-shell .workbench-resizer:hover::before,
-.workbench-shell .workbench-resizer:focus-visible::before { background: var(--primary); }
+.workbench-shell .workbench-resizer:focus-visible::before {
+  background: color-mix(in srgb, var(--muted) 24%, transparent);
+}
+.workbench-shell .workbench-resizer:active::before {
+  background: color-mix(in srgb, var(--muted) 40%, transparent);
+  transform: translate(-50%, -50%);
+}
 
 /* Keep controls usable after a user resizes a column below its default. */
 @container (max-width: 235px) {
@@ -598,15 +616,36 @@ html[data-theme="dark"] .workbench-shell,
   left: 50%;
   top: 50%;
   transform: translate(-50%, -50%);
-  width: 48px;
-  min-width: 48px;
-  border-radius: 8px;
+  width: 192px;
+  min-width: 192px;
+  border-radius: 0;
   box-shadow: none;
 }
-.workbench-shell .workbench-title-group { max-width: calc(50% - 56px); }
+.workbench-shell .workbench-title-group { max-width: calc(50% - 104px); }
 .workbench-shell .workbench-command-actions { margin-inline-start: auto; }
-.workbench-shell .workbench-header-hide-button:hover {
-  background: var(--fill-tertiary);
+.workbench-shell .workbench-header-reveal-zone { width: 192px; }
+.workbench-shell .workbench-header-reveal {
+  left: 50%;
+  margin-left: -96px;
+  width: 192px;
+  min-width: 192px;
+  border-radius: 0;
+  background: linear-gradient(to right, transparent, var(--fill-tertiary) 50%, transparent);
+}
+.workbench-shell .workbench-header-hide-button:hover,
+.workbench-shell .workbench-header-hide-button:focus-visible,
+.workbench-shell .workbench-header-reveal:hover,
+.workbench-shell .workbench-header-reveal:focus-visible,
+.workbench-shell .workbench-header-reveal:active {
+  background: linear-gradient(to right, transparent, var(--fill-tertiary) 50%, transparent);
+  box-shadow: none;
+}
+.workbench-shell .workspace-trigger,
+.workbench-shell .workspace-trigger:hover,
+.workbench-shell .workspace-trigger:active,
+.workbench-shell .workspace-trigger:focus-visible {
+  background: transparent;
+  border-color: transparent;
   box-shadow: none;
 }
 
