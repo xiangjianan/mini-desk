@@ -172,7 +172,7 @@ function regionPairingScore(beforeRegion: string[], afterRegion: string[], delta
 }
 
 /**
- * 文本变更后的 marks 平移器。纯换行插入按全文偏移保留原文格式；其他编辑用
+ * 文本变更后的 marks 平移器。包含换行的纯插入/删除按全文偏移保留原文格式；其他编辑用
  * 行级公共前缀/后缀对齐夹出变化区段；区段内等行数时
  * 逐行等价改写（重编号级联改写多行也走这里），行数不等时按连续缺口对齐（见
  * buildRegionPairing），行内再用前后缀 diff 夹出编辑区。打字、粘贴、IME、AI 润色
@@ -182,6 +182,17 @@ export function translateMarksForEdit(marks: TextMark[], previous: string, next:
   if (previous === next || marks.length === 0) return marks;
   const insertionStart = getCommonPrefixLength(previous, next);
   const addedLength = next.length - previous.length;
+  if (addedLength < 0 && previous.slice(insertionStart, insertionStart - addedLength).includes("\n") &&
+    previous.slice(insertionStart - addedLength) === next.slice(insertionStart)) {
+    // Removing a line boundary joins surviving text rather than deleting a
+    // whole logical line. Map the actual removed span before line pairing;
+    // automatic renumbering is handled separately by the editor.
+    const edit = { start: insertionStart, removed: -addedLength, added: 0 };
+    return marks.flatMap((mark): TextMark[] => {
+      const translated = translateRangeThroughEdit(mark, edit);
+      return translated ? [translated] : [];
+    });
+  }
   if (addedLength > 0 && next.slice(insertionStart, insertionStart + addedLength).includes("\n") &&
     previous.slice(insertionStart) === next.slice(insertionStart + addedLength)) {
     // A line break moves existing text; it does not replace it. Split marks

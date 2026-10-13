@@ -2336,6 +2336,34 @@ describe("TextPanel", () => {
     expect(wrapper.emitted("update")?.length).toBe(1);
   });
 
+  it.each(["highlight", "color"] as const)("编号行合并后保留 %s、重编号与撤销恢复", async (type) => {
+    const wrapper = mount(TextPanel, {
+      props: { titleId: "workspace-title", title: "记事本", lines: [
+        { text: "1. 第一", indent: 0 },
+        { text: "2. 第二", indent: 0, marks: [{ type, color: "blue", start: 3, end: 5 }] },
+        { text: "3. 第三", indent: 0, marks: [{ type, color: "rose", start: 3, end: 5 }] },
+      ] },
+    });
+    const input = wrapper.get("textarea");
+    const textarea = input.element;
+    await input.trigger("dblclick");
+    // Native Backspace at the second line's start removes only the newline.
+    textarea.value = "1. 第一2. 第二\n3. 第三";
+    textarea.setSelectionRange(5, 5);
+    await input.trigger("input");
+    const merged = wrapper.emitted("update")?.at(-1)?.[0] as LineItem[];
+    expect(merged).toEqual([
+      { text: "1. 第一2. 第二", indent: 0, marks: [{ type, color: "blue", start: 8, end: 10 }] },
+      { text: "2. 第三", indent: 0, marks: [{ type, color: "rose", start: 3, end: 5 }] },
+    ]);
+    await wrapper.setProps({ lines: merged });
+    expect(wrapper.get("textarea").element.value).toBe("1. 第一2. 第二\n2. 第三");
+    await input.trigger("keydown", { key: "z", ctrlKey: true });
+    const restored = wrapper.emitted("update")?.at(-1)?.[0] as LineItem[];
+    expect(restored[1]).toEqual({ text: "2. 第二", indent: 0, marks: [{ type, color: "blue", start: 3, end: 5 }] });
+    wrapper.unmount();
+  });
+
   it("无选区时快捷键静默不动作", async () => {
     const wrapper = mount(TextPanel, {
       props: { titleId: "workspace-title", title: "工作空间", lines: [{ text: "hello", indent: 0 }] },

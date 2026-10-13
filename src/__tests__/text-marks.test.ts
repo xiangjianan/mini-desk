@@ -92,6 +92,29 @@ describe("translateMarksForEdit — 文本变更平移", () => {
     expect(translateMarksForEdit([hl(1, 5)], "abcde", "abc\n    - de")).toEqual([hl(1, 3), hl(10, 12)]);
   });
 
+  it.each(["highlight", "color"] as const)("合并编号行时保留后行的 %s 标记", (type) => {
+    const previous = "1. 第一\n2. 第二\n3. 第三";
+    const next = "1. 第一2. 第二\n3. 第三";
+    expect(translateMarksForEdit([
+      { type, color: "blue", start: 9, end: 11 },
+      { type, color: "rose", start: 15, end: 17 },
+    ], previous, next)).toEqual([
+      { type, color: "blue", start: 8, end: 10 },
+      { type, color: "rose", start: 14, end: 16 },
+    ]);
+  });
+
+  it("删除换行及编号前缀时只移除被删文字的标记", () => {
+    expect(translateMarksForEdit([
+      { type: "highlight", color: "amber", start: 3, end: 5 },
+      { type: "color", color: "blue", start: 9, end: 11 },
+      { type: "underline", start: 5, end: 9 },
+    ], "1. 第一\n2. 第二", "1. 第一第二")).toEqual([
+      { type: "highlight", color: "amber", start: 3, end: 5 },
+      { type: "color", color: "blue", start: 5, end: 7 },
+    ]);
+  });
+
   it("整块行删除：区间内 marks 消失，其后 marks 平移", () => {
     expect(translateMarksForEdit([hl(0, 2), hl(4, 5)], "ab\ncd\nef", "ab\nef")).toEqual([hl(0, 2)]);
   });
