@@ -410,6 +410,7 @@ html[data-theme="dark"] .workbench-shell,
   padding-inline: 12px;
 }
 .workbench-shell .space-tab.is-active {
+  border-radius: 8px;
   font-weight: 600;
   color: var(--text);
   background: var(--card);
@@ -419,7 +420,7 @@ html[data-theme="dark"] .workbench-shell,
 .workbench-shell button.space-tab:focus-visible { background: var(--desk-tab-hover); }
 .workbench-shell button.space-tab.is-active:hover,
 .workbench-shell button.space-tab.is-active:focus-visible { background: var(--desk-tab-active-hover); }
-.workbench-shell .space-tab-edit-shell { height: 32px; min-height: 32px; border-radius: 8px 8px 0 0; background: var(--desk-group-surface); }
+.workbench-shell .space-tab-edit-shell { height: 32px; min-height: 32px; border-radius: 8px; background: var(--card); }
 .workbench-shell .space-tab-edit-input,
 .workbench-shell .space-tab-edit-measure { height: 32px; min-height: 32px; }
 .workbench-shell .text-editor-frame {
