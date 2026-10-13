@@ -672,6 +672,8 @@ html[data-theme="dark"] .workbench-shell,
   top: 11.5px;
   left: 50%;
   margin-left: -32px;
+  color: var(--foreground);
+  background: var(--button-hover);
   opacity: 0;
   pointer-events: none;
 }
