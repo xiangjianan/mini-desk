@@ -79,7 +79,7 @@ html[data-theme="dark"] .workbench-shell,
 .workbench-zone {
   padding: 16px 18px;
   border-radius: 0;
-  border-inline-end: 1px solid transparent;
+  border-inline-end: 1px solid var(--desk-edge);
   box-shadow: none;
   background: var(--desk-surface);
   backdrop-filter: none;
