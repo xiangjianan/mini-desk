@@ -822,6 +822,41 @@ describe("WorkbenchShell", () => {
     hiddenTasks.unmount();
   });
 
+  it("animates surviving column widths when zones are hidden and shown", async () => {
+    mockWideGridMetrics();
+    let frame: FrameRequestCallback | undefined;
+    vi.spyOn(window, "requestAnimationFrame").mockImplementation((callback) => {
+      frame = callback;
+      return 1;
+    });
+    const cancel = vi.spyOn(window, "cancelAnimationFrame").mockImplementation(() => {});
+    vi.spyOn(performance, "now").mockReturnValue(0);
+    const wrapper = mount(WorkbenchShell, { props: defaultProps });
+    await nextTick(); await nextTick();
+    const initial = Number.parseFloat(readColumnTracks(wrapper)[0]);
+    await wrapper.setProps({ zoneVisibility: { assets: true, notes: true, tasks: false, workspace: true } });
+    await nextTick(); await nextTick();
+    expect(Number.parseFloat(readColumnTracks(wrapper)[0])).toBe(initial);
+    frame!(120);
+    await nextTick();
+    const middle = Number.parseFloat(readColumnTracks(wrapper)[0]);
+    expect(middle).toBeGreaterThan(initial);
+    frame!(240);
+    await nextTick();
+    const expanded = Number.parseFloat(readColumnTracks(wrapper)[0]);
+    expect(expanded).toBeGreaterThan(middle);
+    await wrapper.setProps({ zoneVisibility: { assets: true, notes: true, tasks: true, workspace: true } });
+    await nextTick(); await nextTick();
+    expect(Number.parseFloat(readColumnTracks(wrapper)[0])).toBe(expanded);
+    frame!(120);
+    await nextTick();
+    expect(Number.parseFloat(readColumnTracks(wrapper)[0])).toBeLessThan(expanded);
+    await wrapper.setProps({ zoneVisibility: { assets: true, notes: false, tasks: true, workspace: true } });
+    await nextTick(); await nextTick();
+    expect(cancel).toHaveBeenCalled();
+    wrapper.unmount();
+  });
+
   it("restores all four zones when a hidden zone becomes visible again", async () => {
     mockWideGridMetrics();
     const wrapper = mount(WorkbenchShell, {

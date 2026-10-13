@@ -110,6 +110,12 @@ let observedGridWidth = 0;
 // readStoredHeaderHidden 是函数声明，提升后可在此直接调用。
 const headerHidden = ref(readStoredHeaderHidden());
 const columnWidths = ref<number[]>([]);
+let visibilityAnimationFrame: number | undefined;
+
+function stopVisibilityAnimation(): void {
+  if (visibilityAnimationFrame !== undefined) window.cancelAnimationFrame(visibilityAnimationFrame);
+  visibilityAnimationFrame = undefined;
+}
 const gridGap = ref(DEFAULT_GRID_GAP);
 const gridPadding = ref({
   top: DEFAULT_GRID_PADDING_Y,
@@ -404,6 +410,7 @@ function syncImagePreviewTop(): void {
 }
 
 function refreshWorkbenchLayout(): void {
+  stopVisibilityAnimation();
   syncImagePreviewTop();
   const metrics = readGridMetrics();
   if (!metrics) return;
@@ -520,6 +527,7 @@ function finishResize(): void {
 }
 
 function startResize(event: PointerEvent, index: number, trailing = false): void {
+  stopVisibilityAnimation();
   if (columnWidths.value.length !== activeMins.value.length) refreshWorkbenchLayout();
   if (columnWidths.value.length !== activeMins.value.length) return;
   event.preventDefault();
@@ -530,6 +538,7 @@ function startResize(event: PointerEvent, index: number, trailing = false): void
 
 function resizeWithKeyboard(event: KeyboardEvent, index: number, trailing = false): void {
   if (!["ArrowLeft", "ArrowRight"].includes(event.key)) return;
+  stopVisibilityAnimation();
   if (columnWidths.value.length !== activeMins.value.length) return;
   event.preventDefault();
   applyResizeDelta(index, event.key === "ArrowRight" ? RESIZE_STEP : -RESIZE_STEP, columnWidths.value, trailing);
@@ -603,11 +612,37 @@ watch(
 // When zones are shown/hidden the active column set changes: re-fit the visible
 // zones to the grid width so they redivide the freed space.
 watch(
-  () => props.zoneVisibility,
-  () => {
-    void nextTick(refreshWorkbenchLayout);
+  activeIndices,
+  (indices, previousIndices) => {
+    const previousWidths = [...columnWidths.value];
+    stopVisibilityAnimation();
+    void nextTick(() => {
+      refreshWorkbenchLayout();
+      const targetWidths = [...columnWidths.value];
+      if (window.innerWidth <= DESKTOP_RESIZE_BREAKPOINT
+        || window.matchMedia?.("(prefers-reduced-motion: reduce)").matches
+        || previousWidths.length !== previousIndices.length
+        || targetWidths.length !== indices.length || !indices.length) return;
+
+      // Keep surviving zones at their current widths, then reflow the real
+      // columns each frame so text, dividers and the preview move together.
+      const startWidths = indices.map((index, position) => {
+        const previousPosition = previousIndices.indexOf(index);
+        return previousPosition >= 0 ? previousWidths[previousPosition] : targetWidths[position];
+      });
+      columnWidths.value = startWidths;
+      const startedAt = performance.now();
+      const step = (now: number) => {
+        const progress = Math.min(1, Math.max(0, (now - startedAt) / 240));
+        const eased = 1 - (1 - progress) ** 3;
+        columnWidths.value = targetWidths.map((target, index) =>
+          startWidths[index] + (target - startWidths[index]) * eased);
+        syncImagePreviewLeft();
+        visibilityAnimationFrame = progress < 1 ? window.requestAnimationFrame(step) : undefined;
+      };
+      visibilityAnimationFrame = window.requestAnimationFrame(step);
+    });
   },
-  { deep: true },
 );
 
 // 切换工作区时区域尺寸跟着换：丢弃当前列宽，让布局按新工作区的存储宽度
@@ -615,6 +650,7 @@ watch(
 watch(
   () => [props.workspaceId, props.zoneWidthRatios],
   () => {
+    stopVisibilityAnimation();
     columnWidths.value = [];
     soloAssetsEngaged.value = false;
     void nextTick(refreshWorkbenchLayout);
@@ -643,6 +679,7 @@ onMounted(() => {
 });
 
 onUnmounted(() => {
+  stopVisibilityAnimation();
   disposeScrollActivity?.();
   gridResizeObserver?.disconnect();
   if (gridResizeFrame !== undefined) window.cancelAnimationFrame(gridResizeFrame);
