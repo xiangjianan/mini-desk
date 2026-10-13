@@ -3,7 +3,6 @@ import { computed, h, nextTick, onMounted, onUnmounted, ref, watch } from "vue";
 import type { Component, ComponentPublicInstance, VNode } from "vue";
 import { NDropdown, NIcon, NScrollbar } from "naive-ui";
 import {
-  Plus as AddOutline,
   ArrowDown as ArrowDownOutline,
   ArrowUp as ArrowUpOutline,
   Clipboard as ClipboardOutline,
@@ -90,9 +89,7 @@ const imageCardRefs = new Map<string, HTMLElement>();
 const imageDragPreview = ref<ImageDragPreview | null>(null);
 const pasteHighlightedId = ref<string | null>(null);
 const externalDropTargetId = ref<string | null>(null);
-const addButtonRef = ref<HTMLElement | null>(null);
 const pasteButtonRef = ref<HTMLElement | null>(null);
-let pickerInput: HTMLInputElement | null = null;
 const uiText = computed(() => getUiText(props.language));
 const guideMenuOption = computed<DropdownOption>(() => ({ ...GUIDE_MENU_OPTION, label: uiText.value.common.tips }));
 const exclusiveMenu = createExclusiveContextMenu(closeMenu);
@@ -146,7 +143,6 @@ onUnmounted(() => {
   window.removeEventListener("wheel", handleImageDragWheel, { capture: true });
   cleanupImagePointerDrag();
   dragAutoScroll.reset();
-  cleanupPickerInput();
   if (pasteHighlightTimer !== undefined) window.clearTimeout(pasteHighlightTimer);
 });
 
@@ -212,40 +208,6 @@ function closeMenu(): void {
 
 function pasteFromHeader(): void {
   emit("paste", { placement: "append", anchor: pasteButtonRef.value ?? undefined });
-}
-
-function openImagePicker(event: MouseEvent): void {
-  event.stopPropagation();
-  // Build the picker on demand and remove it after use. A transient
-  // <input type="file"> (rather than a persistent one in the template) avoids
-  // shadowing the app-level import input, which tests and a11y tools select as
-  // the document's first file input.
-  cleanupPickerInput();
-  const input = document.createElement("input");
-  input.type = "file";
-  input.accept = "image/*";
-  input.multiple = true;
-  input.className = "image-file-input";
-  input.setAttribute("aria-label", uiText.value.images.addImage);
-  input.addEventListener("change", handleImageInputChange);
-  document.body.appendChild(input);
-  pickerInput = input;
-  input.click();
-}
-
-function handleImageInputChange(event: Event): void {
-  const input = event.target as HTMLInputElement;
-  const files = Array.from(input.files ?? []);
-  cleanupPickerInput();
-  if (files.length === 0) return;
-  emit("dropFiles", files, addButtonRef.value ?? undefined);
-}
-
-function cleanupPickerInput(): void {
-  if (!pickerInput) return;
-  pickerInput.removeEventListener("change", handleImageInputChange);
-  pickerInput.remove();
-  pickerInput = null;
 }
 
 function setImageCardRef(id: string, element: Element | ComponentPublicInstance | null): void {
@@ -623,16 +585,6 @@ function handleImageDragWheel(event: WheelEvent): void {
           @click="pasteFromHeader"
         >
           <NIcon :component="ClipboardOutline" />
-        </button>
-        <button
-          ref="addButtonRef"
-          class="image-add-button icon-button"
-          type="button"
-          :aria-label="uiText.images.addImage"
-          :title="uiText.images.addImage"
-          @click="openImagePicker"
-        >
-          <NIcon :component="AddOutline" />
         </button>
       </div>
     </div>

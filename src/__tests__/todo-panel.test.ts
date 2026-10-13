@@ -115,6 +115,23 @@ const defaultTodoLists = [
 ];
 
 describe("TodoPanel", () => {
+  it("opens area settings from the header ellipsis and creates lists through its menu", async () => {
+    const wrapper = mount(TodoPanel, {
+      props: { todoLists: defaultTodoLists, todos: { morning: [], noon: [], evening: [] }, titles: DEFAULT_TITLES },
+      global: { stubs: { Dropdown: dropdownStub, NDropdown: dropdownStub } },
+    });
+    const trigger = wrapper.get('[data-testid="todo-area-menu"]');
+    expect(trigger.attributes("aria-label")).toBe("提醒事项菜单");
+    await trigger.trigger("click");
+    expect(wrapper.findAll(".dropdown-option").map(option => option.text()))
+      .toEqual(["新建列表", "最多展示列数", "Tips"]);
+    expect(wrapper.emitted("createList")).toBeUndefined();
+    await wrapper.get('[data-key="create-list"]').trigger("click");
+    await flushPromises();
+    expect(getLatestListCreateDialogElement()?.getAttribute("aria-label")).toBe("新建列表");
+    wrapper.unmount();
+  });
+
   it("measures native and overlay scrollbar gutters independently", async () => {
     const wrapper = mount(TodoPanel, { props: { todoLists: defaultTodoLists, todos: { morning: [], noon: [], evening: [] }, titles: DEFAULT_TITLES } });
     try {
@@ -621,7 +638,7 @@ describe("TodoPanel", () => {
     const input = dialog?.querySelector<HTMLInputElement>(".todo-list-create-input");
     expect(input?.getAttribute("autocomplete")).toBe("off");
     expect(input?.getAttribute("name")).toBe("mini-desk-todo-list-title");
-    expect(dialog?.getAttribute("aria-label")).toBe("新增提醒事项列表");
+    expect(dialog?.getAttribute("aria-label")).toBe("新建列表");
     expect(document.body.contains(dialog)).toBe(true);
     expect(dialog?.closest(".workbench-zone, .todo-panel")).toBeNull();
     expect(wrapper.emitted("createList")).toBeUndefined();

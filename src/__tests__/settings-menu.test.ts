@@ -83,6 +83,8 @@ describe("SettingsMenu", () => {
       global: { stubs: { Dropdown: dropdownStub, NDropdown: dropdownStub } },
     });
     const [zones, settings] = wrapper.findAllComponents(dropdownStub);
+    expect((settings.props("options") as Array<{ key: string }>).slice(0, 4).map(option => option.key))
+      .toEqual(["data", "language", "gif-theme", "preferences-divider"]);
     expect((settings.props("options") as Array<{key: string}>).map(option => option.key))
       .not.toEqual(expect.arrayContaining(["appearance", "zone-visibility"]));
     expect(wrapper.get('[data-testid="zone-visibility-trigger"]').attributes("aria-label")).toBe(language === "zh" ? "显示区域" : "Visible areas");

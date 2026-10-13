@@ -491,42 +491,10 @@ describe("ImagePanel", () => {
     wrapper.unmount();
   });
 
-  it("renders an add button that opens the native file picker on click", async () => {
-    const clickSpy = vi.spyOn(HTMLInputElement.prototype, "click").mockImplementation(() => {});
+  it("keeps paste available while removing the header add button", () => {
     const wrapper = mountImagePanel();
-
-    const button = wrapper.get(".image-add-button");
-    expect(button.attributes("aria-label")).toBe("新增图片");
-    expect(button.attributes("title")).toBe("新增图片");
-    expect(button.classes()).toContain("icon-button");
-    expect(button.find(".n-icon").exists()).toBe(true);
-
-    await button.trigger("click");
-
-    expect(clickSpy).toHaveBeenCalled();
-    const input = document.querySelector(".image-file-input") as HTMLInputElement | null;
-    expect(input).toBeTruthy();
-    expect(input!.accept).toBe("image/*");
-    expect(input!.multiple).toBe(true);
-    wrapper.unmount();
-  });
-
-  it("emits selected local files from the add button file picker", async () => {
-    vi.spyOn(HTMLInputElement.prototype, "click").mockImplementation(() => {});
-    const wrapper = mountImagePanel();
-
-    await wrapper.get(".image-add-button").trigger("click");
-
-    const input = document.querySelector(".image-file-input") as HTMLInputElement | null;
-    expect(input).toBeTruthy();
-
-    const file = new File(["img"], "local.png", { type: "image/png" });
-    Object.defineProperty(input!, "files", { configurable: true, value: [file] });
-    input!.dispatchEvent(new Event("change"));
-    await nextTick();
-
-    expect(wrapper.emitted("dropFiles")?.[0]).toEqual([[file], expect.any(HTMLElement)]);
-    expect(document.querySelector(".image-file-input")).toBeNull();
+    expect(wrapper.find(".image-add-button").exists()).toBe(false);
+    expect(wrapper.find(".image-paste-button").exists()).toBe(true);
     wrapper.unmount();
   });
 
@@ -548,7 +516,7 @@ describe("ImagePanel", () => {
     wrapper.unmount();
   });
 
-  it("places the count immediately left of the add button on the header row", () => {
+  it("places the count immediately left of paste on the header row", () => {
     const wrapper = mountImagePanel([
       { id: "a", src: "data:image/png;base64,a", createdAt: 1 },
       { id: "b", src: "data:image/png;base64,b", createdAt: 2 },
@@ -558,7 +526,7 @@ describe("ImagePanel", () => {
 
     expect(children[0]).toBe(wrapper.get(".count").element);
     expect(children[1]).toBe(wrapper.get(".image-paste-button").element);
-    expect(children[2]).toBe(wrapper.get(".image-add-button").element);
+    expect(children).toHaveLength(2);
     expect(wrapper.get(".count").text()).toBe("2");
     wrapper.unmount();
   });

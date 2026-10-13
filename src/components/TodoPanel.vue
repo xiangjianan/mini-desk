@@ -1085,9 +1085,9 @@ function openSectionMenu(event: MouseEvent, period: TodoPeriod): void {
 // 新建列表 stays reachable without expanding anything. Sections and the
 // today-focus area own their context menus; clicks that reach this handler
 // from inside them are the native-menu cases their own guards allow through.
-function openPanelMenu(event: MouseEvent): void {
+function openPanelMenu(event: MouseEvent, fromToolbar = false): void {
   const target = event.target as HTMLElement;
-  if (target.closest(".todo-section, .today-focus-section, button, input, textarea, [contenteditable]")) return;
+  if (!fromToolbar && target.closest(".todo-section, .today-focus-section, button, input, textarea, [contenteditable]")) return;
   const period = effectiveTodoLists.value[0]?.id;
   if (!period) return;
   event.preventDefault();
@@ -1987,8 +1987,8 @@ onUnmounted(() => focusRegionAnimation?.cancel());
     <div class="panel-header desk-zone-heading">
       <h2 id="todo-title"><NIcon :component="CheckboxOutline" /><span>{{ uiText.desk.reminders }}</span></h2>
       <div class="header-actions">
-        <button type="button" class="icon-button" :aria-label="uiText.todo.newList" :title="uiText.todo.newList"
-          @click.stop="openCreateListDialog($event.currentTarget as HTMLElement)"><NIcon :component="AddOutline" /></button>
+        <button type="button" class="icon-button" data-testid="todo-area-menu" :aria-label="uiText.todo.menu" :title="uiText.todo.menu"
+          @click.stop="openPanelMenu($event, true)"><NIcon :component="Ellipsis" /></button>
       </div>
     </div>
     <div class="todo-content-scroll" :class="{ 'is-multi-column': columnCount > 1 }">

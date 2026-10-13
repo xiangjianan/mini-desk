@@ -133,7 +133,6 @@ const options = computed(() => [
       },
     ],
   },
-  { type: "divider", key: "general-divider" },
   {
     label: text.value.settings.gifTheme,
     key: "gif-theme",
