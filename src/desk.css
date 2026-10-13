@@ -384,7 +384,7 @@ html[data-theme="dark"] .workbench-shell,
 .workbench-shell .space-tab-edit-shell { background: transparent; }
 .workbench-shell .space-text-panel {
   background: var(--card);
-  border-radius: var(--desk-card-radius);
+  border-radius: 0 0 var(--desk-card-radius) var(--desk-card-radius);
   box-shadow: var(--desk-card-shadow);
 }
 
@@ -395,7 +395,7 @@ html[data-theme="dark"] .workbench-shell,
 .workbench-shell .space-tabs-scrollbar {
   flex-basis: 42px;
   border: 0;
-  border-radius: 10px;
+  border-radius: 10px 10px 0 0;
   background: var(--desk-group-surface);
 }
 .workbench-shell .space-tabs { gap: 3px; padding-inline: 4px; align-items: center; overflow: visible; }
@@ -404,7 +404,7 @@ html[data-theme="dark"] .workbench-shell,
   font-weight: 500;
   height: 32px;
   min-height: 32px;
-  border-radius: 8px;
+  border-radius: 8px 8px 0 0;
   background: transparent;
   box-shadow: none;
   padding-inline: 12px;
@@ -419,7 +419,7 @@ html[data-theme="dark"] .workbench-shell,
 .workbench-shell button.space-tab:focus-visible { background: var(--desk-tab-hover); }
 .workbench-shell button.space-tab.is-active:hover,
 .workbench-shell button.space-tab.is-active:focus-visible { background: var(--desk-tab-active-hover); }
-.workbench-shell .space-tab-edit-shell { height: 32px; min-height: 32px; border-radius: 8px; background: var(--desk-group-surface); }
+.workbench-shell .space-tab-edit-shell { height: 32px; min-height: 32px; border-radius: 8px 8px 0 0; background: var(--desk-group-surface); }
 .workbench-shell .space-tab-edit-input,
 .workbench-shell .space-tab-edit-measure { height: 32px; min-height: 32px; }
 .workbench-shell .text-editor-frame {
