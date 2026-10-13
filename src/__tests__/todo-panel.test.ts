@@ -21,7 +21,7 @@ const dropdownStub = {
     <div>
       <slot />
       <button
-        v-for="option in options"
+        v-for="option in options.filter((item) => item.type !== 'divider')"
         :key="option.key"
         class="dropdown-option"
         :data-key="option.key"
@@ -154,13 +154,13 @@ describe("TodoPanel", () => {
       props: { todoLists: defaultTodoLists, todos: { morning: [], noon: [], evening: [] }, titles: DEFAULT_TITLES },
       global: { stubs: { Dropdown: menuDropdownStub, NDropdown: menuDropdownStub } },
     });
-    await wrapper.get('.todo-section[data-list-id="morning"] .todo-heading').trigger("contextmenu");
+    await wrapper.get('.todo-panel').trigger("contextmenu");
     expect(wrapper.get('[data-key="max-columns"]').text()).toBe("最多展示列数");
     expect(wrapper.findAll('[data-key^="max-columns:"]')).toHaveLength(6);
     await wrapper.get('[data-key="max-columns:2"]').trigger("click");
     expect(wrapper.emitted("maxColumnsChange")).toEqual([[2]]);
     await wrapper.setProps({ language: "en", maxColumns: 2 });
-    await wrapper.get('.todo-section[data-list-id="morning"] .todo-heading').trigger("contextmenu");
+    await wrapper.get('.todo-panel').trigger("contextmenu");
     expect(wrapper.get('[data-key="max-columns"]').text()).toBe("Maximum columns");
     await wrapper.get('[data-key="max-columns:2"]').trigger("click");
     expect(wrapper.emitted("maxColumnsChange")).toEqual([[2]]);
@@ -574,17 +574,9 @@ describe("TodoPanel", () => {
     expect(wrapper.find(".todo-add-list-button").exists()).toBe(false);
 
     await wrapper.get('.todo-section[data-list-id="morning"]').trigger("contextmenu");
-    expect(wrapper.findAll(".dropdown-option").map((option) => option.text())).toEqual([
-      "清理已完成",
-      "隐藏已完成",
-      "粘贴",
-      "新建列表",
-      "编辑列表",
-      "最多展示列数",
-      "删除列表",
-      "Tips",
-    ]);
+    expect(wrapper.findAll(".dropdown-option").map((option) => option.text())).toEqual(["粘贴", "隐藏已完成", "编辑列表", "清理已完成", "删除列表"]);
 
+    await wrapper.get(".todo-panel").trigger("contextmenu");
     await wrapper.findAll(".dropdown-option").find((option) => option.text() === "新建列表")?.trigger("click");
     await flushPromises();
 
@@ -620,6 +612,7 @@ describe("TodoPanel", () => {
     });
 
     await wrapper.get('.todo-section[data-list-id="morning"] .todo-section-menu-button').trigger("click");
+    await wrapper.get(".todo-panel").trigger("contextmenu");
     await wrapper.findAll(".dropdown-option").find((option) => option.text() === "新建列表")?.trigger("click");
     await flushPromises();
     await nextTick();
@@ -711,6 +704,7 @@ describe("TodoPanel", () => {
     });
 
     await wrapper.get('.todo-section[data-list-id="morning"] .todo-section-menu-button').trigger("click");
+    await wrapper.get(".todo-panel").trigger("contextmenu");
     await wrapper.findAll(".dropdown-option").find((option) => option.text() === "新建列表")?.trigger("click");
     await wrapper.get(".todo-list-create-input").setValue("会议");
     const modal = wrapper.findComponent(NModal);
@@ -774,16 +768,7 @@ describe("TodoPanel", () => {
 
     await wrapper.get('.todo-section[data-list-id="morning"] .todo-heading').trigger("contextmenu");
 
-    expect(wrapper.findAll(".dropdown-option").map((option) => option.text())).toEqual([
-      "清理已完成",
-      "隐藏已完成",
-      "粘贴",
-      "新建列表",
-      "编辑列表",
-      "最多展示列数",
-      "删除列表",
-      "Tips",
-    ]);
+    expect(wrapper.findAll(".dropdown-option").map((option) => option.text())).toEqual(["粘贴", "隐藏已完成", "编辑列表", "清理已完成", "删除列表"]);
 
     await wrapper.findAll(".dropdown-option").find((option) => option.text() === "编辑列表")?.trigger("click");
     await nextTick();
@@ -1335,16 +1320,7 @@ describe("TodoPanel", () => {
 
     await wrapper.get('.todo-section[data-period="morning"] .todo-section-menu-button').trigger("click");
 
-    expect(wrapper.findAll(".dropdown-option").map((option) => option.text())).toEqual([
-      "清理已完成",
-      "显示已完成",
-      "粘贴",
-      "新建列表",
-      "编辑列表",
-      "最多展示列数",
-      "删除列表",
-      "Tips",
-    ]);
+    expect(wrapper.findAll(".dropdown-option").map((option) => option.text())).toEqual(["粘贴", "显示已完成", "编辑列表", "清理已完成", "删除列表"]);
 
     await wrapper.findAll(".dropdown-option").find((option) => option.text() === "显示已完成")?.trigger("click");
     expect(wrapper.emitted("toggleCompletedVisibility")?.[0]).toEqual(["morning", true]);
@@ -1389,16 +1365,7 @@ describe("TodoPanel", () => {
     expect(values(wrapper)).toEqual(["早上未完成", "早上已完成", "中午未完成"]);
 
     await wrapper.get('.todo-section[data-period="noon"] .todo-section-menu-button').trigger("click");
-    expect(wrapper.findAll(".dropdown-option").map((option) => option.text())).toEqual([
-      "清理已完成",
-      "显示已完成",
-      "粘贴",
-      "新建列表",
-      "编辑列表",
-      "最多展示列数",
-      "删除列表",
-      "Tips",
-    ]);
+    expect(wrapper.findAll(".dropdown-option").map((option) => option.text())).toEqual(["粘贴", "显示已完成", "编辑列表", "清理已完成", "删除列表"]);
 
     wrapper.unmount();
   });
@@ -2751,7 +2718,6 @@ describe("TodoPanel", () => {
       "设置通知时间",
       "取消星标",
       "删除",
-      "Tips",
     ]);
 
     await wrapper.findAll(".dropdown-option").find((option) => option.text() === "删除")?.trigger("click");
@@ -3361,7 +3327,7 @@ describe("TodoPanel", () => {
       },
     });
 
-    await wrapper.get('[data-period="morning"]').trigger("contextmenu");
+    await wrapper.get('.todo-panel').trigger("contextmenu");
     await wrapper.findAll(".dropdown-option").find((option) => option.text() === "Tips")?.trigger("click");
 
     expect(wrapper.emitted("guide")?.[0]).toEqual(["todos", expect.any(HTMLElement), true]);
@@ -3403,7 +3369,6 @@ describe("TodoPanel", () => {
       "设置通知时间",
       "星标",
       "删除",
-      "Tips",
     ]);
 
     await wrapper.findAll(".dropdown-option").find((option) => option.text() === "星标")?.trigger("click");
@@ -3830,7 +3795,6 @@ describe("TodoPanel", () => {
       "设置通知时间",
       "星标",
       "删除",
-      "Tips",
     ]);
 
     await wrapper.findAll(".dropdown-option").find((option) => option.text() === "复制")?.trigger("click");
@@ -3878,7 +3842,6 @@ describe("TodoPanel", () => {
       "设置通知时间",
       "星标",
       "删除",
-      "Tips",
     ]);
     wrapper.unmount();
   });
@@ -4030,7 +3993,6 @@ describe("TodoPanel", () => {
       "设置通知时间",
       "星标",
       "删除",
-      "Tips",
     ]);
 
     await wrapper.findAll(".dropdown-option").find((option) => option.text() === "粘贴")?.trigger("click");
@@ -4148,17 +4110,8 @@ describe("TodoPanel", () => {
     await wrapper.get('.todo-section[data-period="morning"]').trigger("contextmenu");
     const optionTexts = wrapper.findAll(".dropdown-option").map((option) => option.text());
 
-    expect(optionTexts).toEqual([
-      "清理已完成",
-      "显示已完成",
-      "粘贴",
-      "新建列表",
-      "编辑列表",
-      "最多展示列数",
-      "删除列表",
-      "Tips",
-    ]);
-    expect(optionTexts.indexOf("粘贴")).toBeLessThan(optionTexts.indexOf("新建列表"));
+    expect(optionTexts).toEqual(["粘贴", "显示已完成", "编辑列表", "清理已完成", "删除列表"]);
+    expect(optionTexts).not.toContain("新建列表");
 
     await wrapper.findAll(".dropdown-option").find((option) => option.text() === "粘贴")?.trigger("click");
     await Promise.resolve();
@@ -5040,17 +4993,7 @@ describe("TodoPanel 编辑快捷键", () => {
 
     await wrapper.get('.todo-section[data-list-id="morning"] .todo-heading').trigger("contextmenu");
 
-    expect(wrapper.findAll(".dropdown-option").map((option) => option.text())).toEqual([
-      "清理已完成",
-      "隐藏已完成",
-      "粘贴",
-      "智能粘贴",
-      "新建列表",
-      "编辑列表",
-      "最多展示列数",
-      "删除列表",
-      "Tips",
-    ]);
+    expect(wrapper.findAll(".dropdown-option").map((option) => option.text())).toEqual(["粘贴", "智能粘贴", "隐藏已完成", "编辑列表", "清理已完成", "删除列表"]);
     wrapper.unmount();
   });
 

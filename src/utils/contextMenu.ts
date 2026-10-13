@@ -81,3 +81,26 @@ export function createExclusiveContextMenu(close: () => void): {
     },
   };
 }
+
+/** Consistent sections for context menus; keys still route to each panel's actions. */
+export function organizeContextMenu(options: DropdownOption[]): DropdownOption[] {
+  const group = (option: DropdownOption): number => {
+    const key = String(option.key ?? "");
+    if (["guide", "tips"].includes(key)) return 5;
+    if (key.startsWith("delete") || key === "clear-completed") return 4;
+    if (key.startsWith("move") || key.startsWith("pin-")) return 3;
+    if (["copy", "copy-text", "copy-link", "paste", "smart-paste", "preview", "close-preview", "add", "create", "create-list"].includes(key)) return 0;
+    return 1;
+  };
+  const sorted = options.filter((option) => option.type !== "divider")
+    .map((option, index) => ({ option, index, group: group(option) }))
+    .sort((a, b) => a.group - b.group || a.index - b.index);
+  const result: DropdownOption[] = [];
+  sorted.forEach((entry, index) => {
+    if (index > 0 && entry.group !== sorted[index - 1].group) {
+      result.push({ type: "divider", key: `context-section-${entry.group}` });
+    }
+    result.push(entry.option);
+  });
+  return result;
+}

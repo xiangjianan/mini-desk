@@ -57,7 +57,7 @@ import { TODO_DENSITY_THRESHOLD, formatFocusDuration, getOrderedTodos, getTodoRe
 import { clampCaret } from "../utils/caret";
 import { splitDroppedTodoText } from "../utils/textEditor";
 import { copySelection, copyTextToClipboard, getSelectionRange, probeClipboardForTextPaste } from "../utils/clipboard";
-import { CONTEXT_MENU_Z_INDEX, createExclusiveContextMenu, renderPolishMenuLabel } from "../utils/contextMenu";
+import { organizeContextMenu, CONTEXT_MENU_Z_INDEX, createExclusiveContextMenu, renderPolishMenuLabel } from "../utils/contextMenu";
 import { renderIcon } from "../utils/dropdownIcons";
 import { isImeComposing } from "../utils/ime";
 import type { PolishKind, PolishResult, PolishStyle, PolishTodoItem } from "../sync/polishClient";
@@ -307,12 +307,9 @@ const menuOptions = computed<DropdownOption[]>(() => {
       ...(props.polish
         ? [{ label: uiText.value.common.smartPaste, key: "smart-paste", icon: renderIcon(ClipboardOutline) }]
         : []),
-      { label: uiText.value.todo.newList, key: "create-list", icon: renderIcon(AddOutline) },
       { label: uiText.value.todo.editList, key: "edit-list", icon: renderIcon(CreateOutline) },
       ...buildListMoveOptions(),
-      columnLimitMenu(),
       { label: uiText.value.todo.deleteList, key: "delete-list", disabled: effectiveTodoLists.value.length <= 1, icon: renderIcon(TrashOutline, true) },
-      { ...guideMenuOption.value, icon: renderIcon(HelpCircleOutline) },
     ];
   }
   const options: DropdownOption[] = [];
@@ -348,7 +345,7 @@ const menuOptions = computed<DropdownOption[]>(() => {
     options.push({ label: uiText.value.common.delete, key: "delete", icon: renderIcon(TrashOutline, true) });
   }
   if (!menu.value?.id) options.push(columnLimitMenu());
-  options.push({ ...guideMenuOption.value, icon: renderIcon(HelpCircleOutline) });
+  if (!menu.value?.id) options.push({ ...guideMenuOption.value, icon: renderIcon(HelpCircleOutline) });
   return options;
 });
 
@@ -2464,7 +2461,7 @@ onUnmounted(() => focusRegionAnimation?.cancel());
       :x="menu.x"
       :y="menu.y"
       :z-index="CONTEXT_MENU_Z_INDEX"
-      :options="menuOptions"
+      :options="organizeContextMenu(menuOptions)"
       :render-label="renderPolishMenuLabel"
       @select="handleMenuSelect"
       @clickoutside="exclusiveMenu.handleClickOutside"

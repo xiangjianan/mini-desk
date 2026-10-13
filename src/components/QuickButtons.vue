@@ -28,11 +28,11 @@ import type { AppLanguage, GuideKey, QuickApiBodyType, QuickApiHeader, QuickApiM
 import { GUIDE_MENU_OPTION } from "../state/defaults";
 import { getIconHeadingText, getUiText } from "../state/i18n";
 import type { QuickButtonGroup } from "../state/quickButtons";
-import { buildVisibleQuickButtonGroups, filterVisibleQuickButtonGroups, groupQuickButtonsByColumn, hasOverloadedVisibleQuickButtonGroup, quickButtonUsagePercent, QUICK_BUTTON_OTHER_GROUP_ID, QUICK_BUTTON_EMPTY_GROUP_ID, QUICK_DENSITY_THRESHOLD } from "../state/quickButtons";
+import { buildVisibleQuickButtonGroups, filterVisibleQuickButtonGroups, groupQuickButtonsByColumn, hasOverloadedVisibleQuickButtonGroup, quickButtonClickCount, QUICK_BUTTON_OTHER_GROUP_ID, QUICK_BUTTON_EMPTY_GROUP_ID, QUICK_DENSITY_THRESHOLD } from "../state/quickButtons";
 import { findQuickAppPresetByScheme, getQuickAppPresetHint, getQuickAppPresetTitle, QUICK_APP_PRESETS } from "../state/quickApps";
 import { findQuickApiTemplate, QUICK_API_TEMPLATES } from "../state/quickApiTemplates";
 import { globalSearchNormalized, globalSearchQuery } from "../state/globalSearch";
-import { CONTEXT_MENU_Z_INDEX, createExclusiveContextMenu, renderPolishMenuLabel } from "../utils/contextMenu";
+import { organizeContextMenu, CONTEXT_MENU_Z_INDEX, createExclusiveContextMenu, renderPolishMenuLabel } from "../utils/contextMenu";
 import type { PolishKind, PolishResult, PolishStyle } from "../sync/polishClient";
 import { quickSmartPasteMessages, runQuickSmartPaste } from "../utils/smartPaste";
 import type { SmartPastePhase } from "../utils/smartPaste";
@@ -266,9 +266,9 @@ const areaMenuOptions = computed<DropdownOption[]>(() => [
 const menuOptions = computed<DropdownOption[]>(() => {
   if (menu.value?.tagId) {
     return [
-      ...areaMenuOptions.value.flatMap((option) => option.key === "guide"
-        ? [{ label: uiText.value.quick.deleteTag, key: "delete-tag", icon: renderIcon(TrashOutline, true) }, option]
-        : [option]),
+      ...areaMenuOptions.value.filter((option) => ["add", "paste", "smart-paste"].includes(String(option.key))),
+      { label: uiText.value.common.rename, key: "rename-tag", icon: renderIcon(CreateOutline) },
+      { label: props.tags.find((tag) => tag.id === menu.value?.tagId)?.collapsed ? uiText.value.quick.expandTag : uiText.value.quick.collapseTag, key: "toggle-tag-collapsed", icon: renderIcon(ResizeOutline) },
       ...(moveMenuChildren.value.length > 0
         ? [{
             label: uiText.value.common.moveToWorkspace,
@@ -277,6 +277,7 @@ const menuOptions = computed<DropdownOption[]>(() => {
             children: moveMenuChildren.value,
           }]
         : []),
+      { label: uiText.value.quick.deleteTag, key: "delete-tag", icon: renderIcon(TrashOutline, true) },
     ];
   }
   const button = props.buttons.find((item) => item.id === menu.value?.id);
@@ -299,9 +300,7 @@ const menuOptions = computed<DropdownOption[]>(() => {
           children: moveMenuChildren.value,
         }]
       : []),
-    { label: props.compact ? uiText.value.quick.largeButtons : uiText.value.quick.compactButtons, key: "toggle-compact", icon: renderIcon(ResizeOutline) },
     { label: uiText.value.common.delete, key: "delete", icon: renderIcon(TrashOutline, true) },
-    { ...guideMenuOption.value, icon: renderIcon(HelpCircleOutline) },
   ];
 });
 
@@ -414,9 +413,9 @@ function getQuickTagTitle(tagId?: string): string {
   return props.tags.find((tag) => tag.id === tagId)?.title ?? "";
 }
 
-/** 按钮级使用热度百分比（0–100）：驱动 .has-usage 类与 --button-usage 变量。 */
+/** 按钮的真实累计点击次数。 */
 function buttonUsage(button: QuickButton): number {
-  return quickButtonUsagePercent(button.clicks);
+  return quickButtonClickCount(button.clicks);
 }
 
 function setQuickType(type: QuickButtonType): void {
@@ -514,7 +513,7 @@ function openAreaMenu(event: MouseEvent): void {
   menu.value = { x: event.clientX, y: event.clientY, anchor: event.currentTarget as HTMLElement, tagTitle };
 }
 
-/** 标签头右键：真实标签沿用区域菜单，并增加移动到空间和删除标签及动作；其他目标回落到区域菜单。 */
+/** 标签菜单仅管理当前标签及其内容。 */
 function openTagMenu(event: MouseEvent, tagId: string): void {
   const target = event.target as HTMLElement;
   if (target.closest("button, input, textarea")) return;
@@ -545,6 +544,14 @@ function handleMenuSelect(key: string): void {
     const workspaceId = key.slice("move-ws:".length);
     if (tagId) emit("moveTagToWorkspace", tagId, workspaceId);
     else if (id) emit("moveButtonToWorkspace", id, workspaceId);
+    return;
+  }
+  if (key === "rename-tag" && tagId) {
+    startInlineTagRename(tagId, tagTitle ?? "");
+    return;
+  }
+  if (key === "toggle-tag-collapsed" && tagId) {
+    emit("toggleTagCollapsed", tagId);
     return;
   }
   if (key === "delete-tag") {
@@ -1033,8 +1040,7 @@ function handleQuickGroupDrop(event: DragEvent, groupId: string): void {
                 v-for="button in group.buttons"
                 :key="button.id"
                 class="quick-button"
-                :class="{ 'is-hidden': button.hidden, 'is-copy': button.type === 'text', 'is-api': button.type === 'api', 'is-app': button.type === 'app', 'is-dragging': draggingId === button.id, 'has-usage': true }"
-                :style="{ '--button-usage': `${buttonUsage(button)}%` }"
+                :class="{ 'is-hidden': button.hidden, 'is-copy': button.type === 'text', 'is-api': button.type === 'api', 'is-app': button.type === 'app', 'is-dragging': draggingId === button.id }"
                 :data-id="button.id"
                 :title="button.title"
                 type="button"
@@ -1054,6 +1060,7 @@ function handleQuickGroupDrop(event: DragEvent, groupId: string): void {
                   <HighlightText class="quick-button-label" :text="button.title" :query="globalSearchQuery" />
                   <span class="quick-button-kind" aria-hidden="true">{{ uiText.quick[button.type === 'text' ? 'textType' : button.type === 'api' ? 'apiType' : button.type === 'app' ? 'appType' : 'linkType'] }}</span>
                 </span>
+                <span v-if="buttonUsage(button) > 0" class="quick-button-clicks">×{{ buttonUsage(button) }}</span>
               </button>
             </TransitionGroup>
           </div>
@@ -1070,7 +1077,7 @@ function handleQuickGroupDrop(event: DragEvent, groupId: string): void {
       :x="menu.x"
       :y="menu.y"
       :z-index="CONTEXT_MENU_Z_INDEX"
-      :options="menuOptions"
+      :options="organizeContextMenu(menuOptions)"
       :render-label="renderPolishMenuLabel"
       @select="handleMenuSelect"
       @clickoutside="exclusiveMenu.handleClickOutside"

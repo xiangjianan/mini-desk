@@ -143,7 +143,7 @@ describe("ImagePanel", () => {
     wrapper.unmount();
   });
 
-  it("adds a single paste action to image item menus that pastes below the target", async () => {
+  it("keeps area paste out of image item menus", async () => {
     const wrapper = mountImagePanel([
       { id: "a", src: "data:image/png;base64,a", createdAt: 1 },
       { id: "b", src: "data:image/png;base64,b", createdAt: 2 },
@@ -153,28 +153,14 @@ describe("ImagePanel", () => {
     const card = wrapper.findAll(".image-card")[1];
     await card.trigger("contextmenu");
 
-    expect(wrapper.findAll(".dropdown-option").map((option) => option.text())).toEqual([
-      "预览",
-      "复制",
-      "粘贴",
-      "编辑",
-      "置顶",
-      "置底",
-      "删除",
-      "Tips",
-    ]);
+    expect(wrapper.findAll(".dropdown-option").map((option) => option.text())).toEqual(["预览", "复制", "编辑", "置顶", "置底", "删除"]);
 
     expect(wrapper.text()).not.toContain("取消置顶");
     expect(wrapper.text()).not.toContain("粘贴图片到上方");
     expect(wrapper.text()).not.toContain("粘贴图片到下方");
     expect(wrapper.text()).not.toContain("粘贴替换当前图片");
 
-    await wrapper.findAll(".dropdown-option").find((option) => option.text() === "粘贴")?.trigger("click");
-    expect(wrapper.emitted("paste")?.at(-1)).toEqual([{
-      placement: "after",
-      targetId: "b",
-      anchor: card.element,
-    }]);
+    expect(wrapper.emitted("paste")).toBeUndefined();
 
     wrapper.unmount();
   });
@@ -230,12 +216,12 @@ describe("ImagePanel", () => {
     wrapper.unmount();
   });
 
-  it("emits guide from the image item context menu tips option", async () => {
+  it("keeps usage guidance in the image area menu", async () => {
     const wrapper = mountImagePanel([
       { id: "img-1", src: "data:image/png;base64,one", createdAt: 1 },
     ]);
 
-    await wrapper.get(".image-card").trigger("contextmenu");
+    await wrapper.get(".image-list-scrollbar").trigger("contextmenu");
     await wrapper.findAll(".dropdown-option").find((option) => option.text() === "Tips")?.trigger("click");
 
     expect(wrapper.emitted("guide")?.[0]).toEqual(["images", expect.any(HTMLElement), true]);
@@ -265,16 +251,7 @@ describe("ImagePanel", () => {
 
     await wrapper.findAll(".image-card")[1].trigger("contextmenu");
 
-    expect(wrapper.findAll(".dropdown-option").map((option) => option.text())).toEqual([
-      "取消预览",
-      "复制",
-      "粘贴",
-      "编辑",
-      "置顶",
-      "置底",
-      "删除",
-      "Tips",
-    ]);
+    expect(wrapper.findAll(".dropdown-option").map((option) => option.text())).toEqual(["取消预览", "复制", "编辑", "置顶", "置底", "删除"]);
 
     await wrapper.findAll(".dropdown-option").find((option) => option.text() === "取消预览")?.trigger("click");
 
@@ -294,16 +271,7 @@ describe("ImagePanel", () => {
 
     await wrapper.findAll(".image-card")[0].trigger("contextmenu");
 
-    expect(wrapper.findAll(".dropdown-option").map((option) => option.text())).toEqual([
-      "取消预览",
-      "复制",
-      "粘贴",
-      "编辑",
-      "置顶",
-      "置底",
-      "删除",
-      "Tips",
-    ]);
+    expect(wrapper.findAll(".dropdown-option").map((option) => option.text())).toEqual(["取消预览", "复制", "编辑", "置顶", "置底", "删除"]);
 
     await wrapper.findAll(".dropdown-option").find((option) => option.text() === "取消预览")?.trigger("click");
 
@@ -803,14 +771,7 @@ describe("ImagePanel", () => {
 
     await wrapper.get(".image-card").trigger("contextmenu");
 
-    expect(wrapper.findAll(".dropdown-option").map((option) => option.text())).toEqual([
-      "预览",
-      "复制",
-      "粘贴",
-      "置顶",
-      "置底",
-      "删除",
-    ]);
+    expect(wrapper.findAll(".dropdown-option").map((option) => option.text())).toEqual(["预览", "复制", "置顶", "置底", "删除"]);
 
     await wrapper.get(".image-card").trigger("keydown", { key: "Enter" });
 

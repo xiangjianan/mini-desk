@@ -2110,7 +2110,7 @@ describe("App shell", () => {
     const wrapper = mountApp();
 
     try {
-      await wrapper.get(".todo-item").trigger("contextmenu");
+      await wrapper.get(".todo-panel").trigger("contextmenu");
       await wrapper.findAll(".dropdown-option").find((option) => option.text() === "Tips")?.trigger("click");
       await vi.advanceTimersByTimeAsync(200);
       await wrapper.vm.$nextTick();
@@ -2138,7 +2138,7 @@ describe("App shell", () => {
     const wrapper = mountApp();
 
     try {
-      await wrapper.get(".todo-item").trigger("contextmenu");
+      await wrapper.get(".todo-panel").trigger("contextmenu");
       await wrapper.findAll(".dropdown-option").find((option) => option.text() === "Tips")?.trigger("click");
       await flushPromises();
       await wrapper.vm.$nextTick();
@@ -2148,7 +2148,7 @@ describe("App shell", () => {
       wrapper.findComponent(TodoPanel).vm.$emit("blur");
       await wrapper.vm.$nextTick();
 
-      await wrapper.get(".todo-item").trigger("contextmenu");
+      await wrapper.get(".todo-panel").trigger("contextmenu");
       await wrapper.findAll(".dropdown-option").find((option) => option.text() === "Tips")?.trigger("click");
       await flushPromises();
       await wrapper.vm.$nextTick();
@@ -2187,7 +2187,7 @@ describe("App shell", () => {
     const wrapper = mountApp();
 
     try {
-      await wrapper.get(".todo-item").trigger("contextmenu");
+      await wrapper.get(".todo-panel").trigger("contextmenu");
       await wrapper.findAll(".dropdown-option").find((option) => option.text() === "Tips")?.trigger("click");
       await flushPromises();
       await wrapper.vm.$nextTick();

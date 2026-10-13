@@ -13,7 +13,7 @@ export const menuDropdownStub = {
   template: `
     <div>
       <slot />
-      <template v-for="option in options" :key="option.key">
+      <template v-for="option in options.filter((item) => item.type !== 'divider')" :key="option.key">
         <button
           class="dropdown-option"
           :data-key="option.key"

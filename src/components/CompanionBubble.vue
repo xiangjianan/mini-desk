@@ -8,7 +8,7 @@ import type { DropdownOption } from "naive-ui";
 import type { AppLanguage, CompanionGifTheme } from "../types";
 import { DEFAULT_COMPANION_GIF_THEME, getCompanionGifSrc, getCompanionNotificationIconSrc } from "../state/companionGifThemes";
 import { getUiText } from "../state/i18n";
-import { CONTEXT_MENU_Z_INDEX, createExclusiveContextMenu } from "../utils/contextMenu";
+import { organizeContextMenu, CONTEXT_MENU_Z_INDEX, createExclusiveContextMenu } from "../utils/contextMenu";
 
 const props = withDefaults(defineProps<{
   visible: boolean;
@@ -508,7 +508,7 @@ function isPointInsideElement(x: number, y: number, element: HTMLElement | null)
       :x="gifMenu.x"
       :y="gifMenu.y"
       :z-index="CONTEXT_MENU_Z_INDEX"
-      :options="gifMenuOptions"
+      :options="organizeContextMenu(gifMenuOptions)"
       @select="handleGifMenuSelect"
       @clickoutside="exclusiveMenu.handleClickOutside"
     >

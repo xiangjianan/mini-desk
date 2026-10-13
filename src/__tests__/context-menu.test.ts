@@ -1,5 +1,5 @@
 import { describe, expect, it, vi } from "vitest";
-import { createExclusiveContextMenu } from "../utils/contextMenu";
+import { organizeContextMenu, createExclusiveContextMenu } from "../utils/contextMenu";
 
 function eventAt(timeStamp: number): Event {
   return { timeStamp } as Event;
@@ -48,5 +48,23 @@ describe("exclusive context menus", () => {
 
     first.unmount();
     second.unmount();
+  });
+});
+
+
+describe("context menu sections", () => {
+  it("groups common actions before editing and movement, with deletion and tips last", () => {
+    const children = [{ key: "target", label: "Target", disabled: true }];
+    const result = organizeContextMenu([
+      { key: "edit", label: "Edit" }, { key: "guide", label: "Tips" },
+      { key: "delete", label: "Delete", disabled: true },
+      { key: "move-item", label: "Move", children }, { key: "copy", label: "Copy" },
+    ]);
+    expect(result.filter((item) => item.type !== "divider").map((item) => item.key))
+      .toEqual(["copy", "edit", "move-item", "delete", "guide"]);
+    expect(result.filter((item) => item.type === "divider")).toHaveLength(4);
+    expect(result.find((item) => item.key === "move-item")?.children).toBe(children);
+    expect(result.find((item) => item.key === "delete")?.disabled).toBe(true);
+    expect(organizeContextMenu([])).toEqual([]);
   });
 });

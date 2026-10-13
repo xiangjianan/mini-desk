@@ -9,7 +9,7 @@ import type { ImageContextMenuKey } from "../state/imageContextMenu";
 import { getUiText } from "../state/i18n";
 import { clamp } from "../utils/math";
 import type { AppLanguage, ImagePasteRequest, StoredImage } from "../types";
-import { CONTEXT_MENU_Z_INDEX, createExclusiveContextMenu } from "../utils/contextMenu";
+import { organizeContextMenu, CONTEXT_MENU_Z_INDEX, createExclusiveContextMenu } from "../utils/contextMenu";
 import { isTextEntryTarget } from "../utils/dom";
 import { renderIcon } from "../utils/dropdownIcons";
 import ImageEditor from "./ImageEditor.vue";
@@ -609,7 +609,7 @@ function isPreviewShortcutKey(event: KeyboardEvent): boolean {
         :x="menu.x"
         :y="menu.y"
         :z-index="CONTEXT_MENU_Z_INDEX"
-        :options="menuOptions"
+        :options="organizeContextMenu(menuOptions)"
         @select="handleMenuSelect"
         @clickoutside="exclusiveMenu.handleClickOutside"
       >

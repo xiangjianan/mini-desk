@@ -14,7 +14,7 @@ import {
 import type { DropdownOption } from "naive-ui";
 import type { AppLanguage, GuideKey, LineItem, WorkspaceMoveTarget, WorkspaceSpace } from "../types";
 import { getUiText } from "../state/i18n";
-import { CONTEXT_MENU_Z_INDEX, createExclusiveContextMenu } from "../utils/contextMenu";
+import { organizeContextMenu, CONTEXT_MENU_Z_INDEX, createExclusiveContextMenu } from "../utils/contextMenu";
 import { renderIcon } from "../utils/dropdownIcons";
 import { isImeComposing } from "../utils/ime";
 import type { PolishKind, PolishResult, PolishStyle } from "../sync/polishClient";
@@ -99,11 +99,11 @@ function buildSpaceMoveOptions(): DropdownOption[] {
 }
 
 const menuOptions = computed<DropdownOption[]>(() => menu.value?.anchor ? [
+  { label: uiText.value.space.create, key: "create", icon: renderIcon(AddOutline) },
   { label: uiText.value.common.paste, key: "paste", icon: renderIcon(ClipboardOutline), disabled: !activeSpace.value },
   { label: uiText.value.common.smartPaste, key: "smart-paste", icon: renderIcon(ClipboardOutline), disabled: !activeSpace.value || !props.polish || smartPastePending.value },
   { label: uiText.value.common.tips, key: "guide", icon: renderIcon(HelpCircleOutline) },
 ] : [
-  { label: uiText.value.space.create, key: "create", icon: renderIcon(AddOutline) },
   { label: uiText.value.common.edit, key: "edit", icon: renderIcon(CreateOutline) },
   ...buildSpaceMoveOptions(),
   { label: uiText.value.common.delete, key: "delete", disabled: !canDeleteSpaces.value, icon: renderIcon(TrashOutline, true) },
@@ -228,14 +228,14 @@ function handleMenuSelect(key: string): void {
   const current = menu.value;
   if (!current) return;
   closeMenu();
+  if (key === "create") {
+    emit("create");
+    return;
+  }
   if (current.anchor) {
     if (key === "paste") void textPanelRef.value?.appendPaste();
     if (key === "smart-paste") void appendSmartPaste();
     if (key === "guide") emit("guide", "workspace", current.anchor, true);
-    return;
-  }
-  if (key === "create") {
-    emit("create");
     return;
   }
   if (key === "edit") {
@@ -425,7 +425,7 @@ function handleTabsWheel(event: WheelEvent): void {
       :x="menu.x"
       :y="menu.y"
       :z-index="CONTEXT_MENU_Z_INDEX"
-      :options="menuOptions"
+      :options="organizeContextMenu(menuOptions)"
       @select="handleMenuSelect"
       @clickoutside="exclusiveMenu.handleClickOutside"
     >

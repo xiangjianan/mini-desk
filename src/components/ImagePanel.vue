@@ -21,7 +21,7 @@ import { GUIDE_MENU_OPTION } from "../state/defaults";
 import { getBlankImageContextMenuItems, getImageItemContextMenuItems } from "../state/imageContextMenu";
 import type { ImageContextMenuKey } from "../state/imageContextMenu";
 import { getIconHeadingText, getUiText } from "../state/i18n";
-import { CONTEXT_MENU_Z_INDEX, createExclusiveContextMenu } from "../utils/contextMenu";
+import { organizeContextMenu, CONTEXT_MENU_Z_INDEX, createExclusiveContextMenu } from "../utils/contextMenu";
 import { binaryStringToBytes } from "../utils/base64";
 import { createDragAutoScroll } from "../utils/dragScroll";
 import { renderIcon } from "../utils/dropdownIcons";
@@ -186,7 +186,7 @@ watch(
 
 const menuOptions = computed<DropdownOption[]>(() =>
   (menu.value?.id
-    ? getImageItemContextMenuItems(uiText.value, isPreviewCloseMenuItem.value, true)
+    ? getImageItemContextMenuItems(uiText.value, isPreviewCloseMenuItem.value)
     : getBlankImageContextMenuItems(uiText.value)
   )
     // canEdit=false：编辑入口与无 guide 接线的 Tips 引导项一并隐藏。
@@ -702,7 +702,7 @@ function handleImageDragWheel(event: WheelEvent): void {
       :x="menu.x"
       :y="menu.y"
       :z-index="CONTEXT_MENU_Z_INDEX"
-      :options="menuOptions"
+      :options="organizeContextMenu(menuOptions)"
       @select="handleMenuSelect"
       @clickoutside="exclusiveMenu.handleClickOutside"
     >

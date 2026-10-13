@@ -14,7 +14,7 @@ const dropdownStub = {
     <div>
       <slot />
       <button
-        v-for="option in options"
+        v-for="option in options.filter((item) => item.type !== 'divider')"
         :key="option.key"
         class="dropdown-option"
         :data-key="option.key"
@@ -58,13 +58,13 @@ describe("SpacePanel", () => {
     const wrapper = mountSpacePanel([{ id: "note", title: "笔记", lines: [] }]);
     const heading = wrapper.get(".desk-zone-heading");
     await heading.trigger("contextmenu");
-    expect(wrapper.findAll(".dropdown-option").map(option => option.text())).toEqual(["粘贴", "智能粘贴", "Tips"]);
+    expect(wrapper.findAll(".dropdown-option").map(option => option.text())).toEqual(["新建", "粘贴", "智能粘贴", "Tips"]);
     expect(wrapper.get('[data-key="smart-paste"]').attributes("disabled")).toBeDefined();
     await wrapper.get('[data-key="guide"]').trigger("click");
     expect(wrapper.emitted("guide")?.[0]).toEqual(["workspace", heading.element, true]);
     await wrapper.setProps({ language: "en" });
     await heading.trigger("contextmenu");
-    expect(wrapper.findAll(".dropdown-option").map(option => option.text())).toEqual(["Paste", "Smart paste", "Tips"]);
+    expect(wrapper.findAll(".dropdown-option").map(option => option.text())).toEqual(["New", "Paste", "Smart paste", "Tips"]);
     wrapper.unmount();
   });
 
@@ -76,10 +76,10 @@ describe("SpacePanel", () => {
     await wrapper.get(".desk-smart-paste").trigger("contextmenu");
     expect(wrapper.find(".dropdown-option").exists()).toBe(false);
     await wrapper.get(".desk-zone-heading").trigger("contextmenu");
-    expect(wrapper.findAll(".dropdown-option")).toHaveLength(3);
+    expect(wrapper.findAll(".dropdown-option")).toHaveLength(4);
     await wrapper.get('[data-key="guide"]').trigger("click");
     await wrapper.get(".desk-zone-heading h2").trigger("contextmenu");
-    expect(wrapper.findAll(".dropdown-option")).toHaveLength(3);
+    expect(wrapper.findAll(".dropdown-option")).toHaveLength(4);
     wrapper.unmount();
   });
 
@@ -281,8 +281,9 @@ describe("SpacePanel", () => {
 
     await wrapper.findAll(".space-tab")[1].trigger("contextmenu");
 
-    expect(wrapper.findAll(".dropdown-option").map((option) => option.text())).toEqual(["新建", "编辑", "删除"]);
+    expect(wrapper.findAll(".dropdown-option").map((option) => option.text())).toEqual(["编辑", "删除"]);
 
+    await wrapper.get(".desk-zone-heading").trigger("contextmenu");
     await wrapper.findAll(".dropdown-option").find((option) => option.text() === "新建")?.trigger("click");
 
     expect(wrapper.emitted("create")?.[0]).toEqual([]);

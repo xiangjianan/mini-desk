@@ -589,7 +589,6 @@ describe("ImagePreview", () => {
       "置顶",
       "置底",
       "删除",
-      "Tips",
     ]);
 
     await wrapper.findAll(".dropdown-option").find((option) => option.text() === "编辑")?.trigger("click");
@@ -631,7 +630,7 @@ describe("ImagePreview", () => {
     wrapper.unmount();
   });
 
-  it("emits preview tips from the context menu instead of using an alert dialog", async () => {
+  it("keeps area tips out of the preview item menu", async () => {
     const alertSpy = vi.spyOn(window, "alert").mockImplementation(() => undefined);
     const wrapper = mount(ImagePreview, {
       props: {
@@ -654,8 +653,8 @@ describe("ImagePreview", () => {
     await wrapper.findAll(".dropdown-option").find((option) => option.text() === "Tips")?.trigger("click");
 
     expect(alertSpy).not.toHaveBeenCalled();
-    expect(wrapper.emitted("tips")).toHaveLength(1);
-    expect(wrapper.emitted("tips")?.[0]?.[0]).toBe(wrapper.get(".preview-stage img").element);
+    expect(wrapper.findAll(".dropdown-option").some((option) => option.text() === "Tips")).toBe(false);
+    expect(wrapper.emitted("tips")).toBeUndefined();
     wrapper.unmount();
   });
 
@@ -1143,7 +1142,6 @@ describe("ImagePreview", () => {
       "置顶",
       "置底",
       "删除",
-      "Tips",
     ]);
 
     try {

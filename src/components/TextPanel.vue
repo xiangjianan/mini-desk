@@ -29,7 +29,7 @@ import {
   renumberOrderedListText,
 } from "../utils/textEditor";
 import { clearMarksInRange, MARK_COLORS, toggleMarkInRange, buildMirrorSegments, translateMarksForEdit, type MirrorSegment } from "../utils/textMarks";
-import { CONTEXT_MENU_Z_INDEX, createExclusiveContextMenu, renderPolishMenuLabel } from "../utils/contextMenu";
+import { organizeContextMenu, CONTEXT_MENU_Z_INDEX, createExclusiveContextMenu, renderPolishMenuLabel } from "../utils/contextMenu";
 import { copySelection, getSelectionRange, hasSelection, pasteWithBrowserCommand, probeClipboardForTextPaste, hasAsyncClipboard as hasClipboardApi } from "../utils/clipboard";
 import { renderIcon } from "../utils/dropdownIcons";
 import { clampCaret, setStickySelection } from "../utils/caret";
@@ -284,7 +284,7 @@ const menuOptions = computed<DropdownOption[]>(() => {
       options.push({ label: uiText.value.common.delete, key: "delete", icon: renderIcon(TrashOutline, true) });
     }
   }
-  options.push({ ...guideMenuOption.value, icon: renderIcon(HelpCircleOutline) });
+  if (!target) options.push({ ...guideMenuOption.value, icon: renderIcon(HelpCircleOutline) });
   return options;
 });
 
@@ -1206,7 +1206,7 @@ function restoreSelection(textarea: HTMLTextAreaElement, selection: { start: num
       :x="menu.x"
       :y="menu.y"
       :z-index="CONTEXT_MENU_Z_INDEX"
-      :options="menuOptions"
+      :options="organizeContextMenu(menuOptions)"
       :render-label="renderPolishMenuLabel"
       @select="handleMenuSelect"
       @clickoutside="exclusiveMenu.handleClickOutside"

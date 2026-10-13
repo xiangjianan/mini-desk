@@ -33,9 +33,6 @@
   --input: #ffffff;
   --button: #ffffff;
   --button-hover: color-mix(in srgb, #ffffff 88%, var(--primary) 12%);
-  /* 快捷按钮使用热度染色的基准色：mix 起点 9%、上限（浅色 30%/深色 36%）见下方
-     .quick-buttons .quick-button.has-usage 规则族；折算见 src/state/quickButtons.ts quickButtonUsagePercent。 */
-  --quick-usage-accent: #3b82f6;
   --danger: #b42318;
   --radius: 12px;
   --radius-control: 10px;
@@ -5553,26 +5550,23 @@ button.quick-button {
   background: var(--button-hover);
 }
 
-/* Every button starts with a 9% accent mix, including unused buttons.
-   Clicks reach a 30% mix in light / 36% in dark at 100 clicks.
-   Keep the usage selector above the desktop button base in specificity. */
-.quick-buttons .quick-button.has-usage {
-  background: color-mix(in srgb, var(--quick-usage-accent) calc(9% + var(--button-usage) * 0.21), var(--button));
-}
-
-html[data-theme="dark"] .quick-buttons .quick-button.has-usage {
-  background: color-mix(in srgb, var(--quick-usage-accent) calc(9% + var(--button-usage) * 0.27), var(--button));
-}
-
-/* Hover and keyboard focus deepen the same hue. */
-.quick-buttons .quick-button.has-usage:hover,
-.quick-buttons .quick-button.has-usage:focus-visible {
-  background: color-mix(in srgb, var(--quick-usage-accent) calc(min(var(--button-usage) * 0.21 + 21%, 42%)), var(--button)) !important;
-}
-
-html[data-theme="dark"] .quick-buttons .quick-button.has-usage:hover,
-html[data-theme="dark"] .quick-buttons .quick-button.has-usage:focus-visible {
-  background: color-mix(in srgb, var(--quick-usage-accent) calc(min(var(--button-usage) * 0.27 + 23%, 50%)), var(--button)) !important;
+/* A quiet count in a reserved corner; usage never changes the background. */
+.quick-button { position: relative; }
+.quick-button:has(.quick-button-clicks) .quick-button-content { padding-inline-end: 34px; }
+.quick-button-clicks {
+  position: absolute;
+  right: 7px;
+  bottom: 4px;
+  max-width: 40%;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  color: var(--muted);
+  opacity: 0.65;
+  font-size: 10px;
+  line-height: 1.2;
+  font-variant-numeric: tabular-nums;
+  pointer-events: none;
 }
 
 /* Animate tag groups sliding into place when the tag list is reordered. */

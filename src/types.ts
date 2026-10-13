@@ -91,7 +91,7 @@ export interface QuickButton {
   apiHeaders?: QuickApiHeader[];
   apiBodyType?: QuickApiBodyType;
   apiBody?: string;
-  /** 使用热度计数，点击 +1，驱动 0–100 染色（quickButtonUsagePercent）；缺省 = 0。 */
+  /** 累计点击次数，点击 +1，以按钮右下角 ×N 显示；缺省 = 0。 */
   clicks?: number;
   hidden: boolean;
 }

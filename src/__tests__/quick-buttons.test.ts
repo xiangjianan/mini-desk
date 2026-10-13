@@ -13,8 +13,7 @@ import {
   groupQuickButtonsByColumn,
   hasOverloadedVisibleQuickButtonGroup,
   QUICK_BUTTON_OTHER_GROUP_ID,
-  QUICK_USAGE_MAX_CLICKS,
-  quickButtonUsagePercent,
+  quickButtonClickCount,
   recordQuickButtonClick,
 } from "../state/quickButtons";
 import { globalSearchQuery, resetGlobalSearch, setGlobalSearch } from "../state/globalSearch";
@@ -59,7 +58,7 @@ const selectStub = {
       :value="value"
       @change="$emit('update:value', $event.target.value)"
     >
-      <option v-for="option in options" :key="option.value" :value="option.value">{{ option.label }}</option>
+      <option v-for="option in options.filter((item) => item.type !== 'divider')" :key="option.value" :value="option.value">{{ option.label }}</option>
     </select>
   `,
 };
@@ -265,19 +264,18 @@ describe("QuickButtons", () => {
     expect(hasOverloadedVisibleQuickButtonGroup([...visibleButtons.slice(0, 12), ...hiddenButtons], tags, 12)).toBe(false);
   });
 
-  it("把按钮点击数折算成 0–100 的染色百分比并在封顶值处钳制", () => {
-    expect(QUICK_USAGE_MAX_CLICKS).toBe(100);
-    expect(quickButtonUsagePercent(undefined)).toBe(0);
-    expect(quickButtonUsagePercent(0)).toBe(0);
-    expect(quickButtonUsagePercent(1)).toBe(1);
-    expect(quickButtonUsagePercent(50)).toBe(50);
-    expect(quickButtonUsagePercent(100)).toBe(100);
-    expect(quickButtonUsagePercent(132)).toBe(100);
-    expect(quickButtonUsagePercent(-3)).toBe(0);
-    expect(quickButtonUsagePercent(2.5)).toBe(2);
-    expect(quickButtonUsagePercent("x" as unknown)).toBe(0);
-    expect(quickButtonUsagePercent(NaN)).toBe(0);
-    expect(quickButtonUsagePercent(Infinity)).toBe(0);
+  it("显示真实点击次数并兼容无效历史值", () => {
+    expect(quickButtonClickCount(undefined)).toBe(0);
+    expect(quickButtonClickCount(0)).toBe(0);
+    expect(quickButtonClickCount(1)).toBe(1);
+    expect(quickButtonClickCount(50)).toBe(50);
+    expect(quickButtonClickCount(100)).toBe(100);
+    expect(quickButtonClickCount(132)).toBe(132);
+    expect(quickButtonClickCount(-3)).toBe(0);
+    expect(quickButtonClickCount(2.5)).toBe(2);
+    expect(quickButtonClickCount("x" as unknown)).toBe(0);
+    expect(quickButtonClickCount(NaN)).toBe(0);
+    expect(quickButtonClickCount(Infinity)).toBe(0);
   });
 
   it("按钮点击计数 +1：缺省 0→1，已有值 41→42", () => {
@@ -308,58 +306,19 @@ describe("QuickButtons", () => {
     expect(groups[1]).not.toHaveProperty("usagePercent");
   });
 
-  it("按使用次数给按钮挂 has-usage 类与 --button-usage 变量", () => {
-    const wrapper = mountQuickButtons({
-      tags: [{ id: "tag-hot", title: "常用" }],
-      buttons: [
-        { id: "b-hot", title: "热", value: "a", type: "text", hidden: false, tagId: "tag-hot", clicks: 40 },
-        { id: "b-cold", title: "冷", value: "b", type: "text", hidden: false, tagId: "tag-hot" },
-        { id: "b-other", title: "其他", value: "c", type: "text", hidden: false, clicks: 12 },
-      ],
-    });
-
-    const hot = wrapper.get('[data-id="b-hot"]');
-    expect(hot.classes()).toContain("has-usage");
-    expect(hot.attributes("style")).toContain("--button-usage: 40%");
-
-    const cold = wrapper.get('[data-id="b-cold"]');
-    expect(cold.classes()).toContain("has-usage");
-    expect(cold.attributes("style")).toContain("--button-usage: 0%");
-
-    // 未分组（「其他」组）按钮的计数同样染色。
-    const other = wrapper.get('[data-id="b-other"]');
-    expect(other.classes()).toContain("has-usage");
-    expect(other.attributes("style")).toContain("--button-usage: 12%");
-
+  it("shows quiet real click counts without changing the button background", async () => {
+    const wrapper = mountQuickButtons({ buttons: [
+      { id: "used", title: "Used", value: "a", type: "text", hidden: false, clicks: 10 },
+      { id: "unused", title: "Unused", value: "b", type: "text", hidden: false },
+      { id: "many", title: "Many", value: "c", type: "text", hidden: false, clicks: 1234 },
+    ] });
+    expect(wrapper.get('[data-id="used"] .quick-button-clicks').text()).toBe("×10");
+    expect(wrapper.find('[data-id="unused"] .quick-button-clicks').exists()).toBe(false);
+    expect(wrapper.get('[data-id="many"] .quick-button-clicks').text()).toBe("×1234");
+    expect(wrapper.get('[data-id="used"]').attributes("style") ?? "").not.toContain("--button-usage");
+    await wrapper.setProps({ buttons: [{ id: "used", title: "Used", value: "a", type: "text", hidden: false, clicks: 11 }] });
+    expect(wrapper.get('.quick-button-clicks').text()).toBe("×11");
     wrapper.unmount();
-  });
-
-  it("使用热度染色用 color-mix 数学梯度且不留旧色板痕迹", () => {
-    const styles = readSource("styles.css");
-
-    expect(styles).toMatch(/--quick-usage-accent:\s*#3b82f6/);
-    expect(styles).toMatch(
-      /\.quick-buttons \.quick-button\.has-usage\s*\{[^}]*background:\s*color-mix\(in srgb, var\(--quick-usage-accent\) calc\(9% \+ var\(--button-usage\) \* 0\.21\), var\(--button\)\)/s,
-    );
-    expect(styles).toMatch(/html\[data-theme="dark"\] \.quick-buttons \.quick-button\.has-usage\s*\{[^}]*calc\(9% \+ var\(--button-usage\) \* 0\.27\)/s);
-    expect(styles).toMatch(
-      /\.quick-buttons \.quick-button\.has-usage:hover[^{]*\{[^}]*calc\(min\(var\(--button-usage\) \* 0\.21 \+ 21%, 42%\)\)/s,
-    );
-    expect(styles).toMatch(
-      /\.quick-buttons \.quick-button\.has-usage:hover[^{]*\{[^}]*!important/s,
-    );
-    expect(styles).toMatch(
-      /html\[data-theme="dark"\] \.quick-buttons \.quick-button\.has-usage:hover[^{]*\{[^}]*calc\(min\(var\(--button-usage\) \* 0\.27 \+ 23%, 50%\)\)/s,
-    );
-    // --button-usage 是带百分号的值，乘数必须是纯数值：百分比×百分比在 calc 里非法，
-    // 浏览器会在解析时整条丢弃声明（按钮退回透明底色）。
-    expect(styles).not.toMatch(/--button-usage\) \* \d+%/);
-    // 标签管理器的使用次数徽标已删除：不再有任何徽标样式痕迹。
-    expect(styles).not.toMatch(/\.quick-tag-clicks/);
-    expect(styles).not.toContain("--tag-usage");
-    expect(styles).not.toContain(".quick-tag-group.has-usage");
-    expect(styles).not.toContain("has-tag-color");
-    expect(styles).not.toContain(".quick-tag-color-picker");
   });
 
   it("maps the measured quick panel width to a clamped column count", () => {
@@ -476,7 +435,7 @@ describe("QuickButtons", () => {
 
     expect(wrapper.get(".quick-block").classes()).toContain("is-compact");
 
-    await wrapper.get(".quick-button").trigger("contextmenu");
+    await wrapper.get(".quick-block").trigger("contextmenu");
     expect(wrapper.findAll(".dropdown-option").map((option) => option.text())).toContain("切换为大按钮");
 
     await wrapper.findAll(".dropdown-option").find((option) => option.text() === "切换为大按钮")?.trigger("click");
@@ -524,20 +483,9 @@ describe("QuickButtons", () => {
 
     await wrapper.get(".quick-tag-heading").trigger("contextmenu");
 
-    expect(wrapper.findAll(".dropdown-option").map((option) => option.text())).toEqual([
-      "新增",
-      "粘贴",
-      "查看隐藏",
-      "标签管理",
-      "切换为紧凑按钮",
-      "删除标签",
-      "Tips",
-      "移动到空间",
-      "生活",
-    ]);
+    expect(wrapper.findAll(".dropdown-option").map((option) => option.text())).toEqual(["新增", "粘贴", "重命名", "收起标签", "移动到空间", "生活", "删除标签"]);
 
-    await wrapper.findAll(".dropdown-option").find((option) => option.text() === "标签管理")?.trigger("click");
-    expect(wrapper.get(".quick-tag-manager").text()).toContain("标签管理");
+    expect(wrapper.find('[data-key="manage-tags"]').exists()).toBe(false);
     wrapper.unmount();
   });
 
@@ -555,7 +503,7 @@ describe("QuickButtons", () => {
     wrapper.unmount();
   });
 
-  it("focuses the heading tag's rename input when tag management opens from its menu", async () => {
+  it("focuses the heading tag's rename input when renaming opens from its own menu", async () => {
     const wrapper = mountQuickButtons({
       tags: [{ id: "tag-a", title: "甲" }, { id: "tag-b", title: "乙" }],
       buttons: [{ id: "b1", title: "Btn", value: "v", type: "link", tagId: "tag-b", hidden: false }],
@@ -563,12 +511,12 @@ describe("QuickButtons", () => {
 
     const headingB = wrapper.findAll(".quick-tag-heading").find((heading) => heading.get(".quick-tag-title").text() === "乙");
     await headingB?.trigger("contextmenu");
-    await wrapper.findAll(".dropdown-option").find((option) => option.text() === "标签管理")?.trigger("click");
+    await wrapper.findAll(".dropdown-option").find((option) => option.text() === "重命名")?.trigger("click");
     await wrapper.vm.$nextTick();
 
-    const rowInputs = wrapper.findAll(".quick-tag-manager-row .quick-tag-name-input");
-    expect(rowInputs).toHaveLength(2);
-    expect(document.activeElement).toBe(rowInputs[1].element);
+    const rowInputs = wrapper.findAll(".quick-tag-title-input");
+    expect(rowInputs).toHaveLength(1);
+    expect(document.activeElement).toBe(rowInputs[0].element);
     wrapper.unmount();
   });
 
@@ -1476,13 +1424,7 @@ describe("QuickButtons", () => {
 
     await wrapper.get(".quick-button").trigger("contextmenu");
 
-    expect(wrapper.findAll(".dropdown-option").map((option) => option.text())).toEqual([
-      "编辑",
-      "设为隐藏",
-      "切换为紧凑按钮",
-      "删除",
-      "Tips",
-    ]);
+    expect(wrapper.findAll(".dropdown-option").map((option) => option.text())).toEqual(["编辑", "设为隐藏", "删除"]);
 
     expect(wrapper.findAll(".dropdown-option").some((option) => option.text() === "复制")).toBe(false);
 
@@ -1496,15 +1438,7 @@ describe("QuickButtons", () => {
 
     await wrapper.get(".quick-button").trigger("contextmenu");
 
-    expect(wrapper.findAll(".dropdown-option").map((option) => option.text())).toEqual([
-      "编辑",
-      "设为隐藏",
-      "复制文本",
-      "复制链接",
-      "切换为紧凑按钮",
-      "删除",
-      "Tips",
-    ]);
+    expect(wrapper.findAll(".dropdown-option").map((option) => option.text())).toEqual(["复制文本", "复制链接", "编辑", "设为隐藏", "删除"]);
 
     await wrapper.findAll(".dropdown-option").find((option) => option.text() === "复制链接")?.trigger("click");
 
@@ -1898,10 +1832,8 @@ describe("QuickButtons 跨空间移动", () => {
     await wrapper.get(".quick-tag-title").trigger("contextmenu");
     expect(wrapper.findAll('[data-key^="move-ws:"]')).toHaveLength(0);
     expect(wrapper.find('[data-key="move-tag"]').exists()).toBe(false);
-    expect(wrapper.findAll(".dropdown-option").map((option) => option.text())).toEqual([
-      "新增", "粘贴", "查看隐藏", "标签管理", "切换为紧凑按钮", "删除标签", "Tips",
-    ]);
-    expect(wrapper.get('[data-key="manage-tags"]').text()).toBe("标签管理");
+    expect(wrapper.findAll(".dropdown-option").map((option) => option.text())).toEqual(["新增", "粘贴", "重命名", "收起标签", "删除标签"]);
+    expect(wrapper.find('[data-key="manage-tags"]').exists()).toBe(false);
     expect(wrapper.get('[data-key="delete-tag"]').text()).toBe("删除标签");
     wrapper.unmount();
   });

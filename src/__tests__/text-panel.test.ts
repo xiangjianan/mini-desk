@@ -823,7 +823,7 @@ describe("TextPanel", () => {
     await wrapper.get("textarea").trigger("select");
     await wrapper.get("textarea").trigger("contextmenu");
 
-    expect(wrapper.findAll(".dropdown-option").map((option) => option.text())).toEqual(["复制", "粘贴", ...FORMAT_GROUP_LABELS, "删除", "Tips"]);
+    expect(wrapper.findAll(".dropdown-option").map((option) => option.text())).toEqual(["复制", "粘贴", ...FORMAT_GROUP_LABELS, "删除"]);
 
     textarea.setSelectionRange(4, 4);
     await wrapper.findAll(".dropdown-option").find((option) => option.text() === "复制")?.trigger("click");
@@ -853,7 +853,7 @@ describe("TextPanel", () => {
     textarea.setSelectionRange(0, 0);
     await wrapper.get("textarea").trigger("contextmenu");
 
-    expect(wrapper.findAll(".dropdown-option").map((option) => option.text())).toEqual(["复制", "粘贴", "Tips"]);
+    expect(wrapper.findAll(".dropdown-option").map((option) => option.text())).toEqual(["复制", "粘贴"]);
     expect(wrapper.get('[data-key="copy"]').attributes("disabled")).toBeDefined();
     expect(wrapper.get('[data-key="paste"]').attributes("disabled")).toBeUndefined();
 
@@ -1599,7 +1599,7 @@ describe("TextPanel", () => {
     textarea.setSelectionRange(0, 0);
     await wrapper.get("textarea").trigger("contextmenu");
 
-    expect(wrapper.findAll(".dropdown-option").map((option) => option.text())).toEqual(["复制", "粘贴", "智能粘贴", "Tips"]);
+    expect(wrapper.findAll(".dropdown-option").map((option) => option.text())).toEqual(["复制", "粘贴", "智能粘贴"]);
     wrapper.unmount();
   });
 
@@ -1622,7 +1622,7 @@ describe("TextPanel", () => {
     textarea.setSelectionRange(0, 0);
     await wrapper.get("textarea").trigger("contextmenu");
 
-    expect(wrapper.findAll(".dropdown-option").map((option) => option.text())).toEqual(["复制", "粘贴", "Tips"]);
+    expect(wrapper.findAll(".dropdown-option").map((option) => option.text())).toEqual(["复制", "粘贴"]);
     wrapper.unmount();
   });
 
@@ -1717,7 +1717,7 @@ describe("TextPanel", () => {
     await wrapper.get("textarea").trigger("contextmenu");
 
     expect(wrapper.findAll(".dropdown-option").map((option) => option.text()))
-      .toEqual(["复制", "粘贴", "智能粘贴", "AI润色", "技术风格", "简洁风格", "口语风格", ...FORMAT_GROUP_LABELS, "删除", "Tips"]);
+      .toEqual(["复制", "粘贴", "智能粘贴", "AI润色", "技术风格", "简洁风格", "口语风格", ...FORMAT_GROUP_LABELS, "删除"]);
     wrapper.unmount();
   });
 
@@ -1823,7 +1823,7 @@ describe("TextPanel", () => {
     // 记忆选区一并清除：旧偏移落在润色后的新文本上已错位，复活会作用于错误文本
     await wrapper.get("textarea").trigger("contextmenu");
     expect(wrapper.findAll(".dropdown-option").map((option) => option.text()))
-      .toEqual(["复制", "粘贴", "智能粘贴", "Tips"]);
+      .toEqual(["复制", "粘贴", "智能粘贴"]);
     wrapper.unmount();
   });
 
@@ -1848,7 +1848,7 @@ describe("TextPanel", () => {
     await wrapper.get("textarea").trigger("contextmenu");
 
     expect(wrapper.findAll(".dropdown-option").map((option) => option.text()))
-      .toEqual(["复制", "粘贴", "智能粘贴", "AI润色", "技术风格", "简洁风格", "口语风格", ...FORMAT_GROUP_LABELS, "删除", "Tips"]);
+      .toEqual(["复制", "粘贴", "智能粘贴", "AI润色", "技术风格", "简洁风格", "口语风格", ...FORMAT_GROUP_LABELS, "删除"]);
     wrapper.unmount();
   });
 
@@ -1873,7 +1873,7 @@ describe("TextPanel", () => {
     await wrapper.get("textarea").trigger("contextmenu");
 
     expect(wrapper.findAll(".dropdown-option").map((option) => option.text()))
-      .toEqual(["复制", "粘贴", ...FORMAT_GROUP_LABELS, "删除", "Tips"]);
+      .toEqual(["复制", "粘贴", ...FORMAT_GROUP_LABELS, "删除"]);
     wrapper.unmount();
   });
 
@@ -1905,7 +1905,7 @@ describe("TextPanel", () => {
     // 删除后光标塌缩、记忆选区清除：旧偏移已错位，再次右键不应出现删除项
     expect(textarea.selectionStart).toBe(textarea.selectionEnd);
     await wrapper.get("textarea").trigger("contextmenu");
-    expect(wrapper.findAll(".dropdown-option").map((option) => option.text())).toEqual(["复制", "粘贴", "Tips"]);
+    expect(wrapper.findAll(".dropdown-option").map((option) => option.text())).toEqual(["复制", "粘贴"]);
     wrapper.unmount();
   });
 

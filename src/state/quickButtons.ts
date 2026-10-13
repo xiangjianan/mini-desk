@@ -16,13 +16,9 @@ export const QUICK_BUTTON_EMPTY_GROUP_ID = "__empty";
 export const QUICK_BUTTON_OTHER_GROUP_ID = "__other";
 export const QUICK_DENSITY_THRESHOLD = 12;
 
-/** 点击数封顶：达到该次数即染到最深（100%）。 */
-export const QUICK_USAGE_MAX_CLICKS = 100;
-
-/** 把按钮点击数折算成 0–100 的染色百分比；非法输入按 0 处理。 */
-export function quickButtonUsagePercent(clicks: unknown): number {
-  if (typeof clicks !== "number" || !Number.isFinite(clicks)) return 0;
-  return Math.max(0, Math.min(QUICK_USAGE_MAX_CLICKS, Math.floor(clicks)));
+/** 显示真实累计次数；旧数据中的无效值按零处理。 */
+export function quickButtonClickCount(clicks: unknown): number {
+  return typeof clicks === "number" && Number.isFinite(clicks) ? Math.max(0, Math.floor(clicks)) : 0;
 }
 
 /** 该快捷按钮使用计数 +1（按钮级：点谁计谁，未分组按钮同样计数）。 */

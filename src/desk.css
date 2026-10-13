@@ -801,11 +801,6 @@ html[data-theme="dark"] .workbench-shell,
 .workbench-shell .todo-collapse-button .n-icon { font-size: 14px; }
 .workbench-shell .header-actions,
 .workbench-shell .workbench-command-actions { gap: 0; }
-.workbench-shell .quick-buttons .quick-button.has-usage:hover,
-.workbench-shell .quick-buttons .quick-button.has-usage:focus-visible {
-  background: var(--desk-row-hover) !important;
-}
-
 /* Content begins directly below the common header, like the notebook tab strip. */
 .workbench-shell .todo-content-scroll > .todo-focus-region > .today-focus-section {
   margin-top: var(--desk-group-top);

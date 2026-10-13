@@ -4,7 +4,7 @@ import type { Component, VNode } from "vue";
 import { NDropdown, NIcon } from "naive-ui";
 import type { DropdownOption } from "naive-ui";
 import { CreateOutline } from "@vicons/ionicons5";
-import { CONTEXT_MENU_Z_INDEX, createExclusiveContextMenu } from "../utils/contextMenu";
+import { organizeContextMenu, CONTEXT_MENU_Z_INDEX, createExclusiveContextMenu } from "../utils/contextMenu";
 import { renderIcon } from "../utils/dropdownIcons";
 import { setStickySelection } from "../utils/caret";
 import { isImeComposing } from "../utils/ime";
@@ -141,7 +141,7 @@ defineExpose({ openMenuAt });
     :x="menu.x"
     :y="menu.y"
     :z-index="CONTEXT_MENU_Z_INDEX"
-    :options="menuOptions"
+    :options="organizeContextMenu(menuOptions)"
     @select="handleMenuSelect"
     @clickoutside="exclusiveMenu.handleClickOutside"
   >
