@@ -2816,7 +2816,7 @@ describe("App shell", () => {
 
     try {
       // 默认 auto + 系统浅色，设置可明确选择深色或浅色。
-      expect(wrapper.getComponent(SettingsMenu).props("theme")).toBe("auto");
+      expect(wrapper.getComponent(SettingsMenu).props("theme")).toBe("light");
 
       wrapper.getComponent(SettingsMenu).vm.$emit("theme", wrapper.getComponent(SettingsMenu).props("theme") === "dark" ? "light" : "dark");
       await wrapper.vm.$nextTick();

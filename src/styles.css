@@ -7979,6 +7979,3 @@ body:has(.image-preview) .n-modal-container:has(.focus-now-modal) .n-modal-mask 
 }
 
 .settings-toolbar { display: flex; align-items: center; gap: 0; }
-
-.appearance-buttons { display: flex; align-items: center; }
-.appearance-button.is-selected { color: var(--primary); background: var(--accent); }

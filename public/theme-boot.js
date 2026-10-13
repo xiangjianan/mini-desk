@@ -8,7 +8,7 @@ try {
     // 显式明/暗直接应用；auto（跟随系统）由 prefers-color-scheme 解析，避免暗色系统下首帧闪白。
     var resolved = theme === "dark" || theme === "light"
       ? theme
-      : (typeof window.matchMedia === "function" && window.matchMedia("(prefers-color-scheme: dark)").matches
+      : (theme === "auto" && typeof window.matchMedia === "function" && window.matchMedia("(prefers-color-scheme: dark)").matches
           ? "dark"
           : "light");
     if (resolved === "dark" || resolved === "light") {

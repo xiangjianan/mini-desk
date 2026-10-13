@@ -14,8 +14,8 @@ export function nextManualTheme(mode: ThemeMode, systemDark: boolean): ResolvedT
   return resolveTheme(mode, systemDark) === "dark" ? "light" : "dark";
 }
 
-/** 持久化/导入时的主题值归一：显式值直接保留，未知/缺失回退为 auto（首次打开跟随系统）。 */
+/** 持久化/导入时的主题值归一：显式值直接保留，未知/缺失回退为 light（首次打开白色主题）。 */
 export function normalizeThemeMode(value: unknown): ThemeMode {
   if (value === "light" || value === "dark" || value === "auto") return value;
-  return "auto";
+  return "light";
 }

@@ -256,7 +256,7 @@ describe("Naive UI component usage", () => {
     expect(settings).toContain("NBadge");
     expect(settings).toContain("SettingsOutline");
     expect(settings).not.toContain("⚙");
-    expect(settings).not.toContain("circle");
+    expect(settings).not.toMatch(/<NButton[^>]*\bcircle(?:\s|=|>)/s);
     expect(settings).not.toContain("settings-wrap");
     expect(quick).not.toContain(">+</NButton>");
     expect(todo).not.toContain("↘");

@@ -23,15 +23,15 @@ describe("theme mode helpers (src/state/theme.ts)", () => {
     expect(nextManualTheme("auto", false)).toBe("dark");
   });
 
-  it("normalizeThemeMode keeps explicit modes and falls back to auto for unknown/missing", () => {
+  it("normalizeThemeMode keeps explicit modes and falls back to light for unknown/missing", () => {
     expect(normalizeThemeMode("light")).toBe("light");
     expect(normalizeThemeMode("dark")).toBe("dark");
     expect(normalizeThemeMode("auto")).toBe("auto");
-    expect(normalizeThemeMode("future-theme")).toBe("auto");
-    expect(normalizeThemeMode(undefined)).toBe("auto");
+    expect(normalizeThemeMode("future-theme")).toBe("light");
+    expect(normalizeThemeMode(undefined)).toBe("light");
   });
 
-  it("default state follows the system (auto) theme", () => {
-    expect(defaultState().theme).toBe("auto");
+  it("default state uses the white (light) theme", () => {
+    expect(defaultState().theme).toBe("light");
   });
 });

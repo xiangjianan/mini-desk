@@ -16,7 +16,6 @@ import {
   Settings as SettingsOutline,
   Sun,
   Moon,
-  Monitor,
   LayoutGrid as GridOutline,
   Trash2 as TrashOutline,
 } from "lucide-vue-next";
@@ -40,7 +39,7 @@ const props = withDefaults(defineProps<{
   zoneVisibility?: ZoneVisibility;
 }>(), {
   language: "zh",
-  theme: "auto",
+  theme: "light",
   zoneVisibility: () => ({ assets: true, notes: true, tasks: true, workspace: true }),
   customCompanionGif: () => ({}),
   hasCustomCompanionGif: false,
@@ -82,16 +81,12 @@ const customGifLightPreview = computed(() => customGifLightPreviewSrc.value ?? p
 const customGifDarkPreview = computed(() => customGifDarkPreviewSrc.value ?? props.customCompanionGif.dark);
 const preferenceOpen = ref<"zones" | null>(null);
 let keepPreferenceOpen = false;
-const appearanceModes = [
-  { mode: "light", icon: Sun },
-  { mode: "dark", icon: Moon },
-  { mode: "auto", icon: Monitor },
-] as const;
-function selectAppearance(mode: ThemeMode): void {
+const nextAppearance = computed<ThemeMode>(() => props.theme === "light" ? "dark" : props.theme === "dark" ? "auto" : "light");
+function selectAppearance(): void {
   preferenceOpen.value = null;
   keepPreferenceOpen = false;
   menuOpen.value = false;
-  emit("theme", mode);
+  emit("theme", nextAppearance.value);
 }
 const zoneOptions = computed(() => (["assets", "notes", "tasks", "workspace"] as const).map((zone) => ({
   label: text.value.zoneVisibility[zone], key: `zone:${zone}`,
@@ -301,15 +296,15 @@ function getCompanionGifThemeLabel(theme: CompanionGifTheme): string {
         <NIcon :component="GridOutline" />
       </button>
     </NDropdown>
-    <div class="appearance-buttons" role="group" :aria-label="text.settings.appearance" data-testid="appearance-controls">
-      <button v-for="entry in appearanceModes" :key="entry.mode" type="button"
-        class="icon-button appearance-button" :class="{ 'is-selected': theme === entry.mode }"
-        :data-testid="`appearance-${entry.mode}`" :aria-label="text.settings[entry.mode]"
-        :title="text.settings[entry.mode]" :aria-pressed="theme === entry.mode"
-        @click="selectAppearance(entry.mode)">
-        <NIcon :component="entry.icon" />
-      </button>
-    </div>
+    <button type="button" class="icon-button appearance-button" data-testid="appearance-controls"
+      :data-theme-mode="theme" :aria-label="`${text.settings.appearance}: ${text.settings[theme]}`"
+      :title="`${text.settings[theme]} → ${text.settings[nextAppearance]}`" @click="selectAppearance">
+      <svg v-if="theme === 'auto'" data-testid="appearance-system-icon" width="16" height="16" viewBox="0 0 24 24" aria-hidden="true">
+        <circle cx="12" cy="12" r="8" fill="none" stroke="currentColor" stroke-width="1.5" />
+        <path d="M12 4 A8 8 0 0 1 12 20 Z" fill="currentColor" />
+      </svg>
+      <NIcon v-else :component="theme === 'light' ? Sun : Moon" />
+    </button>
   <NDropdown
     trigger="click"
     placement="bottom-end"

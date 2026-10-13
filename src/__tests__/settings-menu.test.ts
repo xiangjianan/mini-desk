@@ -100,9 +100,9 @@ describe("SettingsMenu", () => {
     await wrapper.setProps({ zoneVisibility: { assets: false, notes: true, tasks: true, workspace: true } });
     expect(wrapper.get('[data-key="zone:assets"]').classes()).not.toContain("is-selected");
     expect(wrapper.get('[data-key="zone:tasks"]').classes()).toContain("is-selected");
-    await wrapper.get('[data-testid="appearance-light"]').trigger("click");
+    await wrapper.get('[data-testid="appearance-controls"]').trigger("click");
     expect(zones.props("show")).toBe(false);
-    expect(wrapper.emitted("theme")).toEqual([["light"]]);
+    expect(wrapper.emitted("theme")).toEqual([["dark"]]);
     expect(wrapper.findAllComponents(dropdownStub)).toHaveLength(2);
     settings.vm.$emit("update:show", true);
     await wrapper.vm.$nextTick();
@@ -124,16 +124,17 @@ describe("SettingsMenu", () => {
         NIcon: { template: "<span />" },
       } },
     });
-    expect(wrapper.get('[data-testid="appearance-controls"]').attributes("aria-label")).toBe(language === "zh" ? "外观" : "Appearance");
-    expect(wrapper.get('[data-testid="appearance-dark"]').classes()).toContain("is-selected");
-    expect(wrapper.get('[data-testid="appearance-auto"]').classes()).not.toContain("is-selected");
+    const button = wrapper.get('[data-testid="appearance-controls"]');
+    expect(wrapper.findAll('.appearance-button')).toHaveLength(1);
+    expect(button.attributes("data-theme-mode")).toBe("dark");
     for (const mode of ["auto", "light", "dark"] as const) {
-      await wrapper.get(`[data-testid="appearance-${mode}"]`).trigger("click");
+      await button.trigger("click");
+      await wrapper.setProps({ theme: mode });
+      expect(button.attributes("data-theme-mode")).toBe(mode);
+      expect(wrapper.find('[data-testid="appearance-system-icon"]').exists()).toBe(mode === "auto");
     }
     expect(wrapper.emitted("theme")).toEqual([["auto"], ["light"], ["dark"]]);
-    await wrapper.setProps({ theme: "auto" });
-    expect(wrapper.get('[data-testid="appearance-auto"]').classes()).toContain("is-selected");
-    expect(wrapper.get('[data-testid="appearance-dark"]').classes()).not.toContain("is-selected");
+
   });
 
   it("groups data actions under one icon menu", async () => {

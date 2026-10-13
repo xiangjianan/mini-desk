@@ -1,7 +1,7 @@
 import { readFileSync } from "node:fs";
 import { resolve } from "node:path";
 import vm from "node:vm";
-import { beforeEach, describe, expect, it } from "vitest";
+import { beforeEach, describe, expect, it, vi } from "vitest";
 
 /** 直接执行 public/theme-boot.js（同步外链脚本，不经打包），验证首帧前的主题与标题栏着色。 */
 
@@ -52,6 +52,20 @@ describe("theme-boot.js (pre-first-frame theming)", () => {
 
     expect(document.documentElement.dataset.theme).toBeUndefined();
     expect(themeColorMeta().content).toBe("#fcfcfe");
+  });
+
+  it("uses white for missing preferences but respects an explicit system mode", () => {
+    vi.stubGlobal("matchMedia", (query: string) => ({ matches: query.includes("prefers-color-scheme") }));
+    try {
+      localStorage.setItem(STATE_KEY, JSON.stringify({}));
+      runThemeBoot();
+      expect(document.documentElement.dataset.theme).toBe("light");
+      localStorage.setItem(STATE_KEY, JSON.stringify({ theme: "auto" }));
+      runThemeBoot();
+      expect(document.documentElement.dataset.theme).toBe("dark");
+    } finally {
+      vi.unstubAllGlobals();
+    }
   });
 
   it("does not throw on malformed persisted state", () => {
