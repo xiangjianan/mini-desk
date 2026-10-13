@@ -417,7 +417,7 @@ html[data-theme="dark"] .workbench-shell,
   box-shadow: inset 0 0 0 1px var(--line-subtle);
 }
 .workbench-shell button.space-tab:hover,
-.workbench-shell button.space-tab:focus-visible { background: var(--desk-tab-hover); }
+.workbench-shell button.space-tab:focus-visible { border-radius: 8px; background: var(--desk-tab-hover); }
 .workbench-shell button.space-tab.is-active:hover,
 .workbench-shell button.space-tab.is-active:focus-visible { background: var(--desk-tab-active-hover); }
 .workbench-shell .space-tab-edit-shell { height: 32px; min-height: 32px; border-radius: 8px; background: var(--card); }
