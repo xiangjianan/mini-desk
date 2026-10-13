@@ -646,44 +646,53 @@ html[data-theme="dark"] .workbench-shell,
   left: 50%;
   top: 50%;
   transform: translate(-50%, -50%);
-  width: 192px;
-  min-width: 192px;
-  border-radius: 0;
+  width: 64px;
+  min-width: 64px;
+  height: 28px;
+  min-height: 28px;
+  border-radius: 999px;
+  color: var(--muted);
+  background: transparent;
   box-shadow: none;
 }
-.workbench-shell .workbench-title-group { max-width: calc(50% - 104px); }
+.workbench-shell .workbench-title-group { max-width: calc(50% - 48px); }
 .workbench-shell .workbench-command-actions { margin-inline-start: auto; }
-.workbench-shell .workbench-header-reveal-zone { width: 192px; }
+.workbench-shell .workbench-header-reveal-zone { width: 64px; height: 32px; }
 .workbench-shell .workbench-header-reveal {
+  top: 4px;
   left: 50%;
-  margin-left: -96px;
-  width: 192px;
-  min-width: 192px;
-  border-radius: 0;
-  background: transparent;
+  margin-left: -32px;
+  width: 64px;
+  min-width: 64px;
+  height: 24px;
+  min-height: 24px;
+  border-radius: 999px;
+  color: var(--muted);
+  background: color-mix(in srgb, var(--foreground) 5%, var(--background));
+  box-shadow: inset 0 0 0 1px color-mix(in srgb, var(--border) 55%, transparent);
 }
 .workbench-shell .workbench-header-hide-button:hover,
 .workbench-shell .workbench-header-hide-button:focus-visible,
 .workbench-shell .workbench-header-reveal:hover,
 .workbench-shell .workbench-header-reveal:focus-visible,
 .workbench-shell .workbench-header-reveal:active {
-  background: transparent;
-  box-shadow: none;
+  color: var(--foreground);
+  background: color-mix(in srgb, var(--foreground) 9%, var(--background));
 }
-/* The header affordance changes geometry, without a background. */
+.workbench-shell .workbench-header-hide-button,
+.workbench-shell .workbench-header-reveal {
+  transition: background-color 180ms ease, color 180ms ease;
+}
 .workbench-shell .workbench-header-hide-button::before,
 .workbench-shell .workbench-header-reveal::before { content: none; }
 .workbench-shell .workbench-header-hide-button svg,
-.workbench-shell .workbench-header-reveal svg {
-  transform: scale(1);
-  transform-origin: center;
-  transition: transform 220ms ease, color 180ms ease;
-}
+.workbench-shell .workbench-header-reveal svg,
 .workbench-shell .workbench-header-hide-button:hover svg,
 .workbench-shell .workbench-header-hide-button:focus-visible svg,
 .workbench-shell .workbench-header-reveal:hover svg,
 .workbench-shell .workbench-header-reveal:focus-visible svg {
-  transform: scale(3, 1.15);
+  transform: none;
+  transition: color 180ms ease;
 }
 .workbench-shell .workbench-header-reveal-enter-active,
 .workbench-shell .workbench-header-reveal-leave-active { transition: opacity 220ms ease; }

@@ -442,6 +442,8 @@ export const GUIDE_MESSAGES: Record<AppLanguage, Record<GuideKey, string[]>> = {
 export const UI_TEXT = {
   zh: {
     common: {
+      hideHeader: "收起顶部栏",
+      showHeader: "展开顶部栏",
       tips: "Tips",
       copy: "复制",
       paste: "粘贴",
@@ -853,6 +855,8 @@ export const UI_TEXT = {
   },
   en: {
     common: {
+      hideHeader: "Collapse top bar",
+      showHeader: "Expand top bar",
       tips: "Tips",
       copy: "Copy",
       paste: "Paste",

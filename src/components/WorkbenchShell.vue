@@ -10,6 +10,7 @@ import {
   DEFAULT_LANGUAGE,
   WORKBENCH_COLLAPSED_FIXED_LABELS_BY_LANGUAGE,
   getDefaultTitles,
+  getUiText,
 } from "../state/i18n";
 import {
   LEGACY_WORKBENCH_WIDTH_STORAGE_KEY,
@@ -58,6 +59,7 @@ const zoneLabels = computed<readonly string[]>(() => {
   ];
 });
 
+const uiText = computed(() => getUiText(props.language));
 const expandHint = computed(() => (props.language === "en" ? "Click to expand" : "点击展开"));
 
 const emit = defineEmits<{
@@ -98,21 +100,15 @@ const RESIZE_STEP = 24;
 // Floor a zone can be dragged down to once it passes its minimum width.
 // Below it the zone collapses to a vertical title rail and content is hidden.
 const COLLAPSED_COLUMN_WIDTH = 44;
-const HEADER_COLLAPSE_REVEAL_DELAY_MS = 200;
-const HEADER_INITIAL_REVEAL_AUTO_HIDE_MS = 1_000;
-const HEADER_REVEAL_AUTO_HIDE_MS = 100;
-const HEADER_REVEAL_POINTER_LEAVE_HIDE_MS = 150;
 
 const gridRef = ref<HTMLElement | null>(null);
 let gridResizeObserver: ResizeObserver | undefined;
 let gridResizeFrame: number | undefined;
 let observedGridWidth = 0;
-const headerRevealZoneRef = ref<HTMLElement | null>(null);
 // 隐藏态必须在首帧渲染前就位：若先按 false 渲染、再在 onMounted 里隐藏，
 // header 的 200ms 离场过渡会把导航栏画在屏幕上（刷新闪现）。
 // readStoredHeaderHidden 是函数声明，提升后可在此直接调用。
 const headerHidden = ref(readStoredHeaderHidden());
-const headerRevealVisible = ref(false);
 const columnWidths = ref<number[]>([]);
 const gridGap = ref(DEFAULT_GRID_GAP);
 const gridPadding = ref({
@@ -166,9 +162,6 @@ const zoneCollapsed = computed<boolean[]>(() => {
   return CANONICAL_ZONE_ORDER.map((canonicalIndex) => collapsedByCanonical.get(canonicalIndex) ?? false);
 });
 
-let headerRevealHideTimer: number | undefined;
-let headerRevealShowTimer: number | undefined;
-let lastPointerPosition: { x: number; y: number } | undefined;
 
 const resizeHandleStyles = computed(() => {
   if (columnWidths.value.length !== activeMins.value.length) return [];
@@ -588,88 +581,10 @@ function expandZoneToDefault(canonicalIndex: number): void {
   syncImagePreviewLeft();
 }
 
-function clearHeaderRevealHideTimer(): void {
-  if (headerRevealHideTimer === undefined) return;
-  window.clearTimeout(headerRevealHideTimer);
-  headerRevealHideTimer = undefined;
-}
-
-function clearHeaderRevealShowTimer(): void {
-  if (headerRevealShowTimer === undefined) return;
-  window.clearTimeout(headerRevealShowTimer);
-  headerRevealShowTimer = undefined;
-}
-
-function rememberPointerPosition(event?: MouseEvent | PointerEvent): void {
-  if (!event || !Number.isFinite(event.clientX) || !Number.isFinite(event.clientY)) return;
-  lastPointerPosition = { x: event.clientX, y: event.clientY };
-}
-
-function isLastPointerInsideHeaderRevealZone(): boolean {
-  const zone = headerRevealZoneRef.value;
-  if (!zone || !lastPointerPosition) return false;
-  const rect = zone.getBoundingClientRect();
-  return (
-    lastPointerPosition.x >= rect.left &&
-    lastPointerPosition.x <= rect.right &&
-    lastPointerPosition.y >= rect.top &&
-    lastPointerPosition.y <= rect.bottom
-  );
-}
-
-function scheduleHeaderRevealHide(delay = HEADER_REVEAL_AUTO_HIDE_MS): void {
-  clearHeaderRevealHideTimer();
-  if (!headerHidden.value) return;
-  headerRevealHideTimer = window.setTimeout(() => {
-    headerRevealVisible.value = false;
-    headerRevealHideTimer = undefined;
-  }, delay);
-}
-
-function scheduleHeaderRevealAfterCollapse(): void {
-  clearHeaderRevealShowTimer();
-  headerRevealVisible.value = false;
-  headerRevealShowTimer = window.setTimeout(() => {
-    headerRevealShowTimer = undefined;
-    if (!headerHidden.value) return;
-    headerRevealVisible.value = true;
-    void nextTick(() => {
-      if (!headerHidden.value) return;
-      if (isLastPointerInsideHeaderRevealZone()) {
-        clearHeaderRevealHideTimer();
-        return;
-      }
-      scheduleHeaderRevealHide(HEADER_INITIAL_REVEAL_AUTO_HIDE_MS);
-    });
-  }, HEADER_COLLAPSE_REVEAL_DELAY_MS);
-}
-
-function showHeaderRevealControl(event?: MouseEvent | PointerEvent): void {
-  rememberPointerPosition(event);
-  if (!headerHidden.value) return;
-  if (headerRevealShowTimer !== undefined) return;
-  clearHeaderRevealHideTimer();
-  headerRevealVisible.value = true;
-}
-
-function handleHeaderRevealZoneLeave(event?: MouseEvent | PointerEvent): void {
-  rememberPointerPosition(event);
-  if (!headerHidden.value) return;
-  scheduleHeaderRevealHide(HEADER_REVEAL_POINTER_LEAVE_HIDE_MS);
-}
-
-function setHeaderHidden(hidden: boolean, event?: MouseEvent | PointerEvent): void {
-  rememberPointerPosition(event);
+function setHeaderHidden(hidden: boolean): void {
   headerHidden.value = hidden;
   persistHeaderHidden(hidden);
   syncImagePreviewTop();
-  if (hidden) {
-    scheduleHeaderRevealAfterCollapse();
-  } else {
-    clearHeaderRevealShowTimer();
-    clearHeaderRevealHideTimer();
-    headerRevealVisible.value = false;
-  }
   void nextTick(refreshWorkbenchLayout);
 }
 
@@ -723,10 +638,6 @@ onMounted(() => {
     });
     gridResizeObserver.observe(gridRef.value);
   }
-  if (headerHidden.value) {
-    headerRevealVisible.value = true;
-    scheduleHeaderRevealHide();
-  }
   void nextTick(refreshWorkbenchLayout);
   window.addEventListener("resize", refreshWorkbenchLayout);
 });
@@ -736,8 +647,6 @@ onUnmounted(() => {
   gridResizeObserver?.disconnect();
   if (gridResizeFrame !== undefined) window.cancelAnimationFrame(gridResizeFrame);
   finishResize();
-  clearHeaderRevealShowTimer();
-  clearHeaderRevealHideTimer();
   window.removeEventListener("resize", refreshWorkbenchLayout);
   document.documentElement.style.removeProperty("--image-preview-left");
   document.documentElement.style.removeProperty("--image-preview-top");
@@ -762,9 +671,10 @@ onUnmounted(() => {
               type="button"
               class="icon-button workbench-header-hide-button"
               data-testid="workbench-header-hide"
-              aria-label="隐藏顶部菜单"
-              title="隐藏顶部菜单"
-              @click="setHeaderHidden(true, $event)"
+              :aria-label="uiText.common.hideHeader"
+              :title="uiText.common.hideHeader"
+              aria-expanded="true"
+              @click="setHeaderHidden(true)"
             >
               <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
                 <path d="M5 14 L10.6 10.75 Q12 9.85 13.4 10.75 L19 14" stroke-width="1.4" vector-effect="non-scaling-stroke" />
@@ -793,23 +703,18 @@ onUnmounted(() => {
 
       <div
         v-if="headerHidden"
-        ref="headerRevealZoneRef"
         class="workbench-header-reveal-zone"
         data-testid="workbench-header-reveal-zone"
-        @click="showHeaderRevealControl($event)"
-        @mouseenter="showHeaderRevealControl($event)"
-        @pointermove="showHeaderRevealControl($event)"
-        @mouseleave="handleHeaderRevealZoneLeave($event)"
       >
         <Transition name="workbench-header-reveal" :duration="220">
           <button
-            v-if="headerRevealVisible"
             type="button"
             class="workbench-header-reveal"
             data-testid="workbench-header-show"
-            aria-label="显示顶部菜单"
-            title="显示顶部菜单"
-            @click="setHeaderHidden(false, $event)"
+            :aria-label="uiText.common.showHeader"
+            :title="uiText.common.showHeader"
+            aria-expanded="false"
+            @click="setHeaderHidden(false)"
           >
             <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
               <path d="M5 10 L10.6 13.25 Q12 14.15 13.4 13.25 L19 10" stroke-width="1.4" vector-effect="non-scaling-stroke" />
