@@ -2833,10 +2833,10 @@ describe("App shell", () => {
     }
   });
 
-  it("toggles workspace areas through settings and persists their checked state", async () => {
+  it("toggles workspace areas through the toolbar and persists their checked state", async () => {
     const wrapper = mountApp();
     try {
-      expect(wrapper.find('[data-testid="zone-visibility-trigger"]').exists()).toBe(false);
+      expect(wrapper.find('[data-testid="zone-visibility-trigger"]').exists()).toBe(true);
       const settings = wrapper.getComponent(SettingsMenu);
       expect(settings.props("zoneVisibility")!.tasks).toBe(true);
       settings.vm.$emit("toggleZone", "tasks");

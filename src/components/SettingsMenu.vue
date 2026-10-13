@@ -78,6 +78,29 @@ const customGifDarkPreviewSrc = ref<string | undefined>();
 const text = computed(() => getUiText(props.language));
 const customGifLightPreview = computed(() => customGifLightPreviewSrc.value ?? props.customCompanionGif.light);
 const customGifDarkPreview = computed(() => customGifDarkPreviewSrc.value ?? props.customCompanionGif.dark);
+const preferenceOpen = ref<"zones" | "appearance" | null>(null);
+let keepPreferenceOpen = false;
+const appearanceOptions = computed(() => (["auto", "light", "dark"] as const).map((mode) => ({
+  label: text.value.settings[mode], key: `appearance:${mode}`,
+  icon: props.theme === mode ? renderIcon(CheckmarkOutline) : undefined,
+})));
+const zoneOptions = computed(() => (["assets", "notes", "tasks", "workspace"] as const).map((zone) => ({
+  label: text.value.zoneVisibility[zone], key: `zone:${zone}`,
+  icon: props.zoneVisibility[zone] ? renderIcon(CheckmarkOutline) : undefined,
+})));
+function handlePreferenceShow(kind: "zones" | "appearance", show: boolean): void {
+  if (!show && preferenceOpen.value !== kind) return;
+  if (!show && keepPreferenceOpen) { keepPreferenceOpen = false; return; }
+  keepPreferenceOpen = false;
+  preferenceOpen.value = show ? kind : null;
+  if (show) menuOpen.value = false;
+}
+function handlePreferenceSelect(key: string): void {
+  keepPreferenceOpen = true;
+  if (key.startsWith("zone:")) emit("toggleZone", key.slice(5) as ZoneKey);
+  else emit("theme", key.slice("appearance:".length) as ThemeMode);
+}
+
 const options = computed(() => [
   {
     label: text.value.settings.data,
@@ -108,26 +131,6 @@ const options = computed(() => [
     ],
   },
   { type: "divider", key: "general-divider" },
-  {
-    label: text.value.settings.appearance,
-    key: "appearance",
-    icon: renderIcon(SunMoon),
-    children: (["auto", "light", "dark"] as const).map((mode) => ({
-      label: text.value.settings[mode],
-      key: `appearance:${mode}`,
-      icon: props.theme === mode ? renderIcon(CheckmarkOutline) : undefined,
-    })),
-  },
-  {
-    label: text.value.zoneVisibility.title,
-    key: "zone-visibility",
-    icon: renderIcon(GridOutline),
-    children: (["assets", "notes", "tasks", "workspace"] as const).map((zone) => ({
-      label: text.value.zoneVisibility[zone],
-      key: `zone:${zone}`,
-      icon: props.zoneVisibility[zone] ? renderIcon(CheckmarkOutline) : undefined,
-    })),
-  },
   {
     label: text.value.settings.gifTheme,
     key: "gif-theme",
@@ -161,16 +164,8 @@ const options = computed(() => [
 ]);
 
 function handleSelect(key: string): void {
-  keepOpenAfterPreferenceSelect = key.startsWith("zone:") || key.startsWith("appearance:") || (key.startsWith("gif-theme:") && key !== "gif-theme:custom");
+  keepOpenAfterPreferenceSelect = key.startsWith("gif-theme:") && key !== "gif-theme:custom";
   if (!keepOpenAfterPreferenceSelect) menuOpen.value = false;
-  if (key === "zone:assets" || key === "zone:notes" || key === "zone:tasks" || key === "zone:workspace") {
-    emit("toggleZone", key.slice("zone:".length) as ZoneKey);
-    return;
-  }
-  if (key === "appearance:auto" || key === "appearance:light" || key === "appearance:dark") {
-    emit("theme", key.slice("appearance:".length) as ThemeMode);
-    return;
-  }
   if (key === "create-workspace") emit("createWorkspace");
   if (key === "export-workspace") emit("exportWorkspace", triggerRef.value ?? undefined);
   if (key === "import") emit("import", triggerRef.value ?? undefined);
@@ -207,6 +202,7 @@ function handleSelect(key: string): void {
 }
 
 function handleDropdownShow(value: boolean): void {
+  if (value) { preferenceOpen.value = null; keepPreferenceOpen = false; }
   if (!value && keepOpenAfterPreferenceSelect) {
     keepOpenAfterPreferenceSelect = false;
     return;
@@ -287,6 +283,25 @@ function getCompanionGifThemeLabel(theme: CompanionGifTheme): string {
 </script>
 
 <template>
+  <div class="settings-toolbar">
+    <NDropdown trigger="click" placement="bottom-end" :show="preferenceOpen === 'zones'"
+      :z-index="CONTEXT_MENU_Z_INDEX" :options="zoneOptions"
+      @select="handlePreferenceSelect" @update:show="(show) => handlePreferenceShow('zones', show)">
+      <button type="button" class="icon-button" data-testid="zone-visibility-trigger"
+        :aria-label="text.zoneVisibility.title" :title="text.zoneVisibility.title"
+        :aria-expanded="preferenceOpen === 'zones'">
+        <NIcon :component="GridOutline" />
+      </button>
+    </NDropdown>
+    <NDropdown trigger="click" placement="bottom-end" :show="preferenceOpen === 'appearance'"
+      :z-index="CONTEXT_MENU_Z_INDEX" :options="appearanceOptions"
+      @select="handlePreferenceSelect" @update:show="(show) => handlePreferenceShow('appearance', show)">
+      <button type="button" class="icon-button" data-testid="appearance-trigger"
+        :aria-label="text.settings.appearance" :title="text.settings.appearance"
+        :aria-expanded="preferenceOpen === 'appearance'">
+        <NIcon :component="SunMoon" />
+      </button>
+    </NDropdown>
   <NDropdown
     trigger="click"
     placement="bottom-end"
@@ -311,6 +326,7 @@ function getCompanionGifThemeLabel(theme: CompanionGifTheme): string {
       </NBadge>
     </span>
   </NDropdown>
+  </div>
   <NModal :show="customGifDialogOpen" preset="card" class="quick-dialog gif-theme-custom-modal"
     :z-index="CONTEXT_MENU_Z_INDEX + 1" :mask-closable="false"
     :title="text.settings.customGif" :aria-label="text.settings.customGif"

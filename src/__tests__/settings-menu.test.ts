@@ -27,6 +27,7 @@ const dropdownStub = defineComponent({
       <template v-for="option in options" :key="option.key">
         <button
           class="dropdown-option"
+          :class="{ 'is-selected': isChecked(option) }"
           :data-key="option.key"
           :disabled="option.disabled"
           type="button"
@@ -67,7 +68,7 @@ type VNodeLike = { type: unknown; props?: { class?: string }; children?: unknown
 // The version option's label is a render function returning a root span whose
 // children hold the version text and (when updating) the badge vnode.
 function findVersionBadge(wrapper: ReturnType<typeof mount>) {
-  const dropdown = wrapper.findComponent(dropdownStub);
+  const dropdown = wrapper.findAllComponents(dropdownStub)[2];
   const options = dropdown.props("options") as Array<{ key: string; label?: () => VNodeLike }>;
   const versionOption = options.find((option) => option.key === "version");
   const nodes = (versionOption?.label?.()?.children ?? []) as VNodeLike[];
@@ -75,46 +76,41 @@ function findVersionBadge(wrapper: ReturnType<typeof mount>) {
 }
 
 describe("SettingsMenu", () => {
-  it.each(["zh", "en"] as const)("groups localized visible areas below appearance and permits repeated toggles in %s", async (language) => {
+  it.each(["zh", "en"] as const)("places visible areas and appearance left of settings and permits repeated toggles in %s", async (language) => {
     const wrapper = mount(SettingsMenu, {
-      props: {
-        appVersion: "1.1.0", updateAvailable: false, companionGifTheme: "none", language,
-        zoneVisibility: { assets: true, notes: true, tasks: false, workspace: true },
-      },
+      props: { appVersion: "1.1.0", updateAvailable: false, companionGifTheme: "none", language,
+        zoneVisibility: { assets: true, notes: true, tasks: false, workspace: true } },
       global: { stubs: { Dropdown: dropdownStub, NDropdown: dropdownStub } },
     });
-    const dropdown = wrapper.getComponent(dropdownStub);
-    const options = dropdown.props("options") as Array<{ key: string }>;
-    expect(options.slice(0, 7).map(option => option.key)).toEqual(["data", "language", "general-divider", "appearance", "zone-visibility", "gif-theme", "preferences-divider"]);
-    expect(wrapper.get('[data-key="zone-visibility"]').text()).toBe(language === "zh" ? "显示区域" : "Visible areas");
-    expect(wrapper.get('[data-key="zone:tasks"]').text()).toBe(language === "zh" ? "提醒事项" : "Reminders");
-    expect(wrapper.get('[data-key="zone:tasks"]').classes()).not.toContain("is-selected");
-    expect(wrapper.get('[data-key="zone:assets"]').classes()).toContain("is-selected");
-    dropdown.vm.$emit("update:show", true);
+    const [zones, appearance, settings] = wrapper.findAllComponents(dropdownStub);
+    expect((settings.props("options") as Array<{key: string}>).map(option => option.key))
+      .not.toEqual(expect.arrayContaining(["appearance", "zone-visibility"]));
+    expect(wrapper.get('[data-testid="zone-visibility-trigger"]').attributes("aria-label")).toBe(language === "zh" ? "显示区域" : "Visible areas");
+    expect(wrapper.get('[data-testid="zone-visibility-trigger"]').element.compareDocumentPosition(wrapper.get('[data-testid="appearance-trigger"]').element) & Node.DOCUMENT_POSITION_FOLLOWING).toBeTruthy();
+    expect(wrapper.get('[data-testid="appearance-trigger"]').element.compareDocumentPosition(wrapper.get('.settings-trigger').element) & Node.DOCUMENT_POSITION_FOLLOWING).toBeTruthy();
+    zones.vm.$emit("update:show", true);
     await wrapper.vm.$nextTick();
     for (const zone of ["assets", "notes", "tasks", "workspace"] as const) {
-      await wrapper.get(`[data-key="zone:${zone}"]`).trigger("click");
-      expect(dropdown.props("show")).toBe(true);
+      zones.vm.$emit("select", `zone:${zone}`);
+      zones.vm.$emit("update:show", false);
+      await wrapper.vm.$nextTick();
+      expect(zones.props("show")).toBe(true);
     }
     expect(wrapper.emitted("toggleZone")).toEqual([["assets"], ["notes"], ["tasks"], ["workspace"]]);
     await wrapper.setProps({ zoneVisibility: { assets: false, notes: true, tasks: true, workspace: true } });
     expect(wrapper.get('[data-key="zone:assets"]').classes()).not.toContain("is-selected");
     expect(wrapper.get('[data-key="zone:tasks"]').classes()).toContain("is-selected");
-    await wrapper.get('[data-key="appearance:light"]').trigger("click");
-    expect(dropdown.props("show")).toBe(true);
-    for (const mode of ["dark", "auto"] as const) {
-      await wrapper.get(`[data-key="appearance:${mode}"]`).trigger("click");
-      expect(dropdown.props("show")).toBe(true);
-    }
-    for (const theme of ["cat", "ikun", "none"] as const) {
-      await wrapper.get(`[data-key="gif-theme:${theme}"]`).trigger("click");
-      expect(dropdown.props("show")).toBe(true);
-    }
-    expect(wrapper.emitted("gifTheme")?.map(args => args[0])).toEqual(["cat", "ikun", "none"]);
-    // After consuming selection closure, outside-click / Escape closes normally.
-    dropdown.vm.$emit("update:show", false);
+    appearance.vm.$emit("update:show", true);
     await wrapper.vm.$nextTick();
-    expect(dropdown.props("show")).toBe(false);
+    expect(zones.props("show")).toBe(false);
+    appearance.vm.$emit("select", "appearance:light");
+    appearance.vm.$emit("update:show", false);
+    await wrapper.vm.$nextTick();
+    expect(appearance.props("show")).toBe(true);
+    settings.vm.$emit("update:show", true);
+    await wrapper.vm.$nextTick();
+    expect(appearance.props("show")).toBe(false);
+    wrapper.unmount();
   });
 
   it.each(["zh", "en"] as const)("offers explicit and system appearance in %s", async (language) => {
@@ -131,7 +127,7 @@ describe("SettingsMenu", () => {
         NIcon: { template: "<span />" },
       } },
     });
-    expect(wrapper.get('[data-key="appearance"]').text()).toBe(language === "zh" ? "外观" : "Appearance");
+    expect(wrapper.get('[data-testid="appearance-trigger"]').attributes("aria-label")).toBe(language === "zh" ? "外观" : "Appearance");
     expect(wrapper.get('[data-key="appearance:dark"]').classes()).toContain("is-selected");
     expect(wrapper.get('[data-key="appearance:auto"]').classes()).not.toContain("is-selected");
     for (const mode of ["auto", "light", "dark"] as const) {

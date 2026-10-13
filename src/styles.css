@@ -7977,3 +7977,5 @@ body:has(.image-preview) .n-modal-container:has(.focus-now-modal) .n-modal-mask 
   background: transparent;
   animation: none;
 }
+
+.settings-toolbar { display: flex; align-items: center; gap: 0; }
