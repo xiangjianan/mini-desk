@@ -198,8 +198,23 @@ watch(columnCount, (next) => emit("columnCountChange", next));
 // Keep each list under one stable keyed Teleport so changing columns moves its
 // existing DOM instead of unmounting and recreating every reminder and icon.
 const columnElements = shallowReactive<Record<number, HTMLElement | null>>({});
+let columnGutterObserver: ResizeObserver | undefined;
+function syncColumnGutters(): void {
+  for (const column of Object.values(columnElements)) {
+    if (!column) continue;
+    const gutter = Math.max(0, column.offsetWidth - column.clientWidth);
+    const value = `${gutter}px`;
+    if (column.style.getPropertyValue("--todo-scrollbar-width") !== value) {
+      column.style.setProperty("--todo-scrollbar-width", value);
+    }
+  }
+}
 function setColumnElement(index: number, element: Element | null): void {
+  const previous = columnElements[index];
+  if (previous === element) return;
+  if (previous) columnGutterObserver?.unobserve(previous);
   columnElements[index] = element as HTMLElement | null;
+  if (element) columnGutterObserver?.observe(element);
 }
 
 // Capture positions before list order, columns, or completed visibility changes.
@@ -225,6 +240,7 @@ onUnmounted(() => {
 // Teleport keyed reordering moves source anchors, not the destination content.
 // Reconcile only list sections (never individual rows) with the stored order.
 onUpdated(() => {
+  syncColumnGutters();
   const positions = new Map<number, number>();
   for (const list of effectiveTodoLists.value) {
     const columnIndex = clampColumn(list.column ?? 0);
@@ -515,6 +531,13 @@ onMounted(() => {
   window.addEventListener("focus", refreshNotifyNow);
   document.addEventListener("visibilitychange", handleVisibilityChange);
   deadlineClockTimer.value = window.setInterval(refreshNotifyNow, DEADLINE_CLOCK_INTERVAL_MS);
+  if (typeof ResizeObserver !== "undefined") {
+    columnGutterObserver = new ResizeObserver(syncColumnGutters);
+    for (const column of Object.values(columnElements)) {
+      if (column) columnGutterObserver.observe(column);
+    }
+  }
+  syncColumnGutters();
   // Track the panel's content width so the column count reacts to window resize,
   // workbench resizer drags, and zone show/hide (none of which fire window resize).
   if (panelRef.value && typeof ResizeObserver !== "undefined") {
@@ -535,6 +558,8 @@ onUnmounted(() => {
   window.removeEventListener("focus", refreshNotifyNow);
   document.removeEventListener("visibilitychange", handleVisibilityChange);
   window.clearInterval(deadlineClockTimer.value);
+  columnGutterObserver?.disconnect();
+  columnGutterObserver = undefined;
   columnResizeObserver?.disconnect();
   columnResizeObserver = undefined;
   hoverScrollCleanup.forEach((cancel) => cancel());

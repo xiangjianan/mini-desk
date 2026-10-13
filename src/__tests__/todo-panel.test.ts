@@ -115,6 +115,20 @@ const defaultTodoLists = [
 ];
 
 describe("TodoPanel", () => {
+  it("measures native and overlay scrollbar gutters independently", async () => {
+    const wrapper = mount(TodoPanel, { props: { todoLists: defaultTodoLists, todos: { morning: [], noon: [], evening: [] }, titles: DEFAULT_TITLES } });
+    try {
+      const column = wrapper.get(".todo-column").element as HTMLElement;
+      Object.defineProperty(column, "offsetWidth", { configurable: true, value: 300 });
+      Object.defineProperty(column, "clientWidth", { configurable: true, value: 288 });
+      await wrapper.setProps({ language: "en" });
+      expect(column.style.getPropertyValue("--todo-scrollbar-width")).toBe("12px");
+      Object.defineProperty(column, "clientWidth", { configurable: true, value: 300 });
+      await wrapper.setProps({ language: "zh" });
+      expect(column.style.getPropertyValue("--todo-scrollbar-width")).toBe("0px");
+    } finally { wrapper.unmount(); }
+  });
+
   it("defaults to one column and respects the configured responsive limit", async () => {
     let resize: ResizeObserverCallback | undefined;
     const original = globalThis.ResizeObserver;

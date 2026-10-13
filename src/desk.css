@@ -281,11 +281,14 @@ html[data-theme="dark"] .workbench-shell,
 }
 .workbench-shell .todo-column {
   gap: var(--desk-group-gap);
-  padding: 0 0 16px;
-  scrollbar-gutter: stable both-edges;
+  padding-block: 0 16px;
+  padding-inline-start: var(--desk-group-scroll-gutter);
+  padding-inline-end: max(0px, calc(var(--desk-group-scroll-gutter) - var(--todo-scrollbar-width, 0px)));
+  scrollbar-gutter: auto;
   scroll-padding-top: var(--desk-group-heading-height);
 }
-/* Equal gutters center the list; the narrow thumb sits inside the right gutter. */
+/* Explicit padding plus the measured scrollbar width keeps both edges equal,
+   including Safari overlay scrollbars which reserve no layout space. */
 .workbench-shell .todo-column::-webkit-scrollbar {
   width: var(--desk-group-scroll-gutter);
 }
