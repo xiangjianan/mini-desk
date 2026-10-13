@@ -666,16 +666,16 @@ html[data-theme="dark"] .workbench-shell,
 }
 .workbench-shell .workbench-title-group { max-width: calc(50% - 48px); }
 .workbench-shell .workbench-command-actions { margin-inline-start: auto; }
-/* Match the 52px header row, excluding its 1px bottom border. */
-.workbench-shell .workbench-header-reveal-zone { width: 96px; height: 52px; }
+/* Only the button footprint should trigger reveal, not the surrounding header. */
+.workbench-shell .workbench-header-reveal-zone { top: 11.5px; width: 64px; height: 28px; pointer-events: none; }
 .workbench-shell .workbench-header-reveal {
-  top: 11.5px;
+  top: 0;
   left: 50%;
   margin-left: -32px;
   color: var(--foreground);
   background: var(--button-hover);
   opacity: 0;
-  pointer-events: none;
+  pointer-events: auto;
 }
 .workbench-shell .workbench-header-reveal-zone:hover .workbench-header-reveal,
 .workbench-shell .workbench-header-reveal-zone:focus-within .workbench-header-reveal {
