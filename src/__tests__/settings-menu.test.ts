@@ -68,7 +68,7 @@ type VNodeLike = { type: unknown; props?: { class?: string }; children?: unknown
 // The version option's label is a render function returning a root span whose
 // children hold the version text and (when updating) the badge vnode.
 function findVersionBadge(wrapper: ReturnType<typeof mount>) {
-  const dropdown = wrapper.findAllComponents(dropdownStub)[2];
+  const dropdown = wrapper.findAllComponents(dropdownStub)[1];
   const options = dropdown.props("options") as Array<{ key: string; label?: () => VNodeLike }>;
   const versionOption = options.find((option) => option.key === "version");
   const nodes = (versionOption?.label?.()?.children ?? []) as VNodeLike[];
@@ -82,12 +82,12 @@ describe("SettingsMenu", () => {
         zoneVisibility: { assets: true, notes: true, tasks: false, workspace: true } },
       global: { stubs: { Dropdown: dropdownStub, NDropdown: dropdownStub } },
     });
-    const [zones, appearance, settings] = wrapper.findAllComponents(dropdownStub);
+    const [zones, settings] = wrapper.findAllComponents(dropdownStub);
     expect((settings.props("options") as Array<{key: string}>).map(option => option.key))
       .not.toEqual(expect.arrayContaining(["appearance", "zone-visibility"]));
     expect(wrapper.get('[data-testid="zone-visibility-trigger"]').attributes("aria-label")).toBe(language === "zh" ? "显示区域" : "Visible areas");
-    expect(wrapper.get('[data-testid="zone-visibility-trigger"]').element.compareDocumentPosition(wrapper.get('[data-testid="appearance-trigger"]').element) & Node.DOCUMENT_POSITION_FOLLOWING).toBeTruthy();
-    expect(wrapper.get('[data-testid="appearance-trigger"]').element.compareDocumentPosition(wrapper.get('.settings-trigger').element) & Node.DOCUMENT_POSITION_FOLLOWING).toBeTruthy();
+    expect(wrapper.get('[data-testid="zone-visibility-trigger"]').element.compareDocumentPosition(wrapper.get('[data-testid="appearance-controls"]').element) & Node.DOCUMENT_POSITION_FOLLOWING).toBeTruthy();
+    expect(wrapper.get('[data-testid="appearance-controls"]').element.compareDocumentPosition(wrapper.get('.settings-trigger').element) & Node.DOCUMENT_POSITION_FOLLOWING).toBeTruthy();
     zones.vm.$emit("update:show", true);
     await wrapper.vm.$nextTick();
     for (const zone of ["assets", "notes", "tasks", "workspace"] as const) {
@@ -100,16 +100,13 @@ describe("SettingsMenu", () => {
     await wrapper.setProps({ zoneVisibility: { assets: false, notes: true, tasks: true, workspace: true } });
     expect(wrapper.get('[data-key="zone:assets"]').classes()).not.toContain("is-selected");
     expect(wrapper.get('[data-key="zone:tasks"]').classes()).toContain("is-selected");
-    appearance.vm.$emit("update:show", true);
-    await wrapper.vm.$nextTick();
+    await wrapper.get('[data-testid="appearance-light"]').trigger("click");
     expect(zones.props("show")).toBe(false);
-    appearance.vm.$emit("select", "appearance:light");
-    appearance.vm.$emit("update:show", false);
-    await wrapper.vm.$nextTick();
-    expect(appearance.props("show")).toBe(true);
+    expect(wrapper.emitted("theme")).toEqual([["light"]]);
+    expect(wrapper.findAllComponents(dropdownStub)).toHaveLength(2);
     settings.vm.$emit("update:show", true);
     await wrapper.vm.$nextTick();
-    expect(appearance.props("show")).toBe(false);
+    expect(zones.props("show")).toBe(false);
     wrapper.unmount();
   });
 
@@ -127,16 +124,16 @@ describe("SettingsMenu", () => {
         NIcon: { template: "<span />" },
       } },
     });
-    expect(wrapper.get('[data-testid="appearance-trigger"]').attributes("aria-label")).toBe(language === "zh" ? "外观" : "Appearance");
-    expect(wrapper.get('[data-key="appearance:dark"]').classes()).toContain("is-selected");
-    expect(wrapper.get('[data-key="appearance:auto"]').classes()).not.toContain("is-selected");
+    expect(wrapper.get('[data-testid="appearance-controls"]').attributes("aria-label")).toBe(language === "zh" ? "外观" : "Appearance");
+    expect(wrapper.get('[data-testid="appearance-dark"]').classes()).toContain("is-selected");
+    expect(wrapper.get('[data-testid="appearance-auto"]').classes()).not.toContain("is-selected");
     for (const mode of ["auto", "light", "dark"] as const) {
-      await wrapper.get(`[data-key="appearance:${mode}"]`).trigger("click");
+      await wrapper.get(`[data-testid="appearance-${mode}"]`).trigger("click");
     }
     expect(wrapper.emitted("theme")).toEqual([["auto"], ["light"], ["dark"]]);
     await wrapper.setProps({ theme: "auto" });
-    expect(wrapper.get('[data-key="appearance:auto"]').classes()).toContain("is-selected");
-    expect(wrapper.get('[data-key="appearance:dark"]').classes()).not.toContain("is-selected");
+    expect(wrapper.get('[data-testid="appearance-auto"]').classes()).toContain("is-selected");
+    expect(wrapper.get('[data-testid="appearance-dark"]').classes()).not.toContain("is-selected");
   });
 
   it("groups data actions under one icon menu", async () => {

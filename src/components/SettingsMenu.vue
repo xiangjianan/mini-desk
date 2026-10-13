@@ -14,7 +14,9 @@ import {
   Smartphone as PhonePortraitOutline,
   Database as ServerOutline,
   Settings as SettingsOutline,
-  SunMoon,
+  Sun,
+  Moon,
+  Monitor,
   LayoutGrid as GridOutline,
   Trash2 as TrashOutline,
 } from "lucide-vue-next";
@@ -78,17 +80,24 @@ const customGifDarkPreviewSrc = ref<string | undefined>();
 const text = computed(() => getUiText(props.language));
 const customGifLightPreview = computed(() => customGifLightPreviewSrc.value ?? props.customCompanionGif.light);
 const customGifDarkPreview = computed(() => customGifDarkPreviewSrc.value ?? props.customCompanionGif.dark);
-const preferenceOpen = ref<"zones" | "appearance" | null>(null);
+const preferenceOpen = ref<"zones" | null>(null);
 let keepPreferenceOpen = false;
-const appearanceOptions = computed(() => (["auto", "light", "dark"] as const).map((mode) => ({
-  label: text.value.settings[mode], key: `appearance:${mode}`,
-  icon: props.theme === mode ? renderIcon(CheckmarkOutline) : undefined,
-})));
+const appearanceModes = [
+  { mode: "light", icon: Sun },
+  { mode: "dark", icon: Moon },
+  { mode: "auto", icon: Monitor },
+] as const;
+function selectAppearance(mode: ThemeMode): void {
+  preferenceOpen.value = null;
+  keepPreferenceOpen = false;
+  menuOpen.value = false;
+  emit("theme", mode);
+}
 const zoneOptions = computed(() => (["assets", "notes", "tasks", "workspace"] as const).map((zone) => ({
   label: text.value.zoneVisibility[zone], key: `zone:${zone}`,
   icon: props.zoneVisibility[zone] ? renderIcon(CheckmarkOutline) : undefined,
 })));
-function handlePreferenceShow(kind: "zones" | "appearance", show: boolean): void {
+function handlePreferenceShow(kind: "zones", show: boolean): void {
   if (!show && preferenceOpen.value !== kind) return;
   if (!show && keepPreferenceOpen) { keepPreferenceOpen = false; return; }
   keepPreferenceOpen = false;
@@ -97,8 +106,7 @@ function handlePreferenceShow(kind: "zones" | "appearance", show: boolean): void
 }
 function handlePreferenceSelect(key: string): void {
   keepPreferenceOpen = true;
-  if (key.startsWith("zone:")) emit("toggleZone", key.slice(5) as ZoneKey);
-  else emit("theme", key.slice("appearance:".length) as ThemeMode);
+  emit("toggleZone", key.slice(5) as ZoneKey);
 }
 
 const options = computed(() => [
@@ -293,15 +301,15 @@ function getCompanionGifThemeLabel(theme: CompanionGifTheme): string {
         <NIcon :component="GridOutline" />
       </button>
     </NDropdown>
-    <NDropdown trigger="click" placement="bottom-end" :show="preferenceOpen === 'appearance'"
-      :z-index="CONTEXT_MENU_Z_INDEX" :options="appearanceOptions"
-      @select="handlePreferenceSelect" @update:show="(show) => handlePreferenceShow('appearance', show)">
-      <button type="button" class="icon-button" data-testid="appearance-trigger"
-        :aria-label="text.settings.appearance" :title="text.settings.appearance"
-        :aria-expanded="preferenceOpen === 'appearance'">
-        <NIcon :component="SunMoon" />
+    <div class="appearance-buttons" role="group" :aria-label="text.settings.appearance" data-testid="appearance-controls">
+      <button v-for="entry in appearanceModes" :key="entry.mode" type="button"
+        class="icon-button appearance-button" :class="{ 'is-selected': theme === entry.mode }"
+        :data-testid="`appearance-${entry.mode}`" :aria-label="text.settings[entry.mode]"
+        :title="text.settings[entry.mode]" :aria-pressed="theme === entry.mode"
+        @click="selectAppearance(entry.mode)">
+        <NIcon :component="entry.icon" />
       </button>
-    </NDropdown>
+    </div>
   <NDropdown
     trigger="click"
     placement="bottom-end"
