@@ -657,19 +657,26 @@ html[data-theme="dark"] .workbench-shell,
 }
 .workbench-shell .workbench-title-group { max-width: calc(50% - 48px); }
 .workbench-shell .workbench-command-actions { margin-inline-start: auto; }
-.workbench-shell .workbench-header-reveal-zone { width: 64px; height: 32px; }
+.workbench-shell .workbench-header-reveal-zone { width: 96px; height: 32px; }
 .workbench-shell .workbench-header-reveal {
   top: 4px;
   left: 50%;
-  margin-left: -32px;
-  width: 64px;
-  min-width: 64px;
+  margin-left: -28px;
+  width: 56px;
+  min-width: 56px;
   height: 24px;
   min-height: 24px;
-  border-radius: 999px;
+  border-radius: 8px;
   color: var(--muted);
-  background: color-mix(in srgb, var(--foreground) 5%, var(--background));
-  box-shadow: inset 0 0 0 1px color-mix(in srgb, var(--border) 55%, transparent);
+  background: var(--button);
+  box-shadow: var(--shadow-control);
+  opacity: 0;
+  pointer-events: none;
+}
+.workbench-shell .workbench-header-reveal-zone:hover .workbench-header-reveal,
+.workbench-shell .workbench-header-reveal-zone:focus-within .workbench-header-reveal {
+  opacity: 1;
+  pointer-events: auto;
 }
 .workbench-shell .workbench-header-hide-button:hover,
 .workbench-shell .workbench-header-hide-button:focus-visible,
@@ -677,11 +684,11 @@ html[data-theme="dark"] .workbench-shell,
 .workbench-shell .workbench-header-reveal:focus-visible,
 .workbench-shell .workbench-header-reveal:active {
   color: var(--foreground);
-  background: color-mix(in srgb, var(--foreground) 9%, var(--background));
+  background: var(--button-hover);
 }
 .workbench-shell .workbench-header-hide-button,
 .workbench-shell .workbench-header-reveal {
-  transition: background-color 180ms ease, color 180ms ease;
+  transition: opacity 180ms ease, background-color 180ms ease, color 180ms ease;
 }
 .workbench-shell .workbench-header-hide-button::before,
 .workbench-shell .workbench-header-reveal::before { content: none; }

@@ -206,7 +206,7 @@ describe("WorkbenchShell", () => {
     expect(wrapper.find('[data-testid="workbench-theme"]').exists()).toBe(false);
   });
 
-  it("keeps a persistent reveal button after collapsing and restores on one click", async () => {
+  it("keeps a focusable reveal button after collapsing and restores on one click", async () => {
     vi.useFakeTimers();
     const wrapper = mount(WorkbenchShell, { props: defaultProps });
     try {
