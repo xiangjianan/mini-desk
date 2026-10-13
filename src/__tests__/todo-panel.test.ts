@@ -1609,7 +1609,7 @@ describe("TodoPanel", () => {
     vi.useRealTimers();
   });
 
-  it("waits 0.8 seconds before scrolling pinned text and preserves its colorful mirror", async () => {
+  it("waits 0.5 seconds before scrolling pinned text and preserves its colorful mirror", async () => {
     let frame: FrameRequestCallback | undefined;
     const raf = vi.spyOn(window, "requestAnimationFrame").mockImplementation((callback) => { frame = callback; return 1; });
     const cancel = vi.spyOn(window, "cancelAnimationFrame").mockImplementation(() => {});
@@ -1626,9 +1626,9 @@ describe("TodoPanel", () => {
       await row.trigger("mouseenter");
       expect(row.get(".todo-marquee-text").text()).toBe("A long pinned reminder");
       frame!(100);
-      frame!(899);
+      frame!(599);
       expect(input.element.scrollLeft).toBe(0);
-      frame!(1000);
+      frame!(700);
       expect(input.element.scrollLeft).toBeGreaterThan(0);
       expect(row.get(".todo-marquee-text").attributes("style")).toContain("translateX(-5px)");
       row.element.classList.add("deadline-overdue");
