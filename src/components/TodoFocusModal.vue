@@ -1,7 +1,8 @@
 <script setup lang="ts">
 import { computed, nextTick, onBeforeUnmount, onMounted, ref, watch } from "vue";
 import { NIcon, NModal } from "naive-ui";
-import { AddOutline, ChevronDownOutline, ChevronUpOutline, CloseOutline, CreateOutline, RemoveOutline, TimeOutline, TrashOutline } from "@vicons/ionicons5";
+import { AddOutline, ChevronDownOutline, ChevronUpOutline, CloseOutline, CreateOutline, RemoveOutline, TrashOutline } from "@vicons/ionicons5";
+import { Timer } from "lucide-vue-next";
 import type { AppLanguage, ImagePasteRequest, LineItem, StoredImage } from "../types";
 import { getUiText } from "../state/i18n";
 import { formatFocusDuration } from "../state/todos";
@@ -72,10 +73,11 @@ onMounted(() => {
 // App checkpoint 提升 baseMs 时重置段起点：显示 = baseMs + (now − 段起点)，接续不跳变。
 watch(() => props.baseMs, () => {
   segmentStartAt.value = Date.now();
+  nowTick.value = segmentStartAt.value;
 });
 
 const displayMs = computed(() => props.baseMs + Math.max(0, nowTick.value - segmentStartAt.value));
-const displayDuration = computed(() => formatFocusDuration(displayMs.value));
+const displayDuration = computed(() => formatFocusDuration(displayMs.value, true));
 const displayDurationIso = computed(() => `PT${Math.ceil(displayMs.value / 1000)}S`);
 
 // —— 贴图预览/编辑：内嵌在右侧记事本区上方的浮层（不离开弹窗），记事本在下层原样保留。
@@ -390,8 +392,8 @@ function handleModalShow(value: boolean): void {
         <h2 class="focus-now-title" :title="title">{{ title }}</h2>
         <div class="focus-now-header-controls">
           <span class="focus-now-timer-group">
-            <NIcon class="focus-now-timer-icon" :size="28" :aria-label="uiText.todo.focusTimer" aria-hidden="true">
-              <TimeOutline />
+            <NIcon class="focus-now-timer-icon" :size="18" :aria-label="uiText.todo.focusTimer" aria-hidden="true">
+              <Timer />
             </NIcon>
             <time
               class="focus-now-timer"

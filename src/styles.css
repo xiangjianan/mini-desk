@@ -7701,6 +7701,10 @@ body:has(.image-preview) .n-modal-container:has(.focus-now-modal) .n-modal-mask 
 .focus-now-modal.n-card {
   width: 90vw !important;
   max-width: 90vw !important;
+  background: var(--background) !important;
+  color: var(--text);
+  border: 1px solid var(--border);
+  border-radius: var(--radius) !important;
 }
 
 /* naive-ui 2.44 的内容类名是 .n-card-content（连字符；.n-card__content 是
@@ -7719,13 +7723,18 @@ body:has(.image-preview) .n-modal-container:has(.focus-now-modal) .n-modal-mask 
 
 .focus-now-header {
   display: grid;
-  grid-template-columns: 1fr auto 1fr;
+  grid-template-columns: minmax(0, 1fr) auto;
   align-items: center;
   gap: 16px;
+  padding-bottom: 12px;
+  border-bottom: 1px solid var(--line-subtle);
 }
 
-/* 三列网格保真居中：空占位与控件区等宽（各 1fr），标题恒在视觉正中。 */
-.focus-now-header-spacer,
+/* 标题与计时控件沿用主页的紧凑两端布局。 */
+.focus-now-header-spacer {
+  display: none;
+}
+
 .focus-now-header-controls {
   min-width: 0;
 }
@@ -7741,9 +7750,9 @@ body:has(.image-preview) .n-modal-container:has(.focus-now-modal) .n-modal-mask 
   margin: 0;
   max-width: min(560px, 48vw);
   overflow: hidden;
-  font-size: 20px;
+  font-size: 16px;
   font-weight: 600;
-  text-align: center;
+  text-align: left;
   text-overflow: ellipsis;
   white-space: nowrap;
 }
@@ -7756,25 +7765,24 @@ body:has(.image-preview) .n-modal-container:has(.focus-now-modal) .n-modal-mask 
 
 .focus-now-timer-icon {
   flex: none;
-  width: 32px;
-  height: 32px;
+  width: 18px;
+  height: 18px;
   color: var(--muted);
 }
 
-/* ionicons 的 svg 会按内在属性压窄字形（实测 16×32），且 NIcon 运行时注入的
-   .n-icon svg 同特异性但更晚生效——提到 (0,2,1) 强制方形，与 28px 数字协调。 */
+/* 与提醒事项菜单保持相同的 Timer 图标尺寸。 */
 .focus-now-header .focus-now-timer-icon svg {
-  width: 28px;
-  height: 28px;
+  width: 18px;
+  height: 18px;
 }
 
 .focus-now-timer {
   flex: none;
   color: var(--text);
-  font-size: 28px;
+  font-size: 14px;
   font-weight: 400;
   font-variant-numeric: tabular-nums;
-  letter-spacing: 1px;
+  letter-spacing: 0;
   line-height: 1;
 }
 
@@ -7816,6 +7824,7 @@ body:has(.image-preview) .n-modal-container:has(.focus-now-modal) .n-modal-mask 
   overflow: hidden;
   border: 1px solid var(--line-subtle);
   border-radius: var(--radius);
+  background: var(--card);
 }
 
 /* 贴图条顶部「添加图片」：15% 宽窄条里占满一行的主行动按钮（左图右文提示的左半）。 */
@@ -7832,7 +7841,7 @@ body:has(.image-preview) .n-modal-container:has(.focus-now-modal) .n-modal-mask 
   gap: 4px;
   width: 100%;
   padding: 6px 8px;
-  border: 1px dashed var(--line-subtle);
+  border: 1px solid var(--line-subtle);
   border-radius: 8px;
   background: transparent;
   color: var(--muted);
@@ -7842,8 +7851,8 @@ body:has(.image-preview) .n-modal-container:has(.focus-now-modal) .n-modal-mask 
 }
 
 .focus-now-add-image:hover {
-  border-color: var(--accent);
-  color: var(--accent-foreground);
+  border-color: var(--primary);
+  color: var(--primary);
   background: color-mix(in srgb, var(--accent) 12%, transparent);
 }
 
@@ -7879,6 +7888,7 @@ body:has(.image-preview) .n-modal-container:has(.focus-now-modal) .n-modal-mask 
   border: 1px solid var(--line-subtle);
   border-radius: var(--radius);
   overflow: hidden;
+  background: var(--card);
 }
 
 .focus-now-notes .text-panel {
@@ -7922,7 +7932,7 @@ body:has(.image-preview) .n-modal-container:has(.focus-now-modal) .n-modal-mask 
   }
 
   .focus-now-timer {
-    font-size: 20px;
+    font-size: 14px;
   }
 }
 
@@ -7933,3 +7943,10 @@ body:has(.image-preview) .n-modal-container:has(.focus-now-modal) .n-modal-mask 
 }
 
 .todo-focus-region { position: relative; overflow: clip; display: flow-root; flex: 0 0 auto; }
+
+@media (max-width: 600px) {
+  .focus-now-stage { padding: 12px; }
+  .focus-now-header { grid-template-columns: minmax(0, 1fr); gap: 8px; }
+  .focus-now-title { max-width: 100%; }
+  .focus-now-header-controls { justify-content: flex-end; }
+}

@@ -44,17 +44,17 @@ describe("TodoFocusModal", () => {
     vi.useRealTimers();
   });
 
-  it("渲染任务标题与初始累计计时（h:mm）", () => {
+  it("渲染任务标题与初始累计计时（h:mm:ss）", () => {
     const wrapper = mountModal();
     expect(wrapper.text()).toContain("写周报");
-    expect(wrapper.find(".focus-now-timer").text()).toBe("0:12"); // 754s → 12.5 分钟向下取整
+    expect(wrapper.find(".focus-now-timer").text()).toBe("0:12:34"); // 754s → 12.5 分钟向下取整
   });
 
   it("计时按分钟推进显示", async () => {
     const wrapper = mountModal();
     vi.advanceTimersByTime(60_000);
     await nextTick();
-    expect(wrapper.find(".focus-now-timer").text()).toBe("0:13");
+    expect(wrapper.find(".focus-now-timer").text()).toBe("0:13:34");
   });
 
   it("baseMs 提升（App checkpoint）后显示接续不跳变", async () => {
@@ -63,7 +63,17 @@ describe("TodoFocusModal", () => {
     await wrapper.setProps({ baseMs: 754_000 + 60_000 });
     vi.advanceTimersByTime(1_000);
     await nextTick();
-    expect(wrapper.find(".focus-now-timer").text()).toBe("0:13"); // 754s + 60s + 1s
+    expect(wrapper.find(".focus-now-timer").text()).toBe("0:13:35"); // 754s + 60s + 1s
+  });
+
+  it("从零开始每秒递增，英文界面也显示累计时长", async () => {
+    const wrapper = mountModal({ baseMs: 0, language: "en" });
+    expect(wrapper.get(".focus-now-timer").text()).toBe("0:00:00");
+    vi.advanceTimersByTime(1000);
+    await nextTick();
+    expect(wrapper.get(".focus-now-timer").text()).toBe("0:00:01");
+    expect(wrapper.get(".focus-now-timer").attributes("datetime")).toBe("PT1S");
+    wrapper.unmount();
   });
 
   it("关闭按钮 emit close（App 负责合并增量）", async () => {
@@ -360,10 +370,10 @@ describe("TodoFocusModal", () => {
     await wrapper.setProps({ show: true });
 
     // 显示回到 baseMs 起点（0:12），空闲的两分钟被丢弃；此后按分钟正常推进。
-    expect(wrapper.find(".focus-now-timer").text()).toBe("0:12");
+    expect(wrapper.find(".focus-now-timer").text()).toBe("0:12:34");
     vi.advanceTimersByTime(60_000);
     await nextTick();
-    expect(wrapper.find(".focus-now-timer").text()).toBe("0:13");
+    expect(wrapper.find(".focus-now-timer").text()).toBe("0:13:34");
     wrapper.unmount();
   });
 
@@ -373,10 +383,10 @@ describe("TodoFocusModal", () => {
 
     await wrapper.setProps({ show: true });
 
-    expect(wrapper.find(".focus-now-timer").text()).toBe("0:12");
+    expect(wrapper.find(".focus-now-timer").text()).toBe("0:12:34");
     vi.advanceTimersByTime(60_000);
     await nextTick();
-    expect(wrapper.find(".focus-now-timer").text()).toBe("0:13");
+    expect(wrapper.find(".focus-now-timer").text()).toBe("0:13:34");
     wrapper.unmount();
   });
 

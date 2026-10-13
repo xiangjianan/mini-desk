@@ -240,12 +240,15 @@ export function collectTodoFocusPayloadIds(todos: TodoItem[]): string[] {
   return todos.flatMap((todo) => (todo.focusImages ?? []).map((image) => getImagePayloadId(image)));
 }
 
-/** 累计专注时长的展示：h:mm（分钟向下取整，弹窗计时器与行内徽标共用）。 */
-export function formatFocusDuration(ms: number): string {
+/** 累计专注时长的展示：h:mm；实时计时可附加秒，行内徽标仍按分钟展示。 */
+export function formatFocusDuration(ms: number, includeSeconds = false): string {
   const totalMinutes = Math.floor(Math.max(0, ms) / 60_000);
   const hours = Math.floor(totalMinutes / 60);
   const minutes = totalMinutes % 60;
-  return `${hours}:${String(minutes).padStart(2, "0")}`;
+  const duration = `${hours}:${String(minutes).padStart(2, "0")}`;
+  if (!includeSeconds) return duration;
+  const seconds = Math.floor(Math.max(0, ms) / 1000) % 60;
+  return `${duration}:${String(seconds).padStart(2, "0")}`;
 }
 
 function ensureTodoList(todos: TodoMap, period: TodoPeriod): TodoItem[] {
