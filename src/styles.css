@@ -2871,11 +2871,13 @@ button.todo-star-button {
   box-sizing: border-box;
   overflow: hidden;
   pointer-events: none;
-  line-height: 34px;
+  display: flex;
+  align-items: center;
   white-space: nowrap;
 }
 .todo-marquee-text {
-  display: inline-block;
+  display: block;
+  flex: none;
   color: transparent;
   -webkit-text-fill-color: transparent;
   background: linear-gradient(90deg, #d946ef 0%, #2563eb 10%, #0f9f6e 20%, #f59e0b 30%, #ef4444 40%, #d946ef 50%, #2563eb 60%, #0f9f6e 70%, #f59e0b 80%, #ef4444 90%, #d946ef 100%);

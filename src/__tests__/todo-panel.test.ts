@@ -1651,6 +1651,31 @@ describe("TodoPanel", () => {
     }
   });
 
+  it("matches compact starred input text metrics when its hover mirror appears", async () => {
+    const wrapper = mount(TodoPanel, {
+      attachTo: document.body,
+      props: { todoLists: defaultTodoLists, todos: { morning: [{ id: "long", text: "A long starred reminder", done: false, starred: true }], noon: [], evening: [] }, titles: DEFAULT_TITLES },
+      global: { stubs: { NDropdown: dropdownStub, NDatePicker: datePickerStub, NTooltip: tooltipStub } },
+    });
+    try {
+      const row = wrapper.get(".todo-item.is-starred");
+      const input = row.get("input.todo-input");
+      (input.element as HTMLInputElement).style.cssText = "height:32px;line-height:32px;font-size:14px;font-family:Arial;font-weight:500;letter-spacing:0.2px";
+      Object.defineProperty(input.element, "scrollWidth", { configurable: true, value: 400 });
+      Object.defineProperty(input.element, "clientWidth", { configurable: true, value: 100 });
+      Object.defineProperty(input.element, "offsetHeight", { configurable: true, value: 32 });
+      await row.trigger("mouseenter");
+      const mirror = row.get(".todo-marquee-mirror").element as HTMLElement;
+      expect(mirror.style.height).toBe("32px");
+      expect(mirror.style.lineHeight).toBe("32px");
+      expect(mirror.style.fontSize).toBe("14px");
+      expect(mirror.style.fontWeight).toBe("500");
+      expect(mirror.style.letterSpacing).toBe("0.2px");
+      await row.trigger("mouseleave");
+      expect(row.find(".todo-marquee-mirror").exists()).toBe(false);
+    } finally { wrapper.unmount(); }
+  });
+
   it("keeps pinned gradients at rest in the final desktop stylesheet and prioritizes overdue red", () => {
     const desk = readFileSync(resolve(__dirname, "../desk.css"), "utf8");
     expect(desk).not.toMatch(/\.workbench-shell \.today-focus-item \.today-focus-input\s*\{[^}]*animation: none/s);

@@ -896,6 +896,13 @@ function startHoverScroll(input: HTMLInputElement | null): void {
     mirror.style.paddingLeft = style.paddingLeft;
     mirror.style.paddingRight = style.paddingRight;
     mirror.style.font = style.font;
+    // Compact list inputs are 32px tall; pinned inputs are 34px. Copy the
+    // resolved metrics explicitly instead of relying on the font shorthand.
+    mirror.style.lineHeight = style.lineHeight;
+    mirror.style.fontSize = style.fontSize;
+    mirror.style.fontFamily = style.fontFamily;
+    mirror.style.fontWeight = style.fontWeight;
+    mirror.style.letterSpacing = style.letterSpacing;
     mirrorText = document.createElement("span");
     mirrorText.className = "todo-marquee-text";
     mirrorText.textContent = input.value;
