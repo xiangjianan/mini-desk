@@ -5,7 +5,6 @@ import {
 } from "lucide-vue-next";
 import { NIcon } from "naive-ui";
 import { installScrollActivity } from "../utils/scrollActivity";
-import { ChevronUp, ChevronDown } from "lucide-vue-next";
 import type { AppLanguage, ZoneVisibility } from "../types";
 import {
   DEFAULT_LANGUAGE,
@@ -767,7 +766,9 @@ onUnmounted(() => {
               title="隐藏顶部菜单"
               @click="setHeaderHidden(true, $event)"
             >
-              <ChevronUp :size="16" />
+              <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+                <path d="M5 14 L11.2 10.4 Q12 9.9 12.8 10.4 L19 14" vector-effect="non-scaling-stroke" />
+              </svg>
             </button>
           <div class="workbench-command-actions">
             <!-- 手机速记手动同步：配对才显示，样式与相邻顶栏 icon-button 一致。 -->
@@ -810,7 +811,9 @@ onUnmounted(() => {
             title="显示顶部菜单"
             @click="setHeaderHidden(false, $event)"
           >
-            <ChevronDown :size="16" />
+            <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+              <path d="M5 10 L11.2 13.6 Q12 14.1 12.8 13.6 L19 10" vector-effect="non-scaling-stroke" />
+            </svg>
           </button>
         </Transition>
       </div>
