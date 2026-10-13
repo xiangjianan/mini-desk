@@ -2863,19 +2863,34 @@ button.todo-star-button {
   animation: starred-text-flow 4.8s linear infinite;
 }
 
-/* 悬浮滚动（hover marquee）期间，星标/重点(渐变)文字临时切换为实色文本：
-   background-clip:text 的渐变排版层在部分引擎上不会随 <input> 的原生滚动重绘，
-   于是 scrollLeft 虽在推进、文字却停在原地，溢出部分永远显示不出来。
-   临时去掉渐变（背景置透明 + 实色文字）后，原生滚动即可正常重绘并显示溢出文本；
-   鼠标移出（移除 is-marquee）即恢复彩色流动渐变。 */
-.todo-item.is-starred .todo-input.is-marquee,
-.today-focus-item .today-focus-input.is-marquee,
-.todo-item.is-starred.is-done .todo-input.is-marquee,
-.today-focus-item.is-done .today-focus-input.is-marquee {
-  color: var(--text);
-  -webkit-text-fill-color: var(--text);
-  background: transparent;
-  animation: none;
+/* A clipped mirror scrolls the gradient glyphs reliably while the input remains
+   the accessible editing control. Focus/mouseleave removes the mirror. */
+.todo-item > .todo-marquee-mirror,
+.today-focus-item > .todo-marquee-mirror {
+  position: absolute;
+  box-sizing: border-box;
+  overflow: hidden;
+  pointer-events: none;
+  line-height: 34px;
+  white-space: nowrap;
+}
+.todo-marquee-text {
+  display: inline-block;
+  color: transparent;
+  -webkit-text-fill-color: transparent;
+  background: linear-gradient(90deg, #d946ef 0%, #2563eb 10%, #0f9f6e 20%, #f59e0b 30%, #ef4444 40%, #d946ef 50%, #2563eb 60%, #0f9f6e 70%, #f59e0b 80%, #ef4444 90%, #d946ef 100%);
+  background-size: 200% 100%;
+  background-clip: text;
+  -webkit-background-clip: text;
+  animation: starred-text-flow 4.8s linear infinite;
+}
+.is-done .todo-marquee-text {
+  text-decoration: line-through;
+  text-decoration-color: var(--muted);
+}
+.todo-input.has-marquee-mirror,
+.today-focus-input.has-marquee-mirror {
+  opacity: 0;
 }
 
 .todo-completed-divider {
@@ -7949,4 +7964,10 @@ body:has(.image-preview) .n-modal-container:has(.focus-now-modal) .n-modal-mask 
   .focus-now-header { grid-template-columns: minmax(0, 1fr); gap: 8px; }
   .focus-now-title { max-width: 100%; }
   .focus-now-header-controls { justify-content: flex-end; }
+}
+
+.focus-now-timer-label {
+  color: var(--muted);
+  font-size: 12px;
+  white-space: nowrap;
 }

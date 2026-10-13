@@ -395,10 +395,11 @@ function handleModalShow(value: boolean): void {
             <NIcon class="focus-now-timer-icon" :size="18" :aria-label="uiText.todo.focusTimer" aria-hidden="true">
               <Timer />
             </NIcon>
+            <span class="focus-now-timer-label">{{ uiText.todo.focusElapsed }}</span>
             <time
               class="focus-now-timer"
               role="timer"
-              :aria-label="uiText.todo.focusTimer"
+              :aria-label="`${uiText.todo.focusElapsed} ${displayDuration}`"
               :datetime="displayDurationIso"
             >{{ displayDuration }}</time>
           </span>

@@ -1609,6 +1609,42 @@ describe("TodoPanel", () => {
     vi.useRealTimers();
   });
 
+  it("waits 1.5 seconds before scrolling pinned text and preserves its colorful mirror", async () => {
+    let frame: FrameRequestCallback | undefined;
+    const raf = vi.spyOn(window, "requestAnimationFrame").mockImplementation((callback) => { frame = callback; return 1; });
+    const cancel = vi.spyOn(window, "cancelAnimationFrame").mockImplementation(() => {});
+    const wrapper = mount(TodoPanel, {
+      attachTo: document.body,
+      props: { todoLists: defaultTodoLists, todos: { morning: [{ id: "long", text: "A long pinned reminder", done: false, starred: true }], noon: [], evening: [] }, titles: DEFAULT_TITLES },
+      global: { stubs: { NDropdown: dropdownStub, NDatePicker: datePickerStub, NTooltip: tooltipStub } },
+    });
+    try {
+      const row = wrapper.get(".today-focus-item");
+      const input = row.get("input.today-focus-input");
+      Object.defineProperty(input.element, "scrollWidth", { configurable: true, value: 400 });
+      Object.defineProperty(input.element, "clientWidth", { configurable: true, value: 100 });
+      await row.trigger("mouseenter");
+      expect(row.get(".todo-marquee-text").text()).toBe("A long pinned reminder");
+      frame!(100);
+      frame!(1599);
+      expect(input.element.scrollLeft).toBe(0);
+      frame!(1700);
+      expect(input.element.scrollLeft).toBeGreaterThan(0);
+      expect(row.get(".todo-marquee-text").attributes("style")).toContain("translateX(-5px)");
+      await row.trigger("mouseleave");
+      expect(row.find(".todo-marquee-mirror").exists()).toBe(false);
+      expect(input.element.scrollLeft).toBe(0);
+      await row.trigger("mouseenter");
+      await input.trigger("focus");
+      expect(row.find(".todo-marquee-mirror").exists()).toBe(false);
+      expect(input.classes()).not.toContain("has-marquee-mirror");
+    } finally {
+      wrapper.unmount();
+      raf.mockRestore();
+      cancel.mockRestore();
+    }
+  });
+
   it("applies a flowing multicolor text effect to starred reminders", () => {
     const styles = readFileSync(resolve(__dirname, "../styles.css"), "utf8");
 

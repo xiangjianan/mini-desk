@@ -849,6 +849,7 @@ function handleInputComposition(event: CompositionEvent): void {
 }
 
 function handleInputFocus(period: TodoPeriod, todo: TodoItem, event: FocusEvent): void {
+  stopHoverScroll(event.currentTarget as HTMLInputElement);
   focusedTodoKey = todoKey(period, todo.id);
   pausePendingReorder(focusedTodoKey);
   focusedListId.value = period;
@@ -864,7 +865,7 @@ function handleInputFocus(period: TodoPeriod, todo: TodoItem, event: FocusEvent)
 // auto-stops the moment focus lands on the input.
 const hoverScrollCleanup = new Map<HTMLInputElement, () => void>();
 const HOVER_SCROLL_SPEED = 0.05; // px per ms (~50px/s, comfortable reading pace)
-const HOVER_SCROLL_PAUSE_START = 320;
+const HOVER_SCROLL_PAUSE_START = 1500;
 const HOVER_SCROLL_PAUSE_END = 760;
 
 function startHoverScroll(input: HTMLInputElement | null): void {
@@ -875,6 +876,33 @@ function startHoverScroll(input: HTMLInputElement | null): void {
   stopHoverScroll(input);
   // Drop the ellipsis while scrolling so the full text is visible, not "...".
   input.classList.add("is-marquee");
+
+  // Render gradient text in a clipped mirror: native input scrolling can leave
+  // background-clip:text frozen in browsers. Keep the input for editing/accessibility.
+  const row = input.closest<HTMLElement>(".today-focus-item, .todo-item");
+  const colored = row && (row.classList.contains("today-focus-item") || row.classList.contains("is-starred"))
+    && !(row.classList.contains("deadline-overdue") && !row.classList.contains("is-done"));
+  let mirror: HTMLSpanElement | undefined;
+  let mirrorText: HTMLSpanElement | undefined;
+  if (colored) {
+    mirror = document.createElement("span");
+    mirror.className = "todo-marquee-mirror";
+    mirror.setAttribute("aria-hidden", "true");
+    mirror.style.left = `${input.offsetLeft}px`;
+    mirror.style.top = `${input.offsetTop}px`;
+    mirror.style.width = `${input.offsetWidth}px`;
+    mirror.style.height = `${input.offsetHeight}px`;
+    const style = getComputedStyle(input);
+    mirror.style.paddingLeft = style.paddingLeft;
+    mirror.style.paddingRight = style.paddingRight;
+    mirror.style.font = style.font;
+    mirrorText = document.createElement("span");
+    mirrorText.className = "todo-marquee-text";
+    mirrorText.textContent = input.value;
+    mirror.append(mirrorText);
+    row.append(mirror);
+    input.classList.add("has-marquee-mirror");
+  }
 
   const maxScroll = overflow;
   const travel = maxScroll / HOVER_SCROLL_SPEED;
@@ -899,12 +927,15 @@ function startHoverScroll(input: HTMLInputElement | null): void {
       x = maxScroll * (1 - (t - HOVER_SCROLL_PAUSE_START - travel - HOVER_SCROLL_PAUSE_END) / travel);
     }
     input.scrollLeft = x;
+    if (mirrorText) mirrorText.style.transform = `translateX(${-x}px)`;
     raf = requestAnimationFrame(tick);
   };
   raf = requestAnimationFrame(tick);
   hoverScrollCleanup.set(input, () => {
     cancelled = true;
     if (raf) cancelAnimationFrame(raf);
+    mirror?.remove();
+    input.classList.remove("has-marquee-mirror");
   });
 }
 
