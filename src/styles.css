@@ -7971,3 +7971,12 @@ body:has(.image-preview) .n-modal-container:has(.focus-now-modal) .n-modal-mask 
   font-size: 12px;
   white-space: nowrap;
 }
+
+/* Pinned reminders are colorful at rest as well as during hover. An overdue
+   reminder takes priority, including when its scrolling mirror is visible. */
+.todo-marquee-mirror.is-overdue .todo-marquee-text {
+  color: var(--danger);
+  -webkit-text-fill-color: var(--danger);
+  background: transparent;
+  animation: none;
+}

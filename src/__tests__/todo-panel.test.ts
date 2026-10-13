@@ -1609,7 +1609,7 @@ describe("TodoPanel", () => {
     vi.useRealTimers();
   });
 
-  it("waits 1.5 seconds before scrolling pinned text and preserves its colorful mirror", async () => {
+  it("waits one second before scrolling pinned text and preserves its colorful mirror", async () => {
     let frame: FrameRequestCallback | undefined;
     const raf = vi.spyOn(window, "requestAnimationFrame").mockImplementation((callback) => { frame = callback; return 1; });
     const cancel = vi.spyOn(window, "cancelAnimationFrame").mockImplementation(() => {});
@@ -1626,11 +1626,17 @@ describe("TodoPanel", () => {
       await row.trigger("mouseenter");
       expect(row.get(".todo-marquee-text").text()).toBe("A long pinned reminder");
       frame!(100);
-      frame!(1599);
+      frame!(1099);
       expect(input.element.scrollLeft).toBe(0);
-      frame!(1700);
+      frame!(1200);
       expect(input.element.scrollLeft).toBeGreaterThan(0);
       expect(row.get(".todo-marquee-text").attributes("style")).toContain("translateX(-5px)");
+      row.element.classList.add("deadline-overdue");
+      frame!(1300);
+      expect(row.get(".todo-marquee-mirror").classes()).toContain("is-overdue");
+      row.element.classList.remove("deadline-overdue");
+      frame!(1400);
+      expect(row.get(".todo-marquee-mirror").classes()).not.toContain("is-overdue");
       await row.trigger("mouseleave");
       expect(row.find(".todo-marquee-mirror").exists()).toBe(false);
       expect(input.element.scrollLeft).toBe(0);

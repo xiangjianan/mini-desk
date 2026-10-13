@@ -865,7 +865,7 @@ function handleInputFocus(period: TodoPeriod, todo: TodoItem, event: FocusEvent)
 // auto-stops the moment focus lands on the input.
 const hoverScrollCleanup = new Map<HTMLInputElement, () => void>();
 const HOVER_SCROLL_SPEED = 0.05; // px per ms (~50px/s, comfortable reading pace)
-const HOVER_SCROLL_PAUSE_START = 1500;
+const HOVER_SCROLL_PAUSE_START = 1000;
 const HOVER_SCROLL_PAUSE_END = 760;
 
 function startHoverScroll(input: HTMLInputElement | null): void {
@@ -927,7 +927,11 @@ function startHoverScroll(input: HTMLInputElement | null): void {
       x = maxScroll * (1 - (t - HOVER_SCROLL_PAUSE_START - travel - HOVER_SCROLL_PAUSE_END) / travel);
     }
     input.scrollLeft = x;
-    if (mirrorText) mirrorText.style.transform = `translateX(${-x}px)`;
+    if (mirrorText) {
+      mirrorText.style.transform = `translateX(${-x}px)`;
+      // Deadlines can expire while hovered; the mirror follows the row state.
+      mirror?.classList.toggle("is-overdue", Boolean(row?.classList.contains("deadline-overdue") && !row.classList.contains("is-done")));
+    }
     raf = requestAnimationFrame(tick);
   };
   raf = requestAnimationFrame(tick);
