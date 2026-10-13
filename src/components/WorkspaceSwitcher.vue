@@ -15,7 +15,7 @@ import {
 import { getUiText } from "../state/i18n";
 import { DEFAULT_BOARD_TITLE } from "../state/defaults";
 import { getWorkspaceBoardTitle } from "../state/workspaces";
-import { CONTEXT_MENU_Z_INDEX } from "../utils/contextMenu";
+import { organizeContextMenu, CONTEXT_MENU_Z_INDEX } from "../utils/contextMenu";
 import type { AppLanguage, ThemeMode, WorkspaceData } from "../types";
 import miniDeskLogo from "../../static/img/mini-desk-logo.svg?url";
 
@@ -38,6 +38,21 @@ const emit = defineEmits<{
 }>();
 
 const text = computed(() => getUiText(props.language));
+const menuIcons = { export: DownloadOutline, rename: CreateOutline, pair: PhonePortraitOutline, delete: TrashOutline };
+const workspaceMenuOptions = computed(() => organizeContextMenu([
+  { key: "export", label: text.value.app.workspaceExportSingle },
+  { key: "rename", label: text.value.common.rename },
+  { key: "pair", label: text.value.app.inboxPair },
+  { key: "delete", label: text.value.common.delete },
+]));
+
+function handleWorkspaceMenuAction(key: string, event: MouseEvent, id: string): void {
+  if (key === "export") handleExport(event, id);
+  if (key === "rename") handleRename(event, id);
+  if (key === "pair") handlePair(event, id);
+  if (key === "delete") handleDelete(event, id);
+}
+
 const open = ref(false);
 const menuOpenId = ref<string | null>(null);
 const dragId = ref<string | null>(null);
@@ -245,46 +260,21 @@ function onDrop(targetId: string): void {
                 </button>
               </template>
               <div class="workspace-switcher-menu" role="menu" :aria-label="text.app.workspaceMenuActions">
-                <button
-                  type="button"
-                  class="workspace-switcher-menu-item"
-                  role="menuitem"
-                  :data-testid="`workspace-export-${workspace.id}`"
-                  @click="handleExport($event, workspace.id)"
-                >
-                  <NIcon :component="DownloadOutline" size="14" />
-                  <span>{{ text.app.workspaceExportSingle }}</span>
-                </button>
-                <button
-                  type="button"
-                  class="workspace-switcher-menu-item"
-                  role="menuitem"
-                  :data-testid="`workspace-pair-${workspace.id}`"
-                  @click="handlePair($event, workspace.id)"
-                >
-                  <NIcon :component="PhonePortraitOutline" size="14" />
-                  <span>{{ text.app.inboxPair }}</span>
-                </button>
-                <button
-                  type="button"
-                  class="workspace-switcher-menu-item"
-                  role="menuitem"
-                  :data-testid="`workspace-rename-${workspace.id}`"
-                  @click="handleRename($event, workspace.id)"
-                >
-                  <NIcon :component="CreateOutline" size="14" />
-                  <span>{{ text.common.rename }}</span>
-                </button>
-                <button
-                  type="button"
-                  class="workspace-switcher-menu-item is-delete"
-                  role="menuitem"
-                  :data-testid="`workspace-delete-${workspace.id}`"
-                  @click="handleDelete($event, workspace.id)"
-                >
-                  <NIcon :component="TrashOutline" size="14" />
-                  <span>{{ text.common.delete }}</span>
-                </button>
+                <template v-for="option in workspaceMenuOptions" :key="String(option.key)">
+                  <div v-if="option.type === 'divider'" class="workspace-switcher-menu-divider" role="separator" />
+                  <button
+                    v-else
+                    type="button"
+                    class="workspace-switcher-menu-item"
+                    :class="{ 'is-delete': option.key === 'delete' }"
+                    role="menuitem"
+                    :data-testid="`workspace-${option.key}-${workspace.id}`"
+                    @click="handleWorkspaceMenuAction(String(option.key), $event, workspace.id)"
+                  >
+                    <NIcon :component="menuIcons[option.key as keyof typeof menuIcons]" size="14" />
+                    <span>{{ option.label }}</span>
+                  </button>
+                </template>
               </div>
             </NPopover>
           </span>

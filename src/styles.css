@@ -7085,6 +7085,7 @@ html[data-theme="dark"] .quick-search .quick-search-toggle:focus-visible {
    list row only shows a single kebab trigger (the zone grid now lives in the
    header's top-right button cluster). */
 .workspace-switcher-menu { min-width: 178px; padding: 2px 0; }
+.workspace-switcher-menu-divider { height: 1px; margin: 5px 0; background: var(--border); }
 .workspace-switcher-menu .workspace-switcher-menu-item {
   display: inline-flex; align-items: center; gap: 8px; width: 100%;
   background: transparent; border: none; cursor: pointer; padding: 5px 10px; border-radius: 8px; color: inherit;

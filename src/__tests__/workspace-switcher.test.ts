@@ -32,6 +32,23 @@ async function clickMenuAction(wrapper: VueWrapper, id: string, action: "export"
 }
 
 describe("WorkspaceSwitcher", () => {
+  it.each(["zh", "en"] as const)("%s 工作空间菜单按当前空间操作分组，列表操作留在弹窗底部", async (language) => {
+    const wrapper = mount(WorkspaceSwitcher, {
+      props: { workspaces, activeWorkspaceId: "a", theme: "light", language },
+      attachTo: document.body,
+    });
+    await wrapper.get('[data-testid="workspace-trigger"]').trigger("click");
+    await openWorkspaceMenu(wrapper, "b");
+    const menu = menuAction("b", "export").parentElement!;
+    expect(Array.from(menu.children).map((item) => item.getAttribute("data-testid") ?? item.getAttribute("role")))
+      .toEqual(["workspace-export-b", "separator", "workspace-rename-b", "workspace-pair-b", "separator", "workspace-delete-b"]);
+    expect(menu.querySelector('[data-testid="workspace-create-button"]')).toBeNull();
+    expect(menu.querySelector('[data-testid="workspace-import-button"]')).toBeNull();
+    expect(wrapper.find('.workspace-switcher-footer [data-testid="workspace-create-button"]').exists()).toBe(true);
+    expect(wrapper.find('.workspace-switcher-footer [data-testid="workspace-import-button"]').exists()).toBe(true);
+    wrapper.unmount();
+  });
+
   it("拖拽排序保留列表项并通过移动过渡换位", async () => {
     const wrapper = mount(WorkspaceSwitcher, {
       props: { workspaces, activeWorkspaceId: "a", theme: "light", language: "zh" },

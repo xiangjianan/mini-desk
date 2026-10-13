@@ -89,7 +89,7 @@ export function organizeContextMenu(options: DropdownOption[]): DropdownOption[]
     if (["guide", "tips"].includes(key)) return 5;
     if (key.startsWith("delete") || key === "clear-completed") return 4;
     if (key.startsWith("move") || key.startsWith("pin-")) return 3;
-    if (["copy", "copy-text", "copy-link", "paste", "smart-paste", "preview", "close-preview", "add", "create", "create-list"].includes(key)) return 0;
+    if (["export", "copy", "copy-text", "copy-link", "paste", "smart-paste", "preview", "close-preview", "add", "create", "create-list"].includes(key)) return 0;
     return 1;
   };
   const sorted = options.filter((option) => option.type !== "divider")
