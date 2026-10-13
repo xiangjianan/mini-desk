@@ -1609,7 +1609,7 @@ describe("TodoPanel", () => {
     vi.useRealTimers();
   });
 
-  it("waits one second before scrolling pinned text and preserves its colorful mirror", async () => {
+  it("waits 0.8 seconds before scrolling pinned text and preserves its colorful mirror", async () => {
     let frame: FrameRequestCallback | undefined;
     const raf = vi.spyOn(window, "requestAnimationFrame").mockImplementation((callback) => { frame = callback; return 1; });
     const cancel = vi.spyOn(window, "cancelAnimationFrame").mockImplementation(() => {});
@@ -1626,9 +1626,9 @@ describe("TodoPanel", () => {
       await row.trigger("mouseenter");
       expect(row.get(".todo-marquee-text").text()).toBe("A long pinned reminder");
       frame!(100);
-      frame!(1099);
+      frame!(899);
       expect(input.element.scrollLeft).toBe(0);
-      frame!(1200);
+      frame!(1000);
       expect(input.element.scrollLeft).toBeGreaterThan(0);
       expect(row.get(".todo-marquee-text").attributes("style")).toContain("translateX(-5px)");
       row.element.classList.add("deadline-overdue");
@@ -1649,6 +1649,15 @@ describe("TodoPanel", () => {
       raf.mockRestore();
       cancel.mockRestore();
     }
+  });
+
+  it("keeps pinned gradients at rest in the final desktop stylesheet and prioritizes overdue red", () => {
+    const desk = readFileSync(resolve(__dirname, "../desk.css"), "utf8");
+    expect(desk).not.toMatch(/\.workbench-shell \.today-focus-item \.today-focus-input\s*\{[^}]*animation: none/s);
+    expect(desk).not.toMatch(/\.workbench-shell \.todo-item\.is-starred \.todo-input\s*\{[^}]*background: transparent/s);
+    const overdue = desk.match(/\.workbench-shell \.today-focus-item\.deadline-overdue:not\(\.is-done\) \.today-focus-input\s*\{([^}]*)\}/)?.[1];
+    expect(overdue).toContain("-webkit-text-fill-color: var(--danger)");
+    expect(overdue).toContain("animation: none");
   });
 
   it("applies a flowing multicolor text effect to starred reminders", () => {

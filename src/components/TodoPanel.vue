@@ -865,7 +865,7 @@ function handleInputFocus(period: TodoPeriod, todo: TodoItem, event: FocusEvent)
 // auto-stops the moment focus lands on the input.
 const hoverScrollCleanup = new Map<HTMLInputElement, () => void>();
 const HOVER_SCROLL_SPEED = 0.05; // px per ms (~50px/s, comfortable reading pace)
-const HOVER_SCROLL_PAUSE_START = 1000;
+const HOVER_SCROLL_PAUSE_START = 800;
 const HOVER_SCROLL_PAUSE_END = 760;
 
 function startHoverScroll(input: HTMLInputElement | null): void {

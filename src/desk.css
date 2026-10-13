@@ -367,9 +367,12 @@ html[data-theme="dark"] .workbench-shell,
 .workbench-shell .todo-item::after { left: 34px; right: 0; border-color: transparent; }
 .workbench-shell .todo-item.deadline-overdue { color: var(--text); }
 .workbench-shell .todo-item.deadline-overdue .todo-notify-button { color: var(--danger); }
-.workbench-shell .todo-item.deadline-overdue:not(.is-done) .todo-input {
-  color: var(--text);
-  -webkit-text-fill-color: var(--text);
+.workbench-shell .todo-item.deadline-overdue:not(.is-done) .todo-input,
+.workbench-shell .today-focus-item.deadline-overdue:not(.is-done) .today-focus-input {
+  color: var(--danger);
+  -webkit-text-fill-color: var(--danger);
+  background: transparent;
+  animation: none;
 }
 .workbench-shell .todo-input { font-size: 14px; }
 .workbench-shell .todo-section.is-collapsed { flex-shrink: 0; }
@@ -751,7 +754,7 @@ html[data-theme="dark"] .workbench-shell,
   }
 }
 
-/* Accent color belongs to status marks; task text stays steady and readable. */
+/* Status marks use accent colors; pinned text keeps its flowing gradient. */
 .workbench-shell .todo-star-button.is-starred { color: var(--desk-accent-amber); }
 .workbench-shell .todo-star-button.is-starred svg { fill: currentColor; }
 .workbench-shell .todo-item .todo-checkbox:checked,
@@ -759,15 +762,7 @@ html[data-theme="dark"] .workbench-shell,
   border-color: var(--desk-accent-emerald);
   background: var(--desk-accent-emerald);
 }
-.workbench-shell .todo-item.is-starred .todo-input,
-.workbench-shell .today-focus-item .today-focus-input {
-  color: var(--text);
-  -webkit-text-fill-color: var(--text);
-  background: transparent;
-  animation: none;
-}
-.workbench-shell .todo-item.is-done .todo-input,
-.workbench-shell .today-focus-item.is-done .today-focus-input {
+.workbench-shell .todo-item.is-done:not(.is-starred) .todo-input {
   color: var(--muted);
   -webkit-text-fill-color: var(--muted);
 }
