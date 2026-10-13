@@ -120,7 +120,7 @@ describe("localized public copy", () => {
     expect(getUiText("en").settings.shortcutHelp).toBe("Help & Shortcuts");
     expect(getUiText("en").quick.add).toBe("Add");
     expect(getUiText("en").quick.menu).toBe("Quick actions menu");
-    expect(getUiText("en").todo.createList).toBe("New reminder list");
+    expect(getUiText("en").todo.createList).toBe("New list");
     expect(getUiText("en").common.delete).toBe("Delete");
     expect(getUiText("zh").settings.language).toBe("Language");
   });
