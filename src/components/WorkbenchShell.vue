@@ -767,7 +767,7 @@ onUnmounted(() => {
               @click="setHeaderHidden(true, $event)"
             >
               <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
-                <path d="M5 14 L11.2 10.4 Q12 9.9 12.8 10.4 L19 14" vector-effect="non-scaling-stroke" />
+                <path d="M5 14 L10.6 10.75 Q12 9.85 13.4 10.75 L19 14" stroke-width="1.4" vector-effect="non-scaling-stroke" />
               </svg>
             </button>
           <div class="workbench-command-actions">
@@ -812,7 +812,7 @@ onUnmounted(() => {
             @click="setHeaderHidden(false, $event)"
           >
             <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
-              <path d="M5 10 L11.2 13.6 Q12 14.1 12.8 13.6 L19 10" vector-effect="non-scaling-stroke" />
+              <path d="M5 10 L10.6 13.25 Q12 14.15 13.4 13.25 L19 10" stroke-width="1.4" vector-effect="non-scaling-stroke" />
             </svg>
           </button>
         </Transition>
