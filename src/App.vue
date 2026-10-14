@@ -356,16 +356,16 @@ const effectiveTheme = computed<ResolvedTheme>(() => resolveTheme(state.theme, s
 const naiveTheme = computed(() => (effectiveTheme.value === "dark" ? darkTheme : null));
 const naiveThemeOverrides = computed(() => ({
   Button: effectiveTheme.value === "dark" ? {
-    textColorPrimary: "#25222d",
-    textColorHoverPrimary: "#25222d",
-    textColorPressedPrimary: "#25222d",
-    textColorFocusPrimary: "#25222d",
+    textColorPrimary: "#20272d",
+    textColorHoverPrimary: "#20272d",
+    textColorPressedPrimary: "#20272d",
+    textColorFocusPrimary: "#20272d",
   } : {},
   common: {
-    primaryColor: effectiveTheme.value === "dark" ? "#b9a5e8" : "#7860b5",
-    primaryColorHover: effectiveTheme.value === "dark" ? "#cabbf1" : "#68509f",
-    primaryColorPressed: effectiveTheme.value === "dark" ? "#a48bd7" : "#59428e",
-    primaryColorSuppl: effectiveTheme.value === "dark" ? "#b9a5e8" : "#7860b5",
+    primaryColor: effectiveTheme.value === "dark" ? "#9cbcd5" : "#3f6887",
+    primaryColorHover: effectiveTheme.value === "dark" ? "#b7d1e5" : "#335a77",
+    primaryColorPressed: effectiveTheme.value === "dark" ? "#83a8c5" : "#294a63",
+    primaryColorSuppl: effectiveTheme.value === "dark" ? "#9cbcd5" : "#3f6887",
     borderRadius: "8px",
     fontFamily: '-apple-system, BlinkMacSystemFont, "Segoe UI", "PingFang SC", sans-serif',
   },
