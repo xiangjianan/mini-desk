@@ -317,6 +317,10 @@ html[data-theme="dark"] .workbench-shell,
   background: var(--desk-group-content);
   box-shadow: var(--desk-card-shadow);
 }
+/* Match the border-free header edge in the dark reminder cards. */
+html[data-theme="dark"] .workbench-shell .todo-section {
+  box-shadow: none;
+}
 .workbench-shell .todo-list-shell,
 .workbench-shell .quick-tag-content {
   border-radius: 0 0 var(--desk-card-radius) var(--desk-card-radius);
