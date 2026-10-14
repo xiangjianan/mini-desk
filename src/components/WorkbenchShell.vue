@@ -25,8 +25,6 @@ const props = withDefaults(defineProps<{
   assetsTitle?: string;
   notesTitle?: string;
   slogan?: string;
-  assetsEmpty?: boolean;
-  notesEmpty?: boolean;
   imagePreviewOpen?: boolean;
   zoneVisibility?: ZoneVisibility;
   /** 区域尺寸按工作区独立存储；缺省回落到旧的共享键（兼容无工作区上下文的挂载）。 */
@@ -40,8 +38,6 @@ const props = withDefaults(defineProps<{
   assetsTitle: "",
   notesTitle: "",
   slogan: "",
-  assetsEmpty: false,
-  notesEmpty: false,
   imagePreviewOpen: false,
   zoneVisibility: () => ({ assets: true, notes: true, tasks: true, workspace: true }),
   workspaceId: "",
@@ -773,9 +769,6 @@ onUnmounted(() => {
         >
           <div class="workbench-zone-rail" aria-hidden="true" :title="expandHint" @click="expandZoneToDefault(0)">{{ zoneLabels[0] }}</div>
           <slot name="assets" />
-          <div v-if="assetsEmpty" class="workbench-empty-copy">
-            <p class="workbench-empty-tagline">{{ uiText.common.welcomeTagline }}</p>
-          </div>
         </section>
         <section
           v-if="zoneVisibility.notes"
@@ -785,9 +778,6 @@ onUnmounted(() => {
         >
           <div class="workbench-zone-rail" aria-hidden="true" :title="expandHint" @click="expandZoneToDefault(1)">{{ zoneLabels[1] }}</div>
           <slot name="notes" />
-          <div v-if="notesEmpty" class="workbench-empty-copy">
-            <p>{{ uiText.common.welcomeDescription }}</p>
-          </div>
         </section>
         <section
           v-if="zoneVisibility.tasks"

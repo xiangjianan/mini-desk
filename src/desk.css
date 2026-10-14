@@ -268,12 +268,23 @@ html[data-theme="dark"] .workbench-shell,
 .workbench-shell .todo-heading {
   min-height: var(--desk-group-heading-height);
   padding: 4px 8px;
-  background: var(--desk-group-surface);
+  background: var(--desk-surface);
   backdrop-filter: none;
   box-shadow: none;
   border: 0;
-  border-radius: var(--desk-card-radius) var(--desk-card-radius) 0 0;
+  border-radius: 0;
 }
+/* The sticky header must cover the scrolled white card at its rounded corners. */
+.workbench-shell .todo-heading::before {
+  content: "";
+  position: absolute;
+  inset: 0;
+  z-index: -1;
+  border-radius: var(--desk-card-radius) var(--desk-card-radius) 0 0;
+  background: var(--desk-group-surface);
+  pointer-events: none;
+}
+
 /* Match tag groups and reminder lists, including independent scroll columns. */
 .workbench-zone > .todo-panel { overflow: visible; }
 .workbench-shell .todo-content-scroll { padding-top: var(--desk-group-top); overflow: visible; }
@@ -315,6 +326,7 @@ html[data-theme="dark"] .workbench-shell,
 .workbench-shell .quick-tag-group:has(> .quick-tag-content.is-collapsed) > .quick-tag-heading {
   border-radius: var(--desk-card-radius);
 }
+.workbench-shell .todo-section.is-collapsed > .todo-heading::before { border-radius: var(--desk-card-radius); }
 .workbench-shell .quick-tag-group:has(> .quick-tag-content.is-collapsed) { background: transparent; }
 .workbench-shell .quick-tag-content.is-collapsed { background: transparent; }
 .workbench-shell .quick-tag-group.is-empty,
@@ -844,23 +856,3 @@ html[data-theme="dark"] .workbench-shell,
   .workbench-zone *,
   .workbench-zone .n-scrollbar > .n-scrollbar-rail { transition: none !important; }
 }
-
-/* Empty-region copy stays below the header and does not intercept paste/drop. */
-.workbench-zone-assets,
-.workbench-zone-notes { position: relative; }
-.workbench-empty-copy {
-  position: absolute;
-  inset: 86px 18px auto;
-  pointer-events: none;
-  color: var(--muted);
-  overflow-wrap: anywhere;
-}
-.workbench-empty-copy p { margin: 0; font-size: 14px; line-height: 1.85; }
-.workbench-empty-copy .workbench-empty-tagline {
-  color: var(--text);
-  font-size: 18px;
-  font-weight: 500;
-  line-height: 1.65;
-  text-wrap: balance;
-}
-.workbench-zone-collapsed > .workbench-empty-copy { display: none; }

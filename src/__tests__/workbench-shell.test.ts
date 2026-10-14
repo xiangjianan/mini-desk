@@ -22,23 +22,6 @@ afterEach(() => {
 });
 
 describe("WorkbenchShell", () => {
-  it("shows localized copy only in empty regions and hides it as content arrives", async () => {
-    const wrapper = mount(WorkbenchShell, {
-      props: { title: "Mini Desk", saveStatusLabel: "Saved", assetsEmpty: true, notesEmpty: true },
-    });
-    expect(wrapper.get(".workbench-zone-assets .workbench-empty-copy").text()).toBe("花点时间，把时间省下来。");
-    expect(wrapper.get(".workbench-zone-notes .workbench-empty-copy").text()).toContain("只需一次简单整理");
-    await wrapper.setProps({ language: "en" });
-    expect(wrapper.get(".workbench-empty-tagline").text()).toBe("A little time now. More time for what matters.");
-    expect(wrapper.get(".workbench-zone-notes .workbench-empty-copy").text()).toContain("A little organization");
-    await wrapper.setProps({ assetsEmpty: false });
-    expect(wrapper.find(".workbench-zone-assets .workbench-empty-copy").exists()).toBe(false);
-    expect(wrapper.find(".workbench-zone-notes .workbench-empty-copy").exists()).toBe(true);
-    await wrapper.setProps({ notesEmpty: false });
-    expect(wrapper.find(".workbench-empty-copy").exists()).toBe(false);
-    wrapper.unmount();
-  });
-
   it("captures scrolling from all four slot regions and clears activity on unmount", async () => {
     vi.useFakeTimers();
     const wrapper = mount(WorkbenchShell, {
