@@ -34,6 +34,22 @@ export interface ChangelogEntry {
 
 export const CHANGELOG: ChangelogEntry[] = [
     {
+      version: "1.1.5",
+      date: "2026-10-14",
+      notes: {
+        zh: [
+          "调整：品牌配色换新——主色由系统蓝改为石墨灰 + 钢青蓝，明暗主题同步",
+          "优化：深色主题工作台表面整体提亮，分组层次更柔和统一",
+          "修复：记事本滚动条拖拽与指针样式恢复；滚动条宽度、吸顶圆角、弹窗按钮等一批细节统一",
+        ],
+        en: [
+          "Changed: a refreshed brand palette — the primary color moves from system blue to graphite and steel blue, in both light and dark themes",
+          "Improved: dark-theme workbench surfaces are lighter overall with softer, more uniform grouping",
+          "Fixed: note scrollbar dragging and pointer cursors restored; a batch of unified details across scrollbar widths, sticky heading corners, and dialog buttons",
+        ],
+      },
+    },
+    {
       version: "1.1.4",
       date: "2026-10-14",
       notes: {
