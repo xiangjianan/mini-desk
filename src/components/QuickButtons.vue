@@ -1,4 +1,5 @@
 <script setup lang="ts">
+import { installPointerSort } from "../utils/pointerSort";
 import { isGroupDropBefore } from "../utils/groupDrop";
 import { computed, h, nextTick, onBeforeUpdate, onMounted, onUnmounted, onUpdated, reactive, ref, watch } from "vue";
 import type { Component, ComponentPublicInstance, VNode } from "vue";
@@ -130,7 +131,7 @@ const tagManagerFocusId = ref<string | undefined>();
 let tagManagerFocusInput: { focus?: () => void } | null = null;
 const draggingId = ref<string | null>(null);
 const draggingTagId = ref<string | null>(null);
-const dragScroll = createDragAutoScroll();
+const dragScroll = createDragAutoScroll({ wheelPauseMs: 240 });
 const editingTagId = ref<string | null>(null);
 const inlineTagDraft = ref("");
 let inlineRenameInput: HTMLInputElement | null = null;
@@ -184,6 +185,12 @@ const groupedButtons = computed(() => {
 
 // Quick actions always use one column, including legacy pinned tag layouts.
 const panelRef = ref<HTMLElement | null>(null);
+let disposePointerSort: (() => void) | undefined;
+onMounted(() => {
+  if (panelRef.value) disposePointerSort = installPointerSort(panelRef.value, ".quick-button, .quick-tag-heading", dragScroll.pauseForWheel);
+});
+onUnmounted(() => disposePointerSort?.());
+
 const columnCount = 1;
 // Group visible groups into explicit column buckets by their pinned `column`.
 // Array order within a bucket = vertical order; 其他/空态 groups land last.

@@ -1,4 +1,5 @@
 <script setup lang="ts">
+import { installPointerSort } from "../utils/pointerSort";
 import { isGroupDropBefore } from "../utils/groupDrop";
 import TodoListCreateDialog from "./TodoListCreateDialog.vue";
 import { computed, h, nextTick, onMounted, onUnmounted, onUpdated, ref, shallowReactive, watch } from "vue";
@@ -133,9 +134,15 @@ const menu = ref<{
   pasteAtCaret?: boolean;
 } | null>(null);
 const dragged = ref<DraggedTodo | null>(null);
-const todoDragScroll = createDragAutoScroll();
+const todoDragScroll = createDragAutoScroll({ wheelPauseMs: 240 });
 const draggedListId = ref<TodoListId | null>(null);
 const panelRef = ref<HTMLElement | null>(null);
+let disposePointerSort: (() => void) | undefined;
+onMounted(() => {
+  if (panelRef.value) disposePointerSort = installPointerSort(panelRef.value, ".todo-drag-handle, .todo-heading", todoDragScroll.pauseForWheel);
+});
+onUnmounted(() => disposePointerSort?.());
+
 // Measured content width of the todo panel, kept in sync via ResizeObserver.
 let measuredPanelWidth = 0;
 const editingListTitleIds = ref<Set<TodoListId>>(new Set());

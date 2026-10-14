@@ -472,7 +472,8 @@ function finishImagePointerDrag(event?: PointerEvent, canceled = false): void {
 }
 
 function handleImagePointerDown(event: PointerEvent, image: StoredImage): void {
-  if (event.button !== 0) return;
+  if (event.button !== 0 || event.altKey) return;
+  event.preventDefault();
   const element = event.currentTarget as HTMLElement;
   const rect = element.getBoundingClientRect();
   cleanupImagePointerDrag();

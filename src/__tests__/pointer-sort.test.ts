@@ -1,0 +1,64 @@
+import { afterEach, describe, expect, it, vi } from "vitest";
+import { installPointerSort } from "../utils/pointerSort";
+
+let dispose: (() => void) | undefined;
+afterEach(() => { dispose?.(); dispose = undefined; document.body.innerHTML = ""; vi.restoreAllMocks(); vi.unstubAllGlobals(); });
+
+function pointer(target: EventTarget, type: string, y: number): void {
+  const event = new MouseEvent(type, { bubbles: true, cancelable: true, button: 0, clientX: 20, clientY: y });
+  Object.defineProperty(event, "pointerId", { value: 1 });
+  target.dispatchEvent(event);
+}
+function fixture() {
+  vi.stubGlobal("DataTransfer", class {
+    values = new Map<string, string>();
+    setData(key: string, value: string) { this.values.set(key, value); }
+    getData(key: string) { return this.values.get(key) ?? ""; }
+  });
+  vi.stubGlobal("DragEvent", class extends MouseEvent {
+    dataTransfer: DataTransfer | null;
+    constructor(type: string, options: DragEventInit) { super(type, options); this.dataTransfer = options.dataTransfer ?? null; }
+  });
+  const root = document.createElement("div");
+  root.style.overflowY = "auto";
+  root.innerHTML = '<button draggable="true" class="source">Move</button><div class="target">Drop</div>';
+  document.body.appendChild(root);
+  Object.defineProperties(root, { scrollHeight: { value: 1000 }, clientHeight: { value: 100 } });
+  const source = root.querySelector<HTMLElement>(".source")!;
+  const target = root.querySelector<HTMLElement>(".target")!;
+  Object.defineProperty(document, "elementFromPoint", { configurable: true, value: vi.fn(() => target) });
+  const end = vi.fn(); const drop = vi.fn(); const pause = vi.fn();
+  source.addEventListener("dragstart", (event) => (event as DragEvent).dataTransfer!.setData("text/plain", "payload"));
+  source.addEventListener("dragend", end);
+  target.addEventListener("drop", (event) => drop((event as DragEvent).dataTransfer!.getData("text/plain")));
+  dispose = installPointerSort(root, ".source", pause);
+  return { root, source, target, end, drop, pause };
+}
+
+describe("pointer sorting", () => {
+  it("allows wheel scrolling mid-drag and preserves drop payloads", () => {
+    const { root, source, end, drop, pause } = fixture();
+    pointer(source, "pointerdown", 20); pointer(window, "pointermove", 35);
+    const wheel = new WheelEvent("wheel", { deltaY: 10, deltaMode: 1, cancelable: true });
+    window.dispatchEvent(wheel);
+    expect(wheel.defaultPrevented).toBe(true);
+    expect(root.scrollTop).toBe(160);
+    expect(pause).toHaveBeenCalled();
+    pointer(window, "pointerup", 35);
+    expect(drop).toHaveBeenCalledWith("payload");
+    expect(end).toHaveBeenCalledOnce();
+    expect(document.body.style.userSelect).toBe("");
+    window.dispatchEvent(new WheelEvent("wheel", { deltaY: 20 }));
+    expect(root.scrollTop).toBe(160);
+  });
+  it("keeps ordinary clicks intact and cancels a drag without dropping", () => {
+    const { source, drop, end } = fixture();
+    pointer(source, "pointerdown", 20); pointer(window, "pointermove", 22); pointer(window, "pointerup", 22);
+    expect(drop).not.toHaveBeenCalled(); expect(end).not.toHaveBeenCalled();
+    pointer(source, "pointerdown", 20); pointer(window, "pointermove", 35);
+    window.dispatchEvent(new KeyboardEvent("keydown", { key: "Escape" }));
+    pointer(window, "pointerup", 35);
+    expect(drop).not.toHaveBeenCalled(); expect(end).toHaveBeenCalledOnce();
+    expect(document.body.style.userSelect).toBe("");
+  });
+});
