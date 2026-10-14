@@ -442,6 +442,8 @@ export const GUIDE_MESSAGES: Record<AppLanguage, Record<GuideKey, string[]>> = {
 export const UI_TEXT = {
   zh: {
     common: {
+      welcomeTagline: "花点时间，把时间省下来。",
+      welcomeDescription: "只需一次简单整理，让零散的想法、资料与任务各归其位。以后每次打开工作台，都能更快找到需要的东西，继续手头的事情。",
       hideHeader: "收起顶部栏",
       showHeader: "展开顶部栏",
       tips: "Tips",
@@ -855,6 +857,8 @@ export const UI_TEXT = {
   },
   en: {
     common: {
+      welcomeTagline: "A little time now. More time for what matters.",
+      welcomeDescription: "A little organization gives your ideas, resources, and tasks a place of their own. Each time you open your desk, find what you need faster and pick up where you left off.",
       hideHeader: "Collapse top bar",
       showHeader: "Expand top bar",
       tips: "Tips",

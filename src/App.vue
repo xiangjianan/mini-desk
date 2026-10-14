@@ -3857,6 +3857,8 @@ function moveItem<T extends { id: string }>(items: T[], dragId: string, targetId
       :slogan="boardSlogan"
       :save-status-label="workspaceDensityLabel"
       :language="state.language"
+      :assets-empty="activeWorkspace.images.length === 0"
+      :notes-empty="activeWorkspace.quickButtons.length === 0 && activeWorkspace.quickTags.length === 0"
       :assets-title="titles['image-title']"
       :notes-title="titles['quick-title']"
       :image-preview-open="Boolean(displayedPreviewId)"

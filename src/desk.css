@@ -22,6 +22,7 @@
   --desk-group-gap: 16px;
   --desk-group-top: 0px;
   --desk-group-scroll-gutter: 12px;
+  --desk-scroll-rail-inset: 4px;
   --desk-group-content: var(--card);
   --desk-group-surface: #e8edf1;
   --desk-accent-amber: #f59e0b;
@@ -278,13 +279,14 @@ html[data-theme="dark"] .workbench-shell,
 .workbench-shell .todo-content-scroll { padding-top: var(--desk-group-top); overflow: visible; }
 .workbench-shell .todo-sections {
   column-gap: 14px;
-  margin-inline: calc(-1 * var(--desk-group-scroll-gutter));
+  margin-inline-start: calc(-1 * var(--desk-group-scroll-gutter));
+  margin-inline-end: calc(var(--desk-scroll-rail-inset) - var(--desk-group-scroll-gutter));
 }
 .workbench-shell .todo-column {
   gap: var(--desk-group-gap);
   padding-block: 0 16px;
   padding-inline-start: var(--desk-group-scroll-gutter);
-  padding-inline-end: max(0px, calc(var(--desk-group-scroll-gutter) - var(--todo-scrollbar-width, 0px)));
+  padding-inline-end: max(0px, calc(var(--desk-group-scroll-gutter) - var(--desk-scroll-rail-inset) - var(--todo-scrollbar-width, 0px)));
   scrollbar-gutter: auto;
   scroll-padding-top: var(--desk-group-heading-height);
 }
@@ -842,3 +844,23 @@ html[data-theme="dark"] .workbench-shell,
   .workbench-zone *,
   .workbench-zone .n-scrollbar > .n-scrollbar-rail { transition: none !important; }
 }
+
+/* Empty-region copy stays below the header and does not intercept paste/drop. */
+.workbench-zone-assets,
+.workbench-zone-notes { position: relative; }
+.workbench-empty-copy {
+  position: absolute;
+  inset: 86px 18px auto;
+  pointer-events: none;
+  color: var(--muted);
+  overflow-wrap: anywhere;
+}
+.workbench-empty-copy p { margin: 0; font-size: 14px; line-height: 1.85; }
+.workbench-empty-copy .workbench-empty-tagline {
+  color: var(--text);
+  font-size: 18px;
+  font-weight: 500;
+  line-height: 1.65;
+  text-wrap: balance;
+}
+.workbench-zone-collapsed > .workbench-empty-copy { display: none; }
