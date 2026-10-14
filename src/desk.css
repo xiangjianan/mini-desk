@@ -275,7 +275,8 @@ html[data-theme="dark"] .workbench-shell,
   border-radius: 0;
 }
 /* The sticky header must cover the scrolled white card at its rounded corners. */
-.workbench-shell .todo-heading::before {
+.workbench-shell .todo-heading::before,
+.workbench-shell .quick-tag-heading::before {
   content: "";
   position: absolute;
   inset: 0;
@@ -326,7 +327,8 @@ html[data-theme="dark"] .workbench-shell,
 .workbench-shell .quick-tag-group:has(> .quick-tag-content.is-collapsed) > .quick-tag-heading {
   border-radius: var(--desk-card-radius);
 }
-.workbench-shell .todo-section.is-collapsed > .todo-heading::before { border-radius: var(--desk-card-radius); }
+.workbench-shell .todo-section.is-collapsed > .todo-heading::before,
+.workbench-shell .quick-tag-group:has(> .quick-tag-content.is-collapsed) > .quick-tag-heading::before { border-radius: var(--desk-card-radius); }
 .workbench-shell .quick-tag-group:has(> .quick-tag-content.is-collapsed) { background: transparent; }
 .workbench-shell .quick-tag-content.is-collapsed { background: transparent; }
 .workbench-shell .quick-tag-group.is-empty,
@@ -519,10 +521,10 @@ html[data-theme="dark"] .workbench-shell,
   position: sticky;
   top: 0;
   z-index: 2;
-  background: var(--desk-group-surface);
+  background: var(--desk-surface);
   min-height: var(--desk-group-heading-height);
   padding: 4px 8px;
-  border-radius: var(--desk-card-radius) var(--desk-card-radius) 0 0;
+  border-radius: 0;
   box-shadow: none;
   border: 0;
 }
