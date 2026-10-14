@@ -290,11 +290,7 @@ html[data-theme="dark"] .workbench-shell,
 /* Explicit padding plus the measured scrollbar width keeps both edges equal,
    including Safari overlay scrollbars which reserve no layout space. */
 .workbench-shell .todo-column::-webkit-scrollbar {
-  width: var(--desk-group-scroll-gutter);
-}
-.workbench-shell .todo-column::-webkit-scrollbar-thumb {
-  border: calc((var(--desk-group-scroll-gutter) - var(--scrollbar-size)) / 2) solid transparent;
-  background-clip: padding-box;
+  width: var(--scrollbar-size);
 }
 .workbench-shell .todo-sections.is-multi-column .todo-column { gap: var(--desk-group-gap); }
 .workbench-shell .todo-section { border-bottom: 0; margin-bottom: 0; }
