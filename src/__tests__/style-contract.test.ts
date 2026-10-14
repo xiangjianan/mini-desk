@@ -321,11 +321,11 @@ describe("workbench style contract", () => {
     expectSelectorBody(styles, ".notify-panel-action", "white-space: nowrap");
     expectSelectorBody(styles, ".quick-dialog-action.n-button", "--n-color: var(--button) !important");
     expectSelectorBody(styles, ".quick-dialog-action.n-button", "--n-border: 1px solid var(--line-control) !important");
-    expectSelectorBody(styles, ".quick-dialog-submit.n-button", "--n-color-hover: rgba(24, 160, 88, 0.1) !important");
-    expectSelectorBody(styles, ".quick-dialog-submit.n-button", "--n-text-color: #18a058 !important");
-    expectSelectorBody(styles, ".quick-dialog-submit.n-button:hover:not(.n-button--disabled)", "background: rgba(24, 160, 88, 0.1) !important");
-    expectSelectorBody(styles, ".n-time-picker-panel .n-button--primary-type", "--n-text-color: #111111 !important");
-    expectSelectorBody(styles, ".n-time-picker-panel .n-button--primary-type", "color: #111111 !important");
+    expectSelectorBody(styles, ".quick-dialog-submit.n-button", "--n-color-hover: var(--button-hover) !important");
+    expectSelectorBody(styles, ".quick-dialog-submit.n-button", "--n-text-color: var(--primary) !important");
+    expectSelectorBody(styles, ".quick-dialog-submit.n-button:hover:not(.n-button--disabled)", "background: var(--button-hover) !important");
+    expectSelectorBody(styles, ".n-time-picker-panel .n-button--primary-type", "--n-text-color: var(--primary-foreground) !important");
+    expectSelectorBody(styles, ".n-time-picker-panel .n-button--primary-type", "color: var(--primary-foreground) !important");
   });
 
   it("keeps shortcut help key pills visually tied to the shared keyboard", () => {

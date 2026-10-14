@@ -506,22 +506,22 @@ html[data-theme="dark"] .n-modal-mask {
 
 .quick-dialog-submit.n-button {
   --n-color: var(--button) !important;
-  --n-color-hover: rgba(24, 160, 88, 0.1) !important;
-  --n-color-pressed: rgba(24, 160, 88, 0.14) !important;
-  --n-color-focus: rgba(24, 160, 88, 0.1) !important;
-  --n-text-color: #18a058 !important;
-  --n-text-color-hover: #18a058 !important;
-  --n-text-color-pressed: #18a058 !important;
-  --n-text-color-focus: #18a058 !important;
-  color: #18a058 !important;
+  --n-color-hover: var(--button-hover) !important;
+  --n-color-pressed: var(--accent) !important;
+  --n-color-focus: var(--button-hover) !important;
+  --n-text-color: var(--primary) !important;
+  --n-text-color-hover: var(--primary) !important;
+  --n-text-color-pressed: var(--primary) !important;
+  --n-text-color-focus: var(--primary) !important;
+  color: var(--primary) !important;
 }
 
 .quick-dialog-submit.n-button .n-button__content {
-  color: #18a058 !important;
+  color: var(--primary) !important;
 }
 
 .quick-dialog-submit.n-button:hover:not(.n-button--disabled) {
-  background: rgba(24, 160, 88, 0.1) !important;
+  background: var(--button-hover) !important;
 }
 
 .n-button .n-button__border,
@@ -1277,7 +1277,7 @@ button.image-card {
   flex: 0 0 20px;
   width: 20px;
   height: 20px;
-  margin: 0 0 0 2px;
+  margin: 0;
   padding: 0;
   border: 0;
   color: var(--muted);
@@ -2363,8 +2363,8 @@ html[data-theme="dark"] .notify-date-picker .n-date-panel-calendar {
 }
 
 .notify-time-option.is-active {
-  background: rgba(24, 160, 88, 0.1);
-  color: #18a058;
+  background: var(--button-hover);
+  color: var(--primary);
 }
 
 .notify-panel-presets {
@@ -2468,13 +2468,13 @@ button.notify-panel-preset:focus-visible {
 }
 
 .notify-panel-action.is-save {
-  color: #18a058;
+  color: var(--primary);
   border-color: var(--line-control);
   background: var(--button);
 }
 
 .notify-panel-action.is-save:hover:not(:disabled) {
-  background: rgba(24, 160, 88, 0.1);
+  background: var(--button-hover);
 }
 
 /* Every delete/trash affordance reads as destructive: the trash icon buttons
@@ -2490,15 +2490,15 @@ button.notify-panel-preset:focus-visible {
 }
 
 .n-time-picker-panel .n-button--primary-type {
-  --n-text-color: #111111 !important;
-  --n-text-color-hover: #111111 !important;
-  --n-text-color-pressed: #111111 !important;
-  --n-text-color-focus: #111111 !important;
-  color: #111111 !important;
+  --n-text-color: var(--primary-foreground) !important;
+  --n-text-color-hover: var(--primary-foreground) !important;
+  --n-text-color-pressed: var(--primary-foreground) !important;
+  --n-text-color-focus: var(--primary-foreground) !important;
+  color: var(--primary-foreground) !important;
 }
 
 .n-time-picker-panel .n-button--primary-type .n-button__content {
-  color: #111111 !important;
+  color: var(--primary-foreground) !important;
 }
 
 .notify-panel-action:disabled {
@@ -2995,7 +2995,7 @@ button.todo-star-button {
   min-width: 34px;
   height: 34px;
   min-height: 34px;
-  margin: 0 0 0 2px;
+  margin: 0;
   border: 0;
   border-radius: 50%;
 }
