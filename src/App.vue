@@ -355,11 +355,17 @@ const systemDark = ref(false);
 const effectiveTheme = computed<ResolvedTheme>(() => resolveTheme(state.theme, systemDark.value));
 const naiveTheme = computed(() => (effectiveTheme.value === "dark" ? darkTheme : null));
 const naiveThemeOverrides = computed(() => ({
+  Button: effectiveTheme.value === "dark" ? {
+    textColorPrimary: "#25222d",
+    textColorHoverPrimary: "#25222d",
+    textColorPressedPrimary: "#25222d",
+    textColorFocusPrimary: "#25222d",
+  } : {},
   common: {
-    primaryColor: effectiveTheme.value === "dark" ? "#0a84ff" : "#007aff",
-    primaryColorHover: effectiveTheme.value === "dark" ? "#409cff" : "#0066d6",
-    primaryColorPressed: "#0057b8",
-    primaryColorSuppl: "#007aff",
+    primaryColor: effectiveTheme.value === "dark" ? "#b9a5e8" : "#7860b5",
+    primaryColorHover: effectiveTheme.value === "dark" ? "#cabbf1" : "#68509f",
+    primaryColorPressed: effectiveTheme.value === "dark" ? "#a48bd7" : "#59428e",
+    primaryColorSuppl: effectiveTheme.value === "dark" ? "#b9a5e8" : "#7860b5",
     borderRadius: "8px",
     fontFamily: '-apple-system, BlinkMacSystemFont, "Segoe UI", "PingFang SC", sans-serif',
   },
