@@ -384,6 +384,8 @@ describe("workbench style contract", () => {
     expectSelectorBody(styles, ".n-scrollbar", "--n-scrollbar-width: var(--scrollbar-size) !important");
     expectSelectorBody(styles, ".n-scrollbar", "--n-scrollbar-height: var(--scrollbar-size) !important");
     expectSelectorBody(styles, ".n-scrollbar-rail__scrollbar", "background: var(--scrollbar-thumb) !important");
+    expectSelectorBody(styles, "*::-webkit-scrollbar-thumb", "cursor: pointer");
+    expectSelectorBody(styles, ".n-scrollbar-rail__scrollbar", "cursor: pointer");
     expectSelectorBody(styles, ".n-scrollbar-rail__scrollbar:hover", "background: var(--scrollbar-thumb-hover) !important");
     expectSelectorBody(styles, ".todo-list-scrollbar", "--n-scrollbar-width: var(--scrollbar-size) !important");
     expectSelectorBody(styles, ".today-focus-scrollbar", "--n-scrollbar-width: var(--scrollbar-size) !important");

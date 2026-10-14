@@ -590,13 +590,15 @@ describe("Naive UI component usage", () => {
       "src/components/ImagePanel.vue",
       "src/components/QuickButtons.vue",
       "src/components/SpacePanel.vue",
-      "src/components/TextPanel.vue",
     ];
 
     for (const file of scrollbarSources) {
       expect(read(file), file).toContain("NScrollbar");
     }
 
+    const text = read("src/components/TextPanel.vue");
+    expect(text).not.toContain("NScrollbar");
+    expect(text).toContain('@scroll="syncMirrorScroll"');
     const todo = read("src/components/TodoPanel.vue");
     const preview = read("src/components/ImagePreview.vue");
     expect(preview).not.toContain("NScrollbar");

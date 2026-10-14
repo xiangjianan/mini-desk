@@ -1,7 +1,7 @@
 <script setup lang="ts">
 import { computed, h, nextTick, onMounted, onUnmounted, ref, watch } from "vue";
 import type { Component, VNode } from "vue";
-import { NDropdown, NIcon, NScrollbar } from "naive-ui";
+import { NDropdown, NIcon } from "naive-ui";
 import type { DropdownOption } from "naive-ui";
 import {
   Clipboard as ClipboardOutline,
@@ -1170,7 +1170,6 @@ function restoreSelection(textarea: HTMLTextAreaElement, selection: { start: num
         :key="index"
         :class="mirrorSegmentClasses(segment)"
       >{{ segment.chunk }}</span><span v-if="hasTrailingLineBreak" class="mirror-trailing-pad">&#8203;</span></div>
-      <NScrollbar class="text-editor-scrollbar" trigger="none">
       <textarea
         ref="textareaRef"
         v-model="text"
@@ -1196,7 +1195,6 @@ function restoreSelection(textarea: HTMLTextAreaElement, selection: { start: num
         @focus="handleFocus"
         @blur="handleBlur"
       />
-      </NScrollbar>
     </div>
     <NDropdown
       v-if="menu"

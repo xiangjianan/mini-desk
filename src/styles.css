@@ -156,6 +156,7 @@ html[data-theme="dark"] {
 }
 
 *::-webkit-scrollbar-thumb {
+  cursor: pointer;
   background: var(--scrollbar-thumb);
   border: 0;
   border-radius: 999px;
@@ -171,6 +172,7 @@ html[data-theme="dark"] {
 }
 
 .n-scrollbar-rail__scrollbar {
+  cursor: pointer;
   background: var(--scrollbar-thumb) !important;
 }
 
@@ -937,12 +939,6 @@ button.space-tab {
   overflow: hidden;
 }
 
-.text-editor-scrollbar,
-.text-editor-scrollbar .n-scrollbar-container,
-.text-editor-scrollbar .n-scrollbar-content {
-  height: 100%;
-}
-
 .text-mirror,
 .text-editor-textarea {
   width: 100%;
@@ -987,8 +983,7 @@ button.space-tab {
 
 .image-list-scrollbar,
 .quick-buttons-scrollbar,
-.todo-list-scrollbar,
-.text-editor-scrollbar {
+.todo-list-scrollbar {
   flex: 1 1 auto;
   min-height: 0;
 }
