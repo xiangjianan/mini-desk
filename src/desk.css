@@ -52,7 +52,8 @@ html[data-theme="dark"] .workbench-shell {
   --quick-usage-accent: #64748b;
   --desk-accent-amber: #fbbf24;
   --desk-accent-emerald: #34d399;
-  --desk-card-shadow: inset 0 0 0 1px var(--line-subtle), 0 2px 6px rgba(0, 0, 0, 0.12);
+  /* Dark cards use their surface color for separation, without a pale outline. */
+  --desk-card-shadow: none;
   --line-subtle: rgba(235, 235, 245, 0.09);
 }
 
