@@ -35,12 +35,13 @@
 
 html[data-theme="dark"] .workbench-shell {
   --desk-zone-accent: #8da9bf;
-  --desk-surface: #20272d;
+  --desk-surface: #262d33;
+  --card: #2e363d;
   --desk-row-hover: #303c46;
   --desk-tab-hover: #3b4955;
   --desk-tab-active-hover: #303c46;
-  --desk-group-surface: #252d34;
-  --desk-group-content: #293138;
+  --desk-group-surface: #2a3239;
+  --desk-group-content: var(--card);
   --desk-selected-surface: #30485a;
   --desk-selected-text: #b1cde2;
   --text: #f1f1f1;
