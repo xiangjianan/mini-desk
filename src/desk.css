@@ -39,8 +39,8 @@ html[data-theme="dark"] .workbench-shell {
   --desk-row-hover: #303c46;
   --desk-tab-hover: #3b4955;
   --desk-tab-active-hover: #303c46;
-  --desk-group-surface: #29333c;
-  --desk-group-content: var(--card);
+  --desk-group-surface: #252d34;
+  --desk-group-content: #293138;
   --desk-selected-surface: #30485a;
   --desk-selected-text: #b1cde2;
   --text: #f1f1f1;
