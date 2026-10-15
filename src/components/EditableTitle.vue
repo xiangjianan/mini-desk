@@ -14,6 +14,7 @@ const props = withDefaults(defineProps<{
   value: string;
   displayValue?: string;
   autoEdit?: boolean;
+  maxLength?: number;
   editLabel?: string;
   menuEnabled?: boolean;
 }>(), {
@@ -96,7 +97,7 @@ async function handleMenuSelect(key: string): Promise<void> {
 }
 
 function commit(): void {
-  const value = draft.value.trim() || props.value;
+  const value = (props.maxLength ? draft.value.trim().slice(0, props.maxLength).replace(/[\uD800-\uDBFF]$/, "") : draft.value.trim()) || props.value;
   composing.value = false;
   if (editing.value) emit("editState", props.id, false);
   editing.value = false;
@@ -126,6 +127,7 @@ defineExpose({ openMenuAt });
     ref="inputRef"
     v-model="draft"
     class="title-edit-input"
+    :maxlength="maxLength"
     @compositionstart="composing = true"
     @compositionend="composing = false"
     @keydown.enter="handleEnter"

@@ -1,4 +1,5 @@
 <script setup lang="ts">
+import { TITLE_MAX_LENGTH } from "../state/titleLimits";
 import { installPointerSort } from "../utils/pointerSort";
 import { isGroupDropBefore } from "../utils/groupDrop";
 import TodoListCreateDialog from "./TodoListCreateDialog.vue";
@@ -2178,6 +2179,7 @@ onUnmounted(() => focusRegionAnimation?.cancel());
             />
             <EditableTitle
               :id="list.id"
+              :max-length="TITLE_MAX_LENGTH"
               :value="list.title"
               :auto-edit="Boolean(props.todoLists && (props.editListId === list.id || localEditListId === list.id))"
               :menu-enabled="false"

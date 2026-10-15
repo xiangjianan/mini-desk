@@ -1,4 +1,5 @@
 <script setup lang="ts">
+import { TITLE_MAX_LENGTH, limitTitle } from "../state/titleLimits";
 import { computed, h, nextTick, onMounted, onUnmounted, ref, watch } from "vue";
 import type { Component, VNode } from "vue";
 import { NDropdown, NIcon, NScrollbar } from "naive-ui";
@@ -155,7 +156,7 @@ watch(
 function commitTabEdit(focusEditorAfterCommit = false): void {
   const id = editingSpaceId.value;
   if (!id) return;
-  const title = editingTitle.value.trim();
+  const title = limitTitle(editingTitle.value);
   const shouldFocusEditor = focusEditorAfterCommit && props.editSpaceId === id;
   suppressNextTabCommitTransition();
   titleComposing.value = false;
@@ -372,6 +373,7 @@ function handleTabsWheel(event: WheelEvent): void {
               <span class="space-tab-edit-measure" aria-hidden="true">{{ editingMeasureTitle || " " }}</span>
               <input
                 v-model="editingTitle"
+                :maxlength="TITLE_MAX_LENGTH"
                 class="space-tab-edit-input"
                 :aria-label="uiText.space.editName"
                 @compositionstart="titleComposing = true"

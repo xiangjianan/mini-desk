@@ -1,4 +1,5 @@
 <script setup lang="ts">
+import { TITLE_MAX_LENGTH, limitTitle } from "../state/titleLimits";
 import { installPointerSort } from "../utils/pointerSort";
 import { isGroupDropBefore } from "../utils/groupDrop";
 import { computed, h, nextTick, onBeforeUpdate, onMounted, onUnmounted, onUpdated, reactive, ref, watch } from "vue";
@@ -387,7 +388,7 @@ function startInlineTagRename(groupId: string, groupTitle: string): void {
 function commitInlineTagRename(): void {
   const id = editingTagId.value;
   if (!id) return;
-  const title = inlineTagDraft.value.trim();
+  const title = limitTitle(inlineTagDraft.value);
   editingTagId.value = null;
   const tag = props.tags.find((item) => item.id === id);
   if (tag && title && title !== tag.title) emit("saveTag", { id, title });
@@ -398,14 +399,14 @@ function cancelInlineTagRename(): void {
 }
 
 function addTag(): void {
-  const title = newTagTitle.value.trim();
+  const title = limitTitle(newTagTitle.value);
   if (!title) return;
   emit("saveTag", { title });
   newTagTitle.value = "";
 }
 
 function saveTag(draft: QuickTagDraft): void {
-  const title = draft.titleDraft.trim();
+  const title = limitTitle(draft.titleDraft);
   if (!title) return;
   if (title === draft.title) return;
   emit("saveTag", { id: draft.id, title });
@@ -988,6 +989,7 @@ function handleQuickGroupDrop(event: DragEvent, groupId: string): void {
               v-if="editingTagId === group.id"
               :ref="setInlineRenameInput"
               v-model="inlineTagDraft"
+              :maxlength="TITLE_MAX_LENGTH"
               class="quick-tag-title-input"
               :placeholder="uiText.quick.tagName"
               autocomplete="off"
@@ -1157,6 +1159,7 @@ function handleQuickGroupDrop(event: DragEvent, groupId: string): void {
           </div>
           <NInput
             :value="form.customTagTitle"
+            :maxlength="TITLE_MAX_LENGTH"
             class="quick-tag-new-inline-input"
             :placeholder="uiText.quick.newTag"
             autocomplete="off"
@@ -1250,6 +1253,7 @@ function handleQuickGroupDrop(event: DragEvent, groupId: string): void {
             <NInput
               :ref="(el) => setTagManagerNameInput(el, tag.id)"
               v-model:value="tag.titleDraft"
+              :maxlength="TITLE_MAX_LENGTH"
               class="quick-tag-name-input"
               :placeholder="uiText.quick.tagName"
               autocomplete="off"
@@ -1270,6 +1274,7 @@ function handleQuickGroupDrop(event: DragEvent, groupId: string): void {
         <div class="quick-tag-add-row">
           <NInput
             v-model:value="newTagTitle"
+              :maxlength="TITLE_MAX_LENGTH"
             class="quick-tag-new-input"
             :placeholder="uiText.quick.newTag"
             autocomplete="off"

@@ -1,4 +1,5 @@
 <script setup lang="ts">
+import { TITLE_MAX_LENGTH, limitTitle } from "../state/titleLimits";
 import { computed, nextTick, ref } from "vue";
 import { NButton, NInput, NModal } from "naive-ui";
 import type { InputInst } from "naive-ui";
@@ -21,7 +22,7 @@ async function open(element?: HTMLElement): Promise<void> {
   inputRef.value?.focus();
 }
 function confirm(): void {
-  const trimmed = title.value.trim();
+  const trimmed = limitTitle(title.value);
   if (!trimmed) { inputRef.value?.focus(); return; }
   emit("confirm", anchor, trimmed);
   show.value = false;
@@ -41,7 +42,7 @@ defineExpose({ open });
     <form class="quick-form" autocomplete="off" @submit.prevent="confirm">
       <label for="todo-list-create-input">
         <span>{{ uiText.todo.listName }}</span>
-        <NInput ref="inputRef" v-model:value="title"
+        <NInput ref="inputRef" v-model:value="title" :maxlength="TITLE_MAX_LENGTH" show-count
           :input-props="{ id: 'todo-list-create-input', class: 'todo-list-create-input', name: 'mini-desk-todo-list-title', autocomplete: 'off' }" />
       </label>
       <div class="dialog-actions">

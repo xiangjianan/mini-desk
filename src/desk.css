@@ -839,6 +839,8 @@ html[data-theme="dark"] .workbench-shell .space-text-panel {
 
 /* Pinned items use the same card and opaque heading surfaces as other lists. */
 .workbench-shell .todo-content-scroll > .todo-focus-region > .today-focus-section > .today-focus-heading {
+  box-shadow: none;
+  border-bottom: 0;
   background: var(--desk-group-surface);
 }
 

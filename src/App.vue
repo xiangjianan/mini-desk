@@ -1,4 +1,5 @@
 <script setup lang="ts">
+import { TITLE_MAX_LENGTH, limitTitle } from "./state/titleLimits";
 import { computed, defineAsyncComponent, nextTick, onMounted, onUnmounted, reactive, ref, watch } from "vue";
 import { darkTheme, dateEnUS, dateZhCN, enUS, NButton, NConfigProvider, NGlobalStyle, NInput, NModal, zhCN } from "naive-ui";
 import CompanionBubble from "./components/CompanionBubble.vue";
@@ -827,7 +828,7 @@ function createSpace(): void {
 function renameSpace(id: string, title: string): void {
   const space = activeWorkspace.value.spaces.find((item) => item.id === id);
   if (!space) return;
-  space.title = getStoredSpaceTitle(id, title) || space.title;
+  space.title = getStoredSpaceTitle(id, limitTitle(title)) || space.title;
   if (pendingEditSpaceId.value === id) pendingEditSpaceId.value = null;
   persistNow();
 }
@@ -974,7 +975,7 @@ function renameWorkspace(id: string, title: string, slogan: string): void {
 }
 
 function confirmWorkspaceDialog(): void {
-  const title = workspaceDraftTitle.value.trim();
+  const title = limitTitle(workspaceDraftTitle.value);
   if (!title) return;
   if (workspaceDialogMode.value === "create") {
     createWorkspace(title, workspaceDraftSlogan.value);
@@ -2108,7 +2109,7 @@ function saveQuick(payload: { id?: string; title: string; value: string; type: Q
 }
 
 function resolveQuickTagId(tagTitle?: string): string | undefined {
-  const title = tagTitle?.trim();
+  const title = limitTitle(tagTitle ?? "");
   if (!title) return undefined;
   const existing = activeWorkspace.value.quickTags.find((tag) => tag.title === title);
   if (existing) return existing.id;
@@ -2118,7 +2119,7 @@ function resolveQuickTagId(tagTitle?: string): string | undefined {
 }
 
 function saveQuickTag(payload: { id?: string; title: string }): void {
-  const title = payload.title.trim();
+  const title = limitTitle(payload.title);
   if (!title) return;
   if (!payload.id) {
     if (activeWorkspace.value.quickTags.some((tag) => tag.title === title)) return;
@@ -2589,7 +2590,7 @@ function formatQuickApiResponseBody(value: string): string {
 }
 
 function createTodoList(anchor?: HTMLElement, title?: string): void {
-  const trimmedTitle = title?.trim() ?? "";
+  const trimmedTitle = limitTitle(title ?? "");
   if (!trimmedTitle) return;
   const id = createId();
   activeWorkspace.value.todoLists.push({ id, title: trimmedTitle, collapsed: false, compact: false, column: 0 });
@@ -2603,7 +2604,7 @@ function createTodoList(anchor?: HTMLElement, title?: string): void {
 function updateTodoListTitle(listId: TodoListId, title: string): void {
   const list = activeWorkspace.value.todoLists.find((item) => item.id === listId);
   if (!list) return;
-  list.title = getStoredTodoListTitle(listId, title) || uiText.value.app.unnamedList;
+  list.title = getStoredTodoListTitle(listId, limitTitle(title)) || uiText.value.app.unnamedList;
   if (pendingEditTodoListId.value === listId) pendingEditTodoListId.value = null;
   persistNow();
 }
@@ -4195,7 +4196,7 @@ function moveItem<T extends { id: string }>(items: T[], dragId: string, targetId
       <div style="display:flex; flex-direction:column; gap:12px;">
         <label style="display:flex; flex-direction:column; gap:4px;">
           <span>{{ uiText.app.workspaceTitle }}</span>
-          <NInput v-model:value="workspaceDraftTitle" :placeholder="uiText.app.workspaceTitlePlaceholder" />
+          <NInput v-model:value="workspaceDraftTitle" :maxlength="TITLE_MAX_LENGTH" show-count :placeholder="uiText.app.workspaceTitlePlaceholder" />
         </label>
         <label style="display:flex; flex-direction:column; gap:4px;">
           <span>{{ uiText.app.workspaceSlogan }}</span>
