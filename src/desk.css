@@ -830,7 +830,7 @@ html[data-theme="dark"] .workbench-shell .space-text-panel {
 .workbench-shell .workbench-command-actions { gap: 0; }
 /* Content begins directly below the common header, like the notebook tab strip. */
 .workbench-shell .todo-content-scroll > .todo-focus-region > .today-focus-section {
-  margin-top: var(--desk-group-top);
+  margin: var(--desk-group-top) 0 var(--desk-group-gap);
   border: 0;
   border-radius: var(--desk-card-radius);
   background: var(--desk-group-content);
@@ -839,9 +839,17 @@ html[data-theme="dark"] .workbench-shell .space-text-panel {
 
 /* Pinned items use the same card and opaque heading surfaces as other lists. */
 .workbench-shell .todo-content-scroll > .todo-focus-region > .today-focus-section > .today-focus-heading {
+  min-height: var(--desk-group-heading-height);
+  padding: 4px 8px;
   box-shadow: none;
   border-bottom: 0;
   background: var(--desk-group-surface);
+}
+
+/* Match the ordinary list's 8px content inset on every side. Ordinary
+   lists use their add row for the bottom inset; pinned lists have no add row. */
+.workbench-shell .today-focus-scrollbar .today-focus-list {
+  padding: 8px;
 }
 
 /* Animate a shared alpha rather than pseudo-element opacity: native scrollbar
