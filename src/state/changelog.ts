@@ -34,8 +34,8 @@ export interface ChangelogEntry {
 
 export const CHANGELOG: ChangelogEntry[] = [
     {
-      version: "1.1.6",
-      date: "2026-10-14",
+      version: "1.1.7",
+      date: "2026-10-15",
       notes: {
         zh: [
           "新增：外观单按钮切换（浅色/深色/跟随系统）收进顶栏，默认浅色主题",
@@ -58,28 +58,14 @@ export const CHANGELOG: ChangelogEntry[] = [
         zh: [
           "新增：「现在做这个」专注弹窗——全屏计时、随手记与贴图，任务行显示累计专注时长",
           "新增：提醒事项多列布局（1–6 列独立滚动）；智能粘贴与手机速记自动识别时间生成闹钟",
-          "调整：品牌升级为 MiniDesk；手机速记配对引导与手动同步完善",
+          "新增：记事本行内富文本标注——高亮、划线、下划线与文字颜色；快捷按钮热度染色",
+          "优化：四区宽度引入黄金分割；品牌升级为 MiniDesk，配对引导与手动同步完善",
         ],
         en: [
           "New: the \"Do it now\" focus modal — a full-screen timer with quick notes and images, plus per-task focus-time badges",
           "New: multi-column reminder layout (1–6 columns); smart paste and mobile capture recognize times and set alarms",
-          "Changed: rebranded as MiniDesk, with better pairing guidance and manual sync for mobile capture",
-        ],
-      },
-    },
-    {
-      version: "1.0.195",
-      date: "2026-09-29",
-      notes: {
-        zh: [
-          "新增：记事本行内富文本标注——高亮、划线、下划线与文字颜色，编辑后自动保持",
-          "新增：快捷按钮使用热度染色；快捷区智能粘贴可从剪贴板一键生成快捷按钮",
-          "优化：四区宽度引入黄金分割；删除确认等一批交互与动效打磨",
-        ],
-        en: [
-          "New: rich-text annotations in notes (highlight, strike, underline, color) that survive editing",
-          "New: usage-heat tinting for quick buttons; clipboard smart paste generates quick buttons",
-          "Improved: golden-ratio zone widths and a polish pass over delete confirms and more",
+          "New: rich-text annotations in notes — highlight, strike, underline, and color; usage-heat tinting for quick buttons",
+          "Improved: golden-ratio zone widths; rebranded as MiniDesk with better pairing guidance and manual sync",
         ],
       },
     },
@@ -89,29 +75,15 @@ export const CHANGELOG: ChangelogEntry[] = [
       notes: {
         zh: [
           "改版：桌面四区视觉焕新，区域宽度按工作区独立记忆；快捷区多列布局与紧凑模式",
-          "优化：主题切换全页平滑过渡；页面缓存优先弱网秒开",
+          "新增：右键「智能粘贴 / AI 润色」，剪贴板杂文经 AI 整理插入；手机速记服务端 AI 润色（可开关、支持英文）",
+          "优化：主题切换全页平滑过渡、可跟随系统；页面缓存优先弱网秒开",
           "改版：手机端首页重构为配对引导页，速记页改「打开的记事本」布局",
         ],
         en: [
           "Redesign: refreshed desktop visuals with per-workspace zone widths; multi-column quick tags and a compact mode",
-          "Improved: whole-page theme cross-fades and cache-first instant loads",
+          "New: right-click \"Smart paste / AI polish\" for clipboard text; server-side AI polish for mobile capture, toggleable with English support",
+          "Improved: whole-page theme cross-fades that follow the system; cache-first instant loads",
           "Redesign: the mobile home became a pairing guide and the capture page an open-notebook layout",
-        ],
-      },
-    },
-    {
-      version: "1.0.164",
-      date: "2026-09-04",
-      notes: {
-        zh: [
-          "新增：右键「智能粘贴 / AI 润色」，剪贴板杂文经 AI 整理插入、选区按风格润色替换",
-          "新增：手机速记服务端 AI 润色（待办拆条、便签要点化），可开关、支持英文",
-          "优化：主题可跟随系统明暗",
-        ],
-        en: [
-          "New: right-click \"Smart paste / AI polish\" for clipboard text and style-based selection polish",
-          "New: server-side AI polish for mobile capture (todos split, notes summarized), toggleable, with English support",
-          "Improved: the theme can follow the system light/dark mode",
         ],
       },
     },
@@ -121,25 +93,13 @@ export const CHANGELOG: ChangelogEntry[] = [
       notes: {
         zh: [
           "新增：手机速记——扫码配对后手机随手记待办与便签，自动同步到电脑",
+          "新增：多工作空间与全局搜索；快捷动作按标签分组，支持 API 模板与打开应用",
           "优化：中继迁至自建服务器（5 分钟同步、不限次数）；应用离线可用、可安装为桌面应用",
         ],
         en: [
           "New: mobile quick capture — pair by QR, jot todos or notes on the phone, auto-synced to the desktop",
-          "Improved: self-hosted relay (5-minute sync, unlimited sends); offline support and desktop install",
-        ],
-      },
-    },
-    {
-      version: "1.0.137",
-      date: "2026-08-21",
-      notes: {
-        zh: [
-          "新增：多工作空间与全局搜索；快捷动作按标签分组，支持 API 模板与打开应用",
-          "优化：提醒列宽自适应多列、性能瘦身与键盘编辑增强",
-        ],
-        en: [
           "New: multi-workspace and global search; quick actions group by tag with API templates and open-app buttons",
-          "Improved: auto-column reminder lists, performance slimming, and keyboard editing",
+          "Improved: self-hosted relay (5-minute sync, unlimited sends); offline support and desktop install",
         ],
       },
     },
