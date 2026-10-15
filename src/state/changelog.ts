@@ -34,20 +34,22 @@ export interface ChangelogEntry {
 
 export const CHANGELOG: ChangelogEntry[] = [
     {
-      version: "1.1.7",
+      version: "1.1.8",
       date: "2026-10-15",
       notes: {
         zh: [
           "新增：外观单按钮切换（浅色/深色/跟随系统）收进顶栏，默认浅色主题",
           "新增：提醒事项可拖到快捷区生成快捷按钮、拖入记事本续写；快捷按钮显示累计点击次数",
-          "调整：品牌配色换为石墨灰 + 钢青蓝，深色主题表面提亮、卡片改用柔和阴影",
-          "优化：分区显隐与列表高度全流程动画；滚动条、圆角与菜单等一批细节统一",
+          "新增：标签、提醒列表、空间与工作区名称限长 20 字，超长自动截断",
+          "调整：品牌配色换为石墨灰 + 钢青蓝；桌面表面与置顶任务视觉整体打磨",
+          "优化：分区显隐与列表高度全流程动画；滚动条、圆角与菜单等细节统一",
         ],
         en: [
           "New: one-button appearance cycling (light / dark / system) beside the top-bar settings, defaulting to light",
           "New: drag reminders onto the quick area to create buttons and into the notebook to append; quick buttons show lifetime click counts",
-          "Changed: a graphite-and-steel-blue brand palette; dark surfaces are lighter and cards use soft shadows",
-          "Improved: full-flow animations for zone visibility and list heights, plus a batch of unified scrollbar, corner, and menu details",
+          "New: user-authored names (tags, reminder lists, spaces, workspaces) are capped at 20 characters",
+          "Changed: a graphite-and-steel-blue brand palette, with desktop surfaces and pinned tasks visually unified",
+          "Improved: full-flow animations for zone visibility and list heights, plus unified scrollbar, corner, and menu details",
         ],
       },
     },
@@ -57,33 +59,15 @@ export const CHANGELOG: ChangelogEntry[] = [
       notes: {
         zh: [
           "新增：「现在做这个」专注弹窗——全屏计时、随手记与贴图，任务行显示累计专注时长",
-          "新增：提醒事项多列布局（1–6 列独立滚动）；智能粘贴与手机速记自动识别时间生成闹钟",
-          "新增：记事本行内富文本标注——高亮、划线、下划线与文字颜色；快捷按钮热度染色",
-          "优化：四区宽度引入黄金分割；品牌升级为 MiniDesk，配对引导与手动同步完善",
+          "新增：提醒事项多列布局；智能粘贴与手机速记自动识别时间生成闹钟",
+          "新增：记事本行内富文本标注与快捷按钮热度染色；右键「智能粘贴 / AI 润色」",
+          "改版：桌面四区视觉焕新、手机端首页重构为配对引导页；四区宽度引入黄金分割",
         ],
         en: [
           "New: the \"Do it now\" focus modal — a full-screen timer with quick notes and images, plus per-task focus-time badges",
-          "New: multi-column reminder layout (1–6 columns); smart paste and mobile capture recognize times and set alarms",
-          "New: rich-text annotations in notes — highlight, strike, underline, and color; usage-heat tinting for quick buttons",
-          "Improved: golden-ratio zone widths; rebranded as MiniDesk with better pairing guidance and manual sync",
-        ],
-      },
-    },
-    {
-      version: "1.0.181",
-      date: "2026-09-18",
-      notes: {
-        zh: [
-          "改版：桌面四区视觉焕新，区域宽度按工作区独立记忆；快捷区多列布局与紧凑模式",
-          "新增：右键「智能粘贴 / AI 润色」，剪贴板杂文经 AI 整理插入；手机速记服务端 AI 润色（可开关、支持英文）",
-          "优化：主题切换全页平滑过渡、可跟随系统；页面缓存优先弱网秒开",
-          "改版：手机端首页重构为配对引导页，速记页改「打开的记事本」布局",
-        ],
-        en: [
-          "Redesign: refreshed desktop visuals with per-workspace zone widths; multi-column quick tags and a compact mode",
-          "New: right-click \"Smart paste / AI polish\" for clipboard text; server-side AI polish for mobile capture, toggleable with English support",
-          "Improved: whole-page theme cross-fades that follow the system; cache-first instant loads",
-          "Redesign: the mobile home became a pairing guide and the capture page an open-notebook layout",
+          "New: multi-column reminder lists; smart paste and mobile capture recognize times and set alarms",
+          "New: rich-text annotations in notes and heat-tinted quick buttons; right-click \"Smart paste / AI polish\"",
+          "Redesign: refreshed desktop visuals and a pairing-guide mobile home; golden-ratio zone widths",
         ],
       },
     },
