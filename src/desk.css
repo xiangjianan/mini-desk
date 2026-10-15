@@ -617,10 +617,10 @@ html[data-theme="dark"] .workbench-shell .space-text-panel {
 .workbench-zone-assets .panel-header h1 { gap: 6px; }
 .workbench-zone-assets .header-actions { gap: 0; }
 .workbench-zone-assets .image-panel .header-actions .icon-button {
-  width: 24px;
-  min-width: 24px;
-  height: 28px;
-  min-height: 28px;
+  width: 34px;
+  min-width: 34px;
+  height: 34px;
+  min-height: 34px;
   padding: 0;
 }
 .workbench-zone-assets .image-panel .header-actions .count { padding-inline: 2px; font-size: 12px; }
@@ -831,12 +831,15 @@ html[data-theme="dark"] .workbench-shell .space-text-panel {
 /* Content begins directly below the common header, like the notebook tab strip. */
 .workbench-shell .todo-content-scroll > .todo-focus-region > .today-focus-section {
   margin-top: var(--desk-group-top);
-  background: var(--desk-surface);
+  border: 0;
+  border-radius: var(--desk-card-radius);
+  background: var(--desk-group-content);
+  box-shadow: var(--desk-card-shadow);
 }
 
-/* Pinned items share the canvas color, including their opaque sticky header. */
+/* Pinned items use the same card and opaque heading surfaces as other lists. */
 .workbench-shell .todo-content-scroll > .todo-focus-region > .today-focus-section > .today-focus-heading {
-  background: var(--desk-surface);
+  background: var(--desk-group-surface);
 }
 
 /* Animate a shared alpha rather than pseudo-element opacity: native scrollbar
@@ -937,8 +940,10 @@ html[data-theme="dark"] .workbench-shell .space-text-panel {
   border-radius: 8px;
 }
 
-.workbench-shell .todo-item:focus-within,
-.workbench-shell .today-focus-item:focus-within {
+/* Pointer clicks on row actions must not latch the row highlight. Keep text
+   editing feedback and a visible row cue for keyboard navigation. */
+.workbench-shell .todo-item:has(.todo-input:focus, :focus-visible),
+.workbench-shell .today-focus-item:has(.today-focus-input:focus, :focus-visible) {
   background: var(--desk-row-hover);
   box-shadow: inset 0 0 0 1px color-mix(in srgb, var(--primary) 26%, transparent);
 }
