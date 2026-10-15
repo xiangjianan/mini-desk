@@ -831,6 +831,12 @@ html[data-theme="dark"] .workbench-shell .space-text-panel {
 /* Content begins directly below the common header, like the notebook tab strip. */
 .workbench-shell .todo-content-scroll > .todo-focus-region > .today-focus-section {
   margin-top: var(--desk-group-top);
+  background: var(--desk-surface);
+}
+
+/* Pinned items share the canvas color, including their opaque sticky header. */
+.workbench-shell .todo-content-scroll > .todo-focus-region > .today-focus-section > .today-focus-heading {
+  background: var(--desk-surface);
 }
 
 /* Animate a shared alpha rather than pseudo-element opacity: native scrollbar
