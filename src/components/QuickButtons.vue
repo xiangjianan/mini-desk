@@ -31,7 +31,7 @@ import { GUIDE_MENU_OPTION } from "../state/defaults";
 import { getIconHeadingText, getUiText } from "../state/i18n";
 import type { QuickButtonGroup } from "../state/quickButtons";
 import { buildVisibleQuickButtonGroups, filterVisibleQuickButtonGroups, groupQuickButtonsByColumn, hasOverloadedVisibleQuickButtonGroup, quickButtonClickCount, QUICK_BUTTON_OTHER_GROUP_ID, QUICK_BUTTON_EMPTY_GROUP_ID, QUICK_DENSITY_THRESHOLD } from "../state/quickButtons";
-import { findQuickAppPresetByScheme, getQuickAppPresetHint, getQuickAppPresetTitle, QUICK_APP_PRESETS } from "../state/quickApps";
+import { findQuickAppPresetByScheme, getQuickAppPresetHint, getQuickAppPresetTitle, getQuickShortcutName, QUICK_APP_PRESETS } from "../state/quickApps";
 import { findQuickApiTemplate, QUICK_API_TEMPLATES } from "../state/quickApiTemplates";
 import { globalSearchNormalized, globalSearchQuery } from "../state/globalSearch";
 import { organizeContextMenu, CONTEXT_MENU_Z_INDEX, createExclusiveContextMenu, renderPolishMenuLabel } from "../utils/contextMenu";
@@ -453,6 +453,13 @@ function selectAppPreset(scheme: string): void {
   if (!preset) return;
   form.value = preset.scheme;
   form.title = getQuickAppPresetTitle(preset, props.language);
+}
+
+function updateQuickValue(value: string): void {
+  form.value = value;
+  if (editingId.value || form.type !== "app") return;
+  const shortcutName = getQuickShortcutName(value);
+  if (shortcutName) form.title = shortcutName;
 }
 
 function selectApiTemplate(key: string): void {
@@ -1136,7 +1143,8 @@ function handleQuickGroupDrop(event: DragEvent, groupId: string): void {
         <label>
           <span>{{ form.type === "api" ? uiText.quick.requestUrl : form.type === "link" ? "URL" : form.type === "app" ? uiText.quick.appScheme : uiText.quick.copyText }}</span>
           <NInput
-            v-model:value="form.value"
+            :value="form.value"
+            @update:value="updateQuickValue"
             :type="form.type === 'text' ? 'textarea' : 'text'"
             autocomplete="off"
             :autosize="form.type === 'text' ? { minRows: 4, maxRows: 8 } : undefined"

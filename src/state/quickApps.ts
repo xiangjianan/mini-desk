@@ -48,10 +48,22 @@ export function getQuickAppPresetHint(preset: QuickAppPreset, language: AppLangu
   return preset.hint ? (preset.hint[language] ?? preset.hint.zh) : "";
 }
 
-/** Find the preset whose scheme matches the given value (exact, trimmed). */
+/** Match a preset, retaining Shortcuts selection after a name is appended. */
 export function findQuickAppPresetByScheme(scheme: string): QuickAppPreset | undefined {
   const trimmed = scheme.trim();
-  return QUICK_APP_PRESETS.find((preset) => preset.scheme === trimmed);
+  return QUICK_APP_PRESETS.find((preset) => preset.scheme === trimmed
+    || (preset.scheme === "shortcuts://run-shortcut?name=" && /^shortcuts:\/\/run-shortcut\?name=/i.test(trimmed)));
+}
+
+/** Read the decoded shortcut name without including other launch parameters. */
+export function getQuickShortcutName(scheme: string): string {
+  try {
+    const url = new URL(scheme.trim());
+    if (url.protocol !== "shortcuts:" || url.hostname !== "run-shortcut") return "";
+    return url.searchParams.get("name")?.trim() ?? "";
+  } catch {
+    return "";
+  }
 }
 
 /**
