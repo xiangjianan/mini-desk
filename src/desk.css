@@ -690,11 +690,18 @@ html[data-theme="dark"] .workbench-shell .space-text-panel {
   transform: translateX(-50%);
   align-items: flex-end;
   padding-bottom: 1px;
+  opacity: 0;
+  pointer-events: none;
+}
+.workbench-shell .workbench-command-bar:hover .workbench-header-hide-button,
+.workbench-shell .workbench-command-bar:focus-within .workbench-header-hide-button {
+  opacity: 1;
+  pointer-events: auto;
 }
 .workbench-shell .workbench-title-group { max-width: calc(50% - 48px); }
 .workbench-shell .workbench-command-actions { margin-inline-start: auto; }
 /* Only the button footprint should trigger reveal, not the surrounding header. */
-.workbench-shell .workbench-header-reveal-zone { top: 0; width: 48px; height: 28px; pointer-events: none; }
+.workbench-shell .workbench-header-reveal-zone { top: 0; width: 48px; height: 28px; pointer-events: auto; }
 .workbench-shell .workbench-header-reveal {
   top: 0;
   left: 50%;
@@ -705,12 +712,14 @@ html[data-theme="dark"] .workbench-shell .space-text-panel {
   padding-top: 1px;
   color: var(--muted);
   background: transparent;
-  opacity: 0.65;
-  pointer-events: auto;
+  opacity: 0;
+  transform: translateY(-100%);
+  pointer-events: none;
 }
 .workbench-shell .workbench-header-reveal-zone:hover .workbench-header-reveal,
 .workbench-shell .workbench-header-reveal-zone:focus-within .workbench-header-reveal {
   opacity: 1;
+  transform: translateY(0);
   pointer-events: auto;
 }
 .workbench-shell .workbench-header-hide-button:hover,
@@ -724,6 +733,9 @@ html[data-theme="dark"] .workbench-shell .space-text-panel {
 .workbench-shell .workbench-header-hide-button,
 .workbench-shell .workbench-header-reveal {
   transition: opacity 180ms ease, background-color 180ms ease, color 180ms ease;
+}
+.workbench-shell .workbench-header-reveal {
+  transition: transform 320ms cubic-bezier(0.2, 0, 0, 1), opacity 240ms ease, color 180ms ease;
 }
 .workbench-shell .workbench-header-hide-button::before,
 .workbench-shell .workbench-header-reveal::before {
@@ -798,6 +810,8 @@ html[data-theme="dark"] .workbench-shell .space-text-panel {
   .workbench-shell .icon-button,
   .workbench-shell .panel-header .desk-ai-action,
   .workbench-shell .workspace-trigger,
+  .workbench-shell .workbench-header-hide-button,
+  .workbench-shell .workbench-header-reveal,
   .workbench-shell .workbench-header-hide-button svg,
   .workbench-shell .workbench-header-reveal svg { transition: none; }
 }
