@@ -671,8 +671,8 @@ html[data-theme="dark"] .workbench-shell .space-text-panel {
 
 .workbench-shell .workbench-header-hide-button,
 .workbench-shell .workbench-header-reveal {
-  width: 64px;
-  min-width: 64px;
+  width: 48px;
+  min-width: 48px;
   height: 28px;
   min-height: 28px;
   padding: 0;
@@ -685,20 +685,27 @@ html[data-theme="dark"] .workbench-shell .space-text-panel {
 .workbench-shell .workbench-header-hide-button {
   position: absolute;
   left: 50%;
-  top: 50%;
-  transform: translate(-50%, -50%);
+  top: auto;
+  bottom: 0;
+  transform: translateX(-50%);
+  align-items: flex-end;
+  padding-bottom: 1px;
 }
 .workbench-shell .workbench-title-group { max-width: calc(50% - 48px); }
 .workbench-shell .workbench-command-actions { margin-inline-start: auto; }
 /* Only the button footprint should trigger reveal, not the surrounding header. */
-.workbench-shell .workbench-header-reveal-zone { top: 11.5px; width: 64px; height: 28px; pointer-events: none; }
+.workbench-shell .workbench-header-reveal-zone { top: 0; width: 48px; height: 28px; pointer-events: none; }
 .workbench-shell .workbench-header-reveal {
   top: 0;
   left: 50%;
-  margin-left: -32px;
-  color: var(--foreground);
-  background: var(--button-hover);
-  opacity: 0;
+  margin-left: -24px;
+  display: flex;
+  align-items: flex-start;
+  justify-content: center;
+  padding-top: 1px;
+  color: var(--muted);
+  background: transparent;
+  opacity: 0.65;
   pointer-events: auto;
 }
 .workbench-shell .workbench-header-reveal-zone:hover .workbench-header-reveal,
@@ -712,14 +719,41 @@ html[data-theme="dark"] .workbench-shell .space-text-panel {
 .workbench-shell .workbench-header-reveal:focus-visible,
 .workbench-shell .workbench-header-reveal:active {
   color: var(--foreground);
-  background: var(--button-hover);
+  background: transparent;
 }
 .workbench-shell .workbench-header-hide-button,
 .workbench-shell .workbench-header-reveal {
   transition: opacity 180ms ease, background-color 180ms ease, color 180ms ease;
 }
 .workbench-shell .workbench-header-hide-button::before,
-.workbench-shell .workbench-header-reveal::before { content: none; }
+.workbench-shell .workbench-header-reveal::before {
+  content: "";
+  position: absolute;
+  width: 32px;
+  height: 16px;
+  left: 8px;
+  background: color-mix(in srgb, var(--muted) 7%, var(--card));
+  border: 1px solid var(--desk-edge);
+  pointer-events: none;
+  transition: background-color 180ms ease;
+}
+.workbench-shell .workbench-header-hide-button::before {
+  bottom: -1px;
+  border-radius: 7px 7px 0 0;
+}
+.workbench-shell .workbench-header-reveal::before {
+  top: -1px;
+  border-radius: 0 0 7px 7px;
+}
+.workbench-shell :is(.workbench-header-hide-button, .workbench-header-reveal):is(:hover, :focus-visible)::before {
+  background: var(--button-hover);
+}
+.workbench-shell :is(.workbench-header-hide-button, .workbench-header-reveal) svg {
+  position: relative;
+  z-index: 1;
+  width: 14px;
+  height: 14px;
+}
 .workbench-shell .workbench-header-hide-button svg,
 .workbench-shell .workbench-header-reveal svg,
 .workbench-shell .workbench-header-hide-button:hover svg,
