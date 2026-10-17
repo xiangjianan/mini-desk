@@ -138,6 +138,10 @@ const dragged = ref<DraggedTodo | null>(null);
 const todoDragScroll = createDragAutoScroll({ wheelPauseMs: 240 });
 const draggedListId = ref<TodoListId | null>(null);
 const panelRef = ref<HTMLElement | null>(null);
+// Teleports and responsive columns settle after mounting. Initial placement
+// must not be treated as a user-triggered row or collapse animation.
+let initialLayoutPending = true;
+let initialLayoutFrame = 0;
 let disposePointerSort: (() => void) | undefined;
 onMounted(() => {
   if (panelRef.value) disposePointerSort = installPointerSort(panelRef.value, ".todo-drag-handle, .todo-heading", todoDragScroll.pauseForWheel);
@@ -536,6 +540,12 @@ onMounted(() => {
       if (column) columnGutterObserver.observe(column);
     }
   }
+  initialLayoutFrame = window.requestAnimationFrame(() => {
+    initialLayoutFrame = window.requestAnimationFrame(() => {
+      initialLayoutPending = false;
+      for (const section of todoSectionRefs.values()) section.classList.remove("is-initial-layout");
+    });
+  });
   syncColumnGutters();
   // Track the panel's content width so the column count reacts to window resize,
   // workbench resizer drags, and zone show/hide (none of which fire window resize).
@@ -551,6 +561,7 @@ onMounted(() => {
 
 onUnmounted(() => {
   isUnmounted = true;
+  window.cancelAnimationFrame(initialLayoutFrame);
   exclusiveMenu.unmount();
   stopReorderTimer();
   document.removeEventListener("pointerdown", handleFloatingEditorOutsidePointerDown, true);
@@ -2133,7 +2144,7 @@ onUnmounted(() => focusRegionAnimation?.cancel());
       <section
         :ref="(element) => setTodoSectionRef(list.id, element as Element | null)"
         class="todo-section"
-        :class="{ 'is-focused': focusedListId === list.id, 'is-collapsed': list.collapsed, 'is-compact': true, 'is-list-dragging': draggedListId === list.id, 'drag-hover': dragHoverListId === list.id }"
+        :class="{ 'is-initial-layout': initialLayoutPending, 'is-focused': focusedListId === list.id, 'is-collapsed': list.collapsed, 'is-compact': true, 'is-list-dragging': draggedListId === list.id, 'drag-hover': dragHoverListId === list.id }"
         :data-list-id="list.id"
         :data-period="list.id"
         @click="handleSectionGuideClick"

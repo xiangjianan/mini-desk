@@ -850,6 +850,33 @@ describe("TodoPanel", () => {
     expect(wrapper.emitted("updateListTitle")).toBeUndefined();
   });
 
+  it("waits for initial column placement before enabling saved-list animations", async () => {
+    const frames: FrameRequestCallback[] = [];
+    vi.spyOn(window, "requestAnimationFrame").mockImplementation((callback) => {
+      frames.push(callback);
+      return frames.length;
+    });
+    const wrapper = mount(TodoPanel, {
+      props: {
+        todoLists: defaultTodoLists.map((list, index) => ({ ...list, collapsed: index === 0 })),
+        todos: { morning: [{ id: "a", text: "上方提醒", done: false }], noon: [{ id: "b", text: "下方提醒", done: false }], evening: [] },
+        titles: DEFAULT_TITLES,
+      },
+    });
+    await nextTick();
+    expect(wrapper.findAll(".todo-section.is-initial-layout")).toHaveLength(3);
+    const runFrame = () => frames.splice(0).forEach((callback) => callback(0));
+    runFrame();
+    await nextTick();
+    expect(wrapper.findAll(".todo-section.is-initial-layout")).toHaveLength(3);
+    runFrame();
+    await nextTick();
+    expect(wrapper.findAll(".todo-section.is-initial-layout")).toHaveLength(0);
+    expect(wrapper.get('[data-list-id="morning"]').classes()).toContain("is-collapsed");
+    wrapper.unmount();
+    vi.restoreAllMocks();
+  });
+
   it("toggles list collapse from a leading header icon and keeps compact out of the menu", async () => {
     const wrapper = mount(TodoPanel, {
       props: {

@@ -7974,3 +7974,14 @@ body:has(.image-preview) .n-modal-container:has(.focus-now-modal) .n-modal-mask 
 }
 
 .settings-toolbar { display: flex; align-items: center; gap: 0; }
+
+/* A saved collapsed list and Teleport relocation must settle without moving
+   the reminders below them. Enable interaction transitions after first layout. */
+.todo-section.is-initial-layout,
+.todo-section.is-initial-layout .todo-list-shell,
+.todo-section.is-initial-layout .todo-item {
+  transition: none !important;
+}
+.todo-section.is-initial-layout .todo-item {
+  transform: none !important;
+}
