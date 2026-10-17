@@ -7943,10 +7943,10 @@ body:has(.image-preview) .n-modal-container:has(.focus-now-modal) .n-modal-mask 
   }
 }
 
-/* Keep headings available for sticky controls, but skip entire offscreen list
-   bodies rather than managing visibility separately for hundreds of rows. */
+/* Resolve list heights on the first layout so lower lists do not shift when
+   estimated offscreen sizes are replaced with their actual content height. */
 .todo-list-scrollbar {
-  content-visibility: auto;
+  content-visibility: visible;
 }
 
 .todo-focus-region { position: relative; overflow: clip; display: flow-root; flex: 0 0 auto; }

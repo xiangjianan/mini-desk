@@ -505,12 +505,6 @@ const listEntries = computed(() =>
   ) as Record<TodoListId, TodoListEntry[]>,
 );
 
-function getTodoListEstimatedHeight(period: TodoListId): number {
-  const entries = listEntries.value[period] ?? [];
-  if (!entries.length) return 48;
-  return entries.reduce((height, entry) => height + (entry.type === "todo" ? 42 : 32), 56);
-}
-
 // Width below which the panel stays single-column (= 2 × the target column width).
 const TODO_MULTI_COLUMN_THRESHOLD = 680;
 const TODO_COLUMN_TARGET_WIDTH = 340;
@@ -2213,10 +2207,7 @@ onUnmounted(() => focusRegionAnimation?.cancel());
           :inert="list.collapsed"
           @click="handleListClick($event, list.id)"
         >
-          <div
-            class="todo-list-scrollbar"
-            :style="{ containIntrinsicBlockSize: `auto ${getTodoListEstimatedHeight(list.id)}px` }"
-          >
+          <div class="todo-list-scrollbar">
           <TodoRowsTransition
             :memo="[listEntries[list.id], todoRenderSignatures[list.id], notifyDisplays, editingTodoKey, selectedMenuTodoKey, dragged, notificationFlashKeys.join('|'), uiText]"
             name="todo-move"
