@@ -7100,6 +7100,9 @@ html[data-theme="dark"] .quick-search .quick-search-toggle:focus-visible {
 .workspace-inbox-step-body { color: var(--muted); font-size: 12px; line-height: 1.6; }
 .workspace-inbox-step-link { color: var(--primary); text-decoration: none; }
 .workspace-inbox-step-link:hover, .workspace-inbox-step-link:focus-visible { text-decoration: underline; }
+/* Safari may focus this first link when the pairing dialog opens. The underline
+   already indicates keyboard focus; avoid the global rectangular focus halo. */
+.workspace-inbox-step-link:focus-visible { outline: none; box-shadow: none; }
 .workspace-inbox-field { display: grid; grid-template-columns: 64px 1fr; align-items: center; gap: 8px; margin: 8px 0; }
 .workspace-inbox-label { color: var(--muted); font-size: 12px; }
 .workspace-inbox-code-row { display: flex; align-items: center; justify-content: space-between; gap: 8px; min-width: 0; }
