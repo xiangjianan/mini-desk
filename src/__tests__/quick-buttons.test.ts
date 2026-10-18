@@ -1433,20 +1433,6 @@ describe("QuickButtons", () => {
     wrapper.unmount();
   });
 
-  it("uses compact quick-button context menu labels without a copy action", async () => {
-    const wrapper = mountQuickButtons({
-      buttons: [{ id: "quick-1", title: "片段", value: "第一行\n第二行", type: "text", hidden: false }],
-    });
-
-    await wrapper.get(".quick-button").trigger("contextmenu");
-
-    expect(wrapper.findAll(".dropdown-option").map((option) => option.text())).toEqual(["编辑", "设为隐藏", "删除"]);
-
-    expect(wrapper.findAll(".dropdown-option").some((option) => option.text() === "复制")).toBe(false);
-
-    wrapper.unmount();
-  });
-
   it("offers copy-link in the context menu for link quick buttons and emits copyLink", async () => {
     const wrapper = mountQuickButtons({
       buttons: [{ id: "quick-1", title: "链接", value: "https://example.com", type: "link", hidden: false }],
@@ -1480,17 +1466,29 @@ describe("QuickButtons", () => {
     wrapper.unmount();
   });
 
-  it("does not offer copy-link for non-link quick buttons", async () => {
-    const wrapper = mountQuickButtons({
-      buttons: [{ id: "quick-1", title: "接口", value: "https://example.com/api", type: "api", hidden: false }],
-    });
-
-    await wrapper.get(".quick-button").trigger("contextmenu");
-
-    expect(wrapper.findAll(".dropdown-option").some((option) => option.text() === "复制链接")).toBe(false);
-    expect(wrapper.findAll(".dropdown-option").some((option) => option.text() === "复制文本")).toBe(false);
-
-    wrapper.unmount();
+  it.each([
+    ["text", "复制内容", "Copy content", "第一行\n第二行"],
+    ["api", "复制请求链接", "Copy request URL", "https://example.com/api"],
+    ["app", "复制应用协议", "Copy app scheme", "shortcuts://run-shortcut?name=Demo"],
+  ] as const)("offers title and property copy actions for %s buttons in both languages", async (type, valueLabel, englishValueLabel, value) => {
+    for (const language of ["zh", "en"] as const) {
+      const wrapper = mountQuickButtons({
+        language,
+        buttons: [{ id: "quick-1", title: "标题", value, type, hidden: false }],
+      });
+      const titleLabel = language === "zh" ? "复制标题" : "Copy title";
+      const contentLabel = language === "zh" ? valueLabel : englishValueLabel;
+      await wrapper.get(".quick-button").trigger("contextmenu");
+      const options = wrapper.findAll(".dropdown-option");
+      expect(options.slice(0, 2).map((option) => option.text())).toEqual([titleLabel, contentLabel]);
+      await options.find((option) => option.text() === titleLabel)!.trigger("click");
+      expect(wrapper.emitted("copyText")?.[0]).toEqual(["quick-1", expect.any(HTMLElement)]);
+      await wrapper.get(".quick-button").trigger("contextmenu");
+      await wrapper.findAll(".dropdown-option").find((option) => option.text() === contentLabel)!.trigger("click");
+      expect(wrapper.emitted("copyLink")?.[0]).toEqual(["quick-1", expect.any(HTMLElement)]);
+      expect(wrapper.emitted("copy")).toBeUndefined();
+      wrapper.unmount();
+    }
   });
 
   it("emits delete from the quick-button context menu", async () => {

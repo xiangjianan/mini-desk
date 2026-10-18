@@ -294,10 +294,10 @@ const menuOptions = computed<DropdownOption[]>(() => {
   return [
     { label: uiText.value.common.edit, key: "edit", icon: renderIcon(CreateOutline) },
     { label: button?.hidden ? uiText.value.quick.show : uiText.value.quick.hide, key: "toggle-hidden", icon: renderIcon(button?.hidden ? EyeOutline : EyeOffOutline) },
-    ...(button?.type === "link"
+    ...(button
       ? [
-          { label: uiText.value.quick.copyText, key: "copy-text", icon: renderIcon(DocumentTextOutline) },
-          { label: uiText.value.quick.copyLink, key: "copy-link", icon: renderIcon(CopyOutline) },
+          { label: button.type === "link" ? uiText.value.quick.copyText : uiText.value.quick.copyTitle, key: "copy-text", icon: renderIcon(DocumentTextOutline) },
+          { label: button.type === "text" ? uiText.value.quick.copyContent : button.type === "api" ? uiText.value.quick.copyRequestUrl : button.type === "app" ? uiText.value.quick.copyAppScheme : uiText.value.quick.copyLink, key: "copy-link", icon: renderIcon(CopyOutline) },
         ]
       : []),
     ...(moveMenuChildren.value.length > 0
