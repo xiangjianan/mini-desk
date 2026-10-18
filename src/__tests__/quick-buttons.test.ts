@@ -864,6 +864,21 @@ describe("QuickButtons", () => {
     wrapper.unmount();
   });
 
+  it("uses the first 25 characters when a pasted URL cannot be parsed", async () => {
+    const value = "https://[invalid-url-with-a-long-path";
+    Object.assign(navigator, { clipboard: { readText: vi.fn().mockResolvedValue(value) } });
+    const wrapper = mountQuickButtons({ buttons: [] });
+
+    await wrapper.get(".quick-block").trigger("contextmenu");
+    await wrapper.findAll(".dropdown-option").find((option) => option.text() === "粘贴")?.trigger("click");
+    await flushPromises();
+
+    expect(wrapper.emitted("save")?.[0][0]).toMatchObject({
+      title: value.slice(0, 25), value, type: "link",
+    });
+    wrapper.unmount();
+  });
+
   it("creates a text quick button when plain text is pasted from the area context menu", async () => {
     Object.assign(navigator, { clipboard: { readText: vi.fn().mockResolvedValue("一段普通文本"), writeText: vi.fn() } });
     const wrapper = mountQuickButtons({ buttons: [] });

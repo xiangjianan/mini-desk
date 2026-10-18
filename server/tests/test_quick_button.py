@@ -55,15 +55,15 @@ class TestSuccess:
 
 
 class TestGuardrails:
-    def test_title_clamped_to_15_codepoints(self, api):
-        api["content"] = json.dumps({"title": "一二三四五六七八九十一二三四五六", "type": "text"}, ensure_ascii=False)
+    def test_title_clamped_to_25_codepoints(self, api):
+        api["content"] = json.dumps({"title": "长" * 30, "type": "text"}, ensure_ascii=False)
         result = llm.generate_quick_button("文本")
-        assert len(result["title"]) == llm.QUICK_TITLE_MAX_CHARS == 15
+        assert len(result["title"]) == llm.QUICK_TITLE_MAX_CHARS == 25
 
     def test_title_truncation_strips_trailing_space(self, api):
-        api["content"] = json.dumps({"title": "一二三四五六七八九十一二三四 五", "type": "text"}, ensure_ascii=False)
+        api["content"] = json.dumps({"title": "一" * 24 + " 五", "type": "text"}, ensure_ascii=False)
         result = llm.generate_quick_button("文本")
-        assert result["title"] == "一二三四五六七八九十一二三四"
+        assert result["title"] == "一" * 24
 
     def test_link_without_url_falls_back_to_text(self, api):
         api["content"] = json.dumps({"title": "笔记", "type": "link"}, ensure_ascii=False)

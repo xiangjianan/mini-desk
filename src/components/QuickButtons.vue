@@ -689,7 +689,7 @@ function classifyQuickText(rawText: string): { title: string; value: string; typ
   const isWebUrl = /^https?:\/\//.test(text);
   const isAppScheme = /^[a-z][a-z0-9+.\-]*:\/\//i.test(text) && !isWebUrl;
   const title = isWebUrl
-    ? (() => { try { return new URL(text).hostname; } catch { return text.slice(0, 20); } })()
+    ? (() => { try { return new URL(text).hostname; } catch { return text.slice(0, 25); } })()
     : text.slice(0, 20);
   const type: QuickButtonType = isWebUrl ? "link" : isAppScheme ? "app" : "text";
   return { title, value: text, type };
