@@ -1440,7 +1440,7 @@ describe("QuickButtons", () => {
 
     await wrapper.get(".quick-button").trigger("contextmenu");
 
-    expect(wrapper.findAll(".dropdown-option").map((option) => option.text())).toEqual(["复制文本", "复制链接", "编辑", "设为隐藏", "删除"]);
+    expect(wrapper.findAll(".dropdown-option").map((option) => option.text())).toEqual(["复制标题", "复制链接", "编辑", "设为隐藏", "删除"]);
 
     await wrapper.findAll(".dropdown-option").find((option) => option.text() === "复制链接")?.trigger("click");
 
@@ -1457,9 +1457,9 @@ describe("QuickButtons", () => {
     await wrapper.get(".quick-button").trigger("contextmenu");
 
     const labels = wrapper.findAll(".dropdown-option").map((option) => option.text());
-    expect(labels.indexOf("复制文本")).toBeLessThan(labels.indexOf("复制链接"));
+    expect(labels.indexOf("复制标题")).toBeLessThan(labels.indexOf("复制链接"));
 
-    await wrapper.findAll(".dropdown-option").find((option) => option.text() === "复制文本")?.trigger("click");
+    await wrapper.findAll(".dropdown-option").find((option) => option.text() === "复制标题")?.trigger("click");
 
     expect(wrapper.emitted("copyText")?.[0]).toEqual(["quick-1", expect.any(HTMLElement)]);
 

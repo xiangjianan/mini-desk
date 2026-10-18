@@ -296,7 +296,7 @@ const menuOptions = computed<DropdownOption[]>(() => {
     { label: button?.hidden ? uiText.value.quick.show : uiText.value.quick.hide, key: "toggle-hidden", icon: renderIcon(button?.hidden ? EyeOutline : EyeOffOutline) },
     ...(button
       ? [
-          { label: button.type === "link" ? uiText.value.quick.copyText : uiText.value.quick.copyTitle, key: "copy-text", icon: renderIcon(DocumentTextOutline) },
+          { label: uiText.value.quick.copyTitle, key: "copy-text", icon: renderIcon(DocumentTextOutline) },
           { label: button.type === "text" ? uiText.value.quick.copyContent : button.type === "api" ? uiText.value.quick.copyRequestUrl : button.type === "app" ? uiText.value.quick.copyAppScheme : uiText.value.quick.copyLink, key: "copy-link", icon: renderIcon(CopyOutline) },
         ]
       : []),
