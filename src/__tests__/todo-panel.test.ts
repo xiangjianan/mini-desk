@@ -124,7 +124,11 @@ describe("TodoPanel", () => {
     expect(trigger.attributes("aria-label")).toBe("提醒事项菜单");
     await trigger.trigger("click");
     expect(wrapper.findAll(".dropdown-option").map(option => option.text()))
-      .toEqual(["新建列表", "最多展示列数", "Tips"]);
+      .toEqual(["新建列表", "清理所有已完成", "最多展示列数", "Tips"]);
+    await wrapper.get('[data-key="clear-all-completed"]').trigger("click");
+    expect(wrapper.emitted("clearAllCompleted")?.[0]).toEqual([trigger.element]);
+    expect(wrapper.emitted("clearCompleted")).toBeUndefined();
+    await trigger.trigger("click");
     expect(wrapper.emitted("createList")).toBeUndefined();
     await wrapper.get('[data-key="create-list"]').trigger("click");
     await flushPromises();

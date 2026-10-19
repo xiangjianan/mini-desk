@@ -108,6 +108,7 @@ const emit = defineEmits<{
   focusNow: [period: TodoPeriod, id: string];
   remove: [period: TodoPeriod, id: string, anchor?: HTMLElement];
   clearCompleted: [period: TodoPeriod, anchor?: HTMLElement];
+  clearAllCompleted: [anchor?: HTMLElement];
   toggleCompletedVisibility: [period: TodoPeriod, showCompleted: boolean];
   blurEmpty: [period: TodoPeriod, id: string];
   blur: [];
@@ -328,6 +329,7 @@ const menuOptions = computed<DropdownOption[]>(() => {
   const todo = getMenuTodo();
   if (!menu.value?.id) {
     options.push({ label: uiText.value.todo.newList, key: "create-list", icon: renderIcon(AddOutline) });
+    options.push({ label: uiText.value.todo.clearAllCompleted, key: "clear-all-completed", icon: renderIcon(CheckmarkDoneOutline) });
   }
   if (menu.value?.id) {
     options.push({ label: uiText.value.common.copy, key: "copy", icon: renderIcon(CopyOutline) });
@@ -1422,6 +1424,11 @@ function handleFloatingEditorOutsidePointerDown(event: PointerEvent): void {
 async function handleMenuSelect(key: string): Promise<void> {
   if (!menu.value) return;
   const { period, id, anchor, target, x, y, pasteAtCaret, selection } = menu.value;
+  if (key === "clear-all-completed") {
+    closeMenu();
+    emit("clearAllCompleted", anchor);
+    return;
+  }
   if (key.startsWith("max-columns:")) {
     const count = normalizeTodoMaxColumns(Number(key.slice("max-columns:".length)));
     closeMenu();

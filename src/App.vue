@@ -2883,9 +2883,11 @@ function removeTodo(period: TodoPeriod, id: string, anchor?: HTMLElement): void 
   });
 }
 
-function clearDone(period: TodoPeriod, anchor?: HTMLElement): void {
-  if (!isConfiguredTodoListId(period)) return;
-  if (!getTodos(period).some((todo) => todo.done)) {
+function clearDone(period?: TodoPeriod, anchor?: HTMLElement): void {
+  const listIds = period === undefined
+    ? activeWorkspace.value.todoLists.map((list) => list.id)
+    : [period].filter(isConfiguredTodoListId);
+  if (!listIds.some((listId) => getTodos(listId).some((todo) => todo.done))) {
     showBubble("noCompletedTodos", anchor);
     return;
   }
@@ -2893,10 +2895,12 @@ function clearDone(period: TodoPeriod, anchor?: HTMLElement): void {
     "confirmClearCompleted",
     anchor,
     () => {
-      if (!isConfiguredTodoListId(period)) return;
+      const currentListIds = listIds.filter(isConfiguredTodoListId);
       // 清理连坐：被清 todo 的 focusImages 载荷走同一 5 秒宽限删除。
-      const doomedFocusIds = collectTodoFocusPayloadIds(getTodos(period).filter((todo) => todo.done));
-      activeWorkspace.value.todos = clearCompleted(activeWorkspace.value.todos, period);
+      const doomedFocusIds = collectTodoFocusPayloadIds(currentListIds.flatMap((listId) => getTodos(listId).filter((todo) => todo.done)));
+      for (const listId of currentListIds) {
+        activeWorkspace.value.todos = clearCompleted(activeWorkspace.value.todos, listId);
+      }
       persistNow();
       doomedFocusIds.forEach((payloadId) => scheduleImagePayloadDeletion(payloadId));
       showBubble("clearCompleted", anchor, { hideCompanionAfter: true });
@@ -2905,7 +2909,7 @@ function clearDone(period: TodoPeriod, anchor?: HTMLElement): void {
     {
       confirmText: uiText.value.todo.clearCompletedConfirm,
       cancelText: uiText.value.common.cancel,
-      highlightTarget: getCompletedTodoTargets(period),
+      highlightTarget: listIds.flatMap(getCompletedTodoTargets),
     },
   );
 }
@@ -4022,6 +4026,7 @@ function moveItem<T extends { id: string }>(items: T[], dragId: string, targetId
           @notify="updateTodoNotify"
           @remove="removeTodo"
           @clear-completed="clearDone"
+          @clear-all-completed="(anchor) => clearDone(undefined, anchor)"
           @toggle-completed-visibility="toggleCompletedVisibility"
           @blur-empty="blurEmptyTodo"
           @focus-now="openFocusNow"
