@@ -199,7 +199,7 @@ const groupsByColumn = computed<QuickButtonGroup[][]>(() => groupQuickButtonsByC
 
 const buttonLayoutSignature = computed(() => JSON.stringify([
   props.compact,
-  groupedButtons.value.map((group) => [group.id, group.buttons.map((button) => [button.id, button.title])]),
+  groupedButtons.value.map((group) => [group.id, group.collapsed, group.buttons.map((button) => [button.id, button.title])]),
 ]));
 let renderedButtonLayout = buttonLayoutSignature.value;
 const quickHeights = new Map<HTMLElement, number>();
@@ -209,7 +209,7 @@ onBeforeUpdate(() => {
   if (renderedButtonLayout === buttonLayoutSignature.value) return;
   renderedButtonLayout = buttonLayoutSignature.value;
   // Capture every current height before cancelling an interrupted animation.
-  for (const element of panelRef.value?.querySelectorAll<HTMLElement>(".quick-tag-groups, .quick-tag-content:not(.is-collapsed)") ?? []) {
+  for (const element of panelRef.value?.querySelectorAll<HTMLElement>(".quick-tag-groups, .quick-tag-content") ?? []) {
     quickHeights.set(element, element.getBoundingClientRect().height);
   }
   for (const animation of quickHeightAnimations.values()) animation.cancel();
@@ -219,7 +219,7 @@ onBeforeUpdate(() => {
 onUpdated(() => {
   // Measure all final sizes before starting animations, so a group's animation
   // does not affect the measurement of the whole quick-actions area.
-  const changes = [...quickHeights].filter(([element]) => element.isConnected && !element.classList.contains("is-collapsed"))
+  const changes = [...quickHeights].filter(([element]) => element.isConnected)
     .map(([element, from]) => ({ element, from, to: element.getBoundingClientRect().height }));
   quickHeights.clear();
   if (window.matchMedia?.("(prefers-reduced-motion: reduce)").matches) return;

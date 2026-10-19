@@ -1159,13 +1159,14 @@ button.image-card {
 }
 
 .quick-tag-content {
-  display: grid;
+  /* Natural block sizing keeps Safari in sync when the inner button grid reflows.
+     Collapse heights are animated by QuickButtons alongside content changes. */
+  display: block;
+  height: auto;
   min-height: 0;
   overflow: hidden;
-  grid-template-rows: 1fr;
   opacity: 1;
   transition:
-    grid-template-rows 0.22s cubic-bezier(0.2, 0, 0, 1),
     opacity 0.16s ease,
     margin-top 0.22s cubic-bezier(0.2, 0, 0, 1);
 }
@@ -1175,7 +1176,7 @@ button.image-card {
 }
 
 .quick-tag-content.is-collapsed {
-  grid-template-rows: 0fr;
+  height: 0;
   margin-top: 0;
   opacity: 0;
   pointer-events: none;
