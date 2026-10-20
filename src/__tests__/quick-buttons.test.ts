@@ -557,7 +557,7 @@ describe("QuickButtons", () => {
     expect(styles).toMatch(/\.quick-tag-content > \.quick-buttons\s*\{[^}]*flex:\s*0 0 auto/s);
     expect(styles).toMatch(/\.quick-tag-content > \.quick-buttons\s*\{[^}]*padding-top:\s*4px/s);
     expect(styles).toMatch(/\.quick-tag-content > \.quick-buttons\s*\{[^}]*padding-bottom:\s*6px/s);
-    expect(styles).toMatch(/\.quick-tag-content\.is-collapsed > \.quick-buttons\s*\{[^}]*padding-top:\s*0[^}]*padding-bottom:\s*0/s);
+    expect(styles).not.toMatch(/\.quick-tag-content\.is-collapsed > \.quick-buttons\s*\{[^}]*padding-top:\s*0/s);
   });
 
   it("keeps externally revealed hidden actions dimmed during their enter transition", async () => {
@@ -1585,12 +1585,12 @@ describe("QuickButtons", () => {
 
     await wrapper.setProps({ tags: [{ ...tag, collapsed: true }] });
     expect(animate).toHaveBeenLastCalledWith(
-      [{ height: "100px" }, { height: "0px" }], expect.objectContaining({ duration: 220 }),
+      [{ height: "100px" }, { height: "0px" }], expect.objectContaining({ duration: 240 }),
     );
     await wrapper.setProps({ tags: [tag] });
     expect(cancel).toHaveBeenCalledOnce();
     expect(animate).toHaveBeenLastCalledWith(
-      [{ height: "0px" }, { height: "100px" }], expect.objectContaining({ duration: 220 }),
+      [{ height: "0px" }, { height: "100px" }], expect.objectContaining({ duration: 240 }),
     );
     expect(content.style.height).toBe("");
     wrapper.unmount();
@@ -1618,11 +1618,11 @@ describe("QuickButtons", () => {
     }
     await wrapper.setProps({ buttons: [a, b] });
     for (const animate of animations) expect(animate).toHaveBeenLastCalledWith(
-      [{ height: "50px" }, { height: "92px" }], expect.objectContaining({ duration: 220 }),
+      [{ height: "50px" }, { height: "92px" }], expect.objectContaining({ duration: 240 }),
     );
     await wrapper.setProps({ buttons: [a] });
     for (const animate of animations) expect(animate).toHaveBeenLastCalledWith(
-      [{ height: "92px" }, { height: "50px" }], expect.objectContaining({ duration: 220 }),
+      [{ height: "92px" }, { height: "50px" }], expect.objectContaining({ duration: 240 }),
     );
     for (const cancel of cancels) expect(cancel).toHaveBeenCalledOnce();
     wrapper.unmount();

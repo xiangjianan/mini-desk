@@ -202,7 +202,7 @@ html[data-theme="dark"] .workbench-shell,
 .workbench-shell .quick-tag-groups { gap: var(--desk-group-gap); padding: var(--desk-group-top) var(--desk-group-scroll-gutter) 16px; }
 .workbench-shell .quick-tag-column { gap: var(--desk-group-gap); }
 .workbench-shell .quick-tag-content > .quick-buttons { padding: 16px; }
-.workbench-shell .quick-tag-content.is-collapsed > .quick-buttons { padding-block: 0; }
+/* Keep content padding stable while its outer height animates. */
 .workbench-shell .quick-tag-heading + .quick-tag-content { margin-top: 0; }
 .workbench-shell .quick-tag-heading + .quick-tag-content.is-collapsed { margin-top: 0; }
 .workbench-shell .quick-tag-heading { min-height: 32px; padding: 0 0 8px; }
@@ -744,18 +744,18 @@ html[data-theme="dark"] .workbench-shell .space-text-panel {
   width: 32px;
   height: 16px;
   left: 8px;
-  background: color-mix(in srgb, var(--muted) 7%, var(--card));
-  border: 1px solid var(--desk-edge);
+  background: var(--secondary);
+  border: 0;
   pointer-events: none;
   transition: background-color 180ms ease;
 }
 .workbench-shell .workbench-header-hide-button::before {
-  bottom: -1px;
-  border-radius: 7px 7px 0 0;
+  bottom: 3px;
+  border-radius: 6px;
 }
 .workbench-shell .workbench-header-reveal::before {
-  top: -1px;
-  border-radius: 0 0 7px 7px;
+  top: 3px;
+  border-radius: 6px;
 }
 .workbench-shell :is(.workbench-header-hide-button, .workbench-header-reveal):is(:hover, :focus-visible)::before {
   background: var(--button-hover);
@@ -1026,4 +1026,24 @@ html[data-theme="dark"] .workbench-shell .space-text-panel {
 
 html[data-theme="dark"] .workbench-shell {
   --desk-zone-accent: #a1bad7;
+}
+
+/* Match the adjacent paste control, including the flex basis. */
+.workbench-shell .quick-tag-heading > :is(.desk-ai-button, .quick-tag-add-button) {
+  flex: 0 0 34px;
+  width: 34px;
+  min-width: 34px;
+  height: 34px;
+  min-height: 34px;
+  padding: 0;
+}
+.workbench-shell .quick-tag-add-button .n-icon { font-size: 16px; }
+
+/* The confirmation tint must follow the header's rounded surface. */
+.workbench-shell :is(.todo-heading, .quick-tag-heading)[data-confirm-target] {
+  border-radius: var(--desk-card-radius) var(--desk-card-radius) 0 0;
+}
+.workbench-shell .todo-section.is-collapsed > .todo-heading[data-confirm-target],
+.workbench-shell .quick-tag-group:has(> .quick-tag-content.is-collapsed) > .quick-tag-heading[data-confirm-target] {
+  border-radius: var(--desk-card-radius);
 }

@@ -227,7 +227,7 @@ onUpdated(() => {
     if (Math.abs(from - to) < 0.5 || !element.animate) continue;
     const animation = element.animate(
       [{ height: `${from}px` }, { height: `${to}px` }],
-      { duration: 220, easing: "cubic-bezier(0.2, 0, 0, 1)" },
+      { duration: 240, easing: "cubic-bezier(0.2, 0, 0, 1)" },
     );
     quickHeightAnimations.set(element, animation);
     void animation.finished.catch(() => {}).then(() => {

@@ -1167,8 +1167,8 @@ button.image-card {
   overflow: hidden;
   opacity: 1;
   transition:
-    opacity 0.16s ease,
-    margin-top 0.22s cubic-bezier(0.2, 0, 0, 1);
+    opacity var(--motion-fast) ease,
+    margin-top var(--motion-medium) var(--motion-ease);
 }
 
 .quick-tag-heading + .quick-tag-content {
@@ -1182,10 +1182,7 @@ button.image-card {
   pointer-events: none;
 }
 
-.quick-tag-content.is-collapsed > .quick-buttons {
-  padding-top: 0;
-  padding-bottom: 0;
-}
+
 
 .quick-tag-content > .quick-buttons {
   flex: 0 0 auto;
@@ -2091,7 +2088,11 @@ button.todo-collapse-button {
 .todo-drag-handle::before {
   content: "";
   position: absolute;
-  inset: 5px 6px;
+  width: 8px;
+  height: 20px;
+  left: 50%;
+  top: 50%;
+  transform: translate(-50%, -50%);
   background-image: radial-gradient(circle, var(--muted) 1px, transparent 1.5px);
   background-size: 4px 4px;
 }
