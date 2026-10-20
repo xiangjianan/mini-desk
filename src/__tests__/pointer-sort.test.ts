@@ -51,6 +51,21 @@ describe("pointer sorting", () => {
     window.dispatchEvent(new WheelEvent("wheel", { deltaY: 20 }));
     expect(root.scrollTop).toBe(160);
   });
+  it("centers the drag preview on the pointer and follows movement without lag", () => {
+    const { source } = fixture();
+    pointer(source, "pointerdown", 20);
+    pointer(window, "pointermove", 35);
+    const preview = document.body.querySelector<HTMLElement>('[aria-hidden="true"]')!;
+    expect(preview.style.top).toBe("35px");
+    expect(preview.style.left).toBe("32px");
+    expect(preview.style.transform).toBe("translateY(-50%)");
+    expect(preview.style.transition).toBe("none");
+    expect(preview.style.animation).toBe("none");
+    pointer(window, "pointermove", 75);
+    expect(preview.style.top).toBe("75px");
+    pointer(window, "pointerup", 75);
+    expect(preview.isConnected).toBe(false);
+  });
   it("keeps ordinary clicks intact and cancels a drag without dropping", () => {
     const { source, drop, end } = fixture();
     pointer(source, "pointerdown", 20); pointer(window, "pointermove", 22); pointer(window, "pointerup", 22);

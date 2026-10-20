@@ -59,11 +59,11 @@ export function installPointerSort(root: HTMLElement, selector: string, pauseAut
       preview = element.cloneNode(true) as HTMLElement;
       preview.setAttribute("aria-hidden", "true");
       preview.inert = true;
-      preview.style.cssText = `position:fixed;z-index:11000;pointer-events:none;width:${rect.width}px;max-height:180px;overflow:hidden;opacity:0.8;margin:0;`;
+      preview.style.cssText = `position:fixed;z-index:11000;pointer-events:none;width:${rect.width}px;max-height:180px;overflow:hidden;opacity:0.8;margin:0;transform:translateY(-50%);transition:none;animation:none;`;
       document.body.appendChild(preview);
     }
     event.preventDefault();
-    if (preview) { preview.style.left = `${x + 12}px`; preview.style.top = `${y + 12}px`; }
+    if (preview) { preview.style.left = `${x + 12}px`; preview.style.top = `${y}px`; }
     updateTarget();
   }
   function up(event: PointerEvent): void {
