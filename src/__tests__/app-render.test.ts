@@ -817,6 +817,12 @@ describe("App shell", () => {
   async function submitCode(wrapper: ReturnType<typeof mountApp>, code: string): Promise<void> {
     await fillCodeInputs(wrapper, code);
     await wrapper.get('[data-testid="mobile-inbox-code-confirm"]').trigger("click");
+    // WebCrypto digest resolves outside Vue's microtask queue; wait for the
+    // actual checking state rather than assuming one flush completes it.
+    await vi.waitFor(() => {
+      const confirm = wrapper.find('[data-testid="mobile-inbox-code-confirm"]');
+      if (confirm.exists()) expect(confirm.attributes('disabled')).toBeUndefined();
+    });
     await flushAsyncComponents();
   }
 
@@ -8560,7 +8566,7 @@ describe("App shell", () => {
     }
   });
 
-  it("keeps the declutter message bubble visible when blank-space creation focuses the new reminder", async () => {
+  it("preserves legacy excess reminders and opens a retained input draft instead of creating another", async () => {
     vi.useFakeTimers();
     localStorage.setItem(
       STORAGE_KEY,
@@ -8588,14 +8594,9 @@ describe("App shell", () => {
       await wrapper.vm.$nextTick();
       await wrapper.vm.$nextTick();
 
-      expect(wrapper.findAll('[data-testid="todo-input-morning"]')).toHaveLength(21);
-      expect(wrapper.find(".focus-companion.is-visible img").exists()).toBe(true);
-
-      await vi.advanceTimersByTimeAsync(200);
-      await wrapper.vm.$nextTick();
-
-      const text = wrapper.get('[data-testid="companion-confirm"]').text();
-      expect(text).toContain("数量有点多，适当做减法");
+      expect(wrapper.findAll('[data-testid="todo-input-morning"]')).toHaveLength(20);
+      expect(wrapper.get('[data-testid="capacity-dialog"]').text()).toContain('开发者建议：先别买');
+      expect(wrapper.find('[data-testid="capacity-resume"]').exists()).toBe(true);
     } finally {
       wrapper.unmount();
       randomSpy.mockRestore();

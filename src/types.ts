@@ -191,6 +191,8 @@ export interface WorkspaceData {
   todos: TodoMap;
   zoneVisibility: ZoneVisibility;
   inbox?: WorkspaceInbox;
+  /** Captures received safely but awaiting a deliberate capacity choice. */
+  pendingInbox?: PendingInboxItem[];
 }
 
 /**
@@ -199,6 +201,13 @@ export interface WorkspaceData {
  * 兼作解密密钥；`lastSeenAt` 是本地保存的服务端时间戳水位线，
  * 防止重复接收历史条目。空间导出不包含该配对配置。
  */
+export interface PendingInboxItem {
+  id: string;
+  text: string;
+  createdAt: number;
+  notifyAt?: number;
+}
+
 export interface WorkspaceInbox {
   code: string;
   todoListId: TodoListId;

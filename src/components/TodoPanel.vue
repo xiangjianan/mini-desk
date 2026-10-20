@@ -1,4 +1,5 @@
 <script setup lang="ts">
+import { getCapacityText } from "../state/capacityText";
 import { TITLE_MAX_LENGTH } from "../state/titleLimits";
 import { installPointerSort } from "../utils/pointerSort";
 import { isGroupDropBefore } from "../utils/groupDrop";
@@ -72,6 +73,7 @@ import TodoRowsTransition from "./TodoRowsTransition";
 import { normalizeTodoMaxColumns, TODO_COLUMN_LIMIT_OPTIONS } from "../state/columns";
 
 const props = withDefaults(defineProps<{
+  capacityUnlocked?: boolean;
   todoLists?: TodoListConfig[];
   maxColumns?: number;
   todos: TodoMap;
@@ -2201,7 +2203,7 @@ onUnmounted(() => focusRegionAnimation?.cancel());
           </h3>
 
           <div class="todo-heading-actions">
-            <span class="todo-count">{{ periodStats[list.id] }}</span>
+            <span class="todo-count">{{ periodStats[list.id] }}<span v-if="!capacityUnlocked && (todos[list.id] ?? []).filter(todo => !todo.done).length >= 7"> · {{ getCapacityText(language).atCapacity }}</span></span>
             <button v-if="props.polish" type="button" class="icon-button desk-ai-button"
               :aria-label="uiText.common.smartPaste" :title="uiText.common.smartPaste"
               @click.stop="openSectionActions($event, list.id); handleMenuSelect('smart-paste')"><NIcon :component="ClipboardOutline" /></button>

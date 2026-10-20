@@ -1,6 +1,7 @@
 import { binaryStringToBytes } from "../utils/base64";
 
 export interface InboxPlainItem {
+  messageId?: string;
   kind: "todo" | "note";
   text: string;
   createdAt: number;

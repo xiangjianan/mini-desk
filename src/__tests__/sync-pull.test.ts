@@ -134,9 +134,9 @@ describe("pullAllInboxes", () => {
       {
         workspaceId: "paired",
         plains: [
-          { kind: "todo", text: "条目i1", createdAt: 10 },
-          { kind: "todo", text: "条目i2", createdAt: 20 },
-          { kind: "todo", text: "条目i3", createdAt: 5 },
+          { kind: "todo", text: "条目i1", createdAt: 10, messageId: "hash-of-AB2CDE4FGHJK:i1" },
+          { kind: "todo", text: "条目i2", createdAt: 20, messageId: "hash-of-AB2CDE4FGHJK:i2" },
+          { kind: "todo", text: "条目i3", createdAt: 5, messageId: "hash-of-AB2CDE4FGHJK:i3" },
         ],
         lastSeenAt: 20,
       },

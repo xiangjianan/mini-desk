@@ -45,6 +45,9 @@ import HighlightText from "./HighlightText.vue";
 
 const props = withDefaults(defineProps<{
   title: string;
+  capacityUnlocked?: boolean;
+  capacityOpen?: boolean;
+  requestSave?: (payload: import('../state/capacityDrafts').QuickDraft) => boolean;
   buttons: QuickButton[];
   tags?: QuickTag[];
   showHidden: boolean;
@@ -90,6 +93,7 @@ const emit = defineEmits<{
 
 const dialogOpen = ref(false);
 const tagManagerOpen = ref(false);
+watch(() => props.capacityOpen, open => { if (open) { dialogOpen.value = false; tagManagerOpen.value = false; } });
 const editingId = ref<string | undefined>();
 type QuickApiHeaderFormRow = QuickApiHeader & { id: string };
 type QuickTagDraft = QuickTag & { titleDraft: string };
@@ -501,7 +505,7 @@ function getApiHeadersPayload(): QuickApiHeader[] {
 function submit(): void {
   if (!canSubmit.value) return;
 
-  emit("save", {
+  const payload = {
     id: editingId.value,
     title: form.title.trim(),
     value: form.value,
@@ -510,7 +514,9 @@ function submit(): void {
     ...(form.type === "api"
       ? { apiMethod: form.apiMethod, apiHeaders: getApiHeadersPayload(), apiBodyType: form.apiBodyType, apiBody: form.apiBody }
       : {}),
-  });
+  };
+  if (props.requestSave) props.requestSave(payload);
+  else emit('save', payload);
   closeDialog();
 }
 
@@ -1018,7 +1024,7 @@ function handleQuickGroupDrop(event: DragEvent, groupId: string): void {
             />
             <span v-else class="quick-tag-title">{{ group.title }}</span>
 
-            <span v-if="editingTagId !== group.id" class="quick-tag-count">{{ group.buttons.length }}</span>
+            <span v-if="editingTagId !== group.id" class="quick-tag-count">{{ group.buttons.filter(button => !button.hidden).length }}{{ !capacityUnlocked && group.buttons.filter(button => !button.hidden).length >= 12 ? ' / 12' : '' }}</span>
             <button
               v-if="group.title && editingTagId !== group.id && props.polish"
               type="button"

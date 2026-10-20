@@ -2,6 +2,14 @@
 import { TITLE_MAX_LENGTH, limitTitle } from "./state/titleLimits";
 import { computed, defineAsyncComponent, nextTick, onMounted, onUnmounted, reactive, ref, watch } from "vue";
 import { darkTheme, dateEnUS, dateZhCN, enUS, NButton, NConfigProvider, NGlobalStyle, NInput, NModal, zhCN } from "naive-ui";
+import CapacityDialog from "./components/CapacityDialog.vue";
+import type { CapacityChoice } from "./components/CapacityDialog.vue";
+import { CAPACITY_LIMITS, capacityCount, checkCapacity, checkWorkspaceGrowth } from "./state/capacity";
+import type { CapacityProblem, CapacityKind } from "./state/capacity";
+import { fillCapacity, getCapacityText } from "./state/capacityText";
+import { loadCapacityDrafts, saveCapacityDrafts } from "./state/capacityDrafts";
+import type { CapacityDraft, QuickDraft } from "./state/capacityDrafts";
+import { loadCapacityLicense } from "./state/membership";
 import CompanionBubble from "./components/CompanionBubble.vue";
 import ImagePanel from "./components/ImagePanel.vue";
 import MobileHome from "./components/MobileHome.vue";
@@ -374,6 +382,270 @@ const naiveThemeOverrides = computed(() => ({
 const naiveLocale = computed(() => (state.language === "en" ? enUS : zhCN));
 const naiveDateLocale = computed(() => (state.language === "en" ? dateEnUS : dateZhCN));
 const uiText = computed(() => getUiText(state.language));
+const capacityCopy = computed(() => getCapacityText(state.language));
+const capacityUnlocked = ref(false);
+void loadCapacityLicense().then(value => { capacityUnlocked.value = value; });
+const capacityVisible = ref(false);
+const capacityBusy = ref(false);
+const capacityStorageError = ref(false);
+const capacityDrafts = ref<CapacityDraft[]>(loadCapacityDrafts());
+const currentCapacityDraft = computed(() => capacityDrafts.value.find(draft => draft.workspaceId === state.activeWorkspaceId));
+const replacementDraft = computed(() => capacityDrafts.value.filter(draft => draft.workspaceId === state.activeWorkspaceId)[1]);
+const capacityRequest = ref<{ source?: 'draft' | 'images' | 'inbox' | 'action'; workspaceId: string; problem: CapacityProblem; items: CapacityChoice[]; input?: boolean; draftText?: string; submit?: (ids: string[]) => void | Promise<void>; retry?: () => void }>();
+const pendingImageFiles = ref<{ workspaceId: string; files: File[]; urls: string[]; targetId?: string; request?: ImagePasteRequest }>();
+function writeCapacityDraft(draft?: CapacityDraft, workspaceId = state.activeWorkspaceId): void {
+  capacityDrafts.value = capacityDrafts.value.filter(item => item.workspaceId !== workspaceId);
+  if (draft) capacityDrafts.value.push(draft);
+  capacityStorageError.value = !saveCapacityDrafts(capacityDrafts.value);
+}
+function openCapacity(problem: CapacityProblem, options: Partial<NonNullable<typeof capacityRequest.value>> = {}): void {
+  capacityRequest.value = { workspaceId: state.activeWorkspaceId, problem, items: [], ...options };
+  capacityVisible.value = true;
+}
+function refreshCapacityRequest(): void {
+  const request = capacityRequest.value;
+  if (!request) return;
+  const workspace = state.workspaces.find(item => item.id === request.workspaceId);
+  if (!workspace) { capacityVisible.value = false; return; }
+  request.problem.current = capacityCount(workspace, request.problem.kind, request.problem.target);
+  request.problem.limit = capacityUnlocked.value ? Number.MAX_SAFE_INTEGER : CAPACITY_LIMITS[request.problem.kind];
+}
+watch(() => [activeWorkspace.value, capacityUnlocked.value], refreshCapacityRequest, { deep: true });
+function capacityGate(workspace: WorkspaceData, kind: CapacityKind, count = 1, target?: string, retry?: () => void): boolean {
+  const problem = checkCapacity(workspace, kind, count, target, capacityUnlocked.value);
+  if (!problem) return true;
+  openCapacity(problem, { workspaceId: workspace.id, retry });
+  return false;
+}
+function acceptWorkspaceGrowth(next: WorkspaceData, retry?: () => void): boolean {
+  const before = state.workspaces.find(workspace => workspace.id === next.id);
+  if (!before) return false;
+  const problem = checkWorkspaceGrowth(before, next, capacityUnlocked.value);
+  if (problem) { openCapacity(problem, { workspaceId: next.id, retry }); return false; }
+  return true;
+}
+function draftProblem(kind: CapacityKind, target?: string): CapacityProblem {
+  return { kind, target, current: capacityCount(activeWorkspace.value, kind, target), limit: capacityUnlocked.value ? Number.MAX_SAFE_INTEGER : CAPACITY_LIMITS[kind], requested: 1 };
+}
+function stageCapacityDraft(draft: CapacityDraft): void {
+  const existing = currentCapacityDraft.value;
+  if (existing && JSON.stringify(existing) !== JSON.stringify(draft)) {
+    if (!replacementDraft.value) {
+      capacityDrafts.value.push(draft);
+      capacityStorageError.value = !saveCapacityDrafts(capacityDrafts.value);
+    }
+    capacityVisible.value = false;
+    return;
+  }
+  writeCapacityDraft(draft);
+  resumeCapacityDraft();
+}
+function capacityDraftSummary(draft: CapacityDraft | undefined): string {
+  if (!draft) return '';
+  if (draft.kind === 'input') return draft.text;
+  if (draft.kind === 'todos') return draft.items.map(item => item.text).join('\n');
+  if (draft.kind === 'quick') return draft.items.map(item => item.title + '\n' + item.value).join('\n');
+  return draft.title;
+}
+function chooseCapacityDraft(useIncoming: boolean): void {
+  const selected = useIncoming ? replacementDraft.value : currentCapacityDraft.value;
+  if (!selected) return;
+  writeCapacityDraft(selected);
+  resumeCapacityDraft();
+}
+function copyCapacityDraftChoices(): void {
+  const content = [capacityCopy.value.original, capacityDraftSummary(currentCapacityDraft.value), '', capacityCopy.value.incoming, capacityDraftSummary(replacementDraft.value)].join('\n');
+  void copyTextToClipboard(content);
+}
+function resumeCapacityDraft(): void {
+  const draft = currentCapacityDraft.value;
+  if (!draft) {
+    if (pendingImageFiles.value?.workspaceId === state.activeWorkspaceId) { showPendingImages(); return; }
+    if (capacityRequest.value) { refreshCapacityRequest(); capacityVisible.value = true; }
+    return;
+  }
+  if (draft.kind === 'todos') {
+    openCapacity(draftProblem('todos', draft.target), { source: 'draft', items: draft.items.map((item, i) => ({ id: String(i), text: item.text })), submit: ids => {
+      const chosen = draft.items.filter((_, i) => ids.includes(String(i)));
+      if (!chosen.length || !capacityGate(activeWorkspace.value, 'todos', chosen.length, draft.target)) { resumeCapacityDraft(); return; }
+      if (!createTodosFromText(draft.target, chosen, draft.afterId)) return;
+      writeCapacityDraft(undefined);
+      const rest = draft.items.filter((_, i) => !ids.includes(String(i)));
+      if (rest.length) { writeCapacityDraft({ ...draft, items: rest }); resumeCapacityDraft(); } else capacityVisible.value = false;
+    } });
+  } else if (draft.kind === 'quick') {
+    const first = draft.items[0];
+    if (!first) { writeCapacityDraft(undefined); return; }
+    const tagId = activeWorkspace.value.quickTags.find(tag => tag.title === first.tagTitle)?.id;
+    const kind = first.tagTitle && !tagId && activeWorkspace.value.quickTags.length >= CAPACITY_LIMITS.tags ? 'tags' : 'quick';
+    openCapacity(draftProblem(kind, tagId), { source: 'draft', items: draft.items.map((item, i) => ({ id: String(i), text: item.title + '\n' + item.value })), submit: ids => {
+      const chosen = draft.items.filter((_, i) => ids.includes(String(i)));
+      if (!chosen.length) return;
+      writeCapacityDraft(undefined);
+      const added = new Set<string>();
+      for (const id of ids) if (saveQuick(draft.items[Number(id)])) added.add(id);
+      const rest = draft.items.filter((_, i) => !added.has(String(i)));
+      if (rest.length) { writeCapacityDraft({ ...draft, items: rest }); resumeCapacityDraft(); } else capacityVisible.value = false;
+    } });
+  } else if (draft.kind === 'input') {
+    openCapacity(draftProblem('todos', draft.target), { source: 'draft', input: true, draftText: draft.text, submit: () => {
+      const text = currentCapacityDraft.value?.kind === 'input' ? currentCapacityDraft.value.text : '';
+      if (!text.trim()) return;
+      const items = text.split(/\r?\n/).map(value => value.trim()).filter(Boolean);
+      if (!isConfiguredTodoListId(draft.target)) { showBubbleText(capacityCopy.value.error); return; }
+      if (checkCapacity(activeWorkspace.value, 'todos', items.length, draft.target, capacityUnlocked.value)) {
+        writeCapacityDraft({ kind: 'todos', workspaceId: draft.workspaceId, target: draft.target, items: items.map(text => ({ text })) });
+        resumeCapacityDraft();
+        return;
+      }
+      if (createTodosFromText(draft.target, items)) { writeCapacityDraft(undefined); capacityVisible.value = false; }
+    } });
+  } else {
+    openCapacity(draftProblem(draft.kind === 'tag' ? 'tags' : 'lists'), { source: 'draft', items: [{ id: '0', text: draft.title }], submit: () => {
+      if (!capacityGate(activeWorkspace.value, draft.kind === 'tag' ? 'tags' : 'lists')) { resumeCapacityDraft(); return; }
+      const saved = draft.kind === 'tag' ? saveQuickTag({ title: draft.title }) : createTodoList(undefined, draft.title);
+      if (saved) { writeCapacityDraft(undefined); capacityVisible.value = false; }
+    } });
+  }
+}
+function updateCapacityInput(text: string): void {
+  const draft = currentCapacityDraft.value;
+  if (draft?.kind !== 'input') return;
+  writeCapacityDraft({ ...draft, text });
+  if (capacityRequest.value) capacityRequest.value.draftText = text;
+}
+function tidyCapacity(): void {
+  const request = capacityRequest.value;
+  capacityVisible.value = false;
+  if (!request) return;
+  if (state.activeWorkspaceId !== request.workspaceId) switchWorkspace(request.workspaceId);
+  const kind = request.problem.kind;
+  const selector = kind === 'images' ? '.image-panel' : kind === 'todos' || kind === 'lists' ? '.todo-panel' : '.quick-block';
+  nextTick(() => {
+    const panel = document.querySelector<HTMLElement>(selector);
+    const target = kind === 'todos' && request.problem.target
+      ? Array.from(document.querySelectorAll<HTMLElement>('.todo-section')).find(item => item.dataset.listId === request.problem.target) ?? panel
+      : kind === 'quick' && request.problem.target
+        ? Array.from(document.querySelectorAll<HTMLElement>('.quick-tag-group')).find(item => item.dataset.groupId === request.problem.target) ?? panel
+        : panel;
+    target?.scrollIntoView({ block: 'nearest' });
+    target?.querySelector<HTMLElement>('button, input, textarea')?.focus({ preventScroll: true });
+  });
+}
+async function submitCapacity(ids: string[]): Promise<void> {
+  if (capacityBusy.value || !capacityRequest.value) return;
+  if (state.activeWorkspaceId !== capacityRequest.value.workspaceId) { switchWorkspace(capacityRequest.value.workspaceId); }
+  capacityBusy.value = true;
+  try { await capacityRequest.value.submit?.(ids); }
+  catch { showBubbleText(capacityCopy.value.error); }
+  finally { capacityBusy.value = false; }
+}
+function reviewPendingInbox(): void {
+  const workspace = activeWorkspace.value;
+  const pending = workspace.pendingInbox ?? [];
+  if (!pending.length) return;
+  const target = workspace.todoLists.some(list => list.id === workspace.inbox?.todoListId) ? workspace.inbox!.todoListId : workspace.todoLists[0]?.id;
+  if (!target) return;
+  openCapacity(draftProblem('todos', target), { source: 'inbox', items: pending.map(item => ({ id: item.id, text: item.text })), submit: ids => {
+    const live = state.workspaces.find(item => item.id === workspace.id);
+    if (!live || !live.todoLists.some(list => list.id === target)) { showBubbleText(capacityCopy.value.error); reviewPendingInbox(); return; }
+    const current = live.pendingInbox ?? [];
+    const chosen = current.filter(item => ids.includes(item.id));
+    if (!chosen.length || !capacityGate(live, 'todos', chosen.length, target)) { reviewPendingInbox(); return; }
+    const oldTodos = live.todos;
+    const oldPending = live.pendingInbox;
+    let todos = live.todos;
+    for (const item of chosen) todos = addTodoToMap(todos, target, { id: createId(), text: item.text, done: false, ...(isValidNotifyAt(item.notifyAt) ? { notifyAt: item.notifyAt } : {}) });
+    live.todos = todos;
+    live.pendingInbox = current.filter(item => !ids.includes(item.id));
+    let saved = false;
+    try { saved = persistNow(); } catch { /* Roll back below. */ }
+    if (!saved) { live.todos = oldTodos; live.pendingInbox = oldPending; capacityStorageError.value = true; }
+    if (live.pendingInbox?.length) reviewPendingInbox(); else capacityVisible.value = false;
+    scheduleNextTodoNotification();
+  } });
+}
+function stageImages(files: File[], targetId?: string, request?: ImagePasteRequest): void {
+  if (pendingImageFiles.value) { showBubbleText(capacityCopy.value.oldDraft); showPendingImages(); return; }
+  pendingImageFiles.value = { workspaceId: state.activeWorkspaceId, files, targetId, request, urls: files.map(file => {
+    try { return URL.createObjectURL(file); } catch { return ''; }
+  }) };
+  showPendingImages();
+}
+function showPendingImages(): void {
+  const pending = pendingImageFiles.value;
+  if (!pending) return;
+  const workspace = state.workspaces.find(item => item.id === pending.workspaceId);
+  if (!workspace) return;
+  openCapacity({ kind: 'images', current: workspace.images.length, limit: capacityUnlocked.value ? Number.MAX_SAFE_INTEGER : CAPACITY_LIMITS.images, requested: pending.files.length }, {
+    source: 'images', workspaceId: pending.workspaceId,
+    items: pending.files.map((file, i) => ({ id: String(i), text: file.name, src: pending.urls[i] })),
+    submit: async ids => {
+      const chosen = pending.files.filter((_, i) => ids.includes(String(i)));
+      if (!chosen.length || !capacityGate(workspace, 'images', chosen.length)) { showPendingImages(); return; }
+      const result = await commitBoardImageBatch(chosen, pending.targetId, pending.request);
+      if (!result) return;
+      const rest = pending.files.filter((_, i) => !ids.includes(String(i)));
+      releasePendingImages();
+      if (rest.length) stageImages(rest, result.at(-1)?.id ?? pending.targetId); else capacityVisible.value = false;
+    },
+  });
+}
+/** Stage every payload before committing metadata, so a batch never silently truncates. */
+async function commitBoardImageBatch(files: File[], targetId?: string, request?: ImagePasteRequest): Promise<StoredImage[] | undefined> {
+  const workspace = activeWorkspace.value;
+  if (checkCapacity(workspace, 'images', files.length, undefined, capacityUnlocked.value)) return undefined;
+  const images: StoredImage[] = [];
+  let rollbackImages: StoredImage[] | undefined;
+  try {
+    for (const file of files) {
+      const src = await fileToDataUrl(file);
+      const image: StoredImage = { id: createId(), src, createdAt: Date.now() };
+      images.push(image);
+      await storeImagePayload(image);
+    }
+    if (shouldBlockBoardEffects() || activeWorkspace.value.id !== workspace.id || activeWorkspace.value !== workspace || checkCapacity(workspace, 'images', images.length, undefined, capacityUnlocked.value)) throw new Error('capacity-changed');
+    let index = targetId ? workspace.images.findIndex(image => image.id === targetId) : -1;
+    if (targetId && index < 0) throw new Error('target-missing');
+    if (index < 0) index = workspace.images.length;
+    else if (request?.placement !== 'before') index++;
+    const before = workspace.images;
+    rollbackImages = before;
+    workspace.images = [...before.slice(0, index), ...images, ...before.slice(index)];
+    if (!persistNow('images', { imageCapacity: capacityUnlocked.value ? undefined : CAPACITY_LIMITS.images })) { workspace.images = before; throw new Error('save-failed'); }
+    return images;
+  } catch {
+    if (rollbackImages) workspace.images = rollbackImages;
+    await Promise.allSettled(images.map(image => deleteStoredImage(image)));
+    showBubbleText(capacityCopy.value.error);
+    return undefined;
+  }
+}
+function releasePendingImages(): void {
+  pendingImageFiles.value?.urls.forEach(url => URL.revokeObjectURL(url));
+  pendingImageFiles.value = undefined;
+}
+function discardCapacityDraft(): void {
+  const request = capacityRequest.value;
+  if (!request) return;
+  const workspace = state.workspaces.find(item => item.id === request.workspaceId);
+  if (request.source === 'inbox' && workspace) {
+    const before = workspace.pendingInbox;
+    const ids = new Set(request.items.map(item => item.id));
+    workspace.pendingInbox = before?.filter(item => !ids.has(item.id));
+    try { if (!persistNow()) throw new Error('save-conflict'); }
+    catch { workspace.pendingInbox = before; capacityStorageError.value = true; return; }
+  } else if (request.source === 'images') releasePendingImages();
+  else if (request.source === 'draft') writeCapacityDraft(undefined, request.workspaceId);
+  capacityVisible.value = false;
+  capacityRequest.value = undefined;
+}
+
+function membershipUnlocked(): void {
+  capacityUnlocked.value = true;
+  refreshCapacityRequest();
+  showBubbleText(capacityCopy.value.unlocked);
+}
 const companionVisible = computed(() => companionFocused.value || bubbleVisible.value);
 const displayedPreviewId = computed(() => activePreviewId.value ?? closingPreviewId.value);
 const imagePreviewClosing = computed(() => Boolean(closingPreviewId.value) && !activePreviewId.value);
@@ -658,6 +930,7 @@ onUnmounted(() => {
   window.removeEventListener("focus", handleNotificationReturn);
   window.removeEventListener("storage", handleStorageEvent);
   window.removeEventListener("beforeunload", handleBeforeUnload);
+  releasePendingImages();
   document.removeEventListener("paste", handlePaste);
   window.removeEventListener("blur", clearDeferredImagePaste);
   document.removeEventListener("visibilitychange", handleDocumentVisibilityChange);
@@ -674,7 +947,8 @@ onUnmounted(() => {
 
 // Closing the tab mid-debounce would drop the last second of todo/line edits;
 // flush synchronously before the page goes away.
-function handleBeforeUnload(): void {
+function handleBeforeUnload(event?: BeforeUnloadEvent): void {
+  if (pendingImageFiles.value?.files.length) { event?.preventDefault(); if (event) event.returnValue = ''; }
   if (focusSession.value) {
     mergeFocusElapsed(false);
     // 同步落盘：页面即将销毁，markDirty 不 bump 文本 generation——不立即写，
@@ -870,8 +1144,11 @@ function reorderSpaces(dragId: string, targetId: string): void {
 
 function applyWorkspaceMove(next: WorkspaceData[]): void {
   if (next === state.workspaces) return;
+  for (const workspace of next) if (!acceptWorkspaceGrowth(workspace)) return;
+  const before = state.workspaces;
   state.workspaces = next;
-  persistNow();
+  try { if (!persistNow()) throw new Error('save-conflict'); }
+  catch { state.workspaces = before; showBubbleText(capacityCopy.value.error); }
 }
 
 function moveQuickButtonAcrossWorkspaces(buttonId: string, workspaceId: string): void {
@@ -1083,6 +1360,7 @@ async function polishClipboard(kind: PolishKind, text: string, style?: PolishSty
 
 /** 面板上浮的智能粘贴气泡：working 长驻等结果替换，done/fallback 常规停留。 */
 function handlePolishStatus(phase: SmartPastePhase, message: string, anchor?: HTMLElement): void {
+  if (phase === 'done' && capacityVisible.value) return;
   if (phase === "working") {
     showBubbleText(message, anchor, {}, POLISH_WORKING_BUBBLE_MS);
     return;
@@ -1123,16 +1401,26 @@ async function pullInboxes(): Promise<InboxSyncOutcome> {
     // 补丁重放：在 await 之后的同一同步块内对当前活对象合并，读-合-写之间零宏任务间隙，
     // 用户在途编辑（同对象字段替换，不换数组身份）无法插入，也就不会被旧快照覆盖。
     // 结构性变更天然安全：工作区已删则按 id 查无目标自然跳过；配对已清除则不在 applicable 中。
+    const beforePull = state.workspaces;
     state.workspaces = state.workspaces.map((workspace) => {
       const patch = applicable.find((candidate) => candidate.workspaceId === workspace.id);
-      return patch ? applyInboxItems(workspace, patch.plains, patch.lastSeenAt) : workspace;
+      return patch ? applyInboxItems(workspace, patch.plains, patch.lastSeenAt, capacityUnlocked.value) : workspace;
     });
-    persistNow();
+    let receivedSaved = false;
+    try { receivedSaved = persistNow(); } catch { /* Keep the previous watermark for retry. */ }
+    if (!receivedSaved) {
+      state.workspaces = beforePull;
+      capacityStorageError.value = true;
+      showBubbleText(capacityCopy.value.storageError);
+      return 'failed';
+    }
     for (const report of reports) {
       // 被门控跳过的补丁不提示：跨标签页场景条目实际由另一标签页应用，两边各弹一次会误导。
       if (!applicable.some((patch) => patch.workspaceId === report.workspaceId)) continue;
       const workspace = state.workspaces.find((item) => item.id === report.workspaceId);
       if (!workspace) continue;
+      const queued = (workspace.pendingInbox?.length ?? 0) - (beforePull.find(item => item.id === workspace.id)?.pendingInbox?.length ?? 0);
+      if (queued > 0) continue;
       showBubbleText(
         uiText.value.app.inboxReceived.replace("{count}", () => String(report.imported)).replace("{title}", () => getWorkspaceBoardTitle(workspace)),
         undefined,
@@ -1167,6 +1455,7 @@ function stopInboxPolling(): void {
 }
 
 function handleWindowFocusInbox(): void {
+  void loadCapacityLicense().then(value => { capacityUnlocked.value = value; });
   if (Date.now() - inboxLastPullAt < INBOX_FOCUS_THROTTLE_MS) return;
   void pullInboxes();
 }
@@ -1508,15 +1797,19 @@ async function applyExternalStoredState(raw?: string): Promise<void> {
 }
 
 async function handlePaste(event: ClipboardEvent): Promise<void> {
+  if (capacityVisible.value) return;
   const request = pendingBrowserImagePasteRequest?.request ?? { placement: "append" as const };
   pendingBrowserImagePasteRequest = undefined;
   if (shouldBlockBoardEffects()) return;
   const items = Array.from(event.clipboardData?.items ?? []);
-  const imageItem = items.find((item) => item.type.startsWith("image/"));
+  const imageItems = items.filter(item => item.type.startsWith('image/'));
+  const imageItem = imageItems[0];
   if (!imageItem) return;
   event.preventDefault();
-  const file = imageItem.getAsFile();
+  const files = imageItems.map(item => item.getAsFile()).filter((file): file is File => file !== null);
+  const file = files[0];
   if (!file) return;
+  if (files.length > 1 && !focusSession.value && request.placement === 'append') { await addImageFiles(files); return; }
   // 专注弹窗打开期间，document 级粘贴路由进该任务的 focusImages（落位固定 append）。
   if (focusSession.value) {
     await addPastedImageFile(file, { placement: "append" }, {
@@ -1606,6 +1899,10 @@ function pasteImageWithBrowserCommand(request: ImagePasteRequest): boolean {
  *  replace 在弹窗内没有编辑语义（预览编辑 v1 关闭）降级追加，before/append
  *  同样直接追加；board 路径保留 before/after/replace 的完整落位与冲突校验。 */
 async function addPastedImageFile(file: File, request: ImagePasteRequest, destination?: FocusDestination): Promise<StoredImage | undefined> {
+  if (!destination && request.placement !== 'replace' && checkCapacity(activeWorkspace.value, 'images', 1, undefined, capacityUnlocked.value)) {
+    stageImages([file], request.placement === 'append' ? undefined : request.targetId, request);
+    return undefined;
+  }
   if (destination) {
     return addImageFile(file, {
       showMessage: true,
@@ -1623,6 +1920,7 @@ async function addPastedImageFile(file: File, request: ImagePasteRequest, destin
     });
   }
   if (shouldBlockBoardEffects()) return undefined;
+  const pasteWorkspace = activeWorkspace.value;
   let src: string;
   try {
     src = await fileToDataUrl(file);
@@ -1633,6 +1931,7 @@ async function addPastedImageFile(file: File, request: ImagePasteRequest, destin
   }
   if (shouldBlockBoardEffects()) return undefined;
 
+  if (activeWorkspace.value !== pasteWorkspace) return undefined;
   const target = activeWorkspace.value.images.find((image) => image.id === request.targetId);
   if (!target) return undefined;
   if (request.placement === "replace") {
@@ -1646,7 +1945,7 @@ async function addPastedImageFile(file: File, request: ImagePasteRequest, destin
       return undefined;
     }
     const currentTarget = activeWorkspace.value.images.find((image) => image.id === request.targetId);
-    if (shouldBlockBoardEffects() || !currentTarget || getImagePayloadId(currentTarget) !== expectedPayloadId) {
+    if (shouldBlockBoardEffects() || activeWorkspace.value !== pasteWorkspace || !currentTarget || getImagePayloadId(currentTarget) !== expectedPayloadId) {
       try {
         await deleteStoredImage(replacement);
       } catch {
@@ -1685,7 +1984,7 @@ async function addPastedImageFile(file: File, request: ImagePasteRequest, destin
     return undefined;
   }
   const targetIndex = activeWorkspace.value.images.findIndex((item) => item.id === request.targetId);
-  if (shouldBlockBoardEffects() || targetIndex < 0) {
+  if (shouldBlockBoardEffects() || activeWorkspace.value !== pasteWorkspace || targetIndex < 0) {
     try {
       await deleteStoredImage(image);
     } catch {
@@ -1693,8 +1992,14 @@ async function addPastedImageFile(file: File, request: ImagePasteRequest, destin
     }
     return undefined;
   }
+  if (checkCapacity(activeWorkspace.value, 'images', 1, undefined, capacityUnlocked.value)) {
+    await deleteStoredImage(image);
+    stageImages([file], request.targetId, request);
+    return undefined;
+  }
   activeWorkspace.value.images.splice(targetIndex + (request.placement === "after" ? 1 : 0), 0, image);
   const persisted = persistNow("images", {
+    imageCapacity: capacityUnlocked.value ? undefined : CAPACITY_LIMITS.images,
     imagePlacement: {
       imageId: image.id,
       targetId: request.targetId,
@@ -1735,6 +2040,8 @@ async function addImageFile(
   } = {},
 ): Promise<StoredImage | undefined> {
   if (shouldBlockBoardEffects()) return undefined;
+  const landingWorkspace = activeWorkspace.value;
+  if (!options.destination && checkCapacity(landingWorkspace, 'images', 1, undefined, capacityUnlocked.value)) { stageImages([file], options.insertAfterId); return undefined; }
   let src: string;
   try {
     src = await fileToDataUrl(file);
@@ -1769,6 +2076,7 @@ async function addImageFile(
     }
     return undefined;
   }
+  const previousBoardImages = [...landingWorkspace.images];
   if (options.destination) {
     // 任务在载荷落库后消失（如撤销/清空数据）：best-effort 清载荷，不落列表。
     if (!insertFocusImage(image, options.destination, options.insertAfterId)) {
@@ -1780,11 +2088,24 @@ async function addImageFile(
       return undefined;
     }
   } else {
+    if (activeWorkspace.value !== landingWorkspace || checkCapacity(landingWorkspace, 'images', 1, undefined, capacityUnlocked.value)) {
+      await deleteStoredImage(image);
+      if (activeWorkspace.value === landingWorkspace) stageImages([file], options.insertAfterId);
+      return undefined;
+    }
     insertStoredImage(image, options.insertAfterId);
   }
   // 专注贴图存盘用全量 scope：images scope 的跨标签合并分支以对方（current）快照
   // 为底、只回写图片——落盘的 todos 是对方的，本 tab 未落盘的 focus 元数据被丢弃。
-  if (persistNow(options.destination ? "all" : "images")) options.onPersisted?.(image);
+  let saved = false;
+  try { saved = persistNow(options.destination ? 'all' : 'images', { imageCapacity: capacityUnlocked.value ? undefined : CAPACITY_LIMITS.images }); } catch { /* Keep the file for retry below. */ }
+  if (!saved && !options.destination) {
+    landingWorkspace.images = previousBoardImages;
+    await deleteStoredImage(image);
+    stageImages([file], options.insertAfterId);
+    return undefined;
+  }
+  if (saved) options.onPersisted?.(image);
   if (options.showMessage ?? true) showBubble("imageAdded", undefined, { hideCompanionAfter: true });
   return image;
 }
@@ -1803,6 +2124,16 @@ async function addImageFiles(
     return;
   }
 
+  if (!destination) {
+    if (pendingImageFiles.value) { showBubbleText(capacityCopy.value.oldDraft); showPendingImages(); return; }
+    if (checkCapacity(activeWorkspace.value, 'images', imageFiles.length, undefined, capacityUnlocked.value)) { stageImages(imageFiles, targetId); return; }
+    const images = await commitBoardImageBatch(imageFiles, targetId);
+    if (!images) { stageImages(imageFiles, targetId); return; }
+    if (targetId) publishPasteFeedback(images.at(-1)!.id);
+    else await copyImage(images.at(-1)!.id, anchor);
+    if (ignoredCount > 0) showBubble('imageDropIgnored', anchor, { hideCompanionAfter: true });
+    return;
+  }
   const added: StoredImage[] = [];
   // When a target is supplied, chain each file after the previous insert so a
   // multi-file drop keeps its file order immediately after the target image.
@@ -2081,63 +2412,75 @@ function imageSourceToPngBlob(src: string): Promise<Blob> {
   });
 }
 
-function saveQuick(payload: { id?: string; title: string; value: string; type: QuickButtonType; tagTitle?: string; apiMethod?: QuickApiMethod; apiHeaders?: QuickApiHeader[]; apiBodyType?: QuickApiBodyType; apiBody?: string }): void {
-  if (!payload.title && !payload.value) return;
-  const tagId = resolveQuickTagId(payload.tagTitle);
-  if (payload.id) {
-    const button = activeWorkspace.value.quickButtons.find((item) => item.id === payload.id);
-    if (button) {
-      button.title = payload.title || button.title;
-      button.value = payload.value;
-      button.type = payload.type;
-      applyQuickTag(button, tagId);
-      applyQuickApiConfig(button, payload);
-    }
-  } else {
-    const button: QuickButton = {
-      id: createId(),
-      title: payload.title || getUntitledQuickTitle(payload.type),
-      value: payload.value,
-      type: payload.type,
-      hidden: false,
-    };
-    applyQuickTag(button, tagId);
-    applyQuickApiConfig(button, payload);
-    activeWorkspace.value.quickButtons.push(button);
+function saveQuick(payload: QuickDraft): boolean {
+  if (!payload || (!payload.title && !payload.value)) return false;
+  const workspace = activeWorkspace.value;
+  const next = { ...workspace, quickTags: workspace.quickTags.map(tag => ({ ...tag })), quickButtons: workspace.quickButtons.map(button => ({ ...button })) };
+  const title = limitTitle(payload.tagTitle ?? '');
+  let tagId = title ? next.quickTags.find(tag => tag.title === title)?.id : undefined;
+  if (title && !tagId) { tagId = createId(); next.quickTags.push({ id: tagId, title }); }
+  let button = payload.id ? next.quickButtons.find(item => item.id === payload.id) : undefined;
+  if (payload.id && !button) return false;
+  if (!button) { button = { id: createId(), title: '', value: '', type: payload.type, hidden: false }; next.quickButtons.push(button); }
+  button.title = payload.title || button.title || getUntitledQuickTitle(payload.type);
+  button.value = payload.value;
+  button.type = payload.type;
+  applyQuickTag(button, tagId);
+  applyQuickApiConfig(button, payload);
+  const problem = checkWorkspaceGrowth(workspace, next, capacityUnlocked.value);
+  if (problem) { stageCapacityDraft({ kind: 'quick', workspaceId: workspace.id, items: [{ ...payload }] }); return false; }
+  const previousTags = workspace.quickTags;
+  const previousButtons = workspace.quickButtons;
+  workspace.quickTags = next.quickTags;
+  workspace.quickButtons = next.quickButtons;
+  try { if (!persistNow()) throw new Error('save-conflict'); }
+  catch {
+    workspace.quickTags = previousTags; workspace.quickButtons = previousButtons;
+    stageCapacityDraft({ kind: 'quick', workspaceId: workspace.id, items: [{ ...payload }] });
+    capacityStorageError.value = true;
+    return false;
   }
-  persistNow();
+  const existingDraft = currentCapacityDraft.value;
+  if (existingDraft?.kind === 'quick' && existingDraft.items.length === 1 && JSON.stringify(existingDraft.items[0]) === JSON.stringify(payload)) writeCapacityDraft(undefined);
+  return true;
 }
 
-function resolveQuickTagId(tagTitle?: string): string | undefined {
-  const title = limitTitle(tagTitle ?? "");
-  if (!title) return undefined;
-  const existing = activeWorkspace.value.quickTags.find((tag) => tag.title === title);
-  if (existing) return existing.id;
-  const tag = { id: createId(), title };
-  activeWorkspace.value.quickTags.push(tag);
-  return tag.id;
-}
 
-function saveQuickTag(payload: { id?: string; title: string }): void {
+function saveQuickTag(payload: { id?: string; title: string }): boolean {
   const title = limitTitle(payload.title);
-  if (!title) return;
+  if (!title) return false;
+  const workspace = activeWorkspace.value;
+  const tags = workspace.quickTags.map(tag => ({ ...tag }));
+  const buttons = workspace.quickButtons.map(button => ({ ...button }));
   if (!payload.id) {
-    if (activeWorkspace.value.quickTags.some((tag) => tag.title === title)) return;
-    activeWorkspace.value.quickTags.push({ id: createId(), title });
-    persistNow();
-    return;
-  }
-
-  const current = activeWorkspace.value.quickTags.find((tag) => tag.id === payload.id);
-  if (!current) return;
-  const duplicate = activeWorkspace.value.quickTags.find((tag) => tag.id !== payload.id && tag.title === title);
-  if (duplicate) {
-    moveQuickButtonsToTag(payload.id, duplicate.id);
-    activeWorkspace.value.quickTags = activeWorkspace.value.quickTags.filter((tag) => tag.id !== payload.id);
+    if (tags.some(tag => tag.title === title)) return true;
+    tags.push({ id: createId(), title });
   } else {
-    current.title = title;
+    const current = tags.find(tag => tag.id === payload.id);
+    if (!current) return false;
+    const duplicate = tags.find(tag => tag.id !== payload.id && tag.title === title);
+    if (duplicate) {
+      buttons.forEach(button => { if (button.tagId === payload.id) applyQuickTag(button, duplicate.id); });
+      tags.splice(tags.indexOf(current), 1);
+    } else current.title = title;
   }
-  persistNow();
+  const problem = checkWorkspaceGrowth(workspace, { ...workspace, quickTags: tags, quickButtons: buttons }, capacityUnlocked.value);
+  if (problem) {
+    if (!payload.id) stageCapacityDraft({ kind: 'tag', workspaceId: workspace.id, title });
+    else openCapacity(problem, { retry: () => { saveQuickTag(payload); } });
+    return false;
+  }
+  const beforeTags = workspace.quickTags;
+  const beforeButtons = workspace.quickButtons;
+  workspace.quickTags = tags; workspace.quickButtons = buttons;
+  try { if (!persistNow()) throw new Error('save-conflict'); }
+  catch {
+    workspace.quickTags = beforeTags; workspace.quickButtons = beforeButtons;
+    if (!payload.id) stageCapacityDraft({ kind: 'tag', workspaceId: workspace.id, title });
+    capacityStorageError.value = true;
+    return false;
+  }
+  return true;
 }
 
 function toggleQuickTagCollapsed(id: string): void {
@@ -2156,8 +2499,8 @@ function deleteQuickTag(id: string, anchor?: HTMLElement): void {
   const tag = activeWorkspace.value.quickTags.find((item) => item.id === id);
   if (!tag) return;
   requestConfirmation("confirmDeleteQuickTag", anchor, () => {
+    if (!moveQuickButtonsToTag(id, undefined)) return;
     activeWorkspace.value.quickTags = activeWorkspace.value.quickTags.filter((item) => item.id !== id);
-    moveQuickButtonsToTag(id, undefined);
     persistNow();
     showBubble("deleteQuickTag", anchor, { hideCompanionAfter: true });
   }, undefined, { confirmText: uiText.value.common.delete, cancelText: uiText.value.common.cancel });
@@ -2176,11 +2519,15 @@ function deleteQuickTagWithButtons(id: string, anchor?: HTMLElement): void {
   }, undefined, { confirmText: uiText.value.common.delete, cancelText: uiText.value.common.cancel, highlightTarget: getQuickTagGroupTargets(id, anchor) });
 }
 
-function moveQuickButtonsToTag(fromTagId: string, toTagId: string | undefined): void {
-  activeWorkspace.value.quickButtons.forEach((button) => {
-    if (button.tagId !== fromTagId) return;
-    applyQuickTag(button, toTagId);
+function moveQuickButtonsToTag(fromTagId: string, toTagId: string | undefined): boolean {
+  const buttons = activeWorkspace.value.quickButtons.map(button => {
+    const next = { ...button };
+    if (next.tagId === fromTagId) applyQuickTag(next, toTagId);
+    return next;
   });
+  if (!acceptWorkspaceGrowth({ ...activeWorkspace.value, quickButtons: buttons })) return false;
+  activeWorkspace.value.quickButtons = buttons;
+  return true;
 }
 
 function applyQuickTag(button: QuickButton, tagId: string | undefined): void {
@@ -2228,6 +2575,7 @@ function deleteQuick(id: string, anchor?: HTMLElement): void {
 function toggleQuickHidden(id: string): void {
   const button = activeWorkspace.value.quickButtons.find((item) => item.id === id);
   if (!button) return;
+  if (button.hidden && !capacityGate(activeWorkspace.value, 'quick', 1, button.tagId, () => toggleQuickHidden(id))) return;
   button.hidden = !button.hidden;
   persistNow();
 }
@@ -2246,6 +2594,7 @@ function moveQuickButtonToTag(buttonId: string, tagId?: string, targetId?: strin
   const button = activeWorkspace.value.quickButtons.find((item) => item.id === buttonId);
   if (!button) return;
   if (tagId && !activeWorkspace.value.quickTags.some((tag) => tag.id === tagId)) return;
+  if (!button.hidden && button.tagId !== tagId && !capacityGate(activeWorkspace.value, 'quick', 1, tagId)) return;
   applyQuickTag(button, tagId);
   if (targetId) moveItem(activeWorkspace.value.quickButtons, buttonId, targetId);
   persistNow();
@@ -2589,16 +2938,28 @@ function formatQuickApiResponseBody(value: string): string {
   return value.length > maxLength ? `${value.slice(0, maxLength)}...` : value;
 }
 
-function createTodoList(anchor?: HTMLElement, title?: string): void {
-  const trimmedTitle = limitTitle(title ?? "");
-  if (!trimmedTitle) return;
+function createTodoList(anchor?: HTMLElement, title?: string): boolean {
+  const trimmedTitle = limitTitle(title ?? '');
+  if (!trimmedTitle) return false;
+  if (!capacityGate(activeWorkspace.value, 'lists')) { stageCapacityDraft({ kind: 'list', workspaceId: state.activeWorkspaceId, title: trimmedTitle }); return false; }
+  const workspace = activeWorkspace.value;
+  const beforeLists = workspace.todoLists;
+  const beforeTodos = workspace.todos;
+  const beforeVisibility = workspace.showCompletedTodos;
   const id = createId();
-  activeWorkspace.value.todoLists.push({ id, title: trimmedTitle, collapsed: false, compact: false, column: 0 });
-  activeWorkspace.value.todos[id] = [];
-  activeWorkspace.value.showCompletedTodos[id] = false;
+  workspace.todoLists = [...beforeLists, { id, title: trimmedTitle, collapsed: false, compact: false, column: 0 }];
+  workspace.todos = { ...beforeTodos, [id]: [] };
+  workspace.showCompletedTodos = { ...beforeVisibility, [id]: false };
+  try { if (!persistNow()) throw new Error('save-conflict'); }
+  catch {
+    workspace.todoLists = beforeLists; workspace.todos = beforeTodos; workspace.showCompletedTodos = beforeVisibility;
+    stageCapacityDraft({ kind: 'list', workspaceId: workspace.id, title: trimmedTitle });
+    capacityStorageError.value = true;
+    return false;
+  }
   pendingEditTodoListId.value = null;
-  persistNow();
   showBubbleText(uiText.value.app.todoListAdded, anchor);
+  return true;
 }
 
 function updateTodoListTitle(listId: TodoListId, title: string): void {
@@ -2709,6 +3070,10 @@ function assignTodoListSections(
 
 function createTodo(period: TodoPeriod, afterId?: string): void {
   if (!isConfiguredTodoListId(period)) return;
+  if (checkCapacity(activeWorkspace.value, 'todos', 1, period, capacityUnlocked.value) && !getTodos(period).some(todo => !todo.done && !todo.text.trim())) {
+    stageCapacityDraft({ kind: 'input', workspaceId: state.activeWorkspaceId, target: period, text: '' });
+    return;
+  }
   if (!afterId) {
     const blankTodo = findOpenBlankTodo();
     if (blankTodo) {
@@ -2741,8 +3106,14 @@ function createTodo(period: TodoPeriod, afterId?: string): void {
 /** 批量创建待办的统一入口：items 为纯文本拆分（粘贴/拖放）或结构化条目（智能粘贴，可带 notifyAt）。
  *  时间落地前用与闹钟选择器同口径的 isValidNotifyAt 复检；落地后重排下一提醒，含时间时对齐
  *  updateTodoNotify 的行为同步请求通知权限。 */
-function createTodosFromText(period: TodoPeriod, items: string[] | PolishTodoItem[], afterId?: string): void {
-  if (!isConfiguredTodoListId(period)) return;
+function createTodosFromText(period: TodoPeriod, items: string[] | PolishTodoItem[], afterId?: string): boolean {
+  if (!isConfiguredTodoListId(period)) return false;
+  const drafts = items.map(item => typeof item === 'string' ? { text: item } : { ...item });
+  if (checkCapacity(activeWorkspace.value, 'todos', drafts.length, period, capacityUnlocked.value)) {
+    stageCapacityDraft({ kind: 'todos', workspaceId: state.activeWorkspaceId, target: period, items: drafts, afterId });
+    return false;
+  }
+  const previousTodos = activeWorkspace.value.todos;
   let insertAfter: string | undefined = afterId;
   let anyNotify = false;
   items.forEach((item) => {
@@ -2763,9 +3134,16 @@ function createTodosFromText(period: TodoPeriod, items: string[] | PolishTodoIte
     anyNotify = anyNotify || notifyAt !== undefined;
     insertAfter = id;
   });
-  persistNow();
+  try { if (!persistNow()) throw new Error('save-conflict'); }
+  catch {
+    activeWorkspace.value.todos = previousTodos;
+    stageCapacityDraft({ kind: 'todos', workspaceId: state.activeWorkspaceId, target: period, items: drafts, afterId });
+    capacityStorageError.value = true;
+    return false;
+  }
   scheduleNextTodoNotification();
   if (anyNotify) void prepareTodoNotifications();
+  return true;
 }
 
 function findOpenBlankTodo(): { period: TodoPeriod; id: string } | undefined {
@@ -2813,6 +3191,7 @@ function updateTodo(period: TodoPeriod, id: string, text: string): void {
 
 function splitTodo(period: TodoPeriod, id: string, before: string, after: string): void {
   if (!isConfiguredTodoListId(period)) return;
+  if (!capacityGate(activeWorkspace.value, 'todos', 1, period)) return;
   cancelEmptyTodoRemoval(period, id);
   const nextId = createId();
   activeWorkspace.value.todos = splitTodoInMap(
@@ -2834,6 +3213,8 @@ function complete(period: TodoPeriod, id: string, done: boolean, anchor?: HTMLEl
   if (!isConfiguredTodoListId(period)) return;
   // 完成 = 保留全部专注数据（贴图/随手记/累计时长）作追溯备份，徽标继续可读可续做；
   // 只有真正删除提醒事项（deleteTodoNow 连坐）才清空对应图片与文本。
+  const reopening = getTodos(period).find(item => item.id === id);
+  if (!done && reopening?.done && !capacityGate(activeWorkspace.value, 'todos', 1, period, () => complete(period, id, done, anchor))) return;
   activeWorkspace.value.todos = completeTodo(activeWorkspace.value.todos, period, id, done);
   persistNow();
   if (done) showBubble("todoCompleted", anchor);
@@ -2952,6 +3333,8 @@ function removeEmptyTodoWithFocusCleanup(period: TodoPeriod, id: string): void {
 
 function moveTodo(dragged: DraggedTodo, destinationPeriod: TodoPeriod, targetId?: string): void {
   if (!isConfiguredTodoListId(dragged.period) || !isConfiguredTodoListId(destinationPeriod)) return;
+  const moving = getTodos(dragged.period).find(item => item.id === dragged.id);
+  if (dragged.period !== destinationPeriod && moving && !moving.done && !capacityGate(activeWorkspace.value, 'todos', 1, destinationPeriod)) return;
   activeWorkspace.value.todos = moveTodoInMap(activeWorkspace.value.todos, dragged.period, dragged.id, destinationPeriod, targetId);
   persistNow();
 }
@@ -3263,7 +3646,7 @@ function suggestIssue(): void {
 
 function handleGlobalKeydown(event: KeyboardEvent): void {
   if (isMobileBlocked.value) return;
-  if (event.defaultPrevented) return;
+  if (event.defaultPrevented || capacityVisible.value) return;
   const previewId = activePreviewId.value;
   // 预览快捷键只在被预览图片仍真实在场时接管：撤销/竞态等可能让图片离开
   // 列表而 activePreviewId 残留（浮层因查不到图而不可见），此时继续武装
@@ -3354,7 +3737,7 @@ function isUndoShortcut(event: KeyboardEvent): boolean {
 }
 
 function shouldSkipGlobalUndo(target: EventTarget | null): boolean {
-  if (document.querySelector(".image-editor")) return true;
+  if (capacityVisible.value || document.querySelector(".image-editor")) return true;
   if (!(target instanceof HTMLElement)) return false;
   if (target.isContentEditable) return true;
   if (target.closest(".image-editor")) return true;
@@ -3861,6 +4244,14 @@ function moveItem<T extends { id: string }>(items: T[], dragId: string, targetId
 <template>
   <NConfigProvider :theme="naiveTheme" :theme-overrides="naiveThemeOverrides" :locale="naiveLocale" :date-locale="naiveDateLocale">
     <NGlobalStyle />
+    <NModal :show="Boolean(replacementDraft)" preset="card" class="capacity-replacement-dialog" style="width: min(520px, calc(100vw - 32px))" :title="capacityCopy.oldDraft" :mask-closable="false" :closable="false" :close-on-esc="false">
+      <p>{{ capacityCopy.replaceWarning }}</p>
+      <p v-if="capacityStorageError" role="alert">{{ capacityCopy.storageError }}</p>
+      <strong>{{ capacityCopy.original }}</strong><pre class="capacity-draft-preview">{{ capacityDraftSummary(currentCapacityDraft) }}</pre>
+      <strong>{{ capacityCopy.incoming }}</strong><pre class="capacity-draft-preview">{{ capacityDraftSummary(replacementDraft) }}</pre>
+      <div class="capacity-replacement-actions"><NButton @click="copyCapacityDraftChoices">{{ capacityCopy.copyBoth }}</NButton><NButton @click="chooseCapacityDraft(false)">{{ capacityCopy.keepOriginal }}</NButton><NButton type="primary" @click="chooseCapacityDraft(true)">{{ capacityCopy.useIncoming }}</NButton></div>
+    </NModal>
+    <CapacityDialog v-if="capacityRequest" :show="capacityVisible" :language="state.language" :problem="capacityRequest.problem" :items="capacityRequest.items" :storage-error="capacityStorageError" :busy="capacityBusy" :input="capacityRequest.input" :draft-text="capacityRequest.draftText" @close="capacityVisible = false" @tidy="tidyCapacity" @submit="submitCapacity" @input="updateCapacityInput" @discard="discardCapacityDraft" @unlocked="membershipUnlocked" @retry="capacityVisible = false; capacityRequest?.retry?.()" />
     <WorkbenchShell
       v-if="!isMobileBlocked"
       :key="boardEpoch"
@@ -3916,6 +4307,8 @@ function moveItem<T extends { id: string }>(items: T[], dragId: string, targetId
       </template>
 
       <template #actions>
+        <button v-if="currentCapacityDraft || pendingImageFiles?.workspaceId === state.activeWorkspaceId || (capacityRequest?.retry && capacityRequest.workspaceId === state.activeWorkspaceId && !capacityVisible)" class="capacity-resume" data-testid="capacity-resume" @click="resumeCapacityDraft">{{ capacityCopy.resume }}</button>
+        <button v-if="activeWorkspace.pendingInbox?.length" class="capacity-resume" data-testid="capacity-pending-inbox" @click="reviewPendingInbox">{{ fillCapacity(capacityCopy.pending, { count: activeWorkspace.pendingInbox.length }) }}</button>
         <SettingsMenu
           :theme="state.theme"
           :zone-visibility="activeWorkspace.zoneVisibility"
@@ -3949,6 +4342,7 @@ function moveItem<T extends { id: string }>(items: T[], dragId: string, targetId
         <ImagePanel
           :title="titles['image-title']"
           :images="activeWorkspace.images"
+          :capacity-unlocked="capacityUnlocked"
           :active-preview-id="activePreviewId"
           :paste-feedback="pasteFeedback"
           :language="state.language"
@@ -3969,6 +4363,9 @@ function moveItem<T extends { id: string }>(items: T[], dragId: string, targetId
       <template #notes>
         <QuickButtons
           :title="titles['quick-title']"
+          :request-save="saveQuick"
+          :capacity-open="capacityVisible || Boolean(replacementDraft)"
+          :capacity-unlocked="capacityUnlocked"
           :tags="activeWorkspace.quickTags"
           :buttons="activeWorkspace.quickButtons"
           :other-collapsed="activeWorkspace.quickOtherCollapsed"
@@ -4005,6 +4402,7 @@ function moveItem<T extends { id: string }>(items: T[], dragId: string, targetId
       <template #tasks>
         <TodoPanel
           :todo-lists="displayTodoLists"
+          :capacity-unlocked="capacityUnlocked"
           :max-columns="activeWorkspace.todoMaxColumns ?? 1"
           :edit-list-id="pendingEditTodoListId"
           :notification-flash-keys="notificationFlashKeys"

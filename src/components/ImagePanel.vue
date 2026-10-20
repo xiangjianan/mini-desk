@@ -27,6 +27,7 @@ import { renderIcon } from "../utils/dropdownIcons";
 
 const props = withDefaults(defineProps<{
   title: string;
+  capacityUnlocked?: boolean;
   images: StoredImage[];
   activePreviewId?: string;
   pasteFeedback?: ImagePasteFeedback;
@@ -576,7 +577,7 @@ function handleImageDragWheel(event: WheelEvent): void {
         <span>{{ getIconHeadingText(title, 'image') }}</span>
       </h1>
       <div class="header-actions">
-        <span class="count">{{ images.length }}</span>
+        <span class="count">{{ images.length }}{{ !capacityUnlocked && images.length >= 10 ? ' / 10' : '' }}</span>
         <button
           ref="pasteButtonRef"
           class="image-paste-button icon-button"

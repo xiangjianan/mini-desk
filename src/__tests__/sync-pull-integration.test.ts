@@ -69,8 +69,8 @@ describe("pullAllInboxes 集成（真实解码）", () => {
       {
         workspaceId: "mixed",
         plains: [
-          { kind: "todo", text: "旧密文待办", createdAt: t1 },
-          { kind: "note", text: "新明文便签", createdAt: t2 },
+          { kind: "todo", text: "旧密文待办", createdAt: t1, messageId: `${await inboxKeyHash(CODE)}:legacy` },
+          { kind: "note", text: "新明文便签", createdAt: t2, messageId: `${await inboxKeyHash(CODE)}:plain` },
         ],
         lastSeenAt: t2,
       },

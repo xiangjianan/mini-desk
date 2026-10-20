@@ -6,6 +6,7 @@ import type { BoardState } from "../types";
 export type SaveStatusKind = "saved" | "saving" | "dirty";
 
 export interface PersistOptions {
+  imageCapacity?: number;
   force?: boolean;
   /** 跳过保存前的撤销快照记录：专注计时落盘等高频、无撤销语义的保存专用。 */
   recordCheckpoint?: boolean;
@@ -124,6 +125,7 @@ export function useBoardPersistence(deps: BoardPersistenceDeps) {
       clientId: deps.clientId,
       force: options.force,
       scope,
+      imageCapacity: options.imageCapacity,
       imagePlacement: options.imagePlacement,
       imageReplacement: options.imageReplacement,
     });

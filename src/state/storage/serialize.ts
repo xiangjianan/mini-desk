@@ -66,6 +66,7 @@ export function getSerializableWorkspace(
     todoListOrder: workspace.todoListOrder ?? workspace.todoLists.map((list) => list.id),
     todoColumnLayouts: normalizeTodoColumnLayouts(workspace.todoColumnLayouts ?? (workspace.todoLayoutManual ? { 1: workspace.todoLists.map((list) => ({ id: list.id, column: 0 })) } : {}), workspace.todoLists),
     zoneVisibility: normalizeZoneVisibility(workspace.zoneVisibility),
+    ...(workspace.pendingInbox?.length ? { pendingInbox: workspace.pendingInbox.map(item => ({ ...item })) } : {}),
     ...(workspace.inbox && !options.omitInbox ? { inbox: { ...workspace.inbox } } : {}),
   };
 }

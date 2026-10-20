@@ -176,8 +176,8 @@ describe("localized public copy", () => {
   });
 
   it("发送成功气泡文案中英齐全", () => {
-    expect(getUiText("zh").app.mobileInboxSent).toBe("已发送 {count} 条，回到电脑端就能看到 (｡•̀ᴗ-)✧");
-    expect(getUiText("en").app.mobileInboxSent).toBe("Sent {count}! Check your desktop board (｡•̀ᴗ-)✧");
+    expect(getUiText("zh").app.mobileInboxSent).toBe("已发送 {count} 条，等待桌面接收 (｡•̀ᴗ-)✧");
+    expect(getUiText("en").app.mobileInboxSent).toBe("Sent {count}; waiting for desktop receipt (｡•̀ᴗ-)✧");
   });
 
   it("一键粘贴文案中英齐全", () => {

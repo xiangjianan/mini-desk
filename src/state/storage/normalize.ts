@@ -110,6 +110,10 @@ export function normalizeWorkspaceData(item: unknown, language: AppLanguage = DE
     todos: normalizeTodos(typed.todos, todoLists),
     zoneVisibility: normalizeZoneVisibility(typed.zoneVisibility ?? fallbackVisibility),
     inbox: normalizeWorkspaceInbox(typed.inbox, todoLists, spaces),
+    ...(Array.isArray(typed.pendingInbox) ? { pendingInbox: typed.pendingInbox.flatMap(item => {
+      if (!isPlainObject(item) || typeof item.id !== 'string' || typeof item.text !== 'string' || typeof item.createdAt !== 'number' || !Number.isFinite(item.createdAt)) return [];
+      return [{ id: item.id, text: item.text, createdAt: item.createdAt, ...(isValidNotifyAt(item.notifyAt) ? { notifyAt: item.notifyAt as number } : {}) }];
+    }).filter((item, index, list) => list.findIndex(other => other.id === item.id) === index) } : {}),
   };
 }
 

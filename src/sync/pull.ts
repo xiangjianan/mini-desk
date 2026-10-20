@@ -1,3 +1,4 @@
+import { checkCapacity } from "../state/capacity";
 import { createId } from "../state/storage/shared";
 import { projectLegacySpaceLines } from "../state/workspaces";
 import type { LineItem, TodoListId, WorkspaceData } from "../types";
@@ -31,7 +32,7 @@ export interface InboxPullResult {
  *  indent 0 到目标空间 Tab（落点空间失效则回退第一个空间），并按共享助手 projectLegacySpaceLines
  *  刷新投影字段（workspaceLines/storageLines = 前两个空间的浅拷贝）。
  *  不做任何拉取/解码，输入对象不被修改，水位线直接取调用方计算好的 lastSeenAt。 */
-export function applyInboxItems(workspace: WorkspaceData, plains: InboxPlainItem[], lastSeenAt: number): WorkspaceData {
+export function applyInboxItems(workspace: WorkspaceData, plains: InboxPlainItem[], lastSeenAt: number, unlocked = false): WorkspaceData {
   const inbox = workspace.inbox;
   if (!inbox) return workspace;
   const todos = plains.filter((plain) => plain.kind === "todo");
@@ -39,7 +40,14 @@ export function applyInboxItems(workspace: WorkspaceData, plains: InboxPlainItem
   let next: WorkspaceData = { ...workspace, inbox: { ...inbox, lastSeenAt } };
   if (todos.length > 0) {
     const listId = resolveTodoListId(next, inbox.todoListId);
-    next = {
+    if ((workspace.pendingInbox?.length ?? 0) > 0 || checkCapacity(next, 'todos', todos.length, listId, unlocked)) {
+      const pending = [...(workspace.pendingInbox ?? [])];
+      for (const plain of todos) {
+        const id = plain.messageId ?? createId();
+        if (!pending.some(item => item.id === id)) pending.push({ id, text: plain.text.slice(0, INBOX_PLAINTEXT_MAX_CHARS), createdAt: plain.createdAt, ...(plain.notifyAt !== undefined ? { notifyAt: plain.notifyAt } : {}) });
+      }
+      next = { ...next, pendingInbox: pending };
+    } else next = {
       ...next,
       todos: {
         ...next.todos,
@@ -90,7 +98,8 @@ export async function pullAllInboxes(workspaces: WorkspaceData[]): Promise<Inbox
     workspaces.map(async (workspace): Promise<InboxPullPatch | null> => {
       const inbox = workspace.inbox;
       if (!inbox) return null;
-      const stored = await fetchInboxItems(await inboxKeyHash(inbox.code));
+      const routingHash = await inboxKeyHash(inbox.code);
+      const stored = await fetchInboxItems(routingHash);
       if (!stored) {
         fetchFailures.push(workspace.id);
         return null;
@@ -102,7 +111,7 @@ export async function pullAllInboxes(workspaces: WorkspaceData[]): Promise<Inbox
       for (const entry of stored) {
         if (entry.createdAt <= inbox.lastSeenAt) continue;
         const plain = await decodeInboxPayload(inbox.code, entry.payload);
-        if (plain) plains.push(plain);
+        if (plain) plains.push({ ...plain, messageId: `${routingHash}:${entry.id}` });
         else console.warn("[inbox] 跳过无法解码的条目", { workspaceId: workspace.id, itemId: entry.id });
       }
       // 无导入且水位线未动时不产补丁：避免调用方每个轮询周期都空转持久化/跨标签页广播/回滚编辑中内容。

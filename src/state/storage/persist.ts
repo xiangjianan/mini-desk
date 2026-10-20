@@ -63,6 +63,7 @@ export function saveStateWithConflictCheck(
         options.imagePlacement,
         options.imageReplacement,
       );
+      if (options.imageCapacity !== undefined && mergedImages.length > options.imageCapacity && mergedImages.length > currentWorkspace.images.length) return { status: 'conflict', state: current };
       const merged = replaceWorkspaceImages(current, currentWorkspace.id, mergedImages);
       const saved = writeSyncedState(merged, storage, {
         clientId: options.clientId,

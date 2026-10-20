@@ -17,6 +17,7 @@ export interface ImageReplacementHint {
 }
 
 export interface SaveStateOptions {
+  imageCapacity?: number;
   storage?: Storage;
   clientId?: string;
   force?: boolean;

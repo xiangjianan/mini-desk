@@ -1050,3 +1050,25 @@ html[data-theme="dark"] .workbench-shell {
   padding-inline: 4px;
   margin-inline-end: 4px;
 }
+
+/* Pending capacity work stays reachable without competing with header controls. */
+.workbench-shell .capacity-resume {
+  flex: 0 0 auto;
+  max-width: 180px;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  border: 1px solid var(--line-subtle);
+  border-radius: 999px;
+  padding: 3px 9px;
+  background: var(--panel);
+  color: var(--primary);
+  font: inherit;
+  font-size: 11px;
+  cursor: pointer;
+}
+.workbench-shell .capacity-resume:focus-visible { outline: 2px solid var(--ring); outline-offset: 2px; }
+
+.capacity-draft-preview { max-height: 160px; overflow: auto; white-space: pre-wrap; overflow-wrap: anywhere; font: inherit; padding: 10px; background: var(--muted-surface); border-radius: 8px; }
+.capacity-replacement-dialog { max-height: calc(100vh - 32px); overflow: auto; }
+.capacity-replacement-actions { display: flex; flex-wrap: wrap; gap: 8px; }
