@@ -1014,13 +1014,14 @@ html[data-theme="dark"] .workbench-shell {
   --desk-zone-accent: #a1bad7;
 }
 
-/* Match the adjacent paste control, including the flex basis. */
-.workbench-shell .quick-tag-heading > :is(.desk-ai-button, .quick-tag-add-button) {
-  flex: 0 0 34px;
-  width: 34px;
-  min-width: 34px;
-  height: 34px;
-  min-height: 34px;
+/* Shared compact rhythm for tag and reminder heading actions. */
+.workbench-shell .quick-tag-heading > :is(.desk-ai-button, .quick-tag-add-button),
+.workbench-shell .todo-heading-actions > .icon-button {
+  flex: 0 0 30px;
+  width: 30px;
+  min-width: 30px;
+  height: 30px;
+  min-height: 30px;
   padding: 0;
 }
 .workbench-shell .quick-tag-add-button .n-icon { font-size: 16px; }
@@ -1044,4 +1045,8 @@ html[data-theme="dark"] .workbench-shell {
 .workbench-shell .quick-tag-group {
   clip-path: inset(0 round var(--desk-card-radius));
 }
-.workbench-shell :is(.quick-tag-count, .todo-count) { margin-inline-end: 6px; }
+.workbench-shell :is(.quick-tag-count, .todo-count) {
+  min-width: 20px;
+  padding-inline: 4px;
+  margin-inline-end: 4px;
+}
