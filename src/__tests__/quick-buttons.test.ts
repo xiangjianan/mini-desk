@@ -549,14 +549,14 @@ describe("QuickButtons", () => {
 
   it("defines a height and opacity transition for tag content", () => {
     const styles = readFileSync(resolve(__dirname, "../styles.css"), "utf8");
-    expect(styles).toMatch(/\.quick-tag-content\s*\{[^}]*display:\s*block[^}]*height:\s*auto[^}]*transition:/s);
+    expect(styles).toMatch(/\.quick-tag-content\s*\{[^}]*display:\s*grid[^}]*grid-template-rows:\s*1fr[^}]*transition:/s);
     expect(styles).toMatch(/\.quick-tag-heading \+ \.quick-tag-content\s*\{[^}]*margin-top:\s*2px/s);
-    expect(styles).toMatch(/\.quick-tag-content\.is-collapsed\s*\{[^}]*height:\s*0[^}]*margin-top:\s*0[^}]*opacity:\s*0/s);
+    expect(styles).toMatch(/\.quick-tag-content\.is-collapsed\s*\{[^}]*grid-template-rows:\s*0fr[^}]*margin-top:\s*0[^}]*opacity:\s*0/s);
     expect(styles).toMatch(/\.quick-tag-group\s*\{[^}]*gap:\s*0/s);
     expect(styles).toMatch(/\.quick-tag-groups\s*\{[^}]*gap:\s*3px/s);
-    expect(styles).toMatch(/\.quick-tag-content > \.quick-buttons\s*\{[^}]*flex:\s*0 0 auto/s);
-    expect(styles).toMatch(/\.quick-tag-content > \.quick-buttons\s*\{[^}]*padding-top:\s*4px/s);
-    expect(styles).toMatch(/\.quick-tag-content > \.quick-buttons\s*\{[^}]*padding-bottom:\s*6px/s);
+    expect(styles).toMatch(/\.quick-tag-clip > \.quick-buttons\s*\{[^}]*flex:\s*0 0 auto/s);
+    expect(styles).toMatch(/\.quick-tag-clip > \.quick-buttons\s*\{[^}]*padding-top:\s*4px/s);
+    expect(styles).toMatch(/\.quick-tag-clip > \.quick-buttons\s*\{[^}]*padding-bottom:\s*6px/s);
     expect(styles).not.toMatch(/\.quick-tag-content\.is-collapsed > \.quick-buttons\s*\{[^}]*padding-top:\s*0/s);
   });
 
@@ -1569,32 +1569,23 @@ describe("QuickButtons", () => {
     wrapper.unmount();
   });
 
-  it("animates collapse and an interrupted expansion while restoring natural height", async () => {
+  it("uses the reminder grid transition without nested height animations on collapse", async () => {
     const tag = { id: "work", title: "工作", collapsed: false };
     const wrapper = mountQuickButtons({
       buttons: [{ id: "a", title: "A", value: "a", type: "text", hidden: false, tagId: "work" }],
       tags: [tag],
     });
     const content = wrapper.get(".quick-tag-content").element as HTMLElement;
-    vi.spyOn(content, "getBoundingClientRect").mockImplementation(() => ({
-      height: content.classList.contains("is-collapsed") ? 0 : 100,
-    }) as DOMRect);
-    const cancel = vi.fn();
-    const animate = vi.fn(() => ({ cancel, finished: new Promise(() => {}) }) as unknown as Animation);
+    const area = wrapper.get(".quick-tag-groups").element as HTMLElement;
+    const animate = vi.fn();
     content.animate = animate;
-
+    area.animate = animate;
     await wrapper.setProps({ tags: [{ ...tag, collapsed: true }] });
-    expect(animate).toHaveBeenLastCalledWith(
-      [{ height: "100px" }, { height: "0px" }], expect.objectContaining({ duration: 240 }),
-    );
+    expect(wrapper.get(".quick-tag-content").attributes("inert")).toBeDefined();
     await wrapper.setProps({ tags: [tag] });
-    expect(cancel).toHaveBeenCalledOnce();
-    expect(animate).toHaveBeenLastCalledWith(
-      [{ height: "0px" }, { height: "100px" }], expect.objectContaining({ duration: 240 }),
-    );
-    expect(content.style.height).toBe("");
+    expect(animate).not.toHaveBeenCalled();
+    expect(wrapper.find(".quick-tag-clip > .quick-buttons").exists()).toBe(true);
     wrapper.unmount();
-    expect(cancel).toHaveBeenCalledTimes(2);
   });
 
   it("animates tag and area heights when adding and deleting quick buttons", async () => {

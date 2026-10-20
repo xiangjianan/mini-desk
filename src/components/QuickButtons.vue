@@ -202,12 +202,24 @@ const buttonLayoutSignature = computed(() => JSON.stringify([
   groupedButtons.value.map((group) => [group.id, group.collapsed, group.buttons.map((button) => [button.id, button.title])]),
 ]));
 let renderedButtonLayout = buttonLayoutSignature.value;
+const collapseSignature = () => JSON.stringify(groupedButtons.value.map(group => [group.id, group.collapsed]));
+let renderedCollapseLayout = collapseSignature();
 const quickHeights = new Map<HTMLElement, number>();
 const quickHeightAnimations = new Map<HTMLElement, Animation>();
 
 onBeforeUpdate(() => {
   if (renderedButtonLayout === buttonLayoutSignature.value) return;
   renderedButtonLayout = buttonLayoutSignature.value;
+  const collapseChanged = renderedCollapseLayout !== collapseSignature();
+  renderedCollapseLayout = collapseSignature();
+  // CSS grid owns collapse, exactly as in TodoPanel. Never animate the parent
+  // height too: nested height animations make the following groups bounce.
+  if (collapseChanged) {
+    for (const animation of quickHeightAnimations.values()) animation.cancel();
+    quickHeightAnimations.clear();
+    quickHeights.clear();
+    return;
+  }
   // Capture every current height before cancelling an interrupted animation.
   for (const element of panelRef.value?.querySelectorAll<HTMLElement>(".quick-tag-groups, .quick-tag-content") ?? []) {
     quickHeights.set(element, element.getBoundingClientRect().height);
@@ -1038,6 +1050,7 @@ function handleQuickGroupDrop(event: DragEvent, groupId: string): void {
             :aria-hidden="group.collapsed"
             :inert="group.collapsed"
           >
+            <div class="quick-tag-clip">
             <TransitionGroup
               :css="false"
               tag="div"
@@ -1079,6 +1092,7 @@ function handleQuickGroupDrop(event: DragEvent, groupId: string): void {
                 <span v-if="buttonUsage(button) > 0" class="quick-button-clicks">×{{ buttonUsage(button) }}</span>
               </button>
             </TransitionGroup>
+            </div>
           </div>
         </section>
         </TransitionGroup>

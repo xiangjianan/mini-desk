@@ -201,7 +201,7 @@ html[data-theme="dark"] .workbench-shell,
 }
 .workbench-shell .quick-tag-groups { gap: var(--desk-group-gap); padding: var(--desk-group-top) var(--desk-group-scroll-gutter) 16px; }
 .workbench-shell .quick-tag-column { gap: var(--desk-group-gap); }
-.workbench-shell .quick-tag-content > .quick-buttons { padding: 16px; }
+.workbench-shell .quick-tag-clip > .quick-buttons { padding: 16px; }
 /* Keep content padding stable while its outer height animates. */
 .workbench-shell .quick-tag-heading + .quick-tag-content { margin-top: 0; }
 .workbench-shell .quick-tag-heading + .quick-tag-content.is-collapsed { margin-top: 0; }
@@ -1047,3 +1047,15 @@ html[data-theme="dark"] .workbench-shell {
 .workbench-shell .quick-tag-group:has(> .quick-tag-content.is-collapsed) > .quick-tag-heading[data-confirm-target] {
   border-radius: var(--desk-card-radius);
 }
+
+/* Keep the rounded surface above scrolled content and mask its corners. */
+.workbench-shell .todo-heading,
+.workbench-shell .quick-tag-heading {
+  isolation: isolate;
+  background-color: var(--desk-surface);
+}
+.workbench-shell .todo-section,
+.workbench-shell .quick-tag-group {
+  clip-path: inset(0 round var(--desk-card-radius));
+}
+.workbench-shell :is(.quick-tag-count, .todo-count) { margin-inline-end: 6px; }

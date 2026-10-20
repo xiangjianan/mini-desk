@@ -1159,16 +1159,19 @@ button.image-card {
 }
 
 .quick-tag-content {
-  /* Natural block sizing keeps Safari in sync when the inner button grid reflows.
-     Collapse heights are animated by QuickButtons alongside content changes. */
-  display: block;
-  height: auto;
+  display: grid;
+  grid-template-rows: 1fr;
   min-height: 0;
   overflow: hidden;
   opacity: 1;
   transition:
-    opacity var(--motion-fast) ease,
-    margin-top var(--motion-medium) var(--motion-ease);
+    grid-template-rows var(--motion-medium) var(--motion-ease),
+    opacity var(--motion-fast) ease;
+}
+
+.quick-tag-clip {
+  min-height: 0;
+  overflow: hidden;
 }
 
 .quick-tag-heading + .quick-tag-content {
@@ -1176,7 +1179,7 @@ button.image-card {
 }
 
 .quick-tag-content.is-collapsed {
-  height: 0;
+  grid-template-rows: 0fr;
   margin-top: 0;
   opacity: 0;
   pointer-events: none;
@@ -1184,7 +1187,7 @@ button.image-card {
 
 
 
-.quick-tag-content > .quick-buttons {
+.quick-tag-clip > .quick-buttons {
   flex: 0 0 auto;
   min-height: 0;
   padding-top: 4px;
@@ -5568,7 +5571,7 @@ button.quick-button {
 
 /* Animate tag groups sliding into place when the tag list is reordered. */
 .quick-tag-group-move {
-  transition: transform var(--motion-medium) var(--motion-spring);
+  transition: transform var(--motion-medium) var(--motion-ease);
 }
 
 .todo-section {
