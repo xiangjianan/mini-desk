@@ -7210,7 +7210,15 @@ describe("App shell", () => {
     }
   });
 
-  it("overwrites the existing workspace in place when importing a same-name workspace", async () => {
+  it.each([
+    { oldCode: undefined, incomingCode: undefined, revocations: 0 },
+    { oldCode: "AB2CDE4FGHJK", incomingCode: undefined, revocations: 1 },
+    { oldCode: "AB2CDE4FGHJK", incomingCode: "MN5PQR7STVWX", revocations: 1 },
+    { oldCode: "AB2CDE4FGHJK", incomingCode: "AB2CDE4FGHJK", revocations: 0 },
+  ])("overwrites the existing workspace in place and retires displaced pairing ($oldCode -> $incomingCode)", async ({ oldCode, incomingCode, revocations }) => {
+    vi.mocked(revokeInboxKey).mockClear();
+    vi.mocked(revokeInboxKey).mockResolvedValue(true);
+    const inbox = (code: string) => ({ code, todoListId: "morning", noteTarget: DEFAULT_SPACE_ID, lastSeenAt: 7 });
     vi.useFakeTimers();
     Object.assign(URL, { createObjectURL: vi.fn(() => "blob:todo-board"), revokeObjectURL: vi.fn() });
     vi.spyOn(HTMLAnchorElement.prototype, "click").mockImplementation(() => {});
@@ -7218,6 +7226,7 @@ describe("App shell", () => {
       ...defaultState(),
       workspaces: [{
         ...defaultWorkspace("existing"),
+        ...(oldCode ? { inbox: inbox(oldCode) } : {}),
         customTitles: { "board-title": "我的桌面" },
         workspaceLines: [{ text: "原有内容", indent: 0 }],
       }],
@@ -7231,7 +7240,7 @@ describe("App shell", () => {
       const file = new File([JSON.stringify({
         miniDeskWorkspaceExport: true,
         version: 1,
-        workspace: { customTitles: { "board-title": "我的桌面" }, workspaceLines: [{ text: "导入内容", indent: 0 }] },
+        workspace: { ...(incomingCode ? { inbox: inbox(incomingCode) } : {}), customTitles: { "board-title": "我的桌面" }, workspaceLines: [{ text: "导入内容", indent: 0 }] },
       })], "todo.json", { type: "application/json" });
       Object.defineProperty(input, "files", { value: [file], configurable: true });
       await wrapper.get('input[type="file"]').trigger("change");
@@ -7242,6 +7251,7 @@ describe("App shell", () => {
 
       expect(wrapper.get('[data-testid="companion-yes"]').text()).toBe("覆盖");
 
+      expect(revokeInboxKey).not.toHaveBeenCalled();
       // Overwrite replaces the existing workspace's content, keeping its id (count unchanged).
       await wrapper.get('[data-testid="companion-yes"]').trigger("click");
       await Promise.resolve();
@@ -7253,6 +7263,12 @@ describe("App shell", () => {
       expect(stored.workspaces).toHaveLength(1);
       expect(stored.workspaces[0].id).toBe("existing");
       expect(stored.workspaces[0].workspaceLines).toEqual([{ text: "导入内容", indent: 0 }]);
+      expect(stored.workspaces[0].inbox?.code).toBe(incomingCode);
+      expect(revokeInboxKey).toHaveBeenCalledTimes(revocations);
+      if (revocations) {
+        const { inboxKeyHash } = await import("../sync/crypto");
+        expect(revokeInboxKey).toHaveBeenCalledWith(await inboxKeyHash(oldCode!));
+      }
     } finally {
       wrapper.unmount();
       vi.useRealTimers();

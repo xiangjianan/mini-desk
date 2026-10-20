@@ -3189,6 +3189,12 @@ async function importData(event: Event): Promise<void> {
         return;
       }
       const replacement: WorkspaceData = { ...importedWorkspace, id: target.id, createdAt: target.createdAt };
+      // Overwriting retires the old inbox just like deleting its workspace.
+      // A re-import retaining the same code still owns that channel.
+      const oldInboxCode = target.inbox?.code;
+      if (oldInboxCode !== undefined && oldInboxCode !== replacement.inbox?.code) {
+        void revokeInbox(oldInboxCode);
+      }
       restoreWorkbenchWidthRatios(replacement.id, replacement.zoneWidthRatios);
       state.workspaces = state.workspaces.map((item) => (item.id === target.id ? replacement : item));
       state.activeWorkspaceId = target.id;
