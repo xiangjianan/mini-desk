@@ -57,14 +57,34 @@ describe('capacity integration', () => {
     seed(5); wrapper = mountApp(); await settle();
     wrapper.getComponent(TodoPanel).vm.$emit('createFromText', 'morning', ['A', 'B', 'C', 'D', 'E']); await settle();
     const dialog = wrapper.getComponent(CapacityDialog);
+    const originalDialog = dialog.vm.$.uid;
     expect(loadState().workspaces[0].todos.morning).toHaveLength(5);
     expect(dialog.props('items')).toHaveLength(5);
     dialog.vm.$emit('submit', ['1', '3']); await settle();
     expect(loadState().workspaces[0].todos.morning.map(todo => todo.text)).toEqual(expect.arrayContaining(['B', 'D']));
     expect(loadCapacityDrafts()[0]).toMatchObject({ items: [{ text: 'A' }, { text: 'C' }, { text: 'E' }] });
+    expect(wrapper.getComponent(CapacityDialog).vm.$.uid).toBe(originalDialog);
+    expect(dialog.props('show')).toBe(true);
+    expect(dialog.props('feedback')).toBe('已加入 2 项，剩余 3 项。');
     wrapper.unmount(); wrapper = mountApp(); await settle();
     await wrapper.get('[data-testid="capacity-resume"]').trigger('click');
     expect(wrapper.getComponent(CapacityDialog).props('items').map(item => item.text)).toEqual(['A', 'C', 'E']);
+  });
+  it('does not automatically reopen a dismissed limit for the same context; explicit review still works', async () => {
+    seed(); wrapper = mountApp(); await settle();
+    const panel = wrapper.getComponent(TodoPanel);
+    panel.vm.$emit('create', 'morning'); await settle();
+    const dialog = wrapper.getComponent(CapacityDialog);
+    const instance = dialog.vm.$.uid;
+    dialog.vm.$emit('input', 'Keep this draft');
+    dialog.vm.$emit('close'); await settle();
+    panel.vm.$emit('create', 'morning'); await settle();
+    expect(dialog.props('show')).toBe(false);
+    expect(loadCapacityDrafts()).toHaveLength(1);
+    expect(loadCapacityDrafts()[0]).toMatchObject({ text: 'Keep this draft' });
+    await wrapper.get('[data-testid="capacity-resume"]').trigger('click'); await settle();
+    expect(dialog.props('show')).toBe(true);
+    expect(wrapper.getComponent(CapacityDialog).vm.$.uid).toBe(instance);
   });
   it('hidden actions release a place; unhide and cross-tag moves are checked', async () => {
     const state = seed(0);
@@ -135,10 +155,15 @@ describe('capacity integration', () => {
     wrapper = mountApp(); await settle();
     wrapper.getComponent(TodoPanel).vm.$emit('createFromText', 'morning', ['New A', 'New B']); await settle();
     expect(loadCapacityDrafts()).toHaveLength(2);
-    expect(wrapper.get('.capacity-replacement-dialog').text()).toContain('Original draft');
-    expect(wrapper.get('.capacity-replacement-dialog').text()).toContain('New A');
+    expect(wrapper.get('[data-testid="capacity-replacement"]').text()).toContain('Original draft');
+    expect(wrapper.get('[data-testid="capacity-replacement"]').text()).toContain('New A');
     wrapper.unmount(); wrapper = mountApp(); await settle();
-    await wrapper.findAll('button').find(button => button.text() === '用本次内容替换原草稿')!.trigger('click');
+    const dialog = wrapper.getComponent(CapacityDialog).vm.$.uid;
+    expect(wrapper.findAll('.n-modal')).toHaveLength(1);
+    await wrapper.findAll('button').find(button => button.text() === '保留本次输入')!.trigger('click');
+    expect(wrapper.getComponent(CapacityDialog).vm.$.uid).toBe(dialog);
+    expect(wrapper.findAll('.n-modal')).toHaveLength(1);
+    expect(wrapper.find('[data-testid="capacity-replacement"]').exists()).toBe(false);
     expect(loadCapacityDrafts()).toHaveLength(1);
     expect(loadCapacityDrafts()[0]).toMatchObject({ kind: 'todos', items: [{ text: 'New A' }, { text: 'New B' }] });
   });
@@ -162,8 +187,8 @@ describe('capacity integration', () => {
   it('does not render a fake payable code when payment is unconfigured', async () => {
     seed(); wrapper = mountApp(); await settle(); wrapper.getComponent(TodoPanel).vm.$emit('create', 'morning'); await settle();
     const dialog = wrapper.getComponent(CapacityDialog);
-    const buy = dialog.findAll('button').find(button => button.text() === '仍然需要更多空间');
-    await buy!.trigger('click'); await settle();
+    // Price and availability are visible without opening another purchase view.
+    expect(dialog.find('[data-testid="capacity-payment"]').exists()).toBe(true);
     expect(dialog.text()).toContain('暂未开放购买'); expect(dialog.text()).toContain('19.90'); expect(dialog.text()).toContain('支付宝'); expect(dialog.find('.capacity-qr').exists()).toBe(false);
   });
 });

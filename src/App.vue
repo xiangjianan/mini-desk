@@ -387,11 +387,23 @@ const capacityUnlocked = ref(false);
 void loadCapacityLicense().then(value => { capacityUnlocked.value = value; });
 const capacityVisible = ref(false);
 const capacityBusy = ref(false);
+const capacityFeedback = ref('');
+const capacityHint = ref('');
+const dismissedCapacityContexts = new Set<string>();
+function capacityContextKey(workspaceId: string, problem: CapacityProblem): string {
+  return JSON.stringify([workspaceId, problem.kind, problem.target ?? null]);
+}
+function closeCapacity(): void {
+  const request = capacityRequest.value;
+  if (request) dismissedCapacityContexts.add(capacityContextKey(request.workspaceId, request.problem));
+  capacityVisible.value = false;
+}
 const capacityStorageError = ref(false);
 const capacityDrafts = ref<CapacityDraft[]>(loadCapacityDrafts());
 const currentCapacityDraft = computed(() => capacityDrafts.value.find(draft => draft.workspaceId === state.activeWorkspaceId));
 const replacementDraft = computed(() => capacityDrafts.value.filter(draft => draft.workspaceId === state.activeWorkspaceId)[1]);
 const capacityRequest = ref<{ source?: 'draft' | 'images' | 'inbox' | 'action'; workspaceId: string; problem: CapacityProblem; items: CapacityChoice[]; input?: boolean; draftText?: string; submit?: (ids: string[]) => void | Promise<void>; retry?: () => void }>();
+watch(replacementDraft, draft => { if (draft) capacityVisible.value = true; }, { immediate: true });
 const pendingImageFiles = ref<{ workspaceId: string; files: File[]; urls: string[]; targetId?: string; request?: ImagePasteRequest }>();
 function writeCapacityDraft(draft?: CapacityDraft, workspaceId = state.activeWorkspaceId): void {
   capacityDrafts.value = capacityDrafts.value.filter(item => item.workspaceId !== workspaceId);
@@ -400,7 +412,10 @@ function writeCapacityDraft(draft?: CapacityDraft, workspaceId = state.activeWor
 }
 function openCapacity(problem: CapacityProblem, options: Partial<NonNullable<typeof capacityRequest.value>> = {}): void {
   capacityRequest.value = { workspaceId: state.activeWorkspaceId, problem, items: [], ...options };
-  capacityVisible.value = true;
+  capacityFeedback.value = '';
+  const dismissed = dismissedCapacityContexts.has(capacityContextKey(capacityRequest.value.workspaceId, problem));
+  if (capacityVisible.value || !dismissed) { capacityVisible.value = true; capacityHint.value = ''; }
+  else capacityHint.value = capacityCopy.value.limitHint;
 }
 function refreshCapacityRequest(): void {
   const request = capacityRequest.value;
@@ -429,12 +444,13 @@ function draftProblem(kind: CapacityKind, target?: string): CapacityProblem {
 }
 function stageCapacityDraft(draft: CapacityDraft): void {
   const existing = currentCapacityDraft.value;
+  if (existing && draft.kind === 'input' && !draft.text) { resumeCapacityDraft(); return; }
   if (existing && JSON.stringify(existing) !== JSON.stringify(draft)) {
     if (!replacementDraft.value) {
       capacityDrafts.value.push(draft);
       capacityStorageError.value = !saveCapacityDrafts(capacityDrafts.value);
     }
-    capacityVisible.value = false;
+    capacityVisible.value = true;
     return;
   }
   writeCapacityDraft(draft);
@@ -457,7 +473,9 @@ function copyCapacityDraftChoices(): void {
   const content = [capacityCopy.value.original, capacityDraftSummary(currentCapacityDraft.value), '', capacityCopy.value.incoming, capacityDraftSummary(replacementDraft.value)].join('\n');
   void copyTextToClipboard(content);
 }
-function resumeCapacityDraft(): void {
+function resumeCapacityDraft(explicit = false): void {
+  if (explicit) { capacityVisible.value = true; capacityHint.value = ''; }
+  if (replacementDraft.value) { capacityVisible.value = true; return; }
   const draft = currentCapacityDraft.value;
   if (!draft) {
     if (pendingImageFiles.value?.workspaceId === state.activeWorkspaceId) { showPendingImages(); return; }
@@ -516,7 +534,7 @@ function updateCapacityInput(text: string): void {
 }
 function tidyCapacity(): void {
   const request = capacityRequest.value;
-  capacityVisible.value = false;
+  closeCapacity();
   if (!request) return;
   if (state.activeWorkspaceId !== request.workspaceId) switchWorkspace(request.workspaceId);
   const kind = request.problem.kind;
@@ -536,11 +554,17 @@ async function submitCapacity(ids: string[]): Promise<void> {
   if (capacityBusy.value || !capacityRequest.value) return;
   if (state.activeWorkspaceId !== capacityRequest.value.workspaceId) { switchWorkspace(capacityRequest.value.workspaceId); }
   capacityBusy.value = true;
-  try { await capacityRequest.value.submit?.(ids); }
+  const beforeCount = capacityRequest.value.items.length;
+  try {
+    await capacityRequest.value.submit?.(ids);
+    const remaining = capacityRequest.value?.items.length ?? 0;
+    if (capacityVisible.value && beforeCount > remaining) capacityFeedback.value = fillCapacity(capacityCopy.value.added, { count: beforeCount - remaining, remaining });
+  }
   catch { showBubbleText(capacityCopy.value.error); }
   finally { capacityBusy.value = false; }
 }
-function reviewPendingInbox(): void {
+function reviewPendingInbox(explicit = false): void {
+  if (explicit) { capacityVisible.value = true; capacityHint.value = ''; }
   const workspace = activeWorkspace.value;
   const pending = workspace.pendingInbox ?? [];
   if (!pending.length) return;
@@ -4244,14 +4268,28 @@ function moveItem<T extends { id: string }>(items: T[], dragId: string, targetId
 <template>
   <NConfigProvider :theme="naiveTheme" :theme-overrides="naiveThemeOverrides" :locale="naiveLocale" :date-locale="naiveDateLocale">
     <NGlobalStyle />
-    <NModal :show="Boolean(replacementDraft)" preset="card" class="capacity-replacement-dialog" style="width: min(520px, calc(100vw - 32px))" :title="capacityCopy.oldDraft" :mask-closable="false" :closable="false" :close-on-esc="false">
-      <p>{{ capacityCopy.replaceWarning }}</p>
-      <p v-if="capacityStorageError" role="alert">{{ capacityCopy.storageError }}</p>
-      <strong>{{ capacityCopy.original }}</strong><pre class="capacity-draft-preview">{{ capacityDraftSummary(currentCapacityDraft) }}</pre>
-      <strong>{{ capacityCopy.incoming }}</strong><pre class="capacity-draft-preview">{{ capacityDraftSummary(replacementDraft) }}</pre>
-      <div class="capacity-replacement-actions"><NButton @click="copyCapacityDraftChoices">{{ capacityCopy.copyBoth }}</NButton><NButton @click="chooseCapacityDraft(false)">{{ capacityCopy.keepOriginal }}</NButton><NButton type="primary" @click="chooseCapacityDraft(true)">{{ capacityCopy.useIncoming }}</NButton></div>
-    </NModal>
-    <CapacityDialog v-if="capacityRequest" :show="capacityVisible" :language="state.language" :problem="capacityRequest.problem" :items="capacityRequest.items" :storage-error="capacityStorageError" :busy="capacityBusy" :input="capacityRequest.input" :draft-text="capacityRequest.draftText" @close="capacityVisible = false" @tidy="tidyCapacity" @submit="submitCapacity" @input="updateCapacityInput" @discard="discardCapacityDraft" @unlocked="membershipUnlocked" @retry="capacityVisible = false; capacityRequest?.retry?.()" />
+    <CapacityDialog
+      v-if="capacityRequest || replacementDraft"
+      :show="capacityVisible"
+      :language="state.language"
+      :problem="capacityRequest?.problem ?? draftProblem('todos', activeWorkspace.todoLists[0]?.id)"
+      :items="capacityRequest?.items ?? []"
+      :storage-error="capacityStorageError"
+      :busy="capacityBusy"
+      :input="capacityRequest?.input"
+      :draft-text="capacityRequest?.draftText"
+      :feedback="capacityFeedback"
+      :replacement="replacementDraft ? { original: capacityDraftSummary(currentCapacityDraft), incoming: capacityDraftSummary(replacementDraft) } : undefined"
+      @close="closeCapacity"
+      @tidy="tidyCapacity"
+      @submit="submitCapacity"
+      @input="updateCapacityInput"
+      @discard="discardCapacityDraft"
+      @unlocked="membershipUnlocked"
+      @choose-draft="chooseCapacityDraft"
+      @copy-drafts="copyCapacityDraftChoices"
+      @retry="capacityRequest?.retry?.()"
+    />
     <WorkbenchShell
       v-if="!isMobileBlocked"
       :key="boardEpoch"
@@ -4307,8 +4345,8 @@ function moveItem<T extends { id: string }>(items: T[], dragId: string, targetId
       </template>
 
       <template #actions>
-        <button v-if="currentCapacityDraft || pendingImageFiles?.workspaceId === state.activeWorkspaceId || (capacityRequest?.retry && capacityRequest.workspaceId === state.activeWorkspaceId && !capacityVisible)" class="capacity-resume" data-testid="capacity-resume" @click="resumeCapacityDraft">{{ capacityCopy.resume }}</button>
-        <button v-if="activeWorkspace.pendingInbox?.length" class="capacity-resume" data-testid="capacity-pending-inbox" @click="reviewPendingInbox">{{ fillCapacity(capacityCopy.pending, { count: activeWorkspace.pendingInbox.length }) }}</button>
+        <button v-if="currentCapacityDraft || pendingImageFiles?.workspaceId === state.activeWorkspaceId || (capacityRequest?.retry && capacityRequest.workspaceId === state.activeWorkspaceId && !capacityVisible)" class="capacity-resume" data-testid="capacity-resume" @click="resumeCapacityDraft(true)">{{ capacityHint || capacityCopy.resume }}</button>
+        <button v-if="activeWorkspace.pendingInbox?.length" class="capacity-resume" data-testid="capacity-pending-inbox" @click="reviewPendingInbox(true)">{{ fillCapacity(capacityCopy.pending, { count: activeWorkspace.pendingInbox.length }) }}</button>
         <SettingsMenu
           :theme="state.theme"
           :zone-visibility="activeWorkspace.zoneVisibility"

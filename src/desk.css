@@ -1070,5 +1070,3 @@ html[data-theme="dark"] .workbench-shell {
 .workbench-shell .capacity-resume:focus-visible { outline: 2px solid var(--ring); outline-offset: 2px; }
 
 .capacity-draft-preview { max-height: 160px; overflow: auto; white-space: pre-wrap; overflow-wrap: anywhere; font: inherit; padding: 10px; background: var(--muted-surface); border-radius: 8px; }
-.capacity-replacement-dialog { max-height: calc(100vh - 32px); overflow: auto; }
-.capacity-replacement-actions { display: flex; flex-wrap: wrap; gap: 8px; }

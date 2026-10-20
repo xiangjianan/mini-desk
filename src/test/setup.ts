@@ -12,6 +12,16 @@ if (!globalThis.crypto?.subtle) {
 
 // DOM 相关 mock 仅在 jsdom 环境生效；node 环境的测试跳过。
 if (typeof window !== "undefined") {
+  // jsdom has no layout/ResizeObserver. Give UI libraries a stable native-shaped
+  // observer before imports, rather than a DOM-scheduling polyfill that can keep
+  // callbacks alive after the jsdom window is disposed. Resize-specific tests
+  // replace this observer with a controllable callback of their own.
+  vi.stubGlobal("ResizeObserver", class {
+    observe(): void {}
+    unobserve(): void {}
+    disconnect(): void {}
+  });
+
   Object.defineProperty(window, "matchMedia", {
     writable: true,
     value: vi.fn().mockImplementation((query: string) => ({
