@@ -688,8 +688,8 @@ html[data-theme="dark"] .workbench-shell .space-text-panel {
   top: auto;
   bottom: 0;
   transform: translateX(-50%);
-  align-items: flex-end;
-  padding-bottom: 1px;
+  align-items: center;
+  padding-bottom: 0;
   opacity: 0;
   pointer-events: none;
 }
@@ -707,9 +707,9 @@ html[data-theme="dark"] .workbench-shell .space-text-panel {
   left: 50%;
   margin-left: -24px;
   display: flex;
-  align-items: flex-start;
+  align-items: center;
   justify-content: center;
-  padding-top: 1px;
+  padding-top: 0;
   color: var(--muted);
   background: transparent;
   opacity: 0;
@@ -739,26 +739,12 @@ html[data-theme="dark"] .workbench-shell .space-text-panel {
 }
 .workbench-shell .workbench-header-hide-button::before,
 .workbench-shell .workbench-header-reveal::before {
-  content: "";
-  position: absolute;
-  width: 32px;
-  height: 16px;
-  left: 8px;
-  background: var(--secondary);
-  border: 0;
-  pointer-events: none;
-  transition: background-color 180ms ease;
+  content: none;
 }
-.workbench-shell .workbench-header-hide-button::before {
-  bottom: 3px;
-  border-radius: 6px;
-}
-.workbench-shell .workbench-header-reveal::before {
-  top: 3px;
-  border-radius: 6px;
-}
-.workbench-shell :is(.workbench-header-hide-button, .workbench-header-reveal):is(:hover, :focus-visible)::before {
-  background: var(--button-hover);
+.workbench-shell :is(.workbench-header-hide-button, .workbench-header-reveal):focus-visible {
+  outline: 2px solid var(--ring);
+  outline-offset: -4px;
+  border-radius: 8px;
 }
 .workbench-shell :is(.workbench-header-hide-button, .workbench-header-reveal) svg {
   position: relative;
