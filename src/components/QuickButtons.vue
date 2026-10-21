@@ -288,7 +288,7 @@ const menuOptions = computed<DropdownOption[]>(() => {
     return [
       ...areaMenuOptions.value.filter((option) => ["add", "paste", "smart-paste"].includes(String(option.key))),
       { label: uiText.value.common.rename, key: "rename-tag", icon: renderIcon(CreateOutline) },
-      { label: props.tags.find((tag) => tag.id === menu.value?.tagId)?.collapsed ? uiText.value.quick.expandTag : uiText.value.quick.collapseTag, key: "toggle-tag-collapsed", icon: renderIcon(ResizeOutline) },
+      ...areaMenuOptions.value.filter((option) => ["toggle-show-hidden", "manage-tags", "toggle-compact"].includes(String(option.key))),
       ...(moveMenuChildren.value.length > 0
         ? [{
             label: uiText.value.common.moveToWorkspace,
@@ -576,10 +576,6 @@ function handleMenuSelect(key: string): void {
   }
   if (key === "rename-tag" && tagId) {
     startInlineTagRename(tagId, tagTitle ?? "");
-    return;
-  }
-  if (key === "toggle-tag-collapsed" && tagId) {
-    emit("toggleTagCollapsed", tagId);
     return;
   }
   if (key === "delete-tag") {

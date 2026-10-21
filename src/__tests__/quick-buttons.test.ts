@@ -483,9 +483,9 @@ describe("QuickButtons", () => {
 
     await wrapper.get(".quick-tag-heading").trigger("contextmenu");
 
-    expect(wrapper.findAll(".dropdown-option").map((option) => option.text())).toEqual(["新增", "粘贴", "重命名", "收起标签", "移动到空间", "生活", "删除标签"]);
+    expect(wrapper.findAll(".dropdown-option").map((option) => option.text())).toEqual(["新增", "粘贴", "重命名", "查看隐藏", "标签管理", "切换为紧凑按钮", "移动到空间", "生活", "删除标签"]);
 
-    expect(wrapper.find('[data-key="manage-tags"]').exists()).toBe(false);
+    expect(wrapper.find('[data-key="manage-tags"]').exists()).toBe(true);
     wrapper.unmount();
   });
 
@@ -503,6 +503,31 @@ describe("QuickButtons", () => {
     expect(labels()).toEqual(expected);
     await wrapper.get(".quick-block").trigger("contextmenu");
     expect(labels()).not.toContain("删除标签");
+    wrapper.unmount();
+  });
+
+  it("reuses visibility, tag management and size actions below rename in the tag menu", async () => {
+    const wrapper = mountQuickButtons({
+      tags: [{ id: "tag-work", title: "工作" }],
+      buttons: [{ id: "b1", title: "Btn", value: "v", type: "link", tagId: "tag-work", hidden: false }],
+      compact: true,
+    });
+    const openMenu = () => wrapper.get(".quick-tag-heading").trigger("contextmenu");
+    await openMenu();
+    expect(wrapper.findAll(".dropdown-option").map(option => option.text())).toEqual([
+      "新增", "粘贴", "重命名", "查看隐藏", "标签管理", "切换为大按钮", "删除标签",
+    ]);
+    expect(wrapper.find('[data-key="toggle-tag-collapsed"]').exists()).toBe(false);
+    await wrapper.get('[data-key="toggle-show-hidden"]').trigger("click");
+    expect(wrapper.emitted("toggleShowHidden")).toHaveLength(1);
+    await wrapper.setProps({ showHidden: true });
+    await openMenu();
+    expect(wrapper.get('[data-key="toggle-show-hidden"]').text()).toBe("收起隐藏");
+    await wrapper.get('[data-key="toggle-compact"]').trigger("click");
+    expect(wrapper.emitted("toggleCompact")).toHaveLength(1);
+    await openMenu();
+    await wrapper.get('[data-key="manage-tags"]').trigger("click");
+    expect(wrapper.find(".quick-tag-manager").exists()).toBe(true);
     wrapper.unmount();
   });
 
@@ -1897,8 +1922,8 @@ describe("QuickButtons 跨空间移动", () => {
     await wrapper.get(".quick-tag-title").trigger("contextmenu");
     expect(wrapper.findAll('[data-key^="move-ws:"]')).toHaveLength(0);
     expect(wrapper.find('[data-key="move-tag"]').exists()).toBe(false);
-    expect(wrapper.findAll(".dropdown-option").map((option) => option.text())).toEqual(["新增", "粘贴", "重命名", "收起标签", "删除标签"]);
-    expect(wrapper.find('[data-key="manage-tags"]').exists()).toBe(false);
+    expect(wrapper.findAll(".dropdown-option").map((option) => option.text())).toEqual(["新增", "粘贴", "重命名", "查看隐藏", "标签管理", "切换为紧凑按钮", "删除标签"]);
+    expect(wrapper.find('[data-key="manage-tags"]').exists()).toBe(true);
     expect(wrapper.get('[data-key="delete-tag"]').text()).toBe("删除标签");
     wrapper.unmount();
   });
