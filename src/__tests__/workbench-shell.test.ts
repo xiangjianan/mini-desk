@@ -199,8 +199,8 @@ describe("WorkbenchShell", () => {
     expect(wrapper.find('button[aria-label="搜索或执行命令"]').exists()).toBe(false);
     expect(wrapper.find('button[aria-label="设置"]').exists()).toBe(false);
     expect(wrapper.find(".workbench-rail").exists()).toBe(false);
-    // The centered hide control is separate from right-side settings.
-    expect(wrapper.findAll(".workbench-command-actions button")).toHaveLength(0);
+    // The collapse control stays in the right-side actions even without slotted settings.
+    expect(wrapper.findAll(".workbench-command-actions button")).toHaveLength(1);
     expect(wrapper.find('[data-testid="zone-visibility-trigger"]').exists()).toBe(false);
     expect(wrapper.get('[data-testid="workbench-header-hide"]').attributes("aria-label")).toBe("收起顶部栏");
     expect(wrapper.find('[data-testid="workbench-theme"]').exists()).toBe(false);

@@ -704,19 +704,6 @@ onUnmounted(() => {
             </slot>
             <p v-if="slogan" class="workbench-slogan">{{ slogan }}</p>
           </div>
-            <button
-              type="button"
-              class="icon-button workbench-header-hide-button"
-              data-testid="workbench-header-hide"
-              :aria-label="uiText.common.hideHeader"
-              :title="uiText.common.hideHeader"
-              aria-expanded="true"
-              @click="setHeaderHidden(true)"
-            >
-              <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
-                <path d="M5 14 L10.6 10.75 Q12 9.85 13.4 10.75 L19 14" stroke-width="1.4" vector-effect="non-scaling-stroke" />
-              </svg>
-            </button>
           <div class="workbench-command-actions">
             <!-- 手机速记手动同步：配对才显示，样式与相邻顶栏 icon-button 一致。 -->
             <button
@@ -732,6 +719,19 @@ onUnmounted(() => {
               @click="emit('syncInbox')"
             >
               <NIcon :component="SyncOutline" :size="16" />
+            </button>
+            <button
+              type="button"
+              class="icon-button workbench-header-hide-button"
+              data-testid="workbench-header-hide"
+              :aria-label="uiText.common.hideHeader"
+              :title="uiText.common.hideHeader"
+              aria-expanded="true"
+              @click="setHeaderHidden(true)"
+            >
+              <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+                <path d="M5 14 L10.6 10.75 Q12 9.85 13.4 10.75 L19 14" stroke-width="1.4" vector-effect="non-scaling-stroke" />
+              </svg>
             </button>
             <slot name="actions" />
           </div>

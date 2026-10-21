@@ -683,18 +683,16 @@ html[data-theme="dark"] .workbench-shell .space-text-panel {
   box-shadow: none;
 }
 .workbench-shell .workbench-header-hide-button {
-  position: absolute;
-  left: 50%;
-  top: auto;
-  bottom: 0;
-  transform: translateX(-50%);
+  position: static;
+  width: 32px;
+  min-width: 32px;
+  height: 32px;
+  min-height: 32px;
+  transform: none;
+  display: inline-flex;
   align-items: center;
-  padding-bottom: 0;
-  opacity: 0;
-  pointer-events: none;
-}
-.workbench-shell .workbench-command-bar:hover .workbench-header-hide-button,
-.workbench-shell .workbench-command-bar:focus-within .workbench-header-hide-button {
+  justify-content: center;
+  padding: 0;
   opacity: 1;
   pointer-events: auto;
 }
