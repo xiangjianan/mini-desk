@@ -1100,6 +1100,12 @@ function openSectionMenu(event: MouseEvent, period: TodoPeriod): void {
 // today-focus area own their context menus; clicks that reach this handler
 // from inside them are the native-menu cases their own guards allow through.
 function openPanelMenu(event: MouseEvent, fromToolbar = false): void {
+  if (fromToolbar && menu.value?.anchor === event.currentTarget) {
+    event.preventDefault();
+    event.stopPropagation();
+    closeMenu();
+    return;
+  }
   const target = event.target as HTMLElement;
   if (!fromToolbar && target.closest(".todo-section, .today-focus-section, button, input, textarea, [contenteditable]")) return;
   const period = effectiveTodoLists.value[0]?.id;
@@ -1114,6 +1120,12 @@ function openPanelMenu(event: MouseEvent, fromToolbar = false): void {
 }
 
 function openSectionActions(event: MouseEvent, period: TodoListId): void {
+  if (event.type === "click" && menu.value?.anchor === event.currentTarget) {
+    event.preventDefault();
+    event.stopPropagation();
+    closeMenu();
+    return;
+  }
   event.preventDefault();
   event.stopPropagation();
   selectedMenuTodoKey.value = null;
@@ -1133,6 +1145,11 @@ function openHeadingActions(event: MouseEvent, period: TodoListId): void {
   openSectionActions(event, period);
 }
 
+
+function handleMenuClickOutside(event?: Event): void {
+  if (event?.target instanceof Node && menu.value?.anchor?.contains(event.target)) return;
+  exclusiveMenu.handleClickOutside(event);
+}
 
 function closeMenu(): void {
   menu.value = null;
@@ -2470,7 +2487,7 @@ onUnmounted(() => focusRegionAnimation?.cancel());
       :options="organizeContextMenu(menuOptions)"
       :render-label="renderPolishMenuLabel"
       @select="handleMenuSelect"
-      @clickoutside="exclusiveMenu.handleClickOutside"
+      @clickoutside="handleMenuClickOutside"
     >
       <span
         class="dropdown-anchor"

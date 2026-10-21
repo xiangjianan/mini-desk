@@ -531,6 +531,21 @@ describe("QuickButtons", () => {
     wrapper.unmount();
   });
 
+  it.each([".quick-menu-button", ".quick-tag-menu-button"])("toggles the menu with repeated clicks on %s", async selector => {
+    const wrapper = mountQuickButtons({
+      tags: [{ id: "tag-work", title: "工作" }],
+      buttons: [{ id: "b1", title: "Btn", value: "v", type: "link", tagId: "tag-work", hidden: false }],
+    });
+    const trigger = wrapper.get(selector);
+    await trigger.trigger("click");
+    expect(wrapper.find(".dropdown-option").exists()).toBe(true);
+    await trigger.trigger("click");
+    expect(wrapper.find(".dropdown-option").exists()).toBe(false);
+    await trigger.trigger("click");
+    expect(wrapper.find(".dropdown-option").exists()).toBe(true);
+    wrapper.unmount();
+  });
+
   it("emits deleteTagWithButtons from the tag heading menu", async () => {
     const wrapper = mountQuickButtons({
       tags: [{ id: "tag-work", title: "工作" }],

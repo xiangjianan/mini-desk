@@ -146,6 +146,21 @@ describe("TodoPanel", () => {
     wrapper.unmount();
   });
 
+  it.each(['[data-testid="todo-area-menu"]', '.todo-section-menu-button'])("toggles the menu with repeated clicks on %s", async selector => {
+    const wrapper = mount(TodoPanel, {
+      props: { todoLists: defaultTodoLists, todos: { morning: [], noon: [], evening: [] }, titles: DEFAULT_TITLES },
+      global: { stubs: { Dropdown: dropdownStub, NDropdown: dropdownStub } },
+    });
+    const trigger = wrapper.findAll(selector)[0]!;
+    await trigger.trigger("click");
+    expect(wrapper.find(".dropdown-option").exists()).toBe(true);
+    await trigger.trigger("click");
+    expect(wrapper.find(".dropdown-option").exists()).toBe(false);
+    await trigger.trigger("click");
+    expect(wrapper.find(".dropdown-option").exists()).toBe(true);
+    wrapper.unmount();
+  });
+
   it("measures native and overlay scrollbar gutters independently", async () => {
     const wrapper = mount(TodoPanel, { props: { todoLists: defaultTodoLists, todos: { morning: [], noon: [], evening: [] }, titles: DEFAULT_TITLES } });
     try {

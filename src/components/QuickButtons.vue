@@ -546,6 +546,12 @@ function openTagMenu(event: MouseEvent, tagId: string, fromToolbar = false): voi
   const target = event.target as HTMLElement;
   if (!fromToolbar && target.closest("button, input, textarea")) return;
   if (!isRealTagGroup(tagId)) return;
+  if (fromToolbar && menu.value?.anchor === event.currentTarget) {
+    event.preventDefault();
+    event.stopPropagation();
+    closeMenu();
+    return;
+  }
   event.preventDefault();
   event.stopPropagation();
   exclusiveMenu.notifyOpen(event, { replacingExistingMenu: Boolean(menu.value) });
@@ -553,12 +559,23 @@ function openTagMenu(event: MouseEvent, tagId: string, fromToolbar = false): voi
 }
 
 function openHeaderMenu(event: MouseEvent): void {
+  if (menu.value?.anchor === event.currentTarget) {
+    event.preventDefault();
+    event.stopPropagation();
+    closeMenu();
+    return;
+  }
   event.preventDefault();
   event.stopPropagation();
   exclusiveMenu.notifyOpen(event, { replacingExistingMenu: Boolean(menu.value) });
   menu.value = { x: event.clientX, y: event.clientY, anchor: event.currentTarget as HTMLElement };
 }
 
+
+function handleMenuClickOutside(event?: Event): void {
+  if (event?.target instanceof Node && menu.value?.anchor?.contains(event.target)) return;
+  exclusiveMenu.handleClickOutside(event);
+}
 
 function closeMenu(): void {
   menu.value = null;
@@ -1119,7 +1136,7 @@ function handleQuickGroupDrop(event: DragEvent, groupId: string): void {
       :options="organizeContextMenu(menuOptions)"
       :render-label="renderPolishMenuLabel"
       @select="handleMenuSelect"
-      @clickoutside="exclusiveMenu.handleClickOutside"
+      @clickoutside="handleMenuClickOutside"
     >
       <span
         class="dropdown-anchor"
