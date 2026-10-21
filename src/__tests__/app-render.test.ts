@@ -1248,6 +1248,42 @@ describe("App shell", () => {
     }
   });
 
+  it("rehydrates fallback workspace images when deleting the active workspace", async () => {
+    const restoreImageDb = installMemoryImageDb();
+    localStorage.setItem(STORAGE_KEY, JSON.stringify({
+      ...defaultState(),
+      workspaces: [
+        { ...defaultWorkspace(), id: "ws-1", title: "空间 1", images: [{ id: "img-1", src: "data:image/png;base64,FIRST" }] },
+        { ...defaultWorkspace(), id: "ws-2", title: "空间 2", images: [] },
+      ],
+      activeWorkspaceId: "ws-1",
+    }));
+    const wrapper = mountApp();
+    try {
+      await flushPromises();
+      wrapper.getComponent(WorkspaceSwitcher).vm.$emit("switch", "ws-2");
+      await flushPromises();
+      const app = wrapper.vm as unknown as {
+        state: { activeWorkspaceId: string; workspaces: Array<{ id: string; images: Array<{ src?: string }> }> };
+      };
+      expect(app.state.workspaces[0]?.images[0]?.src).toBeUndefined();
+      vi.useFakeTimers();
+      wrapper.getComponent(WorkspaceSwitcher).vm.$emit("delete", "ws-2", wrapper.element);
+      await flushPromises();
+      await vi.advanceTimersByTimeAsync(200);
+      await nextTick();
+      await wrapper.get('[data-testid="companion-yes"]').trigger("click");
+      await flushPromises();
+      expect(app.state.activeWorkspaceId).toBe("ws-1");
+      expect(app.state.workspaces).toHaveLength(1);
+      expect(wrapper.getComponent(ImagePanel).props("images")[0].src).toBe("data:image/png;base64,FIRST");
+    } finally {
+      wrapper.unmount();
+      restoreImageDb();
+      vi.useRealTimers();
+    }
+  });
+
   it("persists reminder list title updates", async () => {
     localStorage.setItem(STORAGE_KEY, JSON.stringify({
       ...defaultState(),

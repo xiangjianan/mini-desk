@@ -675,7 +675,8 @@ describe("Naive UI component usage", () => {
     const todayFocusTemplate = todo.match(/class="today-focus-item"[\s\S]*?<\/li>/)?.[0] ?? "";
 
     expect(todo).toContain('"today-focus-title"');
-    expect(todo).toContain(":value=\"titles[todayFocusTitleId]\"");
+    expect(todo).toContain('class="today-focus-title"');
+    expect(todo).toContain("getIconHeadingText(titles[todayFocusTitleId], 'focus')");
     expect(todo).not.toContain("@drop.stop=\"dragged && emit('move', dragged, item.period, item.todo.id)\"");
     expect(todayFocusTemplate).not.toContain('class="todo-drag-handle"');
     expect(todayFocusTemplate).not.toContain("dragstart");

@@ -1190,7 +1190,7 @@ function deleteWorkspace(id: string, anchor?: HTMLElement): void {
   requestConfirmation(
     "confirmDeleteWorkspace",
     anchor,
-    () => {
+    async () => {
       // 整区删除连坐配对：被删工作区的配对码随区消失，云端队列同步注销（失败仅气泡警告）。
       const doomedWorkspace = state.workspaces.find((workspace) => workspace.id === id);
       const doomedInboxCode = doomedWorkspace?.inbox?.code;
@@ -1200,8 +1200,13 @@ function deleteWorkspace(id: string, anchor?: HTMLElement): void {
       ]);
       const result = removeWorkspace(state.workspaces, state.activeWorkspaceId, id);
       if (result.workspaces === state.workspaces) return;
+      if (result.activeWorkspaceId !== state.activeWorkspaceId) {
+        const nextWorkspace = result.workspaces.find((workspace) => workspace.id === result.activeWorkspaceId);
+        if (nextWorkspace) nextWorkspace.images = await hydrateStoredImages(nextWorkspace.images);
+      }
       state.workspaces = result.workspaces;
       state.activeWorkspaceId = result.activeWorkspaceId;
+      releaseInactiveWorkspaceImages(result.activeWorkspaceId);
       pendingEditSpaceId.value = null;
       pendingEditTodoListId.value = null;
       clearImagePreview();
