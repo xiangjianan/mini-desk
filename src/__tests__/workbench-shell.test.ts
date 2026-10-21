@@ -227,6 +227,17 @@ describe("WorkbenchShell", () => {
     } finally { wrapper.unmount(); vi.useRealTimers(); }
   });
 
+  it("keeps the reveal control at the collapse control position", async () => {
+    const wrapper = mount(WorkbenchShell, { props: defaultProps });
+    vi.spyOn(wrapper.get(".workbench-main").element, "getBoundingClientRect").mockReturnValue({ right: 1200, top: 0 } as DOMRect);
+    vi.spyOn(wrapper.get('[data-testid="workbench-header-hide"]').element, "getBoundingClientRect").mockReturnValue({ right: 1070, top: 10, width: 32 } as DOMRect);
+    await wrapper.get('[data-testid="workbench-header-hide"]').trigger("click");
+    const zone = wrapper.get('[data-testid="workbench-header-reveal-zone"]').element as HTMLElement;
+    expect(zone.style.right).toBe("130px");
+    expect(zone.style.top).toBe("10px");
+    wrapper.unmount();
+  });
+
   it("labels header controls in English", async () => {
     const wrapper = mount(WorkbenchShell, { props: { ...defaultProps, language: "en" } });
     expect(wrapper.get('[data-testid="workbench-header-hide"]').attributes("title")).toBe("Collapse top bar");

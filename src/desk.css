@@ -699,11 +699,21 @@ html[data-theme="dark"] .workbench-shell .space-text-panel {
 .workbench-shell .workbench-title-group { max-width: calc(50% - 48px); }
 .workbench-shell .workbench-command-actions { margin-inline-start: auto; }
 /* Only the button footprint should trigger reveal, not the surrounding header. */
-.workbench-shell .workbench-header-reveal-zone { top: 0; width: 48px; height: 28px; pointer-events: auto; }
+.workbench-shell .workbench-header-reveal-zone {
+  left: auto;
+  transform: none;
+  width: 32px;
+  height: 32px;
+  pointer-events: auto;
+}
 .workbench-shell .workbench-header-reveal {
   top: 0;
-  left: 50%;
-  margin-left: -24px;
+  left: 0;
+  margin-left: 0;
+  width: 32px;
+  min-width: 32px;
+  height: 32px;
+  min-height: 32px;
   display: flex;
   align-items: center;
   justify-content: center;

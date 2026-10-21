@@ -109,6 +109,8 @@ let observedGridWidth = 0;
 // header 的 200ms 离场过渡会把导航栏画在屏幕上（刷新闪现）。
 // readStoredHeaderHidden 是函数声明，提升后可在此直接调用。
 const headerHidden = ref(readStoredHeaderHidden());
+const headerHideButton = ref<HTMLButtonElement | null>(null);
+const headerRevealPosition = ref({ right: "126px", top: "10px" });
 const columnWidths = ref<number[]>([]);
 let visibilityAnimationFrame: number | undefined;
 
@@ -591,6 +593,16 @@ function expandZoneToDefault(canonicalIndex: number): void {
 }
 
 function setHeaderHidden(hidden: boolean): void {
+  if (hidden && headerHideButton.value) {
+    const button = headerHideButton.value.getBoundingClientRect();
+    const main = headerHideButton.value.closest(".workbench-main")?.getBoundingClientRect();
+    if (main && button.width > 0) {
+      headerRevealPosition.value = {
+        right: `${main.right - button.right}px`,
+        top: `${button.top - main.top}px`,
+      };
+    }
+  }
   headerHidden.value = hidden;
   persistHeaderHidden(hidden);
   syncImagePreviewTop();
@@ -722,6 +734,7 @@ onUnmounted(() => {
             </button>
             <button
               type="button"
+              ref="headerHideButton"
               class="icon-button workbench-header-hide-button"
               data-testid="workbench-header-hide"
               :aria-label="uiText.common.hideHeader"
@@ -741,6 +754,7 @@ onUnmounted(() => {
       <div
         v-if="headerHidden"
         class="workbench-header-reveal-zone"
+        :style="headerRevealPosition"
         data-testid="workbench-header-reveal-zone"
       >
         <Transition name="workbench-header-reveal" :duration="220">
