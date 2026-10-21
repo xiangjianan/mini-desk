@@ -173,7 +173,6 @@ const notifyPresets = computed(() => {
 const relativeNotifyPresets = computed(() => notifyPresets.value.filter((preset) => preset.group === "relative"));
 const timeNotifyPresets = computed(() => notifyPresets.value.filter((preset) => preset.group === "time"));
 const listCreateDialogRef = ref<InstanceType<typeof TodoListCreateDialog> | null>(null);
-const todayFocusTitleRef = ref<{ openMenuAt: (x: number, y: number, event?: Event) => void } | null>(null);
 const pendingDoneReorderIds = ref<string[]>([]);
 const COMPLETION_DELAY_MS = 2000;
 let reorderTimer: number | undefined;
@@ -1134,13 +1133,6 @@ function openHeadingActions(event: MouseEvent, period: TodoListId): void {
   openSectionActions(event, period);
 }
 
-function openTodayFocusTitleMenu(event: MouseEvent): void {
-  const target = event.target as HTMLElement;
-  if (target.closest("button, input, textarea, .title-edit-input")) return;
-  event.preventDefault();
-  event.stopPropagation();
-  todayFocusTitleRef.value?.openMenuAt(event.clientX, event.clientY, event);
-}
 
 function closeMenu(): void {
   menu.value = null;
@@ -2018,16 +2010,9 @@ onUnmounted(() => focusRegionAnimation?.cancel());
       <Transition name="todo-focus-reveal" :duration="180"
         @before-leave="positionLeavingFocusElement" @leave-cancelled="clearLeavingFocusPosition">
       <section v-if="todayFocus.length" class="today-focus-section" :aria-label="uiText.todo.todayFocus">
-        <div class="today-focus-heading" @contextmenu="openTodayFocusTitleMenu">
+        <div class="today-focus-heading" @contextmenu.stop.prevent>
           <NIcon class="today-focus-title-icon" :component="AlertCircleOutline" />
-          <EditableTitle
-            ref="todayFocusTitleRef"
-            :id="todayFocusTitleId"
-            :value="titles[todayFocusTitleId]"
-            :display-value="getIconHeadingText(titles[todayFocusTitleId], 'focus')"
-            :edit-label="uiText.common.rename"
-            @update="(id, value) => emit('titleUpdate', id, value)"
-          />
+          <span class="today-focus-title">{{ getIconHeadingText(titles[todayFocusTitleId], 'focus') }}</span>
         </div>
         <div class="today-focus-scrollbar">
         <TransitionGroup

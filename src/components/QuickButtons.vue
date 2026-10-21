@@ -1042,12 +1042,12 @@ function handleQuickGroupDrop(event: DragEvent, groupId: string): void {
               <NIcon :component="AddOutline" />
             </button>
             <button
-              v-if="isRealTagGroup(group.id) && editingTagId !== group.id"
+              v-if="group.title && editingTagId !== group.id"
               type="button"
               class="quick-tag-menu-button icon-button"
               :aria-label="uiText.quick.menu"
               :title="uiText.quick.menu"
-              @click.stop="openTagMenu($event, group.id, true)"
+              @click.stop="isRealTagGroup(group.id) ? openTagMenu($event, group.id, true) : openHeaderMenu($event)"
               @dblclick.stop
             >
               <NIcon :component="Ellipsis" />

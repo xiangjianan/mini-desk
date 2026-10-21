@@ -1934,7 +1934,13 @@ describe("QuickButtons 跨空间移动", () => {
       tags: [],
       moveTargets: [{ id: "ws-b", title: "B 空间", lists: [] }],
     });
+    await wrapper.get(".quick-tag-menu-button").trigger("click");
+    const labels = () => wrapper.findAll(".dropdown-option").map(option => option.text());
+    const expected = labels();
+    expect(expected).toContain("标签管理");
+    expect(expected).not.toContain("删除标签");
     await wrapper.get(".quick-tag-title").trigger("contextmenu");
+    expect(labels()).toEqual(expected);
     expect(wrapper.findAll('[data-key^="move-ws:"]')).toHaveLength(0);
     expect(wrapper.find('[data-key="move-tag"]').exists()).toBe(false);
     expect(wrapper.find('[data-key="add"]').exists()).toBe(true);

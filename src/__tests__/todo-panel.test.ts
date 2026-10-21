@@ -2719,7 +2719,7 @@ describe("TodoPanel", () => {
     wrapper.unmount();
   });
 
-  it("edits the today focus title through the shared title model", async () => {
+  it("keeps the today focus title read-only on double click and right click", async () => {
     const wrapper = mount(TodoPanel, {
       props: {
         todos: {
@@ -2739,11 +2739,11 @@ describe("TodoPanel", () => {
       },
     });
 
-    await wrapper.get(".today-focus-heading .editable-title").trigger("dblclick");
-    await wrapper.get(".today-focus-heading .title-edit-input").setValue("‼️ 本日重点");
-    await wrapper.get(".today-focus-heading .title-edit-input").trigger("blur");
-
-    expect(wrapper.emitted("titleUpdate")?.[0]).toEqual(["today-focus-title", "‼️ 本日重点"]);
+    await wrapper.get(".today-focus-title").trigger("dblclick");
+    expect(wrapper.find(".today-focus-heading .title-edit-input").exists()).toBe(false);
+    await wrapper.get(".today-focus-title").trigger("contextmenu");
+    expect(wrapper.find(".dropdown-option").exists()).toBe(false);
+    expect(wrapper.emitted("titleUpdate")).toBeUndefined();
     wrapper.unmount();
   });
 
