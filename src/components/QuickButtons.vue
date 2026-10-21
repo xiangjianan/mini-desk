@@ -574,7 +574,7 @@ function openHeaderMenu(event: MouseEvent): void {
 
 function handleMenuClickOutside(event?: Event): void {
   // Only toolbar buttons need protection so their click handler can toggle the menu.
-  // A context-menu anchor can cover the entire heading, group or panel.
+  // A right-click menu anchor can cover the entire heading, group or panel.
   if (event?.target instanceof Node && menu.value?.anchor?.matches("button") && menu.value.anchor.contains(event.target)) return;
   exclusiveMenu.handleClickOutside(event);
 }
