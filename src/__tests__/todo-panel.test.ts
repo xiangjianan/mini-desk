@@ -4757,6 +4757,18 @@ describe("TodoPanel", () => {
     expect(wrapper.emitted("createFromText")).toBeUndefined();
   });
 
+  it("closes a list context menu on the first outside click within its heading", async () => {
+    const wrapper = mount(TodoPanel, {
+      props: { todos: { morning: [], noon: [], evening: [] }, titles: DEFAULT_TITLES },
+      global: { stubs: { Dropdown: dropdownStub, NDropdown: dropdownStub, NTooltip: tooltipStub } },
+    });
+    await wrapper.get(".todo-heading").trigger("contextmenu");
+    expect(wrapper.findAll(".dropdown-option").length).toBeGreaterThan(0);
+    await wrapper.get(".todo-heading h3").trigger("pointerdown");
+    expect(wrapper.findAll(".dropdown-option")).toHaveLength(0);
+    wrapper.unmount();
+  });
+
   it("opens the create-list menu when right-clicking the blank area below collapsed lists", async () => {
     document.body.innerHTML = "";
     const wrapper = mount(TodoPanel, {

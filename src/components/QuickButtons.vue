@@ -573,7 +573,9 @@ function openHeaderMenu(event: MouseEvent): void {
 
 
 function handleMenuClickOutside(event?: Event): void {
-  if (event?.target instanceof Node && menu.value?.anchor?.contains(event.target)) return;
+  // Only toolbar buttons need protection so their click handler can toggle the menu.
+  // A context-menu anchor can cover the entire heading, group or panel.
+  if (event?.target instanceof Node && menu.value?.anchor?.matches("button") && menu.value.anchor.contains(event.target)) return;
   exclusiveMenu.handleClickOutside(event);
 }
 
@@ -930,6 +932,7 @@ function handleQuickGroupDrop(event: DragEvent, groupId: string): void {
     class="split-block quick-block"
     :class="{ 'is-compact': compact }"
     @click="handleAreaClick"
+    @pointerdown.capture="menu && handleMenuClickOutside($event)"
     @contextmenu="openAreaMenu"
     @dragover="handleQuickDragOver"
     @dragleave="handleQuickDragLeave"

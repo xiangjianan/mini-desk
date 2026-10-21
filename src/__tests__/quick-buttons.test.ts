@@ -474,6 +474,15 @@ describe("QuickButtons", () => {
     wrapper.unmount();
   });
 
+  it("closes a tag context menu on the first outside click within its heading", async () => {
+    const wrapper = mountQuickButtons({ tags: [{ id: "work", title: "工作" }], buttons: [{ id: "b1", title: "Btn", value: "v", type: "link", tagId: "work", hidden: false }] });
+    await wrapper.get(".quick-tag-heading").trigger("contextmenu");
+    expect(wrapper.findAll(".dropdown-option").length).toBeGreaterThan(0);
+    await wrapper.get(".quick-tag-title").trigger("pointerdown");
+    expect(wrapper.findAll(".dropdown-option")).toHaveLength(0);
+    wrapper.unmount();
+  });
+
   it("extends the area menu with tag movement and deletion", async () => {
     const wrapper = mountQuickButtons({
       tags: [{ id: "tag-work", title: "工作" }],

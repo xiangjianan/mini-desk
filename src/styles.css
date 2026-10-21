@@ -1217,6 +1217,11 @@ button.image-card {
   cursor: default;
 }
 
+.quick-tag-heading[draggable="true"]:active,
+.quick-tag-heading[draggable="true"].is-dragging {
+  cursor: grabbing;
+}
+
 .quick-tag-heading.is-dragging {
   opacity: 0.52;
 }

@@ -1147,7 +1147,9 @@ function openHeadingActions(event: MouseEvent, period: TodoListId): void {
 
 
 function handleMenuClickOutside(event?: Event): void {
-  if (event?.target instanceof Node && menu.value?.anchor?.contains(event.target)) return;
+  // Only toolbar buttons need protection so their click handler can toggle the menu.
+  // A context-menu anchor can cover the entire heading, group or panel.
+  if (event?.target instanceof Node && menu.value?.anchor?.matches("button") && menu.value.anchor.contains(event.target)) return;
   exclusiveMenu.handleClickOutside(event);
 }
 
@@ -2012,7 +2014,7 @@ onUnmounted(() => focusRegionAnimation?.cancel());
 </script>
 
 <template>
-  <section ref="panelRef" class="panel todo-panel" aria-labelledby="todo-title" @contextmenu="openPanelMenu" @dragleave="handleTodoDragLeave" @drop="handleTodoDragLeave" @dragend="handleTodoDragEnd">
+  <section ref="panelRef" class="panel todo-panel" aria-labelledby="todo-title" @pointerdown.capture="menu && handleMenuClickOutside($event)" @contextmenu="openPanelMenu" @dragleave="handleTodoDragLeave" @drop="handleTodoDragLeave" @dragend="handleTodoDragEnd">
     <div class="panel-header desk-zone-heading">
       <h2 id="todo-title"><NIcon :component="CheckboxOutline" /><span>{{ uiText.desk.reminders }}</span></h2>
       <div class="header-actions">
