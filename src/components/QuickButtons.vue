@@ -529,21 +529,22 @@ function openAreaMenu(event: MouseEvent): void {
   const target = event.target as HTMLElement;
   const button = target.closest("button");
   if (target.closest("input, textarea, .quick-button") || button) return;
+  const group = target.closest<HTMLElement>(".quick-tag-group");
+  const tagId = group?.dataset.tagId;
+  if (tagId && isRealTagGroup(tagId)) {
+    openTagMenu(event, tagId);
+    return;
+  }
   event.preventDefault();
   event.stopPropagation();
   exclusiveMenu.notifyOpen(event, { replacingExistingMenu: Boolean(menu.value) });
-  const group = target.closest<HTMLElement>(".quick-tag-group");
-  const tagId = group?.dataset.tagId;
-  const tagTitle = tagId && isRealTagGroup(tagId)
-    ? props.tags.find((tag) => tag.id === tagId)?.title
-    : undefined;
-  menu.value = { x: event.clientX, y: event.clientY, anchor: event.currentTarget as HTMLElement, tagTitle };
+  menu.value = { x: event.clientX, y: event.clientY, anchor: event.currentTarget as HTMLElement };
 }
 
 /** 标签菜单仅管理当前标签及其内容。 */
-function openTagMenu(event: MouseEvent, tagId: string): void {
+function openTagMenu(event: MouseEvent, tagId: string, fromToolbar = false): void {
   const target = event.target as HTMLElement;
-  if (target.closest("button, input, textarea")) return;
+  if (!fromToolbar && target.closest("button, input, textarea")) return;
   if (!isRealTagGroup(tagId)) return;
   event.preventDefault();
   event.stopPropagation();
@@ -949,6 +950,7 @@ function handleQuickGroupDrop(event: DragEvent, groupId: string): void {
           type="button"
           class="quick-menu-button icon-button"
           :aria-label="uiText.quick.menu"
+          :title="uiText.quick.menu"
           @click="openHeaderMenu"
         >
           <NIcon :component="Ellipsis" />
@@ -1042,6 +1044,17 @@ function handleQuickGroupDrop(event: DragEvent, groupId: string): void {
               @dblclick.stop
             >
               <NIcon :component="AddOutline" />
+            </button>
+            <button
+              v-if="isRealTagGroup(group.id) && editingTagId !== group.id"
+              type="button"
+              class="quick-tag-menu-button icon-button"
+              :aria-label="uiText.quick.menu"
+              :title="uiText.quick.menu"
+              @click.stop="openTagMenu($event, group.id, true)"
+              @dblclick.stop
+            >
+              <NIcon :component="Ellipsis" />
             </button>
           </div>
           <div

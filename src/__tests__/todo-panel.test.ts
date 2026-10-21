@@ -136,6 +136,16 @@ describe("TodoPanel", () => {
     wrapper.unmount();
   });
 
+  it("opens list creation directly from the area add button", async () => {
+    const wrapper = mount(TodoPanel, {
+      props: { todoLists: defaultTodoLists, todos: { morning: [], noon: [], evening: [] }, titles: DEFAULT_TITLES },
+    });
+    await wrapper.get('[data-testid="todo-area-add"]').trigger("click");
+    await flushPromises();
+    expect(getLatestListCreateDialogElement()?.getAttribute("aria-label")).toBe("新建列表");
+    wrapper.unmount();
+  });
+
   it("measures native and overlay scrollbar gutters independently", async () => {
     const wrapper = mount(TodoPanel, { props: { todoLists: defaultTodoLists, todos: { morning: [], noon: [], evening: [] }, titles: DEFAULT_TITLES } });
     try {

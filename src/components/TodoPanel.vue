@@ -2007,6 +2007,8 @@ onUnmounted(() => focusRegionAnimation?.cancel());
     <div class="panel-header desk-zone-heading">
       <h2 id="todo-title"><NIcon :component="CheckboxOutline" /><span>{{ uiText.desk.reminders }}</span></h2>
       <div class="header-actions">
+        <button type="button" class="icon-button" data-testid="todo-area-add" :aria-label="uiText.todo.newList" :title="uiText.todo.newList"
+          @click.stop="openCreateListDialog($event.currentTarget as HTMLElement)"><NIcon :component="AddOutline" /></button>
         <button type="button" class="icon-button" data-testid="todo-area-menu" :aria-label="uiText.todo.menu" :title="uiText.todo.menu"
           @click.stop="openPanelMenu($event, true)"><NIcon :component="Ellipsis" /></button>
       </div>
@@ -2211,6 +2213,7 @@ onUnmounted(() => focusRegionAnimation?.cancel());
               type="button"
               class="todo-section-menu-button icon-button"
               :aria-label="uiText.todo.menu"
+              :title="uiText.todo.menu"
               @click="openSectionActions($event, list.id)"
             >
               <NIcon :component="Ellipsis" />

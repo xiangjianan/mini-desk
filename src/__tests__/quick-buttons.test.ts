@@ -489,6 +489,23 @@ describe("QuickButtons", () => {
     wrapper.unmount();
   });
 
+  it("uses the same tag menu from the heading, blank content and more button", async () => {
+    const wrapper = mountQuickButtons({
+      tags: [{ id: "tag-work", title: "工作" }],
+      buttons: [{ id: "b1", title: "Btn", value: "v", type: "link", tagId: "tag-work", hidden: false }],
+    });
+    await wrapper.get(".quick-tag-heading").trigger("contextmenu");
+    const labels = () => wrapper.findAll(".dropdown-option").map(option => option.text());
+    const expected = labels();
+    await wrapper.get(".quick-tag-group .quick-buttons").trigger("contextmenu");
+    expect(labels()).toEqual(expected);
+    await wrapper.get(".quick-tag-menu-button").trigger("click");
+    expect(labels()).toEqual(expected);
+    await wrapper.get(".quick-block").trigger("contextmenu");
+    expect(labels()).not.toContain("删除标签");
+    wrapper.unmount();
+  });
+
   it("emits deleteTagWithButtons from the tag heading menu", async () => {
     const wrapper = mountQuickButtons({
       tags: [{ id: "tag-work", title: "工作" }],

@@ -1015,7 +1015,7 @@ html[data-theme="dark"] .workbench-shell {
 }
 
 /* Shared compact rhythm for tag and reminder heading actions. */
-.workbench-shell .quick-tag-heading > :is(.desk-ai-button, .quick-tag-add-button),
+.workbench-shell .quick-tag-heading > :is(.desk-ai-button, .quick-tag-add-button, .quick-tag-menu-button),
 .workbench-shell .todo-heading-actions > .icon-button {
   flex: 0 0 30px;
   width: 30px;
