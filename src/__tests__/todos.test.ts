@@ -1,6 +1,6 @@
 import { describe, expect, it } from "vitest";
 import type { TodoItem, TodoMap } from "../types";
-import { collectTodoFocusPayloadIds, formatFocusDuration, getTodoReorderTarget, updateTodoFocus } from "../state/todos";
+import { collectTodoFocusPayloadIds, formatFocusDuration, getTodoReorderTarget, getTodoDropMoveTarget, moveTodo, updateTodoFocus } from "../state/todos";
 import { extractRetainedImageIds } from "../composables/useUndoHistory";
 import { defaultState } from "../state/defaults";
 import { getSerializableState, normalizeImportedState } from "../state/storage";
@@ -189,5 +189,25 @@ describe("formatFocusDuration", () => {
     expect(formatFocusDuration(3_723_000)).toBe("1:02");
     expect(formatFocusDuration(3_600_000)).toBe("1:00");
     expect(formatFocusDuration(43_200_000)).toBe("12:00");
+  });
+});
+
+describe("drag insertion boundaries", () => {
+  const todos: TodoMap = { morning: ["1", "2", "3", "4", "5"].map(id => ({ id, text: id, done: false })), noon: [] };
+  it.each([
+    ["1", "5", "23415"], // Below fourth, above fifth.
+    ["1", "4", "23145"], // Above fourth.
+    ["1", "2", "12345"], // Adjacent boundary is a no-op.
+    ["1", undefined, "23451"], // Below the last item.
+    ["5", "2", "15234"], // Moving upward.
+    ["3", "3", "12345"], // Dropping onto itself.
+  ])("moves %s before %s without skipping an item", (id, beforeId, expected) => {
+    const target = getTodoDropMoveTarget(todos, "morning", id, "morning", beforeId);
+    expect(moveTodo(todos, "morning", id, "morning", target).morning.map(todo => todo.id).join("")).toBe(expected);
+  });
+  it("keeps the insertion anchor when moving between lists", () => {
+    const lists = { ...todos, noon: [{ id: "x", text: "x", done: false }] };
+    const target = getTodoDropMoveTarget(lists, "morning", "1", "noon", "x");
+    expect(moveTodo(lists, "morning", "1", "noon", target).noon.map(todo => todo.id)).toEqual(["1", "x"]);
   });
 });

@@ -55,7 +55,7 @@ import type {
   TodoStarChange,
   WorkspaceMoveTarget,
 } from "../types";
-import { TODO_DENSITY_THRESHOLD, formatFocusDuration, getOrderedTodos, getTodoReorderTarget, todoKey } from "../state/todos";
+import { TODO_DENSITY_THRESHOLD, formatFocusDuration, getOrderedTodos, getTodoDropMoveTarget, getTodoReorderTarget, todoKey } from "../state/todos";
 import { clampCaret } from "../utils/caret";
 import { splitDroppedTodoText } from "../utils/textEditor";
 import { copySelection, copyTextToClipboard, getSelectionRange, probeClipboardForTextPaste } from "../utils/clipboard";
@@ -636,14 +636,14 @@ function handleTodoItemDrop(event: DragEvent, period: TodoPeriod, targetId: stri
   }
   event.preventDefault();
   event.stopPropagation();
-  emitTodoMove(dragged.value, period, getTodoItemDropTargetId(event, period, targetId));
+  emitTodoDropMove(dragged.value, period, getTodoItemDropTargetId(event, period, targetId));
 }
 
 function handleTodoSectionDrop(event: DragEvent, period: TodoPeriod): void {
   if (dragged.value) {
     event.preventDefault();
     event.stopPropagation();
-    emitTodoMove(dragged.value, period, getTodoDropTargetId(event, period));
+    emitTodoDropMove(dragged.value, period, getTodoDropTargetId(event, period));
     return;
   }
   handleTodoTextDrop(event, period);
@@ -1934,6 +1934,12 @@ function getTodoDropTargetId(event: DragEvent, period: TodoPeriod): string | und
     const rect = item.getBoundingClientRect();
     return y < rect.top + rect.height / 2;
   })?.dataset.todoId;
+}
+
+function emitTodoDropMove(draggedTodo: DraggedTodo, destinationPeriod: TodoPeriod, beforeId?: string): void {
+  emitTodoMove(draggedTodo, destinationPeriod, getTodoDropMoveTarget(
+    props.todos, draggedTodo.period, draggedTodo.id, destinationPeriod, beforeId,
+  ));
 }
 
 function emitTodoMove(draggedTodo: DraggedTodo, destinationPeriod: TodoPeriod, targetId?: string): void {

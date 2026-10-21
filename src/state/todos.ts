@@ -133,6 +133,21 @@ export function removeEmptyTodo(todos: TodoMap, period: TodoPeriod, id: string):
   return removeTodo(todos, period, id);
 }
 
+/** Convert a drag insertion boundary (beforeId) to moveTodo's original-index target. */
+export function getTodoDropMoveTarget(
+  todos: TodoMap,
+  sourcePeriod: TodoPeriod,
+  id: string,
+  destinationPeriod: TodoPeriod,
+  beforeId?: string,
+): string | undefined {
+  if (!beforeId || sourcePeriod !== destinationPeriod || id === beforeId) return beforeId;
+  const items = todos[destinationPeriod] ?? [];
+  const sourceIndex = items.findIndex((todo) => todo.id === id);
+  const targetIndex = items.findIndex((todo) => todo.id === beforeId);
+  return sourceIndex >= 0 && sourceIndex < targetIndex ? items[targetIndex - 1]?.id : beforeId;
+}
+
 export function moveTodo(
   todos: TodoMap,
   sourcePeriod: TodoPeriod,

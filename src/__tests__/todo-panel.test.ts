@@ -9,7 +9,7 @@ import { resolve } from "node:path";
 import TodoPanel from "../components/TodoPanel.vue";
 import TodoListCreateDialog from "../components/TodoListCreateDialog.vue";
 import { DEFAULT_TITLES } from "../state/defaults";
-import { completeTodo } from "../state/todos";
+import { completeTodo, moveTodo } from "../state/todos";
 import type { PolishKind, PolishStyle, PolishResult } from "../sync/polishClient";
 import type { TodoMap, TodoPeriod } from "../types";
 import { menuDropdownStub } from "./helpers/menu-dropdown-stub";
@@ -4636,6 +4636,28 @@ describe("TodoPanel", () => {
 
     expect(wrapper.emitted("move")?.[0]).toEqual([{ period: "morning", id: "a" }, "noon"]);
     expect(wrapper.emitted("createFromText")).toBeUndefined();
+  });
+
+  it.each(["item", "section"])("places the first reminder below the fourth without skipping the fifth (%s drop)", async (dropSurface) => {
+    const todos = { morning: ["1", "2", "3", "4", "5"].map(id => ({ id, text: id, done: false })), noon: [], evening: [] };
+    const wrapper = mount(TodoPanel, {
+      props: { todoLists: defaultTodoLists, todos, titles: DEFAULT_TITLES },
+      global: { stubs: { Dropdown: dropdownStub, NDropdown: dropdownStub, NTooltip: tooltipStub } },
+    });
+    const items = wrapper.findAll('.todo-section[data-list-id="morning"] .todo-item');
+    items.forEach((item, index) => {
+      vi.spyOn(item.element, "getBoundingClientRect").mockReturnValue({
+        top: index * 40, bottom: index * 40 + 40, height: 40, width: 200,
+        left: 0, right: 200, x: 0, y: index * 40, toJSON: () => ({}),
+      });
+    });
+    await items[0].get(".todo-drag-handle").trigger("dragstart");
+    const target = dropSurface === "item" ? items[3] : wrapper.get('.todo-section[data-list-id="morning"]');
+    await target.trigger("drop", { clientY: 155 });
+    const [dragged, destination, targetId] = wrapper.emitted("move")![0] as [{ period: string; id: string }, string, string | undefined];
+    expect(moveTodo(todos, dragged.period, dragged.id, destination, targetId).morning.map(todo => todo.id)).toEqual(["2", "3", "4", "1", "5"]);
+    expect(wrapper.emitted("move")).toHaveLength(1);
+    wrapper.unmount();
   });
 
   it("drops an internal reminder into another list at the mouse position instead of always at the bottom", async () => {
