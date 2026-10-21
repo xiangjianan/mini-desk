@@ -1000,6 +1000,12 @@ html[data-theme="dark"] .workbench-shell .space-text-panel {
   box-shadow: inset 0 0 0 1px color-mix(in srgb, var(--primary) 26%, transparent);
 }
 
+/* The row owns editing feedback; the legacy inset fill would darken only its middle. */
+.workbench-shell .todo-item.is-editing::before,
+.workbench-shell .today-focus-item.is-editing::before {
+  background: transparent;
+}
+
 .workbench-shell .todo-add-row {
   border: 1px dashed var(--line-control);
   color: var(--desk-zone-accent);
