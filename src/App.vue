@@ -60,7 +60,7 @@ import { applyThemeColor } from "./state/theme-color";
 import { readWorkbenchWidthRatios, restoreWorkbenchWidthRatios, removeWorkbenchWidths } from "./state/layoutPrefs";
 import { createWorkspaceData, ensureUniqueWorkspaceTitle, getWorkspaceBoardTitle, projectLegacySpaceLines, removeWorkspace, reorderWorkspaces } from "./state/workspaces";
 import * as workspaceMover from "./state/workspaceMoves";
-import { QUICK_BUTTON_OTHER_GROUP_ID, QUICK_DENSITY_THRESHOLD, assignQuickTagColumn, distributeQuickTagColumns, formatQuickCopiedPreview, recordQuickButtonClick } from "./state/quickButtons";
+import { QUICK_BUTTON_OTHER_GROUP_ID, QUICK_DENSITY_THRESHOLD, assignQuickTagColumn, distributeQuickTagColumns, formatQuickCopiedPreview, recordQuickButtonClick, reorderQuickButton } from "./state/quickButtons";
 import { isQuickAppScheme } from "./state/quickApps";
 import { pickRandomTip, resolveTipGuideKey, type TipPickState } from "./state/guideTips";
 import { isValidNotifyAt } from "./state/deadlines";
@@ -2237,8 +2237,8 @@ function toggleQuickHidden(id: string): void {
   persistNow();
 }
 
-function reorderQuickButtons(dragId: string, targetId: string): void {
-  moveItem(activeWorkspace.value.quickButtons, dragId, targetId);
+function reorderQuickButtons(dragId: string, targetId: string, insertBefore: boolean): void {
+  reorderQuickButton(activeWorkspace.value.quickButtons, dragId, targetId, insertBefore);
   persistNow();
 }
 
@@ -2247,12 +2247,15 @@ function toggleQuickCompact(): void {
   persistNow();
 }
 
-function moveQuickButtonToTag(buttonId: string, tagId?: string, targetId?: string): void {
+function moveQuickButtonToTag(buttonId: string, tagId?: string, targetId?: string, insertBefore?: boolean): void {
   const button = activeWorkspace.value.quickButtons.find((item) => item.id === buttonId);
   if (!button) return;
   if (tagId && !activeWorkspace.value.quickTags.some((tag) => tag.id === tagId)) return;
   applyQuickTag(button, tagId);
-  if (targetId) moveItem(activeWorkspace.value.quickButtons, buttonId, targetId);
+  if (targetId) {
+    if (insertBefore === undefined) moveItem(activeWorkspace.value.quickButtons, buttonId, targetId);
+    else reorderQuickButton(activeWorkspace.value.quickButtons, buttonId, targetId, insertBefore);
+  }
   persistNow();
 }
 

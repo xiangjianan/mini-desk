@@ -15,6 +15,7 @@ import {
   QUICK_BUTTON_OTHER_GROUP_ID,
   quickButtonClickCount,
   recordQuickButtonClick,
+  reorderQuickButton,
 } from "../state/quickButtons";
 import { globalSearchQuery, resetGlobalSearch, setGlobalSearch } from "../state/globalSearch";
 import type { QuickButton } from "../types";
@@ -1607,6 +1608,40 @@ describe("QuickButtons", () => {
     wrapper.unmount();
   });
 
+  it.each([
+    ["1", 110, true, "23145"],
+    ["1", 135, false, "23415"],
+    ["5", 110, true, "12354"],
+    ["5", 135, false, "12345"],
+  ])("sorts %s around the target midpoint at %s", async (sourceId, clientY, before, expected) => {
+    const buttons: QuickButton[] = ["1", "2", "3", "4", "5"].map(id => ({ id, title: id, value: id, type: "text", hidden: false }));
+    const wrapper = mountQuickButtons({ buttons });
+    const rows = wrapper.findAll(".quick-button");
+    vi.spyOn(rows[3].element, "getBoundingClientRect").mockReturnValue({ top: 100, height: 40 } as DOMRect);
+    await rows[Number(sourceId) - 1].trigger("dragstart");
+    await rows[3].trigger("drop", { clientY });
+    expect(wrapper.emitted("reorder")?.[0]).toEqual([sourceId, "4", before]);
+    reorderQuickButton(buttons, sourceId, "4", before);
+    expect(buttons.map(button => button.id).join("")).toBe(expected);
+    wrapper.unmount();
+  });
+
+  it.each([[110, true], [135, false]])("preserves drop side across tags at %s", async (clientY, before) => {
+    const wrapper = mountQuickButtons({
+      tags: [{ id: "a", title: "A" }, { id: "b", title: "B" }],
+      buttons: [
+        { id: "1", title: "1", value: "1", type: "text", hidden: false, tagId: "a" },
+        { id: "2", title: "2", value: "2", type: "text", hidden: false, tagId: "b" },
+      ],
+    });
+    const rows = wrapper.findAll(".quick-button");
+    vi.spyOn(rows[1].element, "getBoundingClientRect").mockReturnValue({ top: 100, height: 40 } as DOMRect);
+    await rows[0].trigger("dragstart");
+    await rows[1].trigger("drop", { clientY });
+    expect(wrapper.emitted("moveToTag")?.[0]).toEqual(["1", "b", "2", before]);
+    wrapper.unmount();
+  });
+
   it("animates quick-button position changes while drag sorting", async () => {
     const wrapper = mountQuickButtons({
       buttons: [
@@ -1627,8 +1662,8 @@ describe("QuickButtons", () => {
     await wrapper.findAll(".quick-button")[0].trigger("dragstart");
     expect(wrapper.findAll(".quick-button")[0].classes()).toContain("is-dragging");
 
-    await wrapper.findAll(".quick-button")[1].trigger("drop");
-    expect(wrapper.emitted("reorder")?.[0]).toEqual(["a", "b"]);
+    await wrapper.findAll(".quick-button")[1].trigger("drop", { clientY: 0 });
+    expect(wrapper.emitted("reorder")?.[0]).toEqual(["a", "b", true]);
 
     await wrapper.findAll(".quick-button")[0].trigger("dragend");
     expect(wrapper.findAll(".quick-button")[0].classes()).not.toContain("is-dragging");

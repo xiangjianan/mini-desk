@@ -73,8 +73,8 @@ const emit = defineEmits<{
   toggleHidden: [id: string];
   toggleShowHidden: [];
   toggleCompact: [];
-  reorder: [dragId: string, targetId: string];
-  moveToTag: [buttonId: string, tagId?: string, targetId?: string];
+  reorder: [dragId: string, targetId: string, insertBefore: boolean];
+  moveToTag: [buttonId: string, tagId?: string, targetId?: string, insertBefore?: boolean];
   saveTag: [payload: { id?: string; title: string }];
   toggleTagCollapsed: [id: string];
   deleteTag: [id: string, anchor?: HTMLElement];
@@ -905,14 +905,16 @@ function handleQuickButtonDrop(event: DragEvent, targetButtonId: string, targetG
     return;
   }
   if (!draggingId.value || draggingId.value === targetButtonId) return;
+  const bounds = (event.currentTarget as HTMLElement).getBoundingClientRect();
+  const insertBefore = event.clientY <= bounds.top + bounds.height / 2;
   if (isQuickButtonTargetGroup(targetGroupId)) {
     const targetTagId = getGroupTagId(targetGroupId);
     if (getQuickButtonTagId(draggingId.value) !== targetTagId) {
-      emit("moveToTag", draggingId.value, targetTagId, targetButtonId);
+      emit("moveToTag", draggingId.value, targetTagId, targetButtonId, insertBefore);
       return;
     }
   }
-  emit("reorder", draggingId.value, targetButtonId);
+  emit("reorder", draggingId.value, targetButtonId, insertBefore);
 }
 
 function handleQuickGroupDrop(event: DragEvent, groupId: string): void {

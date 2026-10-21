@@ -2,6 +2,16 @@ import type { BoardState, QuickButton, QuickTag } from "../types";
 import { matchesSearch } from "../utils/searchHighlight";
 import { assignColumn, distributeColumns } from "./columns";
 
+/** Place relative to a target after removing the source, avoiding downward index drift. */
+export function reorderQuickButton(items: QuickButton[], sourceId: string, targetId: string, insertBefore: boolean): void {
+  if (sourceId === targetId) return;
+  const sourceIndex = items.findIndex(item => item.id === sourceId);
+  if (sourceIndex < 0 || !items.some(item => item.id === targetId)) return;
+  const [source] = items.splice(sourceIndex, 1);
+  const targetIndex = items.findIndex(item => item.id === targetId);
+  items.splice(targetIndex + (insertBefore ? 0 : 1), 0, source);
+}
+
 export interface QuickButtonGroup {
   id: string;
   title: string;
