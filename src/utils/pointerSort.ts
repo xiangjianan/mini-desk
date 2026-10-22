@@ -1,4 +1,5 @@
 import { suppressSortCommitMotion } from "./sortCommit";
+import { landSortPreview } from "./sortLanding";
 import { createSortGap } from "./sortGap";
 /** Pointer-driven in-page sorting keeps wheel events available during a drag.
  * Existing drag handlers receive synthetic events, preserving their drop rules.
@@ -60,12 +61,14 @@ export function installPointerSort(root: HTMLElement, selector: string, pauseAut
       started = true;
       previousUserSelect = document.body.style.userSelect;
       document.body.style.userSelect = "none";
-      const element = source.closest<HTMLElement>(".todo-item") ?? source;
+      const element = source.closest<HTMLElement>(".todo-item")
+        ?? (source.matches(".todo-heading") ? source.closest<HTMLElement>(".todo-section") : null) ?? source;
       const rect = element.getBoundingClientRect();
       preview = element.cloneNode(true) as HTMLElement;
       preview.setAttribute("aria-hidden", "true");
       preview.inert = true;
       preview.style.cssText = `position:fixed;z-index:11000;pointer-events:none;width:${rect.width}px;max-height:180px;overflow:hidden;opacity:0.8;margin:0;transform:translateY(-50%);transition:none;animation:none;`;
+      if (source.matches(".todo-heading")) preview.style.maxHeight = "none";
       document.body.appendChild(preview);
       const surface = source.closest<HTMLElement>(".todo-item, .todo-section, .quick-button, .quick-tag-group, .space-tab, .workspace-switcher-item");
       if (surface) {
@@ -100,7 +103,13 @@ export function installPointerSort(root: HTMLElement, selector: string, pauseAut
       }
       if (container) target = container;
       else if (hasGap && !anchor && target && root.contains(target)) target = null;
+      const landing = hasGap && withinRoot && source.matches(".todo-heading")
+        ? source.closest<HTMLElement>(".todo-section") : null;
       if (target) dispatch(target, "drop");
+      if (landing && preview) {
+        landSortPreview(preview, landing);
+        preview = null; // The landing animation owns this clone until completion.
+      }
       suppressClick = true;
       clickTimer = window.setTimeout(() => { suppressClick = false; }, 0);
     }
