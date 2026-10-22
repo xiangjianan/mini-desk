@@ -1,5 +1,4 @@
 import { suppressSortCommitMotion } from "./sortCommit";
-import { landSortPreview } from "./sortLanding";
 import { createSortGap } from "./sortGap";
 /** Pointer-driven in-page sorting keeps wheel events available during a drag.
  * Existing drag handlers receive synthetic events, preserving their drop rules.
@@ -103,13 +102,7 @@ export function installPointerSort(root: HTMLElement, selector: string, pauseAut
       }
       if (container) target = container;
       else if (hasGap && !anchor && target && root.contains(target)) target = null;
-      const landing = hasGap && withinRoot && source.matches(".todo-heading")
-        ? source.closest<HTMLElement>(".todo-section") : null;
       if (target) dispatch(target, "drop");
-      if (landing && preview) {
-        landSortPreview(preview, landing);
-        preview = null; // The landing animation owns this clone until completion.
-      }
       suppressClick = true;
       clickTimer = window.setTimeout(() => { suppressClick = false; }, 0);
     }
