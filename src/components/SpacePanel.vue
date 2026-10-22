@@ -335,7 +335,11 @@ onUnmounted(() => disposeSort?.());
     <div class="panel-header desk-zone-heading" @contextmenu.stop.prevent="openHeaderMenu($event)">
       <h2><NIcon :component="DocumentTextOutline" /><span>{{ uiText.desk.notes }}</span></h2>
       <div class="header-actions" @contextmenu.stop>
-
+        <button v-if="activeSpace" type="button" class="space-paste-button icon-button"
+          :aria-label="uiText.common.paste" :title="uiText.common.paste"
+          @mousedown.prevent @click.stop="textPanelRef?.appendPaste()">
+          <NIcon :component="ClipboardOutline" /><span>{{ uiText.common.paste }}</span>
+        </button>
       </div>
     </div>
     <div class="space-tabs-scrollbar" @wheel="handleTabsWheel">
