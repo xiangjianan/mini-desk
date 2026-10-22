@@ -54,34 +54,6 @@ function ruleBodies(styles: string, selector: string): string[] {
 }
 
 describe("SpacePanel", () => {
-  it("offers paste, smart paste and Tips on the notebook heading in both languages", async () => {
-    const wrapper = mountSpacePanel([{ id: "note", title: "笔记", lines: [] }]);
-    const heading = wrapper.get(".desk-zone-heading");
-    await heading.trigger("contextmenu");
-    expect(wrapper.findAll(".dropdown-option").map(option => option.text())).toEqual(["新建", "粘贴", "智能粘贴", "Tips"]);
-    expect(wrapper.get('[data-key="smart-paste"]').attributes("disabled")).toBeDefined();
-    await wrapper.get('[data-key="guide"]').trigger("click");
-    expect(wrapper.emitted("guide")?.[0]).toEqual(["workspace", heading.element, true]);
-    await wrapper.setProps({ language: "en" });
-    await heading.trigger("contextmenu");
-    expect(wrapper.findAll(".dropdown-option").map(option => option.text())).toEqual(["New", "Paste", "Smart paste", "Tips"]);
-    wrapper.unmount();
-  });
-
-  it("opens the menu across the heading row but excludes the smart paste area", async () => {
-    const wrapper = mountSpacePanel([{ id: "note", title: "笔记", lines: [] }]);
-    await wrapper.setProps({ polish: vi.fn() });
-    await wrapper.get(".header-actions").trigger("contextmenu");
-    expect(wrapper.find(".dropdown-option").exists()).toBe(false);
-    await wrapper.get(".desk-smart-paste").trigger("contextmenu");
-    expect(wrapper.find(".dropdown-option").exists()).toBe(false);
-    await wrapper.get(".desk-zone-heading").trigger("contextmenu");
-    expect(wrapper.findAll(".dropdown-option")).toHaveLength(4);
-    await wrapper.get('[data-key="guide"]').trigger("click");
-    await wrapper.get(".desk-zone-heading h2").trigger("contextmenu");
-    expect(wrapper.findAll(".dropdown-option")).toHaveLength(4);
-    wrapper.unmount();
-  });
 
   it("appends heading paste to the active notebook without replacing selected text", async () => {
     Object.assign(navigator, { clipboard: { readText: vi.fn().mockResolvedValue("追加文字"), writeText: vi.fn() } });
@@ -97,19 +69,6 @@ describe("SpacePanel", () => {
     const update = wrapper.emitted("update")?.at(-1);
     expect(update?.[0]).toBe("note");
     expect((update?.[1] as { text: string }[]).map(line => line.text).join("\n")).toBe("原文追加文字");
-    wrapper.unmount();
-  });
-
-  it("uses the existing smart paste flow from the notebook heading", async () => {
-    Object.assign(navigator, { clipboard: { readText: vi.fn().mockResolvedValue("杂乱文本"), writeText: vi.fn() } });
-    const polish = vi.fn(async () => ({ items: [{ text: "整理结果" }] }) as import("../sync/polishClient").PolishResult);
-    const wrapper = mountSpacePanel([{ id: "note", title: "笔记", lines: [] }]);
-    await wrapper.setProps({ polish });
-    await wrapper.get(".desk-zone-heading h2").trigger("contextmenu");
-    await wrapper.get('[data-key="smart-paste"]').trigger("click");
-    await flushPromises();
-    expect(polish).toHaveBeenCalledWith("note", "杂乱文本", undefined);
-    expect(wrapper.emitted("update")?.at(-1)?.[0]).toBe("note");
     wrapper.unmount();
   });
 
@@ -662,34 +621,6 @@ describe("SpacePanel", () => {
     const hoverRule = styles.match(/\.space-tab:hover \{([\s\S]*?)\}/)?.[1] ?? "";
 
     expect(hoverRule).toContain("border-right-color: transparent");
-  });
-
-  it("forwards the smart paste polish handler and status events to the text panel", async () => {
-    Object.assign(navigator, { clipboard: { readText: vi.fn().mockResolvedValue("杂乱文本"), writeText: vi.fn() } });
-    const polish = vi.fn(async () => ({ items: [{ text: "1、要点" }] }) as import("../sync/polishClient").PolishResult);
-    const wrapper = mount(SpacePanel, {
-      attachTo: document.body,
-      props: {
-        spaces: [{ id: "workspace", title: "工作空间", lines: [] }],
-        activeSpaceId: "workspace",
-        polish,
-      },
-      global: {
-        stubs: {
-          Dropdown: dropdownStub,
-          NDropdown: dropdownStub,
-        },
-      },
-    });
-    const textarea = wrapper.get("textarea").element as HTMLTextAreaElement;
-    textarea.setSelectionRange(0, 0);
-    await wrapper.get("textarea").trigger("contextmenu");
-    await wrapper.get('[data-key="smart-paste"]').trigger("click");
-    await flushPromises();
-
-    expect(polish).toHaveBeenCalledWith("note", "杂乱文本", undefined);
-    expect((wrapper.emitted("polishMessage") ?? []).map((call) => call[0])).toEqual(["working", "done"]);
-    wrapper.unmount();
   });
 });
 

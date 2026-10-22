@@ -5,7 +5,6 @@ import { darkTheme, dateEnUS, dateZhCN, enUS, NButton, NConfigProvider, NGlobalS
 import CompanionBubble from "./components/CompanionBubble.vue";
 import ImagePanel from "./components/ImagePanel.vue";
 import MobileHome from "./components/MobileHome.vue";
-import MobileInboxCapture from "./components/MobileInboxCapture.vue";
 import QuickButtons from "./components/QuickButtons.vue";
 import SettingsMenu from "./components/SettingsMenu.vue";
 import SpacePanel from "./components/SpacePanel.vue";
@@ -65,24 +64,6 @@ import { QUICK_BUTTON_OTHER_GROUP_ID, QUICK_DENSITY_THRESHOLD, assignQuickTagCol
 import { isQuickAppScheme } from "./state/quickApps";
 import { pickRandomTip, resolveTipGuideKey, type TipPickState } from "./state/guideTips";
 import { isValidNotifyAt } from "./state/deadlines";
-import { INBOX_FOCUS_THROTTLE_MS, INBOX_PULL_INTERVAL_MS } from "./sync/config";
-import {
-  clearRememberedInboxCode,
-  formatInboxCode,
-  generateInboxCode,
-  importedPayloadHasInbox,
-  isValidInboxCode,
-  loadRememberedInboxCode,
-  normalizeInboxCode,
-  parseInboxFragment,
-  saveRememberedInboxCode,
-} from "./sync/pairing";
-import { applyInboxItems, pullAllInboxes } from "./sync/pull";
-import { inboxKeyHash } from "./sync/crypto";
-import { checkInboxKeyStatus, registerInboxKey, revokeInboxKey } from "./sync/inboxClient";
-import { polishClipboardText } from "./sync/polishClient";
-import type { PolishKind, PolishResult, PolishStyle, PolishTodoItem } from "./sync/polishClient";
-import type { SmartPastePhase } from "./utils/smartPaste";
 import { copyTextToClipboard } from "./utils/clipboard";
 import { binaryStringToBytes } from "./utils/base64";
 import { observeMediaQuery } from "./utils/mediaQuery";
@@ -104,17 +85,14 @@ import {
 } from "./state/storage";
 import type { ImagePlacementHint, ImageReplacementHint, SaveScope } from "./state/storage";
 import { appendContinuingListFormat } from "./utils/textEditor";
-import type { AppLanguage, BoardState, CompanionGifTheme, DraggedTodo, GuideKey, ImagePasteFeedback, ImagePasteRequest, LineItem, QuickApiBodyType, QuickApiHeader, QuickApiMethod, QuickButton, QuickButtonType, StoredImage, TodoItem, TodoListConfig, TodoListId, TodoPeriod, TodoStarChange, WorkspaceData, WorkspaceInbox, WorkspaceMoveTarget, WorkspaceSpace, ZoneKey } from "./types";
+import type { AppLanguage, BoardState, CompanionGifTheme, DraggedTodo, GuideKey, ImagePasteFeedback, ImagePasteRequest, LineItem, QuickApiBodyType, QuickApiHeader, QuickApiMethod, QuickButton, QuickButtonType, StoredImage, TodoItem, TodoListConfig, TodoListId, TodoPeriod, TodoStarChange, WorkspaceData, WorkspaceMoveTarget, WorkspaceSpace, ZoneKey } from "./types";
 
 const ImagePreview = defineAsyncComponent(() => import("./components/ImagePreview.vue"));
 const ShortcutHelp = defineAsyncComponent(() => import("./components/ShortcutHelp.vue"));
 const SupportAuthor = defineAsyncComponent(() => import("./components/SupportAuthor.vue"));
 const VersionHistory = defineAsyncComponent(() => import("./components/VersionHistory.vue"));
-// 配对弹窗含 qrcode 依赖，异步加载避免二维码库进主包；v-if + :key 用法与同步组件一致。
-const WorkspaceInboxDialog = defineAsyncComponent(() => import("./components/WorkspaceInboxDialog.vue"));
 
-// 940 而非 900：viewport-fit=cover（index.html）下 iPhone Pro Max 横屏布局宽度为完整 932pt
-// （cover 前是去刘海的 ~814pt），不抬高断点会让横屏从速记壳翻成桌面看板。
+// viewport-fit=cover 下，940px 断点覆盖 iPhone Pro Max 的 932pt 横屏。
 const MOBILE_BREAKPOINT_QUERY = "(max-width: 940px)";
 const IMAGE_DELETE_GRACE_MS = 5000;
 const IMAGE_PREVIEW_CLOSE_MS = 220;
@@ -294,8 +272,6 @@ const workspaceDialogMode = ref<"create" | "rename">("create");
 const workspaceDialogId = ref<string | null>(null);
 const workspaceDraftTitle = ref("");
 const workspaceDraftSlogan = ref("");
-const inboxPairingWorkspaceId = ref<string | null>(null);
-const inboxPairTarget = computed(() => state.workspaces.find((workspace) => workspace.id === inboxPairingWorkspaceId.value) ?? null);
 const imagePayloadPruneTimer = ref<number | undefined>();
 const emptyTodoRemovalTimers = new Map<string, number>();
 const pendingImagePayloadDeletions = new Map<string, number>();
@@ -303,21 +279,6 @@ const shortcutHelpVisible = ref(false);
 const supportDialogVisible = ref(false);
 const changelogVisible = ref(false);
 const isMobileBlocked = ref(getInitialMobileBlocked());
-// URL 带 #inbox=<12位码> 时优先；否则回退手机壳本地记忆（主屏图标/微信入口丢 fragment 的场景）。
-const mobileInboxCode = ref<string | null>(parseInboxFragment(window.location.hash) ?? loadRememberedInboxCode());
-const mobileInboxCodeError = ref<string | null>(null);
-const mobileInboxCodeChecking = ref(false);
-// 手机速记草稿上提：换码卸载重挂（甚至跨会话内的多次换码）内容不丢。
-const mobileInboxDraftText = ref("");
-// 手机壳内任何来源（初始 URL 解析/hashchange/手动输码）的有效码都顺手记住，裸访问下次自动配对；
-// 桌面端不写（不产生手机记忆副作用）。immediate 覆盖初始 fragment 场景，重复写入幂等。
-watch(
-  [mobileInboxCode, isMobileBlocked],
-  ([code, blocked]) => {
-    if (blocked && code) saveRememberedInboxCode(code);
-  },
-  { immediate: true },
-);
 let appMounted = false;
 let pendingBrowserImagePasteRequest: { request: ImagePasteRequest; token: number } | undefined;
 let browserImagePasteRequestToken = 0;
@@ -445,98 +406,6 @@ function shouldBlockBoardEffects(): boolean {
   return isMobileBlocked.value;
 }
 
-function handleHashChange(): void {
-  // 仅在有合法码时跟进：清掉 fragment 不退出速记页，避免误触返回键丢失入口。
-  const code = parseInboxFragment(window.location.hash);
-  if (code) mobileInboxCode.value = code;
-}
-
-/** 输码配对（码由 MobileHome 分组输码拼出后回抛）：格式校验 → 联网验证注册状态（unknown/revoked 拒绝；网络失败 fail-open 放行，发送时兜底）。 */
-async function confirmMobileInboxCode(code: string): Promise<void> {
-  if (mobileInboxCodeChecking.value) return;
-  const normalized = normalizeInboxCode(code);
-  if (!isValidInboxCode(normalized)) {
-    // 移动壳上 showBubbleText 被 shouldBlockBoardEffects 拦截，提示就近显示在输码区。
-    mobileInboxCodeError.value = uiText.value.app.mobileInboxCodeInvalid;
-    return;
-  }
-  mobileInboxCodeChecking.value = true;
-  let status: Awaited<ReturnType<typeof checkInboxKeyStatus>> = null;
-  try {
-    status = await checkInboxKeyStatus(await inboxKeyHash(normalized));
-  } catch {
-    status = null;
-  }
-  // 卸载后不再写输码态与 URL（同 revokeInbox/registerInbox 守卫惯例）。
-  if (!appMounted) return;
-  mobileInboxCodeChecking.value = false;
-  if (status === "unknown") {
-    mobileInboxCodeError.value = uiText.value.app.mobileInboxCodeUnknown;
-    return;
-  }
-  if (status === "revoked") {
-    mobileInboxCodeError.value = uiText.value.app.mobileInboxCodeRevoked;
-    return;
-  }
-  // active 或 null（网络失败 fail-open）：照常配对。
-  mobileInboxCodeError.value = null;
-  mobileInboxCode.value = normalized;
-  // 写回 fragment：刷新/再次打开仍停留在速记页。
-  window.location.hash = `#inbox=${normalized}`;
-}
-
-/** 清码回到输码表单：清本地记忆与 URL 残留 fragment（replaceState 不触发 hashchange，也不留历史记录）并重置错误态。
- *  页脚入口的二次确认已移入 MobileHome 的底部 sheet（confirm 后才回抛 change-code）；失效提示的 change-code 事件直接调用（报错后的主动动作）。 */
-function forgetMobileInboxCode(): void {
-  clearRememberedInboxCode();
-  mobileInboxCode.value = null;
-  mobileInboxCodeError.value = null;
-  window.history.replaceState(null, "", `${window.location.pathname}${window.location.search}`);
-}
-
-/** 手机速记发送成功：复用伴宠气泡（GIF + 消息）在屏幕右下角弹出「已发送 N 条」。
- *  force 绕过移动端板效屏蔽；落点改为安全区感知的右下角（速记页无桌面编辑器可锚定）。 */
-const mobileCaptureRef = ref<{ getEditorElement: () => HTMLTextAreaElement | null } | null>(null);
-
-function positionMobileSuccessBubble(): void {
-  if (!isMobileBlocked.value || !companionVisible.value) return;
-  const editor = mobileCaptureRef.value?.getEditorElement();
-  if (!editor) return;
-  const rect = editor.getBoundingClientRect();
-  companionPosition.value = {
-    right: `${Math.max(12, window.innerWidth - rect.right + 12)}px`,
-    bottom: `${Math.max(12, window.innerHeight - rect.bottom + 12)}px`,
-  };
-}
-
-function handleMobileInboxSent(count: number): void {
-  showBubbleText(uiText.value.app.mobileInboxSent.replace("{count}", () => String(count)), undefined, { force: true });
-  void nextTick(positionMobileSuccessBubble);
-}
-
-/** 速记页复制反馈：点击配对码 → 复制分组码文本 → 短暂弹「复制成功/失败」提示。 */
-const mobileCopyToast = ref("");
-let mobileCopyToastTimer: number | undefined;
-
-function clearMobileCopyToast(): void {
-  if (mobileCopyToastTimer !== undefined) {
-    window.clearTimeout(mobileCopyToastTimer);
-    mobileCopyToastTimer = undefined;
-  }
-}
-
-async function copyMobileInboxCode(): Promise<void> {
-  const code = mobileInboxCode.value;
-  if (!code) return;
-  const copied = await copyTextToClipboard(formatInboxCode(code));
-  clearMobileCopyToast();
-  mobileCopyToast.value = copied ? uiText.value.app.mobileInboxCodeCopied : uiText.value.app.mobileInboxCodeCopyFailed;
-  mobileCopyToastTimer = window.setTimeout(() => {
-    mobileCopyToast.value = "";
-    mobileCopyToastTimer = undefined;
-  }, 1800);
-}
-
 let stopMobileBreakpoint: (() => void) | undefined;
 let stopSystemThemeListener: (() => void) | undefined;
 
@@ -577,8 +446,6 @@ onMounted(async () => {
   checkAppVersion();
   void checkLatestAppVersion();
   window.addEventListener("keydown", handleGlobalKeydown);
-  window.addEventListener("resize", positionMobileSuccessBubble);
-  document.addEventListener("scroll", positionMobileSuccessBubble, true);
   window.addEventListener("focus", handleNotificationReturn);
   window.addEventListener("storage", handleStorageEvent);
   window.addEventListener("beforeunload", handleBeforeUnload);
@@ -586,19 +453,6 @@ onMounted(async () => {
   window.addEventListener("blur", clearDeferredImagePaste);
   document.addEventListener("visibilitychange", handleDocumentVisibilityChange);
   setupStateSyncChannel();
-  window.addEventListener("focus", handleWindowFocusInbox);
-  window.addEventListener("hashchange", handleHashChange);
-  // 启动拉取非阻塞（不 await）：首屏渲染不等收件箱网络往返。
-  if (hasInboxConfigured.value) {
-    void pullInboxes();
-    startInboxPolling();
-  }
-  // 注册制迁移与自愈：启动即幂等注册所有已配对码，失败静默等下次启动。
-  for (const workspace of state.workspaces) {
-    if (workspace.inbox) registerInbox(workspace.inbox.code);
-  }
-  // 智能粘贴配对码同样启动自愈注册（INSERT IGNORE 幂等；首次使用时仍会串行复核）。
-  if (state.polishCode && isValidInboxCode(state.polishCode)) registerInbox(state.polishCode);
   startVersionPolling();
   startNotificationFallbackInterval();
   refreshTodoNotifications();
@@ -607,8 +461,6 @@ onMounted(async () => {
 onUnmounted(() => {
   appMounted = false;
   window.removeEventListener("keydown", handleGlobalKeydown);
-  window.removeEventListener("resize", positionMobileSuccessBubble);
-  document.removeEventListener("scroll", positionMobileSuccessBubble, true);
   window.removeEventListener("focus", handleNotificationReturn);
   window.removeEventListener("storage", handleStorageEvent);
   window.removeEventListener("beforeunload", handleBeforeUnload);
@@ -616,14 +468,10 @@ onUnmounted(() => {
   window.removeEventListener("blur", clearDeferredImagePaste);
   document.removeEventListener("visibilitychange", handleDocumentVisibilityChange);
   teardownStateSyncChannel();
-  window.removeEventListener("focus", handleWindowFocusInbox);
-  window.removeEventListener("hashchange", handleHashChange);
-  stopInboxPolling();
   stopMobileBreakpoint?.();
   stopSystemThemeListener?.();
   discardFocusSession();
   clearTimers();
-  clearMobileCopyToast();
 });
 
 // Closing the tab mid-debounce would drop the last second of todo/line edits;
@@ -805,11 +653,6 @@ function deleteSpace(id: string): void {
       activeWorkspace.value.activeSpaceId = activeWorkspace.value.spaces[Math.max(0, index - 1)]?.id ?? activeWorkspace.value.spaces[0].id;
     }
     // 便签落点空间被删：配对码一并清空（手机端立即失效），云端队列走手动清除同路径注销，失败仅气泡警告。
-    const removedInbox = activeWorkspace.value.inbox;
-    if (removedInbox && removedInbox.noteTarget === id) {
-      delete activeWorkspace.value.inbox;
-      void revokeInbox(removedInbox.code);
-    }
     syncLegacySpaceLines();
     persistNow();
     showBubble("deleteSpace", anchor, { hideCompanionAfter: true });
@@ -964,7 +807,7 @@ function slugifyTitle(title: string): string {
 function exportWorkspaceById(id: string, anchor?: HTMLElement): void {
   const workspace = state.workspaces.find((item) => item.id === id);
   if (!workspace) return;
-  const serialized = getSerializableWorkspace(workspace, { includeImageData: true, omitInbox: true });
+  const serialized = getSerializableWorkspace(workspace, { includeImageData: true });
   const ratios = readWorkbenchWidthRatios(workspace.id);
   if (ratios) serialized.zoneWidthRatios = ratios;
   const content = JSON.stringify({ miniDeskWorkspaceExport: true, version: 1, workspace: serialized }, null, 2);
@@ -978,170 +821,9 @@ function exportCurrentWorkspace(anchor?: HTMLElement): void {
 }
 
 /** 配对弹窗更新/清除：按 id 不可变替换目标工作区并立即落盘。弹窗开合由弹窗自身的 close 事件驱动（轮换仅更新、不关闭）。生成/重置码由弹窗内前置注册成功后才 emit，此处无需再注册。 */
-function handleInboxUpdate(inbox: WorkspaceInbox | null): void {
-  const id = inboxPairingWorkspaceId.value;
-  if (!id) return;
-  const workspace = state.workspaces.find((item) => item.id === id);
-  if (!workspace) return;
-  const oldCode = workspace.inbox?.code;
-  let next: WorkspaceData;
-  if (inbox) {
-    next = { ...workspace, inbox };
-  } else {
-    next = { ...workspace };
-    delete next.inbox;
-  }
-  state.workspaces = state.workspaces.map((item) => (item.id === id ? next : item));
-  persistNow();
-  showBubbleText(inbox ? uiText.value.app.inboxSaved : uiText.value.app.inboxCleared, undefined, { hideCompanionAfter: true });
-  // 清除或轮换（新码≠旧码）：旧码云端队列一并注销；失败不阻塞本地变更，仅气泡警告。
-  if (oldCode !== undefined && (inbox === null || inbox.code !== oldCode)) {
-    void revokeInbox(oldCode);
-  }
+function handleClipboardMessage(message: string, anchor?: HTMLElement): void {
+  showBubbleText(message, anchor);
 }
-
-/** 注销旧配对码：任何失败（网络/服务端/哈希异常）只提示，不抛出；卸载后不再弹气泡。 */
-async function revokeInbox(oldCode: string): Promise<void> {
-  try {
-    const ok = await revokeInboxKey(await inboxKeyHash(oldCode));
-    if (!ok && appMounted) showBubbleText(uiText.value.app.inboxRevokeFailed, undefined, { hideCompanionAfter: true });
-  } catch {
-    if (appMounted) showBubbleText(uiText.value.app.inboxRevokeFailed, undefined, { hideCompanionAfter: true });
-  }
-}
-
-/** 注册配对码（启动路径幂等补注册，存量码自愈）：失败静默等下次启动；生成/重置路径已在弹窗内前置注册。 */
-function registerInbox(code: string): void {
-  inboxKeyHash(code)
-    .then((hash) => registerInboxKey(hash))
-    .catch(() => undefined);
-}
-
-/** 智能粘贴气泡时长：整理中长驻（服务端 LLM 硬超时 30s + 余量，结果到达即替换），结果常规停留。 */
-const POLISH_WORKING_BUBBLE_MS = 60_000;
-const POLISH_RESULT_BUBBLE_MS = 4000;
-
-// 智能粘贴配对码：全局唯一（鉴权只要求「已注册」）。会话内注册成功一次即缓存；
-// 清空数据后 state.polishCode 消失，下次使用生成新码并重新注册。
-let polishRegisteredCode: string | null = null;
-
-/** 面板注入的智能粘贴/AI 润色调用：确保配对码存在且已注册后请求服务端润色（style 为可选风格）；注册失败按网络失败（null）降级。 */
-async function polishClipboard(kind: PolishKind, text: string, style?: PolishStyle): Promise<PolishResult> {
-  let code = state.polishCode;
-  if (!code || !isValidInboxCode(code)) {
-    code = generateInboxCode();
-    state.polishCode = code;
-    persistNow();
-  }
-  if (polishRegisteredCode !== code) {
-    // 注册与润色串行：未注册码的 /polish 会 404，首次使用必须先等注册完成。
-    const registered = await registerInboxKey(await inboxKeyHash(code));
-    if (!registered) return null;
-    polishRegisteredCode = code;
-  }
-  return polishClipboardText(kind, text, code, style);
-}
-
-/** 面板上浮的智能粘贴气泡：working 长驻等结果替换，done/fallback 常规停留。 */
-function handlePolishStatus(phase: SmartPastePhase, message: string, anchor?: HTMLElement): void {
-  if (phase === "working") {
-    showBubbleText(message, anchor, {}, POLISH_WORKING_BUBBLE_MS);
-    return;
-  }
-  showBubbleText(message, anchor, { hideCompanionAfter: true }, POLISH_RESULT_BUBBLE_MS);
-}
-
-// 手机速记拉取（单向收件箱）：各自动触发点（启动/聚焦/定时/切空间/Ctrl+S）与两面板手动同步按钮
-// 共用 pullInboxes；in-flight 守卫串行化并发快照（否则并发合并会以新 ID 重复导入）。
-let inboxPullTimer: number | undefined;
-let inboxLastPullAt = 0;
-// 在途守卫（手动按钮的忙碌态也读它）：串行化并发快照，防止并发批次以新 ID 重复导入。
-const inboxPullInFlight = ref(false);
-// 轮询跟随当前活动空间：只有停在配置过配对码的空间才拉取；
-// 切到未配对空间时定时/聚焦/启动/Ctrl+S 全部静默，不发任何请求。
-const hasInboxConfigured = computed(() => activeWorkspace.value.inbox !== undefined);
-
-type InboxSyncOutcome = "applied" | "uptodate" | "failed" | "skipped";
-
-async function pullInboxes(): Promise<InboxSyncOutcome> {
-  if (!appMounted || inboxPullInFlight.value || !hasInboxConfigured.value) return "skipped";
-  inboxPullInFlight.value = true;
-  inboxLastPullAt = Date.now();
-  try {
-    const { patches, reports, changed, networkFailed } = await pullAllInboxes(state.workspaces);
-    if (!appMounted) return "skipped";
-    if (networkFailed) return "failed";
-    // 水位线单调门控：拉取在途期间，跨标签页广播采纳（applyExternalStoredState 整体覆盖）
-    // 或同名导入覆盖都可能已把同批条目合入并推进水位线。补丁水位线未严格领先即说明本批
-    // 已被应用过，重放会以新 ID 重复导入同文本——先按当前活对象过滤，只保留仍严格领先的补丁。
-    const applicable = patches.filter((patch) => {
-      const workspace = state.workspaces.find((item) => item.id === patch.workspaceId);
-      return workspace?.inbox !== undefined && patch.lastSeenAt > workspace.inbox.lastSeenAt;
-    });
-    // 补丁全部失配（工作区已删/配对已清/水位线已被采纳或导入推进）：无落点或本批已应用过，
-    // 直接返回，跳过空转的整组替换与持久化，也不弹「收到 N 条」。
-    if (!changed || applicable.length === 0) return "uptodate";
-    // 补丁重放：在 await 之后的同一同步块内对当前活对象合并，读-合-写之间零宏任务间隙，
-    // 用户在途编辑（同对象字段替换，不换数组身份）无法插入，也就不会被旧快照覆盖。
-    // 结构性变更天然安全：工作区已删则按 id 查无目标自然跳过；配对已清除则不在 applicable 中。
-    state.workspaces = state.workspaces.map((workspace) => {
-      const patch = applicable.find((candidate) => candidate.workspaceId === workspace.id);
-      return patch ? applyInboxItems(workspace, patch.plains, patch.lastSeenAt) : workspace;
-    });
-    persistNow();
-    for (const report of reports) {
-      // 被门控跳过的补丁不提示：跨标签页场景条目实际由另一标签页应用，两边各弹一次会误导。
-      if (!applicable.some((patch) => patch.workspaceId === report.workspaceId)) continue;
-      const workspace = state.workspaces.find((item) => item.id === report.workspaceId);
-      if (!workspace) continue;
-      showBubbleText(
-        uiText.value.app.inboxReceived.replace("{count}", () => String(report.imported)).replace("{title}", () => getWorkspaceBoardTitle(workspace)),
-        undefined,
-        { hideCompanionAfter: true },
-      );
-    }
-    return "applied";
-  } finally {
-    inboxPullInFlight.value = false;
-  }
-}
-
-/** 手动同步入口（两面板标题栏按钮）：自动路径忽略返回值，仅手动路径按结果补气泡。 */
-async function requestManualInboxSync(): Promise<void> {
-  const outcome = await pullInboxes();
-  if (!appMounted) return;
-  if (outcome === "uptodate") showBubbleText(uiText.value.app.inboxUpToDate, undefined, { hideCompanionAfter: true });
-  else if (outcome === "failed") showBubbleText(uiText.value.app.inboxSyncFailed, undefined, { hideCompanionAfter: true });
-}
-
-function startInboxPolling(): void {
-  if (inboxPullTimer !== undefined) return;
-  inboxPullTimer = window.setInterval(() => {
-    void pullInboxes();
-  }, INBOX_PULL_INTERVAL_MS);
-}
-
-function stopInboxPolling(): void {
-  if (inboxPullTimer === undefined) return;
-  window.clearInterval(inboxPullTimer);
-  inboxPullTimer = undefined;
-}
-
-function handleWindowFocusInbox(): void {
-  if (Date.now() - inboxLastPullAt < INBOX_FOCUS_THROTTLE_MS) return;
-  void pullInboxes();
-}
-
-// 轮询跟随当前活动空间：停未配对空间全静默；切到/配对成功已配对空间时除定时轮询外立即拉取一次
-// （启动拉取仍由 onMounted 负责，此 watch 非 immediate，不产生重复）。
-watch([() => state.activeWorkspaceId, hasInboxConfigured], ([, configured]) => {
-  if (configured) {
-    startInboxPolling();
-    void pullInboxes();
-  } else {
-    stopInboxPolling();
-  }
-});
 
 function deleteWorkspace(id: string, anchor?: HTMLElement): void {
   if (state.workspaces.length <= 1) {
@@ -1154,7 +836,6 @@ function deleteWorkspace(id: string, anchor?: HTMLElement): void {
     async () => {
       // 整区删除连坐配对：被删工作区的配对码随区消失，云端队列同步注销（失败仅气泡警告）。
       const doomedWorkspace = state.workspaces.find((workspace) => workspace.id === id);
-      const doomedInboxCode = doomedWorkspace?.inbox?.code;
       const doomedPayloadIds = new Set([
         ...(doomedWorkspace?.images ?? []).map((image) => getImagePayloadId(image)),
         ...Object.values(doomedWorkspace?.todos ?? {}).flatMap((todos) => collectTodoFocusPayloadIds(todos)),
@@ -1172,7 +853,6 @@ function deleteWorkspace(id: string, anchor?: HTMLElement): void {
       pendingEditTodoListId.value = null;
       clearImagePreview();
       persistNow();
-      if (doomedInboxCode !== undefined) void revokeInbox(doomedInboxCode);
       // 整区删除连坐本地存储：该工作区独占的四区宽度键即刻清理；图片负载
       // 沿用单图删除的 5 秒宽限（期间可被撤销/重导入保住），到期未被任何
       // 工作区引用即从 IndexedDB 清除，不占配额。
@@ -2736,10 +2416,8 @@ function createTodo(period: TodoPeriod, afterId?: string): void {
   nextTick(() => focusTodoInput(period, id));
 }
 
-/** 批量创建待办的统一入口：items 为纯文本拆分（粘贴/拖放）或结构化条目（智能粘贴，可带 notifyAt）。
- *  时间落地前用与闹钟选择器同口径的 isValidNotifyAt 复检；落地后重排下一提醒，含时间时对齐
- *  updateTodoNotify 的行为同步请求通知权限。 */
-function createTodosFromText(period: TodoPeriod, items: string[] | PolishTodoItem[], afterId?: string): void {
+/** 将粘贴或拖入的多行文本创建为提醒。 */
+function createTodosFromText(period: TodoPeriod, items: string[], afterId?: string): void {
   if (!isConfiguredTodoListId(period)) return;
   if (items.length === 0) return;
   const workspace = activeWorkspace.value;
@@ -2747,10 +2425,7 @@ function createTodosFromText(period: TodoPeriod, items: string[] | PolishTodoIte
   if (list) list.collapsed = false;
   let firstCreatedId: string | undefined;
   let insertAfter: string | undefined = afterId;
-  let anyNotify = false;
   items.forEach((item) => {
-    const draft = typeof item === "string" ? { text: item } : item;
-    const notifyAt = isValidNotifyAt(draft.notifyAt) ? draft.notifyAt : undefined;
     const id = createId();
     firstCreatedId ??= id;
     activeWorkspace.value.todos = addTodoToMap(
@@ -2758,18 +2433,15 @@ function createTodosFromText(period: TodoPeriod, items: string[] | PolishTodoIte
       period,
       {
         id,
-        text: draft.text,
+        text: item,
         done: false,
-        ...(notifyAt !== undefined ? { notifyAt } : {}),
       },
       insertAfter,
     );
-    anyNotify = anyNotify || notifyAt !== undefined;
     insertAfter = id;
   });
   persistNow();
   scheduleNextTodoNotification();
-  if (anyNotify) void prepareTodoNotifications();
   nextTick(() => {
     if (activeWorkspace.value !== workspace || !firstCreatedId) return;
     revealPastedItem(getTodoInput(period, firstCreatedId)?.closest<HTMLElement>(".todo-item") ?? undefined);
@@ -3039,8 +2711,6 @@ function clearData(anchor?: HTMLElement): void {
     async () => {
       // 清空数据 = 全部配对一起消失：先留底所有配对码，本地抹掉后逐个注销云端队列，
       // 否则手机会继续发进无人拉取的死队列（同删除工作区的连坐规则）。
-      const doomedInboxCodes = state.workspaces.flatMap((workspace) => (workspace.inbox ? [workspace.inbox.code] : []));
-      const doomedPolishCode = state.polishCode;
       window.clearTimeout(textSaveTimer.value);
       textSaveTimer.value = undefined;
       emptyTodoRemovalTimers.forEach((timer) => window.clearTimeout(timer));
@@ -3053,11 +2723,6 @@ function clearData(anchor?: HTMLElement): void {
       pendingEditTodoListId.value = null;
       resetUndoHistory();
       Object.assign(state, defaultState());
-      // defaultState() 不含可选键 polishCode，需显式删掉，否则清空后本次会话仍带着已注销的旧码。
-      delete state.polishCode;
-      doomedInboxCodes.forEach((code) => void revokeInbox(code));
-      if (doomedPolishCode) void revokeInbox(doomedPolishCode);
-      polishRegisteredCode = null;
       resetTextGenerationBaseline();
       // Flush reactive watchers (the theme watcher persists on change) before wiping, so
       // their writes land first and the clear below leaves localStorage truly empty.
@@ -3145,9 +2810,6 @@ async function importData(event: Event): Promise<void> {
     input.value = "";
     return;
   }
-  // 配对码即手机录入通道的密钥：导出文件携带 inbox 意味着「分享文件 = 分享通道」，
-  // 导入成功后提示来自他人的文件应重置配对码。
-  const importedHasInbox = importedPayloadHasInbox(parsed);
 
   if (isSingleWorkspaceExport(parsed as Record<string, unknown>)) {
     let importedWorkspace: WorkspaceData;
@@ -3165,9 +2827,6 @@ async function importData(event: Event): Promise<void> {
       persistNow("all", { force: true });
       refreshTodoNotifications();
       showBubble("dataImported", importFeedbackAnchor.value, { hideCompanionAfter: true });
-      if (importedHasInbox) {
-        showBubbleText(uiText.value.app.inboxImportNotice, importFeedbackAnchor.value, { hideCompanionAfter: true }, 5000);
-      }
       importFeedbackAnchor.value = undefined;
       input.value = "";
     };
@@ -3197,12 +2856,6 @@ async function importData(event: Event): Promise<void> {
         return;
       }
       const replacement: WorkspaceData = { ...importedWorkspace, id: target.id, createdAt: target.createdAt };
-      // Overwriting retires the old inbox just like deleting its workspace.
-      // A re-import retaining the same code still owns that channel.
-      const oldInboxCode = target.inbox?.code;
-      if (oldInboxCode !== undefined && oldInboxCode !== replacement.inbox?.code) {
-        void revokeInbox(oldInboxCode);
-      }
       restoreWorkbenchWidthRatios(replacement.id, replacement.zoneWidthRatios);
       state.workspaces = state.workspaces.map((item) => (item.id === target.id ? replacement : item));
       state.activeWorkspaceId = target.id;
@@ -3362,7 +3015,6 @@ function handleGlobalKeydown(event: KeyboardEvent): void {
     flushTodoSave();
     flushTextSave();
     showSaveBubble();
-    void pullInboxes();
   }
 }
 
@@ -3892,9 +3544,6 @@ function moveItem<T extends { id: string }>(items: T[], dragId: string, targetId
       :zone-visibility="activeWorkspace.zoneVisibility"
       :workspace-id="state.activeWorkspaceId"
       :zone-width-ratios="activeWorkspace.zoneWidthRatios"
-      :inbox-sync-enabled="hasInboxConfigured"
-      :inbox-syncing="inboxPullInFlight"
-      @sync-inbox="requestManualInboxSync"
       @dragover.prevent
       @drop.prevent="handleBoardDrop"
     >
@@ -3911,7 +3560,6 @@ function moveItem<T extends { id: string }>(items: T[], dragId: string, targetId
           @reorder="reorderWorkspaceSections"
           @export-workspace="exportWorkspaceById"
           @import="requestImport"
-          @pair-inbox="(id: string) => { inboxPairingWorkspaceId = id; }"
         />
       </template>
 
@@ -3946,7 +3594,6 @@ function moveItem<T extends { id: string }>(items: T[], dragId: string, targetId
           @create-workspace="openCreateWorkspace"
           @export-workspace="exportCurrentWorkspace"
           @import="requestImport"
-          @pair-inbox="inboxPairingWorkspaceId = state.activeWorkspaceId"
           @clear-data="clearData"
           @about="about"
           @suggest="suggestIssue"
@@ -3996,7 +3643,6 @@ function moveItem<T extends { id: string }>(items: T[], dragId: string, targetId
           :compact="activeWorkspace.quickCompact"
           :language="state.language"
           :move-targets="workspaceMoveTargets"
-          :polish="polishClipboard"
           @title-update="updateTitle"
           @save="saveQuick"
           @delete="deleteQuick"
@@ -4018,7 +3664,6 @@ function moveItem<T extends { id: string }>(items: T[], dragId: string, targetId
           @delete-tag-with-buttons="deleteQuickTagWithButtons"
           @guide="handleGuideClick"
           @declutter="showQuickDeclutterBubble"
-          @polish-message="handlePolishStatus"
         />
       </template>
 
@@ -4033,7 +3678,6 @@ function moveItem<T extends { id: string }>(items: T[], dragId: string, targetId
           :show-completed="activeWorkspace.showCompletedTodos"
           :language="state.language"
           :move-targets="workspaceMoveTargets"
-          :polish="polishClipboard"
           @title-update="updateTitle"
           @create-list="createTodoList"
           @update-list-title="updateTodoListTitle"
@@ -4044,6 +3688,7 @@ function moveItem<T extends { id: string }>(items: T[], dragId: string, targetId
           @max-columns-change="updateTodoMaxColumns"
           @assign-list-column="assignTodoListSections"
           @create="createTodo"
+          @clipboard-message="handleClipboardMessage"
           @create-from-text="createTodosFromText"
           @update="updateTodo"
           @split="splitTodo"
@@ -4063,7 +3708,6 @@ function moveItem<T extends { id: string }>(items: T[], dragId: string, targetId
           @focus="handleGuideFocus('todos', $event)"
           @guide="handleGuideClick"
           @declutter="showDeclutterBubble"
-          @polish-message="handlePolishStatus"
         />
       </template>
 
@@ -4075,11 +3719,11 @@ function moveItem<T extends { id: string }>(items: T[], dragId: string, targetId
           :edit-space-id="pendingEditSpaceId"
           :language="state.language"
           :move-targets="workspaceMoveTargets"
-          :polish="polishClipboard"
           @activate="activateSpace"
           @create="createSpace"
           @rename="renameSpace"
           @edit-done="finishSpaceEdit"
+          @clipboard-message="handleClipboardMessage"
           @update="updateSpaceLines"
           @delete="deleteSpace"
           @reorder="reorderSpaces"
@@ -4088,52 +3732,11 @@ function moveItem<T extends { id: string }>(items: T[], dragId: string, targetId
           @focus="(_, element) => handleGuideFocus('workspace', element)"
           @guide="(_, anchor, immediate) => handleGuideClick('workspace', anchor, immediate)"
           @blur="handleEditorBlur"
-          @polish-message="handlePolishStatus"
         />
       </template>
     </WorkbenchShell>
 
-    <!-- 手机端首页（OpenDesign 原型实现）：未配对=桌面叙事+分组输码；已配对=状态卡+速记卡+同步提示。
-         配对校验/换码/复制留在 App.vue，输码分组与 sheet 二次确认在 MobileHome 内部。 -->
-    <MobileHome
-      v-else
-      :code="mobileInboxCode"
-      :checking="mobileInboxCodeChecking"
-      :error="mobileInboxCodeError"
-      :language="state.language"
-      :theme="effectiveTheme"
-      @submit="confirmMobileInboxCode"
-      @clear-error="mobileInboxCodeError = null"
-      @change-code="forgetMobileInboxCode"
-      @copy-code="copyMobileInboxCode"
-      @theme="handleThemeClick"
-    >
-      <template v-if="mobileInboxCode">
-        <MobileInboxCapture
-          ref="mobileCaptureRef"
-          v-model="mobileInboxDraftText"
-          :code="mobileInboxCode"
-          :language="state.language"
-          @change-code="forgetMobileInboxCode"
-          @sent="handleMobileInboxSent"
-        />
-      </template>
-    </MobileHome>
-
-    <Transition name="mobile-inbox-toast">
-      <p v-if="mobileCopyToast" class="mobile-inbox-copy-toast" role="status" aria-live="polite" data-testid="mobile-inbox-copy-toast">
-        {{ mobileCopyToast }}
-      </p>
-    </Transition>
-
-    <WorkspaceInboxDialog
-      v-if="inboxPairTarget"
-      :key="inboxPairTarget.id"
-      :workspace="inboxPairTarget"
-      :language="state.language"
-      @update="handleInboxUpdate"
-      @close="inboxPairingWorkspaceId = null"
-    />
+    <MobileHome v-else :language="state.language" />
 
     <ImagePreview
       v-if="!isMobileBlocked && displayedPreviewId"
@@ -4165,7 +3768,6 @@ function moveItem<T extends { id: string }>(items: T[], dragId: string, targetId
       :notes="focusTodo?.focusNotes ?? []"
       :images="focusTodo?.focusImages ?? []"
       :language="state.language"
-      :polish="polishClipboard"
       @close="closeFocusNow"
       @notes-update="(lines) => focusSession && updateFocusNotes(focusSession.period, focusSession.id, lines)"
       @paste-image="(request) => focusSession && pasteImageFromClipboard(request, { period: focusSession.period, id: focusSession.id })"
@@ -4177,8 +3779,7 @@ function moveItem<T extends { id: string }>(items: T[], dragId: string, targetId
       @move-image-to-bottom="(id) => focusSession && replaceFocusImages({ period: focusSession.period, id: focusSession.id }, (list) => { const i = list.findIndex((item) => item.id === id); if (i >= 0 && i < list.length - 1) list.push(...list.splice(i, 1)); return list; })"
     />
 
-    <!-- 伴宠气泡（GIF + 消息）：常挂载，桌面端随编辑/保存触发；移动端速记发送成功时
-         经 handleMobileInboxSent 强制在右下角弹出，其余板效仍被 isBoardBlocked 屏蔽。 -->
+    <!-- 伴宠气泡（GIF + 消息）。 -->
     <CompanionBubble
       :visible="companionVisible"
       :message="bubbleMessage"

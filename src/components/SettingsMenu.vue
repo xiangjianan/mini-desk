@@ -11,7 +11,6 @@ import {
   Images as ImagesOutline,
   Info as InformationCircleOutline,
   KeyRound as KeyOutline,
-  Smartphone as PhonePortraitOutline,
   Database as ServerOutline,
   Settings as SettingsOutline,
   Sun,
@@ -49,7 +48,6 @@ const emit = defineEmits<{
   createWorkspace: [];
   exportWorkspace: [anchor?: HTMLElement];
   import: [anchor?: HTMLElement];
-  pairInbox: [anchor?: HTMLElement];
   clearData: [anchor?: HTMLElement];
   about: [anchor?: HTMLElement];
   suggest: [anchor?: HTMLElement];
@@ -144,7 +142,6 @@ const options = computed(() => [
     })),
   },
   { type: "divider", key: "preferences-divider" },
-  { label: text.value.app.inboxPair, key: "pair-inbox", icon: renderIcon(PhonePortraitOutline) },
   { type: "divider", key: "help-divider" },
   { label: text.value.settings.shortcutHelp, key: "shortcut-help", icon: renderIcon(KeyOutline) },
   { label: text.value.settings.suggest, key: "suggest", icon: renderIcon(MailOutline) },
@@ -171,7 +168,6 @@ function handleSelect(key: string): void {
   if (key === "create-workspace") emit("createWorkspace");
   if (key === "export-workspace") emit("exportWorkspace", triggerRef.value ?? undefined);
   if (key === "import") emit("import", triggerRef.value ?? undefined);
-  if (key === "pair-inbox") emit("pairInbox", triggerRef.value ?? undefined);
   if (key === "clear-data") emit("clearData", triggerRef.value ?? undefined);
   if (key === "suggest") emit("suggest", triggerRef.value ?? undefined);
   if (key === "support") emit("support", triggerRef.value ?? undefined);

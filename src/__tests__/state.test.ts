@@ -164,21 +164,6 @@ describe("state compatibility", () => {
     expect(serialized.zoneVisibility.notes).toBe(false);
   });
 
-  it("omits phone pairing from workspace exports while preserving local serialization", () => {
-    const workspace = defaultWorkspace("paired");
-    workspace.inbox = { code: "0123456789AB", todoListId: workspace.todoLists[0].id, noteTarget: workspace.activeSpaceId, lastSeenAt: 123 };
-    workspace.spaces[0].lines = [{ text: "手机速记内容", indent: 0 }];
-    const local = getSerializableWorkspace(workspace);
-    const exported = getSerializableWorkspace(workspace, { omitInbox: true });
-    const { inbox, ...content } = local;
-
-    expect(exported).not.toHaveProperty("inbox");
-    expect(exported).toEqual(content);
-    expect(workspace.inbox).toEqual(inbox);
-    expect(local.inbox).not.toBe(workspace.inbox);
-    expect(getSerializableState({ ...defaultState(), workspaces: [workspace], activeWorkspaceId: workspace.id }).workspaces[0].inbox).toEqual(inbox);
-  });
-
   it("seeds every workspace from the legacy global zone visibility on load", () => {
     const state = normalizeImportedState({
       zoneVisibility: { tasks: false },
