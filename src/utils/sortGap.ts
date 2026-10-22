@@ -15,6 +15,9 @@ export function createSortGap(source: HTMLElement, selector: string) {
   let before = true;
   let container: HTMLElement | null = null;
   const animations = new Map<HTMLElement, Animation>();
+  function isClippedContent(element: HTMLElement): boolean {
+    return Boolean(element.closest('.todo-section.is-collapsed, .todo-list-shell.is-hidden, .quick-tag-content.is-collapsed'));
+  }
   function layoutBounds(element: HTMLElement): DOMRect {
     const bounds = element.getBoundingClientRect();
     if (!animations.has(element)) return bounds;
@@ -36,10 +39,13 @@ export function createSortGap(source: HTMLElement, selector: string) {
     if (!root.contains(hit)) return;
     // The gap is already the requested slot. Moving rows must not dislodge it.
     if (contains(gap.getBoundingClientRect(), x, y)) return;
-    const candidates = Array.from(root.querySelectorAll<HTMLElement>(selector)).filter(el => el !== source);
+    // Grid collapse clips content without removing its children's rectangles.
+    // Those invisible rows can geometrically overlap a visible list below.
+    const candidates = Array.from(root.querySelectorAll<HTMLElement>(selector)).filter(el => el !== source &&
+      (!['.todo-item', '.quick-button'].includes(selector) || !isClippedContent(el)));
     const hitItem = hit?.closest<HTMLElement>(selector);
     const item = candidates.find(el => contains(layoutBounds(el), x, y))
-      ?? (hitItem && !animations.has(hitItem) ? hitItem : null);
+      ?? (hitItem && candidates.includes(hitItem) && !animations.has(hitItem) ? hitItem : null);
     if (!item) {
       const containers: Record<string, string> = {
         '.todo-item': '.todo-list', '.quick-button': '.quick-buttons',
@@ -48,7 +54,7 @@ export function createSortGap(source: HTMLElement, selector: string) {
       const destination = (containers[selector] ? hit?.closest<HTMLElement>(containers[selector]) : null)
         ?? (selector === '.todo-item' ? hit?.closest('.todo-section')?.querySelector<HTMLElement>('.todo-list')
           : selector === '.quick-button' ? hit?.closest('.quick-tag-group:not(:has(.is-collapsed))')?.querySelector<HTMLElement>('.quick-buttons') : null);
-      if (destination) {
+      if (destination && !isClippedContent(destination)) {
         const last = Array.from(destination.querySelectorAll<HTMLElement>(selector)).filter(el => el !== source).at(-1);
         if (!last) {
           destination.append(gap); container = destination; anchor = null;

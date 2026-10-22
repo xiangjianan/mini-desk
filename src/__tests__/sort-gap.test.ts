@@ -13,6 +13,28 @@ function fixture() {
   return { root, items, pointTo: (element: Element) => { hit = element; } };
 }
 describe('sorting landing gap', () => {
+  it('ignores clipped rows in collapsed lists above the expanded source list', () => {
+    const root = document.body.appendChild(document.createElement('div'));
+    root.innerHTML = '<section class="todo-section is-collapsed"><div class="todo-heading">A</div><div class="todo-list-shell is-hidden"><ul class="todo-list"><li class="todo-item">Hidden A</li></ul></div></section><section class="todo-section is-collapsed"><div class="todo-heading">B</div><div class="todo-list-shell is-hidden"><ul class="todo-list"><li class="todo-item">Hidden B</li></ul></div></section><section class="todo-section"><div class="todo-heading">C</div><ul class="todo-list"><li class="todo-item">Source</li><li class="todo-item">Target</li></ul></section>';
+    const items = Array.from(root.querySelectorAll<HTMLElement>('.todo-item'));
+    // Collapsing clips the list shell; child rows still have layout rectangles
+    // that can overlap visible rows in the section below it.
+    items.forEach((item, index) => vi.spyOn(item, 'getBoundingClientRect').mockReturnValue({
+      top: index === 2 ? 80 : 120, bottom: index === 2 ? 120 : 160,
+      left: 0, right: 120, width: 120, height: 40,
+    } as DOMRect));
+    let hit: Element = items[3]!;
+    Object.defineProperty(document, 'elementFromPoint', { configurable: true, value: () => hit });
+    const gap = createSortGap(items[2]!, '.todo-item');
+    gap.update(root, 20, 145);
+    expect(gap.anchor).toBe(items[3]);
+    expect(root.querySelector('.sort-gap')!.parentElement).toBe(items[3]!.parentElement);
+    hit = root.querySelector('.todo-heading')!;
+    gap.update(root, 20, 10);
+    expect(root.querySelector('.sort-gap')!.parentElement).toBe(items[3]!.parentElement);
+    gap.restore();
+  });
+
   it('reserves the source size, moves the gap, and restores DOM before commit', () => {
     const { root, items } = fixture();
     const gap = createSortGap(items[0]!, '.item');
