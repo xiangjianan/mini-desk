@@ -387,7 +387,7 @@ describe("QuickButtons", () => {
       ],
     });
 
-    expect(wrapper.findAll(".quick-tag-title").map((item) => item.text())).toEqual(["标签 A", "标签 B", "其他"]);
+    expect(wrapper.findAll(".quick-tag-title").map((item) => item.text())).toEqual(["标签 A", "标签 B", "无标签"]);
     expect(wrapper.findAll(".quick-tag-group").map((group) => group.findAll(".quick-button-label").map((button) => button.text()))).toEqual([
       ["A1"],
       ["B1"],
@@ -468,7 +468,7 @@ describe("QuickButtons", () => {
       otherCollapsed: true,
     });
 
-    expect(wrapper.get(".quick-tag-title").text()).toBe("其他");
+    expect(wrapper.get(".quick-tag-title").text()).toBe("无标签");
     expect(wrapper.get(".quick-tag-content").classes()).toContain("is-collapsed");
     expect(wrapper.get(".quick-tag-content").attributes("aria-hidden")).toBe("true");
     expect(wrapper.get(".quick-tag-collapse-button").attributes("aria-expanded")).toBe("false");
