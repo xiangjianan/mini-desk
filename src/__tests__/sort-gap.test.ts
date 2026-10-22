@@ -1,7 +1,7 @@
 import { afterEach, describe, expect, it, vi } from 'vitest';
 import { createSortGap } from '../utils/sortGap';
 
-afterEach(() => { document.body.innerHTML = ''; vi.restoreAllMocks(); });
+afterEach(() => { document.body.innerHTML = ''; vi.restoreAllMocks(); vi.unstubAllGlobals(); });
 function fixture() {
   const root = document.createElement('div');
   root.innerHTML = '<div class="list"><div class="item">A</div><div class="item">B</div><div class="item">C</div></div><div class="list"></div>';
@@ -85,5 +85,49 @@ it('keeps an established gap stable while an animating row passes under the poin
   expect(gap.before).toBe(false);
   expect(animate).toHaveBeenCalledOnce();
   expect(cancel).not.toHaveBeenCalled();
+  gap.restore();
+});
+
+
+it('does not restart rows already settling when a fast upward drag crosses the next row', () => {
+  const root = document.body.appendChild(document.createElement('div'));
+  root.innerHTML = '<div class="item">A</div><div class="item">B</div><div class="item">C</div><div class="item">D</div>';
+  const items = Array.from(root.querySelectorAll<HTMLElement>('.item'));
+  const offsets = new Map<HTMLElement, number>();
+  const nativeStyle = getComputedStyle;
+  vi.stubGlobal('getComputedStyle', (el: HTMLElement) => offsets.has(el)
+    ? { transform: `matrix(1, 0, 0, 1, 0, ${offsets.get(el)})` } : nativeStyle(el));
+  function bounds(el: HTMLElement): DOMRect {
+    const visible = Array.from(root.children).filter(child => (child as HTMLElement).style.display !== 'none');
+    const top = visible.indexOf(el) * 40 + (offsets.get(el) ?? 0);
+    return { left: 0, right: 120, top, bottom: top + 40, width: 120, height: 40 } as DOMRect;
+  }
+  const cancels = items.map(() => vi.fn());
+  const animates = items.map((el, index) => {
+    vi.spyOn(el, 'getBoundingClientRect').mockImplementation(() => bounds(el));
+    const animate = vi.fn((frames: Keyframe[]) => {
+      const dy = String(frames[0]!.transform).match(/, ([-\d.]+)px/)!;
+      offsets.set(el, Number(dy[1]));
+      return { cancel: () => { cancels[index]!(); offsets.delete(el); } } as unknown as Animation;
+    });
+    el.animate = animate as unknown as HTMLElement['animate'];
+    return animate;
+  });
+  let hit: Element = items[1]!;
+  Object.defineProperty(document, 'elementFromPoint', { configurable: true, value: () => hit });
+  const gap = createSortGap(items[3]!, '.item');
+  const placeholder = root.querySelector<HTMLElement>('.sort-gap')!;
+  vi.spyOn(placeholder, 'getBoundingClientRect').mockImplementation(() => bounds(placeholder));
+  gap.update(root, 20, 45);
+  expect(animates[1]).toHaveBeenCalledOnce();
+  expect(animates[2]).toHaveBeenCalledOnce();
+  hit = items[0]!;
+  gap.update(root, 20, 5); // Previous animations have not finished yet.
+  expect(root.firstElementChild).toBe(placeholder);
+  expect(animates[0]).toHaveBeenCalledOnce();
+  expect(animates[1]).toHaveBeenCalledOnce();
+  expect(animates[2]).toHaveBeenCalledOnce();
+  expect(cancels[1]).not.toHaveBeenCalled();
+  expect(cancels[2]).not.toHaveBeenCalled();
   gap.restore();
 });

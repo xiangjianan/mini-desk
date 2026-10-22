@@ -73,16 +73,23 @@ export function createSortGap(source: HTMLElement, selector: string) {
     anchor = item; container = null; before = insertBefore;
     if (before ? item.previousElementSibling === gap : item.nextElementSibling === gap) return;
     const elements = candidates;
-    const positions = elements.map(el => el.getBoundingClientRect());
-    animations.forEach(animation => animation.cancel());
-    animations.clear();
+    const positions = elements.map(el => ({ visual: el.getBoundingClientRect(), layout: layoutBounds(el) }));
     if (before) item.before(gap); else item.after(gap);
-    if (!window.matchMedia?.('(prefers-reduced-motion: reduce)').matches) elements.forEach((el, i) => {
-      const to = el.getBoundingClientRect();
+    elements.forEach((el, i) => {
+      const to = layoutBounds(el);
       const from = positions[i]!;
-      if (el.animate && (from.left !== to.left || from.top !== to.top)) animations.set(el, el.animate([
-        { transform: `translate(${from.left - to.left}px, ${from.top - to.top}px)` }, { transform: 'translate(0, 0)' },
-      ], { duration: 180, easing: 'ease-out' }));
+      // Fast pointer movement often changes only the next row's destination.
+      // Leave every other row's in-flight animation (and easing clock) intact.
+      if (from.layout.left === to.left && from.layout.top === to.top) return;
+      animations.get(el)?.cancel();
+      animations.delete(el);
+      if (!el.animate || window.matchMedia?.('(prefers-reduced-motion: reduce)').matches) return;
+      const animation = el.animate([
+        { transform: `translate(${from.visual.left - to.left}px, ${from.visual.top - to.top}px)` }, { transform: 'translate(0, 0)' },
+      ], { duration: 180, easing: 'ease-out' });
+      animations.set(el, animation);
+      const finish = () => { if (animations.get(el) === animation) animations.delete(el); };
+      void animation.finished?.then(finish, finish);
     });
   }
   function restore() {
