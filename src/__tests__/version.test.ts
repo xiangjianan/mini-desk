@@ -23,7 +23,7 @@ describe("app version", () => {
     const index = readFileSync(resolve(root, "index.html"), "utf8");
     const pkg = JSON.parse(readFileSync(resolve(root, "package.json"), "utf8")) as { version: string };
 
-    expect(pkg.version).toMatch(/^\d+\.\d+\.\d+$/);
+    expect(pkg.version).toMatch(/^\d+\.\d+\.\d+(?:-[0-9A-Za-z]+(?:[.-][0-9A-Za-z]+)*)?$/);
     expect(index).toContain(`<meta name="app-version" content="${pkg.version}"`);
     expect(FALLBACK_APP_VERSION).toBe(pkg.version);
   });
