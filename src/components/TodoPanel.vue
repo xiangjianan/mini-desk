@@ -63,11 +63,6 @@ import { copySelection, copyTextToClipboard, getSelectionRange, probeClipboardFo
 import { createExclusiveContextMenu } from "../utils/contextMenu";
 import { renderIcon } from "../utils/dropdownIcons";
 import { isImeComposing } from "../utils/ime";
-import type { PolishKind, PolishResult, PolishStyle, PolishTodoItem } from "../sync/polishClient";
-import { runSmartPaste, smartPasteMessages, runSelectionPolish, selectionPolishMessages } from "../utils/smartPaste";
-import type { SmartPastePhase } from "../utils/smartPaste";
-import { POLISH_STYLE_ENTRIES } from "../state/polishStyles";
-import SparklesOutlineIcon from "./SparklesOutlineIcon.vue";
 import EditableTitle from "./EditableTitle.vue";
 import TodoRowsTransition from "./TodoRowsTransition";
 import { computePanelColumnCount, normalizeTodoMaxColumns, TODO_COLUMN_LIMIT_OPTIONS } from "../state/columns";
@@ -82,7 +77,6 @@ const props = withDefaults(defineProps<{
   notificationFlashKeys?: string[];
   language?: AppLanguage;
   moveTargets?: WorkspaceMoveTarget[];
-  polish?: (kind: PolishKind, text: string, style?: PolishStyle) => Promise<PolishResult>;
 }>(), {
   maxColumns: 1,
   notificationFlashKeys: () => [],
@@ -114,13 +108,13 @@ const emit = defineEmits<{
   blurEmpty: [period: TodoPeriod, id: string];
   blur: [];
   move: [dragged: DraggedTodo, destinationPeriod: TodoPeriod, targetId?: string];
-  createFromText: [period: TodoPeriod, items: string[] | PolishTodoItem[], afterId?: string];
+  createFromText: [period: TodoPeriod, items: string[], afterId?: string];
   focus: [element: HTMLElement];
   guide: [key: GuideKey, anchor: HTMLElement, immediate?: boolean];
   declutter: [anchor: HTMLElement];
   moveListToWorkspace: [listId: TodoListId, workspaceId: string];
   moveTodoToWorkspace: [period: TodoPeriod, todoId: string, workspaceId: string, listId: TodoListId];
-  polishMessage: [phase: SmartPastePhase, message: string, anchor: HTMLElement | undefined];
+  clipboardMessage: [message: string, anchor: HTMLElement | undefined];
 }>();
 
 const focusedListId = ref<TodoListId | null>(null);
@@ -331,9 +325,6 @@ const menuOptions = computed<DropdownOption[]>(() => {
       { label: uiText.value.todo.clearCompleted, key: "clear-completed", icon: renderIcon(CheckmarkDoneOutline) },
       { label: isCompletedVisible(list.id) ? uiText.value.todo.hideCompleted : uiText.value.todo.showCompleted, key: "toggle-completed", icon: renderIcon(isCompletedVisible(list.id) ? EyeOffOutline : EyeOutline) },
       { label: uiText.value.common.paste, key: "paste", icon: renderIcon(ClipboardOutline) },
-      ...(props.polish
-        ? [{ label: uiText.value.common.smartPaste, key: "smart-paste", icon: renderIcon(ClipboardOutline) }]
-        : []),
       { label: uiText.value.todo.editList, key: "edit-list", icon: renderIcon(CreateOutline) },
       ...buildListMoveOptions(),
       { label: uiText.value.todo.deleteList, key: "delete-list", disabled: effectiveTodoLists.value.length <= 1, icon: renderIcon(TrashOutline, true) },
@@ -348,19 +339,8 @@ const menuOptions = computed<DropdownOption[]>(() => {
   if (menu.value?.id) {
     options.push({ label: uiText.value.common.copy, key: "copy", icon: renderIcon(CopyOutline) });
     if (canPasteTodoText(menu.value.period)) {
-      // 普通粘贴在聚焦时写入选区；失焦及智能粘贴继续新增提醒。
+      // 普通粘贴在聚焦时写入选区；失焦时新增提醒。
       options.push({ label: uiText.value.common.paste, key: "paste", icon: renderIcon(ClipboardOutline) });
-      if (props.polish) {
-        options.push({ label: uiText.value.common.smartPaste, key: "smart-paste", icon: renderIcon(ClipboardOutline) });
-      }
-    }
-    if (props.polish && todo?.text.trim()) {
-      options.push({
-        label: uiText.value.common.smartPolish,
-        key: "smart-polish",
-        icon: renderIcon(SparklesOutlineIcon, false, 14),
-        children: POLISH_STYLE_ENTRIES.map(({ key, labelKey }) => ({ label: uiText.value.common[labelKey], key })),
-      });
     }
     options.push({ label: uiText.value.todo.focusNow, key: "focus-now", icon: renderIcon(TimerOutline) });
     options.push({
@@ -1475,18 +1455,6 @@ async function handleMenuSelect(key: string): Promise<void> {
     if (count !== normalizeTodoMaxColumns(props.maxColumns)) emit("maxColumnsChange", count);
     return;
   }
-  const style = POLISH_STYLE_ENTRIES.find((entry) => entry.key === key)?.style;
-  if (style && id) {
-    const todo = getMenuTodo();
-    if (!todo?.text.trim()) return;
-    const selection = menu.value.selection?.text.trim()
-      ? menu.value.selection
-      : { start: 0, end: todo.text.length, text: todo.text, baseline: todo.text };
-    const input = target ?? anchor?.querySelector<HTMLInputElement>(".todo-input, .today-focus-input") ?? undefined;
-    closeMenu();
-    await polishTodoSelection(period, id, input, selection, style);
-    return;
-  }
   if (key === "focus-now" && id) {
     closeMenu();
     emit("focusNow", period, id);
@@ -1542,29 +1510,6 @@ async function handleMenuSelect(key: string): Promise<void> {
     closeMenu();
     return;
   }
-  if (key === "smart-paste" && !id) {
-    closeMenu();
-    if (!props.polish) return;
-    // 中途切换工作区（或列表数组被结构性替换）：丢弃迟到结果，避免写入其他空间的同名默认列表。
-    // 捕获 props.todoLists（即 App 的 displayTodoLists）：todo 编辑只动 todos 子树，引用不变；
-    // 切换空间/增删列表会换新数组。同空间并发 todo 追加是次序无关的，刻意不做文本基线校验。
-    // 卸载守卫：清空数据 bump boardEpoch 整树 remount，旧实例 props 已冻结、引用比较不再变化，
-    // 必须单独拦截（当前 Vue 对已卸载实例的 emit 也是 no-op，此处让组件不依赖该运行时内部行为）。
-    const landingLists = props.todoLists;
-    await runSmartPaste({
-      kind: "todo",
-      polish: props.polish,
-      messages: smartPasteMessages(uiText.value, "todo"),
-      anchor: getTodoSectionAnchor(period),
-      insert: (items) => {
-        if (isUnmounted || props.todoLists !== landingLists) return;
-        emit("createFromText", period, items);
-      },
-      fallbackTexts: splitDroppedTodoText,
-      notify: (phase, message, anchor) => emit("polishMessage", phase, message, anchor),
-    });
-    return;
-  }
   if (key === "copy" && id) {
     if (target && canCopyTextSelection(period, id, target)) {
       await copyTextSelection(target);
@@ -1582,25 +1527,6 @@ async function handleMenuSelect(key: string): Promise<void> {
     }
     await pasteTodosAfter(period, id);
     closeMenu();
-    return;
-  }
-  if (key === "smart-paste" && id) {
-    closeMenu();
-    if (!props.polish) return;
-    // 中途切换工作区（或列表数组被结构性替换）会换新数组：丢弃迟到结果，避免写入其他空间。
-    const landingLists = props.todoLists;
-    await runSmartPaste({
-      kind: "todo",
-      polish: props.polish,
-      messages: smartPasteMessages(uiText.value, "todo"),
-      anchor,
-      insert: (items) => {
-        if (isUnmounted || props.todoLists !== landingLists) return;
-        emit("createFromText", period, items, id);
-      },
-      fallbackTexts: splitDroppedTodoText,
-      notify: (phase, message, anchor) => emit("polishMessage", phase, message, anchor),
-    });
     return;
   }
   if (key === "notify" && id && anchor) {
@@ -1716,44 +1642,6 @@ function compareTodayFocusEntries(left: TodayFocusEntry, right: TodayFocusEntry)
   return left.index - right.index;
 }
 
-/** Replace only the captured selection; discard results after edits, completion or workspace changes. */
-async function polishTodoSelection(
-  period: TodoPeriod,
-  id: string,
-  target: HTMLInputElement | undefined,
-  selection: { start: number; end: number; text: string; baseline: string },
-  style: PolishStyle,
-): Promise<void> {
-  if (!props.polish) return;
-  const landingLists = props.todoLists;
-  const todo = getTodoById(period, id);
-  if (!todo) return;
-  const baselineDone = todo.done;
-  await runSelectionPolish({
-    kind: "note",
-    text: selection.text,
-    style,
-    polish: props.polish,
-    messages: selectionPolishMessages(uiText.value),
-    anchor: getTodoSectionAnchor(period),
-    apply: (texts) => {
-      const current = getTodoById(period, id);
-      if (isUnmounted || props.todoLists !== landingLists || current !== todo || current.done !== baselineDone || current.text !== selection.baseline) return;
-      const replacement = texts.join(" ").replace(/\s*\n\s*/g, " ");
-      const nextText = selection.baseline.slice(0, selection.start) + replacement + selection.baseline.slice(selection.end);
-      lastTodoSelections.delete(todoKey(period, id));
-      if (!current.done) editingTodoKey.value = todoKey(period, id);
-      emit("update", period, id, nextText);
-      void nextTick(() => {
-        if (!target?.isConnected) return;
-        target.focus({ preventScroll: true });
-        restoreTodoCaret(target, selection.start + replacement.length);
-      });
-    },
-    notify: (phase, message, anchor) => emit("polishMessage", phase, message, anchor),
-  });
-}
-
 function hasSelection(target: HTMLTextAreaElement | HTMLInputElement): boolean {
   return (target.selectionStart ?? 0) !== (target.selectionEnd ?? 0);
 }
@@ -1847,7 +1735,7 @@ async function pasteTodosAfter(period: TodoPeriod, afterId: string): Promise<voi
  * （Ctrl+V 会贴到贴图区）。 */
 function notifyClipboardPasteProbe(kind: "image" | "empty", period: TodoPeriod): void {
   const message = kind === "image" ? uiText.value.app.pasteImageClipboard : uiText.value.app.pasteEmptyClipboard;
-  emit("polishMessage", "fallback", message, getTodoSectionAnchor(period));
+  emit("clipboardMessage", message, getTodoSectionAnchor(period));
 }
 
 async function startTodoEdit(event: MouseEvent, period: TodoPeriod, id: string): Promise<void> {
@@ -2243,9 +2131,7 @@ onUnmounted(() => focusRegionAnimation?.cancel());
 
           <div class="todo-heading-actions">
             <span class="todo-count">{{ periodStats[list.id] }}</span>
-            <button v-if="props.polish" type="button" class="icon-button desk-ai-button"
-              :aria-label="uiText.common.smartPaste" :title="uiText.common.smartPaste"
-              @click.stop="openSectionActions($event, list.id); handleMenuSelect('smart-paste')"><NIcon :component="ClipboardOutline" /></button>
+
             <button type="button" class="icon-button" :aria-label="uiText.desk.addReminder" :title="uiText.desk.addReminder"
               @click.stop="handleHeadingAddClick(list)"><NIcon :component="AddOutline" /></button>
             <button
@@ -2514,7 +2400,6 @@ onUnmounted(() => focusRegionAnimation?.cancel());
     />
 
     <ContextMenu v-if="menu" :x="menu.x" :y="menu.y" :options="menuOptions"
-      :polish-labels="true"
       @select="handleMenuSelect" @clickoutside="exclusiveMenu.handleClickOutside" />
   </section>
 </template>

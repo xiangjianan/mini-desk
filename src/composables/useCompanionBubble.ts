@@ -25,7 +25,7 @@ export interface BubbleOptions {
   linkText?: string;
   linkHref?: string;
   signatureText?: string;
-  /** 绕过 isBoardBlocked 与「不显示」主题的普通气泡静音强制显示：手机速记壳的发送成功反馈复用伴宠气泡。 */
+  /** 绕过 isBoardBlocked 与「不显示」主题的普通气泡静音强制显示：用于需要主动显示的反馈。 */
   force?: boolean;
   /** 用户显式请求的 Tips（右键菜单/GIF 点击）：绕过「不显示」安静模式，但 board 阻断（手机壳/预览层）仍拦截。 */
   explicit?: boolean;

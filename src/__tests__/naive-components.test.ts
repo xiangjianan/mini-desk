@@ -254,10 +254,6 @@ describe("Naive UI component usage", () => {
     expect(quick).toContain("quick-button-icon");
     expect(app).toContain("WorkbenchShell");
     expect(app).toContain('data-testid="save-status"');
-    // 移动端首页壳承载明暗主题按钮（Sunny/Moon 图标随壳渲染），App.vue 只回抛切换事件。
-    expect(app).toContain("@theme=\"handleThemeClick\"");
-    expect(read("src/components/MobileHome.vue")).toContain("SunnyOutline");
-    expect(read("src/components/MobileHome.vue")).toContain("MoonOutline");
     expect(todo).toContain("todo-section-menu-button");
     expect(todo).toContain("uiText.todo.menu");
     expect(todo).toContain("uiText.value.todo.clearCompleted");
@@ -1016,64 +1012,5 @@ describe("Naive UI component usage", () => {
     expect(styles).not.toMatch(/\.workspace-panel \.space-tabs\s*\{[^}]*overflow-x: scroll/s);
     expect(styles).not.toContain("scrollbar-gutter: stable");
     expect(styles).toMatch(/\.space-tabs\s*\{[^}]*overscroll-behavior-x: contain/s);
-  });
-
-  it("uses a mobile handoff page instead of mobile board regions", () => {
-    const app = read("src/App.vue");
-    const styles = read("src/styles.css");
-    const text = read("src/components/TextPanel.vue");
-    const i18n = read("src/state/i18n.ts");
-
-    expect(app).toContain('class="workspace-panel"');
-    expect(app).toContain("MOBILE_BREAKPOINT_QUERY");
-    const home = read("src/components/MobileHome.vue");
-    expect(home).toContain('class="mobile-handoff"');
-    expect(home).toContain('class="mobile-home-brand mobile-handoff-title"');
-    expect(home).toContain('class="mobile-home-theme"');
-    // 桌面引导文案由首页壳的桌面示意图 caption 承担（App.vue 不再引用）。
-    expect(home).toContain("app.mobileMessage");
-    expect(app).toContain('v-if="!isMobileBlocked"');
-    // 伴宠气泡常挂载（无 v-if 门控）：移动端仅速记发送成功经 handleMobileInboxSent 强制弹出，
-    // 其余桌面板效仍被 isBoardBlocked 屏蔽。
-    expect(app).not.toMatch(/<CompanionBubble\s+v-if=/);
-    expect(app).toContain('@sent="handleMobileInboxSent"');
-    expect(app).toContain(':visible="companionVisible"');
-    expect(i18n).toContain("完整工作台，请在电脑端打开");
-    expect(app).not.toContain('class="mobile-nav"');
-    expect(app).not.toContain('class="mobile-drawer-trigger"');
-    expect(app).not.toContain('class="mobile-drawer-menu"');
-    expect(app).not.toContain('class="mobile-menu-option"');
-    expect(app).not.toContain('class="mobile-banner"');
-    expect(app).not.toContain("data-mobile-active");
-    expect(app).not.toContain("mobileActiveArea");
-    expect(app).not.toContain("mobileNavOpen");
-    expect(styles).toMatch(/\.mobile-handoff\s*\{[^}]*height: 100dvh/s);
-    expect(styles).toMatch(/\.mobile-handoff\s*\{[^}]*overflow-y: auto/s);
-    expect(styles).toMatch(/\.mobile-home-page\s*\{[^}]*max-width: 430px/s);
-    // 已配对态整页恰好一屏（不滚动）：page 定高、flex 链路贯通到速记 textarea 弹性撑满剩余高度。
-    expect(home).toContain(':class="{ \'is-fill\': Boolean(code) }"');
-    expect(styles).toMatch(/\.mobile-home-page\.is-fill\s*\{[^}]*height: 100%/s);
-    expect(styles).toMatch(/\.mobile-home-page\.is-fill \.mobile-home-main[^{]*\{[^}]*min-height: 0/s);
-    expect(ruleBodies(styles, ".mobile-home-page.is-fill .mobile-inbox-wrap").join("\n")).toContain("flex-direction: column");
-    expect(styles).toMatch(/\.mobile-home-page\.is-fill \.mobile-inbox-form\s*\{[^}]*min-height: 0/s);
-    expect(styles).toMatch(/\.mobile-home-page\.is-fill \.mobile-inbox-textarea\s*\{[^}]*flex: 1/s);
-    expect(styles).toMatch(/\.mobile-home-page\.is-fill \.mobile-inbox-textarea\s*\{[^}]*resize: none/s);
-    expect(styles).toMatch(/\.mobile-home-code-groups\s*\{/s);
-    expect(styles).toMatch(/@media \(max-width: 900px\)[\s\S]*--app-font-size: 14px/s);
-    expect(styles).toMatch(/@media \(max-width: 900px\)[\s\S]*\.focus-companion\s*\{[^}]*bottom: 28px/s);
-    expect(styles).toMatch(/@media \(max-width: 900px\)[\s\S]*\.focus-companion img\s*\{[^}]*max-width: 50px/s);
-    expect(styles).not.toContain(".mobile-nav");
-    expect(styles).not.toContain(".mobile-drawer-trigger");
-    expect(styles).not.toContain(".mobile-drawer-menu");
-    expect(styles).not.toContain(".mobile-menu-option");
-    expect(styles).not.toContain(".mobile-banner");
-    expect(styles).not.toContain("data-mobile-active");
-    expect(text).toContain("unlockTextareaForMobileKeyboard");
-    expect(text).toContain('@touchstart="handleTouchStart"');
-    expect(text).toContain('@pointerdown="handlePointerDown"');
-    expect(text).not.toContain("handleMobileEditTap");
-    expect(text.match(/async function startEditing[\s\S]*?\n}/)?.[0] ?? "").not.toContain("event.preventDefault();");
-    expect(text).toMatch(/function startEditingFromTextarea\(textarea: HTMLTextAreaElement, keyboardFocus = false\): void \{[\s\S]*editing\.value = true;[\s\S]*unlockTextareaForMobileKeyboard\(textarea, caret, keyboardFocus\);[\s\S]*\}/s);
-    expect(text).toMatch(/async function startEditing\(event: MouseEvent\): Promise<void> \{[\s\S]*startEditingFromTextarea\(textarea\);[\s\S]*await nextTick\(\)/s);
   });
 });
