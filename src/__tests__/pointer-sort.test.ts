@@ -77,3 +77,33 @@ describe("pointer sorting", () => {
     expect(document.body.style.userSelect).toBe("");
   });
 });
+
+it('drops at the reserved row position after restoring layout and removes gaps on Escape', () => {
+  const { root, source, target } = fixture();
+  source.className = 'todo-drag-handle';
+  const row = document.createElement('div');
+  row.className = 'todo-item';
+  source.before(row); row.append(source);
+  target.className = 'todo-item';
+  vi.spyOn(row, 'getBoundingClientRect').mockReturnValue({ top: 0, left: 0, width: 120, height: 40 } as DOMRect);
+  vi.spyOn(target, 'getBoundingClientRect').mockReturnValue({ top: 40, left: 0, width: 120, height: 40 } as DOMRect);
+  dispose?.();
+  dispose = installPointerSort(root, '.todo-drag-handle', () => {});
+  const drop = vi.fn((event: Event) => {
+    expect(root.querySelector('.sort-gap')).toBeNull();
+    expect(row.style.display).toBe('');
+    expect((event as DragEvent).clientY).toBe(70);
+  });
+  target.addEventListener('drop', drop);
+  pointer(source, 'pointerdown', 20);
+  pointer(window, 'pointermove', 75);
+  expect(target.nextElementSibling?.className).toBe('sort-gap');
+  pointer(window, 'pointerup', 75);
+  expect(drop).toHaveBeenCalledOnce();
+  pointer(source, 'pointerdown', 20);
+  pointer(window, 'pointermove', 75);
+  window.dispatchEvent(new KeyboardEvent('keydown', { key: 'Escape' }));
+  expect(root.querySelector('.sort-gap')).toBeNull();
+  expect(row.style.display).toBe('');
+  expect(drop).toHaveBeenCalledOnce();
+});

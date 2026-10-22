@@ -1,7 +1,10 @@
+import { createSortGap } from "./sortGap";
 /** Pointer-driven in-page sorting keeps wheel events available during a drag.
  * Existing drag handlers receive synthetic events, preserving their drop rules.
  */
 export function installPointerSort(root: HTMLElement, selector: string, pauseAutoScroll: () => void): () => void {
+  let gap: ReturnType<typeof createSortGap> | null = null;
+  let gapSelector = "";
   let source: HTMLElement | null = null;
   let transfer: DataTransfer | null = null;
   let preview: HTMLElement | null = null;
@@ -23,8 +26,10 @@ export function installPointerSort(root: HTMLElement, selector: string, pauseAut
       target = next;
     }
     if (target) dispatch(target, "dragover");
+    gap?.update(root, x, y);
   }
   function cleanup(): void {
+    gap?.restore(); gap = null;
     if (started && source) dispatch(source, "dragend");
     preview?.remove();
     if (started) document.body.style.userSelect = previousUserSelect;
@@ -61,6 +66,11 @@ export function installPointerSort(root: HTMLElement, selector: string, pauseAut
       preview.inert = true;
       preview.style.cssText = `position:fixed;z-index:11000;pointer-events:none;width:${rect.width}px;max-height:180px;overflow:hidden;opacity:0.8;margin:0;transform:translateY(-50%);transition:none;animation:none;`;
       document.body.appendChild(preview);
+      const surface = source.closest<HTMLElement>(".todo-item, .todo-section, .quick-button, .quick-tag-group, .space-tab, .workspace-switcher-item");
+      if (surface) {
+        gapSelector = '.' + ['todo-item', 'todo-section', 'quick-button', 'quick-tag-group', 'space-tab', 'workspace-switcher-item'].find(name => surface.classList.contains(name));
+        gap = createSortGap(surface, gapSelector);
+      }
     }
     event.preventDefault();
     if (preview) { preview.style.left = `${x + 12}px`; preview.style.top = `${y}px`; }
@@ -70,6 +80,24 @@ export function installPointerSort(root: HTMLElement, selector: string, pauseAut
     if (!source || event.pointerId !== pointerId) return;
     if (started) {
       x = event.clientX; y = event.clientY; updateTarget();
+      const legacy = source.matches('.space-tab, .workspace-switcher-item');
+      const withinRoot = Boolean(target && root.contains(target));
+      const anchor = withinRoot ? (legacy ? gap?.indexTarget() : gap?.anchor) : null;
+      const before = gap?.before;
+      const container = withinRoot ? gap?.container : null;
+      const hasGap = Boolean(gap);
+      gap?.restore(); gap = null;
+      if (anchor) {
+        const heading = anchor.matches('.todo-section') ? anchor.querySelector('.todo-heading')
+          : anchor.matches('.quick-tag-group') ? anchor.querySelector('.quick-tag-heading') : null;
+        const rect = (heading ?? anchor).getBoundingClientRect();
+        y = rect.top + rect.height * (before ? 0.25 : 0.75);
+        x = rect.left + rect.width * (before ? 0.25 : 0.75);
+        target = anchor.matches('.todo-section') ? anchor.querySelector('.todo-heading') ?? anchor
+          : anchor.matches('.quick-tag-group') ? anchor.querySelector('.quick-tag-heading') ?? anchor : anchor;
+      }
+      if (container) target = container;
+      else if (hasGap && !anchor && target && root.contains(target)) target = null;
       if (target) dispatch(target, "drop");
       suppressClick = true;
       clickTimer = window.setTimeout(() => { suppressClick = false; }, 0);

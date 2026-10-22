@@ -1,0 +1,56 @@
+import { afterEach, describe, expect, it, vi } from 'vitest';
+import { createSortGap } from '../utils/sortGap';
+
+afterEach(() => { document.body.innerHTML = ''; vi.restoreAllMocks(); });
+function fixture() {
+  const root = document.createElement('div');
+  root.innerHTML = '<div class="list"><div class="item">A</div><div class="item">B</div><div class="item">C</div></div><div class="list"></div>';
+  document.body.append(root);
+  const items = Array.from(root.querySelectorAll<HTMLElement>('.item'));
+  items.forEach((item, i) => vi.spyOn(item, 'getBoundingClientRect').mockReturnValue({ top: i * 40, left: 0, width: 120, height: 40, bottom: i * 40 + 40 } as DOMRect));
+  let hit: Element = items[1]!;
+  Object.defineProperty(document, 'elementFromPoint', { configurable: true, value: vi.fn(() => hit) });
+  return { root, items, pointTo: (element: Element) => { hit = element; } };
+}
+describe('sorting landing gap', () => {
+  it('reserves the source size, moves the gap, and restores DOM before commit', () => {
+    const { root, items } = fixture();
+    const gap = createSortGap(items[0]!, '.item');
+    expect(items[0]!.style.display).toBe('none');
+    expect(root.querySelector<HTMLElement>('.sort-gap')!.style.height).toBe('40px');
+    gap.update(root, 20, 75);
+    expect(items[1]!.nextElementSibling?.className).toBe('sort-gap');
+    expect(gap.before).toBe(false);
+    expect(gap.indexTarget()).toBe(items[1]);
+    gap.restore();
+    expect(root.querySelector('.sort-gap')).toBeNull();
+    expect(items[0]!.style.display).toBe('');
+    expect(root.querySelector('.list')!.textContent).toBe('ABC');
+  });
+  it('keeps the gap when the pointer is over it and supports moving back above a row', () => {
+    const { root, items, pointTo } = fixture();
+    const gap = createSortGap(items[0]!, '.item');
+    gap.update(root, 20, 75);
+    pointTo(root.querySelector('.list')!);
+    gap.update(root, 20, 75);
+    expect(gap.anchor).toBe(items[1]);
+    pointTo(items[1]!);
+    gap.update(root, 20, 45);
+    expect(items[1]!.previousElementSibling?.className).toBe('sort-gap');
+    expect(gap.indexTarget()).toBe(items[0]);
+    gap.restore();
+  });
+  it('previews an empty destination and restores without changing either list', () => {
+    const { root, items, pointTo } = fixture();
+    items.forEach(el => el.className = 'todo-item');
+    root.querySelectorAll('.list').forEach(el => el.className = 'todo-list');
+    const empty = root.lastElementChild as HTMLElement;
+    const gap = createSortGap(items[0]!, '.todo-item');
+    pointTo(empty); gap.update(root, 20, 200);
+    expect(gap.container).toBe(empty);
+    expect(empty.querySelector('.sort-gap')).not.toBeNull();
+    gap.restore();
+    expect(empty.children).toHaveLength(0);
+    expect(root.firstElementChild!.textContent).toBe('ABC');
+  });
+});

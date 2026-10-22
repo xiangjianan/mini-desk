@@ -7998,3 +7998,12 @@ body:has(.image-preview) .n-modal-container:has(.focus-now-modal) .n-modal-mask 
 .todo-section.is-initial-layout .todo-item {
   transform: none !important;
 }
+
+/* The dragged item keeps a full-size landing space while neighbours move. */
+.sort-gap {
+  list-style: none;
+  border-radius: 8px;
+  background: color-mix(in srgb, currentColor 5%, transparent);
+  outline: 1px dashed color-mix(in srgb, currentColor 12%, transparent);
+  outline-offset: -1px;
+}

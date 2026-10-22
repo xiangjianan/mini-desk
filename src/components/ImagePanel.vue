@@ -1,4 +1,6 @@
 <script setup lang="ts">
+import { createSortGap } from "../utils/sortGap";
+let sortGap: ReturnType<typeof createSortGap> | null = null;
 import { computed, h, nextTick, onMounted, onUnmounted, ref, watch } from "vue";
 import type { Component, ComponentPublicInstance, VNode } from "vue";
 import { NDropdown, NIcon, NScrollbar } from "naive-ui";
@@ -370,9 +372,12 @@ function updateImageDragPreview(state: ImagePointerDrag, event: PointerEvent): v
 
 function startImagePointerDrag(state: ImagePointerDrag, event: PointerEvent): void {
   state.started = true;
+  const card = imageCardRefs.get(state.id);
+  if (card) sortGap = createSortGap(card, '.image-card');
   draggingId.value = state.id;
   closeMenu();
   updateImageDragPreview(state, event);
+  if (panelRef.value) sortGap?.update(panelRef.value, event.clientX, event.clientY);
   dragAutoScroll.update(state.scrollContainer ?? getCurrentImageListScrollContainer(), event.clientY);
 }
 
@@ -447,6 +452,7 @@ function removeImagePointerListeners(): void {
 
 function cleanupImagePointerDrag(): void {
   removeImagePointerListeners();
+  sortGap?.restore(); sortGap = null;
   imagePointerDrag = null;
   imageDragPreview.value = null;
   draggingId.value = null;
@@ -458,10 +464,15 @@ function finishImagePointerDrag(event?: PointerEvent, canceled = false): void {
   if (!state) return;
 
   removeImagePointerListeners();
+  if (event && !canceled && panelRef.value) sortGap?.update(panelRef.value, event.clientX, event.clientY);
+  const hadGap = Boolean(sortGap);
+  const gapTarget = sortGap?.indexTarget();
+  const gapTargetId = gapTarget ? Array.from(imageCardRefs).find(([, el]) => el === gapTarget)?.[0] : null;
+  sortGap?.restore(); sortGap = null;
   if (state.started && event && !canceled) {
     event.preventDefault();
     suppressImageClickUntil = performance.now() + IMAGE_CLICK_SUPPRESS_MS;
-    const targetId = getImageDropTargetId(event.clientY);
+    const targetId = gapTargetId ?? (hadGap ? state.id : getImageDropTargetId(event.clientY));
     if (targetId && targetId !== state.id) emit("reorder", state.id, targetId);
   }
 
@@ -509,6 +520,7 @@ function handleImagePointerMove(event: PointerEvent): void {
 
   event.preventDefault();
   updateImageDragPreview(state, event);
+  if (panelRef.value) sortGap?.update(panelRef.value, event.clientX, event.clientY);
   dragAutoScroll.update(state.scrollContainer ?? getCurrentImageListScrollContainer(), event.clientY);
 }
 
@@ -552,6 +564,7 @@ function handleImageDragWheel(event: WheelEvent): void {
   event.stopPropagation();
   dragAutoScroll.pauseForWheel();
   scrollImageListByWheel(container, event);
+  if (imagePointerDrag && panelRef.value) sortGap?.update(panelRef.value, imagePointerDrag.currentX, imagePointerDrag.currentY);
 }
 </script>
 

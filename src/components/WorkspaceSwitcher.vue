@@ -1,4 +1,5 @@
 <script setup lang="ts">
+import { installPointerSort } from "../utils/pointerSort";
 import { computed, nextTick, onUnmounted, ref, watch } from "vue";
 import { NPopover, NIcon } from "naive-ui";
 import {
@@ -177,6 +178,16 @@ function onDrop(targetId: string): void {
   if (dragId.value && dragId.value !== targetId) emit("reorder", dragId.value, targetId);
   dragId.value = null;
 }
+let disposeSort: (() => void) | undefined;
+let sortRoot: HTMLElement | undefined;
+function setSortRoot(element: unknown): void {
+  const root = element instanceof HTMLElement ? element : (element as { $el?: HTMLElement } | null)?.$el;
+  if (root === sortRoot) return;
+  disposeSort?.();
+  sortRoot = root;
+  disposeSort = root instanceof HTMLElement ? installPointerSort(root, ".workspace-switcher-item", () => {}) : undefined;
+}
+onUnmounted(() => disposeSort?.());
 </script>
 
 <template>
@@ -218,7 +229,7 @@ function onDrop(targetId: string): void {
 
       <p class="workspace-switcher-section">{{ text.app.workspaces }}</p>
 
-      <TransitionGroup name="workspace-sort" tag="ul" class="workspace-switcher-list">
+      <TransitionGroup name="workspace-sort" tag="ul" class="workspace-switcher-list" :ref="setSortRoot">
         <li
           v-for="workspace in workspaces"
           :key="workspace.id"

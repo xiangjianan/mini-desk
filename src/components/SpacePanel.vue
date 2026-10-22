@@ -1,4 +1,5 @@
 <script setup lang="ts">
+import { installPointerSort } from "../utils/pointerSort";
 import { TITLE_MAX_LENGTH, limitTitle } from "../state/titleLimits";
 import { computed, h, nextTick, onMounted, onUnmounted, ref, watch } from "vue";
 import type { Component, VNode } from "vue";
@@ -311,11 +312,21 @@ function handleTabsWheel(event: WheelEvent): void {
   event.preventDefault();
   scrollTarget.scrollLeft += delta;
 }
+let disposeSort: (() => void) | undefined;
+let sortRoot: HTMLElement | undefined;
+function setSortRoot(element: unknown): void {
+  const root = element instanceof HTMLElement ? element : (element as { $el?: HTMLElement } | null)?.$el;
+  if (root === sortRoot) return;
+  disposeSort?.();
+  sortRoot = root;
+  disposeSort = root instanceof HTMLElement ? installPointerSort(root, ".space-tab", () => {}) : undefined;
+}
+onUnmounted(() => disposeSort?.());
 </script>
 
 <template>
   <section
-    class="panel space-panel"
+    class="panel space-panel" :ref="setSortRoot"
     :class="{ 'drag-hover': todoDropHover }"
     :aria-label="uiText.space.panel"
     @dragover="handleTodoDragOver"

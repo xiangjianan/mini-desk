@@ -607,6 +607,8 @@ describe("ImagePanel", () => {
     mockRect(cards[0].element, { left: 20, top: 100, width: 220, height: 74 });
     mockRect(cards[1].element, { left: 20, top: 190, width: 220, height: 74 });
 
+    const previousHitTest = document.elementFromPoint;
+    Object.defineProperty(document, 'elementFromPoint', { configurable: true, value: (_x: number, y: number) => y >= 190 ? cards[1].element : cards[0].element });
     dispatchPointer(cards[0].element, "pointerdown", { clientX: 40, clientY: 120 });
     dispatchPointer(window, "pointermove", { clientX: 42, clientY: 132 });
     await nextTick();
@@ -614,12 +616,13 @@ describe("ImagePanel", () => {
     expect(wrapper.findAll(".image-card")[0].classes()).toContain("is-dragging");
     expect(wrapper.find(".image-drag-preview").exists()).toBe(true);
 
-    dispatchPointer(window, "pointerup", { clientX: 40, clientY: 210 });
+    dispatchPointer(window, "pointerup", { clientX: 40, clientY: 250 });
     await nextTick();
 
     expect(wrapper.findAll(".image-card")[0].classes()).not.toContain("is-dragging");
     expect(wrapper.find(".image-drag-preview").exists()).toBe(false);
     expect(wrapper.emitted("reorder")?.[0]).toEqual(["a", "b"]);
+    Object.defineProperty(document, 'elementFromPoint', { configurable: true, value: previousHitTest });
 
     await cards[0].trigger("click");
 
