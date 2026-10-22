@@ -657,7 +657,9 @@ function handleTodoSectionDrop(event: DragEvent, period: TodoPeriod): void {
   if (dragged.value) {
     event.preventDefault();
     event.stopPropagation();
-    emitTodoDropMove(dragged.value, period, getTodoDropTargetId(event, period));
+    // A closed list accepts the item at its end; clipped child geometry is
+    // irrelevant when the user deliberately drops on its heading.
+    emitTodoDropMove(dragged.value, period, getListById(period)?.collapsed ? undefined : getTodoDropTargetId(event, period));
     return;
   }
   handleTodoTextDrop(event, period);

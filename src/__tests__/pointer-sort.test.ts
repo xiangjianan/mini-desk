@@ -36,6 +36,36 @@ function fixture() {
 }
 
 describe("pointer sorting", () => {
+  it.each(['todo', 'quick'])('drops a %s item into an explicitly hovered collapsed heading', (kind) => {
+    const { root, source, target, drop } = fixture();
+    const row = document.createElement('div');
+    row.className = kind === 'todo' ? 'todo-item' : 'quick-button';
+    source.before(row); row.append(source);
+    const group = document.createElement('section');
+    group.className = kind === 'todo' ? 'todo-section is-collapsed' : 'quick-tag-group';
+    target.before(group); group.append(target);
+    target.className = kind === 'todo' ? 'todo-heading' : 'quick-tag-heading';
+    const content = document.createElement('div');
+    content.className = kind === 'todo' ? 'todo-list-shell is-hidden' : 'quick-tag-content is-collapsed';
+    group.append(content);
+    vi.spyOn(row, 'getBoundingClientRect').mockReturnValue({ left: 0, right: 120, top: 80, bottom: 120, width: 120, height: 40 } as DOMRect);
+    vi.spyOn(target, 'getBoundingClientRect').mockReturnValue({ left: 0, right: 120, top: 0, bottom: 40, width: 120, height: 40 } as DOMRect);
+    pointer(source, 'pointerdown', 100);
+    pointer(window, 'pointermove', 20);
+    expect(target.classList.contains('is-sort-drop-target')).toBe(true);
+    expect(row.previousElementSibling?.className).toBe('sort-gap');
+    pointer(window, 'pointerup', 20);
+    expect(drop).toHaveBeenCalledWith('payload');
+    expect(target.classList.contains('is-sort-drop-target')).toBe(false);
+    expect(row.style.display).toBe('');
+    expect(root.querySelector('.sort-gap')).toBeNull();
+    pointer(source, 'pointerdown', 100);
+    pointer(window, 'pointermove', 20);
+    window.dispatchEvent(new KeyboardEvent('keydown', { key: 'Escape' }));
+    expect(target.classList.contains('is-sort-drop-target')).toBe(false);
+    expect(drop).toHaveBeenCalledOnce();
+  });
+
   it("allows wheel scrolling mid-drag and preserves drop payloads", () => {
     const { root, source, end, drop, pause } = fixture();
     pointer(source, "pointerdown", 20); pointer(window, "pointermove", 35);

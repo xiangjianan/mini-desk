@@ -94,6 +94,7 @@ export function installPointerSort(root: HTMLElement, selector: string, pauseAut
       const anchor = withinRoot ? (legacy ? gap?.indexTarget() : gap?.anchor) : null;
       const before = gap?.before;
       const container = withinRoot ? gap?.container : null;
+      const collapsedTarget = withinRoot ? gap?.collapsedTarget : null;
       const hasGap = Boolean(gap);
       if (hasGap && withinRoot) suppressSortCommitMotion(root);
       gap?.restore(); gap = null;
@@ -108,6 +109,7 @@ export function installPointerSort(root: HTMLElement, selector: string, pauseAut
       }
       if (container) target = container;
       else if (hasGap && !anchor && target && root.contains(target)) target = null;
+      if (collapsedTarget) target = collapsedTarget;
       if (target) dispatch(target, "drop");
       suppressClick = true;
       clickTimer = window.setTimeout(() => { suppressClick = false; }, 0);

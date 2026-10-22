@@ -14,6 +14,11 @@ export function createSortGap(source: HTMLElement, selector: string) {
   let anchor: HTMLElement | null = null;
   let before = true;
   let container: HTMLElement | null = null;
+  let collapsedTarget: HTMLElement | null = null;
+  function clearCollapsedTarget() {
+    collapsedTarget?.classList.remove('is-sort-drop-target');
+    collapsedTarget = null;
+  }
   const animations = new Map<HTMLElement, Animation>();
   function isClippedContent(element: HTMLElement): boolean {
     return Boolean(element.closest('.todo-section.is-collapsed, .todo-list-shell.is-hidden, .quick-tag-content.is-collapsed'));
@@ -35,8 +40,22 @@ export function createSortGap(source: HTMLElement, selector: string) {
     return x >= bounds.left && x <= bounds.right && y >= bounds.top && y <= bounds.bottom;
   }
   function update(root: HTMLElement, x: number, y: number) {
+    clearCollapsedTarget();
     const hit = document.elementFromPoint?.(x, y);
     if (!root.contains(hit)) return;
+    // Enter a closed group only through its actually hit, visible heading.
+    // Keep the source gap visible; the heading highlights the destination.
+    const hitHeading = selector === '.todo-item'
+      ? hit?.closest<HTMLElement>('.todo-section.is-collapsed > .todo-heading')
+      : selector === '.quick-button'
+        ? hit?.closest<HTMLElement>('.quick-tag-heading') : null;
+    const closedQuickGroup = hitHeading?.parentElement?.querySelector(':scope > .quick-tag-content.is-collapsed');
+    if (hitHeading && (selector === '.todo-item' || closedQuickGroup) &&
+      !hitHeading.parentElement?.contains(source) && contains(hitHeading.getBoundingClientRect(), x, y)) {
+      collapsedTarget = hitHeading;
+      hitHeading.classList.add('is-sort-drop-target');
+      return;
+    }
     // The gap is already the requested slot. Moving rows must not dislodge it.
     if (contains(gap.getBoundingClientRect(), x, y)) return;
     // Grid collapse clips content without removing its children's rectangles.
@@ -99,6 +118,7 @@ export function createSortGap(source: HTMLElement, selector: string) {
     });
   }
   function restore() {
+    clearCollapsedTarget();
     gap.remove();
     if (source.parentElement !== parent || source.nextSibling !== next) parent.insertBefore(source, next?.parentNode === parent ? next : null);
     source.style.display = display;
@@ -113,6 +133,7 @@ export function createSortGap(source: HTMLElement, selector: string) {
     return items[index] ?? items[sourceIndex] ?? null;
   }
   return { update, restore, indexTarget,
+    get collapsedTarget() { return collapsedTarget; },
     get intact() { return gap.parentElement !== null && source.parentElement === parent; },
     get container() { return container; }, get anchor() { return anchor; }, get before() { return before; } };
 }

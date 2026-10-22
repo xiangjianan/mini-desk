@@ -8008,6 +8008,13 @@ body:has(.image-preview) .n-modal-container:has(.focus-now-modal) .n-modal-mask 
   outline-offset: -1px;
 }
 
+:root :is(.todo-heading, .quick-tag-heading).is-sort-drop-target {
+  background: color-mix(in srgb, var(--line-focus) 12%, var(--card));
+  outline: 2px solid var(--line-focus);
+  outline-offset: -2px;
+  border-radius: 8px;
+}
+
 /* Neighbours already occupy their landing positions during the drag. */
 .is-sort-committing,
 .is-sort-committing * {
