@@ -20,6 +20,9 @@ export function installPointerSort(root: HTMLElement, selector: string, pauseAut
     return element.dispatchEvent(new DragEvent(type, { bubbles: true, cancelable: true, dataTransfer: transfer, clientX: x, clientY: y }));
   }
   function updateTarget(): void {
+    // A reactive list update may replace nodes while a pointer drag is active.
+    // Never turn a missing landing slot into a drop at an unrelated raw target.
+    if (gap && !gap.intact) { cleanup(); return; }
     const next = document.elementFromPoint(x, y);
     if (next !== target) {
       if (target) dispatch(target, "dragleave");
@@ -31,6 +34,7 @@ export function installPointerSort(root: HTMLElement, selector: string, pauseAut
   }
   function cleanup(): void {
     gap?.restore(); gap = null;
+    if (started) suppressClick = true;
     if (started && source) dispatch(source, "dragend");
     preview?.remove();
     if (started) document.body.style.userSelect = previousUserSelect;
@@ -45,6 +49,7 @@ export function installPointerSort(root: HTMLElement, selector: string, pauseAut
     if (!candidate || !root.contains(candidate) || candidate.draggable === false) return;
     if (element?.closest("input, textarea, [contenteditable], button") && !candidate.matches("button")) return;
     cleanup();
+    suppressClick = false;
     source = candidate; pointerId = event.pointerId;
     startX = x = event.clientX; startY = y = event.clientY;
     // Prevent the browser from initiating native drag or selecting heading text.
@@ -83,6 +88,7 @@ export function installPointerSort(root: HTMLElement, selector: string, pauseAut
     if (!source || event.pointerId !== pointerId) return;
     if (started) {
       x = event.clientX; y = event.clientY; updateTarget();
+      if (!started || !source) return;
       const legacy = source.matches('.space-tab, .workspace-switcher-item');
       const withinRoot = Boolean(target && root.contains(target));
       const anchor = withinRoot ? (legacy ? gap?.indexTarget() : gap?.anchor) : null;

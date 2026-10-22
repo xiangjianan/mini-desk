@@ -106,5 +106,7 @@ export function createSortGap(source: HTMLElement, selector: string) {
     const index = others.indexOf(anchor) + (before ? 0 : 1);
     return items[index] ?? items[sourceIndex] ?? null;
   }
-  return { update, restore, indexTarget, get container() { return container; }, get anchor() { return anchor; }, get before() { return before; } };
+  return { update, restore, indexTarget,
+    get intact() { return gap.parentElement !== null && source.parentElement === parent; },
+    get container() { return container; }, get anchor() { return anchor; }, get before() { return before; } };
 }

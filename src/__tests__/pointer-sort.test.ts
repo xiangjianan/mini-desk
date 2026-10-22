@@ -108,3 +108,30 @@ it('drops at the reserved row position after restoring layout and removes gaps o
   expect(row.style.display).toBe('');
   expect(drop).toHaveBeenCalledOnce();
 });
+
+it('cancels a drop if a reactive update removed its landing gap', () => {
+  const { root, source, target, end } = fixture();
+  source.className = 'todo-drag-handle';
+  const row = document.createElement('div');
+  row.className = 'todo-item';
+  source.before(row); row.append(source);
+  target.className = 'todo-item';
+  vi.spyOn(row, 'getBoundingClientRect').mockReturnValue({ top: 0, left: 0, width: 120, height: 40 } as DOMRect);
+  vi.spyOn(target, 'getBoundingClientRect').mockReturnValue({ top: 40, left: 0, width: 120, height: 40 } as DOMRect);
+  dispose?.();
+  dispose = installPointerSort(root, '.todo-drag-handle', () => {});
+  const drop = vi.fn();
+  target.addEventListener('drop', drop);
+  pointer(source, 'pointerdown', 20);
+  pointer(window, 'pointermove', 75);
+  root.querySelector('.sort-gap')!.remove();
+  pointer(window, 'pointerup', 75);
+  expect(drop).not.toHaveBeenCalled();
+  expect(row.style.display).toBe('');
+  expect(root.firstElementChild).toBe(row);
+  expect(end).toHaveBeenCalledOnce();
+  expect(document.body.style.userSelect).toBe('');
+  const click = new MouseEvent('click', { bubbles: true, cancelable: true });
+  target.dispatchEvent(click);
+  expect(click.defaultPrevented).toBe(true);
+});

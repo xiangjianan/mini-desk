@@ -868,6 +868,9 @@ function handleInputBlur(period: TodoPeriod, id: string): void {
   // 换序 patch 摘下焦点行时派发的瞬时 blur：吞掉（见 todoReorderBlurGuard
   // 声明处注释），焦点与编辑态在同一个交互内就会恢复。
   if (todoReorderBlurGuard > 0) return;
+  // Hiding the source for a pointer drag can blur its focused input. That is
+  // temporary layout, not an instruction to clean up an empty reminder.
+  if (dragged.value) return;
   const key = todoKey(period, id);
   if (focusedTodoKey === key) focusedTodoKey = null;
   resumePendingReorder();

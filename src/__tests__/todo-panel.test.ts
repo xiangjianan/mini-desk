@@ -4550,6 +4550,24 @@ describe("TodoPanel", () => {
     wrapper.unmount();
   });
 
+  it("does not clean up a reminder blurred by hiding the drag source", async () => {
+    const wrapper = mount(TodoPanel, {
+      props: { todoLists: defaultTodoLists, todos: { morning: [{ id: "a", text: "", done: false }], noon: [], evening: [] }, titles: DEFAULT_TITLES },
+    });
+    try {
+      const input = wrapper.get('.todo-item .todo-input');
+      await input.trigger("focus");
+      await wrapper.get('.todo-drag-handle').trigger("dragstart");
+      await input.trigger("blur");
+      expect(wrapper.emitted("blurEmpty")).toBeUndefined();
+      await wrapper.get('.todo-drag-handle').trigger("dragend");
+      await input.trigger("blur");
+      expect(wrapper.emitted("blurEmpty")).toEqual([["morning", "a"]]);
+    } finally {
+      wrapper.unmount();
+    }
+  });
+
   it("preserves the list landing gap across drag-triggered component updates", async () => {
     const wrapper = mount(TodoPanel, {
       props: { todoLists: defaultTodoLists, todos: { morning: [], noon: [], evening: [] }, titles: DEFAULT_TITLES },
