@@ -14,7 +14,7 @@ const workspaces: WorkspaceData[] = [
 
 // The kebab ("⋯") menu teleports to <body> via NPopover, so menu items must be
 // found through the document rather than the component subtree.
-function menuAction(id: string, action: "export" | "pair" | "rename" | "delete"): HTMLElement {
+function menuAction(id: string, action: "export" | "rename" | "delete"): HTMLElement {
   const item = document.body.querySelector<HTMLElement>(`[data-testid="workspace-${action}-${id}"]`);
   if (!item) throw new Error(`Menu action not found: workspace-${action}-${id}`);
   return item;
@@ -25,7 +25,7 @@ async function openWorkspaceMenu(wrapper: VueWrapper, id: string): Promise<void>
   await nextTick();
 }
 
-async function clickMenuAction(wrapper: VueWrapper, id: string, action: "export" | "pair" | "rename" | "delete"): Promise<void> {
+async function clickMenuAction(wrapper: VueWrapper, id: string, action: "export" | "rename" | "delete"): Promise<void> {
   await openWorkspaceMenu(wrapper, id);
   menuAction(id, action).click();
   await nextTick();
@@ -41,7 +41,7 @@ describe("WorkspaceSwitcher", () => {
     await openWorkspaceMenu(wrapper, "b");
     const menu = menuAction("b", "export").parentElement!;
     expect(Array.from(menu.children).map((item) => item.getAttribute("data-testid") ?? item.getAttribute("role")))
-      .toEqual(["workspace-export-b", "separator", "workspace-rename-b", "workspace-pair-b", "separator", "workspace-delete-b"]);
+      .toEqual(["workspace-export-b", "separator", "workspace-rename-b", "separator", "workspace-delete-b"]);
     expect(menu.querySelector('[data-testid="workspace-create-button"]')).toBeNull();
     expect(menu.querySelector('[data-testid="workspace-import-button"]')).toBeNull();
     expect(wrapper.find('.workspace-switcher-footer [data-testid="workspace-create-button"]').exists()).toBe(true);
@@ -216,20 +216,6 @@ describe("WorkspaceSwitcher", () => {
     // workspace b has a whitespace-only title: the dropdown entry falls back too.
     await wrapper.find('[data-testid="workspace-trigger"]').trigger("click");
     expect(wrapper.get('[data-testid="workspace-option-b"] .workspace-switcher-name').text().trim()).toBe("MiniDesk");
-    wrapper.unmount();
-  });
-});
-
-describe("WorkspaceSwitcher 配对入口", () => {
-  it("每个工作区提供手机速记入口并 emit pairInbox", async () => {
-    const wrapper = mount(WorkspaceSwitcher, {
-      props: { workspaces, activeWorkspaceId: "a", theme: "light", language: "zh" },
-      attachTo: document.body,
-    });
-    await wrapper.find('[data-testid="workspace-trigger"]').trigger("click");
-    await clickMenuAction(wrapper, "a", "pair");
-    expect(wrapper.emitted("pairInbox")).toHaveLength(1);
-    expect(wrapper.emitted("pairInbox")?.[0]).toEqual(["a"]);
     wrapper.unmount();
   });
 });

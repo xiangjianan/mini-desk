@@ -154,99 +154,11 @@ describe("localized public copy", () => {
     expect(getDisplaySpaceTitle({ id: "workspace", title: "Workspace", lines: [] }, "en")).toBe("Quick Notes");
   });
 
-  it("手机速记占位词与双发送按钮文案中英齐全", () => {
-    expect(getUiText("zh").app.mobileInboxPlaceholder).toBe("想到什么就记下来，可多行…");
-    expect(getUiText("en").app.mobileInboxPlaceholder).toBe("Capture a thought — multiple lines are fine…");
-    expect(getUiText("zh").app.mobileInboxSendTodo).toBe("发送到提醒");
-    expect(getUiText("zh").app.mobileInboxSendNote).toBe("发送到记事本");
-    expect(getUiText("en").app.mobileInboxSendTodo).toBe("Send to reminders");
-    expect(getUiText("en").app.mobileInboxSendNote).toBe("Send to notes");
-  });
-
-  it("更换配对码确认文案中英齐全", () => {
-    expect(getUiText("zh").app.mobileInboxChangeCodeConfirm).toBe("更换后需要重新输入配对码，确定更换吗？");
-    expect(getUiText("en").app.mobileInboxChangeCodeConfirm).toBe("You'll need to re-enter a pairing code after changing. Change anyway?");
-  });
-
-  it("配对码失效提示与换码按钮文案中英齐全", () => {
-    expect(getUiText("zh").app.mobileInboxErrorRevoked).toBe("配对码已失效，可能已在桌面端被清除");
-    expect(getUiText("zh").app.mobileInboxRevokedChange).toBe("去更换配对码");
-    expect(getUiText("en").app.mobileInboxErrorRevoked).toBe("This pairing code is no longer active — it may have been cleared on the desktop");
-    expect(getUiText("en").app.mobileInboxRevokedChange).toBe("Change pairing code");
-  });
-
-  it("发送成功气泡文案中英齐全", () => {
-    expect(getUiText("zh").app.mobileInboxSent).toBe("已发送 {count} 条，回到电脑端就能看到 (｡•̀ᴗ-)✧");
-    expect(getUiText("en").app.mobileInboxSent).toBe("Sent {count}! Check your desktop board (｡•̀ᴗ-)✧");
-  });
-
-  it("一键粘贴文案中英齐全", () => {
-    expect(getUiText("zh").app.mobileInboxPaste).toBe("粘贴");
-    expect(getUiText("en").app.mobileInboxPaste).toBe("Paste");
-    expect(getUiText("zh").app.mobileInboxPasteDone).toBe("已粘贴");
-    expect(getUiText("en").app.mobileInboxPasteDone).toBe("Pasted");
-    expect(getUiText("zh").app.mobileInboxPasteEmpty).toBe("剪贴板为空");
-    expect(getUiText("en").app.mobileInboxPasteEmpty).toBe("Clipboard is empty");
-  });
-
-  it("清空按钮文案中英齐全", () => {
-    expect(getUiText("zh").app.mobileInboxClear).toBe("清空");
-    expect(getUiText("en").app.mobileInboxClear).toBe("Clear");
-  });
-
-  it("配对码注册制相关文案中英齐全", () => {
-    expect(getUiText("zh").app.mobileInboxErrorUnknown).toBe("配对码不存在，请到桌面端重新配对");
-    expect(getUiText("en").app.mobileInboxErrorUnknown).toBe("This pairing code doesn't exist; re-pair on the desktop");
-  });
-
-  it("配对码点击复制提示文案中英齐全", () => {
-    expect(getUiText("zh").app.mobileInboxCodeCopied).toBe("复制成功");
-    expect(getUiText("zh").app.mobileInboxCodeCopyFailed).toBe("复制失败");
-    expect(getUiText("zh").app.mobileInboxCodeCopyHint).toBe("点击复制配对码");
-    expect(getUiText("en").app.mobileInboxCodeCopied).toBe("Copied");
-    expect(getUiText("en").app.mobileInboxCodeCopyFailed).toBe("Copy failed");
-    expect(getUiText("en").app.mobileInboxCodeCopyHint).toBe("Tap to copy the pairing code");
-  });
-
   it("主题切换文案中英齐全（两态，无跟随系统档）", () => {
     expect(getUiText("zh").app.themeToDark).toBe("切换到深色");
     expect(getUiText("zh").app.themeToLight).toBe("切换到浅色");
     expect(getUiText("en").app.themeToDark).toBe("Switch to dark");
     expect(getUiText("en").app.themeToLight).toBe("Switch to light");
-  });
-
-  it("智能粘贴文案中英齐全", () => {
-    expect(UI_TEXT.zh.common.smartPaste).toBe("智能粘贴");
-    expect(UI_TEXT.en.common.smartPaste).toBe("Smart paste");
-    for (const locale of [UI_TEXT.zh, UI_TEXT.en]) {
-      expect(locale.app.polishWorking).toContain("✦");
-      expect(locale.app.polishTodoDone).toContain("{count}");
-      expect(locale.app.polishNoteDone).toContain("{count}");
-      expect(locale.app.polishFallback).toBeTruthy();
-      expect(locale.app.polishTooLarge).toBeTruthy();
-      expect(locale.app.polishKeepFallback).toBeTruthy();
-      expect(locale.app.polishKeepTooLarge).toBeTruthy();
-      expect(locale.app.polishQuickDone).toBeTruthy();
-      expect(locale.app.polishQuickFallback).toBeTruthy();
-      expect(locale.app.polishQuickTooLarge).toBeTruthy();
-      expect(locale.app.polishEmptyClipboard).toBeTruthy();
-    }
-    expect(UI_TEXT.zh.app.polishEmptyClipboard).toContain("剪贴板");
-  });
-
-  it("AI 润色（选中文本）文案中英齐全，风格子菜单三档", () => {
-    expect(UI_TEXT.zh.common.smartPolish).toBe("AI润色");
-    expect(UI_TEXT.en.common.smartPolish).toBe("AI polish");
-    expect(UI_TEXT.zh.common.polishStyleTech).toBe("技术风格");
-    expect(UI_TEXT.zh.common.polishStyleConcise).toBe("简洁风格");
-    expect(UI_TEXT.zh.common.polishStyleCasual).toBe("口语风格");
-    expect(UI_TEXT.en.common.polishStyleTech).toBe("Technical");
-    expect(UI_TEXT.en.common.polishStyleConcise).toBe("Concise");
-    expect(UI_TEXT.en.common.polishStyleCasual).toBe("Casual");
-    expect(UI_TEXT.zh.app.polishKeepFallback).toContain("保留原文");
-    expect(UI_TEXT.en.app.polishKeepFallback).toBeTruthy();
-    expect(UI_TEXT.zh.app.polishKeepTooLarge).toContain("保留原文");
-    expect(UI_TEXT.en.app.polishKeepTooLarge).toBeTruthy();
   });
 
   it("「现在做这个」徽标 aria 文案中英都含 {time} 占位符", () => {

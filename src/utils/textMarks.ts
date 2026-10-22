@@ -175,7 +175,7 @@ function regionPairingScore(beforeRegion: string[], afterRegion: string[], delta
  * 文本变更后的 marks 平移器。包含换行的纯插入/删除按全文偏移保留原文格式；其他编辑用
  * 行级公共前缀/后缀对齐夹出变化区段；区段内等行数时
  * 逐行等价改写（重编号级联改写多行也走这里），行数不等时按连续缺口对齐（见
- * buildRegionPairing），行内再用前后缀 diff 夹出编辑区。打字、粘贴、IME、AI 润色
+ * buildRegionPairing），行内再用前后缀 diff 夹出编辑区。打字、粘贴、IME
  * 替换、撤销、自动重编号全部走这同一个通道。
  */
 export function translateMarksForEdit(marks: TextMark[], previous: string, next: string): TextMark[] {
