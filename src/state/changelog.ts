@@ -34,6 +34,22 @@ export interface ChangelogEntry {
 
 export const CHANGELOG: ChangelogEntry[] = [
     {
+      version: "1.1.11",
+      date: "2026-10-22",
+      notes: {
+        zh: [
+          "新增：拖拽排序实时预览落位空隙",
+          "优化：提醒列表拖拽排序与落位动画更顺滑稳定",
+          "修复：隐藏的快捷按钮按当前标签筛选显示",
+        ],
+        en: [
+          "New: live landing-gap preview while drag sorting",
+          "Improved: smoother, steadier reminder drag sorting and landing animations",
+          "Fixed: hidden quick actions now filtered by the selected tag",
+        ],
+      },
+    },
+    {
       version: "1.1.10",
       date: "2026-10-22",
       notes: {
