@@ -257,6 +257,9 @@ onUnmounted(() => {
 // Reconcile only list sections (never individual rows) with the stored order.
 onUpdated(() => {
   syncColumnGutters();
+  // Pointer sorting temporarily owns section order, including its landing gap.
+  // Reconciling Teleports here would push that gap below the stored sections.
+  if (panelRef.value?.querySelector(".todo-column > .sort-gap")) return;
   const positions = new Map<number, number>();
   for (const list of effectiveTodoLists.value) {
     const columnIndex = clampColumn(list.column ?? 0);

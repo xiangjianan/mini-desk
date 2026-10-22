@@ -7,6 +7,7 @@ import { Plus as AddOutline } from "lucide-vue-next";
 import { readFileSync } from "node:fs";
 import { resolve } from "node:path";
 import TodoPanel from "../components/TodoPanel.vue";
+import { createSortGap } from "../utils/sortGap";
 import TodoListCreateDialog from "../components/TodoListCreateDialog.vue";
 import { DEFAULT_TITLES } from "../state/defaults";
 import { completeTodo, moveTodo } from "../state/todos";
@@ -4547,6 +4548,37 @@ describe("TodoPanel", () => {
     await wrapper.get('.todo-section[data-list-id="morning"]').trigger("dragover", { dataTransfer });
     expect(dataTransfer.dropEffect).toBe("move");
     wrapper.unmount();
+  });
+
+  it("preserves the list landing gap across drag-triggered component updates", async () => {
+    const wrapper = mount(TodoPanel, {
+      props: { todoLists: defaultTodoLists, todos: { morning: [], noon: [], evening: [] }, titles: DEFAULT_TITLES },
+    });
+    await nextTick();
+    const sections = wrapper.findAll<HTMLElement>(".todo-section");
+    const source = sections[0]!.element;
+    const column = source.parentElement!;
+    const originalOrder = Array.from(column.children);
+    // Pointer sorting starts the drag and inserts the gap before Vue flushes.
+    source.querySelector(".todo-heading")!.dispatchEvent(new Event("dragstart", { bubbles: true }));
+    const gap = createSortGap(source, ".todo-section");
+    const placeholder = column.querySelector(".sort-gap")!;
+    try {
+      await nextTick();
+      expect(column.firstElementChild).toBe(placeholder);
+      expect(placeholder.nextElementSibling).toBe(source);
+      // Later reactive updates must preserve a moved landing slot too.
+      sections[1]!.element.after(placeholder);
+      await wrapper.setProps({ showCompleted: { morning: false } });
+      expect(sections[1]!.element.nextElementSibling).toBe(placeholder);
+      gap.restore();
+      source.querySelector(".todo-heading")!.dispatchEvent(new Event("dragend", { bubbles: true }));
+      await nextTick();
+      expect(Array.from(column.children)).toEqual(originalOrder);
+    } finally {
+      gap.restore();
+      wrapper.unmount();
+    }
   });
 
   it("keeps internal reminder list drags off the plain-text payload", async () => {
