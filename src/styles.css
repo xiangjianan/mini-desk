@@ -8007,3 +8007,13 @@ body:has(.image-preview) .n-modal-container:has(.focus-now-modal) .n-modal-mask 
   outline: 1px dashed color-mix(in srgb, currentColor 12%, transparent);
   outline-offset: -1px;
 }
+
+/* Neighbours already occupy their landing positions during the drag. */
+.is-sort-committing,
+.is-sort-committing * {
+  transition: none !important;
+  animation: none !important;
+}
+.is-sort-committing :is(.todo-item, .todo-section, .quick-button, .quick-tag-group, .image-card, .space-tab, .workspace-switcher-item) {
+  transform: none !important;
+}

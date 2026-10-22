@@ -783,11 +783,12 @@ const MOVE_DURATION = 220;
 
 function onQuickBeforeEnter(el: Element): void {
   const e = el as HTMLElement;
-  e.style.opacity = "0";
+  if (!e.closest(".is-sort-committing")) e.style.opacity = "0";
 }
 
 function onQuickEnter(el: Element, done: () => void): void {
   const e = el as HTMLElement;
+  if (e.closest(".is-sort-committing")) { done(); return; }
   requestAnimationFrame(() => {
     e.style.transition = `opacity 0.18s ease, transform 0.22s cubic-bezier(0.2, 0, 0, 1)`;
     e.style.opacity = e.classList.contains("is-hidden") ? "0.42" : "1";

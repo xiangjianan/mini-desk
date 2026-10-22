@@ -7,6 +7,7 @@ export function createTodoLeaveHooks() {
   const animations = new Map<HTMLElement, Animation>();
   const previousHeights = new Map<HTMLElement, number>();
   function animateHeight(list: HTMLElement, fromHeight: number, toHeight: number) {
+    if (list.closest(".is-sort-committing")) return;
     if (Math.abs(fromHeight - toHeight) < 0.5 || !list.animate || window.matchMedia?.("(prefers-reduced-motion: reduce)").matches) return;
     const animation = list.animate(
       [{ height: `${fromHeight}px` }, { height: `${toHeight}px` }],
@@ -50,6 +51,7 @@ export function createTodoLeaveHooks() {
     },
     onBeforeLeave(element: Element) {
       const row = element as HTMLElement;
+      if (row.closest(".is-sort-committing")) return;
       // Hidden empty-state markers have no layout to preserve. Holding their
       // zero height delays the first insertion until the leave fade finishes.
       if (row.classList.contains("todo-empty-hint") && window.getComputedStyle(row).display === "none") return;

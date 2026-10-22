@@ -91,6 +91,7 @@ it('drops at the reserved row position after restoring layout and removes gaps o
   dispose = installPointerSort(root, '.todo-drag-handle', () => {});
   const drop = vi.fn((event: Event) => {
     expect(root.querySelector('.sort-gap')).toBeNull();
+    expect(root.classList.contains('is-sort-committing')).toBe(true);
     expect(row.style.display).toBe('');
     expect((event as DragEvent).clientY).toBe(70);
   });

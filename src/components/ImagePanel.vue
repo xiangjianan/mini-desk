@@ -1,4 +1,5 @@
 <script setup lang="ts">
+import { suppressSortCommitMotion } from "../utils/sortCommit";
 import { createSortGap } from "../utils/sortGap";
 let sortGap: ReturnType<typeof createSortGap> | null = null;
 import { computed, h, nextTick, onMounted, onUnmounted, ref, watch } from "vue";
@@ -466,6 +467,7 @@ function finishImagePointerDrag(event?: PointerEvent, canceled = false): void {
   removeImagePointerListeners();
   if (event && !canceled && panelRef.value) sortGap?.update(panelRef.value, event.clientX, event.clientY);
   const hadGap = Boolean(sortGap);
+  if (hadGap && event && !canceled && panelRef.value) suppressSortCommitMotion(panelRef.value);
   const gapTarget = sortGap?.indexTarget();
   const gapTargetId = gapTarget ? Array.from(imageCardRefs).find(([, el]) => el === gapTarget)?.[0] : null;
   sortGap?.restore(); sortGap = null;

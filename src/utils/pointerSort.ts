@@ -1,3 +1,4 @@
+import { suppressSortCommitMotion } from "./sortCommit";
 import { createSortGap } from "./sortGap";
 /** Pointer-driven in-page sorting keeps wheel events available during a drag.
  * Existing drag handlers receive synthetic events, preserving their drop rules.
@@ -86,6 +87,7 @@ export function installPointerSort(root: HTMLElement, selector: string, pauseAut
       const before = gap?.before;
       const container = withinRoot ? gap?.container : null;
       const hasGap = Boolean(gap);
+      if (hasGap && withinRoot) suppressSortCommitMotion(root);
       gap?.restore(); gap = null;
       if (anchor) {
         const heading = anchor.matches('.todo-section') ? anchor.querySelector('.todo-heading')

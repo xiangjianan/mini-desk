@@ -155,3 +155,24 @@ describe("reminder row leave layout", () => {
     expect(list.style.minHeight).toBe("");
   });
 });
+
+
+it("does not pin or animate list height when a drag commits into its reserved gap", () => {
+  const root = document.createElement("section");
+  root.className = "is-sort-committing";
+  const list = root.appendChild(document.createElement("ul"));
+  const row = list.appendChild(document.createElement("li"));
+  let height = 100;
+  vi.spyOn(list, "getBoundingClientRect").mockImplementation(() => ({ height }) as DOMRect);
+  const animate = vi.fn();
+  list.animate = animate;
+  const hooks = createTodoLeaveHooks();
+  hooks.beforeUpdate(list);
+  hooks.onBeforeLeave(row);
+  height = 50;
+  hooks.afterUpdate(list);
+  expect(list.style.height).toBe("");
+  expect(list.style.minHeight).toBe("");
+  expect(animate).not.toHaveBeenCalled();
+  hooks.dispose();
+});
