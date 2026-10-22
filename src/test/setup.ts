@@ -1,14 +1,4 @@
-import { webcrypto } from "node:crypto";
 import { vi } from "vitest";
-
-// jsdom 只提供 getRandomValues；同步加解密测试需要 Node 的 WebCrypto。
-if (!globalThis.crypto?.subtle) {
-  Object.defineProperty(globalThis, "crypto", {
-    configurable: true,
-    writable: true,
-    value: webcrypto,
-  });
-}
 
 // DOM 相关 mock 仅在 jsdom 环境生效；node 环境的测试跳过。
 if (typeof window !== "undefined") {
@@ -25,6 +15,14 @@ if (typeof window !== "undefined") {
       dispatchEvent: vi.fn(),
     })),
   });
+
+  // Keep Naive UI's observer polyfill from scheduling callbacks after jsdom teardown.
+  class TestResizeObserver implements ResizeObserver {
+    observe(): void {}
+    unobserve(): void {}
+    disconnect(): void {}
+  }
+  Object.defineProperty(globalThis, "ResizeObserver", { configurable: true, writable: true, value: TestResizeObserver });
 
   HTMLElement.prototype.scrollIntoView = vi.fn();
 

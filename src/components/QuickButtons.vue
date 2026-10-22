@@ -37,9 +37,6 @@ import { findQuickAppPresetByScheme, getQuickAppPresetHint, getQuickAppPresetTit
 import { findQuickApiTemplate, QUICK_API_TEMPLATES } from "../state/quickApiTemplates";
 import { globalSearchNormalized, globalSearchQuery } from "../state/globalSearch";
 import { createExclusiveContextMenu } from "../utils/contextMenu";
-import type { PolishKind, PolishResult, PolishStyle } from "../sync/polishClient";
-import { quickSmartPasteMessages, runQuickSmartPaste } from "../utils/smartPaste";
-import type { SmartPastePhase } from "../utils/smartPaste";
 import { readClipboardText } from "../utils/clipboard";
 import { renderIcon } from "../utils/dropdownIcons";
 import { createDragAutoScroll, findDragScrollContainer } from "../utils/dragScroll";
@@ -54,8 +51,6 @@ const props = withDefaults(defineProps<{
   /** true = 紧凑按钮（隐藏类型副标题、压低高度）。 */
   compact?: boolean;
   language?: AppLanguage;
-  /** 智能粘贴调用（内部完成配对码管理）；未注入时不渲染智能粘贴入口。 */
-  polish?: (kind: PolishKind, text: string, style?: PolishStyle) => Promise<PolishResult>;
   moveTargets?: WorkspaceMoveTarget[];
 }>(), {
   tags: () => [],
@@ -87,7 +82,6 @@ const emit = defineEmits<{
   moveTagToWorkspace: [tagId: string, workspaceId: string];
   columnCountChange: [count: number];
   assignTagColumn: [draggedId: string, targetColumn: number, anchorId: string | null, insertBefore: boolean];
-  polishMessage: [phase: SmartPastePhase, message: string, anchor: HTMLElement | undefined];
 }>();
 
 const dialogOpen = ref(false);
@@ -120,7 +114,6 @@ const form = reactive<{ title: string; value: string; tagTitle: string; customTa
   apiBody: "",
 });
 const menu = ref<{ x: number; y: number; id?: string; anchor?: HTMLElement; tagTitle?: string; tagId?: string } | null>(null);
-const smartPastePending = ref(false);
 // 卸载守卫：清空数据 bump boardEpoch 整树 remount 后旧实例 props 已冻结，引用比较不再变化，
 // 必须单独拦截（与 TodoPanel 的 landingLists 守卫同口径）。
 let isUnmounted = false;
@@ -282,9 +275,6 @@ const moveMenuChildren = computed<DropdownOption[]>(() =>
 const areaMenuOptions = computed<DropdownOption[]>(() => [
   { label: uiText.value.quick.add, key: "add", icon: renderIcon(AddOutline) },
   { label: uiText.value.common.paste, key: "paste", icon: renderIcon(ClipboardOutline) },
-  ...(props.polish
-    ? [{ label: uiText.value.common.smartPaste, key: "smart-paste", icon: renderIcon(ClipboardOutline) }]
-    : []),
   { label: props.showHidden ? uiText.value.quick.hideHidden : uiText.value.quick.showHidden, key: "toggle-show-hidden", icon: renderIcon(props.showHidden ? EyeOffOutline : EyeOutline) },
   { label: uiText.value.quick.tagManage, key: "manage-tags", icon: renderIcon(PricetagsOutline) },
   { label: props.compact ? uiText.value.quick.largeButtons : uiText.value.quick.compactButtons, key: "toggle-compact", icon: renderIcon(ResizeOutline) },
@@ -294,7 +284,7 @@ const menuOptions = computed<DropdownOption[]>(() => {
   if (menu.value?.tagId) {
     const showHidden = props.tags.find(tag => tag.id === menu.value?.tagId)?.showHidden ?? props.showHidden;
     return [
-      ...areaMenuOptions.value.filter((option) => ["add", "paste", "smart-paste"].includes(String(option.key))),
+      ...areaMenuOptions.value.filter((option) => ["add", "paste"].includes(String(option.key))),
       { label: uiText.value.common.rename, key: "rename-tag", icon: renderIcon(CreateOutline) },
       { label: showHidden ? uiText.value.quick.hideHidden : uiText.value.quick.showHidden, key: "toggle-show-hidden", icon: renderIcon(showHidden ? EyeOffOutline : EyeOutline) },
       ...areaMenuOptions.value.filter((option) => ["manage-tags", "toggle-compact"].includes(String(option.key))),
@@ -624,10 +614,6 @@ function handleMenuSelect(key: string): void {
     void pasteQuick(tagTitle);
     return;
   }
-  if (key === "smart-paste") {
-    void runQuickSmartPasteFlow(tagTitle, anchor);
-    return;
-  }
   if (key === "guide" && anchor) emit("guide", "quickButtons", anchor, true);
   if (!id) return;
   if (key === "copy-text") emit("copyText", id, anchor);
@@ -738,30 +724,6 @@ async function pasteQuick(tagTitle?: string): Promise<void> {
   const trimmed = text?.trim();
   if (!trimmed) return;
   emit("save", { ...classifyQuickText(trimmed), tagTitle });
-}
-
-/** 快捷动作智能粘贴：剪贴板 → 服务端生成按钮 → 落位；失败退化为普通粘贴语义（classifyQuickText）。
- *  落位前比对 buttons 引用丢弃迟到结果（切工作区/结构性替换），与提醒区 landingLists 守卫同口径。 */
-async function runQuickSmartPasteFlow(tagTitle: string | undefined, anchor?: HTMLElement): Promise<void> {
-  if (!props.polish || smartPastePending.value) return;
-  smartPastePending.value = true;
-  const landingButtons = props.buttons;
-  try {
-    await runQuickSmartPaste({
-      kind: "quick",
-      polish: props.polish,
-      messages: quickSmartPasteMessages(uiText.value),
-      anchor,
-      insert: (button) => {
-        if (isUnmounted || props.buttons !== landingButtons) return;
-        emit("save", { ...button, tagTitle });
-      },
-      fallbackButton: classifyQuickText,
-      notify: (phase, message, anchor) => emit("polishMessage", phase, message, anchor),
-    });
-  } finally {
-    smartPastePending.value = false;
-  }
 }
 
 function handleExternalQuickDrop(event: DragEvent, groupId: string): boolean {
@@ -951,18 +913,7 @@ function handleQuickGroupDrop(event: DragEvent, groupId: string): void {
         <span>{{ getIconHeadingText(title, 'quick') }}</span>
       </h2>
       <div class="header-actions">
-        <button
-          v-if="props.polish"
-          type="button"
-          class="icon-button desk-ai-button quick-smart-paste-button"
-          :aria-label="uiText.common.smartPaste"
-          :title="uiText.common.smartPaste"
-          :disabled="smartPastePending"
-          :aria-busy="smartPastePending"
-          @click.stop="runQuickSmartPasteFlow('', $event.currentTarget as HTMLElement)"
-        >
-          <NIcon :component="ClipboardOutline" />
-        </button>
+
         <button type="button" class="quick-add-button icon-button"
           :aria-label="uiText.quick.dialogAdd" :title="uiText.quick.dialogAdd"
           @click.stop="openAdd($event.currentTarget as HTMLElement)">
@@ -1043,19 +994,7 @@ function handleQuickGroupDrop(event: DragEvent, groupId: string): void {
             <span v-else class="quick-tag-title">{{ group.title }}</span>
 
             <span v-if="editingTagId !== group.id" class="quick-tag-count">{{ group.buttons.length }}</span>
-            <button
-              v-if="group.title && editingTagId !== group.id && props.polish"
-              type="button"
-              class="icon-button desk-ai-button"
-              :aria-label="uiText.common.smartPaste"
-              :title="uiText.common.smartPaste"
-              :disabled="smartPastePending"
-              :aria-busy="smartPastePending"
-              @click.stop="runQuickSmartPasteFlow(isRealTagGroup(group.id) ? group.title : '', $event.currentTarget as HTMLElement)"
-              @dblclick.stop
-            >
-              <NIcon :component="ClipboardOutline" />
-            </button>
+
             <button
               v-if="group.title && editingTagId !== group.id"
               type="button"
@@ -1136,7 +1075,6 @@ function handleQuickGroupDrop(event: DragEvent, groupId: string): void {
     </NScrollbar>
 
     <ContextMenu v-if="menu" :x="menu.x" :y="menu.y" :options="menuOptions"
-      :polish-labels="true"
       @select="handleMenuSelect" @clickoutside="exclusiveMenu.handleClickOutside" />
 
     <NModal

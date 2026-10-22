@@ -74,7 +74,7 @@ export function reorderWorkspaces(workspaces: WorkspaceData[], dragId: string, t
   return next;
 }
 
-/** 兼容投影：workspaceLines/storageLines 恒等于 spaces[0]/spaces[1] 的逐行拷贝（cloneLines，marks 深拷贝；App.vue 与 sync/pull.ts 共用此不变量）。 */
+/** 兼容投影：workspaceLines/storageLines 恒等于 spaces[0]/spaces[1] 的逐行拷贝（cloneLines，marks 深拷贝）。 */
 export function projectLegacySpaceLines(spaces: WorkspaceSpace[]): { workspaceLines: LineItem[]; storageLines: LineItem[] } {
   return {
     workspaceLines: cloneLines(spaces[0]?.lines ?? []),

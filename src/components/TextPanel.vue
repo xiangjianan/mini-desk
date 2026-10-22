@@ -11,8 +11,6 @@ import {
   Trash2 as TrashOutline,
 } from "lucide-vue-next";
 import { Highlighter, Paintbrush, Palette, RemoveFormatting, Strikethrough, Underline } from "lucide-vue-next";
-import { POLISH_STYLE_ENTRIES } from "../state/polishStyles";
-import SparklesOutlineIcon from "./SparklesOutlineIcon.vue";
 import type { LineItem, MarkColor, TextMark } from "../types";
 import { GUIDE_MENU_OPTION } from "../state/defaults";
 import { getUiText } from "../state/i18n";
@@ -35,9 +33,6 @@ import { copySelection, getSelectionRange, hasSelection, pasteWithBrowserCommand
 import { renderIcon } from "../utils/dropdownIcons";
 import { clampCaret, setStickySelection } from "../utils/caret";
 import { isImeComposing } from "../utils/ime";
-import type { PolishKind, PolishResult, PolishStyle } from "../sync/polishClient";
-import { runSelectionPolish, runSmartPaste, selectionPolishMessages, smartPasteMessages } from "../utils/smartPaste";
-import type { SmartPastePhase } from "../utils/smartPaste";
 import EditableTitle from "./EditableTitle.vue";
 
 const props = withDefaults(defineProps<{
@@ -48,7 +43,6 @@ const props = withDefaults(defineProps<{
   split?: boolean;
   hideHeader?: boolean;
   language?: AppLanguage;
-  polish?: (kind: PolishKind, text: string, style?: PolishStyle) => Promise<PolishResult>;
 }>(), {
   language: "zh",
 });
@@ -59,7 +53,7 @@ const emit = defineEmits<{
   focus: [element: HTMLElement];
   blur: [element: HTMLElement];
   guide: [element: HTMLElement, immediate?: boolean];
-  polishMessage: [phase: SmartPastePhase, message: string, anchor: HTMLElement | undefined];
+  clipboardMessage: [message: string, anchor: HTMLElement | undefined];
 }>();
 
 const isDragHover = ref(false);
@@ -245,17 +239,6 @@ const menuOptions = computed<DropdownOption[]>(() => {
   if (target) {
     options.push({ label: uiText.value.common.copy, key: "copy", disabled: !canCopyTextSelection(target), icon: renderIcon(CopyOutline) });
     options.push({ label: uiText.value.common.paste, key: "paste", disabled: !menu.value?.canPaste, icon: renderIcon(ClipboardOutline) });
-    if (props.polish) {
-      options.push({ label: uiText.value.common.smartPaste, key: "smart-paste", disabled: !menu.value?.canPaste, icon: renderIcon(ClipboardOutline) });
-    }
-    if (props.polish && menu.value?.selectionText) {
-      options.push({
-        label: uiText.value.common.smartPolish,
-        key: "smart-polish",
-        icon: renderIcon(SparklesOutlineIcon, false, 14),
-        children: POLISH_STYLE_ENTRIES.map(({ key, labelKey }) => ({ label: uiText.value.common[labelKey], key })),
-      });
-    }
     if (menu.value?.selectionText) {
       options.push({
         label: uiText.value.common.format,
@@ -729,15 +712,6 @@ async function appendPaste(): Promise<void> {
   if (!isUnmounted) target.scrollTop = target.scrollHeight;
 }
 
-/** Header paste always appends to this editor, independently of its selection. */
-async function appendSmartPaste(): Promise<void> {
-  const target = textareaRef.value;
-  if (!target || !props.polish) return;
-  const end = text.value.length;
-  await smartPasteFromClipboard(target, { range: { start: end, end }, baseline: text.value });
-  if (!isUnmounted) target.scrollTop = target.scrollHeight;
-}
-
 /** 外部（拖拽粘贴）追加行后滚到编辑器末尾，让新行可见。 */
 function scrollToEnd(): void {
   const target = textareaRef.value;
@@ -746,7 +720,6 @@ function scrollToEnd(): void {
 
 defineExpose({
   appendPaste,
-  appendSmartPaste,
   focusEditor,
   scrollToEnd,
 });
@@ -864,18 +837,6 @@ async function handleMenuSelect(key: string): Promise<void> {
     await pasteTextFromClipboard(target);
     return;
   }
-  if (key === "smart-paste" && target) {
-    if (!canPaste) return;
-    await smartPasteFromClipboard(target);
-    return;
-  }
-  const polishStyle = POLISH_STYLE_ENTRIES.find((entry) => entry.key === key)?.style;
-  if (polishStyle && target) {
-    const selectionText = selectedTextareaText(target);
-    if (!selectionText.trim()) return;
-    await polishSelection(target, selectionText, polishStyle);
-    return;
-  }
   if (key.startsWith("format-") && target) {
     applyFormatFromMenu(key, target);
     return;
@@ -915,7 +876,7 @@ async function copyTextSelection(target: HTMLTextAreaElement | HTMLInputElement)
   await copySelection(target, range);
 }
 
-/** 删除（便签区选中文本）：清除记忆选区并把光标塌缩到删除点，与AI润色落位后的清理同语义。 */
+/** 删除（便签区选中文本）：清除记忆选区并把光标塌缩到删除点。 */
 function deleteTextSelection(target: HTMLTextAreaElement): void {
   const range = getTextSelectionRange(target);
   if (range.start === range.end) return;
@@ -942,68 +903,12 @@ async function pasteTextFromClipboard(target: HTMLTextAreaElement, range = getTe
     const message = probe.kind === "image"
       ? uiText.value.app.pasteImageClipboard
       : uiText.value.app.pasteEmptyClipboard;
-    emit("polishMessage", "fallback", message, target.closest<HTMLElement>(".text-panel") ?? undefined);
+    emit("clipboardMessage", message, target.closest<HTMLElement>(".text-panel") ?? undefined);
     return;
   }
   normalizeTextareaText(target);
   lastTextSelection.value = null;
   collapseSelection(target, target.selectionEnd ?? 0);
-  emit("update", linesFromEditorState(text.value, editorMarks.value));
-}
-
-/** 智能粘贴（便签区）：剪贴板全文交服务端排版润色，失败退化为原文粘贴。 */
-async function smartPasteFromClipboard(
-  target: HTMLTextAreaElement,
-  landing: PolishLanding = { range: getTextSelectionRange(target), baseline: text.value },
-): Promise<void> {
-  if (!props.polish) return;
-  await runSmartPaste({
-    kind: "note",
-    polish: props.polish,
-    messages: smartPasteMessages(uiText.value, "note"),
-    anchor: target.closest<HTMLElement>(".text-panel") ?? undefined,
-    insert: (items) => insertTextsAtSelection(target, items.map((item) => item.text), landing),
-    fallbackTexts: (raw) => [raw],
-    notify: (phase, message, anchor) => emit("polishMessage", phase, message, anchor),
-  });
-}
-
-/** AI 润色（便签区选中文本）：选中内容按所选风格交服务端排版润色并替换选区，失败/超长保留原文。 */
-async function polishSelection(target: HTMLTextAreaElement, selectionText: string, style: PolishStyle): Promise<void> {
-  if (!props.polish) return;
-  const landing: PolishLanding = { range: getTextSelectionRange(target), baseline: text.value };
-  await runSelectionPolish({
-    text: selectionText,
-    kind: "note",
-    style,
-    polish: props.polish,
-    messages: selectionPolishMessages(uiText.value),
-    anchor: target.closest<HTMLElement>(".text-panel") ?? undefined,
-    apply: (texts) => insertTextsAtSelection(target, texts, landing),
-    notify: (phase, message, anchor) => emit("polishMessage", phase, message, anchor),
-  });
-}
-
-/** 进入流程时捕获的落位上下文：选区与基线文本，迟到结果应用前据此做过期判断。 */
-interface PolishLanding {
-  range: { start: number; end: number };
-  baseline: string;
-}
-
-/** 整理结果按行拼接待入捕获选区：进入编辑态、行边界断行、编号归一化、上报 update，与普通粘贴同语义。
- *  流程途中组件被卸载或文本已被改动（用户编辑/并发的另一条流程先落位）时丢弃结果，避免旧内容写进新现场。
- *  落位后取消选区：光标塌缩到插入块末尾，并清除记忆选区——旧偏移在结果文本上已错位，保留会被
- *  getSelectionRange 复活，让下次右键/粘贴作用于错误的文本。 */
-function insertTextsAtSelection(target: HTMLTextAreaElement, texts: string[], landing: PolishLanding): void {
-  if (texts.length === 0) return;
-  if (isUnmounted || text.value !== landing.baseline) return;
-  const { range } = landing;
-  if (!editing.value || target.readOnly) startEditingFromTextarea(target);
-  target.setSelectionRange(range.start, range.end);
-  target.setRangeText(textBlockForRange(landing.baseline, range, texts.join("\n")), range.start, range.end, "end");
-  normalizeTextareaText(target);
-  lastTextSelection.value = null;
-  collapseSelection(target, target.selectionEnd ?? target.selectionStart ?? 0);
   emit("update", linesFromEditorState(text.value, editorMarks.value));
 }
 
@@ -1201,7 +1106,6 @@ function restoreSelection(textarea: HTMLTextAreaElement, selection: { start: num
       />
     </div>
     <ContextMenu v-if="menu" :x="menu.x" :y="menu.y" :options="menuOptions"
-      :polish-labels="true"
       @select="handleMenuSelect" @clickoutside="exclusiveMenu.handleClickOutside" />
   </section>
 </template>
