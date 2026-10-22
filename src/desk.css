@@ -1037,3 +1037,11 @@ html[data-theme="dark"] .workbench-shell {
     animation-duration: 1ms;
   }
 }
+
+/* Plain clipboard actions share the quiet header controls, without icon animation. */
+.workbench-shell .space-paste-button {
+  width: auto;
+  gap: 4px;
+  padding-inline: 8px;
+  font-size: 12px;
+}

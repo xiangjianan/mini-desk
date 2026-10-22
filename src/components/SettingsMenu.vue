@@ -142,7 +142,6 @@ const options = computed(() => [
     })),
   },
   { type: "divider", key: "preferences-divider" },
-  { type: "divider", key: "help-divider" },
   { label: text.value.settings.shortcutHelp, key: "shortcut-help", icon: renderIcon(KeyOutline) },
   { label: text.value.settings.suggest, key: "suggest", icon: renderIcon(MailOutline) },
   ...(SUPPORT_AUTHOR_ENABLED
