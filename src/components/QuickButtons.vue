@@ -912,7 +912,11 @@ function handleQuickGroupDrop(event: DragEvent, groupId: string): void {
         <span>{{ getIconHeadingText(title, 'quick') }}</span>
       </h2>
       <div class="header-actions">
-
+        <button type="button" class="quick-paste-button icon-button"
+          :aria-label="uiText.common.paste" :title="uiText.common.paste"
+          @click.stop="pasteQuick('')">
+          <NIcon :component="ClipboardOutline" />
+        </button>
         <button type="button" class="quick-add-button icon-button"
           :aria-label="uiText.quick.dialogAdd" :title="uiText.quick.dialogAdd"
           @click.stop="openAdd($event.currentTarget as HTMLElement)">
@@ -994,6 +998,11 @@ function handleQuickGroupDrop(event: DragEvent, groupId: string): void {
 
             <span v-if="editingTagId !== group.id" class="quick-tag-count">{{ group.buttons.length }}</span>
 
+            <button v-if="group.title && editingTagId !== group.id" type="button" class="quick-tag-paste-button icon-button"
+              :aria-label="uiText.common.paste" :title="uiText.common.paste"
+              @click.stop="pasteQuick(isRealTagGroup(group.id) ? group.title : '')" @dblclick.stop>
+              <NIcon :component="ClipboardOutline" />
+            </button>
             <button
               v-if="group.title && editingTagId !== group.id"
               type="button"

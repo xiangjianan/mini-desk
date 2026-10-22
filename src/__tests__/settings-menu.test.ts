@@ -83,6 +83,8 @@ describe("SettingsMenu", () => {
       global: { stubs: { Dropdown: dropdownStub, NDropdown: dropdownStub } },
     });
     const [zones, settings] = wrapper.findAllComponents(dropdownStub);
+    const options = settings.props("options") as Array<{ type?: string }>;
+    expect(options.some((option, index) => option.type === "divider" && options[index + 1]?.type === "divider")).toBe(false);
     expect((settings.props("options") as Array<{ key: string }>).slice(0, 4).map(option => option.key))
       .toEqual(["data", "language", "gif-theme", "preferences-divider"]);
     expect((settings.props("options") as Array<{key: string}>).map(option => option.key))
