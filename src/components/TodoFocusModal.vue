@@ -8,7 +8,6 @@ import { getUiText } from "../state/i18n";
 import { formatFocusDuration } from "../state/todos";
 import { isTextEntryTarget } from "../utils/dom";
 import { clamp } from "../utils/math";
-import type { PolishKind, PolishResult, PolishStyle } from "../sync/polishClient";
 import TextPanel from "./TextPanel.vue";
 import ImagePanel from "./ImagePanel.vue";
 import ImageEditor from "./ImageEditor.vue";
@@ -29,7 +28,6 @@ const props = withDefaults(defineProps<{
   notes: LineItem[];
   images: StoredImage[];
   language?: AppLanguage;
-  polish?: (kind: PolishKind, text: string, style?: PolishStyle) => Promise<PolishResult>;
 }>(), {
   language: "zh",
 });
@@ -464,7 +462,6 @@ function handleModalShow(value: boolean): void {
             :lines="notes"
             :placeholder="uiText.todo.focusNotesPlaceholder"
             :language="language"
-            :polish="polish"
             hide-header
             @update="(lines: LineItem[]) => emit('notesUpdate', lines)"
           />

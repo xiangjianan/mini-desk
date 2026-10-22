@@ -19,8 +19,6 @@ import { getUiText } from "../state/i18n";
 import { organizeContextMenu, CONTEXT_MENU_Z_INDEX, createExclusiveContextMenu } from "../utils/contextMenu";
 import { renderIcon } from "../utils/dropdownIcons";
 import { isImeComposing } from "../utils/ime";
-import type { PolishKind, PolishResult, PolishStyle } from "../sync/polishClient";
-import type { SmartPastePhase } from "../utils/smartPaste";
 import TextPanel from "./TextPanel.vue";
 
 const props = withDefaults(defineProps<{
@@ -29,7 +27,6 @@ const props = withDefaults(defineProps<{
   editSpaceId?: string | null;
   language?: AppLanguage;
   moveTargets?: WorkspaceMoveTarget[];
-  polish?: (kind: PolishKind, text: string, style?: PolishStyle) => Promise<PolishResult>;
 }>(), {
   language: "zh",
   moveTargets: () => [],
@@ -45,9 +42,9 @@ const emit = defineEmits<{
   reorder: [dragId: string, targetId: string];
   focus: [key: GuideKey, element: HTMLElement];
   blur: [];
+  clipboardMessage: [message: string, anchor: HTMLElement | undefined];
   guide: [key: GuideKey, anchor: HTMLElement, immediate?: boolean];
   moveSpaceToWorkspace: [spaceId: string, workspaceId: string];
-  polishMessage: [phase: SmartPastePhase, message: string, anchor: HTMLElement | undefined];
   dropTodo: [payload: string];
 }>();
 
@@ -61,17 +58,7 @@ const draggedSpaceId = ref<string | null>(null);
 const todoDropHover = ref(false);
 const suppressTabCommitTransition = ref(false);
 const menu = ref<{ x: number; y: number; spaceId: string; anchor?: HTMLElement } | null>(null);
-const textPanelRef = ref<{ focusEditor: () => void; appendSmartPaste: () => Promise<void>; appendPaste: () => Promise<void>; scrollToEnd: () => void } | null>(null);
-const smartPastePending = ref(false);
-async function appendSmartPaste(): Promise<void> {
-  if (smartPastePending.value) return;
-  smartPastePending.value = true;
-  try {
-    await textPanelRef.value?.appendSmartPaste();
-  } finally {
-    smartPastePending.value = false;
-  }
-}
+const textPanelRef = ref<{ focusEditor: () => void; appendPaste: () => Promise<void>; scrollToEnd: () => void } | null>(null);
 const uiText = computed(() => getUiText(props.language));
 const exclusiveMenu = createExclusiveContextMenu(closeMenu);
 let tabCommitTransitionTimer: number | undefined;
@@ -103,7 +90,6 @@ function buildSpaceMoveOptions(): DropdownOption[] {
 const menuOptions = computed<DropdownOption[]>(() => menu.value?.anchor ? [
   { label: uiText.value.space.create, key: "create", icon: renderIcon(AddOutline) },
   { label: uiText.value.common.paste, key: "paste", icon: renderIcon(ClipboardOutline), disabled: !activeSpace.value },
-  { label: uiText.value.common.smartPaste, key: "smart-paste", icon: renderIcon(ClipboardOutline), disabled: !activeSpace.value || !props.polish || smartPastePending.value },
   { label: uiText.value.common.tips, key: "guide", icon: renderIcon(HelpCircleOutline) },
 ] : [
   { label: uiText.value.common.edit, key: "edit", icon: renderIcon(CreateOutline) },
@@ -236,7 +222,6 @@ function handleMenuSelect(key: string): void {
   }
   if (current.anchor) {
     if (key === "paste") void textPanelRef.value?.appendPaste();
-    if (key === "smart-paste") void appendSmartPaste();
     if (key === "guide") emit("guide", "workspace", current.anchor, true);
     return;
   }
@@ -337,11 +322,7 @@ onUnmounted(() => disposeSort?.());
     <div class="panel-header desk-zone-heading" @contextmenu.stop.prevent="openHeaderMenu($event)">
       <h2><NIcon :component="DocumentTextOutline" /><span>{{ uiText.desk.notes }}</span></h2>
       <div class="header-actions" @contextmenu.stop>
-        <button v-if="props.polish && activeSpace" class="desk-ai-action desk-ai-button desk-smart-paste" type="button"
-          :aria-label="uiText.common.smartPaste" :disabled="smartPastePending" :aria-busy="smartPastePending" @mousedown.prevent
-          @click.stop="appendSmartPaste">
-          <NIcon :component="ClipboardOutline" /><span>{{ uiText.common.smartPaste }}</span>
-        </button>
+
       </div>
     </div>
     <div class="space-tabs-scrollbar" @wheel="handleTabsWheel">
@@ -424,8 +405,7 @@ onUnmounted(() => disposeSort?.());
           @update="handleUpdate"
           @focus="emit('focus', 'workspace', $event)"
           @guide="(anchor, immediate) => emit('guide', 'workspace', anchor, immediate)"
-          :polish="props.polish"
-          @polish-message="(phase, message, anchor) => emit('polishMessage', phase, message, anchor)"
+          @clipboard-message="(message, anchor) => emit('clipboardMessage', message, anchor)"
           @blur="emit('blur')"
         />
       </Transition>
