@@ -33,6 +33,14 @@ export interface ChangelogEntry {
 }
 
 export const CHANGELOG: ChangelogEntry[] = [
+  {
+    version: "1.1.10-offline",
+    date: "2026-10-22",
+    notes: {
+      zh: ["离线特别版：移除智能粘贴、AI 润色及相关入口", "移除手机速记、配对与同步；保留普通粘贴和本地工作台"],
+      en: ["Offline edition: removed smart paste, AI polish, and their controls", "Removed mobile capture, pairing, and sync; kept ordinary paste and the local workbench"],
+    },
+  },
     {
       version: "1.1.14",
       date: "2026-10-27",
