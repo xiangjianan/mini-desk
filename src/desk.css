@@ -945,7 +945,7 @@ html[data-theme="dark"] .workbench-shell {
 }
 
 /* Shared compact rhythm for tag and reminder heading actions. */
-.workbench-shell .quick-tag-heading > :is(.quick-tag-add-button, .quick-tag-menu-button),
+.workbench-shell .quick-tag-heading > :is(.quick-tag-paste-button, .quick-tag-add-button, .quick-tag-menu-button),
 .workbench-shell .todo-heading-actions > .icon-button {
   flex: 0 0 30px;
   width: 30px;
@@ -979,4 +979,12 @@ html[data-theme="dark"] .workbench-shell {
   min-width: 20px;
   padding-inline: 4px;
   margin-inline-end: 4px;
+}
+
+/* Plain clipboard actions share the quiet header controls, without icon animation. */
+.workbench-shell .space-paste-button {
+  width: auto;
+  gap: 4px;
+  padding-inline: 8px;
+  font-size: 12px;
 }
