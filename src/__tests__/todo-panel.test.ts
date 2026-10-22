@@ -978,7 +978,7 @@ describe("TodoPanel", () => {
     expect(wrapper.get('.todo-section[data-list-id="morning"] .todo-heading').attributes("draggable")).toBe("false");
   });
 
-  it("animates reordered list sections while retaining their existing DOM", async () => {
+  it.each([false, true])("reorders list DOM and animates only outside drag commit (committing: %s)", async (committing) => {
     const wrapper = mount(TodoPanel, {
       props: {
         todoLists: defaultTodoLists,
@@ -999,8 +999,13 @@ describe("TodoPanel", () => {
       return animate;
     });
     try {
+      if (committing) wrapper.element.classList.add("is-sort-committing");
       await wrapper.setProps({ todoLists: [...defaultTodoLists].reverse() });
       expect(wrapper.findAll(".todo-section").map((item) => item.element)).toEqual([...sections].reverse());
+      if (committing) {
+        animations.forEach(animate => expect(animate).not.toHaveBeenCalled());
+        return;
+      }
       expect(animations[0]).toHaveBeenCalledWith(
         [{ transform: "translate(0px, -200px)" }, { transform: "translate(0, 0)" }],
         { duration: 220, easing: "cubic-bezier(0.2, 0, 0, 1)" },

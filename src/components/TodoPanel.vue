@@ -236,6 +236,10 @@ const listReorderAnimations = new Map<TodoListId, Animation>();
 watch(
   () => effectiveTodoLists.value.map((list) => `${list.id}:${list.column ?? 0}:${isCompletedVisible(list.id)}`).join("|"),
   (next, previous) => {
+    if (panelRef.value?.classList.contains("is-sort-committing")) {
+      listPositionsBeforeReorder = null;
+      return;
+    }
     // Appending a list does not move existing sections. Avoid forcing layout
     // of every off-screen reminder list just to discover zero animation deltas.
     if (columnCount.value === 1 && previous && next.startsWith(`${previous}|`)) return;
@@ -266,6 +270,13 @@ onUpdated(() => {
   }
   const previousPositions = listPositionsBeforeReorder;
   listPositionsBeforeReorder = null;
+  // CSS transition suppression does not disable Web Animations. The drag
+  // preview has already moved the sections, so never replay this FLIP on drop.
+  if (panelRef.value?.classList.contains("is-sort-committing")) {
+    for (const animation of listReorderAnimations.values()) animation.cancel();
+    listReorderAnimations.clear();
+    return;
+  }
   if (!previousPositions) return;
   for (const animation of listReorderAnimations.values()) animation.cancel();
   listReorderAnimations.clear();
