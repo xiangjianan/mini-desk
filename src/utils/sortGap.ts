@@ -15,10 +15,31 @@ export function createSortGap(source: HTMLElement, selector: string) {
   let before = true;
   let container: HTMLElement | null = null;
   const animations = new Map<HTMLElement, Animation>();
+  function layoutBounds(element: HTMLElement): DOMRect {
+    const bounds = element.getBoundingClientRect();
+    if (!animations.has(element)) return bounds;
+    // Hit testing must use the destination, not the row moving across the pointer.
+    const transform = getComputedStyle(element).transform;
+    const values = transform.match(/^matrix(3d)?\((.+)\)$/);
+    if (!values) return bounds;
+    const matrix = values[2]!.split(',').map(Number);
+    const dx = matrix[values[1] ? 12 : 4] ?? 0;
+    const dy = matrix[values[1] ? 13 : 5] ?? 0;
+    return { ...bounds, left: bounds.left - dx, right: bounds.right - dx,
+      top: bounds.top - dy, bottom: bounds.bottom - dy, width: bounds.width, height: bounds.height } as DOMRect;
+  }
+  function contains(bounds: DOMRect, x: number, y: number): boolean {
+    return x >= bounds.left && x <= bounds.right && y >= bounds.top && y <= bounds.bottom;
+  }
   function update(root: HTMLElement, x: number, y: number) {
     const hit = document.elementFromPoint?.(x, y);
-    const item = hit?.closest<HTMLElement>(selector);
     if (!root.contains(hit)) return;
+    // The gap is already the requested slot. Moving rows must not dislodge it.
+    if (contains(gap.getBoundingClientRect(), x, y)) return;
+    const candidates = Array.from(root.querySelectorAll<HTMLElement>(selector)).filter(el => el !== source);
+    const hitItem = hit?.closest<HTMLElement>(selector);
+    const item = candidates.find(el => contains(layoutBounds(el), x, y))
+      ?? (hitItem && !animations.has(hitItem) ? hitItem : null);
     if (!item) {
       const containers: Record<string, string> = {
         '.todo-item': '.todo-list', '.quick-button': '.quick-buttons',
@@ -40,17 +61,23 @@ export function createSortGap(source: HTMLElement, selector: string) {
     if (item === source) return;
     const heading = item.matches('.todo-section') ? item.querySelector('.todo-heading')
       : item.matches('.quick-tag-group') ? item.querySelector('.quick-tag-heading') : null;
-    const bounds = (heading ?? item).getBoundingClientRect();
+    const layout = layoutBounds(item);
+    const visual = item.getBoundingClientRect();
+    const headingBounds = heading?.getBoundingClientRect();
+    const bounds = headingBounds ? { left: headingBounds.left - (visual.left - layout.left),
+      top: headingBounds.top - (visual.top - layout.top), width: headingBounds.width, height: headingBounds.height } : layout;
     const style = getComputedStyle(item.parentElement!);
     const horizontal = (style.flexDirection === 'row' && style.display === 'flex') || (style.display === 'grid' && style.gridTemplateColumns.split(' ').length > 1);
     const insertBefore = horizontal ? x < bounds.left + bounds.width / 2 : y < bounds.top + bounds.height / 2;
     if (anchor === item && before === insertBefore) return;
-    const elements = Array.from(root.querySelectorAll<HTMLElement>(selector)).filter(el => el !== source);
-    const positions = elements.map(el => el.getBoundingClientRect());
     anchor = item; container = null; before = insertBefore;
+    if (before ? item.previousElementSibling === gap : item.nextElementSibling === gap) return;
+    const elements = candidates;
+    const positions = elements.map(el => el.getBoundingClientRect());
+    animations.forEach(animation => animation.cancel());
+    animations.clear();
     if (before) item.before(gap); else item.after(gap);
     if (!window.matchMedia?.('(prefers-reduced-motion: reduce)').matches) elements.forEach((el, i) => {
-      animations.get(el)?.cancel();
       const to = el.getBoundingClientRect();
       const from = positions[i]!;
       if (el.animate && (from.left !== to.left || from.top !== to.top)) animations.set(el, el.animate([

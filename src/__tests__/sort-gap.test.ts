@@ -54,3 +54,36 @@ describe('sorting landing gap', () => {
     expect(root.firstElementChild!.textContent).toBe('ABC');
   });
 });
+
+
+it('keeps an established gap stable while an animating row passes under the pointer', () => {
+  const { root, items } = fixture();
+  const list = root.firstElementChild as HTMLElement;
+  let moving = false;
+  function bounds(element: Element): DOMRect {
+    const visible = Array.from(list.children).filter(el => (el as HTMLElement).style.display !== 'none');
+    const top = visible.indexOf(element) * 40 + (moving && element === items[1] ? 40 : 0);
+    return { left: 0, right: 120, top, bottom: top + 40, width: 120, height: 40 } as DOMRect;
+  }
+  items.forEach(item => vi.spyOn(item, 'getBoundingClientRect').mockImplementation(() => bounds(item)));
+  const cancel = vi.fn();
+  const animate = vi.fn(() => {
+    moving = true;
+    return { cancel } as unknown as Animation;
+  });
+  items[1]!.animate = animate;
+  const gap = createSortGap(items[0]!, '.item');
+  const placeholder = root.querySelector<HTMLElement>('.sort-gap')!;
+  vi.spyOn(placeholder, 'getBoundingClientRect').mockImplementation(() => bounds(placeholder));
+  gap.update(root, 20, 75);
+  expect(gap.before).toBe(false);
+  expect(animate).toHaveBeenCalledOnce();
+  // Native hit testing can still report the row sliding over this reserved slot.
+  gap.update(root, 20, 45);
+  gap.update(root, 20, 46);
+  expect(items[1]!.nextElementSibling).toBe(placeholder);
+  expect(gap.before).toBe(false);
+  expect(animate).toHaveBeenCalledOnce();
+  expect(cancel).not.toHaveBeenCalled();
+  gap.restore();
+});
