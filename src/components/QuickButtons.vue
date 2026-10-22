@@ -71,7 +71,7 @@ const emit = defineEmits<{
   copyText: [id: string, anchor?: HTMLElement];
   copyLink: [id: string, anchor?: HTMLElement];
   toggleHidden: [id: string];
-  toggleShowHidden: [];
+  toggleShowHidden: [tagId?: string];
   toggleCompact: [];
   reorder: [dragId: string, targetId: string, insertBefore: boolean];
   moveToTag: [buttonId: string, tagId?: string, targetId?: string, insertBefore?: boolean];
@@ -285,10 +285,12 @@ const areaMenuOptions = computed<DropdownOption[]>(() => [
 ]);
 const menuOptions = computed<DropdownOption[]>(() => {
   if (menu.value?.tagId) {
+    const showHidden = props.tags.find(tag => tag.id === menu.value?.tagId)?.showHidden ?? props.showHidden;
     return [
       ...areaMenuOptions.value.filter((option) => ["add", "paste", "smart-paste"].includes(String(option.key))),
       { label: uiText.value.common.rename, key: "rename-tag", icon: renderIcon(CreateOutline) },
-      ...areaMenuOptions.value.filter((option) => ["toggle-show-hidden", "manage-tags", "toggle-compact"].includes(String(option.key))),
+      { label: showHidden ? uiText.value.quick.hideHidden : uiText.value.quick.showHidden, key: "toggle-show-hidden", icon: renderIcon(showHidden ? EyeOffOutline : EyeOutline) },
+      ...areaMenuOptions.value.filter((option) => ["manage-tags", "toggle-compact"].includes(String(option.key))),
       ...(moveMenuChildren.value.length > 0
         ? [{
             label: uiText.value.common.moveToWorkspace,
@@ -606,7 +608,7 @@ function handleMenuSelect(key: string): void {
     return;
   }
   if (key === "toggle-show-hidden") {
-    handleToggleShowHidden(anchor);
+    handleToggleShowHidden(anchor, tagId);
     return;
   }
   if (key === "toggle-compact") {
@@ -653,8 +655,8 @@ const hasOverloadedVisibleGroup = computed(() =>
   hasOverloadedVisibleQuickButtonGroup(props.buttons, props.tags, QUICK_DENSITY_THRESHOLD),
 );
 
-function handleToggleShowHidden(anchor?: HTMLElement): void {
-  emit("toggleShowHidden");
+function handleToggleShowHidden(anchor?: HTMLElement, tagId?: string): void {
+  emit("toggleShowHidden", tagId);
   if (anchor) emit("guide", "toggleHiddenQuick", anchor);
 }
 

@@ -16,7 +16,9 @@ import {
   quickButtonClickCount,
   recordQuickButtonClick,
   reorderQuickButton,
+  toggleQuickHiddenVisibility,
 } from "../state/quickButtons";
+import { normalizeQuickTags } from "../state/storage/normalize";
 import { globalSearchQuery, resetGlobalSearch, setGlobalSearch } from "../state/globalSearch";
 import type { QuickButton } from "../types";
 import { menuDropdownStub } from "./helpers/menu-dropdown-stub";
@@ -514,6 +516,37 @@ describe("QuickButtons", () => {
     await wrapper.get(".quick-block").trigger("contextmenu");
     expect(labels()).not.toContain("删除标签");
     wrapper.unmount();
+  });
+
+  it("toggles hidden actions only in the selected tag and retains visibility after normalization", async () => {
+    const workspace = { quickTags: [{ id: "a", title: "A" }, { id: "b", title: "B" }], showHiddenQuickButtons: false };
+    const buttons: QuickButton[] = ["a", "b"].flatMap(tagId => [
+      { id: tagId, title: tagId, value: "v", type: "text", hidden: false, tagId },
+      { id: `${tagId}-hidden`, title: `${tagId}-hidden`, value: "v", type: "text", hidden: true, tagId },
+    ]);
+    const wrapper = mountQuickButtons({ tags: workspace.quickTags, buttons });
+    const openTag = (id: string) => wrapper.get(`[data-tag-id="${id}"] .quick-tag-heading`).trigger("contextmenu");
+    try {
+      await openTag("a");
+      await wrapper.get('[data-key="toggle-show-hidden"]').trigger("click");
+      expect(wrapper.emitted("toggleShowHidden")?.[0]).toEqual(["a"]);
+      toggleQuickHiddenVisibility(workspace, "a");
+      await wrapper.setProps({ tags: normalizeQuickTags(JSON.parse(JSON.stringify(workspace.quickTags))) });
+      expect(wrapper.findAll(".quick-button").map(button => button.text()).join(" ")).toContain("a-hidden");
+      expect(wrapper.findAll(".quick-button").map(button => button.text()).join(" ")).not.toContain("b-hidden");
+      await openTag("b");
+      expect(wrapper.get('[data-key="toggle-show-hidden"]').text()).toBe("查看隐藏");
+      await openTag("a");
+      expect(wrapper.get('[data-key="toggle-show-hidden"]').text()).toBe("收起隐藏");
+      toggleQuickHiddenVisibility(workspace, "a");
+      expect(buildVisibleQuickButtonGroups(buttons, normalizeQuickTags(workspace.quickTags), false, "其他").map(group => group.buttons.length)).toEqual([1, 1]);
+      toggleQuickHiddenVisibility(workspace);
+      expect(buildVisibleQuickButtonGroups(buttons, workspace.quickTags, workspace.showHiddenQuickButtons, "其他").map(group => group.buttons.length)).toEqual([2, 2]);
+      toggleQuickHiddenVisibility(workspace, "b");
+      expect(buildVisibleQuickButtonGroups(buttons, normalizeQuickTags(workspace.quickTags), true, "其他").map(group => group.buttons.length)).toEqual([2, 1]);
+    } finally {
+      wrapper.unmount();
+    }
   });
 
   it("reuses visibility, tag management and size actions below rename in the tag menu", async () => {

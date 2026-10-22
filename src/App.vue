@@ -60,7 +60,7 @@ import { applyThemeColor } from "./state/theme-color";
 import { readWorkbenchWidthRatios, restoreWorkbenchWidthRatios, removeWorkbenchWidths } from "./state/layoutPrefs";
 import { createWorkspaceData, ensureUniqueWorkspaceTitle, getWorkspaceBoardTitle, projectLegacySpaceLines, removeWorkspace, reorderWorkspaces } from "./state/workspaces";
 import * as workspaceMover from "./state/workspaceMoves";
-import { QUICK_BUTTON_OTHER_GROUP_ID, QUICK_DENSITY_THRESHOLD, assignQuickTagColumn, distributeQuickTagColumns, formatQuickCopiedPreview, recordQuickButtonClick, reorderQuickButton } from "./state/quickButtons";
+import { QUICK_BUTTON_OTHER_GROUP_ID, QUICK_DENSITY_THRESHOLD, assignQuickTagColumn, distributeQuickTagColumns, formatQuickCopiedPreview, recordQuickButtonClick, reorderQuickButton, toggleQuickHiddenVisibility } from "./state/quickButtons";
 import { isQuickAppScheme } from "./state/quickApps";
 import { pickRandomTip, resolveTipGuideKey, type TipPickState } from "./state/guideTips";
 import { isValidNotifyAt } from "./state/deadlines";
@@ -2242,6 +2242,11 @@ function reorderQuickButtons(dragId: string, targetId: string, insertBefore: boo
   persistNow();
 }
 
+function toggleShowHiddenQuick(tagId?: string): void {
+  toggleQuickHiddenVisibility(activeWorkspace.value, tagId);
+  persistNow();
+}
+
 function toggleQuickCompact(): void {
   activeWorkspace.value.quickCompact = !activeWorkspace.value.quickCompact;
   persistNow();
@@ -3682,7 +3687,8 @@ function isGuideAreaEmpty(key: GuideKey, anchor?: HTMLElement): boolean {
   if (key === "images") return activeWorkspace.value.images.length === 0;
   if (key === "note") return !hasLineContent(activeWorkspace.value.noteLines);
   if (key === "quickButtons") {
-    return !activeWorkspace.value.quickButtons.some((button) => activeWorkspace.value.showHiddenQuickButtons || !button.hidden);
+    return !activeWorkspace.value.quickButtons.some((button) => !button.hidden ||
+      (activeWorkspace.value.quickTags.find(tag => tag.id === button.tagId)?.showHidden ?? activeWorkspace.value.showHiddenQuickButtons));
   }
   if (key === "workspace") {
     const active = activeWorkspace.value.spaces.find((space) => space.id === activeWorkspace.value.activeSpaceId) ?? activeWorkspace.value.spaces[0];
@@ -3992,7 +3998,7 @@ function moveItem<T extends { id: string }>(items: T[], dragId: string, targetId
           @copy-link="copyQuickLink"
           @copy-text="copyQuickText"
           @toggle-hidden="toggleQuickHidden"
-          @toggle-show-hidden="activeWorkspace.showHiddenQuickButtons = !activeWorkspace.showHiddenQuickButtons; persistNow()"
+          @toggle-show-hidden="toggleShowHiddenQuick"
           @toggle-compact="toggleQuickCompact"
           @reorder="reorderQuickButtons"
           @column-count-change="onQuickColumnCountChange"

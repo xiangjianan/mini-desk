@@ -17,6 +17,8 @@ export interface QuickTag {
   id: string;
   title: string;
   collapsed?: boolean;
+  /** Overrides workspace hidden-action visibility for this group. */
+  showHidden?: boolean;
   /**
    * Which masonry column (0-indexed) this tag group is pinned to, mirroring
    * `TodoListConfig.column`. Auto-distributed while `quickLayoutManual` is

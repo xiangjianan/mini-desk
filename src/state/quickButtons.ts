@@ -1,4 +1,4 @@
-import type { BoardState, QuickButton, QuickTag } from "../types";
+import type { BoardState, QuickButton, QuickTag, WorkspaceData } from "../types";
 import { matchesSearch } from "../utils/searchHighlight";
 import { assignColumn, distributeColumns } from "./columns";
 
@@ -25,6 +25,16 @@ export interface QuickButtonGroup {
 export const QUICK_BUTTON_EMPTY_GROUP_ID = "__empty";
 export const QUICK_BUTTON_OTHER_GROUP_ID = "__other";
 export const QUICK_DENSITY_THRESHOLD = 12;
+
+export function toggleQuickHiddenVisibility(workspace: Pick<WorkspaceData, "quickTags" | "showHiddenQuickButtons">, tagId?: string): void {
+  if (tagId) {
+    const tag = workspace.quickTags.find(tag => tag.id === tagId);
+    if (tag) tag.showHidden = !(tag.showHidden ?? workspace.showHiddenQuickButtons);
+    return;
+  }
+  workspace.showHiddenQuickButtons = !workspace.showHiddenQuickButtons;
+  for (const tag of workspace.quickTags) delete tag.showHidden;
+}
 
 /** 显示真实累计次数；旧数据中的无效值按零处理。 */
 export function quickButtonClickCount(clicks: unknown): number {
@@ -68,10 +78,11 @@ export function buildVisibleQuickButtonGroups(
   otherCollapsed = false,
 ): QuickButtonGroup[] {
   const taggedButtons = new Map(tags.map((tag) => [tag.id, [] as QuickButton[]]));
+  const visibility = new Map(tags.map(tag => [tag.id, tag.showHidden ?? showHidden]));
   const otherButtons: QuickButton[] = [];
 
   for (const button of buttons) {
-    if (!showHidden && button.hidden) continue;
+    if (button.hidden && !(button.tagId ? visibility.get(button.tagId) ?? showHidden : showHidden)) continue;
     const group = button.tagId ? taggedButtons.get(button.tagId) : undefined;
     if (group) group.push(button);
     else otherButtons.push(button);
