@@ -9,7 +9,6 @@ import {
   Download as DownloadOutline,
   CloudUpload as CloudUploadOutline,
   Check as CheckmarkOutline,
-  Smartphone as PhonePortraitOutline,
   Ellipsis as EllipsisHorizontalOutline,
 } from "lucide-vue-next";
 import { getUiText } from "../state/i18n";
@@ -34,22 +33,19 @@ const emit = defineEmits<{
   reorder: [dragId: string, targetId: string];
   exportWorkspace: [id: string, anchor: HTMLElement];
   import: [anchor: HTMLElement];
-  pairInbox: [id: string];
 }>();
 
 const text = computed(() => getUiText(props.language));
-const menuIcons = { export: DownloadOutline, rename: CreateOutline, pair: PhonePortraitOutline, delete: TrashOutline };
+const menuIcons = { export: DownloadOutline, rename: CreateOutline, delete: TrashOutline };
 const workspaceMenuOptions = computed(() => organizeContextMenu([
   { key: "export", label: text.value.app.workspaceExportSingle },
   { key: "rename", label: text.value.common.rename },
-  { key: "pair", label: text.value.app.inboxPair },
   { key: "delete", label: text.value.common.delete },
 ]));
 
 function handleWorkspaceMenuAction(key: string, event: MouseEvent, id: string): void {
   if (key === "export") handleExport(event, id);
   if (key === "rename") handleRename(event, id);
-  if (key === "pair") handlePair(event, id);
   if (key === "delete") handleDelete(event, id);
 }
 
@@ -146,12 +142,6 @@ function handleExport(event: MouseEvent, id: string): void {
   event.stopPropagation();
   const anchor = event.currentTarget as HTMLElement;
   emit("exportWorkspace", id, anchor);
-  close();
-}
-
-function handlePair(event: MouseEvent, id: string): void {
-  event.stopPropagation();
-  emit("pairInbox", id);
   close();
 }
 

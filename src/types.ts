@@ -190,21 +190,6 @@ export interface WorkspaceData {
   showCompletedTodos: TodoCompletedVisibility;
   todos: TodoMap;
   zoneVisibility: ZoneVisibility;
-  inbox?: WorkspaceInbox;
-}
-
-/**
- * 手机速记（单向收件箱）配对配置。字段存在即启用该工作区的拉取同步。
- * `code` 为配对路由码（12 位 Crockford base32），仅解密存量密文行时仍
- * 兼作解密密钥；`lastSeenAt` 是本地保存的服务端时间戳水位线，
- * 防止重复接收历史条目。空间导出不包含该配对配置。
- */
-export interface WorkspaceInbox {
-  code: string;
-  todoListId: TodoListId;
-  /** 便签落点 = 目标空间 Tab 的 id；指向不存在/已删除的空间时回退第一个空间。 */
-  noteTarget: string;
-  lastSeenAt: number;
 }
 
 export interface BoardSyncState {
@@ -220,8 +205,6 @@ export interface BoardState {
   companionGifTheme: CompanionGifTheme;
   customCompanionGif: CompanionCustomGif;
   customCompanionGifStored: CompanionCustomGifStored;
-  /** 智能粘贴专用配对码（全局唯一，12 位 Crockford base32）：首次智能粘贴时生成并注册到中继。 */
-  polishCode?: string;
   workspaces: WorkspaceData[];
   activeWorkspaceId: string;
 }
@@ -229,8 +212,6 @@ export interface BoardState {
 export interface SerializableOptions {
   includeImageData?: boolean;
   includeCustomGifData?: boolean;
-  /** 空间导出用：排除手机速记配对配置；本地存储和撤销快照仍保留。 */
-  omitInbox?: boolean;
   /** 撤销快照用：剥除 quickButtons[].clicks——点击计数是使用分析而非可撤销内容。 */
   omitQuickButtonClicks?: boolean;
 }

@@ -12,9 +12,9 @@ It gathers the loose bits of daily work into a local-first browser desktop: scre
 
 Mini Desk is built with Vue 3, TypeScript, Vite, and Naive UI. The interface takes cues from Apple's Human Interface Guidelines, aiming for a compact, clear, low-distraction daily experience.
 
-Mini Desk is also an AI coding experiment: the product thinking, interaction trade-offs, and aesthetic judgment come from a human, while 100% of the code — from the UI and state management to the self-hosted relay service — was written by AI (Claude Code) in conversation.
+Mini Desk is also an AI coding experiment: the product thinking, interaction trade-offs, and aesthetic judgment come from a human, while 100% of the code — from the UI and state management to local persistence — was written by AI (Claude Code) in conversation.
 
-No account or sign-in required — all your data lives in the browser: page state in `localStorage`, image originals and custom GIF assets in same-site IndexedDB. Apart from the self-hosted relay shared by mobile capture and smart paste, it depends on no backend service, making it a good fit as a personal browser workbench.
+No account or sign-in required — all your data lives in the browser: page state in `localStorage`, image originals and custom GIF assets in same-site IndexedDB. It depends on no backend service, making it a good fit as a personal browser workbench.
 
 ## Live site
 
@@ -29,7 +29,7 @@ npm test        # run tests
 npm run build   # build the production bundle
 ```
 
-`npm run preview` builds and serves the production bundle — the only way to verify offline behavior (dev mode never registers the Service Worker). For real-device LAN debugging use `npm run preview:lan` (self-signed HTTPS; the mobile-inbox API requires a secure context, and devices must accept the certificate warning once).
+`npm run preview` builds and serves the production bundle — the only way to verify offline behavior (dev mode never registers the Service Worker). For real-device LAN debugging use `npm run preview:lan` (self-signed HTTPS; devices must accept the certificate warning once).
 
 ## Feature overview
 
@@ -45,8 +45,8 @@ npm run build   # build the production bundle
 ### Multi-workspace
 
 - Create, switch, rename, delete, and drag-reorder workspaces; the system always keeps at least one.
-- Each workspace has independent board content, zone visibility, and mobile-inbox pairing; global preferences such as theme, language, and GIF are shared across workspaces.
-- The workspace switcher is a ClickUp-style list; export, pairing, rename, and delete live in each entry's "⋯" menu.
+- Each workspace has independent board content and zone visibility; global preferences such as theme, language, and GIF are shared across workspaces.
+- The workspace switcher is a ClickUp-style list; export, rename, and delete live in each entry's "⋯" menu.
 - Import supports full or single-workspace payloads; same-named spaces can be overwritten or auto-numbered as new; the current workspace can be exported alone.
 
 ### Image shelf
@@ -88,17 +88,6 @@ npm run build   # build the production bundle
 - Buttons can be hidden, with a "show hidden items" toggle and drag-reorder.
 - The search icon in the title bar expands a filter input that filters groups by title and content, with hits highlighted.
 
-### Mobile inbox
-
-- Pair from the workspace "⋯" menu on desktop: get a 12-character code, a QR code, and the full pairing address, copyable in one tap or rotatable (old addresses expire immediately).
-- Pick the reminder target list and the notes target space; pairing is revoked automatically when the workspace is deleted or data is cleared.
-- Open the pairing address on a phone (or type the code) to reach the capture page: multi-line input splits per line, with direct "Send to reminders" / "Send to notes" buttons.
-- One-tap clipboard paste (without popping the keyboard), one-tap draft clearing; once a code is remembered, reopening skips re-entry, and typed codes are verified online with clear expiry messaging.
-- After pairing, the code shows with the middle four characters masked; tapping it still copies the full code.
-- Captures travel as plaintext JSON over HTTPS to a self-hosted relay, authenticated by the pairing-code hash; an optional per-send "AI polish" has the server tidy todos and notes before storing (any failure falls back to raw text).
-- Items are removed from the queue once delivered to the desktop, and expire after 30 days.
-- The desktop pulls on startup, window focus, every 5 minutes, and `Ctrl+S`; switching to a paired workspace pulls immediately.
-
 ### Offline & install
 
 - After the first visit, the app opens fully offline (the Service Worker caches the app shell and static assets).
@@ -112,7 +101,7 @@ npm run build   # build the production bundle
 
 ### Keyboard shortcuts
 
-- `Ctrl+S`: save immediately and pull the mobile inbox.
+- `Ctrl+S`: save immediately.
 - `Ctrl+Z`: board undo (text and image editors keep their own undo stacks).
 - Text zones: `Tab` / `Shift+Tab` indent, `Ctrl/⌘ + ←/→` jump to line start/end, `Ctrl/⌘ + ↑/↓` move the current line.
 - Reminders: `Ctrl/⌘ + ↑/↓` reorder within the group, `Ctrl/⌘ + ←/→` jump to line start/end.
@@ -130,7 +119,7 @@ npm run build   # build the production bundle
 
 ## Saving
 
-- `Ctrl+S` saves immediately with a toast, and pulls the mobile inbox at the same time.
+- `Ctrl+S` saves immediately with a toast at the same time.
 - Text input auto-saves 3 seconds after typing stops, and immediately on blur; reminder input debounces at 1 second.
 - Structural operations (add, complete, drag, …) save instantly.
 - Multiple tabs open at once detect version conflicts and never overwrite each other.
@@ -150,15 +139,14 @@ Image originals are kept in same-site IndexedDB:
 mini-desk-images-v1
 ```
 
-The phone's remembered pairing code is kept in `mini-desk-inbox-code`. Legacy `todo-board-state-v1` and `todo-board-images-v1` keys migrate automatically on read. Clearing site data wipes board content, images, and custom GIFs; deleting only the `localStorage` keys clears board state, but IndexedDB may still hold image originals.
+Legacy `todo-board-state-v1` and `todo-board-images-v1` keys migrate automatically on read. Clearing site data wipes board content, images, and custom GIFs; deleting only the `localStorage` keys clears board state, but IndexedDB may still hold image originals.
 
-The mobile-inbox relay stores only the capture items themselves (self-hosted, authenticated by pairing-code hash); items become unreadable once delivered to the desktop or after 30 days, and are removed from the queue on read. The relay keeps no board data, images, or account information.
 
 ## Mobile notes
 
-The board is designed for desktop workflows: viewports 900px wide or narrower get a guide page pointing to a desktop browser. On workspaces with mobile inbox paired, phones can open the pairing address to capture reminders and notes, which sync to the desktop through the self-hosted relay.
+The board is designed for desktop workflows: viewports 940px wide or narrower get a guide page pointing to a desktop browser.
 
-For local real-device debugging use `npm run preview:lan`; the mobile-inbox API needs a secure context, and devices must accept the self-signed certificate warning once.
+For local real-device debugging use `npm run preview:lan`; devices must accept the self-signed certificate warning once.
 
 ## Deployment
 
@@ -170,13 +158,7 @@ The live site runs on Cloudflare Pages (project `todolist`):
 npm run deploy:cloudflare
 ```
 
-The mobile-inbox relay is a self-hosted service (`server/`, Flask + MySQL) deployed on Aliyun at `/opt/minidesk-inbox`, exposed via nginx at <https://relay.minidesk.online:8443>:
-
-```bash
-cd server && ./deploy.sh
-```
-
-Build-related environment variables: `VITE_BASE` (deployment subpath), `VITE_INBOX_WORKER_URL` (override the relay URL, for local debugging), `MINI_DESK_LAN` (enable self-signed HTTPS for real-device preview).
+Build-related environment variables: `VITE_BASE` (deployment subpath), `MINI_DESK_LAN` (enable self-signed HTTPS for real-device preview).
 
 To publish a release, build `dist` first, then zip the bundle as a release asset:
 
@@ -189,13 +171,11 @@ zip -qr ../dist-<version>.zip .
 ## Project structure
 
 - `src/App.vue`: the board entry point — cross-component state orchestration, saving and conflict detection, import/export, toast bubbles, and global shortcuts.
-- `src/components/`: workbench shell, workspace switcher, image shelf / screenshot editor / preview, reminders, quick actions, note spaces, mobile inbox, settings, and help components.
+- `src/components/`: workbench shell, workspace switcher, image shelf / screenshot editor / preview, reminders, quick actions, note spaces, settings, and help components.
 - `src/state/`: default state, message copy, i18n, theme, GIF themes, version & changelog, localStorage/IndexedDB access, import/export normalization, and reminder domain logic.
-- `src/sync/`: mobile-inbox pairing codes, legacy payload decoding, and relay clients.
 - `src/composables/`: composable logic such as reminder notifications.
 - `src/utils/`: text-editing utilities (indent, list markers, line moves) and friends.
 - `src/__tests__/`: component rendering, state compatibility, interaction contracts, deployment config, and message copy tests.
-- `server/`: the mobile-inbox relay (Flask + MySQL, production).
 - `static/`: companion GIFs and image assets; `public/`: Service Worker, manifest, and icons; `samples/`: sample import data.
 
 ## On AI coding
@@ -207,7 +187,7 @@ How Mini Desk gets built is the project's most interesting experiment: the human
 - Releases are automated: a custom release workflow in the repo (`.claude/skills/`) drives the AI through build, full test runs, Cloudflare deployment, GitHub Releases, and changelog upkeep — one person maintaining 100 releases.
 - The repo itself is a human-AI collaboration artifact: `CLAUDE.md` is the project manual written for the AI, and every changelog entry in `src/state/changelog.ts` was summarized by the AI at release time.
 
-Put differently: everything described here — from the four-zone workbench to the mobile inbox — is the product of the loop "state the requirement → AI implements → AI self-reviews → AI releases".
+Put differently: everything described here — from the four-zone workbench to offline use — is the product of the loop "state the requirement → AI implements → AI self-reviews → AI releases".
 
 ## Acknowledgements
 

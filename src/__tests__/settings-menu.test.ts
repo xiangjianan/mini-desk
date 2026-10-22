@@ -179,53 +179,6 @@ describe("SettingsMenu", () => {
     expect(wrapper.emitted("clearData")?.[0]).toEqual([expect.any(HTMLElement)]);
   });
 
-  it("keeps icons on the data menu, its child actions, and the promoted inbox entry", () => {
-    const source = readFileSync(resolve(__dirname, "../components/SettingsMenu.vue"), "utf8");
-
-    expect(source).toContain("ServerOutline");
-    expect(source).toContain("TrashOutline");
-    expect(source).toMatch(/key:\s*"data"[\s\S]*?icon:\s*renderIcon\(ServerOutline\)/);
-    expect(source).toMatch(/key:\s*"create-workspace"[\s\S]*?icon:\s*renderIcon\(AddOutline\)/);
-    expect(source).toMatch(/key:\s*"import"[\s\S]*?icon:\s*renderIcon\(CloudUploadOutline\)/);
-    expect(source).toMatch(/key:\s*"export-workspace"[\s\S]*?icon:\s*renderIcon\(CloudDownloadOutline\)/);
-    expect(source).toMatch(/key:\s*"clear-data"[\s\S]*?icon:\s*renderIcon\(TrashOutline,\s*true\)/);
-    expect(source).toMatch(/key:\s*"pair-inbox"[\s\S]*?icon:\s*renderIcon\(PhonePortraitOutline\)/);
-  });
-
-  it("pairs a phone from the settings menu for the active workspace", async () => {
-    const wrapper = mount(SettingsMenu, {
-      props: {
-        appVersion: "1.0.38",
-        updateAvailable: false,
-        companionGifTheme: "hermes",
-        language: "zh",
-      },
-      global: {
-        stubs: {
-          Dropdown: dropdownStub,
-          NDropdown: dropdownStub,
-          teleport: true,
-          NBadge: { template: "<span><slot /></span>" },
-          NButton: { template: "<button><slot /></button>" },
-          NIcon: { template: "<span />" },
-        },
-      },
-    });
-
-    // Top-level entry renamed 手机速记, placed below GIF theme in the settings menu.
-    expect(wrapper.find('[data-key="pair-inbox"]').text()).toBe("手机速记");
-    expect(wrapper.find('[data-key="pair-inbox"]').classes()).not.toContain("dropdown-child-option");
-    const keys = wrapper.findAll(".dropdown-option").map((option) => option.attributes("data-key"));
-    // 一级菜单：数据 → 语言 → GIF 主题 → 手机速记 → 快捷键 → 提建议 → 关于。
-    const order = ["data", "language", "gif-theme", "pair-inbox", "shortcut-help", "suggest", "about"].map((key) => keys.indexOf(key));
-    expect(order.every((index) => index >= 0)).toBe(true);
-    expect(order).toEqual([...order].sort((a, b) => a - b));
-
-    await wrapper.find('[data-key="pair-inbox"]').trigger("click");
-
-    expect(wrapper.emitted("pairInbox")?.[0]).toEqual([expect.any(HTMLElement)]);
-  });
-
   it("adds a suggestion action that emits from the settings menu", async () => {
     const wrapper = mount(SettingsMenu, {
       props: {

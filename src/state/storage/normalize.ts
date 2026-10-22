@@ -4,7 +4,6 @@ import { DEFAULT_SPACE_ID, DEFAULT_SPACE_TITLE, DEFAULT_TODO_LISTS, DEFAULT_WORK
 import { isValidNotifyAt } from "../deadlines";
 import { normalizeCompanionGifTheme } from "../companionGifThemes";
 import { isQuickAppScheme } from "../quickApps";
-import { INBOX_CODE_PATTERN } from "../../sync/pairing";
 import { normalizeMarkList } from "../../utils/textMarks";
 import { DEFAULT_LANGUAGE, DEFAULT_SPACE_TITLES, DEFAULT_TITLES_BY_LANGUAGE, LEGACY_DEFAULT_TITLES_BY_LANGUAGE, OLDER_LEGACY_DEFAULT_TITLES_BY_LANGUAGE, getLegacyDefaultTodoLists, getUiText, normalizeLanguage } from "../i18n";
 import { normalizeThemeMode } from "../theme";
@@ -27,7 +26,6 @@ import type {
   TodoListId,
   TodoMap,
   WorkspaceData,
-  WorkspaceInbox,
   WorkspaceSpace,
   ZoneVisibility,
 } from "../../types";
@@ -45,7 +43,6 @@ export function normalizeImportedState(payload: unknown): BoardState {
   // existing layout on load.
   const legacyGlobalVisibility = normalizeZoneVisibility(typed.zoneVisibility);
 
-  const polishCode = normalizePolishCode(typed.polishCode);
   const shared = {
     sync: normalizeSyncState(typed.sync),
     language,
@@ -53,7 +50,6 @@ export function normalizeImportedState(payload: unknown): BoardState {
     companionGifTheme: normalizeCompanionGifTheme(typed.companionGifTheme),
     customCompanionGif: normalizeCustomCompanionGif(typed.customCompanionGif),
     customCompanionGifStored: normalizeCustomCompanionGifStored(typed.customCompanionGifStored, typed.customCompanionGif),
-    ...(polishCode ? { polishCode } : {}),
   };
 
   if (Array.isArray(typed.workspaces)) {
@@ -109,34 +105,7 @@ export function normalizeWorkspaceData(item: unknown, language: AppLanguage = DE
     showCompletedTodos: normalizeCompletedVisibility(typed.showCompletedTodos, todoLists),
     todos: normalizeTodos(typed.todos, todoLists),
     zoneVisibility: normalizeZoneVisibility(typed.zoneVisibility ?? fallbackVisibility),
-    inbox: normalizeWorkspaceInbox(typed.inbox, todoLists, spaces),
   };
-}
-
-export function normalizeWorkspaceInbox(value: unknown, todoLists: TodoListConfig[], spaces: WorkspaceSpace[]): WorkspaceInbox | undefined {
-  if (!isPlainObject(value)) return undefined;
-  const typed = value as Record<string, unknown>;
-  if (typeof typed.code !== "string" || !INBOX_CODE_PATTERN.test(typed.code)) return undefined;
-  const todoListId = todoLists.some((list) => list.id === typed.todoListId)
-    ? (typed.todoListId as TodoListId)
-    : todoLists[0]?.id;
-  if (!todoListId) return undefined;
-  const noteTarget =
-    typeof typed.noteTarget === "string" && spaces.some((space) => space.id === typed.noteTarget)
-      ? typed.noteTarget
-      : spaces[0]?.id;
-  // normalizeSpaces 保证至少一个空间；空 spaces 属于异常防御，丢弃整个 inbox。
-  if (!noteTarget) return undefined;
-  const lastSeenAt =
-    typeof typed.lastSeenAt === "number" && Number.isFinite(typed.lastSeenAt)
-      ? Math.max(0, Math.floor(typed.lastSeenAt))
-      : 0;
-  return { code: typed.code, todoListId, noteTarget, lastSeenAt };
-}
-
-/** 智能粘贴配对码：合法 12 位码原样保留，其余（含空串/异型）丢弃——下次使用时重新生成。 */
-export function normalizePolishCode(value: unknown): string | undefined {
-  return typeof value === "string" && INBOX_CODE_PATTERN.test(value) ? value : undefined;
 }
 
 function normalizeWorkspaceList(value: unknown, language: AppLanguage, fallbackVisibility?: ZoneVisibility): WorkspaceData[] {
