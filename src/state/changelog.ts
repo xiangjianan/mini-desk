@@ -33,14 +33,6 @@ export interface ChangelogEntry {
 }
 
 export const CHANGELOG: ChangelogEntry[] = [
-  {
-    version: "1.1.10-offline",
-    date: "2026-10-22",
-    notes: {
-      zh: ["离线特别版：移除智能粘贴、AI 润色及相关入口", "移除手机速记、配对与同步；保留普通粘贴和本地工作台", "保留各区域及列表的普通粘贴按钮，取消悬浮彩色特效；修复设置菜单重复分割线"],
-      en: ["Offline edition: removed smart paste, AI polish, and their controls", "Removed mobile capture, pairing, and sync; kept ordinary paste and the local workbench", "Kept plain paste buttons in area and list headers without animated hover colors; fixed duplicate settings dividers"],
-    },
-  },
     {
       version: "1.1.17",
       date: "2026-10-28",
@@ -85,6 +77,22 @@ export const CHANGELOG: ChangelogEntry[] = [
         ],
       },
     },
+  {
+    version: "1.1.12-offline",
+    date: "2026-10-23",
+    notes: {
+      zh: [
+        "同步 1.1.12：拖拽排序实时预览落位空隙，支持拖入折叠分组",
+        "优化提醒列表拖拽落位与动画稳定性；隐藏的快捷按钮按当前标签筛选",
+        "未分类快捷动作统一显示为「无标签」；保留普通粘贴按钮和离线版功能取舍",
+      ],
+      en: [
+        "Updated to 1.1.12: live landing-gap previews and drops onto collapsed groups",
+        "Improved reminder drag landing and animations; hidden quick actions are scoped to the selected tag",
+        "Untagged quick actions now use No tag; plain paste controls and offline edition behavior are retained",
+      ],
+    },
+  },
     {
       version: "1.1.12",
       date: "2026-10-23",
@@ -101,6 +109,14 @@ export const CHANGELOG: ChangelogEntry[] = [
         ],
       },
     },
+  {
+    version: "1.1.10-offline",
+    date: "2026-10-22",
+    notes: {
+      zh: ["离线特别版：移除智能粘贴、AI 润色及相关入口", "移除手机速记、配对与同步；保留普通粘贴和本地工作台", "保留各区域及列表的普通粘贴按钮，取消悬浮彩色特效；修复设置菜单重复分割线"],
+      en: ["Offline edition: removed smart paste, AI polish, and their controls", "Removed mobile capture, pairing, and sync; kept ordinary paste and the local workbench", "Kept plain paste buttons in area and list headers without animated hover colors; fixed duplicate settings dividers"],
+    },
+  },
     {
       version: "1.1.10",
       date: "2026-10-22",
