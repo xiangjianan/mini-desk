@@ -333,7 +333,7 @@ html[data-theme="dark"] .workbench-shell,
 }
 .workbench-shell .todo-section.is-collapsed > .todo-heading::before,
 .workbench-shell .quick-tag-group:has(> .quick-tag-content.is-collapsed) > .quick-tag-heading::before { border-radius: var(--desk-card-radius); }
-.workbench-shell .quick-tag-group:has(> .quick-tag-content.is-collapsed) { background: transparent; }
+/* Keep the card fill while the grid shrinks/grows, as reminder lists do. */
 .workbench-shell .quick-tag-content.is-collapsed { background: transparent; }
 .workbench-shell .quick-tag-group.is-empty,
 .workbench-shell .quick-tag-group.is-empty > .quick-tag-content { background: transparent; }
@@ -559,6 +559,10 @@ html[data-theme="dark"] .workbench-shell .space-text-panel {
   margin: 0;
   padding: 0;
   transform: none;
+}
+.workbench-shell button.todo-collapse-button:hover {
+  background: transparent;
+  box-shadow: none;
 }
 .workbench-shell .quick-tag-collapse-button .n-icon,
 .workbench-shell .todo-collapse-button .n-icon { transform: none; }
