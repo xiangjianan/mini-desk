@@ -7,7 +7,7 @@ import type { DropdownOption } from "naive-ui";
 import { getImageItemContextMenuItems } from "../state/imageContextMenu";
 import type { ImageContextMenuKey } from "../state/imageContextMenu";
 import { getUiText } from "../state/i18n";
-import { clamp } from "../utils/math";
+import { useImageTransform, ZOOM_STEP } from "../composables/useImageTransform";
 import type { AppLanguage, ImagePasteRequest, StoredImage } from "../types";
 import { organizeContextMenu, CONTEXT_MENU_Z_INDEX, createExclusiveContextMenu } from "../utils/contextMenu";
 import { isTextEntryTarget } from "../utils/dom";
@@ -42,25 +42,16 @@ const emit = defineEmits<{
   saveEdit: [payload: { id: string; src: string; displayWidth: number; displayHeight: number }];
 }>();
 
-const MIN_SCALE = 0.3;
-const MAX_SCALE = 5;
-const ZOOM_STEP = 0.1;
-const DOUBLE_CLICK_SCALE = 2;
-
 interface ImageSize {
   width: number;
   height: number;
 }
 
-const scale = ref(1);
-const offset = ref({ x: 0, y: 0 });
-const dragging = ref(false);
 const editing = ref(props.editId === props.activeId && Boolean(props.activeId));
 const localClosing = ref(false);
 const previewRef = ref<HTMLElement | null>(null);
 const previewImageRef = ref<HTMLImageElement | null>(null);
 const editorRef = ref<InstanceType<typeof ImageEditor> | null>(null);
-const start = ref({ x: 0, y: 0, ox: 0, oy: 0 });
 const menu = ref<{ x: number; y: number; id: string; anchor?: HTMLElement } | null>(null);
 const editorFrame = ref<{ width: number; height: number } | null>(null);
 let closeTimer: number | undefined;
@@ -72,12 +63,7 @@ const canNavigatePrevious = computed(() => activeIndex.value > 0);
 const canNavigateNext = computed(() => activeIndex.value >= 0 && activeIndex.value < props.images.length - 1);
 const isClosing = computed(() => props.closing || localClosing.value);
 const isDirectEditMode = computed(() => Boolean(props.activeId) && props.editId === props.activeId);
-const activeImageStyle = computed(() => {
-  const style = {
-    transform: `translate(${offset.value.x}px, ${offset.value.y}px) scale(${scale.value})`,
-  };
-  return style;
-});
+const { scale, dragging, activeImageStyle, adjustZoom, toggleZoom, wheel, down, move, resetTransform } = useImageTransform();
 const menuOptions = computed<DropdownOption[]>(() => [
   // canEdit=false：编辑入口与无 tips 接线的「Tips」引导项一并隐藏。
   ...getImageItemContextMenuItems(uiText.value, true)
@@ -119,8 +105,7 @@ watch(
     closeTimer = undefined;
     localClosing.value = false;
     editing.value = props.editId === props.activeId && Boolean(props.activeId);
-    scale.value = 1;
-    offset.value = { x: 0, y: 0 };
+    resetTransform();
     editorFrame.value = null;
     void syncDirectEditorFrame();
   },
@@ -147,16 +132,6 @@ function requestClose(): void {
   }, 220);
 }
 
-function wheel(event: WheelEvent): void {
-  event.preventDefault();
-  if (!event.ctrlKey && !event.metaKey) return;
-  const nextScale = clampScale(scale.value + (event.deltaY < 0 ? ZOOM_STEP : -ZOOM_STEP));
-  if (nextScale === scale.value) return;
-  offset.value = getAnchoredZoomOffset(event, nextScale);
-  scale.value = nextScale;
-  if (scale.value === 1) offset.value = { x: 0, y: 0 };
-}
-
 function navigate(direction: number): boolean {
   if (direction < 0 && !canNavigatePrevious.value) return false;
   if (direction > 0 && !canNavigateNext.value) return false;
@@ -172,56 +147,6 @@ function focusPreviewSurface(): void {
 
 function navigateFromToolbar(direction: number): void {
   if (navigate(direction)) focusPreviewSurface();
-}
-
-function clampScale(value: number): number {
-  return Number(clamp(value, MIN_SCALE, MAX_SCALE).toFixed(2));
-}
-
-function adjustZoom(delta: number): void {
-  scale.value = clampScale(scale.value + delta);
-  if (scale.value === 1) offset.value = { x: 0, y: 0 };
-}
-
-function getAnchoredZoomOffset(event: MouseEvent | WheelEvent, nextScale: number): { x: number; y: number } {
-  const target = event.currentTarget instanceof HTMLElement ? event.currentTarget : null;
-  if (!target || scale.value <= 0) return offset.value;
-
-  const rect = target.getBoundingClientRect();
-  const centerX = rect.left + rect.width / 2;
-  const centerY = rect.top + rect.height / 2;
-  const pointX = event.clientX - centerX;
-  const pointY = event.clientY - centerY;
-  const sourceX = (pointX - offset.value.x) / scale.value;
-  const sourceY = (pointY - offset.value.y) / scale.value;
-  return {
-    x: Number((pointX - nextScale * sourceX).toFixed(2)),
-    y: Number((pointY - nextScale * sourceY).toFixed(2)),
-  };
-}
-
-function toggleZoom(event: MouseEvent): void {
-  if (scale.value === 1) {
-    offset.value = getAnchoredZoomOffset(event, DOUBLE_CLICK_SCALE);
-    scale.value = DOUBLE_CLICK_SCALE;
-    return;
-  }
-
-  scale.value = 1;
-  offset.value = { x: 0, y: 0 };
-}
-
-function down(event: MouseEvent): void {
-  dragging.value = true;
-  start.value = { x: event.clientX, y: event.clientY, ox: offset.value.x, oy: offset.value.y };
-}
-
-function move(event: MouseEvent): void {
-  if (!dragging.value) return;
-  offset.value = {
-    x: start.value.ox + event.clientX - start.value.x,
-    y: start.value.oy + event.clientY - start.value.y,
-  };
 }
 
 function handleExternalDrop(event: DragEvent): void {

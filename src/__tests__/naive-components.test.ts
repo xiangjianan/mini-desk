@@ -1,3 +1,4 @@
+import { ruleBodies } from "./helpers/css-rules";
 import { readFileSync } from "node:fs";
 import { resolve } from "node:path";
 import { describe, expect, it } from "vitest";
@@ -482,9 +483,9 @@ describe("Naive UI component usage", () => {
     expect(styles).toMatch(/\.shortcut-help-modal \.n-base-close\s*\{[^}]*width: 30px/s);
     expect(styles).toMatch(/\.shortcut-help-modal \.n-base-close\s*\{[^}]*height: 30px/s);
     expect(styles).toMatch(/\.shortcut-help-modal \.n-base-close\s*\{[^}]*border-radius: 50% !important/s);
-    expect(styles).toMatch(/\.shortcut-help-modal \.n-base-close:hover\s*\{[^}]*width: 30px/s);
-    expect(styles).toMatch(/\.shortcut-help-modal \.n-base-close:hover\s*\{[^}]*height: 30px/s);
-    expect(styles).toMatch(/\.shortcut-help-modal \.n-base-close:hover\s*\{[^}]*border-radius: 50% !important/s);
+    expect(ruleBodies(styles, ".shortcut-help-modal .n-base-close:hover").join("\n")).toContain("width: 30px");
+    expect(ruleBodies(styles, ".shortcut-help-modal .n-base-close:hover").join("\n")).toContain("height: 30px");
+    expect(ruleBodies(styles, ".shortcut-help-modal .n-base-close:hover").join("\n")).toContain("border-radius: 50% !important");
     expect(styles).toMatch(/\.shortcut-help-modal \.n-base-close \.n-base-close__state-border[\s\S]*?\.shortcut-help-modal \.n-base-close \.n-base-close__border\s*\{[^}]*display: none/s);
   });
 
@@ -580,7 +581,7 @@ describe("Naive UI component usage", () => {
     expect(styles).not.toMatch(/\.notify-time-columns\s*\{[^}]*height: 168px/s);
     expect(styles).toMatch(/\.notify-time-column\s*\{[^}]*-webkit-overflow-scrolling: touch/s);
     expect(styles).toMatch(/\.notify-panel-actions\s*\{[^}]*justify-content: flex-end/s);
-    expect(styles).toMatch(/\.todo-notify-button\s*\{[^}]*align-items: center/s);
+    expect(ruleBodies(styles, ".todo-notify-button").join("\n")).toContain("align-items: center");
     expect(styles).not.toContain(".notify-editor");
     expect(styles).not.toContain(".deadline-editor-actions");
   });
@@ -1044,7 +1045,7 @@ describe("Naive UI component usage", () => {
     expect(home).toContain(':class="{ \'is-fill\': Boolean(code) }"');
     expect(styles).toMatch(/\.mobile-home-page\.is-fill\s*\{[^}]*height: 100%/s);
     expect(styles).toMatch(/\.mobile-home-page\.is-fill \.mobile-home-main[^{]*\{[^}]*min-height: 0/s);
-    expect(styles).toMatch(/\.mobile-home-page\.is-fill \.mobile-inbox-wrap\s*\{[^}]*flex-direction: column/s);
+    expect(ruleBodies(styles, ".mobile-home-page.is-fill .mobile-inbox-wrap").join("\n")).toContain("flex-direction: column");
     expect(styles).toMatch(/\.mobile-home-page\.is-fill \.mobile-inbox-form\s*\{[^}]*min-height: 0/s);
     expect(styles).toMatch(/\.mobile-home-page\.is-fill \.mobile-inbox-textarea\s*\{[^}]*flex: 1/s);
     expect(styles).toMatch(/\.mobile-home-page\.is-fill \.mobile-inbox-textarea\s*\{[^}]*resize: none/s);

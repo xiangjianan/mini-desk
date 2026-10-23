@@ -84,6 +84,7 @@ import type { PolishKind, PolishResult, PolishStyle, PolishTodoItem } from "./sy
 import type { SmartPastePhase } from "./utils/smartPaste";
 import { copyTextToClipboard } from "./utils/clipboard";
 import { binaryStringToBytes } from "./utils/base64";
+import { observeMediaQuery } from "./utils/mediaQuery";
 import { collapseTextEntrySelection, isTextEntryTarget } from "./utils/dom";
 import { extractRetainedImageIds, useUndoHistory } from "./composables/useUndoHistory";
 import { useTodoNotifications } from "./composables/useTodoNotifications";
@@ -296,7 +297,6 @@ const shortcutHelpVisible = ref(false);
 const supportDialogVisible = ref(false);
 const changelogVisible = ref(false);
 const isMobileBlocked = ref(getInitialMobileBlocked());
-const mobileMediaQuery = ref<MediaQueryList | null>(null);
 // URL 带 #inbox=<12位码> 时优先；否则回退手机壳本地记忆（主屏图标/微信入口丢 fragment 的场景）。
 const mobileInboxCode = ref<string | null>(parseInboxFragment(window.location.hash) ?? loadRememberedInboxCode());
 const mobileInboxCodeError = ref<string | null>(null);
@@ -400,7 +400,6 @@ const workspaceDensityLabel = computed(() => {
 
 const boardTitle = computed(() => getWorkspaceBoardTitle(activeWorkspace.value));
 const boardSlogan = computed(() => activeWorkspace.value.customTitles["board-slogan"]?.trim() ?? "");
-const notificationDocumentTitle = computed(() => `${uiText.value.app.notificationTitle} · ${boardTitle.value}`);
 const titles = computed(() =>
   Object.fromEntries(
     Object.entries(getDefaultTitles(state.language)).map(([id, title]) => [id, activeWorkspace.value.customTitles[id] || title]),
@@ -419,8 +418,7 @@ const displaySpaces = computed<WorkspaceSpace[]>(() =>
   })),
 );
 
-function updateMobileBlocked(source?: MediaQueryList | MediaQueryListEvent): void {
-  const matches = Boolean(source?.matches ?? mobileMediaQuery.value?.matches);
+function updateMobileBlocked(matches: boolean): void {
   const wasMobileBlocked = isMobileBlocked.value;
   if (matches && !wasMobileBlocked) {
     clearImagePreview();
@@ -533,67 +531,17 @@ async function copyMobileInboxCode(): Promise<void> {
   }, 1800);
 }
 
-function setupMobileBreakpoint(): void {
-  if (!window.matchMedia) return;
-  const query = window.matchMedia(MOBILE_BREAKPOINT_QUERY);
-  mobileMediaQuery.value = query;
-  updateMobileBlocked(query);
-  if (query.addEventListener) {
-    query.addEventListener("change", updateMobileBlocked);
-    return;
-  }
-  query.addListener(updateMobileBlocked);
-}
-
-function teardownMobileBreakpoint(): void {
-  const query = mobileMediaQuery.value;
-  if (!query) return;
-  if (query.removeEventListener) {
-    query.removeEventListener("change", updateMobileBlocked);
-  } else {
-    query.removeListener(updateMobileBlocked);
-  }
-  mobileMediaQuery.value = null;
-}
-
-/** 系统明暗偏好监听：只更新系统状态，显式明暗选择始终保留。 */
-let systemThemeQuery: MediaQueryList | undefined;
-let systemThemeListener: ((event: MediaQueryListEvent) => void) | undefined;
-
-function setupSystemThemeListener(): void {
-  if (!window.matchMedia) return;
-  const query = window.matchMedia("(prefers-color-scheme: dark)");
-  systemThemeQuery = query;
-  systemDark.value = query.matches;
-  systemThemeListener = (event) => {
-    systemDark.value = event.matches;
-  };
-  if (query.addEventListener) {
-    query.addEventListener("change", systemThemeListener);
-    return;
-  }
-  query.addListener(systemThemeListener);
-}
-
-function teardownSystemThemeListener(): void {
-  const query = systemThemeQuery;
-  const listener = systemThemeListener;
-  if (!query || !listener) return;
-  if (query.removeEventListener) {
-    query.removeEventListener("change", listener);
-  } else {
-    query.removeListener(listener);
-  }
-  systemThemeQuery = undefined;
-  systemThemeListener = undefined;
-}
+let stopMobileBreakpoint: (() => void) | undefined;
+let stopSystemThemeListener: (() => void) | undefined;
 
 onMounted(async () => {
   appMounted = true;
   document.title = boardTitle.value;
-  setupMobileBreakpoint();
+  stopMobileBreakpoint = observeMediaQuery(MOBILE_BREAKPOINT_QUERY, updateMobileBlocked);
   // 先同步一次系统明暗偏好，再 applyTheme：auto 模式下首帧即为正确的明/暗，避免先浅后深。
-  setupSystemThemeListener();
+  stopSystemThemeListener = observeMediaQuery("(prefers-color-scheme: dark)", (matches) => {
+    systemDark.value = matches;
+  });
   applyTheme();
   try {
     state.customCompanionGif = await hydrateCustomCompanionGif(state.customCompanionGif, state.customCompanionGifStored);
@@ -665,8 +613,8 @@ onUnmounted(() => {
   window.removeEventListener("focus", handleWindowFocusInbox);
   window.removeEventListener("hashchange", handleHashChange);
   stopInboxPolling();
-  teardownMobileBreakpoint();
-  teardownSystemThemeListener();
+  stopMobileBreakpoint?.();
+  stopSystemThemeListener?.();
   discardFocusSession();
   clearTimers();
   clearMobileCopyToast();

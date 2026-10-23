@@ -471,11 +471,15 @@ html[data-theme="dark"] .n-modal-mask {
   }
 }
 
-.n-button:not(.n-button--primary-type):not(.n-button--error-type) {
+.n-button:not(.n-button--primary-type):not(.n-button--error-type),
+.quick-dialog-action.n-button {
   --n-color: var(--button) !important;
   --n-color-hover: var(--button-hover) !important;
   --n-color-pressed: var(--button-hover) !important;
   --n-color-focus: var(--button-hover) !important;
+}
+
+.n-button:not(.n-button--primary-type):not(.n-button--error-type) {
   --n-border: 0 solid transparent !important;
   --n-border-hover: 0 solid transparent !important;
   --n-border-pressed: 0 solid transparent !important;
@@ -483,10 +487,6 @@ html[data-theme="dark"] .n-modal-mask {
 }
 
 .quick-dialog-action.n-button {
-  --n-color: var(--button) !important;
-  --n-color-hover: var(--button-hover) !important;
-  --n-color-pressed: var(--button-hover) !important;
-  --n-color-focus: var(--button-hover) !important;
   --n-border: 1px solid var(--line-control) !important;
   --n-border-hover: 1px solid var(--line-control) !important;
   --n-border-pressed: 1px solid var(--line-control) !important;
@@ -1551,15 +1551,7 @@ button.quick-button {
   padding-right: 2px;
 }
 
-.quick-tag-manager-row {
-  display: grid;
-  grid-template-columns: minmax(0, 1fr) 30px;
-  min-width: 0;
-  gap: 6px;
-  align-items: center;
-  padding: 3px;
-}
-
+.quick-tag-manager-row,
 .quick-tag-add-row {
   display: grid;
   grid-template-columns: minmax(0, 1fr) 30px;
@@ -2126,22 +2118,26 @@ button.todo-collapse-button {
   padding: 0 5px;
 }
 
-.todo-notify-button {
-  position: relative;
-  justify-self: end;
-  grid-column: 4;
+.todo-notify-button,
+.todo-link-button {
   display: inline-flex;
   align-items: center;
   justify-content: center;
   width: 26px;
   min-width: 26px;
   height: 26px;
+  border-radius: 50%;
+  color: var(--muted);
+}
+
+.todo-notify-button {
+  position: relative;
+  justify-self: end;
+  grid-column: 4;
   min-height: 26px;
   margin-right: 2px;
   padding: 0;
   border: 0;
-  border-radius: 50%;
-  color: var(--muted);
   background: transparent;
   cursor: pointer;
   overflow: visible;
@@ -2151,14 +2147,6 @@ button.todo-collapse-button {
 }
 
 .todo-link-button {
-  display: inline-flex;
-  align-items: center;
-  justify-content: center;
-  width: 26px;
-  min-width: 26px;
-  height: 26px;
-  color: var(--muted);
-  border-radius: 50%;
   opacity: 0.72;
   transition: color 0.18s ease, opacity 0.18s ease;
 }
@@ -3668,17 +3656,11 @@ body:has(.image-preview) .image-panel .n-scrollbar {
   min-height: 0;
 }
 
-.mobile-home-page.is-fill .mobile-inbox-wrap {
-  flex: 1;
-  min-height: 0;
-  display: flex; /* 覆盖基类 grid：form 弹性伸展，标题/错误/粘贴行保持自然高度 */
-  flex-direction: column;
-}
-
+.mobile-home-page.is-fill .mobile-inbox-wrap,
 .mobile-home-page.is-fill .mobile-inbox-form {
   flex: 1;
   min-height: 0;
-  display: flex; /* 覆盖基类 grid：textarea 撑满剩余，行数提示与按钮行自然高度 */
+  display: flex;
   flex-direction: column;
 }
 
@@ -4464,15 +4446,7 @@ button.mobile-home-btn-danger:focus-visible {
   border-radius: 50% !important;
 }
 
-.shortcut-help-modal .n-base-close:hover {
-  width: 30px;
-  min-width: 30px;
-  height: 30px;
-  min-height: 30px;
-  padding: 0;
-  border-radius: 50% !important;
-}
-
+.shortcut-help-modal .n-base-close:hover,
 .shortcut-help-modal .n-base-close:focus-visible {
   width: 30px;
   min-width: 30px;
@@ -4626,13 +4600,7 @@ button.mobile-home-btn-danger:focus-visible {
   color: var(--muted);
 }
 
-.shortcut-keyboard-overview {
-  padding: 12px;
-  border: 1px solid color-mix(in srgb, var(--border) 74%, transparent);
-  border-radius: var(--radius-control);
-  background: color-mix(in srgb, var(--card) 78%, transparent);
-}
-
+.shortcut-keyboard-overview,
 .shortcut-section {
   padding: 12px;
   border: 1px solid color-mix(in srgb, var(--border) 74%, transparent);

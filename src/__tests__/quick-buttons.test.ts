@@ -1,3 +1,4 @@
+import { ruleBodies } from "./helpers/css-rules";
 import { flushPromises, mount } from "@vue/test-utils";
 import { readFileSync } from "node:fs";
 import { resolve } from "node:path";
@@ -729,7 +730,7 @@ describe("QuickButtons", () => {
 
     expect(styles).toMatch(/\.quick-tag-manager\s*\{[^}]*overflow-x: hidden/s);
     expect(styles).toMatch(/\.quick-tag-manager-list\s*\{[^}]*overflow-x: hidden/s);
-    expect(styles).toMatch(/\.quick-tag-manager-row\s*\{[^}]*min-width: 0/s);
+    expect(ruleBodies(styles, ".quick-tag-manager-row").join("\n")).toContain("min-width: 0");
     expect(styles).toMatch(/\.quick-tag-manager-body\s*\{[^}]*padding: 3px/s);
     expect(styles).toMatch(/\.quick-tag-add-row\s*\{[^}]*padding: 3px/s);
   });

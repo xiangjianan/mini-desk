@@ -75,8 +75,12 @@ export function useTodoNotifications(state: BoardState, deps: TodoNotificationDe
   }
 
   function refreshTodoNotifications(): void {
-    triggerDueTodoNotifications();
-    scheduleNextTodoNotification();
+    // Share one snapshot across pruning, delivery and scheduling. Ordinary todos
+    // never need notification records, and each refresh walks the board once.
+    const reminders = collectNotifiableTodos();
+    pruneSentTodoNotifications(reminders);
+    triggerDueTodoNotifications(reminders);
+    scheduleNextTodoNotification(reminders);
   }
 
   /** Every todo carrying a reminder across ALL workspaces. Reminders fire
@@ -88,6 +92,7 @@ export function useTodoNotifications(state: BoardState, deps: TodoNotificationDe
       for (const list of workspace.todoLists) {
         const period = list.id;
         for (const todo of workspace.todos[period] ?? []) {
+          if (todo.done || todo.notifyAt === undefined || !Number.isFinite(todo.notifyAt)) continue;
           result.push({ workspaceId: workspace.id, workspace, period, todo });
         }
       }
@@ -120,17 +125,15 @@ export function useTodoNotifications(state: BoardState, deps: TodoNotificationDe
     }
   }
 
-  function triggerDueTodoNotifications(): void {
-    pruneSentTodoNotifications();
+  function triggerDueTodoNotifications(all: NotifiableTodo[]): void {
     const now = Date.now();
-    const all = collectNotifiableTodos();
 
     // Phase 1 — active workspace: fire native notifications + in-app flash
     // (permission-gated, unchanged behavior).
     for (const item of all) {
       if (item.workspaceId !== state.activeWorkspaceId) continue;
       const { period, todo } = item;
-      if (todo.done || !Number.isFinite(todo.notifyAt) || todo.notifyAt === undefined || todo.notifyAt > now) continue;
+      if (todo.notifyAt === undefined || todo.notifyAt > now) continue;
       const key = getTodoNotificationKey(item.workspaceId, period, todo);
       if (sentTodoNotifications.has(key)) continue;
       // On constructor failure, leave the todo unsent so the fallback interval
@@ -150,7 +153,7 @@ export function useTodoNotifications(state: BoardState, deps: TodoNotificationDe
     for (const item of all) {
       if (item.workspaceId === state.activeWorkspaceId) continue;
       const { todo } = item;
-      if (todo.done || !Number.isFinite(todo.notifyAt) || todo.notifyAt === undefined || todo.notifyAt > now) continue;
+      if (todo.notifyAt === undefined || todo.notifyAt > now) continue;
       if (sentTodoNotifications.has(getTodoNotificationKey(item.workspaceId, item.period, todo))) continue;
       if (!target || (todo.notifyAt ?? 0) < (target.todo.notifyAt ?? 0)) target = item;
     }
@@ -160,15 +163,15 @@ export function useTodoNotifications(state: BoardState, deps: TodoNotificationDe
     deps.showCrossWorkspacePrompt(target);
   }
 
-  function scheduleNextTodoNotification(): void {
+  function scheduleNextTodoNotification(reminders = collectNotifiableTodos()): void {
     if (!deps.isMounted()) return;
     window.clearTimeout(todoNotificationDueTimer.value);
     todoNotificationDueTimer.value = undefined;
     const now = Date.now();
     let nextNotifyAt: number | undefined;
-    for (const item of collectNotifiableTodos()) {
+    for (const item of reminders) {
       const { todo } = item;
-      if (todo.done || !Number.isFinite(todo.notifyAt) || todo.notifyAt === undefined || todo.notifyAt <= now) continue;
+      if (todo.notifyAt === undefined || todo.notifyAt <= now) continue;
       if (sentTodoNotifications.has(getTodoNotificationKey(item.workspaceId, item.period, todo))) continue;
       if (nextNotifyAt === undefined || todo.notifyAt < nextNotifyAt) nextNotifyAt = todo.notifyAt;
     }
@@ -177,14 +180,8 @@ export function useTodoNotifications(state: BoardState, deps: TodoNotificationDe
     todoNotificationDueTimer.value = window.setTimeout(refreshTodoNotifications, delay);
   }
 
-  function pruneSentTodoNotifications(): void {
-    const activeKeys = new Set<string>();
-    for (const item of collectNotifiableTodos()) {
-      const { todo } = item;
-      if (Number.isFinite(todo.notifyAt) && todo.notifyAt !== undefined && !todo.done) {
-        activeKeys.add(getTodoNotificationKey(item.workspaceId, item.period, todo));
-      }
-    }
+  function pruneSentTodoNotifications(reminders: NotifiableTodo[]): void {
+    const activeKeys = new Set(reminders.map(({ workspaceId, period, todo }) => getTodoNotificationKey(workspaceId, period, todo)));
     for (const key of sentTodoNotifications) {
       if (!activeKeys.has(key)) sentTodoNotifications.delete(key);
     }

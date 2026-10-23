@@ -7,7 +7,7 @@ import type { AppLanguage, ImagePasteRequest, LineItem, StoredImage } from "../t
 import { getUiText } from "../state/i18n";
 import { formatFocusDuration } from "../state/todos";
 import { isTextEntryTarget } from "../utils/dom";
-import { clamp } from "../utils/math";
+import { useImageTransform, ZOOM_STEP } from "../composables/useImageTransform";
 import type { PolishKind, PolishResult, PolishStyle } from "../sync/polishClient";
 import TextPanel from "./TextPanel.vue";
 import ImagePanel from "./ImagePanel.vue";
@@ -84,21 +84,12 @@ const displayDurationIso = computed(() => `PT${Math.ceil(displayMs.value / 1000)
 //    工具栏与缩放/拖拽/键盘交互完全复刻主页面 ImagePreview（.preview-actions /
 //    .preview-stage 全局样式直接复用），差异只在：数据源是 focusImages、保存经
 //    saveImage 上抛 App、关预览是收浮层而非撤全屏。 ——
-const MIN_SCALE = 0.3;
-const MAX_SCALE = 5;
-const ZOOM_STEP = 0.1;
-const DOUBLE_CLICK_SCALE = 2;
-
 const activePreviewId = ref<string>();
 const editorActive = ref(false);
 const imageFileInput = ref<HTMLInputElement>();
 const previewRef = ref<HTMLElement>();
 const previewImageRef = ref<HTMLImageElement>();
 const editorRef = ref<InstanceType<typeof ImageEditor> | null>(null);
-const scale = ref(1);
-const offset = ref({ x: 0, y: 0 });
-const dragging = ref(false);
-const start = ref({ x: 0, y: 0, ox: 0, oy: 0 });
 // 删除预览中的图片后按主页面口径跳邻图：记录最近的下标，悬空时按它选邻居。
 const lastPreviewIndex = ref(0);
 
@@ -108,67 +99,7 @@ const activeIndex = computed(() =>
   props.images.findIndex((image) => image.id === activePreviewId.value));
 const canNavigatePrevious = computed(() => activeIndex.value > 0);
 const canNavigateNext = computed(() => activeIndex.value >= 0 && activeIndex.value < props.images.length - 1);
-const activeImageStyle = computed(() => ({
-  transform: `translate(${offset.value.x}px, ${offset.value.y}px) scale(${scale.value})`,
-}));
-
-function clampScale(value: number): number {
-  return Number(clamp(value, MIN_SCALE, MAX_SCALE).toFixed(2));
-}
-
-function adjustZoom(delta: number): void {
-  scale.value = clampScale(scale.value + delta);
-  if (scale.value === 1) offset.value = { x: 0, y: 0 };
-}
-
-function getAnchoredZoomOffset(event: MouseEvent | WheelEvent, nextScale: number): { x: number; y: number } {
-  const target = event.currentTarget instanceof HTMLElement ? event.currentTarget : null;
-  if (!target || scale.value <= 0) return offset.value;
-  const rect = target.getBoundingClientRect();
-  const centerX = rect.left + rect.width / 2;
-  const centerY = rect.top + rect.height / 2;
-  const pointX = event.clientX - centerX;
-  const pointY = event.clientY - centerY;
-  const sourceX = (pointX - offset.value.x) / scale.value;
-  const sourceY = (pointY - offset.value.y) / scale.value;
-  return {
-    x: Number((pointX - nextScale * sourceX).toFixed(2)),
-    y: Number((pointY - nextScale * sourceY).toFixed(2)),
-  };
-}
-
-function toggleZoom(event: MouseEvent): void {
-  if (scale.value === 1) {
-    offset.value = getAnchoredZoomOffset(event, DOUBLE_CLICK_SCALE);
-    scale.value = DOUBLE_CLICK_SCALE;
-    return;
-  }
-  scale.value = 1;
-  offset.value = { x: 0, y: 0 };
-}
-
-function wheel(event: WheelEvent): void {
-  event.preventDefault();
-  if (!event.ctrlKey && !event.metaKey) return;
-  const nextScale = clampScale(scale.value + (event.deltaY < 0 ? ZOOM_STEP : -ZOOM_STEP));
-  if (nextScale === scale.value) return;
-  offset.value = getAnchoredZoomOffset(event, nextScale);
-  scale.value = nextScale;
-  if (scale.value === 1) offset.value = { x: 0, y: 0 };
-}
-
-function down(event: MouseEvent): void {
-  dragging.value = true;
-  start.value = { x: event.clientX, y: event.clientY, ox: offset.value.x, oy: offset.value.y };
-}
-
-function move(event: MouseEvent): void {
-  if (!dragging.value) return;
-  offset.value = {
-    x: start.value.ox + event.clientX - start.value.x,
-    y: start.value.oy + event.clientY - start.value.y,
-  };
-}
+const { dragging, activeImageStyle, adjustZoom, toggleZoom, wheel, down, move, resetTransform } = useImageTransform();
 
 function navigateFocus(direction: number): boolean {
   if (direction < 0 && !canNavigatePrevious.value) return false;
@@ -197,8 +128,7 @@ function openPreview(id: string): void {
 // 打开/切换预览：重置缩放/拖拽态（主页面同口径）并把焦点收进浮层——回车进编辑、
 // 空格关预览的键盘语义随即生效（浮层是 tabindex=-1 容器，不进 Tab 序列）。
 watch(activePreviewId, async (id) => {
-  scale.value = 1;
-  offset.value = { x: 0, y: 0 };
+  resetTransform();
   dragging.value = false;
   if (!id) return;
   await nextTick();
