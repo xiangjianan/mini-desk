@@ -6,6 +6,26 @@ function eventAt(timeStamp: number): Event {
 }
 
 describe("exclusive context menus", () => {
+  it("lets toolbar trigger clicks reach the toggle handler, including nested icons", () => {
+    const close = vi.fn();
+    const anchor = document.createElement("button");
+    const icon = anchor.appendChild(document.createElement("span"));
+    const menu = createExclusiveContextMenu(close, () => anchor);
+    menu.handleClickOutside({ target: icon } as unknown as Event);
+    expect(close).not.toHaveBeenCalled();
+    menu.handleClickOutside({ target: document.body } as unknown as Event);
+    expect(close).toHaveBeenCalledTimes(1);
+  });
+
+  it("does not protect a heading used as a broad right-click anchor", () => {
+    const close = vi.fn();
+    const anchor = document.createElement("div");
+    const title = anchor.appendChild(document.createElement("h3"));
+    const menu = createExclusiveContextMenu(close, () => anchor);
+    menu.handleClickOutside({ target: title } as unknown as Event);
+    expect(close).toHaveBeenCalledTimes(1);
+  });
+
   it("closes an initially opened menu on the first outside event", () => {
     const close = vi.fn();
     const menu = createExclusiveContextMenu(close);

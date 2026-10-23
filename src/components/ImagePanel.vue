@@ -1,10 +1,11 @@
 <script setup lang="ts">
+import ContextMenu from "./ContextMenu.vue";
 import { suppressSortCommitMotion } from "../utils/sortCommit";
 import { createSortGap } from "../utils/sortGap";
 let sortGap: ReturnType<typeof createSortGap> | null = null;
 import { computed, h, nextTick, onMounted, onUnmounted, ref, watch } from "vue";
 import type { Component, ComponentPublicInstance, VNode } from "vue";
-import { NDropdown, NIcon, NScrollbar } from "naive-ui";
+import { NIcon, NScrollbar } from "naive-ui";
 import {
   ArrowDown as ArrowDownOutline,
   ArrowUp as ArrowUpOutline,
@@ -23,7 +24,7 @@ import { GUIDE_MENU_OPTION } from "../state/defaults";
 import { getBlankImageContextMenuItems, getImageItemContextMenuItems } from "../state/imageContextMenu";
 import type { ImageContextMenuKey } from "../state/imageContextMenu";
 import { getIconHeadingText, getUiText } from "../state/i18n";
-import { organizeContextMenu, CONTEXT_MENU_Z_INDEX, createExclusiveContextMenu } from "../utils/contextMenu";
+import { createExclusiveContextMenu } from "../utils/contextMenu";
 import { binaryStringToBytes } from "../utils/base64";
 import { createDragAutoScroll } from "../utils/dragScroll";
 import { renderIcon } from "../utils/dropdownIcons";
@@ -662,23 +663,8 @@ function handleImageDragWheel(event: WheelEvent): void {
       <span v-else class="image-missing">{{ uiText.images.loading }}</span>
     </div>
 
-    <NDropdown
-      v-if="menu"
-      placement="bottom-start"
-      trigger="manual"
-      :show="true"
-      :x="menu.x"
-      :y="menu.y"
-      :z-index="CONTEXT_MENU_Z_INDEX"
-      :options="organizeContextMenu(menuOptions)"
-      @select="handleMenuSelect"
-      @clickoutside="exclusiveMenu.handleClickOutside"
-    >
-      <span
-        class="dropdown-anchor"
-        :style="{ left: `${menu.x}px`, top: `${menu.y}px` }"
-        aria-hidden="true"
-      />
-    </NDropdown>
+    <ContextMenu v-if="menu" :x="menu.x" :y="menu.y" :options="menuOptions"
+
+      @select="handleMenuSelect" @clickoutside="exclusiveMenu.handleClickOutside" />
   </section>
 </template>

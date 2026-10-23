@@ -1,17 +1,18 @@
 <script setup lang="ts">
 import { computed, nextTick, onBeforeUnmount, onMounted, ref, watch } from "vue";
 import { NIcon, NModal } from "naive-ui";
-import { AddOutline, ChevronDownOutline, ChevronUpOutline, CloseOutline, CreateOutline, RemoveOutline, TrashOutline } from "@vicons/ionicons5";
+import { AddOutline } from "@vicons/ionicons5";
 import { Timer } from "lucide-vue-next";
 import type { AppLanguage, ImagePasteRequest, LineItem, StoredImage } from "../types";
 import { getUiText } from "../state/i18n";
 import { formatFocusDuration } from "../state/todos";
 import { isTextEntryTarget } from "../utils/dom";
-import { useImageTransform, ZOOM_STEP } from "../composables/useImageTransform";
+import { useImageTransform } from "../composables/useImageTransform";
 import type { PolishKind, PolishResult, PolishStyle } from "../sync/polishClient";
 import TextPanel from "./TextPanel.vue";
 import ImagePanel from "./ImagePanel.vue";
 import ImageEditor from "./ImageEditor.vue";
+import ImagePreviewToolbar from "./ImagePreviewToolbar.vue";
 
 export interface FocusImageSavePayload {
   id: string;
@@ -431,68 +432,10 @@ function handleModalShow(value: boolean): void {
                   @dblclick.stop.prevent="toggleZoom"
                 />
               </div>
-              <div class="preview-actions" role="toolbar" :aria-label="uiText.preview.help">
-                <button
-                  type="button"
-                  class="preview-toolbar-button preview-nav-button is-previous"
-                  :aria-label="uiText.preview.previous"
-                  :aria-disabled="!canNavigatePrevious"
-                  :disabled="!canNavigatePrevious"
-                  @click.stop.prevent="navigateFromToolbar(-1)"
-                  @keydown.enter.stop.prevent="navigateFromToolbar(-1)"
-                  @keydown.space.stop.prevent="clearPreview"
-                >
-                  <NIcon size="20">
-                    <ChevronUpOutline />
-                  </NIcon>
-                </button>
-                <button
-                  type="button"
-                  class="preview-toolbar-button preview-nav-button is-next"
-                  :aria-label="uiText.preview.next"
-                  :aria-disabled="!canNavigateNext"
-                  :disabled="!canNavigateNext"
-                  @click.stop.prevent="navigateFromToolbar(1)"
-                  @keydown.enter.stop.prevent="navigateFromToolbar(1)"
-                  @keydown.space.stop.prevent="clearPreview"
-                >
-                  <NIcon size="20">
-                    <ChevronDownOutline />
-                  </NIcon>
-                </button>
-                <button type="button" class="preview-toolbar-button preview-zoom-button is-zoom-out" :aria-label="uiText.preview.zoomOut" @click.stop.prevent="adjustZoom(-ZOOM_STEP)">
-                  <NIcon size="18">
-                    <RemoveOutline />
-                  </NIcon>
-                </button>
-                <button type="button" class="preview-toolbar-button preview-zoom-button is-zoom-in" :aria-label="uiText.preview.zoomIn" @click.stop.prevent="adjustZoom(ZOOM_STEP)">
-                  <NIcon size="18">
-                    <AddOutline />
-                  </NIcon>
-                </button>
-                <button type="button" class="preview-toolbar-button is-edit" :aria-label="uiText.common.edit" @click.stop.prevent="enterEditor">
-                  <NIcon size="18">
-                    <CreateOutline />
-                  </NIcon>
-                </button>
-                <button type="button" class="preview-toolbar-button is-delete" :aria-label="uiText.common.delete" @click.stop.prevent="previewImage && emit('deleteImage', previewImage.id)">
-                  <NIcon size="18">
-                    <TrashOutline />
-                  </NIcon>
-                </button>
-                <button
-                  type="button"
-                  class="preview-toolbar-button is-close"
-                  :aria-label="uiText.preview.close"
-                  @click.stop.prevent="clearPreview"
-                  @keydown.enter.stop.prevent="clearPreview"
-                  @keydown.space.stop.prevent="clearPreview"
-                >
-                  <NIcon size="18">
-                    <CloseOutline />
-                  </NIcon>
-                </button>
-              </div>
+              <ImagePreviewToolbar :language="language" :can-navigate-previous="canNavigatePrevious"
+            :can-navigate-next="canNavigateNext"
+            @navigate="navigateFromToolbar" @zoom="adjustZoom" @edit="enterEditor"
+            @delete="previewImage && emit('deleteImage', previewImage.id)" @close="clearPreview" />
             </template>
           </div>
         </section>

@@ -1,7 +1,8 @@
 <script setup lang="ts">
+import ContextMenu from "./ContextMenu.vue";
 import { computed, h, nextTick, onMounted, onUnmounted, ref, watch } from "vue";
 import type { Component, VNode } from "vue";
-import { NDropdown, NIcon } from "naive-ui";
+import { NIcon } from "naive-ui";
 import type { DropdownOption } from "naive-ui";
 import {
   Clipboard as ClipboardOutline,
@@ -29,7 +30,7 @@ import {
   renumberOrderedListText,
 } from "../utils/textEditor";
 import { clearMarksInRange, MARK_COLORS, toggleMarkInRange, buildMirrorSegments, translateMarksForEdit, type MirrorSegment } from "../utils/textMarks";
-import { organizeContextMenu, CONTEXT_MENU_Z_INDEX, createExclusiveContextMenu, renderPolishMenuLabel } from "../utils/contextMenu";
+import { createExclusiveContextMenu } from "../utils/contextMenu";
 import { copySelection, getSelectionRange, hasSelection, pasteWithBrowserCommand, probeClipboardForTextPaste, hasAsyncClipboard as hasClipboardApi } from "../utils/clipboard";
 import { renderIcon } from "../utils/dropdownIcons";
 import { clampCaret, setStickySelection } from "../utils/caret";
@@ -1196,24 +1197,8 @@ function restoreSelection(textarea: HTMLTextAreaElement, selection: { start: num
         @blur="handleBlur"
       />
     </div>
-    <NDropdown
-      v-if="menu"
-      placement="bottom-start"
-      trigger="manual"
-      :show="true"
-      :x="menu.x"
-      :y="menu.y"
-      :z-index="CONTEXT_MENU_Z_INDEX"
-      :options="organizeContextMenu(menuOptions)"
-      :render-label="renderPolishMenuLabel"
-      @select="handleMenuSelect"
-      @clickoutside="exclusiveMenu.handleClickOutside"
-    >
-      <span
-        class="dropdown-anchor"
-        :style="{ left: `${menu.x}px`, top: `${menu.y}px` }"
-        aria-hidden="true"
-      />
-    </NDropdown>
+    <ContextMenu v-if="menu" :x="menu.x" :y="menu.y" :options="menuOptions"
+      :polish-labels="true"
+      @select="handleMenuSelect" @clickoutside="exclusiveMenu.handleClickOutside" />
   </section>
 </template>

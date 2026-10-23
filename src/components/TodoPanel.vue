@@ -1,4 +1,5 @@
 <script setup lang="ts">
+import ContextMenu from "./ContextMenu.vue";
 import { TITLE_MAX_LENGTH } from "../state/titleLimits";
 import { installPointerSort } from "../utils/pointerSort";
 import { isGroupDropBefore } from "../utils/groupDrop";
@@ -28,7 +29,7 @@ import {
   Trash2 as TrashOutline,
   Ellipsis,
 } from "lucide-vue-next";
-import { NDatePicker, NDropdown, NIcon } from "naive-ui";
+import { NDatePicker, NIcon } from "naive-ui";
 import type { DropdownOption } from "naive-ui";
 import { DEFAULT_TODO_LISTS, GUIDE_MENU_OPTION } from "../state/defaults";
 import { LEGACY_TODO_TITLE_IDS } from "../state/storage";
@@ -59,7 +60,7 @@ import { TODO_DENSITY_THRESHOLD, formatFocusDuration, getOrderedTodos, getTodoDr
 import { clampCaret } from "../utils/caret";
 import { splitDroppedTodoText } from "../utils/textEditor";
 import { copySelection, copyTextToClipboard, getSelectionRange, probeClipboardForTextPaste } from "../utils/clipboard";
-import { organizeContextMenu, CONTEXT_MENU_Z_INDEX, createExclusiveContextMenu, renderPolishMenuLabel } from "../utils/contextMenu";
+import { createExclusiveContextMenu } from "../utils/contextMenu";
 import { renderIcon } from "../utils/dropdownIcons";
 import { isImeComposing } from "../utils/ime";
 import type { PolishKind, PolishResult, PolishStyle, PolishTodoItem } from "../sync/polishClient";
@@ -69,7 +70,7 @@ import { POLISH_STYLE_ENTRIES } from "../state/polishStyles";
 import SparklesOutlineIcon from "./SparklesOutlineIcon.vue";
 import EditableTitle from "./EditableTitle.vue";
 import TodoRowsTransition from "./TodoRowsTransition";
-import { normalizeTodoMaxColumns, TODO_COLUMN_LIMIT_OPTIONS } from "../state/columns";
+import { computePanelColumnCount, normalizeTodoMaxColumns, TODO_COLUMN_LIMIT_OPTIONS } from "../state/columns";
 
 const props = withDefaults(defineProps<{
   todoLists?: TodoListConfig[];
@@ -185,7 +186,7 @@ const todoSectionRefs = new Map<TodoListId, HTMLElement>();
 const notifyPickerAnchors = new Map<string, HTMLElement>();
 const uiText = computed(() => getUiText(props.language));
 const guideMenuOption = computed<DropdownOption>(() => ({ ...GUIDE_MENU_OPTION, label: uiText.value.common.tips }));
-const exclusiveMenu = createExclusiveContextMenu(closeMenu);
+const exclusiveMenu = createExclusiveContextMenu(closeMenu, () => menu.value?.anchor);
 const effectiveTodoLists = computed(() => {
   const lists = props.todoLists ?? DEFAULT_TODO_LISTS.map((list) => ({
     ...list,
@@ -535,9 +536,7 @@ let columnResizeObserver: ResizeObserver | undefined;
  * of lists (so few lists never leave empty columns).
  */
 function computeColumnCount(width: number, listCount: number): number {
-  if (width < TODO_MULTI_COLUMN_THRESHOLD || listCount <= 1) return 1;
-  const computed = 2 + Math.floor((width - TODO_MULTI_COLUMN_THRESHOLD) / TODO_COLUMN_TARGET_WIDTH);
-  return Math.max(1, Math.min(computed, listCount));
+  return computePanelColumnCount(width, listCount, TODO_MULTI_COLUMN_THRESHOLD, TODO_COLUMN_TARGET_WIDTH);
 }
 
 let isUnmounted = false;
@@ -1165,12 +1164,6 @@ function openHeadingActions(event: MouseEvent, period: TodoListId): void {
 }
 
 
-function handleMenuClickOutside(event?: Event): void {
-  // Only toolbar buttons need protection so their click handler can toggle the menu.
-  // A right-click menu anchor can cover the entire heading, group or panel.
-  if (event?.target instanceof Node && menu.value?.anchor?.matches("button") && menu.value.anchor.contains(event.target)) return;
-  exclusiveMenu.handleClickOutside(event);
-}
 
 function closeMenu(): void {
   menu.value = null;
@@ -2039,7 +2032,7 @@ onUnmounted(() => focusRegionAnimation?.cancel());
 </script>
 
 <template>
-  <section ref="panelRef" class="panel todo-panel" aria-labelledby="todo-title" @pointerdown.capture="menu && handleMenuClickOutside($event)" @contextmenu="openPanelMenu" @dragleave="handleTodoDragLeave" @drop="handleTodoDragLeave" @dragend="handleTodoDragEnd">
+  <section ref="panelRef" class="panel todo-panel" aria-labelledby="todo-title" @pointerdown.capture="menu && exclusiveMenu.handleClickOutside($event)" @contextmenu="openPanelMenu" @dragleave="handleTodoDragLeave" @drop="handleTodoDragLeave" @dragend="handleTodoDragEnd">
     <div class="panel-header desk-zone-heading">
       <h2 id="todo-title"><NIcon :component="CheckboxOutline" /><span>{{ uiText.desk.reminders }}</span></h2>
       <div class="header-actions">
@@ -2503,24 +2496,8 @@ onUnmounted(() => focusRegionAnimation?.cancel());
       @confirm="(anchor, title) => emit('createList', anchor, title)"
     />
 
-    <NDropdown
-      v-if="menu"
-      placement="bottom-start"
-      trigger="manual"
-      :show="true"
-      :x="menu.x"
-      :y="menu.y"
-      :z-index="CONTEXT_MENU_Z_INDEX"
-      :options="organizeContextMenu(menuOptions)"
-      :render-label="renderPolishMenuLabel"
-      @select="handleMenuSelect"
-      @clickoutside="handleMenuClickOutside"
-    >
-      <span
-        class="dropdown-anchor"
-        :style="{ left: `${menu.x}px`, top: `${menu.y}px` }"
-        aria-hidden="true"
-      />
-    </NDropdown>
+    <ContextMenu v-if="menu" :x="menu.x" :y="menu.y" :options="menuOptions"
+      :polish-labels="true"
+      @select="handleMenuSelect" @clickoutside="exclusiveMenu.handleClickOutside" />
   </section>
 </template>

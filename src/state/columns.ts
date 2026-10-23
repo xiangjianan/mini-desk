@@ -125,3 +125,10 @@ export function resolveTodoColumns<T extends ColumnItem>(items: T[], count: numb
   }
   return saved ? next : distributeColumns(next, count);
 }
+
+/** Shared width-to-column calculation; each panel keeps its own sizing policy. */
+export function computePanelColumnCount(width: number, itemCount: number, threshold: number, targetWidth: number): number {
+  if (width < threshold || itemCount <= 1) return 1;
+  const count = 2 + Math.floor((width - threshold) / targetWidth);
+  return Math.max(1, Math.min(count, itemCount));
+}

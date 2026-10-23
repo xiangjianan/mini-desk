@@ -2425,10 +2425,14 @@ async function handleQuickButton(id: string, anchor?: HTMLElement): Promise<void
     await callQuickApi(button, anchor);
     return;
   }
-  const copied = await copyTextToClipboard(button.value, shouldBlockBoardEffects);
+  await copyQuickValue(button.value, anchor);
+}
+
+async function copyQuickValue(value: string, anchor?: HTMLElement): Promise<void> {
+  const copied = await copyTextToClipboard(value, shouldBlockBoardEffects);
   if (shouldBlockBoardEffects()) return;
   if (copied) {
-    showBubbleText(getQuickTextCopiedMessage(button.value), anchor, { hideCompanionAfter: true }, 4000);
+    showBubbleText(getQuickTextCopiedMessage(value), anchor, { hideCompanionAfter: true }, 4000);
   } else {
     showBubble("quickTextCopyFailed", anchor, { hideCompanionAfter: true });
   }
@@ -2437,25 +2441,13 @@ async function handleQuickButton(id: string, anchor?: HTMLElement): Promise<void
 async function copyQuickLink(id: string, anchor?: HTMLElement): Promise<void> {
   const button = activeWorkspace.value.quickButtons.find((item) => item.id === id);
   if (!button) return;
-  const copied = await copyTextToClipboard(button.value, shouldBlockBoardEffects);
-  if (shouldBlockBoardEffects()) return;
-  if (copied) {
-    showBubbleText(getQuickTextCopiedMessage(button.value), anchor, { hideCompanionAfter: true }, 4000);
-  } else {
-    showBubble("quickTextCopyFailed", anchor, { hideCompanionAfter: true });
-  }
+  await copyQuickValue(button.value, anchor);
 }
 
 async function copyQuickText(id: string, anchor?: HTMLElement): Promise<void> {
   const button = activeWorkspace.value.quickButtons.find((item) => item.id === id);
   if (!button) return;
-  const copied = await copyTextToClipboard(button.title, shouldBlockBoardEffects);
-  if (shouldBlockBoardEffects()) return;
-  if (copied) {
-    showBubbleText(getQuickTextCopiedMessage(button.title), anchor, { hideCompanionAfter: true }, 4000);
-  } else {
-    showBubble("quickTextCopyFailed", anchor, { hideCompanionAfter: true });
-  }
+  await copyQuickValue(button.title, anchor);
 }
 
 async function callQuickApi(button: QuickButton, anchor?: HTMLElement): Promise<void> {

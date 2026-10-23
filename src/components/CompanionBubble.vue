@@ -157,6 +157,20 @@ const visiblePopover = computed(() => (delayedPopoverVisible.value && popoverVis
 const popoverContentVisible = computed(() => visiblePopover.value || retainingPopoverContent.value);
 const popoverKey = computed(() => `${props.position?.right ?? "default"}:${props.position?.bottom ?? "default"}`);
 
+function syncRenderedContent(): void {
+  renderedMessage.value = props.message;
+  renderedLinkText.value = props.linkText ?? "";
+  renderedLinkHref.value = props.linkHref ?? "";
+  renderedSignatureText.value = props.signatureText ?? "";
+  renderedConfirm.value = Boolean(props.confirm);
+  renderedConfirmDanger.value = Boolean(props.confirmDanger);
+  renderedConfirmText.value = props.confirmText ?? uiText.value.common.yes;
+  renderedCancelText.value = props.cancelText ?? uiText.value.common.no;
+  renderedConfirmHint.value = props.confirmHint ?? "";
+  renderedSecondaryText.value = props.secondaryText ?? "";
+  renderedActionText.value = "";
+}
+
 watch(
   popoverVisible,
   (visible) => {
@@ -182,17 +196,7 @@ watch(
       }, POPOVER_HIDE_CONTENT_MS);
       return;
     }
-    renderedMessage.value = props.message;
-    renderedLinkText.value = props.linkText ?? "";
-    renderedLinkHref.value = props.linkHref ?? "";
-    renderedSignatureText.value = props.signatureText ?? "";
-    renderedConfirm.value = Boolean(props.confirm);
-    renderedConfirmDanger.value = Boolean(props.confirmDanger);
-    renderedConfirmText.value = props.confirmText ?? uiText.value.common.yes;
-    renderedCancelText.value = props.cancelText ?? uiText.value.common.no;
-    renderedConfirmHint.value = props.confirmHint ?? "";
-    renderedSecondaryText.value = props.secondaryText ?? "";
-    renderedActionText.value = "";
+    syncRenderedContent();
     retainingPopoverContent.value = false;
     popoverTimer.value = window.setTimeout(() => {
       popoverTimer.value = undefined;
@@ -262,19 +266,8 @@ watch(
         popoverTimer.value = undefined;
         delayedPopoverVisible.value = true;
       }, POPOVER_DELAY_MS);
-    } else {
     }
-    renderedMessage.value = props.message;
-    renderedLinkText.value = props.linkText ?? "";
-    renderedLinkHref.value = props.linkHref ?? "";
-    renderedSignatureText.value = props.signatureText ?? "";
-    renderedConfirm.value = Boolean(props.confirm);
-    renderedConfirmDanger.value = Boolean(props.confirmDanger);
-    renderedConfirmText.value = props.confirmText ?? uiText.value.common.yes;
-    renderedCancelText.value = props.cancelText ?? uiText.value.common.no;
-    renderedConfirmHint.value = props.confirmHint ?? "";
-    renderedSecondaryText.value = props.secondaryText ?? "";
-    renderedActionText.value = "";
+    syncRenderedContent();
   },
 );
 

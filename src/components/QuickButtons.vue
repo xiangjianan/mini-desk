@@ -1,10 +1,11 @@
 <script setup lang="ts">
+import ContextMenu from "./ContextMenu.vue";
 import { TITLE_MAX_LENGTH, limitTitle } from "../state/titleLimits";
 import { installPointerSort } from "../utils/pointerSort";
 import { isGroupDropBefore } from "../utils/groupDrop";
 import { computed, h, nextTick, onBeforeUpdate, onMounted, onUnmounted, onUpdated, reactive, ref, watch } from "vue";
 import type { Component, ComponentPublicInstance, VNode } from "vue";
-import { NButton, NCheckbox, NDropdown, NIcon, NInput, NModal, NScrollbar, NSelect } from "naive-ui";
+import { NButton, NCheckbox, NIcon, NInput, NModal, NScrollbar, NSelect } from "naive-ui";
 import {
   Plus as AddOutline,
   LayoutGrid as AppsOutline,
@@ -34,7 +35,7 @@ import { buildVisibleQuickButtonGroups, filterVisibleQuickButtonGroups, groupQui
 import { findQuickAppPresetByScheme, getQuickAppPresetHint, getQuickAppPresetTitle, getQuickShortcutName, QUICK_APP_PRESETS } from "../state/quickApps";
 import { findQuickApiTemplate, QUICK_API_TEMPLATES } from "../state/quickApiTemplates";
 import { globalSearchNormalized, globalSearchQuery } from "../state/globalSearch";
-import { organizeContextMenu, CONTEXT_MENU_Z_INDEX, createExclusiveContextMenu, renderPolishMenuLabel } from "../utils/contextMenu";
+import { createExclusiveContextMenu } from "../utils/contextMenu";
 import type { PolishKind, PolishResult, PolishStyle } from "../sync/polishClient";
 import { quickSmartPasteMessages, runQuickSmartPaste } from "../utils/smartPaste";
 import type { SmartPastePhase } from "../utils/smartPaste";
@@ -140,7 +141,7 @@ const dragHoverGroupId = ref<string | null>(null);
 const leavingHiddenIds = new Set<string>();
 const uiText = computed(() => getUiText(props.language));
 const guideMenuOption = computed<DropdownOption>(() => ({ ...GUIDE_MENU_OPTION, label: uiText.value.common.tips }));
-const exclusiveMenu = createExclusiveContextMenu(closeMenu);
+const exclusiveMenu = createExclusiveContextMenu(closeMenu, () => menu.value?.anchor);
 const apiMethodOptions = computed(() =>
   ["GET", "POST", "PUT", "PATCH", "DELETE", "HEAD", "OPTIONS"].map((method) => ({ label: method, value: method })),
 );
@@ -574,12 +575,6 @@ function openHeaderMenu(event: MouseEvent): void {
 }
 
 
-function handleMenuClickOutside(event?: Event): void {
-  // Only toolbar buttons need protection so their click handler can toggle the menu.
-  // A right-click menu anchor can cover the entire heading, group or panel.
-  if (event?.target instanceof Node && menu.value?.anchor?.matches("button") && menu.value.anchor.contains(event.target)) return;
-  exclusiveMenu.handleClickOutside(event);
-}
 
 function closeMenu(): void {
   menu.value = null;
@@ -937,7 +932,7 @@ function handleQuickGroupDrop(event: DragEvent, groupId: string): void {
     class="split-block quick-block"
     :class="{ 'is-compact': compact }"
     @click="handleAreaClick"
-    @pointerdown.capture="menu && handleMenuClickOutside($event)"
+    @pointerdown.capture="menu && exclusiveMenu.handleClickOutside($event)"
     @contextmenu="openAreaMenu"
     @dragover="handleQuickDragOver"
     @dragleave="handleQuickDragLeave"
@@ -1133,25 +1128,9 @@ function handleQuickGroupDrop(event: DragEvent, groupId: string): void {
       </div>
     </NScrollbar>
 
-    <NDropdown
-      v-if="menu"
-      placement="bottom-start"
-      trigger="manual"
-      :show="true"
-      :x="menu.x"
-      :y="menu.y"
-      :z-index="CONTEXT_MENU_Z_INDEX"
-      :options="organizeContextMenu(menuOptions)"
-      :render-label="renderPolishMenuLabel"
-      @select="handleMenuSelect"
-      @clickoutside="handleMenuClickOutside"
-    >
-      <span
-        class="dropdown-anchor"
-        :style="{ left: `${menu.x}px`, top: `${menu.y}px` }"
-        aria-hidden="true"
-      />
-    </NDropdown>
+    <ContextMenu v-if="menu" :x="menu.x" :y="menu.y" :options="menuOptions"
+      :polish-labels="true"
+      @select="handleMenuSelect" @clickoutside="exclusiveMenu.handleClickOutside" />
 
     <NModal
       v-model:show="dialogOpen"

@@ -459,7 +459,9 @@ describe("workbench style contract", () => {
     expect(quick).not.toContain("ColorWandOutline");
     // 右键菜单「智能粘贴」条目与「粘贴」共用剪贴板图标，文字渐变流动走共享 render-label。
     expect(quick).toContain('key: "smart-paste", icon: renderIcon(ClipboardOutline)');
-    expect(quick).toContain(':render-label="renderPolishMenuLabel"');
+    expect(quick).toContain(':polish-labels="true"');
+    const contextMenu = readFileSync(resolve(__dirname, "../components/ContextMenu.vue"), "utf8");
+    expect(contextMenu).toContain(':render-label="polishLabels ? renderPolishMenuLabel : undefined"');
     // 防重态：进行中 cursor:wait + 降透明度（与便签入口同款）。
     expectSelectorBody(desk, ".workbench-shell .desk-ai-button:disabled", "cursor: wait");
   });

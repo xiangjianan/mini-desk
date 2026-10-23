@@ -1,10 +1,11 @@
 <script setup lang="ts">
+import ContextMenu from "./ContextMenu.vue";
 import { computed, h, nextTick, onMounted, onUnmounted, ref, watch } from "vue";
 import type { Component, VNode } from "vue";
-import { NDropdown, NIcon } from "naive-ui";
+import { NIcon } from "naive-ui";
 import type { DropdownOption } from "naive-ui";
 import { CreateOutline } from "@vicons/ionicons5";
-import { organizeContextMenu, CONTEXT_MENU_Z_INDEX, createExclusiveContextMenu } from "../utils/contextMenu";
+import { createExclusiveContextMenu } from "../utils/contextMenu";
 import { renderIcon } from "../utils/dropdownIcons";
 import { setStickySelection } from "../utils/caret";
 import { isImeComposing } from "../utils/ime";
@@ -135,22 +136,7 @@ defineExpose({ openMenuAt });
     @blur="commit"
   />
   <span v-else class="editable-title" @dblclick="startEditing" @contextmenu="openMenu">{{ displayValue ?? value }}</span>
-  <NDropdown
-    v-if="menu"
-    placement="bottom-start"
-    trigger="manual"
-    :show="true"
-    :x="menu.x"
-    :y="menu.y"
-    :z-index="CONTEXT_MENU_Z_INDEX"
-    :options="organizeContextMenu(menuOptions)"
-    @select="handleMenuSelect"
-    @clickoutside="exclusiveMenu.handleClickOutside"
-  >
-    <span
-      class="dropdown-anchor"
-      :style="{ left: `${menu.x}px`, top: `${menu.y}px` }"
-      aria-hidden="true"
-    />
-  </NDropdown>
+  <ContextMenu v-if="menu" :x="menu.x" :y="menu.y" :options="menuOptions"
+
+      @select="handleMenuSelect" @clickoutside="exclusiveMenu.handleClickOutside" />
 </template>

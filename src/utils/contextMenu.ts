@@ -44,7 +44,7 @@ type ContextMenuOpenOptions = {
   replacingExistingMenu?: boolean;
 };
 
-export function createExclusiveContextMenu(close: () => void): {
+export function createExclusiveContextMenu(close: () => void, getAnchor?: () => HTMLElement | undefined): {
   handleClickOutside: (event?: Event) => void;
   notifyOpen: (event?: Event, options?: ContextMenuOpenOptions) => void;
   mount: () => void;
@@ -61,6 +61,10 @@ export function createExclusiveContextMenu(close: () => void): {
 
   return {
     handleClickOutside(event?: Event): void {
+      // Let a repeated toolbar click reach its toggle handler. Broad right-click
+      // anchors (headings/panels) must still close when clicked elsewhere inside.
+      const anchor = getAnchor?.();
+      if (event?.target instanceof Node && anchor?.matches("button") && anchor.contains(event.target)) return;
       if (suppressNextClickOutside) {
         suppressNextClickOutside = false;
         return;

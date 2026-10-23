@@ -4,7 +4,16 @@ import { resolve } from "node:path";
 import { describe, expect, it } from "vitest";
 
 const root = resolve(__dirname, "../..");
-const read = (file: string) => readFileSync(resolve(root, file), "utf8");
+// Source contracts follow the shared UI components after extraction.
+const read = (file: string) => {
+  let source = readFileSync(resolve(root, file), "utf8");
+  for (const component of ["ContextMenu", "ImagePreviewToolbar"]) {
+    if (source.includes(`import ${component} from`)) {
+      source += "\n" + readFileSync(resolve(root, `src/components/${component}.vue`), "utf8");
+    }
+  }
+  return source;
+};
 
 describe("Naive UI component usage", () => {
   it("uses NDropdown for context and settings menus instead of custom menu containers", () => {

@@ -1,9 +1,10 @@
 <script setup lang="ts">
+import ContextMenu from "./ContextMenu.vue";
 import { installPointerSort } from "../utils/pointerSort";
 import { TITLE_MAX_LENGTH, limitTitle } from "../state/titleLimits";
 import { computed, h, nextTick, onMounted, onUnmounted, ref, watch } from "vue";
 import type { Component, VNode } from "vue";
-import { NDropdown, NIcon, NScrollbar } from "naive-ui";
+import { NIcon, NScrollbar } from "naive-ui";
 import {
   Plus as AddOutline,
   FileText as DocumentTextOutline,
@@ -16,7 +17,7 @@ import {
 import type { DropdownOption } from "naive-ui";
 import type { AppLanguage, GuideKey, LineItem, WorkspaceMoveTarget, WorkspaceSpace } from "../types";
 import { getUiText } from "../state/i18n";
-import { organizeContextMenu, CONTEXT_MENU_Z_INDEX, createExclusiveContextMenu } from "../utils/contextMenu";
+import { createExclusiveContextMenu } from "../utils/contextMenu";
 import { renderIcon } from "../utils/dropdownIcons";
 import { isImeComposing } from "../utils/ime";
 import type { PolishKind, PolishResult, PolishStyle } from "../sync/polishClient";
@@ -430,23 +431,8 @@ onUnmounted(() => disposeSort?.());
         />
       </Transition>
     </div>
-    <NDropdown
-      v-if="menu"
-      placement="bottom-start"
-      trigger="manual"
-      :show="true"
-      :x="menu.x"
-      :y="menu.y"
-      :z-index="CONTEXT_MENU_Z_INDEX"
-      :options="organizeContextMenu(menuOptions)"
-      @select="handleMenuSelect"
-      @clickoutside="exclusiveMenu.handleClickOutside"
-    >
-      <span
-        class="dropdown-anchor"
-        :style="{ left: `${menu.x}px`, top: `${menu.y}px` }"
-        aria-hidden="true"
-      />
-    </NDropdown>
+    <ContextMenu v-if="menu" :x="menu.x" :y="menu.y" :options="menuOptions"
+
+      @select="handleMenuSelect" @clickoutside="exclusiveMenu.handleClickOutside" />
   </section>
 </template>

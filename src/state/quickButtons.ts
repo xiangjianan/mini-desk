@@ -1,6 +1,6 @@
 import type { BoardState, QuickButton, QuickTag, WorkspaceData } from "../types";
 import { matchesSearch } from "../utils/searchHighlight";
-import { assignColumn, distributeColumns } from "./columns";
+import { assignColumn, distributeColumns, computePanelColumnCount } from "./columns";
 
 /** Place relative to a target after removing the source, avoiding downward index drift. */
 export function reorderQuickButton(items: QuickButton[], sourceId: string, targetId: string, insertBefore: boolean): void {
@@ -145,9 +145,7 @@ export const QUICK_COLUMN_TARGET_WIDTH = 320;
  * to the visible group count (so few groups never leave empty columns).
  */
 export function computeQuickColumnCount(width: number, groupCount: number): number {
-  if (width < QUICK_MULTI_COLUMN_THRESHOLD || groupCount <= 1) return 1;
-  const computed = 2 + Math.floor((width - QUICK_MULTI_COLUMN_THRESHOLD) / QUICK_COLUMN_TARGET_WIDTH);
-  return Math.max(1, Math.min(computed, groupCount));
+  return computePanelColumnCount(width, groupCount, QUICK_MULTI_COLUMN_THRESHOLD, QUICK_COLUMN_TARGET_WIDTH);
 }
 
 /**
