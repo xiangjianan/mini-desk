@@ -269,6 +269,29 @@ describe("TodoPanel", () => {
     }
   });
 
+  it("does not measure other lists when one reminder starts or stops dragging", async () => {
+    const todoLists = ["first", "second"].map(id => ({ id, title: id, collapsed: false, compact: true }));
+    const todos = Object.fromEntries(todoLists.map(list => [list.id, Array.from({ length: 100 }, (_, i) => ({ id: `${list.id}-${i}`, text: `Task ${i}`, done: false }))]));
+    const wrapper = mount(TodoPanel, { props: { todoLists, todos, titles: DEFAULT_TITLES }, global: { stubs: { TransitionGroup: false } } });
+    let otherReads = 0;
+    const original = HTMLElement.prototype.getBoundingClientRect;
+    const spy = vi.spyOn(HTMLElement.prototype, "getBoundingClientRect").mockImplementation(function (this: HTMLElement) {
+      if (this.classList.contains("todo-item") && this.closest('[data-list-id="second"]')) otherReads++;
+      return original.call(this);
+    });
+    try {
+      const handle = wrapper.get('.todo-section[data-list-id="first"] .todo-drag-handle');
+      await handle.trigger("dragstart");
+      expect(wrapper.get('.todo-section[data-list-id="first"] .todo-item').classes()).toContain("is-menu-selected");
+      await handle.trigger("dragend");
+      expect(wrapper.get('.todo-section[data-list-id="first"] .todo-item').classes()).not.toContain("is-menu-selected");
+      expect(otherReads).toBe(0);
+    } finally {
+      spy.mockRestore();
+      wrapper.unmount();
+    }
+  });
+
   it("skips row position measurements when 32 lists of 30 reminders are redistributed", async () => {
     let notifyResize: ResizeObserverCallback | undefined;
     const originalObserver = globalThis.ResizeObserver;

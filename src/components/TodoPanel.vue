@@ -433,10 +433,14 @@ const contentTodoLists = computed<{ id: TodoListId }[]>((previous) => {
 
 // Read the row fields explicitly so both immutable updates and in-place edits
 // invalidate the memo, while changing only column assignments keeps it stable.
-const todoRenderSignatures = computed(() => Object.fromEntries(
-  contentTodoLists.value.map(({ id }) => [id, getTodos(id).map((todo) =>
-    [todo.id, todo.text, todo.done, todo.starred, todo.notifyAt, todo.focusElapsedMs],
-  )]),
+const todoRenderSignatures = computed<Record<TodoListId, unknown[][]>>((previous) => Object.fromEntries(
+  contentTodoLists.value.map(({ id }) => {
+    const next = getTodos(id).map(todo => [todo.id, todo.text, todo.done, todo.starred, todo.notifyAt, todo.focusElapsedMs]);
+    const cached = previous?.[id];
+    return [id, cached && cached.length === next.length && next.every((fields, index) =>
+      fields.every((value, field) => value === cached[index]?.[field]),
+    ) ? cached : next];
+  }),
 ));
 
 const ordered = computed(() =>
@@ -485,7 +489,7 @@ const notifyPickerStyle = computed(() => {
   };
 });
 
-const notifyDisplays = computed(() => {
+const notifyDisplays = computed<Map<TodoItem, NotifyDisplay>>((previous) => {
   const displays = new Map<TodoItem, NotifyDisplay>();
   const now = deadlineNow.value;
   contentTodoLists.value.forEach((list) => {
@@ -494,6 +498,10 @@ const notifyDisplays = computed(() => {
       if (display) displays.set(todo, display);
     });
   });
+  if (previous?.size === displays.size && [...displays].every(([todo, display]) => {
+    const old = previous.get(todo);
+    return old?.label === display.label && old.compactLabel === display.compactLabel && old.urgency === display.urgency;
+  })) return previous;
   return displays;
 });
 
@@ -516,11 +524,20 @@ type TodoListEntry =
   | { type: "divider"; id: string; period: TodoListId }
   | { type: "todo"; todo: TodoItem };
 
-const listEntries = computed(() =>
+const listEntries = computed<Record<TodoListId, TodoListEntry[]>>((previous) =>
   Object.fromEntries(
     contentTodoLists.value.map((list) => {
       const period = list.id;
-      return [period, buildTodoListEntries(period, visibleOrdered.value[period] ?? [], getDeferredTodoIds(period))];
+      const next = buildTodoListEntries(period, visibleOrdered.value[period] ?? [], getDeferredTodoIds(period));
+      const cached = previous?.[period];
+      // Other lists keep their VNodes when one list changes. New todo objects
+      // still invalidate the cache, even when their IDs/text happen to match.
+      const unchanged = cached?.length === next.length && next.every((entry, index) => {
+        const old = cached[index];
+        return entry.type === "todo" ? old?.type === "todo" && old.todo === entry.todo
+          : old?.type === "divider" && old.id === entry.id && old.period === entry.period;
+      });
+      return [period, unchanged ? cached : next];
     }),
   ) as Record<TodoListId, TodoListEntry[]>,
 );
@@ -2252,7 +2269,7 @@ onUnmounted(() => focusRegionAnimation?.cancel());
         >
           <div class="todo-list-scrollbar">
           <TodoRowsTransition
-            :memo="[listEntries[list.id], todoRenderSignatures[list.id], notifyDisplays, editingTodoKey, selectedMenuTodoKey, dragged, notificationFlashKeys.join('|'), uiText]"
+            :memo="[listEntries[list.id], todoRenderSignatures[list.id], notifyDisplays, editingTodoKey, selectedMenuTodoKey, dragged?.period === list.id ? dragged.id : null, notificationFlashKeys.join('|'), uiText]"
             name="todo-move"
             tag="ul"
             class="todo-list"

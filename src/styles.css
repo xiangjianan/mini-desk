@@ -7985,10 +7985,10 @@ body:has(.image-preview) .n-modal-container:has(.focus-now-modal) .n-modal-mask 
 
 /* Neighbours already occupy their landing positions during the drag. */
 .is-sort-committing,
-.is-sort-committing * {
+.is-sort-committing :is(.todo-item, .todo-completed-divider, .today-focus-item, .todo-section, .quick-button, .quick-tag-group, .image-card, .space-tab, .workspace-switcher-item) {
   transition: none !important;
   animation: none !important;
 }
-.is-sort-committing :is(.todo-item, .todo-section, .quick-button, .quick-tag-group, .image-card, .space-tab, .workspace-switcher-item) {
+.is-sort-committing :is(.todo-item, .todo-completed-divider, .today-focus-item, .todo-section, .quick-button, .quick-tag-group, .image-card, .space-tab, .workspace-switcher-item) {
   transform: none !important;
 }

@@ -13,6 +13,23 @@ function fixture() {
   return { root, items, pointTo: (element: Element) => { hit = element; } };
 }
 describe('sorting landing gap', () => {
+  it('does not measure hundreds of unaffected siblings for a local move', () => {
+    const root = document.body.appendChild(document.createElement('div'));
+    const items = Array.from({ length: 600 }, (_, index) => {
+      const row = root.appendChild(document.createElement('div'));
+      row.className = 'item';
+      vi.spyOn(row, 'getBoundingClientRect').mockReturnValue({ left: 0, right: 120, top: index * 40, bottom: index * 40 + 40, width: 120, height: 40 } as DOMRect);
+      return row;
+    });
+    Object.defineProperty(document, 'elementFromPoint', { configurable: true, value: () => items[2] });
+    const gap = createSortGap(items[0]!, '.item');
+    gap.update(root, 20, 105);
+    expect(gap.anchor).toBe(items[2]);
+    for (const row of items.slice(3)) expect(row.getBoundingClientRect).not.toHaveBeenCalled();
+    gap.restore();
+    expect(root.firstElementChild).toBe(items[0]);
+  });
+
   it('ignores clipped rows in collapsed lists above the expanded source list', () => {
     const root = document.body.appendChild(document.createElement('div'));
     root.innerHTML = '<section class="todo-section is-collapsed"><div class="todo-heading">A</div><div class="todo-list-shell is-hidden"><ul class="todo-list"><li class="todo-item">Hidden A</li></ul></div></section><section class="todo-section is-collapsed"><div class="todo-heading">B</div><div class="todo-list-shell is-hidden"><ul class="todo-list"><li class="todo-item">Hidden B</li></ul></div></section><section class="todo-section"><div class="todo-heading">C</div><ul class="todo-list"><li class="todo-item">Source</li><li class="todo-item">Target</li></ul></section>';

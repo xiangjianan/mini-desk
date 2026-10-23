@@ -181,6 +181,32 @@ describe("QuickButtons", () => {
     Object.assign(navigator, { clipboard: undefined });
   });
 
+  it("does not measure unchanged buttons when a large group collapses", async () => {
+    const tags = Array.from({ length: 6 }, (_, i) => ({ id: `tag-${i}`, title: `Tag ${i}`, collapsed: false }));
+    const buttons = Array.from({ length: 600 }, (_, i) => ({ id: `button-${i}`, title: `Button ${i}`, value: `value-${i}`, type: "text" as const, hidden: false, tagId: `tag-${Math.floor(i / 100)}` }));
+    const wrapper = mount(QuickButtons, {
+      props: { title: "Quick", tags, buttons, showHidden: false },
+      global: { stubs: { TransitionGroup: false, NIcon: true } },
+    });
+    let reads = 0;
+    const originalRect = HTMLElement.prototype.getBoundingClientRect;
+    const spy = vi.spyOn(HTMLElement.prototype, "getBoundingClientRect").mockImplementation(function (this: HTMLElement) {
+      if (this.classList.contains("quick-button")) reads++;
+      return originalRect.call(this);
+    });
+    try {
+      await wrapper.setProps({ tags: tags.map((tag, i) => ({ ...tag, collapsed: i === 0 })) });
+      expect(reads).toBe(0);
+      expect(wrapper.findAll(".quick-button")).toHaveLength(600);
+      await wrapper.setProps({ buttons: buttons.map((button, i) => i === 0 ? { ...button, title: "Edited action", clicks: 7 } : button) });
+      expect(wrapper.get('.quick-button[data-id="button-0"]').text()).toContain("Edited action");
+      expect(wrapper.get('.quick-button[data-id="button-0"]').text()).toContain("×7");
+    } finally {
+      spy.mockRestore();
+      wrapper.unmount();
+    }
+  });
+
   it("omits the search entry from the quick actions header", () => {
     const wrapper = mountQuickButtons({ tags: [], buttons: [] });
     expect(wrapper.find(".quick-search-toggle").exists()).toBe(false);

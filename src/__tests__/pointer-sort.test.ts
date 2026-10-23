@@ -36,6 +36,20 @@ function fixture() {
 }
 
 describe("pointer sorting", () => {
+  it("blocks selection only while dragging without rewriting the page style", () => {
+    const { source } = fixture();
+    pointer(source, "pointerdown", 20);
+    pointer(window, "pointermove", 35);
+    const selection = new Event("selectstart", { bubbles: true, cancelable: true });
+    document.dispatchEvent(selection);
+    expect(selection.defaultPrevented).toBe(true);
+    expect(document.body.style.userSelect).toBe("");
+    window.dispatchEvent(new KeyboardEvent("keydown", { key: "Escape" }));
+    const after = new Event("selectstart", { cancelable: true });
+    document.dispatchEvent(after);
+    expect(after.defaultPrevented).toBe(false);
+  });
+
   it.each(['todo', 'quick'])('drops a %s item into an explicitly hovered collapsed heading', (kind) => {
     const { root, source, target, drop } = fixture();
     const row = document.createElement('div');

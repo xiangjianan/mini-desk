@@ -97,18 +97,32 @@ export function createSortGap(source: HTMLElement, selector: string) {
     if (anchor === item && before === insertBefore) return;
     anchor = item; container = null; before = insertBefore;
     if (before ? item.previousElementSibling === gap : item.nextElementSibling === gap) return;
-    const elements = candidates;
+    // Within one list, only the siblings between the old and new gap move.
+    // Measuring every other list (often hundreds of rows) cannot change the
+    // result, and forces expensive off-screen layout on every pointer move.
+    let elements = candidates;
+    if (gap.parentElement === item.parentElement) {
+      const siblings = Array.from(item.parentElement!.children);
+      const start = siblings.indexOf(gap);
+      const end = siblings.indexOf(item);
+      const affected = new Set(siblings.slice(Math.min(start, end), Math.max(start, end) + 1));
+      elements = candidates.filter(element => affected.has(element));
+    }
     const positions = elements.map(el => ({ visual: el.getBoundingClientRect(), layout: layoutBounds(el) }));
     if (before) item.before(gap); else item.after(gap);
+    // Finish all reads before cancellation/animation writes. Interleaving them
+    // would force style/layout again for each subsequent row.
+    const destinations = elements.map(el => layoutBounds(el));
+    const reducedMotion = window.matchMedia?.('(prefers-reduced-motion: reduce)').matches;
     elements.forEach((el, i) => {
-      const to = layoutBounds(el);
+      const to = destinations[i]!;
       const from = positions[i]!;
       // Fast pointer movement often changes only the next row's destination.
       // Leave every other row's in-flight animation (and easing clock) intact.
       if (from.layout.left === to.left && from.layout.top === to.top) return;
       animations.get(el)?.cancel();
       animations.delete(el);
-      if (!el.animate || window.matchMedia?.('(prefers-reduced-motion: reduce)').matches) return;
+      if (!el.animate || reducedMotion) return;
       const animation = el.animate([
         { transform: `translate(${from.visual.left - to.left}px, ${from.visual.top - to.top}px)` }, { transform: 'translate(0, 0)' },
       ], { duration: 180, easing: 'ease-out' });

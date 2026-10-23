@@ -14,7 +14,6 @@ export function installPointerSort(root: HTMLElement, selector: string, pauseAut
   let x = 0, y = 0, startX = 0, startY = 0, pointerId = 0;
   let suppressClick = false;
   let clickTimer: number | undefined;
-  let previousUserSelect = "";
 
   function dispatch(element: Element, type: string): boolean {
     return element.dispatchEvent(new DragEvent(type, { bubbles: true, cancelable: true, dataTransfer: transfer, clientX: x, clientY: y }));
@@ -37,7 +36,6 @@ export function installPointerSort(root: HTMLElement, selector: string, pauseAut
     if (started) suppressClick = true;
     if (started && source) dispatch(source, "dragend");
     preview?.remove();
-    if (started) document.body.style.userSelect = previousUserSelect;
     source = null; transfer = null; preview = null; target = null; started = false;
     pauseAutoScroll();
   }
@@ -63,8 +61,6 @@ export function installPointerSort(root: HTMLElement, selector: string, pauseAut
       transfer = new DataTransfer();
       if (!dispatch(source, "dragstart")) { cleanup(); return; }
       started = true;
-      previousUserSelect = document.body.style.userSelect;
-      document.body.style.userSelect = "none";
       const element = source.closest<HTMLElement>(".todo-item")
         ?? (source.matches(".todo-heading") ? source.closest<HTMLElement>(".todo-section") : null) ?? source;
       const rect = element.getBoundingClientRect();
@@ -124,6 +120,10 @@ export function installPointerSort(root: HTMLElement, selector: string, pauseAut
   function nativeStart(event: DragEvent): void {
     if (source && event.isTrusted) { event.preventDefault(); event.stopImmediatePropagation(); }
   }
+  // Cancel selection events instead of changing body's inherited user-select.
+  // A global style write invalidates every reminder, action and icon at both
+  // ends of a drag, even though pointerdown already prevents native selection.
+  function select(event: Event): void { if (started) event.preventDefault(); }
   function wheel(event: WheelEvent): void {
     if (!started) return;
     let container: HTMLElement | null = target instanceof HTMLElement ? target : source;
@@ -140,6 +140,7 @@ export function installPointerSort(root: HTMLElement, selector: string, pauseAut
     updateTarget();
   }
   root.addEventListener("pointerdown", down);
+  document.addEventListener("selectstart", select);
   root.addEventListener("dragstart", nativeStart, true);
   window.addEventListener("pointermove", move, { passive: false });
   window.addEventListener("pointerup", up);
@@ -152,6 +153,7 @@ export function installPointerSort(root: HTMLElement, selector: string, pauseAut
     cleanup();
     if (clickTimer !== undefined) window.clearTimeout(clickTimer);
     root.removeEventListener("pointerdown", down);
+    document.removeEventListener("selectstart", select);
     root.removeEventListener("dragstart", nativeStart, true);
     window.removeEventListener("pointermove", move);
     window.removeEventListener("pointerup", up);

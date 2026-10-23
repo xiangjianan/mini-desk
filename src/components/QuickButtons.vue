@@ -1,5 +1,6 @@
 <script setup lang="ts">
 import ContextMenu from "./ContextMenu.vue";
+import MemoTransitionGroup from "./MemoTransitionGroup";
 import { TITLE_MAX_LENGTH, limitTitle } from "../state/titleLimits";
 import { installPointerSort } from "../utils/pointerSort";
 import { isGroupDropBefore } from "../utils/groupDrop";
@@ -197,6 +198,11 @@ const columnCount = 1;
 // Group visible groups into explicit column buckets by their pinned `column`.
 // Array order within a bucket = vertical order; 其他/空态 groups land last.
 const groupsByColumn = computed<QuickButtonGroup[][]>(() => groupQuickButtonsByColumn(groupedButtons.value, columnCount));
+// Ignore layout-only changes, but include every button field so immutable
+// replacement, edits, usage counts and drop payloads never retain stale data.
+const buttonContentSignatures = computed(() => Object.fromEntries(
+  groupedButtons.value.map(group => [group.id, JSON.stringify(group.buttons)]),
+));
 
 const buttonLayoutSignature = computed(() => JSON.stringify([
   props.compact,
@@ -1080,7 +1086,8 @@ function handleQuickGroupDrop(event: DragEvent, groupId: string): void {
             :inert="group.collapsed"
           >
             <div class="quick-tag-clip">
-            <TransitionGroup
+            <MemoTransitionGroup
+              :memo="[buttonContentSignatures[group.id], compact, group.buttons.some(button => button.id === draggingId) ? draggingId : null, globalSearchQuery, uiText]"
               :css="false"
               tag="div"
               class="quick-buttons"
@@ -1120,7 +1127,7 @@ function handleQuickGroupDrop(event: DragEvent, groupId: string): void {
                 </span>
                 <span v-if="buttonUsage(button) > 0" class="quick-button-clicks">×{{ buttonUsage(button) }}</span>
               </button>
-            </TransitionGroup>
+            </MemoTransitionGroup>
             </div>
           </div>
         </section>
