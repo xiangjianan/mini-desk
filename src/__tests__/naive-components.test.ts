@@ -177,8 +177,8 @@ describe("Naive UI component usage", () => {
     expect(styles).toMatch(/\.image-preview\s*\{[^}]*-webkit-user-select: none/s);
     expect(styles).not.toMatch(/\.image-preview\s*\{[^}]*width: 90vw/s);
     expect(styles).toContain("backdrop-filter");
-    expect(styles).toMatch(/\.image-preview\s*\{[^}]*background: rgba\(255, 255, 255/s);
-    expect(styles).toMatch(/html\[data-theme="dark"\] \.image-preview\s*\{[^}]*background: rgba\(0, 0, 0/s);
+    expect(ruleBodies(styles, ".image-preview").join("\n")).toContain("background: var(--card) !important");
+    expect(ruleBodies(styles, "html[data-theme=\"dark\"] .image-preview").join("\n")).toContain("background:\n    radial-gradient(circle at 50% 18%, rgba(58, 58, 60, 0.55), transparent 42%),\n    rgba(28, 28, 30, 0.76)");
     expect(styles).toContain("-webkit-backdrop-filter");
     expect(styles).toMatch(/\.image-preview\s*\{[^}]*z-index: 4300/s);
     expect(styles).toMatch(/\.image-preview\s*\{[^}]*animation: image-preview-in 120ms/s);
@@ -200,7 +200,7 @@ describe("Naive UI component usage", () => {
     expect(styles).toMatch(/\.preview-nav-button\.is-previous:active\s*\{[^}]*transform: translateY\(-3px\)/s);
     expect(styles).toMatch(/\.preview-nav-button\.is-next:active\s*\{[^}]*transform: translateY\(3px\)/s);
     expect(styles).toMatch(/\.preview-stage\s*\{[^}]*border-radius: 0/s);
-    expect(styles).toMatch(/\.preview-stage img\s*\{[^}]*max-height: calc\(100vh - var\(--image-preview-top, 52px\) - 96px\)/s);
+    expect(ruleBodies(styles, ".preview-stage img").join("\n")).toContain("max-height: 100%");
     expect(styles).toMatch(/\.preview-stage img\s*\{[^}]*border-radius: 0/s);
     expect(styles).toMatch(/\.preview-stage img\s*\{[^}]*transition: transform 180ms cubic-bezier\(0\.2, 0, 0, 1\)/s);
     expect(styles).toContain(`@keyframes image-preview-photo-out {
@@ -430,7 +430,7 @@ describe("Naive UI component usage", () => {
     expect(styles).toMatch(/\.quick-button\s*\{[^}]*border-radius: var\(--radius\)/s);
     expect(styles).toMatch(/\.space-tab\s*\{[^}]*border-radius: var\(--radius\)/s);
     expect(styles).toMatch(/\.todo-item\s*\{[^}]*border-radius: var\(--radius\)/s);
-    expect(styles).toMatch(/\.image-card\s*\{[^}]*border-radius: var\(--radius\)/s);
+    expect(ruleBodies(styles, ".image-card").join("\n")).toContain("border-radius: calc(var(--radius) + 2px)");
     expect(styles).toMatch(/\.image-card\s*\{[^}]*border: 1px solid color-mix\(in srgb, var\(--border\) 64%, transparent\)/s);
     expect(styles).not.toContain(".notify-clock-options");
     expect(styles).not.toContain(".notify-clock-button");
@@ -463,9 +463,9 @@ describe("Naive UI component usage", () => {
     ];
 
     expect(styles).toMatch(/\.n-dropdown-menu,[\s\S]*?\.shortcut-help-modal\.n-card\s*\{[^}]*border: 1px solid var\(--border\) !important/s);
-    expect(styles).toMatch(/\.n-dropdown-menu,[\s\S]*?\.shortcut-help-modal\.n-card\s*\{[^}]*background: var\(--popover\) !important/s);
+    expect(ruleBodies(styles, ".shortcut-help-modal.n-card").join("\n")).toContain("background: var(--material-elevated) !important");
     expect(styles).toMatch(/\.n-dropdown-menu,[\s\S]*?\.shortcut-help-modal\.n-card\s*\{[^}]*color: var\(--popover-foreground\) !important/s);
-    expect(styles).toMatch(/\.n-dropdown-menu,[\s\S]*?\.shortcut-help-modal\.n-card\s*\{[^}]*box-shadow: 0 6px 14px rgba\(15, 23, 42, 0\.045\) !important/s);
+    expect(ruleBodies(styles, ".shortcut-help-modal.n-card").join("\n")).toContain("box-shadow: var(--shadow-soft) !important");
     // Transient overlays (context menus, dropdowns, the companion confirm
     // bubble) must render ABOVE the modal layer (10000) so they are never
     // trapped behind a modal's full-screen frosted mask.
@@ -569,7 +569,7 @@ describe("Naive UI component usage", () => {
     expect(styles).toMatch(/\.notify-floating-date-picker\s*\{[^}]*position: fixed/s);
     expect(styles).toMatch(/\.notify-floating-date-picker\s*\{[^}]*border: 0/s);
     expect(styles).toMatch(/\.notify-floating-date-picker\s*\{[^}]*border-radius: var\(--radius\)/s);
-    expect(styles).toMatch(/\.notify-floating-date-picker\s*\{[^}]*box-shadow: 0 8px 22px rgba\(15, 23, 42, 0\.12\)/s);
+    expect(ruleBodies(styles, ".notify-floating-date-picker").join("\n")).toContain("box-shadow: var(--shadow-soft)");
     expect(styles).toMatch(/\.notify-floating-date-picker\s*\{[^}]*padding-top: 8px/s);
     expect(styles).toMatch(/\.notify-date-picker\.n-date-panel\s*\{[^}]*background: transparent !important/s);
     expect(styles).toMatch(/\.notify-date-picker \.n-date-panel-calendar\s*\{[^}]*background: transparent !important/s);
@@ -653,7 +653,7 @@ describe("Naive UI component usage", () => {
     expect(todo).not.toMatch(/class="todo-item"[\s\S]{0,160}draggable="true"/);
     expect(styles).toMatch(/\.todo-item\s*\{[^}]*grid-template-columns: 22px 32px minmax\(0, 1fr\) 26px 26px/s);
     expect(styles).toMatch(/\.todo-item\.has-notify\s*\{[^}]*grid-template-columns: 22px 32px minmax\(0, 1fr\) minmax\(0, 64px\) 26px/s);
-    expect(styles).toMatch(/\.todo-list\s*\{[^}]*padding: 0/s);
+    expect(ruleBodies(styles, ".todo-list").join("\n")).toContain("padding: 4px 6px 8px");
     expect(styles).toMatch(/\.todo-item\s*\{[^}]*height: 34px/s);
     expect(styles).toMatch(/\.todo-item\s*\{[^}]*min-height: 34px/s);
     expect(styles).toMatch(/\.todo-item\s*\{[^}]*padding: 0/s);
@@ -698,7 +698,7 @@ describe("Naive UI component usage", () => {
     expect(styles).toMatch(/\.today-focus-heading\s*\{[^}]*min-height: 34px/s);
     expect(styles).toMatch(/\.today-focus-heading\s*\{[^}]*border-bottom: 0\.5px solid var\(--line-section\)/s);
     expect(styles).toMatch(/\.today-focus-heading\s*\{[^}]*box-shadow: inset 0 -1px/s);
-    expect(styles).toMatch(/\.today-focus-list\s*\{[^}]*padding: 0/s);
+    expect(ruleBodies(styles, ".today-focus-list").join("\n")).toContain("padding: 4px 6px 8px");
     expect(styles).toMatch(/\.today-focus-item\s*\{[^}]*grid-template-columns: 24px minmax\(0, 1fr\) 26px 26px/s);
     expect(styles).toMatch(/\.today-focus-item\.has-notify\s*\{[^}]*grid-template-columns: 24px minmax\(0, 1fr\) minmax\(0, 64px\) 26px/s);
     expect(styles).toMatch(/\.today-focus-item \.todo-notify-button\s*\{[^}]*grid-column: 3/s);
@@ -1001,7 +1001,7 @@ describe("Naive UI component usage", () => {
     expect(styles).toMatch(/\.space-tabs\s*\{[^}]*height: 34px/s);
     expect(styles).toMatch(/\.space-tabs-scrollbar\s*\{[^}]*max-width: 100%/s);
     expect(styles).not.toMatch(/\.space-tabs-scrollbar\s*\{[^}]*calc\(100% - 101px\)/s);
-    expect(styles).toMatch(/\.space-tabs-scrollbar\s*\{[^}]*height: 34px/s);
+    expect(ruleBodies(styles, ".space-tabs-scrollbar").join("\n")).toContain("height: 38px");
     expect(styles).toMatch(/\.space-tabs-scrollbar\s*\{[^}]*border-bottom: 0\.5px solid var\(--line-control\)/s);
     expect(styles).toMatch(/\.space-add-button\s*\{[^}]*margin-left: 4px/s);
     expect(styles).toMatch(/button\.space-add-button,[\s\S]*?\.space-add-button\.icon-button\s*\{[^}]*border: 0/s);

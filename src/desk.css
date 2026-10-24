@@ -8,15 +8,11 @@
   --desk-row-hover: #f1f6fc;
   --desk-tab-hover: #dce5ed;
   --desk-tab-active-hover: #f0f4f7;
-  --desk-selected-surface: #dde8f0;
   --desk-selected-text: #355b78;
-  --desk-zone-accent: #557086;
   --text: #282c35;
   --foreground: #282c35;
-  --card-foreground: #282c35;
   --muted: #777e8b;
   --secondary: #e9eef2;
-  --quick-usage-accent: #94a3b8;
   --line-subtle: rgba(38, 61, 79, 0.10);
   --desk-group-heading-height: 42px;
   --desk-group-gap: 16px;
@@ -28,13 +24,11 @@
   --desk-accent-amber: #f59e0b;
   --desk-accent-emerald: #10b981;
   --desk-card-shadow: inset 0 0 0 1px var(--line-subtle), 0 2px 3px rgba(24, 35, 52, 0.025), 0 6px 16px rgba(24, 35, 52, 0.025);
-  --desk-edge: color-mix(in srgb, var(--line-section) 65%, transparent);
   --desk-control-shadow: 0 1px 2px color-mix(in srgb, var(--foreground) 5%, transparent);
   font-size: var(--app-font-size);
 }
 
 html[data-theme="dark"] .workbench-shell {
-  --desk-zone-accent: #8da9bf;
   --desk-surface: #202329;
   --card: #2a2e36;
   --desk-row-hover: #303c46;
@@ -42,14 +36,11 @@ html[data-theme="dark"] .workbench-shell {
   --desk-tab-active-hover: #303c46;
   --desk-group-surface: #252931;
   --desk-group-content: var(--card);
-  --desk-selected-surface: #30485a;
   --desk-selected-text: #b1cde2;
   --text: #f1f1f1;
   --muted: #a0aeb9;
   --foreground: #fafafa;
-  --card-foreground: #fafafa;
   --secondary: #35414b;
-  --quick-usage-accent: #64748b;
   --desk-accent-amber: #fbbf24;
   --desk-accent-emerald: #34d399;
   /* Dark cards use their surface color for separation, without a pale outline. */
@@ -73,7 +64,6 @@ html[data-theme="dark"] .workbench-shell,
   -webkit-backdrop-filter: blur(20px) saturate(1.3);
   backdrop-filter: blur(20px) saturate(1.3);
   border-bottom: 1px solid var(--desk-edge);
-  box-shadow: none;
 }
 
 .workbench-grid {
@@ -135,7 +125,6 @@ html[data-theme="dark"] .workbench-shell,
 .workbench-zone .panel-header h1,
 .workbench-zone .panel-header h2 {
   gap: 8px;
-  font-size: 16px;
   font-weight: 600;
   line-height: 1.4;
   overflow: hidden;
@@ -160,8 +149,6 @@ html[data-theme="dark"] .workbench-shell,
   color: var(--desk-zone-accent);
   font-size: 14px;
 }
-.desk-zone-heading h1 > .n-icon svg,
-.desk-zone-heading h2 > .n-icon svg { width: 14px; height: 14px; }
 .workbench-shell .header-actions { flex-shrink: 0; gap: 0; }
 .workbench-shell .icon-button {
   box-shadow: none; background: transparent; border-radius: 8px; color: var(--muted);
@@ -205,10 +192,9 @@ html[data-theme="dark"] .workbench-shell,
 /* Keep content padding stable while its outer height animates. */
 .workbench-shell .quick-tag-heading + .quick-tag-content { margin-top: 0; }
 .workbench-shell .quick-tag-heading + .quick-tag-content.is-collapsed { margin-top: 0; }
-.workbench-shell .quick-tag-heading { min-height: 32px; padding: 0 0 8px; }
 .workbench-shell .quick-tag-title { font-size: 13px; font-weight: 500; color: var(--muted); }
 .workbench-shell .quick-tag-count { background: transparent; font-size: 12px; }
-.workbench-shell .quick-buttons { display: grid; grid-template-columns: minmax(0, 1fr); gap: 10px; padding: 0; }
+.workbench-shell .quick-buttons { display: grid; gap: 10px; padding: 0; }
 .workbench-shell .quick-tag-add-button { color: var(--muted); }
 .workbench-shell .quick-tag-add-button:hover,
 .workbench-shell .quick-tag-add-button:focus-visible { color: var(--primary); background: transparent; }
@@ -220,7 +206,6 @@ html[data-theme="dark"] .workbench-shell,
    全局环与全局光晕）。 */
 .workbench-shell .quick-add-button:focus-visible,
 .workbench-shell .quick-tag-add-button:focus-visible,
-.workbench-shell .image-add-button:focus-visible,
 .workbench-shell .settings-btn.icon-button:focus-visible { outline: none; box-shadow: none; }
 /* 专注徽标同款豁免：Esc 关专注弹窗时 FocusTrap 把焦点还原到打开弹窗的徽标上，
    全局实线环 + 光晕会凭空描蓝框；徽标的焦点反馈走上面的变色（hover/:focus-visible
@@ -259,12 +244,10 @@ html[data-theme="dark"] .workbench-shell,
 }
 .workbench-shell button.quick-button:hover {
   --button-hover: var(--desk-row-hover);
-  border-color: var(--line-control);
   background: var(--desk-row-hover);
   box-shadow: none;
   transform: none;
 }
-.workbench-shell .quick-button-icon { font-size: 18px; color: var(--muted); }
 .quick-button-content { display: flex; flex-direction: column; min-width: 0; gap: 3px; transition: gap var(--motion-medium) var(--motion-ease); }
 .workbench-shell .quick-button-label { font-weight: 500; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
 .quick-button-kind { color: var(--muted); font-size: 12px; line-height: 1.4; max-height: 20px; transition: max-height var(--motion-medium) var(--motion-ease), opacity var(--motion-fast) ease; }
@@ -379,7 +362,6 @@ html[data-theme="dark"] .workbench-shell,
   height: 50px;
   min-height: 50px;
   padding: 8px 4px;
-  border-radius: 6px;
   transition: background-color var(--motion-fast) var(--motion-ease), opacity var(--motion-fast) ease, transform var(--motion-medium) var(--motion-ease);
 }
 .workbench-shell .todo-item:hover,
@@ -398,7 +380,6 @@ html[data-theme="dark"] .workbench-shell,
 .workbench-shell .todo-section.is-collapsed { flex-shrink: 0; }
 
 /* Keep the tab editor quiet while the notebook reads as a white card. */
-.workbench-shell .space-tab-edit-shell { background: transparent; }
 .workbench-shell .space-text-panel {
   background: var(--card);
   border-radius: 0 0 var(--desk-card-radius) var(--desk-card-radius);
@@ -436,9 +417,7 @@ html[data-theme="dark"] .workbench-shell .space-text-panel {
 .workbench-shell .space-tab.is-active {
   border-radius: 8px;
   font-weight: 600;
-  color: var(--text);
   background: var(--card);
-  box-shadow: inset 0 0 0 1px var(--line-subtle);
 }
 .workbench-shell button.space-tab:hover,
 .workbench-shell button.space-tab:focus-visible { border-radius: 8px; background: var(--desk-tab-hover); }
@@ -645,10 +624,8 @@ html[data-theme="dark"] .workbench-shell .space-text-panel {
   min-height: 36px;
   margin: 6px 8px;
   padding: 4px;
-  border: 0;
   border-radius: 8px;
   background: transparent;
-  color: var(--muted);
   font: inherit;
   cursor: pointer;
   transition: background-color 180ms ease, color 180ms ease;

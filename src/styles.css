@@ -6,7 +6,6 @@
   --background: #fcfcfe;
   --foreground: #1d1d1f;
   --card: #ffffff;
-  --card-foreground: #111827;
   --popover: #ffffff;
   --popover-foreground: #111827;
   --primary: #3f6887;
@@ -19,7 +18,6 @@
   --accent-foreground: #355b78;
   --destructive: #b42318;
   --border: rgba(60, 60, 67, 0.14);
-  --input-token: rgba(60, 60, 67, 0.18);
   --ring: #3f6887;
   --bg: #fcfcfe;
   --panel: #ffffff;
@@ -49,7 +47,6 @@
   --motion-spring: cubic-bezier(0.34, 1.42, 0.64, 1);
   --shadow-lift: 0 1px 2px rgba(15, 23, 42, 0.05), 0 10px 24px rgba(15, 23, 42, 0.1);
   --shadow-quick-hover: 0 1px 2px rgba(15, 23, 42, 0.05), 0 2px 5px rgba(15, 23, 42, 0.07);
-  --shadow-glow-primary: 0 0 0 1px color-mix(in srgb, var(--primary) 24%, transparent), 0 6px 18px color-mix(in srgb, var(--primary) 22%, transparent);
   /* 悬浮层投影：消息气泡「飘在页面上方」的层次感，刻意多层柔和不发黑（GIF 本体不带投影）。 */
   --shadow-float: 0 1px 2px rgba(15, 23, 42, 0.05), 0 8px 20px rgba(15, 23, 42, 0.08), 0 24px 48px rgba(15, 23, 42, 0.06);
   /* 手机端首页（OpenDesign 原型）补充 token：实心动作蓝（加深保证白字对比）、小号蓝字、成功/实心危险与大圆角卡。 */
@@ -76,7 +73,6 @@ html[data-theme="dark"] {
   --background: #262628;
   --foreground: #fafafa;
   --card: #2c2c2e;
-  --card-foreground: #fafafa;
   --popover: #2c2c2e;
   --popover-foreground: #fafafa;
   --primary: #9cbcd5;
@@ -89,7 +85,6 @@ html[data-theme="dark"] {
   --accent-foreground: #fafafa;
   --destructive: #ff8b7f;
   --border: rgba(235, 235, 245, 0.13);
-  --input-token: rgba(235, 235, 245, 0.18);
   --ring: #9cbcd5;
   --bg: #262628;
   --panel: #2c2c2e;
@@ -112,7 +107,6 @@ html[data-theme="dark"] {
   --focus-ring: 0 0 0 3px color-mix(in srgb, var(--ring) 34%, transparent);
   --shadow-lift: 0 1px 2px rgba(0, 0, 0, 0.2), 0 14px 30px rgba(0, 0, 0, 0.32);
   --shadow-quick-hover: 0 1px 2px rgba(0, 0, 0, 0.18), 0 2px 6px rgba(0, 0, 0, 0.24);
-  --shadow-glow-primary: 0 0 0 1px color-mix(in srgb, var(--primary) 32%, transparent), 0 8px 22px color-mix(in srgb, var(--primary) 30%, transparent);
   --shadow-float: 0 1px 2px rgba(0, 0, 0, 0.3), 0 10px 24px rgba(0, 0, 0, 0.36), 0 28px 56px rgba(0, 0, 0, 0.28);
   --action: #3f6887;
   --link: #9cbcd5;
@@ -219,7 +213,6 @@ body,
 
 body {
   background: var(--bg);
-  color: var(--text);
   font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", "PingFang SC", "Microsoft YaHei", sans-serif;
   font-size: 12px;
   font-weight: 400;
@@ -426,9 +419,7 @@ h3 {
 .quick-dialog.n-card,
 .shortcut-help-modal.n-card {
   border: 1px solid var(--border) !important;
-  background: var(--popover) !important;
   color: var(--popover-foreground) !important;
-  box-shadow: 0 6px 14px rgba(15, 23, 42, 0.045) !important;
 }
 
 /* Modal backdrop: a full-screen frosted-glass (Gaussian blur) overlay that
@@ -569,11 +560,8 @@ html[data-theme="dark"] .n-modal-mask {
 
 .save-status::before {
   content: "";
-  width: 6px;
-  height: 6px;
   border-radius: 999px;
   background-color: #22c55e;
-  box-shadow: 0 0 0 1px rgba(34, 197, 94, 0.18);
   opacity: 1;
   transform: scale(1);
   animation: none;
@@ -667,18 +655,6 @@ html[data-theme="dark"] .n-modal-mask {
     opacity var(--motion-fast) var(--motion-ease);
 }
 
-.image-file-input {
-  position: absolute;
-  width: 1px;
-  height: 1px;
-  padding: 0;
-  margin: -1px;
-  overflow: hidden;
-  clip: rect(0, 0, 0, 0);
-  white-space: nowrap;
-  border: 0;
-}
-
 .image-panel .header-actions .count {
   align-self: center;
   padding-right: 4px;
@@ -693,8 +669,6 @@ html[data-theme="dark"] .n-modal-mask {
   flex: 0 0 34px;
   width: 100%;
   max-width: 100%;
-  height: 34px;
-  min-height: 34px;
   border-bottom: 0.5px solid var(--line-control);
   overflow: hidden;
 }
@@ -750,10 +724,8 @@ html[data-theme="dark"] .n-modal-mask {
   min-height: 34px;
   padding: 0 10px;
   border: 0;
-  border-right: 1px solid var(--line-subtle);
   border-color: var(--border);
   border-radius: var(--radius);
-  color: var(--muted);
   font-size: var(--app-font-size);
   font-weight: 600;
   background: transparent;
@@ -773,11 +745,6 @@ html[data-theme="dark"] .n-modal-mask {
 button.space-tab {
   border: 0;
   background: transparent;
-}
-
-.space-tab.is-active {
-  color: var(--text);
-  background: var(--button-hover);
 }
 
 .space-tab:hover {
@@ -877,7 +844,6 @@ button.space-tab {
   border-bottom: 0;
   border-left: 0;
   border-right: 0;
-  background: var(--button);
   box-shadow: none;
 }
 
@@ -1009,24 +975,17 @@ button.space-tab {
 .image-list {
   display: flex;
   flex-direction: column;
-  gap: 8px;
-  padding: 6px;
   -webkit-user-select: none;
   user-select: none;
 }
 
 .image-card {
   display: grid;
-  grid-template-columns: 28px minmax(0, 1fr);
   align-items: center;
   width: 100%;
-  min-height: 72px;
   padding: 0;
   border: 1px solid color-mix(in srgb, var(--border) 64%, transparent);
-  border-radius: var(--radius);
   font-size: var(--app-font-size);
-  background: color-mix(in srgb, var(--card) 90%, var(--muted-surface));
-  box-shadow: none;
   cursor: zoom-in;
   -webkit-user-select: none;
   user-select: none;
@@ -1059,11 +1018,6 @@ button.image-card {
   will-change: transform;
 }
 
-.image-panel .image-card.is-active {
-  border-color: var(--line-focus);
-  box-shadow: none;
-}
-
 .image-reorder-move,
 .image-reorder-enter-active,
 .image-reorder-leave-active {
@@ -1078,10 +1032,7 @@ button.image-card {
 }
 
 .image-index {
-  height: 100%;
-  min-height: 72px;
   border-right: 0;
-  color: var(--muted);
   display: flex;
   align-items: center;
   justify-content: center;
@@ -1091,11 +1042,8 @@ button.image-card {
 .image-drag-preview img {
   display: block;
   max-width: 100%;
-  max-height: 120px;
   object-fit: contain;
   justify-self: center;
-  margin: 10px;
-  padding: 4px;
 }
 
 .image-missing,
@@ -1125,8 +1073,6 @@ button.image-card {
   align-content: flex-start;
   align-items: flex-start;
   flex-wrap: wrap;
-  gap: 10px;
-  padding: 10px 10px 18px;
 }
 
 .quick-tag-groups {
@@ -1188,8 +1134,6 @@ button.image-card {
   opacity: 0;
   pointer-events: none;
 }
-
-
 
 .quick-tag-clip > .quick-buttons {
   flex: 0 0 auto;
@@ -1702,7 +1646,6 @@ button.quick-button {
   border-bottom: 0;
   border-left: 0;
   border-right: 0;
-  background: var(--panel);
   box-shadow: none;
   overflow: visible;
 }
@@ -1721,7 +1664,6 @@ button.quick-button {
 .today-focus-list {
   list-style: none;
   margin: 0;
-  padding: 0;
   overflow: visible;
 }
 
@@ -1813,7 +1755,6 @@ button.quick-button {
 
 .todo-list {
   list-style: none;
-  padding: 0;
   margin: 0;
 }
 
@@ -1927,7 +1868,6 @@ button.quick-button {
   right: 6px;
   bottom: 2px;
   left: 6px;
-  background: rgba(111, 123, 136, 0.08);
   pointer-events: none;
   z-index: 0;
 }
@@ -2028,34 +1968,16 @@ button.todo-collapse-button {
 
 .todo-collapse-button .n-icon,
 .todo-collapse-button svg {
-  color: var(--muted);
   font-size: 12px;
-  opacity: 0.8;
-  transition:
-    opacity var(--motion-fast) ease,
-    transform var(--motion-medium) var(--motion-ease);
 }
 
 .todo-collapse-button .n-icon {
   transition: transform var(--motion-medium) var(--motion-ease), opacity var(--motion-fast) ease;
 }
 
-.todo-collapse-button.is-collapsed .n-icon {
-  transform: rotate(-90deg);
-}
-
 .todo-collapse-button:hover,
 .todo-collapse-button:focus-visible {
-  color: var(--muted);
   border: 0;
-  background: transparent;
-}
-
-.todo-collapse-button:hover .n-icon,
-.todo-collapse-button:focus-visible .n-icon,
-.todo-collapse-button:hover svg,
-.todo-collapse-button:focus-visible svg {
-  opacity: 0.72;
 }
 
 .todo-section.is-list-dragging {
@@ -2242,8 +2164,6 @@ button.todo-notify-button.has-time {
   max-width: calc(100vw - 16px);
   border: 0;
   border-radius: var(--radius);
-  background: var(--panel);
-  box-shadow: 0 8px 22px rgba(15, 23, 42, 0.12);
   box-sizing: border-box;
   display: grid;
   grid-template-columns: var(--notify-date-column-width) var(--notify-time-column-width);
@@ -2629,7 +2549,6 @@ button.todo-star-button {
 }
 
 .todo-star-button.is-starred {
-  color: var(--text);
   background: transparent;
   opacity: 1;
   pointer-events: auto;
@@ -2746,7 +2665,6 @@ button.todo-star-button {
   min-width: 0;
   flex: 1 1 auto;
   width: 100%;
-  padding: 0 8px;
   border: 0;
   font-size: var(--app-font-size);
   background: transparent;
@@ -2984,7 +2902,6 @@ button.todo-star-button {
 }
 
 .quick-menu-button,
-.image-add-button,
 .image-paste-button,
 .todo-section-menu-button {
   flex: 0 0 34px;
@@ -2998,7 +2915,6 @@ button.todo-star-button {
 }
 
 button.quick-menu-button,
-button.image-add-button,
 button.image-paste-button,
 button.todo-section-menu-button {
   border: 0;
@@ -3402,7 +3318,6 @@ button.todo-section-menu-button {
   align-items: center;
   gap: 8px;
   min-width: 112px;
-  color: var(--muted);
 }
 
 .settings-version-badge {
@@ -3441,17 +3356,11 @@ button.todo-section-menu-button {
   z-index: 4300;
   display: grid;
   grid-template-columns: minmax(0, 1fr);
-  background: rgba(255, 255, 255, 0.72);
   -webkit-backdrop-filter: blur(18px);
-  backdrop-filter: blur(18px);
   color: var(--text);
   -webkit-user-select: none;
   user-select: none;
   animation: image-preview-in 120ms ease-out;
-}
-
-html[data-theme="dark"] .image-preview {
-  background: rgba(0, 0, 0, 0.58);
 }
 
 body:has(.image-preview) .n-modal-mask {
@@ -3555,13 +3464,6 @@ body:has(.image-preview) .image-panel .n-scrollbar {
 
 .preview-stage img {
   grid-area: 1 / 1;
-  width: auto;
-  height: auto;
-  min-width: 0;
-  min-height: 0;
-  max-width: calc(100vw - var(--image-preview-left, clamp(220px, 18vw, 320px)) - 32px);
-  max-height: calc(100vh - var(--image-preview-top, 52px) - 96px);
-  object-fit: contain;
   transform-origin: center;
   transition: transform 180ms cubic-bezier(0.2, 0, 0, 1);
 }
@@ -3579,11 +3481,6 @@ body:has(.image-preview) .image-panel .n-scrollbar {
 }
 
 .preview-actions {
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  gap: 10px;
-  min-height: 44px;
   border-top: 1px solid var(--line-section);
   color: var(--muted);
 }
@@ -3750,153 +3647,6 @@ button.mobile-home-theme:focus-visible {
   line-height: 1.4;
   font-weight: 700;
   letter-spacing: -0.01em;
-}
-
-/* 桌面四栏工作台微缩示意（纯 CSS，列宽对应 .workbench-grid 的真实分区比例）。 */
-.mobile-home-desk {
-  margin: 0;
-  padding: 12px;
-  border: 1px solid var(--line-section);
-  border-radius: 14px;
-  background: var(--panel);
-  box-shadow: var(--shadow-lift);
-}
-
-.mobile-home-desk-chrome {
-  display: flex;
-  align-items: center;
-  gap: 4px;
-  padding-bottom: 9px;
-}
-
-.mobile-home-wdot {
-  width: 6px;
-  height: 6px;
-  border-radius: 50%;
-  background: var(--line-control);
-  flex: none;
-}
-
-.mobile-home-desk-pill {
-  flex: 1;
-  height: 12px;
-  margin-left: 4px;
-  border-radius: 6px;
-  background: var(--bg);
-  border: 1px solid var(--line-subtle);
-}
-
-.mobile-home-desk-grid {
-  display: grid;
-  grid-template-columns: 0.8fr 1fr 1.1fr 1fr;
-  gap: 6px;
-}
-
-.mobile-home-desk-col {
-  min-height: 122px;
-  padding: 7px 6px;
-  border-radius: 9px;
-  border: 1px solid var(--line-subtle);
-  background: var(--bg);
-  display: flex;
-  flex-direction: column;
-  align-items: stretch;
-  gap: 6px;
-  min-width: 0;
-}
-
-.mobile-home-zone-label {
-  display: flex;
-  align-items: center;
-  gap: 3px;
-  font-size: 10px;
-  font-weight: 650;
-  letter-spacing: 0.02em;
-  color: var(--muted);
-}
-
-.mobile-home-zone {
-  width: 4px;
-  height: 4px;
-  border-radius: 2px;
-  background: var(--zone, var(--primary));
-  flex: none;
-}
-
-.mobile-home-sk {
-  height: 4px;
-  border-radius: 2px;
-  background: var(--line-section);
-  display: block;
-}
-
-.mobile-home-tile {
-  aspect-ratio: 4 / 3;
-  border-radius: 5px;
-  background: color-mix(in srgb, var(--primary) 9%, var(--panel));
-  display: block;
-}
-
-.mobile-home-qchip {
-  height: 9px;
-  border-radius: 5px;
-  background: var(--accent);
-  display: block;
-}
-
-.mobile-home-tab {
-  height: 9px;
-  width: 62%;
-  border-radius: 5px;
-  background: var(--accent);
-  display: block;
-}
-
-.mobile-home-cardline {
-  height: 15px;
-  border-radius: 4px;
-  border: 1px solid var(--line-subtle);
-  background: var(--panel);
-  display: block;
-}
-
-.mobile-home-cb-row { display: flex; align-items: center; gap: 4px; }
-
-.mobile-home-cb {
-  width: 6px;
-  height: 6px;
-  border-radius: 2px;
-  border: 1px solid var(--line-control);
-  flex: none;
-}
-
-.mobile-home-cb.is-on { background: var(--line-control); }
-
-.mobile-home-cb-row.is-done .mobile-home-sk { opacity: 0.55; }
-
-/* 骨架条宽度变体（与原型内联宽度一致的具名类）。 */
-.mobile-home-w46 { width: 46%; }
-.mobile-home-w58 { width: 58%; }
-.mobile-home-w66 { width: 66%; }
-.mobile-home-w70 { width: 70%; }
-.mobile-home-w88 { width: 88%; }
-.mobile-home-w90 { width: 90%; }
-
-.mobile-home-desk-caption {
-  display: flex;
-  align-items: flex-start;
-  gap: 7px;
-  margin-top: 11px;
-  font-size: 13px;
-  line-height: 1.55;
-  color: var(--muted);
-}
-
-.mobile-home-desk-caption .n-icon {
-  font-size: 15px;
-  margin-top: 2px;
-  color: var(--muted);
-  flex: none;
 }
 
 /* ---- 快速配对 ---- */
@@ -4117,33 +3867,6 @@ button.mobile-home-primary:focus-visible {
   background: color-mix(in srgb, var(--primary) 7%, var(--panel));
 }
 
-.mobile-home-link-badge {
-  position: relative;
-  width: 36px;
-  height: 36px;
-  border-radius: 50%;
-  background: var(--accent);
-  color: var(--link);
-  display: grid;
-  place-items: center;
-  flex: none;
-  animation: mobile-home-pop var(--motion-slow) var(--motion-spring) both;
-}
-
-.mobile-home-link-badge .n-icon { font-size: 18px; }
-
-.mobile-home-link-dot {
-  position: absolute;
-  top: -2px;
-  right: -2px;
-  width: 10px;
-  height: 10px;
-  border-radius: 50%;
-  background: var(--ok);
-  border: 1px solid var(--panel);
-  animation: mobile-home-dot-pulse 2.2s ease-in-out infinite;
-}
-
 .mobile-home-ps-field {
   display: grid;
   gap: 2px;
@@ -4230,32 +3953,6 @@ button.mobile-home-btn-quiet:focus-visible {
   border-radius: 14px;
   background: var(--panel);
 }
-
-.mobile-home-sync-icons {
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  gap: 10px;
-  color: var(--muted);
-}
-
-.mobile-home-sync-icons .n-icon {
-  font-size: 18px;
-  color: var(--link);
-}
-
-.mobile-home-sync-dots { display: flex; gap: 5px; }
-
-.mobile-home-sync-dots i {
-  width: 4px;
-  height: 4px;
-  border-radius: 2px;
-  background: var(--primary);
-  animation: mobile-home-flow 1.5s ease-in-out infinite;
-}
-
-.mobile-home-sync-dots i:nth-child(2) { animation-delay: 0.25s; }
-.mobile-home-sync-dots i:nth-child(3) { animation-delay: 0.5s; }
 
 .mobile-home-sync p {
   margin: 0;
@@ -4374,21 +4071,6 @@ button.mobile-home-btn-danger:focus-visible {
 @keyframes mobile-home-rise {
   from { opacity: 0; transform: translateY(14px); }
   to { opacity: 1; transform: none; }
-}
-
-@keyframes mobile-home-pop {
-  from { transform: scale(0.55); opacity: 0; }
-  to { transform: scale(1); opacity: 1; }
-}
-
-@keyframes mobile-home-dot-pulse {
-  0%, 100% { box-shadow: 0 0 0 0 color-mix(in srgb, var(--ok) 45%, transparent); }
-  55% { box-shadow: 0 0 0 6px color-mix(in srgb, var(--ok) 0%, transparent); }
-}
-
-@keyframes mobile-home-flow {
-  0%, 100% { opacity: 0.25; }
-  50% { opacity: 1; }
 }
 
 @keyframes mobile-home-spin {
@@ -4836,7 +4518,6 @@ button.mobile-home-btn-danger:focus-visible {
   /* viewport-fit=cover 下（index.html）iPhone 横屏/iPad 等宽屏走桌面布局时，
      用安全区内边距避免内容钻进刘海/圆角；无刘海设备 inset 为 0，等效原状。 */
   padding: env(safe-area-inset-top, 0px) env(safe-area-inset-right, 0px) var(--safe-bottom) env(safe-area-inset-left, 0px);
-  background: color-mix(in srgb, var(--background) 82%, var(--muted-surface));
   color: var(--foreground);
 }
 
@@ -4848,9 +4529,7 @@ button.mobile-home-btn-danger:focus-visible {
   overflow: hidden;
   position: relative;
   border-radius: 0;
-  background: color-mix(in srgb, var(--card) 94%, var(--background));
   box-shadow: none;
-  transition: grid-template-rows 200ms var(--motion-ease);
 }
 
 .workbench-main.is-header-hidden {
@@ -4860,14 +4539,11 @@ button.mobile-home-btn-danger:focus-visible {
 .workbench-command-bar {
   grid-row: 1;
   min-width: 0;
-  overflow: hidden;
-  background: color-mix(in srgb, var(--card) 96%, var(--muted-surface));
   display: flex;
   align-items: center;
   justify-content: space-between;
   gap: 16px;
   padding: 0 16px;
-  box-shadow: inset 0 -1px color-mix(in srgb, var(--border) 42%, transparent);
 }
 
 .workbench-header-enter-active,
@@ -4991,7 +4667,6 @@ body:has(.image-preview) .workbench-command-bar {
 }
 
 .workbench-title-group h1 {
-  font-size: 18px;
   font-weight: 650;
 }
 
@@ -5003,7 +4678,6 @@ body:has(.image-preview) .workbench-command-bar {
 }
 
 .workbench-slogan {
-  color: var(--muted-foreground);
   font-size: 11px;
   line-height: 1;
   white-space: nowrap;
@@ -5045,9 +4719,6 @@ body:has(.image-preview) .workbench-command-bar {
   min-height: 0;
   display: grid;
   grid-template-columns: minmax(100px, 0.382fr) minmax(100px, 0.618fr) minmax(100px, 0.618fr) minmax(100px, 1fr);
-  gap: 14px;
-  padding: 14px;
-  background: color-mix(in srgb, var(--background) 82%, var(--muted-surface));
 }
 
 .workbench-resizer {
@@ -5080,7 +4751,6 @@ button.workbench-resizer {
   top: 12px;
   bottom: 12px;
   left: 50%;
-  width: 2px;
   border-radius: 999px;
   background: transparent;
   transform: translateX(-50%);
@@ -5092,21 +4762,10 @@ button.workbench-resizer {
   background: transparent;
 }
 
-.workbench-resizer:hover::before,
-.workbench-resizer:focus-visible::before {
-  background: color-mix(in srgb, var(--foreground) 18%, transparent);
-}
-
 .workbench-zone {
   min-width: 0;
   min-height: 0;
   border-radius: calc(var(--radius) + 4px);
-  padding: 16px;
-  background: color-mix(in srgb, var(--card) 96%, var(--background));
-  box-shadow:
-    0 0 4px rgba(15, 23, 42, 0.025),
-    0 0 4px rgba(15, 23, 42, 0.04),
-    inset 0 0 0 1px color-mix(in srgb, var(--border) 34%, transparent);
   overflow: hidden;
   display: flex;
   flex-direction: column;
@@ -5258,16 +4917,6 @@ textarea:focus,
   background: var(--material-pressed) !important;
 }
 
-.workbench-shell {
-  background:
-    linear-gradient(180deg, color-mix(in srgb, var(--background) 65%, #ffffff) 0%, var(--background) 100%);
-}
-
-html[data-theme="dark"] .workbench-shell {
-  background:
-    linear-gradient(180deg, color-mix(in srgb, var(--background) 82%, #000000) 0%, var(--background) 100%);
-}
-
 .workbench-main {
   background: transparent;
 }
@@ -5283,7 +4932,6 @@ html[data-theme="dark"] .workbench-shell {
 .workbench-title-group h1 {
   color: var(--foreground);
   font-size: 17px;
-  letter-spacing: 0;
 }
 
 .workbench-slogan {
@@ -5465,8 +5113,6 @@ html[data-theme="dark"] .workbench-shell {
   overflow: visible;
 }
 
-
-
 .text-editor-textarea,
 .text-mirror {
   padding: 12px 14px;
@@ -5484,11 +5130,6 @@ html[data-theme="dark"] .workbench-shell {
   color: color-mix(in srgb, var(--muted) 68%, transparent);
 }
 
-.image-list {
-  gap: 10px;
-  padding: 8px;
-}
-
 .image-card {
   background: color-mix(in srgb, var(--card) 88%, var(--button));
   box-shadow: none;
@@ -5501,12 +5142,6 @@ html[data-theme="dark"] .workbench-shell {
 .image-card:hover,
 .image-card:focus-visible {
   background: color-mix(in srgb, var(--card) 96%, var(--primary) 4%);
-  box-shadow: none;
-}
-
-.image-panel .image-card.is-active {
-  border-color: var(--line-focus);
-  box-shadow: none;
 }
 
 .quick-buttons {
@@ -5724,8 +5359,6 @@ button.workbench-resizer:active {
 
 .quick-menu-button:hover,
 .quick-menu-button:focus-visible,
-.image-add-button:hover,
-.image-add-button:focus-visible,
 .image-paste-button:hover,
 .image-paste-button:focus-visible,
 .todo-section-menu-button:hover,
@@ -5738,13 +5371,8 @@ button.workbench-resizer:active {
 /* 贴图区加号（原生文件框）：ESC/回车的键盘交互会让保持焦点的按钮命中
    :focus-visible，被全局焦点环凭空描边——焦点反馈已有上面的 recolor，
    两套全局指示一并豁免（workbench 覆写在 desk.css 同款规则）。 */
-.image-add-button:focus-visible {
-  outline: none;
-  box-shadow: none;
-}
 
 .quick-menu-button,
-.image-add-button,
 .image-paste-button,
 .todo-section-menu-button {
   display: inline-flex;
@@ -5760,18 +5388,15 @@ button.workbench-resizer:active {
 }
 
 .quick-menu-button .n-icon,
-.image-add-button .n-icon,
 .image-paste-button .n-icon,
 .todo-section-menu-button .n-icon,
 .quick-menu-button svg,
-.image-add-button svg,
 .image-paste-button svg,
 .todo-section-menu-button svg {
   display: block;
 }
 
 .quick-menu-button:active,
-.image-add-button:active,
 .image-paste-button:active,
 .todo-section-menu-button:active {
   background: transparent;
@@ -6497,10 +6122,7 @@ button.todo-collapse-button:active {
 :root {
   --label-primary: rgba(0, 0, 0, 0.88);
   --label-secondary: rgba(60, 60, 67, 0.68);
-  --label-tertiary: rgba(60, 60, 67, 0.42);
   --fill-quaternary: rgba(118, 118, 128, 0.08);
-  --fill-tertiary: rgba(118, 118, 128, 0.12);
-  --fill-secondary: rgba(118, 118, 128, 0.18);
   --separator-opaque: rgba(60, 60, 67, 0.2);
   --control-hit-size: 34px;
   --icon-size: 16px;
@@ -6510,10 +6132,7 @@ button.todo-collapse-button:active {
 html[data-theme="dark"] {
   --label-primary: rgba(255, 255, 255, 0.9);
   --label-secondary: rgba(235, 235, 245, 0.66);
-  --label-tertiary: rgba(235, 235, 245, 0.42);
   --fill-quaternary: rgba(118, 118, 128, 0.14);
-  --fill-tertiary: rgba(118, 118, 128, 0.2);
-  --fill-secondary: rgba(118, 118, 128, 0.28);
   --separator-opaque: rgba(84, 84, 88, 0.64);
 }
 
@@ -6858,66 +6477,6 @@ body,
 /* The companion avatar holds still once visible (no idle float). */
 
 /* Mobile handoff: ambient backdrop now lives on .mobile-handoff itself (see the mobile-home section). */
-
-.quick-search {
-  display: inline-flex;
-  align-items: center;
-  gap: 2px;
-}
-
-/* 30px circle — the base .icon-button size, one step below the 34px hit size.
-   The shared icon-button min-size rule is overridden as well, otherwise it
-   would stretch the 30px-wide toggle back into a vertical ellipse. */
-.quick-search .quick-search-toggle {
-  width: 30px;
-  height: 30px;
-  min-width: 30px;
-  min-height: 30px;
-  padding: 0;
-  border: 0;
-  border-radius: 50%;
-  box-shadow: none;
-}
-
-.quick-search .quick-search-toggle:hover,
-.quick-search .quick-search-toggle:focus-visible,
-.quick-search .quick-search-toggle:active {
-  box-shadow: none;
-}
-
-/* Dark mode: no filled circle behind the search glyph (matches the transparent
-   sibling .quick-menu-button); hovering fades in a soft foreground wash so the
-   toggle still reads as clickable. */
-html[data-theme="dark"] .quick-search .quick-search-toggle,
-html[data-theme="dark"] .quick-search .quick-search-toggle:active {
-  background: transparent;
-  box-shadow: none;
-}
-
-html[data-theme="dark"] .quick-search .quick-search-toggle:hover,
-html[data-theme="dark"] .quick-search .quick-search-toggle:focus-visible {
-  background: color-mix(in srgb, var(--foreground) 10%, transparent);
-  box-shadow: none;
-}
-
-.quick-search-input-wrapper {
-  width: 0;
-  overflow: hidden;
-  transition: width var(--motion-medium) var(--motion-ease);
-}
-
-.quick-search.is-open .quick-search-input-wrapper {
-  width: 140px;
-}
-
-.quick-search-input {
-  width: 140px;
-}
-
-.quick-search-input.n-input--focus {
-  border-color: var(--border);
-  box-shadow: none !important;
-}
 
 .workspace-trigger {
   display: inline-flex;
@@ -7441,14 +7000,11 @@ button.mobile-inbox-send:disabled {
 
 @media (prefers-reduced-motion: reduce) {
   button.mobile-inbox-send:disabled,
-  .mobile-inbox-status.is-shake,
-  .mobile-home-view > *,
-  .mobile-home-link-badge,
-  .mobile-home-link-dot,
-  .mobile-home-sync-dots i,
-  .mobile-home-spinner,
-  .mobile-inbox-polish-input:checked ~ .mobile-inbox-polish-label,
-  .mobile-inbox-spinner {
+.mobile-inbox-status.is-shake,
+.mobile-home-view > *,
+.mobile-home-spinner,
+.mobile-inbox-polish-input:checked ~ .mobile-inbox-polish-label,
+.mobile-inbox-spinner {
     animation: none;
   }
 }

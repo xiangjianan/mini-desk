@@ -13,6 +13,7 @@ import { DEFAULT_TITLES } from "../state/defaults";
 import { completeTodo, moveTodo } from "../state/todos";
 import type { PolishKind, PolishStyle, PolishResult } from "../sync/polishClient";
 import type { TodoMap, TodoPeriod } from "../types";
+import { ruleBodies } from "./helpers/css-rules";
 import { menuDropdownStub } from "./helpers/menu-dropdown-stub";
 
 const dropdownStub = {
@@ -964,12 +965,12 @@ describe("TodoPanel", () => {
     expect(wrapper.emitted("deleteList")?.[0]).toEqual(["morning", expect.any(HTMLElement)]);
   });
 
-  it("styles the centered collapse icon smaller and lighter than regular icon buttons", () => {
+  it("keeps the centered collapse icon small and fully opaque", () => {
     const styles = readFileSync(resolve(__dirname, "../styles.css"), "utf8");
     const iconRule = styles.match(/\.todo-collapse-button \.n-icon,[\s\S]*?\.todo-collapse-button svg\s*\{([\s\S]*?)\}/)?.[1] ?? "";
 
     expect(iconRule).toContain("font-size: 12px");
-    expect(iconRule).toContain("opacity: 0.8");
+    expect(ruleBodies(styles, ".todo-collapse-button .n-icon").join("\n")).toContain("opacity: 1");
   });
 
   it("pauses reminder list dragging while the list title is being edited", async () => {
@@ -1791,7 +1792,7 @@ describe("TodoPanel", () => {
     expect(editingRule).toContain("background: transparent");
     expect(editingBeforeRule).toContain("right: 6px");
     expect(editingBeforeRule).toContain("left: 6px");
-    expect(editingBeforeRule).toMatch(/background: rgba\([^)]*0\.08\)/);
+    expect(ruleBodies(styles, ".today-focus-item.is-editing::before").join("\n")).toContain("background: color-mix(in srgb, var(--button) 74%, transparent)");
     expect(editingBeforeRule).toContain("pointer-events: none");
   });
 
@@ -2962,7 +2963,7 @@ describe("TodoPanel", () => {
     expect(todoItemRule).toContain("align-items: center");
     expect(todayFocusItemRule).toContain("align-items: center");
     expect(todoInputSharedRule).toContain("box-sizing: border-box");
-    expect(todoInputSharedRule).toContain("padding: 0 8px");
+    expect(ruleBodies(styles, ".todo-input").join("\n")).toContain("padding: 0 9px");
     expect(todoInputSharedRule).toContain("text-overflow: ellipsis");
     expect(todoInputSharedRule).toContain("white-space: nowrap");
     expect(todayNotifyRule).toContain("grid-column: 3");

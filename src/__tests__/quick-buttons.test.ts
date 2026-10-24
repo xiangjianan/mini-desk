@@ -1716,7 +1716,7 @@ describe("QuickButtons", () => {
     expect(source).toContain('onQuickBeforeMove');
     expect(styles).toMatch(/\.quick-block\s*\{[^}]*display: flex/s);
     expect(styles).toMatch(/\.quick-block\s*\{[^}]*overflow: hidden/s);
-    expect(styles).toMatch(/\.quick-buttons\s*\{[^}]*padding: 10px 10px 18px/s);
+    expect(styles).toMatch(/\.quick-buttons\s*\{[^}]*padding: 10px 10px 16px/s);
     expect(styles).toMatch(/\.quick-button\.is-dragging\s*\{[^}]*opacity: 0\.45/s);
 
     await wrapper.findAll(".quick-button")[0].trigger("dragstart");

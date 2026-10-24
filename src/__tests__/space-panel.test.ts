@@ -613,7 +613,7 @@ describe("SpacePanel", () => {
     const activeTabRule = styles.match(/\.space-tab\.is-active \{([\s\S]*?)\}/)?.[1] ?? "";
 
     expect(wrapper.find(".space-tab-indicator").exists()).toBe(false);
-    expect(activeTabRule).toContain("background: var(--button-hover)");
+    expect(activeTabRule).toContain("background: color-mix(in srgb, var(--primary) 12%, transparent)");
     expect(activeTabRule).not.toContain("box-shadow");
     expect(styles).not.toContain(".space-tab-indicator");
   });

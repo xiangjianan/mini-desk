@@ -39,15 +39,15 @@ describe("workbench style contract", () => {
     expectSelectorBody(styles, ".workbench-shell", "padding: env(safe-area-inset-top, 0px)");
     expectSelectorBody(styles, ".workbench-main", "border-radius: 0");
     expectSelectorBody(styles, ".workbench-main", "grid-template-rows: 52px minmax(0, 1fr)");
-    expectSelectorBody(styles, ".workbench-main", "transition: grid-template-rows 200ms var(--motion-ease)");
+    expectSelectorBody(styles, ".workbench-main", "transition:\n    grid-template-rows 200ms var(--motion-ease),\n    background-color var(--motion-slow) ease,\n    box-shadow var(--motion-slow) ease");
     expectSelectorBody(styles, ".workbench-main.is-header-hidden", "grid-template-rows: 0px minmax(0, 1fr)");
     expectSelectorBody(styles, ".workbench-command-bar", "padding: 0 16px");
-    expectSelectorBody(styles, ".workbench-grid", "background: color-mix(in srgb, var(--background) 82%, var(--muted-surface))");
+    expectSelectorBody(styles, ".workbench-grid", "background: transparent");
     expect(ruleBodies(styles, ".workbench-zone").join("\n")).not.toContain("border: 1px solid var(--border)");
     expectSelectorBody(styles, ".workbench-zone", "border-radius: calc(var(--radius) + 4px)");
-    expectSelectorBody(styles, ".workbench-zone", "padding: 16px");
-    expectSelectorBody(styles, ".workbench-zone", "background: color-mix(in srgb, var(--card) 96%, var(--background))");
-    expectSelectorBody(styles, ".workbench-zone", "inset 0 0 0 1px color-mix(in srgb, var(--border) 34%, transparent)");
+    expectSelectorBody(styles, ".workbench-zone", "padding: 12px");
+    expectSelectorBody(styles, ".workbench-zone", "background: var(--material-surface)");
+    expectSelectorBody(styles, ".workbench-zone", "inset 0 0 0 1px color-mix(in srgb, var(--border) 72%, transparent)");
     expectSelectorBody(styles, ".workbench-zone > .panel", "border-radius: var(--radius)");
     expectSelectorBody(styles, ".workbench-zone > .space-panel", "box-shadow: none");
     expectSelectorBody(styles, ".workbench-zone > .image-panel", "box-shadow: none");
@@ -131,11 +131,11 @@ describe("workbench style contract", () => {
     expectSelectorBody(styles, ".n-button", "--n-border-radius: var(--radius)");
     expectSelectorBody(styles, ".n-button:not(.n-button--primary-type):not(.n-button--error-type)", "--n-color: var(--button) !important");
     expectSelectorBody(styles, ".n-dropdown-menu", "border: 1px solid var(--border) !important");
-    expectSelectorBody(styles, ".n-dropdown-menu", "background: var(--popover) !important");
+    expectSelectorBody(styles, ".n-dropdown-menu", "background: var(--material-elevated) !important");
     expectSelectorBody(styles, ".n-dropdown-menu", "color: var(--popover-foreground) !important");
-    expectSelectorBody(styles, ".n-dropdown-menu", "box-shadow: 0 6px 14px rgba(15, 23, 42, 0.045) !important");
+    expectSelectorBody(styles, ".n-dropdown-menu", "box-shadow: var(--shadow-soft) !important");
     expectSelectorBody(styles, ".n-modal .n-card", "border: 1px solid var(--border) !important");
-    expectSelectorBody(styles, ".n-modal .n-card", "background: var(--popover) !important");
+    expectSelectorBody(styles, ".n-modal .n-card", "background: var(--material-elevated) !important");
     expectSelectorBody(styles, ".n-modal .n-card", "color: var(--popover-foreground) !important");
     expectSelectorBody(styles, ".panel-header", "border-bottom: 0");
     expectSelectorBody(styles, ".panel-header", "box-shadow: inset 0 -1px color-mix(in srgb, var(--border) 55%, transparent)");
@@ -166,7 +166,7 @@ describe("workbench style contract", () => {
     expectSelectorBody(styles, ".image-preview", "left: var(--image-preview-left, clamp(220px, 18vw, 320px))");
     expectSelectorBody(styles, ".image-preview", "right: 0");
     expect(ruleBodies(styles, ".image-preview").join("\n")).not.toContain("width: 90vw");
-    expectSelectorBody(styles, ".preview-stage img", "max-width: calc(100vw - var(--image-preview-left, clamp(220px, 18vw, 320px)) - 32px)");
+    expectSelectorBody(styles, ".preview-stage img", "max-width: 100%");
     expectSelectorBody(styles, ".preview-stage img", "width: auto");
     expectSelectorBody(styles, ".preview-stage img", "height: auto");
     expectSelectorBody(styles, ".preview-stage img", "min-width: 0");
@@ -293,7 +293,7 @@ describe("workbench style contract", () => {
     expectSelectorBody(styles, ".notify-floating-date-picker", "grid-template-columns: var(--notify-date-column-width) var(--notify-time-column-width)");
     expectSelectorBody(styles, ".notify-floating-date-picker", "border: 0");
     expectSelectorBody(styles, ".notify-floating-date-picker", "border-radius: var(--radius)");
-    expectSelectorBody(styles, ".notify-floating-date-picker", "box-shadow: 0 8px 22px rgba(15, 23, 42, 0.12)");
+    expectSelectorBody(styles, ".notify-floating-date-picker", "box-shadow: var(--shadow-soft)");
     expectSelectorBody(styles, ".notify-floating-date-picker", "padding-top: 8px");
     expectSelectorBody(styles, ".notify-date-picker.n-date-panel", "background: transparent !important");
     expectSelectorBody(styles, ".notify-date-picker .n-date-panel-calendar", "background: transparent !important");
@@ -530,22 +530,16 @@ describe("workbench style contract", () => {
     // （returnFocusOnDeactivated 默认 true，NModal 不透传关闭项）；回车提交后
     // 紧跟的程序化 focus 命中 :focus-visible，两套全局焦点指示都会画到加号按钮上：
     // desk.css 的 .workbench-shell button:focus-visible 实线环 + styles.css 的
-    // 全局 :focus-visible box-shadow 光晕（24% 浅蓝）。贴图区加号弹的是原生文件
-    // 框（无 FocusTrap），但 ESC/回车的键盘交互同样让保持焦点的按钮命中
-    // :focus-visible——机制同源。这些加号按钮的键盘焦点反馈已有配色变化
+    // 全局 :focus-visible box-shadow 光晕（24% 浅蓝）。这些加号按钮的键盘焦点反馈已有配色变化
     // （recolor），两套指示必须一并豁免——基座规则（styles.css）与 workbench
     // 覆写（desk.css，特异性压过全局环）缺一不可。
     expectSelectorBody(styles, ".quick-add-button:focus-visible", "outline: none");
     expectSelectorBody(styles, ".quick-add-button:focus-visible", "box-shadow: none");
     expectSelectorBody(styles, ".quick-tag-add-button:focus-visible", "outline: none");
     expectSelectorBody(styles, ".quick-tag-add-button:focus-visible", "box-shadow: none");
-    expectSelectorBody(styles, ".image-add-button:focus-visible", "outline: none");
-    expectSelectorBody(styles, ".image-add-button:focus-visible", "box-shadow: none");
     expectSelectorBody(desk, ".workbench-shell .quick-add-button:focus-visible", "outline: none");
     expectSelectorBody(desk, ".workbench-shell .quick-add-button:focus-visible", "box-shadow: none");
     expectSelectorBody(desk, ".workbench-shell .quick-tag-add-button:focus-visible", "outline: none");
     expectSelectorBody(desk, ".workbench-shell .quick-tag-add-button:focus-visible", "box-shadow: none");
-    expectSelectorBody(desk, ".workbench-shell .image-add-button:focus-visible", "outline: none");
-    expectSelectorBody(desk, ".workbench-shell .image-add-button:focus-visible", "box-shadow: none");
   });
 });
