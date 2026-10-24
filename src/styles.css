@@ -359,7 +359,7 @@ h3 {
 }
 
 .todo-heading .editable-title {
-  cursor: pointer;
+  cursor: inherit;
 }
 
 .title-edit-input {
@@ -2075,7 +2075,7 @@ button.todo-collapse-button {
   opacity: 0;
 }
 
-.todo-drag-handle {
+button.todo-drag-handle {
   position: relative;
   justify-self: center;
   width: 18px;
@@ -2103,7 +2103,7 @@ button.todo-collapse-button {
 
 .todo-item:hover .todo-drag-handle,
 .todo-drag-handle:focus-visible,
-.todo-drag-handle:active {
+button.todo-drag-handle:active {
   opacity: 0.9;
 }
 
