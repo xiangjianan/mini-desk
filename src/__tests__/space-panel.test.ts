@@ -146,6 +146,42 @@ describe("SpacePanel", () => {
     expect(wrapper.emitted("rename")?.[0]).toEqual(["workspace", "资料"]);
   });
 
+  it("cancels tab renaming before switching tabs can blur and commit the draft", async () => {
+    const wrapper = mountSpacePanel([
+      { id: "workspace", title: "工作空间", lines: [] },
+      { id: "project", title: "项目", lines: [] },
+    ]);
+    await wrapper.findAll(".space-tab")[0].trigger("dblclick");
+    await wrapper.get(".space-tab-edit-input").setValue("未提交标题");
+    const input = wrapper.get(".space-tab-edit-input");
+    const otherTab = wrapper.get('[data-space-tab-id="project"]');
+    otherTab.element.dispatchEvent(new MouseEvent("pointerdown", { bubbles: true, button: 0 }));
+    await flushPromises();
+    await input.trigger("blur");
+    await otherTab.trigger("click");
+
+    expect(wrapper.find(".space-tab-edit-input").exists()).toBe(false);
+    expect(wrapper.emitted("rename")).toBeUndefined();
+    expect(wrapper.emitted("editDone")).toEqual([["workspace"]]);
+    expect(wrapper.emitted("activate")).toEqual([["project"]]);
+    wrapper.unmount();
+  });
+
+  it("cancels tab renaming when the active tab changes externally", async () => {
+    const wrapper = mountSpacePanel([
+      { id: "workspace", title: "工作空间", lines: [] },
+      { id: "project", title: "项目", lines: [] },
+    ]);
+    await wrapper.findAll(".space-tab")[0].trigger("dblclick");
+    await wrapper.get(".space-tab-edit-input").setValue("未提交标题");
+    await wrapper.setProps({ activeSpaceId: "project" });
+
+    expect(wrapper.find(".space-tab-edit-input").exists()).toBe(false);
+    expect(wrapper.emitted("rename")).toBeUndefined();
+    expect(wrapper.emitted("editDone")).toEqual([["workspace"]]);
+    wrapper.unmount();
+  });
+
   it("starts editing a newly created active space name", async () => {
     const wrapper = mount(SpacePanel, {
       attachTo: document.body,

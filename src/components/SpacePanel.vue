@@ -186,6 +186,17 @@ function cancelTabEdit(): void {
   if (id) emit("editDone", id);
 }
 
+function cancelEditingForTab(id: string): void {
+  if (editingSpaceId.value && editingSpaceId.value !== id) cancelTabEdit();
+}
+
+function activateTab(id: string): void {
+  cancelEditingForTab(id);
+  emit("activate", id);
+}
+
+watch(() => props.activeSpaceId, cancelEditingForTab);
+
 function findSpaceTabElement(id: string): HTMLElement | undefined {
   return Array.from(document.querySelectorAll<HTMLElement>(".space-tab"))
     .find((element) => element.dataset.spaceTabId === id);
@@ -366,7 +377,8 @@ onUnmounted(() => disposeSort?.());
               draggable="true"
               :data-space-tab-id="space.id"
               :aria-selected="space.id === activeSpaceId"
-              @click="emit('activate', space.id)"
+              @pointerdown.left="cancelEditingForTab(space.id)"
+              @click="activateTab(space.id)"
               @dblclick.stop="startTabEdit(space.id, $event.currentTarget as HTMLElement)"
               @contextmenu.stop.prevent="openTabMenu($event, space.id)"
               @dragstart="handleDragStart($event, space.id)"
