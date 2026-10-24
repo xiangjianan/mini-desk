@@ -358,6 +358,10 @@ h3 {
   user-select: none;
 }
 
+.todo-heading .editable-title {
+  cursor: pointer;
+}
+
 .title-edit-input {
   width: 100%;
   min-width: 40px;
