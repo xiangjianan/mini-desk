@@ -34,6 +34,22 @@ export interface ChangelogEntry {
 
 export const CHANGELOG: ChangelogEntry[] = [
   {
+    version: "1.1.13-offline",
+    date: "2026-10-25",
+    notes: {
+      zh: [
+        "同步 1.1.13：优化大看板拖拽和折叠性能，保持分组折叠时的底色稳定",
+        "复用图片预览工具栏、缩放交互和右键菜单；修复切换便签时未取消重命名的问题",
+        "保留普通粘贴按钮、无彩色悬浮特效，以及离线版的 AI 和手机速记功能删减",
+      ],
+      en: [
+        "Updated to 1.1.13: faster large-board dragging and collapsing with stable group surfaces",
+        "Shared preview toolbars, image transforms, and context menus; fixed note-tab rename cancellation",
+        "Retained plain paste controls without animated hover colors and the offline edition's AI/mobile feature removal",
+      ],
+    },
+  },
+  {
       version: "1.1.13",
       date: "2026-10-25",
       notes: {
