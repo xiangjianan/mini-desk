@@ -4081,6 +4081,7 @@ function moveItem<T extends { id: string }>(items: T[], dragId: string, targetId
     <ImagePreview
       v-if="!isMobileBlocked && displayedPreviewId"
       :images="activeWorkspace.images"
+      :move-targets="workspaceMoveTargets"
       :active-id="displayedPreviewId"
       :edit-id="activeEditorId"
       :closing="imagePreviewClosing"
@@ -4093,6 +4094,7 @@ function moveItem<T extends { id: string }>(items: T[], dragId: string, targetId
       @navigate="navigatePreview"
       @reorder="reorderImages"
       @move-to-bottom="moveImageToBottom"
+      @move-to-workspace="moveImageAcrossWorkspaces"
       @tips="showPreviewTips"
       @save-edit="saveEditedImage"
     />

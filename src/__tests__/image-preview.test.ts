@@ -1744,3 +1744,22 @@ describe("ImagePreview", () => {
     wrapper.unmount();
   });
 });
+
+it("moves the preview image through the workspace submenu", async () => {
+  const wrapper = mount(ImagePreview, {
+    props: {
+      images: [{ id: "img-1", src: "data:image/png;base64,one", createdAt: 1 }],
+      activeId: "img-1",
+      moveTargets: [{ id: "other", title: "其他空间", lists: [] }],
+    },
+    global: { stubs: { Modal: modalStub, NModal: modalStub, Dropdown: menuDropdownStub, NDropdown: menuDropdownStub } },
+  });
+  await wrapper.get(".preview-stage img").trigger("contextmenu");
+  expect(wrapper.get('[data-key="move-workspace"]').text()).toBe("移动到空间");
+  await wrapper.get('[data-key="move-ws:other"]').trigger("click");
+  expect(wrapper.emitted("moveToWorkspace")).toEqual([["img-1", "other"]]);
+  await wrapper.setProps({ moveTargets: [] });
+  await wrapper.get(".preview-stage img").trigger("contextmenu");
+  expect(wrapper.find('[data-key="move-workspace"]').exists()).toBe(false);
+  wrapper.unmount();
+});

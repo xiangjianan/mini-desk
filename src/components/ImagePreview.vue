@@ -2,14 +2,14 @@
 import ContextMenu from "./ContextMenu.vue";
 import { computed, h, nextTick, onMounted, onUnmounted, ref, watch } from "vue";
 import type { Component, VNode } from "vue";
-import { ArrowDownOutline, ArrowUpOutline, ChevronDownOutline, CloseOutline, CopyOutline, CreateOutline, HelpCircleOutline, TrashOutline } from "@vicons/ionicons5";
+import { SwapHorizontalOutline, ArrowDownOutline, ArrowUpOutline, ChevronDownOutline, CloseOutline, CopyOutline, CreateOutline, HelpCircleOutline, TrashOutline } from "@vicons/ionicons5";
 import { NModal } from "naive-ui";
 import type { DropdownOption } from "naive-ui";
 import { getImageItemContextMenuItems } from "../state/imageContextMenu";
 import type { ImageContextMenuKey } from "../state/imageContextMenu";
 import { getUiText } from "../state/i18n";
 import { useImageTransform } from "../composables/useImageTransform";
-import type { AppLanguage, ImagePasteRequest, StoredImage } from "../types";
+import type { AppLanguage, ImagePasteRequest, StoredImage, WorkspaceMoveTarget } from "../types";
 import { createExclusiveContextMenu } from "../utils/contextMenu";
 import { isTextEntryTarget } from "../utils/dom";
 import { renderIcon } from "../utils/dropdownIcons";
@@ -19,6 +19,7 @@ import ImagePreviewToolbar from "./ImagePreviewToolbar.vue";
 const props = withDefaults(defineProps<{
   images: StoredImage[];
   activeId?: string;
+  moveTargets?: WorkspaceMoveTarget[];
   editId?: string;
   language?: AppLanguage;
   closing?: boolean;
@@ -29,6 +30,7 @@ const props = withDefaults(defineProps<{
   language: "zh",
   closing: false,
   canEdit: true,
+  moveTargets: () => [],
 });
 
 const emit = defineEmits<{
@@ -38,6 +40,7 @@ const emit = defineEmits<{
   navigate: [direction: number];
   reorder: [dragId: string, targetId: string];
   moveToBottom: [id: string];
+  moveToWorkspace: [id: string, workspaceId: string];
   paste: [request: ImagePasteRequest];
   dropFiles: [files: File[], anchor: HTMLElement, targetId: string];
   tips: [anchor?: HTMLElement];
@@ -70,10 +73,19 @@ const menuOptions = computed<DropdownOption[]>(() => [
   // canEdit=false：编辑入口与无 tips 接线的「Tips」引导项一并隐藏。
   ...getImageItemContextMenuItems(uiText.value, true)
     .filter((option) => props.canEdit || (option.key !== "edit" && option.key !== "tips"))
-    .map((option) => ({
-      ...option,
-      icon: renderIcon(getImageMenuIcon(option.key), option.key === "delete"),
-    })),
+    .flatMap((option): DropdownOption[] => [
+      ...(option.key === "delete" && props.moveTargets.length > 0
+        ? [{
+            label: uiText.value.common.moveToWorkspace,
+            key: "move-workspace",
+            icon: renderIcon(SwapHorizontalOutline),
+            children: props.moveTargets.map((target) => ({ label: target.title, key: `move-ws:${target.id}` })),
+          }]
+        : []),
+      {
+        ...option,
+        icon: renderIcon(getImageMenuIcon(option.key), option.key === "delete"),
+      }]),
 ]);
 const exclusiveMenu = createExclusiveContextMenu(closeMenu);
 
@@ -256,6 +268,11 @@ function handleMenuSelect(key: string): void {
   const current = menu.value;
   if (!current) return;
   closeMenu();
+  if (key.startsWith("move-ws:")) {
+    const workspaceId = key.slice("move-ws:".length);
+    if (props.moveTargets.some((target) => target.id === workspaceId)) emit("moveToWorkspace", current.id, workspaceId);
+    return;
+  }
   if (key === "tips") {
     emit("tips", current.anchor);
     return;
