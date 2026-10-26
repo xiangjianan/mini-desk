@@ -822,6 +822,13 @@ function applyWorkspaceMove(next: WorkspaceData[]): void {
   persistNow();
 }
 
+function moveImageAcrossWorkspaces(imageId: string, workspaceId: string): void {
+  const next = workspaceMover.moveImageToWorkspace(state.workspaces, state.activeWorkspaceId, imageId, workspaceId);
+  if (next === state.workspaces) return;
+  if (activePreviewId.value === imageId || closingPreviewId.value === imageId) clearImagePreview();
+  applyWorkspaceMove(next);
+}
+
 function moveQuickButtonAcrossWorkspaces(buttonId: string, workspaceId: string): void {
   applyWorkspaceMove(workspaceMover.moveQuickButtonToWorkspace(state.workspaces, state.activeWorkspaceId, buttonId, workspaceId));
 }
@@ -3903,6 +3910,7 @@ function moveItem<T extends { id: string }>(items: T[], dragId: string, targetId
         <ImagePanel
           :title="titles['image-title']"
           :images="activeWorkspace.images"
+          :move-targets="workspaceMoveTargets"
           :active-preview-id="activePreviewId"
           :paste-feedback="pasteFeedback"
           :language="state.language"
@@ -3914,6 +3922,7 @@ function moveItem<T extends { id: string }>(items: T[], dragId: string, targetId
           @delete="deleteImage"
           @reorder="reorderImages"
           @move-to-bottom="moveImageToBottom"
+          @move-to-workspace="moveImageAcrossWorkspaces"
           @paste="pasteImageFromClipboard"
           @drop-files="addImageFiles"
           @guide="handleGuideClick"

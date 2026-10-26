@@ -1,5 +1,6 @@
 import { describe, expect, it } from "vitest";
 import {
+  moveImageToWorkspace,
   moveQuickButtonToWorkspace,
   moveQuickTagToWorkspace,
   moveSpaceToWorkspace,
@@ -305,5 +306,32 @@ describe("moveSpaceToWorkspace", () => {
     expect(to.spaces[0]).toEqual({ id: "space-1", title: "目标同名", lines: [] });
     expect(to.spaces[1].id).not.toBe("space-1");
     expect(to.spaces[1].lines).toEqual([{ text: "内容", indent: 0 }]);
+  });
+});
+
+describe("moveImageToWorkspace", () => {
+  const image = { id: "image", payloadId: "payload", createdAt: 1, displayWidth: 120, displayHeight: 80 };
+  it("appends after all target images and preserves the payload and dimensions without mutating inputs", () => {
+    const source = workspace("a", { images: [image] });
+    const target = workspace("b", { images: [{ id: "last", createdAt: 2 }] });
+    const next = moveImageToWorkspace([source, target], "a", "image", "b");
+    expect(next[0].images).toEqual([]);
+    expect(next[1].images).toEqual([...target.images, image]);
+    expect(source.images).toEqual([image]);
+    expect(target.images).toHaveLength(1);
+  });
+  it("keeps the legacy payload reference when an imported image id collides", () => {
+    const legacy = { id: "image", createdAt: 1 };
+    const next = moveImageToWorkspace([
+      workspace("a", { images: [legacy] }), workspace("b", { images: [legacy] }),
+    ], "a", "image", "b");
+    expect(next[1].images[1].id).not.toBe("image");
+    expect(next[1].images[1].payloadId).toBe("image");
+  });
+  it("ignores missing images, missing targets and the current workspace", () => {
+    const items = [workspace("a", { images: [image] }), workspace("b")];
+    expect(moveImageToWorkspace(items, "a", "missing", "b")).toBe(items);
+    expect(moveImageToWorkspace(items, "a", "image", "missing")).toBe(items);
+    expect(moveImageToWorkspace(items, "a", "image", "a")).toBe(items);
   });
 });

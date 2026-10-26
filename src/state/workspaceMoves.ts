@@ -227,3 +227,25 @@ export function moveSpaceToWorkspace(
     };
   });
 }
+
+/** 移动贴图到目标空间末尾，保留 IndexedDB 原图引用。 */
+export function moveImageToWorkspace(
+  workspaces: WorkspaceData[],
+  fromWorkspaceId: string,
+  imageId: string,
+  toWorkspaceId: string,
+): WorkspaceData[] {
+  return transferWorkspaceItem(workspaces, fromWorkspaceId, toWorkspaceId, (from, to) => {
+    const image = from.images.find((item) => item.id === imageId);
+    if (!image) return null;
+    const moved = {
+      ...image,
+      id: uniqueIdAmong(to.images.map((item) => item.id), image.id),
+      payloadId: image.payloadId ?? image.id,
+    };
+    return {
+      from: { ...from, images: from.images.filter((item) => item.id !== imageId) },
+      to: { ...to, images: [...to.images, moved] },
+    };
+  });
+}

@@ -7,6 +7,7 @@ import { computed, h, nextTick, onMounted, onUnmounted, ref, watch } from "vue";
 import type { Component, ComponentPublicInstance, VNode } from "vue";
 import { NIcon, NScrollbar } from "naive-ui";
 import {
+  ArrowRightLeft as MoveOutline,
   ArrowDown as ArrowDownOutline,
   ArrowUp as ArrowUpOutline,
   Clipboard as ClipboardOutline,
@@ -19,7 +20,7 @@ import {
   Trash2 as TrashOutline,
 } from "lucide-vue-next";
 import type { DropdownOption } from "naive-ui";
-import type { AppLanguage, GuideKey, ImagePasteFeedback, ImagePasteRequest, StoredImage } from "../types";
+import type { AppLanguage, GuideKey, ImagePasteFeedback, ImagePasteRequest, StoredImage, WorkspaceMoveTarget } from "../types";
 import { GUIDE_MENU_OPTION } from "../state/defaults";
 import { getBlankImageContextMenuItems, getImageItemContextMenuItems } from "../state/imageContextMenu";
 import type { ImageContextMenuKey } from "../state/imageContextMenu";
@@ -33,6 +34,7 @@ const props = withDefaults(defineProps<{
   title: string;
   images: StoredImage[];
   activePreviewId?: string;
+  moveTargets?: WorkspaceMoveTarget[];
   pasteFeedback?: ImagePasteFeedback;
   language?: AppLanguage;
   /** true = 紧凑形态：隐藏标题行（专注弹窗贴图条），对齐 TextPanel 的 hideHeader 先例。 */
@@ -43,6 +45,7 @@ const props = withDefaults(defineProps<{
 }>(), {
   language: "zh",
   canEdit: true,
+  moveTargets: () => [],
 });
 
 const emit = defineEmits<{
@@ -54,6 +57,7 @@ const emit = defineEmits<{
   delete: [id: string, anchor?: HTMLElement];
   reorder: [dragId: string, targetId: string];
   moveToBottom: [id: string];
+  moveToWorkspace: [id: string, workspaceId: string];
   paste: [request: ImagePasteRequest];
   dropFiles: [files: File[], anchor?: HTMLElement, targetId?: string];
   guide: [key: GuideKey, anchor: HTMLElement, immediate?: boolean];
@@ -191,11 +195,20 @@ const menuOptions = computed<DropdownOption[]>(() =>
   )
     // canEdit=false：编辑入口与无 guide 接线的 Tips 引导项一并隐藏。
     .filter((option) => props.canEdit || (option.key !== "edit" && option.key !== "tips"))
-    .map((option) => ({
-      ...option,
-      ...(option.key === "tips" ? guideMenuOption.value : {}),
-      icon: renderIcon(getImageMenuIcon(option.key), option.key === "delete"),
-    })),
+    .flatMap((option): DropdownOption[] => [
+      ...(option.key === "delete" && props.moveTargets.length > 0
+        ? [{
+            label: uiText.value.common.moveToWorkspace,
+            key: "move-workspace",
+            icon: renderIcon(MoveOutline),
+            children: props.moveTargets.map((target) => ({ label: target.title, key: `move-ws:${target.id}` })),
+          }]
+        : []),
+      {
+        ...option,
+        ...(option.key === "tips" ? guideMenuOption.value : {}),
+        icon: renderIcon(getImageMenuIcon(option.key), option.key === "delete"),
+      }]),
 );
 
 function openMenu(event: MouseEvent, id?: string): void {
@@ -241,6 +254,11 @@ function handleMenuSelect(key: string): void {
   }
   if (key === "guide" && anchor) emit("guide", "images", anchor, true);
   if (!id) return;
+  if (key.startsWith("move-ws:")) {
+    const workspaceId = key.slice("move-ws:".length);
+    if (props.moveTargets.some((target) => target.id === workspaceId)) emit("moveToWorkspace", id, workspaceId);
+    return;
+  }
   if (key === "pin-top") {
     const firstImageId = props.images[0]?.id;
     if (firstImageId && firstImageId !== id) emit("reorder", id, firstImageId);

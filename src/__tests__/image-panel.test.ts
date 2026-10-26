@@ -780,3 +780,26 @@ describe("ImagePanel", () => {
     wrapper.unmount();
   });
 });
+
+describe("image workspace menu", () => {
+  it("offers target spaces on images and emits the selected destination", async () => {
+    const wrapper = mountImagePanel([{ id: "a", createdAt: 1 }], {
+      moveTargets: [{ id: "target", title: "工作空间", lists: [] }],
+    });
+    await wrapper.get(".image-card").trigger("contextmenu");
+    expect(wrapper.get('[data-key="move-workspace"]').text()).toBe("移动到空间");
+    await wrapper.get('[data-key="move-ws:target"]').trigger("click");
+    expect(wrapper.emitted("moveToWorkspace")).toEqual([["a", "target"]]);
+    await wrapper.get(".image-list-scrollbar").trigger("contextmenu");
+    expect(wrapper.find('[data-key="move-workspace"]').exists()).toBe(false);
+    wrapper.unmount();
+  });
+  it("uses the English label and hides the menu without other spaces", async () => {
+    const wrapper = mountImagePanel([{ id: "a", createdAt: 1 }], { language: "en" });
+    await wrapper.get(".image-card").trigger("contextmenu");
+    expect(wrapper.find('[data-key="move-workspace"]').exists()).toBe(false);
+    await wrapper.setProps({ moveTargets: [{ id: "target", title: "Work", lists: [] }] });
+    expect(wrapper.get('[data-key="move-workspace"]').text()).toBe("Move to workspace");
+    wrapper.unmount();
+  });
+});
