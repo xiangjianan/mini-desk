@@ -2718,12 +2718,18 @@ function createTodo(period: TodoPeriod, afterId?: string): void {
  *  updateTodoNotify 的行为同步请求通知权限。 */
 function createTodosFromText(period: TodoPeriod, items: string[] | PolishTodoItem[], afterId?: string): void {
   if (!isConfiguredTodoListId(period)) return;
+  if (items.length === 0) return;
+  const workspace = activeWorkspace.value;
+  const list = workspace.todoLists.find((item) => item.id === period);
+  if (list) list.collapsed = false;
+  let firstCreatedId: string | undefined;
   let insertAfter: string | undefined = afterId;
   let anyNotify = false;
   items.forEach((item) => {
     const draft = typeof item === "string" ? { text: item } : item;
     const notifyAt = isValidNotifyAt(draft.notifyAt) ? draft.notifyAt : undefined;
     const id = createId();
+    firstCreatedId ??= id;
     activeWorkspace.value.todos = addTodoToMap(
       activeWorkspace.value.todos,
       period,
@@ -2741,6 +2747,10 @@ function createTodosFromText(period: TodoPeriod, items: string[] | PolishTodoIte
   persistNow();
   scheduleNextTodoNotification();
   if (anyNotify) void prepareTodoNotifications();
+  nextTick(() => {
+    if (activeWorkspace.value !== workspace || !firstCreatedId) return;
+    getTodoInput(period, firstCreatedId)?.scrollIntoView({ block: "nearest", inline: "nearest" });
+  });
 }
 
 function findOpenBlankTodo(): { period: TodoPeriod; id: string } | undefined {

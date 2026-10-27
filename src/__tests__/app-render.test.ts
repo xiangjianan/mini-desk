@@ -1066,11 +1066,17 @@ describe("App shell", () => {
     } finally { wrapper.unmount(); }
   });
 
-  it("creates and persists todos from TodoPanel external text events", async () => {
+  it("expands collapsed lists and reveals persisted pasted todos", async () => {
     const wrapper = mountApp();
 
     try {
-      wrapper.getComponent(TodoPanel).vm.$emit("createFromText", "morning", ["任务 A", "任务 B"]);
+      const panel = wrapper.getComponent(TodoPanel);
+      panel.vm.$emit("toggleListCollapsed", "morning", true);
+      await nextTick();
+      expect(wrapper.get('.todo-section[data-list-id="morning"]').classes()).toContain("is-collapsed");
+      const scroll = vi.spyOn(HTMLElement.prototype, "scrollIntoView");
+      scroll.mockClear();
+      panel.vm.$emit("createFromText", "morning", ["任务 A", "任务 B"]);
       await wrapper.vm.$nextTick();
 
       const renderedTexts = wrapper
@@ -1080,6 +1086,10 @@ describe("App shell", () => {
       const workspace = stored.workspaces[0];
 
       expect(renderedTexts).toEqual(["任务 A", "任务 B"]);
+      expect(wrapper.get('.todo-section[data-list-id="morning"]').classes()).not.toContain("is-collapsed");
+      expect(workspace.todoLists.find((list: { id: string }) => list.id === "morning").collapsed).toBe(false);
+      expect(scroll).toHaveBeenCalledWith({ block: "nearest", inline: "nearest" });
+      expect(scroll.mock.contexts).toContain(wrapper.findAll('[data-testid="todo-input-morning"]')[0].element);
       expect(workspace.todos.morning.map((todo: { text: string; done: boolean }) => ({
         text: todo.text,
         done: todo.done,
