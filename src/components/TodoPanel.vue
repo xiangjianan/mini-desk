@@ -134,6 +134,7 @@ const menu = ref<{
   target?: HTMLInputElement;
   selection?: { start: number; end: number; text: string; baseline: string };
   sectionActions?: boolean;
+  fromToolbar?: boolean;
   pasteAtCaret?: boolean;
 } | null>(null);
 const dragged = ref<DraggedTodo | null>(null);
@@ -342,7 +343,7 @@ const menuOptions = computed<DropdownOption[]>(() => {
   const options: DropdownOption[] = [];
   const todo = getMenuTodo();
   if (!menu.value?.id) {
-    options.push({ label: uiText.value.todo.newList, key: "create-list", icon: renderIcon(AddOutline) });
+    if (!menu.value?.fromToolbar) options.push({ label: uiText.value.todo.newList, key: "create-list", icon: renderIcon(AddOutline) });
     options.push({ label: uiText.value.todo.clearAllCompleted, key: "clear-all-completed", icon: renderIcon(CheckmarkDoneOutline) });
   }
   if (menu.value?.id) {
@@ -1151,7 +1152,7 @@ function openPanelMenu(event: MouseEvent, fromToolbar = false): void {
   exclusiveMenu.notifyOpen(event, { replacingExistingMenu: Boolean(menu.value) });
   // `period` only satisfies the menu shape — with no id/sectionActions the
   // rendered options are list-agnostic (new list / column limit / Tips).
-  menu.value = { x: event.clientX, y: event.clientY, period, anchor: event.currentTarget as HTMLElement };
+  menu.value = { x: event.clientX, y: event.clientY, period, anchor: event.currentTarget as HTMLElement, fromToolbar };
 }
 
 function openSectionActions(event: MouseEvent, period: TodoListId): void {

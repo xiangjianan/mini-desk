@@ -139,8 +139,7 @@ function mountQuickButtonsWithPersistentModal(options: Partial<InstanceType<type
 }
 
 async function openDialog(wrapper: ReturnType<typeof mountQuickButtons>) {
-  await wrapper.get(".quick-menu-button").trigger("click");
-  await wrapper.findAll(".dropdown-option").find((option) => option.text() === "新增")?.trigger("click");
+  await wrapper.findAll(".quick-tag-add-button")[0].trigger("click");
   await wrapper.vm.$nextTick();
 }
 
@@ -520,7 +519,7 @@ describe("QuickButtons", () => {
     wrapper.unmount();
   });
 
-  it("uses the same tag menu from the heading, blank content and more button", async () => {
+  it("omits add only from the list ellipsis while retaining context-menu actions", async () => {
     const wrapper = mountQuickButtons({
       tags: [{ id: "tag-work", title: "工作" }],
       buttons: [{ id: "b1", title: "Btn", value: "v", type: "link", tagId: "tag-work", hidden: false }],
@@ -531,7 +530,7 @@ describe("QuickButtons", () => {
     await wrapper.get(".quick-tag-group .quick-buttons").trigger("contextmenu");
     expect(labels()).toEqual(expected);
     await wrapper.get(".quick-tag-menu-button").trigger("click");
-    expect(labels()).toEqual(expected);
+    expect(labels()).toEqual(expected.filter(label => label !== "新增"));
     await wrapper.get(".quick-block").trigger("contextmenu");
     expect(labels()).not.toContain("删除列表");
     wrapper.unmount();
@@ -643,8 +642,7 @@ describe("QuickButtons", () => {
       tags: [{ id: "tag-a", title: "甲" }, { id: "tag-b", title: "乙" }],
     });
 
-    await wrapper.get(".quick-menu-button").trigger("click");
-    await wrapper.findAll(".dropdown-option").find((option) => option.text() === "新建列表")?.trigger("click");
+    await wrapper.get(".quick-add-button").trigger("click");
     await wrapper.vm.$nextTick();
 
     const rowInputs = wrapper.findAll(".quick-tag-manager-row .quick-tag-name-input");
@@ -1404,11 +1402,12 @@ describe("QuickButtons", () => {
     wrapper.unmount();
   });
 
-  it("offers tag management from the header and blank-area quick menus", async () => {
+  it("keeps list creation in the plus button and blank-area context menu", async () => {
     const headerWrapper = mountQuickButtons();
 
     await headerWrapper.get(".quick-menu-button").trigger("click");
-    expect(headerWrapper.findAll(".dropdown-option").map((option) => option.text())).toContain("新建列表");
+    expect(headerWrapper.findAll(".dropdown-option").map((option) => option.text())).not.toContain("新建列表");
+    expect(headerWrapper.find('[data-key="add"]').exists()).toBe(false);
     headerWrapper.unmount();
 
     const areaWrapper = mountQuickButtons();
@@ -1480,9 +1479,7 @@ describe("QuickButtons", () => {
     await wrapper.get(".quick-menu-button").trigger("click");
 
     expect(wrapper.findAll(".dropdown-option").map((option) => option.text())).toEqual([
-      "新增",
       "粘贴",
-      "新建列表",
       "查看隐藏",
       "切换为紧凑按钮",
       "Tips",
@@ -1498,9 +1495,7 @@ describe("QuickButtons", () => {
     await wrapper.setProps({ showHidden: true });
     await wrapper.get(".quick-menu-button").trigger("click");
     expect(wrapper.findAll(".dropdown-option").map((option) => option.text())).toEqual([
-      "新增",
       "粘贴",
-      "新建列表",
       "收起隐藏",
       "切换为紧凑按钮",
       "Tips",
@@ -1987,10 +1982,12 @@ describe("QuickButtons 跨空间移动", () => {
     await wrapper.get(".quick-tag-menu-button").trigger("click");
     const labels = () => wrapper.findAll(".dropdown-option").map(option => option.text());
     const expected = labels();
-    expect(expected).toContain("新建列表");
+    expect(expected).not.toContain("新建列表");
+    expect(expected).not.toContain("新增");
     expect(expected).not.toContain("删除列表");
     await wrapper.get(".quick-tag-title").trigger("contextmenu");
-    expect(labels()).toEqual(expected);
+    expect(labels().filter(label => !["新增", "新建列表"].includes(label))).toEqual(expected);
+    expect(labels()).toContain("新建列表");
     expect(wrapper.findAll('[data-key^="move-ws:"]')).toHaveLength(0);
     expect(wrapper.find('[data-key="move-tag"]').exists()).toBe(false);
     expect(wrapper.find('[data-key="add"]').exists()).toBe(true);
