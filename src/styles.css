@@ -3204,7 +3204,7 @@ button.todo-section-menu-button {
 }
 
 .settings-btn {
-  border-radius: 50%;
+  border-radius: 8px;
 }
 
 .settings-trigger {
@@ -3218,8 +3218,7 @@ button.todo-section-menu-button {
   min-width: 32px;
   height: 32px;
   min-height: 32px;
-  --n-border-radius: 50% !important;
-  border-radius: 50% !important;
+  border-radius: 8px;
 }
 
 .settings-btn.icon-button .n-icon,

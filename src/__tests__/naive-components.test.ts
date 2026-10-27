@@ -270,7 +270,7 @@ describe("Naive UI component usage", () => {
     expect(settings).not.toContain("settings-wrap");
     expect(quick).not.toContain(">+</NButton>");
     expect(todo).not.toContain("↘");
-    expect(styles).toMatch(/\.settings-btn\s*\{[^}]*border-radius: 50%/s);
+    expect(styles).toMatch(/\.settings-btn\s*\{[^}]*border-radius: 8px/s);
     expect(styles).toMatch(/\.workbench-command-actions\s*\{[^}]*gap: 8px/s);
   });
 
