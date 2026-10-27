@@ -803,3 +803,19 @@ describe("image workspace menu", () => {
     wrapper.unmount();
   });
 });
+
+ it.each(['ctrlKey', 'metaKey'])('sorts a focused image with %s across repeated moves', async (modifier) => {
+   const images = ['a', 'b', 'c'].map(id => ({ id, createdAt: 1 }));
+   const wrapper = mountImagePanel(images);
+   const card = wrapper.findAll('.image-card')[1];
+   await card.trigger('keydown', { key: 'ArrowUp', [modifier]: true });
+   expect(wrapper.emitted('reorder')).toEqual([['b', 'a']]);
+   await wrapper.setProps({ images: [images[1], images[0], images[2]] });
+   await card.trigger('keydown', { key: 'ArrowUp', [modifier]: true });
+   expect(wrapper.emitted('reorder')).toHaveLength(1);
+   await card.trigger('keydown', { key: 'ArrowDown', [modifier]: true });
+   expect(wrapper.emitted('reorder')!.at(-1)).toEqual(['b', 'a']);
+   await card.trigger('keydown', { key: 'ArrowDown' });
+   expect(wrapper.emitted('reorder')).toHaveLength(2);
+   wrapper.unmount();
+ });

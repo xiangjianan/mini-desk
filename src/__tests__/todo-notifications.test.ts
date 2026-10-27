@@ -5,6 +5,7 @@ import type { TodoItem } from "../types";
 
 const engines: ReturnType<typeof useTodoNotifications>[] = [];
 const delivered = vi.fn();
+let lastNotification: { onclick?: () => void; close: ReturnType<typeof vi.fn> };
 
 beforeEach(() => {
   vi.useFakeTimers();
@@ -12,7 +13,9 @@ beforeEach(() => {
   delivered.mockReset();
   vi.stubGlobal("Notification", class {
     static permission = "granted";
-    constructor(title: string, options?: NotificationOptions) { delivered(title, options); }
+    onclick?: () => void;
+    close = vi.fn();
+    constructor(title: string, options?: NotificationOptions) { delivered(title, options); lastNotification = this; }
   });
 });
 
@@ -46,6 +49,18 @@ function todo(id: string, notifyAt?: number): TodoItem {
 }
 
 describe("reminder refresh", () => {
+  it("focuses the originating page and closes the notification when clicked", () => {
+    vi.spyOn(document, "visibilityState", "get").mockReturnValue("hidden");
+    const focus = vi.spyOn(window, "focus").mockImplementation(() => {});
+    const { engine } = setup([todo("due", Date.now())]);
+    engine.refreshTodoNotifications();
+    expect(engine.notificationTitleFlashing()).toBe(true);
+    lastNotification.onclick!();
+    expect(focus).toHaveBeenCalledOnce();
+    expect(lastNotification.close).toHaveBeenCalledOnce();
+    expect(engine.notificationTitleFlashing()).toBe(false);
+  });
+
   it("walks the board once per refresh, even with thousands of ordinary todos", () => {
     const items = Array.from({ length: 10_000 }, (_, i) => todo(String(i)));
     items.push(todo("due", Date.now()), todo("future", Date.now() + 1000));

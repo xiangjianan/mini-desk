@@ -36,6 +36,27 @@ function fixture() {
 }
 
 describe("pointer sorting", () => {
+  it.each(['todo-item', 'todo-section', 'quick-button', 'quick-tag-group'])('keeps the initial grab point for %s', (kind) => {
+    const { root, source } = fixture();
+    const surface = document.createElement('section');
+    surface.className = kind;
+    source.before(surface); surface.append(source);
+    if (kind === 'todo-section') source.classList.add('todo-heading');
+    if (kind === 'quick-button' || kind === 'quick-tag-group') {
+      source.classList.add(kind);
+      surface.className = '';
+    }
+    const previewSource = kind.startsWith('quick') ? source : surface;
+    vi.spyOn(previewSource, 'getBoundingClientRect').mockReturnValue({ left: 10, top: 5, width: 120, height: 40 } as DOMRect);
+    pointer(source, 'pointerdown', 20);
+    pointer(window, 'pointermove', 35);
+    const preview = document.body.querySelector<HTMLElement>(':scope > [aria-hidden="true"]')!;
+    expect(preview.style.left).toBe('10px');
+    expect(preview.style.top).toBe('20px');
+    expect(preview.style.transform).toBe('none');
+    expect(root.contains(preview)).toBe(false);
+  });
+
   it("blocks selection only while dragging without rewriting the page style", () => {
     const { source } = fixture();
     pointer(source, "pointerdown", 20);
@@ -95,18 +116,19 @@ describe("pointer sorting", () => {
     window.dispatchEvent(new WheelEvent("wheel", { deltaY: 20 }));
     expect(root.scrollTop).toBe(160);
   });
-  it("centers the drag preview on the pointer and follows movement without lag", () => {
+  it("preserves the grab point from the initial position and follows movement without lag", () => {
     const { source } = fixture();
+    vi.spyOn(source, "getBoundingClientRect").mockReturnValue({ left: 10, top: 5, width: 100, height: 40 } as DOMRect);
     pointer(source, "pointerdown", 20);
     pointer(window, "pointermove", 35);
-    const preview = document.body.querySelector<HTMLElement>('[aria-hidden="true"]')!;
-    expect(preview.style.top).toBe("35px");
-    expect(preview.style.left).toBe("32px");
-    expect(preview.style.transform).toBe("translateY(-50%)");
+    const preview = document.body.querySelector<HTMLElement>(':scope > [aria-hidden="true"]')!;
+    expect(preview.style.top).toBe("20px");
+    expect(preview.style.left).toBe("10px");
+    expect(preview.style.transform).toBe("none");
     expect(preview.style.transition).toBe("none");
     expect(preview.style.animation).toBe("none");
     pointer(window, "pointermove", 75);
-    expect(preview.style.top).toBe("75px");
+    expect(preview.style.top).toBe("60px");
     pointer(window, "pointerup", 75);
     expect(preview.isConnected).toBe(false);
   });

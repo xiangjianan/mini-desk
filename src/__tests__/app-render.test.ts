@@ -4739,6 +4739,25 @@ describe("App shell", () => {
     }
   });
 
+  it.each(["ctrlKey", "metaKey"])("reorders the selected preview image with %s without switching images", async (modifier) => {
+    localStorage.setItem(STORAGE_KEY, JSON.stringify({ images: [
+      { id: "img-1", src: "data:image/png;base64,one", createdAt: 1 },
+      { id: "img-2", src: "data:image/png;base64,two", createdAt: 2 },
+    ] }));
+    const wrapper = mountApp();
+    try {
+      await wrapper.get(".image-card").trigger("click");
+      window.dispatchEvent(new KeyboardEvent("keydown", { key: "ArrowDown", [modifier]: true }));
+      await nextTick();
+      expect(wrapper.getComponent(ImagePanel).props("images").map((image: { id: string }) => image.id)).toEqual(["img-2", "img-1"]);
+      expect(wrapper.getComponent(ImagePanel).props("activePreviewId")).toBe("img-1");
+      window.dispatchEvent(new KeyboardEvent("keydown", { key: "ArrowUp", [modifier]: true }));
+      await nextTick();
+      expect(wrapper.getComponent(ImagePanel).props("images").map((image: { id: string }) => image.id)).toEqual(["img-1", "img-2"]);
+      expect(wrapper.getComponent(ImagePanel).props("activePreviewId")).toBe("img-1");
+    } finally { wrapper.unmount(); }
+  });
+
   it("switches image preview with vertical, horizontal, and WASD keys", async () => {
     localStorage.setItem(
       STORAGE_KEY,
@@ -8248,6 +8267,12 @@ describe("App shell", () => {
       await wrapper.vm.$nextTick();
 
       expect(wrapper.find('[data-testid="companion-confirm"]').text().trim().length).toBeGreaterThan(0);
+      const message = wrapper.getComponent(CompanionBubble).props("message");
+      await wrapper.get(".image-panel .panel-header").trigger("click");
+      await wrapper.get("textarea").trigger("focus");
+      expect(wrapper.getComponent(CompanionBubble).props("message")).toBe(message);
+      expect(wrapper.getComponent(CompanionBubble).props("visible")).toBe(true);
+
     } finally {
       wrapper.unmount();
       vi.useRealTimers();
@@ -8768,7 +8793,7 @@ describe("App shell", () => {
     wrapper.unmount();
   });
 
-  it("hides the current bubble when focus switches, moves the GIF, and clears focus on Escape", async () => {
+  it("keeps save feedback when focus switches and clears it on Escape", async () => {
     vi.useFakeTimers();
     localStorage.setItem(
       STORAGE_KEY,
@@ -8817,14 +8842,14 @@ describe("App shell", () => {
       wrapper.getComponent(SpacePanel).vm.$emit("focus", "workspace", workspacePanel.element as HTMLElement);
       await wrapper.vm.$nextTick();
 
-      expect(wrapper.find('[data-testid="companion-confirm"]').exists()).toBe(false);
+      expect(wrapper.find('[data-testid="companion-confirm"]').exists()).toBe(true);
       // 焦点切走后伴宠不再锚到新区域右下角，统一回屏幕右下角（无内联定位）。
       expect(wrapper.get('[data-testid="companion-bubble"]').attributes("style")).toBeUndefined();
       expect(wrapper.find(".focus-companion.is-visible").exists()).toBe(true);
 
       await vi.advanceTimersByTimeAsync(260);
       await wrapper.vm.$nextTick();
-      expect(wrapper.find('[data-testid="companion-confirm"]').exists()).toBe(false);
+      expect(wrapper.find('[data-testid="companion-confirm"]').exists()).toBe(true);
 
       window.dispatchEvent(new KeyboardEvent("keydown", { key: "Escape" }));
       await wrapper.vm.$nextTick();

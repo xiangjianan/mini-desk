@@ -1206,6 +1206,7 @@ function syncLegacySpaceLines(): void {
 
 
 function showCompanion(guideKey?: GuideKey): void {
+  if (bubbleVisible.value && bubbleMessage.value && !activeGuideKey.value) return;
   hideBubbleMessage({ clearRetainedContent: true });
   companionPosition.value = getToastPosition();
   activeGuideKey.value = guideKey ?? null;
@@ -1226,6 +1227,7 @@ function handleGuideClick(key: GuideKey, anchor?: HTMLElement, immediate = false
 }
 
 function showAreaGuide(key: GuideKey, anchor?: HTMLElement): void {
+  if (bubbleVisible.value && bubbleMessage.value && !activeGuideKey.value) return;
   if (activeGuideKey.value === key && bubbleVisible.value && Boolean(bubbleMessage.value)) {
     companionPosition.value = getToastPosition();
     return;
@@ -3233,6 +3235,15 @@ function handleGlobalKeydown(event: KeyboardEvent): void {
     // 退格、复制选中文字都必须保持原生行为，与 shouldSkipGlobalUndo 的
     // 豁免口径一致。
     if (isTextEntryTarget(event.target)) return;
+    if ((event.ctrlKey || event.metaKey) && !event.altKey && !event.shiftKey
+      && (event.key === "ArrowUp" || event.key === "ArrowDown")) {
+      event.preventDefault();
+      const images = activeWorkspace.value.images;
+      const index = images.findIndex((image) => image.id === previewId);
+      const target = images[index + (event.key === "ArrowUp" ? -1 : 1)];
+      if (target) reorderImages(previewId, target.id);
+      return;
+    }
     const key = event.key.toLowerCase();
     if ((event.ctrlKey || event.metaKey) && key === "c") {
       event.preventDefault();

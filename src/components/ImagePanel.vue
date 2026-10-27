@@ -280,6 +280,22 @@ function handleGuideClick(event: MouseEvent): void {
   emit("guide", "images", event.currentTarget as HTMLElement);
 }
 
+async function handleCardSortKey(event: KeyboardEvent, id: string): Promise<void> {
+  if (event.isComposing || !(event.ctrlKey || event.metaKey) || event.altKey || event.shiftKey) return;
+  const direction = event.key === "ArrowUp" ? -1 : event.key === "ArrowDown" ? 1 : 0;
+  if (!direction) return;
+  event.preventDefault();
+  event.stopPropagation();
+  const index = props.images.findIndex((image) => image.id === id);
+  const target = props.images[index + direction];
+  if (index < 0 || !target) return;
+  emit("reorder", id, target.id);
+  await nextTick();
+  const card = imageCardRefs.get(id);
+  card?.focus({ preventScroll: true });
+  card?.scrollIntoView?.({ block: "nearest", inline: "nearest" });
+}
+
 /** 卡片 Enter：默认打开编辑；canEdit=false 时重映射为预览，键盘用户仍有可用操作。 */
 function handleCardEnter(id: string): void {
   if (props.canEdit) {
@@ -647,6 +663,7 @@ function handleImageDragWheel(event: WheelEvent): void {
         }"
         type="button"
         @click="handleImageCardClick($event, image.id)"
+        @keydown="handleCardSortKey($event, image.id)"
         @keydown.enter.stop.prevent="handleCardEnter(image.id)"
         @dblclick.stop.prevent="emit('copy', image.id)"
         @contextmenu.stop="openMenu($event, image.id)"

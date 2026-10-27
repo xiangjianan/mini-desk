@@ -117,7 +117,12 @@ export function useTodoNotifications(state: BoardState, deps: TodoNotificationDe
     const icon = getReminderNotificationIcon();
     if (icon) options.icon = icon;
     try {
-      new notificationApi(title, options);
+      const notification = new notificationApi(title, options);
+      notification.onclick = () => {
+        window.focus();
+        handleNotificationReturn();
+        notification.close();
+      };
       return true;
     } catch (error) {
       console.warn("Failed to show reminder notification", error);

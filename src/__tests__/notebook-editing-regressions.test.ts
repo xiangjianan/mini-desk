@@ -19,6 +19,20 @@ function panel(lines: LineItem[]) {
 }
 
 describe('notebook editing audit regressions', () => {
+  it.each(['unchanged', '3. first\n8. second'])('does not emit an update when an unchanged editor loses focus: %s', async (text) => {
+    const wrapper = panel([{ text, indent: 0, marks: [mark(0, 3)] }]);
+    const field = wrapper.get('textarea');
+    await field.trigger('click');
+    await field.trigger('focus');
+    await field.trigger('blur');
+    expect(wrapper.emitted('update')).toBeUndefined();
+    await field.trigger('click');
+    await field.setValue('changed');
+    await field.trigger('blur');
+    expect(wrapper.emitted('update')!.at(-1)![0]).toEqual(expect.arrayContaining([expect.objectContaining({ text: 'changed' })]));
+    wrapper.unmount();
+  });
+
   it.each(['', '- ', '1. '])('preserves highlighting when Enter splits %s before the highlighted text', async (prefix) => {
     const content = `${prefix}before highlight`;
     const start = content.indexOf('highlight');

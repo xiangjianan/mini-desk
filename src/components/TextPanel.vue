@@ -323,8 +323,11 @@ const textPanelClasses = computed(() => ({
 function update(): void {
   if (!editing.value) return;
   const textarea = textareaRef.value;
+  const previous = editorStateFromLines(props.lines);
+  if ((textarea?.value ?? text.value) === previous.text && isSameMarks(previous.marks, editorMarks.value)) return;
   if (textarea) normalizeTextareaText(textarea);
   else commitEditorText(text.value);
+  if (previous.text === text.value && isSameMarks(previous.marks, editorMarks.value)) return;
   emit("update", linesFromEditorState(text.value, editorMarks.value));
 }
 

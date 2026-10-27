@@ -12,6 +12,7 @@ export function installPointerSort(root: HTMLElement, selector: string, pauseAut
   let target: Element | null = null;
   let started = false;
   let x = 0, y = 0, startX = 0, startY = 0, pointerId = 0;
+  let offsetX = 0, offsetY = 0;
   let suppressClick = false;
   let clickTimer: number | undefined;
 
@@ -50,6 +51,10 @@ export function installPointerSort(root: HTMLElement, selector: string, pauseAut
     suppressClick = false;
     source = candidate; pointerId = event.pointerId;
     startX = x = event.clientX; startY = y = event.clientY;
+    const surface = candidate.closest<HTMLElement>(".todo-item")
+      ?? (candidate.matches(".todo-heading") ? candidate.closest<HTMLElement>(".todo-section") : null) ?? candidate;
+    const rect = surface.getBoundingClientRect();
+    offsetX = startX - rect.left; offsetY = startY - rect.top;
     // Prevent the browser from initiating native drag or selecting heading text.
     event.preventDefault();
   }
@@ -67,7 +72,7 @@ export function installPointerSort(root: HTMLElement, selector: string, pauseAut
       preview = element.cloneNode(true) as HTMLElement;
       preview.setAttribute("aria-hidden", "true");
       preview.inert = true;
-      preview.style.cssText = `position:fixed;z-index:11000;pointer-events:none;width:${rect.width}px;max-height:180px;overflow:hidden;opacity:0.8;margin:0;transform:translateY(-50%);transition:none;animation:none;`;
+      preview.style.cssText = `position:fixed;z-index:11000;pointer-events:none;width:${rect.width}px;max-height:180px;overflow:hidden;opacity:0.8;margin:0;transform:none;transition:none;animation:none;`;
       if (source.matches(".todo-heading")) preview.style.maxHeight = "none";
       document.body.appendChild(preview);
       const surface = source.closest<HTMLElement>(".todo-item, .todo-section, .quick-button, .quick-tag-group, .space-tab, .workspace-switcher-item");
@@ -77,7 +82,7 @@ export function installPointerSort(root: HTMLElement, selector: string, pauseAut
       }
     }
     event.preventDefault();
-    if (preview) { preview.style.left = `${x + 12}px`; preview.style.top = `${y}px`; }
+    if (preview) { preview.style.left = `${x - offsetX}px`; preview.style.top = `${y - offsetY}px`; }
     updateTarget();
   }
   function up(event: PointerEvent): void {

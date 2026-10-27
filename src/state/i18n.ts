@@ -1374,6 +1374,7 @@ export const SHORTCUT_HELP: Record<AppLanguage, ShortcutHelpSection[]> = {
       "预览支持拖动平移；大图不用反复开新窗口。",
     ], shortcuts: [
       { key: "Ctrl + V / 拖拽图片", desc: "粘贴或导入图片" },
+      { key: "Ctrl/⌘ + ↑/↓", desc: "上移 / 下移选中图片" },
       { key: "上下按钮", desc: "切换图片" },
       { key: "拖动预览图", desc: "平移图片" },
       { key: "W/A / ↑/←", desc: "上一张图片" },
@@ -1435,6 +1436,7 @@ export const SHORTCUT_HELP: Record<AppLanguage, ShortcutHelpSection[]> = {
       "Drag in preview to pan large images without opening another window.",
     ], shortcuts: [
       { key: "Ctrl + V / Drag image", desc: "Paste or import image" },
+      { key: "Ctrl/⌘ + ↑/↓", desc: "Move selected image up / down" },
       { key: "Stacked buttons", desc: "Switch preview image" },
       { key: "Drag preview", desc: "Pan image" },
       { key: "W/A / ↑/←", desc: "Previous image" },
