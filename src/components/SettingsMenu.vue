@@ -315,16 +315,15 @@ function getCompanionGifThemeLabel(theme: CompanionGifTheme): string {
   >
     <span ref="triggerRef" class="settings-trigger">
       <NBadge :show="updateAvailable && !menuOpen" dot>
-        <NButton
+        <button
+          type="button"
           class="settings-btn icon-button"
-          quaternary
-          size="small"
           :aria-label="text.settings.button"
           :data-update-available="updateAvailable && !menuOpen ? 'true' : undefined"
           @click="emit('guide', 'settings', $event.currentTarget as HTMLElement)"
         >
           <NIcon :component="SettingsOutline" />
-        </NButton>
+        </button>
       </NBadge>
     </span>
   </NDropdown>
