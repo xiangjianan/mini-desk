@@ -1017,7 +1017,7 @@ html[data-theme="dark"] .workbench-shell .space-text-panel {
 }
 
 .workbench-shell .todo-add-row {
-  border: 1px dashed var(--line-control);
+  border: 1px dashed color-mix(in srgb, var(--line-control) 80%, transparent);
   color: var(--desk-zone-accent);
 }
 
