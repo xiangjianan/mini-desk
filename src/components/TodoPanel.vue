@@ -1673,11 +1673,6 @@ async function copyTodoText(period: TodoPeriod, id: string): Promise<void> {
   await copyTextToClipboard(text);
 }
 
-function pasteTodosFromHeader(): void {
-  const list = effectiveTodoLists.value.find(list => list.id === focusedListId.value) ?? effectiveTodoLists.value[0];
-  if (list) void pasteTodosFromClipboard(list.id);
-}
-
 async function pasteTodosFromClipboard(period: TodoPeriod): Promise<void> {
   const probe = await probeClipboardForTextPaste();
   if (probe.kind !== "text") {
@@ -1937,9 +1932,6 @@ onUnmounted(() => focusRegionAnimation?.cancel());
     <div class="panel-header desk-zone-heading">
       <h2 id="todo-title"><NIcon :component="CheckboxOutline" /><span>{{ uiText.desk.reminders }}</span></h2>
       <div class="header-actions">
-        <button type="button" class="todo-area-paste-button icon-button"
-          :aria-label="uiText.common.paste" :title="uiText.common.paste" :disabled="!effectiveTodoLists.length"
-          @mousedown.prevent @click.stop="pasteTodosFromHeader"><NIcon :component="ClipboardOutline" /></button>
         <button type="button" class="icon-button" data-testid="todo-area-add" :aria-label="uiText.todo.newList" :title="uiText.todo.newList"
           @click.stop="openCreateListDialog($event.currentTarget as HTMLElement)"><NIcon :component="AddOutline" /></button>
         <button type="button" class="icon-button" data-testid="todo-area-menu" :aria-label="uiText.todo.menu" :title="uiText.todo.menu"

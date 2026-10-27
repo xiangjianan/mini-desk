@@ -853,11 +853,6 @@ function handleQuickGroupDrop(event: DragEvent, groupId: string): void {
         <span>{{ getIconHeadingText(title, 'quick') }}</span>
       </h2>
       <div class="header-actions">
-        <button type="button" class="quick-paste-button icon-button"
-          :aria-label="uiText.common.paste" :title="uiText.common.paste"
-          @click.stop="pasteQuick('')">
-          <NIcon :component="ClipboardOutline" />
-        </button>
         <button type="button" class="quick-add-button icon-button"
           :aria-label="uiText.quick.newList" :title="uiText.quick.newList"
           @click.stop="listCreateDialog?.open($event.currentTarget as HTMLElement)">
