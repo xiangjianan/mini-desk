@@ -1497,7 +1497,6 @@ describe("QuickButtons", () => {
     await wrapper.get(".quick-menu-button").trigger("click");
 
     expect(wrapper.findAll(".dropdown-option").map((option) => option.text())).toEqual([
-      "粘贴",
       "查看隐藏",
       "切换为紧凑按钮",
       "Tips",
@@ -1513,7 +1512,6 @@ describe("QuickButtons", () => {
     await wrapper.setProps({ showHidden: true });
     await wrapper.get(".quick-menu-button").trigger("click");
     expect(wrapper.findAll(".dropdown-option").map((option) => option.text())).toEqual([
-      "粘贴",
       "收起隐藏",
       "切换为紧凑按钮",
       "Tips",
@@ -1750,10 +1748,16 @@ describe("QuickButtons", () => {
     expect(wrapper.emitted("polishMessage")?.map((call) => call[0])).toEqual(["working", "done"]);
   });
 
-  it("顶部加号文案为新建列表且没有顶部粘贴入口", () => {
-    const wrapper = mountQuickButtons({ polish: vi.fn() });
+  it("顶部菜单不提供粘贴，列表菜单保留普通和智能粘贴", async () => {
+    const wrapper = mountQuickButtons({ polish: vi.fn(), tags: [{ id: "work", title: "工作" }] });
     expect(wrapper.find(".header-actions .desk-ai-button").exists()).toBe(false);
     expect(wrapper.get(".quick-add-button").attributes("aria-label")).toBe("新建列表");
+    await wrapper.get(".quick-menu-button").trigger("click");
+    expect(wrapper.find('.dropdown-option[data-key="paste"]').exists()).toBe(false);
+    expect(wrapper.find('.dropdown-option[data-key="smart-paste"]').exists()).toBe(false);
+    await wrapper.get(".quick-tag-menu-button").trigger("click");
+    expect(wrapper.find('.dropdown-option[data-key="paste"]').exists()).toBe(true);
+    expect(wrapper.find('.dropdown-option[data-key="smart-paste"]').exists()).toBe(true);
     wrapper.unmount();
   });
 

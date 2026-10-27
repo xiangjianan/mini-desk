@@ -302,7 +302,10 @@ const menuOptions = computed<DropdownOption[]>(() => {
   }
   const button = props.buttons.find((item) => item.id === menu.value?.id);
   if (!menu.value?.id) return menu.value?.fromToolbar
-    ? areaMenuOptions.value.filter(option => !["add", "create-list"].includes(String(option.key)))
+    ? areaMenuOptions.value.filter(option => ![
+      "add", "create-list",
+      ...(menu.value?.anchor?.classList.contains("quick-menu-button") ? ["paste", "smart-paste"] : []),
+    ].includes(String(option.key)))
     : areaMenuOptions.value;
 
   return [
