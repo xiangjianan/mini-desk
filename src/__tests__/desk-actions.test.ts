@@ -71,20 +71,16 @@ describe("ordinary header paste actions", () => {
     await flushPromises();
     expect(wrapper.emitted("createFromText")).toEqual([["noon", ["First raw line", "Second raw line"]]]);
     expect(wrapper.emitted("create")).toBeUndefined();
-    await wrapper.get('.panel-header .todo-area-paste-button').trigger("click");
-    await flushPromises();
-    expect(wrapper.emitted("createFromText")?.at(-1)).toEqual(["morning", ["First raw line", "Second raw line"]]);
+    expect(wrapper.find('.panel-header .todo-area-paste-button').exists()).toBe(false);
   });
 
-  it("creates ordinary quick actions in the header or tag destination", async () => {
+  it("keeps ordinary quick list paste without an area-header paste button", async () => {
     setClipboard("https://example.com/path");
     const wrapper = mount(QuickButtons, { props: {
       title: "Actions", buttons: [{ id: "existing", title: "Existing", type: "text", value: "Keep", hidden: false, tagId: "work" }], tags: [{ id: "work", title: "Work" }], showHidden: false,
     }});
     wrappers.push(wrapper);
-    await wrapper.get('.panel-header .quick-paste-button').trigger("click");
-    await flushPromises();
-    expect(wrapper.emitted("save")?.at(-1)?.[0]).toMatchObject({ type: "link", value: "https://example.com/path", tagTitle: "" });
+    expect(wrapper.find('.panel-header .quick-paste-button').exists()).toBe(false);
     await wrapper.get('[data-tag-id="work"] .quick-tag-paste-button').trigger("click");
     await flushPromises();
     expect(wrapper.emitted("save")?.at(-1)?.[0]).toMatchObject({ type: "link", value: "https://example.com/path", tagTitle: "Work" });
