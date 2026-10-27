@@ -27,7 +27,7 @@ import {
   ArrowLeftRight as SwapHorizontalOutline,
   Timer as TimerOutline,
   Trash2 as TrashOutline,
-  Ellipsis,
+  EllipsisVertical,
 } from "lucide-vue-next";
 import { NDatePicker, NIcon } from "naive-ui";
 import type { DropdownOption } from "naive-ui";
@@ -2057,7 +2057,7 @@ onUnmounted(() => focusRegionAnimation?.cancel());
         <button type="button" class="icon-button" data-testid="todo-area-add" :aria-label="uiText.todo.newList" :title="uiText.todo.newList"
           @click.stop="openCreateListDialog($event.currentTarget as HTMLElement)"><NIcon :component="AddOutline" /></button>
         <button type="button" class="icon-button" data-testid="todo-area-menu" :aria-label="uiText.todo.menu" :title="uiText.todo.menu"
-          @click.stop="openPanelMenu($event, true)"><NIcon :component="Ellipsis" /></button>
+          @click.stop="openPanelMenu($event, true)"><NIcon :component="EllipsisVertical" /></button>
       </div>
     </div>
     <div class="todo-content-scroll" :class="{ 'is-multi-column': columnCount > 1 }">
@@ -2256,7 +2256,7 @@ onUnmounted(() => focusRegionAnimation?.cancel());
               :title="uiText.todo.menu"
               @click="openSectionActions($event, list.id)"
             >
-              <NIcon :component="Ellipsis" />
+              <NIcon :component="EllipsisVertical" />
             </button>
           </div>
         </div>

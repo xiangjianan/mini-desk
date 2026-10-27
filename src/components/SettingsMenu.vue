@@ -13,7 +13,7 @@ import {
   KeyRound as KeyOutline,
   Smartphone as PhonePortraitOutline,
   Database as ServerOutline,
-  EllipsisVertical,
+  Settings as SettingsOutline,
   Sun,
   Moon,
   LayoutGrid as GridOutline,
@@ -323,7 +323,7 @@ function getCompanionGifThemeLabel(theme: CompanionGifTheme): string {
           :data-update-available="updateAvailable && !menuOpen ? 'true' : undefined"
           @click="emit('guide', 'settings', $event.currentTarget as HTMLElement)"
         >
-          <NIcon :component="EllipsisVertical" />
+          <NIcon :component="SettingsOutline" />
         </NButton>
       </NBadge>
     </span>

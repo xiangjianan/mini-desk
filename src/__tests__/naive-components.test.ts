@@ -264,7 +264,7 @@ describe("Naive UI component usage", () => {
     expect(todo).toContain("TrashOutline");
     expect(settings).toContain("NIcon");
     expect(settings).toContain("NBadge");
-    expect(settings).toContain(':component="EllipsisVertical"');
+    expect(settings).toContain("SettingsOutline");
     expect(settings).not.toContain("⚙");
     expect(settings).not.toMatch(/<NButton[^>]*\bcircle(?:\s|=|>)/s);
     expect(settings).not.toContain("settings-wrap");

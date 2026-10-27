@@ -25,7 +25,7 @@ import {
   Maximize2 as ResizeOutline,
   ArrowLeftRight as SwapHorizontalOutline,
   Trash2 as TrashOutline,
-  Ellipsis,
+  EllipsisVertical,
 } from "lucide-vue-next";
 import type { DropdownOption } from "naive-ui";
 import type { AppLanguage, GuideKey, QuickApiBodyType, QuickApiHeader, QuickApiMethod, QuickButton, QuickButtonType, QuickTag, WorkspaceMoveTarget } from "../types";
@@ -904,7 +904,7 @@ function handleQuickGroupDrop(event: DragEvent, groupId: string): void {
           :title="uiText.quick.menu"
           @click="openHeaderMenu"
         >
-          <NIcon :component="Ellipsis" />
+          <NIcon :component="EllipsisVertical" />
         </button>
       </div>
     </div>
@@ -1005,7 +1005,7 @@ function handleQuickGroupDrop(event: DragEvent, groupId: string): void {
               @click.stop="isRealTagGroup(group.id) ? openTagMenu($event, group.id, true) : openHeaderMenu($event)"
               @dblclick.stop
             >
-              <NIcon :component="Ellipsis" />
+              <NIcon :component="EllipsisVertical" />
             </button>
           </div>
           <div
