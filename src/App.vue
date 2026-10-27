@@ -38,6 +38,7 @@ import {
   getUiText,
   normalizeLanguage,
 } from "./state/i18n";
+import { findTodoListByTitle } from "./state/todoListNames";
 import {
   TODO_DENSITY_THRESHOLD,
   addTodo as addTodoToMap,
@@ -847,7 +848,7 @@ function moveTodoListAcrossWorkspaces(listId: TodoListId, workspaceId: string): 
     showBubbleText(uiText.value.app.keepOneTodoList);
     return;
   }
-  applyWorkspaceMove(workspaceMover.moveTodoListToWorkspace(state.workspaces, state.activeWorkspaceId, listId, workspaceId));
+  applyWorkspaceMove(workspaceMover.moveTodoListToWorkspace(state.workspaces, state.activeWorkspaceId, listId, workspaceId, state.language));
 }
 
 // TodoPeriod ≡ TodoListId：period 即该提醒所属源列表的键，位置上直接转发。
@@ -2559,6 +2560,10 @@ function formatQuickApiResponseBody(value: string): string {
 function createTodoList(anchor?: HTMLElement, title?: string): void {
   const trimmedTitle = limitTitle(title ?? "");
   if (!trimmedTitle) return;
+  if (findTodoListByTitle(activeWorkspace.value.todoLists, trimmedTitle, state.language)) {
+    showBubbleText(uiText.value.todo.duplicateList, anchor);
+    return;
+  }
   const id = createId();
   activeWorkspace.value.todoLists.push({ id, title: trimmedTitle, collapsed: false, compact: false, column: 0 });
   activeWorkspace.value.todos[id] = [];
@@ -2571,7 +2576,12 @@ function createTodoList(anchor?: HTMLElement, title?: string): void {
 function updateTodoListTitle(listId: TodoListId, title: string): void {
   const list = activeWorkspace.value.todoLists.find((item) => item.id === listId);
   if (!list) return;
-  list.title = getStoredTodoListTitle(listId, limitTitle(title)) || uiText.value.app.unnamedList;
+  const nextTitle = getStoredTodoListTitle(listId, limitTitle(title)) || uiText.value.app.unnamedList;
+  if (findTodoListByTitle(activeWorkspace.value.todoLists, getDisplayTodoListTitle({ ...list, title: nextTitle }, state.language), state.language, listId)) {
+    showBubbleText(uiText.value.todo.duplicateList);
+    return;
+  }
+  list.title = nextTitle;
   if (pendingEditTodoListId.value === listId) pendingEditTodoListId.value = null;
   persistNow();
 }

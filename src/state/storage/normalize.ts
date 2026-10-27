@@ -1,3 +1,4 @@
+import { mergeDuplicateTodoLists } from "../todoListNames";
 import { normalizeZoneWidthRatios } from "../layoutPrefs";
 import { normalizeTodoColumnLayouts, normalizeTodoMaxColumns } from "../columns";
 import { DEFAULT_SPACE_ID, DEFAULT_SPACE_TITLE, DEFAULT_TODO_LISTS, DEFAULT_WORKSPACE_ID, defaultWorkspace } from "../defaults";
@@ -84,7 +85,7 @@ export function normalizeWorkspaceData(item: unknown, language: AppLanguage = DE
   const quickTags = normalizeQuickTags(typed.quickTags);
   const id = typeof typed.id === "string" && typed.id.trim() ? typed.id.trim() : createId();
   const createdAt = typeof typed.createdAt === "number" && Number.isFinite(typed.createdAt) ? typed.createdAt : 0;
-  return {
+  return mergeDuplicateTodoLists({
     id,
     createdAt,
     customTitles,
@@ -110,7 +111,7 @@ export function normalizeWorkspaceData(item: unknown, language: AppLanguage = DE
     todos: normalizeTodos(typed.todos, todoLists),
     zoneVisibility: normalizeZoneVisibility(typed.zoneVisibility ?? fallbackVisibility),
     inbox: normalizeWorkspaceInbox(typed.inbox, todoLists, spaces),
-  };
+  }, language);
 }
 
 export function normalizeWorkspaceInbox(value: unknown, todoLists: TodoListConfig[], spaces: WorkspaceSpace[]): WorkspaceInbox | undefined {

@@ -101,19 +101,17 @@ export function buildVisibleQuickButtonGroups(
     }];
   });
 
-  if (otherButtons.length > 0) {
+  if (otherButtons.length > 0 || groups.length === 0) {
     groups.push({
       id: QUICK_BUTTON_OTHER_GROUP_ID,
       title: otherTitle,
       buttons: otherButtons,
       reorderable: false,
-      collapsed: otherCollapsed,
+      collapsed: otherButtons.length > 0 && otherCollapsed,
     });
   }
 
-  return groups.length > 0
-    ? groups
-    : [{ id: QUICK_BUTTON_EMPTY_GROUP_ID, title: "", buttons: [], reorderable: false, collapsed: false }];
+  return groups;
 }
 
 export function hasOverloadedVisibleQuickButtonGroup(

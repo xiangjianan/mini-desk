@@ -1,6 +1,8 @@
+import { getDisplayTodoListTitle } from "./i18n";
+import { mergeDuplicateTodoLists } from "./todoListNames";
 import { createId } from "./storage";
 import { addTodo as addTodoToMap, removeTodo as removeTodoFromMap } from "./todos";
-import type { QuickButton, QuickTag, TodoItem, TodoListId, TodoMap, WorkspaceData } from "../types";
+import type { AppLanguage, QuickButton, QuickTag, TodoItem, TodoListId, TodoMap, WorkspaceData } from "../types";
 
 /**
  * 跨工作空间移动：快捷按钮/标签、提醒列表/单条提醒、便签 Tab 页。
@@ -123,13 +125,14 @@ export function moveQuickTagToWorkspace(
  * `column` 保留原值（展示端会按目标列数收敛）。源只剩一个列表时拒绝——
  * 每个空间至少保留一个列表。目标已有同 id 列表时重新生成列表 id，
  * 并同步迁移 todos/showCompletedTodos 的键，避免覆盖目标自身数据。
- * 默认空间的 morning/noon/evening 列表 id 天然互撞，重生成是预期路径而非异常。
+ * 同名列表合入目标已有列表；默认列表在 ID 变化前保存其当前显示名称。
  */
 export function moveTodoListToWorkspace(
   workspaces: WorkspaceData[],
   fromWorkspaceId: string,
   listId: TodoListId,
   toWorkspaceId: string,
+  language: AppLanguage = "zh",
 ): WorkspaceData[] {
   return transferWorkspaceItem(workspaces, fromWorkspaceId, toWorkspaceId, (from, to) => {
     if (from.todoLists.length <= 1) return null;
@@ -147,14 +150,14 @@ export function moveTodoListToWorkspace(
         todos: restTodos as TodoMap,
         showCompletedTodos: restVisibility,
       },
-      to: {
+      to: mergeDuplicateTodoLists({
         ...to,
-        todoLists: [...to.todoLists, { ...list, id: movedListId }],
+        todoLists: [...to.todoLists, { ...list, id: movedListId, title: getDisplayTodoListTitle(list, language) }],
         todos: { ...to.todos, [movedListId]: movedTodos.map((todo) => ({ ...todo })) },
         showCompletedTodos: movedVisibility === undefined
           ? to.showCompletedTodos
           : { ...to.showCompletedTodos, [movedListId]: movedVisibility },
-      },
+      }, language),
     };
   });
 }

@@ -414,7 +414,7 @@ describe("QuickButtons", () => {
       ],
     });
 
-    expect(wrapper.findAll(".quick-tag-title").map((item) => item.text())).toEqual(["标签 A", "标签 B", "无标签"]);
+    expect(wrapper.findAll(".quick-tag-title").map((item) => item.text())).toEqual(["标签 A", "标签 B", "常用"]);
     expect(wrapper.findAll(".quick-tag-group").map((group) => group.findAll(".quick-button-label").map((button) => button.text()))).toEqual([
       ["A1"],
       ["B1"],
@@ -453,7 +453,7 @@ describe("QuickButtons", () => {
 
     // 其他组的加号：无标签预选，落进其他分组而不是新建同名标签。
     await wrapper.findAll(".quick-tag-add-button")[1].trigger("click");
-    expect(wrapper.findAll(".quick-tag-choice").find((choice) => choice.text() === "无标签")?.attributes("aria-pressed")).toBe("true");
+    expect(wrapper.findAll(".quick-tag-choice").find((choice) => choice.text() === "常用")?.attributes("aria-pressed")).toBe("true");
     wrapper.unmount();
   });
 
@@ -495,7 +495,7 @@ describe("QuickButtons", () => {
       otherCollapsed: true,
     });
 
-    expect(wrapper.get(".quick-tag-title").text()).toBe("无标签");
+    expect(wrapper.get(".quick-tag-title").text()).toBe("常用");
     expect(wrapper.get(".quick-tag-content").classes()).toContain("is-collapsed");
     expect(wrapper.get(".quick-tag-content").attributes("aria-hidden")).toBe("true");
     expect(wrapper.get(".quick-tag-collapse-button").attributes("aria-expanded")).toBe("false");
@@ -707,7 +707,7 @@ describe("QuickButtons", () => {
 
     await openDialog(wrapper);
     expect(wrapper.find(".quick-tag-select").exists()).toBe(false);
-    expect(wrapper.findAll(".quick-tag-choice").map((option) => option.text())).toEqual(["无标签", "工具"]);
+    expect(wrapper.findAll(".quick-tag-choice").map((option) => option.text())).toEqual(["常用", "工具"]);
     expect(wrapper.findAll(".quick-tag-choice").map((option) => option.attributes("aria-pressed"))).toEqual(["true", "false"]);
 
     await wrapper.findAll(".quick-form input")[0].setValue("接口");
@@ -1803,26 +1803,33 @@ describe("QuickButtons", () => {
     expect(wrapper.emitted("polishMessage")?.map((call) => call[0])).toEqual(["working", "done"]);
   });
 
-  it("顶部加号左侧的智能粘贴按钮：产物直接落到「其他」（无标签）分组", async () => {
-    const polish = vi.fn(async () => ({ button: { title: "GitHub 主页", value: "https://github.com", type: "link" as const } }));
-    const wrapper = mountQuickButtons({
-      tags: [{ id: "tag-a", title: "工作" }],
-      buttons: [{ id: "a1", title: "GitHub", value: "https://github.com", type: "link", hidden: false, tagId: "tag-a" }],
-      polish,
-    });
-    await wrapper.vm.$nextTick();
+  it("顶部加号添加标签，移除顶部粘贴入口，并衔接标签内新增", async () => {
+    const wrapper = mountQuickButtons({ polish: vi.fn() });
+    expect(wrapper.find(".header-actions .desk-ai-button").exists()).toBe(false);
+    expect(wrapper.get(".quick-add-button").attributes("aria-label")).toBe("新增标签");
+    await wrapper.get(".quick-add-button").trigger("click");
+    await wrapper.get(".quick-tag-new-input").setValue("工作");
+    await wrapper.get(".quick-tag-add").trigger("click");
+    expect(wrapper.emitted("saveTag")?.[0]).toEqual([{ title: "工作" }]);
+    expect(wrapper.find(".quick-tag-manager").exists()).toBe(false);
+    expect(wrapper.find(".quick-form").exists()).toBe(true);
+    await wrapper.setProps({ tags: [{ id: "work", title: "工作" }] });
+    expect(wrapper.findAll(".quick-tag-choice").find(choice => choice.text() === "工作")?.attributes("aria-pressed")).toBe("true");
+    wrapper.unmount();
+  });
 
-    const smart = wrapper.get(".header-actions .desk-ai-button");
-    expect(smart.attributes("aria-label")).toBe("智能粘贴");
-    expect(smart.element.nextElementSibling?.classList.contains("quick-add-button")).toBe(true);
-
-    Object.assign(navigator, { clipboard: { readText: vi.fn(async () => "https://github.com") } });
-    await smart.trigger("click");
-    await flushPromises();
-
-    expect(polish).toHaveBeenCalledWith("quick", "https://github.com", undefined);
-    expect(wrapper.emitted("save")?.[0]?.[0]).toEqual({ title: "GitHub 主页", value: "https://github.com", type: "link", tagTitle: "" });
-    expect(wrapper.emitted("polishMessage")?.map((call) => call[0])).toEqual(["working", "done"]);
+  it("空白和全部隐藏时保留常用分组添加入口，有可见内容时隐藏空组", async () => {
+    const wrapper = mountQuickButtons({ otherCollapsed: true });
+    expect(wrapper.get(".quick-tag-title").text()).toBe("常用");
+    expect(wrapper.get(".quick-tag-collapse-button").attributes("aria-expanded")).toBe("true");
+    await wrapper.get(".quick-tag-add-button").trigger("click");
+    expect(wrapper.find(".quick-form").exists()).toBe(true);
+    const button = { id: "a", title: "A", value: "a", type: "text" as const, hidden: true, tagId: "work" };
+    await wrapper.setProps({ tags: [{ id: "work", title: "工作" }], buttons: [button] });
+    expect(wrapper.findAll(".quick-tag-title").map(item => item.text())).toEqual(["常用"]);
+    await wrapper.setProps({ buttons: [{ ...button, hidden: false }] });
+    expect(wrapper.findAll(".quick-tag-title").map(item => item.text())).toEqual(["工作"]);
+    wrapper.unmount();
   });
 
   it("未注入 polish 时标签头、顶部与右键菜单都不出现智能粘贴入口", async () => {

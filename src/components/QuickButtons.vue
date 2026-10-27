@@ -92,6 +92,7 @@ const emit = defineEmits<{
 
 const dialogOpen = ref(false);
 const tagManagerOpen = ref(false);
+const addingTag = ref(false);
 const editingId = ref<string | undefined>();
 type QuickApiHeaderFormRow = QuickApiHeader & { id: string };
 type QuickTagDraft = QuickTag & { titleDraft: string };
@@ -372,7 +373,8 @@ function refreshTagDrafts(): void {
   }));
 }
 
-function openTagManager(anchor?: HTMLElement, focusTagId?: string): void {
+function openTagManager(anchor?: HTMLElement, focusTagId?: string, adding = false): void {
+  addingTag.value = adding;
   refreshTagDrafts();
   newTagTitle.value = "";
   tagManagerAnchor.value = anchor;
@@ -424,6 +426,10 @@ function addTag(): void {
   if (!title) return;
   emit("saveTag", { title });
   newTagTitle.value = "";
+  if (addingTag.value) {
+    tagManagerOpen.value = false;
+    openAdd(tagManagerAnchor.value, title);
+  }
 }
 
 function saveTag(draft: QuickTagDraft): void {
@@ -951,21 +957,9 @@ function handleQuickGroupDrop(event: DragEvent, groupId: string): void {
         <span>{{ getIconHeadingText(title, 'quick') }}</span>
       </h2>
       <div class="header-actions">
-        <button
-          v-if="props.polish"
-          type="button"
-          class="icon-button desk-ai-button quick-smart-paste-button"
-          :aria-label="uiText.common.smartPaste"
-          :title="uiText.common.smartPaste"
-          :disabled="smartPastePending"
-          :aria-busy="smartPastePending"
-          @click.stop="runQuickSmartPasteFlow('', $event.currentTarget as HTMLElement)"
-        >
-          <NIcon :component="ClipboardOutline" />
-        </button>
         <button type="button" class="quick-add-button icon-button"
-          :aria-label="uiText.quick.dialogAdd" :title="uiText.quick.dialogAdd"
-          @click.stop="openAdd($event.currentTarget as HTMLElement)">
+          :aria-label="uiText.quick.addTag" :title="uiText.quick.addTag"
+          @click.stop="openTagManager($event.currentTarget as HTMLElement, undefined, true)">
           <NIcon :component="AddOutline" />
         </button>
         <button
@@ -1283,10 +1277,10 @@ function handleQuickGroupDrop(event: DragEvent, groupId: string): void {
       preset="card"
       class="quick-dialog quick-tag-manager"
       :mask-closable="false"
-      :title="uiText.quick.tagManage"
+      :title="addingTag ? uiText.quick.addTag : uiText.quick.tagManage"
     >
       <div class="quick-tag-manager-body">
-        <div v-if="tagDrafts.length" class="quick-tag-manager-list">
+        <div v-if="!addingTag && tagDrafts.length" class="quick-tag-manager-list">
           <div
             v-for="tag in tagDrafts"
             :key="tag.id"
@@ -1312,7 +1306,7 @@ function handleQuickGroupDrop(event: DragEvent, groupId: string): void {
             </button>
           </div>
         </div>
-        <p v-else class="quick-tag-empty">{{ uiText.quick.emptyTags }}</p>
+        <p v-else-if="!addingTag" class="quick-tag-empty">{{ uiText.quick.emptyTags }}</p>
         <div class="quick-tag-add-row">
           <NInput
             v-model:value="newTagTitle"

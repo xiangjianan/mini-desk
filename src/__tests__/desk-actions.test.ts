@@ -38,13 +38,13 @@ describe("visible workbench actions", () => {
     expect(wrapper.emitted("create")).toEqual([["noon"]]);
   });
 
-  it("opens the existing quick-action editor from the header", async () => {
+  it("opens tag creation from the header", async () => {
     const wrapper = mount(QuickButtons, { props: {
       title: "Actions", buttons: [], showHidden: false, language: "en",
     }});
     wrappers.push(wrapper);
     await wrapper.get(".quick-add-button").trigger("click");
-    expect(wrapper.findComponent(NModal).props("show")).toBe(true);
+    expect(wrapper.findAllComponents(NModal).find(modal => modal.props("show"))?.props("title")).toBe("Add tag");
     expect(wrapper.emitted("save")).toBeUndefined();
   });
 

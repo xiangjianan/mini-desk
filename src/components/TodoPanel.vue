@@ -2509,6 +2509,7 @@ onUnmounted(() => focusRegionAnimation?.cancel());
 
     <TodoListCreateDialog
       ref="listCreateDialogRef"
+      :lists="effectiveTodoLists"
       :language="language"
       @confirm="(anchor, title) => emit('createList', anchor, title)"
     />
