@@ -45,6 +45,8 @@ describe("removed AI and mobile capture features", () => {
     const wrapper = mountApp();
     try {
       await flushPromises();
+      await vi.dynamicImportSettled();
+      await flushPromises();
       expect(wrapper.get(".mobile-desktop-guide").text()).toContain("完整工作台，请在电脑端打开");
       expect(wrapper.find("textarea").exists()).toBe(false);
       expect(wrapper.find(".workbench-shell").exists()).toBe(false);

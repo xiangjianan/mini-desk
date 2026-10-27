@@ -5092,159 +5092,16 @@ describe("TodoPanel 编辑快捷键", () => {
 
   it("列表顶部粘贴按钮直接粘贴原文且不调用智能处理", async () => {
     Object.assign(navigator, { clipboard: { readText: vi.fn().mockResolvedValue("买牛奶"), writeText: vi.fn() } });
-    const polish = vi.fn();
     const wrapper = mount(TodoPanel, {
-      props: { todoLists: defaultTodoLists, todos: { morning: [], noon: [], evening: [] }, titles: DEFAULT_TITLES, polish },
+      props: { todoLists: defaultTodoLists, todos: { morning: [], noon: [], evening: [] }, titles: DEFAULT_TITLES },
       global: { stubs: { NDatePicker: datePickerStub, NTooltip: tooltipStub } },
     });
     const paste = wrapper.get('.todo-section[data-list-id="morning"] .desk-paste-button');
     expect(paste.attributes("aria-label")).toBe("粘贴");
     await paste.trigger("click");
     await flushPromises();
-    expect(polish).not.toHaveBeenCalled();
     expect(wrapper.emitted("createFromText")?.[0]).toEqual(["morning", ["买牛奶"]]);
     wrapper.unmount();
-  });
-
-  it("section 菜单在粘贴下方显示智能粘贴（有 polish 时）", async () => {
-    Object.assign(navigator, { clipboard: { readText: vi.fn().mockResolvedValue("文本"), writeText: vi.fn() } });
-    const wrapper = mount(TodoPanel, {
-      props: {
-        todoLists: defaultTodoLists,
-        todos: { morning: [], noon: [], evening: [] },
-        titles: DEFAULT_TITLES,
-        polish: vi.fn(),
-      },
-      global: {
-        stubs: {
-          Dropdown: dropdownStub,
-          NDatePicker: datePickerStub,
-          NDropdown: dropdownStub,
-          NTooltip: tooltipStub,
-        },
-      },
-    });
-
-    await wrapper.get('.todo-section[data-list-id="morning"] .todo-heading').trigger("contextmenu");
-
-    expect(wrapper.findAll(".dropdown-option").map((option) => option.text())).toEqual(["粘贴", "智能粘贴", "编辑列表", "隐藏已完成", "清理已完成", "删除列表"]);
-    wrapper.unmount();
-  });
-
-  it("智能粘贴成功：拆条落到右键所在列表并气泡提示", async () => {
-    Object.assign(navigator, { clipboard: { readText: vi.fn().mockResolvedValue("买牛奶、交电费"), writeText: vi.fn() } });
-    const polish = vi.fn(async (): Promise<PolishResult> => ({ items: [{ text: "买牛奶" }, { text: "交电费" }] }));
-    const wrapper = mount(TodoPanel, {
-      props: {
-        todoLists: defaultTodoLists,
-        todos: { morning: [], noon: [], evening: [] },
-        titles: DEFAULT_TITLES,
-        polish,
-      },
-      global: {
-        stubs: {
-          Dropdown: dropdownStub,
-          NDatePicker: datePickerStub,
-          NDropdown: dropdownStub,
-          NTooltip: tooltipStub,
-        },
-      },
-    });
-
-    await wrapper.get('.todo-section[data-list-id="morning"] .todo-heading').trigger("contextmenu");
-    await wrapper.get('[data-key="smart-paste"]').trigger("click");
-    await flushPromises();
-
-    expect(polish).toHaveBeenCalledWith("todo", "买牛奶、交电费", undefined);
-    expect(wrapper.emitted("createFromText")?.at(-1)).toEqual(["morning", [{ text: "买牛奶" }, { text: "交电费" }]]);
-    const statuses = wrapper.emitted("polishMessage") ?? [];
-    expect(statuses.map((call) => call[0])).toEqual(["working", "done"]);
-    expect(statuses[1][1]).toBe("已整理为 2 条提醒");
-    wrapper.unmount();
-  });
-
-  it("智能粘贴途中切换工作区：丢弃迟到结果，不落入新空间的同名列表", async () => {
-    Object.assign(navigator, { clipboard: { readText: vi.fn().mockResolvedValue("买牛奶、交电费"), writeText: vi.fn() } });
-    let resolvePolish: (result: PolishResult) => void = () => {};
-    const polish = vi.fn(
-      () =>
-        new Promise<PolishResult>((resolve) => {
-          resolvePolish = resolve;
-        }),
-    );
-    const wrapper = mount(TodoPanel, {
-      props: {
-        todoLists: defaultTodoLists,
-        todos: { morning: [], noon: [], evening: [] },
-        titles: DEFAULT_TITLES,
-        polish,
-      },
-      global: {
-        stubs: {
-          Dropdown: dropdownStub,
-          NDatePicker: datePickerStub,
-          NDropdown: dropdownStub,
-          NTooltip: tooltipStub,
-        },
-      },
-    });
-
-    await wrapper.get('.todo-section[data-list-id="morning"] .todo-heading').trigger("contextmenu");
-    await wrapper.get('[data-key="smart-paste"]').trigger("click");
-    await flushPromises();
-    expect(polish).toHaveBeenCalledWith("todo", "买牛奶、交电费", undefined);
-
-    // 中途切换工作空间：App 的 displayTodoLists 计算属性随 activeWorkspaceId 变化产出全新数组。
-    await wrapper.setProps({
-      todoLists: defaultTodoLists.map((list) => ({ ...list })),
-    });
-    resolvePolish({ items: [{ text: "买牛奶" }, { text: "交电费" }] });
-    await flushPromises();
-
-    expect(wrapper.emitted("createFromText")).toBeUndefined();
-    wrapper.unmount();
-  });
-
-  it("智能粘贴途中卸载面板：丢弃迟到结果", async () => {
-    Object.assign(navigator, { clipboard: { readText: vi.fn().mockResolvedValue("买牛奶、交电费"), writeText: vi.fn() } });
-    let resolvePolish: (result: PolishResult) => void = () => {};
-    const polish = vi.fn(
-      () =>
-        new Promise<PolishResult>((resolve) => {
-          resolvePolish = resolve;
-        }),
-    );
-    const wrapper = mount(TodoPanel, {
-      props: {
-        todoLists: defaultTodoLists,
-        todos: { morning: [], noon: [], evening: [] },
-        titles: DEFAULT_TITLES,
-        polish,
-      },
-      global: {
-        stubs: {
-          Dropdown: dropdownStub,
-          NDatePicker: datePickerStub,
-          NDropdown: dropdownStub,
-          NTooltip: tooltipStub,
-        },
-      },
-    });
-
-    await wrapper.get('.todo-section[data-list-id="morning"] .todo-heading').trigger("contextmenu");
-    await wrapper.get('[data-key="smart-paste"]').trigger("click");
-    await flushPromises();
-    expect(polish).toHaveBeenCalledWith("todo", "买牛奶、交电费", undefined);
-
-    // 清空数据（clearData）bump boardEpoch 触发整树 remount：旧实例带着冻结的 props 卸载，
-    // 列表身份守卫失效（引用比较仍相等）。本用例钉住端到端不变量「卸载后迟到结果不得落地」：
-    // 目前由 Vue 对已卸载实例的 emit no-op（runtime-core emit 首行 isUnmounted 早退）与
-    // 组件内卸载守卫共同保证——若日后 emit 通道改为回调属性等直调形式，这里会先变红。
-    wrapper.unmount();
-    resolvePolish({ items: [{ text: "买牛奶" }, { text: "交电费" }] });
-    await flushPromises();
-
-    expect(wrapper.emitted("createFromText")).toBeUndefined();
   });
 });
 

@@ -2130,7 +2130,7 @@ onUnmounted(() => focusRegionAnimation?.cancel());
 
           <div class="todo-heading-actions">
             <span class="todo-count">{{ periodStats[list.id] }}</span>
-            <button type="button" class="todo-paste-button icon-button"
+            <button type="button" class="todo-paste-button icon-button desk-paste-button"
               :aria-label="uiText.common.paste" :title="uiText.common.paste"
               @mousedown.prevent @click.stop="pasteTodosFromClipboard(list.id)"><NIcon :component="ClipboardOutline" /></button>
             <button type="button" class="icon-button" :aria-label="uiText.desk.addReminder" :title="uiText.desk.addReminder"
