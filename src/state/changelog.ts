@@ -33,6 +33,22 @@ export interface ChangelogEntry {
 }
 
 export const CHANGELOG: ChangelogEntry[] = [
+  {
+    version: "1.1.14-offline",
+    date: "2026-10-27",
+    notes: {
+      zh: [
+        "同步 1.1.14：支持将看板图片移动到其他工作区，预览页也可打开移动菜单",
+        "优化图片排序动画和拖拽预览定位；修复通知失败重试及切换标签页后的提醒保持",
+        "保留普通粘贴按钮及无彩色悬浮特效，继续移除 AI、手机速记和配对同步功能",
+      ],
+      en: [
+        "Updated to 1.1.14: move board images to another workspace, including from the preview menu",
+        "Improved image reorder animations and drag previews; reminders retry notification failures and remain active across tab changes",
+        "Retained plain paste controls without animated hover colors and the offline edition's AI/mobile feature removal",
+      ],
+    },
+  },
     {
       version: "1.1.16",
       date: "2026-10-28",
