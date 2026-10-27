@@ -51,7 +51,7 @@ const props = withDefaults(defineProps<{
   tags?: QuickTag[];
   showHidden: boolean;
   otherCollapsed?: boolean;
-  /** true = 紧凑按钮（隐藏类型副标题、压低高度）。 */
+  /** true = 纯文字胶囊；false = 带图标的单行按钮。 */
   compact?: boolean;
   language?: AppLanguage;
   /** 智能粘贴调用（内部完成配对码管理）；未注入时不渲染智能粘贴入口。 */
@@ -1046,13 +1046,14 @@ function handleQuickGroupDrop(event: DragEvent, groupId: string): void {
                 @drop.stop.prevent="handleQuickButtonDrop($event, button.id, group.id)"
                 @dragend="draggingId = null"
               >
-                <NIcon v-if="button.type === 'text'" class="quick-button-icon" :component="CopyOutline" />
-                <NIcon v-else-if="button.type === 'api'" class="quick-button-icon" :component="CloudUploadOutline" />
-                <NIcon v-else-if="button.type === 'app'" class="quick-button-icon" :component="AppsOutline" />
-                <NIcon v-else class="quick-button-icon" :component="LinkOutline" />
+                <template v-if="!compact">
+                  <NIcon v-if="button.type === 'text'" class="quick-button-icon" :component="CopyOutline" />
+                  <NIcon v-else-if="button.type === 'api'" class="quick-button-icon" :component="CloudUploadOutline" />
+                  <NIcon v-else-if="button.type === 'app'" class="quick-button-icon" :component="AppsOutline" />
+                  <NIcon v-else class="quick-button-icon" :component="LinkOutline" />
+                </template>
                 <span class="quick-button-content">
                   <HighlightText class="quick-button-label" :text="button.title" :query="globalSearchQuery" />
-                  <span class="quick-button-kind" aria-hidden="true">{{ uiText.quick[button.type === 'text' ? 'textType' : button.type === 'api' ? 'apiType' : button.type === 'app' ? 'appType' : 'linkType'] }}</span>
                 </span>
                 <span v-if="buttonUsage(button) > 0" class="quick-button-clicks">×{{ buttonUsage(button) }}</span>
               </button>

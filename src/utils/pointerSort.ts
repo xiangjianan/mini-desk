@@ -79,10 +79,22 @@ export function installPointerSort(root: HTMLElement, selector: string, pauseAut
         preview.style.minHeight = style.minHeight;
         preview.style.padding = style.padding;
         preview.style.gap = style.gap;
-        if (source.closest(".quick-block.is-compact")) {
-          preview.querySelectorAll(".quick-button-kind").forEach((kind) => kind.remove());
-          const content = preview.querySelector<HTMLElement>(".quick-button-content");
-          if (content) content.style.gap = "0";
+        preview.style.borderRadius = style.borderRadius;
+        const content = preview.querySelector<HTMLElement>(".quick-button-content");
+        const sourceContent = source.querySelector<HTMLElement>(".quick-button-content");
+        if (content && sourceContent) {
+          const contentStyle = getComputedStyle(sourceContent);
+          content.style.gap = contentStyle.gap;
+          content.style.paddingInlineEnd = contentStyle.paddingInlineEnd;
+        }
+        const count = preview.querySelector<HTMLElement>(".quick-button-clicks");
+        const sourceCount = source.querySelector<HTMLElement>(".quick-button-clicks");
+        if (count && sourceCount) {
+          const countStyle = getComputedStyle(sourceCount);
+          count.style.position = countStyle.position;
+          count.style.flex = countStyle.flex;
+          count.style.maxWidth = countStyle.maxWidth;
+          count.style.alignSelf = countStyle.alignSelf;
         }
       }
       if (source.matches(".todo-heading")) preview.style.maxHeight = "none";

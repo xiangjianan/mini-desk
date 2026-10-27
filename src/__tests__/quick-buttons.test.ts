@@ -448,6 +448,24 @@ describe("QuickButtons", () => {
     wrapper.unmount();
   });
 
+  it("uses icons only for large single-row buttons and preserves pill actions", async () => {
+    const wrapper = mountQuickButtons({ buttons: [
+      { id: "a", title: "短标题", value: "v", type: "text", hidden: false, clicks: 3 },
+      { id: "b", title: "很长的快捷动作标题用于截断", value: "https://example.com", type: "link", hidden: false },
+    ] });
+    expect(wrapper.findAll(".quick-button-icon")).toHaveLength(2);
+    expect(wrapper.find(".quick-button-kind").exists()).toBe(false);
+    await wrapper.setProps({ compact: true });
+    expect(wrapper.find(".quick-button-icon").exists()).toBe(false);
+    expect(wrapper.findAll(".quick-button-label").map(label => label.text())).toEqual(["短标题", "很长的快捷动作标题用于截断"]);
+    expect(wrapper.get('.quick-button[data-id="a"] .quick-button-clicks').text()).toBe("×3");
+    await wrapper.get('.quick-button[data-id="a"]').trigger("click");
+    expect(wrapper.emitted("copy")?.[0][0]).toBe("a");
+    await wrapper.setProps({ compact: false });
+    expect(wrapper.findAll(".quick-button-icon")).toHaveLength(2);
+    wrapper.unmount();
+  });
+
   it("marks the quick block compact and flips the size toggle menu label", async () => {
     const wrapper = mountQuickButtons({
       buttons: [{ id: "a", title: "A", value: "v", type: "link", hidden: false }],

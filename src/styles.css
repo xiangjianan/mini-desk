@@ -1254,18 +1254,6 @@ button.image-card {
   box-shadow: none;
 }
 
-/* 紧凑模式：类型副标题高度塌缩（可随 min-height 一起过渡，见 desk.css 基座），
-   按钮回落为单行小尺寸。 */
-.quick-block.is-compact .quick-button-kind {
-  max-height: 0;
-  opacity: 0;
-  overflow: hidden;
-}
-
-.quick-block.is-compact .quick-button-content {
-  gap: 0;
-}
-
 .quick-tag-heading.is-editing {
   cursor: text;
   user-select: text;
@@ -1319,7 +1307,9 @@ button.quick-button {
 
 .quick-button-label {
   min-width: 0;
-  word-break: break-word;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
 }
 
 .highlight-text mark {

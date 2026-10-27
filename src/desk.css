@@ -212,17 +212,12 @@ html[data-theme="dark"] .workbench-shell,
    recolor），两套指示一并豁免（特异性 0,3,0）。 */
 .workbench-shell .todo-focus-badge:focus-visible { outline: none; box-shadow: none; }
 
-/* 紧凑按钮：单行、类型副标题塌缩，高度对齐提醒列表的紧凑行（44px）。
-   副标题用 max-height/opacity 过渡而非 display:none，大↔紧凑切换整体有动画。 */
-.workbench-shell .quick-block.is-compact button.quick-button { min-height: 44px; padding: 8px 12px; }
-.workbench-shell .quick-block.is-compact .quick-button-content { gap: 0; }
-.workbench-shell .quick-block.is-compact .quick-button-kind { max-height: 0; opacity: 0; overflow: hidden; }
 .workbench-shell button.quick-button {
   display: flex;
   width: 100%;
   height: auto;
-  min-height: 64px;
-  padding: 12px;
+  min-height: 44px;
+  padding: 8px 12px;
   gap: 12px;
   justify-content: flex-start;
   text-align: start;
@@ -248,9 +243,8 @@ html[data-theme="dark"] .workbench-shell,
   box-shadow: none;
   transform: none;
 }
-.quick-button-content { display: flex; flex-direction: column; min-width: 0; gap: 3px; transition: gap var(--motion-medium) var(--motion-ease); }
+.quick-button-content { display: flex; flex-direction: column; min-width: 0; gap: 0; transition: gap var(--motion-medium) var(--motion-ease); }
 .workbench-shell .quick-button-label { font-weight: 500; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
-.quick-button-kind { color: var(--muted); font-size: 12px; line-height: 1.4; max-height: 20px; transition: max-height var(--motion-medium) var(--motion-ease), opacity var(--motion-fast) ease; }
 
 .workbench-shell .todo-heading {
   min-height: var(--desk-group-heading-height);
@@ -479,7 +473,6 @@ html[data-theme="dark"] .workbench-shell .space-text-panel {
   .workbench-zone .panel-header .header-actions { margin-inline-start: auto; }
   .workbench-zone .todo-heading { flex-wrap: wrap; }
   .workbench-zone .todo-heading-actions { margin-inline-start: auto; }
-  .workbench-zone .quick-button-kind { display: none; }
   .workbench-zone button.quick-button { min-height: 42px; padding: 8px; gap: 8px; }
 }
 
@@ -495,6 +488,34 @@ html[data-theme="dark"] .workbench-shell .space-text-panel {
   grid-template-columns: repeat(auto-fill, minmax(min(100%, 196px), 1fr));
 }
 .workbench-shell button.quick-button { max-width: 400px; }
+
+/* Compact actions wrap as text pills, bounded by both the list and 240px. */
+.workbench-shell .quick-block.is-compact .quick-buttons {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: flex-start;
+  gap: 8px;
+}
+.workbench-shell .quick-block.is-compact button.quick-button {
+  flex: 0 1 auto;
+  width: fit-content;
+  max-width: min(100%, 240px);
+  min-width: 0;
+  min-height: 30px;
+  padding: 5px 12px;
+  gap: 6px;
+  border-radius: 999px;
+}
+.workbench-shell .quick-block.is-compact .quick-button-content {
+  padding-inline-end: 0;
+}
+.workbench-shell .quick-block.is-compact .quick-button-clicks {
+  position: static;
+  flex: 0 0 auto;
+  max-width: none;
+  align-self: center;
+}
+
 
 /* Overdue dates retain their warning color; task text stays readable and neutral. */
 
