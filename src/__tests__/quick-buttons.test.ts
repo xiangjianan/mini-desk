@@ -448,7 +448,7 @@ describe("QuickButtons", () => {
     wrapper.unmount();
   });
 
-  it("uses icons only for large single-row buttons and preserves pill actions", async () => {
+  it("keeps icons in both sizes and preserves pill actions", async () => {
     const wrapper = mountQuickButtons({ buttons: [
       { id: "a", title: "短标题", value: "v", type: "text", hidden: false, clicks: 3 },
       { id: "b", title: "很长的快捷动作标题用于截断", value: "https://example.com", type: "link", hidden: false },
@@ -456,7 +456,7 @@ describe("QuickButtons", () => {
     expect(wrapper.findAll(".quick-button-icon")).toHaveLength(2);
     expect(wrapper.find(".quick-button-kind").exists()).toBe(false);
     await wrapper.setProps({ compact: true });
-    expect(wrapper.find(".quick-button-icon").exists()).toBe(false);
+    expect(wrapper.findAll(".quick-button-icon")).toHaveLength(2);
     expect(wrapper.findAll(".quick-button-label").map(label => label.text())).toEqual(["短标题", "很长的快捷动作标题用于截断"]);
     expect(wrapper.get('.quick-button[data-id="a"] .quick-button-clicks').text()).toBe("×3");
     await wrapper.get('.quick-button[data-id="a"]').trigger("click");

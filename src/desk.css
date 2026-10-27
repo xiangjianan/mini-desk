@@ -489,7 +489,7 @@ html[data-theme="dark"] .workbench-shell .space-text-panel {
 }
 .workbench-shell button.quick-button { max-width: 400px; }
 
-/* Compact actions wrap as text pills, bounded by both the list and 240px. */
+/* Compact actions wrap as pills, bounded by both the list and 240px. */
 .workbench-shell .quick-block.is-compact .quick-buttons {
   display: flex;
   flex-wrap: wrap;
@@ -505,6 +505,14 @@ html[data-theme="dark"] .workbench-shell .space-text-panel {
   padding: 5px 12px;
   gap: 6px;
   border-radius: 999px;
+}
+.workbench-shell .quick-block.is-compact .quick-button-icon {
+  width: 16px;
+  height: 16px;
+  font-size: 16px;
+  border-radius: 0;
+  background: transparent;
+  color: var(--muted);
 }
 .workbench-shell .quick-block.is-compact .quick-button-content {
   padding-inline-end: 0;

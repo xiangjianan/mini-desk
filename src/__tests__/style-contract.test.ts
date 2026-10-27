@@ -483,6 +483,8 @@ describe("workbench style contract", () => {
     expectSelectorBody(desk, ".workbench-shell .quick-block.is-compact button.quick-button", "width: fit-content");
     expectSelectorBody(desk, ".workbench-shell .quick-block.is-compact button.quick-button", "max-width: min(100%, 240px)");
     expectSelectorBody(desk, ".workbench-shell .quick-block.is-compact button.quick-button", "border-radius: 999px");
+    expectSelectorBody(desk, ".workbench-shell .quick-block.is-compact .quick-button-icon", "background: transparent");
+    expectSelectorBody(desk, ".workbench-shell .quick-block.is-compact .quick-button-icon", "width: 16px");
   });
 
   it("keeps mirror typography paired with the transparent textarea (no drift)", () => {
