@@ -5,7 +5,7 @@ import type { TodoItem } from "../types";
 
 const engines: ReturnType<typeof useTodoNotifications>[] = [];
 const delivered = vi.fn();
-let lastNotification: { onclick?: () => void; close: ReturnType<typeof vi.fn> };
+let lastNotification: { onclick?: () => void; onerror?: (() => void) | null; close: ReturnType<typeof vi.fn> };
 
 beforeEach(() => {
   vi.useFakeTimers();
@@ -14,6 +14,7 @@ beforeEach(() => {
   vi.stubGlobal("Notification", class {
     static permission = "granted";
     onclick?: () => void;
+    onerror?: (() => void) | null;
     close = vi.fn();
     constructor(title: string, options?: NotificationOptions) { delivered(title, options); lastNotification = this; }
   });
@@ -134,6 +135,34 @@ describe("reminder refresh", () => {
       expect(showNotification).toHaveBeenCalledExactlyOnceWith("【今天】", expect.objectContaining({ body: "due", data: { url: window.location.href } }));
       engine.refreshTodoNotifications();
       expect(delivered).toHaveBeenCalledOnce();
+    } finally {
+      if (original) Object.defineProperty(navigator, "serviceWorker", original);
+      else Reflect.deleteProperty(navigator, "serviceWorker");
+    }
+  });
+
+  it.each([false, true])("retries asynchronous display failures with a service worker available=%s", async (persistent) => {
+    const showNotification = vi.fn(async () => {});
+    const original = Object.getOwnPropertyDescriptor(navigator, "serviceWorker");
+    Object.defineProperty(navigator, "serviceWorker", { configurable: true, value: persistent
+      ? { getRegistration: vi.fn(async () => ({ active: {}, showNotification })) } : undefined });
+    const visibility = vi.spyOn(document, "visibilityState", "get").mockReturnValue("hidden");
+    try {
+      const { engine } = setup([todo("due", Date.now())]);
+      engine.refreshTodoNotifications();
+      expect(delivered).toHaveBeenCalledOnce();
+      lastNotification.onerror!();
+      expect(lastNotification.onerror).toBeNull();
+      expect(engine.notificationTitleFlashing()).toBe(true);
+      await vi.advanceTimersByTimeAsync(0);
+      engine.refreshTodoNotifications();
+      if (persistent) {
+        expect(showNotification).toHaveBeenCalledOnce();
+        expect(delivered).toHaveBeenCalledOnce();
+      } else expect(delivered).toHaveBeenCalledTimes(2);
+      visibility.mockReturnValue("visible");
+      engine.handleNotificationReturn();
+      expect(engine.notificationTitleFlashing()).toBe(false);
     } finally {
       if (original) Object.defineProperty(navigator, "serviceWorker", original);
       else Reflect.deleteProperty(navigator, "serviceWorker");

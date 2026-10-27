@@ -127,8 +127,25 @@ export function useTodoNotifications(state: BoardState, deps: TodoNotificationDe
     };
     const icon = getReminderNotificationIcon();
     if (icon) options.icon = icon;
+    function retryWithPersistentNotification(): void {
+      // Safari may report delivery failure asynchronously after construction.
+      if (pendingNativeNotifications.has(key) || !navigator.serviceWorker?.getRegistration) return;
+      pendingNativeNotifications.add(key);
+      void Promise.resolve().then(() => navigator.serviceWorker.getRegistration()).then(async (registration) => {
+        if (!registration?.active || !registration.showNotification) return;
+        await registration.showNotification(title, { ...options, data: { url: window.location.href } });
+        sentTodoNotifications.add(key);
+      }).catch((fallbackError) => {
+        console.warn("Failed to show persistent reminder notification", fallbackError);
+      }).finally(() => pendingNativeNotifications.delete(key));
+    }
     try {
       const notification = new notificationApi(title, options);
+      notification.onerror = () => {
+        notification.onerror = null;
+        sentTodoNotifications.delete(key);
+        retryWithPersistentNotification();
+      };
       notification.onclick = () => {
         window.focus();
         handleNotificationReturn();
@@ -137,18 +154,7 @@ export function useTodoNotifications(state: BoardState, deps: TodoNotificationDe
       return true;
     } catch (error) {
       console.warn("Failed to show reminder notification", error);
-      // Some browsers reject page-created notifications but support persistent
-      // notifications through the already registered service worker.
-      if (navigator.serviceWorker?.getRegistration) {
-        pendingNativeNotifications.add(key);
-        void navigator.serviceWorker.getRegistration().then(async (registration) => {
-          if (!registration?.active || !registration.showNotification) return;
-          await registration.showNotification(title, { ...options, data: { url: window.location.href } });
-          sentTodoNotifications.add(key);
-        }).catch((fallbackError) => {
-          console.warn("Failed to show persistent reminder notification", fallbackError);
-        }).finally(() => pendingNativeNotifications.delete(key));
-      }
+      retryWithPersistentNotification();
       return false;
     }
   }
