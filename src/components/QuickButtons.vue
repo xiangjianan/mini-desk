@@ -288,7 +288,6 @@ const menuOptions = computed<DropdownOption[]>(() => {
       ...areaMenuOptions.value.filter((option) => ["paste", "smart-paste"].includes(String(option.key))),
       { label: uiText.value.common.rename, key: "rename-tag", icon: renderIcon(CreateOutline) },
       { label: showHidden ? uiText.value.quick.hideHidden : uiText.value.quick.showHidden, key: "toggle-show-hidden", icon: renderIcon(showHidden ? EyeOffOutline : EyeOutline) },
-      ...areaMenuOptions.value.filter((option) => ["toggle-compact"].includes(String(option.key))),
       ...(moveMenuChildren.value.length > 0
         ? [{
             label: uiText.value.common.moveToWorkspace,

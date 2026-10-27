@@ -530,7 +530,7 @@ describe("QuickButtons", () => {
 
     await wrapper.get(".quick-tag-heading").trigger("contextmenu");
 
-    expect(wrapper.findAll(".dropdown-option").map((option) => option.text())).toEqual(["粘贴", "重命名", "查看隐藏", "切换为紧凑按钮", "移动到空间", "生活", "删除列表"]);
+    expect(wrapper.findAll(".dropdown-option").map((option) => option.text())).toEqual(["粘贴", "重命名", "查看隐藏", "移动到空间", "生活", "删除列表"]);
 
     expect(wrapper.find('[data-key="create-list"]').exists()).toBe(false);
     wrapper.unmount();
@@ -584,7 +584,7 @@ describe("QuickButtons", () => {
     }
   });
 
-  it("reuses visibility, tag management and size actions below rename in the tag menu", async () => {
+  it("keeps size switching in the area menu and out of list menus", async () => {
     const wrapper = mountQuickButtons({
       tags: [{ id: "tag-work", title: "工作" }],
       buttons: [{ id: "b1", title: "Btn", value: "v", type: "link", tagId: "tag-work", hidden: false }],
@@ -593,7 +593,7 @@ describe("QuickButtons", () => {
     const openMenu = () => wrapper.get(".quick-tag-heading").trigger("contextmenu");
     await openMenu();
     expect(wrapper.findAll(".dropdown-option").map(option => option.text())).toEqual([
-      "粘贴", "重命名", "查看隐藏", "切换为大按钮", "删除列表",
+      "粘贴", "重命名", "查看隐藏", "删除列表",
     ]);
     expect(wrapper.find('[data-key="toggle-tag-collapsed"]').exists()).toBe(false);
     await wrapper.get('[data-key="toggle-show-hidden"]').trigger("click");
@@ -601,6 +601,11 @@ describe("QuickButtons", () => {
     await wrapper.setProps({ showHidden: true });
     await openMenu();
     expect(wrapper.get('[data-key="toggle-show-hidden"]').text()).toBe("收起隐藏");
+    expect(wrapper.find('[data-key="toggle-compact"]').exists()).toBe(false);
+    await wrapper.get(".quick-tag-menu-button").trigger("click");
+    expect(wrapper.find('[data-key="toggle-compact"]').exists()).toBe(false);
+    await wrapper.get(".quick-menu-button").trigger("click");
+    expect(wrapper.get('[data-key="toggle-compact"]').text()).toBe("切换为大按钮");
     await wrapper.get('[data-key="toggle-compact"]').trigger("click");
     expect(wrapper.emitted("toggleCompact")).toHaveLength(1);
     await openMenu();
@@ -1995,7 +2000,7 @@ describe("QuickButtons 跨空间移动", () => {
     await wrapper.get(".quick-tag-title").trigger("contextmenu");
     expect(wrapper.findAll('[data-key^="move-ws:"]')).toHaveLength(0);
     expect(wrapper.find('[data-key="move-tag"]').exists()).toBe(false);
-    expect(wrapper.findAll(".dropdown-option").map((option) => option.text())).toEqual(["粘贴", "重命名", "查看隐藏", "切换为紧凑按钮", "删除列表"]);
+    expect(wrapper.findAll(".dropdown-option").map((option) => option.text())).toEqual(["粘贴", "重命名", "查看隐藏", "删除列表"]);
     expect(wrapper.find('[data-key="create-list"]').exists()).toBe(false);
     expect(wrapper.get('[data-key="delete-tag"]').text()).toBe("删除列表");
     wrapper.unmount();
