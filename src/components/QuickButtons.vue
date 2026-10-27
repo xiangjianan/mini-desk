@@ -119,7 +119,7 @@ const form = reactive<{ title: string; value: string; tagTitle: string; tagId: s
   apiBodyType: "none",
   apiBody: "",
 });
-const menu = ref<{ x: number; y: number; id?: string; anchor?: HTMLElement; tagTitle?: string; tagId?: string; fromToolbar?: boolean } | null>(null);
+const menu = ref<{ x: number; y: number; id?: string; anchor?: HTMLElement; tagTitle?: string; tagId?: string } | null>(null);
 const smartPastePending = ref(false);
 // 卸载守卫：清空数据 bump boardEpoch 整树 remount 后旧实例 props 已冻结，引用比较不再变化，
 // 必须单独拦截（与 TodoPanel 的 landingLists 守卫同口径）。
@@ -285,7 +285,7 @@ const menuOptions = computed<DropdownOption[]>(() => {
   if (menu.value?.tagId) {
     const showHidden = props.tags.find(tag => tag.id === menu.value?.tagId)?.showHidden ?? props.showHidden;
     return [
-      ...areaMenuOptions.value.filter((option) => [...(menu.value?.fromToolbar ? [] : ["add"]), "paste", "smart-paste"].includes(String(option.key))),
+      ...areaMenuOptions.value.filter((option) => ["paste", "smart-paste"].includes(String(option.key))),
       { label: uiText.value.common.rename, key: "rename-tag", icon: renderIcon(CreateOutline) },
       { label: showHidden ? uiText.value.quick.hideHidden : uiText.value.quick.showHidden, key: "toggle-show-hidden", icon: renderIcon(showHidden ? EyeOffOutline : EyeOutline) },
       ...areaMenuOptions.value.filter((option) => ["toggle-compact"].includes(String(option.key))),
@@ -301,12 +301,9 @@ const menuOptions = computed<DropdownOption[]>(() => {
     ];
   }
   const button = props.buttons.find((item) => item.id === menu.value?.id);
-  if (!menu.value?.id) return menu.value?.fromToolbar
-    ? areaMenuOptions.value.filter(option => ![
-      "add", "create-list",
-      ...(menu.value?.anchor?.classList.contains("quick-menu-button") ? ["paste", "smart-paste"] : []),
-    ].includes(String(option.key)))
-    : areaMenuOptions.value;
+  if (!menu.value?.id) return areaMenuOptions.value.filter(option =>
+    !["add", "create-list", "paste", "smart-paste"].includes(String(option.key)),
+  );
 
   return [
     { label: uiText.value.common.edit, key: "edit", icon: renderIcon(CreateOutline) },
@@ -508,7 +505,7 @@ function openTagMenu(event: MouseEvent, tagId: string, fromToolbar = false): voi
   event.preventDefault();
   event.stopPropagation();
   exclusiveMenu.notifyOpen(event, { replacingExistingMenu: Boolean(menu.value) });
-  menu.value = { x: event.clientX, y: event.clientY, anchor: event.currentTarget as HTMLElement, tagId, tagTitle: props.tags.find((tag) => tag.id === tagId)?.title, fromToolbar };
+  menu.value = { x: event.clientX, y: event.clientY, anchor: event.currentTarget as HTMLElement, tagId, tagTitle: props.tags.find((tag) => tag.id === tagId)?.title };
 }
 
 function openHeaderMenu(event: MouseEvent): void {
@@ -521,7 +518,7 @@ function openHeaderMenu(event: MouseEvent): void {
   event.preventDefault();
   event.stopPropagation();
   exclusiveMenu.notifyOpen(event, { replacingExistingMenu: Boolean(menu.value) });
-  menu.value = { x: event.clientX, y: event.clientY, anchor: event.currentTarget as HTMLElement, fromToolbar: true };
+  menu.value = { x: event.clientX, y: event.clientY, anchor: event.currentTarget as HTMLElement };
 }
 
 

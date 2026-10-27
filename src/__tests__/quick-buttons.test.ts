@@ -425,10 +425,9 @@ describe("QuickButtons", () => {
     wrapper.unmount();
   });
 
-  it("adds from a list context menu without a list picker", async () => {
+  it("adds from a list plus button without a list picker", async () => {
     const wrapper = mountQuickButtons({ tags: [{ id: "work", title: "工作" }] });
-    await wrapper.get(".quick-tag-heading").trigger("contextmenu");
-    await wrapper.get('[data-key="add"]').trigger("click");
+    await wrapper.get(".quick-tag-add-button").trigger("click");
     expect(wrapper.find(".quick-tag-field").exists()).toBe(false);
     await wrapper.findAll(".quick-form input")[0].setValue("动作");
     await wrapper.findAll(".quick-form input")[1].setValue("https://example.com");
@@ -531,7 +530,7 @@ describe("QuickButtons", () => {
 
     await wrapper.get(".quick-tag-heading").trigger("contextmenu");
 
-    expect(wrapper.findAll(".dropdown-option").map((option) => option.text())).toEqual(["新增", "粘贴", "重命名", "查看隐藏", "切换为紧凑按钮", "移动到空间", "生活", "删除列表"]);
+    expect(wrapper.findAll(".dropdown-option").map((option) => option.text())).toEqual(["粘贴", "重命名", "查看隐藏", "切换为紧凑按钮", "移动到空间", "生活", "删除列表"]);
 
     expect(wrapper.find('[data-key="create-list"]').exists()).toBe(false);
     wrapper.unmount();
@@ -594,7 +593,7 @@ describe("QuickButtons", () => {
     const openMenu = () => wrapper.get(".quick-tag-heading").trigger("contextmenu");
     await openMenu();
     expect(wrapper.findAll(".dropdown-option").map(option => option.text())).toEqual([
-      "新增", "粘贴", "重命名", "查看隐藏", "切换为大按钮", "删除列表",
+      "粘贴", "重命名", "查看隐藏", "切换为大按钮", "删除列表",
     ]);
     expect(wrapper.find('[data-key="toggle-tag-collapsed"]').exists()).toBe(false);
     await wrapper.get('[data-key="toggle-show-hidden"]').trigger("click");
@@ -947,11 +946,11 @@ describe("QuickButtons", () => {
     wrapper.unmount();
   });
 
-  it("creates a link quick button when a URL is pasted from the area context menu", async () => {
+  it("creates a link quick button when a URL is pasted from the list context menu", async () => {
     Object.assign(navigator, { clipboard: { readText: vi.fn().mockResolvedValue("https://example.com/page"), writeText: vi.fn() } });
-    const wrapper = mountQuickButtons({ buttons: [] });
+    const wrapper = mountQuickButtons({ buttons: [], tags: [{ id: "work", title: "工作" }] });
 
-    await wrapper.get(".quick-block").trigger("contextmenu");
+    await wrapper.get(".quick-tag-heading").trigger("contextmenu");
     await wrapper.findAll(".dropdown-option").find((option) => option.text() === "粘贴")?.trigger("click");
     await Promise.resolve();
     await wrapper.vm.$nextTick();
@@ -968,9 +967,9 @@ describe("QuickButtons", () => {
   it("uses the first 25 characters when a pasted URL cannot be parsed", async () => {
     const value = "https://[invalid-url-with-a-long-path";
     Object.assign(navigator, { clipboard: { readText: vi.fn().mockResolvedValue(value) } });
-    const wrapper = mountQuickButtons({ buttons: [] });
+    const wrapper = mountQuickButtons({ buttons: [], tags: [{ id: "work", title: "工作" }] });
 
-    await wrapper.get(".quick-block").trigger("contextmenu");
+    await wrapper.get(".quick-tag-heading").trigger("contextmenu");
     await wrapper.findAll(".dropdown-option").find((option) => option.text() === "粘贴")?.trigger("click");
     await flushPromises();
 
@@ -980,11 +979,11 @@ describe("QuickButtons", () => {
     wrapper.unmount();
   });
 
-  it("creates a text quick button when plain text is pasted from the area context menu", async () => {
+  it("creates a text quick button when plain text is pasted from the list context menu", async () => {
     Object.assign(navigator, { clipboard: { readText: vi.fn().mockResolvedValue("一段普通文本"), writeText: vi.fn() } });
-    const wrapper = mountQuickButtons({ buttons: [] });
+    const wrapper = mountQuickButtons({ buttons: [], tags: [{ id: "work", title: "工作" }] });
 
-    await wrapper.get(".quick-block").trigger("contextmenu");
+    await wrapper.get(".quick-tag-heading").trigger("contextmenu");
     await wrapper.findAll(".dropdown-option").find((option) => option.text() === "粘贴")?.trigger("click");
     await Promise.resolve();
     await wrapper.vm.$nextTick();
@@ -1420,7 +1419,7 @@ describe("QuickButtons", () => {
     wrapper.unmount();
   });
 
-  it("keeps list creation in the plus button and blank-area context menu", async () => {
+  it("keeps blank-area and toolbar menus identical", async () => {
     const headerWrapper = mountQuickButtons();
 
     await headerWrapper.get(".quick-menu-button").trigger("click");
@@ -1431,7 +1430,11 @@ describe("QuickButtons", () => {
     const areaWrapper = mountQuickButtons();
 
     await areaWrapper.get(".quick-buttons").trigger("contextmenu");
-    expect(areaWrapper.findAll(".dropdown-option").map((option) => option.text())).toContain("新建列表");
+    const areaKeys = areaWrapper.findAll(".dropdown-option").map(option => option.attributes("data-key"));
+    await areaWrapper.get(".quick-menu-button").trigger("click");
+    expect(areaWrapper.findAll(".dropdown-option").map(option => option.attributes("data-key"))).toEqual(areaKeys);
+    expect(areaKeys).not.toContain("add");
+    expect(areaKeys).not.toContain("create-list");
     areaWrapper.unmount();
   });
 
@@ -1758,6 +1761,10 @@ describe("QuickButtons", () => {
     await wrapper.get(".quick-tag-menu-button").trigger("click");
     expect(wrapper.find('.dropdown-option[data-key="paste"]').exists()).toBe(true);
     expect(wrapper.find('.dropdown-option[data-key="smart-paste"]').exists()).toBe(true);
+    const listKeys = wrapper.findAll(".dropdown-option").map(option => option.attributes("data-key"));
+    await wrapper.get(".quick-tag-heading").trigger("contextmenu");
+    expect(wrapper.findAll(".dropdown-option").map(option => option.attributes("data-key"))).toEqual(listKeys);
+    expect(listKeys).not.toContain("add");
     wrapper.unmount();
   });
 
@@ -1966,13 +1973,12 @@ describe("QuickButtons 跨空间移动", () => {
     wrapper.unmount();
   });
 
-  it("新增菜单沿用右键标签作为默认标签", async () => {
+  it("列表加号沿用所在标签作为默认标签", async () => {
     const wrapper = mountQuickButtons({
       tags: [{ id: "tag-work", title: "工作" }],
       buttons: [{ id: "b1", title: "Btn", value: "v", type: "link", tagId: "tag-work", hidden: false }],
     });
-    await wrapper.get(".quick-tag-title").trigger("contextmenu");
-    await wrapper.get('[data-key="add"]').trigger("click");
+    await wrapper.get(".quick-tag-add-button").trigger("click");
     expect(wrapper.find(".quick-tag-field").exists()).toBe(false);
     await wrapper.findAll(".quick-form input")[0].setValue("新动作");
     await wrapper.findAll(".quick-form input")[1].setValue("https://example.com");
@@ -1989,7 +1995,7 @@ describe("QuickButtons 跨空间移动", () => {
     await wrapper.get(".quick-tag-title").trigger("contextmenu");
     expect(wrapper.findAll('[data-key^="move-ws:"]')).toHaveLength(0);
     expect(wrapper.find('[data-key="move-tag"]').exists()).toBe(false);
-    expect(wrapper.findAll(".dropdown-option").map((option) => option.text())).toEqual(["新增", "粘贴", "重命名", "查看隐藏", "切换为紧凑按钮", "删除列表"]);
+    expect(wrapper.findAll(".dropdown-option").map((option) => option.text())).toEqual(["粘贴", "重命名", "查看隐藏", "切换为紧凑按钮", "删除列表"]);
     expect(wrapper.find('[data-key="create-list"]').exists()).toBe(false);
     expect(wrapper.get('[data-key="delete-tag"]').text()).toBe("删除列表");
     wrapper.unmount();
@@ -2008,11 +2014,11 @@ describe("QuickButtons 跨空间移动", () => {
     expect(expected).not.toContain("新增");
     expect(expected).not.toContain("删除列表");
     await wrapper.get(".quick-tag-title").trigger("contextmenu");
-    expect(labels().filter(label => !["新增", "新建列表"].includes(label))).toEqual(expected);
-    expect(labels()).toContain("新建列表");
+    expect(labels()).toEqual(expected);
+    expect(labels()).not.toContain("新建列表");
     expect(wrapper.findAll('[data-key^="move-ws:"]')).toHaveLength(0);
     expect(wrapper.find('[data-key="move-tag"]').exists()).toBe(false);
-    expect(wrapper.find('[data-key="add"]').exists()).toBe(true);
+    expect(wrapper.find('[data-key="add"]').exists()).toBe(false);
     wrapper.unmount();
   });
 
