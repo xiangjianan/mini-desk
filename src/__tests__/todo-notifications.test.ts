@@ -33,15 +33,17 @@ function setup(todos: TodoItem[]) {
   workspace.todos = { today: todos };
   const prompt = vi.fn();
   const blocked = vi.fn(() => false);
+  const issue = vi.fn();
   const engine = useTodoNotifications(state, {
     isMounted: () => true,
     boardTitle: () => "Mini Desk",
     showCrossWorkspacePrompt: prompt,
     isBoardBlocked: blocked,
     hasPendingConfirm: () => false,
+    showNotificationIssue: issue,
   });
   engines.push(engine);
-  return { state, workspace, engine, prompt, blocked };
+  return { state, workspace, engine, prompt, blocked, issue };
 }
 
 function todo(id: string, notifyAt?: number): TodoItem {
@@ -58,7 +60,84 @@ describe("reminder refresh", () => {
     lastNotification.onclick!();
     expect(focus).toHaveBeenCalledOnce();
     expect(lastNotification.close).toHaveBeenCalledOnce();
+    expect(engine.notificationTitleFlashing()).toBe(true);
+    vi.spyOn(document, "visibilityState", "get").mockReturnValue("visible");
+    engine.handleNotificationReturn();
     expect(engine.notificationTitleFlashing()).toBe(false);
+  });
+
+  it.each(["denied", "default", "missing", "throws"])("keeps background title attention when native notifications are %s", async (mode) => {
+    vi.spyOn(document, "visibilityState", "get").mockReturnValue("hidden");
+    if (mode === "missing") vi.stubGlobal("Notification", undefined);
+    else if (mode === "throws") delivered.mockImplementation(() => { throw new Error("unavailable"); });
+    else Object.defineProperty(Notification, "permission", { value: mode });
+    vi.spyOn(console, "warn").mockImplementation(() => {});
+    const { engine, issue } = setup([todo("due", Date.now() + 1000)]);
+    await engine.prepareTodoNotifications();
+    if (mode !== "throws") expect(issue).toHaveBeenCalledWith(mode === "missing" ? "unsupported" : "permission");
+    vi.advanceTimersByTime(1000);
+    expect(document.title).toContain("新提醒");
+    vi.advanceTimersByTime(750);
+    expect(document.title).toBe("Mini Desk");
+    engine.handleNotificationReturn();
+    expect(engine.notificationTitleFlashing()).toBe(true);
+    vi.spyOn(document, "visibilityState", "get").mockReturnValue("visible");
+    engine.handleNotificationReturn();
+    expect(engine.notificationFlashKeys.value).toContain("today:due");
+    expect(engine.notificationTitleFlashing()).toBe(false);
+  });
+
+  it("flashes when switching away after a foreground reminder, then acknowledges it on return", () => {
+    const visibility = vi.spyOn(document, "visibilityState", "get").mockReturnValue("visible");
+    const { engine } = setup([todo("due", Date.now())]);
+    engine.refreshTodoNotifications();
+    expect(engine.notificationTitleFlashing()).toBe(false);
+    visibility.mockReturnValue("hidden");
+    engine.handleNotificationVisibilityChange();
+    expect(engine.notificationTitleFlashing()).toBe(true);
+    expect(delivered).toHaveBeenCalledOnce();
+    visibility.mockReturnValue("visible");
+    engine.handleNotificationVisibilityChange();
+    visibility.mockReturnValue("hidden");
+    engine.handleNotificationVisibilityChange();
+    expect(engine.notificationTitleFlashing()).toBe(false);
+  });
+
+  it("checks overdue reminders immediately when the tab is hidden or returns after a suspended timer", () => {
+    const visibility = vi.spyOn(document, "visibilityState", "get").mockReturnValue("visible");
+    const { engine } = setup([todo("due", Date.now() + 1000)]);
+    engine.refreshTodoNotifications();
+    vi.setSystemTime(Date.now() + 2000);
+    visibility.mockReturnValue("hidden");
+    engine.handleNotificationVisibilityChange();
+    expect(delivered).toHaveBeenCalledOnce();
+    expect(engine.notificationTitleFlashing()).toBe(true);
+    visibility.mockReturnValue("visible");
+    engine.handleNotificationVisibilityChange();
+    expect(delivered).toHaveBeenCalledOnce();
+    expect(engine.notificationTitleFlashing()).toBe(false);
+  });
+
+  it("falls back to persistent notifications and avoids duplicate sends while delivery is pending", async () => {
+    vi.spyOn(console, "warn").mockImplementation(() => {});
+    delivered.mockImplementation(() => { throw new Error("page notifications unavailable"); });
+    const showNotification = vi.fn(async () => {});
+    const getRegistration = vi.fn(async () => ({ active: {}, showNotification }));
+    const original = Object.getOwnPropertyDescriptor(navigator, "serviceWorker");
+    Object.defineProperty(navigator, "serviceWorker", { configurable: true, value: { getRegistration } });
+    try {
+      const { engine } = setup([todo("due", Date.now())]);
+      engine.refreshTodoNotifications();
+      engine.refreshTodoNotifications();
+      expect(delivered).toHaveBeenCalledOnce();
+      await vi.advanceTimersByTimeAsync(0);
+      expect(showNotification).toHaveBeenCalledExactlyOnceWith("【今天】", expect.objectContaining({ body: "due", data: { url: window.location.href } }));
+      engine.refreshTodoNotifications();
+      expect(delivered).toHaveBeenCalledOnce();
+    } finally {
+      if (original) Object.defineProperty(navigator, "serviceWorker", original);
+      else Reflect.deleteProperty(navigator, "serviceWorker");
+    }
   });
 
   it("walks the board once per refresh, even with thousands of ordinary todos", () => {

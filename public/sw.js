@@ -178,3 +178,16 @@ async function staleWhileRevalidate(event, request) {
   if (fresh) return fresh;
   throw new Error("offline-no-cache");
 }
+
+// Persistent reminder notifications return to their originating Mini Desk page.
+self.addEventListener("notificationclick", (event) => {
+  event.notification.close();
+  event.waitUntil((async () => {
+    const url = new URL(event.notification.data?.url || "/", self.location.origin);
+    if (url.origin !== self.location.origin) return;
+    const windows = await self.clients.matchAll({ type: "window", includeUncontrolled: true });
+    const existing = windows.find((client) => client.url === url.href);
+    if (existing) await existing.focus();
+    else await self.clients.openWindow(url.href);
+  })());
+});

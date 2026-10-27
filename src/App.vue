@@ -221,6 +221,7 @@ const {
   startNotificationTitleFlash,
   queueTodoNotificationFlash,
   handleNotificationReturn,
+  handleNotificationVisibilityChange,
   startFallbackInterval: startNotificationFallbackInterval,
   clearTimers: clearNotificationTimers,
 } = useTodoNotifications(state, {
@@ -229,6 +230,10 @@ const {
   isBoardBlocked: shouldBlockBoardEffects,
   hasPendingConfirm: () => Boolean(pendingConfirm.value),
   showCrossWorkspacePrompt: showCrossWorkspaceReminderPrompt,
+  showNotificationIssue: (issue) => showBubbleText(
+    issue === "permission" ? uiText.value.app.notifyPermissionRequired : uiText.value.app.notifyUnsupported,
+    undefined, { force: true, hideCompanionAfter: true }, 6000,
+  ),
 });
 
 const {
@@ -3568,7 +3573,7 @@ function clearTimers(): void {
 
 /** Shows the "another workspace has a reminder — switch?" companion bubble. */
 function handleDocumentVisibilityChange(): void {
-  if (document.visibilityState === "visible") handleNotificationReturn();
+  handleNotificationVisibilityChange();
 }
 
 function showCrossWorkspaceReminderPrompt(item: NotifiableTodo): void {

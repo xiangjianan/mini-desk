@@ -90,6 +90,7 @@ interface SwHarness {
   skipWaiting: ReturnType<typeof vi.fn>;
   claim: ReturnType<typeof vi.fn>;
   matchAllClients: ReturnType<typeof vi.fn>;
+  openWindow: ReturnType<typeof vi.fn>;
 }
 
 function makeLoadSw() {
@@ -97,6 +98,7 @@ function makeLoadSw() {
     const listeners = new Map<string, Listener>();
     const skipWaiting = vi.fn();
     const claim = vi.fn();
+    const openWindow = vi.fn();
     const matchAllClients = vi.fn().mockResolvedValue([]);
     const fetchMock = vi.fn();
     const caches = createCacheStorage(fetchMock);
@@ -104,7 +106,7 @@ function makeLoadSw() {
     const swScope = {
       location: { origin: ORIGIN },
       skipWaiting,
-      clients: { claim, matchAll: matchAllClients },
+      clients: { claim, matchAll: matchAllClients, openWindow },
       addEventListener: (type: string, listener: Listener) => listeners.set(type, listener),
     };
 
@@ -121,7 +123,7 @@ function makeLoadSw() {
     const code = readFileSync(resolve(__dirname, "../../public/sw.js"), "utf8");
     vm.runInNewContext(code, sandbox);
 
-    return { listeners, caches, fetchMock, skipWaiting, claim, matchAllClients };
+    return { listeners, caches, fetchMock, skipWaiting, claim, matchAllClients, openWindow };
   };
 }
 
@@ -488,4 +490,21 @@ describe("service worker first-visit warm-up", () => {
 
     expect(sw.claim).toHaveBeenCalled();
   });
+});
+
+it.each([true, false])("notification click returns to its page with existing tab=%s", async (existing) => {
+  const sw = await loadSw();
+  const url = `${ORIGIN}/?desk=1`;
+  const focus = vi.fn(async () => {});
+  const close = vi.fn();
+  sw.matchAllClients.mockResolvedValue(existing ? [{ url, focus }] : []);
+  let completed: Promise<unknown> | undefined;
+  const event = { notification: { data: { url }, close }, waitUntil: (promise: Promise<unknown>) => { completed = promise; } };
+  sw.listeners.get("notificationclick")!(event as never);
+  await completed;
+  expect(close).toHaveBeenCalledOnce();
+  if (existing) {
+    expect(focus).toHaveBeenCalledOnce();
+    expect(sw.openWindow).not.toHaveBeenCalled();
+  } else expect(sw.openWindow).toHaveBeenCalledWith(url);
 });

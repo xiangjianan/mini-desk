@@ -26,6 +26,7 @@ export interface TodoNotificationDeps {
   isBoardBlocked: () => boolean;
   /** Whether a confirm bubble is already mid-flight. */
   hasPendingConfirm: () => boolean;
+  showNotificationIssue?: (issue: "permission" | "unsupported") => void;
 }
 
 /**
@@ -43,6 +44,9 @@ export function useTodoNotifications(state: BoardState, deps: TodoNotificationDe
   const notificationFlashKeys = ref<string[]>([]);
   const pendingNotificationFlashKeys = ref<string[]>([]);
   const sentTodoNotifications = new Set<string>();
+  const alertedTodoNotifications = new Set<string>();
+  const pendingNativeNotifications = new Set<string>();
+  const pendingAttentionKeys = new Set<string>();
   const notificationFlashTimers = new Map<string, number>();
 
   const uiText = computed(() => getUiText(state.language));
@@ -54,7 +58,11 @@ export function useTodoNotifications(state: BoardState, deps: TodoNotificationDe
 
   async function prepareTodoNotifications(): Promise<void> {
     const notificationApi = getNotificationApi();
-    if (!notificationApi) return;
+    if (!notificationApi) {
+      deps.showNotificationIssue?.("unsupported");
+      refreshTodoNotifications();
+      return;
+    }
     if (notificationApi.permission === "default" && typeof notificationApi.requestPermission === "function") {
       try {
         await notificationApi.requestPermission();
@@ -62,6 +70,7 @@ export function useTodoNotifications(state: BoardState, deps: TodoNotificationDe
         console.warn("Failed to request reminder notification permission", error);
       }
     }
+    if (notificationApi.permission !== "granted") deps.showNotificationIssue?.("permission");
     refreshTodoNotifications();
   }
 
@@ -109,6 +118,8 @@ export function useTodoNotifications(state: BoardState, deps: TodoNotificationDe
   function fireNativeTodoNotification(item: NotifiableTodo): boolean {
     const notificationApi = getNotificationApi();
     if (!notificationApi || notificationApi.permission !== "granted") return false;
+    const key = getTodoNotificationKey(item.workspaceId, item.period, item.todo);
+    if (pendingNativeNotifications.has(key)) return false;
     const title = `【${getWorkspaceTodoListTitle(item.workspace, item.period)}】`;
     const options: NotificationOptions = {
       body: formatNotificationBody(item.todo.text, state.language),
@@ -126,6 +137,18 @@ export function useTodoNotifications(state: BoardState, deps: TodoNotificationDe
       return true;
     } catch (error) {
       console.warn("Failed to show reminder notification", error);
+      // Some browsers reject page-created notifications but support persistent
+      // notifications through the already registered service worker.
+      if (navigator.serviceWorker?.getRegistration) {
+        pendingNativeNotifications.add(key);
+        void navigator.serviceWorker.getRegistration().then(async (registration) => {
+          if (!registration?.active || !registration.showNotification) return;
+          await registration.showNotification(title, { ...options, data: { url: window.location.href } });
+          sentTodoNotifications.add(key);
+        }).catch((fallbackError) => {
+          console.warn("Failed to show persistent reminder notification", fallbackError);
+        }).finally(() => pendingNativeNotifications.delete(key));
+      }
       return false;
     }
   }
@@ -133,20 +156,24 @@ export function useTodoNotifications(state: BoardState, deps: TodoNotificationDe
   function triggerDueTodoNotifications(all: NotifiableTodo[]): void {
     const now = Date.now();
 
-    // Phase 1 — active workspace: fire native notifications + in-app flash
-    // (permission-gated, unchanged behavior).
+    // Page attention is independent of browser permission and native delivery.
+    // Retry failed native notifications without replaying the row flash.
     for (const item of all) {
       if (item.workspaceId !== state.activeWorkspaceId) continue;
       const { period, todo } = item;
       if (todo.notifyAt === undefined || todo.notifyAt > now) continue;
       const key = getTodoNotificationKey(item.workspaceId, period, todo);
       if (sentTodoNotifications.has(key)) continue;
+      if (!alertedTodoNotifications.has(key)) {
+        alertedTodoNotifications.add(key);
+        pendingAttentionKeys.add(key);
+        startNotificationTitleFlash();
+        queueTodoNotificationFlash(period, todo.id);
+      }
       // On constructor failure, leave the todo unsent so the fallback interval
       // retries it (the browser Notification constructor can fail transiently).
       if (!fireNativeTodoNotification(item)) continue;
       sentTodoNotifications.add(key);
-      startNotificationTitleFlash();
-      queueTodoNotificationFlash(period, todo.id);
     }
 
     // Phase 2 — non-active workspace: prompt to switch (one at a time). This is
@@ -163,7 +190,9 @@ export function useTodoNotifications(state: BoardState, deps: TodoNotificationDe
       if (!target || (todo.notifyAt ?? 0) < (target.todo.notifyAt ?? 0)) target = item;
     }
     if (!target) return;
-    sentTodoNotifications.add(getTodoNotificationKey(target.workspaceId, target.period, target.todo));
+    const key = getTodoNotificationKey(target.workspaceId, target.period, target.todo);
+    sentTodoNotifications.add(key);
+    pendingAttentionKeys.add(key);
     startNotificationTitleFlash();
     deps.showCrossWorkspacePrompt(target);
   }
@@ -187,8 +216,10 @@ export function useTodoNotifications(state: BoardState, deps: TodoNotificationDe
 
   function pruneSentTodoNotifications(reminders: NotifiableTodo[]): void {
     const activeKeys = new Set(reminders.map(({ workspaceId, period, todo }) => getTodoNotificationKey(workspaceId, period, todo)));
-    for (const key of sentTodoNotifications) {
-      if (!activeKeys.has(key)) sentTodoNotifications.delete(key);
+    for (const records of [sentTodoNotifications, alertedTodoNotifications, pendingAttentionKeys]) {
+      for (const key of records) {
+        if (!activeKeys.has(key)) records.delete(key);
+      }
     }
   }
 
@@ -234,8 +265,20 @@ export function useTodoNotifications(state: BoardState, deps: TodoNotificationDe
   }
 
   function handleNotificationReturn(): void {
+    // Window focus can fire before the tab becomes visible (or for another tab).
+    if (document.visibilityState !== "visible") return;
     stopNotificationTitleFlash();
+    pendingAttentionKeys.clear();
     flushPendingTodoNotificationFlashes();
+    refreshTodoNotifications();
+  }
+
+  function handleNotificationVisibilityChange(): void {
+    if (document.visibilityState === "visible") handleNotificationReturn();
+    else {
+      refreshTodoNotifications();
+      if (pendingAttentionKeys.size > 0) startNotificationTitleFlash();
+    }
   }
 
   function queueTodoNotificationFlash(period: TodoPeriod, id: string): void {
@@ -304,6 +347,7 @@ export function useTodoNotifications(state: BoardState, deps: TodoNotificationDe
     startNotificationTitleFlash,
     queueTodoNotificationFlash,
     handleNotificationReturn,
+    handleNotificationVisibilityChange,
     startFallbackInterval,
     clearTimers,
   };

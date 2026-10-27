@@ -3353,12 +3353,14 @@ describe("App shell", () => {
       await vi.advanceTimersByTimeAsync(1);
       expect(document.title).toContain("新提醒");
 
+      Object.defineProperty(document, "visibilityState", { configurable: true, get: () => "visible" });
       window.dispatchEvent(new Event("focus"));
       expect(document.title).toBe("MiniDesk");
 
       await vi.advanceTimersByTimeAsync(1200);
       expect(document.title).toBe("MiniDesk");
 
+      Object.defineProperty(document, "visibilityState", { configurable: true, get: () => "hidden" });
       const secondNotifyAt = new Date(2026, 4, 25, 8, 0, 3).getTime();
       wrapper.getComponent(TodoPanel).vm.$emit("notify", "morning", "todo-1", secondNotifyAt);
       await vi.advanceTimersByTimeAsync(2000);
