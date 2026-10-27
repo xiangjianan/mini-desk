@@ -1088,3 +1088,13 @@ html[data-theme="dark"] .workbench-shell {
   padding-inline: 4px;
   margin-inline-end: 4px;
 }
+
+/* Briefly mark newly pasted items without shifting their layout. */
+.workbench-shell :is(.quick-button, .todo-item).is-paste-highlighted {
+  animation: image-paste-highlight 1200ms ease-out;
+}
+@media (prefers-reduced-motion: reduce) {
+  .workbench-shell :is(.quick-button, .todo-item).is-paste-highlighted {
+    animation-duration: 1ms;
+  }
+}

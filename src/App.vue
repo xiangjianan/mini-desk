@@ -2049,7 +2049,7 @@ function imageSourceToPngBlob(src: string): Promise<Blob> {
   });
 }
 
-function saveQuick(payload: { tagId?: string; id?: string; title: string; value: string; type: QuickButtonType; tagTitle?: string; apiMethod?: QuickApiMethod; apiHeaders?: QuickApiHeader[]; apiBodyType?: QuickApiBodyType; apiBody?: string }): void {
+function saveQuick(payload: { tagId?: string; id?: string; title: string; value: string; type: QuickButtonType; tagTitle?: string; apiMethod?: QuickApiMethod; apiHeaders?: QuickApiHeader[]; apiBodyType?: QuickApiBodyType; apiBody?: string }, revealAfterPaste = false): void {
   if (!payload.title && !payload.value) return;
   const tagId = payload.tagId && activeWorkspace.value.quickTags.some(tag => tag.id === payload.tagId)
     ? payload.tagId
@@ -2074,8 +2074,27 @@ function saveQuick(payload: { tagId?: string; id?: string; title: string; value:
     applyQuickTag(button, tagId);
     applyQuickApiConfig(button, payload);
     activeWorkspace.value.quickButtons.push(button);
+    if (revealAfterPaste) {
+      const workspace = activeWorkspace.value;
+      const tag = workspace.quickTags.find((item) => item.id === tagId);
+      if (tag) tag.collapsed = false;
+      else workspace.quickOtherCollapsed = false;
+      nextTick(() => {
+        if (activeWorkspace.value !== workspace) return;
+        const element = Array.from(document.querySelectorAll<HTMLElement>(".quick-button[data-id]"))
+          .find((item) => item.dataset.id === button.id);
+        revealPastedItem(element);
+      });
+    }
   }
   persistNow();
+}
+
+function revealPastedItem(element?: HTMLElement): void {
+  if (!element) return;
+  element.scrollIntoView({ block: "nearest", inline: "nearest" });
+  element.classList.add("is-paste-highlighted");
+  element.addEventListener("animationend", () => element.classList.remove("is-paste-highlighted"), { once: true });
 }
 
 function resolveQuickTagId(tagTitle?: string): string | undefined {
@@ -2749,7 +2768,7 @@ function createTodosFromText(period: TodoPeriod, items: string[] | PolishTodoIte
   if (anyNotify) void prepareTodoNotifications();
   nextTick(() => {
     if (activeWorkspace.value !== workspace || !firstCreatedId) return;
-    getTodoInput(period, firstCreatedId)?.scrollIntoView({ block: "nearest", inline: "nearest" });
+    revealPastedItem(getTodoInput(period, firstCreatedId)?.closest<HTMLElement>(".todo-item") ?? undefined);
   });
 }
 

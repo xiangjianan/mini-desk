@@ -1089,7 +1089,9 @@ describe("App shell", () => {
       expect(wrapper.get('.todo-section[data-list-id="morning"]').classes()).not.toContain("is-collapsed");
       expect(workspace.todoLists.find((list: { id: string }) => list.id === "morning").collapsed).toBe(false);
       expect(scroll).toHaveBeenCalledWith({ block: "nearest", inline: "nearest" });
-      expect(scroll.mock.contexts).toContain(wrapper.findAll('[data-testid="todo-input-morning"]')[0].element);
+      const pastedRow = wrapper.findAll('[data-testid="todo-input-morning"]')[0].element.closest(".todo-item");
+      expect(scroll.mock.contexts).toContain(pastedRow);
+      expect(pastedRow?.classList.contains("is-paste-highlighted")).toBe(true);
       expect(workspace.todos.morning.map((todo: { text: string; done: boolean }) => ({
         text: todo.text,
         done: todo.done,
@@ -4334,6 +4336,25 @@ describe("App shell", () => {
       wrapper.unmount();
       vi.useRealTimers();
     }
+  });
+
+  it("expands a collapsed quick list and briefly highlights its pasted button", async () => {
+    const wrapper = mountApp();
+    try {
+      const panel = wrapper.getComponent(QuickButtons);
+      const tag = panel.props("tags")![0];
+      panel.vm.$emit("toggleTagCollapsed", tag.id);
+      await nextTick();
+      expect(panel.props("tags")![0].collapsed).toBe(true);
+      panel.vm.$emit("save", { title: "粘贴动作", value: "内容", type: "text", tagTitle: tag.title }, true);
+      await nextTick();
+      expect(panel.props("tags")![0].collapsed).toBe(false);
+      const button = wrapper.get(".quick-button.is-paste-highlighted");
+      expect(button.text()).toContain("粘贴动作");
+      expect(loadState().workspaces[0].quickTags[0].collapsed).not.toBe(true);
+      await button.trigger("animationend");
+      expect(button.classes()).not.toContain("is-paste-highlighted");
+    } finally { wrapper.unmount(); }
   });
 
   it("creates quick action tags from save payloads and persists tag references", async () => {

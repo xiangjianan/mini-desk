@@ -68,7 +68,7 @@ const props = withDefaults(defineProps<{
 
 const emit = defineEmits<{
   titleUpdate: [id: string, value: string];
-  save: [payload: { tagId?: string; id?: string; title: string; value: string; type: QuickButtonType; tagTitle?: string; apiMethod?: QuickApiMethod; apiHeaders?: QuickApiHeader[]; apiBodyType?: QuickApiBodyType; apiBody?: string }];
+  save: [payload: { tagId?: string; id?: string; title: string; value: string; type: QuickButtonType; tagTitle?: string; apiMethod?: QuickApiMethod; apiHeaders?: QuickApiHeader[]; apiBodyType?: QuickApiBodyType; apiBody?: string }, revealAfterPaste?: boolean];
   delete: [id: string, anchor?: HTMLElement];
   copy: [id: string, anchor?: HTMLElement];
   copyText: [id: string, anchor?: HTMLElement];
@@ -678,7 +678,7 @@ async function pasteQuick(tagTitle?: string): Promise<void> {
   const text = await readClipboardText();
   const trimmed = text?.trim();
   if (!trimmed) return;
-  emit("save", { ...classifyQuickText(trimmed), tagTitle });
+  emit("save", { ...classifyQuickText(trimmed), tagTitle }, true);
 }
 
 /** 快捷动作智能粘贴：剪贴板 → 服务端生成按钮 → 落位；失败退化为普通粘贴语义（classifyQuickText）。

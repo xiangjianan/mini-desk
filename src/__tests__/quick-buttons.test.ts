@@ -1748,6 +1748,7 @@ describe("QuickButtons", () => {
     await flushPromises();
 
     expect(polish).not.toHaveBeenCalled();
+    expect(wrapper.emitted("save")?.[0]?.[1]).toBe(true);
     expect(wrapper.emitted("save")?.[0]?.[0]).toEqual({ title: "github.com", value: "https://github.com", type: "link", tagTitle: "工作" });
     expect(wrapper.emitted("polishMessage")).toBeUndefined();
   });
