@@ -8,6 +8,13 @@ function expectSelectorBody(styles: string, selector: string, text: string): voi
 }
 
 describe("workbench style contract", () => {
+  it("keeps image sorting motion above the workbench hover transition", () => {
+    const desk = readFileSync(resolve(__dirname, "../desk.css"), "utf8");
+    for (const phase of ["move", "enter-active", "leave-active"]) {
+      expectSelectorBody(desk, `.workbench-shell .image-card.image-reorder-${phase}`, "transform 0.22s");
+    }
+  });
+
   it("moves focus reminders and their region during the exit fade", () => {
     const styles = readFileSync(resolve(__dirname, "../styles.css"), "utf8");
     expect(ruleBodies(styles, ".today-focus-move-leave-active").join("\n")).toMatch(/position:\s*absolute/);

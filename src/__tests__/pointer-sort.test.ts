@@ -36,6 +36,24 @@ function fixture() {
 }
 
 describe("pointer sorting", () => {
+  it.each([false, true])('preserves quick-button presentation with compact=%s', (compact) => {
+    const { root, source } = fixture();
+    root.className = `quick-block${compact ? ' is-compact' : ''}`;
+    source.classList.add('quick-button');
+    source.innerHTML = '<span class="quick-button-content"><span class="quick-button-label">Title</span><span class="quick-button-kind">Remark</span></span>';
+    source.style.minHeight = compact ? '44px' : '64px';
+    source.style.padding = compact ? '8px 12px' : '12px';
+    pointer(source, 'pointerdown', 20);
+    pointer(window, 'pointermove', 35);
+    const preview = document.body.querySelector<HTMLElement>(':scope > [aria-hidden="true"]')!;
+    expect(preview.querySelector('.quick-button-label')?.textContent).toBe('Title');
+    expect(Boolean(preview.querySelector('.quick-button-kind'))).toBe(!compact);
+    expect(source.querySelector('.quick-button-kind')?.textContent).toBe('Remark');
+    expect(preview.style.minHeight).toBe(source.style.minHeight);
+    expect(preview.style.padding).toBe(source.style.padding);
+    if (compact) expect(preview.querySelector<HTMLElement>('.quick-button-content')?.style.gap).toBe('0px');
+  });
+
   it.each(['todo-item', 'todo-section', 'quick-button', 'quick-tag-group'])('keeps the initial grab point for %s', (kind) => {
     const { root, source } = fixture();
     const surface = document.createElement('section');

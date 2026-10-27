@@ -73,6 +73,18 @@ export function installPointerSort(root: HTMLElement, selector: string, pauseAut
       preview.setAttribute("aria-hidden", "true");
       preview.inert = true;
       preview.style.cssText = `position:fixed;z-index:11000;pointer-events:none;width:${rect.width}px;max-height:180px;overflow:hidden;opacity:0.8;margin:0;transform:none;transition:none;animation:none;`;
+      if (source.matches(".quick-button")) {
+        // The floating clone leaves the compact-mode and workbench ancestors.
+        const style = getComputedStyle(element);
+        preview.style.minHeight = style.minHeight;
+        preview.style.padding = style.padding;
+        preview.style.gap = style.gap;
+        if (source.closest(".quick-block.is-compact")) {
+          preview.querySelectorAll(".quick-button-kind").forEach((kind) => kind.remove());
+          const content = preview.querySelector<HTMLElement>(".quick-button-content");
+          if (content) content.style.gap = "0";
+        }
+      }
       if (source.matches(".todo-heading")) preview.style.maxHeight = "none";
       document.body.appendChild(preview);
       const surface = source.closest<HTMLElement>(".todo-item, .todo-section, .quick-button, .quick-tag-group, .space-tab, .workspace-switcher-item");

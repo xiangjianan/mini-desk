@@ -1001,6 +1001,15 @@ html[data-theme="dark"] .workbench-shell .space-text-panel {
   transition: box-shadow var(--motion-fast) ease;
 }
 
+.workbench-shell .image-card.image-reorder-move,
+.workbench-shell .image-card.image-reorder-enter-active,
+.workbench-shell .image-card.image-reorder-leave-active {
+  transition:
+    transform 0.22s cubic-bezier(0.2, 0, 0, 1),
+    opacity 0.18s ease,
+    box-shadow var(--motion-fast) ease;
+}
+
 .workbench-shell .image-card:hover {
   box-shadow: var(--desk-card-shadow), 0 0 0 1px color-mix(in srgb, var(--primary) 25%, transparent);
 }
