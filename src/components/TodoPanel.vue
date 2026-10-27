@@ -1,4 +1,5 @@
 <script setup lang="ts">
+import SmartPasteIcon from "./SmartPasteIcon.vue";
 import ContextMenu from "./ContextMenu.vue";
 import { TITLE_MAX_LENGTH } from "../state/titleLimits";
 import { installPointerSort } from "../utils/pointerSort";
@@ -334,7 +335,7 @@ const menuOptions = computed<DropdownOption[]>(() => {
       { label: isCompletedVisible(list.id) ? uiText.value.todo.hideCompleted : uiText.value.todo.showCompleted, key: "toggle-completed", icon: renderIcon(isCompletedVisible(list.id) ? EyeOffOutline : EyeOutline) },
       { label: uiText.value.common.paste, key: "paste", icon: renderIcon(ClipboardOutline) },
       ...(props.polish
-        ? [{ label: uiText.value.common.smartPaste, key: "smart-paste", icon: renderIcon(ClipboardOutline) }]
+        ? [{ label: uiText.value.common.smartPaste, key: "smart-paste", icon: renderIcon(SmartPasteIcon) }]
         : []),
       ...buildListMoveOptions(),
       { label: uiText.value.todo.deleteList, key: "delete-list", disabled: effectiveTodoLists.value.length <= 1, icon: renderIcon(TrashOutline, true) },
@@ -352,7 +353,7 @@ const menuOptions = computed<DropdownOption[]>(() => {
       // 普通粘贴在聚焦时写入选区；失焦及智能粘贴继续新增提醒。
       options.push({ label: uiText.value.common.paste, key: "paste", icon: renderIcon(ClipboardOutline) });
       if (props.polish) {
-        options.push({ label: uiText.value.common.smartPaste, key: "smart-paste", icon: renderIcon(ClipboardOutline) });
+        options.push({ label: uiText.value.common.smartPaste, key: "smart-paste", icon: renderIcon(SmartPasteIcon) });
       }
     }
     if (props.polish && todo?.text.trim()) {
@@ -2244,9 +2245,9 @@ onUnmounted(() => focusRegionAnimation?.cancel());
 
           <div class="todo-heading-actions">
             <span class="todo-count">{{ periodStats[list.id] }}</span>
-            <button v-if="props.polish" type="button" class="icon-button desk-ai-button"
-              :aria-label="uiText.common.smartPaste" :title="uiText.common.smartPaste"
-              @click.stop="openSectionActions($event, list.id); handleMenuSelect('smart-paste')"><NIcon :component="ClipboardOutline" /></button>
+            <button type="button" class="icon-button desk-paste-button"
+              :aria-label="uiText.common.paste" :title="uiText.common.paste"
+              @click.stop="openSectionActions($event, list.id); handleMenuSelect('paste')"><NIcon :component="ClipboardOutline" /></button>
             <button type="button" class="icon-button" :aria-label="uiText.desk.addReminder" :title="uiText.desk.addReminder"
               @click.stop="handleHeadingAddClick(list)"><NIcon :component="AddOutline" /></button>
             <button

@@ -1,4 +1,5 @@
 <script setup lang="ts">
+import SmartPasteIcon from "./SmartPasteIcon.vue";
 import ContextMenu from "./ContextMenu.vue";
 import TodoListCreateDialog from "./TodoListCreateDialog.vue";
 import MemoTransitionGroup from "./MemoTransitionGroup";
@@ -274,7 +275,7 @@ const areaMenuOptions = computed<DropdownOption[]>(() => [
   { label: uiText.value.quick.add, key: "add", icon: renderIcon(AddOutline) },
   { label: uiText.value.common.paste, key: "paste", icon: renderIcon(ClipboardOutline) },
   ...(props.polish
-    ? [{ label: uiText.value.common.smartPaste, key: "smart-paste", icon: renderIcon(ClipboardOutline) }]
+    ? [{ label: uiText.value.common.smartPaste, key: "smart-paste", icon: renderIcon(SmartPasteIcon) }]
     : []),
   { label: props.showHidden ? uiText.value.quick.hideHidden : uiText.value.quick.showHidden, key: "toggle-show-hidden", icon: renderIcon(props.showHidden ? EyeOffOutline : EyeOutline) },
   { label: uiText.value.quick.newList, key: "create-list", icon: renderIcon(AddOutline) },
@@ -972,14 +973,12 @@ function handleQuickGroupDrop(event: DragEvent, groupId: string): void {
 
             <span v-if="editingTagId !== group.id" class="quick-tag-count">{{ group.buttons.length }}</span>
             <button
-              v-if="group.title && editingTagId !== group.id && props.polish"
+              v-if="group.title && editingTagId !== group.id"
               type="button"
-              class="icon-button desk-ai-button"
-              :aria-label="uiText.common.smartPaste"
-              :title="uiText.common.smartPaste"
-              :disabled="smartPastePending"
-              :aria-busy="smartPastePending"
-              @click.stop="runQuickSmartPasteFlow(isRealTagGroup(group.id) ? group.title : '', $event.currentTarget as HTMLElement)"
+              class="icon-button desk-paste-button"
+              :aria-label="uiText.common.paste"
+              :title="uiText.common.paste"
+              @click.stop="pasteQuick(isRealTagGroup(group.id) ? group.title : '')"
               @dblclick.stop
             >
               <NIcon :component="ClipboardOutline" />

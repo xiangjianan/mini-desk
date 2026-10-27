@@ -1,4 +1,5 @@
 <script setup lang="ts">
+import SmartPasteIcon from "./SmartPasteIcon.vue";
 import ContextMenu from "./ContextMenu.vue";
 import { installPointerSort } from "../utils/pointerSort";
 import { TITLE_MAX_LENGTH, limitTitle } from "../state/titleLimits";
@@ -104,7 +105,7 @@ function buildSpaceMoveOptions(): DropdownOption[] {
 const menuOptions = computed<DropdownOption[]>(() => menu.value?.anchor ? [
   { label: uiText.value.space.create, key: "create", icon: renderIcon(AddOutline) },
   { label: uiText.value.common.paste, key: "paste", icon: renderIcon(ClipboardOutline), disabled: !activeSpace.value },
-  { label: uiText.value.common.smartPaste, key: "smart-paste", icon: renderIcon(ClipboardOutline), disabled: !activeSpace.value || !props.polish || smartPastePending.value },
+  { label: uiText.value.common.smartPaste, key: "smart-paste", icon: renderIcon(SmartPasteIcon), disabled: !activeSpace.value || !props.polish || smartPastePending.value },
   { label: uiText.value.common.tips, key: "guide", icon: renderIcon(HelpCircleOutline) },
 ] : [
   { label: uiText.value.common.rename, key: "edit", icon: renderIcon(CreateOutline) },
@@ -352,7 +353,7 @@ onUnmounted(() => disposeSort?.());
         <button v-if="props.polish && activeSpace" class="desk-ai-action desk-ai-button desk-smart-paste" type="button"
           :aria-label="uiText.common.smartPaste" :disabled="smartPastePending" :aria-busy="smartPastePending" @mousedown.prevent
           @click.stop="appendSmartPaste">
-          <NIcon :component="ClipboardOutline" /><span>{{ uiText.common.smartPaste }}</span>
+          <NIcon :component="SmartPasteIcon" /><span>{{ uiText.common.smartPaste }}</span>
         </button>
       </div>
     </div>

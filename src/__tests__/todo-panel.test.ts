@@ -5159,6 +5159,22 @@ describe("TodoPanel 编辑快捷键", () => {
     wrapper.unmount();
   });
 
+  it("列表顶部粘贴按钮直接粘贴原文且不调用智能处理", async () => {
+    Object.assign(navigator, { clipboard: { readText: vi.fn().mockResolvedValue("买牛奶"), writeText: vi.fn() } });
+    const polish = vi.fn();
+    const wrapper = mount(TodoPanel, {
+      props: { todoLists: defaultTodoLists, todos: { morning: [], noon: [], evening: [] }, titles: DEFAULT_TITLES, polish },
+      global: { stubs: { NDatePicker: datePickerStub, NTooltip: tooltipStub } },
+    });
+    const paste = wrapper.get('.todo-section[data-list-id="morning"] .desk-paste-button');
+    expect(paste.attributes("aria-label")).toBe("粘贴");
+    await paste.trigger("click");
+    await flushPromises();
+    expect(polish).not.toHaveBeenCalled();
+    expect(wrapper.emitted("createFromText")?.[0]).toEqual(["morning", ["买牛奶"]]);
+    wrapper.unmount();
+  });
+
   it("section 菜单在粘贴下方显示智能粘贴（有 polish 时）", async () => {
     Object.assign(navigator, { clipboard: { readText: vi.fn().mockResolvedValue("文本"), writeText: vi.fn() } });
     const wrapper = mount(TodoPanel, {

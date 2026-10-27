@@ -1,4 +1,5 @@
 <script setup lang="ts">
+import SmartPasteIcon from "./SmartPasteIcon.vue";
 import ContextMenu from "./ContextMenu.vue";
 import { computed, h, nextTick, onMounted, onUnmounted, ref, watch } from "vue";
 import type { Component, VNode } from "vue";
@@ -246,7 +247,7 @@ const menuOptions = computed<DropdownOption[]>(() => {
     options.push({ label: uiText.value.common.copy, key: "copy", disabled: !canCopyTextSelection(target), icon: renderIcon(CopyOutline) });
     options.push({ label: uiText.value.common.paste, key: "paste", disabled: !menu.value?.canPaste, icon: renderIcon(ClipboardOutline) });
     if (props.polish) {
-      options.push({ label: uiText.value.common.smartPaste, key: "smart-paste", disabled: !menu.value?.canPaste, icon: renderIcon(ClipboardOutline) });
+      options.push({ label: uiText.value.common.smartPaste, key: "smart-paste", disabled: !menu.value?.canPaste, icon: renderIcon(SmartPasteIcon) });
     }
     if (props.polish && menu.value?.selectionText) {
       options.push({
