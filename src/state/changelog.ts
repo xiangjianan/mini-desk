@@ -34,6 +34,22 @@ export interface ChangelogEntry {
 
 export const CHANGELOG: ChangelogEntry[] = [
     {
+      version: "1.1.15",
+      date: "2026-10-27",
+      notes: {
+        zh: [
+          "改版：快捷动作区改为持久分组，纯文字紧凑胶囊样式",
+          "优化：面板菜单统一收敛为竖排 ⋮ 菜单，去除重复创建入口",
+          "新增：粘贴条目闪烁高亮反馈与全新智能粘贴图标",
+        ],
+        en: [
+          "Redesigned: quick actions as persistent groups with compact text-only pills",
+          "Improved: panel menus unified into vertical ⋮ menus without duplicate creation actions",
+          "New: flash highlight on pasted items and a fresh smart-paste icon",
+        ],
+      },
+    },
+    {
       version: "1.1.14",
       date: "2026-10-27",
       notes: {
