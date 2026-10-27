@@ -1,3 +1,4 @@
+import { normalizeQuickLists } from "./quickLists";
 import { getDisplayTodoListTitle } from "./i18n";
 import { mergeDuplicateTodoLists } from "./todoListNames";
 import { createId } from "./storage";
@@ -45,6 +46,7 @@ export function moveQuickButtonToWorkspace(
   fromWorkspaceId: string,
   buttonId: string,
   toWorkspaceId: string,
+  language: AppLanguage = "zh",
 ): WorkspaceData[] {
   return transferWorkspaceItem(workspaces, fromWorkspaceId, toWorkspaceId, (from, to) => {
     const button = from.quickButtons.find((item) => item.id === buttonId);
@@ -73,7 +75,7 @@ export function moveQuickButtonToWorkspace(
 
     return {
       from: { ...from, quickButtons: from.quickButtons.filter((item) => item.id !== buttonId) },
-      to: { ...to, quickTags, quickButtons: [...to.quickButtons, moved] },
+      to: { ...to, ...normalizeQuickLists(quickTags, [...to.quickButtons, moved], language) },
     };
   });
 }
@@ -88,6 +90,7 @@ export function moveQuickTagToWorkspace(
   fromWorkspaceId: string,
   tagId: string,
   toWorkspaceId: string,
+  language: AppLanguage = "zh",
 ): WorkspaceData[] {
   return transferWorkspaceItem(workspaces, fromWorkspaceId, toWorkspaceId, (from, to) => {
     const tag = from.quickTags.find((item) => item.id === tagId);
@@ -108,8 +111,7 @@ export function moveQuickTagToWorkspace(
     return {
       from: {
         ...from,
-        quickTags: from.quickTags.filter((item) => item.id !== tagId),
-        quickButtons: from.quickButtons.filter((button) => button.tagId !== tagId),
+        ...normalizeQuickLists(from.quickTags.filter((item) => item.id !== tagId), from.quickButtons.filter((button) => button.tagId !== tagId), language),
       },
       to: {
         ...to,

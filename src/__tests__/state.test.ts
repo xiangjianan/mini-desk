@@ -787,7 +787,7 @@ describe("state compatibility", () => {
     });
   });
 
-  it("normalizes quick action tags and keeps invalid tag references untagged", () => {
+  it("normalizes quick action lists and migrates invalid references to General", () => {
     const state = normalizeImportedState({
       quickTags: [
         { id: "tag-a", title: "标签 A", collapsed: true, color: "#22c55e", clicks: 9 },
@@ -809,13 +809,14 @@ describe("state compatibility", () => {
     expect(ws().quickTags).toEqual([
       { id: "tag-a", title: "标签 A", collapsed: true, column: 0 },
       { id: "tag-b", title: "标签 B", column: 0 },
+      { id: "quick-general", title: "常用", collapsed: false, column: 0 },
     ]);
     expect(ws().quickButtons[0]).toMatchObject({ tagId: "tag-a", clicks: 7 });
     expect(ws().quickButtons[1]).toMatchObject({ clicks: 132 });
     expect(ws().quickButtons[2]).not.toHaveProperty("clicks");
     expect(ws().quickButtons[3]).not.toHaveProperty("clicks");
     expect(ws().quickButtons[4]).not.toHaveProperty("clicks");
-    expect(ws().quickButtons[5]).not.toHaveProperty("tagId");
+    expect(ws().quickButtons[5]).toHaveProperty("tagId", "quick-general");
     expect(getSerializableState(state).workspaces[0].quickTags).toEqual(ws().quickTags);
     expect(getSerializableState(state).workspaces[0].quickButtons).toEqual(ws().quickButtons);
   });

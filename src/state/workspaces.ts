@@ -1,7 +1,7 @@
 import { DEFAULT_BOARD_TITLE, defaultWorkspace } from "./defaults";
 import { createId } from "./storage";
 import { cloneLines } from "./storage/serialize";
-import type { LineItem, WorkspaceData, WorkspaceSpace } from "../types";
+import type { AppLanguage, LineItem, WorkspaceData, WorkspaceSpace } from "../types";
 
 /** 工作空间看板标题：自定义标题去空白后为空时回退默认看板标题（DEFAULT_BOARD_TITLE）。 */
 export function getWorkspaceBoardTitle(workspace: WorkspaceData): string {
@@ -22,9 +22,10 @@ export function createWorkspaceData(
   slogan: string,
   createdAt: number,
   id: string = createId(),
+  language: AppLanguage = "zh",
 ): WorkspaceData {
   return {
-    ...defaultWorkspace(id),
+    ...defaultWorkspace(id, language),
     createdAt,
     customTitles: buildWorkspaceCustomTitles(title, slogan),
   };

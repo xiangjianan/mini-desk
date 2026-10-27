@@ -44,7 +44,7 @@ describe("ShortcutHelp", () => {
     expect(wrapper.findAll(".shortcut-section")).toHaveLength(5);
     expect(wrapper.text()).toContain("双击列表标题或空间标签可以改名");
     expect(wrapper.text()).toContain("右键空白处可以新增提醒事项列表");
-    expect(wrapper.text()).toContain("快捷动作可以按标签分组");
+    expect(wrapper.text()).toContain("快捷动作按列表整理");
     expect(wrapper.text()).not.toContain("工具栏");
     expect(wrapper.text()).toContain("Ctrl + S");
     expect(wrapper.text()).toContain("Esc / Space");

@@ -90,7 +90,6 @@ export function buildVisibleQuickButtonGroups(
 
   const groups = tags.flatMap((tag): QuickButtonGroup[] => {
     const groupButtons = taggedButtons.get(tag.id) ?? [];
-    if (groupButtons.length === 0) return [];
     return [{
       id: tag.id,
       title: tag.title,

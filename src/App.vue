@@ -836,11 +836,11 @@ function moveImageAcrossWorkspaces(imageId: string, workspaceId: string): void {
 }
 
 function moveQuickButtonAcrossWorkspaces(buttonId: string, workspaceId: string): void {
-  applyWorkspaceMove(workspaceMover.moveQuickButtonToWorkspace(state.workspaces, state.activeWorkspaceId, buttonId, workspaceId));
+  applyWorkspaceMove(workspaceMover.moveQuickButtonToWorkspace(state.workspaces, state.activeWorkspaceId, buttonId, workspaceId, state.language));
 }
 
 function moveQuickTagAcrossWorkspaces(tagId: string, workspaceId: string): void {
-  applyWorkspaceMove(workspaceMover.moveQuickTagToWorkspace(state.workspaces, state.activeWorkspaceId, tagId, workspaceId));
+  applyWorkspaceMove(workspaceMover.moveQuickTagToWorkspace(state.workspaces, state.activeWorkspaceId, tagId, workspaceId, state.language));
 }
 
 function moveTodoListAcrossWorkspaces(listId: TodoListId, workspaceId: string): void {
@@ -874,7 +874,7 @@ function workspaceCreatedMessage(): string {
 }
 
 function createWorkspace(title: string, slogan: string): void {
-  const workspace = ensureUniqueWorkspaceTitle(createWorkspaceData(title, slogan, Date.now()), state.workspaces, DEFAULT_BOARD_TITLE);
+  const workspace = ensureUniqueWorkspaceTitle(createWorkspaceData(title, slogan, Date.now(), undefined, state.language), state.workspaces, DEFAULT_BOARD_TITLE);
   state.workspaces = [...state.workspaces, workspace];
   state.activeWorkspaceId = workspace.id;
   pendingEditSpaceId.value = null;
@@ -2049,9 +2049,11 @@ function imageSourceToPngBlob(src: string): Promise<Blob> {
   });
 }
 
-function saveQuick(payload: { id?: string; title: string; value: string; type: QuickButtonType; tagTitle?: string; apiMethod?: QuickApiMethod; apiHeaders?: QuickApiHeader[]; apiBodyType?: QuickApiBodyType; apiBody?: string }): void {
+function saveQuick(payload: { tagId?: string; id?: string; title: string; value: string; type: QuickButtonType; tagTitle?: string; apiMethod?: QuickApiMethod; apiHeaders?: QuickApiHeader[]; apiBodyType?: QuickApiBodyType; apiBody?: string }): void {
   if (!payload.title && !payload.value) return;
-  const tagId = resolveQuickTagId(payload.tagTitle);
+  const tagId = payload.tagId && activeWorkspace.value.quickTags.some(tag => tag.id === payload.tagId)
+    ? payload.tagId
+    : resolveQuickTagId(payload.tagTitle);
   if (payload.id) {
     const button = activeWorkspace.value.quickButtons.find((item) => item.id === payload.id);
     if (button) {
@@ -2078,7 +2080,7 @@ function saveQuick(payload: { id?: string; title: string; value: string; type: Q
 
 function resolveQuickTagId(tagTitle?: string): string | undefined {
   const title = limitTitle(tagTitle ?? "");
-  if (!title) return undefined;
+  if (!title) return activeWorkspace.value.quickTags[0]?.id;
   const existing = activeWorkspace.value.quickTags.find((tag) => tag.title === title);
   if (existing) return existing.id;
   const tag = { id: createId(), title };
@@ -2121,22 +2123,18 @@ function toggleQuickTagCollapsed(id: string): void {
 }
 
 function deleteQuickTag(id: string, anchor?: HTMLElement): void {
-  const tag = activeWorkspace.value.quickTags.find((item) => item.id === id);
-  if (!tag) return;
-  requestConfirmation("confirmDeleteQuickTag", anchor, () => {
-    activeWorkspace.value.quickTags = activeWorkspace.value.quickTags.filter((item) => item.id !== id);
-    moveQuickButtonsToTag(id, undefined);
-    persistNow();
-    showBubble("deleteQuickTag", anchor, { hideCompanionAfter: true });
-  }, undefined, { confirmText: uiText.value.common.delete, cancelText: uiText.value.common.cancel });
+  deleteQuickTagWithButtons(id, anchor);
 }
 
-/** 标签头右键「删除标签及动作」：与标签管理器的删除（只删标签、按钮归入未分组）不同，
- *  这里连标签下的全部快捷按钮一并删除。 */
 function deleteQuickTagWithButtons(id: string, anchor?: HTMLElement): void {
+  if (activeWorkspace.value.quickTags.length <= 1) {
+    showBubbleText(uiText.value.quick.keepOneList, anchor);
+    return;
+  }
   const tag = activeWorkspace.value.quickTags.find((item) => item.id === id);
   if (!tag) return;
   requestConfirmation("confirmDeleteQuickTagWithButtons", anchor, () => {
+    if (activeWorkspace.value.quickTags.length <= 1) return;
     activeWorkspace.value.quickTags = activeWorkspace.value.quickTags.filter((item) => item.id !== id);
     activeWorkspace.value.quickButtons = activeWorkspace.value.quickButtons.filter((button) => button.tagId !== id);
     persistNow();
@@ -2219,7 +2217,7 @@ function moveQuickButtonToTag(buttonId: string, tagId?: string, targetId?: strin
   const button = activeWorkspace.value.quickButtons.find((item) => item.id === buttonId);
   if (!button) return;
   if (tagId && !activeWorkspace.value.quickTags.some((tag) => tag.id === tagId)) return;
-  applyQuickTag(button, tagId);
+  applyQuickTag(button, tagId ?? activeWorkspace.value.quickTags[0]?.id);
   if (targetId) {
     if (insertBefore === undefined) moveItem(activeWorkspace.value.quickButtons, buttonId, targetId);
     else reorderQuickButton(activeWorkspace.value.quickButtons, buttonId, targetId, insertBefore);

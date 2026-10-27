@@ -1,3 +1,4 @@
+import { normalizeQuickLists } from "../quickLists";
 import { mergeDuplicateTodoLists } from "../todoListNames";
 import { normalizeZoneWidthRatios } from "../layoutPrefs";
 import { normalizeTodoColumnLayouts, normalizeTodoMaxColumns } from "../columns";
@@ -82,7 +83,8 @@ export function normalizeWorkspaceData(item: unknown, language: AppLanguage = DE
   const storageLines = normalizeLineCollection(typed.storageLines ?? typed.storage);
   const spaces = normalizeSpaces(typed.spaces, workspaceLines, storageLines, customTitles);
   const todoLists = normalizeTodoLists(typed.todoLists, customTitles, typed.todos, typed.showCompletedTodos);
-  const quickTags = normalizeQuickTags(typed.quickTags);
+  const normalizedTags = normalizeQuickTags(typed.quickTags);
+  const { quickTags, quickButtons } = normalizeQuickLists(normalizedTags, normalizeQuickButtons(typed.quickButtons, language, normalizedTags), language, Boolean(typed.quickOtherCollapsed));
   const id = typeof typed.id === "string" && typed.id.trim() ? typed.id.trim() : createId();
   const createdAt = typeof typed.createdAt === "number" && Number.isFinite(typed.createdAt) ? typed.createdAt : 0;
   return mergeDuplicateTodoLists({
@@ -96,7 +98,7 @@ export function normalizeWorkspaceData(item: unknown, language: AppLanguage = DE
     activeSpaceId: normalizeActiveSpaceId(typed.activeSpaceId, spaces),
     images: normalizeImages(typed.images),
     quickTags,
-    quickButtons: normalizeQuickButtons(typed.quickButtons, language, quickTags),
+    quickButtons,
     quickOtherCollapsed: Boolean(typed.quickOtherCollapsed),
     showHiddenQuickButtons: Boolean(typed.showHiddenQuickButtons),
     quickCompact: Boolean(typed.quickCompact),
@@ -141,7 +143,7 @@ export function normalizePolishCode(value: unknown): string | undefined {
 }
 
 function normalizeWorkspaceList(value: unknown, language: AppLanguage, fallbackVisibility?: ZoneVisibility): WorkspaceData[] {
-  if (!Array.isArray(value)) return [defaultWorkspace()];
+  if (!Array.isArray(value)) return [defaultWorkspace(undefined, language)];
   const seen = new Set<string>();
   const workspaces = value
     .map((item) => normalizeWorkspaceData(item, language, fallbackVisibility))
@@ -151,7 +153,7 @@ function normalizeWorkspaceList(value: unknown, language: AppLanguage, fallbackV
       seen.add(id);
       return { ...workspace, id };
     });
-  return workspaces.length > 0 ? workspaces : [defaultWorkspace()];
+  return workspaces.length > 0 ? workspaces : [defaultWorkspace(undefined, language)];
 }
 
 function normalizeLegacyWorkspace(typed: Record<string, unknown>, language: AppLanguage, fallbackVisibility?: ZoneVisibility): WorkspaceData {

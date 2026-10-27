@@ -1,10 +1,11 @@
 <script setup lang="ts">
 import ContextMenu from "./ContextMenu.vue";
+import TodoListCreateDialog from "./TodoListCreateDialog.vue";
 import MemoTransitionGroup from "./MemoTransitionGroup";
 import { TITLE_MAX_LENGTH, limitTitle } from "../state/titleLimits";
 import { installPointerSort } from "../utils/pointerSort";
 import { isGroupDropBefore } from "../utils/groupDrop";
-import { computed, h, nextTick, onBeforeUpdate, onMounted, onUnmounted, onUpdated, reactive, ref, watch } from "vue";
+import { computed, h, nextTick, onBeforeUpdate, onMounted, onUnmounted, onUpdated, reactive, ref } from "vue";
 import type { Component, ComponentPublicInstance, VNode } from "vue";
 import { NButton, NCheckbox, NIcon, NInput, NModal, NScrollbar, NSelect } from "naive-ui";
 import {
@@ -21,7 +22,6 @@ import {
   Zap as FlashOutline,
   CircleHelp as HelpCircleOutline,
   Link as LinkOutline,
-  Tags as PricetagsOutline,
   Maximize2 as ResizeOutline,
   ArrowLeftRight as SwapHorizontalOutline,
   Trash2 as TrashOutline,
@@ -67,7 +67,7 @@ const props = withDefaults(defineProps<{
 
 const emit = defineEmits<{
   titleUpdate: [id: string, value: string];
-  save: [payload: { id?: string; title: string; value: string; type: QuickButtonType; tagTitle?: string; apiMethod?: QuickApiMethod; apiHeaders?: QuickApiHeader[]; apiBodyType?: QuickApiBodyType; apiBody?: string }];
+  save: [payload: { tagId?: string; id?: string; title: string; value: string; type: QuickButtonType; tagTitle?: string; apiMethod?: QuickApiMethod; apiHeaders?: QuickApiHeader[]; apiBodyType?: QuickApiBodyType; apiBody?: string }];
   delete: [id: string, anchor?: HTMLElement];
   copy: [id: string, anchor?: HTMLElement];
   copyText: [id: string, anchor?: HTMLElement];
@@ -91,11 +91,10 @@ const emit = defineEmits<{
 }>();
 
 const dialogOpen = ref(false);
-const tagManagerOpen = ref(false);
-const addingTag = ref(false);
+const listCreateDialog = ref<InstanceType<typeof TodoListCreateDialog> | null>(null);
+const quickListConfigs = computed(() => props.tags.map(tag => ({ ...tag, collapsed: Boolean(tag.collapsed), compact: false })));
 const editingId = ref<string | undefined>();
 type QuickApiHeaderFormRow = QuickApiHeader & { id: string };
-type QuickTagDraft = QuickTag & { titleDraft: string };
 
 let headerRowId = 0;
 
@@ -109,11 +108,11 @@ function createHeaderRows(headers: QuickApiHeader[] | undefined): QuickApiHeader
   return rows.length ? rows : [createHeaderRow()];
 }
 
-const form = reactive<{ title: string; value: string; tagTitle: string; customTagTitle: string; type: QuickButtonType; apiMethod: QuickApiMethod; apiHeaders: QuickApiHeaderFormRow[]; apiBodyType: QuickApiBodyType; apiBody: string }>({
+const form = reactive<{ title: string; value: string; tagTitle: string; tagId: string; type: QuickButtonType; apiMethod: QuickApiMethod; apiHeaders: QuickApiHeaderFormRow[]; apiBodyType: QuickApiBodyType; apiBody: string }>({
   title: "",
   value: "",
   tagTitle: "",
-  customTagTitle: "",
+  tagId: "",
   type: "link",
   apiMethod: "GET",
   apiHeaders: [createHeaderRow()],
@@ -128,11 +127,6 @@ let isUnmounted = false;
 onUnmounted(() => {
   isUnmounted = true;
 });
-const tagDrafts = ref<QuickTagDraft[]>([]);
-const newTagTitle = ref("");
-const tagManagerAnchor = ref<HTMLElement | undefined>();
-const tagManagerFocusId = ref<string | undefined>();
-let tagManagerFocusInput: { focus?: () => void } | null = null;
 const draggingId = ref<string | null>(null);
 const draggingTagId = ref<string | null>(null);
 const dragScroll = createDragAutoScroll({ wheelPauseMs: 240 });
@@ -153,10 +147,6 @@ const apiBodyTypeOptions = computed(() => [
   { label: uiText.value.quick.bodyText, value: "text" },
   { label: uiText.value.quick.bodyForm, value: "form" },
 ]);
-const tagChoices = computed(() => [
-  { label: uiText.value.quick.noTag, value: "" },
-  ...props.tags.map((tag) => ({ label: tag.title, value: tag.title })),
-]);
 const appPresetOptions = computed(() => [
   { label: uiText.value.quick.commonApp, value: "" },
   ...QUICK_APP_PRESETS.map((preset) => {
@@ -173,12 +163,12 @@ const selectedAppScheme = computed(() => {
 
 onMounted(exclusiveMenu.mount);
 onUnmounted(exclusiveMenu.unmount);
-watch(() => props.tags, refreshTagDrafts, { deep: true });
+
 
 const groupedButtons = computed(() => {
   const base = buildVisibleQuickButtonGroups(props.buttons, props.tags, props.showHidden, uiText.value.quick.otherTag, props.otherCollapsed);
   const groups = filterVisibleQuickButtonGroups(base, globalSearchNormalized.value);
-  if (dragHoverGroupId.value === QUICK_BUTTON_OTHER_GROUP_ID && !groups.some((group) => group.id === QUICK_BUTTON_OTHER_GROUP_ID)) {
+  if (!props.tags.length && dragHoverGroupId.value === QUICK_BUTTON_OTHER_GROUP_ID && !groups.some((group) => group.id === QUICK_BUTTON_OTHER_GROUP_ID)) {
     return [...groups.filter((group) => group.id !== QUICK_BUTTON_EMPTY_GROUP_ID), {
       id: QUICK_BUTTON_OTHER_GROUP_ID, title: uiText.value.quick.otherTag,
       buttons: [], reorderable: false, collapsed: false,
@@ -287,7 +277,7 @@ const areaMenuOptions = computed<DropdownOption[]>(() => [
     ? [{ label: uiText.value.common.smartPaste, key: "smart-paste", icon: renderIcon(ClipboardOutline) }]
     : []),
   { label: props.showHidden ? uiText.value.quick.hideHidden : uiText.value.quick.showHidden, key: "toggle-show-hidden", icon: renderIcon(props.showHidden ? EyeOffOutline : EyeOutline) },
-  { label: uiText.value.quick.tagManage, key: "manage-tags", icon: renderIcon(PricetagsOutline) },
+  { label: uiText.value.todo.newList, key: "create-list", icon: renderIcon(AddOutline) },
   { label: props.compact ? uiText.value.quick.largeButtons : uiText.value.quick.compactButtons, key: "toggle-compact", icon: renderIcon(ResizeOutline) },
   { ...guideMenuOption.value, icon: renderIcon(HelpCircleOutline) },
 ]);
@@ -298,7 +288,7 @@ const menuOptions = computed<DropdownOption[]>(() => {
       ...areaMenuOptions.value.filter((option) => ["add", "paste", "smart-paste"].includes(String(option.key))),
       { label: uiText.value.common.rename, key: "rename-tag", icon: renderIcon(CreateOutline) },
       { label: showHidden ? uiText.value.quick.hideHidden : uiText.value.quick.showHidden, key: "toggle-show-hidden", icon: renderIcon(showHidden ? EyeOffOutline : EyeOutline) },
-      ...areaMenuOptions.value.filter((option) => ["manage-tags", "toggle-compact"].includes(String(option.key))),
+      ...areaMenuOptions.value.filter((option) => ["toggle-compact"].includes(String(option.key))),
       ...(moveMenuChildren.value.length > 0
         ? [{
             label: uiText.value.common.moveToWorkspace,
@@ -307,7 +297,7 @@ const menuOptions = computed<DropdownOption[]>(() => {
             children: moveMenuChildren.value,
           }]
         : []),
-      { label: uiText.value.quick.deleteTag, key: "delete-tag", icon: renderIcon(TrashOutline, true) },
+      { label: uiText.value.quick.deleteTag, key: "delete-tag", disabled: props.tags.length <= 1, icon: renderIcon(TrashOutline, true) },
     ];
   }
   const button = props.buttons.find((item) => item.id === menu.value?.id);
@@ -334,12 +324,13 @@ const menuOptions = computed<DropdownOption[]>(() => {
   ];
 });
 
-function openAdd(anchor?: HTMLElement, tagTitle = ""): void {
+function openAdd(anchor?: HTMLElement, tagTitle = "", tagId?: string): void {
   editingId.value = undefined;
   form.title = "";
   form.value = "";
-  form.tagTitle = tagTitle;
-  form.customTagTitle = "";
+  const list = props.tags.find(tag => tag.id === tagId) ?? props.tags.find(tag => tag.title === tagTitle) ?? props.tags[0];
+  form.tagTitle = list?.title ?? "";
+  form.tagId = list?.id ?? "";
   form.type = "link";
   form.apiMethod = "GET";
   form.apiHeaders = [createHeaderRow()];
@@ -356,7 +347,7 @@ function openEdit(id: string): void {
   form.title = button.title;
   form.value = button.value;
   form.tagTitle = getQuickTagTitle(button.tagId);
-  form.customTagTitle = "";
+  form.tagId = button.tagId ?? props.tags[0]?.id ?? "";
   form.type = button.type;
   form.apiMethod = button.apiMethod ?? "GET";
   form.apiHeaders = createHeaderRows(button.apiHeaders);
@@ -364,34 +355,6 @@ function openEdit(id: string): void {
   form.apiBody = button.apiBody ?? "";
   dialogOpen.value = true;
   menu.value = null;
-}
-
-function refreshTagDrafts(): void {
-  tagDrafts.value = props.tags.map((tag) => ({
-    ...tag,
-    titleDraft: tag.title,
-  }));
-}
-
-function openTagManager(anchor?: HTMLElement, focusTagId?: string, adding = false): void {
-  addingTag.value = adding;
-  refreshTagDrafts();
-  newTagTitle.value = "";
-  tagManagerAnchor.value = anchor;
-  tagManagerFocusId.value = focusTagId;
-  tagManagerOpen.value = true;
-  void nextTick(() => {
-    tagManagerFocusInput?.focus?.();
-    tagManagerFocusInput = null;
-    tagManagerFocusId.value = undefined;
-  });
-}
-
-/** 标签管理器行输入 ref：只捕获待聚焦标签那一行（NInput 暴露 focus()，测试 stub 根元素即 input）。 */
-function setTagManagerNameInput(el: Element | ComponentPublicInstance | null, id: string): void {
-  if (!el || id !== tagManagerFocusId.value) return;
-  const instance = el as ComponentPublicInstance & { focus?: () => void };
-  tagManagerFocusInput = typeof instance.focus === "function" ? instance : instance.$el ?? null;
 }
 
 function setInlineRenameInput(el: Element | ComponentPublicInstance | null): void {
@@ -421,28 +384,6 @@ function cancelInlineTagRename(): void {
   editingTagId.value = null;
 }
 
-function addTag(): void {
-  const title = limitTitle(newTagTitle.value);
-  if (!title) return;
-  emit("saveTag", { title });
-  newTagTitle.value = "";
-  if (addingTag.value) {
-    tagManagerOpen.value = false;
-    openAdd(tagManagerAnchor.value, title);
-  }
-}
-
-function saveTag(draft: QuickTagDraft): void {
-  const title = limitTitle(draft.titleDraft);
-  if (!title) return;
-  if (title === draft.title) return;
-  emit("saveTag", { id: draft.id, title });
-}
-
-function deleteTag(id: string, event: MouseEvent): void {
-  emit("deleteTag", id, event.currentTarget as HTMLElement ?? tagManagerAnchor.value);
-}
-
 function getQuickTagTitle(tagId?: string): string {
   if (!tagId) return "";
   return props.tags.find((tag) => tag.id === tagId)?.title ?? "";
@@ -464,15 +405,6 @@ function setQuickType(type: QuickButtonType): void {
   }
 }
 
-function selectQuickTag(tagTitle: string): void {
-  form.tagTitle = tagTitle;
-  form.customTagTitle = "";
-}
-
-function setCustomQuickTag(tagTitle: string): void {
-  form.customTagTitle = tagTitle;
-  if (tagTitle.trim()) form.tagTitle = "";
-}
 
 function selectAppPreset(scheme: string): void {
   if (!scheme) return;
@@ -521,7 +453,8 @@ function submit(): void {
     title: form.title.trim(),
     value: form.value,
     type: form.type,
-    tagTitle: (form.customTagTitle.trim() || form.tagTitle).trim(),
+    tagTitle: form.tagTitle.trim(),
+    tagId: form.tagId || undefined,
     ...(form.type === "api"
       ? { apiMethod: form.apiMethod, apiHeaders: getApiHeadersPayload(), apiBodyType: form.apiBodyType, apiBody: form.apiBody }
       : {}),
@@ -607,11 +540,11 @@ function handleMenuSelect(key: string): void {
     return;
   }
   if (key === "delete-tag") {
-    if (tagId) emit("deleteTagWithButtons", tagId, anchor);
+    if (tagId && props.tags.length > 1) emit("deleteTagWithButtons", tagId, anchor);
     return;
   }
   if (key === "add") {
-    openAdd(anchor, tagTitle);
+    openAdd(anchor, tagTitle, tagId);
     return;
   }
   if (key === "toggle-show-hidden") {
@@ -622,8 +555,8 @@ function handleMenuSelect(key: string): void {
     emit("toggleCompact");
     return;
   }
-  if (key === "manage-tags") {
-    openTagManager(anchor, tagId);
+  if (key === "create-list") {
+    void listCreateDialog.value?.open(anchor);
     return;
   }
   if (key === "paste") {
@@ -680,7 +613,7 @@ function handleQuickDragOver(event: DragEvent): void {
   if (hasText && !types.includes("Files")) {
     event.preventDefault();
     event.dataTransfer!.dropEffect = "copy";
-    dragHoverGroupId.value = (event.target as HTMLElement | null)?.closest<HTMLElement>(".quick-tag-group")?.dataset.tagId ?? QUICK_BUTTON_OTHER_GROUP_ID;
+    dragHoverGroupId.value = (event.target as HTMLElement | null)?.closest<HTMLElement>(".quick-tag-group")?.dataset.tagId ?? props.tags[0]?.id ?? QUICK_BUTTON_OTHER_GROUP_ID;
   }
   if (draggingId.value || draggingTagId.value) {
     if (event.dataTransfer) event.dataTransfer.dropEffect = "move";
@@ -692,7 +625,7 @@ function handleQuickDragLeave(event?: DragEvent): void {
   if (dragHoverGroupId.value === null) return;
   const nextTarget = event?.relatedTarget;
   if (nextTarget instanceof HTMLElement && panelRef.value?.contains(nextTarget)) {
-    dragHoverGroupId.value = nextTarget.closest<HTMLElement>(".quick-tag-group")?.dataset.tagId ?? QUICK_BUTTON_OTHER_GROUP_ID;
+    dragHoverGroupId.value = nextTarget.closest<HTMLElement>(".quick-tag-group")?.dataset.tagId ?? props.tags[0]?.id ?? QUICK_BUTTON_OTHER_GROUP_ID;
     return;
   }
   dragHoverGroupId.value = null;
@@ -958,8 +891,8 @@ function handleQuickGroupDrop(event: DragEvent, groupId: string): void {
       </h2>
       <div class="header-actions">
         <button type="button" class="quick-add-button icon-button"
-          :aria-label="uiText.quick.addTag" :title="uiText.quick.addTag"
-          @click.stop="openTagManager($event.currentTarget as HTMLElement, undefined, true)">
+          :aria-label="uiText.todo.newList" :title="uiText.todo.newList"
+          @click.stop="listCreateDialog?.open($event.currentTarget as HTMLElement)">
           <NIcon :component="AddOutline" />
         </button>
         <button
@@ -1056,7 +989,7 @@ function handleQuickGroupDrop(event: DragEvent, groupId: string): void {
               class="quick-tag-add-button"
               :aria-label="uiText.quick.addInTag"
               :title="uiText.quick.addInTag"
-              @click.stop="openAdd($event.currentTarget as HTMLElement, isRealTagGroup(group.id) ? group.title : '')"
+              @click.stop="openAdd($event.currentTarget as HTMLElement, isRealTagGroup(group.id) ? group.title : '', group.id)"
               @dblclick.stop
             >
               <NIcon :component="AddOutline" />
@@ -1178,30 +1111,6 @@ function handleQuickGroupDrop(event: DragEvent, groupId: string): void {
             :autosize="form.type === 'text' ? { minRows: 4, maxRows: 8 } : undefined"
           />
         </label>
-        <div class="quick-tag-field">
-          <span>{{ uiText.quick.tag }}</span>
-          <div class="quick-tag-choices" role="group" :aria-label="uiText.quick.tag">
-            <button
-              v-for="tag in tagChoices"
-              :key="tag.value || '__none'"
-              type="button"
-              class="quick-tag-choice"
-              :class="{ 'is-selected': !form.customTagTitle.trim() && form.tagTitle === tag.value }"
-              :aria-pressed="!form.customTagTitle.trim() && form.tagTitle === tag.value"
-              @click="selectQuickTag(tag.value)"
-            >
-              {{ tag.label }}
-            </button>
-          </div>
-          <NInput
-            :value="form.customTagTitle"
-            :maxlength="TITLE_MAX_LENGTH"
-            class="quick-tag-new-inline-input"
-            :placeholder="uiText.quick.newTag"
-            autocomplete="off"
-            @update:value="setCustomQuickTag"
-          />
-        </div>
         <template v-if="form.type === 'api'">
           <div class="quick-api-templates">
             <span class="quick-api-templates-label">{{ uiText.quick.apiTemplates.label }}</span>
@@ -1272,61 +1181,11 @@ function handleQuickGroupDrop(event: DragEvent, groupId: string): void {
       </form>
     </NModal>
 
-    <NModal
-      v-model:show="tagManagerOpen"
-      preset="card"
-      class="quick-dialog quick-tag-manager"
-      :mask-closable="false"
-      :title="addingTag ? uiText.quick.addTag : uiText.quick.tagManage"
-    >
-      <div class="quick-tag-manager-body">
-        <div v-if="!addingTag && tagDrafts.length" class="quick-tag-manager-list">
-          <div
-            v-for="tag in tagDrafts"
-            :key="tag.id"
-            class="quick-tag-manager-row"
-          >
-            <NInput
-              :ref="(el) => setTagManagerNameInput(el, tag.id)"
-              v-model:value="tag.titleDraft"
-              :maxlength="TITLE_MAX_LENGTH"
-              class="quick-tag-name-input"
-              :placeholder="uiText.quick.tagName"
-              autocomplete="off"
-              @keydown.enter.prevent="saveTag(tag)"
-              @blur="saveTag(tag)"
-            />
-            <button
-              type="button"
-              class="quick-tag-delete icon-button is-delete"
-              :aria-label="uiText.quick.deleteTag"
-              @click="deleteTag(tag.id, $event)"
-            >
-              <NIcon :component="TrashOutline" />
-            </button>
-          </div>
-        </div>
-        <p v-else-if="!addingTag" class="quick-tag-empty">{{ uiText.quick.emptyTags }}</p>
-        <div class="quick-tag-add-row">
-          <NInput
-            v-model:value="newTagTitle"
-              :maxlength="TITLE_MAX_LENGTH"
-            class="quick-tag-new-input"
-            :placeholder="uiText.quick.newTag"
-            autocomplete="off"
-            @keydown.enter.prevent="addTag"
-          />
-          <button
-            type="button"
-            class="quick-tag-add icon-button"
-            :aria-label="uiText.quick.addTag"
-            :disabled="newTagTitle.trim().length === 0"
-            @click="addTag"
-          >
-            <NIcon :component="AddOutline" />
-          </button>
-        </div>
-      </div>
-    </NModal>
+    <TodoListCreateDialog
+      ref="listCreateDialog"
+      :language="language"
+      :lists="quickListConfigs"
+      @confirm="(_anchor, title) => emit('saveTag', { title })"
+    />
   </section>
 </template>

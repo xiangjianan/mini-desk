@@ -1,10 +1,12 @@
-import type { BoardState, TodoListConfig, TodoListId, TodoMap, WorkspaceData, ZoneVisibility } from "../types";
+import { DEFAULT_QUICK_LIST_ID } from "./quickLists";
+import type { AppLanguage, BoardState, TodoListConfig, TodoListId, TodoMap, WorkspaceData, ZoneVisibility } from "../types";
 import { DEFAULT_COMPANION_GIF_THEME } from "./companionGifThemes";
 import {
   DEFAULT_LANGUAGE,
   DEFAULT_SPACE_TITLES,
   DEFAULT_TITLES_ZH,
   getDefaultTodoLists,
+  getUiText,
 } from "./i18n";
 
 export const STORAGE_KEY = "mini-desk-state-v1";
@@ -33,7 +35,7 @@ export const DEFAULT_TITLES: Record<string, string> = DEFAULT_TITLES_ZH;
 
 export const GUIDE_MENU_OPTION = { label: "Tips", key: "guide" } as const;
 
-export function defaultWorkspace(id: string = DEFAULT_WORKSPACE_ID): WorkspaceData {
+export function defaultWorkspace(id: string = DEFAULT_WORKSPACE_ID, language: AppLanguage = DEFAULT_LANGUAGE): WorkspaceData {
   return {
     id,
     createdAt: 0,
@@ -44,7 +46,7 @@ export function defaultWorkspace(id: string = DEFAULT_WORKSPACE_ID): WorkspaceDa
     spaces: [{ id: DEFAULT_SPACE_ID, title: DEFAULT_SPACE_TITLE, lines: [] }],
     activeSpaceId: DEFAULT_SPACE_ID,
     images: [],
-    quickTags: [],
+    quickTags: [{ id: DEFAULT_QUICK_LIST_ID, title: getUiText(language).quick.otherTag, collapsed: false, column: 0 }],
     quickButtons: [],
     quickOtherCollapsed: false,
     showHiddenQuickButtons: false,

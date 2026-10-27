@@ -45,8 +45,8 @@ describe("moveQuickButtonToWorkspace", () => {
     const orphan = { ...button, id: "btn-2", tagId: "missing" };
     const next = moveQuickButtonToWorkspace([workspace("ws-a", { quickTags: [tag], quickButtons: [orphan] }), target], "ws-a", "btn-2", "ws-b");
     const to = next.find((w) => w.id === "ws-b")!;
-    expect(to.quickTags).toHaveLength(0);
-    expect(to.quickButtons[0].tagId).toBeUndefined();
+    expect(to.quickTags).toHaveLength(1);
+    expect(to.quickButtons[0].tagId).toBe(to.quickTags[0].id);
   });
 
   it("未知 id 或同空间时返回原数组引用", () => {
@@ -59,7 +59,7 @@ describe("moveQuickButtonToWorkspace", () => {
     moveQuickButtonToWorkspace([source, target], "ws-a", "btn-1", "ws-b");
     expect(source.quickButtons).toHaveLength(1);
     expect(target.quickButtons).toHaveLength(0);
-    expect(target.quickTags).toHaveLength(0);
+    expect(target.quickTags).toHaveLength(1);
   });
 
   it("目标已有同 id 按钮时重新生成 id", () => {
@@ -98,11 +98,11 @@ describe("moveQuickTagToWorkspace", () => {
     const next = moveQuickTagToWorkspace([source, target], "ws-a", "tag-1", "ws-b");
     const from = next.find((w) => w.id === "ws-a")!;
     const to = next.find((w) => w.id === "ws-b")!;
-    expect(from.quickTags).toHaveLength(0);
+    expect(from.quickTags).toHaveLength(1);
     expect(from.quickButtons.map((b) => b.id)).toEqual(["btn-2"]);
     expect(to.quickTags.map((t) => t.title)).toEqual(["常用"]);
     expect(to.quickButtons.map((b) => b.id)).toEqual(["btn-1"]);
-    expect(to.quickButtons[0].tagId).toBe("tag-1");
+    expect(to.quickButtons[0].tagId).toBe(to.quickTags[0].id);
   });
 
   it("目标有同名标签时合并：按钮改挂现有标签，不新增标签", () => {

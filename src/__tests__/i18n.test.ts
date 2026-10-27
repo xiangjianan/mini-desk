@@ -88,7 +88,7 @@ describe("localized public copy", () => {
     expect(SHORTCUT_HELP.zh.flatMap((section) => section.tips)).toEqual(expect.arrayContaining([
       "双击列表标题或空间标签可以改名。",
       "右键空白处可以新增提醒事项列表，列表名也能拖动排序。",
-      "快捷动作可以按标签分组，也能拖到其他标签或常用分组。",
+      "快捷动作按列表整理，列表中的加号用于添加动作，也能拖动动作到其他列表。",
     ]));
     expect(SHORTCUT_HELP.zh.flatMap((section) => section.shortcuts.map((shortcut) => shortcut.key))).toEqual(expect.arrayContaining([
       "Ctrl + S",

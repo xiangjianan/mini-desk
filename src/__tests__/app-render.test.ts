@@ -4340,10 +4340,10 @@ describe("App shell", () => {
 
       const stored = JSON.parse(localStorage.getItem(STORAGE_KEY) || "{}");
       const workspace = stored.workspaces[0];
-      expect(workspace.quickTags).toEqual([{ id: expect.any(String), title: "工作" }]);
+      expect(workspace.quickTags.map((list: { title: string }) => list.title)).toEqual(["常用", "工作"]);
       expect(workspace.quickButtons[0]).toMatchObject({
         title: "接口",
-        tagId: workspace.quickTags[0].id,
+        tagId: workspace.quickTags[1].id,
       });
 
       wrapper.getComponent(QuickButtons).vm.$emit("save", {
@@ -4356,11 +4356,33 @@ describe("App shell", () => {
 
       const nextStored = JSON.parse(localStorage.getItem(STORAGE_KEY) || "{}");
       const nextWorkspace = nextStored.workspaces[0];
-      expect(nextWorkspace.quickTags).toHaveLength(1);
-      expect(nextWorkspace.quickButtons[1]).toMatchObject({ tagId: nextWorkspace.quickTags[0].id });
+      expect(nextWorkspace.quickTags).toHaveLength(2);
+      expect(nextWorkspace.quickButtons[1]).toMatchObject({ tagId: nextWorkspace.quickTags[1].id });
     } finally {
       wrapper.unmount();
     }
+  });
+
+  it("deletes General as an ordinary list and refuses to delete the final list", async () => {
+    vi.useFakeTimers();
+    localStorage.setItem(STORAGE_KEY, JSON.stringify({ ...defaultState(), workspaces: [{ ...defaultWorkspace(), quickTags: [{ id: "general", title: "常用" }, { id: "work", title: "工作" }] }] }));
+    const wrapper = mountApp();
+    try {
+      wrapper.getComponent(QuickButtons).vm.$emit("deleteTagWithButtons", "general");
+      await vi.advanceTimersByTimeAsync(200);
+      await wrapper.vm.$nextTick();
+      await wrapper.get('[data-testid="companion-yes"]').trigger("click");
+      await vi.advanceTimersByTimeAsync(200);
+      await wrapper.vm.$nextTick();
+      const stored = JSON.parse(localStorage.getItem(STORAGE_KEY) || "{}");
+      expect(stored.workspaces[0].quickTags.map((list: { id: string }) => list.id)).toEqual(["work"]);
+      wrapper.getComponent(QuickButtons).vm.$emit("deleteTagWithButtons", "work");
+      await vi.advanceTimersByTimeAsync(200);
+      await wrapper.vm.$nextTick();
+      expect(wrapper.getComponent(QuickButtons).props("tags")).toHaveLength(1);
+      expect(wrapper.find('[data-testid="companion-yes"]').exists()).toBe(false);
+      expect(JSON.parse(localStorage.getItem(STORAGE_KEY) || "{}").workspaces[0].quickTags.map((list: { id: string }) => list.id)).toEqual(["work"]);
+    } finally { wrapper.unmount(); vi.useRealTimers(); }
   });
 
   it("persists quick action tag order when tag headings are reordered", async () => {
@@ -4504,7 +4526,7 @@ describe("App shell", () => {
 
       const stored = JSON.parse(localStorage.getItem(STORAGE_KEY) || "{}");
       const workspace = stored.workspaces[0];
-      expect(workspace.quickButtons.find((button: { id: string }) => button.id === "a")).not.toHaveProperty("tagId");
+      expect(workspace.quickButtons.find((button: { id: string }) => button.id === "a")).toHaveProperty("tagId", workspace.quickTags[0].id);
     } finally {
       wrapper.unmount();
     }
@@ -4560,7 +4582,7 @@ describe("App shell", () => {
 
       stored = JSON.parse(localStorage.getItem(STORAGE_KEY) || "{}");
       expect(stored.workspaces[0].quickTags.map((tag: { id: string }) => tag.id)).not.toContain("tag-a");
-      expect(stored.workspaces[0].quickButtons.find((button: { id: string }) => button.id === "a")).not.toHaveProperty("tagId");
+      expect(stored.workspaces[0].quickButtons.find((button: { id: string }) => button.id === "a")).toBeUndefined();
       expect(stored.workspaces[0].quickButtons.find((button: { id: string }) => button.id === "b")).toMatchObject({ tagId: "tag-b" });
     } finally {
       wrapper.unmount();
