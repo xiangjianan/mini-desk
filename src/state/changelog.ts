@@ -34,8 +34,8 @@ export interface ChangelogEntry {
 
 export const CHANGELOG: ChangelogEntry[] = [
     {
-      version: "1.1.13",
-      date: "2026-10-25",
+      version: "1.1.14",
+      date: "2026-10-27",
       notes: {
         zh: [
           "优化：大幅降低大看板拖拽排序与分组折叠的布局开销，操作更流畅",
