@@ -277,7 +277,7 @@ const areaMenuOptions = computed<DropdownOption[]>(() => [
     ? [{ label: uiText.value.common.smartPaste, key: "smart-paste", icon: renderIcon(ClipboardOutline) }]
     : []),
   { label: props.showHidden ? uiText.value.quick.hideHidden : uiText.value.quick.showHidden, key: "toggle-show-hidden", icon: renderIcon(props.showHidden ? EyeOffOutline : EyeOutline) },
-  { label: uiText.value.todo.newList, key: "create-list", icon: renderIcon(AddOutline) },
+  { label: uiText.value.quick.newList, key: "create-list", icon: renderIcon(AddOutline) },
   { label: props.compact ? uiText.value.quick.largeButtons : uiText.value.quick.compactButtons, key: "toggle-compact", icon: renderIcon(ResizeOutline) },
   { ...guideMenuOption.value, icon: renderIcon(HelpCircleOutline) },
 ]);
@@ -301,7 +301,7 @@ const menuOptions = computed<DropdownOption[]>(() => {
   }
   const button = props.buttons.find((item) => item.id === menu.value?.id);
   if (!menu.value?.id) return areaMenuOptions.value.filter(option =>
-    !["add", "create-list", "paste", "smart-paste"].includes(String(option.key)),
+    !["add", "create-list", "paste", "smart-paste", "toggle-show-hidden"].includes(String(option.key)),
   );
 
   return [
@@ -892,7 +892,7 @@ function handleQuickGroupDrop(event: DragEvent, groupId: string): void {
       </h2>
       <div class="header-actions">
         <button type="button" class="quick-add-button icon-button"
-          :aria-label="uiText.todo.newList" :title="uiText.todo.newList"
+          :aria-label="uiText.quick.newList" :title="uiText.quick.newList"
           @click.stop="listCreateDialog?.open($event.currentTarget as HTMLElement)">
           <NIcon :component="AddOutline" />
         </button>

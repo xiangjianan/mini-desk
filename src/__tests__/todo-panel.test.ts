@@ -649,7 +649,7 @@ describe("TodoPanel", () => {
     expect(wrapper.findAll(".dropdown-option").map((option) => option.text())).toEqual(["粘贴", "重命名", "隐藏已完成", "清理已完成", "删除列表"]);
 
     await wrapper.get(".todo-panel").trigger("contextmenu");
-    await wrapper.findAll(".dropdown-option").find((option) => option.text() === "新建列表")?.trigger("click");
+    await wrapper.findAll(".dropdown-option").find((option) => option.text() === "新建提醒事项列表")?.trigger("click");
     await flushPromises();
 
     const dialog = getLatestListCreateDialogElement();
@@ -685,7 +685,7 @@ describe("TodoPanel", () => {
 
     await wrapper.get('.todo-section[data-list-id="morning"] .todo-section-menu-button').trigger("click");
     await wrapper.get(".todo-panel").trigger("contextmenu");
-    await wrapper.findAll(".dropdown-option").find((option) => option.text() === "新建列表")?.trigger("click");
+    await wrapper.findAll(".dropdown-option").find((option) => option.text() === "新建提醒事项列表")?.trigger("click");
     await flushPromises();
     await nextTick();
 
@@ -777,7 +777,7 @@ describe("TodoPanel", () => {
 
     await wrapper.get('.todo-section[data-list-id="morning"] .todo-section-menu-button').trigger("click");
     await wrapper.get(".todo-panel").trigger("contextmenu");
-    await wrapper.findAll(".dropdown-option").find((option) => option.text() === "新建列表")?.trigger("click");
+    await wrapper.findAll(".dropdown-option").find((option) => option.text() === "新建提醒事项列表")?.trigger("click");
     await wrapper.get(".todo-list-create-input").setValue("会议");
     const modal = wrapper.findComponent(NModal);
     expect(modal.props("show")).toBe(true);

@@ -682,6 +682,7 @@ export const UI_TEXT = {
       addReminder: "添加提醒",
     },
     quick: {
+      newList: "新建快捷动作列表",
       menu: "快捷动作菜单",
       searchPlaceholder: "搜索快捷动作",
       list: "快捷按钮列表",
@@ -792,7 +793,7 @@ export const UI_TEXT = {
       hideCompleted: "隐藏已完成",
       showCompleted: "显示已完成",
       editList: "编辑列表",
-      newList: "新建列表",
+      newList: "新建提醒事项列表",
       addItem: "新增提醒事项",
       deleteList: "删除列表",
       createList: "新建列表",
@@ -1103,6 +1104,7 @@ export const UI_TEXT = {
       addReminder: "Add reminder",
     },
     quick: {
+      newList: "New quick action list",
       menu: "Quick actions menu",
       searchPlaceholder: "Search quick actions",
       list: "Quick buttons list",
@@ -1213,7 +1215,7 @@ export const UI_TEXT = {
       hideCompleted: "Hide completed",
       showCompleted: "Show completed",
       editList: "Edit list",
-      newList: "New list",
+      newList: "New reminder list",
       addItem: "Add reminder",
       deleteList: "Delete list",
       createList: "New list",

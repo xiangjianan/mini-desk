@@ -1493,7 +1493,7 @@ describe("QuickButtons", () => {
     wrapper.unmount();
   });
 
-  it("moves add and hidden visibility actions into a compact area menu", async () => {
+  it("keeps hidden visibility in list menus only", async () => {
     const wrapper = mountQuickButtons({
       buttons: [{ id: "hidden-1", title: "隐藏项", value: "value", type: "text", hidden: true }],
       showHidden: false,
@@ -1505,22 +1505,18 @@ describe("QuickButtons", () => {
     await wrapper.get(".quick-menu-button").trigger("click");
 
     expect(wrapper.findAll(".dropdown-option").map((option) => option.text())).toEqual([
-      "查看隐藏",
       "切换为紧凑按钮",
       "Tips",
     ]);
 
-    await wrapper.findAll(".dropdown-option").find((option) => option.text() === "查看隐藏")?.trigger("click");
-    expect(wrapper.emitted("toggleShowHidden")).toHaveLength(1);
-
-    await wrapper.get(".quick-menu-button").trigger("click");
+    expect(wrapper.find('[data-key="toggle-show-hidden"]').exists()).toBe(false);
+    expect(wrapper.emitted("toggleShowHidden")).toBeUndefined();
     await wrapper.findAll(".dropdown-option").find((option) => option.text() === "切换为紧凑按钮")?.trigger("click");
     expect(wrapper.emitted("toggleCompact")).toHaveLength(1);
 
     await wrapper.setProps({ showHidden: true });
     await wrapper.get(".quick-menu-button").trigger("click");
     expect(wrapper.findAll(".dropdown-option").map((option) => option.text())).toEqual([
-      "收起隐藏",
       "切换为紧凑按钮",
       "Tips",
     ]);
@@ -1759,7 +1755,7 @@ describe("QuickButtons", () => {
   it("顶部菜单不提供粘贴，列表菜单保留普通和智能粘贴", async () => {
     const wrapper = mountQuickButtons({ polish: vi.fn(), tags: [{ id: "work", title: "工作" }] });
     expect(wrapper.find(".header-actions .desk-ai-button").exists()).toBe(false);
-    expect(wrapper.get(".quick-add-button").attributes("aria-label")).toBe("新建列表");
+    expect(wrapper.get(".quick-add-button").attributes("aria-label")).toBe("新建快捷动作列表");
     await wrapper.get(".quick-menu-button").trigger("click");
     expect(wrapper.find('.dropdown-option[data-key="paste"]').exists()).toBe(false);
     expect(wrapper.find('.dropdown-option[data-key="smart-paste"]').exists()).toBe(false);
