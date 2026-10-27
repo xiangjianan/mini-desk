@@ -40,6 +40,5 @@ export function mergeDuplicateTodoLists(workspace: WorkspaceData, language: AppL
     todoColumnLayouts: workspace.todoColumnLayouts && Object.fromEntries(
       Object.entries(workspace.todoColumnLayouts).map(([count, layout]) => [count, layout.filter(item => !aliases.has(item.id))]),
     ),
-    inbox: workspace.inbox && { ...workspace.inbox, todoListId: remap(workspace.inbox.todoListId) },
   };
 }

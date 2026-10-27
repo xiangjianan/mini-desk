@@ -34,19 +34,11 @@ export interface ChangelogEntry {
 
 export const CHANGELOG: ChangelogEntry[] = [
   {
-    version: "1.1.14-offline",
+    version: "1.1.15-offline",
     date: "2026-10-27",
     notes: {
-      zh: [
-        "同步 1.1.14：支持将看板图片移动到其他工作区，预览页也可打开移动菜单",
-        "优化图片排序动画和拖拽预览定位；修复通知失败重试及切换标签页后的提醒保持",
-        "保留普通粘贴按钮及无彩色悬浮特效，继续移除 AI、手机速记和配对同步功能",
-      ],
-      en: [
-        "Updated to 1.1.14: move board images to another workspace, including from the preview menu",
-        "Improved image reorder animations and drag previews; reminders retry notification failures and remain active across tab changes",
-        "Retained plain paste controls without animated hover colors and the offline edition's AI/mobile feature removal",
-      ],
+      zh: ["同步 1.1.15：快捷动作改为持久列表，优化紧凑胶囊和列表创建、重命名行为", "统一竖排菜单和区域操作层级；普通粘贴后自动展开并高亮新条目", "保留普通粘贴按钮及无彩色悬浮特效，不引入 AI 图标、润色和手机速记功能"],
+      en: ["Updated to 1.1.15: persistent quick-action lists, compact pills, and refined list creation and renaming", "Unified vertical menus and action hierarchy; plain paste reveals and highlights new items", "Retained plain paste controls without animated hover colors; AI icons, polish, and mobile capture remain removed"],
     },
   },
     {
@@ -65,6 +57,22 @@ export const CHANGELOG: ChangelogEntry[] = [
         ],
       },
     },
+  {
+    version: "1.1.14-offline",
+    date: "2026-10-27",
+    notes: {
+      zh: [
+        "同步 1.1.14：支持将看板图片移动到其他工作区，预览页也可打开移动菜单",
+        "优化图片排序动画和拖拽预览定位；修复通知失败重试及切换标签页后的提醒保持",
+        "保留普通粘贴按钮及无彩色悬浮特效，继续移除 AI、手机速记和配对同步功能",
+      ],
+      en: [
+        "Updated to 1.1.14: move board images to another workspace, including from the preview menu",
+        "Improved image reorder animations and drag previews; reminders retry notification failures and remain active across tab changes",
+        "Retained plain paste controls without animated hover colors and the offline edition's AI/mobile feature removal",
+      ],
+    },
+  },
     {
       version: "1.1.14",
       date: "2026-10-27",

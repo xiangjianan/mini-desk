@@ -18,7 +18,6 @@ const data = () => ({
   showCompletedTodos: { first: false, second: true, third: false },
   todoListOrder: ["second", "first", "third"],
   todoColumnLayouts: { "1": [{ id: "first", column: 0 }, { id: "second", column: 0 }] },
-  inbox: { code: "0123456789AB", todoListId: "second", noteTarget: "workspace", lastSeenAt: 0 },
 });
 
 describe("reminder list names", () => {
@@ -30,7 +29,7 @@ describe("reminder list names", () => {
     expect(findTodoListByTitle([list("custom", "Work")], "Work", "en", "custom")).toBeUndefined();
   });
 
-  it("merges legacy duplicates without losing reminders, IDs, visibility or inbox routing", () => {
+  it("merges legacy duplicates without losing reminders, IDs or visibility", () => {
     const input = data();
     const next = mergeDuplicateTodoLists(input, "zh");
     expect(next.todoLists.map(list => list.id)).toEqual(["first"]);
@@ -41,13 +40,11 @@ describe("reminder list names", () => {
     expect(next.showCompletedTodos).toEqual({ first: true });
     expect(next.todoListOrder).toEqual(["first"]);
     expect(next.todoColumnLayouts).toEqual({ "1": [{ id: "first", column: 0 }] });
-    expect(next.inbox?.todoListId).toBe("first");
     expect(input.todos.second[0].id).toBe("same");
     expect(mergeDuplicateTodoLists(next, "zh")).toBe(next);
     const normalized = normalizeWorkspaceData(input);
     expect(normalized.todoLists).toHaveLength(1);
     expect(normalized.todos.first).toHaveLength(3);
-    expect(normalized.inbox?.todoListId).toBe("first");
   });
 
   it("merges a moved list into the existing list, preserving target configuration", () => {

@@ -291,7 +291,7 @@ const menuOptions = computed<DropdownOption[]>(() => {
   }
   const button = props.buttons.find((item) => item.id === menu.value?.id);
   if (!menu.value?.id) return areaMenuOptions.value.filter(option =>
-    !["add", "create-list", "paste", "smart-paste", "toggle-show-hidden"].includes(String(option.key)),
+    !["add", "create-list", "paste", "toggle-show-hidden"].includes(String(option.key)),
   );
 
   return [
@@ -939,7 +939,7 @@ function handleQuickGroupDrop(event: DragEvent, groupId: string): void {
 
             <span v-if="editingTagId !== group.id" class="quick-tag-count">{{ group.buttons.length }}</span>
 
-            <button v-if="group.title && editingTagId !== group.id" type="button" class="quick-tag-paste-button icon-button"
+            <button v-if="group.title && editingTagId !== group.id" type="button" class="quick-tag-paste-button icon-button desk-paste-button"
               :aria-label="uiText.common.paste" :title="uiText.common.paste"
               @click.stop="pasteQuick(isRealTagGroup(group.id) ? group.title : '')" @dblclick.stop>
               <NIcon :component="ClipboardOutline" />
