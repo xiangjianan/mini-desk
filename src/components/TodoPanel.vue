@@ -330,12 +330,12 @@ const menuOptions = computed<DropdownOption[]>(() => {
     if (!list) return [guideMenuOption.value];
     return [
       { label: uiText.value.todo.clearCompleted, key: "clear-completed", icon: renderIcon(CheckmarkDoneOutline) },
+      { label: uiText.value.common.rename, key: "edit-list", icon: renderIcon(CreateOutline) },
       { label: isCompletedVisible(list.id) ? uiText.value.todo.hideCompleted : uiText.value.todo.showCompleted, key: "toggle-completed", icon: renderIcon(isCompletedVisible(list.id) ? EyeOffOutline : EyeOutline) },
       { label: uiText.value.common.paste, key: "paste", icon: renderIcon(ClipboardOutline) },
       ...(props.polish
         ? [{ label: uiText.value.common.smartPaste, key: "smart-paste", icon: renderIcon(ClipboardOutline) }]
         : []),
-      { label: uiText.value.todo.editList, key: "edit-list", icon: renderIcon(CreateOutline) },
       ...buildListMoveOptions(),
       { label: uiText.value.todo.deleteList, key: "delete-list", disabled: effectiveTodoLists.value.length <= 1, icon: renderIcon(TrashOutline, true) },
     ];

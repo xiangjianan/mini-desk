@@ -317,16 +317,16 @@ describe("SpacePanel", () => {
 
     await wrapper.findAll(".space-tab")[1].trigger("contextmenu");
 
-    expect(wrapper.findAll(".dropdown-option").map((option) => option.text())).toEqual(["编辑", "删除"]);
+    expect(wrapper.findAll(".dropdown-option").map((option) => option.text())).toEqual(["重命名", "删除"]);
 
     await wrapper.get(".desk-zone-heading").trigger("contextmenu");
     await wrapper.findAll(".dropdown-option").find((option) => option.text() === "新建")?.trigger("click");
 
     expect(wrapper.emitted("create")?.[0]).toEqual([]);
 
-    // 「编辑」沿用原「重命名」的内联改名流程。
+    // 「重命名」进入标签的内联改名流程。
     await wrapper.findAll(".space-tab")[1].trigger("contextmenu");
-    await wrapper.findAll(".dropdown-option").find((option) => option.text() === "编辑")?.trigger("click");
+    await wrapper.findAll(".dropdown-option").find((option) => option.text() === "重命名")?.trigger("click");
 
     expect(wrapper.find(".space-tab-edit-input").exists()).toBe(true);
 

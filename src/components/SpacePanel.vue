@@ -107,7 +107,7 @@ const menuOptions = computed<DropdownOption[]>(() => menu.value?.anchor ? [
   { label: uiText.value.common.smartPaste, key: "smart-paste", icon: renderIcon(ClipboardOutline), disabled: !activeSpace.value || !props.polish || smartPastePending.value },
   { label: uiText.value.common.tips, key: "guide", icon: renderIcon(HelpCircleOutline) },
 ] : [
-  { label: uiText.value.common.edit, key: "edit", icon: renderIcon(CreateOutline) },
+  { label: uiText.value.common.rename, key: "edit", icon: renderIcon(CreateOutline) },
   ...buildSpaceMoveOptions(),
   { label: uiText.value.common.delete, key: "delete", disabled: !canDeleteSpaces.value, icon: renderIcon(TrashOutline, true) },
 ]);
