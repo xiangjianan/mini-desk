@@ -1048,6 +1048,11 @@ html[data-theme="dark"] .workbench-shell {
 }
 
 /* Shared compact rhythm for tag and reminder heading actions. */
+.workbench-shell :is(.quick-block, .todo-panel) > .panel-header > .header-actions {
+  padding-inline-end: 8px;
+  align-items: center;
+}
+.workbench-shell :is(.quick-block, .todo-panel) > .panel-header > .header-actions > .icon-button,
 .workbench-shell .quick-tag-heading > :is(.desk-ai-button, .quick-tag-add-button, .quick-tag-menu-button),
 .workbench-shell .todo-heading-actions > .icon-button {
   flex: 0 0 30px;
