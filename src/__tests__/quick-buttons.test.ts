@@ -1446,7 +1446,7 @@ describe("QuickButtons", () => {
   it("opens the shared reminder list dialog and only creates a list", async () => {
     const wrapper = mountQuickButtons({ tags: [{ id: "general", title: "常用" }] });
     await wrapper.get(".quick-add-button").trigger("click");
-    expect(wrapper.get(".todo-list-create-dialog").text()).toContain("新建快捷动作列表");
+    expect(wrapper.get(".todo-list-create-dialog").text()).toContain("新建列表");
     await wrapper.get(".todo-list-create-dialog input").setValue("工作");
     await wrapper.get(".todo-list-create-dialog form").trigger("submit");
     expect(wrapper.emitted("saveTag")?.[0]).toEqual([{ title: "工作" }]);
@@ -1756,7 +1756,7 @@ describe("QuickButtons", () => {
   it("顶部菜单不提供粘贴，列表菜单保留普通和智能粘贴", async () => {
     const wrapper = mountQuickButtons({ polish: vi.fn(), tags: [{ id: "work", title: "工作" }] });
     expect(wrapper.find(".header-actions .desk-paste-button").exists()).toBe(false);
-    expect(wrapper.get(".quick-add-button").attributes("aria-label")).toBe("新建快捷动作列表");
+    expect(wrapper.get(".quick-add-button").attributes("aria-label")).toBe("新建列表");
     await wrapper.get(".quick-menu-button").trigger("click");
     expect(wrapper.find('.dropdown-option[data-key="paste"]').exists()).toBe(false);
     expect(wrapper.find('.dropdown-option[data-key="smart-paste"]').exists()).toBe(false);
