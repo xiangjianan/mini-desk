@@ -135,7 +135,7 @@ describe("TodoPanel", () => {
     expect(wrapper.find('[data-key="create-list"]').exists()).toBe(false);
     await wrapper.get('[data-testid="todo-area-add"]').trigger("click");
     await flushPromises();
-    expect(getLatestListCreateDialogElement()?.getAttribute("aria-label")).toBe("新建列表");
+    expect(getLatestListCreateDialogElement()?.getAttribute("aria-label")).toBe("新建提醒事项列表");
     wrapper.unmount();
   });
 
@@ -145,7 +145,7 @@ describe("TodoPanel", () => {
     });
     await wrapper.get('[data-testid="todo-area-add"]').trigger("click");
     await flushPromises();
-    expect(getLatestListCreateDialogElement()?.getAttribute("aria-label")).toBe("新建列表");
+    expect(getLatestListCreateDialogElement()?.getAttribute("aria-label")).toBe("新建提醒事项列表");
     wrapper.unmount();
   });
 
@@ -693,7 +693,7 @@ describe("TodoPanel", () => {
     const input = dialog?.querySelector<HTMLInputElement>(".todo-list-create-input");
     expect(input?.getAttribute("autocomplete")).toBe("off");
     expect(input?.getAttribute("name")).toBe("mini-desk-todo-list-title");
-    expect(dialog?.getAttribute("aria-label")).toBe("新建列表");
+    expect(dialog?.getAttribute("aria-label")).toBe("新建提醒事项列表");
     expect(document.body.contains(dialog)).toBe(true);
     expect(dialog?.closest(".workbench-zone, .todo-panel")).toBeNull();
     expect(wrapper.emitted("createList")).toBeUndefined();

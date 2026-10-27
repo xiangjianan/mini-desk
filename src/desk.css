@@ -1091,7 +1091,7 @@ html[data-theme="dark"] .workbench-shell {
 
 /* Briefly mark newly pasted items without shifting their layout. */
 .workbench-shell :is(.quick-button, .todo-item).is-paste-highlighted {
-  animation: pasted-item-flash 420ms ease-out;
+  animation: pasted-item-flash 1s ease-in-out 2;
 }
 @keyframes pasted-item-flash {
   0%, 100% { background-color: var(--card); }

@@ -7,7 +7,7 @@ import { findTodoListByTitle } from "../state/todoListNames";
 import type { AppLanguage, TodoListConfig } from "../types";
 import { getUiText } from "../state/i18n";
 
-const props = defineProps<{ language?: AppLanguage; lists?: TodoListConfig[] }>();
+const props = defineProps<{ language?: AppLanguage; lists?: TodoListConfig[]; dialogTitle?: string }>();
 const emit = defineEmits<{ confirm: [anchor: HTMLElement | undefined, title: string] }>();
 const uiText = computed(() => getUiText(props.language ?? "zh"));
 const inputRef = ref<InputInst | null>(null);
@@ -43,7 +43,7 @@ defineExpose({ open });
 
 <template>
   <NModal :show="show" preset="card" class="quick-dialog todo-list-create-dialog"
-    :mask-closable="false" :title="uiText.todo.listDialog" :aria-label="uiText.todo.listDialog"
+    :mask-closable="false" :title="dialogTitle ?? uiText.todo.newList" :aria-label="dialogTitle ?? uiText.todo.newList"
     @close="show = false" @esc="show = false" @after-leave="clear">
     <form class="quick-form" autocomplete="off" @submit.prevent="confirm">
       <label for="todo-list-create-input">

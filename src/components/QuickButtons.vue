@@ -1182,6 +1182,7 @@ function handleQuickGroupDrop(event: DragEvent, groupId: string): void {
 
     <TodoListCreateDialog
       ref="listCreateDialog"
+      :dialog-title="uiText.quick.newList"
       :language="language"
       :lists="quickListConfigs"
       @confirm="(_anchor, title) => emit('saveTag', { title })"

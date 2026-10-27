@@ -1446,7 +1446,7 @@ describe("QuickButtons", () => {
   it("opens the shared reminder list dialog and only creates a list", async () => {
     const wrapper = mountQuickButtons({ tags: [{ id: "general", title: "常用" }] });
     await wrapper.get(".quick-add-button").trigger("click");
-    expect(wrapper.get(".todo-list-create-dialog").text()).toContain("新建列表");
+    expect(wrapper.get(".todo-list-create-dialog").text()).toContain("新建快捷动作列表");
     await wrapper.get(".todo-list-create-dialog input").setValue("工作");
     await wrapper.get(".todo-list-create-dialog form").trigger("submit");
     expect(wrapper.emitted("saveTag")?.[0]).toEqual([{ title: "工作" }]);
