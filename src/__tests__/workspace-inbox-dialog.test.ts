@@ -234,7 +234,7 @@ describe("WorkspaceInboxDialog", () => {
     expect(link.attributes("href")).toBe(INBOX_APP_STORE_URL);
     expect(link.attributes("target")).toBe("_blank");
     expect(link.attributes("rel")).toContain("noopener");
-    expect(link.text()).toBe("下载");
+    expect(link.text()).toBe("下载 Mini Desk");
   });
 
   it("未生成码的空态同样展示四步引导", () => {

@@ -28,8 +28,7 @@ export function buildInboxAddress(code: string): string {
   return `${window.location.origin}${window.location.pathname}#inbox=${code}`;
 }
 
-// TODO(占位链接): App 上架后替换为真实 App Store 地址（workspace-inbox-dialog 测试 import 本常量断言，改这里即可）。
-export const INBOX_APP_STORE_URL = "https://apps.apple.com/app/mini-desk";
+export const INBOX_APP_STORE_URL = "https://apps.apple.com/us/app/minidesk/id6823998088";
 
 export const REMEMBERED_INBOX_CODE_KEY = "mini-desk-inbox-code";
 
