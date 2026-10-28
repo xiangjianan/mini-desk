@@ -171,7 +171,7 @@ html[data-theme="dark"] .workbench-shell,
 }
 .workbench-shell .panel-header .desk-ai-action:hover,
 .workbench-shell .panel-header .desk-ai-action:focus-visible { background: var(--secondary); }
-.workbench-shell button:focus-visible { outline: 2px solid var(--ring); outline-offset: 2px; }
+.workbench-shell button:focus-visible:where(:not([data-pointer-focus])) { outline: 2px solid var(--ring); outline-offset: 2px; }
 
 /* Preserve card alignment while leaving room for the hover ring inside the scroll clip. */
 .workbench-zone-assets > .image-panel { overflow: visible; }
@@ -759,7 +759,7 @@ html[data-theme="dark"] .workbench-shell .space-text-panel {
 .workbench-shell .workbench-header-reveal::before {
   content: none;
 }
-.workbench-shell :is(.workbench-header-hide-button, .workbench-header-reveal):focus-visible {
+.workbench-shell :is(.workbench-header-hide-button, .workbench-header-reveal):focus-visible:where(:not([data-pointer-focus])) {
   outline: 2px solid var(--ring);
   outline-offset: -4px;
   border-radius: 8px;
@@ -845,7 +845,7 @@ html[data-theme="dark"] .workbench-shell .space-text-panel {
   .workbench-command-bar { background: var(--desk-surface); }
   .n-dropdown-menu,
   .n-popover { background: var(--popover) !important; }
-  .workbench-shell button:focus-visible {
+  .workbench-shell button:focus-visible:where(:not([data-pointer-focus])) {
     outline: 3px solid var(--ring);
     outline-offset: 2px;
   }

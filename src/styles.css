@@ -2332,7 +2332,7 @@ button.notify-panel-preset:active {
   background: var(--accent);
 }
 
-button.notify-panel-preset:focus-visible {
+button.notify-panel-preset:focus-visible:where(:not([data-pointer-focus])) {
   outline: 2px solid var(--primary);
   outline-offset: 2px;
 }
@@ -3616,7 +3616,7 @@ button.mobile-home-theme .n-icon { font-size: 20px; }
 
 button.mobile-home-theme:active { color: var(--text); }
 
-button.mobile-home-theme:focus-visible {
+button.mobile-home-theme:focus-visible:where(:not([data-pointer-focus])) {
   outline: none;
   box-shadow: var(--focus-ring);
 }
@@ -3830,7 +3830,7 @@ button.mobile-home-primary:active:not(:disabled) { transform: scale(0.985); }
 
 button.mobile-home-primary:disabled { opacity: 0.45; cursor: default; }
 
-button.mobile-home-primary:focus-visible {
+button.mobile-home-primary:focus-visible:where(:not([data-pointer-focus])) {
   outline: none;
   box-shadow: var(--focus-ring);
 }
@@ -3893,9 +3893,9 @@ button.mobile-home-ps-code {
 }
 
 button.mobile-home-ps-code:hover,
-button.mobile-home-ps-code:focus-visible { color: var(--text); }
+button.mobile-home-ps-code:focus-visible:where(:not([data-pointer-focus])) { color: var(--text); }
 
-button.mobile-home-ps-code:focus-visible {
+button.mobile-home-ps-code:focus-visible:where(:not([data-pointer-focus])) {
   outline: 0;
   border-radius: 4px;
   box-shadow: var(--focus-ring);
@@ -3926,7 +3926,7 @@ button.mobile-home-btn-quiet {
 
 button.mobile-home-btn-quiet:active:not(:disabled) { transform: scale(0.97); }
 
-button.mobile-home-btn-quiet:focus-visible {
+button.mobile-home-btn-quiet:focus-visible:where(:not([data-pointer-focus])) {
   outline: none;
   box-shadow: var(--focus-ring);
 }
@@ -4057,7 +4057,7 @@ button.mobile-home-btn-danger {
 
 button.mobile-home-btn-danger:active { transform: scale(0.97); }
 
-button.mobile-home-btn-danger:focus-visible {
+button.mobile-home-btn-danger:focus-visible:where(:not([data-pointer-focus])) {
   outline: none;
   box-shadow: var(--focus-ring);
 }
@@ -4850,9 +4850,13 @@ button.workbench-resizer {
   background: color-mix(in srgb, var(--primary) 82%, transparent);
 }
 
-:focus-visible {
+:focus-visible:where(:not([data-pointer-focus])) {
   outline: 0;
   box-shadow: var(--focus-ring);
+}
+
+button[data-pointer-focus]:focus-visible {
+  outline: none;
 }
 
 button:active,
