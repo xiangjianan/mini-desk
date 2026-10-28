@@ -34,11 +34,11 @@ export interface ChangelogEntry {
 
 export const CHANGELOG: ChangelogEntry[] = [
   {
-    version: "1.1.16-offline",
+    version: "1.1.17-offline",
     date: "2026-10-28",
     notes: {
-      zh: ["同步 1.1.16：快捷动作列表支持自定义配色，优化颜色预览与标题输入交互", "统一提醒列表编辑交互；保留离线功能取舍，快捷动作与提醒区域顶部不显示粘贴按钮，列表内普通粘贴保留"],
-      en: ["Updated to 1.1.16: custom quick-list colors with improved previews and title editing", "Aligned reminder-list editing; retained offline features and list paste controls without quick-action or reminder area-header paste buttons"],
+      zh: ["同步 1.1.17：优化列表拖拽预览、快捷动作图标和空提醒列表保存", "统一笔记空白区域及列表菜单，新增工作台随机 Tips", "保留离线版的普通粘贴和既有顶部按钮设置"],
+      en: ["Updated to 1.1.17: improved list drag previews, quick-action icons and empty reminder list persistence", "Unified notebook blank-area and list menus and added random workbench tips", "Retained offline paste controls and existing area-header button choices"],
     },
   },
     {
@@ -57,6 +57,15 @@ export const CHANGELOG: ChangelogEntry[] = [
         ],
       },
     },
+  {
+    version: "1.1.16-offline",
+    date: "2026-10-28",
+    notes: {
+      zh: ["同步 1.1.16：快捷动作列表支持自定义配色，优化颜色预览与标题输入交互", "统一提醒列表编辑交互；保留离线功能取舍，快捷动作与提醒区域顶部不显示粘贴按钮，列表内普通粘贴保留"],
+      en: ["Updated to 1.1.16: custom quick-list colors with improved previews and title editing", "Aligned reminder-list editing; retained offline features and list paste controls without quick-action or reminder area-header paste buttons"],
+    },
+  },
+
     {
       version: "1.1.16",
       date: "2026-10-28",
