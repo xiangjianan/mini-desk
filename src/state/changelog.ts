@@ -34,11 +34,11 @@ export interface ChangelogEntry {
 
 export const CHANGELOG: ChangelogEntry[] = [
   {
-    version: "1.1.15-offline",
-    date: "2026-10-27",
+    version: "1.1.16-offline",
+    date: "2026-10-28",
     notes: {
-      zh: ["同步 1.1.15：快捷动作改为持久列表，优化紧凑胶囊和列表创建、重命名行为", "统一竖排菜单和区域操作层级；普通粘贴后自动展开并高亮新条目", "保留普通粘贴按钮及无彩色悬浮特效，不引入 AI 图标、润色和手机速记功能"],
-      en: ["Updated to 1.1.15: persistent quick-action lists, compact pills, and refined list creation and renaming", "Unified vertical menus and action hierarchy; plain paste reveals and highlights new items", "Retained plain paste controls without animated hover colors; AI icons, polish, and mobile capture remain removed"],
+      zh: ["同步 1.1.16：快捷动作列表支持自定义配色，优化颜色预览与标题输入交互", "统一提醒列表编辑交互；保留离线功能取舍，快捷动作与提醒区域顶部不显示粘贴按钮，列表内普通粘贴保留"],
+      en: ["Updated to 1.1.16: custom quick-list colors with improved previews and title editing", "Aligned reminder-list editing; retained offline features and list paste controls without quick-action or reminder area-header paste buttons"],
     },
   },
     {
@@ -73,6 +73,15 @@ export const CHANGELOG: ChangelogEntry[] = [
         ],
       },
     },
+  {
+    version: "1.1.15-offline",
+    date: "2026-10-27",
+    notes: {
+      zh: ["同步 1.1.15：快捷动作改为持久列表，优化紧凑胶囊和列表创建、重命名行为", "统一竖排菜单和区域操作层级；普通粘贴后自动展开并高亮新条目", "保留普通粘贴按钮及无彩色悬浮特效，不引入 AI 图标、润色和手机速记功能"],
+      en: ["Updated to 1.1.15: persistent quick-action lists, compact pills, and refined list creation and renaming", "Unified vertical menus and action hierarchy; plain paste reveals and highlights new items", "Retained plain paste controls without animated hover colors; AI icons, polish, and mobile capture remain removed"],
+    },
+  },
+
   {
     version: "1.1.14-offline",
     date: "2026-10-27",
