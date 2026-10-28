@@ -7443,6 +7443,7 @@ describe("App shell", () => {
 
   it("exports through a generated browser download without requesting file-system access", async () => {
     vi.useFakeTimers();
+    vi.setSystemTime(new Date(2026, 9, 29, 0, 4, 5));
     const showSaveFilePicker = vi.fn();
     const showDirectoryPicker = vi.fn();
     let exportedBlob: Blob | undefined;
@@ -7471,7 +7472,7 @@ describe("App shell", () => {
       expect(createObjectURL).toHaveBeenCalledWith(expect.any(Blob));
       expect(anchorClick).toHaveBeenCalled();
       expect(revokeObjectURL).toHaveBeenCalledWith("blob:todo-board");
-      expect((anchorClick.mock.instances[0] as HTMLAnchorElement).download).toMatch(/^mini-desk-.+-\d{4}-\d{2}-\d{2}\.json$/);
+      expect((anchorClick.mock.instances[0] as HTMLAnchorElement).download).toMatch(/^mini-desk-.+-20261029000405\.json$/);
 
       expect(exportedBlob).toBeInstanceOf(Blob);
       if (!exportedBlob) throw new Error("Expected export blob");

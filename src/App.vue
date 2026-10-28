@@ -961,6 +961,11 @@ function slugifyTitle(title: string): string {
   return trimmed.replace(/[\\/:*?"<>|]/g, "").slice(0, 24).trim() || "workspace";
 }
 
+function exportTimestamp(date: Date): string {
+  const pad = (value: number) => String(value).padStart(2, "0");
+  return `${date.getFullYear()}${pad(date.getMonth() + 1)}${pad(date.getDate())}${pad(date.getHours())}${pad(date.getMinutes())}${pad(date.getSeconds())}`;
+}
+
 function exportWorkspaceById(id: string, anchor?: HTMLElement): void {
   const workspace = state.workspaces.find((item) => item.id === id);
   if (!workspace) return;
@@ -969,7 +974,7 @@ function exportWorkspaceById(id: string, anchor?: HTMLElement): void {
   if (ratios) serialized.zoneWidthRatios = ratios;
   const content = JSON.stringify({ miniDeskWorkspaceExport: true, version: 1, workspace: serialized }, null, 2);
   const title = getWorkspaceBoardTitle(workspace);
-  downloadExportFile(content, `mini-desk-${slugifyTitle(title)}-${new Date().toISOString().slice(0, 10)}.json`);
+  downloadExportFile(content, `mini-desk-${slugifyTitle(title)}-${exportTimestamp(new Date())}.json`);
   showBubble("dataExported", anchor, { hideCompanionAfter: true });
 }
 
