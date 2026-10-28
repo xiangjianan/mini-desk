@@ -68,6 +68,7 @@ describe("pointer sorting", () => {
     content.className = kind === "quick" ? "quick-tag-content" : "todo-list-shell";
     content.innerHTML = '<button class="quick-button">Action</button><textarea>Reminder</textarea>';
     list.append(content);
+    vi.spyOn(list, "getBoundingClientRect").mockReturnValue({ left: 10, top: 5, width: 120, height: 140 } as DOMRect);
     for (const collapsed of [false, true]) {
       content.classList.toggle("is-collapsed", collapsed);
       list.classList.toggle("is-collapsed", collapsed);
@@ -77,7 +78,10 @@ describe("pointer sorting", () => {
       const clonedList = preview.querySelector<HTMLElement>(`.${list.classList[0]}`)!;
       expect(preview.classList.contains("workbench-shell")).toBe(true);
       expect(preview.style.opacity).toBe("0.85");
-      expect(preview.style.maxHeight).toBe("");
+      expect(preview.style.height).toBe("140px");
+      expect(preview.style.padding).toBe("0px");
+      expect(preview.style.overflow).toBe("hidden");
+      expect(clonedList.style.height).toBe("140px");
       expect(clonedList.classList.contains("is-collapsed")).toBe(collapsed);
       expect(clonedList.querySelector(".quick-button")?.textContent).toBe("Action");
       expect(clonedList.querySelector("textarea")?.value).toBe("Reminder");

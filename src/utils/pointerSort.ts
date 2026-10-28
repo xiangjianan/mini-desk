@@ -106,11 +106,13 @@ export function installPointerSort(root: HTMLElement, selector: string, pauseAut
         list.classList.remove("is-list-dragging");
         list.querySelector(".quick-tag-heading")?.classList.remove("is-dragging");
         list.style.cssText = element.style.cssText;
+        list.style.height = `${rect.height}px`;
+        list.style.boxSizing = "border-box";
         const wrapper = document.createElement("div");
         wrapper.className = "workbench-shell";
         wrapper.setAttribute("aria-hidden", "true");
         wrapper.inert = true;
-        wrapper.style.cssText = `position:fixed;z-index:11000;pointer-events:none;width:${rect.width}px;opacity:0.85;margin:0;transform:none;transition:none;animation:none;`;
+        wrapper.style.cssText = `position:fixed;z-index:11000;pointer-events:none;display:block;width:${rect.width}px;height:${rect.height}px;padding:0;overflow:hidden;background:transparent;opacity:0.85;margin:0;transform:none;transition:none;animation:none;`;
         const zone = document.createElement("div");
         zone.className = "workbench-zone";
         zone.style.display = "contents";
