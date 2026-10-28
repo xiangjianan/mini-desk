@@ -100,10 +100,10 @@ export function installPointerSort(root: HTMLElement, selector: string, pauseAut
       if (source.matches(".todo-heading, .quick-tag-heading")) {
         // The preview is moved to body, outside the workbench selectors that
         // size and style list actions. Preserve their visible presentation.
-        const selector = ".desk-paste-button, .quick-tag-add-button, .quick-tag-menu-button, .todo-heading-actions > .icon-button";
+        const selector = ".desk-paste-button, .quick-tag-add-button, .quick-tag-menu-button, .todo-heading-actions > .icon-button, .todo-collapse-button, .quick-tag-collapse-button";
         const originalButtons = source.querySelectorAll<HTMLElement>(selector);
         const previewButtons = preview.querySelectorAll<HTMLElement>(selector);
-        const properties = ["display", "align-items", "justify-content", "align-self", "flex", "width", "min-width", "height", "min-height", "padding", "margin", "border", "border-radius", "background", "box-shadow", "color", "line-height"];
+        const properties = ["display", "align-items", "justify-content", "align-self", "flex", "width", "min-width", "height", "min-height", "padding", "margin", "border", "border-radius", "background", "box-shadow", "color", "line-height", "position", "left", "top", "transform"];
         originalButtons.forEach((button, index) => {
           const clone = previewButtons[index];
           if (!clone) return;
@@ -111,7 +111,11 @@ export function installPointerSort(root: HTMLElement, selector: string, pauseAut
           properties.forEach(property => clone.style.setProperty(property, style.getPropertyValue(property)));
           const icon = button.querySelector<HTMLElement>(".n-icon");
           const cloneIcon = clone.querySelector<HTMLElement>(".n-icon");
-          if (icon && cloneIcon) cloneIcon.style.fontSize = getComputedStyle(icon).fontSize;
+          if (icon && cloneIcon) {
+            const iconStyle = getComputedStyle(icon);
+            cloneIcon.style.fontSize = iconStyle.fontSize;
+            cloneIcon.style.transform = iconStyle.transform;
+          }
         });
       }
       if (source.matches(".todo-heading")) preview.style.maxHeight = "none";

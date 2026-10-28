@@ -79,6 +79,23 @@ describe("pointer sorting", () => {
     expect(clone.style.color).toBe("rgb(100, 110, 120)");
   });
 
+  it.each([false, true])("keeps the reminder collapse control at the start when collapsed=%s", (collapsed) => {
+    const { source } = fixture();
+    source.classList.add("todo-heading");
+    const section = document.createElement("section");
+    section.className = "todo-section";
+    source.before(section);
+    section.append(source);
+    source.innerHTML = `<button class="todo-collapse-button${collapsed ? " is-collapsed" : ""}" style="position:static;left:auto;transform:none;width:26px"><span class="n-icon" style="transform:${collapsed ? "rotate(-90deg)" : "none"}"></span></button>`;
+    pointer(source, "pointerdown", 20);
+    pointer(window, "pointermove", 35);
+    const button = document.body.querySelector<HTMLElement>(':scope > [aria-hidden="true"] .todo-collapse-button')!;
+    expect(button.style.position).toBe("static");
+    expect(button.style.left).toBe("auto");
+    expect(button.style.transform).toBe("none");
+    expect(button.querySelector<HTMLElement>(".n-icon")!.style.transform).toBe(collapsed ? "rotate(-90deg)" : "none");
+  });
+
   it.each(['todo-item', 'todo-section', 'quick-button', 'quick-tag-group'])('keeps the initial grab point for %s', (kind) => {
     const { root, source } = fixture();
     const surface = document.createElement('section');
