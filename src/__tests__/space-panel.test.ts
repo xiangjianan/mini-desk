@@ -140,6 +140,9 @@ describe("SpacePanel", () => {
     const wrapper = mountSpacePanel([{ id: "workspace", title: "工作空间", lines: [] }]);
 
     await wrapper.get(".space-tab").trigger("dblclick");
+    const input = wrapper.get(".space-tab-edit-input").element as HTMLInputElement;
+    expect(input.selectionStart).toBe(4);
+    expect(input.selectionEnd).toBe(4);
     await wrapper.get(".space-tab-edit-input").setValue("资料");
     await wrapper.get(".space-tab-edit-input").trigger("keydown.enter");
 

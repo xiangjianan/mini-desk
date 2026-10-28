@@ -1124,4 +1124,14 @@ html[data-theme="dark"] .workbench-shell .quick-tag-group[style*="--quick-list-c
 .quick-list-colors .quick-color-swatch, .quick-list-colors .quick-color-none { width: 28px; height: 28px; min-width: 28px; padding: 0; border: 1px solid var(--line-subtle); border-radius: 50%; }
 .quick-list-colors .selected { outline: 2px solid var(--text); outline-offset: 2px; }
 .quick-color-custom { display: inline-flex; align-items: center; gap: 4px; }
-.quick-color-custom input { width: 30px; height: 28px; padding: 0; border: 0; background: transparent; }
+/* Use the same mixed color as an actual quick button, including in dark mode. */
+.quick-list-colors .quick-color-swatch, .quick-color-custom-preview {
+  background: color-mix(in srgb, var(--quick-list-color) 18%, var(--card));
+}
+html[data-theme="dark"] .quick-list-colors .quick-color-swatch,
+html[data-theme="dark"] .quick-color-custom-preview {
+  background: color-mix(in srgb, var(--quick-list-color) 24%, var(--card));
+}
+.quick-color-custom-preview { position: relative; display: inline-block; width: 30px; height: 28px; border: 1px solid var(--line-subtle); border-radius: 4px; }
+.quick-color-custom input { position: absolute; inset: 0; width: 100%; height: 100%; opacity: 0; cursor: pointer; }
+.quick-color-custom-preview:focus-within { outline: 2px solid var(--text); outline-offset: 2px; }

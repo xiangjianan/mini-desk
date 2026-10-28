@@ -4,6 +4,7 @@ import ContextMenu from "./ContextMenu.vue";
 import QuickListDialog from "./QuickListDialog.vue";
 import MemoTransitionGroup from "./MemoTransitionGroup";
 import { TITLE_MAX_LENGTH, limitTitle } from "../state/titleLimits";
+import { setStickySelection } from "../utils/caret";
 import { installPointerSort } from "../utils/pointerSort";
 import { isGroupDropBefore } from "../utils/groupDrop";
 import { computed, h, nextTick, onBeforeUpdate, onMounted, onUnmounted, onUpdated, reactive, ref } from "vue";
@@ -368,7 +369,7 @@ function startInlineTagRename(groupId: string, groupTitle: string): void {
   inlineTagDraft.value = groupTitle;
   void nextTick(() => {
     inlineRenameInput?.focus();
-    inlineRenameInput?.select();
+    if (inlineRenameInput) setStickySelection(inlineRenameInput, inlineRenameInput.value.length, inlineRenameInput.value.length);
   });
 }
 

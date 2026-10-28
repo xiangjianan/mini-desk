@@ -1459,6 +1459,8 @@ describe("QuickButtons", () => {
     expect(wrapper.get(".quick-tag-collapse-button").element.nextElementSibling?.classList.contains("quick-tag-title-input")).toBe(true);
 
     const input = wrapper.get(".quick-tag-title-input");
+    expect((input.element as HTMLInputElement).selectionStart).toBe(2);
+    expect((input.element as HTMLInputElement).selectionEnd).toBe(2);
     await input.setValue("工作台");
     await input.trigger("blur");
 

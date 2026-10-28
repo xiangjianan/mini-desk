@@ -3,6 +3,7 @@ import SmartPasteIcon from "./SmartPasteIcon.vue";
 import ContextMenu from "./ContextMenu.vue";
 import { installPointerSort } from "../utils/pointerSort";
 import { TITLE_MAX_LENGTH, limitTitle } from "../state/titleLimits";
+import { setStickySelection } from "../utils/caret";
 import { computed, h, nextTick, onMounted, onUnmounted, ref, watch } from "vue";
 import type { Component, VNode } from "vue";
 import { NIcon, NScrollbar } from "naive-ui";
@@ -142,7 +143,7 @@ function startTabEdit(id: string, sourceElement?: HTMLElement): void {
   nextTick(() => {
     const input = document.querySelector<HTMLInputElement>(".space-tab-edit-input");
     input?.focus({ preventScroll: true });
-    input?.select();
+    if (input) setStickySelection(input, input.value.length, input.value.length);
   });
 }
 
