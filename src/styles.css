@@ -1259,7 +1259,8 @@ button.image-card {
   user-select: text;
 }
 
-.quick-tag-title-input {
+.quick-tag-title-input,
+.todo-heading .title-edit-input {
   flex: 1;
   min-width: 0;
   margin: 0;
@@ -1270,6 +1271,11 @@ button.image-card {
   color: inherit;
   font: inherit;
   line-height: 1.4;
+}
+
+.todo-heading .title-edit-input {
+  height: auto;
+  font-size: inherit;
 }
 
 .quick-button {

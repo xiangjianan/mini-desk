@@ -646,7 +646,7 @@ describe("TodoPanel", () => {
     expect(wrapper.find(".todo-add-list-button").exists()).toBe(false);
 
     await wrapper.get('.todo-section[data-list-id="morning"]').trigger("contextmenu");
-    expect(wrapper.findAll(".dropdown-option").map((option) => option.text())).toEqual(["粘贴", "重命名", "隐藏已完成", "清理已完成", "删除列表"]);
+    expect(wrapper.findAll(".dropdown-option").map((option) => option.text())).toEqual(["粘贴", "编辑列表", "隐藏已完成", "清理已完成", "删除列表"]);
 
     await wrapper.get(".todo-panel").trigger("contextmenu");
     await wrapper.findAll(".dropdown-option").find((option) => option.text() === "新建列表")?.trigger("click");
@@ -840,12 +840,22 @@ describe("TodoPanel", () => {
 
     await wrapper.get('.todo-section[data-list-id="morning"] .todo-heading').trigger("contextmenu");
 
-    expect(wrapper.findAll(".dropdown-option").map((option) => option.text())).toEqual(["粘贴", "重命名", "隐藏已完成", "清理已完成", "删除列表"]);
+    expect(wrapper.findAll(".dropdown-option").map((option) => option.text())).toEqual(["粘贴", "编辑列表", "隐藏已完成", "清理已完成", "删除列表"]);
 
-    await wrapper.findAll(".dropdown-option").find((option) => option.text() === "重命名")?.trigger("click");
+    await wrapper.findAll(".dropdown-option").find((option) => option.text() === "编辑列表")?.trigger("click");
     await nextTick();
 
-    expect(wrapper.find('.todo-section[data-list-id="morning"] .title-edit-input').exists()).toBe(true);
+    const dialog = getLatestListCreateDialogElement();
+    expect(dialog?.getAttribute("aria-label")).toBe("编辑列表");
+    expect(dialog?.querySelector("input")?.value).toBe(defaultTodoLists[0].title);
+    const input = dialog!.querySelector("input")!;
+    input.value = "新的名称";
+    input.dispatchEvent(new Event("input", { bubbles: true }));
+    await nextTick();
+    dialog!.querySelector("form")!.dispatchEvent(new Event("submit", { bubbles: true, cancelable: true }));
+    await nextTick();
+    expect(wrapper.emitted("updateListTitle")?.at(-1)).toEqual(["morning", "新的名称"]);
+    wrapper.unmount();
   });
 
   it("auto-edits the configured list matching editListId", async () => {
@@ -1424,7 +1434,7 @@ describe("TodoPanel", () => {
 
     await wrapper.get('.todo-section[data-period="morning"] .todo-section-menu-button').trigger("click");
 
-    expect(wrapper.findAll(".dropdown-option").map((option) => option.text())).toEqual(["粘贴", "重命名", "显示已完成", "清理已完成", "删除列表"]);
+    expect(wrapper.findAll(".dropdown-option").map((option) => option.text())).toEqual(["粘贴", "编辑列表", "显示已完成", "清理已完成", "删除列表"]);
 
     await wrapper.findAll(".dropdown-option").find((option) => option.text() === "显示已完成")?.trigger("click");
     expect(wrapper.emitted("toggleCompletedVisibility")?.[0]).toEqual(["morning", true]);
@@ -1469,7 +1479,7 @@ describe("TodoPanel", () => {
     expect(values(wrapper)).toEqual(["早上未完成", "早上已完成", "中午未完成"]);
 
     await wrapper.get('.todo-section[data-period="noon"] .todo-section-menu-button').trigger("click");
-    expect(wrapper.findAll(".dropdown-option").map((option) => option.text())).toEqual(["粘贴", "重命名", "显示已完成", "清理已完成", "删除列表"]);
+    expect(wrapper.findAll(".dropdown-option").map((option) => option.text())).toEqual(["粘贴", "编辑列表", "显示已完成", "清理已完成", "删除列表"]);
 
     wrapper.unmount();
   });
@@ -4214,7 +4224,7 @@ describe("TodoPanel", () => {
     await wrapper.get('.todo-section[data-period="morning"]').trigger("contextmenu");
     const optionTexts = wrapper.findAll(".dropdown-option").map((option) => option.text());
 
-    expect(optionTexts).toEqual(["粘贴", "重命名", "显示已完成", "清理已完成", "删除列表"]);
+    expect(optionTexts).toEqual(["粘贴", "编辑列表", "显示已完成", "清理已完成", "删除列表"]);
     expect(optionTexts).not.toContain("新建列表");
 
     await wrapper.findAll(".dropdown-option").find((option) => option.text() === "粘贴")?.trigger("click");
@@ -5196,7 +5206,7 @@ describe("TodoPanel 编辑快捷键", () => {
 
     await wrapper.get('.todo-section[data-list-id="morning"] .todo-heading').trigger("contextmenu");
 
-    expect(wrapper.findAll(".dropdown-option").map((option) => option.text())).toEqual(["粘贴", "智能粘贴", "重命名", "隐藏已完成", "清理已完成", "删除列表"]);
+    expect(wrapper.findAll(".dropdown-option").map((option) => option.text())).toEqual(["粘贴", "智能粘贴", "编辑列表", "隐藏已完成", "清理已完成", "删除列表"]);
     wrapper.unmount();
   });
 

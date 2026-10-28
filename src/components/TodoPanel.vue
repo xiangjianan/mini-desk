@@ -125,7 +125,6 @@ const emit = defineEmits<{
 }>();
 
 const focusedListId = ref<TodoListId | null>(null);
-const localEditListId = ref<TodoListId | null>(null);
 const menu = ref<{
   x: number;
   y: number;
@@ -331,7 +330,7 @@ const menuOptions = computed<DropdownOption[]>(() => {
     if (!list) return [guideMenuOption.value];
     return [
       { label: uiText.value.todo.clearCompleted, key: "clear-completed", icon: renderIcon(CheckmarkDoneOutline) },
-      { label: uiText.value.common.rename, key: "edit-list", icon: renderIcon(CreateOutline) },
+      { label: uiText.value.todo.editList, key: "edit-list", icon: renderIcon(CreateOutline) },
       { label: isCompletedVisible(list.id) ? uiText.value.todo.hideCompleted : uiText.value.todo.showCompleted, key: "toggle-completed", icon: renderIcon(isCompletedVisible(list.id) ? EyeOffOutline : EyeOutline) },
       { label: uiText.value.common.paste, key: "paste", icon: renderIcon(ClipboardOutline) },
       ...(props.polish
@@ -1195,7 +1194,6 @@ function openCreateListDialog(anchor?: HTMLElement): void {
 
 function handleListTitleUpdate(listId: TodoListId, value: string): void {
   setListTitleEditing(listId, false);
-  if (localEditListId.value === listId) localEditListId.value = null;
   if (!props.todoLists) {
     const legacyTitleId = LEGACY_TODO_TITLE_IDS[listId];
     if (legacyTitleId) {
@@ -1215,15 +1213,6 @@ function setListTitleEditing(listId: TodoListId, editing: boolean): void {
 
 function isListTitleEditing(listId: TodoListId): boolean {
   return editingListTitleIds.value.has(listId);
-}
-
-async function startListTitleEdit(listId: TodoListId): Promise<void> {
-  if (!getListById(listId)) return;
-  localEditListId.value = null;
-  await nextTick();
-  localEditListId.value = listId;
-  await nextTick();
-  localEditListId.value = null;
 }
 
 function handleStarClick(event: MouseEvent, period: TodoPeriod, todo: TodoItem): void {
@@ -1516,7 +1505,8 @@ async function handleMenuSelect(key: string): Promise<void> {
   }
   if (key === "edit-list") {
     closeMenu();
-    await startListTitleEdit(period);
+    const list = getListById(period);
+    if (list) await listCreateDialogRef.value?.open(anchor, list);
     return;
   }
   if (key === "create-list") {
@@ -2236,7 +2226,7 @@ onUnmounted(() => focusRegionAnimation?.cancel());
               :id="list.id"
               :max-length="TITLE_MAX_LENGTH"
               :value="list.title"
-              :auto-edit="Boolean(props.todoLists && (props.editListId === list.id || localEditListId === list.id))"
+              :auto-edit="Boolean(props.todoLists && props.editListId === list.id)"
               :menu-enabled="false"
               @update="(_id, value) => handleListTitleUpdate(list.id, value)"
               @edit-state="(_id, editing) => setListTitleEditing(list.id, editing)"
@@ -2513,7 +2503,7 @@ onUnmounted(() => focusRegionAnimation?.cancel());
       ref="listCreateDialogRef"
       :lists="effectiveTodoLists"
       :language="language"
-      @confirm="(anchor, title) => emit('createList', anchor, title)"
+      @confirm="(anchor, title, id) => id ? handleListTitleUpdate(id, title) : emit('createList', anchor, title)"
     />
 
     <ContextMenu v-if="menu" :x="menu.x" :y="menu.y" :options="menuOptions"
