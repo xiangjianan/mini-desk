@@ -1423,7 +1423,7 @@ describe("QuickButtons", () => {
     const headerWrapper = mountQuickButtons();
 
     await headerWrapper.get(".quick-menu-button").trigger("click");
-    expect(headerWrapper.findAll(".dropdown-option").map((option) => option.text())).not.toContain("新建列表");
+    expect(headerWrapper.findAll(".dropdown-option").map((option) => option.text())[0]).toBe("新建列表");
     expect(headerWrapper.find('[data-key="add"]').exists()).toBe(false);
     headerWrapper.unmount();
 
@@ -1434,7 +1434,9 @@ describe("QuickButtons", () => {
     await areaWrapper.get(".quick-menu-button").trigger("click");
     expect(areaWrapper.findAll(".dropdown-option").map(option => option.attributes("data-key"))).toEqual(areaKeys);
     expect(areaKeys).not.toContain("add");
-    expect(areaKeys).not.toContain("create-list");
+    expect(areaKeys[0]).toBe("create-list");
+    await areaWrapper.get('[data-key="create-list"]').trigger("click");
+    expect(areaWrapper.get(".quick-list-dialog").text()).toContain("新建列表");
     areaWrapper.unmount();
   });
 
@@ -1503,6 +1505,7 @@ describe("QuickButtons", () => {
     await wrapper.get(".quick-menu-button").trigger("click");
 
     expect(wrapper.findAll(".dropdown-option").map((option) => option.text())).toEqual([
+      "新建列表",
       "切换为紧凑按钮",
       "Tips",
     ]);
@@ -1515,6 +1518,7 @@ describe("QuickButtons", () => {
     await wrapper.setProps({ showHidden: true });
     await wrapper.get(".quick-menu-button").trigger("click");
     expect(wrapper.findAll(".dropdown-option").map((option) => option.text())).toEqual([
+      "新建列表",
       "切换为紧凑按钮",
       "Tips",
     ]);
@@ -2012,12 +2016,12 @@ describe("QuickButtons 跨空间移动", () => {
     await wrapper.get(".quick-tag-menu-button").trigger("click");
     const labels = () => wrapper.findAll(".dropdown-option").map(option => option.text());
     const expected = labels();
-    expect(expected).not.toContain("新建列表");
+    expect(expected[0]).toBe("新建列表");
     expect(expected).not.toContain("新增");
     expect(expected).not.toContain("删除列表");
     await wrapper.get(".quick-tag-title").trigger("contextmenu");
     expect(labels()).toEqual(expected);
-    expect(labels()).not.toContain("新建列表");
+    expect(labels()[0]).toBe("新建列表");
     expect(wrapper.findAll('[data-key^="move-ws:"]')).toHaveLength(0);
     expect(wrapper.find('[data-key="move-tag"]').exists()).toBe(false);
     expect(wrapper.find('[data-key="add"]').exists()).toBe(false);

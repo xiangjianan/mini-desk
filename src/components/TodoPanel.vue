@@ -329,13 +329,13 @@ const menuOptions = computed<DropdownOption[]>(() => {
     const list = getListById(menu.value.period);
     if (!list) return [guideMenuOption.value];
     return [
-      { label: uiText.value.todo.clearCompleted, key: "clear-completed", icon: renderIcon(CheckmarkDoneOutline) },
       { label: uiText.value.todo.editList, key: "edit-list", icon: renderIcon(CreateOutline) },
       { label: isCompletedVisible(list.id) ? uiText.value.todo.hideCompleted : uiText.value.todo.showCompleted, key: "toggle-completed", icon: renderIcon(isCompletedVisible(list.id) ? EyeOffOutline : EyeOutline) },
       { label: uiText.value.common.paste, key: "paste", icon: renderIcon(ClipboardOutline) },
       ...(props.polish
         ? [{ label: uiText.value.common.smartPaste, key: "smart-paste", icon: renderIcon(SmartPasteIcon) }]
         : []),
+      { label: uiText.value.todo.clearCompleted, key: "clear-completed", icon: renderIcon(CheckmarkDoneOutline) },
       ...buildListMoveOptions(),
       { label: uiText.value.todo.deleteList, key: "delete-list", disabled: effectiveTodoLists.value.length <= 1, icon: renderIcon(TrashOutline, true) },
     ];
@@ -343,7 +343,7 @@ const menuOptions = computed<DropdownOption[]>(() => {
   const options: DropdownOption[] = [];
   const todo = getMenuTodo();
   if (!menu.value?.id) {
-    if (!menu.value?.fromToolbar) options.push({ label: uiText.value.todo.newList, key: "create-list", icon: renderIcon(AddOutline) });
+    options.push({ label: uiText.value.todo.newList, key: "create-list", icon: renderIcon(AddOutline) });
     options.push({ label: uiText.value.todo.clearAllCompleted, key: "clear-all-completed", icon: renderIcon(CheckmarkDoneOutline) });
   }
   if (menu.value?.id) {

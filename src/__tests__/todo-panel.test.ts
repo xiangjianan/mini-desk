@@ -117,7 +117,7 @@ const defaultTodoLists = [
 ];
 
 describe("TodoPanel", () => {
-  it("keeps list creation in the add button rather than the header ellipsis", async () => {
+  it("offers list creation in both the header menu and add button", async () => {
     const wrapper = mount(TodoPanel, {
       props: { todoLists: defaultTodoLists, todos: { morning: [], noon: [], evening: [] }, titles: DEFAULT_TITLES },
       global: { stubs: { Dropdown: dropdownStub, NDropdown: dropdownStub } },
@@ -125,14 +125,17 @@ describe("TodoPanel", () => {
     const trigger = wrapper.get('[data-testid="todo-area-menu"]');
     expect(trigger.attributes("aria-label")).toBe("提醒事项菜单");
     await trigger.trigger("click");
+    const toolbarKeys = wrapper.findAll(".dropdown-option").map(option => option.attributes("data-key"));
     expect(wrapper.findAll(".dropdown-option").map(option => option.text()))
-      .toEqual(["清理所有已完成", "最多展示列数", "Tips"]);
+      .toEqual(["新建列表", "清理所有已完成", "最多展示列数", "Tips"]);
+    await wrapper.get(".todo-panel").trigger("contextmenu");
+    expect(wrapper.findAll(".dropdown-option").map(option => option.attributes("data-key"))).toEqual(toolbarKeys);
     await wrapper.get('[data-key="clear-all-completed"]').trigger("click");
-    expect(wrapper.emitted("clearAllCompleted")?.[0]).toEqual([trigger.element]);
+    expect(wrapper.emitted("clearAllCompleted")?.[0]).toEqual([wrapper.get(".todo-panel").element]);
     expect(wrapper.emitted("clearCompleted")).toBeUndefined();
     await trigger.trigger("click");
     expect(wrapper.emitted("createList")).toBeUndefined();
-    expect(wrapper.find('[data-key="create-list"]').exists()).toBe(false);
+    expect(wrapper.find('[data-key="create-list"]').exists()).toBe(true);
     await wrapper.get('[data-testid="todo-area-add"]').trigger("click");
     await flushPromises();
     expect(getLatestListCreateDialogElement()?.getAttribute("aria-label")).toBe("新建列表");

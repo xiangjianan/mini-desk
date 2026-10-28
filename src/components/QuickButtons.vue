@@ -272,13 +272,13 @@ const moveMenuChildren = computed<DropdownOption[]>(() =>
   props.moveTargets.map((target) => ({ label: target.title, key: `move-ws:${target.id}` })),
 );
 const areaMenuOptions = computed<DropdownOption[]>(() => [
+  { label: uiText.value.quick.newList, key: "create-list", icon: renderIcon(AddOutline) },
   { label: uiText.value.quick.add, key: "add", icon: renderIcon(AddOutline) },
   { label: uiText.value.common.paste, key: "paste", icon: renderIcon(ClipboardOutline) },
   ...(props.polish
     ? [{ label: uiText.value.common.smartPaste, key: "smart-paste", icon: renderIcon(SmartPasteIcon) }]
     : []),
   { label: props.showHidden ? uiText.value.quick.hideHidden : uiText.value.quick.showHidden, key: "toggle-show-hidden", icon: renderIcon(props.showHidden ? EyeOffOutline : EyeOutline) },
-  { label: uiText.value.quick.newList, key: "create-list", icon: renderIcon(AddOutline) },
   { label: props.compact ? uiText.value.quick.largeButtons : uiText.value.quick.compactButtons, key: "toggle-compact", icon: renderIcon(ResizeOutline) },
   { ...guideMenuOption.value, icon: renderIcon(HelpCircleOutline) },
 ]);
@@ -286,9 +286,9 @@ const menuOptions = computed<DropdownOption[]>(() => {
   if (menu.value?.tagId) {
     const showHidden = props.tags.find(tag => tag.id === menu.value?.tagId)?.showHidden ?? props.showHidden;
     return [
-      ...areaMenuOptions.value.filter((option) => ["paste", "smart-paste"].includes(String(option.key))),
       { label: uiText.value.quick.editList, key: "edit-tag", icon: renderIcon(CreateOutline) },
       { label: showHidden ? uiText.value.quick.hideHidden : uiText.value.quick.showHidden, key: "toggle-show-hidden", icon: renderIcon(showHidden ? EyeOffOutline : EyeOutline) },
+      ...areaMenuOptions.value.filter((option) => ["paste", "smart-paste"].includes(String(option.key))),
       ...(moveMenuChildren.value.length > 0
         ? [{
             label: uiText.value.common.moveToWorkspace,
@@ -302,7 +302,7 @@ const menuOptions = computed<DropdownOption[]>(() => {
   }
   const button = props.buttons.find((item) => item.id === menu.value?.id);
   if (!menu.value?.id) return areaMenuOptions.value.filter(option =>
-    !["add", "create-list", "paste", "smart-paste", "toggle-show-hidden"].includes(String(option.key)),
+    !["add", "paste", "smart-paste", "toggle-show-hidden"].includes(String(option.key)),
   );
 
   return [
