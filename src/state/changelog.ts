@@ -34,6 +34,22 @@ export interface ChangelogEntry {
 
 export const CHANGELOG: ChangelogEntry[] = [
     {
+      version: "1.1.17",
+      date: "2026-10-28",
+      notes: {
+        zh: [
+          "优化：列表拖拽预览完整还原原样式，不再错位放大",
+          "优化：各区右键菜单统一整理，屏蔽原生菜单但保留文本操作",
+          "新增：顶栏菜单随机工作台小贴士",
+        ],
+        en: [
+          "Improved: list drag previews now faithfully match the original styling without offset or oversizing",
+          "Improved: context menus unified across areas; native menus suppressed while keeping text actions",
+          "New: random workbench tips in the header menu",
+        ],
+      },
+    },
+    {
       version: "1.1.16",
       date: "2026-10-28",
       notes: {
