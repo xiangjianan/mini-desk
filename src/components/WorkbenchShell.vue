@@ -2,8 +2,12 @@
 import { computed, nextTick, onMounted, onUnmounted, ref, watch } from "vue";
 import {
   RefreshCw as SyncOutline,
+  CircleHelp as HelpCircleOutline,
 } from "lucide-vue-next";
 import { NIcon } from "naive-ui";
+import ContextMenu from "./ContextMenu.vue";
+import { createExclusiveContextMenu } from "../utils/contextMenu";
+import { renderIcon } from "../utils/dropdownIcons";
 import { installScrollActivity } from "../utils/scrollActivity";
 import type { AppLanguage, ZoneVisibility } from "../types";
 import {
@@ -64,6 +68,7 @@ const expandHint = computed(() => (props.language === "en" ? "Click to expand" :
 
 const emit = defineEmits<{
   syncInbox: [];
+  randomTip: [anchor: HTMLElement];
 }>();
 
 defineSlots<{
@@ -75,6 +80,23 @@ defineSlots<{
   tasks?: () => unknown;
   workspace?: () => unknown;
 }>();
+
+const headerMenu = ref<{ x: number; y: number; anchor: HTMLElement } | null>(null);
+const exclusiveHeaderMenu = createExclusiveContextMenu(() => { headerMenu.value = null; });
+const headerMenuOptions = computed(() => [{ label: uiText.value.common.tips, key: "guide", icon: renderIcon(HelpCircleOutline) }]);
+function openHeaderContextMenu(event: MouseEvent): void {
+  const target = event.target as HTMLElement;
+  if (target.closest("button, input, textarea, a, [role=button], [contenteditable]")) return;
+  event.preventDefault();
+  event.stopPropagation();
+  exclusiveHeaderMenu.notifyOpen(event, { replacingExistingMenu: Boolean(headerMenu.value) });
+  headerMenu.value = { x: event.clientX, y: event.clientY, anchor: event.currentTarget as HTMLElement };
+}
+function selectHeaderMenu(key: string): void {
+  const anchor = headerMenu.value?.anchor;
+  headerMenu.value = null;
+  if (key === "guide" && anchor) emit("randomTip", anchor);
+}
 
 const DESKTOP_RESIZE_BREAKPOINT = 1180;
 const WORKBENCH_HEADER_STORAGE_KEY = "mini-desk-workbench-header-hidden";
@@ -672,6 +694,7 @@ watch(
 let disposeScrollActivity: (() => void) | undefined;
 
 onMounted(() => {
+  exclusiveHeaderMenu.mount();
   if (gridRef.value) disposeScrollActivity = installScrollActivity(gridRef.value);
   if (gridRef.value && typeof ResizeObserver !== "undefined") {
     gridResizeObserver = new ResizeObserver((entries) => {
@@ -691,6 +714,7 @@ onMounted(() => {
 });
 
 onUnmounted(() => {
+  exclusiveHeaderMenu.unmount();
   stopVisibilityAnimation();
   disposeScrollActivity?.();
   gridResizeObserver?.disconnect();
@@ -704,9 +728,11 @@ onUnmounted(() => {
 
 <template>
   <main class="workbench-shell">
+    <ContextMenu v-if="headerMenu" :x="headerMenu.x" :y="headerMenu.y" :options="headerMenuOptions"
+      @select="selectHeaderMenu" @clickoutside="exclusiveHeaderMenu.handleClickOutside" />
     <section class="workbench-main" :class="{ 'is-header-hidden': headerHidden }">
       <Transition name="workbench-header" :duration="200">
-        <header v-if="!headerHidden" class="workbench-command-bar" data-testid="workbench-command-bar">
+        <header v-if="!headerHidden" class="workbench-command-bar" data-testid="workbench-command-bar" @contextmenu="openHeaderContextMenu">
           <div class="workbench-title-group">
             <slot name="workspace-trigger">
               <span class="workbench-title-fallback">{{ title }}</span>

@@ -4,6 +4,7 @@ import { resolve } from "node:path";
 import { afterEach, describe, expect, it, vi } from "vitest";
 import { nextTick } from "vue";
 import WorkbenchShell from "../components/WorkbenchShell.vue";
+import { menuDropdownStub } from "./helpers/menu-dropdown-stub";
 
 const originalGetBoundingClientRect = HTMLElement.prototype.getBoundingClientRect;
 const WORKBENCH_WIDTH_STORAGE_KEY = "mini-desk-workbench-widths";
@@ -47,6 +48,22 @@ describe("WorkbenchShell", () => {
     title: "MiniDesk",
     saveStatusLabel: "已保存",
   };
+
+  it("opens Tips on blank header space while leaving controls alone", async () => {
+    const wrapper = mount(WorkbenchShell, {
+      props: defaultProps,
+      global: { stubs: { Dropdown: menuDropdownStub, NDropdown: menuDropdownStub } },
+    });
+    const header = wrapper.get('[data-testid="workbench-command-bar"]');
+    await wrapper.get('[data-testid="workbench-header-hide"]').trigger("contextmenu");
+    expect(wrapper.find('[data-key="guide"]').exists()).toBe(false);
+    await header.trigger("contextmenu");
+    expect(wrapper.get('[data-key="guide"]').text()).toBe("Tips");
+    await wrapper.get('[data-key="guide"]').trigger("click");
+    expect(wrapper.emitted("randomTip")?.[0]).toEqual([header.element]);
+    expect(wrapper.find('[data-key="guide"]').exists()).toBe(false);
+    wrapper.unmount();
+  });
 
   it("refits fixed columns when the grid width changes without a window resize", async () => {
     vi.useFakeTimers();

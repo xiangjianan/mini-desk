@@ -1,7 +1,7 @@
 import { readFileSync } from "node:fs";
 import { resolve } from "node:path";
 import { describe, expect, it } from "vitest";
-import { pickRandomTip, resolveTipGuideKey } from "../state/guideTips";
+import { pickRandomTip, pickWorkbenchTipArea, resolveTipGuideKey } from "../state/guideTips";
 import { getGuideMessages } from "../state/i18n";
 
 function panel(...classNames: string[]): HTMLElement {
@@ -99,5 +99,17 @@ describe("pickRandomTip", () => {
     expect(app).toContain("{ hideCompanionAfter, guideKey: key, explicit }");
     // GIF 点击 Tips 与右键菜单同语义：显式请求，同样带 explicit。
     expect(app).toContain("showBubbleText(withKaomoji(tips[companionTipPick.value.index], \"encouraging\"), anchor, { guideKey, explicit: true }");
+  });
+});
+
+describe("pickWorkbenchTipArea", () => {
+  it.each(["zh", "en"] as const)("draws only from all four workbench tip pools in %s", language => {
+    const messages = getGuideMessages(language);
+    const total = ["images", "quickButtons", "todos", "workspace"].reduce((count, area) => count + messages[area as "images" | "quickButtons" | "todos" | "workspace"].length, 0);
+    const picks = Array.from({ length: total }, (_, index) => pickWorkbenchTipArea(messages, () => index / total));
+    expect(new Set(picks)).toEqual(new Set(["images", "quickButtons", "todos", "workspace"]));
+    for (const area of ["images", "quickButtons", "todos", "workspace"] as const) {
+      expect(picks.filter(pick => pick === area)).toHaveLength(messages[area].length);
+    }
   });
 });

@@ -37,3 +37,10 @@ export function pickRandomTip(state: TipPickState | null, guideKey: GuideKey, ti
   const index = (state.index + 1 + Math.floor(Math.random() * (tipsLength - 1))) % tipsLength;
   return { guideKey, index };
 }
+
+/** Draw uniformly from the tips belonging to the four workbench areas. */
+export function pickWorkbenchTipArea(messages: Record<GuideKey, string[]>, random = Math.random): GuideKey | null {
+  const areas: GuideKey[] = ["images", "quickButtons", "todos", "workspace"];
+  const pool = areas.flatMap(area => messages[area].map(() => area));
+  return pool.length ? pool[Math.floor(random() * pool.length)] : null;
+}

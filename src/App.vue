@@ -63,7 +63,7 @@ import { createWorkspaceData, ensureUniqueWorkspaceTitle, getWorkspaceBoardTitle
 import * as workspaceMover from "./state/workspaceMoves";
 import { QUICK_BUTTON_OTHER_GROUP_ID, QUICK_DENSITY_THRESHOLD, assignQuickTagColumn, distributeQuickTagColumns, formatQuickCopiedPreview, recordQuickButtonClick, reorderQuickButton, toggleQuickHiddenVisibility } from "./state/quickButtons";
 import { isQuickAppScheme } from "./state/quickApps";
-import { pickRandomTip, resolveTipGuideKey, type TipPickState } from "./state/guideTips";
+import { pickRandomTip, pickWorkbenchTipArea, resolveTipGuideKey, type TipPickState } from "./state/guideTips";
 import { isValidNotifyAt } from "./state/deadlines";
 import { INBOX_FOCUS_THROTTLE_MS, INBOX_PULL_INTERVAL_MS } from "./sync/config";
 import {
@@ -1220,6 +1220,11 @@ function showCompanion(guideKey?: GuideKey): void {
 
 function handleGuideFocus(key: GuideKey, anchor?: HTMLElement): void {
   showAreaGuide(key, anchor);
+}
+
+function handleHeaderRandomTip(anchor: HTMLElement): void {
+  const area = pickWorkbenchTipArea(getGuideMessages(state.language));
+  if (area) handleGuideClick(area, anchor, true);
 }
 
 function handleGuideClick(key: GuideKey, anchor?: HTMLElement, immediate = false): void {
@@ -3895,6 +3900,7 @@ function moveItem<T extends { id: string }>(items: T[], dragId: string, targetId
       :inbox-sync-enabled="hasInboxConfigured"
       :inbox-syncing="inboxPullInFlight"
       @sync-inbox="requestManualInboxSync"
+      @random-tip="handleHeaderRandomTip"
       @dragover.prevent
       @drop.prevent="handleBoardDrop"
     >
