@@ -22,7 +22,7 @@ describe("quick action lists", () => {
     expect(workspace.quickTags[0].backgroundColor).toBe("#80aed5");
     expect(workspace.quickTags[1].backgroundColor).toBeUndefined();
     expect(normalizeWorkspaceData(getSerializableWorkspace(workspace)).quickTags).toEqual(workspace.quickTags);
-    expect(nextQuickColor([{ id: "a", title: "A", backgroundColor: "#e88d82" }])).toBe("#e8b65f");
+    expect(nextQuickColor([{ id: "a", title: "A", backgroundColor: "#3b82f6" }])).toBe("#22c55e");
   });
 
   it("migrates untagged and dangling actions without losing content or collapsed state", () => {

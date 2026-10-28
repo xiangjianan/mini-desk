@@ -1444,7 +1444,7 @@ describe("QuickButtons", () => {
     expect(wrapper.get(".quick-list-dialog").text()).toContain("新建列表");
     await wrapper.get(".quick-list-dialog input").setValue("工作");
     await wrapper.get(".quick-list-dialog form").trigger("submit");
-    expect(wrapper.emitted("saveTag")?.[0]).toEqual([{ id: undefined, title: "工作", backgroundColor: "#e88d82" }]);
+    expect(wrapper.emitted("saveTag")?.[0]).toEqual([{ id: undefined, title: "工作", backgroundColor: "#3b82f6" }]);
     expect(wrapper.find(".quick-form").exists()).toBe(false);
     wrapper.unmount();
   });
@@ -1456,6 +1456,7 @@ describe("QuickButtons", () => {
     });
 
     await wrapper.get(".quick-tag-heading").trigger("dblclick");
+    expect(wrapper.get(".quick-tag-collapse-button").element.nextElementSibling?.classList.contains("quick-tag-title-input")).toBe(true);
 
     const input = wrapper.get(".quick-tag-title-input");
     await input.setValue("工作台");

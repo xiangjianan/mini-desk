@@ -1108,8 +1108,16 @@ html[data-theme="dark"] .workbench-shell {
   background: color-mix(in srgb, var(--quick-list-color) 18%, var(--card));
   border-color: color-mix(in srgb, var(--quick-list-color) 32%, var(--line-subtle));
 }
-.workbench-shell .quick-tag-group[style*="--quick-list-color"] button.quick-button:hover {
-  background: color-mix(in srgb, var(--quick-list-color) 26%, var(--card));
+.workbench-shell .quick-tag-group[style*="--quick-list-color"] button.quick-button:hover,
+.workbench-shell .quick-tag-group[style*="--quick-list-color"] button.quick-button:focus-visible {
+  background: color-mix(in srgb, var(--quick-list-color) 30%, var(--card)) !important;
+}
+html[data-theme="dark"] .workbench-shell .quick-tag-group[style*="--quick-list-color"] button.quick-button {
+  background: color-mix(in srgb, var(--quick-list-color) 24%, var(--card));
+}
+html[data-theme="dark"] .workbench-shell .quick-tag-group[style*="--quick-list-color"] button.quick-button:hover,
+html[data-theme="dark"] .workbench-shell .quick-tag-group[style*="--quick-list-color"] button.quick-button:focus-visible {
+  background: color-mix(in srgb, var(--quick-list-color) 38%, var(--card)) !important;
 }
 .quick-list-colors { display: flex; flex-wrap: wrap; align-items: center; gap: 8px; padding: 0; border: 0; margin: 0; }
 .quick-list-colors legend { margin-bottom: 8px; }

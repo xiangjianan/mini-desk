@@ -946,7 +946,7 @@ function handleQuickGroupDrop(event: DragEvent, groupId: string): void {
             @dragend="draggingTagId = null"
           >
             <button
-              v-if="group.id !== QUICK_BUTTON_EMPTY_GROUP_ID && editingTagId !== group.id"
+              v-if="group.id !== QUICK_BUTTON_EMPTY_GROUP_ID"
               type="button"
               class="quick-tag-collapse-button"
               :class="{ 'is-collapsed': group.collapsed }"
