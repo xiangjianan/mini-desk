@@ -97,6 +97,23 @@ export function installPointerSort(root: HTMLElement, selector: string, pauseAut
           count.style.alignSelf = countStyle.alignSelf;
         }
       }
+      if (source.matches(".todo-heading, .quick-tag-heading")) {
+        // The preview is moved to body, outside the workbench selectors that
+        // size and style list actions. Preserve their visible presentation.
+        const selector = ".desk-paste-button, .quick-tag-add-button, .quick-tag-menu-button, .todo-heading-actions > .icon-button";
+        const originalButtons = source.querySelectorAll<HTMLElement>(selector);
+        const previewButtons = preview.querySelectorAll<HTMLElement>(selector);
+        const properties = ["display", "align-items", "justify-content", "align-self", "flex", "width", "min-width", "height", "min-height", "padding", "margin", "border", "border-radius", "background", "box-shadow", "color", "line-height"];
+        originalButtons.forEach((button, index) => {
+          const clone = previewButtons[index];
+          if (!clone) return;
+          const style = getComputedStyle(button);
+          properties.forEach(property => clone.style.setProperty(property, style.getPropertyValue(property)));
+          const icon = button.querySelector<HTMLElement>(".n-icon");
+          const cloneIcon = clone.querySelector<HTMLElement>(".n-icon");
+          if (icon && cloneIcon) cloneIcon.style.fontSize = getComputedStyle(icon).fontSize;
+        });
+      }
       if (source.matches(".todo-heading")) preview.style.maxHeight = "none";
       document.body.appendChild(preview);
       const surface = source.closest<HTMLElement>(".todo-item, .todo-section, .quick-button, .quick-tag-group, .space-tab, .workspace-switcher-item");

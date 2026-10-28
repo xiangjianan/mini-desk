@@ -56,6 +56,29 @@ describe("pointer sorting", () => {
     if (compact) expect(preview.querySelector<HTMLElement>('.quick-button-content')?.style.gap).toBe('0px');
   });
 
+  it.each(["quick", "todo"])("preserves %s list action styling in the body preview", (kind) => {
+    const { root, source } = fixture();
+    source.classList.add(kind === "quick" ? "quick-tag-heading" : "todo-heading");
+    if (kind === "todo") {
+      const section = document.createElement("section");
+      section.className = "todo-section";
+      source.before(section);
+      section.append(source);
+    }
+    source.innerHTML = kind === "quick"
+      ? '<span class="quick-tag-title">List</span><button class="quick-tag-add-button">+</button>'
+      : '<span>List</span><div class="todo-heading-actions"><button class="icon-button">+</button></div>';
+    const button = source.querySelector<HTMLButtonElement>("button")!;
+    button.style.cssText = "width:30px;height:30px;padding:0;border-radius:8px;background:transparent;color:rgb(100, 110, 120)";
+    pointer(source, "pointerdown", 20);
+    pointer(window, "pointermove", 35);
+    const clone = document.body.querySelector<HTMLElement>(':scope > [aria-hidden="true"] :is(.quick-tag-add-button, .todo-heading-actions > button)')!;
+    expect(clone.style.width).toBe("30px");
+    expect(clone.style.height).toBe("30px");
+    expect(clone.style.borderRadius).toBe("8px");
+    expect(clone.style.color).toBe("rgb(100, 110, 120)");
+  });
+
   it.each(['todo-item', 'todo-section', 'quick-button', 'quick-tag-group'])('keeps the initial grab point for %s', (kind) => {
     const { root, source } = fixture();
     const surface = document.createElement('section');
