@@ -23,3 +23,24 @@ it("suppresses pointer-origin focus rings until focus changes or Tab navigation 
     button.remove();
   }
 });
+
+it("removes existing and dynamically added buttons from the Tab order while leaving inputs available", async () => {
+  const container = document.createElement("div");
+  container.innerHTML = '<button>Existing</button><input type="text">';
+  document.body.append(container);
+  const dispose = trackPointerButtonFocus(document);
+  try {
+    expect(container.querySelector("button")!.tabIndex).toBe(-1);
+    expect(container.querySelector("input")!.tabIndex).toBe(0);
+    const button = document.createElement("button");
+    container.append(button);
+    await Promise.resolve();
+    expect(button.tabIndex).toBe(-1);
+    button.tabIndex = 0;
+    await Promise.resolve();
+    expect(button.tabIndex).toBe(-1);
+  } finally {
+    dispose();
+    container.remove();
+  }
+});
