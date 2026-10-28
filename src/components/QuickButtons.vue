@@ -1,7 +1,7 @@
 <script setup lang="ts">
 import SmartPasteIcon from "./SmartPasteIcon.vue";
 import ContextMenu from "./ContextMenu.vue";
-import TodoListCreateDialog from "./TodoListCreateDialog.vue";
+import QuickListDialog from "./QuickListDialog.vue";
 import MemoTransitionGroup from "./MemoTransitionGroup";
 import { TITLE_MAX_LENGTH, limitTitle } from "../state/titleLimits";
 import { installPointerSort } from "../utils/pointerSort";
@@ -78,7 +78,7 @@ const emit = defineEmits<{
   toggleCompact: [];
   reorder: [dragId: string, targetId: string, insertBefore: boolean];
   moveToTag: [buttonId: string, tagId?: string, targetId?: string, insertBefore?: boolean];
-  saveTag: [payload: { id?: string; title: string }];
+  saveTag: [payload: { id?: string; title: string; backgroundColor?: string | null }];
   toggleTagCollapsed: [id: string];
   deleteTag: [id: string, anchor?: HTMLElement];
   deleteTagWithButtons: [tagId: string, anchor?: HTMLElement];
@@ -92,8 +92,7 @@ const emit = defineEmits<{
 }>();
 
 const dialogOpen = ref(false);
-const listCreateDialog = ref<InstanceType<typeof TodoListCreateDialog> | null>(null);
-const quickListConfigs = computed(() => props.tags.map(tag => ({ ...tag, collapsed: Boolean(tag.collapsed), compact: false })));
+const listCreateDialog = ref<InstanceType<typeof QuickListDialog> | null>(null);
 const editingId = ref<string | undefined>();
 type QuickApiHeaderFormRow = QuickApiHeader & { id: string };
 
@@ -287,7 +286,7 @@ const menuOptions = computed<DropdownOption[]>(() => {
     const showHidden = props.tags.find(tag => tag.id === menu.value?.tagId)?.showHidden ?? props.showHidden;
     return [
       ...areaMenuOptions.value.filter((option) => ["paste", "smart-paste"].includes(String(option.key))),
-      { label: uiText.value.common.rename, key: "rename-tag", icon: renderIcon(CreateOutline) },
+      { label: uiText.value.quick.editList, key: "edit-tag", icon: renderIcon(CreateOutline) },
       { label: showHidden ? uiText.value.quick.hideHidden : uiText.value.quick.showHidden, key: "toggle-show-hidden", icon: renderIcon(showHidden ? EyeOffOutline : EyeOutline) },
       ...(moveMenuChildren.value.length > 0
         ? [{
@@ -537,8 +536,8 @@ function handleMenuSelect(key: string): void {
     else if (id) emit("moveButtonToWorkspace", id, workspaceId);
     return;
   }
-  if (key === "rename-tag" && tagId) {
-    startInlineTagRename(tagId, tagTitle ?? "");
+  if (key === "edit-tag" && tagId) {
+    void listCreateDialog.value?.open(anchor, props.tags.find(tag => tag.id === tagId));
     return;
   }
   if (key === "delete-tag") {
@@ -929,6 +928,7 @@ function handleQuickGroupDrop(event: DragEvent, groupId: string): void {
           :key="group.id"
           class="quick-tag-group"
           :class="{ 'is-empty': group.id === QUICK_BUTTON_EMPTY_GROUP_ID, 'drag-hover': dragHoverGroupId === group.id }"
+          :style="props.tags.find(tag => tag.id === group.id)?.backgroundColor ? { '--quick-list-color': props.tags.find(tag => tag.id === group.id)?.backgroundColor } : undefined"
           :data-tag-id="group.id"
           @dragover="handleTagDragOver($event, group.id)"
           @drop.stop.prevent="handleQuickGroupDrop($event, group.id)"
@@ -1180,12 +1180,6 @@ function handleQuickGroupDrop(event: DragEvent, groupId: string): void {
       </form>
     </NModal>
 
-    <TodoListCreateDialog
-      ref="listCreateDialog"
-      :dialog-title="uiText.quick.newList"
-      :language="language"
-      :lists="quickListConfigs"
-      @confirm="(_anchor, title) => emit('saveTag', { title })"
-    />
+    <QuickListDialog ref="listCreateDialog" :language="language" :tags="tags" @confirm="emit('saveTag', $event)" />
   </section>
 </template>

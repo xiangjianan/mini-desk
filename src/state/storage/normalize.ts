@@ -1,3 +1,4 @@
+import { normalizeQuickColor } from "../quickColors";
 import { normalizeQuickLists } from "../quickLists";
 import { mergeDuplicateTodoLists } from "../todoListNames";
 import { normalizeZoneWidthRatios } from "../layoutPrefs";
@@ -370,7 +371,7 @@ export function normalizeQuickTags(tags: unknown): QuickTag[] {
       // Numeric guard (not Boolean()): column 0 is valid and falsy.
       const column = typeof record.column === "number" && Number.isFinite(record.column) ? Math.max(0, Math.floor(record.column)) : 0;
       // 存量 color 与标签级 clicks 就此退役：导入即静默剥除（V2 起计数在按钮级 quickButtons[].clicks）。
-      return { id, title, column, ...(record.collapsed === true ? { collapsed: true } : {}),
+      return { id, title, column, ...(normalizeQuickColor(record.backgroundColor) ? { backgroundColor: normalizeQuickColor(record.backgroundColor) } : {}), ...(record.collapsed === true ? { collapsed: true } : {}),
         ...(typeof record.showHidden === "boolean" ? { showHidden: record.showHidden } : {}) };
     })
     .filter((item): item is QuickTag => item !== null);

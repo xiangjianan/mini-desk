@@ -2107,12 +2107,12 @@ function resolveQuickTagId(tagTitle?: string): string | undefined {
   return tag.id;
 }
 
-function saveQuickTag(payload: { id?: string; title: string }): void {
+function saveQuickTag(payload: { id?: string; title: string; backgroundColor?: string | null }): void {
   const title = limitTitle(payload.title);
   if (!title) return;
   if (!payload.id) {
     if (activeWorkspace.value.quickTags.some((tag) => tag.title === title)) return;
-    activeWorkspace.value.quickTags.push({ id: createId(), title });
+    activeWorkspace.value.quickTags.push({ id: createId(), title, ...(payload.backgroundColor ? { backgroundColor: payload.backgroundColor } : {}) });
     persistNow();
     return;
   }
@@ -2125,6 +2125,10 @@ function saveQuickTag(payload: { id?: string; title: string }): void {
     activeWorkspace.value.quickTags = activeWorkspace.value.quickTags.filter((tag) => tag.id !== payload.id);
   } else {
     current.title = title;
+    if (payload.backgroundColor !== undefined) {
+      if (payload.backgroundColor) current.backgroundColor = payload.backgroundColor;
+      else delete current.backgroundColor;
+    }
   }
   persistNow();
 }

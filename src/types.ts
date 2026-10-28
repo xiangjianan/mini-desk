@@ -14,6 +14,7 @@ export interface QuickApiHeader {
   value: string;
 }
 export interface QuickTag {
+  backgroundColor?: string;
   id: string;
   title: string;
   collapsed?: boolean;

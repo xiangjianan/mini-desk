@@ -1,6 +1,7 @@
 import { describe, expect, it } from "vitest";
 import { normalizeQuickLists } from "../state/quickLists";
 import { normalizeWorkspaceData, getSerializableWorkspace } from "../state/storage";
+import { nextQuickColor } from "../state/quickColors";
 import { defaultWorkspace } from "../state/defaults";
 
 const loose = { id: "a", title: "动作", value: "v", type: "text" as const, hidden: false, clicks: 3 };
@@ -14,6 +15,14 @@ describe("quick action lists", () => {
     expect(restored.quickTags).toHaveLength(1);
     expect(restored.quickTags[0]).toMatchObject({ id: workspace.quickTags[0].id, title: workspace.quickTags[0].title });
     expect(Boolean(restored.quickTags[0].collapsed)).toBe(false);
+  });
+
+  it("preserves valid list colors while ignoring legacy and invalid values", () => {
+    const workspace = normalizeWorkspaceData({ quickTags: [{ id: "a", title: "A", backgroundColor: "#80AED5" }, { id: "b", title: "B", color: "red", backgroundColor: "url(x)" }], quickButtons: [] });
+    expect(workspace.quickTags[0].backgroundColor).toBe("#80aed5");
+    expect(workspace.quickTags[1].backgroundColor).toBeUndefined();
+    expect(normalizeWorkspaceData(getSerializableWorkspace(workspace)).quickTags).toEqual(workspace.quickTags);
+    expect(nextQuickColor([{ id: "a", title: "A", backgroundColor: "#e88d82" }])).toBe("#e8b65f");
   });
 
   it("migrates untagged and dangling actions without losing content or collapsed state", () => {

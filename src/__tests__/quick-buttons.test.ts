@@ -530,7 +530,7 @@ describe("QuickButtons", () => {
 
     await wrapper.get(".quick-tag-heading").trigger("contextmenu");
 
-    expect(wrapper.findAll(".dropdown-option").map((option) => option.text())).toEqual(["粘贴", "重命名", "查看隐藏", "移动到空间", "生活", "删除列表"]);
+    expect(wrapper.findAll(".dropdown-option").map((option) => option.text())).toEqual(["粘贴", "编辑列表", "查看隐藏", "移动到空间", "生活", "删除列表"]);
 
     expect(wrapper.find('[data-key="create-list"]').exists()).toBe(false);
     wrapper.unmount();
@@ -593,7 +593,7 @@ describe("QuickButtons", () => {
     const openMenu = () => wrapper.get(".quick-tag-heading").trigger("contextmenu");
     await openMenu();
     expect(wrapper.findAll(".dropdown-option").map(option => option.text())).toEqual([
-      "粘贴", "重命名", "查看隐藏", "删除列表",
+      "粘贴", "编辑列表", "查看隐藏", "删除列表",
     ]);
     expect(wrapper.find('[data-key="toggle-tag-collapsed"]').exists()).toBe(false);
     await wrapper.get('[data-key="toggle-show-hidden"]').trigger("click");
@@ -642,20 +642,15 @@ describe("QuickButtons", () => {
     wrapper.unmount();
   });
 
-  it("focuses the heading tag's rename input when renaming opens from its own menu", async () => {
-    const wrapper = mountQuickButtons({
-      tags: [{ id: "tag-a", title: "甲" }, { id: "tag-b", title: "乙" }],
-      buttons: [{ id: "b1", title: "Btn", value: "v", type: "link", tagId: "tag-b", hidden: false }],
-    });
-
-    const headingB = wrapper.findAll(".quick-tag-heading").find((heading) => heading.get(".quick-tag-title").text() === "乙");
-    await headingB?.trigger("contextmenu");
-    await wrapper.findAll(".dropdown-option").find((option) => option.text() === "重命名")?.trigger("click");
-    await wrapper.vm.$nextTick();
-
-    const rowInputs = wrapper.findAll(".quick-tag-title-input");
-    expect(rowInputs).toHaveLength(1);
-    expect(document.activeElement).toBe(rowInputs[0].element);
+  it("opens list editing for the selected heading", async () => {
+    const wrapper = mountQuickButtons({ tags: [{ id: "tag-a", title: "甲" }, { id: "tag-b", title: "乙", backgroundColor: "#80aed5" }] });
+    await wrapper.findAll(".quick-tag-heading")[1].trigger("contextmenu");
+    await wrapper.get('[data-key="edit-tag"]').trigger("click");
+    expect(wrapper.get(".quick-list-dialog").text()).toContain("编辑列表");
+    expect((wrapper.get(".quick-list-dialog input").element as HTMLInputElement).value).toBe("乙");
+    await wrapper.get('.quick-color-none').trigger('click');
+    await wrapper.get('.quick-list-dialog form').trigger('submit');
+    expect(wrapper.emitted('saveTag')?.[0]).toEqual([{ id: 'tag-b', title: '乙', backgroundColor: null }]);
     wrapper.unmount();
   });
 
@@ -1443,13 +1438,13 @@ describe("QuickButtons", () => {
     areaWrapper.unmount();
   });
 
-  it("opens the shared reminder list dialog and only creates a list", async () => {
+  it("opens the list dialog and creates a list with a default color", async () => {
     const wrapper = mountQuickButtons({ tags: [{ id: "general", title: "常用" }] });
     await wrapper.get(".quick-add-button").trigger("click");
-    expect(wrapper.get(".todo-list-create-dialog").text()).toContain("新建列表");
-    await wrapper.get(".todo-list-create-dialog input").setValue("工作");
-    await wrapper.get(".todo-list-create-dialog form").trigger("submit");
-    expect(wrapper.emitted("saveTag")?.[0]).toEqual([{ title: "工作" }]);
+    expect(wrapper.get(".quick-list-dialog").text()).toContain("新建列表");
+    await wrapper.get(".quick-list-dialog input").setValue("工作");
+    await wrapper.get(".quick-list-dialog form").trigger("submit");
+    expect(wrapper.emitted("saveTag")?.[0]).toEqual([{ id: undefined, title: "工作", backgroundColor: "#e88d82" }]);
     expect(wrapper.find(".quick-form").exists()).toBe(false);
     wrapper.unmount();
   });
@@ -1999,7 +1994,7 @@ describe("QuickButtons 跨空间移动", () => {
     await wrapper.get(".quick-tag-title").trigger("contextmenu");
     expect(wrapper.findAll('[data-key^="move-ws:"]')).toHaveLength(0);
     expect(wrapper.find('[data-key="move-tag"]').exists()).toBe(false);
-    expect(wrapper.findAll(".dropdown-option").map((option) => option.text())).toEqual(["粘贴", "重命名", "查看隐藏", "删除列表"]);
+    expect(wrapper.findAll(".dropdown-option").map((option) => option.text())).toEqual(["粘贴", "编辑列表", "查看隐藏", "删除列表"]);
     expect(wrapper.find('[data-key="create-list"]').exists()).toBe(false);
     expect(wrapper.get('[data-key="delete-tag"]').text()).toBe("删除列表");
     wrapper.unmount();

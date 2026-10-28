@@ -1102,3 +1102,18 @@ html[data-theme="dark"] .workbench-shell {
     animation-duration: 1ms;
   }
 }
+
+/* List colors remain subtle in both themes and preserve the current text contrast. */
+.workbench-shell .quick-tag-group[style*="--quick-list-color"] button.quick-button {
+  background: color-mix(in srgb, var(--quick-list-color) 18%, var(--card));
+  border-color: color-mix(in srgb, var(--quick-list-color) 32%, var(--line-subtle));
+}
+.workbench-shell .quick-tag-group[style*="--quick-list-color"] button.quick-button:hover {
+  background: color-mix(in srgb, var(--quick-list-color) 26%, var(--card));
+}
+.quick-list-colors { display: flex; flex-wrap: wrap; align-items: center; gap: 8px; padding: 0; border: 0; margin: 0; }
+.quick-list-colors legend { margin-bottom: 8px; }
+.quick-list-colors .quick-color-swatch, .quick-list-colors .quick-color-none { width: 28px; height: 28px; min-width: 28px; padding: 0; border: 1px solid var(--line-subtle); border-radius: 50%; }
+.quick-list-colors .selected { outline: 2px solid var(--text); outline-offset: 2px; }
+.quick-color-custom { display: inline-flex; align-items: center; gap: 4px; }
+.quick-color-custom input { width: 30px; height: 28px; padding: 0; border: 0; background: transparent; }

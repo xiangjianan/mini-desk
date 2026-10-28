@@ -60,7 +60,7 @@ export function moveQuickButtonToWorkspace(
       if (existing) {
         tagId = existing.id;
       } else {
-        const created: QuickTag = { id: createId(), title: sourceTag.title };
+        const created: QuickTag = { id: createId(), title: sourceTag.title, ...(sourceTag.backgroundColor ? { backgroundColor: sourceTag.backgroundColor } : {}) };
         quickTags = [...to.quickTags, created];
         tagId = created.id;
       }
