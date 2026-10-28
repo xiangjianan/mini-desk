@@ -48,6 +48,7 @@ const props = withDefaults(defineProps<{
   placeholder?: string;
   split?: boolean;
   hideHeader?: boolean;
+  delegateBlankContextMenu?: boolean;
   language?: AppLanguage;
   polish?: (kind: PolishKind, text: string, style?: PolishStyle) => Promise<PolishResult>;
 }>(), {
@@ -60,6 +61,7 @@ const emit = defineEmits<{
   focus: [element: HTMLElement];
   blur: [element: HTMLElement];
   guide: [element: HTMLElement, immediate?: boolean];
+  blankContextMenu: [event: MouseEvent];
   polishMessage: [phase: SmartPastePhase, message: string, anchor: HTMLElement | undefined];
 }>();
 
@@ -801,6 +803,12 @@ function rememberSelection(event: Event): void {
 
 function openTextMenu(event: MouseEvent): void {
   const target = event.target instanceof HTMLTextAreaElement ? event.target : undefined;
+  if (!target && props.delegateBlankContextMenu) {
+    event.preventDefault();
+    event.stopPropagation();
+    emit("blankContextMenu", event);
+    return;
+  }
   if (target && !hasAsyncClipboard()) {
     closeMenu();
     return;

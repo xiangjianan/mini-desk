@@ -232,8 +232,16 @@ function openTabMenu(event: MouseEvent, id: string): void {
 }
 
 function openHeaderMenu(event: MouseEvent): void {
+  event.preventDefault();
+  event.stopPropagation();
   exclusiveMenu.notifyOpen(event, { replacingExistingMenu: Boolean(menu.value) });
   menu.value = { x: event.clientX, y: event.clientY, spaceId: activeSpace.value?.id ?? "", anchor: event.currentTarget as HTMLElement };
+}
+
+function openTabsBlankMenu(event: MouseEvent): void {
+  const target = event.target as HTMLElement;
+  if (target.closest("button, input, textarea")) return;
+  openHeaderMenu(event);
 }
 
 function closeMenu(): void {
@@ -358,7 +366,7 @@ onUnmounted(() => disposeSort?.());
         </button>
       </div>
     </div>
-    <div class="space-tabs-scrollbar" @wheel="handleTabsWheel">
+    <div class="space-tabs-scrollbar" @wheel="handleTabsWheel" @contextmenu="openTabsBlankMenu">
       <NScrollbar class="space-tabs-scrollbar-inner" x-scrollable trigger="none">
         <TransitionGroup
           name="space-reorder"
@@ -435,10 +443,12 @@ onUnmounted(() => disposeSort?.());
           :lines="activeSpace.lines"
           :language="props.language"
           hide-header
+          delegate-blank-context-menu
           @title-update="handleRename"
           @update="handleUpdate"
           @focus="emit('focus', 'workspace', $event)"
           @guide="(anchor, immediate) => emit('guide', 'workspace', anchor, immediate)"
+          @blank-context-menu="openHeaderMenu"
           :polish="props.polish"
           @polish-message="(phase, message, anchor) => emit('polishMessage', phase, message, anchor)"
           @blur="emit('blur')"

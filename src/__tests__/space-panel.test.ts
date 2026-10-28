@@ -68,6 +68,22 @@ describe("SpacePanel", () => {
     wrapper.unmount();
   });
 
+  it("uses the same area menu on the heading, blank tab strip, and editor frame", async () => {
+    const wrapper = mountSpacePanel([{ id: "note", title: "笔记", lines: [] }]);
+    const keys = () => wrapper.findAll(".dropdown-option").map(option => option.attributes("data-key"));
+    await wrapper.get(".desk-zone-heading").trigger("contextmenu");
+    const expected = keys();
+    await wrapper.get(".space-tabs").trigger("contextmenu");
+    expect(keys()).toEqual(expected);
+    await wrapper.get(".text-editor-frame").trigger("contextmenu");
+    expect(keys()).toEqual(expected);
+    await wrapper.get('[data-key="create"]').trigger("click");
+    expect(wrapper.emitted("create")).toHaveLength(1);
+    await wrapper.get(".space-tab").trigger("contextmenu");
+    expect(keys()).toEqual(["edit", "delete"]);
+    wrapper.unmount();
+  });
+
   it("opens the menu across the heading row but excludes the smart paste area", async () => {
     const wrapper = mountSpacePanel([{ id: "note", title: "笔记", lines: [] }]);
     await wrapper.setProps({ polish: vi.fn() });
