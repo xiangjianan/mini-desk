@@ -173,11 +173,11 @@ html[data-theme="dark"] .workbench-shell,
 .workbench-shell .panel-header .desk-ai-action:focus-visible { background: var(--secondary); }
 .workbench-shell button:focus-visible { outline: 2px solid var(--ring); outline-offset: 2px; }
 
-/* Keep image cards in place and move the scroll rail into the outer inset. */
+/* Preserve card alignment while leaving room for the hover ring inside the scroll clip. */
 .workbench-zone-assets > .image-panel { overflow: visible; }
-.workbench-zone-assets .image-list-scrollbar { width: calc(100% + 12px); }
-.workbench-zone-assets .image-list-scrollbar .image-list { padding-inline-end: 12px; }
-.workbench-shell .image-list { padding: var(--desk-group-top) 0 16px; gap: 14px; }
+.workbench-zone-assets .image-list-scrollbar { width: calc(100% + 14px); margin-inline-start: -2px; }
+.workbench-zone-assets .image-list-scrollbar .image-list { padding-inline: 2px 12px; }
+.workbench-shell .image-list { padding: calc(var(--desk-group-top) + 2px) 0 16px; gap: 14px; }
 .workbench-shell .image-card { border-radius: var(--desk-card-radius); background: var(--card); box-shadow: var(--desk-card-shadow); }
 
 /* Put scroll rails in the zone inset while groups align with the header rule. */
