@@ -56,6 +56,36 @@ describe("pointer sorting", () => {
     if (compact) expect(preview.querySelector<HTMLElement>('.quick-button-content')?.style.gap).toBe('0px');
   });
 
+  it.each(["quick", "todo"])("preserves the complete %s list preview in expanded and collapsed states", (kind) => {
+    const { source } = fixture();
+    const list = document.createElement("section");
+    list.className = kind === "quick" ? "quick-tag-group" : "todo-section";
+    list.style.setProperty("--quick-list-color", "#3b82f6");
+    source.before(list);
+    list.append(source);
+    source.classList.add(kind === "quick" ? "quick-tag-heading" : "todo-heading");
+    const content = document.createElement("div");
+    content.className = kind === "quick" ? "quick-tag-content" : "todo-list-shell";
+    content.innerHTML = '<button class="quick-button">Action</button><textarea>Reminder</textarea>';
+    list.append(content);
+    for (const collapsed of [false, true]) {
+      content.classList.toggle("is-collapsed", collapsed);
+      list.classList.toggle("is-collapsed", collapsed);
+      pointer(source, "pointerdown", 20);
+      pointer(window, "pointermove", 35);
+      const preview = document.body.querySelector<HTMLElement>(':scope > [aria-hidden="true"]')!;
+      const clonedList = preview.querySelector<HTMLElement>(`.${list.classList[0]}`)!;
+      expect(preview.classList.contains("workbench-shell")).toBe(true);
+      expect(preview.style.opacity).toBe("0.85");
+      expect(preview.style.maxHeight).toBe("");
+      expect(clonedList.classList.contains("is-collapsed")).toBe(collapsed);
+      expect(clonedList.querySelector(".quick-button")?.textContent).toBe("Action");
+      expect(clonedList.querySelector("textarea")?.value).toBe("Reminder");
+      expect(clonedList.style.getPropertyValue("--quick-list-color")).toBe("#3b82f6");
+      window.dispatchEvent(new KeyboardEvent("keydown", { key: "Escape" }));
+    }
+  });
+
   it.each(["quick", "todo"])("preserves %s list action styling in the body preview", (kind) => {
     const { root, source } = fixture();
     source.classList.add(kind === "quick" ? "quick-tag-heading" : "todo-heading");

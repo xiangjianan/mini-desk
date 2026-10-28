@@ -52,7 +52,8 @@ export function installPointerSort(root: HTMLElement, selector: string, pauseAut
     source = candidate; pointerId = event.pointerId;
     startX = x = event.clientX; startY = y = event.clientY;
     const surface = candidate.closest<HTMLElement>(".todo-item")
-      ?? (candidate.matches(".todo-heading") ? candidate.closest<HTMLElement>(".todo-section") : null) ?? candidate;
+      ?? (candidate.matches(".todo-heading") ? candidate.closest<HTMLElement>(".todo-section") : null)
+      ?? (candidate.matches(".quick-tag-heading") ? candidate.closest<HTMLElement>(".quick-tag-group") : null) ?? candidate;
     const rect = surface.getBoundingClientRect();
     offsetX = startX - rect.left; offsetY = startY - rect.top;
     // Prevent the browser from initiating native drag or selecting heading text.
@@ -67,7 +68,8 @@ export function installPointerSort(root: HTMLElement, selector: string, pauseAut
       if (!dispatch(source, "dragstart")) { cleanup(); return; }
       started = true;
       const element = source.closest<HTMLElement>(".todo-item")
-        ?? (source.matches(".todo-heading") ? source.closest<HTMLElement>(".todo-section") : null) ?? source;
+        ?? (source.matches(".todo-heading") ? source.closest<HTMLElement>(".todo-section") : null)
+        ?? (source.matches(".quick-tag-heading") ? source.closest<HTMLElement>(".quick-tag-group") : null) ?? source;
       const rect = element.getBoundingClientRect();
       preview = element.cloneNode(true) as HTMLElement;
       preview.setAttribute("aria-hidden", "true");
@@ -97,28 +99,45 @@ export function installPointerSort(root: HTMLElement, selector: string, pauseAut
           count.style.alignSelf = countStyle.alignSelf;
         }
       }
-      if (source.matches(".todo-heading, .quick-tag-heading")) {
-        // The preview is moved to body, outside the workbench selectors that
-        // size and style list actions. Preserve their visible presentation.
-        const selector = ".desk-paste-button, .quick-tag-add-button, .quick-tag-menu-button, .todo-heading-actions > .icon-button, .todo-collapse-button, .quick-tag-collapse-button";
-        const originalButtons = source.querySelectorAll<HTMLElement>(selector);
-        const previewButtons = preview.querySelectorAll<HTMLElement>(selector);
-        const properties = ["display", "align-items", "justify-content", "align-self", "flex", "width", "min-width", "height", "min-height", "padding", "margin", "border", "border-radius", "background", "box-shadow", "color", "line-height", "position", "left", "top", "transform"];
-        originalButtons.forEach((button, index) => {
-          const clone = previewButtons[index];
+      if (source.matches(".todo-heading, .quick-tag-heading") && element !== source) {
+        // Recreate the workbench ancestry so the entire cloned list retains
+        // its real styles, including collapsed state, colors and item layout.
+        const list = preview;
+        list.classList.remove("is-list-dragging");
+        list.querySelector(".quick-tag-heading")?.classList.remove("is-dragging");
+        list.style.cssText = element.style.cssText;
+        const wrapper = document.createElement("div");
+        wrapper.className = "workbench-shell";
+        wrapper.setAttribute("aria-hidden", "true");
+        wrapper.inert = true;
+        wrapper.style.cssText = `position:fixed;z-index:11000;pointer-events:none;width:${rect.width}px;opacity:0.85;margin:0;transform:none;transition:none;animation:none;`;
+        const zone = document.createElement("div");
+        zone.className = "workbench-zone";
+        zone.style.display = "contents";
+        const panel = document.createElement("div");
+        const originalPanel = source.closest<HTMLElement>(".quick-block, .todo-panel");
+        panel.className = originalPanel?.className ?? (source.matches(".todo-heading") ? "todo-panel" : "quick-block");
+        panel.style.display = "contents";
+        panel.appendChild(list);
+        zone.appendChild(panel);
+        wrapper.appendChild(zone);
+        const originals = [element, ...element.querySelectorAll<HTMLElement>("*")];
+        const clones = [list, ...list.querySelectorAll<HTMLElement>("*")];
+        document.body.appendChild(wrapper);
+        originals.forEach((original, index) => {
+          const clone = clones[index];
           if (!clone) return;
-          const style = getComputedStyle(button);
-          properties.forEach(property => clone.style.setProperty(property, style.getPropertyValue(property)));
-          const icon = button.querySelector<HTMLElement>(".n-icon");
-          const cloneIcon = clone.querySelector<HTMLElement>(".n-icon");
-          if (icon && cloneIcon) {
-            const iconStyle = getComputedStyle(icon);
-            cloneIcon.style.fontSize = iconStyle.fontSize;
-            cloneIcon.style.transform = iconStyle.transform;
+          clone.scrollTop = original.scrollTop;
+          clone.scrollLeft = original.scrollLeft;
+          if (original instanceof HTMLInputElement && clone instanceof HTMLInputElement) {
+            clone.value = original.value;
+            clone.checked = original.checked;
+          } else if (original instanceof HTMLTextAreaElement && clone instanceof HTMLTextAreaElement) {
+            clone.value = original.value;
           }
         });
+        preview = wrapper;
       }
-      if (source.matches(".todo-heading")) preview.style.maxHeight = "none";
       document.body.appendChild(preview);
       const surface = source.closest<HTMLElement>(".todo-item, .todo-section, .quick-button, .quick-tag-group, .space-tab, .workspace-switcher-item");
       if (surface) {
