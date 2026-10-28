@@ -2084,12 +2084,14 @@ onUnmounted(() => focusRegionAnimation?.cancel());
             <input
               type="checkbox"
               class="todo-checkbox"
+              tabindex="-1"
               :checked="item.todo.done"
               :aria-label="uiText.todo.done"
               @change="handleChecked(item.period, item.todo.id, ($event.target as HTMLInputElement).checked)"
             />
             <input
               class="today-focus-input"
+              tabindex="-1"
               :data-todo-id="item.todo.id"
               :data-period="item.period"
               :value="item.todo.text"
@@ -2305,12 +2307,14 @@ onUnmounted(() => focusRegionAnimation?.cancel());
                 <input
                   type="checkbox"
                   class="todo-checkbox"
+                  tabindex="-1"
                   :checked="entry.todo.done"
                   :aria-label="uiText.todo.done"
                   @change="handleChecked(list.id, entry.todo.id, ($event.target as HTMLInputElement).checked)"
                 />
                 <input
                   class="todo-input"
+                  tabindex="-1"
                   :data-testid="`todo-input-${list.id}`"
                   :data-todo-id="entry.todo.id"
                   :data-period="list.id"

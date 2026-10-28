@@ -2930,6 +2930,8 @@ describe("TodoPanel", () => {
     expect(rowChildren[2]).toContain("todo-input");
     expect(rowChildren[3]).toContain("todo-deadline-slot");
     expect(rowChildren[4]).toContain("todo-star-button");
+    expect(wrapper.get(".todo-item .todo-checkbox").attributes("tabindex")).toBe("-1");
+    expect(wrapper.get(".todo-item .todo-input").attributes("tabindex")).toBe("-1");
     wrapper.unmount();
   });
 
@@ -2961,6 +2963,8 @@ describe("TodoPanel", () => {
     expect(rowChildren[1]).toContain("today-focus-input");
     expect(rowChildren[2]).toContain("todo-deadline-slot");
     expect(rowChildren[3]).toContain("todo-star-button");
+    expect(wrapper.get(".today-focus-item .todo-checkbox").attributes("tabindex")).toBe("-1");
+    expect(wrapper.get(".today-focus-item .today-focus-input").attributes("tabindex")).toBe("-1");
     wrapper.unmount();
   });
 
