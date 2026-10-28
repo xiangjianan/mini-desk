@@ -337,10 +337,7 @@ describe("App shell", () => {
     const stored = JSON.parse(localStorage.getItem(STORAGE_KEY) || "{}");
     const workspace = stored.workspaces[0];
     expect(workspace.todoLists.map((list: { id: string }) => list.id)).toEqual(["custom"]);
-    expect(workspace.todos.custom.at(-1)).toMatchObject({
-      text: "",
-      done: false,
-    });
+    expect(workspace.todos.custom).toHaveLength(1);
 
     wrapper.unmount();
   });
@@ -896,6 +893,18 @@ describe("App shell", () => {
     expect(wrapper.find('[data-testid="todo-input-morning"]').exists()).toBe(true);
 
     wrapper.unmount();
+  });
+
+  it("does not restore an unfinished blank reminder after reload", async () => {
+    const wrapper = mountApp();
+    await wrapper.get('[data-testid="todo-list-morning"]').trigger("click");
+    expect(wrapper.find('[data-testid="todo-input-morning"]').exists()).toBe(true);
+    const stored = JSON.parse(localStorage.getItem(STORAGE_KEY) || "{}");
+    expect(stored.workspaces[0].todos.morning).toEqual([]);
+    wrapper.unmount();
+    const reloaded = mountApp();
+    expect(reloaded.find('[data-testid="todo-input-morning"]').exists()).toBe(false);
+    reloaded.unmount();
   });
 
   it("cancels an empty reminder creation when clicking the same blank list space again", async () => {
@@ -1524,8 +1533,7 @@ describe("App shell", () => {
 
       const stored = JSON.parse(localStorage.getItem(STORAGE_KEY) || "{}");
       const workspace = stored.workspaces[0];
-      expect(workspace.todos['bad"]id']).toHaveLength(1);
-      expect(workspace.todos['bad"]id'][0]).toMatchObject({ text: "", done: false });
+      expect(workspace.todos['bad"]id']).toHaveLength(0);
       expect(
         wrapper
           .findAll("input.todo-input")
@@ -6195,7 +6203,7 @@ describe("App shell", () => {
       // In-memory state reflects every keystroke, but nothing hit storage yet.
       expect(todoPanel.props("todos").morning[0].text).toBe("草稿文");
       const storedMidDebounce = JSON.parse(localStorage.getItem(STORAGE_KEY) || "{}");
-      expect(storedMidDebounce.workspaces[0].todos.morning[0].text).toBe("");
+      expect(storedMidDebounce.workspaces[0].todos.morning).toEqual([]);
 
       await vi.advanceTimersByTimeAsync(1000);
       const stored = JSON.parse(localStorage.getItem(STORAGE_KEY) || "{}");

@@ -1103,6 +1103,14 @@ html[data-theme="dark"] .workbench-shell {
   }
 }
 
+/* Match the icon tile to the list tint, keeping compact icons transparent. */
+.workbench-shell .quick-block:not(.is-compact) .quick-tag-group[style*="--quick-list-color"] .quick-button-icon {
+  background: color-mix(in srgb, var(--quick-list-color) 40%, var(--card));
+}
+html[data-theme="dark"] .workbench-shell .quick-block:not(.is-compact) .quick-tag-group[style*="--quick-list-color"] .quick-button-icon {
+  background: color-mix(in srgb, var(--quick-list-color) 48%, var(--card));
+}
+
 /* List colors remain subtle in both themes and preserve the current text contrast. */
 .workbench-shell .quick-tag-group[style*="--quick-list-color"] button.quick-button {
   background: color-mix(in srgb, var(--quick-list-color) 18%, var(--card));

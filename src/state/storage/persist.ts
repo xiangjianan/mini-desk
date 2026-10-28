@@ -15,8 +15,21 @@ export function loadState(storage: Storage = localStorage): BoardState {
   }
 }
 
+function withoutEmptyTodoDrafts(state: BoardState): BoardState {
+  return {
+    ...state,
+    workspaces: state.workspaces.map((workspace) => ({
+      ...workspace,
+      todos: Object.fromEntries(Object.entries(workspace.todos).map(([id, todos]) => [
+        id,
+        todos.filter((todo) => todo.text.trim() || todo.done || Object.keys(todo).some((key) => !["id", "text", "done"].includes(key))),
+      ])),
+    })),
+  };
+}
+
 export function saveState(state: BoardState, storage: Storage = localStorage): void {
-  storage.setItem(STORAGE_KEY, JSON.stringify(getSerializableState(state)));
+  storage.setItem(STORAGE_KEY, JSON.stringify(getSerializableState(withoutEmptyTodoDrafts(state))));
 }
 
 function findWorkspace(state: BoardState): WorkspaceData | undefined {
@@ -39,7 +52,7 @@ export function saveStateWithConflictCheck(
   const storage = options.storage ?? localStorage;
   const scope = options.scope ?? "all";
   const current = loadCurrentPrimaryState(storage);
-  const local = getSerializableState(state);
+  const local = getSerializableState(withoutEmptyTodoDrafts(state));
   const localRevision = normalizeSyncState(local.sync).revision;
   const currentRevision = current ? normalizeSyncState(current.sync).revision : 0;
 
