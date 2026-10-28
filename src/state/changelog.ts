@@ -37,8 +37,8 @@ export const CHANGELOG: ChangelogEntry[] = [
     version: "1.1.17-offline",
     date: "2026-10-28",
     notes: {
-      zh: ["同步 1.1.17：优化列表拖拽预览、快捷动作图标和空提醒列表保存", "统一笔记空白区域及列表菜单，新增工作台随机 Tips", "保留离线版的普通粘贴和既有顶部按钮设置"],
-      en: ["Updated to 1.1.17: improved list drag previews, quick-action icons and empty reminder list persistence", "Unified notebook blank-area and list menus and added random workbench tips", "Retained offline paste controls and existing area-header button choices"],
+      zh: ["优化列表拖拽预览与右键菜单", "新增工作台随机 Tips，修复空提醒列表保存"],
+      en: ["Improved list drag previews and context menus", "Added random workbench tips and fixed empty reminder list persistence"],
     },
   },
     {
