@@ -57,14 +57,6 @@ export const CHANGELOG: ChangelogEntry[] = [
         ],
       },
     },
-  {
-    version: "1.1.16-offline",
-    date: "2026-10-28",
-    notes: {
-      zh: ["同步 1.1.16：快捷动作列表支持自定义配色，优化颜色预览与标题输入交互", "统一提醒列表编辑交互；保留离线功能取舍，快捷动作与提醒区域顶部不显示粘贴按钮，列表内普通粘贴保留"],
-      en: ["Updated to 1.1.16: custom quick-list colors with improved previews and title editing", "Aligned reminder-list editing; retained offline features and list paste controls without quick-action or reminder area-header paste buttons"],
-    },
-  },
 
     {
       version: "1.1.16",
@@ -82,31 +74,7 @@ export const CHANGELOG: ChangelogEntry[] = [
         ],
       },
     },
-  {
-    version: "1.1.15-offline",
-    date: "2026-10-27",
-    notes: {
-      zh: ["同步 1.1.15：快捷动作改为持久列表，优化紧凑胶囊和列表创建、重命名行为", "统一竖排菜单和区域操作层级；普通粘贴后自动展开并高亮新条目", "保留普通粘贴按钮及无彩色悬浮特效，不引入 AI 图标、润色和手机速记功能"],
-      en: ["Updated to 1.1.15: persistent quick-action lists, compact pills, and refined list creation and renaming", "Unified vertical menus and action hierarchy; plain paste reveals and highlights new items", "Retained plain paste controls without animated hover colors; AI icons, polish, and mobile capture remain removed"],
-    },
-  },
 
-  {
-    version: "1.1.14-offline",
-    date: "2026-10-27",
-    notes: {
-      zh: [
-        "同步 1.1.14：支持将看板图片移动到其他工作区，预览页也可打开移动菜单",
-        "优化图片排序动画和拖拽预览定位；修复通知失败重试及切换标签页后的提醒保持",
-        "保留普通粘贴按钮及无彩色悬浮特效，继续移除 AI、手机速记和配对同步功能",
-      ],
-      en: [
-        "Updated to 1.1.14: move board images to another workspace, including from the preview menu",
-        "Improved image reorder animations and drag previews; reminders retry notification failures and remain active across tab changes",
-        "Retained plain paste controls without animated hover colors and the offline edition's AI/mobile feature removal",
-      ],
-    },
-  },
     {
       version: "1.1.14",
       date: "2026-10-27",
@@ -119,38 +87,6 @@ export const CHANGELOG: ChangelogEntry[] = [
         ],
       },
     },
-  {
-    version: "1.1.13-offline",
-    date: "2026-10-25",
-    notes: {
-      zh: [
-        "同步 1.1.13：优化大看板拖拽和折叠性能，保持分组折叠时的底色稳定",
-        "复用图片预览工具栏、缩放交互和右键菜单；修复切换便签时未取消重命名的问题",
-        "保留普通粘贴按钮、无彩色悬浮特效，以及离线版的 AI 和手机速记功能删减",
-      ],
-      en: [
-        "Updated to 1.1.13: faster large-board dragging and collapsing with stable group surfaces",
-        "Shared preview toolbars, image transforms, and context menus; fixed note-tab rename cancellation",
-        "Retained plain paste controls without animated hover colors and the offline edition's AI/mobile feature removal",
-      ],
-    },
-  },
-  {
-    version: "1.1.12-offline",
-    date: "2026-10-23",
-    notes: {
-      zh: [
-        "同步 1.1.12：拖拽排序实时预览落位空隙，支持拖入折叠分组",
-        "优化提醒列表拖拽落位与动画稳定性；隐藏的快捷按钮按当前标签筛选",
-        "未分类快捷动作统一显示为「无标签」；保留普通粘贴按钮和离线版功能取舍",
-      ],
-      en: [
-        "Updated to 1.1.12: live landing-gap previews and drops onto collapsed groups",
-        "Improved reminder drag landing and animations; hidden quick actions are scoped to the selected tag",
-        "Untagged quick actions now use No tag; plain paste controls and offline edition behavior are retained",
-      ],
-    },
-  },
     {
       version: "1.1.12",
       date: "2026-10-23",
@@ -167,14 +103,6 @@ export const CHANGELOG: ChangelogEntry[] = [
         ],
       },
     },
-  {
-    version: "1.1.10-offline",
-    date: "2026-10-22",
-    notes: {
-      zh: ["离线特别版：移除智能粘贴、AI 润色及相关入口", "移除手机速记、配对与同步；保留普通粘贴和本地工作台", "保留各区域及列表的普通粘贴按钮，取消悬浮彩色特效；修复设置菜单重复分割线"],
-      en: ["Offline edition: removed smart paste, AI polish, and their controls", "Removed mobile capture, pairing, and sync; kept ordinary paste and the local workbench", "Kept plain paste buttons in area and list headers without animated hover colors; fixed duplicate settings dividers"],
-    },
-  },
     {
       version: "1.1.10",
       date: "2026-10-22",
