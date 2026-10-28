@@ -850,6 +850,32 @@ describe("WorkbenchShell", () => {
     hiddenTasks.unmount();
   });
 
+  it("restores the destination layout immediately when switching workspaces with different visible zones", async () => {
+    mockWideGridMetrics();
+    const wrapper = mount(WorkbenchShell, {
+      props: { ...defaultProps, workspaceId: "original" },
+    });
+    await nextTick(); await nextTick();
+    const originalTracks = readColumnTracks(wrapper);
+    await wrapper.setProps({
+      workspaceId: "new",
+      zoneVisibility: { assets: false, notes: true, tasks: true, workspace: false },
+    });
+    await nextTick(); await nextTick();
+    const divider = wrapper.findAll(".workbench-resizer")[0];
+    divider.element.dispatchEvent(new MouseEvent("pointerdown", { bubbles: true, clientX: 200 }));
+    window.dispatchEvent(new MouseEvent("pointermove", { clientX: 400 }));
+    window.dispatchEvent(new MouseEvent("pointerup"));
+    await nextTick();
+    await wrapper.setProps({
+      workspaceId: "original",
+      zoneVisibility: { assets: true, notes: true, tasks: true, workspace: true },
+    });
+    await nextTick(); await nextTick();
+    expect(readColumnTracks(wrapper)).toEqual(originalTracks);
+    wrapper.unmount();
+  });
+
   it("animates surviving column widths when zones are hidden and shown", async () => {
     mockWideGridMetrics();
     let frame: FrameRequestCallback | undefined;

@@ -646,11 +646,13 @@ watch(
 // When zones are shown/hidden the active column set changes: re-fit the visible
 // zones to the grid width so they redivide the freed space.
 watch(
-  activeIndices,
-  (indices, previousIndices) => {
+  [activeIndices, () => props.workspaceId],
+  ([indices, workspaceId], [previousIndices, previousWorkspaceId]) => {
     const previousWidths = [...columnWidths.value];
     stopVisibilityAnimation();
+    if (workspaceId !== previousWorkspaceId) return;
     void nextTick(() => {
+      if (props.workspaceId !== workspaceId) return;
       refreshWorkbenchLayout();
       const targetWidths = [...columnWidths.value];
       if (window.innerWidth <= DESKTOP_RESIZE_BREAKPOINT
