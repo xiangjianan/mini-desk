@@ -46,6 +46,26 @@ describe("companion bubble placement", () => {
     resetLastPointerPosition();
   });
 
+  it("expires an unanswered confirmation and runs its cancellation cleanup", () => {
+    vi.useFakeTimers();
+    try {
+      const bubble = useCompanionBubble(createDeps());
+      const cancel = vi.fn();
+      const target = createZoneAnchor();
+      bubble.requestConfirmation("confirmDeleteTodo", target, vi.fn(), cancel);
+      vi.advanceTimersByTime(9999);
+      expect(bubble.pendingConfirm.value).not.toBeNull();
+      vi.advanceTimersByTime(1);
+      expect(bubble.pendingConfirm.value).toBeNull();
+      expect(bubble.bubbleVisible.value).toBe(false);
+      expect(target.hasAttribute("data-confirm-target")).toBe(false);
+      expect(cancel).toHaveBeenCalledOnce();
+      bubble.clearTimers();
+    } finally {
+      vi.useRealTimers();
+    }
+  });
+
   it("places plain toasts at the screen corner and ignores the zone anchor", () => {
     const { showBubble, companionPosition } = useCompanionBubble(createDeps());
     showBubble("deleteTodo", createZoneAnchor());

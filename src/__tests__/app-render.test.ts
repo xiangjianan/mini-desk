@@ -8447,7 +8447,7 @@ describe("App shell", () => {
     }
   });
 
-  it("does not flash a stale Tips bubble when focusing a non-empty area", async () => {
+  it("keeps the current Tips bubble when focusing a non-empty notebook", async () => {
     vi.useFakeTimers();
     vi.spyOn(Math, "random").mockReturnValue(0);
     localStorage.setItem(
@@ -8471,14 +8471,14 @@ describe("App shell", () => {
       wrapper.getComponent(SpacePanel).vm.$emit("focus", "workspace", wrapper.get(".text-panel").element as HTMLElement);
       await wrapper.vm.$nextTick();
 
-      expect(wrapper.find('[data-testid="companion-confirm"]').exists()).toBe(false);
+      expect(wrapper.find('[data-testid="companion-confirm"]').exists()).toBe(true);
     } finally {
       wrapper.unmount();
       vi.useRealTimers();
     }
   });
 
-  it("shows Tips for empty clicked areas and no GIF for non-empty clicked areas", async () => {
+  it("keeps Tips when clicking another non-empty area", async () => {
     vi.useFakeTimers();
     vi.setSystemTime(new Date("2026-05-20T00:00:00.000Z"));
     vi.spyOn(Math, "random").mockReturnValue(0);
@@ -8524,8 +8524,8 @@ describe("App shell", () => {
       await wrapper.get(".quick-block").trigger("click");
       await wrapper.vm.$nextTick();
 
-      expect(wrapper.find(".focus-companion.is-visible img").exists()).toBe(false);
-      expect(wrapper.find('[data-testid="companion-confirm"]').exists()).toBe(false);
+      expect(wrapper.find(".focus-companion.is-visible img").exists()).toBe(true);
+      expect(wrapper.find('[data-testid="companion-confirm"]').text()).toContain("Ctrl+V 粘贴截图");
     } finally {
       wrapper.unmount();
       vi.useRealTimers();
@@ -8598,7 +8598,7 @@ describe("App shell", () => {
     }
   });
 
-  it("allows quick-link blank-area Tips to refresh after switching focus to another area", async () => {
+  it("keeps quick-link Tips when focusing the notebook until expiry", async () => {
     vi.useFakeTimers();
     const randomSpy = vi.spyOn(Math, "random");
     randomSpy
@@ -8628,6 +8628,9 @@ describe("App shell", () => {
       wrapper.getComponent(SpacePanel).vm.$emit("focus", "workspace", wrapper.get(".text-panel").element as HTMLElement);
       await wrapper.vm.$nextTick();
 
+      expect(wrapper.get('[data-testid="companion-confirm"]').text()).toBe(firstTips);
+      await vi.advanceTimersByTimeAsync(6000);
+      await wrapper.vm.$nextTick();
       expect(wrapper.find('[data-testid="companion-confirm"]').exists()).toBe(false);
 
       quick.vm.$emit("guide", "quickButtons", quick.element as HTMLElement);

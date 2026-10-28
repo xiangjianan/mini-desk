@@ -173,6 +173,7 @@ export function useCompanionBubble(deps: CompanionBubbleDeps) {
 
   function finishBubbleTimer(): void {
     const options = bubbleTimerOptions.value;
+    clearPendingConfirm(true);
     bubbleTimer.value = undefined;
     bubbleRemainingMs.value = 0;
     bubbleTimerStartedAt.value = 0;
@@ -205,7 +206,7 @@ export function useCompanionBubble(deps: CompanionBubbleDeps) {
   }
 
   function pauseBubbleTimer(): void {
-    if (bubbleVisible.value && bubbleTimer.value && !pendingConfirm.value) {
+    if (bubbleVisible.value && bubbleTimer.value) {
       window.clearTimeout(bubbleTimer.value);
       bubbleTimer.value = undefined;
       const elapsed = Date.now() - bubbleTimerStartedAt.value;
@@ -222,7 +223,7 @@ export function useCompanionBubble(deps: CompanionBubbleDeps) {
   }
 
   function resumeBubbleTimer(): void {
-    if (bubbleVisible.value && !bubbleTimer.value && !pendingConfirm.value && (bubbleMessage.value || bubbleLink.value || bubbleSignature.value)) {
+    if (bubbleVisible.value && !bubbleTimer.value && (bubbleMessage.value || bubbleLink.value || bubbleSignature.value)) {
       if (bubbleRemainingMs.value <= 0) {
         finishBubbleTimer();
         return;
@@ -274,6 +275,7 @@ export function useCompanionBubble(deps: CompanionBubbleDeps) {
     companionFocused.value = true;
     companionPosition.value = options.position === "toast" ? getToastPosition() : getConfirmPosition();
     setConfirmHighlight(options.highlightTarget === null ? null : options.highlightTarget ?? anchor ?? null);
+    startBubbleTimer(10000);
   }
 
   async function confirmCompanionAction(): Promise<void> {

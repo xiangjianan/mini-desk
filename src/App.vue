@@ -1212,7 +1212,7 @@ function syncLegacySpaceLines(): void {
 
 
 function showCompanion(guideKey?: GuideKey): void {
-  if (bubbleVisible.value && bubbleMessage.value && !activeGuideKey.value) return;
+  if (bubbleVisible.value && bubbleMessage.value) return;
   hideBubbleMessage({ clearRetainedContent: true });
   companionPosition.value = getToastPosition();
   activeGuideKey.value = guideKey ?? null;
@@ -1238,11 +1238,7 @@ function handleGuideClick(key: GuideKey, anchor?: HTMLElement, immediate = false
 }
 
 function showAreaGuide(key: GuideKey, anchor?: HTMLElement): void {
-  if (bubbleVisible.value && bubbleMessage.value && !activeGuideKey.value) return;
-  if (activeGuideKey.value === key && bubbleVisible.value && Boolean(bubbleMessage.value)) {
-    companionPosition.value = getToastPosition();
-    return;
-  }
+  if (bubbleVisible.value && bubbleMessage.value) return;
   if (isGuideAreaEmpty(key, anchor)) {
     showGuideBubble(key, anchor, false);
     return;
@@ -3752,7 +3748,7 @@ function randomGuideMessage(key: GuideKey): string {
 }
 
 function invalidateGuideCompanion(nextKey: GuideKey): void {
-  if (!activeGuideKey.value || activeGuideKey.value === nextKey || pendingConfirm.value) return;
+  if (bubbleVisible.value || !activeGuideKey.value || activeGuideKey.value === nextKey || pendingConfirm.value) return;
   hideCompanion();
 }
 
