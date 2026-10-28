@@ -32,7 +32,7 @@ import {
 } from "../utils/textEditor";
 import { clearMarksInRange, MARK_COLORS, toggleMarkInRange, buildMirrorSegments, translateMarksForEdit, type MirrorSegment } from "../utils/textMarks";
 import { createExclusiveContextMenu } from "../utils/contextMenu";
-import { copySelection, getSelectionRange, hasSelection, pasteWithBrowserCommand, probeClipboardForTextPaste, hasAsyncClipboard as hasClipboardApi } from "../utils/clipboard";
+import { copySelection, getSelectionRange, hasSelection, pasteWithBrowserCommand, probeClipboardForTextPaste } from "../utils/clipboard";
 import { renderIcon } from "../utils/dropdownIcons";
 import { clampCaret, setStickySelection } from "../utils/caret";
 import { isImeComposing } from "../utils/ime";
@@ -251,18 +251,20 @@ const menuOptions = computed<DropdownOption[]>(() => {
     if (props.polish) {
       options.push({ label: uiText.value.common.smartPaste, key: "smart-paste", disabled: !menu.value?.canPaste, icon: renderIcon(SmartPasteIcon) });
     }
-    if (props.polish && menu.value?.selectionText) {
+    if (props.polish) {
       options.push({
         label: uiText.value.common.smartPolish,
         key: "smart-polish",
+        disabled: !menu.value?.selectionText,
         icon: renderIcon(SparklesOutlineIcon, false, 14),
         children: POLISH_STYLE_ENTRIES.map(({ key, labelKey }) => ({ label: uiText.value.common[labelKey], key })),
       });
     }
-    if (menu.value?.selectionText) {
+    {
       options.push({
         label: uiText.value.common.format,
         key: "format",
+        disabled: !menu.value?.selectionText,
         icon: renderIcon(Paintbrush),
         children: [
           {
@@ -284,9 +286,7 @@ const menuOptions = computed<DropdownOption[]>(() => {
         ],
       });
     }
-    if (menu.value?.selectionText) {
-      options.push({ label: uiText.value.common.delete, key: "delete", icon: renderIcon(TrashOutline, true) });
-    }
+    options.push({ label: uiText.value.common.delete, key: "delete", disabled: !menu.value?.selectionText, icon: renderIcon(TrashOutline, true) });
   }
   if (!target) options.push({ ...guideMenuOption.value, icon: renderIcon(HelpCircleOutline) });
   return options;
@@ -809,10 +809,6 @@ function openTextMenu(event: MouseEvent): void {
     emit("blankContextMenu", event);
     return;
   }
-  if (target && !hasAsyncClipboard()) {
-    closeMenu();
-    return;
-  }
   event.preventDefault();
   event.stopPropagation();
   if (target && hasSelection(target)) rememberTextSelection(target);
@@ -1031,9 +1027,6 @@ function selectedTextareaText(target: HTMLTextAreaElement): string {
   return range.start === range.end ? "" : target.value.slice(range.start, range.end);
 }
 
-function hasAsyncClipboard(): boolean {
-  return hasClipboardApi();
-}
 
 function applyEditorText(next: string): void {
   commitEditorText(next);

@@ -768,7 +768,7 @@ describe("TextPanel", () => {
     wrapper.unmount();
   });
 
-  it("keeps the native textarea context menu when async clipboard APIs are unavailable", async () => {
+  it("shows the custom textarea menu when async clipboard APIs are unavailable", async () => {
     Object.assign(navigator, { clipboard: undefined });
     const wrapper = mount(TextPanel, {
       props: {
@@ -794,8 +794,8 @@ describe("TextPanel", () => {
     textarea.dispatchEvent(event);
     await wrapper.vm.$nextTick();
 
-    expect(event.defaultPrevented).toBe(false);
-    expect(wrapper.find(".dropdown-option").exists()).toBe(false);
+    expect(event.defaultPrevented).toBe(true);
+    expect(wrapper.get('[data-key="paste"]').attributes("disabled")).toBeDefined();
     wrapper.unmount();
   });
 
@@ -853,7 +853,8 @@ describe("TextPanel", () => {
     textarea.setSelectionRange(0, 0);
     await wrapper.get("textarea").trigger("contextmenu");
 
-    expect(wrapper.findAll(".dropdown-option").map((option) => option.text())).toEqual(["复制", "粘贴"]);
+    expect(wrapper.get('[data-key="format"]').attributes("disabled")).toBeDefined();
+    expect(wrapper.get('[data-key="delete"]').attributes("disabled")).toBeDefined();
     expect(wrapper.get('[data-key="copy"]').attributes("disabled")).toBeDefined();
     expect(wrapper.get('[data-key="paste"]').attributes("disabled")).toBeUndefined();
 
@@ -1599,7 +1600,8 @@ describe("TextPanel", () => {
     textarea.setSelectionRange(0, 0);
     await wrapper.get("textarea").trigger("contextmenu");
 
-    expect(wrapper.findAll(".dropdown-option").map((option) => option.text())).toEqual(["复制", "粘贴", "智能粘贴"]);
+    expect(wrapper.find('[data-key="smart-paste"]').exists()).toBe(true);
+    expect(wrapper.get('[data-key="smart-polish"]').attributes("disabled")).toBeDefined();
     wrapper.unmount();
   });
 
@@ -1622,7 +1624,8 @@ describe("TextPanel", () => {
     textarea.setSelectionRange(0, 0);
     await wrapper.get("textarea").trigger("contextmenu");
 
-    expect(wrapper.findAll(".dropdown-option").map((option) => option.text())).toEqual(["复制", "粘贴"]);
+    expect(wrapper.get('[data-key="format"]').attributes("disabled")).toBeDefined();
+    expect(wrapper.get('[data-key="delete"]').attributes("disabled")).toBeDefined();
     wrapper.unmount();
   });
 
@@ -1822,8 +1825,8 @@ describe("TextPanel", () => {
     expect(textarea.selectionStart).toBe(textarea.selectionEnd);
     // 记忆选区一并清除：旧偏移落在润色后的新文本上已错位，复活会作用于错误文本
     await wrapper.get("textarea").trigger("contextmenu");
-    expect(wrapper.findAll(".dropdown-option").map((option) => option.text()))
-      .toEqual(["复制", "粘贴", "智能粘贴"]);
+    expect(wrapper.get('[data-key="smart-polish"]').attributes("disabled")).toBeDefined();
+    expect(wrapper.get('[data-key="delete"]').attributes("disabled")).toBeDefined();
     wrapper.unmount();
   });
 
@@ -1905,7 +1908,8 @@ describe("TextPanel", () => {
     // 删除后光标塌缩、记忆选区清除：旧偏移已错位，再次右键不应出现删除项
     expect(textarea.selectionStart).toBe(textarea.selectionEnd);
     await wrapper.get("textarea").trigger("contextmenu");
-    expect(wrapper.findAll(".dropdown-option").map((option) => option.text())).toEqual(["复制", "粘贴"]);
+    expect(wrapper.get('[data-key="format"]').attributes("disabled")).toBeDefined();
+    expect(wrapper.get('[data-key="delete"]').attributes("disabled")).toBeDefined();
     wrapper.unmount();
   });
 
@@ -2238,14 +2242,17 @@ describe("TextPanel", () => {
     });
   });
 
-  it("无选区时不出现「格式」组", async () => {
+  it("无选区时显示但禁用选区操作", async () => {
     await withClipboard(async () => {
       const wrapper = mount(TextPanel, {
         props: { titleId: "workspace-title", title: "工作空间", lines: [{ text: "hello", indent: 0 }] },
         global: { stubs: { Dropdown: menuDropdownStub, NDropdown: menuDropdownStub, NTooltip: tooltipStub } },
       });
       await wrapper.get("textarea").trigger("contextmenu");
-      expect(wrapper.find('[data-key="format"]').exists()).toBe(false);
+      for (const key of ["copy", "format", "delete"]) {
+        expect(wrapper.get(`[data-key="${key}"]`).attributes("disabled")).toBeDefined();
+      }
+      expect(wrapper.get('[data-key="paste"]').attributes("disabled")).toBeUndefined();
     });
   });
 

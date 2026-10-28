@@ -4,6 +4,9 @@ import "./desk.css";
 import "./mobile.css";
 import App from "./App.vue";
 import { registerServiceWorker } from "./pwa";
+import { preventNativeContextMenu } from "./utils/contextMenu";
+
+document.addEventListener("contextmenu", preventNativeContextMenu, true);
 
 createApp(App).mount("#app");
 void registerServiceWorker();

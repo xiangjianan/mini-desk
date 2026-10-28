@@ -108,3 +108,8 @@ export function organizeContextMenu(options: DropdownOption[]): DropdownOption[]
   });
   return result;
 }
+
+/** Block the browser menu without stopping custom context menu handlers. */
+export function preventNativeContextMenu(event: Event): void {
+  event.preventDefault();
+}
