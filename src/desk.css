@@ -990,7 +990,7 @@ html[data-theme="dark"] .workbench-shell .space-text-panel {
   height: 30px;
   border-radius: 8px;
   color: var(--desk-selected-text);
-  background: var(--desk-row-hover);
+  background: transparent;
 }
 
 .workbench-shell button.quick-button:hover {
@@ -1101,14 +1101,6 @@ html[data-theme="dark"] .workbench-shell {
   .workbench-shell :is(.quick-button, .todo-item).is-paste-highlighted {
     animation-duration: 1ms;
   }
-}
-
-/* Match the icon tile to the list tint, keeping compact icons transparent. */
-.workbench-shell .quick-block:not(.is-compact) .quick-tag-group[style*="--quick-list-color"] .quick-button-icon {
-  background: color-mix(in srgb, var(--quick-list-color) 40%, var(--card));
-}
-html[data-theme="dark"] .workbench-shell .quick-block:not(.is-compact) .quick-tag-group[style*="--quick-list-color"] .quick-button-icon {
-  background: color-mix(in srgb, var(--quick-list-color) 48%, var(--card));
 }
 
 /* List colors remain subtle in both themes and preserve the current text contrast. */
