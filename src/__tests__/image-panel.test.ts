@@ -1,7 +1,7 @@
 import { mount } from "@vue/test-utils";
 import { readFileSync } from "fs";
 import { resolve } from "path";
-import { nextTick } from "vue";
+import { defineComponent, h, nextTick, watch } from "vue";
 import { afterEach, describe, expect, it, vi } from "vitest";
 import ImagePanel from "../components/ImagePanel.vue";
 import type { StoredImage } from "../types";
@@ -84,6 +84,26 @@ function createImageDataTransfer(): {
 }
 
 describe("ImagePanel", () => {
+  it("temporarily disables reorder motion when restoring image payloads", async () => {
+    const classes: string[] = [];
+    const transitionStub = defineComponent({
+      props: ["moveClass"],
+      setup(props, { slots }) {
+        watch(() => props.moveClass, (value) => classes.push(value), { immediate: true, flush: "sync" });
+        return () => h("div", slots.default?.());
+      },
+    });
+    const wrapper = mount(ImagePanel, {
+      props: { title: "截图", images: [{ id: "a", createdAt: 1 }] },
+      global: { stubs: { "transition-group": transitionStub } },
+    });
+    await wrapper.setProps({ images: [{ id: "a", src: "data:image/png;base64,a", createdAt: 1 }] });
+    await nextTick();
+    await nextTick();
+    expect(classes).toEqual(["image-reorder-move", "image-restore-move", "image-reorder-move"]);
+    wrapper.unmount();
+  });
+
   it("keeps the panel title read-only without a rename menu", async () => {
     const wrapper = mountImagePanel();
     await wrapper.get("#image-title").trigger("dblclick");
