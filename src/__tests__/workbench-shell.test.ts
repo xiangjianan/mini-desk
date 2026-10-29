@@ -799,6 +799,19 @@ describe("WorkbenchShell", () => {
     return value ? value.split(/\s+/) : [];
   };
 
+  it("applies imported proportions immediately when switching to the imported workspace", async () => {
+    mockWideGridMetrics();
+    const wrapper = mount(WorkbenchShell, {
+      props: { ...defaultProps, workspaceId: "old", zoneVisibility: { assets: true, notes: true, tasks: true, workspace: true } },
+    });
+    await nextTick(); await nextTick();
+    localStorage.setItem(`${WORKBENCH_WIDTH_STORAGE_KEY}:imported`, JSON.stringify([1000, 2000, 3000, 4000]));
+    await wrapper.setProps({ workspaceId: "imported", zoneWidthRatios: [0.1, 0.2, 0.3, 0.4], zoneVisibility: { assets: true, notes: true, tasks: true, workspace: true } });
+    await nextTick(); await nextTick();
+    expect(readColumnTracks(wrapper)).toEqual(["116px", "232px", "347px", "463px"]);
+    wrapper.unmount();
+  });
+
   it("hides a zone entirely and redivides the width across the remaining zones", async () => {
     mockWideGridMetrics();
     const wrapper = mount(WorkbenchShell, {

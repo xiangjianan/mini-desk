@@ -6848,6 +6848,12 @@ describe("App shell", () => {
 
   it("导入带 focusImages 内联载荷的工作区时把载荷写入 IndexedDB", async () => {
     vi.useFakeTimers();
+    vi.spyOn(window, "innerWidth", "get").mockReturnValue(1600);
+    const originalRect = HTMLElement.prototype.getBoundingClientRect;
+    vi.spyOn(HTMLElement.prototype, "getBoundingClientRect").mockImplementation(function (this: HTMLElement) {
+      if (this.classList.contains("workbench-grid")) return { width: 1200, height: 748, top: 52, left: 0, right: 1200, bottom: 800, x: 0, y: 52, toJSON: () => undefined } as DOMRect;
+      return originalRect.call(this);
+    });
     const restoreIndexedDb = installMemoryImageDb();
     Object.assign(URL, { createObjectURL: vi.fn(() => "blob:todo-board"), revokeObjectURL: vi.fn() });
     vi.spyOn(HTMLAnchorElement.prototype, "click").mockImplementation(() => {});
@@ -6895,6 +6901,7 @@ describe("App shell", () => {
       const imported = stored.workspaces[1];
       expect(imported.zoneWidthRatios).toEqual([0.1, 0.2, 0.3, 0.4]);
       expect(JSON.parse(localStorage.getItem(`mini-desk-workbench-widths:${imported.id}`)!)).toEqual([1000, 2000, 3000, 4000]);
+      expect(wrapper.get(".workbench-grid").attributes("style")).toContain("grid-template-columns: 116px 232px 347px 463px");
       expect(imported.todos.morning[0].focusImages).toEqual([{ id: "img-1", payloadId: "pay-1", createdAt: 9 }]);
       await expect(getStoredImagePayload({ id: "img-1", payloadId: "pay-1" })).resolves.toBe("data:image/png;base64,imported");
     } finally {

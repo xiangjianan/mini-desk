@@ -3192,6 +3192,7 @@ async function importData(event: Event): Promise<void> {
       restoreWorkbenchWidthRatios(workspace.id, workspace.zoneWidthRatios);
       state.workspaces = [...state.workspaces, workspace];
       state.activeWorkspaceId = workspace.id;
+      boardEpoch.value += 1;
       await finishImport(workspace);
     };
     // Overwrite the existing same-name workspace in place (keep its id/createdAt,
@@ -3212,6 +3213,7 @@ async function importData(event: Event): Promise<void> {
       restoreWorkbenchWidthRatios(replacement.id, replacement.zoneWidthRatios);
       state.workspaces = state.workspaces.map((item) => (item.id === target.id ? replacement : item));
       state.activeWorkspaceId = target.id;
+      boardEpoch.value += 1;
       await finishImport(replacement);
     };
 
