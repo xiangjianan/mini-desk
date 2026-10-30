@@ -38,30 +38,14 @@ export const CHANGELOG: ChangelogEntry[] = [
       date: "2026-10-30",
       notes: {
         zh: [
-          "优化：列表拖拽预览完整还原原样式，不再错位放大",
-          "优化：各区右键菜单统一整理，屏蔽原生菜单但保留文本操作",
-          "新增：顶栏菜单随机工作台小贴士",
-        ],
-        en: [
-          "Improved: list drag previews now faithfully match the original styling without offset or oversizing",
-          "Improved: context menus unified across areas; native menus suppressed while keeping text actions",
-          "New: random workbench tips in the header menu",
-        ],
-      },
-    },
-    {
-      version: "1.1.16",
-      date: "2026-10-28",
-      notes: {
-        zh: [
           "改版：快捷动作区改为持久分组，纯文字紧凑胶囊样式，分组可自定义颜色",
-          "优化：面板菜单统一收敛为竖排 ⋮ 菜单，去除重复创建入口",
-          "新增：粘贴条目闪烁高亮反馈与全新智能粘贴图标",
+          "优化：面板菜单与各区右键菜单统一整理，列表拖拽预览完整还原原样式",
+          "新增：粘贴条目闪烁高亮反馈与顶栏随机工作台小贴士",
         ],
         en: [
           "Redesigned: quick actions as persistent groups with compact text-only pills and custom colors",
-          "Improved: panel menus unified into vertical ⋮ menus without duplicate creation actions",
-          "New: flash highlight on pasted items and a fresh smart-paste icon",
+          "Improved: panel and context menus unified; list drag previews faithfully match the original styling",
+          "New: flash highlight on pasted items and random workbench tips in the header menu",
         ],
       },
     },
