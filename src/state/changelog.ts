@@ -34,8 +34,8 @@ export interface ChangelogEntry {
 
 export const CHANGELOG: ChangelogEntry[] = [
     {
-      version: "1.1.17",
-      date: "2026-10-28",
+      version: "1.1.18",
+      date: "2026-10-30",
       notes: {
         zh: [
           "优化：列表拖拽预览完整还原原样式，不再错位放大",
