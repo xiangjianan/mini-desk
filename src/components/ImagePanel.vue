@@ -99,18 +99,6 @@ const pasteHighlightedId = ref<string | null>(null);
 const externalDropTargetId = ref<string | null>(null);
 const pasteButtonRef = ref<HTMLElement | null>(null);
 const uiText = computed(() => getUiText(props.language));
-// Restoring image payloads can change card heights; do not animate that reflow
-// as though the user had reordered the cards.
-const restoringImages = ref(false);
-watch(
-  () => props.images.map((image) => [image.id, Boolean(image.src)] as const),
-  (images, previous) => {
-    if (!previous.some(([id, hasSrc]) => !hasSrc && images.some(([nextId, nextHasSrc]) => nextId === id && nextHasSrc))) return;
-    restoringImages.value = true;
-    void nextTick(() => { restoringImages.value = false; });
-  },
-  { flush: "sync" },
-);
 const guideMenuOption = computed<DropdownOption>(() => ({ ...GUIDE_MENU_OPTION, label: uiText.value.common.tips }));
 const exclusiveMenu = createExclusiveContextMenu(closeMenu);
 const isPreviewCloseMenuItem = computed(() => Boolean(menu.value?.id && props.activePreviewId));
@@ -661,7 +649,7 @@ function handleImageDragWheel(event: WheelEvent): void {
       @drop.prevent.stop="handleExternalDrop"
       @contextmenu.prevent.stop="openMenu($event)"
     >
-      <TransitionGroup name="image-reorder" tag="div" class="image-list" :move-class="restoringImages ? 'image-restore-move' : 'image-reorder-move'">
+      <TransitionGroup name="image-reorder" tag="div" class="image-list">
       <button
         v-for="(image, index) in images"
         :key="image.id"
